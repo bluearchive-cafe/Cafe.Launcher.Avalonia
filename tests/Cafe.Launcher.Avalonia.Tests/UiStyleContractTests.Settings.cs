@@ -881,15 +881,16 @@ public sealed partial class UiStyleContractTests
             "Kind=\"ContentSave\" Width=\"{StaticResource Launcher.Icon.Md}\" Height=\"{StaticResource Launcher.Icon.Md}\" Foreground=",
             settingsOverlay,
             StringComparison.Ordinal);
-        // The escape-key resolution for the settings modal lives in ShellLifecycle
-        // where modal coordination was consolidated from ShellCoordinator.
+        // The escape-key resolution for the settings modal is a ModalRegistration
+        // (ADR-023): kind, visibility source, content, and escape command colocated
+        // in ShellLifecycle's RegisterModals.
         var shellLifecycle = File.ReadAllText(ProjectFile("Features/Shell/ShellLifecycle.cs"));
         Assert.Contains(
-            "case ModalKind.Settings:",
+            "ModalKind.Settings,",
             shellLifecycle,
             StringComparison.Ordinal);
         Assert.Contains(
-            "ShowSettingsCommand",
+            "windowChrome.ShowSettingsCommand",
             shellLifecycle,
             StringComparison.Ordinal);
         Assert.DoesNotContain(

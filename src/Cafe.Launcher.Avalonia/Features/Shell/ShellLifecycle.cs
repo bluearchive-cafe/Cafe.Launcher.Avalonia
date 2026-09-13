@@ -60,6 +60,7 @@ public sealed class ShellLifecycle : IShellRuntime
     private readonly ShellRefreshCoordinator refreshCoordinator;
     private readonly IFilePickerService filePickerService;
     private readonly ShellStartup startup;
+    private readonly ModalRegistrar modalRegistrar;
     private bool disposed;
     private bool isBusy;
     private bool isMotionReduced = true;
@@ -134,6 +135,7 @@ public sealed class ShellLifecycle : IShellRuntime
         debug = family.Debug;
         this.ownsPresentationCollaborators = ownsPresentationCollaborators;
         ModalHost = family.ModalHost;
+        modalRegistrar = new ModalRegistrar(ModalHost);
 
         getBackgroundBitmap = background.GetBackgroundBitmap;
         previewAppearanceAsync = PreviewAppearanceAsync;
@@ -438,23 +440,113 @@ public sealed class ShellLifecycle : IShellRuntime
 
         startup.Wire();
 
-        windowChrome.PropertyChanged += OnWindowChromePropertyChanged;
-        settings.PropertyChanged += OnSettingsPropertyChanged;
         settings.Editor.CurrentPropertyChanged += OnSettingPropertyChanged;
-        resourcePanel.PropertyChanged += OnResourcePanelPropertyChanged;
-        logViewer.PropertyChanged += OnLogViewerPropertyChanged;
-        logExport.PropertyChanged += OnLogExportPropertyChanged;
-        debug.PropertyChanged += OnDebugPropertyChanged;
-        dialogs.Gallery.PropertyChanged += OnGalleryPropertyChanged;
-        dialogs.PropertyChanged += OnDialogsPropertyChanged;
-        dialogs.StopConfirm.PropertyChanged += OnConfirmationVisibilityChanged;
-        dialogs.DownloadRunningCloseConfirm.PropertyChanged += OnConfirmationVisibilityChanged;
-        dialogs.UninstallConfirm.PropertyChanged += OnConfirmationVisibilityChanged;
-        dialogs.RepairConfirm.PropertyChanged += OnConfirmationVisibilityChanged;
-        dialogs.ResourcePanelSourceConfirm.PropertyChanged += OnConfirmationVisibilityChanged;
-        dialogs.DebugResetConfirm.PropertyChanged += OnConfirmationVisibilityChanged;
-        dialogs.SettingsResetConfirm.PropertyChanged += OnConfirmationVisibilityChanged;
-        dialogs.SetupWizardExitConfirm.PropertyChanged += OnConfirmationVisibilityChanged;
+        RegisterModals();
+    }
+
+    /// <summary>
+    /// 每个模态一条注册记录：种类、可见性旗标来源、栈内容与 ESC 命令收拢在
+    /// 一处（ADR-023）。顺序保持原 Wire 订阅序——多处旗标同时翻转时，栈序
+    /// 依赖注册序。
+    /// </summary>
+    private void RegisterModals()
+    {
+        modalRegistrar.Register(new ModalRegistration(
+            ModalKind.Settings,
+            windowChrome,
+            nameof(WindowChromeViewModel.IsSettingsVisible),
+            () => windowChrome.IsSettingsVisible,
+            settings,
+            windowChrome.ShowSettingsCommand));
+        modalRegistrar.Register(new ModalRegistration(
+            ModalKind.UnsavedSettingsConfirmation,
+            settings,
+            nameof(SettingsViewModel.IsUnsavedChangesVisible),
+            () => settings.IsUnsavedChangesVisible,
+            settings,
+            windowChrome.KeepEditingSettingsCommand));
+        modalRegistrar.Register(new ModalRegistration(
+            ModalKind.ResourcePanel,
+            resourcePanel,
+            nameof(ResourcePanelViewModel.IsResourcePanelVisible),
+            () => resourcePanel.IsResourcePanelVisible,
+            resourcePanel,
+            resourcePanel.CloseResourcePanelCommand));
+        modalRegistrar.Register(new ModalRegistration(
+            ModalKind.LogViewer,
+            logViewer,
+            nameof(LogViewerDialogViewModel.IsVisible),
+            () => logViewer.IsVisible,
+            logViewer,
+            logViewer.CloseCommand));
+        modalRegistrar.Register(new ModalRegistration(
+            ModalKind.LogExport,
+            logExport,
+            nameof(LogExportDialogViewModel.IsVisible),
+            () => logExport.IsVisible,
+            logExport,
+            logExport.CloseCommand));
+        modalRegistrar.Register(new ModalRegistration(
+            ModalKind.Debug,
+            debug,
+            nameof(DebugViewModel.IsVisible),
+            () => debug.IsVisible,
+            debug,
+            debug.CloseCommand));
+        modalRegistrar.Register(new ModalRegistration(
+            ModalKind.DesignGallery,
+            dialogs.Gallery,
+            nameof(DesignGalleryViewModel.IsVisible),
+            () => dialogs.Gallery.IsVisible,
+            dialogs.Gallery,
+            dialogs.Gallery.CloseCommand));
+        modalRegistrar.Register(new ModalRegistration(
+            ModalKind.Notice,
+            dialogs,
+            nameof(DialogsViewModel.IsNoticeDialogVisible),
+            () => dialogs.IsNoticeDialogVisible,
+            dialogs,
+            dialogs.DismissNoticeCommand));
+        modalRegistrar.Register(new ModalRegistration(
+            ModalKind.Update,
+            dialogs,
+            nameof(DialogsViewModel.IsUpdateAvailableVisible),
+            () => dialogs.IsUpdateAvailableVisible,
+            dialogs,
+            dialogs.CancelUpdateAvailableCommand));
+        modalRegistrar.Register(new ModalRegistration(
+            ModalKind.Error,
+            dialogs,
+            nameof(DialogsViewModel.IsErrorDialogVisible),
+            () => dialogs.IsErrorDialogVisible,
+            dialogs,
+            dialogs.ContinueAfterErrorCommand));
+        modalRegistrar.Register(new ModalRegistration(
+            ModalKind.SetupWizard,
+            dialogs,
+            nameof(DialogsViewModel.IsSetupWizardVisible),
+            () => dialogs.IsSetupWizardVisible,
+            dialogs.SetupWizard,
+            dialogs.SetupWizardExitConfirm.ShowCommand));
+        RegisterConfirmation(ModalKind.StopConfirmation, dialogs.StopConfirm);
+        RegisterConfirmation(ModalKind.DownloadRunningCloseConfirmation, dialogs.DownloadRunningCloseConfirm);
+        RegisterConfirmation(ModalKind.UninstallConfirmation, dialogs.UninstallConfirm);
+        RegisterConfirmation(ModalKind.RepairConfirmation, dialogs.RepairConfirm);
+        RegisterConfirmation(ModalKind.ResourcePanelSourceConfirmation, dialogs.ResourcePanelSourceConfirm);
+        RegisterConfirmation(ModalKind.DebugResetConfirmation, dialogs.DebugResetConfirm);
+        RegisterConfirmation(ModalKind.SettingsResetConfirmation, dialogs.SettingsResetConfirm);
+        RegisterConfirmation(ModalKind.SetupWizardExitConfirmation, dialogs.SetupWizardExitConfirm);
+    }
+
+    private void RegisterConfirmation(ModalKind kind, ConfirmationDialogViewModel confirmation)
+    {
+        modalRegistrar.Register(new ModalRegistration(
+            kind,
+            confirmation,
+            nameof(ConfirmationDialogViewModel.IsVisible),
+            () => confirmation.IsVisible,
+            dialogs,
+            confirmation.CancelCommand));
     }
 
     /// <summary>Removes cross-feature event subscriptions established by <see cref="Wire"/>.</summary>
@@ -477,23 +569,8 @@ public sealed class ShellLifecycle : IShellRuntime
         debug.ResetSettingsConfirmationRequested -= dialogs.DebugResetConfirm.Show;
         dialogs.DebugResetConfirm.Confirmed -= debug.ConfirmResetSettingsAsync;
         dialogs.SettingsResetConfirm.Confirmed -= ResetSettingsFromSettingsPageAsync;
-        windowChrome.PropertyChanged -= OnWindowChromePropertyChanged;
-        settings.PropertyChanged -= OnSettingsPropertyChanged;
+        modalRegistrar.Dispose();
         settings.Editor.CurrentPropertyChanged -= OnSettingPropertyChanged;
-        resourcePanel.PropertyChanged -= OnResourcePanelPropertyChanged;
-        logViewer.PropertyChanged -= OnLogViewerPropertyChanged;
-        logExport.PropertyChanged -= OnLogExportPropertyChanged;
-        debug.PropertyChanged -= OnDebugPropertyChanged;
-        dialogs.Gallery.PropertyChanged -= OnGalleryPropertyChanged;
-        dialogs.PropertyChanged -= OnDialogsPropertyChanged;
-        dialogs.StopConfirm.PropertyChanged -= OnConfirmationVisibilityChanged;
-        dialogs.DownloadRunningCloseConfirm.PropertyChanged -= OnConfirmationVisibilityChanged;
-        dialogs.UninstallConfirm.PropertyChanged -= OnConfirmationVisibilityChanged;
-        dialogs.RepairConfirm.PropertyChanged -= OnConfirmationVisibilityChanged;
-        dialogs.ResourcePanelSourceConfirm.PropertyChanged -= OnConfirmationVisibilityChanged;
-        dialogs.DebugResetConfirm.PropertyChanged -= OnConfirmationVisibilityChanged;
-        dialogs.SettingsResetConfirm.PropertyChanged -= OnConfirmationVisibilityChanged;
-        dialogs.SetupWizardExitConfirm.PropertyChanged -= OnConfirmationVisibilityChanged;
 
         if (settings.Appearance.GetBackgroundBitmap == getBackgroundBitmap)
         {
@@ -521,69 +598,8 @@ public sealed class ShellLifecycle : IShellRuntime
     /// <summary>Handles Escape for the active modal and returns whether a modal consumed it.</summary>
     public bool TryHandleEscape()
     {
-        switch (ModalHost.Top?.Kind)
-        {
-            case ModalKind.DownloadRunningCloseConfirmation:
-                dialogs.DownloadRunningCloseConfirm.CancelCommand.Execute(null);
-                break;
-            case ModalKind.StopConfirmation:
-                dialogs.StopConfirm.CancelCommand.Execute(null);
-                break;
-            case ModalKind.UnsavedSettingsConfirmation:
-                windowChrome.KeepEditingSettingsCommand.Execute(null);
-                break;
-            case ModalKind.RepairConfirmation:
-                dialogs.RepairConfirm.CancelCommand.Execute(null);
-                break;
-            case ModalKind.ResourcePanelSourceConfirmation:
-                dialogs.ResourcePanelSourceConfirm.CancelCommand.Execute(null);
-                break;
-            case ModalKind.UninstallConfirmation:
-                dialogs.UninstallConfirm.CancelCommand.Execute(null);
-                break;
-            case ModalKind.Notice:
-                dialogs.DismissNoticeCommand.Execute(null);
-                break;
-            case ModalKind.Update:
-                dialogs.CancelUpdateAvailableCommand.Execute(null);
-                break;
-            case ModalKind.Error:
-                dialogs.ContinueAfterErrorCommand.Execute(null);
-                break;
-            case ModalKind.LogViewer:
-                logViewer.CloseCommand.Execute(null);
-                break;
-            case ModalKind.LogExport:
-                logExport.CloseCommand.Execute(null);
-                break;
-            case ModalKind.Debug:
-                debug.CloseCommand.Execute(null);
-                break;
-            case ModalKind.DesignGallery:
-                dialogs.Gallery.CloseCommand.Execute(null);
-                break;
-            case ModalKind.DebugResetConfirmation:
-                dialogs.DebugResetConfirm.CancelCommand.Execute(null);
-                break;
-            case ModalKind.SettingsResetConfirmation:
-                dialogs.SettingsResetConfirm.CancelCommand.Execute(null);
-                break;
-            case ModalKind.SetupWizardExitConfirmation:
-                dialogs.SetupWizardExitConfirm.CancelCommand.Execute(null);
-                break;
-            case ModalKind.Settings:
-                windowChrome.ShowSettingsCommand.Execute(null);
-                break;
-            case ModalKind.SetupWizard:
-                dialogs.SetupWizardExitConfirm.ShowCommand.Execute(null);
-                break;
-            case ModalKind.ResourcePanel:
-                resourcePanel.CloseResourcePanelCommand.Execute(null);
-                break;
-            default:
-                return false;
-        }
-        return true;
+        var top = ModalHost.Top;
+        return top is not null && modalRegistrar.TryDispatchEscape(top.Kind);
     }
 
     /// <summary>Unsubscribes lifecycle callbacks and releases lifecycle-owned resources.</summary>
@@ -756,162 +772,4 @@ public sealed class ShellLifecycle : IShellRuntime
         }
     }
 
-    private void OnWindowChromePropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(WindowChromeViewModel.IsSettingsVisible))
-        {
-            SyncModal(ModalKind.Settings, windowChrome.IsSettingsVisible, settings);
-        }
-    }
-
-    private void OnSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(SettingsViewModel.IsUnsavedChangesVisible))
-        {
-            SyncModal(
-                ModalKind.UnsavedSettingsConfirmation,
-                settings.IsUnsavedChangesVisible,
-                settings);
-        }
-    }
-
-    private void OnResourcePanelPropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(ResourcePanelViewModel.IsResourcePanelVisible))
-        {
-            SyncModal(
-                ModalKind.ResourcePanel,
-                resourcePanel.IsResourcePanelVisible,
-                resourcePanel);
-        }
-    }
-
-    private void OnLogViewerPropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(LogViewerDialogViewModel.IsVisible))
-        {
-            SyncModal(ModalKind.LogViewer, logViewer.IsVisible, logViewer);
-        }
-    }
-
-    private void OnLogExportPropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(LogExportDialogViewModel.IsVisible))
-        {
-            SyncModal(ModalKind.LogExport, logExport.IsVisible, logExport);
-        }
-    }
-
-    private void OnDebugPropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(DebugViewModel.IsVisible))
-        {
-            SyncModal(ModalKind.Debug, debug.IsVisible, debug);
-        }
-    }
-
-    private void OnGalleryPropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(DesignGalleryViewModel.IsVisible))
-        {
-            SyncModal(
-                ModalKind.DesignGallery,
-                dialogs.Gallery.IsVisible,
-                dialogs.Gallery);
-        }
-    }
-
-    /// <summary>
-    /// 确认对话框家族的可见性同步：实例的 IsVisible 变化映射回各自的 ModalKind
-    /// 后进模态栈。对话框内容仍由 <see cref="DialogsViewModel"/> 呈现，模态栈只
-    /// 需要知道当前顶层是哪一类确认。
-    /// </summary>
-    private void OnConfirmationVisibilityChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName != nameof(ConfirmationDialogViewModel.IsVisible)
-            || sender is not ConfirmationDialogViewModel confirmation)
-        {
-            return;
-        }
-
-        var (kind, content) = MapConfirmationModal(confirmation);
-        SyncModal(kind, confirmation.IsVisible, content);
-    }
-
-    private (ModalKind Kind, IModalContentViewModel Content) MapConfirmationModal(
-        ConfirmationDialogViewModel confirmation)
-    {
-        if (ReferenceEquals(confirmation, dialogs.StopConfirm))
-        {
-            return (ModalKind.StopConfirmation, dialogs);
-        }
-
-        if (ReferenceEquals(confirmation, dialogs.DownloadRunningCloseConfirm))
-        {
-            return (ModalKind.DownloadRunningCloseConfirmation, dialogs);
-        }
-
-        if (ReferenceEquals(confirmation, dialogs.UninstallConfirm))
-        {
-            return (ModalKind.UninstallConfirmation, dialogs);
-        }
-
-        if (ReferenceEquals(confirmation, dialogs.RepairConfirm))
-        {
-            return (ModalKind.RepairConfirmation, dialogs);
-        }
-
-        if (ReferenceEquals(confirmation, dialogs.ResourcePanelSourceConfirm))
-        {
-            return (ModalKind.ResourcePanelSourceConfirmation, dialogs);
-        }
-
-        if (ReferenceEquals(confirmation, dialogs.DebugResetConfirm))
-        {
-            return (ModalKind.DebugResetConfirmation, dialogs);
-        }
-
-        if (ReferenceEquals(confirmation, dialogs.SettingsResetConfirm))
-        {
-            return (ModalKind.SettingsResetConfirmation, dialogs);
-        }
-
-        if (ReferenceEquals(confirmation, dialogs.SetupWizardExitConfirm))
-        {
-            return (ModalKind.SetupWizardExitConfirmation, dialogs);
-        }
-
-        throw new InvalidOperationException($"Unregistered confirmation dialog: {confirmation.LogSource}.");
-    }
-
-    private void OnDialogsPropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        switch (e.PropertyName)
-        {
-            case nameof(DialogsViewModel.IsNoticeDialogVisible):
-                SyncModal(ModalKind.Notice, dialogs.IsNoticeDialogVisible, dialogs);
-                break;
-            case nameof(DialogsViewModel.IsUpdateAvailableVisible):
-                SyncModal(ModalKind.Update, dialogs.IsUpdateAvailableVisible, dialogs);
-                break;
-            case nameof(DialogsViewModel.IsErrorDialogVisible):
-                SyncModal(ModalKind.Error, dialogs.IsErrorDialogVisible, dialogs);
-                break;
-            case nameof(DialogsViewModel.IsSetupWizardVisible):
-                SyncModal(ModalKind.SetupWizard, dialogs.IsSetupWizardVisible, dialogs.SetupWizard);
-                break;
-        }
-    }
-
-    private void SyncModal(ModalKind kind, bool isVisible, IModalContentViewModel content)
-    {
-        if (isVisible)
-        {
-            ModalHost.Open(kind, content);
-        }
-        else
-        {
-            ModalHost.Close(kind);
-        }
-    }
 }
