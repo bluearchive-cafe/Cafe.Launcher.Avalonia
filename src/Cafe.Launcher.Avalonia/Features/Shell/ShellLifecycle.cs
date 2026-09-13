@@ -112,6 +112,13 @@ public sealed class ShellLifecycle : IShellRuntime
         IFilePickerService filePickerService,
         bool ownsPresentationCollaborators)
     {
+        // 所有权制度按构造路径分叉（受控测试缝，见 AUD-ARCH-003）：
+        // - 生产 DI 路径走公开构造，ownsPresentationCollaborators: false——展示 VM 家族由
+        //   DI 组合根（全 Singleton）持有并释放，Dispose 不得触碰它们。
+        // - 测试路径经 MainWindowViewModel 的 internal 构造以 owns: true 创建，替身展示
+        //   VM 无容器持有，由 ShellLifecycle.Dispose 统一释放。两种制度下 Dispose 的释放
+        //   范围不同；与释放顺序相关的回归在测试中不可复现，收敛该分叉需先让测试路径
+        //   显式管理替身生命周期（已裁定当前缝可接受，故仅在此书面记录差异）。
         this.filePickerService = filePickerService;
         this.launcherCoreService = launcherCoreService;
         this.settingsService = settingsService;
