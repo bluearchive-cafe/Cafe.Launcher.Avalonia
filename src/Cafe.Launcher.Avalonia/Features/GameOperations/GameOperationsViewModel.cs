@@ -364,9 +364,9 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
             await journey.ResumePersistedAsync(currentSnapshot, cancellationToken);
     }
 
-    public void StopDownload(bool clearPersistedState)
+    public void StopDownload(DownloadStopReason reason)
     {
-        journey.Stop(clearPersistedState);
+        journey.Stop(reason);
     }
 
     public bool IsDownloadRunning => journey.IsDownloadRunning;

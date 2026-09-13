@@ -125,6 +125,7 @@ public sealed partial class MainWindowViewModelTests : IDisposable
             diagnostics,
             localizationService,
             new GameInstallationPath(),
+            new DownloadCheckpointStore(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "download_state.json")),
             new GameProcessTracker());
 
         var remoteContentViewModel = new RemoteContentViewModel(localizationService, imageCacheService, diagnostics);

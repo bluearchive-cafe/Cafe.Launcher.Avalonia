@@ -45,16 +45,10 @@ internal sealed class DownloadSession : IDisposable
 
     /// <summary>Gets the cancellation source owned by this single download session.</summary>
     public CancellationTokenSource CancellationTokenSource { get; }
-    private int clearPersistedStateOnCancel;
+    private int stopReason;
 
-    /// <summary>Sets whether cancellation clears the persisted download checkpoint.</summary>
-    public bool ClearPersistedStateOnCancel
-    {
-        set => Volatile.Write(ref clearPersistedStateOnCancel, value ? 1 : 0);
-    }
-
-    private bool ShouldClearPersistedStateOnCancel =>
-        Volatile.Read(ref clearPersistedStateOnCancel) == 1;
+    private bool ShouldDiscardCheckpointOnCancel =>
+        (DownloadStopReason)Volatile.Read(ref stopReason) == DownloadStopReason.UserRequested;
 
     /// <summary>Gets whether execution is currently paused at a download boundary.</summary>
     public bool IsPaused
@@ -138,7 +132,7 @@ internal sealed class DownloadSession : IDisposable
         }
         catch (OperationCanceledException) when (activeToken.IsCancellationRequested)
         {
-            if (ShouldClearPersistedStateOnCancel)
+            if (ShouldDiscardCheckpointOnCancel)
             {
                 checkpointStore.Clear();
             }
@@ -555,8 +549,14 @@ internal sealed class DownloadSession : IDisposable
     }
 
     /// <summary>Cancels the session and releases any paused work.</summary>
-    public void Stop()
+    /// <summary>
+    /// 停止会话。停止原因在取消触发前一次性写入并原子生效：用户停止在取消
+    /// 处理时丢弃持久化检查点，生命周期退出保留它供下次启动续传——外层
+    /// 不再需要在 Stop 之前预置任何标志。
+    /// </summary>
+    public void Stop(DownloadStopReason reason)
     {
+        Volatile.Write(ref stopReason, (int)reason);
         CancellationTokenSource.Cancel();
         ResetPauseState();
     }

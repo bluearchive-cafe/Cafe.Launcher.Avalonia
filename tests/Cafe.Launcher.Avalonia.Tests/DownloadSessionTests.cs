@@ -71,7 +71,7 @@ public sealed class DownloadSessionTests
         using var session = CreateSession();
 
         Assert.False(session.CancellationTokenSource.IsCancellationRequested);
-        session.Stop();
+        session.Stop(DownloadStopReason.ApplicationExit);
         Assert.True(session.CancellationTokenSource.IsCancellationRequested);
     }
 

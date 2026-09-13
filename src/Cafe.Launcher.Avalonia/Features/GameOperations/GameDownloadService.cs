@@ -51,7 +51,8 @@ public sealed class GameDownloadService : IDisposable
         LocalDiagnostics diagnostics,
         LocalizationService localizer,
         GameInstallationPath installationPath,
-        IGameProcessTracker gameProcessTracker)
+        IGameProcessTracker gameProcessTracker,
+        DownloadCheckpointStore checkpointStore)
     {
         this.apiClient = apiClient;
         this.remoteManifestService = remoteManifestService;
@@ -68,7 +69,7 @@ public sealed class GameDownloadService : IDisposable
         this.localizer = localizer;
         this.installationPath = installationPath;
         this.gameProcessTracker = gameProcessTracker;
-        checkpointStore = DownloadCheckpointStore.CreateDefault();
+        this.checkpointStore = checkpointStore;
         sessionContext = BuildSessionContext(checkpointStore);
     }
 
@@ -100,9 +101,9 @@ public sealed class GameDownloadService : IDisposable
             diagnostics,
             localizer,
             installationPath,
-            gameProcessTracker)
+            gameProcessTracker,
+            new DownloadCheckpointStore(downloadStateFilePath))
     {
-        checkpointStore = new DownloadCheckpointStore(downloadStateFilePath);
         sessionContext = BuildSessionContext(checkpointStore);
     }
 
@@ -132,7 +133,11 @@ public sealed class GameDownloadService : IDisposable
         return await RunSessionAsync(snapshot, repair: true, progress, cancellationToken).ConfigureAwait(false);
     }
 
-    public void Stop(bool clearPersistedState = true)
+    /// <summary>
+    /// 停止当前下载会话。停止原因随取消一次性传入会话：用户停止丢弃持久化
+    /// 检查点，生命周期退出保留它供下次启动续传——调用方无需预置任何标志。
+    /// </summary>
+    public void Stop(DownloadStopReason reason)
     {
         DownloadSession? session;
         lock (activeDownloadLock)
@@ -140,20 +145,22 @@ public sealed class GameDownloadService : IDisposable
             session = activeSession;
             if (session is not null)
             {
-                session.ClearPersistedStateOnCancel = clearPersistedState;
                 activeSession = null;
             }
         }
 
         if (session is not null)
         {
-            session.Stop();
+            session.Stop(reason);
             IsRunningChanged?.Invoke();
-            // Only a live session is a user stop: shutdown calls Stop() with no active
-            // session, and logging there produced phantom "stopped by user" entries on
-            // every clean exit. The injected logger keeps the line off the process-wide
-            // static sink.
-            diagnostics.DebugAsync("GameDownload", "Download stopped by user").GetAwaiter().GetResult();
+            // Only a live session counts as a stop: lifecycle shutdown calls Stop() with no
+            // active session, and logging there produced phantom "stopped" entries on every
+            // clean exit. The injected logger keeps the line off the process-wide static sink.
+            diagnostics.DebugAsync(
+                "GameDownload",
+                reason == DownloadStopReason.UserRequested
+                    ? "Download stopped by user"
+                    : "Download stopped for application exit").GetAwaiter().GetResult();
         }
     }
 
@@ -294,7 +301,8 @@ public sealed class GameDownloadService : IDisposable
             activeSession = session;
         }
 
-        previous?.Stop();
+        // 被新操作取代的旧会话按用户意图处置：丢弃旧检查点，新会话写入自己的。
+        previous?.Stop(DownloadStopReason.UserRequested);
     }
 
     private bool ClearActiveSession(DownloadSession session)
@@ -329,7 +337,7 @@ public sealed class GameDownloadService : IDisposable
             activeSession = null;
         }
 
-        session?.Stop();
+        session?.Stop(DownloadStopReason.ApplicationExit);
         session?.Dispose();
         GC.SuppressFinalize(this);
     }

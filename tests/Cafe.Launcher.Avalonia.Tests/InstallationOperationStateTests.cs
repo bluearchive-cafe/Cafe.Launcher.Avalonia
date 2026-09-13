@@ -529,7 +529,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             new LocalInstallationStateStore(),
             new LocalDiagnostics(),
             new LocalizationService(),
-            new GameInstallationPath(), new GameProcessTracker());
+            new GameInstallationPath(), new DownloadCheckpointStore(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "checkpoint.json")), new GameProcessTracker());
 
         var result = await service.ValidateAsync(gamePath);
 
@@ -545,7 +545,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             new LocalInstallationStateStore(),
             new LocalDiagnostics(),
             localizer,
-            new GameInstallationPath(), new GameProcessTracker());
+            new GameInstallationPath(), new DownloadCheckpointStore(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "checkpoint.json")), new GameProcessTracker());
         var protectedPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         Assert.False(string.IsNullOrWhiteSpace(protectedPath));
 
@@ -574,6 +574,7 @@ public sealed class InstallationOperationStateTests : IDisposable
                 new LocalDiagnostics(),
                 localizer,
                 new GameInstallationPath(),
+                new DownloadCheckpointStore(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "checkpoint.json")),
                 new RunningGameProcessTracker());
 
             var result = await service.ValidateAsync(gamePath);
@@ -596,7 +597,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             new LocalInstallationStateStore(),
             new LocalDiagnostics(),
             localizer,
-            new GameInstallationPath(), new GameProcessTracker());
+            new GameInstallationPath(), new DownloadCheckpointStore(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "checkpoint.json")), new GameProcessTracker());
         var driveRoot = Path.GetPathRoot(Path.GetTempPath());
         Assert.False(string.IsNullOrWhiteSpace(driveRoot));
 
@@ -615,7 +616,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             new LocalInstallationStateStore(),
             new LocalDiagnostics(),
             localizer,
-            new GameInstallationPath(), new GameProcessTracker());
+            new GameInstallationPath(), new DownloadCheckpointStore(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "checkpoint.json")), new GameProcessTracker());
         var missingPath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
 
         var result = await service.ValidateAsync(missingPath);
@@ -638,7 +639,7 @@ public sealed class InstallationOperationStateTests : IDisposable
                 new LocalInstallationStateStore(),
                 new LocalDiagnostics(),
                 localizer,
-                new GameInstallationPath(), new GameProcessTracker());
+                new GameInstallationPath(), new DownloadCheckpointStore(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "checkpoint.json")), new GameProcessTracker());
 
             var result = await service.ValidateAsync(invalidGamePath);
 
@@ -686,7 +687,7 @@ public sealed class InstallationOperationStateTests : IDisposable
                 new LocalInstallationStateStore(),
                 new LocalDiagnostics(),
                 localizer,
-                new GameInstallationPath(), new GameProcessTracker());
+                new GameInstallationPath(), new DownloadCheckpointStore(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "checkpoint.json")), new GameProcessTracker());
 
             var result = await service.ValidateAsync(gamePath);
 
@@ -724,7 +725,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             store,
             new LocalDiagnostics(),
             new LocalizationService(),
-            new GameInstallationPath(), new GameProcessTracker());
+            new GameInstallationPath(), new DownloadCheckpointStore(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "checkpoint.json")), new GameProcessTracker());
         var snapshot = new LauncherStatusSnapshot
         {
             RuntimeState = LauncherRuntimeState.Ready,
@@ -759,7 +760,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             new DiskSpaceService(),
             new LocalDiagnostics(),
             new LocalizationService(),
-            new GameInstallationPath(), new GameProcessTracker());
+            new GameInstallationPath(), new GameProcessTracker(), new DownloadCheckpointStore(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "checkpoint.json")));
 
         var result = await service.RepairAsync(
             new LauncherStatusSnapshot { RuntimeState = LauncherRuntimeState.NotInstalled },
@@ -776,7 +777,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             new LocalInstallationStateStore(),
             new LocalDiagnostics(),
             new LocalizationService(),
-            new GameInstallationPath(), new GameProcessTracker());
+            new GameInstallationPath(), new DownloadCheckpointStore(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "checkpoint.json")), new GameProcessTracker());
 
         var result = await service.UninstallAsync(
             new LauncherStatusSnapshot

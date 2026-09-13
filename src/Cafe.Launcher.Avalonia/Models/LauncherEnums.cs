@@ -1,5 +1,15 @@
 namespace Cafe.Launcher.Avalonia.Models;
 
+/// <summary>下载停止的语义原因：决定持久化检查点的去留。</summary>
+public enum DownloadStopReason
+{
+    /// <summary>用户明确停止：丢弃持久化检查点与临时进度，不自动续传。</summary>
+    UserRequested,
+
+    /// <summary>应用生命周期退出（关机、会话结束、窗口销毁）：保留检查点，下次启动可续传。</summary>
+    ApplicationExit
+}
+
 public enum GameOperationsRefreshMode
 {
     Normal,

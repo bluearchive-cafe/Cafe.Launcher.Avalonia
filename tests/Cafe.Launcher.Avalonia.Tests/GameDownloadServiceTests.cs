@@ -83,7 +83,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         var apiClient = new LauncherApiClient(new StubRemoteHttpTransport(), new AuthorizationHeaderFactory(), new PatchUrlGroupService());
         var service = CreateService(apiClient);
 
-        service.Stop();
+        service.Stop(DownloadStopReason.ApplicationExit);
         service.Dispose();
     }
 
@@ -106,8 +106,8 @@ public sealed class GameDownloadServiceTests : IDisposable
             Path.Combine(tempDir, "download_state.json"),
             diagnostics: diagnostics);
 
-        service.Stop();
-        service.Stop();
+        service.Stop(DownloadStopReason.ApplicationExit);
+        service.Stop(DownloadStopReason.ApplicationExit);
         // Sentinel proves the sink is live, so the negative assertion cannot pass vacuously.
         await diagnostics.DebugAsync("StopLogSentinel", "sentinel");
         logger.Dispose();
@@ -143,7 +143,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         var operation = service.InstallOrUpdateAsync(snapshot, _ => { });
         await downloader.DownloadStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
 
-        service.Stop();
+        service.Stop(DownloadStopReason.UserRequested);
         await operation.WaitAsync(TimeSpan.FromSeconds(2));
         logger.Dispose();
         var logText = await File.ReadAllTextAsync(logger.LogFilePath);
@@ -838,10 +838,10 @@ public sealed class GameDownloadServiceTests : IDisposable
     }
 
     [Theory]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
-    public async Task Stop_WhenOperationIsPaused_StopsOperationAndAppliesPersistedStateChoice(
-        bool clearPersistedState,
+    [InlineData(DownloadStopReason.UserRequested, false)]
+    [InlineData(DownloadStopReason.ApplicationExit, true)]
+    public async Task Stop_WhenOperationIsPaused_AppliesCheckpointChoiceMatchingStopReason(
+        DownloadStopReason reason,
         bool expectedStateFileExists)
     {
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
@@ -865,7 +865,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         downloader.AllowPauseCheck.TrySetResult();
         await downloader.PauseCheckStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
 
-        service.Stop(clearPersistedState);
+        service.Stop(reason);
         var result = await operation.WaitAsync(TimeSpan.FromSeconds(2));
 
         Assert.False(result.Success);
@@ -1538,7 +1538,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         finally
         {
             transport.Release.TrySetResult();
-            service.Stop();
+            service.Stop(DownloadStopReason.ApplicationExit);
             await repairTask;
             Directory.Delete(tempDir, recursive: true);
         }

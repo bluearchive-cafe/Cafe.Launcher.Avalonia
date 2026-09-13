@@ -161,7 +161,7 @@ public sealed class WindowChromeViewModelTests : IDisposable
 
         context.ViewModel.CloseAfterStoppingDownload();
 
-Assert.True(context.Backend.LastStopClearPersistedState);
+Assert.Equal(DownloadStopReason.UserRequested, context.Backend.LastStopReason);
         Assert.True(closed);
     }
 

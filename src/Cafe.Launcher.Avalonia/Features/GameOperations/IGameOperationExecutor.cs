@@ -52,8 +52,8 @@ internal interface IGameOperationExecutor
         LauncherStatusSnapshot snapshot,
         Action<GameOperationProgress> progress);
 
-    /// <summary>Stops work and optionally clears its persisted checkpoint.</summary>
-    void Stop(bool clearPersistedState);
+    /// <summary>Stops work with the named intent: user stop discards the persisted checkpoint, application exit keeps it for resume.</summary>
+    void Stop(DownloadStopReason reason);
 
     /// <summary>Pauses active installation work.</summary>
     void Pause();
