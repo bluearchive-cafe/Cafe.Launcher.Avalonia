@@ -79,7 +79,12 @@ public sealed class ResourcePanelViewModelTests
         Assert.False(voice.IsEnabled);
         Assert.Equal("ClockOutline", voice.StatusIconKind);
         Assert.False(voice.IsVersionAligned);
+        // 脏检查：加载完成后无任何改动，保存不可用；改动开关后恢复可用。
+        Assert.False(context.ViewModel.IsResourcePanelSaveEnabled);
+        GetItem(context.ViewModel, ResourcePanelResourceCodes.Voice).IsEnabled = true;
         Assert.True(context.ViewModel.IsResourcePanelSaveEnabled);
+        GetItem(context.ViewModel, ResourcePanelResourceCodes.Voice).IsEnabled = false;
+        Assert.False(context.ViewModel.IsResourcePanelSaveEnabled);
         Assert.True(context.ViewModel.IsResourcePanelVisible);
     }
 
@@ -275,6 +280,51 @@ public sealed class ResourcePanelViewModelTests
         // custom 存档 UID 为空 → 回退到 cookie 自动检测，UID 保持可用。
         Assert.Equal("UIDTESTA", context.ViewModel.ResourcePanelUid);
         Assert.False(context.ViewModel.IsResourcePanelUidMissing);
+    }
+
+    [Fact]
+    public async Task RefreshResourcePanel_AfterSuccessfulLoad_PreservesVersionsWhileLoadingAndAfterFailure()
+    {
+        using var context = await CreateContextAsync(
+            cookieUid: "UIDTESTA",
+            configure: transport =>
+            {
+                transport.StatusJson = """
+                {
+                  "text": {
+                    "official": { "version": "1.0.0" },
+                    "localized": { "version": "1.0.0" }
+                  }
+                }
+                """;
+                transport.ConfigJson = """{ "text": "cn", "voice": "jp", "media": "jp" }""";
+            });
+        context.ViewModel.ApplySettings(new LauncherSettings
+        {
+            PatchUrlGroup = PatchUrlGroups.Cafe,
+            ProxyMode = ProxyModes.Direct
+        });
+        await context.ViewModel.OpenResourcePanelCommand.ExecuteAsync(null);
+        var text = GetItem(context.ViewModel, ResourcePanelResourceCodes.Text);
+        Assert.Equal("1.0.0", text.OfficialVersion);
+
+        // 同一 UID 重载：加载中保留已加载的版本，不闪烁归零。
+        // 失败注入必须先于刷新（status 与 config 并行发出），再把 /status/list 挂门控观察加载中。
+        context.Transport.ConfigGetStatusCode = HttpStatusCode.InternalServerError;
+        context.Transport.GateStatus = true;
+        var refreshTask = context.ViewModel.RefreshResourcePanelCommand.ExecuteAsync(null);
+        await WaitUntilAsync(() => context.ViewModel.IsResourcePanelBusy
+            && context.ViewModel.ResourcePanelItems.All(item => item.Status == ResourcePanelItemStatus.Loading)
+            && context.Transport.StatusListCount == 2);
+        Assert.Equal("1.0.0", text.OfficialVersion);
+
+        // 重载失败：保留最后一次成功数据供诊断，仅状态转 Failed、消息标记错误。
+        context.Transport.ReleaseStatus();
+        await refreshTask.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal("1.0.0", text.OfficialVersion);
+        Assert.Equal(ResourcePanelItemStatus.Failed, text.Status);
+        Assert.True(context.ViewModel.IsResourcePanelMessageError);
+        Assert.False(context.ViewModel.IsResourcePanelSaveEnabled);
     }
 
     private static ResourcePanelItem GetItem(ResourcePanelViewModel viewModel, string code) =>
