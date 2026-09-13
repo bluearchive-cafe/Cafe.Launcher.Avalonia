@@ -1,0 +1,716 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Cafe.Launcher.Avalonia — 架构深化评审 2026-09-13</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({ startOnLoad: true, theme: "neutral", securityLevel: "loose" });
+</script>
+<style>
+  .badge-strong  { background:#059669; color:#fff; }
+  .badge-explore { background:#d97706; color:#fff; }
+  .badge-spec    { background:#64748b; color:#fff; }
+  .badge-done    { background:#4f46e5; color:#fff; }
+  .badge-cat     { border:1px solid #cbd5e1; color:#475569; }
+  .badge { font-size:11px; letter-spacing:.08em; text-transform:uppercase; padding:3px 10px; border-radius:9999px; font-weight:600; }
+  .modlabel { font-size:10px; letter-spacing:.12em; text-transform:uppercase; }
+  .deepbox  { background:linear-gradient(135deg,#0f172a,#1e293b); color:#f1f5f9; }
+  .faded    { opacity:.45; }
+  .seam     { stroke-dasharray:5 4; }
+  .leakedge { stroke:#dc2626; stroke-width:2; }
+  .diagram  { height:320px; overflow:hidden; }
+  table.policy { border-collapse:collapse; font-size:11px; }
+  table.policy th, table.policy td { border:1px solid #cbd5e1; padding:2px 7px; text-align:left; }
+  table.policy th { background:#f1f5f9; font-weight:600; }
+</style>
+</head>
+<body class="bg-stone-50 text-slate-900 font-sans">
+<main class="max-w-5xl mx-auto px-6 py-12 space-y-12">
+
+<!-- ============ Header ============ -->
+<header class="space-y-4">
+  <h1 class="font-serif text-3xl">Cafe.Launcher.Avalonia — 架构深化评审</h1>
+  <p class="text-sm text-slate-500">2026-09-13 · 评审基线 main@a985718 · 11 个候选 + 3 项暂缓 · 词汇表：模块 / 接口 / 深度 / 接缝 / 适配器 / 杠杆 / 局部性</p>
+  <div class="rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 space-y-1">
+    <p class="text-sm font-semibold text-indigo-900">进度：已落地 9 / 11 · 否决 2（截至 2026-09-13）——全部 11 项已裁决</p>
+    <div class="w-full h-2 rounded-full bg-indigo-100 overflow-hidden">
+      <div class="h-full rounded-full bg-indigo-600" style="width:100%"></div>
+    </div>
+    <p class="text-xs text-indigo-900/80">✓ <a href="#c01" class="underline">候选 01</a>（三步：88ebd46 → ca352db → fae538a） · ✓ <a href="#c08" class="underline">候选 08</a>（2fab374） · ✓ <a href="#c02" class="underline">候选 02</a>（1b4bddf） · ✓ <a href="#c04" class="underline">候选 04</a>（98f5655） · ✓ <a href="#c05" class="underline">候选 05</a>（89d3c17） · 文档同步 6f67033。✗ <a href="#c03" class="underline">候选 03</a> 经重审否决（ADR-021） · ✗ <a href="#c07" class="underline">候选 07</a> 否决原案、收缩落地检查点单点化（ADR-022，81965b2） · ✓ <a href="#c09" class="underline">候选 09</a>（ad9de79） · ✓ <a href="#c10" class="underline">候选 10</a> 收缩落地（4aabccc） · ✓ <a href="#c06" class="underline">候选 06</a>（ADR-023 前置 6c14c48 + 实现 77547fa） · ✓ <a href="#c11" class="underline">候选 11</a>（d33633b）。11 项全部裁决完毕。门禁全程绿：单元 1695 / headless 176 / 覆盖率 86.33% 行 · 93.04% 分支（棘轮保持）。</p>
+  </div>
+  <div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-slate-500">
+    <span><span class="inline-block w-3 h-3 border border-slate-400 bg-white align-[-1px]"></span> 模块（module）</span>
+    <span><span class="inline-block w-4 border-t-2 border-dashed border-slate-400 align-middle"></span> 接缝（seam）</span>
+    <span><span class="inline-block w-4 border-t-2 border-red-600 align-middle"></span> 泄漏（leak）</span>
+    <span><span class="inline-block w-3 h-3 deepbox align-[-1px]"></span> 深模块（deep module）</span>
+  </div>
+  <p class="text-sm text-slate-600">热点依据近三个月提交历史：网络子系统（socks / 重定向 / DNS 缓存 / 超时预算连续修复）、GameOperations 下载管线、诊断与 Shell 模态层。三个方向各派一个探查代理走查后汇成以下候选。20 个 ADR 全部属于设计系统决策，除卡片 06 需修订 ADR-015 外，其余候选均无裁定冲突。</p>
+  <nav class="flex flex-wrap gap-2 text-xs">
+    <a href="#c01" class="px-2.5 py-1 rounded-full border border-indigo-400 bg-indigo-50 text-indigo-800">01 HTTP 传输 ✓</a>
+    <a href="#c02" class="px-2.5 py-1 rounded-full border border-indigo-400 bg-indigo-50 text-indigo-800">02 代理域 ✓</a>
+    <a href="#c03" class="px-2.5 py-1 rounded-full border border-red-300 bg-red-50 text-red-700">03 Executor 直通带 ✗</a>
+    <a href="#c04" class="px-2.5 py-1 rounded-full border border-indigo-400 bg-indigo-50 text-indigo-800">04 操作权限表 ✓</a>
+    <a href="#c05" class="px-2.5 py-1 rounded-full border border-indigo-400 bg-indigo-50 text-indigo-800">05 停止意图 ✓</a>
+    <a href="#c06" class="px-2.5 py-1 rounded-full border border-indigo-400 bg-indigo-50 text-indigo-800">06 模态注册 ✓</a>
+    <a href="#c07" class="px-2.5 py-1 rounded-full border border-red-300 bg-red-50 text-red-700">07 规划/执行接缝 ✗</a>
+    <a href="#c08" class="px-2.5 py-1 rounded-full border border-indigo-400 bg-indigo-50 text-indigo-800">08 下载临时文件 ✓</a>
+    <a href="#c09" class="px-2.5 py-1 rounded-full border border-indigo-400 bg-indigo-50 text-indigo-800">09 确认对话框 ✓</a>
+    <a href="#c10" class="px-2.5 py-1 rounded-full border border-indigo-400 bg-indigo-50 text-indigo-800">10 轮播引擎 ✓</a>
+    <a href="#c11" class="px-2.5 py-1 rounded-full border border-indigo-400 bg-indigo-50 text-indigo-800">11 诊断静态接缝 ✓</a>
+  </nav>
+</header>
+
+<section id="candidates" class="space-y-10">
+
+<!-- ============ 01 RemoteHttpTransport ============ -->
+<article id="c01" class="rounded-xl border border-slate-200 bg-white p-6 space-y-4 shadow-sm">
+  <div class="flex items-start justify-between gap-4">
+    <h2 class="font-serif text-xl">01 · 把远程 HTTP 传输合并为一个深模块</h2>
+    <div class="flex gap-2 shrink-0">
+      <span class="badge badge-done">✓ 已落地</span><span class="badge badge-strong">Strong</span><span class="badge badge-cat">ports &amp; adapters</span>
+    </div>
+  </div>
+  <div class="rounded-lg bg-indigo-50 border border-indigo-200 px-4 py-2 text-xs text-indigo-900">
+    落地于 88ebd46（模块 + 测试套）→ ca352db（五调用方迁移，proxyMode 中继拆除，净 −827 行）→ fae538a（JSON 机制收编）。评审指出的「同一类泄漏不变量三周修三次」由构造消除；envelope 路径顺带获得缺失的 SSRF 校验与重定向处理。
+  </div>
+  <div class="font-mono text-xs text-slate-600 leading-5">
+    Services/RemoteHttpRequestService.cs · Services/RemoteHttpUrlValidator.cs · Services/ResponseBodyReader.cs ·
+    Services/HttpClientFactory.cs · Helpers/HttpClientLease.cs<br/>
+    调用方：LauncherApiClient.cs:209 · LauncherUpdateService.cs:190 · FileDownloadService.cs:91 · ImageCacheService.cs:236 · ResourcePanelApiClient.cs:130
+  </div>
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="rounded-lg border border-slate-200 p-3">
+      <p class="modlabel text-slate-400 mb-1">Before — 4 步调用方协议 × 6 处</p>
+      <div class="diagram">
+      <pre class="mermaid">
+flowchart TB
+  subgraph callers["调用方各自拼装"]
+    A["LauncherApiClient"]
+    B["LauncherUpdateService"]
+    C["FileDownloadService"]
+    D["ImageCacheService"]
+    E["ResourcePanelApiClient"]
+  end
+  subgraph parts["每次必须记住的零件"]
+    L["HttpClientLease<br/>Client + ConnectionProxy 成对"]
+    V["RemoteHttpUrlValidator<br/>逐 URI 出口判定"]
+    R["RemoteHttpRequestService<br/>两个语义不同的 SendAsync"]
+    B2["64MiB 上限 / 重试 / JSON"]
+  end
+  A --> L
+  B --> L
+  C --> L
+  D --> L
+  E --> L
+  A --> R
+  B --> R
+  C --> R
+  D --> R
+  E --> R
+  R -.->|"同一不变量 3 周内修 3 次<br/>9a24b97 · d6fee4e · d342641"| V
+      </pre>
+      </div>
+    </div>
+    <div class="rounded-lg border border-slate-200 p-3">
+      <p class="modlabel text-slate-400 mb-1">After — 一个接口，实现吸收全部不变量</p>
+      <div class="diagram">
+      <pre class="mermaid">
+flowchart TB
+  A["调用方 ×6"] --> T
+  T["RemoteHttpTransport<br/>GetJsonAsync / GetStreamAsync"]
+  subgraph impl["实现（藏起来）"]
+    direction LR
+    i1["租约"] ~~~ i2["URL 校验 + 出口判定"] ~~~ i3["手动重定向循环"] ~~~ i4["64MiB / 重试 / 停顿预算"]
+  end
+  T -.- impl
+  classDef deep fill:#0f172a,color:#f1f5f9,stroke:#0f172a;
+  classDef dim opacity:.55;
+  class T deep
+  class i1,i2,i3,i4 dim
+      </pre>
+      </div>
+    </div>
+  </div>
+  <p class="text-sm"><strong>问题</strong>：安全取一个远程 URL 是调用方的 4 步协议，不是一次调用——「池化处理器禁止自动重定向」「循环重载才校验 URL」「Client 与 ConnectionProxy 必须成对传递」都是调用方必须知道却无签名强制的事实；同一类泄漏不变量三周内在三个调用方各修一次。</p>
+  <p class="text-sm"><strong>方案</strong>：一个注入式传输模块，两个方法（取 JSON / 取流）；租约获取、SSRF 校验、逐 URI 出口判定、手动重定向、体积上限、重试全部沉入实现。校验器、重试、响应体读取器原样保留——它们是深度所在。</p>
+  <ul class="text-sm list-disc pl-5 space-y-1 marker:text-emerald-600">
+    <li>局部性：同类网络 bug 集中到一个模块</li>
+    <li>杠杆：一个接口服务 6 个调用点</li>
+    <li>接口收窄：出口判定变私有细节</li>
+    <li>级联删除：ProxyAwareHttpClientLeaseSource 直通层、4 份复制的测试构造器、零调用的 CreateClient 重载</li>
+    <li>测试穿过接口，不再绕过它（SendAsync 行为测试今天寄居在 RemoteHttpUrlValidatorTests.cs:240）</li>
+  </ul>
+</article>
+
+<!-- ============ 02 代理域 ============ -->
+<article id="c02" class="rounded-xl border border-slate-200 bg-white p-6 space-y-4 shadow-sm">
+  <div class="flex items-start justify-between gap-4">
+    <h2 class="font-serif text-xl">02 · 代理域收敛：规范化只发生一次</h2>
+    <div class="flex gap-2 shrink-0">
+      <span class="badge badge-done">✓ 已落地</span><span class="badge badge-strong">Strong</span><span class="badge badge-cat">local-substitutable</span>
+    </div>
+  </div>
+  <div class="rounded-lg bg-indigo-50 border border-indigo-200 px-4 py-2 text-xs text-indigo-900">
+    落地于 1b4bddf：指纹与处理器合入唯一的 GetOrCreateHandlerAsync（不匹配缓存结构上不可达），规范化收敛到摄入点唯一一处（socks:// 与 socks5:// 共享缓存），HttpClientFactory 缩为租约管道；白盒静态测试转接口级，缓存行为测试随实现搬家。
+  </div>
+  <div class="font-mono text-xs text-slate-600 leading-5">
+    Services/ProxySettingsService.cs · Services/WindowsRegistrySystemProxySettingsProvider.cs · Services/HttpClientFactory.cs:144
+  </div>
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="rounded-lg border border-slate-200 p-3 diagram">
+      <p class="modlabel text-slate-400 mb-2">Before — 一个类戴三顶帽子，不变量靠注释维系</p>
+      <div class="space-y-2 text-xs">
+        <div class="border-l-4 border-red-500 bg-red-50 pl-3 py-2">
+          <span class="modlabel text-red-700">规范化 ×2</span>
+          <div class="text-slate-700">注册表提供者已规范化 → ProxySettingsService.cs:46 又防御性做一遍，注释自述恐惧：「任何遗忘的提供者都会让 socks:// 在首次请求时复活」</div>
+        </div>
+        <div class="border-l-4 border-amber-500 bg-amber-50 pl-3 py-2">
+          <span class="modlabel text-amber-700">指纹 ⇄ 处理器等价</span>
+          <div class="text-slate-700">GetProxyFingerprintAsync 与 CreateHttpHandlerAsync 只靠纪律同步；改一半，旧处理器静默服务新代理（HttpClientFactory.cs:148）</div>
+        </div>
+        <div class="border-l-4 border-amber-500 bg-amber-50 pl-3 py-2">
+          <span class="modlabel text-amber-700">bypass 通配符翻译</span>
+          <div class="text-slate-700">裸 * 会在「首次使用代理时」抛 RegexParseException——只靠构造时约定防范</div>
+        </div>
+      </div>
+    </div>
+    <div class="rounded-lg border border-slate-200 p-3 diagram flex flex-col">
+      <p class="modlabel text-slate-400 mb-2">After — 一个深模块，一个显式适配器</p>
+      <div class="flex-1 flex items-center justify-center gap-3">
+        <div class="border border-slate-300 rounded bg-white px-3 py-2 text-center">
+          <div class="modlabel text-slate-500">适配器</div>
+          <div class="text-xs font-mono">WindowsRegistry…Provider</div>
+          <div class="text-[10px] text-slate-400">注册表快照 → SystemProxySettings?</div>
+        </div>
+        <svg width="46" height="20"><line x1="0" y1="10" x2="46" y2="10" stroke="#64748b" stroke-width="2" class="seam" marker-end="url(#a)"/></svg>
+        <div class="deepbox rounded-lg px-4 py-4 text-center">
+          <div class="modlabel text-slate-300">代理模块（深）</div>
+          <div class="text-xs mt-1">ResolveAsync(mode) → 连接策略</div>
+          <div class="text-[10px] text-slate-400 mt-1 faded">规范化 · WebProxy 构造 · 通配符翻译 · 指纹（私有）</div>
+        </div>
+      </div>
+      <p class="text-[11px] text-slate-500 mt-2">socks 修复（9a24b97）不再需要同时动规范化、构造与指纹三处。</p>
+    </div>
+  </div>
+  <p class="text-sm"><strong>问题</strong>：三个代理不变量分居三个文件、靠注释与纪律耦合；最近三个代理 bug 有两个落在这里，修复被迫一次横跨规范化、构造与指纹语义。</p>
+  <p class="text-sm"><strong>方案</strong>：一个代理模块拥有规范化（唯一一处）、处理器构造、通配符翻译与指纹；注册表提供者作为唯一生产适配器留在接缝上。处理器缓存可整体移入模块，HttpClientFactory 缩为客户端/租约管道。</p>
+  <ul class="text-sm list-disc pl-5 space-y-1 marker:text-emerald-600">
+    <li>局部性：socks 类修复集中一处</li>
+    <li>指纹⇄处理器不变量获得类型保证</li>
+    <li>白盒内部测试（ResolveProxyUrl_…）转为接口测试</li>
+    <li>「注册表中途变更 ⇒ 换新处理器」变得可直接测试</li>
+  </ul>
+</article>
+
+<!-- ============ 03 Executor 直通带 ============ -->
+<article id="c03" class="rounded-xl border border-slate-200 bg-white p-6 space-y-4 shadow-sm">
+  <div class="flex items-start justify-between gap-4">
+    <h2 class="font-serif text-xl">03 · 删除 GameOperationExecutor 直通带</h2>
+    <div class="flex gap-2 shrink-0">
+      <span class="badge badge-done" style="background:#b91c1c">✗ 已否决（ADR-021）</span><span class="badge badge-strong" style="opacity:.45">Strong</span><span class="badge badge-cat">in-process</span>
+    </div>
+  </div>
+  <div class="rounded-lg bg-red-50 border border-red-200 px-4 py-2 text-xs text-red-900">
+    <strong>重审否决（2026-09-13，<a href="../docs/design/adr/ADR-021-保留操作后端接缝.md">ADR-021</a>）</strong>：实现前的牵连面枚举推翻了删除测试的结论——<code>StubGameOperationExecutor</code> 是 15+ 个测试文件的脚本化操作后端，headless 的 <code>ThreadAwareGameOperationExecutor</code> 依赖它模拟跨线程 <code>IsRunningChanged</code> 竞态。删除会让复杂度在测试侧全面重现（真实服务的 <code>IsRunning</code> 不可脚本化），接口的生产适配器 + 测试适配器构成真实接缝。本卡保留为否决记录与评审方法教训：删除测试必须同时枚举生产与测试两侧。
+  </div>
+  <div class="font-mono text-xs text-slate-600 leading-5">
+    Features/GameOperations/GameOperationExecutor.cs（全文件 63 行）· IGameOperationExecutor.cs · GameOperationJourney.cs · GameOperationsViewModel.cs:104 · tests/TestDoubles/StubGameOperationExecutor.cs
+  </div>
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="rounded-lg border border-slate-200 p-3 diagram">
+      <p class="modlabel text-slate-400 mb-2">Before — 一次「暂停」穿越四跳零行为</p>
+      <div class="space-y-1.5">
+        <div class="h-11 border-l-4 border-slate-300 bg-slate-50 pl-3 flex items-center justify-between"><span class="modlabel">GameOperationsViewModel</span><span class="text-[10px] text-slate-400">触发命令</span></div>
+        <div class="h-11 border-l-4 border-slate-300 bg-slate-50 pl-3 flex items-center justify-between"><span class="modlabel">GameOperationJourney</span><span class="text-[10px] text-red-600">1:1 转发</span></div>
+        <div class="h-11 border-l-4 border-red-500 bg-red-50 pl-3 flex items-center justify-between"><span class="modlabel text-red-700">GameOperationExecutor（63 行）</span><span class="text-[10px] text-red-600">每一成员都是 1:1 转发</span></div>
+        <div class="h-11 border-l-4 border-slate-300 bg-slate-50 pl-3 flex items-center justify-between"><span class="modlabel">GameDownloadService</span><span class="text-[10px] text-slate-400">真实行为</span></div>
+        <div class="h-11 border-l-4 border-slate-300 bg-slate-50 pl-3 flex items-center justify-between"><span class="modlabel">DownloadSession</span><span class="text-[10px] text-slate-400">真实行为</span></div>
+      </div>
+    </div>
+    <div class="rounded-lg border border-slate-200 p-3 diagram">
+      <p class="modlabel text-slate-400 mb-2">After — 接缝留在真实适配器上</p>
+      <div class="space-y-1.5">
+        <div class="h-14 border-l-4 border-slate-300 bg-slate-50 pl-3 flex items-center justify-between"><span class="modlabel">GameOperationsViewModel</span><span class="text-[10px] text-slate-400">预检 UX</span></div>
+        <div class="h-20 deepbox rounded-lg pl-3 pr-3 flex flex-col justify-center gap-1">
+          <span class="modlabel text-slate-300">GameOperationJourney（规则之家）</span>
+          <span class="text-[10px] text-slate-400">重试分类 · 状态闸 · 刷新/快照纪律 —— 原样保留</span>
+        </div>
+        <div class="h-11 border-l-4 border-slate-300 bg-slate-50 pl-3 flex items-center justify-between"><span class="modlabel">GameLaunchService</span><span class="text-[10px] text-slate-400">接缝：IGameRuntime（已有 2 个适配器）</span></div>
+        <div class="h-11 border-l-4 border-slate-300 bg-slate-50 pl-3 flex items-center justify-between"><span class="modlabel">GameDownloadService</span><span class="text-[10px] text-slate-400">接缝：IFileDownloadService（真实）</span></div>
+        <div class="h-11 border-l-4 border-slate-300 bg-slate-50 pl-3 flex items-center justify-between"><span class="modlabel">GameUninstallService</span><span class="text-[10px] text-slate-400">接缝：状态存储（真实）</span></div>
+      </div>
+    </div>
+  </div>
+  <p class="text-sm"><strong>问题</strong>：63 行模块每个成员都 1:1 转发，唯一实现 = 假想接缝；删除测试通过——没有任何复杂度会在生产代码重现。新加一个操作如今要改 4 个文件（服务、executor 实现、executor 接口、journey）。</p>
+  <p class="text-sm"><strong>方案</strong>：journey 直接依赖三个管线模块；journey 自己的控制转发（GameOperationJourney.cs:349-365）一并消失。测试如需单一假体，留一个复合测试替身即可——那是测试机械，不是生产接口。</p>
+  <ul class="text-sm list-disc pl-5 space-y-1 marker:text-emerald-600">
+    <li>接口数量 −1，漂移风险随接口消失</li>
+    <li>新增操作：4 个文件 → 2 个</li>
+    <li>操作词汇表（stop/pause/isrunning）不再声明 3 次</li>
+  </ul>
+</article>
+
+<!-- ============ 04 权限表 ============ -->
+<article id="c04" class="rounded-xl border border-slate-200 bg-white p-6 space-y-4 shadow-sm">
+  <div class="flex items-start justify-between gap-4">
+    <h2 class="font-serif text-xl">04 · 「有效安装状态 → 操作」权限表收进一个模块</h2>
+    <div class="flex gap-2 shrink-0">
+      <span class="badge badge-done">✓ 已落地</span><span class="badge badge-strong">Strong</span><span class="badge badge-cat">in-process</span>
+    </div>
+  </div>
+  <div class="rounded-lg bg-indigo-50 border border-indigo-200 px-4 py-2 text-xs text-indigo-900">
+    落地于 98f5655：GameOperationPolicy.Allows(Operation, LauncherRuntimeState) 成为唯一权限表，8 个纯权限闸（三层下载/修复/卸载/启动闸 + VM 预检）统一改读；策略自带操作轴，与进度语义的 GameOperationKind 分开。评审卡中 journey 370-395 经重审为流程分支而非权限闸，保持原样。新增 4×7 全表测试 28 格显式断言 + 枚举长度守卫。行为零变化。
+  </div>
+  <div class="font-mono text-xs text-slate-600 leading-5">
+    GameOperationsViewModel.cs:265,333 · GameOperationJourney.cs:272,377 · GameDownloadService.cs:105,121 · GameLaunchService.cs:32 · GameUninstallService.cs:61
+  </div>
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="rounded-lg border border-slate-200 p-3 diagram">
+      <p class="modlabel text-slate-400 mb-2">Before — 同一张策略表存了三份局部副本</p>
+      <div class="grid grid-cols-3 gap-2">
+        <div>
+          <p class="modlabel text-red-700 mb-1">表示层</p>
+          <table class="policy"><tr><td>可启动</td><td>→启动</td></tr><tr><td>损坏</td><td>→修复</td></tr><tr><td>有效</td><td>→卸载</td></tr></table>
+        </div>
+        <div>
+          <p class="modlabel text-red-700 mb-1">旅程层</p>
+          <table class="policy"><tr><td>未安装…</td><td>→安装</td></tr><tr><td>损坏|可启动</td><td>→修复</td></tr><tr><td>有效</td><td>→卸载</td></tr></table>
+        </div>
+        <div>
+          <p class="modlabel text-red-700 mb-1">服务层</p>
+          <table class="policy"><tr><td>未安装…</td><td>→安装</td></tr><tr><td>损坏|可启动</td><td>→修复</td></tr><tr><td>有效</td><td>→卸载</td></tr></table>
+        </div>
+      </div>
+      <p class="text-[11px] text-red-600 mt-3">删除任何一份守卫，bug 在另一层重现 —— 不变量无家可归。新增一个 LauncherRuntimeState 要改 5 个 switch、4 组守卫。</p>
+    </div>
+    <div class="rounded-lg border border-slate-200 p-3 diagram flex flex-col">
+      <p class="modlabel text-slate-400 mb-2">After — 一个模块，三个读者</p>
+      <div class="deepbox rounded-lg px-4 py-4 text-center">
+        <div class="modlabel text-slate-300">GameOperationPolicy</div>
+        <div class="text-xs mt-1">Check(操作种类, 运行状态) → 允许 | 原因</div>
+      </div>
+      <div class="flex justify-center my-2"><svg width="200" height="18"><line x1="100" y1="0" x2="100" y2="18" stroke="#64748b" stroke-width="2" class="seam"/></svg></div>
+      <div class="grid grid-cols-3 gap-2 text-center text-xs">
+        <div class="border border-slate-300 rounded py-2">VM<br/><span class="text-[10px] text-slate-400">预检 UX：跳过哪个提示</span></div>
+        <div class="border border-slate-300 rounded py-2">Journey<br/><span class="text-[10px] text-slate-400">路径闸</span></div>
+        <div class="border border-slate-300 rounded py-2">服务<br/><span class="text-[10px] text-slate-400">执行边界断言一次</span></div>
+      </div>
+      <p class="text-[11px] text-slate-500 mt-3">各表面对状态文案的 switch（按钮标签、toast 文字）原地保留——那是合法的每表面职责。</p>
+    </div>
+  </div>
+  <p class="text-sm"><strong>问题</strong>：安装生命周期语境（CONTEXT.md）里「可启动 permits 启动、损坏 permits 修复、有效 permits 卸载」这张表，在表示、旅程、服务三层各存一份形状略异的副本。</p>
+  <p class="text-sm"><strong>方案</strong>：单一静态函数作为策略表的家；可观察行为完全不变，`GameOperationErrorCode.InvalidState` 仍是终结错误模式。</p>
+  <ul class="text-sm list-disc pl-5 space-y-1 marker:text-emerald-600">
+    <li>新增状态：5 个 switch → 1 处</li>
+    <li>一张 kind × state 表格测试钉死策略</li>
+    <li>三层散落的守卫测试合并为一</li>
+  </ul>
+</article>
+
+<!-- ============ 05 停止意图 ============ -->
+<article id="c05" class="rounded-xl border border-slate-200 bg-white p-6 space-y-4 shadow-sm">
+  <div class="flex items-start justify-between gap-4">
+    <h2 class="font-serif text-xl">05 · 用命名的停止/刷新意图替代 clearPersistedState 布尔</h2>
+    <div class="flex gap-2 shrink-0">
+      <span class="badge badge-done">✓ 已落地</span><span class="badge badge-strong">Strong</span><span class="badge badge-cat">in-process</span>
+    </div>
+  </div>
+  <div class="rounded-lg bg-indigo-50 border border-indigo-200 px-4 py-2 text-xs text-indigo-900">
+    落地于 89d3c17：DownloadStopReason（UserRequested / ApplicationExit）贯穿四层，原因随取消一次性原子写入会话，时序契约与公开 setter 删除；检查点存储归一为 DI 单例。语义以代码为准修正评审卡的矛盾表述：用户停止=丢弃检查点，生命周期退出=保留续传。范围收缩：SkipPersistedResume 的竞态守卫角色真实（清除在会话取消异步路径），保留并记录于提交说明。
+  </div>
+  <div class="font-mono text-xs text-slate-600 leading-5">
+    IGameOperationExecutor.cs:56 · IGameOperationJourney.cs:57 · GameOperationJourney.cs:299 · GameOperationsViewModel.cs:361 · GameDownloadService.cs:131 · DownloadSession.cs:48 · ShellLifecycle.cs:263,359,582 · GameUninstallService.cs:35
+  </div>
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="rounded-lg border border-slate-200 p-3">
+      <p class="modlabel text-slate-400 mb-1">Before — bool + 时序契约穿过 4 个接口</p>
+      <div class="diagram">
+      <pre class="mermaid">
+sequenceDiagram
+  participant SH as Shell（关机路径）
+  participant J as Journey
+  participant S as DownloadSession
+  SH->>J: Stop(clearPersistedState: false)
+  Note over J,S: 契约只存在于注释：标志必须在 Stop 之前设置
+  J->>S: ClearPersistedStateOnCancel = false
+  J->>S: Stop()
+  Note over S: 设错顺序 ⇒ 静默丢/留检查点
+  Note over SH: 还要再懂一个枚举：SkipPersistedResume
+      </pre>
+      </div>
+    </div>
+    <div class="rounded-lg border border-slate-200 p-3">
+      <p class="modlabel text-slate-400 mb-1">After — 意图命名，机制入内</p>
+      <div class="diagram">
+      <pre class="mermaid">
+sequenceDiagram
+  participant SH as Shell
+  participant J as Journey
+  participant S as DownloadSession
+  SH->>J: StopForShutdown()
+  J->>S: Stop(原因=Shutdown)
+  Note over S: 会话自己决定：保留还是清除检查点
+  SH->>J: StopForUser()
+  J->>S: Stop(原因=User)
+      </pre>
+      </div>
+    </div>
+  </div>
+  <p class="text-sm"><strong>问题</strong>：下载模块内部的检查点持久化策略以一个 bool 加时序契约穿过 4 个接口，还派生 SkipPersistedResume 特殊枚举；shell 必须懂得「关机=false、用户停止=true」；卸载服务私自构造第二个 DownloadCheckpointStore 直插下载模块的持久化。</p>
+  <p class="text-sm"><strong>方案</strong>：StopForUser()（保留续传标记）与 StopForShutdown()/StopAndDiscard()（清除）两个命名意图；会话接收停止原因而非预置标志，时序耦合消失；检查点存储归一为单一共享依赖。检查点文件语义（镜像官方启动器）不变。</p>
+  <ul class="text-sm list-disc pl-5 space-y-1 marker:text-emerald-600">
+    <li>接口收窄，不改任何域契约</li>
+    <li>shell 不再知晓下载模块的持久化策略</li>
+    <li>bool 理论测试改为两个命名意图测试</li>
+    <li>枚举值不再编码他模块的持久化策略</li>
+  </ul>
+</article>
+
+<!-- ============ 06 模态注册 ============ -->
+<article id="c06" class="rounded-xl border border-slate-200 bg-white p-6 space-y-4 shadow-sm">
+  <div class="flex items-start justify-between gap-4">
+    <h2 class="font-serif text-xl">06 · 模态栈注册收敛为 ModalRegistration 子模块</h2>
+    <div class="flex gap-2 shrink-0">
+      <span class="badge badge-done">✓ 已落地</span><span class="badge badge-strong">Strong</span><span class="badge badge-cat">in-process</span>
+    </div>
+  </div>
+  <div class="rounded-lg bg-indigo-50 border border-indigo-200 px-4 py-2 text-xs text-indigo-900">
+    落地于 <a href="../docs/design/adr/ADR-023-模态注册声明式收敛.md">ADR-023</a>（前置修订，6c14c48）+ 实现（77547fa）：19 条 ESC 臂逐臂核实为纯命令后表驱动化，每模态一条 ModalRegistration（种类/可见性来源/属性名/内容/ESC 命令），ShellLifecycle 917→775 行，watcher 方法 + ESC switch + MapConfirmationModal 全部消亡。重审修正：「漏注册到运行时才发现」已过时——per-kind 理论测试早已护航；共享来源（DialogsViewModel 承载 4 旗标）要求注册器遍历全部匹配注册，Find 首项缺陷被该理论当场抓获——表漂移变测试失败的承诺在落地当天即兑现一次。
+  </div>
+  <div class="font-mono text-xs text-slate-600 leading-5">
+    Features/Shell/ShellLifecycle.cs:506,744 · ViewModels/ModalHostViewModel.cs:22 · ViewModels/ModalKind.cs · ViewModels/IModalContentViewModel.cs
+  </div>
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="rounded-lg border border-slate-200 p-3 diagram">
+      <p class="modlabel text-slate-400 mb-2">Before — 一个概念的知识涂布在四张代码表</p>
+      <div class="space-y-1.5 text-xs">
+        <div class="border border-slate-300 rounded px-3 py-2 flex justify-between items-center"><span class="modlabel">可见性 watcher ×7</span><span class="text-red-600">①</span></div>
+        <div class="border border-slate-300 rounded px-3 py-2 flex justify-between items-center"><span class="modlabel">OnDialogsPropertyChanged（12 臂 switch）</span><span class="text-red-600">②</span></div>
+        <div class="border border-slate-300 rounded px-3 py-2 flex justify-between items-center"><span class="modlabel">TryHandleEscape（19 臂 switch）</span><span class="text-red-600">③</span></div>
+        <div class="border border-slate-300 rounded px-3 py-2 flex justify-between items-center"><span class="modlabel">Is*Interactive ×8 + 通知 ×11</span><span class="text-red-600">④</span></div>
+      </div>
+      <p class="text-[11px] text-red-600 mt-2">新增一个模态 = 6 个编辑点（ModalKind、拥有者 flag、watcher、escape 臂、gate 属性、AXAML 绑定）。</p>
+    </div>
+    <div class="rounded-lg border border-slate-200 p-3 diagram flex flex-col">
+      <p class="modlabel text-slate-400 mb-2">After — 注册即接入</p>
+      <div class="deepbox rounded-lg px-4 py-3 text-center">
+        <div class="modlabel text-slate-300">ModalRegistrar（Shell 内部）+ ModalHost</div>
+        <div class="text-[11px] text-slate-400 mt-1">通用订阅可见性 · 驱动开/关 · ESC 分发到 Top</div>
+      </div>
+      <div class="flex justify-center my-2"><svg width="220" height="16"><line x1="110" y1="0" x2="110" y2="16" stroke="#64748b" stroke-width="2" class="seam"/></svg></div>
+      <div class="border border-slate-300 rounded px-3 py-2 text-center">
+        <div class="modlabel">注册记录（每模态一份）</div>
+        <div class="text-[11px] text-slate-500">Kind · 可见性流 · 可选取消命令</div>
+      </div>
+      <p class="text-[11px] text-slate-500 mt-2">对话框层照旧：无闸口，遮罩 + ZIndex 承担拦截（AGENTS.md 模态隔离裁定原样保留）。</p>
+    </div>
+  </div>
+  <p class="text-sm"><strong>问题</strong>：ModalHostViewModel 本身深而局部，但栈要求的知识分散在 ShellLifecycle 的四张按种类展开的表里。删除测试通过：删掉 TryHandleEscape 与 7 个 watcher，行为完好——shell 是这个概念的直通层，不是它的家。漏注册一个种类，直到运行时才被发现。</p>
+  <p class="text-sm"><strong>方案</strong>：注册记录（种类、可见性、取消命令）+ 通用 ModalRegistrar 订阅并驱动 ModalHost；ESC 分发移到栈顶内容。新增模态的接口 = 「实现一条注册记录」。</p>
+  <ul class="text-sm list-disc pl-5 space-y-1 marker:text-emerald-600">
+    <li>新增模态：6 个编辑点 → 1 条注册记录</li>
+    <li>栈/ESC 行为用 2 个假注册即可测试</li>
+    <li>表格漂移从运行时错误变测试失败</li>
+    <li>ShellLifecycle 约 −200 行、两张表消失</li>
+  </ul>
+  <div class="rounded-lg bg-amber-50 border border-amber-300 px-4 py-2 text-xs text-amber-900">
+    ⚠ 与 ADR-015 相抵：该 ADR 冻结了「bool 属性 → SyncModal → ModalHost 栈」的显示管线。值得重开，因为只换管线不换语义，且对话框层无闸口的裁定完整保留；落地前先补一条 ADR 修订。
+  </div>
+</article>
+
+<!-- ============ 07 规划/执行内部接缝 ============ -->
+<article id="c07" class="rounded-xl border border-slate-200 bg-white p-6 space-y-4 shadow-sm">
+  <div class="flex items-start justify-between gap-4">
+    <h2 class="font-serif text-xl">07 · DownloadSession 内部接缝：规划与执行分离</h2>
+    <div class="flex gap-2 shrink-0">
+      <span class="badge badge-done" style="background:#b91c1c">✗ 已否决（ADR-022）</span><span class="badge badge-explore" style="opacity:.45">Worth exploring</span><span class="badge badge-cat">in-process</span>
+    </div>
+  </div>
+  <div class="rounded-lg bg-red-50 border border-red-200 px-4 py-2 text-xs text-red-900">
+    <strong>重审否决（2026-09-13，<a href="../docs/design/adr/ADR-022-下载会话接缝不升格.md">ADR-022</a>）</strong>：提议的接缝已以同名存在于代码中——<code>PrepareDownloadPlanAsync</code> 返回的私有 record 就叫 <code>DownloadPlanPreparation</code>，执行半段 <code>RunDownloadVerifyLoopAsync</code> 已委托给独立的 <code>DownloadExecutor</code>；升格只是可见性搬家，删除测试不过。代价清单四项：handler 假体与内部静态直捅两项已被候选 08 消灭/隔离，ACL hack 与 CreateService 手接经核实为可接受的集成形态。收缩后的真实剩余价值（检查点终局清除散布 14 处）以单点化落地（81965b2），并消除「ApplicationExit 退出 + 非取消异常浮出 → 误清可续传检查点」的潜在分叉。
+  </div>
+  <div class="font-mono text-xs text-slate-600 leading-5">
+    Features/GameOperations/DownloadSession.cs:202,413 · tests/Cafe.Launcher.Avalonia.Tests/GameDownloadServiceTests.cs（2134 行，16 个传输假体）
+  </div>
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="rounded-lg border border-slate-200 p-3 diagram flex gap-3 items-end justify-center">
+      <div class="flex flex-col items-center">
+        <div class="w-20 h-8 border-2 border-slate-400 rounded flex items-center justify-center modlabel">RunAsync</div>
+        <svg width="12" height="24"><line x1="6" y1="0" x2="6" y2="24" stroke="#64748b" stroke-width="2"/></svg>
+        <div class="w-40 h-52 deepbox rounded flex flex-col items-center justify-center gap-1 text-center px-2">
+          <span class="modlabel text-slate-300">DownloadSession（708 行）</span>
+          <span class="text-[10px] text-slate-400 leading-4">磁盘闸 · 零差异跳过 · 游戏运行闸 · CDN 完整性 · 差异计算 · 空间闸 · 写探测 · 校验重试预算 · 状态提交</span>
+        </div>
+        <p class="text-[10px] text-slate-500 mt-1 text-center">唯一观察口 = HTTP/文件系统<br/>（测试在三层之下模拟世界）</p>
+      </div>
+      <div class="self-center max-w-[46%]">
+        <p class="modlabel text-red-700 mb-1">代价清单</p>
+        <ul class="text-[11px] text-slate-600 space-y-0.5 list-disc pl-4">
+          <li>16 个 HttpMessageHandler/Stream 假体</li>
+          <li>ACL 探测 hack（DenyCreateFiles）</li>
+          <li>CreateService 手接 12 个协作者</li>
+          <li>内部静态被 9 个测试直捅</li>
+        </ul>
+      </div>
+    </div>
+    <div class="rounded-lg border border-slate-200 p-3 diagram flex flex-col items-center justify-center gap-2">
+      <div class="w-20 h-8 border-2 border-slate-400 rounded flex items-center justify-center modlabel">RunAsync</div>
+      <p class="modlabel text-slate-400">外部接口一个字节都不动；内部接缝正式化：</p>
+      <div class="w-full max-w-sm border-2 border-dashed border-slate-400 rounded-lg p-2 flex gap-2 items-center">
+        <div class="flex-1 bg-white border border-slate-300 rounded px-2 py-2 text-center">
+          <div class="modlabel">PlanAsync</div>
+          <div class="text-[10px] text-slate-500">→ DownloadPlanPreparation（纯函数化）</div>
+        </div>
+        <svg width="30" height="14"><line x1="0" y1="7" x2="30" y2="7" stroke="#64748b" stroke-width="2" class="seam"/></svg>
+        <div class="flex-1 bg-white border border-slate-300 rounded px-2 py-2 text-center">
+          <div class="modlabel">ExecuteAsync(plan)</div>
+          <div class="text-[10px] text-slate-500">→ GameOperationResult</div>
+        </div>
+      </div>
+      <p class="text-[11px] text-slate-500">ManifestDiffCalculator 与 DownloadExecutor 已是现成适配器——这是接缝定位，不是新机器。磁盘闸/零差异测试改用假磁盘检查器；传输假体缩到真正测 DownloadExecutor 的部分（DownloadExecutorTests 已有家）。</p>
+    </div>
+  </div>
+  <p class="text-sm"><strong>问题</strong>：模块深但只有 RunAsync 一个观察口，中段不变量只能靠三层之下的传输模拟观察——2000 行外的测试假体就是「这个接缝想要存在」的最硬证据。</p>
+  <p class="text-sm"><strong>方案</strong>：外部接口不变，把既有的私有分段升格为内部接缝。建议排在 03–05 之后做：它切割的是承载契约的 708 行文件，churn 最高、价值也最高。</p>
+  <ul class="text-sm list-disc pl-5 space-y-1 marker:text-amber-600">
+    <li>闸门类测试离开 HttpMessageHandler 屈折</li>
+    <li>修复 CRC64 语义与阶段序列由既有旅程测试护航</li>
+    <li>局部性：计划缺陷在计划层暴露</li>
+  </ul>
+</article>
+
+<!-- ============ 08 下载接口临时文件状态机 ============ -->
+<article id="c08" class="rounded-xl border border-slate-200 bg-white p-6 space-y-4 shadow-sm">
+  <div class="flex items-start justify-between gap-4">
+    <h2 class="font-serif text-xl">08 · 下载接口拥有传输与临时文件状态机</h2>
+    <div class="flex gap-2 shrink-0">
+      <span class="badge badge-done">✓ 已落地</span><span class="badge badge-explore">Worth exploring</span><span class="badge badge-cat">ports &amp; adapters</span>
+    </div>
+  </div>
+  <div class="rounded-lg bg-indigo-50 border border-indigo-200 px-4 py-2 text-xs text-indigo-900">
+    落地于 2fab374（+ 文档同步 6f67033）：批级 IDownloadTransport 接缝、.tmp 状态机单一归属、显式 DownloadOutcome、IHttpClientLeaseSource 家族三类型删除——评审承诺的级联删除兑现。行为零变化，单元 1651 / headless 176 全绿。
+  </div>
+  <div class="font-mono text-xs text-slate-600 leading-5">
+    Services/IFileDownloadService.cs:16 · Services/FileDownloadService.cs:75 · Features/GameOperations/DownloadExecutor.cs:74,399 · Services/FileDownloadOperationControl.cs:19
+  </div>
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="rounded-lg border border-slate-200 p-3 diagram flex flex-col justify-center gap-2 text-xs">
+      <p class="modlabel text-slate-400">Before — 不变量两个部分所有者</p>
+      <div class="border border-slate-300 rounded px-3 py-2">
+        <span class="modlabel">DownloadExecutor</span>
+        <div class="text-slate-600">统计 .tmp 长度判「已存在」、播种进度（399-432）</div>
+      </div>
+      <div class="flex justify-center"><svg width="240" height="26">
+        <line x1="10" y1="0" x2="230" y2="26" stroke="#dc2626" stroke-width="2" class="seam"/>
+        <text x="80" y="14" fill="#dc2626" font-size="10">「已完整」= null 返回，调用方必须自行补偿</text>
+      </svg></div>
+      <div class="border border-slate-300 rounded px-3 py-2">
+        <span class="modlabel">FileDownloadService</span>
+        <div class="text-slate-600">独立推导 完成 / 超长删除 / Content-Range 校验（75-123）</div>
+      </div>
+      <p class="text-[11px] text-red-600">5 字段 FileDownloadOperationControl 把 HttpClient + ConnectionProxy 对拖过接缝；GameDownloadServiceTests 里约 25 个手写 handler 假体是接缝错位的账单。</p>
+    </div>
+    <div class="rounded-lg border border-slate-200 p-3 diagram flex flex-col justify-center gap-2">
+      <p class="modlabel text-slate-400">After — 状态机与传输都住进接口后面</p>
+      <div class="deepbox rounded-lg px-4 py-4 text-center">
+        <div class="modlabel text-slate-300">IFileDownloadService（深）</div>
+        <div class="text-xs mt-1">DownloadAsync(request, callbacks)</div>
+        <div class="text-[11px] text-slate-400 mt-1 faded">.tmp 状态机 → 显式结果：Transferred / AlreadyComplete / Reset(n)</div>
+        <div class="text-[11px] text-slate-400 faded">传输解析（重定向、代理出口、停顿预算）内部完成</div>
+      </div>
+      <div class="border border-slate-300 rounded px-3 py-2 text-xs">
+        <span class="modlabel">DownloadExecutor</span>
+        <span class="text-slate-600">只剩 暂停/进度 接线；不再 stat 临时文件，按显式结果播种进度</span>
+      </div>
+      <p class="text-[11px] text-slate-500">批级连接复用由每会话一个 IDownloadTransport 承担（DownloadSessionContext 已有此概念）——传输接口由此获得第二个适配器，接缝转正。</p>
+    </div>
+  </div>
+  <p class="text-sm"><strong>问题</strong>：「.tmp 暂存 + 按长度续传」不变量劈成两半分居两个模块，任何一半都不能删——删了就静默丢字节或重复计数；同一契约的文档写了两遍（接口注释 + executor 注释），是接口面积而非行为。</p>
+  <p class="text-sm"><strong>方案</strong>：接口拥有完整临时文件状态机并返回显式结果，null 返回陷阱删除；传输所有权同场移交。与候选 01 汇合：下载服务成为传输模块的第二个消费者。</p>
+  <ul class="text-sm list-disc pl-5 space-y-1 marker:text-amber-600">
+    <li>null 返回陷阱删除</li>
+    <li>代理出口不变量单点强制</li>
+    <li>停顿/续传/截断在传输假体上测一次</li>
+    <li>续传契约测试一张表钉死</li>
+  </ul>
+</article>
+
+<!-- ============ 09 确认对话框 ============ -->
+<article id="c09" class="rounded-xl border border-slate-200 bg-white p-6 space-y-4 shadow-sm">
+  <div class="flex items-start justify-between gap-4">
+    <h2 class="font-serif text-xl">09 · DialogsViewModel 确认机制去重</h2>
+    <div class="flex gap-2 shrink-0">
+      <span class="badge badge-done">✓ 已落地</span><span class="badge badge-explore">Worth exploring</span><span class="badge badge-cat">in-process</span>
+    </div>
+  </div>
+  <div class="rounded-lg bg-indigo-50 border border-indigo-200 px-4 py-2 text-xs text-indigo-900">
+    落地于 ad9de79（+ AGENTS.md 裁决描述同步）：ConfirmationDialogViewModel 单点拥有「先隐藏 → 顺序调用 → 失败记日志」，DialogsViewModel 聚合 8 实例（509→302 行，公共面收窄约 24 成员）；模态注册同步归队为按实例订阅 IsVisible。重审修正评审卡：家族实为 7+1 而非 11（更新可用/公告/严重错误结构迥异）；视觉层 ConfirmDialog 控件早已统一，重复纯在 VM 管道。行为增量三项如实落地：5 处静默吞异常变为有日志、3 个同步处理器变异步顺序调用（void→Task）、双胞胎隐藏时序归一。设置页未保存确认留作模块未来采纳者。
+  </div>
+  <div class="font-mono text-xs text-slate-600 leading-5">
+    ViewModels/DialogsViewModel.cs:57,100,343 · tests/.../DialogsViewModelTests.cs · UiStyleContractTests.Dialogs.cs
+  </div>
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="rounded-lg border border-slate-200 p-3 diagram">
+      <p class="modlabel text-slate-400 mb-2">Before — 11 份手写的 45 行同款</p>
+      <div class="grid grid-cols-4 gap-1.5 text-[10px] text-center">
+        <div class="border border-slate-300 rounded py-3">调试重置</div>
+        <div class="border border-red-400 rounded py-3 bg-red-50">设置重置<span class="block text-red-600">复制粘贴的双胞胎</span></div>
+        <div class="border border-slate-300 rounded py-3">修复确认</div>
+        <div class="border border-slate-300 rounded py-3">卸载确认</div>
+        <div class="border border-slate-300 rounded py-3">停止下载</div>
+        <div class="border border-slate-300 rounded py-3">资源源切换</div>
+        <div class="border border-slate-300 rounded py-3">…</div>
+        <div class="border border-slate-300 rounded py-3">×11</div>
+      </div>
+      <p class="text-[11px] text-slate-500 mt-2">每份 = flag + Show* + 取消命令 + 确认事件 + try/log/finally 确认体。「确认后隐藏 → 顺序调用订阅者 → 记录失败」的不变量按对话框重复实现。</p>
+    </div>
+    <div class="rounded-lg border border-slate-200 p-3 diagram flex flex-col justify-center gap-2">
+      <p class="modlabel text-slate-400 mb-1">After — 一个模块拥有机制，聚合器拥有实例</p>
+      <div class="deepbox rounded-lg px-4 py-3 text-center">
+        <div class="modlabel text-slate-300">ConfirmationDialogViewModel</div>
+        <div class="text-[11px] text-slate-400 mt-1">flag · 文本 · 命令 · 顺序调用错误策略（一次实现）</div>
+      </div>
+      <div class="flex justify-center"><svg width="200" height="16"><line x1="100" y1="0" x2="100" y2="16" stroke="#64748b" stroke-width="2" class="seam"/></svg></div>
+      <div class="border border-slate-300 rounded px-3 py-2 text-center text-xs">DialogsViewModel 聚合 11 个实例<span class="block text-[10px] text-slate-400">（与已获批的 shell 聚合方向一致）</span></div>
+    </div>
+  </div>
+  <p class="text-sm"><strong>问题</strong>：宽而重复的接口；11 个确认各写一遍同一不变量，删除任一双胞胎的手写成员、改由共享模块供给，行为原样保留——被删的是重复，不是行为。</p>
+  <p class="text-sm"><strong>方案</strong>：一个小模块拥有 flag+文本+命令+顺序调用错误策略；DialogsViewModel 聚合实例。AXAML 解剖不变，现有测试与契约测试原样通过。</p>
+  <ul class="text-sm list-disc pl-5 space-y-1 marker:text-amber-600">
+    <li>不变量一处实现，11 处受益</li>
+    <li>新确认对话框 = 一个实例字段</li>
+    <li>双胞胎差异（漂移）被类型抹平</li>
+  </ul>
+</article>
+
+<!-- ============ 10 轮播引擎 ============ -->
+<article id="c10" class="rounded-xl border border-slate-200 bg-white p-6 space-y-4 shadow-sm">
+  <div class="flex items-start justify-between gap-4">
+    <h2 class="font-serif text-xl">10 · 从 RemoteContentViewModel 抽出轮播引擎（补时钟接缝）</h2>
+    <div class="flex gap-2 shrink-0">
+      <span class="badge badge-done">✓ 已落地（收缩）</span><span class="badge badge-explore">Worth exploring</span><span class="badge badge-cat">in-process</span>
+    </div>
+  </div>
+  <div class="rounded-lg bg-indigo-50 border border-indigo-200 px-4 py-2 text-xs text-indigo-900">
+    落地于 4aabccc（收缩版）：按 ToastHostViewModel 库内先例就地接缝——新增 ICarouselTimer + DispatcherCarouselTimer 生产适配器，公共 ctor 保持三参默认真时钟，internal ctor 注入 delayAsync + 计时器替身。三条原不可测时序路径（tick 推进、5 秒窗口到时恢复、窗口内暂停取消）转为纯单元测试，另钉「二次导航取代首窗」与「Stop 后 tick 无效」。重审修正：引擎未抽 CarouselController——CarouselSelectedIndex 是 AXAML 绑定态（圆点/页文本/转场副作用），状态必须留在绑定侧，抽取只是搬家而非删除；接缝先行，抽取留待 VM 再长胖。
+  </div>
+  <div class="font-mono text-xs text-slate-600 leading-5">
+    ViewModels/RemoteContentViewModel.cs:296 · ViewModels/ToastHostViewModel.cs:23（库内先例）
+  </div>
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="rounded-lg border border-slate-200 p-3 diagram">
+      <p class="modlabel text-slate-400 mb-2">Before — 神 VM 的五顶帽子，引擎焊死在 DispatcherTimer</p>
+      <div class="space-y-1.5 text-xs">
+        <div class="h-9 border-l-4 border-red-500 bg-red-50 pl-2 flex items-center justify-between"><span class="modlabel text-red-700">轮播播放引擎（296-459，最深实现）</span><span class="text-[10px] text-red-600">无时钟接缝</span></div>
+        <div class="h-9 border-l-4 border-slate-300 bg-slate-50 pl-2 flex items-center"><span class="modlabel">DTO → 表示映射</span></div>
+        <div class="h-9 border-l-4 border-slate-300 bg-slate-50 pl-2 flex items-center"><span class="modlabel">横幅预载管线（并发闸 + 解码 + 释放次序）</span></div>
+        <div class="h-9 border-l-4 border-slate-300 bg-slate-50 pl-2 flex items-center"><span class="modlabel">URL 方案消毒</span></div>
+        <div class="h-9 border-l-4 border-slate-300 bg-slate-50 pl-2 flex items-center"><span class="modlabel">社交图标 / 日期格式化</span></div>
+      </div>
+      <p class="text-[11px] text-slate-500 mt-2">状态机只能穿过 VM + IsCarouselTimerRunning 内部状态测试；ToastHostViewModel 已用注入 delayAsync 证明此接缝可行——库内先例。</p>
+    </div>
+    <div class="rounded-lg border border-slate-200 p-3 diagram flex flex-col justify-center gap-2">
+      <p class="modlabel text-slate-400">After — 引擎独立，时钟注入</p>
+      <div class="deepbox rounded-lg px-4 py-3 text-center">
+        <div class="modlabel text-slate-300">CarouselController（时钟注入）</div>
+        <div class="text-[11px] text-slate-400 mt-1">Load · Pause · Resume · NotifyUserNavigation · Tick</div>
+        <div class="text-[10px] text-slate-500 mt-1">自动前进 · 暂停恢复 · 手动导航 5s 重启 · 抑制规则（原状态机）</div>
+      </div>
+      <div class="border border-slate-300 rounded px-3 py-2 text-center text-xs">RemoteContentViewModel 只留映射与标签</div>
+      <p class="text-[11px] text-slate-500">暂停/恢复/导航竞态变纯单元测试；headless 远程内容测试缩到渲染职责。</p>
+    </div>
+  </div>
+  <p class="text-sm"><strong>问题</strong>：VM 里最深的实现没有接缝，焊死在 Avalonia DispatcherTimer 与裸 Task.Delay 上；库内已有第二个用法（toast）证明时钟接缝是真的。</p>
+  <p class="text-sm"><strong>方案</strong>：引擎成员整体迁出为 CarouselController，删除测试通过（索引、圆点、页文本等外部行为全部保留）。</p>
+  <ul class="text-sm list-disc pl-5 space-y-1 marker:text-amber-600">
+    <li>状态机竞态纯单元测试</li>
+    <li>两个适配器让接缝转正</li>
+    <li>headless 套件减负到渲染</li>
+  </ul>
+</article>
+
+<!-- ============ 11 诊断静态接缝 ============ -->
+<article id="c11" class="rounded-xl border border-slate-200 bg-white p-6 space-y-4 shadow-sm">
+  <div class="flex items-start justify-between gap-4">
+    <h2 class="font-serif text-xl">11 · 诊断系统的静态接缝接口化</h2>
+    <div class="flex gap-2 shrink-0">
+      <span class="badge badge-done">✓ 已落地</span><span class="badge badge-explore">Worth exploring</span><span class="badge badge-cat">local-substitutable</span>
+    </div>
+  </div>
+  <div class="rounded-lg bg-indigo-50 border border-indigo-200 px-4 py-2 text-xs text-indigo-900">
+    落地于 d33633b：LocalDiagnostics 构造函数不再覆写进程级静态 syncLogger（「最后构造者获胜」消除——测试临时 logger 不再劫持共享路径），改由组合根 RegisterSharedLogger 单点注册；LogExportService 的崩溃目录来源经 ICrashReportLocator（CrashReportStore 实现，位置策略单一归属）按类型消费——目录契约从命名约定变编译期耦合，假定位器可直测导出器。ADR-019 预 DI 崩溃路径与视图/代码后置的诚实残余原样保留。
+  </div>
+  <div class="font-mono text-xs text-slate-600 leading-5">
+    Services/Diagnostics/LocalDiagnostics.cs:23,41 · Services/Diagnostics/LogExportService.cs:337 · Program.cs:72,298
+  </div>
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="rounded-lg border border-slate-200 p-3 diagram flex flex-col justify-center gap-2 text-xs">
+      <p class="modlabel text-slate-400 mb-1">Before — 深模块之间靠静态可变状态相连</p>
+      <div class="flex items-center justify-center gap-2">
+        <div class="border border-slate-300 rounded px-2 py-2 text-center">LogExportService</div>
+        <svg width="60" height="14"><line x1="0" y1="7" x2="60" y2="7" stroke="#dc2626" stroke-width="2" class="seam"/><text x="8" y="-1" fill="#dc2626" font-size="9">静态直插</text></svg>
+        <div class="border border-slate-300 rounded px-2 py-2 text-center">CrashReportStore<br/><span class="text-[9px] text-red-600">.DefaultFallbackDirectory 静态</span></div>
+      </div>
+      <div class="flex items-center justify-center gap-2 mt-1">
+        <div class="border border-slate-300 rounded px-2 py-2 text-center">27 个调用点</div>
+        <svg width="60" height="14"><line x1="0" y1="7" x2="60" y2="7" stroke="#dc2626" stroke-width="2" class="seam"/><text x="6" y="-1" fill="#dc2626" font-size="9">后建者覆盖</text></svg>
+        <div class="border border-slate-300 rounded px-2 py-2 text-center">LocalDiagnostics.syncLogger</div>
+      </div>
+      <p class="text-[11px] text-red-600 mt-1">目录契约靠注释维持：改名约定，编译器不吭一声，直到运行时导出空归档。</p>
+    </div>
+    <div class="rounded-lg border border-slate-200 p-3 diagram flex flex-col justify-center gap-2 text-xs">
+      <p class="modlabel text-slate-400 mb-1">After — 两个小接缝，其余原样</p>
+      <div class="flex items-center justify-center gap-2">
+        <div class="border border-slate-300 rounded px-2 py-2 text-center">LogExportService</div>
+        <svg width="60" height="14"><line x1="0" y1="7" x2="60" y2="7" stroke="#64748b" stroke-width="2" class="seam"/></svg>
+        <div class="border border-slate-300 rounded px-2 py-2 text-center">ICrashReportLocator<br/><span class="text-[9px] text-slate-400">DI 绑定</span></div>
+        <svg width="30" height="14"><line x1="0" y1="7" x2="30" y2="7" stroke="#64748b" stroke-width="2" class="seam"/></svg>
+        <div class="deepbox rounded px-2 py-2 text-center">CrashReportStore</div>
+      </div>
+      <div class="flex items-center justify-center gap-2 mt-1">
+        <div class="border border-slate-300 rounded px-2 py-2 text-center">调用点（DI 可达处）</div>
+        <svg width="60" height="14"><line x1="0" y1="7" x2="60" y2="7" stroke="#64748b" stroke-width="2" class="seam"/></svg>
+        <div class="border border-slate-300 rounded px-2 py-2 text-center">LocalDiagnostics 实例（静态路径委托同一实例）</div>
+      </div>
+      <p class="text-[11px] text-slate-500 mt-1">ADR-019 两级兜底（Program.cs 预 DI 静态保留给崩溃路径）原样不动；只重接健康进程一侧。</p>
+    </div>
+  </div>
+  <p class="text-sm"><strong>问题</strong>：每个诊断模块都深、都过删除测试，但模块间接缝是静态可变状态——测试隔离靠集合约定硬撑，目录契约靠注释不靠类型。</p>
+  <p class="text-sm"><strong>方案</strong>：ICrashReportLocator 注入导出器；LocalDiagnostics 静态路径委托到 DI 同一实例而非「最后构造者获胜」。视图/代码后置不可达处是诚实的残余成本。</p>
+  <ul class="text-sm list-disc pl-5 space-y-1 marker:text-amber-600">
+    <li>目录漂移变成编译错误</li>
+    <li>并行测试套件不再共享 logger</li>
+    <li>导出器可用假定位器直测</li>
+  </ul>
+</article>
+
+</section>
+
+<!-- ============ Speculative ============ -->
+<section id="speculative" class="rounded-xl border border-slate-200 bg-white p-6 space-y-2 shadow-sm">
+  <h2 class="font-serif text-lg">暂缓项（Speculative）</h2>
+  <ul class="text-sm list-disc pl-5 space-y-1 text-slate-600">
+    <li><span class="badge badge-done badge">✓ 已基本消除</span>&nbsp; <code class="font-mono text-xs">string proxyMode</code> 串过 45 处签名：候选 01/08 落地后，五个远程客户端签名中的 proxyMode 全部消失，仅剩下载会话向 <code class="font-mono text-xs">IDownloadTransportSource.CreateAsync</code> 传模式的一处（会话级事实，非中继）。</li>
+    <li><span class="badge badge-spec badge">Speculative</span>&nbsp; <code class="font-mono text-xs">IShellRuntime</code> + MainWindowViewModel 的 7 个 1:1 委托：单一实现 = 假想接缝。删除测试可通过，但该接缝确实把 13-VM 夹具负担隔离在 ShellLifecycleTests——这是要做的决策，不是要动的代码。</li>
+    <li><span class="badge badge-spec badge">Speculative</span>&nbsp; GameOperationsViewModel 内暂停表现双份强制（305 vs 447）与「清零进度的阶段集合」（430）：局部小项，无害可缓。</li>
+  </ul>
+</section>
+
+<!-- ============ Top recommendation ============ -->
+<section id="top-recommendation" class="rounded-xl border-2 border-emerald-600 bg-white p-8 space-y-3 shadow">
+  <p class="modlabel text-emerald-700">首选建议</p>
+  <h2 class="font-serif text-2xl"><a href="#c01" class="underline decoration-emerald-400 underline-offset-4">候选 01 · 把远程 HTTP 传输合并为一个深模块</a></h2>
+  <p class="text-xs font-semibold text-emerald-700">✓ 已完成 —— 提交 88ebd46 / ca352db / fae538a；级联删除（租约源直通层、4 份测试构造器、死重载）已随候选 08 一并兑现。</p>
+  <p class="text-sm text-slate-700">修复历史给出了最硬的证据：同一类「不变量在接缝上泄漏」的 bug 三周内在三个不同调用方各修一次（9a24b97、d6fee4e、d342641）——这正是行为没有家、每次都在新调用方重演的局部性缺陷。深化后，租约源直通层、四份复制的测试构造器与死重载随之级联删除，而校验器、重试、响应体读取这些已经通过删除测试的部件原样成为新模块的实现深度。全程在 20 个设计 ADR 之外，无裁定成本。</p>
+  <p class="text-xs text-slate-500">同季度可顺路搭车的速赢：候选 03（删直通带，机械）与候选 04（权限表，小而独立）。候选 06 价值同样高，但需先补 ADR-015 修订。</p>
+</section>
+
+<footer class="text-xs text-slate-400 pb-6">
+  由 improve-codebase-architecture 评审生成 · 2026-09-13 · 依据三个探查代理的走查记录（网络/HTTP、GameOperations、Shell/诊断）· 评审基线 main@a985718 · 进度更新于候选 01/08/02/04/05 落地后（main@89d3c17+）· 落地卡片的 file:line 引用对准评审基线，可能与当前树有偏移
+</footer>
+
+</main>
+</body>
+</html>

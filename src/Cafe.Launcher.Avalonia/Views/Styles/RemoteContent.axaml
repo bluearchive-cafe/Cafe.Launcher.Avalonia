@@ -113,12 +113,12 @@
         <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
     </Style>
     <Style Selector="Button.social-chip:pointerover">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Hover}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.SocialChip.Hover}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Hover}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary}"/>
     </Style>
     <Style Selector="Button.social-chip:pressed">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Pressed}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.SocialChip.Pressed}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
     </Style>

@@ -80,6 +80,12 @@ internal static class MaterialSchemeGenerator
         result["Launcher.Color.Carousel.Dot.Active"] = new SolidColorBrush(Colors.White);
         result["Launcher.Color.Button.Flat.Hover"] = new SolidColorBrush(Color.FromArgb(0x14, primary.R, primary.G, primary.B));
         result["Launcher.Color.Button.Flat.Pressed"] = new SolidColorBrush(Color.FromArgb(0x30, primary.R, primary.G, primary.B));
+        // Social chips float directly on the wallpaper, so translucent state
+        // washes would show the backdrop through them. Pre-composite their state
+        // layers onto the opaque Content.Row base (defaults in App.axaml) instead.
+        var socialChipBase = Color.Parse(isDark ? "#FF202833" : "#FFF1F5F9");
+        result["Launcher.Color.SocialChip.Hover"] = new SolidColorBrush(Blend(socialChipBase, primary, 0.08));
+        result["Launcher.Color.SocialChip.Pressed"] = new SolidColorBrush(Blend(socialChipBase, primary, 0.19));
 
         var error = MaterialColorMapper.ToAvaloniaColor(scheme.Error);
         var onError = MaterialColorMapper.ToAvaloniaColor(scheme.OnError);

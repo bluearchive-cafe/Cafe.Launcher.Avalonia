@@ -1,6 +1,8 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Cafe.Launcher.Avalonia.Models;
@@ -271,5 +273,46 @@ public sealed partial class MainWindowHeadlessTests
         // headless drawing path. The design intends a visible non-zero gap; 3px is the
         // real-font floor, so assert the widened gap stays >= 3px.
         Assert.True(gap >= 3, $"Expected at least 3 px between tab header and indicator, but measured {gap} px.");
+    }
+
+    [AvaloniaFact]
+    public void MainWindow_SocialChip_HoverKeepsOpaqueBackgroundOverWallpaper()
+    {
+        using var context = CreateContext();
+        context.ViewModel.RemoteContent.Apply(
+            new LauncherRemoteState
+            {
+                SocialMediaResource = new SocialMediaResourceResponse
+                {
+                    SocialMediaResourceOpen = true,
+                    SocialMediaResourceList =
+                    [
+                        new SocialMediaResourceItem { SocialMediaChannel = "Twitter", JumpUrl = "https://x.example.invalid/" }
+                    ]
+                }
+            },
+            new LauncherSettings { ShowRemoteContentCard = true },
+            CancellationToken.None);
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var chip = context.Window
+            .GetVisualDescendants()
+            .OfType<Button>()
+            .Single(control => control.Classes.Contains("social-chip") && control.Classes.Contains("official-site"));
+        var chipBorder = chip.GetVisualDescendants().OfType<Border>().First();
+
+        // The chips float directly on the wallpaper: both rest and hover states
+        // must stay opaque, otherwise the backdrop shows through on hover.
+        Assert.Equal((byte)0xFF, ((ISolidColorBrush)chipBorder.Background!).Color.A);
+
+        var topLeft = chip.TranslatePoint(default, context.Window);
+        Assert.NotNull(topLeft);
+        context.Window.MouseMove(topLeft.Value + new Point(chip.Bounds.Width / 2, chip.Bounds.Height / 2));
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(chip.IsPointerOver);
+        var hoverBackground = Assert.IsType<SolidColorBrush>(chipBorder.Background);
+        Assert.Equal((byte)0xFF, hoverBackground.Color.A);
     }
 }
