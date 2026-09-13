@@ -1,4 +1,5 @@
 using Cafe.Launcher.Avalonia.ViewModels;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -10,7 +11,7 @@ public sealed class ConfirmationDialogViewModelTests
     [Fact]
     public void Show_WithMessage_SetsMessageAndShows()
     {
-        var dialog = new ConfirmationDialogViewModel("TestConfirmFailed");
+        var dialog = CreateDialog();
 
         dialog.Show("message");
 
@@ -21,7 +22,7 @@ public sealed class ConfirmationDialogViewModelTests
     [Fact]
     public void Show_WithoutMessage_PreservesExistingMessage()
     {
-        var dialog = new ConfirmationDialogViewModel("TestConfirmFailed");
+        var dialog = CreateDialog();
         dialog.Message = "existing";
 
         dialog.Show();
@@ -31,9 +32,9 @@ public sealed class ConfirmationDialogViewModelTests
     }
 
     [Fact]
-    public void ShowCommand_ShowsDialog()
+    public void ShowCommand_WhenExecuted_ShowsDialog()
     {
-        var dialog = new ConfirmationDialogViewModel("TestConfirmFailed");
+        var dialog = CreateDialog();
 
         dialog.ShowCommand.Execute(null);
 
@@ -41,9 +42,9 @@ public sealed class ConfirmationDialogViewModelTests
     }
 
     [Fact]
-    public async Task ConfirmCommand_HidesFirstThenInvokesSubscriber()
+    public async Task ConfirmCommand_WhenExecuted_HidesFirstThenInvokesSubscriber()
     {
-        var dialog = new ConfirmationDialogViewModel("TestConfirmFailed");
+        var dialog = CreateDialog();
         var visibleAtSubscriber = true;
         dialog.Confirmed += () =>
         {
@@ -61,7 +62,7 @@ public sealed class ConfirmationDialogViewModelTests
     [Fact]
     public async Task ConfirmCommand_WithMultipleAsyncSubscribers_AwaitsEverySubscriberInOrder()
     {
-        var dialog = new ConfirmationDialogViewModel("TestConfirmFailed");
+        var dialog = CreateDialog();
         var firstInvoked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var firstRelease = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var secondInvoked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -90,7 +91,7 @@ public sealed class ConfirmationDialogViewModelTests
     [Fact]
     public async Task ConfirmCommand_WhenSubscriberThrows_HidesDialogAndSkipsRemainingSubscribers()
     {
-        var dialog = new ConfirmationDialogViewModel("TestConfirmFailed");
+        var dialog = CreateDialog();
         var secondInvoked = false;
         dialog.Confirmed += () => throw new InvalidOperationException("subscriber broke");
         dialog.Confirmed += () =>
@@ -107,9 +108,39 @@ public sealed class ConfirmationDialogViewModelTests
     }
 
     [Fact]
-    public async Task CancelCommand_HidesWithoutRaisingConfirmed()
+    public async Task ConfirmCommand_WhenSubscriberThrows_UsesInjectedDiagnosticsAndStableModuleTag()
     {
-        var dialog = new ConfirmationDialogViewModel("TestConfirmFailed");
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var logger = new UnifiedLogger(tempDir);
+        try
+        {
+            var dialog = new ConfirmationDialogViewModel(
+                new LocalDiagnostics(logger),
+                "TestOperation");
+            dialog.Confirmed += () => throw new InvalidOperationException("subscriber broke");
+
+            await dialog.ConfirmCommand.ExecuteAsync(null);
+            logger.Dispose();
+
+            var text = File.ReadAllText(logger.LogFilePath);
+            Assert.Contains("[ConfirmationDialog]", text, StringComparison.Ordinal);
+            Assert.Contains("TestOperation confirmation handler failed.", text, StringComparison.Ordinal);
+            Assert.Contains("subscriber broke", text, StringComparison.Ordinal);
+        }
+        finally
+        {
+            logger.Dispose();
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task CancelCommand_WhenExecuted_HidesWithoutRaisingConfirmed()
+    {
+        var dialog = CreateDialog();
         var confirmed = false;
         dialog.Confirmed += () =>
         {
@@ -123,4 +154,7 @@ public sealed class ConfirmationDialogViewModelTests
         Assert.False(dialog.IsVisible);
         Assert.False(confirmed);
     }
+
+    private static ConfirmationDialogViewModel CreateDialog() =>
+        new(new LocalDiagnostics(), "Test");
 }

@@ -43,24 +43,21 @@ public sealed class LogExportService
         LauncherUserDataDirectory.Root,
         LauncherConstants.LogExportFolderName);
 
-    public LogExportService(LocalDiagnostics diagnostics)
-        : this(diagnostics, LauncherUserDataDirectory.Root, new CrashReportStore())
-    {
-    }
-
+    /// <summary>Creates an exporter using the production launcher-data root.</summary>
     public LogExportService(LocalDiagnostics diagnostics, ICrashReportLocator crashReportLocator)
         : this(diagnostics, LauncherUserDataDirectory.Root, crashReportLocator)
     {
     }
 
+    /// <summary>Creates an exporter with an explicit data root for deterministic tests.</summary>
     internal LogExportService(
         LocalDiagnostics diagnostics,
         string userDataRoot,
-        ICrashReportLocator? crashReportLocator = null)
+        ICrashReportLocator crashReportLocator)
     {
         this.diagnostics = diagnostics;
         this.userDataRoot = userDataRoot;
-        this.crashReportLocator = crashReportLocator ?? new CrashReportStore();
+        this.crashReportLocator = crashReportLocator;
     }
 
     /// <summary>

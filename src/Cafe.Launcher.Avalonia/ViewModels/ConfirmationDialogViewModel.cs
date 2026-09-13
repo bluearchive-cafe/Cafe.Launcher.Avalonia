@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Services;
@@ -19,11 +20,17 @@ namespace Cafe.Launcher.Avalonia.ViewModels;
 /// </summary>
 public sealed partial class ConfirmationDialogViewModel : ViewModelBase
 {
-    private readonly string logSource;
+    private const string LogTitle = "ConfirmationDialog";
+    private readonly LocalDiagnostics diagnostics;
+    private readonly string operationContext;
 
-    public ConfirmationDialogViewModel(string logSource)
+    /// <summary>Creates one confirmation dialog with instance-scoped diagnostics and operation context.</summary>
+    public ConfirmationDialogViewModel(
+        LocalDiagnostics diagnostics,
+        string operationContext)
     {
-        this.logSource = logSource;
+        this.diagnostics = diagnostics;
+        this.operationContext = operationContext;
         ShowCommand = new RelayCommand(Show);
         CancelCommand = new RelayCommand(Cancel);
         ConfirmCommand = new AsyncRelayCommand(ConfirmAsync);
@@ -35,8 +42,8 @@ public sealed partial class ConfirmationDialogViewModel : ViewModelBase
     [ObservableProperty]
     private string message = "";
 
-    /// <summary>Gets the diagnostics log source this confirmation reports failures under.</summary>
-    public string LogSource => logSource;
+    /// <summary>Gets the operation name included in diagnostics when confirmation handling fails.</summary>
+    public string OperationContext => operationContext;
 
     /// <summary>Raised after the user confirms and the dialog has closed.</summary>
     public event Func<Task>? Confirmed;
@@ -69,10 +76,11 @@ public sealed partial class ConfirmationDialogViewModel : ViewModelBase
         }
         catch (Exception exception)
         {
-            await LocalDiagnostics.LogAsync(
-                LogEntrySeverity.Error,
-                logSource,
-                $"{logSource}: {exception.Message}");
+            await diagnostics.ErrorAsync(
+                LogTitle,
+                $"{operationContext} confirmation handler failed.",
+                exception,
+                CancellationToken.None);
         }
     }
 }

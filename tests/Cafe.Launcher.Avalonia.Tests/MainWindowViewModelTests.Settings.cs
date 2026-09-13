@@ -369,7 +369,8 @@ public partial class MainWindowViewModelTests
         var dialogs = new DialogsViewModel(
             localizer,
             new NoticeStateService(Path.Combine(tempDir, "save-failure-notices.json")),
-            new SetupWizardViewModel(localizer, new GameInstallationPath(), new LocalInstallationStateStore(), new LocalDiagnostics(), new StubFilePickerService()));
+            new SetupWizardViewModel(localizer, new GameInstallationPath(), new LocalInstallationStateStore(), new LocalDiagnostics(), new StubFilePickerService()),
+            new LocalDiagnostics());
         using var testLogger = new UnifiedLogger(tempDir);
         using var settings = new SettingsViewModel(
             settingsService,

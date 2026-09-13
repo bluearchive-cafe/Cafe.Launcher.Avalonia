@@ -92,7 +92,7 @@ public sealed class DialogsViewModelTests
     }
 
     [Fact]
-    public async Task ConfirmationCommands_RaiseConfirmedAndCloseDialogs()
+    public async Task ConfirmationCommands_WhenExecuted_RaiseConfirmedAndCloseDialogs()
     {
         var viewModel = CreateViewModel();
         var repair = false;
@@ -185,7 +185,7 @@ public sealed class DialogsViewModelTests
     }
 
     [Fact]
-    public async Task CancelCommands_CloseEveryConfirmationDialog()
+    public async Task CancelCommands_WhenExecuted_CloseEveryConfirmationDialog()
     {
         var viewModel = CreateViewModel();
         var requested = false;
@@ -226,6 +226,7 @@ public sealed class DialogsViewModelTests
             new LocalizationService(),
             stateService,
             new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(), new LocalInstallationStateStore(), new LocalDiagnostics(), new StubFilePickerService()),
+            new LocalDiagnostics(),
             action =>
             {
                 action();
@@ -286,7 +287,7 @@ public sealed class DialogsViewModelTests
     }
 
     [Fact]
-    public void ShowStopConfirm_LocalizesSharedStopMessage()
+    public void ShowStopConfirm_WhenInvoked_LocalizesSharedStopMessage()
     {
         var viewModel = CreateViewModel();
 
@@ -347,6 +348,7 @@ public sealed class DialogsViewModelTests
             new LocalizationService(),
             new NoticeStateService(noticePath),
             new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(), new LocalInstallationStateStore(), new LocalDiagnostics(), new StubFilePickerService()),
+            new LocalDiagnostics(),
             action =>
             {
                 action();

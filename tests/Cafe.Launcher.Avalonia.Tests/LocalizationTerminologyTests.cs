@@ -188,7 +188,8 @@ public sealed class LocalizationTerminologyTests
         var dialogs = new DialogsViewModel(
             localizer,
             new NoticeStateService(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "notice.json")),
-            setupWizard);
+            setupWizard,
+            new LocalDiagnostics());
 
         settingsOptions.RefreshDisplayNames();
         dialogs.ApplyLanguage();

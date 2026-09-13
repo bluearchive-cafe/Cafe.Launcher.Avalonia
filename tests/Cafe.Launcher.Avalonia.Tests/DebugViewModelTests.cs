@@ -218,7 +218,8 @@ public sealed class DebugViewModelTests : IDisposable
                 localizer,
                 new GameInstallationPath(),
                 new LocalInstallationStateStore(),
-                diagnostics, new StubFilePickerService()));
+                diagnostics, new StubFilePickerService()),
+            diagnostics);
         var backend = new StubGameOperationExecutor { IsDownloadRunning = true };
         var errorHandling = new ErrorHandlingService(localizer, diagnostics, toastService);
         var operations = new GameOperationsViewModel(

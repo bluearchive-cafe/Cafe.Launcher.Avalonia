@@ -1086,7 +1086,8 @@ public sealed class GameOperationsViewModelTests
         shell.IsBusy = false;
         var dialogs = new DialogsViewModel(localizer, new NoticeStateService(
             Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "notices.json")),
-            new SetupWizardViewModel(localizer, new GameInstallationPath(), new LocalInstallationStateStore(), diagnostics, new StubFilePickerService()));
+            new SetupWizardViewModel(localizer, new GameInstallationPath(), new LocalInstallationStateStore(), diagnostics, new StubFilePickerService()),
+            diagnostics);
         var backend = new StubGameOperationExecutor();
         var shortcutService = new TestGameShortcutService();
         var errorHandling = new ErrorHandlingService(

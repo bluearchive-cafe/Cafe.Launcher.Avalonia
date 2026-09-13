@@ -107,7 +107,11 @@ public sealed partial class MainWindowViewModelTests : IDisposable
         var shellViewModel = new ShellViewModel(localizationService);
         var errorHandling = new ErrorHandlingService(localizationService, diagnostics, toastService);
         var noticeStateService = new NoticeStateService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "shown_notices.json"));
-        var dialogsViewModel = new DialogsViewModel(localizationService, noticeStateService, new SetupWizardViewModel(localizationService, new GameInstallationPath(), new LocalInstallationStateStore(), new LocalDiagnostics(), filePickerService));
+        var dialogsViewModel = new DialogsViewModel(
+            localizationService,
+            noticeStateService,
+            new SetupWizardViewModel(localizationService, new GameInstallationPath(), new LocalInstallationStateStore(), diagnostics, filePickerService),
+            diagnostics);
         using var settingsLogger = new UnifiedLogger(Path.Combine(tempDir, Guid.NewGuid().ToString("N")));
         var settingsViewModel = new SettingsViewModel(
             settingsService, httpClientFactory, localizationService, toastService,
@@ -187,7 +191,7 @@ public sealed partial class MainWindowViewModelTests : IDisposable
                 resourcePanelViewModel,
                 new LogViewerDialogViewModel(testLogger, null, null, null, null),
                 new LogExportDialogViewModel(
-                    new LogExportService(new LocalDiagnostics(testLogger)),
+                    new LogExportService(new LocalDiagnostics(testLogger), new CrashReportStore()),
                     filePickerService,
                     toastService,
                     localizationService,

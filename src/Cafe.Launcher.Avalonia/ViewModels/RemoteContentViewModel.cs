@@ -27,6 +27,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     private readonly ICarouselTimer carouselTimer;
     private BannerCarouselTransition bannerTransition = new(MotionTokens.NormalDuration);
     private CancellationTokenSource? carouselDelayCts;
+    private Task carouselResumeTask = Task.CompletedTask;
     private CancellationTokenSource? bannerPreloadCts;
     private bool showRemoteContentCard = true;
     private bool isMotionReduced;
@@ -100,6 +101,9 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     public Action<string?>? OpenExternalUrlRequested { get; set; }
 
     internal bool IsCarouselTimerRunning => carouselTimer.IsRunning;
+
+    /// <summary>Gets the active manual-navigation resume operation for deterministic synchronization in tests.</summary>
+    internal Task CarouselResumeTask => carouselResumeTask;
 
     public RemoteContentViewModel(
         LocalizationService localizer,
@@ -436,7 +440,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
                 ? BannerCarouselTransition.CarouselSlideMode.Backward
                 : BannerCarouselTransition.CarouselSlideMode.Forward);
         StopCarouselTimer();
-        _ = ScheduleCarouselResumeAfterDelayAsync();
+        carouselResumeTask = ScheduleCarouselResumeAfterDelayAsync();
     }
 
     [RelayCommand]
@@ -447,7 +451,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
             // Dot navigation has no spatial neighbour relation; it always cross-fades.
             NavigateToBanner(index, BannerCarouselTransition.CarouselSlideMode.Fade);
             StopCarouselTimer();
-            _ = ScheduleCarouselResumeAfterDelayAsync();
+            carouselResumeTask = ScheduleCarouselResumeAfterDelayAsync();
         }
     }
 
