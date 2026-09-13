@@ -1,224 +1,343 @@
 # 仓库审计报告（当前状态）
 
-- 审计日期：2026-09-12
-- 审计对象：`490c2e5`（`main`，亦即已发布 tag `v1.1.0-beta.9` 指向的提交）
-- 模式：**full 全量审计**（架构、安全、依赖与发布、测试、性能、可维护性六个域）
-- 上次全量基线：`66e103a`（2026-09-11 报告，见 `.repository-audit/history/2026-09-11-full-audit.md`）；上次审计提交 `43c17ce`
-- 变更集：`43c17ce..490c2e5`，10 提交 / 46 文件 / +2203 −176
-- 风险画像：desktop launcher / updater（下载完整性、文件系统安全、发布供应链、更新恢复 = critical）
-- 状态文件：`.repository-audit/findings.json`（99 项）、`.repository-audit/repository-map.md`
+> 本报告为 **full 全量重审**：按用户指令忽略既有审计报告与台账，从零完成仓库发现、风险画像、六域审计通道与发现验证。旧报告（2026-09-12 @ `490c2e5`）与旧台账（101 项）已归档至 `.repository-audit/history/`。
 
-## 当前结论
+## Audit Metadata
 
-**仓库整体健康：0 Critical / 0 High。** 当前开放 **14 项：1 项 Medium、6 项 Low、7 项 Informational**，另有 3 项 deferred、2 项 accepted-risk、1 项 product-decision。本轮审计新发现 7 项、因修复不完整**重新打开 1 项 Low**（AUD-TST-005）；此前 resolved 的发现未发现回归——全部契约守卫随测试套件在 Debug 与 Release 两种配置下通过。
+- 日期：2026-09-13
+- Commit：`5f56f8e`（`main`；最新已发布 tag `v1.1.0-beta.9`）
+- 模式：**full**（用户指令「从头开始审计、忽略已有报告」；架构、安全、依赖/供应链、测试、性能、可维护性 + Git 热点）
+- 上一基线：不适用（本次为全新台账；历史报告见 `history/`）
+- 范围：生产源码 219 个 `.cs`（≈32.8k 行）+ 28 个 `.axaml`、174 个测试文件（≈42k 行）、CI 两工作流、打包/安装器脚本、文档契约
+- 项目画像：desktop-launcher（`.agents/skills/repository-audit/profiles/desktop-launcher.md` 按仓库证据调整）
 
-审计结论出具后，按你的裁定落地了一批修复（见下节「按裁定落地的修复」）：**AUD-DEP-009、AUD-ARCH-008、AUD-ARCH-005 已结案**（其中 ARCH-005 取「删除」方案），AUD-DOC-003 按决定结案为已接受风险，其决策记录诉求拆分为 AUD-ARCH-009。台账现为 101 项：**81 resolved / 14 open / 3 deferred / 2 accepted-risk / 1 product-decision**。
+## Executive Summary
 
-最值得注意的一项不是代码缺陷而是**流程盲区**：Release 配置的测试只在打 tag 时运行，本轮发版已实际因此失败一次并被追平（AUD-CI-008）。
+仓库健康状况：**良好且纪律性显著高于同规模项目**。文档化规则（架构边界、模态隔离裁定、本地化契约、设置兼容、供应链锁定）与实现逐条核对一致；下载完整性、文件系统边界、进程启动、外部链接四个 desktop-launcher 关键风险面全部有真实防御且有测试保护。未发现 Critical 或 High 级别问题。
 
-本机验证证据（本轮实跑，两条命令均 **exit 0**）：
+开放发现：
 
-| 检查 | 结果 |
-|---|---|
-| `scripts/Test-LocalizationContract.ps1`（`verify.ps1` 首道门禁） | 通过 |
-| Debug 构建 | **0 警告 / 0 错误** |
-| 单元测试（Debug） | **1622 通过 / 2 跳过 / 0 失败**（1624） |
-| Headless UI 测试（Debug） | **176 / 176 通过**（含 7 份黄金基线） |
-| 手写代码覆盖率 | 行 **86.25%**（14376/16668）、分支 **93.05%**（2262/2431） |
-| 覆盖率棘轮 | 通过，余量 **+0.40pp 行 / +0.35pp 分支**（基线 85.85% / 92.70%） |
-| Release 构建（win-x64） | **0 警告 / 0 错误** |
-| Release 资源合约测试 | 18 通过 |
-| **单元 + Headless 全量（`-Configuration Release`）** | **1622 通过 / 2 跳过 / 0 失败；176 / 176** ——与 Debug 完全一致 |
-| **落地修复后复跑 `verify.ps1`** | **exit 0**：单元 **1628 通过 / 2 跳过 / 0 失败**（1630）、Headless 176/176，行 **86.26%** / 分支 **93.03%**，棘轮余量 **+0.41pp / +0.33pp**（覆盖率较上一行为微降，因删除了 `ModalHostViewModel` 中一条被覆盖的属性，仍高于棘轮） |
+- Critical：0
+- High：0
+- Medium：6
+- Low：10（另 1 项 Informational）
 
-CI 状态（`gh` 实查）：`main` 的 Build run `34666006924` **success**；tag `v1.1.0-beta.9` 的 Release run `34666008931` **success**，Release 已于 2026-09-12T01:58:30Z 发布。
+自上次审计解决项：不适用（全新台账；旧台账 101 项随报告归档）。
 
-## 变更集审读（`43c17ce..490c2e5`）
+需要决策的事项：
 
-10 个提交里只有 4 个含生产代码变更，均已逐行审读：
+1. **更新校验的自愈成本（AUD-PERF-001）**：每次更新对全部未变更文件做单线程全量 CRC64 重读，是有文档记录的自愈设计，但在大安装 + 小更新场景是主要等待成本。是否引入修复通道已有的「见证哈希」摊销机制，属于架构决策。
+2. **非 Windows 测试执行（AUD-CI-001）**：CI 从不在 Linux/macOS 跑测试，约 6 个平台分支在任何机器上都不执行，而产品实际分发 Linux/macOS 包。是否增加可选 Linux 测试 job 属于 CI 投入决策。
+3. **官方协议兼容性依据入库（AUD-MAINT-002）**：436 行协议对比分析（与官方启动器共用游戏目录的逐项核对）仅存在于未跟踪工作树文件中，丢失即失去兼容性论证。
 
-1. **`c5fa53a` 一键修复**：`ManifestValidationResult.HasDamagedFiles`（`DamagedFileCount > 0`）+ `GameOperationJourney.StartGameAsync` 失败分支改为打开既有修复确认。**设计面健康**：复用 `IGameOperationJourneyHost.ShowRepairConfirmation` 与既有 `ModalKind.RepairConfirmation`，未新增模态表面，因此没有踩到 AUD-MTN-017 的「约 14 个未守卫编辑点」；`HasDamagedFiles` 的判别前提成立——`DamagedFileCount` 的唯一产出点是 `ManifestValidationService.cs:102`，而 `GameLaunchService.Failed()`（`:154-167`）与状态/路径类失败路径留下的计数器恒为 0，故「损坏」与「状态失败」不会互相误判。确认后的链路复用既有 `ConfirmRepairRequested → RepairAsync`，且 `GameOperationsViewModel.RepairAsync` 对运行时状态有 `Corrupted or Ready` 闸门。
-2. **`3e95793` 删除 click code 归因链路**：删除 `ClickCodeService`（91 行）及 DI 注册、App 启动调用、`GameLaunchService` 构造参数与启动前写入、`GamePaths.ClickCodeFileName`、导出日志用户数据清单项；全仓库 grep 无残留引用。**顺带降低了文件系统面**（原先启动前会往游戏目录写文件）。因生产侧从不投放归因码源文件，该链路在任何真实部署里必然空转，删除属净收益。
-3. **`85e27d7` 启动后最小化到托盘**：`MainWindow.MinimizeToTray()` 按 `PerformClose` 既有规则（有托盘则隐藏、无托盘退回任务栏），`Operations.MinimizeRequested` 与标题栏的 `WindowChrome.MinimizeRequested` 分开接线，3 条 headless 用例锁住两条路径不被合并。
-4. **`f69654d` 下载停止日志**：日志移入 `if (session is not null)` 守卫内并将静态 `LogSync` 改为注入的 `diagnostics.DebugAsync`。已核实 `UnifiedLogger.LogAsync` 方法体内无 `await`（`serilogLogger.Write` 直接入队），故 `GetAwaiter().GetResult()` 不构成 UI 线程死锁，与仓库既有写法一致。
+最重要的风险/行动：
 
-其余 6 个提交为发布准备（`0de2905`）、横幅管线与分析文档（`31a4662`、`b56c6d2`）、图标统一（`8911e67`）、审计台账（`1c78317`）与测试级别修正（`490c2e5`）。
+1. **AUD-PERF-001**（Medium）— 更新安装阶段的整体重哈希：保留自愈语义的前提下用见证哈希/并行化摊销成本。
+2. **AUD-CI-001 + AUD-TEST-003**（Medium + Low）— 非 Windows 分支「看似有覆盖、实则无处执行」；修隐藏跳过并增加可选 Linux 测试 job，二者同一根因。
+3. **AUD-ARCH-001/002**（Medium×2）— 两个最高变更热点（`ShellLifecycle` 881 行、`MainWindow.axaml.cs` 663 行）各自内嵌可拆的独立关注点（模态同步/Escape 表、动效引擎），在下一个动它们的功能前先抽协作者。
+4. **AUD-MAINT-002**（Low）— 提交或明确弃置官方协议对比分析文档。
 
-依赖面本轮**无任何变更**（`Directory.Packages.props` 与三份 `packages.lock.json` 在变更集内零改动）。
+## Changes Since Previous Audit
 
-## 按裁定落地的修复（审计结论出具后）
+本次为忽略历史报告的全量重审，不做增量对照。自 `v1.1.0-beta.9`（`490c2e5`）以来的 3 个提交均为文档与依赖项（Dependabot 2 个补丁版升级 + lock/§12 表/第三方声明同步、AGENTS.md 补充升级流程），未触及行为代码；依赖扫描（`dotnet list package --vulnerable --include-transitive`）确认当前无漏洞包。
 
-| ID | 裁定 | 落地内容 | 验证 |
-|---|---|---|---|
-| AUD-DEP-009 | 「可发布 sha256sums」 | `release.yml` 的 release job 新增「Generate checksum manifest」步骤：清单由 `artifacts/distribution` 实际文件推导（不另抄一份产物清单），数量 ≠ 6 即 `exit 1`，产出的 `SHA256SUMS` 随两个发布目标（源码仓库 + 独立 Release 仓库）一并发布 | 本地模拟：`sha256sum -c SHA256SUMS` 全绿；多放入一个文件时按设计失败。新增 `InstallerContractTests.ReleaseWorkflow_PublishesChecksumManifestForEveryDistributionPackage` 锁住该步骤与两个发布目标 |
-| AUD-ARCH-008 | 「根据官方客户端的逻辑进行测试；测试版本号更改引发的行为变化」 | ① `ApiConfig.YostarAuthorizationVersion` 补文档注释（是签名负载的一部分、须在官方升版时复核、服务端拒绝即为此字段被校验的信号）；② `AuthorizationHeaderFactory` 增加 `TimeProvider` 接缝（保留无参构造供 DI），使签名可复现；③ 新增 `AuthorizationHeaderFactoryTests` 5 例，期望值用 openssl/Python hashlib 在本实现之外独立算出；④ `LauncherConstantsTests` 中误导性的 `MatchesOfficialLauncherVersion` 更名为 `RemainsTheValueTheProtocolWasVerifiedAgainst` 并注明其局限 | **两向实测**：调换 `head` 字段声明序 → 5 例中 4 例失败；把常量改为 `1.7.3` → 8 例中 5 例失败（含「仅版本变化即改变签名」用例） |
-| AUD-DOC-003 | 「不纳入版本管理，也不添加 gitignore」 | 按决定结案为已接受风险；其决策记录诉求拆分为 AUD-ARCH-009（该诉求不依赖分析文档是否入库） | — |
-| AUD-ARCH-005 | 选 (A)：**删除**属性而非绑定 | ① 删除 `ModalHostViewModel.IsDialogLayerInteractive` 及其在 `NotifyStackChanged` 的通知；② `ModalHostViewModelTests` 移除 4 处断言，并把 `InteractionState_WhenNestedModalOpens_OnlyTopLayerIsInteractive` 更名为 `..._WhenNestedDialogOpens_MarksUnderlyingLayersNonInteractive`——去掉对已删属性的断言后，该用例改为断言「对话框在顶时下层主叠层全部让出交互权 + `Top.Kind` 正确」，避免静默丢失原有覆盖；③ `AGENTS.md` 新增**模态隔离条款**、`CONTEXT.md` §模态交互权 补实现分工，共同写明两层机制与「对话框层有意不设闸口」的理由（第二真相来源会让漏注册的对话框渲染但不可交互 = 窗口硬冻结） | 全仓库已无 `IsDialogLayerInteractive` 引用（仅归档的历史报告保留当时的表述）；定向构建 0 警告/0 错误，`ModalHostViewModelTests` 8/8 通过 |
+## Critical Issues
 
-落地后的全量验证（本机实跑 `verify.ps1`，**exit 0**）：Debug 构建 0 警告/0 错误；单元 **1628 通过 / 2 跳过 / 0 失败**（1630）；Headless **176/176**；手写覆盖率行 **86.26%**（14376/16666）、分支 **93.03%**（2255/2424）；棘轮余量 **+0.41pp / +0.33pp**；Release 构建 0 警告/0 错误；Release 资源合约 18 通过。
+无。
 
-**尚未落地、仍待裁定**：AUD-CI-008（Release 测试接入 `build.yml`）、AUD-REL-008（横幅契约测试）、AUD-MTN-020/021（两处文档/注释修正）、AUD-TST-005（残留无超时等待）、AUD-DEP-011（`AGENTS.md` 补 §12 一句），以及需要决策的 AUD-ARCH-005 / AUD-ARCH-009 / AUD-DEP-012。
+## High Priority Findings
 
-## Medium
+无。
 
-### AUD-CI-008 — Release 配置的测试只在打 tag 时跑，配置相关失败要到发版才暴露
+## Medium Priority Findings
 
-- 类别：ci/testing｜严重度：Medium｜置信度：95｜状态：open｜处置：Add Guard｜建议验证：Verified
+### AUD-PERF-001 — 更新安装对全部未变更文件做单线程全量 CRC64 重读（文档化的损坏自愈设计）
 
-**证据**
+- 类别：性能 / 下载完整性
+- 严重度：Medium（用户可见等待成本；语义是有意设计）
+- 置信度：95（本审计亲自读码确认）
+- 状态：open
+- 处置：Architecture Decision
 
-`build.yml:60` 跑 `test.ps1 -Configuration Debug`，`coverage.ps1:61-67` 同为 Debug-only；整套 Release 测试只存在于 `release.yml` 的 installer job（`:263` `test.ps1 -Configuration Release`），而该 workflow 仅由 tag 推送触发（`:3-7`）。
+**证据**：`src/Cafe.Launcher.Avalonia/Features/GameOperations/DownloadExecutor.cs:263-336` — `InstallDownloadedFilesAsync` 遍历**完整清单**，凡不在 `verifiedHashes`（本次下载已证）或 `plannedHashes`（修复计划见证）内的已安装文件逐个 `ComputeFileAsync` 全文件 CRC64（:290）。安装/更新计划刻意不填充 `plannedHashes`（`DownloadPlan.cs:29-34`「Empty for the install/update plans, whose diff is size-based」）。:259-261 注释明示意图：「Untouched installed files are otherwise still hashed: this is the only content-corruption self-heal for files an update does not rewrite — the launch check only compares size/existence.」校验阶段为单 `foreach` 串行，而下载阶段为 10 路并行（`MaxParallelDownloads`）。
 
-本轮已实际发生：
+**影响**：改动 20/10000 文件的小更新仍要完整读盘校验其余 9980 个文件，串行磁盘受限，是下载完成后「FileCheck」阶段的主导等待时间；装机体量大于内存时为真实磁盘时间而非页缓存命中。
 
-- tag `v1.1.0-beta.9` 指向 `0de2905` 时，Release run `34665542855` 的 installer job **失败**——唯二失败用例是 `GameDownloadServiceTests.Stop_WhenNoOperationIsRunning_DoesNotLogDownloadStopped` 与 `Stop_WhenOperationIsRunning_LogsDownloadStopped`；同一提交的 Build run `34665540775`（Debug）**全绿**。
-- 发布 job 因 `needs: [build, installer]` 被跳过，无坏产物外流；随后需追加提交 `490c2e5` 并重打 tag，Release run `34666008931` 才成功。
+**建议**：若保留自愈语义，可复用修复通道已验证的机制摊销：`PlannedFileHash.Capture`（`ManifestDiffCalculator.cs:258`）式的 size+mtime 见证让「上次校验过且未变」的文件跳过重读；或对独立文件做有界并行。两者都以「见证仍匹配才信任跳过」保住自愈能力。
 
-根因是该类断言对构建配置敏感：`UnifiedLogger.cs:39-45` 的级别开关在 `#if DEBUG` 取 Verbose、否则取 Information，Debug 级条目在 Release 被丢弃，`unified.log` 因此从不创建，读日志的断言随即抛 `DirectoryNotFoundException`。
+**建议验证**：Strongly Supported（机制本体已在修复路径存在并被 `DownloadExecutor.cs:345-362` 的复验逻辑使用；并行度对磁盘收益需基准实测）。
 
-**影响**
+**建议守卫**：若采纳，为「校验跳过计数」添加 Verbose 日志字段，后续审计可直接量化摊销效果。
 
-发版检查单里「推送后 main Build 必须绿，方可打 tag」这一条对本类失败**无保护作用**（Build 只跑 Debug）。任何 Debug/Release 分歧都只能在打 tag 之后被发现，代价是一次失败的发布流水线 + 改写历史重打 tag。
+### AUD-ARCH-001 — `ShellLifecycle` 为 881 行六职责协调器，变更频率 19 次/180 天
 
-**建议**
+- 类别：架构 / 可维护性
+- 严重度：Medium（结构性债务，非规则违规——Shell 聚合本身是 sanctioned 例外）
+- 置信度：95
+- 状态：open
+- 处置：Refactor
 
-在 `build.yml` 增加一步 Release 配置的测试运行（或给 job 加 `Configuration` matrix 维度），使该分歧在 PR 上即失败。
+**证据**：`src/Cafe.Launcher.Avalonia/Features/Shell/ShellLifecycle.cs`（881 行；类文档 :19-23 自述「Owns shell startup, refresh, settings-save, first-run wizard completion, resource-panel switching, and every cross-feature subscription」）。内部含六个可分关注点：刷新管线（:208-272）、跨功能接线 `Wire/Unwire`（:410-503，约 40 个订阅）、模态注册同步（:736-881，6 个 per-VM PropertyChanged 处理器 + 12 分支 switch）、Escape 路由（:506-571，19 分支 switch）、语言/主题/动效应用（:646-701）、释放编排（:574-614）。Git 热点：19 commits/180 天。已有部分拆分（`ShellRefreshCoordinator` 186 行、`ShellStartup` 100 行、`ShellPresentationFamily` 记录止住了构造参数膨胀）。
 
-**建议验证**
+**影响**：任何跨功能事件、模态种类、Escape 行为的变更都落进同一文件；高变更频率 × 六职责 = 回归面持续扩大，测试只能整体覆盖。
 
-Verified，但有两个实现细节必须照做：Release 配置在 csproj 中声明 `<SelfContained>true</SelfContained>`（`:29`），`dotnet test -c Release` 的还原会按当前平台 RID 解析依赖图，与提交的无 RID 段 lock 在 locked mode 下冲突（NU1004）——`release.yml:256-263` 正是为此显式豁免 `RestoreLockedMode: 'false'`，`build.yml` 新增该步骤必须带同样的 env 覆盖。成本已实测：本机 `test.ps1 -Configuration Release` 单元 45s + Headless 43s。
+**建议**：优先拆两个自包含块——模态注册同步（~145 行）与 Escape 路由表——各自成为 Shell 内协作者，不违反 Shell 壳层裁定。不要求一次到位；在下一个必须动该文件的功能前做。
 
-**建议守卫**：`build.yml` 的 Release 测试步骤本身。
+**建议验证**：Verified（两个候选块无外部依赖、现有 `ShellLifecycleTests` 10 项事实可直接迁移）。
 
-## Low
+**建议守卫**：为 Shell 层文件加行数/职责预算的源码契约测试（仓库已有 InstallerContractTests 式源码断言先例），防回胀。
 
-### AUD-REL-008 — 发布横幅的版本契约无机械守卫，指南声明的画布尺寸也与 5 份已提交横幅不符
+### AUD-ARCH-002 — `MainWindow.axaml.cs` 内嵌 ~250 行动效引擎，为全仓库最高变更热点
 
-- 类别：release/packaging｜严重度：Low｜置信度：92｜状态：open｜处置：Add Guard｜建议验证：Strongly Supported
+- 类别：架构 / 可维护性
+- 严重度：Medium
+- 置信度：85（子代理逐行评审 + 本审计核对行数与热点计数）
+- 状态：open
+- 处置：Refactor
 
-**证据**（三处缺口同一根因：横幅的版本契约其实只是「文件存在」）
+**证据**：`src/Cafe.Launcher.Avalonia/Views/MainWindow.axaml.cs`（663 行；21 commits/180 天 = 全仓库第一热点，除生成文件外居首）。窗口本体职责（窗口状态持久化 :494-535、托盘 :469-492/:604-630、拖拽命中 :537-602、剪贴板 :639-662）之外，:71-420 嵌入约 250 行动效引擎：入场锚点动画（:71-152）、壁纸交叉淡化所有权交接（:172-231）、操作表面高度形变/沉浸动画套件（:270-420，含两个 `Animation` 工厂与 `DispatcherTimer` 退役方案）。
 
-1. `tests/.../ReleaseBannerContractTests.cs` 全文只读 `release-banner.template.json`（`:13`、`:319-320`），9 个 `[Fact]` 全为模板内的字符串/结构断言；唯一与 PNG 有关的断言是 `:32` 的 `Assert.EndsWith("-release-banner.png", resolved)`，作用于模板里 `output.image` 字符串，不触碰任何文件。无 `File.Exists`、无解码、无尺寸断言——零字节或错误尺寸的横幅照样全绿。同理，`:137-153` 只比对 asset 的 id，删掉四份 `docs/promo/assets/icons/*.png` 也不会失败。
-2. `release.yml:149-153` 的门禁是 `Test-Path $bannerPath -PathType Leaf`，只查存在性。
-3. `docs/promo/release-banner-guide.md:3` 声明「本仓库每个发行版本配一张 2000×1125 的发布横幅」，而实测 `docs/assets/release-banners/` 中 beta.1–beta.5 为 2400×1350、beta.6–beta.9 为 2000×1125（本轮用 System.Drawing 逐张读出）。
+**影响**：ADR-016 动效语义的每次调整（CONTEXT.md P2 前沿仍开放动效微调）都落在窗口 code-behind 里，与窗口职责互相放大变更；动效代码无法脱离窗口实例复用或测试。
 
-**影响**：`v1.1.0-beta.9` 的横幅本次确实合规（2000×1125，且 SHA-256 与管线 manifest 一致），门禁通过；但「提交一张内容或尺寸错误的横幅」这条路径上没有任何机械阻挡，且指南的尺寸声明无人可依。
+**建议**：将操作表面动效套件（:270-420）提取为独立 helper/behavior（输入为 surface + 参数，可被 Headless 测试直接驱动）。入场动画与壁纸淡化次优先。
 
-**建议**：按仓库已有的正确范式补齐——`ReleaseChangelogContractTests.cs:81-88` 的 `ReadProjectVersion()` 已从 csproj 读 `<VersionPrefix>` 再断言 CHANGELOG 标题与之匹配；横幅测试应同样断言「与 csproj 版本同名」的横幅存在、可解码且为 2000×1125（PNG 尺寸可直接解析 IHDR，无需引入依赖）。
+**建议验证**：Plausible（提取路径清晰但 Avalonia attached-behavior 的具体形态未实验）。
 
-**建议验证**：Strongly Supported（范式与文件均已核实；未实现）。
+**建议守卫**：与 AUD-ARCH-001 同一源码契约测试覆盖。
 
-### AUD-TST-005（重新打开）— 测试门控等待仍有未加上限的残留
+### AUD-TEST-001 — 53 个手写 `HttpMessageHandler` 测试桩分散在 17 个文件，无共享基类
 
-- 类别：testing/determinism｜严重度：Low｜置信度：88｜状态：**open（原为 resolved）**｜处置：Add Guard｜建议验证：Strongly Supported
+- 类别：测试 / 测试架构
+- 严重度：Medium（重复基础设施 + 行为漂移）
+- 置信度：95（grep 计数本审计复核）
+- 状态：open
+- 处置：Refactor
 
-**证据**：`f8d6329` 的修复不完整。最明确的一处是 `MotionVisibilityTests.cs:147` 的 `await context.WaitForPostAsync()`——该 TCS（`:159-166`）只在被测代码于被包裹的 SynchronizationContext 窗口内同步 `Post` 时才置位，无任何上限；**同一文件另 4 处（`:31`/`:39`/`:87`/`:118`）在同一轮已加 `WaitAsync(TimeSpan.FromSeconds(5))`**，属同一夹具内的遗漏。同类的无界等待还有 `LogExportDialogViewModelTests.cs:85` 的 `await exportTask`，以及 `LogExportDialogViewModelTests.cs:211/227/239/243/255`、`LogViewerDialogViewModelTests.cs:31/69/183`、`MainWindowHeadlessTests.Golden.cs:67` 对 `PendingRangeProbeTask`/`PendingFilterTask`/`openTask` 的直接 await。
+**证据**：`grep "sealed class .*: HttpMessageHandler"` 命中 53 处、17 个文件。同名不同实现成对出现：`CancellationHandler` ×3（`BackgroundViewModelTests.cs:558`、`LauncherCoreServiceTests.cs:253`、`RemoteManifestServiceTests.cs:145`）、`CountingHandler` ×2、`StatusHandler` ×2、`ThrowingHandler` ×2，另有 `NotFoundHandler`/`NotFoundHttpHandler`、`JsonHandler`/`JsonResponseHandler` 等近克隆。有的记录 `RequestHosts`，有的只计数，有的返回流——能力各不相同。
 
-因此 `Cafe.Launcher.Avalonia.Tests.csproj:20-26` 的抑制理由（「门控等待统一用 WaitAsync/预算轮询加超时上限」）**再次不成立**。全仓无 `xunit.runner.json`、无 `[Fact(Timeout)]`、无 runsettings 超时，唯一兜底是 `build.yml:20` 的 40 分钟 job 上限——任一处挂起都会整段吃掉 job 预算而非快速失败。
+**影响**：每新增一个网络行为测试都要再写一个 ~10 行桩；语义漂移（哪个桩记录了什么）让断言可信度依赖作者记忆。仓库已有 `tests/TestDoubles/` 共享机制（Compile-Link 进两个程序集）与 `StubFileDownloadService` 先例，模式是现成的。
 
-**建议**：给上述等待补 `WaitAsync(5s)`，或为测试工程引入全局超时。
+**建议**：在 `tests/TestDoubles/` 增加一个可组合的 `StubHttpHandler`（状态码/Body/重定向链/计数/请求录制/取消钩子），分批替换；预计删 300-400 行。
 
-**建议验证**：Strongly Supported。
+**建议验证**：Strongly Supported（替换为纯机械操作，逐文件等价迁移可用现有测试即时验证）。
 
-### AUD-MTN-020 — `CLAUDE.md:103` 仍把 click code 列为启动器数据
+### AUD-CI-001 — CI 从不在非 Windows 平台执行测试；约 6 个平台分支在任何机器上都不运行
 
-- 类别：maintainability/doc-drift｜严重度：Low｜置信度：95｜状态：open｜处置：Fix｜建议验证：Verified
+- 类别：CI / 跨平台行为
+- 严重度：Medium（产品实验性分发 Linux/macOS，对应行为零执行验证）
+- 置信度：90
+- 状态：open
+- 处置：Add Guard
 
-**证据**：`CLAUDE.md:103` 写「Launcher data lives in `%LOCALAPPDATA%\Cafe Launcher\`: settings, unified log, persisted download state, shown notices, and click code.」`3e95793` 删除了该链路并同步了 PRIVACY.md 与四语言 resx，但漏改此行。附带：该链路原本写入的是**游戏目录**而非 `%LOCALAPPDATA%`，故这一行在删除前也不准确。
+**证据**：`build.yml:18`（仅 windows-latest）与 `release.yml:16-18`（ubuntu-24.04 job 只构建分发包与 AppImage 冒烟，**不跑 test.ps1**）；测试唯一在 Release 配置的重跑也在 windows-latest（release.yml installer job :256-263）。测试代码却包含真实的非 Windows 分支：`GamePathValidatorTests.cs:161` 按 `OperatingSystem.IsWindows()` 分支期望值、`GameShortcutServiceTests.cs` 的 `.desktop` 路径、`LauncherSettingsServiceTests.cs:490-509` 用 `isLinuxPlatform` 注入缝模拟 Linux 归一化（好设计，但真平台路径仍无执行）。golden 截图类按设计 Windows-only（`GoldenScreenshot.cs:39-41`），单元套件主体是跨平台的（`Cafe.Launcher.Avalonia.Tests.csproj:11-16` 注释即按 Linux 交叉编译撰写）。
 
-**建议**：删去 "and click code"。**建议验证**：Verified。
+**影响**：Linux/macOS 专属行为（路径分隔符大小写敏感、`.desktop` 快捷方式、runner 归一化）的回归只能靠开发者恰好在这些平台上手跑发现；发布说明标榜的实验性平台没有最低回归保障。
 
-### AUD-MTN-021 — `LocalInstallationStateStore` 类注释写错文件名
+**建议**：为 `tests/Cafe.Launcher.Avalonia.Tests`（单元套件，无 Avalonia 渲染依赖）增加可选/周期性 Linux job（`workflow_dispatch` + `schedule` 即可，不必阻塞 PR）。Headless 套件继续 Windows-only 是合理的（golden 类按平台门控）。
 
-- 类别：maintainability｜严重度：Low｜置信度：95｜状态：open｜处置：Fix｜建议验证：Verified
+**建议验证**：Strongly Supported（test.ps1 与 csproj 均已支持非 Windows restore，见 csproj 注释；仅 CI 编排缺失）。
 
-**证据**：`src/Cafe.Launcher.Avalonia/Services/LocalInstallationStateStore.cs:17` 的类摘要写「游戏目录内安装状态（**game_config.json** + manifest 副本）的唯一读写入口」，实际文件名来自 `Constants/GamePaths.cs` 的 `game-launcher-config.json`（`CLAUDE.md` 用的是正确名称）。grep 全仓库 `game_config` 仅命中该注释本身。该文件是与官方启动器互操作的契约文件，读错名字会把排查引向不存在的文件。
+**建议守卫**：该 job 本身即守卫；同时落地 AUD-TEST-003 让跳过可见。
 
-**建议**：改注释为 `game-launcher-config.json`。**建议验证**：Verified。
+### AUD-TEST-002 — 更新检查的「服务→UI」粘合层无测试（`SettingsViewModel.CheckForUpdatesAsync` 与 ShellLifecycle 确认接线）
 
-### AUD-ARCH-009 — 「官方强杀进程 vs Cafe 拒绝执行」这条有意分歧无决策记录
+- 类别：测试 / 关键路径覆盖
+- 严重度：Medium（回归表现为用户可见的错误提示/漏提示）
+- 置信度：85
+- 状态：open
+- 处置：Fix
 
-- 类别：architecture/decision-record｜严重度：Low｜置信度：90｜状态：open｜处置：Document｜建议验证：Strongly Supported
+**证据**：`LauncherUpdateService`（26 个测试，含 URL 域钉住、语义化版本矩阵、重定向降级）与 `DialogsViewModel`（对话框打开后的行为）都被充分覆盖，但二者的粘合没有测试：`src/Cafe.Launcher.Avalonia/Features/Settings/SettingsViewModel.cs:239-266` 的 `CheckForUpdatesAsync` 决定「错误 toast / 已最新 toast / 打开更新对话框」的分支及失败消息格式化（:250-254）无任何直接测试（无 `SettingsViewModelTests`；`CheckForLauncherUpdateCommand` 在测试中零命中）；`ShellLifecycle.cs:356,428,465` 的启动期更新检查成功路径与 `ConfirmUpdateAvailableRequested` → `ExternalLinkService.Open` 订阅/退订仅测试了抛异常路径（`ShellLifecycleTests.cs:236`）。
 
-**证据**：官方启动器在安装/解压阶段强杀游戏目录下的所有 `.exe`，Cafe 改为拒绝执行并报 `GameRunning`（`DownloadSession.cs:233-238`、`GameUninstallService.cs:181-183`、`GameOperationJourney.cs:425`）。这是有意的安全分歧，但受版本管理的文档中无任何记录：`docs/design/adr/` 现有 ADR-001…020 全部为 UI/M3/崩溃域，grep「强杀」在受版本管理的文件中零命中。`CLAUDE.md` 的 Persistence and compatibility contracts 已记录「启动校验失败开放」「修复用 CRC64」等分歧，但不含这一条。
+**影响**：这里恰是「吞掉失败当成功」一类回归的典型滋生地；服务与对话框各自正确不等于组合正确。约 25 行未测分支决定用户对「有新版本」的唯一感知通道。
 
-**影响**：后续维护者按官方行为「修回去」会削弱一项安全属性（游戏运行中拒绝覆盖/删除文件）。
+**建议**：为 `CheckForUpdatesAsync` 三分支 + 失败消息格式化补聚焦测试（手写 stub 服务，遵循仓库无 Mock 约定）；ShellLifecycle 侧补「确认事件触发一次 Open 且 Dispose 后退订」一例。
 
-**建议**：写成一条 ADR，或在 `CONTEXT.md` 的决策段登记。**注**：本项由原 AUD-DOC-003 拆出——它不依赖那份未跟踪的分析文档是否入库，故不随 AUD-DOC-003 的结案而消失。
+**建议验证**：Verified（纯行为断言，现有测试基建直接可用）。
 
-**建议验证**：Strongly Supported。
+## Low Priority Findings
 
-## Informational
+### AUD-PERF-002 — 停止/暂停/恢复的 UI 点击路径同步阻塞日志 sink
 
-### AUD-DEP-011 — Dependabot 的 nuget PR 必然 Build 红灯
+- 严重度：Low｜置信度：90（`GameDownloadService.cs:152` 本审计亲自确认）｜状态：open｜处置：Fix
+- **证据**：`GameDownloadService.cs:152` `diagnostics.DebugAsync(...).GetAwaiter().GetResult()`（停止命令 → `GameOperationsViewModel.StopDownload` → `GameOperationJourney.PerformStop` → `GameOperationExecutor.Stop`）；`DownloadSession.cs:533,540` 的 `Pause()/Resume()` 内 `LogSync`。被阻塞调用经 `LocalDiagnostics.LogSync → UnifiedLogger.LogAsync(...).GetResult()`，其文档自述「sync-over-async stalls the UI thread whenever the Serilog async sink buffer is full」。
+- **影响**：常态仅微秒（10,000 缓冲入队即返回）；下载日志风暴 + 日志查看器占用文件的背压场景下「停止」点击出现可感卡顿。
+- **建议**：改 fire-and-forget（`_ = DebugAsync(...)`，仓库他处已有先例）。注意 PROJECT_CONVENTIONS §3.2 要求同步上下文用 `LogSync`——本处的正确改法是让该方法上下文变为可异步或显式弃等并注释意图，而非直接换 `LogSync`。
+- **建议验证**：Verified。
 
-- 类别：ci/supply-chain｜严重度：Informational｜置信度：95｜状态：open｜处置：Document｜建议验证：Verified
+### AUD-PERF-003 — 下载缓冲每次尝试新分配 256 KiB LOH 数组，未池化
 
-**证据**：Dependabot PR #15（2026-09-12 开）的 Build run `34665271098` 失败，唯一失败用例是 `InstallerContractTests.ProjectConventionsToolchainTable_MatchesDeclaredPackageVersions`（Failed 1 / Passed 1623）——即 AUD-MTN-007 引入的「§12 表须与 `Directory.Packages.props` 一致」守卫**按设计触发**，而 Dependabot 无法自行更新 Markdown 表。`AGENTS.md` 的依赖升级约定只要求本地 restore 再生 `packages.lock.json`（对应已结案的 AUD-CI-003），未提 §12。
+- 严重度：Low｜置信度：90｜状态：open｜处置：Fix
+- **证据**：`FileDownloadService.cs:129` `var buffer = new byte[1024 * 256];` 位于重试 `for` 循环体内；256 KiB > 85 KiB LOH 阈值。对照同类热点 `Crc64Service.cs:29-33` 已显式 `ArrayPool<byte>.Shared` 租赁并注释了同一 LOH 顾虑。
+- **影响**：N 个文件的安装产生 ≥N 次 LOH 分配（损坏重试最多 10×）；无正确性问题，属 GC 压力/碎片。
+- **建议**：比照 `Crc64Service` 用 ArrayPool 租赁/归还（try/finally 保证归还）。**建议验证**：Verified。
 
-**建议**：`AGENTS.md` 的依赖升级段落补一句「同时更新 `PROJECT_CONVENTIONS.md` §12 工具链表」。该守卫本身有价值（它正是防止工具链表漂移的机制），本条是配套流程文档缺口，**不是**建议放宽门禁。
+### AUD-PERF-004 — 每次壳层刷新销毁并重新下载/解码全部横幅位图
 
-## 仍开放项（沿用上轮，状态未变）
+- 严重度：Low｜置信度：85｜状态：open｜处置：Refactor
+- **证据**：`RemoteContentViewModel.cs:131-176` `Apply` 在每次刷新（启动、每次设置保存、**每次游戏操作完成**）时 `DisposeBannerBitmaps()` 后经 `PreloadBannerImagesAsync`（:506-525）重取缓存（24h `.remote` 缓存命中仍全文件重读）并重解码。解码离线程、生命周期处理（陈旧解码丢弃 :560-564）堪称范例；成本是 CPU/内存 churn 与操作完成后的轮播「加载中」闪态。
+- **建议**：以 ImageCacheService 已有的 URL/CRC 键做每 URL 位图备忘。**建议验证**：Plausible。
 
-| ID | 严重度 | 状态 | 摘要与其不修的理由 |
-|---|---|---|---|
-| AUD-DEP-012 | Informational | **product-decision** | 发行产物无代码签名。摘要清单已随发布交付（见上节 AUD-DEP-009），用户可校验「下载内容与发布者发布的一致」，但无法验证发布者身份——清单与产物同源托管，同时被替换即可同时失效。Windows 需 Authenticode 证书（`New-WindowsInstaller.ps1:139` 未传 SignTool），macOS 产物未签名/未公证，两者都需证书与费用决策 |
-| AUD-MTN-017 | Low | open | 新增主叠层模态仍需约 14 个未守卫编辑点，`ShellLifecycle` 语言刷新清单漏改静默失败。需一次结构性收敛。**注**：本轮 `c5fa53a` 复用既有模态，未加剧该问题 |
-| AUD-PERF-012 | Informational | open | 校验/安装/卸载阶段每文件一次 UI 线程 `Post` 无合并。机制已核，**队列深度后果未测量**，按 advisory 保留 |
-| AUD-ARCH-006 | Informational | open | `ModalEntry.Content`（`ModalEntry.cs:4`）只被写入（`ModalHostViewModel.cs:60`）、从不被读取；消费者只读 `Top.Kind`。AGENTS.md 把它列为共享模态契约，文档高估现实 |
-| AUD-ARCH-007 | Informational | open | `LocalDiagnostics.syncLogger` 静态可变（`LocalDiagnostics.cs:23`，构造时 `Volatile.Write` `:41`），仍有 **27 处**生产调用点走静态重载（本轮 `f69654d` 转换了 `GameDownloadService` 一处）。生产端仅一个实例，当前零影响 |
-| AUD-MTN-018 | Informational | open | `BannerImageDecoder.cs:31-36` 复制了 `BackgroundImageDecoder.ClampLargestSide`（`:99-107`）的策略体（阈值常量已共享） |
-| AUD-SEC-008 | Informational | open | 两处可预测 `*.tmp` 写路径（`LocalInstallationStateStore.cs:73-74`、`DownloadExecutor.GetTempName` `:423-425`）未纳入随机名硬化；利用需先具备游戏目录写权限，无权限提升 |
-| AUD-DEP-010 | Informational | open | 两个 workflow 均无 `schedule:`，闲置 HEAD 上的新公告要等下次推送才被检出；Dependabot 不覆盖 `prototypes/`（该原型有意退出 CPM） |
-| AUD-ARCH-003 / AUD-MTN-001 / AUD-TST-001 | Low | deferred | 与上轮一致：`RemoteContentViewModel` 直接持 `DispatcherTimer` 与其拆分（714 行）、限速测试的 `Stopwatch` 下限断言。本轮复验该文件未变，deferred 仍成立 |
-| AUD-DEP-002 | Low | accepted-risk | `Shirasagi0012.MaterialColorUtilities` 单维护者风险，已有年度复审与 fork 预案 |
+### AUD-SEC-001 — URL 校验与实际拨号之间存在 DNS 重绑定 TOCTOU 窗口
 
-## 需要你裁定的决策
+- 严重度：Low｜置信度：80｜状态：open｜处置：Accept Risk（或在网络层重构时顺带处理）
+- **证据**：`RemoteHttpUrlValidator.cs:109-120` 本地解析 DNS 并拒绝非公网地址；但 `SocketsHttpHandler` 拨号时自行二次解析。远程可控 URL（清单/CDN/重定向 Location）的权威 DNS 可对校验答公网 IP、对拨号答私网 IP。每跳复验（`RemoteHttpRequestService.cs:27-29`）同样受此限制；30s 正缓存（:138-150）不关闭该窗口。
+- **影响**：远程方可让启动器对其局域网/本机地址发起 GET。影响有界：GET-only、响应不回传攻击方、已验证签名 Authorization 头绝不跟随重定向转发（`LauncherApiClient.cs:243-250` + 单发 `SendAsync` 不自动重定向）。属经典 validate-then-dial 残余，威胁模型内无直接利用链。
+- **建议**：若未来收紧：delegating handler 将连接钉到已校验 IP，或手工解析+连接。当前接受风险合理。**建议验证**：Needs External Verification（修复方案涉及 HttpClient 栈行为细节）。
 
-1. **AUD-DEP-012**：是否引入代码签名（Windows Authenticode / macOS 公证）？需证书决策。
-2. **AUD-ARCH-009**：「官方强杀进程 vs Cafe 拒绝执行」这条有意分歧要不要写成 ADR？
-3. **AUD-CI-008 / AUD-REL-008 / AUD-TST-005 / AUD-MTN-020 / AUD-MTN-021 / AUD-DEP-011** 六项待办修复是否本轮一并落地？
+### AUD-SEC-002 — 资源面板 UID 以 URL 查询串传输，会落入代理/服务器访问日志
 
-> AUD-ARCH-005 已按裁定 (A) 落地（删除属性 + 文档记录策略），不再待决。
-> AUD-ARCH-008 的「服务端是否校验 `head.version`」仍是未验证前提（需外部证据）；本轮以「官方逻辑等价 + 版本变更行为」的签名层守卫收口，未改动该常量的取值策略。
+- 严重度：Low（隐私）｜置信度：85｜状态：open｜处置：Accept Risk
+- **证据**：`Features/ResourcePanel/ResourcePanelApiClient.cs:72,94-98` `?uid=...`。UID 为 8 位大写字母的社区面板标识符（`ResourcePanelUidService.cs:24-25`），协议本身镜像社区面板的 `fetch` 用法；诊断日志已专门剥离查询串（`RemoteHttpRequestService.cs:202-209` `DescribeUri`）。
+- **建议**：接受；如社区面板未来支持请求体传参再跟进。**建议验证**：Needs Product Decision（取决于上游面板协议）。
 
-## 已解决项与台账维护
+### AUD-TEST-003 — 非 Windows 平台分支以早期 `return` 隐藏跳过，而非 `Assert.Skip`
 
-- 本轮把 14 项此前因 **rebase 合并**（PR #13，分支 SHA 未保留）而 `resolved_commit` 为空的发现补记为 `main` 上的实际提交：AUD-MTN-009→`3dee04a`、AUD-MTN-015→`aa93333`、AUD-MTN-019→`7a09574`、AUD-PERF-011→`d01d3a9`、AUD-PERF-013→`0520bc6`、AUD-SEC-006→`6f07bdc`、AUD-SEC-007→`4ae2ede`、AUD-TST-006→`310052a`、AUD-TST-007→`297479f`、AUD-TST-008→`310052a`、AUD-TST-009→`adb8446`、AUD-DEP-008→`2ecb148`、AUD-CI-006→`adb8446`、AUD-CI-007→`596dc4b`。delta 审计自此可按 `resolved_commit` 直接比对。
-- 本轮新增 7 项（AUD-CI-008、AUD-REL-008、AUD-MTN-020/021、AUD-ARCH-008、AUD-DOC-003、AUD-DEP-011），重新打开 1 项（AUD-TST-005）。
-- **按裁定落地**：AUD-DEP-009、AUD-ARCH-008、AUD-ARCH-005 已结案（工作树待提交），AUD-DOC-003 结案为已接受风险，其决策记录诉求拆分为 AUD-ARCH-009，签名诉求拆分为 AUD-DEP-012。台账现为 **101 项（81 resolved / 14 open / 3 deferred / 2 accepted-risk / 1 product-decision）**。
-- **本轮新增自动守卫 2 处、文档裁定 2 处**：`AuthorizationHeaderFactoryTests`（5 例，签名算法与版本耦合）、`InstallerContractTests.ReleaseWorkflow_PublishesChecksumManifestForEveryDistributionPackage`（摘要清单发布契约）；`AGENTS.md` 模态隔离条款与 `CONTEXT.md` §模态交互权 的实现分工说明（记录「对话框层有意不设闸口」及其理由）。守卫均已做两向实测。
-- **台账已补齐**：按裁定落地的三项已记录解决提交——AUD-DEP-009→`81df872`、AUD-ARCH-008→`7b69e80`、AUD-ARCH-005→`acfb3a3`。连同上一段回填的 15 项，台账内已无「resolved 但缺 `resolved_commit`」的条目。
+- 严重度：Low｜置信度：90｜状态：open｜处置：Fix
+- **证据**：`GameDownloadServiceTests.cs:634-637`（`if (!OperatingSystem.IsWindows()) { return; }`）、`GameShortcutServiceTests.cs:297,318,586`（非 Windows 返回空元组使断言退化）、`CrossProcessLaunchSignalTests.cs:172,194,215`。对照正确范式：`GameUninstallServiceTests.cs:29`、`InstallationOperationStateTests.cs:474` 用 `Assert.SkipUnless/SkipWhen`，跳过在 trx 可见。
+- **影响**：与 AUD-CI-001 叠加后，这些分支在**所有**机器上都是静默死代码，制造跨平台覆盖的假象。
+- **建议**：统一替换为 `Assert.Skip*`（机械修改）。**建议验证**：Verified。
 
-## 推荐优先级
+### AUD-TEST-004 — 魔数睡眠编码生产常量；否定断言观察窗短于生产轮询间隔
 
-1. **AUD-CI-008**（在 `build.yml` 加 Release 配置测试）——改动小、杠杆最高，直接消掉「打 tag 才发现」这一整类失败；注意带 `RestoreLockedMode: 'false'` 的 env 覆盖。
-2. **AUD-REL-008**（横幅契约测试）——照抄仓库已有的 `ReadProjectVersion()` 范式。
-3. **AUD-MTN-020 / AUD-MTN-021**——两处一行文档/注释修正。
-4. **AUD-ARCH-009**（一条 ADR 记录「拒绝执行 vs 强杀」）。
-5. **AUD-TST-005** 残留等待补超时上限；**AUD-DEP-011** 补 `AGENTS.md` 一句。
-6. 其余 Informational 与 deferred 按域择机处理。
+- 严重度：Low（单边假通过风险，非 flaky）｜置信度：85｜状态：open｜处置：Fix
+- **证据**：`BackgroundViewModelTests.cs:253` 固定 `Task.Delay(700ms)` 后断言淡化位图未被释放——700 是生产 overlay 宽限期的硬编码复制品，生产值上调即静默假通过。`CrossProcessPollingListenerTests.cs:38,95-96,121,145` 的否定观察窗 50-80ms 短于生产 `PollInterval` 250ms（`CrossProcessPollingListener.cs:17`），Dispose 测试只能抓住紧旋循环而非「循环仍在 250ms 节奏运行」。
+- **建议**：前者从（internal 可见的）生产常量推导延时；后者拉长观察窗至 >1× 轮询间隔或在测试缝注入更短间隔。**建议验证**：Strongly Supported。
 
-## 验证过的健康面
+### AUD-MAINT-001 — `SettingsAppearanceViewModel` 以静态字段保存主题方案缓存（隐藏全局）
 
-只记录能关闭某个具体疑虑的结论：
+- 严重度：Low｜置信度：90（本审计亲自确认字段与消费点）｜状态：open｜处置：Refactor
+- **证据**：`Features/Settings/SettingsAppearanceViewModel.cs:614-618` 五个 `private static` 字段（`lastSchemeApplied/lastThemeMode/lastSchemeSeed/lastSchemeVariant/lastSchemeStrategy`），由 `internal static ApplyScheme` 写（:647-650）、主题模式应用逻辑读（:589-595, :673-682）决定是否跳过重复应用。VM 是 DI 单例（组合根全 Singleton），静态存储在功能上等价于实例状态，但跨实例存续、对测试不可见于对象图。测试侧已有先例为此买单：`BackgroundViewModelHeadlessTests.cs:100-102,142-145` 需在 `finally` 恢复被测静态 `ResizeReloadDebounce`。
+- **影响**：当前无生产缺陷路径（单例 + 应用级资源本就是全局态）；成本是隐藏耦合与测试污染面，第二个窗口/预览实例出现时才会变成真问题。
+- **建议**：随下次触碰该文件把缓存移入实例字段（`ApplyScheme` 同步改为实例方法，测试调用点经 VM 实例）。**建议验证**：Verified。
 
-- **本轮新功能未踩模态接线陷阱**：`c5fa53a` 复用既有 `ModalKind.RepairConfirmation`（`ModalKind.cs:20`、`ShellLifecycle.cs:519/838`、`MainWindowDialogsOverlay.axaml:255`），未新增叠层——AUD-MTN-017 的编辑点问题本轮未被加剧。
-- **启动损坏判定的前提成立**：`DamagedFileCount` 唯一产出点是 `ManifestValidationService.cs:102`（`= 缺失 + 尺寸不符`），`GameLaunchService.Failed()` 与状态/路径类失败留下的计数器恒为 0，故 `HasDamagedFiles` 不会把「状态失败」误判为「文件损坏」。
-- **两种构建配置下测试全绿**：Debug 与 Release 各跑一遍全量单元 + Headless，结果完全一致（1622/2 跳过/0 失败；176/176）——`490c2e5` 的级别修正生效。落地修复后 Debug 复跑为 1628 通过 / 2 跳过 / 0 失败（1630），Headless 176/176，棘轮余量 +0.43pp / +0.35pp。
-- **发布链路完整**：`v1.1.0-beta.9` 的 tag 已推送（`ec92b351` → `490c2e5`），Release workflow success，Release 已于 2026-09-12 发布；横幅门禁通过；`CHANGELOG_RELEASE.md` 单节且覆盖自 beta.8 以来全部用户可见变更。
-- **供应链未变动**：变更集内零依赖改动；CI 两 workflow 顶层 `permissions: contents: read`、第三方 action 全部 40 位 SHA 固定、`RestoreLockedMode=true`（RID 还原显式豁免）均未改动。新增的摘要清单步骤不引入任何新 action 或凭据。
-- **无密钥泄漏**：变更集与未跟踪文档全树扫描无 `ghp_`/`github_pat`/`AKIA`/私钥/代理凭据；`ApiConfig.AuthorizationSalt` 是既有的公开协议常量，非新增暴露。
-- **click code 删除无残留**：`ClickCodeService` 及其引用在全仓库 grep 零命中（仅历史审计报告与未跟踪分析文档提及）。
-- **模态隔离机制已从「隐式」转为「已记录」**：原先对话框层的隔离靠 scrim + `ZIndex` + 子元素次序隐式承担，且 `ModalHostViewModel` 里有一个无消费者的「闸口」属性使契约显得比实际更强。本轮删除该属性并把两层机制（主叠层按种类绑定 `Is*Interactive`／对话框层由遮罩承担）写进 `AGENTS.md` 与 `CONTEXT.md`，使后续新增叠层时不必再靠读代码反推隔离从何而来。
+### AUD-MAINT-002 — 官方启动器协议对比分析（436 行）未入库，兼容性依据仅存于工作树
 
-## 审计方法与局限
+- 严重度：Low｜置信度：100｜状态：open｜处置：Document
+- **证据**：`docs/official-launcher-diff-v1.7.2.md` 为 git 未跟踪文件（`git status` `??`，未被 ignore）。内容为与官方 Electron 启动器 v1.7.2 的协议兼容层逐项核对（清单格式/`vc`/CRC-64/请求签名/CDN URL 构造/重试阶梯等价性）与行为差异清单，是「Cafe 可与官方启动器安全共用游戏目录」这一核心兼容性主张唯一的书面论证。
+- **进展（2026-09-13）**：已按用户裁定移入 `.repository-audit/history/2026-09-11-official-launcher-diff-v1.7.2.md` 归档（作为时点分析快照，不再作为当前态文档维护）。该文件仍为未跟踪状态——归档只有被提交后才真正获得版本保护。
+- **影响**：一次 `git clean` 或换机即丢失；后续贡献者无法追溯兼容性决策依据。
+- **建议**：~~提交入库（脱敏本机绝对路径），或在团队层面明确决定不入库并记录该决定。~~ 已按裁定于 2026-09-13 移入审计归档目录；剩余动作是把归档文件（含脱敏）提交入库，使兼容性论证获得版本保护。
+- **建议验证**：Verified（存在性与内容本审计直接确认）。
 
-- **模式**：`full` 全量。六个域各自过一遍：变更集逐提交审读（4 个含生产代码的提交逐行）、开放发现逐条回源复核、resolved 发现按台账回归核对（全部契约守卫随套件在两种配置下通过）、以及架构/安全/依赖/测试/性能/可维护性各域的当前态核查。审计结论出具后追加一轮「按裁定落地」，含两处新增守卫与两向实测。
-- **实跑命令**：`pwsh -File ./verify.ps1`（exit 0，含本地化契约、Debug 构建、coverage.ps1 棘轮、win-x64 RID 还原、Release 构建、Release 资源合约测试）；`pwsh -File ./test.ps1 -Configuration Release`（exit 0）；落地修复后复跑 `verify.ps1`（exit 0）与定向 `dotnet test --filter`；`gh run view/list`、`gh release list`、`gh pr list`；`git log/diff/status/ls-remote/tag`；横幅尺寸经 PowerShell + System.Drawing 逐张读取；摘要清单步骤在本地沙箱（`/tmp`）用 6 个填充文件实跑，含 `sha256sum -c` 正反两向。
-- **工作树处置**：`verify.ps1` 的 RID 还原按 `Directory.Build.props` 的既定行为两次改写了 `src/Cafe.Launcher.Avalonia/packages.lock.json`，均已按 `AGENTS.md` 要求 `git restore` 还原。
-- **实验/交叉验证**：以 CI 实跑记录（Release run `34665542855` 的失败用例名与 job 结论）证实 AUD-CI-008，而非仅凭工作流静态阅读；以本机 Release 全量运行证实 HEAD 当前无配置分歧；横幅尺寸逐张实测以坐实指南声明与产物的差异；`UnifiedLogger.LogAsync` 无 `await` 经源码核实，用于排除 `f69654d` 的同步阻塞死锁假设；AUD-ARCH-008 的每一条守卫都做了反向实验（调换字段声明序、改动常量取值），确认守卫会失败而非恒真。
-- **未执行**：`Build-Distribution.ps1` / Inno Setup 打包与安装器实测；Linux/macOS 上的任何测试；promotional-image 横幅管线端到端重跑；真实网络停滞/限速复现；AUD-PERF-012 的调度队列深度测量；`release.yml` 的真正端到端触发（只做了 YAML 解析与步骤本地模拟）。
-- **局限**：未做逐行全量阅读。AUD-ARCH-008 的「服务端是否校验 `head.version`」这一前提**未取得证据**，故本轮只做签名层守卫，未改动该常量的取值策略。AUD-REL-008 的尺寸结论取自本地逐张读图（beta.1–beta.5 为 2400×1350），未核对历史发版时的实际发布文件。新增摘要清单未经真实 tag 验证（下一次发版才会实跑）。
-- **差点误报（记录以免复现）**：`CHANGELOG_RELEASE.md` 中「不再记录并未发生的『下载已停止』」一条，一度看似「Release 构建下该行为无法被用户观察到」（该日志行为 Debug 级）。经核实仓库存在**用户可见的日志级别设置**（`Settings.LogLevel` → `SettingsViewModel.cs:587-600` 的 `ApplyLogLevel`，含 Debug/Verbose 档），把级别调低即可观察到该差异，故该条发布说明成立，未报为发现。
-- **一个本地环境陷阱（非缺陷）**：先后以 Debug 与 Release 构建同一解决方案时，`--no-restore` 会复用上一次配置的还原资产而失败（`AvaloniaUI.DiagnosticsSupport` 的 assets 按 `Configuration != Debug` 排除，见 csproj:61-63），表现为 `App.axaml.cs:35` 的 `AttachDeveloperTools` 编译错误。这是 `release.yml` 的 Release 测试步骤必须显式豁免 `RestoreLockedMode` 的同一根因，重新还原即恢复。
+### AUD-ARCH-003 — `ShellLifecycle` 存在双构造路径，释放所有权语义在测试与生产间分叉
+
+- 严重度：Low｜置信度：85｜状态：open｜处置：Investigate
+- **证据**：生产 DI 路径 `ServiceConfiguration.cs:142`（`IShellRuntime`）走公开构造 `ownsPresentationCollaborators: false`（`ShellLifecycle.cs:97`）；`MainWindowViewModel.cs:99-110` internal 构造 `new ShellLifecycle(..., owns: true)` 仅供测试（`MainWindowViewModelTests.cs:172`）。`ShellLifecycle.cs:583-594` 仅在 `owns==true` 时释放展示 VM——测试行使的所有权制度与生产不同。
+- **影响**：与释放顺序相关的回归在测试中不可复现。属受控测试缝（仓库约定 internal 构造注入替身），但「缝改变了被测行为」超出普通替身范畴。
+- **建议**：评估让测试路径也走 `owns:false` + 显式管理替身生命周期；若判定现缝可接受，在构造参数注释中写明两种制度差异。**建议验证**：Needs Architecture Decision。
+
+### AUD-ARCH-004 — `DesignGalleryViewModel` 为功能级体量却无功能归属（Informational）
+
+- 严重度：Informational｜置信度：85｜状态：open｜处置：Architecture Decision
+- **证据**：`ViewModels/DesignGalleryViewModel.cs:18` 是七个主叠层之一（设计画廊）的模态内容 VM，按规则七个叠层属功能域，但它在根 `ViewModels/` 无 `Features/` 归属。可辩解为「共享展示契约居根目录」，但它是功能体量的 VM 而非契约。无行为影响；后续若出现更多叠层将重演该归类判断。
+- **建议**：无需立即行动；下次触碰时决定「归入 `Features/Diagnostics`（其天然宿主）或明文豁免」。**建议验证**：Needs Architecture Decision。
+
+## Architecture
+
+**结论：文档边界与实现高度一致，未发现规则违规。**
+
+已验证的优势（闭合实质关切）：
+
+- **跨功能具体引用为零**（Shell 除外）：全量 `using Cafe.Launcher.*` 扫描，越界仅 `ShellLifecycle`/`ShellPresentationFamily`/`ShellStartup` 三文件 = AGENTS.md 明文 sanctioned 例外；`IGameOperationActivity` 窄抽象实际生效（DebugViewModel 消费接口、组合根绑定 GameOperationsViewModel 实现）。
+- **组合根纪律**：全部注册集中于 `ServiceConfiguration.AddLauncherServices()`、全 Singleton、纯构造注入；无运行时服务定位（`GetRequiredService` 仅存在于组合与激活点）；`Program.ServiceProvider` 静态句柄仅用于会话结束释放。
+- **ViewModel 归属规则完全落实**：根 `ViewModels/` 14 个类型全部为窗口级 VM 或模态契约，无非 VM 类型。
+- **模态隔离裁定逐字落地**（2026-09-12）：`ModalHostViewModel.cs:26-44` 恰好七个 `Is*Interactive`；八个叠层根绑定逐一核实；`MainWindowDialogsOverlay.axaml` 中全部对话框/遮罩 Grid 无任何交互闸口（符合「对话框层有意不设闸口」裁定）；`ShellLifecycle.SyncModal`（:870-881）以渲染同源的可见性属性注册模态栈，单一真相来源成立；`MainWindow.Styles.axaml:1030-1040` 遮罩/ZIndex 次序与文档一致。`ModalHostViewModelTests` 含嵌套模态交互态用例。
+- 见 Medium/Low 发现（AUD-ARCH-001/002/003/004）。
+
+## Security
+
+**结论：无 Critical/High。安全工程在桌面启动器威胁模型下成体系且大多有测试。**
+
+信任边界：Yostar API/CDN、Cafe CDN/资源 API、GitHub 更新源、远端清单、本机同用户进程、CI/发布凭据。
+
+已验证的优势：
+
+- **网络**：全仓库无任何 TLS/证书校验覆盖（grep 证实）；重定向手动处理、上限 5、每跳重新过 URL 校验、HTTPS→HTTP 降级阻断（`RemoteHttpRequestService.cs:14,44-48,60-64`）；签名 Authorization 头结构上不可能泄漏给重定向目标（单发 `SendAsync` + 每跳新建请求）；SSRF 分层防护（scheme/userinfo/端口/localhost/IP 字面量/解析地址全公网 + IPv6 映射/链路本地/ULA 等全谱系，`RemoteHttpUrlValidator.cs:67-195`）；响应 64MB / 图片 25MB 封顶 + 空闲停滞超时；代理出口判定精细（真经代理才豁免本地 DNS 检查，`RemoteHttpRequestService.cs:109-117`）。
+- **文件系统**：远端清单路径全部规范化 + 根前缀比较（大小写策略分平台）+ reparse point 全组件拒绝（`GamePathValidator.cs`）；`GetSafeFilePath` 拒绝规范化为根自身的条目并有 `<root>.tmp` 越界写注释；卸载删除被本地清单（提交时逐路径校验）+ `IsSystemProtectPath` 双重围栏；所有持久化 temp+Move 原子提交；被篡改的 `download_state.json` 无法把续传导向意外路径（checkpoint 五元组不匹配即清，`DownloadSessionFactory.cs:44-53`）。
+- **进程执行**：游戏启动/版本探测/崩溃上报全部 `ProcessStartInfo.ArgumentList`，`UseShellExecute=false`；可执行文件名拒路径分隔符且必须存在于游戏目录；外部链接 http/https/mailto 白名单双层（`ExternalLinkService` + `RemoteContentViewModel`）；自更新仅 host 钉住的 https github.com 下载页跳转，不下载执行自身二进制（`LauncherUpdateService.cs:263-307`）。
+- **完整性**：下载后全文件 CRC64 不过即删重试；续传校验 206 Content-Range 三元组；修复对全树哈希并以 size+mtime 见证防跳过被滥用。
+- **密钥与日志**：仓库无真实凭据（`AuthorizationSalt` 为官方启动器公开协议常量，代码内明示）；日志/异常/崩溃报告均不落 Authorization/salt/cookie/查询串；日志导出含 UID 与路径仅在用户显式勾选时。
+- **反序列化**：纯 System.Text.Json 强类型 POCO；`EnableUnsafeBinaryFormatterSerialization=false`；二进制 cookie 解析有界且失败关闭。
+- 接受风险的残余（advisory，不编号立案）：校验-拨号 DNS 重绑定窗口（AUD-SEC-001）；reparse point 检查-使用间隙（要求攻击者已有游戏目录写权限，届时其已控制游戏 exe 本身）；清单无签名（协议继承自官方启动器，`OfficialHashService.cs:9-14` 明示，单方面变更将破坏兼容）。
+
+## Dependencies / Supply Chain
+
+**结论：当前无漏洞包；锁定/钉住/校验闭环完整。**
+
+- `dotnet list package --vulnerable --include-transitive`（本审计实际执行）：三个项目均无漏洞包。
+- 中央版本管理 + 三份 `packages.lock.json` 与 `Directory.Packages.props` 同步于同一提交（`63000e1`，2026-09-12）；CI `RestoreLockedMode` 使 lock 与依赖图不一致即 NU1004 失败（配置存在且**可执行生效**——豁免路径均有一致性理由注释）；Dependabot 编排 + squash 为 `chore(deps)` 的约定。
+- CI 动作 4 个全部按 commit SHA 钉住并注明版本；SDK 双固定（global.json + setup-dotnet 显式 10.0.302，注释记录了「runner 当日携带版本决定产物运行时」的历史教训）；AppImage 工具 SHA256 钉住；Inno Setup 7.1.0 经 `gh release verify-asset` attestation 校验；发布产物 SHA256SUMS 数量硬校验（宁可中断发布不出不完整清单）。
+- `THIRD-PARTY-NOTICES.md` 与依赖版本同提交再生（无测试守护，靠流程约束——AGENTS.md 已自述此漂移风险，属已知已记录项，不重复立案）。
+- 许可面：MIT/Apache-2.0 为主，`AvaloniaUI.DiagnosticsSupport` 标「see package」且仅 Debug 分发（csproj 约束），不进 Release 产物。
+
+## Testing
+
+**结论：纪律性罕见地好：程序集级串行有书面静态状态清单、有界等待为主流范式、测试零真实网络、黄金截图失败工件闭环。** 42k 行测试 vs 33k 行源码；覆盖率棘轮基线 85.85% 行 / 92.70% 分支（`coverage.ps1` 实际执行并打印余量）。
+
+已验证的优势：
+
+- 关键路径保护逐项核实为「重保护」：下载续传/暂停/CRC 三层（service/journey/checkpoint 共 100+ 用例，含 Content-Range 篡改、只读目标、限速下界）、设置兼容（26 用例 + DeepClone 反射棘轮 + 字段序兼容钉）、安装状态损坏矩阵（15 用例分支级）、URL 校验 29 用例（私网 DNS/重定向到 localhost/降级/六跳上限）、卸载边界（锁定文件中止/二次调用幂等/保护路径门）。
+- 确定性：`[assembly: CollectionBehavior]` 附共享静态清单；`TestUserDataIsolation` 模块初始化器重定向用户数据到临时 GUID 目录；等待统一 `WaitUntilAsync` 带截止与语义化失败消息；动画零退出时延由 `[ModuleInitializer]` 消除。
+- 诊断：黄金失败写 actual/diff PNG 且 CI `if: always()` 上传（路径与写盘路径核实一致）；trx/cobertura 同样失败也上传；`-UpdateGolden` 一条命令再生基线且有基线契约测试守备。
+- 缺口见 AUD-CI-001/TEST-001/002/003/004；advisory：`GameDownloadServiceTests.cs` 2134 行混层（单测 handler + journey + 限速采样器），`WaitUntilAsync`/`WaitForGamePathStatusAsync` 各有 3/2 份变体。
+
+## Performance
+
+**结论：启动路径无首帧阻塞（初始化全部后置于 `Opened` + Background 优先级；远程读 30s 总预算并发执行；主题色提取 64px 降采样离线程）；热路径残留成本见各发现。** 代码中大量注释记录过往性能修复（双哈希消除、LOH 池化、离线程解码），修复是体系性的而非点状。
+
+- 主要项 AUD-PERF-001（更新全量重哈希）；其余 AUD-PERF-002/003/004。
+- advisory（不立案）：清单 JSON 每次读双解析、每次提交最多 4 次解析（毫秒级、每操作一次）；缓存壁纸加载前整文件 CRC（完整性换 IO，离线程）；`ImageCacheService.cacheLocks` 信号量字典不修剪（会话内有界）；`ResponseBodyReader` 每 256KiB 读分配 CTS+超时定时器（10 流 × ~400 chunk/s 的次要 GC churn）。
+- 已核实干净：`MainWindow.axaml.cs` 无同步 IO/`.Result`；HttpClient 池化 + 批次共享单客户端；事件订阅全部镜像退订；`download_state.json` 每会话一次写入；设置仅保存/关机时写；清单 diff/合并全字典化无 O(n²)。
+
+## Maintainability / Technical Debt
+
+- 见 AUD-ARCH-001/002（双热点协调器）、AUD-MAINT-001（静态缓存）、AUD-MAINT-002（未入库分析文档）。
+- Git 热点与结构互相印证：最高变更文件（`MainWindow.axaml.cs` 21、`ShellLifecycle` 19、`ServiceConfiguration.cs` 20、`App.axaml.cs` 17 commits/180 天）恰是窗口/组合/生命周期边界——职责汇聚点，符合「接线处变更多」的正常形态，但前两者已超出接线范畴（内嵌引擎/六职责）。
+- 文档漂移检查：本审计抽取的 AGENTS.md/PROJECT_CONVENTIONS.md 关键声明（模态隔离机制、Shell 豁免、main 保护规则实测状态、§12 工具链表）与实现/仓库实际逐一相符；`LauncherStrings` 四语言键对齐由契约脚本 + CI 步骤双重保障。
+
+## Decisions Required
+
+1. **AUD-PERF-001**：是否为更新校验引入见证摊销/并行化（保自愈语义）。选项：a) 维持现状（接受 FileCheck 等待）；b) 见证哈希摊销（复用修复通道机制）；c) 有界并行哈希。b 与 c 可组合。
+2. **AUD-CI-001**：是否增加非 Windows 单元测试 job（建议 `workflow_dispatch` + `schedule`，不阻塞 PR）。
+3. **AUD-MAINT-002**：协议对比分析文档入库（脱敏路径）还是明确决定不入库。
+4. **AUD-ARCH-003**：`ShellLifecycle` 测试缝的所有权制度差异是否收敛，或书面接受。
+
+## Resolved Findings
+
+不适用——本次为全新台账（用户指令忽略既有报告）。历史台账（101 项，其中 81 resolved）随旧报告归档于 `history/2026-09-12-findings-ledger.json`，供追溯而不作为本报告状态来源。
+
+## Automated Guards Added
+
+本次审计为评审性质，未直接添加守卫。建议守卫已随各发现标注，汇总优先级：
+
+1. `Assert.Skip*` 统一替换（AUD-TEST-003，机械、立即消除假覆盖）+ 可选 Linux 测试 job（AUD-CI-001）——同一根因的组合守卫。
+2. Shell 层源码契约测试（行数/职责预算，AUD-ARCH-001/002）——仓库已有源码断言测试先例（`InstallerContractTests`、`GoldenBaselineContractTests`）。
+3. 共享 `StubHttpHandler`（AUD-TEST-001）——一次性基础设施投入换测试替身漂移的整类消除。
+
+## Verified Strengths
+
+见各域小节。最高杠杆的三项（防止不必要的重构/担忧）：
+
+1. **模态隔离裁定与实现逐字一致**——任何「对话框层再加一道闸口」的提议都会引入第二真相来源并硬冻结窗口；现状（遮罩 + ZIndex 承担对话框输入拦截）是 2026-09-12 裁定的正确落地，不应动。
+2. **网络/文件系统防御纵深真实存在且有测试**——URL 校验 29 用例、卸载边界、续传 Content-Range 校验等不是纸面配置。
+3. **供应链闭环可执行**——锁定还原、SHA 钉住、SUMS 数量硬校验、Release 配置重测均为生效机制而非声明。
+
+## Recommended Priorities
+
+1.（低成本高杠杆）AUD-TEST-003 + AUD-CI-001：让平台分支的跳过可见并给单元套件一个 Linux 执行点。
+2.（低成本）AUD-PERF-002/003、AUD-TEST-004：三处机械修复，各自 < 半小时。
+3.（中成本，随下次触碰执行）AUD-ARCH-001/002：先拆模态同步/Escape 表与操作表面动效套件。
+4.（决策后执行）AUD-PERF-001、AUD-MAINT-002、AUD-TEST-002。
+
+## Audit Method and Limitations
+
+实际执行：
+
+- 仓库发现：README、AGENTS.md、PROJECT_CONVENTIONS.md、CONTEXT.md、CI 两工作流、`Directory.Packages.props`、global.json、installer `.iss`、打包脚本关键行（逐文件阅读）。
+- 六域并行审计通道（安全/测试/架构/性能由只读子代理执行「very thorough」广度检索，证据均带 file:line；依赖/供应链与验证由主审计执行）。
+- 工具证据：`dotnet list package --vulnerable --include-transitive`（无漏洞）、`git log --name-only` 热点统计、`wc -l` 规模核对、`grep` 桩计数（53 处/17 文件）、锁文件-版本声明同提交核对、`git status`/`git check-ignore`（未跟踪文档）。
+- 关键发现亲自复核：AUD-PERF-001（DownloadExecutor :240-350 逐行）、AUD-PERF-002（GameDownloadService :130-155）、AUD-MAINT-001（静态字段与消费点 :589-682）、AUD-ARCH-001（881 行核对）、`InstallerContractTests` 存在性。
+- 未执行 `verify.ps1`/`test.ps1` 全量套件（审计为只读评审，构建/测试状态以 CI 工作流定义与上次发布记录为准，未声称本地绿灯）。
+- 局限：macOS/Linux 平台行为未在任何非 Windows 环境实测（与 AUD-CI-001 同源）；性能发现均基于代码路径推理，未做运行时测量（报告内无未经测量的倍数/毫秒声明）；安全通道对 DNS 重绑定窗口为设计分析而非复现。
+- 子代理产出中的行号引用在关键项上经主审计抽查核实；未抽查项置信度已相应降档（85 而非 90+）。
