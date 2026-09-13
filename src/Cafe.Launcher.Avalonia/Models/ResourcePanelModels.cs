@@ -1,3 +1,4 @@
+using System;
 using System.Text.Json.Serialization;
 using CommunityToolkit.Mvvm.ComponentModel;
 
@@ -99,4 +100,17 @@ public sealed partial class ResourcePanelItem : ObservableObject
 
     [ObservableProperty]
     private string statusIconKind = "";
+
+    /// <summary>
+    /// Gets whether official and localized versions carry the same meaningful value,
+    /// letting the item collapse the two-column version comparison into one row.
+    /// </summary>
+    public bool IsVersionAligned =>
+        !string.IsNullOrWhiteSpace(OfficialVersion)
+        && OfficialVersion != "--"
+        && string.Equals(OfficialVersion, LocalizedVersion, StringComparison.Ordinal);
+
+    partial void OnOfficialVersionChanged(string value) => OnPropertyChanged(nameof(IsVersionAligned));
+
+    partial void OnLocalizedVersionChanged(string value) => OnPropertyChanged(nameof(IsVersionAligned));
 }

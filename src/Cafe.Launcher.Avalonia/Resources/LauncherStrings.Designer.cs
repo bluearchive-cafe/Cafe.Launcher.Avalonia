@@ -834,6 +834,8 @@ internal static class LauncherStrings
 
     internal static string ResourcePanelUidSourceCustom => GetRequiredString("resourcePanelUidSourceCustom");
 
+    internal static string ResourcePanelVersionAligned => GetRequiredString("resourcePanelVersionAligned");
+
     internal static string ResourcePanelWaiting => GetRequiredString("resourcePanelWaiting");
 
     internal static string Resume => GetRequiredString("resume");

@@ -559,6 +559,12 @@
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Md}"/>
     </Style>
+    <!-- 严重度变体：错误消息（加载/保存失败、校验失败）以 danger 语调重染，与中性/成功消息区分。 -->
+    <Style Selector="Border.info-strip.danger">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Danger.Soft}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Danger}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
+    </Style>
     <Style Selector="Border.notice-card">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Notice.Background}"/>
         <Setter Property="MaxHeight" Value="{StaticResource Launcher.Component.NoticeCard.MaxHeight}"/>
