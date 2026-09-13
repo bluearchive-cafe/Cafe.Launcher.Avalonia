@@ -47,8 +47,9 @@ internal sealed class DownloadSession : IDisposable
     public CancellationTokenSource CancellationTokenSource { get; }
     private int stopReason;
 
-    private bool ShouldDiscardCheckpointOnCancel =>
-        (DownloadStopReason)Volatile.Read(ref stopReason) == DownloadStopReason.UserRequested;
+    /// <summary>任何终局出口都丢弃检查点；唯一例外是生命周期退出保留供续传。</summary>
+    private bool ShouldDiscardCheckpointAtExit =>
+        (DownloadStopReason)Volatile.Read(ref stopReason) != DownloadStopReason.ApplicationExit;
 
     /// <summary>Gets whether execution is currently paused at a download boundary.</summary>
     public bool IsPaused
@@ -97,6 +98,12 @@ internal sealed class DownloadSession : IDisposable
     }
 
     /// <summary>Runs the configured install, update, or repair workflow to a terminal result.</summary>
+    /// <remarks>
+    /// 检查点只在操作在飞时存在：任何终局出口（成功、各类失败、用户停止）都在
+    /// 出口处单点清除，唯一例外是生命周期退出（ApplicationExit）保留供下次启动
+    /// 续传。去留判定依据停止原因而非异常类型——在飞操作可能以任意异常浮出，
+    /// 若在逐个 catch 里清查，二者一旦分叉就会静默丢掉可续传状态。
+    /// </remarks>
     public async Task<GameOperationResult> RunAsync()
     {
         var activeToken = CancellationTokenSource.Token;
@@ -132,36 +139,27 @@ internal sealed class DownloadSession : IDisposable
         }
         catch (OperationCanceledException) when (activeToken.IsCancellationRequested)
         {
-            if (ShouldDiscardCheckpointOnCancel)
-            {
-                checkpointStore.Clear();
-            }
-
             progress(CreateProgress(operationKind, GameOperationStage.Stopped, 0));
             return Failed(localizer.T(LocalizationKeys.OperationStopped), GameOperationErrorCode.Stopped);
         }
         catch (IOException exception) when (exception.HResult == unchecked((int)0x80070070))
         {
             await diagnostics.ErrorAsync("GameDownload", exception, CancellationToken.None).ConfigureAwait(false);
-            checkpointStore.Clear();
             return Failed(localizer.T(LocalizationKeys.DiskSpaceInsufficient), GameOperationErrorCode.InsufficientDiskSpace);
         }
         catch (UnauthorizedAccessException exception)
         {
             await diagnostics.ErrorAsync("GameDownload", exception, CancellationToken.None).ConfigureAwait(false);
-            checkpointStore.Clear();
             return Failed(localizer.F(LocalizationKeys.FileAccessDenied, gamePath), GameOperationErrorCode.System);
         }
         catch (IOException exception)
         {
             await diagnostics.ErrorAsync("GameDownload", exception, CancellationToken.None).ConfigureAwait(false);
-            checkpointStore.Clear();
             return Failed(localizer.F(LocalizationKeys.FileOperationFailed, exception.Message), GameOperationErrorCode.System);
         }
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
         {
             await diagnostics.ErrorAsync("GameDownload", exception, CancellationToken.None).ConfigureAwait(false);
-            checkpointStore.Clear();
             return Failed(localizer.F(LocalizationKeys.NetworkErrorDetail, exception.Message), GameOperationErrorCode.Network);
         }
         catch (Exception exception)
@@ -170,8 +168,14 @@ internal sealed class DownloadSession : IDisposable
                 "GameDownload",
                 exception,
                 CancellationToken.None);
-            checkpointStore.Clear();
             return Failed(localizer.F(LocalizationKeys.UnexpectedError, exception.Message), GameOperationErrorCode.System);
+        }
+        finally
+        {
+            if (ShouldDiscardCheckpointAtExit)
+            {
+                checkpointStore.Clear();
+            }
         }
     }
 
@@ -226,7 +230,6 @@ internal sealed class DownloadSession : IDisposable
         if (localGame.GameConfig?.Name is { Length: > 0 }
             && await gameProcessTracker.IsGameRunningAsync($"{localGame.GameConfig.Name}.exe", activeToken))
         {
-            checkpointStore.Clear();
             return DownloadPlanPreparation.Stop(Failed(
                 localizer.T(LocalizationKeys.GameExecutableRunning),
                 GameOperationErrorCode.GameRunning));
@@ -253,7 +256,6 @@ internal sealed class DownloadSession : IDisposable
                 activeToken).ConfigureAwait(false);
         if (string.IsNullOrWhiteSpace(cdnConfig.PrimaryCdn) || string.IsNullOrWhiteSpace(cdnConfig.BackUpCdn))
         {
-            checkpointStore.Clear();
             return DownloadPlanPreparation.Stop(Failed(
                 localizer.T(LocalizationKeys.CdnConfigIncomplete),
                 GameOperationErrorCode.CdnConfiguration));
@@ -291,7 +293,6 @@ internal sealed class DownloadSession : IDisposable
             // 跳过它让 Program Files 等只读位置下的“仅检查更新”安静通过。
             if (LocalInstallationStateMatchesCommit(localGame, gameConfig, downloadPlan.ManifestFiles))
             {
-                checkpointStore.Clear();
                 return new DownloadPlanPreparation(
                     gamePath,
                     downloadPlan,
@@ -313,7 +314,6 @@ internal sealed class DownloadSession : IDisposable
                 gameConfig,
                 downloadPlan.ManifestFiles,
                 activeToken).ConfigureAwait(false);
-            checkpointStore.Clear();
             return new DownloadPlanPreparation(
                 gamePath,
                 downloadPlan,
@@ -350,7 +350,6 @@ internal sealed class DownloadSession : IDisposable
                 "GameDownload",
                 $"path: {gamePath}{Environment.NewLine}required: {FileSizeFormatter.Format(diskCheck.RequiredBytes)}{Environment.NewLine}available: {(diskCheck.AvailableBytes.HasValue ? FileSizeFormatter.Format(diskCheck.AvailableBytes.Value) : "--")}",
                 activeToken);
-            checkpointStore.Clear();
             return DownloadPlanPreparation.Stop(Failed(
                 localizer.F(
                     LocalizationKeys.DiskSpaceInsufficientDetail,
@@ -377,7 +376,7 @@ internal sealed class DownloadSession : IDisposable
     }
 
     /// <summary>
-    /// 写探测失败时的统一收尾：记日志、清检查点、以本地化 FileAccessDenied 停止。
+    /// 写探测失败时的统一收尾：记日志并以本地化 FileAccessDenied 停止。
     /// 零差异提交路径与下载路径共用，避免两处闸口漂移。
     /// </summary>
     private async Task<DownloadPlanPreparation> StopForWriteDeniedAsync(
@@ -389,7 +388,6 @@ internal sealed class DownloadSession : IDisposable
             "GameDownload",
             $"Write probe failed: {gamePath}",
             activeToken).ConfigureAwait(false);
-        checkpointStore.Clear();
         return DownloadPlanPreparation.Stop(affectedCount.HasValue
             ? Failed(
                 localizer.F(LocalizationKeys.FileAccessDenied, gamePath),
@@ -456,7 +454,6 @@ internal sealed class DownloadSession : IDisposable
                         ?? throw new InvalidOperationException("Game config was resolved during planning."),
                     downloadPlan.ManifestFiles,
                     activeToken).ConfigureAwait(false);
-                checkpointStore.Clear();
                 progress(CreateProgress(
                     operationKind,
                     repair ? GameOperationStage.RepairCompleted : GameOperationStage.DownloadCompleted,
@@ -505,7 +502,6 @@ internal sealed class DownloadSession : IDisposable
             IsRunning = true,
             CanStop = true
         });
-        checkpointStore.Clear();
         return Failed(
             localizer.F(LocalizationKeys.VerificationFailed, currentDownloadList.Count),
             GameOperationErrorCode.Network,

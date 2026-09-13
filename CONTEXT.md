@@ -202,3 +202,4 @@ _Avoid_: 遮罩点击穿透
 | ADR-019 | 不可恢复崩溃两级兜底 | ✅ 已接受 |
 | ADR-020 | 崩溃窗口独立 Fluent 设计系统 | ✅ 已接受 |
 | ADR-021 | 保留操作后端接缝（否决删除 GameOperationExecutor 直通带） | ✅ 已接受 |
+| ADR-022 | DownloadSession 内部接缝维持私有分段（否决升格 Plan/Execute 为独立类） | ✅ 已接受 |
