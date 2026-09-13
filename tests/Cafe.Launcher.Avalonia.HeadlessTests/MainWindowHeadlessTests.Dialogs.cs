@@ -323,7 +323,7 @@ public sealed partial class MainWindowHeadlessTests
     [AvaloniaTheory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task LogExport_WhenAContentRowIsChecked_KeepsItsGlyphReadable(bool isDark)
+    public void LogExport_WhenAContentRowIsChecked_KeepsItsGlyphReadable(bool isDark)
     {
         using var context = CreateContext();
         // Applied through the settings view model: that is the path which also replays the M3
@@ -332,7 +332,8 @@ public sealed partial class MainWindowHeadlessTests
         context.ViewModel.Settings.Appearance.ApplyTheme(isDark ? ThemeModes.Dark : ThemeModes.Light);
         Dispatcher.UIThread.RunJobs();
 
-        await ShowGoldenWindowAsync(context);
+        PrepareGoldenWindow(context);
+        context.Window.Show();
         ShowLogExport(context);
         context.ViewModel.LogExport.IncludeCrashReports = true;
         Dispatcher.UIThread.RunJobs();

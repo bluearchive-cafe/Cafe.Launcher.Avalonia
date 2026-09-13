@@ -48,6 +48,9 @@ public sealed class ProxySettingsServiceTests : IDisposable
             new Uri("http://proxy.example.invalid:8080"),
             proxy.GetProxy(new Uri("https://public.example.invalid")));
         Assert.True(proxy.IsBypassed(new Uri("http://localhost")));
+        // WinINet 对代理 407 质询用当前用户凭据静默认证；手搓 WebProxy 必须
+        // 补齐同一行为（对应 .NET 系统代理对象的 DefaultCredentials）。
+        Assert.NotNull(proxy.Credentials);
         Assert.False(handler.AllowAutoRedirect);
         // 代理路径 handler 必须携带与直连 handler 相同的连接默认值
         // （见 HttpClientFactory.ConfigureConnectionDefaults）。
@@ -214,6 +217,51 @@ public sealed class ProxySettingsServiceTests : IDisposable
         // Auto 与 System 语义不同（前者恒用系统默认检测），缓存按模式区分。
         Assert.NotSame(systemHandler, autoHandler);
         Assert.Equal(2, service.CachedHandlerCount);
+    }
+
+    [Fact]
+    public async Task GetOrCreateHandlerAsync_WhenSnapshotIsPacOnly_UsesSystemDetection()
+    {
+        // PAC-only 快照（ProxyEnable=0 但 AutoConfigURL 有值）仍是有效的系统
+        // 代理配置：System 模式交由系统默认检测执行脚本，而不是退化为直连。
+        var service = new ProxySettingsService(() => new SystemProxySettings(
+            string.Empty,
+            [],
+            "http://wpad.example.invalid/proxy.pac"));
+
+        using var handler = await service.GetOrCreateHandlerAsync(ProxyModes.System);
+
+        Assert.True(handler.UseProxy);
+        Assert.NotNull(handler.Proxy);
+        Assert.Equal(1, service.CachedHandlerCount);
+    }
+
+    [Fact]
+    public async Task GetOrCreateHandlerAsync_WhenAutoConfigUrlChanges_ReplacesCachedHandler()
+    {
+        // 对应 WinINet 的 settings-changed 刷新：指纹必须覆盖 AutoConfigURL，
+        // 否则 PAC 变更前后手动代理身份同为空，陈旧处理器会一直缓存到重启。
+        var settings = new SystemProxySettings(
+            string.Empty,
+            [],
+            "http://wpad.example.invalid/proxy-a.pac");
+        var service = new ProxySettingsService(() => settings);
+
+        using var first = await service.GetOrCreateHandlerAsync(ProxyModes.Auto);
+        settings = new SystemProxySettings(
+            string.Empty,
+            [],
+            "http://wpad.example.invalid/proxy-b.pac");
+        using var second = await service.GetOrCreateHandlerAsync(ProxyModes.Auto);
+        settings = new SystemProxySettings(
+            string.Empty,
+            [],
+            "http://wpad.example.invalid/proxy-b.pac");
+        using var third = await service.GetOrCreateHandlerAsync(ProxyModes.Auto);
+
+        Assert.NotSame(first, second);
+        Assert.Same(second, third);
+        Assert.Equal(1, service.CachedHandlerCount);
     }
 
     [Fact]
