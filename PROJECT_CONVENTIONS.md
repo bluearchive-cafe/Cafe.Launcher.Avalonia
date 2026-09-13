@@ -1,8 +1,8 @@
 # PROJECT_CONVENTIONS.md
 
-[← Back to CLAUDE.md](CLAUDE.md) · [Back to AGENTS.md](AGENTS.md)
+[← Back to AGENTS.md](AGENTS.md)
 
-AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、Codex 等）在为本仓库编写代码时提供强制性规则与模式参考。
+AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、Codex 等）在为本仓库编写代码时提供强制性规则与模式参考。仓库结构、命令与发布流程见 [AGENTS.md](AGENTS.md)。
 
 ---
 
@@ -13,7 +13,7 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 3. **验证先于完成** — 声称完成前必须运行 `dotnet test`（至少跑受影响的测试类）。Don't claim "done" on trust.
 4. **向后兼容** — 对 `settings.json` 的修改与新增 key 均需保留对旧格式的兼容；修改公共 API 签名时，所有现有调用点不能断编。
 5. **零警告** — `TreatWarningsAsErrors` + `EnforceCodeStyleInBuild` 已启用，任何 warning = error。本地 build 后必须看到 `0 个警告 0 个错误`。
-6. **无远程遥测** — 诊断日志只留本地。不要添加任何向 Aliyun SLS 或第三方服务器发送日志的代码。
+6. **无远程遥测** — 诊断日志只留本地。不要添加任何向第三方服务器发送日志或遥测的代码。
 
 ---
 
@@ -41,7 +41,7 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 
 ### 2.3 XAML 规范
 
-- 所有可视值使用 `StaticResource` 设计 token，**禁止**在 View XAML 中写裸色号、`Transparent`、裸图标尺寸、裸 `4`/`6`/`8` 圆角半径。
+- 所有可视值使用 `StaticResource`/`DynamicResource` 设计 token（`App.axaml` 中的 `Launcher.*` 家族），**禁止**在 View XAML 中写裸色号、`Transparent`、裸图标尺寸、裸 `4`/`6`/`8` 圆角半径。运行中的 token 取值可在 Debug 门的设计画廊叠层里查看。
 - 主题无关的渐变和阴影定义仅允许在 `App.axaml` 或 `MainWindow.Styles.axaml` 中。
 - `AutomationProperties.Name` 绑定到本地化字符串的**所有**交互控件都必须有。
 - 控件使用语义化的 `Classes` 属性而非内联 Style。
@@ -74,7 +74,7 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 
 - **使用 `LocalDiagnostics`** 作为唯一入口（不直接调 `UnifiedLogger.LogAsync`，除了 `Program.cs` 和 `UnifiedLogger` 自身）。
 - 将 `LocalDiagnostics diagnostics` 通过构造函数注入，存储为 `private readonly` 字段。
-- `title` 参数是日志行的 `[LogTitle]` 标签：用简短的 PascalCase 标识调用方模块（如 `"GameDownload"`, `"LauncherCore"`, `"ApiClient"`）。
+- `title` 参数是日志行的 `[LogTitle]` 标签：用简短的 PascalCase 标识调用方模块（如 `"GameDownload"`, `"LauncherCore"`, `"ApiClient"`）。该标签受 `DiagnosticsLogTitleContractTests` 源码契约守护。
 - `message`（可选）放上下文细节：文件路径、耗时毫秒、计数值、状态码。不记密钥/盐/Authorization 头。
 - 同步上下文用 `LocalDiagnostics.LogSync(severity, title, message)`（如 `Stop()`、`Pause()` 等 void 方法）。
 - 异步上下文用 `await diagnostics.DebugAsync(title, message, CancellationToken.None)`。不传播调用方的 cancellationToken（日志不应被取消）。
@@ -94,8 +94,9 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 
 1. 在 4 个资源文件（`Resources/LauncherStrings{,.zh-Hans,.zh-Hant,.ja}.resx`）中按字母序添加 key-value。
 2. XAML 中绑定：`{Binding Shell.I18n[newKey]}`。
-3. 所有 4 种语言都提供翻译（对专有名词可回退到英文文本，但不得留空）。
-4. 新增或重命名 key 后运行 `scripts/Generate-LauncherStringsDesigner.ps1`，并运行 `scripts/Test-LocalizationContract.ps1`。
+3. C# 中一律引用 `Constants/LocalizationKeys` 的编译时常量，**禁止**向 `T()`/`F()`/`I18n[...]` 传裸 key 字符串字面量（`ResxResourceContractTests` 守护）。
+4. 所有 4 种语言都提供翻译（对专有名词可回退到英文文本，但不得留空）；术语与译名以 `UBIQUITOUS_LANGUAGE.md` 的规范译法为准。
+5. 新增或重命名 key 后运行 `scripts/Generate-LauncherStringsDesigner.ps1` 与 `scripts/Generate-LocalizationKeys.ps1`，再运行 `scripts/Test-LocalizationContract.ps1`。
 
 ### 4.2 测试中的本地化
 
@@ -120,30 +121,36 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 
 - 所有依赖通过构造函数注入，不使用属性注入或 Service Locator。
 - 测试用构造函数（接收 `HttpMessageHandler` 或其他测试替身）标记为 `internal`。
-- 不使用 Mocking 框架；测试用手写 stub/fake/handler 子类。
+- 不使用 Mocking 框架；测试用手写 stub/fake/handler 子类（共享替身放 `tests/TestDoubles/`，经 Compile-Link 编入两个测试程序集）。
 
 ---
 
 ## 6. 测试规范
 
 ### 6.1 测试项目
+
 - 单元测试：`tests/Cafe.Launcher.Avalonia.Tests/`（xUnit v3 + coverlet.msbuild）
-- Headless UI 测试：`tests/Cafe.Launcher.Avalonia.HeadlessTests/`（xUnit v3 + Avalonia.Headless.XUnit）
+- Headless UI 测试：`tests/Cafe.Launcher.Avalonia.HeadlessTests/`（xUnit v3 + Avalonia.Headless.XUnit，含黄金截图基线）
 
 ### 6.2 测试结构
+
 - 一个测试类对应一个被测试类，文件名 `{Target}Tests.cs`。
-- 使用 `Fact`（同步/异步）和 `Theory`（参数化），不使用 `TestFixture`/`TestClass` 等 NUnit 属性。
-- 测试方法命名：`Method_State_ExpectedResult`（下划线风格，`CA1707` 已对测试文件关闭）。
+- 使用 `Fact`（同步/异步）和 `Theory`（参数化）。
+- 测试方法命名：`Method_State_ExpectedResult`（下划线风格，`CA1707` 已对测试文件关闭）；源码/契约类守卫测试可用两段式 `Subject_Expectation`。
 - IDisposable 的测试类可选实现 `IDisposable` 清理临时文件/目录。
 
 ### 6.3 测试编写规则
+
 - **每个新功能必有测试。** 没有测试的 PR/分支不应合并。
 - 修改框架/基础设施（日志、本地化、DI）时，先跑现有的全套测试 → 再写新的覆盖新增行为。
 - `UiStyleContractTests` 在修改任何 XAML 文件后都必须跑一遍。
-- 覆盖率最低阈值为 line ≥ 50%、branch ≥ 50%；`coverage.ps1` 还会验证仓库当前覆盖率基线未回退。
+- 平台门控的测试用 `Assert.SkipUnless`/`Assert.SkipWhen` 显式跳过，**禁止**用早期 `return` 静默跳过（跳过必须出现在测试结果里）。
+- 等待异步状态一律用有截止时间的轮询（参照 `HeadlessTestHost.WaitUntilAsync`），不要用裸 `Task.Delay(N)` 后断言；确需固定延时的负向断言，延时从（internal 可见的）生产常量推导，不要手抄魔数。
+- 覆盖率最低阈值为 line ≥ 50%、branch ≥ 50%；`coverage.ps1` 还会验证仓库当前覆盖率基线未回退（基线数值以 `coverage.ps1` 为准，每次运行打印余量）。
 - 新增服务按适用情况覆盖：正向路径、典型失败路径（exception/validation failure）和关键边界条件（如 null input、empty collection）。
 
 ### 6.4 测试替身
+
 - 不用 Moq/NSubstitute。伪造 `HttpMessageHandler` 时手写子类。
 - 伪造 DI 依赖时，创建简洁的内部构造函数接受 `Action<>` 或 `Func<>` 委托。
 - 伪造本地化时调用 `TestLocalizationHelper.Initialize()`。
@@ -153,9 +160,10 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 ## 7. Settings 兼容性规则
 
 `settings.json` 的 JSON 字段名必须向后兼容：
+
 - 新增字段：提供合理默认值（在 `LauncherSettings` 模型中），`LauncherSettingsService` 不因缺失字段而抛异常。
 - 重命名或删除字段前，明确旧 JSON 的读取策略；必要时在 `LauncherSettingsService` 中解析旧字段。
-- `LauncherSettings` 的新增字段需有默认值，并同步更新 `DeepClone()`；`LauncherSettingsService.NormalizeSettings()` 负责将未知或不合法值兜底为有效默认值。
+- `LauncherSettings` 的新增字段需有默认值，并同步更新 `DeepClone()`；`LauncherSettingsService.NormalizeSettings()` 负责将未知或不合法值兜底为有效默认值。`LauncherSettingsTests` 以反射守护 `DeepClone` 覆盖全部公共可写属性。
 
 ---
 
@@ -196,13 +204,13 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 - [ ] `dotnet test`（受影响的测试类）→ 全部通过
 - [ ] XAML 改动 → `UiStyleContractTests` 通过
 - [ ] 新功能的测试覆盖了预期行为
-- [ ] 新增的本地化 key 存在于 4 个 `LauncherStrings*.resx` 文件中，已生成 `LauncherStrings.Designer.cs`，且资源合约测试通过
+- [ ] 新增的本地化 key 存在于 4 个 `LauncherStrings*.resx` 文件中，已生成 `LauncherStrings.Designer.cs` 与 `LocalizationKeys.cs`，且资源合约测试通过
 - [ ] 未引入裸色号、裸图标尺寸、裸圆角在 View XAML 中
 - [ ] 新增的 public/internal API 有 XML doc comment
 - [ ] IDisposable 新增类注册顺序不影响现有 disposal order
-- [ ] 日志调用使用 `LocalDiagnostics`（不直接 `UnifiedLogger`），`title` 含义清晰
+- [ ] 日志调用使用 `LocalDiagnostics`（不直接 `UnifiedLogger`），`title` 为 PascalCase 模块标签
 - [ ] 未在日志/异常消息中写入敏感信息（密钥、salt、token）
-- [ ] CLAUDE.md / AGENTS.md 如有结构性变化一并更新
+- [ ] AGENTS.md / CONTEXT.md 如有结构性变化一并更新
 
 ---
 
@@ -218,6 +226,7 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 | 在日志里记 `Authorization` 头内容 | 省略所有 secret/salt/token 字段 |
 | 对 `CancellationToken` 用 `default` 忽略 | 显式 `CancellationToken.None` 表示有意不传播 |
 | 新增 settings 字段不提供默认值导致旧用户启动就崩 | 在 `LauncherSettings` 模型中设合理默认值 |
+| 平台分支测试用早期 `return` 跳过 | 用 `Assert.SkipUnless`/`Assert.SkipWhen` 让跳过可见 |
 
 ---
 
@@ -225,7 +234,7 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 
 | 工具/库 | 版本 | 用途 |
 |---|---|---|
-| .NET SDK | 10.0.x | Runtime |
+| .NET SDK | 10.0.302 | Runtime / SDK（global.json 钉住，`latestFeature` 滚动） |
 | Avalonia / Avalonia.Desktop | 12.1.2 | UI Framework |
 | Avalonia.Controls.ColorPicker | 12.1.2 | 自定义主题色取色器 |
 | Avalonia.Themes.Fluent | 12.1.2 | Fluent 主题 |
@@ -242,6 +251,6 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 | xunit.runner.visualstudio | 3.1.5 | xUnit VS 适配器 |
 | Microsoft.NET.Test.Sdk | 18.10.0 | 测试宿主 |
 | coverlet.msbuild | 10.0.1 | Code coverage |
-| Inno Setup | 7.0+ | Windows installer |
+| Inno Setup | 7.0+ | Windows installer（脚本强制最低 7.0，CI 安装 7.1.0） |
 
-> 版本以 `Directory.Packages.props` 中声明的为准；升级依赖时同步更新本表，并再生 `THIRD-PARTY-NOTICES.md` 与 lock 文件。
+> 版本以 `Directory.Packages.props` 中声明的为准；升级依赖时同步更新本表（受 `InstallerContractTests` 守护），并再生 `THIRD-PARTY-NOTICES.md` 与 lock 文件（流程见 AGENTS.md「Dependency upgrades」）。

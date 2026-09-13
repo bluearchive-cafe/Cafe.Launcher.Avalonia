@@ -1,5 +1,7 @@
 # Ubiquitous Language
 
+界面与文案的规范术语、四语言译法和翻译规则。安装生命周期与诊断领域概念（本地安装状态、损坏安装状态、崩溃快照等）定义在 [CONTEXT.md](CONTEXT.md)；工程结构见 [AGENTS.md](AGENTS.md)。
+
 ## Launcher and game files
 
 | Term | Definition | Aliases to avoid |
@@ -62,16 +64,6 @@
 - **Launch verification** checks a **game installation** before launch.
 - **Repair** restores a **game installation** against the selected **download source**.
 - The **Resource Panel** manages **localized resources** when the **Cafe download source** is selected.
-
-## Example dialogue
-
-> **Developer:** “Should **launch verification** use the local or remote **manifest**?”
->
-> **Domain expert:** “It uses the mode selected by the user. **Repair** always checks the **game installation** against the selected **download source**.”
->
-> **Developer:** “When is the **Resource Panel** available?”
->
-> **Domain expert:** “It is available with the **Cafe download source**, which provides the managed **localized resources**.”
 
 ## Flagged ambiguities
 

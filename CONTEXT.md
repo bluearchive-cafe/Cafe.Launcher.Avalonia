@@ -1,15 +1,15 @@
-# Cafe Launcher
+# Cafe Launcher — 项目上下文
 
-该上下文描述启动器管理游戏安装与运行时使用的核心领域概念。
+本文件描述启动器管理游戏安装与运行时使用的核心领域概念，以及设计系统的决策记录。工程结构与工作流见 `AGENTS.md`；编码规范见 `PROJECT_CONVENTIONS.md`；界面文案术语与规范译法见 `UBIQUITOUS_LANGUAGE.md`。
 
-## Language
+## 领域语言：安装生命周期
 
 **本地安装状态**:
 启动器用来判断本地游戏安装身份、版本和受管理文件集合的一组持久化状态。它不包含游戏文件本身。
 _Avoid_: 本地游戏状态、下载状态
 
 **游戏安装路径**:
-游戏安装目录的规范化位置，是下载、卸载和本地安装状态访问共同使用的路径。
+游戏安装目录的规范化位置，是下载、卸载和本地安装状态访问共同使用的路径。规范化后固定为 `YostarGames\BlueArchive_JP`。
 _Avoid_: 游戏路径、本地路径
 
 **运行环境配置**:
@@ -82,7 +82,7 @@ _Avoid_: 系统动效
 
 **系统动效**:
 跟随 Windows 动画开关决定是否启用完整产品动效的模式。
-_Avoid_: 自动动效
+_Avoid_: 自动员效
 
 **降动效**:
 移除所有空间移动、自动轮播与装饰性过渡，同时允许临时表面使用极短的纯透明度变化，以保留状态可理解性和即时操作反馈。
@@ -131,17 +131,18 @@ _Avoid_: 完成、取消成功
 **模态交互权**:
 模态栈中只有顶层表面能够接收输入；顶层关闭时，交互权和焦点须在退出完成后才归还下层表面或触发者。
 _Avoid_: 遮罩点击穿透
+
 实现分工（2026-09-12 审计裁定）：七个主叠层（设置、资源面板、日志查看器、日志导出、调试面板、设计画廊、设置向导）各自在叠层根上绑定一个按种类区分的 `ModalHostViewModel.Is*Interactive`；**对话框层有意不设此类闸口**——它的可见性由 `DialogsViewModel.Is*Visible` 驱动而非 `ModalKind` 属性，再加一道闸口会形成第二个真相来源，使「已显示但未注册进模态栈」的对话框渲染出来却不可交互（窗口硬冻结），故该层的输入拦截由全屏遮罩与 `ZIndex` 次序承担。详见 `AGENTS.md` 的模态隔离条款。
 
 ## 已定骨架（P1 落地，勿再开）
 
 - **M3 语义 / FluentTheme 底座**；点分层 token（`Launcher.*` 十二家族）；AA 契约自动化；动态色管线（ApplyScheme）；黄金截图基线；Debug 门画廊。
 - **组件四型映射**：`primary-action`→filled、`flat-action`→outlined（语境可 tonal）、`text-link`→text、`danger-action`→error-filled；共享模板 `LauncherBorderButtonTemplate` 保留；诊断/日志例外（Fluent 基础模板，仅 token 兼容）。
-- **表面与 Z 序**：单窗口 + 覆盖层（100/200/500/1000 不动）；P3 表面顺序 = 主壳→设置→对话框+Toast→向导→诊断/日志/资源面板（Q22）。
+- **表面与 Z 序**：单窗口 + 覆盖层（100/200/500/1000 不动，常量在 `LauncherConstants`）；P3 表面顺序 = 主壳→设置→对话框+Toast→向导→诊断/日志/资源面板（Q22）。
 
 ## P2 决策前沿
 
-### ✅ 已定案（Round 1，2026-08-25）
+### Round 1（2026-08-25）
 
 1. **底栏仲裁标准** → [ADR-001](docs/design/adr/ADR-001-底栏仲裁标准.md)：四标准等权 + 可读性一票否决；**形态本身待原型分支**。
 2. **圆角字阶一次性迁移** → [ADR-002](docs/design/adr/ADR-002-圆角字阶迁移.md)：Xs=4/Sm=8/Md=12/Lg=16，全量消费同步 + 基线重生成。
@@ -151,27 +152,30 @@ _Avoid_: 遮罩点击穿透
 6. **设置页布局范围** → [ADR-006](docs/design/adr/ADR-006-设置页布局范围.md)：仅组件规格统一，骨架不动。
 7. **画廊状态矩阵范围** → [ADR-007](docs/design/adr/ADR-007-画廊矩阵范围.md)：3 组件 × 6 态。
 
-### ✅ 已定案（Round 2 + 设置页方向，2026-08-25）
-
-13. **设置页重设计方向** → [ADR-013](docs/design/adr/ADR-013-设置页重设计方向.md)：**变体 B（纯列表 + hairline 分隔线）**；导航选中态 = SecondaryContainer 底 + OnSecondaryContainer 字 + leading icon（无指示条）；设置页蓝图已定稿（原型见 `prototype/settings-page`）。
-14. **其余界面重设计方向** → [ADR-014](docs/design/adr/ADR-014-其余表面M3重设计方向.md)：对话框/Toast/设置向导；**主壳首页仍搁置**；资源面板/日志/调试仅 token 兼容（Q3）。
+### Round 2 + 设置页方向（2026-08-25）
 
 8. **组件批次映射** → [ADR-008](docs/design/adr/ADR-008-组件批次映射.md)：A=模板+四型按钮，B=现存组件对齐，C=新组件+矩阵+清单。
 9. **设置三项 UI + 算法落地** → [ADR-009](docs/design/adr/ADR-009-设置三项UI与算法落地.md)：3×SettingRow(ComboBox)，次序算法→变体→中性；P2 实现 Celebi+Score 提取器接入。
 10. **中性色切换交互** → [ADR-010](docs/design/adr/ADR-010-中性色切换交互.md)：一行 ComboBox + caption 提示，无阻断。
 11. **字阶迁移时机** → [ADR-011](docs/design/adr/ADR-011-字阶迁移时机.md)：随组件批次。
 12. **底栏原型启动** → [ADR-012](docs/design/adr/ADR-012-底栏原型启动.md)：**已撤销**（2026-08-25 用户放弃首页布局决策；Q18 形态重新开放，仲裁标准 ADR-001 保留）。
+13. **设置页重设计方向** → [ADR-013](docs/design/adr/ADR-013-设置页重设计方向.md)：**变体 B（纯列表 + hairline 分隔线）**；导航选中态 = SecondaryContainer 底 + OnSecondaryContainer 字 + leading icon（无指示条）；设置页蓝图已定稿（原型见 `prototype/settings-page`）。
+14. **其余界面重设计方向** → [ADR-014](docs/design/adr/ADR-014-其余表面M3重设计方向.md)：对话框/Toast/设置向导；**主壳首页仍搁置**；资源面板/日志/调试仅 token 兼容（Q3）。
+
+### Fluent 动效重设计（2026-08-27）
+
+- **M3 视觉之上的 Fluent 动效层** → [ADR-016](docs/design/adr/ADR-016-Fluent动效层.md)：五类动效语义、Windows 时长与曲线、完整/系统/降动效边界、响应优先降级，以及独立 Avalonia 原型门禁。
+
+### 执行状态
+
+- **P2 执行 ticket 拆分已执行完毕（2026-08-26）**——A→B→C 批次 + 设置三项 UI（`SettingSelect`）+ Celebi+Score 提取器接入 + 中性色 caption（ADR-010）+ 走查清单（`docs/design/design-walkthrough-checklist.md`）全部落地。
+- P3 目前完成 = 设置页（ADR-013）+ 对话框/Toast/设置向导（ADR-014/017）+ 关于分区（ADR-018）+ 崩溃窗口（ADR-019/020）。
+- P2 剩余项：底栏双原型对比区随 Q18 重新裁决；画廊矩阵渲染细节随批次微调。
 
 ### 🔓 仍开放
 
 - **底栏形态（Q18）**：仲裁结论已撤销，重新开放（ADR-001 标准保留；`prototype/bottom-bar` 素材保留）。
 - **首页（主壳）重设计**：已搁置（2026-08-25 用户放弃本轮设计稿与相关布局决策）；P3 主壳表面照旧包含，但无既定蓝图。
-- **P2 执行 ticket 拆分**：**已执行完毕（2026-08-26）**——A→B→C 批次 + 设置三项 UI（`SettingSelect`）+ Celebi+Score 提取器接入 + 中性色 caption（ADR-010）+ 走查清单（`docs/design/design-walkthrough-checklist.md`）全部落地；P3 目前完成 = 设置页（ADR-013）+ 对话框/Toast/设置向导（ADR-014/017）+ 关于分区（ADR-018）+ 崩溃窗口（ADR-019/020）。
-- P2 剩余项：底栏双原型对比区随 Q18 重新裁决；画廊矩阵渲染细节随批次微调。
-
-### ✅ 已定案（Fluent 动效重设计，2026-08-27）
-
-- **M3 视觉之上的 Fluent 动效层** → [ADR-016](docs/design/adr/ADR-016-Fluent动效层.md)：五类动效语义、Windows 时长与曲线、完整/系统/降动效边界、响应优先降级，以及独立 Avalonia 原型门禁。
 
 ## ADR 索引
 
