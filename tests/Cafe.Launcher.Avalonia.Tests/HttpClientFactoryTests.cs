@@ -122,60 +122,8 @@ public sealed class HttpClientFactoryTests
             () => factory.CreateLeaseAsync(ProxyModes.Direct));
     }
 
-    [Fact]
-    public async Task CreateLeaseAsync_WhenProxyModeIsDirect_DoesNotCacheHandler()
-    {
-        using var factory = new HttpClientFactory(new ProxySettingsService());
-
-        using (await factory.CreateLeaseAsync(ProxyModes.Direct))
-        {
-        }
-
-        Assert.Equal(0, factory.CachedProxyHandlerCount);
-    }
-
-    [Fact]
-    public async Task CreateLeaseAsync_WithUnchangedProxySettings_ReusesCachedHandler()
-    {
-        var factory = CreateFactory(() => new SystemProxySettings(
-            "http://proxy.example.invalid:8080",
-            ["localhost"]));
-
-        using (await factory.CreateLeaseAsync(ProxyModes.System))
-        {
-        }
-
-        using (await factory.CreateLeaseAsync(ProxyModes.System))
-        {
-        }
-
-        Assert.Equal(1, factory.CachedProxyHandlerCount);
-    }
-
-    [Fact]
-    public async Task CreateLeaseAsync_WhenProxySettingsChange_ReplacesCachedHandler()
-    {
-        var settings = new SystemProxySettings(
-            "http://proxy-a.example.invalid:8080",
-            ["localhost"]);
-        using var factory = CreateFactory(() => settings);
-
-        using (await factory.CreateLeaseAsync(ProxyModes.System))
-        {
-        }
-
-        settings = new SystemProxySettings(
-            "http://proxy-b.example.invalid:8080",
-            []);
-        using (await factory.CreateLeaseAsync(ProxyModes.System))
-        {
-        }
-
-        Assert.Equal(1, factory.CachedProxyHandlerCount);
-    }
-
-    private static HttpClientFactory CreateFactory(Func<SystemProxySettings?> provider) =>
-        new(new ProxySettingsService(provider));
+    // 代理处理器的缓存行为测试（指纹换处理器、直连不缓存）随实现迁移至
+    // ProxySettingsServiceTests——缓存由 ProxySettingsService 拥有。
 
     private static void AssertHttpVersion(HttpClient client, Version expectedVersion)
     {

@@ -12,9 +12,27 @@ namespace Cafe.Launcher.Avalonia.Services;
 
 internal sealed record SystemProxySettings(string ProxyUrl, IReadOnlyList<string> NoProxy);
 
-public sealed class ProxySettingsService
+/// <summary>
+/// The proxy domain in one place. Normalization of raw system-proxy URLs
+/// (bare hosts, <c>socks://</c>, legacy IE <c>socks=host:port</c> assignments,
+/// shell-style bypass wildcards) happens exactly once — at settings ingestion —
+/// and both the constructed <see cref="IWebProxy"/> and the cache fingerprint
+/// consume the normalized form, so <c>socks://h</c> and <c>socks5://h</c> share
+/// one cached handler.
+/// </summary>
+/// <remarks>
+/// The cached-handler invariant is structural: the only way to obtain a proxy
+/// handler is <see cref="GetOrCreateHandlerAsync"/>, which pairs fingerprint
+/// computation and handler construction internally — a changed registry
+/// snapshot always replaces the cached handler, an unchanged one always reuses
+/// it, and no caller can hold a fingerprint without its handler or vice versa.
+/// </remarks>
+public sealed class ProxySettingsService : IDisposable
 {
     private readonly Func<SystemProxySettings?> systemProxySettingsProvider;
+    private readonly Dictionary<string, CachedProxyHandler> proxyHandlers = new(StringComparer.Ordinal);
+    private readonly object proxyHandlerLock = new();
+    private bool disposed;
 
     public ProxySettingsService() : this(WindowsRegistrySystemProxySettingsProvider.GetSettings)
     {
@@ -25,45 +43,140 @@ public sealed class ProxySettingsService
         this.systemProxySettingsProvider = systemProxySettingsProvider;
     }
 
-    public Task<IWebProxy?> CreateProxyAsync(string proxyMode, CancellationToken cancellationToken = default)
+    private sealed record CachedProxyHandler(string Fingerprint, SocketsHttpHandler Handler);
+
+    /// <summary>
+    /// Returns a proxy-configured handler for the mode, reusing the cached one
+    /// while the effective settings' fingerprint is unchanged. Direct mode is
+    /// answered fresh and uncached — production routes it to the factory's
+    /// shared direct handler before ever reaching this method; the branch only
+    /// exists for completeness and tests.
+    /// </summary>
+    public async Task<SocketsHttpHandler> GetOrCreateHandlerAsync(
+        string proxyMode,
+        CancellationToken cancellationToken = default)
     {
+        ObjectDisposedException.ThrowIf(disposed, this);
         if (proxyMode == ProxyModes.Direct)
         {
-            return Task.FromResult<IWebProxy?>(null);
+            var directHandler = new SocketsHttpHandler();
+            HttpClientFactory.ConfigureConnectionDefaults(directHandler);
+            directHandler.UseProxy = false;
+            return directHandler;
         }
 
-        if (proxyMode == ProxyModes.Auto)
+        var fingerprint = GetFingerprint(proxyMode);
+        lock (proxyHandlerLock)
         {
-            return Task.FromResult<IWebProxy?>(WebRequest.GetSystemWebProxy());
+            if (proxyHandlers.TryGetValue(proxyMode, out var cached)
+                && cached.Fingerprint == fingerprint)
+            {
+                return cached.Handler;
+            }
         }
 
-        var settings = systemProxySettingsProvider();
-        if (settings is null || string.IsNullOrWhiteSpace(settings.ProxyUrl))
+        // Handler creation is async (system-proxy resolution), so it happens
+        // outside the lock; a concurrent lease may cache an equivalent handler
+        // first, in which case the freshly created one is disposed unused.
+        var created = await CreateHandlerAsync(proxyMode, cancellationToken).ConfigureAwait(false);
+        lock (proxyHandlerLock)
         {
-            return Task.FromResult<IWebProxy?>(WebRequest.GetSystemWebProxy());
+            if (proxyHandlers.TryGetValue(proxyMode, out var existing)
+                && existing.Fingerprint == fingerprint)
+            {
+                created.Dispose();
+                return existing.Handler;
+            }
+
+            if (proxyHandlers.TryGetValue(proxyMode, out var stale))
+            {
+                stale.Handler.Dispose();
+            }
+
+            proxyHandlers[proxyMode] = new CachedProxyHandler(fingerprint, created);
+            return created;
+        }
+    }
+
+    /// <summary>Only for use by test projects (see <c>InternalsVisibleTo</c>).</summary>
+    internal int CachedHandlerCount
+    {
+        get { lock (proxyHandlerLock) return proxyHandlers.Count; }
+    }
+
+    private async Task<SocketsHttpHandler> CreateHandlerAsync(
+        string proxyMode,
+        CancellationToken cancellationToken)
+    {
+        var handler = new SocketsHttpHandler();
+        HttpClientFactory.ConfigureConnectionDefaults(handler);
+        handler.UseProxy = true;
+        handler.Proxy = proxyMode == ProxyModes.Auto
+            ? WebRequest.GetSystemWebProxy()
+            : BuildConfiguredProxy();
+        await Task.CompletedTask.ConfigureAwait(false);
+        return handler;
+    }
+
+    /// <summary>
+    /// Auto mode always uses live default detection; System mode uses the
+    /// configured proxy and only falls back to default detection when the
+    /// snapshot is empty — the distinction the cache-prefix keeps separate.
+    /// </summary>
+    private IWebProxy BuildConfiguredProxy()
+    {
+        var settings = GetNormalizedSettings();
+        if (settings is null)
+        {
+            return WebRequest.GetSystemWebProxy();
         }
 
-        // Normalize at the point of use: the registry provider already applies
-        // ResolveProxyUrl, but any future provider that forgets it would otherwise
-        // resurface the "socks://" NotSupportedException at first request.
-        return Task.FromResult<IWebProxy?>(new WebProxy(ResolveProxyUrl(settings.ProxyUrl))
+        return new WebProxy(settings.ProxyUrl)
         {
             BypassProxyOnLocal = settings.NoProxy.Any(IsLocalBypassToken),
             BypassList = BuildBypassRegexList(settings.NoProxy)
-        });
+        };
+    }
+
+    private string GetFingerprint(string proxyMode)
+    {
+        var settings = GetNormalizedSettings();
+        var identity = settings is null
+            ? "system-default"
+            : $"{settings.ProxyUrl}|{string.Join(",", settings.NoProxy)}";
+        return $"{proxyMode}:{identity}";
+    }
+
+    /// <summary>
+    /// The single normalization point: every consumer of system-proxy settings —
+    /// the constructed proxy, the cache fingerprint — sees the normalized URL,
+    /// so a provider that forgets to normalize can never resurface the
+    /// "socks://" NotSupportedException at request time.
+    /// </summary>
+    private SystemProxySettings? GetNormalizedSettings()
+    {
+        var settings = systemProxySettingsProvider();
+        if (settings is null || string.IsNullOrWhiteSpace(settings.ProxyUrl))
+        {
+            return null;
+        }
+
+        return new SystemProxySettings(
+            ResolveProxyUrl(settings.ProxyUrl),
+            settings.NoProxy);
     }
 
     private static bool IsLocalBypassToken(string entry) =>
         string.Equals(entry.Trim(), "<local>", StringComparison.OrdinalIgnoreCase);
 
-    internal static string[] BuildBypassRegexList(IEnumerable<string> entries) =>
+    private static string[] BuildBypassRegexList(IEnumerable<string> entries) =>
         entries
             .Select(ConvertBypassEntryToRegex)
             .Where(pattern => pattern is not null)
             .Select(pattern => pattern!)
             .ToArray();
 
-    internal static string? ConvertBypassEntryToRegex(string entry)
+    private static string? ConvertBypassEntryToRegex(string entry)
     {
         var trimmed = entry.Trim();
         if (trimmed.Length == 0)
@@ -88,45 +201,7 @@ public sealed class ProxySettingsService
             .Replace("\\?", ".", StringComparison.Ordinal);
     }
 
-    /// <summary>
-    /// Returns a stable identity string for the proxy configuration behind the given
-    /// proxy mode, used by <see cref="HttpClientFactory"/> to decide whether a cached
-    /// proxy handler can be reused. The Windows registry snapshot is re-read on every
-    /// call, so a mid-session system-proxy change produces a new fingerprint and
-    /// invalidates the cache.
-    /// </summary>
-    public Task<string> GetProxyFingerprintAsync(
-        string proxyMode,
-        CancellationToken cancellationToken = default)
-    {
-        if (proxyMode == ProxyModes.Direct)
-        {
-            return Task.FromResult(ProxyModes.Direct);
-        }
-
-        // Both Auto and System ultimately resolve from the same system proxy settings
-        // source; the mode prefix keeps their caches distinct because Auto falls back
-        // to default detection while System only falls back when the snapshot is empty.
-        var settings = systemProxySettingsProvider();
-        var identity = settings is null || string.IsNullOrWhiteSpace(settings.ProxyUrl)
-            ? "system-default"
-            : $"{settings.ProxyUrl}|{string.Join(",", settings.NoProxy)}";
-        return Task.FromResult($"{proxyMode}:{identity}");
-    }
-
-    public async Task<SocketsHttpHandler> CreateHttpHandlerAsync(
-        string proxyMode,
-        CancellationToken cancellationToken = default)
-    {
-        var proxy = await CreateProxyAsync(proxyMode, cancellationToken).ConfigureAwait(false);
-        var handler = new SocketsHttpHandler();
-        HttpClientFactory.ConfigureConnectionDefaults(handler);
-        handler.UseProxy = proxyMode != ProxyModes.Direct;
-        handler.Proxy = proxy;
-        return handler;
-    }
-
-    internal static string ResolveProxyUrl(string value)
+    private static string ResolveProxyUrl(string value)
     {
         if (value.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
             || value.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
@@ -168,5 +243,22 @@ public sealed class ProxySettingsService
         }
 
         return $"http://{value}";
+    }
+
+    public void Dispose()
+    {
+        if (disposed) return;
+        disposed = true;
+        lock (proxyHandlerLock)
+        {
+            foreach (var cached in proxyHandlers.Values)
+            {
+                cached.Handler.Dispose();
+            }
+
+            proxyHandlers.Clear();
+        }
+
+        GC.SuppressFinalize(this);
     }
 }
