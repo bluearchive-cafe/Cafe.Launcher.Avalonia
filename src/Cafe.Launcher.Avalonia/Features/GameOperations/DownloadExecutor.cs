@@ -21,6 +21,12 @@ internal sealed class DownloadExecutor
 {
     private const int MaxParallelDownloads = 10;
 
+    /// <summary>
+    /// 安装/更新校验阶段的有界并行度。校验是磁盘+CPU 混合负载，并行度超过机器核心数
+    /// 后只增加 IO 争用；上限 8 避免高核心机器上把磁盘打满影响同机游戏/其他进程。
+    /// </summary>
+    private static readonly int VerificationParallelism = Math.Clamp(Environment.ProcessorCount, 1, 8);
+
     private readonly IFileDownloadService fileDownloadService;
     private readonly Crc64Service crc64Service;
     private readonly IDownloadTransportSource transportSource;
@@ -267,45 +273,74 @@ internal sealed class DownloadExecutor
         CancellationToken cancellationToken)
     {
         var downloadedPathSet = downloadedFiles.Select(item => item.Path).ToHashSet(StringComparer.Ordinal);
-        var failedFiles = new List<ManifestFile>();
-        var index = 0;
+        // 有界并行校验：CRC64 全量重读是安装/更新阶段的主导等待，而各文件的校验彼此独立
+        // （Crc64Service 经共享 ArrayPool 保证并发安全，下载阶段已在并发使用）。结果按清单
+        // 下标收集，失败列表与进度仍保持与串行版本相同的清单顺序语义；自愈语义不变——
+        // 未经 verifiedHashes/plannedHashes 见证豁免的文件仍全量重读。
+        var failedFlags = new bool[manifestFiles.Count];
+        var skippedCount = 0;
+        var completedCount = 0;
 
-        foreach (var file in manifestFiles)
+        using var semaphore = new SemaphoreSlim(VerificationParallelism, VerificationParallelism);
+        var tasks = manifestFiles.Select(async (file, index) =>
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var isDownloaded = downloadedPathSet.Contains(file.Path);
-            var checkPath = isDownloaded
-                ? GetTempName(GamePathValidator.GetSafeFilePath(gamePath, file.Path))
-                : GamePathValidator.GetSafeFilePath(gamePath, file.Path);
+            await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                var isDownloaded = downloadedPathSet.Contains(file.Path);
+                var checkPath = isDownloaded
+                    ? GetTempName(GamePathValidator.GetSafeFilePath(gamePath, file.Path))
+                    : GamePathValidator.GetSafeFilePath(gamePath, file.Path);
 
-            if (!File.Exists(checkPath))
-            {
-                failedFiles.Add(new ManifestFile { Path = file.Path, Size = file.Size, Hash = file.Hash });
-            }
-            else if (!IsAlreadyVerified(file, checkPath, isDownloaded, verifiedHashes, plannedHashes))
-            {
-                var crc64 = await crc64Service.ComputeFileAsync(checkPath, null, cancellationToken).ConfigureAwait(false);
-                if (crc64 != file.Hash)
+                if (!File.Exists(checkPath))
                 {
-                    await diagnostics.MessageAsync(
-                        "GameDownload",
-                        $"CRC64 mismatch: {file.Path}{Environment.NewLine}" +
-                        $"expected: {file.Hash}{Environment.NewLine}" +
-                        $"actual:   {crc64}{Environment.NewLine}" +
-                        $"size: {new FileInfo(checkPath).Length}",
-                        CancellationToken.None);
+                    failedFlags[index] = true;
+                }
+                else if (!IsAlreadyVerified(file, checkPath, isDownloaded, verifiedHashes, plannedHashes))
+                {
+                    var crc64 = await crc64Service.ComputeFileAsync(checkPath, null, cancellationToken).ConfigureAwait(false);
+                    if (crc64 != file.Hash)
+                    {
+                        await diagnostics.MessageAsync(
+                            "GameDownload",
+                            $"CRC64 mismatch: {file.Path}{Environment.NewLine}" +
+                            $"expected: {file.Hash}{Environment.NewLine}" +
+                            $"actual:   {crc64}{Environment.NewLine}" +
+                            $"size: {new FileInfo(checkPath).Length}",
+                            CancellationToken.None);
 
-                    failedFiles.Add(new ManifestFile { Path = file.Path, Size = file.Size, Hash = file.Hash });
-                    DeleteExistingFile(checkPath);
+                        failedFlags[index] = true;
+                        DeleteExistingFile(checkPath);
+                    }
+                }
+                else
+                {
+                    Interlocked.Increment(ref skippedCount);
                 }
             }
+            finally
+            {
+                semaphore.Release();
+            }
 
-            progress((int)Math.Round(++index * 100d / manifestFiles.Count));
+            progress((int)Math.Round(Interlocked.Increment(ref completedCount) * 100d / manifestFiles.Count));
+        }).ToArray();
+
+        await Task.WhenAll(tasks).ConfigureAwait(false);
+        var failedFiles = new List<ManifestFile>();
+        for (var index = 0; index < manifestFiles.Count; index++)
+        {
+            if (failedFlags[index])
+            {
+                var file = manifestFiles[index];
+                failedFiles.Add(new ManifestFile { Path = file.Path, Size = file.Size, Hash = file.Hash });
+            }
         }
 
         await diagnostics.VerboseAsync(
             "GameDownload",
-            $"CRC check complete: {manifestFiles.Count - failedFiles.Count} passed, {failedFiles.Count} failed",
+            $"CRC check complete: {manifestFiles.Count - failedFiles.Count} passed, {failedFiles.Count} failed, {skippedCount} skipped by verified/witness hash",
             CancellationToken.None).ConfigureAwait(false);
 
         // Install passed files BEFORE returning failures — prevents retry cascade
