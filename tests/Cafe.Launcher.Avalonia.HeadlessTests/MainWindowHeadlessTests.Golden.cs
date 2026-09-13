@@ -40,7 +40,7 @@ public sealed partial class MainWindowHeadlessTests
     {
         using var context = CreateContext();
         await ShowGoldenWindowAsync(context);
-        context.ViewModel.Dialogs.ShowRepairConfirm("golden repair confirmation");
+        context.ViewModel.Dialogs.RepairConfirm.Show("golden repair confirmation");
         Dispatcher.UIThread.RunJobs();
         GoldenScreenshot.Compare(context.Window, "confirm-dialog");
     }

@@ -194,15 +194,15 @@ public sealed class GameOperationsViewModelTests
 
         await context.ViewModel.StartGameCommand.ExecuteAsync(null);
 
-        Assert.True(context.Dialogs.IsRepairConfirmVisible);
+        Assert.True(context.Dialogs.RepairConfirm.IsVisible);
         Assert.Equal(
             context.Localizer.T("launchDamageRepairPrompt"),
-            context.Dialogs.RepairConfirmText);
+            context.Dialogs.RepairConfirm.Message);
 
-        await context.Dialogs.ConfirmRepairCommand.ExecuteAsync(null);
+        await context.Dialogs.RepairConfirm.ConfirmCommand.ExecuteAsync(null);
 
         Assert.Equal(1, context.Backend.RepairCallCount);
-        Assert.False(context.Dialogs.IsRepairConfirmVisible);
+        Assert.False(context.Dialogs.RepairConfirm.IsVisible);
     }
 
     [Fact]
@@ -216,7 +216,7 @@ public sealed class GameOperationsViewModelTests
 
         await context.ViewModel.InstallOrUpdateCommand.ExecuteAsync(null);
 
-        Assert.True(context.Dialogs.IsRepairConfirmVisible);
+        Assert.True(context.Dialogs.RepairConfirm.IsVisible);
         Assert.Equal(0, context.Backend.InstallCallCount);
         Assert.False(context.Shell.IsBusy);
     }
@@ -535,7 +535,7 @@ public sealed class GameOperationsViewModelTests
 
         await context.ViewModel.RequestRepairCommand.ExecuteAsync(null);
 
-        Assert.True(context.Dialogs.IsRepairConfirmVisible);
+        Assert.True(context.Dialogs.RepairConfirm.IsVisible);
     }
 
     [Fact]
@@ -593,7 +593,7 @@ public sealed class GameOperationsViewModelTests
 
         context.ViewModel.StopOperationCommand.Execute(null);
 
-        Assert.True(context.Dialogs.IsStopConfirmVisible);
+        Assert.True(context.Dialogs.StopConfirm.IsVisible);
         Assert.Equal(0, context.Backend.StopCallCount);
     }
 
@@ -634,8 +634,8 @@ public sealed class GameOperationsViewModelTests
 
         await context.ViewModel.RequestUninstallCommand.ExecuteAsync(null);
 
-        Assert.True(context.Dialogs.IsUninstallConfirmVisible);
-        Assert.Contains("C:\\Game", context.Dialogs.UninstallConfirmText, StringComparison.Ordinal);
+        Assert.True(context.Dialogs.UninstallConfirm.IsVisible);
+        Assert.Contains("C:\\Game", context.Dialogs.UninstallConfirm.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -954,7 +954,7 @@ public sealed class GameOperationsViewModelTests
         await context.ViewModel.RequestRepairCommand.ExecuteAsync(null);
         await context.ViewModel.RepairAsync();
 
-        Assert.False(context.Dialogs.IsRepairConfirmVisible);
+        Assert.False(context.Dialogs.RepairConfirm.IsVisible);
         Assert.Equal(0, context.Backend.RepairCallCount);
     }
 
@@ -974,7 +974,7 @@ public sealed class GameOperationsViewModelTests
         var notification = Assert.Single(notifications);
         Assert.Equal(ToastSeverity.Warning, notification.Severity);
         Assert.Equal(context.Localizer.T("operationUnavailableForCurrentState"), notification.Message);
-        Assert.False(context.Dialogs.IsRepairConfirmVisible);
+        Assert.False(context.Dialogs.RepairConfirm.IsVisible);
     }
 
     [Fact]
@@ -993,7 +993,7 @@ public sealed class GameOperationsViewModelTests
         var notification = Assert.Single(notifications);
         Assert.Equal(ToastSeverity.Warning, notification.Severity);
         Assert.Equal(context.Localizer.T("operationUnavailableForCurrentState"), notification.Message);
-        Assert.False(context.Dialogs.IsUninstallConfirmVisible);
+        Assert.False(context.Dialogs.UninstallConfirm.IsVisible);
     }
 
     [Fact]
@@ -1004,7 +1004,7 @@ public sealed class GameOperationsViewModelTests
         context.ViewModel.StopOperationCommand.Execute(null);
 
         Assert.Equal(1, context.Backend.StopCallCount);
-        Assert.False(context.Dialogs.IsStopConfirmVisible);
+        Assert.False(context.Dialogs.StopConfirm.IsVisible);
     }
 
     [Fact]
@@ -1030,7 +1030,7 @@ public sealed class GameOperationsViewModelTests
 
         await context.ViewModel.RequestUninstallCommand.ExecuteAsync(null);
 
-        Assert.False(context.Dialogs.IsUninstallConfirmVisible);
+        Assert.False(context.Dialogs.UninstallConfirm.IsVisible);
     }
 
     [Fact]

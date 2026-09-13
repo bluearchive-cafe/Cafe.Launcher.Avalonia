@@ -55,7 +55,7 @@ public partial class MainWindowViewModelTests
 
         await viewModel.ResourcePanel.OpenResourcePanelCommand.ExecuteAsync(null);
 
-        Assert.True(viewModel.Dialogs.IsResourcePanelSourceConfirmVisible);
+        Assert.True(viewModel.Dialogs.ResourcePanelSourceConfirm.IsVisible);
         Assert.False(viewModel.ResourcePanel.IsResourcePanelVisible);
         Assert.Equal(0, CountRequests(transport, "/status/list"));
         Assert.Equal(0, CountRequests(transport, "/config/get"));
@@ -85,13 +85,13 @@ public partial class MainWindowViewModelTests
         viewModel.ResourcePanel.ApplySettings(new LauncherSettings { PatchUrlGroup = PatchUrlGroups.Official });
         await viewModel.ResourcePanel.OpenResourcePanelCommand.ExecuteAsync(null);
 
-        viewModel.Dialogs.ConfirmResourcePanelSourceSwitchCommand.Execute(null);
+        viewModel.Dialogs.ResourcePanelSourceConfirm.ConfirmCommand.Execute(null);
         await WaitForConditionAsync(() =>
             viewModel.ResourcePanel.IsResourcePanelVisible
             && CountRequests(transport, "/status/list") == 1
             && CountRequests(transport, "/config/get") == 1);
 
-        Assert.False(viewModel.Dialogs.IsResourcePanelSourceConfirmVisible);
+        Assert.False(viewModel.Dialogs.ResourcePanelSourceConfirm.IsVisible);
         Assert.True(viewModel.ResourcePanel.IsResourcePanelVisible);
         Assert.Equal(PatchUrlGroups.Cafe, viewModel.Settings.Editor.Current.PatchUrlGroup);
         Assert.Equal(PatchUrlGroups.Cafe, (await settingsService.ReadAsync()).PatchUrlGroup);
@@ -140,7 +140,7 @@ public partial class MainWindowViewModelTests
         await openTask;
 
         Assert.True(viewModel.ResourcePanel.IsResourcePanelVisible);
-        Assert.False(viewModel.Dialogs.IsResourcePanelSourceConfirmVisible);
+        Assert.False(viewModel.Dialogs.ResourcePanelSourceConfirm.IsVisible);
     }
 
     [Fact]

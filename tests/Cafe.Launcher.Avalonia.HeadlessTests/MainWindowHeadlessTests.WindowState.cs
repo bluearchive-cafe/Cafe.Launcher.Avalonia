@@ -107,7 +107,7 @@ public sealed partial class MainWindowHeadlessTests
         context.ViewModel.Debug.ResetSettingsCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
 
-        Assert.True(context.ViewModel.Dialogs.IsDebugResetConfirmationVisible);
+        Assert.True(context.ViewModel.Dialogs.DebugResetConfirm.IsVisible);
     }
 
     [AvaloniaTheory]
@@ -278,12 +278,12 @@ public sealed partial class MainWindowHeadlessTests
     {
         using var context = CreateContext();
         context.Window.Show();
-        context.ViewModel.Dialogs.IsDownloadRunningCloseConfirmVisible = false;
-        context.ViewModel.Dialogs.IsStopConfirmVisible = false;
+        context.ViewModel.Dialogs.DownloadRunningCloseConfirm.IsVisible = false;
+        context.ViewModel.Dialogs.StopConfirm.IsVisible = false;
         context.ViewModel.Settings.IsUnsavedChangesVisible = false;
-        context.ViewModel.Dialogs.IsRepairConfirmVisible = false;
-        context.ViewModel.Dialogs.IsResourcePanelSourceConfirmVisible = false;
-        context.ViewModel.Dialogs.IsUninstallConfirmVisible = false;
+        context.ViewModel.Dialogs.RepairConfirm.IsVisible = false;
+        context.ViewModel.Dialogs.ResourcePanelSourceConfirm.IsVisible = false;
+        context.ViewModel.Dialogs.UninstallConfirm.IsVisible = false;
         context.ViewModel.Dialogs.IsNoticeDialogVisible = false;
         context.ViewModel.ResourcePanel.IsResourcePanelVisible = false;
         context.ViewModel.Settings.Editor.ApplySnapshot(

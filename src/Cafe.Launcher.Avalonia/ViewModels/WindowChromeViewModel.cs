@@ -200,10 +200,11 @@ public partial class WindowChromeViewModel : ViewModelBase
         CloseRequested?.Invoke();
     }
 
-    public void CloseAfterStoppingDownload()
+    public Task CloseAfterStoppingDownload()
     {
         operations.StopDownload(DownloadStopReason.UserRequested);
         CloseRequested?.Invoke();
+        return Task.CompletedTask;
     }
 
     public void RequestClose() => CloseRequested?.Invoke();

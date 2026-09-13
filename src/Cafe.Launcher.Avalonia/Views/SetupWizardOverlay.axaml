@@ -42,7 +42,7 @@
                     <Button Grid.Column="1"
                             Classes="flat-action dialog-action"
                             VerticalAlignment="Center"
-                            Command="{Binding Dialogs.RequestSetupWizardExitCommand}"
+                            Command="{Binding Dialogs.SetupWizardExitConfirm.ShowCommand}"
                             ToolTip.Tip="{Binding Shell.I18n[setupWizardSkip]}"
                             AutomationProperties.Name="{Binding Shell.I18n[setupWizardSkip]}">
                         <StackPanel Classes="button-content">

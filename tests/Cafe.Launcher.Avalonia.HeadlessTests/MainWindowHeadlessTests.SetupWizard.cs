@@ -499,14 +499,14 @@ public sealed partial class MainWindowHeadlessTests
 
         Assert.True(firstHandled);
         Assert.True(context.ViewModel.Dialogs.IsSetupWizardVisible);
-        Assert.True(context.ViewModel.Dialogs.IsSetupWizardExitConfirmVisible);
+        Assert.True(context.ViewModel.Dialogs.SetupWizardExitConfirm.IsVisible);
 
         var secondHandled = context.ViewModel.TryHandleEscape();
         Dispatcher.UIThread.RunJobs();
 
         Assert.True(secondHandled);
         Assert.True(context.ViewModel.Dialogs.IsSetupWizardVisible);
-        Assert.False(context.ViewModel.Dialogs.IsSetupWizardExitConfirmVisible);
+        Assert.False(context.ViewModel.Dialogs.SetupWizardExitConfirm.IsVisible);
     }
 
     [AvaloniaFact]
@@ -518,10 +518,10 @@ public sealed partial class MainWindowHeadlessTests
         context.ViewModel.TryHandleEscape();
         Dispatcher.UIThread.RunJobs();
 
-        await context.ViewModel.Dialogs.ConfirmSetupWizardExitCommand.ExecuteAsync(null);
+        await context.ViewModel.Dialogs.SetupWizardExitConfirm.ConfirmCommand.ExecuteAsync(null);
         Dispatcher.UIThread.RunJobs();
 
-        Assert.False(context.ViewModel.Dialogs.IsSetupWizardExitConfirmVisible);
+        Assert.False(context.ViewModel.Dialogs.SetupWizardExitConfirm.IsVisible);
         Assert.False(context.ViewModel.Dialogs.IsSetupWizardVisible);
     }
 

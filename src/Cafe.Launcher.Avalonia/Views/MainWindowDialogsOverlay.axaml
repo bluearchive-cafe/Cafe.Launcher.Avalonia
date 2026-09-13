@@ -252,22 +252,22 @@
         </Grid>
 
         <!-- Repair confirmation dialog -->
-        <controls:ConfirmDialog IsOpen="{Binding Dialogs.IsRepairConfirmVisible}"
+        <controls:ConfirmDialog IsOpen="{Binding Dialogs.RepairConfirm.IsVisible}"
                                 Title="{Binding Shell.I18n[repairConfirm]}"
-                                Message="{Binding Dialogs.RepairConfirmText}"
+                                Message="{Binding Dialogs.RepairConfirm.Message}"
                                 CancelText="{Binding Shell.I18n[cancel]}"
-                                CancelCommand="{Binding Dialogs.CancelRepairCommand}"
+                                CancelCommand="{Binding Dialogs.RepairConfirm.CancelCommand}"
                                 ConfirmText="{Binding Shell.I18n[repair]}"
-                                ConfirmCommand="{Binding Dialogs.ConfirmRepairCommand}"/>
+                                ConfirmCommand="{Binding Dialogs.RepairConfirm.ConfirmCommand}"/>
 
         <!-- Resource Panel source confirmation dialog -->
-        <controls:ConfirmDialog IsOpen="{Binding Dialogs.IsResourcePanelSourceConfirmVisible}"
+        <controls:ConfirmDialog IsOpen="{Binding Dialogs.ResourcePanelSourceConfirm.IsVisible}"
                                 Title="{Binding Shell.I18n[resourcePanelCafeOnlyTitle]}"
-                                Message="{Binding Dialogs.ResourcePanelSourceConfirmText}"
+                                Message="{Binding Dialogs.ResourcePanelSourceConfirm.Message}"
                                 CancelText="{Binding Shell.I18n[cancel]}"
-                                CancelCommand="{Binding Dialogs.CancelResourcePanelSourceSwitchCommand}"
+                                CancelCommand="{Binding Dialogs.ResourcePanelSourceConfirm.CancelCommand}"
                                 ConfirmText="{Binding Shell.I18n[resourcePanelCafeOnlySwitch]}"
-                                ConfirmCommand="{Binding Dialogs.ConfirmResourcePanelSourceSwitchCommand}"/>
+                                ConfirmCommand="{Binding Dialogs.ResourcePanelSourceConfirm.ConfirmCommand}"/>
 
         <!-- Update available dialog -->
         <Grid Classes="dialog-overlay motion-overlay"
@@ -373,33 +373,33 @@
         </Grid>
 
         <!-- Stop download confirmation dialog -->
-        <controls:ConfirmDialog IsOpen="{Binding Dialogs.IsStopConfirmVisible}"
+        <controls:ConfirmDialog IsOpen="{Binding Dialogs.StopConfirm.IsVisible}"
                                 Title="{Binding Shell.I18n[stopDownloadTitle]}"
-                                Message="{Binding Dialogs.StopConfirmText}"
+                                Message="{Binding Dialogs.StopConfirm.Message}"
                                 CancelText="{Binding Shell.I18n[cancel]}"
-                                CancelCommand="{Binding Dialogs.CancelStopCommand}"
+                                CancelCommand="{Binding Dialogs.StopConfirm.CancelCommand}"
                                 ConfirmText="{Binding Shell.I18n[stop]}"
-                                ConfirmCommand="{Binding Dialogs.ConfirmStopCommand}"
+                                ConfirmCommand="{Binding Dialogs.StopConfirm.ConfirmCommand}"
                                 IsDangerConfirm="True"/>
 
         <!-- Download running close confirmation dialog -->
-        <controls:ConfirmDialog IsOpen="{Binding Dialogs.IsDownloadRunningCloseConfirmVisible}"
+        <controls:ConfirmDialog IsOpen="{Binding Dialogs.DownloadRunningCloseConfirm.IsVisible}"
                                 Title="{Binding Shell.I18n[stopDownloadTitle]}"
-                                Message="{Binding Dialogs.DownloadRunningCloseConfirmText}"
+                                Message="{Binding Dialogs.DownloadRunningCloseConfirm.Message}"
                                 CancelText="{Binding Shell.I18n[cancel]}"
-                                CancelCommand="{Binding Dialogs.CancelCloseWhileDownloadingCommand}"
+                                CancelCommand="{Binding Dialogs.DownloadRunningCloseConfirm.CancelCommand}"
                                 ConfirmText="{Binding Shell.I18n[stop]}"
-                                ConfirmCommand="{Binding Dialogs.ConfirmCloseWhileDownloadingCommand}"
+                                ConfirmCommand="{Binding Dialogs.DownloadRunningCloseConfirm.ConfirmCommand}"
                                 IsDangerConfirm="True"/>
 
         <!-- Uninstall confirmation dialog -->
-        <controls:ConfirmDialog IsOpen="{Binding Dialogs.IsUninstallConfirmVisible}"
+        <controls:ConfirmDialog IsOpen="{Binding Dialogs.UninstallConfirm.IsVisible}"
                                 Title="{Binding Shell.I18n[confirmUninstall]}"
-                                Message="{Binding Dialogs.UninstallConfirmText}"
+                                Message="{Binding Dialogs.UninstallConfirm.Message}"
                                 CancelText="{Binding Shell.I18n[cancel]}"
-                                CancelCommand="{Binding Dialogs.CancelUninstallCommand}"
+                                CancelCommand="{Binding Dialogs.UninstallConfirm.CancelCommand}"
                                 ConfirmText="{Binding Shell.I18n[uninstall]}"
-                                ConfirmCommand="{Binding Dialogs.ConfirmUninstallCommand}"
+                                ConfirmCommand="{Binding Dialogs.UninstallConfirm.ConfirmCommand}"
                                 IsDangerConfirm="True"/>
 
         <!-- Unsaved changes confirmation dialog -->
@@ -475,28 +475,28 @@
         </Grid>
 
         <views:SetupWizardOverlay/>
-        <controls:ConfirmDialog IsOpen="{Binding Dialogs.IsSetupWizardExitConfirmVisible}"
+        <controls:ConfirmDialog IsOpen="{Binding Dialogs.SetupWizardExitConfirm.IsVisible}"
                                 Title="{Binding Shell.I18n[setupWizardExitTitle]}"
                                 Message="{Binding Shell.I18n[setupWizardExitMessage]}"
                                 CancelText="{Binding Shell.I18n[cancel]}"
-                                CancelCommand="{Binding Dialogs.CancelSetupWizardExitCommand}"
+                                CancelCommand="{Binding Dialogs.SetupWizardExitConfirm.CancelCommand}"
                                 ConfirmText="{Binding Shell.I18n[setupWizardExitConfirm]}"
-                                ConfirmCommand="{Binding Dialogs.ConfirmSetupWizardExitCommand}"/>
-        <controls:ConfirmDialog IsOpen="{Binding Dialogs.IsDebugResetConfirmationVisible}"
+                                ConfirmCommand="{Binding Dialogs.SetupWizardExitConfirm.ConfirmCommand}"/>
+        <controls:ConfirmDialog IsOpen="{Binding Dialogs.DebugResetConfirm.IsVisible}"
                                 Title="{Binding Shell.I18n[debugResetSettingsTitle]}"
                                 Message="{Binding Shell.I18n[debugResetSettingsDescription]}"
                                 CancelText="{Binding Shell.I18n[cancel]}"
-                                CancelCommand="{Binding Dialogs.CancelDebugResetCommand}"
+                                CancelCommand="{Binding Dialogs.DebugResetConfirm.CancelCommand}"
                                 ConfirmText="{Binding Shell.I18n[debugResetSettingsConfirm]}"
-                                ConfirmCommand="{Binding Dialogs.ConfirmDebugResetCommand}"
+                                ConfirmCommand="{Binding Dialogs.DebugResetConfirm.ConfirmCommand}"
                                 IsDangerConfirm="True"/>
-        <controls:ConfirmDialog IsOpen="{Binding Dialogs.IsResetSettingsConfirmationVisible}"
+        <controls:ConfirmDialog IsOpen="{Binding Dialogs.SettingsResetConfirm.IsVisible}"
                                 Title="{Binding Shell.I18n[debugResetSettingsTitle]}"
                                 Message="{Binding Shell.I18n[debugResetSettingsDescription]}"
                                 CancelText="{Binding Shell.I18n[cancel]}"
-                                CancelCommand="{Binding Dialogs.CancelSettingsResetCommand}"
+                                CancelCommand="{Binding Dialogs.SettingsResetConfirm.CancelCommand}"
                                 ConfirmText="{Binding Shell.I18n[debugResetSettingsConfirm]}"
-                                ConfirmCommand="{Binding Dialogs.ConfirmSettingsResetCommand}"
+                                ConfirmCommand="{Binding Dialogs.SettingsResetConfirm.ConfirmCommand}"
                                 IsDangerConfirm="True"/>
     </Grid>
 </UserControl>

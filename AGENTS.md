@@ -30,7 +30,7 @@ Features must not reference each other's concrete types. Extract a narrow abstra
 Only the top surface of the modal stack may receive input (the principle in `CONTEXT.md` §模态交互权). The mechanism differs by layer and intentionally has two halves:
 
 - The seven primary overlays (settings, resource panel, log viewer, log export, debug panel, design gallery, setup wizard) each cross the shell via a per-kind `ModalHostViewModel.Is*Interactive` binding on their overlay root.
-- The dialog layer has **no** such gate on purpose. Its surfaces are driven by `DialogsViewModel.Is*Visible` (rendering) rather than by a `ModalKind` property, so a gate would introduce a second source of truth — a dialog shown without being registered in the modal stack would render but be non-interactive, freezing the window instead of degrading. Its input interception is carried by the full-screen scrim plus `ZIndex` ordering (`Grid.dialog-overlay`, `Views/MainWindow.Styles.axaml`).
+- The dialog layer has **no** such gate on purpose. Its surfaces are driven by visibility flags (rendering) rather than by a `ModalKind` property — the confirmation family via its `ConfirmationDialogViewModel.IsVisible` instances and the remaining dialogs via `DialogsViewModel.Is*Visible` — so a gate would introduce a second source of truth — a dialog shown without being registered in the modal stack would render but be non-interactive, freezing the window instead of degrading. Its input interception is carried by the full-screen scrim plus `ZIndex` ordering (`Grid.dialog-overlay`, `Views/MainWindow.Styles.axaml`).
 
 Do not add a dialog-layer interaction gate without first making modal registration the single source of truth for dialog visibility.
 

@@ -47,7 +47,7 @@ public sealed partial class UiStyleContractTests
             .Descendants()
             .Single(element =>
                 element.Name.LocalName == "Button"
-                && element.Attribute("Command")?.Value == "{Binding Dialogs.RequestSetupWizardExitCommand}");
+                && element.Attribute("Command")?.Value == "{Binding Dialogs.SetupWizardExitConfirm.ShowCommand}");
         var progressRow = skipButton.Parent!;
         Assert.Equal("Grid", progressRow.Name.LocalName);
         var heading = progressRow
@@ -229,7 +229,7 @@ public sealed partial class UiStyleContractTests
             .Descendants()
             .Single(element =>
                 element.Name.LocalName == "Button"
-                && element.Attribute("Command")?.Value == "{Binding Dialogs.RequestSetupWizardExitCommand}");
+                && element.Attribute("Command")?.Value == "{Binding Dialogs.SetupWizardExitConfirm.ShowCommand}");
         var heading = skipButton.Parent!
             .Elements()
             .First(element => element.Name.LocalName == "StackPanel");

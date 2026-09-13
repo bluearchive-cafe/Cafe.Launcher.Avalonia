@@ -64,11 +64,11 @@ public partial class MainWindowViewModelTests
         using var viewModel = await CreateViewModelAsync(new CountingCoreService(CreateSnapshot()));
 
         viewModel.WindowChrome.IsSettingsVisible = true;
-        viewModel.Dialogs.ShowRepairConfirm("repair");
+        viewModel.Dialogs.RepairConfirm.Show("repair");
         Assert.Equal(ModalKind.RepairConfirmation, viewModel.ModalHost.Top?.Kind);
 
         Assert.True(viewModel.TryHandleEscape());
-        Assert.False(viewModel.Dialogs.IsRepairConfirmVisible);
+        Assert.False(viewModel.Dialogs.RepairConfirm.IsVisible);
         Assert.True(viewModel.WindowChrome.IsSettingsVisible);
 
         Assert.True(viewModel.TryHandleEscape());
@@ -103,7 +103,7 @@ public partial class MainWindowViewModelTests
                 viewModel.Dialogs.Gallery.OpenCommand.Execute(null);
                 break;
             case ModalKind.DebugResetConfirmation:
-                viewModel.Dialogs.ShowDebugResetConfirmation();
+                viewModel.Dialogs.DebugResetConfirm.Show();
                 break;
             case ModalKind.Notice:
                 viewModel.Dialogs.IsNoticeDialogVisible = true;
@@ -121,22 +121,22 @@ public partial class MainWindowViewModelTests
                 viewModel.Dialogs.ShowSetupWizard();
                 break;
             case ModalKind.SetupWizardExitConfirmation:
-                viewModel.Dialogs.RequestSetupWizardExitCommand.Execute(null);
+                viewModel.Dialogs.SetupWizardExitConfirm.ShowCommand.Execute(null);
                 break;
             case ModalKind.UnsavedSettingsConfirmation:
                 viewModel.Settings.IsUnsavedChangesVisible = true;
                 break;
             case ModalKind.SettingsResetConfirmation:
-                viewModel.Dialogs.ShowSettingsResetConfirmation();
+                viewModel.Dialogs.SettingsResetConfirm.Show();
                 break;
             case ModalKind.RepairConfirmation:
-                viewModel.Dialogs.ShowRepairConfirm("repair");
+                viewModel.Dialogs.RepairConfirm.Show("repair");
                 break;
             case ModalKind.ResourcePanelSourceConfirmation:
-                viewModel.Dialogs.ShowResourcePanelSourceConfirm("source");
+                viewModel.Dialogs.ResourcePanelSourceConfirm.Show("source");
                 break;
             case ModalKind.UninstallConfirmation:
-                viewModel.Dialogs.ShowUninstallConfirm("uninstall");
+                viewModel.Dialogs.UninstallConfirm.Show("uninstall");
                 break;
             case ModalKind.StopConfirmation:
                 viewModel.Dialogs.ShowStopConfirm();

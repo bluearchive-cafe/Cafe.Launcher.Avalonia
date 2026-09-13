@@ -266,7 +266,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
 
     /// <summary>Opens the shared launcher-settings reset confirmation (shell performs the reset).</summary>
     [RelayCommand]
-    private void RequestResetSettings() => dialogs.ShowSettingsResetConfirmation();
+    private void RequestResetSettings() => dialogs.SettingsResetConfirm.Show();
 
     [RelayCommand(CanExecute = nameof(CanSaveSettings))]
     private async Task SaveSettingsAsync()
