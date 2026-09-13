@@ -81,6 +81,10 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
     [ObservableProperty]
     private string resourcePanelMessage = "";
 
+    /// <summary>Gets whether the current inline message carries error severity (drives the strip's danger styling).</summary>
+    [ObservableProperty]
+    private bool isResourcePanelMessageError;
+
     [ObservableProperty]
     private string selectedResourcePanelUidSource = ResourcePanelUidSources.Auto;
 
@@ -190,7 +194,7 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
         }
         catch (Exception exception)
         {
-            ResourcePanelMessage = localizer.F(LocalizationKeys.ResourcePanelLoadFailed, exception.Message);
+            SetResourcePanelMessage(localizer.F(LocalizationKeys.ResourcePanelLoadFailed, exception.Message), isError: true);
             await resourcePanelService.LogErrorAsync("Resource panel source switch failed.", exception);
         }
         finally
@@ -211,13 +215,13 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
         var uid = ManualResourcePanelUid.Trim();
         if (string.IsNullOrWhiteSpace(uid))
         {
-            ResourcePanelMessage = localizer.T(LocalizationKeys.ResourcePanelUidEmpty);
+            SetResourcePanelMessage(localizer.T(LocalizationKeys.ResourcePanelUidEmpty), isError: true);
             return;
         }
 
         if (!ResourcePanelUidService.IsValidUid(uid))
         {
-            ResourcePanelMessage = localizer.T(LocalizationKeys.ResourcePanelUidInvalidFormat);
+            SetResourcePanelMessage(localizer.T(LocalizationKeys.ResourcePanelUidInvalidFormat), isError: true);
             return;
         }
 
@@ -233,7 +237,7 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
             ResourcePanelUidText = localizer.F(LocalizationKeys.ResourcePanelCurrentUid, uid);
             IsResourcePanelUidMissing = false;
             IsResourcePanelUidEditing = false;
-            ResourcePanelMessage = localizer.T(LocalizationKeys.ResourcePanelUidSaved);
+            SetResourcePanelMessage(localizer.T(LocalizationKeys.ResourcePanelUidSaved));
             await LoadResourcePanelDataAsync(uid, lifetimeCts.Token);
         }
         catch (OperationCanceledException) when (lifetimeCts.IsCancellationRequested)
@@ -241,7 +245,7 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
         }
         catch (Exception exception)
         {
-            ResourcePanelMessage = localizer.F(LocalizationKeys.ResourcePanelLoadFailed, exception.Message);
+            SetResourcePanelMessage(localizer.F(LocalizationKeys.ResourcePanelLoadFailed, exception.Message), isError: true);
             await errorHandling.HandleErrorAsync("Resource panel manual UID save failed.", exception,
                 new ErrorHandlingOptions { ShowToast = false });
         }
@@ -257,7 +261,7 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
         if (string.IsNullOrWhiteSpace(ResourcePanelUid))
         {
             IsResourcePanelUidMissing = true;
-            ResourcePanelMessage = localizer.F(LocalizationKeys.ResourcePanelUidMissing, resourcePanelService.CookieLibraryPath);
+            SetResourcePanelMessage(localizer.F(LocalizationKeys.ResourcePanelUidMissing, resourcePanelService.CookieLibraryPath));
             return;
         }
 
@@ -270,7 +274,7 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
                 GetResourcePanelItem(ResourcePanelResourceCodes.Voice).IsEnabled,
                 GetResourcePanelItem(ResourcePanelResourceCodes.Media).IsEnabled,
                 lifetimeCts.Token);
-            ResourcePanelMessage = localizer.T(LocalizationKeys.ResourcePanelSaved);
+            SetResourcePanelMessage(localizer.T(LocalizationKeys.ResourcePanelSaved));
             toastService.ShowSuccess(localizer.T(LocalizationKeys.ResourcePanelSaved));
         }
         catch (OperationCanceledException) when (lifetimeCts.IsCancellationRequested)
@@ -279,7 +283,7 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
         catch (Exception exception)
         {
             var message = localizer.F(LocalizationKeys.ResourcePanelSaveFailed, exception.Message);
-            ResourcePanelMessage = message;
+            SetResourcePanelMessage(message, isError: true);
             await errorHandling.HandleErrorAsync("Resource panel save failed.", exception,
                 new ErrorHandlingOptions { ToastMessage = message });
         }
@@ -313,7 +317,7 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
     {
         IsResourcePanelBusy = true;
         IsResourcePanelUidEditing = false;
-        ResourcePanelMessage = localizer.T(LocalizationKeys.ResourcePanelLoading);
+        SetResourcePanelMessage(localizer.T(LocalizationKeys.ResourcePanelLoading));
         SetResourcePanelStatusText(localizer.T(LocalizationKeys.ResourcePanelLoading));
         try
         {
@@ -338,7 +342,7 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
             if (string.IsNullOrWhiteSpace(uid))
             {
                 IsResourcePanelUidMissing = true;
-                ResourcePanelMessage = localizer.F(LocalizationKeys.ResourcePanelUidMissing, resourcePanelService.CookieLibraryPath);
+                SetResourcePanelMessage(localizer.F(LocalizationKeys.ResourcePanelUidMissing, resourcePanelService.CookieLibraryPath));
                 SetResourcePanelStatusText(localizer.T(LocalizationKeys.ResourcePanelFailed));
                 return;
             }
@@ -352,7 +356,7 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
         catch (Exception exception)
         {
             IsResourcePanelBusy = false;
-            ResourcePanelMessage = localizer.F(LocalizationKeys.ResourcePanelLoadFailed, exception.Message);
+            SetResourcePanelMessage(localizer.F(LocalizationKeys.ResourcePanelLoadFailed, exception.Message), isError: true);
             SetResourcePanelStatusText(localizer.T(LocalizationKeys.ResourcePanelFailed));
             await resourcePanelService.LogErrorAsync("Resource panel load failed.", exception);
         }
@@ -375,11 +379,11 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
 
     private async Task LoadResourcePanelDataAsync(string uid, CancellationToken cancellationToken)
     {
-        ResourcePanelMessage = localizer.T(LocalizationKeys.ResourcePanelLoading);
+        SetResourcePanelMessage(localizer.T(LocalizationKeys.ResourcePanelLoading));
         SetResourcePanelStatusText(localizer.T(LocalizationKeys.ResourcePanelLoading));
         var result = await resourcePanelService.LoadDataAsync(uid, cancellationToken);
         ApplyResult(result);
-        ResourcePanelMessage = localizer.T(LocalizationKeys.StatusNetworkLoaded);
+        SetResourcePanelMessage(localizer.T(LocalizationKeys.StatusNetworkLoaded));
     }
 
     private void ApplyResult(ResourcePanelLoadResult result)
@@ -420,6 +424,13 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
                 : ResourcePanelItemStatus.Failed;
             item.StatusIconKind = IsResourcePanelBusy ? "Sync" : "AlertCircle";
         }
+    }
+
+    /// <summary>Sets the inline message and its severity together so the strip styling never drifts from the text.</summary>
+    private void SetResourcePanelMessage(string message, bool isError = false)
+    {
+        ResourcePanelMessage = message;
+        IsResourcePanelMessageError = isError;
     }
 
     private ResourcePanelItem GetResourcePanelItem(string code)

@@ -38,13 +38,11 @@
                 </controls:DialogSurface.HeaderIcon>
                 <controls:DialogSurface.Content>
                     <StackPanel Spacing="{StaticResource Launcher.Spacing.Md}">
-                        <Border Classes="info-strip resource-panel-status">
-                            <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}">
-                                    <TextBlock Text="{Binding ResourcePanel.ResourcePanelUidText}" Classes="body"
-                                               IsVisible="{Binding ResourcePanel.ResourcePanelUidText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                                    <TextBlock Text="{Binding ResourcePanel.ResourcePanelMessage}" Classes="body"/>
-                                </StackPanel>
-                            </Border>
+                        <Border Classes="info-strip resource-panel-status"
+                                Classes.danger="{Binding ResourcePanel.IsResourcePanelMessageError}"
+                                IsVisible="{Binding ResourcePanel.ResourcePanelMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                            <TextBlock Text="{Binding ResourcePanel.ResourcePanelMessage}" Classes="body"/>
+                        </Border>
 
                             <!-- UID input card: shown when UID missing -->
                             <Border Classes="dialog-card"
@@ -113,7 +111,6 @@
                                         <Button Grid.Column="1" Classes="flat-action dialog-action"
                                                 Command="{Binding ResourcePanel.BeginEditResourcePanelUidCommand}"
                                                 AutomationProperties.Name="{Binding Shell.I18n[resourcePanelChangeUid]}"
-                                                IsVisible="{Binding ResourcePanel.IsResourcePanelUidSourceCustom}"
                                                 IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
                                             <StackPanel Classes="button-content">
                                                 <materialIcons:MaterialIcon Kind="Pencil" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
@@ -163,7 +160,16 @@
                                                           IsEnabled="{Binding IsOperable}"
                                                           AutomationProperties.Name="{Binding DisplayName}"
                                                           VerticalAlignment="Center"/>
-                                                <Grid Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="Auto,*,Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}">
+                                                <!-- 版本一致时折叠为单行结论，避免两列相同哈希的重复噪音。 -->
+                                                <StackPanel Grid.Row="1" Grid.ColumnSpan="2"
+                                                            Orientation="Horizontal"
+                                                            Spacing="{StaticResource Launcher.Spacing.Sm}"
+                                                            IsVisible="{Binding IsVersionAligned}">
+                                                    <TextBlock Text="{Binding #DialogsRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n[resourcePanelVersionAligned]}" Classes="caption"/>
+                                                    <TextBlock Text="{Binding OfficialVersion}" Classes="value"/>
+                                                </StackPanel>
+                                                <Grid Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="Auto,*,Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}"
+                                                      IsVisible="{Binding !IsVersionAligned}">
                                                     <TextBlock Text="{Binding #DialogsRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n[resourcePanelOfficialVersion]}" Classes="caption"/>
                                                     <TextBlock Grid.Column="1" Text="{Binding OfficialVersion}" Classes="value"/>
                                                     <TextBlock Grid.Column="2" Text="{Binding #DialogsRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n[resourcePanelLocalizedVersion]}" Classes="caption"/>

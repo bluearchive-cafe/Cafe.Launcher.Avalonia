@@ -1228,6 +1228,9 @@ public static class LocalizationKeys
     /// <summary>Resource key for <c>resourcePanelUidSourceCustom</c>.</summary>
     public const string ResourcePanelUidSourceCustom = "resourcePanelUidSourceCustom";
 
+    /// <summary>Resource key for <c>resourcePanelVersionAligned</c>.</summary>
+    public const string ResourcePanelVersionAligned = "resourcePanelVersionAligned";
+
     /// <summary>Resource key for <c>resourcePanelWaiting</c>.</summary>
     public const string ResourcePanelWaiting = "resourcePanelWaiting";
 

@@ -447,6 +447,20 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void ResourcePanel_ChangeUidAction_RemainsVisibleForAutoSource()
+    {
+        // 修改 UID 入口常驻：自动获取来源下也必须可见，避免"先切来源才能改 UID"的隐藏操作链。
+        var document = XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
+        var changeUidButton = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Button"
+                && element.Attribute("Command")?.Value
+                    == "{Binding ResourcePanel.BeginEditResourcePanelUidCommand}");
+        Assert.Null(changeUidButton.Attribute("IsVisible"));
+    }
+
+    [Fact]
     public void ResourcePanel_StatusStripHasVisibleSurfaceAndBorder()
     {
         var dialogs = XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
@@ -456,6 +470,13 @@ public sealed partial class UiStyleContractTests
                 element.Name.LocalName == "Border"
                 && HasClass(element, "resource-panel-status"));
         Assert.True(HasClass(statusStrip, "info-strip"));
+        // 严重度经 Classes.danger 绑定驱动；UID 事实只在展示卡渲染，状态条只承载消息。
+        Assert.Equal(
+            "{Binding ResourcePanel.IsResourcePanelMessageError}",
+            statusStrip.Attribute("Classes.danger")?.Value);
+        Assert.DoesNotContain(
+            statusStrip.Descendants(),
+            element => element.Attribute("Text")?.Value == "{Binding ResourcePanel.ResourcePanelUidText}");
 
         var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
         var statusStyle = GetStyleSetters(styles, "Border.info-strip.resource-panel-status");
@@ -466,6 +487,10 @@ public sealed partial class UiStyleContractTests
             "{DynamicResource Launcher.Color.Primary.Border}",
             statusStyle["BorderBrush"]);
         Assert.Equal("{StaticResource Launcher.Border.Thickness.Default}", statusStyle["BorderThickness"]);
+
+        var dangerStyle = GetStyleSetters(styles, "Border.info-strip.danger");
+        Assert.Equal("{DynamicResource Launcher.Color.Danger.Soft}", dangerStyle["Background"]);
+        Assert.Equal("{DynamicResource Launcher.Color.Danger}", dangerStyle["BorderBrush"]);
     }
 
     [Fact]

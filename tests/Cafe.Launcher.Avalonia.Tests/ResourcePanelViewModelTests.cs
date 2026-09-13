@@ -67,14 +67,18 @@ public sealed class ResourcePanelViewModelTests
         Assert.Equal(
             context.Localizer.T(LocalizationKeys.StatusNetworkLoaded),
             context.ViewModel.ResourcePanelMessage);
+        Assert.False(context.ViewModel.IsResourcePanelMessageError);
         var text = GetItem(context.ViewModel, ResourcePanelResourceCodes.Text);
         Assert.Equal(ResourcePanelItemStatus.Ready, text.Status);
         Assert.True(text.IsEnabled);
         Assert.Equal("CheckCircle", text.StatusIconKind);
+        // 版本一致判定：官方与本地化版本相同的条目折叠为单行结论。
+        Assert.True(text.IsVersionAligned);
         var voice = GetItem(context.ViewModel, ResourcePanelResourceCodes.Voice);
         Assert.Equal(ResourcePanelItemStatus.Waiting, voice.Status);
         Assert.False(voice.IsEnabled);
         Assert.Equal("ClockOutline", voice.StatusIconKind);
+        Assert.False(voice.IsVersionAligned);
         Assert.True(context.ViewModel.IsResourcePanelSaveEnabled);
         Assert.True(context.ViewModel.IsResourcePanelVisible);
     }
@@ -136,8 +140,9 @@ public sealed class ResourcePanelViewModelTests
 
         await context.ViewModel.OpenResourcePanelCommand.ExecuteAsync(null);
 
-        // 失败反馈路径：忙碌清除、消息为格式化错误、三项进入 Failed 且版本归零、保存不可用。
+        // 失败反馈路径：忙碌清除、消息为格式化错误并标记错误严重度、三项进入 Failed 且版本归零、保存不可用。
         Assert.False(context.ViewModel.IsResourcePanelBusy);
+        Assert.True(context.ViewModel.IsResourcePanelMessageError);
         Assert.StartsWith(
             LocalizedPrefix(context.Localizer, LocalizationKeys.ResourcePanelLoadFailed),
             context.ViewModel.ResourcePanelMessage,
@@ -240,6 +245,7 @@ public sealed class ResourcePanelViewModelTests
             LocalizedPrefix(context.Localizer, LocalizationKeys.ResourcePanelSaveFailed),
             context.ViewModel.ResourcePanelMessage,
             StringComparison.Ordinal);
+        Assert.True(context.ViewModel.IsResourcePanelMessageError);
         Assert.Equal(1, context.ErrorHandling.HandleErrorCount);
         Assert.Equal("Resource panel save failed.", context.ErrorHandling.LastContext);
         Assert.Equal(context.ViewModel.ResourcePanelMessage, context.ErrorHandling.LastOptions?.ToastMessage);
