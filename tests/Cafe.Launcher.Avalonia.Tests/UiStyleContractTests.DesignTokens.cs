@@ -53,7 +53,7 @@ public sealed partial class UiStyleContractTests
                  {
                      ["Launcher.StateLayer.Hover"] = "0.08",
                      ["Launcher.StateLayer.Focus"] = "0.12",
-                     ["Launcher.StateLayer.Pressed"] = "0.16",
+                     ["Launcher.StateLayer.Pressed"] = "0.12",
                      ["Launcher.StateLayer.Selected"] = "0.24",
                      ["Launcher.Spacing.Thickness.Xxl"] = "24",
                      ["Launcher.Spacing.Thickness.Section"] = "40",

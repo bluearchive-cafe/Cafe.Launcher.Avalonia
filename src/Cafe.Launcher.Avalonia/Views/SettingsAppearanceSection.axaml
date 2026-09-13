@@ -77,6 +77,9 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="models:ThemeColorPaletteItem">
+                                <!-- 勾选前景与色块刷子同源配对（CheckBrush）：全局 OnPrimary 只对
+                                     当前主题 Primary 成立，任意种子的色块须用自身 scheme 的
+                                     OnPrimary 才能保持勾选对比度。 -->
                                 <Button Classes="color-swatch-button"
                                         AutomationProperties.Name="{Binding ColorHex}"
                                         ToolTip.Tip="{Binding ColorHex}"
@@ -89,7 +92,7 @@
                                                                     Height="{StaticResource Launcher.Icon.Sm}"
                                                                     HorizontalAlignment="Center"
                                                                     VerticalAlignment="Center"
-                                                                    Foreground="{DynamicResource Launcher.Color.OnPrimary}"
+                                                                    Foreground="{Binding CheckBrush}"
                                                                     IsVisible="{Binding IsSelected}"/>
                                     </Border>
                                 </Button>

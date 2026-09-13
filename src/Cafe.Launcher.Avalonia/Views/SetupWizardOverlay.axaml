@@ -145,17 +145,17 @@
                                 <materialIcons:MaterialIcon Kind="Alert"
                                                            Width="{StaticResource Launcher.Icon.Sm}"
                                                            Height="{StaticResource Launcher.Icon.Sm}"
-                                                           Foreground="{StaticResource Launcher.Color.Danger}"
+                                                           Foreground="{DynamicResource Launcher.Color.Error}"
                                                            IsVisible="{Binding Dialogs.SetupWizard.IsGamePathCorruptedInstallation}"/>
                                 <materialIcons:MaterialIcon Kind="Alert"
                                                            Width="{StaticResource Launcher.Icon.Sm}"
                                                            Height="{StaticResource Launcher.Icon.Sm}"
-                                                           Foreground="{StaticResource Launcher.Color.Danger}"
+                                                           Foreground="{DynamicResource Launcher.Color.Error}"
                                                            IsVisible="{Binding Dialogs.SetupWizard.IsGamePathInaccessible}"/>
                                 <materialIcons:MaterialIcon Kind="Lock"
                                                            Width="{StaticResource Launcher.Icon.Sm}"
                                                            Height="{StaticResource Launcher.Icon.Sm}"
-                                                           Foreground="{StaticResource Launcher.Color.Danger}"
+                                                           Foreground="{DynamicResource Launcher.Color.Error}"
                                                            IsVisible="{Binding Dialogs.SetupWizard.IsGamePathNotWritable}"/>
                                 <TextBlock Text="{Binding Dialogs.SetupWizard.GamePathStatusText}"
                                            AutomationProperties.Name="{Binding Dialogs.SetupWizard.GamePathStatusText}"
@@ -172,7 +172,7 @@
                             <TextBlock Text="{Binding Shell.I18n[setupWizardGamePathEmpty]}"
                                        Classes="caption"
                                        TextAlignment="Center"
-                                       Foreground="{StaticResource Launcher.Color.Danger}"
+                                       Foreground="{DynamicResource Launcher.Color.Error}"
                                        IsVisible="{Binding Dialogs.SetupWizard.IsGamePathEmpty}"/>
                         </StackPanel>
 

@@ -411,13 +411,13 @@ public sealed partial class UiStyleContractTests
             "{DynamicResource Launcher.Color.Success}",
             GetStyleSetters(styles, "TextBlock.wizard-game-path-status.ready")["Foreground"]);
         Assert.Equal(
-            "{StaticResource Launcher.Color.Danger}",
+            "{DynamicResource Launcher.Color.Error}",
             GetStyleSetters(styles, "TextBlock.wizard-game-path-status.corrupted")["Foreground"]);
         Assert.Equal(
-            "{StaticResource Launcher.Color.Danger}",
+            "{DynamicResource Launcher.Color.Error}",
             GetStyleSetters(styles, "TextBlock.wizard-game-path-status.inaccessible")["Foreground"]);
         Assert.Equal(
-            "{StaticResource Launcher.Color.Danger}",
+            "{DynamicResource Launcher.Color.Error}",
             GetStyleSetters(styles, "TextBlock.wizard-game-path-status.notwritable")["Foreground"]);
 
         // 状态图标与文本共用语义色：检测中 Sync、就绪 CheckCircle、损坏/不可访问 Alert、
@@ -455,7 +455,7 @@ public sealed partial class UiStyleContractTests
                     "{Binding Dialogs.SetupWizard.IsGamePathCorruptedInstallation}",
                     icon.Attribute("IsVisible")?.Value);
                 Assert.Equal(
-                    "{StaticResource Launcher.Color.Danger}",
+                    "{DynamicResource Launcher.Color.Error}",
                     icon.Attribute("Foreground")?.Value);
             },
             icon =>
@@ -465,7 +465,7 @@ public sealed partial class UiStyleContractTests
                     "{Binding Dialogs.SetupWizard.IsGamePathInaccessible}",
                     icon.Attribute("IsVisible")?.Value);
                 Assert.Equal(
-                    "{StaticResource Launcher.Color.Danger}",
+                    "{DynamicResource Launcher.Color.Error}",
                     icon.Attribute("Foreground")?.Value);
             },
             icon =>
@@ -475,7 +475,7 @@ public sealed partial class UiStyleContractTests
                     "{Binding Dialogs.SetupWizard.IsGamePathNotWritable}",
                     icon.Attribute("IsVisible")?.Value);
                 Assert.Equal(
-                    "{StaticResource Launcher.Color.Danger}",
+                    "{DynamicResource Launcher.Color.Error}",
                     icon.Attribute("Foreground")?.Value);
             });
     }

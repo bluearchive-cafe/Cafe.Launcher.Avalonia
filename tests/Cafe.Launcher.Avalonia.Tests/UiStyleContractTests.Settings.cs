@@ -507,6 +507,22 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void AppearanceSwatchCheckGlyph_PairsWithItsOwnGeneratedPrimary()
+    {
+        // 勾选前景取色块自身 scheme 的 OnPrimary（`CheckBrush`），不复用全局
+        // `Launcher.Color.OnPrimary`：全局 OnPrimary 只对当前主题 Primary 成立，
+        // 任意种子的色块需要与自身 Primary 配对的 on-color 才保持对比度。
+        var document = XDocument.Load(ProjectFile("Views/SettingsAppearanceSection.axaml"));
+        var checkGlyph = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "MaterialIcon"
+                && element.Attribute("Kind")?.Value == "Check");
+
+        Assert.Equal("{Binding CheckBrush}", checkGlyph.Attribute("Foreground")?.Value);
+    }
+
+    [Fact]
     public void AboutSection_UsesSettingsGroupForTopLevelRhythm()
     {
         var document = XDocument.Load(ProjectFile("Views/SettingsAboutSection.axaml"));

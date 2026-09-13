@@ -69,11 +69,11 @@
                 <Setter Property="Margin" Value="{StaticResource Launcher.Component.Tabs.Indicator.Margin}"/>
             </Style>
             <Style Selector="^:pointerover /template/ Border#PART_LayoutRoot">
-                <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
+                <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row.Hover}"/>
                 <Setter Property="TextElement.Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
             </Style>
             <Style Selector="^:selected:pointerover /template/ Border#PART_LayoutRoot">
-                <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
+                <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row.Hover}"/>
                 <Setter Property="TextElement.Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
             </Style>
         </ControlTheme>

@@ -60,6 +60,8 @@ public sealed class DesignTokenContrastTests
         new("bottom panel primary text", "Launcher.Text.Primary", "Launcher.Color.Panel.Bottom.Background", 4.5),
         new("bottom panel secondary text", "Launcher.Text.Secondary", "Launcher.Color.Panel.Bottom.Background", 4.5),
         new("info strip text", "Launcher.Text.Info", "Launcher.Color.Info.Background", 4.5),
+        new("dialog warning badge", "Launcher.Text.Warning", "Launcher.Color.Warning.Background", 4.5),
+        new("dialog alert danger title", "Launcher.Text.Danger", "Launcher.Color.Danger.Soft", 4.5),
         new("info surface primary text", "Launcher.Text.Primary", "Launcher.Color.Info.Background", 4.5),
         new("notice surface primary text", "Launcher.Text.Primary", "Launcher.Color.Notice.Background", 4.5),
         new("danger soft primary text", "Launcher.Text.Primary", "Launcher.Color.Danger.Soft", 4.5),
@@ -83,14 +85,16 @@ public sealed class DesignTokenContrastTests
         new("toast warning severity", "Launcher.Color.Warning", "Launcher.Color.Toast.Background", 3.0),
         new("toast error severity", "Launcher.Color.Danger", "Launcher.Color.Toast.Background", 3.0),
         new("toast info severity", "Launcher.Color.Info", "Launcher.Color.Toast.Background", 3.0),
+        new("dialog alert info icon", "Launcher.Color.Info", "Launcher.Color.Info.Background", 3.0),
+        new("dialog alert danger icon", "Launcher.Color.Danger", "Launcher.Color.Danger.Soft", 3.0),
         new("field border on light/dark field", "Launcher.Color.Field.Border", "Launcher.Color.Field.Background", 3.0)
     ];
 
     // Explicit exemption list (design-system spec §8): over-wallpaper chrome/banner
     // content and runtime-dynamic scheme roles are covered by rule/walkthrough, not
     // static pair assertions. M3 adds runtime on-color luminance for scheme roles.
-    // - FocusRing is accent-derived (SystemAccentColor @ 0.60); focus-indicator
-    //   visibility is reviewed per surface in the walkthrough checklist (§2).
+    // - FocusRing is runtime-derived from the opaque scheme Primary role; its
+    //   surface contrast is covered by MaterialSchemeGeneratorTests.
     // - SecondaryContainer family is written at runtime by ApplyScheme from the M3
     //   DynamicScheme (container tone 90 / on-container tone 10 pairing); the App.axaml
     //   values are placeholders only, so static assertions would test placeholders.

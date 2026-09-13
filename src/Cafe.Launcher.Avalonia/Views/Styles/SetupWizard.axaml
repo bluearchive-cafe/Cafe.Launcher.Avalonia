@@ -95,12 +95,12 @@
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Success}"/>
     </Style>
     <Style Selector="TextBlock.wizard-game-path-status.corrupted">
-        <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Danger}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Error}"/>
     </Style>
     <Style Selector="TextBlock.wizard-game-path-status.inaccessible">
-        <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Danger}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Error}"/>
     </Style>
     <Style Selector="TextBlock.wizard-game-path-status.notwritable">
-        <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Danger}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Error}"/>
     </Style>
 </Styles>

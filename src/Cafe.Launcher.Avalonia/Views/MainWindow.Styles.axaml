@@ -111,6 +111,11 @@
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
     </Style>
+    <!-- M3: ComboBox 弹层对齐对话框表面家族，避免 Fluent 中性灰与种子跟随主题脱节。 -->
+    <Style Selector="ComboBox /template/ Border#PopupBorder">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Background}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.OutlineVariant}"/>
+    </Style>
     <Style Selector="ComboBox.setting-control">
         <Setter Property="MinWidth" Value="{StaticResource Launcher.Component.Settings.Control.MinWidth}"/>
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Field.Background}"/>
@@ -1089,22 +1094,26 @@
         <Setter Property="Orientation" Value="Horizontal"/>
         <Setter Property="Spacing" Value="{StaticResource Launcher.Spacing.Xs}"/>
     </Style>
+    <!-- 状态表面标题为 12px 小字（4.5:1），图标按图形 3:1；两种角色都消费与状态表面成对的文本色。
+         Info/Danger 的业务色调在两种角色上均达标（图标亮 3.31/4.03、暗 3.35/3.33），保持不变；
+         warning 不再沿用业务色：Launcher.Color.Warning 在暗色 Warning.Background 上仅 2.27:1，
+         亮色标题侧也只有 4.48:1，两侧都不足。 -->
     <Style Selector="TextBlock.dialog-alert-title">
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Label.Md}"/>
         <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
-        <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Info}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Info}"/>
     </Style>
     <Style Selector="TextBlock.dialog-alert-title.warning">
-        <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Warning}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Warning}"/>
     </Style>
     <Style Selector="TextBlock.dialog-alert-title.danger">
-        <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Danger}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Danger}"/>
     </Style>
     <Style Selector="materialIcons|MaterialIcon.dialog-alert-icon">
         <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Info}"/>
     </Style>
     <Style Selector="materialIcons|MaterialIcon.dialog-alert-icon.warning">
-        <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Warning}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Warning}"/>
     </Style>
     <Style Selector="materialIcons|MaterialIcon.dialog-alert-icon.danger">
         <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Danger}"/>
@@ -1115,7 +1124,7 @@
     </Style>
     <Style Selector="Border.dialog-card">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Card.Background}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Outline}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.OutlineVariant}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Lg}"/>
@@ -1609,6 +1618,25 @@
     <!-- :checked 声明在 Fluent 的 :disabled 之后，会盖掉主题的禁用画刷，故显式降不透明度。 -->
     <Style Selector="CheckBox.setting-checkbox:disabled">
         <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
+    </Style>
+    <!-- 默认焦点装饰器铺满控件布局盒，而 `:empty` 的 CheckBox 可见内容只有 20×20 的字形：
+         Fluent 的 MinHeight 32 让盒上下各多 6px，给标签预留的 8px 间距让右侧多 8px，于是环
+         相对勾选框明显偏右下。故去掉默认装饰器，按可见盒铺 token 环：
+         - `:empty`（当前全部 5 处 CheckBox）铺在勾选框字形上；
+         - `:not(:empty)`（以后带原生标签时）铺在控件盒上——那时盒宽恰为字形+间距+标签，
+           与 `wizard-option` 框整行的语义一致，几何也左右对称。
+         注：一旦真的带原生标签，标签字色需另行接 token——Fluent 的 CheckBoxForeground*
+         既不随 Launcher.Text.* 也不随中性色策略，不接就会重演默认色盖过语义层。 -->
+    <Style Selector="CheckBox:focus-visible">
+        <Setter Property="FocusAdorner" Value="{x:Null}"/>
+    </Style>
+    <Style Selector="CheckBox:empty:focus-visible /template/ Border#NormalRectangle">
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
+    </Style>
+    <Style Selector="CheckBox:not(:empty):focus-visible /template/ Border#PART_Border">
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
     </Style>
     <Style Selector="Border.color-swatch">
         <Setter Property="Width" Value="{StaticResource Launcher.Control.Size.Swatch}"/>

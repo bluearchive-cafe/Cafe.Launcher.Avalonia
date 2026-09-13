@@ -705,6 +705,43 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void DialogAlertTitles_ConsumeOnContainerTextTokens()
+    {
+        var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+
+        // 状态表面标题为 12px 小字，须消费与状态表面成对的文本色（4.5:1），
+        // 不得复用供图标/色条使用的 Info/Danger 业务色调。三个变体都要在册——
+        // warning 曾漏迁而停留在业务色上（暗色 2.27:1）。
+        Assert.Equal(
+            "{DynamicResource Launcher.Text.Info}",
+            GetStyleSetters(styles, "TextBlock.dialog-alert-title")["Foreground"]);
+        Assert.Equal(
+            "{DynamicResource Launcher.Text.Warning}",
+            GetStyleSetters(styles, "TextBlock.dialog-alert-title.warning")["Foreground"]);
+        Assert.Equal(
+            "{DynamicResource Launcher.Text.Danger}",
+            GetStyleSetters(styles, "TextBlock.dialog-alert-title.danger")["Foreground"]);
+    }
+
+    [Fact]
+    public void DialogAlertIcons_KeepToneAboveGraphicFloorInBothThemes()
+    {
+        var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+
+        // 图标按图形 3:1 目标。Info/Danger 的业务色调在其状态表面上达标（由
+        // DesignTokenContrastTests 的 UI 对锁定），warning 不达标故与标题同用成对文本色。
+        Assert.Equal(
+            "{StaticResource Launcher.Color.Info}",
+            GetStyleSetters(styles, "materialIcons|MaterialIcon.dialog-alert-icon")["Foreground"]);
+        Assert.Equal(
+            "{DynamicResource Launcher.Text.Warning}",
+            GetStyleSetters(styles, "materialIcons|MaterialIcon.dialog-alert-icon.warning")["Foreground"]);
+        Assert.Equal(
+            "{StaticResource Launcher.Color.Danger}",
+            GetStyleSetters(styles, "materialIcons|MaterialIcon.dialog-alert-icon.danger")["Foreground"]);
+    }
+
+    [Fact]
     public void SocialChips_UseCrispBorderTemplateAcrossInteractiveStates()
     {
         var styles = XDocument.Load(ProjectFile("Views/Styles/RemoteContent.axaml"));

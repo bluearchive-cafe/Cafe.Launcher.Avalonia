@@ -171,7 +171,9 @@ public sealed partial class UiStyleContractTests
         // values declared here; this pin keeps the XAML and the reset table from
         // drifting apart.
         var document = XDocument.Load(ProjectFile("App.axaml"));
-        foreach (var (key, light, dark) in MaterialSchemeGenerator.DialogSurfaceDefaults.Concat(MaterialSchemeGenerator.NeutralContentDefaults))
+        foreach (var (key, light, dark) in MaterialSchemeGenerator.DialogSurfaceDefaults
+                     .Concat(MaterialSchemeGenerator.NeutralContentDefaults)
+                     .Concat(MaterialSchemeGenerator.NeutralSurfaceDefaults))
         {
             Assert.Equal(light, ReadThemeBrushColor(document, "Light", key));
             Assert.Equal(dark, ReadThemeBrushColor(document, "Dark", key));

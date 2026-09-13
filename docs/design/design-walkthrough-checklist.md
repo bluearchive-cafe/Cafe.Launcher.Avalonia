@@ -18,10 +18,10 @@
 | 卡片 / Toast 卡 | ✓ | ✓ | ✓ | ✓ | ✓ | 不适用（留空） |
 | 设置行（Select 输入） | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
-- 状态层不透明度产品值：hover 8% / focus 12% / pressed 16% / disabled 内容 38%（`Launcher.StateLayer.*`；pressed 16% 为产品值，M3 官方 12%——记录性偏差，见 ADR-004 落地记录）。
+- 状态层不透明度刻度：hover 8% / focus 12% / pressed 12% / disabled 内容 38%（`Launcher.StateLayer.*`；pressed 已随审计-0906 由 16% 勘误为 12%，与 M3 官方一致，见 ADR-004 修订）。
 - 状态反馈以「预混色状态变体」实现（`Primary.Hover/.Pressed`、`SecondaryContainer.Hover/.Pressed` 等），未采用叠加状态层机制（ADR-004 落地记录）。
 - 向导组件（ADR-017）随审计-0828 对齐本矩阵：`wizard-action.primary-action` 补齐 filled 禁用态（预混配方），`wizard-option` 键盘聚焦铺 token 焦点环。
-- 焦点环（`FocusRing`，运行时 accent 派生）逐表面复核：明/暗主题 + 壁纸模式目测 ≥3:1 可辨识（含 banner 箭头、chrome 态区域）；本项不进静态对比度契约。
+- 焦点环（`FocusRing`，运行时 scheme 的不透明 `Primary`）逐表面复核：明/暗主题 + 壁纸模式目测 ≥3:1 可辨识（含 banner 箭头、chrome 态区域）；本项不进静态对比度契约。
 
 ## 2. 无障碍豁免区（spec §8，逐项人工复核）
 
