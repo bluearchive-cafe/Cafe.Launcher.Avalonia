@@ -130,6 +130,10 @@ public sealed record RemoteRequestOptions
 /// </summary>
 public readonly record struct RemoteBody(Stream Content, long? DeclaredContentLength);
 
+/// <summary>
+/// Executes validated, proxy-aware remote HTTP requests and owns redirect,
+/// retry, response-lifetime, buffering, and body-stall policies.
+/// </summary>
 public sealed class RemoteHttpTransport : IRemoteHttpTransport
 {
     private readonly Func<string, TimeSpan?, CancellationToken, Task<HttpClientLease>> createLeaseAsync;
@@ -188,6 +192,7 @@ public sealed class RemoteHttpTransport : IRemoteHttpTransport
         this.idleReadTimeout = idleReadTimeout;
     }
 
+    /// <inheritdoc />
     public async Task<T?> GetJsonAsync<T>(
         Uri uri,
         RemoteRequestOptions? options = null,
@@ -203,6 +208,7 @@ public sealed class RemoteHttpTransport : IRemoteHttpTransport
             delayAsync).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
     public async Task<RemoteBody> GetStreamAsync(
         Uri uri,
         RemoteRequestOptions? options = null,
@@ -300,7 +306,8 @@ public sealed class RemoteHttpTransport : IRemoteHttpTransport
         if (policy.MaxAttempts == 1)
         {
             return policy;
-        }        if (policy.RetryScope == RemoteRetryScope.None)
+        }
+        if (policy.RetryScope == RemoteRetryScope.None)
         {
             throw new ArgumentException(
                 "RetryScope None allows a single attempt; set MaxAttempts to 1 or pick a scope.",

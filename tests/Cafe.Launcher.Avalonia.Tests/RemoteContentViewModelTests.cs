@@ -10,6 +10,8 @@ namespace Cafe.Launcher.Avalonia.Tests;
 [Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class RemoteContentViewModelTests
 {
+    private static readonly TimeSpan GateTimeout = TimeSpan.FromSeconds(5);
+
     static RemoteContentViewModelTests()
     {
         TestLocalizationHelper.Initialize();
@@ -681,7 +683,7 @@ public sealed class RemoteContentViewModelTests
     }
 
     [Fact]
-    public void CarouselTimerTick_AdvancesToNextBanner()
+    public void CarouselTimerTick_WhenRunning_AdvancesToNextBanner()
     {
         using var context = CreateSeamedContext();
         context.ViewModel.Apply(CreateBannerState(2, loop: true), new LauncherSettings(), CancellationToken.None);
@@ -742,13 +744,14 @@ public sealed class RemoteContentViewModelTests
         context.ViewModel.Apply(CreateBannerState(2, loop: true), new LauncherSettings(), CancellationToken.None);
 
         context.ViewModel.SelectNextBannerCommand.Execute(null);
+        var firstResumeTask = context.ViewModel.CarouselResumeTask;
         context.ViewModel.SelectPreviousBannerCommand.Execute(null);
         Assert.False(context.Timer.IsRunning);
 
         // 第一次导航的恢复窗口被第二次导航取消，而非到时恢复。
         await WaitUntil(() => context.Delay.CancelledCount >= 1);
         context.Delay.Gates[0].TrySetResult();
-        await Task.Delay(20);
+        await firstResumeTask.WaitAsync(GateTimeout);
         Assert.False(context.Timer.IsRunning);
 
         context.Delay.Gates[1].TrySetResult();

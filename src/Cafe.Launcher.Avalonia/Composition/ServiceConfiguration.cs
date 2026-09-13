@@ -39,8 +39,15 @@ public static class ServiceConfiguration
         services.AddSingleton<LogExportService>();
         services.AddSingleton<LogViewerDialogViewModel>();
         services.AddSingleton<LogExportDialogViewModel>();
-        services.AddSingleton<LocalDiagnostics>();
+        services.AddSingleton(sp =>
+        {
+            var logger = sp.GetRequiredService<UnifiedLogger>();
+            var localDiagnostics = new LocalDiagnostics(logger);
+            LocalDiagnostics.RegisterSharedLogger(logger);
+            return localDiagnostics;
+        });
         services.AddSingleton<CrashReportStore>();
+        services.AddSingleton<ICrashReportLocator>(sp => sp.GetRequiredService<CrashReportStore>());
         services.AddSingleton<ICrashReporterLauncher, CrashReporterLauncher>();
         if (existingFatalCrashService is not null)
         {

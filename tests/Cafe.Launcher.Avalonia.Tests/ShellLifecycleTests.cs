@@ -348,7 +348,8 @@ public sealed class ShellLifecycleTests : IDisposable
         var dialogs = new DialogsViewModel(
             localizer,
             new NoticeStateService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "shown_notices.json")),
-            wizard);
+            wizard,
+            new LocalDiagnostics());
         using var settingsLogger = new UnifiedLogger(Path.Combine(tempDir, Guid.NewGuid().ToString("N")));
         var settings = new SettingsViewModel(
             settingsService,
@@ -397,7 +398,7 @@ public sealed class ShellLifecycleTests : IDisposable
         using var testLogger = new UnifiedLogger(tempDir);
         var logViewer = new LogViewerDialogViewModel(testLogger, null, null, null, null);
         var logExport = new LogExportDialogViewModel(
-            new LogExportService(new LocalDiagnostics(testLogger)),
+            new LogExportService(new LocalDiagnostics(testLogger), new CrashReportStore()),
             filePickerService,
             toastService,
             localizer,

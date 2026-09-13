@@ -141,19 +141,27 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel
 
     public event Action<string>? ConfirmUpdateAvailableRequested;
 
-    public DialogsViewModel(LocalizationService localizer, NoticeStateService noticeStateService, SetupWizardViewModel setupWizard)
+    /// <summary>Creates the application dialog family and its confirmation children.</summary>
+    public DialogsViewModel(
+        LocalizationService localizer,
+        NoticeStateService noticeStateService,
+        SetupWizardViewModel setupWizard,
+        LocalDiagnostics diagnostics)
         : this(
             localizer,
             noticeStateService,
             setupWizard,
+            diagnostics,
             async action => await Dispatcher.UIThread.InvokeAsync(action))
     {
     }
 
+    /// <summary>Creates the dialog family with an injectable UI dispatcher for deterministic tests.</summary>
     internal DialogsViewModel(
         LocalizationService localizer,
         NoticeStateService noticeStateService,
         SetupWizardViewModel setupWizard,
+        LocalDiagnostics diagnostics,
         Func<Action, Task> invokeOnUiAsync)
     {
         this.localizer = localizer;
@@ -162,14 +170,14 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel
         LanguageOptions = LocalizationService.GetLanguageOptions(localizer);
         SetupWizard = setupWizard;
         Gallery = new DesignGalleryViewModel(key => localizer.T(key));
-        StopConfirm = new ConfirmationDialogViewModel("StopConfirmFailed");
-        DownloadRunningCloseConfirm = new ConfirmationDialogViewModel("CloseWhileDownloadingFailed");
-        UninstallConfirm = new ConfirmationDialogViewModel("UninstallConfirmFailed");
-        RepairConfirm = new ConfirmationDialogViewModel("RepairConfirmFailed");
-        ResourcePanelSourceConfirm = new ConfirmationDialogViewModel("ResourceSourceSwitchFailed");
-        DebugResetConfirm = new ConfirmationDialogViewModel("DebugResetFailed");
-        SettingsResetConfirm = new ConfirmationDialogViewModel("SettingsResetFailed");
-        SetupWizardExitConfirm = new ConfirmationDialogViewModel("SetupWizardExitFailed");
+        StopConfirm = new ConfirmationDialogViewModel(diagnostics, "Stop");
+        DownloadRunningCloseConfirm = new ConfirmationDialogViewModel(diagnostics, "CloseWhileDownloading");
+        UninstallConfirm = new ConfirmationDialogViewModel(diagnostics, "Uninstall");
+        RepairConfirm = new ConfirmationDialogViewModel(diagnostics, "Repair");
+        ResourcePanelSourceConfirm = new ConfirmationDialogViewModel(diagnostics, "ResourceSourceSwitch");
+        DebugResetConfirm = new ConfirmationDialogViewModel(diagnostics, "DebugReset");
+        SettingsResetConfirm = new ConfirmationDialogViewModel(diagnostics, "SettingsReset");
+        SetupWizardExitConfirm = new ConfirmationDialogViewModel(diagnostics, "SetupWizardExit");
         SetupWizardExitConfirm.Confirmed += () => SetupWizard.SkipCommand.ExecuteAsync(null);
     }
 

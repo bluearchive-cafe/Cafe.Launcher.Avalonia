@@ -10,10 +10,13 @@ namespace Cafe.Launcher.Avalonia.Helpers;
 /// </summary>
 internal interface ICarouselTimer
 {
+    /// <summary>Gets whether periodic ticks are currently enabled.</summary>
     bool IsRunning { get; }
 
+    /// <summary>Starts periodic ticks at <paramref name="interval" />, replacing any existing schedule.</summary>
     void Start(TimeSpan interval, Action onTick);
 
+    /// <summary>Stops periodic ticks; subsequent stale ticks must not invoke the callback.</summary>
     void Stop();
 }
 
@@ -22,8 +25,10 @@ internal sealed class DispatcherCarouselTimer : ICarouselTimer
 {
     private DispatcherTimer? timer;
 
+    /// <inheritdoc />
     public bool IsRunning => timer?.IsEnabled == true;
 
+    /// <inheritdoc />
     public void Start(TimeSpan interval, Action onTick)
     {
         Stop();
@@ -32,6 +37,7 @@ internal sealed class DispatcherCarouselTimer : ICarouselTimer
         timer.Start();
     }
 
+    /// <inheritdoc />
     public void Stop()
     {
         timer?.Stop();
