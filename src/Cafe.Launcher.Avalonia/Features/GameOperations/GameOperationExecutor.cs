@@ -55,7 +55,7 @@ internal sealed class GameOperationExecutor(
         Action<GameOperationProgress> progress) =>
         uninstallService.UninstallAsync(snapshot, progress);
 
-    public void Stop(bool clearPersistedState) => downloadService.Stop(clearPersistedState);
+    public void Stop(DownloadStopReason reason) => downloadService.Stop(reason);
 
     public void Pause() => downloadService.Pause();
 

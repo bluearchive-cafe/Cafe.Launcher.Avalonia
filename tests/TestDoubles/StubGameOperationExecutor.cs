@@ -52,8 +52,8 @@ internal sealed class StubGameOperationExecutor : IGameOperationExecutor
 
     public int StopCallCount { get; private set; }
 
-    /// <summary>Gets 最近一次 Stop 收到的 clearPersistedState 参数；尚未调用过 Stop 时为 null。</summary>
-    public bool? LastStopClearPersistedState { get; private set; }
+    /// <summary>Gets 最近一次 Stop 收到的停止原因；尚未调用过 Stop 时为 null。</summary>
+    public DownloadStopReason? LastStopReason { get; private set; }
 
     /// <summary>Launch 的返回结果；Validation 有默认实例，无需额外初始化。</summary>
     public GameLaunchResult LaunchResult { get; set; } = new();
@@ -156,10 +156,10 @@ internal sealed class StubGameOperationExecutor : IGameOperationExecutor
     }
 
     /// <inheritdoc />
-    public void Stop(bool clearPersistedState)
+    public void Stop(DownloadStopReason reason)
     {
         StopCallCount++;
-        LastStopClearPersistedState = clearPersistedState;
+        LastStopReason = reason;
         IsDownloadRunning = false;
     }
 

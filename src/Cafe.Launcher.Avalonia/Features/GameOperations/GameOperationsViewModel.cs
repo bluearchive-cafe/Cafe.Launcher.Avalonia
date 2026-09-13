@@ -262,7 +262,7 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
             return;
         }
 
-        if (currentSnapshot.RuntimeState is not (LauncherRuntimeState.Corrupted or LauncherRuntimeState.Ready))
+        if (!GameOperationPolicy.Allows(GameOperationPolicy.Operation.Repair, currentSnapshot.RuntimeState))
         {
             toastService.ShowWarning(localizer.T(LocalizationKeys.OperationUnavailableForCurrentState));
             return;
@@ -273,7 +273,7 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
 
     public async Task RepairAsync()
     {
-        if (currentSnapshot is not null && currentSnapshot.RuntimeState is LauncherRuntimeState.Corrupted or LauncherRuntimeState.Ready)
+        if (currentSnapshot is not null && GameOperationPolicy.Allows(GameOperationPolicy.Operation.Repair, currentSnapshot.RuntimeState))
             await journey.RepairAsync(currentSnapshot);
     }
 
@@ -330,7 +330,7 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
             return;
         }
 
-        if (currentSnapshot.RuntimeState != LauncherRuntimeState.Ready)
+        if (!GameOperationPolicy.Allows(GameOperationPolicy.Operation.Uninstall, currentSnapshot.RuntimeState))
         {
             toastService.ShowWarning(localizer.T(LocalizationKeys.OperationUnavailableForCurrentState));
             return;
@@ -364,9 +364,9 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
             await journey.ResumePersistedAsync(currentSnapshot, cancellationToken);
     }
 
-    public void StopDownload(bool clearPersistedState)
+    public void StopDownload(DownloadStopReason reason)
     {
-        journey.Stop(clearPersistedState);
+        journey.Stop(reason);
     }
 
     public bool IsDownloadRunning => journey.IsDownloadRunning;

@@ -26,22 +26,6 @@ public sealed class GameUninstallService
         LocalDiagnostics diagnostics,
         LocalizationService localizer,
         GameInstallationPath installationPath,
-        IGameProcessTracker gameProcessTracker)
-        : this(
-            localInstallationStateStore,
-            diagnostics,
-            localizer,
-            installationPath,
-            DownloadCheckpointStore.CreateDefault(),
-            gameProcessTracker)
-    {
-    }
-
-    internal GameUninstallService(
-        LocalInstallationStateStore localInstallationStateStore,
-        LocalDiagnostics diagnostics,
-        LocalizationService localizer,
-        GameInstallationPath installationPath,
         DownloadCheckpointStore checkpointStore,
         IGameProcessTracker gameProcessTracker)
     {
@@ -58,7 +42,7 @@ public sealed class GameUninstallService
         Action<GameOperationProgress> progress,
         CancellationToken cancellationToken = default)
     {
-        if (snapshot.RuntimeState != LauncherRuntimeState.Ready)
+        if (!GameOperationPolicy.Allows(GameOperationPolicy.Operation.Uninstall, snapshot.RuntimeState))
         {
             return DownloadSession.Failed(localizer.T(LocalizationKeys.OperationUnavailableForCurrentState), GameOperationErrorCode.InvalidState);
         }

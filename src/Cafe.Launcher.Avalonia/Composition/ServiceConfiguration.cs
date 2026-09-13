@@ -91,6 +91,9 @@ public static class ServiceConfiguration
             sp.GetRequiredService<IProcessLauncher>(),
             sp.GetRequiredService<IGameProcessTracker>()));
         services.AddSingleton<IGameProcessTracker, GameProcessTracker>();
+        // 持久化检查点存储全库单例：下载服务写入/清除，卸载服务清除——
+        // 同一文件只允许一个所有者实例。
+        services.AddSingleton(sp => DownloadCheckpointStore.CreateDefault());
         services.AddSingleton<GameLaunchService>();
         services.AddSingleton<GameUninstallService>();
         services.AddSingleton<IGameShortcutService, GameShortcutService>();
@@ -121,7 +124,8 @@ public static class ServiceConfiguration
             sp.GetRequiredService<LocalDiagnostics>(),
             sp.GetRequiredService<LocalizationService>(),
             sp.GetRequiredService<GameInstallationPath>(),
-            sp.GetRequiredService<IGameProcessTracker>()));
+            sp.GetRequiredService<IGameProcessTracker>(),
+            sp.GetRequiredService<DownloadCheckpointStore>()));
 
         // ── ViewModels (all singleton — single-window desktop app) ─────────
         services.AddSingleton<SettingsViewModel>();

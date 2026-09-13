@@ -202,7 +202,7 @@ public partial class WindowChromeViewModel : ViewModelBase
 
     public void CloseAfterStoppingDownload()
     {
-        operations.StopDownload(clearPersistedState: true);
+        operations.StopDownload(DownloadStopReason.UserRequested);
         CloseRequested?.Invoke();
     }
 

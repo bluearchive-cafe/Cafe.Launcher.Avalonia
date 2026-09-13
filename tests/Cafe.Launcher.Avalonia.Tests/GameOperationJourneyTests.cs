@@ -259,7 +259,7 @@ public sealed class GameOperationJourneyTests
         context.Journey.PerformStop();
 
         Assert.Equal(1, context.Executor.StopCallCount);
-        Assert.True(context.Executor.LastStopClearPersistedState);
+        Assert.Equal(DownloadStopReason.UserRequested, context.Executor.LastStopReason);
         Assert.Contains(notifications, toast => toast.Severity == ToastSeverity.Warning);
     }
 

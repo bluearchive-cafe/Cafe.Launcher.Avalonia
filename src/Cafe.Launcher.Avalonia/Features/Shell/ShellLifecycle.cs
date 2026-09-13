@@ -276,7 +276,7 @@ public sealed class ShellLifecycle : IShellRuntime
     {
         Task pendingRefreshes = refreshCoordinator.BeginShutdown();
         refreshCoordinator.CancelLifetime();
-        operations.StopDownload(clearPersistedState: false);
+        operations.StopDownload(DownloadStopReason.ApplicationExit);
         await refreshCoordinator.WaitForShutdownWorkAsync(pendingRefreshes);
     }
 
@@ -579,7 +579,7 @@ public sealed class ShellLifecycle : IShellRuntime
         Task pendingRefreshes = refreshCoordinator.BeginShutdown();
         refreshCoordinator.CancelLifetime();
         Unwire();
-        operations.StopDownload(clearPersistedState: false);
+        operations.StopDownload(DownloadStopReason.ApplicationExit);
         if (ownsPresentationCollaborators)
         {
             operations.Dispose();

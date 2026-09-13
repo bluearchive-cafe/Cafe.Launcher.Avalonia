@@ -55,7 +55,7 @@ internal interface IGameOperationJourney
     void PerformStop();
 
     /// <summary>Stops work and optionally clears its persisted checkpoint.</summary>
-    void Stop(bool clearPersistedState);
+    void Stop(DownloadStopReason reason);
 
     /// <summary>Pauses active installation work.</summary>
     void Pause();

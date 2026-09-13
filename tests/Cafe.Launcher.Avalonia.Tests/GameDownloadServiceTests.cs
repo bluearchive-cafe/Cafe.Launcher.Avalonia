@@ -83,7 +83,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         var apiClient = new LauncherApiClient(new StubRemoteHttpTransport(), new AuthorizationHeaderFactory(), new PatchUrlGroupService());
         var service = CreateService(apiClient);
 
-        service.Stop();
+        service.Stop(DownloadStopReason.ApplicationExit);
         service.Dispose();
     }
 
@@ -106,8 +106,8 @@ public sealed class GameDownloadServiceTests : IDisposable
             Path.Combine(tempDir, "download_state.json"),
             diagnostics: diagnostics);
 
-        service.Stop();
-        service.Stop();
+        service.Stop(DownloadStopReason.ApplicationExit);
+        service.Stop(DownloadStopReason.ApplicationExit);
         // Sentinel proves the sink is live, so the negative assertion cannot pass vacuously.
         await diagnostics.DebugAsync("StopLogSentinel", "sentinel");
         logger.Dispose();
@@ -143,7 +143,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         var operation = service.InstallOrUpdateAsync(snapshot, _ => { });
         await downloader.DownloadStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
 
-        service.Stop();
+        service.Stop(DownloadStopReason.UserRequested);
         await operation.WaitAsync(TimeSpan.FromSeconds(2));
         logger.Dispose();
         var logText = await File.ReadAllTextAsync(logger.LogFilePath);
@@ -838,10 +838,10 @@ public sealed class GameDownloadServiceTests : IDisposable
     }
 
     [Theory]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
-    public async Task Stop_WhenOperationIsPaused_StopsOperationAndAppliesPersistedStateChoice(
-        bool clearPersistedState,
+    [InlineData(DownloadStopReason.UserRequested, false)]
+    [InlineData(DownloadStopReason.ApplicationExit, true)]
+    public async Task Stop_WhenOperationIsPaused_AppliesCheckpointChoiceMatchingStopReason(
+        DownloadStopReason reason,
         bool expectedStateFileExists)
     {
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
@@ -865,7 +865,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         downloader.AllowPauseCheck.TrySetResult();
         await downloader.PauseCheckStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
 
-        service.Stop(clearPersistedState);
+        service.Stop(reason);
         var result = await operation.WaitAsync(TimeSpan.FromSeconds(2));
 
         Assert.False(result.Success);
@@ -875,6 +875,35 @@ public sealed class GameDownloadServiceTests : IDisposable
         Assert.Equal([true, false], runningStates);
         Assert.Contains(progress, item => item.Stage == GameOperationStage.Stopped);
         Assert.Equal(expectedStateFileExists, File.Exists(statePath));
+        Directory.Delete(tempDir, recursive: true);
+    }
+
+    [Fact]
+    public async Task Stop_WhenApplicationExitStopSurfacesAsNetworkException_KeepsCheckpoint()
+    {
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
+        var statePath = Path.Combine(tempDir, "download_state.json");
+        var fileBytes = Encoding.UTF8.GetBytes("exit-content");
+        var manifestFile = await CreateManifestFileAsync(tempDir, "data/file.bin", fileBytes);
+        var apiClient = CreateManifestApiClient(manifestFile);
+        // 在飞操作以 HttpRequestException 而非 OCE 浮出：检查点去留必须按
+        // 停止原因判定——生命周期退出保留供续传，不受异常类型影响。
+        var downloader = new FaultingFileDownloadService(new HttpRequestException("connection dropped after exit"));
+        using var service = CreateService(apiClient, settingsService, statePath, downloader);
+        var snapshot = CreateSnapshot(gamePath);
+        snapshot.RuntimeState = LauncherRuntimeState.NotInstalled;
+
+        var operation = service.InstallOrUpdateAsync(snapshot, _ => { });
+        await downloader.DownloadStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        Assert.True(File.Exists(statePath));
+        service.Stop(DownloadStopReason.ApplicationExit);
+        downloader.Release.TrySetResult();
+        var result = await operation.WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.False(result.Success);
+        Assert.True(File.Exists(statePath));
         Directory.Delete(tempDir, recursive: true);
     }
 
@@ -1538,7 +1567,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         finally
         {
             transport.Release.TrySetResult();
-            service.Stop();
+            service.Stop(DownloadStopReason.ApplicationExit);
             await repairTask;
             Directory.Delete(tempDir, recursive: true);
         }
@@ -1805,6 +1834,32 @@ public sealed class GameDownloadServiceTests : IDisposable
             await output.FlushAsync(cancellationToken);
             await control.ReportProgressAsync(remaining.Length, cancellationToken);
             return DownloadOutcome.AlreadyComplete();
+        }
+    }
+
+    /// <summary>
+    /// 在下载起点挂起，直到测试注入故障后以其原样浮出：用于模拟「停止已请求，
+    /// 但在飞操作以非取消异常（如 HttpRequestException）而非 OCE 结束」的路径，
+    /// 钉住检查点去留按停止原因判定而非异常类型。
+    /// </summary>
+    private sealed class FaultingFileDownloadService(Exception fault) : IFileDownloadService
+    {
+        public TaskCompletionSource DownloadStarted { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource Release { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public long GetExistingDownloadedSize(string targetTempPath, long expectedSize) => 0;
+
+        public async Task<DownloadOutcome> DownloadAsync(
+            FileDownloadRequest request,
+            FileDownloadOperationControl control,
+            CancellationToken cancellationToken)
+        {
+            DownloadStarted.TrySetResult();
+            await Release.Task;
+            throw fault;
         }
     }
 

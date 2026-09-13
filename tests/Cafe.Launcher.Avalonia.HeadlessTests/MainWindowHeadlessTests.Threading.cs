@@ -156,7 +156,7 @@ public sealed partial class MainWindowHeadlessTests
             Action<GameOperationProgress> progress) =>
             throw new NotSupportedException();
 
-        public void Stop(bool clearPersistedState)
+        public void Stop(DownloadStopReason reason)
         {
         }
 

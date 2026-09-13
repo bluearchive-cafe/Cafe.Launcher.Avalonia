@@ -269,7 +269,7 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
     /// <summary>Runs a confirmed uninstall and refreshes launcher state afterward.</summary>
     public async Task ConfirmUninstallAsync(LauncherStatusSnapshot snapshot)
     {
-        if (snapshot.RuntimeState != LauncherRuntimeState.Ready)
+        if (!GameOperationPolicy.Allows(GameOperationPolicy.Operation.Uninstall, snapshot.RuntimeState))
         {
             return;
         }
@@ -298,7 +298,7 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
     /// <summary>Executes the stop after the confirmation flow has completed.</summary>
     public void PerformStop()
     {
-        executor.Stop(clearPersistedState: true);
+        executor.Stop(DownloadStopReason.UserRequested);
         try { toastService.ShowWarning(localizer.T(LocalizationKeys.StopRequested)); }
         catch (Exception ex)
         {
@@ -347,9 +347,9 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
     }
 
     /// <summary>Stops the active workflow, optionally clearing its persisted checkpoint.</summary>
-    public void Stop(bool clearPersistedState)
+    public void Stop(DownloadStopReason reason)
     {
-        executor.Stop(clearPersistedState);
+        executor.Stop(reason);
     }
 
     /// <summary>Pauses the active download workflow.</summary>
