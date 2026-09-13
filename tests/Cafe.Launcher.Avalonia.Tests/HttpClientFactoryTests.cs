@@ -30,11 +30,9 @@ public sealed class HttpClientFactoryTests
         using var factory = new HttpClientFactory(new ProxySettingsService());
         factory.ConfigureHttp2(false);
 
-        using var client = factory.CreateClient(TimeSpan.FromSeconds(1));
         using var directLease = await factory.CreateLeaseAsync(ProxyModes.Direct);
         using var proxyLease = await factory.CreateLeaseAsync(ProxyModes.Auto);
 
-        AssertHttpVersion(client, HttpVersion.Version11);
         AssertHttpVersion(directLease.Client, HttpVersion.Version11);
         AssertHttpVersion(proxyLease.Client, HttpVersion.Version11);
     }
@@ -45,11 +43,9 @@ public sealed class HttpClientFactoryTests
         using var factory = new HttpClientFactory(new ProxySettingsService());
         factory.ConfigureHttp2(true);
 
-        using var client = factory.CreateClient(TimeSpan.FromSeconds(1));
         using var directLease = await factory.CreateLeaseAsync(ProxyModes.Direct);
         using var proxyLease = await factory.CreateLeaseAsync(ProxyModes.Auto);
 
-        AssertHttpVersion(client, HttpVersion.Version20);
         AssertHttpVersion(directLease.Client, HttpVersion.Version20);
         AssertHttpVersion(proxyLease.Client, HttpVersion.Version20);
     }
@@ -83,18 +79,6 @@ public sealed class HttpClientFactoryTests
     }
 
     [Fact]
-    public void CreateClient_WithBaseAddressAndTimeout_AppliesConfiguration()
-    {
-        using var factory = new HttpClientFactory(new ProxySettingsService());
-        using var client = factory.CreateClient(
-            "https://example.test/api/",
-            TimeSpan.FromSeconds(7));
-
-        Assert.Equal(new Uri("https://example.test/api/"), client.BaseAddress);
-        Assert.Equal(TimeSpan.FromSeconds(7), client.Timeout);
-    }
-
-    [Fact]
     public async Task CreateLeaseAsync_WithDirectConfiguration_AppliesBaseAddressAndTimeout()
     {
         using var factory = new HttpClientFactory(new ProxySettingsService());
@@ -106,16 +90,6 @@ public sealed class HttpClientFactoryTests
 
         Assert.Equal(new Uri("https://example.test/"), lease.Client.BaseAddress);
         Assert.Equal(TimeSpan.FromSeconds(9), lease.Client.Timeout);
-    }
-
-    [Fact]
-    public void CreateClient_AfterFactoryIsDisposed_Throws()
-    {
-        var factory = new HttpClientFactory(new ProxySettingsService());
-        factory.Dispose();
-
-        Assert.Throws<ObjectDisposedException>(
-            () => factory.CreateClient(TimeSpan.FromSeconds(1)));
     }
 
     [Fact]

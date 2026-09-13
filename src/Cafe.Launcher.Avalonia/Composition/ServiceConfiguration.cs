@@ -60,6 +60,12 @@ public static class ServiceConfiguration
 
         // ── HttpClient factory (shared pool, proxy-aware) ────────────────
         services.AddSingleton<HttpClientFactory>();
+        services.AddSingleton<IRemoteHttpTransport>(sp => new RemoteHttpTransport(
+            sp.GetRequiredService<HttpClientFactory>(),
+            sp.GetRequiredService<RemoteHttpUrlValidator>(),
+            // 代理模式解析自设置编辑器的已保存快照——与各调用方此前传入的
+            // snapshot.ProxyMode 同源；options.ProxyMode 仍可按调用覆盖。
+            () => sp.GetRequiredService<ISettingsEditor>().GetSavedSnapshot().ProxyMode));
         services.AddSingleton<WindowFilePickerService>();
         services.AddSingleton<IFilePickerService>(sp =>
             sp.GetRequiredService<WindowFilePickerService>());

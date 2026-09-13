@@ -1,19 +1,43 @@
 using System.Net;
 using System.Net.Http;
-using System.Text;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed class LauncherUpdateServiceTests
 {
+    // 降级语义按 URI 区分两端点：server 端与 GitHub 端分别以配置常量组装。
+    private static readonly Uri ProxyReleasesUri =
+        new(new Uri(ApiConfig.LauncherApiBaseUrl), ApiConfig.LauncherReleasesPath);
+
+    private static readonly Uri GitHubReleasesUri = new(ApiConfig.GitHubReleasesApiUrl);
+
+    private const string GitHubReleasesJson =
+        """
+        [
+          {
+            "tag_name":"v1.0.0-beta.8",
+            "draft":false,
+            "published_at":"2026-07-19T14:28:42Z",
+            "assets":[
+              {
+                "name":"Cafe.Launcher.Avalonia_v1.0.0-beta.8_setup.exe",
+                "browser_download_url":"https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v1.0.0-beta.8/Cafe.Launcher.Avalonia_v1.0.0-beta.8_setup.exe",
+                "size":54170696,
+                "state":"uploaded"
+              }
+            ]
+          }
+        ]
+        """;
+
     [Fact]
     public async Task CheckForUpdateAsync_WhenNewerReleaseExists_ReturnsAllReleaseFilesInApiOrder()
     {
-        var handler = new ReleaseHandler(
-            HttpStatusCode.OK,
+        var transport = CreateReleasesTransport(
             """
             [
               {
@@ -36,9 +60,9 @@ public sealed class LauncherUpdateServiceTests
               }
             ]
             """);
-        using var service = new LauncherUpdateService(handler);
+        var service = new LauncherUpdateService(transport);
 
-        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta, ProxyModes.Direct);
+        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
 
         Assert.True(result.IsSuccessful);
         Assert.True(result.IsUpdateAvailable);
@@ -57,15 +81,14 @@ public sealed class LauncherUpdateServiceTests
                 Assert.Equal("https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v1.2.0/Cafe.Launcher_Setup_v1.2.0.exe", file.Url);
                 Assert.Equal(6000000, file.Size);
             });
-        Assert.Equal(ApiConfig.LauncherReleasesPath, handler.RequestPath);
+        Assert.Equal(ProxyReleasesUri, Assert.Single(transport.RequestedUris));
     }
 
     [Fact]
     public async Task CheckForUpdateAsync_WhenReleaseMatchesCurrentVersion_ReturnsNoUpdate()
     {
         var currentVersion = BuildInfo.LauncherVersion;
-        var handler = new ReleaseHandler(
-            HttpStatusCode.OK,
+        var transport = CreateReleasesTransport(
             $$"""
             [
               {
@@ -82,9 +105,9 @@ public sealed class LauncherUpdateServiceTests
               }
             ]
             """);
-        using var service = new LauncherUpdateService(handler);
+        var service = new LauncherUpdateService(transport);
 
-        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta, ProxyModes.Direct);
+        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
 
         Assert.True(result.IsSuccessful);
         Assert.False(result.IsUpdateAvailable);
@@ -95,23 +118,28 @@ public sealed class LauncherUpdateServiceTests
     [Fact]
     public async Task CheckForUpdateAsync_WhenServerReturnsNotFound_ReturnsFailure()
     {
-        using var service = new LauncherUpdateService(
-            new ReleaseHandler(HttpStatusCode.NotFound, """{"message":"Not Found"}"""));
+        // 原假体对两端点都应答 404：代理端点的失败会降级到 GitHub 端点，
+        // 后者再次 404 后失败才落为返回值。
+        var transport = new StubRemoteHttpTransport(
+            _ => new HttpRequestException("Not Found", null, HttpStatusCode.NotFound));
+        var service = new LauncherUpdateService(transport);
 
-        var result = await service.CheckForUpdateAsync(UpdateChannels.Stable, ProxyModes.Direct);
+        var result = await service.CheckForUpdateAsync(UpdateChannels.Stable);
 
         Assert.False(result.IsSuccessful);
         Assert.False(result.IsUpdateAvailable);
+        Assert.Equal(2, transport.RequestedUris.Count);
     }
 
     [Fact]
     public async Task CheckForUpdateAsync_WhenProxyIsUnavailable_UsesGitHubReleases()
     {
-        using var service = new LauncherUpdateService(
-            new ProxyFailureGitHubReleaseHandler(),
-            currentVersionOverride: "1.0.0-beta.7");
+        var transport = CreateReleasesTransport(
+            gitHubReleasesJson: GitHubReleasesJson,
+            proxyFailure: new HttpRequestException("proxy unavailable"));
+        var service = new LauncherUpdateService(transport, currentVersionOverride: "1.0.0-beta.7");
 
-        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta, ProxyModes.Direct);
+        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
 
         Assert.True(result.IsSuccessful);
         Assert.True(result.IsUpdateAvailable);
@@ -122,11 +150,12 @@ public sealed class LauncherUpdateServiceTests
     [Fact]
     public async Task CheckForUpdateAsync_WhenProxyTimesOut_UsesGitHubReleases()
     {
-        using var service = new LauncherUpdateService(
-            new ProxyFailureGitHubReleaseHandler(new TaskCanceledException("simulated proxy timeout")),
-            currentVersionOverride: "1.0.0-beta.7");
+        var transport = CreateReleasesTransport(
+            gitHubReleasesJson: GitHubReleasesJson,
+            proxyFailure: new TaskCanceledException("simulated proxy timeout"));
+        var service = new LauncherUpdateService(transport, currentVersionOverride: "1.0.0-beta.7");
 
-        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta, ProxyModes.Direct);
+        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
 
         Assert.True(result.IsSuccessful);
         Assert.True(result.IsUpdateAvailable);
@@ -135,30 +164,12 @@ public sealed class LauncherUpdateServiceTests
     }
 
     [Fact]
-    public async Task CheckForUpdateAsync_WhenProxyEndpointRedirects_FollowsRedirectAndParses()
-    {
-        // 守卫（AUD-NET-008）：自更新两端点必须走统一手动重定向路径——池化 handler
-        // 均 AllowAutoRedirect=false，裸 GetAsync 下任何 3xx 都会硬失败。
-        var handler = new RedirectThenReleasesHandler();
-        using var service = new LauncherUpdateService(
-            handler,
-            currentVersionOverride: "1.0.0-beta.7");
-
-        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta, ProxyModes.Direct);
-
-        Assert.True(result.IsSuccessful);
-        Assert.True(result.IsUpdateAvailable);
-        Assert.Equal("1.0.0-beta.8", result.LatestVersion);
-        Assert.Equal(2, handler.CallCount);
-    }
-
-    [Fact]
     public async Task CheckForUpdateAsync_WhenRequiredFieldsAreMissing_ReturnsFailure()
     {
-        using var service = new LauncherUpdateService(
-            new ReleaseHandler(HttpStatusCode.OK, """[{"files":[]}]"""));
+        var transport = CreateReleasesTransport("""[{"files":[]}]""");
+        var service = new LauncherUpdateService(transport);
 
-        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta, ProxyModes.Direct);
+        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
 
         Assert.False(result.IsSuccessful);
     }
@@ -166,27 +177,26 @@ public sealed class LauncherUpdateServiceTests
     [Fact]
     public async Task CheckForUpdateAsync_WhenVersionIsNotSemver_ReturnsFailure()
     {
-        using var service = new LauncherUpdateService(
-            new ReleaseHandler(
-                HttpStatusCode.OK,
-                """
-                [
+        var transport = CreateReleasesTransport(
+            """
+            [
+              {
+                "version": "latest",
+                "files": [
                   {
-                    "version": "latest",
-                    "files": [
-                      {
-                        "name": "Cafe.Launcher.zip",
-                        "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v1.0.0/Cafe.Launcher.zip",
-                        "sha512": "abc",
-                        "size": 100
-                      }
-                    ],
-                    "releaseDate": "2026-06-15T00:00:00Z"
+                    "name": "Cafe.Launcher.zip",
+                    "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v1.0.0/Cafe.Launcher.zip",
+                    "sha512": "abc",
+                    "size": 100
                   }
-                ]
-                """));
+                ],
+                "releaseDate": "2026-06-15T00:00:00Z"
+              }
+            ]
+            """);
+        var service = new LauncherUpdateService(transport);
 
-        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta, ProxyModes.Direct);
+        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
 
         Assert.False(result.IsSuccessful);
     }
@@ -194,38 +204,36 @@ public sealed class LauncherUpdateServiceTests
     [Fact]
     public async Task CheckForUpdateAsync_WhenInvalidVersionPrecedesValidVersion_UsesValidVersion()
     {
-        using var service = new LauncherUpdateService(
-            new ReleaseHandler(
-                HttpStatusCode.OK,
-                """
-                [
+        var transport = CreateReleasesTransport(
+            """
+            [
+              {
+                "version": "latest",
+                "files": [
                   {
-                    "version": "latest",
-                    "files": [
-                      {
-                        "name": "latest.zip",
-                        "url": "https://example.com/latest.zip",
-                        "sha512": "invalid",
-                        "size": 100
-                      }
-                    ]
-                  },
-                  {
-                    "version": "1.2.0",
-                    "files": [
-                      {
-                        "name": "Cafe.Launcher_v1.2.0.zip",
-                        "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v1.2.0/Cafe.Launcher_v1.2.0.zip",
-                        "sha512": "abc123",
-                        "size": 5000000
-                      }
-                    ]
+                    "name": "latest.zip",
+                    "url": "https://example.com/latest.zip",
+                    "sha512": "invalid",
+                    "size": 100
                   }
                 ]
-                """),
-            currentVersionOverride: "1.0.0");
+              },
+              {
+                "version": "1.2.0",
+                "files": [
+                  {
+                    "name": "Cafe.Launcher_v1.2.0.zip",
+                    "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v1.2.0/Cafe.Launcher_v1.2.0.zip",
+                    "sha512": "abc123",
+                    "size": 5000000
+                  }
+                ]
+              }
+            ]
+            """);
+        var service = new LauncherUpdateService(transport, currentVersionOverride: "1.0.0");
 
-        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta, ProxyModes.Direct);
+        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
 
         Assert.True(result.IsSuccessful);
         Assert.True(result.IsUpdateAvailable);
@@ -235,15 +243,11 @@ public sealed class LauncherUpdateServiceTests
     [Fact]
     public async Task CheckForUpdateAsync_WhenReleaseFileIsOutsideReleaseRepository_ReturnsFailure()
     {
-        using var service = new LauncherUpdateService(
-            new ReleaseHandler(
-                HttpStatusCode.OK,
-                """
-                [{"version":"1.2.0","files":[{"name":"update.zip","url":"https://example.com/update.zip","size":100}]}]
-                """),
-            currentVersionOverride: "1.0.0");
+        var transport = CreateReleasesTransport(
+            """[{"version":"1.2.0","files":[{"name":"update.zip","url":"https://example.com/update.zip","size":100}]}]""");
+        var service = new LauncherUpdateService(transport, currentVersionOverride: "1.0.0");
 
-        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta, ProxyModes.Direct);
+        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
 
         Assert.False(result.IsSuccessful);
     }
@@ -251,11 +255,10 @@ public sealed class LauncherUpdateServiceTests
     [Fact]
     public async Task CheckForUpdateAsync_WhenReleaseFilesAreMissing_ReturnsValidationFailureMessage()
     {
-        using var service = new LauncherUpdateService(
-            new ReleaseHandler(HttpStatusCode.OK, """[{"version":"1.2.0","files":[]}]"""),
-            currentVersionOverride: "1.0.0");
+        var transport = CreateReleasesTransport("""[{"version":"1.2.0","files":[]}]""");
+        var service = new LauncherUpdateService(transport, currentVersionOverride: "1.0.0");
 
-        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta, ProxyModes.Direct);
+        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
 
         Assert.False(result.IsSuccessful);
         Assert.Equal("files must contain at least one entry", result.FailureMessage);
@@ -272,11 +275,10 @@ public sealed class LauncherUpdateServiceTests
     [InlineData("""[{"version":"1.2.0","files":[{"name":"valid.zip","url":"https://example.com/valid.zip","sha512":"","size":100},{"name":"","url":"https://example.com/invalid.zip","sha512":"","size":100}]}]""")]
     public async Task CheckForUpdateAsync_WhenDownloadFileIsInvalid_ReturnsFailure(string response)
     {
-        using var service = new LauncherUpdateService(
-            new ReleaseHandler(HttpStatusCode.OK, response),
-            currentVersionOverride: "1.0.0");
+        var transport = CreateReleasesTransport(response);
+        var service = new LauncherUpdateService(transport, currentVersionOverride: "1.0.0");
 
-        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta, ProxyModes.Direct);
+        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
 
         Assert.False(result.IsSuccessful);
         Assert.False(result.IsUpdateAvailable);
@@ -305,8 +307,7 @@ public sealed class LauncherUpdateServiceTests
     [Fact]
     public async Task CheckForUpdateAsync_WhenBetaChannel_PicksFirstRelease()
     {
-        var handler = new ReleaseHandler(
-            HttpStatusCode.OK,
+        var transport = CreateReleasesTransport(
             """
             [
               {
@@ -336,11 +337,9 @@ public sealed class LauncherUpdateServiceTests
             ]
             """);
         // Current version "1.0.0-beta.1" (prerelease) — override version
-        using var service = new LauncherUpdateService(
-            handler,
-            currentVersionOverride: "1.0.0-beta.1");
+        var service = new LauncherUpdateService(transport, currentVersionOverride: "1.0.0-beta.1");
 
-        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta, ProxyModes.Direct);
+        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
 
         Assert.True(result.IsSuccessful);
         Assert.True(result.IsUpdateAvailable);
@@ -350,8 +349,7 @@ public sealed class LauncherUpdateServiceTests
     [Fact]
     public async Task CheckForUpdateAsync_WhenStableChannel_SkipsPrerelease()
     {
-        var handler = new ReleaseHandler(
-            HttpStatusCode.OK,
+        var transport = CreateReleasesTransport(
             """
             [
               {
@@ -380,11 +378,9 @@ public sealed class LauncherUpdateServiceTests
               }
             ]
             """);
-        using var service = new LauncherUpdateService(
-            handler,
-            currentVersionOverride: "1.0.0");
+        var service = new LauncherUpdateService(transport, currentVersionOverride: "1.0.0");
 
-        var result = await service.CheckForUpdateAsync(UpdateChannels.Stable, ProxyModes.Direct);
+        var result = await service.CheckForUpdateAsync(UpdateChannels.Stable);
 
         Assert.True(result.IsSuccessful);
         Assert.True(result.IsUpdateAvailable);
@@ -394,8 +390,7 @@ public sealed class LauncherUpdateServiceTests
     [Fact]
     public async Task CheckForUpdateAsync_WhenStableChannel_OnlyPrereleasesExist_ReturnsUpToDate()
     {
-        var handler = new ReleaseHandler(
-            HttpStatusCode.OK,
+        var transport = CreateReleasesTransport(
             """
             [
               {
@@ -412,11 +407,9 @@ public sealed class LauncherUpdateServiceTests
               }
             ]
             """);
-        using var service = new LauncherUpdateService(
-            handler,
-            currentVersionOverride: "1.0.0");
+        var service = new LauncherUpdateService(transport, currentVersionOverride: "1.0.0");
 
-        var result = await service.CheckForUpdateAsync(UpdateChannels.Stable, ProxyModes.Direct);
+        var result = await service.CheckForUpdateAsync(UpdateChannels.Stable);
 
         Assert.True(result.IsSuccessful);
         Assert.False(result.IsUpdateAvailable);
@@ -425,22 +418,20 @@ public sealed class LauncherUpdateServiceTests
     [Fact]
     public async Task CheckForUpdateAsync_WhenStableChannel_CurrentPrereleaseReceivesStableRelease()
     {
-        using var service = new LauncherUpdateService(
-            new ReleaseHandler(
-                HttpStatusCode.OK,
-                """
-                [{
-                  "version": "1.0.0",
-                  "files": [{
-                    "name": "Cafe.Launcher.Avalonia_v1.0.0_setup.exe",
-                    "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v1.0.0/Cafe.Launcher.Avalonia_v1.0.0_setup.exe",
-                    "size": 100
-                  }]
-                }]
-                """),
-            currentVersionOverride: "1.0.0-beta.10");
+        var transport = CreateReleasesTransport(
+            """
+            [{
+              "version": "1.0.0",
+              "files": [{
+                "name": "Cafe.Launcher.Avalonia_v1.0.0_setup.exe",
+                "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v1.0.0/Cafe.Launcher.Avalonia_v1.0.0_setup.exe",
+                "size": 100
+              }]
+            }]
+            """);
+        var service = new LauncherUpdateService(transport, currentVersionOverride: "1.0.0-beta.10");
 
-        var result = await service.CheckForUpdateAsync(UpdateChannels.Stable, ProxyModes.Direct);
+        var result = await service.CheckForUpdateAsync(UpdateChannels.Stable);
 
         Assert.True(result.IsSuccessful);
         Assert.True(result.IsUpdateAvailable);
@@ -492,102 +483,30 @@ public sealed class LauncherUpdateServiceTests
         Assert.True(LauncherUpdateService.IsNewerVersion("1.0.0-beta.11", "1.0.0-beta.2"));
     }
 
-    private sealed class ReleaseHandler : HttpMessageHandler
-    {
-        private readonly HttpStatusCode statusCode;
-        private readonly string content;
-
-        public ReleaseHandler(HttpStatusCode statusCode, string content)
+    /// <summary>
+    /// Builds a transport that answers the server proxy releases endpoint with
+    /// <paramref name="proxyReleasesJson"/> (or fails it with
+    /// <paramref name="proxyFailure"/>) and the GitHub releases endpoint with
+    /// <paramref name="gitHubReleasesJson"/>, mirroring the server-to-GitHub
+    /// fallback discipline under test.
+    /// </summary>
+    private static StubRemoteHttpTransport CreateReleasesTransport(
+        string proxyReleasesJson = "",
+        string? gitHubReleasesJson = null,
+        Exception? proxyFailure = null) =>
+        new(uri =>
         {
-            this.statusCode = statusCode;
-            this.content = content;
-        }
-
-        public string RequestPath { get; private set; } = "";
-
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken)
-        {
-            RequestPath = request.RequestUri?.PathAndQuery ?? "";
-
-            return Task.FromResult(new HttpResponseMessage(statusCode)
+            if (uri == ProxyReleasesUri)
             {
-                Content = new StringContent(content, Encoding.UTF8, "application/json")
-            });
-        }
-    }
-
-    private sealed class RedirectThenReleasesHandler : HttpMessageHandler
-    {
-        private int _callCount;
-
-        public int CallCount => _callCount;
-
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken)
-        {
-            var count = Interlocked.Increment(ref _callCount);
-            if (count == 1)
-            {
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Found)
-                {
-                    Headers = { Location = new Uri("https://api-cafe-launcher.saibamidori.com/api/launcher/releases") }
-                });
+                return (object?)proxyFailure ?? proxyReleasesJson;
             }
 
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            if (uri == GitHubReleasesUri)
             {
-                Content = new StringContent(
-                    """
-                    [{
-                      "version": "1.0.0-beta.8",
-                      "files": [
-                        {
-                          "name": "Cafe.Launcher.zip",
-                          "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v1.0.0-beta.8/Cafe.Launcher.zip",
-                          "size": 100
-                        }
-                      ]
-                    }]
-                    """,
-                    Encoding.UTF8,
-                    "application/json")
-            });
-        }
-    }
-
-    private sealed class ProxyFailureGitHubReleaseHandler(Exception? proxyFailure = null) : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken)
-        {
-            if (request.RequestUri?.Host == "api-cafe-launcher.saibamidori.com")
-            {
-                throw proxyFailure ?? new HttpRequestException("proxy unavailable");
+                return gitHubReleasesJson
+                    ?? throw new InvalidOperationException($"Unexpected request to {uri} without GitHub release data.");
             }
 
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent(
-                    """
-                    [{
-                      "tag_name":"v1.0.0-beta.8",
-                      "draft":false,
-                      "published_at":"2026-07-19T14:28:42Z",
-                      "assets":[{
-                        "name":"Cafe.Launcher.Avalonia_v1.0.0-beta.8_setup.exe",
-                        "browser_download_url":"https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v1.0.0-beta.8/Cafe.Launcher.Avalonia_v1.0.0-beta.8_setup.exe",
-                        "size":54170696,
-                        "state":"uploaded"
-                      }]
-                    }]
-                    """,
-                    Encoding.UTF8,
-                    "application/json")
-            });
-        }
-    }
+            throw new InvalidOperationException($"Unexpected request URI: {uri}");
+        });
 }

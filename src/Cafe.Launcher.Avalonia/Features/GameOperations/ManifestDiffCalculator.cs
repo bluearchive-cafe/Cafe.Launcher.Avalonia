@@ -40,7 +40,6 @@ internal sealed class ManifestDiffCalculator
         LocalInstallationState localGame,
         GameConfigResponse gameConfig,
         string patchUrlGroup,
-        string proxyMode,
         Action<GameOperationProgress> progress,
         CancellationToken cancellationToken)
     {
@@ -54,7 +53,6 @@ internal sealed class ManifestDiffCalculator
                 localGame.Manifest.Version,
                 localGame.Manifest.Basis,
                 patchUrlGroup,
-                proxyMode,
                 cancellationToken).ConfigureAwait(false);
             if (currentManifest is not null)
             {
@@ -69,7 +67,6 @@ internal sealed class ManifestDiffCalculator
             version,
             basis,
             patchUrlGroup,
-            proxyMode,
             cancellationToken).ConfigureAwait(false);
         var statDiff = CheckStat(
             currentFiles,
@@ -91,7 +88,6 @@ internal sealed class ManifestDiffCalculator
         string gamePath,
         GameConfigResponse gameConfig,
         string patchUrlGroup,
-        string proxyMode,
         Action<GameOperationProgress> progress,
         CancellationToken cancellationToken)
     {
@@ -102,7 +98,6 @@ internal sealed class ManifestDiffCalculator
             version,
             basis,
             patchUrlGroup,
-            proxyMode,
             cancellationToken).ConfigureAwait(false);
 
         var (hashDiff, plannedHashes) = await CheckHashAsync(

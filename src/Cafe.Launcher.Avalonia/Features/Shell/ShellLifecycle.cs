@@ -620,7 +620,6 @@ public sealed class ShellLifecycle : IShellRuntime
             var savedSettings = settings.Editor.GetSavedSnapshot();
             var result = await launcherUpdateService.CheckForUpdateAsync(
                 savedSettings.UpdateChannel,
-                savedSettings.ProxyMode,
                 cancellationToken);
 
             if (result.IsSuccessful && result.IsUpdateAvailable)

@@ -1,9 +1,7 @@
-using System.Net;
-using System.Net.Http;
-using System.Text;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Auth;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -25,15 +23,14 @@ public sealed class ManifestValidationServiceTests : IDisposable
     [Fact]
     public async Task ValidateAsync_WhenCheckModeIsNone_SucceedsWithoutInstallationState()
     {
-        using var apiClient = CreateApiClient(new HttpClientHandler());
+        var apiClient = CreateApiClient(new StubRemoteHttpTransport());
         var service = CreateService(apiClient);
 
         var result = await service.ValidateAsync(
             tempDir,
             new LocalInstallationState(),
             LaunchCheckModes.None,
-            PatchUrlGroups.Official,
-            ProxyModes.Direct);
+            PatchUrlGroups.Official);
 
         Assert.True(result.Success);
     }
@@ -43,15 +40,14 @@ public sealed class ManifestValidationServiceTests : IDisposable
     {
         var filePath = Path.Combine(tempDir, "data.bin");
         await File.WriteAllTextAsync(filePath, "1234");
-        using var apiClient = CreateApiClient(new HttpClientHandler());
+        var apiClient = CreateApiClient(new StubRemoteHttpTransport());
         var service = CreateService(apiClient);
 
         var result = await service.ValidateAsync(
             tempDir,
             CreateLocalState(new ManifestFile { Path = "data.bin", Size = "4" }),
             LaunchCheckModes.LocalManifest,
-            PatchUrlGroups.Official,
-            ProxyModes.Direct);
+            PatchUrlGroups.Official);
 
         Assert.True(result.Success);
         Assert.Equal(0, result.DamagedFileCount);
@@ -62,7 +58,7 @@ public sealed class ManifestValidationServiceTests : IDisposable
     public async Task ValidateAsync_WhenLocalFilesAreMissingOrWrongSize_ReturnsExactCounts()
     {
         await File.WriteAllTextAsync(Path.Combine(tempDir, "wrong.bin"), "1");
-        using var apiClient = CreateApiClient(new HttpClientHandler());
+        var apiClient = CreateApiClient(new StubRemoteHttpTransport());
         var service = CreateService(apiClient);
 
         var result = await service.ValidateAsync(
@@ -71,8 +67,7 @@ public sealed class ManifestValidationServiceTests : IDisposable
                 new ManifestFile { Path = "missing.bin", Size = "4" },
                 new ManifestFile { Path = "wrong.bin", Size = "4" }),
             LaunchCheckModes.LocalManifest,
-            PatchUrlGroups.Official,
-            ProxyModes.Direct);
+            PatchUrlGroups.Official);
 
         Assert.False(result.Success);
         Assert.Equal(2, result.DamagedFileCount);
@@ -84,7 +79,7 @@ public sealed class ManifestValidationServiceTests : IDisposable
     [Fact]
     public async Task ValidateAsync_WhenLocalInstallationIsNotInstalled_ReturnsFailure()
     {
-        using var apiClient = CreateApiClient(new HttpClientHandler());
+        var apiClient = CreateApiClient(new StubRemoteHttpTransport());
         var service = CreateService(apiClient);
 
         var result = await service.ValidateAsync(
@@ -95,8 +90,7 @@ public sealed class ManifestValidationServiceTests : IDisposable
                 ManifestPath = Path.Combine(tempDir, "manifest.json")
             },
             LaunchCheckModes.LocalManifest,
-            PatchUrlGroups.Official,
-            ProxyModes.Direct);
+            PatchUrlGroups.Official);
 
         Assert.False(result.Success);
     }
@@ -104,7 +98,7 @@ public sealed class ManifestValidationServiceTests : IDisposable
     [Fact]
     public async Task ValidateAsync_WhenLocalManifestIsUnreadable_ReturnsFailure()
     {
-        using var apiClient = CreateApiClient(new HttpClientHandler());
+        var apiClient = CreateApiClient(new StubRemoteHttpTransport());
         var service = CreateService(apiClient);
 
         var result = await service.ValidateAsync(
@@ -115,8 +109,7 @@ public sealed class ManifestValidationServiceTests : IDisposable
                 ManifestPath = Path.Combine(tempDir, "manifest.json")
             },
             LaunchCheckModes.LocalManifest,
-            PatchUrlGroups.Official,
-            ProxyModes.Direct);
+            PatchUrlGroups.Official);
 
         Assert.False(result.Success);
     }
@@ -124,15 +117,14 @@ public sealed class ManifestValidationServiceTests : IDisposable
     [Fact]
     public async Task ValidateAsync_WhenRemoteMetadataIsMissing_ReturnsFailure()
     {
-        using var apiClient = CreateApiClient(new HttpClientHandler());
+        var apiClient = CreateApiClient(new StubRemoteHttpTransport());
         var service = CreateService(apiClient);
 
         var result = await service.ValidateAsync(
             tempDir,
             CreateLocalState(),
             LaunchCheckModes.RemoteManifest,
-            PatchUrlGroups.Official,
-            ProxyModes.Direct);
+            PatchUrlGroups.Official);
 
         Assert.False(result.Success);
     }
@@ -141,17 +133,17 @@ public sealed class ManifestValidationServiceTests : IDisposable
     public async Task ValidateAsync_WhenRemoteManifestMatches_Succeeds()
     {
         await File.WriteAllTextAsync(Path.Combine(tempDir, "remote.bin"), "1234");
-        using var apiClient = CreateApiClient(new RemoteManifestHandler(
-            "https://manifest.example.invalid/manifest.json",
-            "{\"source\":\"\",\"file\":[{\"path\":\"remote.bin\",\"size\":\"4\",\"hash\":\"0\"}]}"));
+        var apiClient = CreateApiClient(new StubRemoteHttpTransport(uri =>
+            uri.AbsolutePath.Contains("/api/launcher/game/config/json", StringComparison.Ordinal)
+                ? """{"code":200,"data":{"url":"https://manifest.example.invalid/manifest.json"}}"""
+                : "{\"source\":\"\",\"file\":[{\"path\":\"remote.bin\",\"size\":\"4\",\"hash\":\"0\"}]}"));
         var service = CreateService(apiClient);
 
         var result = await service.ValidateAsync(
             tempDir,
             CreateRemoteLocalState(),
             LaunchCheckModes.RemoteManifest,
-            PatchUrlGroups.Official,
-            ProxyModes.Direct);
+            PatchUrlGroups.Official);
 
         Assert.True(result.Success);
     }
@@ -161,15 +153,17 @@ public sealed class ManifestValidationServiceTests : IDisposable
     {
         // Fail open like the official launcher: an unobtainable remote manifest must not
         // block launch, otherwise it deadlocks against a repair that targets the latest.
-        using var apiClient = CreateApiClient(new RemoteManifestHandler("", "{}"));
+        var apiClient = CreateApiClient(new StubRemoteHttpTransport(uri =>
+            uri.AbsolutePath.Contains("/api/launcher/game/config/json", StringComparison.Ordinal)
+                ? """{"code":200,"data":{"url":""}}"""
+                : "{}"));
         var service = CreateService(apiClient);
 
         var result = await service.ValidateAsync(
             tempDir,
             CreateRemoteLocalState(),
             LaunchCheckModes.RemoteManifest,
-            PatchUrlGroups.Official,
-            ProxyModes.Direct);
+            PatchUrlGroups.Official);
 
         Assert.True(result.Success);
         Assert.False(result.HasDamagedFiles);
@@ -179,15 +173,15 @@ public sealed class ManifestValidationServiceTests : IDisposable
     public async Task ValidateAsync_WhenRemoteRequestFails_AllowsLaunch()
     {
         // Network failure (or a de-listed local-basis build) must fail open, not block launch.
-        using var apiClient = CreateApiClient(new ThrowingHandler());
+        var apiClient = CreateApiClient(new StubRemoteHttpTransport(
+            _ => new HttpRequestException("network failure")));
         var service = CreateService(apiClient);
 
         var result = await service.ValidateAsync(
             tempDir,
             CreateRemoteLocalState(),
             LaunchCheckModes.RemoteManifest,
-            PatchUrlGroups.Official,
-            ProxyModes.Direct);
+            PatchUrlGroups.Official);
 
         Assert.True(result.Success);
     }
@@ -210,8 +204,8 @@ public sealed class ManifestValidationServiceTests : IDisposable
             }
         };
 
-    private static LauncherApiClient CreateApiClient(HttpMessageHandler handler) =>
-        new(handler, new AuthorizationHeaderFactory(), new PatchUrlGroupService());
+    private static LauncherApiClient CreateApiClient(IRemoteHttpTransport transport) =>
+        new(transport, new AuthorizationHeaderFactory(), new PatchUrlGroupService());
 
     private static ManifestValidationService CreateService(LauncherApiClient apiClient)
     {
@@ -228,34 +222,5 @@ public sealed class ManifestValidationServiceTests : IDisposable
         {
             Directory.Delete(tempDir, recursive: true);
         }
-    }
-
-    private sealed class RemoteManifestHandler(
-        string manifestUrl,
-        string manifestJson) : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken)
-        {
-            var isUrlRequest = request.RequestUri?.AbsolutePath.Contains(
-                "/api/launcher/game/config/json",
-                StringComparison.Ordinal) == true;
-            var json = isUrlRequest
-                ? $"{{\"code\":200,\"data\":{{\"url\":\"{manifestUrl}\"}}}}"
-                : manifestJson;
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent(json, Encoding.UTF8, "application/json")
-            });
-        }
-    }
-
-    private sealed class ThrowingHandler : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken) =>
-            throw new HttpRequestException("network failure");
     }
 }

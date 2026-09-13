@@ -113,7 +113,7 @@ internal sealed class DownloadSession : IDisposable
         {
             var settings = await settingsService.ReadAsync(activeToken).ConfigureAwait(false);
             var gameConfig = snapshot.Remote.GameConfig
-                ?? await apiClient.GetGameConfigAsync(settings.ProxyMode, activeToken).ConfigureAwait(false);
+                ?? await apiClient.GetGameConfigAsync(activeToken).ConfigureAwait(false);
             var preparation = await PrepareDownloadPlanAsync(
                 settings,
                 gameConfig,
@@ -256,7 +256,6 @@ internal sealed class DownloadSession : IDisposable
         var cdnConfig = snapshot.Remote.CdnConfig
             ?? await apiClient.GetCdnConfigAsync(
                 settings.PatchUrlGroup,
-                settings.ProxyMode,
                 activeToken).ConfigureAwait(false);
         if (string.IsNullOrWhiteSpace(cdnConfig.PrimaryCdn) || string.IsNullOrWhiteSpace(cdnConfig.BackUpCdn))
         {
@@ -271,7 +270,6 @@ internal sealed class DownloadSession : IDisposable
                 gamePath,
                 gameConfig,
                 settings.PatchUrlGroup,
-                settings.ProxyMode,
                 progress,
                 activeToken).ConfigureAwait(false)
             : await diffCalculator.BuildInstallOrUpdatePlanAsync(
@@ -279,7 +277,6 @@ internal sealed class DownloadSession : IDisposable
                 localGame,
                 gameConfig,
                 settings.PatchUrlGroup,
-                settings.ProxyMode,
                 progress,
                 activeToken).ConfigureAwait(false);
 

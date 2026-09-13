@@ -11,8 +11,6 @@ using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Services.GameRuntime;
 using Cafe.Launcher.Avalonia.Testing;
 using Cafe.Launcher.Avalonia.ViewModels;
-using System.Net;
-using System.Text;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -32,7 +30,7 @@ public sealed partial class MainWindowViewModelTests : IDisposable
     private readonly ProxySettingsService proxySettings = new();
     private readonly HttpClientFactory httpClientFactory;
     private readonly LauncherApiClient apiClient = new(
-        new HttpClientHandler(),
+        new StubRemoteHttpTransport(),
         new AuthorizationHeaderFactory(),
         new PatchUrlGroupService());
     private readonly ImageCacheService imageCacheService;
@@ -42,9 +40,9 @@ public sealed partial class MainWindowViewModelTests : IDisposable
         Directory.CreateDirectory(tempDir);
         httpClientFactory = new HttpClientFactory(proxySettings);
         imageCacheService = new ImageCacheService(
-            httpClientFactory,
+            new StubRemoteHttpTransport(),
             new Crc64Service(),
-            RemoteHttpUrlValidator.CreateForTesting());
+            Path.Combine(tempDir, "image-cache"));
     }
 
     private async Task<MainWindowViewModel> CreateViewModelAsync(
@@ -98,11 +96,11 @@ public sealed partial class MainWindowViewModelTests : IDisposable
             new BestHttpCookieLibraryService(),
             settingsService,
             Path.Combine(tempDir, "missing-resource-panel-cookie"));
-        resourcePanelApiClient ??= new ResourcePanelApiClient(new ResourcePanelHandler());
+        resourcePanelApiClient ??= new ResourcePanelApiClient(new StubRemoteHttpTransport());
 
         toastService ??= new ToastService();
         var diskSpaceService = new DiskSpaceService();
-        var launcherUpdateSvc = launcherUpdateService ?? new LauncherUpdateService(new LauncherUpdateHandler());
+        var launcherUpdateSvc = launcherUpdateService ?? new LauncherUpdateService(new StubRemoteHttpTransport());
         var settingsEditor = new SettingsEditor();
         var settingsOptions = new SettingsOptionsViewModel(localizationService, diskSpaceService);
         var settingsAppearance = new SettingsAppearanceViewModel(settingsEditor);
@@ -280,7 +278,6 @@ public sealed partial class MainWindowViewModelTests : IDisposable
     public void Dispose()
     {
         imageCacheService.Dispose();
-        apiClient.Dispose();
         httpClientFactory.Dispose();
         if (Directory.Exists(tempDir))
         {
@@ -341,31 +338,6 @@ public sealed partial class MainWindowViewModelTests : IDisposable
             }
 
             return snapshot;
-        }
-    }
-
-    private sealed class LauncherUpdateHandler : HttpMessageHandler
-    {
-        private readonly string? responseJson;
-
-        public LauncherUpdateHandler(string? responseJson = null)
-        {
-            this.responseJson = responseJson;
-        }
-
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken)
-        {
-            if (responseJson is not null)
-            {
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-                {
-                    Content = new StringContent(responseJson, Encoding.UTF8, "application/json")
-                });
-            }
-
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
         }
     }
 }

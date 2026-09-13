@@ -70,11 +70,10 @@ public sealed class ResourcePanelService
     /// </summary>
     public async Task<ResourcePanelLoadResult> LoadDataAsync(
         string uid,
-        string proxyMode,
         CancellationToken cancellationToken = default)
     {
-        var statusTask = apiClient.GetStatusAsync(proxyMode, cancellationToken);
-        var configTask = apiClient.GetConfigAsync(uid, proxyMode, cancellationToken);
+        var statusTask = apiClient.GetStatusAsync(cancellationToken);
+        var configTask = apiClient.GetConfigAsync(uid, cancellationToken);
 
         await Task.WhenAll(statusTask, configTask).ConfigureAwait(false);
 
@@ -97,7 +96,6 @@ public sealed class ResourcePanelService
         bool textEnabled,
         bool voiceEnabled,
         bool mediaEnabled,
-        string proxyMode,
         CancellationToken cancellationToken = default)
     {
         await apiClient.SaveConfigAsync(
@@ -105,7 +103,6 @@ public sealed class ResourcePanelService
             ToModeString(textEnabled),
             ToModeString(voiceEnabled),
             ToModeString(mediaEnabled),
-            proxyMode,
             cancellationToken).ConfigureAwait(false);
     }
 

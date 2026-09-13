@@ -17,38 +17,33 @@ namespace Cafe.Launcher.Avalonia.Services;
 /// <summary>
 /// Checks for launcher self-updates via the server proxy endpoint.
 /// </summary>
-public sealed partial class LauncherUpdateService : IDisposable
+public sealed partial class LauncherUpdateService
 {
     private static readonly JsonSerializerOptions JsonOptions = JsonDefaults.Strict;
-    private readonly IHttpClientLeaseSource leaseSource;
-    private readonly RemoteHttpUrlValidator urlValidator;
+    private readonly IRemoteHttpTransport transport;
     private readonly string currentVersion;
     private readonly LocalDiagnostics? diagnostics;
 
+    /// <summary>Production constructor — accepts dependencies from DI.</summary>
     public LauncherUpdateService(
-        HttpClientFactory httpClientFactory,
-        RemoteHttpUrlValidator urlValidator,
+        IRemoteHttpTransport transport,
         LocalDiagnostics diagnostics)
     {
-        leaseSource = new ProxyAwareHttpClientLeaseSource(
-            httpClientFactory,
-            new Uri(ApiConfig.LauncherApiBaseUrl),
-            TimeSpan.FromSeconds(15));
-        this.urlValidator = urlValidator;
+        this.transport = transport;
         currentVersion = BuildInfo.LauncherVersion;
         this.diagnostics = diagnostics;
     }
 
+    /// <summary>
+    /// Injectable constructor — accepts a transport and a version override for
+    /// testability (the stub transport is the second adapter at that seam).
+    /// </summary>
     internal LauncherUpdateService(
-        HttpMessageHandler handler,
+        IRemoteHttpTransport transport,
         string? currentVersionOverride = null,
         LocalDiagnostics? diagnosticsOverride = null)
     {
-        leaseSource = new FixedHttpClientLeaseSource(
-            handler,
-            new Uri(ApiConfig.LauncherApiBaseUrl),
-            TimeSpan.FromSeconds(15));
-        urlValidator = RemoteHttpUrlValidator.CreateForTesting();
+        this.transport = transport;
         currentVersion = currentVersionOverride ?? BuildInfo.LauncherVersion;
         diagnostics = diagnosticsOverride;
     }
@@ -60,12 +55,11 @@ public sealed partial class LauncherUpdateService : IDisposable
     /// </summary>
     public async Task<LauncherUpdateCheckResult> CheckForUpdateAsync(
         string updateChannel,
-        string proxyMode,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            var releases = await FetchReleasesAsync(proxyMode, cancellationToken).ConfigureAwait(false);
+            var releases = await FetchReleasesAsync(cancellationToken).ConfigureAwait(false);
 
             if (releases is null || releases.Count == 0)
             {
@@ -162,12 +156,11 @@ public sealed partial class LauncherUpdateService : IDisposable
     }
 
     private async Task<List<LauncherReleaseResponse>?> FetchReleasesAsync(
-        string proxyMode,
         CancellationToken cancellationToken)
     {
         try
         {
-            return await FetchProxyReleasesAsync(proxyMode, cancellationToken).ConfigureAwait(false);
+            return await FetchProxyReleasesAsync(cancellationToken).ConfigureAwait(false);
         }
         catch (Exception exception) when (exception is HttpRequestException
             || (exception is OperationCanceledException && !cancellationToken.IsCancellationRequested))
@@ -175,59 +168,41 @@ public sealed partial class LauncherUpdateService : IDisposable
             // A slow proxy endpoint surfaces as TaskCanceledException (HttpClient timeout)
             // rather than HttpRequestException; that is precisely when the GitHub fallback
             // matters most, so both degrade to it. Caller cancellation still propagates.
-            return await FetchGitHubReleasesAsync(proxyMode, cancellationToken).ConfigureAwait(false);
+            return await FetchGitHubReleasesAsync(cancellationToken).ConfigureAwait(false);
         }
     }
 
     private async Task<List<LauncherReleaseResponse>?> FetchProxyReleasesAsync(
-        string proxyMode,
         CancellationToken cancellationToken)
     {
         // LauncherApiBaseUrl ends with '/' and the path starts with '/', so plain
         // string concatenation would produce a double slash; Uri-relative resolution
-        // replaces the base path instead.
+        // replaces the base path instead. No transport-level retries: the endpoint's
+        // failures degrade to the GitHub fallback instead of being replayed.
         var requestUri = new Uri(new Uri(ApiConfig.LauncherApiBaseUrl), ApiConfig.LauncherReleasesPath);
-        using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken).ConfigureAwait(false);
-        using var response = await RemoteHttpRequestService.SendAsync(
-                lease.Client,
-                requestUri,
-                static uri => new HttpRequestMessage(HttpMethod.Get, uri),
-                urlValidator,
-                cancellationToken,
-                connectionProxy: lease.ConnectionProxy).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
-
-        return await RemoteHttpRequestService.DeserializeJsonAsync<List<LauncherReleaseResponse>>(
-            response,
+        return await transport.GetJsonAsync<List<LauncherReleaseResponse>>(
             requestUri,
-            JsonOptions,
+            new RemoteRequestOptions
+            {
+                Timeout = TimeSpan.FromSeconds(15),
+                Json = JsonOptions
+            },
             cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<List<LauncherReleaseResponse>> FetchGitHubReleasesAsync(
-        string proxyMode,
         CancellationToken cancellationToken)
     {
         var requestUri = new Uri(ApiConfig.GitHubReleasesApiUrl);
-        using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken).ConfigureAwait(false);
-        using var response = await RemoteHttpRequestService.SendAsync(
-                lease.Client,
-                requestUri,
-                uri =>
-                {
-                    var request = new HttpRequestMessage(HttpMethod.Get, uri);
-                    request.Headers.UserAgent.ParseAdd($"CafeLauncher/{BuildInfo.LauncherVersion}");
-                    return request;
-                },
-                urlValidator,
-                cancellationToken,
-                connectionProxy: lease.ConnectionProxy).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
-
-        var releases = await RemoteHttpRequestService.DeserializeJsonAsync<List<GitHubRelease>>(
-            response,
-            new Uri(ApiConfig.GitHubReleasesApiUrl),
-            JsonOptions,
+        var releases = await transport.GetJsonAsync<List<GitHubRelease>>(
+            requestUri,
+            new RemoteRequestOptions
+            {
+                Timeout = TimeSpan.FromSeconds(15),
+                Json = JsonOptions,
+                ConfigureRequest = request => request.Headers.UserAgent.ParseAdd(
+                    $"CafeLauncher/{BuildInfo.LauncherVersion}")
+            },
             cancellationToken).ConfigureAwait(false) ?? [];
         return releases
             .Where(release => !release.Draft)
@@ -391,11 +366,6 @@ public sealed partial class LauncherUpdateService : IDisposable
             match.Groups[4].Success,
             match.Groups[4].Success ? match.Groups[4].Value : "");
         return true;
-    }
-
-    public void Dispose()
-    {
-        leaseSource.Dispose();
     }
 
     private readonly record struct SemanticVersion(string CoreVersion, bool IsPrerelease, string PrereleaseLabel);

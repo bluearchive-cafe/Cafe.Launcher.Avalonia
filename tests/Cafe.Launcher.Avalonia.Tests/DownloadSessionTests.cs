@@ -5,6 +5,7 @@ using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Auth;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Services.GameRuntime;
+using Cafe.Launcher.Avalonia.Testing;
 using Xunit;
 
 namespace Cafe.Launcher.Avalonia.Tests;
@@ -219,7 +220,7 @@ public sealed class DownloadSessionTests
     {
         var diagnostics = new LocalDiagnostics();
         var apiClient = new LauncherApiClient(
-            new HttpClientHandler(),
+            new StubRemoteHttpTransport(),
             new AuthorizationHeaderFactory(),
             new PatchUrlGroupService());
         using var httpClientFactory = new HttpClientFactory(new ProxySettingsService());

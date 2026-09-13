@@ -36,14 +36,12 @@ public sealed class RemoteManifestService
         string version,
         string basis,
         string patchUrlGroup,
-        string proxyMode,
         CancellationToken cancellationToken = default)
     {
         var url = await apiClient.GetManifestUrlAsync(
             version,
             basis,
             patchUrlGroup,
-            proxyMode,
             cancellationToken).ConfigureAwait(false);
 
         if (string.IsNullOrWhiteSpace(url.Url))
@@ -54,7 +52,6 @@ public sealed class RemoteManifestService
         return await FetchManifestAsync(
             url.Url,
             patchUrlGroup,
-            proxyMode,
             cancellationToken).ConfigureAwait(false);
     }
 
@@ -68,7 +65,6 @@ public sealed class RemoteManifestService
         string version,
         string basis,
         string patchUrlGroup,
-        string proxyMode,
         CancellationToken cancellationToken = default)
     {
         try
@@ -77,7 +73,6 @@ public sealed class RemoteManifestService
                 version,
                 basis,
                 patchUrlGroup,
-                proxyMode,
                 cancellationToken).ConfigureAwait(false);
 
             if (string.IsNullOrWhiteSpace(url.Url))
@@ -88,7 +83,6 @@ public sealed class RemoteManifestService
             return await FetchManifestAsync(
                 url.Url,
                 patchUrlGroup,
-                proxyMode,
                 cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
@@ -108,14 +102,12 @@ public sealed class RemoteManifestService
     private async Task<RemoteManifest> FetchManifestAsync(
         string manifestUrl,
         string patchUrlGroup,
-        string proxyMode,
         CancellationToken cancellationToken)
     {
         try
         {
             return await apiClient.GetRemoteManifestAsync(
                 manifestUrl,
-                proxyMode,
                 cancellationToken).ConfigureAwait(false);
         }
         catch (HttpRequestException exception)
@@ -130,7 +122,6 @@ public sealed class RemoteManifestService
 
             return await apiClient.GetRemoteManifestAsync(
                 officialUrl,
-                proxyMode,
                 cancellationToken).ConfigureAwait(false);
         }
     }

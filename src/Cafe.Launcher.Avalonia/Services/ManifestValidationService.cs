@@ -32,7 +32,6 @@ public sealed class ManifestValidationService
         LocalInstallationState localGame,
         string launchCheckMode,
         string patchUrlGroup,
-        string proxyMode,
         CancellationToken cancellationToken = default)
     {
         if (launchCheckMode == LaunchCheckModes.None)
@@ -56,7 +55,7 @@ public sealed class ManifestValidationService
             try
             {
                 var remoteManifest = await remoteManifestService.GetRequiredManifestAsync(
-                    version, basis, patchUrlGroup, proxyMode, cancellationToken).ConfigureAwait(false);
+                    version, basis, patchUrlGroup, cancellationToken).ConfigureAwait(false);
                 return ValidateFiles(gamePath, remoteManifest.File);
             }
             catch (Exception exception)

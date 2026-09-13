@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Net.Http;
 using System.Threading;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Models;
@@ -7,6 +6,7 @@ using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Auth;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Services.GameRuntime;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -77,8 +77,8 @@ public sealed class InstallationOperationStateTests : IDisposable
     [Fact]
     public async Task StartAsync_WhenInstallationStateIsCorrupted_BlocksLaunch()
     {
-        using var apiClient = new LauncherApiClient(
-            new HttpClientHandler(),
+        var apiClient = new LauncherApiClient(
+            new StubRemoteHttpTransport(),
             new AuthorizationHeaderFactory(),
             new PatchUrlGroupService());
         var localizer = new LocalizationService();
@@ -102,8 +102,8 @@ public sealed class InstallationOperationStateTests : IDisposable
     [Fact]
     public async Task StartAsync_WhenRuntimeStateIsBelowLowestVersion_BlocksLaunch()
     {
-        using var apiClient = new LauncherApiClient(
-            new HttpClientHandler(),
+        var apiClient = new LauncherApiClient(
+            new StubRemoteHttpTransport(),
             new AuthorizationHeaderFactory(),
             new PatchUrlGroupService());
         var localizer = new LocalizationService();
@@ -124,8 +124,8 @@ public sealed class InstallationOperationStateTests : IDisposable
     [Fact]
     public async Task StartAsync_WhenRuntimeStateIsIoFailure_ReturnsLocalizedFailure()
     {
-        using var apiClient = new LauncherApiClient(
-            new HttpClientHandler(),
+        var apiClient = new LauncherApiClient(
+            new StubRemoteHttpTransport(),
             new AuthorizationHeaderFactory(),
             new PatchUrlGroupService());
         var localizer = new LocalizationService();
@@ -146,8 +146,8 @@ public sealed class InstallationOperationStateTests : IDisposable
     [Fact]
     public async Task StartAsync_WhenRuntimeStateIsRemoteUnavailable_ReturnsLocalizedFailure()
     {
-        using var apiClient = new LauncherApiClient(
-            new HttpClientHandler(),
+        var apiClient = new LauncherApiClient(
+            new StubRemoteHttpTransport(),
             new AuthorizationHeaderFactory(),
             new PatchUrlGroupService());
         var localizer = new LocalizationService();
@@ -168,8 +168,8 @@ public sealed class InstallationOperationStateTests : IDisposable
     [Fact]
     public async Task StartAsync_WhenRuntimeStateIsUpdateAvailable_ReturnsLocalizedFailure()
     {
-        using var apiClient = new LauncherApiClient(
-            new HttpClientHandler(),
+        var apiClient = new LauncherApiClient(
+            new StubRemoteHttpTransport(),
             new AuthorizationHeaderFactory(),
             new PatchUrlGroupService());
         var localizer = new LocalizationService();
@@ -205,8 +205,8 @@ public sealed class InstallationOperationStateTests : IDisposable
                     Version = "1.0.0"
                 }
             };
-            using var apiClient = new LauncherApiClient(
-                new HttpClientHandler(),
+            var apiClient = new LauncherApiClient(
+                new StubRemoteHttpTransport(),
                 new AuthorizationHeaderFactory(),
                 new PatchUrlGroupService());
             var localizer = new LocalizationService();
@@ -248,8 +248,8 @@ public sealed class InstallationOperationStateTests : IDisposable
                     Version = "1.0.0"
                 }
             };
-            using var apiClient = new LauncherApiClient(
-                new HttpClientHandler(),
+            var apiClient = new LauncherApiClient(
+                new StubRemoteHttpTransport(),
                 new AuthorizationHeaderFactory(),
                 new PatchUrlGroupService());
             var localizer = new LocalizationService();
@@ -279,8 +279,8 @@ public sealed class InstallationOperationStateTests : IDisposable
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
         Directory.CreateDirectory(gamePath);
         await File.WriteAllTextAsync(Path.Combine(gamePath, "BlueArchive.exe"), "");
-        using var apiClient = new LauncherApiClient(
-            new HttpClientHandler(),
+        var apiClient = new LauncherApiClient(
+            new StubRemoteHttpTransport(),
             new AuthorizationHeaderFactory(),
             new PatchUrlGroupService());
         var localizer = new LocalizationService();
@@ -317,8 +317,8 @@ public sealed class InstallationOperationStateTests : IDisposable
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
         Directory.CreateDirectory(gamePath);
         await File.WriteAllTextAsync(Path.Combine(gamePath, "BlueArchive.exe"), "");
-        using var apiClient = new LauncherApiClient(
-            new HttpClientHandler(),
+        var apiClient = new LauncherApiClient(
+            new StubRemoteHttpTransport(),
             new AuthorizationHeaderFactory(),
             new PatchUrlGroupService());
         var localizer = new LocalizationService();
@@ -355,8 +355,8 @@ public sealed class InstallationOperationStateTests : IDisposable
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
         Directory.CreateDirectory(gamePath);
         await File.WriteAllTextAsync(Path.Combine(gamePath, "BlueArchive.exe"), "");
-        using var apiClient = new LauncherApiClient(
-            new HttpClientHandler(),
+        var apiClient = new LauncherApiClient(
+            new StubRemoteHttpTransport(),
             new AuthorizationHeaderFactory(),
             new PatchUrlGroupService());
         var localizer = new LocalizationService();
@@ -397,8 +397,8 @@ public sealed class InstallationOperationStateTests : IDisposable
         Directory.CreateDirectory(gamePath);
         var executablePath = Path.Combine(gamePath, "BlueArchive.exe");
         await File.WriteAllTextAsync(executablePath, "");
-        using var apiClient = new LauncherApiClient(
-            new HttpClientHandler(),
+        var apiClient = new LauncherApiClient(
+            new StubRemoteHttpTransport(),
             new AuthorizationHeaderFactory(),
             new PatchUrlGroupService());
         var localizer = new LocalizationService();
@@ -434,8 +434,8 @@ public sealed class InstallationOperationStateTests : IDisposable
         Directory.CreateDirectory(gamePath);
         var executablePath = Path.Combine(gamePath, "BlueArchive.exe");
         await File.WriteAllTextAsync(executablePath, "");
-        using var apiClient = new LauncherApiClient(
-            new HttpClientHandler(),
+        var apiClient = new LauncherApiClient(
+            new StubRemoteHttpTransport(),
             new AuthorizationHeaderFactory(),
             new PatchUrlGroupService());
         var localizer = new LocalizationService();
@@ -490,8 +490,8 @@ public sealed class InstallationOperationStateTests : IDisposable
                 ["/c", "exit", "0"],
                 []));
         Assert.Equal(LocalInstallationStateKind.Valid, localGame.Kind);
-        using var apiClient = new LauncherApiClient(
-            new HttpClientHandler(),
+        var apiClient = new LauncherApiClient(
+            new StubRemoteHttpTransport(),
             new AuthorizationHeaderFactory(),
             new PatchUrlGroupService());
         var localizer = new LocalizationService();
@@ -743,8 +743,8 @@ public sealed class InstallationOperationStateTests : IDisposable
     [Fact]
     public async Task RepairAsync_WhenRuntimeStateDoesNotAllowRepair_ReturnsInvalidState()
     {
-        using var apiClient = new LauncherApiClient(
-            new HttpClientHandler(),
+        var apiClient = new LauncherApiClient(
+            new StubRemoteHttpTransport(),
             new AuthorizationHeaderFactory(),
             new PatchUrlGroupService());
         using var service = new GameDownloadService(

@@ -69,37 +69,6 @@ public sealed class HttpClientFactory : IDisposable
     }
 
     /// <summary>
-    /// Creates an HttpClient with a BaseAddress and timeout (direct connection, no proxy).
-    /// The returned client shares the pooled handler and must be disposed by the caller.
-    /// </summary>
-    public HttpClient CreateClient(string baseAddress, TimeSpan timeout)
-    {
-        ThrowIfDisposed();
-        var client = new HttpClient(defaultHandler, disposeHandler: false)
-        {
-            BaseAddress = new Uri(baseAddress),
-            Timeout = timeout
-        };
-        ApplyHttpVersion(client);
-        return client;
-    }
-
-    /// <summary>
-    /// Creates an HttpClient with a timeout and no base address (direct connection, no proxy).
-    /// The returned client shares the pooled handler and must be disposed by the caller.
-    /// </summary>
-    public HttpClient CreateClient(TimeSpan timeout)
-    {
-        ThrowIfDisposed();
-        var client = new HttpClient(defaultHandler, disposeHandler: false)
-        {
-            Timeout = timeout
-        };
-        ApplyHttpVersion(client);
-        return client;
-    }
-
-    /// <summary>
     /// Returns a lease to a proxy-aware HttpClient. Direct clients share the long-lived
     /// default handler; proxy modes share a cached handler keyed by proxy mode and
     /// revalidated against the current proxy fingerprint on every lease, so a system

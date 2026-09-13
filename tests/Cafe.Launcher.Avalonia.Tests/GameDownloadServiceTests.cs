@@ -70,7 +70,7 @@ public sealed class GameDownloadServiceTests : IDisposable
     [Fact]
     public void Dispose_WhenCalledTwice_DoesNotThrow()
     {
-        using var apiClient = new LauncherApiClient(new HttpClientHandler(), new AuthorizationHeaderFactory(), new PatchUrlGroupService());
+        var apiClient = new LauncherApiClient(new StubRemoteHttpTransport(), new AuthorizationHeaderFactory(), new PatchUrlGroupService());
         var service = CreateService(apiClient);
 
         service.Dispose();
@@ -80,7 +80,7 @@ public sealed class GameDownloadServiceTests : IDisposable
     [Fact]
     public void Dispose_AfterStop_DoesNotThrow()
     {
-        using var apiClient = new LauncherApiClient(new HttpClientHandler(), new AuthorizationHeaderFactory(), new PatchUrlGroupService());
+        var apiClient = new LauncherApiClient(new StubRemoteHttpTransport(), new AuthorizationHeaderFactory(), new PatchUrlGroupService());
         var service = CreateService(apiClient);
 
         service.Stop();
@@ -92,7 +92,7 @@ public sealed class GameDownloadServiceTests : IDisposable
     {
         // Shutdown calls Stop() twice (lifecycle prepare + dispose) with no active session.
         // Only a real session counts as a user stop, so the log must stay clean.
-        using var apiClient = new LauncherApiClient(new HttpClientHandler(), new AuthorizationHeaderFactory(), new PatchUrlGroupService());
+        var apiClient = new LauncherApiClient(new StubRemoteHttpTransport(), new AuthorizationHeaderFactory(), new PatchUrlGroupService());
         using var logger = new UnifiedLogger(Path.Combine(tempDir, "logs"));
         // Debug builds default the switch to Verbose but Release defaults it to
         // Information, while the stop line and the sentinel below are both
@@ -125,7 +125,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
         var fileBytes = Encoding.UTF8.GetBytes("stopped-content");
         var manifestFile = await CreateManifestFileAsync(tempDir, "data/file.bin", fileBytes);
-        using var apiClient = CreateManifestApiClient(manifestFile);
+        var apiClient = CreateManifestApiClient(manifestFile);
         var downloader = new ControlledFileDownloadService(fileBytes);
         using var logger = new UnifiedLogger(Path.Combine(tempDir, "logs"));
         // The stop line is Debug-severity and Release defaults the switch to Information,
@@ -333,7 +333,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         var hashPath = Path.Combine(tempDir, "hash-source.bin");
         await File.WriteAllBytesAsync(hashPath, expectedBytes);
         var expectedHash = await new Crc64Service().ComputeFileAsync(hashPath);
-        using var apiClient = new LauncherApiClient(new HttpClientHandler(), new AuthorizationHeaderFactory(), new PatchUrlGroupService());
+        var apiClient = new LauncherApiClient(new StubRemoteHttpTransport(), new AuthorizationHeaderFactory(), new PatchUrlGroupService());
         using var service = CreateService(apiClient);
         var handler = new RetryContentHandler(expectedBytes);
         using var client = new HttpClient(handler);
@@ -382,7 +382,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         var hashPath = Path.Combine(tempDir, "hash-source.bin");
         await File.WriteAllBytesAsync(hashPath, expectedBytes);
         var expectedHash = await new Crc64Service().ComputeFileAsync(hashPath);
-        using var apiClient = new LauncherApiClient(new HttpClientHandler(), new AuthorizationHeaderFactory(), new PatchUrlGroupService());
+        var apiClient = new LauncherApiClient(new StubRemoteHttpTransport(), new AuthorizationHeaderFactory(), new PatchUrlGroupService());
         using var service = CreateService(apiClient);
         var handler = new AlwaysWrongContentHandler();
         using var client = new HttpClient(handler);
@@ -580,7 +580,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         var settingsService = new LauncherSettingsService(settingsPath);
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
         await WriteLocalGameFilesAsync(gamePath);
-        using var apiClient = CreateManifestApiClient();
+        var apiClient = CreateManifestApiClient();
         var service = CreateService(apiClient, settingsService, statePath);
 
         var result = await service.InstallOrUpdateAsync(CreateSnapshot(gamePath), _ => { });
@@ -616,7 +616,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         await File.WriteAllTextAsync(
             manifestPath,
             (await File.ReadAllTextAsync(manifestPath)).Insert(1, "\"sentinel\":\"keep\","));
-        using var apiClient = CreateManifestApiClient();
+        var apiClient = CreateManifestApiClient();
         var service = CreateService(apiClient, settingsService, statePath);
         var snapshot = CreateSnapshot(gamePath);
 
@@ -653,7 +653,7 @@ public sealed class GameDownloadServiceTests : IDisposable
                 LaunchParameters: [],
                 Files: []));
         Assert.Equal(LocalInstallationStateKind.Valid, committed.Kind);
-        using var apiClient = CreateManifestApiClient();
+        var apiClient = CreateManifestApiClient();
         var service = CreateService(apiClient, settingsService, statePath);
         DenyCreateFiles(gamePath);
         try
@@ -708,7 +708,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         var hashPath = Path.Combine(tempDir, "hash-source.bin");
         await File.WriteAllBytesAsync(hashPath, fileBytes);
         var expectedHash = await new Crc64Service().ComputeFileAsync(hashPath);
-        using var apiClient = CreateManifestApiClient(
+        var apiClient = CreateManifestApiClient(
             new ManifestFile
             {
                 Path = "data/file.bin",
@@ -749,7 +749,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
         var fileBytes = Encoding.UTF8.GetBytes("pause-resume-content");
         var manifestFile = await CreateManifestFileAsync(tempDir, "data/file.bin", fileBytes);
-        using var apiClient = CreateManifestApiClient(manifestFile);
+        var apiClient = CreateManifestApiClient(manifestFile);
         var downloader = new ControlledFileDownloadService(fileBytes);
         using var service = CreateService(
             apiClient,
@@ -790,7 +790,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         var statePath = Path.Combine(tempDir, "download_state.json");
         var fileBytes = Encoding.UTF8.GetBytes("stopped-content");
         var manifestFile = await CreateManifestFileAsync(tempDir, "data/file.bin", fileBytes);
-        using var apiClient = CreateManifestApiClient(manifestFile);
+        var apiClient = CreateManifestApiClient(manifestFile);
         var downloader = new ControlledFileDownloadService(fileBytes);
         using var service = CreateService(apiClient, settingsService, statePath, downloader);
         var progress = new List<GameOperationProgress>();
@@ -830,7 +830,7 @@ public sealed class GameDownloadServiceTests : IDisposable
             Size = long.MaxValue.ToString(CultureInfo.InvariantCulture),
             Hash = "0"
         };
-        using var apiClient = CreateManifestApiClient(manifestFile);
+        var apiClient = CreateManifestApiClient(manifestFile);
         var downloader = new StubFileDownloadService();
         using var service = CreateService(
             apiClient,
@@ -864,7 +864,7 @@ public sealed class GameDownloadServiceTests : IDisposable
             Size = plannedDownloadBytes.ToString(CultureInfo.InvariantCulture),
             Hash = "0"
         };
-        using var apiClient = CreateManifestApiClient(manifestFile);
+        var apiClient = CreateManifestApiClient(manifestFile);
         var downloader = new StubFileDownloadService();
         var diskSpaceService = new DiskSpaceService
         {
@@ -905,7 +905,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
         var fileBytes = new byte[10];
         var manifestFile = await CreateManifestFileAsync(tempDir, "data/file.bin", fileBytes);
-        using var apiClient = CreateManifestApiClient(manifestFile);
+        var apiClient = CreateManifestApiClient(manifestFile);
         var diskSpaceService = new DiskSpaceService
         {
             GetAvailableBytesOverride = _ => availableBytes
@@ -941,7 +941,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
         var fileBytes = new byte[10];
         var manifestFile = await CreateManifestFileAsync(tempDir, "data/update.bin", fileBytes);
-        using var apiClient = CreateManifestApiClient(manifestFile);
+        var apiClient = CreateManifestApiClient(manifestFile);
         var diskSpaceService = new DiskSpaceService
         {
             GetAvailableBytesOverride = _ => 15
@@ -977,7 +977,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
         var fileBytes = new byte[10];
         var manifestFile = await CreateManifestFileAsync(tempDir, "data/repair.bin", fileBytes);
-        using var apiClient = CreateManifestApiClient(manifestFile);
+        var apiClient = CreateManifestApiClient(manifestFile);
         var diskSpaceService = new DiskSpaceService
         {
             GetAvailableBytesOverride = _ => 15
@@ -1016,7 +1016,7 @@ public sealed class GameDownloadServiceTests : IDisposable
             Size = long.MaxValue.ToString(CultureInfo.InvariantCulture),
             Hash = "0"
         };
-        using var apiClient = CreateManifestApiClient(manifestFile);
+        var apiClient = CreateManifestApiClient(manifestFile);
         var statePath = Path.Combine(tempDir, "download_state.json");
         using var service = CreateService(
             apiClient,
@@ -1045,7 +1045,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
         var fileBytes = new byte[10];
         var manifestFile = await CreateManifestFileAsync(tempDir, "data/file.bin", fileBytes);
-        using var apiClient = CreateManifestApiClient(manifestFile);
+        var apiClient = CreateManifestApiClient(manifestFile);
         var readCount = 0;
         var diskSpaceService = new DiskSpaceService
         {
@@ -1100,7 +1100,7 @@ public sealed class GameDownloadServiceTests : IDisposable
                 Hash = hashFile.Hash
             })
             .ToArray();
-        using var apiClient = CreateManifestApiClient(manifestFiles);
+        var apiClient = CreateManifestApiClient(manifestFiles);
         var downloader = new ParallelTrackingFileDownloadService(fileBytes, expectedBlockedCount: 10);
         using var service = CreateService(
             apiClient,
@@ -1136,7 +1136,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
         var expectedBytes = Encoding.UTF8.GetBytes("verified-content");
         var manifestFile = await CreateManifestFileAsync(tempDir, "data/file.bin", expectedBytes);
-        using var apiClient = CreateManifestApiClient(manifestFile);
+        var apiClient = CreateManifestApiClient(manifestFile);
         var downloader = new VerificationRetryFileDownloadService(
             Encoding.UTF8.GetBytes("invalid-content"),
             expectedBytes);
@@ -1169,7 +1169,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         var fileBytes = new byte[1024 * 1024];
         Random.Shared.NextBytes(fileBytes);
         var manifestFile = await CreateManifestFileAsync(tempDir, "data/file.bin", fileBytes);
-        using var apiClient = CreateManifestApiClient(manifestFile);
+        var apiClient = CreateManifestApiClient(manifestFile);
         using var service = CreateService(
             apiClient,
             settingsService,
@@ -1198,7 +1198,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         var fileBytes = new byte[1024];
         Random.Shared.NextBytes(fileBytes);
         var manifestFile = await CreateManifestFileAsync(tempDir, "data/file.bin", fileBytes);
-        using var apiClient = CreateManifestApiClient(manifestFile);
+        var apiClient = CreateManifestApiClient(manifestFile);
         using var service = CreateService(
             apiClient,
             settingsService,
@@ -1234,7 +1234,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         var temporaryPath = Path.Combine(gamePath, "data", "file.bin.tmp");
         Directory.CreateDirectory(Path.GetDirectoryName(temporaryPath)!);
         await File.WriteAllBytesAsync(temporaryPath, fileBytes[..400]);
-        using var apiClient = CreateManifestApiClient(manifestFile);
+        var apiClient = CreateManifestApiClient(manifestFile);
         using var service = CreateService(
             apiClient,
             settingsService,
@@ -1363,7 +1363,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
         var expectedBytes = Encoding.UTF8.GetBytes("expected-content");
         var manifestFile = await CreateManifestFileAsync(tempDir, "data/file.bin", expectedBytes);
-        using var apiClient = CreateManifestApiClient(manifestFile);
+        var apiClient = CreateManifestApiClient(manifestFile);
         var downloader = new VerificationRetryFileDownloadService(
             Encoding.UTF8.GetBytes("invalid-content"),
             Encoding.UTF8.GetBytes("invalid-content"));
@@ -1406,7 +1406,7 @@ public sealed class GameDownloadServiceTests : IDisposable
             Basis = "manifest.json",
             GamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP")
         }));
-        using var apiClient = CreateManifestApiClient();
+        var apiClient = CreateManifestApiClient();
         var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
         var service = CreateService(apiClient, settingsService, statePath);
 
@@ -1429,7 +1429,7 @@ public sealed class GameDownloadServiceTests : IDisposable
             GamePath = gamePath,
             PatchUrlGroup = PatchUrlGroups.Official
         }));
-        using var apiClient = CreateManifestApiClient();
+        var apiClient = CreateManifestApiClient();
         var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
         var service = CreateService(apiClient, settingsService, statePath);
         var snapshot = CreateSnapshot(gamePath);
@@ -1451,9 +1451,12 @@ public sealed class GameDownloadServiceTests : IDisposable
         var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
         var statePath = Path.Combine(tempDir, "download_state.json");
-        var handler = new BlockingManifestHandler();
-        using var apiClient = new LauncherApiClient(
-            handler,
+        var transport = new GatedRemoteHttpTransport(new StubRemoteHttpTransport(uri =>
+            uri.PathAndQuery.Contains("/api/launcher/game/config/json", StringComparison.Ordinal)
+                ? "{\"code\":200,\"data\":{\"url\":\"https://manifest.example.invalid/manifest.json\"}}"
+                : "{\"source\":\"\",\"file\":[]}"));
+        var apiClient = new LauncherApiClient(
+            transport,
             new AuthorizationHeaderFactory(),
             new PatchUrlGroupService());
         using var service = CreateService(apiClient, settingsService, statePath);
@@ -1461,12 +1464,12 @@ public sealed class GameDownloadServiceTests : IDisposable
         snapshot.RuntimeState = LauncherRuntimeState.Corrupted;
         var repairTask = service.RepairAsync(snapshot, _ => { });
 
-        await handler.RequestStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        await transport.RequestStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
         var resumeTask = service.ResumePersistedAsync(snapshot, _ => { });
 
         try
         {
-            // repairTask 被 handler.Release 门控、必然仍在执行；resumeTask 在 5 秒预算内
+            // repairTask 被 transport.Release 门控、必然仍在执行；resumeTask 在 5 秒预算内
             // 完成（预算放宽以免慢机误报）即证明续传持久化不等待正在进行的修复。
             await resumeTask.WaitAsync(TimeSpan.FromSeconds(5));
             Assert.Null(await resumeTask);
@@ -1474,7 +1477,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         }
         finally
         {
-            handler.Release.TrySetResult();
+            transport.Release.TrySetResult();
             service.Stop();
             await repairTask;
             Directory.Delete(tempDir, recursive: true);
@@ -1490,9 +1493,12 @@ public sealed class GameDownloadServiceTests : IDisposable
         await File.WriteAllTextAsync(Path.Combine(gamePath, "unknown.bin"), "keep");
         var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
-        var handler = new LatestManifestOnlyHandler();
-        using var apiClient = new LauncherApiClient(
-            handler,
+        var transport = new StubRemoteHttpTransport(uri =>
+            uri.PathAndQuery.Contains("/api/launcher/game/config/json", StringComparison.Ordinal)
+                ? "{\"code\":200,\"data\":{\"url\":\"https://manifest.example.invalid/manifest.json\"}}"
+                : "{\"source\":\"\",\"file\":[]}");
+        var apiClient = new LauncherApiClient(
+            transport,
             new AuthorizationHeaderFactory(),
             new PatchUrlGroupService());
         using var service = CreateService(
@@ -1506,7 +1512,10 @@ public sealed class GameDownloadServiceTests : IDisposable
         var state = await new LocalInstallationStateStore().ReadAsync(gamePath);
 
         Assert.True(result.Success);
-        Assert.Equal(1, handler.ManifestUrlRequestCount);
+        Assert.Equal(
+            1,
+            transport.RequestedUris.Count(uri =>
+                uri.PathAndQuery.Contains("/api/launcher/game/config/json", StringComparison.Ordinal)));
         Assert.Equal(LocalInstallationStateKind.Valid, state.Kind);
         Assert.Equal("1.0.0", state.Manifest?.Version);
         Assert.True(File.Exists(Path.Combine(gamePath, "unknown.bin")));
@@ -1625,16 +1634,20 @@ public sealed class GameDownloadServiceTests : IDisposable
 
     private static LauncherApiClient CreateManifestApiClient()
     {
-        return new LauncherApiClient(
-            new ManifestHandler(),
-            new AuthorizationHeaderFactory(),
-            new PatchUrlGroupService());
+        return CreateManifestApiClient([]);
     }
 
     private static LauncherApiClient CreateManifestApiClient(params ManifestFile[] files)
     {
         return new LauncherApiClient(
-            new ManifestHandler(files),
+            new StubRemoteHttpTransport(uri =>
+                uri.PathAndQuery.Contains("/api/launcher/game/config/json", StringComparison.Ordinal)
+                    ? "{\"code\":200,\"data\":{\"url\":\"https://manifest.example.invalid/manifest.json\"}}"
+                    : JsonSerializer.Serialize(new RemoteManifest
+                    {
+                        Source = "source",
+                        File = files.ToList()
+                    })),
             new AuthorizationHeaderFactory(),
             new PatchUrlGroupService());
     }
@@ -1678,25 +1691,6 @@ public sealed class GameDownloadServiceTests : IDisposable
                 },
                 ConnectionProxy: null),
             CancellationToken.None);
-    }
-
-    private sealed class ManifestHandler(params ManifestFile[] files) : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-        {
-            var requestUri = request.RequestUri?.ToString() ?? "";
-            var json = requestUri.Contains("/api/launcher/game/config/json", StringComparison.Ordinal)
-                ? "{\"code\":200,\"data\":{\"url\":\"https://manifest.example.invalid/manifest.json\"}}"
-                : JsonSerializer.Serialize(new RemoteManifest
-                {
-                    Source = "source",
-                    File = files.ToList()
-                });
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent(json, Encoding.UTF8, "application/json")
-            });
-        }
     }
 
     private sealed class ChunkedFileDownloadService(
@@ -1857,7 +1851,12 @@ public sealed class GameDownloadServiceTests : IDisposable
         }
     }
 
-    private sealed class BlockingManifestHandler : HttpMessageHandler
+    /// <summary>
+    /// 在首个 API 请求处挂起、直到 Release 的传输替身：用 await 门控（替代原来阻塞的
+    /// HttpMessageHandler 假体，且保留取消语义），应答本身仍交给按 URI 应答的
+    /// <see cref="StubRemoteHttpTransport"/>。
+    /// </summary>
+    private sealed class GatedRemoteHttpTransport(StubRemoteHttpTransport inner) : IRemoteHttpTransport
     {
         public TaskCompletionSource RequestStarted { get; } =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -1865,48 +1864,21 @@ public sealed class GameDownloadServiceTests : IDisposable
         public TaskCompletionSource Release { get; } =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        protected override async Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken)
+        public async Task<T?> GetJsonAsync<T>(
+            Uri uri,
+            RemoteRequestOptions? options = null,
+            CancellationToken cancellationToken = default)
         {
             RequestStarted.TrySetResult();
-            await Release.Task.WaitAsync(cancellationToken);
-            var requestUri = request.RequestUri?.ToString() ?? "";
-            var json = requestUri.Contains("/api/launcher/game/config/json", StringComparison.Ordinal)
-                ? "{\"code\":200,\"data\":{\"url\":\"https://manifest.example.invalid/manifest.json\"}}"
-                : "{\"source\":\"\",\"file\":[]}";
-            return new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent(json, Encoding.UTF8, "application/json")
-            };
+            await Release.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+            return await inner.GetJsonAsync<T>(uri, options, cancellationToken).ConfigureAwait(false);
         }
-    }
 
-    private sealed class LatestManifestOnlyHandler : HttpMessageHandler
-    {
-        public int ManifestUrlRequestCount { get; private set; }
-
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken)
-        {
-            var requestUri = request.RequestUri?.ToString() ?? "";
-            string json;
-            if (requestUri.Contains("/api/launcher/game/config/json", StringComparison.Ordinal))
-            {
-                ManifestUrlRequestCount++;
-                json = "{\"code\":200,\"data\":{\"url\":\"https://manifest.example.invalid/manifest.json\"}}";
-            }
-            else
-            {
-                json = "{\"source\":\"\",\"file\":[]}";
-            }
-
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent(json, Encoding.UTF8, "application/json")
-            });
-        }
+        public Task<RemoteBody> GetStreamAsync(
+            Uri uri,
+            RemoteRequestOptions? options = null,
+            CancellationToken cancellationToken = default) =>
+            inner.GetStreamAsync(uri, options, cancellationToken);
     }
 
     private sealed class RetryContentHandler : HttpMessageHandler

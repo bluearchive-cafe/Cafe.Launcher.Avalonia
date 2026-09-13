@@ -26,7 +26,6 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
     private readonly IErrorHandlingService errorHandling;
     private readonly CancellationTokenSource lifetimeCts = new();
     private bool disposed;
-    private string proxyMode = ProxyModes.Auto;
     private string patchUrlGroup = PatchUrlGroups.Official;
     private bool isLoadingSource;
     private bool isSettingUidSource;
@@ -131,7 +130,6 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
 
     public void ApplySettings(LauncherSettings settings)
     {
-        proxyMode = settings.ProxyMode;
         patchUrlGroup = settings.PatchUrlGroup;
     }
 
@@ -271,7 +269,6 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
                 GetResourcePanelItem(ResourcePanelResourceCodes.Text).IsEnabled,
                 GetResourcePanelItem(ResourcePanelResourceCodes.Voice).IsEnabled,
                 GetResourcePanelItem(ResourcePanelResourceCodes.Media).IsEnabled,
-                proxyMode,
                 lifetimeCts.Token);
             ResourcePanelMessage = localizer.T(LocalizationKeys.ResourcePanelSaved);
             toastService.ShowSuccess(localizer.T(LocalizationKeys.ResourcePanelSaved));
@@ -380,7 +377,7 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
     {
         ResourcePanelMessage = localizer.T(LocalizationKeys.ResourcePanelLoading);
         SetResourcePanelStatusText(localizer.T(LocalizationKeys.ResourcePanelLoading));
-        var result = await resourcePanelService.LoadDataAsync(uid, proxyMode, cancellationToken);
+        var result = await resourcePanelService.LoadDataAsync(uid, cancellationToken);
         ApplyResult(result);
         ResourcePanelMessage = localizer.T(LocalizationKeys.StatusNetworkLoaded);
     }

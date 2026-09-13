@@ -1,10 +1,9 @@
 using System.Net;
-using System.Net.Http;
-using System.Text;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Auth;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -50,8 +49,8 @@ public sealed class LauncherCoreServiceTests : IDisposable
     [Fact]
     public async Task LoadAsync_WhenGameConfigFails_PreservesLocalAndOtherRemoteState()
     {
-        var handler = new LauncherStateHandler("/api/launcher/game/config");
-        var service = await CreateServiceAsync(handler);
+        var transport = CreateLauncherStateTransport("/api/launcher/game/config");
+        var service = await CreateServiceAsync(transport);
 
         var snapshot = await service.LoadAsync();
 
@@ -68,8 +67,8 @@ public sealed class LauncherCoreServiceTests : IDisposable
     [Fact]
     public async Task LoadAsync_WhenOptionalRemoteCallFails_RemainsReady()
     {
-        var handler = new LauncherStateHandler("/api/launcher/operations/resource");
-        var service = await CreateServiceAsync(handler);
+        var transport = CreateLauncherStateTransport("/api/launcher/operations/resource");
+        var service = await CreateServiceAsync(transport);
 
         var snapshot = await service.LoadAsync();
 
@@ -82,21 +81,23 @@ public sealed class LauncherCoreServiceTests : IDisposable
     [Fact]
     public async Task LoadAsync_WhenCancellationIsRequested_PropagatesCancellation()
     {
-        var service = await CreateServiceAsync(new CancellationHandler());
-        using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
+        var service = await CreateServiceAsync(new StubRemoteHttpTransport(
+            _ => new OperationCanceledException("simulated canceled remote read")));
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
             () => service.LoadAsync(cancellation.Token));
     }
 
     [Fact]
-    public async Task LoadAsync_WhenRemoteReadsStall_DegradesWithinBudgetWithoutCancellation()
+    public async Task LoadAsync_WhenRemoteReadsKeepFailing_DegradesWithinBudgetWithoutCancellation()
     {
-        // 守卫（启动预算）：六个远端读取各自有 3×30s 超时 + 退避（叠加最坏 ~92s
-        // 才降级）。整体预算到点后快照必须以降级态返回，而不是继续挂在重试里；
-        // 调用方 token 全程未取消。
+        // 守卫（启动预算）：远端读取持续失败（真实传输下表现为 3×30s 超时 + 退避，
+        // 最坏 ~92s 才降级）时，整体预算到点后快照必须以降级态返回，而不是把
+        // 失败抛出或继续挂在调用方 token 上。调用方 token 全程未取消。
         var service = await CreateServiceAsync(
-            new CancellationHandler(),
+            new StubRemoteHttpTransport(_ => new TaskCanceledException("simulated stalled remote read")),
             remoteStateBudget: TimeSpan.FromMilliseconds(250));
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
@@ -113,7 +114,7 @@ public sealed class LauncherCoreServiceTests : IDisposable
     public async Task LoadAsync_WhenSettingsDocumentHasNoGamePath_ReturnsEffectiveDefaultGamePath()
     {
         var service = await CreateServiceAsync(
-            new LauncherStateHandler("/api/launcher/never"),
+            CreateLauncherStateTransport("/api/launcher/never"),
             useEmptySettingsDocument: true);
         var expectedPath = new GameInstallationPath().GetDefaultGamePath();
 
@@ -129,8 +130,8 @@ public sealed class LauncherCoreServiceTests : IDisposable
         var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
         await settingsService.SaveAsync(new LauncherSettings { EnableHttp2 = true });
         using var factory = new HttpClientFactory(new ProxySettingsService());
-        using var apiClient = new LauncherApiClient(
-            new LauncherStateHandler("/api/launcher/never"),
+        var apiClient = new LauncherApiClient(
+            CreateLauncherStateTransport("/api/launcher/never"),
             new AuthorizationHeaderFactory(),
             new PatchUrlGroupService());
         var service = new LauncherCoreService(
@@ -143,13 +144,13 @@ public sealed class LauncherCoreServiceTests : IDisposable
 
         await service.LoadAsync();
 
-        using var client = factory.CreateClient(TimeSpan.FromSeconds(1));
-        Assert.Equal(HttpVersion.Version20, client.DefaultRequestVersion);
-        Assert.Equal(HttpVersionPolicy.RequestVersionOrLower, client.DefaultVersionPolicy);
+        using var lease = await factory.CreateLeaseAsync(ProxyModes.Direct);
+        Assert.Equal(HttpVersion.Version20, lease.Client.DefaultRequestVersion);
+        Assert.Equal(HttpVersionPolicy.RequestVersionOrLower, lease.Client.DefaultVersionPolicy);
     }
 
     private async Task<LauncherCoreService> CreateServiceAsync(
-        HttpMessageHandler handler,
+        StubRemoteHttpTransport transport,
         bool useEmptySettingsDocument = false,
         TimeSpan? remoteStateBudget = null)
     {
@@ -178,7 +179,7 @@ public sealed class LauncherCoreServiceTests : IDisposable
         }
 
         var apiClient = new LauncherApiClient(
-            handler,
+            transport,
             new AuthorizationHeaderFactory(),
             new PatchUrlGroupService());
         return new LauncherCoreService(
@@ -208,26 +209,22 @@ public sealed class LauncherCoreServiceTests : IDisposable
         }
     }
 
-    private sealed class LauncherStateHandler : HttpMessageHandler
-    {
-        private readonly string failingPath;
-
-        public LauncherStateHandler(string failingPath)
+    /// <summary>
+    /// 按 URL 应答的状态快照替身：<paramref name="failingPath"/> 上的请求以 500 形态
+    /// 失败，其余端点返回 code 200 的空数据 envelope（game/config 返回完整版本数据）。
+    /// </summary>
+    private static StubRemoteHttpTransport CreateLauncherStateTransport(string failingPath) =>
+        new(uri =>
         {
-            this.failingPath = failingPath;
-        }
-
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken)
-        {
-            var path = request.RequestUri?.AbsolutePath ?? "";
-            if (path == failingPath)
+            if (uri.AbsolutePath == failingPath)
             {
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.InternalServerError));
+                return new HttpRequestException(
+                    $"simulated server failure for {failingPath}",
+                    null,
+                    HttpStatusCode.InternalServerError);
             }
 
-            var data = path switch
+            var data = uri.AbsolutePath switch
             {
                 "/api/launcher/game/config" => """
                     {
@@ -240,24 +237,6 @@ public sealed class LauncherCoreServiceTests : IDisposable
                     """,
                 _ => "{}"
             };
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent(
-                    $$"""{"code":200,"data":{{data}}}""",
-                    Encoding.UTF8,
-                    "application/json")
-            });
-        }
-    }
-
-    private sealed class CancellationHandler : HttpMessageHandler
-    {
-        protected override async Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken)
-        {
-            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
-            throw new InvalidOperationException("Unreachable.");
-        }
-    }
+            return $$"""{"code":200,"data":{{data}}}""";
+        });
 }

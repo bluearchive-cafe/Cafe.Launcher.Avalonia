@@ -33,24 +33,18 @@ public sealed class ImageCacheService : IDisposable
     internal static readonly TimeSpan CacheEntryLifetime = TimeSpan.FromDays(30);
 
     private readonly string cacheDir;
-    private readonly IHttpClientLeaseSource httpClientLeaseSource;
+    private readonly IRemoteHttpTransport transport;
     private readonly Crc64Service crc64Service;
-    private readonly RemoteHttpUrlValidator urlValidator;
     private readonly ConcurrentDictionary<string, SemaphoreSlim> cacheLocks =
         new(StringComparer.Ordinal);
     private bool disposed;
 
     public ImageCacheService(
-        HttpClientFactory httpClientFactory,
-        Crc64Service crc64Service,
-        RemoteHttpUrlValidator urlValidator)
+        IRemoteHttpTransport transport,
+        Crc64Service crc64Service)
         : this(
-            new ProxyAwareHttpClientLeaseSource(
-                httpClientFactory,
-                baseAddress: null,
-                timeout: RequestTimeout),
+            transport,
             crc64Service,
-            urlValidator,
             Path.Combine(
                 LauncherUserDataDirectory.Root,
                 "image-cache"))
@@ -58,14 +52,12 @@ public sealed class ImageCacheService : IDisposable
     }
 
     internal ImageCacheService(
-        IHttpClientLeaseSource httpClientLeaseSource,
+        IRemoteHttpTransport transport,
         Crc64Service crc64Service,
-        RemoteHttpUrlValidator urlValidator,
         string cacheDir)
     {
-        this.httpClientLeaseSource = httpClientLeaseSource;
+        this.transport = transport;
         this.crc64Service = crc64Service;
-        this.urlValidator = urlValidator;
         this.cacheDir = cacheDir;
         try
         {
@@ -114,18 +106,19 @@ public sealed class ImageCacheService : IDisposable
 
     /// <summary>
     /// Downloads an image from the given URL and caches it under the CRC64 hash.
-    /// Returns the local file path.
+    /// Returns the local file path. The proxy mode resolves from launcher settings
+    /// via the transport.
     /// </summary>
     public Task<string> CacheImageAsync(string url, string crc64Hash, CancellationToken ct = default)
     {
-        return CacheImageAsync(url, crc64Hash, ProxyModes.Direct, ct);
+        return CacheImageAsync(url, crc64Hash, ResolvedModeOptions(), ct);
     }
 
-    public async Task<string> CacheImageAsync(
+    private async Task<string> CacheImageAsync(
         string url,
         string crc64Hash,
-        string proxyMode,
-        CancellationToken ct = default)
+        RemoteRequestOptions options,
+        CancellationToken ct)
     {
         // Defense-in-depth: reject hashes containing path separators or traversal sequences
         if (crc64Hash.Contains('/') || crc64Hash.Contains('\\') || crc64Hash.Contains(".."))
@@ -144,7 +137,7 @@ public sealed class ImageCacheService : IDisposable
             var tempPath = $"{cachePath}.{Guid.NewGuid():N}.tmp";
             try
             {
-                var bytes = await GetImageBytesAsync(url, proxyMode, ct).ConfigureAwait(false);
+                var bytes = await GetImageBytesAsync(new Uri(url), options, ct).ConfigureAwait(false);
                 await File.WriteAllBytesAsync(tempPath, bytes, ct).ConfigureAwait(false);
 
                 var actual = await crc64Service.ComputeFileAsync(tempPath, null, ct).ConfigureAwait(false);
@@ -170,10 +163,10 @@ public sealed class ImageCacheService : IDisposable
     /// <summary>
     /// Returns a URL-keyed image cache entry when it is still fresh, otherwise downloads and
     /// persists a new copy. Use this when the remote payload does not provide a content hash.
+    /// The proxy mode resolves from launcher settings via the transport.
     /// </summary>
     public async Task<byte[]> GetCachedOrDownloadImageBytesAsync(
         string url,
-        string proxyMode,
         CancellationToken ct = default)
     {
         var cacheKey = Convert.ToHexString(
@@ -196,7 +189,7 @@ public sealed class ImageCacheService : IDisposable
                 }
             }
 
-            var bytes = await GetImageBytesAsync(url, proxyMode, ct).ConfigureAwait(false);
+            var bytes = await GetImageBytesAsync(new Uri(url), ResolvedModeOptions(), ct).ConfigureAwait(false);
             var tempPath = $"{cachePath}.{Guid.NewGuid():N}.tmp";
             try
             {
@@ -223,44 +216,34 @@ public sealed class ImageCacheService : IDisposable
         }
     }
 
+    /// <summary>
+    /// Downloads the image bytes directly, pinning a direct connection: callers
+    /// of this overload deliberately bypass the settings-resolved proxy mode.
+    /// </summary>
     public Task<byte[]> GetImageBytesAsync(string url, CancellationToken ct = default)
     {
-        return GetImageBytesAsync(url, ProxyModes.Direct, ct);
+        return GetImageBytesAsync(new Uri(url), DirectModeOptions(), ct);
     }
 
-    public async Task<byte[]> GetImageBytesAsync(
-        string url,
-        string proxyMode,
-        CancellationToken ct = default)
+    private async Task<byte[]> GetImageBytesAsync(
+        Uri uri,
+        RemoteRequestOptions options,
+        CancellationToken ct)
     {
-        using var lease = await CreateRequestClientAsync(proxyMode, ct).ConfigureAwait(false);
-        using var response = await RemoteHttpRequestService.SendAsync(
-            lease.Client,
-            new Uri(url),
-            static uri =>
-            {
-                var request = new HttpRequestMessage(HttpMethod.Get, uri);
-                request.Headers.TryAddWithoutValidation("User-Agent",
-                    $"CafeLauncher/{BuildInfo.LauncherVersion} (.NET)");
-                return request;
-            },
-            urlValidator,
-            ct,
-            connectionProxy: lease.ConnectionProxy).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
-        if (response.Content.Headers.ContentLength is > MaxImageBytes)
+        var remote = await transport.GetStreamAsync(uri, options, ct).ConfigureAwait(false);
+        using var input = remote.Content;
+        if (remote.DeclaredContentLength is > MaxImageBytes)
         {
             throw new InvalidDataException("Image response is too large.");
         }
 
-        await using var input = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
         using var output = new MemoryStream();
         var buffer = new byte[64 * 1024];
         while (true)
         {
-            var read = await ResponseBodyReader
-                .ReadAsync(input, buffer, ct)
-                .ConfigureAwait(false);
+            // 停顿预算由传输层的流包装承担：每次读取都有空闲上限，
+            // 静默断流会以 HttpRequestException 浮出而不是永久挂起。
+            var read = await input.ReadAsync(buffer.AsMemory(), ct).ConfigureAwait(false);
             if (read == 0)
             {
                 break;
@@ -277,12 +260,23 @@ public sealed class ImageCacheService : IDisposable
         return output.ToArray();
     }
 
-    private async Task<HttpClientLease> CreateRequestClientAsync(string proxyMode, CancellationToken ct)
+    private static RemoteRequestOptions ResolvedModeOptions() => new()
     {
-        return await httpClientLeaseSource
-            .CreateLeaseAsync(proxyMode, ct)
-            .ConfigureAwait(false);
-    }
+        Timeout = RequestTimeout,
+        ConfigureRequest = ConfigureImageRequest
+    };
+
+    private static RemoteRequestOptions DirectModeOptions() => new()
+    {
+        ProxyMode = ProxyModes.Direct,
+        Timeout = RequestTimeout,
+        ConfigureRequest = ConfigureImageRequest
+    };
+
+    private static void ConfigureImageRequest(HttpRequestMessage request) =>
+        request.Headers.TryAddWithoutValidation(
+            "User-Agent",
+            $"CafeLauncher/{BuildInfo.LauncherVersion} (.NET)");
 
     private static void TryDelete(string path)
     {
@@ -343,7 +337,6 @@ public sealed class ImageCacheService : IDisposable
         }
 
         cacheLocks.Clear();
-        httpClientLeaseSource.Dispose();
         GC.SuppressFinalize(this);
     }
 }
