@@ -1,5 +1,7 @@
 # Fluent 动效实验台交接
 
+> 状态：**已交接**（时点文档；实验台位于 [prototypes/FluentMotionLab](../../prototypes/FluentMotionLab)，承接 [ADR-016](adr/ADR-016-Fluent动效层.md) 的动效验证）。
+
 ## 目标
 
 建立一个与产品代码隔离的 Avalonia 动效实验台，用真实 Avalonia 渲染、语义 Token 和 Windows Fluent 曲线验证 ADR-016。实验台只回答动效手感、连续性、中断和降动效行为，不承担正式架构或生产迁移。
