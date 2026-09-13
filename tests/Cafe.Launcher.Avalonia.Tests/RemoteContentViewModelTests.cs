@@ -2,6 +2,7 @@ using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Testing;
 using Cafe.Launcher.Avalonia.ViewModels;
 
 namespace Cafe.Launcher.Avalonia.Tests;
@@ -17,11 +18,9 @@ public sealed class RemoteContentViewModelTests
     [Fact]
     public void Apply_WhenBannersAreRemoved_StopsExistingCarouselTimer()
     {
-        using var httpClientFactory = new HttpClientFactory(new ProxySettingsService());
         using var imageCacheService = new ImageCacheService(
-            httpClientFactory,
-            new Crc64Service(),
-            RemoteHttpUrlValidator.CreateForTesting());
+            new StubRemoteHttpTransport(),
+            new Crc64Service());
         using var viewModel = new RemoteContentViewModel(
             new LocalizationService(),
             imageCacheService,
@@ -696,11 +695,7 @@ public sealed class RemoteContentViewModelTests
 
     private static TestContext CreateContext(string? language = null)
     {
-        var factory = new HttpClientFactory(new ProxySettingsService());
-        var cache = new ImageCacheService(
-            factory,
-            new Crc64Service(),
-            RemoteHttpUrlValidator.CreateForTesting());
+        var cache = new ImageCacheService(new StubRemoteHttpTransport(), new Crc64Service());
         var localizer = new LocalizationService();
         if (language is not null)
         {
@@ -709,20 +704,17 @@ public sealed class RemoteContentViewModelTests
 
         return new TestContext(
             new RemoteContentViewModel(localizer, cache, new LocalDiagnostics()),
-            cache,
-            factory);
+            cache);
     }
 
     private sealed record TestContext(
         RemoteContentViewModel ViewModel,
-        ImageCacheService Cache,
-        HttpClientFactory Factory) : IDisposable
+        ImageCacheService Cache) : IDisposable
     {
         public void Dispose()
         {
             ViewModel.Dispose();
             Cache.Dispose();
-            Factory.Dispose();
         }
     }
 }

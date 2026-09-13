@@ -240,7 +240,7 @@ public sealed class ShellLifecycleTests : IDisposable
         var core = new ScriptedCoreService(snapshot);
         var fixture = CreateLifecycle(
             core,
-            launcherUpdateService: new LauncherUpdateService(new ThrowingHttpHandler(), currentVersionOverride: "0.0.0"));
+            launcherUpdateService: new LauncherUpdateService(CreateThrowingTransport(), currentVersionOverride: "0.0.0"));
 
         await fixture.Lifecycle.InitializeAsync().WaitAsync(TimeSpan.FromSeconds(2));
         var pendingUpdateCheck = fixture.Lifecycle.PendingStartupUpdateCheck;
@@ -322,7 +322,7 @@ public sealed class ShellLifecycleTests : IDisposable
         settingsService ??= new LauncherSettingsService(
             Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
         launcherUpdateService ??= new LauncherUpdateService(
-            new NotFoundHttpHandler(),
+            CreateNotFoundTransport(),
             currentVersionOverride: "0.0.0");
         operationsBackend ??= new StubGameOperationExecutor();
 
@@ -330,9 +330,9 @@ public sealed class ShellLifecycleTests : IDisposable
         var diagnostics = new LocalDiagnostics();
         var filePickerService = new StubFilePickerService();
         var imageCacheService = new ImageCacheService(
-            httpClientFactory,
+            new StubRemoteHttpTransport(),
             new Crc64Service(),
-            RemoteHttpUrlValidator.CreateForTesting());
+            Path.Combine(tempDir, "image-cache"));
         var settingsEditor = new SettingsEditor();
         var settingsAppearance = new SettingsAppearanceViewModel(settingsEditor);
         var settingsOptions = new SettingsOptionsViewModel(localizer, new DiskSpaceService());
@@ -369,7 +369,7 @@ public sealed class ShellLifecycleTests : IDisposable
                 new BestHttpCookieLibraryService(),
                 settingsService,
                 Path.Combine(tempDir, "missing-resource-panel-cookie")),
-            new ResourcePanelApiClient(new NotFoundHttpHandler()),
+            new ResourcePanelApiClient(CreateNotFoundTransport()),
             diagnostics);
         var resourcePanel = new ResourcePanelViewModel(resourcePanelService, localizer, toastService, errorHandling);
         var remoteContent = new RemoteContentViewModel(localizer, imageCacheService, diagnostics);
@@ -431,7 +431,6 @@ public sealed class ShellLifecycleTests : IDisposable
         disposables.Add(lifecycle);
         disposables.Add(imageCacheService);
         disposables.Add(settingsService);
-        disposables.Add(launcherUpdateService);
 
         return new ShellFixture(
             lifecycle,
@@ -479,21 +478,11 @@ public sealed class ShellLifecycleTests : IDisposable
         }
     }
 
-    /// <summary>所有请求都返回 404 的默认替身,保证夹具不发真实网络请求。</summary>
-    private sealed class NotFoundHttpHandler : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
-    }
+    /// <summary>所有远程请求都以 404 回答的替身,保证夹具不发真实网络请求。</summary>
+    private static StubRemoteHttpTransport CreateNotFoundTransport() => new(_ =>
+        throw new HttpRequestException("stub transport answered NotFound", null, HttpStatusCode.NotFound));
 
-    /// <summary>让更新检查在 HTTP 层抛非网络异常,驱动 CheckForStartupUpdateAsync 的兜底分支。</summary>
-    private sealed class ThrowingHttpHandler : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken) =>
-            throw new InvalidOperationException("update probe failed");
-    }
+    /// <summary>让更新检查在传输层抛 HTTP 错误,驱动 CheckForStartupUpdateAsync 的失败降级分支。</summary>
+    private static StubRemoteHttpTransport CreateThrowingTransport() => new(_ =>
+        throw new HttpRequestException("update probe failed"));
 }

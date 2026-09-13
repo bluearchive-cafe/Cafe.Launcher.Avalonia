@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -10,19 +9,15 @@ using Cafe.Launcher.Avalonia.Models;
 namespace Cafe.Launcher.Avalonia.Services;
 
 /// <summary>
-/// Centralized factory for creating pre-configured <see cref="HttpClient"/> instances
-/// and proxy-aware leases. Eliminates duplicate SocketsHttpHandler/HttpClient creation
-/// across LauncherApiClient, ImageCacheService, ResourcePanelApiClient, and LauncherUpdateService.
-/// Registered as a singleton in DI.
+/// Lease/client plumbing over the shared connection pool: hands out proxy-aware
+/// leases (direct clients share the pooled default handler; proxy handlers come
+/// from <see cref="ProxySettingsService"/>) and owns the connection-level
+/// defaults plus the HTTP/2 preference.
 /// </summary>
 public sealed class HttpClientFactory : IDisposable
 {
-    private sealed record CachedProxyHandler(string Fingerprint, SocketsHttpHandler Handler);
-
     private readonly SocketsHttpHandler defaultHandler;
     private readonly ProxySettingsService proxySettingsService;
-    private readonly Dictionary<string, CachedProxyHandler> proxyHandlers = new(StringComparer.Ordinal);
-    private readonly object proxyHandlerLock = new();
     private bool enableHttp2 = true;
     private bool disposed;
 
@@ -69,37 +64,6 @@ public sealed class HttpClientFactory : IDisposable
     }
 
     /// <summary>
-    /// Creates an HttpClient with a BaseAddress and timeout (direct connection, no proxy).
-    /// The returned client shares the pooled handler and must be disposed by the caller.
-    /// </summary>
-    public HttpClient CreateClient(string baseAddress, TimeSpan timeout)
-    {
-        ThrowIfDisposed();
-        var client = new HttpClient(defaultHandler, disposeHandler: false)
-        {
-            BaseAddress = new Uri(baseAddress),
-            Timeout = timeout
-        };
-        ApplyHttpVersion(client);
-        return client;
-    }
-
-    /// <summary>
-    /// Creates an HttpClient with a timeout and no base address (direct connection, no proxy).
-    /// The returned client shares the pooled handler and must be disposed by the caller.
-    /// </summary>
-    public HttpClient CreateClient(TimeSpan timeout)
-    {
-        ThrowIfDisposed();
-        var client = new HttpClient(defaultHandler, disposeHandler: false)
-        {
-            Timeout = timeout
-        };
-        ApplyHttpVersion(client);
-        return client;
-    }
-
-    /// <summary>
     /// Returns a lease to a proxy-aware HttpClient. Direct clients share the long-lived
     /// default handler; proxy modes share a cached handler keyed by proxy mode and
     /// revalidated against the current proxy fingerprint on every lease, so a system
@@ -122,7 +86,9 @@ public sealed class HttpClientFactory : IDisposable
             return new HttpClientLease(client, ownsClient: true);
         }
 
-        var handler = await GetOrAddProxyHandlerAsync(proxyMode, cancellationToken).ConfigureAwait(false);
+        var handler = await proxySettingsService
+            .GetOrCreateHandlerAsync(proxyMode, cancellationToken)
+            .ConfigureAwait(false);
         var proxyClient = new HttpClient(handler, disposeHandler: false);
         if (baseAddress is not null) proxyClient.BaseAddress = baseAddress;
         if (timeout.HasValue) proxyClient.Timeout = timeout.Value;
@@ -141,73 +107,17 @@ public sealed class HttpClientFactory : IDisposable
         client.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower;
     }
 
-    private async Task<SocketsHttpHandler> GetOrAddProxyHandlerAsync(
-        string proxyMode,
-        CancellationToken cancellationToken)
-    {
-        var fingerprint = await proxySettingsService
-            .GetProxyFingerprintAsync(proxyMode, cancellationToken)
-            .ConfigureAwait(false);
-
-        lock (proxyHandlerLock)
-        {
-            if (proxyHandlers.TryGetValue(proxyMode, out var cached)
-                && cached.Fingerprint == fingerprint)
-            {
-                return cached.Handler;
-            }
-        }
-
-        // Handler creation is async (proxy resolution), so it happens outside the lock;
-        // a concurrent lease may cache an equivalent handler first, in which case the
-        // freshly created one is disposed unused.
-        var created = await proxySettingsService
-            .CreateHttpHandlerAsync(proxyMode, cancellationToken)
-            .ConfigureAwait(false);
-        lock (proxyHandlerLock)
-        {
-            if (proxyHandlers.TryGetValue(proxyMode, out var existing)
-                && existing.Fingerprint == fingerprint)
-            {
-                created.Dispose();
-                return existing.Handler;
-            }
-
-            if (proxyHandlers.TryGetValue(proxyMode, out var stale))
-            {
-                stale.Handler.Dispose();
-            }
-
-            proxyHandlers[proxyMode] = new CachedProxyHandler(fingerprint, created);
-            return created;
-        }
-    }
-
     private void ThrowIfDisposed()
     {
         ObjectDisposedException.ThrowIf(disposed, this);
-    }
-
-    /// <summary>Only for use by test projects (see <c>InternalsVisibleTo</c>).</summary>
-    internal int CachedProxyHandlerCount
-    {
-        get { lock (proxyHandlerLock) return proxyHandlers.Count; }
     }
 
     public void Dispose()
     {
         if (disposed) return;
         disposed = true;
-        lock (proxyHandlerLock)
-        {
-            foreach (var cached in proxyHandlers.Values)
-            {
-                cached.Handler.Dispose();
-            }
-
-            proxyHandlers.Clear();
-        }
-
+        // 代理处理器的缓存与生命周期由 ProxySettingsService 拥有；
+        // 这里只释放直连默认处理器。
         defaultHandler.Dispose();
         GC.SuppressFinalize(this);
     }

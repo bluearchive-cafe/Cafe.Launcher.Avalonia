@@ -1,7 +1,9 @@
 using System.Net;
 using System.Text;
+using System.Text.Json;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Features.ResourcePanel;
+using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
@@ -21,10 +23,10 @@ public sealed class ResourcePanelViewModelTests
     {
         using var context = await CreateContextAsync(
             cookieUid: "UIDTESTA",
-            configure: handler =>
+            configure: transport =>
             {
-                handler.GateStatus = true;
-                handler.StatusJson = """
+                transport.GateStatus = true;
+                transport.StatusJson = """
                 {
                   "text": {
                     "official": { "version": "1.0.0" },
@@ -36,7 +38,7 @@ public sealed class ResourcePanelViewModelTests
                   }
                 }
                 """;
-                handler.ConfigJson = """{ "text": "cn", "voice": "jp", "media": "jp" }""";
+                transport.ConfigJson = """{ "text": "cn", "voice": "jp", "media": "jp" }""";
             });
         context.ViewModel.ApplySettings(new LauncherSettings
         {
@@ -53,7 +55,7 @@ public sealed class ResourcePanelViewModelTests
         Assert.True(context.ViewModel.IsResourcePanelVisible);
         Assert.False(context.ViewModel.IsResourcePanelSaveEnabled);
 
-        context.Handler.ReleaseStatus();
+        context.Transport.ReleaseStatus();
         await openTask.WaitAsync(TimeSpan.FromSeconds(5));
 
         // 加载完成：忙碌清除、UID 就位、文本就绪/启用、语音等待/停用、保存可用。
@@ -90,9 +92,9 @@ public sealed class ResourcePanelViewModelTests
         // 命令守卫：非 Cafe 源只弹确认，不打开面板也不发任何 API 请求。
         Assert.True(confirmRequested);
         Assert.False(context.ViewModel.IsResourcePanelVisible);
-        Assert.Equal(0, context.Handler.StatusListCount);
-        Assert.Equal(0, context.Handler.ConfigGetCount);
-        Assert.Equal(0, context.Handler.ConfigSetCount);
+        Assert.Equal(0, context.Transport.StatusListCount);
+        Assert.Equal(0, context.Transport.ConfigGetCount);
+        Assert.Equal(0, context.Transport.ConfigSetCount);
     }
 
     [Fact]
@@ -116,8 +118,8 @@ public sealed class ResourcePanelViewModelTests
             context.Localizer.F(LocalizationKeys.ResourcePanelUidMissing, context.Service.CookieLibraryPath),
             context.ViewModel.ResourcePanelMessage);
         Assert.False(context.ViewModel.IsResourcePanelSaveEnabled);
-        Assert.Equal(0, context.Handler.StatusListCount);
-        Assert.Equal(0, context.Handler.ConfigGetCount);
+        Assert.Equal(0, context.Transport.StatusListCount);
+        Assert.Equal(0, context.Transport.ConfigGetCount);
     }
 
     [Fact]
@@ -125,7 +127,7 @@ public sealed class ResourcePanelViewModelTests
     {
         using var context = await CreateContextAsync(
             cookieUid: "UIDTESTA",
-            configure: handler => handler.ConfigGetStatusCode = HttpStatusCode.InternalServerError);
+            configure: transport => transport.ConfigGetStatusCode = HttpStatusCode.InternalServerError);
         context.ViewModel.ApplySettings(new LauncherSettings
         {
             PatchUrlGroup = PatchUrlGroups.Cafe,
@@ -150,8 +152,8 @@ public sealed class ResourcePanelViewModelTests
         }
 
         Assert.False(context.ViewModel.IsResourcePanelSaveEnabled);
-        Assert.Equal(1, context.Handler.StatusListCount);
-        Assert.Equal(1, context.Handler.ConfigGetCount);
+        Assert.Equal(1, context.Transport.StatusListCount);
+        Assert.Equal(1, context.Transport.ConfigGetCount);
     }
 
     [Fact]
@@ -182,8 +184,8 @@ public sealed class ResourcePanelViewModelTests
         Assert.Equal("MANUALAA", saved.ResourcePanelUid);
         Assert.Equal(ResourcePanelUidSources.Custom, saved.ResourcePanelUidSource);
         // 保存后用新 UID 重载了面板数据。
-        Assert.Equal(1, context.Handler.StatusListCount);
-        Assert.Equal(1, context.Handler.ConfigGetCount);
+        Assert.Equal(1, context.Transport.StatusListCount);
+        Assert.Equal(1, context.Transport.ConfigGetCount);
     }
 
     [Fact]
@@ -204,7 +206,7 @@ public sealed class ResourcePanelViewModelTests
 
         await context.ViewModel.SaveResourcePanelCommand.ExecuteAsync(null);
 
-        Assert.Equal("?uid=UIDTESTA&text=cn&voice=jp&media=cn", context.Handler.LastConfigSetQuery);
+        Assert.Equal("?uid=UIDTESTA&text=cn&voice=jp&media=cn", context.Transport.LastConfigSetQuery);
         Assert.Equal(
             context.Localizer.T(LocalizationKeys.ResourcePanelSaved),
             context.ViewModel.ResourcePanelMessage);
@@ -218,7 +220,7 @@ public sealed class ResourcePanelViewModelTests
     {
         using var context = await CreateContextAsync(
             cookieUid: "UIDTESTA",
-            configure: handler => handler.ConfigSetStatusCode = HttpStatusCode.InternalServerError);
+            configure: transport => transport.ConfigSetStatusCode = HttpStatusCode.InternalServerError);
         context.ViewModel.ApplySettings(new LauncherSettings
         {
             PatchUrlGroup = PatchUrlGroups.Cafe,
@@ -232,7 +234,7 @@ public sealed class ResourcePanelViewModelTests
 
         // 保存失败：成功 toast 不弹，消息走 saveFailed 格式，并经 IErrorHandlingService 上报
         // （toast 内容与行内消息一致）。
-        Assert.Equal(1, context.Handler.ConfigSetCount);
+        Assert.Equal(1, context.Transport.ConfigSetCount);
         Assert.Equal(0, toastCount);
         Assert.StartsWith(
             LocalizedPrefix(context.Localizer, LocalizationKeys.ResourcePanelSaveFailed),
@@ -254,12 +256,12 @@ public sealed class ResourcePanelViewModelTests
             ProxyMode = ProxyModes.Direct
         });
         await context.ViewModel.OpenResourcePanelCommand.ExecuteAsync(null);
-        Assert.Equal(1, context.Handler.ConfigGetCount);
+        Assert.Equal(1, context.Transport.ConfigGetCount);
 
         // 属性变更即触发 SetUidSourceCommand（isLoadingSource 守卫确保加载期间的赋值不触发）。
         context.ViewModel.SelectedResourcePanelUidSource = ResourcePanelUidSources.Custom;
 
-        await WaitUntilAsync(() => context.Handler.ConfigGetCount == 2 && !context.ViewModel.IsResourcePanelBusy);
+        await WaitUntilAsync(() => context.Transport.ConfigGetCount == 2 && !context.ViewModel.IsResourcePanelBusy);
 
         var saved = await context.SettingsService.ReadAsync();
         Assert.Equal(ResourcePanelUidSources.Custom, saved.ResourcePanelUidSource);
@@ -291,7 +293,7 @@ public sealed class ResourcePanelViewModelTests
 
     private async Task<TestContext> CreateContextAsync(
         string? cookieUid = null,
-        Action<GatedResourcePanelHandler>? configure = null)
+        Action<GatedResourcePanelTransport>? configure = null)
     {
         var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempDir);
@@ -303,9 +305,9 @@ public sealed class ResourcePanelViewModelTests
 
         var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
         var uidService = new ResourcePanelUidService(new BestHttpCookieLibraryService(), settingsService, cookiePath);
-        var handler = new GatedResourcePanelHandler();
-        configure?.Invoke(handler);
-        var apiClient = new ResourcePanelApiClient(handler);
+        var transport = new GatedResourcePanelTransport();
+        configure?.Invoke(transport);
+        var apiClient = new ResourcePanelApiClient(transport);
         var localizer = new LocalizationService();
         var toastService = new ToastService();
         var errorHandling = new FakeErrorHandlingService();
@@ -313,7 +315,7 @@ public sealed class ResourcePanelViewModelTests
         var viewModel = new ResourcePanelViewModel(service, localizer, toastService, errorHandling);
         return new TestContext(
             viewModel,
-            handler,
+            transport,
             settingsService,
             apiClient,
             toastService,
@@ -346,7 +348,7 @@ public sealed class ResourcePanelViewModelTests
 
     private sealed record TestContext(
         ResourcePanelViewModel ViewModel,
-        GatedResourcePanelHandler Handler,
+        GatedResourcePanelTransport Transport,
         LauncherSettingsService SettingsService,
         ResourcePanelApiClient ApiClient,
         ToastService ToastService,
@@ -358,7 +360,6 @@ public sealed class ResourcePanelViewModelTests
         public void Dispose()
         {
             ViewModel.Dispose();
-            ApiClient.Dispose();
             SettingsService.Dispose();
             try
             {
@@ -372,10 +373,11 @@ public sealed class ResourcePanelViewModelTests
     }
 
     /// <summary>
-    /// 可选门控的假 API handler：/status/list 可被挂起以观察“加载中”状态；
-    /// 非 2xx 状态码用于注入失败（不触发网络重试，用例保持快速确定）。
+    /// 可选门控的传输替身：/status/list 可被挂起以观察“加载中”状态；
+    /// 非 2xx 状态码以携带状态码的 HttpRequestException 注入失败（与传输层
+    /// 状态强制语义一致，且 stub 不重试，用例保持快速确定）。
     /// </summary>
-    private sealed class GatedResourcePanelHandler : HttpMessageHandler
+    private sealed class GatedResourcePanelTransport : IRemoteHttpTransport
     {
         private readonly TaskCompletionSource statusGate = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -384,53 +386,66 @@ public sealed class ResourcePanelViewModelTests
         public string StatusJson { get; set; } = "{}";
         public string ConfigJson { get; set; } = "{}";
 
-        public int StatusListCount { get; private set; }
-        public int ConfigGetCount { get; private set; }
-        public int ConfigSetCount { get; private set; }
-        public string? LastConfigSetQuery { get; private set; }
         public HttpStatusCode? ConfigGetStatusCode { get; set; }
         public HttpStatusCode? ConfigSetStatusCode { get; set; }
 
-        public void ReleaseStatus() => statusGate.TrySetResult();
+        public List<Uri> RequestedUris { get; } = [];
 
-        protected override async Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken)
+        public int StatusListCount => CountPaths("/status/list");
+
+        public int ConfigGetCount => CountPaths("/config/get");
+
+        public int ConfigSetCount => CountPaths("/config/set");
+
+        public string? LastConfigSetQuery =>
+            RequestedUris.LastOrDefault(uri => uri.AbsolutePath == "/config/set")?.Query;
+
+        public async Task<T?> GetJsonAsync<T>(
+            Uri uri,
+            RemoteRequestOptions? options = null,
+            CancellationToken cancellationToken = default)
         {
-            var path = request.RequestUri?.AbsolutePath ?? "";
-            if (path == "/status/list")
+            RequestedUris.Add(uri);
+            var json = uri.AbsolutePath switch
             {
-                StatusListCount++;
-                if (GateStatus)
-                {
-                    await statusGate.Task.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
-                }
-
-                return Json(StatusJson);
-            }
-
-            if (path == "/config/get")
-            {
-                ConfigGetCount++;
-                return ConfigGetStatusCode is { } getCode ? Status(getCode) : Json(ConfigJson);
-            }
-
-            if (path == "/config/set")
-            {
-                ConfigSetCount++;
-                LastConfigSetQuery = request.RequestUri?.Query;
-                return ConfigSetStatusCode is { } setCode ? Status(setCode) : Json("{}");
-            }
-
-            return Status(HttpStatusCode.NotFound);
+                "/status/list" => await RespondStatusAsync(cancellationToken).ConfigureAwait(false),
+                "/config/get" when ConfigGetStatusCode is { } getCode =>
+                    throw new HttpRequestException($"stub transport answered {getCode}", null, getCode),
+                "/config/get" => ConfigJson,
+                _ => throw new HttpRequestException("stub transport answered NotFound", null, HttpStatusCode.NotFound)
+            };
+            return JsonSerializer.Deserialize<T>(json, options?.Json ?? JsonDefaults.Strict);
         }
 
-        private static HttpResponseMessage Json(string json) => new(HttpStatusCode.OK)
+        public Task<RemoteBody> GetStreamAsync(
+            Uri uri,
+            RemoteRequestOptions? options = null,
+            CancellationToken cancellationToken = default)
         {
-            Content = new StringContent(json, Encoding.UTF8, "application/json")
-        };
+            RequestedUris.Add(uri);
+            if (uri.AbsolutePath == "/config/set" && ConfigSetStatusCode is { } setCode)
+            {
+                throw new HttpRequestException($"stub transport answered {setCode}", null, setCode);
+            }
 
-        private static HttpResponseMessage Status(HttpStatusCode statusCode) => new(statusCode);
+            var bytes = "{}"u8.ToArray();
+            return Task.FromResult(new RemoteBody(new MemoryStream(bytes), bytes.LongLength));
+        }
+
+        public void ReleaseStatus() => statusGate.TrySetResult();
+
+        private async Task<string> RespondStatusAsync(CancellationToken cancellationToken)
+        {
+            if (GateStatus)
+            {
+                await statusGate.Task.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken).ConfigureAwait(false);
+            }
+
+            return StatusJson;
+        }
+
+        private int CountPaths(string path) =>
+            RequestedUris.Count(uri => uri.AbsolutePath == path);
     }
 
     /// <summary>手写 fake：记录 HandleErrorAsync 调用（无 mocking 框架）。</summary>

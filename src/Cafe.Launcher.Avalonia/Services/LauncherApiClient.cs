@@ -1,6 +1,5 @@
 using System;
 using System.Diagnostics;
-using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,65 +11,62 @@ using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
-public sealed class LauncherApiClient : IDisposable
+/// <summary>
+/// Client for the Yostar launcher API (envelope endpoints) and remote manifests.
+/// Transport concerns — proxy-aware leasing, SSRF validation, redirects, status
+/// enforcement, buffering and retries — live in <see cref="IRemoteHttpTransport"/>;
+/// this class owns only the API vocabulary: request paths, the time-signed
+/// Authorization header (rebuilt per attempt and per redirect hop by the
+/// transport's <see cref="RemoteRequestOptions.ConfigureRequest"/>), envelope
+/// business codes, and manifest URL rewriting.
+/// </summary>
+public sealed class LauncherApiClient
 {
-    private readonly IHttpClientLeaseSource leaseSource;
+    private readonly IRemoteHttpTransport transport;
     private readonly AuthorizationHeaderFactory authorizationHeaderFactory;
     private readonly PatchUrlGroupService patchUrlGroupService;
-    private readonly RemoteHttpUrlValidator urlValidator;
     private readonly JsonSerializerOptions jsonOptions = JsonDefaults.Strict;
 
-    /// <summary>Production constructor — accepts dependencies from DI.</summary>
-    public LauncherApiClient(
-        HttpClientFactory httpClientFactory,
-        AuthorizationHeaderFactory authorizationHeaderFactory,
-        PatchUrlGroupService patchUrlGroupService,
-        RemoteHttpUrlValidator urlValidator)
-    {
-        leaseSource = new ProxyAwareHttpClientLeaseSource(
-            httpClientFactory,
-            new Uri(ApiConfig.ApiBaseUrl),
-            TimeSpan.FromSeconds(30));
-        this.authorizationHeaderFactory = authorizationHeaderFactory;
-        this.patchUrlGroupService = patchUrlGroupService;
-        this.urlValidator = urlValidator;
-    }
-
     /// <summary>
-    /// Injectable constructor — accepts an <see cref="HttpMessageHandler"/> for testability.
-    /// The handler is NOT disposed by this class (caller owns its lifetime).
+    /// Maximum number of attempts for transient manifest/envelope fetch failures
+    /// (initial attempt + retries). Backoff: 500ms, 1000ms; scope
+    /// <see cref="RemoteRetryScope.Transient"/>. Envelope business codes are
+    /// authoritative and never retried. Mirrors the bounded retry philosophy of
+    /// <see cref="FileDownloadService.RetryDomainOrder"/> but with fewer
+    /// attempts — manifests are small metadata payloads, not large file downloads.
     /// </summary>
-    internal LauncherApiClient(
-        HttpMessageHandler handler,
+    private const int MaxFetchAttempts = 3;
+    private static readonly TimeSpan[] FetchBackoff =
+    [
+        TimeSpan.FromMilliseconds(500),
+        TimeSpan.FromMilliseconds(1000)
+    ];
+
+    private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(30);
+
+    public LauncherApiClient(
+        IRemoteHttpTransport transport,
         AuthorizationHeaderFactory authorizationHeaderFactory,
         PatchUrlGroupService patchUrlGroupService)
     {
-        leaseSource = new FixedHttpClientLeaseSource(
-            handler,
-            new Uri(ApiConfig.ApiBaseUrl),
-            TimeSpan.FromSeconds(30));
+        this.transport = transport;
         this.authorizationHeaderFactory = authorizationHeaderFactory;
         this.patchUrlGroupService = patchUrlGroupService;
-        urlValidator = RemoteHttpUrlValidator.CreateForTesting();
     }
 
     public Task<GameConfigResponse> GetGameConfigAsync(
-        string proxyMode,
         CancellationToken cancellationToken = default)
     {
         return GetEnvelopeDataAsync<GameConfigResponse>(
             "/api/launcher/game/config",
-            proxyMode,
             cancellationToken);
     }
 
     public async Task<BaseConfigResponse> GetBaseConfigAsync(
-        string proxyMode,
         CancellationToken cancellationToken = default)
     {
         var response = await GetEnvelopeDataAsync<BaseConfigResponse>(
             "/api/launcher/base/config",
-            proxyMode,
             cancellationToken).ConfigureAwait(false);
         response.LauncherBackgroundImg = ResolveLauncherBackgroundUrl(
             response.LauncherBackgroundImg);
@@ -87,64 +83,53 @@ public sealed class LauncherApiClient : IDisposable
     }
 
     private Task<CdnConfigResponse> GetCdnConfigAsync(
-        string proxyMode,
         CancellationToken cancellationToken)
     {
         return GetEnvelopeDataAsync<CdnConfigResponse>(
             "/api/launcher/advanced/game/download/cdn",
-            proxyMode,
             cancellationToken);
     }
 
     public async Task<CdnConfigResponse> GetCdnConfigAsync(
         string patchUrlGroup,
-        string proxyMode,
         CancellationToken cancellationToken = default)
     {
-        var response = await GetCdnConfigAsync(proxyMode, cancellationToken).ConfigureAwait(false);
+        var response = await GetCdnConfigAsync(cancellationToken).ConfigureAwait(false);
         return RewriteCdnConfig(response, patchUrlGroup);
     }
 
     public Task<OperationsResourceResponse> GetOperationsResourceAsync(
-        string proxyMode,
         CancellationToken cancellationToken = default)
     {
         return GetEnvelopeDataAsync<OperationsResourceResponse>(
             "/api/launcher/operations/resource",
-            proxyMode,
             cancellationToken);
     }
 
     public Task<SocialMediaResourceResponse> GetSocialMediaResourceAsync(
-        string proxyMode,
         CancellationToken cancellationToken = default)
     {
         return GetEnvelopeDataAsync<SocialMediaResourceResponse>(
             "/api/launcher/social/media/resource",
-            proxyMode,
             cancellationToken);
     }
 
     public Task<InstallationConfigResponse> GetInstallationConfigAsync(
-        string proxyMode,
         CancellationToken cancellationToken = default)
     {
         return GetEnvelopeDataAsync<InstallationConfigResponse>(
             "/api/launcher/installation/config",
-            proxyMode,
             cancellationToken);
     }
 
     private Task<ManifestUrlResponse> GetManifestUrlAsync(
         string version,
         string filePath,
-        string proxyMode,
         CancellationToken cancellationToken)
     {
         var requestPath = $"/api/launcher/game/config/json?version={Uri.EscapeDataString(version)}&file_path={Uri.EscapeDataString(filePath)}";
         return GetEnvelopeDataAsync<ManifestUrlResponse>(
             requestPath,
-            proxyMode,
             cancellationToken);
     }
 
@@ -152,13 +137,11 @@ public sealed class LauncherApiClient : IDisposable
         string version,
         string filePath,
         string patchUrlGroup,
-        string proxyMode,
         CancellationToken cancellationToken = default)
     {
         var response = await GetManifestUrlAsync(
             version,
             filePath,
-            proxyMode,
             cancellationToken).ConfigureAwait(false);
         return RewriteManifestUrl(response, patchUrlGroup);
     }
@@ -178,139 +161,78 @@ public sealed class LauncherApiClient : IDisposable
         return patchUrlGroupService.RewriteCdnConfig(response, patchUrlGroup);
     }
 
-    /// <summary>
-    /// Maximum number of attempts for transient manifest fetch failures
-    /// (initial attempt + retries). Mirrors the bounded retry philosophy of
-    /// <see cref="FileDownloadService.RetryDomainOrder"/> but with fewer
-    /// attempts — manifests are small metadata payloads, not large file
-    /// downloads. Backoff: 500ms, 1000ms.
-    /// </summary>
-    private const int MaxManifestFetchAttempts = 3;
-    private static readonly TimeSpan[] ManifestFetchBackoff =
-    [
-        TimeSpan.FromMilliseconds(500),
-        TimeSpan.FromMilliseconds(1000)
-    ];
-
-    /// <summary>
-    /// Maximum retry attempts for core API envelope calls (game config, CDN config, etc.).
-    /// These are more critical than manifest downloads because they determine startup state.
-    /// Uses the same backoff sequence as manifest fetches.
-    /// </summary>
-    private const int MaxEnvelopeFetchAttempts = 3;
-
     public async Task<RemoteManifest> GetRemoteManifestAsync(
         string url,
-        string proxyMode,
         CancellationToken cancellationToken = default)
     {
         var requestUri = new Uri(url);
-
-        return await RetryPolicy.ExecuteWithRetryAsync(
-            async ct =>
+        var manifest = await transport.GetJsonAsync<RemoteManifest>(
+            requestUri,
+            new RemoteRequestOptions
             {
-                using var lease = await leaseSource
-                    .CreateLeaseAsync(proxyMode, ct)
-                    .ConfigureAwait(false);
-                using var response = await RemoteHttpRequestService.SendAsync(
-                    lease.Client,
-                    requestUri,
-                    static uri => new HttpRequestMessage(HttpMethod.Get, uri),
-                    urlValidator,
-                    ct,
-                    connectionProxy: lease.ConnectionProxy).ConfigureAwait(false);
-                response.EnsureSuccessStatusCode();
-                var manifest = await RemoteHttpRequestService.DeserializeJsonAsync<RemoteManifest>(
-                    response, requestUri, jsonOptions, ct).ConfigureAwait(false);
-                return manifest ?? new RemoteManifest();
+                MaxAttempts = MaxFetchAttempts,
+                Backoff = i => FetchBackoff[i],
+                RetryScope = RemoteRetryScope.Transient,
+                Timeout = RequestTimeout
             },
-            MaxManifestFetchAttempts,
-            i => ManifestFetchBackoff[i],
-            cancellationToken,
-            ex => IsRetryableRequestFailure(ex) || ex is JsonException);
+            cancellationToken).ConfigureAwait(false);
+        return manifest ?? new RemoteManifest();
     }
 
     private async Task<T> GetEnvelopeDataAsync<T>(
         string path,
-        string proxyMode,
         CancellationToken cancellationToken)
     {
-        return await RetryPolicy.ExecuteWithRetryAsync(
-            async ct =>
+        // ApiConfig.ApiBaseUrl ends with '/' and the path starts with '/', so
+        // Uri-relative resolution replaces the base path instead of concatenating.
+        var requestUri = new Uri(new Uri(ApiConfig.ApiBaseUrl), path);
+        var stopwatch = Stopwatch.StartNew();
+        var envelope = await transport.GetJsonAsync<LauncherApiEnvelope<T>>(
+            requestUri,
+            new RemoteRequestOptions
             {
-                var sw = Stopwatch.StartNew();
-                using var lease = await leaseSource.CreateLeaseAsync(proxyMode, ct).ConfigureAwait(false);
-                using var request = new HttpRequestMessage(HttpMethod.Get, path);
-                request.Headers.TryAddWithoutValidation(
+                MaxAttempts = MaxFetchAttempts,
+                Backoff = i => FetchBackoff[i],
+                RetryScope = RemoteRetryScope.Transient,
+                Timeout = RequestTimeout,
+                ConfigureRequest = request => request.Headers.TryAddWithoutValidation(
                     "Authorization",
-                    authorizationHeaderFactory.Create("", ApiConfig.YostarAuthorizationVersion));
-
-                using var response = await RemoteHttpRequestService
-                    .SendAsync(lease.Client, request, ct)
-                    .ConfigureAwait(false);
-                response.EnsureSuccessStatusCode();
-                await LocalDiagnostics.LogAsync(
-                    LogEntrySeverity.Debug,
-                    "ApiClient",
-                    $"GET {path} -> {(int)response.StatusCode}, {sw.ElapsedMilliseconds}ms (attempt N/A)");
-
-                var envelope = await RemoteHttpRequestService.DeserializeJsonAsync<LauncherApiEnvelope<T>>(response, request.RequestUri, jsonOptions, ct).ConfigureAwait(false);
-
-                if (envelope is null)
-                {
-                    throw new InvalidOperationException("API response body is empty.");
-                }
-
-                if (envelope.Code != 200)
-                {
-                    var message = envelope.Message ?? envelope.Msg ?? $"API response code: {envelope.Code}";
-                    throw new LauncherApiEnvelopeException(message);
-                }
-
-                if (envelope.Data is null)
-                {
-                    throw new InvalidOperationException("API response data is empty.");
-                }
-
-                return envelope.Data;
+                    authorizationHeaderFactory.Create("", ApiConfig.YostarAuthorizationVersion)),
+                Json = jsonOptions
             },
-            MaxEnvelopeFetchAttempts,
-            i => ManifestFetchBackoff[i],
-            cancellationToken,
-            ex => IsRetryableRequestFailure(ex)
-                || ex is JsonException
-                || (ex is InvalidOperationException and not LauncherApiEnvelopeException));
-    }
+            cancellationToken).ConfigureAwait(false);
+        await LocalDiagnostics.LogAsync(
+            LogEntrySeverity.Debug,
+            "ApiClient",
+            $"GET {path} -> {stopwatch.ElapsedMilliseconds}ms").ConfigureAwait(false);
 
-    private static bool IsRetryableRequestFailure(Exception exception)
-    {
-        if (exception is TaskCanceledException)
+        if (envelope is null)
         {
-            return true;
+            // 行为精炼：重试归传输层后，空体不再参与重试预算——它只会以
+            // InvalidOperationException 终结一次调用；业务码异常照旧不重试。
+            throw new InvalidOperationException("API response body is empty.");
         }
 
-        if (exception is not HttpRequestException { StatusCode: { } statusCode })
+        if (envelope.Code != 200)
         {
-            return exception is HttpRequestException;
+            var message = envelope.Message ?? envelope.Msg ?? $"API response code: {envelope.Code}";
+            throw new LauncherApiEnvelopeException(message);
         }
 
-        return statusCode == System.Net.HttpStatusCode.RequestTimeout
-            || statusCode == System.Net.HttpStatusCode.TooManyRequests
-            || (int)statusCode >= 500;
-    }
+        if (envelope.Data is null)
+        {
+            throw new InvalidOperationException("API response data is empty.");
+        }
 
-    public void Dispose()
-    {
-        leaseSource.Dispose();
-        GC.SuppressFinalize(this);
+        return envelope.Data;
     }
 }
 
 /// <summary>
 /// The API envelope answered with a non-200 business code (e.g. a server-side
 /// rejection such as maintenance or a rate limit). The server responded, so the
-/// failure is authoritative rather than transient — <see cref="RetryPolicy"/>
-/// callers deliberately do not retry it. Derives from
+/// failure is authoritative rather than transient — the transport's retry
+/// scope deliberately does not match it. Derives from
 /// <see cref="InvalidOperationException"/> so existing catch sites that treat
 /// envelope failures as protocol errors keep working unchanged.
 /// </summary>

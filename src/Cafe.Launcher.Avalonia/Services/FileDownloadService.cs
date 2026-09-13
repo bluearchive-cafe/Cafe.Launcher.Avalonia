@@ -26,22 +26,39 @@ public sealed class FileDownloadService : IFileDownloadService
 
     private readonly Crc64Service crc64Service;
     private readonly LocalDiagnostics diagnostics;
-    private readonly RemoteHttpUrlValidator urlValidator;
     private readonly TimeSpan? idleReadTimeout;
 
     public FileDownloadService(
         Crc64Service crc64Service,
         LocalDiagnostics diagnostics,
-        RemoteHttpUrlValidator urlValidator,
         TimeSpan? idleReadTimeout = null)
     {
         this.crc64Service = crc64Service;
         this.diagnostics = diagnostics;
-        this.urlValidator = urlValidator;
         this.idleReadTimeout = idleReadTimeout;
     }
 
-    public async Task<string?> DownloadAsync(
+    /// <inheritdoc />
+    public long GetExistingDownloadedSize(string targetTempPath, long expectedSize) =>
+        StatExistingBytes(targetTempPath, expectedSize);
+
+    /// <summary>
+    /// The single implementation of the .tmp length semantics shared by the
+    /// resume decisions in <see cref="DownloadAsync"/> and by batch-level
+    /// progress seeding: 0 when the file is absent or larger than expected.
+    /// </summary>
+    private static long StatExistingBytes(string targetTempPath, long expectedSize)
+    {
+        if (expectedSize <= 0 || !File.Exists(targetTempPath))
+        {
+            return 0;
+        }
+
+        var length = new FileInfo(targetTempPath).Length;
+        return length <= expectedSize ? length : 0;
+    }
+
+    public async Task<DownloadOutcome> DownloadAsync(
         FileDownloadRequest request,
         FileDownloadOperationControl control,
         CancellationToken cancellationToken)
@@ -52,11 +69,10 @@ public sealed class FileDownloadService : IFileDownloadService
         var expectedSize = request.ExpectedSize;
         var expectedHash = request.ExpectedHash;
         var filePath = request.FilePath;
-        var httpClient = control.HttpClient;
+        var transport = control.Transport;
         var pauseAwaiter = control.WaitWhilePausedAsync;
         var onProgressAsync = control.ReportProgressAsync;
         var onProgressResetAsync = control.ReportProgressResetAsync;
-        var connectionProxy = control.ConnectionProxy;
         var targetDirectory = Path.GetDirectoryName(targetTempPath);
         if (!string.IsNullOrWhiteSpace(targetDirectory))
         {
@@ -72,15 +88,18 @@ public sealed class FileDownloadService : IFileDownloadService
 
             try
             {
-                var fi = new FileInfo(targetTempPath);
-                var existingLength = fi.Exists ? fi.Length : 0;
-                if (existingLength == expectedSize && expectedSize > 0)
+                var existingLength = StatExistingBytes(targetTempPath, expectedSize);
+                if (expectedSize > 0 && existingLength == expectedSize)
                 {
-                    // 上次会话已下满但未验证：调用方必须在安装阶段自行校验。
-                    return null;
+                    // 上次会话已下满但未验证：显式 AlreadyComplete，
+                    // 调用方在安装阶段自行校验。
+                    return DownloadOutcome.AlreadyComplete();
                 }
 
-                if (existingLength > expectedSize && expectedSize > 0)
+                var declaredLength = File.Exists(targetTempPath)
+                    ? new FileInfo(targetTempPath).Length
+                    : 0;
+                if (declaredLength > expectedSize && expectedSize > 0)
                 {
                     File.Delete(targetTempPath);
                     existingLength = 0;
@@ -88,8 +107,7 @@ public sealed class FileDownloadService : IFileDownloadService
                 }
 
                 var initialUri = new Uri(downloadUrl);
-                using var response = await RemoteHttpRequestService.SendAsync(
-                    httpClient,
+                using var response = await transport.SendAsync(
                     initialUri,
                     uri =>
                     {
@@ -101,9 +119,7 @@ public sealed class FileDownloadService : IFileDownloadService
 
                         return request;
                     },
-                    urlValidator,
-                    cancellationToken,
-                    connectionProxy).ConfigureAwait(false);
+                    cancellationToken).ConfigureAwait(false);
                 response.EnsureSuccessStatusCode();
 
                 var fileMode = FileMode.Create;
@@ -144,7 +160,7 @@ public sealed class FileDownloadService : IFileDownloadService
                     crc64 = await crc64Service.ComputeFileAsync(targetTempPath, null, cancellationToken).ConfigureAwait(false);
                 }
 
-                if (crc64 == expectedHash) return crc64;
+                if (crc64 == expectedHash) return DownloadOutcome.Transferred(crc64);
 
                 var downloadedLength = new FileInfo(targetTempPath).Length;
                 File.Delete(targetTempPath);

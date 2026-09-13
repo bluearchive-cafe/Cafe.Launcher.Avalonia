@@ -70,7 +70,6 @@ public sealed class GameLaunchService
             snapshot.LocalGame,
             snapshot.Settings.LaunchCheckMode,
             snapshot.Settings.PatchUrlGroup,
-            snapshot.Settings.ProxyMode,
             cancellationToken).ConfigureAwait(false);
 
         if (!validation.Success)

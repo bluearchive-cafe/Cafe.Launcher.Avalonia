@@ -43,9 +43,9 @@ internal static class WindowsRegistrySystemProxySettingsProvider
                 : proxyOverride.Split(';', StringSplitOptions.RemoveEmptyEntries).ToList();
             noProxy.AddRange(["localhost", "127.0.0.1", "::1"]);
 
-            return new SystemProxySettings(
-                ProxySettingsService.ResolveProxyUrl(proxyServer),
-                noProxy);
+            // 原始值原样交付：socks 等格式规范化由 ProxySettingsService 在
+            // 设置摄入点统一完成（全库唯一一处）。
+            return new SystemProxySettings(proxyServer, noProxy);
         }
         catch (Exception ex)
         {

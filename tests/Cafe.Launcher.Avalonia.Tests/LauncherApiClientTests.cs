@@ -7,6 +7,7 @@ using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Auth;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -25,13 +26,13 @@ public sealed class LauncherApiClientTests
               }
             }
             """;
-        using var handler = new JsonResponseHandler(responseJson);
-        using var client = new LauncherApiClient(
-            handler,
+        var transport = new StubRemoteHttpTransport(_ => responseJson);
+        var client = new LauncherApiClient(
+            transport,
             new AuthorizationHeaderFactory(),
             new PatchUrlGroupService());
 
-        var result = await client.GetBaseConfigAsync(ProxyModes.Direct);
+        var result = await client.GetBaseConfigAsync();
 
         Assert.Equal(
             "https://launcher-pkg-ba-jp.yo-star.com/prod/BlueArchive_JP/launcher_background_img/82f20f8436deddb6bcdceddfa3b1955b.jpg",
@@ -41,7 +42,7 @@ public sealed class LauncherApiClientTests
     [Fact]
     public void RewriteManifestUrl_WhenCafe_RewritesPackageHost()
     {
-        using var client = new LauncherApiClient(new HttpClientHandler(), new AuthorizationHeaderFactory(), new PatchUrlGroupService());
+        var client = new LauncherApiClient(new StubRemoteHttpTransport(), new AuthorizationHeaderFactory(), new PatchUrlGroupService());
         var response = new ManifestUrlResponse
         {
             Url = "https://launcher-pkg-ba-jp.yo-star.com/zip_online_config_json/test.json"
@@ -55,7 +56,7 @@ public sealed class LauncherApiClientTests
     [Fact]
     public void RewriteCdnConfig_WhenCafe_RewritesPrimaryAndUsesPrimaryForBackup()
     {
-        using var client = new LauncherApiClient(new HttpClientHandler(), new AuthorizationHeaderFactory(), new PatchUrlGroupService());
+        var client = new LauncherApiClient(new StubRemoteHttpTransport(), new AuthorizationHeaderFactory(), new PatchUrlGroupService());
         var response = new CdnConfigResponse
         {
             PrimaryCdn = "https://launcher-pkg-ba-jp.yo-star.com",
@@ -69,103 +70,52 @@ public sealed class LauncherApiClientTests
     }
 
     [Fact]
-    public async Task GetBaseConfigAsync_WhenResponseIsNotValidJson_ThrowsJsonExceptionWithContext()
-    {
-        var bytes = new byte[] { 0x8B, 0x0B, 0x00, 0x01, 0x41, 0x42, 0x43, 0x44 };
-        using var handler = new BinaryResponseHandler(bytes, "application/octet-stream");
-        using var client = new LauncherApiClient(
-            handler,
-            new AuthorizationHeaderFactory(),
-            new PatchUrlGroupService());
-
-        var ex = await Assert.ThrowsAsync<JsonException>(() => client.GetBaseConfigAsync(ProxyModes.Direct));
-
-        Assert.Contains("not valid JSON", ex.Message);
-        Assert.Contains("status: 200", ex.Message);
-        Assert.Contains("content-type: application/octet-stream", ex.Message);
-        Assert.Contains("first-bytes: 8B0B000141424344", ex.Message);
-    }
-
-    [Fact]
-    public async Task GetBaseConfigAsync_WhenResponseLooksGzip_ThrowsJsonExceptionMentioningGzip()
-    {
-        var bytes = new byte[] { 0x1F, 0x8B, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00 };
-        using var handler = new BinaryResponseHandler(bytes, "application/json");
-        using var client = new LauncherApiClient(
-            handler,
-            new AuthorizationHeaderFactory(),
-            new PatchUrlGroupService());
-
-        var ex = await Assert.ThrowsAsync<JsonException>(() => client.GetBaseConfigAsync(ProxyModes.Direct));
-
-        Assert.Contains("gzip", ex.Message);
-    }
-
-    [Fact]
     public async Task GetBaseConfigAsync_WhenEnvelopeCodeIsNot200_FailsFastWithoutRetry()
     {
-        using var handler = new EnvelopeCodeHandler(503, "service under maintenance");
-        using var client = new LauncherApiClient(
-            handler,
+        var transport = new StubRemoteHttpTransport(
+            _ => """{"code":503,"data":{"launcher_background_img":null},"message":"service under maintenance"}""");
+        var client = new LauncherApiClient(
+            transport,
             new AuthorizationHeaderFactory(),
             new PatchUrlGroupService());
 
         var ex = await Assert.ThrowsAsync<LauncherApiEnvelopeException>(
-            () => client.GetBaseConfigAsync(ProxyModes.Direct));
+            () => client.GetBaseConfigAsync());
 
-        Assert.Equal(1, handler.CallCount);
+        Assert.Single(transport.RequestedUris);
         Assert.Contains("service under maintenance", ex.Message);
     }
 
     [Fact]
-    public async Task GetBaseConfigAsync_WhenEnvelopeDataIsMissing_RetriesBeforeFailing()
+    public async Task GetBaseConfigAsync_WhenEnvelopeDataIsMissing_ThrowsInvalidOperationExceptionAfterSingleRequest()
     {
-        using var handler = new EnvelopeCodeHandler(200, message: null, includeData: false);
-        using var client = new LauncherApiClient(
-            handler,
+        // 行为精炼：重试归传输层后，空 envelope 数据由客户端在首次请求后即以
+        // InvalidOperationException 终结，不再进入客户端重试预算。
+        var transport = new StubRemoteHttpTransport(_ => """{"code":200,"data":null}""");
+        var client = new LauncherApiClient(
+            transport,
             new AuthorizationHeaderFactory(),
             new PatchUrlGroupService());
 
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => client.GetBaseConfigAsync(ProxyModes.Direct));
+            () => client.GetBaseConfigAsync());
 
-        Assert.Equal(3, handler.CallCount);
+        Assert.Single(transport.RequestedUris);
     }
 
     [Fact]
-    public async Task GetRemoteManifestAsync_WhenFirstAttemptsReturnNonJson_RetriesAndSucceedsOnThirdAttempt()
+    public async Task GetRemoteManifestAsync_WhenBodyIsEmpty_ReturnsEmptyManifestFallback()
     {
-        var badBytes = new byte[] { 0x8B, 0x0B, 0x00, 0x01 };
-        const string goodJson = """{"source":"test","file":[]}""";
-        using var handler = new FlakyManifestHandler(badBytes, goodJson, failFirstAttempts: 2);
-        using var client = new LauncherApiClient(
-            handler,
+        var transport = new StubRemoteHttpTransport(_ => null);
+        var client = new LauncherApiClient(
+            transport,
             new AuthorizationHeaderFactory(),
             new PatchUrlGroupService());
 
-        var manifest = await client.GetRemoteManifestAsync(
-            "https://example.com/manifest.json",
-            ProxyModes.Direct);
+        var manifest = await client.GetRemoteManifestAsync("https://example.com/manifest.json");
 
-        Assert.Equal("test", manifest.Source);
-        Assert.Equal(3, handler.CallCount);
-    }
-
-    [Fact]
-    public async Task GetBaseConfigAsync_WhenDeclaredContentLengthExceedsLimit_ThrowsHttpRequestExceptionWithContext()
-    {
-        using var handler = new OversizedContentLengthHandler(128L * 1024 * 1024);
-        using var client = new LauncherApiClient(
-            handler,
-            new AuthorizationHeaderFactory(),
-            new PatchUrlGroupService());
-
-        var ex = await Assert.ThrowsAsync<HttpRequestException>(
-            () => client.GetBaseConfigAsync(ProxyModes.Direct));
-
-        Assert.Contains("exceeds", ex.Message);
-        Assert.Contains("url:", ex.Message);
-        Assert.Contains("status: 200", ex.Message);
+        Assert.Null(manifest.Source);
+        Assert.Empty(manifest.File);
     }
 
     [Fact]
@@ -180,7 +130,7 @@ public sealed class LauncherApiClientTests
         };
 
         var ex = await Assert.ThrowsAsync<HttpRequestException>(() =>
-            RemoteHttpRequestService.DeserializeJsonAsync<LauncherApiEnvelope<BaseConfigResponse>>(
+            RemoteHttpTransport.DeserializeJsonAsync<LauncherApiEnvelope<BaseConfigResponse>>(
                 response,
                 new Uri("https://example.test/api"),
                 JsonDefaults.Strict,
@@ -202,7 +152,7 @@ public sealed class LauncherApiClientTests
         };
 
         var ex = await Assert.ThrowsAsync<JsonException>(() =>
-            RemoteHttpRequestService.DeserializeJsonAsync<LauncherApiEnvelope<BaseConfigResponse>>(
+            RemoteHttpTransport.DeserializeJsonAsync<LauncherApiEnvelope<BaseConfigResponse>>(
                 response,
                 new Uri("https://example.test/config/get?uid=UID-SECRET-VALUE"),
                 JsonDefaults.Strict,
@@ -225,7 +175,7 @@ public sealed class LauncherApiClientTests
         };
 
         var ex = await Assert.ThrowsAsync<HttpRequestException>(() =>
-            RemoteHttpRequestService.DeserializeJsonAsync<LauncherApiEnvelope<BaseConfigResponse>>(
+            RemoteHttpTransport.DeserializeJsonAsync<LauncherApiEnvelope<BaseConfigResponse>>(
                 response,
                 new Uri("https://example.test/config/get?uid=UID-SECRET-VALUE"),
                 JsonDefaults.Strict,
@@ -234,112 +184,6 @@ public sealed class LauncherApiClientTests
 
         Assert.Contains("https://example.test/config/get", ex.Message, StringComparison.Ordinal);
         Assert.DoesNotContain("UID-SECRET-VALUE", ex.Message, StringComparison.Ordinal);
-    }
-
-    private sealed class JsonResponseHandler(string json) : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent(json, Encoding.UTF8, "application/json")
-            });
-    }
-
-    /// <summary>Serves a fixed envelope payload; used to pin envelope retry semantics.</summary>
-    private sealed class EnvelopeCodeHandler(int code, string? message, bool includeData = true) : HttpMessageHandler
-    {
-        private int _callCount;
-
-        public int CallCount => _callCount;
-
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken)
-        {
-            Interlocked.Increment(ref _callCount);
-            var data = includeData ? """{"launcher_background_img":null}""" : "null";
-            var content = message is null
-                ? $$"""{"code":{{code}},"data":{{data}}}"""
-                : $$"""{"code":{{code}},"data":{{data}},"message":{{JsonSerializer.Serialize(message)}}}""";
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent(
-                    content,
-                    Encoding.UTF8,
-                    "application/json")
-            });
-        }
-    }
-
-    private sealed class BinaryResponseHandler(byte[] bytes, string mediaType) : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new ByteArrayContent(bytes)
-                {
-                    Headers = { ContentType = new MediaTypeHeaderValue(mediaType) }
-                }
-            });
-    }
-
-    private sealed class FlakyManifestHandler(byte[] badBytes, string goodJson, int failFirstAttempts) : HttpMessageHandler
-    {
-        private int _callCount;
-
-        public int CallCount => _callCount;
-
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken)
-        {
-            var count = Interlocked.Increment(ref _callCount);
-            HttpResponseMessage response;
-            if (count <= failFirstAttempts)
-            {
-                response = new HttpResponseMessage(HttpStatusCode.OK)
-                {
-                    Content = new ByteArrayContent(badBytes)
-                    {
-                        Headers = { ContentType = new MediaTypeHeaderValue("application/octet-stream") }
-                    }
-                };
-            }
-            else
-            {
-                response = new HttpResponseMessage(HttpStatusCode.OK)
-                {
-                    Content = new StringContent(goodJson, Encoding.UTF8, "application/json")
-                };
-            }
-
-            return Task.FromResult(response);
-        }
-    }
-
-    /// <summary>Declares an oversized Content-Length while the actual body is small.</summary>
-    private sealed class OversizedContentLengthHandler(long declaredLength) : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken)
-        {
-            var content = new StringContent(
-                """{"code":200,"data":{}}""",
-                Encoding.UTF8,
-                "application/json")
-            {
-                Headers = { ContentLength = declaredLength }
-            };
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = content
-            });
-        }
     }
 
     /// <summary>Non-seekable stream that repeats a byte pattern; used to exercise the chunked-body limit.</summary>

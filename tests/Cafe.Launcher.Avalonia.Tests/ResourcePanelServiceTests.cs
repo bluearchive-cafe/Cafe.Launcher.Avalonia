@@ -4,6 +4,7 @@ using Cafe.Launcher.Avalonia.Features.ResourcePanel;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -31,23 +32,29 @@ public sealed class ResourcePanelServiceTests : IDisposable
     [Fact]
     public async Task LoadDataAsync_WhenOneParallelRequestFails_ThrowsInsteadOfReturningPartialResult()
     {
-        var handler = new FakeResourcePanelHandler { ConfigGetStatusCode = HttpStatusCode.InternalServerError };
-        var service = await CreateServiceAsync(handler);
+        var transport = new StubRemoteHttpTransport(uri => uri.AbsolutePath switch
+        {
+            "/status/list" => "{}",
+            "/config/get" => throw new HttpRequestException(
+                "stub transport answered InternalServerError",
+                null,
+                HttpStatusCode.InternalServerError),
+            _ => "ok"
+        });
+        var service = await CreateServiceAsync(transport);
 
         // 并行语义：status 与 config 同时发出，config 失败时整体抛出（无部分结果）。
         await Assert.ThrowsAsync<HttpRequestException>(
-            () => service.LoadDataAsync("UIDTESTA", ProxyModes.Direct));
+            () => service.LoadDataAsync("UIDTESTA"));
 
-        Assert.Equal(1, handler.StatusListCount);
-        Assert.Equal(1, handler.ConfigGetCount);
+        Assert.Equal(1, CountRequests(transport, "/status/list"));
+        Assert.Equal(1, CountRequests(transport, "/config/get"));
     }
 
     [Fact]
     public async Task LoadDataAsync_WhenBothRequestsSucceed_MapsVersionsModesAndReadiness()
     {
-        var handler = new FakeResourcePanelHandler
-        {
-            StatusJson = """
+        var statusJson = """
             {
               "text": {
                 "official": { "version": "1.0.0" },
@@ -62,12 +69,17 @@ public sealed class ResourcePanelServiceTests : IDisposable
                 "localized": { "version": "" }
               }
             }
-            """,
-            ConfigJson = """{ "text": "cn", "voice": "jp", "media": "jp" }"""
-        };
-        var service = await CreateServiceAsync(handler);
+            """;
+        var configJson = """{ "text": "cn", "voice": "jp", "media": "jp" }""";
+        var transport = new StubRemoteHttpTransport(uri => uri.AbsolutePath switch
+        {
+            "/status/list" => statusJson,
+            "/config/get" => configJson,
+            _ => "ok"
+        });
+        var service = await CreateServiceAsync(transport);
 
-        var result = await service.LoadDataAsync("UIDTESTA", ProxyModes.Direct);
+        var result = await service.LoadDataAsync("UIDTESTA");
 
         // 文本：版本一致 → 就绪；配置为 cn → 已启用。
         Assert.Equal("1.0.0", result.Text.OfficialVersion);
@@ -87,33 +99,61 @@ public sealed class ResourcePanelServiceTests : IDisposable
     [Fact]
     public async Task SaveConfigAsync_WhenServerRejects_ThrowsHttpRequestException()
     {
-        var handler = new FakeResourcePanelHandler { ConfigSetStatusCode = HttpStatusCode.InternalServerError };
-        var service = await CreateServiceAsync(handler);
+        var transport = new StubRemoteHttpTransport(uri => uri.AbsolutePath switch
+        {
+            "/config/set" => throw new HttpRequestException(
+                "stub transport answered InternalServerError",
+                null,
+                HttpStatusCode.InternalServerError),
+            _ => "ok"
+        });
+        var service = await CreateServiceAsync(transport);
 
         // 保存失败按实现语义向上传播，由 ViewModel 层转为用户可见错误。
         await Assert.ThrowsAsync<HttpRequestException>(
-            () => service.SaveConfigAsync("UIDTESTA", true, false, true, ProxyModes.Direct));
+            () => service.SaveConfigAsync("UIDTESTA", true, false, true));
 
-        Assert.Equal(1, handler.ConfigSetCount);
+        Assert.Equal(1, CountRequests(transport, "/config/set"));
     }
 
     [Fact]
     public async Task SaveConfigThenLoadData_WhenModesChange_RoundTripsEnabledFlags()
     {
-        var handler = new FakeResourcePanelHandler
+        // 与上方 LoadData 测试同形的 status 应答：LoadDataAsync 并行拉取
+        // status + config，两者都必须拿到合法 JSON。
+        var statusJson = """
+            {
+              "text": {
+                "official": { "version": "1.0.0" },
+                "localized": { "version": "1.0.0" }
+              },
+              "voice": {
+                "official": { "version": "2.0.0" },
+                "localized": { "version": "2.1.0" }
+              },
+              "media": {
+                "official": { "version": "" },
+                "localized": { "version": "" }
+              }
+            }
+            """;
+        var configJson = """{ "text": "jp", "voice": "jp", "media": "jp" }""";
+        var transport = new StubRemoteHttpTransport(uri => uri.AbsolutePath switch
         {
-            ConfigJson = """{ "text": "jp", "voice": "jp", "media": "jp" }"""
-        };
-        var service = await CreateServiceAsync(handler);
+            "/status/list" => statusJson,
+            "/config/get" => configJson,
+            _ => "ok"
+        });
+        var service = await CreateServiceAsync(transport);
 
-        await service.SaveConfigAsync("UIDTESTA", textEnabled: true, voiceEnabled: false, mediaEnabled: true, ProxyModes.Direct);
+        await service.SaveConfigAsync("UIDTESTA", textEnabled: true, voiceEnabled: false, mediaEnabled: true);
 
         // 保存序列化契约：true → cn，false → jp。
-        Assert.Equal("?uid=UIDTESTA&text=cn&voice=jp&media=cn", handler.LastConfigSetQuery);
+        Assert.Equal("?uid=UIDTESTA&text=cn&voice=jp&media=cn", LastConfigSetQuery(transport));
 
         // 模拟服务器按保存内容更新配置后再次读取，IsEnabled 应与保存值一致。
-        handler.ConfigJson = """{ "text": "cn", "voice": "jp", "media": "cn" }""";
-        var result = await service.LoadDataAsync("UIDTESTA", ProxyModes.Direct);
+        configJson = """{ "text": "cn", "voice": "jp", "media": "cn" }""";
+        var result = await service.LoadDataAsync("UIDTESTA");
 
         Assert.True(result.Text.IsEnabled);
         Assert.False(result.Voice.IsEnabled);
@@ -124,7 +164,7 @@ public sealed class ResourcePanelServiceTests : IDisposable
     public async Task ResolveUidWithSourceAsync_WhenAutoSource_PrefersCookieOverSavedUid()
     {
         var service = await CreateServiceAsync(
-            new FakeResourcePanelHandler(),
+            new StubRemoteHttpTransport(),
             cookieUid: "COOKIEAA",
             settings: new LauncherSettings { ResourcePanelUid = "SAVEDUID" });
 
@@ -137,7 +177,7 @@ public sealed class ResourcePanelServiceTests : IDisposable
     public async Task ResolveUidWithSourceAsync_WhenCustomSource_PrefersSavedUidOverCookie()
     {
         var service = await CreateServiceAsync(
-            new FakeResourcePanelHandler(),
+            new StubRemoteHttpTransport(),
             cookieUid: "COOKIEAA",
             settings: new LauncherSettings { ResourcePanelUid = "SAVEDUID" });
 
@@ -150,7 +190,7 @@ public sealed class ResourcePanelServiceTests : IDisposable
     public async Task ResolveUidWithSourceAsync_WhenCustomSourceUidIsInvalid_FallsBackToCookie()
     {
         var service = await CreateServiceAsync(
-            new FakeResourcePanelHandler(),
+            new StubRemoteHttpTransport(),
             cookieUid: "COOKIEAA",
             settings: new LauncherSettings { ResourcePanelUid = "bad" });
 
@@ -163,7 +203,7 @@ public sealed class ResourcePanelServiceTests : IDisposable
     [Fact]
     public async Task SaveUidSourceAsync_ThenGetUidSourceAsync_RoundTripsPreferenceAndManualUid()
     {
-        var service = await CreateServiceAsync(new FakeResourcePanelHandler());
+        var service = await CreateServiceAsync(new StubRemoteHttpTransport());
 
         await service.SaveUidSourceAsync(ResourcePanelUidSources.Custom);
         await service.SaveManualUidAsync("MANUALAA");
@@ -186,7 +226,7 @@ public sealed class ResourcePanelServiceTests : IDisposable
             Path.Combine(tempDir, "missing"));
         var service = new ResourcePanelService(
             uidService,
-            new ResourcePanelApiClient(new FakeResourcePanelHandler()),
+            new ResourcePanelApiClient(new StubRemoteHttpTransport()),
             new LocalDiagnostics());
 
         // 存储写入失败按实现语义原样传播（不做吞并或降级）。
@@ -197,14 +237,14 @@ public sealed class ResourcePanelServiceTests : IDisposable
     [Fact]
     public async Task SaveManualUidAsync_WhenUidHasInvalidFormat_ThrowsArgumentException()
     {
-        var service = await CreateServiceAsync(new FakeResourcePanelHandler());
+        var service = await CreateServiceAsync(new StubRemoteHttpTransport());
 
         await Assert.ThrowsAsync<ArgumentException>(
             () => service.SaveManualUidAsync("bad-uid"));
     }
 
     private async Task<ResourcePanelService> CreateServiceAsync(
-        FakeResourcePanelHandler handler,
+        StubRemoteHttpTransport transport,
         string? cookieUid = null,
         LauncherSettings? settings = null)
     {
@@ -222,8 +262,15 @@ public sealed class ResourcePanelServiceTests : IDisposable
         }
 
         var uidService = new ResourcePanelUidService(new BestHttpCookieLibraryService(), settingsService, cookiePath);
-        return new ResourcePanelService(uidService, new ResourcePanelApiClient(handler), new LocalDiagnostics());
+        return new ResourcePanelService(uidService, new ResourcePanelApiClient(transport), new LocalDiagnostics());
     }
+
+    private static int CountRequests(StubRemoteHttpTransport transport, string path) =>
+        transport.RequestedUris.Count(uri => uri.AbsolutePath == path);
+
+    private static string? LastConfigSetQuery(StubRemoteHttpTransport transport) =>
+        transport.RequestedUris
+            .LastOrDefault(uri => uri.AbsolutePath == "/config/set")?.Query;
 
     private static async Task WriteCookieLibraryAsync(string path, string uid)
     {
@@ -244,58 +291,5 @@ public sealed class ResourcePanelServiceTests : IDisposable
         writer.Write(false);
         writer.Write(false);
         writer.Flush();
-    }
-
-    /// <summary>
-    /// 按路径分发的假 API handler：可用可空状态码注入失败（非 2xx 不触发重试，用例保持快速确定），
-    /// 并记录 /config/set 的精确查询串。
-    /// </summary>
-    private sealed class FakeResourcePanelHandler : HttpMessageHandler
-    {
-        public string StatusJson { get; set; } = "{}";
-        public string ConfigJson { get; set; } = "{}";
-        public HttpStatusCode? StatusStatusCode { get; set; }
-        public HttpStatusCode? ConfigGetStatusCode { get; set; }
-        public HttpStatusCode? ConfigSetStatusCode { get; set; }
-
-        public int StatusListCount { get; private set; }
-        public int ConfigGetCount { get; private set; }
-        public int ConfigSetCount { get; private set; }
-        public string? LastConfigSetQuery { get; private set; }
-
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken)
-        {
-            var path = request.RequestUri?.AbsolutePath ?? "";
-            if (path == "/status/list")
-            {
-                StatusListCount++;
-                return Task.FromResult(Respond(StatusStatusCode, StatusJson));
-            }
-
-            if (path == "/config/get")
-            {
-                ConfigGetCount++;
-                return Task.FromResult(Respond(ConfigGetStatusCode, ConfigJson));
-            }
-
-            if (path == "/config/set")
-            {
-                ConfigSetCount++;
-                LastConfigSetQuery = request.RequestUri?.Query;
-                return Task.FromResult(Respond(ConfigSetStatusCode, "{}"));
-            }
-
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
-        }
-
-        private static HttpResponseMessage Respond(HttpStatusCode? statusCode, string json) =>
-            statusCode is { } code
-                ? new HttpResponseMessage(code)
-                : new HttpResponseMessage(HttpStatusCode.OK)
-                {
-                    Content = new StringContent(json, Encoding.UTF8, "application/json")
-                };
     }
 }

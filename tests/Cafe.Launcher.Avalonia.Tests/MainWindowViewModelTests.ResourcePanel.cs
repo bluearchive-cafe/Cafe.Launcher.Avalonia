@@ -3,6 +3,7 @@ using System.Text;
 using Cafe.Launcher.Avalonia.Features.ResourcePanel;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -15,8 +16,8 @@ public partial class MainWindowViewModelTests
         await WriteResourcePanelCookieLibraryAsync(cookiePath, "UIDTESTA");
         var settingsService = new LauncherSettingsService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
         var uidService = new ResourcePanelUidService(new BestHttpCookieLibraryService(), settingsService, cookiePath);
-        var handler = new ResourcePanelHandler();
-        using var apiClient = new ResourcePanelApiClient(handler);
+        var transport = CreateResourcePanelTransport();
+        var apiClient = new ResourcePanelApiClient(transport);
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = await CreateViewModelAsync(coreService, settingsService, uidService, apiClient);
         viewModel.ResourcePanel.ApplySettings(new LauncherSettings { PatchUrlGroup = PatchUrlGroups.Cafe });
@@ -26,8 +27,8 @@ public partial class MainWindowViewModelTests
         Assert.True(viewModel.ResourcePanel.IsResourcePanelVisible);
         Assert.False(viewModel.ResourcePanel.IsResourcePanelUidMissing);
         Assert.Equal("UIDTESTA", viewModel.ResourcePanel.ResourcePanelUid);
-        Assert.Equal(1, handler.StatusListCount);
-        Assert.Equal(1, handler.ConfigGetCount);
+        Assert.Equal(1, CountRequests(transport, "/status/list"));
+        Assert.Equal(1, CountRequests(transport, "/config/get"));
         var text = viewModel.ResourcePanel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Text);
         var voice = viewModel.ResourcePanel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Voice);
         Assert.Equal(viewModel.Shell.I18n["resourcePanelReady"], text.StatusText);
@@ -43,8 +44,8 @@ public partial class MainWindowViewModelTests
         await WriteResourcePanelCookieLibraryAsync(cookiePath, "UIDTESTA");
         var settingsService = new LauncherSettingsService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
         var uidService = new ResourcePanelUidService(new BestHttpCookieLibraryService(), settingsService, cookiePath);
-        var handler = new ResourcePanelHandler();
-        using var apiClient = new ResourcePanelApiClient(handler);
+        var transport = CreateResourcePanelTransport();
+        var apiClient = new ResourcePanelApiClient(transport);
         using var viewModel = await CreateViewModelAsync(
             new CountingCoreService(CreateSnapshot()),
             settingsService,
@@ -56,8 +57,8 @@ public partial class MainWindowViewModelTests
 
         Assert.True(viewModel.Dialogs.IsResourcePanelSourceConfirmVisible);
         Assert.False(viewModel.ResourcePanel.IsResourcePanelVisible);
-        Assert.Equal(0, handler.StatusListCount);
-        Assert.Equal(0, handler.ConfigGetCount);
+        Assert.Equal(0, CountRequests(transport, "/status/list"));
+        Assert.Equal(0, CountRequests(transport, "/config/get"));
     }
 
     [Fact]
@@ -72,8 +73,8 @@ public partial class MainWindowViewModelTests
             PatchUrlGroup = PatchUrlGroups.Official
         });
         var uidService = new ResourcePanelUidService(new BestHttpCookieLibraryService(), settingsService, cookiePath);
-        var handler = new ResourcePanelHandler();
-        using var apiClient = new ResourcePanelApiClient(handler);
+        var transport = CreateResourcePanelTransport();
+        var apiClient = new ResourcePanelApiClient(transport);
         var snapshot = CreateSnapshot();
         snapshot.Settings.PatchUrlGroup = PatchUrlGroups.Cafe;
         using var viewModel = await CreateViewModelAsync(
@@ -87,14 +88,14 @@ public partial class MainWindowViewModelTests
         viewModel.Dialogs.ConfirmResourcePanelSourceSwitchCommand.Execute(null);
         await WaitForConditionAsync(() =>
             viewModel.ResourcePanel.IsResourcePanelVisible
-            && handler.StatusListCount == 1
-            && handler.ConfigGetCount == 1);
+            && CountRequests(transport, "/status/list") == 1
+            && CountRequests(transport, "/config/get") == 1);
 
         Assert.False(viewModel.Dialogs.IsResourcePanelSourceConfirmVisible);
         Assert.True(viewModel.ResourcePanel.IsResourcePanelVisible);
         Assert.Equal(PatchUrlGroups.Cafe, viewModel.Settings.Editor.Current.PatchUrlGroup);
         Assert.Equal(PatchUrlGroups.Cafe, (await settingsService.ReadAsync()).PatchUrlGroup);
-        Assert.Equal(1, handler.ConfigGetCount);
+        Assert.Equal(1, CountRequests(transport, "/config/get"));
     }
 
     [Fact]
@@ -107,7 +108,12 @@ public partial class MainWindowViewModelTests
             $"http://127.0.0.1:{proxyEndpoint.Port}",
             []));
         using var clientFactory = new HttpClientFactory(proxySettings);
-        using var apiClient = new ResourcePanelApiClient(clientFactory, new RemoteHttpUrlValidator());
+        // 代理租约与出口校验属于传输层：用真实 RemoteHttpTransport 验证面板请求经系统代理发出。
+        var transport = new RemoteHttpTransport(
+            clientFactory,
+            new RemoteHttpUrlValidator(),
+            () => ProxyModes.System);
+        var apiClient = new ResourcePanelApiClient(transport);
         var settingsService = new LauncherSettingsService(
             Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
         await settingsService.SaveAsync(new LauncherSettings { ResourcePanelUid = "UIDTESTA" });
@@ -146,8 +152,8 @@ public partial class MainWindowViewModelTests
             new BestHttpCookieLibraryService(),
             settingsService,
             Path.Combine(tempDir, "missing"));
-        var handler = new ResourcePanelHandler();
-        using var apiClient = new ResourcePanelApiClient(handler);
+        var transport = CreateResourcePanelTransport();
+        var apiClient = new ResourcePanelApiClient(transport);
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = await CreateViewModelAsync(coreService, settingsService, uidService, apiClient);
         viewModel.ResourcePanel.ApplySettings(new LauncherSettings { PatchUrlGroup = PatchUrlGroups.Cafe });
@@ -158,10 +164,11 @@ public partial class MainWindowViewModelTests
 
         await viewModel.ResourcePanel.SaveResourcePanelCommand.ExecuteAsync(null);
 
-        Assert.Equal("GET", handler.LastRequestMethod);
-        Assert.Equal("/config/set?uid=UIDTESTA&text=cn&voice=jp&media=cn", handler.LastRequestPathAndQuery);
-        Assert.Null(handler.LastRequestBody);
-        Assert.Equal(1, handler.ConfigSetCount);
+        var setRequest = Assert.Single(
+            transport.RequestedUris,
+            uri => uri.AbsolutePath == "/config/set");
+        Assert.Equal("/config/set?uid=UIDTESTA&text=cn&voice=jp&media=cn", setRequest.PathAndQuery);
+        Assert.Equal(1, CountRequests(transport, "/config/set"));
     }
 
     [Fact]
@@ -172,8 +179,8 @@ public partial class MainWindowViewModelTests
             new BestHttpCookieLibraryService(),
             settingsService,
             Path.Combine(tempDir, "missing"));
-        var handler = new ResourcePanelHandler();
-        using var apiClient = new ResourcePanelApiClient(handler);
+        var transport = CreateResourcePanelTransport();
+        var apiClient = new ResourcePanelApiClient(transport);
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = await CreateViewModelAsync(coreService, settingsService, uidService, apiClient);
         viewModel.ResourcePanel.ApplySettings(new LauncherSettings { PatchUrlGroup = PatchUrlGroups.Cafe });
@@ -183,9 +190,9 @@ public partial class MainWindowViewModelTests
         Assert.True(viewModel.ResourcePanel.IsResourcePanelVisible);
         Assert.True(viewModel.ResourcePanel.IsResourcePanelUidMissing);
         Assert.Equal("", viewModel.ResourcePanel.ResourcePanelUid);
-        Assert.Equal(0, handler.StatusListCount);
-        Assert.Equal(0, handler.ConfigGetCount);
-        Assert.Equal(0, handler.ConfigSetCount);
+        Assert.Equal(0, CountRequests(transport, "/status/list"));
+        Assert.Equal(0, CountRequests(transport, "/config/get"));
+        Assert.Equal(0, CountRequests(transport, "/config/set"));
     }
 
     [Fact]
@@ -196,8 +203,8 @@ public partial class MainWindowViewModelTests
             new BestHttpCookieLibraryService(),
             settingsService,
             Path.Combine(tempDir, "missing"));
-        var handler = new ResourcePanelHandler();
-        using var apiClient = new ResourcePanelApiClient(handler);
+        var transport = CreateResourcePanelTransport();
+        var apiClient = new ResourcePanelApiClient(transport);
         using var viewModel = await CreateViewModelAsync(
             new CountingCoreService(CreateSnapshot()),
             settingsService,
@@ -209,9 +216,9 @@ public partial class MainWindowViewModelTests
         await viewModel.ResourcePanel.SaveManualResourcePanelUidCommand.ExecuteAsync(null);
 
         Assert.Equal(viewModel.Shell.I18n["resourcePanelUidEmpty"], viewModel.ResourcePanel.ResourcePanelMessage);
-        Assert.Equal(0, handler.StatusListCount);
-        Assert.Equal(0, handler.ConfigGetCount);
-        Assert.Equal(0, handler.ConfigSetCount);
+        Assert.Equal(0, CountRequests(transport, "/status/list"));
+        Assert.Equal(0, CountRequests(transport, "/config/get"));
+        Assert.Equal(0, CountRequests(transport, "/config/set"));
     }
 
     private static async Task WriteResourcePanelCookieLibraryAsync(string path, string uid)
@@ -245,62 +252,37 @@ public partial class MainWindowViewModelTests
         }
     }
 
-    private sealed class ResourcePanelHandler : HttpMessageHandler
+    private static int CountRequests(StubRemoteHttpTransport transport, string path) =>
+        transport.RequestedUris.Count(uri => uri.AbsolutePath == path);
+
+    /// <summary>按路径应答资源面板端点的共享替身；/config/set 以 "ok" 正文应答流式读取。</summary>
+    private static StubRemoteHttpTransport CreateResourcePanelTransport() => new(uri => uri.AbsolutePath switch
     {
-        public int StatusListCount { get; private set; }
-        public int ConfigGetCount { get; private set; }
-        public int ConfigSetCount { get; private set; }
-        public string LastRequestMethod { get; private set; } = "";
-        public string LastRequestPathAndQuery { get; private set; } = "";
-        public string? LastRequestBody { get; private set; }
-
-        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-        {
-            LastRequestMethod = request.Method.Method;
-            LastRequestPathAndQuery = request.RequestUri?.PathAndQuery ?? "";
-            LastRequestBody = request.Content is not null ? await request.Content.ReadAsStringAsync(cancellationToken) : null;
-            var path = request.RequestUri?.AbsolutePath ?? "";
-            var json = "{}";
-            if (path == "/status/list")
+        "/status/list" =>
+            """
             {
-                StatusListCount++;
-                json = """
-                {
-                  "text": {
-                    "official": { "version": "1.0.0" },
-                    "localized": { "version": "1.0.0" }
-                  },
-                  "voice": {
-                    "official": { "version": "2.0.0" },
-                    "localized": { "version": "2.1.0" }
-                  },
-                  "media": {
-                    "official": { "version": "3.0.0" },
-                    "localized": { "version": "3.0.0" }
-                  }
-                }
-                """;
+              "text": {
+                "official": { "version": "1.0.0" },
+                "localized": { "version": "1.0.0" }
+              },
+              "voice": {
+                "official": { "version": "2.0.0" },
+                "localized": { "version": "2.1.0" }
+              },
+              "media": {
+                "official": { "version": "3.0.0" },
+                "localized": { "version": "3.0.0" }
+              }
             }
-            else if (path == "/config/get")
+            """,
+        "/config/get" =>
+            """
             {
-                ConfigGetCount++;
-                json = """
-                {
-                  "text": "cn",
-                  "voice": "jp",
-                  "media": "cn"
-                }
-                """;
+              "text": "cn",
+              "voice": "jp",
+              "media": "cn"
             }
-            else if (request.RequestUri?.PathAndQuery == "/config/set?uid=UIDTESTA&text=cn&voice=jp&media=cn")
-            {
-                ConfigSetCount++;
-            }
-
-            return new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent(json, Encoding.UTF8, "application/json")
-            };
-        }
-    }
+            """,
+        _ => "ok"
+    });
 }

@@ -27,7 +27,6 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     private DispatcherTimer? carouselTimer;
     private CancellationTokenSource? carouselDelayCts;
     private CancellationTokenSource? bannerPreloadCts;
-    private string proxyMode = ProxyModes.Auto;
     private bool showRemoteContentCard = true;
     private bool isMotionReduced;
     private bool isBannerPointerOver;
@@ -132,7 +131,6 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     {
         if (disposed) return;
         cancellationToken.ThrowIfCancellationRequested();
-        proxyMode = settings.ProxyMode;
         StopCarouselTimer();
         CancelCarouselDelay();
         var preloadToken = RestartBannerPreloadCancellation().Token;
@@ -536,7 +534,6 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
             {
                 var bytes = await imageCacheService.GetCachedOrDownloadImageBytesAsync(
                     item.ImageUrl,
-                    proxyMode,
                     cancellationToken);
                 if (bytes is null)
                 {

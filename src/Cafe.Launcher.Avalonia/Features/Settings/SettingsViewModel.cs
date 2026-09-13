@@ -241,8 +241,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
     {
         var savedSettings = editor.GetSavedSnapshot();
         var result = await launcherUpdateService.CheckForUpdateAsync(
-            savedSettings.UpdateChannel,
-            savedSettings.ProxyMode);
+            savedSettings.UpdateChannel);
 
         if (!result.IsSuccessful)
         {

@@ -6,6 +6,7 @@ using Avalonia.Media.Imaging;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Testing;
 using Cafe.Launcher.Avalonia.ViewModels;
 
 namespace Cafe.Launcher.Avalonia.Tests;
@@ -26,7 +27,7 @@ public sealed class BackgroundViewModelTests : IDisposable
     public async Task UpdateBackgroundImageAsync_WhenRemoteImageIsValid_LoadsAndCachesImage()
     {
         var hash = await ComputeHashAsync(PngBytes);
-        using var cache = CreateCache(new ImageHandler(PngBytes));
+        using var cache = CreateCache(_ => PngBytes);
         var themeRefreshCount = 0;
         using var viewModel = new BackgroundViewModel(
             cache,
@@ -54,7 +55,7 @@ public sealed class BackgroundViewModelTests : IDisposable
     public async Task Constructor_DoesNotDecodeBundledImage_AndFirstRefreshDecodesExactlyOnce()
     {
         var bundledLoadCount = 0;
-        using var cache = CreateCache(new ImageHandler(PngBytes));
+        using var cache = CreateCache(_ => PngBytes);
         using var viewModel = new BackgroundViewModel(
             cache,
             new LocalDiagnostics(),
@@ -92,7 +93,7 @@ public sealed class BackgroundViewModelTests : IDisposable
     [Fact]
     public async Task UpdateBackgroundImageAsync_WhenRemoteImageFails_FallsBackToBundledImage()
     {
-        using var cache = CreateCache(new StatusHandler(HttpStatusCode.BadGateway));
+        using var cache = CreateCache(_ => new HttpRequestException("bad gateway", null, HttpStatusCode.BadGateway));
         using var viewModel = new BackgroundViewModel(
             cache,
             new LocalDiagnostics(),
@@ -119,7 +120,7 @@ public sealed class BackgroundViewModelTests : IDisposable
     {
         var path = Path.Combine(tempDir, "invalid.png");
         await File.WriteAllTextAsync(path, "not-an-image");
-        using var cache = CreateCache(new ImageHandler(PngBytes));
+        using var cache = CreateCache(_ => PngBytes);
         using var viewModel = new BackgroundViewModel(
             cache,
             new LocalDiagnostics(),
@@ -133,7 +134,7 @@ public sealed class BackgroundViewModelTests : IDisposable
     [Fact]
     public async Task LoadCustomBackgroundAsync_WhenPathDoesNotExist_ReturnsNull()
     {
-        using var cache = CreateCache(new ImageHandler(PngBytes));
+        using var cache = CreateCache(_ => PngBytes);
         using var viewModel = new BackgroundViewModel(
             cache,
             new LocalDiagnostics(),
@@ -151,7 +152,7 @@ public sealed class BackgroundViewModelTests : IDisposable
         var folder = Path.Combine(tempDir, "empty");
         Directory.CreateDirectory(folder);
         await File.WriteAllTextAsync(Path.Combine(folder, "readme.txt"), "text");
-        using var cache = CreateCache(new ImageHandler(PngBytes));
+        using var cache = CreateCache(_ => PngBytes);
         using var viewModel = new BackgroundViewModel(
             cache,
             new LocalDiagnostics(),
@@ -166,7 +167,7 @@ public sealed class BackgroundViewModelTests : IDisposable
     public async Task UpdateBackgroundImageAsync_WhenSourceUnchanged_SkipsReloadWithoutFade()
     {
         var hash = await ComputeHashAsync(PngBytes);
-        using var cache = CreateCache(new ImageHandler(PngBytes));
+        using var cache = CreateCache(_ => PngBytes);
         using var viewModel = new BackgroundViewModel(
             cache,
             new LocalDiagnostics(),
@@ -197,7 +198,7 @@ public sealed class BackgroundViewModelTests : IDisposable
     [Fact]
     public async Task UpdateBackgroundImageAsync_WhenSourceChangedToBundled_FadesPreviousWallpaper()
     {
-        using var cache = CreateCache(new ImageHandler(PngBytes));
+        using var cache = CreateCache(_ => PngBytes);
         using var viewModel = new BackgroundViewModel(
             cache,
             new LocalDiagnostics(),
@@ -226,7 +227,7 @@ public sealed class BackgroundViewModelTests : IDisposable
     [Fact]
     public async Task UpdateBackgroundImageAsync_WhileOverlayStillHoldsPreviousImage_DefersDisposalUntilOverlayReleases()
     {
-        using var cache = CreateCache(new ImageHandler(PngBytes));
+        using var cache = CreateCache(_ => PngBytes);
         using var viewModel = new BackgroundViewModel(
             cache,
             new LocalDiagnostics(),
@@ -264,7 +265,7 @@ public sealed class BackgroundViewModelTests : IDisposable
     public async Task UpdateBackgroundImageAsync_WhenMotionReduced_SkipsCrossFadeOverlay()
     {
         var bundled = new TestImage();
-        using var cache = CreateCache(new ImageHandler(PngBytes));
+        using var cache = CreateCache(_ => PngBytes);
         using var viewModel = new BackgroundViewModel(
             cache,
             new LocalDiagnostics(),
@@ -286,7 +287,7 @@ public sealed class BackgroundViewModelTests : IDisposable
     [Fact]
     public async Task UpdateBackgroundImageAsync_WhenRemoteDownloadIsCanceled_PropagatesCancellation()
     {
-        using var cache = CreateCache(new CancellationHandler());
+        using var cache = CreateCache(_ => new OperationCanceledException("canceled"));
         using var viewModel = new BackgroundViewModel(
             cache,
             new LocalDiagnostics(),
@@ -306,7 +307,7 @@ public sealed class BackgroundViewModelTests : IDisposable
     [Fact]
     public async Task UpdateBackgroundImageAsync_WhenRemoteFieldsAreMissing_UsesBundledImage()
     {
-        using var cache = CreateCache(new ImageHandler(PngBytes));
+        using var cache = CreateCache(_ => PngBytes);
         var bundled = new TestImage();
         using var viewModel = new BackgroundViewModel(
             cache,
@@ -328,7 +329,7 @@ public sealed class BackgroundViewModelTests : IDisposable
     {
         var path = Path.Combine(tempDir, "custom.png");
         await File.WriteAllBytesAsync(path, PngBytes);
-        using var cache = CreateCache(new ImageHandler(PngBytes));
+        using var cache = CreateCache(_ => PngBytes);
         var custom = new TestImage();
         using var viewModel = new BackgroundViewModel(
             cache,
@@ -354,7 +355,7 @@ public sealed class BackgroundViewModelTests : IDisposable
     {
         var path = Path.Combine(tempDir, "custom-reswap.png");
         await File.WriteAllBytesAsync(path, PngBytes);
-        using var cache = CreateCache(new ImageHandler(PngBytes));
+        using var cache = CreateCache(_ => PngBytes);
         using var viewModel = new BackgroundViewModel(
             cache,
             new LocalDiagnostics(),
@@ -392,7 +393,7 @@ public sealed class BackgroundViewModelTests : IDisposable
     {
         var path = Path.Combine(tempDir, "custom-skip.png");
         await File.WriteAllBytesAsync(path, PngBytes);
-        using var cache = CreateCache(new ImageHandler(PngBytes));
+        using var cache = CreateCache(_ => PngBytes);
         using var viewModel = new BackgroundViewModel(
             cache,
             new LocalDiagnostics(),
@@ -426,7 +427,7 @@ public sealed class BackgroundViewModelTests : IDisposable
     [Fact]
     public void ApplyBackgroundPresentation_WhenUniform_UsesConfiguredFillColor()
     {
-        using var cache = CreateCache(new ImageHandler(PngBytes));
+        using var cache = CreateCache(_ => PngBytes);
         using var viewModel = new BackgroundViewModel(
             cache,
             new LocalDiagnostics(),
@@ -446,7 +447,7 @@ public sealed class BackgroundViewModelTests : IDisposable
     [Fact]
     public void Dispose_WhenCalledTwice_DoesNotThrow()
     {
-        using var cache = CreateCache(new ImageHandler(PngBytes));
+        using var cache = CreateCache(_ => PngBytes);
         var viewModel = new BackgroundViewModel(
             cache,
             new LocalDiagnostics(),
@@ -461,7 +462,7 @@ public sealed class BackgroundViewModelTests : IDisposable
     [Fact]
     public async Task LoadCustomBackgroundAsync_WhenCanceled_PropagatesCancellation()
     {
-        using var cache = CreateCache(new ImageHandler(PngBytes));
+        using var cache = CreateCache(_ => PngBytes);
         using var viewModel = new BackgroundViewModel(
             cache,
             new LocalDiagnostics(),
@@ -511,15 +512,8 @@ public sealed class BackgroundViewModelTests : IDisposable
             }
         };
 
-    private ImageCacheService CreateCache(HttpMessageHandler handler) =>
-        new(
-            new FixedHttpClientLeaseSource(
-                handler,
-                baseAddress: null,
-                timeout: Timeout.InfiniteTimeSpan),
-            new Crc64Service(),
-            RemoteHttpUrlValidator.CreateForTesting(),
-            tempDir);
+    private ImageCacheService CreateCache(Func<Uri, object?> responder) =>
+        new(new StubRemoteHttpTransport(responder), new Crc64Service(), tempDir);
 
     private async Task<string> ComputeHashAsync(byte[] bytes)
     {
@@ -534,33 +528,6 @@ public sealed class BackgroundViewModelTests : IDisposable
         {
             Directory.Delete(tempDir, recursive: true);
         }
-    }
-
-    private sealed class ImageHandler(byte[] bytes) : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new ByteArrayContent(bytes)
-            });
-    }
-
-    private sealed class StatusHandler(HttpStatusCode statusCode) : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new HttpResponseMessage(statusCode));
-    }
-
-    private sealed class CancellationHandler : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken) =>
-            Task.FromCanceled<HttpResponseMessage>(cancellationToken);
     }
 
     private sealed class TestImage : IImage, IDisposable

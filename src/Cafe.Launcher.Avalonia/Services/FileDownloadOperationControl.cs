@@ -1,24 +1,24 @@
 using System;
-using System.Net;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
-/// <summary>Provides the shared transport and cooperative operation controls for a transfer.</summary>
+/// <summary>
+/// Cooperative operation controls for one transfer. Everything here is
+/// caller-owned policy — the batch transport travels in
+/// <see cref="Transport"/>, and the temp-file state machine lives inside
+/// <see cref="IFileDownloadService"/>.
+/// </summary>
+/// <param name="Transport">The batch-scoped download transport (one per download batch).</param>
+/// <param name="WaitWhilePausedAsync">Awaited between chunks to honor a cooperative pause.</param>
 /// <param name="ReportProgressAsync">Reports transferred bytes.</param>
 /// <param name="ReportProgressResetAsync">
 /// Asks the progress owner to resample valid downloaded bytes after discarded
 /// temporary data is removed.
 /// </param>
-/// <param name="ConnectionProxy">
-/// The proxy carrying the transfer's connections, or null for direct egress.
-/// Resolved per URI when validating remote URLs.
-/// </param>
 public sealed record FileDownloadOperationControl(
-    HttpClient HttpClient,
+    IDownloadTransport Transport,
     Func<Task> WaitWhilePausedAsync,
     Func<long, CancellationToken, Task> ReportProgressAsync,
-    Func<CancellationToken, Task> ReportProgressResetAsync,
-    IWebProxy? ConnectionProxy);
+    Func<CancellationToken, Task> ReportProgressResetAsync);

@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http;
-using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -32,8 +32,7 @@ public sealed class ImageCacheServiceTests : IDisposable
         File.SetLastWriteTimeUtc(expiredCache, expiredTime);
         File.SetLastWriteTimeUtc(expiredRemote, expiredTime);
         File.SetLastWriteTimeUtc(staleTemp, expiredTime);
-        using var source = CreateSource(new ByteArrayContent([]));
-        using var service = CreateService(source);
+        using var service = CreateService(null);
 
         service.CleanupExpiredEntries(now);
 
@@ -50,8 +49,7 @@ public sealed class ImageCacheServiceTests : IDisposable
         var hash = await ComputeHashAsync(bytes);
         var cachePath = Path.Combine(tempDir, $"{hash}.cache");
         await File.WriteAllBytesAsync(cachePath, bytes);
-        using var source = CreateSource(new ByteArrayContent(bytes));
-        using var service = CreateService(source);
+        using var service = CreateService(null);
 
         var result = await service.GetCachedPathAsync(hash);
 
@@ -64,8 +62,7 @@ public sealed class ImageCacheServiceTests : IDisposable
         var expectedHash = await ComputeHashAsync("expected"u8.ToArray());
         var cachePath = Path.Combine(tempDir, $"{expectedHash}.cache");
         await File.WriteAllBytesAsync(cachePath, "actual"u8.ToArray());
-        using var source = CreateSource(new ByteArrayContent([]));
-        using var service = CreateService(source);
+        using var service = CreateService(null);
 
         var result = await service.GetCachedPathAsync(expectedHash);
 
@@ -78,18 +75,14 @@ public sealed class ImageCacheServiceTests : IDisposable
     {
         var bytes = "downloaded-image"u8.ToArray();
         var hash = await ComputeHashAsync(bytes);
-        var handler = new CountingHandler(bytes);
-        using IHttpClientLeaseSource source = new FixedHttpClientLeaseSource(
-            handler,
-            baseAddress: null,
-            timeout: Timeout.InfiniteTimeSpan);
-        using var service = CreateService(source);
+        var transport = new StubRemoteHttpTransport(_ => bytes);
+        using var service = CreateServiceWithTransport(transport);
 
         var results = await Task.WhenAll(
             service.CacheImageAsync("https://images.example.invalid/a.png", hash),
             service.CacheImageAsync("https://images.example.invalid/a.png", hash));
 
-        Assert.Equal(1, handler.RequestCount);
+        Assert.Single(transport.RequestedUris);
         Assert.Equal(results[0], results[1]);
         Assert.Equal(bytes, await File.ReadAllBytesAsync(results[0]));
     }
@@ -98,23 +91,17 @@ public sealed class ImageCacheServiceTests : IDisposable
     public async Task GetCachedOrDownloadImageBytesAsync_WhenUrlIsRequestedTwice_ReusesDiskCache()
     {
         var bytes = "remote-banner"u8.ToArray();
-        var handler = new CountingHandler(bytes);
-        using IHttpClientLeaseSource source = new FixedHttpClientLeaseSource(
-            handler,
-            baseAddress: null,
-            timeout: Timeout.InfiniteTimeSpan);
-        using var service = CreateService(source);
+        var transport = new StubRemoteHttpTransport(_ => bytes);
+        using var service = CreateServiceWithTransport(transport);
 
         var first = await service.GetCachedOrDownloadImageBytesAsync(
-            "https://images.example.invalid/banner.png",
-            ProxyModes.Direct);
+            "https://images.example.invalid/banner.png");
         var second = await service.GetCachedOrDownloadImageBytesAsync(
-            "https://images.example.invalid/banner.png",
-            ProxyModes.Direct);
+            "https://images.example.invalid/banner.png");
 
         Assert.Equal(bytes, first);
         Assert.Equal(bytes, second);
-        Assert.Equal(1, handler.RequestCount);
+        Assert.Single(transport.RequestedUris);
     }
 
     [Theory]
@@ -123,8 +110,7 @@ public sealed class ImageCacheServiceTests : IDisposable
     [InlineData("folder\\hash")]
     public async Task CacheImageAsync_WhenHashContainsPathSyntax_Throws(string hash)
     {
-        using var source = CreateSource(new ByteArrayContent([]));
-        using var service = CreateService(source);
+        using var service = CreateService(null);
 
         await Assert.ThrowsAsync<ArgumentException>(
             () => service.CacheImageAsync("https://images.example.invalid/a.png", hash));
@@ -134,8 +120,7 @@ public sealed class ImageCacheServiceTests : IDisposable
     public async Task CacheImageAsync_WhenDownloadedHashDoesNotMatch_RemovesTemporaryFile()
     {
         var expectedHash = await ComputeHashAsync("expected"u8.ToArray());
-        using var source = CreateSource(new ByteArrayContent("actual"u8.ToArray()));
-        using var service = CreateService(source);
+        using var service = CreateService(_ => "actual"u8.ToArray());
 
         await Assert.ThrowsAsync<InvalidDataException>(
             () => service.CacheImageAsync(
@@ -149,9 +134,8 @@ public sealed class ImageCacheServiceTests : IDisposable
     [Fact]
     public async Task GetImageBytesAsync_WhenContentLengthExceedsLimit_Throws()
     {
-        var content = new ByteArrayContent(new byte[25 * 1024 * 1024 + 1]);
-        using var source = CreateSource(content);
-        using var service = CreateService(source);
+        var oversized = new byte[25 * 1024 * 1024 + 1];
+        using var service = CreateService(_ => oversized);
 
         await Assert.ThrowsAsync<InvalidDataException>(
             () => service.GetImageBytesAsync("https://images.example.invalid/a.png"));
@@ -160,8 +144,7 @@ public sealed class ImageCacheServiceTests : IDisposable
     [Fact]
     public async Task GetImageBytesAsync_WhenStreamExceedsLimit_Throws()
     {
-        using var source = CreateSource(new UnknownLengthContent(25 * 1024 * 1024 + 1));
-        using var service = CreateService(source);
+        using var service = CreateServiceWithTransport(new UnknownLengthTransport());
 
         await Assert.ThrowsAsync<InvalidDataException>(
             () => service.GetImageBytesAsync("https://images.example.invalid/a.png"));
@@ -170,11 +153,8 @@ public sealed class ImageCacheServiceTests : IDisposable
     [Fact]
     public async Task GetImageBytesAsync_WhenResponseIsFailure_Throws()
     {
-        using IHttpClientLeaseSource source = new FixedHttpClientLeaseSource(
-            new StatusHandler(HttpStatusCode.BadGateway),
-            baseAddress: null,
-            timeout: Timeout.InfiniteTimeSpan);
-        using var service = CreateService(source);
+        using var service = CreateService(
+            _ => new HttpRequestException("bad gateway", null, HttpStatusCode.BadGateway));
 
         await Assert.ThrowsAsync<HttpRequestException>(
             () => service.GetImageBytesAsync("https://images.example.invalid/a.png"));
@@ -185,8 +165,7 @@ public sealed class ImageCacheServiceTests : IDisposable
     {
         using var cts = new CancellationTokenSource();
         cts.Cancel();
-        using var source = CreateSource(new ByteArrayContent([]));
-        using var service = CreateService(source);
+        using var service = CreateService(_ => new OperationCanceledException("canceled"));
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
             () => service.GetImageBytesAsync(
@@ -194,18 +173,11 @@ public sealed class ImageCacheServiceTests : IDisposable
                 cts.Token));
     }
 
-    private ImageCacheService CreateService(IHttpClientLeaseSource source) =>
-        new(
-            source,
-            new Crc64Service(),
-            RemoteHttpUrlValidator.CreateForTesting(),
-            tempDir);
+    private ImageCacheService CreateService(Func<Uri, object?>? responder) =>
+        new(new StubRemoteHttpTransport(responder), new Crc64Service(), tempDir);
 
-    private static FixedHttpClientLeaseSource CreateSource(HttpContent content) =>
-        new(
-            new StaticResponseHandler(content),
-            baseAddress: null,
-            timeout: Timeout.InfiniteTimeSpan);
+    private ImageCacheService CreateServiceWithTransport(IRemoteHttpTransport transport) =>
+        new(transport, new Crc64Service(), tempDir);
 
     private async Task<string> ComputeHashAsync(byte[] bytes)
     {
@@ -222,56 +194,22 @@ public sealed class ImageCacheServiceTests : IDisposable
         }
     }
 
-    private sealed class StaticResponseHandler(HttpContent content) : HttpMessageHandler
+    /// <summary>声明长度缺失、纯累计超限的响应体：声明长度守卫放行后由累计守卫兜住。</summary>
+    private sealed class UnknownLengthTransport : IRemoteHttpTransport
     {
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = content
-            });
-    }
-
-    private sealed class CountingHandler(byte[] bytes) : HttpMessageHandler
-    {
-        public int RequestCount { get; private set; }
-
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken)
-        {
-            RequestCount++;
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new ByteArrayContent(bytes)
-            });
-        }
-    }
-
-    private sealed class StatusHandler(HttpStatusCode statusCode) : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new HttpResponseMessage(statusCode));
-    }
-
-    private sealed class UnknownLengthContent(int length) : HttpContent
-    {
-        protected override Task SerializeToStreamAsync(
-            Stream stream,
-            TransportContext? context) =>
+        public Task<T?> GetJsonAsync<T>(
+            Uri uri,
+            RemoteRequestOptions? options = null,
+            CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
 
-        protected override bool TryComputeLength(out long length)
-        {
-            length = 0;
-            return false;
-        }
-
-        protected override Task<Stream> CreateContentReadStreamAsync() =>
-            Task.FromResult<Stream>(new RepeatingByteStream(length));
+        public Task<RemoteBody> GetStreamAsync(
+            Uri uri,
+            RemoteRequestOptions? options = null,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(new RemoteBody(
+                new RepeatingByteStream(25 * 1024 * 1024 + 1),
+                DeclaredContentLength: null));
     }
 
     private sealed class RepeatingByteStream(long length) : Stream

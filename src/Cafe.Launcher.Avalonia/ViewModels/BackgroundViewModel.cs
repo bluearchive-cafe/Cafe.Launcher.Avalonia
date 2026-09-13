@@ -171,9 +171,8 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
                 {
                     try
                     {
-                        var proxyMode = snapshot?.Settings.ProxyMode ?? ProxyModes.Auto;
                         var cachedPath = await imageCacheService.GetCachedPathAsync(crc64, cancellationToken)
-                            ?? await imageCacheService.CacheImageAsync(bgImg, crc64, proxyMode, cancellationToken);
+                            ?? await imageCacheService.CacheImageAsync(bgImg, crc64, cancellationToken);
                         cancellationToken.ThrowIfCancellationRequested();
                         // 远端背景图可能很大；解码放线程池，避免续体回到 UI 线程后卡帧。
                         var remoteImage = await Task.Run(() => imageLoader(cachedPath, decodeSize));

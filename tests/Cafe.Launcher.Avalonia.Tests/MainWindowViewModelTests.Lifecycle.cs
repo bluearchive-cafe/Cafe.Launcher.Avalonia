@@ -255,7 +255,7 @@ public partial class MainWindowViewModelTests
             ]
             """;
         var updateSvc = new LauncherUpdateService(
-            new LauncherUpdateHandler(releaseJson),
+            new StubRemoteHttpTransport(_ => releaseJson),
             currentVersionOverride: "1.0.0");
         using var viewModel = await CreateViewModelAsync(
             coreService,
@@ -298,7 +298,7 @@ public partial class MainWindowViewModelTests
         var toasts = new List<string>();
         var toastService = new ToastService();
         toastService.ToastRaised += notification => toasts.Add(notification.Message);
-        // LauncherUpdateHandler returns 404 by default (no releases found = no update)
+        // The default stub transport answers with an empty body (no releases found = no update).
         using var viewModel = await CreateViewModelAsync(
             coreService,
             toastService: toastService);

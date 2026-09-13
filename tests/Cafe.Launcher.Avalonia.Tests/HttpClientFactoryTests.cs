@@ -30,11 +30,9 @@ public sealed class HttpClientFactoryTests
         using var factory = new HttpClientFactory(new ProxySettingsService());
         factory.ConfigureHttp2(false);
 
-        using var client = factory.CreateClient(TimeSpan.FromSeconds(1));
         using var directLease = await factory.CreateLeaseAsync(ProxyModes.Direct);
         using var proxyLease = await factory.CreateLeaseAsync(ProxyModes.Auto);
 
-        AssertHttpVersion(client, HttpVersion.Version11);
         AssertHttpVersion(directLease.Client, HttpVersion.Version11);
         AssertHttpVersion(proxyLease.Client, HttpVersion.Version11);
     }
@@ -45,29 +43,11 @@ public sealed class HttpClientFactoryTests
         using var factory = new HttpClientFactory(new ProxySettingsService());
         factory.ConfigureHttp2(true);
 
-        using var client = factory.CreateClient(TimeSpan.FromSeconds(1));
         using var directLease = await factory.CreateLeaseAsync(ProxyModes.Direct);
         using var proxyLease = await factory.CreateLeaseAsync(ProxyModes.Auto);
 
-        AssertHttpVersion(client, HttpVersion.Version20);
         AssertHttpVersion(directLease.Client, HttpVersion.Version20);
         AssertHttpVersion(proxyLease.Client, HttpVersion.Version20);
-    }
-
-    [Fact]
-    public async Task FixedHttpClientLeaseSource_UsesInjectedHandler()
-    {
-        var handler = new RecordingHandler();
-        using IHttpClientLeaseSource source = new FixedHttpClientLeaseSource(
-            handler,
-            new Uri("https://example.test/"),
-            TimeSpan.FromSeconds(5));
-
-        using var lease = await source.CreateLeaseAsync(ProxyModes.System);
-        using var response = await lease.Client.GetAsync("status");
-
-        response.EnsureSuccessStatusCode();
-        Assert.Equal("https://example.test/status", handler.RequestUri);
     }
 
     [Fact]
@@ -83,18 +63,6 @@ public sealed class HttpClientFactoryTests
     }
 
     [Fact]
-    public void CreateClient_WithBaseAddressAndTimeout_AppliesConfiguration()
-    {
-        using var factory = new HttpClientFactory(new ProxySettingsService());
-        using var client = factory.CreateClient(
-            "https://example.test/api/",
-            TimeSpan.FromSeconds(7));
-
-        Assert.Equal(new Uri("https://example.test/api/"), client.BaseAddress);
-        Assert.Equal(TimeSpan.FromSeconds(7), client.Timeout);
-    }
-
-    [Fact]
     public async Task CreateLeaseAsync_WithDirectConfiguration_AppliesBaseAddressAndTimeout()
     {
         using var factory = new HttpClientFactory(new ProxySettingsService());
@@ -106,16 +74,6 @@ public sealed class HttpClientFactoryTests
 
         Assert.Equal(new Uri("https://example.test/"), lease.Client.BaseAddress);
         Assert.Equal(TimeSpan.FromSeconds(9), lease.Client.Timeout);
-    }
-
-    [Fact]
-    public void CreateClient_AfterFactoryIsDisposed_Throws()
-    {
-        var factory = new HttpClientFactory(new ProxySettingsService());
-        factory.Dispose();
-
-        Assert.Throws<ObjectDisposedException>(
-            () => factory.CreateClient(TimeSpan.FromSeconds(1)));
     }
 
     [Fact]
@@ -164,77 +122,12 @@ public sealed class HttpClientFactoryTests
             () => factory.CreateLeaseAsync(ProxyModes.Direct));
     }
 
-    [Fact]
-    public async Task CreateLeaseAsync_WhenProxyModeIsDirect_DoesNotCacheHandler()
-    {
-        using var factory = new HttpClientFactory(new ProxySettingsService());
-
-        using (await factory.CreateLeaseAsync(ProxyModes.Direct))
-        {
-        }
-
-        Assert.Equal(0, factory.CachedProxyHandlerCount);
-    }
-
-    [Fact]
-    public async Task CreateLeaseAsync_WithUnchangedProxySettings_ReusesCachedHandler()
-    {
-        var factory = CreateFactory(() => new SystemProxySettings(
-            "http://proxy.example.invalid:8080",
-            ["localhost"]));
-
-        using (await factory.CreateLeaseAsync(ProxyModes.System))
-        {
-        }
-
-        using (await factory.CreateLeaseAsync(ProxyModes.System))
-        {
-        }
-
-        Assert.Equal(1, factory.CachedProxyHandlerCount);
-    }
-
-    [Fact]
-    public async Task CreateLeaseAsync_WhenProxySettingsChange_ReplacesCachedHandler()
-    {
-        var settings = new SystemProxySettings(
-            "http://proxy-a.example.invalid:8080",
-            ["localhost"]);
-        using var factory = CreateFactory(() => settings);
-
-        using (await factory.CreateLeaseAsync(ProxyModes.System))
-        {
-        }
-
-        settings = new SystemProxySettings(
-            "http://proxy-b.example.invalid:8080",
-            []);
-        using (await factory.CreateLeaseAsync(ProxyModes.System))
-        {
-        }
-
-        Assert.Equal(1, factory.CachedProxyHandlerCount);
-    }
-
-    private static HttpClientFactory CreateFactory(Func<SystemProxySettings?> provider) =>
-        new(new ProxySettingsService(provider));
+    // 代理处理器的缓存行为测试（指纹换处理器、直连不缓存）随实现迁移至
+    // ProxySettingsServiceTests——缓存由 ProxySettingsService 拥有。
 
     private static void AssertHttpVersion(HttpClient client, Version expectedVersion)
     {
         Assert.Equal(expectedVersion, client.DefaultRequestVersion);
         Assert.Equal(HttpVersionPolicy.RequestVersionOrLower, client.DefaultVersionPolicy);
-    }
-
-    private sealed class RecordingHandler : HttpMessageHandler
-    {
-        public string? RequestUri { get; private set; }
-
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken)
-        {
-            RequestUri = request.RequestUri?.AbsoluteUri;
-            return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK));
-        }
     }
 }

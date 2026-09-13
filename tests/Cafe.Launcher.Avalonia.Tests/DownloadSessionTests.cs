@@ -5,6 +5,7 @@ using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Auth;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Services.GameRuntime;
+using Cafe.Launcher.Avalonia.Testing;
 using Xunit;
 
 namespace Cafe.Launcher.Avalonia.Tests;
@@ -219,15 +220,14 @@ public sealed class DownloadSessionTests
     {
         var diagnostics = new LocalDiagnostics();
         var apiClient = new LauncherApiClient(
-            new HttpClientHandler(),
+            new StubRemoteHttpTransport(),
             new AuthorizationHeaderFactory(),
             new PatchUrlGroupService());
-        using var httpClientFactory = new HttpClientFactory(new ProxySettingsService());
         var context = new DownloadSessionContext(
             apiClient,
             new RemoteManifestService(apiClient),
-            new FileDownloadService(new Crc64Service(), diagnostics, RemoteHttpUrlValidator.CreateForTesting()),
-            new ProxyAwareHttpClientLeaseSource(httpClientFactory, new Uri(ApiConfig.ApiBaseUrl), TimeSpan.FromSeconds(30)),
+            new FileDownloadService(new Crc64Service(), diagnostics),
+            new StubDownloadTransportSource(),
             new Crc64Service(),
             new LocalInstallationStateStore(),
             new LauncherSettingsService(),
@@ -243,5 +243,12 @@ public sealed class DownloadSessionTests
             repair: false,
             _ => { },
             CancellationToken.None);
+    }
+
+    /// <summary>最简传输源替身：生命周期测试只构造会话，不发起真实下载。</summary>
+    private sealed class StubDownloadTransportSource : IDownloadTransportSource
+    {
+        public Task<IDownloadTransport> CreateAsync(string proxyMode, CancellationToken cancellationToken) =>
+            Task.FromResult<IDownloadTransport>(new StubDownloadTransport());
     }
 }

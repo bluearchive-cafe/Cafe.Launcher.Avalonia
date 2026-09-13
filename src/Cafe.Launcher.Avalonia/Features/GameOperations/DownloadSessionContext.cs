@@ -15,7 +15,7 @@ internal sealed record DownloadSessionContext(
     LauncherApiClient ApiClient,
     RemoteManifestService RemoteManifestService,
     IFileDownloadService FileDownloadService,
-    IHttpClientLeaseSource LeaseSource,
+    IDownloadTransportSource TransportSource,
     Crc64Service Crc64Service,
     LocalInstallationStateStore LocalInstallationStateStore,
     LauncherSettingsService SettingsService,

@@ -81,30 +81,29 @@ public sealed class LauncherCoreService : ILauncherCoreService
         await diagnostics.DebugAsync("LauncherCore", "LoadAsync started", CancellationToken.None).ConfigureAwait(false);
         var gameConfigTask = ReadRemoteAsync(
             "game-config",
-            () => apiClient.GetGameConfigAsync(settings.ProxyMode, remoteBudget.Token),
+            () => apiClient.GetGameConfigAsync(remoteBudget.Token),
             cancellationToken);
         var baseConfigTask = ReadRemoteAsync(
             "base-config",
-            () => apiClient.GetBaseConfigAsync(settings.ProxyMode, remoteBudget.Token),
+            () => apiClient.GetBaseConfigAsync(remoteBudget.Token),
             cancellationToken);
         var cdnConfigTask = ReadRemoteAsync(
             "cdn-config",
             () => apiClient.GetCdnConfigAsync(
                 settings.PatchUrlGroup,
-                settings.ProxyMode,
                 remoteBudget.Token),
             cancellationToken);
         var operationsResourceTask = ReadRemoteAsync(
             "operations-resource",
-            () => apiClient.GetOperationsResourceAsync(settings.ProxyMode, remoteBudget.Token),
+            () => apiClient.GetOperationsResourceAsync(remoteBudget.Token),
             cancellationToken);
         var socialMediaResourceTask = ReadRemoteAsync(
             "social-media-resource",
-            () => apiClient.GetSocialMediaResourceAsync(settings.ProxyMode, remoteBudget.Token),
+            () => apiClient.GetSocialMediaResourceAsync(remoteBudget.Token),
             cancellationToken);
         var installationConfigTask = ReadRemoteAsync(
             "installation-config",
-            () => apiClient.GetInstallationConfigAsync(settings.ProxyMode, remoteBudget.Token),
+            () => apiClient.GetInstallationConfigAsync(remoteBudget.Token),
             cancellationToken);
         if (string.IsNullOrWhiteSpace(settings.GamePath))
         {

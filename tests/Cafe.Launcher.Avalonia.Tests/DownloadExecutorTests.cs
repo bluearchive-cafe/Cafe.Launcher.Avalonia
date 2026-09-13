@@ -196,8 +196,8 @@ public sealed class DownloadExecutorTests : IDisposable
 
             try
             {
-                // A shared lease client is supplied through the control object.
-                Assert.NotNull(operationControl.HttpClient);
+                // A shared batch transport is supplied through the control object.
+                Assert.NotNull(operationControl.Transport);
                 await operationControl.ReportProgressAsync(10, cancellationToken);
                 await Task.Delay(50, cancellationToken);
             }
@@ -206,12 +206,11 @@ public sealed class DownloadExecutorTests : IDisposable
                 Interlocked.Decrement(ref currentConcurrency);
             }
         });
-        using var leaseSource = new FixedHttpClientLeaseSource(new HttpClientHandler(), null, null);
         var progressCount = 0;
         var executor = new DownloadExecutor(
             transferService,
             new Crc64Service(),
-            leaseSource,
+            new StubDownloadTransportSource(),
             new LocalDiagnostics(),
             () => Task.CompletedTask,
             () => false);
@@ -253,12 +252,18 @@ public sealed class DownloadExecutorTests : IDisposable
             await operationControl.ReportProgressResetAsync(cancellationToken);
             await operationControl.ReportProgressAsync(8, cancellationToken);
         });
-        using var leaseSource = new FixedHttpClientLeaseSource(new HttpClientHandler(), null, null);
+        // 进度播种与重采样都经 fileDownloadService.GetExistingDownloadedSize：
+        // 假体按真实 .tmp 长度语义返回盘上字节（缺失或超长记 0）。
+        transferService.ExistingSize = (path, expectedSize) =>
+        {
+            var length = File.Exists(path) ? new FileInfo(path).Length : 0;
+            return length <= expectedSize ? length : 0;
+        };
         var progressSnapshots = new List<GameOperationProgress>();
         var executor = new DownloadExecutor(
             transferService,
             new Crc64Service(),
-            leaseSource,
+            new StubDownloadTransportSource(),
             new LocalDiagnostics(),
             () => Task.CompletedTask,
             () => false);
@@ -318,10 +323,28 @@ public sealed class DownloadExecutorTests : IDisposable
         new(
             new StubFileDownloadService(),
             new Crc64Service(),
-            new FixedHttpClientLeaseSource(new HttpClientHandler(), null, null),
+            new StubDownloadTransportSource(),
             new LocalDiagnostics(),
             () => Task.CompletedTask,
             () => false);
+
+    /// <summary>
+    /// 最简传输源替身：每批交出一个共享 <see cref="StubDownloadTransport"/>，
+    /// 并记录 CreateAsync 的调用次数与代理模式。
+    /// </summary>
+    private sealed class StubDownloadTransportSource : IDownloadTransportSource
+    {
+        public int CreateCount { get; private set; }
+
+        public List<string> RequestedProxyModes { get; } = [];
+
+        public Task<IDownloadTransport> CreateAsync(string proxyMode, CancellationToken cancellationToken)
+        {
+            CreateCount++;
+            RequestedProxyModes.Add(proxyMode);
+            return Task.FromResult<IDownloadTransport>(new StubDownloadTransport());
+        }
+    }
 
     public void Dispose()
     {

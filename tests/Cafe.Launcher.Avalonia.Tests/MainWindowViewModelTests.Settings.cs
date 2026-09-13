@@ -22,9 +22,10 @@ public partial class MainWindowViewModelTests
 
         await SaveSettingsAsync(viewModel);
 
-        using var client = httpClientFactory.CreateClient(TimeSpan.FromSeconds(1));
-        Assert.Equal(HttpVersion.Version20, client.DefaultRequestVersion);
-        Assert.Equal(HttpVersionPolicy.RequestVersionOrLower, client.DefaultVersionPolicy);
+        // CreateClient 已删除：未来的客户端现在经由工厂租约创建，检查租约客户端的版本配置。
+        using var lease = await httpClientFactory.CreateLeaseAsync(ProxyModes.Direct);
+        Assert.Equal(HttpVersion.Version20, lease.Client.DefaultRequestVersion);
+        Assert.Equal(HttpVersionPolicy.RequestVersionOrLower, lease.Client.DefaultVersionPolicy);
     }
 
     [Fact]
@@ -375,7 +376,7 @@ public partial class MainWindowViewModelTests
             null!,
             localizer,
             toastService,
-            new LauncherUpdateService(new LauncherUpdateHandler()),
+            new LauncherUpdateService(new StubRemoteHttpTransport()),
             dialogs,
             testLogger,
             new GameInstallationPath(),
