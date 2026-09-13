@@ -15,10 +15,11 @@ public sealed class LocalDiagnostics
     private readonly UnifiedLogger logger;
 
     /// <summary>
-    /// Thread-safe static reference used by <see cref="LogSync"/> to reach the DI-resolved logger.
-    /// Uses Volatile.Read/Write to avoid stale reads without locking.
-    /// Falls back to Debug.WriteLine when no logger has been registered (e.g. before DI init,
-    /// or after the logger has been disposed during shutdown).
+    /// Thread-safe static reference used by the static entry points to reach the
+    /// logger registered once by the composition root (see
+    /// <see cref="RegisterSharedLogger"/>). Uses Volatile.Read/Write to avoid
+    /// stale reads without locking. Falls back to Debug.WriteLine when no logger
+    /// has been registered (e.g. before DI init, or after disposal during shutdown).
     /// </summary>
     private static UnifiedLogger? syncLogger;
 
@@ -38,8 +39,16 @@ public sealed class LocalDiagnostics
     public LocalDiagnostics(UnifiedLogger logger)
     {
         this.logger = logger;
-        Volatile.Write(ref syncLogger, logger);
     }
+
+    /// <summary>
+    /// Registers the process-wide logger backing the static <see cref="LogAsync"/>
+    /// and <see cref="LogSync"/> entry points. The composition root calls this
+    /// exactly once for the real pipeline; later constructions — including test
+    /// doubles writing to temporary directories — cannot hijack the shared path.
+    /// </summary>
+    internal static void RegisterSharedLogger(UnifiedLogger logger) =>
+        Volatile.Write(ref syncLogger, logger);
 
     internal string LogFilePath => logger.LogFilePath;
 

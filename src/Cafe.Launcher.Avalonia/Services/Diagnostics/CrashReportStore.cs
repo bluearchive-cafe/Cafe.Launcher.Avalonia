@@ -13,7 +13,7 @@ using Cafe.Launcher.Avalonia.Constants;
 namespace Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 /// <summary>Synchronously persists share-safe crash snapshots for the isolated reporter.</summary>
-public sealed class CrashReportStore
+public sealed class CrashReportStore : ICrashReportLocator
 {
     internal const string ReportDirectoryName = "CrashReports";
     internal const int RetainedReportCount = 10;
@@ -51,6 +51,13 @@ public sealed class CrashReportStore
     }
 
     internal string PrimaryDirectory => primaryDirectory;
+
+    /// <inheritdoc />
+    public IEnumerable<string> GetCrashReportDirectories(string userDataRoot)
+    {
+        yield return Path.Combine(userDataRoot, ReportDirectoryName);
+        yield return DefaultFallbackDirectory;
+    }
 
     /// <summary>Creates and synchronously writes a crash snapshot, falling back to the temp directory.</summary>
     public CrashReport Create(CrashOrigin origin, Exception exception)

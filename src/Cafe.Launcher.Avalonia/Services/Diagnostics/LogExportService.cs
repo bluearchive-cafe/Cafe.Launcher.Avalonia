@@ -37,20 +37,30 @@ public sealed class LogExportService
 
     private readonly LocalDiagnostics diagnostics;
     private readonly string userDataRoot;
+    private readonly ICrashReportLocator crashReportLocator;
 
     public static string DefaultExportDirectory => Path.Combine(
         LauncherUserDataDirectory.Root,
         LauncherConstants.LogExportFolderName);
 
     public LogExportService(LocalDiagnostics diagnostics)
-        : this(diagnostics, LauncherUserDataDirectory.Root)
+        : this(diagnostics, LauncherUserDataDirectory.Root, new CrashReportStore())
     {
     }
 
-    internal LogExportService(LocalDiagnostics diagnostics, string userDataRoot)
+    public LogExportService(LocalDiagnostics diagnostics, ICrashReportLocator crashReportLocator)
+        : this(diagnostics, LauncherUserDataDirectory.Root, crashReportLocator)
+    {
+    }
+
+    internal LogExportService(
+        LocalDiagnostics diagnostics,
+        string userDataRoot,
+        ICrashReportLocator? crashReportLocator = null)
     {
         this.diagnostics = diagnostics;
         this.userDataRoot = userDataRoot;
+        this.crashReportLocator = crashReportLocator ?? new CrashReportStore();
     }
 
     /// <summary>
@@ -334,11 +344,8 @@ public sealed class LogExportService
     /// store cannot drift apart and silently lose the reports written there. The primary
     /// directory is derived from this service's own root, which tests override.
     /// </summary>
-    private IEnumerable<string> CrashReportDirectories()
-    {
-        yield return Path.Combine(userDataRoot, CrashReportStore.ReportDirectoryName);
-        yield return CrashReportStore.DefaultFallbackDirectory;
-    }
+    private IEnumerable<string> CrashReportDirectories() =>
+        crashReportLocator.GetCrashReportDirectories(userDataRoot);
 
     /// <summary>
     /// Bundles the current user-data snapshot. Unlike logs and crash reports these files are

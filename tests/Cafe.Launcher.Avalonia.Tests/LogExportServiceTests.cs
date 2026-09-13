@@ -197,6 +197,53 @@ public sealed class LogExportServiceTests : IDisposable
     }
 
     [Fact]
+    public void GetCrashReportDirectories_ReturnsPrimaryUnderRootAndTempFallback()
+    {
+        var directories = new CrashReportStore()
+            .GetCrashReportDirectories(Path.Combine(tempDir, "root"))
+            .ToList();
+
+        Assert.Equal(2, directories.Count);
+        Assert.Equal(
+            Path.Combine(tempDir, "root", CrashReportStore.ReportDirectoryName),
+            directories[0]);
+        Assert.Equal(CrashReportStore.DefaultFallbackDirectory, directories[1]);
+    }
+
+    [Fact]
+    public async Task ExportAsync_WhenLocatorSuppliesCustomDirectory_CollectsCrashReportsFromIt()
+    {
+        // 定位器接缝：导出器的崩溃区来源由注入决定，导出器自身无需真实目录约定。
+        var customDirectory = Path.Combine(tempDir, "custom-crash-location");
+        Directory.CreateDirectory(customDirectory);
+        var reportPath = Path.Combine(customDirectory, "CR-20260909-120000-ABCD.json");
+        File.WriteAllText(reportPath, "{}");
+        File.SetLastWriteTimeUtc(reportPath, DateTime.UtcNow.AddHours(-1));
+        var logger = WriteDeterministicLog("locator-source", $"{DateTimeOffset.Now.AddMinutes(-5):O} [INF] [Test] Entry\n");
+        var service = new LogExportService(
+            new LocalDiagnostics(logger),
+            new StubCrashReportLocator(customDirectory));
+
+        var zipPath = await service.ExportAsync(
+            Path.Combine(tempDir, "locator-selected"),
+            new LogExportOptions
+            {
+                Range = LogExportRangePreset.Last24Hours,
+                IncludeCrashReports = true
+            });
+
+        using var zip = ZipFile.OpenRead(zipPath);
+        Assert.Contains(
+            zip.Entries,
+            entry => entry.FullName == "crash-reports/CR-20260909-120000-ABCD.json");
+    }
+
+    private sealed class StubCrashReportLocator(params string[] directories) : ICrashReportLocator
+    {
+        public IEnumerable<string> GetCrashReportDirectories(string userDataRoot) => directories;
+    }
+
+    [Fact]
     public async Task ExportAsync_WithUserData_BundlesLauncherStateFilesOnly()
     {
         var dataRoot = Path.Combine(tempDir, "user-data-root");
