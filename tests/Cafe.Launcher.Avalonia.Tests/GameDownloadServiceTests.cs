@@ -689,12 +689,13 @@ public sealed class GameDownloadServiceTests : IDisposable
     }
 
     [Fact]
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
     public async Task InstallOrUpdateAsync_WhenCommitNeededButDirectoryNotWritable_FailsWithLocalizedAccessDenied()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
+        // 运行时可见跳过；平台分析器守卫由方法级 SupportedOSPlatform 承担。
+        Assert.SkipUnless(
+            OperatingSystem.IsWindows(),
+            "目录 ACL 写探测（DenyCreateFiles/RevokeDenyCreateFiles）只能在 Windows 上复现。");
 
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
         Directory.CreateDirectory(gamePath);

@@ -355,7 +355,9 @@ public sealed class ShellLifecycle : IShellRuntime
 
     private Task OnResourcePanelSourceSwitchConfirmed() => SwitchSourceThenOpenPanelAsync();
 
-    private static void OnUpdateAvailableConfirmed(string downloadUrl) => ExternalLinkService.Open(downloadUrl);
+    // 经 openExternalUrl（windowChrome 的注入缝）而非直接调 ExternalLinkService.Open：
+    // 壳的全部外部链接出口统一走这一条缝，测试可注入记录委托。
+    private void OnUpdateAvailableConfirmed(string downloadUrl) => openExternalUrl(downloadUrl);
 
     /// <summary>Refreshes shell state after a game operation and records resume behavior.</summary>
     public async Task HandleOperationsRefreshRequestedAsync(GameOperationsRefreshMode mode)

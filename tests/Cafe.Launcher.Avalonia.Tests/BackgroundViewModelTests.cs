@@ -210,8 +210,11 @@ public sealed class BackgroundViewModelTests : IDisposable
             CancellationToken.None);
         var fading = Assert.Single(fadingOut);
 
-        // 模拟合成器停滞：视图层在宽限期过后仍未摘除覆盖层引用。此时释放位图会让
+        // 模拟合成器停滞：视图层迟迟不回调 OnWallpaperOverlayReleased。此时释放位图会让
         // 下一渲染帧在 Image.Render 读取已释放实现，抛 ObjectDisposedException 崩溃。
+        // 700ms 是任意浸泡窗，不对应任何生产常量——生产端已无宽限定时器（2090db3 移除，
+        // 释放完全由视图回调驱动，BackgroundViewModel 明文禁止固定延时宽限），本窗口
+        // 守护的是「不得重新引入短于该窗的定时释放」这一负向不变量。
         await Task.Delay(TimeSpan.FromMilliseconds(700));
 
         Assert.False(

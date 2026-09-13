@@ -292,8 +292,11 @@ public sealed class GameShortcutServiceTests : IDisposable
         Assert.Equal("Blue   Archive", sanitized);
     }
 
+    // 非 Windows 上先做可见跳过（SkipResult 会中止调用方测试），后面的早退
+    // return 是给平台分析器（CA1416）的守卫，在跳过之后不可达。
     private static (string IconPath, int IconIndex) ReadShortcutIconLocation(string shortcutPath)
     {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "Shell Link COM 接口仅在 Windows 上可用。");
         if (!OperatingSystem.IsWindows())
         {
             return ("", -1);
@@ -315,6 +318,7 @@ public sealed class GameShortcutServiceTests : IDisposable
 
     private static (string TargetPath, string WorkingDirectory, string Arguments) ReadShortcutTarget(string shortcutPath)
     {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "Shell Link COM 接口仅在 Windows 上可用。");
         if (!OperatingSystem.IsWindows())
         {
             return ("", "", "");
