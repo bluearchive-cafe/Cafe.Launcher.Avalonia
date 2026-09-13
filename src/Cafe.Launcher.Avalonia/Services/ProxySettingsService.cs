@@ -10,7 +10,7 @@ using Cafe.Launcher.Avalonia.Models;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
-internal sealed record SystemProxySettings(string ProxyUrl, IReadOnlyList<string> NoProxy);
+internal sealed record SystemProxySettings(string ProxyUrl, IReadOnlyList<string> NoProxy, string? AutoConfigUrl = null);
 
 /// <summary>
 /// The proxy domain in one place. Normalization of raw system-proxy URLs
@@ -21,11 +21,20 @@ internal sealed record SystemProxySettings(string ProxyUrl, IReadOnlyList<string
 /// one cached handler.
 /// </summary>
 /// <remarks>
+/// <para>
 /// The cached-handler invariant is structural: the only way to obtain a proxy
 /// handler is <see cref="GetOrCreateHandlerAsync"/>, which pairs fingerprint
 /// computation and handler construction internally — a changed registry
 /// snapshot always replaces the cached handler, an unchanged one always reuses
 /// it, and no caller can hold a fingerprint without its handler or vice versa.
+/// </para>
+/// <para>
+/// The fingerprint also covers the PAC script URL (<c>AutoConfigURL</c>) even
+/// when no manual proxy is configured, mirroring WinINet's settings-changed
+/// refresh: without it, a PAC reconfiguration would leave stale handlers cached
+/// until restart, because the manual-proxy identity they were keyed on is empty
+/// before and after the change.
+/// </para>
 /// </remarks>
 public sealed class ProxySettingsService : IDisposable
 {
@@ -121,18 +130,25 @@ public sealed class ProxySettingsService : IDisposable
     /// <summary>
     /// Auto mode always uses live default detection; System mode uses the
     /// configured proxy and only falls back to default detection when the
-    /// snapshot is empty — the distinction the cache-prefix keeps separate.
+    /// snapshot is empty or PAC-only — the distinction the cache-prefix keeps
+    /// separate. A PAC-only snapshot also routes to default detection: WinINet
+    /// resolves "auto-detect → PAC → manual" and executes the script itself.
     /// </summary>
     private IWebProxy BuildConfiguredProxy()
     {
         var settings = GetNormalizedSettings();
-        if (settings is null)
+        if (settings is null || string.IsNullOrEmpty(settings.ProxyUrl))
         {
             return WebRequest.GetSystemWebProxy();
         }
 
+        // WinINet answers proxy authentication challenges (407) silently with
+        // the current user's credentials; .NET's own system proxy object does
+        // the same. The hand-built WebProxy must opt into default credentials,
+        // or authenticated corporate proxies fail every proxied request.
         return new WebProxy(settings.ProxyUrl)
         {
+            UseDefaultCredentials = true,
             BypassProxyOnLocal = settings.NoProxy.Any(IsLocalBypassToken),
             BypassList = BuildBypassRegexList(settings.NoProxy)
         };
@@ -143,7 +159,7 @@ public sealed class ProxySettingsService : IDisposable
         var settings = GetNormalizedSettings();
         var identity = settings is null
             ? "system-default"
-            : $"{settings.ProxyUrl}|{string.Join(",", settings.NoProxy)}";
+            : $"{settings.ProxyUrl}|{settings.AutoConfigUrl}|{string.Join(",", settings.NoProxy)}";
         return $"{proxyMode}:{identity}";
     }
 
@@ -156,14 +172,17 @@ public sealed class ProxySettingsService : IDisposable
     private SystemProxySettings? GetNormalizedSettings()
     {
         var settings = systemProxySettingsProvider();
-        if (settings is null || string.IsNullOrWhiteSpace(settings.ProxyUrl))
+        if (settings is null
+            || (string.IsNullOrWhiteSpace(settings.ProxyUrl)
+                && string.IsNullOrWhiteSpace(settings.AutoConfigUrl)))
         {
             return null;
         }
 
         return new SystemProxySettings(
-            ResolveProxyUrl(settings.ProxyUrl),
-            settings.NoProxy);
+            string.IsNullOrWhiteSpace(settings.ProxyUrl) ? string.Empty : ResolveProxyUrl(settings.ProxyUrl),
+            settings.NoProxy,
+            string.IsNullOrWhiteSpace(settings.AutoConfigUrl) ? null : settings.AutoConfigUrl.Trim());
     }
 
     private static bool IsLocalBypassToken(string entry) =>
