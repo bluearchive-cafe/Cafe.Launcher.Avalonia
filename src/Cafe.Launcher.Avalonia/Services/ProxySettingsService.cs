@@ -87,6 +87,13 @@ public sealed class ProxySettingsService : IDisposable
         // Handler creation is async (system-proxy resolution), so it happens
         // outside the lock; a concurrent lease may cache an equivalent handler
         // first, in which case the freshly created one is disposed unused.
+        // Disposing the stale handler below also pulls it out from under leases
+        // that still wrap it (leases hold the handler with disposeHandler:false):
+        // in-flight transfers of a running download batch fail fast, and the
+        // verification retry round recovers them on a fresh lease. Accepted
+        // tradeoff (AUD-ARCH-007): a system-proxy change mid-download costs one
+        // failed round, never correctness — lease refcounting was judged to be
+        // more concurrency risk than this recoverable hiccup.
         var created = await CreateHandlerAsync(proxyMode, cancellationToken).ConfigureAwait(false);
         lock (proxyHandlerLock)
         {
@@ -146,6 +153,10 @@ public sealed class ProxySettingsService : IDisposable
         // the current user's credentials; .NET's own system proxy object does
         // the same. The hand-built WebProxy must opt into default credentials,
         // or authenticated corporate proxies fail every proxied request.
+        // Same-user trust-boundary concession (AUD-SEC-004): a same-user process
+        // could point ProxyServer at its own listener and collect the credential
+        // response — but that already requires code execution as the user, so
+        // this mirrors WinINet behavior instead of defending against it.
         return new WebProxy(settings.ProxyUrl)
         {
             UseDefaultCredentials = true,
