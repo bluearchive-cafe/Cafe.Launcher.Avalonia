@@ -22,6 +22,7 @@ public sealed partial class UiStyleContractTests
     [
         "Views/MainWindow.axaml",
         "Views/MainWindowSettingsOverlay.axaml",
+        "Views/MainWindowDebugOverlay.axaml",
         "Views/ResourcePanelOverlay.axaml",
         "Views/DesignGalleryOverlay.axaml",
         "Views/SettingsGeneralSection.axaml",
@@ -50,7 +51,6 @@ public sealed partial class UiStyleContractTests
             SearchOption.TopDirectoryOnly);
         var declared = ViewFiles
             .Concat(StyleFiles)
-            .Append("Views/MainWindowDebugOverlay.axaml")
             .ToHashSet(StringComparer.Ordinal);
         // CrashReportWindow 独立于主窗口运行（崩溃进程专用界面），自带
         // Crash.* 令牌族，不参与 §2.3 令牌纪律——豁免必须显式留名，

@@ -217,7 +217,7 @@
                         <Border Classes="dialog-card">
                             <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}">
                                 <TextBlock Text="{Binding Shell.I18n[debugOutput]}" Classes="section-title"/>
-                                <Border Classes="dialog-card" Padding="{StaticResource Launcher.Spacing.Thickness.Sm}" Background="{DynamicResource Launcher.Color.Info.Background}">
+                                <Border Classes="dialog-card compact" Background="{DynamicResource Launcher.Color.Info.Background}">
                                     <TextBlock Text="{Binding Debug.LastActionResult}" Classes="caption"/>
                                 </Border>
                                 <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}">

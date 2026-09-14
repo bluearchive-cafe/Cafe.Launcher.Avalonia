@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "last_full_audit_commit": "715fee5",
-  "last_audit_commit": "6c80951",
+  "last_full_audit_commit": "93b3335",
+  "last_audit_commit": "93b3335",
   "last_audit_mode": "full",
   "last_audit_date": "2026-09-14",
   "repository_map_version": 15,
-  "note": "2026-09-14 full 六域重审（基线 8449d37 以来 16 个提交）+ 同日修复轮。重审：上轮 5 项 Medium 中 4 项随 878260a/715fee5/b9dc68e/5553793/5777f2f 解决，PERF-001 与 CI-001 部分解决并降档；新立案 8 项，其中 SEC-003 修正上轮「签名 Authorization 头绝不随重定向转发」的错误论断。修复轮（按优先级、逐项提交）：SEC-003 @ 1dcc9df、CI-001 @ c37c44c、PERF-006 @ 4c0b0cd、SEC-005 @ 457ac50、SEC-004/ARCH-007 书面化接受 + ISettingsEditor 急切捕获 @ 78e0ef0、MAINT-001 @ 696abdd、ARCH-004 @ 6c80951、ARCH-006 文档修正 @ 690993f、SEC-001 注释更正 @ d1693d5。开放 6 项（全 Low）：PERF-001（见证摊销待基准决策）、PERF-004（Plausible 补救，待专属设计轮）、PERF-005 残留（二次解码调查）、SEC-001/SEC-002（接受风险）、ARCH-005（接受，若再动 Shell 按表驱动收敛）。工具证据：漏洞扫描零包；修复轮后单元 1710 + headless 177 全绿。",
+  "note": "2026-09-14（晚）第二修复轮：按报告 Recommended Priorities 杠杆序将复审新立案 7 项逐项提交——TEST-005 @ 58edcf8（并行校验多文件清单用例 ×2）、SEC-006 @ 8b6d3dd（复核发现补救已被 5a38be9 否决——fake-ip/CDN 依赖这些段，转书面化接受 + switch 显式放行臂 + 198.18/15 守卫测试）、TEST-006 @ c2701da（ResourcePanelOverlay 补入 ViewFiles + Views 顶层全覆盖元契约，CrashReportWindow 显式豁免）、TEST-007 @ cabaa3c（主题订阅拆卸哨兵法双相守卫）、MAINT-003 @ 415809d（GamePaths.UnifiedLogFileName 收拢三处硬编码，轮转名从词干派生）、PERF-007 @ 5f53a6e（PercentProgressGate 百分比门控应用到校验/stat/修复扫描/卸载四处产生侧 + 400 文件同桶接线测试）、MAINT-004 @ 93b3335（承载点化石注释更正为 FirstChild 层序不变量说明）。每阶段聚焦测试后提交，收口全量套件。开放回到 6 项 Low（PERF-001/004/005、SEC-001/002、ARCH-005，全部决策/设计轮门控）；accepted-risk 增至 4 项 Low（SEC-004、SEC-006、ARCH-007、MAINT-002）。",
   "open_counts": {
     "critical": 0,
     "high": 0,
@@ -13,25 +13,16 @@
     "low": 6,
     "informational": 0
   },
+  "accepted_risk_low_count": 4,
   "resolved_since_last_audit": [
-    "AUD-ARCH-002",
-    "AUD-ARCH-003",
-    "AUD-ARCH-004",
-    "AUD-ARCH-006",
-    "AUD-CI-001",
-    "AUD-MAINT-001",
-    "AUD-PERF-006",
-    "AUD-SEC-003",
-    "AUD-SEC-005",
-    "AUD-TEST-002",
-    "AUD-TEST-003",
-    "AUD-TEST-004",
-    "AUD-PERF-002",
-    "AUD-PERF-003"
+    "AUD-TEST-005",
+    "AUD-TEST-006",
+    "AUD-TEST-007",
+    "AUD-MAINT-003",
+    "AUD-PERF-007",
+    "AUD-MAINT-004"
   ],
   "accepted_risk_since_last_audit": [
-    "AUD-MAINT-002",
-    "AUD-SEC-004",
-    "AUD-ARCH-007"
+    "AUD-SEC-006"
   ]
 }
