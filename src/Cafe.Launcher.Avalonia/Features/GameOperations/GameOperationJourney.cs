@@ -259,11 +259,31 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
         }
     }
 
-    /// <summary>Validates uninstall eligibility and reports the affected file count.</summary>
+    /// <summary>
+    /// Validates uninstall eligibility and reports the affected file count.
+    /// 预检失败时就地报出执行层给出的具体原因，并返回 null（ADR-029）：调用方拿到 null
+    /// 即中止流程、无需再表态——拒绝在原地可见，与 ADR-027 对确认后拒绝的处理同构。
+    /// </summary>
     public async Task<GameOperationResult?> ValidateUninstallAsync(LauncherStatusSnapshot snapshot)
     {
         var validation = await executor.ValidateUninstallAsync(snapshot.LocalGame.GamePath);
-        return validation.Success ? validation : null;
+        if (validation.Success)
+        {
+            return validation;
+        }
+
+        // 执行层的失败结果自带可执行的本地化原因（路径缺失／受保护／目录名非法／元数据缺失），
+        // 没有原因时才退回笼统的「当前状态不可用」，避免弹出一个没有内容的提示。
+        if (string.IsNullOrWhiteSpace(validation.Message))
+        {
+            ShowOperationUnavailable();
+        }
+        else
+        {
+            toastService.ShowWarning(validation.Message);
+        }
+
+        return null;
     }
 
     /// <summary>Runs a confirmed uninstall and refreshes launcher state afterward.</summary>

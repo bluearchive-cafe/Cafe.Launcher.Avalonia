@@ -27,14 +27,6 @@ public sealed class LogExportService
 
     private const int MaxRetainedLogFiles = 3;
 
-    /// <summary>Launcher-owned files under the user data root that a user-data export bundles.</summary>
-    private static readonly string[] UserDataFileNames =
-    [
-        GamePaths.LauncherSettingsFileName,
-        GamePaths.DownloadStateFileName,
-        GamePaths.NoticeStateFileName
-    ];
-
     private readonly LocalDiagnostics diagnostics;
     private readonly LauncherDataRoot dataRoot;
     private readonly ICrashReportLocator crashReportLocator;
@@ -341,18 +333,27 @@ public sealed class LogExportService
     /// <summary>
     /// Bundles the current user-data snapshot. Unlike logs and crash reports these files are
     /// state rather than a time series, so the export range does not filter them.
+    /// 这里只列「导出哪些」——根内布局由 <see cref="LauncherDataRoot"/> 拥有，
+    /// 不再自己把根与文件名拼一遍（那会让同一份布局有两个出处）。
     /// </summary>
     private void AddUserData(
         ZipArchive zip,
         ExportManifest manifest,
         CancellationToken cancellationToken)
     {
-        foreach (var fileName in UserDataFileNames)
+        string[] userDataPaths =
+        [
+            dataRoot.SettingsPath,
+            dataRoot.DownloadStatePath,
+            dataRoot.NoticeStatePath
+        ];
+
+        foreach (var filePath in userDataPaths)
         {
             TryCopyOptionalFileToZip(
                 zip,
-                Path.Combine(dataRoot.Root, fileName),
-                $"user-data/{fileName}",
+                filePath,
+                $"user-data/{Path.GetFileName(filePath)}",
                 manifest,
                 cancellationToken);
         }

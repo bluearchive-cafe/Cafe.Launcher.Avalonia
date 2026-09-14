@@ -1125,9 +1125,12 @@ public sealed class GameOperationsViewModelTests
     }
 
     [Fact]
-    public async Task RequestUninstallCommand_WhenValidationFails_DoesNotShowConfirmation()
+    public async Task RequestUninstallCommand_WhenValidationFails_ReportsReasonAndSkipsConfirmation()
     {
+        // 预检失败必须给可见反馈（ADR-029）：卸载按钮此刻可点，什么都不发生就是「点了没反应」。
         var context = CreateContext();
+        var notifications = new List<ToastNotification>();
+        context.ToastService.ToastRaised += notifications.Add;
         context.ViewModel.ApplySnapshot(ReadySnapshot("C:\\Game"));
         context.Backend.ValidateUninstallResult = new GameOperationResult
         {
@@ -1138,6 +1141,33 @@ public sealed class GameOperationsViewModelTests
         await context.ViewModel.RequestUninstallCommand.ExecuteAsync(null);
 
         Assert.False(context.Dialogs.UninstallConfirm.IsVisible);
+        var notification = Assert.Single(notifications);
+        Assert.Equal(ToastSeverity.Warning, notification.Severity);
+        Assert.Equal("cannot uninstall", notification.Message);
+    }
+
+    [Fact]
+    public async Task RequestUninstallCommand_WhenValidationFailsWithoutReason_ReportsGenericWarning()
+    {
+        // 执行层没给原因时退回笼统文案：宁可少说，也不能弹出一个空白的提示。
+        var context = CreateContext();
+        var notifications = new List<ToastNotification>();
+        context.ToastService.ToastRaised += notifications.Add;
+        context.ViewModel.ApplySnapshot(ReadySnapshot("C:\\Game"));
+        context.Backend.ValidateUninstallResult = new GameOperationResult
+        {
+            Success = false,
+            Message = ""
+        };
+
+        await context.ViewModel.RequestUninstallCommand.ExecuteAsync(null);
+
+        Assert.False(context.Dialogs.UninstallConfirm.IsVisible);
+        var notification = Assert.Single(notifications);
+        Assert.Equal(ToastSeverity.Warning, notification.Severity);
+        Assert.Equal(
+            context.Localizer.T("operationUnavailableForCurrentState"),
+            notification.Message);
     }
 
     [Fact]

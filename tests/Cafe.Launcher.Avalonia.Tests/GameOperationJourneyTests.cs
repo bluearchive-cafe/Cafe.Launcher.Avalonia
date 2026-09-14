@@ -234,6 +234,47 @@ public sealed class GameOperationJourneyTests
     }
 
     [Fact]
+    public async Task ValidateUninstallAsync_WhenValidationFails_ReportsTheExecutorReason()
+    {
+        // 预检失败必须可见（ADR-029）：卸载按钮此刻可点，静默返回 null 就是「点了没反应」。
+        // 报的是执行层给出的具体原因（路径缺失／受保护／目录名非法），不是笼统的「不可用」。
+        var context = CreateContext();
+        var notifications = context.SubscribeToasts();
+        context.Executor.ValidateUninstallResult = new GameOperationResult
+        {
+            Success = false,
+            Message = "game path is gone"
+        };
+
+        var validation = await context.Journey.ValidateUninstallAsync(CreateSnapshot());
+
+        Assert.Null(validation);
+        Assert.Equal(1, context.Executor.ValidateUninstallCallCount);
+        var notification = Assert.Single(notifications);
+        Assert.Equal(ToastSeverity.Warning, notification.Severity);
+        Assert.Equal("game path is gone", notification.Message);
+    }
+
+    [Fact]
+    public async Task ValidateUninstallAsync_WhenValidationSucceeds_ReturnsTheResultWithoutReporting()
+    {
+        // 反向守卫：成功路径不得因为「总是报一句」而多出一个 Toast。
+        var context = CreateContext();
+        var notifications = context.SubscribeToasts();
+        context.Executor.ValidateUninstallResult = new GameOperationResult
+        {
+            Success = true,
+            AffectedFileCount = 5
+        };
+
+        var validation = await context.Journey.ValidateUninstallAsync(CreateSnapshot());
+
+        Assert.NotNull(validation);
+        Assert.Equal(5, validation.AffectedFileCount);
+        Assert.Empty(notifications);
+    }
+
+    [Fact]
     public async Task ResumePersistedAsync_WhenHostBusy_SkipsResume()
     {
         var context = CreateContext();

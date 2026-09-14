@@ -371,6 +371,7 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
         var validation = await journey.ValidateUninstallAsync(currentSnapshot);
         if (validation is null)
         {
+            // 预检失败的原因已由 journey 就地报出（ADR-029）：这里只需不再打开确认框。
             return;
         }
 

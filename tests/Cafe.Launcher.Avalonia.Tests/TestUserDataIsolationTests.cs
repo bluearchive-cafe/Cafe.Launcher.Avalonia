@@ -91,8 +91,9 @@ public sealed class TestUserDataIsolationTests
 
     /// <summary>
     /// 进程根解析只允许出现在声明表内：组合根解析一次，ADR-019 保护的 pre-DI 路径各解析
-    /// 一次，其余模块一律接收注入的 <c>LauncherDataRoot</c>。少了这条守卫，进程级静态会
-    /// 重新在各模块里开花——那正是候选 03 要收掉的东西。
+    /// 一次，其余模块一律接收注入的 <c>LauncherDataRoot</c>。表里另有一处已声明例外
+    /// （<c>GameCompatibilityPaths</c>：静态助手、无 DI 接缝，Windows 分支在调用时解析）。
+    /// 少了这条守卫，进程级静态会重新在各模块里开花——那正是候选 03 要收掉的东西。
     /// </summary>
     [Fact]
     public void ProcessRootResolution_IsConfinedToDeclaredPreDiSites()
@@ -112,9 +113,30 @@ public sealed class TestUserDataIsolationTests
             Path.Combine(projectRoot, "Services", "GameRuntime", "GameCompatibilityPaths.cs")
         };
 
-        var offenders = Directory
+        var scanned = Directory
             .EnumerateFiles(projectRoot, "*.cs", SearchOption.AllDirectories)
             .Where(path => !IsBuildOrTestArtifact(projectRoot, path))
+            .ToArray();
+
+        // 反空转基线：本守卫的形状是「排除声明表后必须为空」，于是「根目录找错／后缀失效
+        // 导致一个文件都没扫」与「树是干净的」不可区分。两条基线把这种退化态变成红的。
+        // 基线为 2026-09-15 的实测值；真的删文件就同步下调，扫描失效应表现为红而不是绿。
+        const int landedScannedFiles = 231;
+        const int landedResolvingFiles = 5;
+        var resolving = scanned
+            .Where(path => File.ReadAllText(path).Contains("ForCurrentProcess", StringComparison.Ordinal))
+            .ToArray();
+
+        Assert.True(
+            scanned.Length >= landedScannedFiles,
+            $"只枚举到 {scanned.Length} 个 .cs 文件，低于落地基线 {landedScannedFiles}——"
+            + "先确认扫描域仍是 src/ 全树（递归未退化成 TopDirectoryOnly）。");
+        Assert.True(
+            resolving.Length >= landedResolvingFiles,
+            $"只有 {resolving.Length} 个文件含 ForCurrentProcess，低于落地基线 {landedResolvingFiles}——"
+            + "要么解析点被删（同步下调基线），要么模式过时（重命名后本守卫会静默放行一切）。");
+
+        var offenders = scanned
             .Where(path => !declared.Contains(path))
             .Where(path => File.ReadAllText(path).Contains("ForCurrentProcess", StringComparison.Ordinal))
             .Select(path => Path.GetRelativePath(projectRoot, path))

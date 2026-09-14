@@ -37,10 +37,11 @@ public sealed class LauncherDataRootTests : IDisposable
 
         // 布局由本模块拥有：每个知名路径都是「根 ＋ 已声明的名字」，名字仍由
         // GamePaths / LauncherConstants 声明，避免同一份命名散到各消费方。
+        // unified.log 不在其中：它的落点由 UnifiedLogger 实例拥有（构造时给目录、
+        // 由 LogFilePath 读出），根上再声明一份就成了同一份布局的第二个出处。
         Assert.Equal(Path.Combine(dataRoot.Root, GamePaths.LauncherSettingsFileName), dataRoot.SettingsPath);
         Assert.Equal(Path.Combine(dataRoot.Root, GamePaths.DownloadStateFileName), dataRoot.DownloadStatePath);
         Assert.Equal(Path.Combine(dataRoot.Root, GamePaths.NoticeStateFileName), dataRoot.NoticeStatePath);
-        Assert.Equal(Path.Combine(dataRoot.Root, GamePaths.UnifiedLogFileName), dataRoot.UnifiedLogPath);
         Assert.Equal(Path.Combine(dataRoot.Root, LauncherDataRoot.ImageCacheFolderName), dataRoot.ImageCacheDirectory);
         Assert.Equal(Path.Combine(dataRoot.Root, LauncherDataRoot.CrashReportsFolderName), dataRoot.CrashReportsDirectory);
         Assert.Equal(Path.Combine(dataRoot.Root, LauncherConstants.LogExportFolderName), dataRoot.LogExportDirectory);
@@ -50,7 +51,6 @@ public sealed class LauncherDataRootTests : IDisposable
             dataRoot.SettingsPath,
             dataRoot.DownloadStatePath,
             dataRoot.NoticeStatePath,
-            dataRoot.UnifiedLogPath,
             dataRoot.ImageCacheDirectory,
             dataRoot.CrashReportsDirectory,
             dataRoot.LogExportDirectory
