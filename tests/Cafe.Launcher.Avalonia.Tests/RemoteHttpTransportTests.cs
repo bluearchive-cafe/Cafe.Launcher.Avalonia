@@ -301,6 +301,54 @@ public sealed class RemoteHttpTransportTests
         Assert.Equal(["1", "2"], handler.TestHeaderValues);
     }
 
+    [Fact]
+    public async Task GetStreamAsync_WhenRedirectLeavesInitialHost_StripsAuthorizationHeader()
+    {
+        // AUD-SEC-003：.NET 的 HttpClient 在跨主机重定向时剥离 Authorization；
+        // 手写重定向循环必须保持同一约定——经 ConfigureRequest 逐跳重建的签名头
+        // 只允许交给初始授权方，不得跟随跨主机跳外泄。
+        var handler = new AuthTrackingRedirectHandler(new Uri("https://other.example/final"));
+        var transport = CreateTransport(handler);
+        var options = new RemoteRequestOptions
+        {
+            ConfigureRequest = request => request.Headers.TryAddWithoutValidation(
+                "Authorization",
+                "AW test-signature")
+        };
+
+        var remote = await transport.GetStreamAsync(new Uri("https://example.test/start"), options);
+        using var body = remote.Content;
+
+        Assert.Equal(
+            ["https://example.test/start", "https://other.example/final"],
+            handler.RequestUris);
+        Assert.Equal(["AW test-signature", null], handler.AuthorizationHeaderValues);
+    }
+
+    [Fact]
+    public async Task GetStreamAsync_WhenRedirectStaysOnInitialHost_KeepsAuthorizationHeader()
+    {
+        var handler = new AuthTrackingRedirectHandler(new Uri("/final", UriKind.Relative));
+        var transport = CreateTransport(handler);
+        var options = new RemoteRequestOptions
+        {
+            ConfigureRequest = request => request.Headers.TryAddWithoutValidation(
+                "Authorization",
+                "AW test-signature")
+        };
+
+        var remote = await transport.GetStreamAsync(new Uri("https://example.test/start"), options);
+        using var body = remote.Content;
+
+        Assert.Equal(2, handler.RequestUris.Count);
+        Assert.All(
+            handler.RequestUris,
+            uri => Assert.StartsWith("https://example.test/", uri, StringComparison.Ordinal));
+        Assert.Equal(
+            ["AW test-signature", "AW test-signature"],
+            handler.AuthorizationHeaderValues);
+    }
+
     // ---- Retry policy ----
 
     [Fact]
@@ -767,6 +815,29 @@ public sealed class RemoteHttpTransportTests
                 ? new HttpResponseMessage(HttpStatusCode.Redirect)
                 {
                     Headers = { Location = new Uri("/final", UriKind.Relative) }
+                }
+                : new HttpResponseMessage(HttpStatusCode.OK));
+        }
+    }
+
+    /// <summary>两跳重定向处理器：第一跳按给定 Location 重定向，记录每跳 URI 与 Authorization 头。</summary>
+    private sealed class AuthTrackingRedirectHandler(Uri location) : HttpMessageHandler
+    {
+        public List<string> RequestUris { get; } = [];
+
+        public List<string?> AuthorizationHeaderValues { get; } = [];
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            RequestUris.Add(request.RequestUri?.AbsoluteUri ?? "");
+            request.Headers.TryGetValues("Authorization", out var values);
+            AuthorizationHeaderValues.Add(values is null ? null : string.Join(",", values));
+            return Task.FromResult(RequestUris.Count == 1
+                ? new HttpResponseMessage(HttpStatusCode.Redirect)
+                {
+                    Headers = { Location = location }
                 }
                 : new HttpResponseMessage(HttpStatusCode.OK));
         }

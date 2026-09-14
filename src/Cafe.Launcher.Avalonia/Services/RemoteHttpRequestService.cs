@@ -32,6 +32,13 @@ internal static class RemoteHttpRequestService
                 .ConfigureAwait(false);
 
             using var request = createRequest(currentUri);
+            if (!IsSameAuthority(currentUri, initialUri))
+            {
+                // .NET 自带的 HttpClient 在跨主机重定向时会剥离 Authorization；
+                // 手写循环保持同一约定——调用方经 ConfigureRequest 逐跳重建的
+                // 凭据头只允许交给初始授权方，不跟随跨主机跳外泄（AUD-SEC-003）。
+                request.Headers.Remove("Authorization");
+            }
             var response = await SendAsync(
                     client,
                     request,
@@ -99,6 +106,11 @@ internal static class RemoteHttpRequestService
             or HttpStatusCode.RedirectMethod
             or HttpStatusCode.TemporaryRedirect
             or HttpStatusCode.PermanentRedirect;
+
+    private static bool IsSameAuthority(Uri left, Uri right) =>
+        left.Scheme == right.Scheme
+        && left.Host == right.Host
+        && left.Port == right.Port;
 
     /// <summary>
     /// Decides whether a request to <paramref name="uri"/> actually egresses through
