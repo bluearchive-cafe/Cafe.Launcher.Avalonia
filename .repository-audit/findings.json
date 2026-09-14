@@ -132,7 +132,52 @@
       "last_verified_commit": "715fee5",
       "resolved_commit": "c37c44c",
       "guard": "build.yml linux-unit-tests job（push/PR 阻塞）+ linux-tests.yml weekly 巡检双守卫",
-      "delta_note": "修复（c37c44c，2026-09-14）：build.yml 新增 linux-unit-tests job（ubuntu-24.04，push/PR 触发并阻塞），复用 linux-tests.yml 的作业体（无 RID 还原、无渲染依赖）；weekly 作业保留作周期巡检。Headless/golden 套件按设计保持 Windows-only（golden 基线平台门控）。审计时点该 job 的 Linux 实跑绿灯未经本机验证（无 GitHub Actions 访问），以 CI 记录为准。"
+      "delta_note": "修复（c37c44c，2026-09-14）：build.yml 新增 linux-unit-tests job（ubuntu-24.04，push/PR 触发并阻塞），复用 linux-tests.yml 的作业体（无 RID 还原、无渲染依赖）；weekly 作业保留作周期巡检。Headless/golden 套件按设计保持 Windows-only（golden 基线平台门控）。审计时点该 job 的 Linux 实跑绿灯未经本机验证（无 GitHub Actions 访问），以 CI 记录为准。2026-09-14 晚对账：守卫的两类首跑（weekly schedule @ 715fee5、build.yml push job @ 2176db8）均红，红出三例平台假设（立案 AUD-CI-002/003/004，同日 b4a80c8 解决）——守卫本职生效：正是为拦住「平台分支不随变更执行」而建，首跑即兑现。"
+    },
+    "AUD-CI-002": {
+      "title": "测试隔离用户目录过深，Listen/Raise 派生 Unix 套接字路径超 AF_UNIX 108 字节上限，linux-unit-tests 首跑即红",
+      "category": "ci/cross-platform",
+      "severity": "low",
+      "confidence": 90,
+      "status": "resolved",
+      "disposition": "Fix",
+      "recommendation_validation": "Verified",
+      "first_seen_commit": "2176db8",
+      "last_verified_commit": "b4a80c8",
+      "resolved_commit": "b4a80c8",
+      "guard": "TestUserDataIsolationTests.IsolatedUserDataDirectory_KeepsDerivedUnixSocketPathUnderKernelLimit（派生套接字路径 ≤107 字节；限定 Unix 消费域，Windows 可见跳过——初版未门控在 CI Windows runner 上自证其误，runneradmin 临时目录 41 字符派生 109，但 Windows 走命名事件分支不受此约束）",
+      "delta_note": "新发现（2026-09-14 晚 CI 对账）。linux job 首跑（34839782163 / 34821368356）红出 CrossProcessLaunchSignalTests.Raise_WhenFirstInstanceListens_ReturnsOnceAndAutoResets（Assert.True 失败，仅 152ms）。根因：TestUserDataIsolation 模块初始化器把 CAFE_LAUNCHER_TEST_USER_DATA_DIRECTORY 设为 <tmp>/Cafe.Launcher.Avalonia.Tests/UserData/<Assembly>/<guid32>（≈104 字符）；Linux 上 Listen/Raise 以 LauncherUserDataDirectory.Root 为套接字目录，派生路径 ≈132 字节 > 107——UnixDomainSocketEndPoint 构造抛 ArgumentException（TryBind 只捕获 SocketException/IOException，直穿 EnsureBound 兜底 catch），绑定永不成功、unixPending 为 null，WaitOne 立即 false；时长与 RaiseAt 6×25ms 重试精确吻合。Windows 不触发（Listen/Raise 走命名事件分支；ListenAt 用例的 tempDir 更短）。生产影响有界：真实 Linux 数据目录（~/.local/share/Cafe Launcher）对常见用户名 ≈95 字符可绑定，超长主目录时按既有设计降级（Warn 日志，转发不可用）。",
+      "resolution_note": "修复（b4a80c8，2026-09-14 CI 对账轮）：隔离目录压短为 <tmp>/cl-tests/<guid32>（套接字路径 ≈74 字节），注释载明 108 字节约束；新增机械守卫测试钉住派生路径 ≤107。装配名层级删除——两测试工程各进程独立 guid，无需目录再分。跟进（ff976ae）：守卫初版在 CI Windows runner 上红出自身（runneradmin 临时目录 41 字符 → 派生 109）——上限只在 Unix 消费域构成约束，改为 Assert.SkipUnless(非 Windows) 可见跳过，断言保留在 linux job 上执行；守卫首跑即拦下自己的越界断言，反向验证了其敏感性。"
+    },
+    "AUD-CI-003": {
+      "title": "ApplyCulture 无效文化名用例选用「格式合法但未知」的名字——ICU（Linux）宽容创建不抛异常，捕获分支在 Linux 从未执行",
+      "category": "ci/cross-platform",
+      "severity": "low",
+      "confidence": 85,
+      "status": "resolved",
+      "disposition": "Fix",
+      "recommendation_validation": "Verified",
+      "first_seen_commit": "2176db8",
+      "last_verified_commit": "b4a80c8",
+      "resolved_commit": "b4a80c8",
+      "guard": null,
+      "delta_note": "新发现（2026-09-14 晚 CI 对账）。CrashReportBootstrapTests.ApplyCulture_WhenCultureNameIsInvalid_KeepsTheActiveCulture 期望 CurrentUICulture 保持空串、实际变 xx-INVALID：Windows NLS 对未知名抛 CultureNotFoundException（捕获分支生效、用例绿），Linux ICU 对格式合法但未知的名字以默认数据宽容创建（GetCultureInfo 成功 → 文化被应用）。产品行为本身正确——ApplyCulture 契约是「平台不认识就保持现状」，缺陷在用例选名只覆盖 NLS 的失败模式。",
+      "resolution_note": "修复（b4a80c8，2026-09-14 CI 对账轮）：改用双连字符的格式非法名 xx--INVALID——格式非法在两个栈都抛 CultureNotFoundException，真正进入捕获分支；Windows 本地实测通过，注释载明 ICU 宽容性。Linux 侧以 CI 首绿为最终确认。"
+    },
+    "AUD-CI-004": {
+      "title": "SanitizeFileName 用例硬编码 Windows 非法字符集未门控——.lnk/.desktop 按平台创建，字符集随平台本就正确",
+      "category": "ci/cross-platform",
+      "severity": "low",
+      "confidence": 95,
+      "status": "resolved",
+      "disposition": "Fix",
+      "recommendation_validation": "Verified",
+      "first_seen_commit": "2176db8",
+      "last_verified_commit": "b4a80c8",
+      "resolved_commit": "b4a80c8",
+      "guard": null,
+      "delta_note": "新发现（2026-09-14 晚 CI 对账）。GameShortcutServiceTests.SanitizeFileName_WhenNameContainsInvalidCharacters_ReplacesThem 期望 Blue<>:Archive|? → Blue   Archive（Windows 集），Linux 实际原样返回（Path.GetInvalidFileNameChars() 在 Linux 仅含 / 与 \\0）。产品行为正确：ResolveShortcutFileName 的两个消费点分别在 Windows（.lnk，Shell Link COM）与 Linux（.desktop，经 --launch-game 走启动器）上创建各自平台的工件，字符集随运行平台是设计行为。缺陷在用例未声明平台契约。",
+      "resolution_note": "修复（b4a80c8，2026-09-14 CI 对账轮）：拆为 SanitizeFileName_WhenNameContainsPathSeparator_ReplacesThem（跨平台契约：'/' 在所有平台被替换并修剪）+ SanitizeFileName_WhenNameContainsWindowsInvalidCharacters_ReplacesThem（Assert.SkipUnless(Windows) 可见跳过，钉住 Windows 集）。"
     },
     "AUD-PERF-004": {
       "title": "每次壳层刷新销毁并重新下载/解码全部横幅位图",

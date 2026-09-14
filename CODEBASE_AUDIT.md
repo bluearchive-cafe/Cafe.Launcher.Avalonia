@@ -7,6 +7,8 @@
 > **同日复审（2026-09-14 下午，用户指令「全量审查 + 检查报告问题修复情况」）**：①上轮修复轮 9 项提交逐项在工作树读码核实为真实落地（代码 + 守卫测试 + 文档/注释均在，非纸面关闭）；②6 项开放发现证据锚点复核仍准确；③四域只读子代理独立重扫全树 + 主审计逐项核实候选，**新立案 7 项**（1 Medium + 6 Low，见对应节）；④本地实测单元 1708 通过/0 失败/2 可见跳过 + Headless 177 全绿，`dotnet list package --vulnerable` 三项目零漏洞。上午版报告已归档至 `.repository-audit/history/2026-09-14-full-audit.md`。
 >
 > **第二修复轮（2026-09-14 晚，用户指令「按优先级修复并逐阶段提交」）**：复审新立案 7 项全部落地（6 个提交 + 1 项转接受），每阶段聚焦测试后逐项提交：AUD-TEST-005（`58edcf8`）、AUD-SEC-006（`8b6d3dd`，复核发现其补救已被 `5a38be9` 刻意否决——fake-ip 代理/CDN 依赖这些段，按 SEC-004/ARCH-007 先例转书面化接受 + 守卫）、AUD-TEST-006（`c2701da`）、AUD-TEST-007（`cabaa3c`）、AUD-MAINT-003（`415809d`）、AUD-PERF-007（`5f53a6e`）、AUD-MAINT-004（`93b3335`）。开放发现收敛至 6 项 Low（全部决策/设计轮门控），另 4 项 Low 为书面化 accepted-risk。
+>
+> **同日后续两轮（用户指令「核查更改是否正确」与「检查远端 CI 状态」）**：①核查轮确认第二修复轮 7 项全部真实落地（逐 diff 对账 + 守卫变异验证 + 全量套件实测一致），顺带收口 TEST-006 元契约对 `MainWindowDebugOverlay.axaml` 的匿名放行（`f912d38`）并更正 TEST-005 用例计数归属（`2176db8`）；②CI 对账轮——AUD-CI-001 守卫的两类 Linux 首跑（weekly schedule 与 build.yml push job）均红，红出三例平台假设而非回归（与推送无涉：schedule 跑的是推送前旧 HEAD），立案 AUD-CI-002/003/004 并同日解决（`b4a80c8`），守卫本职生效。
 
 ## Audit Metadata
 
@@ -26,7 +28,7 @@
 - High：0
 - Medium：0
 - Low：6 open（全部决策/设计轮门控：AUD-PERF-001、AUD-PERF-004、AUD-PERF-005 残留、AUD-SEC-001、AUD-SEC-002、AUD-ARCH-005）+ 4 accepted-risk（MAINT-002、SEC-004、SEC-006、ARCH-007）
-- 本窗口解决：14 项（8 项随上轮修复落地：ARCH-002/003、TEST-002/003/004、PERF-002/003、MAINT-002；6 项随同日修复轮：ARCH-004/006、CI-001、PERF-006、SEC-003/005）；第二修复轮再解决 6 项（TEST-005/006/007、MAINT-003/004、PERF-007）并将 SEC-006 结案为 accepted-risk
+- 本窗口解决：14 项（8 项随上轮修复落地：ARCH-002/003、TEST-002/003/004、PERF-002/003、MAINT-002；6 项随同日修复轮：ARCH-004/006、CI-001、PERF-006、SEC-003/005）；第二修复轮再解决 6 项（TEST-005/006/007、MAINT-003/004、PERF-007）并将 SEC-006 结案为 accepted-risk；CI 对账轮新立案 3 项（AUD-CI-002/003/004）并同日全部解决
 
 **一处上轮审计证据更正（重要）**：上轮安全节声明「签名 Authorization 头绝不跟随重定向转发」——复核证实该头经 `RemoteRequestOptions.ConfigureRequest` 钩子在**每一重定向跳重发**（含跨主机），已立案为 AUD-SEC-003（Low）。这推翻了上轮对 DNS 重绑定残余风险影响边界的部分论证。
 
@@ -124,6 +126,31 @@
 - **影响**：错误标签遮蔽该位置依赖的微妙层序不变量；调整层序或寻找宿主的维护者会被误导。两行修正。
 - **建议**：改写为说明「主叠层 FirstChild 位于对话框层之下」的准确注释。**建议验证**：Verified。
 - **解决记录（`93b3335`）**：注释改写为说明 FirstChild 层序不变量并警示勿在其前插入子项；`UiStyleContractTests` 全绿。
+
+### AUD-CI-002 — 测试隔离用户目录过深，Listen/Raise 派生 Unix 套接字路径超 AF_UNIX 108 字节上限【CI 对账轮新立案；已解决 `b4a80c8`】
+
+- 类别：CI / 跨平台（平台假设）
+- 严重度：Low｜置信度：90（CI 复现 + 机制读码核实，152ms 快速失败签名与 Raise 6×25ms 重试吻合）｜状态：**resolved**（`b4a80c8`）｜处置：Fix（已执行）
+- **证据**：AUD-CI-001 守卫的两类 Linux 首跑均红出 `CrossProcessLaunchSignalTests.Raise_WhenFirstInstanceListens_ReturnsOnceAndAutoResets`。`TestUserDataIsolation` 模块初始化器把测试覆盖目录设为 `<tmp>/Cafe.Launcher.Avalonia.Tests/UserData/<Assembly>/<guid32>`（≈104 字符）；Linux 上 `Listen`/`Raise` 以 `LauncherUserDataDirectory.Root` 为套接字目录，派生路径 ≈132 字节 > 107——`UnixDomainSocketEndPoint` 构造抛 `ArgumentException`（`TryBind` 只捕获 `SocketException`/`IOException`，直穿 `EnsureBound` 兜底 catch），绑定永不成功、`unixPending` 为 null，`WaitOne` 立即 false。Windows 不触发（`Listen`/`Raise` 走命名事件分支；`ListenAt` 用例的 `tempDir` 更短）。
+- **影响**：CI Linux 通道红；生产影响有界——真实 Linux 数据目录对常见用户名 ≈95 字符可绑定，超长主目录按既有设计降级（Warn 日志，转发不可用）。
+- **建议**：压短隔离目录并加「派生套接字路径 ≤107」机械守卫。**建议验证**：Verified。
+- **解决记录（`b4a80c8`）**：隔离目录压短为 `<tmp>/cl-tests/<guid32>`（≈74 字节），注释载明 108 字节约束；新增 `TestUserDataIsolationTests.IsolatedUserDataDirectory_KeepsDerivedUnixSocketPathUnderKernelLimit` 机械守卫。跟进（`ff976ae`）：守卫初版未门控、在 CI Windows runner 上红出自身（runneradmin 临时目录 41 字符 → 派生 109）——上限只在 Unix 消费域构成约束（Windows 走命名事件分支），改为 `Assert.SkipUnless(非 Windows)` 可见跳过，断言保留在 linux job（push/PR 阻塞 + weekly）上执行；守卫首跑即拦下自己的越界断言，反向验证其敏感性。`linux-unit-tests` 已于 `ee93482` 首绿（三例修复全部生效）。
+
+### AUD-CI-003 — ApplyCulture 无效文化名用例选名只覆盖 NLS 失败模式，ICU（Linux）宽容创建不抛异常【CI 对账轮新立案；已解决 `b4a80c8`】
+
+- 类别：CI / 跨平台（平台假设）
+- 严重度：Low｜置信度：85（CI 断言输出 + 机制读码）｜状态：**resolved**（`b4a80c8`）｜处置：Fix（已执行）
+- **证据**：`CrashReportBootstrapTests.ApplyCulture_WhenCultureNameIsInvalid_KeepsTheActiveCulture` 期望 `CurrentUICulture` 保持空串、实际变 `xx-INVALID`：Windows NLS 对未知名抛 `CultureNotFoundException`（捕获分支生效、用例绿），Linux ICU 对格式合法但未知的名字以默认数据宽容创建（`GetCultureInfo` 成功 → 文化被应用）。产品行为本身正确——契约是「平台不认识就保持现状」，缺陷在用例选名。
+- **建议**：改用格式非法名（双连字符），两个全球化栈都抛异常，真正进入捕获分支。**建议验证**：Verified。
+- **解决记录（`b4a80c8`）**：改用 `xx--INVALID`，Windows 本地实测通过，注释载明 ICU 宽容性；Linux 侧以 CI 首绿为最终确认。
+
+### AUD-CI-004 — SanitizeFileName 用例硬编码 Windows 非法字符集未门控【CI 对账轮新立案；已解决 `b4a80c8`】
+
+- 类别：CI / 跨平台（平台假设）
+- 严重度：Low｜置信度：95（CI 断言输出 + 调用点读码）｜状态：**resolved**（`b4a80c8`）｜处置：Fix（已执行）
+- **证据**：`SanitizeFileName_WhenNameContainsInvalidCharacters_ReplacesThem` 期望 `Blue<>:Archive|?` → `Blue   Archive`（Windows 集），Linux 实际原样返回（`Path.GetInvalidFileNameChars()` 在 Linux 仅含 `/` 与 `\0`）。产品行为正确：`ResolveShortcutFileName` 的两个消费点分别在 Windows（`.lnk`，Shell Link COM）与 Linux（`.desktop`，经 `--launch-game` 走启动器）创建各自平台的工件，字符集随运行平台是设计行为。缺陷在用例未声明平台契约。
+- **建议**：拆跨平台契约用例 + Windows 集合精确断言（可见跳过）。**建议验证**：Verified。
+- **解决记录（`b4a80c8`）**：拆为 `SanitizeFileName_WhenNameContainsPathSeparator_ReplacesThem`（`'/'` 全平台替换并修剪）+ `SanitizeFileName_WhenNameContainsWindowsInvalidCharacters_ReplacesThem`（`Assert.SkipUnless(Windows)`）。
 
 ### AUD-SEC-003 — 签名 Authorization 头在每一重定向跳重发（含跨主机）【新立案；更正上轮审计论断】
 
@@ -362,6 +389,14 @@
 
 第二修复轮验证：每阶段跑聚焦测试后逐项提交；收口全量套件本地实测（Debug，`93b3335`）：单元 1719 总量 = 1717 通过 / 0 失败 / 2 可见跳过 + Headless 178 通过 / 0 失败（新增守卫 1 例）。
 
+CI 对账轮（2026-09-14 晚，AUD-CI-001 守卫首跑产出）：
+
+- **AUD-CI-002**（`b4a80c8`）：测试隔离目录四层 ≈104 字符，`Listen`/`Raise` 派生 Unix 套接字路径 ≈132 字节超 AF_UNIX 108 上限，绑定永不成功——压短为 `<tmp>/cl-tests/<guid>` 并加派生路径 ≤107 机械守卫。
+- **AUD-CI-003**（`b4a80c8`）：无效文化名用例改用双连字符格式非法名（ICU 对「格式合法但未知」宽容创建，原选名在 Linux 不抛异常）。
+- **AUD-CI-004**（`b4a80c8`）：非法字符集用例拆为跨平台路径分隔符断言 + Windows 集合精确断言（可见跳过）；产品按平台取字符集的行为本身正确。
+
+CI 对账轮验证：本地（Windows，Debug，`b4a80c8`）全量单元 1720 总量 = 1718 通过 / 0 失败 / 2 可见跳过；Linux 侧行为以推送后 CI 首绿为最终确认（守卫首跑与三例失败均与推送无涉——schedule 跑的是推送前旧 HEAD `715fee5`，同样红出相同三例）。
+
 ## Automated Guards Added
 
 本窗口由修复顺带落地的守卫：
@@ -380,6 +415,10 @@
 3. `ThemeSubscriptionTeardownHeadlessTests` 哨兵双相守卫（AUD-TEST-007 守卫）。
 4. 198.18/15 放行守卫测试（AUD-SEC-006 接受风险的护栏）。
 5. `PercentProgressGate` 四态单测 + 400 文件同桶去重接线测试（AUD-PERF-007 守卫）。
+
+CI 对账轮（2026-09-14 晚）顺带落地的守卫：
+
+6. `TestUserDataIsolationTests.IsolatedUserDataDirectory_KeepsDerivedUnixSocketPathUnderKernelLimit`——派生 Unix 套接字路径 ≤107 字节的跨平台机械守卫（AUD-CI-002，防止隔离目录再度变深）。
 
 ## Verified Strengths
 
@@ -403,7 +442,8 @@
 - 仓库发现与规则加载：AGENTS.md、PROJECT_CONVENTIONS.md、CONTEXT.md、ADR-016..023、CI 三工作流、coverage/test 脚本、desktop-launcher 画像（逐文件）。
 - 上午轮：四域并行审计通道（架构/安全/测试/性能由只读子代理逐行检索，证据带 file:line）；依赖/供应链、生命周期对账、报告撰写与关键发现复核由主审计执行。
 - **晚间第二修复轮（用户指令「按优先级修复并逐阶段提交」）**：7 项复审新立案按杠杆序逐项提交（58edcf8/8b6d3dd/c2701da/cabaa3c/415809d/5f53a6e/93b3335），每阶段聚焦测试后提交，收口全量套件本地实测（单元 1717 通过/0 失败/2 可见跳过 + Headless 178 通过/0 失败）；SEC-006 执行中经 git log -S 复核发现补救已被 5a38be9 刻意否决，转书面化接受。
+- **同日核查轮 + CI 对账轮（用户指令「核查更改是否正确」「检查远端 CI 状态」）**：核查轮对第二修复轮 7 提交逐 diff 对账 + 守卫变异验证（删除退订行守卫即红，已恢复）+ 全量套件实测；CI 对账轮经 `gh` 读取 GitHub Actions 运行记录（34839782163 / 34821368356），定位三例失败根因（socket 路径长度 / ICU 宽容性 / 平台字符集）后同日修复（b4a80c8），本地 Windows 全量单元 1720 通过 / 0 失败 / 2 可见跳过。
 - **下午复审轮**：主审计逐项读码核实修复轮 9 提交与 6 项开放发现；四个只读子代理（架构/安全/测试/性能）以「已知台账排除清单」独立重扫全树（累计 ~230 次工具调用），返回 14 项候选；主审计对 7 项立案候选全部亲自复核（读源文件 + grep 守卫），5 项降为 advisory。工具证据：`.\test.ps1` 本地实测（单元 1708 通过/0 失败/2 可见跳过 + Headless 177 通过/0 失败，`6ecd7bf`）；`dotnet list package --vulnerable --include-transitive` 三项目零漏洞；依赖文件 git diff 零变更。
 - 关键新发现亲自复核：AUD-TEST-005（`DownloadExecutorTests` 8 处单元素清单 + `GameDownloadServiceTests` 零引用 grep）、AUD-SEC-006（`IsPublicAddress` switch 现场）、AUD-PERF-007（逐文件 progress 现场 + 累加器作用域 grep）、AUD-MAINT-003（GamePaths.cs 全文 + 两处字面量现场）、AUD-TEST-006（`ViewFiles` 14 项现场）、AUD-TEST-007（守卫 grep 空 + 订阅行现场）、AUD-MAINT-004（注释现场）。
 - 未执行：`coverage.ps1`、`verify.ps1` 全序列（Debug 全套件绿基础上视为充分；Release 配置与覆盖率棘轮状态以 CI 为准）；GitHub Actions 运行历史（`linux-unit-tests` job 首跑绿灯未知，以 CI 记录为准）。
-- 局限：性能发现均为代码路径推理，无运行时测量（报告内无未经测量的倍数/毫秒声明）；子代理候选的低置信项（<80）未立案、列入 Advisory 并标注置信度；上轮「DownloadExecutorTests 9 用例钉住并行行为」的说法经复审修正为「钉住代码路径但未钉并发语义」（见 AUD-TEST-005）。
+- 局限：性能发现均为代码路径推理，无运行时测量（报告内无未经测量的倍数/毫秒声明）；子代理候选的低置信项（<80）未立案、列入 Advisory 并标注置信度；上轮「DownloadExecutorTests 9 用例钉住并行行为」的说法经复审修正为「钉住代码路径但未钉并发语义」（见 AUD-TEST-005）。CI 对账轮的三项修复（`b4a80c8`）为平台差异，Windows 本地不可复现 Linux 行为——ICU 宽容性与套接字路径上限的 Linux 侧效果以推送后 CI 首绿为最终确认。
