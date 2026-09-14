@@ -22,6 +22,7 @@ public sealed partial class UiStyleContractTests
     [
         "Views/MainWindow.axaml",
         "Views/MainWindowSettingsOverlay.axaml",
+        "Views/ResourcePanelOverlay.axaml",
         "Views/DesignGalleryOverlay.axaml",
         "Views/SettingsGeneralSection.axaml",
         "Views/SettingsGameSection.axaml",
@@ -35,6 +36,40 @@ public sealed partial class UiStyleContractTests
         "Views/MainWindowToastOverlay.axaml",
         "Views/SetupWizardOverlay.axaml"
     ];
+
+    [Fact]
+    public void ScanTargets_CoverEveryTopLevelViewFile()
+    {
+        // 元契约（AUD-TEST-006）：手工白名单会漂移——拆分出 ResourcePanelOverlay
+        // 的提交补了其他分卷的列表，却漏掉共享的 ViewFiles，令牌纪律扫描就此
+        // 失去对最新主叠层的覆盖。此测试把漂移变成编译不可能：Views/ 顶层的
+        // 每个 .axaml 都必须被 ViewFiles/StyleFiles 声明，或进入显式豁免表。
+        var actualViews = Directory.GetFiles(
+            ProjectFile("Views"),
+            "*.axaml",
+            SearchOption.TopDirectoryOnly);
+        var declared = ViewFiles
+            .Concat(StyleFiles)
+            .Append("Views/MainWindowDebugOverlay.axaml")
+            .ToHashSet(StringComparer.Ordinal);
+        // CrashReportWindow 独立于主窗口运行（崩溃进程专用界面），自带
+        // Crash.* 令牌族，不参与 §2.3 令牌纪律——豁免必须显式留名，
+        // 防止其他文件借道溜进豁免。
+        var exempt = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "Views/CrashReportWindow.axaml"
+        };
+
+        var undeclared = actualViews
+            .Select(path => $"Views/{Path.GetFileName(path)}")
+            .Where(relative => !declared.Contains(relative) && !exempt.Contains(relative))
+            .ToArray();
+
+        Assert.True(
+            undeclared.Length == 0,
+            "Views/*.axaml missing from UiStyleContractTests scan sets. Add to ViewFiles (or StyleFiles for style dictionaries), or justify an explicit exemption: "
+            + string.Join(", ", undeclared));
+    }
 
     private static readonly HashSet<string> IconTokens =
     [
