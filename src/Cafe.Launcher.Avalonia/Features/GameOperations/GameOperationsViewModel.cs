@@ -64,6 +64,10 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
     [ObservableProperty]
     private int progressValue;
 
+    // 同阶段进度单调钳制状态（AUD-PERF-006）：见 ApplyProgressCore。
+    private GameOperationStage displayedProgressStage = GameOperationStage.Idle;
+    private int displayedProgressFloor;
+
     [ObservableProperty]
     private string progressDetail = "";
 
@@ -392,7 +396,23 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
     private void ApplyProgressCore(GameOperationProgress progress)
     {
         PanelMode = GameOperationPanelMode.Progress;
-        ProgressValue = Math.Clamp(progress.Progress, 0, 100);
+        // 并行校验/下载的进度回调由多个线程池线程经 Dispatcher.Post 汇入，到达次序
+        // 不保证递增：递增与回调非原子，百分比可瞬时回退（AUD-PERF-006）。同一阶段
+        // 内钳制为单调；阶段切换时重置下界——新阶段（含重试轮经 VerificationRetry
+        // 折返 FileCheck）合法地从低百分比重新开始。
+        var value = Math.Clamp(progress.Progress, 0, 100);
+        if (progress.Stage != displayedProgressStage)
+        {
+            displayedProgressStage = progress.Stage;
+            displayedProgressFloor = 0;
+        }
+        else if (value < displayedProgressFloor)
+        {
+            value = displayedProgressFloor;
+        }
+
+        displayedProgressFloor = value;
+        ProgressValue = value;
         var progressPresentation = ResolveProgressPresentation(progress.OperationKind);
         ProgressTitle = progressPresentation.Title;
         ProgressIconKind = progressPresentation.IconKind;

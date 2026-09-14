@@ -725,6 +725,65 @@ public sealed class GameOperationsViewModelTests
         Assert.True(context.ViewModel.CanPauseOperation);
     }
 
+    [Fact]
+    public void ApplyProgress_WhenSameStageProgressArrivesOutOfOrder_ClampsToMonotonicValue()
+    {
+        // AUD-PERF-006：并行校验的进度回调可能乱序到达（递增与回调非原子），
+        // 同阶段内显示值不得瞬时回退。
+        var context = CreateContext();
+
+        context.ViewModel.ApplyProgress(new GameOperationProgress
+        {
+            OperationKind = GameOperationKind.Download,
+            Stage = GameOperationStage.FileCheck,
+            Progress = 50
+        });
+        context.ViewModel.ApplyProgress(new GameOperationProgress
+        {
+            OperationKind = GameOperationKind.Download,
+            Stage = GameOperationStage.FileCheck,
+            Progress = 30
+        });
+
+        Assert.Equal(50, context.ViewModel.ProgressValue);
+    }
+
+    [Fact]
+    public void ApplyProgress_WhenStageChanges_AllowsProgressToRestartFromLowerValue()
+    {
+        var context = CreateContext();
+
+        context.ViewModel.ApplyProgress(new GameOperationProgress
+        {
+            OperationKind = GameOperationKind.Download,
+            Stage = GameOperationStage.FileCheck,
+            Progress = 100
+        });
+        context.ViewModel.ApplyProgress(new GameOperationProgress
+        {
+            OperationKind = GameOperationKind.Download,
+            Stage = GameOperationStage.VerificationRetry,
+            Progress = 0,
+            FailedFileCount = 3,
+            RetryAttempt = 1,
+            RetryLimit = 3
+        });
+        context.ViewModel.ApplyProgress(new GameOperationProgress
+        {
+            OperationKind = GameOperationKind.Download,
+            Stage = GameOperationStage.FileCheck,
+            Progress = 0
+        });
+        context.ViewModel.ApplyProgress(new GameOperationProgress
+        {
+            OperationKind = GameOperationKind.Download,
+            Stage = GameOperationStage.FileCheck,
+            Progress = 40
+        });
+
+        Assert.Equal(40, context.ViewModel.ProgressValue);
+    }
+
     [Theory]
     [InlineData(GameOperationKind.Download, GameOperationStage.Downloading, "Download")]
     [InlineData(GameOperationKind.Repair, GameOperationStage.RepairCheck, "Tools")]
