@@ -38,6 +38,8 @@ Do not add a dialog-layer interaction gate without first making modal registrati
 
 Requires the .NET SDK pinned by `global.json` (`10.0.302`, rolling forward within the same feature band). Repository scripts disable .NET CLI and Avalonia telemetry. Builds enforce nullable reference types, compiled bindings, code style, and warnings-as-errors; a successful build has zero warnings.
 
+Repository commands run under either Bash or PowerShell 7 (`pwsh`). Windows PowerShell 5.1 (`powershell.exe`) is not supported: the scripts use `??`, which its parser rejects, and it decodes their Chinese diagnostics with the ANSI code page (`coverage.ps1` carries a UTF-8 BOM carve-out in `.editorconfig` for that reason). CI reflects the same split — `shell: pwsh` and `shell: bash` only.
+
 | Command | Purpose |
 | --- | --- |
 | `.\build.ps1` | Restore and build the Debug configuration |
