@@ -3,10 +3,10 @@ using System.ComponentModel;
 namespace Cafe.Launcher.Avalonia.Services;
 
 /// <summary>
-/// 诊断面板所需的"游戏操作活动"窄视图：下载运行/暂停状态、可暂停判定，
-/// 以及暂停/恢复与停止控制。由 GameOperationsViewModel 实现；DebugViewModel
-/// 只依赖本抽象而非 GameOperations 本体，避免 Diagnostics 与 GameOperations
-/// 两个 Feature 产生横向耦合。放在共享 Services 层使两个 Feature 都只向下依赖。
+/// "游戏操作活动"窄视图：下载运行/暂停状态、可暂停判定，以及暂停/恢复与停止控制。
+/// 由 GameOperationsViewModel 实现；消费者是窗口 chrome（停止手势）与诊断面板，
+/// 两者都只依赖本抽象而非 GameOperations 本体，避免窗口层／Diagnostics 与
+/// GameOperations 产生横向耦合。放在共享 Services 层使各 Feature 都只向下依赖。
 /// </summary>
 public interface IGameOperationActivity
 {

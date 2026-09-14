@@ -11,19 +11,27 @@ namespace Cafe.Launcher.Avalonia.Services;
 /// <summary>
 /// Lease/client plumbing over the shared connection pool: hands out proxy-aware
 /// leases (direct clients share the pooled default handler; proxy handlers come
-/// from <see cref="ProxySettingsService"/>) and owns the connection-level
-/// defaults plus the HTTP/2 preference.
+/// from <see cref="ProxySettingsService"/>) and owns the connection-level defaults.
+/// 客户端偏好由注入的来源按租约解析（见 ADR-028），本模块不接受偏好推送。
 /// </summary>
 public sealed class HttpClientFactory : IDisposable
 {
     private readonly SocketsHttpHandler defaultHandler;
     private readonly ProxySettingsService proxySettingsService;
-    private bool enableHttp2 = true;
+    private readonly Func<bool> enableHttp2Preference;
     private bool disposed;
 
-    public HttpClientFactory(ProxySettingsService proxySettingsService)
+    /// <summary>
+    /// <paramref name="enableHttp2Preference"/> 在每次租约创建时求值，缺省为 HTTP/2 开启。
+    /// 偏好与代理模式同源——组合根上的一次闭包读已保存设置——所以没有调用方需要
+    /// 「记得推送」，也不会出现某条租约用了过期开关。
+    /// </summary>
+    public HttpClientFactory(
+        ProxySettingsService proxySettingsService,
+        Func<bool>? enableHttp2Preference = null)
     {
         this.proxySettingsService = proxySettingsService;
+        this.enableHttp2Preference = enableHttp2Preference ?? (static () => true);
         defaultHandler = new SocketsHttpHandler();
         ConfigureConnectionDefaults(defaultHandler);
         defaultHandler.UseProxy = false;
@@ -51,16 +59,6 @@ public sealed class HttpClientFactory : IDisposable
         handler.PooledConnectionLifetime = TimeSpan.FromMinutes(15);
         handler.ConnectTimeout = TimeSpan.FromSeconds(15);
         handler.KeepAlivePingDelay = TimeSpan.FromSeconds(30);
-    }
-
-    /// <summary>
-    /// Configures the preferred HTTP version for clients created after this call.
-    /// HTTP/2 remains optional and falls back to HTTP/1.1 when unavailable.
-    /// </summary>
-    public void ConfigureHttp2(bool enabled)
-    {
-        ThrowIfDisposed();
-        Volatile.Write(ref enableHttp2, enabled);
     }
 
     /// <summary>
@@ -101,7 +99,7 @@ public sealed class HttpClientFactory : IDisposable
 
     private void ApplyHttpVersion(HttpClient client)
     {
-        client.DefaultRequestVersion = Volatile.Read(ref enableHttp2)
+        client.DefaultRequestVersion = enableHttp2Preference()
             ? HttpVersion.Version20
             : HttpVersion.Version11;
         client.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower;

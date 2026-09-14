@@ -384,7 +384,6 @@ public sealed class ShellLifecycleTests : IDisposable
         var settings = new SettingsViewModel(
             settingsService,
             savedSettingsWriter,
-            httpClientFactory,
             localizer,
             toastService,
             launcherUpdateService,

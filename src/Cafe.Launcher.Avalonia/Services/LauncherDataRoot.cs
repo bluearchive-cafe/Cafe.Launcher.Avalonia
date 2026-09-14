@@ -47,9 +47,6 @@ public sealed class LauncherDataRoot
     /// <summary><c>shown_notices.json</c>：已读公告的指纹集合。</summary>
     public string NoticeStatePath => Path.Combine(Root, GamePaths.NoticeStateFileName);
 
-    /// <summary><c>unified.log</c>：进程唯一的日志文件。</summary>
-    public string UnifiedLogPath => Path.Combine(Root, GamePaths.UnifiedLogFileName);
-
     /// <summary>图片缓存目录（可整体删除，缺失时按需重建）。</summary>
     public string ImageCacheDirectory => Path.Combine(Root, ImageCacheFolderName);
 

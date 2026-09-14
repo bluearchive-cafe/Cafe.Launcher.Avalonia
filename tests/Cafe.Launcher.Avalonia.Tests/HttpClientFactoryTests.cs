@@ -27,8 +27,7 @@ public sealed class HttpClientFactoryTests
     [Fact]
     public async Task CreatedClients_WhenHttp2IsDisabled_UseHttp11WithFallback()
     {
-        using var factory = new HttpClientFactory(new ProxySettingsService());
-        factory.ConfigureHttp2(false);
+        using var factory = new HttpClientFactory(new ProxySettingsService(), () => false);
 
         using var directLease = await factory.CreateLeaseAsync(ProxyModes.Direct);
         using var proxyLease = await factory.CreateLeaseAsync(ProxyModes.Auto);
@@ -40,14 +39,33 @@ public sealed class HttpClientFactoryTests
     [Fact]
     public async Task CreatedClients_WhenHttp2IsEnabled_UseHttp2WithFallback()
     {
-        using var factory = new HttpClientFactory(new ProxySettingsService());
-        factory.ConfigureHttp2(true);
+        using var factory = new HttpClientFactory(new ProxySettingsService(), () => true);
 
         using var directLease = await factory.CreateLeaseAsync(ProxyModes.Direct);
         using var proxyLease = await factory.CreateLeaseAsync(ProxyModes.Auto);
 
         AssertHttpVersion(directLease.Client, HttpVersion.Version20);
         AssertHttpVersion(proxyLease.Client, HttpVersion.Version20);
+    }
+
+    /// <summary>
+    /// 偏好是拉取的：来源改变后新建的租约跟随新值，全程没有任何「推送」这一步。
+    /// </summary>
+    [Fact]
+    public async Task CreatedClients_WhenThePreferenceSourceChanges_TrackItWithoutAnyPush()
+    {
+        var enabled = false;
+        using var factory = new HttpClientFactory(new ProxySettingsService(), () => enabled);
+
+        using (var disabled = await factory.CreateLeaseAsync(ProxyModes.Direct))
+        {
+            AssertHttpVersion(disabled.Client, HttpVersion.Version11);
+        }
+
+        enabled = true;
+
+        using var enabledLease = await factory.CreateLeaseAsync(ProxyModes.Direct);
+        AssertHttpVersion(enabledLease.Client, HttpVersion.Version20);
     }
 
     [Fact]

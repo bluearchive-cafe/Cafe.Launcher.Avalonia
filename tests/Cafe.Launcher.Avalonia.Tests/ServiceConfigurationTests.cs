@@ -1,3 +1,4 @@
+using System.Net;
 using Cafe.Launcher.Avalonia.Features.Shell;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Features.Settings;
@@ -143,6 +144,34 @@ public sealed class ServiceConfigurationTests : IDisposable
         viewModel.Settings.Editor.Current.Language = LauncherLanguages.Japanese;
 
         Assert.Equal(1, notificationCount);
+    }
+
+    /// <summary>
+    /// 状态加载不再配置任何东西：HTTP/2 偏好由容器上的一次闭包按租约读取已保存快照
+    /// （见 ADR-028）。这条用例守的是「保存设置之后新建的租约立刻跟随」这条链——把组合根的
+    /// 闭包写死为 true，或退回按类型注册（容器对未注册的可选参数会回退到声明默认值）
+    /// 即变红。放在本文件：它断言的是组合根接线，不是某个服务的职责。
+    /// </summary>
+    [Fact]
+    public async Task SavedHttp2Setting_IsReadByLeasesCreatedAfterwards_WithoutAnyPush()
+    {
+        await using var provider = CreateServices().BuildServiceProvider();
+        var editor = provider.GetRequiredService<ISettingsEditor>();
+        using var factory = provider.GetRequiredService<HttpClientFactory>();
+
+        foreach (var (enabled, expected) in new[]
+                 {
+                     (false, HttpVersion.Version11),
+                     (true, HttpVersion.Version20)
+                 })
+        {
+            editor.ApplySnapshot(new LauncherSettings { EnableHttp2 = enabled });
+
+            using var lease = await factory.CreateLeaseAsync(ProxyModes.Direct);
+
+            Assert.Equal(expected, lease.Client.DefaultRequestVersion);
+            Assert.Equal(HttpVersionPolicy.RequestVersionOrLower, lease.Client.DefaultVersionPolicy);
+        }
     }
 
     public void Dispose()

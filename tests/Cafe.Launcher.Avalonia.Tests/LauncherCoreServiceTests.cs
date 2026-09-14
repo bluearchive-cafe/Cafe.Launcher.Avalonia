@@ -124,31 +124,6 @@ public sealed class LauncherCoreServiceTests : IDisposable
         Assert.Equal(expectedPath, snapshot.LocalGame.GamePath);
     }
 
-    [Fact]
-    public async Task LoadAsync_WhenHttp2IsEnabled_ConfiguresFactoryFromPersistedSetting()
-    {
-        var settingsService = new LauncherSettingsService( TestDataRoot.ForDirectory(Path.Combine(tempDir)) );
-        await settingsService.SaveAsync(new LauncherSettings { EnableHttp2 = true });
-        using var factory = new HttpClientFactory(new ProxySettingsService());
-        var apiClient = new LauncherApiClient(
-            CreateLauncherStateTransport("/api/launcher/never"),
-            new AuthorizationHeaderFactory(),
-            new PatchUrlGroupService());
-        var service = new LauncherCoreService(
-            apiClient,
-            new LocalInstallationStateStore(),
-            new GameInstallationPath(),
-            settingsService,
-            factory,
-            new LocalDiagnostics());
-
-        await service.LoadAsync();
-
-        using var lease = await factory.CreateLeaseAsync(ProxyModes.Direct);
-        Assert.Equal(HttpVersion.Version20, lease.Client.DefaultRequestVersion);
-        Assert.Equal(HttpVersionPolicy.RequestVersionOrLower, lease.Client.DefaultVersionPolicy);
-    }
-
     private async Task<LauncherCoreService> CreateServiceAsync(
         StubRemoteHttpTransport transport,
         bool useEmptySettingsDocument = false,
@@ -187,7 +162,6 @@ public sealed class LauncherCoreServiceTests : IDisposable
             store,
             new GameInstallationPath(),
             settingsService,
-            new HttpClientFactory(new ProxySettingsService()),
             new LocalDiagnostics(),
             remoteStateBudget ?? LauncherCoreService.DefaultRemoteStateBudget);
     }

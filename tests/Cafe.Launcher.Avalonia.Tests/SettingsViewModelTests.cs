@@ -123,7 +123,6 @@ public sealed class SettingsViewModelTests
         new(
             null!,
             null!,
-            null!,
             localizer,
             toastService,
             new LauncherUpdateService(transport),

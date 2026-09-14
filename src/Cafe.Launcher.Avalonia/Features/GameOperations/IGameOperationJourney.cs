@@ -42,7 +42,11 @@ internal interface IGameOperationJourney
     /// <summary>Runs a confirmed repair for the supplied status snapshot.</summary>
     Task RepairAsync(LauncherStatusSnapshot snapshot);
 
-    /// <summary>Validates uninstall eligibility and reports the affected file count.</summary>
+    /// <summary>
+    /// Validates uninstall eligibility and reports the affected file count.
+    /// 失败时返回 null，且失败原因已就地报给用户（ADR-029）——调用方据此中止流程即可，
+    /// 不要把它当成「无事发生」。
+    /// </summary>
     Task<GameOperationResult?> ValidateUninstallAsync(LauncherStatusSnapshot snapshot);
 
     /// <summary>Runs a confirmed uninstall for the supplied status snapshot.</summary>

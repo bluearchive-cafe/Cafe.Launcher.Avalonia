@@ -73,7 +73,15 @@ public static class ServiceConfiguration
         services.AddSingleton<ResourcePanelService>();
 
         // ── HttpClient factory (shared pool, proxy-aware) ────────────────
-        services.AddSingleton<HttpClientFactory>();
+        services.AddSingleton(sp =>
+        {
+            // HTTP/2 偏好与代理模式同源：都按使用时机读编辑器的已保存快照，
+            // 于是调用方不必「记得推」，也不会有租约用到过期的开关（ADR-028）。
+            var settingsEditor = sp.GetRequiredService<ISettingsEditor>();
+            return new HttpClientFactory(
+                sp.GetRequiredService<ProxySettingsService>(),
+                () => settingsEditor.GetSavedSnapshot().EnableHttp2);
+        });
         services.AddSingleton<IRemoteHttpTransport>(sp =>
         {
             // ISettingsEditor 是无依赖单例，在传输构造时一次解析并闭包引用；
