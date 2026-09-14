@@ -32,22 +32,26 @@ public sealed partial class ResourcePanelUidService
 
     private readonly BestHttpCookieLibraryService cookieLibraryService;
     private readonly LauncherSettingsService settingsService;
+    private readonly ISavedSettingsWriter savedSettingsWriter;
     private readonly string cookieLibraryPath;
 
     public ResourcePanelUidService(
         BestHttpCookieLibraryService cookieLibraryService,
-        LauncherSettingsService settingsService)
-        : this(cookieLibraryService, settingsService, GetDefaultCookieLibraryPath())
+        LauncherSettingsService settingsService,
+        ISavedSettingsWriter savedSettingsWriter)
+        : this(cookieLibraryService, settingsService, savedSettingsWriter, GetDefaultCookieLibraryPath())
     {
     }
 
     internal ResourcePanelUidService(
         BestHttpCookieLibraryService cookieLibraryService,
         LauncherSettingsService settingsService,
+        ISavedSettingsWriter savedSettingsWriter,
         string cookieLibraryPath)
     {
         this.cookieLibraryService = cookieLibraryService;
         this.settingsService = settingsService;
+        this.savedSettingsWriter = savedSettingsWriter;
         this.cookieLibraryPath = cookieLibraryPath;
     }
 
@@ -59,14 +63,15 @@ public sealed partial class ResourcePanelUidService
         return settings.ResourcePanelUidSource;
     }
 
-    internal async Task<LauncherSettings> ReadSettingsAsync(CancellationToken cancellationToken = default)
+    /// <summary>
+    /// 写 UID 来源。走唯一写入方而非直接落盘：这个字段与设置草稿同属一份已保存设置，
+    /// 落盘而不回写编辑器，用户在设置页的下一次保存就会把它写回旧值。
+    /// </summary>
+    internal async Task SaveUidSourceAsync(string uidSource, CancellationToken cancellationToken = default)
     {
-        return await settingsService.ReadAsync(cancellationToken).ConfigureAwait(false);
-    }
-
-    internal async Task SaveSettingsAsync(LauncherSettings settings, CancellationToken cancellationToken = default)
-    {
-        await settingsService.SaveAsync(settings, cancellationToken).ConfigureAwait(false);
+        await savedSettingsWriter.UpdateAsync(
+            settings => settings.ResourcePanelUidSource = uidSource,
+            cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<string> ResolveUidAsync(CancellationToken cancellationToken = default)
@@ -120,9 +125,9 @@ public sealed partial class ResourcePanelUidService
             throw new ArgumentException("UID must be exactly 8 uppercase letters (A-Z).", nameof(uid));
         }
 
-        var settings = await settingsService.ReadAsync(cancellationToken).ConfigureAwait(false);
-        settings.ResourcePanelUid = trimmed;
-        await settingsService.SaveAsync(settings, cancellationToken).ConfigureAwait(false);
+        await savedSettingsWriter.UpdateAsync(
+            settings => settings.ResourcePanelUid = trimmed,
+            cancellationToken).ConfigureAwait(false);
     }
 
     private string TryReadCookieUid()

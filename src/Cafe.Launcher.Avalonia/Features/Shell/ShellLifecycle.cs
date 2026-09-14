@@ -34,6 +34,7 @@ public sealed class ShellLifecycle : IShellRuntime
 
     private readonly ILauncherCoreService launcherCoreService;
     private readonly LauncherSettingsService settingsService;
+    private readonly ISavedSettingsWriter savedSettingsWriter;
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
     private readonly LauncherUpdateService launcherUpdateService;
@@ -76,6 +77,7 @@ public sealed class ShellLifecycle : IShellRuntime
     public ShellLifecycle(
         ILauncherCoreService launcherCoreService,
         LauncherSettingsService settingsService,
+        ISavedSettingsWriter savedSettingsWriter,
         LocalizationService localizer,
         ToastService toastService,
         LauncherUpdateService launcherUpdateService,
@@ -87,6 +89,7 @@ public sealed class ShellLifecycle : IShellRuntime
         : this(
             launcherCoreService,
             settingsService,
+            savedSettingsWriter,
             localizer,
             toastService,
             launcherUpdateService,
@@ -102,6 +105,7 @@ public sealed class ShellLifecycle : IShellRuntime
     internal ShellLifecycle(
         ILauncherCoreService launcherCoreService,
         LauncherSettingsService settingsService,
+        ISavedSettingsWriter savedSettingsWriter,
         LocalizationService localizer,
         ToastService toastService,
         LauncherUpdateService launcherUpdateService,
@@ -122,6 +126,7 @@ public sealed class ShellLifecycle : IShellRuntime
         this.filePickerService = filePickerService;
         this.launcherCoreService = launcherCoreService;
         this.settingsService = settingsService;
+        this.savedSettingsWriter = savedSettingsWriter;
         this.localizer = localizer;
         this.toastService = toastService;
         this.launcherUpdateService = launcherUpdateService;
@@ -158,7 +163,7 @@ public sealed class ShellLifecycle : IShellRuntime
             RefreshAsync,
             ApplyMotionSettings,
             ApplyLanguage,
-            settings => settingsService.SaveAsync(settings),
+            settings => savedSettingsWriter.ReplaceAsync(settings),
             () => dialogs.IsSetupWizardVisible = false,
             () => dialogs.IsSetupWizardVisible,
             dialogs.SetupWizard);
@@ -331,10 +336,7 @@ public sealed class ShellLifecycle : IShellRuntime
     {
         try
         {
-            var savedSettings = await settingsService.ReadAsync();
-            savedSettings.PatchUrlGroup = PatchUrlGroups.Cafe;
-            await settingsService.SaveAsync(savedSettings);
-            settings.Editor.Current.PatchUrlGroup = PatchUrlGroups.Cafe;
+            await savedSettingsWriter.UpdateAsync(settings => settings.PatchUrlGroup = PatchUrlGroups.Cafe);
 
             await HandleSettingsSavedAsync();
             await resourcePanel.OpenPanelDirectlyAsync();
@@ -349,7 +351,7 @@ public sealed class ShellLifecycle : IShellRuntime
     /// <summary>Restores default settings from the debug panel.</summary>
     public async Task ResetSettingsToDefaultsAsync()
     {
-        await settingsService.SaveAsync(LauncherSettings.CreateDefaults());
+        await savedSettingsWriter.ReplaceAsync(LauncherSettings.CreateDefaults());
         await RefreshAsync();
     }
 

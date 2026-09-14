@@ -15,6 +15,8 @@ namespace Cafe.Launcher.Avalonia.Services;
 /// <summary>
 /// settings.json 的唯一读写入口：信号量串行化读写、原子写盘、
 /// 未知/非法字段经 <c>NormalizeSettings</c> 兜底为有效默认值（向后兼容契约）。
+/// 读取可以由任何模块直接调用；写入在生产代码里只由 <see cref="ISavedSettingsWriter"/>
+/// 调用——它负责把落盘值同步给设置编辑器，绕过去就会让草稿与磁盘分叉。
 /// </summary>
 public sealed class LauncherSettingsService : IDisposable
 {
@@ -100,7 +102,11 @@ public sealed class LauncherSettingsService : IDisposable
         return LauncherSettings.CreateDefaults();
     }
 
-    public async Task SaveAsync(LauncherSettings settings, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Writes <paramref name="settings"/> and returns the normalized value that was written, so a
+    /// caller that keeps the value as its own state never holds a copy that normalization changed.
+    /// </summary>
+    public async Task<LauncherSettings> SaveAsync(LauncherSettings settings, CancellationToken cancellationToken = default)
     {
         await writeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -112,6 +118,7 @@ public sealed class LauncherSettingsService : IDisposable
                 normalized,
                 jsonOptions,
                 cancellationToken).ConfigureAwait(false);
+            return normalized;
         }
         finally
         {

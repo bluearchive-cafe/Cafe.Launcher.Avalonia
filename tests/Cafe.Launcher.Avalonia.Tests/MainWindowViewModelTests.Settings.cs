@@ -71,14 +71,14 @@ public partial class MainWindowViewModelTests
             }
         };
         var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
-        var settingsService = new LauncherSettingsService(settingsPath);
-        await settingsService.SaveAsync(new LauncherSettings
+        var savedSettings = new SavedSettingsTestRig(settingsPath);
+        await savedSettings.SeedAsync(new LauncherSettings
         {
             GamePath = snapshot.Settings.GamePath,
             PatchUrlGroup = PatchUrlGroups.Official
         });
         var coreService = new CountingCoreService(snapshot);
-        using var viewModel = await CreateViewModelAsync(coreService, settingsService);
+        using var viewModel = await CreateViewModelAsync(coreService, savedSettings);
         await viewModel.InitializeAsync();
 
         viewModel.Settings.Editor.Current.PatchUrlGroup = PatchUrlGroups.Cafe;
@@ -105,15 +105,15 @@ public partial class MainWindowViewModelTests
             }
         };
         var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
-        var settingsService = new LauncherSettingsService(settingsPath);
-        await settingsService.SaveAsync(new LauncherSettings
+        var savedSettings = new SavedSettingsTestRig(settingsPath);
+        await savedSettings.SeedAsync(new LauncherSettings
         {
             GamePath = snapshot.Settings.GamePath,
             PatchUrlGroup = PatchUrlGroups.Official
         });
         using var viewModel = await CreateViewModelAsync(
             new CountingCoreService(snapshot),
-            settingsService);
+            savedSettings);
         await viewModel.InitializeAsync();
 
         viewModel.Settings.Editor.Current.PatchUrlGroup = PatchUrlGroups.Cafe;
@@ -129,8 +129,8 @@ public partial class MainWindowViewModelTests
         var snapshot = CreateSnapshot();
         snapshot.Settings.PatchUrlGroup = PatchUrlGroups.Official;
         var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
-        var settingsService = new LauncherSettingsService(settingsPath);
-        await settingsService.SaveAsync(new LauncherSettings
+        var savedSettings = new SavedSettingsTestRig(settingsPath);
+        await savedSettings.SeedAsync(new LauncherSettings
         {
             GamePath = snapshot.Settings.GamePath,
             PatchUrlGroup = PatchUrlGroups.Official
@@ -138,7 +138,7 @@ public partial class MainWindowViewModelTests
         var coreService = new CountingCoreService(snapshot);
         using var viewModel = await CreateViewModelAsync(
             coreService,
-            settingsService,
+            savedSettings,
             gameOperationsBackend: new StubGameOperationExecutor { IsDownloadRunning = true });
         await viewModel.InitializeAsync();
 
@@ -158,8 +158,8 @@ public partial class MainWindowViewModelTests
         // GameInstallationPath.NormalizeGamePath appends YostarGames/BlueArchive_JP
         var expectedPath = Path.Combine(pickedPath, "YostarGames", "BlueArchive_JP");
         var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
-        var settingsService = new LauncherSettingsService(settingsPath);
-        await settingsService.SaveAsync(new LauncherSettings());
+        var savedSettings = new SavedSettingsTestRig(settingsPath);
+        await savedSettings.SeedAsync(new LauncherSettings());
         var snapshot = CreateSnapshot();
         snapshot.Settings.GamePath = "";
         snapshot.LocalGame = new LocalInstallationState();
@@ -168,7 +168,7 @@ public partial class MainWindowViewModelTests
         {
             FolderPicker = (_, _) => Task.FromResult<string?>(pickedPath)
         };
-        using var viewModel = await CreateViewModelAsync(coreService, settingsService, filePickerService: filePicker);
+        using var viewModel = await CreateViewModelAsync(coreService, savedSettings, filePickerService: filePicker);
         await viewModel.InitializeAsync();
         viewModel.WindowChrome.IsSettingsVisible = true;
 
@@ -176,13 +176,13 @@ public partial class MainWindowViewModelTests
 
         Assert.True(viewModel.Settings.IsSettingsDirty);
         Assert.Equal(expectedPath, viewModel.Settings.Editor.Current.GamePath);
-        Assert.Equal("", (await settingsService.ReadAsync()).GamePath);
+        Assert.Equal("", (await savedSettings.SettingsService.ReadAsync()).GamePath);
 
         await SaveSettingsAsync(viewModel);
 
         Assert.False(viewModel.Settings.IsSettingsDirty);
         Assert.True(viewModel.WindowChrome.IsSettingsVisible);
-        Assert.Equal(expectedPath, (await settingsService.ReadAsync()).GamePath);
+        Assert.Equal(expectedPath, (await savedSettings.SettingsService.ReadAsync()).GamePath);
     }
 
     [Fact]
@@ -193,8 +193,8 @@ public partial class MainWindowViewModelTests
         Directory.CreateDirectory(selectedRoot);
         var expectedPath = Path.Combine(selectedRoot, "YostarGames", "BlueArchive_JP");
         var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
-        var settingsService = new LauncherSettingsService(settingsPath);
-        await settingsService.SaveAsync(new LauncherSettings
+        var savedSettings = new SavedSettingsTestRig(settingsPath);
+        await savedSettings.SeedAsync(new LauncherSettings
         {
             GamePath = originalPath,
             ThemeMode = ThemeModes.Light
@@ -203,18 +203,18 @@ public partial class MainWindowViewModelTests
         snapshot.Settings.GamePath = originalPath;
         snapshot.Settings.ThemeMode = ThemeModes.Light;
         snapshot.LocalGame = CopyLocalGameWithPath(snapshot.LocalGame, originalPath);
-        var coreService = new SettingsBackedCoreService(settingsService, snapshot);
+        var coreService = new SettingsBackedCoreService(savedSettings.SettingsService, snapshot);
         var filePicker = new StubFilePickerService
         {
             FolderPicker = (_, _) => Task.FromResult<string?>(selectedRoot)
         };
-        using var viewModel = await CreateViewModelAsync(coreService, settingsService, filePickerService: filePicker);
+        using var viewModel = await CreateViewModelAsync(coreService, savedSettings, filePickerService: filePicker);
         await viewModel.InitializeAsync();
         viewModel.Settings.Editor.Current.ThemeMode = ThemeModes.Dark;
 
         await viewModel.Settings.SelectInstalledGameCommand.ExecuteAsync(null);
 
-        var persisted = await settingsService.ReadAsync();
+        var persisted = await savedSettings.SettingsService.ReadAsync();
         Assert.Equal(expectedPath, persisted.GamePath);
         Assert.Equal(ThemeModes.Light, persisted.ThemeMode);
         Assert.Equal(expectedPath, viewModel.Shell.PathText);
@@ -227,19 +227,19 @@ public partial class MainWindowViewModelTests
         var pickedPath = Path.Combine(tempDir, "background.png");
         await File.WriteAllBytesAsync(pickedPath, []);
         var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
-        var settingsService = new LauncherSettingsService(settingsPath);
-        await settingsService.SaveAsync(new LauncherSettings());
+        var savedSettings = new SavedSettingsTestRig(settingsPath);
+        await savedSettings.SeedAsync(new LauncherSettings());
         var coreService = new CountingCoreService(CreateSnapshot());
         var filePicker = new StubFilePickerService
         {
             ImagePicker = _ => Task.FromResult<string?>(pickedPath)
         };
-        using var viewModel = await CreateViewModelAsync(coreService, settingsService, filePickerService: filePicker);
+        using var viewModel = await CreateViewModelAsync(coreService, savedSettings, filePickerService: filePicker);
         await viewModel.InitializeAsync();
 
         await viewModel.Settings.ChooseBackgroundImageCommand.ExecuteAsync(null);
 
-        var persistedBeforeSave = await settingsService.ReadAsync();
+        var persistedBeforeSave = await savedSettings.SettingsService.ReadAsync();
         Assert.True(viewModel.Settings.IsSettingsDirty);
         Assert.Equal(pickedPath, viewModel.Settings.Editor.Current.CustomBackgroundPath);
         Assert.Equal(BackgroundSources.Custom, viewModel.Settings.Editor.Current.BackgroundSource);
@@ -248,7 +248,7 @@ public partial class MainWindowViewModelTests
 
         await SaveSettingsAsync(viewModel);
 
-        var persistedAfterSave = await settingsService.ReadAsync();
+        var persistedAfterSave = await savedSettings.SettingsService.ReadAsync();
         Assert.False(viewModel.Settings.IsSettingsDirty);
         Assert.Equal(pickedPath, persistedAfterSave.CustomBackgroundPath);
         Assert.Equal(BackgroundSources.Custom, persistedAfterSave.BackgroundSource);
@@ -261,19 +261,19 @@ public partial class MainWindowViewModelTests
         var pickedFolder = Path.Combine(tempDir, "backgrounds");
         Directory.CreateDirectory(pickedFolder);
         var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
-        var settingsService = new LauncherSettingsService(settingsPath);
+        var savedSettings = new SavedSettingsTestRig(settingsPath);
         var persistedSettings = new LauncherSettings
         {
             BackgroundSource = BackgroundSources.Custom,
             CustomBackgroundPath = savedPath
         };
-        await settingsService.SaveAsync(persistedSettings);
+        await savedSettings.SeedAsync(persistedSettings);
         var coreService = new CountingCoreService(CreateSnapshot());
         var filePicker = new StubFilePickerService
         {
             FolderPicker = (_, _) => Task.FromResult<string?>(pickedFolder)
         };
-        using var viewModel = await CreateViewModelAsync(coreService, settingsService, filePickerService: filePicker);
+        using var viewModel = await CreateViewModelAsync(coreService, savedSettings, filePickerService: filePicker);
         await viewModel.InitializeAsync();
         viewModel.Settings.Editor.ApplySnapshot(persistedSettings);
         viewModel.Settings.Appearance.Load(persistedSettings);
@@ -282,17 +282,17 @@ public partial class MainWindowViewModelTests
 
         Assert.True(viewModel.Settings.IsSettingsDirty);
         Assert.Equal(pickedFolder, viewModel.Settings.Editor.Current.CustomBackgroundPath);
-        Assert.Equal(savedPath, (await settingsService.ReadAsync()).CustomBackgroundPath);
+        Assert.Equal(savedPath, (await savedSettings.SettingsService.ReadAsync()).CustomBackgroundPath);
 
         viewModel.Settings.ClearBackgroundCommand.Execute(null);
 
         Assert.Equal("", viewModel.Settings.Editor.Current.CustomBackgroundPath);
         Assert.Equal(BackgroundSources.Bundled, viewModel.Settings.Editor.Current.BackgroundSource);
-        Assert.Equal(savedPath, (await settingsService.ReadAsync()).CustomBackgroundPath);
+        Assert.Equal(savedPath, (await savedSettings.SettingsService.ReadAsync()).CustomBackgroundPath);
 
         await SaveSettingsAsync(viewModel);
 
-        var saved = await settingsService.ReadAsync();
+        var saved = await savedSettings.SettingsService.ReadAsync();
         Assert.Equal("", saved.CustomBackgroundPath);
         Assert.Equal(BackgroundSources.Bundled, saved.BackgroundSource);
     }
@@ -361,10 +361,10 @@ public partial class MainWindowViewModelTests
     [Fact]
     public async Task SaveSettingsAsync_WhenPersistenceFails_KeepsDirtyState()
     {
-        var settingsService = new LauncherSettingsService(tempDir);
+        var savedSettings = new SavedSettingsTestRig(tempDir);
         var localizer = new LocalizationService();
         var toastService = new ToastService();
-        var editor = new SettingsEditor();
+        var editor = savedSettings.Editor;
         var appearance = new SettingsAppearanceViewModel(editor);
         var dialogs = new DialogsViewModel(
             localizer,
@@ -373,7 +373,8 @@ public partial class MainWindowViewModelTests
             new LocalDiagnostics());
         using var testLogger = new UnifiedLogger(tempDir);
         using var settings = new SettingsViewModel(
-            settingsService,
+            savedSettings.SettingsService,
+            savedSettings.Writer,
             null!,
             localizer,
             toastService,
@@ -420,17 +421,17 @@ public partial class MainWindowViewModelTests
     public async Task SaveSettingsAsync_WhenCustomThemeColorSelected_PersistsColor()
     {
         var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
-        var settingsService = new LauncherSettingsService(settingsPath);
-        await settingsService.SaveAsync(new LauncherSettings());
+        var savedSettings = new SavedSettingsTestRig(settingsPath);
+        await savedSettings.SeedAsync(new LauncherSettings());
         var coreService = new CountingCoreService(CreateSnapshot());
-        using var viewModel = await CreateViewModelAsync(coreService, settingsService);
+        using var viewModel = await CreateViewModelAsync(coreService, savedSettings);
 
         viewModel.Settings.Editor.Current.ThemeColorMode = ThemeColorModes.Custom;
         viewModel.Settings.Appearance.SelectedCustomThemeColor =
             Color.FromArgb(0xFF, 0x33, 0x66, 0x99);
         await SaveSettingsAsync(viewModel);
 
-        var settings = await settingsService.ReadAsync();
+        var settings = await savedSettings.SettingsService.ReadAsync();
         Assert.Equal(ThemeColorModes.Custom, settings.ThemeColorMode);
         Assert.Equal("#FF336699", settings.CustomThemeColor);
     }
@@ -439,10 +440,10 @@ public partial class MainWindowViewModelTests
     public async Task SaveSettingsAsync_WhenWallpaperPaletteSelected_PersistsPaletteAndIndex()
     {
         var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
-        var settingsService = new LauncherSettingsService(settingsPath);
-        await settingsService.SaveAsync(new LauncherSettings());
+        var savedSettings = new SavedSettingsTestRig(settingsPath);
+        await savedSettings.SeedAsync(new LauncherSettings());
         var coreService = new CountingCoreService(CreateSnapshot());
-        using var viewModel = await CreateViewModelAsync(coreService, settingsService);
+        using var viewModel = await CreateViewModelAsync(coreService, savedSettings);
         viewModel.Settings.Editor.Current.ThemeColorMode = ThemeColorModes.Wallpaper;
         viewModel.Settings.Appearance.ThemeColorPaletteItems.Add(new ThemeColorPaletteItem
         {
@@ -460,7 +461,7 @@ public partial class MainWindowViewModelTests
 
         await SaveSettingsAsync(viewModel);
 
-        var settings = await settingsService.ReadAsync();
+        var settings = await savedSettings.SettingsService.ReadAsync();
         Assert.Equal(ThemeColorModes.Wallpaper, settings.ThemeColorMode);
         Assert.Equal(["#FFD82038", "#FF2050D8"], settings.ThemeColorPalette);
         Assert.Equal(1, settings.SelectedThemeColorPaletteIndex);

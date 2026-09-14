@@ -306,11 +306,10 @@ public partial class App : Application
         {
             await viewModel.PrepareForShutdownAsync();
 
-            var settings = viewModel.Settings.Editor.GetSavedSnapshot();
-            if (settings.RememberWindowPositionAndSize)
+            if (viewModel.Settings.Editor.GetSavedSnapshot().RememberWindowPositionAndSize)
             {
-                mainWindow.CaptureWindowState(settings);
-                await serviceProvider.GetRequiredService<LauncherSettingsService>().SaveAsync(settings);
+                await serviceProvider.GetRequiredService<ISavedSettingsWriter>()
+                    .UpdateAsync(mainWindow.CaptureWindowState);
             }
         }
         catch (Exception exception)

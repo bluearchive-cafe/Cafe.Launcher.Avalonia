@@ -37,11 +37,12 @@
   <h1 class="font-serif text-3xl">Cafe.Launcher.Avalonia — 架构深化评审（第二轮）</h1>
   <p class="text-sm text-slate-500">2026-09-14 · 评审基线 main@fe6efd4 · 14 个候选 + 6 项本轮排除 · 词汇表：模块 / 接口 / 深度 / 接缝 / 适配器 / 杠杆 / 局部性</p>
   <div class="rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 space-y-1">
-    <p class="text-sm font-semibold text-indigo-900">状态：已落地 1 / 14（候选 01 · 2026-09-14）——其余 13 项待裁决</p>
+    <p class="text-sm font-semibold text-indigo-900">状态：已落地 2 / 14（候选 01 · 候选 02 · 2026-09-14）——其余 12 项待裁决</p>
     <div class="w-full h-2 rounded-full bg-indigo-100 overflow-hidden">
-      <div class="h-full rounded-full bg-indigo-600" style="width:7%"></div>
+      <div class="h-full rounded-full bg-indigo-600" style="width:14%"></div>
     </div>
     <p class="text-xs text-indigo-900/80">✓ <a href="#c01" class="underline">候选 01</a> 落地，门禁全绿：单元 1719 / Headless 178（0 失败，3 处可见平台跳过）· 覆盖率行 86.87% / 分支 93.30%（棘轮 +1.02pp / +0.60pp）· Debug 与 Release 构建 0 警告 0 错误。落地形态与卡片原议有一处偏离：机制由"反射驱动"改为<strong>声明表 ＋ 两相反射守卫</strong>，以保持生产代码不对模型做反射枚举（仓库既有取向，见卡片内的落地说明）。同日独立复核后单元测试为 1720（见卡片内的复核跟进）。</p>
+    <p class="text-xs text-indigo-900/80">✓ <a href="#c02" class="underline">候选 02</a> 落地，门禁全绿：单元 1730 / Headless 178（0 失败，3 处可见平台跳过）· 覆盖率行 86.87–86.92% / 分支 93.26%（同一棵树重复测量，棘轮 +1.02pp / +0.56pp）· Debug 与 Release 构建 0 警告 0 错误。范围按复核结果大于卡片原议：写入方由 4 条路线更正为 6 个逻辑写入方 ＋ 1 处展示刷新，并并入候选 01 移交的归一化不对称；接口归属裁定为<strong>独立写入方</strong>而非把持久化并进编辑器（理由见 <a href="design/adr/ADR-024-已保存设置唯一写入方.md" class="underline">ADR-024</a>），落地形态与文档见卡片内的落地说明。</p>
     <p class="text-xs text-indigo-900/80">上一轮（<a href="architecture-review-2026-09-13.html" class="underline">2026-09-13</a>）11 个候选已全部裁决：9 项落地，2 项否决（候选 03 → <a href="design/adr/ADR-021-保留操作后端接缝.md" class="underline">ADR-021</a>、候选 07 → <a href="design/adr/ADR-022-下载会话接缝不升格.md" class="underline">ADR-022</a>），另产生 ADR-023 修订 ADR-015。本轮不再重复其上任何主张；本轮候选 07 与审计既有 <span class="font-mono">AUD-ARCH-005</span> 同源，属"审计已给出方向、尚无归属"的结构项。</p>
   </div>
   <div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-slate-500">
@@ -135,8 +136,20 @@
   <div class="flex items-start justify-between gap-4">
     <h2 class="font-serif text-xl">02 · 让"已保存设置发生变化"只有一个写入方</h2>
     <div class="flex gap-2 shrink-0">
-      <span class="badge badge-strong">Strong</span><span class="badge badge-cat">in-process</span>
+      <span class="badge badge-done">✓ 已落地</span><span class="badge badge-strong">Strong</span><span class="badge badge-cat">in-process</span>
     </div>
+  </div>
+  <div class="rounded-lg bg-indigo-50 border border-indigo-200 px-4 py-2 text-xs text-indigo-900 space-y-1">
+    <p><strong>落地（2026-09-14，未提交）</strong>：<span class="font-mono">ISavedSettingsWriter</span> / <span class="font-mono">SavedSettingsWriter</span>（<span class="font-mono">Services/SavedSettingsWriter.cs</span>）成为已保存设置的唯一写入方，三个操作各对应一种基底——<span class="font-mono">SaveDraftAsync()</span>（草稿成为已保存设置，设置页保存）、<span class="font-mono">UpdateAsync(change)</span>（在已保存设置上改字段，基底是设置快照）、<span class="font-mono">ReplaceAsync(settings)</span>（整份替换：向导完成、恢复默认）。</p>
+    <p><strong>落盘值即快照</strong>：<span class="font-mono">LauncherSettingsService.SaveAsync</span> 改为返回真正落盘的归一化值，写入方以它收口编辑器（<span class="font-mono">ApplySnapshot</span>）——候选 01 移交的归一化不对称（落盘的是 <span class="font-mono">NormalizeSettings</span> 副本，交回编辑器的却是未归一化的草稿）就此闭合。</p>
+    <p><strong>六个写入方降为调用者</strong>：设置页保存、游戏路径选择、资源面板切换来源、恢复默认设置、关窗采集窗口几何、向导完成保存。资源面板 UID 与 UID 来源这两个字段写入原先完全不碰编辑器，现一并收拢（<span class="font-mono">ResourcePanelUidService</span> 的读写入口随之分离：读仍走设置服务，写走写入方）。</p>
+    <p><strong>第七处：展示刷新不再写草稿</strong>：删除 <span class="font-mono">ShellViewModel.ApplyLanguage</span> 内的 <span class="font-mono">settings.Editor.Current.Language = language;</span>。语言进入已保存设置只剩「设置页保存」与「向导完成整份替换」两条路——向导的 <span class="font-mono">BuildSettings()</span> 本就带着所选语言，故预览不再写草稿不会丢语言。</p>
+    <p><strong>范围更正（复核发现，超出卡片原议）</strong>：卡片图列四条路线，正文称"本轮独立重扫未发现这两处之外的其他刷新路径写持久化"；实测 <span class="font-mono">SaveAsync</span> 在生产有 8 个调用点、归并后 6 个逻辑写入方，卡片未列的是游戏路径选择（<span class="font-mono">SettingsViewModel.cs:374-376</span>）、恢复默认设置（<span class="font-mono">ShellLifecycle.cs:352</span>），以及资源面板自有的 UID 与 UID 来源。另更正一处锚点：卡片行号里的 <span class="font-mono">SettingsAppearanceViewModel.cs:238-242</span> 是主题色板提交，第四条路线实为关窗路径 <span class="font-mono">App.axaml.cs:312-313</span>。</p>
+    <p><strong>派生故障（代码推理，未做运行时观测）</strong>：UID 分叉是一条可复现的用户可见失去——资源面板写入手动 UID 后编辑器草稿仍是旧值，用户在设置页改动任意一项并保存，整份草稿写回，UID 被静默回滚，而设置页里根本没有该字段的编辑入口。这比卡片原有的四条 bullet 更硬，也是「落盘值与草稿不再可能不一致」这条收益最直接的兑现点。</p>
+    <p><strong>守卫</strong>：<span class="font-mono">SavedSettingsWriterTests</span> 六例（字段写入后草稿保存不回滚该字段、草稿需归一化时落盘值即快照、<span class="font-mono">UpdateAsync</span> 同时落盘与收口编辑器、<span class="font-mono">ReplaceAsync</span> 之后草稿与快照都在替换值上、两处空参数守卫）；<span class="font-mono">MainWindowViewModelTests.Language</span> 两例（展示刷新与首次向导语言预览都不改草稿、不置脏，并同时断言语言确实生效——否则接错线也能"通过"）；<span class="font-mono">SettingsWriteOwnershipTests</span> 两条结构守卫（<span class="font-mono">LauncherSettingsService.SaveAsync</span> 的生产调用方只有写入方；持有设置服务的生产文件是一张需登记的声明表，兼作反空转断言）。四处变异注入已验证会咬并报出准确位置：去掉收口调用（3 例红）、<span class="font-mono">SaveAsync</span> 返回入参而非归一化值（1 例红）、恢复草稿写入（2 例红）、旁路直写设置服务（所有权守卫红并报出旁路文件）。</p>
+    <p><strong>测试前置消失</strong>：<span class="font-mono">MainWindowHeadlessTests.cs:48</span> 与 <span class="font-mono">WindowState.cs:289</span> 两处「先撤销脏状态」的 <span class="font-mono">ApplySnapshot(GetSnapshot())</span> 已删除——它们存在的唯一理由就是清掉展示刷新留下的脏标记。</p>
+    <p><strong>文档</strong>：<span class="font-mono">CONTEXT.md</span> 新立「已保存设置」一词，并把「设置快照」改述为它在编辑器里的副本（原条目把「已保存设置」列为应避免的说法，两词此前是同一个意思的两种叫法）；<span class="font-mono">ADR-024</span> 记录「为什么写入方不并进编辑器」（编辑器保持无 I/O、可同步构造，<span class="font-mono">RemoteHttpTransport</span> 的构造期闭包与二十余个设置测试不受影响），并写明以设置快照为字段改写基底的后果；<span class="font-mono">PROJECT_CONVENTIONS.md</span> §7 增补写入规则一条。</p>
+    <p><strong>测试装配</strong>：生产侧由 DI 单例保证「一个编辑器 ＋ 一个写入方」，测试侧新增 <span class="font-mono">SavedSettingsTestRig</span> 成对装配三者（随手 <span class="font-mono">new</span> 一个空编辑器会让字段改写的基底退化成默认值，测试里的落盘内容就与生产不同）。</p>
   </div>
   <div class="font-mono text-xs text-slate-600 leading-5">
     ViewModels/ShellViewModel.cs:118-158 · Features/Shell/ShellLifecycle.cs:333-346 · Features/Shell/ShellStartup.cs:90-95 · Features/Settings/SettingsAppearanceViewModel.cs:238-242 · tests/Cafe.Launcher.Avalonia.HeadlessTests/MainWindowHeadlessTests.cs:48-49
@@ -185,6 +198,7 @@ flowchart TB
   <div class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-700 space-y-1">
     <p><strong>复核证据</strong>：<span class="font-mono">ShellViewModel.cs:142</span> <span class="font-mono">settings.Editor.Current.Language = language;</span> 位于 <span class="font-mono">ApplyLanguage</span> 内，而该方法由 <span class="font-mono">ShellLifecycle.cs:228</span>（加载）/<span class="font-mono">:412</span>（保存后）/<span class="font-mono">:689</span>（应用快照）三处调用；首次设置向导的语言预览经 <span class="font-mono">SetupWizardViewModel.cs:119</span> → <span class="font-mono">ShellStartup.cs:90-95</span> 也走到它 ⇒ <strong>预览会改设置草稿</strong>。第二处：<span class="font-mono">ShellLifecycle.cs:333-346</span> 把 <span class="font-mono">PatchUrlGroup</span> 落盘后在 <span class="font-mono">:337</span> 手工同步草稿而不重放快照。测试侧代价：<span class="font-mono">MainWindowHeadlessTests.cs:48-49</span> 与 <span class="font-mono">MainWindowHeadlessTests.WindowState.cs:289-290</span> 调 <span class="font-mono">ApplySnapshot(GetSnapshot())</span> 纯为清掉这个脏标记。</p>
     <p class="text-slate-500">本轮独立重扫未发现这两处之外的其他"刷新路径写持久化"（见"本轮排除"最后一项），故范围限定为它们。</p>
+    <p class="text-slate-500"><strong>就地更正（2026-09-14 落地时复核）</strong>：这句范围判断不成立——<span class="font-mono">SaveAsync</span> 在生产共 8 个调用点、归并后 6 个逻辑写入方，本卡未列的是游戏路径选择、恢复默认设置，以及资源面板 UID 与 UID 来源两个字段写入（完全不碰编辑器）。上方文件锚点里第四条路线也认错了位置：<span class="font-mono">SettingsAppearanceViewModel.cs:238-242</span> 是主题色板提交，实为 <span class="font-mono">App.axaml.cs:312-313</span> 的关窗路径。详见卡内落地说明。</p>
   </div>
   <div class="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-xs text-amber-900">
     <strong>候选 01 移交的输入（2026-09-14 复核发现，尚未立案）</strong>：<span class="font-mono">LauncherSettingsService.SaveAsync</span> 落盘的是<b>归一化</b>副本（<span class="font-mono">LauncherSettingsService.cs:108-114,148-210</span>），而 <span class="font-mono">SettingsViewModel.cs:310</span> 把<b>未归一化</b>的草稿对象交给 <span class="font-mono">ApplySnapshot</span>——于是保存成功后编辑器的「设置快照」可能与磁盘上的值不同（小写十六进制、未 trim 的 UID、含重复项的调色板、越界的调色板索引）。候选 01 按裁定只处理同一性的<b>定义</b>、参照点保持为编辑器快照，故该不对称原样移交本卡。注：本卡两个写入点与它同源，但修法不同（前者是写入方归属，后者是"已保存"的真值归属），可合并为同一轮。
@@ -917,6 +931,7 @@ flowchart TB
     </div>
     <p class="text-sm text-slate-700">先做这一项，理由是它同时满足三个条件：<strong>故障用户可见且静默</strong>（漏改一处比较，保存按钮就永远不亮——<span class="font-mono">CanSaveSettings =&gt; IsSettingsDirty &amp;&amp; !IsSaving</span>），<strong>修法最小</strong>（把属性枚举收进 <span class="font-mono">DeepClone</span> 与 JSON 契约已经所在的模型，再补一个形状现成的反射守卫），且<strong>不触碰任何 ADR</strong>。候选 02/03 与之同域，适合随后作为一轮"设置所有权"合并推进；候选 04 是与之独立的最大一块无守卫面。</p>
     <p class="text-xs text-slate-500">推进前请先选择要探索的候选——本报告按技能流程只呈现机会与方向，未给出接口设计。</p>
+    <p class="text-xs text-slate-500">后续（2026-09-14）：候选 01、候选 02 均已按裁定落地并提交，接口归属裁定为独立写入方（<a href="design/adr/ADR-024-已保存设置唯一写入方.md" class="underline">ADR-024</a>）；候选 03 未随本轮推进，仍待裁决。</p>
   </div>
 </section>
 

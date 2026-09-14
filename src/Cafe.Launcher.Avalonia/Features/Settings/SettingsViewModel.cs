@@ -21,6 +21,7 @@ namespace Cafe.Launcher.Avalonia.Features.Settings;
 public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalContentViewModel
 {
     private readonly LauncherSettingsService settingsService;
+    private readonly ISavedSettingsWriter savedSettingsWriter;
     private readonly HttpClientFactory httpClientFactory;
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
@@ -63,6 +64,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
 
     public SettingsViewModel(
         LauncherSettingsService settingsService,
+        ISavedSettingsWriter savedSettingsWriter,
         HttpClientFactory httpClientFactory,
         LocalizationService localizer,
         ToastService toastService,
@@ -77,6 +79,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         IFilePickerService filePickerService)
     {
         this.settingsService = settingsService;
+        this.savedSettingsWriter = savedSettingsWriter;
         this.httpClientFactory = httpClientFactory;
         this.localizer = localizer;
         this.toastService = toastService;
@@ -296,8 +299,9 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
                 s.SelectedThemeColorPaletteIndex = Appearance.SelectedThemeColorPaletteIndex;
             });
 
-            var settings = editor.GetSnapshot();
-            await settingsService.SaveAsync(settings);
+            // 落盘值而非草稿对象：归一化会改写草稿里的表示（大小写、trim、色板去重），
+            // 后续的跟随动作与编辑器都必须以真正落盘的那个值为准。
+            var settings = await savedSettingsWriter.SaveDraftAsync();
             httpClientFactory.ConfigureHttp2(settings.EnableHttp2);
             ApplyLogLevel(settings.LogLevel);
 
@@ -308,7 +312,6 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
                     settings.ThemeColorMode,
                     SettingsAppearanceViewModel.ParseColorOrDefault(settings.CustomThemeColor));
 
-            editor.ApplySnapshot(settings);
             toastService.ShowSuccess(localizer.T(LocalizationKeys.SettingsSaved));
             RefreshGameRuntimeStatus();
 
@@ -370,10 +373,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
 
         try
         {
-            var settings = await settingsService.ReadAsync();
-            settings.GamePath = pickedPath;
-            await settingsService.SaveAsync(settings);
-            editor.ApplySnapshot(settings);
+            await savedSettingsWriter.UpdateAsync(settings => settings.GamePath = pickedPath);
             toastService.ShowSuccess(localizer.T(LocalizationKeys.GamePathUpdated));
 
             await AsyncEvent.InvokeSequentiallyAsync(SettingsSaved);

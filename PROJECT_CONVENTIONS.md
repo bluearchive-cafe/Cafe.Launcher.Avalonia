@@ -164,6 +164,7 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 - 新增字段：提供合理默认值（在 `LauncherSettings` 模型中），`LauncherSettingsService` 不因缺失字段而抛异常。
 - 重命名或删除字段前，明确旧 JSON 的读取策略；必要时在 `LauncherSettingsService` 中解析旧字段。
 - `LauncherSettings` 的新增字段需有默认值，并同步更新两张清单：`DeepClone()` 的拷贝构造与 `ComparedProperties`（状态同一性，见 `CONTEXT.md`）。漏前者会静默浅拷贝，漏后者会让设置页保存按钮不再跟踪该字段。`LauncherSettingsService.NormalizeSettings()` 负责将未知或不合法值兜底为有效默认值。`LauncherSettingsTests` 以反射守护两张清单：`DeepClone` 覆盖全部公共可写属性（比较用测试内独立渲染，不复用生产比较器，以免比较器缺陷被报成拷贝缺陷），状态同一性则是两相守卫（两份默认设置必须判为相同；逐属性改动必脏、还原必净），另有守卫断言两张表的名字与全部公共可写属性一一对应。
+- 写入已保存设置一律经 `ISavedSettingsWriter`（见 `CONTEXT.md` 的「已保存设置」与 [ADR-024](docs/design/adr/ADR-024-已保存设置唯一写入方.md)），不要直接调用 `LauncherSettingsService.SaveAsync`：绕过去就不会回写编辑器草稿，用户下一次保存设置会把这次写入的字段回滚掉。`SettingsWriteOwnershipTests` 守卫这条边界（生产调用方唯一性 ＋ 持有者声明表）。
 
 ---
 

@@ -366,6 +366,7 @@ public sealed class ShellLifecycleTests : IDisposable
             new Crc64Service(),
             Path.Combine(tempDir, "image-cache"));
         var settingsEditor = new SettingsEditor();
+        var savedSettingsWriter = new SavedSettingsWriter(settingsService, settingsEditor);
         var settingsAppearance = new SettingsAppearanceViewModel(settingsEditor);
         var settingsOptions = new SettingsOptionsViewModel(localizer, new DiskSpaceService());
         var shell = new ShellViewModel(localizer);
@@ -385,6 +386,7 @@ public sealed class ShellLifecycleTests : IDisposable
         using var settingsLogger = new UnifiedLogger(Path.Combine(tempDir, Guid.NewGuid().ToString("N")));
         var settings = new SettingsViewModel(
             settingsService,
+            savedSettingsWriter,
             httpClientFactory,
             localizer,
             toastService,
@@ -401,6 +403,7 @@ public sealed class ShellLifecycleTests : IDisposable
             new ResourcePanelUidService(
                 new BestHttpCookieLibraryService(),
                 settingsService,
+                savedSettingsWriter,
                 Path.Combine(tempDir, "missing-resource-panel-cookie")),
             new ResourcePanelApiClient(CreateNotFoundTransport()),
             diagnostics);
@@ -459,6 +462,7 @@ public sealed class ShellLifecycleTests : IDisposable
         var lifecycle = new ShellLifecycle(
             coreService,
             settingsService,
+            savedSettingsWriter,
             localizer,
             toastService,
             launcherUpdateService,

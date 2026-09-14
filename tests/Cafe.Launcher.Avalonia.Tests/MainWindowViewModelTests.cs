@@ -47,7 +47,7 @@ public sealed partial class MainWindowViewModelTests : IDisposable
 
     private async Task<MainWindowViewModel> CreateViewModelAsync(
         ILauncherCoreService coreService,
-        LauncherSettingsService? settingsService = null,
+        SavedSettingsTestRig? savedSettings = null,
         ResourcePanelUidService? resourcePanelUidService = null,
         ResourcePanelApiClient? resourcePanelApiClient = null,
         ToastService? toastService = null,
@@ -58,8 +58,10 @@ public sealed partial class MainWindowViewModelTests : IDisposable
         StubFilePickerService? filePickerService = null)
     {
         filePickerService ??= new StubFilePickerService();
-        settingsService ??= new LauncherSettingsService(
-            Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+        savedSettings ??= new SavedSettingsTestRig(new LauncherSettingsService(
+            Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json")));
+        var settingsService = savedSettings.SettingsService;
+        var savedSettingsWriter = savedSettings.Writer;
         var localInstallationStateStore = new LocalInstallationStateStore();
         var diagnostics = new LocalDiagnostics();
         var localizationService = new LocalizationService();
@@ -95,13 +97,14 @@ public sealed partial class MainWindowViewModelTests : IDisposable
         resourcePanelUidService ??= new ResourcePanelUidService(
             new BestHttpCookieLibraryService(),
             settingsService,
+            savedSettingsWriter,
             Path.Combine(tempDir, "missing-resource-panel-cookie"));
         resourcePanelApiClient ??= new ResourcePanelApiClient(new StubRemoteHttpTransport());
 
         toastService ??= new ToastService();
         var diskSpaceService = new DiskSpaceService();
         var launcherUpdateSvc = launcherUpdateService ?? new LauncherUpdateService(new StubRemoteHttpTransport());
-        var settingsEditor = new SettingsEditor();
+        var settingsEditor = savedSettings.Editor;
         var settingsOptions = new SettingsOptionsViewModel(localizationService, diskSpaceService);
         var settingsAppearance = new SettingsAppearanceViewModel(settingsEditor);
         var shellViewModel = new ShellViewModel(localizationService);
@@ -114,7 +117,7 @@ public sealed partial class MainWindowViewModelTests : IDisposable
             diagnostics);
         using var settingsLogger = new UnifiedLogger(Path.Combine(tempDir, Guid.NewGuid().ToString("N")));
         var settingsViewModel = new SettingsViewModel(
-            settingsService, httpClientFactory, localizationService, toastService,
+            settingsService, savedSettingsWriter, httpClientFactory, localizationService, toastService,
             launcherUpdateSvc, dialogsViewModel,
             settingsLogger,
             new GameInstallationPath(),
@@ -175,6 +178,7 @@ public sealed partial class MainWindowViewModelTests : IDisposable
         return new MainWindowViewModel(
             coreService,
             settingsService,
+            savedSettingsWriter,
             localizationService,
             toastService,
             launcherUpdateSvc,

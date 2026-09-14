@@ -4,6 +4,12 @@ using Cafe.Launcher.Avalonia.Models;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
+/// <summary>
+/// The settings state: the draft the user edits (<see cref="Current"/>) and the last saved
+/// snapshot it is compared against. In-memory and I/O-free on purpose — every production write
+/// to the saved settings goes through <see cref="ISavedSettingsWriter"/>, which persists and then
+/// applies the persisted value back here so the draft never disagrees with disk.
+/// </summary>
 public interface ISettingsEditor : INotifyPropertyChanged
 {
     LauncherSettings Current { get; }

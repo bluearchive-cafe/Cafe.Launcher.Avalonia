@@ -86,6 +86,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     internal MainWindowViewModel(
         ILauncherCoreService launcherCoreService,
         LauncherSettingsService settingsService,
+        ISavedSettingsWriter savedSettingsWriter,
         LocalizationService localizer,
         ToastService toastService,
         LauncherUpdateService launcherUpdateService,
@@ -99,6 +100,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             new ShellLifecycle(
                 launcherCoreService,
                 settingsService,
+                savedSettingsWriter,
                 localizer,
                 toastService,
                 launcherUpdateService,
