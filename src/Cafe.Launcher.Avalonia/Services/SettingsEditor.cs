@@ -7,6 +7,12 @@ namespace Cafe.Launcher.Avalonia.Services;
 public interface ISettingsEditor : INotifyPropertyChanged
 {
     LauncherSettings Current { get; }
+
+    /// <summary>
+    /// Whether <see cref="Current"/> differs from the last saved snapshot — the state identity
+    /// defined by <see cref="LauncherSettings.HasSameSettingsState"/>. Recomputed whenever a field
+    /// on <see cref="Current"/> changes; the settings page's save button tracks nothing else.
+    /// </summary>
     bool IsDirty { get; }
 
     /// <summary>
@@ -104,67 +110,11 @@ public sealed class SettingsEditor : ISettingsEditor
     {
         CurrentPropertyChanged?.Invoke(this, e);
         OnPropertyChanged(nameof(Current));
-        var newIsDirty = !SettingsMatch(current, snapshot);
+        var newIsDirty = !current.HasSameSettingsState(snapshot);
         if (isDirty != newIsDirty)
         {
             isDirty = newIsDirty;
             OnPropertyChanged(nameof(IsDirty));
         }
-    }
-
-    private static bool SettingsMatch(LauncherSettings left, LauncherSettings right)
-    {
-        if (left.ThemeColorPalette.Count != right.ThemeColorPalette.Count)
-        {
-            return false;
-        }
-
-        for (var index = 0; index < left.ThemeColorPalette.Count; index++)
-        {
-            if (!string.Equals(
-                    left.ThemeColorPalette[index],
-                    right.ThemeColorPalette[index],
-                    StringComparison.Ordinal))
-            {
-                return false;
-            }
-        }
-
-        return string.Equals(left.GamePath, right.GamePath, StringComparison.Ordinal)
-            && string.Equals(left.LaunchCheckMode, right.LaunchCheckMode, StringComparison.Ordinal)
-            && string.Equals(left.ProxyMode, right.ProxyMode, StringComparison.Ordinal)
-            && string.Equals(left.CloseBehavior, right.CloseBehavior, StringComparison.Ordinal)
-            && string.Equals(left.Language, right.Language, StringComparison.Ordinal)
-            && string.Equals(left.ThemeMode, right.ThemeMode, StringComparison.Ordinal)
-            && string.Equals(left.MotionMode, right.MotionMode, StringComparison.Ordinal)
-            && string.Equals(left.ThemeColorMode, right.ThemeColorMode, StringComparison.Ordinal)
-            && string.Equals(left.ThemeColorExtractionAlgorithm, right.ThemeColorExtractionAlgorithm, StringComparison.Ordinal)
-            && string.Equals(left.ThemeColorVariant, right.ThemeColorVariant, StringComparison.Ordinal)
-            && string.Equals(left.NeutralColorStrategy, right.NeutralColorStrategy, StringComparison.Ordinal)
-            && string.Equals(left.CustomThemeColor, right.CustomThemeColor, StringComparison.Ordinal)
-            && left.SelectedThemeColorPaletteIndex == right.SelectedThemeColorPaletteIndex
-            && string.Equals(left.DownloadSpeedLimit, right.DownloadSpeedLimit, StringComparison.Ordinal)
-            && left.EnableHttp2 == right.EnableHttp2
-            && left.EnableStartupUpdateCheck == right.EnableStartupUpdateCheck
-            && left.ShowRemoteContentCard == right.ShowRemoteContentCard
-            && left.RememberWindowPositionAndSize == right.RememberWindowPositionAndSize
-            && left.WindowPositionX == right.WindowPositionX
-            && left.WindowPositionY == right.WindowPositionY
-            && left.WindowWidth == right.WindowWidth
-            && left.WindowHeight == right.WindowHeight
-            && string.Equals(left.PatchUrlGroup, right.PatchUrlGroup, StringComparison.Ordinal)
-            && string.Equals(left.CustomBackgroundPath, right.CustomBackgroundPath, StringComparison.Ordinal)
-            && string.Equals(left.BackgroundSource, right.BackgroundSource, StringComparison.Ordinal)
-            && string.Equals(left.BackgroundFit, right.BackgroundFit, StringComparison.Ordinal)
-            && string.Equals(left.BackgroundFillColor, right.BackgroundFillColor, StringComparison.Ordinal)
-            && string.Equals(left.ResourcePanelUid, right.ResourcePanelUid, StringComparison.Ordinal)
-            && string.Equals(left.ResourcePanelUidSource, right.ResourcePanelUidSource, StringComparison.Ordinal)
-            && string.Equals(left.StatusDetailMode, right.StatusDetailMode, StringComparison.Ordinal)
-            && string.Equals(left.UpdateChannel, right.UpdateChannel, StringComparison.Ordinal)
-            && string.Equals(left.LogLevel, right.LogLevel, StringComparison.Ordinal)
-            && string.Equals(left.GameRuntime.Runner, right.GameRuntime.Runner, StringComparison.Ordinal)
-            && string.Equals(left.GameRuntime.RunnerPath, right.GameRuntime.RunnerPath, StringComparison.Ordinal)
-            && string.Equals(left.GameRuntime.PrefixPath, right.GameRuntime.PrefixPath, StringComparison.Ordinal)
-            && string.Equals(left.GameRuntime.ProtonPath, right.GameRuntime.ProtonPath, StringComparison.Ordinal);
     }
 }
