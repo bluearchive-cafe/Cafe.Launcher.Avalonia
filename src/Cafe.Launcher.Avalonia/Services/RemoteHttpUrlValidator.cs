@@ -11,10 +11,13 @@ public sealed class RemoteHttpUrlValidator
 {
     /// <summary>
     /// How long a successful all-public DNS resolution may be reused across
-    /// requests. Deliberately short: it bounds the window in which a host whose
-    /// DNS record flips to a private address would still be dialed. Blocked,
-    /// private, empty, or failed resolutions are never cached and re-resolve on
-    /// every request.
+    /// requests. This is an IO-saving cache, not a rebinding defense: because
+    /// the actual dial re-resolves independently (no connection pinning), a
+    /// host whose record flips to a private address can still be dialed until
+    /// the cached answer expires — the TTL caps the width of that
+    /// validate-then-dial window (AUD-SEC-001), it does not close it. Blocked,
+    /// private, empty, or failed resolutions are never cached and re-resolve
+    /// on every request.
     /// </summary>
     internal static readonly TimeSpan DefaultCacheLifetime = TimeSpan.FromSeconds(30);
 
