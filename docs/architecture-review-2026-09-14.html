@@ -1,0 +1,929 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Cafe.Launcher.Avalonia — 架构深化评审 2026-09-14</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({ startOnLoad: true, theme: "neutral", securityLevel: "loose" });
+</script>
+<style>
+  .badge-strong  { background:#059669; color:#fff; }
+  .badge-explore { background:#d97706; color:#fff; }
+  .badge-spec    { background:#64748b; color:#fff; }
+  .badge-done    { background:#4f46e5; color:#fff; }
+  .badge-cat     { border:1px solid #cbd5e1; color:#475569; }
+  .badge { font-size:11px; letter-spacing:.08em; text-transform:uppercase; padding:3px 10px; border-radius:9999px; font-weight:600; }
+  .modlabel { font-size:10px; letter-spacing:.12em; text-transform:uppercase; }
+  .deepbox  { background:linear-gradient(135deg,#0f172a,#1e293b); color:#f1f5f9; }
+  .faded    { opacity:.45; }
+  .seam     { stroke-dasharray:5 4; }
+  .leakedge { stroke:#dc2626; stroke-width:2; }
+  .diagram  { height:300px; overflow:hidden; }
+  .thin     { height:26px; }
+  .thick    { height:64px; }
+  .bar      { background:#e2e8f0; border-left:3px solid #94a3b8; }
+  table.policy { border-collapse:collapse; font-size:11px; }
+  table.policy th, table.policy td { border:1px solid #cbd5e1; padding:2px 7px; text-align:left; }
+  table.policy th { background:#f1f5f9; font-weight:600; }
+</style>
+</head>
+<body class="bg-stone-50 text-slate-900 font-sans">
+<main class="max-w-5xl mx-auto px-6 py-12 space-y-12">
+
+<!-- ============ Header ============ -->
+<header class="space-y-4">
+  <h1 class="font-serif text-3xl">Cafe.Launcher.Avalonia — 架构深化评审（第二轮）</h1>
+  <p class="text-sm text-slate-500">2026-09-14 · 评审基线 main@fe6efd4 · 14 个候选 + 6 项本轮排除 · 词汇表：模块 / 接口 / 深度 / 接缝 / 适配器 / 杠杆 / 局部性</p>
+  <div class="rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 space-y-1">
+    <p class="text-sm font-semibold text-indigo-900">状态：已落地 1 / 14（候选 01 · 2026-09-14）——其余 13 项待裁决</p>
+    <div class="w-full h-2 rounded-full bg-indigo-100 overflow-hidden">
+      <div class="h-full rounded-full bg-indigo-600" style="width:7%"></div>
+    </div>
+    <p class="text-xs text-indigo-900/80">✓ <a href="#c01" class="underline">候选 01</a> 落地，门禁全绿：单元 1719 / Headless 178（0 失败，3 处可见平台跳过）· 覆盖率行 86.87% / 分支 93.30%（棘轮 +1.02pp / +0.60pp）· Debug 与 Release 构建 0 警告 0 错误。落地形态与卡片原议有一处偏离：机制由"反射驱动"改为<strong>声明表 ＋ 两相反射守卫</strong>，以保持生产代码不对模型做反射枚举（仓库既有取向，见卡片内的落地说明）。同日独立复核后单元测试为 1720（见卡片内的复核跟进）。</p>
+    <p class="text-xs text-indigo-900/80">上一轮（<a href="architecture-review-2026-09-13.html" class="underline">2026-09-13</a>）11 个候选已全部裁决：9 项落地，2 项否决（候选 03 → <a href="design/adr/ADR-021-保留操作后端接缝.md" class="underline">ADR-021</a>、候选 07 → <a href="design/adr/ADR-022-下载会话接缝不升格.md" class="underline">ADR-022</a>），另产生 ADR-023 修订 ADR-015。本轮不再重复其上任何主张；本轮候选 07 与审计既有 <span class="font-mono">AUD-ARCH-005</span> 同源，属"审计已给出方向、尚无归属"的结构项。</p>
+  </div>
+  <div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-slate-500">
+    <span><span class="inline-block w-3 h-3 border border-slate-400 bg-white align-[-1px]"></span> 模块（module）</span>
+    <span><span class="inline-block w-4 border-t-2 border-dashed border-slate-400 align-middle"></span> 接缝（seam）</span>
+    <span><span class="inline-block w-4 border-t-2 border-red-600 align-middle"></span> 泄漏（leak）</span>
+    <span><span class="inline-block w-3 h-3 deepbox align-[-1px]"></span> 深模块（deep module）</span>
+    <span><span class="badge badge-strong">Strong</span> 强烈建议</span>
+    <span><span class="badge badge-explore">Worth exploring</span> 值得探索</span>
+    <span><span class="badge badge-spec">Speculative</span> 投机</span>
+  </div>
+  <p class="text-sm text-slate-600">热点依据：<span class="font-mono">ShellLifecycle.cs</span> 784 行 / 25 commits 为 src/ 第一热点，<span class="font-mono">MainWindow.Styles.axaml</span> 次之；本轮三个方向各派探查代理走查后，<strong>所有将写入本报告的数字与论断均经主评审逐条 grep 复核</strong>，其中两项上轮口头推断被证伪（见"本轮排除"）。</p>
+  <nav class="flex flex-wrap gap-2 text-xs">
+    <a href="#c01" class="px-2.5 py-1 rounded-full border border-emerald-400 bg-emerald-50 text-emerald-800">01 设置同一性</a>
+    <a href="#c02" class="px-2.5 py-1 rounded-full border border-emerald-400 bg-emerald-50 text-emerald-800">02 设置单一写入方</a>
+    <a href="#c03" class="px-2.5 py-1 rounded-full border border-emerald-400 bg-emerald-50 text-emerald-800">03 数据根注入</a>
+    <a href="#c04" class="px-2.5 py-1 rounded-full border border-emerald-400 bg-emerald-50 text-emerald-800">04 XAML 键契约</a>
+    <a href="#c05" class="px-2.5 py-1 rounded-full border border-emerald-400 bg-emerald-50 text-emerald-800">05 检查点决策权</a>
+    <a href="#c06" class="px-2.5 py-1 rounded-full border border-amber-400 bg-amber-50 text-amber-800">06 Journey 构造点</a>
+    <a href="#c07" class="px-2.5 py-1 rounded-full border border-amber-400 bg-amber-50 text-amber-800">07 Wire/Unwire</a>
+    <a href="#c08" class="px-2.5 py-1 rounded-full border border-amber-400 bg-amber-50 text-amber-800">08 模态闸口</a>
+    <a href="#c09" class="px-2.5 py-1 rounded-full border border-amber-400 bg-amber-50 text-amber-800">09 时钟接缝</a>
+    <a href="#c10" class="px-2.5 py-1 rounded-full border border-amber-400 bg-amber-50 text-amber-800">10 拒绝结果</a>
+    <a href="#c11" class="px-2.5 py-1 rounded-full border border-amber-400 bg-amber-50 text-amber-800">11 假想接缝</a>
+    <a href="#c12" class="px-2.5 py-1 rounded-full border border-amber-400 bg-amber-50 text-amber-800">12 诊断注册</a>
+    <a href="#c13" class="px-2.5 py-1 rounded-full border border-amber-400 bg-amber-50 text-amber-800">13 客户端策略</a>
+    <a href="#c14" class="px-2.5 py-1 rounded-full border border-slate-400 bg-slate-100 text-slate-700">14 出口口径</a>
+    <a href="#excluded" class="px-2.5 py-1 rounded-full border border-slate-300 bg-white text-slate-500">本轮排除</a>
+    <a href="#top" class="px-2.5 py-1 rounded-full border border-slate-900 bg-slate-900 text-white">首推</a>
+  </nav>
+</header>
+
+<section id="candidates" class="space-y-10">
+
+<!-- ============ 01 设置同一性 ============ -->
+<article id="c01" class="rounded-xl border border-slate-200 bg-white p-6 space-y-4 shadow-sm">
+  <div class="flex items-start justify-between gap-4">
+    <h2 class="font-serif text-xl">01 · 把设置的状态同一性收进设置模块</h2>
+    <div class="flex gap-2 shrink-0">
+      <span class="badge badge-done">✓ 已落地</span><span class="badge badge-strong">Strong</span><span class="badge badge-cat">in-process</span>
+    </div>
+  </div>
+  <div class="rounded-lg bg-indigo-50 border border-indigo-200 px-4 py-2 text-xs text-indigo-900 space-y-1">
+    <p><strong>落地（2026-09-14，未提交）</strong>：<span class="font-mono">LauncherSettings.ComparedProperties</span>——34 条声明表（<span class="font-mono">nameof</span> ＋ 访问器）；<span class="font-mono">HasSameSettingsState</span>；<span class="font-mono">internal static ValuesEqual</span>（逐值比较的唯一定义，字符串 <span class="font-mono">Ordinal</span>、集合逐元素、嵌套对象递归、未识别类型回退 <span class="font-mono">Equals</span> 且永不抛）。<span class="font-mono">GameRuntimeSettings</span> 获得同构的 4 条表与自身同一性。</p>
+    <p><strong>删除</strong>：<span class="font-mono">SettingsEditor.SettingsMatch</span>（36 行 <span class="font-mono">&amp;&amp;</span> 链 ＋ 调色板 2 处检查）与测试里那份独立的 <span class="font-mono">ValuesMatch</span>（<span class="font-mono">DeepClone</span> 守卫的比较方式见复核跟进）。</p>
+    <p><strong>机制偏离原议</strong>：卡片原议 Q1 为"反射驱动"，落地前复核发现本仓库生产代码<b>不对模型做反射枚举</b>（<span class="font-mono">AGENTS.md</span> 明载"no reflection-based view locator"、编译期显式绑定；生产仅剩的 2 处反射是读自身程序集版本元数据，见 <span class="font-mono">BuildInfo.cs:14</span>、<span class="font-mono">Program.cs:184</span>），故改为声明表 ＋ 反射只出现在守卫里。修复来自守卫而非机制，故该偏离不损失安全性。</p>
+    <p><strong>守卫（两相）</strong>：正相断言两份默认设置必须判为相同——它是<b>唯一</b>能证明同一性会回答"相同"的断言（<span class="font-mono">SettingsEditor.IsDirty</span> 构造期为字段默认 <span class="font-mono">false</span>，<span class="font-mono">ApplySnapshot</span> 又是赋值清位，两者都不走比较）；反相逐属性（34 ＋ 嵌套 4）要求"改动必脏、还原必净"，还原用的是<b>等值异引用</b>副本，专抓引用比较。三处变异注入已验证会咬并报出准确原因：漏顶层属性（<span class="font-mono">Changing 'EnableHttp2' left the editor clean</span>）、漏嵌套叶（<span class="font-mono">Changing 'GameRuntime.ProtonPath' …</span>）、集合退回引用比较（<span class="font-mono">Two default settings do not compare identical</span>）。</p>
+    <p><strong>文档</strong>：<span class="font-mono">CONTEXT.md</span> 新立「设置草稿／设置快照／状态同一性」三词（原无任何相关术语，该概念此前被独立实现五遍）；<span class="font-mono">PROJECT_CONVENTIONS.md</span> §7 改述为"两张清单"，并如实写明新增字段<b>需要</b>登记进 <span class="font-mono">ComparedProperties</span>。</p>
+    <p><strong>复核跟进（2026-09-14，同日独立复核）</strong>：复现了三处变异注入与全部构建／覆盖率门禁，并据此更正三处表述与两处守卫缺口。表述：(1) 生产代码并非零反射，准确说法见上；(2)「新增设置项从 4 处编辑降为 1–2 处」在声明表形态下不成立——新增字段仍要改 4 处（属性＋JSON 契约、拷贝构造、<span class="font-mono">ComparedProperties</span>、<span class="font-mono">NormalizeSettings</span>），实际收益是其中 2 处由守卫把关、漏改不再静默；(3) <span class="font-mono">ValuesEqual</span> 的 <span class="font-mono">NaN</span> 说明同步更正——该情形当前<b>不可达</b>（<span class="font-mono">MainWindow.CaptureWindowState</span> 以 <span class="font-mono">double.IsFinite</span> 过滤、<span class="font-mono">NormalizeSettings</span> 载入时置 null），<span class="font-mono">Equals</span> 是自反性上的稳健选择，而非修复某用户可见故障。守卫缺口：(1) <span class="font-mono">DeepClone</span> 守卫不再复用生产比较器——原写法会把比较器缺陷报成拷贝缺陷（报 <span class="font-mono">DeepClone did not copy 'ThemeColorPalette'</span>，而拷贝构造完好），且两张表同时漏登记某嵌套叶时它不再报警；现改为测试内独立渲染比较，嵌套叶逐叶展开。(2) 新增声明表名字与可写属性 1:1 的守卫 <span class="font-mono">ComparedProperties_NamesEverySettablePropertyExactlyOnce</span>，让只用于阅读的 <span class="font-mono">nameof</span> 标签第一次被断言。单元测试 1719 → 1720。</p>
+  </div>
+  <div class="font-mono text-xs text-slate-600 leading-5">
+    Models/LauncherSettings.cs:51-151 · Models/GameRuntimeSettings.cs:12-23 · Services/SettingsEditor.cs:115-169 · Features/Settings/SettingsViewModel.cs:131 · tests/Cafe.Launcher.Avalonia.Tests/LauncherSettingsTests.cs:15
+  </div>
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="rounded-lg border border-slate-200 p-3">
+      <p class="modlabel text-slate-400 mb-2">Before — 同一份属性清单写在四个地方</p>
+      <div class="space-y-2 text-xs font-mono">
+        <div class="rounded border border-slate-300 px-2 py-1">JSON 契约 <span class="text-slate-400">34 个 [JsonPropertyName]</span></div>
+        <div class="rounded border border-slate-300 px-2 py-1">拷贝构造 <span class="text-emerald-600">34 行 · 有反射守卫</span></div>
+        <div class="rounded border-2 border-red-400 px-2 py-1">SettingsMatch 同一性 <span class="text-red-600">36 行 ＋ 调色板 2 处 · 无守卫</span></div>
+        <div class="rounded border border-slate-300 px-2 py-1">校验表 <span class="text-slate-400">SettingsService 内</span></div>
+      </div>
+      <p class="text-[11px] text-slate-500 mt-2">新增一个设置项 = 4 处编辑，漏改同一性 ⇒ 草稿变了但保存按钮不亮</p>
+    </div>
+    <div class="rounded-lg border border-slate-200 p-3">
+      <p class="modlabel text-slate-400 mb-2">After — 一个同一性操作 ＋ 一个完备性守卫</p>
+      <div class="deepbox rounded-lg px-3 py-3 text-xs">
+        <p class="font-semibold">LauncherSettings · 状态同一性</p>
+        <p class="text-slate-300 mt-1">属性枚举收在 DeepClone 与 JSON 契约已所在之处</p>
+        <p class="text-slate-400 mt-2">↳ SettingsEditor 只消费，不再自己列举</p>
+        <p class="text-emerald-300 mt-2">↳ 反射完备性测试，对齐既有拷贝构造守卫</p>
+      </div>
+      <p class="text-[11px] text-slate-500 mt-2">同一块声明 + 一处守卫各自服务全部消费方</p>
+    </div>
+  </div>
+  <p class="text-sm"><strong>问题</strong>：设置的状态同一性由 37 处手写比较承担，而属性清单在四处各写一遍、只有两处有守卫——于是"添加一个设置项"是一次静默的多点编辑，漏改的后果是保存按钮启用态永远不亮（用户可见的假死）。</p>
+  <p class="text-sm"><strong>方案</strong>：在设置模块上给出一个状态同一性操作（属性枚举与 <span class="font-mono">DeepClone</span>、JSON 契约同址），编辑器消费它而非自行列举；补一个反射完备性测试，形状对齐 <span class="font-mono">LauncherSettingsTests.cs:15</span> 已有的那份。</p>
+  <ul class="text-sm list-disc pl-5 space-y-1 marker:text-emerald-600">
+    <li>局部性：属性枚举集中到一处</li>
+    <li>守卫对称：拷贝构造已被守卫，同一性的漏改不再静默</li>
+    <li>用户可见故障消除：Save 不再静默不亮</li>
+    <li>新增设置项仍是 4 处编辑，其中 2 处（拷贝构造、<span class="font-mono">ComparedProperties</span>）由守卫把关</li>
+  </ul>
+  <div class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-700 space-y-0.5">
+    <p><strong>复核证据</strong>：<span class="font-mono">LauncherSettings</span> 恰好 34 个顶层属性（34 个 <span class="font-mono">[JsonPropertyName]</span>），<span class="font-mono">GameRuntimeSettings</span> 另 4 个 ⇒ 38 个叶。<span class="font-mono">SettingsEditor.cs</span> 的 <span class="font-mono">&amp;&amp;</span> 链 36 行比较（:133-168）＋ 调色板计数检查（:117-120）＋ 调色板元素循环（:122-131）＝ 38 个比较点，与 38 个叶一一对应。漂移后果：<span class="font-mono">SettingsViewModel.cs:131</span> <span class="font-mono">CanSaveSettings =&gt; IsSettingsDirty &amp;&amp; !IsSaving</span>。</p>
+  </div>
+</article>
+
+<!-- ============ 02 设置单一写入方 ============ -->
+<article id="c02" class="rounded-xl border border-slate-200 bg-white p-6 space-y-4 shadow-sm">
+  <div class="flex items-start justify-between gap-4">
+    <h2 class="font-serif text-xl">02 · 让"已保存设置发生变化"只有一个写入方</h2>
+    <div class="flex gap-2 shrink-0">
+      <span class="badge badge-strong">Strong</span><span class="badge badge-cat">in-process</span>
+    </div>
+  </div>
+  <div class="font-mono text-xs text-slate-600 leading-5">
+    ViewModels/ShellViewModel.cs:118-158 · Features/Shell/ShellLifecycle.cs:333-346 · Features/Shell/ShellStartup.cs:90-95 · Features/Settings/SettingsAppearanceViewModel.cs:238-242 · tests/Cafe.Launcher.Avalonia.HeadlessTests/MainWindowHeadlessTests.cs:48-49
+  </div>
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="rounded-lg border border-slate-200 p-3">
+      <p class="modlabel text-slate-400 mb-1">Before — 四条写入路线，草稿/快照靠手工修补</p>
+      <div class="diagram">
+      <pre class="mermaid">
+flowchart TB
+  A["展示刷新<br/>ApplyLanguage"] --> W1["改设置草稿"]
+  B["资源面板切换来源"] --> W2["落盘 ＋ 手工同步草稿"]
+  C["窗口几何采集"] --> W3["落盘"]
+  D["保存后跟进"] --> W4["快照克隆不回流"]
+  W1 -.-> X["Current ≠ snapshot<br/>测试需先撤销脏状态"]
+  W2 -.-> X
+  classDef leak stroke:#dc2626,stroke-width:2px;
+  class W1,W2,X leak
+      </pre>
+      </div>
+    </div>
+    <div class="rounded-lg border border-slate-200 p-3">
+      <p class="modlabel text-slate-400 mb-1">After — 一个命名操作，四个调用者</p>
+      <div class="diagram">
+      <pre class="mermaid">
+flowchart TB
+  A["展示刷新"] --> S["已保存设置发生变化<br/>（模块拥有）"]
+  B["来源切换"] --> S
+  C["窗口几何"] --> S
+  D["保存后跟进"] --> S
+  S --> R["草稿与快照由模块<br/>自行保持一致"]
+  classDef deep stroke:#0f172a,stroke-width:3px,fill:#0f172a,color:#f1f5f9;
+  class S,R deep
+      </pre>
+      </div>
+    </div>
+  </div>
+  <p class="text-sm"><strong>问题</strong>：展示刷新路径直接改写持久化草稿，来源切换把已落盘的值手工同步进草稿而不重放快照，窗口几何另走一路——结果编辑器的不变式要靠测试先"撤销脏状态"才能被测。</p>
+  <p class="text-sm"><strong>方案</strong>：命名一个"已保存设置发生变化"的操作并让四个写入方都成为它的调用者；草稿与快照的一致性由模块维护，窗口几何与来源切换降为调用者而非作者。</p>
+  <ul class="text-sm list-disc pl-5 space-y-1 marker:text-emerald-600">
+    <li>局部性：设置状态转换集中在一个模块</li>
+    <li>预览不再写用户草稿</li>
+    <li>测试前置的"撤销脏状态"两处消失</li>
+    <li>落盘值与草稿不再可能不一致</li>
+  </ul>
+  <div class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-700 space-y-1">
+    <p><strong>复核证据</strong>：<span class="font-mono">ShellViewModel.cs:142</span> <span class="font-mono">settings.Editor.Current.Language = language;</span> 位于 <span class="font-mono">ApplyLanguage</span> 内，而该方法由 <span class="font-mono">ShellLifecycle.cs:228</span>（加载）/<span class="font-mono">:412</span>（保存后）/<span class="font-mono">:689</span>（应用快照）三处调用；首次设置向导的语言预览经 <span class="font-mono">SetupWizardViewModel.cs:119</span> → <span class="font-mono">ShellStartup.cs:90-95</span> 也走到它 ⇒ <strong>预览会改设置草稿</strong>。第二处：<span class="font-mono">ShellLifecycle.cs:333-346</span> 把 <span class="font-mono">PatchUrlGroup</span> 落盘后在 <span class="font-mono">:337</span> 手工同步草稿而不重放快照。测试侧代价：<span class="font-mono">MainWindowHeadlessTests.cs:48-49</span> 与 <span class="font-mono">MainWindowHeadlessTests.WindowState.cs:289-290</span> 调 <span class="font-mono">ApplySnapshot(GetSnapshot())</span> 纯为清掉这个脏标记。</p>
+    <p class="text-slate-500">本轮独立重扫未发现这两处之外的其他"刷新路径写持久化"（见"本轮排除"最后一项），故范围限定为它们。</p>
+  </div>
+  <div class="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-xs text-amber-900">
+    <strong>候选 01 移交的输入（2026-09-14 复核发现，尚未立案）</strong>：<span class="font-mono">LauncherSettingsService.SaveAsync</span> 落盘的是<b>归一化</b>副本（<span class="font-mono">LauncherSettingsService.cs:108-114,148-210</span>），而 <span class="font-mono">SettingsViewModel.cs:310</span> 把<b>未归一化</b>的草稿对象交给 <span class="font-mono">ApplySnapshot</span>——于是保存成功后编辑器的「设置快照」可能与磁盘上的值不同（小写十六进制、未 trim 的 UID、含重复项的调色板、越界的调色板索引）。候选 01 按裁定只处理同一性的<b>定义</b>、参照点保持为编辑器快照，故该不对称原样移交本卡。注：本卡两个写入点与它同源，但修法不同（前者是写入方归属，后者是"已保存"的真值归属），可合并为同一轮。
+  </div>
+</article>
+
+<!-- ============ 03 数据根注入 ============ -->
+<article id="c03" class="rounded-xl border border-slate-200 bg-white p-6 space-y-4 shadow-sm">
+  <div class="flex items-start justify-between gap-4">
+    <h2 class="font-serif text-xl">03 · 数据根成为注入模块，消掉构造器阶梯</h2>
+    <div class="flex gap-2 shrink-0">
+      <span class="badge badge-strong">Strong</span><span class="badge badge-cat">local-substitutable</span>
+    </div>
+  </div>
+  <div class="font-mono text-xs text-slate-600 leading-5">
+    Services/LauncherUserDataDirectory.cs:18-21 · Services/LauncherSettingsService.cs:27-52 · Services/ImageCacheService.cs:42-54 · Services/Diagnostics/LogExportService.cs:45-55 · Services/Diagnostics/CrashReportStore.cs:38-52 · Services/Diagnostics/LocalDiagnostics.cs · Features/GameOperations/DownloadCheckpointStore.cs:21 · Services/NoticeStateService.cs:32
+  </div>
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="rounded-lg border border-slate-200 p-3">
+      <p class="modlabel text-slate-400 mb-2">Before — 一个进程级静态读，15 条入口各自分叉</p>
+      <div class="space-y-1">
+        <div class="bar thin rounded px-2 text-[11px] leading-6 font-mono">static readonly Root ＋ 环境变量覆盖</div>
+        <div class="grid grid-cols-2 gap-1 text-[10px] font-mono">
+          <div class="bar thin rounded px-1 leading-6">SettingsService · 4 个构造器</div>
+          <div class="bar thin rounded px-1 leading-6">ImageCacheService · 2</div>
+          <div class="bar thin rounded px-1 leading-6">LogExportService · 2</div>
+          <div class="bar thin rounded px-1 leading-6">CrashReportStore · 2</div>
+          <div class="bar thin rounded px-1 leading-6">LocalDiagnostics · 2</div>
+          <div class="bar thin rounded px-1 leading-6">CheckpointStore · 1</div>
+        </div>
+      </div>
+      <p class="text-[11px] text-slate-500 mt-2">测试改路径要穿过多条不同形状的入口</p>
+    </div>
+    <div class="rounded-lg border border-slate-200 p-3">
+      <p class="modlabel text-slate-400 mb-2">After — 组合根解析一次，构造器回到单一形状</p>
+      <div class="space-y-2">
+        <div class="deepbox thick rounded flex items-center px-3 text-xs">
+          <span>数据根模块 · 由组合根解析（它已知进程根）</span>
+        </div>
+        <div class="grid grid-cols-2 gap-1 text-[10px] font-mono">
+          <div class="rounded bg-slate-100 px-1 leading-6">SettingsService · 1 个构造器</div>
+          <div class="rounded bg-slate-100 px-1 leading-6">ImageCacheService · 1</div>
+          <div class="rounded bg-slate-100 px-1 leading-6">LogExportService · 1</div>
+          <div class="rounded bg-slate-100 px-1 leading-6">CrashReportStore · 1</div>
+        </div>
+        <p class="text-[11px] text-slate-500">测试在一个接缝上换根</p>
+      </div>
+    </div>
+  </div>
+  <p class="text-sm"><strong>问题</strong>："启动器数据放在哪"是一次进程级静态读，15 处生产消费点各自长出一个测试专用构造器阶梯（或用环境变量绕行），于是测试要改路径就得认识多种不同形状的入口。</p>
+  <p class="text-sm"><strong>方案</strong>：数据根成为一个由组合根解析的注入模块，各模块构造器回到单一形状。</p>
+  <ul class="text-sm list-disc pl-5 space-y-1 marker:text-emerald-600">
+    <li>杠杆：一个接缝服务全部消费方</li>
+    <li>构造器阶梯（本域最集中的测试摩擦）消失</li>
+    <li>进程级隐式依赖降为显式注入</li>
+    <li>与 ADR-019/023 的"在根上注册"方向一致</li>
+  </ul>
+  <div class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-700">
+    <strong>复核证据</strong>：<span class="font-mono">LauncherUserDataDirectory.Root</span> 为 <span class="font-mono">static readonly</span>（:18-21），覆盖依赖 <span class="font-mono">CAFE_LAUNCHER_TEST_USER_DATA_DIRECTORY</span>；<span class="font-mono">src/</span> 内 <span class="font-mono">LauncherUserDataDirectory.</span> 生产消费 <strong>15 处</strong>（排除定义文件自身）；阶梯计数：<span class="font-mono">LauncherSettingsService</span> 4 个构造器、<span class="font-mono">ImageCacheService</span> 2、<span class="font-mono">LogExportService</span> 2、<span class="font-mono">CrashReportStore</span> 2、<span class="font-mono">LocalDiagnostics</span> 2，另 <span class="font-mono">DownloadCheckpointStore.cs:21</span>、<span class="font-mono">NoticeStateService.cs:32</span>。
+  </div>
+</article>
+
+<!-- ============ 04 XAML 键契约 ============ -->
+<article id="c04" class="rounded-xl border border-slate-200 bg-white p-6 space-y-4 shadow-sm">
+  <div class="flex items-start justify-between gap-4">
+    <h2 class="font-serif text-xl">04 · 把 545 处 XAML 键纳入既有 .resx 契约</h2>
+    <div class="flex gap-2 shrink-0">
+      <span class="badge badge-strong">Strong</span><span class="badge badge-cat">in-process</span>
+    </div>
+  </div>
+  <div class="font-mono text-xs text-slate-600 leading-5">
+    Views/*.axaml（16 个文件）· Services/LocalizationService.cs:214 · tests/Cafe.Launcher.Avalonia.Tests/ResxResourceContractTests.cs:196-219 · tests/Cafe.Launcher.Avalonia.Tests/UiStyleContractTests.Localization.cs:11-30 · scripts/Test-LocalizationContract.ps1:73-93
+  </div>
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="rounded-lg border border-slate-200 p-3">
+      <p class="modlabel text-slate-400 mb-2">Before — 契约只覆盖一半</p>
+      <div class="space-y-2 text-xs">
+        <div class="rounded border-2 border-emerald-400 px-2 py-1.5">
+          <span class="font-semibold">.cs 面 · 已被契约覆盖</span>
+          <p class="text-slate-500 mt-0.5">LocalizationKeys 常量 ↔ .resx 双向钉板（555 键）</p>
+        </div>
+        <div class="rounded border-2 border-red-400 px-2 py-1.5">
+          <span class="font-semibold text-red-700">.axaml 面 · 545 处无契约</span>
+          <p class="text-slate-500 mt-0.5">扫描域写死 <span class="font-mono">*.cs</span>；仅存的 XAML 检查只验 debug 前缀</p>
+        </div>
+        <div class="rounded bg-red-50 border border-red-200 px-2 py-1 text-red-700 font-mono">
+          拼错键 → 构建绿 / 测试绿 → 运行期 "Localization unavailable."
+        </div>
+      </div>
+    </div>
+    <div class="rounded-lg border border-slate-200 p-3">
+      <p class="modlabel text-slate-400 mb-2">After — 一个键词表，两面可证</p>
+      <div class="space-y-2 text-xs">
+        <div class="deepbox rounded px-3 py-3">
+          <p class="font-semibold">键契约（已存在的那条）</p>
+          <p class="text-slate-300 mt-1">键存在性在写键的地方被检查：.cs 与 .axaml 同一条规则</p>
+        </div>
+        <div class="rounded bg-emerald-50 border border-emerald-300 px-2 py-1.5 text-emerald-800">
+          拼错的键 → 测试红，附缺失键名
+        </div>
+        <p class="text-[11px] text-slate-500">占位符与键拼写共享同一份定义</p>
+      </div>
+    </div>
+  </div>
+  <p class="text-sm"><strong>问题</strong>：545 处 XAML 键是按字符串索引器手打的，而唯一的键契约把扫描域写死为 <span class="font-mono">*.cs</span>，唯一面向 .axaml 的检查只验证一个 <span class="font-mono">debug</span> 前缀——于是在 XAML 里拼错一个键，构建与测试都合法，运行期静默降级成一句固定串。</p>
+  <p class="text-sm"><strong>方案</strong>：把既有的那条键契约（它已经把握住了 <span class="font-mono">LocalizationKeys</span> 常量到 .resx 的绑定）扩展到 .axaml 面，让键存在性在写键的地方就被检查。</p>
+  <ul class="text-sm list-disc pl-5 space-y-1 marker:text-emerald-600">
+    <li>最大一块无守卫面（545 处 / 264 键 / 16 文件）入契约</li>
+    <li>生成式 XAML 编辑的错拼有守卫</li>
+    <li>占位符契约与键契约合一</li>
+  </ul>
+  <div class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-700 space-y-1">
+    <p><strong>复核证据</strong>：实测 <span class="font-mono">Views/</span> 下 <span class="font-mono">I18n[…]</span> 引用 <strong>545 处</strong>、去重 <strong>264 个键</strong>、分布 <strong>16 个 .axaml</strong>、单引号形式 0 处；<strong>今日 264 个键全部存在（无活漂移）</strong>，本项是补信任缺口而非修当前缺陷。<span class="font-mono">ResxResourceContractTests.cs:201</span> <span class="font-mono">Directory.GetFiles(root, "*.cs", …)</span>；<span class="font-mono">Test-LocalizationContract.ps1</span> 明文声明 XAML 绑定为"设计内用法"故豁免；<span class="font-mono">UiStyleContractTests.Localization.cs:24-29</span> 只断言 <span class="font-mono">StartsWith("debug")</span>，<span class="font-mono">debuggPanel</span> 这类拼写可以通过；降级串落点在 <span class="font-mono">LocalizationService.cs:214</span>。</p>
+    <p class="text-slate-500">范围说明：只补 XAML 侧的信任缺口，不主张撤销脚本里那条显式豁免声明（它是脚本注释，不是 ADR）。</p>
+  </div>
+</article>
+
+<!-- ============ 05 检查点决策权 ============ -->
+<article id="c05" class="rounded-xl border border-slate-200 bg-white p-6 space-y-4 shadow-sm">
+  <div class="flex items-start justify-between gap-4">
+    <h2 class="font-serif text-xl">05 · 检查点的决策权回到游戏操作域</h2>
+    <div class="flex gap-2 shrink-0">
+      <span class="badge badge-strong">Strong</span><span class="badge badge-cat">in-process</span>
+    </div>
+  </div>
+  <div class="font-mono text-xs text-slate-600 leading-5">
+    ViewModels/WindowChromeViewModel.cs:21,203-208 · Services/IGameOperationActivity.cs:11-33 · Features/GameOperations/GameOperationsViewModel.cs:372 · Models/LauncherEnums.cs:6-10 · Features/Shell/ShellLifecycle.cs:288,623,437 · ViewModels/DialogsViewModel.cs:195,213
+  </div>
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="rounded-lg border border-slate-200 p-3">
+      <p class="modlabel text-slate-400 mb-1">Before — 裸枚举值把持久化结果交给调用方选</p>
+      <div class="diagram">
+      <pre class="mermaid">
+sequenceDiagram
+  participant WC as WindowChromeViewModel
+  participant GA as GameOperationsViewModel
+  participant S as DownloadSession
+  Note over WC: 持有具体 VM（窄接口缺这个方法）
+  WC->>GA: StopDownload(UserRequested)
+  Note over S: 丢弃检查点
+  participant SL as ShellLifecycle
+  SL->>GA: StopDownload(ApplicationExit)
+  Note over S: 会话已空 ⇒ 空操作
+      </pre>
+      </div>
+    </div>
+    <div class="rounded-lg border border-slate-200 p-3">
+      <p class="modlabel text-slate-400 mb-1">After — 域暴露意图，结果由域决定</p>
+      <div class="diagram">
+      <pre class="mermaid">
+sequenceDiagram
+  participant WC as WindowChrome（窄视图）
+  participant GA as 游戏操作域
+  participant S as DownloadSession
+  WC->>GA: 停止并丢弃（关闭已确认）
+  GA->>S: 域自行翻译为检查点结果
+  participant SL as ShellLifecycle
+  SL->>GA: 生命周期退出
+  GA->>S: 域自行保留检查点
+      </pre>
+      </div>
+    </div>
+  </div>
+  <p class="text-sm"><strong>问题</strong>："停止是否保留续传"由一个裸枚举值表达，任何调用方都能替下载模块做这个决定；窗口 chrome 因此必须持有具体的 <span class="font-mono">GameOperationsViewModel</span>——尽管一个专为此存在的窄视图就在旁边——因为带原因的停止不在那个接口上。</p>
+  <p class="text-sm"><strong>方案</strong>：让游戏操作域拥有停止意图词表并只暴露意图级入口，于是"选哪个检查点结果"不再是调用方的知识，窄视图随之够用。</p>
+  <ul class="text-sm list-disc pl-5 space-y-1 marker:text-emerald-600">
+    <li>检查点策略回到功能内</li>
+    <li>窗口 chrome 不再命名具体展示模块</li>
+    <li>枚举注释与代码口径一致</li>
+    <li>关闭手势的语义由域命名，不由 chrome 拼</li>
+  </ul>
+  <div class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-700 space-y-1">
+    <p><strong>复核证据</strong>：<span class="font-mono">WindowChromeViewModel.cs:205</span> <span class="font-mono">operations.StopDownload(DownloadStopReason.UserRequested);</span>（该路径由 <span class="font-mono">ShellLifecycle.cs:437</span> 接到关闭确认）；同时 <span class="font-mono">ShellLifecycle.cs:288</span>（<span class="font-mono">PrepareForShutdownAsync</span>）与 <span class="font-mono">:623</span>（<span class="font-mono">Dispose</span>）发 <span class="font-mono">ApplicationExit</span>。<span class="font-mono">WindowChromeViewModel.cs:21</span> 持有具体 <span class="font-mono">GameOperationsViewModel</span>，而 <span class="font-mono">IGameOperationActivity</span> 只提供无原因参数的 <span class="font-mono">StopOperation()</span>——耦合正因这个缺口而存在。<span class="font-mono">LauncherEnums.cs:9</span> 的注释把 <span class="font-mono">ApplicationExit</span> 描述为包含"窗口销毁"，但窗口关闭手势实际走 <span class="font-mono">UserRequested</span>。</p>
+    <p class="text-slate-600"><strong>一处论断更正（如实记录）</strong>：上一轮口头推断的"关闭路径缺 Toast 是用户可见缺陷"本轮<strong>证伪</strong>——关闭确认与停止确认共用同一文案 <span class="font-mono">StopDownloadMessage</span>（<span class="font-mono">DialogsViewModel.cs:195</span> 与 <span class="font-mono">:213</span>），用户已被告知进度会丢失，且窗口随即关闭。真正的残留是<strong>决策权位置与注释口径</strong>，不是缺提示。</p>
+  </div>
+</article>
+
+<!-- ============ 06 Journey 构造点 ============ -->
+<article id="c06" class="rounded-xl border border-slate-200 bg-white p-6 space-y-4 shadow-sm">
+  <div class="flex items-start justify-between gap-4">
+    <h2 class="font-serif text-xl">06 · 给 journey 一个构造点</h2>
+    <div class="flex gap-2 shrink-0">
+      <span class="badge badge-explore">Worth exploring</span><span class="badge badge-cat">in-process</span>
+    </div>
+  </div>
+  <div class="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-xs text-amber-900">
+    <strong>与 ADR-021 相关</strong>：ADR-021 的后果条款把"journey 注入接口化"明确列为需要重开该裁定的触发事件之一。任何把它注入或脚本化的动作必须先重开 ADR-021。本项<strong>不</strong>触碰受 ADR-021 保护的 <span class="font-mono">IGameOperationExecutor</span>（1 生产 ＋ 2 替身），它的去留不在本轮议题内。
+  </div>
+  <div class="font-mono text-xs text-slate-600 leading-5">
+    Features/GameOperations/GameOperationsViewModel.cs:21,123 · Features/GameOperations/IGameOperationJourney.cs:16 · Features/GameOperations/GameOperationJourney.cs:19 · Composition/ServiceConfiguration.cs
+  </div>
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="rounded-lg border border-slate-200 p-3">
+      <p class="modlabel text-slate-400 mb-1">Before — 571 行规则内联 new，无替换点</p>
+      <div class="diagram">
+      <pre class="mermaid">
+flowchart TB
+  VM["GameOperationsViewModel<br/>534 行"] -->|"new（内联，把 this 当宿主）"| J["GameOperationJourney<br/>571 行编排规则"]
+  VM -.->|"实现"| H["IGameOperationJourneyHost"]
+  J -.->|"回调"| H
+  CFG["组合根"] -.->|"无登记"| J
+  classDef leak stroke:#dc2626,stroke-width:2px;
+  class J,CFG leak
+      </pre>
+      </div>
+    </div>
+    <div class="rounded-lg border border-slate-200 p-3">
+      <p class="modlabel text-slate-400 mb-1">After — 一个构造点，接口获得第二个适配器</p>
+      <div class="diagram">
+      <pre class="mermaid">
+flowchart TB
+  CFG["组合根"] -->|"构造"| J["深模块：操作编排"]
+  CFG --> VM["GameOperationsViewModel"]
+  VM -->|"注入"| J
+  T["测试替身（脚本化 journey）"] -.->|"第二个适配器"| VM
+  classDef deep stroke:#0f172a,stroke-width:3px,fill:#0f172a,color:#f1f5f9;
+  class J deep
+      </pre>
+      </div>
+    </div>
+  </div>
+  <p class="text-sm"><strong>问题</strong>：571 行的操作编排规则没有任何替换点——唯一实现是内联 <span class="font-mono">new</span> 出来的（还把 VM 自身当宿主传进去），组合根里没有它的登记，测试要驱动这些规则只能把 534 行的展示模块整体立起来。</p>
+  <p class="text-sm"><strong>方案</strong>：把 journey 的构造移到组合根，让 VM 接收它；接口于是得到第二个适配器，编排规则不再与展示接线缠在一起。</p>
+  <ul class="text-sm list-disc pl-5 space-y-1 marker:text-emerald-600">
+    <li>接口从假想接缝变为真接缝（两个适配器）</li>
+    <li>编排规则可不经展示模块被驱动</li>
+    <li>VM 的 534 行不再同时承担接线与编排</li>
+  </ul>
+  <div class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-700 space-y-1">
+    <p><strong>复核证据</strong>：<span class="font-mono">GameOperationsViewModel.cs:123</span> <span class="font-mono">journey = new GameOperationJourney(…, this);</span>；<span class="font-mono">rg Journey Composition/ServiceConfiguration.cs</span> 零命中；<span class="font-mono">IGameOperationJourney</span> 的全部出现仅为声明、实现与 VM 的私有字段，无测试替身实现它（<span class="font-mono">GameOperationJourneyTests</span> 直接 new 具体类）。</p>
+    <p><strong>删除检验（双判）</strong>：删<em>接口</em>不集中任何东西（字段类型变窄，复杂度不重现）⇒ 接口确为浅；删<em>类</em>会失败（571 行校验/重试/刷新规则会重新涌进已经 534 行的 VM）。两件事，两个结论——本项主张的是后者所在的位置，不是删掉前者。</p>
+  </div>
+</article>
+
+<!-- ============ 07 Wire/Unwire ============ -->
+<article id="c07" class="rounded-xl border border-slate-200 bg-white p-6 space-y-4 shadow-sm">
+  <div class="flex items-start justify-between gap-4">
+    <h2 class="font-serif text-xl">07 · Wire/Unwire 收敛为单张声明表</h2>
+    <div class="flex gap-2 shrink-0">
+      <span class="badge badge-explore">Worth exploring</span><span class="badge badge-cat">in-process</span>
+    </div>
+  </div>
+  <div class="rounded-lg border border-slate-300 bg-slate-50 px-4 py-2 text-xs text-slate-700">
+    <strong>与审计既有裁定一致</strong>：此项与 <span class="font-mono">CODEBASE_AUDIT.md</span> 的 <span class="font-mono">AUD-ARCH-005</span> 同源（784 行 / 25 commits，src/ 第一热点，处置 = Accept Risk），审计自身已写明方向："若再动 Shell，把订阅收敛为单张声明表由 Wire/Unwire 共同消费"。本轮不提出新主张，只是把这条已有方向列为有归属的候选。
+  </div>
+  <div class="font-mono text-xs text-slate-600 leading-5">
+    Features/Shell/ShellLifecycle.cs:421-454 · Features/Shell/ShellLifecycle.cs:562-605 · 先例 Features/Shell/ModalRegistrar.cs
+  </div>
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="rounded-lg border border-slate-200 p-3">
+      <p class="modlabel text-slate-400 mb-2">Before — 两份手抄清单，相隔约 140 行</p>
+      <div class="space-y-1 text-[11px] font-mono">
+        <div class="rounded border border-slate-300 px-2 py-1.5">
+          <p class="text-slate-500">Wire() · :421-454</p>
+          <p>15 处 += ＋ startup.Wire()</p>
+        </div>
+        <div class="text-center text-slate-400 text-base leading-4">⋮ 140 行 ⋮</div>
+        <div class="rounded border border-slate-300 px-2 py-1.5">
+          <p class="text-slate-500">Unwire() · :562-605</p>
+          <p>15 处 -= ＋ 4 处 = null; 重置</p>
+        </div>
+        <div class="rounded border-2 border-red-400 bg-red-50 px-2 py-1 text-red-700">
+          漏配对称：编译期与测试期均无信号
+        </div>
+      </div>
+    </div>
+    <div class="rounded-lg border border-slate-200 p-3">
+      <p class="modlabel text-slate-400 mb-2">After — 一张表，两侧共同遍历</p>
+      <div class="space-y-2">
+        <div class="deepbox rounded px-3 py-3 text-xs">
+          <p class="font-semibold">声明：source / handler 对表</p>
+          <p class="text-slate-300 mt-1">Wire 与 Unwire 遍历同一份数据</p>
+        </div>
+        <div class="rounded bg-emerald-50 border border-emerald-300 px-2 py-1.5 text-[11px] text-emerald-800">
+          对称性成为数据性质，不再是评审纪律
+        </div>
+        <p class="text-[11px] text-slate-500">先例：ADR-023 对模态注册已如此收敛</p>
+      </div>
+    </div>
+  </div>
+  <p class="text-sm"><strong>问题</strong>：15 条订阅与 15 条退订加 4 处受托重置，是同一个 784 行模块里相隔约 140 行的两份手抄清单；漏配对称在编译期与测试期都没有信号。</p>
+  <p class="text-sm"><strong>方案</strong>：声明一张 source/handler 对表，由 Wire 与 Unwire 共同遍历——即 ADR-023 对模态注册已经做过的事，应用到它的非模态另一半。</p>
+  <ul class="text-sm list-disc pl-5 space-y-1 marker:text-emerald-600">
+    <li>配对规则成为数据，非纪律</li>
+    <li>先例已在同文件落地（ADR-023）</li>
+    <li>第一热点的双点编辑降到单点</li>
+  </ul>
+  <div class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-700">
+    <strong>复核证据</strong>：实测 <span class="font-mono">Wire()</span> 体（:421-454）<strong>15 处 <span class="font-mono">+=</span></strong>，<span class="font-mono">Unwire()</span> 体（:562-605）<strong>15 处 <span class="font-mono">-=</span></strong> ＋ <strong>4 处 <span class="font-mono">= null;</span></strong>；审计记 16 对（含 <span class="font-mono">startup.Wire()/Unwire()</span> 这条委派对）。文件 784 行，已复核。相邻的 <span class="font-mono">TryHandleEscape</span> 在 ADR-023 后已是 2 行委派（:608-612），可作为收敛后形态的参照。
+  </div>
+</article>
+
+<!-- ============ 08 模态闸口 ============ -->
+<article id="c08" class="rounded-xl border border-slate-200 bg-white p-6 space-y-4 shadow-sm">
+  <div class="flex items-start justify-between gap-4">
+    <h2 class="font-serif text-xl">08 · 模态闸口收敛为单一 kind 判定</h2>
+    <div class="flex gap-2 shrink-0">
+      <span class="badge badge-explore">Worth exploring</span><span class="badge badge-cat">in-process</span>
+    </div>
+  </div>
+  <div class="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-xs text-amber-900">
+    <strong>与既有裁决冲突（需对着裁决重开，不可绕过）</strong>：<span class="font-mono">AGENTS.md</span>「模态隔离裁决（2026-09-12 审计）」规定七个主叠层"各自在叠层根上绑定一个按种类区分的 <span class="font-mono">ModalHostViewModel.Is*Interactive</span>"，ADR-023 亦明确保持 <span class="font-mono">Is*Interactive</span> 闸口与 AXAML 绑定不动。裁决的<strong>意图</strong>（对话框层不设闸口、由全屏遮罩与 ZIndex 承担）在任何"按叠层根设闸口"的形态下都保持不变——本项只改主叠层闸口的<em>表达方式</em>，不触碰裁决对对话框层的部分。值得重开的理由是<strong>正确性隐患</strong>（通知扫描无守卫），不是"第二个真相来源"。
+  </div>
+  <div class="font-mono text-xs text-slate-600 leading-5">
+    ViewModels/ModalHostViewModel.cs:23-44,69-79 · Views/MainWindowSettingsOverlay.axaml:12 · Views/ResourcePanelOverlay.axaml:13 · Views/MainWindowLogViewerOverlay.axaml:11 · Views/MainWindowLogExportOverlay.axaml:10 · Views/MainWindowDebugOverlay.axaml:10 · Views/DesignGalleryOverlay.axaml:11 · Views/SetupWizardOverlay.axaml:11 · Views/MainWindow.axaml:40 · Features/Shell/ShellLifecycle.cs:461-547 · tests/Cafe.Launcher.Avalonia.Tests/MainWindowViewModelTests.WizardDialogs.cs:85-152
+  </div>
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="rounded-lg border border-slate-200 p-3">
+      <p class="modlabel text-slate-400 mb-2">Before — 接口面几乎与实现面一样宽</p>
+      <div class="flex gap-3 items-end">
+        <div class="flex-1">
+          <p class="text-[10px] text-slate-500 mb-1">8 个闸口属性（接口面）</p>
+          <div class="rounded bg-red-100 border-2 border-red-400" style="height:150px"></div>
+        </div>
+        <div class="flex-1">
+          <p class="text-[10px] text-slate-500 mb-1">81 行模块（实现面）</p>
+          <div class="rounded bg-slate-200 border border-slate-400" style="height:170px"></div>
+        </div>
+      </div>
+      <p class="text-[11px] text-slate-500 mt-2">加一个叠层要手工改 <strong>6 处</strong>，其中"加通知行"编译器管不到</p>
+    </div>
+    <div class="rounded-lg border border-slate-200 p-3">
+      <p class="modlabel text-slate-400 mb-2">After — 窄接口 ＋ 一处推导</p>
+      <div class="flex gap-3 items-end">
+        <div class="flex-1">
+          <p class="text-[10px] text-slate-500 mb-1">栈顶一次</p>
+          <div class="rounded bg-emerald-200 border-2 border-emerald-500" style="height:26px"></div>
+        </div>
+        <div class="flex-1">
+          <p class="text-[10px] text-slate-500 mb-1">81 行模块</p>
+          <div class="rounded bg-slate-200 border border-slate-400" style="height:170px"></div>
+        </div>
+      </div>
+      <p class="text-[11px] text-slate-500 mt-2">8 个布尔与 11 行扫描删除；"当前该种类表面"在单点推导</p>
+    </div>
+  </div>
+  <p class="text-sm"><strong>问题</strong>：加一个主叠层要手工改 6 处，其中"加一行通知"编译器管不到、也没有任何测试透过绑定断言过它——于是漏加通知会留下一个永久过期的闸口，表现为"表面可见但点不动"。</p>
+  <p class="text-sm"><strong>方案</strong>：只暴露栈顶一次，在单一位置推导"当前是否该种类表面"，让叠层根查同一个判定，从而删除 8 个布尔与那 11 行扫描。</p>
+  <ul class="text-sm list-disc pl-5 space-y-1 marker:text-emerald-600">
+    <li>接口面从 8 个布尔收成 1 个</li>
+    <li>过期闸口不再可能（无手抄通知）</li>
+    <li>新增叠层从 6 处手工改动降到 3 处</li>
+    <li>绑定路径首次可被测试</li>
+  </ul>
+  <div class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-700 space-y-1">
+    <p><strong>复核证据</strong>：<span class="font-mono">ModalHostViewModel.cs</span> 恰 81 行；<strong>8 个闸口属性</strong>（:23,26,29,32,35,38,41,44）；<strong>11 行手工通知</strong>（:69-79，文件内无其他通知调用）；<strong>8 个绑定</strong>＝7 个主叠层根 ＋ 基准面 <span class="font-mono">MainWindow.axaml:40</span>；<span class="font-mono">src/</span> 内闸口名出现 <strong>24 次</strong>（8 声明 ＋ 8 通知 ＋ 8 绑定）；<span class="font-mono">ModalKind</span> 恰 <strong>19 个值</strong>（<span class="font-mono">ModalKind.cs:5-25</span>），其中仅 7 个带闸口，其余 12 个（3 对话框 ＋ 9 确认）按裁决走全屏遮罩；<span class="font-mono">ShellLifecycle.cs:463-547</span> 共 19 条注册。新增一个主叠层的 6 处改动：<span class="font-mono">ModalKind</span> 值 → <span class="font-mono">ShellLifecycle</span> 的注册 → 闸口属性 → 通知行 → 叠层根 <span class="font-mono">IsEnabled</span> 绑定 → <span class="font-mono">WizardDialogs.cs</span> 的 <span class="font-mono">OpenModalAsync</span> 分支（其 <span class="font-mono">default</span> 会抛，:147-151）。</p>
+    <p class="text-slate-500">无测试覆盖闸口的绑定—通知路径：<span class="font-mono">ModalHostViewModelTests.cs:70-111</span> 直接断言属性值，无 headless 测试触及这些闸口。</p>
+  </div>
+</article>
+
+<!-- ============ 09 时钟接缝 ============ -->
+<article id="c09" class="rounded-xl border border-slate-200 bg-white p-6 space-y-4 shadow-sm">
+  <div class="flex items-start justify-between gap-4">
+    <h2 class="font-serif text-xl">09 · 给下载节奏一个时钟接缝</h2>
+    <div class="flex gap-2 shrink-0">
+      <span class="badge badge-explore">Worth exploring</span><span class="badge badge-cat">local-substitutable</span>
+    </div>
+  </div>
+  <div class="font-mono text-xs text-slate-600 leading-5">
+    Features/GameOperations/DownloadProgressAccumulator.cs:71,115 · Features/GameOperations/DownloadTransferThrottle.cs:43,67,75 · Features/GameOperations/DownloadExecutor.cs:97-165 · tests/Cafe.Launcher.Avalonia.Tests/GameDownloadServiceTests.cs:1350-1445
+  </div>
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="rounded-lg border border-slate-200 p-3">
+      <p class="modlabel text-slate-400 mb-2">Before — 为测试时间而长的平行表面</p>
+      <div class="space-y-1 text-[11px] font-mono">
+        <div class="rounded border border-slate-300 px-2 py-1">
+          <p class="text-slate-500">DownloadTransferThrottle</p>
+          <p>Pause / Resume / RecordBytes <span class="text-slate-400">生产用</span></p>
+          <p class="text-red-600">PauseAt / ResumeAt / RecordBytesAt <span class="text-slate-400">仅测试</span></p>
+        </div>
+        <div class="rounded border border-slate-300 px-2 py-1">
+          <p class="text-slate-500">DownloadProgressAccumulator</p>
+          <p>TryRecord / Resume <span class="text-slate-400">生产用</span></p>
+          <p class="text-red-600">TryRecordAt / ResumeAt <span class="text-slate-400">仅测试</span></p>
+        </div>
+        <div class="rounded border-2 border-red-400 bg-red-50 px-2 py-1">
+          暂停握手（引用相等 ＋ 共享锁）无聚焦测试
+        </div>
+      </div>
+    </div>
+    <div class="rounded-lg border border-slate-200 p-3">
+      <p class="modlabel text-slate-400 mb-2">After — 每个模块一套表面，确定性来自适配器</p>
+      <div class="space-y-2">
+        <div class="deepbox rounded px-3 py-3 text-xs">
+          <p class="font-semibold">时间戳来源：唯一注入的接缝</p>
+          <p class="text-slate-300 mt-1">生产 = 单调时钟；测试 = 可控时钟</p>
+        </div>
+        <div class="rounded bg-slate-100 px-2 py-1.5 text-[11px] font-mono">
+          Throttle · 表面 5 个（原 9）<br/>Accumulator · 表面 6 个（原 9）
+        </div>
+        <p class="text-[11px] text-slate-500">暂停握手成为可确定测试的单元</p>
+      </div>
+    </div>
+  </div>
+  <p class="text-sm"><strong>问题</strong>：为了让测试能控制时间，两个模块各自长出一套 <span class="font-mono">*At</span> 平行表面与第二个构造器，其中 7 个成员没有任何生产调用方；而真正协调两者的暂停握手（引用相等 ＋ 共享锁，保证暂停时长不计入速度）没有任何聚焦测试。</p>
+  <p class="text-sm"><strong>方案</strong>：把时间戳来源做成唯一注入的接缝，每个模块只留一套表面，确定性由时钟适配器提供而不是靠重复成员。</p>
+  <ul class="text-sm list-disc pl-5 space-y-1 marker:text-emerald-600">
+    <li>删除仅测试用的平行成员</li>
+    <li>确定性来自适配器，非 API 复制</li>
+    <li>暂停握手首次可被聚焦测试</li>
+    <li>不影响 ADR-022 的会话内分段</li>
+  </ul>
+  <div class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-700 space-y-1">
+    <p><strong>复核证据</strong>：生产调用仅 <span class="font-mono">Pause/Resume/TryRecord/GetCurrentSnapshot</span>（<span class="font-mono">DownloadExecutor.cs:145,161,193,203</span>）与 <span class="font-mono">RecordBytes</span>（<span class="font-mono">:225</span>）；<span class="font-mono">TryRecordAt</span>/<span class="font-mono">ResumeAt</span>/<span class="font-mono">PauseAt</span>/<span class="font-mono">RecordBytesAt</span> 仅出现在两个下载模块自身与测试中。<span class="font-mono">DownloadExecutor.cs:104-165</span> 持有 <span class="font-mono">measuredPauseTask</span> 的引用相等舞蹈与 <span class="font-mono">pauseMeasurementLock</span>；<span class="font-mono">DownloadExecutorTests</span> 中 <span class="font-mono">Pause</span> 命中 0。</p>
+    <p><strong>删除检验</strong>：今天删掉 <span class="font-mono">*At</span> 不集中任何东西——测试会单纯失去确定性，因为它所代理的时钟接缝还不存在。重复是权宜，缺的接缝才是深化点。</p>
+  </div>
+</article>
+
+<!-- ============ 10 拒绝结果 ============ -->
+<article id="c10" class="rounded-xl border border-slate-200 bg-white p-6 space-y-4 shadow-sm">
+  <div class="flex items-start justify-between gap-4">
+    <h2 class="font-serif text-xl">10 · 把"拒绝意味着什么"收进策略表</h2>
+    <div class="flex gap-2 shrink-0">
+      <span class="badge badge-explore">Worth exploring</span><span class="badge badge-cat">in-process</span>
+    </div>
+  </div>
+  <div class="font-mono text-xs text-slate-600 leading-5">
+    Features/GameOperations/GameOperationPolicy.cs:27-36 · Features/GameOperations/GameOperationsViewModel.cs:269-273,280,338-342 · Features/GameOperations/GameOperationJourney.cs:270-275 · Features/GameOperations/GameDownloadService.cs:115,128 · Features/GameOperations/GameLaunchService.cs:42 · Features/GameOperations/GameUninstallService.cs:45
+  </div>
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="rounded-lg border border-slate-200 p-3">
+      <p class="modlabel text-slate-400 mb-1">Before — 一个布尔，八处各自解释</p>
+      <div class="diagram">
+      <pre class="mermaid">
+flowchart LR
+  P["Allows(操作, 状态)"] --> A["返回 null"]
+  P --> B["弹警告 Toast"]
+  P --> C["返回 Failed(...)"]
+  P --> D["静默 return"]
+  classDef leak stroke:#dc2626,stroke-width:2px;
+  class D leak
+      </pre>
+      </div>
+      <p class="text-[11px] text-slate-500">同一判定，四种反应；其中一种在用户已确认破坏性操作后静默无事</p>
+    </div>
+    <div class="rounded-lg border border-slate-200 p-3">
+      <p class="modlabel text-slate-400 mb-1">After — 单一拒绝结果，调用方渲染</p>
+      <div class="diagram">
+      <pre class="mermaid">
+flowchart LR
+  P["策略：此状态下此操作被拒绝<br/>（结果而非布尔）"] --> R["调用方只负责渲染<br/>提示 / 失败 / 中止"]
+  classDef deep stroke:#0f172a,stroke-width:3px,fill:#0f172a,color:#f1f5f9;
+  class P deep
+      </pre>
+      </div>
+    </div>
+  </div>
+  <p class="text-sm"><strong>问题</strong>：策略表只回答"是否允许"，不回答"拒绝意味着什么"，于是同一判定在 8 处被重述为 4 种不同反应——其中一处在用户已经确认破坏性操作之后静默返回，点了没反应。</p>
+  <p class="text-sm"><strong>方案</strong>：把"此状态下此操作被拒绝"深化为单一结果，由调用方渲染，而不是每个调用方各自解释一个布尔。</p>
+  <ul class="text-sm list-disc pl-5 space-y-1 marker:text-emerald-600">
+    <li>局部性：拒绝语义单点定义</li>
+    <li>静默无操作窗口关闭</li>
+    <li>4×8 矩阵不再散成内联模式匹配</li>
+  </ul>
+  <div class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-700 space-y-1">
+    <p><strong>复核证据</strong>：<span class="font-mono">GameOperationPolicy.Allows</span> 共 <strong>8 个消费点</strong>（上列文件行号）。<span class="font-mono">GameOperationJourney.cs:270-275</span> 在状态自确认对话以来已变时无提示无结果直接 <span class="font-mono">return</span>，而 <span class="font-mono">GameOperationsViewModel.cs:338-342</span> 对同一条件弹 <span class="font-mono">OperationUnavailableForCurrentState</span> 警告。VM 在 <span class="font-mono">:338</span> 检查、<span class="font-mono">:350</span> 才显示确认框，二者之间的状态变化会让确认框点了没反应；对照 <span class="font-mono">GameUninstallService.cs:45</span> 返回类型化的 <span class="font-mono">Failed(...)</span>。</p>
+    <p><strong>删除检验</strong>：删表会失败（4×8 矩阵会散成 8 处内联模式匹配）⇒ 该留下的是表，该集中是拒绝结果。</p>
+  </div>
+</article>
+
+<!-- ============ 11 假想接缝 ============ -->
+<article id="c11" class="rounded-xl border border-slate-200 bg-white p-6 space-y-4 shadow-sm">
+  <div class="flex items-start justify-between gap-4">
+    <h2 class="font-serif text-xl">11 · 降级三个只有单一适配器的假想接缝</h2>
+    <div class="flex gap-2 shrink-0">
+      <span class="badge badge-explore">Worth exploring</span><span class="badge badge-cat">in-process</span>
+    </div>
+  </div>
+  <div class="font-mono text-xs text-slate-600 leading-5">
+    Services/SettingsEditor.cs:7-25 · Features/Shell/IShellRuntime.cs · ViewModels/MainWindowViewModel.cs:34-46,114-132 · Services/Diagnostics/LocalDiagnostics.cs:9-12,55-155 · Services/Diagnostics/UnifiedLogger.cs:124-135
+  </div>
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="rounded-lg border border-slate-200 p-3">
+      <p class="modlabel text-slate-400 mb-2">Before — 接口数 &gt; 适配器数</p>
+      <div class="space-y-1.5 text-[11px]">
+        <div class="rounded border border-slate-300 px-2 py-1.5 font-mono">
+          <p>ISettingsEditor <span class="text-red-600">· 1 个适配器 · tests/ 命中 0</span></p>
+          <p class="text-slate-500">其中 3 个成员是纯转发</p>
+        </div>
+        <div class="rounded border border-slate-300 px-2 py-1.5 font-mono">
+          <p>IShellRuntime <span class="text-red-600">· 12 成员 · 1 适配器 · 0 替身</span></p>
+        </div>
+        <div class="rounded border border-slate-300 px-2 py-1.5 font-mono">
+          <p>LocalDiagnostics <span class="text-red-600">· 235 行重复吞异常</span></p>
+        </div>
+        <p class="text-slate-500 pt-1">按 ADR-021 自己的标准（手写替身即第二适配器），三者都不是真接缝</p>
+      </div>
+    </div>
+    <div class="rounded-lg border border-slate-200 p-3">
+      <p class="modlabel text-slate-400 mb-2">After — 要么给替身，要么去掉间接层</p>
+      <div class="space-y-2">
+        <div class="deepbox rounded px-3 py-3 text-xs">
+          <p class="font-semibold">有替身的留下；没替身的收成具体类</p>
+          <p class="text-slate-300 mt-1">"永不抛"策略收进 UnifiedLogger 一次</p>
+        </div>
+        <div class="rounded bg-emerald-50 border border-emerald-300 px-2 py-1.5 text-[11px] text-emerald-800">
+          静态入口改为委派，不再各包一层
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="text-sm"><strong>问题</strong>：三个接口各有唯一适配器且零替身，只买了间接层没买到可替性；其中 <span class="font-mono">Commit</span> 与两个 <span class="font-mono">Get*Snapshot</span> 是纯转发，<span class="font-mono">LocalDiagnostics</span> 又重复了一遍 <span class="font-mono">UnifiedLogger</span> 已经在做的吞异常策略。</p>
+  <p class="text-sm"><strong>方案</strong>：没有替身的接口保留具体类；"永不抛"策略收进 <span class="font-mono">UnifiedLogger</span> 一次，静态入口改为委派而不是再包一层。</p>
+  <ul class="text-sm list-disc pl-5 space-y-1 marker:text-emerald-600">
+    <li>接口数与适配器数一致</li>
+    <li>吞异常策略单点，非 235 行重复</li>
+    <li>窗口 VM 不再比它承载的家族更宽</li>
+  </ul>
+  <div class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-700">
+    <strong>复核证据</strong>：<span class="font-mono">ISettingsEditor</span> 在 <span class="font-mono">tests/</span> 下命中 <strong>0</strong>（<span class="font-mono">rg ISettingsEditor tests/ | wc -l</span>）；<span class="font-mono">IShellRuntime</span> 12 成员、唯一适配器 <span class="font-mono">ShellLifecycle</span>（<span class="font-mono">:24</span>）、唯一注入点 <span class="font-mono">ServiceConfiguration.cs:166</span>，无替身（headless 测试只是从 DI <em>解析</em>它，未替换）；<span class="font-mono">MainWindowViewModel</span> 重新声明 13 个属性（<span class="font-mono">:34-46</span>）并一对一转发 12 个运行时成员（<span class="font-mono">:114-132</span>）；<span class="font-mono">LocalDiagnostics</span> 类文档自述其存在是为让既有调用点不改动。
+  </div>
+</article>
+
+<!-- ============ 12 诊断注册 ============ -->
+<article id="c12" class="rounded-xl border border-slate-200 bg-white p-6 space-y-4 shadow-sm">
+  <div class="flex items-start justify-between gap-4">
+    <h2 class="font-serif text-xl">12 · 诊断注册只留一个所有方</h2>
+    <div class="flex gap-2 shrink-0">
+      <span class="badge badge-explore">Worth exploring</span><span class="badge badge-cat">in-process</span>
+    </div>
+  </div>
+  <div class="font-mono text-xs text-slate-600 leading-5">
+    Services/Diagnostics/LocalDiagnostics.cs:24,44-51 · Composition/ServiceConfiguration.cs:42-48 · tests/Cafe.Launcher.Avalonia.HeadlessTests/HeadlessTestHost.cs:32 · tests/Cafe.Launcher.Avalonia.Tests/SettingsCategoryTests.cs:85,102,291,396 · tests/Cafe.Launcher.Avalonia.Tests/ToastHostViewModelTests.cs:664 · tests/Cafe.Launcher.Avalonia.Tests/WindowChromeViewModelTests.cs:258
+  </div>
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="rounded-lg border border-slate-200 p-3">
+      <p class="modlabel text-slate-400 mb-1">Before — 两条缝，其中一条每次测试重建</p>
+      <div class="diagram">
+      <pre class="mermaid">
+flowchart TB
+  DI["组合根工厂<br/>RegisterSharedLogger"] --> L["进程级静态日志器"]
+  T1["测试提供者 1"] --> DI
+  T2["测试提供者 2"] --> DI
+  Tn["测试提供者 n"] --> DI
+  L -.->|"后注册者胜 ⇒ 静态写入绑到最后一个"| Tn
+  S["16 文件 / 23 处静态调用点"] --> L
+  classDef leak stroke:#dc2626,stroke-width:2px;
+  class L,Tn leak
+      </pre>
+      </div>
+    </div>
+    <div class="rounded-lg border border-slate-200 p-3">
+      <p class="modlabel text-slate-400 mb-1">After — 幂等注册，静态缝收窄到崩溃路径</p>
+      <div class="diagram">
+      <pre class="mermaid">
+flowchart TB
+  R["注册模块（组合根解析）<br/>幂等 · 按进程先注册者胜"] --> L["单一日志接缝"]
+  L --> S["静态入口：仅 pre-DI 崩溃路径"]
+  classDef deep stroke:#0f172a,stroke-width:3px,fill:#0f172a,color:#f1f5f9;
+  class R,L deep
+      </pre>
+      </div>
+    </div>
+  </div>
+  <p class="text-sm"><strong>问题</strong>：DI 缝与进程级静态缝同时存在，而静态那一条会被每次 <span class="font-mono">AddLauncherServices()</span> 重新注册，于是测试运行把静态日志写入绑到最后一个构造的提供者上，尽管代码注释声称它只注册一次。</p>
+  <p class="text-sm"><strong>方案</strong>：注册由一个从组合根解析的模块拥有（幂等、按进程先注册者胜），静态入口收窄到它存在的理由——DI 之前的崩溃路径。</p>
+  <ul class="text-sm list-disc pl-5 space-y-1 marker:text-emerald-600">
+    <li>注册语义与注释一致</li>
+    <li>静态写入不再漂移到最后的提供者</li>
+    <li>ADR-019 的两级设计被锐化，未被推翻</li>
+  </ul>
+  <div class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-700 space-y-1">
+    <p><strong>复核证据</strong>：<span class="font-mono">ServiceConfiguration.cs:42-48</span> 从工厂调 <span class="font-mono">RegisterSharedLogger</span>，而 <span class="font-mono">LocalDiagnostics.cs:44-51</span> 的文档描述为一次注册；<span class="font-mono">AddLauncherServices()</span> 按提供者重复执行（上列测试文件行号）；仅 <span class="font-mono">DiagnosticsServicesTests.cs:136-142</span> 覆盖静态路径，且只断言不抛。</p>
+    <p><strong>删除检验</strong>：删静态入口会把日志集中到一个接缝，但 ADR-019 的 pre-DI 崩溃路径确实需要一个残留——<strong>收窄，不要删除</strong>。</p>
+  </div>
+</article>
+
+<!-- ============ 13 客户端策略 ============ -->
+<article id="c13" class="rounded-xl border border-slate-200 bg-white p-6 space-y-4 shadow-sm">
+  <div class="flex items-start justify-between gap-4">
+    <h2 class="font-serif text-xl">13 · 客户端策略改为拉取，不再由调用方推送</h2>
+    <div class="flex gap-2 shrink-0">
+      <span class="badge badge-explore">Worth exploring</span><span class="badge badge-cat">in-process</span>
+    </div>
+  </div>
+  <div class="font-mono text-xs text-slate-600 leading-5">
+    Services/HttpClientFactory.cs:63-67 · Features/Settings/SettingsViewModel.cs:24,66 · Services/LauncherCoreService.cs:35,44,62,78 · Composition/ServiceConfiguration.cs:70-81
+  </div>
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="rounded-lg border border-slate-200 p-3">
+      <p class="modlabel text-slate-400 mb-2">Before — 同一策略，一半推一半拉</p>
+      <div class="space-y-1.5 text-[11px]">
+        <div class="rounded border-2 border-red-400 bg-red-50 px-2 py-1.5">
+          <p class="font-semibold text-red-700">HTTP/2 开关 · 推送</p>
+          <p class="font-mono">SettingsViewModel → ConfigureHttp2</p>
+          <p class="font-mono">LauncherCoreService → ConfigureHttp2</p>
+        </div>
+        <div class="rounded border-2 border-emerald-400 bg-emerald-50 px-2 py-1.5">
+          <p class="font-semibold text-emerald-700">代理模式 · 拉取</p>
+          <p class="font-mono">组合根闭包读已保存快照</p>
+        </div>
+        <p class="text-slate-500">池化策略因此有三个写入方；新调用方得记得推</p>
+      </div>
+    </div>
+    <div class="rounded-lg border border-slate-200 p-3">
+      <p class="modlabel text-slate-400 mb-2">After — 两半都拉，接口只剩租约</p>
+      <div class="space-y-2">
+        <div class="deepbox rounded px-3 py-3 text-xs">
+          <p class="font-semibold">客户端偏好：一处拉取</p>
+          <p class="text-slate-300 mt-1">组合根的一次闭包，读已保存快照</p>
+        </div>
+        <div class="rounded bg-slate-100 px-2 py-1.5 text-[11px] font-mono">
+          工厂接口 = 租约<br/>不接受偏好推送
+        </div>
+        <p class="text-[11px] text-slate-500">两个不做出站工作的模块不再持有工厂</p>
+      </div>
+    </div>
+  </div>
+  <p class="text-sm"><strong>问题</strong>：两个不做任何出站工作的模块持有客户端工厂，只为推送一个 HTTP/2 开关，于是池化策略有三个写入方，任何新调用方都得记得推；而同一策略的另一半（代理模式）已经是拉取的。</p>
+  <p class="text-sm"><strong>方案</strong>：用解析代理模式的同一方式解析 HTTP/2 偏好（组合根上的一次闭包读已保存快照），把工厂的接口留给租约。</p>
+  <ul class="text-sm list-disc pl-5 space-y-1 marker:text-emerald-600">
+    <li>客户端策略收敛到一个所有方</li>
+    <li>工厂接口只剩租约</li>
+    <li>新调用方无需记住推送</li>
+    <li>远程传输模块本身不动（真深：2 成员 / 591 行）</li>
+  </ul>
+  <div class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-700">
+    <strong>复核证据</strong>：<span class="font-mono">ConfigureHttp2</span> 的消费者为 <span class="font-mono">SettingsViewModel</span> 与 <span class="font-mono">LauncherCoreService</span>；<span class="font-mono">ServiceConfiguration.cs:74-80</span> 已展示在用的拉取模式；<span class="font-mono">IRemoteHttpTransport</span> 保持不动。这是上一轮候选 01/02 落地后留下的残留，无 ADR 冻结 <span class="font-mono">ConfigureHttp2</span>。
+  </div>
+</article>
+
+<!-- ============ 14 出口口径 ============ -->
+<article id="c14" class="rounded-xl border border-slate-200 bg-white p-6 space-y-4 shadow-sm">
+  <div class="flex items-start justify-between gap-4">
+    <h2 class="font-serif text-xl">14 · 传输模块的"单出口"声明与下载出口</h2>
+    <div class="flex gap-2 shrink-0">
+      <span class="badge badge-spec">Speculative</span><span class="badge badge-cat">ports &amp; adapters</span>
+    </div>
+  </div>
+  <div class="font-mono text-xs text-slate-600 leading-5">
+    Services/RemoteHttpTransport.cs:14-17 · Services/FileDownloadService.cs:110-120 · Services/DownloadTransport.cs:13-70 · Services/RemoteHttpRequestService.cs · docs/design/adr/ADR-022
+  </div>
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="rounded-lg border border-slate-200 p-3">
+      <p class="modlabel text-slate-400 mb-2">Before — 文档称单出口，代码是两个</p>
+      <div class="space-y-1.5 text-[11px]">
+        <div class="rounded border border-slate-300 px-2 py-1.5 font-mono">
+          JSON / 流 · 7 个调用点 → IRRemoteHttpTransport
+        </div>
+        <div class="rounded border border-slate-300 px-2 py-1.5 font-mono">
+          文件下载 → DownloadTransport → RemoteHttpRequestService → 工厂租约
+        </div>
+        <div class="rounded border-2 border-amber-400 bg-amber-50 px-2 py-1">
+          <span class="font-mono">new HttpClient</span> 仅 2 处（工厂内），但租约策略两套
+        </div>
+        <p class="text-slate-500">读者无法判断某条保证由谁负责</p>
+      </div>
+    </div>
+    <div class="rounded-lg border border-slate-200 p-3">
+      <p class="modlabel text-slate-400 mb-2">After — 声明与实现对齐（文档级）</p>
+      <div class="space-y-2">
+        <div class="deepbox rounded px-3 py-3 text-xs">
+          <p class="font-semibold">接口文档写明两出口契约</p>
+          <p class="text-slate-300 mt-1">哪条保证归传输、哪条归下载批量接缝</p>
+        </div>
+        <p class="text-[11px] text-slate-500">或把下载租约纳入传输策略；ADR-022 的批量接缝保持不动</p>
+      </div>
+    </div>
+  </div>
+  <p class="text-sm"><strong>问题</strong>：传输模块的文档自称唯一的出站模块，而文件下载走的是另一个出口；两条路径共用重定向/校验发送器但不共用租约策略，读者无法判断某条保证由谁负责。</p>
+  <p class="text-sm"><strong>方案</strong>：在接口文档里写明两出口契约（或把下载租约纳入传输策略），保持 ADR-022 的批量接缝不动。</p>
+  <ul class="text-sm list-disc pl-5 space-y-1 marker:text-emerald-600">
+    <li>接口声明与实现一致</li>
+    <li>保证归属可被读者判断</li>
+    <li>不触碰 ADR-022 的批量接缝</li>
+  </ul>
+  <div class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-700">
+    <strong>复核证据</strong>：<span class="font-mono">new HttpClient</span> 仅出现在 <span class="font-mono">HttpClientFactory.cs:82,92</span>；7 处 <span class="font-mono">IRemoteHttpTransport</span> 调用点；下载路径 <span class="font-mono">FileDownloadService.cs:115</span>。<strong>删除检验</strong>：删掉下载出口会集中到一个模块但<em>违反 ADR-022</em>——所以深化只能是文档级的：把声明改对。若被框定成"升格/合并下载接缝"，本项即与 ADR-022 冲突，那时应先重开裁定。
+  </div>
+</article>
+
+</section>
+
+<!-- ============ 本轮排除 ============ -->
+<section id="excluded" class="space-y-6">
+  <h2 class="font-serif text-2xl">本轮排除与证伪</h2>
+  <p class="text-sm text-slate-600">以下各项经复核后<strong>不列为候选</strong>。前五项属既有裁定或 ADR 保留区，不重开；后三项是本轮主动证伪的推断（其中两项来自上一轮的口头记录）。</p>
+  <div class="space-y-3">
+
+    <div class="rounded-xl border border-slate-200 bg-white p-5 space-y-2 shadow-sm">
+      <p class="font-semibold text-sm">← 不重开：<span class="font-mono">GameOperationExecutor</span> 的 1:1 转发</p>
+      <p class="text-sm text-slate-600">63 行接口 / 63 行 1:1 实现，接口面≈实现面，<em>确为浅</em>——但 ADR-021 已明确裁定保留该接缝，且它有 1 个生产 ＋ 2 个替身适配器（14 个测试文件引用 <span class="font-mono">StubGameOperationExecutor</span>）。按"两个适配器 = 真接缝"的规则它成立，本轮不动。</p>
+    </div>
+
+    <div class="rounded-xl border border-slate-200 bg-white p-5 space-y-2 shadow-sm">
+      <p class="font-semibold text-sm">← 不重开：<span class="font-mono">DownloadSession</span> 的 Plan/Execute 分段</p>
+      <p class="text-sm text-slate-600">ADR-022 已裁定维持私有分段。其"提交同一性谓词命中时连带跳过写入探针"的顺序知识（<span class="font-mono">DownloadSession.cs:294</span> → <span class="font-mono">:307</span>）确属局部性缺口，但升格独立类会重开 ADR-022，故仅记录为观察项。</p>
+    </div>
+
+    <div class="rounded-xl border border-slate-200 bg-white p-5 space-y-2 shadow-sm">
+      <p class="font-semibold text-sm">← 不触碰：对话框层不设交互闸口</p>
+      <p class="text-sm text-slate-600"><span class="font-mono">AGENTS.md</span> 模态隔离裁决 ＋ <span class="font-mono">CONTEXT.md</span> §模态交互权：对话框层由可见性旗标与全屏遮罩驱动，加闸口会形成第二个真相来源并导致"已显示未注册"的窗口硬冻结。候选 08 只改<strong>主叠层</strong>闸口的表达方式，对该裁决关于对话框层的部分一字不动。</p>
+    </div>
+
+    <div class="rounded-xl border border-slate-200 bg-white p-5 space-y-2 shadow-sm">
+      <p class="font-semibold text-sm">← 不行动：<span class="font-mono">ModalEntry.Content</span> 只有写入没有读取</p>
+      <p class="text-sm text-slate-600"><span class="font-mono">IModalContentViewModel</span> 是 6 行、<strong>0 个成员</strong>的标记接口（8 个生产实现 ＋ 2 个替身），其唯一被类型化的值 <span class="font-mono">ModalEntry.Content</span> 只在 <span class="font-mono">ModalRegistrar.cs:78</span> 被传入，从无读取者（无 .axaml 绑定 <span class="font-mono">Top.Content</span>）。这不是疏漏而是保留钩子：ADR-015 把 DataTemplate 化"留作将来独立议题"，ADR-023 维持原状。按"不重开 ADR"的规则，本轮只记录事实，不提议消费它。</p>
+    </div>
+
+    <div class="rounded-xl border border-slate-200 bg-white p-5 space-y-2 shadow-sm">
+      <p class="font-semibold text-sm">← 证伪：转换器/控件只是为了掩盖浅 VM</p>
+      <p class="text-sm text-slate-600"><span class="font-mono">Converters/</span> 只有 2 个模块，都是"语义枚举 → 主题 token"的映射，删掉只会把 token 查找搬进 VM（对可测性更差）。控件最宽的 <span class="font-mono">SettingSelect</span> 8 个样式属性中 5 个是转发给内层 <span class="font-mono">SettingRow</span> 的行头表面——重复确实存在，但受编译器检查、体量小，且基类与编译绑定互动别扭。<strong>Speculative，不列为候选。</strong></p>
+    </div>
+
+    <div class="rounded-xl border border-slate-200 bg-white p-5 space-y-2 shadow-sm">
+      <p class="font-semibold text-sm">← 证伪：<span class="font-mono">ShellLifecycle</span> 因体量而变浅</p>
+      <p class="text-sm text-slate-600">784 行、28 个公开/内部成员声明，其 <strong>12 成员</strong>接口 <span class="font-mono">IShellRuntime</span> 覆盖 784 行行为——<em>宽实现窄接口即深，非浅</em>。它是热点，但热点 ≠ 浅。它唯一残留的浅特征是候选 07 的配对隐患，其余部分（含 <span class="font-mono">ShellRefreshCoordinator</span> 186 行/8 成员、<span class="font-mono">ModalRegistrar</span> 95 行、<span class="font-mono">ShellStartup</span> 100 行）本轮明确判为<strong>应当保护</strong>的深模块。</p>
+    </div>
+
+    <div class="rounded-xl border border-slate-200 bg-white p-5 space-y-2 shadow-sm">
+      <p class="font-semibold text-sm">← 证伪：刷新路径普遍写持久化（除候选 02 两处）</p>
+      <p class="text-sm text-slate-600">独立重扫未发现第三处：编辑器的 <span class="font-mono">Commit</span> 只由用户驱动的改动到达（<span class="font-mono">markDirty: true</span> 仅见于 <span class="font-mono">SettingsAppearanceViewModel.cs:316,358</span>），预览/刷新调用方一律传 <span class="font-mono">false</span>。两处只读残留（<span class="font-mono">RemoteContentViewModel.Apply</span> 触发的横幅图下载、<span class="font-mono">BackgroundViewModel</span> 的身份指纹探测）均为读操作，不构成持久化泄漏。</p>
+    </div>
+
+    <div class="rounded-xl border border-slate-200 bg-white p-5 space-y-2 shadow-sm">
+      <p class="font-semibold text-sm">← 证伪：关闭路径缺 Toast 是用户可见缺陷</p>
+      <p class="text-sm text-slate-600">见候选 05 的更正框：关闭确认与停止确认共用同一文案，用户已被告知进度会丢失，且窗口随即关闭，故不构成缺陷。真正可行动的部分是决策权位置与 <span class="font-mono">LauncherEnums.cs:9</span> 的注释口径。</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============ Top recommendation ============ -->
+<section id="top" class="space-y-4">
+  <h2 class="font-serif text-2xl">首推</h2>
+  <div class="rounded-xl border-2 border-slate-900 bg-white p-6 space-y-3 shadow-sm">
+    <div class="flex items-start justify-between gap-4">
+      <h3 class="font-serif text-xl">01 · 把设置的状态同一性收进设置模块</h3>
+      <span class="badge badge-strong shrink-0">Strong</span>
+    </div>
+    <p class="text-sm text-slate-700">先做这一项，理由是它同时满足三个条件：<strong>故障用户可见且静默</strong>（漏改一处比较，保存按钮就永远不亮——<span class="font-mono">CanSaveSettings =&gt; IsSettingsDirty &amp;&amp; !IsSaving</span>），<strong>修法最小</strong>（把属性枚举收进 <span class="font-mono">DeepClone</span> 与 JSON 契约已经所在的模型，再补一个形状现成的反射守卫），且<strong>不触碰任何 ADR</strong>。候选 02/03 与之同域，适合随后作为一轮"设置所有权"合并推进；候选 04 是与之独立的最大一块无守卫面。</p>
+    <p class="text-xs text-slate-500">推进前请先选择要探索的候选——本报告按技能流程只呈现机会与方向，未给出接口设计。</p>
+  </div>
+</section>
+
+<footer class="pt-8 text-xs text-slate-400 border-t border-slate-200">
+  <p>基线 main@fe6efd4 · 2026-09-14 · 全部数字与论断经主编 grepp 复核（含三处对上轮口头推断的更正/证伪）· 上一轮报告：<a href="architecture-review-2026-09-13.html" class="underline">architecture-review-2026-09-13.html</a></p>
+</footer>
+
+</main>
+</body>
+</html>
