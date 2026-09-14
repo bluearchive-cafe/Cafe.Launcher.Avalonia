@@ -269,8 +269,12 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
     /// <summary>Runs a confirmed uninstall and refreshes launcher state afterward.</summary>
     public async Task ConfirmUninstallAsync(LauncherStatusSnapshot snapshot)
     {
-        if (!GameOperationPolicy.Allows(GameOperationPolicy.Operation.Uninstall, snapshot.RuntimeState))
+        // 用户已经在确认框上点过确认：此时状态若又变得不允许，必须给可见反馈，
+        // 否则「点了没反应」（ADR-027）。
+        if (GameOperationPolicy.Decide(GameOperationPolicy.Operation.Uninstall, snapshot.RuntimeState)
+            == GameOperationDecision.RejectedForCurrentState)
         {
+            ShowOperationUnavailable();
             return;
         }
 
@@ -294,6 +298,9 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
             host.SetBusy(false);
         }
     }
+
+    private void ShowOperationUnavailable() =>
+        toastService.ShowWarning(localizer.T(LocalizationKeys.OperationUnavailableForCurrentState));
 
     /// <summary>Executes the stop after the confirmation flow has completed.</summary>
     public void PerformStop()

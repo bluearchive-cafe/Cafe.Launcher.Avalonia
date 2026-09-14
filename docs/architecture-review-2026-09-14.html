@@ -37,15 +37,16 @@
   <h1 class="font-serif text-3xl">Cafe.Launcher.Avalonia — 架构深化评审（第二轮）</h1>
   <p class="text-sm text-slate-500">2026-09-14 · 评审基线 main@fe6efd4 · 14 个候选 + 6 项本轮排除 · 词汇表：模块 / 接口 / 深度 / 接缝 / 适配器 / 杠杆 / 局部性</p>
   <div class="rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 space-y-1">
-    <p class="text-sm font-semibold text-indigo-900">状态：已落地 5 / 14（候选 01 · 候选 02 · 候选 04 · 候选 03 · 候选 05 · 2026-09-15）——其余 9 项待裁决</p>
+    <p class="text-sm font-semibold text-indigo-900">状态：已落地 6 / 14（候选 01 · 候选 02 · 候选 04 · 候选 03 · 候选 05 · 候选 10 · 2026-09-15）——其余 8 项待裁决</p>
     <div class="w-full h-2 rounded-full bg-indigo-100 overflow-hidden">
-      <div class="h-full rounded-full bg-indigo-600" style="width:35%"></div>
+      <div class="h-full rounded-full bg-indigo-600" style="width:43%"></div>
     </div>
     <p class="text-xs text-indigo-900/80">✓ <a href="#c01" class="underline">候选 01</a> 落地，门禁全绿：单元 1719 / Headless 178（0 失败，3 处可见平台跳过）· 覆盖率行 86.87% / 分支 93.30%（棘轮 +1.02pp / +0.60pp）· Debug 与 Release 构建 0 警告 0 错误。落地形态与卡片原议有一处偏离：机制由"反射驱动"改为<strong>声明表 ＋ 两相反射守卫</strong>，以保持生产代码不对模型做反射枚举（仓库既有取向，见卡片内的落地说明）。同日独立复核后单元测试为 1720（见卡片内的复核跟进）。</p>
     <p class="text-xs text-indigo-900/80">✓ <a href="#c02" class="underline">候选 02</a> 落地，门禁全绿：单元 1730 / Headless 178（0 失败，3 处可见平台跳过）· 覆盖率行 86.87–86.92% / 分支 93.26%（同一棵树重复测量，棘轮 +1.02pp / +0.56pp）· Debug 与 Release 构建 0 警告 0 错误。范围按复核结果大于卡片原议：写入方由 4 条路线更正为 6 个逻辑写入方 ＋ 1 处展示刷新，并并入候选 01 移交的归一化不对称；接口归属裁定为<strong>独立写入方</strong>而非把持久化并进编辑器（理由见 <a href="design/adr/ADR-024-已保存设置唯一写入方.md" class="underline">ADR-024</a>），落地形态与文档见卡片内的落地说明。</p>
     <p class="text-xs text-indigo-900/80">✓ <a href="#c04" class="underline">候选 04</a> 落地，门禁全绿：单元 1733 / Headless 178（0 失败，3 处可见平台跳过）· 覆盖率行 86.92% / 分支 93.26%（棘轮 +1.07pp / +0.56pp）· Debug 与 Release 构建 0 警告 0 错误。范围按落地裁定为<strong>只补 .axaml 侧的存在性契约</strong>：扫描域取应用工程下全部 .axaml（递归、无手抄文件清单），生产代码零改动。卡片两条收益表述在落地时更正——「占位符契约合一」在 XAML 侧无对象可合（0/264 键带占位符），且 <span class="font-mono">.cs</span> 面的「禁止裸字面量」形态无法照搬到绑定路径，故这面只能做存在性检查——详见卡片内的落地说明。</p>
     <p class="text-xs text-indigo-900/80">✓ <a href="#c03" class="underline">候选 03</a> 落地（2026-09-15），门禁见卡片：数据根收成一个注入模块（<span class="font-mono">Services/LauncherDataRoot.cs</span>），进程根只由组合根与 ADR-019 保护的 pre-DI 路径解析（<a href="design/adr/ADR-025-数据根由组合根解析并注入.md" class="underline">ADR-025</a>），其余模块一律接收注入实例，测试换根只剩 <span class="font-mono">TestDataRoot</span> 一个接缝。卡片两处论断在落地时更正：测试摩擦被高估（静态那条路本就有单一覆盖点），且阶梯清单里的 <span class="font-mono">LocalDiagnostics</span> 并非数据根消费方；真正的缺陷是「每个模块都能各读一次进程级静态」。改动面按实测为生产 15 处 ＋ 测试 175 处构造点（分布在 28 个测试文件）。</p>
     <p class="text-xs text-indigo-900/80">✓ <a href="#c05" class="underline">候选 05</a> 落地（2026-09-15）：停止意图收成域外唯一说法（<span class="font-mono">Services/GameOperationStopIntent.cs</span>），<span class="font-mono">DownloadStopReason</span> 移入 <span class="font-mono">Features/GameOperations/</span>、由域翻译一次；窗口 chrome 的 <span class="font-mono">operations</span> 字段类型由具体展示 VM 收窄为窄视图（<a href="design/adr/ADR-026-停止意图由游戏操作域翻译.md" class="underline">ADR-026</a>）。卡片两处论断更正：窄视图的由来是诊断面板而非窗口 chrome；「窗口 chrome 不再命名具体展示模块」应限定为那一个字段。唯一确定的缺陷是注释口径（<span class="font-mono">LauncherEnums.cs</span> 把「窗口销毁」归入 ApplicationExit，而关窗手势走 UserRequested），行为本身有测试钉住、无用户可见故障。</p>
+    <p class="text-xs text-indigo-900/80">✓ <a href="#c10" class="underline">候选 10</a> 落地（2026-09-15）：策略不再对外给布尔（<span class="font-mono">GameOperationPolicy.Decide</span> → <span class="font-mono">GameOperationDecision</span>），调用方必须对「被拒绝」表态；两处「确认之后静默」关闭（<span class="font-mono">GameOperationsViewModel.RepairAsync</span> 与 <span class="font-mono">GameOperationJourney.ConfirmUninstallAsync</span> 改为渲染与预检相同的警告）（<a href="design/adr/ADR-027-策略判定结果与确认后拒绝反馈.md" class="underline">ADR-027</a>）。卡片只点名了 journey 那一处静默，落地前复核发现 <span class="font-mono">RepairAsync</span> 是同类第二处，且它当时被 <span class="font-mono">ConfirmUninstallAsync_WhenNotReady_SkipsUninstall</span> 这类用例（断言「不执行」）半钉住。</p>
     <p class="text-xs text-indigo-900/80">上一轮（<a href="architecture-review-2026-09-13.html" class="underline">2026-09-13</a>）11 个候选已全部裁决：9 项落地，2 项否决（候选 03 → <a href="design/adr/ADR-021-保留操作后端接缝.md" class="underline">ADR-021</a>、候选 07 → <a href="design/adr/ADR-022-下载会话接缝不升格.md" class="underline">ADR-022</a>），另产生 ADR-023 修订 ADR-015。本轮不再重复其上任何主张；本轮候选 07 与审计既有 <span class="font-mono">AUD-ARCH-005</span> 同源，属"审计已给出方向、尚无归属"的结构项。</p>
   </div>
   <div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-slate-500">
@@ -642,10 +643,19 @@ flowchart TB
   <div class="flex items-start justify-between gap-4">
     <h2 class="font-serif text-xl">10 · 把"拒绝意味着什么"收进策略表</h2>
     <div class="flex gap-2 shrink-0">
-      <span class="badge badge-explore">Worth exploring</span><span class="badge badge-cat">in-process</span>
+      <span class="badge badge-done">✓ 已落地</span><span class="badge badge-cat">in-process</span>
     </div>
   </div>
-  <div class="font-mono text-xs text-slate-600 leading-5">
+
+  <div class="rounded-lg bg-indigo-50 border border-indigo-200 px-4 py-2 text-xs text-indigo-900 space-y-1">
+    <p><strong>落地（2026-09-15，未提交）</strong>：<span class="font-mono">GameOperationPolicy.Allows</span>（布尔）改为 <span class="font-mono">Decide</span> 返回 <span class="font-mono">GameOperationDecision</span>（<span class="font-mono">Allowed</span>／<span class="font-mono">RejectedForCurrentState</span>），判定表降为私有实现细节——8 个调用点从此必须显式处理「被拒绝」这一支，「拒绝之后什么都不做」只能是有意写出来的。三处按原样保留的渲染：启动路径的按状态定制文案（损坏／IO 失败／远端不可用，拒绝原因本身就是状态）、下载与卸载执行边界的类型化失败、两个表示层预检的警告 Toast。</p>
+    <p><strong>两处静默窗口关闭（行为变更）</strong>：<span class="font-mono">GameOperationsViewModel.RepairAsync</span>（确认后的修复）与 <span class="font-mono">GameOperationJourney.ConfirmUninstallAsync</span>（确认后的卸载）改为渲染与预检相同的 <span class="font-mono">OperationUnavailableForCurrentState</span> 警告——两处各收成一个私有方法，避免第三次手抄同一行。触发场景不变：确认框打开期间后台刷新把状态改掉（例如 Ready → UpdateAvailable），用户点了确认却什么都不发生。</p>
+    <p><strong>卡片两处更正（如实记录）</strong>：(1) 卡片只说了一处静默（journey 的卸载），实际是<strong>两处</strong>——<span class="font-mono">GameOperationsViewModel.RepairAsync</span> 同样是「确认之后静默」，且它此前被测试半钉住：<span class="font-mono">ConfirmUninstallAsync_WhenNotReady_SkipsUninstall</span> 断言「不执行卸载」，等于把静默写进了契约（该用例已更名为 <span class="font-mono">…_ReportsInsteadOfSilence</span> 并补上反馈断言）。(2) 卡片称「同一判定在 8 处被重述为 4 种不同反应」，四种反应经复核成立，但其中启动路径的「按状态定制文案」是<strong>合理</strong>的分层（策略答允不允许、配哪句话在调用层），不是缺陷；</p>
+    <p><strong>守卫（三处，均以变异注入验证会咬）</strong>：形状约束 <span class="font-mono">Decide_IsTheOnlyPublicVerdict_NoBareBoolean</span>（公开面上出现任何返回布尔的成员即红；注入一个 <span class="font-mono">IsAllowed</span> 后变红）；两条行为用例 <span class="font-mono">RepairAsync_…_ReportsInsteadOfSilence</span> 与 <span class="font-mono">ConfirmUninstallAsync_…_ReportsInsteadOfSilence</span>（把任一处的反馈回退为静默即红，两处都验过）。全表测试（4 操作 × 7 状态 28 格）改为断言判定结果，枚举长度守卫不变。</p>
+    <p><strong>测试装配</strong>：单元 1746 → 1748（+2；两处行为用例，另一条为既有用例更名扩充），Headless 178 不变。</p>
+    <p><strong>门禁</strong>：单元 1748 / Headless 178（0 失败，3 处可见平台跳过）· 覆盖率行 86.88% / 分支 93.26%（棘轮 +1.03pp / +0.56pp）· Debug 与 Release 构建 0 警告 0 错误。</p>
+    <p><strong>一次假验证留痕</strong>：首次做 journey 的变异注入时，注入脚本用 <span class="font-mono">\n</span> 模式去匹配 CRLF 源码，模式命中数 0、文件其实没改，于是看到「回退成静默后测试仍绿」的假结论；核对命中数后重做才拿到真结果（同类坑在候选 04 的 resx 注入上已出现过一次）。</p>
+  </div>  <div class="font-mono text-xs text-slate-600 leading-5">
     Features/GameOperations/GameOperationPolicy.cs:27-36 · Features/GameOperations/GameOperationsViewModel.cs:269-273,280,338-342 · Features/GameOperations/GameOperationJourney.cs:270-275 · Features/GameOperations/GameDownloadService.cs:115,128 · Features/GameOperations/GameLaunchService.cs:42 · Features/GameOperations/GameUninstallService.cs:45
   </div>
   <div class="grid md:grid-cols-2 gap-4">
@@ -961,7 +971,7 @@ flowchart TB
     </div>
     <p class="text-sm text-slate-700">先做这一项，理由是它同时满足三个条件：<strong>故障用户可见且静默</strong>（漏改一处比较，保存按钮就永远不亮——<span class="font-mono">CanSaveSettings =&gt; IsSettingsDirty &amp;&amp; !IsSaving</span>），<strong>修法最小</strong>（把属性枚举收进 <span class="font-mono">DeepClone</span> 与 JSON 契约已经所在的模型，再补一个形状现成的反射守卫），且<strong>不触碰任何 ADR</strong>。候选 02/03 与之同域，适合随后作为一轮"设置所有权"合并推进；候选 04 是与之独立的最大一块无守卫面。</p>
     <p class="text-xs text-slate-500">推进前请先选择要探索的候选——本报告按技能流程只呈现机会与方向，未给出接口设计。</p>
-    <p class="text-xs text-slate-500">后续（2026-09-14）：候选 01、候选 02 均已按裁定落地并提交，接口归属裁定为独立写入方（<a href="design/adr/ADR-024-已保存设置唯一写入方.md" class="underline">ADR-024</a>）；候选 04 随后按"收益最高"裁定落地；候选 03 按"数据根注入"、候选 05 按"停止意图归域"依次裁定落地（2026-09-15，<a href="design/adr/ADR-025-数据根由组合根解析并注入.md" class="underline">ADR-025</a> / <a href="design/adr/ADR-026-停止意图由游戏操作域翻译.md" class="underline">ADR-026</a>）。余下候选 06–14 仍待裁决，其中 10 带用户可见的静默无反馈，06／08 需先重开既有裁定。</p>
+    <p class="text-xs text-slate-500">后续（2026-09-14）：候选 01、候选 02 均已按裁定落地并提交，接口归属裁定为独立写入方（<a href="design/adr/ADR-024-已保存设置唯一写入方.md" class="underline">ADR-024</a>）；候选 04 随后按"收益最高"裁定落地；候选 03 按"数据根注入"、候选 05 按"停止意图归域"、候选 10 按"拒绝语义收进策略结果"依次裁定落地（2026-09-15，<a href="design/adr/ADR-025-数据根由组合根解析并注入.md" class="underline">ADR-025</a> / <a href="design/adr/ADR-026-停止意图由游戏操作域翻译.md" class="underline">ADR-026</a> / <a href="design/adr/ADR-027-策略判定结果与确认后拒绝反馈.md" class="underline">ADR-027</a>）。余下候选 06–09、11–14 待裁决，其中 06／08 需先重开既有裁定。</p>
   </div>
 </section>
 

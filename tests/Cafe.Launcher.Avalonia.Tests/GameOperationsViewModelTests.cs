@@ -539,6 +539,32 @@ public sealed class GameOperationsViewModelTests
     }
 
     [Fact]
+    public async Task RepairAsync_WhenStateNoLongerAllowsRepair_ReportsInsteadOfSilence()
+    {
+        // 用户在确认框上点过确认之后状态仍可能变化（后台刷新）：此时不能静默什么都不做。
+        var context = CreateContext();
+        var raised = new List<ToastNotification>();
+        context.ToastService.ToastRaised += raised.Add;
+        context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
+        {
+            RuntimeState = LauncherRuntimeState.Corrupted
+        });
+        context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
+        {
+            RuntimeState = LauncherRuntimeState.NotInstalled
+        });
+
+        await context.ViewModel.RepairAsync();
+
+        Assert.Equal(0, context.Backend.RepairCallCount);
+        var notification = Assert.Single(raised);
+        Assert.Equal(ToastSeverity.Warning, notification.Severity);
+        Assert.Equal(
+            context.Localizer.T("operationUnavailableForCurrentState"),
+            notification.Message);
+    }
+
+    [Fact]
     public async Task RepairAsync_WhenRepairCompletes_RefreshesState()
     {
         var context = CreateContext();

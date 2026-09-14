@@ -48,11 +48,31 @@ public sealed class GameOperationPolicyTests
     [InlineData(Operation.Uninstall, BelowLowestVersion, false)]
     [InlineData(Operation.Uninstall, UpdateAvailable, false)]
     [InlineData(Operation.Uninstall, Ready, true)]
-    public void Allows_WhenCheckedAgainstFullPolicyTable_MatchesTheDocumentedPermissionMatrix(
+    public void Decide_WhenCheckedAgainstFullPolicyTable_MatchesTheDocumentedPermissionMatrix(
         Operation operation,
         LauncherRuntimeState state,
         bool expected)
     {
-        Assert.Equal(expected, GameOperationPolicy.Allows(operation, state));
+        var decision = GameOperationPolicy.Decide(operation, state);
+
+        Assert.Equal(
+            expected ? GameOperationDecision.Allowed : GameOperationDecision.RejectedForCurrentState,
+            decision);
+    }
+
+    /// <summary>
+    /// 形状约束：策略只给判定结果，不给裸布尔。调用方因此必须对「被拒绝」这一支表态，
+    /// 「拒绝之后什么都不做」只能是有意写出来的（ADR-027）。
+    /// </summary>
+    [Fact]
+    public void Decide_IsTheOnlyPublicVerdict_NoBareBoolean()
+    {
+        var verdicts = typeof(GameOperationPolicy)
+            .GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+            .Select(method => (method.Name, method.ReturnType))
+            .ToArray();
+
+        Assert.Contains(verdicts, verdict => verdict.Name == "Decide" && verdict.ReturnType == typeof(GameOperationDecision));
+        Assert.DoesNotContain(verdicts, verdict => verdict.ReturnType == typeof(bool));
     }
 }

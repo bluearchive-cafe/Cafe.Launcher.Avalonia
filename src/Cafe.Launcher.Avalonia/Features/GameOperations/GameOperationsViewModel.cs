@@ -266,9 +266,10 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
             return;
         }
 
-        if (!GameOperationPolicy.Allows(GameOperationPolicy.Operation.Repair, currentSnapshot.RuntimeState))
+        if (GameOperationPolicy.Decide(GameOperationPolicy.Operation.Repair, currentSnapshot.RuntimeState)
+            == GameOperationDecision.RejectedForCurrentState)
         {
-            toastService.ShowWarning(localizer.T(LocalizationKeys.OperationUnavailableForCurrentState));
+            ShowOperationUnavailable();
             return;
         }
 
@@ -277,8 +278,20 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
 
     public async Task RepairAsync()
     {
-        if (currentSnapshot is not null && GameOperationPolicy.Allows(GameOperationPolicy.Operation.Repair, currentSnapshot.RuntimeState))
-            await journey.RepairAsync(currentSnapshot);
+        // 确认框点过之后状态可能又变了：不能静默什么都不做（ADR-027）。
+        if (currentSnapshot is null)
+        {
+            return;
+        }
+
+        if (GameOperationPolicy.Decide(GameOperationPolicy.Operation.Repair, currentSnapshot.RuntimeState)
+            == GameOperationDecision.RejectedForCurrentState)
+        {
+            ShowOperationUnavailable();
+            return;
+        }
+
+        await journey.RepairAsync(currentSnapshot);
     }
 
     [RelayCommand]
@@ -348,9 +361,10 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
             return;
         }
 
-        if (!GameOperationPolicy.Allows(GameOperationPolicy.Operation.Uninstall, currentSnapshot.RuntimeState))
+        if (GameOperationPolicy.Decide(GameOperationPolicy.Operation.Uninstall, currentSnapshot.RuntimeState)
+            == GameOperationDecision.RejectedForCurrentState)
         {
-            toastService.ShowWarning(localizer.T(LocalizationKeys.OperationUnavailableForCurrentState));
+            ShowOperationUnavailable();
             return;
         }
 
@@ -365,6 +379,9 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
             currentSnapshot.LocalGame.GamePath,
             Math.Max(0, validation.AffectedFileCount - 2)));
     }
+
+    private void ShowOperationUnavailable() =>
+        toastService.ShowWarning(localizer.T(LocalizationKeys.OperationUnavailableForCurrentState));
 
     public async Task ConfirmUninstallAsync()
     {

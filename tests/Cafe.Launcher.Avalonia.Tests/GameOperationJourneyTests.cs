@@ -216,14 +216,21 @@ public sealed class GameOperationJourneyTests
     }
 
     [Fact]
-    public async Task ConfirmUninstallAsync_WhenNotReady_SkipsUninstall()
+    public async Task ConfirmUninstallAsync_WhenStateNoLongerAllowsUninstall_ReportsInsteadOfSilence()
     {
+        // 用户已经点过确认：状态若在这之后变得不允许，不能什么都不做（ADR-027）。
         var context = CreateContext();
+        var notifications = context.SubscribeToasts();
 
         await context.Journey.ConfirmUninstallAsync(CreateSnapshot(LauncherRuntimeState.NotInstalled));
 
         Assert.Equal(0, context.Executor.UninstallCallCount);
         Assert.Equal(0, context.Host.SetBusyCallCount);
+        var notification = Assert.Single(notifications);
+        Assert.Equal(ToastSeverity.Warning, notification.Severity);
+        Assert.Equal(
+            context.Localizer.T(LocalizationKeys.OperationUnavailableForCurrentState),
+            notification.Message);
     }
 
     [Fact]
