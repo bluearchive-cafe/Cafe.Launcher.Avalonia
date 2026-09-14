@@ -114,7 +114,7 @@ public sealed partial class MainWindowViewModelTests : IDisposable
             diagnostics);
         using var settingsLogger = new UnifiedLogger(Path.Combine(tempDir, Guid.NewGuid().ToString("N")));
         var settingsViewModel = new SettingsViewModel(
-            settingsService, savedSettingsWriter, httpClientFactory, localizationService, toastService,
+            settingsService, savedSettingsWriter, localizationService, toastService,
             launcherUpdateSvc, dialogsViewModel,
             settingsLogger,
             new GameInstallationPath(),

@@ -378,7 +378,6 @@ public partial class MainWindowViewModelTests
         using var settings = new SettingsViewModel(
             savedSettings.SettingsService,
             savedSettings.Writer,
-            null!,
             localizer,
             toastService,
             new LauncherUpdateService(new StubRemoteHttpTransport()),

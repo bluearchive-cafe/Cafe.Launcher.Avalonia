@@ -163,7 +163,6 @@ public sealed class SettingsOptionsDiskSpaceTests
         using var settings = new SettingsViewModel(
             null!,
             null!,
-            null!,
             localizer,
             null!,
             null!,
