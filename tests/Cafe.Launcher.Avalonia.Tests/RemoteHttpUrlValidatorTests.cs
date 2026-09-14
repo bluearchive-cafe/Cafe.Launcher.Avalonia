@@ -123,6 +123,20 @@ public sealed class RemoteHttpUrlValidatorTests
     }
 
     [Fact]
+    public async Task ValidateAsync_WhenLiteralAddressIsBenchmarkRange_ReturnsUri()
+    {
+        // 守卫（AUD-SEC-006，接受风险）：RFC 2544 基准段 198.18.0.0/15 被
+        // fake-ip 模式代理软件（如 Clash）用作 DNS 应答段，直连路径的域名
+        // 解析结果落在这里——拦截会弄坏真实用户的横幅/下载（5a38be9 曾为此
+        // 移除拦截）。与 CGNAT 一并刻意放行；重审该让步前不得收紧。
+        var validator = RemoteHttpUrlValidator.CreateForTesting();
+
+        var uri = await validator.ValidateAsync("https://198.18.0.1/file");
+
+        Assert.Equal("198.18.0.1", uri.Host);
+    }
+
+    [Fact]
     public async Task ValidateAsync_WhenSameHostValidatedRepeatedlyWithinCacheLifetime_ResolvesOnce()
     {
         var resolvedHosts = new List<string>();

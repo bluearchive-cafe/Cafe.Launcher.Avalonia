@@ -16,18 +16,18 @@
       "delta_note": "2026-09-14 复核：Medium→Low 降档。715fee5 已交付有界并行 min(ProcessorCount,8)（DownloadExecutor.cs:28,284-330）、下载期 verifiedHashes 跨轮累积（DownloadSession.cs:413-435）、修复通道见证跳过（PlannedFileHash）。残留：更新计划的 plannedHashes 刻意为空（DownloadPlan.cs:21-29），未变更文件仍全读一遍——这是代码注释明示的唯一内容损坏自愈通道（:260-264）。"
     },
     "AUD-CI-001": {
-      "title": "非 Windows 测试不随变更执行：linux-tests.yml 仅 workflow_dispatch + 每周定时，平台分支回归不能阻塞引入它的变更",
+      "title": "非 Windows 平台分支不随变更执行（linux-tests.yml 仅 dispatch+weekly；已由 build.yml ubuntu job 收口）",
       "category": "ci/cross-platform",
       "severity": "low",
       "confidence": 95,
-      "status": "open",
+      "status": "resolved",
       "disposition": "Add Guard",
       "recommendation_validation": "Verified",
       "first_seen_commit": "5f56f8e",
       "last_verified_commit": "715fee5",
-      "resolved_commit": null,
-      "guard": "在 build.yml（push/PR）追加 ubuntu-24.04 单元测试 step（job 体已存在于 linux-tests.yml，可复用）；可选为 ruleset 增加 required_status_checks",
-      "delta_note": "2026-09-14 复核：Medium→Low 降档。5553793 落地 linux-tests.yml：单元套件获得真实非 Windows 执行点（平台自适应测试不再无处执行），但触发仅 dispatch+weekly（linux-tests.yml:7-10，注释自述「不阻塞 PR」），Headless/golden 按设计保持 Windows-only。该 job 是否曾绿跑未经本审计验证（只读评审，无 GitHub Actions 运行历史访问）。"
+      "resolved_commit": "c37c44c",
+      "guard": "build.yml linux-unit-tests job（push/PR 阻塞）+ linux-tests.yml weekly 巡检双守卫",
+      "delta_note": "修复（c37c44c，2026-09-14）：build.yml 新增 linux-unit-tests job（ubuntu-24.04，push/PR 触发并阻塞），复用 linux-tests.yml 的作业体（无 RID 还原、无渲染依赖）；weekly 作业保留作周期巡检。Headless/golden 套件按设计保持 Windows-only（golden 基线平台门控）。审计时点该 job 的 Linux 实跑绿灯未经本机验证（无 GitHub Actions 访问），以 CI 记录为准。"
     },
     "AUD-PERF-004": {
       "title": "每次壳层刷新销毁并重新下载/解码全部横幅位图",
@@ -55,21 +55,21 @@
       "last_verified_commit": "715fee5",
       "resolved_commit": null,
       "guard": "AGENTS.md 首帧承诺改为如实描述（记录刻意例外），或壁纸解码点改造后恢复承诺",
-      "delta_note": "新发现（2026-09-14）。BackgroundViewModel 构造函数 :122 backgroundImageSource = bundledImageLoader() 同步解码 Assets/launcher-background.png（2560×1388），经 App.axaml.cs:61 DI 解析链在 MainWindow 显示前于 UI 线程执行；AGENTS.md:75 原写明「no blocking work before the first frame」，revert 提交消息记录了产品理由（无它则窗口先开在主题底色上，golden 基线与 UX 回退）。第二处：首次刷新时跳过卫（BackgroundViewModel.cs:153-160）因 lastBackgroundSourceKey/lastDecodeTarget 未置而不能命中，:232 于线程池再次全量解码同一内置图。进展 2026-09-14（工作树，未提交）：必须做的文档半项已交付——AGENTS.md:75 改写为「重活不占首帧路径 + 内置壁纸构造期同步解码是唯一刻意例外，勿擅自改回异步」；CONTEXT.md 复核无同类声明无需改动。仍开放：消除首次刷新二次冗余解码的调查（需先确认跳过卫的解码目标可合法匹配）。"
+      "delta_note": "新发现（2026-09-14）。BackgroundViewModel 构造函数 :122 backgroundImageSource = bundledImageLoader() 同步解码 Assets/launcher-background.png（2560×1388），经 App.axaml.cs:61 DI 解析链在 MainWindow 显示前于 UI 线程执行；AGENTS.md:75 原写明「no blocking work before the first frame」，revert 提交消息记录了产品理由（无它则窗口先开在主题底色上，golden 基线与 UX 回退）。第二处：首次刷新时跳过卫（BackgroundViewModel.cs:153-160）因 lastBackgroundSourceKey/lastDecodeTarget 未置而不能命中，:232 于线程池再次全量解码同一内置图。进展 2026-09-14（690993f）：必须做的文档半项已交付——AGENTS.md:75 改写为「重活不占首帧路径 + 内置壁纸构造期同步解码是唯一刻意例外，勿擅自改回异步」；CONTEXT.md 复核无同类声明无需改动。仍开放：消除首次刷新二次冗余解码的调查（需先确认跳过卫的解码目标可合法匹配）。"
     },
     "AUD-PERF-006": {
       "title": "并行安装校验的进度回调可瞬时回退（Interlocked 递增与回调非原子）",
       "category": "performance/ui-correctness",
       "severity": "low",
       "confidence": 85,
-      "status": "open",
+      "status": "resolved",
       "disposition": "Fix",
       "recommendation_validation": "Verified",
       "first_seen_commit": "715fee5",
       "last_verified_commit": "715fee5",
-      "resolved_commit": null,
-      "guard": "ApplyProgressCore 钳制单调，或在单次 Interlocked 操作内取值并回调",
-      "delta_note": "新发现（2026-09-14，715fee5 引入）。DownloadExecutor.cs:327 progress((int)Math.Round(Interlocked.Increment(ref completedCount) * 100d / manifestFiles.Count)) 于线程池并发执行：线程 A 递增至 5 后被抢占，可在 B 已回调 6 之后回调 5——FileCheck 百分比可瞬时回退；阶段边界进度（DownloadSession.cs:457-460）保证终值正确，无卡死。消费侧 Dispatcher.UIThread.Post 线程安全但不保序。修复为单行钳制。"
+      "resolved_commit": "4c0b0cd",
+      "guard": "守卫测试：ApplyProgress_WhenSameStageProgressArrivesOutOfOrder_ClampsToMonotonicValue / WhenStageChanges_AllowsProgressToRestartFromLowerValue",
+      "delta_note": "修复（4c0b0cd，2026-09-14）：ApplyProgressCore 按阶段键控钳制进度单调（同阶段不回退；阶段切换含重试轮折返 FileCheck 时重置下界，与 DownloadSession.cs:439 的显式归零兼容）。"
     },
     "AUD-SEC-001": {
       "title": "URL 校验与拨号间 DNS 重绑定 TOCTOU 窗口（validate-then-dial 残余；30s 正缓存反而加宽该窗口）",
@@ -83,7 +83,7 @@
       "last_verified_commit": "715fee5",
       "resolved_commit": null,
       "guard": null,
-      "delta_note": "2026-09-14 复核：仍成立，证据位置更新。逐跳校验现居 RemoteHttpRequestService.cs:28-34（由 RemoteHttpTransport.cs:276-294 与 DownloadTransport.cs:40-50 共用）；全仓库无 ConnectCallback/IP 钉扎（grep 证实），SocketsHttpHandler 仍归 HttpClientFactory.cs:27-54，拨号时二次解析。新认识：RemoteHttpUrlValidator.cs:19,134-150 的 30s 正缓存对重绑定威胁是加宽而非收窄（原注释 :12-19 的框定在此威胁下是反的）。进展 2026-09-14（工作树，未提交）：该反向框定注释已更正——现明确「缓存是省 IO 手段而非重绑定防御，TTL 只是该 validate-then-dial 窗口的上限而非关闭（引 AUD-SEC-001）」。风险处置不变（Accept Risk）。影响有界不变：GET-only、响应不回传攻击方。"
+      "delta_note": "2026-09-14 复核：仍成立，证据位置更新。逐跳校验现居 RemoteHttpRequestService.cs:28-34（由 RemoteHttpTransport.cs:276-294 与 DownloadTransport.cs:40-50 共用）；全仓库无 ConnectCallback/IP 钉扎（grep 证实），SocketsHttpHandler 仍归 HttpClientFactory.cs:27-54，拨号时二次解析。新认识：RemoteHttpUrlValidator.cs:19,134-150 的 30s 正缓存对重绑定威胁是加宽而非收窄（原注释 :12-19 的框定在此威胁下是反的）。注释更正已入库（d1693d5）——现明确「缓存是省 IO 手段而非重绑定防御，TTL 只是该 validate-then-dial 窗口的上限而非关闭（引 AUD-SEC-001）」。风险处置不变（Accept Risk）。影响有界不变：GET-only、响应不回传攻击方。"
     },
     "AUD-SEC-002": {
       "title": "资源面板 UID 以 URL 查询串传输，落入代理/服务器访问日志（且变更为 GET，可重放）",
@@ -104,42 +104,42 @@
       "category": "security/network",
       "severity": "low",
       "confidence": 85,
-      "status": "open",
+      "status": "resolved",
       "disposition": "Fix",
       "recommendation_validation": "Verified",
       "first_seen_commit": "715fee5",
       "last_verified_commit": "715fee5",
-      "resolved_commit": null,
-      "guard": "单测钉住：跨主机重定向后请求不携带 Authorization",
-      "delta_note": "新发现（2026-09-14，本审计主代理亲自复核确认）。重定向循环逐跳 createRequest(currentUri)（RemoteHttpRequestService.cs:34），BuildRequest 每跳调用 ConfigureRequest（RemoteHttpTransport.cs:285-294），LauncherApiClient.cs:198-200 据此每跳重附签名头；签名与请求路径无关（AuthorizationHeaderFactory.cs:44，data 为空串）故可对任意端点重放。.NET 自带 HttpClient 会在跨主机重定向剥离 Authorization，手写循环丢掉了这层保护。影响有界：仅 API 主机可指定重定向目标，其被攻陷本可直接取得该头。建议在 RemoteHttpRequestService.SendAsync 对下一跳 Host != 初始 Host 时剥离 Authorization（规则收进单一发送例程）。上轮审计「签名 Authorization 头绝不跟随重定向转发」的影响声明据此更正。"
+      "resolved_commit": "1dcc9df",
+      "guard": "守卫测试：GetStreamAsync_WhenRedirectLeavesInitialHost_StripsAuthorizationHeader / WhenRedirectStaysOnInitialHost_KeepsAuthorizationHeader",
+      "delta_note": "修复（1dcc9df，2026-09-14）：RemoteHttpRequestService.SendAsync 对非初始授权方（scheme+host+port）的跳剥离 Authorization，规则收进单一发送例程；.NET 内建 HttpClient 的跨主机剥离约定得以保持。配套两个守卫测试。"
     },
     "AUD-SEC-004": {
       "title": "手写代理对注册表配置的代理发送当前用户默认凭据（UseDefaultCredentials=true，与 WinINet 对齐）",
       "category": "security/network",
       "severity": "low",
       "confidence": 80,
-      "status": "open",
+      "status": "accepted-risk",
       "disposition": "Accept Risk",
       "recommendation_validation": "Verified",
       "first_seen_commit": "715fee5",
       "last_verified_commit": "715fee5",
-      "resolved_commit": null,
+      "resolved_commit": "78e0ef0",
       "guard": null,
-      "delta_note": "新发现（2026-09-14，66c9c01 引入）。ProxySettingsService.cs:149-151 new WebProxy(settings.ProxyUrl){UseDefaultCredentials=true}，ProxyUrl 原样取自 HKCU Internet Settings。同用户进程可写 ProxyServer 指向攻击者并收集 NTLM/Kerberos 应答。误报排查：这是 WinINet/GetSystemWebProxy 的既定行为，且注册表值本就在同用户进程写入能力内（届时已 game over）。处置：保持行为（兼容），在既有注释旁写明同用户信任边界让步；仅 System 模式启用已是现状。"
+      "delta_note": "结案（78e0ef0，2026-09-14）：信任边界让步已书面化于 BuildConfiguredProxy 注释——同用户进程本可冒充用户，镜像 WinINet 行为而非防御它。行为不变。"
     },
     "AUD-SEC-005": {
       "title": "发布产物无签名、SHA256SUMS 自行发布于同一 Release：完整性可验、来源不可独立验证",
       "category": "security/supply-chain",
       "severity": "low",
       "confidence": 85,
-      "status": "open",
+      "status": "resolved",
       "disposition": "Add Guard",
       "recommendation_validation": "Strongly Supported",
       "first_seen_commit": "715fee5",
       "last_verified_commit": "715fee5",
-      "resolved_commit": null,
-      "guard": "release.yml 为六产物追加 actions/attest-build-provenance（无需证书）；文档写明 SHA256SUMS 仅完整性非来源",
-      "delta_note": "新发现（2026-09-14）。release.yml:358-372 生成 SHA256SUMS 并与产物同发布（:374-409）；无 Authenticode/codesign/notarization/attest-build-provenance。终端用户真实性完全依赖 github.com TLS + Release 组织控制——社区项目可辩护的模型，但 Release 账号被攻陷时用户无从独立验证。构建输入侧已有 attestation（Inno Setup verify-asset）、动作 SHA 钉住、NuGetAudit。低成本守卫：attest-build-provenance。"
+      "resolved_commit": "457ac50",
+      "guard": "release.yml Attest build provenance step（attest-build-provenance v4.2.2 SHA 钉住）；证书签名待项目获得证书再议（可选后续）",
+      "delta_note": "修复（457ac50，2026-09-14）：release job 为六个分发包与 SHA256SUMS 签发 OIDC 构建来源证明（公共 attestation 账本可核验），补 id-token/attestations 权限。Authenticode/codesign 证书签名仍为可选后续。"
     },
     "AUD-ARCH-005": {
       "title": "ShellLifecycle 为 src/ 最高变更热点（25 commits/180d），Wire/Unwire 16 对订阅镜像仍靠人工配对、无对称性守卫",
@@ -165,51 +165,51 @@
       "recommendation_validation": "Verified",
       "first_seen_commit": "715fee5",
       "last_verified_commit": "715fee5",
-      "resolved_commit": null,
+      "resolved_commit": "690993f",
       "guard": "改写后的 AGENTS.md 表述与 UiStyleContractTests（Dialogs.cs:510-516、ToastLog.cs:139）互为印证",
-      "resolution_note": "2026-09-14 修复（工作树，未提交）：采纳原建议第一分支——AGENTS.md:77 改写为如实描述（toast 为 LauncherConstants.ZIndexToast 常量；settings/dialog/wizard 三层由 MainWindow.Styles.axaml 样式 setter 钉住、UiStyleContractTests 守护）。未采纳第二分支（三字面量移入常量类）：样式即实际生效的钉住机制且已有契约测试护栏，挪动属可选重构而非必要。"
+      "resolution_note": "2026-09-14 修复（690993f）：采纳原建议第一分支——AGENTS.md:77 改写为如实描述（toast 为 LauncherConstants.ZIndexToast 常量；settings/dialog/wizard 三层由 MainWindow.Styles.axaml 样式 setter 钉住、UiStyleContractTests 守护）。未采纳第二分支（三字面量移入常量类）：样式即实际生效的钉住机制且已有契约测试护栏，挪动属可选重构而非必要。"
     },
     "AUD-ARCH-007": {
       "title": "代理指纹变化在同模式下次租约创建时 Dispose 旧 SocketsHttpHandler，而进行中的下载批次租约仍持有该 handler",
       "category": "architecture/lifecycle",
       "severity": "low",
       "confidence": 70,
-      "status": "open",
+      "status": "accepted-risk",
       "disposition": "Investigate",
       "recommendation_validation": "Needs External Verification",
       "first_seen_commit": "715fee5",
       "last_verified_commit": "715fee5",
-      "resolved_commit": null,
+      "resolved_commit": "78e0ef0",
       "guard": "若证实有害：为缓存 handler 加租约引用计数 / 延迟至租约释放再 Dispose；或书面记录「下载中途系统代理变更代价一轮失败重试」",
-      "delta_note": "新发现（2026-09-14，架构与性能两通道各自独立识别后合并立案）。ProxySettingsService.cs:100-103 指纹变化即 stale.Handler.Dispose()；HttpClientFactory.cs:92 租约以 disposeHandler:false 包裹 handler；下载批单租约全程持有（DownloadTransport.cs:36-72，10 分钟租约 GameDownloadService.cs:39）。触发链：VPN/PAC/注册表变更 → 任一后续远程调用建租约 → 处置进行中批次下的 handler。影响：批次传输快速失败进入验证重试轮、下轮新租约自愈——代价一轮下载而非永久故障；:87-89 注释只覆盖创建竞态未覆盖活租约处置。运行时行为（disposed handler 对在途请求的确切语义）未复现，需实验验证。"
+      "delta_note": "结案（78e0ef0，2026-09-14）：处置权衡已书面化于 GetOrCreateHandlerAsync 注释——活租约下的批次传输快速失败、验证重试轮换新租约自愈，一轮失败代价、无损正确性；租约引用计数判为更高并发风险。"
     },
     "AUD-MAINT-001": {
       "title": "SettingsAppearanceViewModel 以 5 个静态字段保存主题方案缓存（隐藏全局）",
       "category": "maintainability/hidden-globals",
       "severity": "low",
       "confidence": 90,
-      "status": "open",
+      "status": "resolved",
       "disposition": "Refactor",
       "recommendation_validation": "Verified",
       "first_seen_commit": "5f56f8e",
       "last_verified_commit": "715fee5",
-      "resolved_commit": null,
+      "resolved_commit": "696abdd",
       "guard": null,
-      "delta_note": "2026-09-14 复核：仍成立。:614-618 五个 private static 缓存字段原样；VM 为 DI 单例，静态存储功能等价实例态；测试侧先例（BackgroundViewModelHeadlessTests 恢复静态 ResizeReloadDebounce）已为此买单。随下次触碰该文件移入实例字段。"
+      "delta_note": "修复（696abdd，2026-09-14）：五个方案缓存字段与 ApplyScheme、ActualThemeVariantChanged 订阅全部转实例；Dispose 拆卸订阅（headless 共享 Application 不再跨测试累积）；两处 headless 测试改经 DI 构造的 VM 实例调用。单元 1710 + headless 177 全绿。"
     },
     "AUD-ARCH-004": {
       "title": "DesignGalleryViewModel 为功能级体量却无功能归属（根 ViewModels/）",
       "category": "architecture/boundaries",
       "severity": "informational",
       "confidence": 85,
-      "status": "open",
+      "status": "resolved",
       "disposition": "Architecture Decision",
       "recommendation_validation": "Needs Architecture Decision",
       "first_seen_commit": "5f56f8e",
       "last_verified_commit": "715fee5",
-      "resolved_commit": null,
+      "resolved_commit": "6c80951",
       "guard": null,
-      "delta_note": "2026-09-14 复核：仍成立，无变化（69 行，最后触碰 5be9610）。七个主叠层之一的模态内容 VM 仍居根 ViewModels/ 无 Features/ 归属；无行为影响，下次触碰时决定归属（Features/Diagnostics 或明文豁免）。"
+      "delta_note": "解决（6c80951，2026-09-14）：按 ViewModel 归属规则移入 Features/Diagnostics（其天然宿主，审计建议的第一选项）；命名空间随目录，DialogsViewModel 增补 using——窗口层向下聚合与 Shell 同向。"
     },
     "AUD-ARCH-001": {
       "title": "ShellLifecycle 为 881 行六职责协调器（19 commits/180d）",

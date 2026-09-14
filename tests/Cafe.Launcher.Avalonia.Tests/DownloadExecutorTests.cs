@@ -156,6 +156,123 @@ public sealed class DownloadExecutorTests : IDisposable
     }
 
     [Fact]
+    public async Task InstallDownloadedFilesAsync_WhenManyFilesVerifyInParallel_ReassemblesFailuresInManifestOrder()
+    {
+        // 契约（AUD-TEST-005）：有界并行校验在多文件清单下保持与串行版相同的语义——
+        // 失败列表按清单顺序重组；失配的已下载 .tmp 删除、失配的未改动已安装文件在
+        // 终路径删除（与官方启动器一致的损坏自愈）；通过文件照常搬移；进度每文件恰一次。
+        const int fileCount = 12; // 高于并行度上限 8，覆盖信号量等待与按索引重组
+        const int downloadedCount = 8;
+        var crc64 = new Crc64Service();
+        var manifestFiles = new List<ManifestFile>();
+        var downloadedFiles = new List<ManifestFile>();
+        var finalPaths = new string[fileCount];
+        var tempPaths = new string[fileCount];
+        for (var index = 0; index < fileCount; index++)
+        {
+            var name = $"file{index:D2}.bin";
+            var correctBytes = new byte[] { (byte)index, 0xAA, 0x55 };
+            finalPaths[index] = Path.Combine(tempDir, name);
+            tempPaths[index] = DownloadExecutor.GetTempName(finalPaths[index]);
+            await File.WriteAllBytesAsync(finalPaths[index], correctBytes);
+            var manifestFile = new ManifestFile
+            {
+                Path = name,
+                Size = "3",
+                Hash = await crc64.ComputeFileAsync(finalPaths[index])
+            };
+            manifestFiles.Add(manifestFile);
+            if (index < downloadedCount)
+            {
+                // 已下载文件按生产布局只存在 .tmp；index 3 故意写错以触发失配
+                File.Delete(finalPaths[index]);
+                downloadedFiles.Add(manifestFile);
+                await File.WriteAllBytesAsync(
+                    tempPaths[index],
+                    index == 3 ? new byte[] { 0xFF, 0xFF, 0xFF } : correctBytes);
+            }
+            else if (index == 9)
+            {
+                // 未改动已安装文件在终路径损坏：与官方一致的失配即删语义
+                await File.WriteAllBytesAsync(finalPaths[index], new byte[] { 0xEE, 0xEE, 0xEE });
+            }
+        }
+
+        var progressCount = 0;
+        var failed = await CreateExecutor().InstallDownloadedFilesAsync(
+            tempDir,
+            manifestFiles,
+            downloadedFiles,
+            new Dictionary<string, string>(),
+            new Dictionary<string, PlannedFileHash>(),
+            _ => progressCount++,
+            CancellationToken.None);
+
+        Assert.Equal(2, failed.Count);
+        Assert.Equal("file03.bin", failed[0].Path);
+        Assert.Equal("file09.bin", failed[1].Path);
+        Assert.Equal(manifestFiles[3].Hash, failed[0].Hash);
+        Assert.Equal(manifestFiles[9].Hash, failed[1].Hash);
+        Assert.False(File.Exists(tempPaths[3]));
+        Assert.False(File.Exists(finalPaths[9]));
+        for (var index = 0; index < fileCount; index++)
+        {
+            if (index is 3 or 9)
+            {
+                continue;
+            }
+
+            Assert.True(File.Exists(finalPaths[index]));
+            if (index < downloadedCount)
+            {
+                Assert.False(File.Exists(tempPaths[index]));
+            }
+        }
+
+        Assert.Equal(fileCount, progressCount);
+    }
+
+    [Fact]
+    public async Task InstallDownloadedFilesAsync_WhenDownloadedTempIsMissing_MarksOnlyThatFileFailed()
+    {
+        // 缺失检查在并行路径上同样生效：缺失的已下载文件判失败且无需删除，
+        // 其余已下载与未改动文件照常通过。
+        var crc64 = new Crc64Service();
+        var presentPath = Path.Combine(tempDir, "present.bin");
+        var presentBytes = new byte[] { 1, 2, 3 };
+        await File.WriteAllBytesAsync(presentPath, presentBytes);
+        var present = new ManifestFile
+        {
+            Path = "present.bin",
+            Size = "3",
+            Hash = await crc64.ComputeFileAsync(presentPath)
+        };
+        File.Move(presentPath, DownloadExecutor.GetTempName(presentPath));
+        var untouchedPath = Path.Combine(tempDir, "untouched.bin");
+        await File.WriteAllBytesAsync(untouchedPath, new byte[] { 4, 5, 6 });
+        var untouched = new ManifestFile
+        {
+            Path = "untouched.bin",
+            Size = "3",
+            Hash = await crc64.ComputeFileAsync(untouchedPath)
+        };
+        var missing = new ManifestFile { Path = "missing.bin", Size = "3", Hash = "whatever" };
+
+        var failed = await CreateExecutor().InstallDownloadedFilesAsync(
+            tempDir,
+            [present, missing, untouched],
+            [present, missing],
+            new Dictionary<string, string>(),
+            new Dictionary<string, PlannedFileHash>(),
+            _ => { },
+            CancellationToken.None);
+
+        _ = Assert.Single(failed);
+        Assert.Equal("missing.bin", failed[0].Path);
+        Assert.True(File.Exists(untouchedPath));
+    }
+
+    [Fact]
     public void RemoveFiles_WhenFileIsReadOnly_DeletesFile()
     {
         var filePath = Path.Combine(tempDir, "removed.bin");

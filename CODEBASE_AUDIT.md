@@ -1,11 +1,13 @@
 # 仓库审计报告（当前状态）
 
 > 本报告为 **full 全量重审**（用户指令）：六域审计通道全部执行，对上一基线以来的 16 个提交逐域重验，全部开放发现按现行源码逐项复核。上一报告（2026-09-13 full+delta）已归档至 `.repository-audit/history/2026-09-13-full-audit.md`。
+>
+> **同日修复轮**：报告定稿后按优先级将可执行发现全部落地（9 个提交，`d1693d5..6c80951`），修复后单元 1710 + Headless 177 全绿。开放发现收敛至 6 项 Low，全部为需要基准数据、产品输入或专属设计轮的决策项。详见 Resolved Findings。
 
 ## Audit Metadata
 
 - 日期：2026-09-14
-- Commit：`715fee5`（`main`；最新已发布 tag `v1.1.0-beta.9`）
+- Commit：审计基线 `715fee5`（`main`；最新已发布 tag `v1.1.0-beta.9`）；同日修复轮后 HEAD `6c80951`
 - 模式：**full**（上一基线 2026-09-13 @ `5f56f8e`/`8449d37`；本窗口 `8449d37..715fee5` 共 16 个提交）
 - 范围：生产源码 242 个 `.cs`（≈33.6k 行）+ 29 个 `.axaml`、210 个测试文件（≈43k 行）、CI 三工作流、打包/安装器脚本、文档契约
 - 项目画像：desktop-launcher（`.agents/skills/repository-audit/profiles/desktop-launcher.md` 按仓库证据调整）
@@ -14,23 +16,22 @@
 
 仓库健康状况：**良好，且较上一审计实质性改善**。desktop-launcher 四个关键风险面（下载完整性、文件系统边界、进程启动、外部链接）防御纵深不变且全部有测试；上一轮全部 5 项 Medium 级结构/测试发现中 4 项已随 `878260a`/`b9dc68e`/`5553793`/`5777f2f`/`715fee5` 真实解决（不是纸面解决——本审计逐项读码 + 本地实测 1704 个单元测试全绿确认），其余 2 项（AUD-PERF-001、AUD-CI-001）部分解决后降档。**未发现 Critical / High / Medium 级问题。**
 
-开放发现（2026-09-14 复核后）：
+开放发现（2026-09-14 修复轮后）：
 
 - Critical：0
 - High：0
 - Medium：0
-- Low：13（另 1 项 Informational；合计 14 项开放）
-- 本窗口解决：8 项（AUD-ARCH-002、AUD-ARCH-003、AUD-TEST-002、AUD-TEST-003、AUD-TEST-004、AUD-PERF-002、AUD-PERF-003、AUD-MAINT-002）
-- 报告定稿后随即修复（2026-09-14，工作树）：AUD-ARCH-006 整项解决；AUD-PERF-005 的文档半项交付；AUD-SEC-001 的反向框定注释更正
+- Low：6（全部为决策/待设计项：AUD-PERF-001、AUD-PERF-004、AUD-PERF-005 残留、AUD-SEC-001、AUD-SEC-002、AUD-ARCH-005）
+- 本窗口解决：14 项（8 项随上轮修复落地：ARCH-002/003、TEST-002/003/004、PERF-002/003、MAINT-002；6 项随同日修复轮：ARCH-004/006、CI-001、PERF-006、SEC-003/005）；另 3 项结案为 accepted-risk（MAINT-002、SEC-004、ARCH-007）
 
 **一处上轮审计证据更正（重要）**：上轮安全节声明「签名 Authorization 头绝不跟随重定向转发」——复核证实该头经 `RemoteRequestOptions.ConfigureRequest` 钩子在**每一重定向跳重发**（含跨主机），已立案为 AUD-SEC-003（Low）。这推翻了上轮对 DNS 重绑定残余风险影响边界的部分论证。
 
-最重要的风险/行动：
+最重要的风险/行动（修复轮后剩余）：
 
-1. **AUD-SEC-003**（Low，修复成本低）— 手写重定向循环丢失了 .NET 对跨主机重定向剥离 Authorization 的内建保护；在单一发送例程中对跨主机跳剥离该头即可，配套单测钉住。
-2. **AUD-CI-001 残留**（Low）— `linux-tests.yml` 已给平台分支真实执行点（每周 + 手动），但仍不随变更触发；把现有 job 体复用进 `build.yml` 的 PR 路径即可闭环。
-3. ~~**文档漂移三处一并修正**~~（已完成 2026-09-14，工作树）——AGENTS.md ZIndex 表述（AUD-ARCH-006，结案）、AGENTS.md:75 首帧承诺记录壁纸解码刻意例外（AUD-PERF-005 文档半项）、`RemoteHttpUrlValidator` DNS 缓存反向框定注释更正（AUD-SEC-001 证据修正）；剩余的 advisory 级服务定位表述修正随下次触碰 `ServiceConfiguration` 时顺带。
-4. **AUD-ARCH-007**（Low，需调查）— 代理指纹变化可在下载批次进行中 Dispose 其底层 handler；需一次实验确认 disposed handler 对在途请求的确切语义，再决定加引用计数还是书面接受。
+1. **AUD-PERF-001**（Low）— 更新路径未变更文件的全读是文档化的损坏自愈设计，已并行化 ≤8 + 下载期哈希跨轮复用；剩余的见证摊销须先基准实测再决策，不得弱化自愈语义。
+2. **AUD-PERF-004**（Low）— 每次壳层刷新全量重解码横幅位图；位图备忘的补救验证为 Plausible，需要专属设计轮处理轮播/陈旧释放生命周期，不宜顺手改。
+3. **AUD-PERF-005 残留**（Low）— 首帧权衡已文档化（690993f）；二次冗余解码的消除需先确认跳过卫可合法匹配。
+4. **AUD-ARCH-005**（Low，接受中）— ShellLifecycle 的 Wire/Unwire 密度：若再因结构原因触碰，按 ADR-023 声明表收敛。
 
 ## Changes Since Previous Audit
 
@@ -62,7 +63,7 @@
 ### AUD-SEC-003 — 签名 Authorization 头在每一重定向跳重发（含跨主机）【新立案；更正上轮审计论断】
 
 - 类别：安全 / 网络凭据处理
-- 严重度：Low｜置信度：85（本审计主代理亲自读码确认）｜状态：open｜处置：Fix
+- 严重度：Low｜置信度：85（本审计主代理亲自读码确认）｜状态：**resolved**（`1dcc9df`）｜处置：Fix（已执行）
 - **证据**：重定向循环逐跳 `createRequest(currentUri)`（`Services/RemoteHttpRequestService.cs:34`）；`BuildRequest` 每跳调用 `policy.ConfigureRequest?.Invoke(request)`（`Services/RemoteHttpTransport.cs:285-294`）；`Services/LauncherApiClient.cs:198-200` 据此每跳重附 `Authorization`（`TryAddWithoutValidation`）。签名与请求路径无关（`Services/Auth/AuthorizationHeaderFactory.cs:44`，`data` 为空串），被截获即可对任意端点重放至服务器容忍的时限。无测试断言跨跳的头行为。
 - **影响**：.NET 内建 `HttpClient` 会在跨主机重定向时剥离 `Authorization`，手写循环丢掉了这层保护。影响有界：仅 API 主机可选择重定向目标，而其被攻陷本可直接取得该头——属加固而非独立利用链。
 - **建议**：在 `RemoteHttpRequestService.SendAsync` 中当下一跳 `Uri.Host` 与初始主机不同时剥离 `Authorization`（规则收进单一发送例程，优于让 `ConfigureRequest` 感知跳数）。
@@ -72,8 +73,8 @@
 ### AUD-SEC-004 — 手写代理对注册表配置的代理发送当前用户默认凭据【新立案；66c9c01 引入】
 
 - 类别：安全 / 网络
-- 严重度：Low｜置信度：80｜状态：open｜处置：Accept Risk（补注释）
-- **证据**：`Services/ProxySettingsService.cs:149-151` `new WebProxy(settings.ProxyUrl) { UseDefaultCredentials = true, … }`；`ProxyUrl` 原样取自 `HKCU\...\Internet Settings\ProxyServer`（`WindowsRegistrySystemProxySettingsProvider.cs:25-56`）。提交消息记录意图：镜像 WinINet 的静默 407 应答。
+- 严重度：Low｜置信度：80｜状态：**accepted-risk**（`78e0ef0`，让步已书面化）｜处置：Accept Risk
+- **证据**：`Services/ProxySettingsService.cs` `BuildConfiguredProxy` 内 `UseDefaultCredentials = true` `new WebProxy(settings.ProxyUrl) { UseDefaultCredentials = true, … }`；`ProxyUrl` 原样取自 `HKCU\...\Internet Settings\ProxyServer`（`WindowsRegistrySystemProxySettingsProvider.cs:25-56`）。提交消息记录意图：镜像 WinINet 的静默 407 应答。
 - **影响**：同用户进程可写 `ProxyServer` 指向攻击者收集 NTLM/Kerberos 应答。误报排查：与 `WebRequest.GetSystemWebProxy()` 行为一致，且注册表值本就在同用户写入能力内（届时攻击者已控制用户会话）——真实风险低。
 - **建议**：保持行为；在既有注释旁写明「同用户信任边界让步」；仅 System 模式启用默认凭据已是现状，维持。
 - **建议验证**：Verified（读码确认；无凭据行为测试，现有 ProxySettingsServiceTests 断言的是 PAC/凭据属性存在性）。
@@ -81,7 +82,7 @@
 ### AUD-SEC-005 — 发布产物无签名、SHA256SUMS 自行发布于同一 Release【新立案】
 
 - 类别：安全 / 供应链
-- 严重度：Low｜置信度：85（事实）；可利用性评估 60｜状态：open｜处置：Add Guard
+- 严重度：Low｜置信度：85（事实）；可利用性评估 60｜状态：**resolved**（`457ac50`）｜处置：Add Guard（已执行）
 - **证据**：`release.yml:358-372` 生成六产物 `SHA256SUMS` 并发布到同一 Release（:374-409）；全仓库无 Authenticode、无 `actions/attest-build-provenance`、无 macOS codesign/notarization（`installer/macos/Info.plist` 无 `com.apple.security.*`，`Build-Distribution.ps1` 无签名步骤）。
 - **影响**：终端用户真实性完全依赖 github.com TLS + Release 组织账号控制——社区项目可辩护的模型（且构建输入侧已有 attestation、SHA 钉住、NuGetAudit）；缺口仅在 Release 账号被攻陷时用户无从独立验证。
 - **建议**：为发布产物追加 `actions/attest-build-provenance`（GitHub 托管、无需证书）；文档写明 `SHA256SUMS` 仅完整性非来源。证书签名待项目获得证书再议。
@@ -99,7 +100,7 @@
 ### AUD-PERF-005 — revert `5b8b344` 恢复壁纸构造期同步解码：首帧前 UI 线程全分辨率解码 + 首次刷新二次冗余解码【新立案；文档半项已交付】
 
 - 类别：性能 / 启动与首帧
-- 严重度：Low｜置信度：80｜状态：open（文档半项已交付 2026-09-14，工作树）｜处置：~~Document（必须）~~ 已完成 + Investigate（二次解码）
+- 严重度：Low｜置信度：80｜状态：open（文档半项已交付 `690993f`）｜处置：~~Document（必须）~~ 已完成 + Investigate（二次解码）
 - **证据**：`ViewModels/BackgroundViewModel.cs:122` 构造函数内 `backgroundImageSource = bundledImageLoader()` 同步解码 `Assets/launcher-background.png`（2560×1388，提交消息载明），经 `App.axaml.cs:61` DI 解析链在 `MainWindow` 显示前于 UI 线程执行。`AGENTS.md:75` 原承诺「no blocking work before the first frame」——revert 刻意违反该承诺（提交消息记录产品理由：无它则窗口先开在主题底色上，golden 基线与 UX 回退）。第二处：首次刷新时跳过卫（:153-160）因 `lastBackgroundSourceKey`/`lastDecodeTarget` 未置而不能命中，:232 于线程池再次全量解码同一内置图（loader 不接收目标尺寸，第二次解码产图同尺寸）。
 - **已交付（文档半项）**：AGENTS.md:75 改写为「重活不占首帧路径 + 内置壁纸构造期同步解码是唯一刻意例外（使首帧显示壁纸而非主题底色），勿擅自改回异步」；CONTEXT.md 复核无同类声明，无需改动。
 - **影响（残留）**：未量化：首帧关键路径一次全 PNG 解码（已文档化为刻意）+ 启动后短时间内一次冗余解码（线程池）。
@@ -109,7 +110,7 @@
 ### AUD-PERF-006 — 并行安装校验的进度回调可瞬时回退【新立案；715fee5 引入】
 
 - 类别：性能 / UI 正确性
-- 严重度：Low｜置信度：85（竞态从代码确定；用户感知未测）｜状态：open｜处置：Fix
+- 严重度：Low｜置信度：85（竞态从代码确定；用户感知未测）｜状态：**resolved**（`4c0b0cd`）｜处置：Fix（已执行）
 - **证据**：`Features/GameOperations/DownloadExecutor.cs:327` `progress((int)Math.Round(Interlocked.Increment(ref completedCount) * 100d / manifestFiles.Count));` 在线程池并发执行——递增与回调非原子：线程 A 递增至 5 后被抢占，可在 B 回调 6 之后回调 5。消费侧 `Dispatcher.UIThread.Post` 线程安全但不保序。
 - **影响**：FileCheck 百分比可瞬时回退；阶段边界进度（`DownloadSession.cs:457-460`）保证终值正确，无卡死。属外观瑕疵。
 - **建议**：`ApplyProgressCore` 钳制单调，或在单次 `Interlocked` 操作内取值并回调。**建议验证**：Verified（单行修复，无需测量）。
@@ -117,7 +118,7 @@
 ### AUD-CI-001 — 非 Windows 测试不随变更执行【部分解决，Medium→Low 降档】
 
 - 类别：CI / 跨平台行为
-- 严重度：Low｜置信度：95｜状态：open（部分解决）｜处置：Add Guard
+- 严重度：Low｜置信度：95｜状态：**resolved**（`c37c44c`）｜处置：Add Guard（已执行）
 - **已解决部分（`5553793`）**：新增 `.github/workflows/linux-tests.yml`（ubuntu-24.04，`workflow_dispatch` + 每周一 cron）：单元套件获得真实非 Windows 执行点，平台自适应测试（如 `GamePathValidatorTests.cs:161`）不再无处执行；权限最小（`contents: read`）、动作 SHA 钉住、无新信任面（本审计安全通道专项评估）。locked 还原跨平台成立的推理已写入工作流注释。
 - **残留**：触发仅 dispatch + weekly（`linux-tests.yml:7-10`，注释自述「不阻塞 PR」）——平台分支回归不能阻塞引入它的变更，最坏晚一周才暴露且不阻塞合并；Headless/golden 按设计保持 Windows-only（合理）。该 job 是否曾绿跑，本审计无法验证（只读评审，无 GitHub Actions 运行历史）。另按 PROJECT_CONVENTIONS §9，`main` 规则集无 required_status_checks，Windows job 亦只是约定门。
 - **建议**：把现有 job 体（无 RID 还原、无渲染依赖）复用为 `build.yml` 中 push/PR 路径的 ubuntu 单元测试 step；可选为规则集加 required status checks。**建议验证**：Verified（job 体已存在，纯编排改动）。
@@ -125,7 +126,7 @@
 ### AUD-ARCH-007 — 代理指纹变化可在下载批次进行中 Dispose 其底层 handler【新立案】
 
 - 类别：架构 / 生命周期所有权
-- 严重度：Low｜置信度：70（机制结构性证实；未复现运行时行为）｜状态：open｜处置：Investigate
+- 严重度：Low｜置信度：70（机制结构性证实；未复现运行时行为）｜状态：**accepted-risk**（`78e0ef0`，权衡已书面化）｜处置：Accept Risk
 - **证据**：`Services/ProxySettingsService.cs:100-103` 指纹变化即 `stale.Handler.Dispose()`（下次同模式租约创建时触发）；租约以 `disposeHandler: false` 包裹 handler（`Services/HttpClientFactory.cs:92`），仅释放自己的 HttpClient；下载批单租约全程持有（`Services/DownloadTransport.cs:36-72`，租约 10 分钟 `GameDownloadService.cs:39`）。触发链：系统代理/VPN/PAC 变更 → 任一后续远程调用（更新检查、资源面板、横幅）建租约 → 处置进行中批次下的 handler。:87-89 注释只覆盖创建竞态，未覆盖活租约处置。
 - **影响**：批次传输快速失败进入验证重试轮，下轮新租约自愈——代价一轮下载而非永久故障、无完整性风险（.tmp + CRC64）。性能通道独立识别同一机制，交叉证实。
 - **建议**：先实验确认 disposed `SocketsHttpHandler` 对在途请求的确切语义；若有害，为缓存 handler 加租约引用计数或延迟至租约释放再处置；若可接受，书面记录「下载中途代理变更代价一轮失败重试」。**建议验证**：Needs External Verification。
@@ -142,8 +143,8 @@
 
 ### AUD-MAINT-001 — `SettingsAppearanceViewModel` 以 5 个静态字段保存主题方案缓存
 
-- 严重度：Low｜置信度：90｜状态：open（复核仍成立）｜处置：Refactor（随下次触碰）
-- **证据**：`Features/Settings/SettingsAppearanceViewModel.cs:614-618` 五个 `private static` 缓存字段原样（本审计 grep 复核）。VM 为 DI 单例，静态存储功能等价实例态；成本是隐藏耦合与测试污染面（测试侧已有先例为静态 `ResizeReloadDebounce` 付费）。
+- 严重度：Low｜置信度：90｜状态：**resolved**（`696abdd`）｜处置：Refactor（已执行）
+- **原证据**：`Features/Settings/SettingsAppearanceViewModel.cs:614-618` 五个 `private static` 缓存字段（本审计 grep 复核）。VM 为 DI 单例，静态存储功能等价实例态；成本是隐藏耦合与测试污染面（测试侧已有先例为静态 `ResizeReloadDebounce` 付费）。
 - **建议**：随下次触碰该文件移入实例字段。**建议验证**：Verified。
 
 ### AUD-PERF-004 — 每次壳层刷新销毁并重新解码全部横幅位图
@@ -166,13 +167,11 @@
 
 ## Informational Findings
 
-### AUD-ARCH-004 — `DesignGalleryViewModel` 为功能级体量却无功能归属
-
-- 严重度：Informational｜置信度：85｜状态：open（无变化，69 行，最后触碰 `5be9610`）｜处置：Architecture Decision（下次触碰时决定：归 `Features/Diagnostics` 或明文豁免）
+无（AUD-ARCH-004 已随 `6c80951` 归入 `Features/Diagnostics`；AUD-ARCH-006 已随 `690993f` 修正并结案，均转 Resolved Findings）。
 
 ## Advisory（不立案汇总）
 
-- **组合根一处运行时服务定位**：`Composition/ServiceConfiguration.cs:75` transport 工厂内 `() => sp.GetRequiredService<ISettingsEditor>()...` lambda——`SettingsEditor` 无构造依赖（`SettingsEditor.cs:31-37`），可在构造期一次捕获。上轮「无运行时服务定位」的结论据此略有过强；建议随下次触碰改为急切捕获。（置信度 72，advisory 档）
+- **组合根运行时服务定位**（已处理 `78e0ef0`）：transport 工厂内 `ISettingsEditor` 改为构造时一次解析并闭包引用，代理模式解析不再重复服务定位。
 - **DI 工厂内静态注册共享日志器**：`ServiceConfiguration.cs:42-48` 首次解析时 `LocalDiagnostics.RegisterSharedLogger(logger)`（`Volatile.Write`），构建多容器的测试会令首个容器的 logger 成为全局目标。生产路径 `App.axaml.cs:58` 急切解析一次，序确定；影响限于诊断误路由。建议测试 teardown 复位或显式一次性注册。（置信度 72，advisory 档）
 - **Wire() 委托缝**：四个可空委托由 Shell 在构造后赋值（`ShellLifecycle.cs:426-428,:448`），已文档化为意图（`SettingsViewModel.cs:49`「Coordination delegates — set by parent after construction」）、空条件消费、测试钉住——有意设计，仅记录依赖图对构造签名不可见这一属性。
 - **清单 `.tmp` 暂存名与 `.tmp` 结尾清单条目可互撞**（置信度 45，低于报告线）：敌意清单可声明 `x.tmp` 使其与 `x` 的暂存名重合；清单内容可控本就意味着内容可控，不构成独立完整性绕过。可加廉价断言（清单路径不得以暂存后缀结尾）。
@@ -188,7 +187,7 @@
 - **模态注册声明式收敛保持**：19 个 `ModalKind` ↔ 19 条注册（`ShellLifecycle.cs:461-548` ↔ `ModalKind.cs:5-25`），`TryHandleEscape` 2 行委托（:608-612）；`ResourcePanelOverlay` 拆分（`d479c9c`）未破坏裁定——新覆盖层自带 `IsResourcePanelInteractive` 门（`ResourcePanelOverlay.axaml:12-14`）且仍是主叠层FirstChild、位于对话框层之下。
 - **新抽取件干净**：`OperationSurfaceAnimator`（190 行）逐字搬移、ADR-016 注释保留、headless 动效套件未弱化；残留（两处未用 using、锚点退役回调跨文件）见 AUD-ARCH-002 解决记录。
 - **组合根纪律**：全 Singleton、纯构造注入、释放顺序显式注释且经读码核实（客户端注册于 `HttpClientFactory` 之后 :115-135）；`Program.ServiceProvider` 仅用于会话末释放。两处轻微偏离见 advisory。
-- 见 Low 发现（AUD-ARCH-005/007）与 Informational（AUD-ARCH-004/006）。
+- 剩余 Low 发现：AUD-ARCH-005（接受中，若再动 Shell 按声明表收敛）；ARCH-004/006/007 已分别随 `6c80951`/`690993f`/`78e0ef0` 结案。
 
 ## Security
 
@@ -213,7 +212,7 @@
 - `dotnet list package --vulnerable --include-transitive`（本审计实际执行）：三个项目均无漏洞包。
 - `Directory.Packages.props`、三份 `packages.lock.json`、`global.json` 在窗口内零变更（git diff 证实），锁定/钉住/attestation 结论沿用上轮无需重扫。
 - `NuGetAudit` + warnings-as-errors 在构建层兜底漏洞包（`Directory.Build.props:24-27`）。
-- 发布侧完整性缺口见 AUD-SEC-005（attestation 建议）。
+- 发布侧完整性缺口已于 `457ac50` 以 `attest-build-provenance`（OIDC 来源证明）补全；证书签名仍为可选后续。
 
 ## Testing
 
@@ -222,27 +221,27 @@
 - **关键路径保护**（复核保持）：下载续传/CRC/限速（`GameDownloadServiceTests` 49 用例 + `FileDownloadServiceTests` 13 + `Crc64ServiceTests` 7）、安装状态损坏矩阵、设置兼容（legacy 字段 + DeepClone 棘轮）、卸载边界、URL 校验、更新流三áváginas 分支 + 确认接线（AUD-TEST-002 解决）。
 - **确定性**：正面等待全部有截止/迭代上限（本通道全树检索无悬挂面）；程序集级串行 + 静态清单 + 用户数据隔离保持；`Assert.Skip*` 16 处，平台分支全部可见跳过（AUD-TEST-003 解决）；`ResourcePanelApiClient` 有 5 个专用用例（精确查询串、404→空配置、无客户端重试）。
 - **CI 门禁**：覆盖率棘轮在 build.yml 强制（85.85%/92.70% 基线 + 余量打印）；golden 失败工件闭环（actual/diff PNG `if: always()` 上传，路径与写盘一致核实）；契约测试全部在可执行路径上、无本机-only 测试。
-- **残留**：AUD-CI-001 残档（Linux job 不随变更跑）；advisory 见汇总节（等待助手变体、巨型测试文件）。
+- **残留**：无（AUD-CI-001 已随 `c37c44c` 在 build.yml 增加 push/PR 触发的 ubuntu 单测 job 后收口）；advisory 见汇总节（等待助手变体、巨型测试文件）。
 
 ## Performance
 
-**结论：上轮全部性能发现落地且质量好（修复非纸面）；新窗口 UI 工作零每帧 C# 开销；两处新 Low（PERF-005/006）。**
+**结论：上轮全部性能发现落地且质量好（修复非纸面）；新窗口 UI 工作零每帧 C# 开销；新 Low 两处中 PERF-006 已随 `4c0b0cd` 修复，PERF-005 文档半项已交付、二次解码调查开放。**
 
 - **已核实干净**：资源面板脏检查事件驱动（3 项，`ResourcePanelViewModel.cs:37-40,:387-403`，无按键路径工作）；`ResourcePanelOverlay` 静态编译绑定 + `ItemsControl` over 3 项；`OperationSurfaceAnimator` 由 Avalonia `Animation` 渲染时钟驱动（无 DispatcherTimer、无每帧回调，`UpdateLayout()` 每转换两次且有运动关闭短路）；轮播单 5s 定时器；代理指纹每租约读注册表为文档化意图（3 次 `Registry.GetValue` 对网络操作可忽略）；启动重活仍在窗口打开后。
-- **AUD-PERF-001 残留**与 **AUD-PERF-005/006** 见 Low 节。
+- **AUD-PERF-001 残留**与 **AUD-PERF-005 残留**见 Low 节；PERF-006 已修复（`4c0b0cd`）。
 
 ## Maintainability / Technical Debt
 
 - 热点与结构互证：`ShellLifecycle` 25、`ServiceConfiguration` 24、`MainWindow.axaml.cs` 22 commits/180d——接线处变更多的正常形态；动效引擎已出窗（`5777f2f`），`ShellLifecycle` 的 Wire/Unwire 密度立案为 AUD-ARCH-005。
-- 文档漂移三处已修复（2026-09-14，工作树）：AUD-ARCH-006（ZIndex 表述，结案）、AGENTS.md:75 首帧承诺（AUD-PERF-005 文档半项）、`RemoteHttpUrlValidator` DNS 缓存反向框定注释（AUD-SEC-001 证据修正）；advisory 一处（组合根服务定位表述）随下次触碰。
+- 文档漂移三处已修复入库（2026-09-14：`690993f`/`d1693d5`）：AUD-ARCH-006（ZIndex 表述，结案）、AGENTS.md:75 首帧承诺（AUD-PERF-005 文档半项）、`RemoteHttpUrlValidator` DNS 缓存反向框定注释（AUD-SEC-001 证据修正）；advisory 的组合根服务定位已随 `78e0ef0` 一次解析化。AUD-MAINT-001 静态缓存与 AUD-ARCH-004 VM 归属亦已分别随 `696abdd`/`6c80951` 落地。
 - `docs/architecture-review-2026-09-13.html` 已入库（`afd6dbd`）；官方协议对比文档按用户裁定 accepted-risk 结案（AUD-MAINT-002），行为不变量由 `OfficialHashServiceTests`/`AuthorizationHeaderFactoryTests`/`LauncherConstantsTests` 钉住。
 
 ## Decisions Required
 
-1. **AUD-PERF-001 残留**：更新路径是否在「自愈契约」前提下引入见证摊销（并行化已交付；需基准实测）。
-2. **AUD-SEC-005**：是否追加 `attest-build-provenance`（低成本、无证书依赖）；证书签名待有证书再议。
-3. **AUD-ARCH-007**：disposed handler 对在途请求语义的实验结果决定「加引用计数」还是「书面接受一轮失败重试」。
-4. **AUD-PERF-005 残留**：首次刷新二次解码是否消除（文档半项已交付；评估构造位图复用/跳过态种子化，需先确认跳过卫可合法匹配）。
+修复轮后仅剩两项决策：
+
+1. **AUD-PERF-001 残留**：更新路径是否在「自愈契约」前提下引入见证摊销（并行化已交付；需基准实测后再决策，未测量不得轻动）。
+2. **AUD-PERF-005 残留**：首次刷新二次解码是否消除（需先确认跳过卫的解码目标可合法匹配；与同步/异步之争互不绑定）。
 
 ## Resolved Findings（本窗口，8 项）
 
@@ -255,13 +254,18 @@
 - **AUD-PERF-003**（`878260a`）：下载缓冲 `ArrayPool.Rent` + finally 归还（return 在 try/finally 外，归还有保证）；内容非敏感无需清零。
 - **AUD-MAINT-002**（结案为 accepted-risk）：按用户 2026-09-12 裁定不入库；工作树文件已移除；行为不变量由既有测试守卫兜底。
 
-报告定稿后随即修复（2026-09-14，工作树，未提交）：
+同日修复轮（2026-09-14，按优先级逐项提交，全部已入库）：
 
-- **AUD-ARCH-006**（整项解决）：`AGENTS.md:77` 的 ZIndex 表述按原建议第一分支改写——toast 为 `LauncherConstants.ZIndexToast` 常量，settings/dialog/wizard 三层由 `Views/MainWindow.Styles.axaml` 样式 setter 钉住、`UiStyleContractTests` 守护（引用经核实：`UiStyleContractTests.Dialogs.cs:510-516`、`UiStyleContractTests.ToastLog.cs:139`）。未采纳「三字面量移入常量类」分支：样式即实际钉住机制且已有契约测试护栏。
-- **AUD-PERF-005 文档半项**：`AGENTS.md:75` 改写为「重活不占首帧路径 + 内置壁纸构造期同步解码是唯一刻意例外（首帧显示壁纸而非主题底色），勿擅自改回异步」；CONTEXT.md 复核无同类声明。该项因二次解码调查仍保持 open。
-- **AUD-SEC-001 证据修正**：`RemoteHttpUrlValidator.cs` 的 DNS 缓存注释反向框定已更正（现明确缓存是省 IO 手段而非重绑定防御、TTL 是窗口上限而非关闭，引 AUD-SEC-001）。风险处置不变。
+- **AUD-SEC-003**（`1dcc9df`）：`RemoteHttpRequestService.SendAsync` 对非初始授权方（scheme+host+port）的跳剥离 `Authorization`，与 .NET 内建 HttpClient 的跨主机剥离约定对齐；配套跨主机剥离/同主机保留两个守卫测试（`AuthTrackingRedirectHandler`）。
+- **AUD-CI-001**（`c37c44c`）：`build.yml` 新增 `linux-unit-tests` job（ubuntu-24.04，push/PR 触发并阻塞），复用 weekly 作业体；平台分支回归现在阻塞 PR。
+- **AUD-PERF-006**（`4c0b0cd`）：`ApplyProgressCore` 按阶段键控钳制进度单调；与重试轮经 `VerificationRetry` 折返 `FileCheck` 显式归零（`DownloadSession.cs:439`）的流程兼容；配套乱序回退/阶段重启守卫测试。
+- **AUD-SEC-005**（`457ac50`）：release job 追加 `actions/attest-build-provenance` v4.2.2（SHA 钉住）为六个分发包与 SHA256SUMS 签发 OIDC 构建来源证明；补 `id-token`/`attestations` 权限。
+- **AUD-SEC-004 + AUD-ARCH-007**（`78e0ef0`，均结案 accepted-risk）：`ProxySettingsService` 注释书面化同用户凭据让步与活租约处置权衡（一轮失败重试自愈、租约引用计数判为更高风险）；顺带将组合根 `ISettingsEditor` 改为一次解析（advisory 项闭合）。
+- **AUD-MAINT-001**（`696abdd`）：主题方案缓存五字段、`ApplyScheme`、`ActualThemeVariantChanged` 订阅全部转实例；`Dispose` 拆卸订阅（headless 共享 Application 不再跨测试累积）；两处 headless 测试改经 DI 构造的 VM 实例调用。
+- **AUD-ARCH-004**（`6c80951`）：`DesignGalleryViewModel` 移入 `Features/Diagnostics`（其天然宿主），命名空间随目录。
+- **AUD-ARCH-006**（`690993f`）与 **AUD-SEC-001 注释更正**（`d1693d5`）：AGENTS.md ZIndex 表述如实化 + 首帧承诺记录壁纸例外 + DNS 缓存反向框定更正。
 
-修复验证：Debug 构建零警告零错误（XML 文档注释参与编译，注释改动经构建确认无害）；`git diff --check` 干净，AGENTS.md 仅 +2/−2 行、无行尾破坏。
+修复轮验证：每阶段跑聚焦测试；收口时全量套件（单元 1710 通过/0 失败/2 可见跳过 + Headless 177 通过/0 失败）与 Debug 构建零警告；`LineEndingPolicyContractTests` 绿。CI 编排类改动（build.yml/release.yml）经 YAML 解析校验，未实际触发 workflow 运行。
 
 此前已解决（维持）：AUD-ARCH-001（`77547fa` ModalRegistrar）、AUD-TEST-001（`88ebd46..fae538a` RemoteHttpTransport 接缝）。
 
@@ -274,7 +278,7 @@
 3. 校验跳过计数 Verbose 日志（AUD-PERF-001 建议的量化钩子，`DownloadExecutor.cs:341-344`）。
 4. `ProxySettingsServiceTests` 16 用例（WinINet 归一化理论用例）与 `MainWindowHeadlessTests.RemoteContent` 5 用例随功能落地。
 
-剩余建议守卫：AUD-SEC-003 的跨主机重定向头断言（修复时一并）；AUD-CI-001 残档的 build.yml ubuntu step（本身即守卫）；AUD-SEC-005 的 build-provenance attestation。
+剩余建议守卫：无新增——SEC-003 头断言、CI-001 ubuntu job、SEC-005 attestation 均已随修复轮落地；MAINT-001/ARCH-004 的守卫即其重构本身与既有测试。
 
 ## Verified Strengths
 
@@ -286,11 +290,10 @@
 
 ## Recommended Priorities
 
-1.（低成本高杠杆）AUD-SEC-003：发送例程剥离跨主机 Authorization + 单测。
-2.（低成本）AUD-CI-001 残档：build.yml 复用 ubuntu 单测 step；AUD-PERF-006 进度钳制（单行）。
-3.（调查后定）AUD-ARCH-007： disposed handler 语义实验 → 引用计数或书面接受。
-4.（决策后执行）AUD-PERF-001 见证摊销、AUD-SEC-005 attestation、AUD-PERF-005 二次解码消除。
-5.（随下次触碰）AUD-ARCH-005（Shell 订阅表）、AUD-MAINT-001（静态缓存入实例）、AUD-PERF-004（横幅位图备忘）、advisory 的组合根 `ISettingsEditor` 急切捕获。
+1.（决策后执行）AUD-PERF-001 见证摊销：先以新增的 Verbose 跳过计数日志基准实测，再决定是否引入。
+2.（专属设计轮）AUD-PERF-004 横幅位图备忘：Plausible 级补救，需先设计轮播位图的生命周期（复用/失效/陈旧释放）再动手。
+3.（随下次触碰）AUD-PERF-005 二次解码调查；AUD-ARCH-005 若再动 Shell 按声明表收敛 Wire/Unwire。
+4.（维持接受）AUD-SEC-001/002 与已书面化的 SEC-004/ARCH-007：除非威胁模型变化。
 
 ## Audit Method and Limitations
 

@@ -1,30 +1,37 @@
 {
   "schema_version": 1,
   "last_full_audit_commit": "715fee5",
-  "last_audit_commit": "715fee5",
+  "last_audit_commit": "6c80951",
   "last_audit_mode": "full",
   "last_audit_date": "2026-09-14",
   "repository_map_version": 15,
-  "note": "2026-09-14 full 六域重审（基线 8449d37 以来 16 个提交）：上一轮 5 项 Medium/finding 级问题中 4 项随 878260a/715fee5/b9dc68e/5553793/5777f2f 解决（ARCH-002/003、TEST-002/003/004、PERF-002/003、MAINT-002 按用户裁定 accepted-risk），PERF-001 与 CI-001 部分解决并降档 Low。新立案 7 项（SEC-003/004/005、ARCH-005/006/007、PERF-005）+ 1 项（PERF-006），其中 SEC-003 修正上轮「签名 Authorization 头绝不随重定向转发」的错误论断。报告定稿后随即修复（同日，工作树未提交）：AUD-ARCH-006 解决（AGENTS.md ZIndex 表述改写）；AUD-PERF-005 文档半项交付（AGENTS.md 首帧承诺记录刻意例外）；AUD-SEC-001 的反向框定注释更正（RemoteHttpUrlValidator.cs）。工具证据：dotnet list package --vulnerable 无漏洞包；单元套件本地实测 1704 通过 / 0 失败 / 2 可见跳过；修复后 Debug 构建零警告。",
+  "note": "2026-09-14 full 六域重审（基线 8449d37 以来 16 个提交）+ 同日修复轮。重审：上轮 5 项 Medium 中 4 项随 878260a/715fee5/b9dc68e/5553793/5777f2f 解决，PERF-001 与 CI-001 部分解决并降档；新立案 8 项，其中 SEC-003 修正上轮「签名 Authorization 头绝不随重定向转发」的错误论断。修复轮（按优先级、逐项提交）：SEC-003 @ 1dcc9df、CI-001 @ c37c44c、PERF-006 @ 4c0b0cd、SEC-005 @ 457ac50、SEC-004/ARCH-007 书面化接受 + ISettingsEditor 急切捕获 @ 78e0ef0、MAINT-001 @ 696abdd、ARCH-004 @ 6c80951、ARCH-006 文档修正 @ 690993f、SEC-001 注释更正 @ d1693d5。开放 6 项（全 Low）：PERF-001（见证摊销待基准决策）、PERF-004（Plausible 补救，待专属设计轮）、PERF-005 残留（二次解码调查）、SEC-001/SEC-002（接受风险）、ARCH-005（接受，若再动 Shell 按表驱动收敛）。工具证据：漏洞扫描零包；修复轮后单元 1710 + headless 177 全绿。",
   "open_counts": {
     "critical": 0,
     "high": 0,
     "medium": 0,
-    "low": 13,
-    "informational": 1
+    "low": 6,
+    "informational": 0
   },
   "resolved_since_last_audit": [
     "AUD-ARCH-002",
     "AUD-ARCH-003",
+    "AUD-ARCH-004",
     "AUD-ARCH-006",
+    "AUD-CI-001",
+    "AUD-MAINT-001",
+    "AUD-PERF-006",
+    "AUD-SEC-003",
+    "AUD-SEC-005",
     "AUD-TEST-002",
     "AUD-TEST-003",
     "AUD-TEST-004",
     "AUD-PERF-002",
-    "AUD-PERF-003",
-    "AUD-MAINT-002"
+    "AUD-PERF-003"
   ],
-  "evidence_corrections": [
-    "AUD-SEC-003（新立案）：上轮审计对重定向 Authorization 头的影响声明有误——头经 ConfigureRequest 钩子逐跳重发，并非「绝不跟随重定向转发」"
+  "accepted_risk_since_last_audit": [
+    "AUD-MAINT-002",
+    "AUD-SEC-004",
+    "AUD-ARCH-007"
   ]
 }
