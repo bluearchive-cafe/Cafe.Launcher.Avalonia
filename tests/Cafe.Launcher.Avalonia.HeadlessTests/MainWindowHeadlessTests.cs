@@ -49,7 +49,7 @@ public sealed partial class MainWindowHeadlessTests
             viewModel.Settings.Editor.GetSnapshot());
         // Apply the default M3 dynamic scheme so navigation selection visual
         // matches the real app's initialization behavior.
-        SettingsAppearanceViewModel.ApplyScheme(
+        viewModel.Settings.Appearance.ApplyScheme(
             Color.Parse("#FF2E7DF6"));
         var window = new MainWindow { DataContext = viewModel };
         window.ConfigureViewModel(viewModel);

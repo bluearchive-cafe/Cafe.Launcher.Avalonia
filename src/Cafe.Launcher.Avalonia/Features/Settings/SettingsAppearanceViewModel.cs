@@ -611,11 +611,13 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         return Color.Parse(LauncherConstants.DefaultThemeColor);
     }
 
-    private static bool lastSchemeApplied;
-    private static string lastThemeMode = ThemeModes.System;
-    private static Color lastSchemeSeed = Color.Parse(LauncherConstants.DefaultThemeColor);
-    private static string lastSchemeVariant = ThemeColorVariants.TonalSpot;
-    private static string lastSchemeStrategy = NeutralColorStrategies.BrandBlue;
+    // 方案缓存居实例而非静态（AUD-MAINT-001）：VM 是 DI 单例，实例态即全局态，
+    // 但对对象图与测试可见；静态版本曾让缓存跨测试实例存续且不可见。
+    private bool lastSchemeApplied;
+    private string lastThemeMode = ThemeModes.System;
+    private Color lastSchemeSeed = Color.Parse(LauncherConstants.DefaultThemeColor);
+    private string lastSchemeVariant = ThemeColorVariants.TonalSpot;
+    private string lastSchemeStrategy = NeutralColorStrategies.BrandBlue;
 
     /// <summary>
     /// Applies the M3 dynamic scheme derived from <paramref name="seed"/> onto the
@@ -623,7 +625,7 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
     /// <c>ApplyAccentBrushes</c>; the previous accent-family override remains a
     /// subset of <see cref="Services.MaterialSchemeGenerator.BuildRoleBrushes"/>.
     /// </summary>
-    internal static void ApplyScheme(
+    internal void ApplyScheme(
         Color seed,
         string variant = ThemeColorVariants.TonalSpot,
         bool isDark = false,
@@ -650,9 +652,9 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         lastSchemeStrategy = neutralStrategy;
     }
 
-    private static Application? themeApplication;
+    private Application? themeApplication;
 
-    private static void EnsureThemeSubscription(Application application)
+    private void EnsureThemeSubscription(Application application)
     {
         if (ReferenceEquals(themeApplication, application))
         {
@@ -668,7 +670,7 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         themeApplication.ActualThemeVariantChanged += OnActualThemeVariantChanged;
     }
 
-    private static void OnActualThemeVariantChanged(object? sender, EventArgs e)
+    private void OnActualThemeVariantChanged(object? sender, EventArgs e)
     {
         if (lastThemeMode != ThemeModes.System || !lastSchemeApplied)
         {
@@ -757,6 +759,11 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         if (platformSettings is not null)
         {
             platformSettings.ColorValuesChanged -= OnPlatformColorValuesChanged;
+        }
+        if (themeApplication is not null)
+        {
+            themeApplication.ActualThemeVariantChanged -= OnActualThemeVariantChanged;
+            themeApplication = null;
         }
     }
 }
