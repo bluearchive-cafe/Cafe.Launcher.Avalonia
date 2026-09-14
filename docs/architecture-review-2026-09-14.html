@@ -37,12 +37,13 @@
   <h1 class="font-serif text-3xl">Cafe.Launcher.Avalonia — 架构深化评审（第二轮）</h1>
   <p class="text-sm text-slate-500">2026-09-14 · 评审基线 main@fe6efd4 · 14 个候选 + 6 项本轮排除 · 词汇表：模块 / 接口 / 深度 / 接缝 / 适配器 / 杠杆 / 局部性</p>
   <div class="rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 space-y-1">
-    <p class="text-sm font-semibold text-indigo-900">状态：已落地 2 / 14（候选 01 · 候选 02 · 2026-09-14）——其余 12 项待裁决</p>
+    <p class="text-sm font-semibold text-indigo-900">状态：已落地 3 / 14（候选 01 · 候选 02 · 候选 04 · 2026-09-14）——其余 11 项待裁决</p>
     <div class="w-full h-2 rounded-full bg-indigo-100 overflow-hidden">
-      <div class="h-full rounded-full bg-indigo-600" style="width:14%"></div>
+      <div class="h-full rounded-full bg-indigo-600" style="width:21%"></div>
     </div>
     <p class="text-xs text-indigo-900/80">✓ <a href="#c01" class="underline">候选 01</a> 落地，门禁全绿：单元 1719 / Headless 178（0 失败，3 处可见平台跳过）· 覆盖率行 86.87% / 分支 93.30%（棘轮 +1.02pp / +0.60pp）· Debug 与 Release 构建 0 警告 0 错误。落地形态与卡片原议有一处偏离：机制由"反射驱动"改为<strong>声明表 ＋ 两相反射守卫</strong>，以保持生产代码不对模型做反射枚举（仓库既有取向，见卡片内的落地说明）。同日独立复核后单元测试为 1720（见卡片内的复核跟进）。</p>
     <p class="text-xs text-indigo-900/80">✓ <a href="#c02" class="underline">候选 02</a> 落地，门禁全绿：单元 1730 / Headless 178（0 失败，3 处可见平台跳过）· 覆盖率行 86.87–86.92% / 分支 93.26%（同一棵树重复测量，棘轮 +1.02pp / +0.56pp）· Debug 与 Release 构建 0 警告 0 错误。范围按复核结果大于卡片原议：写入方由 4 条路线更正为 6 个逻辑写入方 ＋ 1 处展示刷新，并并入候选 01 移交的归一化不对称；接口归属裁定为<strong>独立写入方</strong>而非把持久化并进编辑器（理由见 <a href="design/adr/ADR-024-已保存设置唯一写入方.md" class="underline">ADR-024</a>），落地形态与文档见卡片内的落地说明。</p>
+    <p class="text-xs text-indigo-900/80">✓ <a href="#c04" class="underline">候选 04</a> 落地，门禁全绿：单元 1733 / Headless 178（0 失败，3 处可见平台跳过）· 覆盖率行 86.92% / 分支 93.26%（棘轮 +1.07pp / +0.56pp）· Debug 与 Release 构建 0 警告 0 错误。范围按落地裁定为<strong>只补 .axaml 侧的存在性契约</strong>：扫描域取应用工程下全部 .axaml（递归、无手抄文件清单），生产代码零改动。卡片两条收益表述在落地时更正——「占位符契约合一」在 XAML 侧无对象可合（0/264 键带占位符），且 <span class="font-mono">.cs</span> 面的「禁止裸字面量」形态无法照搬到绑定路径，故这面只能做存在性检查——详见卡片内的落地说明。</p>
     <p class="text-xs text-indigo-900/80">上一轮（<a href="architecture-review-2026-09-13.html" class="underline">2026-09-13</a>）11 个候选已全部裁决：9 项落地，2 项否决（候选 03 → <a href="design/adr/ADR-021-保留操作后端接缝.md" class="underline">ADR-021</a>、候选 07 → <a href="design/adr/ADR-022-下载会话接缝不升格.md" class="underline">ADR-022</a>），另产生 ADR-023 修订 ADR-015。本轮不再重复其上任何主张；本轮候选 07 与审计既有 <span class="font-mono">AUD-ARCH-005</span> 同源，属"审计已给出方向、尚无归属"的结构项。</p>
   </div>
   <div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-slate-500">
@@ -266,8 +267,17 @@ flowchart TB
   <div class="flex items-start justify-between gap-4">
     <h2 class="font-serif text-xl">04 · 把 545 处 XAML 键纳入既有 .resx 契约</h2>
     <div class="flex gap-2 shrink-0">
-      <span class="badge badge-strong">Strong</span><span class="badge badge-cat">in-process</span>
+      <span class="badge badge-done">✓ 已落地</span><span class="badge badge-strong">Strong</span><span class="badge badge-cat">in-process</span>
     </div>
+  </div>
+  <div class="rounded-lg bg-indigo-50 border border-indigo-200 px-4 py-2 text-xs text-indigo-900 space-y-1">
+    <p><strong>落地（2026-09-14，未提交）</strong>：另一半键契约加进既有的 <span class="font-mono">ResxResourceContractTests</span>（<span class="font-mono">.cs</span> 面的裸字面量禁令与常量↔.resx 钉板同处一个类，两面因此共用一份词表）。三条断言，正相／契约／反空转各一：<span class="font-mono">XamlResourceKeyScan_ReadsBothLiteralForms_AndIgnoresComments</span> 用内联夹具断言扫描器必须读到 <span class="font-mono">I18n[close]</span> 与 <span class="font-mono">I18n['close']</span> 两种字面量形态、且不被注释与无关索引器迷惑——它是唯一能证明提取本身有效的断言，失效则下面两条退化为恒真；<span class="font-mono">XamlResourceBindings_UseOnlyKeysThatExistInNeutralResources</span> 逐处断言 XAML 写的键存在于中立 .resx（其余三语言由既有 <span class="font-mono">Resx_AllFourFiles_HaveIdenticalKeySets</span> 钉住，故只比中立文件即覆盖四语），失败信息给出文件:行号 → 键；<span class="font-mono">XamlKeyScan_StillCoversTheKeyBearingFiles</span> 是反空转基线。</p>
+    <p><strong>扫描域＝应用工程下全部 .axaml</strong>（<span class="font-mono">Directory.GetFiles(root, "*.axaml", AllDirectories)</span>，排除 <span class="font-mono">bin</span>/<span class="font-mono">obj</span>），不维护手抄文件清单——AUD-TEST-006 已证明这类清单漂移过一次（拆分出主叠层时漏掉共享的 <span class="font-mono">ViewFiles</span>）。今天命中 16 个含键文件；其余 13 个 .axaml 不含键但在域内，无需留名。</p>
+    <p><strong>落地实测</strong>：545 处引用 / 去重 264 键 / 16 文件；545 处<strong>全是纯标识符</strong>（无 <span class="font-mono">I18n[{Binding …}]</span> 这类动态形态）、单引号形式 0 处；与中立 555 键对差<strong>缺失 0</strong> ⇒ 守卫首跑即绿，无需任何豁免或欠账清理。另实测 264 个键<strong>无一</strong>带复合格式占位符。</p>
+    <p><strong>卡片两处更正（如实记录）</strong>：(1)「占位符契约与键契约合一」在 XAML 侧没有对象可合——带 <span class="font-mono">{0}</span> 的键（如 <span class="font-mono">networkWithMessage</span>）全部只在 <span class="font-mono">.cs</span> 里消费，XAML 侧 0/264，故本条收益不成立；(2) 守卫形状不能照搬 <span class="font-mono">.cs</span> 面——那面靠「拒绝裸字面量、强制引用 <span class="font-mono">LocalizationKeys</span> 常量」实现，而绑定路径本身就是字符串、引用不到 C# 常量，所以这面只能做存在性检查。两点决定了落地形态，故记在卡片内而非另开条目。</p>
+    <p><strong>守卫验证（五处变异注入，逐处复原）</strong>：<span class="font-mono">MainWindow.axaml</span> 把 <span class="font-mono">I18n[close]</span> 改成 <span class="font-mono">clsoe</span> ⇒ 红，报 <span class="font-mono">Views/MainWindow.axaml:53 → clsoe</span>；注入一颗<strong>被注释掉</strong>的坏键 ⇒ 绿（注释先剥掉，不制造假红）；把提取正则改成永不命中 ⇒ 反空转红（<span class="font-mono">扫描到 0 个含键引用的 .axaml，低于落地基线 16</span>）；把扫描域从递归降为 <span class="font-mono">TopDirectoryOnly</span> ⇒ 同上红；从中立 .resx 删掉 <span class="font-mono">close</span> 一条 ⇒ 红并报出 9 个文件 27 处 <span class="font-mono">→ close</span>。</p>
+    <p><strong>未改动</strong>：生产代码零改动（无新接口、无新模块、无 DI 变化）；<span class="font-mono">scripts/Test-LocalizationContract.ps1</span> 里那条 XAML 豁免注释原样保留——它说的是裸字面量扫描（本就只扫 <span class="font-mono">.cs</span>），仍然准确；<span class="font-mono">UiStyleContractTests</span> 的 <span class="font-mono">StartsWith("debug")</span> 检查保留，与新契约互补（一个管前缀纪律，一个管存在性）。</p>
+    <p><strong>测试装配</strong>：单元 1730 → 1733（+3，既有文件内追加，无新增测试文件）。</p>
   </div>
   <div class="font-mono text-xs text-slate-600 leading-5">
     Views/*.axaml（16 个文件）· Services/LocalizationService.cs:214 · tests/Cafe.Launcher.Avalonia.Tests/ResxResourceContractTests.cs:196-219 · tests/Cafe.Launcher.Avalonia.Tests/UiStyleContractTests.Localization.cs:11-30 · scripts/Test-LocalizationContract.ps1:73-93
@@ -313,6 +323,7 @@ flowchart TB
   <div class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-700 space-y-1">
     <p><strong>复核证据</strong>：实测 <span class="font-mono">Views/</span> 下 <span class="font-mono">I18n[…]</span> 引用 <strong>545 处</strong>、去重 <strong>264 个键</strong>、分布 <strong>16 个 .axaml</strong>、单引号形式 0 处；<strong>今日 264 个键全部存在（无活漂移）</strong>，本项是补信任缺口而非修当前缺陷。<span class="font-mono">ResxResourceContractTests.cs:201</span> <span class="font-mono">Directory.GetFiles(root, "*.cs", …)</span>；<span class="font-mono">Test-LocalizationContract.ps1</span> 明文声明 XAML 绑定为"设计内用法"故豁免；<span class="font-mono">UiStyleContractTests.Localization.cs:24-29</span> 只断言 <span class="font-mono">StartsWith("debug")</span>，<span class="font-mono">debuggPanel</span> 这类拼写可以通过；降级串落点在 <span class="font-mono">LocalizationService.cs:214</span>。</p>
     <p class="text-slate-500">范围说明：只补 XAML 侧的信任缺口，不主张撤销脚本里那条显式豁免声明（它是脚本注释，不是 ADR）。</p>
+    <p class="text-slate-500">落地前独立重测（2026-09-14）：卡片全部数字逐项吻合——545 处 / 264 键 / 16 文件、扫描域写死 <span class="font-mono">*.cs</span>（<span class="font-mono">ResxResourceContractTests.cs:201</span>）、<span class="font-mono">StartsWith("debug")</span>、脚本豁免注释、<span class="font-mono">LocalizationService.cs:214</span> 降级串，另补测 545 处全为纯标识符与 264 键零占位符。仅上面两条收益表述在落地时更正。</p>
   </div>
 </article>
 
@@ -931,7 +942,7 @@ flowchart TB
     </div>
     <p class="text-sm text-slate-700">先做这一项，理由是它同时满足三个条件：<strong>故障用户可见且静默</strong>（漏改一处比较，保存按钮就永远不亮——<span class="font-mono">CanSaveSettings =&gt; IsSettingsDirty &amp;&amp; !IsSaving</span>），<strong>修法最小</strong>（把属性枚举收进 <span class="font-mono">DeepClone</span> 与 JSON 契约已经所在的模型，再补一个形状现成的反射守卫），且<strong>不触碰任何 ADR</strong>。候选 02/03 与之同域，适合随后作为一轮"设置所有权"合并推进；候选 04 是与之独立的最大一块无守卫面。</p>
     <p class="text-xs text-slate-500">推进前请先选择要探索的候选——本报告按技能流程只呈现机会与方向，未给出接口设计。</p>
-    <p class="text-xs text-slate-500">后续（2026-09-14）：候选 01、候选 02 均已按裁定落地并提交，接口归属裁定为独立写入方（<a href="design/adr/ADR-024-已保存设置唯一写入方.md" class="underline">ADR-024</a>）；候选 03 未随本轮推进，仍待裁决。</p>
+    <p class="text-xs text-slate-500">后续（2026-09-14）：候选 01、候选 02 均已按裁定落地并提交，接口归属裁定为独立写入方（<a href="design/adr/ADR-024-已保存设置唯一写入方.md" class="underline">ADR-024</a>）；候选 04 随后按"收益最高"裁定落地（未提交），是本报告里唯一一次不按序号推进的选择——候选 03 在"故障用户可见且静默／修法最小／不触碰 ADR"三条上与 04 同测时只满足第三条，故顺延，与候选 05–14 同样仍待裁决。</p>
   </div>
 </section>
 

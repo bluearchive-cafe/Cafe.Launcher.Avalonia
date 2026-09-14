@@ -93,7 +93,7 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 ### 4.1 添加新字符串
 
 1. 在 4 个资源文件（`Resources/LauncherStrings{,.zh-Hans,.zh-Hant,.ja}.resx`）中按字母序添加 key-value。
-2. XAML 中绑定：`{Binding Shell.I18n[newKey]}`。
+2. XAML 中绑定：`{Binding Shell.I18n[newKey]}`。绑定路径是字符串、引用不到 C# 常量，故这一面由 `ResxResourceContractTests.XamlResourceBindings_UseOnlyKeysThatExistInNeutralResources` 做存在性守卫——拼错的键以前构建与测试全绿，只在运行期降级为 `"Localization unavailable."`；同一测试类的 `XamlKeyScan_StillCoversTheKeyBearingFiles` 是它的反空转基线，扫描域为应用工程下全部 `.axaml`（无手抄文件清单）。
 3. C# 中一律引用 `Constants/LocalizationKeys` 的编译时常量，**禁止**向 `T()`/`F()`/`I18n[...]` 传裸 key 字符串字面量（`ResxResourceContractTests` 守护）。
 4. 所有 4 种语言都提供翻译（对专有名词可回退到英文文本，但不得留空）；术语与译名以 `UBIQUITOUS_LANGUAGE.md` 的规范译法为准。
 5. 新增或重命名 key 后运行 `scripts/Generate-LauncherStringsDesigner.ps1` 与 `scripts/Generate-LocalizationKeys.ps1`，再运行 `scripts/Test-LocalizationContract.ps1`。
