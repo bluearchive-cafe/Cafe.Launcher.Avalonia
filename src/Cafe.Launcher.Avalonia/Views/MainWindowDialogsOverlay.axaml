@@ -10,7 +10,8 @@
              x:Name="DialogsRoot"
              x:DataType="vm:MainWindowViewModel">
     <Grid>
-        <!-- Chinese localization settings：资源面板覆盖层（已拆分至 ResourcePanelOverlay.axaml） -->
+        <!-- 资源面板（主叠层）宿主于此容器并占据 FirstChild：其层序位于对话框
+             层之下依赖「首个子元素先渲染」这一顺序，勿移动或插入子项到其前。 -->
         <views:ResourcePanelOverlay/>
 
         <!-- Notice popup dialog -->
