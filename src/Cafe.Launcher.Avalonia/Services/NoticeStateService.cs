@@ -11,28 +11,16 @@ namespace Cafe.Launcher.Avalonia.Services;
 
 public sealed class NoticeStateService
 {
-    private readonly string? statePath;
+    private readonly LauncherDataRoot dataRoot;
     private readonly SemaphoreSlim writeLock = new(1, 1);
 
-    public NoticeStateService(string? statePath = null)
+    public NoticeStateService(LauncherDataRoot dataRoot)
     {
-        this.statePath = statePath;
+        ArgumentNullException.ThrowIfNull(dataRoot);
+        this.dataRoot = dataRoot;
     }
 
-    private string StatePath
-    {
-        get
-        {
-            if (!string.IsNullOrWhiteSpace(statePath))
-            {
-                return statePath;
-            }
-
-            return Path.Combine(
-                LauncherUserDataDirectory.Root,
-                GamePaths.NoticeStateFileName);
-        }
-    }
+    private string StatePath => dataRoot.NoticeStatePath;
 
     public async Task<HashSet<string>> ReadShownNoticesAsync(CancellationToken cancellationToken = default)
     {

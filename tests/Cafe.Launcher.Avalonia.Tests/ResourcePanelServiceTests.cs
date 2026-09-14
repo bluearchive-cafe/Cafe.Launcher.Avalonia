@@ -219,10 +219,11 @@ public sealed class ResourcePanelServiceTests : IDisposable
         // 目标目录被同名文件占用 → AtomicJsonFileStore 的 CreateDirectory 抛出。
         var blocker = Path.Combine(tempDir, "blocker");
         await File.WriteAllTextAsync(blocker, "not a directory");
-        var settingsService = new LauncherSettingsService(Path.Combine(blocker, "settings.json"));
+        var savedSettings = new SavedSettingsTestRig(Path.Combine(blocker, "settings.json"));
         var uidService = new ResourcePanelUidService(
             new BestHttpCookieLibraryService(),
-            settingsService,
+            savedSettings.SettingsService,
+            savedSettings.Writer,
             Path.Combine(tempDir, "missing"));
         var service = new ResourcePanelService(
             uidService,
@@ -254,14 +255,14 @@ public sealed class ResourcePanelServiceTests : IDisposable
             await WriteCookieLibraryAsync(cookiePath, cookieUid);
         }
 
-        var settingsService = new LauncherSettingsService(
+        var savedSettings = new SavedSettingsTestRig(
             Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
         if (settings is not null)
         {
-            await settingsService.SaveAsync(settings);
+            await savedSettings.SeedAsync(settings);
         }
 
-        var uidService = new ResourcePanelUidService(new BestHttpCookieLibraryService(), settingsService, cookiePath);
+        var uidService = new ResourcePanelUidService(new BestHttpCookieLibraryService(), savedSettings.SettingsService, savedSettings.Writer, cookiePath);
         return new ResourcePanelService(uidService, new ResourcePanelApiClient(transport), new LocalDiagnostics());
     }
 

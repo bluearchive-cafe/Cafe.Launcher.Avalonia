@@ -93,7 +93,7 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 ### 4.1 添加新字符串
 
 1. 在 4 个资源文件（`Resources/LauncherStrings{,.zh-Hans,.zh-Hant,.ja}.resx`）中按字母序添加 key-value。
-2. XAML 中绑定：`{Binding Shell.I18n[newKey]}`。
+2. XAML 中绑定：`{Binding Shell.I18n[newKey]}`。绑定路径是字符串、引用不到 C# 常量，故这一面由 `ResxResourceContractTests.XamlResourceBindings_UseOnlyKeysThatExistInNeutralResources` 做存在性守卫——拼错的键以前构建与测试全绿，只在运行期降级为 `"Localization unavailable."`；同一测试类的 `XamlKeyScan_StillCoversTheKeyBearingFiles` 是它的反空转基线，扫描域为应用工程下全部 `.axaml`（无手抄文件清单）。
 3. C# 中一律引用 `Constants/LocalizationKeys` 的编译时常量，**禁止**向 `T()`/`F()`/`I18n[...]` 传裸 key 字符串字面量（`ResxResourceContractTests` 守护）。
 4. 所有 4 种语言都提供翻译（对专有名词可回退到英文文本，但不得留空）；术语与译名以 `UBIQUITOUS_LANGUAGE.md` 的规范译法为准。
 5. 新增或重命名 key 后运行 `scripts/Generate-LauncherStringsDesigner.ps1` 与 `scripts/Generate-LocalizationKeys.ps1`，再运行 `scripts/Test-LocalizationContract.ps1`。
@@ -159,11 +159,16 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 
 ## 7. Settings 兼容性规则
 
+持久化落点一律经注入的 `LauncherDataRoot`（见 `CONTEXT.md` 的「数据根」与 [ADR-025](docs/design/adr/ADR-025-数据根由组合根解析并注入.md)），不要在模块内解析进程级数据根：进程根只由组合根与 ADR-019 保护的 pre-DI 路径解析，`TestUserDataIsolationTests.ProcessRootResolution_IsConfinedToDeclaredPreDiSites` 以声明表守这条边界。新增落盘位置时把路径加进 `LauncherDataRoot`，文件名仍声明在 `Constants/GamePaths.cs`。
+
+停止活动工作流由调用方表达意图（`GameOperationStopIntent`），检查点去留那套策略词表留在 `Features/GameOperations/` 内、由域翻译一次（[ADR-026](docs/design/adr/ADR-026-停止意图由游戏操作域翻译.md)）；域外不要命名 `DownloadStopReason`，`GameOperationStopOwnershipTests` 守卫这条边界。
+
 `settings.json` 的 JSON 字段名必须向后兼容：
 
 - 新增字段：提供合理默认值（在 `LauncherSettings` 模型中），`LauncherSettingsService` 不因缺失字段而抛异常。
 - 重命名或删除字段前，明确旧 JSON 的读取策略；必要时在 `LauncherSettingsService` 中解析旧字段。
-- `LauncherSettings` 的新增字段需有默认值，并同步更新 `DeepClone()`；`LauncherSettingsService.NormalizeSettings()` 负责将未知或不合法值兜底为有效默认值。`LauncherSettingsTests` 以反射守护 `DeepClone` 覆盖全部公共可写属性。
+- `LauncherSettings` 的新增字段需有默认值，并同步更新两张清单：`DeepClone()` 的拷贝构造与 `ComparedProperties`（状态同一性，见 `CONTEXT.md`）。漏前者会静默浅拷贝，漏后者会让设置页保存按钮不再跟踪该字段。`LauncherSettingsService.NormalizeSettings()` 负责将未知或不合法值兜底为有效默认值。`LauncherSettingsTests` 以反射守护两张清单：`DeepClone` 覆盖全部公共可写属性（比较用测试内独立渲染，不复用生产比较器，以免比较器缺陷被报成拷贝缺陷），状态同一性则是两相守卫（两份默认设置必须判为相同；逐属性改动必脏、还原必净），另有守卫断言两张表的名字与全部公共可写属性一一对应。
+- 写入已保存设置一律经 `ISavedSettingsWriter`（见 `CONTEXT.md` 的「已保存设置」与 [ADR-024](docs/design/adr/ADR-024-已保存设置唯一写入方.md)），不要直接调用 `LauncherSettingsService.SaveAsync`：绕过去就不会回写编辑器草稿，用户下一次保存设置会把这次写入的字段回滚掉。`SettingsWriteOwnershipTests` 守卫这条边界（生产调用方唯一性 ＋ 持有者声明表）。
 
 ---
 

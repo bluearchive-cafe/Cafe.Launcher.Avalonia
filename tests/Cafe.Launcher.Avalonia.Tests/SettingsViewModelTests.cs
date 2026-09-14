@@ -123,6 +123,7 @@ public sealed class SettingsViewModelTests
         new(
             null!,
             null!,
+            null!,
             localizer,
             toastService,
             new LauncherUpdateService(transport),
@@ -143,7 +144,7 @@ public sealed class SettingsViewModelTests
             "shown_notices.json");
         return new DialogsViewModel(
             new LocalizationService(),
-            new NoticeStateService(noticePath),
+            new NoticeStateService( TestDataRoot.ForFile(noticePath) ),
             new SetupWizardViewModel(
                 new LocalizationService(),
                 new GameInstallationPath(),

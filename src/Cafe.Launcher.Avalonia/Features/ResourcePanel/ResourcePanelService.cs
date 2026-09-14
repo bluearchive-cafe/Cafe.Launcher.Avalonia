@@ -53,9 +53,7 @@ public sealed class ResourcePanelService
     /// <summary>Persist UID source preference to settings.</summary>
     public async Task SaveUidSourceAsync(string uidSource, CancellationToken cancellationToken = default)
     {
-        var settings = await uidService.ReadSettingsAsync(cancellationToken).ConfigureAwait(false);
-        settings.ResourcePanelUidSource = uidSource;
-        await uidService.SaveSettingsAsync(settings, cancellationToken).ConfigureAwait(false);
+        await uidService.SaveUidSourceAsync(uidSource, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Persist a manually-entered UID to settings.</summary>

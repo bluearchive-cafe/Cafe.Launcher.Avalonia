@@ -102,7 +102,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         var diagnostics = new LocalDiagnostics(logger);
         using var service = CreateService(
             apiClient,
-            new LauncherSettingsService(Path.Combine(tempDir, "settings.json")),
+            new LauncherSettingsService( TestDataRoot.ForDirectory(Path.Combine(tempDir)) ),
             Path.Combine(tempDir, "download_state.json"),
             diagnostics: diagnostics);
 
@@ -121,7 +121,7 @@ public sealed class GameDownloadServiceTests : IDisposable
     public async Task Stop_WhenOperationIsRunning_LogsDownloadStopped()
     {
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
-        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        var settingsService = new LauncherSettingsService( TestDataRoot.ForDirectory(Path.Combine(tempDir)) );
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
         var fileBytes = Encoding.UTF8.GetBytes("stopped-content");
         var manifestFile = await CreateManifestFileAsync(tempDir, "data/file.bin", fileBytes);
@@ -637,7 +637,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         Directory.CreateDirectory(gamePath);
         var settingsPath = Path.Combine(tempDir, "settings.json");
         var statePath = Path.Combine(tempDir, "download_state.json");
-        var settingsService = new LauncherSettingsService(settingsPath);
+        var settingsService = new LauncherSettingsService( TestDataRoot.ForFile(settingsPath) );
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
         await WriteLocalGameFilesAsync(gamePath);
         var apiClient = CreateManifestApiClient();
@@ -657,7 +657,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         Directory.CreateDirectory(gamePath);
         var settingsPath = Path.Combine(tempDir, "settings.json");
         var statePath = Path.Combine(tempDir, "download_state.json");
-        var settingsService = new LauncherSettingsService(settingsPath);
+        var settingsService = new LauncherSettingsService( TestDataRoot.ForFile(settingsPath) );
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
         // 与 CreateSnapshot 的远端配置逐字段对齐（版本/basis/ExeName/Params/空清单），
         // 使 LocalInstallationStateMatchesCommit 命中「提交是纯重写，可跳过」分支。
@@ -702,7 +702,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         var settingsPath = Path.Combine(tempDir, "settings.json");
         var statePath = Path.Combine(tempDir, "download_state.json");
         File.WriteAllText(statePath, "stale-checkpoint");
-        var settingsService = new LauncherSettingsService(settingsPath);
+        var settingsService = new LauncherSettingsService( TestDataRoot.ForFile(settingsPath) );
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
         // 版本落后使状态不匹配 → 确需提交；清单两侧均为空 → diff==0 走写探测闸口。
         var committed = await new LocalInstallationStateStore().CommitAsync(
@@ -762,7 +762,7 @@ public sealed class GameDownloadServiceTests : IDisposable
     public async Task InstallOrUpdateAsync_WhenFileIsRequired_InstallsFileAndCommitsInstallationState()
     {
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
-        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        var settingsService = new LauncherSettingsService( TestDataRoot.ForDirectory(Path.Combine(tempDir)) );
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
         var statePath = Path.Combine(tempDir, "download_state.json");
         var fileBytes = Encoding.UTF8.GetBytes("installed-content");
@@ -806,7 +806,7 @@ public sealed class GameDownloadServiceTests : IDisposable
     public async Task InstallOrUpdateAsync_WhenPaused_WaitsUntilResumeBeforeCompleting()
     {
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
-        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        var settingsService = new LauncherSettingsService( TestDataRoot.ForDirectory(Path.Combine(tempDir)) );
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
         var fileBytes = Encoding.UTF8.GetBytes("pause-resume-content");
         var manifestFile = await CreateManifestFileAsync(tempDir, "data/file.bin", fileBytes);
@@ -846,7 +846,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         bool expectedStateFileExists)
     {
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
-        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        var settingsService = new LauncherSettingsService( TestDataRoot.ForDirectory(Path.Combine(tempDir)) );
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
         var statePath = Path.Combine(tempDir, "download_state.json");
         var fileBytes = Encoding.UTF8.GetBytes("stopped-content");
@@ -883,7 +883,7 @@ public sealed class GameDownloadServiceTests : IDisposable
     public async Task Stop_WhenApplicationExitStopSurfacesAsNetworkException_KeepsCheckpoint()
     {
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
-        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        var settingsService = new LauncherSettingsService( TestDataRoot.ForDirectory(Path.Combine(tempDir)) );
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
         var statePath = Path.Combine(tempDir, "download_state.json");
         var fileBytes = Encoding.UTF8.GetBytes("exit-content");
@@ -912,7 +912,7 @@ public sealed class GameDownloadServiceTests : IDisposable
     public async Task InstallOrUpdateAsync_WhenDiskSpaceIsInsufficient_DoesNotStartDownloads()
     {
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
-        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        var settingsService = new LauncherSettingsService( TestDataRoot.ForDirectory(Path.Combine(tempDir)) );
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
         var manifestFile = new ManifestFile
         {
@@ -943,7 +943,7 @@ public sealed class GameDownloadServiceTests : IDisposable
     public async Task InstallOrUpdateAsync_WhenFreshInstallNeedsDecompressionSpace_BlocksBeforeDownload()
     {
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
-        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        var settingsService = new LauncherSettingsService( TestDataRoot.ForDirectory(Path.Combine(tempDir)) );
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
         Assert.True(FileSizeFormatter.TryParseHumanReadable("1.09GB", out var plannedDownloadBytes));
         Assert.True(FileSizeFormatter.TryParseHumanReadable("18.5GB", out var decompressionBytes));
@@ -991,7 +991,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         string expectedAvailable)
     {
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
-        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        var settingsService = new LauncherSettingsService( TestDataRoot.ForDirectory(Path.Combine(tempDir)) );
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
         var fileBytes = new byte[10];
         var manifestFile = await CreateManifestFileAsync(tempDir, "data/file.bin", fileBytes);
@@ -1027,7 +1027,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
         Directory.CreateDirectory(gamePath);
         await WriteLocalGameFilesAsync(gamePath);
-        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        var settingsService = new LauncherSettingsService( TestDataRoot.ForDirectory(Path.Combine(tempDir)) );
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
         var fileBytes = new byte[10];
         var manifestFile = await CreateManifestFileAsync(tempDir, "data/update.bin", fileBytes);
@@ -1063,7 +1063,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
         Directory.CreateDirectory(gamePath);
         await WriteLocalGameFilesAsync(gamePath);
-        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        var settingsService = new LauncherSettingsService( TestDataRoot.ForDirectory(Path.Combine(tempDir)) );
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
         var fileBytes = new byte[10];
         var manifestFile = await CreateManifestFileAsync(tempDir, "data/repair.bin", fileBytes);
@@ -1098,7 +1098,7 @@ public sealed class GameDownloadServiceTests : IDisposable
     public async Task InstallOrUpdateAsync_WhenDiskSpaceIsInsufficient_ClearsDownloadState()
     {
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
-        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        var settingsService = new LauncherSettingsService( TestDataRoot.ForDirectory(Path.Combine(tempDir)) );
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
         var manifestFile = new ManifestFile
         {
@@ -1131,7 +1131,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         bool expectedSuccess)
     {
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
-        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        var settingsService = new LauncherSettingsService( TestDataRoot.ForDirectory(Path.Combine(tempDir)) );
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
         var fileBytes = new byte[10];
         var manifestFile = await CreateManifestFileAsync(tempDir, "data/file.bin", fileBytes);
@@ -1178,7 +1178,7 @@ public sealed class GameDownloadServiceTests : IDisposable
     public async Task InstallOrUpdateAsync_WhenMoreThanTenFilesAreRequired_LimitsParallelDownloadsToTen()
     {
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
-        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        var settingsService = new LauncherSettingsService( TestDataRoot.ForDirectory(Path.Combine(tempDir)) );
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
         var fileBytes = Encoding.UTF8.GetBytes("parallel-content");
         var hashFile = await CreateManifestFileAsync(tempDir, "unused.bin", fileBytes);
@@ -1222,7 +1222,7 @@ public sealed class GameDownloadServiceTests : IDisposable
     public async Task InstallOrUpdateAsync_WhenInstallVerificationFails_RedownloadsFailedFile()
     {
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
-        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        var settingsService = new LauncherSettingsService( TestDataRoot.ForDirectory(Path.Combine(tempDir)) );
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
         var expectedBytes = Encoding.UTF8.GetBytes("verified-content");
         var manifestFile = await CreateManifestFileAsync(tempDir, "data/file.bin", expectedBytes);
@@ -1250,7 +1250,7 @@ public sealed class GameDownloadServiceTests : IDisposable
     public async Task InstallOrUpdateAsync_WhenSpeedLimitIsOneMegabytePerSecond_ThrottlesReportedBytes()
     {
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
-        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        var settingsService = new LauncherSettingsService( TestDataRoot.ForDirectory(Path.Combine(tempDir)) );
         await settingsService.SaveAsync(new LauncherSettings
         {
             GamePath = gamePath,
@@ -1283,7 +1283,7 @@ public sealed class GameDownloadServiceTests : IDisposable
     public async Task InstallOrUpdateAsync_WhenChunksArriveInsideProgressInterval_ReportsEveryTransferredByte()
     {
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
-        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        var settingsService = new LauncherSettingsService( TestDataRoot.ForDirectory(Path.Combine(tempDir)) );
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
         var fileBytes = new byte[1024];
         Random.Shared.NextBytes(fileBytes);
@@ -1316,7 +1316,7 @@ public sealed class GameDownloadServiceTests : IDisposable
     public async Task InstallOrUpdateAsync_WhenTemporaryFileExists_StartsProgressFromExistingBytes()
     {
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
-        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        var settingsService = new LauncherSettingsService( TestDataRoot.ForDirectory(Path.Combine(tempDir)) );
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
         var fileBytes = new byte[1000];
         Random.Shared.NextBytes(fileBytes);
@@ -1449,7 +1449,7 @@ public sealed class GameDownloadServiceTests : IDisposable
     public async Task InstallOrUpdateAsync_WhenInstallVerificationAlwaysFails_StopsAfterThreeRetries()
     {
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
-        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        var settingsService = new LauncherSettingsService( TestDataRoot.ForDirectory(Path.Combine(tempDir)) );
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
         var expectedBytes = Encoding.UTF8.GetBytes("expected-content");
         var manifestFile = await CreateManifestFileAsync(tempDir, "data/file.bin", expectedBytes);
@@ -1497,7 +1497,7 @@ public sealed class GameDownloadServiceTests : IDisposable
             GamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP")
         }));
         var apiClient = CreateManifestApiClient();
-        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        var settingsService = new LauncherSettingsService( TestDataRoot.ForDirectory(Path.Combine(tempDir)) );
         var service = CreateService(apiClient, settingsService, statePath);
 
         var result = await service.ResumePersistedAsync(CreateSnapshot(Path.Combine(tempDir, "YostarGames", "BlueArchive_JP")), _ => { });
@@ -1520,7 +1520,7 @@ public sealed class GameDownloadServiceTests : IDisposable
             PatchUrlGroup = PatchUrlGroups.Official
         }));
         var apiClient = CreateManifestApiClient();
-        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        var settingsService = new LauncherSettingsService( TestDataRoot.ForDirectory(Path.Combine(tempDir)) );
         var service = CreateService(apiClient, settingsService, statePath);
         var snapshot = CreateSnapshot(gamePath);
         snapshot.Settings.PatchUrlGroup = PatchUrlGroups.Cafe;
@@ -1538,7 +1538,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
         Directory.CreateDirectory(gamePath);
         await WriteLocalGameFilesAsync(gamePath);
-        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        var settingsService = new LauncherSettingsService( TestDataRoot.ForDirectory(Path.Combine(tempDir)) );
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
         var statePath = Path.Combine(tempDir, "download_state.json");
         var transport = new GatedRemoteHttpTransport(new StubRemoteHttpTransport(uri =>
@@ -1581,7 +1581,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         Directory.CreateDirectory(gamePath);
         await File.WriteAllTextAsync(Path.Combine(gamePath, "manifest.json"), "{}");
         await File.WriteAllTextAsync(Path.Combine(gamePath, "unknown.bin"), "keep");
-        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        var settingsService = new LauncherSettingsService( TestDataRoot.ForDirectory(Path.Combine(tempDir)) );
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
         var transport = new StubRemoteHttpTransport(uri =>
             uri.PathAndQuery.Contains("/api/launcher/game/config/json", StringComparison.Ordinal)
@@ -1616,7 +1616,7 @@ public sealed class GameDownloadServiceTests : IDisposable
     {
         return CreateService(
             apiClient,
-            new LauncherSettingsService(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "settings.json")),
+            new LauncherSettingsService( TestDataRoot.ForDirectory(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"))) ),
             Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "download_state.json"));
     }
 
@@ -1645,8 +1645,7 @@ public sealed class GameDownloadServiceTests : IDisposable
             diagnostics,
             new LocalizationService(),
             new GameInstallationPath(),
-            new GameProcessTracker(),
-            downloadStateFilePath);
+            new GameProcessTracker(), TestDataRoot.ForFile(downloadStateFilePath) );
     }
 
     /// <summary>

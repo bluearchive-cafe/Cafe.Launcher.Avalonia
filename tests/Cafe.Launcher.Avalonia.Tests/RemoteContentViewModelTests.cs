@@ -22,7 +22,7 @@ public sealed class RemoteContentViewModelTests
     {
         using var imageCacheService = new ImageCacheService(
             new StubRemoteHttpTransport(),
-            new Crc64Service());
+            new Crc64Service(), TestDataRoot.ForCurrentProcess());
         using var viewModel = new RemoteContentViewModel(
             new LocalizationService(),
             imageCacheService,
@@ -783,7 +783,7 @@ public sealed class RemoteContentViewModelTests
 
     private static TestContext CreateContext(string? language = null)
     {
-        var cache = new ImageCacheService(new StubRemoteHttpTransport(), new Crc64Service());
+        var cache = new ImageCacheService(new StubRemoteHttpTransport(), new Crc64Service(), TestDataRoot.ForCurrentProcess());
         var localizer = new LocalizationService();
         if (language is not null)
         {
@@ -821,7 +821,7 @@ public sealed class RemoteContentViewModelTests
 
     private static SeamedContext CreateSeamedContext()
     {
-        var cache = new ImageCacheService(new StubRemoteHttpTransport(), new Crc64Service());
+        var cache = new ImageCacheService(new StubRemoteHttpTransport(), new Crc64Service(), TestDataRoot.ForCurrentProcess());
         var timer = new ManualCarouselTimer();
         var delay = new GateDelay();
         return new SeamedContext(

@@ -25,13 +25,14 @@ public sealed class UnifiedLogger : IDisposable
     private readonly string logFilePath;
     private bool disposed;
 
-    public UnifiedLogger() : this(null) { }
-
-    internal UnifiedLogger(string? logDirectory)
+    /// <summary>
+    /// 日志目录必须显式给出：进程根由组合根或 ADR-019 保护的 pre-DI 路径解析，
+    /// 日志器本身不再是「谁都能读一次」的静态消费点。
+    /// </summary>
+    internal UnifiedLogger(string logDirectory)
     {
-        var dir = logDirectory ?? Path.Combine(
-            LauncherUserDataDirectory.Root);
-        logFilePath = Path.Combine(dir, GamePaths.UnifiedLogFileName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(logDirectory);
+        logFilePath = Path.Combine(logDirectory, GamePaths.UnifiedLogFileName);
 
         // Verbose in Debug builds so developers see everything; Information in
         // Release so production logs stay lean. The switch can be adjusted at

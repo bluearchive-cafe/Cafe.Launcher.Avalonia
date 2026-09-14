@@ -11,15 +11,18 @@ using Cafe.Launcher.Avalonia.Services;
 namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 
 /// <summary>Persists and clears resumable game download state atomically.</summary>
-public sealed class DownloadCheckpointStore(string filePath)
+public sealed class DownloadCheckpointStore
 {
     private static readonly JsonSerializerOptions JsonOptions = JsonDefaults.Indented;
-    private readonly string temporaryFilePath = filePath + ".tmp";
+    private readonly string filePath;
+    private readonly string temporaryFilePath;
 
-    /// <summary>Creates a store for the launcher's standard per-user checkpoint path.</summary>
-    internal static DownloadCheckpointStore CreateDefault() => new(Path.Combine(
-        LauncherUserDataDirectory.Root,
-        GamePaths.DownloadStateFileName));
+    public DownloadCheckpointStore(LauncherDataRoot dataRoot)
+    {
+        ArgumentNullException.ThrowIfNull(dataRoot);
+        filePath = dataRoot.DownloadStatePath;
+        temporaryFilePath = filePath + ".tmp";
+    }
 
     /// <summary>Reads the current checkpoint, or returns <see langword="null"/> when none is usable.</summary>
     public async Task<DownloadTaskState?> LoadAsync(CancellationToken cancellationToken = default)

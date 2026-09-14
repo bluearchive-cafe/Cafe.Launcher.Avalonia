@@ -39,7 +39,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
     [Fact]
     public async Task Http2_RoundTripsAndOldJsonDefaultsToEnabled()
     {
-        var service = new LauncherSettingsService(settingsPath);
+        var service = new LauncherSettingsService( TestDataRoot.ForFile(settingsPath) );
         await service.SaveAsync(new LauncherSettings { EnableHttp2 = false });
 
         Assert.False((await service.ReadAsync()).EnableHttp2);
@@ -62,7 +62,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
     [Fact]
     public async Task DynamicColorFields_RoundTripAndInvalidValuesFallbackToDefaults()
     {
-        var service = new LauncherSettingsService(settingsPath);
+        var service = new LauncherSettingsService( TestDataRoot.ForFile(settingsPath) );
         var settings = new LauncherSettings
         {
             ThemeColorExtractionAlgorithm = ThemeColorExtractionAlgorithms.Wu,
@@ -90,7 +90,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
     {
         await File.WriteAllTextAsync(settingsPath, """{"language":"ja"}""");
 
-        var settings = await new LauncherSettingsService(settingsPath).ReadAsync();
+        var settings = await new LauncherSettingsService( TestDataRoot.ForFile(settingsPath) ).ReadAsync();
 
         Assert.Equal(ThemeColorExtractionAlgorithms.CelebiScore, settings.ThemeColorExtractionAlgorithm);
         Assert.Equal(ThemeColorVariants.TonalSpot, settings.ThemeColorVariant);
@@ -100,7 +100,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
     [Fact]
     public async Task MotionMode_RoundTripsAndInvalidValueFallsBackToSystem()
     {
-        var service = new LauncherSettingsService(settingsPath);
+        var service = new LauncherSettingsService( TestDataRoot.ForFile(settingsPath) );
         await service.SaveAsync(new LauncherSettings { MotionMode = MotionModes.Reduced });
         Assert.Equal(MotionModes.Reduced, (await service.ReadAsync()).MotionMode);
 
@@ -111,7 +111,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
     [Fact]
     public async Task Language_RoundTripsAllSupportedValuesAndInvalidFallsBackToAuto()
     {
-        var service = new LauncherSettingsService(settingsPath);
+        var service = new LauncherSettingsService( TestDataRoot.ForFile(settingsPath) );
 
         foreach (var language in new[]
         {
@@ -140,7 +140,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
     [Fact]
     public async Task ReadAsync_WhenFileMissing_ReturnsDefaults()
     {
-        var service = new LauncherSettingsService(settingsPath);
+        var service = new LauncherSettingsService( TestDataRoot.ForFile(settingsPath) );
 
         var settings = await service.ReadAsync();
 
@@ -180,7 +180,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
     {
         await File.WriteAllTextAsync(settingsPath, """{"language":"ja"}""");
 
-        var settings = await new LauncherSettingsService(settingsPath).ReadAsync();
+        var settings = await new LauncherSettingsService( TestDataRoot.ForFile(settingsPath) ).ReadAsync();
 
         Assert.Equal(MotionModes.System, settings.MotionMode);
     }
@@ -196,7 +196,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
               "LaunchCheckMode": "RemoteManifest"
             }
             """);
-        var service = new LauncherSettingsService(settingsPath);
+        var service = new LauncherSettingsService( TestDataRoot.ForFile(settingsPath) );
 
         var settings = await service.ReadAsync();
 
@@ -215,7 +215,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
               "resourcePanelUid": "LEGACY-COMPAT-UID"
             }
             """);
-        var service = new LauncherSettingsService(settingsPath);
+        var service = new LauncherSettingsService( TestDataRoot.ForFile(settingsPath) );
 
         var exception = await Record.ExceptionAsync(async () =>
         {
@@ -255,7 +255,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
               "statusDetailMode": "detailed"
             }
             """);
-        var service = new LauncherSettingsService(settingsPath);
+        var service = new LauncherSettingsService( TestDataRoot.ForFile(settingsPath) );
 
         var settings = await service.ReadAsync();
 
@@ -282,7 +282,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
     [Fact]
     public async Task SaveAsync_WritesExactCurrentJsonFieldNames()
     {
-        var service = new LauncherSettingsService(settingsPath);
+        var service = new LauncherSettingsService( TestDataRoot.ForFile(settingsPath) );
         var settings = new LauncherSettings
         {
             GamePath = @"D:\YostarGames\BlueArchive_JP",
@@ -397,7 +397,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
     [Fact]
     public async Task EnableStartupUpdateCheck_RoundTripsAndMissingDefaultsToTrue()
     {
-        var service = new LauncherSettingsService(settingsPath);
+        var service = new LauncherSettingsService( TestDataRoot.ForFile(settingsPath) );
         await service.SaveAsync(new LauncherSettings { EnableStartupUpdateCheck = false });
         Assert.False((await service.ReadAsync()).EnableStartupUpdateCheck);
 
@@ -408,7 +408,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
     [Fact]
     public async Task SaveAsync_WhenCalledConcurrently_LeavesOneCompleteSettingsDocument()
     {
-        var service = new LauncherSettingsService(settingsPath);
+        var service = new LauncherSettingsService( TestDataRoot.ForFile(settingsPath) );
         var writes = Enumerable.Range(0, 32)
             .Select(index => service.SaveAsync(new LauncherSettings
             {
@@ -431,14 +431,14 @@ public sealed class LauncherSettingsServiceTests : IDisposable
     [Fact]
     public async Task SaveAsync_GameRuntimeSettings_RoundTripsAndNormalizesInvalidValues()
     {
-        var service = new LauncherSettingsService(settingsPath);
+        var service = new LauncherSettingsService( TestDataRoot.ForFile(settingsPath) );
         var settings = new LauncherSettings();
         settings.GameRuntime.Runner = "not-a-runner";
         settings.GameRuntime.RunnerPath = "  /usr/bin/umu-run  ";
         settings.GameRuntime.PrefixPath = "   ";
         await service.SaveAsync(settings);
 
-        var reloaded = await new LauncherSettingsService(settingsPath).ReadAsync();
+        var reloaded = await new LauncherSettingsService( TestDataRoot.ForFile(settingsPath) ).ReadAsync();
 
         Assert.Equal(GameRuntimeRunners.Auto, reloaded.GameRuntime.Runner);
         Assert.Equal("/usr/bin/umu-run", reloaded.GameRuntime.RunnerPath);
@@ -448,10 +448,10 @@ public sealed class LauncherSettingsServiceTests : IDisposable
     [Fact]
     public async Task ReadAsync_WhenGameRuntimeIsMissing_UsesDefaults()
     {
-        var service = new LauncherSettingsService(settingsPath);
+        var service = new LauncherSettingsService( TestDataRoot.ForFile(settingsPath) );
         await service.SaveAsync(new LauncherSettings());
 
-        var reloaded = await new LauncherSettingsService(settingsPath).ReadAsync();
+        var reloaded = await new LauncherSettingsService( TestDataRoot.ForFile(settingsPath) ).ReadAsync();
 
         Assert.Equal(GameRuntimeRunners.Auto, reloaded.GameRuntime.Runner);
         Assert.Null(reloaded.GameRuntime.RunnerPath);
@@ -464,7 +464,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
     {
         await File.WriteAllTextAsync(settingsPath, """{"gameRuntime":null}""");
 
-        var reloaded = await new LauncherSettingsService(settingsPath).ReadAsync();
+        var reloaded = await new LauncherSettingsService( TestDataRoot.ForFile(settingsPath) ).ReadAsync();
 
         Assert.NotNull(reloaded.GameRuntime);
         Assert.Equal(GameRuntimeRunners.Auto, reloaded.GameRuntime.Runner);
@@ -490,7 +490,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
     public async Task ReadAsync_WhenNativeRunnerOnLinux_NormalizesToAuto()
     {
         await File.WriteAllTextAsync(settingsPath, """{"gameRuntime":{"runner":"native"}}""");
-        var service = new LauncherSettingsService(settingsPath, isLinuxPlatform: () => true);
+        var service = new LauncherSettingsService( TestDataRoot.ForFile(settingsPath) , isLinuxPlatform: () => true);
 
         var reloaded = await service.ReadAsync();
 
@@ -501,7 +501,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
     public async Task ReadAsync_WhenNativeRunnerOnWindows_KeepsNative()
     {
         await File.WriteAllTextAsync(settingsPath, """{"gameRuntime":{"runner":"native"}}""");
-        var service = new LauncherSettingsService(settingsPath, isLinuxPlatform: () => false);
+        var service = new LauncherSettingsService( TestDataRoot.ForFile(settingsPath) , isLinuxPlatform: () => false);
 
         var reloaded = await service.ReadAsync();
 
@@ -516,7 +516,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         // three file-backed stores each carry the same guard for their corrupt-input path.
         Directory.CreateDirectory(tempDir);
         await File.WriteAllTextAsync(settingsPath, "{");
-        var service = new LauncherSettingsService(settingsPath);
+        var service = new LauncherSettingsService( TestDataRoot.ForFile(settingsPath) );
 
         var reloaded = await service.ReadAsync();
 
@@ -534,7 +534,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
             FileMode.Open,
             FileAccess.ReadWrite,
             FileShare.None);
-        var service = new LauncherSettingsService(settingsPath);
+        var service = new LauncherSettingsService( TestDataRoot.ForFile(settingsPath) );
 
         var reloaded = await service.ReadAsync();
 

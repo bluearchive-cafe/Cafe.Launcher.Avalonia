@@ -137,12 +137,12 @@ public partial class MainWindowViewModelTests
         var providerReadCount = 0;
         var snapshot = CreateSnapshot();
         snapshot.Settings.MotionMode = motionMode;
-        using var settingsService = new LauncherSettingsService(
+        using var savedSettings = new SavedSettingsTestRig(
             Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
-        await settingsService.SaveAsync(snapshot.Settings);
+        await savedSettings.SeedAsync(snapshot.Settings);
         using var viewModel = await CreateViewModelAsync(
             new CountingCoreService(snapshot),
-            settingsService: settingsService,
+            savedSettings: savedSettings,
             windowsAnimationSettingsProvider: new WindowsAnimationSettingsProvider(
                 () =>
                 {
@@ -162,12 +162,12 @@ public partial class MainWindowViewModelTests
         var providerReadCount = 0;
         var snapshot = CreateSnapshot();
         snapshot.Settings.MotionMode = MotionModes.Full;
-        using var settingsService = new LauncherSettingsService(
+        using var savedSettings = new SavedSettingsTestRig(
             Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
-        await settingsService.SaveAsync(snapshot.Settings);
+        await savedSettings.SeedAsync(snapshot.Settings);
         using var viewModel = await CreateViewModelAsync(
             new CountingCoreService(snapshot),
-            settingsService: settingsService,
+            savedSettings: savedSettings,
             windowsAnimationSettingsProvider: new WindowsAnimationSettingsProvider(
                 () =>
                 {
@@ -196,12 +196,12 @@ public partial class MainWindowViewModelTests
             GamePath = "persisted-game-path",
             MotionMode = MotionModes.System
         };
-        using var settingsService = new LauncherSettingsService(
+        using var savedSettings = new SavedSettingsTestRig(
             Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
-        await settingsService.SaveAsync(persistedSettings);
+        await savedSettings.SeedAsync(persistedSettings);
         using var viewModel = await CreateViewModelAsync(
             new ThrowingCoreService(),
-            settingsService: settingsService,
+            savedSettings: savedSettings,
             windowsAnimationSettingsProvider: new WindowsAnimationSettingsProvider(
                 () =>
                 {
@@ -228,16 +228,16 @@ public partial class MainWindowViewModelTests
     {
         var snapshot = CreateSnapshot();
         snapshot.Settings.MotionMode = MotionModes.Reduced;
-        using var settingsService = new LauncherSettingsService(
+        using var savedSettings = new SavedSettingsTestRig(
             Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
-        await settingsService.SaveAsync(snapshot.Settings);
+        await savedSettings.SeedAsync(snapshot.Settings);
         var toastService = new ToastService();
         var displayDelay = new TaskCompletionSource(
             TaskCreationOptions.RunContinuationsAsynchronously);
         var exitDelayCalls = 0;
         using var viewModel = await CreateViewModelAsync(
             new CountingCoreService(snapshot),
-            settingsService: settingsService,
+            savedSettings: savedSettings,
             toastService: toastService,
             toastDelayAsync: (delay, cancellationToken) =>
             {

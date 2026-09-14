@@ -15,7 +15,7 @@ public sealed class DownloadCheckpointStoreTests
     {
         var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         var path = Path.Combine(directory, "download_state.json");
-        var store = new DownloadCheckpointStore(path);
+        var store = new DownloadCheckpointStore( TestDataRoot.ForFile(path) );
         var state = new DownloadTaskState
         {
             Version = "1.0.0",
@@ -47,7 +47,7 @@ public sealed class DownloadCheckpointStoreTests
         Directory.CreateDirectory(directory);
         var path = Path.Combine(directory, "download_state.json");
         await File.WriteAllTextAsync(path, "{");
-        var store = new DownloadCheckpointStore(path);
+        var store = new DownloadCheckpointStore( TestDataRoot.ForFile(path) );
 
         var actual = await store.LoadAsync();
 
@@ -63,7 +63,7 @@ public sealed class DownloadCheckpointStoreTests
         var path = Path.Combine(directory, "download_state.json");
         await File.WriteAllTextAsync(path, "{}");
         await File.WriteAllTextAsync(path + ".tmp", "{}");
-        var store = new DownloadCheckpointStore(path);
+        var store = new DownloadCheckpointStore( TestDataRoot.ForFile(path) );
 
         store.Clear();
 

@@ -21,6 +21,7 @@ namespace Cafe.Launcher.Avalonia.Features.Diagnostics;
 /// </summary>
 public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewModel, IDisposable
 {
+    private readonly LauncherDataRoot dataRoot;
     private readonly ToastService toastService;
     private readonly UnifiedLogger unifiedLogger;
     private readonly IErrorHandlingService errorHandling;
@@ -74,6 +75,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
 
     /// <summary>Initializes the debug overlay and observes game-operation state.</summary>
     public DebugViewModel(
+        LauncherDataRoot dataRoot,
         ToastService toastService,
         UnifiedLogger unifiedLogger,
         IErrorHandlingService errorHandling,
@@ -82,6 +84,8 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
         IGameOperationActivity operations,
         ShellViewModel shell)
     {
+        ArgumentNullException.ThrowIfNull(dataRoot);
+        this.dataRoot = dataRoot;
         this.toastService = toastService;
         this.unifiedLogger = unifiedLogger;
         this.errorHandling = errorHandling;
@@ -114,7 +118,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
     private void RefreshSystemInfo()
     {
         LogFilePath = unifiedLogger.LogFilePath;
-        DataDirectoryPath = LauncherUserDataDirectory.Root;
+        DataDirectoryPath = dataRoot.Root;
 
         SystemInfoText = Format(
             shell.I18n[LocalizationKeys.DebugSystemInfoFormat],
@@ -381,7 +385,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
             return;
         }
 
-        operations.StopOperation();
+        operations.RequestStop();
         LastActionResult = shell.I18n[LocalizationKeys.StopRequested];
     }
 

@@ -67,10 +67,13 @@ internal sealed class CrossProcessLaunchSignal : IDisposable
     /// Windows 上这保证命名事件先于互斥量存在，转发永不落空；
     /// Unix 上只解析套接字路径，实际绑定由互斥量获胜者调用 <see cref="EnsureBound"/>。
     /// </summary>
-    internal static CrossProcessLaunchSignal Listen(string signalName) =>
-        OperatingSystem.IsWindows()
+    internal static CrossProcessLaunchSignal Listen(string signalName, LauncherDataRoot dataRoot)
+    {
+        ArgumentNullException.ThrowIfNull(dataRoot);
+        return OperatingSystem.IsWindows()
             ? new CrossProcessLaunchSignal(signalName, socketDirectory: null)
-            : ListenAt(signalName, LauncherUserDataDirectory.Root);
+            : new CrossProcessLaunchSignal(signalName, dataRoot.Root);
+    }
 
     /// <summary>
     /// 测试缝：始终使用 Unix 域套接字传输（Windows 10 及以上同样支持 AF_UNIX，
@@ -167,8 +170,10 @@ internal sealed class CrossProcessLaunchSignal : IDisposable
     /// <summary>
     /// 由非第一个实例调用：请求第一个实例拉起游戏。尽力而为，绝不抛出。
     /// </summary>
-    internal static void Raise(string signalName)
+    internal static void Raise(string signalName, LauncherDataRoot dataRoot)
     {
+        ArgumentNullException.ThrowIfNull(dataRoot);
+
         if (OperatingSystem.IsWindows())
         {
             try
@@ -186,7 +191,7 @@ internal sealed class CrossProcessLaunchSignal : IDisposable
             return;
         }
 
-        RaiseAt(signalName, LauncherUserDataDirectory.Root);
+        RaiseAt(signalName, dataRoot.Root);
     }
 
     /// <summary>

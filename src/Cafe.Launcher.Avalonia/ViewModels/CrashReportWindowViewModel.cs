@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Resources;
+using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.ViewModels;
@@ -10,10 +11,13 @@ namespace Cafe.Launcher.Avalonia.ViewModels;
 public sealed class CrashReportWindowViewModel
 {
     private readonly CrashReport report;
+    private readonly LauncherDataRoot dataRoot;
 
-    public CrashReportWindowViewModel(CrashReport report)
+    public CrashReportWindowViewModel(CrashReport report, LauncherDataRoot dataRoot)
     {
+        ArgumentNullException.ThrowIfNull(dataRoot);
         this.report = report;
+        this.dataRoot = dataRoot;
     }
 
     public string WindowTitle => T(LocalizationKeys.CrashWindowCaption);
@@ -53,7 +57,7 @@ public sealed class CrashReportWindowViewModel
     public string ExitText => T(LocalizationKeys.CrashWindowExit);
 
     /// <summary>Directory the "open log folder" action reveals: the launcher log lives there.</summary>
-    public string LogDirectory => Services.LauncherUserDataDirectory.Root;
+    public string LogDirectory => dataRoot.Root;
 
     private static string T(string key) =>
         LauncherStrings.ResourceManager.GetString(key, CultureInfo.CurrentUICulture)

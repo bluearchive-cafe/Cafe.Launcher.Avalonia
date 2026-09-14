@@ -230,12 +230,12 @@ public sealed class DownloadSessionTests
             new StubDownloadTransportSource(),
             new Crc64Service(),
             new LocalInstallationStateStore(),
-            new LauncherSettingsService(),
+            new LauncherSettingsService(TestDataRoot.ForCurrentProcess()),
             new DiskSpaceService(),
             diagnostics,
             new LocalizationService(),
             new GameInstallationPath(),
-            new DownloadCheckpointStore(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "checkpoint.json")),
+            new DownloadCheckpointStore( TestDataRoot.ForDirectory(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "checkpoint.json")) ),
             new GameProcessTracker());
         return new DownloadSession(
             context,

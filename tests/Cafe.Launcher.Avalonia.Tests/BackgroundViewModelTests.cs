@@ -16,10 +16,13 @@ public sealed class BackgroundViewModelTests : IDisposable
     private static readonly byte[] PngBytes = Convert.FromBase64String(
         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=");
 
-    private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+    private readonly string rootDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+    private readonly string tempDir;
 
     public BackgroundViewModelTests()
     {
+        // 缓存目录由数据根派生（<root>/image-cache），故工作目录取派生结果本身。
+        tempDir = Path.Combine(rootDir, LauncherDataRoot.ImageCacheFolderName);
         Directory.CreateDirectory(tempDir);
     }
 
@@ -477,7 +480,7 @@ public sealed class BackgroundViewModelTests : IDisposable
         };
 
     private ImageCacheService CreateCache(Func<Uri, object?> responder) =>
-        new(new StubRemoteHttpTransport(responder), new Crc64Service(), tempDir);
+        new(new StubRemoteHttpTransport(responder), new Crc64Service(), TestDataRoot.ForDirectory(rootDir));
 
     private async Task<string> ComputeHashAsync(byte[] bytes)
     {
@@ -488,9 +491,9 @@ public sealed class BackgroundViewModelTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(tempDir))
+        if (Directory.Exists(rootDir))
         {
-            Directory.Delete(tempDir, recursive: true);
+            Directory.Delete(rootDir, recursive: true);
         }
     }
 

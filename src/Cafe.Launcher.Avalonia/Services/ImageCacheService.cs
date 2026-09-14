@@ -41,24 +41,13 @@ public sealed class ImageCacheService : IDisposable
 
     public ImageCacheService(
         IRemoteHttpTransport transport,
-        Crc64Service crc64Service)
-        : this(
-            transport,
-            crc64Service,
-            Path.Combine(
-                LauncherUserDataDirectory.Root,
-                "image-cache"))
-    {
-    }
-
-    internal ImageCacheService(
-        IRemoteHttpTransport transport,
         Crc64Service crc64Service,
-        string cacheDir)
+        LauncherDataRoot dataRoot)
     {
+        ArgumentNullException.ThrowIfNull(dataRoot);
         this.transport = transport;
         this.crc64Service = crc64Service;
-        this.cacheDir = cacheDir;
+        this.cacheDir = dataRoot.ImageCacheDirectory;
         try
         {
             Directory.CreateDirectory(cacheDir);

@@ -15,7 +15,6 @@ namespace Cafe.Launcher.Avalonia.Services.Diagnostics;
 /// <summary>Synchronously persists share-safe crash snapshots for the isolated reporter.</summary>
 public sealed class CrashReportStore : ICrashReportLocator
 {
-    internal const string ReportDirectoryName = "CrashReports";
     internal const int RetainedReportCount = 10;
     internal static readonly TimeSpan RetentionAge = TimeSpan.FromDays(30);
 
@@ -28,26 +27,21 @@ public sealed class CrashReportStore : ICrashReportLocator
     private readonly string primaryDirectory;
     private readonly string fallbackDirectory;
 
-    /// <summary>User-data location of the crash snapshots.</summary>
-    internal static string DefaultPrimaryDirectory => Path.Combine(
-        LauncherUserDataDirectory.Root,
-        ReportDirectoryName);
-
     /// <summary>Temp location the store falls back to when the user-data root is unwritable.</summary>
     internal static string DefaultFallbackDirectory => Path.Combine(
         Path.GetTempPath(),
         "Cafe.Launcher",
-        ReportDirectoryName);
+        LauncherDataRoot.CrashReportsFolderName);
 
-    public CrashReportStore()
-        : this(DefaultPrimaryDirectory, DefaultFallbackDirectory)
+    /// <summary>
+    /// 生产接线显式传入 <see cref="DefaultFallbackDirectory"/>；测试通常省略，
+    /// 让回退目录等于传入的根。
+    /// </summary>
+    public CrashReportStore(LauncherDataRoot dataRoot, string? fallbackDirectory = null)
     {
-    }
-
-    internal CrashReportStore(string primaryDirectory, string? fallbackDirectory = null)
-    {
-        this.primaryDirectory = Path.GetFullPath(primaryDirectory);
-        this.fallbackDirectory = Path.GetFullPath(fallbackDirectory ?? primaryDirectory);
+        ArgumentNullException.ThrowIfNull(dataRoot);
+        this.primaryDirectory = dataRoot.CrashReportsDirectory;
+        this.fallbackDirectory = Path.GetFullPath(fallbackDirectory ?? this.primaryDirectory);
     }
 
     internal string PrimaryDirectory => primaryDirectory;
@@ -55,7 +49,7 @@ public sealed class CrashReportStore : ICrashReportLocator
     /// <inheritdoc />
     public IEnumerable<string> GetCrashReportDirectories(string userDataRoot)
     {
-        yield return Path.Combine(userDataRoot, ReportDirectoryName);
+        yield return Path.Combine(userDataRoot, LauncherDataRoot.CrashReportsFolderName);
         yield return DefaultFallbackDirectory;
     }
 

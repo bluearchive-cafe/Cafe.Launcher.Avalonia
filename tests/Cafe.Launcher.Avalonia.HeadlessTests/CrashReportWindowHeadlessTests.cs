@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.IO;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
@@ -6,6 +7,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Cafe.Launcher.Avalonia.Views;
@@ -14,6 +16,10 @@ namespace Cafe.Launcher.Avalonia.HeadlessTests;
 
 public sealed class CrashReportWindowHeadlessTests
 {
+    /// <summary>崩溃窗口只需要一个数据根；日志目录本身在本组测试里不被读取。</summary>
+    private static LauncherDataRoot TestDataRoot() =>
+        new(Path.Combine(Path.GetTempPath(), "Cafe.Launcher.Avalonia.HeadlessTests", Guid.NewGuid().ToString("N")));
+
     [AvaloniaFact]
     public void CrashReportWindow_WhenTechnicalDetailsExpand_GrowsWithContent()
     {
@@ -21,7 +27,7 @@ public sealed class CrashReportWindowHeadlessTests
             ?? throw new InvalidOperationException("Headless application is not initialised.");
         var previousTheme = application.RequestedThemeVariant;
         application.RequestedThemeVariant = ThemeVariant.Light;
-        var window = new CrashReportWindow(CreateReport())
+        var window = new CrashReportWindow(CreateReport(), TestDataRoot())
         {
             FontFamily = new FontFamily("Segoe UI")
         };
@@ -64,7 +70,7 @@ public sealed class CrashReportWindowHeadlessTests
         application.RequestedThemeVariant = ThemeVariant.Light;
 
         var report = CreateReport();
-        var window = new CrashReportWindow(report)
+        var window = new CrashReportWindow(report, TestDataRoot())
         {
             FontFamily = new FontFamily("Segoe UI")
         };

@@ -1,3 +1,5 @@
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using Cafe.Launcher.Avalonia.Constants;
@@ -165,6 +167,9 @@ public sealed class LauncherSettings : ObservableObject
     /// ⚠️ When adding a new setting property to this class,
     /// you MUST add a corresponding line to this constructor.
     /// Failure to do so results in silent shallow copy of the new property.
+    /// The same property must also be added to <see cref="ComparedProperties"/>, otherwise state
+    /// identity ignores it and the settings page's save button stops tracking that field.
+    /// LauncherSettingsTests guards both lists.
     /// </summary>
     public LauncherSettings(LauncherSettings other)
     {
@@ -205,6 +210,159 @@ public sealed class LauncherSettings : ObservableObject
         // NormalizeSettings deep-clones before its own ??= guard runs, so the copy
         // constructor must tolerate null without crashing the load path.
         GameRuntime = other.GameRuntime?.DeepClone() ?? new GameRuntimeSettings();
+    }
+
+    /// <summary>
+    /// The properties that participate in <see cref="HasSameSettingsState"/>, as (name, reader)
+    /// pairs. Declared here rather than enumerated by reflection so the compared set stays greppable
+    /// and no production code depends on runtime reflection; LauncherSettingsTests reads the names
+    /// and drives the readers, so a settable property missing from this table fails the tests instead
+    /// of silently dropping out of state identity.
+    /// </summary>
+    private static readonly (string Name, Func<LauncherSettings, object?> Read)[] ComparedProperties =
+    [
+        (nameof(GamePath), settings => settings.GamePath),
+        (nameof(LaunchCheckMode), settings => settings.LaunchCheckMode),
+        (nameof(ProxyMode), settings => settings.ProxyMode),
+        (nameof(CloseBehavior), settings => settings.CloseBehavior),
+        (nameof(Language), settings => settings.Language),
+        (nameof(ThemeMode), settings => settings.ThemeMode),
+        (nameof(MotionMode), settings => settings.MotionMode),
+        (nameof(ThemeColorMode), settings => settings.ThemeColorMode),
+        (nameof(ThemeColorExtractionAlgorithm), settings => settings.ThemeColorExtractionAlgorithm),
+        (nameof(ThemeColorVariant), settings => settings.ThemeColorVariant),
+        (nameof(NeutralColorStrategy), settings => settings.NeutralColorStrategy),
+        (nameof(CustomThemeColor), settings => settings.CustomThemeColor),
+        (nameof(ThemeColorPalette), settings => settings.ThemeColorPalette),
+        (nameof(SelectedThemeColorPaletteIndex), settings => settings.SelectedThemeColorPaletteIndex),
+        (nameof(DownloadSpeedLimit), settings => settings.DownloadSpeedLimit),
+        (nameof(EnableHttp2), settings => settings.EnableHttp2),
+        (nameof(EnableStartupUpdateCheck), settings => settings.EnableStartupUpdateCheck),
+        (nameof(ShowRemoteContentCard), settings => settings.ShowRemoteContentCard),
+        (nameof(RememberWindowPositionAndSize), settings => settings.RememberWindowPositionAndSize),
+        (nameof(WindowPositionX), settings => settings.WindowPositionX),
+        (nameof(WindowPositionY), settings => settings.WindowPositionY),
+        (nameof(WindowWidth), settings => settings.WindowWidth),
+        (nameof(WindowHeight), settings => settings.WindowHeight),
+        (nameof(PatchUrlGroup), settings => settings.PatchUrlGroup),
+        (nameof(CustomBackgroundPath), settings => settings.CustomBackgroundPath),
+        (nameof(BackgroundSource), settings => settings.BackgroundSource),
+        (nameof(BackgroundFit), settings => settings.BackgroundFit),
+        (nameof(BackgroundFillColor), settings => settings.BackgroundFillColor),
+        (nameof(ResourcePanelUid), settings => settings.ResourcePanelUid),
+        (nameof(ResourcePanelUidSource), settings => settings.ResourcePanelUidSource),
+        (nameof(StatusDetailMode), settings => settings.StatusDetailMode),
+        (nameof(UpdateChannel), settings => settings.UpdateChannel),
+        (nameof(LogLevel), settings => settings.LogLevel),
+        (nameof(GameRuntime), settings => settings.GameRuntime)
+    ];
+
+    /// <summary>
+    /// Reports whether <paramref name="other"/> holds the same settings state — the identity the
+    /// settings page's dirty flag and save button are derived from, and the counterpart of
+    /// <see cref="DeepClone"/>: clone, then compare, must answer "same".
+    /// Every entry goes through <see cref="ValuesEqual"/>, which handles the two shapes that carry
+    /// no value equality of their own: <see cref="ThemeColorPalette"/> element by element (order is
+    /// significant — the extractor decides the canonical order, so any dedup or normalization
+    /// shifts indices) and <see cref="GameRuntime"/> by recursing into its own state identity.
+    /// </summary>
+    public bool HasSameSettingsState(LauncherSettings? other)
+    {
+        if (other is null)
+        {
+            return false;
+        }
+
+        foreach (var (_, read) in ComparedProperties)
+        {
+            if (!ValuesEqual(read(this), read(other)))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Compares two settings values: the single per-value definition shared by
+    /// <see cref="HasSameSettingsState"/> and the LauncherSettingsTests guards.
+    /// Strings compare with <see cref="StringComparison.Ordinal"/> — deliberately not culture-aware,
+    /// because these are stored codes rather than display text. Boxed values go through <c>Equals</c>
+    /// because that is the comparison the boxed shape offers, and because it is reflexive where
+    /// <c>==</c> is not: with <c>==</c>, two <c>NaN</c> window dimensions would compare different and
+    /// leave the editor permanently dirty. That case is currently unreachable —
+    /// <c>MainWindow.CaptureWindowState</c> filters with <c>double.IsFinite</c> and
+    /// <c>LauncherSettingsService.NormalizeSettings</c> nulls non-finite dimensions on load — so
+    /// identity does not depend on that filtering.
+    /// Unrecognised types fall back to <see cref="object.Equals(object?)"/> and never throw: a wrong
+    /// "different" answer only leaves the save button enabled, and the guards are what keep a wrong
+    /// answer from shipping.
+    /// </summary>
+    internal static bool ValuesEqual(object? left, object? right)
+    {
+        if (ReferenceEquals(left, right))
+        {
+            return true;
+        }
+
+        if (left is null || right is null)
+        {
+            return false;
+        }
+
+        if (left is GameRuntimeSettings leftRuntime && right is GameRuntimeSettings rightRuntime)
+        {
+            return leftRuntime.HasSameSettingsState(rightRuntime);
+        }
+
+        // Strings are IEnumerable<char>, so they must be handled before the sequence branch.
+        if (left is string leftText && right is string rightText)
+        {
+            return string.Equals(leftText, rightText, StringComparison.Ordinal);
+        }
+
+        if (left is IEnumerable leftItems && right is IEnumerable rightItems)
+        {
+            return SequencesEqual(leftItems, rightItems);
+        }
+
+        return left.Equals(right);
+    }
+
+    private static bool SequencesEqual(IEnumerable left, IEnumerable right)
+    {
+        var leftItems = left.GetEnumerator();
+        var rightItems = right.GetEnumerator();
+
+        try
+        {
+            while (true)
+            {
+                var hasLeft = leftItems.MoveNext();
+                var hasRight = rightItems.MoveNext();
+
+                if (hasLeft != hasRight)
+                {
+                    return false;
+                }
+
+                if (!hasLeft)
+                {
+                    return true;
+                }
+
+                if (!ValuesEqual(leftItems.Current, rightItems.Current))
+                {
+                    return false;
+                }
+            }
+        }
+        finally
+        {
+            (leftItems as IDisposable)?.Dispose();
+            (rightItems as IDisposable)?.Dispose();
+        }
     }
 
     /// <summary>

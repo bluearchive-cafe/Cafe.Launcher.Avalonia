@@ -87,7 +87,7 @@ public sealed class GameDownloadService : IDisposable
         LocalizationService localizer,
         GameInstallationPath installationPath,
         IGameProcessTracker gameProcessTracker,
-        string downloadStateFilePath)
+        LauncherDataRoot dataRoot)
         : this(
             apiClient,
             remoteManifestService,
@@ -102,7 +102,7 @@ public sealed class GameDownloadService : IDisposable
             localizer,
             installationPath,
             gameProcessTracker,
-            new DownloadCheckpointStore(downloadStateFilePath))
+            new DownloadCheckpointStore(dataRoot))
     {
         sessionContext = BuildSessionContext(checkpointStore);
     }

@@ -15,56 +15,32 @@ namespace Cafe.Launcher.Avalonia.Services;
 /// <summary>
 /// settings.json 的唯一读写入口：信号量串行化读写、原子写盘、
 /// 未知/非法字段经 <c>NormalizeSettings</c> 兜底为有效默认值（向后兼容契约）。
+/// 读取可以由任何模块直接调用；写入在生产代码里只由 <see cref="ISavedSettingsWriter"/>
+/// 调用——它负责把落盘值同步给设置编辑器，绕过去就会让草稿与磁盘分叉。
 /// </summary>
 public sealed class LauncherSettingsService : IDisposable
 {
     private readonly SemaphoreSlim writeLock = new(1, 1);
-    private readonly string? settingsPath;
+    private readonly LauncherDataRoot dataRoot;
     private readonly LocalDiagnostics? diagnostics;
     private readonly Func<bool> isLinuxPlatform;
     private static readonly JsonSerializerOptions jsonOptions = JsonDefaults.Indented;
 
-    public LauncherSettingsService() : this(null, null, null)
+    /// <summary>
+    /// <paramref name="isLinuxPlatform"/> 仅供测试注入平台判定；生产用运行时平台。
+    /// </summary>
+    public LauncherSettingsService(
+        LauncherDataRoot dataRoot,
+        LocalDiagnostics? diagnostics = null,
+        Func<bool>? isLinuxPlatform = null)
     {
-    }
-
-    public LauncherSettingsService(LocalDiagnostics diagnostics) : this(diagnostics, null, null)
-    {
-    }
-
-    public LauncherSettingsService(string settingsPath) : this(null, settingsPath, null)
-    {
-    }
-
-    internal LauncherSettingsService(string settingsPath, Func<bool> isLinuxPlatform)
-        : this(null, settingsPath, isLinuxPlatform)
-    {
-    }
-
-    private LauncherSettingsService(
-        LocalDiagnostics? diagnostics,
-        string? settingsPath,
-        Func<bool>? isLinuxPlatform)
-    {
+        ArgumentNullException.ThrowIfNull(dataRoot);
+        this.dataRoot = dataRoot;
         this.diagnostics = diagnostics;
-        this.settingsPath = settingsPath;
         this.isLinuxPlatform = isLinuxPlatform ?? OperatingSystem.IsLinux;
     }
 
-    public string SettingsPath
-    {
-        get
-        {
-            if (!string.IsNullOrWhiteSpace(settingsPath))
-            {
-                return settingsPath;
-            }
-
-            return Path.Combine(
-                LauncherUserDataDirectory.Root,
-                GamePaths.LauncherSettingsFileName);
-        }
-    }
+    public string SettingsPath => dataRoot.SettingsPath;
 
     public async Task<LauncherSettings> ReadAsync(CancellationToken cancellationToken = default)
     {
@@ -100,7 +76,11 @@ public sealed class LauncherSettingsService : IDisposable
         return LauncherSettings.CreateDefaults();
     }
 
-    public async Task SaveAsync(LauncherSettings settings, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Writes <paramref name="settings"/> and returns the normalized value that was written, so a
+    /// caller that keeps the value as its own state never holds a copy that normalization changed.
+    /// </summary>
+    public async Task<LauncherSettings> SaveAsync(LauncherSettings settings, CancellationToken cancellationToken = default)
     {
         await writeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -112,6 +92,7 @@ public sealed class LauncherSettingsService : IDisposable
                 normalized,
                 jsonOptions,
                 cancellationToken).ConfigureAwait(false);
+            return normalized;
         }
         finally
         {

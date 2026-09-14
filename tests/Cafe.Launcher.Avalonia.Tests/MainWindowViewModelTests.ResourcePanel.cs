@@ -14,12 +14,12 @@ public partial class MainWindowViewModelTests
     {
         var cookiePath = Path.Combine(tempDir, "Library");
         await WriteResourcePanelCookieLibraryAsync(cookiePath, "UIDTESTA");
-        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
-        var uidService = new ResourcePanelUidService(new BestHttpCookieLibraryService(), settingsService, cookiePath);
+        var savedSettings = new SavedSettingsTestRig(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+        var uidService = new ResourcePanelUidService(new BestHttpCookieLibraryService(), savedSettings.SettingsService, savedSettings.Writer, cookiePath);
         var transport = CreateResourcePanelTransport();
         var apiClient = new ResourcePanelApiClient(transport);
         var coreService = new CountingCoreService(CreateSnapshot());
-        using var viewModel = await CreateViewModelAsync(coreService, settingsService, uidService, apiClient);
+        using var viewModel = await CreateViewModelAsync(coreService, savedSettings, uidService, apiClient);
         viewModel.ResourcePanel.ApplySettings(new LauncherSettings { PatchUrlGroup = PatchUrlGroups.Cafe });
 
         await viewModel.ResourcePanel.OpenResourcePanelCommand.ExecuteAsync(null);
@@ -42,13 +42,13 @@ public partial class MainWindowViewModelTests
     {
         var cookiePath = Path.Combine(tempDir, "Library");
         await WriteResourcePanelCookieLibraryAsync(cookiePath, "UIDTESTA");
-        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
-        var uidService = new ResourcePanelUidService(new BestHttpCookieLibraryService(), settingsService, cookiePath);
+        var savedSettings = new SavedSettingsTestRig(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+        var uidService = new ResourcePanelUidService(new BestHttpCookieLibraryService(), savedSettings.SettingsService, savedSettings.Writer, cookiePath);
         var transport = CreateResourcePanelTransport();
         var apiClient = new ResourcePanelApiClient(transport);
         using var viewModel = await CreateViewModelAsync(
             new CountingCoreService(CreateSnapshot()),
-            settingsService,
+            savedSettings,
             uidService,
             apiClient);
         viewModel.ResourcePanel.ApplySettings(new LauncherSettings { PatchUrlGroup = PatchUrlGroups.Official });
@@ -67,19 +67,19 @@ public partial class MainWindowViewModelTests
         var cookiePath = Path.Combine(tempDir, "Library");
         await WriteResourcePanelCookieLibraryAsync(cookiePath, "UIDTESTA");
         var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
-        var settingsService = new LauncherSettingsService(settingsPath);
-        await settingsService.SaveAsync(new LauncherSettings
+        var savedSettings = new SavedSettingsTestRig(settingsPath);
+        await savedSettings.SeedAsync(new LauncherSettings
         {
             PatchUrlGroup = PatchUrlGroups.Official
         });
-        var uidService = new ResourcePanelUidService(new BestHttpCookieLibraryService(), settingsService, cookiePath);
+        var uidService = new ResourcePanelUidService(new BestHttpCookieLibraryService(), savedSettings.SettingsService, savedSettings.Writer, cookiePath);
         var transport = CreateResourcePanelTransport();
         var apiClient = new ResourcePanelApiClient(transport);
         var snapshot = CreateSnapshot();
         snapshot.Settings.PatchUrlGroup = PatchUrlGroups.Cafe;
         using var viewModel = await CreateViewModelAsync(
             new CountingCoreService(snapshot),
-            settingsService,
+            savedSettings,
             uidService,
             apiClient);
         viewModel.ResourcePanel.ApplySettings(new LauncherSettings { PatchUrlGroup = PatchUrlGroups.Official });
@@ -94,7 +94,7 @@ public partial class MainWindowViewModelTests
         Assert.False(viewModel.Dialogs.ResourcePanelSourceConfirm.IsVisible);
         Assert.True(viewModel.ResourcePanel.IsResourcePanelVisible);
         Assert.Equal(PatchUrlGroups.Cafe, viewModel.Settings.Editor.Current.PatchUrlGroup);
-        Assert.Equal(PatchUrlGroups.Cafe, (await settingsService.ReadAsync()).PatchUrlGroup);
+        Assert.Equal(PatchUrlGroups.Cafe, (await savedSettings.SettingsService.ReadAsync()).PatchUrlGroup);
         Assert.Equal(1, CountRequests(transport, "/config/get"));
     }
 
@@ -114,16 +114,17 @@ public partial class MainWindowViewModelTests
             new RemoteHttpUrlValidator(),
             () => ProxyModes.System);
         var apiClient = new ResourcePanelApiClient(transport);
-        var settingsService = new LauncherSettingsService(
+        var savedSettings = new SavedSettingsTestRig(
             Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
-        await settingsService.SaveAsync(new LauncherSettings { ResourcePanelUid = "UIDTESTA" });
+        await savedSettings.SeedAsync(new LauncherSettings { ResourcePanelUid = "UIDTESTA" });
         var uidService = new ResourcePanelUidService(
             new BestHttpCookieLibraryService(),
-            settingsService,
+            savedSettings.SettingsService,
+            savedSettings.Writer,
             Path.Combine(tempDir, "missing"));
         using var viewModel = await CreateViewModelAsync(
             new CountingCoreService(CreateSnapshot()),
-            settingsService,
+            savedSettings,
             uidService,
             apiClient);
         viewModel.ResourcePanel.ApplySettings(new LauncherSettings
@@ -146,16 +147,17 @@ public partial class MainWindowViewModelTests
     [Fact]
     public async Task SaveResourcePanelAsync_SendsCnForEnabledAndJpForDisabled()
     {
-        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
-        await settingsService.SaveAsync(new LauncherSettings { ResourcePanelUid = "UIDTESTA" });
+        var savedSettings = new SavedSettingsTestRig(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+        await savedSettings.SeedAsync(new LauncherSettings { ResourcePanelUid = "UIDTESTA" });
         var uidService = new ResourcePanelUidService(
             new BestHttpCookieLibraryService(),
-            settingsService,
+            savedSettings.SettingsService,
+            savedSettings.Writer,
             Path.Combine(tempDir, "missing"));
         var transport = CreateResourcePanelTransport();
         var apiClient = new ResourcePanelApiClient(transport);
         var coreService = new CountingCoreService(CreateSnapshot());
-        using var viewModel = await CreateViewModelAsync(coreService, settingsService, uidService, apiClient);
+        using var viewModel = await CreateViewModelAsync(coreService, savedSettings, uidService, apiClient);
         viewModel.ResourcePanel.ApplySettings(new LauncherSettings { PatchUrlGroup = PatchUrlGroups.Cafe });
         await viewModel.ResourcePanel.OpenResourcePanelCommand.ExecuteAsync(null);
         viewModel.ResourcePanel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Text).IsEnabled = true;
@@ -174,15 +176,16 @@ public partial class MainWindowViewModelTests
     [Fact]
     public async Task OpenResourcePanelAsync_WhenUidMissing_ShowsManualInputAndSkipsApiCalls()
     {
-        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+        var savedSettings = new SavedSettingsTestRig(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
         var uidService = new ResourcePanelUidService(
             new BestHttpCookieLibraryService(),
-            settingsService,
+            savedSettings.SettingsService,
+            savedSettings.Writer,
             Path.Combine(tempDir, "missing"));
         var transport = CreateResourcePanelTransport();
         var apiClient = new ResourcePanelApiClient(transport);
         var coreService = new CountingCoreService(CreateSnapshot());
-        using var viewModel = await CreateViewModelAsync(coreService, settingsService, uidService, apiClient);
+        using var viewModel = await CreateViewModelAsync(coreService, savedSettings, uidService, apiClient);
         viewModel.ResourcePanel.ApplySettings(new LauncherSettings { PatchUrlGroup = PatchUrlGroups.Cafe });
 
         await viewModel.ResourcePanel.OpenResourcePanelCommand.ExecuteAsync(null);
@@ -198,16 +201,17 @@ public partial class MainWindowViewModelTests
     [Fact]
     public async Task SaveManualResourcePanelUidAsync_WhenUidIsBlank_ShowsValidationMessage()
     {
-        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+        var savedSettings = new SavedSettingsTestRig(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
         var uidService = new ResourcePanelUidService(
             new BestHttpCookieLibraryService(),
-            settingsService,
+            savedSettings.SettingsService,
+            savedSettings.Writer,
             Path.Combine(tempDir, "missing"));
         var transport = CreateResourcePanelTransport();
         var apiClient = new ResourcePanelApiClient(transport);
         using var viewModel = await CreateViewModelAsync(
             new CountingCoreService(CreateSnapshot()),
-            settingsService,
+            savedSettings,
             uidService,
             apiClient);
         viewModel.ResourcePanel.ApplySettings(new LauncherSettings { PatchUrlGroup = PatchUrlGroups.Cafe });

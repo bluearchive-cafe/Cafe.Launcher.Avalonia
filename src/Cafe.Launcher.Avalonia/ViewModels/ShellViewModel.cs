@@ -139,7 +139,9 @@ public partial class ShellViewModel : ViewModelBase, IDisposable
             resourcePanel.ResourcePanelUidText = localizer.F(LocalizationKeys.ResourcePanelCurrentUid, resourcePanel.ResourcePanelUid);
         }
 
-        settings.Editor.Current.Language = language;
+        // 展示刷新不写设置草稿：首次向导的语言预览也走这里，预览改了草稿就等于用户
+        // 没保存过也把编辑器变脏（保存按钮亮起、设置页显示预览过的语言）。语言进入
+        // 已保存设置只有两条路——设置页自己保存，或向导完成时整份替换。
         DiskSpaceText = localizer.T(LocalizationKeys.DiskSpaceEmpty);
         GameFolderPickerTitle = localizer.T(LocalizationKeys.ChooseInstallFolder);
         LogExportFolderPickerTitle = localizer.T(LocalizationKeys.LogExportFolderPickerTitle);

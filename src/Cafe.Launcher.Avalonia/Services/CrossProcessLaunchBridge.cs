@@ -15,6 +15,7 @@ internal sealed class CrossProcessLaunchBridge : IDisposable
 {
     private readonly string launchSignalName;
     private readonly string showSignalName;
+    private readonly LauncherDataRoot dataRoot;
     private readonly CrossProcessLaunchSignal signal;
     private Mutex? mutex;
     private bool disposed;
@@ -23,11 +24,16 @@ internal sealed class CrossProcessLaunchBridge : IDisposable
     /// 创建桥并立即建立监听端点 —— 必须在探测单实例互斥量之前调用,
     /// 否则第二个实例的转发可能抢在监听端点存在之前落空。
     /// </summary>
-    internal CrossProcessLaunchBridge(string launchSignalName, string showSignalName)
+    internal CrossProcessLaunchBridge(
+        string launchSignalName,
+        string showSignalName,
+        LauncherDataRoot dataRoot)
     {
+        ArgumentNullException.ThrowIfNull(dataRoot);
         this.launchSignalName = launchSignalName;
         this.showSignalName = showSignalName;
-        signal = CrossProcessLaunchSignal.Listen(launchSignalName);
+        this.dataRoot = dataRoot;
+        signal = CrossProcessLaunchSignal.Listen(launchSignalName, dataRoot);
     }
 
     /// <summary>Gets the launch-game endpoint owned by this process (valid only after winning).</summary>
@@ -51,7 +57,7 @@ internal sealed class CrossProcessLaunchBridge : IDisposable
 
         if (Program.HasLaunchGameArgument(args))
         {
-            CrossProcessLaunchSignal.Raise(launchSignalName);
+            CrossProcessLaunchSignal.Raise(launchSignalName, dataRoot);
         }
 
         RaiseShowWindow();

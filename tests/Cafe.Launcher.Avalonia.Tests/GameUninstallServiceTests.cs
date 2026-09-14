@@ -164,7 +164,7 @@ public sealed class GameUninstallServiceTests : IDisposable
             new LocalDiagnostics(),
             localizer ?? new LocalizationService(),
             new GameInstallationPath(),
-            new DownloadCheckpointStore(Path.Combine(tempDir, "download_state.json")),
+            new DownloadCheckpointStore( TestDataRoot.ForDirectory(Path.Combine(tempDir)) ),
             new GameProcessTracker());
     }
 

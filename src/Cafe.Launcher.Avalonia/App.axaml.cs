@@ -86,7 +86,9 @@ public partial class App : Application
                     trayService?.Dispose();
                     mainWindow.Hide();
 
-                    crashReportWindow = new CrashReportWindow(report);
+                    crashReportWindow = new CrashReportWindow(
+                        report,
+                        serviceProvider.GetRequiredService<LauncherDataRoot>());
                     crashReportWindow.Closed += (_, _) => desktop.Shutdown(1);
                     desktop.MainWindow = crashReportWindow;
                     crashReportWindow.Show();
@@ -306,11 +308,10 @@ public partial class App : Application
         {
             await viewModel.PrepareForShutdownAsync();
 
-            var settings = viewModel.Settings.Editor.GetSavedSnapshot();
-            if (settings.RememberWindowPositionAndSize)
+            if (viewModel.Settings.Editor.GetSavedSnapshot().RememberWindowPositionAndSize)
             {
-                mainWindow.CaptureWindowState(settings);
-                await serviceProvider.GetRequiredService<LauncherSettingsService>().SaveAsync(settings);
+                await serviceProvider.GetRequiredService<ISavedSettingsWriter>()
+                    .UpdateAsync(mainWindow.CaptureWindowState);
             }
         }
         catch (Exception exception)

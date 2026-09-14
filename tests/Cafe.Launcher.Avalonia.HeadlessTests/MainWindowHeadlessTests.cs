@@ -45,8 +45,6 @@ public sealed partial class MainWindowHeadlessTests
             viewModel.Settings,
             viewModel.ResourcePanel,
             hasSnapshot: false);
-        viewModel.Settings.Editor.ApplySnapshot(
-            viewModel.Settings.Editor.GetSnapshot());
         // Apply the default M3 dynamic scheme so navigation selection visual
         // matches the real app's initialization behavior.
         viewModel.Settings.Appearance.ApplyScheme(

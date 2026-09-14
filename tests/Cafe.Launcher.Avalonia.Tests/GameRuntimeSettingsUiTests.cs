@@ -138,6 +138,7 @@ public sealed class GameRuntimeSettingsUiTests
         new(
             null!,
             null!,
+            null!,
             localizer,
             null!,
             null!,

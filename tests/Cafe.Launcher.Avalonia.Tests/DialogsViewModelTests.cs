@@ -221,7 +221,7 @@ public sealed class DialogsViewModelTests
             Path.GetTempPath(),
             Guid.NewGuid().ToString("N"),
             "shown_notices.json");
-        var stateService = new NoticeStateService(statePath);
+        var stateService = new NoticeStateService( TestDataRoot.ForFile(statePath) );
         var viewModel = new DialogsViewModel(
             new LocalizationService(),
             stateService,
@@ -346,7 +346,7 @@ public sealed class DialogsViewModelTests
             "shown_notices.json");
         return new DialogsViewModel(
             new LocalizationService(),
-            new NoticeStateService(noticePath),
+            new NoticeStateService( TestDataRoot.ForFile(noticePath) ),
             new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(), new LocalInstallationStateStore(), new LocalDiagnostics(), new StubFilePickerService()),
             new LocalDiagnostics(),
             action =>

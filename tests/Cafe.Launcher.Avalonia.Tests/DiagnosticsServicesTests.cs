@@ -22,7 +22,7 @@ public sealed class DiagnosticsServicesTests : IDisposable
             diagnostics.LogFilePath,
             StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain(
-            LauncherUserDataDirectory.Root,
+            LauncherDataRoot.ForCurrentProcess().Root,
             diagnostics.LogFilePath,
             StringComparison.OrdinalIgnoreCase);
     }

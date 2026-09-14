@@ -286,8 +286,6 @@ public sealed partial class MainWindowHeadlessTests
         context.ViewModel.Dialogs.UninstallConfirm.IsVisible = false;
         context.ViewModel.Dialogs.IsNoticeDialogVisible = false;
         context.ViewModel.ResourcePanel.IsResourcePanelVisible = false;
-        context.ViewModel.Settings.Editor.ApplySnapshot(
-            context.ViewModel.Settings.Editor.GetSnapshot());
         context.ViewModel.WindowChrome.IsSettingsVisible = true;
         Dispatcher.UIThread.RunJobs();
 

@@ -240,6 +240,135 @@ public sealed class ResxResourceContractTests
         Assert.All(DynamicProductionKeys, key => Assert.Contains(key, ResxValues["en"]));
     }
 
+    /// <summary>
+    /// XAML 面的键契约（架构评审 2026-09-14 · 候选 04）。.cs 面那条键契约靠「禁止裸字面量、
+    /// 强制引用 <see cref="LocalizationKeys"/> 常量」实现，而 XAML 绑定路径本身就是字符串、
+    /// 无法引用 C# 常量，于是同一份词表在 .axaml 侧退化成无人检查的字符串——拼错键时构建与
+    /// 测试全绿，运行期由 <c>LocalizationService.T</c> 的 null 分支静默降级为固定串
+    /// （<c>LocalizationService.cs:214</c>）。这一半只做存在性检查：XAML 里写的键必须在中立
+    /// .resx 里存在。其余三个语言文件的键集由 Resx_AllFourFiles_HaveIdenticalKeySets 钉住，
+    /// 故比对中立文件即覆盖四个语言。
+    /// </summary>
+    private static readonly Regex XamlResourceKeyPattern = new(
+        """I18n\[\s*['"]?(?<key>[A-Za-z_][A-Za-z0-9_]*)['"]?\s*\]""",
+        RegexOptions.Compiled);
+
+    private static readonly Regex XamlCommentPattern = new(
+        "<!--.*?-->",
+        RegexOptions.Compiled | RegexOptions.Singleline);
+
+    /// <summary>
+    /// 扫描域＝应用工程下全部 <c>.axaml</c>（递归，排除 bin/obj），不维护手抄文件清单：
+    /// AUD-TEST-006 已证明这类清单会漂移一次（拆分出主叠层时漏掉共享的 ViewFiles，
+    /// 令牌扫描就此失去对最新叠层的覆盖）。
+    /// </summary>
+    private static string[] XamlFilesInScope()
+    {
+        var root = TestLocalizationHelper.FindProjectRoot();
+        var separator = Path.DirectorySeparatorChar;
+        var files = Directory
+            .GetFiles(root, "*.axaml", SearchOption.AllDirectories)
+            .Where(path => !path.Contains($"{separator}bin{separator}", StringComparison.OrdinalIgnoreCase))
+            .Where(path => !path.Contains($"{separator}obj{separator}", StringComparison.OrdinalIgnoreCase))
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.NotEmpty(files);
+        return files;
+    }
+
+    /// <summary>
+    /// 取出 XAML 里的键引用及其行号。注释先剥掉：注掉的绑定不该让守卫红，
+    /// 也不该假装自己是活引用。
+    /// </summary>
+    private static (string Key, int Line)[] ResourceKeysInXaml(string text)
+    {
+        var scanned = XamlCommentPattern.Replace(text, string.Empty);
+        return XamlResourceKeyPattern
+            .Matches(scanned)
+            .Select(match => (
+                match.Groups["key"].Value,
+                scanned.Take(match.Index).Count(character => character == '\n') + 1))
+            .ToArray();
+    }
+
+    /// <summary>
+    /// 正相断言：扫描器必须读到两种合法的字面量键形态，且不被注释与无关索引器迷惑。
+    /// 它是唯一能证明提取本身有效的断言——若它失效，下方两条契约会退化为永远为真。
+    /// </summary>
+    [Fact]
+    public void XamlResourceKeyScan_ReadsBothLiteralForms_AndIgnoresComments()
+    {
+        const string fixture = """
+            <TextBlock Text="{Binding Shell.I18n[close]}"/>
+            <TextBlock Text="{Binding Shell.I18n['cancel']}"/>
+            <!-- <TextBlock Text="{Binding Shell.I18n[retiredKey]}"/> -->
+            <TextBlock Text="{Binding Shell.Other[close]}"/>
+            """;
+
+        var keys = ResourceKeysInXaml(fixture).Select(entry => entry.Key).ToArray();
+
+        Assert.Equal(new[] { "close", "cancel" }, keys);
+    }
+
+    [Fact]
+    public void XamlResourceBindings_UseOnlyKeysThatExistInNeutralResources()
+    {
+        var root = TestLocalizationHelper.FindProjectRoot();
+        var missing = XamlFilesInScope()
+            .SelectMany(path => ResourceKeysInXaml(File.ReadAllText(path))
+                .Select(entry => (
+                    File: Path.GetRelativePath(root, path).Replace('\\', '/'),
+                    entry.Key,
+                    entry.Line)))
+            .Where(entry => !ResxValues["en"].ContainsKey(entry.Key))
+            .Select(entry => $"{entry.File}:{entry.Line} → {entry.Key}")
+            .ToArray();
+
+        Assert.True(
+            missing.Length == 0,
+            "XAML 绑定了中立 resx 中不存在的资源键，运行期会静默降级为 \"Localization unavailable.\"。"
+            + "请改用 Resources/LauncherStrings.resx 里的键；若这确实是按变量索引的绑定而非字面量键，"
+            + "在此显式豁免并说明理由，不要放宽 XamlResourceKeyPattern："
+            + string.Join(", ", missing));
+    }
+
+    /// <summary>
+    /// 反空转：扫描域或提取模式一旦失效（递归退化成 TopDirectoryOnly、绑定形态变化后正则
+    /// 不再命中），上一条契约会变成永远为真的空断言。基线为候选 04 落地时的实测值；真移除
+    /// 了绑定／文案就同步下调，扫描失效应表现为红。
+    /// </summary>
+    [Fact]
+    public void XamlKeyScan_StillCoversTheKeyBearingFiles()
+    {
+        const int landedKeyBearingFiles = 16;
+        const int landedReferences = 545;
+        const int landedDistinctKeys = 264;
+
+        var perFile = XamlFilesInScope()
+            .Select(path => ResourceKeysInXaml(File.ReadAllText(path)))
+            .ToArray();
+        var references = perFile.Sum(entries => entries.Length);
+        var keyBearingFiles = perFile.Count(entries => entries.Length > 0);
+        var distinctKeys = perFile
+            .SelectMany(entries => entries)
+            .Select(entry => entry.Key)
+            .Distinct(StringComparer.Ordinal)
+            .Count();
+
+        Assert.True(
+            keyBearingFiles >= landedKeyBearingFiles,
+            $"扫描到 {keyBearingFiles} 个含键引用的 .axaml，低于落地基线 {landedKeyBearingFiles}——"
+            + "先确认扫描域是否仍覆盖 Views/ 与 Controls/ 的子目录。");
+        Assert.True(
+            references >= landedReferences,
+            $"扫描到 {references} 处键引用，低于落地基线 {landedReferences}——"
+            + "先确认绑定形态是否变化到 XamlResourceKeyPattern 不再命中。");
+        Assert.True(
+            distinctKeys >= landedDistinctKeys,
+            $"扫描到 {distinctKeys} 个不同的键，低于落地基线 {landedDistinctKeys}。");
+    }
+
     [Fact]
     public void ResourceManager_ContainsExpectedSatelliteAssemblies()
     {

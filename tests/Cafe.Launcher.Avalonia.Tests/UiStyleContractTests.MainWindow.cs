@@ -147,7 +147,7 @@ public sealed partial class UiStyleContractTests
             ["{Binding Settings.SelectInstalledGameCommand}"] = ("{Binding Shell.I18n[selectInstalledGame]}", "secondary-operation"),
             ["{Binding Operations.StartGameCommand}"] = ("{Binding Shell.I18n[startGame]}", "primary-operation"),
             ["{Binding Operations.PauseResumeCommand}"] = ("{Binding Operations.PauseResumeText}", "secondary-operation"),
-            ["{Binding Operations.StopOperationCommand}"] = ("{Binding Shell.I18n[stop]}", "secondary-operation")
+            ["{Binding Operations.RequestStopCommand}"] = ("{Binding Shell.I18n[stop]}", "secondary-operation")
         };
 
         foreach (var (command, expected) in expectedButtons)

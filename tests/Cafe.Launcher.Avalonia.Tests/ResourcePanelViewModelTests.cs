@@ -361,8 +361,12 @@ public sealed class ResourcePanelViewModelTests
             await WriteCookieLibraryAsync(cookiePath, cookieUid);
         }
 
-        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
-        var uidService = new ResourcePanelUidService(new BestHttpCookieLibraryService(), settingsService, cookiePath);
+        var savedSettings = new SavedSettingsTestRig(Path.Combine(tempDir, "settings.json"));
+        var uidService = new ResourcePanelUidService(
+            new BestHttpCookieLibraryService(),
+            savedSettings.SettingsService,
+            savedSettings.Writer,
+            cookiePath);
         var transport = new GatedResourcePanelTransport();
         configure?.Invoke(transport);
         var apiClient = new ResourcePanelApiClient(transport);
@@ -374,7 +378,7 @@ public sealed class ResourcePanelViewModelTests
         return new TestContext(
             viewModel,
             transport,
-            settingsService,
+            savedSettings.SettingsService,
             apiClient,
             toastService,
             errorHandling,

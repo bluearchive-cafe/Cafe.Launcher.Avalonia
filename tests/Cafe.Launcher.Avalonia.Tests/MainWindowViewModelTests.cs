@@ -41,13 +41,12 @@ public sealed partial class MainWindowViewModelTests : IDisposable
         httpClientFactory = new HttpClientFactory(proxySettings);
         imageCacheService = new ImageCacheService(
             new StubRemoteHttpTransport(),
-            new Crc64Service(),
-            Path.Combine(tempDir, "image-cache"));
+            new Crc64Service(), TestDataRoot.ForDirectory(Path.Combine(tempDir)) );
     }
 
     private async Task<MainWindowViewModel> CreateViewModelAsync(
         ILauncherCoreService coreService,
-        LauncherSettingsService? settingsService = null,
+        SavedSettingsTestRig? savedSettings = null,
         ResourcePanelUidService? resourcePanelUidService = null,
         ResourcePanelApiClient? resourcePanelApiClient = null,
         ToastService? toastService = null,
@@ -58,8 +57,9 @@ public sealed partial class MainWindowViewModelTests : IDisposable
         StubFilePickerService? filePickerService = null)
     {
         filePickerService ??= new StubFilePickerService();
-        settingsService ??= new LauncherSettingsService(
-            Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+        savedSettings ??= new SavedSettingsTestRig(new LauncherSettingsService( TestDataRoot.ForDirectory(Path.Combine(tempDir, Guid.NewGuid().ToString("N"))) ));
+        var settingsService = savedSettings.SettingsService;
+        var savedSettingsWriter = savedSettings.Writer;
         var localInstallationStateStore = new LocalInstallationStateStore();
         var diagnostics = new LocalDiagnostics();
         var localizationService = new LocalizationService();
@@ -90,23 +90,23 @@ public sealed partial class MainWindowViewModelTests : IDisposable
             diagnostics,
             localizationService,
             new GameInstallationPath(),
-            new GameProcessTracker(),
-            Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "download_state.json"));
+            new GameProcessTracker(), TestDataRoot.ForDirectory(Path.Combine(tempDir, Guid.NewGuid().ToString("N"))) );
         resourcePanelUidService ??= new ResourcePanelUidService(
             new BestHttpCookieLibraryService(),
             settingsService,
+            savedSettingsWriter,
             Path.Combine(tempDir, "missing-resource-panel-cookie"));
         resourcePanelApiClient ??= new ResourcePanelApiClient(new StubRemoteHttpTransport());
 
         toastService ??= new ToastService();
         var diskSpaceService = new DiskSpaceService();
         var launcherUpdateSvc = launcherUpdateService ?? new LauncherUpdateService(new StubRemoteHttpTransport());
-        var settingsEditor = new SettingsEditor();
+        var settingsEditor = savedSettings.Editor;
         var settingsOptions = new SettingsOptionsViewModel(localizationService, diskSpaceService);
         var settingsAppearance = new SettingsAppearanceViewModel(settingsEditor);
         var shellViewModel = new ShellViewModel(localizationService);
         var errorHandling = new ErrorHandlingService(localizationService, diagnostics, toastService);
-        var noticeStateService = new NoticeStateService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "shown_notices.json"));
+        var noticeStateService = new NoticeStateService( TestDataRoot.ForDirectory(Path.Combine(tempDir, Guid.NewGuid().ToString("N"))) );
         var dialogsViewModel = new DialogsViewModel(
             localizationService,
             noticeStateService,
@@ -114,7 +114,7 @@ public sealed partial class MainWindowViewModelTests : IDisposable
             diagnostics);
         using var settingsLogger = new UnifiedLogger(Path.Combine(tempDir, Guid.NewGuid().ToString("N")));
         var settingsViewModel = new SettingsViewModel(
-            settingsService, httpClientFactory, localizationService, toastService,
+            settingsService, savedSettingsWriter, httpClientFactory, localizationService, toastService,
             launcherUpdateSvc, dialogsViewModel,
             settingsLogger,
             new GameInstallationPath(),
@@ -129,7 +129,7 @@ public sealed partial class MainWindowViewModelTests : IDisposable
             diagnostics,
             localizationService,
             new GameInstallationPath(),
-            new DownloadCheckpointStore(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "download_state.json")),
+            new DownloadCheckpointStore( TestDataRoot.ForDirectory(Path.Combine(tempDir, Guid.NewGuid().ToString("N"))) ),
             new GameProcessTracker());
 
         var remoteContentViewModel = new RemoteContentViewModel(localizationService, imageCacheService, diagnostics);
@@ -166,8 +166,8 @@ public sealed partial class MainWindowViewModelTests : IDisposable
                     return Task.CompletedTask;
                 },
                 toastDelayAsync);
-        var debugViewModel = new DebugViewModel(toastService, new UnifiedLogger(Path.Combine(tempDir, Guid.NewGuid().ToString("N"))), errorHandling, new StubFatalCrashService(), settingsService, gameOperationsViewModel, shellViewModel);
-        var windowChromeViewModel = new WindowChromeViewModel(
+        var debugViewModel = new DebugViewModel( TestDataRoot.ForDirectory(tempDir) ,toastService, new UnifiedLogger(Path.Combine(tempDir, Guid.NewGuid().ToString("N"))), errorHandling, new StubFatalCrashService(), settingsService, gameOperationsViewModel, shellViewModel);
+        var windowChromeViewModel = new WindowChromeViewModel( TestDataRoot.ForDirectory(tempDir) ,
             settingsViewModel, remoteContentViewModel, dialogsViewModel, gameOperationsViewModel,
             debugViewModel);
 
@@ -175,6 +175,7 @@ public sealed partial class MainWindowViewModelTests : IDisposable
         return new MainWindowViewModel(
             coreService,
             settingsService,
+            savedSettingsWriter,
             localizationService,
             toastService,
             launcherUpdateSvc,
@@ -191,7 +192,7 @@ public sealed partial class MainWindowViewModelTests : IDisposable
                 resourcePanelViewModel,
                 new LogViewerDialogViewModel(testLogger, null, null, null, null),
                 new LogExportDialogViewModel(
-                    new LogExportService(new LocalDiagnostics(testLogger), new CrashReportStore()),
+                    new LogExportService(new LocalDiagnostics(testLogger), TestDataRoot.ForCurrentProcess(), new CrashReportStore(TestDataRoot.ForCurrentProcess()) ),
                     filePickerService,
                     toastService,
                     localizationService,

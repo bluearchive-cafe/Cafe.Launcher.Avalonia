@@ -187,7 +187,7 @@ public sealed class LocalizationTerminologyTests
             new LocalDiagnostics(), new StubFilePickerService());
         var dialogs = new DialogsViewModel(
             localizer,
-            new NoticeStateService(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "notice.json")),
+            new NoticeStateService( TestDataRoot.ForDirectory(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "notice.json")) ),
             setupWizard,
             new LocalDiagnostics());
 

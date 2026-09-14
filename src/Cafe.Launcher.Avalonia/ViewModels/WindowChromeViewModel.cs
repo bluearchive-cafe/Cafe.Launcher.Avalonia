@@ -15,10 +15,11 @@ namespace Cafe.Launcher.Avalonia.ViewModels;
 
 public partial class WindowChromeViewModel : ViewModelBase
 {
+    private readonly LauncherDataRoot dataRoot;
     private readonly SettingsViewModel settings;
     private readonly RemoteContentViewModel remoteContent;
     private readonly DialogsViewModel dialogs;
-    private readonly GameOperationsViewModel operations;
+    private readonly IGameOperationActivity operations;
     private readonly DebugViewModel debug;
     private readonly Action<string?> openExternalUrl;
     private readonly Action<string> openDirectory;
@@ -31,12 +32,14 @@ public partial class WindowChromeViewModel : ViewModelBase
     public event Action? RestoreRequested;
 
     public WindowChromeViewModel(
+        LauncherDataRoot dataRoot,
         SettingsViewModel settings,
         RemoteContentViewModel remoteContent,
         DialogsViewModel dialogs,
-        GameOperationsViewModel operations,
+        IGameOperationActivity operations,
         DebugViewModel debug)
         : this(
+            dataRoot,
             settings,
             remoteContent,
             dialogs,
@@ -48,14 +51,17 @@ public partial class WindowChromeViewModel : ViewModelBase
     }
 
     internal WindowChromeViewModel(
+        LauncherDataRoot dataRoot,
         SettingsViewModel settings,
         RemoteContentViewModel remoteContent,
         DialogsViewModel dialogs,
-        GameOperationsViewModel operations,
+        IGameOperationActivity operations,
         DebugViewModel debug,
         Action<string?> openExternalUrl,
         Action<string> openDirectory)
     {
+        ArgumentNullException.ThrowIfNull(dataRoot);
+        this.dataRoot = dataRoot;
         this.settings = settings;
         this.remoteContent = remoteContent;
         this.dialogs = dialogs;
@@ -174,7 +180,7 @@ public partial class WindowChromeViewModel : ViewModelBase
     [RelayCommand]
     private void OpenDataDirectory()
     {
-        openDirectory(LauncherUserDataDirectory.Root);
+        openDirectory(dataRoot.Root);
     }
 
     [RelayCommand]
@@ -202,7 +208,7 @@ public partial class WindowChromeViewModel : ViewModelBase
 
     public Task CloseAfterStoppingDownload()
     {
-        operations.StopDownload(DownloadStopReason.UserRequested);
+        operations.StopOperation(GameOperationStopIntent.UserStop);
         CloseRequested?.Invoke();
         return Task.CompletedTask;
     }
