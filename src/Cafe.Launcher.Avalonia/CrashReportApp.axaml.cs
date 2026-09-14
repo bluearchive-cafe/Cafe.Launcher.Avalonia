@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Views;
 
@@ -21,7 +22,7 @@ public partial class CrashReportApp : Application
             var report = CrashReportBootstrap.Resolve(Program.CrashReportPath);
             CrashReportBootstrap.ApplyCulture(report.UiCulture);
 
-            var crashWindow = new CrashReportWindow(report);
+            var crashWindow = new CrashReportWindow(report, LauncherDataRoot.ForCurrentProcess());
             desktop.MainWindow = crashWindow;
         }
 

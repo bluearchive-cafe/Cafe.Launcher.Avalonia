@@ -25,6 +25,14 @@ public interface IGameOperationActivity
     /// <summary>Toggles pause/resume for the active download.</summary>
     void PauseResume();
 
-    /// <summary>Stops the active download workflow.</summary>
-    void StopOperation();
+    /// <summary>
+    /// 用户按下停止：域自行决定是否先确认（有活动下载时弹确认框，否则直接停止）。
+    /// </summary>
+    void RequestStop();
+
+    /// <summary>
+    /// 按给定意图立即停止活动工作流——「关窗并停止」与生命周期退出走这里。
+    /// 调用方只表达意图，检查点去留由域翻译。
+    /// </summary>
+    void StopOperation(GameOperationStopIntent intent);
 }

@@ -7,10 +7,14 @@ namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed class ImageCacheServiceTests : IDisposable
 {
-    private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+    private readonly string rootDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+    private readonly string tempDir;
 
     public ImageCacheServiceTests()
     {
+        // 缓存目录由数据根派生（<root>/image-cache）：把测试工作目录取成派生结果，
+        // 于是用例仍按"文件就落在 tempDir 下"断言。
+        tempDir = Path.Combine(rootDir, LauncherDataRoot.ImageCacheFolderName);
         Directory.CreateDirectory(tempDir);
     }
 
@@ -174,10 +178,10 @@ public sealed class ImageCacheServiceTests : IDisposable
     }
 
     private ImageCacheService CreateService(Func<Uri, object?>? responder) =>
-        new(new StubRemoteHttpTransport(responder), new Crc64Service(), tempDir);
+        new(new StubRemoteHttpTransport(responder), new Crc64Service(), TestDataRoot.ForDirectory(rootDir));
 
     private ImageCacheService CreateServiceWithTransport(IRemoteHttpTransport transport) =>
-        new(transport, new Crc64Service(), tempDir);
+        new(transport, new Crc64Service(), TestDataRoot.ForDirectory(rootDir));
 
     private async Task<string> ComputeHashAsync(byte[] bytes)
     {
@@ -188,9 +192,9 @@ public sealed class ImageCacheServiceTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(tempDir))
+        if (Directory.Exists(rootDir))
         {
-            Directory.Delete(tempDir, recursive: true);
+            Directory.Delete(rootDir, recursive: true);
         }
     }
 

@@ -20,6 +20,11 @@ public static class ServiceConfiguration
         UnifiedLogger? existingLogger = null,
         IFatalCrashService? existingFatalCrashService = null)
     {
+        // 进程根在这里解析一次，其余登记项与所有消费方共用这一个实例——
+        // 「数据放哪」不再是各模块各自读一次的进程级静态。
+        var dataRoot = LauncherDataRoot.ForCurrentProcess();
+        services.AddSingleton(dataRoot);
+
         // ── Leaf services (parameterless constructors, no deps) ──────────
         services.AddSingleton<GameInstallationPath>();
         services.AddSingleton<LocalInstallationStateStore>();
@@ -35,7 +40,7 @@ public static class ServiceConfiguration
         if (existingLogger is not null)
             services.AddSingleton(existingLogger);
         else
-            services.AddSingleton<UnifiedLogger>();
+            services.AddSingleton(_ => new UnifiedLogger(dataRoot.Root));
         services.AddSingleton<LogExportService>();
         services.AddSingleton<LogViewerDialogViewModel>();
         services.AddSingleton<LogExportDialogViewModel>();
@@ -46,7 +51,9 @@ public static class ServiceConfiguration
             LocalDiagnostics.RegisterSharedLogger(logger);
             return localDiagnostics;
         });
-        services.AddSingleton<CrashReportStore>();
+        services.AddSingleton(_ => new CrashReportStore(
+            dataRoot,
+            CrashReportStore.DefaultFallbackDirectory));
         services.AddSingleton<ICrashReportLocator>(sp => sp.GetRequiredService<CrashReportStore>());
         services.AddSingleton<ICrashReporterLauncher, CrashReporterLauncher>();
         if (existingFatalCrashService is not null)
@@ -91,7 +98,9 @@ public static class ServiceConfiguration
         services.AddSingleton<ManifestValidationService>();
         services.AddSingleton<NoticeStateService>();
         services.AddSingleton<ResourcePanelUidService>();
-        services.AddSingleton<LauncherSettingsService>();
+        services.AddSingleton(sp => new LauncherSettingsService(
+            dataRoot,
+            sp.GetRequiredService<LocalDiagnostics>()));
         services.AddSingleton<WindowsAnimationSettingsProvider>();
         services.AddSingleton<ISettingsEditor, SettingsEditor>();
         // 已保存设置的唯一写入方：依赖编辑器与设置服务，二者都登记在它之前。
@@ -108,7 +117,7 @@ public static class ServiceConfiguration
         services.AddSingleton<IGameProcessTracker, GameProcessTracker>();
         // 持久化检查点存储全库单例：下载服务写入/清除，卸载服务清除——
         // 同一文件只允许一个所有者实例。
-        services.AddSingleton(sp => DownloadCheckpointStore.CreateDefault());
+        services.AddSingleton(_ => new DownloadCheckpointStore(dataRoot));
         services.AddSingleton<GameLaunchService>();
         services.AddSingleton<GameUninstallService>();
         services.AddSingleton<IGameShortcutService, GameShortcutService>();

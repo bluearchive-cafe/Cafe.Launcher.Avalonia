@@ -213,7 +213,7 @@ public sealed class DebugViewModelTests : IDisposable
         var diagnostics = new LocalDiagnostics();
         var dialogs = new DialogsViewModel(
             localizer,
-            new NoticeStateService(Path.Combine(tempDir, "notices.json")),
+            new NoticeStateService( TestDataRoot.ForDirectory(Path.Combine(tempDir, "notices.json")) ),
             new SetupWizardViewModel(
                 localizer,
                 new GameInstallationPath(),
@@ -234,12 +234,12 @@ public sealed class DebugViewModelTests : IDisposable
             _ => Task.CompletedTask);
         var logger = new UnifiedLogger(Path.Combine(tempDir, "logs"));
         var fatalCrash = new StubFatalCrashService();
-        var viewModel = new DebugViewModel(
+        var viewModel = new DebugViewModel( TestDataRoot.ForDirectory(tempDir) ,
             toastService,
             logger,
             errorHandling,
             fatalCrash,
-            new LauncherSettingsService(tempDir),
+            new LauncherSettingsService(TestDataRoot.ForDirectory(tempDir)),
             operations,
             shell);
         return new TestContext(viewModel, operations, backend, logger, toastService, localizer, fatalCrash);

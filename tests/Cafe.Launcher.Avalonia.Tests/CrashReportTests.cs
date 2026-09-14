@@ -1,4 +1,5 @@
 using System.Text;
+using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.Tests;
@@ -13,7 +14,7 @@ public sealed class CrashReportTests : IDisposable
     [Fact]
     public void Create_WhenExceptionContainsUserProfile_PersistsReadableSanitizedSnapshot()
     {
-        var store = new CrashReportStore(tempDirectory);
+        var store = new CrashReportStore(TestDataRoot.ForDirectory(tempDirectory));
         var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         var secretPath = Path.Combine(userProfile, "private", "file.txt");
 
@@ -62,7 +63,7 @@ public sealed class CrashReportTests : IDisposable
         var blockedPath = Path.Combine(tempDirectory, "blocked");
         File.WriteAllText(blockedPath, "not a directory");
         var fallbackPath = Path.Combine(tempDirectory, "fallback");
-        var store = new CrashReportStore(blockedPath, fallbackPath);
+        var store = new CrashReportStore(TestDataRoot.ForDirectory(blockedPath), fallbackPath);
 
         var report = store.Create(CrashOrigin.DiagnosticsInitialization, new IOException("primary unavailable"));
 
@@ -73,22 +74,23 @@ public sealed class CrashReportTests : IDisposable
     [Fact]
     public void CleanupOldReports_WhenCountExceedsLimit_RetainsNewestTen()
     {
-        Directory.CreateDirectory(tempDirectory);
+        var reportsDirectory = Path.Combine(tempDirectory, LauncherDataRoot.CrashReportsFolderName);
+        Directory.CreateDirectory(reportsDirectory);
         var now = DateTimeOffset.Now;
         for (var index = 0; index < 12; index++)
         {
-            var path = Path.Combine(tempDirectory, $"report-{index:D2}.json");
+            var path = Path.Combine(reportsDirectory, $"report-{index:D2}.json");
             File.WriteAllText(path, "{}");
             File.SetLastWriteTimeUtc(path, now.AddDays(-index).UtcDateTime);
         }
 
-        var store = new CrashReportStore(tempDirectory);
+        var store = new CrashReportStore(TestDataRoot.ForDirectory(tempDirectory));
         store.CleanupOldReports(now);
 
         Assert.Equal(
             CrashReportStore.RetainedReportCount,
-            Directory.EnumerateFiles(tempDirectory, "*.json").Count());
-        Assert.False(File.Exists(Path.Combine(tempDirectory, "report-11.json")));
+            Directory.EnumerateFiles(reportsDirectory, "*.json").Count());
+        Assert.False(File.Exists(Path.Combine(reportsDirectory, "report-11.json")));
     }
 
     [Fact]
@@ -97,7 +99,8 @@ public sealed class CrashReportTests : IDisposable
         Directory.CreateDirectory(tempDirectory);
         using var logger = new UnifiedLogger(tempDirectory);
         var reportDirectory = Path.Combine(tempDirectory, "reports");
-        var store = new CrashReportStore(reportDirectory);
+        var reportsDirectory = Path.Combine(reportDirectory, LauncherDataRoot.CrashReportsFolderName);
+        var store = new CrashReportStore(TestDataRoot.ForDirectory(reportDirectory));
         var launcher = new RecordingCrashReporterLauncher();
         var service = new FatalCrashService(logger, store, launcher);
 
@@ -105,8 +108,8 @@ public sealed class CrashReportTests : IDisposable
         service.HandleUnhandledCrash(CrashOrigin.AppDomainUnhandledException, new IOException("second"));
 
         Assert.Single(launcher.Paths);
-        Assert.Single(Directory.EnumerateFiles(reportDirectory, "*.json"));
-        var additional = Assert.Single(Directory.EnumerateFiles(reportDirectory, "*.additional.log"));
+        Assert.Single(Directory.EnumerateFiles(reportsDirectory, "*.json"));
+        var additional = Assert.Single(Directory.EnumerateFiles(reportsDirectory, "*.additional.log"));
         Assert.Contains("second", File.ReadAllText(additional), StringComparison.Ordinal);
     }
 
@@ -115,7 +118,7 @@ public sealed class CrashReportTests : IDisposable
     {
         Directory.CreateDirectory(tempDirectory);
         using var logger = new UnifiedLogger(tempDirectory);
-        var store = new CrashReportStore(Path.Combine(tempDirectory, "reports"));
+        var store = new CrashReportStore( TestDataRoot.ForDirectory(Path.Combine(tempDirectory, "reports")) );
         var launcher = new RecordingCrashReporterLauncher();
         var service = new FatalCrashService(logger, store, launcher);
         CrashReport? requestedReport = null;
@@ -136,7 +139,7 @@ public sealed class CrashReportTests : IDisposable
         // process is the one being abandoned, so the report has to survive it.
         Directory.CreateDirectory(tempDirectory);
         using var logger = new UnifiedLogger(tempDirectory);
-        var store = new CrashReportStore(Path.Combine(tempDirectory, "reports"));
+        var store = new CrashReportStore( TestDataRoot.ForDirectory(Path.Combine(tempDirectory, "reports")) );
         var launcher = new RecordingCrashReporterLauncher();
         var service = new FatalCrashService(logger, store, launcher);
         service.FatalCrashRequested += _ => throw new InvalidOperationException(
@@ -156,7 +159,7 @@ public sealed class CrashReportTests : IDisposable
         var blockedFallback = Path.Combine(tempDirectory, "fallback-file");
         File.WriteAllText(blockedPrimary, "not a directory");
         File.WriteAllText(blockedFallback, "not a directory");
-        var store = new CrashReportStore(blockedPrimary, blockedFallback);
+        var store = new CrashReportStore(TestDataRoot.ForDirectory(blockedPrimary), blockedFallback);
         var launcher = new RecordingCrashReporterLauncher();
         var service = new FatalCrashService(logger, store, launcher);
 
@@ -175,7 +178,7 @@ public sealed class CrashReportTests : IDisposable
         var blockedPrimary = Path.Combine(tempDirectory, "primary-file");
         File.WriteAllText(blockedPrimary, "not a directory");
         var fallback = Path.Combine(tempDirectory, "fallback");
-        var store = new CrashReportStore(blockedPrimary, fallback);
+        var store = new CrashReportStore(TestDataRoot.ForDirectory(blockedPrimary), fallback);
         var launcher = new RecordingCrashReporterLauncher();
         var service = new FatalCrashService(logger, store, launcher);
 
@@ -202,7 +205,7 @@ public sealed class CrashReportTests : IDisposable
             File.SetLastWriteTimeUtc(path, now.AddDays(-index).UtcDateTime);
         }
 
-        var store = new CrashReportStore(primary, fallback);
+        var store = new CrashReportStore(TestDataRoot.ForDirectory(primary), fallback);
         store.CleanupOldReports(now);
 
         Assert.Equal(

@@ -361,14 +361,17 @@ public partial class MainWindowViewModelTests
     [Fact]
     public async Task SaveSettingsAsync_WhenPersistenceFails_KeepsDirtyState()
     {
-        var savedSettings = new SavedSettingsTestRig(tempDir);
+        var blockedRoot = Path.Combine(tempDir, "blocked-persistence-root");
+        Directory.CreateDirectory(tempDir);
+        File.WriteAllText(blockedRoot, "not a directory");
+        var savedSettings = new SavedSettingsTestRig(TestDataRoot.ForDirectory(blockedRoot));
         var localizer = new LocalizationService();
         var toastService = new ToastService();
         var editor = savedSettings.Editor;
         var appearance = new SettingsAppearanceViewModel(editor);
         var dialogs = new DialogsViewModel(
             localizer,
-            new NoticeStateService(Path.Combine(tempDir, "save-failure-notices.json")),
+            new NoticeStateService( TestDataRoot.ForDirectory(Path.Combine(tempDir, "save-failure-notices.json")) ),
             new SetupWizardViewModel(localizer, new GameInstallationPath(), new LocalInstallationStateStore(), new LocalDiagnostics(), new StubFilePickerService()),
             new LocalDiagnostics());
         using var testLogger = new UnifiedLogger(tempDir);

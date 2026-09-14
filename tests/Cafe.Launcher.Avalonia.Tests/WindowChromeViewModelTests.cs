@@ -193,7 +193,7 @@ Assert.Equal(DownloadStopReason.UserRequested, context.Backend.LastStopReason);
         using var context = CreateContext();
         var openedUrls = new List<string?>();
         string? openedDirectory = null;
-        var viewModel = new WindowChromeViewModel(
+        var viewModel = new WindowChromeViewModel( TestDataRoot.ForDirectory(tempDir) ,
             context.Settings,
             context.RemoteContent,
             context.Dialogs,
@@ -224,7 +224,7 @@ Assert.Equal(DownloadStopReason.UserRequested, context.Backend.LastStopReason);
         Assert.Equal(LauncherConstants.PrivacyPolicyUrl, openedUrls[5]);
         Assert.Equal(LauncherConstants.DefaultBackgroundArtworkUrl, openedUrls[6]);
         Assert.Equal("mailto:support@example.invalid", openedUrls[7]);
-        Assert.Equal(LauncherUserDataDirectory.Root, openedDirectory);
+        Assert.Equal(TestDataRoot.ForDirectory(tempDir).Root, openedDirectory);
     }
 
     [Fact]
@@ -271,7 +271,7 @@ Assert.Equal(DownloadStopReason.UserRequested, context.Backend.LastStopReason);
             dialogs,
             provider.GetRequiredService<IErrorHandlingService>(),
             _ => Task.CompletedTask);
-        var debug = new DebugViewModel(
+        var debug = new DebugViewModel( TestDataRoot.ForDirectory(tempDir) ,
             provider.GetRequiredService<ToastService>(),
             logger,
             provider.GetRequiredService<IErrorHandlingService>(),
@@ -279,7 +279,7 @@ Assert.Equal(DownloadStopReason.UserRequested, context.Backend.LastStopReason);
             provider.GetRequiredService<LauncherSettingsService>(),
             operations,
             provider.GetRequiredService<ShellViewModel>());
-        var viewModel = new WindowChromeViewModel(
+        var viewModel = new WindowChromeViewModel( TestDataRoot.ForDirectory(tempDir) ,
             settings,
             remoteContent,
             dialogs,

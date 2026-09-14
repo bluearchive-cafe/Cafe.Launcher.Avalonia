@@ -159,6 +159,10 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 
 ## 7. Settings 兼容性规则
 
+持久化落点一律经注入的 `LauncherDataRoot`（见 `CONTEXT.md` 的「数据根」与 [ADR-025](docs/design/adr/ADR-025-数据根由组合根解析并注入.md)），不要在模块内解析进程级数据根：进程根只由组合根与 ADR-019 保护的 pre-DI 路径解析，`TestUserDataIsolationTests.ProcessRootResolution_IsConfinedToDeclaredPreDiSites` 以声明表守这条边界。新增落盘位置时把路径加进 `LauncherDataRoot`，文件名仍声明在 `Constants/GamePaths.cs`。
+
+停止活动工作流由调用方表达意图（`GameOperationStopIntent`），检查点去留那套策略词表留在 `Features/GameOperations/` 内、由域翻译一次（[ADR-026](docs/design/adr/ADR-026-停止意图由游戏操作域翻译.md)）；域外不要命名 `DownloadStopReason`，`GameOperationStopOwnershipTests` 守卫这条边界。
+
 `settings.json` 的 JSON 字段名必须向后兼容：
 
 - 新增字段：提供合理默认值（在 `LauncherSettings` 模型中），`LauncherSettingsService` 不因缺失字段而抛异常。

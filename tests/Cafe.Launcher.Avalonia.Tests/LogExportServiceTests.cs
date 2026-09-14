@@ -25,7 +25,7 @@ public sealed class LogExportServiceTests : IDisposable
         using var logger = new UnifiedLogger(logDirectory);
         await logger.LogAsync(LogEntrySeverity.Info, "Test log");
         logger.Dispose(); // flush async sink to disk before reading
-        var service = new LogExportService(new LocalDiagnostics(logger), new CrashReportStore());
+        var service = new LogExportService(new LocalDiagnostics(logger), TestDataRoot.ForCurrentProcess(), new CrashReportStore(TestDataRoot.ForCurrentProcess()) );
 
         var zipPath = await service.ExportAsync(exportDirectory, LogExportOptions.Default);
 
@@ -39,22 +39,28 @@ public sealed class LogExportServiceTests : IDisposable
     [Fact]
     public void DefaultExportDirectory_UsesProductDataExportFolder()
     {
-        var expected = Path.Combine(
-            LauncherUserDataDirectory.Root,
-            LauncherConstants.LogExportFolderName);
+        var dataRoot = TestDataRoot.ForDirectory(tempDir);
+        using var logger = new UnifiedLogger(Path.Combine(tempDir, "directory-probe"));
 
-        Assert.Equal(expected, LogExportService.DefaultExportDirectory);
-        Assert.EndsWith(
-            "log-exports",
-            LogExportService.DefaultExportDirectory,
-            StringComparison.Ordinal);
+        // 目录布局由数据根模块拥有：导出目录就是根下的 log-exports，
+        // 服务暴露的正是同一个值。
+        Assert.Equal(
+            Path.Combine(dataRoot.Root, LauncherConstants.LogExportFolderName),
+            dataRoot.LogExportDirectory);
+        Assert.EndsWith("log-exports", dataRoot.LogExportDirectory, StringComparison.Ordinal);
+
+        var service = new LogExportService(
+            new LocalDiagnostics(logger),
+            dataRoot,
+            new CrashReportStore(dataRoot));
+        Assert.Equal(dataRoot.LogExportDirectory, service.DefaultExportDirectory);
     }
 
     [Fact]
     public async Task ExportAsync_WhenCurrentLogIsMissing_Throws()
     {
         using var logger = new UnifiedLogger(Path.Combine(tempDir, "missing-source"));
-        var service = new LogExportService(new LocalDiagnostics(logger), new CrashReportStore());
+        var service = new LogExportService(new LocalDiagnostics(logger), TestDataRoot.ForCurrentProcess(), new CrashReportStore(TestDataRoot.ForCurrentProcess()) );
         var destination = Path.Combine(tempDir, "selected");
 
         await Assert.ThrowsAsync<FileNotFoundException>(
@@ -69,7 +75,7 @@ public sealed class LogExportServiceTests : IDisposable
         var logger = WriteDeterministicLog(
             "cancelled-source",
             $"{DateTimeOffset.Now:O} [INF] [Test] Entry\n");
-        var service = new LogExportService(new LocalDiagnostics(logger), new CrashReportStore());
+        var service = new LogExportService(new LocalDiagnostics(logger), TestDataRoot.ForCurrentProcess(), new CrashReportStore(TestDataRoot.ForCurrentProcess()) );
         var destination = Path.Combine(tempDir, "cancelled-selected");
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
@@ -85,7 +91,7 @@ public sealed class LogExportServiceTests : IDisposable
     {
         const string content = "2026-09-01T10:00:00.0000000+08:00 [INF] [Test] Old entry\n";
         var logger = WriteDeterministicLog("verbatim-source", content);
-        var service = new LogExportService(new LocalDiagnostics(logger), new CrashReportStore());
+        var service = new LogExportService(new LocalDiagnostics(logger), TestDataRoot.ForCurrentProcess(), new CrashReportStore(TestDataRoot.ForCurrentProcess()) );
 
         var zipPath = await service.ExportAsync(Path.Combine(tempDir, "verbatim-selected"), LogExportOptions.Default);
 
@@ -105,7 +111,7 @@ public sealed class LogExportServiceTests : IDisposable
             $"{now.AddMinutes(-4):O} [WRN] [Test] Recent warning\n" +
             $"{now.AddHours(1):O} [INF] [Test] Future entry\n";
         var logger = WriteDeterministicLog("range-source", content);
-        var service = new LogExportService(new LocalDiagnostics(logger), new CrashReportStore());
+        var service = new LogExportService(new LocalDiagnostics(logger), TestDataRoot.ForCurrentProcess(), new CrashReportStore(TestDataRoot.ForCurrentProcess()) );
 
         var zipPath = await service.ExportAsync(
             Path.Combine(tempDir, "range-selected"),
@@ -125,7 +131,7 @@ public sealed class LogExportServiceTests : IDisposable
     {
         const string content = "2026-09-01T10:00:00.0000000+08:00 [INF] [Test] Old entry\n";
         var logger = WriteDeterministicLog("empty-range-source", content);
-        var service = new LogExportService(new LocalDiagnostics(logger), new CrashReportStore());
+        var service = new LogExportService(new LocalDiagnostics(logger), TestDataRoot.ForCurrentProcess(), new CrashReportStore(TestDataRoot.ForCurrentProcess()) );
 
         var zipPath = await service.ExportAsync(
             Path.Combine(tempDir, "empty-range-selected"),
@@ -147,7 +153,7 @@ public sealed class LogExportServiceTests : IDisposable
         var outOfWindow = $"{now.AddHours(-2):O} [INF] [Test] Old entry\n";
         var logger = WriteDeterministicLog("rotated-source", inWindow);
         File.WriteAllText(Path.Combine(tempDir, "rotated-source", "unified_001.log"), outOfWindow);
-        var service = new LogExportService(new LocalDiagnostics(logger), new CrashReportStore());
+        var service = new LogExportService(new LocalDiagnostics(logger), TestDataRoot.ForCurrentProcess(), new CrashReportStore(TestDataRoot.ForCurrentProcess()) );
 
         var zipPath = await service.ExportAsync(
             Path.Combine(tempDir, "rotated-selected"),
@@ -165,7 +171,7 @@ public sealed class LogExportServiceTests : IDisposable
     public async Task ExportAsync_WithCrashReports_AddsArtifactsInsideTheWindow()
     {
         var dataRoot = Path.Combine(tempDir, "crash-data");
-        var crashDirectory = Path.Combine(dataRoot, CrashReportStore.ReportDirectoryName);
+        var crashDirectory = Path.Combine(dataRoot, LauncherDataRoot.CrashReportsFolderName);
         Directory.CreateDirectory(crashDirectory);
         var recentReport = Path.Combine(crashDirectory, "CR-20260909-120000-ABCD.json");
         var recentAdditional = Path.ChangeExtension(recentReport, ".additional.log");
@@ -180,7 +186,7 @@ public sealed class LogExportServiceTests : IDisposable
         File.SetLastWriteTimeUtc(recentAdditional, recentStamp);
         File.SetLastWriteTimeUtc(oldReport, DateTime.UtcNow.AddDays(-2));
         var logger = WriteDeterministicLog("crash-source", $"{DateTimeOffset.Now.AddMinutes(-5):O} [INF] [Test] Entry\n");
-        var service = new LogExportService(new LocalDiagnostics(logger), dataRoot, new CrashReportStore());
+        var service = new LogExportService(new LocalDiagnostics(logger), TestDataRoot.ForDirectory(dataRoot) , new CrashReportStore(TestDataRoot.ForCurrentProcess()));
 
         var zipPath = await service.ExportAsync(
             Path.Combine(tempDir, "crash-selected"),
@@ -199,13 +205,13 @@ public sealed class LogExportServiceTests : IDisposable
     [Fact]
     public void GetCrashReportDirectories_WithCustomRoot_ReturnsPrimaryUnderRootAndTempFallback()
     {
-        var directories = new CrashReportStore()
+        var directories = new CrashReportStore(TestDataRoot.ForCurrentProcess())
             .GetCrashReportDirectories(Path.Combine(tempDir, "root"))
             .ToList();
 
         Assert.Equal(2, directories.Count);
         Assert.Equal(
-            Path.Combine(tempDir, "root", CrashReportStore.ReportDirectoryName),
+            Path.Combine(tempDir, "root", LauncherDataRoot.CrashReportsFolderName),
             directories[0]);
         Assert.Equal(CrashReportStore.DefaultFallbackDirectory, directories[1]);
     }
@@ -221,8 +227,7 @@ public sealed class LogExportServiceTests : IDisposable
         File.SetLastWriteTimeUtc(reportPath, DateTime.UtcNow.AddHours(-1));
         var logger = WriteDeterministicLog("locator-source", $"{DateTimeOffset.Now.AddMinutes(-5):O} [INF] [Test] Entry\n");
         var service = new LogExportService(
-            new LocalDiagnostics(logger),
-            new StubCrashReportLocator(customDirectory));
+            new LocalDiagnostics(logger), TestDataRoot.ForCurrentProcess(), new StubCrashReportLocator(customDirectory));
 
         var zipPath = await service.ExportAsync(
             Path.Combine(tempDir, "locator-selected"),
@@ -262,7 +267,7 @@ public sealed class LogExportServiceTests : IDisposable
         }
 
         var logger = WriteDeterministicLog("user-data-source", "2026-09-09T10:00:00.0000000+08:00 [INF] [Test] Entry\n");
-        var service = new LogExportService(new LocalDiagnostics(logger), dataRoot, new CrashReportStore());
+        var service = new LogExportService(new LocalDiagnostics(logger), TestDataRoot.ForDirectory(dataRoot) , new CrashReportStore(TestDataRoot.ForCurrentProcess()));
 
         var zipPath = await service.ExportAsync(
             Path.Combine(tempDir, "user-data-selected"),
@@ -284,7 +289,7 @@ public sealed class LogExportServiceTests : IDisposable
     public async Task ExportAsync_WhenARequestedCrashReportCannotBeRead_RecordsItAsSkipped()
     {
         var dataRoot = Path.Combine(tempDir, "skipped-data");
-        var crashDirectory = Path.Combine(dataRoot, CrashReportStore.ReportDirectoryName);
+        var crashDirectory = Path.Combine(dataRoot, LauncherDataRoot.CrashReportsFolderName);
         Directory.CreateDirectory(crashDirectory);
         const string lockedName = "CR-20260909-120000-ABCD.json";
         const string readableName = "CR-20260909-130000-ABCD.json";
@@ -298,7 +303,7 @@ public sealed class LogExportServiceTests : IDisposable
         var logPath = Path.Combine(logDirectory, "unified.log");
         File.WriteAllText(logPath, "2026-09-09T10:00:00.0000000+08:00 [INF] [Test] Entry\n");
         using var logger = new UnifiedLogger(logDirectory);
-        var service = new LogExportService(new LocalDiagnostics(logger), dataRoot, new CrashReportStore());
+        var service = new LogExportService(new LocalDiagnostics(logger), TestDataRoot.ForDirectory(dataRoot) , new CrashReportStore(TestDataRoot.ForCurrentProcess()));
 
         string zipPath;
         using (File.Open(lockedReport, FileMode.Open, FileAccess.Read, FileShare.None))
@@ -344,7 +349,7 @@ public sealed class LogExportServiceTests : IDisposable
         Directory.CreateDirectory(dataRoot);
         File.WriteAllText(Path.Combine(dataRoot, "settings.json"), "{}");
         var logger = WriteDeterministicLog("metadata-source", "2026-09-09T10:00:00.0000000+08:00 [INF] [Test] Entry\n");
-        var service = new LogExportService(new LocalDiagnostics(logger), dataRoot, new CrashReportStore());
+        var service = new LogExportService(new LocalDiagnostics(logger), TestDataRoot.ForDirectory(dataRoot) , new CrashReportStore(TestDataRoot.ForCurrentProcess()));
 
         var zipPath = await service.ExportAsync(
             Path.Combine(tempDir, "metadata-selected"),
@@ -375,7 +380,7 @@ public sealed class LogExportServiceTests : IDisposable
             "probe-inside-source",
             $"{now.AddHours(-2):O} [INF] [Test] Old entry\n" +
             $"{now.AddMinutes(-5):O} [INF] [Test] Recent entry\n");
-        var service = new LogExportService(new LocalDiagnostics(logger), new CrashReportStore());
+        var service = new LogExportService(new LocalDiagnostics(logger), TestDataRoot.ForCurrentProcess(), new CrashReportStore(TestDataRoot.ForCurrentProcess()) );
 
         var hasEntries = await service.HasLogEntriesAsync(
             new LogExportOptions { Range = LogExportRangePreset.LastHour });
@@ -389,7 +394,7 @@ public sealed class LogExportServiceTests : IDisposable
         var logger = WriteDeterministicLog(
             "probe-outside-source",
             $"{DateTimeOffset.Now.AddHours(-2):O} [INF] [Test] Old entry\n");
-        var service = new LogExportService(new LocalDiagnostics(logger), new CrashReportStore());
+        var service = new LogExportService(new LocalDiagnostics(logger), TestDataRoot.ForCurrentProcess(), new CrashReportStore(TestDataRoot.ForCurrentProcess()) );
 
         var hasEntries = await service.HasLogEntriesAsync(
             new LogExportOptions { Range = LogExportRangePreset.LastHour });
@@ -405,7 +410,7 @@ public sealed class LogExportServiceTests : IDisposable
         var logger = WriteDeterministicLog(
             "probe-unbounded-source",
             "2026-09-01T10:00:00.0000000+08:00 [INF] [Test] Old entry\n");
-        var service = new LogExportService(new LocalDiagnostics(logger), new CrashReportStore());
+        var service = new LogExportService(new LocalDiagnostics(logger), TestDataRoot.ForCurrentProcess(), new CrashReportStore(TestDataRoot.ForCurrentProcess()) );
 
         Assert.True(await service.HasLogEntriesAsync(LogExportOptions.Default));
     }
@@ -414,7 +419,7 @@ public sealed class LogExportServiceTests : IDisposable
     public async Task HasLogEntriesAsync_WithoutARange_WhenTheLogIsEmpty_ReturnsFalse()
     {
         var logger = WriteDeterministicLog("probe-empty-source", "");
-        var service = new LogExportService(new LocalDiagnostics(logger), new CrashReportStore());
+        var service = new LogExportService(new LocalDiagnostics(logger), TestDataRoot.ForCurrentProcess(), new CrashReportStore(TestDataRoot.ForCurrentProcess()) );
 
         Assert.False(await service.HasLogEntriesAsync(LogExportOptions.Default));
     }
@@ -423,7 +428,7 @@ public sealed class LogExportServiceTests : IDisposable
     public async Task HasLogEntriesAsync_WhenTheLogFileIsMissing_ReturnsFalse()
     {
         using var logger = new UnifiedLogger(Path.Combine(tempDir, "probe-missing-source"));
-        var service = new LogExportService(new LocalDiagnostics(logger), new CrashReportStore());
+        var service = new LogExportService(new LocalDiagnostics(logger), TestDataRoot.ForCurrentProcess(), new CrashReportStore(TestDataRoot.ForCurrentProcess()) );
 
         var hasEntries = await service.HasLogEntriesAsync(
             new LogExportOptions { Range = LogExportRangePreset.LastHour });

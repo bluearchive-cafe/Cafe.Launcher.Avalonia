@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using Avalonia.Controls;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
@@ -26,15 +27,17 @@ public partial class CrashReportWindow : Window
             UiCulture = System.Globalization.CultureInfo.CurrentUICulture.Name,
             ExceptionType = nameof(InvalidOperationException),
             TechnicalDetails = "Preview crash details"
-        })
+        },
+        // 设计期预览不接触真实用户数据目录。
+        new LauncherDataRoot(Path.GetTempPath()))
     {
     }
 
-    public CrashReportWindow(CrashReport report)
+    public CrashReportWindow(CrashReport report, LauncherDataRoot dataRoot)
     {
         ArgumentNullException.ThrowIfNull(report);
         InitializeComponent();
-        viewModel = new CrashReportWindowViewModel(report);
+        viewModel = new CrashReportWindowViewModel(report, dataRoot);
         DataContext = viewModel;
         Opened += OnOpened;
     }

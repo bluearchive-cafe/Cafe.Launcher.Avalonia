@@ -36,27 +36,20 @@ public sealed class LogExportService
     ];
 
     private readonly LocalDiagnostics diagnostics;
-    private readonly string userDataRoot;
+    private readonly LauncherDataRoot dataRoot;
     private readonly ICrashReportLocator crashReportLocator;
 
-    public static string DefaultExportDirectory => Path.Combine(
-        LauncherUserDataDirectory.Root,
-        LauncherConstants.LogExportFolderName);
+    /// <summary>Default directory offered to the user when exporting logs.</summary>
+    public string DefaultExportDirectory => dataRoot.LogExportDirectory;
 
-    /// <summary>Creates an exporter using the production launcher-data root.</summary>
-    public LogExportService(LocalDiagnostics diagnostics, ICrashReportLocator crashReportLocator)
-        : this(diagnostics, LauncherUserDataDirectory.Root, crashReportLocator)
-    {
-    }
-
-    /// <summary>Creates an exporter with an explicit data root for deterministic tests.</summary>
-    internal LogExportService(
+    public LogExportService(
         LocalDiagnostics diagnostics,
-        string userDataRoot,
+        LauncherDataRoot dataRoot,
         ICrashReportLocator crashReportLocator)
     {
+        ArgumentNullException.ThrowIfNull(dataRoot);
         this.diagnostics = diagnostics;
-        this.userDataRoot = userDataRoot;
+        this.dataRoot = dataRoot;
         this.crashReportLocator = crashReportLocator;
     }
 
@@ -343,7 +336,7 @@ public sealed class LogExportService
     /// directory is derived from this service's own root, which tests override.
     /// </summary>
     private IEnumerable<string> CrashReportDirectories() =>
-        crashReportLocator.GetCrashReportDirectories(userDataRoot);
+        crashReportLocator.GetCrashReportDirectories(dataRoot.Root);
 
     /// <summary>
     /// Bundles the current user-data snapshot. Unlike logs and crash reports these files are
@@ -358,7 +351,7 @@ public sealed class LogExportService
         {
             TryCopyOptionalFileToZip(
                 zip,
-                Path.Combine(userDataRoot, fileName),
+                Path.Combine(dataRoot.Root, fileName),
                 $"user-data/{fileName}",
                 manifest,
                 cancellationToken);

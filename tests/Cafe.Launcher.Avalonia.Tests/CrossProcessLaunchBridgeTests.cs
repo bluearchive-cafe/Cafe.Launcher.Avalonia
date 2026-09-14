@@ -12,7 +12,7 @@ public sealed class CrossProcessLaunchBridgeTests
         Assert.SkipUnless(OperatingSystem.IsWindows(), "Named mutex/event objects are Windows features.");
 
         var (launchName, showName, mutexName) = UniqueNames();
-        using var bridge = new CrossProcessLaunchBridge(launchName, showName);
+        using var bridge = new CrossProcessLaunchBridge(launchName, showName, TestDataRoot.ForCurrentProcess() );
 
         var won = bridge.TryEnterSingleInstance(mutexName, []);
 
@@ -26,10 +26,10 @@ public sealed class CrossProcessLaunchBridgeTests
         Assert.SkipUnless(OperatingSystem.IsWindows(), "Named mutex/event objects are Windows features.");
 
         var (launchName, showName, mutexName) = UniqueNames();
-        using var first = new CrossProcessLaunchBridge(launchName, showName);
+        using var first = new CrossProcessLaunchBridge(launchName, showName, TestDataRoot.ForCurrentProcess() );
         Assert.True(first.TryEnterSingleInstance(mutexName, []));
 
-        using var second = new CrossProcessLaunchBridge(launchName, showName);
+        using var second = new CrossProcessLaunchBridge(launchName, showName, TestDataRoot.ForCurrentProcess() );
         var won = second.TryEnterSingleInstance(mutexName, ["--launch-game"]);
 
         Assert.False(won);
@@ -42,10 +42,10 @@ public sealed class CrossProcessLaunchBridgeTests
         Assert.SkipUnless(OperatingSystem.IsWindows(), "Named mutex/event objects are Windows features.");
 
         var (launchName, showName, mutexName) = UniqueNames();
-        using var first = new CrossProcessLaunchBridge(launchName, showName);
+        using var first = new CrossProcessLaunchBridge(launchName, showName, TestDataRoot.ForCurrentProcess() );
         Assert.True(first.TryEnterSingleInstance(mutexName, []));
 
-        using var second = new CrossProcessLaunchBridge(launchName, showName);
+        using var second = new CrossProcessLaunchBridge(launchName, showName, TestDataRoot.ForCurrentProcess() );
         var won = second.TryEnterSingleInstance(mutexName, []);
 
         Assert.False(won);

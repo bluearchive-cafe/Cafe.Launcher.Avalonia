@@ -103,11 +103,15 @@ sealed class Program
             return;
         }
 
-        var reportStore = new CrashReportStore();
+        // 进程根在此解析一次：随后所有 pre-DI 落点（崩溃快照、日志器、首启探测、
+        // 单实例信号）与 DI 容器共用同一个实例。
+        var dataRoot = LauncherDataRoot.ForCurrentProcess();
+
+        var reportStore = new CrashReportStore(dataRoot, CrashReportStore.DefaultFallbackDirectory);
         UnifiedLogger crashLogger;
         try
         {
-            crashLogger = new UnifiedLogger();
+            crashLogger = new UnifiedLogger(dataRoot.Root);
         }
         catch (Exception exception)
         {
@@ -137,7 +141,7 @@ sealed class Program
 
             // The isolated reporter bypasses this handshake above. Normal launches still
             // forward to the first instance instead of starting a duplicate process.
-            using var launchBridge = new CrossProcessLaunchBridge(LaunchGameSignalName, SignalName);
+            using var launchBridge = new CrossProcessLaunchBridge(LaunchGameSignalName, SignalName, dataRoot);
             if (!launchBridge.TryEnterSingleInstance(MutexName, args))
             {
                 return;
@@ -146,7 +150,7 @@ sealed class Program
             LaunchGameSignal = launchBridge.Signal;
             LaunchGameRequested = HasLaunchGameArgument(args);
             ShowHiddenSettings = HasShowHiddenSettingsArgument(args);
-            FirstLaunch = DetectFirstLaunch();
+            FirstLaunch = DetectFirstLaunch(dataRoot);
 
             RunSession(
                 crashLogger,
@@ -252,12 +256,10 @@ sealed class Program
     /// </summary>
     internal static int ResolveSessionExitCode() => FatalCrashExitRequested ? 1 : 0;
 
-    private static bool DetectFirstLaunch()
+    private static bool DetectFirstLaunch(LauncherDataRoot dataRoot)
     {
-        var settingsPath = Path.Combine(
-            LauncherUserDataDirectory.Root,
-            GamePaths.LauncherSettingsFileName);
-        return !File.Exists(settingsPath);
+        ArgumentNullException.ThrowIfNull(dataRoot);
+        return !File.Exists(dataRoot.SettingsPath);
     }
 
     internal static void RunSession(

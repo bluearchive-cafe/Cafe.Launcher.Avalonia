@@ -16,7 +16,12 @@ namespace Cafe.Launcher.Avalonia.Tests;
 internal sealed class SavedSettingsTestRig : IDisposable
 {
     public SavedSettingsTestRig(string settingsPath)
-        : this(new LauncherSettingsService(settingsPath))
+        : this(new LauncherSettingsService( TestDataRoot.ForFile(settingsPath) ))
+    {
+    }
+
+    public SavedSettingsTestRig(LauncherDataRoot dataRoot)
+        : this(new LauncherSettingsService(dataRoot))
     {
     }
 

@@ -586,12 +586,12 @@ public sealed class GameOperationsViewModelTests
     }
 
     [Fact]
-    public void StopOperationCommand_WhenDownloadIsRunning_ShowsConfirmation()
+    public void RequestStopCommand_WhenDownloadIsRunning_ShowsConfirmation()
     {
         var context = CreateContext();
         context.Backend.IsDownloadRunning = true;
 
-        context.ViewModel.StopOperationCommand.Execute(null);
+        context.ViewModel.RequestStopCommand.Execute(null);
 
         Assert.True(context.Dialogs.StopConfirm.IsVisible);
         Assert.Equal(0, context.Backend.StopCallCount);
@@ -1056,14 +1056,36 @@ public sealed class GameOperationsViewModelTests
     }
 
     [Fact]
-    public void StopOperationCommand_WhenNoDownloadIsRunning_StopsImmediately()
+    public void RequestStopCommand_WhenNoDownloadIsRunning_StopsImmediately()
     {
         var context = CreateContext();
 
-        context.ViewModel.StopOperationCommand.Execute(null);
+        context.ViewModel.RequestStopCommand.Execute(null);
 
         Assert.Equal(1, context.Backend.StopCallCount);
         Assert.False(context.Dialogs.StopConfirm.IsVisible);
+    }
+
+    [Fact]
+    public void StopOperation_WhenIntentIsUserStop_DiscardsTheCheckpointReason()
+    {
+        var context = CreateContext();
+
+        context.ViewModel.StopOperation(GameOperationStopIntent.UserStop);
+
+        Assert.Equal(1, context.Backend.StopCallCount);
+        Assert.Equal(DownloadStopReason.UserRequested, context.Backend.LastStopReason);
+    }
+
+    [Fact]
+    public void StopOperation_WhenIntentIsProcessExit_KeepsTheCheckpointReason()
+    {
+        var context = CreateContext();
+
+        context.ViewModel.StopOperation(GameOperationStopIntent.ProcessExit);
+
+        Assert.Equal(1, context.Backend.StopCallCount);
+        Assert.Equal(DownloadStopReason.ApplicationExit, context.Backend.LastStopReason);
     }
 
     [Fact]
@@ -1143,8 +1165,7 @@ public sealed class GameOperationsViewModelTests
         var toastService = new ToastService();
         var shell = new ShellViewModel(localizer);
         shell.IsBusy = false;
-        var dialogs = new DialogsViewModel(localizer, new NoticeStateService(
-            Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "notices.json")),
+        var dialogs = new DialogsViewModel(localizer, new NoticeStateService( TestDataRoot.ForDirectory(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "notices.json")) ),
             new SetupWizardViewModel(localizer, new GameInstallationPath(), new LocalInstallationStateStore(), diagnostics, new StubFilePickerService()),
             diagnostics);
         var backend = new StubGameOperationExecutor();

@@ -86,7 +86,9 @@ public partial class App : Application
                     trayService?.Dispose();
                     mainWindow.Hide();
 
-                    crashReportWindow = new CrashReportWindow(report);
+                    crashReportWindow = new CrashReportWindow(
+                        report,
+                        serviceProvider.GetRequiredService<LauncherDataRoot>());
                     crashReportWindow.Closed += (_, _) => desktop.Shutdown(1);
                     desktop.MainWindow = crashReportWindow;
                     crashReportWindow.Show();

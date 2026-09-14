@@ -442,7 +442,7 @@
                                     <TextBlock Text="{Binding Operations.PauseResumeText}"/>
                                 </StackPanel>
                             </Button>
-                            <Button Classes="flat-action bottom-action secondary-operation" Command="{Binding Operations.StopOperationCommand}" VerticalAlignment="Center"
+                            <Button Classes="flat-action bottom-action secondary-operation" Command="{Binding Operations.RequestStopCommand}" VerticalAlignment="Center"
                                     ToolTip.Tip="{Binding Shell.I18n[stop]}"
                                     AutomationProperties.Name="{Binding Shell.I18n[stop]}">
                                 <StackPanel Classes="button-content">

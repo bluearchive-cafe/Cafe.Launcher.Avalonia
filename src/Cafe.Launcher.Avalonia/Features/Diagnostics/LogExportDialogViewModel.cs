@@ -223,10 +223,10 @@ public sealed partial class LogExportDialogViewModel : ViewModelBase, IModalCont
         string? destination = null;
         try
         {
-            Directory.CreateDirectory(LogExportService.DefaultExportDirectory);
+            Directory.CreateDirectory(exportService.DefaultExportDirectory);
             destination = await filePickerService.PickFolderAsync(
                 localizer.T(LocalizationKeys.LogExportFolderPickerTitle),
-                LogExportService.DefaultExportDirectory);
+                exportService.DefaultExportDirectory);
             if (string.IsNullOrWhiteSpace(destination))
             {
                 return;

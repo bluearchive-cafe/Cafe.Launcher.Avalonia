@@ -21,52 +21,26 @@ namespace Cafe.Launcher.Avalonia.Services;
 public sealed class LauncherSettingsService : IDisposable
 {
     private readonly SemaphoreSlim writeLock = new(1, 1);
-    private readonly string? settingsPath;
+    private readonly LauncherDataRoot dataRoot;
     private readonly LocalDiagnostics? diagnostics;
     private readonly Func<bool> isLinuxPlatform;
     private static readonly JsonSerializerOptions jsonOptions = JsonDefaults.Indented;
 
-    public LauncherSettingsService() : this(null, null, null)
+    /// <summary>
+    /// <paramref name="isLinuxPlatform"/> 仅供测试注入平台判定；生产用运行时平台。
+    /// </summary>
+    public LauncherSettingsService(
+        LauncherDataRoot dataRoot,
+        LocalDiagnostics? diagnostics = null,
+        Func<bool>? isLinuxPlatform = null)
     {
-    }
-
-    public LauncherSettingsService(LocalDiagnostics diagnostics) : this(diagnostics, null, null)
-    {
-    }
-
-    public LauncherSettingsService(string settingsPath) : this(null, settingsPath, null)
-    {
-    }
-
-    internal LauncherSettingsService(string settingsPath, Func<bool> isLinuxPlatform)
-        : this(null, settingsPath, isLinuxPlatform)
-    {
-    }
-
-    private LauncherSettingsService(
-        LocalDiagnostics? diagnostics,
-        string? settingsPath,
-        Func<bool>? isLinuxPlatform)
-    {
+        ArgumentNullException.ThrowIfNull(dataRoot);
+        this.dataRoot = dataRoot;
         this.diagnostics = diagnostics;
-        this.settingsPath = settingsPath;
         this.isLinuxPlatform = isLinuxPlatform ?? OperatingSystem.IsLinux;
     }
 
-    public string SettingsPath
-    {
-        get
-        {
-            if (!string.IsNullOrWhiteSpace(settingsPath))
-            {
-                return settingsPath;
-            }
-
-            return Path.Combine(
-                LauncherUserDataDirectory.Root,
-                GamePaths.LauncherSettingsFileName);
-        }
-    }
+    public string SettingsPath => dataRoot.SettingsPath;
 
     public async Task<LauncherSettings> ReadAsync(CancellationToken cancellationToken = default)
     {

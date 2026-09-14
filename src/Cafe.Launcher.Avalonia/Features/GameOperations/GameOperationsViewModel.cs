@@ -282,7 +282,7 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
     }
 
     [RelayCommand]
-    public void StopOperation()
+    public void RequestStop()
     {
         if (journey.IsDownloadRunning)
         {
@@ -292,6 +292,19 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
 
         journey.PerformStop();
     }
+
+    /// <summary>
+    /// 按意图停止活动工作流。检查点去留是域内策略：调用方只说为什么停，
+    /// 由 <see cref="ToStopReason"/> 翻译成下载模块的停止原因。
+    /// </summary>
+    public void StopOperation(GameOperationStopIntent intent) => journey.Stop(ToStopReason(intent));
+
+    private static DownloadStopReason ToStopReason(GameOperationStopIntent intent) => intent switch
+    {
+        GameOperationStopIntent.UserStop => DownloadStopReason.UserRequested,
+        GameOperationStopIntent.ProcessExit => DownloadStopReason.ApplicationExit,
+        _ => throw new ArgumentOutOfRangeException(nameof(intent), intent, "Unhandled stop intent.")
+    };
 
     public Task PerformStop()
     {
@@ -367,11 +380,6 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
     {
         if (currentSnapshot is not null)
             await journey.ResumePersistedAsync(currentSnapshot, cancellationToken);
-    }
-
-    public void StopDownload(DownloadStopReason reason)
-    {
-        journey.Stop(reason);
     }
 
     public bool IsDownloadRunning => journey.IsDownloadRunning;

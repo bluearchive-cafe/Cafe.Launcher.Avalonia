@@ -16,7 +16,7 @@ public sealed class NoticeStateServiceTests : IDisposable
     [Fact]
     public async Task ReadShownNoticesAsync_WhenFileMissing_ReturnsEmpty()
     {
-        var service = new NoticeStateService(statePath);
+        var service = new NoticeStateService( TestDataRoot.ForFile(statePath) );
 
         var result = await service.ReadShownNoticesAsync();
 
@@ -26,7 +26,7 @@ public sealed class NoticeStateServiceTests : IDisposable
     [Fact]
     public async Task SaveAndRead_RoundTripsCorrectly()
     {
-        var service = new NoticeStateService(statePath);
+        var service = new NoticeStateService( TestDataRoot.ForFile(statePath) );
 
         await service.SaveShownNoticeAsync("hash1");
         await service.SaveShownNoticeAsync("hash2");
@@ -44,7 +44,7 @@ public sealed class NoticeStateServiceTests : IDisposable
     {
         Directory.CreateDirectory(Path.GetDirectoryName(statePath)!);
         await File.WriteAllTextAsync(statePath, "not valid json");
-        var service = new NoticeStateService(statePath);
+        var service = new NoticeStateService( TestDataRoot.ForFile(statePath) );
 
         // Should not throw — the read path catches JsonException
         var exception = await Record.ExceptionAsync(
@@ -57,7 +57,7 @@ public sealed class NoticeStateServiceTests : IDisposable
     {
         Directory.CreateDirectory(Path.GetDirectoryName(statePath)!);
         await File.WriteAllTextAsync(statePath, "{{{broken json");
-        var service = new NoticeStateService(statePath);
+        var service = new NoticeStateService( TestDataRoot.ForFile(statePath) );
 
         var result = await service.ReadShownNoticesAsync();
 

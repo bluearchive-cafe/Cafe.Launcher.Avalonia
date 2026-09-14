@@ -394,7 +394,7 @@ public sealed class SettingsCategoryTests
         var settingsPath = Path.Combine(directory, "settings.json");
         var services = new ServiceCollection();
         services.AddLauncherServices();
-        services.Replace(ServiceDescriptor.Singleton(new LauncherSettingsService(settingsPath)));
+        services.Replace(ServiceDescriptor.Singleton(new LauncherSettingsService( TestDataRoot.ForFile(settingsPath) )));
         var provider = services.BuildServiceProvider();
         return new SettingsViewModelScope(
             provider,

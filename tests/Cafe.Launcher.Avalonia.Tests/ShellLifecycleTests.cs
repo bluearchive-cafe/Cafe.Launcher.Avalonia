@@ -50,8 +50,7 @@ public sealed class ShellLifecycleTests : IDisposable
     {
         // 预置"显示远程内容卡片",让 BeginLoading/EndLoading 的加载闸门真实开合,
         // 从而能断言失败后加载态被 finally 收干净。
-        var settingsService = new LauncherSettingsService(
-            Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+        var settingsService = new LauncherSettingsService( TestDataRoot.ForDirectory(Path.Combine(tempDir, Guid.NewGuid().ToString("N"))) );
         await settingsService.SaveAsync(new LauncherSettings { ShowRemoteContentCard = true });
         var core = new ScriptedCoreService(new InvalidOperationException("load failed"));
         var fixture = CreateLifecycle(core, settingsService: settingsService);
@@ -142,7 +141,7 @@ public sealed class ShellLifecycleTests : IDisposable
     [Fact]
     public async Task HandleSetupWizardCompletedAsync_WhenSaveFails_KeepsWizardVisibleAndSkipsRefresh()
     {
-        var settingsService = new LauncherSettingsService(CreateBlockedSettingsPath());
+        var settingsService = new LauncherSettingsService( TestDataRoot.ForDirectory(CreateBlockedSettingsPath()) );
         var core = new ScriptedCoreService(CreateSnapshot());
         var fixture = CreateLifecycle(core, settingsService: settingsService);
         fixture.Dialogs.IsSetupWizardVisible = true;
@@ -163,7 +162,7 @@ public sealed class ShellLifecycleTests : IDisposable
     public async Task HandleSetupWizardCompletedAsync_AfterSaveFailureRetry_CompletesAndHidesWizard()
     {
         var blockedPath = CreateBlockedSettingsPath();
-        var settingsService = new LauncherSettingsService(blockedPath);
+        var settingsService = new LauncherSettingsService( TestDataRoot.ForFile(blockedPath) );
         var core = new ScriptedCoreService(CreateSnapshot());
         var fixture = CreateLifecycle(core, settingsService: settingsService);
         fixture.Dialogs.IsSetupWizardVisible = true;
@@ -188,7 +187,7 @@ public sealed class ShellLifecycleTests : IDisposable
     [Fact]
     public async Task SwitchSourceThenOpenPanelAsync_WhenSaveFails_ShowsErrorToastAndKeepsPanelClosed()
     {
-        var settingsService = new LauncherSettingsService(CreateBlockedSettingsPath());
+        var settingsService = new LauncherSettingsService( TestDataRoot.ForDirectory(CreateBlockedSettingsPath()) );
         var core = new ScriptedCoreService(CreateSnapshot());
         var fixture = CreateLifecycle(core, settingsService: settingsService);
         // CreateDefaults 的下载源随系统 UI 文化浮动,这里显式预置 Official 作为"原值"。
@@ -212,7 +211,7 @@ public sealed class ShellLifecycleTests : IDisposable
     public async Task SwitchSourceThenOpenPanelAsync_AfterSaveFailureRetry_PersistsCafeSourceAndOpensPanel()
     {
         var blockedPath = CreateBlockedSettingsPath();
-        var settingsService = new LauncherSettingsService(blockedPath);
+        var settingsService = new LauncherSettingsService( TestDataRoot.ForFile(blockedPath) );
         // 核心服务真实实现会在加载时带回刚持久化的设置;这里让快照携带
         // Cafe 下载源来模拟"刷新读回已保存的 Cafe 源"。
         var snapshot = CreateSnapshot();
@@ -351,8 +350,7 @@ public sealed class ShellLifecycleTests : IDisposable
         LauncherUpdateService? launcherUpdateService = null,
         StubGameOperationExecutor? operationsBackend = null)
     {
-        settingsService ??= new LauncherSettingsService(
-            Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+        settingsService ??= new LauncherSettingsService( TestDataRoot.ForDirectory(Path.Combine(tempDir, Guid.NewGuid().ToString("N"))) );
         launcherUpdateService ??= new LauncherUpdateService(
             CreateNotFoundTransport(),
             currentVersionOverride: "0.0.0");
@@ -363,8 +361,7 @@ public sealed class ShellLifecycleTests : IDisposable
         var filePickerService = new StubFilePickerService();
         var imageCacheService = new ImageCacheService(
             new StubRemoteHttpTransport(),
-            new Crc64Service(),
-            Path.Combine(tempDir, "image-cache"));
+            new Crc64Service(), TestDataRoot.ForDirectory(Path.Combine(tempDir)) );
         var settingsEditor = new SettingsEditor();
         var savedSettingsWriter = new SavedSettingsWriter(settingsService, settingsEditor);
         var settingsAppearance = new SettingsAppearanceViewModel(settingsEditor);
@@ -380,7 +377,7 @@ public sealed class ShellLifecycleTests : IDisposable
         wizards.Add(wizard);
         var dialogs = new DialogsViewModel(
             localizer,
-            new NoticeStateService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "shown_notices.json")),
+            new NoticeStateService( TestDataRoot.ForDirectory(Path.Combine(tempDir, Guid.NewGuid().ToString("N"))) ),
             wizard,
             new LocalDiagnostics());
         using var settingsLogger = new UnifiedLogger(Path.Combine(tempDir, Guid.NewGuid().ToString("N")));
@@ -421,7 +418,7 @@ public sealed class ShellLifecycleTests : IDisposable
             errorHandling,
             _ => Task.CompletedTask);
         var toastHost = new ToastHostViewModel(toastService, localizer, diagnostics);
-        var debug = new DebugViewModel(
+        var debug = new DebugViewModel( TestDataRoot.ForDirectory(tempDir) ,
             toastService,
             new UnifiedLogger(Path.Combine(tempDir, Guid.NewGuid().ToString("N"))),
             errorHandling,
@@ -429,7 +426,7 @@ public sealed class ShellLifecycleTests : IDisposable
             settingsService,
             operations,
             shell);
-        var windowChrome = new WindowChromeViewModel(
+        var windowChrome = new WindowChromeViewModel( TestDataRoot.ForDirectory(tempDir) ,
             settings,
             remoteContent,
             dialogs,
@@ -440,7 +437,7 @@ public sealed class ShellLifecycleTests : IDisposable
         using var testLogger = new UnifiedLogger(tempDir);
         var logViewer = new LogViewerDialogViewModel(testLogger, null, null, null, null);
         var logExport = new LogExportDialogViewModel(
-            new LogExportService(new LocalDiagnostics(testLogger), new CrashReportStore()),
+            new LogExportService(new LocalDiagnostics(testLogger), TestDataRoot.ForCurrentProcess(), new CrashReportStore(TestDataRoot.ForCurrentProcess()) ),
             filePickerService,
             toastService,
             localizer,

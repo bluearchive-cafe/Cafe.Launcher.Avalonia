@@ -127,7 +127,7 @@ public sealed class LauncherCoreServiceTests : IDisposable
     [Fact]
     public async Task LoadAsync_WhenHttp2IsEnabled_ConfiguresFactoryFromPersistedSetting()
     {
-        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        var settingsService = new LauncherSettingsService( TestDataRoot.ForDirectory(Path.Combine(tempDir)) );
         await settingsService.SaveAsync(new LauncherSettings { EnableHttp2 = true });
         using var factory = new HttpClientFactory(new ProxySettingsService());
         var apiClient = new LauncherApiClient(
@@ -156,7 +156,7 @@ public sealed class LauncherCoreServiceTests : IDisposable
     {
         var store = new LocalInstallationStateStore();
         var settingsPath = Path.Combine(tempDir, "settings.json");
-        var settingsService = new LauncherSettingsService(settingsPath);
+        var settingsService = new LauncherSettingsService( TestDataRoot.ForFile(settingsPath) );
         if (useEmptySettingsDocument)
         {
             Directory.CreateDirectory(tempDir);

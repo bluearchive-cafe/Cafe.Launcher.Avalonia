@@ -93,7 +93,7 @@ public sealed class CrashReportBootstrapTests : IDisposable
     public void Resolve_WhenSnapshotWasPersisted_ReturnsTheStoredReport()
     {
         Directory.CreateDirectory(tempDirectory);
-        var store = new CrashReportStore(tempDirectory);
+        var store = new CrashReportStore(TestDataRoot.ForDirectory(tempDirectory));
         var stored = store.Create(CrashOrigin.Main, new InvalidOperationException("persisted"));
 
         var resolved = CrashReportBootstrap.Resolve(stored.SnapshotPath);
