@@ -58,6 +58,8 @@ public sealed class GameUninstallService
 
             var localGame = await localInstallationStateStore.ReadAsync(gamePath, cancellationToken).ConfigureAwait(false);
             var files = localGame.Manifest?.Files ?? [];
+            // AUD-PERF-007：逐文件回调经百分比门控去重后抵达 UI 线程。
+            var progressGate = new PercentProgressGate();
             for (var i = 0; i < files.Count; i++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -71,13 +73,17 @@ public sealed class GameUninstallService
                     // Already gone — not an error
                 }
 
-                progress(new GameOperationProgress
+                var percent = files.Count > 0 ? (int)Math.Round((i + 1) * 100d / files.Count) : 100;
+                if (progressGate.ShouldDeliver(percent))
                 {
-                    OperationKind = GameOperationKind.Uninstall,
-                    Stage = GameOperationStage.Uninstalling,
-                    Progress = files.Count > 0 ? (int)Math.Round((i + 1) * 100d / files.Count) : 100,
-                    IsRunning = true
-                });
+                    progress(new GameOperationProgress
+                    {
+                        OperationKind = GameOperationKind.Uninstall,
+                        Stage = GameOperationStage.Uninstalling,
+                        Progress = percent,
+                        IsRunning = true
+                    });
+                }
             }
 
             var deletedState = await localInstallationStateStore.DeleteAsync(

@@ -169,12 +169,13 @@ public sealed class LogExportService
     private IEnumerable<(string FilePath, string EntryName, bool Required)> LogFiles()
     {
         var logFilePath = diagnostics.LogFilePath;
-        yield return (logFilePath, "unified.log", true);
+        yield return (logFilePath, GamePaths.UnifiedLogFileName, true);
 
         var logDirectory = Path.GetDirectoryName(logFilePath)!;
+        var rotatedStem = Path.GetFileNameWithoutExtension(GamePaths.UnifiedLogFileName);
         for (var i = 1; i <= MaxRetainedLogFiles; i++)
         {
-            var entryName = $"unified_{i:D3}.log";
+            var entryName = $"{rotatedStem}_{i:D3}.log";
             yield return (Path.Combine(logDirectory, entryName), entryName, false);
         }
     }

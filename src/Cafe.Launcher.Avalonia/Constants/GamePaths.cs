@@ -31,4 +31,11 @@ public static class GamePaths
     public const string LauncherSettingsFileName = "settings.json";
     public const string DownloadStateFileName = "download_state.json";
     public const string NoticeStateFileName = "shown_notices.json";
+
+    /// <summary>
+    /// The unified Serilog log file in the launcher data directory. Rotated
+    /// siblings derive their entry names from this stem (unified_001.log …),
+    /// so renaming this constant carries the rotation scheme with it.
+    /// </summary>
+    public const string UnifiedLogFileName = "unified.log";
 }

@@ -273,6 +273,46 @@ public sealed class DownloadExecutorTests : IDisposable
     }
 
     [Fact]
+    public async Task InstallDownloadedFilesAsync_WhenManyFilesSharePercentBuckets_DeduplicatesProgress()
+    {
+        // 契约（AUD-PERF-007）：校验阶段逐文件回调经百分比门控去重——400 个文件
+        // 挤在 101 个百分比桶里，消费方只应收到桶变化的那几次，而非每文件一次。
+        const int fileCount = 400;
+        var crc64 = new Crc64Service();
+        var manifestFiles = new List<ManifestFile>();
+        for (var index = 0; index < fileCount; index++)
+        {
+            var name = $"bulk{index:D4}.bin";
+            var path = Path.Combine(tempDir, name);
+            await File.WriteAllBytesAsync(path, new[] { (byte)index });
+            manifestFiles.Add(new ManifestFile
+            {
+                Path = name,
+                Size = "1",
+                Hash = await crc64.ComputeFileAsync(path)
+            });
+        }
+
+        var delivered = new List<int>();
+        var failed = await CreateExecutor().InstallDownloadedFilesAsync(
+            tempDir,
+            manifestFiles,
+            [],
+            new Dictionary<string, string>(),
+            new Dictionary<string, PlannedFileHash>(),
+            delivered.Add,
+            CancellationToken.None);
+
+        Assert.Empty(failed);
+        Assert.True(
+            delivered.Count < fileCount,
+            $"progress delivered {delivered.Count} times; percent gate did not collapse repeats.");
+        Assert.Equal(0, delivered[0]);
+        Assert.Equal(100, delivered[^1]);
+        Assert.Equal(delivered.Count, delivered.Distinct().Count());
+    }
+
+    [Fact]
     public void RemoveFiles_WhenFileIsReadOnly_DeletesFile()
     {
         var filePath = Path.Combine(tempDir, "removed.bin");
