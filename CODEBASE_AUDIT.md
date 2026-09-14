@@ -67,7 +67,7 @@
 - **证据**：`DownloadExecutorTests` 全部 8 处清单参数均为单元素 `[manifestFile]`（`tests/Cafe.Launcher.Avalonia.Tests/DownloadExecutorTests.cs:38-39,:65-66,:94-95,:122,:148`）；`GameDownloadServiceTests` 零处引用 `InstallDownloadedFilesAsync`（grep 证实）。提交 `715fee5` 的 stat 只含 `DownloadExecutor.cs` 与 `ShellLifecycle.cs`，无测试文件——并发落地时未伴随测试扩容。
 - **影响**：`SemaphoreSlim(≤8)` 门控、按索引 `failedFlags` 重组、乱序进度回调的**产生侧**、`WhenAll` 取消扇出均无用例可检出回归（如边界死锁、失败标志丢失、顺序破坏）。该路径是下载完整性的执行端。上轮「9 用例经并行路径钉住行为」的说法对并发维度 overstated——用例确实走并行代码路径，但每次只有 1 个文件，从不产生竞争。显示侧乱序回退已由 `4c0b0cd` 的钳制测试钉住，产生侧未钉。
 - **建议**：补一个多文件清单用例（含故意的哈希不匹配文件 + 文件数 > 并行度），断言失败重组、按清单序重试与成功计数。**建议验证**：Verified（机械测试扩容，被测 API 现成）。
-- **解决记录（`58edcf8`）**：`DownloadExecutorTests` 增至 14 用例——12 文件（>并行度 8）混合布局断言失败列表按清单序重组、失配 .tmp/终路径删除、通过文件搬移、进度每文件一次；缺失 .tmp 只标记该文件失败。
+- **解决记录（`58edcf8`）**：`DownloadExecutorTests` 增至 13 用例（随后的 `5f53a6e` 另补 400 文件接线测试，至 14）——12 文件（>并行度 8）混合布局断言失败列表按清单序重组、失配 .tmp/终路径删除、通过文件搬移、进度每文件一次；缺失 .tmp 只标记该文件失败。
 
 ## Low Priority Findings
 
@@ -105,7 +105,7 @@
 - **证据**：`UiStyleContractTests.cs:21-36` `ViewFiles` 14 项无 `Views/ResourcePanelOverlay.axaml`；令牌纪律用例（原色/`Transparent`/图标尺寸 `Tokens.cs:511-514`、Raw 色值 `:570-578`、排版内联 `:600+`）均消费该列表——最新主叠层不受任何 §2.3 令牌检查。拆分提交 `d479c9c` 在 Motion（`:199-207`）/Dialogs（`:32-38`）/Localization 列表都补了该文件，唯独令牌扫描列表漏了——手工白名单模式已实际漂移一次。当前文件实测无违规（潜在而非现行）。
 - **影响**：下一个编辑该文件的人没有绊网；同一漂移可在未来任何新文件上复发。
 - **建议**：短平快——把文件补进 `ViewFiles`；更强——加「`Views/*.axaml` 全部在扫描集内」的元契约测试，令白名单漂移不可能。**建议验证**：Verified。
-- **解决记录（`c2701da`）**：文件补入共享 `ViewFiles`（三扫描全部生效，实测无违规）；新增 `ScanTargets_CoverEveryTopLevelViewFile` 元契约——Views/ 顶层每个 `.axaml` 必须被 `ViewFiles`/`StyleFiles` 声明或显式豁免（`CrashReportWindow` 留名豁免，注释载明其独立 `Crash.*` 令牌族）。
+- **解决记录（`c2701da`）**：文件补入共享 `ViewFiles`（三扫描全部生效，实测无违规）；新增 `ScanTargets_CoverEveryTopLevelViewFile` 元契约——Views/ 顶层每个 `.axaml` 必须被 `ViewFiles`/`StyleFiles` 声明或显式豁免（`CrashReportWindow` 留名豁免，注释载明其独立 `Crash.*` 令牌族）。复核跟进（同日晚）：原实现曾以匿名 `Append` 放行 `MainWindowDebugOverlay.axaml`（不在扫描集亦未留名豁免，其 ：220 内联 `Padding` 违规因此不可见）——已补入 `ViewFiles`（实测 148 令牌契约全绿），内边距以下沉的 `Border.dialog-card.compact` 样式类收口（视觉不变），元契约自此只剩声明集与留名豁免两条路径。
 
 ### AUD-TEST-007 — 主题变体订阅拆卸（696abdd 当日新增）全仓库无回归守卫【复审新立案；已解决 `cabaa3c`】
 
@@ -352,9 +352,9 @@
 
 第二修复轮（2026-09-14 晚，按杠杆序逐项提交）：
 
-- **AUD-TEST-005**（`58edcf8`）：`DownloadExecutorTests` 增至 14 用例——12 文件（>并行度 8）混合布局钉住失败按清单序重组、失配 .tmp/终路径删除、通过文件搬移、进度每文件一次；缺失 .tmp 只标记该文件失败。
+- **AUD-TEST-005**（`58edcf8`）：`DownloadExecutorTests` 增至 13 用例（随后的 `5f53a6e` 另补 400 文件接线测试，至 14）——12 文件（>并行度 8）混合布局钉住失败按清单序重组、失配 .tmp/终路径删除、通过文件搬移、进度每文件一次；缺失 .tmp 只标记该文件失败。
 - **AUD-SEC-006**（`8b6d3dd`，结案 accepted-risk）：执行时发现补救已被 `5a38be9` 否决（fake-ip 代理 DNS 应答落 198.18/15、CDN 边缘节点落 100.64/10，拦截即回归用户可见故障）——转书面化接受：switch 显式放行臂 + 让步注释 + 198.18/15 放行守卫测试。
-- **AUD-TEST-006**（`c2701da`）：`ResourcePanelOverlay` 补入共享 `ViewFiles`；`ScanTargets_CoverEveryTopLevelViewFile` 元契约令 Views/ 顶层白名单漂移不可能（`CrashReportWindow` 显式豁免留名）。
+- **AUD-TEST-006**（`c2701da`）：`ResourcePanelOverlay` 补入共享 `ViewFiles`；`ScanTargets_CoverEveryTopLevelViewFile` 元契约令 Views/ 顶层白名单漂移不可能（`CrashReportWindow` 显式豁免留名）。复核跟进：`MainWindowDebugOverlay` 原经匿名 `Append` 放行，已补入 `ViewFiles`（内联 `Padding` 以 `dialog-card.compact` 样式类收口，视觉不变）。
 - **AUD-TEST-007**（`cabaa3c`）：`ThemeSubscriptionTeardownHeadlessTests` 哨兵法双相守卫——对照相自证哨兵能侦测在位处理器，Dispose 后哨兵必须存活；退订行被删即失败。
 - **AUD-MAINT-003**（`415809d`）：`GamePaths.UnifiedLogFileName` 收拢三处硬编码，轮转名从常量词干派生；测试字面量保留为线钉。
 - **AUD-PERF-007**（`5f53a6e`）：`PercentProgressGate`（Interlocked 值变化门控）应用到校验/stat/修复扫描/卸载四处产生侧；门控四态单测 + 400 文件同桶去重接线测试；显式阶段发射有意不过门。

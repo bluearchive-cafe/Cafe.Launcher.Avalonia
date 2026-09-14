@@ -74,7 +74,7 @@
       "resolved_commit": "c2701da",
       "guard": "修复建议：短平快是把文件补进 ViewFiles；更强的是加「Views/*.axaml 全部在扫描集内」的元契约测试，防白名单再次漂移",
       "delta_note": "新发现（2026-09-14 复审，主审计直接核实）。UiStyleContractTests.cs:21-36 ViewFiles 14 项无 ResourcePanelOverlay.axaml；令牌纪律用例（Tokens.cs:511-514 原色/图标尺寸、:570-578 Raw 色值、:600+ 排版内联）均消费该列表，故最新主叠层不受任何 §2.3 令牌检查覆盖。拆分提交 d479c9c 在 Motion/Dialogs/Localization 等其他列表补了该文件（:199-207、:32-38），唯独令牌扫描列表漏了——证明手工白名单模式已漂移一次。当前文件实测无违规（潜在而非现行）。",
-      "resolution_note": "修复（c2701da，2026-09-14 修复轮）：ResourcePanelOverlay.axaml 补入共享 ViewFiles（令牌纪律三扫描全部生效，实测无违规）；新增 ScanTargets_CoverEveryTopLevelViewFile 元契约——Views/ 顶层每个 .axaml 必须被 ViewFiles/StyleFiles 声明或显式豁免（CrashReportWindow 留名），白名单漂移自此不可能。"
+      "resolution_note": "修复（c2701da，2026-09-14 修复轮）：ResourcePanelOverlay.axaml 补入共享 ViewFiles（令牌纪律三扫描全部生效，实测无违规）；新增 ScanTargets_CoverEveryTopLevelViewFile 元契约——Views/ 顶层每个 .axaml 必须被 ViewFiles/StyleFiles 声明或显式豁免（CrashReportWindow 留名），白名单漂移自此不可能。复核跟进（同日晚）：元契约原以匿名 Append 放行 MainWindowDebugOverlay.axaml（不在扫描集亦未留名豁免，其 :220 内联 Padding 违规因此不可见）；已补入 ViewFiles（实测 148 令牌契约全绿），内边距下沉为 Border.dialog-card.compact 样式类（视觉不变），扫描集外仅剩留名豁免一条路径。"
     },
     "AUD-TEST-007": {
       "title": "主题变体订阅拆卸（696abdd 当日新增）全仓库无回归守卫——删除 Dispose 拆卸块全套件仍绿",

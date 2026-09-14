@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "last_full_audit_commit": "93b3335",
-  "last_audit_commit": "93b3335",
+  "last_audit_commit": "f912d38",
   "last_audit_mode": "full",
   "last_audit_date": "2026-09-14",
   "repository_map_version": 15,
-  "note": "2026-09-14（晚）第二修复轮：按报告 Recommended Priorities 杠杆序将复审新立案 7 项逐项提交——TEST-005 @ 58edcf8（并行校验多文件清单用例 ×2）、SEC-006 @ 8b6d3dd（复核发现补救已被 5a38be9 否决——fake-ip/CDN 依赖这些段，转书面化接受 + switch 显式放行臂 + 198.18/15 守卫测试）、TEST-006 @ c2701da（ResourcePanelOverlay 补入 ViewFiles + Views 顶层全覆盖元契约，CrashReportWindow 显式豁免）、TEST-007 @ cabaa3c（主题订阅拆卸哨兵法双相守卫）、MAINT-003 @ 415809d（GamePaths.UnifiedLogFileName 收拢三处硬编码，轮转名从词干派生）、PERF-007 @ 5f53a6e（PercentProgressGate 百分比门控应用到校验/stat/修复扫描/卸载四处产生侧 + 400 文件同桶接线测试）、MAINT-004 @ 93b3335（承载点化石注释更正为 FirstChild 层序不变量说明）。每阶段聚焦测试后提交，收口全量套件。开放回到 6 项 Low（PERF-001/004/005、SEC-001/002、ARCH-005，全部决策/设计轮门控）；accepted-risk 增至 4 项 Low（SEC-004、SEC-006、ARCH-007、MAINT-002）。",
+  "note": "2026-09-14（晚）第二修复轮：按报告 Recommended Priorities 杠杆序将复审新立案 7 项逐项提交——TEST-005 @ 58edcf8（并行校验多文件清单用例 ×2）、SEC-006 @ 8b6d3dd（复核发现补救已被 5a38be9 否决——fake-ip/CDN 依赖这些段，转书面化接受 + switch 显式放行臂 + 198.18/15 守卫测试）、TEST-006 @ c2701da（ResourcePanelOverlay 补入 ViewFiles + Views 顶层全覆盖元契约，CrashReportWindow 显式豁免）、TEST-007 @ cabaa3c（主题订阅拆卸哨兵法双相守卫）、MAINT-003 @ 415809d（GamePaths.UnifiedLogFileName 收拢三处硬编码，轮转名从词干派生）、PERF-007 @ 5f53a6e（PercentProgressGate 百分比门控应用到校验/stat/修复扫描/卸载四处产生侧 + 400 文件同桶接线测试）、MAINT-004 @ 93b3335（承载点化石注释更正为 FirstChild 层序不变量说明）。每阶段聚焦测试后提交，收口全量套件。开放回到 6 项 Low（PERF-001/004/005、SEC-001/002、ARCH-005，全部决策/设计轮门控）；accepted-risk 增至 4 项 Low（SEC-004、SEC-006、ARCH-007、MAINT-002）。复核跟进（同日深夜，用户指令核查更改正确性后）：①TEST-006 元契约的匿名 Append 放行收口——MainWindowDebugOverlay.axaml 补入 ViewFiles（其 :220 内联 Padding 违规因不在扫描集而不可见；实测 148 令牌契约全绿），内边距下沉为 dialog-card.compact 样式类（视觉不变，headless 178 全绿）@ f912d38；②TEST-005 用例计数归属更正（58edcf8 时点 13 例，+5f53a6e 400 文件接线测试后 14 例）。",
   "open_counts": {
     "critical": 0,
     "high": 0,
