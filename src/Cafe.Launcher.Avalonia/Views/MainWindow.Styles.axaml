@@ -1126,6 +1126,10 @@
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Lg}"/>
     </Style>
+    <!-- 紧凑 dialog-card 变体：§2.3 禁止视图内联 Padding，需要更密内边距的卡片以此类覆盖。 -->
+    <Style Selector="Border.dialog-card.compact">
+        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Sm}"/>
+    </Style>
     <Style Selector="ListBox.update-file-list">
         <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>

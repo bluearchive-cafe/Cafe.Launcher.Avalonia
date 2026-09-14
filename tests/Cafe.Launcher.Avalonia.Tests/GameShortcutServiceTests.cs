@@ -285,8 +285,26 @@ public sealed class GameShortcutServiceTests : IDisposable
     }
 
     [Fact]
-    public void SanitizeFileName_WhenNameContainsInvalidCharacters_ReplacesThem()
+    public void SanitizeFileName_WhenNameContainsPathSeparator_ReplacesIt()
     {
+        // 跨平台契约：路径分隔符在所有平台的非法字符集内，替换后修剪尾随空格。
+        Assert.Equal("a b", GameShortcutService.SanitizeFileName("a/b"));
+    }
+
+    [Fact]
+    public void SanitizeFileName_WhenNameContainsWindowsInvalidCharacters_ReplacesThem()
+    {
+        // 非法字符集来自运行平台的 Path.GetInvalidFileNameChars()——.lnk 与
+        // .desktop 分别在各自平台创建，字符集随平台是正确行为（AUD-CI-004）。
+        // 本用例钉住 Windows 集（<>:|? 均非法）；Linux 的集合仅含 '/' 与 '\0'。
+        Assert.SkipUnless(
+            OperatingSystem.IsWindows(),
+            "Windows 专属非法字符集断言仅在 Windows 上有效。");
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
         var sanitized = GameShortcutService.SanitizeFileName("Blue<>:Archive|?");
 
         Assert.Equal("Blue   Archive", sanitized);

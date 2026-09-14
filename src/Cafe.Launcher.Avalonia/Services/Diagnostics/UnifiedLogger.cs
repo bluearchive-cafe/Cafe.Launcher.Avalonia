@@ -31,7 +31,7 @@ public sealed class UnifiedLogger : IDisposable
     {
         var dir = logDirectory ?? Path.Combine(
             LauncherUserDataDirectory.Root);
-        logFilePath = Path.Combine(dir, "unified.log");
+        logFilePath = Path.Combine(dir, GamePaths.UnifiedLogFileName);
 
         // Verbose in Debug builds so developers see everything; Information in
         // Release so production logs stay lean. The switch can be adjusted at

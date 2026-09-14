@@ -30,7 +30,10 @@ public sealed class CrashReportBootstrapTests : IDisposable
         using var culture = new CultureScope();
         var expected = CultureInfo.CurrentUICulture;
 
-        CrashReportBootstrap.ApplyCulture("xx-INVALID");
+        // 双连字符让名字在两个全球化栈上都格式非法：ICU（Linux）对「格式合法但未知」
+        // 的名字会以默认数据宽容地创建文化（"xx-INVALID" 在 Linux 因此不抛异常），
+        // 只有格式非法的名字才跨平台抛 CultureNotFoundException，真正进入捕获分支。
+        CrashReportBootstrap.ApplyCulture("xx--INVALID");
 
         Assert.Equal(expected, CultureInfo.CurrentUICulture);
     }

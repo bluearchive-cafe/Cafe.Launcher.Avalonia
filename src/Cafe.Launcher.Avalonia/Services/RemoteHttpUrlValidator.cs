@@ -175,6 +175,15 @@ public sealed class RemoteHttpUrlValidator
                 192 when bytes[1] == 0 => false,
                 192 when bytes[1] == 168 => false,
                 >= 224 => false,
+
+                // CGNAT（100.64/10）与基准测试段（198.18/15）刻意按公网放行
+                // （AUD-SEC-006，接受风险）：fake-ip 模式的代理软件把 DNS 应答
+                // 落在 198.18/15、部分 CDN 边缘节点落在 100.64/10，拦截会弄坏
+                // 真实用户的横幅/下载（5a38be9 曾为此移除拦截）。放行的代价
+                // 有界——GET-only、端口限 80/443、跨主机重定向剥离凭据、响应
+                // 不回传攻击方。勿在未重审该让步前重新收紧。
+                100 when bytes[1] is >= 64 and <= 127 => true,
+                198 when bytes[1] is >= 18 and <= 19 => true,
                 _ => true
             };
         }

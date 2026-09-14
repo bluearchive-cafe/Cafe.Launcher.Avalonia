@@ -59,6 +59,36 @@ public sealed class TestUserDataIsolationTests
     }
 
     [Fact]
+    public void IsolatedUserDataDirectory_KeepsDerivedUnixSocketPathUnderKernelLimit()
+    {
+        // 套接字路径仅在 Unix 上被消费（Windows 的 Listen/Raise 走命名事件分支，
+        // Windows runner 的用户临时目录可合法地超出该上限——b4a80c8 的守卫初版
+        // 未门控，在 runneradmin 上自证其误）。跳过在 Windows 上可见。
+        Assert.SkipUnless(
+            !OperatingSystem.IsWindows(),
+            "AF_UNIX 套接字路径上限仅在 Unix 平台约束 LauncherUserDataDirectory.Root 的派生路径。");
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        // AUD-CI-002：Root 派生 Unix 域套接字路径（<Root>/cl-signal-<12hex>.sock），
+        // AF_UNIX 的 sockaddr_un 上限是 108 字节（含终止符即 107）。隔离目录过深
+        // 会让 Listen/Raise 的绑定永远失败——linux-unit-tests 首跑即因此红过。
+        var isolatedDirectory = Environment.GetEnvironmentVariable(
+            Services.LauncherUserDataDirectory.TestOverrideEnvironmentVariable);
+
+        Assert.False(string.IsNullOrWhiteSpace(isolatedDirectory));
+        var socketPath = Services.CrossProcessLaunchSignal.GetSocketFilePath(
+            isolatedDirectory,
+            "Local\\CafeTest_Signal_" + Guid.NewGuid().ToString("N"));
+
+        Assert.True(
+            socketPath.Length <= 107,
+            $"Derived Unix socket path is too long ({socketPath.Length} > 107): {socketPath}");
+    }
+
+    [Fact]
     public void PersistentUserDataPaths_UseCentralDirectoryProvider()
     {
         var projectRoot = TestLocalizationHelper.FindProjectRoot();

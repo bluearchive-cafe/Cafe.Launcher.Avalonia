@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Avalonia;
 using Avalonia.Headless.XUnit;
@@ -8,6 +9,8 @@ using Avalonia.Styling;
 using Cafe.Launcher.Avalonia.Features.Settings;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Cafe.Launcher.Avalonia.HeadlessTests;
@@ -38,10 +41,17 @@ public sealed class NeutralStrategyHeadlessTests
                 Color: ReadThemedColor(application, entry.Key, entry.variant)))
             .ToList();
 
+        // ApplyScheme is an instance member of the DI-singleton appearance VM
+        // (AUD-MAINT-001); scaffold the same provider the window tests use and
+        // dispose it so the theme-variant subscription detaches afterwards.
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDir);
+        var provider = HeadlessTestHost.CreateServiceProvider(tempDir);
+        var appearance = provider.GetRequiredService<MainWindowViewModel>().Settings.Appearance;
         var seed = Color.Parse("#FF2E9E46");
         try
         {
-            SettingsAppearanceViewModel.ApplyScheme(
+            appearance.ApplyScheme(
                 seed,
                 ThemeColorVariants.TonalSpot,
                 isDark: false,
@@ -50,7 +60,7 @@ public sealed class NeutralStrategyHeadlessTests
                 Color.Parse(dialogDefaults[0].Light),
                 ReadThemedColor(application, "Launcher.Color.Dialog.Background", ThemeVariant.Light));
 
-            SettingsAppearanceViewModel.ApplyScheme(
+            appearance.ApplyScheme(
                 seed,
                 ThemeColorVariants.TonalSpot,
                 isDark: false,
@@ -63,7 +73,7 @@ public sealed class NeutralStrategyHeadlessTests
             }
 
             // The reset also holds for the dark theme path.
-            SettingsAppearanceViewModel.ApplyScheme(
+            appearance.ApplyScheme(
                 seed,
                 ThemeColorVariants.TonalSpot,
                 isDark: true,
@@ -85,6 +95,9 @@ public sealed class NeutralStrategyHeadlessTests
                     brush.Color = color;
                 }
             }
+
+            provider.Dispose();
+            Directory.Delete(tempDir, true);
         }
     }
 

@@ -4,10 +4,11 @@ using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Cafe.Launcher.Avalonia.Helpers;
+using Cafe.Launcher.Avalonia.ViewModels;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-namespace Cafe.Launcher.Avalonia.ViewModels;
+namespace Cafe.Launcher.Avalonia.Features.Diagnostics;
 
 /// <summary>
 /// Debug-only design gallery (spec §9 Q11): enumerates the live
