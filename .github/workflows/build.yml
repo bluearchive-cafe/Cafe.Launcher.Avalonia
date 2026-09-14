@@ -88,3 +88,48 @@ jobs:
         env:
           RestoreLockedMode: 'false'
         run: dotnet publish $env:Project_Path -c Release -r win-x64 -o publish --no-restore
+
+  # AUD-CI-001：产品以实验性形态分发 Linux/macOS 包，平台分支（路径分隔符、
+  # .desktop 快捷方式、runner 归一化）必须在随变更执行的 CI 上运行，而不只是
+  # 每周的 linux-tests.yml。单元套件无 Avalonia 渲染依赖，提交的 lock 固定的
+  # 无 RID 依赖图在 Linux 上同样成立；Headless/golden 套件按设计保持 Windows-only。
+  linux-unit-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+      DOTNET_NOLOGO: 1
+      AVALONIA_TELEMETRY_OPTOUT: 1
+      ContinuousIntegrationBuild: 'true'
+      RestoreLockedMode: 'true'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 1
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          # Pinned to the SDK named by global.json, same as the Windows build job.
+          dotnet-version: 10.0.302
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            **/packages.lock.json
+            Directory.Packages.props
+
+      - name: Unit tests
+        run: >
+          dotnet test tests/Cafe.Launcher.Avalonia.Tests/Cafe.Launcher.Avalonia.Tests.csproj
+          -c Debug --logger "trx" --results-directory TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: linux-unit-test-results
+          retention-days: 14
+          path: TestResults/**/*.trx
