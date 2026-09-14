@@ -9,6 +9,8 @@
 > **第二修复轮（2026-09-14 晚，用户指令「按优先级修复并逐阶段提交」）**：复审新立案 7 项全部落地（6 个提交 + 1 项转接受），每阶段聚焦测试后逐项提交：AUD-TEST-005（`58edcf8`）、AUD-SEC-006（`8b6d3dd`，复核发现其补救已被 `5a38be9` 刻意否决——fake-ip 代理/CDN 依赖这些段，按 SEC-004/ARCH-007 先例转书面化接受 + 守卫）、AUD-TEST-006（`c2701da`）、AUD-TEST-007（`cabaa3c`）、AUD-MAINT-003（`415809d`）、AUD-PERF-007（`5f53a6e`）、AUD-MAINT-004（`93b3335`）。开放发现收敛至 6 项 Low（全部决策/设计轮门控），另 4 项 Low 为书面化 accepted-risk。
 >
 > **同日后续两轮（用户指令「核查更改是否正确」与「检查远端 CI 状态」）**：①核查轮确认第二修复轮 7 项全部真实落地（逐 diff 对账 + 守卫变异验证 + 全量套件实测一致），顺带收口 TEST-006 元契约对 `MainWindowDebugOverlay.axaml` 的匿名放行（`f912d38`）并更正 TEST-005 用例计数归属（`2176db8`）；②CI 对账轮——AUD-CI-001 守卫的两类 Linux 首跑（weekly schedule 与 build.yml push job）均红，红出三例平台假设而非回归（与推送无涉：schedule 跑的是推送前旧 HEAD），立案 AUD-CI-002/003/004 并同日解决（`b4a80c8`），守卫本职生效。
+>
+> **架构评审复核轮（2026-09-15，用户指令「审查分析报告，确认已修复内容可维护、未引入新问题」）**：对象为架构深化评审（第二轮）已落地的 7 个候选（提交 `eadd7c7..de758c7` ＋ 工作树中的候选 13）。逐项读码复核 + 门禁本地复现：Debug 0 警告 0 错误 · 单元 1749（0 失败，3 可见平台跳过）· Headless 178（0 失败）· 覆盖率棘轮通过（行 86.90% / 分支 93.26%，slack +1.05pp / +0.56pp）。结论：无改动引入的功能性回归；候选 13 的拉取链路经线程安全（快照只做引用替换）与启动顺序（`ShellLifecycle.cs:230` 播种早于 `:242`）两处专门核实成立。复核收口三处落地残留（候选 03 的 `UnifiedLogPath` 无生产消费者、`LogExportService` 自行拼根内路径、`GameCompatibilityPaths` 被误列为 pre-DI；候选 05 的 `WindowChromeViewModel` 未用 using），并为数据根守卫补反空转基线（原先「一个文件都没扫到」与「干净」不可区分）。另立案一条 ADR-027 同类缺口并落地 <a href="design/adr/ADR-029-卸载预检失败不再静默.md">ADR-029</a>（卸载预检失败此前折叠为 `null` 后静默返回）。本窗口的新发现不以 AUD-xxx 立案：它们全部来自评审候选的落地形态而非六域审计通道，记录见对应 ADR 与评审报告的复核轮说明。
 
 ## Audit Metadata
 
@@ -131,7 +133,7 @@
 
 - 类别：CI / 跨平台（平台假设）
 - 严重度：Low｜置信度：90（CI 复现 + 机制读码核实，152ms 快速失败签名与 Raise 6×25ms 重试吻合）｜状态：**resolved**（`b4a80c8`）｜处置：Fix（已执行）
-- **证据**：AUD-CI-001 守卫的两类 Linux 首跑均红出 `CrossProcessLaunchSignalTests.Raise_WhenFirstInstanceListens_ReturnsOnceAndAutoResets`。`TestUserDataIsolation` 模块初始化器把测试覆盖目录设为 `<tmp>/Cafe.Launcher.Avalonia.Tests/UserData/<Assembly>/<guid32>`（≈104 字符）；Linux 上 `Listen`/`Raise` 以 `LauncherUserDataDirectory.Root` 为套接字目录，派生路径 ≈132 字节 > 107——`UnixDomainSocketEndPoint` 构造抛 `ArgumentException`（`TryBind` 只捕获 `SocketException`/`IOException`，直穿 `EnsureBound` 兜底 catch），绑定永不成功、`unixPending` 为 null，`WaitOne` 立即 false。Windows 不触发（`Listen`/`Raise` 走命名事件分支；`ListenAt` 用例的 `tempDir` 更短）。
+- **证据**：AUD-CI-001 守卫的两类 Linux 首跑均红出 `CrossProcessLaunchSignalTests.Raise_WhenFirstInstanceListens_ReturnsOnceAndAutoResets`。`TestUserDataIsolation` 模块初始化器把测试覆盖目录设为 `<tmp>/Cafe.Launcher.Avalonia.Tests/UserData/<Assembly>/<guid32>`（≈104 字符）；Linux 上 `Listen`/`Raise` 以当时的 `LauncherUserDataDirectory.Root`（现已由 `LauncherDataRoot` 取代，见 ADR-025）为套接字目录，派生路径 ≈132 字节 > 107——`UnixDomainSocketEndPoint` 构造抛 `ArgumentException`（`TryBind` 只捕获 `SocketException`/`IOException`，直穿 `EnsureBound` 兜底 catch），绑定永不成功、`unixPending` 为 null，`WaitOne` 立即 false。Windows 不触发（`Listen`/`Raise` 走命名事件分支；`ListenAt` 用例的 `tempDir` 更短）。
 - **影响**：CI Linux 通道红；生产影响有界——真实 Linux 数据目录对常见用户名 ≈95 字符可绑定，超长主目录按既有设计降级（Warn 日志，转发不可用）。
 - **建议**：压短隔离目录并加「派生套接字路径 ≤107」机械守卫。**建议验证**：Verified。
 - **解决记录（`b4a80c8`）**：隔离目录压短为 `<tmp>/cl-tests/<guid32>`（≈74 字节），注释载明 108 字节约束；新增 `TestUserDataIsolationTests.IsolatedUserDataDirectory_KeepsDerivedUnixSocketPathUnderKernelLimit` 机械守卫。跟进（`ff976ae`）：守卫初版未门控、在 CI Windows runner 上红出自身（runneradmin 临时目录 41 字符 → 派生 109）——上限只在 Unix 消费域构成约束（Windows 走命名事件分支），改为 `Assert.SkipUnless(非 Windows)` 可见跳过，断言保留在 linux job（push/PR 阻塞 + weekly）上执行；守卫首跑即拦下自己的越界断言，反向验证其敏感性。`linux-unit-tests` 已于 `ee93482` 首绿（三例修复全部生效）。
@@ -419,6 +421,13 @@ CI 对账轮验证：本地（Windows，Debug，`b4a80c8`）全量单元 1720 �
 CI 对账轮（2026-09-14 晚）顺带落地的守卫：
 
 6. `TestUserDataIsolationTests.IsolatedUserDataDirectory_KeepsDerivedUnixSocketPathUnderKernelLimit`——派生 Unix 套接字路径 ≤107 字节的跨平台机械守卫（AUD-CI-002，防止隔离目录再度变深）。
+
+架构评审复核轮（2026-09-15）顺带落地的守卫：
+
+7. `GameOperationJourneyTests.ValidateUninstallAsync_WhenValidationFails_ReportsTheExecutorReason` 与 `GameOperationsViewModelTests.RequestUninstallCommand_WhenValidationFails_ReportsReasonAndSkipsConfirmation`——预检失败必须报出执行层原因（ADR-029，回退为静默即红）。
+8. `GameOperationsViewModelTests.RequestUninstallCommand_WhenValidationFailsWithoutReason_ReportsGenericWarning`——无原因边界走通用文案（防止弹出空提示）。
+9. `GameOperationJourneyTests.ValidateUninstallAsync_WhenValidationSucceeds_ReturnsTheResultWithoutReporting`——反向守卫：成功路径不得多报一条 Toast。
+10. `TestUserDataIsolationTests.ProcessRootResolution_IsConfinedToDeclaredPreDiSites` 增两条反空转基线（扫描面 ≥231 个 `.cs`、解析点 ≥5 个）——原先「扫到零个文件」与「树是干净的」不可区分，基线为 2026-09-15 实测值，删文件时同步下调。
 
 ## Verified Strengths
 
