@@ -547,19 +547,34 @@
       "resolution_note": "按用户 2026-09-12 裁定结案为已接受风险（该文档不纳入版本管理、不加 gitignore 条目）。2026-09-14 复核：工作树文件已移除（文件系统与 git ls-files 均无），风险由测试守卫兜底——知识可丢，行为回归仍会被拦。同类的 architecture-review-2026-09-13.html 已于 54c1871 入库。本项不再开放。"
     },
     "AUD-PERF-008": {
-        "title": "并行校验的进度门控判据是「值变化」，落后的回调会把走过的桶再报一遍（进度回跳、每个桶只报一次的契约被破坏）",
-        "category": "performance/progress-callback",
-        "severity": "low",
-        "confidence": 70,
-        "status": "resolved",
-        "disposition": "Fix",
-        "recommendation_validation": "Verified",
-        "first_seen_commit": "608d888",
-        "last_verified_commit": "608d888",
-        "resolved_commit": "608d888",
-        "guard": "PercentProgressGateTests.ShouldDeliverMonotonic_WhenALaggingCallbackArrivesLate_ReturnsFalse（26 之后到达的 25 不再投递，且不许把门退回去）、..._WhenProducersRace_DeliversEveryBucketOnlyOnce（8 worker × 400 文件的半真实并发）、DownloadExecutorTests.InstallDownloadedFilesAsync_WhenManyFilesSharePercentBuckets_DeduplicatesProgress（distinct == count 的原始契约）",
-        "resolution_note": "2026-09-15 复核轮的收尾门禁（coverage.ps1）跑出一次 InstallDownloadedFilesAsync_WhenManyFilesSharePercentBuckets_DeduplicatesProgress 失败（Expected 102 / Actual 101）：delivered 里出现了重复百分比。定位为门控判据而非测试：PercentProgressGate.ShouldDeliver 用 != 判「值变化」，而校验阶段是 ≤8 并发逐文件回调（67229b5 引入并行），到达顺序不保证单调——落后的那一次算出较小百分比、与上次不同，于是二次投递。修复（608d888）：新增 ShouldDeliverMonotonic（CAS 循环，只投递严格更大的值）并只用于这条并行生产者；需要阶段折返重报的调用方继续用 ShouldDeliver（既有「折返回到 0 必须放行」契约保留）。变异验证：把单调判据降回 == 后两条用例同时红并报出重复。普通运行连跑多轮未复现，故该用例此前一直被视为稳定。",
-        "delta_note": "发现于 2026-09-15 复核轮（用户指令「按顺序处理问题，每阶段之后提交」的收尾门禁）。归因核实：本轮 12 个提交未触碰 DownloadExecutor.cs / PercentProgressGate.cs / DownloadExecutorTests.cs（git diff --stat 为空），门控与并行均来自更早的 608d888 / 67229b5。"
+      "title": "并行校验的进度门控判据是「值变化」，落后的回调会把走过的桶再报一遍（进度回跳、每个桶只报一次的契约被破坏）",
+      "category": "performance/progress-callback",
+      "severity": "low",
+      "confidence": 70,
+      "status": "resolved",
+      "disposition": "Fix",
+      "recommendation_validation": "Verified",
+      "first_seen_commit": "608d888",
+      "last_verified_commit": "608d888",
+      "resolved_commit": "608d888",
+      "guard": "PercentProgressGateTests.ShouldDeliverMonotonic_WhenALaggingCallbackArrivesLate_ReturnsFalse（26 之后到达的 25 不再投递，且不许把门退回去）、..._WhenProducersRace_DeliversEveryBucketOnlyOnce（8 worker × 400 文件的半真实并发）、DownloadExecutorTests.InstallDownloadedFilesAsync_WhenManyFilesSharePercentBuckets_DeduplicatesProgress（distinct == count 的原始契约）",
+      "resolution_note": "2026-09-15 复核轮的收尾门禁（coverage.ps1）跑出一次 InstallDownloadedFilesAsync_WhenManyFilesSharePercentBuckets_DeduplicatesProgress 失败（Expected 102 / Actual 101）：delivered 里出现了重复百分比。定位为门控判据而非测试：PercentProgressGate.ShouldDeliver 用 != 判「值变化」，而校验阶段是 ≤8 并发逐文件回调（67229b5 引入并行），到达顺序不保证单调——落后的那一次算出较小百分比、与上次不同，于是二次投递。修复（608d888）：新增 ShouldDeliverMonotonic（CAS 循环，只投递严格更大的值）并只用于这条并行生产者；需要阶段折返重报的调用方继续用 ShouldDeliver（既有「折返回到 0 必须放行」契约保留）。变异验证：把单调判据降回 == 后两条用例同时红并报出重复。普通运行连跑多轮未复现，故该用例此前一直被视为稳定。",
+      "delta_note": "发现于 2026-09-15 复核轮（用户指令「按顺序处理问题，每阶段之后提交」的收尾门禁）。归因核实：本轮 12 个提交未触碰 DownloadExecutor.cs / PercentProgressGate.cs / DownloadExecutorTests.cs（git diff --stat 为空），门控与并行均来自更早的 608d888 / 67229b5。"
+    },
+    "AUD-CI-006": {
+      "title": "GameProcessNames.WithoutExtension 用 Path.GetFileName 切路径：Unix 上 \"\\\" 不是分隔符，配置里 Windows 形状的启动参数整条被当成文件名，游戏可执行文件静默移出家族（Windows 无症状，linux-unit-tests 因此转红）",
+      "category": "ci/cross-platform",
+      "severity": "low",
+      "confidence": 95,
+      "status": "resolved",
+      "disposition": "Fix",
+      "recommendation_validation": "Verified",
+      "first_seen_commit": "6408c58",
+      "last_verified_commit": "8461044",
+      "resolved_commit": "8461044",
+      "guard": "linux-unit-tests 作业的绿（run 34993079616 两作业全绿：linux-unit-tests 1m31s、build 6m15s）＋回归用例 WithoutExtension_SplitsPath_IndependentlyOfHostPlatform（\"\\\"、\"/\" 与无分隔符三个输入，两平台必须给出同一个答案）。",
+      "delta_note": "发现于 2026-09-15 深夜的 CI 复查（用户指令「修复问题」）。AUD-CI-005 于当日以「linux-unit-tests 首次绿」结案（run 34967403211）；此后 21:35 的 6db3cdd（随 6408c58 折叠，即功能轮复核第 ⑤ 项「params 带引号或尾随空白时游戏可执行文件被静默移出家族」）新增了 GameProcessNamesTests.FromLaunchConfiguration_NormalizesQuotedAndPaddedParameters，作业随即对后续 push 重新变红（run 34992497456、34993079616 之前的数跑均为 build 绿 / linux 红）。失败文本单一且稳定：Failed Cafe.Launcher.Avalonia.Tests.GameProcessNamesTests.FromLaunchConfiguration_NormalizesQuotedAndPaddedParameters，Assert.Equal() Failure: Collections differ at index 1（单元 1803 通过 / 1 失败 / 18 可见跳过）。根因读码确认：GameProcessNames.WithoutExtension 用 Path.GetFileName(normalized) 取文件名，而 Unix 上 \"\\\" 不是路径分隔符——\"C:\\dir\\BlueArchive.exe\" 整条被当成文件名（得到 C:\\dir\\BlueArchive），不等于 BlueArchive。判后缀那一步（LooksLikeExecutable，纯 EndsWith(\".exe\")）仍然通过，所以参数没有被丢弃、而是提取出了错误的名字，这正是索引 1 处集合不同的来源。与 AUD-CI-002..005 不同，这条是生产侧而非测试侧的平台假设：Windows 的 Path 语义恰好与配置形状一致，因此本机与 build 作业上结构性看不见。",
+      "resolution_note": "修复（8461044）：路径切分改为把 \"\\\" 与 \"/\" 一起当分隔符——新增私有 FileNameOf 与 PathSeparators，WithoutExtension 不再调用 Path.GetFileName，该类随之不再触碰任何宿主平台 API（System.IO using 已移除）；补回归用例 WithoutExtension_SplitsPath_IndependentlyOfHostPlatform，并在 WithoutExtension 的 remarks 里写明为何不能按宿主约定切路径（配置里的 params 在任何平台上都是 Windows 形状，Linux 与 macOS 下游戏跑在兼容层里也一样）。未改判据口径：归一（Unquoted）、家族判定（BelongsToFamily）与报法（DescribeForDisplay）保持原样，只把「取文件名」这一步与宿主解耦；也未把用例按平台跳过——被跳过的正是产品缺陷本身。验证：8461044 推送后 run 34993079616 两作业全绿（linux-unit-tests 1m31s、build 6m15s），为该作业在 CI-005 结案后首次重新转绿、也是本窗口首次整跑全绿；本机单元 1821 通过 / 0 失败 / 2 可见跳过（总 1823）。残留：作业仍非 required check（同 AUD-CI-005 残留）；Unix 上闸门另有 comm 15 字符截断的结构性限制，已单独书面化，不在本条范围内。"
     }
   }
 }
