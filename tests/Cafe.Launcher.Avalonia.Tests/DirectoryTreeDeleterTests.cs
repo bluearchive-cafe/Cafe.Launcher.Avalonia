@@ -129,6 +129,11 @@ public sealed class DirectoryTreeDeleterTests : IDisposable
         // "Xigncode:{GUID}" 目录项——列得出来、打不开、无 8.3 短名，用户态没有任何 API 删得掉。
         // 从前一处卡住就中断整棵树的删除，报出来的还只是父目录那句无信息量的「目录不是空的」，
         // 安装目录整条留在盘上。现在要删完能删的，并把真正卡住的路径交回调用方如实上报。
+        // 用例靠独占句柄制造卡住的条目：那是 Windows 的文件共享语义，POSIX 允许 unlink 已打开的
+        // 文件，Linux 上删除照常成功、blocked 为空——所以可见跳过而不是让它在 Linux 上红。
+        Assert.SkipUnless(
+            OperatingSystem.IsWindows(),
+            "卡住的条目只能在 Windows 上用打开的句柄复现：POSIX 允许 unlink 已打开的文件。");
         var root = Path.Combine(tempDir, "root-blocked");
         var keepDir = Path.Combine(root, "keep");
         var blockedDir = Path.Combine(root, "blocked");

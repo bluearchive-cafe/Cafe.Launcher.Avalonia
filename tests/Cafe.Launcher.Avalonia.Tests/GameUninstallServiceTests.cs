@@ -220,6 +220,12 @@ public sealed class GameUninstallServiceTests : IDisposable
         // 实机回归（2026-09-15）：反作弊留下的目录项在用户态删不掉。删不掉的项目不该把一次
         // 已经完成的卸载报成「卸载失败」——manifest 与两个状态文件都已删除，游戏确实卸载了——
         // 但留下来的东西必须点名，否则「彻底清除」说得比做得多（ADR-030）。
+        // 用例靠独占句柄制造「删不掉的条目」：那是 Windows 的文件共享语义，POSIX 允许 unlink
+        // 已打开的文件，Linux 上删除照常成功、残留清单为空——所以可见跳过而不是让它在
+        // Linux 上红（同族先例：本文件的 UninstallAsync_WhenManifestFileIsLocked_...）。
+        Assert.SkipUnless(
+            OperatingSystem.IsWindows(),
+            "删不掉的文件条目只能在 Windows 上用打开的句柄复现：POSIX 允许 unlink 已打开的文件。");
         var gamePath = CreateGameDirectory();
         await WriteGameFileAsync(gamePath, "data/managed.bin");
         var lockedPath = Path.Combine(gamePath, "data", "locked.bin");
