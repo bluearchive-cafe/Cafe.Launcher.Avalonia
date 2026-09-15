@@ -113,9 +113,9 @@
         }
       },
       {
-        "id": "icon-repair",
+        "id": "icon-uninstall",
         "type": "image",
-        "asset": "icon-repair",
+        "asset": "icon-uninstall",
         "style": {
           "x": 1310,
           "y": 96,
@@ -137,9 +137,9 @@
         }
       },
       {
-        "id": "icon-log",
+        "id": "icon-launch",
         "type": "image",
-        "asset": "icon-log",
+        "asset": "icon-launch",
         "style": {
           "x": 1420,
           "y": 520,
@@ -367,14 +367,14 @@
   },
   "assets": [
     {
-      "id": "icon-repair",
-      "file": "../assets/icons/icon-repair.png",
+      "id": "icon-uninstall",
+      "file": "../assets/icons/icon-uninstall.png",
       "origin_class": "decorative",
       "kind": "icon"
     },
     {
-      "id": "icon-log",
-      "file": "../assets/icons/icon-log.png",
+      "id": "icon-launch",
+      "file": "../assets/icons/icon-launch.png",
       "origin_class": "decorative",
       "kind": "icon"
     },

@@ -52,7 +52,7 @@ Repository commands run under either Bash or PowerShell 7 (`pwsh`). Windows Powe
 | `.\scripts\Test-LocalizationContract.ps1` | Verify resource keys and composite-format placeholders across all localized `.resx` files |
 | `.\scripts\Build-Distribution.ps1` | Publish and package self-contained archives; pass `-Rids win-x64,osx-arm64,linux-x64` for the full set |
 | `.\scripts\New-WindowsInstaller.ps1` | Build the Inno Setup installer from `artifacts/publish/win-x64` (requires Inno Setup 7.0+) |
-| `.\scripts\New-AppIconAssets.ps1` | Regenerate committed macOS `.icns` and Linux `.png` icon assets after changing `Assets/app-icon-source.jpg` |
+| `.\scripts\New-AppIconAssets.ps1` | Regenerate committed macOS `.icns` and Linux `.png` icon assets after changing `Assets/app-icon-source.png` |
 
 Run one test class:
 
