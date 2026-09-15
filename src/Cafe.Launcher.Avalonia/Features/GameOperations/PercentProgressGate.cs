@@ -22,4 +22,31 @@ internal sealed class PercentProgressGate
 
     /// <summary>Reports whether <paramref name="percent"/> differs from the last delivered value.</summary>
     internal bool ShouldDeliver(int percent) => Interlocked.Exchange(ref lastReported, percent) != percent;
+
+    /// <summary>
+    /// 并行调用方的门控：只投递比上次更大的值。
+    /// </summary>
+    /// <remarks>
+    /// 「值变化即投递」这条判据在并发下有个假象：回调的到达顺序不保证单调，一次落后的回调
+    /// 会把已经走过的桶再报一遍——进度条回跳，而且「每个桶只报一次」被破坏（2026-09-15 复核轮：
+    /// coverage 运行里 <c>DownloadExecutorTests</c> 的 400 文件去重用例因此偶发红，报出
+    /// delivered 102 / distinct 101）。这条路径的百分比由「已完成数 ÷ 总数」算出，同一轮内只增
+    /// 不减，所以收紧成单调没有语义损失；需要折返重报的调用方（阶段重启）用 <see cref="ShouldDeliver"/>。
+    /// </remarks>
+    internal bool ShouldDeliverMonotonic(int percent)
+    {
+        while (true)
+        {
+            var previous = Volatile.Read(ref lastReported);
+            if (percent <= previous)
+            {
+                return false;
+            }
+
+            if (Interlocked.CompareExchange(ref lastReported, percent, previous) == previous)
+            {
+                return true;
+            }
+        }
+    }
 }

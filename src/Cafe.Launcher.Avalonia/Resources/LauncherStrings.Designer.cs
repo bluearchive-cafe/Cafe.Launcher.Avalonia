@@ -1118,6 +1118,8 @@ internal static class LauncherStrings
 
     internal static string Uninstalling => GetRequiredString("uninstalling");
 
+    internal static string UninstallRefusedByPathGuard => GetRequiredString("uninstallRefusedByPathGuard");
+
     internal static string UninstallThoroughCleanupOption => GetRequiredString("uninstallThoroughCleanupOption");
 
     internal static string UninstallThoroughCleanupOptionPending => GetRequiredString("uninstallThoroughCleanupOptionPending");

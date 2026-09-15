@@ -115,8 +115,11 @@ public sealed class GameUninstallService
                         "Thorough cleanup was refused by the path guards.",
                         exception,
                         CancellationToken.None).ConfigureAwait(false);
+                    // 报本地化的拒绝理由，守卫那句英文说明只留在日志里（2026-09-15 复核轮）：
+                    // GamePathValidator/DirectoryTreeDeleter 抛的是仓库自己写的英文，
+                    // 套进「卸载失败：{0}」就会让本地化界面显示英文开发文档。
                     return DownloadSession.Failed(
-                        localizer.F(LocalizationKeys.UninstallFailed, exception.Message),
+                        localizer.F(LocalizationKeys.UninstallRefusedByPathGuard, gamePath),
                         GameOperationErrorCode.System);
                 }
             }
@@ -300,8 +303,12 @@ public sealed class GameUninstallService
                 catch (InvalidOperationException exception)
                 {
                     // 预检之后路径又变了（竞争）：折算成 IO 失败，交给既有的失败呈现，
-                    // 否则它会冒泡成调用方只记日志的匿名异常。
-                    throw new IOException(exception.Message, exception);
+                    // 否则它会冒泡成调用方只记日志的匿名异常。文案就地本地化：守卫抛的是
+                    // 仓库自己的英文说明，不该经「卸载失败：{0}」呈给用户（2026-09-15 复核轮），
+                    // 原文仍随内部异常进日志。
+                    throw new IOException(
+                        localizer.F(LocalizationKeys.UninstallRefusedByPathGuard, gamePath),
+                        exception);
                 }
             },
             cancellationToken).ConfigureAwait(false);

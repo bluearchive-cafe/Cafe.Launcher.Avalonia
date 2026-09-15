@@ -1654,6 +1654,9 @@ public static class LocalizationKeys
     /// <summary>Resource key for <c>uninstalling</c>.</summary>
     public const string Uninstalling = "uninstalling";
 
+    /// <summary>Resource key for <c>uninstallRefusedByPathGuard</c>.</summary>
+    public const string UninstallRefusedByPathGuard = "uninstallRefusedByPathGuard";
+
     /// <summary>Resource key for <c>uninstallThoroughCleanupOption</c>.</summary>
     public const string UninstallThoroughCleanupOption = "uninstallThoroughCleanupOption";
 

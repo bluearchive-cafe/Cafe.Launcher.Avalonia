@@ -483,8 +483,13 @@ public sealed class GameUninstallServiceTests : IDisposable
         var result = await service.UninstallAsync(Snapshot(linkedGame), UninstallScope.ThoroughCleanup, _ => { });
 
         Assert.False(result.Success);
-        Assert.Contains("reparse", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(GameOperationErrorCode.System, result.ErrorCode);
+        // 拒绝理由本地化：守卫抛的是仓库自己写的英文（"…Refusing to delete a reparse point…"），
+        // 它只该进日志（2026-09-15 复核轮）。
+        var localizer = new LocalizationService();
+        Assert.Equal(localizer.F(LocalizationKeys.UninstallRefusedByPathGuard, linkedGamePath), result.Message);
+        Assert.DoesNotContain("reparse", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Refusing", result.Message, StringComparison.Ordinal);
         // 拒绝先于任何删除：清单文件、状态文件与链接都还在。
         Assert.True(File.Exists(managedPath));
         Assert.True(File.Exists(Path.Combine(realGamePath, "manifest.json")));

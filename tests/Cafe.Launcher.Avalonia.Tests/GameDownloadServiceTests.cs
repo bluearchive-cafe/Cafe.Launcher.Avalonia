@@ -652,6 +652,48 @@ public sealed class GameDownloadServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task InstallOrUpdateAsync_WhenTheGameStartsBeforeTheZeroDiffCommit_RefusesAndWritesNothing()
+    {
+        // 差异为零、但本地状态与将要提交的内容不一致时，这条路径也会往安装目录里写两个状态
+        // 文件，所以「进入写入之前复查」这道闸门同样适用于它（ADR-032）。用例让第二次探测
+        // 才报在跑：计划阶段放行，提交之前复查命中（2026-09-15 复核轮）。
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        Directory.CreateDirectory(gamePath);
+        var statePath = Path.Combine(tempDir, "download_state.json");
+        var settingsService = new LauncherSettingsService( TestDataRoot.ForFile(Path.Combine(tempDir, "settings.json")) );
+        await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
+        // 版本落后使状态不匹配 → 确需提交；清单两侧均为空 → diff==0。
+        var committed = await new LocalInstallationStateStore().CommitAsync(
+            gamePath,
+            new LocalInstallationStateCommit(
+                Version: "0.9.0",
+                ManifestBasis: "manifest.json",
+                ExecutableName: "BlueArchive",
+                LaunchParameters: [],
+                Files: []));
+        Assert.Equal(LocalInstallationStateKind.Valid, committed.Kind);
+        var manifestPath = Path.Combine(gamePath, "manifest.json");
+        var manifestBefore = await File.ReadAllTextAsync(manifestPath);
+        var probes = 0;
+        using var service = CreateService(
+            CreateManifestApiClient(),
+            settingsService,
+            statePath,
+            processTracker: new GameProcessTracker((_, _) => Task.FromResult<IReadOnlyList<string>>(
+                ++probes > 1 ? ["BlueArchive"] : [])));
+
+        var result = await service.InstallOrUpdateAsync(CreateSnapshot(gamePath), _ => { });
+
+        Assert.False(result.Success);
+        Assert.Equal(GameOperationErrorCode.GameRunning, result.ErrorCode);
+        Assert.Equal(2, probes);
+        // 提交没发生：本地清单逐字未变，续传检查点也没落盘。
+        Assert.Equal(manifestBefore, await File.ReadAllTextAsync(manifestPath));
+        Assert.False(File.Exists(statePath));
+        Directory.Delete(tempDir, recursive: true);
+    }
+
+    [Fact]
     public async Task InstallOrUpdateAsync_WhenAlreadyCurrentAndStateMatchesCommit_SucceedsWithoutRewritingState()
     {
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
@@ -1519,6 +1561,51 @@ public sealed class GameDownloadServiceTests : IDisposable
         Assert.False(File.Exists(Path.Combine(gamePath, "data", "file.bin")));
         Assert.False(File.Exists(Path.Combine(gamePath, "manifest.json")));
         Assert.False(File.Exists(statePath));
+        Directory.Delete(tempDir, recursive: true);
+    }
+
+    [Fact]
+    public async Task InstallOrUpdateAsync_OnAFreshInstall_DerivesTheGateFromTheRemoteHostAndItsStartParams()
+    {
+        // 全新安装没有本地配置，判据只能来自远端——而远端配置声明的是两个字段（启动程序名 +
+        // 启动参数），本地配置落盘时写的也正是这两项（CommitInstallationStateAsync 的
+        // ExecutableName 与 LaunchParameters）。只取名字会漏掉 params 里的游戏本体：游戏被
+        // 外部起来、宿主还没起时，闸门照样放行（2026-09-15 复核轮）。
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        var statePath = Path.Combine(tempDir, "download_state.json");
+        var settingsService = new LauncherSettingsService( TestDataRoot.ForDirectory(Path.Combine(tempDir)) );
+        await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
+        var fileBytes = Encoding.UTF8.GetBytes("fresh-install");
+        var manifestFile = await CreateManifestFileAsync(tempDir, "data/file.bin", fileBytes);
+        var asked = new List<IReadOnlyList<string>>();
+        using var service = CreateService(
+            CreateManifestApiClient(manifestFile),
+            settingsService,
+            statePath,
+            CreateWritingFileDownloadService(fileBytes),
+            processTracker: new GameProcessTracker((names, _) =>
+            {
+                asked.Add(names);
+                // 与真实判据同形：宿主还没起，只有 params 声明的那一个在跑。
+                return Task.FromResult<IReadOnlyList<string>>(
+                    names.Contains("BlueArchive", StringComparer.OrdinalIgnoreCase) ? ["BlueArchive"] : []);
+            }));
+        var snapshot = CreateSnapshot(gamePath);
+        snapshot.RuntimeState = LauncherRuntimeState.NotInstalled;
+        snapshot.Remote.GameConfig!.GameStartExeName = "xldr_BlueArchiveOnline_JP_loader_x64";
+        snapshot.Remote.GameConfig!.GameStartParams = ["BlueArchive.exe"];
+
+        var result = await service.InstallOrUpdateAsync(snapshot, _ => { });
+
+        Assert.False(result.Success);
+        Assert.Equal(GameOperationErrorCode.GameRunning, result.ErrorCode);
+        // 判据里两个名字都在：只按远端声明的启动程序名算时，第二条断言红。
+        var requested = Assert.Single(asked);
+        Assert.Contains("xldr_BlueArchiveOnline_JP_loader_x64", requested, StringComparer.Ordinal);
+        Assert.Contains("BlueArchive", requested, StringComparer.Ordinal);
+        // 拒绝发生在计划阶段：游戏文件与本地清单都没落地。
+        Assert.False(File.Exists(Path.Combine(gamePath, "data", "file.bin")));
+        Assert.False(File.Exists(Path.Combine(gamePath, "manifest.json")));
         Directory.Delete(tempDir, recursive: true);
     }
 

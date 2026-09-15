@@ -10,7 +10,8 @@ namespace Cafe.Launcher.Avalonia.Helpers;
 /// <remarks>
 /// 逐条容错：一个取不到属性的条目（权限、临时锁）不应该让「将删除多少」这个展示数字
 /// 变成异常。reparse point 既不计入也不再向内遍历——与删除口径一致（删除不会跟随
-/// reparse point），顺带避免自引用链接把遍历变成死循环。
+/// reparse point），顺带避免自引用链接把遍历变成死循环。根自身是 reparse point 时同样
+/// 按 0 报（2026-09-15 复核轮）：删除路径的守卫会拒绝这种根，遍历却会跟着链接走进目标盘。
 /// </remarks>
 public static class DirectorySizeProbe
 {
@@ -18,6 +19,11 @@ public static class DirectorySizeProbe
     public static long Measure(string? path)
     {
         if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
+        {
+            return 0;
+        }
+
+        if (IsReparsePoint(path))
         {
             return 0;
         }
@@ -62,5 +68,18 @@ public static class DirectorySizeProbe
         }
 
         return total;
+    }
+
+    /// <summary>读不到属性时按「不是链接」处理：展示数字允许偏小，不允许抛。</summary>
+    private static bool IsReparsePoint(string path)
+    {
+        try
+        {
+            return (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
     }
 }
