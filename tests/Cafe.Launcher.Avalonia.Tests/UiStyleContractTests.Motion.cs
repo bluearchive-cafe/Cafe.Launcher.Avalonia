@@ -61,7 +61,7 @@ public sealed partial class UiStyleContractTests
         foreach (var animation in enterAnimations)
         {
             Assert.Equal(
-                "{StaticResource Launcher.Motion.Duration.Fast}",
+                "{x:Static helpers:MotionTokens.FastDuration}",
                 animation.Attribute("Duration")?.Value);
             Assert.Equal("Forward", animation.Attribute("FillMode")?.Value);
             Assert.Null(animation.Attribute("Delay"));
@@ -121,32 +121,32 @@ public sealed partial class UiStyleContractTests
         AssertOverlayBrushAnimation(
             document,
             "Grid.motion-overlay.motion-enabled.motion-enter",
-            "{StaticResource Launcher.Motion.Duration.Fast}");
+            "{x:Static helpers:MotionTokens.FastDuration}");
         AssertMotionAnimation(
             document,
             "Grid.motion-shell.motion-enabled.motion-enter",
-            "{StaticResource Launcher.Motion.Duration.Fast}",
+            "{x:Static helpers:MotionTokens.FastDuration}",
             expectedStartOffset: null);
         AssertMotionAnimation(
             document,
             "Grid.motion-overlay.motion-enabled.motion-enter > Border.motion-surface",
-            "{StaticResource Launcher.Motion.Duration.Normal}",
+            "{x:Static helpers:MotionTokens.NormalDuration}",
             expectedStartOffset: "{StaticResource Launcher.Motion.Offset.Surface}",
             expectsOpacity: false);
         AssertMotionAnimation(
             document,
             ":is(UserControl).motion-content.motion-enabled.motion-enter",
-            "{StaticResource Launcher.Motion.Duration.Fast}",
+            "{x:Static helpers:MotionTokens.FastDuration}",
             expectedStartOffset: null);
         AssertMotionAnimation(
             document,
             "StackPanel.motion-content.motion-enabled.motion-enter",
-            "{StaticResource Launcher.Motion.Duration.Fast}",
+            "{x:Static helpers:MotionTokens.FastDuration}",
             expectedStartOffset: null);
         AssertMotionAnimation(
             document,
             "Border.motion-bottom.motion-enabled.motion-enter",
-            "{StaticResource Launcher.Motion.Duration.Normal}",
+            "{x:Static helpers:MotionTokens.NormalDuration}",
             expectedStartOffset: "{StaticResource Launcher.Motion.Offset.Bottom}");
         AssertOverlayBrushExitAnimation(
             document,

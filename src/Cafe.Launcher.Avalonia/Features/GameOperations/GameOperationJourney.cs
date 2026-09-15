@@ -36,6 +36,12 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 
     private LauncherStatusSnapshot? lastInstallSnapshot;
 
+    /// <summary>
+    /// The toast gets one short beat to be read before the window is taken away by the
+    /// minimize-to-tray or exit that follows; both post-launch arms share the same beat.
+    /// </summary>
+    private static readonly TimeSpan AfterLaunchToastBeat = TimeSpan.FromMilliseconds(600);
+
     /// <summary>Initializes the execution seam and presentation host for game operations.</summary>
     public GameOperationJourney(
         IGameOperationExecutor executor,
@@ -134,12 +140,12 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
                 // The window is about to disappear, so the toast gets one short beat to be read
                 // before the process goes away — the same beat the minimize path gives itself.
                 toastService.ShowSuccess(localizer.T(LocalizationKeys.GameLaunchedExiting));
-                await delayAsync(TimeSpan.FromMilliseconds(600));
+                await delayAsync(AfterLaunchToastBeat);
                 host.RequestExit();
                 break;
             default:
                 toastService.ShowSuccess(localizer.T(LocalizationKeys.GameLaunchedMinimized));
-                await delayAsync(TimeSpan.FromMilliseconds(600));
+                await delayAsync(AfterLaunchToastBeat);
                 host.RequestMinimize();
                 break;
         }

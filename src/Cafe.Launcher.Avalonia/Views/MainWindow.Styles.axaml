@@ -599,7 +599,7 @@
          Background.PreviousWallpaperFadingOut 事件时驱动，不用属性过渡以免“先淡入旧图”。 -->
     <Style Selector="Grid.motion-shell.motion-enabled.motion-enter">
         <Style.Animations>
-            <Animation Duration="{StaticResource Launcher.Motion.Duration.Fast}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Enter}">
+            <Animation Duration="{x:Static helpers:MotionTokens.FastDuration}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Enter}">
                 <KeyFrame Cue="0%">
                     <Setter Property="Opacity" Value="0"/>
                 </KeyFrame>
@@ -611,7 +611,7 @@
     </Style>
     <Style Selector="Grid.motion-overlay.motion-enabled.motion-enter">
         <Style.Animations>
-            <Animation Duration="{StaticResource Launcher.Motion.Duration.Fast}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Enter}">
+            <Animation Duration="{x:Static helpers:MotionTokens.FastDuration}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Enter}">
                 <KeyFrame Cue="0%">
                     <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
                 </KeyFrame>
@@ -623,7 +623,7 @@
     </Style>
     <Style Selector="Grid.motion-overlay.motion-enabled.motion-enter > Border.motion-surface">
         <Style.Animations>
-            <Animation Duration="{StaticResource Launcher.Motion.Duration.Normal}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Enter}">
+            <Animation Duration="{x:Static helpers:MotionTokens.NormalDuration}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Enter}">
                 <KeyFrame Cue="0%">
                     <Setter Property="TranslateTransform.Y" Value="{StaticResource Launcher.Motion.Offset.Surface}"/>
                 </KeyFrame>
@@ -636,7 +636,7 @@
     <!-- ADR-016：内部内容层不再二次运动；表面的单次进入/退出已由平行规则覆盖。 -->
     <Style Selector="Grid.motion-overlay.motion-enabled.motion-exit">
         <Style.Animations>
-            <Animation Duration="{StaticResource Launcher.Motion.Duration.Fast}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Exit}">
+            <Animation Duration="{x:Static helpers:MotionTokens.FastDuration}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Exit}">
                 <KeyFrame Cue="0%">
                     <Setter Property="Background" Value="{StaticResource Launcher.Color.Overlay.Scrim.Md}"/>
                 </KeyFrame>
@@ -648,7 +648,7 @@
     </Style>
     <Style Selector="Grid.motion-overlay.motion-enabled.motion-exit > Border.motion-surface">
         <Style.Animations>
-            <Animation Duration="{StaticResource Launcher.Motion.Duration.Fast}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Exit}">
+            <Animation Duration="{x:Static helpers:MotionTokens.FastDuration}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Exit}">
                 <KeyFrame Cue="0%">
                     <Setter Property="TranslateTransform.Y" Value="0"/>
                 </KeyFrame>
@@ -661,7 +661,7 @@
     <!-- DialogSurface 模板控件版本：整面滑移 + 整体淡入淡出（不再拆分内容层）。 -->
     <Style Selector="Grid.motion-overlay.motion-enabled.motion-enter > controls|DialogSurface.motion-surface">
         <Style.Animations>
-            <Animation Duration="{StaticResource Launcher.Motion.Duration.Normal}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Enter}">
+            <Animation Duration="{x:Static helpers:MotionTokens.NormalDuration}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Enter}">
                 <KeyFrame Cue="0%">
                     <Setter Property="TranslateTransform.Y" Value="{StaticResource Launcher.Motion.Offset.Surface}"/>
                     <Setter Property="Opacity" Value="0"/>
@@ -675,7 +675,7 @@
     </Style>
     <Style Selector="Grid.motion-overlay.motion-enabled.motion-exit > controls|DialogSurface.motion-surface">
         <Style.Animations>
-            <Animation Duration="{StaticResource Launcher.Motion.Duration.Fast}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Exit}">
+            <Animation Duration="{x:Static helpers:MotionTokens.FastDuration}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Exit}">
                 <KeyFrame Cue="0%">
                     <Setter Property="TranslateTransform.Y" Value="0"/>
                     <Setter Property="Opacity" Value="1"/>
@@ -690,7 +690,7 @@
     <!-- ADR-016 内容切换：同级目的地纯交叉淡化，无方向位移。 -->
     <Style Selector=":is(UserControl).motion-content.motion-enabled.motion-enter">
         <Style.Animations>
-            <Animation Duration="{StaticResource Launcher.Motion.Duration.Fast}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Enter}">
+            <Animation Duration="{x:Static helpers:MotionTokens.FastDuration}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Enter}">
                 <KeyFrame Cue="0%">
                     <Setter Property="Opacity" Value="0"/>
                 </KeyFrame>
@@ -702,7 +702,7 @@
     </Style>
     <Style Selector="StackPanel.motion-content.motion-enabled.motion-enter">
         <Style.Animations>
-            <Animation Duration="{StaticResource Launcher.Motion.Duration.Fast}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Enter}">
+            <Animation Duration="{x:Static helpers:MotionTokens.FastDuration}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Enter}">
                 <KeyFrame Cue="0%">
                     <Setter Property="Opacity" Value="0"/>
                 </KeyFrame>
@@ -714,7 +714,7 @@
     </Style>
     <Style Selector="Border.motion-bottom.motion-enabled.motion-enter">
         <Style.Animations>
-            <Animation Duration="{StaticResource Launcher.Motion.Duration.Normal}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Enter}">
+            <Animation Duration="{x:Static helpers:MotionTokens.NormalDuration}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Enter}">
                 <KeyFrame Cue="0%">
                     <Setter Property="Opacity" Value="0"/>
                     <Setter Property="TranslateTransform.Y" Value="{StaticResource Launcher.Motion.Offset.Bottom}"/>

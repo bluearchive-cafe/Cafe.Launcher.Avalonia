@@ -183,7 +183,7 @@ public sealed partial class UiStyleContractTests
     private static void AssertOverlayBrushExitAnimation(XDocument document, string selector)
     {
         var animation = GetMotionAnimation(document, selector);
-        Assert.Equal("{StaticResource Launcher.Motion.Duration.Fast}", animation.Attribute("Duration")?.Value);
+        Assert.Equal("{x:Static helpers:MotionTokens.FastDuration}", animation.Attribute("Duration")?.Value);
         Assert.Equal("Forward", animation.Attribute("FillMode")?.Value);
         Assert.Equal("{StaticResource Launcher.Motion.Easing.Exit}", animation.Attribute("Easing")?.Value);
 
@@ -247,7 +247,7 @@ public sealed partial class UiStyleContractTests
         bool expectsOpacity = true)
     {
         var animation = GetMotionAnimation(document, selector);
-        Assert.Equal("{StaticResource Launcher.Motion.Duration.Fast}", animation.Attribute("Duration")?.Value);
+        Assert.Equal("{x:Static helpers:MotionTokens.FastDuration}", animation.Attribute("Duration")?.Value);
         Assert.Equal("Forward", animation.Attribute("FillMode")?.Value);
         Assert.Equal("{StaticResource Launcher.Motion.Easing.Exit}", animation.Attribute("Easing")?.Value);
 
