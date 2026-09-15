@@ -19,45 +19,42 @@ public sealed class GameOperationPolicyTests
         Assert.Equal(4, Enum.GetValues<Operation>().Length);
     }
 
-    [Theory]
-    [InlineData(Operation.Launch, NotInstalled, false)]
-    [InlineData(Operation.Launch, Corrupted, false)]
-    [InlineData(Operation.Launch, IoFailure, false)]
-    [InlineData(Operation.Launch, RemoteUnavailable, false)]
-    [InlineData(Operation.Launch, BelowLowestVersion, false)]
-    [InlineData(Operation.Launch, UpdateAvailable, false)]
-    [InlineData(Operation.Launch, Ready, true)]
-    [InlineData(Operation.InstallOrUpdate, NotInstalled, true)]
-    [InlineData(Operation.InstallOrUpdate, Corrupted, false)]
-    [InlineData(Operation.InstallOrUpdate, IoFailure, false)]
-    [InlineData(Operation.InstallOrUpdate, RemoteUnavailable, false)]
-    [InlineData(Operation.InstallOrUpdate, BelowLowestVersion, true)]
-    [InlineData(Operation.InstallOrUpdate, UpdateAvailable, true)]
-    [InlineData(Operation.InstallOrUpdate, Ready, false)]
-    [InlineData(Operation.Repair, NotInstalled, false)]
-    [InlineData(Operation.Repair, Corrupted, true)]
-    [InlineData(Operation.Repair, IoFailure, false)]
-    [InlineData(Operation.Repair, RemoteUnavailable, false)]
-    [InlineData(Operation.Repair, BelowLowestVersion, false)]
-    [InlineData(Operation.Repair, UpdateAvailable, false)]
-    [InlineData(Operation.Repair, Ready, true)]
-    [InlineData(Operation.Uninstall, NotInstalled, false)]
-    [InlineData(Operation.Uninstall, Corrupted, false)]
-    [InlineData(Operation.Uninstall, IoFailure, false)]
-    [InlineData(Operation.Uninstall, RemoteUnavailable, false)]
-    [InlineData(Operation.Uninstall, BelowLowestVersion, false)]
-    [InlineData(Operation.Uninstall, UpdateAvailable, false)]
-    [InlineData(Operation.Uninstall, Ready, true)]
-    public void Decide_WhenCheckedAgainstFullPolicyTable_MatchesTheDocumentedPermissionMatrix(
-        Operation operation,
-        LauncherRuntimeState state,
-        bool expected)
+    /// <summary>
+    /// 逐格断言判定结果。写成「遍历枚举 × 显式允许集」而不是 28 行 InlineData：删掉一行
+    /// InlineData 时剩下的用例照样绿（漏行没有任何信号），而遍历枚举时每个格子都被断言过，
+    /// 允许集的规模另有断言兜住「表被删空」这种退化（2026-09-15 复核轮）。
+    /// 枚举维度由 <see cref="EnumCoverage_WhenGameOperationStatesOrOperationsChange_ForcesExplicitTableUpdate"/>
+    /// 钉住，遍历因此不会因为枚举变空而变成空转。
+    /// </summary>
+    [Fact]
+    public void Decide_ForEveryOperationAndState_MatchesTheDocumentedPermissionMatrix()
     {
-        var decision = GameOperationPolicy.Decide(operation, state);
+        var permitted = new HashSet<(Operation Operation, LauncherRuntimeState State)>
+        {
+            (Operation.Launch, Ready),
+            (Operation.InstallOrUpdate, NotInstalled),
+            (Operation.InstallOrUpdate, BelowLowestVersion),
+            (Operation.InstallOrUpdate, UpdateAvailable),
+            (Operation.Repair, Corrupted),
+            (Operation.Repair, Ready),
+            (Operation.Uninstall, Ready),
+        };
 
-        Assert.Equal(
-            expected ? GameOperationDecision.Allowed : GameOperationDecision.RejectedForCurrentState,
-            decision);
+        // 28 格里允许 7 格。这个数字是这张表的形状本身：改了它就必须同时改策略，
+        // 而改策略会让下面的遍历红。
+        Assert.Equal(7, permitted.Count);
+
+        foreach (var operation in Enum.GetValues<Operation>())
+        {
+            foreach (var state in Enum.GetValues<LauncherRuntimeState>())
+            {
+                var expected = permitted.Contains((operation, state))
+                    ? GameOperationDecision.Allowed
+                    : GameOperationDecision.RejectedForCurrentState;
+
+                Assert.Equal(expected, GameOperationPolicy.Decide(operation, state));
+            }
+        }
     }
 
     /// <summary>

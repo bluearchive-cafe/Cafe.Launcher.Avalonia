@@ -48,6 +48,22 @@ public sealed class DirectorySizeProbeTests : IDisposable
         Assert.Equal(4, DirectorySizeProbe.Measure(root));
     }
 
+    [Fact]
+    public void Measure_WhenTheRootItselfIsAReparsePoint_ReturnsZero()
+    {
+        var realTree = Path.Combine(tempDir, "real-tree");
+        Directory.CreateDirectory(realTree);
+        File.WriteAllText(Path.Combine(realTree, "counted-nowhere.txt"), "1234567890");
+        var linkRoot = Path.Combine(tempDir, "link-root");
+        TestSymlinks.CreateDirectorySymbolicLinkOrSkip(linkRoot, realTree);
+
+        // 根是链接时彻底清除会被守卫拒绝（什么都不删），所以展示数字必须是 0：
+        // 报出目标树的体积等于承诺一次不会发生的删除（2026-09-15 复核轮）。
+        Assert.Equal(0, DirectorySizeProbe.Measure(linkRoot));
+        // 链接的目标本身照常可测，只是不再经由链接抵达。
+        Assert.Equal(10, DirectorySizeProbe.Measure(realTree));
+    }
+
     public void Dispose()
     {
         for (var attempt = 0; attempt < 3; attempt++)

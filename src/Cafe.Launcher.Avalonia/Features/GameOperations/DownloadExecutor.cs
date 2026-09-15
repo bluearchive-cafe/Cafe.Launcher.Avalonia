@@ -326,8 +326,11 @@ internal sealed class DownloadExecutor
                 semaphore.Release();
             }
 
+            // 校验是并行的（≤8 个 worker）：回调的到达顺序不保证单调，落后的那一次会把走过的
+            // 桶再报一遍，所以这里用单调判据——进度只增不减，每个桶也只报一次
+            // （2026-09-15 复核轮：非单调判据下 400 文件去重用例会偶发红）。
             var percent = (int)Math.Round(Interlocked.Increment(ref completedCount) * 100d / manifestFiles.Count);
-            if (progressGate.ShouldDeliver(percent))
+            if (progressGate.ShouldDeliverMonotonic(percent))
             {
                 progress(percent);
             }

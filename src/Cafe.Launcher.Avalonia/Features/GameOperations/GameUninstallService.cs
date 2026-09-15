@@ -115,8 +115,11 @@ public sealed class GameUninstallService
                         "Thorough cleanup was refused by the path guards.",
                         exception,
                         CancellationToken.None).ConfigureAwait(false);
+                    // 报本地化的拒绝理由，守卫那句英文说明只留在日志里（2026-09-15 复核轮）：
+                    // GamePathValidator/DirectoryTreeDeleter 抛的是仓库自己写的英文，
+                    // 套进「卸载失败：{0}」就会让本地化界面显示英文开发文档。
                     return DownloadSession.Failed(
-                        localizer.F(LocalizationKeys.UninstallFailed, exception.Message),
+                        localizer.F(LocalizationKeys.UninstallRefusedByPathGuard, gamePath),
                         GameOperationErrorCode.System);
                 }
             }
@@ -184,10 +187,10 @@ public sealed class GameUninstallService
                 $"Game uninstall completed.{Environment.NewLine}path: {gamePath}{Environment.NewLine}files: {files.Count}{Environment.NewLine}leftovers: {leftovers.Count}",
                 cancellationToken).ConfigureAwait(false);
 
-            // 自定义到受管子树之外的 Prefix 不会被删（ADR-030）：成功文案必须说出来，
+            // 落在两个删除目标之外的 Prefix 不会被删（ADR-030）：成功文案必须说出来，
             // 否则「彻底清除」看起来做了它没做的事。
             var keptPrefixPath = scope == UninstallScope.ThoroughCleanup
-                ? ResolveKeptPrefixPath(snapshot)
+                ? ResolveKeptPrefixPath(snapshot, gamePath)
                 : null;
             if (leftovers.Count > 0)
             {
@@ -204,7 +207,7 @@ public sealed class GameUninstallService
             return new GameOperationResult
             {
                 Success = true,
-                Message = BuildCompletionMessage(leftovers, keptPrefixPath),
+                Message = BuildCompletionMessage(localizer, leftovers, keptPrefixPath),
                 AffectedFileCount = files.Count + 2
             };
         }
@@ -236,10 +239,21 @@ public sealed class GameUninstallService
     /// 用户自定义且落在受管子树之外的 Prefix（ADR-030）：保留不删，并在成功文案里回报。
     /// 它是用户自选的任意目录，可能与别的程序共用——删它是另一件事，不该由卸载顺手做掉。
     /// </summary>
-    private static string? ResolveKeptPrefixPath(LauncherStatusSnapshot snapshot)
+    /// <remarks>
+    /// 只有「彻底清除确实没动它」才配得上「已保留」这句。<c>PrefixPath</c> 是自由文本，用户可以
+    /// 把它填进安装目录里（便携安装），而安装目录整棵正是彻底清除的删除目标之一：树都删完了
+    /// 再报「已保留：&lt;该路径&gt;」，是被同一次操作当场证伪的一句话。
+    /// </remarks>
+    private static string? ResolveKeptPrefixPath(LauncherStatusSnapshot snapshot, string gamePath)
     {
         var prefixPath = GameRuntimeConfiguration.FromSettings(snapshot.Settings.GameRuntime).PrefixPath;
         if (string.IsNullOrWhiteSpace(prefixPath))
+        {
+            return null;
+        }
+
+        // 彻底清除的两个删除目标：安装目录整棵、受管兼容子树整棵（ResolveCleanupTargets）。
+        if (DirectoryTreeDeleter.IsUnder(prefixPath, gamePath))
         {
             return null;
         }
@@ -289,24 +303,36 @@ public sealed class GameUninstallService
                 catch (InvalidOperationException exception)
                 {
                     // 预检之后路径又变了（竞争）：折算成 IO 失败，交给既有的失败呈现，
-                    // 否则它会冒泡成调用方只记日志的匿名异常。
-                    throw new IOException(exception.Message, exception);
+                    // 否则它会冒泡成调用方只记日志的匿名异常。文案就地本地化：守卫抛的是
+                    // 仓库自己的英文说明，不该经「卸载失败：{0}」呈给用户（2026-09-15 复核轮），
+                    // 原文仍随内部异常进日志。
+                    throw new IOException(
+                        localizer.F(LocalizationKeys.UninstallRefusedByPathGuard, gamePath),
+                        exception);
                 }
             },
             cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
-    /// 彻底清除的完成文案（ADR-030）：删不掉的项目优先报出来——它是实际缺口，比
-    /// 「Prefix 主动保留」这条设计内说明更该占用户的一眼。保留的 Prefix 仍记进日志。
+    /// 彻底清除的完成文案（ADR-030）：两个事实各说各的，缺一不可——删不掉的项目是实际缺口，
+    /// 「Prefix 主动保留」是设计内说明，但它可能占着几十 GB，用户看不见就得自己去找目录。
+    /// 残留清单点名（上限 <see cref="MaxReportedLeftovers"/>，完整清单始终留在日志里）。
     /// </summary>
-    private string BuildCompletionMessage(IReadOnlyList<string> leftovers, string? keptPrefixPath)
+    internal static string BuildCompletionMessage(
+        LocalizationService localizer,
+        IReadOnlyList<string> leftovers,
+        string? keptPrefixPath)
     {
         if (leftovers.Count > 0)
         {
-            return localizer.F(
-                LocalizationKeys.UninstallCompletedWithLeftovers,
-                string.Join(Environment.NewLine, leftovers.Take(MaxReportedLeftovers)));
+            var listed = string.Join(Environment.NewLine, leftovers.Take(MaxReportedLeftovers));
+            return keptPrefixPath is null
+                ? localizer.F(LocalizationKeys.UninstallCompletedWithLeftovers, listed)
+                : localizer.F(
+                    LocalizationKeys.UninstallCompletedWithLeftoversKeptPrefix,
+                    listed,
+                    keptPrefixPath);
         }
 
         return keptPrefixPath is null
