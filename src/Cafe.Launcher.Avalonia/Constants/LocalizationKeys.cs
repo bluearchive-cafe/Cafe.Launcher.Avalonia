@@ -1642,6 +1642,9 @@ public static class LocalizationKeys
     /// <summary>Resource key for <c>uninstallCompletedWithLeftovers</c>.</summary>
     public const string UninstallCompletedWithLeftovers = "uninstallCompletedWithLeftovers";
 
+    /// <summary>Resource key for <c>uninstallCompletedWithLeftoversKeptPrefix</c>.</summary>
+    public const string UninstallCompletedWithLeftoversKeptPrefix = "uninstallCompletedWithLeftoversKeptPrefix";
+
     /// <summary>Resource key for <c>uninstallConfirmText</c>.</summary>
     public const string UninstallConfirmText = "uninstallConfirmText";
 

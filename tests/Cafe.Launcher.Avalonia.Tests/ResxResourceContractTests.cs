@@ -38,8 +38,9 @@ public sealed class ResxResourceContractTests
         // 555 → 557（ADR-030 的两个新串）→ 558（对话框先弹、尺寸后到，见 ADR-030 的第 4 条决策）
         // → 563（「游戏启动后的行为」的设置行、说明、保持窗口选项与两条启动提示，见 ADR-031；
         // 最小化与退出两个选项复用既有串，不新增同义 key）
-        // → 564（彻底清除完成但有个别项目删不掉时的结果串，见 ADR-030）。
-        Assert.Equal(564, ResxValues["en"].Count);
+        // → 564（彻底清除完成但有个别项目删不掉时的结果串，见 ADR-030）
+        // → 565（复核轮：残留与「Prefix 已保留」同时成立时的结果串，两种事实都要在提示里）。
+        Assert.Equal(565, ResxValues["en"].Count);
     }
 
     [Fact]
@@ -285,9 +286,17 @@ public sealed class ResxResourceContractTests
     /// 取出 XAML 里的键引用及其行号。注释先剥掉：注掉的绑定不该让守卫红，
     /// 也不该假装自己是活引用。
     /// </summary>
+    /// <remarks>
+    /// 剥法是「抹成等长空白」而不是删掉：注释里的换行必须留在原处，否则它之后的每个键
+    /// 报出的行号都会偏小（多行注释吃掉几行就偏几行），失败信息会把人指到别的行上。
+    /// 2026-09-15 复核轮修正——此前用 Replace(…, string.Empty)，实测 16 个含键文件里有
+    /// 4 个、约三成的键行号不准。
+    /// </remarks>
     private static (string Key, int Line)[] ResourceKeysInXaml(string text)
     {
-        var scanned = XamlCommentPattern.Replace(text, string.Empty);
+        var scanned = XamlCommentPattern.Replace(
+            text,
+            match => string.Concat(match.Value.Select(character => character == '\n' ? '\n' : ' ')));
         return XamlResourceKeyPattern
             .Matches(scanned)
             .Select(match => (
@@ -313,6 +322,29 @@ public sealed class ResxResourceContractTests
         var keys = ResourceKeysInXaml(fixture).Select(entry => entry.Key).ToArray();
 
         Assert.Equal(new[] { "close", "cancel" }, keys);
+    }
+
+    /// <summary>
+    /// 行号本身也要准：失败信息是 <c>文件:行号 → 键</c>，行号偏小就等于把人指到别的行上。
+    /// 多行注释被抹掉换行时，它之后的每个键都会偏小——所以这一条钉住「注释吃掉的行还算数」。
+    /// </summary>
+    [Fact]
+    public void XamlResourceKeyScan_ReportsLinesThatSurviveMultiLineComments()
+    {
+        const string fixture = """
+            <UserControl>
+              <!--
+                <TextBlock Text="{Binding Shell.I18n[retired]}"/>
+                <TextBlock Text="{Binding Shell.I18n[alsoRetired]}"/>
+              -->
+              <TextBlock Text="{Binding Shell.I18n[close]}"/>
+            </UserControl>
+            """;
+
+        var entry = Assert.Single(ResourceKeysInXaml(fixture));
+
+        Assert.Equal("close", entry.Key);
+        Assert.Equal(6, entry.Line);
     }
 
     [Fact]

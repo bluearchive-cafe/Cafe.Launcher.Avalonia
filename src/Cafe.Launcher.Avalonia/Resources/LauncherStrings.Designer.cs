@@ -1110,6 +1110,8 @@ internal static class LauncherStrings
 
     internal static string UninstallCompletedWithLeftovers => GetRequiredString("uninstallCompletedWithLeftovers");
 
+    internal static string UninstallCompletedWithLeftoversKeptPrefix => GetRequiredString("uninstallCompletedWithLeftoversKeptPrefix");
+
     internal static string UninstallConfirmText => GetRequiredString("uninstallConfirmText");
 
     internal static string UninstallFailed => GetRequiredString("uninstallFailed");

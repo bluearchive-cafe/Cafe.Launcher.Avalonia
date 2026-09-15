@@ -18,6 +18,19 @@ public sealed class GameUninstallServiceTests : IDisposable
 {
     private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
 
+    /// <summary>
+    /// 实测的 Blue Archive 启动配置（ADR-032）：宿主名是配置里的 <c>name</c>，游戏可执行文件
+    /// 在 <c>params</c> 里；反作弊宿主是宿主名去掉 <c>_loader_x64</c> 的同族短名，它不在配置里。
+    /// 需要「判据来自配置」的用例用这一组，而不是与本判据无关的合成名。
+    /// </summary>
+    private const string LoaderExecutableName = "xldr_BlueArchiveOnline_JP_loader_x64";
+
+    private const string GameExecutableName = "BlueArchive";
+
+    private const string AntiCheatSiblingName = "xldr_BlueArchiveOnline_JP";
+
+    private static readonly string[] LaunchParameters = ["BlueArchive.exe"];
+
     static GameUninstallServiceTests()
     {
         TestLocalizationHelper.Initialize();
@@ -215,6 +228,88 @@ public sealed class GameUninstallServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task UninstallAsync_WhenPrefixLivesInsideTheInstallDirectory_DoesNotClaimItWasKept()
+    {
+        // PrefixPath 是自由文本：把它填进安装目录（便携安装）也是合法配置。而安装目录整棵正是
+        // 彻底清除的删除目标之一，树都删完了还报「已保留」是被同一次操作当场证伪的一句话。
+        var gamePath = CreateGameDirectory();
+        await WriteGameFileAsync(gamePath, "data/managed.bin");
+        var embeddedPrefix = Path.Combine(gamePath, "wine-prefix");
+        Directory.CreateDirectory(embeddedPrefix);
+        await File.WriteAllTextAsync(Path.Combine(embeddedPrefix, "user.reg"), "reg");
+        var store = await CreateCommittedStoreAsync(gamePath, "data/managed.bin");
+        var localGame = await store.ReadAsync(gamePath);
+        var localizer = new LocalizationService();
+        var service = CreateService(store, localizer);
+
+        var result = await service.UninstallAsync(
+            Snapshot(localGame, embeddedPrefix),
+            UninstallScope.ThoroughCleanup,
+            _ => { });
+
+        Assert.True(result.Success);
+        Assert.False(Directory.Exists(gamePath));
+        Assert.DoesNotContain(embeddedPrefix, result.Message, StringComparison.Ordinal);
+        Assert.Equal(localizer.T(LocalizationKeys.UninstallCompleted), result.Message);
+    }
+
+    [Fact]
+    public void BuildCompletionMessage_WithLeftoversAndKeptPrefix_StatesBoth()
+    {
+        // 复核轮：两个事实缺一不可。旧写法是二选一——只要有名有姓的残留，就把「Prefix 已保留」
+        // 整条吞掉，而那个目录可能有几十 GB，用户只能自己去猜它还在不在。直接驱动文案构造，
+        // 因此这一态不再需要「先造出一个删不掉的条目」（那件事只有 Windows 能复现）。
+        var localizer = new LocalizationService();
+        var message = GameUninstallService.BuildCompletionMessage(
+            localizer,
+            [@"C:\game\StreamingAssets\Xigncode:{GUID}"],
+            @"D:\shared-wine-prefix");
+
+        Assert.Contains("Xigncode:{GUID}", message, StringComparison.Ordinal);
+        Assert.Contains(@"D:\shared-wine-prefix", message, StringComparison.Ordinal);
+        // 占位符全部被消费：资源串与实参个数不匹配会在这里现形。
+        Assert.DoesNotContain("{0}", message, StringComparison.Ordinal);
+        Assert.DoesNotContain("{1}", message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BuildCompletionMessage_ForEveryCombination_ReportsOnlyWhatHappened()
+    {
+        var localizer = new LocalizationService();
+        string[] leftovers = [@"C:\game\stuck.bin"];
+        const string prefix = @"D:\shared-wine-prefix";
+
+        Assert.Equal(
+            localizer.T(LocalizationKeys.UninstallCompleted),
+            GameUninstallService.BuildCompletionMessage(localizer, [], null));
+        Assert.Equal(
+            localizer.F(LocalizationKeys.UninstallCompletedKeptPrefix, prefix),
+            GameUninstallService.BuildCompletionMessage(localizer, [], prefix));
+        Assert.Equal(
+            localizer.F(LocalizationKeys.UninstallCompletedWithLeftovers, leftovers[0]),
+            GameUninstallService.BuildCompletionMessage(localizer, leftovers, null));
+        Assert.Equal(
+            localizer.F(LocalizationKeys.UninstallCompletedWithLeftoversKeptPrefix, leftovers[0], prefix),
+            GameUninstallService.BuildCompletionMessage(localizer, leftovers, prefix));
+        // 没保留就不许提保留，没残留就不许提残留——反向也要钉住，否则「多报一句」不会被发现。
+        Assert.DoesNotContain(prefix, GameUninstallService.BuildCompletionMessage(localizer, leftovers, null), StringComparison.Ordinal);
+        Assert.DoesNotContain(leftovers[0], GameUninstallService.BuildCompletionMessage(localizer, [], prefix), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BuildCompletionMessage_WithMoreLeftoversThanTheCap_NamesOnlyTheFirstFew()
+    {
+        var localizer = new LocalizationService();
+        var leftovers = Enumerable.Range(0, 6).Select(index => $@"C:\game\leftover-{index}.bin").ToArray();
+
+        var message = GameUninstallService.BuildCompletionMessage(localizer, leftovers, null);
+
+        // 上限只防病态清单把提示撑爆；完整清单留在日志里（诊断侧已单独记录）。
+        Assert.Contains("leftover-4.bin", message, StringComparison.Ordinal);
+        Assert.DoesNotContain("leftover-5.bin", message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task UninstallAsync_WhenThoroughCleanupCannotRemoveSomething_StillSucceedsAndNamesIt()
     {
         // 实机回归（2026-09-15）：反作弊留下的目录项在用户态删不掉。删不掉的项目不该把一次
@@ -250,19 +345,46 @@ public sealed class GameUninstallServiceTests : IDisposable
         // 只认宿主就会放行，接着整棵删除撞在仍被占用的目录上——实机就是这么留下残留的。
         var gamePath = CreateGameDirectory();
         await WriteGameFileAsync(gamePath, "data/managed.bin");
-        var store = await CreateCommittedStoreAsync(gamePath, "data/managed.bin");
+        // 配置按游戏自己带来的那份写：宿主名 + 启动参数里的游戏可执行文件。写成一个与判据
+        // 无关的合成名（本文件其它用例的默认值）就会让「家族来自配置」这件事无从检验——
+        // 替身照答不误，把 FromLaunchConfiguration(name, null) 这样的回归放过去。
+        var store = await CreateCommittedStoreAsync(
+            gamePath,
+            LoaderExecutableName,
+            LaunchParameters,
+            "data/managed.bin");
         var localGame = await store.ReadAsync(gamePath);
+        var asked = new List<IReadOnlyList<string>>();
         var service = CreateService(
             store,
-            processTracker: new GameProcessTracker(
-                (_, _) => Task.FromResult<IReadOnlyList<string>>(["xldr_BlueArchiveOnline_JP"])));
+            processTracker: new GameProcessTracker((names, _) =>
+            {
+                asked.Add(names);
+                // 与真实判据同形：只有请求的族里含配置宿主时，反作弊宿主才落在族内
+                // （ExtendsProcessName 那条规则的前提），否则它根本不该被判据认领。
+                return Task.FromResult<IReadOnlyList<string>>(
+                    names.Contains(LoaderExecutableName, StringComparer.OrdinalIgnoreCase)
+                        ? [AntiCheatSiblingName]
+                        : []);
+            }));
 
         var result = await service.UninstallAsync(Snapshot(localGame), UninstallScope.ThoroughCleanup, _ => { });
 
         Assert.False(result.Success);
         Assert.Equal(GameOperationErrorCode.GameRunning, result.ErrorCode);
-        Assert.Contains("xldr_BlueArchiveOnline_JP", result.Message, StringComparison.Ordinal);
+        Assert.Contains(AntiCheatSiblingName, result.Message, StringComparison.Ordinal);
         Assert.True(Directory.Exists(gamePath));
+
+        // 判据确实来自配置的 name + params：漏掉 params 里的游戏可执行文件，
+        // 或干脆拿一个空判据去问，这两条断言就红——这才是「只认宿主时会放行」的守卫形态。
+        Assert.NotEmpty(asked);
+        Assert.All(
+            asked,
+            names =>
+            {
+                Assert.Contains(LoaderExecutableName, names, StringComparer.OrdinalIgnoreCase);
+                Assert.Contains(GameExecutableName, names, StringComparer.OrdinalIgnoreCase);
+            });
     }
 
     [Fact]
@@ -396,8 +518,24 @@ public sealed class GameUninstallServiceTests : IDisposable
     }
 
     /// <summary>为给定清单文件落盘安装状态，返回已初始化的存储实例。</summary>
+    /// <summary>为给定清单文件落盘安装状态，返回已初始化的存储实例。</summary>
+    private static Task<LocalInstallationStateStore> CreateCommittedStoreAsync(
+        string gamePath,
+        params string[] manifestPaths) =>
+        CreateCommittedStoreAsync(
+            gamePath,
+            $"CafeLauncherTest{Guid.NewGuid():N}",
+            [],
+            manifestPaths);
+
+    /// <summary>
+    /// 同上，但启动配置由调用方给定。需要检验「判据来自配置」的用例必须走这一条：默认的合成名
+    /// 与进程判据毫无关系，用它的替身只能证明「探针被调用过」，证明不了「判据是按配置算出来的」。
+    /// </summary>
     private static async Task<LocalInstallationStateStore> CreateCommittedStoreAsync(
         string gamePath,
+        string executableName,
+        IReadOnlyList<string> launchParameters,
         params string[] manifestPaths)
     {
         var store = new LocalInstallationStateStore();
@@ -406,8 +544,8 @@ public sealed class GameUninstallServiceTests : IDisposable
             new LocalInstallationStateCommit(
                 "1.0.0",
                 "manifest.json",
-                $"CafeLauncherTest{Guid.NewGuid():N}",
-                [],
+                executableName,
+                launchParameters,
                 [.. manifestPaths.Select(path => new LocalInstallationFile(
                     path,
                     new FileInfo(Path.Combine(gamePath, path.Replace('/', Path.DirectorySeparatorChar))).Length,

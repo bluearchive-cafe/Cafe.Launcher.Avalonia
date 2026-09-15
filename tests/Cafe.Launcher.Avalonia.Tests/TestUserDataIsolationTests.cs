@@ -59,6 +59,46 @@ public sealed class TestUserDataIsolationTests
             settingsService.SettingsPath);
     }
 
+    /// <summary>
+    /// 受管兼容子树也必须落在隔离目录内。它不是数据根的普通消费方：<c>GameCompatibilityPaths</c>
+    /// 是 ADR-025 的已声明例外（静态助手、无 DI 接缝），Unix 分支从 XDG 数据主目录派生，看不见
+    /// 数据根覆盖。少了这条守卫，<c>GameUninstallServiceTests</c> 的彻底清除用例会在开发机的
+    /// 真实 <c>~/.local/share/cafe-launcher</c> 上写 marker 再把整棵删掉——CI 容器是新的，
+    /// 所以红不了，只有开发机受伤。
+    /// </summary>
+    [Fact]
+    public void TestProcess_ManagedCompatibilityRootStaysInsideTheIsolatedDirectory()
+    {
+        var isolatedDirectory = Environment.GetEnvironmentVariable(
+            Services.LauncherDataRoot.TestOverrideEnvironmentVariable);
+
+        Assert.False(string.IsNullOrWhiteSpace(isolatedDirectory));
+        Assert.StartsWith(
+            Path.GetFullPath(isolatedDirectory),
+            Path.GetFullPath(Services.GameRuntime.GameCompatibilityPaths.GetDefaultCompatibilityRoot()),
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Unix 侧的隔离手段本身也要被钉住（上一条只断言结果落在隔离目录内，把 XDG 变量改成
+    /// 别的目录它照样绿）。跳在 Windows 上可见：该分支不读 XDG。
+    /// </summary>
+    [Fact]
+    public void TestProcess_UnixDataHomeIsRedirectedToTheIsolatedDirectory()
+    {
+        Assert.SkipWhen(
+            OperatingSystem.IsWindows(),
+            "Windows 分支的兼容前缀复用启动器数据根，不读 XDG_DATA_HOME。");
+
+        var isolatedDirectory = Environment.GetEnvironmentVariable(
+            Services.LauncherDataRoot.TestOverrideEnvironmentVariable);
+
+        Assert.Equal(
+            Path.GetFullPath(isolatedDirectory!),
+            Path.GetFullPath(Environment.GetEnvironmentVariable(
+                Testing.TestUserDataIsolation.UnixDataHomeVariable)!));
+    }
+
     [Fact]
     public void IsolatedUserDataDirectory_KeepsDerivedUnixSocketPathUnderKernelLimit()
     {

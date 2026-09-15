@@ -36,6 +36,23 @@ public sealed class GameProcessNamesTests
         Assert.Empty(GameProcessNames.FromLaunchConfiguration("   ", ["-flag"]));
     }
 
+    [Fact]
+    public void FromLaunchConfiguration_NormalizesQuotedAndPaddedParameters()
+    {
+        // params 是游戏自己写的命令行片段，引号与空白都是合法写法。判后缀必须先归一，
+        // 否则 "C:\dir\BlueArchive.exe" 会因为结尾那个引号被当成「不是可执行文件」丢掉：
+        // 游戏可执行文件静默移出家族，闸门对「游戏正在跑」这件事少一半判据
+        // （2026-09-15 复核轮；形态不是实测抓来的，实机配置未随仓库固定）。
+        Assert.Equal(
+            ["host", "BlueArchive"],
+            GameProcessNames.FromLaunchConfiguration(
+                "\"host.exe\"",
+                ["\"C:\\dir\\BlueArchive.exe\"", "BlueArchive.exe ", " C:\\dir\\BlueArchive.exe "]));
+
+        // 归一不等于放宽：引号里不是可执行文件名就照样丢掉。
+        Assert.Empty(GameProcessNames.FromLaunchConfiguration(null, ["\"C:\\dir\"", "\"-flag\""]));
+    }
+
     [Theory]
     [InlineData("xldr_BlueArchiveOnline_JP_loader_x64.exe")]
     [InlineData("xldr_BlueArchiveOnline_JP_loader_x64")]

@@ -100,12 +100,13 @@ public static class GameProcessNames
     /// <summary>去掉路径与 <c>.exe</c> 扩展名，留下可直接比较的进程名。</summary>
     internal static string WithoutExtension(string? exeName)
     {
-        if (string.IsNullOrWhiteSpace(exeName))
+        var normalized = Unquoted(exeName);
+        if (normalized.Length == 0)
         {
             return "";
         }
 
-        var name = Path.GetFileName(exeName.Trim());
+        var name = Path.GetFileName(normalized);
         return name.EndsWith(ExecutableExtension, StringComparison.OrdinalIgnoreCase)
             ? name[..^ExecutableExtension.Length]
             : name;
@@ -122,7 +123,21 @@ public static class GameProcessNames
         }
     }
 
+    /// <summary>
+    /// 启动参数里的一个词是不是「可执行文件名」。判后缀之前先去掉成对引号与首尾空白——<c>params</c>
+    /// 是游戏自己写的命令行片段，带引号的路径是合法写法，而 <c>"C:\dir\BlueArchive.exe"</c> 直接判
+    /// 后缀会因结尾那个引号被当成「不是可执行文件」丢掉：游戏可执行文件静默移出家族，判据少一半。
+    /// 判据与提取必须走同一份归一（<see cref="WithoutExtension"/>），否则两者会各说各话。
+    /// </summary>
     private static bool LooksLikeExecutable(string? parameter) =>
-        !string.IsNullOrWhiteSpace(parameter)
-        && parameter.EndsWith(ExecutableExtension, StringComparison.OrdinalIgnoreCase);
+        Unquoted(parameter).EndsWith(ExecutableExtension, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>去掉首尾空白与成对的首尾引号（<c>"x.exe"</c> 与 <c> x.exe </c> 都归一成 <c>x.exe</c>）。</summary>
+    private static string Unquoted(string? value)
+    {
+        var trimmed = value?.Trim() ?? "";
+        return trimmed.Length >= 2 && trimmed[0] == '"' && trimmed[^1] == '"'
+            ? trimmed[1..^1].Trim()
+            : trimmed;
+    }
 }
