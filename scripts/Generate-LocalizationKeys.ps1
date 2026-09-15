@@ -69,9 +69,7 @@ foreach ($key in $keys) {
 }
 
 $entries = foreach ($key in $keys) {
-    '    /// <summary>Resource key for <c>{0}</c>.</summary>' -f $key
     '    public const string {0} = "{1}";' -f $names[$key], $key
-    ''
 }
 
 $header = @'

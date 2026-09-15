@@ -142,8 +142,6 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     [NotifyPropertyChangedFor(nameof(GamePathPresentation))]
     [NotifyPropertyChangedFor(nameof(IsGamePathChecking))]
     [NotifyPropertyChangedFor(nameof(IsGamePathReady))]
-    [NotifyPropertyChangedFor(nameof(IsGamePathAvailableForInstallation))]
-    [NotifyPropertyChangedFor(nameof(IsGamePathValidInstallation))]
     [NotifyPropertyChangedFor(nameof(IsGamePathCorruptedInstallation))]
     [NotifyPropertyChangedFor(nameof(IsGamePathInaccessible))]
     [NotifyPropertyChangedFor(nameof(IsGamePathNotWritable))]
@@ -170,12 +168,6 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
 
     public bool IsGamePathReady => GamePathStatus is SetupWizardGamePathStatus.AvailableForInstallation
         or SetupWizardGamePathStatus.ValidInstallation;
-
-    public bool IsGamePathAvailableForInstallation =>
-        GamePathStatus == SetupWizardGamePathStatus.AvailableForInstallation;
-
-    public bool IsGamePathValidInstallation =>
-        GamePathStatus == SetupWizardGamePathStatus.ValidInstallation;
 
     public bool IsGamePathCorruptedInstallation =>
         GamePathStatus == SetupWizardGamePathStatus.CorruptedInstallation;

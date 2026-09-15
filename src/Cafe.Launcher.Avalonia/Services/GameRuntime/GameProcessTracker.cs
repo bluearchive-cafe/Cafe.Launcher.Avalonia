@@ -59,7 +59,7 @@ public sealed class GameProcessTracker : IGameProcessTracker
             previousExitedHandler = trackedProcessExitedHandler;
             trackedProcess = tracked;
             trackedProcessExitedHandler = exitedHandler;
-            trackedProcessName = ReadProcessName(process.HostProcess);
+            trackedProcessName = ProcessService.TryReadProcessName(process.HostProcess);
             trackedRunnerId = process.RunnerId;
             startedAt = DateTimeOffset.Now;
             tracked.Exited += exitedHandler;
@@ -112,22 +112,6 @@ public sealed class GameProcessTracker : IGameProcessTracker
             ? trackedProcessName
             : knownExeNames.Count > 0 ? knownExeNames[0] : "";
         return name.Length > 0 ? [name] : [];
-    }
-
-    /// <summary>
-    /// 注册时记下宿主进程名，供「句柄还活着」这条路径回报。反作弊会保护镜像路径，但名字来自
-    /// 系统快照，读得到；真读不到就留空，由调用方传进来的那组已知名字兜底。
-    /// </summary>
-    private static string ReadProcessName(Process process)
-    {
-        try
-        {
-            return process.ProcessName;
-        }
-        catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)
-        {
-            return "";
-        }
     }
 
     private void CaptureExit(ITrackedProcess process, Action exitedHandler)

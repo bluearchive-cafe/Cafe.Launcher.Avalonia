@@ -403,29 +403,18 @@ internal sealed class DownloadSession : IDisposable
             : GameProcessNames.FromLaunchConfiguration(remoteConfig.GameStartExeName, remoteConfig.GameStartParams);
 
     /// <summary>
-    /// 「游戏是不是在跑」这道闸门（ADR-032）在本会话的唯一实现：计划阶段与写入边界复查共用它，
-    /// 判据与报出的名字不会分叉。返回 null 表示放行。
+    /// 「游戏是不是在跑」这道闸门（ADR-032）在本会话的入口：计划阶段与写入边界复查共用它，
+    /// 正文在 <see cref="RunningGameGate"/>，与卸载侧的判据、报法不会分叉。返回 null 表示放行。
     /// </summary>
-    private async Task<GameOperationResult?> FindRunningGameFailureAsync(
+    private Task<GameOperationResult?> FindRunningGameFailureAsync(
         IReadOnlyList<string> knownProcessNames,
-        CancellationToken activeToken)
-    {
-        if (knownProcessNames.Count == 0)
-        {
-            return null;
-        }
-
-        var runningProcesses = await gameProcessTracker
-            .FindRunningGameProcessesAsync(knownProcessNames, activeToken)
-            .ConfigureAwait(false);
-        return runningProcesses.Count == 0
-            ? null
-            : Failed(
-                localizer.F(
-                    LocalizationKeys.GameExecutableRunning,
-                    GameProcessNames.DescribeForDisplay(runningProcesses)),
-                GameOperationErrorCode.GameRunning);
-    }
+        CancellationToken activeToken) =>
+        RunningGameGate.FindFailureAsync(
+            gameProcessTracker,
+            localizer,
+            LocalizationKeys.GameExecutableRunning,
+            knownProcessNames,
+            activeToken);
 
     /// <summary>
     /// 写探测失败时的统一收尾：记日志并以本地化 FileAccessDenied 停止。

@@ -32,12 +32,10 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void ViewsAndControls_UserFacingTextHasNoFixedEnglishLiterals()
     {
-        var violations = Directory
-            .GetFiles(ProjectFile("Views"), "*.axaml", SearchOption.AllDirectories)
-            .Concat(Directory.GetFiles(ProjectFile("Controls"), "*.axaml", SearchOption.AllDirectories))
-            .SelectMany(path => FindFixedEnglishLiterals(
-                XDocument.Load(path, LoadOptions.SetLineInfo),
-                Path.GetRelativePath(TestLocalizationHelper.FindProjectRoot(), path)))
+        var violations = ProjectMarkupFiles()
+            .SelectMany(relativePath => FindFixedEnglishLiterals(
+                XDocument.Load(ProjectFile(relativePath), LoadOptions.SetLineInfo),
+                relativePath))
             .Order(StringComparer.Ordinal)
             .ToList();
 

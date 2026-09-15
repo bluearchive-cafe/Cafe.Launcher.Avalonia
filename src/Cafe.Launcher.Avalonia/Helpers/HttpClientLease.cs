@@ -11,7 +11,6 @@ namespace Cafe.Launcher.Avalonia.Helpers;
 /// </summary>
 public sealed class HttpClientLease : IDisposable
 {
-    private readonly SocketsHttpHandler? handler;
     private readonly bool ownsClient;
 
     /// <summary>
@@ -31,17 +30,6 @@ public sealed class HttpClientLease : IDisposable
         this.ownsClient = ownsClient;
     }
 
-    /// <summary>
-    /// Wraps a per-request client with its own handler. The lease owns both
-    /// and will dispose them on <see cref="Dispose"/>.
-    /// </summary>
-    public HttpClientLease(HttpClient client, SocketsHttpHandler handler)
-    {
-        Client = client;
-        this.handler = handler;
-        ownsClient = true;
-    }
-
     public HttpClient Client { get; }
 
     /// <summary>
@@ -56,7 +44,6 @@ public sealed class HttpClientLease : IDisposable
         if (ownsClient)
         {
             Client.Dispose();
-            handler?.Dispose();
         }
         GC.SuppressFinalize(this);
     }

@@ -34,7 +34,7 @@ public static class ProcessService
             {
                 using (process)
                 {
-                    var name = TryReadName(process);
+                    var name = TryReadProcessName(process);
                     if (name.Length > 0
                         && GameProcessNames.BelongsToFamily(name, knownNames)
                         && seen.Add(name))
@@ -53,7 +53,12 @@ public static class ProcessService
         return Task.FromResult<IReadOnlyList<string>>(matches);
     }
 
-    private static string TryReadName(Process process)
+    /// <summary>
+    /// 从系统快照读进程名，读不到（枚举与读取之间已退出、或访问被拒）返回空串。反作弊保护的
+    /// 是镜像路径而不是名字，所以「游戏运行中」闸门靠的正是这次读取；进程名提取的唯一定义，
+    /// <see cref="GameProcessTracker"/> 注册时记名也走这里。
+    /// </summary>
+    internal static string TryReadProcessName(Process process)
     {
         try
         {

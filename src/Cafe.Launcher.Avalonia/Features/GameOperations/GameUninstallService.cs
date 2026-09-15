@@ -253,13 +253,13 @@ public sealed class GameUninstallService
         }
 
         // 彻底清除的两个删除目标：安装目录整棵、受管兼容子树整棵（ResolveCleanupTargets）。
-        if (DirectoryTreeDeleter.IsUnder(prefixPath, gamePath))
+        var (gameRoot, managedPrefixRoot) = ResolveCleanupTargets(gamePath);
+        if (DirectoryTreeDeleter.IsUnder(prefixPath, gameRoot))
         {
             return null;
         }
 
-        var managedRoot = GameCompatibilityPaths.GetDefaultGameCompatibilityRoot(GameRuntimeIds.BlueArchiveJapan);
-        return DirectoryTreeDeleter.IsUnder(prefixPath, managedRoot) ? null : prefixPath;
+        return DirectoryTreeDeleter.IsUnder(prefixPath, managedPrefixRoot) ? null : prefixPath;
     }
 
     /// <summary>
@@ -422,9 +422,9 @@ public sealed class GameUninstallService
     }
 
     /// <summary>
-    /// 「游戏是不是在跑」这道闸门（ADR-032）的唯一实现：预检与删除前的复查共用它，判据与报出的
-    /// 名字因此不会分叉。返回 null 表示放行；配置里没有可用名字时不拦（无可识别的判据，闸门
-    /// 不做无根据的拒绝）。
+    /// 「游戏是不是在跑」这道闸门（ADR-032）在本类的入口：预检与删除前的复查共用它，正文在
+    /// <see cref="RunningGameGate"/>，与下载／安装／修复侧的判据、报法不会分叉。返回 null 表示
+    /// 放行；配置里没有可用名字时不拦（无可识别的判据，闸门不做无根据的拒绝）。
     /// </summary>
     private async Task<GameOperationResult?> FindRunningGameFailureAsync(
         GameLauncherConfig? gameConfig,
@@ -435,19 +435,12 @@ public sealed class GameUninstallService
             return null;
         }
 
-        var runningProcesses = await gameProcessTracker.FindRunningGameProcessesAsync(
+        return await RunningGameGate.FindFailureAsync(
+            gameProcessTracker,
+            localizer,
+            LocalizationKeys.GameIsRunning,
             GameProcessNames.FromLaunchConfiguration(gameConfig.Name, gameConfig.Params),
             cancellationToken).ConfigureAwait(false);
-        if (runningProcesses.Count == 0)
-        {
-            return null;
-        }
-
-        // 报出实际在跑的那几个（报法由 GameProcessNames.DescribeForDisplay 统一：名字补回 .exe，
-        // 与下载/安装/修复那条闸门一致），而不是只报配置里那个宿主：只认宿主时错的正是这一句。
-        return DownloadSession.Failed(
-            localizer.F(LocalizationKeys.GameIsRunning, GameProcessNames.DescribeForDisplay(runningProcesses)),
-            GameOperationErrorCode.GameRunning);
     }
 
     private static bool IsSystemProtectPath(string path)

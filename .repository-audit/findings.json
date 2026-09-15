@@ -2,19 +2,19 @@
   "schema_version": 1,
   "findings": {
     "AUD-TEST-005": {
-      "title": "有界并行安装校验（715fee5）无多文件清单测试：信号量门控、failedFlags 重组、WhenAll 取消扇出全部未钉住",
+      "title": "有界并行安装校验（67229b5）无多文件清单测试：信号量门控、failedFlags 重组、WhenAll 取消扇出全部未钉住",
       "category": "testing/critical-path",
       "severity": "medium",
       "confidence": 85,
       "status": "resolved",
       "disposition": "Add Guard",
       "recommendation_validation": "Verified",
-      "first_seen_commit": "6ecd7bf",
-      "last_verified_commit": "93b3335",
-      "resolved_commit": "58edcf8",
+      "first_seen_commit": "dc1a6ef",
+      "last_verified_commit": "d4ca700",
+      "resolved_commit": "67229b5",
       "guard": null,
-      "delta_note": "新发现（2026-09-14 复审，主审计直接核实）。DownloadExecutorTests 全部 8 处清单参数均为单元素 [manifestFile]（:38-39,:65-66,:94-95,:122,:148），GameDownloadServiceTests 零处引用 InstallDownloadedFilesAsync——并发语义（SemaphoreSlim(≤8) 门控、按索引 failedFlags 重组、乱序进度回调的产生侧、WhenAll 取消扇出）无用例可检出回归。上轮「DownloadExecutorTests 9 用例经并行路径钉住行为」的说法对并发维度 overstated：用例确实走并行代码路径但每次只有 1 个文件。显示侧乱序回退已由 4c0b0cd 的钳制测试钉住，产生侧未钉。建议：一个多文件清单用例（含故意的哈希不匹配文件）钉住失败重组与按清单序重试。",
-      "resolution_note": "修复（58edcf8，2026-09-14 修复轮）：DownloadExecutorTests 增至 13 用例——12 文件（>并行度 8）混合布局断言失败列表按清单序重组、失配 .tmp/终路径删除、通过文件搬移、进度每文件一次；缺失 .tmp 只标记该文件失败。并发语义（信号量门控、failedFlags 重组）自此被多文件用例钉住。"
+      "delta_note": "新发现（2026-09-14 复审，主审计直接核实）。DownloadExecutorTests 全部 8 处清单参数均为单元素 [manifestFile]（:38-39,:65-66,:94-95,:122,:148），GameDownloadServiceTests 零处引用 InstallDownloadedFilesAsync——并发语义（SemaphoreSlim(≤8) 门控、按索引 failedFlags 重组、乱序进度回调的产生侧、WhenAll 取消扇出）无用例可检出回归。上轮「DownloadExecutorTests 9 用例经并行路径钉住行为」的说法对并发维度 overstated：用例确实走并行代码路径但每次只有 1 个文件。显示侧乱序回退已由 608d888 的钳制测试钉住，产生侧未钉。建议：一个多文件清单用例（含故意的哈希不匹配文件）钉住失败重组与按清单序重试。",
+      "resolution_note": "修复（67229b5，2026-09-14 修复轮）：DownloadExecutorTests 增至 13 用例——12 文件（>并行度 8）混合布局断言失败列表按清单序重组、失配 .tmp/终路径删除、通过文件搬移、进度每文件一次；缺失 .tmp 只标记该文件失败。并发语义（信号量门控、failedFlags 重组）自此被多文件用例钉住。"
     },
     "AUD-SEC-006": {
       "title": "IsPublicAddress 私有地址黑名单遗漏 CGNAT 100.64.0.0/10 与基准测试段 198.18.0.0/15，字面 IP 直连按公网放行",
@@ -24,12 +24,12 @@
       "status": "accepted-risk",
       "disposition": "Fix",
       "recommendation_validation": "Verified",
-      "first_seen_commit": "6ecd7bf",
-      "last_verified_commit": "93b3335",
-      "resolved_commit": "8b6d3dd",
+      "first_seen_commit": "dc1a6ef",
+      "last_verified_commit": "d4ca700",
+      "resolved_commit": "521f4c1",
       "guard": "若修复：RemoteHttpUrlValidatorTests 补两段字面 IP 拒绝用例即守卫",
-      "delta_note": "新发现（2026-09-14 复审，主审计读码核实）。RemoteHttpUrlValidator.cs:170-179 的 IPv4 switch 覆盖 0/10/127/169.254/172.16-31/192.0/192.168/≥224，100.64/10 与 198.18/15 落入 _ => true 按公网放行（:91-99 字面 IP 分支直接判定，:112-124 主机名解析后同判）。影响有界：端口限 80/443、GET-only、跨主机重定向已剥离凭据（1dcc9df）、响应不回传攻击方（仅 JSON 解析失败的 16 字节预览入诊断日志，RemoteHttpTransport.cs:468-476）；可达目标为 Tailscale/WARP/CGNAT 网关管理面。与 AUD-SEC-001（validate-then-dial TOCTOU）根因不同：这是黑名单分类缺口而非时序窗口。修复为一行 switch 扩展。",
-      "resolution_note": "结案为接受风险（8b6d3dd，2026-09-14 修复轮）——诊断成立（两段确按公网放行）但补救已被否决：5a38be9 曾刻意移除对这些段的拦截（fake-ip 代理软件把 DNS 应答落在 198.18/15、部分 CDN 边缘节点落在 100.64/10，重新拦截会回归真实用户横幅/下载失败，且有测试 ValidateAsync_WhenLiteralAddressIsCarrierGradeNat_ReturnsUri 钉住放行）。按 SEC-004/ARCH-007 先例书面化：IsPublicAddress switch 显式放行臂 + 让步注释（代价有界：GET-only、80/443、跨主机重定向剥离凭据、响应不回传）；新增 198.18/15 放行守卫测试。勿在未重审该让步前重新收紧。"
+      "delta_note": "新发现（2026-09-14 复审，主审计读码核实）。RemoteHttpUrlValidator.cs:170-179 的 IPv4 switch 覆盖 0/10/127/169.254/172.16-31/192.0/192.168/≥224，100.64/10 与 198.18/15 落入 _ => true 按公网放行（:91-99 字面 IP 分支直接判定，:112-124 主机名解析后同判）。影响有界：端口限 80/443、GET-only、跨主机重定向已剥离凭据（d7076cb）、响应不回传攻击方（仅 JSON 解析失败的 16 字节预览入诊断日志，RemoteHttpTransport.cs:468-476）；可达目标为 Tailscale/WARP/CGNAT 网关管理面。与 AUD-SEC-001（validate-then-dial TOCTOU）根因不同：这是黑名单分类缺口而非时序窗口。修复为一行 switch 扩展。",
+      "resolution_note": "结案为接受风险（521f4c1，2026-09-14 修复轮）——诊断成立（两段确按公网放行）但补救已被否决：5a38be9 曾刻意移除对这些段的拦截（fake-ip 代理软件把 DNS 应答落在 198.18/15、部分 CDN 边缘节点落在 100.64/10，重新拦截会回归真实用户横幅/下载失败，且有测试 ValidateAsync_WhenLiteralAddressIsCarrierGradeNat_ReturnsUri 钉住放行）。按 SEC-004/ARCH-007 先例书面化：IsPublicAddress switch 显式放行臂 + 让步注释（代价有界：GET-only、80/443、跨主机重定向剥离凭据、响应不回传）；新增 198.18/15 放行守卫测试。勿在未重审该让步前重新收紧。"
     },
     "AUD-PERF-007": {
       "title": "校验/diff/卸载阶段逐文件派发 UI 线程进度回调（无下载阶段的 100ms 累加器等价物）",
@@ -39,12 +39,12 @@
       "status": "resolved",
       "disposition": "Fix",
       "recommendation_validation": "Strongly Supported",
-      "first_seen_commit": "6ecd7bf",
-      "last_verified_commit": "93b3335",
-      "resolved_commit": "5f53a6e",
+      "first_seen_commit": "dc1a6ef",
+      "last_verified_commit": "d4ca700",
+      "resolved_commit": "608d888",
       "guard": null,
       "delta_note": "新发现（2026-09-14 复审）。DownloadExecutor.cs:327-329（每清单文件每次校验轮一次 progress，无百分比去重）、ManifestDiffCalculator.cs:74/:107/:125（UpdateCheck/RepairCheck 逐文件）、GameUninstallService.cs:74（逐文件 new GameOperationProgress）；消费侧 GameOperationsViewModel.ApplyProgress（:379-394）每回调一次 Dispatcher.UIThread.Post + 闭包分配，ApplyProgressCore（:396-472）每次写 ~12 个 observable 属性 + 本地化格式化。下载阶段已有 DownloadProgressAccumulator(100ms)（DownloadExecutor.cs:100-103）刻意解决同类问题，其余阶段无等价门控。大清单校验/卸载时 UI 线程收到每文件一次回调。定性影响（无测量）；与 AUD-PERF-001 相互作用（未变更文件跳过重读亦减少本项回调量），根因不同各自立案。",
-      "resolution_note": "修复（5f53a6e，2026-09-14 修复轮）：新增 PercentProgressGate（Interlocked 值变化门控：首值 0 必达、重复抑制、阶段折返回退放行、线程安全），应用到校验（DownloadExecutor）、stat/修复哈希扫描（ManifestDiffCalculator）与卸载（GameUninstallService）三处产生侧；显式阶段发射有意不过门。守卫：门控四态单测 + 执行器 400 文件同桶去重接线测试。与消费侧 AUD-PERF-006 钳制互补。"
+      "resolution_note": "修复（608d888，2026-09-14 修复轮）：新增 PercentProgressGate（Interlocked 值变化门控：首值 0 必达、重复抑制、阶段折返回退放行、线程安全），应用到校验（DownloadExecutor）、stat/修复哈希扫描（ManifestDiffCalculator）与卸载（GameUninstallService）三处产生侧；显式阶段发射有意不过门。守卫：门控四态单测 + 执行器 400 文件同桶去重接线测试。与消费侧 AUD-PERF-006 钳制互补。"
     },
     "AUD-MAINT-003": {
       "title": "unified.log 文件名硬编码两处，违背 AGENTS.md「数据文件名声明于 Constants/GamePaths.cs」契约",
@@ -54,12 +54,12 @@
       "status": "resolved",
       "disposition": "Fix",
       "recommendation_validation": "Verified",
-      "first_seen_commit": "6ecd7bf",
-      "last_verified_commit": "93b3335",
-      "resolved_commit": "415809d",
+      "first_seen_commit": "dc1a6ef",
+      "last_verified_commit": "d4ca700",
+      "resolved_commit": "de2a1ee",
       "guard": "补 GamePaths 常量后，LogExportServiceTests 已引用字面量可同步改常量；可选加文件名清单契约测试",
       "delta_note": "新发现（2026-09-14 复审，主审计直接核实）。AGENTS.md「Persistence and compatibility contracts」声称文件名声明于 GamePaths.cs 并列举 unified.log；实际 GamePaths.cs:29-33 只有 manifest/config/settings/download-state/notice 五项。unified.log 字面量在 UnifiedLogger.cs:34 与 LogExportService.cs:172 各一份，轮转名 unified_{i:D3}.log 在 :177——重命名日志文件将静默分叉 logger 与导出器。同文件 LogExportService.cs:33-35 的其余导出项已用 GamePaths 常量，字面量是离群点。修复：补 UnifiedLogFileName 常量并三处引用。",
-      "resolution_note": "修复（415809d，2026-09-14 修复轮）：GamePaths.UnifiedLogFileName 常量收拢三处硬编码（UnifiedLogger 构造、LogExportService 当前项 + 轮转名派生——轮转名 unified_NNN.log 从常量词干派生，改名自动携带方案）；AGENTS.md「文件名声明于 GamePaths.cs」恢复为真。LogExportServiceTests 的字面量保留为导出线格式线钉。"
+      "resolution_note": "修复（de2a1ee，2026-09-14 修复轮）：GamePaths.UnifiedLogFileName 常量收拢三处硬编码（UnifiedLogger 构造、LogExportService 当前项 + 轮转名派生——轮转名 unified_NNN.log 从常量词干派生，改名自动携带方案）；AGENTS.md「文件名声明于 GamePaths.cs」恢复为真。LogExportServiceTests 的字面量保留为导出线格式线钉。"
     },
     "AUD-TEST-006": {
       "title": "UiStyleContractTests 令牌纪律扫描遗漏 Views/ResourcePanelOverlay.axaml——守卫白名单恰在创建该文件的拆分提交中漂移",
@@ -69,27 +69,27 @@
       "status": "resolved",
       "disposition": "Add Guard",
       "recommendation_validation": "Verified",
-      "first_seen_commit": "6ecd7bf",
-      "last_verified_commit": "93b3335",
-      "resolved_commit": "c2701da",
+      "first_seen_commit": "dc1a6ef",
+      "last_verified_commit": "d4ca700",
+      "resolved_commit": "3ea7baa",
       "guard": "修复建议：短平快是把文件补进 ViewFiles；更强的是加「Views/*.axaml 全部在扫描集内」的元契约测试，防白名单再次漂移",
-      "delta_note": "新发现（2026-09-14 复审，主审计直接核实）。UiStyleContractTests.cs:21-36 ViewFiles 14 项无 ResourcePanelOverlay.axaml；令牌纪律用例（Tokens.cs:511-514 原色/图标尺寸、:570-578 Raw 色值、:600+ 排版内联）均消费该列表，故最新主叠层不受任何 §2.3 令牌检查覆盖。拆分提交 d479c9c 在 Motion/Dialogs/Localization 等其他列表补了该文件（:199-207、:32-38），唯独令牌扫描列表漏了——证明手工白名单模式已漂移一次。当前文件实测无违规（潜在而非现行）。",
-      "resolution_note": "修复（c2701da，2026-09-14 修复轮）：ResourcePanelOverlay.axaml 补入共享 ViewFiles（令牌纪律三扫描全部生效，实测无违规）；新增 ScanTargets_CoverEveryTopLevelViewFile 元契约——Views/ 顶层每个 .axaml 必须被 ViewFiles/StyleFiles 声明或显式豁免（CrashReportWindow 留名），白名单漂移自此不可能。复核跟进（同日晚）：元契约原以匿名 Append 放行 MainWindowDebugOverlay.axaml（不在扫描集亦未留名豁免，其 :220 内联 Padding 违规因此不可见）；已补入 ViewFiles（实测 148 令牌契约全绿），内边距下沉为 Border.dialog-card.compact 样式类（视觉不变），扫描集外仅剩留名豁免一条路径。"
+      "delta_note": "新发现（2026-09-14 复审，主审计直接核实）。UiStyleContractTests.cs:21-36 ViewFiles 14 项无 ResourcePanelOverlay.axaml；令牌纪律用例（Tokens.cs:511-514 原色/图标尺寸、:570-578 Raw 色值、:600+ 排版内联）均消费该列表，故最新主叠层不受任何 §2.3 令牌检查覆盖。拆分提交 e56d54b 在 Motion/Dialogs/Localization 等其他列表补了该文件（:199-207、:32-38），唯独令牌扫描列表漏了——证明手工白名单模式已漂移一次。当前文件实测无违规（潜在而非现行）。",
+      "resolution_note": "修复（3ea7baa，2026-09-14 修复轮）：ResourcePanelOverlay.axaml 补入共享 ViewFiles（令牌纪律三扫描全部生效，实测无违规）；新增 ScanTargets_CoverEveryTopLevelViewFile 元契约——Views/ 顶层每个 .axaml 必须被 ViewFiles/StyleFiles 声明或显式豁免（CrashReportWindow 留名），白名单漂移自此不可能。复核跟进（同日晚）：元契约原以匿名 Append 放行 MainWindowDebugOverlay.axaml（不在扫描集亦未留名豁免，其 :220 内联 Padding 违规因此不可见）；已补入 ViewFiles（实测 148 令牌契约全绿），内边距下沉为 Border.dialog-card.compact 样式类（视觉不变），扫描集外仅剩留名豁免一条路径。"
     },
     "AUD-TEST-007": {
-      "title": "主题变体订阅拆卸（696abdd 当日新增）全仓库无回归守卫——删除 Dispose 拆卸块全套件仍绿",
+      "title": "主题变体订阅拆卸（b04cb83 当日新增）全仓库无回归守卫——删除 Dispose 拆卸块全套件仍绿",
       "category": "testing/regression-guard",
       "severity": "low",
       "confidence": 80,
       "status": "resolved",
       "disposition": "Add Guard",
       "recommendation_validation": "Verified",
-      "first_seen_commit": "6ecd7bf",
-      "last_verified_commit": "93b3335",
-      "resolved_commit": "cabaa3c",
+      "first_seen_commit": "dc1a6ef",
+      "last_verified_commit": "d4ca700",
+      "resolved_commit": "b04cb83",
       "guard": "建议单测：构造 VM → EnsureThemeSubscription → Dispose → 断言 Application 事件已退订（或 headless 两 VM 实例串联断言不互相触发）",
       "delta_note": "新发现（2026-09-14 复审）。SettingsAppearanceViewModel.cs:763-767（Dispose 退订 ActualThemeVariantChanged）、:657-670（EnsureThemeSubscription 含换 Application 先退订分支）——全仓库 grep 无测试引用 EnsureThemeSubscription/themeApplication 或断言退订；headless 侧仅隐式拆卸（NeutralStrategyHeadlessTests.cs:99 provider.Dispose、MainWindowHeadlessTests TestContext.Dispose）。提交消息声称「headless 共享 Application 不再跨测试累积订阅」但该行为未被钉住——删除 :765 退订行套件仍全绿，被修复的累积bug可静默回归。与已接受的 ShellLifecycle Wire/Unwire 项（AUD-ARCH-005）无涉：不同类、新代码、无接受裁定。",
-      "resolution_note": "修复（cabaa3c，2026-09-14 修复轮）：新增 ThemeSubscriptionTeardownHeadlessTests——哨兵法双相守卫：武装 System 模式处理器后置哨兵色，对照相翻转变体证明哨兵能侦测到在位处理器（方案重刷改写哨兵），provider.Dispose 后再翻转哨兵必须存活；退订行被删即测试失败。临时目录清理沿用受控删除纪律。"
+      "resolution_note": "修复（b04cb83，2026-09-14 修复轮）：新增 ThemeSubscriptionTeardownHeadlessTests——哨兵法双相守卫：武装 System 模式处理器后置哨兵色，对照相翻转变体证明哨兵能侦测到在位处理器（方案重刷改写哨兵），provider.Dispose 后再翻转哨兵必须存活；退订行被删即测试失败。临时目录清理沿用受控删除纪律。"
     },
     "AUD-MAINT-004": {
       "title": "MainWindowDialogsOverlay.axaml 承载点残留错误注释（「Chinese localization settings：资源面板覆盖层」）",
@@ -99,12 +99,12 @@
       "status": "resolved",
       "disposition": "Fix",
       "recommendation_validation": "Verified",
-      "first_seen_commit": "6ecd7bf",
-      "last_verified_commit": "93b3335",
-      "resolved_commit": "93b3335",
+      "first_seen_commit": "dc1a6ef",
+      "last_verified_commit": "d4ca700",
+      "resolved_commit": "d4ca700",
       "guard": null,
       "delta_note": "新发现（2026-09-14 复审，主审计读文件核实）。MainWindowDialogsOverlay.axaml:13 注释以「Chinese localization settings」开头——与资源面板无关，git log -S 追溯至 f20de8b 仓库重组的化石文本；:13-14 恰是资源面板（主叠层）嵌于对话框容器、以 FirstChild 位于对话框层之下的承载点，错误标签遮蔽这一微妙不变量。两行修正。",
-      "resolution_note": "修复（93b3335，2026-09-14 修复轮）：MainWindowDialogsOverlay.axaml:13 化石注释改写为说明「资源面板以 FirstChild 位于对话框层之下」层序不变量的准确注释；UiStyleContractTests 全绿。"
+      "resolution_note": "修复（d4ca700，2026-09-14 修复轮）：MainWindowDialogsOverlay.axaml:13 化石注释改写为说明「资源面板以 FirstChild 位于对话框层之下」层序不变量的准确注释；UiStyleContractTests 全绿。"
     },
     "AUD-PERF-001": {
       "title": "更新路径仍对全部未变更已安装文件做全文件 CRC64 重读（已并行化 + 跨轮摊销；自愈语义为文档化设计）",
@@ -114,11 +114,11 @@
       "status": "open",
       "disposition": "Architecture Decision",
       "recommendation_validation": "Strongly Supported",
-      "first_seen_commit": "5f56f8e",
-      "last_verified_commit": "715fee5",
+      "first_seen_commit": "ab156dd",
+      "last_verified_commit": "67229b5",
       "resolved_commit": null,
       "guard": "已落地：校验跳过计数 Verbose 日志（DownloadExecutor.cs:341-344）。剩余决策：更新路径是否引入修复通道式见证摊销（须保自愈契约，Benchmark 后采纳）",
-      "delta_note": "2026-09-14 复核：Medium→Low 降档。715fee5 已交付有界并行 min(ProcessorCount,8)（DownloadExecutor.cs:28,284-330）、下载期 verifiedHashes 跨轮累积（DownloadSession.cs:413-435）、修复通道见证跳过（PlannedFileHash）。残留：更新计划的 plannedHashes 刻意为空（DownloadPlan.cs:21-29），未变更文件仍全读一遍——这是代码注释明示的唯一内容损坏自愈通道（:260-264）。"
+      "delta_note": "2026-09-14 复核：Medium→Low 降档。67229b5 已交付有界并行 min(ProcessorCount,8)（DownloadExecutor.cs:28,284-330）、下载期 verifiedHashes 跨轮累积（DownloadSession.cs:413-435）、修复通道见证跳过（PlannedFileHash）。残留：更新计划的 plannedHashes 刻意为空（DownloadPlan.cs:21-29），未变更文件仍全读一遍——这是代码注释明示的唯一内容损坏自愈通道（:260-264）。"
     },
     "AUD-CI-001": {
       "title": "非 Windows 平台分支不随变更执行（linux-tests.yml 仅 dispatch+weekly；已由 build.yml ubuntu job 收口）",
@@ -128,11 +128,11 @@
       "status": "resolved",
       "disposition": "Add Guard",
       "recommendation_validation": "Verified",
-      "first_seen_commit": "5f56f8e",
-      "last_verified_commit": "715fee5",
-      "resolved_commit": "c37c44c",
+      "first_seen_commit": "ab156dd",
+      "last_verified_commit": "67229b5",
+      "resolved_commit": "08c53f8",
       "guard": "build.yml linux-unit-tests job（push/PR 阻塞）+ linux-tests.yml weekly 巡检双守卫",
-      "delta_note": "修复（c37c44c，2026-09-14）：build.yml 新增 linux-unit-tests job（ubuntu-24.04，push/PR 触发并阻塞），复用 linux-tests.yml 的作业体（无 RID 还原、无渲染依赖）；weekly 作业保留作周期巡检。Headless/golden 套件按设计保持 Windows-only（golden 基线平台门控）。审计时点该 job 的 Linux 实跑绿灯未经本机验证（无 GitHub Actions 访问），以 CI 记录为准。2026-09-14 晚对账：守卫的两类首跑（weekly schedule @ 715fee5、build.yml push job @ 2176db8）均红，红出三例平台假设（立案 AUD-CI-002/003/004，同日 b4a80c8 解决）——守卫本职生效：正是为拦住「平台分支不随变更执行」而建，首跑即兑现。2026-09-15 CI 对账复核：build.yml:96-130 的 linux-unit-tests 作业确实挂在 push/pull_request 上（build.yml:3-6），建议已完全落地；但该作业自落地起对 ee93482/1f428a3/7090aad/58398f4/90e918c 及本次 cbda8b9+0f5993d 连续红，保护在事实上未生效——转为 AUD-CI-005，本项维持 resolved（建议已落地）而不再视为有效门。"
+      "delta_note": "修复（08c53f8，2026-09-14）：build.yml 新增 linux-unit-tests job（ubuntu-24.04，push/PR 触发并阻塞），复用 linux-tests.yml 的作业体（无 RID 还原、无渲染依赖）；weekly 作业保留作周期巡检。Headless/golden 套件按设计保持 Windows-only（golden 基线平台门控）。审计时点该 job 的 Linux 实跑绿灯未经本机验证（无 GitHub Actions 访问），以 CI 记录为准。2026-09-14 晚对账：守卫的两类首跑（weekly schedule @ 67229b5、build.yml push job @ c8698ab）均红，红出三例平台假设（立案 AUD-CI-002/003/004，同日 08c53f8 解决）——守卫本职生效：正是为拦住「平台分支不随变更执行」而建，首跑即兑现。2026-09-15 CI 对账复核：build.yml:96-130 的 linux-unit-tests 作业确实挂在 push/pull_request 上（build.yml:3-6），建议已完全落地；但该作业自落地起对 e49b1d4/2d169bf/a243820/098166a/6408c58 及本次 6408c58+5dd6938 连续红，保护在事实上未生效——转为 AUD-CI-005，本项维持 resolved（建议已落地）而不再视为有效门。"
     },
     "AUD-CI-002": {
       "title": "测试隔离用户目录过深，Listen/Raise 派生 Unix 套接字路径超 AF_UNIX 108 字节上限，linux-unit-tests 首跑即红",
@@ -142,12 +142,12 @@
       "status": "resolved",
       "disposition": "Fix",
       "recommendation_validation": "Verified",
-      "first_seen_commit": "2176db8",
-      "last_verified_commit": "b4a80c8",
-      "resolved_commit": "b4a80c8",
+      "first_seen_commit": "c8698ab",
+      "last_verified_commit": "08c53f8",
+      "resolved_commit": "08c53f8",
       "guard": "TestUserDataIsolationTests.IsolatedUserDataDirectory_KeepsDerivedUnixSocketPathUnderKernelLimit（派生套接字路径 ≤107 字节；限定 Unix 消费域，Windows 可见跳过——初版未门控在 CI Windows runner 上自证其误，runneradmin 临时目录 41 字符派生 109，但 Windows 走命名事件分支不受此约束）",
       "delta_note": "新发现（2026-09-14 晚 CI 对账）。linux job 首跑（34839782163 / 34821368356）红出 CrossProcessLaunchSignalTests.Raise_WhenFirstInstanceListens_ReturnsOnceAndAutoResets（Assert.True 失败，仅 152ms）。根因：TestUserDataIsolation 模块初始化器把 CAFE_LAUNCHER_TEST_USER_DATA_DIRECTORY 设为 <tmp>/Cafe.Launcher.Avalonia.Tests/UserData/<Assembly>/<guid32>（≈104 字符）；Linux 上 Listen/Raise 以 LauncherUserDataDirectory.Root 为套接字目录，派生路径 ≈132 字节 > 107——UnixDomainSocketEndPoint 构造抛 ArgumentException（TryBind 只捕获 SocketException/IOException，直穿 EnsureBound 兜底 catch），绑定永不成功、unixPending 为 null，WaitOne 立即 false；时长与 RaiseAt 6×25ms 重试精确吻合。Windows 不触发（Listen/Raise 走命名事件分支；ListenAt 用例的 tempDir 更短）。生产影响有界：真实 Linux 数据目录（~/.local/share/Cafe Launcher）对常见用户名 ≈95 字符可绑定，超长主目录时按既有设计降级（Warn 日志，转发不可用）。",
-      "resolution_note": "修复（b4a80c8，2026-09-14 CI 对账轮）：隔离目录压短为 <tmp>/cl-tests/<guid32>（套接字路径 ≈74 字节），注释载明 108 字节约束；新增机械守卫测试钉住派生路径 ≤107。装配名层级删除——两测试工程各进程独立 guid，无需目录再分。跟进（ff976ae）：守卫初版在 CI Windows runner 上红出自身（runneradmin 临时目录 41 字符 → 派生 109）——上限只在 Unix 消费域构成约束，改为 Assert.SkipUnless(非 Windows) 可见跳过，断言保留在 linux job 上执行；守卫首跑即拦下自己的越界断言，反向验证了其敏感性。"
+      "resolution_note": "修复（08c53f8，2026-09-14 CI 对账轮）：隔离目录压短为 <tmp>/cl-tests/<guid32>（套接字路径 ≈74 字节），注释载明 108 字节约束；新增机械守卫测试钉住派生路径 ≤107。装配名层级删除——两测试工程各进程独立 guid，无需目录再分。跟进（08c53f8）：守卫初版在 CI Windows runner 上红出自身（runneradmin 临时目录 41 字符 → 派生 109）——上限只在 Unix 消费域构成约束，改为 Assert.SkipUnless(非 Windows) 可见跳过，断言保留在 linux job 上执行；守卫首跑即拦下自己的越界断言，反向验证了其敏感性。"
     },
     "AUD-CI-003": {
       "title": "ApplyCulture 无效文化名用例选用「格式合法但未知」的名字——ICU（Linux）宽容创建不抛异常，捕获分支在 Linux 从未执行",
@@ -157,12 +157,12 @@
       "status": "resolved",
       "disposition": "Fix",
       "recommendation_validation": "Verified",
-      "first_seen_commit": "2176db8",
-      "last_verified_commit": "b4a80c8",
-      "resolved_commit": "b4a80c8",
+      "first_seen_commit": "c8698ab",
+      "last_verified_commit": "08c53f8",
+      "resolved_commit": "08c53f8",
       "guard": null,
       "delta_note": "新发现（2026-09-14 晚 CI 对账）。CrashReportBootstrapTests.ApplyCulture_WhenCultureNameIsInvalid_KeepsTheActiveCulture 期望 CurrentUICulture 保持空串、实际变 xx-INVALID：Windows NLS 对未知名抛 CultureNotFoundException（捕获分支生效、用例绿），Linux ICU 对格式合法但未知的名字以默认数据宽容创建（GetCultureInfo 成功 → 文化被应用）。产品行为本身正确——ApplyCulture 契约是「平台不认识就保持现状」，缺陷在用例选名只覆盖 NLS 的失败模式。",
-      "resolution_note": "修复（b4a80c8，2026-09-14 CI 对账轮）：改用双连字符的格式非法名 xx--INVALID——格式非法在两个栈都抛 CultureNotFoundException，真正进入捕获分支；Windows 本地实测通过，注释载明 ICU 宽容性。Linux 侧以 CI 首绿为最终确认。"
+      "resolution_note": "修复（08c53f8，2026-09-14 CI 对账轮）：改用双连字符的格式非法名 xx--INVALID——格式非法在两个栈都抛 CultureNotFoundException，真正进入捕获分支；Windows 本地实测通过，注释载明 ICU 宽容性。Linux 侧以 CI 首绿为最终确认。"
     },
     "AUD-CI-004": {
       "title": "SanitizeFileName 用例硬编码 Windows 非法字符集未门控——.lnk/.desktop 按平台创建，字符集随平台本就正确",
@@ -172,12 +172,12 @@
       "status": "resolved",
       "disposition": "Fix",
       "recommendation_validation": "Verified",
-      "first_seen_commit": "2176db8",
-      "last_verified_commit": "b4a80c8",
-      "resolved_commit": "b4a80c8",
+      "first_seen_commit": "c8698ab",
+      "last_verified_commit": "08c53f8",
+      "resolved_commit": "08c53f8",
       "guard": null,
       "delta_note": "新发现（2026-09-14 晚 CI 对账）。GameShortcutServiceTests.SanitizeFileName_WhenNameContainsInvalidCharacters_ReplacesThem 期望 Blue<>:Archive|? → Blue   Archive（Windows 集），Linux 实际原样返回（Path.GetInvalidFileNameChars() 在 Linux 仅含 / 与 \\0）。产品行为正确：ResolveShortcutFileName 的两个消费点分别在 Windows（.lnk，Shell Link COM）与 Linux（.desktop，经 --launch-game 走启动器）上创建各自平台的工件，字符集随运行平台是设计行为。缺陷在用例未声明平台契约。",
-      "resolution_note": "修复（b4a80c8，2026-09-14 CI 对账轮）：拆为 SanitizeFileName_WhenNameContainsPathSeparator_ReplacesThem（跨平台契约：'/' 在所有平台被替换并修剪）+ SanitizeFileName_WhenNameContainsWindowsInvalidCharacters_ReplacesThem（Assert.SkipUnless(Windows) 可见跳过，钉住 Windows 集）。"
+      "resolution_note": "修复（08c53f8，2026-09-14 CI 对账轮）：拆为 SanitizeFileName_WhenNameContainsPathSeparator_ReplacesThem（跨平台契约：'/' 在所有平台被替换并修剪）+ SanitizeFileName_WhenNameContainsWindowsInvalidCharacters_ReplacesThem（Assert.SkipUnless(Windows) 可见跳过，钉住 Windows 集）。"
     },
     "AUD-CI-005": {
       "title": "build.yml 的 linux-unit-tests 作业在 main 上连续六次 push 全红、且规则集无 required status checks——平台假设回归既没被门拦住也没人看见",
@@ -187,12 +187,12 @@
       "status": "resolved",
       "disposition": "Fix",
       "recommendation_validation": "Verified",
-      "first_seen_commit": "0f5993d",
-      "last_verified_commit": "d646523",
-      "resolved_commit": "d646523",
+      "first_seen_commit": "5dd6938",
+      "last_verified_commit": "08c53f8",
+      "resolved_commit": "08c53f8",
       "guard": "linux-unit-tests 作业的绿即守卫（run 34967403211 首绿：1806 通过 / 0 失败 / 18 可见跳过）；残留一半（升为 required status checks）在规则集侧，只有仓库管理员能做",
-      "delta_note": "新立案（2026-09-15 CI 对账复核，用户指令「Push」后核对远端）。gh run list 显示 linux-unit-tests 对 ee93482/1f428a3/7090aad/58398f4/90e918c 五次 push 全部 failure，本次 cbda8b9+0f5993d 的 run 34961576610 同样 build 绿 / linux 红（单元 1801 通过 / 4 失败 / 16 可见跳过；本轮新增的 UninstallAsync_WhenTheGameStartedAfterThePrecheck_RefusesAndDeletesNothing 在 Linux 上通过）。四条失败全部是测试侧平台假设，与本窗口代码无关：①ShellLifecycleTests.cs:190-207 与 :142-158——CreateBlockedSettingsPath() 用同名文件占位使目录创建失败，Windows 抛的正是 IOException，Linux 抛子类 DirectoryNotFoundException，而用例用 Assert.ThrowsAsync<IOException>（要求精确类型）与 Assert.Contains(\"IOException\", toast.Message)（断言类型名），同一场景两平台结论相反；②DirectoryTreeDeleterTests.Delete_WhenAnEntryCannotBeDeleted_RemovesTheRestAndReportsTheBlocker 与 GameUninstallServiceTests.UninstallAsync_WhenThoroughCleanupCannotRemoveSomething_StillSucceedsAndNamesIt——靠 FileShare.Read/None 打开句柄制造「删不掉的条目」，POSIX 允许 unlink 已打开文件，Linux 上删除照常成功、残留清单为空，ADR-030 的残留回报语义因此未被跨平台钉住（同文件族里 UninstallAsync_WhenManifestFileIsLocked_... 早已 Assert.SkipUnless(Windows)，这两条没有）。影响：平台假设回归不能阻塞合并（PROJECT_CONVENTIONS §9：规则集无 required status checks）且在事实上无人查看——上一次「CI 对账」只验证了另一份 linux-tests.yml 的首绿，这四条与产品行为无关（三平台产品行为未见异常），但真回归会与噪声混在一起。建议：(a) ShellLifecycleTests 两例改 Assert.ThrowsAnyAsync<IOException> 并把 toast 断言换成不绑类型名的可辨识内容（如被挡路径的父目录名）；(b) 两条删除残留用例按先例加 Assert.SkipUnless(Windows)（父目录只读在 POSIX 能挡 unlink、在 Windows 不能，故以门控为宜）；(c) 可选把 linux-unit-tests 加入 required status checks。修测试而非产品：不得为让用例在 Linux 上过而弱化 ADR-030 的残留回报语义或改动 DirectoryTreeDeleter 的删除行为。",
-      "resolution_note": "修复（d646523，2026-09-15 CI 修复轮）：(a) ShellLifecycleTests 两例的 Assert.ThrowsAsync<IOException> 改 ThrowsAnyAsync（接受子类），toast 断言改为接受 IO 家族的任一类型名（新增 MentionsIoFailure 辅助），CreateBlockedSettingsPath 的文档注释写明「抛出的精确类型随平台而变，不要绑死」；(b) DirectoryTreeDeleterTests 与 GameUninstallServiceTests 的 ADR-030 残留用例按同族先例加 Assert.SkipUnless(OperatingSystem.IsWindows(), …)，注释写明为何不能用跨平台阻塞手段代替（父目录只读在 POSIX 能挡 unlink、在 Windows 不能）。未改其他「锁住以制造失败」的用例（ResourcePanelServiceTests / LogExportServiceTests / LocalInstallationStateStoreTests / SetupWizardViewModelTests）：.NET 在 Unix 上用 flock 模拟文件共享，那些断言两平台都成立、CI 从未红过，改动属无据重构。验证：d646523 推送后 run 34967403211 两作业全绿，linux-unit-tests 1806 通过 / 0 失败 / 18 可见跳过（16 条既有 + 2 条新增门控），build 侧单元 1823 / 跳过 1、Headless 184、覆盖率棘轮绿——该作业自落地以来首次绿跑。残留：作业仍非 required check，平台回归不会阻塞合并、但现在能被看见；升为 required check 需仓库规则集侧改动。"
+      "delta_note": "新立案（2026-09-15 CI 对账复核，用户指令「Push」后核对远端）。gh run list 显示 linux-unit-tests 对 e49b1d4/2d169bf/a243820/098166a/6408c58 五次 push 全部 failure，本次 6408c58+5dd6938 的 run 34961576610 同样 build 绿 / linux 红（单元 1801 通过 / 4 失败 / 16 可见跳过；本轮新增的 UninstallAsync_WhenTheGameStartedAfterThePrecheck_RefusesAndDeletesNothing 在 Linux 上通过）。四条失败全部是测试侧平台假设，与本窗口代码无关：①ShellLifecycleTests.cs:190-207 与 :142-158——CreateBlockedSettingsPath() 用同名文件占位使目录创建失败，Windows 抛的正是 IOException，Linux 抛子类 DirectoryNotFoundException，而用例用 Assert.ThrowsAsync<IOException>（要求精确类型）与 Assert.Contains(\"IOException\", toast.Message)（断言类型名），同一场景两平台结论相反；②DirectoryTreeDeleterTests.Delete_WhenAnEntryCannotBeDeleted_RemovesTheRestAndReportsTheBlocker 与 GameUninstallServiceTests.UninstallAsync_WhenThoroughCleanupCannotRemoveSomething_StillSucceedsAndNamesIt——靠 FileShare.Read/None 打开句柄制造「删不掉的条目」，POSIX 允许 unlink 已打开文件，Linux 上删除照常成功、残留清单为空，ADR-030 的残留回报语义因此未被跨平台钉住（同文件族里 UninstallAsync_WhenManifestFileIsLocked_... 早已 Assert.SkipUnless(Windows)，这两条没有）。影响：平台假设回归不能阻塞合并（PROJECT_CONVENTIONS §9：规则集无 required status checks）且在事实上无人查看——上一次「CI 对账」只验证了另一份 linux-tests.yml 的首绿，这四条与产品行为无关（三平台产品行为未见异常），但真回归会与噪声混在一起。建议：(a) ShellLifecycleTests 两例改 Assert.ThrowsAnyAsync<IOException> 并把 toast 断言换成不绑类型名的可辨识内容（如被挡路径的父目录名）；(b) 两条删除残留用例按先例加 Assert.SkipUnless(Windows)（父目录只读在 POSIX 能挡 unlink、在 Windows 不能，故以门控为宜）；(c) 可选把 linux-unit-tests 加入 required status checks。修测试而非产品：不得为让用例在 Linux 上过而弱化 ADR-030 的残留回报语义或改动 DirectoryTreeDeleter 的删除行为。",
+      "resolution_note": "修复（08c53f8，2026-09-15 CI 修复轮）：(a) ShellLifecycleTests 两例的 Assert.ThrowsAsync<IOException> 改 ThrowsAnyAsync（接受子类），toast 断言改为接受 IO 家族的任一类型名（新增 MentionsIoFailure 辅助），CreateBlockedSettingsPath 的文档注释写明「抛出的精确类型随平台而变，不要绑死」；(b) DirectoryTreeDeleterTests 与 GameUninstallServiceTests 的 ADR-030 残留用例按同族先例加 Assert.SkipUnless(OperatingSystem.IsWindows(), …)，注释写明为何不能用跨平台阻塞手段代替（父目录只读在 POSIX 能挡 unlink、在 Windows 不能）。未改其他「锁住以制造失败」的用例（ResourcePanelServiceTests / LogExportServiceTests / LocalInstallationStateStoreTests / SetupWizardViewModelTests）：.NET 在 Unix 上用 flock 模拟文件共享，那些断言两平台都成立、CI 从未红过，改动属无据重构。验证：08c53f8 推送后 run 34967403211 两作业全绿，linux-unit-tests 1806 通过 / 0 失败 / 18 可见跳过（16 条既有 + 2 条新增门控），build 侧单元 1823 / 跳过 1、Headless 184、覆盖率棘轮绿——该作业自落地以来首次绿跑。残留：作业仍非 required check，平台回归不会阻塞合并、但现在能被看见；升为 required check 需仓库规则集侧改动。"
     },
     "AUD-PERF-004": {
       "title": "每次壳层刷新销毁并重新下载/解码全部横幅位图",
@@ -202,25 +202,25 @@
       "status": "open",
       "disposition": "Refactor",
       "recommendation_validation": "Plausible",
-      "first_seen_commit": "5f56f8e",
-      "last_verified_commit": "715fee5",
+      "first_seen_commit": "ab156dd",
+      "last_verified_commit": "67229b5",
       "resolved_commit": null,
       "guard": null,
       "delta_note": "2026-09-14 复核：仍成立。窗口内无提交触及 RemoteContentViewModel（git log 证实）。现行证据：Apply（:152-195）每次 DisposeBannerBitmaps（:696-704）后重取缓存重解码全部横幅（:546-558）；Apply 触发点为启动（ShellLifecycle.cs:240）、每次设置保存/重置（:310,:353）、每次游戏操作完成（:372→:686-704）。既有缓解：24h 磁盘字节缓存（ImageCacheService.cs:23,:179-184）、线程池解码（:555-558）、4 路并发上限（:22）、陈旧解码丢弃（:565-571）。残留成本为全量位图重解码，未量化。"
     },
     "AUD-PERF-005": {
-      "title": "revert 5b8b344 恢复内置壁纸构造期同步解码：首帧前 UI 线程全分辨率 PNG 解码（与 AGENTS.md「首帧前无阻塞工作」表述冲突）+ 首次刷新二次冗余全量解码",
+      "title": "revert c826f8a 恢复内置壁纸构造期同步解码：首帧前 UI 线程全分辨率 PNG 解码（与 AGENTS.md「首帧前无阻塞工作」表述冲突）+ 首次刷新二次冗余全量解码",
       "category": "performance/startup",
       "severity": "low",
       "confidence": 80,
       "status": "open",
       "disposition": "Document",
       "recommendation_validation": "Verified",
-      "first_seen_commit": "715fee5",
-      "last_verified_commit": "715fee5",
+      "first_seen_commit": "67229b5",
+      "last_verified_commit": "67229b5",
       "resolved_commit": null,
       "guard": "AGENTS.md 首帧承诺改为如实描述（记录刻意例外），或壁纸解码点改造后恢复承诺",
-      "delta_note": "新发现（2026-09-14）。BackgroundViewModel 构造函数 :122 backgroundImageSource = bundledImageLoader() 同步解码 Assets/launcher-background.png（2560×1388），经 App.axaml.cs:61 DI 解析链在 MainWindow 显示前于 UI 线程执行；AGENTS.md:75 原写明「no blocking work before the first frame」，revert 提交消息记录了产品理由（无它则窗口先开在主题底色上，golden 基线与 UX 回退）。第二处：首次刷新时跳过卫（BackgroundViewModel.cs:153-160）因 lastBackgroundSourceKey/lastDecodeTarget 未置而不能命中，:232 于线程池再次全量解码同一内置图。进展 2026-09-14（690993f）：必须做的文档半项已交付——AGENTS.md:75 改写为「重活不占首帧路径 + 内置壁纸构造期同步解码是唯一刻意例外，勿擅自改回异步」；CONTEXT.md 复核无同类声明无需改动。仍开放：消除首次刷新二次冗余解码的调查（需先确认跳过卫的解码目标可合法匹配）。"
+      "delta_note": "新发现（2026-09-14）。BackgroundViewModel 构造函数 :122 backgroundImageSource = bundledImageLoader() 同步解码 Assets/launcher-background.png（2560×1388），经 App.axaml.cs:61 DI 解析链在 MainWindow 显示前于 UI 线程执行；AGENTS.md:75 原写明「no blocking work before the first frame」，revert 提交消息记录了产品理由（无它则窗口先开在主题底色上，golden 基线与 UX 回退）。第二处：首次刷新时跳过卫（BackgroundViewModel.cs:153-160）因 lastBackgroundSourceKey/lastDecodeTarget 未置而不能命中，:232 于线程池再次全量解码同一内置图。进展 2026-09-14（700e674）：必须做的文档半项已交付——AGENTS.md:75 改写为「重活不占首帧路径 + 内置壁纸构造期同步解码是唯一刻意例外，勿擅自改回异步」；CONTEXT.md 复核无同类声明无需改动。仍开放：消除首次刷新二次冗余解码的调查（需先确认跳过卫的解码目标可合法匹配）。"
     },
     "AUD-PERF-006": {
       "title": "并行安装校验的进度回调可瞬时回退（Interlocked 递增与回调非原子）",
@@ -230,11 +230,11 @@
       "status": "resolved",
       "disposition": "Fix",
       "recommendation_validation": "Verified",
-      "first_seen_commit": "715fee5",
-      "last_verified_commit": "715fee5",
-      "resolved_commit": "4c0b0cd",
+      "first_seen_commit": "67229b5",
+      "last_verified_commit": "67229b5",
+      "resolved_commit": "608d888",
       "guard": "守卫测试：ApplyProgress_WhenSameStageProgressArrivesOutOfOrder_ClampsToMonotonicValue / WhenStageChanges_AllowsProgressToRestartFromLowerValue",
-      "delta_note": "修复（4c0b0cd，2026-09-14）：ApplyProgressCore 按阶段键控钳制进度单调（同阶段不回退；阶段切换含重试轮折返 FileCheck 时重置下界，与 DownloadSession.cs:439 的显式归零兼容）。"
+      "delta_note": "修复（608d888，2026-09-14）：ApplyProgressCore 按阶段键控钳制进度单调（同阶段不回退；阶段切换含重试轮折返 FileCheck 时重置下界，与 DownloadSession.cs:439 的显式归零兼容）。"
     },
     "AUD-SEC-001": {
       "title": "URL 校验与拨号间 DNS 重绑定 TOCTOU 窗口（validate-then-dial 残余；30s 正缓存反而加宽该窗口）",
@@ -244,11 +244,11 @@
       "status": "open",
       "disposition": "Accept Risk",
       "recommendation_validation": "Needs External Verification",
-      "first_seen_commit": "5f56f8e",
-      "last_verified_commit": "715fee5",
+      "first_seen_commit": "ab156dd",
+      "last_verified_commit": "67229b5",
       "resolved_commit": null,
       "guard": null,
-      "delta_note": "2026-09-14 复核：仍成立，证据位置更新。逐跳校验现居 RemoteHttpRequestService.cs:28-34（由 RemoteHttpTransport.cs:276-294 与 DownloadTransport.cs:40-50 共用）；全仓库无 ConnectCallback/IP 钉扎（grep 证实），SocketsHttpHandler 仍归 HttpClientFactory.cs:27-54，拨号时二次解析。新认识：RemoteHttpUrlValidator.cs:19,134-150 的 30s 正缓存对重绑定威胁是加宽而非收窄（原注释 :12-19 的框定在此威胁下是反的）。注释更正已入库（d1693d5）——现明确「缓存是省 IO 手段而非重绑定防御，TTL 只是该 validate-then-dial 窗口的上限而非关闭（引 AUD-SEC-001）」。风险处置不变（Accept Risk）。影响有界不变：GET-only、响应不回传攻击方。"
+      "delta_note": "2026-09-14 复核：仍成立，证据位置更新。逐跳校验现居 RemoteHttpRequestService.cs:28-34（由 RemoteHttpTransport.cs:276-294 与 DownloadTransport.cs:40-50 共用）；全仓库无 ConnectCallback/IP 钉扎（grep 证实），SocketsHttpHandler 仍归 HttpClientFactory.cs:27-54，拨号时二次解析。新认识：RemoteHttpUrlValidator.cs:19,134-150 的 30s 正缓存对重绑定威胁是加宽而非收窄（原注释 :12-19 的框定在此威胁下是反的）。注释更正已入库（521f4c1）——现明确「缓存是省 IO 手段而非重绑定防御，TTL 只是该 validate-then-dial 窗口的上限而非关闭（引 AUD-SEC-001）」。风险处置不变（Accept Risk）。影响有界不变：GET-only、响应不回传攻击方。"
     },
     "AUD-SEC-002": {
       "title": "资源面板 UID 以 URL 查询串传输，落入代理/服务器访问日志（且变更为 GET，可重放）",
@@ -258,8 +258,8 @@
       "status": "open",
       "disposition": "Accept Risk",
       "recommendation_validation": "Needs Product Decision",
-      "first_seen_commit": "5f56f8e",
-      "last_verified_commit": "715fee5",
+      "first_seen_commit": "ab156dd",
+      "last_verified_commit": "67229b5",
       "resolved_commit": null,
       "guard": null,
       "delta_note": "2026-09-14 复核：仍成立，证据更新。UID 仍为两处查询串：ResourcePanelApiClient.cs:49（config/get）与 :71-75（config/set，GET 携带完整变更内容）。诊断日志剥离查询串的引用更新为 RemoteHttpTransport.cs:431-432 DescribeUri（GetLeftPart(Path)），原 RemoteHttpRequestService.cs:202-209 引用已失效（该文件现 121 行不再持有诊断）。其余日志点 grep 证实零 UID 泄漏。上游协议约束不变，接受合理。"
@@ -272,11 +272,11 @@
       "status": "resolved",
       "disposition": "Fix",
       "recommendation_validation": "Verified",
-      "first_seen_commit": "715fee5",
-      "last_verified_commit": "715fee5",
-      "resolved_commit": "1dcc9df",
+      "first_seen_commit": "67229b5",
+      "last_verified_commit": "67229b5",
+      "resolved_commit": "d7076cb",
       "guard": "守卫测试：GetStreamAsync_WhenRedirectLeavesInitialHost_StripsAuthorizationHeader / WhenRedirectStaysOnInitialHost_KeepsAuthorizationHeader",
-      "delta_note": "修复（1dcc9df，2026-09-14）：RemoteHttpRequestService.SendAsync 对非初始授权方（scheme+host+port）的跳剥离 Authorization，规则收进单一发送例程；.NET 内建 HttpClient 的跨主机剥离约定得以保持。配套两个守卫测试。"
+      "delta_note": "修复（d7076cb，2026-09-14）：RemoteHttpRequestService.SendAsync 对非初始授权方（scheme+host+port）的跳剥离 Authorization，规则收进单一发送例程；.NET 内建 HttpClient 的跨主机剥离约定得以保持。配套两个守卫测试。"
     },
     "AUD-SEC-004": {
       "title": "手写代理对注册表配置的代理发送当前用户默认凭据（UseDefaultCredentials=true，与 WinINet 对齐）",
@@ -286,11 +286,11 @@
       "status": "accepted-risk",
       "disposition": "Accept Risk",
       "recommendation_validation": "Verified",
-      "first_seen_commit": "715fee5",
-      "last_verified_commit": "715fee5",
-      "resolved_commit": "78e0ef0",
+      "first_seen_commit": "67229b5",
+      "last_verified_commit": "67229b5",
+      "resolved_commit": "043279e",
       "guard": null,
-      "delta_note": "结案（78e0ef0，2026-09-14）：信任边界让步已书面化于 BuildConfiguredProxy 注释——同用户进程本可冒充用户，镜像 WinINet 行为而非防御它。行为不变。"
+      "delta_note": "结案（043279e，2026-09-14）：信任边界让步已书面化于 BuildConfiguredProxy 注释——同用户进程本可冒充用户，镜像 WinINet 行为而非防御它。行为不变。"
     },
     "AUD-SEC-005": {
       "title": "发布产物无签名、SHA256SUMS 自行发布于同一 Release：完整性可验、来源不可独立验证",
@@ -300,11 +300,11 @@
       "status": "resolved",
       "disposition": "Add Guard",
       "recommendation_validation": "Strongly Supported",
-      "first_seen_commit": "715fee5",
-      "last_verified_commit": "715fee5",
-      "resolved_commit": "457ac50",
+      "first_seen_commit": "67229b5",
+      "last_verified_commit": "67229b5",
+      "resolved_commit": "db941bf",
       "guard": "release.yml Attest build provenance step（attest-build-provenance v4.2.2 SHA 钉住）；证书签名待项目获得证书再议（可选后续）",
-      "delta_note": "修复（457ac50，2026-09-14）：release job 为六个分发包与 SHA256SUMS 签发 OIDC 构建来源证明（公共 attestation 账本可核验），补 id-token/attestations 权限。Authenticode/codesign 证书签名仍为可选后续。"
+      "delta_note": "修复（db941bf，2026-09-14）：release job 为六个分发包与 SHA256SUMS 签发 OIDC 构建来源证明（公共 attestation 账本可核验），补 id-token/attestations 权限。Authenticode/codesign 证书签名仍为可选后续。"
     },
     "AUD-ARCH-009": {
       "title": "下载/安装/修复的「游戏在跑」闸门：全新安装时判据取自本地配置而为空即放行；且只在计划阶段查一次、报法不点名",
@@ -314,12 +314,12 @@
       "status": "resolved",
       "disposition": "Fix",
       "recommendation_validation": "Verified",
-      "first_seen_commit": "0f5993d",
-      "last_verified_commit": "0f5993d",
-      "resolved_commit": "c38d6fa",
+      "first_seen_commit": "5dd6938",
+      "last_verified_commit": "5dd6938",
+      "resolved_commit": "6408c58",
       "guard": "GameDownloadServiceTests.InstallOrUpdateAsync_WhenTheRemoteDeclaredExecutableIsRunning_RefusesBeforeWritingAnything 与 ..._WhenTheGameStartsDuringTheDownload_RefusesBeforeTouchingTheGameDirectory（变异验证：拆掉兜底与复查即红）+ GameProcessNamesTests.DescribeForDisplay_...",
       "delta_note": "新立案（2026-09-15 功能轮跟进，用户追问「下载/修复/更新是否没有『游戏在跑』的阻塞逻辑」）。闸门本就存在：DownloadSession.PrepareDownloadPlanAsync 的判据，安装/更新/修复/续传四条入口（GameDownloadService.InstallOrUpdateAsync/RepairAsync/ResumePersistedAsync）都经 DownloadSession.RunAsync 过它，拒绝文案 gameExecutableRunning 以 GameRunning 终态错误弹出（无重试按钮）。但核实出三处真缺口：①判据取自 localGame.GameConfig?.Name——全新安装（还没有 game-launcher-config.json）时名字集合为空，闸门直接放行，游戏在跑也照样开始安装；②只在计划阶段查一次，而下载/修复可能持续数分钟，真正动安装目录的是后面的 InstallDownloadedFilesAsync（DownloadExecutor.cs:359-370 的 DeleteExistingFile + File.Move）；③报法不统一——卸载点名实际在跑的进程，下载只有笼统一句，与 ADR-032 决策 5「报出的名字就是用户看到的」不一致。影响分档：Windows 上覆盖被占用的文件抛 IO、操作失败且 .tmp 可重试（不静默坏掉）；Linux 上 POSIX 允许删除/改名已打开文件，可能静默替换运行中游戏正在读的文件（与 AUD-CI-005 同一语义），全新安装时游戏在跑也属这一档。",
-      "resolution_note": "修复（c38d6fa，2026-09-15 功能轮跟进）：①ResolveKnownProcessNames 在没有本地配置时退回远端配置声明的启动程序名 GameConfigResponse.GameStartExeName（提交路径已用它与本地 Name 做相等校验，同一身份）；②RunDownloadVerifyLoopAsync 在每轮下载之后、第一处写入（RemoveFiles）之前复查同一道闸门，命中即返回失败而不是 Stop——.tmp 留在盘上，用户关掉游戏后重试按已有字节继续（检查点按既有终局语义在该出口丢弃，只有应用退出那档保留）；③判法与报法各收一处：FindRunningGameFailureAsync 同时服务计划阶段与写入边界，运行中进程的报法收进 GameProcessNames.DescribeForDisplay（卸载那条也改走它），下载文案由「游戏正在运行，请关闭游戏后再修改文件。」改为点名进程，四语同步改写、键数不变。守卫三条并做变异验证（把远端兜底改成空、把复查判据喂空后两条用例同时变红，还原转绿）。文档：ADR-032 第 8 条决策 + 已知限制第 3 条、AGENTS.md 游戏操作段、CONTEXT.md「游戏进程家族」词条。残留（书面记录）：远端兜底只有宿主一个名字，全新安装且只剩反作弊宿主存活时仍可能放行——需别的信号（如随包发布的运行器清单）才能彻底覆盖。"
+      "resolution_note": "修复（6408c58，2026-09-15 功能轮跟进）：①ResolveKnownProcessNames 在没有本地配置时退回远端配置声明的启动程序名 GameConfigResponse.GameStartExeName（提交路径已用它与本地 Name 做相等校验，同一身份）；②RunDownloadVerifyLoopAsync 在每轮下载之后、第一处写入（RemoveFiles）之前复查同一道闸门，命中即返回失败而不是 Stop——.tmp 留在盘上，用户关掉游戏后重试按已有字节继续（检查点按既有终局语义在该出口丢弃，只有应用退出那档保留）；③判法与报法各收一处：FindRunningGameFailureAsync 同时服务计划阶段与写入边界，运行中进程的报法收进 GameProcessNames.DescribeForDisplay（卸载那条也改走它），下载文案由「游戏正在运行，请关闭游戏后再修改文件。」改为点名进程，四语同步改写、键数不变。守卫三条并做变异验证（把远端兜底改成空、把复查判据喂空后两条用例同时变红，还原转绿）。文档：ADR-032 第 8 条决策 + 已知限制第 3 条、AGENTS.md 游戏操作段、CONTEXT.md「游戏进程家族」词条。残留（书面记录）：远端兜底只有宿主一个名字，全新安装且只剩反作弊宿主存活时仍可能放行——需别的信号（如随包发布的运行器清单）才能彻底覆盖。"
     },
     "AUD-ARCH-005": {
       "title": "ShellLifecycle 为 src/ 最高变更热点（25 commits/180d），Wire/Unwire 16 对订阅镜像仍靠人工配对、无对称性守卫",
@@ -329,8 +329,8 @@
       "status": "open",
       "disposition": "Accept Risk",
       "recommendation_validation": "Verified",
-      "first_seen_commit": "715fee5",
-      "last_verified_commit": "715fee5",
+      "first_seen_commit": "67229b5",
+      "last_verified_commit": "67229b5",
       "resolved_commit": null,
       "guard": "若再动 Shell：按 ADR-023 模式把订阅收敛为单张声明表，由 Wire/Unwire 共同消费，对称性成为数据性质",
       "delta_note": "新立案（2026-09-14；与已解决的 AUD-ARCH-001 残留同源但根因独立：热点密度而非模态注册）。ShellLifecycle 现 784 行、25 commits/180d（ServiceConfiguration 24、MainWindow.axaml.cs 22）；持 ~30 协作者（:35-63）、34 行 Wire + 44 行 Unwire（:421-454,:562-605）16 对订退对。现有覆盖仅验 Dispose 路径（ShellLifecycleTests.cs:237-259）。仓库先例（ADR-021/022）偏好书面接受而非投机抽取：现状接受，下次因结构原因触碰时按 ADR-023 表驱动收敛。"
@@ -343,11 +343,11 @@
       "status": "resolved",
       "disposition": "Document",
       "recommendation_validation": "Verified",
-      "first_seen_commit": "715fee5",
-      "last_verified_commit": "715fee5",
-      "resolved_commit": "690993f",
+      "first_seen_commit": "67229b5",
+      "last_verified_commit": "67229b5",
+      "resolved_commit": "700e674",
       "guard": "改写后的 AGENTS.md 表述与 UiStyleContractTests（Dialogs.cs:510-516、ToastLog.cs:139）互为印证",
-      "resolution_note": "2026-09-14 修复（690993f）：采纳原建议第一分支——AGENTS.md:77 改写为如实描述（toast 为 LauncherConstants.ZIndexToast 常量；settings/dialog/wizard 三层由 MainWindow.Styles.axaml 样式 setter 钉住、UiStyleContractTests 守护）。未采纳第二分支（三字面量移入常量类）：样式即实际生效的钉住机制且已有契约测试护栏，挪动属可选重构而非必要。"
+      "resolution_note": "2026-09-14 修复（700e674）：采纳原建议第一分支——AGENTS.md:77 改写为如实描述（toast 为 LauncherConstants.ZIndexToast 常量；settings/dialog/wizard 三层由 MainWindow.Styles.axaml 样式 setter 钉住、UiStyleContractTests 守护）。未采纳第二分支（三字面量移入常量类）：样式即实际生效的钉住机制且已有契约测试护栏，挪动属可选重构而非必要。"
     },
     "AUD-ARCH-007": {
       "title": "代理指纹变化在同模式下次租约创建时 Dispose 旧 SocketsHttpHandler，而进行中的下载批次租约仍持有该 handler",
@@ -357,11 +357,11 @@
       "status": "accepted-risk",
       "disposition": "Investigate",
       "recommendation_validation": "Needs External Verification",
-      "first_seen_commit": "715fee5",
-      "last_verified_commit": "715fee5",
-      "resolved_commit": "78e0ef0",
+      "first_seen_commit": "67229b5",
+      "last_verified_commit": "67229b5",
+      "resolved_commit": "043279e",
       "guard": "若证实有害：为缓存 handler 加租约引用计数 / 延迟至租约释放再 Dispose；或书面记录「下载中途系统代理变更代价一轮失败重试」",
-      "delta_note": "结案（78e0ef0，2026-09-14）：处置权衡已书面化于 GetOrCreateHandlerAsync 注释——活租约下的批次传输快速失败、验证重试轮换新租约自愈，一轮失败代价、无损正确性；租约引用计数判为更高并发风险。"
+      "delta_note": "结案（043279e，2026-09-14）：处置权衡已书面化于 GetOrCreateHandlerAsync 注释——活租约下的批次传输快速失败、验证重试轮换新租约自愈，一轮失败代价、无损正确性；租约引用计数判为更高并发风险。"
     },
     "AUD-ARCH-008": {
       "title": "卸载的「游戏在跑」闸门只在预检（ValidateAsync）跑一次，确认框打开期间游戏被外部启动也照删——执行边界不复查",
@@ -371,11 +371,11 @@
       "status": "resolved",
       "disposition": "Fix",
       "recommendation_validation": "Verified",
-      "first_seen_commit": "90e918c",
-      "last_verified_commit": "90e918c",
-      "resolved_commit": "cbda8b9",
+      "first_seen_commit": "6408c58",
+      "last_verified_commit": "6408c58",
+      "resolved_commit": "6408c58",
       "guard": "GameUninstallServiceTests.UninstallAsync_WhenTheGameStartedAfterThePrecheck_RefusesAndDeletesNothing（变异验证：拆掉复查即红）",
-      "resolution_note": "修复（cbda8b9，2026-09-15 功能轮跟进）：UninstallAsync 在读到 localGame 之后、彻底清除守卫与文件循环之前调用新的私有 FindRunningGameFailureAsync（GameUninstallService.cs:408），命中即返回既有 GameIsRunning 失败、不做任何删除；ValidateAsync 的同一段判据与文案也改走它，两道闸门共用一处实现（GameProcessNames 名字集合 + RunningProcessSeparator 拼接 + .exe 补回 + GameOperationErrorCode.GameRunning），消息不会分叉。失败经 ConfirmUninstallAsync 的 ShowOperationResult 落地（ADR-027）。守卫用例把探测分两相：预检时没在跑、删除时在跑；断言失败码、点名 BlueArchive.exe、且清单文件/安装状态/目录/快捷方式全未被动过。变异验证：判据换成空输入后该用例与 ..._WhenOnlyTheAntiCheatHostIsStillRunning_RefusesAndNamesIt 同时变红，还原后转绿。（2026-09-15 复核轮更正：`..._WhenOnlyTheAntiCheatHostIsStillRunning_RefusesAndNamesIt` 当时证明不了「判据来自配置」——它的替身忽略入参、夹具用的又是与判据无关的合成名，把 FromLaunchConfiguration(name, null) 这样的回归照样放过去。该用例已改为按实测启动配置（name + params）构造，并要求每个探针都带齐两个名字，变异验证已复核。）聚焦 140 用例（卸载/旅程/安装状态/VM）全绿。文档：ADR-032 第 7 条决策 + 守卫条目、AGENTS.md 游戏操作段。",
+      "resolution_note": "修复（6408c58，2026-09-15 功能轮跟进）：UninstallAsync 在读到 localGame 之后、彻底清除守卫与文件循环之前调用新的私有 FindRunningGameFailureAsync（GameUninstallService.cs:408），命中即返回既有 GameIsRunning 失败、不做任何删除；ValidateAsync 的同一段判据与文案也改走它，两道闸门共用一处实现（GameProcessNames 名字集合 + RunningProcessSeparator 拼接 + .exe 补回 + GameOperationErrorCode.GameRunning），消息不会分叉。失败经 ConfirmUninstallAsync 的 ShowOperationResult 落地（ADR-027）。守卫用例把探测分两相：预检时没在跑、删除时在跑；断言失败码、点名 BlueArchive.exe、且清单文件/安装状态/目录/快捷方式全未被动过。变异验证：判据换成空输入后该用例与 ..._WhenOnlyTheAntiCheatHostIsStillRunning_RefusesAndNamesIt 同时变红，还原后转绿。（2026-09-15 复核轮更正：`..._WhenOnlyTheAntiCheatHostIsStillRunning_RefusesAndNamesIt` 当时证明不了「判据来自配置」——它的替身忽略入参、夹具用的又是与判据无关的合成名，把 FromLaunchConfiguration(name, null) 这样的回归照样放过去。该用例已改为按实测启动配置（name + params）构造，并要求每个探针都带齐两个名字，变异验证已复核。）聚焦 140 用例（卸载/旅程/安装状态/VM）全绿。文档：ADR-032 第 7 条决策 + 守卫条目、AGENTS.md 游戏操作段。",
       "delta_note": "新立案（2026-09-15 功能轮复核）。闸门只在 GameUninstallService.cs:374-388（ValidateAsync）；UninstallAsync 自身仅复查策略（:79-83，GameOperationPolicy 判的是安装生命周期状态而非进程），随后直接删清单文件并进入彻底清除（:118-169）；GameOperationJourney.cs:321-330 与 GameOperationsViewModel.cs:423-435 同样只复查策略。确认框从 Show 到用户点击可以一直开着（尺寸统计先弹框后回填，37k 文件/24 GB 的树实测 3.4 秒；用户也可放着不管），期间从桌面快捷方式或 Steam 启动游戏不触碰任何闸门，而 ADR-032 的原话是「只在整族退出后放行」。危害被 ADR-030 的残留上报兜住（不静默、不误报成功），但仍可能删到运行中游戏正在读的文件。与路径守卫不对称：同一提交给路径守卫加了执行边界复查（预检 :97-115，删除时 :271-289 经 DirectoryTreeDeleter.Delete → EnsureDeletable 再跑一次）。两条处置都已核实可行：(a) 在 UninstallAsync 删除前补一次 gameProcessTracker.FindRunningGameProcessesAsync（localGame.GameConfig 已在 :94 读到，判据与预检同源，失败经 ShowOperationResult 落地，合 ADR-027）；(b) 若判定「用户点头即授权」，写进 ADR-032 的已知限制。注意不得为此加 UI 禁用态或进程轮询（ADR-032 已否掉把判定搬进视图层）。"
     },
     "AUD-MAINT-001": {
@@ -386,11 +386,11 @@
       "status": "resolved",
       "disposition": "Refactor",
       "recommendation_validation": "Verified",
-      "first_seen_commit": "5f56f8e",
-      "last_verified_commit": "715fee5",
-      "resolved_commit": "696abdd",
+      "first_seen_commit": "ab156dd",
+      "last_verified_commit": "67229b5",
+      "resolved_commit": "b04cb83",
       "guard": null,
-      "delta_note": "修复（696abdd，2026-09-14）：五个方案缓存字段与 ApplyScheme、ActualThemeVariantChanged 订阅全部转实例；Dispose 拆卸订阅（headless 共享 Application 不再跨测试累积）；两处 headless 测试改经 DI 构造的 VM 实例调用。单元 1710 + headless 177 全绿。"
+      "delta_note": "修复（b04cb83，2026-09-14）：五个方案缓存字段与 ApplyScheme、ActualThemeVariantChanged 订阅全部转实例；Dispose 拆卸订阅（headless 共享 Application 不再跨测试累积）；两处 headless 测试改经 DI 构造的 VM 实例调用。单元 1710 + headless 177 全绿。"
     },
     "AUD-ARCH-004": {
       "title": "DesignGalleryViewModel 为功能级体量却无功能归属（根 ViewModels/）",
@@ -400,11 +400,11 @@
       "status": "resolved",
       "disposition": "Architecture Decision",
       "recommendation_validation": "Needs Architecture Decision",
-      "first_seen_commit": "5f56f8e",
-      "last_verified_commit": "715fee5",
-      "resolved_commit": "6c80951",
+      "first_seen_commit": "ab156dd",
+      "last_verified_commit": "67229b5",
+      "resolved_commit": "95b9f8b",
       "guard": null,
-      "delta_note": "解决（6c80951，2026-09-14）：按 ViewModel 归属规则移入 Features/Diagnostics（其天然宿主，审计建议的第一选项）；命名空间随目录，DialogsViewModel 增补 using——窗口层向下聚合与 Shell 同向。"
+      "delta_note": "解决（95b9f8b，2026-09-14）：按 ViewModel 归属规则移入 Features/Diagnostics（其天然宿主，审计建议的第一选项）；命名空间随目录，DialogsViewModel 增补 using——窗口层向下聚合与 Shell 同向。"
     },
     "AUD-ARCH-001": {
       "title": "ShellLifecycle 为 881 行六职责协调器（19 commits/180d）",
@@ -414,11 +414,11 @@
       "status": "resolved",
       "disposition": "Refactor",
       "recommendation_validation": "Verified",
-      "first_seen_commit": "5f56f8e",
-      "last_verified_commit": "715fee5",
-      "resolved_commit": "77547fa",
+      "first_seen_commit": "ab156dd",
+      "last_verified_commit": "67229b5",
+      "resolved_commit": "2fe3565",
       "guard": "Shell 层行数/职责预算源码契约测试（参照 InstallerContractTests 先例）——仍未添加，留作可选",
-      "resolution_note": "77547fa 落地 ModalRegistrar（模态注册/Escape 收敛）。2026-09-14 复核：19 个 ModalKind ↔ 19 条注册（ShellLifecycle.cs:461-548 ↔ ModalKind.cs:5-25），TryHandleEscape 2 行委托（:608-612），MainWindowViewModelTests.WizardDialogs.cs 枚举守卫仍在。残留 advisory：88 行注册表仍居 ShellLifecycle 内；建议的行数预算契约测试未添加；热点密度另行立案为 AUD-ARCH-005。"
+      "resolution_note": "2fe3565 落地 ModalRegistrar（模态注册/Escape 收敛）。2026-09-14 复核：19 个 ModalKind ↔ 19 条注册（ShellLifecycle.cs:461-548 ↔ ModalKind.cs:5-25），TryHandleEscape 2 行委托（:608-612），MainWindowViewModelTests.WizardDialogs.cs 枚举守卫仍在。残留 advisory：88 行注册表仍居 ShellLifecycle 内；建议的行数预算契约测试未添加；热点密度另行立案为 AUD-ARCH-005。"
     },
     "AUD-ARCH-002": {
       "title": "MainWindow.axaml.cs 内嵌 ~250 行动效引擎，全仓库最高变更热点（21 commits/180d）",
@@ -428,11 +428,11 @@
       "status": "resolved",
       "disposition": "Refactor",
       "recommendation_validation": "Verified",
-      "first_seen_commit": "5f56f8e",
-      "last_verified_commit": "715fee5",
-      "resolved_commit": "5777f2f",
+      "first_seen_commit": "ab156dd",
+      "last_verified_commit": "67229b5",
+      "resolved_commit": "cf353cd",
       "guard": "Headless 动效套件（MainWindowHeadlessTests.Motion.cs）即守卫； animator 无直接单测（仅经窗口端到端驱动），可选补直接驱动用例",
-      "resolution_note": "5777f2f 将操作表面高度形变引擎（Transition/Settle/Cancel + 两个 Animation 工厂）逐字抽出为 Views/OperationSurfaceAnimator.cs（190 行，ADR-016 注释保留），MainWindow.axaml.cs 663→499 行（git show --stat 证实）。刻意残留（提交消息明示「次优先」）：入场锚点 :60-142、壁纸交叉淡化 :158-221、动效偏好处理 :223-256 约 180 行。残留 advisory：两处迁移遗留未用 using（:8,:13）；锚点退役回调使动画器需窗口回调才能度量（OperationSurfaceAnimator.cs:59 ↔ MainWindow.axaml.cs:233-237），排序不变量跨两文件——下次触碰该文件时清理。"
+      "resolution_note": "cf353cd 将操作表面高度形变引擎（Transition/Settle/Cancel + 两个 Animation 工厂）逐字抽出为 Views/OperationSurfaceAnimator.cs（190 行，ADR-016 注释保留），MainWindow.axaml.cs 663→499 行（git show --stat 证实）。刻意残留（提交消息明示「次优先」）：入场锚点 :60-142、壁纸交叉淡化 :158-221、动效偏好处理 :223-256 约 180 行。残留 advisory：两处迁移遗留未用 using（:8,:13）；锚点退役回调使动画器需窗口回调才能度量（OperationSurfaceAnimator.cs:59 ↔ MainWindow.axaml.cs:233-237），排序不变量跨两文件——下次触碰该文件时清理。"
     },
     "AUD-ARCH-003": {
       "title": "ShellLifecycle 双构造路径：测试（owns=true）与生产（owns=false）释放所有权制度分叉",
@@ -442,11 +442,11 @@
       "status": "resolved",
       "disposition": "Document",
       "recommendation_validation": "Verified",
-      "first_seen_commit": "5f56f8e",
-      "last_verified_commit": "715fee5",
-      "resolved_commit": "715fee5",
+      "first_seen_commit": "ab156dd",
+      "last_verified_commit": "67229b5",
+      "resolved_commit": "67229b5",
       "guard": "构造参数注释即书面记录（ShellLifecycle.cs:115-121）；可选将裁定升格为 ADR",
-      "resolution_note": "按原建议第二分支执行：715fee5 在 internal 构造内书面记录两种制度（:115-121，含释放范围差异、测试不可复现性、收敛前置条件与「已裁定当前缝可接受」的明示）。生产 :98 仍 owns:false、测试经 MainWindowViewModel.cs:110 owns:true，分叉本身保留但已裁定接受并成文。未升格 ADR（advisory）。"
+      "resolution_note": "按原建议第二分支执行：67229b5 在 internal 构造内书面记录两种制度（:115-121，含释放范围差异、测试不可复现性、收敛前置条件与「已裁定当前缝可接受」的明示）。生产 :98 仍 owns:false、测试经 MainWindowViewModel.cs:110 owns:true，分叉本身保留但已裁定接受并成文。未升格 ADR（advisory）。"
     },
     "AUD-TEST-001": {
       "title": "53 个手写 HttpMessageHandler 测试桩分散 17 文件，无共享基类，同名不同实现成对出现",
@@ -456,11 +456,11 @@
       "status": "resolved",
       "disposition": "Refactor",
       "recommendation_validation": "Strongly Supported",
-      "first_seen_commit": "5f56f8e",
-      "last_verified_commit": "8449d37",
-      "resolved_commit": "fae538a",
+      "first_seen_commit": "ab156dd",
+      "last_verified_commit": "1619d35",
+      "resolved_commit": "f123429",
       "guard": "tests/TestDoubles/StubRemoteHttpTransport 已成守卫形态",
-      "resolution_note": "2026-09-13 解决（88ebd46..fae538a）：RemoteHttpTransport 接缝 + 共享 StubRemoteHttpTransport，散桩 53 处/17 文件 → 9 处/1 文件（全部留在传输层自身测试）。2026-09-14 未 reopen：状态维持。"
+      "resolution_note": "2026-09-13 解决（f123429..f123429）：RemoteHttpTransport 接缝 + 共享 StubRemoteHttpTransport，散桩 53 处/17 文件 → 9 处/1 文件（全部留在传输层自身测试）。2026-09-14 未 reopen：状态维持。"
     },
     "AUD-TEST-002": {
       "title": "SettingsViewModel.CheckForUpdatesAsync 分支与 ShellLifecycle 更新确认接线无测试",
@@ -470,11 +470,11 @@
       "status": "resolved",
       "disposition": "Fix",
       "recommendation_validation": "Verified",
-      "first_seen_commit": "5f56f8e",
-      "last_verified_commit": "715fee5",
-      "resolved_commit": "b9dc68e",
+      "first_seen_commit": "ab156dd",
+      "last_verified_commit": "67229b5",
+      "resolved_commit": "a6d3794",
       "guard": "SettingsViewModelTests 4 用例 + ShellLifecycleTests 更新流 11 用例即守卫",
-      "resolution_note": "b9dc68e 落地：SettingsViewModelTests（4 用例）覆盖 CheckForUpdatesAsync 三分支 + 失败消息格式化（异常失败 toast :46-62、非异常失败含 FailureMessage 格式化 :65-81、已最新 toast :84-97、有更新开对话框且无 toast :100-117）；ShellLifecycleTests 增至 11 用例覆盖确认接线端到端（ConfirmUpdateAvailableRequested → 恰一次外部打开 :237-265、Dispose 后退订、启动检查失败降级 :268-287），启动检查成功 toast 由 MainWindowViewModelTests.Lifecycle.cs:233-269 覆盖。残留 advisory：SettingsViewModel.cs:251-252「失败无异常且 FailureMessage 为空 → 裸本地化消息」子分支无直接断言。"
+      "resolution_note": "a6d3794 落地：SettingsViewModelTests（4 用例）覆盖 CheckForUpdatesAsync 三分支 + 失败消息格式化（异常失败 toast :46-62、非异常失败含 FailureMessage 格式化 :65-81、已最新 toast :84-97、有更新开对话框且无 toast :100-117）；ShellLifecycleTests 增至 11 用例覆盖确认接线端到端（ConfirmUpdateAvailableRequested → 恰一次外部打开 :237-265、Dispose 后退订、启动检查失败降级 :268-287），启动检查成功 toast 由 MainWindowViewModelTests.Lifecycle.cs:233-269 覆盖。残留 advisory：SettingsViewModel.cs:251-252「失败无异常且 FailureMessage 为空 → 裸本地化消息」子分支无直接断言。"
     },
     "AUD-TEST-003": {
       "title": "非 Windows 平台分支以早期 return 隐藏跳过而非 Assert.Skip（假覆盖）",
@@ -484,11 +484,11 @@
       "status": "resolved",
       "disposition": "Fix",
       "recommendation_validation": "Verified",
-      "first_seen_commit": "5f56f8e",
-      "last_verified_commit": "715fee5",
-      "resolved_commit": "5553793",
+      "first_seen_commit": "ab156dd",
+      "last_verified_commit": "67229b5",
+      "resolved_commit": "08c53f8",
       "guard": "Assert.Skip* 范式已成既有形态（16 处）；新平台门控测试照此办理",
-      "resolution_note": "5553793 落地：全仓库 Assert.Skip* 16 处 + 1 处 WindowsFactAttribute.Skip（GameShortcutServiceTests.cs:592）；GameDownloadServiceTests.cs:696 现为 SkipUnless；残留的全部 if(!IsWindows()) return 均位于 SkipUnless 之后且注释为 CA1416 分析器守卫（CrossProcessLaunchSignalTests.cs:171-218、GameShortcutServiceTests.cs:298-325）；非 Windows 退化助手（原 :297,:318）已不可达。本审计本地实测：1706 用例中 2 项可见 SKIP（GamePathValidatorTests 符号链接两例），0 隐藏跳过。"
+      "resolution_note": "08c53f8 落地：全仓库 Assert.Skip* 16 处 + 1 处 WindowsFactAttribute.Skip（GameShortcutServiceTests.cs:592）；GameDownloadServiceTests.cs:696 现为 SkipUnless；残留的全部 if(!IsWindows()) return 均位于 SkipUnless 之后且注释为 CA1416 分析器守卫（CrossProcessLaunchSignalTests.cs:171-218、GameShortcutServiceTests.cs:298-325）；非 Windows 退化助手（原 :297,:318）已不可达。本审计本地实测：1706 用例中 2 项可见 SKIP（GamePathValidatorTests 符号链接两例），0 隐藏跳过。"
     },
     "AUD-TEST-004": {
       "title": "魔数睡眠编码生产常量（700ms）；否定观察窗 50-80ms 短于 250ms 生产轮询间隔",
@@ -498,11 +498,11 @@
       "status": "resolved",
       "disposition": "Fix",
       "recommendation_validation": "Strongly Supported",
-      "first_seen_commit": "5f56f8e",
-      "last_verified_commit": "715fee5",
-      "resolved_commit": "878260a",
+      "first_seen_commit": "ab156dd",
+      "last_verified_commit": "67229b5",
+      "resolved_commit": "1f09bc8",
       "guard": "观察窗推导注释已成范式；若再触碰可改注入时钟",
-      "resolution_note": "878260a 落地：CrossProcessPollingListenerTests.cs:95-98 处置观察窗 80ms→400ms（>1× 生产 250ms 轮询间隔，CrossProcessPollingListener.cs:17）并附推导注释；BackgroundViewModelTests.cs:213-218 的 700ms 重新文档化为回归绊网（否定不变量，「不得重新引入短于该窗的定时释放」），不再复制生产常量。残留 advisory：否定观察窗仍为固定睡眠（:38,:124,:148 60/50ms 标定于注入的 5ms 假节奏 ~10×，可辩护）；等待助手私有变体增至 ~7 份（advisory，先前已记）。"
+      "resolution_note": "1f09bc8 落地：CrossProcessPollingListenerTests.cs:95-98 处置观察窗 80ms→400ms（>1× 生产 250ms 轮询间隔，CrossProcessPollingListener.cs:17）并附推导注释；BackgroundViewModelTests.cs:213-218 的 700ms 重新文档化为回归绊网（否定不变量，「不得重新引入短于该窗的定时释放」），不再复制生产常量。残留 advisory：否定观察窗仍为固定睡眠（:38,:124,:148 60/50ms 标定于注入的 5ms 假节奏 ~10×，可辩护）；等待助手私有变体增至 ~7 份（advisory，先前已记）。"
     },
     "AUD-PERF-002": {
       "title": "停止/暂停/恢复 UI 点击路径同步阻塞日志 sink（GetAwaiter().GetResult()）",
@@ -512,11 +512,11 @@
       "status": "resolved",
       "disposition": "Fix",
       "recommendation_validation": "Verified",
-      "first_seen_commit": "5f56f8e",
-      "last_verified_commit": "715fee5",
-      "resolved_commit": "878260a",
+      "first_seen_commit": "ab156dd",
+      "last_verified_commit": "67229b5",
+      "resolved_commit": "1f09bc8",
       "guard": null,
-      "resolution_note": "878260a 落地：GameDownloadService.cs:162 Stop 改 fire-and-forget _ = diagnostics.DebugAsync(...)；DownloadSession.cs:523/:531 Pause/Resume 同改，均附符合 PROJECT_CONVENTIONS §3.2 的意图注释。复核 grep：UI 点击路径无残余 GetResult()/LogSync；剩余 LogSync 均在非点击上下文（启动/关机/异常回退；GameOperationJourney.cs:305 为停止 toast 异常路径，非正常路径）。"
+      "resolution_note": "1f09bc8 落地：GameDownloadService.cs:162 Stop 改 fire-and-forget _ = diagnostics.DebugAsync(...)；DownloadSession.cs:523/:531 Pause/Resume 同改，均附符合 PROJECT_CONVENTIONS §3.2 的意图注释。复核 grep：UI 点击路径无残余 GetResult()/LogSync；剩余 LogSync 均在非点击上下文（启动/关机/异常回退；GameOperationJourney.cs:305 为停止 toast 异常路径，非正常路径）。"
     },
     "AUD-PERF-003": {
       "title": "下载缓冲每次尝试新分配 256 KiB LOH 数组，未池化（Crc64Service 已有 ArrayPool 先例）",
@@ -526,11 +526,11 @@
       "status": "resolved",
       "disposition": "Fix",
       "recommendation_validation": "Verified",
-      "first_seen_commit": "5f56f8e",
-      "last_verified_commit": "715fee5",
-      "resolved_commit": "878260a",
+      "first_seen_commit": "ab156dd",
+      "last_verified_commit": "67229b5",
+      "resolved_commit": "1f09bc8",
       "guard": null,
-      "resolution_note": "878260a 落地：FileDownloadService.cs:147 ArrayPool.Rent(1024*256)，:168-171 finally 归还；唯一 return（:173）在 try/finally 之外，归还有保证。内容为游戏文件字节非敏感，无需 clearArray。比照 Crc64Service.cs:33 同型。"
+      "resolution_note": "1f09bc8 落地：FileDownloadService.cs:147 ArrayPool.Rent(1024*256)，:168-171 finally 归还；唯一 return（:173）在 try/finally 之外，归还有保证。内容为游戏文件字节非敏感，无需 clearArray。比照 Crc64Service.cs:33 同型。"
     },
     "AUD-MAINT-002": {
       "title": "官方启动器协议对比分析（436 行）未入库，兼容性依据仅存于工作树",
@@ -540,11 +540,11 @@
       "status": "accepted-risk",
       "disposition": "No Action",
       "recommendation_validation": "Verified",
-      "first_seen_commit": "5f56f8e",
-      "last_verified_commit": "715fee5",
+      "first_seen_commit": "ab156dd",
+      "last_verified_commit": "67229b5",
       "resolved_commit": null,
       "guard": "行为不变量的代码侧守卫已存在：OfficialHashServiceTests（清单/配置字段序）、AuthorizationHeaderFactoryTests（签名与版本耦合）、LauncherConstantsTests",
-      "resolution_note": "按用户 2026-09-12 裁定结案为已接受风险（该文档不纳入版本管理、不加 gitignore 条目）。2026-09-14 复核：工作树文件已移除（文件系统与 git ls-files 均无），风险由测试守卫兜底——知识可丢，行为回归仍会被拦。同类的 architecture-review-2026-09-13.html 已于 afd6dbd 入库。本项不再开放。"
+      "resolution_note": "按用户 2026-09-12 裁定结案为已接受风险（该文档不纳入版本管理、不加 gitignore 条目）。2026-09-14 复核：工作树文件已移除（文件系统与 git ls-files 均无），风险由测试守卫兜底——知识可丢，行为回归仍会被拦。同类的 architecture-review-2026-09-13.html 已于 54c1871 入库。本项不再开放。"
     },
     "AUD-PERF-008": {
         "title": "并行校验的进度门控判据是「值变化」，落后的回调会把走过的桶再报一遍（进度回跳、每个桶只报一次的契约被破坏）",
@@ -554,12 +554,12 @@
         "status": "resolved",
         "disposition": "Fix",
         "recommendation_validation": "Verified",
-        "first_seen_commit": "5f53a6e",
-        "last_verified_commit": "fb217b5",
-        "resolved_commit": "fb217b5",
+        "first_seen_commit": "608d888",
+        "last_verified_commit": "608d888",
+        "resolved_commit": "608d888",
         "guard": "PercentProgressGateTests.ShouldDeliverMonotonic_WhenALaggingCallbackArrivesLate_ReturnsFalse（26 之后到达的 25 不再投递，且不许把门退回去）、..._WhenProducersRace_DeliversEveryBucketOnlyOnce（8 worker × 400 文件的半真实并发）、DownloadExecutorTests.InstallDownloadedFilesAsync_WhenManyFilesSharePercentBuckets_DeduplicatesProgress（distinct == count 的原始契约）",
-        "resolution_note": "2026-09-15 复核轮的收尾门禁（coverage.ps1）跑出一次 InstallDownloadedFilesAsync_WhenManyFilesSharePercentBuckets_DeduplicatesProgress 失败（Expected 102 / Actual 101）：delivered 里出现了重复百分比。定位为门控判据而非测试：PercentProgressGate.ShouldDeliver 用 != 判「值变化」，而校验阶段是 ≤8 并发逐文件回调（715fee5 引入并行），到达顺序不保证单调——落后的那一次算出较小百分比、与上次不同，于是二次投递。修复（fb217b5）：新增 ShouldDeliverMonotonic（CAS 循环，只投递严格更大的值）并只用于这条并行生产者；需要阶段折返重报的调用方继续用 ShouldDeliver（既有「折返回到 0 必须放行」契约保留）。变异验证：把单调判据降回 == 后两条用例同时红并报出重复。普通运行连跑多轮未复现，故该用例此前一直被视为稳定。",
-        "delta_note": "发现于 2026-09-15 复核轮（用户指令「按顺序处理问题，每阶段之后提交」的收尾门禁）。归因核实：本轮 12 个提交未触碰 DownloadExecutor.cs / PercentProgressGate.cs / DownloadExecutorTests.cs（git diff --stat 为空），门控与并行均来自更早的 5f53a6e / 715fee5。"
+        "resolution_note": "2026-09-15 复核轮的收尾门禁（coverage.ps1）跑出一次 InstallDownloadedFilesAsync_WhenManyFilesSharePercentBuckets_DeduplicatesProgress 失败（Expected 102 / Actual 101）：delivered 里出现了重复百分比。定位为门控判据而非测试：PercentProgressGate.ShouldDeliver 用 != 判「值变化」，而校验阶段是 ≤8 并发逐文件回调（67229b5 引入并行），到达顺序不保证单调——落后的那一次算出较小百分比、与上次不同，于是二次投递。修复（608d888）：新增 ShouldDeliverMonotonic（CAS 循环，只投递严格更大的值）并只用于这条并行生产者；需要阶段折返重报的调用方继续用 ShouldDeliver（既有「折返回到 0 必须放行」契约保留）。变异验证：把单调判据降回 == 后两条用例同时红并报出重复。普通运行连跑多轮未复现，故该用例此前一直被视为稳定。",
+        "delta_note": "发现于 2026-09-15 复核轮（用户指令「按顺序处理问题，每阶段之后提交」的收尾门禁）。归因核实：本轮 12 个提交未触碰 DownloadExecutor.cs / PercentProgressGate.cs / DownloadExecutorTests.cs（git diff --stat 为空），门控与并行均来自更早的 608d888 / 67229b5。"
     }
   }
 }

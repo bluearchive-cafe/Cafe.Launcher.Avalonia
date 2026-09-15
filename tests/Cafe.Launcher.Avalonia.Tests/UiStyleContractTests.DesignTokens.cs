@@ -84,15 +84,12 @@ public sealed partial class UiStyleContractTests
         var staticFamilies = "Launcher\\.(Spacing|Radius|Typography|Icon|Control|Component|Layout|Motion|Elevation|StateLayer)";
         var dynamicStaticReference = new Regex($"\\{{\\s*DynamicResource\\s+{staticFamilies}", RegexOptions.CultureInvariant);
 
-        var files = Directory.GetFiles(ProjectFile("Views"), "*.axaml", SearchOption.AllDirectories)
-            .Concat(Directory.GetFiles(ProjectFile("Controls"), "*.axaml", SearchOption.AllDirectories));
-
-        foreach (var file in files)
+        foreach (var relativePath in ProjectMarkupFiles())
         {
-            var text = File.ReadAllText(file);
+            var text = File.ReadAllText(ProjectFile(relativePath));
             Assert.False(
                 dynamicStaticReference.IsMatch(text),
-                $"Static-family tokens must use {{StaticResource}}, not {{DynamicResource}}: {file}");
+                $"Static-family tokens must use {{StaticResource}}, not {{DynamicResource}}: {relativePath}");
         }
     }
 
@@ -102,13 +99,11 @@ public sealed partial class UiStyleContractTests
         var legacyReference = new Regex(
             @"\bLauncher[A-Z][A-Za-z0-9]*",
             RegexOptions.CultureInvariant);
-        var files = Directory.GetFiles(ProjectFile("Views"), "*.axaml", SearchOption.AllDirectories)
-            .Concat(Directory.GetFiles(ProjectFile("Controls"), "*.axaml", SearchOption.AllDirectories))
-            .Append(ProjectFile("App.axaml"));
+        var files = ProjectMarkupFiles().Append("App.axaml");
 
-        foreach (var file in files)
+        foreach (var relativePath in files)
         {
-            var text = File.ReadAllText(file);
+            var text = File.ReadAllText(ProjectFile(relativePath));
             foreach (Match match in legacyReference.Matches(text))
             {
                 var preceded = match.Index > 0 ? text[match.Index - 1] : '\0';
@@ -127,7 +122,7 @@ public sealed partial class UiStyleContractTests
 
                 Assert.True(
                     match.Value == "LauncherBorderButtonTemplate",
-                    $"Legacy flat token key '{match.Value}' found in {file} — rename gate violated.");
+                    $"Legacy flat token key '{match.Value}' found in {relativePath} — rename gate violated.");
             }
         }
     }

@@ -66,6 +66,7 @@ _ReSharper.*/
 # Windows
 Thumbs.db
 
+.artifacts/
 .claude/
 .superpowers/
 .worktrees/

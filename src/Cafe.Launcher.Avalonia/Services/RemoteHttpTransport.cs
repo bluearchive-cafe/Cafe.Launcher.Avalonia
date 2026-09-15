@@ -73,11 +73,9 @@ public enum RemoteRetryScope
     /// </summary>
     Network,
 
-    /// <summary><see cref="Network"/> plus bodies that failed to parse as JSON.</summary>
-    NetworkAndParse,
-
     /// <summary>
-    /// <see cref="NetworkAndParse"/> plus transient status answers (408, 429, 5xx).
+    /// <see cref="Network"/> plus bodies that failed to parse as JSON and transient
+    /// status answers (408, 429, 5xx).
     /// This is the manifest/envelope fetch discipline: a server that answered
     /// "try again shortly" is asked again, while 404-style authoritative answers
     /// are surfaced immediately.
@@ -327,7 +325,6 @@ public sealed class RemoteHttpTransport : IRemoteHttpTransport
     private static bool IsRetryable(RemoteRetryScope scope, Exception exception) => scope switch
     {
         RemoteRetryScope.Network => ProducedNoResponse(exception),
-        RemoteRetryScope.NetworkAndParse => ProducedNoResponse(exception) || exception is JsonException,
         RemoteRetryScope.Transient => exception is HttpRequestException { StatusCode: { } statusCode }
             ? statusCode == HttpStatusCode.RequestTimeout
                 || statusCode == HttpStatusCode.TooManyRequests
