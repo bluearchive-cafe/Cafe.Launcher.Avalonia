@@ -499,10 +499,15 @@ v2 把海报表达成一棵递归的节点树，只有 `text` / `image` / `shape
 1. `glow-disc`、`base-disc` — 两个柔光圆，`shape: circle`，各带 `intent.allow_bleed`，提供大面积底色。
 2. `ring-top-right`、`ring-bottom-left` — 两个细描边圆环，分别与上面两个柔光圆同心：只给 `border`
    不给 `background`，因此只有一圈描边；同样各带 `intent.allow_bleed`。
-3. `surface-card` — 承载诊断图标的浅色卡片，`shape: rect` + `radius: 56` + `rotation: -14`，
-   `background` 取 `$primary 5%`、`border` 取 `$primary 14%`，与 `icon-log` 同心同角度。
-4. `icon-repair`、`icon-network`、`icon-log`、`icon-shield` — 四个图标素材，绝对定位 + 旋转；
+3. `surface-card` — 承载图标的浅色卡片，`shape: rect` + `radius: 56` + `rotation: -14`，
+   `background` 取 `$primary 5%`、`border` 取 `$primary 14%`，与 `icon-launch` 同心同角度。
+4. `icon-uninstall`、`icon-network`、`icon-launch`、`icon-shield` — 四个图标素材，绝对定位 + 旋转；
    只有 `icon-shield` 出血。
+
+   节点 id 与素材 id 同名，且**按当版用途命名**（上一版是 `icon-repair` / `icon-log`），因此换图标
+   集时这四个 id 会跟着改；位置、尺寸、旋转与透明度档位则按位次沿用，几何不变——`allowed_findings`
+   仍是那五处、五个矩形也逐个不变。两个胶囊节点则是另一套办法：它们改用 `highlight-1` / `highlight-2`
+   这类与版本无关的 id，因为里面装的是编辑性短语，按当版功能命名会让每版都改名。
 5. `copy-zone` — 文案区，`layout: stack`，`x:150 y:0 width:1080 height:1125` + `justify:"center"`，
    对应旧版 `.header` 的 flex 垂直居中；块内元素增长时它会自动重新居中。
 
@@ -532,29 +537,41 @@ v2 把海报表达成一棵递归的节点树，只有 `text` / `image` / `shape
 
 ## 图标资产
 
-`docs/promo/assets/icons/` 下的四个 PNG 是从 Material Icons 官方仓库光栅化来的，已入库，
-正常情况下无需重新生成：
+`docs/promo/assets/icons/` 下的 PNG 是从 Material Icons 官方仓库光栅化来的，已入库，
+正常情况下无需重新生成。模板与本版 spec 引用的是下面这四个：
 
 | 文件 | 图标 | 用途 | 上色 |
 | --- | --- | --- | --- |
-| `icon-repair.png` | `action/build` | 启动校验一键修复 | `#2E7DF6` |
-| `icon-log.png` | `action/history` | 诊断导出的时间范围 | `#2E7DF6` |
-| `icon-network.png` | `notification/network_check` | 网络与代理更稳 | `#2E7DF6` |
-| `icon-shield.png` | `action/verified_user` | 安全与隐私 | `#7A5AF8` |
+| `icon-uninstall.png` | `action/delete_forever` | 卸载彻底清除 | `#2E7DF6` |
+| `icon-launch.png` | `action/exit_to_app` | 游戏启动后的行为 | `#2E7DF6` |
+| `icon-network.png` | `hardware/router` | 网络与代理更稳 | `#2E7DF6` |
+| `icon-shield.png` | `action/verified_user` | 安全与隐私（发布产物可校验） | `#7A5AF8` |
 
 这组图标是**装饰**，不承载事实：一套四个按当版更新的主题挑，换主题时按下面的命令重新生成
 并把新文件入库，同时更新本表。
 
+**换图标集时不要顺手删掉旧文件**：`v1.1.0-beta.9.spec.json` 这类归档 spec 仍按名字引用它们那一版
+的图标（`icon-repair.png` / `icon-log.png` 就是为它留的），而归档 spec 的价值正是「还能重跑」。
+判据与既有提交一致——**只移除任何 spec 都不再引用的文件**。想彻底停用某一版 spec 时，
+先删该 spec 再删它的图标。
+
 两点必须知道：
 
 1. **必须光栅化，不能直接用 SVG**：素材准备阶段用 Pillow 处理，Pillow 读不了 SVG。
-   源地址遵循 `<分类>/<名称>/materialicons/24px.svg`，但分类不能靠猜——`image/wallpaper`
-   实测返回 404，每个图标都要看 HTTP 状态。光栅化用无头 Chrome 输出带透明通道的 512×512，
-   `--default-background-color=00000000` 是透明背景的关键，缺了会得到白底方块。
-2. **当前入库的四个文件是「已上色 + 已烘入透明度」的成品**：光栅化那一步得到的是纯黑 alpha 蒙版
-   （`fill` 没被带进来，字形本身是对的）；随后按上表着色，并把设计要求的透明度
-   （`0.13` / `0.11` / `0.10` / `0.12`，对应 repair / log / network / shield）乘进 alpha 通道。
-   两步都只改 RGB 与 alpha，字形几何完全不变。
+   源地址是 `https://raw.githubusercontent.com/google/material-design-icons/master/src/<分类>/<名称>/materialicons/24px.svg`
+   （注意是 `material-design-icons` 仓库的 `src/`，不是 `material-icons` 仓库的 `svg/`——后者实测 404），
+   但**分类和名称都不能靠猜**：`action/delete_sweep`、`action/block`、`action/refresh`、`image/wallpaper`
+   实测全部 404（`refresh` 不在 `action/` 下），每个候选都要先 `curl -o /dev/null -w "%{http_code}"` 看状态。
+   光栅化成 512×512：把 SVG **内联**进页面再截图（见下方脚本）。不要用 `<img src="file://…">`——
+   `set_content` 造出的文档取不到 `file://` 子资源，Chromium 会静默渲染成一张破图占位符，
+   截图出来只有左上角一个小点，而 alpha 检查照样通过。
+2. **当前入库的四个文件是「已上色 + 已烘入透明度」的成品**：光栅化那一步得到的是纯 alpha 蒙版
+   （`fill` 没被带进来，字形本身是对的；RGB 是黑是白都无所谓，下一步整个换掉）；随后按上表着色，
+   并把设计要求的透明度（`0.13` / `0.11` / `0.10` / `0.12`，对应 uninstall / launch / network / shield）
+   乘进 alpha 通道。两步都只改 RGB 与 alpha，字形几何完全不变。
+
+   对同一枚图标，本流程与入库文件是**可对照**的：拿未被改动的 `icon-shield.png` 当对照跑一遍，
+   本仓库实测 262144 个像素全等（0 个差异）。
 
 之所以把透明度烘进素材而不是在节点上写 `opacity: 0.13`，有两个具体理由（不是说 `opacity` 不能用，
 它对形状是好用的，见「样式值的类型」）：
@@ -565,15 +582,35 @@ v2 把海报表达成一棵递归的节点树，只有 `text` / `image` / `shape
   再叠一层数值 `opacity` 只会得到两倍衰减。**两者只能用一种**，本模板选 alpha。
   如果将来改成用 `opacity`，必须先把素材里的 alpha 还原成不透明，否则亮度会算错。
 
-要重做图标时：先按上面的命令光栅化成纯黑图，再上色 + 烘透明度。用 Pillow 即可，两步都是
-确定性变换：
+要重做图标时是两步确定性变换。先光栅化——用 Playwright 的 Chromium（管线本来就依赖它），
+把 SVG **内联**进页面再按 512×512 截图：
+
+```python
+from pathlib import Path
+from playwright.sync_api import sync_playwright
+
+SIZE = 512
+html = """<!doctype html><html><head><meta charset="utf-8"><style>
+html,body{margin:0;padding:0;background:transparent}
+svg{display:block;width:%dpx;height:%dpx}
+</style></head><body>%s</body></html>"""
+
+with sync_playwright() as p:
+    page = p.chromium.launch().new_page(viewport={"width": SIZE, "height": SIZE}, device_scale_factor=1)
+    for svg in sorted(Path("artifacts/icon-src").glob("*.svg")):
+        page.set_content(html % (SIZE, SIZE, svg.read_text(encoding="utf-8")))
+        page.wait_for_timeout(120)
+        page.screenshot(path=f"artifacts/icon-src/raster/{svg.stem}.png", omit_background=True)
+```
+
+`omit_background=True` 是透明背景的关键，缺了会得到白底方块。随后上色 + 烘透明度：
 
 ```python
 from PIL import Image
-im = Image.open("icon-repair.png").convert("RGBA")
+im = Image.open("icon-uninstall.png").convert("RGBA")
 alpha = im.getchannel("A").point(lambda v: round(v * 0.13))   # 设计要求的透明度
 im = Image.merge("RGBA", (*[Image.new("L", im.size, c) for c in (0x2E, 0x7D, 0xF6)], alpha))
-im.save("icon-repair.png", format="PNG", optimize=True)
+im.save("icon-uninstall.png", format="PNG", optimize=True)
 ```
 
 改完随手验一下「上色 + 烘透明度」是否真的生效（尺寸 512×512，RGB 三通道应全等于上表颜色，
@@ -584,17 +621,27 @@ from PIL import Image
 from pathlib import Path
 for path in sorted(Path("docs/promo/assets/icons").glob("*.png")):
     with Image.open(path) as im:
-        print(path.name, im.size, im.mode, im.getchannel("A").getextrema())
+        alpha = im.getchannel("A")
+        print(path.name, im.size, im.mode, alpha.getextrema(), alpha.getbbox())
 ```
 
-本仓库四个文件的实测值，可据此对照：
+**`getextrema()` 分不出「字形正确」与「整张空白」**：空蒙版的 extrema 同样是 `(0, 255)`，
+着色后也能算出「正确」的 33 / 28 / 26 / 31——上一条那个破图占位符就是这样一路混过尺寸、
+模式、extrema 三项检查的。所以要连 `getbbox()` 一起看：它应大致落在 20–491 之间（24×24 视框
+自带的留白；本仓库现存六个文件的实测极值就是 20 与 491），而不是挤在左上角二三十个像素里；
+再确认 `images: 4/4 healthy`（第 6 步）与肉眼能看见字形状（第 7 步）。
+
+本仓库当前引用的四个文件的实测值，可据此对照：
 
 | 文件 | 尺寸 / 模式 | alpha 范围 | 对应透明度 |
 | --- | --- | --- | --- |
-| `icon-repair.png` | 512×512 / RGBA | `(0, 33)` | 0.13 |
-| `icon-log.png` | 512×512 / RGBA | `(0, 28)` | 0.11 |
+| `icon-uninstall.png` | 512×512 / RGBA | `(0, 33)` | 0.13 |
+| `icon-launch.png` | 512×512 / RGBA | `(0, 28)` | 0.11 |
 | `icon-network.png` | 512×512 / RGBA | `(0, 26)` | 0.10 |
 | `icon-shield.png` | 512×512 / RGBA | `(0, 31)` | 0.12 |
+
+另外两个为归档 spec 保留的文件（`icon-repair.png` `(0, 33)`、`icon-log.png` `(0, 28)`）沿用同一套
+口径，不必重新核对。
 
 alpha 上界是**故意压得很低**的：图标只是背景点缀，最大值 26–33 意味着最不透明的像素也只有约
 10%–13% 不透明度。这正是设计意图，不要为了「看得更清楚」把它调亮。
@@ -631,9 +678,9 @@ alpha 上界是**故意压得很低**的：图标只是背景点缀，最大值 
 ### 实测基线（本仓库模板，2000×1125）
 
 以下数值是 2026-09 在本机（Windows 10、Python 3.14.6、Playwright 1.62.0 + Chromium 1234）
-实跑**由本模板复制出的发布 spec**（`v1.1.0-beta.9`）的记录，用来判断「这次跑出来是否正常」。
-计数、百分比与出血矩形是稳定的（只由场景几何决定）；**绝对字节数与哈希只对「同一份 spec +
-同一环境」有意义**，tag 文案变长变短都会让它们变。
+实跑**由本模板复制出的发布 spec**（`v1.1.0-beta.10`，四枚图标见「图标资产」）的记录，用来判断
+「这次跑出来是否正常」。计数、百分比与出血矩形是稳定的（只由场景几何决定，换图标集也不动它们）；
+**绝对字节数与哈希只对「同一份 spec + 同一环境」有意义**，tag 文案与图标像素都会让它们变。
 
 | 项 | 值 |
 | --- | --- |
@@ -647,7 +694,7 @@ alpha 上界是**故意压得很低**的：图标只是背景点缀，最大值 
 | `images` | `4/4 healthy` |
 | `allowed_findings` | 5 |
 | `unchecked` | 3（对比度、字形级回退、层次与平衡——恒为此三项） |
-| 无损压缩收益 | 12.9%（688114 → 599249 字节，逐像素一致） |
+| 无损压缩收益 | 12.6%（699131 → 610763 字节，逐像素一致） |
 
 五条 `allowed_findings` 的具体节点（都由 `intent.allow_bleed: true` 释放）：
 
@@ -703,7 +750,7 @@ enforced」那一行：该计数只累加 `errors` + `warnings` + 不健康的�
   同样是干净的。**唯一的例外是字体闸门**：它以 `RuntimeError` traceback 的形式抛出（见第 4 步）。
 - **相对路径全部以「spec 文件所在目录」为基准**，不是当前工作目录。所以脚本可以从仓库任意目录调用，
   但**spec 文件本身不能随便挪**：把模板复制到 `%TEMP%` 再跑，`../assets/icons/…` 会解析到
-  `%TEMP%` 的上一级并报 `asset 'icon-repair' source does not exist`。每版 spec 必须留在
+  `%TEMP%` 的上一级并报 `asset 'icon-uninstall' source does not exist`。每版 spec 必须留在
   `docs/promo/specs/` 下。
 - **渲染器没有 `--scale` 之类的参数**，唯一的开关是 `--verify-determinism`；画布相关的旋钮只能通过
   spec 的 `canvas` 段调整，而且 `device_scale_factor` 被 schema 钉死为 1。

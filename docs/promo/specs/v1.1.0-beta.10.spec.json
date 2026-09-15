@@ -274,7 +274,7 @@
                     "id": "subtitle-line-1",
                     "type": "text",
                     "tag": "p",
-                    "text": "崩溃后弹出报告窗口、启动失败说明原因、启动更快；",
+                    "text": "卸载可连整个安装目录一起清除，被拒绝的操作都会说明原因；",
                     "style": {
                       "color": "$on_surface_variant",
                       "font_size": 36,
@@ -286,7 +286,7 @@
                     "id": "subtitle-line-2",
                     "type": "text",
                     "tag": "p",
-                    "text": "macOS 支持范围同步写明。",
+                    "text": "设置里还能选游戏启动后保持窗口或直接退出。",
                     "style": {
                       "color": "$on_surface_variant",
                       "font_size": 36,
@@ -310,7 +310,7 @@
                     "id": "badge",
                     "type": "text",
                     "tag": "div",
-                    "text": "vX.Y.Z-beta.N",
+                    "text": "v1.1.0-beta.10",
                     "style": {
                       "height": 78,
                       "line_height": "78px",
@@ -327,7 +327,7 @@
                     "id": "highlight-1",
                     "type": "text",
                     "tag": "div",
-                    "text": "崩溃诊断",
+                    "text": "彻底清除",
                     "style": {
                       "height": 78,
                       "line_height": "74px",
@@ -344,7 +344,7 @@
                     "id": "highlight-2",
                     "type": "text",
                     "tag": "div",
-                    "text": "启动提速",
+                    "text": "启动行为可选",
                     "style": {
                       "height": 78,
                       "line_height": "74px",
@@ -408,9 +408,9 @@
     "layout": "advisory"
   },
   "output": {
-    "image": "../../assets/release-banners/cafe-launcher-vX.Y.Z-beta.N-release-banner.png",
-    "manifest": "../../../artifacts/release-banner/vX.Y.Z-beta.N.manifest.json",
-    "prepared": "../../../artifacts/release-banner/vX.Y.Z-beta.N.prepared.json",
-    "components_dir": "../../../artifacts/release-banner/vX.Y.Z-beta.N-components"
+    "image": "../../assets/release-banners/cafe-launcher-v1.1.0-beta.10-release-banner.png",
+    "manifest": "../../../artifacts/release-banner/v1.1.0-beta.10.manifest.json",
+    "prepared": "../../../artifacts/release-banner/v1.1.0-beta.10.prepared.json",
+    "components_dir": "../../../artifacts/release-banner/v1.1.0-beta.10-components"
   }
 }
