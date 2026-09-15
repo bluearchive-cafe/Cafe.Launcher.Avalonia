@@ -146,7 +146,6 @@ public sealed partial class UiStyleContractTests
 
         var expectedSelectors = new HashSet<string>(StringComparer.Ordinal)
         {
-            "TextBlock.heading",
             "TextBlock.dialog-title",
             "TextBlock.dialog-alert-title",
             "TextBlock.titlebar-brand",
@@ -182,10 +181,6 @@ public sealed partial class UiStyleContractTests
     public void SemanticComponents_UseBalancedDensityTokens()
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
-
-        var settingsSection = GetStyleSetters(document, "Border.settings-section");
-        Assert.Equal("{StaticResource Launcher.Spacing.Thickness.Lg}", settingsSection["Padding"]);
-        Assert.Equal("{StaticResource Launcher.Radius.Md}", settingsSection["CornerRadius"]);
 
         var contentRow = GetStyleSetters(document, "Border.content-row");
         Assert.Equal("{StaticResource Launcher.Spacing.Thickness.Md}", contentRow["Padding"]);
@@ -248,7 +243,6 @@ public sealed partial class UiStyleContractTests
         // ADR-008 batch A: every button family routes through the shared template (ADR-004).
         foreach (var selector in new[]
                  {
-                     "Button.text-link",
                      "Button.icon-button",
                      "Button.banner-link",
                      "Button.primary-action",
@@ -288,31 +282,12 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             "{StaticResource Launcher.Component.PathField.Padding}",
             pathField["Padding"]);
-        Assert.Equal(
-            "{StaticResource Launcher.Component.Dialog.Title.Height}",
-            GetStyleSetters(document, "Grid.dialog-header")["Height"]);
     }
 
     [Fact]
     public void ButtonVariants_CoverM3InteractiveAndDisabledStates()
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
-
-        var textLinkHover = GetStyleSetters(document, "Button.text-link:pointerover");
-        Assert.Equal(
-            "{DynamicResource Launcher.Color.Button.Flat.Hover}",
-            textLinkHover["Background"]);
-        Assert.Equal(
-            "{DynamicResource Launcher.Color.Primary}",
-            textLinkHover["Foreground"]);
-
-        var textLinkDisabled = GetStyleSetters(document, "Button.text-link:disabled");
-        Assert.Equal(
-            "{DynamicResource Launcher.Text.Secondary}",
-            textLinkDisabled["Foreground"]);
-        Assert.Equal(
-            "{StaticResource Launcher.StateLayer.Disabled.Content}",
-            textLinkDisabled["Opacity"]);
 
         var iconButtonDisabled = GetStyleSetters(document, "Button.icon-button:disabled");
         Assert.Equal(

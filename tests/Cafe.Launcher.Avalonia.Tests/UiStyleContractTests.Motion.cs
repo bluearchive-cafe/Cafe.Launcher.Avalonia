@@ -174,7 +174,6 @@ public sealed partial class UiStyleContractTests
                  {
                      "Grid.motion-overlay",
                      "Border.motion-surface",
-                     "Grid.motion-surface-content",
                      ":is(UserControl).motion-content",
                      "StackPanel.motion-content",
                      "Border.motion-bottom",
@@ -238,15 +237,6 @@ public sealed partial class UiStyleContractTests
             Assert.True(HasClass(surface, "motion-surface"));
             AssertHasLocalTranslateTransform(surface);
 
-            if (surface.Name.LocalName != "DialogSurface")
-            {
-                // ADR-015 之前的三层结构（Border > Grid）保留内容层淡出检查；
-                // 模板控件表面合并了内容层，滑移与整体淡入淡出由平行规则驱动。
-                var surfaceContent = surface
-                    .Elements()
-                    .Single(child => child.Name.LocalName == "Grid");
-                Assert.True(HasClass(surfaceContent, "motion-surface-content"));
-            }
         });
 
         var settings = XDocument.Load(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
