@@ -198,14 +198,14 @@ public sealed class DownloadExecutorTests : IDisposable
             }
         }
 
-        var progressCount = 0;
+        var progressCount = new CallbackRecorder<int>();
         var failed = await CreateExecutor().InstallDownloadedFilesAsync(
             tempDir,
             manifestFiles,
             downloadedFiles,
             new Dictionary<string, string>(),
             new Dictionary<string, PlannedFileHash>(),
-            _ => progressCount++,
+            progressCount.Add,
             CancellationToken.None);
 
         Assert.Equal(2, failed.Count);
@@ -229,7 +229,11 @@ public sealed class DownloadExecutorTests : IDisposable
             }
         }
 
-        Assert.Equal(fileCount, progressCount);
+        // 每个完成都落进新的百分比桶（12 文件下 round(k*100/12) 两两不同），所以投递次数
+        // 恰好等于文件数——收集必须线程安全：回调来自 ≤8 个并行 worker
+        // （2026-09-15 深夜 CI 复查：这里原为未加锁的 progressCount++，丢了一次更新，12 变 11）。
+        Assert.Equal(fileCount, progressCount.Count);
+        Assert.Equal(progressCount.Count, progressCount.Distinct().Count());
     }
 
     [Fact]
@@ -278,9 +282,9 @@ public sealed class DownloadExecutorTests : IDisposable
         // 契约（AUD-PERF-007）：校验阶段逐文件回调经百分比门控去重——400 个文件
         // 挤在 101 个百分比桶里，消费方只应收到桶变化的那几次，而非每文件一次。
         //
-        // 回调来自 ≤8 个并行 worker，所以收集必须自己加锁：List<T> 不是线程安全的，并发 Add
-        // 会重复或丢条目。断言也只取与到达顺序无关的性质——单调判据决定「投递什么」，但「谁先
-        // Add」由线程竞速决定，且落后于更高桶的 0 会被单调判据丢掉（completed 1、2 都算 0，
+        // 回调来自 ≤8 个并行 worker，所以收集走 CallbackRecorder（未加锁的 List<T> 在并发 Add
+        // 下会丢条目或写重复项）。断言也只取与到达顺序无关的性质——单调判据决定「投递什么」，但
+        // 「谁先 Add」由线程竞速决定，且落后于更高桶的 0 会被单调判据丢掉（completed 1、2 都算 0，
         // 3 就算 1；前者若排在后者之后到达即被压掉），因此不能假设首项是 0
         // （2026-09-15 深夜 CI 复查：断言 delivered[0] == 0 在 CI 上偶发红，实到 1）。
         const int fileCount = 400;
@@ -299,21 +303,14 @@ public sealed class DownloadExecutorTests : IDisposable
             });
         }
 
-        var delivered = new List<int>();
-        var deliveredLock = new object();
+        var delivered = new CallbackRecorder<int>();
         var failed = await CreateExecutor().InstallDownloadedFilesAsync(
             tempDir,
             manifestFiles,
             [],
             new Dictionary<string, string>(),
             new Dictionary<string, PlannedFileHash>(),
-            percent =>
-            {
-                lock (deliveredLock)
-                {
-                    delivered.Add(percent);
-                }
-            },
+            delivered.Add,
             CancellationToken.None);
 
         Assert.Empty(failed);
@@ -378,7 +375,8 @@ public sealed class DownloadExecutorTests : IDisposable
                 Interlocked.Decrement(ref currentConcurrency);
             }
         });
-        var progressCount = 0;
+        // 下载阶段同样由 ≤10 个并发传输上报，计数走 CallbackRecorder（未加锁的 ++ 会丢更新）。
+        var progressCount = new CallbackRecorder<GameOperationProgress>();
         var executor = new DownloadExecutor(
             transferService,
             new Crc64Service(),
@@ -399,12 +397,12 @@ public sealed class DownloadExecutorTests : IDisposable
             ProxyModes.Direct,
             speedLimitBytesPerSec: 0,
             GameOperationKind.Download,
-            _ => progressCount++,
+            progressCount.Add,
             CancellationToken.None);
 
         Assert.True(maximumConcurrency > 1);
         Assert.True(maximumConcurrency <= 10);
-        Assert.True(progressCount > 0);
+        Assert.True(progressCount.Count > 0);
     }
 
     [Fact]

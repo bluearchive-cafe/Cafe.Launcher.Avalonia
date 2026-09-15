@@ -354,7 +354,7 @@ public sealed class GameDownloadServiceTests : IDisposable
             PrimaryCdn = "https://primary.example.invalid",
             BackUpCdn = "https://backup.example.invalid"
         };
-        var reportedBytes = new List<long>();
+        var reportedBytes = new CallbackRecorder<long>();
 
         await InvokeDownloadFileAsync(
             service,
@@ -821,7 +821,7 @@ public sealed class GameDownloadServiceTests : IDisposable
             });
         var downloader = CreateWritingFileDownloadService(fileBytes);
         using var service = CreateService(apiClient, settingsService, statePath, downloader);
-        var progress = new List<GameOperationProgress>();
+        var progress = new CallbackRecorder<GameOperationProgress>();
         var runningStates = new List<bool>();
         service.IsRunningChanged += () => runningStates.Add(service.IsRunning);
         var snapshot = CreateSnapshot(gamePath);
@@ -897,7 +897,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         var apiClient = CreateManifestApiClient(manifestFile);
         var downloader = new ControlledFileDownloadService(fileBytes);
         using var service = CreateService(apiClient, settingsService, statePath, downloader);
-        var progress = new List<GameOperationProgress>();
+        var progress = new CallbackRecorder<GameOperationProgress>();
         var runningStates = new List<bool>();
         service.IsRunningChanged += () => runningStates.Add(service.IsRunning);
         var snapshot = CreateSnapshot(gamePath);
@@ -1009,7 +1009,7 @@ public sealed class GameDownloadServiceTests : IDisposable
             Path.Combine(tempDir, "download_state.json"),
             downloader,
             diskSpaceService);
-        var progress = new List<GameOperationProgress>();
+        var progress = new CallbackRecorder<GameOperationProgress>();
         var snapshot = CreateSnapshot(gamePath);
         snapshot.RuntimeState = LauncherRuntimeState.NotInstalled;
         snapshot.Remote.GameConfig!.DecompressionSize = "18.5GB";
@@ -1085,7 +1085,7 @@ public sealed class GameDownloadServiceTests : IDisposable
             Path.Combine(tempDir, "download_state.json"),
             CreateWritingFileDownloadService(fileBytes),
             diskSpaceService);
-        var progress = new List<GameOperationProgress>();
+        var progress = new CallbackRecorder<GameOperationProgress>();
         var snapshot = CreateSnapshot(gamePath);
         snapshot.RuntimeState = LauncherRuntimeState.UpdateAvailable;
         snapshot.Remote.GameConfig!.DecompressionSize = "20B";
@@ -1121,7 +1121,7 @@ public sealed class GameDownloadServiceTests : IDisposable
             Path.Combine(tempDir, "download_state.json"),
             CreateWritingFileDownloadService(fileBytes),
             diskSpaceService);
-        var progress = new List<GameOperationProgress>();
+        var progress = new CallbackRecorder<GameOperationProgress>();
         var snapshot = CreateSnapshot(gamePath);
         snapshot.RuntimeState = LauncherRuntimeState.Ready;
         snapshot.Remote.GameConfig!.DecompressionSize = "20B";
@@ -1194,7 +1194,7 @@ public sealed class GameDownloadServiceTests : IDisposable
             Path.Combine(tempDir, "download_state.json"),
             CreateWritingFileDownloadService(fileBytes),
             diskSpaceService);
-        var progress = new List<GameOperationProgress>();
+        var progress = new CallbackRecorder<GameOperationProgress>();
         var snapshot = CreateSnapshot(gamePath);
         snapshot.RuntimeState = LauncherRuntimeState.NotInstalled;
 
@@ -1339,7 +1339,7 @@ public sealed class GameDownloadServiceTests : IDisposable
             new ChunkedFileDownloadService(fileBytes, chunkSize: 128));
         var snapshot = CreateSnapshot(gamePath);
         snapshot.RuntimeState = LauncherRuntimeState.NotInstalled;
-        var progress = new List<GameOperationProgress>();
+        var progress = new CallbackRecorder<GameOperationProgress>();
 
         var result = await service.InstallOrUpdateAsync(snapshot, progress.Add);
 
@@ -1375,7 +1375,7 @@ public sealed class GameDownloadServiceTests : IDisposable
             new ResumingFileDownloadService(fileBytes));
         var snapshot = CreateSnapshot(gamePath);
         snapshot.RuntimeState = LauncherRuntimeState.NotInstalled;
-        var progress = new List<GameOperationProgress>();
+        var progress = new CallbackRecorder<GameOperationProgress>();
 
         var result = await service.InstallOrUpdateAsync(snapshot, progress.Add);
 
@@ -1508,7 +1508,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         var snapshot = CreateSnapshot(gamePath);
         snapshot.RuntimeState = LauncherRuntimeState.NotInstalled;
 
-        var progress = new List<GameOperationProgress>();
+        var progress = new CallbackRecorder<GameOperationProgress>();
         var result = await service.InstallOrUpdateAsync(snapshot, progress.Add);
 
         Assert.False(result.Success);
