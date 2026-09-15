@@ -48,6 +48,9 @@ internal sealed class StubGameOperationExecutor : IGameOperationExecutor
 
     public int UninstallCallCount { get; private set; }
 
+    /// <summary>Gets 最近一次卸载收到的范围；尚未调用过卸载时为 null。</summary>
+    public UninstallScope? LastUninstallScope { get; private set; }
+
     public int ResumeCallCount { get; private set; }
 
     public int StopCallCount { get; private set; }
@@ -146,12 +149,30 @@ internal sealed class StubGameOperationExecutor : IGameOperationExecutor
         return Task.FromResult(ValidateUninstallResult);
     }
 
+    /// <summary>彻底清除会删除的两个目录的返回尺寸；默认全 0。</summary>
+    public UninstallFootprint MeasureFootprintResult { get; set; }
+
+    /// <summary>设置后测量返回其 Task，用于把测量挂在「统计中」状态。</summary>
+    public TaskCompletionSource<UninstallFootprint>? MeasureFootprintCompletion { get; set; }
+
+    /// <summary>测量被调用的次数。</summary>
+    public int MeasureFootprintCallCount { get; private set; }
+
+    /// <inheritdoc />
+    public Task<UninstallFootprint> MeasureUninstallFootprintAsync(LauncherStatusSnapshot snapshot)
+    {
+        MeasureFootprintCallCount++;
+        return MeasureFootprintCompletion?.Task ?? Task.FromResult(MeasureFootprintResult);
+    }
+
     /// <inheritdoc />
     public Task<GameOperationResult> UninstallAsync(
         LauncherStatusSnapshot snapshot,
+        UninstallScope scope,
         Action<GameOperationProgress> progress)
     {
         UninstallCallCount++;
+        LastUninstallScope = scope;
         return UninstallCompletion?.Task ?? Task.FromResult(UninstallResult);
     }
 

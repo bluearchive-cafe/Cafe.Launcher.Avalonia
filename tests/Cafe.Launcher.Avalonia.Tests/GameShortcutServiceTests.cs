@@ -34,6 +34,58 @@ public sealed class GameShortcutServiceTests : IDisposable
     }
 
     [Fact]
+    public void DeleteShortcutInDirectory_WhenShortcutExists_RemovesItAndReportsDeleted()
+    {
+        var shortcutDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "desktop")).FullName;
+        var gameDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "game")).FullName;
+        var service = new GameShortcutService(new LocalizationService());
+        var snapshot = new LauncherStatusSnapshot
+        {
+            LocalGame = new LocalInstallationState { GamePath = gameDirectory }
+        };
+        // 名字必须与创建侧同源：本地化显示名 + 平台后缀（ADR-030）。
+        var shortcutName = service.ResolveShortcutFileName(
+            Path.Combine(gameDirectory, GamePaths.GameExecutableFileName));
+        var extension = OperatingSystem.IsLinux() ? ".desktop" : ".lnk";
+        var shortcutPath = Path.Combine(shortcutDirectory, $"{shortcutName}{extension}");
+        File.WriteAllText(shortcutPath, "stub entry");
+
+        var result = service.DeleteShortcutInDirectory(snapshot, shortcutDirectory);
+
+        Assert.Equal(GameShortcutStatus.Deleted, result.Status);
+        Assert.False(File.Exists(shortcutPath));
+    }
+
+    [Fact]
+    public void DeleteShortcutInDirectory_WhenShortcutIsMissing_ReportsNotFound()
+    {
+        var shortcutDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "desktop")).FullName;
+        var service = new GameShortcutService(new LocalizationService());
+        var snapshot = new LauncherStatusSnapshot
+        {
+            LocalGame = new LocalInstallationState
+            {
+                GamePath = Directory.CreateDirectory(Path.Combine(tempDirectory, "game")).FullName
+            }
+        };
+
+        var result = service.DeleteShortcutInDirectory(snapshot, shortcutDirectory);
+
+        // 桌面本来就没有这个快捷方式不算失败：卸载不该因此变成失败（ADR-030）。
+        Assert.Equal(GameShortcutStatus.NotFound, result.Status);
+    }
+
+    [Fact]
+    public void DeleteShortcutInDirectory_WhenTargetDirectoryIsBlank_ReportsUnsupportedPlatform()
+    {
+        var service = new GameShortcutService(new LocalizationService());
+
+        var result = service.DeleteShortcutInDirectory(new LauncherStatusSnapshot(), null);
+
+        Assert.Equal(GameShortcutStatus.UnsupportedPlatform, result.Status);
+    }
+
+    [Fact]
     public async Task CreateShortcutInDirectoryAsync_WhenOnlyRemoteNameAvailable_ReturnsGameNotResolved()
     {
         var gameDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "game")).FullName;

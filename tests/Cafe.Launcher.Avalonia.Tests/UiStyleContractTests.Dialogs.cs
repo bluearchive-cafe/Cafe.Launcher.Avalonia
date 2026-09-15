@@ -381,6 +381,17 @@ public sealed partial class UiStyleContractTests
                 .Descendants()
                 .Count(element => element.Name.LocalName == "Button" && HasClass(element, "confirm-dialog-action")));
 
+        // 可选行（ADR-030）：勾选项必须带本地化名（辅助技术要读得出这个破坏性选项），
+        // 且状态双向绑定（用户勾了要能读回来）。
+        var option = control
+            .Descendants()
+            .Single(element => element.Name.LocalName == "CheckBox");
+        Assert.Equal("{Binding IsOptionChecked, ElementName=Root, Mode=TwoWay}", option.Attribute("IsChecked")?.Value);
+        Assert.Equal("{Binding OptionText, ElementName=Root}", option.Attribute("Content")?.Value);
+        Assert.Equal(
+            "{Binding OptionText, ElementName=Root}",
+            option.Attribute("AutomationProperties.Name")?.Value);
+
         var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
         Assert.Equal(
             "{DynamicResource Launcher.Color.Primary}",

@@ -50,10 +50,14 @@ internal sealed class GameOperationExecutor(
     public Task<GameOperationResult> ValidateUninstallAsync(string gamePath) =>
         uninstallService.ValidateAsync(gamePath);
 
+    public Task<UninstallFootprint> MeasureUninstallFootprintAsync(LauncherStatusSnapshot snapshot) =>
+        uninstallService.MeasureFootprintAsync(snapshot);
+
     public Task<GameOperationResult> UninstallAsync(
         LauncherStatusSnapshot snapshot,
+        UninstallScope scope,
         Action<GameOperationProgress> progress) =>
-        uninstallService.UninstallAsync(snapshot, progress);
+        uninstallService.UninstallAsync(snapshot, scope, progress);
 
     public void Stop(DownloadStopReason reason) => downloadService.Stop(reason);
 

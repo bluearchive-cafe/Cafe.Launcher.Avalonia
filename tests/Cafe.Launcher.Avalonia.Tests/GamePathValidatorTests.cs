@@ -89,7 +89,7 @@ public sealed class GamePathValidatorTests
 
         try
         {
-            CreateDirectorySymbolicLinkOrSkip(linkPath, outsidePath);
+            TestSymlinks.CreateDirectorySymbolicLinkOrSkip(linkPath, outsidePath);
 
             var exception = Assert.Throws<InvalidOperationException>(
                 () => GamePathValidator.GetSafePath(gamePath, "linked/file.bin"));
@@ -117,7 +117,7 @@ public sealed class GamePathValidatorTests
 
         try
         {
-            CreateDirectorySymbolicLinkOrSkip(linkedGamePath, actualGamePath);
+            TestSymlinks.CreateDirectorySymbolicLinkOrSkip(linkedGamePath, actualGamePath);
 
             var exception = Assert.Throws<InvalidOperationException>(
                 () => GamePathValidator.GetSafePath(linkedGamePath, "data/file.bin"));
@@ -135,22 +135,6 @@ public sealed class GamePathValidatorTests
         }
     }
 
-    private static void CreateDirectorySymbolicLinkOrSkip(string path, string target)
-    {
-        try
-        {
-            Directory.CreateSymbolicLink(path, target);
-        }
-        catch (Exception exception) when (
-            exception is IOException
-                or UnauthorizedAccessException
-                or PlatformNotSupportedException)
-        {
-            Assert.SkipWhen(
-                true,
-                $"Directory symbolic links are unavailable: {exception.Message}");
-        }
-    }
 }
 
 public sealed class GamePathValidatorPlatformTests

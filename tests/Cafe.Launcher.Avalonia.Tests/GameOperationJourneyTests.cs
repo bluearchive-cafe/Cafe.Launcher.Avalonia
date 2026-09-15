@@ -222,7 +222,9 @@ public sealed class GameOperationJourneyTests
         var context = CreateContext();
         var notifications = context.SubscribeToasts();
 
-        await context.Journey.ConfirmUninstallAsync(CreateSnapshot(LauncherRuntimeState.NotInstalled));
+        await context.Journey.ConfirmUninstallAsync(
+            CreateSnapshot(LauncherRuntimeState.NotInstalled),
+            UninstallScope.ManifestFilesOnly);
 
         Assert.Equal(0, context.Executor.UninstallCallCount);
         Assert.Equal(0, context.Host.SetBusyCallCount);
@@ -272,6 +274,67 @@ public sealed class GameOperationJourneyTests
         Assert.NotNull(validation);
         Assert.Equal(5, validation.AffectedFileCount);
         Assert.Empty(notifications);
+    }
+
+    [Theory]
+    [InlineData(UninstallScope.ManifestFilesOnly)]
+    [InlineData(UninstallScope.ThoroughCleanup)]
+    public async Task ConfirmUninstallAsync_ForwardsTheRequestedScopeToTheExecutor(UninstallScope scope)
+    {
+        var context = CreateContext();
+
+        await context.Journey.ConfirmUninstallAsync(CreateSnapshot(), scope);
+
+        Assert.Equal(1, context.Executor.UninstallCallCount);
+        Assert.Equal(scope, context.Executor.LastUninstallScope);
+    }
+
+    [Fact]
+    public async Task ConfirmUninstallAsync_WhenUninstallSucceeds_ReportsTheResult()
+    {
+        // 从前这里把终态丢掉，成功也没有回声（ADR-030 顺带修）。
+        var context = CreateContext();
+        var notifications = context.SubscribeToasts();
+        context.Executor.UninstallResult = new GameOperationResult { Success = true, Message = "uninstalled" };
+
+        await context.Journey.ConfirmUninstallAsync(CreateSnapshot(), UninstallScope.ManifestFilesOnly);
+
+        var notification = Assert.Single(notifications);
+        Assert.Equal(ToastSeverity.Success, notification.Severity);
+        Assert.Equal("uninstalled", notification.Message);
+    }
+
+    [Fact]
+    public async Task ConfirmUninstallAsync_WhenUninstallFails_ReportsTheFailureInsteadOfSilence()
+    {
+        // 逐文件删除撞上占用/权限时用户必须看到发生了什么（ADR-030）。
+        var context = CreateContext();
+        var notifications = context.SubscribeToasts();
+        context.Executor.UninstallResult = new GameOperationResult
+        {
+            Success = false,
+            Message = "game files are locked",
+            ErrorCode = GameOperationErrorCode.System
+        };
+
+        await context.Journey.ConfirmUninstallAsync(CreateSnapshot(), UninstallScope.ThoroughCleanup);
+
+        var notification = Assert.Single(notifications);
+        Assert.Equal(ToastSeverity.Error, notification.Severity);
+        Assert.Equal("game files are locked", notification.Message);
+    }
+
+    [Fact]
+    public async Task MeasureUninstallFootprintAsync_ReturnsTheExecutorMeasurement()
+    {
+        var context = CreateContext();
+        context.Executor.MeasureFootprintResult = new UninstallFootprint(2048, 512);
+
+        var footprint = await context.Journey.MeasureUninstallFootprintAsync(CreateSnapshot());
+
+        Assert.Equal(1, context.Executor.MeasureFootprintCallCount);
+        Assert.Equal(2048, footprint.InstallDirectoryBytes);
+        Assert.Equal(512, footprint.PrefixBytes);
     }
 
     [Fact]

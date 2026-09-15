@@ -25,9 +25,17 @@
                 <TranslateTransform/>
             </controls:DialogSurface.RenderTransform>
             <controls:DialogSurface.Content>
-                <TextBlock Text="{Binding Message, ElementName=Root}"
-                           Classes="dialog-message"
-                           TextWrapping="Wrap"/>
+                <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}">
+                    <TextBlock Text="{Binding Message, ElementName=Root}"
+                               Classes="dialog-message"
+                               TextWrapping="Wrap"/>
+                    <!-- 可选勾选项（ADR-030）：未设 OptionText 的确认框整行折叠。 -->
+                    <CheckBox Classes="setting-checkbox"
+                              IsVisible="{Binding OptionText, ElementName=Root, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                              IsChecked="{Binding IsOptionChecked, ElementName=Root, Mode=TwoWay}"
+                              Content="{Binding OptionText, ElementName=Root}"
+                              AutomationProperties.Name="{Binding OptionText, ElementName=Root}"/>
+                </StackPanel>
             </controls:DialogSurface.Content>
             <controls:DialogSurface.Footer>
                 <StackPanel Classes="confirm-actions">

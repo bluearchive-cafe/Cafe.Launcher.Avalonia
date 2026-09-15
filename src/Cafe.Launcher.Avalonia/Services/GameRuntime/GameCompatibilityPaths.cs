@@ -18,6 +18,14 @@ public static class GameCompatibilityPaths
         Path.Combine(GetLauncherDataRoot(), "compatibility");
 
     /// <summary>
+    /// 某个游戏在受管兼容根下的整棵子树：&lt;compatibilityRoot&gt;/&lt;gameId&gt;，
+    /// 覆盖该游戏所有运行器的默认前缀。彻底清除就是删这一棵（ADR-030）；
+    /// 用户自定义到别处的前缀不在其中，因此不会被连带删除。
+    /// </summary>
+    public static string GetDefaultGameCompatibilityRoot(string gameId) =>
+        Path.Combine(GetDefaultCompatibilityRoot(), gameId);
+
+    /// <summary>
     /// Default Wine prefix for a game, isolated per runner, e.g.
     /// &lt;dataRoot&gt;/compatibility/&lt;gameId&gt;/&lt;runnerId&gt;/prefix.
     /// UMU and Wine keep separate prefixes so switching runners cannot corrupt the

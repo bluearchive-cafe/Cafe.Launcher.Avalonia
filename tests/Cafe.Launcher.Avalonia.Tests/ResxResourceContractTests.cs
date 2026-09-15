@@ -35,7 +35,8 @@ public sealed class ResxResourceContractTests
     [Fact]
     public void Resx_NeutralContainsAllExpectedKeys()
     {
-        Assert.Equal(555, ResxValues["en"].Count);
+        // 555 → 557（ADR-030 的两个新串）→ 558（对话框先弹、尺寸后到，见 ADR-030 的第 4 条决策）。
+        Assert.Equal(558, ResxValues["en"].Count);
     }
 
     [Fact]

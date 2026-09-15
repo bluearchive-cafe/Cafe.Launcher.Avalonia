@@ -1096,11 +1096,17 @@ internal static class LauncherStrings
 
     internal static string UninstallCompleted => GetRequiredString("uninstallCompleted");
 
+    internal static string UninstallCompletedKeptPrefix => GetRequiredString("uninstallCompletedKeptPrefix");
+
     internal static string UninstallConfirmText => GetRequiredString("uninstallConfirmText");
 
     internal static string UninstallFailed => GetRequiredString("uninstallFailed");
 
     internal static string Uninstalling => GetRequiredString("uninstalling");
+
+    internal static string UninstallThoroughCleanupOption => GetRequiredString("uninstallThoroughCleanupOption");
+
+    internal static string UninstallThoroughCleanupOptionPending => GetRequiredString("uninstallThoroughCleanupOptionPending");
 
     internal static string Unknown => GetRequiredString("unknown");
 

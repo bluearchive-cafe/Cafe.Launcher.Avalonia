@@ -1621,6 +1621,9 @@ public static class LocalizationKeys
     /// <summary>Resource key for <c>uninstallCompleted</c>.</summary>
     public const string UninstallCompleted = "uninstallCompleted";
 
+    /// <summary>Resource key for <c>uninstallCompletedKeptPrefix</c>.</summary>
+    public const string UninstallCompletedKeptPrefix = "uninstallCompletedKeptPrefix";
+
     /// <summary>Resource key for <c>uninstallConfirmText</c>.</summary>
     public const string UninstallConfirmText = "uninstallConfirmText";
 
@@ -1629,6 +1632,12 @@ public static class LocalizationKeys
 
     /// <summary>Resource key for <c>uninstalling</c>.</summary>
     public const string Uninstalling = "uninstalling";
+
+    /// <summary>Resource key for <c>uninstallThoroughCleanupOption</c>.</summary>
+    public const string UninstallThoroughCleanupOption = "uninstallThoroughCleanupOption";
+
+    /// <summary>Resource key for <c>uninstallThoroughCleanupOptionPending</c>.</summary>
+    public const string UninstallThoroughCleanupOptionPending = "uninstallThoroughCleanupOptionPending";
 
     /// <summary>Resource key for <c>unknown</c>.</summary>
     public const string Unknown = "unknown";

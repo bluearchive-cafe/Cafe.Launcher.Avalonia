@@ -286,8 +286,14 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
         return null;
     }
 
+    /// <summary>
+    /// 彻底清除会删除的两个目录的实测大小（ADR-030），供确认框展示；与删除目标同源。
+    /// </summary>
+    public Task<UninstallFootprint> MeasureUninstallFootprintAsync(LauncherStatusSnapshot snapshot) =>
+        executor.MeasureUninstallFootprintAsync(snapshot);
+
     /// <summary>Runs a confirmed uninstall and refreshes launcher state afterward.</summary>
-    public async Task ConfirmUninstallAsync(LauncherStatusSnapshot snapshot)
+    public async Task ConfirmUninstallAsync(LauncherStatusSnapshot snapshot, UninstallScope scope)
     {
         // 用户已经在确认框上点过确认：此时状态若又变得不允许，必须给可见反馈，
         // 否则「点了没反应」（ADR-027）。
@@ -305,7 +311,9 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
             // Prepare for uninstall — the first progress update from the workflow
             // will set the correct icon. Call PrepareOperation to reset panel state.
             host.PrepareOperation();
-            var result = await executor.UninstallAsync(snapshot, host.ApplyProgress);
+            var result = await executor.UninstallAsync(snapshot, scope, host.ApplyProgress);
+            // 终态必须落地（ADR-030）：从前这里把结果丢掉，卸载失败时用户什么也看不到。
+            ShowOperationResult(result);
             await RequestRefresh(GameOperationsRefreshMode.Normal);
         }
         catch (Exception exception)
