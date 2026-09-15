@@ -53,6 +53,18 @@ public sealed class GameProcessNamesTests
         Assert.Empty(GameProcessNames.FromLaunchConfiguration(null, ["\"C:\\dir\"", "\"-flag\""]));
     }
 
+    [Fact]
+    public void WithoutExtension_SplitsPath_IndependentlyOfHostPlatform()
+    {
+        // 配置里的路径在任何平台上都是 Windows 形状（Linux 与 macOS 下游戏跑在兼容层里），
+        // 所以路径切分不能跟着宿主的分隔符约定走：按宿主约定切时，Unix 上 "\" 不是分隔符，
+        // 整个路径会被当成文件名，游戏可执行文件静默移出家族——判据少一半（ADR-032）。
+        // 三个用例在 Windows 与 Linux 上必须给出同一个答案。
+        Assert.Equal("BlueArchive", GameProcessNames.WithoutExtension("C:\\dir\\BlueArchive.exe"));
+        Assert.Equal("BlueArchive", GameProcessNames.WithoutExtension("C:/dir/BlueArchive.exe"));
+        Assert.Equal("BlueArchive", GameProcessNames.WithoutExtension("BlueArchive.exe"));
+    }
+
     [Theory]
     [InlineData("xldr_BlueArchiveOnline_JP_loader_x64.exe")]
     [InlineData("xldr_BlueArchiveOnline_JP_loader_x64")]

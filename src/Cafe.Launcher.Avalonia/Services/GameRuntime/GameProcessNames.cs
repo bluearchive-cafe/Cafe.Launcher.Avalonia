@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 
 namespace Cafe.Launcher.Avalonia.Services.GameRuntime;
@@ -98,6 +97,12 @@ public static class GameProcessNames
         string.Join(" / ", processNames.Select(name => $"{name}{ExecutableExtension}"));
 
     /// <summary>去掉路径与 <c>.exe</c> 扩展名，留下可直接比较的进程名。</summary>
+    /// <remarks>
+    /// 路径切分不按宿主平台的分隔符约定（不用 <c>Path.GetFileName</c>）：<c>params</c> 来自游戏
+    /// 自带的启动配置，在任何平台上都是 Windows 形状（<c>C:\dir\BlueArchive.exe</c>），Linux 与 macOS
+    /// 下游戏跑在兼容层里也一样。让宿主约定参与进来时，Unix 上 <c>\</c> 不是分隔符，整个路径会被当成
+    /// 文件名，游戏可执行文件静默移出家族——判据少一半，正是 ADR-032 要避免的那件事。
+    /// </remarks>
     internal static string WithoutExtension(string? exeName)
     {
         var normalized = Unquoted(exeName);
@@ -106,13 +111,22 @@ public static class GameProcessNames
             return "";
         }
 
-        var name = Path.GetFileName(normalized);
+        var name = FileNameOf(normalized);
         return name.EndsWith(ExecutableExtension, StringComparison.OrdinalIgnoreCase)
             ? name[..^ExecutableExtension.Length]
             : name;
     }
 
+    /// <summary>最后一个路径分隔符之后的部分，<c>\</c> 与 <c>/</c> 一视同仁。</summary>
+    private static string FileNameOf(string path)
+    {
+        var cut = path.LastIndexOfAny(PathSeparators);
+        return cut >= 0 ? path[(cut + 1)..] : path;
+    }
+
     private const string ExecutableExtension = ".exe";
+
+    private static readonly char[] PathSeparators = ['\\', '/'];
 
     private static void AddName(List<string> names, HashSet<string> seen, string? candidate)
     {
