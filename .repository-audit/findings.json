@@ -545,6 +545,21 @@
       "resolved_commit": null,
       "guard": "行为不变量的代码侧守卫已存在：OfficialHashServiceTests（清单/配置字段序）、AuthorizationHeaderFactoryTests（签名与版本耦合）、LauncherConstantsTests",
       "resolution_note": "按用户 2026-09-12 裁定结案为已接受风险（该文档不纳入版本管理、不加 gitignore 条目）。2026-09-14 复核：工作树文件已移除（文件系统与 git ls-files 均无），风险由测试守卫兜底——知识可丢，行为回归仍会被拦。同类的 architecture-review-2026-09-13.html 已于 afd6dbd 入库。本项不再开放。"
+    },
+    "AUD-PERF-008": {
+        "title": "并行校验的进度门控判据是「值变化」，落后的回调会把走过的桶再报一遍（进度回跳、每个桶只报一次的契约被破坏）",
+        "category": "performance/progress-callback",
+        "severity": "low",
+        "confidence": 70,
+        "status": "resolved",
+        "disposition": "Fix",
+        "recommendation_validation": "Verified",
+        "first_seen_commit": "5f53a6e",
+        "last_verified_commit": "fb217b5",
+        "resolved_commit": "fb217b5",
+        "guard": "PercentProgressGateTests.ShouldDeliverMonotonic_WhenALaggingCallbackArrivesLate_ReturnsFalse（26 之后到达的 25 不再投递，且不许把门退回去）、..._WhenProducersRace_DeliversEveryBucketOnlyOnce（8 worker × 400 文件的半真实并发）、DownloadExecutorTests.InstallDownloadedFilesAsync_WhenManyFilesSharePercentBuckets_DeduplicatesProgress（distinct == count 的原始契约）",
+        "resolution_note": "2026-09-15 复核轮的收尾门禁（coverage.ps1）跑出一次 InstallDownloadedFilesAsync_WhenManyFilesSharePercentBuckets_DeduplicatesProgress 失败（Expected 102 / Actual 101）：delivered 里出现了重复百分比。定位为门控判据而非测试：PercentProgressGate.ShouldDeliver 用 != 判「值变化」，而校验阶段是 ≤8 并发逐文件回调（715fee5 引入并行），到达顺序不保证单调——落后的那一次算出较小百分比、与上次不同，于是二次投递。修复（fb217b5）：新增 ShouldDeliverMonotonic（CAS 循环，只投递严格更大的值）并只用于这条并行生产者；需要阶段折返重报的调用方继续用 ShouldDeliver（既有「折返回到 0 必须放行」契约保留）。变异验证：把单调判据降回 == 后两条用例同时红并报出重复。普通运行连跑多轮未复现，故该用例此前一直被视为稳定。",
+        "delta_note": "发现于 2026-09-15 复核轮（用户指令「按顺序处理问题，每阶段之后提交」的收尾门禁）。归因核实：本轮 12 个提交未触碰 DownloadExecutor.cs / PercentProgressGate.cs / DownloadExecutorTests.cs（git diff --stat 为空），门控与并行均来自更早的 5f53a6e / 715fee5。"
     }
   }
 }
