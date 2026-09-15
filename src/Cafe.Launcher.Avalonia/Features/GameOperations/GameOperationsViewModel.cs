@@ -18,7 +18,7 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 
 public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJourneyHost, IGameOperationActivity, IDisposable
 {
-    private readonly IGameOperationJourney journey;
+    private readonly GameOperationJourney journey;
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
     private readonly DialogsViewModel dialogs;

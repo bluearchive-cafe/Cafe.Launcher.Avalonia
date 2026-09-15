@@ -16,7 +16,7 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
     /// binding, progress mapping, and thin command delegation — and drives
     /// refresh / log-viewer / minimize through the host interface.
     /// </summary>
-    internal sealed class GameOperationJourney : IGameOperationJourney
+    internal sealed class GameOperationJourney
 {
     /// <summary>Forwards installation running-state changes to the presentation host.</summary>
     public event Action? IsRunningChanged
