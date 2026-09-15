@@ -19,6 +19,8 @@
 > **同日下载侧跟进（用户追问「下载/修复/更新是否没有『游戏在跑』的闸门」，核实后按三条建议落地）**：闸门本就存在（`DownloadSession.PrepareDownloadPlanAsync`，安装/更新/修复/续传都过它），但有三处真缺口——本地配置不存在时判据为空而放行、只在计划阶段查一次、报法不点名。**立案 AUD-ARCH-009 并同日解决**：①没有本地配置时退回远端配置声明的启动程序名；②进入写入之前（`RemoveFiles` / `InstallDownloadedFilesAsync` 之前）复查同一道闸门，失败即返回、`.tmp` 留在盘上可重试；③判法与报法各收一处（`FindRunningGameFailureAsync`、`GameProcessNames.DescribeForDisplay`），下载与卸载两个入口报出的进程名从此一致，下载文案改为点名。全量门禁复跑：Debug/Release 各 0 警告 0 错误 · 单元 1823 通过 / 0 失败（总 1824）· Headless 184 通过 / 0 失败 · 覆盖率行 87.01% / 分支 93.46%（slack +1.16pp / +0.76pp）；新增两条下载侧守卫均做变异验证（拆掉即红）。该修复即 `c38d6fa`。
 >
 > **同日 CI 对账复核（用户指令「Push」后顺带核对远端）**：推送 `cbda8b9..0f5993d` 成功（`build` 作业绿），但 `linux-unit-tests` 作业红——且 `gh run list` 显示它自落地起对五次 push 全红（`ee93482`/`1f428a3`/`7090aad`/`58398f4`/`90e918c`），四条失败与本窗口代码无关：两例是测试绑定了 Windows 的精确异常类型（`ShellLifecycleTests`，Linux 抛子类 `DirectoryNotFoundException`），两例是靠文件共享制造「删不掉的条目」而 POSIX 允许 unlink 已打开文件（`DirectoryTreeDeleterTests` 与 `GameUninstallServiceTests` 的 ADR-030 用例）。本轮新增的守卫用例在 Linux 上通过（1801 通过 / 4 失败 / 16 跳过）。结论：AUD-CI-001 的建议已落地但**那个作业一直红、且非 required**，保护没真的生效——立案 AUD-CI-005 并结案 CI-001；本轮开放计数改为 7 项 Low。
+>
+> **同日 CI 修复（用户指令「提交之后修复 ci 问题」）**：四处测试侧平台假设按 AUD-CI-005 的建议修掉（两例放宽为接受派生类型与 IO 家族类型名、两例按同族先例加 Windows 可见跳过），`d646523` 推送后 **`linux-unit-tests` 首次绿**（run 34967403211：1806 通过 / 0 失败 / 18 可见跳过，新增的 2 条门控与设计一致；`build` 侧单元 1823 / 跳过 1、Headless 184、覆盖率棘轮全绿）。CI-005 结案，开放计数回到 6 项 Low；残留一半（作业升为 required check）在规则集侧，只有仓库管理员能做，已记进 Recommended Priorities。
 
 ## Audit Metadata
 
@@ -38,8 +40,8 @@
 - Critical：0
 - High：0
 - Medium：0
-- Low：7 open（决策/设计轮门控：AUD-PERF-001、AUD-PERF-004、AUD-PERF-005 残留、AUD-SEC-001、AUD-SEC-002、AUD-ARCH-005；CI 对账复核新立案：AUD-CI-005）+ 4 accepted-risk（MAINT-002、SEC-004、SEC-006、ARCH-007）
-- 本窗口解决：14 项（8 项随上轮修复落地：ARCH-002/003、TEST-002/003/004、PERF-002/003、MAINT-002；6 项随同日修复轮：ARCH-004/006、CI-001、PERF-006、SEC-003/005）；第二修复轮再解决 6 项（TEST-005/006/007、MAINT-003/004、PERF-007）并将 SEC-006 结案为 accepted-risk；CI 对账轮新立案 3 项（AUD-CI-002/003/004）并同日全部解决；功能轮（2026-09-15）新立案 1 项（ARCH-008）并于同日跟进按建议 (a) 解决（`cbda8b9`）；随后按用户追问再立案 AUD-ARCH-009（下载/安装/修复闸门的三处缺口）并同日解决（`c38d6fa`）；CI 对账复核结案 AUD-CI-001（其建议已落地为 `build.yml` 的 push/PR linux 作业）、新立案 AUD-CI-005（该作业连续红且非 required）
+- Low：6 open（决策/设计轮门控：AUD-PERF-001、AUD-PERF-004、AUD-PERF-005 残留、AUD-SEC-001、AUD-SEC-002、AUD-ARCH-005）+ 4 accepted-risk（MAINT-002、SEC-004、SEC-006、ARCH-007）
+- 本窗口解决：14 项（8 项随上轮修复落地：ARCH-002/003、TEST-002/003/004、PERF-002/003、MAINT-002；6 项随同日修复轮：ARCH-004/006、CI-001、PERF-006、SEC-003/005）；第二修复轮再解决 6 项（TEST-005/006/007、MAINT-003/004、PERF-007）并将 SEC-006 结案为 accepted-risk；CI 对账轮新立案 3 项（AUD-CI-002/003/004）并同日全部解决；功能轮（2026-09-15）新立案 1 项（ARCH-008）并于同日跟进按建议 (a) 解决（`cbda8b9`）；随后按用户追问再立案 AUD-ARCH-009（下载/安装/修复闸门的三处缺口）并同日解决（`c38d6fa`）；CI 对账复核结案 AUD-CI-001（其建议已落地为 `build.yml` 的 push/PR linux 作业）、新立案 AUD-CI-005（该作业连续红且非 required）并于同日修复、作业首绿（`d646523`）
 
 **一处上轮审计证据更正（重要）**：上轮安全节声明「签名 Authorization 头绝不跟随重定向转发」——复核证实该头经 `RemoteRequestOptions.ConfigureRequest` 钩子在**每一重定向跳重发**（含跨主机），已立案为 AUD-SEC-003（Low）。这推翻了上轮对 DNS 重绑定残余风险影响边界的部分论证。
 
@@ -236,16 +238,19 @@
 - **建议**：把现有 job 体（无 RID 还原、无渲染依赖）复用为 `build.yml` 中 push/PR 路径的 ubuntu 单元测试 step；可选为规则集加 required status checks。**建议验证**：Verified（job 体已存在，纯编排改动）。
 - **建议已落地（2026-09-15 CI 对账复核）**：`build.yml:96-130` 现有 `linux-unit-tests` 作业，由 `push` 与 `pull_request` 触发（`build.yml:3-6`），注释即引 AUD-CI-001 说明「平台分支必须在随变更执行的 CI 上运行」。原「触发仅 dispatch + weekly」的残留自此消除，本项结案为 resolved。**但新作业自落地起一直红**——保护并未真的生效，转为 AUD-CI-005。
 
-### AUD-CI-005 — `linux-unit-tests` 作业在 main 上连续 5 次红、且非 required：平台假设回归既没被门拦住，也没人看见【CI 对账复核新立案】
+### AUD-CI-005 — `linux-unit-tests` 作业在 main 上连续 6 次红、且非 required：平台假设回归既没被门拦住，也没人看见【CI 对账复核新立案；同日修复，作业首绿】
 
 - 类别：CI / 平台假设
-- 严重度：Low｜置信度：95（GitHub Actions 运行历史直接核实，失败清单与错误文本逐条读取）｜状态：open｜处置：Fix（测试侧）+ 可选把 job 升为 required check
+- 严重度：Low｜置信度：95（GitHub Actions 运行历史直接核实，失败清单与错误文本逐条读取）｜状态：**resolved**（`d646523`；测试侧四条已修、作业首绿。规则集侧「升为 required check」仍为残留）｜处置：Fix（已执行）
 - **证据**：`build.yml` 的 `linux-unit-tests` 作业对 `90e918c` / `58398f4` / `7090aad` / `1f428a3` / `ee93482` 五次 push 全部 failure（`gh run list`）；本次推送的 `cbda8b9`＋`0f5993d` 同样 failure（run 34961576610：`build` 绿、`linux-unit-tests` 红，单元 1801 通过 / 4 失败 / 16 可见跳过）。四条失败与本窗口代码无关，分两类：
   - **两例测试依赖 Windows 的精确异常类型**（`ShellLifecycleTests.cs:190-207`、`:142-158`）：`CreateBlockedSettingsPath()` 用同名**文件**占位使目录创建失败，Windows 上抛的正是 `IOException`，Linux 上抛的是子类 `DirectoryNotFoundException`——`Assert.ThrowsAsync<IOException>` 要求精确类型、`Assert.Contains("IOException", toast.Message)` 断言的是类型名，于是同一场景在两平台结论相反。
   - **两例依赖 Windows 文件共享语义**（`DirectoryTreeDeleterTests.Delete_WhenAnEntryCannotBeDeleted_...`、`GameUninstallServiceTests.UninstallAsync_WhenThoroughCleanupCannotRemoveSomething_...`）：用例靠 `FileShare.Read/None` 打开句柄来制造「删不掉的条目」，而 POSIX 允许 unlink 已打开的文件——Linux 上删除照常成功，残留清单为空，断言「按路径回报」自然失败。前者带来的 ADR-030 语义未被跨平台钉住。
 - **影响**：`main` 上的平台假设回归既不能阻塞合并（PROJECT_CONVENTIONS §9：规则集无 required status checks），又在事实上无人查看（连续 5 次红未被任何一轮复核发现——本报告上一轮的「CI 对账」只验证了另一份 `linux-tests.yml` 的首绿）。产品以实验性形态分发 Linux/macOS 包，真正的平台回归会与这些噪声混在一起。四例本身都是测试缺陷（三个平台上的产品行为未见异常：`DirectoryTreeDeleter` 删掉了它该删的、设置保存失败也确实被报出）。
 - **建议**：(a) `ShellLifecycleTests` 两例改为接受派生类型（`Assert.ThrowsAnyAsync<IOException>`；toast 断言改为不绑类型名的可辨识内容，例如被挡路径的父目录名）；(b) `DirectoryTreeDeleterTests` 那条按仓库既有先例加 `Assert.SkipUnless(OperatingSystem.IsWindows(), …)`（同一文件族里的 `UninstallAsync_WhenManifestFileIsLocked_...` 已经这么做），或改用跨平台的阻塞手段（父目录只读在 POSIX 上能挡住 unlink，Windows 上不能，故这条仍以门控为宜）；`GameUninstallServiceTests` 那条同理。(c) 可选：把 `linux-unit-tests` 加进 required status checks，让这类回归真的挡住合并。**建议验证**：Verified（失败清单、错误文本、平台语义逐条核实）。
 - **注意**：修的是测试而非产品——不要为了让用例在 Linux 上过而弱化 ADR-030 的残留回报语义，也不要改动 `DirectoryTreeDeleter` 的删除行为。
+- **解决**（`d646523`，2026-09-15 CI 对账轮）：(a) `ShellLifecycleTests` 两例的 `Assert.ThrowsAsync<IOException>` 改为 `ThrowsAnyAsync`（接受子类），toast 断言改为接受 IO 家族的任一类型名（新增 `MentionsIoFailure` 辅助），并在 `CreateBlockedSettingsPath` 的文档注释里写明「抛出的精确类型随平台而变，不要绑死」；(b) 两条删除残留用例按同族先例加 `Assert.SkipUnless(OperatingSystem.IsWindows(), …)`，注释写明为何不能用「跨平台阻塞手段」代替（父目录只读在 POSIX 能挡 unlink、在 Windows 不能）。**未改**其他「锁住以制造失败」的用例（`ResourcePanelServiceTests`、`LogExportServiceTests`、`LocalInstallationStateStoreTests`、`SetupWizardViewModelTests`）：.NET 在 Unix 上用 flock 模拟文件共享，那些断言在两平台都成立（CI 从未红过），改动属无据重构。
+- **验证**：推送 `d646523` 后 run **34967403211** 两个作业全绿——`linux-unit-tests` **1806 通过 / 0 失败 / 18 可见跳过（总 1824）**（16 条既有 + 新增 2 条门控，与设计一致），`build` 侧单元 1823 / 跳过 1、Headless 184、覆盖率棘轮均绿。这是该作业自落地以来的首次绿跑。
+- **残留**：作业虽绿仍非 required check（PROJECT_CONVENTIONS §9：`main` 规则集无 required_status_checks）——平台回归依旧不会阻塞合并，只是现在能被看见。要真正挡住需要仓库规则集侧的改动（只有仓库管理员能做）。
 
 ### AUD-ARCH-007 — 代理指纹变化可在下载批次进行中 Dispose 其底层 handler【新立案】
 
@@ -510,7 +515,7 @@ CI 对账轮（2026-09-14 晚）顺带落地的守卫：
 1.（决策后执行）AUD-PERF-001 见证摊销：先以新增的 Verbose 跳过计数日志基准实测，再决定是否引入。
 2.（专属设计轮）AUD-PERF-004 横幅位图备忘：Plausible 级补救，需先设计轮播位图的生命周期（复用/失效/陈旧释放）再动手。
 3.（随下次触碰）AUD-PERF-005 二次解码调查；AUD-ARCH-005 若再动 Shell 按声明表收敛 Wire/Unwire。
-4.（建议尽快）AUD-CI-005：修四条测试侧平台假设（两例放宽异常类型断言、两例按先例加 Windows 可见跳过），并考虑把 `linux-unit-tests` 加进 required status checks——否则下一条平台回归仍会与这四例噪声混在一起。
+4.（用户侧，可选）AUD-CI-005 残留：把 `linux-unit-tests` 加进 required status checks——作业现已首绿，加进去才能真正挡住平台回归，只有仓库管理员能改。
 5.（维持接受）AUD-SEC-001/002 与已书面化的 SEC-004/SEC-006/ARCH-007：除非威胁模型变化。
 
 ## Audit Method and Limitations
