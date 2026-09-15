@@ -89,7 +89,21 @@ public sealed class PercentProgressGateTests
 
         var ordered = delivered.OrderBy(value => value).ToArray();
         Assert.Equal(ordered.Length, ordered.Distinct().Count());
-        Assert.Equal(0, ordered[0]);
+        // 不假设最小项是 0：谁先赢下 CAS 由线程竞速决定，若首个赢家已经是 1 桶，落后的 0 会被
+        // 单调判据压掉（那个 400 文件去重用例的「首项是 0」断言就是这样在 CI 上偶发红的）。
+        Assert.All(ordered, value => Assert.InRange(value, 0, 100));
         Assert.Equal(100, ordered[^1]);
+    }
+
+    [Fact]
+    public void ShouldDeliverMonotonic_WhenTheZeroBucketLagsBehind_SuppressesIt()
+    {
+        // 0 桶没有特权：并行校验里 completed 1、2 都算 0、3 就算 1，前者被抢占一次就排在后者之后。
+        // 阶段开头的 0 由阶段切换的显式投递负责，不靠这条路径。
+        var gate = new PercentProgressGate();
+        _ = gate.ShouldDeliverMonotonic(1);
+
+        Assert.False(gate.ShouldDeliverMonotonic(0));
+        Assert.True(gate.ShouldDeliverMonotonic(2));
     }
 }

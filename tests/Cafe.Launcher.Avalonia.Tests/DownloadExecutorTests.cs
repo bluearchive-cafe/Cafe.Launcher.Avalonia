@@ -277,6 +277,12 @@ public sealed class DownloadExecutorTests : IDisposable
     {
         // 契约（AUD-PERF-007）：校验阶段逐文件回调经百分比门控去重——400 个文件
         // 挤在 101 个百分比桶里，消费方只应收到桶变化的那几次，而非每文件一次。
+        //
+        // 回调来自 ≤8 个并行 worker，所以收集必须自己加锁：List<T> 不是线程安全的，并发 Add
+        // 会重复或丢条目。断言也只取与到达顺序无关的性质——单调判据决定「投递什么」，但「谁先
+        // Add」由线程竞速决定，且落后于更高桶的 0 会被单调判据丢掉（completed 1、2 都算 0，
+        // 3 就算 1；前者若排在后者之后到达即被压掉），因此不能假设首项是 0
+        // （2026-09-15 深夜 CI 复查：断言 delivered[0] == 0 在 CI 上偶发红，实到 1）。
         const int fileCount = 400;
         var crc64 = new Crc64Service();
         var manifestFiles = new List<ManifestFile>();
@@ -294,22 +300,31 @@ public sealed class DownloadExecutorTests : IDisposable
         }
 
         var delivered = new List<int>();
+        var deliveredLock = new object();
         var failed = await CreateExecutor().InstallDownloadedFilesAsync(
             tempDir,
             manifestFiles,
             [],
             new Dictionary<string, string>(),
             new Dictionary<string, PlannedFileHash>(),
-            delivered.Add,
+            percent =>
+            {
+                lock (deliveredLock)
+                {
+                    delivered.Add(percent);
+                }
+            },
             CancellationToken.None);
 
         Assert.Empty(failed);
         Assert.True(
             delivered.Count < fileCount,
             $"progress delivered {delivered.Count} times; percent gate did not collapse repeats.");
-        Assert.Equal(0, delivered[0]);
-        Assert.Equal(100, delivered[^1]);
+        // 单调判据下每个桶至多投递一次——这条与到达顺序无关，是门控本身的不变量。
         Assert.Equal(delivered.Count, delivered.Distinct().Count());
+        Assert.All(delivered, percent => Assert.InRange(percent, 0, 100));
+        // 100 是最大桶，不会被单调判据压掉（completed 399、400 都算 100，谁先赢下它都投得出去）。
+        Assert.Contains(100, delivered);
     }
 
     [Fact]
