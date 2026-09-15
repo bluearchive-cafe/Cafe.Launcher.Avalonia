@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
@@ -845,8 +846,10 @@ public sealed class InstallationOperationStateTests : IDisposable
 
         public GameLaunchExitInfo? LastExit => null;
 
-        public Task<bool> IsGameRunningAsync(string exeName, CancellationToken cancellationToken = default) =>
-            Task.FromResult(true);
+        public Task<IReadOnlyList<string>> FindRunningGameProcessesAsync(
+            IReadOnlyList<string> knownExeNames,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<string>>(["BlueArchive"]);
     }
 
     private sealed class FailingProcessLauncher : IProcessLauncher

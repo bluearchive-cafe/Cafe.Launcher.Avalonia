@@ -238,6 +238,62 @@ public sealed class GameUninstallServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task UninstallAsync_WhenOnlyTheAntiCheatHostIsStillRunning_RefusesAndNamesIt()
+    {
+        // 闸门要认整族进程，而不是只认配置里那个宿主（ADR-032）：反作弊宿主的名字不是宿主名，
+        // 只认宿主就会放行，接着整棵删除撞在仍被占用的目录上——实机就是这么留下残留的。
+        var gamePath = CreateGameDirectory();
+        await WriteGameFileAsync(gamePath, "data/managed.bin");
+        var store = await CreateCommittedStoreAsync(gamePath, "data/managed.bin");
+        var localGame = await store.ReadAsync(gamePath);
+        var service = CreateService(
+            store,
+            processTracker: new GameProcessTracker(
+                (_, _) => Task.FromResult<IReadOnlyList<string>>(["xldr_BlueArchiveOnline_JP"])));
+
+        var result = await service.UninstallAsync(Snapshot(localGame), UninstallScope.ThoroughCleanup, _ => { });
+
+        Assert.False(result.Success);
+        Assert.Equal(GameOperationErrorCode.GameRunning, result.ErrorCode);
+        Assert.Contains("xldr_BlueArchiveOnline_JP", result.Message, StringComparison.Ordinal);
+        Assert.True(Directory.Exists(gamePath));
+    }
+
+    [Fact]
+    public async Task UninstallAsync_WhenTheGameStartedAfterThePrecheck_RefusesAndDeletesNothing()
+    {
+        // 确认框打开期间游戏可能被外部起来（桌面快捷方式、Steam）：预检答的是「点卸载那一刻」，
+        // 而那个答复在用户读完文案再点确认时可能已经过期。删除前必须复查同一道闸门
+        // （AUD-ARCH-008）。用例把两次探测分开：预检时没在跑，删除时在跑。
+        var gamePath = CreateGameDirectory();
+        var managedPath = await WriteGameFileAsync(gamePath, "data/managed.bin");
+        var store = await CreateCommittedStoreAsync(gamePath, "data/managed.bin");
+        var localGame = await store.ReadAsync(gamePath);
+        var gameStarted = false;
+        var shortcut = new TestGameShortcutService();
+        var service = CreateService(
+            store,
+            shortcutService: shortcut,
+            processTracker: new GameProcessTracker(
+                (_, _) => Task.FromResult<IReadOnlyList<string>>(gameStarted ? ["BlueArchive"] : [])));
+
+        var validation = await service.ValidateAsync(gamePath);
+        Assert.True(validation.Success);
+
+        gameStarted = true;
+        var result = await service.UninstallAsync(Snapshot(localGame), UninstallScope.ThoroughCleanup, _ => { });
+
+        Assert.False(result.Success);
+        Assert.Equal(GameOperationErrorCode.GameRunning, result.ErrorCode);
+        Assert.Contains("BlueArchive.exe", result.Message, StringComparison.Ordinal);
+        // 拒绝发生在删任何东西之前：清单文件、安装状态、整个目录与桌面快捷方式都原样。
+        Assert.True(File.Exists(managedPath));
+        Assert.True(Directory.Exists(gamePath));
+        Assert.Equal(LocalInstallationStateKind.Valid, (await store.ReadAsync(gamePath)).Kind);
+        Assert.Equal(0, shortcut.DeleteCallCount);
+    }
+
+    [Fact]
     public async Task MeasureFootprintAsync_WhenTargetsExist_ReportsBothTreeSizes()
     {
         var gamePath = CreateGameDirectory();
@@ -357,7 +413,8 @@ public sealed class GameUninstallServiceTests : IDisposable
     private GameUninstallService CreateService(
         LocalInstallationStateStore store,
         LocalizationService? localizer = null,
-        TestGameShortcutService? shortcutService = null)
+        TestGameShortcutService? shortcutService = null,
+        IGameProcessTracker? processTracker = null)
     {
         // 检查点存储绑定到测试临时目录，避免卸载成功路径清除真实用户目录中的续传标记。
         return new GameUninstallService(
@@ -366,7 +423,7 @@ public sealed class GameUninstallServiceTests : IDisposable
             localizer ?? new LocalizationService(),
             new GameInstallationPath(),
             new DownloadCheckpointStore( TestDataRoot.ForDirectory(Path.Combine(tempDir)) ),
-            new GameProcessTracker(),
+            processTracker ?? new GameProcessTracker(),
             shortcutService ?? new TestGameShortcutService());
     }
 

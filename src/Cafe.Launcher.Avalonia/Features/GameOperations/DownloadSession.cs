@@ -227,8 +227,10 @@ internal sealed class DownloadSession : IDisposable
         Directory.CreateDirectory(gamePath);
 
         var localGame = await localInstallationStateStore.ReadAsync(gamePath, activeToken).ConfigureAwait(false);
-        if (localGame.GameConfig?.Name is { Length: > 0 }
-            && await gameProcessTracker.IsGameRunningAsync($"{localGame.GameConfig.Name}.exe", activeToken))
+        if (localGame.GameConfig?.Name is { Length: > 0 } hostExeName
+            && (await gameProcessTracker.FindRunningGameProcessesAsync(
+                GameProcessNames.FromLaunchConfiguration(hostExeName, localGame.GameConfig.Params),
+                activeToken).ConfigureAwait(false)).Count > 0)
         {
             return DownloadPlanPreparation.Stop(Failed(
                 localizer.T(LocalizationKeys.GameExecutableRunning),

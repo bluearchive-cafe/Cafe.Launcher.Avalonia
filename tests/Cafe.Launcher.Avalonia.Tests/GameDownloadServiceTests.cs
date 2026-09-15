@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Globalization;
 using System.Net;
 using System.Net.Http;
@@ -1645,8 +1646,16 @@ public sealed class GameDownloadServiceTests : IDisposable
             diagnostics,
             new LocalizationService(),
             new GameInstallationPath(),
-            new GameProcessTracker(), TestDataRoot.ForFile(downloadStateFilePath) );
+            CreateTrackerReportingNoGameRunning(), TestDataRoot.ForFile(downloadStateFilePath) );
     }
+
+    /// <summary>
+    /// 名字扫描固定为「没有游戏在跑」：这些用例要验的是下载与提交本身，而真实扫描会读到
+    /// 开发机上正在运行的游戏，让用例随环境变色（实测过一次：机器上开着 BlueArchive.exe，
+    /// 提交路径的用例全部撞上「游戏正在运行」闸门）。
+    /// </summary>
+    private static GameProcessTracker CreateTrackerReportingNoGameRunning() =>
+        new((_, _) => Task.FromResult<IReadOnlyList<string>>([]));
 
     /// <summary>
     /// 用共享替身模拟「整文件写入临时目录并上报进度」的下载器（原

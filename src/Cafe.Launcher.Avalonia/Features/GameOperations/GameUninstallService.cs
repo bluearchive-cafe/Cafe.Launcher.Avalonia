@@ -21,6 +21,11 @@ public sealed class GameUninstallService
     /// </summary>
     private const int MaxReportedLeftovers = 5;
 
+    /// <summary>多个正在运行的游戏进程名之间的分隔符；语言中立，不依赖某一语的顿号。</summary>
+    private const string RunningProcessSeparator = " / ";
+
+    private static string WithExecutableExtension(string processName) => $"{processName}.exe";
+
     private readonly LocalInstallationStateStore localInstallationStateStore;
     private readonly GameInstallationPath installationPath;
     private readonly LocalDiagnostics diagnostics;
@@ -88,6 +93,18 @@ public sealed class GameUninstallService
 
             var localGame = await localInstallationStateStore.ReadAsync(gamePath, cancellationToken).ConfigureAwait(false);
             var files = localGame.Manifest?.Files ?? [];
+
+            // 预检答的是「点卸载那一刻」的进程状态，而确认框可以一直开着（尺寸统计、用户离开），
+            // 这期间从桌面快捷方式或 Steam 把游戏起来，预检的答复就已经过期。删除之前复查同一道
+            // 闸门（ADR-032 的「只在整族退出后放行」），命中即按既有消息报出——与路径守卫的执行
+            // 边界复查（EnsureCleanupTargetsAreDeletable）同构，且失败经 ConfirmUninstallAsync 的
+            // ShowOperationResult 落地，不是静默（ADR-027）。
+            var gameRunning = await FindRunningGameFailureAsync(localGame.GameConfig, cancellationToken)
+                .ConfigureAwait(false);
+            if (gameRunning is not null)
+            {
+                return gameRunning;
+            }
 
             // 彻底清除的守卫先行（ADR-030）：拒绝就什么都不删，别留下半删状态。
             if (scope == UninstallScope.ThoroughCleanup)
@@ -366,9 +383,13 @@ public sealed class GameUninstallService
             return DownloadSession.Failed(localizer.F(LocalizationKeys.GameConfigMetadataMissing, GamePaths.GameConfigFileName), GameOperationErrorCode.Uninstall);
         }
 
-        if (await gameProcessTracker.IsGameRunningAsync($"{localGame.GameConfig.Name}.exe", cancellationToken))
+        // 卸载会删掉整个安装目录，因此闸门要认整族进程，而不是只认配置里那个宿主：反作弊宿主
+        // （名字是宿主名的同族变体）在强杀游戏后仍会占着目录，只认宿主就会放行（ADR-032）。
+        var gameRunning = await FindRunningGameFailureAsync(localGame.GameConfig, cancellationToken)
+            .ConfigureAwait(false);
+        if (gameRunning is not null)
         {
-            return DownloadSession.Failed(localizer.F(LocalizationKeys.GameIsRunning, $"{localGame.GameConfig.Name}.exe"), GameOperationErrorCode.GameRunning);
+            return gameRunning;
         }
 
         return new GameOperationResult
@@ -377,6 +398,37 @@ public sealed class GameUninstallService
             Message = localizer.F(LocalizationKeys.ReadyToUninstall, localGame.Manifest?.Files.Count ?? 0),
             AffectedFileCount = (localGame.Manifest?.Files.Count ?? 0) + 2
         };
+    }
+
+    /// <summary>
+    /// 「游戏是不是在跑」这道闸门（ADR-032）的唯一实现：预检与删除前的复查共用它，判据与报出的
+    /// 名字因此不会分叉。返回 null 表示放行；配置里没有可用名字时不拦（无可识别的判据，闸门
+    /// 不做无根据的拒绝）。
+    /// </summary>
+    private async Task<GameOperationResult?> FindRunningGameFailureAsync(
+        GameLauncherConfig? gameConfig,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(gameConfig?.Name))
+        {
+            return null;
+        }
+
+        var runningProcesses = await gameProcessTracker.FindRunningGameProcessesAsync(
+            GameProcessNames.FromLaunchConfiguration(gameConfig.Name, gameConfig.Params),
+            cancellationToken).ConfigureAwait(false);
+        if (runningProcesses.Count == 0)
+        {
+            return null;
+        }
+
+        // 报出实际在跑的那几个（去掉扩展名的进程名补回 .exe，与启动器别处称呼可执行文件一致），
+        // 而不是只报配置里那个宿主：只认宿主时错的正是这一句。
+        return DownloadSession.Failed(
+            localizer.F(
+                LocalizationKeys.GameIsRunning,
+                string.Join(RunningProcessSeparator, runningProcesses.Select(WithExecutableExtension))),
+            GameOperationErrorCode.GameRunning);
     }
 
     private static bool IsSystemProtectPath(string path)
