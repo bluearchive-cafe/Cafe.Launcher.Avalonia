@@ -115,6 +115,9 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
     /// <summary>Raised when a successful launch should minimize the launcher (driven by the journey host).</summary>
     public event Action? MinimizeRequested;
 
+    /// <summary>Raised when a successful launch should exit the launcher (driven by the journey host).</summary>
+    public event Action? ExitRequested;
+
     bool IGameOperationJourneyHost.IsBusy => shell.IsBusy;
 
     LauncherStatusSnapshot? IGameOperationJourneyHost.CurrentSnapshot => currentSnapshot;
@@ -232,6 +235,8 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
         AsyncEvent.InvokeSequentiallyAsync(OpenLogViewerRequested);
 
     void IGameOperationJourneyHost.RequestMinimize() => MinimizeRequested?.Invoke();
+
+    void IGameOperationJourneyHost.RequestExit() => ExitRequested?.Invoke();
 
     [RelayCommand]
     private async Task StartGameAsync()

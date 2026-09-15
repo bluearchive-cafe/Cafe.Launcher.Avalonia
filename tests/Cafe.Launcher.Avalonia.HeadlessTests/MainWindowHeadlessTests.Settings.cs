@@ -232,6 +232,23 @@ public sealed partial class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
+    public async Task SaveSettings_FromSettingsPage_ReportsSuccessInsteadOfThreadFailure()
+    {
+        using var context = CreateContext();
+        OpenSettings(context);
+
+        context.ViewModel.Settings.Editor.Current.Language = LauncherLanguages.Japanese;
+        await context.ViewModel.Settings.SaveSettingsCommand.ExecuteAsync(null);
+        Dispatcher.UIThread.RunJobs();
+
+        // 保存失败会被 SettingsViewModel 收成错误提示，而落盘在抛异常之前就已经成功，
+        // 所以「只有一条成功提示」才是这次保存真的走完的凭据：收口在非 UI 线程抛出时，
+        // 成功提示根本发不出来。
+        var toast = Assert.Single(context.ViewModel.Toasts.ActiveToasts);
+        Assert.Equal(ToastSeverity.Success, toast.Severity);
+    }
+
+    [AvaloniaFact]
     public void SettingsWorkspace_WhenEachExactCodeIsSelected_ShowsOnlyItsSection()
     {
         using var context = CreateContext();

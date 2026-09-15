@@ -22,6 +22,12 @@
                                 ItemsSource="{Binding Settings.Options.CloseBehavior}"
                                 SelectedValue="{Binding Settings.Editor.Current.CloseBehavior, Mode=TwoWay}"/>
 
+        <controls:SettingSelect Title="{Binding Shell.I18n[launchBehavior]}"
+                                Description="{Binding Shell.I18n[launchBehaviorDescription]}"
+                                AutomationName="{Binding Shell.I18n[launchBehavior]}"
+                                ItemsSource="{Binding Settings.Options.AfterLaunchBehavior}"
+                                SelectedValue="{Binding Settings.Editor.Current.AfterLaunchBehavior, Mode=TwoWay}"/>
+
         <controls:SettingSelect Title="{Binding Shell.I18n[motionMode]}"
                                 Description="{Binding Shell.I18n[motionModeDescription]}"
                                 AutomationName="{Binding Shell.I18n[motionMode]}"

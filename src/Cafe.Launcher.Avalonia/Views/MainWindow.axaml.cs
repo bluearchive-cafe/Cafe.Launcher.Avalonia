@@ -146,6 +146,7 @@ public partial class MainWindow : Window
         UnconfigureViewModel();
         configuredViewModel = viewModel;
         viewModel.Operations.MinimizeRequested += MinimizeToTray;
+        viewModel.Operations.ExitRequested += ExitAfterLaunch;
         viewModel.WindowChrome.MinimizeRequested += MinimizeWindow;
         viewModel.WindowChrome.CloseRequested += PerformClose;
         viewModel.WindowChrome.RestoreRequested += ShowWindow;
@@ -272,6 +273,7 @@ public partial class MainWindow : Window
 
         viewModel.Background.PreviousWallpaperFadingOut -= FadeOutPreviousWallpaper;
         viewModel.Operations.MinimizeRequested -= MinimizeToTray;
+        viewModel.Operations.ExitRequested -= ExitAfterLaunch;
         viewModel.WindowChrome.MinimizeRequested -= MinimizeWindow;
         viewModel.WindowChrome.CloseRequested -= PerformClose;
         viewModel.WindowChrome.RestoreRequested -= ShowWindow;
@@ -320,6 +322,25 @@ public partial class MainWindow : Window
         }
 
         WindowState = WindowState.Minimized;
+    }
+
+    /// <summary>
+    /// Game-launch exit path, taken when the user picks "exit the launcher" as the post-launch
+    /// behavior. Deliberately does not go through <see cref="PerformClose"/>: that path routes the
+    /// close through the saved CloseBehavior, so a user who keeps "minimize to tray" there would
+    /// turn this setting into a silent no-op.
+    /// </summary>
+    private void ExitAfterLaunch() => RequestShutdown();
+
+    private void RequestShutdown()
+    {
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            desktop.TryShutdown();
+            return;
+        }
+
+        Close();
     }
 
     public void SetSystemTray(SystemTrayService trayService)
@@ -456,13 +477,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-        {
-            desktop.TryShutdown();
-            return;
-        }
-
-        Close();
+        RequestShutdown();
     }
 
     public void ShowWindow()

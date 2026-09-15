@@ -34,6 +34,13 @@ public static class CloseBehaviors
     public const string Exit = "exit";
 }
 
+public static class AfterLaunchBehaviors
+{
+    public const string KeepOpen = "keepOpen";
+    public const string Minimize = "minimize";
+    public const string Exit = "exit";
+}
+
 public static class LauncherLanguages
 {
     public const string Auto = "auto";

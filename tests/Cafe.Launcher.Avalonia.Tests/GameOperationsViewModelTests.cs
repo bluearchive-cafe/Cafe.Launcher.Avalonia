@@ -175,6 +175,34 @@ public sealed class GameOperationsViewModelTests
     }
 
     [Fact]
+    public async Task StartGameCommand_WhenAfterLaunchBehaviorExits_RaisesExitInsteadOfMinimize()
+    {
+        // The host interface carries both window verbs, so this pins that the journey's choice
+        // reaches the right one through the view model's events.
+        var context = CreateContext();
+        var minimized = false;
+        var exited = false;
+        context.Backend.LaunchResult = new GameLaunchResult
+        {
+            Success = true,
+            Message = "started",
+            Validation = new ManifestValidationResult
+            {
+                Success = true,
+                Message = "validated"
+            }
+        };
+        context.ViewModel.ApplySnapshot(ReadySnapshot(afterLaunchBehavior: AfterLaunchBehaviors.Exit));
+        context.ViewModel.MinimizeRequested += () => minimized = true;
+        context.ViewModel.ExitRequested += () => exited = true;
+
+        await context.ViewModel.StartGameCommand.ExecuteAsync(null);
+
+        Assert.True(exited);
+        Assert.False(minimized);
+    }
+
+    [Fact]
     public async Task StartGameCommand_WhenLaunchVerificationFindsDamagedFiles_OffersRepairThatRunsOnConfirm()
     {
         var context = CreateContext();
@@ -1303,11 +1331,14 @@ public sealed class GameOperationsViewModelTests
         return new TestContext(viewModel, backend, shortcutService, shell, dialogs, toastService, localizer);
     }
 
-    private static LauncherStatusSnapshot ReadySnapshot(string gamePath = "") =>
+    private static LauncherStatusSnapshot ReadySnapshot(
+        string gamePath = "",
+        string afterLaunchBehavior = AfterLaunchBehaviors.Minimize) =>
         new()
         {
             RuntimeState = LauncherRuntimeState.Ready,
-            LocalGame = new LocalInstallationState { GamePath = gamePath }
+            LocalGame = new LocalInstallationState { GamePath = gamePath },
+            Settings = new LauncherSettings { AfterLaunchBehavior = afterLaunchBehavior }
         };
 
     private sealed record TestContext(

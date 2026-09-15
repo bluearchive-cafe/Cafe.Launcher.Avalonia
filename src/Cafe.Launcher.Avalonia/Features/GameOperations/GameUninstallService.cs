@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -14,6 +15,12 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 
 public sealed class GameUninstallService
 {
+    /// <summary>
+    /// 完成文案里最多点名几个删不掉的项目。实际只会是个位数（反作弊留下的目录项），
+    /// 上限只是防止病态情况把提示撑爆；完整清单始终留在日志里。
+    /// </summary>
+    private const int MaxReportedLeftovers = 5;
+
     private readonly LocalInstallationStateStore localInstallationStateStore;
     private readonly GameInstallationPath installationPath;
     private readonly LocalDiagnostics diagnostics;
@@ -149,9 +156,11 @@ public sealed class GameUninstallService
                 // Best-effort cleanup of the resume marker; preserve uninstall success.
             }
 
+            var leftovers = new List<string>();
             if (scope == UninstallScope.ThoroughCleanup)
             {
-                await DeleteThoroughCleanupTargetsAsync(gamePath, cancellationToken).ConfigureAwait(false);
+                leftovers.AddRange(
+                    await DeleteThoroughCleanupTargetsAsync(gamePath, cancellationToken).ConfigureAwait(false));
             }
 
             // 快捷方式只在卸载成功之后删（ADR-030）：中途失败会提前返回，快捷方式因此保留下来。
@@ -160,7 +169,7 @@ public sealed class GameUninstallService
 
             await diagnostics.MessageAsync(
                 "GameUninstall",
-                $"Game uninstall completed.{Environment.NewLine}path: {gamePath}{Environment.NewLine}files: {files.Count}",
+                $"Game uninstall completed.{Environment.NewLine}path: {gamePath}{Environment.NewLine}files: {files.Count}{Environment.NewLine}leftovers: {leftovers.Count}",
                 cancellationToken).ConfigureAwait(false);
 
             // 自定义到受管子树之外的 Prefix 不会被删（ADR-030）：成功文案必须说出来，
@@ -168,12 +177,22 @@ public sealed class GameUninstallService
             var keptPrefixPath = scope == UninstallScope.ThoroughCleanup
                 ? ResolveKeptPrefixPath(snapshot)
                 : null;
+            if (leftovers.Count > 0)
+            {
+                // 删不掉的项目不改变「游戏已卸载」这件事（manifest 与两个状态文件都已删除），
+                // 但它们确实留在盘上，必须点名——否则「彻底清除」一样说得比做得多。
+                await diagnostics.WarningAsync(
+                    "GameUninstall",
+                    $"Thorough cleanup left {leftovers.Count} item(s) behind:"
+                    + Environment.NewLine
+                    + string.Join(Environment.NewLine, leftovers),
+                    cancellationToken).ConfigureAwait(false);
+            }
+
             return new GameOperationResult
             {
                 Success = true,
-                Message = keptPrefixPath is null
-                    ? localizer.T(LocalizationKeys.UninstallCompleted)
-                    : localizer.F(LocalizationKeys.UninstallCompletedKeptPrefix, keptPrefixPath),
+                Message = BuildCompletionMessage(leftovers, keptPrefixPath),
                 AffectedFileCount = files.Count + 2
             };
         }
@@ -231,21 +250,29 @@ public sealed class GameUninstallService
             GameCompatibilityPaths.GetDefaultCompatibilityRoot());
     }
 
-    private async Task DeleteThoroughCleanupTargetsAsync(string gamePath, CancellationToken cancellationToken)
+    /// <summary>
+    /// 删掉彻底清除的两个目标，返回删不掉的项目。Windows 上确实存在用户态删不掉的目录项
+    /// （Blue Archive 反作弊留下的 <c>Xigncode:{GUID}</c>：列得出来、打不开、无 8.3 短名），
+    /// 所以这里的结果由调用方如实上报，而不是当成调用方的错误抛出去。
+    /// </summary>
+    private async Task<IReadOnlyList<string>> DeleteThoroughCleanupTargetsAsync(
+        string gamePath,
+        CancellationToken cancellationToken)
     {
         var (gameRoot, managedPrefixRoot) = ResolveCleanupTargets(gamePath);
         var compatibilityRoot = GameCompatibilityPaths.GetDefaultCompatibilityRoot();
 
         // 整棵删除走线程池：安装目录与 Prefix 都可能有上万条目，不能占着 UI 线程。
-        await Task.Run(
+        return await Task.Run(
             () =>
             {
                 try
                 {
                     // 先过游戏目录自己的守卫（顺带拒绝 reparse point 根），再删它本身。
                     var safeGameRoot = GamePathValidator.GetSafePath(gameRoot, ".");
-                    DirectoryTreeDeleter.Delete(safeGameRoot, gameRoot);
-                    DirectoryTreeDeleter.Delete(managedPrefixRoot, compatibilityRoot);
+                    var leftover = new List<string>(DirectoryTreeDeleter.Delete(safeGameRoot, gameRoot));
+                    leftover.AddRange(DirectoryTreeDeleter.Delete(managedPrefixRoot, compatibilityRoot));
+                    return (IReadOnlyList<string>)leftover;
                 }
                 catch (InvalidOperationException exception)
                 {
@@ -255,6 +282,24 @@ public sealed class GameUninstallService
                 }
             },
             cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// 彻底清除的完成文案（ADR-030）：删不掉的项目优先报出来——它是实际缺口，比
+    /// 「Prefix 主动保留」这条设计内说明更该占用户的一眼。保留的 Prefix 仍记进日志。
+    /// </summary>
+    private string BuildCompletionMessage(IReadOnlyList<string> leftovers, string? keptPrefixPath)
+    {
+        if (leftovers.Count > 0)
+        {
+            return localizer.F(
+                LocalizationKeys.UninstallCompletedWithLeftovers,
+                string.Join(Environment.NewLine, leftovers.Take(MaxReportedLeftovers)));
+        }
+
+        return keptPrefixPath is null
+            ? localizer.T(LocalizationKeys.UninstallCompleted)
+            : localizer.F(LocalizationKeys.UninstallCompletedKeptPrefix, keptPrefixPath);
     }
 
     /// <summary>

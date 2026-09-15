@@ -72,29 +72,33 @@ public static class DirectoryTreeDeleter
     /// <summary>
     /// 递归删除 <paramref name="path"/>；目标不存在时视为已完成。
     /// </summary>
+    /// <returns>
+    /// 删不掉的项目（目录项，或因此留下来的目录本身）；为空表示整棵树已经删干净。
+    /// 调用方要据此如实上报：安装目录能被删到什么程度不由调用方决定。
+    /// </returns>
     /// <exception cref="InvalidOperationException">见 <see cref="EnsureDeletable"/>。</exception>
-    /// <exception cref="IOException">删除过程中被占用、无权限等——由调用方定性。</exception>
-    public static void Delete(string path, string allowedRoot)
+    public static IReadOnlyList<string> Delete(string path, string allowedRoot)
     {
         EnsureDeletable(path, allowedRoot);
 
         var fullPath = Path.GetFullPath(path);
         if (!Directory.Exists(fullPath))
         {
-            return;
+            return [];
         }
 
-        DeleteLevelByLevel(fullPath);
+        return DeleteLevelByLevel(fullPath);
     }
 
     /// <summary>
     /// 自顶向下收集、自底向上删除：每个目录被收集时它的子项已开始处理，因此逆序删除时
     /// 目录必为空。链接在被遇到时就按链接删掉，父目录随即可能变空。
     /// </summary>
-    private static void DeleteLevelByLevel(string root)
+    private static List<string> DeleteLevelByLevel(string root)
     {
         var pending = new Stack<string>();
         var directories = new List<string>();
+        var blocked = new List<string>();
         pending.Push(root);
 
         while (pending.Count > 0)
@@ -102,43 +106,98 @@ public static class DirectoryTreeDeleter
             var current = pending.Pop();
             directories.Add(current);
 
-            foreach (var entry in Directory.EnumerateFileSystemEntries(current))
+            foreach (var entry in EnumerateEntries(current, blocked))
             {
-                var attributes = File.GetAttributes(entry);
-                if ((attributes & FileAttributes.ReparsePoint) != 0)
-                {
-                    // 删目录项本身，不跟随进目标。
-                    if ((attributes & FileAttributes.Directory) != 0)
-                    {
-                        Directory.Delete(entry, recursive: false);
-                    }
-                    else
-                    {
-                        File.Delete(entry);
-                    }
-
-                    continue;
-                }
-
-                if ((attributes & FileAttributes.Directory) != 0)
-                {
-                    pending.Push(entry);
-                    continue;
-                }
-
-                // 只读文件删不掉：与 Directory.Delete(recursive: true) 一样先摘掉该属性。
-                if ((attributes & FileAttributes.ReadOnly) != 0)
-                {
-                    File.SetAttributes(entry, attributes & ~FileAttributes.ReadOnly);
-                }
-
-                File.Delete(entry);
+                DeleteEntry(entry, pending, blocked);
             }
         }
 
         for (var index = directories.Count - 1; index >= 0; index--)
         {
-            Directory.Delete(directories[index], recursive: false);
+            try
+            {
+                Directory.Delete(directories[index], recursive: false);
+            }
+            catch (Exception exception) when (IsFileSystemFailure(exception))
+            {
+                blocked.Add(directories[index]);
+            }
+        }
+
+        // 单点失败不中断整棵树的删除：能删的都删完，卡住的按路径回给调用方，而不是抛父目录
+        // 那句无信息量的「目录不是空的」——Windows 上有删不掉的项目并不是调用方做错了什么。
+        return blocked;
+    }
+
+    /// <summary>
+    /// 枚举目录项。名字在 Win32 命名空间里非法的条目（游戏反作弊留下的 <c>Xigncode:{GUID}</c>
+    /// 之类）列得出来却打不开，枚举本身也可能因此失败——这类失败记下来继续，不中断整棵树。
+    /// </summary>
+    private static string[] EnumerateEntries(string directory, List<string> blocked)
+    {
+        try
+        {
+            return Directory.GetFileSystemEntries(directory);
+        }
+        catch (Exception exception) when (IsFileSystemFailure(exception))
+        {
+            blocked.Add(directory);
+            return [];
         }
     }
+
+    private static void DeleteEntry(string entry, Stack<string> pending, List<string> blocked)
+    {
+        FileAttributes attributes;
+        try
+        {
+            attributes = File.GetAttributes(entry);
+        }
+        catch (Exception exception) when (IsFileSystemFailure(exception) || exception is ArgumentException)
+        {
+            // ArgumentException 也在这里：路径里带 ':' 的条目会被 .NET 直接判为非法字符，
+            // 连 <c>\\?\</c> 前缀都到不了 Win32。它是真实存在的目录项，不是调用方的参数错误。
+            blocked.Add(entry);
+            return;
+        }
+
+        try
+        {
+            if ((attributes & FileAttributes.ReparsePoint) != 0)
+            {
+                // 删目录项本身，不跟随进目标。
+                if ((attributes & FileAttributes.Directory) != 0)
+                {
+                    Directory.Delete(entry, recursive: false);
+                }
+                else
+                {
+                    File.Delete(entry);
+                }
+
+                return;
+            }
+
+            if ((attributes & FileAttributes.Directory) != 0)
+            {
+                pending.Push(entry);
+                return;
+            }
+
+            // 只读文件删不掉：与 Directory.Delete(recursive: true) 一样先摘掉该属性。
+            if ((attributes & FileAttributes.ReadOnly) != 0)
+            {
+                File.SetAttributes(entry, attributes & ~FileAttributes.ReadOnly);
+            }
+
+            File.Delete(entry);
+        }
+        catch (Exception exception) when (IsFileSystemFailure(exception))
+        {
+            blocked.Add(entry);
+        }
+    }
+
+    private static bool IsFileSystemFailure(Exception exception) =>
+        exception is IOException or UnauthorizedAccessException;
 }

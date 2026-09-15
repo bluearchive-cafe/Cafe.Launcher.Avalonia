@@ -122,6 +122,44 @@ public sealed class DirectoryTreeDeleterTests : IDisposable
         Assert.False(Directory.Exists(root));
     }
 
+    [Fact]
+    public void Delete_WhenAnEntryCannotBeDeleted_RemovesTheRestAndReportsTheBlocker()
+    {
+        // 实测（2026-09-15 实机回归）：Blue Archive 的反作弊在 StreamingAssets 下留下
+        // "Xigncode:{GUID}" 目录项——列得出来、打不开、无 8.3 短名，用户态没有任何 API 删得掉。
+        // 从前一处卡住就中断整棵树的删除，报出来的还只是父目录那句无信息量的「目录不是空的」，
+        // 安装目录整条留在盘上。现在要删完能删的，并把真正卡住的路径交回调用方如实上报。
+        var root = Path.Combine(tempDir, "root-blocked");
+        var keepDir = Path.Combine(root, "keep");
+        var blockedDir = Path.Combine(root, "blocked");
+        Directory.CreateDirectory(keepDir);
+        Directory.CreateDirectory(blockedDir);
+        File.WriteAllText(Path.Combine(keepDir, "gone.txt"), "x");
+        var lockedPath = Path.Combine(blockedDir, "locked.bin");
+        File.WriteAllText(lockedPath, "x");
+
+        using var handle = new FileStream(lockedPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+        var blocked = DirectoryTreeDeleter.Delete(root, root);
+
+        Assert.Contains(lockedPath, blocked);
+        Assert.False(Directory.Exists(keepDir));
+        Assert.True(File.Exists(lockedPath));
+    }
+
+    [Fact]
+    public void Delete_WhenEverythingCanBeDeleted_ReportsNothingBlocked()
+    {
+        var root = Path.Combine(tempDir, "root-clean");
+        Directory.CreateDirectory(Path.Combine(root, "nested"));
+        File.WriteAllText(Path.Combine(root, "nested", "file.txt"), "x");
+
+        var blocked = DirectoryTreeDeleter.Delete(root, root);
+
+        Assert.Empty(blocked);
+        Assert.False(Directory.Exists(root));
+    }
+
     [Theory]
     [InlineData("child")]
     [InlineData("child/grandchild")]

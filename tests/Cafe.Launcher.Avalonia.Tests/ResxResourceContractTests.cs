@@ -35,8 +35,11 @@ public sealed class ResxResourceContractTests
     [Fact]
     public void Resx_NeutralContainsAllExpectedKeys()
     {
-        // 555 → 557（ADR-030 的两个新串）→ 558（对话框先弹、尺寸后到，见 ADR-030 的第 4 条决策）。
-        Assert.Equal(558, ResxValues["en"].Count);
+        // 555 → 557（ADR-030 的两个新串）→ 558（对话框先弹、尺寸后到，见 ADR-030 的第 4 条决策）
+        // → 563（「游戏启动后的行为」的设置行、说明、保持窗口选项与两条启动提示，见 ADR-031；
+        // 最小化与退出两个选项复用既有串，不新增同义 key）
+        // → 564（彻底清除完成但有个别项目删不掉时的结果串，见 ADR-030）。
+        Assert.Equal(564, ResxValues["en"].Count);
     }
 
     [Fact]

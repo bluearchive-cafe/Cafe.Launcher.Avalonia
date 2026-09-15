@@ -215,6 +215,29 @@ public sealed class GameUninstallServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task UninstallAsync_WhenThoroughCleanupCannotRemoveSomething_StillSucceedsAndNamesIt()
+    {
+        // 实机回归（2026-09-15）：反作弊留下的目录项在用户态删不掉。删不掉的项目不该把一次
+        // 已经完成的卸载报成「卸载失败」——manifest 与两个状态文件都已删除，游戏确实卸载了——
+        // 但留下来的东西必须点名，否则「彻底清除」说得比做得多（ADR-030）。
+        var gamePath = CreateGameDirectory();
+        await WriteGameFileAsync(gamePath, "data/managed.bin");
+        var lockedPath = Path.Combine(gamePath, "data", "locked.bin");
+        await File.WriteAllTextAsync(lockedPath, "x");
+        var store = await CreateCommittedStoreAsync(gamePath, "data/managed.bin");
+        var localGame = await store.ReadAsync(gamePath);
+        var service = CreateService(store);
+
+        using var handle = new FileStream(lockedPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+        var result = await service.UninstallAsync(Snapshot(localGame), UninstallScope.ThoroughCleanup, _ => { });
+
+        Assert.True(result.Success);
+        Assert.Contains(lockedPath, result.Message, StringComparison.Ordinal);
+        Assert.True(File.Exists(lockedPath));
+    }
+
+    [Fact]
     public async Task MeasureFootprintAsync_WhenTargetsExist_ReportsBothTreeSizes()
     {
         var gamePath = CreateGameDirectory();

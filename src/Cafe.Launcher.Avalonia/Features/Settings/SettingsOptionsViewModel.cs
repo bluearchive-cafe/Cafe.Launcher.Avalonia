@@ -115,6 +115,13 @@ public sealed class SettingsOptionsViewModel
         new() { Code = CloseBehaviors.Exit }
     ];
 
+    public ObservableCollection<SettingOption> AfterLaunchBehavior { get; } =
+    [
+        new() { Code = AfterLaunchBehaviors.KeepOpen },
+        new() { Code = AfterLaunchBehaviors.Minimize },
+        new() { Code = AfterLaunchBehaviors.Exit }
+    ];
+
     public IReadOnlyList<LanguageOption> Language { get; }
 
     public ObservableCollection<SettingOption> UpdateChannel { get; } =
@@ -250,6 +257,16 @@ public sealed class SettingsOptionsViewModel
         RefreshOptions(CloseBehavior, code => code switch
         {
             CloseBehaviors.Exit => localizer.T(LocalizationKeys.CloseBehaviorExit),
+            _ => localizer.T(LocalizationKeys.CloseBehaviorMinimize)
+        });
+
+        // "Minimize to tray" and "exit the launcher" name the same two actions the close-behavior
+        // row does, so they reuse its copy instead of introducing near-synonyms that could drift
+        // apart across the four locales.
+        RefreshOptions(AfterLaunchBehavior, code => code switch
+        {
+            AfterLaunchBehaviors.KeepOpen => localizer.T(LocalizationKeys.LaunchBehaviorKeepOpen),
+            AfterLaunchBehaviors.Exit => localizer.T(LocalizationKeys.ExitLauncher),
             _ => localizer.T(LocalizationKeys.CloseBehaviorMinimize)
         });
 

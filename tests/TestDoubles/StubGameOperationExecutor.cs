@@ -78,6 +78,9 @@ internal sealed class StubGameOperationExecutor : IGameOperationExecutor
 
     public GameOperationResult UninstallResult { get; set; } = new();
 
+    /// <summary>设置后 Uninstall 同步抛出该异常，用于验证旅程的抛出路径。</summary>
+    public Exception? UninstallException { get; set; }
+
     /// <summary>设置后 Uninstall 返回其 Task，用于把操作挂起在卸载阶段。</summary>
     public TaskCompletionSource<GameOperationResult>? UninstallCompletion { get; set; }
 
@@ -173,6 +176,11 @@ internal sealed class StubGameOperationExecutor : IGameOperationExecutor
     {
         UninstallCallCount++;
         LastUninstallScope = scope;
+        if (UninstallException is not null)
+        {
+            throw UninstallException;
+        }
+
         return UninstallCompletion?.Task ?? Task.FromResult(UninstallResult);
     }
 

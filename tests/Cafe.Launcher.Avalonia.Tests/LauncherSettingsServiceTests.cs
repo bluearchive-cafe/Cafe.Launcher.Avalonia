@@ -98,6 +98,28 @@ public sealed class LauncherSettingsServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task AfterLaunchBehavior_RoundTripsAndInvalidValueFallsBackToMinimize()
+    {
+        var service = new LauncherSettingsService( TestDataRoot.ForFile(settingsPath) );
+        await service.SaveAsync(new LauncherSettings { AfterLaunchBehavior = AfterLaunchBehaviors.KeepOpen });
+        Assert.Equal(AfterLaunchBehaviors.KeepOpen, (await service.ReadAsync()).AfterLaunchBehavior);
+
+        await File.WriteAllTextAsync(settingsPath, """{"afterLaunchBehavior":"invalid"}""");
+        Assert.Equal(AfterLaunchBehaviors.Minimize, (await service.ReadAsync()).AfterLaunchBehavior);
+    }
+
+    [Fact]
+    public async Task AfterLaunchBehavior_WhenMissingFromOldJson_DefaultsToMinimize()
+    {
+        // Existing installs have no such field, and minimizing is what the launcher did before the
+        // setting existed — an upgrade must not silently change post-launch behavior.
+        var service = new LauncherSettingsService( TestDataRoot.ForFile(settingsPath) );
+        await File.WriteAllTextAsync(settingsPath, """{"language":"ja"}""");
+
+        Assert.Equal(AfterLaunchBehaviors.Minimize, (await service.ReadAsync()).AfterLaunchBehavior);
+    }
+
+    [Fact]
     public async Task MotionMode_RoundTripsAndInvalidValueFallsBackToSystem()
     {
         var service = new LauncherSettingsService( TestDataRoot.ForFile(settingsPath) );
@@ -359,6 +381,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
             "launchCheckMode",
             "proxyMode",
             "closeBehavior",
+            "afterLaunchBehavior",
             "language",
             "themeMode",
             "motionMode",
