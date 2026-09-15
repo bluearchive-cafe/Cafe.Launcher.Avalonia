@@ -11,13 +11,19 @@ using Cafe.Launcher.Avalonia.Services;
 
 namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 
-/// <summary>Terminal outcome of a desktop shortcut creation attempt.</summary>
+/// <summary>Terminal outcome of a desktop shortcut creation or removal attempt.</summary>
 public enum GameShortcutStatus
 {
     Created,
     UnsupportedPlatform,
     GameNotResolved,
-    Failed
+    Failed,
+
+    /// <summary>桌面快捷方式已删除（卸载的一部分，ADR-030）。</summary>
+    Deleted,
+
+    /// <summary>桌面本来就没有这个快捷方式——不算失败。</summary>
+    NotFound
 }
 
 /// <summary>Result of a desktop shortcut creation attempt, with failure detail when applicable.</summary>
@@ -28,6 +34,12 @@ public interface IGameShortcutService
 {
     /// <summary>Creates a desktop shortcut that starts the installed game.</summary>
     Task<GameShortcutResult> CreateDesktopShortcutAsync(LauncherStatusSnapshot snapshot);
+
+    /// <summary>
+    /// 删除桌面快捷方式。卸载的一部分（标准路径与彻底清除都删，ADR-030）：
+    /// 命名按创建侧同一套计算重算，因此不依赖游戏文件是否还在；找不到不算失败。
+    /// </summary>
+    Task<GameShortcutResult> DeleteDesktopShortcutAsync(LauncherStatusSnapshot snapshot);
 
     /// <summary>Opens the installed game folder in the platform file manager.</summary>
     bool TryOpenGameFolder(LauncherStatusSnapshot snapshot);
@@ -87,6 +99,51 @@ public sealed class GameShortcutService : IGameShortcutService
             ? Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory)
             : null;
         return CreateShortcutInDirectoryAsync(snapshot, desktopDirectory);
+    }
+
+    public Task<GameShortcutResult> DeleteDesktopShortcutAsync(LauncherStatusSnapshot snapshot)
+    {
+        var desktopDirectory = isWindowsPlatform() || isLinuxPlatform()
+            ? Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory)
+            : null;
+        return Task.FromResult(DeleteShortcutInDirectory(snapshot, desktopDirectory));
+    }
+
+    /// <summary>
+    /// 删除桌面快捷方式（ADR-030）。与创建共用 <see cref="ResolveShortcutFileName"/>，
+    /// 因此名字来源一致；这里刻意不解析启动目标——游戏文件可能已经先一步删掉了，
+    /// 而显示名不需要目标存在。
+    /// </summary>
+    internal GameShortcutResult DeleteShortcutInDirectory(
+        LauncherStatusSnapshot snapshot,
+        string? targetDirectory)
+    {
+        if ((!isWindowsPlatform() && !isLinuxPlatform()) || string.IsNullOrWhiteSpace(targetDirectory))
+        {
+            return new GameShortcutResult(GameShortcutStatus.UnsupportedPlatform);
+        }
+
+        var executablePath = Path.Combine(
+            snapshot.LocalGame.GamePath ?? "",
+            GamePaths.GameExecutableFileName);
+        var shortcutFileName = ResolveShortcutFileName(executablePath);
+        var extension = isLinuxPlatform() ? ".desktop" : ".lnk";
+        var shortcutPath = Path.Combine(targetDirectory, $"{shortcutFileName}{extension}");
+
+        if (!File.Exists(shortcutPath))
+        {
+            return new GameShortcutResult(GameShortcutStatus.NotFound, shortcutPath);
+        }
+
+        try
+        {
+            File.Delete(shortcutPath);
+            return new GameShortcutResult(GameShortcutStatus.Deleted, shortcutPath);
+        }
+        catch (Exception exception)
+        {
+            return new GameShortcutResult(GameShortcutStatus.Failed, exception.Message);
+        }
     }
 
     internal async Task<GameShortcutResult> CreateShortcutInDirectoryAsync(

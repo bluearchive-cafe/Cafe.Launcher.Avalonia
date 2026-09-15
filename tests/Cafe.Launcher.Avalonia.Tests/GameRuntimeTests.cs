@@ -437,8 +437,9 @@ public sealed class GameRuntimeTests
         public bool HasLiveTrackedProcess => false;
         public GameLaunchExitInfo? LastExit => null;
 
-        public Task<bool> IsGameRunningAsync(
-            string exeName,
-            CancellationToken cancellationToken = default) => Task.FromResult(false);
+        public Task<IReadOnlyList<string>> FindRunningGameProcessesAsync(
+            IReadOnlyList<string> knownExeNames,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<string>>([]);
     }
 }

@@ -146,7 +146,7 @@ public sealed class ShellLifecycleTests : IDisposable
         var fixture = CreateLifecycle(core, settingsService: settingsService);
         fixture.Dialogs.IsSetupWizardVisible = true;
 
-        await Assert.ThrowsAsync<IOException>(() =>
+        await Assert.ThrowsAnyAsync<IOException>(() =>
             fixture.Lifecycle
                 .HandleSetupWizardCompletedAsync(CreateWizardSettings())
                 .WaitAsync(TimeSpan.FromSeconds(2)));
@@ -166,7 +166,7 @@ public sealed class ShellLifecycleTests : IDisposable
         var core = new ScriptedCoreService(CreateSnapshot());
         var fixture = CreateLifecycle(core, settingsService: settingsService);
         fixture.Dialogs.IsSetupWizardVisible = true;
-        await Assert.ThrowsAsync<IOException>(() =>
+        await Assert.ThrowsAnyAsync<IOException>(() =>
             fixture.Lifecycle
                 .HandleSetupWizardCompletedAsync(CreateWizardSettings())
                 .WaitAsync(TimeSpan.FromSeconds(2)));
@@ -198,7 +198,13 @@ public sealed class ShellLifecycleTests : IDisposable
 
         var errorToasts = raisedToasts.Where(t => t.Severity == ToastSeverity.Error).ToList();
         var errorToast = Assert.Single(errorToasts);
-        Assert.Contains("IOException", errorToast.Message, StringComparison.Ordinal);
+        // 提示里的异常类型名随平台而变：同一个「同名文件挡住了 settings 目录」的布局，Windows 上
+        // 抛的是 IOException，Linux 上抛的是子类 DirectoryNotFoundException（ErrorHandlingService
+        // 把类型名写进提示，所以断言绑死其中一个会让同一场景在两平台结论相反——CI 实测红过）。
+        // 这里只要求提示点名了 IO 家族的失败。
+        Assert.True(
+            MentionsIoFailure(errorToast.Message),
+            $"错误提示应点名一个 IO 异常：{errorToast.Message}");
         Assert.False(fixture.ResourcePanel.IsResourcePanelVisible);
         // 内存设置快照不得被半套用:保存失败时下载源必须保持预置的 Official
         // (对 Editor 的 Cafe 改写位于 SaveAsync 之后,失败时不可达)。
@@ -304,7 +310,22 @@ public sealed class ShellLifecycleTests : IDisposable
         }
     }
 
-    /// <summary>用同名文件占位,让 Directory.CreateDirectory 抛出 IOException,模拟持久化层不可写。</summary>
+    /// <summary>
+    /// 提示是否点名了 IO 家族的失败：<c>ErrorHandlingService.FormatToastMessage</c> 会把异常类型名
+    /// 写进提示，而同一场景的精确类型随平台而变（见 <see cref="CreateBlockedSettingsPath"/>），
+    /// 所以这里接受该家族的任一名字而不是某一个。
+    /// </summary>
+    private static bool MentionsIoFailure(string message) =>
+        message.Contains("IOException", StringComparison.Ordinal)
+        || message.Contains("DirectoryNotFoundException", StringComparison.Ordinal)
+        || message.Contains("UnauthorizedAccessException", StringComparison.Ordinal);
+
+    /// <summary>
+    /// 用同名文件占位,让 Directory.CreateDirectory 抛出 IOException,模拟持久化层不可写。
+    /// 抛出的**具体类型随平台而变**：Windows 上正是 <see cref="IOException"/>，Linux 上是它的子类
+    /// <see cref="DirectoryNotFoundException"/>——所以断言用 <c>ThrowsAnyAsync</c>/IO 家族判断，
+    /// 不要绑死类型名（CI 实测过同一场景两平台结论相反）。
+    /// </summary>
     private string CreateBlockedSettingsPath()
     {
         var blocker = Path.Combine(tempDir, "settings-blocked");

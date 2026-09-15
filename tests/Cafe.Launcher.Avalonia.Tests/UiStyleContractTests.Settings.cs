@@ -17,6 +17,7 @@ public sealed partial class UiStyleContractTests
             [
                 "Settings.Editor.Current.Language",
                 "Settings.Editor.Current.CloseBehavior",
+                "Settings.Editor.Current.AfterLaunchBehavior",
                 "Settings.Editor.Current.MotionMode"
             ],
             ["SettingsGameSection"] =

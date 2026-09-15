@@ -82,9 +82,7 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
             if (launchResult.Success)
             {
                 await diagnostics.MessageAsync("GameLaunch", launchDiagnostic);
-                toastService.ShowSuccess(localizer.T(LocalizationKeys.GameLaunchedMinimized));
-                await delayAsync(TimeSpan.FromMilliseconds(600));
-                host.RequestMinimize();
+                await ApplyAfterLaunchBehaviorAsync(snapshot.Settings.AfterLaunchBehavior);
             }
             else
             {
@@ -117,6 +115,33 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
         finally
         {
             host.SetBusy(false);
+        }
+    }
+
+    /// <summary>
+    /// Applies the user's post-launch preference. Minimizing to tray is the shipped behavior, so an
+    /// unrecognized value falls back to it — normalization already rejects unknown codes, and the
+    /// default arm only covers a snapshot built in code rather than read from disk.
+    /// </summary>
+    private async Task ApplyAfterLaunchBehaviorAsync(string behavior)
+    {
+        switch (behavior)
+        {
+            case AfterLaunchBehaviors.KeepOpen:
+                toastService.ShowSuccess(localizer.T(LocalizationKeys.GameLaunched));
+                break;
+            case AfterLaunchBehaviors.Exit:
+                // The window is about to disappear, so the toast gets one short beat to be read
+                // before the process goes away — the same beat the minimize path gives itself.
+                toastService.ShowSuccess(localizer.T(LocalizationKeys.GameLaunchedExiting));
+                await delayAsync(TimeSpan.FromMilliseconds(600));
+                host.RequestExit();
+                break;
+            default:
+                toastService.ShowSuccess(localizer.T(LocalizationKeys.GameLaunchedMinimized));
+                await delayAsync(TimeSpan.FromMilliseconds(600));
+                host.RequestMinimize();
+                break;
         }
     }
 
@@ -286,8 +311,14 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
         return null;
     }
 
+    /// <summary>
+    /// 彻底清除会删除的两个目录的实测大小（ADR-030），供确认框展示；与删除目标同源。
+    /// </summary>
+    public Task<UninstallFootprint> MeasureUninstallFootprintAsync(LauncherStatusSnapshot snapshot) =>
+        executor.MeasureUninstallFootprintAsync(snapshot);
+
     /// <summary>Runs a confirmed uninstall and refreshes launcher state afterward.</summary>
-    public async Task ConfirmUninstallAsync(LauncherStatusSnapshot snapshot)
+    public async Task ConfirmUninstallAsync(LauncherStatusSnapshot snapshot, UninstallScope scope)
     {
         // 用户已经在确认框上点过确认：此时状态若又变得不允许，必须给可见反馈，
         // 否则「点了没反应」（ADR-027）。
@@ -305,13 +336,17 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
             // Prepare for uninstall — the first progress update from the workflow
             // will set the correct icon. Call PrepareOperation to reset panel state.
             host.PrepareOperation();
-            var result = await executor.UninstallAsync(snapshot, host.ApplyProgress);
+            var result = await executor.UninstallAsync(snapshot, scope, host.ApplyProgress);
+            // 终态必须落地（ADR-030）：从前这里把结果丢掉，卸载失败时用户什么也看不到。
+            ShowOperationResult(result);
             await RequestRefresh(GameOperationsRefreshMode.Normal);
         }
         catch (Exception exception)
         {
+            // 终态必须落地（ADR-030）：抛出路径和返回失败路径一样要给用户看得见的结果。
+            // 只剩日志时，一次抛出的彻底清除会表现为「界面回到未安装、目录还在盘上」而无任何说明。
             await errorHandling.HandleErrorAsync("Game uninstall failed.", exception,
-                new ErrorHandlingOptions { ShowToast = false });
+                new ErrorHandlingOptions { ToastMessage = localizer.F(LocalizationKeys.UninstallFailed, exception.Message) });
         }
         finally
         {

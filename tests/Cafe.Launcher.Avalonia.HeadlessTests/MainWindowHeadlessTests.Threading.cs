@@ -151,8 +151,11 @@ public sealed partial class MainWindowHeadlessTests
             throw new NotSupportedException();
         public Task<GameOperationResult> ValidateUninstallAsync(string gamePath) =>
             throw new NotSupportedException();
+        public Task<UninstallFootprint> MeasureUninstallFootprintAsync(LauncherStatusSnapshot snapshot) =>
+            throw new NotSupportedException();
         public Task<GameOperationResult> UninstallAsync(
             LauncherStatusSnapshot snapshot,
+            UninstallScope scope,
             Action<GameOperationProgress> progress) =>
             throw new NotSupportedException();
 

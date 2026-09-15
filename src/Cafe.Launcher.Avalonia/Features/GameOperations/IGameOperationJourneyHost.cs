@@ -33,4 +33,6 @@ internal interface IGameOperationJourneyHost
     Task ShowLogViewerAsync();
     /// <summary>Asks the host to minimize the window after a successful game launch.</summary>
     void RequestMinimize();
+    /// <summary>Asks the host to exit the launcher after a successful game launch.</summary>
+    void RequestExit();
 }

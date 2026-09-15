@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Globalization;
 using System.Net;
 using System.Net.Http;
@@ -1487,6 +1488,79 @@ public sealed class GameDownloadServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task InstallOrUpdateAsync_WhenTheRemoteDeclaredExecutableIsRunning_RefusesBeforeWritingAnything()
+    {
+        // 全新安装时还没有 game-launcher-config.json，判据只能来自远端配置声明的启动程序名
+        // （ADR-032 的兜底）：否则安装会在游戏运行时直接放行。替身只在「请求的名字里含
+        // BlueArchive」时才报在跑——这同时证明名字确实是从远端配置推导出来的。
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        var statePath = Path.Combine(tempDir, "download_state.json");
+        var settingsService = new LauncherSettingsService( TestDataRoot.ForDirectory(Path.Combine(tempDir)) );
+        await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
+        var fileBytes = Encoding.UTF8.GetBytes("fresh-install");
+        var manifestFile = await CreateManifestFileAsync(tempDir, "data/file.bin", fileBytes);
+        var apiClient = CreateManifestApiClient(manifestFile);
+        using var service = CreateService(
+            apiClient,
+            settingsService,
+            statePath,
+            CreateWritingFileDownloadService(fileBytes),
+            processTracker: new GameProcessTracker((names, _) => Task.FromResult<IReadOnlyList<string>>(
+                names.Contains("BlueArchive") ? ["BlueArchive"] : [])));
+        var snapshot = CreateSnapshot(gamePath);
+        snapshot.RuntimeState = LauncherRuntimeState.NotInstalled;
+
+        var result = await service.InstallOrUpdateAsync(snapshot, _ => { });
+
+        Assert.False(result.Success);
+        Assert.Equal(GameOperationErrorCode.GameRunning, result.ErrorCode);
+        Assert.Contains("BlueArchive.exe", result.Message, StringComparison.Ordinal);
+        // 拒绝发生在计划阶段：游戏文件、本地清单与续传检查点一个都没写。
+        Assert.False(File.Exists(Path.Combine(gamePath, "data", "file.bin")));
+        Assert.False(File.Exists(Path.Combine(gamePath, "manifest.json")));
+        Assert.False(File.Exists(statePath));
+        Directory.Delete(tempDir, recursive: true);
+    }
+
+    [Fact]
+    public async Task InstallOrUpdateAsync_WhenTheGameStartsDuringTheDownload_RefusesBeforeTouchingTheGameDirectory()
+    {
+        // 计划阶段答的是「点下按钮那一刻」，而下载可能持续数分钟。下载阶段只写 .tmp，真正的
+        // 写入（先删、后搬移）在安装阶段，所以复查点落在进入写入之前（ADR-032）。替身让第二次
+        // 探测才报在跑，模拟「规划完之后用户从桌面快捷方式把游戏起来」。
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        var statePath = Path.Combine(tempDir, "download_state.json");
+        var settingsService = new LauncherSettingsService( TestDataRoot.ForDirectory(Path.Combine(tempDir)) );
+        await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
+        var fileBytes = Encoding.UTF8.GetBytes("boundary-check");
+        var manifestFile = await CreateManifestFileAsync(tempDir, "data/file.bin", fileBytes);
+        var apiClient = CreateManifestApiClient(manifestFile);
+        var probeCalls = 0;
+        using var service = CreateService(
+            apiClient,
+            settingsService,
+            statePath,
+            CreateWritingFileDownloadService(fileBytes),
+            processTracker: new GameProcessTracker((_, _) => Task.FromResult<IReadOnlyList<string>>(
+                ++probeCalls > 1 ? ["BlueArchive"] : [])));
+        var snapshot = CreateSnapshot(gamePath);
+        snapshot.RuntimeState = LauncherRuntimeState.NotInstalled;
+
+        var result = await service.InstallOrUpdateAsync(snapshot, _ => { });
+
+        Assert.False(result.Success);
+        Assert.Equal(GameOperationErrorCode.GameRunning, result.ErrorCode);
+        Assert.Contains("BlueArchive.exe", result.Message, StringComparison.Ordinal);
+        // 游戏目录里什么都没被替换：目标文件未落地，而下载好的 .tmp 与检查点都留着可续传
+        // （失败结果不是用户停止，不应丢弃检查点）。
+        Assert.False(File.Exists(Path.Combine(gamePath, "data", "file.bin")));
+        // 已经下好的暂存文件留在盘上：用户关掉游戏后重试会按已有字节继续（检查点按既有终局
+        // 语义在失败出口丢弃，所以这里不断言它——续传材料的断言落在 .tmp 上）。
+        Assert.True(File.Exists(Path.Combine(gamePath, "data", "file.bin.tmp")), $"probeCalls={probeCalls}");
+        Directory.Delete(tempDir, recursive: true);
+    }
+
+    [Fact]
     public async Task ResumePersistedAsync_WhenStateDoesNotMatchCurrentVersion_ClearsDownloadState()
     {
         var statePath = Path.Combine(tempDir, "download_state.json");
@@ -1626,7 +1700,8 @@ public sealed class GameDownloadServiceTests : IDisposable
         string downloadStateFilePath,
         IFileDownloadService? fileDownloadService = null,
         DiskSpaceService? diskSpaceService = null,
-        LocalDiagnostics? diagnostics = null)
+        LocalDiagnostics? diagnostics = null,
+        GameProcessTracker? processTracker = null)
     {
         var localInstallationStateStore = new LocalInstallationStateStore();
         diagnostics ??= new LocalDiagnostics();
@@ -1645,8 +1720,16 @@ public sealed class GameDownloadServiceTests : IDisposable
             diagnostics,
             new LocalizationService(),
             new GameInstallationPath(),
-            new GameProcessTracker(), TestDataRoot.ForFile(downloadStateFilePath) );
+            processTracker ?? CreateTrackerReportingNoGameRunning(), TestDataRoot.ForFile(downloadStateFilePath) );
     }
+
+    /// <summary>
+    /// 名字扫描固定为「没有游戏在跑」：这些用例要验的是下载与提交本身，而真实扫描会读到
+    /// 开发机上正在运行的游戏，让用例随环境变色（实测过一次：机器上开着 BlueArchive.exe，
+    /// 提交路径的用例全部撞上「游戏正在运行」闸门）。
+    /// </summary>
+    private static GameProcessTracker CreateTrackerReportingNoGameRunning() =>
+        new((_, _) => Task.FromResult<IReadOnlyList<string>>([]));
 
     /// <summary>
     /// 用共享替身模拟「整文件写入临时目录并上报进度」的下载器（原

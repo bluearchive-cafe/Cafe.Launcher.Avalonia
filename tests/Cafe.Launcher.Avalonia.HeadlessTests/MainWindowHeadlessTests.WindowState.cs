@@ -426,6 +426,36 @@ public sealed partial class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
+    public void MainWindow_LaunchExit_WhenCloseBehaviorIsMinimize_ClosesInsteadOfHidingToTray()
+    {
+        // The launch-exit path must not route through the close path: with CloseBehavior left on
+        // "minimize to tray", going through PerformClose would turn "exit after launch" into a
+        // silent tray hide. Closed fires on a real close and not on a tray Hide, so it separates
+        // the two outcomes where IsVisible alone cannot.
+        using var context = CreateContext();
+        context.ViewModel.Settings.Editor.ApplySnapshot(new LauncherSettings
+        {
+            CloseBehavior = CloseBehaviors.Minimize
+        });
+        using var trayService = new SystemTrayService(
+            context.Window,
+            new LocalizationService(),
+            new TestTrayPlatform());
+        context.Window.SetSystemTray(trayService);
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var closed = false;
+        context.Window.Closed += (_, _) => closed = true;
+
+        ((IGameOperationJourneyHost)context.ViewModel.Operations).RequestExit();
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(closed);
+        Assert.False(context.Window.IsVisible);
+    }
+
+    [AvaloniaFact]
     public void MainWindow_TitleBarMinimize_WhenTrayIsConfigured_StaysOnTaskbar()
     {
         // The launch path hides to tray, but the title-bar minimize button still asks for a

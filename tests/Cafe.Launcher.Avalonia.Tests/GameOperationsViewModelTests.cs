@@ -1,6 +1,7 @@
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Features.SetupWizard;
+using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Testing;
@@ -171,6 +172,34 @@ public sealed class GameOperationsViewModelTests
         Assert.False(context.Shell.IsBusy);
         Assert.Equal("validated", context.Shell.LaunchCheckValueText);
         Assert.Contains(notifications, item => item.Severity == ToastSeverity.Success);
+    }
+
+    [Fact]
+    public async Task StartGameCommand_WhenAfterLaunchBehaviorExits_RaisesExitInsteadOfMinimize()
+    {
+        // The host interface carries both window verbs, so this pins that the journey's choice
+        // reaches the right one through the view model's events.
+        var context = CreateContext();
+        var minimized = false;
+        var exited = false;
+        context.Backend.LaunchResult = new GameLaunchResult
+        {
+            Success = true,
+            Message = "started",
+            Validation = new ManifestValidationResult
+            {
+                Success = true,
+                Message = "validated"
+            }
+        };
+        context.ViewModel.ApplySnapshot(ReadySnapshot(afterLaunchBehavior: AfterLaunchBehaviors.Exit));
+        context.ViewModel.MinimizeRequested += () => minimized = true;
+        context.ViewModel.ExitRequested += () => exited = true;
+
+        await context.ViewModel.StartGameCommand.ExecuteAsync(null);
+
+        Assert.True(exited);
+        Assert.False(minimized);
     }
 
     [Fact]
@@ -645,6 +674,65 @@ public sealed class GameOperationsViewModelTests
         context.Backend.IsDownloadRunning = false;
 
         Assert.Equal(1, notificationCount);
+    }
+
+    [Fact]
+    public async Task RequestUninstallCommand_WhenOpened_ResetsTheThoroughOptionAndShowsBothSizes()
+    {
+        // 破坏性选项不预置（ADR-030）：上一次勾过也要归零；标签里带两个目录的实测大小。
+        var context = CreateContext();
+        context.ViewModel.ApplySnapshot(ReadySnapshot("C:\\Game"));
+        context.Backend.ValidateUninstallResult = new GameOperationResult { Success = true, AffectedFileCount = 5 };
+        context.Backend.MeasureFootprintResult = new UninstallFootprint(1234567, 890);
+        context.ViewModel.IsThoroughUninstallSelected = true;
+
+        await context.ViewModel.RequestUninstallCommand.ExecuteAsync(null);
+
+        Assert.False(context.ViewModel.IsThoroughUninstallSelected);
+        Assert.Equal(1, context.Backend.MeasureFootprintCallCount);
+        Assert.Contains(FileSizeFormatter.Format(1234567), context.ViewModel.ThoroughUninstallOptionText, StringComparison.Ordinal);
+        Assert.Contains(FileSizeFormatter.Format(890), context.ViewModel.ThoroughUninstallOptionText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RequestUninstallCommand_WhenMeasurementIsStillRunning_ShowsTheDialogRightAway()
+    {
+        // 回归（ADR-030 第 4 条）：统计曾经跑在 Show 之前——实测 37k 文件的安装目录要 3.4 秒，
+        // 点击卸载在那期间「没反应」，关掉设置页之后对话框才冒出来。对话框必须先出现。
+        var context = CreateContext();
+        context.ViewModel.ApplySnapshot(ReadySnapshot("C:\\Game"));
+        context.Backend.ValidateUninstallResult = new GameOperationResult { Success = true, AffectedFileCount = 5 };
+        context.Backend.MeasureFootprintCompletion = new TaskCompletionSource<UninstallFootprint>();
+
+        var pending = context.ViewModel.RequestUninstallCommand.ExecuteAsync(null);
+
+        Assert.True(context.Dialogs.UninstallConfirm.IsVisible);
+        Assert.Equal(
+            context.Localizer.T("uninstallThoroughCleanupOptionPending"),
+            context.ViewModel.ThoroughUninstallOptionText);
+
+        context.Backend.MeasureFootprintCompletion.SetResult(new UninstallFootprint(1234567, 890));
+        await pending;
+
+        // 测量回来之后换成带数字的那句。
+        Assert.Contains(FileSizeFormatter.Format(1234567), context.ViewModel.ThoroughUninstallOptionText, StringComparison.Ordinal);
+        Assert.Contains(FileSizeFormatter.Format(890), context.ViewModel.ThoroughUninstallOptionText, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(false, UninstallScope.ManifestFilesOnly)]
+    [InlineData(true, UninstallScope.ThoroughCleanup)]
+    public async Task ConfirmUninstallAsync_WhenOptionIsToggled_ForwardsTheMatchingScope(
+        bool thoroughSelected,
+        UninstallScope expected)
+    {
+        var context = CreateContext();
+        context.ViewModel.ApplySnapshot(ReadySnapshot("C:\\Game"));
+        context.ViewModel.IsThoroughUninstallSelected = thoroughSelected;
+
+        await context.ViewModel.ConfirmUninstallAsync();
+
+        Assert.Equal(expected, context.Backend.LastUninstallScope);
     }
 
     [Fact]
@@ -1243,11 +1331,14 @@ public sealed class GameOperationsViewModelTests
         return new TestContext(viewModel, backend, shortcutService, shell, dialogs, toastService, localizer);
     }
 
-    private static LauncherStatusSnapshot ReadySnapshot(string gamePath = "") =>
+    private static LauncherStatusSnapshot ReadySnapshot(
+        string gamePath = "",
+        string afterLaunchBehavior = AfterLaunchBehaviors.Minimize) =>
         new()
         {
             RuntimeState = LauncherRuntimeState.Ready,
-            LocalGame = new LocalInstallationState { GamePath = gamePath }
+            LocalGame = new LocalInstallationState { GamePath = gamePath },
+            Settings = new LauncherSettings { AfterLaunchBehavior = afterLaunchBehavior }
         };
 
     private sealed record TestContext(

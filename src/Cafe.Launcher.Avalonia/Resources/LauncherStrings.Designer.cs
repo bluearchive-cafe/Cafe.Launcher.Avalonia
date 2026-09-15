@@ -398,6 +398,10 @@ internal static class LauncherStrings
 
     internal static string GameIsRunning => GetRequiredString("gameIsRunning");
 
+    internal static string GameLaunched => GetRequiredString("gameLaunched");
+
+    internal static string GameLaunchedExiting => GetRequiredString("gameLaunchedExiting");
+
     internal static string GameLaunchedMinimized => GetRequiredString("gameLaunchedMinimized");
 
     internal static string GameLaunchFailed => GetRequiredString("gameLaunchFailed");
@@ -505,6 +509,12 @@ internal static class LauncherStrings
     internal static string LanguageAuto => GetRequiredString("languageAuto");
 
     internal static string LanguageDescription => GetRequiredString("languageDescription");
+
+    internal static string LaunchBehavior => GetRequiredString("launchBehavior");
+
+    internal static string LaunchBehaviorDescription => GetRequiredString("launchBehaviorDescription");
+
+    internal static string LaunchBehaviorKeepOpen => GetRequiredString("launchBehaviorKeepOpen");
 
     internal static string LaunchCheck => GetRequiredString("launchCheck");
 
@@ -1096,11 +1106,19 @@ internal static class LauncherStrings
 
     internal static string UninstallCompleted => GetRequiredString("uninstallCompleted");
 
+    internal static string UninstallCompletedKeptPrefix => GetRequiredString("uninstallCompletedKeptPrefix");
+
+    internal static string UninstallCompletedWithLeftovers => GetRequiredString("uninstallCompletedWithLeftovers");
+
     internal static string UninstallConfirmText => GetRequiredString("uninstallConfirmText");
 
     internal static string UninstallFailed => GetRequiredString("uninstallFailed");
 
     internal static string Uninstalling => GetRequiredString("uninstalling");
+
+    internal static string UninstallThoroughCleanupOption => GetRequiredString("uninstallThoroughCleanupOption");
+
+    internal static string UninstallThoroughCleanupOptionPending => GetRequiredString("uninstallThoroughCleanupOptionPending");
 
     internal static string Unknown => GetRequiredString("unknown");
 

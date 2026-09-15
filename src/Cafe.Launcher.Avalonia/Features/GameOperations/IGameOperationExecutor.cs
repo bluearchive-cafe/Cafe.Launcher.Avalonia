@@ -47,9 +47,15 @@ internal interface IGameOperationExecutor
     /// <summary>Validates uninstall eligibility for the supplied game path.</summary>
     Task<GameOperationResult> ValidateUninstallAsync(string gamePath);
 
+    /// <summary>
+    /// 彻底清除会删除的两个目录的实测大小（ADR-030）。展示用；与删除共用目标计算。
+    /// </summary>
+    Task<UninstallFootprint> MeasureUninstallFootprintAsync(LauncherStatusSnapshot snapshot);
+
     /// <summary>Runs a confirmed uninstall for the supplied status snapshot.</summary>
     Task<GameOperationResult> UninstallAsync(
         LauncherStatusSnapshot snapshot,
+        UninstallScope scope,
         Action<GameOperationProgress> progress);
 
     /// <summary>Stops work with the named intent: user stop discards the persisted checkpoint, application exit keeps it for resume.</summary>

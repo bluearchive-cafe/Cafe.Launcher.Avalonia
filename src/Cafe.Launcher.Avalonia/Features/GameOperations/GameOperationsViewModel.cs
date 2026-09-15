@@ -83,6 +83,20 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
     [ObservableProperty]
     private bool isPaused;
 
+    /// <summary>
+    /// 卸载确认框里「彻底清除」的勾选状态（ADR-030）。每次打开确认框重置为 false——
+    /// 破坏性选项不预置，用户必须主动勾。
+    /// </summary>
+    [ObservableProperty]
+    private bool isThoroughUninstallSelected;
+
+    /// <summary>
+    /// 彻底清除选项的标签：安装目录与受管 Prefix 的实测大小（ADR-030）。
+    /// 空字符串时确认框整行折叠（其他确认框都不设它）。
+    /// </summary>
+    [ObservableProperty]
+    private string thoroughUninstallOptionText = "";
+
     [ObservableProperty]
     private bool canPauseOperation;
 
@@ -100,6 +114,9 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
 
     /// <summary>Raised when a successful launch should minimize the launcher (driven by the journey host).</summary>
     public event Action? MinimizeRequested;
+
+    /// <summary>Raised when a successful launch should exit the launcher (driven by the journey host).</summary>
+    public event Action? ExitRequested;
 
     bool IGameOperationJourneyHost.IsBusy => shell.IsBusy;
 
@@ -218,6 +235,8 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
         AsyncEvent.InvokeSequentiallyAsync(OpenLogViewerRequested);
 
     void IGameOperationJourneyHost.RequestMinimize() => MinimizeRequested?.Invoke();
+
+    void IGameOperationJourneyHost.RequestExit() => ExitRequested?.Invoke();
 
     [RelayCommand]
     private async Task StartGameAsync()
@@ -375,10 +394,27 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
             return;
         }
 
+        // 勾选每次打开都归零（ADR-030）：破坏性选项不预置。
+        IsThoroughUninstallSelected = false;
+        // 对话框先弹、尺寸后到（ADR-030 第 4 条）：统计要遍历整个安装目录与 Prefix，
+        // 实测 37k 文件 ≈ 3.4 秒；放在 Show 之前会让点击「没反应」那么久。
+        // 先显示带「正在统计」的标签，测量回来后再换成带数字的那句。
+        ThoroughUninstallOptionText = localizer.T(LocalizationKeys.UninstallThoroughCleanupOptionPending);
+
         dialogs.UninstallConfirm.Show(localizer.F(
             LocalizationKeys.UninstallConfirmText,
             currentSnapshot.LocalGame.GamePath,
             Math.Max(0, validation.AffectedFileCount - 2)));
+
+        var footprint = await journey.MeasureUninstallFootprintAsync(currentSnapshot);
+        if (dialogs.UninstallConfirm.IsVisible)
+        {
+            // 用户还没关掉/确认：把实测数字换上去（测量与删除同源，显示多少就删多少）。
+            ThoroughUninstallOptionText = localizer.F(
+                LocalizationKeys.UninstallThoroughCleanupOption,
+                FileSizeFormatter.Format(footprint.InstallDirectoryBytes),
+                FileSizeFormatter.Format(footprint.PrefixBytes));
+        }
     }
 
     private void ShowOperationUnavailable() =>
@@ -390,7 +426,11 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
         {
             // Set uninstall icon before the journey runs so the test sees it
             ProgressIconKind = ResolveProgressPresentation(GameOperationKind.Uninstall).IconKind;
-            await journey.ConfirmUninstallAsync(currentSnapshot);
+            await journey.ConfirmUninstallAsync(
+                currentSnapshot,
+                IsThoroughUninstallSelected
+                    ? UninstallScope.ThoroughCleanup
+                    : UninstallScope.ManifestFilesOnly);
         }
     }
 

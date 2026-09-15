@@ -48,6 +48,7 @@ public sealed class LauncherSettings : ObservableObject
     ;
     private string resourcePanelUidSource = ResourcePanelUidSources.Auto;
     private GameRuntimeSettings gameRuntime = new();
+    private string afterLaunchBehavior = AfterLaunchBehaviors.Minimize;
     private string statusDetailMode = StatusDetailModes.Compact;
 
     [JsonPropertyName("gamePath")]
@@ -149,6 +150,9 @@ public sealed class LauncherSettings : ObservableObject
     [JsonPropertyName("gameRuntime")]
     public GameRuntimeSettings GameRuntime { get => gameRuntime; set => SetProperty(ref gameRuntime, value); }
 
+    [JsonPropertyName("afterLaunchBehavior")]
+    public string AfterLaunchBehavior { get => afterLaunchBehavior; set => SetProperty(ref afterLaunchBehavior, value); }
+
     [JsonPropertyName("statusDetailMode")]
     public string StatusDetailMode { get => statusDetailMode; set => SetProperty(ref statusDetailMode, value); }
 
@@ -177,6 +181,7 @@ public sealed class LauncherSettings : ObservableObject
         LaunchCheckMode = other.LaunchCheckMode;
         ProxyMode = other.ProxyMode;
         CloseBehavior = other.CloseBehavior;
+        AfterLaunchBehavior = other.AfterLaunchBehavior;
         Language = other.Language;
         ThemeMode = other.ThemeMode;
         MotionMode = other.MotionMode;
@@ -225,6 +230,7 @@ public sealed class LauncherSettings : ObservableObject
         (nameof(LaunchCheckMode), settings => settings.LaunchCheckMode),
         (nameof(ProxyMode), settings => settings.ProxyMode),
         (nameof(CloseBehavior), settings => settings.CloseBehavior),
+        (nameof(AfterLaunchBehavior), settings => settings.AfterLaunchBehavior),
         (nameof(Language), settings => settings.Language),
         (nameof(ThemeMode), settings => settings.ThemeMode),
         (nameof(MotionMode), settings => settings.MotionMode),

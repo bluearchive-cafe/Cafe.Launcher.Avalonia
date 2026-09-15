@@ -1,3 +1,4 @@
+using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Testing;
@@ -67,6 +68,30 @@ public partial class MainWindowViewModelTests
         await viewModel.Dialogs.UninstallConfirm.ConfirmCommand.ExecuteAsync(null);
 
         Assert.Equal(1, backend.UninstallCallCount);
+    }
+
+    [Fact]
+    public async Task ConfirmUninstallCommand_WhenThoroughCleanupIsChecked_ForwardsThoroughScope()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.RuntimeState = LauncherRuntimeState.Ready;
+        var backend = new StubGameOperationExecutor
+        {
+            ValidateUninstallResult = new GameOperationResult { Success = true },
+            UninstallResult = new GameOperationResult { Success = true, Message = "uninstalled" }
+        };
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(snapshot),
+            gameOperationsBackend: backend);
+        await viewModel.InitializeAsync();
+        await viewModel.Operations.RequestUninstallCommand.ExecuteAsync(null);
+
+        // 勾选经真实接线走到执行层：确认框上的选项最终变成卸载范围（ADR-030）。
+        viewModel.Operations.IsThoroughUninstallSelected = true;
+        await viewModel.Dialogs.UninstallConfirm.ConfirmCommand.ExecuteAsync(null);
+
+        Assert.Equal(1, backend.UninstallCallCount);
+        Assert.Equal(UninstallScope.ThoroughCleanup, backend.LastUninstallScope);
     }
 
     [Fact]

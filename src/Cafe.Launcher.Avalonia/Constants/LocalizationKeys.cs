@@ -574,6 +574,12 @@ public static class LocalizationKeys
     /// <summary>Resource key for <c>gameIsRunning</c>.</summary>
     public const string GameIsRunning = "gameIsRunning";
 
+    /// <summary>Resource key for <c>gameLaunched</c>.</summary>
+    public const string GameLaunched = "gameLaunched";
+
+    /// <summary>Resource key for <c>gameLaunchedExiting</c>.</summary>
+    public const string GameLaunchedExiting = "gameLaunchedExiting";
+
     /// <summary>Resource key for <c>gameLaunchedMinimized</c>.</summary>
     public const string GameLaunchedMinimized = "gameLaunchedMinimized";
 
@@ -735,6 +741,15 @@ public static class LocalizationKeys
 
     /// <summary>Resource key for <c>languageDescription</c>.</summary>
     public const string LanguageDescription = "languageDescription";
+
+    /// <summary>Resource key for <c>launchBehavior</c>.</summary>
+    public const string LaunchBehavior = "launchBehavior";
+
+    /// <summary>Resource key for <c>launchBehaviorDescription</c>.</summary>
+    public const string LaunchBehaviorDescription = "launchBehaviorDescription";
+
+    /// <summary>Resource key for <c>launchBehaviorKeepOpen</c>.</summary>
+    public const string LaunchBehaviorKeepOpen = "launchBehaviorKeepOpen";
 
     /// <summary>Resource key for <c>launchCheck</c>.</summary>
     public const string LaunchCheck = "launchCheck";
@@ -1621,6 +1636,12 @@ public static class LocalizationKeys
     /// <summary>Resource key for <c>uninstallCompleted</c>.</summary>
     public const string UninstallCompleted = "uninstallCompleted";
 
+    /// <summary>Resource key for <c>uninstallCompletedKeptPrefix</c>.</summary>
+    public const string UninstallCompletedKeptPrefix = "uninstallCompletedKeptPrefix";
+
+    /// <summary>Resource key for <c>uninstallCompletedWithLeftovers</c>.</summary>
+    public const string UninstallCompletedWithLeftovers = "uninstallCompletedWithLeftovers";
+
     /// <summary>Resource key for <c>uninstallConfirmText</c>.</summary>
     public const string UninstallConfirmText = "uninstallConfirmText";
 
@@ -1629,6 +1650,12 @@ public static class LocalizationKeys
 
     /// <summary>Resource key for <c>uninstalling</c>.</summary>
     public const string Uninstalling = "uninstalling";
+
+    /// <summary>Resource key for <c>uninstallThoroughCleanupOption</c>.</summary>
+    public const string UninstallThoroughCleanupOption = "uninstallThoroughCleanupOption";
+
+    /// <summary>Resource key for <c>uninstallThoroughCleanupOptionPending</c>.</summary>
+    public const string UninstallThoroughCleanupOptionPending = "uninstallThoroughCleanupOptionPending";
 
     /// <summary>Resource key for <c>unknown</c>.</summary>
     public const string Unknown = "unknown";

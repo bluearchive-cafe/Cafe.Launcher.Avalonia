@@ -130,7 +130,8 @@ public sealed partial class MainWindowViewModelTests : IDisposable
             localizationService,
             new GameInstallationPath(),
             new DownloadCheckpointStore( TestDataRoot.ForDirectory(Path.Combine(tempDir, Guid.NewGuid().ToString("N"))) ),
-            new GameProcessTracker());
+            new GameProcessTracker(),
+            new TestGameShortcutService());
 
         var remoteContentViewModel = new RemoteContentViewModel(localizationService, imageCacheService, diagnostics);
         var backgroundViewModel = new BackgroundViewModel(imageCacheService, diagnostics, settingsViewModel);

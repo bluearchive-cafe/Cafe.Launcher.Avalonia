@@ -10,35 +10,35 @@ namespace Cafe.Launcher.Avalonia.Tests;
 public sealed class GameProcessTrackerTests
 {
     [Fact]
-    public async Task IsGameRunningAsync_WhenTrackedProcessIsLive_ReturnsTrueBeforeNameScan()
+    public async Task FindRunningGameProcessesAsync_WhenTrackedProcessIsLive_ReportsItWithoutScanning()
     {
         var fake = new FakeTrackedProcess { HasExited = false };
-        var tracker = new GameProcessTracker(StubProbe(returnValue: false), _ => fake);
+        var tracker = new GameProcessTracker(StubProbe(), _ => fake);
 
         tracker.Register(new GameProcess(new Process(), "native"));
 
         Assert.True(tracker.HasLiveTrackedProcess);
-        Assert.True(await tracker.IsGameRunningAsync("missing-game.exe"));
+        Assert.NotEmpty(await tracker.FindRunningGameProcessesAsync(KnownNames));
         Assert.Null(tracker.LastExit);
     }
 
     [Fact]
-    public async Task IsGameRunningAsync_WhenNoTrackedProcess_FallsBackToNameScan()
+    public async Task FindRunningGameProcessesAsync_WhenNoTrackedProcess_FallsBackToNameScan()
     {
-        var tracker = new GameProcessTracker(StubProbe(returnValue: true));
+        var tracker = new GameProcessTracker(StubProbe("BlueArchive"));
 
         Assert.False(tracker.HasLiveTrackedProcess);
-        Assert.True(await tracker.IsGameRunningAsync("BlueArchive.exe"));
+        Assert.NotEmpty(await tracker.FindRunningGameProcessesAsync(KnownNames));
 
-        var falseTracker = new GameProcessTracker(StubProbe(returnValue: false));
-        Assert.False(await falseTracker.IsGameRunningAsync("BlueArchive.exe"));
+        var falseTracker = new GameProcessTracker(StubProbe());
+        Assert.Empty(await falseTracker.FindRunningGameProcessesAsync(KnownNames));
     }
 
     [Fact]
     public async Task Register_WhenTrackedProcessExits_RecordsExitInfoAndClearsTracking()
     {
         var fake = new FakeTrackedProcess { ExitCode = 0 };
-        var tracker = new GameProcessTracker(StubProbe(returnValue: false), _ => fake);
+        var tracker = new GameProcessTracker(StubProbe(), _ => fake);
 
         tracker.Register(new GameProcess(new Process(), "native"));
         fake.RaiseExited();
@@ -49,17 +49,22 @@ public sealed class GameProcessTrackerTests
         Assert.True(tracker.LastExit.Duration >= TimeSpan.Zero);
 
         Assert.False(tracker.HasLiveTrackedProcess);
-        Assert.False(await tracker.IsGameRunningAsync("BlueArchive.exe"));
+        Assert.Empty(await tracker.FindRunningGameProcessesAsync(KnownNames));
     }
 
-    private static Func<string, CancellationToken, Task<bool>> StubProbe(bool returnValue) =>
-        (_, _) => Task.FromResult(returnValue);
+    private static readonly IReadOnlyList<string> KnownNames =
+        GameProcessNames.FromLaunchConfiguration("xldr_BlueArchiveOnline_JP_loader_x64", ["BlueArchive.exe"]);
+
+    /// <summary>名字扫描的替身：返回给定的命中列表，空表示没在跑。</summary>
+    private static Func<IReadOnlyList<string>, CancellationToken, Task<IReadOnlyList<string>>> StubProbe(
+        params string[] matches) =>
+        (_, _) => Task.FromResult<IReadOnlyList<string>>(matches);
 
     [Fact]
     public async Task Register_WhenFakeProcessExits_RecordsExitDetailsAndClearsTracking()
     {
         var fake = new FakeTrackedProcess();
-        var tracker = new GameProcessTracker(StubProbe(returnValue: false), _ => fake);
+        var tracker = new GameProcessTracker(StubProbe(), _ => fake);
 
         tracker.Register(new GameProcess(new Process(), "umu"));
         fake.ExitCode = 42;
@@ -69,7 +74,7 @@ public sealed class GameProcessTrackerTests
         Assert.Equal(42, tracker.LastExit!.ExitCode);
         Assert.Equal("umu", tracker.LastExit.RunnerId);
         Assert.False(tracker.HasLiveTrackedProcess);
-        Assert.False(await tracker.IsGameRunningAsync("BlueArchive.exe"));
+        Assert.Empty(await tracker.FindRunningGameProcessesAsync(KnownNames));
         Assert.True(fake.DisposeSucceeded);
     }
 
@@ -77,7 +82,7 @@ public sealed class GameProcessTrackerTests
     public async Task Register_WhenFakeProcessAlreadyExited_RecordsImmediatelyWithoutEvent()
     {
         var fake = new FakeTrackedProcess { HasExited = true, ExitCode = 7 };
-        var tracker = new GameProcessTracker(StubProbe(returnValue: false), _ => fake);
+        var tracker = new GameProcessTracker(StubProbe(), _ => fake);
 
         tracker.Register(new GameProcess(new Process(), "wine"));
 
@@ -94,7 +99,7 @@ public sealed class GameProcessTrackerTests
         var second = new FakeTrackedProcess();
         var processes = new List<ITrackedProcess>();
         var tracker = new GameProcessTracker(
-            StubProbe(returnValue: false),
+            StubProbe(),
             _ =>
             {
                 var current = processes.Count == 0 ? (ITrackedProcess)first : second;
@@ -120,7 +125,7 @@ public sealed class GameProcessTrackerTests
         var second = new FakeTrackedProcess();
         var processes = new List<ITrackedProcess> { first, second };
         var tracker = new GameProcessTracker(
-            StubProbe(returnValue: false),
+            StubProbe(),
             _ => processes[0]);
 
         tracker.Register(new GameProcess(new Process(), "wine"));

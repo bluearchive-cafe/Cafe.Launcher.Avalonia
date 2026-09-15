@@ -11,26 +11,37 @@
 > **同日后续两轮（用户指令「核查更改是否正确」与「检查远端 CI 状态」）**：①核查轮确认第二修复轮 7 项全部真实落地（逐 diff 对账 + 守卫变异验证 + 全量套件实测一致），顺带收口 TEST-006 元契约对 `MainWindowDebugOverlay.axaml` 的匿名放行（`f912d38`）并更正 TEST-005 用例计数归属（`2176db8`）；②CI 对账轮——AUD-CI-001 守卫的两类 Linux 首跑（weekly schedule 与 build.yml push job）均红，红出三例平台假设而非回归（与推送无涉：schedule 跑的是推送前旧 HEAD），立案 AUD-CI-002/003/004 并同日解决（`b4a80c8`），守卫本职生效。
 >
 > **架构评审复核轮（2026-09-15，用户指令「审查分析报告，确认已修复内容可维护、未引入新问题」）**：对象为架构深化评审（第二轮）已落地的 7 个候选（提交 `eadd7c7..de758c7` ＋ 工作树中的候选 13）。逐项读码复核 + 门禁本地复现：Debug 0 警告 0 错误 · 单元 1749（0 失败，3 可见平台跳过）· Headless 178（0 失败）· 覆盖率棘轮通过（行 86.90% / 分支 93.26%，slack +1.05pp / +0.56pp）。结论：无改动引入的功能性回归；候选 13 的拉取链路经线程安全（快照只做引用替换）与启动顺序（`ShellLifecycle.cs:230` 播种早于 `:242`）两处专门核实成立。复核收口三处落地残留（候选 03 的 `UnifiedLogPath` 无生产消费者、`LogExportService` 自行拼根内路径、`GameCompatibilityPaths` 被误列为 pre-DI；候选 05 的 `WindowChromeViewModel` 未用 using），并为数据根守卫补反空转基线（原先「一个文件都没扫到」与「干净」不可区分）。另立案一条 ADR-027 同类缺口并落地 <a href="design/adr/ADR-029-卸载预检失败不再静默.md">ADR-029</a>（卸载预检失败此前折叠为 `null` 后静默返回）。本窗口的新发现不以 AUD-xxx 立案：它们全部来自评审候选的落地形态而非六域审计通道，记录见对应 ADR 与评审报告的复核轮说明。
+>
+> **功能轮复核（2026-09-15，用户指令「对照 codebase 分析报告检查最近更改」）**：对象为报告定稿后的 5 个提交（`7090aad..90e918c`，65 文件，+2549/−127），三条主线：<a href="design/adr/ADR-030-卸载可彻底清除.md">ADR-030</a> 卸载可彻底清除（含实机回归后的两处修订）、<a href="design/adr/ADR-031-启动后行为可配置且退出不走关闭路径.md">ADR-031</a> 启动后行为可配置、<a href="design/adr/ADR-032-游戏进程按名字家族识别.md">ADR-032</a> 游戏进程按名字家族识别。逐提交读码 + 门禁本地复现：Debug 与 Release 构建均 0 警告 0 错误 · 单元 1819 通过 / 0 失败 / 1 可见跳过（总 1820）· Headless 184 通过 / 0 失败 · 覆盖率棘轮通过（行 86.96%、分支 93.44%，slack +1.11pp / +0.74pp，较上窗口微升）。结论：三条设计与各自 ADR 一致（守卫先行再删、终态落地、启动退出绕开关闭路径、闸门换名字家族），无回归，报告既有开放项的锚点未失效。**新立案 1 项 Low：AUD-ARCH-008**（卸载的执行边界不复查「游戏在跑」闸门——确认框打开期间的跨越窗口无人拦）。另实测否掉一条候选：反作弊残留的 `Xigncode:{GUID}` 条目在 .NET 上抛的是 `FileNotFoundException`（IOException），`DirectoryTreeDeleter` 与 `DirectorySizeProbe` 都接得住，删者额外兜 `ArgumentException` 属冗余防御而非缺口。
+>
+> **同日功能轮跟进（用户指令「可以」——按该条建议 (a) 修复）**：`GameUninstallService.UninstallAsync` 在读到安装状态之后、删任何东西之前复查同一道进程家族闸门，判据与拒绝文案收进单一私有实现 `FindRunningGameFailureAsync`（`ValidateAsync` 也改走它，两道闸门不会各说各话）；新增 `GameUninstallServiceTests.UninstallAsync_WhenTheGameStartedAfterThePrecheck_RefusesAndDeletesNothing` 并做**变异验证**（把复查改成空判据后该用例与预检用例同时变红，再还原）；ADR-032 增第 7 条决策与守卫说明、AGENTS.md 游戏操作段同步。聚焦实测 140 用例（卸载/旅程/安装状态/VM 四类）全绿，随后的全量门禁复跑：Debug/Release 各 0 警告 0 错误 · 单元 1820 通过 / 0 失败 / 1 可见跳过（总 1821）· Headless 184 通过 / 0 失败 · 覆盖率行 87.00% / 分支 93.45%（slack +1.15pp / +0.75pp）。该修复即 `cbda8b9`。
+>
+> **同日下载侧跟进（用户追问「下载/修复/更新是否没有『游戏在跑』的闸门」，核实后按三条建议落地）**：闸门本就存在（`DownloadSession.PrepareDownloadPlanAsync`，安装/更新/修复/续传都过它），但有三处真缺口——本地配置不存在时判据为空而放行、只在计划阶段查一次、报法不点名。**立案 AUD-ARCH-009 并同日解决**：①没有本地配置时退回远端配置声明的启动程序名；②进入写入之前（`RemoveFiles` / `InstallDownloadedFilesAsync` 之前）复查同一道闸门，失败即返回、`.tmp` 留在盘上可重试；③判法与报法各收一处（`FindRunningGameFailureAsync`、`GameProcessNames.DescribeForDisplay`），下载与卸载两个入口报出的进程名从此一致，下载文案改为点名。全量门禁复跑：Debug/Release 各 0 警告 0 错误 · 单元 1823 通过 / 0 失败（总 1824）· Headless 184 通过 / 0 失败 · 覆盖率行 87.01% / 分支 93.46%（slack +1.16pp / +0.76pp）；新增两条下载侧守卫均做变异验证（拆掉即红）。该修复即 `c38d6fa`。
+>
+> **同日 CI 对账复核（用户指令「Push」后顺带核对远端）**：推送 `cbda8b9..0f5993d` 成功（`build` 作业绿），但 `linux-unit-tests` 作业红——且 `gh run list` 显示它自落地起对五次 push 全红（`ee93482`/`1f428a3`/`7090aad`/`58398f4`/`90e918c`），四条失败与本窗口代码无关：两例是测试绑定了 Windows 的精确异常类型（`ShellLifecycleTests`，Linux 抛子类 `DirectoryNotFoundException`），两例是靠文件共享制造「删不掉的条目」而 POSIX 允许 unlink 已打开文件（`DirectoryTreeDeleterTests` 与 `GameUninstallServiceTests` 的 ADR-030 用例）。本轮新增的守卫用例在 Linux 上通过（1801 通过 / 4 失败 / 16 跳过）。结论：AUD-CI-001 的建议已落地但**那个作业一直红、且非 required**，保护没真的生效——立案 AUD-CI-005 并结案 CI-001；本轮开放计数改为 7 项 Low。
+>
+> **同日 CI 修复（用户指令「提交之后修复 ci 问题」）**：四处测试侧平台假设按 AUD-CI-005 的建议修掉（两例放宽为接受派生类型与 IO 家族类型名、两例按同族先例加 Windows 可见跳过），`d646523` 推送后 **`linux-unit-tests` 首次绿**（run 34967403211：1806 通过 / 0 失败 / 18 可见跳过，新增的 2 条门控与设计一致；`build` 侧单元 1823 / 跳过 1、Headless 184、覆盖率棘轮全绿）。CI-005 结案，开放计数回到 6 项 Low；残留一半（作业升为 required check）在规则集侧，只有仓库管理员能做，已记进 Recommended Priorities。
 
 ## Audit Metadata
 
 - 日期：2026-09-14（上午 full 六域重审 + 下午修复核实轮/独立重扫 + 晚间第二修复轮）
 - Commit：审计基线 `715fee5`（`main`；最新已发布 tag `v1.1.0-beta.9`）；第二修复轮后 HEAD `93b3335`
+- 最近复核窗口（2026-09-15 功能轮）：`7090aad..90e918c` 5 提交，HEAD `90e918c`
 - 模式：**full**（上午：`8449d37..715fee5` 16 提交六域重验；下午：HEAD `6ecd7bf` 全树独立重扫 + 修复核实）
-- 范围：生产源码 242 个 `.cs`（≈33.6k 行）+ 29 个 `.axaml`、210 个测试文件（≈43k 行）、CI 三工作流、打包/安装器脚本、文档契约
+- 范围：生产源码 251 个 `.cs`（≈35.1k 行）+ 29 个 `.axaml`、224 个测试文件（≈46.3k 行）、CI 三工作流、打包/安装器脚本、文档契约
 - 项目画像：desktop-launcher（`.agents/skills/repository-audit/profiles/desktop-launcher.md` 按仓库证据调整）
 
 ## Executive Summary
 
 仓库健康状况：**良好，且较上一审计实质性改善**。desktop-launcher 四个关键风险面（下载完整性、文件系统边界、进程启动、外部链接）防御纵深不变且全部有测试；上一轮全部 5 项 Medium 级结构/测试发现中 4 项已随 `878260a`/`b9dc68e`/`5553793`/`5777f2f`/`715fee5` 真实解决（不是纸面解决——本审计逐项读码 + 本地实测全绿确认），其余 2 项（AUD-PERF-001、AUD-CI-001）部分解决后降档。同日修复轮 9 项提交经复审逐项读码核实为真实落地。**复审新立案 1 项 Medium（测试覆盖缺口），其余 6 项新发现为 Low。**
 
-开放发现（2026-09-14 第二修复轮后）：
+开放发现（2026-09-15 功能轮后）：
 
 - Critical：0
 - High：0
 - Medium：0
-- Low：6 open（全部决策/设计轮门控：AUD-PERF-001、AUD-PERF-004、AUD-PERF-005 残留、AUD-SEC-001、AUD-SEC-002、AUD-ARCH-005）+ 4 accepted-risk（MAINT-002、SEC-004、SEC-006、ARCH-007）
-- 本窗口解决：14 项（8 项随上轮修复落地：ARCH-002/003、TEST-002/003/004、PERF-002/003、MAINT-002；6 项随同日修复轮：ARCH-004/006、CI-001、PERF-006、SEC-003/005）；第二修复轮再解决 6 项（TEST-005/006/007、MAINT-003/004、PERF-007）并将 SEC-006 结案为 accepted-risk；CI 对账轮新立案 3 项（AUD-CI-002/003/004）并同日全部解决
+- Low：6 open（决策/设计轮门控：AUD-PERF-001、AUD-PERF-004、AUD-PERF-005 残留、AUD-SEC-001、AUD-SEC-002、AUD-ARCH-005）+ 4 accepted-risk（MAINT-002、SEC-004、SEC-006、ARCH-007）
+- 本窗口解决：14 项（8 项随上轮修复落地：ARCH-002/003、TEST-002/003/004、PERF-002/003、MAINT-002；6 项随同日修复轮：ARCH-004/006、CI-001、PERF-006、SEC-003/005）；第二修复轮再解决 6 项（TEST-005/006/007、MAINT-003/004、PERF-007）并将 SEC-006 结案为 accepted-risk；CI 对账轮新立案 3 项（AUD-CI-002/003/004）并同日全部解决；功能轮（2026-09-15）新立案 1 项（ARCH-008）并于同日跟进按建议 (a) 解决（`cbda8b9`）；随后按用户追问再立案 AUD-ARCH-009（下载/安装/修复闸门的三处缺口）并同日解决（`c38d6fa`）；CI 对账复核结案 AUD-CI-001（其建议已落地为 `build.yml` 的 push/PR linux 作业）、新立案 AUD-CI-005（该作业连续红且非 required）并于同日修复、作业首绿（`d646523`）
 
 **一处上轮审计证据更正（重要）**：上轮安全节声明「签名 Authorization 头绝不跟随重定向转发」——复核证实该头经 `RemoteRequestOptions.ConfigureRequest` 钩子在**每一重定向跳重发**（含跨主机），已立案为 AUD-SEC-003（Low）。这推翻了上轮对 DNS 重绑定残余风险影响边界的部分论证。
 
@@ -53,6 +64,15 @@
 - 功能线：资源面板三连（`8526b97` 版本一致单行结论、`8bda5e1` 刷新保留旧数据 + 保存按钮脏检查、`23ff11c` 状态条去重），覆盖层拆分 `ResourcePanelOverlay`（`d479c9c`）；`66c9c01` 系统代理解析对齐 WinINet；`a9e1818` 社交芯片悬停态专用 token；`5b8b344` **revert** 恢复内置壁纸构造期同步解码（见 AUD-PERF-005）。
 - 审计自身：`e024aa1` 上轮 delta 复核入库；`afd6dbd` 架构评审报告入库 `docs/architecture-review-2026-09-13.html`（上轮的未跟踪待决项就此闭合）。
 - 依赖：`Directory.Packages.props`、三份 `packages.lock.json`、`global.json` 零变更（git diff 证实），依赖结论无需重扫；`dotnet list package --vulnerable --include-transitive` 本审计实测三项目均无漏洞包。
+
+**功能轮（2026-09-15，报告定稿后的 5 个提交 `7090aad..90e918c`，65 文件，+2549/−127）**
+
+- `58398f4` ＋ `770221d` feat/fix(game-ops) **ADR-030**：卸载确认框多一个默认不勾的「彻底清除」可选行（`Controls/ConfirmDialog.axaml:28-36` 新增 `OptionText`/`IsOptionChecked` 槽，未设 `OptionText` 时整行折叠，9 处用量的既有解剖契约不变）；标准卸载也删桌面快捷方式；彻底清除删整棵安装目录与受管 `compatibility/<gameId>` 子树，用户自定义在受管根之外的 Prefix 保留并在完成文案里说明。`Helpers/DirectoryTreeDeleter` 自己遍历（不用 `Directory.Delete(path, recursive: true)`：树内一个 junction 就会让后者抛 `UnauthorizedAccessException`），删不掉的条目不中断、按路径交回调用方；`Helpers/DirectorySizeProbe` 为确认框量同一批目标，对话框先弹、尺寸后回填（实测 37k 文件/24 GB 的树要 3.4 秒）。终态交给 `ShowOperationResult`——返回失败与**抛出**两条路径都有可见反馈，此前结果被丢弃。
+- `12e7b7b` feat(settings) **ADR-031**：新增持久化设置 `afterLaunchBehavior`（`keepOpen`/`minimize`/`exit`，默认 `minimize`，归一化拒绝未知值），常规分区「应用偏好」下一行；规则在旅程里按快照分派，呈现层仍是两个单用途窗口动词（`RequestMinimize`/`RequestExit`）；退出刻意不走 `PerformClose`——那条路会把关闭意图交给 `CloseBehavior` 解释，用户在那里选「最小化到托盘」时本设置会退化成静默隐藏——改走抽出的 `RequestShutdown`（`Views/MainWindow.axaml.cs:333-344`，`PerformClose` 的退出分支共用）。
+- `7afcae7` fix(settings)：`SavedSettingsWriter` 的编辑器收口落到 UI 线程（`Dispatcher.UIThread.InvokeAsync`；无 Avalonia 应用或已在 UI 线程则就地收口）。此前落盘续体在线程池线程上就地写绑定可观察状态，保存设置会撞 `VerifyAccess` 报「保存启动器设置失败」。
+- `90e918c` fix(game-ops) **ADR-032**：进程识别从「配置里那一个宿主名」换成**名字家族**（`Services/GameRuntime/GameProcessNames`：宿主名 + `params` 里的可执行文件，再按 `_` 为界收同族变体，单段名不认领整族）；`IGameProcessTracker` 返回值由布尔改为实际在跑的进程名列表（报出的名字就是用户看到的，宿主已退出时不再假报宿主）；卸载预检与下载/安装/修复两条闸门同判据；走一次系统快照而非每名字一扫。判据按名字是因为实测三个进程的镜像路径全读不到（反作弊保护进程对象）。顺带修掉 `GameDownloadServiceTests` 用真实进程扫描导致的随环境变色。
+- 文档：三份 ADR（030/031/032）、`CONTEXT.md` 三条词条（游戏进程家族、彻底清除、启动后行为）与 ADR 索引、`AGENTS.md` 游戏操作段（进程家族闸门、`UninstallScope`、递归删除与「对话框先弹、尺寸后到」）；`settings-overlay.png` 金标准随新增设置行重生。
+- 依赖：`Directory.Packages.props`、三份 `packages.lock.json`、`global.json` 零变更（git diff 证实）。
 
 ## Critical Issues
 
@@ -216,6 +236,21 @@
 - **已解决部分（`5553793`）**：新增 `.github/workflows/linux-tests.yml`（ubuntu-24.04，`workflow_dispatch` + 每周一 cron）：单元套件获得真实非 Windows 执行点，平台自适应测试（如 `GamePathValidatorTests.cs:161`）不再无处执行；权限最小（`contents: read`）、动作 SHA 钉住、无新信任面（本审计安全通道专项评估）。locked 还原跨平台成立的推理已写入工作流注释。
 - **残留**：触发仅 dispatch + weekly（`linux-tests.yml:7-10`，注释自述「不阻塞 PR」）——平台分支回归不能阻塞引入它的变更，最坏晚一周才暴露且不阻塞合并；Headless/golden 按设计保持 Windows-only（合理）。该 job 是否曾绿跑，本审计无法验证（只读评审，无 GitHub Actions 运行历史）。另按 PROJECT_CONVENTIONS §9，`main` 规则集无 required_status_checks，Windows job 亦只是约定门。
 - **建议**：把现有 job 体（无 RID 还原、无渲染依赖）复用为 `build.yml` 中 push/PR 路径的 ubuntu 单元测试 step；可选为规则集加 required status checks。**建议验证**：Verified（job 体已存在，纯编排改动）。
+- **建议已落地（2026-09-15 CI 对账复核）**：`build.yml:96-130` 现有 `linux-unit-tests` 作业，由 `push` 与 `pull_request` 触发（`build.yml:3-6`），注释即引 AUD-CI-001 说明「平台分支必须在随变更执行的 CI 上运行」。原「触发仅 dispatch + weekly」的残留自此消除，本项结案为 resolved。**但新作业自落地起一直红**——保护并未真的生效，转为 AUD-CI-005。
+
+### AUD-CI-005 — `linux-unit-tests` 作业在 main 上连续 6 次红、且非 required：平台假设回归既没被门拦住，也没人看见【CI 对账复核新立案；同日修复，作业首绿】
+
+- 类别：CI / 平台假设
+- 严重度：Low｜置信度：95（GitHub Actions 运行历史直接核实，失败清单与错误文本逐条读取）｜状态：**resolved**（`d646523`；测试侧四条已修、作业首绿。规则集侧「升为 required check」仍为残留）｜处置：Fix（已执行）
+- **证据**：`build.yml` 的 `linux-unit-tests` 作业对 `90e918c` / `58398f4` / `7090aad` / `1f428a3` / `ee93482` 五次 push 全部 failure（`gh run list`）；本次推送的 `cbda8b9`＋`0f5993d` 同样 failure（run 34961576610：`build` 绿、`linux-unit-tests` 红，单元 1801 通过 / 4 失败 / 16 可见跳过）。四条失败与本窗口代码无关，分两类：
+  - **两例测试依赖 Windows 的精确异常类型**（`ShellLifecycleTests.cs:190-207`、`:142-158`）：`CreateBlockedSettingsPath()` 用同名**文件**占位使目录创建失败，Windows 上抛的正是 `IOException`，Linux 上抛的是子类 `DirectoryNotFoundException`——`Assert.ThrowsAsync<IOException>` 要求精确类型、`Assert.Contains("IOException", toast.Message)` 断言的是类型名，于是同一场景在两平台结论相反。
+  - **两例依赖 Windows 文件共享语义**（`DirectoryTreeDeleterTests.Delete_WhenAnEntryCannotBeDeleted_...`、`GameUninstallServiceTests.UninstallAsync_WhenThoroughCleanupCannotRemoveSomething_...`）：用例靠 `FileShare.Read/None` 打开句柄来制造「删不掉的条目」，而 POSIX 允许 unlink 已打开的文件——Linux 上删除照常成功，残留清单为空，断言「按路径回报」自然失败。前者带来的 ADR-030 语义未被跨平台钉住。
+- **影响**：`main` 上的平台假设回归既不能阻塞合并（PROJECT_CONVENTIONS §9：规则集无 required status checks），又在事实上无人查看（连续 5 次红未被任何一轮复核发现——本报告上一轮的「CI 对账」只验证了另一份 `linux-tests.yml` 的首绿）。产品以实验性形态分发 Linux/macOS 包，真正的平台回归会与这些噪声混在一起。四例本身都是测试缺陷（三个平台上的产品行为未见异常：`DirectoryTreeDeleter` 删掉了它该删的、设置保存失败也确实被报出）。
+- **建议**：(a) `ShellLifecycleTests` 两例改为接受派生类型（`Assert.ThrowsAnyAsync<IOException>`；toast 断言改为不绑类型名的可辨识内容，例如被挡路径的父目录名）；(b) `DirectoryTreeDeleterTests` 那条按仓库既有先例加 `Assert.SkipUnless(OperatingSystem.IsWindows(), …)`（同一文件族里的 `UninstallAsync_WhenManifestFileIsLocked_...` 已经这么做），或改用跨平台的阻塞手段（父目录只读在 POSIX 上能挡住 unlink，Windows 上不能，故这条仍以门控为宜）；`GameUninstallServiceTests` 那条同理。(c) 可选：把 `linux-unit-tests` 加进 required status checks，让这类回归真的挡住合并。**建议验证**：Verified（失败清单、错误文本、平台语义逐条核实）。
+- **注意**：修的是测试而非产品——不要为了让用例在 Linux 上过而弱化 ADR-030 的残留回报语义，也不要改动 `DirectoryTreeDeleter` 的删除行为。
+- **解决**（`d646523`，2026-09-15 CI 对账轮）：(a) `ShellLifecycleTests` 两例的 `Assert.ThrowsAsync<IOException>` 改为 `ThrowsAnyAsync`（接受子类），toast 断言改为接受 IO 家族的任一类型名（新增 `MentionsIoFailure` 辅助），并在 `CreateBlockedSettingsPath` 的文档注释里写明「抛出的精确类型随平台而变，不要绑死」；(b) 两条删除残留用例按同族先例加 `Assert.SkipUnless(OperatingSystem.IsWindows(), …)`，注释写明为何不能用「跨平台阻塞手段」代替（父目录只读在 POSIX 能挡 unlink、在 Windows 不能）。**未改**其他「锁住以制造失败」的用例（`ResourcePanelServiceTests`、`LogExportServiceTests`、`LocalInstallationStateStoreTests`、`SetupWizardViewModelTests`）：.NET 在 Unix 上用 flock 模拟文件共享，那些断言在两平台都成立（CI 从未红过），改动属无据重构。
+- **验证**：推送 `d646523` 后 run **34967403211** 两个作业全绿——`linux-unit-tests` **1806 通过 / 0 失败 / 18 可见跳过（总 1824）**（16 条既有 + 新增 2 条门控，与设计一致），`build` 侧单元 1823 / 跳过 1、Headless 184、覆盖率棘轮均绿。这是该作业自落地以来的首次绿跑。
+- **残留**：作业虽绿仍非 required check（PROJECT_CONVENTIONS §9：`main` 规则集无 required_status_checks）——平台回归依旧不会阻塞合并，只是现在能被看见。要真正挡住需要仓库规则集侧的改动（只有仓库管理员能做）。
 
 ### AUD-ARCH-007 — 代理指纹变化可在下载批次进行中 Dispose 其底层 handler【新立案】
 
@@ -225,6 +260,24 @@
 - **影响**：批次传输快速失败进入验证重试轮，下轮新租约自愈——代价一轮下载而非永久故障、无完整性风险（.tmp + CRC64）。性能通道独立识别同一机制，交叉证实。
 - **建议**：先实验确认 disposed `SocketsHttpHandler` 对在途请求的确切语义；若有害，为缓存 handler 加租约引用计数或延迟至租约释放再处置；若可接受，书面记录「下载中途代理变更代价一轮失败重试」。**建议验证**：Needs External Verification。
 - **注意**：修复不得改变 `ProxySettingsService.cs:23-38` 文档化的指纹替换不变量。
+
+### AUD-ARCH-008 — 卸载的「游戏在跑」闸门只在预检跑一次，用户确认前的窗口里游戏被外部起来也照删【功能轮新立案；同日按建议 (a) 解决】
+
+- 类别：架构 / 执行边界一致性
+- 严重度：Low｜置信度：85（两条路径逐行读码确认；未做运行时复现——需「对话框开着时从外部启动游戏」的时序）｜状态：**resolved**（`cbda8b9`）｜处置：Fix（已执行，(a) 分支）
+- **证据**：闸门只存在于预检（`GameUninstallService.cs:374-388`）；`UninstallAsync` 自身只复查策略（:79-83，`GameOperationPolicy` 判的是安装生命周期状态，与进程无关），随后直接删清单文件并进入彻底清除（:118-169）；journey（`GameOperationJourney.cs:321-330`）与 VM（`GameOperationsViewModel.cs:423-435`）同样只复查策略，都不再问进程。确认框从 `Show` 到用户点击之间可以一直开着（尺寸统计先弹框后回填，实测 37k 文件/24 GB 的树要 3.4 秒；用户也可以放着不管），期间从桌面快捷方式或 Steam 等外部路径启动游戏不触碰任何闸门——而 ADR-032 的原话是「只在整族退出后放行」。
+- **影响**：删除落在正在运行的安装上——能删的会被删掉（`BlueArchive_Data` 下正在被游戏读取的文件），删不掉的按 ADR-030 如实回报为残留。危害被 ADR-030 的残留上报兜住（不静默、不误报成功），但仍可能出现「游戏当场失败、需要修复」这类用户可见损害。与路径守卫的处理不对称：同一提交为路径守卫加了执行边界复查（预检 `:97-115` 跑一次，删除时 `:271-289` 经 `DirectoryTreeDeleter.Delete` → `EnsureDeletable` 再跑一次）。
+- **解决**（`cbda8b9`，2026-09-15 功能轮跟进）：`UninstallAsync` 在读到 `localGame` 之后、彻底清除守卫与文件循环之前调用新的私有 `FindRunningGameFailureAsync`（`GameUninstallService.cs:408`），命中即返回既有的 `GameIsRunning` 失败、不做任何删除；`ValidateAsync` 的同一段判据与文案也改为调用它，两道闸门自此共用一处实现，消息不会分叉（`GameProcessNames` 名字集合 + `RunningProcessSeparator` 拼接 + `.exe` 补回 + `GameOperationErrorCode.GameRunning`）。失败经 `ConfirmUninstallAsync` 的 `ShowOperationResult` 落地，合 ADR-027 的「确认后拒绝必须可见」。守卫：`GameUninstallServiceTests.UninstallAsync_WhenTheGameStartedAfterThePrecheck_RefusesAndDeletesNothing`（探测分两相——预检时没在跑、删除时在跑；断言失败码、点名 `BlueArchive.exe`、且清单文件/安装状态/目录/快捷方式全未被动过），**变异验证**：把复查的判据换成空输入后该用例与 `..._WhenOnlyTheAntiCheatHostIsStillRunning_RefusesAndNamesIt` 同时变红，还原后转绿。文档：ADR-032 第 7 条决策 + 守卫条目、AGENTS.md 游戏操作段。
+- **被否的替代方案**：(b) 判定「用户在确认框上点头就是对当时状态的授权」并写进 ADR-032 已知限制——取 (a) 是因为成本几行 + 一例用例，且与路径守卫的执行边界复查对称；UI 禁用态/进程轮询仍被 ADR-032 否决，未采用。
+
+### AUD-ARCH-009 — 下载/安装/修复的「游戏在跑」闸门：全新安装时判据为空而放行、且只在计划阶段查一次【功能轮跟进新立案；同日解决】
+
+- 类别：架构 / 执行边界一致性
+- 严重度：Low｜置信度：90（三处逐行读码确认；「全新安装时判据为空」由代码结构直接证实，跨平台后果的那一档基于 POSIX 语义推理）｜状态：**resolved**（`c38d6fa`）｜处置：Fix（已执行，三条建议全部落地）
+- **证据（三处缺口）**：①**判据的取法要求本地配置存在**——`DownloadSession.PrepareDownloadPlanAsync` 的闸门判据取自 `localGame.GameConfig?.Name`，全新安装时该文件还不存在，于是名字集合为空、闸门直接放行，游戏在跑也照样开始安装；②**只在计划阶段查一次**——下载/修复可能持续数分钟，期间从桌面快捷方式或 Steam 把游戏起来不会再被发现，而真正动安装目录的是后面的 `InstallDownloadedFilesAsync`（`:359-370` 的 `DeleteExistingFile` + `File.Move`）；③**报法不统一**——卸载那条点名实际在跑的进程，下载那条只有笼统一句，与 ADR-032 决策 5「报出的名字就是用户看到的」不一致。
+- **影响（按平台分档）**：运行中操作 + Windows → 覆盖被占用的文件抛 IO，操作失败并如实报错、`.tmp` 留在盘上可重试，不会静默坏掉；运行中操作 + Linux（POSIX 允许删除/改名已打开的文件，见 AUD-CI-005 同一语义）或全新安装时游戏在跑 → 可能**静默**把运行中游戏正在读的文件换掉，启动器这边一切「成功」，最坏是游戏当场出错。属「值得补但不是高危」：既不损坏安装记录（CRC64 + 暂存 + 提交兜底），也不涉及越权删除。
+- **解决**（`c38d6fa`，2026-09-15 功能轮跟进）：①`ResolveKnownProcessNames` 在没有本地配置时退回远端配置声明的启动程序名 `GameConfigResponse.GameStartExeName`（它与本地 `Name` 本就是同一身份——提交路径已在做相等校验）；②`RunDownloadVerifyLoopAsync` 在每轮下载之后、第一处写入（`RemoveFiles`）之前复查同一道闸门，命中即返回失败**而不是 Stop**，`.tmp` 留在盘上、用户关掉游戏后重试按已有字节继续（检查点按既有终局语义在该出口丢弃）；③判法与报法各收一处——`FindRunningGameFailureAsync` 同时服务计划阶段与写入边界，「运行中的进程怎么写给用户看」收进 `GameProcessNames.DescribeForDisplay`（卸载那条也改走它），下载文案因此从「游戏正在运行，请关闭游戏后再修改文件。」变为点名的「游戏正在运行：BlueArchive.exe。请关闭游戏后再修改文件。」（四语同步改写，键数不变）。守卫：`GameDownloadServiceTests.InstallOrUpdateAsync_WhenTheRemoteDeclaredExecutableIsRunning_RefusesBeforeWritingAnything`（替身只在请求的名字含 `BlueArchive` 时报在跑，等价于证明名字来自远端配置；断言游戏文件/本地清单/检查点一个都没写）、`..._WhenTheGameStartsDuringTheDownload_RefusesBeforeTouchingTheGameDirectory`（第二次探测才报在跑，断言目标文件未落地而 `.tmp` 留在盘上）、`GameProcessNamesTests.DescribeForDisplay_AppendsTheExecutableExtensionAndJoinsWithASeparator`。**变异验证**：把远端兜底改成空、把复查判据喂空后，前两条用例同时变红，还原后转绿。文档：ADR-032 第 8 条决策 + 已知限制第 3 条、AGENTS.md 游戏操作段、CONTEXT.md「游戏进程家族」词条。
+- **残留（ADR-032 已知限制第 3 条）**：远端兜底只有宿主一个名字，拿不到本地 `params`；全新安装且只剩反作弊宿主存活时仍可能放行。要彻底解决需要别的信号（例如随包发布的运行器清单），已书面记录。
 
 ### AUD-ARCH-005 — `ShellLifecycle` 为 src/ 最高变更热点，Wire/Unwire 16 对订阅镜像靠人工配对【新立案】
 
@@ -265,6 +318,12 @@
 
 ## Advisory（不立案汇总）
 
+功能轮新增（2026-09-15，置信度低于报告线或属决策项）：
+
+- **彻底清除阶段没有进度反馈**（置信度 70）：`GameUninstallService.cs:118-142` 的百分比闸门只覆盖清单文件；`DeleteThoroughCleanupTargetsAsync`（:263-289，跑在线程池上）整段不发进度，24 GB 安装的删除期间面板停在 100%。ADR-030 第 4 条为 3.4 秒的测量专门做了「先弹框、尺寸后到」，同一条思路没有延伸到更长的删除段——但删除期间有 `SetBusy` 与操作表面在动，与「点了没反应」不同档，故不立案。
+- **尺寸统计不可取消**（置信度 60）：`MeasureFootprintAsync` 的 `Task.Run(..., cancellationToken)` 只能拦住启动，`DirectorySizeProbe.Measure` 自身不查 token，用户关掉对话框后遍历仍把整棵树走完（结果被 `IsVisible` 守卫丢弃）。纯浪费 I/O，无正确性影响。
+- **`Helpers/ProcessService.cs` 现引用 `Services/GameRuntime`**（置信度 55）：`GameProcessNames.BelongsToFamily` 是 Helpers 唯一的 Services 依赖（grep 证实全仓 Helpers 仅此一处）。两者同属 AGENTS.md 所列「共享基础设施」，没有成文的方向规则，故仅记录：若将来立「Helpers 不得依赖 Services」的分层规则，这一处需要随之下沉或改接缝。
+
 复审新增（2026-09-14 下午，置信度低于报告线或属决策项）：
 
 - **settings.json 每次壳层刷新双读 + 每读双解析**（置信度 75）：`LauncherCoreService.cs:77` 的 `LoadAsync` 在 `ShellLifecycle.cs:223` 已读之后再次 `settingsService.ReadAsync`；`LauncherSettingsService.cs:79` 反序列化后 `ApplyLegacyFields`（`:122-124`）又无条件 `JsonDocument.Parse(json)` 一次。全部在线程池，文件 KB 级——纯冗余工作，改动需先厘清两次读取的快照一致性语义。
@@ -289,7 +348,7 @@
 
 **结论：文档边界与实现一致，模态隔离裁定与 ADR-023 收敛经受住了本窗口两轮 UI 重构。**
 
-- **跨功能边界零违规**（复核）：全量 `using` 扫描，越界仍仅 `ShellLifecycle`/`ShellPresentationFamily`/`ShellStartup` 三文件 = sanctioned 例外；`DebugViewModel` 仍经 `IGameOperationActivity` 窄抽象消费（组合根绑定 `:154-155`）。
+- **跨功能边界零违规**（复核）：全量 `using` 扫描，越界仍仅 `ShellLifecycle`/`ShellPresentationFamily`/`ShellStartup` 三文件 = sanctioned 例外；`DebugViewModel` 仍经 `IGameOperationActivity` 窄抽象消费（组合根绑定 `:154-155`）。功能轮（2026-09-15）新增依赖仅一条 `Helpers/ProcessService.cs` → `Services/GameRuntime/GameProcessNames`（族判定），不属功能边界（两者同列 AGENTS.md 的共享基础设施），记录见 advisory。
 - **模态注册声明式收敛保持**：19 个 `ModalKind` ↔ 19 条注册（`ShellLifecycle.cs:461-548` ↔ `ModalKind.cs:5-25`），`TryHandleEscape` 2 行委托（:608-612）；`ResourcePanelOverlay` 拆分（`d479c9c`）未破坏裁定——新覆盖层自带 `IsResourcePanelInteractive` 门（`ResourcePanelOverlay.axaml:12-14`）且仍是主叠层FirstChild、位于对话框层之下。
 - **新抽取件干净**：`OperationSurfaceAnimator`（190 行）逐字搬移、ADR-016 注释保留、headless 动效套件未弱化；残留（两处未用 using、锚点退役回调跨文件）见 AUD-ARCH-002 解决记录。
 - **组合根纪律**：全 Singleton、纯构造注入、释放顺序显式注释且经读码核实（客户端注册于 `HttpClientFactory` 之后 :115-135）；`Program.ServiceProvider` 仅用于会话末释放。两处轻微偏离见 advisory。
@@ -322,7 +381,7 @@
 
 ## Testing
 
-**结论：纪律持续兑现。上轮 4 项测试发现全部真实解决；修复轮的守卫测试逐项核实到位（SEC-003 两用例、PERF-006 两用例断言与 `DownloadSession.cs:439` 的显式归零兼容、`IsSameAuthority` 双向钉住）。复审新立案的 3 项测试缺口（TEST-005/006/007）已随第二修复轮全部补齐并配套元契约/哨兵守卫；收口实测单元 1717 通过 / 0 失败 / 2 可见跳过 + Headless 178 通过 / 0 失败。**
+**结论：纪律持续兑现。上轮 4 项测试发现全部真实解决；修复轮的守卫测试逐项核实到位（SEC-003 两用例、PERF-006 两用例断言与 `DownloadSession.cs:439` 的显式归零兼容、`IsSameAuthority` 双向钉住）。复审新立案的 3 项测试缺口（TEST-005/006/007）已随第二修复轮全部补齐并配套元契约/哨兵守卫；收口实测单元 1717 通过 / 0 失败 / 2 可见跳过 + Headless 178 通过 / 0 失败。功能轮（2026-09-15）复测：单元 1819 通过 / 0 失败 / 1 可见跳过（总 1820）+ Headless 184 通过 / 0 失败；同日跟进修复后为单元 1820 / 1 跳过（总 1821）· Headless 184；新增守卫集中在破坏性删除路径与进程家族判据（见 Automated Guards Added 11-16），并修掉一处随环境变色的用例——`GameDownloadServiceTests` 原先用真实进程扫描，开发机上开着游戏就会让提交路径用例集体撞上「游戏在跑」闸门。**
 
 - **关键路径保护**（复核保持 + 一处降级）：下载续传/CRC/限速、安装状态损坏矩阵、设置兼容（legacy 字段 + DeepClone 棘轮）、卸载边界、URL 校验、更新流三分支 + 确认接线（AUD-TEST-002 解决）均钉住；**例外**：并行安装校验的并发语义无多文件用例（AUD-TEST-005，Medium）。
 - **确定性**：正面等待全部有截止/迭代上限（复审全树检索无悬挂面）；程序集级串行 + 静态清单 + 用户数据隔离保持；`Assert.Skip*` 16 处，平台分支全部可见跳过（复审复核保持，零隐藏跳过）；`ResourcePanelApiClient` 5 个专用用例。复审另发现一处确定性边角：`NeutralStrategyHeadlessTests.cs:100` 裸 `Directory.Delete`（advisory）。
@@ -350,6 +409,8 @@
 1. **AUD-PERF-001 残留**：更新路径是否在「自愈契约」前提下引入见证摊销（并行化已交付；需基准实测后再决策，未测量不得轻动）。
 2. **AUD-PERF-005 残留**：首次刷新二次解码是否消除（需先确认跳过卫的解码目标可合法匹配；与同步/异步之争互不绑定）。
 3. **AUD-ARCH-005**：若再因结构原因触碰 Shell，按 ADR-023 声明表收敛 Wire/Unwire（维持接受）。
+
+功能轮（2026-09-15）新立案的 AUD-ARCH-008 已于同日跟进按建议 (a) 解决（`cbda8b9`：`UninstallAsync` 删除前复查家族闸门 + 变异验证过的守卫用例），不留待决项。
 
 复审新立案的 7 项已于第二修复轮全部落地（6 项解决 + SEC-006 转书面化接受）。
 
@@ -429,6 +490,18 @@ CI 对账轮（2026-09-14 晚）顺带落地的守卫：
 9. `GameOperationJourneyTests.ValidateUninstallAsync_WhenValidationSucceeds_ReturnsTheResultWithoutReporting`——反向守卫：成功路径不得多报一条 Toast。
 10. `TestUserDataIsolationTests.ProcessRootResolution_IsConfinedToDeclaredPreDiSites` 增两条反空转基线（扫描面 ≥231 个 `.cs`、解析点 ≥5 个）——原先「扫到零个文件」与「树是干净的」不可区分，基线为 2026-09-15 实测值，删文件时同步下调。
 
+功能轮（2026-09-15）顺带落地的守卫：
+
+11. `DirectoryTreeDeleterTests`（12 Fact + `IsUnder` 2 例 Theory）与 `DirectorySizeProbeTests`（3 Fact + 空路径 3 例 Theory）——递归删除的越界/盘根/reparse 根拒删、树内链接只删链接且目标存活、只读文件也删、删不掉的条目不影响其余删除并按路径交回；测量的跳过链接口径与删除一致（`TestSymlinks` 抽为共享助手，junction 回退 + 可见跳过）。
+12. `GameUninstallServiceTests` 新增 8 例（标准卸载删快捷方式、彻底清除删整棵树与受管子树、自定义前缀保留并说明、删不掉仍成功并点名、游戏根是链接时失败而不抛、`MeasureFootprintAsync` 双树尺寸）与 `GameShortcutServiceTests` 删除三态。
+13. `GameProcessNamesTests`（4 Fact + 2 Theory 共 13 例：族推导与正反例——`xldr` 单段不认领、`BlueArchiveData` 同前缀不匹配）与 `GameProcessTrackerTests` 更新（句柄优先、扫描回落、句柄活着但扫描看不见时用注册时记下的名字）＋ `GameUninstallServiceTests.UninstallAsync_WhenOnlyTheAntiCheatHostIsStillRunning_RefusesAndNamesIt`（只认宿主时这条会放行）。
+14. `SavedSettingsWriterThreadingTests`（4 例，含后台线程调用方的超时上限与「反空转」断言：无 `Current` 通知即失败）与 `MainWindowHeadlessTests.WindowState` 的启动退出用例（`CloseBehavior = Minimize` 时仍真关闭——`Closed` 与 `IsVisible` 分得开这两者）。
+15. `UiStyleContractTests.Dialogs` 确认框可选行的本地化名 + `Mode=TwoWay` 断言、`UiStyleContractTests.Settings` 常规分区绑定清单；`ResxResourceContractTests` 键数基线 555→564（含逐步来源注释）。
+16. `GameUninstallServiceTests.UninstallAsync_WhenTheGameStartedAfterThePrecheck_RefusesAndDeletesNothing`——执行边界的进程家族复查（AUD-ARCH-008 守卫，变异验证：拆掉复查即红）。
+17. `GameDownloadServiceTests.InstallOrUpdateAsync_WhenTheRemoteDeclaredExecutableIsRunning_RefusesBeforeWritingAnything`——远端兜底判据（AUD-ARCH-009 守卫；替身只在请求的名字含 `BlueArchive` 时报在跑，等价于证明名字来自远端配置）。
+18. `GameDownloadServiceTests.InstallOrUpdateAsync_WhenTheGameStartsDuringTheDownload_RefusesBeforeTouchingTheGameDirectory`——下载的写入边界复查（AUD-ARCH-009 守卫；断言目标文件未落地而 `.tmp` 留在盘上）。与 17 同批变异验证：拆掉兜底与复查即红。
+19. `GameProcessNamesTests.DescribeForDisplay_AppendsTheExecutableExtensionAndJoinsWithASeparator`——用户可见的运行中进程报法（两个入口共用一处的守卫）。
+
 ## Verified Strengths
 
 最高杠杆的三项（防止不必要的重构/担忧）：
@@ -442,7 +515,8 @@ CI 对账轮（2026-09-14 晚）顺带落地的守卫：
 1.（决策后执行）AUD-PERF-001 见证摊销：先以新增的 Verbose 跳过计数日志基准实测，再决定是否引入。
 2.（专属设计轮）AUD-PERF-004 横幅位图备忘：Plausible 级补救，需先设计轮播位图的生命周期（复用/失效/陈旧释放）再动手。
 3.（随下次触碰）AUD-PERF-005 二次解码调查；AUD-ARCH-005 若再动 Shell 按声明表收敛 Wire/Unwire。
-4.（维持接受）AUD-SEC-001/002 与已书面化的 SEC-004/SEC-006/ARCH-007：除非威胁模型变化。
+4.（用户侧，可选）AUD-CI-005 残留：把 `linux-unit-tests` 加进 required status checks——作业现已首绿，加进去才能真正挡住平台回归，只有仓库管理员能改。
+5.（维持接受）AUD-SEC-001/002 与已书面化的 SEC-004/SEC-006/ARCH-007：除非威胁模型变化。
 
 ## Audit Method and Limitations
 

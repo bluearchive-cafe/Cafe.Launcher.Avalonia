@@ -209,6 +209,8 @@
         <controls:ConfirmDialog IsOpen="{Binding Dialogs.UninstallConfirm.IsVisible}"
                                 Title="{Binding Shell.I18n[confirmUninstall]}"
                                 Message="{Binding Dialogs.UninstallConfirm.Message}"
+                                OptionText="{Binding Operations.ThoroughUninstallOptionText}"
+                                IsOptionChecked="{Binding Operations.IsThoroughUninstallSelected, Mode=TwoWay}"
                                 CancelText="{Binding Shell.I18n[cancel]}"
                                 CancelCommand="{Binding Dialogs.UninstallConfirm.CancelCommand}"
                                 ConfirmText="{Binding Shell.I18n[uninstall]}"

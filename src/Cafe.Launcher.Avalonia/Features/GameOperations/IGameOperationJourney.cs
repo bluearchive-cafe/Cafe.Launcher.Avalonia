@@ -49,8 +49,14 @@ internal interface IGameOperationJourney
     /// </summary>
     Task<GameOperationResult?> ValidateUninstallAsync(LauncherStatusSnapshot snapshot);
 
+    /// <summary>
+    /// 彻底清除会删除的两个目录的实测大小（ADR-030），供确认框展示；
+    /// 与随后真正删除的目标同源。
+    /// </summary>
+    Task<UninstallFootprint> MeasureUninstallFootprintAsync(LauncherStatusSnapshot snapshot);
+
     /// <summary>Runs a confirmed uninstall for the supplied status snapshot.</summary>
-    Task ConfirmUninstallAsync(LauncherStatusSnapshot snapshot);
+    Task ConfirmUninstallAsync(LauncherStatusSnapshot snapshot, UninstallScope scope);
 
     /// <summary>Attempts to continue a persisted download while respecting cancellation.</summary>
     Task ResumePersistedAsync(LauncherStatusSnapshot snapshot, CancellationToken cancellationToken);
