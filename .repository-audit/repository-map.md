@@ -1,9 +1,9 @@
 # Repository Map
 
 - 地图版本：15（full 全量重审刷新）
-- 审计日期：2026-09-14（full 六域重审；上一基线 2026-09-13 @ `5f56f8e`）
-- HEAD：`6c80951`（`main`；最新已发布 tag `v1.1.0-beta.9`；审计基线 `715fee5` + 同日修复轮 `d1693d5..6c80951`）
-- 上一版地图（v14，2026-09-13，HEAD `5f56f8e`）与旧报告已归档：`history/2026-09-13-full-audit.md`
+- 审计日期：2026-09-14（full 六域重审；上一基线 2026-09-13 @ `ab156dd`）
+- HEAD：`95b9f8b`（`main`；最新已发布 tag `v1.1.0-beta.9`；审计基线 `67229b5` + 同日修复轮 `521f4c1..95b9f8b`）
+- 上一版地图（v14，2026-09-13，HEAD `ab156dd`）与旧报告已归档：`history/2026-09-13-full-audit.md`
 
 ## Project
 
@@ -21,13 +21,13 @@
 - `Composition/ServiceConfiguration.cs`（~150 行）— 唯一 DI 组合根，全部 AddSingleton，构造函数注入（一处例外：transport 工厂内 `ISettingsEditor` 运行时解析 lambda，见本审计 advisory）
 - `Features/`：Shell（窗口壳层，sanctioned 聚合例外）、GameOperations、Settings、SetupWizard、Diagnostics、ResourcePanel
 - `Services/`：网络（`RemoteHttpTransport` 唯一出站模块 + `RemoteHttpRequestService` 手动重定向 + `RemoteHttpUrlValidator` + `HttpClientFactory`/`ProxySettingsService` 代理租约）、下载（`FileDownloadService` .tmp 状态机、`Crc64Service` ArrayPool）、清单/安装状态、设置、自更新、诊断、GameRuntime/、Auth/
-- 根 `ViewModels/`：窗口级 VM + 模态契约（14 个类型，全部合规；AUD-ARCH-004 `DesignGalleryViewModel` 已于 6c80951 归入 Features/Diagnostics）
+- 根 `ViewModels/`：窗口级 VM + 模态契约（14 个类型，全部合规；AUD-ARCH-004 `DesignGalleryViewModel` 已于 95b9f8b 归入 Features/Diagnostics）
 - `Views/`：`MainWindow.axaml.cs`（499 行，动效引擎已抽出）+ `OperationSurfaceAnimator.cs`（190 行，操作表面动效）+ `ResourcePanelOverlay.axaml`（新拆分）+ `MainWindow.Styles.axaml`（Z 序/遮罩）
 - 横切：`Helpers/GamePathValidator.cs`（路径规范化 + 根边界 + reparse point 拒绝）、`AtomicJsonFileStore.cs`、`JsonDefaults.cs`
 
 ### Tests
 
-- `tests/Cafe.Launcher.Avalonia.Tests/` — xUnit v3（本审计本地实测：1704 通过 / 0 失败 / 2 可见跳过 @ `715fee5` Debug）
+- `tests/Cafe.Launcher.Avalonia.Tests/` — xUnit v3（本审计本地实测：1704 通过 / 0 失败 / 2 可见跳过 @ `67229b5` Debug）
 - `tests/Cafe.Launcher.Avalonia.HeadlessTests/` — Avalonia.Headless.XUnit + Skia 黄金截图（7 份基线 + 基线契约测试）
 - 共享替身 `tests/TestDoubles/`（含 `StubRemoteHttpTransport`）、`TestAnimationSetup.cs`、`TestUserDataIsolation.cs` 以 Compile-Link 编入两个测试程序集
 - `Assert.Skip*` 16 处 + 1 处 attribute `Skip=`；平台分支全部可见跳过
@@ -36,7 +36,7 @@
 ### Build / CI
 
 - `.github/workflows/build.yml` — windows-latest（push/PR）：本地化契约 → Debug 全量测试 → 覆盖率门禁 → win-x64 发布；动作按 SHA 钉住；`RestoreLockedMode`
-- `.github/workflows/linux-tests.yml`（新增 @ `5553793`）— ubuntu-24.04 单元套件每周巡检；`build.yml` 另有 `linux-unit-tests` job（@ `c37c44c`）随 push/PR 阻塞执行（AUD-CI-001 收口）
+- `.github/workflows/linux-tests.yml`（新增 @ `08c53f8`）— ubuntu-24.04 单元套件每周巡检；`build.yml` 另有 `linux-unit-tests` job（@ `08c53f8`）随 push/PR 阻塞执行（AUD-CI-001 收口）
 - `.github/workflows/release.yml` — tag 触发：ubuntu-24.04 三 RID 分发包（AppImage 工具 SHA256 钉住）→ windows-latest Release 重测 + Inno 安装器（attestation 校验）→ 双仓库发布 + `SHA256SUMS` 数量硬校验 + 横幅存在性硬校验
 - SDK 双固定：global.json 10.0.302 + setup-dotnet 显式版本
 
@@ -47,8 +47,8 @@
 
 ### Documentation / ADRs
 
-- `AGENTS.md`、`PROJECT_CONVENTIONS.md`（§12 工具链表受 InstallerContractTests 守护）、`CONTEXT.md`（模态交互权裁定）、`UBIQUITOUS_LANGUAGE.md`、ADR-001..023、`PRIVACY.md`、`THIRD-PARTY-NOTICES.md`（63000e1 与依赖同提交再生）
-- `docs/architecture-review-2026-09-13.html`（`afd6dbd` 入库，架构评审候选 01-11 的工作产物）
+- `AGENTS.md`、`PROJECT_CONVENTIONS.md`（§12 工具链表受 InstallerContractTests 守护）、`CONTEXT.md`（模态交互权裁定）、`UBIQUITOUS_LANGUAGE.md`、ADR-001..023、`PRIVACY.md`、`THIRD-PARTY-NOTICES.md`（cbddf31 与依赖同提交再生）
+- `docs/architecture-review-2026-09-13.html`（`54c1871` 入库，架构评审候选 01-11 的工作产物）
 - 官方启动器 v1.7.2 协议对比分析：按用户 2026-09-12 裁定不入库；行为不变量由 `OfficialHashServiceTests`（字段序）、`AuthorizationHeaderFactoryTests`（签名/版本耦合）、`LauncherConstantsTests` 等测试钉住；工作树文件已于 2026-09-14 前移除（AUD-MAINT-002 以 accepted-risk 结案）
 
 ## Architecture
@@ -88,6 +88,6 @@ desktop-launcher 基线按仓库证据调整：
 
 ## Previous Audit State
 
-- 本轮为 full 全量重审（用户指令）+ 同日修复轮；上一报告（2026-09-13 full+delta @ `5f56f8e`/`8449d37`）归档于 `history/2026-09-13-full-audit.md`
-- 现行台账 `findings.json`（2026-09-14 @ `6c80951`）：开放 6 项（全 Low：PERF-001/004/005 残留、SEC-001/002、ARCH-005，均为决策/待设计项）
+- 本轮为 full 全量重审（用户指令）+ 同日修复轮；上一报告（2026-09-13 full+delta @ `ab156dd`/`1619d35`）归档于 `history/2026-09-13-full-audit.md`
+- 现行台账 `findings.json`（2026-09-14 @ `95b9f8b`）：开放 6 项（全 Low：PERF-001/004/005 残留、SEC-001/002、ARCH-005，均为决策/待设计项）
 - 累计结案 17 项：14 resolved + 3 accepted-risk（MAINT-002、SEC-004、ARCH-007）；修复轮提交清单见 audit-state.json note
