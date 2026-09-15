@@ -66,4 +66,15 @@ public sealed class GameProcessNamesTests
     {
         Assert.False(GameProcessNames.BelongsToFamily("BlueArchive", []));
     }
+
+    [Fact]
+    public void DescribeForDisplay_AppendsTheExecutableExtensionAndJoinsWithASeparator()
+    {
+        // 两道闸门（卸载 / 下载、安装、修复）共用这一处报法：用户看到的名字不因入口而变样。
+        Assert.Equal(
+            "xldr_BlueArchiveOnline_JP.exe / BlueArchive.exe",
+            GameProcessNames.DescribeForDisplay(["xldr_BlueArchiveOnline_JP", "BlueArchive"]));
+        Assert.Equal("BlueArchive.exe", GameProcessNames.DescribeForDisplay(["BlueArchive"]));
+        Assert.Equal("", GameProcessNames.DescribeForDisplay([]));
+    }
 }

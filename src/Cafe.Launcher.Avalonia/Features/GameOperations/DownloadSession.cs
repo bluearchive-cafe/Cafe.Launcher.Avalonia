@@ -186,11 +186,12 @@ internal sealed class DownloadSession : IDisposable
         DownloadPlan? Plan,
         CdnConfigResponse? CdnConfig,
         int SpeedLimitBytesPerSec,
+        IReadOnlyList<string> KnownProcessNames,
         GameOperationResult? Failure,
         GameOperationResult? CompletedResult)
     {
         public static DownloadPlanPreparation Stop(GameOperationResult result) =>
-            new(null, null, null, 0, result, null);
+            new(null, null, null, 0, [], result, null);
     }
 
     /// <summary>
@@ -227,14 +228,11 @@ internal sealed class DownloadSession : IDisposable
         Directory.CreateDirectory(gamePath);
 
         var localGame = await localInstallationStateStore.ReadAsync(gamePath, activeToken).ConfigureAwait(false);
-        if (localGame.GameConfig?.Name is { Length: > 0 } hostExeName
-            && (await gameProcessTracker.FindRunningGameProcessesAsync(
-                GameProcessNames.FromLaunchConfiguration(hostExeName, localGame.GameConfig.Params),
-                activeToken).ConfigureAwait(false)).Count > 0)
+        var knownProcessNames = ResolveKnownProcessNames(localGame.GameConfig, gameConfig);
+        var gameRunning = await FindRunningGameFailureAsync(knownProcessNames, activeToken).ConfigureAwait(false);
+        if (gameRunning is not null)
         {
-            return DownloadPlanPreparation.Stop(Failed(
-                localizer.T(LocalizationKeys.GameExecutableRunning),
-                GameOperationErrorCode.GameRunning));
+            return DownloadPlanPreparation.Stop(gameRunning);
         }
 
         await checkpointStore.SaveAsync(new DownloadTaskState
@@ -300,6 +298,7 @@ internal sealed class DownloadSession : IDisposable
                     downloadPlan,
                     cdnConfig,
                     speedLimitBytesPerSec,
+                    knownProcessNames,
                     Failure: null,
                     CompletedResult: alreadyCurrentResult);
             }
@@ -321,6 +320,7 @@ internal sealed class DownloadSession : IDisposable
                 downloadPlan,
                 cdnConfig,
                 speedLimitBytesPerSec,
+                knownProcessNames,
                 Failure: null,
                 CompletedResult: alreadyCurrentResult);
         }
@@ -373,8 +373,46 @@ internal sealed class DownloadSession : IDisposable
             downloadPlan,
             cdnConfig,
             speedLimitBytesPerSec,
+            knownProcessNames,
             Failure: null,
             CompletedResult: null);
+    }
+
+    /// <summary>
+    /// 这道闸门认哪些名字（ADR-032）：本地配置带来宿主名与启动参数里的可执行文件；还没有本地
+    /// 配置时（全新安装，或配置缺失/损坏）退回远端配置声明的启动程序名——否则安装会在游戏
+    /// 运行时直接放行。名字一个都取不到时返回空，闸门不做无根据的拒绝。
+    /// </summary>
+    private static IReadOnlyList<string> ResolveKnownProcessNames(
+        GameLauncherConfig? localConfig,
+        GameConfigResponse remoteConfig) =>
+        localConfig?.Name is { Length: > 0 } hostExeName
+            ? GameProcessNames.FromLaunchConfiguration(hostExeName, localConfig.Params)
+            : GameProcessNames.FromLaunchConfiguration(remoteConfig.GameStartExeName, null);
+
+    /// <summary>
+    /// 「游戏是不是在跑」这道闸门（ADR-032）在本会话的唯一实现：计划阶段与写入边界复查共用它，
+    /// 判据与报出的名字不会分叉。返回 null 表示放行。
+    /// </summary>
+    private async Task<GameOperationResult?> FindRunningGameFailureAsync(
+        IReadOnlyList<string> knownProcessNames,
+        CancellationToken activeToken)
+    {
+        if (knownProcessNames.Count == 0)
+        {
+            return null;
+        }
+
+        var runningProcesses = await gameProcessTracker
+            .FindRunningGameProcessesAsync(knownProcessNames, activeToken)
+            .ConfigureAwait(false);
+        return runningProcesses.Count == 0
+            ? null
+            : Failed(
+                localizer.F(
+                    LocalizationKeys.GameExecutableRunning,
+                    GameProcessNames.DescribeForDisplay(runningProcesses)),
+                GameOperationErrorCode.GameRunning);
     }
 
     /// <summary>
@@ -434,6 +472,19 @@ internal sealed class DownloadSession : IDisposable
             foreach (var entry in roundVerified)
             {
                 verifiedHashes[entry.Key] = entry.Value;
+            }
+
+            // 写入边界复查（ADR-032）：计划阶段答的是「点下按钮那一刻」，而下载可能持续数分钟，
+            // 这期间游戏被从外部起来时预检的答复就已经过期。下载阶段只写 .tmp，从这里开始才动
+            // 安装目录里的真实文件（先删、后搬移），所以在第一处写入之前复查一次同一道闸门。
+            // 命中即返回失败而不是 Stop：.tmp 留在盘上，用户关掉游戏后重试会按已有字节继续
+            // （检查点按既有终局语义丢弃——只有应用退出那一档才保留供跨会话续传）。
+            var gameRunning = await FindRunningGameFailureAsync(
+                preparation.KnownProcessNames,
+                activeToken).ConfigureAwait(false);
+            if (gameRunning is not null)
+            {
+                return gameRunning;
             }
 
             DownloadExecutor.RemoveFiles(gamePath, downloadPlan.NeedDelete, null);

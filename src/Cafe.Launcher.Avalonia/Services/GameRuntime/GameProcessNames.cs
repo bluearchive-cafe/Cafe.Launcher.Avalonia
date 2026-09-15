@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace Cafe.Launcher.Avalonia.Services.GameRuntime;
 
@@ -87,6 +88,14 @@ public static class GameProcessNames
         && knownName.StartsWith(processName, StringComparison.OrdinalIgnoreCase)
         && knownName[processName.Length] == '_'
         && processName.Contains('_', StringComparison.Ordinal);
+
+    /// <summary>
+    /// 一组正在运行的游戏进程名在界面上怎么写：不含扩展名的进程名补回 <c>.exe</c>（与启动器
+    /// 别处称呼可执行文件一致），多条用语言中立的分隔符连接。卸载与下载/安装/修复两道闸门
+    /// 共用它，用户看到的名字因此不会因入口不同而变样（ADR-032）。
+    /// </summary>
+    public static string DescribeForDisplay(IReadOnlyList<string> processNames) =>
+        string.Join(" / ", processNames.Select(name => $"{name}{ExecutableExtension}"));
 
     /// <summary>去掉路径与 <c>.exe</c> 扩展名，留下可直接比较的进程名。</summary>
     internal static string WithoutExtension(string? exeName)

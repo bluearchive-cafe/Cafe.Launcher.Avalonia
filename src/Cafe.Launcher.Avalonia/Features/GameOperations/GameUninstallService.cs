@@ -21,11 +21,6 @@ public sealed class GameUninstallService
     /// </summary>
     private const int MaxReportedLeftovers = 5;
 
-    /// <summary>多个正在运行的游戏进程名之间的分隔符；语言中立，不依赖某一语的顿号。</summary>
-    private const string RunningProcessSeparator = " / ";
-
-    private static string WithExecutableExtension(string processName) => $"{processName}.exe";
-
     private readonly LocalInstallationStateStore localInstallationStateStore;
     private readonly GameInstallationPath installationPath;
     private readonly LocalDiagnostics diagnostics;
@@ -422,12 +417,10 @@ public sealed class GameUninstallService
             return null;
         }
 
-        // 报出实际在跑的那几个（去掉扩展名的进程名补回 .exe，与启动器别处称呼可执行文件一致），
-        // 而不是只报配置里那个宿主：只认宿主时错的正是这一句。
+        // 报出实际在跑的那几个（报法由 GameProcessNames.DescribeForDisplay 统一：名字补回 .exe，
+        // 与下载/安装/修复那条闸门一致），而不是只报配置里那个宿主：只认宿主时错的正是这一句。
         return DownloadSession.Failed(
-            localizer.F(
-                LocalizationKeys.GameIsRunning,
-                string.Join(RunningProcessSeparator, runningProcesses.Select(WithExecutableExtension))),
+            localizer.F(LocalizationKeys.GameIsRunning, GameProcessNames.DescribeForDisplay(runningProcesses)),
             GameOperationErrorCode.GameRunning);
     }
 
