@@ -39,7 +39,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <AvaloniaResource Include="Assets\**" />
+    <!-- app-icon-source.png 是图标流水线的输入（New-AppIconAssets.ps1 与手工生成的 .ico），
+         运行时没有代码读它（About 分区不含 Image，托盘与窗口用的是 app-icon.ico），
+         因此不嵌进资源：它比其余素材都大，嵌进去会随全部六个分发包发出去。 -->
+    <AvaloniaResource Include="Assets\**" Exclude="Assets\app-icon-source.png" />
     <EmbeddedResource Remove="Resources\LauncherStrings*" />
     <None Update="Assets\app-icon.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

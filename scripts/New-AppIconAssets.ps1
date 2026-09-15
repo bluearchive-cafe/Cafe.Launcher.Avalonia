@@ -5,7 +5,7 @@ param(
 
 # One-shot Windows tool: regenerates the committed icon assets used by the
 # macOS bundle (installer/macos/app-icon.icns) and the Linux AppImage
-# (installer/linux/app-icon-*.png) from Assets/app-icon-source.jpg.
+# (installer/linux/app-icon-*.png) from Assets/app-icon-source.png.
 # Run it after changing the source artwork and commit the outputs.
 
 $ErrorActionPreference = "Stop"
@@ -17,7 +17,7 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RootDir = Split-Path -Parent $ScriptDir
 
 if ([string]::IsNullOrWhiteSpace($SourcePath)) {
-    $SourcePath = Join-Path $RootDir "src/Cafe.Launcher.Avalonia/Assets/app-icon-source.jpg"
+    $SourcePath = Join-Path $RootDir "src/Cafe.Launcher.Avalonia/Assets/app-icon-source.png"
 }
 
 $MacOSOutputDir = Join-Path $RootDir "installer/macos"
