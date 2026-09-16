@@ -77,9 +77,7 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
             return;
         }
 
-        host.SetBusy(true);
-
-        try
+        await RunBusyAsync("Game launch failed.", LocalizationKeys.GameLaunchFailed, async () =>
         {
             var launchResult = await executor.LaunchAsync(snapshot);
             host.SetLaunchCheckResult(launchResult.Validation.Message);
@@ -112,16 +110,7 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
                     await diagnostics.ErrorAsync("GameLaunch", launchResult.DiagnosticException);
                 }
             }
-        }
-        catch (Exception exception)
-        {
-            await errorHandling.HandleErrorAsync("Game launch failed.", exception,
-                new ErrorHandlingOptions { ToastMessage = localizer.F(LocalizationKeys.GameLaunchFailed, exception.Message) });
-        }
-        finally
-        {
-            host.SetBusy(false);
-        }
+        });
     }
 
     /// <summary>
@@ -159,22 +148,11 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
             return;
         }
 
-        host.SetBusy(true);
-
-        try
+        await RunBusyAsync("Game update check failed.", LocalizationKeys.GameCheckUpdateFailed, async () =>
         {
             await RequestRefresh(GameOperationsRefreshMode.SkipPersistedResume);
             ReportUpdateCheck(host.CurrentSnapshot ?? snapshot);
-        }
-        catch (Exception exception)
-        {
-            await errorHandling.HandleErrorAsync("Game update check failed.", exception,
-                new ErrorHandlingOptions { ToastMessage = localizer.F(LocalizationKeys.GameCheckUpdateFailed, exception.Message) });
-        }
-        finally
-        {
-            host.SetBusy(false);
-        }
+        });
     }
 
     /// <summary>Creates the desktop shortcut for the installed game and reports the outcome.</summary>
@@ -185,9 +163,7 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
             return;
         }
 
-        host.SetBusy(true);
-
-        try
+        await RunBusyAsync("Desktop shortcut creation failed.", LocalizationKeys.GameShortcutFailed, async () =>
         {
             var result = await shortcutService.CreateDesktopShortcutAsync(snapshot);
             switch (result.Status)
@@ -207,16 +183,7 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(snapshot), result.Status, null);
             }
-        }
-        catch (Exception exception)
-        {
-            await errorHandling.HandleErrorAsync("Desktop shortcut creation failed.", exception,
-                new ErrorHandlingOptions { ToastMessage = localizer.F(LocalizationKeys.GameShortcutFailed, exception.Message) });
-        }
-        finally
-        {
-            host.SetBusy(false);
-        }
+        });
     }
 
     /// <summary>Opens the installed game folder in the platform file manager.</summary>
@@ -594,6 +561,35 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 
     private Task<bool> RequestRefresh(GameOperationsRefreshMode mode) =>
         host.RefreshAsync(mode);
+
+    /// <summary>
+    /// 无后置处理的入口共用的骨架：进入忙碌、执行、把异常按 (日志上下文, 失败文案键) 报给用户、
+    /// 退出忙碌。
+    /// </summary>
+    /// <remarks>
+    /// 三个入口（启动游戏、检查更新、创建快捷方式）此前各写一遍同一段 try/catch/finally，差异只有
+    /// 日志上下文与失败文案键。带 <c>refreshHandled</c> 后置处理或自定义
+    /// <see cref="ErrorHandlingOptions"/> 的入口（修复、卸载、续传）仍在调用点显式展开——那些是
+    /// 入口自己的语义，不是这段骨架的一部分。
+    /// </remarks>
+    private async Task RunBusyAsync(string errorContext, string failureMessageKey, Func<Task> body)
+    {
+        host.SetBusy(true);
+
+        try
+        {
+            await body();
+        }
+        catch (Exception exception)
+        {
+            await errorHandling.HandleErrorAsync(errorContext, exception,
+                new ErrorHandlingOptions { ToastMessage = localizer.F(failureMessageKey, exception.Message) });
+        }
+        finally
+        {
+            host.SetBusy(false);
+        }
+    }
 
     private bool PrepareShellOnly(LauncherStatusSnapshot? snapshot)
     {
