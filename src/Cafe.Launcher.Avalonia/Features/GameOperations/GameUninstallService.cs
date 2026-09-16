@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -74,7 +74,7 @@ public sealed class GameUninstallService
         if (GameOperationPolicy.Decide(GameOperationPolicy.Operation.Uninstall, snapshot.RuntimeState)
             == GameOperationDecision.RejectedForCurrentState)
         {
-            return DownloadSession.Failed(localizer.T(LocalizationKeys.OperationUnavailableForCurrentState), GameOperationErrorCode.InvalidState);
+            return GameOperationRejections.UnavailableResult(localizer);
         }
 
         var gamePath = installationPath.NormalizeGamePath(snapshot.LocalGame.GamePath ?? "");
@@ -166,7 +166,7 @@ public sealed class GameUninstallService
             {
                 checkpointStore.Clear();
             }
-            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            catch (Exception exception) when (StorageFailure.IsRecoverable(exception))
             {
                 // Best-effort cleanup of the resume marker; preserve uninstall success.
             }
@@ -211,7 +211,7 @@ public sealed class GameUninstallService
                 AffectedFileCount = files.Count + 2
             };
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        catch (Exception exception) when (StorageFailure.IsRecoverable(exception))
         {
             await diagnostics.ErrorAsync(
                 "GameUninstall",

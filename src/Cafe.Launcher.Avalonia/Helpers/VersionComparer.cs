@@ -52,7 +52,12 @@ public static class VersionComparer
     /// A larger set of pre-release fields denotes a higher precedence than a smaller set if all
     /// preceding identifiers are equal.
     /// </summary>
-    private static int ComparePrerelease(string s1, string s2)
+    /// <remarks>
+    /// The launcher-update service's release ordering shares this rule set, so it calls here rather
+    /// than keeping its own copy: two implementations of §11 drift silently, and both sides are
+    /// pinned by tests over the same version vectors.
+    /// </remarks>
+    internal static int ComparePrerelease(string s1, string s2)
     {
         var parts1 = s1.Split('.');
         var parts2 = s2.Split('.');

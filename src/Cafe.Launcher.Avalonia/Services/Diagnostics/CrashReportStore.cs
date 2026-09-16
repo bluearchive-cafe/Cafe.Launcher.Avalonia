@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -9,6 +9,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Cafe.Launcher.Avalonia.Constants;
+using Cafe.Launcher.Avalonia.Helpers;
 
 namespace Cafe.Launcher.Avalonia.Services.Diagnostics;
 
@@ -63,25 +64,20 @@ public sealed class CrashReportStore : ICrashReportLocator
         var id = string.Create(
             CultureInfo.InvariantCulture,
             $"CR-{now:yyyyMMdd-HHmmss}-{Convert.ToHexString(RandomNumberGenerator.GetBytes(2))}");
-        var report = new CrashReport
-        {
-            Id = id,
-            OccurredAt = now,
-            Source = source,
-            AppVersion = BuildInfo.LauncherVersion,
-            BuildSha = BuildInfo.CommitSha,
-            OperatingSystem = $"{RuntimeInformation.OSDescription} · {RuntimeInformation.OSArchitecture}",
-            UiCulture = CultureInfo.CurrentUICulture.Name,
-            ExceptionType = exception.GetType().FullName ?? exception.GetType().Name,
-            TechnicalDetails = BuildTechnicalDetails(id, now, source, exception)
-        };
+        var report = CrashReport.Build(
+            id,
+            now,
+            source,
+            $"{RuntimeInformation.OSDescription} · {RuntimeInformation.OSArchitecture}",
+            exception.GetType().FullName ?? exception.GetType().Name,
+            BuildTechnicalDetails(id, now, source, exception));
 
         Exception? primaryFailure = null;
         try
         {
             return Write(report, primaryDirectory);
         }
-        catch (Exception writeException) when (writeException is IOException or UnauthorizedAccessException)
+        catch (Exception writeException) when (StorageFailure.IsRecoverable(writeException))
         {
             primaryFailure = writeException;
         }
@@ -90,7 +86,7 @@ public sealed class CrashReportStore : ICrashReportLocator
         {
             return Write(report, fallbackDirectory);
         }
-        catch (Exception fallbackFailure) when (fallbackFailure is IOException or UnauthorizedAccessException)
+        catch (Exception fallbackFailure) when (StorageFailure.IsRecoverable(fallbackFailure))
         {
             throw new AggregateException("Crash snapshot could not be persisted.", primaryFailure, fallbackFailure);
         }
@@ -108,7 +104,7 @@ public sealed class CrashReportStore : ICrashReportLocator
         {
             return Write(report, fallbackDirectory);
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        catch (Exception exception) when (StorageFailure.IsRecoverable(exception))
         {
             return report;
         }
@@ -163,7 +159,7 @@ public sealed class CrashReportStore : ICrashReportLocator
                 .ToString();
             File.AppendAllText(additionalPath, entry, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
         }
-        catch (Exception appendException) when (appendException is IOException or UnauthorizedAccessException)
+        catch (Exception appendException) when (StorageFailure.IsRecoverable(appendException))
         {
             // The primary snapshot already exists; a secondary failure must never recurse.
         }
@@ -215,7 +211,7 @@ public sealed class CrashReportStore : ICrashReportLocator
                 }
             }
         }
-        catch (Exception cleanupException) when (cleanupException is IOException or UnauthorizedAccessException)
+        catch (Exception cleanupException) when (StorageFailure.IsRecoverable(cleanupException))
         {
             // Retention is maintenance only and must never prevent startup.
         }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -56,7 +56,7 @@ public sealed class LauncherSettingsService : IDisposable
             ApplyLegacyFields(settings, json);
             return NormalizeSettings(settings);
         }
-        catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
+        catch (Exception exception) when (StorageFailure.IsRecoverableOrInvalidJson(exception))
         {
             if (diagnostics is not null)
             {

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using Cafe.Launcher.Avalonia.Constants;
 
@@ -47,16 +47,11 @@ internal static class CrashReportBootstrap
     }
 
     /// <summary>Report shown when no snapshot could be read from disk.</summary>
-    private static CrashReport CreateUnreadableReport() => new()
-    {
-        Id = "CR-UNAVAILABLE",
-        OccurredAt = DateTimeOffset.Now,
-        Source = "CrashReportMode",
-        AppVersion = BuildInfo.LauncherVersion,
-        BuildSha = BuildInfo.CommitSha,
-        OperatingSystem = Environment.OSVersion.ToString(),
-        UiCulture = CultureInfo.CurrentUICulture.Name,
-        ExceptionType = nameof(InvalidOperationException),
-        TechnicalDetails = "The crash snapshot could not be read. Open the log directory for any diagnostics that were saved."
-    };
+    private static CrashReport CreateUnreadableReport() => CrashReport.Build(
+        "CR-UNAVAILABLE",
+        DateTimeOffset.Now,
+        "CrashReportMode",
+        Environment.OSVersion.ToString(),
+        nameof(InvalidOperationException),
+        "The crash snapshot could not be read. Open the log directory for any diagnostics that were saved.");
 }

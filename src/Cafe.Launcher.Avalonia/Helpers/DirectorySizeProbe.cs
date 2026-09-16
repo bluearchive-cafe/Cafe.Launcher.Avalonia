@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 
@@ -56,13 +56,13 @@ public static class DirectorySizeProbe
                             total += new FileInfo(entry).Length;
                         }
                     }
-                    catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+                    catch (Exception exception) when (StorageFailure.IsRecoverable(exception))
                     {
                         // 单个条目读不到就跳过：展示数字允许偏小，不允许抛。
                     }
                 }
             }
-            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            catch (Exception exception) when (StorageFailure.IsRecoverable(exception))
             {
             }
         }
@@ -77,7 +77,7 @@ public static class DirectorySizeProbe
         {
             return (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0;
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        catch (Exception exception) when (StorageFailure.IsRecoverable(exception))
         {
             return false;
         }

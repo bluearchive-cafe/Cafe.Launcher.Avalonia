@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Net.Http;
@@ -52,7 +52,7 @@ public sealed class ImageCacheService : IDisposable
         {
             Directory.CreateDirectory(cacheDir);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch (Exception ex) when (StorageFailure.IsRecoverable(ex))
         {
             // Cache directory is non-critical — log and continue without caching
             LocalDiagnostics.LogSync(LogEntrySeverity.Warn, "ImageCache", $"failed to create cache directory: {ex.Message}");
@@ -62,14 +62,20 @@ public sealed class ImageCacheService : IDisposable
     }
 
     /// <summary>
+    /// 纵深防御：拒绝含路径分隔符或穿越序列的哈希——它会被拼进缓存文件名。
+    /// 查询与写入两侧共用这一处判据，只有「怎么反应」不同（查不到即未命中，写入则拒绝入参）。
+    /// </summary>
+    private static bool IsUnsafeCacheKey(string key) =>
+        key.Contains('/') || key.Contains('\\') || key.Contains("..");
+
+    /// <summary>
     /// Returns the cached file path if a cached copy exists for the given CRC64 hash.
     /// </summary>
     public string? GetCachedPath(string crc64Hash)
     {
         if (string.IsNullOrWhiteSpace(crc64Hash))
             return null;
-        // Defense-in-depth: reject hashes containing path separators or traversal sequences
-        if (crc64Hash.Contains('/') || crc64Hash.Contains('\\') || crc64Hash.Contains(".."))
+        if (IsUnsafeCacheKey(crc64Hash))
             return null;
         var cachePath = Path.Combine(cacheDir, $"{crc64Hash}.cache");
         return File.Exists(cachePath) ? cachePath : null;
@@ -109,8 +115,7 @@ public sealed class ImageCacheService : IDisposable
         RemoteRequestOptions options,
         CancellationToken ct)
     {
-        // Defense-in-depth: reject hashes containing path separators or traversal sequences
-        if (crc64Hash.Contains('/') || crc64Hash.Contains('\\') || crc64Hash.Contains(".."))
+        if (IsUnsafeCacheKey(crc64Hash))
             throw new ArgumentException("CRC64 hash contains invalid characters.", nameof(crc64Hash));
 
         var cachePath = Path.Combine(cacheDir, $"{crc64Hash}.cache");
@@ -172,7 +177,7 @@ public sealed class ImageCacheService : IDisposable
                 {
                     return await File.ReadAllBytesAsync(cachePath, ct).ConfigureAwait(false);
                 }
-                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+                catch (Exception exception) when (StorageFailure.IsRecoverable(exception))
                 {
                     TryDelete(cachePath);
                 }
@@ -185,7 +190,7 @@ public sealed class ImageCacheService : IDisposable
                 await File.WriteAllBytesAsync(tempPath, bytes, ct).ConfigureAwait(false);
                 File.Move(tempPath, cachePath, overwrite: true);
             }
-            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            catch (Exception exception) when (StorageFailure.IsRecoverable(exception))
             {
                 // A cache write is optional: callers can still render the downloaded image.
                 // 豁免：缓存写入是可选优化，失败时调用方仍可直接渲染下载内容。
@@ -221,32 +226,27 @@ public sealed class ImageCacheService : IDisposable
     {
         var remote = await transport.GetStreamAsync(uri, options, ct).ConfigureAwait(false);
         using var input = remote.Content;
-        if (remote.DeclaredContentLength is > MaxImageBytes)
+
+        MemoryStream output;
+        try
+        {
+            // 停顿预算由传输层的流包装承担：每次读取都有空闲上限，
+            // 静默断流会以 HttpRequestException 浮出而不是永久挂起。
+            output = await RemoteBodyReader.ReadAllAsync(
+                (chunk, token) => input.ReadAsync(chunk.AsMemory(), token).AsTask(),
+                MaxImageBytes,
+                remote.DeclaredContentLength,
+                ct).ConfigureAwait(false);
+        }
+        catch (RemoteBodyTooLargeException)
         {
             throw new InvalidDataException("Image response is too large.");
         }
 
-        using var output = new MemoryStream();
-        var buffer = new byte[64 * 1024];
-        while (true)
+        using (output)
         {
-            // 停顿预算由传输层的流包装承担：每次读取都有空闲上限，
-            // 静默断流会以 HttpRequestException 浮出而不是永久挂起。
-            var read = await input.ReadAsync(buffer.AsMemory(), ct).ConfigureAwait(false);
-            if (read == 0)
-            {
-                break;
-            }
-
-            if (output.Length + read > MaxImageBytes)
-            {
-                throw new InvalidDataException("Image response is too large.");
-            }
-
-            output.Write(buffer.AsSpan(0, read));
+            return output.ToArray();
         }
-
-        return output.ToArray();
     }
 
     private static RemoteRequestOptions ResolvedModeOptions() => new()
@@ -273,7 +273,7 @@ public sealed class ImageCacheService : IDisposable
         {
             File.Delete(path);
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        catch (Exception exception) when (StorageFailure.IsRecoverable(exception))
         {
         }
     }
@@ -301,14 +301,14 @@ public sealed class ImageCacheService : IDisposable
                             File.Delete(file);
                         }
                     }
-                    catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+                    catch (Exception exception) when (StorageFailure.IsRecoverable(exception))
                     {
                         // 单个文件失败不阻塞其余清理（可能正被并发读取）。
                     }
                 }
             }
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        catch (Exception exception) when (StorageFailure.IsRecoverable(exception))
         {
             LocalDiagnostics.LogSync(LogEntrySeverity.Warn, "ImageCache", $"cache sweep failed: {exception.Message}");
         }

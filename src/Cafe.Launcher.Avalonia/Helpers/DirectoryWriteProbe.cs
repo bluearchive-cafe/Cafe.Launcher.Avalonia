@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 
 namespace Cafe.Launcher.Avalonia.Helpers;
@@ -23,7 +23,7 @@ public static class DirectoryWriteProbe
 
             return TryCreateProbeFile(directory);
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        catch (Exception exception) when (StorageFailure.IsRecoverable(exception))
         {
             return false;
         }
@@ -46,7 +46,7 @@ public static class DirectoryWriteProbe
             var ancestor = GetNearestExistingAncestorDirectory(targetPath);
             return ancestor is not null && TryCreateProbeFile(ancestor);
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        catch (Exception exception) when (StorageFailure.IsRecoverable(exception))
         {
             return false;
         }
@@ -88,7 +88,7 @@ public static class DirectoryWriteProbe
                 FileOptions.DeleteOnClose);
             return true;
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        catch (Exception exception) when (StorageFailure.IsRecoverable(exception))
         {
             return false;
         }

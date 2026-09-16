@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -288,7 +288,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
             fingerprint = $"{info.Length}|{info.LastWriteTimeUtc.Ticks}";
             return true;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch (Exception ex) when (StorageFailure.IsRecoverable(ex))
         {
             // File.Exists 与读取属性之间存在被占用/收回权限的窗口；读不到指纹
             // 就当来源不稳定，走完整重载管线。
@@ -451,7 +451,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
                 imagePath = ResolveRandomBackgroundImage(path);
                 cancellationToken.ThrowIfCancellationRequested();
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            catch (Exception ex) when (StorageFailure.IsRecoverable(ex))
             {
                 await diagnostics.MessageAsync(
                     "Background",

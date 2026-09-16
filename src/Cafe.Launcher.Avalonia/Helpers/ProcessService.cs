@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -52,6 +52,20 @@ public static class ProcessService
 
         return Task.FromResult<IReadOnlyList<string>>(matches);
     }
+
+    /// <summary>
+    /// 进程句柄已不可用：进程已退出、句柄已释放，或无权访问它。
+    /// </summary>
+    /// <remarks>
+    /// <para>调用方的回退值各不相同（读不到「是否退出」就当作已退出、读不到退出码就报 -1、
+    /// 观察与释放失败即忽略），但「哪些异常属于这一类」是同一个判据，不该逐处重写——重写
+    /// 会让一次遗漏看起来像一次刻意的收窄。</para>
+    /// <para>本文件自己的两处 catch 刻意不用它：枚举进程列表失败只容忍
+    /// <see cref="InvalidOperationException"/>/<see cref="Win32Exception"/>（按「没在跑」放行），
+    /// 读进程名还额外容忍 <see cref="NotSupportedException"/>——两者容忍的失败面与句柄失效不同。</para>
+    /// </remarks>
+    internal static bool IsProcessUnavailable(Exception exception) =>
+        exception is InvalidOperationException or Win32Exception or ObjectDisposedException;
 
     /// <summary>
     /// 从系统快照读进程名，读不到（枚举与读取之间已退出、或访问被拒）返回空串。反作弊保护的

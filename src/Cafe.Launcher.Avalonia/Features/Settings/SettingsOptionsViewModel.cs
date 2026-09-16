@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using Cafe.Launcher.Avalonia.Constants;
@@ -311,15 +311,15 @@ public sealed class SettingsOptionsViewModel
         });
     }
 
-    private void RefreshOptions(ObservableCollection<SettingOption> options, System.Func<string, string> resolveDisplayName)
-    {
-        foreach (var option in options)
-        {
-            option.DisplayName = resolveDisplayName(option.Code);
-        }
-    }
-
-    private void RefreshOptions(ObservableCollection<ThemeOption> options, System.Func<string, string> resolveDisplayName)
+    /// <summary>
+    /// 按 code 重解析一组选项的显示名。此前按元素类型分了两个逐字相同的重载，而
+    /// <see cref="SettingOption"/> 与 <see cref="ThemeOption"/> 都派生自
+    /// <see cref="SelectableOption"/>，泛型约束即可覆盖两者。
+    /// </summary>
+    private static void RefreshOptions<T>(
+        ObservableCollection<T> options,
+        System.Func<string, string> resolveDisplayName)
+        where T : SelectableOption
     {
         foreach (var option in options)
         {

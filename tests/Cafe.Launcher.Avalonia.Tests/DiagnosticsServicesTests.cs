@@ -1,4 +1,4 @@
-using Cafe.Launcher.Avalonia.Services;
+﻿using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Testing;
 
@@ -45,6 +45,44 @@ public sealed class DiagnosticsServicesTests : IDisposable
         var text = File.ReadAllText(logger.LogFilePath);
         Assert.Contains("[DebugTest]", text, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task LogFileHeaderCodes_EverySeverity_AreRecognisedByTheLogEntryReader()
+    {
+        // UnifiedLogger 的输出模板（Serilog 的 {Level:u3}）与 LogEntryReader 的头部正则是同一套
+        // 三字母代码的两份独立声明，彼此不引用。任一侧改动——换格式、加一级严重度、改拼写——
+        // 都会让日志查看器与导出过滤器静默读不到任何条目（无法识别的头行被当成上一条的续行），
+        // 而两侧各自的既有用例都仍然通过。这条往返用例是它们之间的唯一定位点。
+        using var logger = new UnifiedLogger(tempDir);
+        logger.SetMinimumLevel(Serilog.Events.LogEventLevel.Verbose);
+
+        var severities = Enum.GetValues<LogEntrySeverity>();
+        foreach (var severity in severities)
+        {
+            await logger.LogAsync(severity, TitleOf(severity));
+        }
+
+        logger.Dispose();
+        var records = LogEntryReader.Read(File.ReadAllLines(logger.LogFilePath)).ToList();
+
+        // 每级各一条且顺序一致：少一条即说明该级的代码没被识别（那条头行会被吞进上一条的正文）。
+        // 断的是开头而非整串：读取器的 Title 是「头行里级别代码之后的全部内容」，其中还包含
+        // 模板里的 {LogTitle} 标签（另一条用例钉住那一段）。
+        Assert.Equal(severities.Length, records.Count);
+        for (var index = 0; index < severities.Length; index++)
+        {
+            Assert.StartsWith($"[{TitleOf(severities[index])}]", records[index].Title, StringComparison.Ordinal);
+        }
+
+        Assert.All(records, record => Assert.NotNull(record.Timestamp));
+
+        // 代码两两不同，否则「这是哪一级」在查看器里不可分。
+        Assert.Equal(
+            severities.Length,
+            records.Select(record => record.SeverityCode).Distinct(StringComparer.Ordinal).Count());
+    }
+
+    private static string TitleOf(LogEntrySeverity severity) => $"Severity-{severity}";
 
     [Fact]
     public async Task DebugLevel_SuppressedWhenMinLevelIsInfo()

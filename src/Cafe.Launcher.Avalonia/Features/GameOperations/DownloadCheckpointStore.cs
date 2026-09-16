@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Text.Json;
 using System.Threading;
@@ -43,7 +43,7 @@ public sealed class DownloadCheckpointStore
         {
             throw;
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException)
+        catch (Exception exception) when (StorageFailure.IsRecoverableOrInvalidJson(exception))
         {
             return null;
         }

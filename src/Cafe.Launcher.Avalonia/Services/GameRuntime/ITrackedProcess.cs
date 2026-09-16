@@ -1,6 +1,7 @@
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.Diagnostics;
+using Cafe.Launcher.Avalonia.Helpers;
 
 namespace Cafe.Launcher.Avalonia.Services.GameRuntime;
 
@@ -43,7 +44,7 @@ internal sealed class SystemTrackedProcess : ITrackedProcess
             {
                 return process.HasExited;
             }
-            catch (Exception ex) when (ex is InvalidOperationException or Win32Exception or ObjectDisposedException)
+            catch (Exception ex) when (ProcessService.IsProcessUnavailable(ex))
             {
                 return true;
             }
@@ -58,7 +59,7 @@ internal sealed class SystemTrackedProcess : ITrackedProcess
             {
                 return process.ExitCode;
             }
-            catch (Exception ex) when (ex is InvalidOperationException or Win32Exception or ObjectDisposedException)
+            catch (Exception ex) when (ProcessService.IsProcessUnavailable(ex))
             {
                 return -1;
             }
@@ -80,7 +81,7 @@ internal sealed class SystemTrackedProcess : ITrackedProcess
             process.EnableRaisingEvents = true;
             process.Exited += OnExited;
         }
-        catch (Exception ex) when (ex is InvalidOperationException or Win32Exception or ObjectDisposedException)
+        catch (Exception ex) when (ProcessService.IsProcessUnavailable(ex))
         {
             // Exit observation is best-effort; the name-scan fallback stays authoritative.
         }
@@ -92,7 +93,7 @@ internal sealed class SystemTrackedProcess : ITrackedProcess
         {
             process.Exited -= OnExited;
         }
-        catch (Exception ex) when (ex is InvalidOperationException or Win32Exception or ObjectDisposedException)
+        catch (Exception ex) when (ProcessService.IsProcessUnavailable(ex))
         {
         }
 
@@ -100,7 +101,7 @@ internal sealed class SystemTrackedProcess : ITrackedProcess
         {
             process.Dispose();
         }
-        catch (Exception ex) when (ex is InvalidOperationException or Win32Exception or ObjectDisposedException)
+        catch (Exception ex) when (ProcessService.IsProcessUnavailable(ex))
         {
         }
     }

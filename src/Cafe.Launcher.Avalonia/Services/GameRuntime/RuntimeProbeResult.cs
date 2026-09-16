@@ -1,5 +1,6 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
+using Cafe.Launcher.Avalonia.Helpers;
 
 namespace Cafe.Launcher.Avalonia.Services.GameRuntime;
 
@@ -51,20 +52,9 @@ public sealed record RuntimeProbeResult(
             lines.Add($"ExitCode: {ExitCode.Value}");
         }
 
-        if (!string.IsNullOrWhiteSpace(StandardOutput))
-        {
-            lines.Add($"StandardOutput: {StandardOutput.Trim()}");
-        }
-
-        if (!string.IsNullOrWhiteSpace(StandardError))
-        {
-            lines.Add($"StandardError: {StandardError.Trim()}");
-        }
-
-        if (!string.IsNullOrWhiteSpace(ErrorMessage))
-        {
-            lines.Add($"Error: {ErrorMessage}");
-        }
+        DiagnosticLines.Optional(lines, "StandardOutput", StandardOutput?.Trim());
+        DiagnosticLines.Optional(lines, "StandardError", StandardError?.Trim());
+        DiagnosticLines.Optional(lines, "Error", ErrorMessage);
 
         return string.Join(Environment.NewLine, lines);
     }

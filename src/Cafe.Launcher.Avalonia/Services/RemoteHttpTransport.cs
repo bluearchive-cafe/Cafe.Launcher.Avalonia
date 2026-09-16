@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.IO;
 using System.Net;
@@ -372,50 +372,44 @@ public sealed class RemoteHttpTransport : IRemoteHttpTransport
         CancellationToken cancellationToken,
         TimeSpan? idleReadTimeout = null)
     {
-        // Reject via the declared length when present; the streaming guard below
-        // still bounds responses without a Content-Length (chunked transfer).
-        if (response.Content.Headers.ContentLength is { } contentLength && contentLength > maxBytes)
-        {
-            throw BuildResponseTooLargeException(requestUri, response, contentLength, contentLength);
-        }
-
         await using var networkStream = await response.Content
             .ReadAsStreamAsync(cancellationToken)
             .ConfigureAwait(false);
-        using var buffer = new MemoryStream();
-        var chunk = new byte[64 * 1024];
-        while (true)
-        {
-            var read = await ResponseBodyReader
-                .ReadAsync(networkStream, chunk, cancellationToken, idleReadTimeout)
-                .ConfigureAwait(false);
-            if (read == 0)
-            {
-                break;
-            }
 
-            if (buffer.Length + read > maxBytes)
-            {
-                throw BuildResponseTooLargeException(
-                    requestUri,
-                    response,
-                    buffer.Length + read,
-                    declaredBytes: null);
-            }
-
-            await buffer.WriteAsync(chunk.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
-        }
-        buffer.Position = 0;
-
+        MemoryStream buffer;
         try
         {
-            return await JsonSerializer
-                .DeserializeAsync<T>(buffer, options, cancellationToken)
-                .ConfigureAwait(false);
+            buffer = await RemoteBodyReader.ReadAllAsync(
+                (chunk, ct) => ResponseBodyReader.ReadAsync(networkStream, chunk, ct, idleReadTimeout),
+                maxBytes,
+                response.Content.Headers.ContentLength,
+                cancellationToken).ConfigureAwait(false);
         }
-        catch (JsonException ex)
+        catch (RemoteBodyTooLargeException tooLarge)
         {
-            throw BuildRemoteJsonException(requestUri, response, buffer, ex);
+            // 声明长度可判时两个字段都是声明值，流式越界时长度为零、声明为空——与分块读取
+            // 尚未拿到 Content-Length 的事实一致。
+            throw BuildResponseTooLargeException(
+                requestUri,
+                response,
+                tooLarge.ActualBytes,
+                tooLarge.DeclaredBytes);
+        }
+
+        using (buffer)
+        {
+            buffer.Position = 0;
+
+            try
+            {
+                return await JsonSerializer
+                    .DeserializeAsync<T>(buffer, options, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (JsonException ex)
+            {
+                throw BuildRemoteJsonException(requestUri, response, buffer, ex);
+            }
         }
     }
 

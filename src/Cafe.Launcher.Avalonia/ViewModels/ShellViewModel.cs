@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Runtime.InteropServices;
 using Avalonia.Media;
 using Cafe.Launcher.Avalonia.Constants;
@@ -90,10 +90,6 @@ public partial class ShellViewModel : ViewModelBase, IDisposable
 
     public LocalizedTextCatalog I18n { get; }
 
-    public string GameFolderPickerTitle { get; private set; } = "";
-
-    public string LogExportFolderPickerTitle { get; private set; } = "";
-
     public ShellViewModel(LocalizationService localizer)
     {
         this.localizer = localizer;
@@ -143,18 +139,13 @@ public partial class ShellViewModel : ViewModelBase, IDisposable
         // 没保存过也把编辑器变脏（保存按钮亮起、设置页显示预览过的语言）。语言进入
         // 已保存设置只有两条路——设置页自己保存，或向导完成时整份替换。
         DiskSpaceText = localizer.T(LocalizationKeys.DiskSpaceEmpty);
-        GameFolderPickerTitle = localizer.T(LocalizationKeys.ChooseInstallFolder);
-        LogExportFolderPickerTitle = localizer.T(LocalizationKeys.LogExportFolderPickerTitle);
 
         if (!hasSnapshot)
         {
-            PathText = localizer.T(LocalizationKeys.PathLoading);
+            SetLoadingPlaceholders();
             VersionText = localizer.T(LocalizationKeys.VersionLoading);
             NetworkText = localizer.T(LocalizationKeys.NetworkLoading);
             LaunchCheckText = localizer.T(LocalizationKeys.LaunchCheckLoading);
-            ExecutableText = localizer.T(LocalizationKeys.ExecutableLoading);
-            ExecutableNameText = localizer.T(LocalizationKeys.LauncherLoadingValue);
-            LaunchCheckValueText = localizer.T(LocalizationKeys.LauncherLoadingValue);
             SettingsSummary = localizer.T(LocalizationKeys.Settings);
         }
     }
@@ -165,14 +156,23 @@ public partial class ShellViewModel : ViewModelBase, IDisposable
         LaunchCheckValueText = localizer.T(LocalizationKeys.LauncherLoadingValue);
     }
 
-    public void SetRefreshError(Exception exception)
+    /// <summary>
+    /// 把四行「还在读」的占位文案复位：语言切换（尚无快照时）与刷新失败都要重写这几行，
+    /// 此前逐处各抄一遍——新增一行状态就得记得改三处。
+    /// </summary>
+    private void SetLoadingPlaceholders()
     {
-        NetworkText = localizer.F(LocalizationKeys.NetworkWithMessage, exception.Message);
-        VersionText = localizer.T(LocalizationKeys.VersionUnavailable);
         PathText = localizer.T(LocalizationKeys.PathLoading);
         ExecutableText = localizer.T(LocalizationKeys.ExecutableLoading);
         ExecutableNameText = localizer.T(LocalizationKeys.LauncherLoadingValue);
         LaunchCheckValueText = localizer.T(LocalizationKeys.LauncherLoadingValue);
+    }
+
+    public void SetRefreshError(Exception exception)
+    {
+        NetworkText = localizer.F(LocalizationKeys.NetworkWithMessage, exception.Message);
+        VersionText = localizer.T(LocalizationKeys.VersionUnavailable);
+        SetLoadingPlaceholders();
     }
 
     public void ApplySnapshot(LauncherStatusSnapshot snapshot, SettingsViewModel settings)

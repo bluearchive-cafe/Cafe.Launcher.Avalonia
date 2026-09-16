@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -91,7 +91,7 @@ public sealed class LogExportService
         {
             File.Delete(partialPath);
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        catch (Exception exception) when (StorageFailure.IsRecoverable(exception))
         {
             // Preserve the original export failure. The partial suffix makes any cleanup failure
             // distinguishable from a completed diagnostic archive.
@@ -142,7 +142,7 @@ public sealed class LogExportService
         {
             return ReadLinesInWindow(filePath, window, cancellationToken).Any();
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        catch (Exception exception) when (StorageFailure.IsRecoverable(exception))
         {
             // Unreadable means "nothing to show" as far as the hint is concerned; the export
             // itself is where the failure gets reported.
