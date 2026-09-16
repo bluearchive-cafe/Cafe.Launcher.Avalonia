@@ -1,3 +1,4 @@
+using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Auth;
@@ -33,6 +34,7 @@ public sealed class ManifestValidationServiceTests : IDisposable
             PatchUrlGroups.Official);
 
         Assert.True(result.Success);
+        Assert.Equal(new LocalizationService().T(LocalizationKeys.LaunchCheckSkipped), result.Message);
     }
 
     [Fact]
@@ -166,6 +168,7 @@ public sealed class ManifestValidationServiceTests : IDisposable
             PatchUrlGroups.Official);
 
         Assert.True(result.Success);
+        Assert.Equal(new LocalizationService().T(LocalizationKeys.LaunchCheckRemoteUnavailable), result.Message);
         Assert.False(result.HasDamagedFiles);
     }
 
@@ -184,6 +187,7 @@ public sealed class ManifestValidationServiceTests : IDisposable
             PatchUrlGroups.Official);
 
         Assert.True(result.Success);
+        Assert.Equal(new LocalizationService().T(LocalizationKeys.LaunchCheckRemoteUnavailable), result.Message);
     }
 
     private static LocalInstallationState CreateLocalState(params ManifestFile[] files) =>
