@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -20,9 +20,9 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCont
     private const int PageSize = 500;
     private static readonly TimeSpan FilterDebounceDelay = TimeSpan.FromMilliseconds(200);
     private readonly UnifiedLogger logger;
-    private readonly ToastService? toastService;
-    private readonly LocalizationService? localizer;
-    private readonly LocalDiagnostics? diagnostics;
+    private readonly ToastService toastService;
+    private readonly LocalizationService localizer;
+    private readonly LocalDiagnostics diagnostics;
     private readonly Func<CancellationToken, Task<IReadOnlyList<LogEntryDisplay>>> entryLoader;
     private IReadOnlyList<LogEntryDisplay> allEntries = [];
     private CancellationTokenSource? filterCancellationTokenSource;
@@ -77,37 +77,16 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCont
 
     internal LogViewerDialogViewModel(
         UnifiedLogger logger,
-        ToastService? toastService,
-        LocalizationService? localizer,
-        LocalDiagnostics? diagnostics,
-        Func<CancellationToken, Task<IReadOnlyList<LogEntryDisplay>>>? entryLoader)
+        ToastService toastService,
+        LocalizationService localizer,
+        LocalDiagnostics diagnostics,
+        Func<CancellationToken, Task<IReadOnlyList<LogEntryDisplay>>>? entryLoader = null)
     {
         this.logger = logger;
         this.toastService = toastService;
         this.localizer = localizer;
         this.diagnostics = diagnostics;
         this.entryLoader = entryLoader ?? LoadEntriesAsync;
-    }
-
-    public void LoadEntries()
-    {
-        try
-        {
-            loadedPageCount = 1;
-            SetLoadedEntries(ReadEntries());
-        }
-        catch (Exception ex)
-        {
-            // 同步路径无法 await 诊断管道，走静态 LogSync 保证失败进入本地日志
-            // 而非只在调试器可见；用户可见反馈由异步的 OpenAsync 路径负责。
-            LocalDiagnostics.LogSync(
-                LogEntrySeverity.Error,
-                "LogViewer",
-                $"failed to read log entries synchronously: {ex.Message}");
-            allEntries = [];
-        }
-
-        ApplyFilter();
     }
 
     partial void OnFilterTextChanged(string value)
@@ -162,17 +141,14 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCont
         {
             // 日志读取失败正是用户最需要日志的时刻：空列表必须伴随显式的
             // 错误提示与本地日志记录，避免「加载失败」被误读成「没有日志」。
-            toastService?.ShowError(ErrorHandlingService.FormatToastMessage(
-                localizer?.T(LocalizationKeys.LogLoadFailed) ?? "Failed to load log entries",
+            toastService.ShowError(ErrorHandlingService.FormatToastMessage(
+                localizer.T(LocalizationKeys.LogLoadFailed),
                 ex));
-            if (diagnostics is not null)
-            {
-                await diagnostics.ErrorAsync(
-                    "LogViewer",
-                    "Loading the log entries failed.",
-                    ex,
-                    CancellationToken.None);
-            }
+            await diagnostics.ErrorAsync(
+                "LogViewer",
+                "Loading the log entries failed.",
+                ex,
+                CancellationToken.None);
 
             allEntries = [];
         }
@@ -203,17 +179,14 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCont
         catch (Exception ex)
         {
             loadedPageCount--;
-            toastService?.ShowError(ErrorHandlingService.FormatToastMessage(
-                localizer?.T(LocalizationKeys.LogLoadFailed) ?? "Failed to load log entries",
+            toastService.ShowError(ErrorHandlingService.FormatToastMessage(
+                localizer.T(LocalizationKeys.LogLoadFailed),
                 ex));
-            if (diagnostics is not null)
-            {
-                await diagnostics.ErrorAsync(
-                    "LogViewer",
-                    "Loading the earlier log entries failed.",
-                    ex,
-                    CancellationToken.None);
-            }
+            await diagnostics.ErrorAsync(
+                "LogViewer",
+                "Loading the earlier log entries failed.",
+                ex,
+                CancellationToken.None);
         }
     }
 
@@ -231,20 +204,6 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCont
     private void SetFilterError() => SeverityFilter = LogEntrySeverity.Error;
     [RelayCommand]
     private void SetFilterFatal() => SeverityFilter = LogEntrySeverity.Fatal;
-
-    private IReadOnlyList<LogEntryDisplay> ReadEntries()
-    {
-        var logPath = logger.LogFilePath;
-        if (!File.Exists(logPath))
-            return [];
-
-        using var reader = OpenLogReader(logPath);
-        var lines = new List<string>();
-        while (reader.ReadLine() is { } line)
-            lines.Add(line);
-
-        return ParseEntries(lines);
-    }
 
     private void SetLoadedEntries(IReadOnlyList<LogEntryDisplay> entries)
     {

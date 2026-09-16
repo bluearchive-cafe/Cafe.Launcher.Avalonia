@@ -1,4 +1,5 @@
-using Cafe.Launcher.Avalonia.Features.Diagnostics;
+﻿using Cafe.Launcher.Avalonia.Features.Diagnostics;
+using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Testing;
 
@@ -24,8 +25,12 @@ public sealed class LogViewerDialogViewModelTests : IDisposable
     public async Task FilterText_WhenNoEntryMatches_ExposesEmptyState()
     {
         await logger.LogAsync(LogEntrySeverity.Info, "Launcher started");
+        logger.Dispose(); // release Serilog file handle before reading
         var viewModel = CreateViewModel();
-        viewModel.LoadEntries();
+        await viewModel.OpenCommand.ExecuteAsync(null);
+
+        // 先证明确实读到了条目再断言「过滤后为空」：否则读取失败时后半段也成立，用例空转通过。
+        Assert.NotEmpty(viewModel.FilteredEntries);
 
         viewModel.FilterText = "text-that-does-not-exist";
         await viewModel.PendingFilterTask;
@@ -41,7 +46,7 @@ public sealed class LogViewerDialogViewModelTests : IDisposable
         await logger.LogAsync(LogEntrySeverity.Error, "Launcher failed");
         logger.Dispose(); // release Serilog file handle before reading
         var viewModel = CreateViewModel();
-        viewModel.LoadEntries();
+        await viewModel.OpenCommand.ExecuteAsync(null);
         File.Delete(logger.LogFilePath);
 
         viewModel.SetFilterErrorCommand.Execute(null);
@@ -57,9 +62,9 @@ public sealed class LogViewerDialogViewModelTests : IDisposable
             TaskCreationOptions.RunContinuationsAsynchronously);
         var viewModel = new LogViewerDialogViewModel(
             logger,
-            null,
-            null,
-            null,
+            new ToastService(),
+            new LocalizationService(),
+            new LocalDiagnostics(),
             _ => entriesLoaded.Task);
 
         var openTask = viewModel.OpenCommand.ExecuteAsync(null);
@@ -217,7 +222,7 @@ public sealed class LogViewerDialogViewModelTests : IDisposable
     }
 
     private LogViewerDialogViewModel CreateViewModel() =>
-        new(logger, null, null, null, null);
+        new(logger, new ToastService(), new LocalizationService(), new LocalDiagnostics());
 
     public void Dispose()
     {

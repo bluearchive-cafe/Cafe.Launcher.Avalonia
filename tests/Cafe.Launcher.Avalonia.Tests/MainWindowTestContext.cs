@@ -280,7 +280,7 @@ internal sealed class MainWindowTestContext : IDisposable
                 windowChromeViewModel,
                 settingsViewModel,
                 resourcePanelViewModel,
-                new LogViewerDialogViewModel(windowLogger, null, null, null, null),
+                new LogViewerDialogViewModel(windowLogger, new ToastService(), new LocalizationService(), new LocalDiagnostics()),
                 new LogExportDialogViewModel(
                     new LogExportService(new LocalDiagnostics(windowLogger), TestDataRoot.ForCurrentProcess(), new CrashReportStore(TestDataRoot.ForCurrentProcess())),
                     filePickerService,
