@@ -9,16 +9,16 @@
 
 ## 0. 落地状态（2026-09-16）
 
-**阶段 A 全部 · 阶段 B 18/22 · 阶段 C 6/8 · 阶段 D 1/17；§2 的 6 项正确性问题中 3 项已修。**
+**阶段 A 全部（13/13）· 阶段 B 19/22 · 阶段 C 6/8 · 阶段 D 1/17；§2 的 6 项正确性问题中 3 项已修、3 项开放。**
 每个提交前跑 `.\verify.ps1` 且退出码 0。收口实测：单元 **1857 通过 / 0 失败 / 2 可见跳过**、
 无头 **185 通过 / 0 失败**、覆盖率行 **87.27%** / 分支 **93.63%**（棘轮余量 +1.42pp / +0.93pp）、
 Debug 与 Release 构建各 0 警告 0 错误。
 
 | 批次 | 状态 | 提交 | 说明 |
 | --- | --- | --- | --- |
-| §2 正确性问题 | 3 修 / 4 开放 | `0db316d` `d2d4bc6` `7161f4c` `56e0509` | `DEF-1`（唯一用户可见、且已随 beta.9／beta.10 出货）、`DEF-3`、`DEF-6` 已修；`DEF-2`、`DEF-4`、`DEF-5` 开放，已分别立案为 `AUD-TEST-010`、`AUD-TEST-013`、`AUD-ARCH-012` |
+| §2 正确性问题 | 3 修 / 3 开放 | `0db316d` `d2d4bc6` `7161f4c` `56e0509` | `DEF-1`（唯一用户可见、且已随 beta.9／beta.10 出货）、`DEF-3`、`DEF-6` 已修；`DEF-2`、`DEF-4`、`DEF-5` 开放，已分别立案为 `AUD-TEST-010`、`AUD-TEST-013`、`AUD-ARCH-012` |
 | A 测试设施复用 | **13/13** | `fe9a012`..`0db316d` | 净 −814 行测试代码、生产零改动；`%TEMP%` 残留目录由 15 个／轮降到 **0 个／轮**（实测）；两处偏离原议见 A 节注 |
-| B 生产侧等价收敛 | **18/22** | `7161f4c`..`9044998` | `B5` 并入评审候选 11 待裁决；`B12`／`B15` 评估后判定收益不抵成本；`B17` 两侧完成并暴露 `AUD-TEST-012` |
+| B 生产侧等价收敛 | **19/22** | `7161f4c`..`9044998` | `B5` 并入评审候选 11 待裁决；`B12`／`B15` 评估后判定收益不抵成本；`B17` 两侧完成并暴露 `AUD-TEST-012` |
 | C 死代码删除 | **6/8** | `5ec1999`..`ed7b290` | `C5`／`C8` 经核实为深模块边界与承重语义标记，判定不做 |
 | D 结构收敛 | 1/17 | `d2d4bc6` | 仅 `D1`（即 `DEF-1`）；`D14`／`D15` 仍需先裁决，其余 14 项待做 |
 | E 登记不排期 | 0/9 | — | 按定义为登记项，不排期 |
@@ -184,11 +184,13 @@ Debug 与 Release 构建各 0 警告 0 错误。
 | `A12` | 共享替身放在测试工程根目录 | `tests/Cafe.Launcher.Avalonia.Tests/StubFilePickerService.cs`（33 处调用 / 12 文件，含 `MainWindowTestContext.cs:113,188,294`） | 移入 `tests/TestDoubles/`（命名空间已一致，只改两个 csproj 的 `Compile-Link` 项） | `build.ps1` + `test.ps1 -Suite All`；移动时务必检查无头工程的 Include | S |
 | `A13` | 等待原语仍有 4 套私有包装 + 27 处魔法超时 + 墙钟等待 | 包装：`RemoteContentViewModelTests.cs:762`、`ToastHostViewModelTests.cs:833`、`ResourcePanelViewModelTests.cs:345`、`MainWindowViewModelTests.ResourcePanel.cs:243`；超时字面量：`ShellLifecycleTests.cs` ×16、`SetupWizardViewModelTests.cs` ×3、`ResourcePanelViewModelTests.cs` ×3、`ToastHostViewModelTests.cs` ×2、`SettingsCategoryTests.cs` ×2、`RemoteHttpTransportTests.cs` ×1（全仓 60 处，仅 3 个不同值：2s×47 / 5s×12 / 10s×1）；墙钟等待：`CrossProcessPollingListenerTests.cs:25,38,56-57,59,65,85,98,124,147-148`（8× `Thread.Sleep` + `SpinUntil` + `DateTime.UtcNow` 截止）、`ToastHostViewModelTests.cs:730-737,785-792`、`SetupWizardViewModelTests.cs:540-550`、`LocalizationTerminologyTests.cs:148-170` | `TestWait` 补 `UntilAsync(cond, string message, TimeSpan? timeout = null)`（默认命名常量）、`Bounded(Task, string?, TimeSpan?)`、`HoldsForAsync(window, cond, what)`（`Stopwatch` 计时）；删 4 个包装，墙钟循环全部改走设施 | `TestSupportFacilityTests` 已有 `UntilAsync_*` 钉住超时/取消/推进；为两个新成员各补一条。`CrossProcessPollingListenerTests` 若确需真实 soak，保留**一个**命名常量并写明原因（对齐 `BackgroundViewModelTests.cs:216-223` 的先例） | L |
 
+**逐项状态（13/13 落地）**：`A3` → `0db316d`；`A11` → `7856b63`；其余 `A1`·`A2`·`A4`–`A10`·`A12`·`A13` → `89fba3b`。其中 `A13` 有两处偏离原议（三个 `WaitUntil` 包装按判断保留、27 处魔法超时字面量与 `CrossProcessPollingListenerTests` 的 `Thread.Sleep` 未动），见本节注。
+
 ### 阶段 B — 生产侧等价收敛（22 项）
 
 **为什么第二批**：改动都在 `src/`，但每项都能给出「等价」的读码证明，且多数已有测试钉住同一行为。逐项独立提交，便于二分。
 
-> **状态：已落地 18／22（2026-09-16，`7161f4c`..`9044998` 七个提交）。** 全部 `verify.ps1` 退出码 0。
+> **状态：已落地 19／22（2026-09-16，`7161f4c`..`9044998` 八个提交）。** 全部 `verify.ps1` 退出码 0。
 > 逐项先读码复核扫描结论再改，多处扫描计数与计划不符（`B4` 实为 30 处而非 19 处、`B1` 的副本是
 > 整个 §11 比较而非「核心段比较」等），已在各提交信息里更正。
 >
@@ -243,6 +245,8 @@ Debug 与 Release 构建各 0 警告 0 错误。
 | `B21` | `GameShortcutService` 两套平台解析 | 见 `DEF-6` | 同 `DEF-6` | 同 `DEF-6` | 中 / 低 |
 | `B22` | 两个诊断 `Describe()` 构造器共用同一习语 | `Services/GameRuntime/RuntimeProbeResult.cs:44-69` 与 `GameRuntimeDiagnosticSnapshot.cs:26-54`（都是「可选行 `!string.IsNullOrWhiteSpace` 才追加的 `Label: value` 列表，`Environment.NewLine` 连接」，共 6 处受守卫追加） | `Helpers/DiagnosticText` 极小 builder（`Line`/`Optional`/`ToString`）；若判定太小则各文件内一个私有 `AppendOptional` | `GameRuntimeDiagnosticSnapshotTests` 钉住快照文本；`RuntimeProbeResult.Describe` 由 `GameRuntimeTests` 断言 | 低 / 低 |
 
+**逐项状态（19/22 落地）**：`B1`·`B3`·`B4`·`B6`–`B9`·`B22` → `7161f4c`；`B2`·`B10` → `cfe9648`；`B13`·`B14`·`B16` → `0a92d66`；`B19`·`B21` → `56e0509`；`B20` → `f52eea3`；`B18` → `fe59372`；`B11` 与 `B17` → `42f327d`（`B17` 的严重度半边）+ `9044998`（生命周期半边）。**未落地 3 项**：`B5`（并入评审候选 11，待裁决）、`B12`·`B15`（判定不做，理由见 `0a92d66`）。
+
 ### 阶段 C — 死代码与无效代码删除（8 项）
 
 **为什么第三批**：纯删除，零行为风险；但需先确认「无引用」判定正确——本仓库有「靠 `InternalsVisibleTo` 被测试直接调用」与「靠字符串键被 XAML 消费」两类陷阱，逐项已核。
@@ -285,6 +289,8 @@ Debug 与 Release 构建各 0 警告 0 错误。
 | `C7` | 单消费者的 `Helpers/ProcessService` 位置 | `Helpers/ProcessService.cs:11-71`，唯一消费者 `Services/GameRuntime/GameProcessTracker.cs:25,62`；其 `TryReadProcessName` 是 `internal` 正是为了让 tracker 共用 | 移入 `Services/GameRuntime/`（它不是 DI 服务，`PROJECT_CONVENTIONS.md` §5 不适用）。副作用：消掉 `Helpers/` → `Services/` 的唯一内部依赖 | 成员保持 `internal`，测试零改动 |
 | `C8` | 字节相同的样式对 | `MainWindow.Styles.axaml:781-784` `Border.banner-media` ≡ `:785-788` `Border.banner-frame`（各 1 处使用）；`:485-489` `TextBlock.panel-title` ≡ `:1139-1143` `TextBlock.section-title`（1 vs 11 处）；`:1159-1162` `StackPanel.button-content` ≡ `:1166-1169` `StackPanel.card-heading`（49 vs 1 处）；`:582-584` `Border.motion-surface` ≡ `:591-593` `Border.motion-bottom` | 保留高使用量的名字，删孪生并重贴单处调用点；把 `MainWindow.axaml:119` 内联的 `CornerRadius`+`ClipToBounds` 收回类 | **必须同一提交**处理 `UiStyleContractTests.Tokens.cs:135-167` 的 `FontWeight_StrongIsLimitedToConfirmedEmphasisScenarios` `SetEquals` 允许表（`:150` 含 `TextBlock.panel-title`），否则该用例失败。像素不变 |
 
+**逐项状态（6/8 落地）**：`C1` → `5ec1999`；`C2` → `8e8b7d7`；`C3`·`C6`·`C7` → `538c48b`；`C4` → `f42e5a6`。**判定不做 2 项**：`C5`·`C8`（理由见本节注）。
+
 ### 阶段 D — 结构收敛（17 项，逐项需裁决）
 
 **为什么最后**：这些项跨文件、动所有权或接缝，且部分与待裁决的评审候选重叠。**每项独立裁决、独立提交**，不要打包。
@@ -319,6 +325,8 @@ Debug 与 Release 构建各 0 警告 0 错误。
 | `D16` | `CrashReportWindow` 用自己的 token 家族却大量写字面量 | `Views/CrashReportWindow.axaml:20-27` 声明 `Crash.Spacing.*`/`Crash.Radius.*`，但 `:10,12`（`Width="700"`/`MaxHeight="720"`）、`:113`、`:115-117`（`44`/`CornerRadius="22"`）、`:147,180,177-179,192` 及 6 处 `FontWeight="SemiBold"`、`:68-81` 的 `MinWidth="108"`/`Padding="16,8"` 等仍是裸数字；`Crash.Spacing.Md`（`:22`）与 `Crash.Spacing.Xxl`（`:25`）声明后从未被消费 | 补齐 `Crash.Layout.*`/`Crash.Typography.*` 条目并消费；两个未用 token 要么用、要么删 | 低——该文件被 `UiStyleContractTests` 显式豁免（`:11-17`），所以今天无守卫；建议顺带为 `Crash.*` 加一条扫描 |
 | `D17` | 三个手写 INPC 模型 vs 工具箱基类 | `Models/LauncherRuntimeModels.cs:243-249` ≡ `:267-273`（两个逐字相同的 `SetField<T>`）、`:38-43`（第三个，仅 `string` 变体）；三个类声明在 `:12,188,252`。同目录其余可观察模型**已经**派生自 `ObservableObject`（`GameRuntimeSettings.cs:7`、`LauncherSettings.cs:10`、`ToastNotification.cs:67`、`ResourcePanelItem.cs:67`、`ThemeColorPaletteItem.cs:6`、`BannerDot.cs:9`），基类已是承重结构 | 三个类改派生 `ObservableObject`；`SelectableOption` 的三个属性可用 `[ObservableProperty]`（工具箱产出的 `PropertyChanged` 契约相同） | 中——须保留 `RemoteContentItem.IsImageLoading`/`IsImageLoadFailed` 的私有 setter；补「每类一个属性的 `PropertyChanged` 名称断言」，避免通知被静默丢掉（横幅圆点会不再更新） |
 
+**逐项状态（1/17 落地）**：`D1` → `d2d4bc6`（即 `DEF-1` / `AUD-ARCH-010`）。其余 16 项未动，其中 `D14`·`D15` 需先裁决（见 §5），`D3` 建议与 `DEF-5` 同批落地。
+
 ### 阶段 E — 登记不排期（9 项）
 
 收益低于成本或属无据重构，**只记录**：
@@ -334,6 +342,8 @@ Debug 与 Release 构建各 0 警告 0 错误。
 | `E7` | `LauncherSettings` 三份平行枚举（属性 / 拷贝构造 / `ComparedProperties`） | `Models/LauncherSettings.cs:168-177` 与 `PROJECT_CONVENTIONS.md` §7 已书面化为刻意设计（可 grep、无反射），两张表都有守卫。不重开 |
 | `E8` | `LocalInstallationStateStore` 的 `.tmp`+`File.Move` 未走 `Helpers/AtomicJsonFileStore` | 刻意不同：该 store 必须在发布前**回读并校验** temp 文件（`:131-139`），且有 `beforeTempValidation` 交错接缝（`:126-129`）；通用 store 会丢掉「发布前先验证」的保证 |
 | `E9` | `ThemeColorExtractionService.ToSv` 与 `Helpers/ColorUtils.ToHsv` | 代数等价但 IEEE 双精度上非逐位相同，且 `ToSv` 按字节运算以避免热循环里每像素构造 `Color`；其结果喂给量化阈值（`MinimumSaturation`），末位变化可能改变调色板。不值得冒险 |
+
+**状态**：按定义为登记项，不排期，全部未动。
 
 ---
 
