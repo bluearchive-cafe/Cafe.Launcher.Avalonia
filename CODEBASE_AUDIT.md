@@ -30,6 +30,12 @@
 
 > **测试设施轮（2026-09-16，用户指令「测试设施复用与可靠性改进」）**：以测试体系为对象做了一轮「先维护成本与隔离、再执行速度」的重构，分三项交付：①**共享设施收敛**——新增 `tests/Support/{TestDirectory,TestRepository,TestWait}.cs`（两工程 Compile-Link 共用），43 个测试文件的临时目录惯例、5 处各自的异步等待实现、仓库/资源定位与 `.resx` 解析全部换到它们上面；②**上下文所有权明确**——主窗口装配迁入 `MainWindowTestContext`（先前装配方法里的局部 `using` 日志在返回时即被释放，而 `SettingsViewModel`/`LogViewerDialogViewModel` 长期持有它们），`AddLauncherServices` 增可选 `launcherDataRoot`，无头上下文改为每用例一个独立数据根；③**反馈效率**——资源面板代理用例拆为呈现层与传输层回环两条（原单条 10.26s 靠「接受连接即断开、等真实传输退避走完」结束），`test.ps1` 增 `-Suite`/`-Filter`。同配置实测（Debug）：单元 1831 → 1853 条、测试用时 31.8s → 23.9s（最慢用例 10.26s → 2.07s），无头 185 条同量级；两套件 0 失败、可见跳过数不变、golden 基线未更新且全绿；受影响异步用例 19 条单元 + 13 条无头各重复 10 次全绿；`verify.ps1` 全绿（覆盖率行 87.17% / 分支 93.62%，余量 +1.32pp / +0.92pp）。立案 AUD-TEST-009 并同日结案（见 Low 节）；串行执行、Windows CI 双跑、`-Filter` 不进 CI 记为**后续性能机会**，本轮明确不碰。
 
+> **简并扫描轮 + 计划落地（2026-09-16，用户指令「全量扫描项目中可简化，可重用的逻辑 并编写修改计划」→「先实现一阶段」→「提交」→「落到 main，之后做 a3」→「进入 b」→「收尾 b17」→「c」→「d1?」）**：本窗口先以 8 路只读子代理对全树做「可简化／可重用逻辑」扫描（覆盖 `Services/`、`GameOperations/`、其余 `Features/`、`ViewModels/`+`Views/`+`Controls/`+`Converters/`、`Helpers/`+`Models/`+`Constants/`+`Composition/`+`scripts/`、单测 A–M、单测 N–Z、无头+`TestDoubles`+`Support`+XAML），产出报告与计划 `docs/design/simplification-reuse-plan-2026-09-16.md`（91 个候选去重为阶段 A 测试设施复用 13／B 生产侧等价收敛 22／C 死代码删除 8／D 结构收敛 17／E 登记不排期 9，另 22 项复核后明确不做）。扫描副产物另被证据钉住 6 项正确性问题与 2 项守卫缺口，本窗口立案 8 项：`AUD-ARCH-010`（**卸载删除清单文件不清只读属性、路径守卫宽于下载侧——已随 beta.9／beta.10 出货，用户可见**；`d2d4bc6` 抽出 `ManifestFileRemover` 由下载与卸载共用，变异验证拆掉只读清除即 3 条用例变红）、`AUD-ARCH-011`（`GameShortcutService` 公开创建路径绕过平台接缝；`56e0509`）、`AUD-MAINT-005`（日志级别词表两份独立声明且无守卫；`cfe9648` 补六级别往返守卫）、`AUD-TEST-011`（破坏性路径用例默认绑定真实进程扫描器；`7161f4c` 17 处默认改 `TestGameProcessTracker.None`，变异验证改成「在跑」即 36 条变红）**四项同日解决**；`AUD-ARCH-012`（journey 的 `Ready` 分支不报告拒绝）、`AUD-TEST-010`（**动效叠层守卫清单已实际漂移**：`DesignGalleryOverlay.axaml` 带 `motion-overlay` 却不在扫描集内，而 `Assert.Equal(9, …)` 仍通过——本审计实测该套件 153 条全绿）、`AUD-TEST-012`（提示条拆除时的倒计时唤醒无覆盖，删掉后 86 条用例全绿）、`AUD-TEST-013`（无头套件泄漏 `Application.RequestedThemeVariant`，两处锚点待复核故置信度只给 60）**四项开放**。
+>
+> 计划落地进度：**阶段 A 全部（13 项）**——测试设施复用与用例装配去重，净 −814 行测试代码、生产零改动、`%TEMP%` 残留目录由 15 个／轮降到 **0 个／轮**；**阶段 B 18/22**——`B5` 并入评审候选 11 待裁决、`B12`／`B15` 评估后判定收益不抵成本（理由见 `0a92d66`）、`B17` 两侧完成（并记下其暴露的 `AUD-TEST-012`）；**阶段 C 6/8**——`C5`（`ResourcePanelService` 转发成员）与 `C8`（四对字节相同的样式）经核实为深模块边界与承重语义标记（两对分别被穷尽集合守卫与无头定位器钉住），判定不做；**阶段 D 1/17**（`D1` 即 `AUD-ARCH-010`）。逐提交前跑 `.\verify.ps1` 退出码 0；收口实测单元 **1857 通过 / 0 失败 / 2 可见跳过**、无头 **185 通过 / 0 失败**、覆盖率行 **87.27%** / 分支 **93.63%**（棘轮余量 +1.42pp / +0.93pp），Release 构建 0 警告 0 错误。
+>
+> 本窗口另记两条方法论结论：①**涉及「是否存在泄漏」的条目必须以实测为准**——计划原把 22 处 `%TEMP%` 字面量计为泄漏，按计划自带的验证协议（比对 `%TEMP%` 顶层改名集合）实测后证伪一半：基线 15 个／轮 → 那 13 处收敛后 14 个／轮，即只去掉 1 处真实泄漏；真正的泄漏源是 14 处无人释放的 `TestDirectory` 局部变量，静态清点字面量会把「指向不存在目录的路径串」误计为泄漏。②**扫描的计数多次与实情不符，逐项先读码复核是必需的**：`B4` 实为 30 处而非 19 处、`C2` 的 23 处里有 1 处是活的（在 `StackPanel` 上，删掉会丢布局）、`C3` 的 4 个包装里 2 个完全无调用者、`C8` 四对里两对是承重标记。
+
 ## Audit Metadata
 
 - 日期：2026-09-14（上午 full 六域重审 + 下午修复核实轮/独立重扫 + 晚间第二修复轮）
@@ -44,12 +50,12 @@
 
 仓库健康状况：**良好，且较上一审计实质性改善**。desktop-launcher 四个关键风险面（下载完整性、文件系统边界、进程启动、外部链接）防御纵深不变且全部有测试；上一轮全部 5 项 Medium 级结构/测试发现中 4 项已随 `1f09bc8`/`a6d3794`/`08c53f8`/`cf353cd`/`67229b5` 真实解决（不是纸面解决——本审计逐项读码 + 本地实测全绿确认），其余 2 项（AUD-PERF-001、AUD-CI-001）部分解决后降档。同日修复轮 9 项提交经复审逐项读码核实为真实落地。**复审新立案 1 项 Medium（测试覆盖缺口），其余 6 项新发现为 Low。**
 
-开放发现（2026-09-15 功能轮后）：
+开放发现（2026-09-16 简并扫描轮 + 计划落地后）：
 
 - Critical：0
 - High：0
 - Medium：0
-- Low：6 open（决策/设计轮门控：AUD-PERF-001、AUD-PERF-004、AUD-PERF-005 残留、AUD-SEC-001、AUD-SEC-002、AUD-ARCH-005）+ 4 accepted-risk（MAINT-002、SEC-004、SEC-006、ARCH-007）
+- Low：10 open（决策/设计轮门控：AUD-PERF-001、AUD-PERF-004、AUD-PERF-005 残留、AUD-SEC-001、AUD-SEC-002、AUD-ARCH-005 + 本窗口新立案 4 项：AUD-ARCH-012、AUD-TEST-010、AUD-TEST-012、AUD-TEST-013）+ 4 accepted-risk（MAINT-002、SEC-004、SEC-006、ARCH-007）
 - 本窗口解决：14 项（8 项随上轮修复落地：ARCH-002/003、TEST-002/003/004、PERF-002/003、MAINT-002；6 项随同日修复轮：ARCH-004/006、CI-001、PERF-006、SEC-003/005）；第二修复轮再解决 6 项（TEST-005/006/007、MAINT-003/004、PERF-007）并将 SEC-006 结案为 accepted-risk；CI 对账轮新立案 3 项（AUD-CI-002/003/004）并同日全部解决；功能轮（2026-09-15）新立案 1 项（ARCH-008）并于同日跟进按建议 (a) 解决（`6408c58`）；随后按用户追问再立案 AUD-ARCH-009（下载/安装/修复闸门的三处缺口）并同日解决（`6408c58`）；CI 对账复核结案 AUD-CI-001（其建议已落地为 `build.yml` 的 push/PR linux 作业）、新立案 AUD-CI-005（该作业连续红且非 required）并于同日修复、作业首绿（`08c53f8`）；CI 复查（2026-09-15 深夜）新立案 AUD-CI-006（生产侧平台假设：`Path.GetFileName` 在 Unix 上切不开配置里 Windows 形状的 `params`，游戏可执行文件静默移出家族）并同日解决（`8461044`）；CI 续查（2026-09-15 深夜）新立案 AUD-TEST-008（并行校验／下载路径上测试侧收集未加锁或非原子自增，两次 CI 偶发红）并同日解决（`e83334b` + `0060855`）
 
 **一处上轮审计证据更正（重要）**：上轮安全节声明「签名 Authorization 头绝不跟随重定向转发」——复核证实该头经 `RemoteRequestOptions.ConfigureRequest` 钩子在**每一重定向跳重发**（含跨主机），已立案为 AUD-SEC-003（Low）。这推翻了上轮对 DNS 重绑定残余风险影响边界的部分论证。
@@ -101,6 +107,16 @@
 - **影响**：`SemaphoreSlim(≤8)` 门控、按索引 `failedFlags` 重组、乱序进度回调的**产生侧**、`WhenAll` 取消扇出均无用例可检出回归（如边界死锁、失败标志丢失、顺序破坏）。该路径是下载完整性的执行端。上轮「9 用例经并行路径钉住行为」的说法对并发维度 overstated——用例确实走并行代码路径，但每次只有 1 个文件，从不产生竞争。显示侧乱序回退已由 `608d888` 的钳制测试钉住，产生侧未钉。
 - **建议**：补一个多文件清单用例（含故意的哈希不匹配文件 + 文件数 > 并行度），断言失败重组、按清单序重试与成功计数。**建议验证**：Verified（机械测试扩容，被测 API 现成）。
 - **解决记录（`67229b5`）**：`DownloadExecutorTests` 增至 13 用例（随后的 `608d888` 另补 400 文件接线测试，至 14）——12 文件（>并行度 8）混合布局断言失败列表按清单序重组、失配 .tmp/终路径删除、通过文件搬移、进度每文件一次；缺失 .tmp 只标记该文件失败。
+
+### AUD-ARCH-010 — 卸载删除清单文件不清只读属性、且路径守卫宽于下载侧：清单里一个只读文件就让整次卸载失败（已随 v1.1.0-beta.9／beta.10 出货）【简并扫描轮新立案；同日解决 `d2d4bc6`】
+
+- 类别：架构 / 执行路径一致性（用户可见）
+- 严重度：Medium｜置信度：95（主审计逐行读码核实两处分叉 + 变异验证）｜状态：**resolved**（`d2d4bc6`）｜处置：Fix（已执行）
+- **证据**：`Features/GameOperations/GameUninstallService.cs:128-139` 用 `GamePathValidator.GetSafePath` + 裸 `File.Delete`，只兜 `FileNotFoundException`；而 `Features/GameOperations/DownloadExecutor.cs:408-417` 的 `RemoveFiles` 与私有 `DeleteExistingFile` 用 `GetSafeFilePath` 且删除前清 `FileAttributes.ReadOnly`，其 doc 注释原文记录了「不清会让安装/更新直接中止」那次事故——**同一问题修在了下载侧，卸载侧没跟上**。第二处分叉：`GetSafePath` 不拒归一到游戏根目录自身的条目（空路径、`"."`、`"sub/.."`），`File.Delete` 会落在游戏根目录上。
+- **影响**：清单里任一文件带只读属性（手工拷贝过、或被打过更新包标记，都是常见形态）→ `UnauthorizedAccessException` 不被兜住 → **整次卸载失败**，而同一批文件在更新路径上是能删的。
+- **发布归属**：`git grep "Already gone" v1.1.0-beta.9 -- "*GameUninstallService.cs"` 命中，`v1.1.0-beta.10`（2026-09-16 打标签、HEAD 的祖先）同样含该循环 → **已出货**，下一版需一条面向用户的 `fix` 条目。
+- **建议**：抽出 feature 内的清单删除器，采用下载侧的 `GetSafeFilePath` + 清只读 + 宽容语义，由两处共用；卸载侧的 `PercentProgressGate` 保持在调用方。
+- **解决记录**：新增 `Features/GameOperations/ManifestFileRemover`，三条语义收成一处（`GetSafeFilePath` 解析、删除前清只读、已不在盘上不算错误），`DownloadExecutor` 的 `RemoveFiles` 与 `DeleteExistingFile` 搬过去（后者同时服务校验不匹配与安装覆盖两处），卸载侧改调它。新增 `GameUninstallServiceTests.UninstallAsync_WhenAManifestFileIsReadOnly_RemovesItInsteadOfFailing`；**变异验证**：删掉只读清除后 **3 条用例同时变红**（新增的卸载用例 + 下载侧既有的 `RemoveFiles_WhenFileIsReadOnly_DeletesFile` 与 `InstallDownloadedFilesAsync_WhenTargetFileIsReadOnly_ReplacesInstalledFile`），即三条删除路径都被真实覆盖；该变异只在 Windows 上咬得住（POSIX 允许 unlink 只读文件），已写入用例注释。顺带一处行为变化：`DownloadSession` 现在把 `activeToken` 传给删除循环（原签名没有令牌参数，属签名的偶然；该路径上其它每一步都转发同一令牌，CA2016 亦如此要求）。
 
 ## Low Priority Findings
 
@@ -366,6 +382,63 @@
 - 严重度：Low（隐私）｜置信度：85｜状态：open｜处置：Accept Risk
 - **证据更新（2026-09-14）**：UID 仍为两处查询串（`ResourcePanelApiClient.cs:49` config/get、:71-75 config/set——GET 携带完整变更内容，可重放可入日志）。诊断日志剥离查询串的机制完好，引用更新为 `RemoteHttpTransport.cs:431-432`（`DescribeUri` → `GetLeftPart(Path)`；原 `RemoteHttpRequestService.cs:202-209` 引用已失效，该文件现 121 行不持有诊断）；其余日志点 grep 证实零 UID 泄漏。
 - **建议**：接受；上游协议约束不变。**建议验证**：Needs Product Decision。
+
+### AUD-ARCH-011 — `GameShortcutService` 的公开创建路径直接读 `OperatingSystem`，绕过 `ShortcutEnvironment` 注入的平台探针【简并扫描轮新立案；同日解决 `56e0509`】
+
+- 类别：架构 / 测试接缝旁路
+- 严重度：Low｜置信度：90｜状态：**resolved**（`56e0509`）｜处置：Fix（已执行）
+- **证据**：`Features/GameOperations/GameShortcutService.cs:98-101`（创建）用裸 `OperatingSystem.IsWindows()/IsLinux()`，`:106-109`（删除）用注入的 `isWindowsPlatform()/isLinuxPlatform()`；`:66-71` 的 `ShortcutEnvironment.ForCurrentPlatform` 把探针接到同一对平台检查上，故生产下两者等价。
+- **影响**：公开的 `CreateDesktopShortcutAsync`（真正碰桌面的那条）无法被测试接缝切换，平台问题在测试里不可复现——只有删除那条可切换。
+- **解决记录**：收成 `ResolveDesktopDirectory()` 由两个入口共用；生产行为不变，变的是公开入口现在尊重接缝。
+
+### AUD-ARCH-012 — `GameOperationJourney` 的 `Ready` 分支是唯一不报告的拒绝【简并扫描轮新立案】
+
+- 类别：架构 / 反馈一致性
+- 严重度：Low｜置信度：85｜状态：open｜处置：Add Guard
+- **证据**：`Features/GameOperations/GameOperationJourney.cs:457-460` 的 `if (snapshot.RuntimeState == Ready) return null;`，与同函数另三个分支对照——`Corrupted` 开修复确认框、`IoFailure`/`RemoteUnavailable` 走刷新、结果走 toast。`GameOperationsViewModelTests.cs:1107-1116` 名为 `…_ReturnsUnavailable` 却只断言 `InstallCallCount == 0`，不断言任何反馈。
+- **影响**：只在快照过期时可达（`Ready` 下安装按钮所在面板不可见），用户表现为「点了没反应」——与 ADR-027／029 建立的口径（确认后拒绝必须可见、预检失败不静默）不一致。
+- **建议**：走与策略预检相同的拒绝渲染（`ShowOperationUnavailable`）；**不要**在此处新增策略调用，该分支的语义已经判定完毕。与计划 `D3`（修复路径闸门归位）同批，两者都动拒绝渲染。**建议验证**：Verified。
+
+### AUD-MAINT-005 — 日志级别词表是两份互不引用的独立声明，且任一侧改动都没有守卫【简并扫描轮新立案；同日解决 `cfe9648`】
+
+- 类别：可维护性 / 无守卫的线格式契约
+- 严重度：Low｜置信度：90｜状态：**resolved**（`cfe9648`）｜处置：Add Guard（已执行）
+- **证据**：生产侧 `Services/Diagnostics/UnifiedLogger.cs:61` 的 `outputTemplate` 用 Serilog 的 `{Level:u3}`；消费侧 `Services/Diagnostics/LogEntryReader.cs:27-29` 的正则硬编码 `(ERR|WRN|INF|VRB|DBG|FTL)`，被日志查看器与导出过滤器消费。两侧互不引用，全仓库没有任何用例断言两者一致。
+- **影响**：任一侧改动（换格式、加一级严重度、改拼写）都会让日志查看器与导出过滤器**静默读不到任何条目**（认不出的头行被当成上一条的续行），而两侧各自的既有用例都仍然通过。
+- **解决记录**：按计划「先补测试再谈合并」补上往返守卫 `DiagnosticsServicesTests.LogFileHeaderCodes_EverySeverity_AreRecognisedByTheLogEntryReader`——六个严重度各写一条，断言逐条被识别、顺序一致、时间戳可解析、六个代码两两不同。**变异验证**：从正则里删掉 `VRB` 后立刻变红，还原后转绿。词表「合并成一张表」留待后续（先有守卫，再谈是否值得为它建表）。
+
+### AUD-TEST-010 — 动效叠层守卫清单已实际漂移：`DesignGalleryOverlay` 带 `motion-overlay` 却不在扫描集内，`Assert.Equal(9, …)` 仍通过【简并扫描轮新立案】
+
+- 类别：测试 / 守卫覆盖
+- 严重度：Low｜置信度：95（本审计实测计数与文件类名）｜状态：open｜处置：Add Guard
+- **证据**：`tests/Cafe.Launcher.Avalonia.Tests/UiStyleContractTests.Motion.cs:197-206` 手抄声明 7 个叠层文件、`:220` 断言 `Assert.Equal(9, overlays.Count)`；而 `src/Cafe.Launcher.Avalonia/Views/DesignGalleryOverlay.axaml:10` 带 `dialog-overlay motion-overlay`。**本审计实测**：该套件 153 条全绿，即画廊的动效契约今天无人守（若纳入清单，计数应为 10）。
+- **影响**：与已解决的 AUD-TEST-006 同一根因（手抄白名单在新建文件时漂移）。已有两条元契约（`UiStyleContractTests.cs:27-43` 的 `ScanTargets_CoverEveryTopLevelViewFile`、`UiStyleContractTests.Tokens.cs:702-717` 的 `StyleFiles_AreExplicitAndParseable`）只管 `ViewFiles`/`StyleFiles` 两个集合，动效清单不在其管辖内。
+- **建议**：清单改为按目录发现（`Views/*Overlay.axaml`）+ 显式留名豁免集；补一条「声明的集合 == 发现的集合」的元契约，`DesignGalleryOverlay` 补入清单（9 → 10）与元契约**同一提交**，否则元契约首跑即红。**建议验证**：Verified。
+
+### AUD-TEST-011 — 破坏性路径的用例默认绑定真实进程扫描器：开发机上有游戏进程时整类用例变红，与用例意图无关【简并扫描轮新立案；同日解决 `7161f4c`】
+
+- 类别：测试 / 环境依赖
+- 严重度：Low｜置信度：90｜状态：**resolved**（`7161f4c`）｜处置：Fix（已执行）
+- **证据**：`GameUninstallServiceTests.CreateService` 默认 `processTracker ?? new GameProcessTracker()`，而 `Services/GameRuntime/GameProcessTracker.cs:25` 的默认构造绑定 `ProcessService.FindRunningExeNamesAsync`（真实系统快照）；`GameUninstallService` 在写入边界复查该闸门。同类站点另有 16 处（`InstallationOperationStateTests`、`MainWindowTestContext`）。本仓库已实际发生过一次同类事故——`GameDownloadServiceTests` 里 `CreateTrackerReportingNoGameRunning` 的注释记录了它（机器上开着 `BlueArchive.exe`，提交路径用例全部撞上「游戏正在运行」闸门）。
+- **影响**：开发机/CI 上有游戏进程存活时，卸载与提交相关用例按设计拒绝执行而变红，原因与用例意图无关；一次真回归会混进这片噪声里。
+- **解决记录**：新增 `tests/TestDoubles/TestGameProcessTracker`（`None`/`Running`），17 处「与用例断言无关」的默认绑定改为 `None`，删掉两个私有替身与一处工厂；只有「正在运行」本身是断言对象的用例才注入 `Running`。**变异验证**：把 `None()` 改成报「在跑」→ **36 条用例变红**（下载/安装/卸载路径），正是该缺陷的描述形态。
+
+### AUD-TEST-012 — 「拆除提示条时唤醒挂起的倒计时等待」无覆盖：删掉该唤醒后 86 条提示条用例全绿【简并扫描轮新立案】
+
+- 类别：测试 / 守卫覆盖
+- 严重度：Low｜置信度：90（变异实测）｜状态：open｜处置：Add Guard
+- **证据**：`ViewModels/ToastHostViewModel.cs` 的 `EndLifecycle` 里 `countdown.Interruption?.Cancel(); ResumeCountdown(countdown);`。**变异验证**：删掉这一段后 **86 条提示条用例全绿**。
+- **影响**：失败形态是「挂起的倒计时任务一直阻塞到宿主 `Dispose`」——只漏一个 `Task`、不产生错值，因此没有任何断言看得见。属合并前即存在的缺口（原 `StopCountdown` 做同一件事，`B17` 的字典合并原样保留）。
+- **建议**：在生命周期记录上挂本次任务引用作为测试缝，补一条「挂起态提示条被拆除后其等待被唤醒」的用例。**建议验证**：Verified（变异实测）。
+- **对照（同提交的另一半**有**覆盖）**：退出信号的移交去掉后 `ToastExit_WhenAutomaticAndManualRequestsOverlap_WaitsAndRemovesOnce` 立刻变红。
+
+### AUD-TEST-013 — 无头套件泄漏 `Application.RequestedThemeVariant`，golden 截图依赖用例顺序【简并扫描轮新立案；两处锚点待复核】
+
+- 类别：测试 / 隔离性
+- 严重度：Low｜置信度：60（两处锚定的是方法调用而非直接赋值，本审计未逐行确认）｜状态：open｜处置：Investigate
+- **证据**：生产写入点唯一：`Features/Settings/SettingsAppearanceViewModel.cs:584` 的 `application.RequestedThemeVariant = themeVariant;`。无头侧 `CrashReportWindowHeadlessTests.cs:28-29/56` 与 `ThemeSubscriptionTeardownHeadlessTests.cs:32/51-62` 做了快照 + `finally` 复位（证明危险已知）；扫描报告称 `MainWindowHeadlessTests.Dialogs.cs:332`（经 `ApplyTheme`）与 `SystemThemeColorHeadlessTests.cs:26-33`（经 `ApplyPlatformColorValues`）未复位。`MainWindowHeadlessTests.Golden.cs` 的 `PrepareGoldenWindow` 只固定语言、动效与字体，**不固定变体**。
+- **影响**：共享一个 `Application` 的套件里，golden 截到亮色还是暗色取决于同批次哪个用例先跑——属「偶然绿」。
+- **建议**：先读那两处方法的实现复核是否真的漏复位；确认后加 `ThemeVariantSnapshot : IDisposable` 设施（置于 `HeadlessTestHost` 旁）并让 `PrepareGoldenWindow` 显式设定变体，使 golden 不再依赖顺序。**注意**：若今天的环境变体恰好是亮色，改后像素不变；否则会移动 golden。**建议验证**：Needs External Verification。
 
 ## Informational Findings
 

@@ -1,9 +1,43 @@
-﻿# 可简化 / 可重用逻辑全量扫描与修改计划
+# 可简化 / 可重用逻辑全量扫描与修改计划
 
 > 扫描基线：`main@8250756` · 2026-09-16
 > 范围：生产 251 个 `.cs`（≈35.1k 行）+ 29 个 `.axaml`，测试 224 个文件（≈46.3k 行），`scripts/` 与 `.github/workflows/`
 > 方法：8 路独立只读扫描（`Services/` · `Features/GameOperations/` · 其余 `Features/` · `ViewModels/`+`Views/`+`Controls/`+`Converters/` · `Helpers/`+`Models/`+`Constants/`+`Composition/`+`scripts/` · 单元测试 A–M · 单元测试 N–Z · 无头测试+`TestDoubles/`+`Support/`+XAML），随后主代理对全部高杠杆论断逐条读码复核
 > 行号为**扫描时工作树**位置；落地任一单项前须重新定位（本计划不主张行号稳定）
+
+---
+
+## 0. 落地状态（2026-09-16）
+
+**阶段 A 全部 · 阶段 B 18/22 · 阶段 C 6/8 · 阶段 D 1/17；§2 的 6 项正确性问题中 3 项已修。**
+每个提交前跑 `.\verify.ps1` 且退出码 0。收口实测：单元 **1857 通过 / 0 失败 / 2 可见跳过**、
+无头 **185 通过 / 0 失败**、覆盖率行 **87.27%** / 分支 **93.63%**（棘轮余量 +1.42pp / +0.93pp）、
+Debug 与 Release 构建各 0 警告 0 错误。
+
+| 批次 | 状态 | 提交 | 说明 |
+| --- | --- | --- | --- |
+| §2 正确性问题 | 3 修 / 4 开放 | `0db316d` `d2d4bc6` `7161f4c` `56e0509` | `DEF-1`（唯一用户可见、且已随 beta.9／beta.10 出货）、`DEF-3`、`DEF-6` 已修；`DEF-2`、`DEF-4`、`DEF-5` 开放，已分别立案为 `AUD-TEST-010`、`AUD-TEST-013`、`AUD-ARCH-012` |
+| A 测试设施复用 | **13/13** | `fe9a012`..`0db316d` | 净 −814 行测试代码、生产零改动；`%TEMP%` 残留目录由 15 个／轮降到 **0 个／轮**（实测）；两处偏离原议见 A 节注 |
+| B 生产侧等价收敛 | **18/22** | `7161f4c`..`9044998` | `B5` 并入评审候选 11 待裁决；`B12`／`B15` 评估后判定收益不抵成本；`B17` 两侧完成并暴露 `AUD-TEST-012` |
+| C 死代码删除 | **6/8** | `5ec1999`..`ed7b290` | `C5`／`C8` 经核实为深模块边界与承重语义标记，判定不做 |
+| D 结构收敛 | 1/17 | `d2d4bc6` | 仅 `D1`（即 `DEF-1`）；`D14`／`D15` 仍需先裁决，其余 14 项待做 |
+| E 登记不排期 | 0/9 | — | 按定义为登记项，不排期 |
+
+新增发现已写入审计台账：`CODEBASE_AUDIT.md` 与 `.repository-audit/findings.json` 共**立案 8 项**
+（1 Medium + 7 Low）：`AUD-ARCH-010`（= `DEF-1`，resolved）、`AUD-ARCH-011`（= `DEF-6`，resolved）、
+`AUD-MAINT-005`（resolved，`B10` 补的往返守卫）、`AUD-TEST-011`（= `DEF-3`，resolved）、
+`AUD-ARCH-012`（= `DEF-5`，open）、`AUD-TEST-010`（= `DEF-2`，open）、`AUD-TEST-012`（`B17` 暴露，open）、
+`AUD-TEST-013`（= `DEF-4`，open，两处锚点待复核）。
+
+**发布归属**：`DEF-1` 已随 `v1.1.0-beta.9` 与 `beta.10` 出货，**下一版需要一条面向用户的 `fix`
+条目**（「卸载遇到只读文件不再整体失败」）。本计划未改 `CHANGELOG_RELEASE.md`——它当前是 beta.10
+的单版本文档且 beta.10 已打标签。
+
+**两条方法论结论**（都来自实测而非推断）：①涉及「是否存在泄漏」的条目必须以实测为准——本计划
+原把 22 处 `%TEMP%` 字面量计为泄漏，按计划自带的协议实测后证伪一半（详见 A3 行下的注）；
+②扫描的计数多次与实情不符，**逐项先读码复核是必需的**——`B4` 实为 30 处而非 19 处、`C2` 的 23 处里
+有 1 处是活的、`C3` 的 4 个包装里 2 个完全无调用者、`C8` 四对里两对是承重标记、`B1` 的副本比
+计划描述的更大。
 
 ---
 
@@ -27,11 +61,11 @@
 
 ### 1.2 最该先做的五件
 
-1. **`DEF-1`：卸载删除清单文件缺少只读属性清除**（§2）——一个只读文件就让整次卸载失败，且卸载侧用了较宽的路径守卫。同仓库的 `DownloadExecutor` 已经为同一问题付过费（代码注释原文记录了这次事故）。这是本轮扫描中唯一有用户可见后果的项。
-2. **`A1`：契约测试各自手写仓库定位**（12 文件 13 处定义）——`TestRepository` 的缓存设计被它自己的目标消费者绕过，其中 5 处的向上目录遍历与设施逐行等价。
-3. **`B1`：`LauncherUpdateService` 重写了 `VersionComparer` 的前置版本比较**——32 行逐行等价副本，两侧都有测试钉住同一批向量。
-4. **`A10`：破坏性路径的测试用真实进程扫描器**——`GameUninstallServiceTests` 的默认装配绑定 `ProcessService.FindRunningExeNamesAsync`，开发机上有游戏进程时整类用例变红。同类事故本仓库已发生过一次（`GameDownloadServiceTests` 的注释记录了它）。
-5. **`DEF-2`：`UiStyleContractTests.Motion` 的手抄叠层清单已实际漂移**——`DesignGalleryOverlay.axaml` 带 `motion-overlay` 却不在扫描集内，画廊的动效契约今天无人守。这是 AUD-TEST-006 的同类复发（守卫白名单在新建文件时漂移）。
+1. **`DEF-1`：卸载删除清单文件缺少只读属性清除**（§2）——一个只读文件就让整次卸载失败，且卸载侧用了较宽的路径守卫。同仓库的 `DownloadExecutor` 已经为同一问题付过费（代码注释原文记录了这次事故）。这是本轮扫描中唯一有用户可见后果的项。 → **已完成**（`d2d4bc6`）
+2. **`A1`：契约测试各自手写仓库定位**（12 文件 13 处定义）——`TestRepository` 的缓存设计被它自己的目标消费者绕过，其中 5 处的向上目录遍历与设施逐行等价。 → **已完成**（`89fba3b`）
+3. **`B1`：`LauncherUpdateService` 重写了 `VersionComparer` 的前置版本比较**——32 行逐行等价副本，两侧都有测试钉住同一批向量。 → **已完成**（`7161f4c`）
+4. **`A10`：破坏性路径的测试用真实进程扫描器**——`GameUninstallServiceTests` 的默认装配绑定 `ProcessService.FindRunningExeNamesAsync`，开发机上有游戏进程时整类用例变红。同类事故本仓库已发生过一次（`GameDownloadServiceTests` 的注释记录了它）。 → **已完成**（`7161f4c`）
+5. **`DEF-2`：`UiStyleContractTests.Motion` 的手抄叠层清单已实际漂移**——`DesignGalleryOverlay.axaml` 带 `motion-overlay` 却不在扫描集内，画廊的动效契约今天无人守。这是 AUD-TEST-006 的同类复发（守卫白名单在新建文件时漂移）。 → **开放**（立案 `AUD-TEST-010`；已实测确认该套件 153 条全绿而画廊的动效契约无人守）
 
 ### 1.3 与既有台账的关系（本计划不重复主张）
 
@@ -53,6 +87,8 @@
 
 ### DEF-1 卸载删除清单文件不清除只读属性，且路径守卫较宽
 
+- **状态**：**已修**（`d2d4bc6`，立案 `AUD-ARCH-010`）。修法与建议一致（抽出 `ManifestFileRemover` 由下载与卸载共用），另发现计划未提的第二处：路径守卫也从 `GetSafePath` 收口到 `GetSafeFilePath`。变异验证：拆掉只读清除后 3 条用例同时变红（新增的卸载用例 + 下载侧既有两条）。**已随 beta.9／beta.10 出货，下一版需一条用户可见的 fix 条目。**
+
 - **证据**：
   - `Features/GameOperations/GameUninstallService.cs:129-140`：`GamePathValidator.GetSafePath(gamePath, files[i].Path)` + 裸 `File.Delete(filePath)`，只兜 `FileNotFoundException`。
   - `Features/GameOperations/DownloadExecutor.cs:408-438`：同一件事用 `GamePathValidator.GetSafeFilePath` + `DeleteExistingFile`（先清 `FileAttributes.ReadOnly` 再删），其 doc 注释原文：「**previously aborted installs/updates outright**」。
@@ -65,11 +101,15 @@
 
 ### DEF-2 `UiStyleContractTests.Motion` 的叠层清单已漂移
 
+- **状态**：**开放**（立案 `AUD-TEST-010`）。已实测确认：该套件 153 条全绿而 `DesignGalleryOverlay.axaml:10` 的 `motion-overlay` 无人守（纳入清单计数应为 10）。修它需要同时改清单与元契约，未在本轮动。
+
 - **证据**：`tests/Cafe.Launcher.Avalonia.Tests/UiStyleContractTests.Motion.cs:197-206` 声明 7 个叠层文件，`:220` 断言 `Assert.Equal(9, overlays.Count)`；而 `src/Cafe.Launcher.Avalonia/Views/DesignGalleryOverlay.axaml:10` 带 `dialog-overlay motion-overlay` —— 该文件不在清单内，**其动效契约今天不被任何断言覆盖**。
 - **性质**：与已解决的 `AUD-TEST-006`（令牌扫描遗漏 `ResourcePanelOverlay.axaml`）同一根因：手工白名单在创建新文件时漂移。该文件已有两个元契约（`UiStyleContractTests.cs:27-43` 的 `ScanTargets_CoverEveryTopLevelViewFile`、`UiStyleContractTests.Tokens.cs:702-717` 的 `StyleFiles_AreExplicitAndParseable`），但只管 `ViewFiles`/`StyleFiles` 两个集合，动效清单不在其管辖内。
 - **建议**：把清单改为按目录发现（`Views/*Overlay.axaml`）+ 一份显式留名豁免集；补一条与 `StyleFiles_AreExplicitAndParseable` 同形的元契约断言「声明的集合 == 发现的集合」。`DesignGalleryOverlay` 补入清单（`9 → 10`）应与元契约同一提交，否则元契约首次运行即红——这正是它该有的行为。
 
 ### DEF-3 破坏性路径的测试绑定真实进程扫描器
+
+- **状态**：**已修**（`7161f4c`，立案 `AUD-TEST-011`）。`TestGameProcessTracker.None` 进 `TestDoubles`，17 处默认绑定改为 `None`；变异验证：改成报「在跑」即 36 条用途例变红。
 
 - **证据**：`tests/Cafe.Launcher.Avalonia.Tests/GameUninstallServiceTests.cs:568-577` 的 `CreateService` 默认 `processTracker ?? new GameProcessTracker()`，而 `Services/GameRuntime/GameProcessTracker.cs:25-27` 的默认构造绑定 `ProcessService.FindRunningExeNamesAsync`（真实系统快照）；`GameUninstallService` 在写入边界复查该闸门。同类站点另见 `InstallationOperationStateTests`（13 处装配 + 9 处检查点）与 `MainWindowTestContext.cs:138,158,210`。
 - **影响**：开发机/CI 上若有 `BlueArchive.exe` 或其反作弊同族进程存活，卸载相关用例会按设计拒绝执行而**变红**，且原因与用例意图无关。`GameDownloadServiceTests.cs:1808-1814` 的 `CreateTrackerReportingNoGameRunning` 注释记录了本仓库已实际发生过这次事故——那些调用点没跟上。
@@ -77,6 +117,8 @@
 - **验证**：在跑着 `BlueArchive.exe` 的机器上跑一次目标用例（改前应红、改后应绿）；或做变异检查——把一处改回真实 tracker 并确认同一用例变红。
 
 ### DEF-4 无头套件泄漏 `Application.RequestedThemeVariant`，golden 结果依赖用例顺序
+
+- **状态**：**开放**（立案 `AUD-TEST-013`）。两处锚定的是方法调用而非直接赋值，**尚未逐行复核**，故审计置信度只给 60。
 
 - **证据**：生产写入点唯一（`Features/Settings/SettingsAppearanceViewModel.cs:584` `application.RequestedThemeVariant = themeVariant;`）。无头侧 `CrashReportWindowHeadlessTests.cs:28-29/56` 与 `ThemeSubscriptionTeardownHeadlessTests.cs:32/51-62` 做了快照+`finally` 复位（证明危险已知），而扫描报告称 `MainWindowHeadlessTests.Dialogs.cs:332`（经 `ApplyTheme`）与 `SystemThemeColorHeadlessTests.cs:26-33`（经 `ApplyPlatformColorValues`）**未复位**；`MainWindowHeadlessTests.Golden.cs` 的 `PrepareGoldenWindow` 只固定语言、动效与字体，不固定变体。
 - **影响**：共享一个 `Application` 的套件里，golden 截图截到亮色还是暗色取决于同批次哪个用例先跑。这是「偶然绿」的典型形态。
@@ -86,11 +128,15 @@
 
 ### DEF-5 `GameOperationJourney` 的 `Ready` 分支是唯一不报告的拒绝
 
+- **状态**：**开放**（立案 `AUD-ARCH-012`）。建议与 `D3`（修复路径闸门归位）同批落地，两者都动拒绝渲染。
+
 - **证据**：`Features/GameOperations/GameOperationJourney.cs:457-460`（`if (snapshot.RuntimeState == Ready) return null;`）与同函数其余三个分支对照——`Corrupted` 开修复对话框（`:445-455`）、`IoFailure`/`RemoteUnavailable` 走刷新、结果走 toast（`:487-511`）。`GameOperationsViewModelTests.cs:1107-1116` 名为 `…_ReturnsUnavailable` 却只断言 `InstallCallCount == 0`。
 - **影响**：该分支只在快照过期时可达（`Ready` 下安装按钮所在的 `IsInstallPanelVisible` 为 false），用户表现为「点了没反应」。与 `ADR-027`/`ADR-029` 建立的口径（确认后拒绝必须可见、预检失败不静默）不一致。
 - **建议**：走与策略预检相同的拒绝渲染（`ShowOperationUnavailable`）；**不要**在此处新增策略调用——该分支的语义已经判定完毕。把该用例的断言补成它名字承诺的「报出警告」。此项应与 `D3`（修复路径闸门归位）同批，因为两者都动拒绝渲染。
 
 ### DEF-6 `GameShortcutService` 的公开入口无法被测试接缝切换
+
+- **状态**：**已修**（`56e0509`，立案 `AUD-ARCH-011`）。收成 `ResolveDesktopDirectory()` 由两个入口共用；生产行为不变。
 
 - **证据**：`Features/GameOperations/GameShortcutService.cs:98-101` 与 `:106-109` 各算一遍「本平台是否支持桌面快捷方式 + 桌面目录」的两套表达式；`:121,130,153,160-161,209,233` 混用注入探针与裸 `OperatingSystem.IsWindows()/IsLinux()`。`ShortcutEnvironment.ForCurrentPlatform`（`:66-71`）把注入探针接到真实平台检查上。
 - **影响**：两个入口在生产下等价，但**公开的 `CreateDesktopShortcutAsync` 路径（真正碰真实桌面的那条）无法被接缝切换**，测试只能覆盖到另一条。属测试可及性缺陷而非产品缺陷。
