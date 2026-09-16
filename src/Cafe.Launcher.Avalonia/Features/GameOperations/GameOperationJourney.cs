@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Constants;
@@ -361,7 +361,7 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
     }
 
     private void ShowOperationUnavailable() =>
-        toastService.ShowWarning(localizer.T(LocalizationKeys.OperationUnavailableForCurrentState));
+        GameOperationRejections.WarnUnavailable(localizer, toastService);
 
     /// <summary>Executes the stop after the confirmation flow has completed.</summary>
     public void PerformStop()

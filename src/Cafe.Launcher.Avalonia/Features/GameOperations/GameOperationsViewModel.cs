@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.IO;
 using System.Threading;
@@ -418,7 +418,7 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
     }
 
     private void ShowOperationUnavailable() =>
-        toastService.ShowWarning(localizer.T(LocalizationKeys.OperationUnavailableForCurrentState));
+        GameOperationRejections.WarnUnavailable(localizer, toastService);
 
     public async Task ConfirmUninstallAsync()
     {

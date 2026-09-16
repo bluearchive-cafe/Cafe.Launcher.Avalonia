@@ -74,7 +74,7 @@ public sealed class GameUninstallService
         if (GameOperationPolicy.Decide(GameOperationPolicy.Operation.Uninstall, snapshot.RuntimeState)
             == GameOperationDecision.RejectedForCurrentState)
         {
-            return DownloadSession.Failed(localizer.T(LocalizationKeys.OperationUnavailableForCurrentState), GameOperationErrorCode.InvalidState);
+            return GameOperationRejections.UnavailableResult(localizer);
         }
 
         var gamePath = installationPath.NormalizeGamePath(snapshot.LocalGame.GamePath ?? "");

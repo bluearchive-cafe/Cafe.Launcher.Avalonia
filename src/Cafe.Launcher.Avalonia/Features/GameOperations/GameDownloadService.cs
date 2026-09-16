@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Constants;
@@ -115,7 +115,7 @@ public sealed class GameDownloadService : IDisposable
         if (GameOperationPolicy.Decide(GameOperationPolicy.Operation.InstallOrUpdate, snapshot.RuntimeState)
             == GameOperationDecision.RejectedForCurrentState)
         {
-            return DownloadSession.Failed(localizer.T(LocalizationKeys.OperationUnavailableForCurrentState), GameOperationErrorCode.InvalidState);
+            return GameOperationRejections.UnavailableResult(localizer);
         }
 
         return await RunSessionAsync(snapshot, repair: false, progress, cancellationToken).ConfigureAwait(false);
@@ -129,7 +129,7 @@ public sealed class GameDownloadService : IDisposable
         if (GameOperationPolicy.Decide(GameOperationPolicy.Operation.Repair, snapshot.RuntimeState)
             == GameOperationDecision.RejectedForCurrentState)
         {
-            return DownloadSession.Failed(localizer.T(LocalizationKeys.OperationUnavailableForCurrentState), GameOperationErrorCode.InvalidState);
+            return GameOperationRejections.UnavailableResult(localizer);
         }
 
         return await RunSessionAsync(snapshot, repair: true, progress, cancellationToken).ConfigureAwait(false);

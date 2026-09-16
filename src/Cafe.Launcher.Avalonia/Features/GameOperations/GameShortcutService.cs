@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -93,21 +93,25 @@ public sealed class GameShortcutService : IGameShortcutService
         launcherExecutablePath = environment.LauncherExecutablePath;
     }
 
-    public Task<GameShortcutResult> CreateDesktopShortcutAsync(LauncherStatusSnapshot snapshot)
-    {
-        var desktopDirectory = OperatingSystem.IsWindows() || OperatingSystem.IsLinux()
-            ? Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory)
-            : null;
-        return CreateShortcutInDirectoryAsync(snapshot, desktopDirectory);
-    }
+    public Task<GameShortcutResult> CreateDesktopShortcutAsync(LauncherStatusSnapshot snapshot) =>
+        CreateShortcutInDirectoryAsync(snapshot, ResolveDesktopDirectory());
 
-    public Task<GameShortcutResult> DeleteDesktopShortcutAsync(LauncherStatusSnapshot snapshot)
-    {
-        var desktopDirectory = isWindowsPlatform() || isLinuxPlatform()
+    public Task<GameShortcutResult> DeleteDesktopShortcutAsync(LauncherStatusSnapshot snapshot) =>
+        Task.FromResult(DeleteShortcutInDirectory(snapshot, ResolveDesktopDirectory()));
+
+    /// <summary>
+    /// 桌面目录；平台不受支持时为 null（调用方据此报 UnsupportedPlatform）。
+    /// </summary>
+    /// <remarks>
+    /// 创建那条路径此前直接读 <see cref="OperatingSystem"/>，绕过了
+    /// <see cref="ShortcutEnvironment"/> 注入的探针，于是测试换不动它的平台判断——只有删除那条
+    /// 能被接缝切换。两个入口共用这一处判定后，平台问题在测试里可复现，生产行为不变（注入的
+    /// 探针本来就是同一对 <see cref="OperatingSystem"/> 调用）。
+    /// </remarks>
+    private string? ResolveDesktopDirectory() =>
+        isWindowsPlatform() || isLinuxPlatform()
             ? Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory)
             : null;
-        return Task.FromResult(DeleteShortcutInDirectory(snapshot, desktopDirectory));
-    }
 
     /// <summary>
     /// 删除桌面快捷方式（ADR-030）。与创建共用 <see cref="ResolveShortcutFileName"/>，
