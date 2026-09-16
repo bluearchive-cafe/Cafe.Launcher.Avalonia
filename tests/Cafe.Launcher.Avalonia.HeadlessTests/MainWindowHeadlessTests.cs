@@ -6,6 +6,7 @@ using Avalonia.VisualTree;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Features.Settings;
 using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Avalonia.Testing;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Cafe.Launcher.Avalonia.Views;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,10 +30,10 @@ public sealed partial class MainWindowHeadlessTests
 
     private static TestContext CreateContext(IGameOperationExecutor? executor = null)
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(tempDir);
+        // 无头拆卸用尽力清理：窗口关闭与句柄释放是异步的。
+        var directory = TestDirectory.Create(TestDirectoryCleanup.BestEffort);
         // 与 HeadlessTestHost.CreateContext 共用 DI 构造；executor 在日志注册前追加。
-        var provider = HeadlessTestHost.CreateServiceProvider(tempDir, services =>
+        var provider = HeadlessTestHost.CreateServiceProvider(directory, services =>
         {
             if (executor is not null)
             {
@@ -51,7 +52,7 @@ public sealed partial class MainWindowHeadlessTests
             Color.Parse("#FF2E7DF6"));
         var window = new MainWindow { DataContext = viewModel };
         window.ConfigureViewModel(viewModel);
-        return new TestContext(tempDir, provider, window, viewModel);
+        return new TestContext(directory, provider, window, viewModel);
     }
 
     private static void OpenSettings(TestContext context)
@@ -74,29 +75,17 @@ public sealed partial class MainWindowHeadlessTests
     }
 
     private sealed record TestContext(
-        string TempDir,
+        TestDirectory Directory,
         ServiceProvider Provider,
         MainWindow Window,
         MainWindowViewModel ViewModel) : IDisposable
     {
+        /// <summary>拆卸顺序即所有权顺序：先关窗（停掉绑定与后台操作），再放容器，最后删目录。</summary>
         public void Dispose()
         {
             Window.Close();
             Provider.Dispose();
-            if (!Directory.Exists(TempDir))
-            {
-                return;
-            }
-
-            try
-            {
-                // 与 HeadlessTestHost 的上下文清理一致：句柄延迟释放导致的删除失败
-                // 只残留临时目录，不让清理问题掩盖测试结果。
-                Directory.Delete(TempDir, recursive: true);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-            }
+            Directory.Dispose();
         }
     }
 }

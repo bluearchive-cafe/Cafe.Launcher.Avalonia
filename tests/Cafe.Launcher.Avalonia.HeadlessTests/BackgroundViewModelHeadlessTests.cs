@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
@@ -11,6 +11,7 @@ using Avalonia.Threading;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Testing;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,7 +29,7 @@ public sealed class BackgroundViewModelHeadlessTests
     public async Task UpdateBackgroundImageAsync_WhenMetricsProvideSmallerTarget_DecodesToInjectedTarget()
     {
         using var context = HeadlessTestHost.CreateContext();
-        var wallpaperPath = Path.Combine(context.TempDir, "large-wallpaper.png");
+        var wallpaperPath = Path.Combine(context.Directory.Path, "large-wallpaper.png");
         HeadlessTestHost.WriteSolidPng(wallpaperPath, Brushes.DarkSlateBlue, 3000, 1600);
         var viewModel = new BackgroundViewModel(
             context.Provider.GetRequiredService<ImageCacheService>(),
@@ -66,7 +67,7 @@ public sealed class BackgroundViewModelHeadlessTests
         {
             using var context = HeadlessTestHost.CreateContext();
             var metrics = new MutableWindowMetrics(new PixelSize(1300, 754));
-            var wallpaperPath = Path.Combine(context.TempDir, "grow-wallpaper.png");
+            var wallpaperPath = Path.Combine(context.Directory.Path, "grow-wallpaper.png");
             HeadlessTestHost.WriteSolidPng(wallpaperPath, Brushes.DarkSlateBlue, 3000, 1600);
             var viewModel = CreateResizeAwareViewModel(context, metrics);
             try
@@ -111,7 +112,7 @@ public sealed class BackgroundViewModelHeadlessTests
         {
             using var context = HeadlessTestHost.CreateContext();
             var metrics = new MutableWindowMetrics(new PixelSize(1300, 754));
-            var wallpaperPath = Path.Combine(context.TempDir, "shrink-wallpaper.png");
+            var wallpaperPath = Path.Combine(context.Directory.Path, "shrink-wallpaper.png");
             HeadlessTestHost.WriteSolidPng(wallpaperPath, Brushes.DarkSlateBlue, 3000, 1600);
             var viewModel = CreateResizeAwareViewModel(context, metrics);
             try
@@ -154,7 +155,7 @@ public sealed class BackgroundViewModelHeadlessTests
         {
             using var context = HeadlessTestHost.CreateContext();
             var metrics = new MutableWindowMetrics(new PixelSize(1300, 400));
-            var wallpaperPath = Path.Combine(context.TempDir, "grow-height-wallpaper.png");
+            var wallpaperPath = Path.Combine(context.Directory.Path, "grow-height-wallpaper.png");
             HeadlessTestHost.WriteSolidPng(wallpaperPath, Brushes.DarkSlateBlue, 3000, 1600);
             var viewModel = CreateResizeAwareViewModel(context, metrics);
             try
@@ -199,7 +200,7 @@ public sealed class BackgroundViewModelHeadlessTests
         {
             using var context = HeadlessTestHost.CreateContext();
             var metrics = new MutableWindowMetrics(new PixelSize(1300, 2000));
-            var wallpaperPath = Path.Combine(context.TempDir, "aspect-flip-wallpaper.png");
+            var wallpaperPath = Path.Combine(context.Directory.Path, "aspect-flip-wallpaper.png");
             HeadlessTestHost.WriteSolidPng(wallpaperPath, Brushes.DarkSlateBlue, 3000, 1600);
             var viewModel = CreateResizeAwareViewModel(context, metrics);
             try
@@ -236,7 +237,7 @@ public sealed class BackgroundViewModelHeadlessTests
     {
         using var context = HeadlessTestHost.CreateContext();
         var metrics = new MutableWindowMetrics(new PixelSize(2600, 1500));
-        var wallpaperPath = Path.Combine(context.TempDir, "shrink-midflight-wallpaper.png");
+        var wallpaperPath = Path.Combine(context.Directory.Path, "shrink-midflight-wallpaper.png");
         HeadlessTestHost.WriteSolidPng(wallpaperPath, Brushes.DarkSlateBlue, 3000, 1600);
         var decodeStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var releaseDecode = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -299,7 +300,7 @@ public sealed class BackgroundViewModelHeadlessTests
         {
             using var context = HeadlessTestHost.CreateContext();
             var metrics = new MutableWindowMetrics(new PixelSize(1300, 754));
-            var wallpaperFolder = Path.Combine(context.TempDir, "wallpapers");
+            var wallpaperFolder = Path.Combine(context.Directory.Path, "wallpapers");
             Directory.CreateDirectory(wallpaperFolder);
             HeadlessTestHost.WriteSolidPng(
                 Path.Combine(wallpaperFolder, "first.png"),
@@ -365,8 +366,8 @@ public sealed class BackgroundViewModelHeadlessTests
     public async Task UpdateBackgroundImageAsync_WhenOlderDecodeFinishesLast_DoesNotReplaceNewerWallpaper()
     {
         using var context = HeadlessTestHost.CreateContext();
-        var firstPath = Path.Combine(context.TempDir, "first-wallpaper.png");
-        var secondPath = Path.Combine(context.TempDir, "second-wallpaper.png");
+        var firstPath = Path.Combine(context.Directory.Path, "first-wallpaper.png");
+        var secondPath = Path.Combine(context.Directory.Path, "second-wallpaper.png");
         HeadlessTestHost.WriteSolidPng(firstPath, Brushes.DarkSlateBlue, 320, 200);
         HeadlessTestHost.WriteSolidPng(secondPath, Brushes.IndianRed, 320, 200);
         var firstStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -420,16 +421,12 @@ public sealed class BackgroundViewModelHeadlessTests
         }
     }
 
-    private static async Task WaitUntilAsync(Func<bool> condition, TimeSpan timeout)
-    {
-        var deadline = DateTime.UtcNow + timeout;
-        while (!condition() && DateTime.UtcNow < deadline)
-        {
-            await Task.Delay(25);
-        }
-
-        Assert.True(condition(), "Condition was not met within the timeout.");
-    }
+    /// <summary>
+    /// 等背景加载状态落定。条件读的是 ViewModel 属性、不涉及控件，因此不用
+    /// HeadlessTestHost 的 UI 调度包装；机制与超时语义在 <see cref="TestWait"/>。
+    /// </summary>
+    private static Task WaitUntilAsync(Func<bool> condition, TimeSpan timeout) =>
+        TestWait.UntilAsync(condition, timeout, "Background load state did not settle.");
 
     private static LauncherSettings CreateCustomBackgroundSettings(string path) => new()
     {

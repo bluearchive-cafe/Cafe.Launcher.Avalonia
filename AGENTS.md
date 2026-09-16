@@ -12,6 +12,7 @@ This is a .NET 10 Avalonia desktop launcher for Blue Archive (JP). The solution 
 - `Views/` — Avalonia views; large style/overlay blocks live in separate `.axaml` files (`MainWindow.Styles.axaml` and per-overlay files). `MainWindow.axaml` keeps only the window shell and content grid.
 - `Resources/` — localized `.resx` strings. `Assets/` — static runtime assets.
 - `tests/Cafe.Launcher.Avalonia.Tests/` — xUnit v3 unit tests. `tests/Cafe.Launcher.Avalonia.HeadlessTests/` — Avalonia Headless UI tests, including golden-screenshot baselines.
+- `tests/Support/` — test facilities both suites use (temp directories, repository/resource lookup, bounded async waiting), compiled into each test assembly through the same `Compile-Link` mechanism as `tests/TestDoubles/`. A facility belongs here only when both projects need it and it carries no project-specific knowledge.
 - `scripts/` and `installer/` — packaging scripts and the Windows installer.
 - `prototypes/` — throwaway design prototypes; not part of the app or release.
 
@@ -45,6 +46,8 @@ Repository commands run under either Bash or PowerShell 7 (`pwsh`). Windows Powe
 | `.\build.ps1` | Restore and build the Debug configuration |
 | `dotnet run --project .\src\Cafe.Launcher.Avalonia\Cafe.Launcher.Avalonia.csproj` | Run the launcher locally |
 | `.\test.ps1` | Run both xUnit test projects |
+| `.\test.ps1 -Suite Headless` | Run one suite only (`All`/`Unit`/`Headless`) |
+| `.\test.ps1 -Filter "FullyQualifiedName~VersionComparerTests"` | Run a filtered subset (`dotnet test --filter` expression) |
 | `.\test.ps1 -Configuration Release` | Run both projects in Release (what the release workflow runs) |
 | `.\coverage.ps1` | Run tests with Coverlet; enforces the 50% line/branch minimum and rejects regressions below the repository baseline (baseline values live in `coverage.ps1`, which prints current slack) |
 | `.\verify.ps1` | Full sequence: Debug build, coverage, Release build |
@@ -109,6 +112,8 @@ Regenerate `Resources/LauncherStrings.Designer.cs` with `scripts/Generate-Launch
 Tests use xUnit v3; UI tests use `Avalonia.Headless.XUnit`. Name tests `Method_State_ExpectedResult` — behavior tests use the full three-segment form, while source/guard contract tests (asserting files, resources, or member structure rather than behavior) may use the two-segment `Subject_Expectation` form. Do not introduce a mocking framework; prefer handwritten `HttpMessageHandler` subclasses, fakes, and stubs (shared ones live in `tests/TestDoubles/`).
 
 Add focused regression tests for behavior changes. New services should cover the success path, the typical failure path, and key boundary conditions. Platform-gated tests must skip visibly with `Assert.SkipUnless`/`Assert.SkipWhen` rather than early `return`, so the skip shows up in test results. Run `UiStyleContractTests` after XAML/style edits and `.\dev.ps1 ui` for broader UI changes. Run `.\scripts\Test-LocalizationContract.ps1` after modifying any `LauncherStrings*.resx`. Before merging or releasing, run `.\verify.ps1`. Golden-screenshot baselines are regenerated with `.\test.ps1 -UpdateGolden`.
+
+Use the shared facilities instead of re-rolling them (see `PROJECT_CONVENTIONS.md` §6.5): a temp directory is a `TestDirectory` that owns its own cleanup, `LauncherDataRoot` is derived from it, and every wait for asynchronous state goes through `TestWait.UntilAsync` (`HeadlessTestHost.WaitUntilAsync` adds the UI-dispatch half). Assemble a `MainWindowViewModel` through `MainWindowTestContext`, which states who owns what — the loggers it hands to consumers must outlive the assembly call. Test through the real container only for composition, binding, and window integration.
 
 ## Release Notes
 

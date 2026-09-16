@@ -9,7 +9,7 @@ namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed class LauncherCoreServiceTests : IDisposable
 {
-    private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+    private readonly TestDirectory tempDir = TestDirectory.Create();
 
     [Theory]
     [InlineData(LocalInstallationStateKind.NotInstalled, LauncherRuntimeState.NotInstalled)]
@@ -134,7 +134,6 @@ public sealed class LauncherCoreServiceTests : IDisposable
         var settingsService = new LauncherSettingsService( TestDataRoot.ForFile(settingsPath) );
         if (useEmptySettingsDocument)
         {
-            Directory.CreateDirectory(tempDir);
             await File.WriteAllTextAsync(settingsPath, "{}");
         }
         else
@@ -177,10 +176,7 @@ public sealed class LauncherCoreServiceTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(tempDir))
-        {
-            Directory.Delete(tempDir, recursive: true);
-        }
+        tempDir.Dispose();
     }
 
     /// <summary>

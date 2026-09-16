@@ -1,26 +1,12 @@
-using Cafe.Launcher.Avalonia.Helpers;
+﻿using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Features.Settings;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.GameRuntime;
 using Cafe.Launcher.Avalonia.ViewModels;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
-
-internal sealed class FakeErrorHandlingService : IErrorHandlingService
-{
-    public Task HandleErrorAsync(string context, Exception exception, ErrorHandlingOptions? options = null)
-        => Task.CompletedTask;
-
-    public Task HandleCriticalErrorAsync(string context, Exception exception)
-        => Task.CompletedTask;
-
-    public event Action<CriticalErrorInfo>? CriticalErrorRequested
-    {
-        add { }
-        remove { }
-    }
-}
 
 [Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class SettingsOptionsDiskSpaceTests
@@ -158,7 +144,7 @@ public sealed class SettingsOptionsDiskSpaceTests
         localizer.SetLanguage(LauncherLanguages.SimplifiedChinese);
         var options = new SettingsOptionsViewModel(localizer, diskSpace);
         var editor = new SettingsEditor();
-        var errorHandling = new FakeErrorHandlingService();
+        var errorHandling = new RecordingErrorHandlingService();
         var shell = new ShellViewModel(localizer);
         using var settings = new SettingsViewModel(
             null!,

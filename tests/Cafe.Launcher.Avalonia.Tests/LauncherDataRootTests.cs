@@ -4,6 +4,7 @@ using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -13,12 +14,7 @@ namespace Cafe.Launcher.Avalonia.Tests;
 /// </summary>
 public sealed class LauncherDataRootTests : IDisposable
 {
-    private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-
-    public LauncherDataRootTests()
-    {
-        Directory.CreateDirectory(tempDir);
-    }
+    private readonly TestDirectory tempDir = TestDirectory.Create();
 
     [Fact]
     public void Root_WhenGivenRelativePath_ResolvesToAbsolutePath()
@@ -102,9 +98,6 @@ public sealed class LauncherDataRootTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(tempDir))
-        {
-            Directory.Delete(tempDir, recursive: true);
-        }
+        tempDir.Dispose();
     }
 }

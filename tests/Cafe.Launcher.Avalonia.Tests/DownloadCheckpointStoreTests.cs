@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Testing;
 using Xunit;
 
 namespace Cafe.Launcher.Avalonia.Tests;
@@ -13,7 +14,7 @@ public sealed class DownloadCheckpointStoreTests
     [Fact]
     public async Task SaveAsync_ValidState_ReplacesCheckpointAtomically()
     {
-        var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var directory = TestDirectory.Create();
         var path = Path.Combine(directory, "download_state.json");
         var store = new DownloadCheckpointStore( TestDataRoot.ForFile(path) );
         var state = new DownloadTaskState
@@ -37,14 +38,13 @@ public sealed class DownloadCheckpointStoreTests
         Assert.Equal(state.PatchUrlGroup, actual.PatchUrlGroup);
         Assert.Equal(state.StartedAt, actual.StartedAt);
         Assert.False(File.Exists(path + ".tmp"));
-        Directory.Delete(directory, recursive: true);
+        directory.Dispose();
     }
 
     [Fact]
     public async Task LoadAsync_MalformedCheckpoint_ReturnsNull()
     {
-        var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(directory);
+        var directory = TestDirectory.Create();
         var path = Path.Combine(directory, "download_state.json");
         await File.WriteAllTextAsync(path, "{");
         var store = new DownloadCheckpointStore( TestDataRoot.ForFile(path) );
@@ -52,14 +52,13 @@ public sealed class DownloadCheckpointStoreTests
         var actual = await store.LoadAsync();
 
         Assert.Null(actual);
-        Directory.Delete(directory, recursive: true);
+        directory.Dispose();
     }
 
     [Fact]
     public async Task Clear_ExistingCheckpoint_RemovesCheckpointAndTemporaryFile()
     {
-        var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(directory);
+        var directory = TestDirectory.Create();
         var path = Path.Combine(directory, "download_state.json");
         await File.WriteAllTextAsync(path, "{}");
         await File.WriteAllTextAsync(path + ".tmp", "{}");
@@ -69,6 +68,6 @@ public sealed class DownloadCheckpointStoreTests
 
         Assert.False(File.Exists(path));
         Assert.False(File.Exists(path + ".tmp"));
-        Directory.Delete(directory, recursive: true);
+        directory.Dispose();
     }
 }

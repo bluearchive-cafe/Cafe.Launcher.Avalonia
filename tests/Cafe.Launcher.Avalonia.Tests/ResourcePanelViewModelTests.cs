@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Text;
 using System.Text.Json;
 using Cafe.Launcher.Avalonia.Constants;
@@ -7,6 +7,7 @@ using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -340,25 +341,19 @@ public sealed class ResourcePanelViewModelTests
         return placeholderIndex < 0 ? template : template[..placeholderIndex];
     }
 
-    private static async Task WaitUntilAsync(Func<bool> condition)
-    {
-        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        while (!condition())
-        {
-            await Task.Delay(10, timeoutCts.Token);
-        }
-    }
+    /// <summary>等面板状态落定；机制与超时语义在 <see cref="TestWait"/>。</summary>
+    private static Task WaitUntilAsync(Func<bool> condition) =>
+        TestWait.UntilAsync(condition, TimeSpan.FromSeconds(5), "Resource panel state did not settle.");
 
     private async Task<TestContext> CreateContextAsync(
         string? cookieUid = null,
         Action<GatedResourcePanelTransport>? configure = null)
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(tempDir);
+        var tempDir = TestDirectory.Create();
         var cookiePath = Path.Combine(tempDir, "Library");
         if (cookieUid is not null)
         {
-            await WriteCookieLibraryAsync(cookiePath, cookieUid);
+            await BestHttpCookieLibraryFixture.WriteUidAsync(cookiePath, cookieUid);
         }
 
         var savedSettings = new SavedSettingsTestRig(Path.Combine(tempDir, "settings.json"));
@@ -372,7 +367,7 @@ public sealed class ResourcePanelViewModelTests
         var apiClient = new ResourcePanelApiClient(transport);
         var localizer = new LocalizationService();
         var toastService = new ToastService();
-        var errorHandling = new FakeErrorHandlingService();
+        var errorHandling = new RecordingErrorHandlingService();
         var service = new ResourcePanelService(uidService, apiClient, new LocalDiagnostics());
         var viewModel = new ResourcePanelViewModel(service, localizer, toastService, errorHandling);
         return new TestContext(
@@ -387,34 +382,13 @@ public sealed class ResourcePanelViewModelTests
             tempDir);
     }
 
-    private static async Task WriteCookieLibraryAsync(string path, string uid)
-    {
-        await using var stream = File.Create(path);
-        using var writer = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true);
-        writer.Write(1);
-        writer.Write(1);
-        writer.Write(1);
-        writer.Write("uid");
-        writer.Write(uid);
-        writer.Write(DateTime.UtcNow.ToBinary());
-        writer.Write(DateTime.UtcNow.ToBinary());
-        writer.Write(DateTime.FromBinary(0).ToBinary());
-        writer.Write(2147483647L);
-        writer.Write(false);
-        writer.Write("bluearchive.cafe");
-        writer.Write("/");
-        writer.Write(false);
-        writer.Write(false);
-        writer.Flush();
-    }
-
     private sealed record TestContext(
         ResourcePanelViewModel ViewModel,
         GatedResourcePanelTransport Transport,
         LauncherSettingsService SettingsService,
         ResourcePanelApiClient ApiClient,
         ToastService ToastService,
-        FakeErrorHandlingService ErrorHandling,
+        RecordingErrorHandlingService ErrorHandling,
         ResourcePanelService Service,
         LocalizationService Localizer,
         string TempDir) : IDisposable
@@ -508,30 +482,5 @@ public sealed class ResourcePanelViewModelTests
 
         private int CountPaths(string path) =>
             RequestedUris.Count(uri => uri.AbsolutePath == path);
-    }
-
-    /// <summary>手写 fake：记录 HandleErrorAsync 调用（无 mocking 框架）。</summary>
-    private sealed class FakeErrorHandlingService : IErrorHandlingService
-    {
-        public int HandleErrorCount { get; private set; }
-        public string? LastContext { get; private set; }
-        public Exception? LastException { get; private set; }
-        public ErrorHandlingOptions? LastOptions { get; private set; }
-
-        public event Action<CriticalErrorInfo>? CriticalErrorRequested;
-
-        public Task HandleErrorAsync(string context, Exception exception, ErrorHandlingOptions? options = null)
-        {
-            HandleErrorCount++;
-            LastContext = context;
-            LastException = exception;
-            LastOptions = options;
-            return Task.CompletedTask;
-        }
-
-        public Task HandleCriticalErrorAsync(string context, Exception exception) => Task.CompletedTask;
-
-        /// <summary>供潜在的关键错误用例触发事件，同时消除 CS0067。</summary>
-        public void RaiseCriticalError(CriticalErrorInfo info) => CriticalErrorRequested?.Invoke(info);
     }
 }

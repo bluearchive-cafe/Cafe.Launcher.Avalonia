@@ -1,10 +1,11 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using Cafe.Launcher.Avalonia.Composition;
 using Cafe.Launcher.Avalonia.Features.Settings;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Testing;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -14,7 +15,7 @@ namespace Cafe.Launcher.Avalonia.Tests;
 public sealed class ToastHostViewModelTests : IDisposable
 {
     private readonly object invokeGate = new();
-    private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+    private readonly TestDirectory tempDir = TestDirectory.Create();
 
     static ToastHostViewModelTests()
     {
@@ -726,12 +727,10 @@ public sealed class ToastHostViewModelTests : IDisposable
 
         // 负向断言给出可观察窗口：消失的 Toast 的计数不会因指针移开而被重新计一次。
         viewModel.SetToastPointerOver(toast.Id, isPointerOver: false);
-        var observationEnd = DateTime.UtcNow.AddMilliseconds(250);
-        while (DateTime.UtcNow < observationEnd)
-        {
-            Assert.Equal(1, delays.RequestCount);
-            await Task.Delay(10);
-        }
+        await TestWait.HoldsForAsync(
+            TimeSpan.FromMilliseconds(250),
+            () => delays.RequestCount == 1,
+            "The disappeared toast's countdown was re-counted");
     }
 
     [Fact]
@@ -780,14 +779,11 @@ public sealed class ToastHostViewModelTests : IDisposable
 
         toastService.Show("after-dispose");
         // 负向断言给出可观察窗口：若仍订阅，Show 会同步登记 duration delay（RequestCount=1）
-        // 并进入 ActiveToasts，轮询中即时失败；持续 250ms 无出现即证明已退订。
-        var observationEnd = DateTime.UtcNow.AddMilliseconds(250);
-        while (DateTime.UtcNow < observationEnd)
-        {
-            Assert.Empty(viewModel.ActiveToasts);
-            Assert.Equal(0, delays.RequestCount);
-            await Task.Delay(10);
-        }
+        // 并进入 ActiveToasts，观察窗内即时失败；持续 250ms 无出现即证明已退订。
+        await TestWait.HoldsForAsync(
+            TimeSpan.FromMilliseconds(250),
+            () => viewModel.ActiveToasts.Count == 0 && delays.RequestCount == 0,
+            "A disposed toast host still registered the shown toast");
 
         Assert.Empty(viewModel.ActiveToasts);
         Assert.Equal(0, delays.RequestCount);
@@ -795,7 +791,6 @@ public sealed class ToastHostViewModelTests : IDisposable
 
     private ServiceProvider CreateProvider()
     {
-        Directory.CreateDirectory(tempDir);
         var services = new ServiceCollection();
         services.AddLauncherServices();
         services.AddSingleton(_ => new UnifiedLogger(Path.Combine(tempDir, "logs")));
@@ -829,19 +824,9 @@ public sealed class ToastHostViewModelTests : IDisposable
         return Task.CompletedTask;
     }
 
-    private static async Task WaitUntilAsync(Func<bool> condition)
-    {
-        var timeout = DateTime.UtcNow + TimeSpan.FromSeconds(2);
-        while (!condition())
-        {
-            if (DateTime.UtcNow >= timeout)
-            {
-                throw new TimeoutException("Condition was not reached.");
-            }
-
-            await Task.Delay(10);
-        }
-    }
+    /// <summary>等提示条状态落定；机制与超时语义在 <see cref="TestWait"/>。</summary>
+    private static Task WaitUntilAsync(Func<bool> condition) =>
+        TestWait.UntilAsync(condition, TimeSpan.FromSeconds(2), "Toast state did not settle.");
 
     private sealed class ControlledDelay
     {
@@ -901,9 +886,6 @@ public sealed class ToastHostViewModelTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(tempDir))
-        {
-            Directory.Delete(tempDir, recursive: true);
-        }
+        tempDir.Dispose();
     }
 }

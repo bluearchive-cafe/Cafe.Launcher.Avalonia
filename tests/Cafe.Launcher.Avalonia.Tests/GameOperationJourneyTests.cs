@@ -1,4 +1,4 @@
-using Cafe.Launcher.Avalonia.Constants;
+﻿using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
@@ -561,28 +561,5 @@ public sealed class GameOperationJourneyTests
         public void RequestMinimize() => MinimizeRequested = true;
 
         public void RequestExit() => ExitRequested = true;
-    }
-
-    private sealed class RecordingErrorHandlingService : IErrorHandlingService
-    {
-        public List<(string Context, Exception Exception)> Handled { get; } = [];
-
-        /// <summary>与 <see cref="Handled"/> 同序的呈现选项，用于断言失败是否真的会到达用户。</summary>
-        public List<ErrorHandlingOptions?> HandledOptions { get; } = [];
-
-        public Task HandleErrorAsync(string context, Exception exception, ErrorHandlingOptions? options = null)
-        {
-            Handled.Add((context, exception));
-            HandledOptions.Add(options);
-            return Task.CompletedTask;
-        }
-
-        public Task HandleCriticalErrorAsync(string context, Exception exception) => Task.CompletedTask;
-
-        public event Action<CriticalErrorInfo>? CriticalErrorRequested
-        {
-            add { }
-            remove { }
-        }
     }
 }

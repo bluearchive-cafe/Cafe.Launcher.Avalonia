@@ -1,4 +1,4 @@
-using Cafe.Launcher.Avalonia.Constants;
+﻿using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Composition;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Features.Diagnostics;
@@ -15,7 +15,7 @@ namespace Cafe.Launcher.Avalonia.Tests;
 [Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class WindowChromeViewModelTests : IDisposable
 {
-    private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+    private readonly TestDirectory tempDir = TestDirectory.Create();
 
     static WindowChromeViewModelTests()
     {
@@ -193,7 +193,7 @@ Assert.Equal(DownloadStopReason.UserRequested, context.Backend.LastStopReason);
         using var context = CreateContext();
         var openedUrls = new List<string?>();
         string? openedDirectory = null;
-        var viewModel = new WindowChromeViewModel( TestDataRoot.ForDirectory(tempDir) ,
+        var viewModel = new WindowChromeViewModel( tempDir.DataRoot ,
             context.Settings,
             context.RemoteContent,
             context.Dialogs,
@@ -224,7 +224,7 @@ Assert.Equal(DownloadStopReason.UserRequested, context.Backend.LastStopReason);
         Assert.Equal(LauncherConstants.PrivacyPolicyUrl, openedUrls[5]);
         Assert.Equal(LauncherConstants.DefaultBackgroundArtworkUrl, openedUrls[6]);
         Assert.Equal("mailto:support@example.invalid", openedUrls[7]);
-        Assert.Equal(TestDataRoot.ForDirectory(tempDir).Root, openedDirectory);
+        Assert.Equal(tempDir.DataRoot.Root, openedDirectory);
     }
 
     [Fact]
@@ -252,7 +252,6 @@ Assert.Equal(DownloadStopReason.UserRequested, context.Backend.LastStopReason);
 
     private TestContext CreateContext()
     {
-        Directory.CreateDirectory(tempDir);
         var services = new ServiceCollection();
         var logger = new UnifiedLogger(Path.Combine(tempDir, "logs"));
         services.AddLauncherServices(logger);
@@ -271,7 +270,7 @@ Assert.Equal(DownloadStopReason.UserRequested, context.Backend.LastStopReason);
             dialogs,
             provider.GetRequiredService<IErrorHandlingService>(),
             _ => Task.CompletedTask);
-        var debug = new DebugViewModel( TestDataRoot.ForDirectory(tempDir) ,
+        var debug = new DebugViewModel( tempDir.DataRoot ,
             provider.GetRequiredService<ToastService>(),
             logger,
             provider.GetRequiredService<IErrorHandlingService>(),
@@ -279,7 +278,7 @@ Assert.Equal(DownloadStopReason.UserRequested, context.Backend.LastStopReason);
             provider.GetRequiredService<LauncherSettingsService>(),
             operations,
             provider.GetRequiredService<ShellViewModel>());
-        var viewModel = new WindowChromeViewModel( TestDataRoot.ForDirectory(tempDir) ,
+        var viewModel = new WindowChromeViewModel( tempDir.DataRoot ,
             settings,
             remoteContent,
             dialogs,
@@ -299,10 +298,7 @@ Assert.Equal(DownloadStopReason.UserRequested, context.Backend.LastStopReason);
 
     public void Dispose()
     {
-        if (Directory.Exists(tempDir))
-        {
-            Directory.Delete(tempDir, recursive: true);
-        }
+        tempDir.Dispose();
     }
 
     private sealed record TestContext(

@@ -1,4 +1,4 @@
-using Cafe.Launcher.Avalonia.Constants;
+﻿using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
@@ -235,7 +235,7 @@ public sealed class DownloadSessionTests
             diagnostics,
             new LocalizationService(),
             new GameInstallationPath(),
-            new DownloadCheckpointStore( TestDataRoot.ForDirectory(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "checkpoint.json")) ),
+            new DownloadCheckpointStore(TestDataRoot.ForCurrentProcess()),
             new GameProcessTracker());
         return new DownloadSession(
             context,

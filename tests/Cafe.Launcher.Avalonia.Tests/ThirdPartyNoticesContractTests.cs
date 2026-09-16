@@ -1,3 +1,5 @@
+﻿using Cafe.Launcher.Avalonia.Testing;
+
 namespace Cafe.Launcher.Avalonia.Tests;
 
 /// <summary>
@@ -11,7 +13,7 @@ public sealed class ThirdPartyNoticesContractTests
     [Fact]
     public void Notices_DeclareTheRedistributedSelfContainedRuntime()
     {
-        var notices = File.ReadAllText(ProjectFile("THIRD-PARTY-NOTICES.md"));
+        var notices = File.ReadAllText(TestRepository.FromRepositoryRoot("THIRD-PARTY-NOTICES.md"));
 
         Assert.Contains("## Self-contained .NET runtime", notices, StringComparison.Ordinal);
         Assert.Contains("Microsoft.NETCore.App", notices, StringComparison.Ordinal);
@@ -21,7 +23,7 @@ public sealed class ThirdPartyNoticesContractTests
     [Fact]
     public void NoticesGenerator_EmitsTheRuntimeSectionOnRegeneration()
     {
-        var generator = File.ReadAllText(ProjectFile("scripts/New-ThirdPartyNotices.ps1"));
+        var generator = File.ReadAllText(TestRepository.FromRepositoryRoot("scripts/New-ThirdPartyNotices.ps1"));
 
         Assert.Contains("## Self-contained .NET runtime", generator, StringComparison.Ordinal);
         Assert.Contains("dotnet --list-runtimes", generator, StringComparison.Ordinal);
@@ -30,14 +32,11 @@ public sealed class ThirdPartyNoticesContractTests
     [Fact]
     public void DistributionScript_ShipsTheLicenseDisclosureWithEveryArchive()
     {
-        var script = File.ReadAllText(ProjectFile("scripts/Build-Distribution.ps1"));
+        var script = File.ReadAllText(TestRepository.FromRepositoryRoot("scripts/Build-Distribution.ps1"));
 
         // Every packaging step below the publish loop copies the publish directory, so placing the
         // two files there is what puts them inside the zip, .app, tar.gz, deb and AppImage.
         Assert.Contains("\"LICENSE\", \"THIRD-PARTY-NOTICES.md\"", script, StringComparison.Ordinal);
         Assert.Contains("Copy-Item -LiteralPath (Join-Path $RootDir $noticeFile)", script, StringComparison.Ordinal);
     }
-
-    private static string ProjectFile(string relativePath) =>
-        Path.Combine(TestLocalizationHelper.FindRepositoryRoot(), relativePath);
 }

@@ -20,7 +20,7 @@ public sealed class ThemeColorExtractionAsyncHeadlessTests
     {
         using var context = HeadlessTestHost.CreateContext();
         using var bitmap = HeadlessTestHost.WriteSolidPngBitmap(
-            context.TempDir, "seed.png", Brushes.IndianRed, 96, 64);
+            context.Directory.Path, "seed.png", Brushes.IndianRed, 96, 64);
         context.Appearance.GetBackgroundBitmap = () => bitmap;
 
         await context.Appearance.RefreshThemeColorPaletteFromCurrentBackgroundAsync(markDirty: false);
@@ -59,7 +59,7 @@ public sealed class ThemeColorExtractionAsyncHeadlessTests
     {
         using var context = HeadlessTestHost.CreateContext();
         using var bitmap = HeadlessTestHost.WriteSolidPngBitmap(
-            context.TempDir, "stale.png", Brushes.IndianRed, 96, 64);
+            context.Directory.Path, "stale.png", Brushes.IndianRed, 96, 64);
         context.Appearance.GetBackgroundBitmap = () => bitmap;
 
         // 第一轮提取不等待；随后“壁纸已清空”的更新决策先行落定并递增代数。
@@ -76,7 +76,7 @@ public sealed class ThemeColorExtractionAsyncHeadlessTests
     public async Task UpdateBackgroundImageAsync_WhenWallpaperTheme_WiresExtractionAndFillsPalette()
     {
         using var context = HeadlessTestHost.CreateContext();
-        var wallpaperPath = Path.Combine(context.TempDir, "wallpaper.png");
+        var wallpaperPath = Path.Combine(context.Directory.Path, "wallpaper.png");
         HeadlessTestHost.WriteSolidPng(wallpaperPath, Brushes.IndianRed, 320, 200);
 
         // 与 ShellLifecycle 相同的取色来源接线。

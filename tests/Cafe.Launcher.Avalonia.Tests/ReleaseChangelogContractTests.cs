@@ -1,4 +1,5 @@
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -76,17 +77,14 @@ public sealed class ReleaseChangelogContractTests
         }
     }
 
-    private static string ReadChangelog() => File.ReadAllText(ProjectFile("CHANGELOG_RELEASE.md"));
+    private static string ReadChangelog() => File.ReadAllText(TestRepository.FromRepositoryRoot("CHANGELOG_RELEASE.md"));
 
     private static string ReadProjectVersion()
     {
-        var project = File.ReadAllText(ProjectFile("src/Cafe.Launcher.Avalonia/Cafe.Launcher.Avalonia.csproj"));
+        var project = File.ReadAllText(TestRepository.FromRepositoryRoot("src/Cafe.Launcher.Avalonia/Cafe.Launcher.Avalonia.csproj"));
         var match = Regex.Match(project, "<VersionPrefix>([^<]+)</VersionPrefix>");
 
         Assert.True(match.Success, "Cafe.Launcher.Avalonia.csproj must declare <VersionPrefix>.");
         return match.Groups[1].Value;
     }
-
-    private static string ProjectFile(string relativePath) =>
-        Path.Combine(TestLocalizationHelper.FindRepositoryRoot(), relativePath);
 }

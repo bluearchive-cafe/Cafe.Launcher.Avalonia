@@ -1,11 +1,11 @@
 using System;
-using System.IO;
 using Avalonia;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Cafe.Launcher.Avalonia.Features.Settings;
 using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Avalonia.Testing;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -30,9 +30,9 @@ public sealed class ThemeSubscriptionTeardownHeadlessTests
         var application = Application.Current
             ?? throw new InvalidOperationException("Headless application is not initialised.");
         var variantSnapshot = application.RequestedThemeVariant;
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(tempDir);
-        var provider = HeadlessTestHost.CreateServiceProvider(tempDir);
+        // 无头拆卸用尽力清理：窗口关闭与句柄释放是异步的。
+        var directory = TestDirectory.Create(TestDirectoryCleanup.BestEffort);
+        var provider = HeadlessTestHost.CreateServiceProvider(directory);
         try
         {
             var appearance = provider.GetRequiredService<MainWindowViewModel>().Settings.Appearance;
@@ -60,15 +60,7 @@ public sealed class ThemeSubscriptionTeardownHeadlessTests
         finally
         {
             application.RequestedThemeVariant = variantSnapshot;
-            // 句柄延迟释放不应让清理失败掩盖测试结果（与 MainWindowHeadlessTests
-            // 的拆卸纪律一致，勿改回裸 Delete）。
-            try
-            {
-                Directory.Delete(tempDir, true);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-            }
+            directory.Dispose();
         }
     }
 

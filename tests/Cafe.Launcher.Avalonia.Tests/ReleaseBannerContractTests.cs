@@ -1,4 +1,5 @@
-using System.Text.Json;
+﻿using System.Text.Json;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -36,7 +37,7 @@ public sealed class ReleaseBannerContractTests
     public void BannerTemplate_DeclaresHouseCanvasAndDeterministicScale()
     {
         using var document = JsonDocument.Parse(File.ReadAllText(
-            ProjectFile(TemplateRelativePath)));
+            TestRepository.FromRepositoryRoot(TemplateRelativePath)));
         var canvas = document.RootElement.GetProperty("canvas");
 
         Assert.Equal("custom", canvas.GetProperty("preset").GetString());
@@ -52,7 +53,7 @@ public sealed class ReleaseBannerContractTests
     public void BannerTemplate_UsesLightMd3WithExplicitTokens()
     {
         using var document = JsonDocument.Parse(File.ReadAllText(
-            ProjectFile(TemplateRelativePath)));
+            TestRepository.FromRepositoryRoot(TemplateRelativePath)));
         var material = document.RootElement.GetProperty("material");
 
         Assert.Equal("md3", material.GetProperty("version").GetString());
@@ -73,7 +74,7 @@ public sealed class ReleaseBannerContractTests
     public void BannerTemplate_AuthorsWithSceneSchemaV2()
     {
         using var document = JsonDocument.Parse(File.ReadAllText(
-            ProjectFile(TemplateRelativePath)));
+            TestRepository.FromRepositoryRoot(TemplateRelativePath)));
         var root = document.RootElement;
 
         // v2 is the pipeline's authoring path; v1 exists only to re-render existing posters and
@@ -91,7 +92,7 @@ public sealed class ReleaseBannerContractTests
     public void BannerTemplate_RequestsReleaseProfileForDelivery()
     {
         using var document = JsonDocument.Parse(File.ReadAllText(
-            ProjectFile(TemplateRelativePath)));
+            TestRepository.FromRepositoryRoot(TemplateRelativePath)));
         var validation = document.RootElement.GetProperty("validation");
 
         // The banner is rendered once per release, so it runs the delivery gate: draft/review can
@@ -105,7 +106,7 @@ public sealed class ReleaseBannerContractTests
     public void BannerTemplate_FontStackIsInstalledOnWindowsRenderHosts()
     {
         using var document = JsonDocument.Parse(File.ReadAllText(
-            ProjectFile(TemplateRelativePath)));
+            TestRepository.FromRepositoryRoot(TemplateRelativePath)));
         var stack = document.RootElement
             .GetProperty("typography").GetProperty("font_family").GetString()!;
 
@@ -131,7 +132,7 @@ public sealed class ReleaseBannerContractTests
     public void BannerTemplate_SceneIdsAreUniqueAndAssetReferencesResolve()
     {
         using var document = JsonDocument.Parse(File.ReadAllText(
-            ProjectFile(TemplateRelativePath)));
+            TestRepository.FromRepositoryRoot(TemplateRelativePath)));
         var root = document.RootElement;
 
         var declared = root.GetProperty("assets").EnumerateArray()
@@ -157,7 +158,7 @@ public sealed class ReleaseBannerContractTests
     public void BannerTemplate_BleedingNodesDeclareAllowBleed()
     {
         using var document = JsonDocument.Parse(File.ReadAllText(
-            ProjectFile(TemplateRelativePath)));
+            TestRepository.FromRepositoryRoot(TemplateRelativePath)));
         var scene = document.RootElement.GetProperty("scene");
 
         // The renderer records an off-canvas node as a warning unless the node's own intent marks
@@ -173,7 +174,7 @@ public sealed class ReleaseBannerContractTests
     public void BannerTemplate_KeepsReleasePlaceholders()
     {
         using var document = JsonDocument.Parse(File.ReadAllText(
-            ProjectFile(TemplateRelativePath)));
+            TestRepository.FromRepositoryRoot(TemplateRelativePath)));
         var root = document.RootElement;
 
         // The template is copied per release and its placeholders are replaced in the copy, so the
@@ -315,7 +316,4 @@ public sealed class ReleaseBannerContractTests
 
         return document.RootElement.GetProperty("output").GetProperty("image").GetString()!;
     }
-
-    private static string ProjectFile(string relativePath) =>
-        Path.Combine(TestLocalizationHelper.FindRepositoryRoot(), relativePath);
 }

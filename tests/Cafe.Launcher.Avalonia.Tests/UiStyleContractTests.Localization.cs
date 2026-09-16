@@ -1,5 +1,6 @@
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -10,8 +11,8 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void LocalizedTextCatalog_DebugBindings_UseResourceKeys()
     {
-        var overlay = XDocument.Load(ProjectFile("Views/MainWindowDebugOverlay.axaml"));
-        var source = File.ReadAllText(ProjectFile("Services/LocalizationService.cs"));
+        var overlay = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowDebugOverlay.axaml"));
+        var source = File.ReadAllText(TestRepository.FromApplicationRoot("Services/LocalizationService.cs"));
         var debugProperties = overlay
             .Descendants()
             .SelectMany(element => element.Attributes())
@@ -34,7 +35,7 @@ public sealed partial class UiStyleContractTests
     {
         var violations = ProjectMarkupFiles()
             .SelectMany(relativePath => FindFixedEnglishLiterals(
-                XDocument.Load(ProjectFile(relativePath), LoadOptions.SetLineInfo),
+                XDocument.Load(TestRepository.FromApplicationRoot(relativePath), LoadOptions.SetLineInfo),
                 relativePath))
             .Order(StringComparer.Ordinal)
             .ToList();

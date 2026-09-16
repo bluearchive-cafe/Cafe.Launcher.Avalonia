@@ -9,16 +9,11 @@ namespace Cafe.Launcher.Avalonia.Tests;
 [Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class ManifestValidationServiceTests : IDisposable
 {
-    private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+    private readonly TestDirectory tempDir = TestDirectory.Create();
 
     static ManifestValidationServiceTests()
     {
         TestLocalizationHelper.Initialize();
-    }
-
-    public ManifestValidationServiceTests()
-    {
-        Directory.CreateDirectory(tempDir);
     }
 
     [Fact]
@@ -222,9 +217,6 @@ public sealed class ManifestValidationServiceTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(tempDir))
-        {
-            Directory.Delete(tempDir, recursive: true);
-        }
+        tempDir.Dispose();
     }
 }

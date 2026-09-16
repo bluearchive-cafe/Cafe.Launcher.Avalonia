@@ -1,4 +1,5 @@
 using Cafe.Launcher.Avalonia.Helpers;
+using Cafe.Launcher.Avalonia.Testing;
 using Xunit;
 
 namespace Cafe.Launcher.Avalonia.Tests;
@@ -8,7 +9,7 @@ public sealed class DirectoryWriteProbeTests
     [Fact]
     public void CanWrite_ExistingDirectory_ReturnsTrue()
     {
-        var directory = CreateTempDirectory();
+        using var directory = TestDirectory.Create();
 
         Assert.True(DirectoryWriteProbe.CanWrite(directory));
     }
@@ -16,15 +17,16 @@ public sealed class DirectoryWriteProbeTests
     [Fact]
     public void CanWrite_MissingDirectory_ReturnsFalse()
     {
-        var directory = Path.Combine(CreateTempDirectory(), "missing");
+        using var directory = TestDirectory.Create();
+        var missing = Path.Combine(directory, "missing");
 
-        Assert.False(DirectoryWriteProbe.CanWrite(directory));
+        Assert.False(DirectoryWriteProbe.CanWrite(missing));
     }
 
     [Fact]
     public void CanCreate_TargetDirectoryExists_ReturnsTrue()
     {
-        var directory = CreateTempDirectory();
+        using var directory = TestDirectory.Create();
 
         Assert.True(DirectoryWriteProbe.CanCreate(directory));
     }
@@ -32,7 +34,7 @@ public sealed class DirectoryWriteProbeTests
     [Fact]
     public void CanCreate_MissingChainUnderWritableAncestor_ReturnsTrue()
     {
-        var ancestor = CreateTempDirectory();
+        using var ancestor = TestDirectory.Create();
         var target = Path.Combine(ancestor, "YostarGames", "BlueArchive_JP");
 
         Assert.True(DirectoryWriteProbe.CanCreate(target));
@@ -41,7 +43,7 @@ public sealed class DirectoryWriteProbeTests
     [Fact]
     public void CanCreate_AncestorChainBlockedByFile_ReturnsFalse()
     {
-        var ancestor = CreateTempDirectory();
+        using var ancestor = TestDirectory.Create();
         var blocker = Path.Combine(ancestor, "blocker");
         File.WriteAllText(blocker, "not a directory");
         var target = Path.Combine(blocker, "YostarGames", "BlueArchive_JP");
@@ -52,19 +54,12 @@ public sealed class DirectoryWriteProbeTests
     [Fact]
     public void CanCreate_WhenProbeSucceeds_LeavesNoResidueFiles()
     {
-        var ancestor = CreateTempDirectory();
+        using var ancestor = TestDirectory.Create();
         var target = Path.Combine(ancestor, "YostarGames", "BlueArchive_JP");
 
         var result = DirectoryWriteProbe.CanCreate(target);
 
         Assert.True(result);
         Assert.Empty(Directory.GetFiles(ancestor, "*.tmp"));
-    }
-
-    private static string CreateTempDirectory()
-    {
-        var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(directory);
-        return directory;
     }
 }

@@ -1,4 +1,4 @@
-using Avalonia;
+﻿using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
@@ -25,33 +25,28 @@ public sealed partial class MainWindowHeadlessTests
                 PublishTime = 1_700_000_000_000 + index
             })
             .ToList();
-        context.ViewModel.RemoteContent.Apply(
-            new LauncherRemoteState
+        ApplyRemoteState(context, state =>
+        {
+            state.OperationsResource = new OperationsResourceResponse
             {
-                OperationsResource = new OperationsResourceResponse
+                OperationsResourceOpen = true,
+                NewsList = new NewsListEnvelope
                 {
-                    OperationsResourceOpen = true,
-                    NewsList = new NewsListEnvelope
+                    Code = 0,
+                    Data = new NewsListData
                     {
-                        Code = 0,
-                        Data = new NewsListData
-                        {
-                            News =
-                            [
-                                new NewsTypeItem
-                                {
-                                    TypeLabel = "News",
-                                    Rows = rows
-                                }
-                            ]
-                        }
+                        News =
+                        [
+                            new NewsTypeItem
+                            {
+                                TypeLabel = "News",
+                                Rows = rows
+                            }
+                        ]
                     }
                 }
-            },
-            new LauncherSettings { ShowRemoteContentCard = true },
-            CancellationToken.None);
-        context.Window.Show();
-        Dispatcher.UIThread.RunJobs();
+            };
+        });
 
         var viewport = context.Window
             .GetVisualDescendants()
@@ -101,33 +96,28 @@ public sealed partial class MainWindowHeadlessTests
                 PublishTime = 1_700_000_000_000 + index
             })
             .ToList();
-        context.ViewModel.RemoteContent.Apply(
-            new LauncherRemoteState
+        ApplyRemoteState(context, state =>
+        {
+            state.OperationsResource = new OperationsResourceResponse
             {
-                OperationsResource = new OperationsResourceResponse
+                OperationsResourceOpen = true,
+                NewsList = new NewsListEnvelope
                 {
-                    OperationsResourceOpen = true,
-                    NewsList = new NewsListEnvelope
+                    Code = 0,
+                    Data = new NewsListData
                     {
-                        Code = 0,
-                        Data = new NewsListData
-                        {
-                            News =
-                            [
-                                new NewsTypeItem
-                                {
-                                    TypeLabel = "News",
-                                    Rows = rows
-                                }
-                            ]
-                        }
+                        News =
+                        [
+                            new NewsTypeItem
+                            {
+                                TypeLabel = "News",
+                                Rows = rows
+                            }
+                        ]
                     }
                 }
-            },
-            new LauncherSettings { ShowRemoteContentCard = true },
-            CancellationToken.None);
-        context.Window.Show();
-        Dispatcher.UIThread.RunJobs();
+            };
+        });
 
         var viewport = context.Window
             .GetVisualDescendants()
@@ -149,53 +139,48 @@ public sealed partial class MainWindowHeadlessTests
     public void MainWindow_RemoteContent_WithOverflow_ScrollsOuterTransparentContainer()
     {
         using var context = CreateContext();
-        context.ViewModel.RemoteContent.Apply(
-            new LauncherRemoteState
+        ApplyRemoteState(context, state =>
+        {
+            state.BaseConfig = new BaseConfigResponse
             {
-                BaseConfig = new BaseConfigResponse
-                {
-                    NoticePopOpen = true,
-                    NoticeContent = new string('N', 500)
-                },
-                OperationsResource = new OperationsResourceResponse
-                {
-                    OperationsResourceOpen = true,
-                    OperationsBannerList =
-                    [
-                        new OperationsBannerItem
-                        {
-                            BannerImg = "",
-                            JumpUrl = "https://news.example.invalid/banner"
-                        }
-                    ],
-                    NewsList = new NewsListEnvelope
+                NoticePopOpen = true,
+                NoticeContent = new string('N', 500)
+            };
+            state.OperationsResource = new OperationsResourceResponse
+            {
+                OperationsResourceOpen = true,
+                OperationsBannerList =
+                [
+                    new OperationsBannerItem
                     {
-                        Code = 0,
-                        Data = new NewsListData
-                        {
-                            News =
-                            [
-                                new NewsTypeItem
-                                {
-                                    TypeLabel = "News",
-                                    Rows = Enumerable.Range(1, 3)
-                                        .Select(index => new NewsRowItem
-                                        {
-                                            Title = $"News item {index}",
-                                            Link = $"https://news.example.invalid/{index}",
-                                            PublishTime = 1_700_000_000_000 + index
-                                        })
-                                        .ToList()
-                                }
-                            ]
-                        }
+                        BannerImg = "",
+                        JumpUrl = "https://news.example.invalid/banner"
+                    }
+                ],
+                NewsList = new NewsListEnvelope
+                {
+                    Code = 0,
+                    Data = new NewsListData
+                    {
+                        News =
+                        [
+                            new NewsTypeItem
+                            {
+                                TypeLabel = "News",
+                                Rows = Enumerable.Range(1, 3)
+                                    .Select(index => new NewsRowItem
+                                    {
+                                        Title = $"News item {index}",
+                                        Link = $"https://news.example.invalid/{index}",
+                                        PublishTime = 1_700_000_000_000 + index
+                                    })
+                                    .ToList()
+                            }
+                        ]
                     }
                 }
-            },
-            new LauncherSettings { ShowRemoteContentCard = true },
-            CancellationToken.None);
-        context.Window.Show();
-        Dispatcher.UIThread.RunJobs();
+            };
+        });
 
         var layoutHost = context.Window
             .GetVisualDescendants()
@@ -209,54 +194,49 @@ public sealed partial class MainWindowHeadlessTests
     public void MainWindow_NewsTabs_KeepVisualGapBetweenHeaderAndSelectedIndicator()
     {
         using var context = CreateContext();
-        context.ViewModel.RemoteContent.Apply(
-            new LauncherRemoteState
+        ApplyRemoteState(context, state =>
+        {
+            state.OperationsResource = new OperationsResourceResponse
             {
-                OperationsResource = new OperationsResourceResponse
+                OperationsResourceOpen = true,
+                NewsList = new NewsListEnvelope
                 {
-                    OperationsResourceOpen = true,
-                    NewsList = new NewsListEnvelope
+                    Code = 0,
+                    Data = new NewsListData
                     {
-                        Code = 0,
-                        Data = new NewsListData
-                        {
-                            News =
-                            [
-                                new NewsTypeItem
-                                {
-                                    TypeLabel = "News",
-                                    Rows =
-                                    [
-                                        new NewsRowItem
-                                        {
-                                            Title = "News item",
-                                            Link = "https://news.example.invalid/1",
-                                            PublishTime = 1_700_000_000_000
-                                        }
-                                    ]
-                                },
-                                new NewsTypeItem
-                                {
-                                    TypeLabel = "Events",
-                                    Rows =
-                                    [
-                                        new NewsRowItem
-                                        {
-                                            Title = "Event item",
-                                            Link = "https://news.example.invalid/2",
-                                            PublishTime = 1_700_000_000_001
-                                        }
-                                    ]
-                                }
-                            ]
-                        }
+                        News =
+                        [
+                            new NewsTypeItem
+                            {
+                                TypeLabel = "News",
+                                Rows =
+                                [
+                                    new NewsRowItem
+                                    {
+                                        Title = "News item",
+                                        Link = "https://news.example.invalid/1",
+                                        PublishTime = 1_700_000_000_000
+                                    }
+                                ]
+                            },
+                            new NewsTypeItem
+                            {
+                                TypeLabel = "Events",
+                                Rows =
+                                [
+                                    new NewsRowItem
+                                    {
+                                        Title = "Event item",
+                                        Link = "https://news.example.invalid/2",
+                                        PublishTime = 1_700_000_000_001
+                                    }
+                                ]
+                            }
+                        ]
                     }
                 }
-            },
-            new LauncherSettings { ShowRemoteContentCard = true },
-            CancellationToken.None);
-        context.Window.Show();
-        Dispatcher.UIThread.RunJobs();
+            };
+        });
 
         var selectedTab = context.Window.GetVisualDescendants().OfType<TabItem>().Single(tab => tab.IsSelected);
         var header = selectedTab.GetVisualDescendants().OfType<TextBlock>().Single(text => text.Text == "News");
@@ -279,22 +259,17 @@ public sealed partial class MainWindowHeadlessTests
     public void MainWindow_SocialChip_HoverKeepsOpaqueBackgroundOverWallpaper()
     {
         using var context = CreateContext();
-        context.ViewModel.RemoteContent.Apply(
-            new LauncherRemoteState
+        ApplyRemoteState(context, state =>
+        {
+            state.SocialMediaResource = new SocialMediaResourceResponse
             {
-                SocialMediaResource = new SocialMediaResourceResponse
-                {
-                    SocialMediaResourceOpen = true,
-                    SocialMediaResourceList =
-                    [
-                        new SocialMediaResourceItem { SocialMediaChannel = "Twitter", JumpUrl = "https://x.example.invalid/" }
-                    ]
-                }
-            },
-            new LauncherSettings { ShowRemoteContentCard = true },
-            CancellationToken.None);
-        context.Window.Show();
-        Dispatcher.UIThread.RunJobs();
+                SocialMediaResourceOpen = true,
+                SocialMediaResourceList =
+                [
+                    new SocialMediaResourceItem { SocialMediaChannel = "Twitter", JumpUrl = "https://x.example.invalid/" }
+                ]
+            };
+        });
 
         var chip = context.Window
             .GetVisualDescendants()

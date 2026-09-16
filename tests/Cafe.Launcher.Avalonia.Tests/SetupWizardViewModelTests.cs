@@ -1,9 +1,10 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Features.SetupWizard;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Testing;
 using Cafe.Launcher.Avalonia.ViewModels;
 
 namespace Cafe.Launcher.Avalonia.Tests;
@@ -11,6 +12,9 @@ namespace Cafe.Launcher.Avalonia.Tests;
 [Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class SetupWizardViewModelTests
 {
+    /// <summary>向导路径校验（防抖 + 后台写探测）的就绪预算。</summary>
+    private static readonly TimeSpan GateSettleBudget = TimeSpan.FromSeconds(5);
+
     static SetupWizardViewModelTests()
     {
         TestLocalizationHelper.Initialize();
@@ -65,7 +69,7 @@ public sealed class SetupWizardViewModelTests
     public void Step1_WhenGamePathWasAlreadySetOrCleared_DoesNotOverwriteItOnReentry()
     {
         var vm = CreateViewModel();
-        var existingPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        using var existingPath = TestDirectory.Create();
         vm.GamePath = existingPath;
 
         vm.NextCommand.Execute(null);
@@ -166,7 +170,7 @@ public sealed class SetupWizardViewModelTests
     [Fact]
     public async Task CanGoNext_Step1WithNotInstalledPath_ReturnsTrue()
     {
-        var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        using var path = TestDirectory.Create();
         var vm = new SetupWizardViewModel(
             new LocalizationService(),
             new GameInstallationPath(),
@@ -181,8 +185,7 @@ public sealed class SetupWizardViewModelTests
     [Fact]
     public async Task CanGoNext_Step1WithNotWritablePath_ReturnsFalse()
     {
-        var root = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(root);
+        using var root = TestDirectory.Create();
         var blocker = Path.Combine(root, "blocker");
         File.WriteAllText(blocker, "not a directory");
         var vm = new SetupWizardViewModel(
@@ -322,7 +325,7 @@ public sealed class SetupWizardViewModelTests
     [Fact]
     public async Task GamePathStatus_WhenStateFilesAreValid_IsValidInstallationAndCanGoNext()
     {
-        var gamePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        using var gamePath = TestDirectory.Create();
         var normalizedGamePath = new GameInstallationPath().NormalizeGamePath(gamePath);
         var store = new LocalInstallationStateStore();
         Directory.CreateDirectory(normalizedGamePath);
@@ -342,7 +345,7 @@ public sealed class SetupWizardViewModelTests
     [Fact]
     public async Task GamePathStatus_WhenOnlyManifestExists_IsCorruptedInstallationAndCannotGoNext()
     {
-        var gamePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        using var gamePath = TestDirectory.Create();
         var normalizedGamePath = new GameInstallationPath().NormalizeGamePath(gamePath);
         Directory.CreateDirectory(normalizedGamePath);
         await File.WriteAllTextAsync(Path.Combine(normalizedGamePath, "manifest.json"), "{}");
@@ -359,7 +362,7 @@ public sealed class SetupWizardViewModelTests
     [Fact]
     public async Task GamePathPresentation_WhenInstallationIsCorrupted_HasTitleAndDescription()
     {
-        var gamePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        using var gamePath = TestDirectory.Create();
         var normalizedGamePath = new GameInstallationPath().NormalizeGamePath(gamePath);
         Directory.CreateDirectory(normalizedGamePath);
         await File.WriteAllTextAsync(Path.Combine(normalizedGamePath, "manifest.json"), "{}");
@@ -381,7 +384,7 @@ public sealed class SetupWizardViewModelTests
     [Fact]
     public async Task GamePathStatus_WhenStateFileIsLocked_IsInaccessibleAndCannotGoNext()
     {
-        var gamePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        using var gamePath = TestDirectory.Create();
         var normalizedGamePath = new GameInstallationPath().NormalizeGamePath(gamePath);
         var store = new LocalInstallationStateStore();
         Directory.CreateDirectory(normalizedGamePath);
@@ -416,7 +419,7 @@ public sealed class SetupWizardViewModelTests
     [Fact]
     public async Task GamePathStatus_WhenChecking_CannotGoNextAndUpdatesWhenReadCompletes()
     {
-        var gamePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        using var gamePath = TestDirectory.Create();
         var normalizedGamePath = new GameInstallationPath().NormalizeGamePath(gamePath);
         Directory.CreateDirectory(normalizedGamePath);
         var tempFilesWritten = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -446,9 +449,9 @@ public sealed class SetupWizardViewModelTests
     [Fact]
     public async Task GamePathStatus_WhenOldReadIsCancelled_DoesNotOverwriteNewPathStatus()
     {
-        var oldGamePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        using var oldGamePath = TestDirectory.Create();
         var normalizedOldGamePath = new GameInstallationPath().NormalizeGamePath(oldGamePath);
-        var newGamePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        using var newGamePath = TestDirectory.Create();
         Directory.CreateDirectory(normalizedOldGamePath);
         var tempFilesWritten = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var releaseCommit = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -537,7 +540,11 @@ public sealed class SetupWizardViewModelTests
         // 路径校验为异步（防抖 + 后台写探测），推进循环在门控未就绪时
         // 有界等待而非热自旋：5 秒预算内未就绪即快速失败（参见 P0 整改
         // 中 Headless 同类修复）。
-        var deadline = DateTime.UtcNow.AddSeconds(5);
+        await TestWait.UntilAsync(
+            () => viewModel.IsLastStep || viewModel.CanGoNext,
+            GateSettleBudget,
+            "向导门控未在 5 秒预算内就绪。");
+
         for (var guard = 0; !viewModel.IsLastStep && guard < 100; guard++)
         {
             if (viewModel.CanGoNext)
@@ -546,8 +553,10 @@ public sealed class SetupWizardViewModelTests
             }
             else
             {
-                Assert.True(DateTime.UtcNow < deadline, "向导门控未在 5 秒预算内就绪。");
-                await Task.Delay(10);
+                await TestWait.UntilAsync(
+                    () => viewModel.IsLastStep || viewModel.CanGoNext,
+                    GateSettleBudget,
+                    "向导门控未在 5 秒预算内就绪。");
             }
         }
 

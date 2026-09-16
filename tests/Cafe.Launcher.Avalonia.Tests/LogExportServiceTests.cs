@@ -1,21 +1,17 @@
-using System.IO.Compression;
+﻿using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed class LogExportServiceTests : IDisposable
 {
-    private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-
-    public LogExportServiceTests()
-    {
-        Directory.CreateDirectory(tempDir);
-    }
+    private readonly TestDirectory tempDir = TestDirectory.Create();
 
     [Fact]
     public async Task ExportAsync_WritesArchiveToSpecifiedDirectory()
@@ -39,7 +35,7 @@ public sealed class LogExportServiceTests : IDisposable
     [Fact]
     public void DefaultExportDirectory_UsesProductDataExportFolder()
     {
-        var dataRoot = TestDataRoot.ForDirectory(tempDir);
+        var dataRoot = tempDir.DataRoot;
         using var logger = new UnifiedLogger(Path.Combine(tempDir, "directory-probe"));
 
         // 目录布局由数据根模块拥有：导出目录就是根下的 log-exports，
@@ -456,9 +452,6 @@ public sealed class LogExportServiceTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(tempDir))
-        {
-            Directory.Delete(tempDir, recursive: true);
-        }
+        tempDir.Dispose();
     }
 }

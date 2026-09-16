@@ -100,7 +100,7 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 
 ### 4.2 测试中的本地化
 
-- 使用 `LocalizationService.T()` 的单元测试通过 `TestLocalizationHelper.Initialize()` 或 `LocalizationService.InitializeForTesting(...)` 提供测试资源。
+- 使用 `LocalizationService.T()` 的单元测试通过 `TestLocalizationHelper.Initialize()` 或 `LocalizationService.InitializeForTesting(...)` 提供测试资源（前者是 `TestRepository.InitializeLocalizationResources()` 的转发面，见 §6.5）。
 - 不要在测试中直接写死预期中文字符串（本地化可能变化）；改用 key 查找或只断言非空/非 null。
 
 ---
@@ -137,7 +137,7 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 - 一个测试类对应一个被测试类，文件名 `{Target}Tests.cs`。
 - 使用 `Fact`（同步/异步）和 `Theory`（参数化）。
 - 测试方法命名：`Method_State_ExpectedResult`（下划线风格，`CA1707` 已对测试文件关闭）；源码/契约类守卫测试可用两段式 `Subject_Expectation`。
-- IDisposable 的测试类可选实现 `IDisposable` 清理临时文件/目录。
+- IDisposable 的测试类可选实现 `IDisposable` 清理临时文件/目录；临时目录用 `TestDirectory` 持有（见 §6.5），不要自己拼 `Path.GetTempPath()` 再手写删除与退避。
 
 ### 6.3 测试编写规则
 
@@ -145,7 +145,7 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 - 修改框架/基础设施（日志、本地化、DI）时，先跑现有的全套测试 → 再写新的覆盖新增行为。
 - `UiStyleContractTests` 在修改任何 XAML 文件后都必须跑一遍。
 - 平台门控的测试用 `Assert.SkipUnless`/`Assert.SkipWhen` 显式跳过，**禁止**用早期 `return` 静默跳过（跳过必须出现在测试结果里）。
-- 等待异步状态一律用有截止时间的轮询（参照 `HeadlessTestHost.WaitUntilAsync`），不要用裸 `Task.Delay(N)` 后断言；确需固定延时的负向断言，延时从（internal 可见的）生产常量推导，不要手抄魔数。
+- 等待异步状态一律用有截止时间的轮询（统一走 `TestWait.UntilAsync`；无头侧用 `HeadlessTestHost.WaitUntilAsync`，它在同一实现上补一次 UI 调度推进），不要用裸 `Task.Delay(N)` 后断言；能直接等任务的地方直接 `await ... .WaitAsync(超时)`。确需固定延时的负向断言，延时从（internal 可见的）生产常量推导，不要手抄魔数。
 - 覆盖率最低阈值为 line ≥ 50%、branch ≥ 50%；`coverage.ps1` 还会验证仓库当前覆盖率基线未回退（基线数值以 `coverage.ps1` 为准，每次运行打印余量）。
 - 新增服务按适用情况覆盖：正向路径、典型失败路径（exception/validation failure）和关键边界条件（如 null input、empty collection）。
 
@@ -154,6 +154,17 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 - 不用 Moq/NSubstitute。伪造 `HttpMessageHandler` 时手写子类。
 - 伪造 DI 依赖时，创建简洁的内部构造函数接受 `Action<>` 或 `Func<>` 委托。
 - 伪造本地化时调用 `TestLocalizationHelper.Initialize()`。
+- 只合并**契约相同**的重复替身（共享的放 `tests/TestDoubles/`）；场景专属的故障模拟留在使用它的测试旁边，不要为了共用把替身做成瑞士军刀。
+
+### 6.5 共享测试设施（`tests/Support/`）
+
+两个测试工程通过 `Compile-Link` 共用同一份源码（与 `tests/TestDoubles/` 同一机制）。新增设施的门槛是「两套件都需要、且不含任何工程专属知识」：
+
+- **`TestDirectory`** — 临时目录的唯一创建与清理点：短路径独立目录、派生 `LauncherDataRoot`、释放即删除（有界重试）。删除失败默认**可见**（抛 `IOException`）；无头容器拆卸用 `TestDirectoryCleanup.BestEffort`（留下目录并写诊断，不让清理问题掩盖断言结论）。释放顺序是硬约束：先放掉容器/服务，再 `Dispose()` 目录。它隐式转换为自己的路径字符串，因此用例仍可把它当路径用（`Path.Combine(tempDir, ...)`），但**不要**再对它调用 `Directory.Delete`——删除归 `Dispose`。
+- **`TestRepository`** — 仓库与应用目录的唯一定位点，并缓存 `.resx` 的解析结果。`InitializeLocalizationResources()` **每次调用都重装**资源快照：`LocalizationService.InitializeForTesting` 是「最后者胜」的进程级状态，缓存住安装会让一个先装自定义资源的用例污染其后所有用例。
+- **`TestWait`** — 唯一的有截止时间轮询实现（单调计时、超时、取消、可注入的推进动作）。超时抛带上下文的 `TimeoutException`。
+- 主窗口 ViewModel 的装配走 `MainWindowTestContext`：它只释放自己创建的对象，调用方传入的替身与工厂归调用方。它持有的日志器活到用例结束（消费者——设置页与日志查看器——会在其整个活期内继续写入），因此**不要**把日志器放回装配方法里的局部 `using`。
+- 无头上下文每个用例一个独立数据根（`HeadlessTestHost.CreateServiceProvider(dataRoot:)`）：进程根是按程序集隔离的共享目录，用它会让同程序集的两个上下文互相看见对方的设置、下载检查点与崩溃快照。
 
 ---
 

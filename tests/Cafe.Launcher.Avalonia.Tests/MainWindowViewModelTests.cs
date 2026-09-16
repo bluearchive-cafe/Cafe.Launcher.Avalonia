@@ -1,14 +1,8 @@
-using Cafe.Launcher.Avalonia.Features.Diagnostics;
-using Cafe.Launcher.Avalonia.Features.GameOperations;
-using Cafe.Launcher.Avalonia.Features.ResourcePanel;
-using Cafe.Launcher.Avalonia.Features.Settings;
-using Cafe.Launcher.Avalonia.Features.SetupWizard;
+﻿using Cafe.Launcher.Avalonia.Features.ResourcePanel;
 using Cafe.Launcher.Avalonia.Features.Shell;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
-using Cafe.Launcher.Avalonia.Services.Auth;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
-using Cafe.Launcher.Avalonia.Services.GameRuntime;
 using Cafe.Launcher.Avalonia.Testing;
 using Cafe.Launcher.Avalonia.ViewModels;
 
@@ -26,24 +20,26 @@ public sealed partial class MainWindowViewModelTests : IDisposable
         TestLocalizationHelper.Initialize();
     }
 
-    private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+    private readonly TestDirectory tempDir = TestDirectory.Create();
+    private readonly List<MainWindowTestContext> contexts = [];
     private readonly ProxySettingsService proxySettings = new();
     private readonly HttpClientFactory httpClientFactory;
-    private readonly LauncherApiClient apiClient = new(
-        new StubRemoteHttpTransport(),
-        new AuthorizationHeaderFactory(),
-        new PatchUrlGroupService());
     private readonly ImageCacheService imageCacheService;
 
     public MainWindowViewModelTests()
     {
-        Directory.CreateDirectory(tempDir);
         httpClientFactory = new HttpClientFactory(proxySettings);
         imageCacheService = new ImageCacheService(
             new StubRemoteHttpTransport(),
-            new Crc64Service(), TestDataRoot.ForDirectory(Path.Combine(tempDir)) );
+            new Crc64Service(),
+            tempDir.DataRoot);
     }
 
+    /// <summary>
+    /// 装配一个主窗口 ViewModel 并登记它的上下文。对象图与日志的构造在
+    /// <see cref="MainWindowTestContext"/>（连同那里的所有权规则），这里只负责
+    /// 创建上下文、让它活到用例结束，并把 ViewModel 交给用例。
+    /// </summary>
     private async Task<MainWindowViewModel> CreateViewModelAsync(
         ILauncherCoreService coreService,
         SavedSettingsTestRig? savedSettings = null,
@@ -56,153 +52,22 @@ public sealed partial class MainWindowViewModelTests : IDisposable
         Func<TimeSpan, CancellationToken, Task>? toastDelayAsync = null,
         StubFilePickerService? filePickerService = null)
     {
-        filePickerService ??= new StubFilePickerService();
-        savedSettings ??= new SavedSettingsTestRig(new LauncherSettingsService( TestDataRoot.ForDirectory(Path.Combine(tempDir, Guid.NewGuid().ToString("N"))) ));
-        var settingsService = savedSettings.SettingsService;
-        var savedSettingsWriter = savedSettings.Writer;
-        var localInstallationStateStore = new LocalInstallationStateStore();
-        var diagnostics = new LocalDiagnostics();
-        var localizationService = new LocalizationService();
-        var remoteManifestService = new RemoteManifestService(apiClient);
-        var diagnosticsVal = new LocalDiagnostics();
-        var fileDownloadService = new FileDownloadService(
-            new Crc64Service(),
-            diagnosticsVal);
-        var manifestValidationService = new ManifestValidationService(apiClient, remoteManifestService, localizationService);
-        var gameRuntime = new GameRuntime(
-            [GameRunnerDefinition.Native],
-            new DefaultProcessLauncher(),
-            new GameProcessTracker());
-        var gameLaunchService = new GameLaunchService(
-            manifestValidationService,
-            gameRuntime,
-            localizationService);
-        var gameDownloadService = new GameDownloadService(
-            apiClient,
-            remoteManifestService,
-            fileDownloadService,
-            localInstallationStateStore,
-            settingsService,
-            new HttpClientFactory(new ProxySettingsService()),
-            RemoteHttpUrlValidator.CreateForTesting(),
-            new Crc64Service(),
-            new DiskSpaceService(),
-            diagnostics,
-            localizationService,
-            new GameInstallationPath(),
-            new GameProcessTracker(), TestDataRoot.ForDirectory(Path.Combine(tempDir, Guid.NewGuid().ToString("N"))) );
-        resourcePanelUidService ??= new ResourcePanelUidService(
-            new BestHttpCookieLibraryService(),
-            settingsService,
-            savedSettingsWriter,
-            Path.Combine(tempDir, "missing-resource-panel-cookie"));
-        resourcePanelApiClient ??= new ResourcePanelApiClient(new StubRemoteHttpTransport());
-
-        toastService ??= new ToastService();
-        var diskSpaceService = new DiskSpaceService();
-        var launcherUpdateSvc = launcherUpdateService ?? new LauncherUpdateService(new StubRemoteHttpTransport());
-        var settingsEditor = savedSettings.Editor;
-        var settingsOptions = new SettingsOptionsViewModel(localizationService, diskSpaceService);
-        var settingsAppearance = new SettingsAppearanceViewModel(settingsEditor);
-        var shellViewModel = new ShellViewModel(localizationService);
-        var errorHandling = new ErrorHandlingService(localizationService, diagnostics, toastService);
-        var noticeStateService = new NoticeStateService( TestDataRoot.ForDirectory(Path.Combine(tempDir, Guid.NewGuid().ToString("N"))) );
-        var dialogsViewModel = new DialogsViewModel(
-            localizationService,
-            noticeStateService,
-            new SetupWizardViewModel(localizationService, new GameInstallationPath(), new LocalInstallationStateStore(), diagnostics, filePickerService),
-            diagnostics);
-        using var settingsLogger = new UnifiedLogger(Path.Combine(tempDir, Guid.NewGuid().ToString("N")));
-        var settingsViewModel = new SettingsViewModel(
-            settingsService, savedSettingsWriter, localizationService, toastService,
-            launcherUpdateSvc, dialogsViewModel,
-            settingsLogger,
-            new GameInstallationPath(),
-            settingsOptions, settingsAppearance, errorHandling,
-            gameRuntime, filePickerService);
-        var resourcePanelService = new ResourcePanelService(
-            resourcePanelUidService, resourcePanelApiClient, diagnostics);
-        var resourcePanelViewModel = new ResourcePanelViewModel(
-            resourcePanelService, localizationService, toastService, errorHandling);
-        var gameUninstallService = new GameUninstallService(
-            localInstallationStateStore,
-            diagnostics,
-            localizationService,
-            new GameInstallationPath(),
-            new DownloadCheckpointStore( TestDataRoot.ForDirectory(Path.Combine(tempDir, Guid.NewGuid().ToString("N"))) ),
-            new GameProcessTracker(),
-            new TestGameShortcutService());
-
-        var remoteContentViewModel = new RemoteContentViewModel(localizationService, imageCacheService, diagnostics);
-        var backgroundViewModel = new BackgroundViewModel(imageCacheService, diagnostics, settingsViewModel);
-        var gameOperationsViewModel = gameOperationsBackend is null
-            ? new GameOperationsViewModel(
-                new GameOperationExecutor(gameLaunchService, gameDownloadService, gameUninstallService),
-                new GameShortcutService(localizationService),
-                localizationService,
-                toastService,
-                diagnostics,
-                shellViewModel,
-                dialogsViewModel,
-                errorHandling)
-            : new GameOperationsViewModel(
-                gameOperationsBackend,
-                new TestGameShortcutService(),
-                localizationService,
-                toastService,
-                diagnostics,
-                shellViewModel,
-                dialogsViewModel,
-                errorHandling,
-                _ => Task.CompletedTask);
-        var toastHostViewModel = toastDelayAsync is null
-            ? new ToastHostViewModel(toastService, localizationService, diagnostics)
-            : new ToastHostViewModel(
-                toastService,
-                localizationService,
-                diagnostics,
-            action =>
-                {
-                    action();
-                    return Task.CompletedTask;
-                },
-                toastDelayAsync);
-        var debugViewModel = new DebugViewModel( TestDataRoot.ForDirectory(tempDir) ,toastService, new UnifiedLogger(Path.Combine(tempDir, Guid.NewGuid().ToString("N"))), errorHandling, new StubFatalCrashService(), settingsService, gameOperationsViewModel, shellViewModel);
-        var windowChromeViewModel = new WindowChromeViewModel( TestDataRoot.ForDirectory(tempDir) ,
-            settingsViewModel, remoteContentViewModel, dialogsViewModel, gameOperationsViewModel,
-            debugViewModel);
-
-        using var testLogger = new UnifiedLogger(tempDir);
-        return new MainWindowViewModel(
+        var context = MainWindowTestContext.Create(
+            tempDir,
+            httpClientFactory,
+            imageCacheService,
             coreService,
-            settingsService,
-            savedSettingsWriter,
-            localizationService,
+            savedSettings,
+            resourcePanelUidService,
+            resourcePanelApiClient,
             toastService,
-            launcherUpdateSvc,
-            diagnostics,
-            new ShellPresentationFamily(
-                shellViewModel,
-                backgroundViewModel,
-                remoteContentViewModel,
-                dialogsViewModel,
-                gameOperationsViewModel,
-                toastHostViewModel,
-                windowChromeViewModel,
-                settingsViewModel,
-                resourcePanelViewModel,
-                new LogViewerDialogViewModel(testLogger, null, null, null, null),
-                new LogExportDialogViewModel(
-                    new LogExportService(new LocalDiagnostics(testLogger), TestDataRoot.ForCurrentProcess(), new CrashReportStore(TestDataRoot.ForCurrentProcess()) ),
-                    filePickerService,
-                    toastService,
-                    localizationService,
-                    diagnostics),
-                debugViewModel,
-                new ModalHostViewModel()),
-            errorHandling,
-            windowsAnimationSettingsProvider ?? new WindowsAnimationSettingsProvider(),
+            launcherUpdateService,
+            gameOperationsBackend,
+            windowsAnimationSettingsProvider,
+            toastDelayAsync,
             filePickerService);
+        contexts.Add(context);
+        return context.ViewModel;
     }
 
     private LauncherStatusSnapshot CreateSnapshot()
@@ -284,12 +149,16 @@ public sealed partial class MainWindowViewModelTests : IDisposable
 
     public void Dispose()
     {
+        // 顺序即所有权：用例已经释放过自己的 ViewModel，接着释放上下文自建的资源
+        // （日志、设置装配、下载用工厂），最后才删临时目录。
+        foreach (var context in contexts)
+        {
+            context.Dispose();
+        }
+
         imageCacheService.Dispose();
         httpClientFactory.Dispose();
-        if (Directory.Exists(tempDir))
-        {
-            Directory.Delete(tempDir, recursive: true);
-        }
+        tempDir.Dispose();
     }
 
     private sealed class CountingCoreService : ILauncherCoreService

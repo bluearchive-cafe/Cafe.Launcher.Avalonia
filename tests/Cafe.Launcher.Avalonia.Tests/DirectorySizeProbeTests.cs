@@ -1,4 +1,5 @@
-using Cafe.Launcher.Avalonia.Helpers;
+﻿using Cafe.Launcher.Avalonia.Helpers;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -8,7 +9,7 @@ namespace Cafe.Launcher.Avalonia.Tests;
 /// </summary>
 public sealed class DirectorySizeProbeTests : IDisposable
 {
-    private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+    private readonly TestDirectory tempDir = TestDirectory.Create();
 
     [Fact]
     public void Measure_WhenTreeHasNestedFiles_SumsEveryFileByte()
@@ -66,26 +67,6 @@ public sealed class DirectorySizeProbeTests : IDisposable
 
     public void Dispose()
     {
-        for (var attempt = 0; attempt < 3; attempt++)
-        {
-            try
-            {
-                if (Directory.Exists(tempDir))
-                {
-                    Directory.Delete(tempDir, recursive: true);
-                }
-
-                return;
-            }
-            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-            {
-                if (attempt == 2)
-                {
-                    throw;
-                }
-
-                Thread.Sleep(TimeSpan.FromMilliseconds(100 * (attempt + 1)));
-            }
-        }
+        tempDir.Dispose();
     }
 }

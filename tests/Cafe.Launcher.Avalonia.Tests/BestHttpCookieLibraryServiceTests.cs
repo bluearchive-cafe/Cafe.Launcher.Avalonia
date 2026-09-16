@@ -1,4 +1,5 @@
-using Cafe.Launcher.Avalonia.Services;
+﻿using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -8,7 +9,7 @@ public sealed class BestHttpCookieLibraryServiceTests
     public void Read_WhenLibraryContainsUidCookie_ReturnsExactCookieFields()
     {
         var service = new BestHttpCookieLibraryService();
-        using var stream = CreateLibraryStream(writer =>
+        using var stream = BestHttpCookieLibraryFixture.Stream(writer =>
         {
             writer.Write(1);
             writer.Write(1);
@@ -45,7 +46,7 @@ public sealed class BestHttpCookieLibraryServiceTests
     public void Read_WhenLibraryContainsSecureHttpOnlyCookie_ReturnsBooleanFlags()
     {
         var service = new BestHttpCookieLibraryService();
-        using var stream = CreateLibraryStream(writer =>
+        using var stream = BestHttpCookieLibraryFixture.Stream(writer =>
         {
             writer.Write(1);
             writer.Write(1);
@@ -75,7 +76,7 @@ public sealed class BestHttpCookieLibraryServiceTests
     public void Read_WhenCountIsNegative_ThrowsInvalidDataException()
     {
         var service = new BestHttpCookieLibraryService();
-        using var stream = CreateLibraryStream(writer =>
+        using var stream = BestHttpCookieLibraryFixture.Stream(writer =>
         {
             writer.Write(1);
             writer.Write(-1);
@@ -88,7 +89,7 @@ public sealed class BestHttpCookieLibraryServiceTests
     public void Read_WhenTrailingBytesExist_ThrowsInvalidDataException()
     {
         var service = new BestHttpCookieLibraryService();
-        using var stream = CreateLibraryStream(writer =>
+        using var stream = BestHttpCookieLibraryFixture.Stream(writer =>
         {
             writer.Write(1);
             writer.Write(0);
@@ -96,17 +97,5 @@ public sealed class BestHttpCookieLibraryServiceTests
         });
 
         Assert.Throws<InvalidDataException>(() => service.Read(stream));
-    }
-
-    private static MemoryStream CreateLibraryStream(Action<BinaryWriter> write)
-    {
-        var stream = new MemoryStream();
-        using (var writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true))
-        {
-            write(writer);
-        }
-
-        stream.Position = 0;
-        return stream;
     }
 }

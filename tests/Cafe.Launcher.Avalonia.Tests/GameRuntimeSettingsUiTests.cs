@@ -1,10 +1,11 @@
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Features.Settings;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.GameRuntime;
 using Cafe.Launcher.Avalonia.ViewModels;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -146,7 +147,7 @@ public sealed class GameRuntimeSettingsUiTests
             null!,
             options,
             new SettingsAppearanceViewModel(new SettingsEditor()),
-            new FakeErrorHandlingService(),
+            new RecordingErrorHandlingService(),
             gameRuntime,
             new StubFilePickerService());
 

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Cafe.Launcher.Avalonia.Helpers;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -8,7 +9,7 @@ public sealed class AtomicJsonFileStoreTests
     [Fact]
     public async Task WriteAsync_ThenReadAsync_RoundTripsAndLeavesNoTemporaryFiles()
     {
-        var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var directory = TestDirectory.Create();
         var path = Path.Combine(directory, "state.json");
         var value = new TestState("ready", 3);
 
@@ -25,10 +26,7 @@ public sealed class AtomicJsonFileStoreTests
         }
         finally
         {
-            if (Directory.Exists(directory))
-            {
-                Directory.Delete(directory, recursive: true);
-            }
+            directory.Dispose();
         }
     }
 

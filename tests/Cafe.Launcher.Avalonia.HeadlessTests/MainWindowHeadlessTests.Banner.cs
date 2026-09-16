@@ -1,4 +1,4 @@
-using Avalonia;
+﻿using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Headless;
@@ -16,24 +16,19 @@ public sealed partial class MainWindowHeadlessTests
     public void MainWindow_BannerControls_HideAfterPointerLeavesBannerStage()
     {
         using var context = CreateContext();
-        context.ViewModel.RemoteContent.Apply(
-            new LauncherRemoteState
+        ApplyRemoteState(context, state =>
+        {
+            state.OperationsResource = new OperationsResourceResponse
             {
-                OperationsResource = new OperationsResourceResponse
-                {
-                    OperationsResourceOpen = true,
-                    BannerLoop = false,
-                    OperationsBannerList =
-                    [
-                        new OperationsBannerItem { BannerImg = "", JumpUrl = "https://banner.example.invalid/1" },
-                        new OperationsBannerItem { BannerImg = "", JumpUrl = "https://banner.example.invalid/2" }
-                    ]
-                }
-            },
-            new LauncherSettings { ShowRemoteContentCard = true },
-            CancellationToken.None);
-        context.Window.Show();
-        Dispatcher.UIThread.RunJobs();
+                OperationsResourceOpen = true,
+                BannerLoop = false,
+                OperationsBannerList =
+                [
+                    new OperationsBannerItem { BannerImg = "", JumpUrl = "https://banner.example.invalid/1" },
+                    new OperationsBannerItem { BannerImg = "", JumpUrl = "https://banner.example.invalid/2" }
+                ]
+            };
+        });
 
         var bannerStage = context.Window
             .GetVisualDescendants()
@@ -81,24 +76,19 @@ public sealed partial class MainWindowHeadlessTests
     public void MainWindow_BannerIndicators_AreVisualOnlyAndFollowHoverVisibility()
     {
         using var context = CreateContext();
-        context.ViewModel.RemoteContent.Apply(
-            new LauncherRemoteState
+        ApplyRemoteState(context, state =>
+        {
+            state.OperationsResource = new OperationsResourceResponse
             {
-                OperationsResource = new OperationsResourceResponse
-                {
-                    OperationsResourceOpen = true,
-                    BannerLoop = false,
-                    OperationsBannerList =
-                    [
-                        new OperationsBannerItem { BannerImg = "", JumpUrl = "https://banner.example.invalid/1" },
-                        new OperationsBannerItem { BannerImg = "", JumpUrl = "https://banner.example.invalid/2" }
-                    ]
-                }
-            },
-            new LauncherSettings { ShowRemoteContentCard = true },
-            CancellationToken.None);
-        context.Window.Show();
-        Dispatcher.UIThread.RunJobs();
+                OperationsResourceOpen = true,
+                BannerLoop = false,
+                OperationsBannerList =
+                [
+                    new OperationsBannerItem { BannerImg = "", JumpUrl = "https://banner.example.invalid/1" },
+                    new OperationsBannerItem { BannerImg = "", JumpUrl = "https://banner.example.invalid/2" }
+                ]
+            };
+        });
 
         var bannerStage = context.Window
             .GetVisualDescendants()
@@ -149,24 +139,19 @@ public sealed partial class MainWindowHeadlessTests
     public void MainWindow_BannerControls_ShowWhileBannerStageIsFocused()
     {
         using var context = CreateContext();
-        context.ViewModel.RemoteContent.Apply(
-            new LauncherRemoteState
+        ApplyRemoteState(context, state =>
+        {
+            state.OperationsResource = new OperationsResourceResponse
             {
-                OperationsResource = new OperationsResourceResponse
-                {
-                    OperationsResourceOpen = true,
-                    BannerLoop = false,
-                    OperationsBannerList =
-                    [
-                        new OperationsBannerItem { BannerImg = "", JumpUrl = "https://banner.example.invalid/1" },
-                        new OperationsBannerItem { BannerImg = "", JumpUrl = "https://banner.example.invalid/2" }
-                    ]
-                }
-            },
-            new LauncherSettings { ShowRemoteContentCard = true },
-            CancellationToken.None);
-        context.Window.Show();
-        Dispatcher.UIThread.RunJobs();
+                OperationsResourceOpen = true,
+                BannerLoop = false,
+                OperationsBannerList =
+                [
+                    new OperationsBannerItem { BannerImg = "", JumpUrl = "https://banner.example.invalid/1" },
+                    new OperationsBannerItem { BannerImg = "", JumpUrl = "https://banner.example.invalid/2" }
+                ]
+            };
+        });
 
         var bannerStage = context.Window
             .GetVisualDescendants()
@@ -192,32 +177,27 @@ public sealed partial class MainWindowHeadlessTests
     public void MainWindow_BannerLink_WhenPressed_PreservesBannerCompositionBounds()
     {
         using var context = CreateContext();
-        context.ViewModel.RemoteContent.Apply(
-            new LauncherRemoteState
+        ApplyRemoteState(context, state =>
+        {
+            state.OperationsResource = new OperationsResourceResponse
             {
-                OperationsResource = new OperationsResourceResponse
-                {
-                    OperationsResourceOpen = true,
-                    BannerLoop = false,
-                    OperationsBannerList =
-                    [
-                        new OperationsBannerItem
-                        {
-                            BannerImg = "",
-                            JumpUrl = "https://banner.example.invalid/1"
-                        },
-                        new OperationsBannerItem
-                        {
-                            BannerImg = "",
-                            JumpUrl = "https://banner.example.invalid/2"
-                        }
-                    ]
-                }
-            },
-            new LauncherSettings { ShowRemoteContentCard = true },
-            CancellationToken.None);
-        context.Window.Show();
-        Dispatcher.UIThread.RunJobs();
+                OperationsResourceOpen = true,
+                BannerLoop = false,
+                OperationsBannerList =
+                [
+                    new OperationsBannerItem
+                    {
+                        BannerImg = "",
+                        JumpUrl = "https://banner.example.invalid/1"
+                    },
+                    new OperationsBannerItem
+                    {
+                        BannerImg = "",
+                        JumpUrl = "https://banner.example.invalid/2"
+                    }
+                ]
+            };
+        });
 
         var bannerStage = context.Window
             .GetVisualDescendants()
@@ -251,31 +231,26 @@ public sealed partial class MainWindowHeadlessTests
     public void MainWindow_SocialActions_AddTopRightVerticalButtonsInSourceOrder()
     {
         using var context = CreateContext();
-        context.ViewModel.RemoteContent.Apply(
-            new LauncherRemoteState
+        ApplyRemoteState(context, state =>
+        {
+            state.SocialMediaResource = new SocialMediaResourceResponse
             {
-                SocialMediaResource = new SocialMediaResourceResponse
-                {
-                    SocialMediaResourceOpen = true,
-                    SocialMediaResourceList =
-                    [
-                        new SocialMediaResourceItem
-                        {
-                            SocialMediaChannel = "YouTube",
-                            JumpUrl = "https://youtube.example.invalid"
-                        },
-                        new SocialMediaResourceItem
-                        {
-                            SocialMediaChannel = "Discord",
-                            JumpUrl = "https://discord.example.invalid"
-                        }
-                    ]
-                }
-            },
-            new LauncherSettings { ShowRemoteContentCard = true },
-            CancellationToken.None);
-        context.Window.Show();
-        Dispatcher.UIThread.RunJobs();
+                SocialMediaResourceOpen = true,
+                SocialMediaResourceList =
+                [
+                    new SocialMediaResourceItem
+                    {
+                        SocialMediaChannel = "YouTube",
+                        JumpUrl = "https://youtube.example.invalid"
+                    },
+                    new SocialMediaResourceItem
+                    {
+                        SocialMediaChannel = "Discord",
+                        JumpUrl = "https://discord.example.invalid"
+                    }
+                ]
+            };
+        });
 
         var actionButtons = context.Window
             .GetVisualDescendants()

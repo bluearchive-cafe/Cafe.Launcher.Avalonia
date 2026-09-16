@@ -1,23 +1,19 @@
-using Cafe.Launcher.Avalonia.Features.ResourcePanel;
+﻿using Cafe.Launcher.Avalonia.Features.ResourcePanel;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed class ResourcePanelUidServiceTests : IDisposable
 {
-    private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-
-    public ResourcePanelUidServiceTests()
-    {
-        Directory.CreateDirectory(tempDir);
-    }
+    private readonly TestDirectory tempDir = TestDirectory.Create();
 
     [Fact]
     public async Task ResolveUidAsync_WhenCookieContainsUid_ReturnsCookieUid()
     {
         var cookiePath = Path.Combine(tempDir, "Library");
-        await WriteCookieLibraryAsync(cookiePath, "COOKIEAA");
+        await BestHttpCookieLibraryFixture.WriteUidAsync(cookiePath, "COOKIEAA");
         var savedSettings = new SavedSettingsTestRig(Path.Combine(tempDir, "settings.json"));
         await savedSettings.SeedAsync(new LauncherSettings { ResourcePanelUid = "SETTINGA" });
         var service = new ResourcePanelUidService(new BestHttpCookieLibraryService(), savedSettings.SettingsService, savedSettings.Writer, cookiePath);
@@ -47,7 +43,7 @@ public sealed class ResourcePanelUidServiceTests : IDisposable
     public async Task ResolveUidAsync_WhenUidCookieDomainDoesNotMatch_ReturnsSettingsUid()
     {
         var cookiePath = Path.Combine(tempDir, "Library");
-        await WriteCookieLibraryAsync(cookiePath, "COOKIEAA", "example.com", "/");
+        await BestHttpCookieLibraryFixture.WriteUidAsync(cookiePath, "COOKIEAA", "example.com", "/");
         var savedSettings = new SavedSettingsTestRig(Path.Combine(tempDir, "settings.json"));
         await savedSettings.SeedAsync(new LauncherSettings { ResourcePanelUid = "SETTINGA" });
         var service = new ResourcePanelUidService(new BestHttpCookieLibraryService(), savedSettings.SettingsService, savedSettings.Writer, cookiePath);
@@ -61,7 +57,7 @@ public sealed class ResourcePanelUidServiceTests : IDisposable
     public async Task ResolveUidAsync_WhenNoUidExists_ReturnsEmptyString()
     {
         var cookiePath = Path.Combine(tempDir, "Library");
-        await WriteCookieLibraryAsync(cookiePath, "");
+        await BestHttpCookieLibraryFixture.WriteUidAsync(cookiePath, "");
         var savedSettings = new SavedSettingsTestRig(Path.Combine(tempDir, "settings.json"));
         var service = new ResourcePanelUidService(
             new BestHttpCookieLibraryService(),
@@ -94,7 +90,7 @@ public sealed class ResourcePanelUidServiceTests : IDisposable
     public async Task ResolveUidAsync_WhenCookieUidHasInvalidFormat_FallsBackToSettings()
     {
         var cookiePath = Path.Combine(tempDir, "Library");
-        await WriteCookieLibraryAsync(cookiePath, "invalid");
+        await BestHttpCookieLibraryFixture.WriteUidAsync(cookiePath, "invalid");
         var savedSettings = new SavedSettingsTestRig(Path.Combine(tempDir, "settings.json"));
         await savedSettings.SeedAsync(new LauncherSettings { ResourcePanelUid = "SETTINGA" });
         var service = new ResourcePanelUidService(new BestHttpCookieLibraryService(), savedSettings.SettingsService, savedSettings.Writer, cookiePath);
@@ -108,7 +104,7 @@ public sealed class ResourcePanelUidServiceTests : IDisposable
     public async Task ResolveUidAsync_WhenBothCookieAndSettingsAreInvalid_ReturnsEmpty()
     {
         var cookiePath = Path.Combine(tempDir, "Library");
-        await WriteCookieLibraryAsync(cookiePath, "bad");
+        await BestHttpCookieLibraryFixture.WriteUidAsync(cookiePath, "bad");
         var savedSettings = new SavedSettingsTestRig(Path.Combine(tempDir, "settings.json"));
         await savedSettings.SeedAsync(new LauncherSettings { ResourcePanelUid = "also-bad" });
         var service = new ResourcePanelUidService(new BestHttpCookieLibraryService(), savedSettings.SettingsService, savedSettings.Writer, cookiePath);
@@ -131,42 +127,8 @@ public sealed class ResourcePanelUidServiceTests : IDisposable
         await Assert.ThrowsAsync<ArgumentException>(() => service.SaveManualUidAsync("bad-uid"));
     }
 
-    private static async Task WriteCookieLibraryAsync(
-        string path,
-        string uid,
-        string domain = "bluearchive.cafe",
-        string cookiePath = "/")
-    {
-        await using var stream = File.Create(path);
-        using var writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true);
-        writer.Write(1);
-        writer.Write(string.IsNullOrEmpty(uid) ? 0 : 1);
-        if (string.IsNullOrEmpty(uid))
-        {
-            await stream.FlushAsync();
-            return;
-        }
-
-        writer.Write(1);
-        writer.Write("uid");
-        writer.Write(uid);
-        writer.Write(DateTime.UtcNow.ToBinary());
-        writer.Write(DateTime.UtcNow.ToBinary());
-        writer.Write(DateTime.FromBinary(0).ToBinary());
-        writer.Write(2147483647L);
-        writer.Write(false);
-        writer.Write(domain);
-        writer.Write(cookiePath);
-        writer.Write(false);
-        writer.Write(false);
-        writer.Flush();
-    }
-
     public void Dispose()
     {
-        if (Directory.Exists(tempDir))
-        {
-            Directory.Delete(tempDir, recursive: true);
-        }
+        tempDir.Dispose();
     }
 }

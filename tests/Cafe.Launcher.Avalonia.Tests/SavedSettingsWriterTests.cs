@@ -1,5 +1,7 @@
-using Cafe.Launcher.Avalonia.Models;
+﻿using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Testing;
+using Cafe.Launcher.Avalonia.Constants;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -10,12 +12,7 @@ namespace Cafe.Launcher.Avalonia.Tests;
 /// </summary>
 public sealed class SavedSettingsWriterTests : IDisposable
 {
-    private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-
-    public SavedSettingsWriterTests()
-    {
-        Directory.CreateDirectory(tempDir);
-    }
+    private readonly TestDirectory tempDir = TestDirectory.Create();
 
     [Fact]
     public async Task UpdateAsync_ThenDraftSave_KeepsTheFieldWrittenByTheOtherWriter()
@@ -98,13 +95,10 @@ public sealed class SavedSettingsWriterTests : IDisposable
     }
 
     private SavedSettingsTestRig CreateRig() =>
-        new(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+        new(tempDir.Sub(GamePaths.LauncherSettingsFileName));
 
     public void Dispose()
     {
-        if (Directory.Exists(tempDir))
-        {
-            Directory.Delete(tempDir, recursive: true);
-        }
+        tempDir.Dispose();
     }
 }

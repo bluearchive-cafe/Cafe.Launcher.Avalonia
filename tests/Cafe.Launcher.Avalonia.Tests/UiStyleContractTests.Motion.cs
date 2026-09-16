@@ -1,4 +1,5 @@
-using System.Xml.Linq;
+﻿using System.Xml.Linq;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -9,12 +10,12 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void ToastMotionAnimation_IsEnabledOnlyByRootMotionPreference()
     {
-        var overlay = File.ReadAllText(ProjectFile("Views/MainWindowToastOverlay.axaml"));
+        var overlay = File.ReadAllText(TestRepository.FromApplicationRoot("Views/MainWindowToastOverlay.axaml"));
         Assert.Contains(
             "Classes.motion-enabled=\"{Binding #ToastOverlayRoot.((vm:MainWindowViewModel)DataContext).IsMotionEnabled}\"",
             overlay,
             StringComparison.Ordinal);
-        var overlayDocument = XDocument.Load(ProjectFile("Views/MainWindowToastOverlay.axaml"));
+        var overlayDocument = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowToastOverlay.axaml"));
         var toastCard = overlayDocument
             .Descendants()
             .Single(element =>
@@ -22,7 +23,7 @@ public sealed partial class UiStyleContractTests
                 && HasClass(element, "toast-card"));
         Assert.Equal("{Binding IsExiting}", toastCard.Attribute("Classes.motion-exit")?.Value);
 
-        var document = XDocument.Load(ProjectFile("Views/Styles/Toast.axaml"));
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/Styles/Toast.axaml"));
         var toastStyles = document
             .Descendants()
             .Where(element =>
@@ -101,7 +102,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void ToastStack_UsesRootMotionPreference()
     {
-        var document = XDocument.Load(ProjectFile("Views/MainWindowToastOverlay.axaml"));
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowToastOverlay.axaml"));
         var controlsNamespace = document.Root?.GetNamespaceOfPrefix("controls");
         Assert.NotNull(controlsNamespace);
         var toastList = document
@@ -116,7 +117,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void CoreMotionStyles_DefineExactConditionalAnimations()
     {
-        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
 
         AssertOverlayBrushAnimation(
             document,
@@ -207,7 +208,7 @@ public sealed partial class UiStyleContractTests
         var overlays = new List<(XElement Element, XNamespace ControlsNamespace)>();
         foreach (var path in overlayFiles)
         {
-            var document = XDocument.Load(ProjectFile(path));
+            var document = XDocument.Load(TestRepository.FromApplicationRoot(path));
             var controlsNamespace = document.Root?.GetNamespaceOfPrefix("controls");
             Assert.NotNull(controlsNamespace);
             overlays.AddRange(
@@ -239,7 +240,7 @@ public sealed partial class UiStyleContractTests
 
         });
 
-        var settings = XDocument.Load(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
+        var settings = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowSettingsOverlay.axaml"));
         var contentTargets = settings
             .Descendants()
             .Where(element => HasClass(element, "motion-content"))
@@ -260,7 +261,7 @@ public sealed partial class UiStyleContractTests
             Assert.Null(element.Attribute("RenderTransform"));
         });
 
-        var mainWindow = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
+        var mainWindow = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.axaml"));
         var bottomTargets = mainWindow
             .Descendants()
             .Where(element => HasClass(element, "motion-bottom"))
@@ -290,7 +291,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void MainWindow_OperationStates_TransformInsideSingleTaskContainer()
     {
-        var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.axaml"));
 
         var surface = document
             .Descendants()

@@ -2,6 +2,7 @@ using System.Text.Json;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -150,13 +151,12 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         await File.WriteAllTextAsync(settingsPath, """{"language":"invalid"}""");
         Assert.Equal(LauncherLanguages.Auto, (await service.ReadAsync()).Language);
     }
-    private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+    private readonly TestDirectory tempDir = TestDirectory.Create();
     private readonly string settingsPath;
 
     public LauncherSettingsServiceTests()
     {
         settingsPath = Path.Combine(tempDir, "settings.json");
-        Directory.CreateDirectory(tempDir);
     }
 
     [Fact]
@@ -537,7 +537,6 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         // Recover rather than throw: ReadAsync runs inside the startup try block, so a file the
         // user (or a crash) left truncated must not be able to abort initialization. The other
         // three file-backed stores each carry the same guard for their corrupt-input path.
-        Directory.CreateDirectory(tempDir);
         await File.WriteAllTextAsync(settingsPath, "{");
         var service = new LauncherSettingsService( TestDataRoot.ForFile(settingsPath) );
 
@@ -550,7 +549,6 @@ public sealed class LauncherSettingsServiceTests : IDisposable
     [Fact]
     public async Task ReadAsync_WhenSettingsFileCannotBeOpened_FallsBackToDefaults()
     {
-        Directory.CreateDirectory(tempDir);
         await File.WriteAllTextAsync(settingsPath, """{"language":"ja"}""");
         await using var locked = new FileStream(
             settingsPath,
@@ -566,9 +564,6 @@ public sealed class LauncherSettingsServiceTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(tempDir))
-        {
-            Directory.Delete(tempDir, recursive: true);
-        }
+        tempDir.Dispose();
     }
 }

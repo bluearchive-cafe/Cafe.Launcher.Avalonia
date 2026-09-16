@@ -9,28 +9,23 @@ using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
 [Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class GameShortcutServiceTests : IDisposable
 {
-    private readonly string tempDirectory;
+    private readonly TestDirectory tempDirectory = TestDirectory.Create();
 
     static GameShortcutServiceTests()
     {
         TestLocalizationHelper.Initialize();
     }
 
-    public GameShortcutServiceTests()
-    {
-        tempDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(tempDirectory);
-    }
-
     public void Dispose()
     {
-        Directory.Delete(tempDirectory, recursive: true);
+        tempDirectory.Dispose();
     }
 
     [Fact]

@@ -1,4 +1,4 @@
-using Cafe.Launcher.Avalonia.Features.GameOperations;
+﻿using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Features.SetupWizard;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Features.Diagnostics;
@@ -13,7 +13,7 @@ namespace Cafe.Launcher.Avalonia.Tests;
 [Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class DebugViewModelTests : IDisposable
 {
-    private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+    private readonly TestDirectory tempDir = TestDirectory.Create();
 
     static DebugViewModelTests()
     {
@@ -197,15 +197,11 @@ public sealed class DebugViewModelTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(tempDir))
-        {
-            Directory.Delete(tempDir, recursive: true);
-        }
+        tempDir.Dispose();
     }
 
     private TestContext CreateContext(string language = LauncherLanguages.English)
     {
-        Directory.CreateDirectory(tempDir);
         var localizer = new LocalizationService();
         localizer.SetLanguage(language);
         var toastService = new ToastService();
@@ -234,12 +230,12 @@ public sealed class DebugViewModelTests : IDisposable
             _ => Task.CompletedTask);
         var logger = new UnifiedLogger(Path.Combine(tempDir, "logs"));
         var fatalCrash = new StubFatalCrashService();
-        var viewModel = new DebugViewModel( TestDataRoot.ForDirectory(tempDir) ,
+        var viewModel = new DebugViewModel( tempDir.DataRoot ,
             toastService,
             logger,
             errorHandling,
             fatalCrash,
-            new LauncherSettingsService(TestDataRoot.ForDirectory(tempDir)),
+            new LauncherSettingsService(tempDir.DataRoot),
             operations,
             shell);
         return new TestContext(viewModel, operations, backend, logger, toastService, localizer, fatalCrash);

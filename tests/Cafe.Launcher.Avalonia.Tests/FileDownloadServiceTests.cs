@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using Cafe.Launcher.Avalonia.Models;
@@ -20,40 +20,11 @@ public sealed class FileDownloadServiceTests : IDisposable
     private const string PrimaryHost = "primary.example.invalid";
     private const string BackupHost = "backup.example.invalid";
 
-    private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+    private readonly TestDirectory tempDir = TestDirectory.Create();
 
     public void Dispose()
     {
-        if (Directory.Exists(tempDir))
-        {
-            const int maxRetries = 5;
-            for (var attempt = 0; attempt < maxRetries; attempt++)
-            {
-                try
-                {
-                    Directory.Delete(tempDir, recursive: true);
-                    break;
-                }
-                catch (IOException)
-                {
-                    if (attempt == maxRetries - 1)
-                    {
-                        throw;
-                    }
-
-                    Thread.Sleep(TimeSpan.FromMilliseconds(200 * (attempt + 1)));
-                }
-                catch (UnauthorizedAccessException)
-                {
-                    if (attempt == maxRetries - 1)
-                    {
-                        throw;
-                    }
-
-                    Thread.Sleep(TimeSpan.FromMilliseconds(200 * (attempt + 1)));
-                }
-            }
-        }
+        tempDir.Dispose();
     }
 
     [Theory]
@@ -63,7 +34,6 @@ public sealed class FileDownloadServiceTests : IDisposable
         HttpStatusCode statusCode,
         string expectedStatusText)
     {
-        Directory.CreateDirectory(tempDir);
         var targetPath = Path.Combine(tempDir, "file.bin.tmp");
         var expectedBytes = Encoding.UTF8.GetBytes("complete-content");
         // 预置一份部分写入的临时文件，验证 HTTP 失败不会丢弃可用于续传的已下载数据。
@@ -90,13 +60,12 @@ public sealed class FileDownloadServiceTests : IDisposable
     [Fact]
     public async Task DownloadAsync_WhenCancelledMidStream_PropagatesCancellationAndKeepsPartialFile()
     {
-        Directory.CreateDirectory(tempDir);
         var targetPath = Path.Combine(tempDir, "file.bin.tmp");
         var expectedBytes = Encoding.UTF8.GetBytes("complete-content");
         const int deliveredBytes = 4;
         using var transport = new StubDownloadTransport((_, _) => new HttpResponseMessage(HttpStatusCode.OK)
         {
-            Content = new StreamContent(new GatedReadStream(expectedBytes, deliveredBytes))
+            Content = new StreamContent(ScriptedReadStream.StallingAfter(expectedBytes, deliveredBytes))
         });
         var downloader = CreateService();
         using var cancellationSource = new CancellationTokenSource();
@@ -131,12 +100,11 @@ public sealed class FileDownloadServiceTests : IDisposable
         // 守卫（AUD-NET-001）：ResponseHeadersRead 之下 HttpClient.Timeout 只约束到响应头，
         // 正文零字节停滞必须由空闲读预算转成可重试的 HttpRequestException，
         // 而不是让下载会话在无异常、无进度的情况下无限挂起。
-        Directory.CreateDirectory(tempDir);
         var targetPath = Path.Combine(tempDir, "file.bin.tmp");
         var expectedBytes = Encoding.UTF8.GetBytes("complete-content");
         using var transport = new StubDownloadTransport((_, _) => new HttpResponseMessage(HttpStatusCode.OK)
         {
-            Content = new StreamContent(new GatedReadStream(expectedBytes, deliveredBytes: 0))
+            Content = new StreamContent(ScriptedReadStream.StallingAfter(expectedBytes, deliveredBytes: 0))
         });
         var downloader = CreateService(TimeSpan.FromMilliseconds(200));
 
@@ -154,7 +122,6 @@ public sealed class FileDownloadServiceTests : IDisposable
     [Fact]
     public async Task DownloadAsync_WhenBodyIsShorterThanDeclaredContentLength_FailsCrcCheckAndRemovesPartialFile()
     {
-        Directory.CreateDirectory(tempDir);
         var targetPath = Path.Combine(tempDir, "file.bin.tmp");
         var expectedBytes = Encoding.UTF8.GetBytes("complete-content");
         var expectedHash = await ComputeExpectedHashAsync(expectedBytes);
@@ -162,7 +129,7 @@ public sealed class FileDownloadServiceTests : IDisposable
         using var transport = new StubDownloadTransport((_, _) => new HttpResponseMessage(HttpStatusCode.OK)
         {
             // 声明完整 Content-Length 但只提供前 4 字节，模拟被截断的响应体。
-            Content = new StreamContent(new FixedLengthReadStream(expectedBytes, deliveredBytes: 4))
+            Content = new StreamContent(ScriptedReadStream.EndingAfter(expectedBytes, deliveredBytes: 4))
             {
                 Headers = { ContentLength = expectedBytes.Length }
             }
@@ -191,7 +158,6 @@ public sealed class FileDownloadServiceTests : IDisposable
     [Fact]
     public async Task DownloadAsync_WhenTemporaryFileExistsAndServerHonorsRange_AppendsFromExistingLength()
     {
-        Directory.CreateDirectory(tempDir);
         var targetPath = Path.Combine(tempDir, "file.bin.tmp");
         var expectedBytes = Encoding.UTF8.GetBytes("complete-content");
         const int existingBytes = 4;
@@ -225,7 +191,6 @@ public sealed class FileDownloadServiceTests : IDisposable
     public async Task DownloadAsync_WhenTransferVerified_ReturnsTransferredOutcomeWithComputedCrc64()
     {
         // 下载即校验：结果携带本次计算的 CRC64，安装阶段据此跳过重复整读哈希。
-        Directory.CreateDirectory(tempDir);
         var targetPath = Path.Combine(tempDir, "file.bin.tmp");
         var expectedBytes = Encoding.UTF8.GetBytes("complete-content");
         var expectedHash = await ComputeExpectedHashAsync(expectedBytes);
@@ -265,7 +230,6 @@ public sealed class FileDownloadServiceTests : IDisposable
     public async Task DownloadAsync_WhenTempFileAlreadyComplete_ReturnsAlreadyCompleteOutcomeWithoutTransfer()
     {
         // 断点续传「已下满」早退路径不做哈希：Crc64 为空，安装阶段必须自行校验。
-        Directory.CreateDirectory(tempDir);
         var targetPath = Path.Combine(tempDir, "file.bin.tmp");
         var expectedBytes = Encoding.UTF8.GetBytes("complete-content");
         await File.WriteAllBytesAsync(targetPath, expectedBytes);
@@ -286,7 +250,6 @@ public sealed class FileDownloadServiceTests : IDisposable
     [Fact]
     public async Task DownloadAsync_WhenTempFileExceedsExpectedSize_DeletesFileResetsProgressAndRestartsFromZero()
     {
-        Directory.CreateDirectory(tempDir);
         var targetPath = Path.Combine(tempDir, "file.bin.tmp");
         var expectedBytes = Encoding.UTF8.GetBytes("complete-content");
         // 超长临时文件不可信（可能是上次中断留下的错误内容）：必须整体丢弃。
@@ -319,7 +282,6 @@ public sealed class FileDownloadServiceTests : IDisposable
     [Fact]
     public async Task DownloadAsync_WhenResumedContentRangeIsInvalid_DiscardsTempFileAndRestartsFromFullDownload()
     {
-        Directory.CreateDirectory(tempDir);
         var targetPath = Path.Combine(tempDir, "file.bin.tmp");
         var expectedBytes = Encoding.UTF8.GetBytes("complete-content");
         const int existingBytes = 4;
@@ -372,7 +334,6 @@ public sealed class FileDownloadServiceTests : IDisposable
         int existingBytes,
         long expectedSize)
     {
-        Directory.CreateDirectory(tempDir);
         var targetPath = Path.Combine(tempDir, "file.bin.tmp");
         File.WriteAllBytes(targetPath, new byte[existingBytes]);
         var downloader = CreateService();
@@ -383,7 +344,6 @@ public sealed class FileDownloadServiceTests : IDisposable
     [Fact]
     public void GetExistingDownloadedSize_WhenTempFileIsMissing_ReturnsZero()
     {
-        Directory.CreateDirectory(tempDir);
         var downloader = CreateService();
 
         Assert.Equal(0, downloader.GetExistingDownloadedSize(Path.Combine(tempDir, "missing.bin.tmp"), 16));
@@ -392,7 +352,6 @@ public sealed class FileDownloadServiceTests : IDisposable
     [Fact]
     public void GetExistingDownloadedSize_WhenTempFileExceedsExpectedSize_ReturnsZero()
     {
-        Directory.CreateDirectory(tempDir);
         var targetPath = Path.Combine(tempDir, "file.bin.tmp");
         File.WriteAllBytes(targetPath, new byte[20]);
         var downloader = CreateService();
@@ -403,7 +362,6 @@ public sealed class FileDownloadServiceTests : IDisposable
     [Fact]
     public void GetExistingDownloadedSize_WhenExpectedSizeIsNotPositive_ReturnsZero()
     {
-        Directory.CreateDirectory(tempDir);
         var targetPath = Path.Combine(tempDir, "file.bin.tmp");
         File.WriteAllBytes(targetPath, new byte[4]);
         var downloader = CreateService();
@@ -451,116 +409,4 @@ public sealed class FileDownloadServiceTests : IDisposable
         FileDownloadService.RetryDomainOrder
             .Select(retryType => retryType == 0 ? BackupHost : PrimaryHost)
             .ToArray();
-
-    /// <summary>
-    /// 先交付 <paramref name="deliveredBytes"/> 字节，然后无限期挂起：取消令牌触发时抛出
-    /// <see cref="OperationCanceledException"/>（模拟下载到一半被用户取消），空闲读预算
-    /// 触发时由 <c>ResponseBodyReader</c> 转成停滞异常（模拟正文零字节停滞）。
-    /// </summary>
-    private sealed class GatedReadStream(byte[] content, int deliveredBytes) : Stream
-    {
-        private int position;
-
-        public override bool CanRead => true;
-
-        public override bool CanSeek => false;
-
-        public override bool CanWrite => false;
-
-        public override long Length => content.Length;
-
-        public override long Position
-        {
-            get => position;
-            set => throw new NotSupportedException();
-        }
-
-        public override async ValueTask<int> ReadAsync(
-            Memory<byte> buffer,
-            CancellationToken cancellationToken = default)
-        {
-            if (position < deliveredBytes)
-            {
-                var bytesToCopy = Math.Min(buffer.Length, deliveredBytes - position);
-                content.AsMemory(position, bytesToCopy).CopyTo(buffer);
-                position += bytesToCopy;
-                return bytesToCopy;
-            }
-
-            // 字节预算用尽后挂起，直到取消令牌（用户取消或空闲读预算）触发。
-            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
-            return 0;
-        }
-
-        public override int Read(byte[] buffer, int offset, int count) =>
-            throw new NotSupportedException("此替身仅支持异步读取。");
-
-        public override void Flush()
-        {
-        }
-
-        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-
-        public override void SetLength(long value) => throw new NotSupportedException();
-
-        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
-    }
-
-    /// <summary>交付指定字节数后干净地到达 EOF，头部声明的总长大于实际字节。</summary>
-    private sealed class FixedLengthReadStream(byte[] content, int deliveredBytes) : Stream
-    {
-        private int position;
-
-        public override bool CanRead => true;
-
-        public override bool CanSeek => false;
-
-        public override bool CanWrite => false;
-
-        public override long Length => content.Length;
-
-        public override long Position
-        {
-            get => position;
-            set => throw new NotSupportedException();
-        }
-
-        public override ValueTask<int> ReadAsync(
-            Memory<byte> buffer,
-            CancellationToken cancellationToken = default)
-        {
-            if (position >= deliveredBytes)
-            {
-                return ValueTask.FromResult(0);
-            }
-
-            var bytesToCopy = Math.Min(buffer.Length, deliveredBytes - position);
-            content.AsMemory(position, bytesToCopy).CopyTo(buffer);
-            position += bytesToCopy;
-            return ValueTask.FromResult(bytesToCopy);
-        }
-
-        public override int Read(byte[] buffer, int offset, int count)
-        {
-            if (position >= deliveredBytes)
-            {
-                return 0;
-            }
-
-            var bytesToCopy = Math.Min(count, deliveredBytes - position);
-            Array.Copy(content, position, buffer, offset, bytesToCopy);
-            position += bytesToCopy;
-            return bytesToCopy;
-        }
-
-        public override void Flush()
-        {
-        }
-
-        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-
-        public override void SetLength(long value) => throw new NotSupportedException();
-
-        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
-    }
 }

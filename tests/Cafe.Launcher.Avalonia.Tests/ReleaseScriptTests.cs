@@ -1,3 +1,5 @@
+﻿using Cafe.Launcher.Avalonia.Testing;
+
 namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed class ReleaseScriptTests
@@ -5,7 +7,7 @@ public sealed class ReleaseScriptTests
     [Fact]
     public void ReleaseScript_SkipsVersionCommitWhenProjectVersionIsAlreadyCommitted()
     {
-        var script = File.ReadAllText(ProjectFile("release.ps1"));
+        var script = File.ReadAllText(TestRepository.FromRepositoryRoot("release.ps1"));
 
         Assert.Contains(
             "git -C $ScriptDir diff --cached --quiet -- $CsprojRelativePath",
@@ -25,7 +27,7 @@ public sealed class ReleaseScriptTests
     [Fact]
     public void ReleaseScript_PreservesMaintainedChangelog()
     {
-        var script = File.ReadAllText(ProjectFile("release.ps1"));
+        var script = File.ReadAllText(TestRepository.FromRepositoryRoot("release.ps1"));
 
         Assert.Contains("if (Test-Path $ChangelogFile)", script, StringComparison.Ordinal);
         Assert.Contains(
@@ -41,7 +43,7 @@ public sealed class ReleaseScriptTests
     [Fact]
     public void ReleaseWorkflow_PrefersMaintainedChangelog()
     {
-        var workflow = File.ReadAllText(ProjectFile(".github/workflows/release.yml"));
+        var workflow = File.ReadAllText(TestRepository.FromRepositoryRoot(".github/workflows/release.yml"));
 
         Assert.Contains(
             "if (Test-Path \"CHANGELOG_RELEASE.md\")",
@@ -56,7 +58,7 @@ public sealed class ReleaseScriptTests
     [Fact]
     public void ReleaseChangelog_BannerWhenPresent_UsesTaggedSourceRepository()
     {
-        var changelog = File.ReadAllText(ProjectFile("CHANGELOG_RELEASE.md"));
+        var changelog = File.ReadAllText(TestRepository.FromRepositoryRoot("CHANGELOG_RELEASE.md"));
         var bannerReferences = changelog
             .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
             .Where(line => line.Contains("/docs/assets/release-banners/", StringComparison.Ordinal))
@@ -68,8 +70,5 @@ public sealed class ReleaseScriptTests
             StringComparison.Ordinal));
         Assert.DoesNotContain("/releases/download/", changelog, StringComparison.Ordinal);
     }
-
-    private static string ProjectFile(string relativePath) =>
-        Path.Combine(TestLocalizationHelper.FindRepositoryRoot(), relativePath);
 
 }

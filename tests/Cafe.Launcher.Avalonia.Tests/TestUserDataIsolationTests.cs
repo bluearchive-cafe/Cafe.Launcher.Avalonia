@@ -9,6 +9,8 @@ public sealed class TestUserDataIsolationTests
     public void Resolve_WhenTestOverrideIsMissing_UsesProductLocalApplicationData(
         string? testOverride)
     {
+        // 这里要的是一个「本机应用数据目录」的路径字符串，不是要建目录：
+        // 解析结果本身就是纯路径拼接，创建与删除都不参与。
         var localApplicationData = Path.Combine(
             Path.GetTempPath(),
             Guid.NewGuid().ToString("N"));

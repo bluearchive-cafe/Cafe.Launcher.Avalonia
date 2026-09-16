@@ -1,16 +1,12 @@
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed class DiagnosticsServicesTests : IDisposable
 {
-    private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-
-    public DiagnosticsServicesTests()
-    {
-        Directory.CreateDirectory(tempDir);
-    }
+    private readonly TestDirectory tempDir = TestDirectory.Create();
 
     [Fact]
     public void LocalDiagnostics_ParameterlessConstructor_UsesTemporaryDirectory()
@@ -144,9 +140,6 @@ public sealed class DiagnosticsServicesTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(tempDir))
-        {
-            Directory.Delete(tempDir, recursive: true);
-        }
+        tempDir.Dispose();
     }
 }
