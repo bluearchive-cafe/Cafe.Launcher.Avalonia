@@ -1,4 +1,5 @@
-using System.Net;
+﻿using System.Net;
+using System.Net.Sockets;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -272,6 +273,39 @@ public sealed class RemoteHttpTransportTests
         using var body = remote.Content;
 
         Assert.Equal([ProxyModes.Auto], leaseSource.RequestedProxyModes);
+    }
+
+    /// <summary>
+    /// 代理租约真的把请求发到系统代理：这一条只有真开 socket 才能证明——上面的替身租约
+    /// 工厂只证明「传输层要了哪个代理模式」。回环监听器按明文 HTTP 代理应答绝对形式请求，
+    /// 于是整条路径（系统代理租约 → 出口经代理故跳过本地 DNS → 明文应答）在一个成功结果上
+    /// 收口，不靠失败重试来结束。系统代理下的资源面板请求此前由
+    /// <c>ResourcePanelApplySettings_WhenSystemProxyAndCafeSource_OpensPanelWithoutSourceConfirm</c>
+    /// 的同名用例顺带覆盖，那是它一次要等约 10 秒重试退避的原因。
+    /// </summary>
+    [Fact]
+    public async Task GetJsonAsync_WhenSystemProxyConfigured_DialsTheProxyAndReadsItsAnswer()
+    {
+        using var proxy = new LoopbackHttpProxy("""{"Name":"through-proxy"}""");
+        var proxySettings = new ProxySettingsService(
+            () => new SystemProxySettings($"http://127.0.0.1:{proxy.Port}", []));
+        using var clientFactory = new HttpClientFactory(proxySettings);
+        var transport = new RemoteHttpTransport(
+            clientFactory,
+            new RemoteHttpUrlValidator(),
+            () => ProxyModes.System);
+
+        var payload = await transport
+            .GetJsonAsync<SamplePayload>(
+                new Uri("http://api.bluearchive.cafe/status/list"),
+                new RemoteRequestOptions { Timeout = TimeSpan.FromSeconds(5) })
+            .WaitAsync(TimeSpan.FromSeconds(10));
+
+        Assert.Equal("through-proxy", payload?.Name);
+        // 绝对形式请求行：明文代理收到的是它，而不是 CONNECT 隧道。
+        Assert.StartsWith(
+            "GET http://api.bluearchive.cafe/status/list HTTP/1.1",
+            Assert.Single(proxy.RequestLines));
     }
 
     [Fact]
@@ -677,6 +711,79 @@ public sealed class RemoteHttpTransportTests
     }
 
     // ---- Fakes and stubs ----
+
+    /// <summary>
+    /// 回环明文 HTTP 代理：接受一个连接，读掉请求行与头部，回答一个确定的 200 JSON 正文。
+    /// 只服务一个请求——用例要验证的是「请求到了代理并读回了它的应答」，不是连接复用。
+    /// </summary>
+    private sealed class LoopbackHttpProxy : IDisposable
+    {
+        /// <summary>请求头上限：畸形请求不得让替身无限读下去。</summary>
+        private const int MaxRequestHeadBytes = 64 * 1024;
+
+        private readonly TcpListener listener;
+        private readonly string body;
+
+        public LoopbackHttpProxy(string body)
+        {
+            this.body = body;
+            listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            Port = ((IPEndPoint)listener.LocalEndpoint).Port;
+            _ = ServeOnceAsync();
+        }
+
+        public int Port { get; }
+
+        public List<string> RequestLines { get; } = [];
+
+        private async Task ServeOnceAsync()
+        {
+            using var client = await listener.AcceptTcpClientAsync();
+            await using var stream = client.GetStream();
+            // 必须把头部一起读干净再回应并关闭：留着未读的入站数据就关连接，
+            // Windows 发 RST 而不是 FIN，客户端会在读到应答前就断。
+            var head = await ReadRequestHeadAsync(stream);
+            RequestLines.Add(head.Split("\r\n")[0]);
+            await WriteResponseAsync(stream);
+        }
+
+        private static async Task<string> ReadRequestHeadAsync(Stream stream)
+        {
+            var buffer = new byte[1];
+            var head = new StringBuilder();
+            while (head.Length <= MaxRequestHeadBytes)
+            {
+                if (await stream.ReadAsync(buffer) == 0)
+                {
+                    break;
+                }
+
+                head.Append((char)buffer[0]);
+                if (head.ToString().EndsWith("\r\n\r\n", StringComparison.Ordinal))
+                {
+                    break;
+                }
+            }
+
+            return head.ToString();
+        }
+
+        private async Task WriteResponseAsync(Stream stream)
+        {
+            var payload = Encoding.UTF8.GetBytes(body);
+            var head = Encoding.ASCII.GetBytes(
+                "HTTP/1.1 200 OK\r\n"
+                + "Content-Type: application/json\r\n"
+                + $"Content-Length: {payload.Length}\r\n"
+                + "Connection: close\r\n\r\n");
+            await stream.WriteAsync(head);
+            await stream.WriteAsync(payload);
+            await stream.FlushAsync();
+        }
+
+        public void Dispose() => listener.Stop();
+    }
 
     private static RemoteHttpTransport CreateTransport(
         HttpMessageHandler handler,
