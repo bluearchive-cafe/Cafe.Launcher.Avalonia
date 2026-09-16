@@ -226,32 +226,27 @@ public sealed class ImageCacheService : IDisposable
     {
         var remote = await transport.GetStreamAsync(uri, options, ct).ConfigureAwait(false);
         using var input = remote.Content;
-        if (remote.DeclaredContentLength is > MaxImageBytes)
+
+        MemoryStream output;
+        try
+        {
+            // 停顿预算由传输层的流包装承担：每次读取都有空闲上限，
+            // 静默断流会以 HttpRequestException 浮出而不是永久挂起。
+            output = await RemoteBodyReader.ReadAllAsync(
+                (chunk, token) => input.ReadAsync(chunk.AsMemory(), token).AsTask(),
+                MaxImageBytes,
+                remote.DeclaredContentLength,
+                ct).ConfigureAwait(false);
+        }
+        catch (RemoteBodyTooLargeException)
         {
             throw new InvalidDataException("Image response is too large.");
         }
 
-        using var output = new MemoryStream();
-        var buffer = new byte[64 * 1024];
-        while (true)
+        using (output)
         {
-            // 停顿预算由传输层的流包装承担：每次读取都有空闲上限，
-            // 静默断流会以 HttpRequestException 浮出而不是永久挂起。
-            var read = await input.ReadAsync(buffer.AsMemory(), ct).ConfigureAwait(false);
-            if (read == 0)
-            {
-                break;
-            }
-
-            if (output.Length + read > MaxImageBytes)
-            {
-                throw new InvalidDataException("Image response is too large.");
-            }
-
-            output.Write(buffer.AsSpan(0, read));
+            return output.ToArray();
         }
-
-        return output.ToArray();
     }
 
     private static RemoteRequestOptions ResolvedModeOptions() => new()
