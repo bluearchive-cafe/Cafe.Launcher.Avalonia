@@ -185,9 +185,10 @@ public sealed class LocalizationTerminologyTests
             new GameInstallationPath(),
             new LocalInstallationStateStore(),
             new LocalDiagnostics(), new StubFilePickerService());
+        using var tempDir = TestDirectory.Create();
         var dialogs = new DialogsViewModel(
             localizer,
-            new NoticeStateService( TestDataRoot.ForDirectory(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "notice.json")) ),
+            new NoticeStateService(tempDir.DataRoot),
             setupWizard,
             new LocalDiagnostics());
 

@@ -69,7 +69,7 @@ public sealed class SetupWizardViewModelTests
     public void Step1_WhenGamePathWasAlreadySetOrCleared_DoesNotOverwriteItOnReentry()
     {
         var vm = CreateViewModel();
-        var existingPath = TestDirectory.Create();
+        using var existingPath = TestDirectory.Create();
         vm.GamePath = existingPath;
 
         vm.NextCommand.Execute(null);
@@ -170,7 +170,7 @@ public sealed class SetupWizardViewModelTests
     [Fact]
     public async Task CanGoNext_Step1WithNotInstalledPath_ReturnsTrue()
     {
-        var path = TestDirectory.Create();
+        using var path = TestDirectory.Create();
         var vm = new SetupWizardViewModel(
             new LocalizationService(),
             new GameInstallationPath(),
@@ -185,7 +185,7 @@ public sealed class SetupWizardViewModelTests
     [Fact]
     public async Task CanGoNext_Step1WithNotWritablePath_ReturnsFalse()
     {
-        var root = TestDirectory.Create();
+        using var root = TestDirectory.Create();
         var blocker = Path.Combine(root, "blocker");
         File.WriteAllText(blocker, "not a directory");
         var vm = new SetupWizardViewModel(
@@ -325,7 +325,7 @@ public sealed class SetupWizardViewModelTests
     [Fact]
     public async Task GamePathStatus_WhenStateFilesAreValid_IsValidInstallationAndCanGoNext()
     {
-        var gamePath = TestDirectory.Create();
+        using var gamePath = TestDirectory.Create();
         var normalizedGamePath = new GameInstallationPath().NormalizeGamePath(gamePath);
         var store = new LocalInstallationStateStore();
         Directory.CreateDirectory(normalizedGamePath);
@@ -345,7 +345,7 @@ public sealed class SetupWizardViewModelTests
     [Fact]
     public async Task GamePathStatus_WhenOnlyManifestExists_IsCorruptedInstallationAndCannotGoNext()
     {
-        var gamePath = TestDirectory.Create();
+        using var gamePath = TestDirectory.Create();
         var normalizedGamePath = new GameInstallationPath().NormalizeGamePath(gamePath);
         Directory.CreateDirectory(normalizedGamePath);
         await File.WriteAllTextAsync(Path.Combine(normalizedGamePath, "manifest.json"), "{}");
@@ -362,7 +362,7 @@ public sealed class SetupWizardViewModelTests
     [Fact]
     public async Task GamePathPresentation_WhenInstallationIsCorrupted_HasTitleAndDescription()
     {
-        var gamePath = TestDirectory.Create();
+        using var gamePath = TestDirectory.Create();
         var normalizedGamePath = new GameInstallationPath().NormalizeGamePath(gamePath);
         Directory.CreateDirectory(normalizedGamePath);
         await File.WriteAllTextAsync(Path.Combine(normalizedGamePath, "manifest.json"), "{}");
@@ -384,7 +384,7 @@ public sealed class SetupWizardViewModelTests
     [Fact]
     public async Task GamePathStatus_WhenStateFileIsLocked_IsInaccessibleAndCannotGoNext()
     {
-        var gamePath = TestDirectory.Create();
+        using var gamePath = TestDirectory.Create();
         var normalizedGamePath = new GameInstallationPath().NormalizeGamePath(gamePath);
         var store = new LocalInstallationStateStore();
         Directory.CreateDirectory(normalizedGamePath);
@@ -419,7 +419,7 @@ public sealed class SetupWizardViewModelTests
     [Fact]
     public async Task GamePathStatus_WhenChecking_CannotGoNextAndUpdatesWhenReadCompletes()
     {
-        var gamePath = TestDirectory.Create();
+        using var gamePath = TestDirectory.Create();
         var normalizedGamePath = new GameInstallationPath().NormalizeGamePath(gamePath);
         Directory.CreateDirectory(normalizedGamePath);
         var tempFilesWritten = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -449,9 +449,9 @@ public sealed class SetupWizardViewModelTests
     [Fact]
     public async Task GamePathStatus_WhenOldReadIsCancelled_DoesNotOverwriteNewPathStatus()
     {
-        var oldGamePath = TestDirectory.Create();
+        using var oldGamePath = TestDirectory.Create();
         var normalizedOldGamePath = new GameInstallationPath().NormalizeGamePath(oldGamePath);
-        var newGamePath = TestDirectory.Create();
+        using var newGamePath = TestDirectory.Create();
         Directory.CreateDirectory(normalizedOldGamePath);
         var tempFilesWritten = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var releaseCommit = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);

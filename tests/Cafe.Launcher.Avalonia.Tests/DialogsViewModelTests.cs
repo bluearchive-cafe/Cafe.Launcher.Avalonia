@@ -9,8 +9,16 @@ using Cafe.Launcher.Avalonia.Testing;
 namespace Cafe.Launcher.Avalonia.Tests;
 
 [Collection(nameof(LocalizationServiceTestIsolation))]
-public sealed class DialogsViewModelTests
+public sealed class DialogsViewModelTests : IDisposable
 {
+    /// <summary>
+    /// 本类各静态装配辅助方法共用的临时父目录：xUnit 为每个测试方法新建实例，故它本身
+    /// 就是每测试一个；每次装配再取一个子目录，保持「每个上下文一个独立数据根」的原语义。
+    /// </summary>
+    private readonly TestDirectory tempDir = TestDirectory.Create();
+
+    public void Dispose() => tempDir.Dispose();
+
     /// <summary>Upper bound for a wait on an event the test itself gates, so a broken command fails instead of hanging.</summary>
     private static readonly TimeSpan GateTimeout = TimeSpan.FromSeconds(5);
 
@@ -235,11 +243,7 @@ public sealed class DialogsViewModelTests
     [Fact]
     public async Task ShowNoticeDialogIfNeededAsync_WhenNoticeWasNotShown_ShowsAndPersistsNotice()
     {
-        var statePath = Path.Combine(
-            Path.GetTempPath(),
-            Guid.NewGuid().ToString("N"),
-            "shown_notices.json");
-        var stateService = new NoticeStateService( TestDataRoot.ForFile(statePath) );
+        var stateService = new NoticeStateService(tempDir.DataRoot);
         var viewModel = new DialogsViewModel(
             new LocalizationService(),
             stateService,
@@ -356,15 +360,13 @@ public sealed class DialogsViewModelTests
         Assert.False(viewModel.SettingsResetConfirm.IsVisible);
     }
 
-    private static DialogsViewModel CreateViewModel()
+    private string NextDataRoot() => tempDir.Sub(Guid.NewGuid().ToString("N"));
+
+    private DialogsViewModel CreateViewModel()
     {
-        var noticePath = Path.Combine(
-            Path.GetTempPath(),
-            Guid.NewGuid().ToString("N"),
-            "shown_notices.json");
         return new DialogsViewModel(
             new LocalizationService(),
-            new NoticeStateService( TestDataRoot.ForFile(noticePath) ),
+            new NoticeStateService(TestDataRoot.ForDirectory(NextDataRoot())),
             new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(), new LocalInstallationStateStore(), new LocalDiagnostics(), new StubFilePickerService()),
             new LocalDiagnostics(),
             action =>

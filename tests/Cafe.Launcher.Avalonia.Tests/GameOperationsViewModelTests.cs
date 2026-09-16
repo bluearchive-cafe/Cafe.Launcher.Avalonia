@@ -1,4 +1,4 @@
-using Cafe.Launcher.Avalonia.Models;
+﻿using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Features.SetupWizard;
 using Cafe.Launcher.Avalonia.Helpers;
@@ -10,8 +10,16 @@ using Cafe.Launcher.Avalonia.ViewModels;
 namespace Cafe.Launcher.Avalonia.Tests;
 
 [Collection(nameof(LocalizationServiceTestIsolation))]
-public sealed class GameOperationsViewModelTests
+public sealed class GameOperationsViewModelTests : IDisposable
 {
+    /// <summary>
+    /// 本类各静态装配辅助方法共用的临时父目录：xUnit 为每个测试方法新建实例，故它本身
+    /// 就是每测试一个；每次装配再取一个子目录，保持「每个上下文一个独立数据根」的原语义。
+    /// </summary>
+    private readonly TestDirectory tempDir = TestDirectory.Create();
+
+    public void Dispose() => tempDir.Dispose();
+
     static GameOperationsViewModelTests()
     {
         TestLocalizationHelper.Initialize();
@@ -1301,14 +1309,16 @@ public sealed class GameOperationsViewModelTests
         Assert.False(context.Shell.IsBusy);
     }
 
-    private static TestContext CreateContext(LocalDiagnostics? diagnostics = null)
+    private string NextDataRoot() => tempDir.Sub(Guid.NewGuid().ToString("N"));
+
+    private TestContext CreateContext(LocalDiagnostics? diagnostics = null)
     {
         diagnostics ??= new LocalDiagnostics();
         var localizer = new LocalizationService();
         var toastService = new ToastService();
         var shell = new ShellViewModel(localizer);
         shell.IsBusy = false;
-        var dialogs = new DialogsViewModel(localizer, new NoticeStateService( TestDataRoot.ForDirectory(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "notices.json")) ),
+        var dialogs = new DialogsViewModel(localizer, new NoticeStateService(TestDataRoot.ForDirectory(NextDataRoot())),
             new SetupWizardViewModel(localizer, new GameInstallationPath(), new LocalInstallationStateStore(), diagnostics, new StubFilePickerService()),
             diagnostics);
         var backend = new StubGameOperationExecutor();

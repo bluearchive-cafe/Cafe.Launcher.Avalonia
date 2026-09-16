@@ -1,4 +1,4 @@
-using Cafe.Launcher.Avalonia.Constants;
+﻿using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Testing;
 
@@ -29,7 +29,7 @@ public sealed class GameInstallationPathTests
     [Fact]
     public void GetDefaultGamePath_WhenRunningAsAppImage_UsesWritableUserProfile()
     {
-        var testRoot = TestDirectory.Create();
+        using var testRoot = TestDirectory.Create();
         var applicationBaseDirectory = Path.Combine(testRoot, ".mount_cafe", "usr", "bin");
         var userProfileDirectory = Path.Combine(testRoot, "home");
         var expected = Path.GetFullPath(Path.Combine(
@@ -50,7 +50,7 @@ public sealed class GameInstallationPathTests
     [Fact]
     public void GetDefaultGamePath_WhenInstalledByPackageManager_UsesWritableUserProfile()
     {
-        var testRoot = TestDirectory.Create();
+        using var testRoot = TestDirectory.Create();
         var packageRoot = Path.Combine(testRoot, "opt");
         var applicationBaseDirectory = Path.Combine(packageRoot, "cafe-launcher");
         var userProfileDirectory = Path.Combine(testRoot, "home");
@@ -72,7 +72,7 @@ public sealed class GameInstallationPathTests
     [Fact]
     public void NormalizeGamePath_WhenParentPathProvided_AppendsLauncherFolders()
     {
-        var input = TestDirectory.Create();
+        using var input = TestDirectory.Create();
 
         var result = installationPath.NormalizeGamePath(input);
 

@@ -21,8 +21,16 @@ namespace Cafe.Launcher.Avalonia.Tests;
 /// ToastService/DialogsViewModel 断言最终用户可见行为。
 /// </summary>
 [Collection(nameof(LocalizationServiceTestIsolation))]
-public sealed class SettingsViewModelTests
+public sealed class SettingsViewModelTests : IDisposable
 {
+    /// <summary>
+    /// 本类各静态装配辅助方法共用的临时父目录：xUnit 为每个测试方法新建实例，故它本身
+    /// 就是每测试一个；每次装配再取一个子目录，保持「每个上下文一个独立数据根」的原语义。
+    /// </summary>
+    private readonly TestDirectory tempDir = TestDirectory.Create();
+
+    public void Dispose() => tempDir.Dispose();
+
     // 降级语义按 URI 区分两端点，常量与 LauncherUpdateServiceTests 一致。
     private static readonly Uri ProxyReleasesUri =
         new(new Uri(ApiConfig.LauncherApiBaseUrl), ApiConfig.LauncherReleasesPath);
@@ -135,15 +143,13 @@ public sealed class SettingsViewModelTests
             new StubGameRuntime(),
             new StubFilePickerService());
 
-    private static DialogsViewModel CreateDialogsViewModel()
+    private string NextDataRoot() => tempDir.Sub(Guid.NewGuid().ToString("N"));
+
+    private DialogsViewModel CreateDialogsViewModel()
     {
-        var noticePath = System.IO.Path.Combine(
-            System.IO.Path.GetTempPath(),
-            Guid.NewGuid().ToString("N"),
-            "shown_notices.json");
         return new DialogsViewModel(
             new LocalizationService(),
-            new NoticeStateService( TestDataRoot.ForFile(noticePath) ),
+            new NoticeStateService(TestDataRoot.ForDirectory(NextDataRoot())),
             new SetupWizardViewModel(
                 new LocalizationService(),
                 new GameInstallationPath(),
