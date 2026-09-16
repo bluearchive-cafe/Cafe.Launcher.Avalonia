@@ -142,6 +142,35 @@
 
 **为什么第二批**：改动都在 `src/`，但每项都能给出「等价」的读码证明，且多数已有测试钉住同一行为。逐项独立提交，便于二分。
 
+> **状态：已落地 18／22（2026-09-16，`7161f4c`..`9044998` 七个提交）。** 全部 `verify.ps1` 退出码 0。
+> 逐项先读码复核扫描结论再改，多处扫描计数与计划不符（`B4` 实为 30 处而非 19 处、`B1` 的副本是
+> 整个 §11 比较而非「核心段比较」等），已在各提交信息里更正。
+>
+> **四项未按计划执行，各有理由：**
+> - `B5`：按计划并入架构评审候选 11，需先对其统一口径作出裁决，不单独排期。
+> - `B12`（三个错误三元组走 `ErrorHandlingService`）、`B15`（调试面板私有 `Format` 换
+>   `LocalizationService.F`）：评估后判定收益不抵成本，理由见 `0a92d66` 的提交信息（前者需给
+>   `ErrorHandlingOptions` 增两个字段并向两个诊断 VM 注入新依赖，三处标题/文案本就不同，改造后
+>   行数持平；后者需为调试面板新增依赖并改 11 处调用点，且两者的失败语义不同——调试面板在模板
+>   畸形时显示原文比报本地化失败更可取，而该情形已被本地化契约脚本挡在提交前）。
+>
+> **两项补了守卫（计划只提了「先补测试」）**：`B10` 的日志级别词表往返用例，与 `B17` 的严重度
+> 完备性/区分度用例；两者都做了变异验证（拆掉即红）。`B18` 的忙碌重置亦做变异验证（删掉
+> `finally` 后 4 条用例变红）。
+>
+> **`B17` 落地形态与计划草稿有两处偏离**：①草的 `ToastLifecycle` 把 `IsExiting` 列为记录字段——
+> 它是模型上被 XAML 绑定的属性，照做会破坏绑定，未采纳；②三个槽位的寿命并不相同（倒计时贯穿
+> 全程、动作令牌只在动作执行期、退出信号只在退场动画期），因此 `EndLifecycle` 只做拆除方该做的
+> 事（释放悬挂的倒计时等待、丢弃记录），在途动作令牌仍归动作自身与 Dismiss 管——统一取消它会
+> 是行为变更而非重构。
+>
+> **`B17` 的变异验证暴露一处既有覆盖缺口（需后续处理）**：把 `EndLifecycle` 里的倒计时唤醒
+> 删掉后 **86 条提示条用例全绿**，即「拆除提示条时唤醒挂起的倒计时等待」这条不变量当前没有覆盖。
+> 它是合并前就有的缺口（原 `StopCountdown` 做同一件事），失败形态是「挂起的倒计时任务一直阻塞
+> 到宿主 Dispose」——只漏一个 `Task`、不产生错值，所以没有被任何断言看见。要补需要一条测试缝
+> （在生命周期记录上挂本次任务），本轮未做。相对地，退出信号的移交是**有**覆盖的：去掉它
+> `ToastExit_WhenAutomaticAndManualRequestsOverlap_WaitsAndRemovesOnce` 立刻红。
+
 | 编号 | 项 | 证据锚点 | 落地改动 | 守卫 | 收益/风险 |
 | --- | --- | --- | --- | --- | --- |
 | `B1` | `LauncherUpdateService` 逐行重写 `VersionComparer` 的前置版本比较 | `Services/LauncherUpdateService.cs:322-353`（`ComparePrereleaseLabels`，32 行）与 `Helpers/VersionComparer.cs:55-87`（`ComparePrerelease`）**算法/规则/返回值完全一致，仅变量名不同**（已逐行读码确认）；另 `IsNewerVersion`（`:284-313`）、`TryParseSemanticVersion`（`:355-369`）、`SemanticVersion` record（`:371`）、`IsPrereleaseVersion`（`:235-236`）为同域自备 | 把 `VersionComparer.ComparePrerelease` 提到 `internal`，`ComparePrereleaseLabels` 删除改调它；`SemanticVersionRegex` 保留（发布过滤需要形状保证，`VersionComparer.Compare` 对非数字段宽容按 0 处理，语义不同，**不要**整体替换成 `Compare > 0`） | `LauncherUpdateServiceTests`（beta.2>beta.1、beta.11>beta.2、`1.2.0-1`<`1.2.0-alpha`、`beta.1.fix`>beta.1）与 `VersionComparerTests.Compare_HandlesPreReleaseSuffixes` 是**同一批向量的两份**，等价性主张一旦错误必红 | 高 / 低 |

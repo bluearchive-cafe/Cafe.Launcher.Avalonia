@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -280,6 +280,21 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
 
     public List<string> GetThemeColorPaletteHexes() =>
         ThemeColorPaletteItems.Select(item => item.ColorHex).ToList();
+
+    /// <summary>
+    /// 从设置快照应用外观：主题模式与主题色。三处调用点此前各写一遍同一对语句
+    /// （<see cref="ApplyTheme"/> 加一次 <see cref="ApplyThemeColor"/>，后者还要就地解析自定义色）。
+    /// </summary>
+    /// <remarks>
+    /// 接缝内的 <c>ShellLifecycle.ApplySnapshotAsync</c> 刻意不走这里：它在两次应用之间更新背景图，
+    /// 顺序是有意的，不能合并成一个调用。
+    /// </remarks>
+    public void ApplyFrom(LauncherSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        ApplyTheme(settings.ThemeMode);
+        ApplyThemeColor(settings.ThemeColorMode, ParseColorOrDefault(settings.CustomThemeColor));
+    }
 
     public void ApplyThemeColor(string themeColorMode, Color customColor)
     {
