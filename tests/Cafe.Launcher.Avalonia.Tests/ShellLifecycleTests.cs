@@ -451,7 +451,7 @@ public sealed class ShellLifecycleTests : IDisposable
             url => openedUrls.Add(url),
             _ => { });
         using var testLogger = new UnifiedLogger(tempDir);
-        var logViewer = new LogViewerDialogViewModel(testLogger, null, null, null, null);
+        var logViewer = new LogViewerDialogViewModel(testLogger, new ToastService(), new LocalizationService(), new LocalDiagnostics());
         var logExport = new LogExportDialogViewModel(
             new LogExportService(new LocalDiagnostics(testLogger), TestDataRoot.ForCurrentProcess(), new CrashReportStore(TestDataRoot.ForCurrentProcess()) ),
             filePickerService,

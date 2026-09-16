@@ -4,9 +4,8 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using Cafe.Launcher.Avalonia.Services.GameRuntime;
 
-namespace Cafe.Launcher.Avalonia.Helpers;
+namespace Cafe.Launcher.Avalonia.Services.GameRuntime;
 
 public static class ProcessService
 {

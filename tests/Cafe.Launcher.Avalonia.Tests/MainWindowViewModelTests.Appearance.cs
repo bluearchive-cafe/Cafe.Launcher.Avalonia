@@ -1,4 +1,4 @@
-using Avalonia.Media;
+﻿using Avalonia.Media;
 using Cafe.Launcher.Avalonia.Features.Settings;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
@@ -200,7 +200,7 @@ public partial class MainWindowViewModelTests
     {
         var source = Color.FromRgb(0xC9, 0xCD, 0xD8);
 
-        var normalized = SettingsAppearanceViewModel.NormalizeAccentColorForUi(source);
+        var normalized = ColorUtils.NormalizeAccentColorForUi(source);
 
         Assert.NotEqual(source, normalized);
         Assert.True(GetPerceivedSaturation(normalized) >= 0.22d);
@@ -212,7 +212,7 @@ public partial class MainWindowViewModelTests
     {
         var source = Color.FromRgb(0x20, 0x50, 0xD8);
 
-        var normalized = SettingsAppearanceViewModel.NormalizeAccentColorForUi(source);
+        var normalized = ColorUtils.NormalizeAccentColorForUi(source);
 
         Assert.Equal(source, normalized);
     }

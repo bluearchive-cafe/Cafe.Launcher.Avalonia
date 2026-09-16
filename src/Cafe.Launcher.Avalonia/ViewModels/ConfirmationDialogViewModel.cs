@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Helpers;
@@ -43,7 +43,6 @@ public sealed partial class ConfirmationDialogViewModel : ViewModelBase
     private string message = "";
 
     /// <summary>Gets the operation name included in diagnostics when confirmation handling fails.</summary>
-    public string OperationContext => operationContext;
 
     /// <summary>Raised after the user confirms and the dialog has closed.</summary>
     public event Func<Task>? Confirmed;

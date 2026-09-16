@@ -397,7 +397,12 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         return BackgroundImageSource as Bitmap;
     }
 
-    public async Task<Bitmap?> LoadCustomBackgroundAsync(
+    /// <summary>
+    /// 测试缝：按给定路径解析并解码一张自定义背景。生产代码不走这里——它经由
+    /// <c>Apply</c>/<c>ApplyBackgroundPresentation</c> 落到同一条私有实现上；本方法此前是
+    /// public，而它的唯一调用者是测试（§5.3：仅供测试的接缝标 internal）。
+    /// </summary>
+    internal async Task<Bitmap?> LoadCustomBackgroundAsync(
         string path,
         CancellationToken cancellationToken = default) =>
         (await LoadCustomBackgroundImageResultAsync(
