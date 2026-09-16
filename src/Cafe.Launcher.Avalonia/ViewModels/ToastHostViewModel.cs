@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -22,9 +22,7 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
     private readonly Func<Action, Task> invokeOnUiAsync;
     private readonly Func<TimeSpan, CancellationToken, Task> delayAsync;
     private readonly CancellationTokenSource lifetimeCts = new();
-    private readonly Dictionary<string, TaskCompletionSource> exitCompletions = [];
-    private readonly Dictionary<string, CancellationTokenSource> actionTokens = [];
-    private readonly Dictionary<string, ToastCountdown> countdowns = [];
+    private readonly Dictionary<string, ToastLifecycle> lifecycles = [];
     private bool reduceMotion = true;
     private bool disposed;
 
@@ -73,7 +71,8 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
 
     /// <summary>Gets whether the display countdown of <paramref name="toastId"/> is suspended.</summary>
     internal bool IsCountdownSuspended(string toastId) =>
-        countdowns.TryGetValue(toastId, out var countdown) && countdown.Suspended;
+        lifecycles.TryGetValue(toastId, out var lifecycle)
+        && lifecycle.Countdown is { Suspended: true };
 
     /// <summary>
     /// Suspends or resumes the display countdown of one toast as the pointer enters or leaves its
@@ -83,7 +82,9 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
     /// <remarks>Call on the UI thread, from the pointer handlers of the toast card.</remarks>
     internal void SetToastPointerOver(string toastId, bool isPointerOver)
     {
-        if (disposed || !countdowns.TryGetValue(toastId, out var countdown))
+        if (disposed
+            || !lifecycles.TryGetValue(toastId, out var lifecycle)
+            || lifecycle.Countdown is not { } countdown)
         {
             return;
         }
@@ -150,11 +151,14 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
 
             await invokeOnUiAsync(() =>
             {
+                // 记录的建立与拆除各只有一处：随提示条进入栈建立，随其离开栈拆除。
+                var lifecycle = new ToastLifecycle();
                 if (!notification.HasActions)
                 {
-                    countdowns[notification.Id] = new ToastCountdown();
+                    lifecycle.Countdown = new ToastCountdown();
                 }
 
+                lifecycles[notification.Id] = lifecycle;
                 ActiveToasts.Insert(0, notification);
             });
             if (notification.HasActions)
@@ -234,7 +238,8 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
             TaskCompletionSource? resumed = null;
             await invokeOnUiAsync(() =>
             {
-                if (!countdowns.TryGetValue(toast.Id, out var countdown))
+                if (!lifecycles.TryGetValue(toast.Id, out var lifecycle)
+                    || lifecycle.Countdown is not { } countdown)
                 {
                     return;
                 }
@@ -263,10 +268,22 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
         }
     }
 
-    /// <summary>Ends the countdown of a toast that left the stack, releasing a suspended wait.</summary>
-    private void StopCountdown(string toastId)
+    /// <summary>
+    /// 拆除一条提示条的运行期状态：释放悬挂的倒计时等待，并丢弃整条记录。
+    /// </summary>
+    /// <remarks>
+    /// 记录的建立与拆除各只有一处，因此不存在「某条拆除路径忘了动某一个字典」这回事——此前三个
+    /// 按 id 平行的字典各有自己的拆除点，其中一个还只在无动作的提示条上建立。
+    /// 在途动作的令牌刻意不在这里取消：它由动作自身的流程与 Dismiss 负责（与合并前一致）。
+    /// </remarks>
+    private void EndLifecycle(string toastId)
     {
-        if (countdowns.Remove(toastId, out var countdown))
+        if (!lifecycles.Remove(toastId, out var lifecycle))
+        {
+            return;
+        }
+
+        if (lifecycle.Countdown is { } countdown)
         {
             countdown.Interruption?.Cancel();
             ResumeCountdown(countdown);
@@ -286,6 +303,7 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
     {
         ToastNotification? toast = null;
         ToastAction? action = null;
+        ToastLifecycle? lifecycle = null;
         await invokeOnUiAsync(() =>
         {
             var candidate = ActiveToasts.FirstOrDefault(item => item.Id == toastId);
@@ -303,9 +321,10 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
             candidate.IsActionExecuting = true;
             toast = candidate;
             action = selectedAction;
+            lifecycle = lifecycles.TryGetValue(toastId, out var found) ? found : null;
         });
 
-        if (toast is null || action is null)
+        if (toast is null || action is null || lifecycle is null)
         {
             return;
         }
@@ -319,7 +338,7 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
                 actionTimeoutCts.CancelAfter(timeout);
             }
 
-            actionTokens[toast.Id] = actionTimeoutCts;
+            lifecycle.ActionToken = actionTimeoutCts;
             var result = await action.ExecuteAsync(actionTimeoutCts.Token);
             if (result.IsSuccess)
             {
@@ -355,17 +374,20 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
         }
         finally
         {
-            actionTokens.Remove(toast.Id);
+            // 记录可能已在动作执行期间随提示条离开而被拆除：写回一个已脱离的对象无害，
+            // 关键是不要再按 id 查字典——那会把条目重新种回一个已经不属于它的栈位置。
+            lifecycle.ActionToken = null;
             actionTimeoutCts?.Dispose();
         }
     }
 
     private void CancelActionToken(string toastId)
     {
-        if (actionTokens.TryGetValue(toastId, out var cts))
+        if (lifecycles.TryGetValue(toastId, out var lifecycle)
+            && lifecycle.ActionToken is { } token)
         {
-            cts.Cancel();
-            actionTokens.Remove(toastId);
+            token.Cancel();
+            lifecycle.ActionToken = null;
         }
     }
 
@@ -402,16 +424,22 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
                     return;
                 }
 
-                if (exitCompletions.TryGetValue(toastId, out var existingCompletion))
+                if (!lifecycles.TryGetValue(toastId, out var lifecycle))
                 {
-                    exitCompletion = existingCompletion;
+                    lifecycle = new ToastLifecycle();
+                    lifecycles[toastId] = lifecycle;
+                }
+
+                if (lifecycle.ExitCompletion is not null)
+                {
+                    exitCompletion = lifecycle.ExitCompletion;
                     return;
                 }
 
                 if (reduceMotion)
                 {
                     ActiveToasts.Remove(toast);
-                    StopCountdown(toastId);
+                    EndLifecycle(toastId);
                     return;
                 }
 
@@ -419,7 +447,7 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
                 exitingToast = toast;
                 exitCompletion = new TaskCompletionSource(
                     TaskCreationOptions.RunContinuationsAsynchronously);
-                exitCompletions.Add(toastId, exitCompletion);
+                lifecycle.ExitCompletion = exitCompletion;
                 ownsExit = true;
             });
 
@@ -471,8 +499,7 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
         invokeOnUiAsync(() =>
         {
             ActiveToasts.Remove(toast);
-            exitCompletions.Remove(toastId);
-            StopCountdown(toastId);
+            EndLifecycle(toastId);
         });
 
     public void Dispose()
@@ -486,6 +513,24 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
         toastService.ToastRaised -= OnToastRaised;
         lifetimeCts.Cancel();
         lifetimeCts.Dispose();
+    }
+
+    /// <summary>
+    /// 一条提示条在提示栈里的运行期状态。
+    /// </summary>
+    /// <remarks>
+    /// 三个槽位各有自己的所有者与生命周期：倒计时从显示贯穿到离开（只有无动作的提示条会有）、
+    /// 动作令牌只在动作执行期、退出信号只在退场动画期。收在一条记录里是为了让建立与拆除各有
+    /// 一处，而不是因为三者寿命相同。提示条的 IsExiting 不在此处——它是模型上被 XAML 绑定的
+    /// 属性，不随这条记录一起拆除。
+    /// </remarks>
+    private sealed class ToastLifecycle
+    {
+        public ToastCountdown? Countdown { get; set; }
+
+        public CancellationTokenSource? ActionToken { get; set; }
+
+        public TaskCompletionSource? ExitCompletion { get; set; }
     }
 
     /// <summary>
