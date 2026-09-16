@@ -410,7 +410,8 @@ public sealed partial class MainWindowHeadlessTests
         var managementRow = section
             .GetVisualDescendants()
             .OfType<global::Cafe.Launcher.Avalonia.Controls.SettingRow>()
-            .Single(row => row.GetVisualDescendants().OfType<Button>().Count() == 2);
+            .Single(row => row.GetVisualDescendants().OfType<Button>()
+                .Any(button => button.Command == context.ViewModel.Operations.RequestUninstallCommand));
         var buttons = managementRow.GetVisualDescendants().OfType<Button>().ToArray();
         var repairButton = Assert.Single(
             buttons,
