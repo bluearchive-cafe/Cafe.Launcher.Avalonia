@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using Avalonia;
 using Avalonia.Data.Converters;
@@ -22,13 +22,7 @@ public sealed class ToastSeverityToBrushConverter : IValueConverter
             return null;
         }
 
-        var resourceKey = severity switch
-        {
-            ToastSeverity.Success => "Launcher.Color.Success",
-            ToastSeverity.Warning => "Launcher.Color.Warning",
-            ToastSeverity.Error => "Launcher.Color.Danger",
-            _ => "Launcher.Color.Info"
-        };
+        var resourceKey = ToastSeverityProfile.For(severity).BrushResourceKey;
 
         var app = Application.Current;
         return app?.TryGetResource(

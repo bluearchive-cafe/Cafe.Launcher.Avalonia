@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
@@ -232,10 +232,7 @@ public sealed class ShellLifecycle : IShellRuntime
             ApplyMotionSettings(settingsForLanguage);
             ApplyLanguage(settingsForLanguage.Language);
             settings.Appearance.Load(settingsForLanguage);
-            settings.Appearance.ApplyTheme(settingsForLanguage.ThemeMode);
-            settings.Appearance.ApplyThemeColor(
-                settingsForLanguage.ThemeColorMode,
-                SettingsAppearanceViewModel.ParseColorOrDefault(settingsForLanguage.CustomThemeColor));
+            settings.Appearance.ApplyFrom(settingsForLanguage);
             shell.SetLoading();
             remoteContent.BeginLoading(settingsForLanguage.ShowRemoteContentCard);
 
@@ -392,10 +389,7 @@ public sealed class ShellLifecycle : IShellRuntime
         string? propertyName,
         CancellationToken cancellationToken)
     {
-        settings.Appearance.ApplyTheme(previewSettings.ThemeMode);
-        settings.Appearance.ApplyThemeColor(
-            previewSettings.ThemeColorMode,
-            SettingsAppearanceViewModel.ParseColorOrDefault(previewSettings.CustomThemeColor));
+        settings.Appearance.ApplyFrom(previewSettings);
         background.ApplyBackgroundPresentation(previewSettings);
 
         if (propertyName is null
@@ -412,10 +406,7 @@ public sealed class ShellLifecycle : IShellRuntime
     private Task ApplyLanguageAndThemeAsync(LauncherSettings launcherSettings)
     {
         ApplyLanguage(launcherSettings.Language);
-        settings.Appearance.ApplyTheme(launcherSettings.ThemeMode);
-        settings.Appearance.ApplyThemeColor(
-            launcherSettings.ThemeColorMode,
-            SettingsAppearanceViewModel.ParseColorOrDefault(launcherSettings.CustomThemeColor));
+        settings.Appearance.ApplyFrom(launcherSettings);
         return Task.CompletedTask;
     }
 

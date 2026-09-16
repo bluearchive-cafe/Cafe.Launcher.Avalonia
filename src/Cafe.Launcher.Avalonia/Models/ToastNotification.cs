@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -98,13 +98,7 @@ public sealed partial class ToastNotification : ObservableObject
     public string PrimaryActionLabel => PrimaryAction?.Label ?? "";
     public string SecondaryActionLabel => SecondaryAction?.Label ?? "";
 
-    public string IconKind => Severity switch
-    {
-        ToastSeverity.Success => "CheckCircle",
-        ToastSeverity.Warning => "AlertOutline",
-        ToastSeverity.Error => "AlertCircle",
-        _ => "InformationOutline"
-    };
+    public string IconKind => ToastSeverityProfile.For(Severity).IconKind;
 }
 
 public enum ToastSeverity
