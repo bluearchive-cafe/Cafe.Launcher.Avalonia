@@ -6,6 +6,7 @@ using Cafe.Launcher.Avalonia.Composition;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Testing;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -13,12 +14,7 @@ namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed class ServiceConfigurationTests : IDisposable
 {
-    private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-
-    public ServiceConfigurationTests()
-    {
-        Directory.CreateDirectory(tempDir);
-    }
+    private readonly TestDirectory tempDir = TestDirectory.Create();
 
     [Fact]
     public async Task MainWindowViewModel_BackgroundUpdateUsesExplicitSettings()
@@ -174,12 +170,64 @@ public sealed class ServiceConfigurationTests : IDisposable
         }
     }
 
+    /// <summary>
+    /// 显式数据根必须贯穿整张对象图：登记项、闭包捕获的构造参数（日志、崩溃快照）都要落在
+    /// 指定目录。只替换 DI 登记而漏掉闭包里的那个根，正是「测试写进真实用户数据目录」的成因。
+    /// </summary>
+    [Fact]
+    public async Task AddLauncherServices_WhenDataRootIsExplicit_RoutesPersistentStateIntoIt()
+    {
+        var dataRoot = TestDataRoot.ForDirectory(tempDir.Sub(Guid.NewGuid().ToString("N")));
+        var services = new ServiceCollection();
+        services.AddLauncherServices(launcherDataRoot: dataRoot);
+        await using var provider = services.BuildServiceProvider();
+
+        Assert.Same(dataRoot, provider.GetRequiredService<LauncherDataRoot>());
+        Assert.Equal(
+            dataRoot.SettingsPath,
+            provider.GetRequiredService<LauncherSettingsService>().SettingsPath);
+        Assert.Equal(
+            dataRoot.CrashReportsDirectory,
+            provider.GetRequiredService<CrashReportStore>().PrimaryDirectory);
+        Assert.StartsWith(
+            dataRoot.Root,
+            provider.GetRequiredService<UnifiedLogger>().LogFilePath,
+            StringComparison.OrdinalIgnoreCase);
+        // 图片缓存目录不对外暴露，改看行为：构造即创建的就是注入根下的那一个。
+        provider.GetRequiredService<ImageCacheService>();
+        Assert.True(Directory.Exists(dataRoot.ImageCacheDirectory));
+
+        await provider.GetRequiredService<DownloadCheckpointStore>().SaveAsync(new DownloadTaskState
+        {
+            Version = "1.0.0",
+            Basis = "manifest.json",
+            GamePath = dataRoot.Root,
+            StartedAt = "2026-09-16T00:00:00.0000000+00:00"
+        });
+        await provider.GetRequiredService<NoticeStateService>().SaveShownNoticeAsync("notice-hash");
+
+        Assert.True(File.Exists(dataRoot.DownloadStatePath));
+        Assert.True(File.Exists(dataRoot.NoticeStatePath));
+    }
+
+    /// <summary>
+    /// 缺省仍按进程解析：生产路径的行为不因新增的可选参数而改变。
+    /// </summary>
+    [Fact]
+    public void AddLauncherServices_WithoutAnExplicitRoot_ResolvesTheProcessRoot()
+    {
+        var services = new ServiceCollection();
+        services.AddLauncherServices();
+        using var provider = services.BuildServiceProvider();
+
+        Assert.Equal(
+            LauncherDataRoot.ForCurrentProcess().Root,
+            provider.GetRequiredService<LauncherDataRoot>().Root);
+    }
+
     public void Dispose()
     {
-        if (Directory.Exists(tempDir))
-        {
-            Directory.Delete(tempDir, recursive: true);
-        }
+        tempDir.Dispose();
     }
 
     private ServiceCollection CreateServices()

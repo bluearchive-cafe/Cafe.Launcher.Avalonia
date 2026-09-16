@@ -2,6 +2,7 @@ using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Testing;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cafe.Launcher.Avalonia.HeadlessTests;
@@ -62,15 +63,14 @@ public sealed class SavedSettingsWriterThreadingTests
 
     private sealed class WriterRig : IDisposable
     {
-        private readonly string tempDir;
+        private readonly TestDirectory directory;
         private readonly ServiceProvider provider;
         private readonly List<(string Property, bool HasUiAccess)> notifications = [];
 
         public WriterRig()
         {
-            tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(tempDir);
-            provider = HeadlessTestHost.CreateServiceProvider(tempDir);
+            directory = TestDirectory.Create(TestDirectoryCleanup.BestEffort);
+            provider = HeadlessTestHost.CreateServiceProvider(directory);
             Writer = provider.GetRequiredService<ISavedSettingsWriter>();
             Editor = provider.GetRequiredService<ISettingsEditor>();
             Editor.PropertyChanged += (_, eventArgs) => notifications.Add(
@@ -101,13 +101,7 @@ public sealed class SavedSettingsWriterThreadingTests
         public void Dispose()
         {
             provider.Dispose();
-            try
-            {
-                Directory.Delete(tempDir, recursive: true);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-            }
+            directory.Dispose();
         }
     }
 }

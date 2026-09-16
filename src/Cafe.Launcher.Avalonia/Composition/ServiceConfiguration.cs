@@ -15,14 +15,23 @@ namespace Cafe.Launcher.Avalonia.Composition;
 
 public static class ServiceConfiguration
 {
+    /// <summary>
+    /// 注册全部启动器服务。
+    /// </summary>
+    /// <param name="launcherDataRoot">
+    /// 显式数据根：缺省时按进程解析（生产路径）。测试传它来让整张对象图——登记项与
+    /// 闭包中捕获的那些（日志、崩溃快照、设置、下载检查点）——都落在同一个隔离目录里；
+    /// 只替换 DI 登记项而漏掉闭包，会让测试写进真实用户数据目录。
+    /// </param>
     public static IServiceCollection AddLauncherServices(
         this IServiceCollection services,
         UnifiedLogger? existingLogger = null,
-        IFatalCrashService? existingFatalCrashService = null)
+        IFatalCrashService? existingFatalCrashService = null,
+        LauncherDataRoot? launcherDataRoot = null)
     {
         // 进程根在这里解析一次，其余登记项与所有消费方共用这一个实例——
         // 「数据放哪」不再是各模块各自读一次的进程级静态。
-        var dataRoot = LauncherDataRoot.ForCurrentProcess();
+        var dataRoot = launcherDataRoot ?? LauncherDataRoot.ForCurrentProcess();
         services.AddSingleton(dataRoot);
 
         // ── Leaf services (parameterless constructors, no deps) ──────────

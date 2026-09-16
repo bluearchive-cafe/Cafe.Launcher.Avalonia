@@ -9,6 +9,7 @@ using Avalonia.Styling;
 using Cafe.Launcher.Avalonia.Features.Settings;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Testing;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -44,9 +45,8 @@ public sealed class NeutralStrategyHeadlessTests
         // ApplyScheme is an instance member of the DI-singleton appearance VM
         // (AUD-MAINT-001); scaffold the same provider the window tests use and
         // dispose it so the theme-variant subscription detaches afterwards.
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(tempDir);
-        var provider = HeadlessTestHost.CreateServiceProvider(tempDir);
+        var directory = TestDirectory.Create(TestDirectoryCleanup.BestEffort);
+        var provider = HeadlessTestHost.CreateServiceProvider(directory);
         var appearance = provider.GetRequiredService<MainWindowViewModel>().Settings.Appearance;
         var seed = Color.Parse("#FF2E9E46");
         try
@@ -97,7 +97,7 @@ public sealed class NeutralStrategyHeadlessTests
             }
 
             provider.Dispose();
-            Directory.Delete(tempDir, true);
+            directory.Dispose();
         }
     }
 

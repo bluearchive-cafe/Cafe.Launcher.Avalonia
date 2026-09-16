@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using Avalonia.Media;
 using Cafe.Launcher.Avalonia.Features.Settings;
 using Cafe.Launcher.Avalonia.Features.SetupWizard;
@@ -362,7 +362,6 @@ public partial class MainWindowViewModelTests
     public async Task SaveSettingsAsync_WhenPersistenceFails_KeepsDirtyState()
     {
         var blockedRoot = Path.Combine(tempDir, "blocked-persistence-root");
-        Directory.CreateDirectory(tempDir);
         File.WriteAllText(blockedRoot, "not a directory");
         var savedSettings = new SavedSettingsTestRig(TestDataRoot.ForDirectory(blockedRoot));
         var localizer = new LocalizationService();

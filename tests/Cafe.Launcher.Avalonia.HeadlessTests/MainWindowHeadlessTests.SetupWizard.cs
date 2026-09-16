@@ -59,7 +59,7 @@ public sealed partial class MainWindowHeadlessTests
         Assert.True(context.ViewModel.Dialogs.IsSetupWizardVisible);
         Assert.True(context.ViewModel.Dialogs.SetupWizard.IsFirstStep);
 
-        var installationBasePath = Path.Combine(context.TempDir, "available-installation");
+        var installationBasePath = Path.Combine(context.Directory.Path, "available-installation");
         context.ViewModel.Dialogs.SetupWizard.GamePath = installationBasePath;
 
         // Step 0 → 1 detects only the preconfigured test path.
@@ -83,7 +83,7 @@ public sealed partial class MainWindowHeadlessTests
         Assert.True(nextButton.IsEnabled);
 
         var corruptedInstallationPath = new GameInstallationPath().NormalizeGamePath(
-            Path.Combine(context.TempDir, "corrupted-installation"));
+            Path.Combine(context.Directory.Path, "corrupted-installation"));
         Directory.CreateDirectory(corruptedInstallationPath);
         await File.WriteAllTextAsync(
             Path.Combine(corruptedInstallationPath, GamePaths.ManifestFileName),
@@ -110,7 +110,7 @@ public sealed partial class MainWindowHeadlessTests
     {
         using var context = CreateContext();
         var wizard = context.ViewModel.Dialogs.SetupWizard;
-        wizard.GamePath = Path.Combine(context.TempDir, "available-installation");
+        wizard.GamePath = Path.Combine(context.Directory.Path, "available-installation");
 
         context.Window.Show();
         context.ViewModel.Dialogs.ShowSetupWizard();
@@ -456,7 +456,7 @@ public sealed partial class MainWindowHeadlessTests
         string language)
     {
         using var context = CreateContext();
-        var installationBasePath = Path.Combine(context.TempDir, "available-installation");
+        var installationBasePath = Path.Combine(context.Directory.Path, "available-installation");
         context.ViewModel.Dialogs.SetupWizard.GamePath = installationBasePath;
         context.Window.Show();
         context.ViewModel.Dialogs.ShowSetupWizard();
