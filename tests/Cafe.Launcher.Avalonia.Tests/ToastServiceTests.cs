@@ -41,12 +41,77 @@ public sealed class ToastServiceTests
         ToastNotification? raised = null;
         service.ToastRaised += notification => raised = notification;
 
-        service.Show("saved", ToastSeverity.Success, 1234);
+        service.Show("saved", ToastSeverity.Success, ToastDuration.Extended);
 
         Assert.NotNull(raised);
         Assert.Null(raised.Title);
         Assert.False(raised.HasActions);
-        Assert.Equal(1234, raised.DurationMs);
+        Assert.Equal(ToastDuration.Extended, raised.Duration);
+    }
+
+    [Fact]
+    public void Show_WithoutExplicitTier_UsesTheSeverityTier()
+    {
+        var service = new ToastService();
+        var raised = new List<ToastNotification>();
+        service.ToastRaised += notification => raised.Add(notification);
+
+        service.ShowSuccess("saved");
+        service.ShowWarning("careful");
+        service.ShowError("broke");
+        service.Show("hint");
+        service.Show("saved", ToastSeverity.Success);
+
+        Assert.Equal(
+            new[]
+            {
+                ToastDuration.Brief,
+                ToastDuration.Medium,
+                ToastDuration.Extended,
+                ToastDuration.Brief,
+                ToastDuration.Brief
+            },
+            raised.Select(notification => notification.Duration));
+    }
+
+    [Fact]
+    public void Show_WithExplicitTier_OverridesTheSeverityTier()
+    {
+        var service = new ToastService();
+        ToastNotification? raised = null;
+        service.ToastRaised += notification => raised = notification;
+
+        service.Show("saved", ToastSeverity.Error, ToastDuration.Brief);
+
+        Assert.NotNull(raised);
+        Assert.Equal(ToastDuration.Brief, raised.Duration);
+    }
+
+    [Fact]
+    public void Show_WithTierInOptions_OverridesTheSeverityTier()
+    {
+        var service = new ToastService();
+        ToastNotification? raised = null;
+        service.ToastRaised += notification => raised = notification;
+
+        service.Show(new ToastOptions
+        {
+            Message = "Install failed",
+            Severity = ToastSeverity.Error,
+            Duration = ToastDuration.Brief
+        });
+
+        Assert.NotNull(raised);
+        Assert.Equal(ToastDuration.Brief, raised.Duration);
+    }
+
+    [Theory]
+    [InlineData(ToastDuration.Brief, 4)]
+    [InlineData(ToastDuration.Medium, 6)]
+    [InlineData(ToastDuration.Extended, 8)]
+    public void DurationTiers_ResolveToDistinctFixedLengths(ToastDuration duration, int expectedSeconds)
+    {
+        Assert.Equal(TimeSpan.FromSeconds(expectedSeconds), ToastDurations.Resolve(duration));
     }
 
     [Fact]

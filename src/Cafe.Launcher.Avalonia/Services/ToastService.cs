@@ -16,14 +16,17 @@ public sealed class ToastService
     public event Action<ToastNotification>? ToastRaised;
 
     /// <summary>
-    /// Show an informational toast that auto-dismisses after the default duration.
+    /// Show a toast that disappears after the tier configured for <paramref name="severity"/>.
     /// </summary>
-    public void Show(string message, ToastSeverity severity = ToastSeverity.Info, int durationMs = 4000) =>
+    /// <param name="message">Text displayed by the toast.</param>
+    /// <param name="severity">Severity that selects the icon, color, and default duration tier.</param>
+    /// <param name="duration">Display duration tier; <see langword="null"/> uses the severity default.</param>
+    public void Show(string message, ToastSeverity severity = ToastSeverity.Info, ToastDuration? duration = null) =>
         Show(new ToastOptions
         {
             Message = message,
             Severity = severity,
-            DurationMs = durationMs
+            Duration = duration
         });
 
     /// <summary>
@@ -38,14 +41,14 @@ public sealed class ToastService
             Title = options.Title,
             Message = options.Message,
             Severity = options.Severity,
-            DurationMs = options.DurationMs,
+            Duration = options.Duration ?? ToastDurations.ForSeverity(options.Severity),
             CreatedAt = DateTimeOffset.Now,
             PrimaryAction = options.PrimaryAction,
             SecondaryAction = options.SecondaryAction
         });
     }
 
-    public void ShowError(string message) => Show(message, ToastSeverity.Error, 8000);
-    public void ShowSuccess(string message) => Show(message, ToastSeverity.Success, 4000);
-    public void ShowWarning(string message) => Show(message, ToastSeverity.Warning, 6000);
+    public void ShowError(string message) => Show(message, ToastSeverity.Error);
+    public void ShowSuccess(string message) => Show(message, ToastSeverity.Success);
+    public void ShowWarning(string message) => Show(message, ToastSeverity.Warning);
 }
