@@ -422,7 +422,7 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
 
     partial void OnSelectedCustomThemeColorChanged(Color value)
     {
-        PushToEditor(settings => settings.CustomThemeColor = ToColorHex(value));
+        PushToEditor(settings => settings.CustomThemeColor = ThemeColorExtractionService.ToColorHex(value));
         UpdateThemeColorPreview();
     }
 
@@ -439,7 +439,7 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
 
     partial void OnSelectedBackgroundFillColorChanged(Color value)
     {
-        PushToEditor(settings => settings.BackgroundFillColor = ToColorHex(value));
+        PushToEditor(settings => settings.BackgroundFillColor = ThemeColorExtractionService.ToColorHex(value));
         BackgroundFillColorPreviewBrush = new SolidColorBrush(value);
     }
 
@@ -738,18 +738,6 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
 
         application.Resources[key] = new SolidColorBrush(color);
     }
-
-    internal static Color NormalizeAccentColorForUi(Color color) =>
-        ColorUtils.NormalizeAccentColorForUi(color);
-
-    internal static Color GetReadableOnAccentColor(Color color) =>
-        ColorUtils.GetReadableOnAccentColor(color);
-
-    internal static Color AdjustColor(Color color, double factor) =>
-        ColorUtils.AdjustColor(color, factor);
-
-    public static string ToColorHex(Color color) =>
-        ThemeColorExtractionService.ToColorHex(color);
 
     public static Color ParseColorOrDefault(string? value) =>
         Color.TryParse(value, out var color)
