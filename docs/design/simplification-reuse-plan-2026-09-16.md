@@ -142,6 +142,25 @@
 
 **为什么第二批**：改动都在 `src/`，但每项都能给出「等价」的读码证明，且多数已有测试钉住同一行为。逐项独立提交，便于二分。
 
+> **状态：已落地 17／22（2026-09-16，`7161f4c`..`42f327d` 六个提交）。** 全部 `verify.ps1` 退出码 0。
+> 逐项先读码复核扫描结论再改，多处扫描计数与计划不符（`B4` 实为 30 处而非 19 处、`B1` 的副本是
+> 整个 §11 比较而非「核心段比较」等），已在各提交信息里更正。
+>
+> **五项未按计划执行，各有理由：**
+> - `B5`：按计划并入架构评审候选 11，需先对其统一口径作出裁决，不单独排期。
+> - `B12`（三个错误三元组走 `ErrorHandlingService`）、`B15`（调试面板私有 `Format` 换
+>   `LocalizationService.F`）：评估后判定收益不抵成本，理由见 `0a92d66` 的提交信息（前者需给
+>   `ErrorHandlingOptions` 增两个字段并向两个诊断 VM 注入新依赖，三处标题/文案本就不同，改造后
+>   行数持平；后者需为调试面板新增依赖并改 11 处调用点，且两者的失败语义不同——调试面板在模板
+>   畸形时显示原文比报本地化失败更可取，而该情形已被本地化契约脚本挡在提交前）。
+> - `B17` 的另一半（`ToastHostViewModel` 三个按 id 平行的字典并成一个生命周期对象）：**未做**。
+>   它动的是队列/退出/倒计时三套状态机的交汇处，26 条既有用例覆盖，值得单独一轮；本轮只做了
+>   该条的严重度半边（`Models/ToastSeverityProfile`）。
+>
+> **两项补了守卫（计划只提了「先补测试」）**：`B10` 的日志级别词表往返用例，与 `B17` 的严重度
+> 完备性/区分度用例；两者都做了变异验证（拆掉即红）。`B18` 的忙碌重置亦做变异验证（删掉
+> `finally` 后 4 条用例变红）。
+
 | 编号 | 项 | 证据锚点 | 落地改动 | 守卫 | 收益/风险 |
 | --- | --- | --- | --- | --- | --- |
 | `B1` | `LauncherUpdateService` 逐行重写 `VersionComparer` 的前置版本比较 | `Services/LauncherUpdateService.cs:322-353`（`ComparePrereleaseLabels`，32 行）与 `Helpers/VersionComparer.cs:55-87`（`ComparePrerelease`）**算法/规则/返回值完全一致，仅变量名不同**（已逐行读码确认）；另 `IsNewerVersion`（`:284-313`）、`TryParseSemanticVersion`（`:355-369`）、`SemanticVersion` record（`:371`）、`IsPrereleaseVersion`（`:235-236`）为同域自备 | 把 `VersionComparer.ComparePrerelease` 提到 `internal`，`ComparePrereleaseLabels` 删除改调它；`SemanticVersionRegex` 保留（发布过滤需要形状保证，`VersionComparer.Compare` 对非数字段宽容按 0 处理，语义不同，**不要**整体替换成 `Compare > 0`） | `LauncherUpdateServiceTests`（beta.2>beta.1、beta.11>beta.2、`1.2.0-1`<`1.2.0-alpha`、`beta.1.fix`>beta.1）与 `VersionComparerTests.Compare_HandlesPreReleaseSuffixes` 是**同一批向量的两份**，等价性主张一旦错误必红 | 高 / 低 |
