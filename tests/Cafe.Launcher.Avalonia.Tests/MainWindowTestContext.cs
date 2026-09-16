@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -135,7 +135,7 @@ internal sealed class MainWindowTestContext : IDisposable
         var gameRuntime = new GameRuntime(
             [GameRunnerDefinition.Native],
             new DefaultProcessLauncher(),
-            new GameProcessTracker());
+            TestGameProcessTracker.None());
         var gameLaunchService = new GameLaunchService(
             manifestValidationService,
             gameRuntime,
@@ -155,7 +155,7 @@ internal sealed class MainWindowTestContext : IDisposable
             diagnostics,
             localizationService,
             new GameInstallationPath(),
-            new GameProcessTracker(),
+            TestGameProcessTracker.None(),
             TestDataRoot.ForDirectory(directory.Sub(Guid.NewGuid().ToString("N"))));
         if (resourcePanelUidService is null)
         {
@@ -207,7 +207,7 @@ internal sealed class MainWindowTestContext : IDisposable
             localizationService,
             new GameInstallationPath(),
             new DownloadCheckpointStore(TestDataRoot.ForDirectory(directory.Sub(Guid.NewGuid().ToString("N")))),
-            new GameProcessTracker(),
+            TestGameProcessTracker.None(),
             new TestGameShortcutService());
 
         var remoteContentViewModel = new RemoteContentViewModel(localizationService, imageCacheService, diagnostics);

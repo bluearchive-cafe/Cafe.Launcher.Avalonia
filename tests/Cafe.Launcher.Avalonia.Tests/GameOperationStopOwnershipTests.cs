@@ -1,7 +1,8 @@
-using System.Reflection;
+﻿using System.Reflection;
 using System.Text.RegularExpressions;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -137,7 +138,7 @@ public sealed class GameOperationStopOwnershipTests
     /// </summary>
     private static string[] SourceFiles()
     {
-        var root = ProjectFile(".");
+        var root = TestRepository.FromApplicationRoot(".");
         var files = Directory
             .EnumerateFiles(root, "*.cs", SearchOption.AllDirectories)
             .Where(path => !IsBuildArtifact(root, path))
@@ -161,28 +162,5 @@ public sealed class GameOperationStopOwnershipTests
     }
 
     private static string RelativePath(string absolutePath) =>
-        Path.GetRelativePath(ProjectFile("."), absolutePath).Replace(Path.DirectorySeparatorChar, '/');
-
-    private static string ProjectFile(string relativePath)
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null)
-        {
-            var projectFile = Path.Combine(
-                directory.FullName,
-                "src",
-                "Cafe.Launcher.Avalonia",
-                "Cafe.Launcher.Avalonia.csproj");
-            if (File.Exists(projectFile))
-            {
-                return Path.Combine(
-                    Path.GetDirectoryName(projectFile)!,
-                    relativePath.Replace('/', Path.DirectorySeparatorChar));
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new DirectoryNotFoundException("The application project was not found.");
-    }
+        Path.GetRelativePath(TestRepository.FromApplicationRoot("."), absolutePath).Replace(Path.DirectorySeparatorChar, '/');
 }

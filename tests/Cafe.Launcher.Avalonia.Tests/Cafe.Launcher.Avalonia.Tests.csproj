@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -55,9 +55,14 @@
     <Compile Include="..\TestDoubles\CallbackRecorder.cs" Link="TestDoubles\CallbackRecorder.cs" />
     <Compile Include="..\TestDoubles\StubFatalCrashService.cs" Link="TestDoubles\StubFatalCrashService.cs" />
     <Compile Include="..\TestDoubles\StubFileDownloadService.cs" Link="TestDoubles\StubFileDownloadService.cs" />
+    <Compile Include="..\TestDoubles\StubFilePickerService.cs" Link="TestDoubles\StubFilePickerService.cs" />
+    <Compile Include="..\TestDoubles\TestGameProcessTracker.cs" Link="TestDoubles\TestGameProcessTracker.cs" />
+    <Compile Include="..\TestDoubles\ScriptedReadStream.cs" Link="TestDoubles\ScriptedReadStream.cs" />
+    <Compile Include="..\TestDoubles\BestHttpCookieLibraryFixture.cs" Link="TestDoubles\BestHttpCookieLibraryFixture.cs" />
     <Compile Include="..\TestDoubles\StubGameOperationExecutor.cs" Link="TestDoubles\StubGameOperationExecutor.cs" />
     <Compile Include="..\TestDoubles\StubRemoteHttpTransport.cs" Link="TestDoubles\StubRemoteHttpTransport.cs" />
     <Compile Include="..\TestDoubles\StubDownloadTransport.cs" Link="TestDoubles\StubDownloadTransport.cs" />
+    <Compile Include="..\TestDoubles\RecordingErrorHandlingService.cs" Link="TestDoubles\RecordingErrorHandlingService.cs" />
   </ItemGroup>
 
 </Project>

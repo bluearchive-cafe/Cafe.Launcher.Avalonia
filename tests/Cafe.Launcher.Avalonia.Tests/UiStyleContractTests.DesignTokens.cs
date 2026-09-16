@@ -1,5 +1,6 @@
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -11,7 +12,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void DesignTokens_NewFamilies_DeclareExpectedScaleValues()
     {
-        var app = XDocument.Load(ProjectFile("App.axaml"));
+        var app = XDocument.Load(TestRepository.FromApplicationRoot("App.axaml"));
         var keyed = app
             .Descendants()
             .Where(element => element.Attributes().Any(attribute => attribute.Name.LocalName == "Key"))
@@ -86,7 +87,7 @@ public sealed partial class UiStyleContractTests
 
         foreach (var relativePath in ProjectMarkupFiles())
         {
-            var text = File.ReadAllText(ProjectFile(relativePath));
+            var text = File.ReadAllText(TestRepository.FromApplicationRoot(relativePath));
             Assert.False(
                 dynamicStaticReference.IsMatch(text),
                 $"Static-family tokens must use {{StaticResource}}, not {{DynamicResource}}: {relativePath}");
@@ -103,7 +104,7 @@ public sealed partial class UiStyleContractTests
 
         foreach (var relativePath in files)
         {
-            var text = File.ReadAllText(ProjectFile(relativePath));
+            var text = File.ReadAllText(TestRepository.FromApplicationRoot(relativePath));
             foreach (Match match in legacyReference.Matches(text))
             {
                 var preceded = match.Index > 0 ? text[match.Index - 1] : '\0';

@@ -8,6 +8,7 @@ using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Services.GameRuntime;
 using Cafe.Launcher.Avalonia.Testing;
 using Cafe.Launcher.Avalonia.ViewModels;
+using Cafe.Launcher.Avalonia.Constants;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -70,7 +71,7 @@ public partial class MainWindowViewModelTests
                 Version = "1.0.0"
             }
         };
-        var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
+        var settingsPath = tempDir.Sub(GamePaths.LauncherSettingsFileName);
         var savedSettings = new SavedSettingsTestRig(settingsPath);
         await savedSettings.SeedAsync(new LauncherSettings
         {
@@ -104,7 +105,7 @@ public partial class MainWindowViewModelTests
                 Version = "1.0.0"
             }
         };
-        var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
+        var settingsPath = tempDir.Sub(GamePaths.LauncherSettingsFileName);
         var savedSettings = new SavedSettingsTestRig(settingsPath);
         await savedSettings.SeedAsync(new LauncherSettings
         {
@@ -128,7 +129,7 @@ public partial class MainWindowViewModelTests
     {
         var snapshot = CreateSnapshot();
         snapshot.Settings.PatchUrlGroup = PatchUrlGroups.Official;
-        var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
+        var settingsPath = tempDir.Sub(GamePaths.LauncherSettingsFileName);
         var savedSettings = new SavedSettingsTestRig(settingsPath);
         await savedSettings.SeedAsync(new LauncherSettings
         {
@@ -157,7 +158,7 @@ public partial class MainWindowViewModelTests
         Directory.CreateDirectory(pickedPath);
         // GameInstallationPath.NormalizeGamePath appends YostarGames/BlueArchive_JP
         var expectedPath = Path.Combine(pickedPath, "YostarGames", "BlueArchive_JP");
-        var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
+        var settingsPath = tempDir.Sub(GamePaths.LauncherSettingsFileName);
         var savedSettings = new SavedSettingsTestRig(settingsPath);
         await savedSettings.SeedAsync(new LauncherSettings());
         var snapshot = CreateSnapshot();
@@ -192,7 +193,7 @@ public partial class MainWindowViewModelTests
         var selectedRoot = Path.Combine(tempDir, "selected");
         Directory.CreateDirectory(selectedRoot);
         var expectedPath = Path.Combine(selectedRoot, "YostarGames", "BlueArchive_JP");
-        var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
+        var settingsPath = tempDir.Sub(GamePaths.LauncherSettingsFileName);
         var savedSettings = new SavedSettingsTestRig(settingsPath);
         await savedSettings.SeedAsync(new LauncherSettings
         {
@@ -226,7 +227,7 @@ public partial class MainWindowViewModelTests
     {
         var pickedPath = Path.Combine(tempDir, "background.png");
         await File.WriteAllBytesAsync(pickedPath, []);
-        var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
+        var settingsPath = tempDir.Sub(GamePaths.LauncherSettingsFileName);
         var savedSettings = new SavedSettingsTestRig(settingsPath);
         await savedSettings.SeedAsync(new LauncherSettings());
         var coreService = new CountingCoreService(CreateSnapshot());
@@ -260,7 +261,7 @@ public partial class MainWindowViewModelTests
         var savedPath = Path.Combine(tempDir, "saved-background.png");
         var pickedFolder = Path.Combine(tempDir, "backgrounds");
         Directory.CreateDirectory(pickedFolder);
-        var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
+        var settingsPath = tempDir.Sub(GamePaths.LauncherSettingsFileName);
         var savedSettings = new SavedSettingsTestRig(settingsPath);
         var persistedSettings = new LauncherSettings
         {
@@ -421,7 +422,7 @@ public partial class MainWindowViewModelTests
     [Fact]
     public async Task SaveSettingsAsync_WhenCustomThemeColorSelected_PersistsColor()
     {
-        var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
+        var settingsPath = tempDir.Sub(GamePaths.LauncherSettingsFileName);
         var savedSettings = new SavedSettingsTestRig(settingsPath);
         await savedSettings.SeedAsync(new LauncherSettings());
         var coreService = new CountingCoreService(CreateSnapshot());
@@ -440,7 +441,7 @@ public partial class MainWindowViewModelTests
     [Fact]
     public async Task SaveSettingsAsync_WhenWallpaperPaletteSelected_PersistsPaletteAndIndex()
     {
-        var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
+        var settingsPath = tempDir.Sub(GamePaths.LauncherSettingsFileName);
         var savedSettings = new SavedSettingsTestRig(settingsPath);
         await savedSettings.SeedAsync(new LauncherSettings());
         var coreService = new CountingCoreService(CreateSnapshot());

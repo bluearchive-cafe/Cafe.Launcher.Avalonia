@@ -1,6 +1,7 @@
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -46,7 +47,7 @@ public sealed partial class UiStyleContractTests
     {
         var projectRoot = TestLocalizationHelper.FindProjectRoot();
         return Directory
-            .GetFiles(ProjectFile(relativeDirectory), "*.axaml", searchOption)
+            .GetFiles(TestRepository.FromApplicationRoot(relativeDirectory), "*.axaml", searchOption)
             .Select(path => Path.GetRelativePath(projectRoot, path).Replace('\\', '/'))
             .Order(StringComparer.Ordinal)
             .ToArray();
@@ -346,9 +347,6 @@ public sealed partial class UiStyleContractTests
         }
     }
 
-    private static string ProjectFile(string relativePath) =>
-        Path.Combine(TestLocalizationHelper.FindProjectRoot(), relativePath.Replace('/', Path.DirectorySeparatorChar));
-
     [GeneratedRegex("#[0-9A-Fa-f]{6,8}", RegexOptions.CultureInvariant)]
     private static partial Regex DirectColorRegex();
 
@@ -362,7 +360,7 @@ public sealed partial class UiStyleContractTests
                 element.Name.LocalName == "Style"
                 && element.Attribute("Selector")?.Value == selector);
         matchingStyle ??= StyleFiles
-            .Select(path => XDocument.Load(ProjectFile(path)))
+            .Select(path => XDocument.Load(TestRepository.FromApplicationRoot(path)))
             .SelectMany(styleDocument => styleDocument.Descendants())
             .Single(element =>
                 element.Name.LocalName == "Style"

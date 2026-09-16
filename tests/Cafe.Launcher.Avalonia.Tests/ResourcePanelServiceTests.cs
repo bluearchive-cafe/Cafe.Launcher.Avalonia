@@ -1,10 +1,11 @@
-using System.Net;
+﻿using System.Net;
 using System.Text;
 using Cafe.Launcher.Avalonia.Features.ResourcePanel;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Testing;
+using Cafe.Launcher.Avalonia.Constants;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -247,11 +248,11 @@ public sealed class ResourcePanelServiceTests : IDisposable
         var cookiePath = Path.Combine(tempDir, $"Library-{Guid.NewGuid():N}");
         if (cookieUid is not null)
         {
-            await WriteCookieLibraryAsync(cookiePath, cookieUid);
+            await BestHttpCookieLibraryFixture.WriteUidAsync(cookiePath, cookieUid);
         }
 
         var savedSettings = new SavedSettingsTestRig(
-            Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+            tempDir.Sub(GamePaths.LauncherSettingsFileName));
         if (settings is not null)
         {
             await savedSettings.SeedAsync(settings);
@@ -267,25 +268,4 @@ public sealed class ResourcePanelServiceTests : IDisposable
     private static string? LastConfigSetQuery(StubRemoteHttpTransport transport) =>
         transport.RequestedUris
             .LastOrDefault(uri => uri.AbsolutePath == "/config/set")?.Query;
-
-    private static async Task WriteCookieLibraryAsync(string path, string uid)
-    {
-        await using var stream = File.Create(path);
-        using var writer = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true);
-        writer.Write(1);
-        writer.Write(1);
-        writer.Write(1);
-        writer.Write("uid");
-        writer.Write(uid);
-        writer.Write(DateTime.UtcNow.ToBinary());
-        writer.Write(DateTime.UtcNow.ToBinary());
-        writer.Write(DateTime.FromBinary(0).ToBinary());
-        writer.Write(2147483647L);
-        writer.Write(false);
-        writer.Write("bluearchive.cafe");
-        writer.Write("/");
-        writer.Write(false);
-        writer.Write(false);
-        writer.Flush();
-    }
 }

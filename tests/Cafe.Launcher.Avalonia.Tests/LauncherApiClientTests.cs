@@ -1,4 +1,4 @@
-using System.Net.Http;
+﻿using System.Net.Http;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
@@ -123,7 +123,7 @@ public sealed class LauncherApiClientTests
     {
         using var response = new HttpResponseMessage(HttpStatusCode.OK)
         {
-            Content = new StreamContent(new RepeatingStream(4096))
+            Content = new StreamContent(new SyntheticReadStream(4096, (byte)'A', declaresLength: false))
             {
                 Headers = { ContentType = new MediaTypeHeaderValue("application/json") }
             }
@@ -168,7 +168,7 @@ public sealed class LauncherApiClientTests
     {
         using var response = new HttpResponseMessage(HttpStatusCode.OK)
         {
-            Content = new StreamContent(new RepeatingStream(4096))
+            Content = new StreamContent(new SyntheticReadStream(4096, (byte)'A', declaresLength: false))
             {
                 Headers = { ContentType = new MediaTypeHeaderValue("application/json") }
             }
@@ -184,42 +184,5 @@ public sealed class LauncherApiClientTests
 
         Assert.Contains("https://example.test/config/get", ex.Message, StringComparison.Ordinal);
         Assert.DoesNotContain("UID-SECRET-VALUE", ex.Message, StringComparison.Ordinal);
-    }
-
-    /// <summary>Non-seekable stream that repeats a byte pattern; used to exercise the chunked-body limit.</summary>
-    private sealed class RepeatingStream(int totalBytes) : Stream
-    {
-        private int produced;
-
-        public override bool CanRead => true;
-        public override bool CanSeek => false;
-        public override bool CanWrite => false;
-        public override long Length => throw new NotSupportedException();
-        public override long Position
-        {
-            get => produced;
-            set => throw new NotSupportedException();
-        }
-
-        public override int Read(byte[] buffer, int offset, int count)
-        {
-            if (produced >= totalBytes)
-            {
-                return 0;
-            }
-
-            var read = Math.Min(count, totalBytes - produced);
-            Array.Fill(buffer, (byte)'A', offset, read);
-            produced += read;
-            return read;
-        }
-
-        public override void Flush()
-        {
-        }
-
-        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-        public override void SetLength(long value) => throw new NotSupportedException();
-        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 }

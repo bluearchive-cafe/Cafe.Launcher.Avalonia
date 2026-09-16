@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Testing;
@@ -209,58 +209,7 @@ public sealed class ImageCacheServiceTests : IDisposable
             RemoteRequestOptions? options = null,
             CancellationToken cancellationToken = default) =>
             Task.FromResult(new RemoteBody(
-                new RepeatingByteStream(25 * 1024 * 1024 + 1),
+                new SyntheticReadStream(25 * 1024 * 1024 + 1),
                 DeclaredContentLength: null));
-    }
-
-    private sealed class RepeatingByteStream(long length) : Stream
-    {
-        private long position;
-
-        public override bool CanRead => true;
-        public override bool CanSeek => false;
-        public override bool CanWrite => false;
-        public override long Length => length;
-        public override long Position
-        {
-            get => position;
-            set => throw new NotSupportedException();
-        }
-
-        public override int Read(byte[] buffer, int offset, int count)
-        {
-            var remaining = length - position;
-            if (remaining <= 0)
-            {
-                return 0;
-            }
-
-            var read = (int)Math.Min(count, remaining);
-            Array.Clear(buffer, offset, read);
-            position += read;
-            return read;
-        }
-
-        public override ValueTask<int> ReadAsync(
-            Memory<byte> buffer,
-            CancellationToken cancellationToken = default)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var remaining = length - position;
-            if (remaining <= 0)
-            {
-                return ValueTask.FromResult(0);
-            }
-
-            var read = (int)Math.Min(buffer.Length, remaining);
-            buffer.Span[..read].Clear();
-            position += read;
-            return ValueTask.FromResult(read);
-        }
-
-        public override void Flush() => throw new NotSupportedException();
-        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-        public override void SetLength(long value) => throw new NotSupportedException();
-        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 }

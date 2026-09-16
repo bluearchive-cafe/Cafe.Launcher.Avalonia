@@ -1,4 +1,4 @@
-using System.IO.Compression;
+﻿using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -35,7 +35,7 @@ public sealed class LogExportServiceTests : IDisposable
     [Fact]
     public void DefaultExportDirectory_UsesProductDataExportFolder()
     {
-        var dataRoot = TestDataRoot.ForDirectory(tempDir);
+        var dataRoot = tempDir.DataRoot;
         using var logger = new UnifiedLogger(Path.Combine(tempDir, "directory-probe"));
 
         // 目录布局由数据根模块拥有：导出目录就是根下的 log-exports，

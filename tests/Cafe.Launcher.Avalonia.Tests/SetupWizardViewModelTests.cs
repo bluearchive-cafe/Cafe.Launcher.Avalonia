@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Features.SetupWizard;
 using Cafe.Launcher.Avalonia.Models;
@@ -12,6 +12,9 @@ namespace Cafe.Launcher.Avalonia.Tests;
 [Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class SetupWizardViewModelTests
 {
+    /// <summary>向导路径校验（防抖 + 后台写探测）的就绪预算。</summary>
+    private static readonly TimeSpan GateSettleBudget = TimeSpan.FromSeconds(5);
+
     static SetupWizardViewModelTests()
     {
         TestLocalizationHelper.Initialize();
@@ -537,7 +540,11 @@ public sealed class SetupWizardViewModelTests
         // 路径校验为异步（防抖 + 后台写探测），推进循环在门控未就绪时
         // 有界等待而非热自旋：5 秒预算内未就绪即快速失败（参见 P0 整改
         // 中 Headless 同类修复）。
-        var deadline = DateTime.UtcNow.AddSeconds(5);
+        await TestWait.UntilAsync(
+            () => viewModel.IsLastStep || viewModel.CanGoNext,
+            GateSettleBudget,
+            "向导门控未在 5 秒预算内就绪。");
+
         for (var guard = 0; !viewModel.IsLastStep && guard < 100; guard++)
         {
             if (viewModel.CanGoNext)
@@ -546,8 +553,10 @@ public sealed class SetupWizardViewModelTests
             }
             else
             {
-                Assert.True(DateTime.UtcNow < deadline, "向导门控未在 5 秒预算内就绪。");
-                await Task.Delay(10);
+                await TestWait.UntilAsync(
+                    () => viewModel.IsLastStep || viewModel.CanGoNext,
+                    GateSettleBudget,
+                    "向导门控未在 5 秒预算内就绪。");
             }
         }
 

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -131,7 +131,7 @@ public sealed class SettingsViewModelTests
             null!,
             new SettingsOptionsViewModel(localizer, new DiskSpaceService()),
             new SettingsAppearanceViewModel(new SettingsEditor()),
-            new FakeErrorHandlingService(),
+            new RecordingErrorHandlingService(),
             new StubGameRuntime(),
             new StubFilePickerService());
 

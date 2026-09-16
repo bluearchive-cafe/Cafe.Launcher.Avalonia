@@ -58,6 +58,15 @@ public static class TestRepository
     public static string InApplication(params string[] segments) => Combine(ApplicationPath, segments);
 
     /// <summary>
+    /// 仓库根下的路径，接受以 <c>'/'</c> 分隔的相对路径——契约测试的字面量习惯沿用仓库的
+    /// 相对引用（Bash 与 CI 里也是这个形状），由这里一次性换算成宿主分隔符。
+    /// </summary>
+    public static string FromRepositoryRoot(string relativePath) => CombineRelative(Root, relativePath);
+
+    /// <summary>应用工程目录下的路径，接受以 <c>'/'</c> 分隔的相对路径。</summary>
+    public static string FromApplicationRoot(string relativePath) => CombineRelative(ApplicationPath, relativePath);
+
+    /// <summary>
     /// 把仓库里的四种语言资源装进 <see cref="LocalizationService"/> 的测试资源槽位。
     /// 每次调用都重装，即便此前已有用例装过自定义资源。
     /// </summary>
@@ -90,6 +99,9 @@ public static class TestRepository
 
         return path;
     }
+
+    private static string CombineRelative(string root, string relativePath) =>
+        Path.Combine(root, relativePath.Replace('/', Path.DirectorySeparatorChar));
 
     private static Dictionary<string, Dictionary<string, string>> ReadAllResx()
     {

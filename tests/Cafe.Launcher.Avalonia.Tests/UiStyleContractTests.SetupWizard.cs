@@ -1,4 +1,5 @@
-using System.Xml.Linq;
+﻿using System.Xml.Linq;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -12,7 +13,7 @@ public sealed partial class UiStyleContractTests
         // 2026-08-28 审计修复：wizard filled 型禁用态组合须声明在 primary 之后，
         // 与主样式 filled 型家族（primary-action.dialog-action:disabled 等）同一预混配方；
         // 选项行（wizard-option）键盘聚焦时铺 token 焦点环（spec §8）。
-        var wizardStyles = XDocument.Load(ProjectFile("Views/Styles/SetupWizard.axaml"));
+        var wizardStyles = XDocument.Load(TestRepository.FromApplicationRoot("Views/Styles/SetupWizard.axaml"));
 
         var primaryDisabled = GetStyleSetters(wizardStyles, "Button.wizard-action.primary-action:disabled");
         Assert.Equal("{DynamicResource Launcher.Color.Content.Row}", primaryDisabled["Background"]);
@@ -28,7 +29,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void SetupWizardOverlay_IsDedicatedViewIncludedByDialogsOverlay()
     {
-        var dialogsOverlay = File.ReadAllText(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
+        var dialogsOverlay = File.ReadAllText(TestRepository.FromApplicationRoot("Views/MainWindowDialogsOverlay.axaml"));
 
         Assert.Contains("<views:SetupWizardOverlay/>", dialogsOverlay, StringComparison.Ordinal);
         Assert.DoesNotContain("Dialogs.SetupWizard.NextCommand", dialogsOverlay, StringComparison.Ordinal);
@@ -37,7 +38,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void SetupWizardOverlay_UsesProgressRowAndContentActions()
     {
-        var document = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/SetupWizardOverlay.axaml"));
 
         // 实验台解剖（ADR-017）：无侧栏导航；进度行承载向导标题与步骤进度，跳过钮居右。
         Assert.DoesNotContain(
@@ -76,7 +77,7 @@ public sealed partial class UiStyleContractTests
             .Elements()
             .Single(element => element.Name.LocalName == "Grid");
         Assert.Equal("Auto,*,Auto", contentBlock.Attribute("RowDefinitions")?.Value);
-        var wizardStyles = XDocument.Load(ProjectFile("Views/Styles/SetupWizard.axaml"));
+        var wizardStyles = XDocument.Load(TestRepository.FromApplicationRoot("Views/Styles/SetupWizard.axaml"));
         Assert.Equal(
             "{StaticResource Launcher.Component.Dialog.Panel.Body.Padding}",
             GetStyleSetters(wizardStyles, "Border.wizard-body")["Padding"]);
@@ -108,8 +109,8 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void SetupWizardOverlay_UsesSetupWizardLayerBetweenDialogsAndToast()
     {
-        var overlay = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
-        var styles = File.ReadAllText(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var overlay = XDocument.Load(TestRepository.FromApplicationRoot("Views/SetupWizardOverlay.axaml"));
+        var styles = File.ReadAllText(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
 
         Assert.Contains(
             overlay.Descendants(),
@@ -122,7 +123,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void SetupWizard_UsesConstrainedSingleColumnWorkspace()
     {
-        var document = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/SetupWizardOverlay.axaml"));
         var xNamespace = document.Root?.GetNamespaceOfPrefix("x");
         Assert.NotNull(xNamespace);
         var dialog = document
@@ -176,7 +177,7 @@ public sealed partial class UiStyleContractTests
     {
         // ADR-017：步骤切换 = 旧内容先淡出、新内容按方向滑入的顺序换页，由后置代码编排；
         // 步骤面板不走 MotionVisibility 与声明式动画类，可见性完全由后置代码接管。
-        var document = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/SetupWizardOverlay.axaml"));
         var xNamespace = document.Root?.GetNamespaceOfPrefix("x");
         Assert.NotNull(xNamespace);
         var controls = document.Root?.GetNamespaceOfPrefix("controls");
@@ -224,7 +225,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void SetupWizardHeader_ShowsWizardTitleAndProgress()
     {
-        var document = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/SetupWizardOverlay.axaml"));
         var skipButton = document
             .Descendants()
             .Single(element =>
@@ -255,7 +256,7 @@ public sealed partial class UiStyleContractTests
         // 实验台完成态语义：最后一步（复核）即完成确认，标题以 Success 色标识，无庆祝动画。
         // 各面板标题静态绑定自身资源键——共享 StepTitle 绑定会在 Step 变化的 t=0 让全部
         // 标题（含淡出中的旧面板）同帧跳到新标题，破坏中点换面的次序语义。
-        var overlay = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
+        var overlay = XDocument.Load(TestRepository.FromApplicationRoot("Views/SetupWizardOverlay.axaml"));
         var expectedTitleKeys = new[]
         {
             "setupWizardLanguage",
@@ -279,7 +280,7 @@ public sealed partial class UiStyleContractTests
             element => element.Name.LocalName == "TextBlock"
                 && (element.Attribute("Text")?.Value.Contains("SetupWizard.StepTitle") ?? false));
 
-        var styles = XDocument.Load(ProjectFile("Views/Styles/SetupWizard.axaml"));
+        var styles = XDocument.Load(TestRepository.FromApplicationRoot("Views/Styles/SetupWizard.axaml"));
         Assert.Equal(
             "{DynamicResource Launcher.Color.Success}",
             GetStyleSetters(styles, "TextBlock.wizard-step-title.wizard-complete")["Foreground"]);
@@ -288,7 +289,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void SetupWizard_Review_UsesSeparatedCenteredRows()
     {
-        var overlay = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
+        var overlay = XDocument.Load(TestRepository.FromApplicationRoot("Views/SetupWizardOverlay.axaml"));
         var xNamespace = overlay.Root?.GetNamespaceOfPrefix("x");
         Assert.NotNull(xNamespace);
         var reviewStep = overlay
@@ -340,7 +341,7 @@ public sealed partial class UiStyleContractTests
                     element.Name.LocalName is "TextBlock" or "Button"),
                 element => Assert.Equal("Center", element.Attribute("VerticalAlignment")?.Value)));
 
-        var styles = XDocument.Load(ProjectFile("Views/Styles/SetupWizard.axaml"));
+        var styles = XDocument.Load(TestRepository.FromApplicationRoot("Views/Styles/SetupWizard.axaml"));
         var rowStyle = GetStyleSetters(styles, "Grid.wizard-review-row");
         var dividerStyle = GetStyleSetters(styles, "Border.wizard-review-divider");
 
@@ -353,7 +354,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void SetupWizardGamePath_ShowsStatusWithSemanticStateStyles()
     {
-        var overlay = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
+        var overlay = XDocument.Load(TestRepository.FromApplicationRoot("Views/SetupWizardOverlay.axaml"));
         var gamePathInput = overlay
             .Descendants()
             .Single(element =>
@@ -403,7 +404,7 @@ public sealed partial class UiStyleContractTests
         Assert.Equal("CharacterEllipsis", status.Attribute("TextTrimming")?.Value);
         Assert.Equal("1", status.Attribute("MaxLines")?.Value);
 
-        var styles = XDocument.Load(ProjectFile("Views/Styles/SetupWizard.axaml"));
+        var styles = XDocument.Load(TestRepository.FromApplicationRoot("Views/Styles/SetupWizard.axaml"));
         Assert.Equal(
             "{DynamicResource Launcher.Color.Primary}",
             GetStyleSetters(styles, "TextBlock.wizard-game-path-status.checking")["Foreground"]);
@@ -483,7 +484,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void SetupWizard_ChoiceSteps_UseGroupedRadioButtons()
     {
-        var document = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/SetupWizardOverlay.axaml"));
         var xNamespace = document.Root?.GetNamespaceOfPrefix("x");
         Assert.NotNull(xNamespace);
         var downloadSourceStep = document
@@ -556,7 +557,7 @@ public sealed partial class UiStyleContractTests
     public void SetupWizard_ActionButtons_UseTonalAndFilledStyles()
     {
         // ADR-017：向导动作钮 = 中性 tonal（Content.Row 底色）+ filled 主按钮（primary-action 叠加）。
-        var styles = XDocument.Load(ProjectFile("Views/Styles/SetupWizard.axaml"));
+        var styles = XDocument.Load(TestRepository.FromApplicationRoot("Views/Styles/SetupWizard.axaml"));
         var tonal = GetStyleSetters(styles, "Button.wizard-action");
         Assert.Equal("{DynamicResource Launcher.Color.Content.Row}", tonal["Background"]);
         Assert.Equal("{DynamicResource Launcher.Text.Primary}", tonal["Foreground"]);
@@ -578,7 +579,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void SetupWizard_OptionRowsUseTokenizedMinimumTargets()
     {
-        var styles = XDocument.Load(ProjectFile("Views/Styles/SetupWizard.axaml"));
+        var styles = XDocument.Load(TestRepository.FromApplicationRoot("Views/Styles/SetupWizard.axaml"));
 
         // ADR-017：卡片按钮形态（wizard-choice）已被纯单选组 + M3 选项行取代，不得回归。
         Assert.DoesNotContain(

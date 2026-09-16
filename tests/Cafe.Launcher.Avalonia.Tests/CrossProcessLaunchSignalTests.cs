@@ -1,4 +1,4 @@
-using Cafe.Launcher.Avalonia.Services;
+﻿using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
@@ -25,10 +25,10 @@ public sealed class CrossProcessLaunchSignalTests : IDisposable
     public void Raise_WhenFirstInstanceListens_ReturnsOnceAndAutoResets()
     {
         var name = UniqueName();
-        using var signal = CrossProcessLaunchSignal.Listen(name, TestDataRoot.ForDirectory(tempDir));
+        using var signal = CrossProcessLaunchSignal.Listen(name, tempDir.DataRoot);
         signal.EnsureBound();
 
-        CrossProcessLaunchSignal.Raise(name, TestDataRoot.ForDirectory(tempDir));
+        CrossProcessLaunchSignal.Raise(name, tempDir.DataRoot);
 
         Assert.True(signal.WaitOne(TimeSpan.FromSeconds(5)));
         Assert.False(signal.WaitOne(TimeSpan.FromMilliseconds(50)));
@@ -39,7 +39,7 @@ public sealed class CrossProcessLaunchSignalTests : IDisposable
     {
         var name = UniqueName();
 
-        CrossProcessLaunchSignal.Raise(name, TestDataRoot.ForDirectory(tempDir));
+        CrossProcessLaunchSignal.Raise(name, tempDir.DataRoot);
     }
 
     [Fact]
@@ -176,7 +176,7 @@ public sealed class CrossProcessLaunchSignalTests : IDisposable
         using var preset = new EventWaitHandle(false, EventResetMode.AutoReset, name);
         preset.Set();
 
-        using var signal = CrossProcessLaunchSignal.Listen(name, TestDataRoot.ForDirectory(tempDir));
+        using var signal = CrossProcessLaunchSignal.Listen(name, tempDir.DataRoot);
 
         Assert.True(signal.WaitOne(TimeSpan.Zero));
         // AutoReset：一次唤醒之后立即回到未触发状态。
@@ -193,7 +193,7 @@ public sealed class CrossProcessLaunchSignalTests : IDisposable
         }
 
         var name = UniqueName();
-        using var signal = CrossProcessLaunchSignal.Listen(name, TestDataRoot.ForDirectory(tempDir));
+        using var signal = CrossProcessLaunchSignal.Listen(name, tempDir.DataRoot);
         using var external = EventWaitHandle.OpenExisting(name);
 
         // 等待之前的多次 Set 合并为一次唤醒：内核命名事件是二态对象。
@@ -217,9 +217,9 @@ public sealed class CrossProcessLaunchSignalTests : IDisposable
         // Raise 在没有任何监听者时创建→Set→关闭句柄；最后一个句柄关闭后命名对象被销毁，
         // 因此之后的 Listen 拿到的是全新的未触发事件——这正是生产代码必须
         // “先建事件、后抢互斥量”的原因（转发请求可能落空的窗口）。
-        CrossProcessLaunchSignal.Raise(name, TestDataRoot.ForDirectory(tempDir));
+        CrossProcessLaunchSignal.Raise(name, tempDir.DataRoot);
 
-        using var signal = CrossProcessLaunchSignal.Listen(name, TestDataRoot.ForDirectory(tempDir));
+        using var signal = CrossProcessLaunchSignal.Listen(name, tempDir.DataRoot);
 
         Assert.False(signal.WaitOne(TimeSpan.Zero));
     }

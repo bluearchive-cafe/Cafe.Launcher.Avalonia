@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using Cafe.Launcher.Avalonia.Features.Shell;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Features.Settings;
@@ -9,6 +9,7 @@ using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Testing;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
+using Cafe.Launcher.Avalonia.Constants;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -61,7 +62,7 @@ public sealed class ServiceConfigurationTests : IDisposable
         {
             Settings = new LauncherSettings
             {
-                GamePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "YostarGames", "BlueArchive_JP")
+                GamePath = Path.Combine(tempDir, GamePaths.RootFolderName, GamePaths.GameFolderName)
             },
             RuntimeState = LauncherRuntimeState.Ready,
             Remote = new LauncherRemoteState

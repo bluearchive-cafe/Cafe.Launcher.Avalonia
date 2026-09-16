@@ -727,12 +727,10 @@ public sealed class ToastHostViewModelTests : IDisposable
 
         // 负向断言给出可观察窗口：消失的 Toast 的计数不会因指针移开而被重新计一次。
         viewModel.SetToastPointerOver(toast.Id, isPointerOver: false);
-        var observationEnd = DateTime.UtcNow.AddMilliseconds(250);
-        while (DateTime.UtcNow < observationEnd)
-        {
-            Assert.Equal(1, delays.RequestCount);
-            await Task.Delay(10);
-        }
+        await TestWait.HoldsForAsync(
+            TimeSpan.FromMilliseconds(250),
+            () => delays.RequestCount == 1,
+            "The disappeared toast's countdown was re-counted");
     }
 
     [Fact]
@@ -781,14 +779,11 @@ public sealed class ToastHostViewModelTests : IDisposable
 
         toastService.Show("after-dispose");
         // 负向断言给出可观察窗口：若仍订阅，Show 会同步登记 duration delay（RequestCount=1）
-        // 并进入 ActiveToasts，轮询中即时失败；持续 250ms 无出现即证明已退订。
-        var observationEnd = DateTime.UtcNow.AddMilliseconds(250);
-        while (DateTime.UtcNow < observationEnd)
-        {
-            Assert.Empty(viewModel.ActiveToasts);
-            Assert.Equal(0, delays.RequestCount);
-            await Task.Delay(10);
-        }
+        // 并进入 ActiveToasts，观察窗内即时失败；持续 250ms 无出现即证明已退订。
+        await TestWait.HoldsForAsync(
+            TimeSpan.FromMilliseconds(250),
+            () => viewModel.ActiveToasts.Count == 0 && delays.RequestCount == 0,
+            "A disposed toast host still registered the shown toast");
 
         Assert.Empty(viewModel.ActiveToasts);
         Assert.Equal(0, delays.RequestCount);

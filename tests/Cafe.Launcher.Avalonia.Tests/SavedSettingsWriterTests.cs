@@ -1,6 +1,7 @@
-using Cafe.Launcher.Avalonia.Models;
+﻿using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Testing;
+using Cafe.Launcher.Avalonia.Constants;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -94,7 +95,7 @@ public sealed class SavedSettingsWriterTests : IDisposable
     }
 
     private SavedSettingsTestRig CreateRig() =>
-        new(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+        new(tempDir.Sub(GamePaths.LauncherSettingsFileName));
 
     public void Dispose()
     {

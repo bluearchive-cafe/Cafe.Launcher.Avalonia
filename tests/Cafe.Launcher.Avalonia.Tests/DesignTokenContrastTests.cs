@@ -1,7 +1,8 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Xml.Linq;
 using Avalonia.Media;
 using Cafe.Launcher.Avalonia.Helpers;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -153,7 +154,7 @@ public sealed class DesignTokenContrastTests
     {
         var app = LoadTokenBrushes();
         var definedKeys = new HashSet<string>(
-            XDocument.Load(ProjectFile("App.axaml"))
+            XDocument.Load(TestRepository.FromApplicationRoot("App.axaml"))
                 .Descendants()
                 .Where(element => element.Attributes().Any(attribute => attribute.Name.LocalName == "Key"))
                 .Select(element => element.Attributes()
@@ -267,7 +268,7 @@ public sealed class DesignTokenContrastTests
 
     private static TokenBrushes LoadTokenBrushes()
     {
-        var document = XDocument.Load(ProjectFile("App.axaml"));
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("App.axaml"));
         var result = new TokenBrushes();
 
         foreach (var dictionary in document.Descendants().Where(element => element.Name.LocalName == "ResourceDictionary"))
@@ -341,18 +342,5 @@ public sealed class DesignTokenContrastTests
 
         // Dynamic brush (e.g. SystemAccentColor reference) carries no static hex value.
         return false;
-    }
-
-    private static string ProjectFile(string relativePath)
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null
-               && !File.Exists(Path.Combine(current.FullName, "Cafe.Launcher.Avalonia.slnx")))
-        {
-            current = current.Parent;
-        }
-
-        Assert.NotNull(current);
-        return Path.Combine(current!.FullName, "src", "Cafe.Launcher.Avalonia", relativePath);
     }
 }

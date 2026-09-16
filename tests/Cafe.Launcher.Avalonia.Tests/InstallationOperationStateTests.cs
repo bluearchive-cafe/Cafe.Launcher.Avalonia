@@ -16,11 +16,29 @@ public sealed class InstallationOperationStateTests : IDisposable
 {
     private readonly TestDirectory tempDir = TestDirectory.Create();
 
+    /// <summary>
+    /// 装配一次启动校验：API 客户端 ＋ 清单校验服务 ＋ 启动服务。运行时候选是这组装配里
+    /// 唯一的变量，因此由调用方传入；不传即用原生运行时。
+    /// </summary>
+    private static GameLaunchService CreateLaunchService(
+        LocalizationService localizer,
+        IGameRuntime? runtime = null)
+    {
+        var apiClient = CreateApiClient();
+        return new GameLaunchService(
+            new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
+            runtime ?? CreateGameRuntime(),
+            localizer);
+    }
+
+    private static LauncherApiClient CreateApiClient() =>
+        new(new StubRemoteHttpTransport(), new AuthorizationHeaderFactory(), new PatchUrlGroupService());
+
     private static IGameRuntime CreateGameRuntime() =>
         new GameRuntime(
             [GameRunnerDefinition.Native],
             new DefaultProcessLauncher(),
-            new GameProcessTracker());
+            TestGameProcessTracker.None());
 
     private static GameRunnerDefinition SupportedUmuDefinition() =>
         new(
@@ -36,7 +54,7 @@ public sealed class InstallationOperationStateTests : IDisposable
         new GameRuntime(
             [SupportedUmuDefinition()],
             new DefaultProcessLauncher(),
-            new GameProcessTracker(),
+            TestGameProcessTracker.None(),
             locateExecutable: (_, _) => null,
             probeVersion: (_, _, _, _) =>
                 Task.FromResult(RuntimeProbeResult.Success("9.0", 0, "", "")));
@@ -45,7 +63,7 @@ public sealed class InstallationOperationStateTests : IDisposable
         new GameRuntime(
             [SupportedUmuDefinition()],
             new FailingProcessLauncher(),
-            new GameProcessTracker(),
+            TestGameProcessTracker.None(),
             locateExecutable: (_, _) => "/usr/bin/umu-run",
             probeVersion: (_, _, _, _) =>
                 Task.FromResult(RuntimeProbeResult.Success("1.4.4", 0, "", "")));
@@ -65,7 +83,7 @@ public sealed class InstallationOperationStateTests : IDisposable
         new GameRuntime(
             [UnsupportedNativeDefinition()],
             new DefaultProcessLauncher(),
-            new GameProcessTracker(),
+            TestGameProcessTracker.None(),
             locateExecutable: (_, _) => null,
             probeVersion: (_, _, _, _) =>
                 Task.FromResult(RuntimeProbeResult.Success("9.0", 0, "", "")));
@@ -78,15 +96,8 @@ public sealed class InstallationOperationStateTests : IDisposable
     [Fact]
     public async Task StartAsync_WhenInstallationStateIsCorrupted_BlocksLaunch()
     {
-        var apiClient = new LauncherApiClient(
-            new StubRemoteHttpTransport(),
-            new AuthorizationHeaderFactory(),
-            new PatchUrlGroupService());
         var localizer = new LocalizationService();
-        var service = new GameLaunchService(
-            new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
-            CreateGameRuntime(),
-            localizer);
+        var service = CreateLaunchService(localizer);
 
         var result = await service.StartAsync(new LauncherStatusSnapshot
         {
@@ -103,15 +114,8 @@ public sealed class InstallationOperationStateTests : IDisposable
     [Fact]
     public async Task StartAsync_WhenRuntimeStateIsBelowLowestVersion_BlocksLaunch()
     {
-        var apiClient = new LauncherApiClient(
-            new StubRemoteHttpTransport(),
-            new AuthorizationHeaderFactory(),
-            new PatchUrlGroupService());
         var localizer = new LocalizationService();
-        var service = new GameLaunchService(
-            new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
-            CreateGameRuntime(),
-            localizer);
+        var service = CreateLaunchService(localizer);
 
         var result = await service.StartAsync(new LauncherStatusSnapshot
         {
@@ -125,15 +129,8 @@ public sealed class InstallationOperationStateTests : IDisposable
     [Fact]
     public async Task StartAsync_WhenRuntimeStateIsIoFailure_ReturnsLocalizedFailure()
     {
-        var apiClient = new LauncherApiClient(
-            new StubRemoteHttpTransport(),
-            new AuthorizationHeaderFactory(),
-            new PatchUrlGroupService());
         var localizer = new LocalizationService();
-        var service = new GameLaunchService(
-            new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
-            CreateGameRuntime(),
-            localizer);
+        var service = CreateLaunchService(localizer);
 
         var result = await service.StartAsync(new LauncherStatusSnapshot
         {
@@ -147,15 +144,8 @@ public sealed class InstallationOperationStateTests : IDisposable
     [Fact]
     public async Task StartAsync_WhenRuntimeStateIsRemoteUnavailable_ReturnsLocalizedFailure()
     {
-        var apiClient = new LauncherApiClient(
-            new StubRemoteHttpTransport(),
-            new AuthorizationHeaderFactory(),
-            new PatchUrlGroupService());
         var localizer = new LocalizationService();
-        var service = new GameLaunchService(
-            new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
-            CreateGameRuntime(),
-            localizer);
+        var service = CreateLaunchService(localizer);
 
         var result = await service.StartAsync(new LauncherStatusSnapshot
         {
@@ -169,15 +159,8 @@ public sealed class InstallationOperationStateTests : IDisposable
     [Fact]
     public async Task StartAsync_WhenRuntimeStateIsUpdateAvailable_ReturnsLocalizedFailure()
     {
-        var apiClient = new LauncherApiClient(
-            new StubRemoteHttpTransport(),
-            new AuthorizationHeaderFactory(),
-            new PatchUrlGroupService());
         var localizer = new LocalizationService();
-        var service = new GameLaunchService(
-            new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
-            CreateGameRuntime(),
-            localizer);
+        var service = CreateLaunchService(localizer);
 
         var result = await service.StartAsync(new LauncherStatusSnapshot
         {
@@ -191,87 +174,59 @@ public sealed class InstallationOperationStateTests : IDisposable
     [Fact]
     public async Task StartAsync_WhenExecutableNameContainsPathSeparator_BlocksLaunch()
     {
-        var tempDir = CreateTempDir();
-        try
-        {
-            var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
-            Directory.CreateDirectory(gamePath);
-            var localGame = new LocalInstallationState
-            {
-                Kind = LocalInstallationStateKind.Valid,
-                GamePath = gamePath,
-                GameConfig = new GameLauncherConfig
-                {
-                    Name = "folder\\BlueArchive",
-                    Version = "1.0.0"
-                }
-            };
-            var apiClient = new LauncherApiClient(
-                new StubRemoteHttpTransport(),
-                new AuthorizationHeaderFactory(),
-                new PatchUrlGroupService());
-            var localizer = new LocalizationService();
-            var service = new GameLaunchService(
-                new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
-                CreateGameRuntime(),
-                localizer);
+        using var tempDir = TestDirectory.Create();
+var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+Directory.CreateDirectory(gamePath);
+var localGame = new LocalInstallationState
+{
+    Kind = LocalInstallationStateKind.Valid,
+    GamePath = gamePath,
+    GameConfig = new GameLauncherConfig
+    {
+        Name = "folder\\BlueArchive",
+        Version = "1.0.0"
+    }
+};
+var localizer = new LocalizationService();
+var service = CreateLaunchService(localizer);
 
-            var result = await service.StartAsync(new LauncherStatusSnapshot
-            {
-                RuntimeState = LauncherRuntimeState.Ready,
-                LocalGame = localGame
-            });
+var result = await service.StartAsync(new LauncherStatusSnapshot
+{
+    RuntimeState = LauncherRuntimeState.Ready,
+    LocalGame = localGame
+});
 
-            Assert.False(result.Success);
-            Assert.Equal(localizer.T("gameExecutableNameInvalid"), result.Message);
-        }
-        finally
-        {
-            DeleteTempDir(tempDir);
-        }
+Assert.False(result.Success);
+Assert.Equal(localizer.T("gameExecutableNameInvalid"), result.Message);
     }
 
     [Fact]
     public async Task StartAsync_WhenExecutableIsMissing_BlocksLaunch()
     {
-        var tempDir = CreateTempDir();
-        try
-        {
-            var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
-            Directory.CreateDirectory(gamePath);
-            var localGame = new LocalInstallationState
-            {
-                Kind = LocalInstallationStateKind.Valid,
-                GamePath = gamePath,
-                GameConfig = new GameLauncherConfig
-                {
-                    Name = "BlueArchive",
-                    Version = "1.0.0"
-                }
-            };
-            var apiClient = new LauncherApiClient(
-                new StubRemoteHttpTransport(),
-                new AuthorizationHeaderFactory(),
-                new PatchUrlGroupService());
-            var localizer = new LocalizationService();
-            var service = new GameLaunchService(
-                new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
-                CreateGameRuntime(),
-                localizer);
+        using var tempDir = TestDirectory.Create();
+var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+Directory.CreateDirectory(gamePath);
+var localGame = new LocalInstallationState
+{
+    Kind = LocalInstallationStateKind.Valid,
+    GamePath = gamePath,
+    GameConfig = new GameLauncherConfig
+    {
+        Name = "BlueArchive",
+        Version = "1.0.0"
+    }
+};
+var localizer = new LocalizationService();
+var service = CreateLaunchService(localizer);
 
-            var result = await service.StartAsync(new LauncherStatusSnapshot
-            {
-                RuntimeState = LauncherRuntimeState.Ready,
-                LocalGame = localGame
-            });
+var result = await service.StartAsync(new LauncherStatusSnapshot
+{
+    RuntimeState = LauncherRuntimeState.Ready,
+    LocalGame = localGame
+});
 
-            Assert.False(result.Success);
-            Assert.Equal(localizer.F("gameExecutableMissing", Path.Combine(gamePath, "BlueArchive.exe")), result.Message);
-        }
-        finally
-        {
-            DeleteTempDir(tempDir);
-        }
+Assert.False(result.Success);
+Assert.Equal(localizer.F("gameExecutableMissing", Path.Combine(gamePath, "BlueArchive.exe")), result.Message);
     }
 
     [Fact]
@@ -280,15 +235,8 @@ public sealed class InstallationOperationStateTests : IDisposable
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
         Directory.CreateDirectory(gamePath);
         await File.WriteAllTextAsync(Path.Combine(gamePath, "BlueArchive.exe"), "");
-        var apiClient = new LauncherApiClient(
-            new StubRemoteHttpTransport(),
-            new AuthorizationHeaderFactory(),
-            new PatchUrlGroupService());
         var localizer = new LocalizationService();
-        var service = new GameLaunchService(
-            new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
-            CreateUnavailableRunnerRuntime(),
-            localizer);
+        var service = CreateLaunchService(localizer, runtime: CreateUnavailableRunnerRuntime());
 
         var result = await service.StartAsync(new LauncherStatusSnapshot
         {
@@ -318,15 +266,8 @@ public sealed class InstallationOperationStateTests : IDisposable
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
         Directory.CreateDirectory(gamePath);
         await File.WriteAllTextAsync(Path.Combine(gamePath, "BlueArchive.exe"), "");
-        var apiClient = new LauncherApiClient(
-            new StubRemoteHttpTransport(),
-            new AuthorizationHeaderFactory(),
-            new PatchUrlGroupService());
         var localizer = new LocalizationService();
-        var service = new GameLaunchService(
-            new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
-            CreateUnsupportedPlatformRuntime(),
-            localizer);
+        var service = CreateLaunchService(localizer, runtime: CreateUnsupportedPlatformRuntime());
 
         var result = await service.StartAsync(new LauncherStatusSnapshot
         {
@@ -356,15 +297,8 @@ public sealed class InstallationOperationStateTests : IDisposable
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
         Directory.CreateDirectory(gamePath);
         await File.WriteAllTextAsync(Path.Combine(gamePath, "BlueArchive.exe"), "");
-        var apiClient = new LauncherApiClient(
-            new StubRemoteHttpTransport(),
-            new AuthorizationHeaderFactory(),
-            new PatchUrlGroupService());
         var localizer = new LocalizationService();
-        var service = new GameLaunchService(
-            new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
-            CreateUnavailableRunnerRuntime(),
-            localizer);
+        var service = CreateLaunchService(localizer, runtime: CreateUnavailableRunnerRuntime());
 
         var result = await service.StartAsync(new LauncherStatusSnapshot
         {
@@ -398,15 +332,8 @@ public sealed class InstallationOperationStateTests : IDisposable
         Directory.CreateDirectory(gamePath);
         var executablePath = Path.Combine(gamePath, "BlueArchive.exe");
         await File.WriteAllTextAsync(executablePath, "");
-        var apiClient = new LauncherApiClient(
-            new StubRemoteHttpTransport(),
-            new AuthorizationHeaderFactory(),
-            new PatchUrlGroupService());
         var localizer = new LocalizationService();
-        var service = new GameLaunchService(
-            new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
-            CreateFailingRunnerRuntime(),
-            localizer);
+        var service = CreateLaunchService(localizer, runtime: CreateFailingRunnerRuntime());
 
         var result = await service.StartAsync(
             new LauncherStatusSnapshot
@@ -435,15 +362,8 @@ public sealed class InstallationOperationStateTests : IDisposable
         Directory.CreateDirectory(gamePath);
         var executablePath = Path.Combine(gamePath, "BlueArchive.exe");
         await File.WriteAllTextAsync(executablePath, "");
-        var apiClient = new LauncherApiClient(
-            new StubRemoteHttpTransport(),
-            new AuthorizationHeaderFactory(),
-            new PatchUrlGroupService());
         var localizer = new LocalizationService();
-        var service = new GameLaunchService(
-            new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
-            CreateFailingRunnerRuntime(),
-            localizer);
+        var service = CreateLaunchService(localizer, runtime: CreateFailingRunnerRuntime());
 
         var result = await service.StartAsync(
             new LauncherStatusSnapshot
@@ -491,15 +411,8 @@ public sealed class InstallationOperationStateTests : IDisposable
                 ["/c", "exit", "0"],
                 []));
         Assert.Equal(LocalInstallationStateKind.Valid, localGame.Kind);
-        var apiClient = new LauncherApiClient(
-            new StubRemoteHttpTransport(),
-            new AuthorizationHeaderFactory(),
-            new PatchUrlGroupService());
         var localizer = new LocalizationService();
-        var service = new GameLaunchService(
-            new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
-            CreateGameRuntime(),
-            localizer);
+        var service = CreateLaunchService(localizer);
         var snapshot = new LauncherStatusSnapshot
         {
             RuntimeState = LauncherRuntimeState.Ready,
@@ -530,7 +443,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             new LocalInstallationStateStore(),
             new LocalDiagnostics(),
             new LocalizationService(),
-            new GameInstallationPath(), new DownloadCheckpointStore( TestDataRoot.ForDirectory(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "checkpoint.json")) ), new GameProcessTracker(),
+            new GameInstallationPath(), new DownloadCheckpointStore( tempDir.DataRoot ), TestGameProcessTracker.None(),
             new TestGameShortcutService());
 
         var result = await service.ValidateAsync(gamePath);
@@ -547,7 +460,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             new LocalInstallationStateStore(),
             new LocalDiagnostics(),
             localizer,
-            new GameInstallationPath(), new DownloadCheckpointStore( TestDataRoot.ForDirectory(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "checkpoint.json")) ), new GameProcessTracker(),
+            new GameInstallationPath(), new DownloadCheckpointStore( tempDir.DataRoot ), TestGameProcessTracker.None(),
             new TestGameShortcutService());
         var protectedPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         Assert.False(string.IsNullOrWhiteSpace(protectedPath));
@@ -562,35 +475,28 @@ public sealed class InstallationOperationStateTests : IDisposable
     [Fact]
     public async Task ValidateAsync_WhenGameIsRunning_BlocksUninstall()
     {
-        var tempDir = CreateTempDir();
-        try
-        {
-            var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
-            Directory.CreateDirectory(gamePath);
-            var localGame = await new LocalInstallationStateStore().CommitAsync(
-                gamePath,
-                new LocalInstallationStateCommit("1.0.0", "manifest.json", "BlueArchive", [], []));
-            Assert.Equal(LocalInstallationStateKind.Valid, localGame.Kind);
-            var localizer = new LocalizationService();
-            var service = new GameUninstallService(
-                new LocalInstallationStateStore(),
-                new LocalDiagnostics(),
-                localizer,
-                new GameInstallationPath(),
-                new DownloadCheckpointStore( TestDataRoot.ForDirectory(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "checkpoint.json")) ),
-                new RunningGameProcessTracker(),
-                new TestGameShortcutService());
+        using var tempDir = TestDirectory.Create();
+var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+Directory.CreateDirectory(gamePath);
+var localGame = await new LocalInstallationStateStore().CommitAsync(
+    gamePath,
+    new LocalInstallationStateCommit("1.0.0", "manifest.json", "BlueArchive", [], []));
+Assert.Equal(LocalInstallationStateKind.Valid, localGame.Kind);
+var localizer = new LocalizationService();
+var service = new GameUninstallService(
+    new LocalInstallationStateStore(),
+    new LocalDiagnostics(),
+    localizer,
+    new GameInstallationPath(),
+    new DownloadCheckpointStore( tempDir.DataRoot ),
+    TestGameProcessTracker.Running("BlueArchive"),
+    new TestGameShortcutService());
 
-            var result = await service.ValidateAsync(gamePath);
+var result = await service.ValidateAsync(gamePath);
 
-            Assert.False(result.Success);
-            Assert.Equal(localizer.F("gameIsRunning", "BlueArchive.exe"), result.Message);
-            Assert.Equal(GameOperationErrorCode.GameRunning, result.ErrorCode);
-        }
-        finally
-        {
-            DeleteTempDir(tempDir);
-        }
+Assert.False(result.Success);
+Assert.Equal(localizer.F("gameIsRunning", "BlueArchive.exe"), result.Message);
+Assert.Equal(GameOperationErrorCode.GameRunning, result.ErrorCode);
     }
 
     [Fact]
@@ -601,7 +507,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             new LocalInstallationStateStore(),
             new LocalDiagnostics(),
             localizer,
-            new GameInstallationPath(), new DownloadCheckpointStore( TestDataRoot.ForDirectory(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "checkpoint.json")) ), new GameProcessTracker(),
+            new GameInstallationPath(), new DownloadCheckpointStore( tempDir.DataRoot ), TestGameProcessTracker.None(),
             new TestGameShortcutService());
         var driveRoot = Path.GetPathRoot(Path.GetTempPath());
         Assert.False(string.IsNullOrWhiteSpace(driveRoot));
@@ -621,7 +527,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             new LocalInstallationStateStore(),
             new LocalDiagnostics(),
             localizer,
-            new GameInstallationPath(), new DownloadCheckpointStore( TestDataRoot.ForDirectory(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "checkpoint.json")) ), new GameProcessTracker(),
+            new GameInstallationPath(), new DownloadCheckpointStore( tempDir.DataRoot ), TestGameProcessTracker.None(),
             new TestGameShortcutService());
         var missingPath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
 
@@ -635,78 +541,64 @@ public sealed class InstallationOperationStateTests : IDisposable
     [Fact]
     public async Task ValidateAsync_WhenGameDirectoryNameIsInvalid_BlocksUninstall()
     {
-        var tempDir = CreateTempDir();
-        try
-        {
-            var invalidGamePath = Path.Combine(tempDir, "YostarGames", "WrongFolder");
-            Directory.CreateDirectory(invalidGamePath);
-            var localizer = new LocalizationService();
-            var service = new GameUninstallService(
-                new LocalInstallationStateStore(),
-                new LocalDiagnostics(),
-                localizer,
-                new GameInstallationPath(), new DownloadCheckpointStore( TestDataRoot.ForDirectory(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "checkpoint.json")) ), new GameProcessTracker(),
-                new TestGameShortcutService());
+        using var tempDir = TestDirectory.Create();
+var invalidGamePath = Path.Combine(tempDir, "YostarGames", "WrongFolder");
+Directory.CreateDirectory(invalidGamePath);
+var localizer = new LocalizationService();
+var service = new GameUninstallService(
+    new LocalInstallationStateStore(),
+    new LocalDiagnostics(),
+    localizer,
+    new GameInstallationPath(), new DownloadCheckpointStore( tempDir.DataRoot ), TestGameProcessTracker.None(),
+    new TestGameShortcutService());
 
-            var result = await service.ValidateAsync(invalidGamePath);
+var result = await service.ValidateAsync(invalidGamePath);
 
-            Assert.False(result.Success);
-            Assert.Equal(localizer.F("gameDirectoryNameInvalid", "BlueArchive_JP"), result.Message);
-            Assert.Equal(GameOperationErrorCode.Uninstall, result.ErrorCode);
-        }
-        finally
-        {
-            DeleteTempDir(tempDir);
-        }
+Assert.False(result.Success);
+Assert.Equal(localizer.F("gameDirectoryNameInvalid", "BlueArchive_JP"), result.Message);
+Assert.Equal(GameOperationErrorCode.Uninstall, result.ErrorCode);
     }
 
     [Fact]
     public async Task ValidateAsync_WhenGameConfigMetadataIsIncomplete_BlocksUninstall()
     {
-        var tempDir = CreateTempDir();
-        try
-        {
-            var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
-            Directory.CreateDirectory(gamePath);
-            await File.WriteAllTextAsync(
-                Path.Combine(gamePath, "game-launcher-config.json"),
-                """
-                {
-                  "tag": "bluearchivejp",
-                  "name": "BlueArchive",
-                  "version": "",
-                  "vc": "0"
-                }
-                """);
-            await File.WriteAllTextAsync(
-                Path.Combine(gamePath, "manifest.json"),
-                """
-                {
-                  "name": "bluearchivejp",
-                  "version": "1.0.0",
-                  "basis": "manifest.json",
-                  "files": [],
-                  "vc": "0"
-                }
-                """);
-            var localizer = new LocalizationService();
-            var service = new GameUninstallService(
-                new LocalInstallationStateStore(),
-                new LocalDiagnostics(),
-                localizer,
-                new GameInstallationPath(), new DownloadCheckpointStore( TestDataRoot.ForDirectory(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "checkpoint.json")) ), new GameProcessTracker(),
-                new TestGameShortcutService());
+        using var tempDir = TestDirectory.Create();
+var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+Directory.CreateDirectory(gamePath);
+await File.WriteAllTextAsync(
+    Path.Combine(gamePath, "game-launcher-config.json"),
+    """
+    {
+      "tag": "bluearchivejp",
+      "name": "BlueArchive",
+      "version": "",
+      "vc": "0"
+    }
+    """);
+await File.WriteAllTextAsync(
+    Path.Combine(gamePath, "manifest.json"),
+    """
+    {
+      "name": "bluearchivejp",
+      "version": "1.0.0",
+      "basis": "manifest.json",
+      "files": [],
+      "vc": "0"
+    }
+    """);
+var localizer = new LocalizationService();
+var service = new GameUninstallService(
+    new LocalInstallationStateStore(),
+    new LocalDiagnostics(),
+    localizer,
+    new GameInstallationPath(), new DownloadCheckpointStore( tempDir.DataRoot ), TestGameProcessTracker.None(),
+    new TestGameShortcutService());
 
-            var result = await service.ValidateAsync(gamePath);
+var result = await service.ValidateAsync(gamePath);
 
-            Assert.False(result.Success);
-            Assert.Equal(localizer.F("gameConfigMetadataMissing", "game-launcher-config.json"), result.Message);
-            Assert.Equal(GameOperationErrorCode.Uninstall, result.ErrorCode);
-        }
-        finally
-        {
-            DeleteTempDir(tempDir);
-        }
+Assert.False(result.Success);
+Assert.Equal(localizer.F("gameConfigMetadataMissing", "game-launcher-config.json"), result.Message);
+Assert.Equal(GameOperationErrorCode.Uninstall, result.ErrorCode);
     }
 
     [Fact]
@@ -733,7 +625,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             store,
             new LocalDiagnostics(),
             new LocalizationService(),
-            new GameInstallationPath(), new DownloadCheckpointStore( TestDataRoot.ForDirectory(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "checkpoint.json")) ), new GameProcessTracker(),
+            new GameInstallationPath(), new DownloadCheckpointStore( tempDir.DataRoot ), TestGameProcessTracker.None(),
             new TestGameShortcutService());
         var snapshot = new LauncherStatusSnapshot
         {
@@ -762,14 +654,14 @@ public sealed class InstallationOperationStateTests : IDisposable
             new RemoteManifestService(apiClient),
             new FileDownloadService(new Crc64Service(), new LocalDiagnostics()),
             new LocalInstallationStateStore(),
-            new LauncherSettingsService( TestDataRoot.ForDirectory(Path.Combine(tempDir)) ),
+            new LauncherSettingsService( tempDir.DataRoot ),
             new HttpClientFactory(new ProxySettingsService()),
             RemoteHttpUrlValidator.CreateForTesting(),
             new Crc64Service(),
             new DiskSpaceService(),
             new LocalDiagnostics(),
             new LocalizationService(),
-            new GameInstallationPath(), new GameProcessTracker(), new DownloadCheckpointStore( TestDataRoot.ForDirectory(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "checkpoint.json")) ));
+            new GameInstallationPath(), TestGameProcessTracker.None(), new DownloadCheckpointStore( tempDir.DataRoot ));
 
         var result = await service.RepairAsync(
             new LauncherStatusSnapshot { RuntimeState = LauncherRuntimeState.NotInstalled },
@@ -786,7 +678,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             new LocalInstallationStateStore(),
             new LocalDiagnostics(),
             new LocalizationService(),
-            new GameInstallationPath(), new DownloadCheckpointStore( TestDataRoot.ForDirectory(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "checkpoint.json")) ), new GameProcessTracker(),
+            new GameInstallationPath(), new DownloadCheckpointStore( tempDir.DataRoot ), TestGameProcessTracker.None(),
             new TestGameShortcutService());
 
         var result = await service.UninstallAsync(
@@ -806,24 +698,6 @@ public sealed class InstallationOperationStateTests : IDisposable
         tempDir.Dispose();
     }
 
-    private static TestDirectory CreateTempDir() => TestDirectory.Create();
-
-    private static void DeleteTempDir(TestDirectory tempDir) => tempDir.Dispose();
-
-    /// <summary>Reports the game as running so the uninstall guard can be exercised.</summary>
-    private sealed class RunningGameProcessTracker : IGameProcessTracker
-    {
-        public void Register(GameProcess process) => throw new NotSupportedException();
-
-        public bool HasLiveTrackedProcess => true;
-
-        public GameLaunchExitInfo? LastExit => null;
-
-        public Task<IReadOnlyList<string>> FindRunningGameProcessesAsync(
-            IReadOnlyList<string> knownExeNames,
-            CancellationToken cancellationToken = default) =>
-            Task.FromResult<IReadOnlyList<string>>(["BlueArchive"]);
-    }
 
     private sealed class FailingProcessLauncher : IProcessLauncher
     {

@@ -1,7 +1,8 @@
-using Cafe.Launcher.Avalonia.Helpers;
+﻿using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Testing;
+using Cafe.Launcher.Avalonia.Constants;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -138,7 +139,7 @@ public partial class MainWindowViewModelTests
         var snapshot = CreateSnapshot();
         snapshot.Settings.MotionMode = motionMode;
         using var savedSettings = new SavedSettingsTestRig(
-            Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+            tempDir.Sub(GamePaths.LauncherSettingsFileName));
         await savedSettings.SeedAsync(snapshot.Settings);
         using var viewModel = await CreateViewModelAsync(
             new CountingCoreService(snapshot),
@@ -163,7 +164,7 @@ public partial class MainWindowViewModelTests
         var snapshot = CreateSnapshot();
         snapshot.Settings.MotionMode = MotionModes.Full;
         using var savedSettings = new SavedSettingsTestRig(
-            Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+            tempDir.Sub(GamePaths.LauncherSettingsFileName));
         await savedSettings.SeedAsync(snapshot.Settings);
         using var viewModel = await CreateViewModelAsync(
             new CountingCoreService(snapshot),
@@ -197,7 +198,7 @@ public partial class MainWindowViewModelTests
             MotionMode = MotionModes.System
         };
         using var savedSettings = new SavedSettingsTestRig(
-            Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+            tempDir.Sub(GamePaths.LauncherSettingsFileName));
         await savedSettings.SeedAsync(persistedSettings);
         using var viewModel = await CreateViewModelAsync(
             new ThrowingCoreService(),
@@ -229,7 +230,7 @@ public partial class MainWindowViewModelTests
         var snapshot = CreateSnapshot();
         snapshot.Settings.MotionMode = MotionModes.Reduced;
         using var savedSettings = new SavedSettingsTestRig(
-            Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+            tempDir.Sub(GamePaths.LauncherSettingsFileName));
         await savedSettings.SeedAsync(snapshot.Settings);
         var toastService = new ToastService();
         var displayDelay = new TaskCompletionSource(

@@ -1,4 +1,5 @@
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -16,7 +17,7 @@ public sealed class InstallerContractTests
             "installer/lang/CustomMessages.ja.isl",
         })
         {
-            var bytes = File.ReadAllBytes(GetProjectFilePath(relativePath));
+            var bytes = File.ReadAllBytes(TestRepository.FromRepositoryRoot(relativePath));
 
             Assert.True(
                 bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF,
@@ -574,12 +575,12 @@ public sealed class InstallerContractTests
         Assert.Contains("{FILE_VERSION}", plist, StringComparison.Ordinal);
         Assert.Contains("NSHighResolutionCapable", plist, StringComparison.Ordinal);
 
-        var icns = File.ReadAllBytes(GetProjectFilePath("installer/macos/app-icon.icns"));
+        var icns = File.ReadAllBytes(TestRepository.FromRepositoryRoot("installer/macos/app-icon.icns"));
         Assert.True(icns.Length > 8 && icns.AsSpan(0, 4).SequenceEqual("icns"u8), "app-icon.icns must be a valid icns container.");
 
         foreach (var size in new[] { 256, 512 })
         {
-            var png = File.ReadAllBytes(GetProjectFilePath($"installer/linux/app-icon-{size}.png"));
+            var png = File.ReadAllBytes(TestRepository.FromRepositoryRoot($"installer/linux/app-icon-{size}.png"));
             Assert.True(png.Length > 4 && png.AsSpan(0, 4).SequenceEqual(new byte[] { 0x89, 0x50, 0x4E, 0x47 }), $"app-icon-{size}.png must be a valid PNG.");
         }
 
@@ -694,9 +695,6 @@ public sealed class InstallerContractTests
     // Contract assertions are line-ending agnostic: the repository stores
     // installer scripts with LF, while a fresh checkout may produce CRLF.
     private static string ReadProjectFile(string relativePath) =>
-        File.ReadAllText(GetProjectFilePath(relativePath)).Replace("\r\n", "\n", StringComparison.Ordinal);
-
-    private static string GetProjectFilePath(string relativePath) =>
-        Path.Combine(TestLocalizationHelper.FindRepositoryRoot(), relativePath);
+        File.ReadAllText(TestRepository.FromRepositoryRoot(relativePath)).Replace("\r\n", "\n", StringComparison.Ordinal);
 
 }

@@ -4,6 +4,7 @@ using Cafe.Launcher.Avalonia.Features.ResourcePanel;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Testing;
+using Cafe.Launcher.Avalonia.Constants;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -13,8 +14,8 @@ public partial class MainWindowViewModelTests
     public async Task OpenResourcePanelAsync_WhenCookieUidExists_LoadsStatusAndConfig()
     {
         var cookiePath = Path.Combine(tempDir, "Library");
-        await WriteResourcePanelCookieLibraryAsync(cookiePath, "UIDTESTA");
-        var savedSettings = new SavedSettingsTestRig(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+        await BestHttpCookieLibraryFixture.WriteUidAsync(cookiePath, "UIDTESTA");
+        var savedSettings = new SavedSettingsTestRig(tempDir.Sub(GamePaths.LauncherSettingsFileName));
         var uidService = new ResourcePanelUidService(new BestHttpCookieLibraryService(), savedSettings.SettingsService, savedSettings.Writer, cookiePath);
         var transport = CreateResourcePanelTransport();
         var apiClient = new ResourcePanelApiClient(transport);
@@ -41,8 +42,8 @@ public partial class MainWindowViewModelTests
     public async Task OpenResourcePanelAsync_WhenSourceIsNotCafe_ShowsConfirmBeforeOpening()
     {
         var cookiePath = Path.Combine(tempDir, "Library");
-        await WriteResourcePanelCookieLibraryAsync(cookiePath, "UIDTESTA");
-        var savedSettings = new SavedSettingsTestRig(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+        await BestHttpCookieLibraryFixture.WriteUidAsync(cookiePath, "UIDTESTA");
+        var savedSettings = new SavedSettingsTestRig(tempDir.Sub(GamePaths.LauncherSettingsFileName));
         var uidService = new ResourcePanelUidService(new BestHttpCookieLibraryService(), savedSettings.SettingsService, savedSettings.Writer, cookiePath);
         var transport = CreateResourcePanelTransport();
         var apiClient = new ResourcePanelApiClient(transport);
@@ -65,8 +66,8 @@ public partial class MainWindowViewModelTests
     public async Task ConfirmResourcePanelSourceSwitch_WhenUidExists_SwitchesToCafeAndOpensPanel()
     {
         var cookiePath = Path.Combine(tempDir, "Library");
-        await WriteResourcePanelCookieLibraryAsync(cookiePath, "UIDTESTA");
-        var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
+        await BestHttpCookieLibraryFixture.WriteUidAsync(cookiePath, "UIDTESTA");
+        var settingsPath = tempDir.Sub(GamePaths.LauncherSettingsFileName);
         var savedSettings = new SavedSettingsTestRig(settingsPath);
         await savedSettings.SeedAsync(new LauncherSettings
         {
@@ -109,7 +110,7 @@ public partial class MainWindowViewModelTests
     public async Task ResourcePanelApplySettings_WhenSystemProxyAndCafeSource_OpensPanelWithoutSourceConfirm()
     {
         var savedSettings = new SavedSettingsTestRig(
-            Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+            tempDir.Sub(GamePaths.LauncherSettingsFileName));
         await savedSettings.SeedAsync(new LauncherSettings { ResourcePanelUid = "UIDTESTA" });
         var uidService = new ResourcePanelUidService(
             new BestHttpCookieLibraryService(),
@@ -141,7 +142,7 @@ public partial class MainWindowViewModelTests
     [Fact]
     public async Task SaveResourcePanelAsync_SendsCnForEnabledAndJpForDisabled()
     {
-        var savedSettings = new SavedSettingsTestRig(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+        var savedSettings = new SavedSettingsTestRig(tempDir.Sub(GamePaths.LauncherSettingsFileName));
         await savedSettings.SeedAsync(new LauncherSettings { ResourcePanelUid = "UIDTESTA" });
         var uidService = new ResourcePanelUidService(
             new BestHttpCookieLibraryService(),
@@ -170,7 +171,7 @@ public partial class MainWindowViewModelTests
     [Fact]
     public async Task OpenResourcePanelAsync_WhenUidMissing_ShowsManualInputAndSkipsApiCalls()
     {
-        var savedSettings = new SavedSettingsTestRig(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+        var savedSettings = new SavedSettingsTestRig(tempDir.Sub(GamePaths.LauncherSettingsFileName));
         var uidService = new ResourcePanelUidService(
             new BestHttpCookieLibraryService(),
             savedSettings.SettingsService,
@@ -195,7 +196,7 @@ public partial class MainWindowViewModelTests
     [Fact]
     public async Task SaveManualResourcePanelUidAsync_WhenUidIsBlank_ShowsValidationMessage()
     {
-        var savedSettings = new SavedSettingsTestRig(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+        var savedSettings = new SavedSettingsTestRig(tempDir.Sub(GamePaths.LauncherSettingsFileName));
         var uidService = new ResourcePanelUidService(
             new BestHttpCookieLibraryService(),
             savedSettings.SettingsService,
@@ -217,27 +218,6 @@ public partial class MainWindowViewModelTests
         Assert.Equal(0, CountRequests(transport, "/status/list"));
         Assert.Equal(0, CountRequests(transport, "/config/get"));
         Assert.Equal(0, CountRequests(transport, "/config/set"));
-    }
-
-    private static async Task WriteResourcePanelCookieLibraryAsync(string path, string uid)
-    {
-        await using var stream = File.Create(path);
-        using var writer = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true);
-        writer.Write(1);
-        writer.Write(1);
-        writer.Write(1);
-        writer.Write("uid");
-        writer.Write(uid);
-        writer.Write(DateTime.UtcNow.ToBinary());
-        writer.Write(DateTime.UtcNow.ToBinary());
-        writer.Write(DateTime.FromBinary(0).ToBinary());
-        writer.Write(2147483647L);
-        writer.Write(false);
-        writer.Write("bluearchive.cafe");
-        writer.Write("/");
-        writer.Write(false);
-        writer.Write(false);
-        writer.Flush();
     }
 
     private static Task WaitForConditionAsync(Func<bool> condition) =>

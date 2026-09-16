@@ -1,4 +1,5 @@
-using System.Xml.Linq;
+﻿using System.Xml.Linq;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -9,7 +10,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void BannerImage_UsesDistinctLoadingAndFailureStates()
     {
-        var mainWindow = File.ReadAllText(ProjectFile("Views/MainWindow.axaml"));
+        var mainWindow = File.ReadAllText(TestRepository.FromApplicationRoot("Views/MainWindow.axaml"));
 
         Assert.Contains(
             "IsVisible=\"{Binding IsImageLoading}\"",
@@ -32,10 +33,10 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void RemoteContentPanel_UsesExplicitLoadingState()
     {
-        var mainWindow = File.ReadAllText(ProjectFile("Views/MainWindow.axaml"));
-        var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
-        var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
-        var app = XDocument.Load(ProjectFile("App.axaml"));
+        var mainWindow = File.ReadAllText(TestRepository.FromApplicationRoot("Views/MainWindow.axaml"));
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.axaml"));
+        var styles = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
+        var app = XDocument.Load(TestRepository.FromApplicationRoot("App.axaml"));
 
         Assert.Contains(
             "IsVisible=\"{Binding RemoteContent.IsPanelVisible}\"",
@@ -74,7 +75,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void MainWindow_BackgroundImages_UseHighQualityInterpolation()
     {
-        var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.axaml"));
         var backgroundImages = document
             .Descendants()
             .Where(element =>
@@ -96,7 +97,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void SystemTrayMenu_DoesNotLoadItemIcons()
     {
-        var platform = File.ReadAllText(ProjectFile("Services/SystemTrayPlatform.cs"));
+        var platform = File.ReadAllText(TestRepository.FromApplicationRoot("Services/SystemTrayPlatform.cs"));
 
         Assert.DoesNotContain("LoadMenuIcon", platform, StringComparison.Ordinal);
         Assert.DoesNotContain("Icon = menuIcon", platform, StringComparison.Ordinal);
@@ -111,10 +112,10 @@ public sealed partial class UiStyleContractTests
     {
         const string resourceName = "Assets/launcher-background.png";
         var backgroundViewModel =
-            File.ReadAllText(ProjectFile("ViewModels/BackgroundViewModel.cs"));
+            File.ReadAllText(TestRepository.FromApplicationRoot("ViewModels/BackgroundViewModel.cs"));
 
-        Assert.True(File.Exists(ProjectFile(resourceName)));
+        Assert.True(File.Exists(TestRepository.FromApplicationRoot(resourceName)));
         Assert.Contains(resourceName, backgroundViewModel, StringComparison.Ordinal);
-        Assert.False(File.Exists(ProjectFile("Assets/bg-7b36e4e0.png")));
+        Assert.False(File.Exists(TestRepository.FromApplicationRoot("Assets/bg-7b36e4e0.png")));
     }
 }

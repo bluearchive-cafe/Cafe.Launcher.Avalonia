@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Constants;
@@ -49,7 +49,7 @@ public sealed class ShellLifecycleTests : IDisposable
     {
         // 预置"显示远程内容卡片",让 BeginLoading/EndLoading 的加载闸门真实开合,
         // 从而能断言失败后加载态被 finally 收干净。
-        var settingsService = new LauncherSettingsService( TestDataRoot.ForDirectory(Path.Combine(tempDir, Guid.NewGuid().ToString("N"))) );
+        var settingsService = new LauncherSettingsService( tempDir.DataRoot );
         await settingsService.SaveAsync(new LauncherSettings { ShowRemoteContentCard = true });
         var core = new ScriptedCoreService(new InvalidOperationException("load failed"));
         var fixture = CreateLifecycle(core, settingsService: settingsService);
@@ -367,7 +367,7 @@ public sealed class ShellLifecycleTests : IDisposable
         LauncherUpdateService? launcherUpdateService = null,
         StubGameOperationExecutor? operationsBackend = null)
     {
-        settingsService ??= new LauncherSettingsService( TestDataRoot.ForDirectory(Path.Combine(tempDir, Guid.NewGuid().ToString("N"))) );
+        settingsService ??= new LauncherSettingsService( tempDir.DataRoot );
         launcherUpdateService ??= new LauncherUpdateService(
             CreateNotFoundTransport(),
             currentVersionOverride: "0.0.0");
@@ -378,7 +378,7 @@ public sealed class ShellLifecycleTests : IDisposable
         var filePickerService = new StubFilePickerService();
         var imageCacheService = new ImageCacheService(
             new StubRemoteHttpTransport(),
-            new Crc64Service(), TestDataRoot.ForDirectory(Path.Combine(tempDir)) );
+            new Crc64Service(), tempDir.DataRoot );
         var settingsEditor = new SettingsEditor();
         var savedSettingsWriter = new SavedSettingsWriter(settingsService, settingsEditor);
         var settingsAppearance = new SettingsAppearanceViewModel(settingsEditor);
@@ -394,10 +394,10 @@ public sealed class ShellLifecycleTests : IDisposable
         wizards.Add(wizard);
         var dialogs = new DialogsViewModel(
             localizer,
-            new NoticeStateService( TestDataRoot.ForDirectory(Path.Combine(tempDir, Guid.NewGuid().ToString("N"))) ),
+            new NoticeStateService( tempDir.DataRoot ),
             wizard,
             new LocalDiagnostics());
-        using var settingsLogger = new UnifiedLogger(Path.Combine(tempDir, Guid.NewGuid().ToString("N")));
+        using var settingsLogger = new UnifiedLogger(tempDir.Sub("settings-log"));
         var settings = new SettingsViewModel(
             settingsService,
             savedSettingsWriter,
@@ -434,15 +434,15 @@ public sealed class ShellLifecycleTests : IDisposable
             errorHandling,
             _ => Task.CompletedTask);
         var toastHost = new ToastHostViewModel(toastService, localizer, diagnostics);
-        var debug = new DebugViewModel( TestDataRoot.ForDirectory(tempDir) ,
+        var debug = new DebugViewModel( tempDir.DataRoot ,
             toastService,
-            new UnifiedLogger(Path.Combine(tempDir, Guid.NewGuid().ToString("N"))),
+            new UnifiedLogger(tempDir.Sub("debug-log")),
             errorHandling,
             new StubFatalCrashService(),
             settingsService,
             operations,
             shell);
-        var windowChrome = new WindowChromeViewModel( TestDataRoot.ForDirectory(tempDir) ,
+        var windowChrome = new WindowChromeViewModel( tempDir.DataRoot ,
             settings,
             remoteContent,
             dialogs,

@@ -1,4 +1,4 @@
-using Cafe.Launcher.Avalonia.Features.GameOperations;
+﻿using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Features.SetupWizard;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Features.Diagnostics;
@@ -230,12 +230,12 @@ public sealed class DebugViewModelTests : IDisposable
             _ => Task.CompletedTask);
         var logger = new UnifiedLogger(Path.Combine(tempDir, "logs"));
         var fatalCrash = new StubFatalCrashService();
-        var viewModel = new DebugViewModel( TestDataRoot.ForDirectory(tempDir) ,
+        var viewModel = new DebugViewModel( tempDir.DataRoot ,
             toastService,
             logger,
             errorHandling,
             fatalCrash,
-            new LauncherSettingsService(TestDataRoot.ForDirectory(tempDir)),
+            new LauncherSettingsService(tempDir.DataRoot),
             operations,
             shell);
         return new TestContext(viewModel, operations, backend, logger, toastService, localizer, fatalCrash);

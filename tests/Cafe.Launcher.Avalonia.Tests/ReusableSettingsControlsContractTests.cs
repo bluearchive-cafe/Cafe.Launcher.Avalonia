@@ -1,4 +1,5 @@
-using System.Xml.Linq;
+﻿using System.Xml.Linq;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -17,7 +18,7 @@ public sealed class ReusableSettingsControlsContractTests
     public void SettingsSections_UseSettingSelectForSimpleOptionRows()
     {
         var documents = SettingsSections
-            .Select(file => XDocument.Load(ProjectFile($"Views/{file}")))
+            .Select(file => XDocument.Load(TestRepository.FromApplicationRoot($"Views/{file}")))
             .ToArray();
 
         Assert.All(
@@ -44,7 +45,7 @@ public sealed class ReusableSettingsControlsContractTests
     [Fact]
     public void SettingSelect_ProvidesTypedOptionTemplateAndTwoWaySelection()
     {
-        var document = XDocument.Load(ProjectFile("Controls/SettingSelect.axaml"));
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Controls/SettingSelect.axaml"));
         var comboBox = document
             .Descendants()
             .Single(element => element.Name.LocalName == "ComboBox");
@@ -62,28 +63,5 @@ public sealed class ReusableSettingsControlsContractTests
                 .Single(element => element.Name.LocalName == "DataTemplate")
                 .Attribute(XName.Get("DataType", "http://schemas.microsoft.com/winfx/2006/xaml"))
                 ?.Value);
-    }
-
-    private static string ProjectFile(string relativePath)
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null)
-        {
-            var projectFile = Path.Combine(
-                directory.FullName,
-                "src",
-                "Cafe.Launcher.Avalonia",
-                "Cafe.Launcher.Avalonia.csproj");
-            if (File.Exists(projectFile))
-            {
-                return Path.Combine(
-                    Path.GetDirectoryName(projectFile)!,
-                    relativePath.Replace('/', Path.DirectorySeparatorChar));
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new DirectoryNotFoundException("The application project was not found.");
     }
 }

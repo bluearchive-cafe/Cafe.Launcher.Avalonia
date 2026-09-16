@@ -572,8 +572,8 @@ public sealed class GameUninstallServiceTests : IDisposable
             new LocalDiagnostics(),
             localizer ?? new LocalizationService(),
             new GameInstallationPath(),
-            new DownloadCheckpointStore( TestDataRoot.ForDirectory(Path.Combine(tempDir)) ),
-            processTracker ?? new GameProcessTracker(),
+            new DownloadCheckpointStore( tempDir.DataRoot ),
+            processTracker ?? TestGameProcessTracker.None(),
             shortcutService ?? new TestGameShortcutService());
     }
 

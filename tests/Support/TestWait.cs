@@ -70,4 +70,49 @@ public static class TestWait
         return $"{subject} was not met within {timeout.TotalSeconds:0.#}s "
             + $"(waited {elapsed.TotalSeconds:0.#}s).";
     }
+
+    /// <summary>
+    /// 在 <paramref name="window"/> 这段时间内持续要求 <paramref name="condition"/> 成立，
+    /// 用于「这段时间里什么都没有发生」这类负向断言。
+    /// </summary>
+    /// <remarks>
+    /// 观察窗同样用 <see cref="Stopwatch"/> 而非墙上时钟：墙钟往前跳会让窗口提前结束，
+    /// 负向断言于是在几乎没观察的情况下通过——它证明的是「没看到」，而不是「不存在」。
+    /// </remarks>
+    public static async Task HoldsForAsync(
+        TimeSpan window,
+        Func<bool> condition,
+        string? failureMessage = null,
+        Func<ValueTask>? tickAsync = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(condition);
+        var startedAt = Stopwatch.GetTimestamp();
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var elapsed = Stopwatch.GetElapsedTime(startedAt);
+            if (!condition())
+            {
+                var subject = string.IsNullOrWhiteSpace(failureMessage) ? "Condition" : failureMessage;
+                throw new InvalidOperationException(
+                    $"{subject} was violated after {elapsed.TotalSeconds:0.#}s "
+                    + $"of a {window.TotalSeconds:0.#}s observation window.");
+            }
+
+            if (elapsed >= window)
+            {
+                return;
+            }
+
+            if (tickAsync is not null)
+            {
+                await tickAsync();
+            }
+            else
+            {
+                await Task.Delay(PollInterval, cancellationToken);
+            }
+        }
+    }
 }

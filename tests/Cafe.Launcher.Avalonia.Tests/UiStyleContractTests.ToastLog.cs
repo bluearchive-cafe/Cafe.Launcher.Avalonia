@@ -1,4 +1,5 @@
-using System.Xml.Linq;
+﻿using System.Xml.Linq;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -13,7 +14,7 @@ public sealed partial class UiStyleContractTests
     [InlineData("LauncherStrings.zh-Hant.resx")]
     public void LogSeverityNames_MatchBetweenViewerFiltersAndSettings(string resxFile)
     {
-        var values = TestLocalizationHelper.ReadResx(ProjectFile($"Resources/{resxFile}"));
+        var values = TestLocalizationHelper.ReadResx(TestRepository.FromApplicationRoot($"Resources/{resxFile}"));
         Dictionary<string, string> matchingKeys = new(StringComparer.Ordinal)
         {
             ["logFilterVerbose"] = "logLevelVerbose",
@@ -33,8 +34,8 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void LogViewer_UserFacingTextUsesLocalizationBindings()
     {
-        var logViewer = File.ReadAllText(ProjectFile("Views/MainWindowLogViewerOverlay.axaml"));
-        var settings = File.ReadAllText(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
+        var logViewer = File.ReadAllText(TestRepository.FromApplicationRoot("Views/MainWindowLogViewerOverlay.axaml"));
+        var settings = File.ReadAllText(TestRepository.FromApplicationRoot("Views/MainWindowSettingsOverlay.axaml"));
 
         foreach (var literal in new[]
                  {
@@ -55,7 +56,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void LogViewer_EmptyStateUsesExplicitViewModelStateAndContainer()
     {
-        var document = XDocument.Load(ProjectFile("Views/MainWindowLogViewerOverlay.axaml"));
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowLogViewerOverlay.axaml"));
         var emptyState = document
             .Descendants()
             .Single(element =>
@@ -71,7 +72,7 @@ public sealed partial class UiStyleContractTests
                 element.Name.LocalName == "TextBlock"
                 && element.Attribute("Text")?.Value == "{Binding Shell.I18n[logNoMatchingEntries]}");
 
-        var styles = XDocument.Load(ProjectFile("Views/Styles/Diagnostics.axaml"));
+        var styles = XDocument.Load(TestRepository.FromApplicationRoot("Views/Styles/Diagnostics.axaml"));
         var emptyStateTextStyle = styles
             .Descendants()
             .Single(element =>
@@ -90,7 +91,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void LogViewer_UsesStableHeightAndBoundedWidth()
     {
-        var document = XDocument.Load(ProjectFile("Views/MainWindowLogViewerOverlay.axaml"));
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowLogViewerOverlay.axaml"));
         var dialog = document
             .Descendants()
             .Single(element => element.Name.LocalName == "DialogSurface");
@@ -115,7 +116,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void LogViewer_UsesVirtualizedListBox()
     {
-        var document = XDocument.Load(ProjectFile("Views/MainWindowLogViewerOverlay.axaml"));
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowLogViewerOverlay.axaml"));
         var list = document
             .Descendants()
             .Single(element =>
@@ -133,7 +134,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void ToastLayer_UsesLauncherConstantsZIndex()
     {
-        var toastOverlay = File.ReadAllText(ProjectFile("Views/MainWindowToastOverlay.axaml"));
+        var toastOverlay = File.ReadAllText(TestRepository.FromApplicationRoot("Views/MainWindowToastOverlay.axaml"));
 
         Assert.Contains(
             "ZIndex=\"{x:Static constants:LauncherConstants.ZIndexToast}\"",
@@ -145,7 +146,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void ToastHost_AllowsHitTestingSoDismissButtonCanReceiveClicks()
     {
-        var document = XDocument.Load(ProjectFile("Views/Styles/Toast.axaml"));
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/Styles/Toast.axaml"));
 
         Assert.Equal(
             "True",
@@ -156,7 +157,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void LogViewer_FilterControlsShareHeightAndSingleBottomGap()
     {
-        var document = XDocument.Load(ProjectFile("Views/MainWindowLogViewerOverlay.axaml"));
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowLogViewerOverlay.axaml"));
         var filterButtons = document
             .Descendants()
             .Where(element =>
@@ -174,7 +175,7 @@ public sealed partial class UiStyleContractTests
             "{StaticResource Launcher.Control.Height.Setting}",
             search.Attribute("Height")?.Value);
 
-        var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var styles = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
         Assert.Equal(
             "{StaticResource Launcher.Control.Height.Setting}",
             GetStyleSetters(styles, "Button.filter-tab.log-filter")["Height"]);
@@ -182,7 +183,7 @@ public sealed partial class UiStyleContractTests
             "{StaticResource Launcher.Component.LogViewer.FilterBar.Margin}",
             GetStyleSetters(styles, "StackPanel.log-filter-bar")["Margin"]);
 
-        var app = XDocument.Load(ProjectFile("App.axaml"));
+        var app = XDocument.Load(TestRepository.FromApplicationRoot("App.axaml"));
         var xKey = XNamespace.Get("http://schemas.microsoft.com/winfx/2006/xaml") + "Key";
         string TokenValue(string key) => app
             .Descendants()
@@ -198,7 +199,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void LogViewer_ContentUsesSingleDialogBodyInset()
     {
-        var document = XDocument.Load(ProjectFile("Views/MainWindowLogViewerOverlay.axaml"));
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowLogViewerOverlay.axaml"));
         var loadEarlier = document
             .Descendants()
             .Single(element =>
@@ -208,7 +209,7 @@ public sealed partial class UiStyleContractTests
             "{StaticResource Launcher.Component.Dialog.Content.BottomMargin}",
             loadEarlier.Attribute("Margin")?.Value);
 
-        var styles = XDocument.Load(ProjectFile("Views/Styles/Diagnostics.axaml"));
+        var styles = XDocument.Load(TestRepository.FromApplicationRoot("Views/Styles/Diagnostics.axaml"));
         Assert.Equal(
             "{StaticResource Launcher.Spacing.Thickness.None}",
             GetStyleSetters(styles, "ListBox.log-entry-list")["Margin"]);
@@ -220,8 +221,8 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void ToastAndDebugOverlay_NewMeasurements_UseLauncherTokens()
     {
-        var debugOverlay = File.ReadAllText(ProjectFile("Views/MainWindowDebugOverlay.axaml"));
-        var toastStyles = File.ReadAllText(ProjectFile("Views/Styles/Toast.axaml"));
+        var debugOverlay = File.ReadAllText(TestRepository.FromApplicationRoot("Views/MainWindowDebugOverlay.axaml"));
+        var toastStyles = File.ReadAllText(TestRepository.FromApplicationRoot("Views/Styles/Toast.axaml"));
 
         Assert.DoesNotContain("Width=\"720\"", debugOverlay, StringComparison.Ordinal);
         Assert.DoesNotContain("Height=\"540\"", debugOverlay, StringComparison.Ordinal);
@@ -235,7 +236,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void ToastCards_DoNotUseOverlappingBoxShadows()
     {
-        var document = XDocument.Load(ProjectFile("Views/Styles/Toast.axaml"));
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/Styles/Toast.axaml"));
         var toastCardStyle = document
             .Descendants()
             .Single(element =>
@@ -252,7 +253,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void ToastActions_UseTitleAlignedGridAndPrimaryFirstLeftAlignedLayout()
     {
-        var document = XDocument.Load(ProjectFile("Views/MainWindowToastOverlay.axaml"));
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowToastOverlay.axaml"));
         var layout = document.Descendants().Single(element => HasClass(element, "toast-layout"));
         Assert.Equal("Auto,*,Auto", layout.Attribute("ColumnDefinitions")?.Value);
         Assert.Equal("Auto,Auto,Auto", layout.Attribute("RowDefinitions")?.Value);
@@ -289,7 +290,7 @@ public sealed partial class UiStyleContractTests
         Assert.Equal("{Binding PrimaryActionLabel}", actionButtons[0].Attribute("AutomationProperties.Name")?.Value);
         Assert.Equal("{Binding SecondaryActionLabel}", actionButtons[1].Attribute("AutomationProperties.Name")?.Value);
 
-        var styles = XDocument.Load(ProjectFile("Views/Styles/Toast.axaml"));
+        var styles = XDocument.Load(TestRepository.FromApplicationRoot("Views/Styles/Toast.axaml"));
         var titleStyle = styles.Descendants().Single(element =>
             element.Name.LocalName == "Style"
             && element.Attribute("Selector")?.Value == "TextBlock.toast-title");
@@ -303,7 +304,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void ToastProgress_ShowsOnlyActionExecutingIndeterminateBar()
     {
-        var document = XDocument.Load(ProjectFile("Views/MainWindowToastOverlay.axaml"));
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowToastOverlay.axaml"));
         var progressElements = document.Descendants()
             .Where(element => HasClass(element, "toast-progress")).ToArray();
         Assert.Single(progressElements);
@@ -313,7 +314,7 @@ public sealed partial class UiStyleContractTests
         Assert.Equal("{Binding IsActionExecuting}", actionExecuting.Attribute("IsVisible")?.Value);
         Assert.Equal("True", actionExecuting.Attribute("IsIndeterminate")?.Value);
 
-        var styles = XDocument.Load(ProjectFile("Views/Styles/Toast.axaml"));
+        var styles = XDocument.Load(TestRepository.FromApplicationRoot("Views/Styles/Toast.axaml"));
         var progressStyle = styles.Descendants().Single(element =>
             element.Name.LocalName == "Style"
             && element.Attribute("Selector")?.Value == "ProgressBar.toast-progress");
@@ -341,7 +342,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void DebugPanel_ProvidesLocalizedActionToastEntry()
     {
-        var document = XDocument.Load(ProjectFile("Views/MainWindowDebugOverlay.axaml"));
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowDebugOverlay.axaml"));
         var button = document.Descendants().Single(element =>
             element.Name.LocalName == "Button"
             && element.Attribute("Command")?.Value == "{Binding Debug.TestActionToastCommand}");

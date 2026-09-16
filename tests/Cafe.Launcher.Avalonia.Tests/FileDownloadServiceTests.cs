@@ -65,7 +65,7 @@ public sealed class FileDownloadServiceTests : IDisposable
         const int deliveredBytes = 4;
         using var transport = new StubDownloadTransport((_, _) => new HttpResponseMessage(HttpStatusCode.OK)
         {
-            Content = new StreamContent(new GatedReadStream(expectedBytes, deliveredBytes))
+            Content = new StreamContent(ScriptedReadStream.StallingAfter(expectedBytes, deliveredBytes))
         });
         var downloader = CreateService();
         using var cancellationSource = new CancellationTokenSource();
@@ -104,7 +104,7 @@ public sealed class FileDownloadServiceTests : IDisposable
         var expectedBytes = Encoding.UTF8.GetBytes("complete-content");
         using var transport = new StubDownloadTransport((_, _) => new HttpResponseMessage(HttpStatusCode.OK)
         {
-            Content = new StreamContent(new GatedReadStream(expectedBytes, deliveredBytes: 0))
+            Content = new StreamContent(ScriptedReadStream.StallingAfter(expectedBytes, deliveredBytes: 0))
         });
         var downloader = CreateService(TimeSpan.FromMilliseconds(200));
 
@@ -129,7 +129,7 @@ public sealed class FileDownloadServiceTests : IDisposable
         using var transport = new StubDownloadTransport((_, _) => new HttpResponseMessage(HttpStatusCode.OK)
         {
             // 声明完整 Content-Length 但只提供前 4 字节，模拟被截断的响应体。
-            Content = new StreamContent(new FixedLengthReadStream(expectedBytes, deliveredBytes: 4))
+            Content = new StreamContent(ScriptedReadStream.EndingAfter(expectedBytes, deliveredBytes: 4))
             {
                 Headers = { ContentLength = expectedBytes.Length }
             }
@@ -409,116 +409,4 @@ public sealed class FileDownloadServiceTests : IDisposable
         FileDownloadService.RetryDomainOrder
             .Select(retryType => retryType == 0 ? BackupHost : PrimaryHost)
             .ToArray();
-
-    /// <summary>
-    /// 先交付 <paramref name="deliveredBytes"/> 字节，然后无限期挂起：取消令牌触发时抛出
-    /// <see cref="OperationCanceledException"/>（模拟下载到一半被用户取消），空闲读预算
-    /// 触发时由 <c>ResponseBodyReader</c> 转成停滞异常（模拟正文零字节停滞）。
-    /// </summary>
-    private sealed class GatedReadStream(byte[] content, int deliveredBytes) : Stream
-    {
-        private int position;
-
-        public override bool CanRead => true;
-
-        public override bool CanSeek => false;
-
-        public override bool CanWrite => false;
-
-        public override long Length => content.Length;
-
-        public override long Position
-        {
-            get => position;
-            set => throw new NotSupportedException();
-        }
-
-        public override async ValueTask<int> ReadAsync(
-            Memory<byte> buffer,
-            CancellationToken cancellationToken = default)
-        {
-            if (position < deliveredBytes)
-            {
-                var bytesToCopy = Math.Min(buffer.Length, deliveredBytes - position);
-                content.AsMemory(position, bytesToCopy).CopyTo(buffer);
-                position += bytesToCopy;
-                return bytesToCopy;
-            }
-
-            // 字节预算用尽后挂起，直到取消令牌（用户取消或空闲读预算）触发。
-            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
-            return 0;
-        }
-
-        public override int Read(byte[] buffer, int offset, int count) =>
-            throw new NotSupportedException("此替身仅支持异步读取。");
-
-        public override void Flush()
-        {
-        }
-
-        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-
-        public override void SetLength(long value) => throw new NotSupportedException();
-
-        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
-    }
-
-    /// <summary>交付指定字节数后干净地到达 EOF，头部声明的总长大于实际字节。</summary>
-    private sealed class FixedLengthReadStream(byte[] content, int deliveredBytes) : Stream
-    {
-        private int position;
-
-        public override bool CanRead => true;
-
-        public override bool CanSeek => false;
-
-        public override bool CanWrite => false;
-
-        public override long Length => content.Length;
-
-        public override long Position
-        {
-            get => position;
-            set => throw new NotSupportedException();
-        }
-
-        public override ValueTask<int> ReadAsync(
-            Memory<byte> buffer,
-            CancellationToken cancellationToken = default)
-        {
-            if (position >= deliveredBytes)
-            {
-                return ValueTask.FromResult(0);
-            }
-
-            var bytesToCopy = Math.Min(buffer.Length, deliveredBytes - position);
-            content.AsMemory(position, bytesToCopy).CopyTo(buffer);
-            position += bytesToCopy;
-            return ValueTask.FromResult(bytesToCopy);
-        }
-
-        public override int Read(byte[] buffer, int offset, int count)
-        {
-            if (position >= deliveredBytes)
-            {
-                return 0;
-            }
-
-            var bytesToCopy = Math.Min(count, deliveredBytes - position);
-            Array.Copy(content, position, buffer, offset, bytesToCopy);
-            position += bytesToCopy;
-            return bytesToCopy;
-        }
-
-        public override void Flush()
-        {
-        }
-
-        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-
-        public override void SetLength(long value) => throw new NotSupportedException();
-
-        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
-    }
 }

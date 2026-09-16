@@ -1,15 +1,19 @@
-using Cafe.Launcher.Avalonia.Models;
+﻿using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Features.Settings;
 using Cafe.Launcher.Avalonia.Features.SetupWizard;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
 [Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class LocalizationTerminologyTests
 {
+    /// <summary>向导路径校验（防抖 + 后台写探测）的就绪预算。</summary>
+    private static readonly TimeSpan GateSettleBudget = TimeSpan.FromSeconds(5);
+
     static LocalizationTerminologyTests()
     {
         TestLocalizationHelper.Initialize();
@@ -145,16 +149,10 @@ public sealed class LocalizationTerminologyTests
         // Step 1 的 CanGoNext 由后台 fire-and-forget 路径校验门控：先以有界
         // 轮询等校验落定，再用步数上限推进，消除热自旋竞态（调度异常时快速
         // 失败而非挂死测试进程）。
-        var statusDeadline = DateTime.UtcNow.AddSeconds(5);
-        while (viewModel.GamePathStatus != SetupWizardGamePathStatus.AvailableForInstallation)
-        {
-            if (DateTime.UtcNow >= statusDeadline)
-            {
-                Assert.Fail("路径校验未在 5 秒预算内完成。");
-            }
-
-            await Task.Delay(10);
-        }
+        await TestWait.UntilAsync(
+            () => viewModel.GamePathStatus == SetupWizardGamePathStatus.AvailableForInstallation,
+            GateSettleBudget,
+            "路径校验未在 5 秒预算内完成。");
 
         for (var guard = 0; !viewModel.IsLastStep && guard < 100; guard++)
         {
@@ -164,8 +162,10 @@ public sealed class LocalizationTerminologyTests
             }
             else
             {
-                Assert.True(DateTime.UtcNow < statusDeadline, "向导门控未在 5 秒预算内就绪。");
-                await Task.Delay(10);
+                await TestWait.UntilAsync(
+                    () => viewModel.IsLastStep || viewModel.CanGoNext,
+                    GateSettleBudget,
+                    "向导门控未在 5 秒预算内就绪。");
             }
         }
 
