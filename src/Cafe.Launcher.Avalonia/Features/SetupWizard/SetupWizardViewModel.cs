@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,6 +10,7 @@ using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System.Linq;
 
 namespace Cafe.Launcher.Avalonia.Features.SetupWizard;
 
@@ -496,14 +497,14 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
         }
     }
 
-    private string ResolveLanguageDisplayName() => Language switch
-    {
-        LauncherLanguages.English => "English",
-        LauncherLanguages.SimplifiedChinese => "简体中文",
-        LauncherLanguages.TraditionalChinese => "繁體中文",
-        LauncherLanguages.Japanese => "日本語",
-        _ => localizer.T(LocalizationKeys.LanguageAuto)
-    };
+    /// <summary>
+    /// 语言显示名取自 <see cref="LocalizationService.GetLanguageOptions"/> 这一处词表：
+    /// 本方法原先把四个语言名各手抄一遍（含「自动」的兜底），与设置页那份是两份独立声明。
+    /// </summary>
+    private string ResolveLanguageDisplayName() =>
+        LocalizationService.GetLanguageOptions(localizer)
+            .FirstOrDefault(option => option.Code == Language)?.DisplayName
+        ?? localizer.T(LocalizationKeys.LanguageAuto);
 
     private string ResolveDownloadSourceDisplayName() => PatchUrlGroup switch
     {
