@@ -18,6 +18,14 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 
 public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJourneyHost, IGameOperationActivity, IDisposable
 {
+    /// <summary>
+    /// 暂停/恢复按钮的两个图标名。按「按钮此刻提供什么」命名而不是按状态命名：暂停态下按钮
+    /// 提供的是恢复，因此显示播放图标——按状态命名会让这个极性在读代码时看不出来。
+    /// </summary>
+    private const string PauseIcon = "Pause";
+
+    private const string ResumeIcon = "Play";
+
     private readonly GameOperationJourney journey;
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
@@ -104,7 +112,7 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
     private string pauseResumeText = "";
 
     [ObservableProperty]
-    private string pauseResumeIcon = "Pause";
+    private string pauseResumeIcon = PauseIcon;
 
     /// <summary>Raised when shell state must be refreshed after an operation (driven by the journey host).</summary>
     public event Func<GameOperationsRefreshMode, Task>? RefreshRequested;
@@ -154,7 +162,7 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
 
     public void ApplyLanguage()
     {
-        PauseResumeText = IsPaused ? localizer.T(LocalizationKeys.Resume) : localizer.T(LocalizationKeys.Pause);
+        ApplyPausePresentation();
         if (string.IsNullOrWhiteSpace(ProgressTitle))
         {
             ProgressTitle = localizer.T(LocalizationKeys.Preparing);
@@ -200,8 +208,20 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
         ProgressEstimated = "";
         IsPaused = false;
         CanPauseOperation = false;
-        PauseResumeText = localizer.T(LocalizationKeys.Pause);
-        PauseResumeIcon = "Pause";
+        ApplyPausePresentation();
+    }
+
+    /// <summary>
+    /// 暂停/恢复这一对呈现（按钮文案与图标）由 <see cref="IsPaused"/> 一处推导。
+    /// </summary>
+    /// <remarks>
+    /// 此前这个三元表达式在语言切换、准备复位、命令切换与进度回调四处各写一遍，图标名
+    /// 「Pause」「Play」也散在各处——改一次文案要在四个地方对齐。调用方只需先落 <see cref="IsPaused"/>。
+    /// </remarks>
+    private void ApplyPausePresentation()
+    {
+        PauseResumeText = IsPaused ? localizer.T(LocalizationKeys.Resume) : localizer.T(LocalizationKeys.Pause);
+        PauseResumeIcon = IsPaused ? ResumeIcon : PauseIcon;
     }
 
     void IGameOperationJourneyHost.ApplySnapshot(LauncherStatusSnapshot snapshot)
@@ -356,16 +376,14 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
         {
             journey.Resume();
             IsPaused = false;
-            PauseResumeText = localizer.T(LocalizationKeys.Pause);
-            PauseResumeIcon = "Pause";
+            ApplyPausePresentation();
             ProgressDetail = localizer.T(LocalizationKeys.Downloading);
         }
         else
         {
             journey.Pause();
             IsPaused = true;
-            PauseResumeText = localizer.T(LocalizationKeys.Resume);
-            PauseResumeIcon = "Play";
+            ApplyPausePresentation();
             ProgressDetail = localizer.T(LocalizationKeys.Paused);
             ProgressSpeed = "";
             ProgressEstimated = "";
@@ -533,8 +551,7 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
             : "";
         IsPaused = progress.IsPaused;
         CanPauseOperation = progress.CanPause;
-        PauseResumeText = progress.IsPaused ? localizer.T(LocalizationKeys.Resume) : localizer.T(LocalizationKeys.Pause);
-        PauseResumeIcon = progress.IsPaused ? "Play" : "Pause";
+        ApplyPausePresentation();
     }
 
     private (string Title, string IconKind) ResolveProgressPresentation(GameOperationKind operationKind)
