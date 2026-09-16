@@ -38,6 +38,36 @@ public sealed class GameUninstallServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task UninstallAsync_WhenAManifestFileIsReadOnly_RemovesItInsteadOfFailing()
+    {
+        // 只读属性是手工拷贝过、或被打过更新包标记的文件留下的常见形态。卸载侧此前走裸
+        // File.Delete 且不清属性，清单里只要有一个这样的文件就整次卸载以
+        // UnauthorizedAccessException 中止——而同一次删除在更新/安装那条路径上是能过的。
+        var gamePath = CreateGameDirectory();
+        var readOnlyPath = await WriteGameFileAsync(gamePath, "data/readonly.bin");
+        var afterPath = await WriteGameFileAsync(gamePath, "data/after.bin");
+        var store = await CreateCommittedStoreAsync(gamePath, "data/readonly.bin", "data/after.bin");
+        var localGame = await store.ReadAsync(gamePath);
+        Assert.Equal(LocalInstallationStateKind.Valid, localGame.Kind);
+        var shortcut = new TestGameShortcutService();
+        var service = CreateService(store, shortcutService: shortcut);
+        var snapshot = new LauncherStatusSnapshot
+        {
+            RuntimeState = LauncherRuntimeState.Ready,
+            LocalGame = localGame
+        };
+        File.SetAttributes(readOnlyPath, FileAttributes.ReadOnly);
+
+        var result = await service.UninstallAsync(snapshot, UninstallScope.ManifestFilesOnly, _ => { });
+
+        Assert.True(result.Success, result.Message);
+        // 只读的那个与它之后的文件都已删除：删除按清单一侧推进，不再中途抛出。
+        Assert.False(File.Exists(readOnlyPath));
+        Assert.False(File.Exists(afterPath));
+        Assert.Equal(1, shortcut.DeleteCallCount);
+    }
+
+    [Fact]
     public async Task UninstallAsync_WhenManifestFileIsLocked_FailsAndKeepsRemainingFiles()
     {
         Assert.SkipUnless(OperatingSystem.IsWindows(), "共享冲突导致的删除失败只能在 Windows 上用打开的文件流复现。");

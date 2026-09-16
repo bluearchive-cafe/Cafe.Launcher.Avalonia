@@ -1,4 +1,4 @@
-using Cafe.Launcher.Avalonia.Features.GameOperations;
+﻿using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
@@ -326,10 +326,9 @@ public sealed class DownloadExecutorTests : IDisposable
         File.WriteAllText(filePath, "data");
         File.SetAttributes(filePath, FileAttributes.ReadOnly);
 
-        DownloadExecutor.RemoveFiles(
+        ManifestFileRemover.DeleteAll(
             tempDir,
-            [new ManifestFile { Path = "removed.bin" }],
-            progress: null);
+            [new ManifestFile { Path = "removed.bin" }]);
 
         Assert.False(File.Exists(filePath));
     }

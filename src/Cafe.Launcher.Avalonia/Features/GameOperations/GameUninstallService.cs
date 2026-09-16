@@ -123,24 +123,20 @@ public sealed class GameUninstallService
                         GameOperationErrorCode.System);
                 }
             }
-            // AUD-PERF-007：逐文件回调经百分比门控去重后抵达 UI 线程。
+            // AUD-PERF-007：逐文件回调经百分比门控去重后抵达 UI 线程。删除语义（守卫、只读
+            // 属性清除、已不在盘上不算错误）与更新/安装那条路径共用 ManifestFileRemover——
+            // 卸载侧此前是另一份裸 File.Delete 循环，清单里有一个只读文件就整次失败。
             var progressGate = new PercentProgressGate();
-            for (var i = 0; i < files.Count; i++)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                var filePath = GamePathValidator.GetSafePath(gamePath, files[i].Path);
-                try
+            ManifestFileRemover.DeleteAll(
+                gamePath,
+                files,
+                percent =>
                 {
-                    File.Delete(filePath);
-                }
-                catch (FileNotFoundException)
-                {
-                    // Already gone — not an error
-                }
+                    if (!progressGate.ShouldDeliver(percent))
+                    {
+                        return;
+                    }
 
-                var percent = files.Count > 0 ? (int)Math.Round((i + 1) * 100d / files.Count) : 100;
-                if (progressGate.ShouldDeliver(percent))
-                {
                     progress(new GameOperationProgress
                     {
                         OperationKind = GameOperationKind.Uninstall,
@@ -148,8 +144,8 @@ public sealed class GameUninstallService
                         Progress = percent,
                         IsRunning = true
                     });
-                }
-            }
+                },
+                cancellationToken);
 
             var deletedState = await localInstallationStateStore.DeleteAsync(
                 gamePath,

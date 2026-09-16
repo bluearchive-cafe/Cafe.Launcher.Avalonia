@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -313,7 +313,7 @@ internal sealed class DownloadExecutor
                             CancellationToken.None);
 
                         failedFlags[index] = true;
-                        DeleteExistingFile(checkPath);
+                        ManifestFileRemover.DeleteFileIfPresent(checkPath);
                     }
                 }
                 else
@@ -368,7 +368,7 @@ internal sealed class DownloadExecutor
                     Directory.CreateDirectory(dir);
                 // 目标文件常因只读属性（手工拷贝、更新包标记）导致 File.Delete/Move 抛
                 // UnauthorizedAccessException，先清除属性再覆盖。
-                DeleteExistingFile(targetPath);
+                ManifestFileRemover.DeleteFileIfPresent(targetPath);
                 File.Move(tempPath, targetPath);
             }
         }
@@ -400,41 +400,6 @@ internal sealed class DownloadExecutor
             && plannedHashes.TryGetValue(file.Path, out var planned)
             && planned.Hash == file.Hash
             && planned.Matches(checkPath);
-    }
-
-    /// <summary>
-    /// Deletes files that are no longer part of the manifest.
-    /// </summary>
-    internal static void RemoveFiles(string gamePath, IReadOnlyList<ManifestFile> files, Action<int>? progress)
-    {
-        for (var i = 0; i < files.Count; i++)
-        {
-            var filePath = GamePathValidator.GetSafeFilePath(gamePath, files[i].Path);
-            DeleteExistingFile(filePath);
-
-            progress?.Invoke((int)Math.Round((i + 1) * 100d / files.Count));
-        }
-    }
-
-    /// <summary>
-    /// Deletes an existing file if present, clearing the read-only attribute first —
-    /// <see cref="File.Delete(string)"/> throws <see cref="UnauthorizedAccessException"/>
-    /// on read-only files, which previously aborted installs/updates outright.
-    /// </summary>
-    private static void DeleteExistingFile(string path)
-    {
-        var info = new FileInfo(path);
-        if (!info.Exists)
-        {
-            return;
-        }
-
-        if ((info.Attributes & FileAttributes.ReadOnly) != 0)
-        {
-            info.Attributes &= ~FileAttributes.ReadOnly;
-        }
-
-        info.Delete();
     }
 
     private sealed class DownloadFileState(
