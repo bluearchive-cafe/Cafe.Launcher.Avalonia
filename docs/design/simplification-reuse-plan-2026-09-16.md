@@ -104,11 +104,29 @@
 
 **为什么先做**：零产品风险；且其中 `A1`/`A13` 会让后续批次的测试改动更快、更可靠。本阶段全部只动 `tests/`。
 
+> **状态：已落地（2026-09-16，`fe9a012`..`0db316d`）。** 净 −814 行，生产代码零改动；`verify.ps1`
+> 退出码 0（Debug／Release 各 0 警告 0 错误、单元 1853 通过 / 2 可见跳过、无头 185 通过、覆盖率
+> 棘轮行 87.06% / 分支 93.38%）。两处偏离原议：①`A13` 要求删除的三个 `WaitUntil` 包装**保留**
+> ——实测 `ToastHostViewModelTests` 一处有 40 个调用点，删掉会让同一句失败文案重复 40 遍；
+> ②`A3` 的前提按实测更正，见该行下的注。`A9`／`A10` 的守卫做了变异验证（改坏后分别 157 条与
+> 36 条用例变红），非仅以「用例绿」收口。
+
 | 编号 | 项 | 证据锚点 | 落地改动 | 守卫 | 规模 |
 | --- | --- | --- | --- | --- | --- |
 | `A1` | 契约测试各自手写仓库根定位 | `DesignTokenContrastTests.cs:346`、`GameOperationStopOwnershipTests.cs:166`、`DialogActionButtonContractTests.cs:155`、`InstallDiskSpaceUiContractTests.cs:27`、`InstallerContractTests.cs:696,699`（该文件内 46 处调用）= 5 处；同类另 7 处（`ReleaseBannerContractTests.cs:319`、`ReleaseChangelogContractTests.cs:90`、`ReleaseScriptTests.cs:72`、`ReusableSettingsControlsContractTests.cs:67`、`SettingsWriteOwnershipTests.cs:161`、`ThirdPartyNoticesContractTests.cs:41`、`UiAccessibilityContractTests.cs:114`、`UiStyleContractTests.cs:349`） | 全删，改用 `TestRepository.InApplication(...)` / `InRepository(...)`；单测 A–M 与 N–Z 两路独立扫描均命中，**共 13 处定义 / 12 文件** | 改造后 TRX 通过集必须逐条一致；可做「重命名被扫描文件后确认消费者仍会失败」的非空转检查 | M |
 | `A2` | `InstallationOperationStateTests` 同一段 5 行装配重复 13 次 | `InstallationOperationStateTests.cs:81-89,106-114,128-136,150-158,172-180,209-217,252-260,283-291,321-329,359-367,401-409,438-446,494-502`；另 `new DownloadCheckpointStore(…Guid…)` 10 次（`:533,550,580,604,624,648,697,736,772,789`） | 文件内私有 `CreateLaunchService(IGameRuntime?)` / `CreateCheckpointStore(TestDirectory)`（用 `dir.Sub("checkpoint.json")`） | 57 个用例全部保留、`--filter` 通过集一致；约减 85 行 | M |
 | `A3` | 一次性 `%TEMP%\<Guid>` 数据根从不删除 | 22 处 / 8 文件：`InstallationOperationStateTests.cs:533,550,580,604,624,648,697,736,772,789`、`GameDownloadServiceTests.cs:1775-1776`、`GameOperationsViewModelTests.cs:1311`、`DialogsViewModelTests.cs:239,362`、`DownloadSessionTests.cs:238`、`LocalizationTerminologyTests.cs:190`、`ServiceConfigurationTests.cs:64`、`SetupWizardViewModelTests.cs:104,131,285,313,487` | 换 `TestDirectory.Create()` / 既有 `tempDir.Sub(...)`；仅用路径字符串的两处用 `BestEffort` 清理 | 全量跑一次 `test.ps1` 前后统计 `%TEMP%` 目录数，增量必须为 0（当前每轮泄漏 40+） | M |
+
+> **A3 已落地（2026-09-16），本行前提按实测更正 —— 见下。** 本行把「22 处 `%TEMP%\<Guid>` 数据根」
+> 当成 22 处泄漏，按本行给出的验证协议实测后**证伪了一半**：只有真正被写入的目录才会落地，
+> 而根目录会不会落地取决于消费方是否创建它（`NoticeStateService` 只在公告真被记录时才写；
+> `DirectoryWriteProbe.CanCreate` 只探测最近的已存在祖先，不创建目标）。每轮全量单元套件、
+> 比对 `%TEMP%` 顶层改名集合的实测值：基线 `8250756` 泄漏 **15** 个 guid32 目录／轮 → 阶段 A
+> 主体（`7856b63`，即本行那 13 处收敛）后 **14** 个／轮，**即那批收敛只去掉了 1 处真实泄漏**。
+> 真正的泄漏源是本计划**没有识别出来**的另一类：14 处 `TestDirectory.Create()` 局部变量无人
+> 释放（设施承诺「一处创建、一处删除」，漏掉后半句就是直接漏目录）。收口后实测 **0 个／轮**。
+> 结论：涉及「是否存在泄漏」的条目必须以实测为准，静态清点 `%TEMP%` 字面量会把「指向不存在
+> 目录的路径串」误计为泄漏。
 | `A4` | 已是每用例独立的 `TestDirectory` 内再套 `Guid` | `MainWindowViewModelTests.Settings.cs:73,107,131,160,195,229,263,424,443`；`MainWindowViewModelTests.ResourcePanel.cs:17,45,69,112,144,173,198`；`MainWindowViewModelTests.Motion.cs:141,166,200,232` | 换 `tempDir.Sub(Constants.GamePaths.LauncherSettingsFileName)` | 每个受影响用例都先播种再断言，碰撞会表现为红而非静默绿 | S |
 | `A5` | `TestDataRoot.ForDirectory(tempDir)` 冗余 | 22 处（`BackgroundViewModelTests.cs:483`、`DebugViewModelTests.cs:233,238`、`CrashReportTests.cs:15,84`、`LogExportServiceTests.cs:38`、`ShellLifecycleTests.cs:437,445` 等）+ 29 处 `ForDirectory(Path.Combine(tempDir))`（27 处在 `GameDownloadServiceTests.cs`） | 用 `tempDir.DataRoot`；后者整体塌成 `new LauncherSettingsService(tempDir.DataRoot)` | `TestSupportFacilityTests.DataRoot_DerivesWellKnownPathsFromTheDirectory` 已钉住等价 | S |
 | `A6` | 35 处用例体内冗余 `tempDir.Dispose()` | `GameDownloadServiceTests.cs:274,319,374,409,448,503,563,625,646,688,726,840,…,1768`（35 处，其中 4 处包在整测 `try/finally` 里） | 全删，只留类级 `Dispose`（`:33-43`）。`TestDirectory.Dispose` 已幂等，且行内 `finally` 会让清理早于同类下一用例的残留观察——与 `ReportFailure` 的设计意图相反 | 前后 `%TEMP%` 计数不变 | S |
