@@ -73,7 +73,7 @@ public sealed class ManifestValidationService
                 return new ManifestValidationResult
                 {
                     Success = true,
-                    Message = localizer.T(LocalizationKeys.LaunchCheckSkipped)
+                    Message = localizer.T(LocalizationKeys.LaunchCheckRemoteUnavailable)
                 };
             }
         }

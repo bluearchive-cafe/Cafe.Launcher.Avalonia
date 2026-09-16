@@ -1,3 +1,4 @@
+using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Features.SetupWizard;
 using Cafe.Launcher.Avalonia.Services;
@@ -15,6 +16,22 @@ public sealed class DialogsViewModelTests
     static DialogsViewModelTests()
     {
         TestLocalizationHelper.Initialize();
+    }
+
+    [Fact]
+    public void DownloadConfirmations_WhenLanguageIsApplied_PreserveDistinctConsequences()
+    {
+        var viewModel = CreateViewModel();
+        var localizer = new LocalizationService();
+        viewModel.ShowStopConfirm();
+        viewModel.ShowDownloadRunningCloseConfirm();
+
+        Assert.Equal(localizer.T(LocalizationKeys.StopDownloadMessage), viewModel.StopConfirm.Message);
+        Assert.Equal(localizer.T(LocalizationKeys.CloseDownloadMessage), viewModel.DownloadRunningCloseConfirm.Message);
+        viewModel.ApplyLanguage();
+        Assert.Equal(localizer.T(LocalizationKeys.StopDownloadMessage), viewModel.StopConfirm.Message);
+        Assert.Equal(localizer.T(LocalizationKeys.CloseDownloadMessage), viewModel.DownloadRunningCloseConfirm.Message);
+        Assert.NotEqual(viewModel.StopConfirm.Message, viewModel.DownloadRunningCloseConfirm.Message);
     }
 
     [Fact]
@@ -282,12 +299,12 @@ public sealed class DialogsViewModelTests
         viewModel.ApplyLanguage();
 
         Assert.NotEmpty(viewModel.StopConfirm.Message);
-        Assert.Equal(viewModel.StopConfirm.Message, viewModel.DownloadRunningCloseConfirm.Message);
+        Assert.NotEqual(viewModel.StopConfirm.Message, viewModel.DownloadRunningCloseConfirm.Message);
         Assert.Contains("1.2.0", viewModel.UpdateAvailableText, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void ShowStopConfirm_WhenInvoked_LocalizesSharedStopMessage()
+    public void ShowStopConfirm_WhenInvoked_LocalizesDistinctStopMessages()
     {
         var viewModel = CreateViewModel();
 
@@ -297,7 +314,7 @@ public sealed class DialogsViewModelTests
         Assert.True(viewModel.StopConfirm.IsVisible);
         Assert.True(viewModel.DownloadRunningCloseConfirm.IsVisible);
         Assert.NotEmpty(viewModel.StopConfirm.Message);
-        Assert.Equal(viewModel.StopConfirm.Message, viewModel.DownloadRunningCloseConfirm.Message);
+        Assert.NotEqual(viewModel.StopConfirm.Message, viewModel.DownloadRunningCloseConfirm.Message);
     }
 
     [Fact]

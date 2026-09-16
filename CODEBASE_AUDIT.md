@@ -26,6 +26,8 @@
 
 > **同日深夜 CI 复查（用户指令「修复问题」）**：`linux-unit-tests` 在 AUD-CI-005 结案后再度转红，且**这次不是测试侧**——`6db3cdd`（随 `6408c58` 折叠，即上一轮功能复核第 ⑤ 项）新增的 `GameProcessNamesTests.FromLaunchConfiguration_NormalizesQuotedAndPaddedParameters` 断言了 Windows 路径语义，而生产侧 `GameProcessNames.WithoutExtension` 用 `Path.GetFileName` 取文件名：Unix 上 `\` 不是路径分隔符，`"C:\dir\BlueArchive.exe"` 整条被当成文件名（得到 `C:\dir\BlueArchive`），`params` 声明的那个可执行文件（`BlueArchive`，实机上正是游戏本体进程）因此静默移出家族——判据少一半，正是 ADR-032 要避免的那件事；而 Windows 的 `Path` 语义恰好与配置形状一致，本机与 `build` 作业上结构性看不见。**立案 AUD-CI-006 并同日解决**（`8461044`）：路径切分改为把 `\` 与 `/` 一起当分隔符（`GameProcessNames` 随之不再触碰任何宿主平台 API），补 `WithoutExtension_SplitsPath_IndependentlyOfHostPlatform` 钉住同一批输入在两平台结论相同；推送后 run 34993079616 **两作业全绿**（`linux-unit-tests` 1m31s、`build` 6m15s），本窗口首次整跑全绿。开放计数不变（同日立案即结案）。另记：本窗口未发布增量经一次折叠重排（自 `v1.1.0-beta.9` 起 117 笔 → 76 笔），本报告与 `.repository-audit` 下的归档报告、`findings.json`、`audit-state.json` 里的提交号引用已随之重映射（`dc5b14b`），引用保持可解析。
 
+> **同日深夜 CI 续查（用户指令「修复问题」的后续）**：`linux-unit-tests` 转绿后，`build` 作业又在**与改动无关的提交**上红了一次（`857900f` 仅文档改动，红在 `DownloadExecutorTests` 的 400 文件去重用例：`Assert.Equal(0, delivered[0])` 实到 1），随后同一文件的 12 文件并行用例又在 Linux 作业上红（`Assert.Equal(fileCount, progressCount)` 实到 11）。两次根因都在测试侧：进度回调由并行 worker 调用（校验 ≤8、下载 ≤10 个并发传输），而用例把回调收进未加锁的 `List<T>`、或做非原子自增；`delivered[0] == 0` 还断言了单调门控并不承诺的到达顺序。**立案 AUD-TEST-008 并同日解决**（`e83334b` 收口该用例，`0060855` 一次收完同类站点：新增共享替身 `CallbackRecorder<T>`，校验与下载两阶段喂给测试的回调全部换到它上面，共 13 处；断言改为与到达顺序无关）。本机复现不出（同一用例连跑 12 次全绿），结论来自 CI 日志 + 读码。发布提交 `e1045b6` 的 `Build` 作业 success（两套件 + 覆盖率棘轮），`linux-unit-tests` 在 `0060855` 上绿。开放计数不变（同日立案即结案）。
+
 ## Audit Metadata
 
 - 日期：2026-09-14（上午 full 六域重审 + 下午修复核实轮/独立重扫 + 晚间第二修复轮）
@@ -46,7 +48,7 @@
 - High：0
 - Medium：0
 - Low：6 open（决策/设计轮门控：AUD-PERF-001、AUD-PERF-004、AUD-PERF-005 残留、AUD-SEC-001、AUD-SEC-002、AUD-ARCH-005）+ 4 accepted-risk（MAINT-002、SEC-004、SEC-006、ARCH-007）
-- 本窗口解决：14 项（8 项随上轮修复落地：ARCH-002/003、TEST-002/003/004、PERF-002/003、MAINT-002；6 项随同日修复轮：ARCH-004/006、CI-001、PERF-006、SEC-003/005）；第二修复轮再解决 6 项（TEST-005/006/007、MAINT-003/004、PERF-007）并将 SEC-006 结案为 accepted-risk；CI 对账轮新立案 3 项（AUD-CI-002/003/004）并同日全部解决；功能轮（2026-09-15）新立案 1 项（ARCH-008）并于同日跟进按建议 (a) 解决（`6408c58`）；随后按用户追问再立案 AUD-ARCH-009（下载/安装/修复闸门的三处缺口）并同日解决（`6408c58`）；CI 对账复核结案 AUD-CI-001（其建议已落地为 `build.yml` 的 push/PR linux 作业）、新立案 AUD-CI-005（该作业连续红且非 required）并于同日修复、作业首绿（`08c53f8`）；CI 复查（2026-09-15 深夜）新立案 AUD-CI-006（生产侧平台假设：`Path.GetFileName` 在 Unix 上切不开配置里 Windows 形状的 `params`，游戏可执行文件静默移出家族）并同日解决（`8461044`）
+- 本窗口解决：14 项（8 项随上轮修复落地：ARCH-002/003、TEST-002/003/004、PERF-002/003、MAINT-002；6 项随同日修复轮：ARCH-004/006、CI-001、PERF-006、SEC-003/005）；第二修复轮再解决 6 项（TEST-005/006/007、MAINT-003/004、PERF-007）并将 SEC-006 结案为 accepted-risk；CI 对账轮新立案 3 项（AUD-CI-002/003/004）并同日全部解决；功能轮（2026-09-15）新立案 1 项（ARCH-008）并于同日跟进按建议 (a) 解决（`6408c58`）；随后按用户追问再立案 AUD-ARCH-009（下载/安装/修复闸门的三处缺口）并同日解决（`6408c58`）；CI 对账复核结案 AUD-CI-001（其建议已落地为 `build.yml` 的 push/PR linux 作业）、新立案 AUD-CI-005（该作业连续红且非 required）并于同日修复、作业首绿（`08c53f8`）；CI 复查（2026-09-15 深夜）新立案 AUD-CI-006（生产侧平台假设：`Path.GetFileName` 在 Unix 上切不开配置里 Windows 形状的 `params`，游戏可执行文件静默移出家族）并同日解决（`8461044`）；CI 续查（2026-09-15 深夜）新立案 AUD-TEST-008（并行校验／下载路径上测试侧收集未加锁或非原子自增，两次 CI 偶发红）并同日解决（`e83334b` + `0060855`）
 
 **一处上轮审计证据更正（重要）**：上轮安全节声明「签名 Authorization 头绝不跟随重定向转发」——复核证实该头经 `RemoteRequestOptions.ConfigureRequest` 钩子在**每一重定向跳重发**（含跨主机），已立案为 AUD-SEC-003（Low）。这推翻了上轮对 DNS 重绑定残余风险影响边界的部分论证。
 
@@ -268,6 +270,17 @@
 - **解决**（`8461044`，2026-09-15 深夜 CI 复查）：新增私有 `FileNameOf` 与 `PathSeparators`，`WithoutExtension` 改为按最后一个分隔符（`\` 或 `/`）取文件名，不再调用 `Path.GetFileName`；`System.IO` using 随之移除，`GameProcessNames` 不再触碰任何宿主平台 API。未改判据口径：归一（`Unquoted`）、家族判定（`BelongsToFamily`）与报法（`DescribeForDisplay`）保持原样，只把「取文件名」这一步与宿主解耦。`WithoutExtension` 的 remarks 写明为何不能按宿主约定切路径（配置里的 `params` 在任何平台上都是 Windows 形状，Linux 与 macOS 下游戏跑在兼容层里也一样）。
 - **验证**：新增回归用例 `WithoutExtension_SplitsPath_IndependentlyOfHostPlatform`（`\`、`/` 与无分隔符三个输入，两平台必须给出同一个答案），Windows 侧本机单元 **1821 通过 / 0 失败 / 2 可见跳过（总 1823）**；推送 `8461044` 后 run **34993079616 两作业全绿**（`linux-unit-tests` 1m31s、`build` 6m15s）——该作业自 CI-005 结案后首次重新转绿。Linux 侧无法在本机复现（无 WSL 发行版与容器），以该作业为最终验证。
 - **残留**：作业仍非 required check（同 AUD-CI-005 残留）；Unix 上闸门的 `comm` 15 字符截断属另一条已书面化的结构性限制，不在本条范围内。
+
+### AUD-TEST-008 — 并行校验／下载路径上测试把进度回调收进未加锁的 `List` 或做非原子自增（两次 CI 偶发红）【CI 复查新立案；同日解决】
+
+- 类别：测试 / 确定性
+- 严重度：Low｜置信度：95（两次 CI 失败日志 + 源码读码 + 两平台语义核实；本机无法复现，见证据）｜状态：**resolved**（`0060855`）｜处置：Fix（已执行）
+- **证据**：两次红都落在**与改动无关**的提交上：①run 34994104568（提交 `857900f`，仅文档改动）的 `build` 作业红在 `DownloadExecutorTests.InstallDownloadedFilesAsync_WhenManyFilesSharePercentBuckets_DeduplicatesProgress`——`Assert.Equal(0, delivered[0])` 实到 1；②run 34995139532（提交 `e83334b`）的 `linux-unit-tests` 作业红在 `DownloadExecutorTests.InstallDownloadedFilesAsync_WhenManyFilesVerifyInParallel_ReassemblesFailuresInManifestOrder`——`Assert.Equal(fileCount, progressCount)` 实到 11。根因两处都在用例：回调由并行 worker 抵达（校验阶段 ≤8、下载阶段 ≤10 个并发传输），而用例把回调收进未加锁的 `List<int>`／`List<GameOperationProgress>`（`List<T>.Add` 并发下会丢条目或写重复项），或用 `_ => progressCount++` 非原子自增（丢更新）；`delivered[0] == 0` 另外断言了单调门控并不承诺的到达顺序——completed 1、2 都算 0 桶、3 就算 1，落后于更高桶的 0 会被单调判据压掉（`PercentProgressGateTests` 里 `Assert.Equal(0, ordered[0])` 是同一处过度指定）。
+- **影响**：噪声而非产品缺陷——两条用例钉的语义（百分比去重、失败按清单顺序重组）在产品侧都成立，三个平台的产品行为未见异常；但偶发红会与真回归混在一起，且 `linux-unit-tests` 仍非 required check，红只表现为「没人看」。本机复现不出（同一用例连跑 12 次全绿；CI 上 worker 数多于核数，`Math.Round` 与 `semaphore.Release` 之间被抢占的窗口更大），所以这类问题只能靠 CI 的多次运行暴露——这正是把它记进台账的理由。
+- **建议**：(a) 测试侧收集一律走线程安全收集器（新增共享替身 `CallbackRecorder<T>`：加锁收集、读走快照）；(b) 断言只取与到达顺序无关的不变量，顺序相关的期望要么改断言、要么由确定性用例在门控层钉住；(c) 不要把断言放宽成「什么都能过」——12 文件用例的投递次数恰好等于文件数（`round(k*100/12)` 两两不同），这条仍是门控语义的正向证据。
+- **解决**（`e83334b` + `0060855`）：`e83334b` 修 400 文件用例（收集加锁、断言改为每桶至多一次／值域 0..100／100 必达）并改掉 `PercentProgressGateTests` 的同一处过度指定、补 `ShouldDeliverMonotonic_WhenTheZeroBucketLagsBehind_SuppressesIt`；`0060855` 新增 `tests/TestDoubles/CallbackRecorder.cs`（需在两个测试项目的 csproj 显式 `Compile Include`——`tests/TestDoubles` 不随 SDK 通配）并把校验与下载两阶段的收集一次换完（`DownloadExecutorTests` 三处、`GameDownloadServiceTests` 十处，共 13 处）；`PercentProgressGate` 的类注释更正（原文称新门控总是投递 0，对并行路径不成立），`ShouldDeliverMonotonic` 的 remarks 补记那个 102/101 另有收集侧竞态一份。**产品口径未改**：单调门控是刻意的（落后回调回跳是真实的），阶段开头的 0 由阶段切换的显式投递负责，用例里已写明这一点。
+- **验证**：本机单元 **1822 通过 / 0 失败 / 2 可见跳过（总 1824）**、Headless **184 通过 / 0 失败**；`Build` 作业在发布提交 `e1045b6` 上 **success**（两套件 + 覆盖率棘轮），`linux-unit-tests` 在 `0060855` 上绿。
+- **残留**：未动的同类收集——`GameDownloadServiceTests` 的 `runningStates`（`IsRunningChanged` 每次操作只触发一次，不与并行 worker 并发）与其余单点触发的事件处理器收集。这类竞态本机复现不出，若 CI 再现，优先检查是否又有新站点绕开了 `CallbackRecorder`。
 
 ### AUD-ARCH-007 — 代理指纹变化可在下载批次进行中 Dispose 其底层 handler【新立案】
 

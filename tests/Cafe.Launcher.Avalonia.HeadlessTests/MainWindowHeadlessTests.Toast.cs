@@ -1,6 +1,9 @@
+using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Cafe.Launcher.Avalonia.Services;
@@ -75,7 +78,7 @@ public sealed partial class MainWindowHeadlessTests
         {
             Title = "Updated",
             Message = "You are up to date.",
-            DurationMs = 60000
+            Duration = ToastDuration.Extended
         });
         Dispatcher.UIThread.RunJobs();
 
@@ -84,5 +87,41 @@ public sealed partial class MainWindowHeadlessTests
             .ToArray();
 
         Assert.Empty(visibleProgress);
+    }
+
+    [AvaloniaFact]
+    public void Toast_WhilePointerRestsOnTheCard_SuspendsDisplayCountdown()
+    {
+        using var context = CreateContext();
+        var toastService = context.Provider.GetRequiredService<ToastService>();
+        context.Window.Show();
+        toastService.Show(new ToastOptions
+        {
+            Title = "Updated",
+            Message = "You are up to date.",
+            Duration = ToastDuration.Extended
+        });
+        Dispatcher.UIThread.RunJobs();
+
+        var card = context.Window.GetVisualDescendants().OfType<Border>()
+            .Single(control => control.Classes.Contains("toast-card"));
+        var toastId = context.ViewModel.Toasts.ActiveToasts.Single().Id;
+        var cardTopLeft = card.TranslatePoint(default, context.Window);
+        Assert.NotNull(cardTopLeft);
+        Assert.False(context.ViewModel.Toasts.IsCountdownSuspended(toastId));
+
+        context.Window.MouseMove(
+            cardTopLeft.Value + new Point(card.Bounds.Width / 2, card.Bounds.Height / 2),
+            RawInputModifiers.None);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(context.ViewModel.Toasts.IsCountdownSuspended(toastId));
+        Assert.Single(context.ViewModel.Toasts.ActiveToasts);
+
+        context.Window.MouseMove(new Point(0, 0), RawInputModifiers.None);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.False(context.ViewModel.Toasts.IsCountdownSuspended(toastId));
+        Assert.Single(context.ViewModel.Toasts.ActiveToasts);
     }
 }

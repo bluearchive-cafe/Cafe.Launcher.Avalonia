@@ -670,7 +670,7 @@ public sealed class ShellLifecycle : IShellRuntime
                 toastService.Show(
                     localizer.F(LocalizationKeys.StartupUpdateAvailable, result.LatestVersion),
                     ToastSeverity.Info,
-                    durationMs: 8000);
+                    duration: ToastDuration.Extended);
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

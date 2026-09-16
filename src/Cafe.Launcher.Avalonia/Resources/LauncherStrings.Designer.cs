@@ -114,9 +114,15 @@ internal static class LauncherStrings
 
     internal static string CloseBehaviorMinimize => GetRequiredString("closeBehaviorMinimize");
 
+    internal static string CloseDownloadMessage => GetRequiredString("closeDownloadMessage");
+
+    internal static string CloseDownloadTitle => GetRequiredString("closeDownloadTitle");
+
     internal static string ConfirmUninstall => GetRequiredString("confirmUninstall");
 
     internal static string ContactCustomerSupport => GetRequiredString("contactCustomerSupport");
+
+    internal static string ContinueDownload => GetRequiredString("continueDownload");
 
     internal static string CrashWindowBuild => GetRequiredString("crashWindowBuild");
 
@@ -528,6 +534,8 @@ internal static class LauncherStrings
 
     internal static string LaunchCheckRemoteManifest => GetRequiredString("launchCheckRemoteManifest");
 
+    internal static string LaunchCheckRemoteUnavailable => GetRequiredString("launchCheckRemoteUnavailable");
+
     internal static string LaunchCheckSkipped => GetRequiredString("launchCheckSkipped");
 
     internal static string LaunchCheckWithMessage => GetRequiredString("launchCheckWithMessage");
@@ -858,6 +866,8 @@ internal static class LauncherStrings
 
     internal static string SelectInstalledGame => GetRequiredString("selectInstalledGame");
 
+    internal static string SelectInstalledGameTooltip => GetRequiredString("selectInstalledGameTooltip");
+
     internal static string Settings => GetRequiredString("settings");
 
     internal static string SettingsCategoryAbout => GetRequiredString("settingsCategoryAbout");
@@ -1013,6 +1023,8 @@ internal static class LauncherStrings
     internal static string StatusNetworkLoaded => GetRequiredString("statusNetworkLoaded");
 
     internal static string Stop => GetRequiredString("stop");
+
+    internal static string StopAndExit => GetRequiredString("stopAndExit");
 
     internal static string StopDownloadMessage => GetRequiredString("stopDownloadMessage");
 

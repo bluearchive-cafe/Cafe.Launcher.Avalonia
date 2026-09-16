@@ -192,7 +192,7 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel
 
         if (DownloadRunningCloseConfirm.IsVisible)
         {
-            DownloadRunningCloseConfirm.Message = localizer.T(LocalizationKeys.StopDownloadMessage);
+            DownloadRunningCloseConfirm.Message = localizer.T(LocalizationKeys.CloseDownloadMessage);
         }
 
         if (IsUpdateAvailableVisible)
@@ -210,7 +210,7 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel
     /// <summary>Presents the close-while-downloading confirmation with the localized stop message.</summary>
     public void ShowDownloadRunningCloseConfirm()
     {
-        DownloadRunningCloseConfirm.Show(localizer.T(LocalizationKeys.StopDownloadMessage));
+        DownloadRunningCloseConfirm.Show(localizer.T(LocalizationKeys.CloseDownloadMessage));
     }
 
     public void ShowUpdateAvailable(string version, IReadOnlyList<ReleaseFile> files)

@@ -38,7 +38,7 @@ public sealed class ToastHostViewModelTests : IDisposable
                 return Task.CompletedTask;
             });
 
-        toastService.Show(CreateActionOptions(durationMs: 0));
+        toastService.Show(CreateActionOptions());
         await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 1);
 
         Assert.Equal(0, delayCalls);
@@ -60,7 +60,7 @@ public sealed class ToastHostViewModelTests : IDisposable
         toastService.Show(new ToastOptions
         {
             Message = "saved",
-            DurationMs = 100
+            Duration = ToastDuration.Brief
         });
         await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 1);
         await delays.ReleaseNextAsync();
@@ -106,7 +106,7 @@ public sealed class ToastHostViewModelTests : IDisposable
             InvokeSerially,
             delays.WaitAsync);
 
-        toastService.Show(new ToastOptions { Message = "saved", DurationMs = 100 });
+        toastService.Show(new ToastOptions { Message = "saved", Duration = ToastDuration.Brief });
         await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 1);
         var toast = viewModel.ActiveToasts.Single();
 
@@ -135,7 +135,7 @@ public sealed class ToastHostViewModelTests : IDisposable
         {
             calls++;
             return await release.Task;
-        }, durationMs: 0));
+        }));
         await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 1);
         var toast = viewModel.ActiveToasts[0];
 
@@ -161,7 +161,7 @@ public sealed class ToastHostViewModelTests : IDisposable
             InvokeSerially,
             static (_, _) => Task.CompletedTask);
         toastService.Show(CreateActionOptions(_ => Task.FromResult(
-            ToastActionResult.Failure("Still offline", "Retry failed")), durationMs: 0));
+            ToastActionResult.Failure("Still offline", "Retry failed"))));
         await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 1);
         var toast = viewModel.ActiveToasts[0];
 
@@ -187,7 +187,7 @@ public sealed class ToastHostViewModelTests : IDisposable
             InvokeSerially,
             static (_, _) => Task.CompletedTask);
         toastService.Show(CreateActionOptions(
-            secondary: _ => throw new InvalidOperationException("secret detail"), durationMs: 0));
+            secondary: _ => throw new InvalidOperationException("secret detail")));
         await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 1);
         var toast = viewModel.ActiveToasts[0];
 
@@ -394,7 +394,7 @@ public sealed class ToastHostViewModelTests : IDisposable
                 return exitDelay.Task.WaitAsync(cancellationToken);
             });
         viewModel.ApplyMotionPreference(reduceMotion: false);
-        toastService.Show("overlap", durationMs: 1234);
+        toastService.Show("overlap", ToastSeverity.Info, ToastDuration.Brief);
         await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 1);
         var toast = viewModel.ActiveToasts[0];
         var removeCount = 0;
@@ -628,6 +628,142 @@ public sealed class ToastHostViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task ToastPointerOver_WhileDisplayCountdownIsPending_SuspendsItUntilThePointerLeaves()
+    {
+        await using var provider = CreateProvider();
+        var toastService = provider.GetRequiredService<ToastService>();
+        var delays = new ControlledDelay();
+        using var viewModel = new ToastHostViewModel(
+            toastService,
+            provider.GetRequiredService<LocalizationService>(),
+            new LocalDiagnostics(),
+            InvokeSerially,
+            delays.WaitAsync);
+
+        toastService.Show(new ToastOptions { Message = "saved", Duration = ToastDuration.Brief });
+        await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 1);
+        var toast = viewModel.ActiveToasts.Single();
+
+        viewModel.SetToastPointerOver(toast.Id, isPointerOver: true);
+        await WaitUntilAsync(() => delays.CancellationCount == 1);
+
+        Assert.True(viewModel.IsCountdownSuspended(toast.Id));
+        Assert.Equal(1, delays.RequestCount);
+        Assert.Contains(toast, viewModel.ActiveToasts);
+
+        viewModel.SetToastPointerOver(toast.Id, isPointerOver: false);
+        await WaitUntilAsync(() => delays.RequestCount == 2);
+
+        Assert.False(viewModel.IsCountdownSuspended(toast.Id));
+        Assert.Equal(ToastDurations.Resolve(ToastDuration.Brief), delays.RequestedDurations[1]);
+        Assert.Contains(toast, viewModel.ActiveToasts);
+
+        delays.ReleaseAll();
+        await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 0);
+    }
+
+    [Fact]
+    public async Task ToastPointerOver_AfterEachPointerLeave_RestartsTheFullDisplayDuration()
+    {
+        await using var provider = CreateProvider();
+        var toastService = provider.GetRequiredService<ToastService>();
+        var delays = new ControlledDelay();
+        using var viewModel = new ToastHostViewModel(
+            toastService,
+            provider.GetRequiredService<LocalizationService>(),
+            new LocalDiagnostics(),
+            InvokeSerially,
+            delays.WaitAsync);
+
+        toastService.Show(new ToastOptions { Message = "saved", Duration = ToastDuration.Brief });
+        await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 1);
+        var toast = viewModel.ActiveToasts.Single();
+
+        for (var visit = 0; visit < 2; visit++)
+        {
+            viewModel.SetToastPointerOver(toast.Id, isPointerOver: true);
+            await WaitUntilAsync(() => delays.CancellationCount == visit + 1);
+            viewModel.SetToastPointerOver(toast.Id, isPointerOver: false);
+            await WaitUntilAsync(() => delays.RequestCount == visit + 2);
+        }
+
+        Assert.Equal(
+            new[]
+            {
+                ToastDurations.Resolve(ToastDuration.Brief),
+                ToastDurations.Resolve(ToastDuration.Brief),
+                ToastDurations.Resolve(ToastDuration.Brief)
+            },
+            delays.RequestedDurations);
+
+        delays.ReleaseAll();
+        await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 0);
+    }
+
+    [Fact]
+    public async Task DismissToast_WhilePointerRestsOnIt_EndsTheSuspendedCountdown()
+    {
+        await using var provider = CreateProvider();
+        var toastService = provider.GetRequiredService<ToastService>();
+        var delays = new ControlledDelay();
+        using var viewModel = new ToastHostViewModel(
+            toastService,
+            provider.GetRequiredService<LocalizationService>(),
+            new LocalDiagnostics(),
+            InvokeSerially,
+            delays.WaitAsync);
+
+        toastService.Show(new ToastOptions { Message = "saved", Duration = ToastDuration.Brief });
+        await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 1);
+        var toast = viewModel.ActiveToasts.Single();
+        viewModel.SetToastPointerOver(toast.Id, isPointerOver: true);
+        await WaitUntilAsync(() => delays.CancellationCount == 1);
+
+        await viewModel.DismissToastCommand.ExecuteAsync(toast.Id);
+
+        Assert.Empty(viewModel.ActiveToasts);
+        Assert.False(viewModel.IsCountdownSuspended(toast.Id));
+
+        // 负向断言给出可观察窗口：消失的 Toast 的计数不会因指针移开而被重新计一次。
+        viewModel.SetToastPointerOver(toast.Id, isPointerOver: false);
+        var observationEnd = DateTime.UtcNow.AddMilliseconds(250);
+        while (DateTime.UtcNow < observationEnd)
+        {
+            Assert.Equal(1, delays.RequestCount);
+            await Task.Delay(10);
+        }
+    }
+
+    [Fact]
+    public async Task ToastPointerOver_OnToastWithoutDisplayCountdown_IsIgnored()
+    {
+        await using var provider = CreateProvider();
+        var toastService = provider.GetRequiredService<ToastService>();
+        var delayCalls = 0;
+        using var viewModel = new ToastHostViewModel(
+            toastService,
+            provider.GetRequiredService<LocalizationService>(),
+            new LocalDiagnostics(),
+            InvokeSerially,
+            (_, _) =>
+            {
+                delayCalls++;
+                return Task.CompletedTask;
+            });
+
+        toastService.Show(CreateActionOptions());
+        await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 1);
+        var toast = viewModel.ActiveToasts.Single();
+
+        viewModel.SetToastPointerOver(toast.Id, isPointerOver: true);
+        viewModel.SetToastPointerOver("missing-toast", isPointerOver: true);
+
+        Assert.False(viewModel.IsCountdownSuspended(toast.Id));
+        Assert.Equal(0, delayCalls);
+        Assert.Contains(toast, viewModel.ActiveToasts);
+    }
+
+    [Fact]
     public async Task Dispose_UnsubscribesFromToastService()
     {
         await using var provider = CreateProvider();
@@ -669,12 +805,12 @@ public sealed class ToastHostViewModelTests : IDisposable
     private static ToastOptions CreateActionOptions(
         Func<CancellationToken, Task<ToastActionResult>>? primary = null,
         Func<CancellationToken, Task<ToastActionResult>>? secondary = null,
-        int durationMs = 4000) =>
+        ToastDuration duration = ToastDuration.Brief) =>
         new()
         {
             Title = "Action",
             Message = "Choose",
-            DurationMs = durationMs,
+            Duration = duration,
             PrimaryAction = new ToastAction(
                 "Primary",
                 primary ?? (_ => Task.FromResult(ToastActionResult.Success()))),
@@ -710,19 +846,36 @@ public sealed class ToastHostViewModelTests : IDisposable
     private sealed class ControlledDelay
     {
         private readonly ConcurrentQueue<TaskCompletionSource> requests = new();
+        private readonly ConcurrentQueue<TimeSpan> requestedDurations = new();
         private readonly SemaphoreSlim requestAvailable = new(0);
         private int requestCount;
+        private int cancellationCount;
 
         public int RequestCount => Volatile.Read(ref requestCount);
 
-        public Task WaitAsync(TimeSpan _, CancellationToken cancellationToken)
+        /// <summary>Gets the durations requested so far, in request order.</summary>
+        public IReadOnlyList<TimeSpan> RequestedDurations => requestedDurations.ToArray();
+
+        /// <summary>Gets how many requests were cancelled while still pending.</summary>
+        public int CancellationCount => Volatile.Read(ref cancellationCount);
+
+        public async Task WaitAsync(TimeSpan duration, CancellationToken cancellationToken)
         {
+            requestedDurations.Enqueue(duration);
             var request = new TaskCompletionSource(
                 TaskCreationOptions.RunContinuationsAsynchronously);
             requests.Enqueue(request);
             Interlocked.Increment(ref requestCount);
             requestAvailable.Release();
-            return request.Task.WaitAsync(cancellationToken);
+            try
+            {
+                await request.Task.WaitAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                Interlocked.Increment(ref cancellationCount);
+                throw;
+            }
         }
 
         public async Task ReleaseNextAsync()
@@ -734,6 +887,15 @@ public sealed class ToastHostViewModelTests : IDisposable
             }
 
             request.TrySetResult();
+        }
+
+        /// <summary>Completes every request recorded so far, including ones already cancelled.</summary>
+        public void ReleaseAll()
+        {
+            while (requests.TryDequeue(out var request))
+            {
+                request.TrySetResult();
+            }
         }
     }
 

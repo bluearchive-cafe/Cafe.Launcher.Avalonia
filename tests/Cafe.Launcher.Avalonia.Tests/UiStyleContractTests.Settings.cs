@@ -24,6 +24,7 @@ public sealed partial class UiStyleContractTests
             [
                 "Settings.Editor.Current.GamePath",
                 "Settings.Editor.Current.LaunchCheckMode",
+                "Operations.OpenGameFolderCommand",
                 "Operations.RequestRepairCommand",
                 "Operations.RequestUninstallCommand"
             ],

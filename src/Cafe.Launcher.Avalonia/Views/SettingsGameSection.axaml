@@ -14,14 +14,23 @@
                                  Title="{Binding Shell.I18n[gamePath]}"
                                  Description="{Binding Settings.Editor.Current.GamePath}">
                 <controls:SettingRow.Action>
-                    <Button Classes="flat-action" Command="{Binding Settings.ChooseGamePathCommand}"
-                            AutomationProperties.Name="{Binding Shell.I18n[choose]}"
-                            IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
-                        <StackPanel Classes="button-content">
-                            <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                            <TextBlock Text="{Binding Shell.I18n[choose]}"/>
-                        </StackPanel>
-                    </Button>
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
+                        <Button Classes="flat-action" Command="{Binding Settings.ChooseGamePathCommand}"
+                                AutomationProperties.Name="{Binding Shell.I18n[choose]}"
+                                IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                <TextBlock Text="{Binding Shell.I18n[choose]}"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="flat-action" Command="{Binding Operations.OpenGameFolderCommand}"
+                                AutomationProperties.Name="{Binding Shell.I18n[gameOpenFolder]}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                <TextBlock Text="{Binding Shell.I18n[gameOpenFolder]}"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
                 </controls:SettingRow.Action>
             </controls:SettingRow>
 

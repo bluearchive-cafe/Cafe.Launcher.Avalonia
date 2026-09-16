@@ -24,6 +24,7 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
     private readonly CancellationTokenSource lifetimeCts = new();
     private readonly Dictionary<string, TaskCompletionSource> exitCompletions = [];
     private readonly Dictionary<string, CancellationTokenSource> actionTokens = [];
+    private readonly Dictionary<string, ToastCountdown> countdowns = [];
     private bool reduceMotion = true;
     private bool disposed;
 
@@ -68,6 +69,33 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
     public void ApplyMotionPreference(bool reduceMotion)
     {
         this.reduceMotion = reduceMotion;
+    }
+
+    /// <summary>Gets whether the display countdown of <paramref name="toastId"/> is suspended.</summary>
+    internal bool IsCountdownSuspended(string toastId) =>
+        countdowns.TryGetValue(toastId, out var countdown) && countdown.Suspended;
+
+    /// <summary>
+    /// Suspends or resumes the display countdown of one toast as the pointer enters or leaves its
+    /// card. A suspended toast never expires, and a resumed one restarts with its full duration —
+    /// the same restart-on-resume semantics the banner carousel uses.
+    /// </summary>
+    /// <remarks>Call on the UI thread, from the pointer handlers of the toast card.</remarks>
+    internal void SetToastPointerOver(string toastId, bool isPointerOver)
+    {
+        if (disposed || !countdowns.TryGetValue(toastId, out var countdown))
+        {
+            return;
+        }
+
+        countdown.Suspended = isPointerOver;
+        if (isPointerOver)
+        {
+            countdown.Interruption?.Cancel();
+            return;
+        }
+
+        ResumeCountdown(countdown);
     }
 
     [RelayCommand(AllowConcurrentExecutions = true)]
@@ -120,13 +148,21 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
                 return;
             }
 
-            await invokeOnUiAsync(() => ActiveToasts.Insert(0, notification));
+            await invokeOnUiAsync(() =>
+            {
+                if (!notification.HasActions)
+                {
+                    countdowns[notification.Id] = new ToastCountdown();
+                }
+
+                ActiveToasts.Insert(0, notification);
+            });
             if (notification.HasActions)
             {
                 return;
             }
 
-            await delayAsync(TimeSpan.FromMilliseconds(notification.DurationMs), cancellationToken);
+            await RunDisplayCountdownAsync(notification, cancellationToken);
             await ExitToastAsync(notification.Id, cancellationToken);
         }
         catch (OperationCanceledException exception) when (
@@ -147,6 +183,101 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
                 $"ToastHost: toast notification lifecycle failed: {ex.Message}",
                 CancellationToken.None);
         }
+    }
+
+    /// <summary>
+    /// Runs the display countdown of one toast until its duration elapses. The countdown is
+    /// suspended while the pointer rests on the toast card: the wait in flight is interrupted and
+    /// the loop, on its next pass, either waits for the pointer to leave or ends because the toast
+    /// left the stack.
+    /// </summary>
+    private async Task RunDisplayCountdownAsync(ToastNotification toast, CancellationToken cancellationToken)
+    {
+        var duration = ToastDurations.Resolve(toast.Duration);
+        while (true)
+        {
+            var interruption = await WaitForDisplayAttemptAsync(toast, cancellationToken);
+            if (interruption is null)
+            {
+                return;
+            }
+
+            using var attempt = CancellationTokenSource.CreateLinkedTokenSource(
+                cancellationToken,
+                interruption.Token);
+            try
+            {
+                await delayAsync(duration, attempt.Token);
+                return;
+            }
+            catch (OperationCanceledException) when (
+                interruption.IsCancellationRequested
+                && !cancellationToken.IsCancellationRequested)
+            {
+                // Suspended by the pointer, or stopped along with the toast — re-evaluate.
+            }
+        }
+    }
+
+    /// <summary>
+    /// Returns the interruption source for the next display attempt once the countdown may run,
+    /// or <see langword="null"/> when it must end because the toast left the stack. A suspended
+    /// countdown waits here until the pointer leaves the card.
+    /// </summary>
+    private async Task<CancellationTokenSource?> WaitForDisplayAttemptAsync(
+        ToastNotification toast,
+        CancellationToken cancellationToken)
+    {
+        while (true)
+        {
+            CancellationTokenSource? interruption = null;
+            TaskCompletionSource? resumed = null;
+            await invokeOnUiAsync(() =>
+            {
+                if (!countdowns.TryGetValue(toast.Id, out var countdown))
+                {
+                    return;
+                }
+
+                if (countdown.Suspended)
+                {
+                    resumed = countdown.Resumed ??= new TaskCompletionSource(
+                        TaskCreationOptions.RunContinuationsAsynchronously);
+                    return;
+                }
+
+                interruption = countdown.Interruption = new CancellationTokenSource();
+            });
+
+            if (interruption is not null)
+            {
+                return interruption;
+            }
+
+            if (resumed is null)
+            {
+                return null;
+            }
+
+            await resumed.Task.WaitAsync(cancellationToken);
+        }
+    }
+
+    /// <summary>Ends the countdown of a toast that left the stack, releasing a suspended wait.</summary>
+    private void StopCountdown(string toastId)
+    {
+        if (countdowns.Remove(toastId, out var countdown))
+        {
+            countdown.Interruption?.Cancel();
+            ResumeCountdown(countdown);
+        }
+    }
+
+    private static void ResumeCountdown(ToastCountdown countdown)
+    {
+        var resumed = countdown.Resumed;
+        countdown.Resumed = null;
+        resumed?.TrySetResult();
     }
 
     private async Task ExecuteToastActionAsync(
@@ -280,6 +411,7 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
                 if (reduceMotion)
                 {
                     ActiveToasts.Remove(toast);
+                    StopCountdown(toastId);
                     return;
                 }
 
@@ -340,6 +472,7 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
         {
             ActiveToasts.Remove(toast);
             exitCompletions.Remove(toastId);
+            StopCountdown(toastId);
         });
 
     public void Dispose()
@@ -353,5 +486,22 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
         toastService.ToastRaised -= OnToastRaised;
         lifetimeCts.Cancel();
         lifetimeCts.Dispose();
+    }
+
+    /// <summary>
+    /// Tracks the display countdown of one toast. Only the UI thread touches these members:
+    /// the countdown task reads and writes them through <see cref="invokeOnUiAsync"/>, and the
+    /// pointer handlers of the toast card call in from the UI thread.
+    /// </summary>
+    private sealed class ToastCountdown
+    {
+        /// <summary>Gets or sets whether the pointer currently rests on the toast card.</summary>
+        public bool Suspended { get; set; }
+
+        /// <summary>Gets or sets the wait that completes once a suspended countdown may continue.</summary>
+        public TaskCompletionSource? Resumed { get; set; }
+
+        /// <summary>Gets or sets the source that cancels the display wait currently in flight.</summary>
+        public CancellationTokenSource? Interruption { get; set; }
     }
 }

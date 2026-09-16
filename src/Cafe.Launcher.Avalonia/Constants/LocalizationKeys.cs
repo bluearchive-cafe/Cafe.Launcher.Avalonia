@@ -58,8 +58,11 @@ public static class LocalizationKeys
     public const string CloseBehaviorDescription = "closeBehaviorDescription";
     public const string CloseBehaviorExit = "closeBehaviorExit";
     public const string CloseBehaviorMinimize = "closeBehaviorMinimize";
+    public const string CloseDownloadMessage = "closeDownloadMessage";
+    public const string CloseDownloadTitle = "closeDownloadTitle";
     public const string ConfirmUninstall = "confirmUninstall";
     public const string ContactCustomerSupport = "contactCustomerSupport";
+    public const string ContinueDownload = "continueDownload";
     public const string CrashWindowBuild = "crashWindowBuild";
     public const string CrashWindowCaption = "crashWindowCaption";
     public const string CrashWindowCopied = "crashWindowCopied";
@@ -265,6 +268,7 @@ public static class LocalizationKeys
     public const string LaunchCheckLocalManifest = "launchCheckLocalManifest";
     public const string LaunchCheckNone = "launchCheckNone";
     public const string LaunchCheckRemoteManifest = "launchCheckRemoteManifest";
+    public const string LaunchCheckRemoteUnavailable = "launchCheckRemoteUnavailable";
     public const string LaunchCheckSkipped = "launchCheckSkipped";
     public const string LaunchCheckWithMessage = "launchCheckWithMessage";
     public const string LaunchDamageRepairPrompt = "launchDamageRepairPrompt";
@@ -430,6 +434,7 @@ public static class LocalizationKeys
     public const string Retry = "retry";
     public const string Save = "save";
     public const string SelectInstalledGame = "selectInstalledGame";
+    public const string SelectInstalledGameTooltip = "selectInstalledGameTooltip";
     public const string Settings = "settings";
     public const string SettingsCategoryAbout = "settingsCategoryAbout";
     public const string SettingsCategoryAboutDescription = "settingsCategoryAboutDescription";
@@ -508,6 +513,7 @@ public static class LocalizationKeys
     public const string StatusLaunchCheckRemote = "statusLaunchCheckRemote";
     public const string StatusNetworkLoaded = "statusNetworkLoaded";
     public const string Stop = "stop";
+    public const string StopAndExit = "stopAndExit";
     public const string StopDownloadMessage = "stopDownloadMessage";
     public const string StopDownloadTitle = "stopDownloadTitle";
     public const string StopRequested = "stopRequested";

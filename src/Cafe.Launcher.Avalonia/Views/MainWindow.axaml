@@ -359,7 +359,7 @@
                                     </Button>
                                     <Button Grid.Column="3" Classes="icon-link secondary-operation" Command="{Binding Settings.SelectInstalledGameCommand}" VerticalAlignment="Center"
                                             IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}"
-                                            ToolTip.Tip="{Binding Shell.I18n[selectInstalledGame]}"
+                                            ToolTip.Tip="{Binding Shell.I18n[selectInstalledGameTooltip]}"
                                             AutomationProperties.Name="{Binding Shell.I18n[selectInstalledGame]}">
                                         <StackPanel Classes="button-content">
                                             <materialIcons:MaterialIcon Kind="FolderSearchOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>

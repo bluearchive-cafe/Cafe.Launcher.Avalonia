@@ -197,11 +197,11 @@
 
         <!-- Download running close confirmation dialog -->
         <controls:ConfirmDialog IsOpen="{Binding Dialogs.DownloadRunningCloseConfirm.IsVisible}"
-                                Title="{Binding Shell.I18n[stopDownloadTitle]}"
+                                Title="{Binding Shell.I18n[closeDownloadTitle]}"
                                 Message="{Binding Dialogs.DownloadRunningCloseConfirm.Message}"
-                                CancelText="{Binding Shell.I18n[cancel]}"
+                                CancelText="{Binding Shell.I18n[continueDownload]}"
                                 CancelCommand="{Binding Dialogs.DownloadRunningCloseConfirm.CancelCommand}"
-                                ConfirmText="{Binding Shell.I18n[stop]}"
+                                ConfirmText="{Binding Shell.I18n[stopAndExit]}"
                                 ConfirmCommand="{Binding Dialogs.DownloadRunningCloseConfirm.ConfirmCommand}"
                                 IsDangerConfirm="True"/>
 

@@ -50,7 +50,13 @@ public sealed class ToastOptions
     public string? Title { get; init; }
     public required string Message { get; init; }
     public ToastSeverity Severity { get; init; } = ToastSeverity.Info;
-    public int DurationMs { get; init; } = 4000;
+
+    /// <summary>
+    /// Gets the tier that decides how long the toast stays on screen before it disappears.
+    /// Leave it <see langword="null"/> for the severity's tier from <see cref="ToastDurations"/>.
+    /// </summary>
+    public ToastDuration? Duration { get; init; }
+
     public ToastAction? PrimaryAction { get; init; }
     public ToastAction? SecondaryAction { get; init; }
 }
@@ -80,7 +86,9 @@ public sealed partial class ToastNotification : ObservableObject
     private string severityLabel = "";
 
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
-    public int DurationMs { get; set; } = 4000;
+
+    /// <summary>Gets the tier that decides how long the toast stays on screen.</summary>
+    public ToastDuration Duration { get; set; } = ToastDuration.Brief;
     public DateTimeOffset CreatedAt { get; set; }
     public ToastAction? PrimaryAction { get; init; }
     public ToastAction? SecondaryAction { get; init; }
