@@ -590,6 +590,27 @@
       "guard": "测试侧收集一律走 CallbackRecorder<T>（加锁收集、读走快照）＋ DownloadExecutorTests 的断言只取与到达顺序无关的不变量（每桶至多一次、值域 0..100、100 必达）＋ PercentProgressGateTests.ShouldDeliverMonotonic_WhenTheZeroBucketLagsBehind_SuppressesIt 钉住「0 桶落后即被压掉」这条语义；端到端守卫是 Build 作业（run 34997306346 在 e1045b6 上 success：两套件 + 覆盖率棘轮全绿）。",
       "delta_note": "发现于 2026-09-15 深夜 CI 复查（用户指令「修复问题」）。两次红都出现在与改动无关的提交上，说明是测试侧竞态：①run 34994104568（提交 857900f，仅文档改动）的 build 作业红在 DownloadExecutorTests.InstallDownloadedFilesAsync_WhenManyFilesSharePercentBuckets_DeduplicatesProgress，Assert.Equal(0, delivered[0]) 实到 1；②run 34995139532（提交 e83334b）的 linux-unit-tests 作业红在 DownloadExecutorTests.InstallDownloadedFilesAsync_WhenManyFilesVerifyInParallel_ReassemblesFailuresInManifestOrder，Assert.Equal(fileCount, progressCount) 实到 11。根因两处都在用例：进度回调由并行 worker 调用（校验阶段 ≤8、下载阶段 ≤10 个并发传输），而用例把回调收进未加锁的 List<int>／List<GameOperationProgress>（List<T>.Add 在并发下会丢条目或写重复项），或用 `_ => progressCount++` 非原子自增（丢更新）；此外 delivered[0] == 0 断言了单调门控并不承诺的到达顺序——completed 1、2 都算 0 桶、3 就算 1，落后于更高桶的 0 会被单调判据压掉。本机无法复现（同一用例连跑 12 次全绿，CI 上 worker 多于核数、抢占窗口更大），故结论来自 CI 日志 + 读码 + 两平台语义，不依赖本地重现。",
       "resolution_note": "修复（e83334b 收口 400 文件用例的收集与断言，0060855 把同类站点一次收完、并结案）：新增测试替身 tests/TestDoubles/CallbackRecorder.cs（加锁收集、读走快照，实现 IReadOnlyList<T>，需在两个测试项目的 csproj 显式 Compile Include——该目录不随 SDK 通配），把校验阶段与下载阶段喂给测试的进度回调全部换到它上面（DownloadExecutorTests 三处、GameDownloadServiceTests 十处）；断言改为与到达顺序无关（每桶至多一次、值域 0..100、100 必达、Contains 型），PercentProgressGateTests 里同一处过度指定（Assert.Equal(0, ordered[0])）一并改掉并补确定性用例；PercentProgressGate 的类注释更正（原文称新门控总是投递 0，对并行路径不成立）、ShouldDeliverMonotonic 的 remarks 补记那个 102/101 另有收集侧竞态一份。产品口径未改（单调门控是刻意的：落后回调回跳是真实的；阶段开头的 0 由阶段切换的显式投递负责，用例里已写明）。未动的同类站点：GameDownloadServiceTests 的 runningStates（IsRunningChanged 每次操作只触发一次，不与并行 worker 并发）与其余事件处理器收集。验证：本机单元 1822 通过 / 0 失败 / 2 可见跳过（总 1824）、Headless 184 通过 / 0 失败；Build 作业在 e1045b6 上 success、linux-unit-tests 在 0060855 上绿。残留：这类竞态本机复现不出，只能靠 CI 的多次运行继续观察——若再出现，优先看是否又有新站点绕开了 CallbackRecorder。"
+    },
+    "AUD-TEST-009": {
+      "title": "测试设施三处各自重写：临时目录（64 文件 115 处 Path.GetTempPath，清理与退避各写一遍）、异步等待（3 套实现，其中一套用墙钟计时）、主窗口装配（两个 UnifiedLogger 在装配方法返回时即被局部 using 释放，而 SettingsViewModel/LogViewerDialogViewModel 长期持有它们；无头上下文共用程序集级进程根）",
+      "category": "testing/maintainability",
+      "severity": "low",
+      "confidence": 95,
+      "status": "resolved",
+      "disposition": "Fix",
+      "recommendation_validation": "Verified",
+      "first_seen_commit": "03605f9",
+      "last_verified_commit": "03605f9",
+      "resolved_commit": "aeaa96d + 1c42f79 + 969df88",
+      "guard": "TestSupportFacilityTests（14 例：目录独立/派生数据根/Dispose 幂等与真删除/ReportFailure 抛出与 BestEffort 不抛/TestWait 立即返回·轮询·超时消息·取消·推进动作/TestRepository 路径缓存与每次重装资源快照）＋ MainWindowTestContextTests（3 例：装配返回后日志仍可写、Dispose 后日志文件可删、两上下文互不可见对方 settings.json）＋ ServiceConfigurationTests 增 2 例（显式数据根贯穿登记项与闭包：设置/崩溃快照/日志/图片缓存/下载检查点/公告状态；缺省仍解析进程根）＋ RemoteHttpTransportTests 回环代理用例（系统代理租约真的拨号代理并读回应答）",
+      "delta_note": "2026-09-16 测试设施轮（用户指令「测试设施复用与可靠性改进」）。重构分三项交付：共享设施（tests/Support/{TestDirectory,TestRepository,TestWait}.cs，两工程 Compile-Link）、上下文所有权（MainWindowTestContext + AddLauncherServices(launcherDataRoot:) + 无头每上下文独立数据根）、反馈效率（资源面板代理用例拆为呈现层与传输层两条 + test.ps1 -Suite/-Filter）。同配置 Debug 实测：单元 1831 条 31.8s → 1853 条 23.9s 测试用时，最慢用例 10.26s（ResourcePanelApplySettings_UsesCafeSourceAndSystemProxyWhenOpeningPanel，靠监听器接受即断开、等真实传输退避走完）→ 2.07s（既有用例）；无头 185 条 56.4s → 57.1s 同量级；两套件 0 失败、可见跳过 2 条不变、golden 基线未更新且全绿；受影响异步用例单元 19 条 ×10、无头 13 条 ×10 全绿；verify.ps1 全绿（覆盖率行 87.17% / 分支 93.62%，余量 +1.32pp / +0.92pp）。后续性能机会（本轮不做）：两套件仍串行、Windows CI 普通测试与覆盖率双跑、-Filter 不进 CI；新增两条清理失败守卫各约 1.5s（有意走完有界退避）。",
+      "evidence": [
+        "tests/Support/TestDirectory.cs、tests/Support/TestRepository.cs、tests/Support/TestWait.cs（新增，两工程 csproj Compile-Link）",
+        "tests/Cafe.Launcher.Avalonia.Tests/MainWindowTestContext.cs（主窗口装配与所有权）",
+        "src/Cafe.Launcher.Avalonia/Composition/ServiceConfiguration.cs:18-36（AddLauncherServices 可选 launcherDataRoot，闭包与登记项共用同一实例）",
+        "tests/Cafe.Launcher.Avalonia.HeadlessTests/HeadlessTestHost.cs（CreateServiceProvider(TestDirectory) 显式数据根；WaitUntilAsync 委托 TestWait 并先泵一次 UI 线程）",
+        "test.ps1（-Suite/-Filter；-UpdateGolden 保持原行为并拒绝混用）"
+      ]
     }
   }
 }

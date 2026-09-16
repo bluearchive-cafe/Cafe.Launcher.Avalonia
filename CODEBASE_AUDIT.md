@@ -28,6 +28,8 @@
 
 > **同日深夜 CI 续查（用户指令「修复问题」的后续）**：`linux-unit-tests` 转绿后，`build` 作业又在**与改动无关的提交**上红了一次（`857900f` 仅文档改动，红在 `DownloadExecutorTests` 的 400 文件去重用例：`Assert.Equal(0, delivered[0])` 实到 1），随后同一文件的 12 文件并行用例又在 Linux 作业上红（`Assert.Equal(fileCount, progressCount)` 实到 11）。两次根因都在测试侧：进度回调由并行 worker 调用（校验 ≤8、下载 ≤10 个并发传输），而用例把回调收进未加锁的 `List<T>`、或做非原子自增；`delivered[0] == 0` 还断言了单调门控并不承诺的到达顺序。**立案 AUD-TEST-008 并同日解决**（`e83334b` 收口该用例，`0060855` 一次收完同类站点：新增共享替身 `CallbackRecorder<T>`，校验与下载两阶段喂给测试的回调全部换到它上面，共 13 处；断言改为与到达顺序无关）。本机复现不出（同一用例连跑 12 次全绿），结论来自 CI 日志 + 读码。发布提交 `e1045b6` 的 `Build` 作业 success（两套件 + 覆盖率棘轮），`linux-unit-tests` 在 `0060855` 上绿。开放计数不变（同日立案即结案）。
 
+> **测试设施轮（2026-09-16，用户指令「测试设施复用与可靠性改进」）**：以测试体系为对象做了一轮「先维护成本与隔离、再执行速度」的重构，分三项交付：①**共享设施收敛**——新增 `tests/Support/{TestDirectory,TestRepository,TestWait}.cs`（两工程 Compile-Link 共用），43 个测试文件的临时目录惯例、5 处各自的异步等待实现、仓库/资源定位与 `.resx` 解析全部换到它们上面；②**上下文所有权明确**——主窗口装配迁入 `MainWindowTestContext`（先前装配方法里的局部 `using` 日志在返回时即被释放，而 `SettingsViewModel`/`LogViewerDialogViewModel` 长期持有它们），`AddLauncherServices` 增可选 `launcherDataRoot`，无头上下文改为每用例一个独立数据根；③**反馈效率**——资源面板代理用例拆为呈现层与传输层回环两条（原单条 10.26s 靠「接受连接即断开、等真实传输退避走完」结束），`test.ps1` 增 `-Suite`/`-Filter`。同配置实测（Debug）：单元 1831 → 1853 条、测试用时 31.8s → 23.9s（最慢用例 10.26s → 2.07s），无头 185 条同量级；两套件 0 失败、可见跳过数不变、golden 基线未更新且全绿；受影响异步用例 19 条单元 + 13 条无头各重复 10 次全绿；`verify.ps1` 全绿（覆盖率行 87.17% / 分支 93.62%，余量 +1.32pp / +0.92pp）。立案 AUD-TEST-009 并同日结案（见 Low 节）；串行执行、Windows CI 双跑、`-Filter` 不进 CI 记为**后续性能机会**，本轮明确不碰。
+
 ## Audit Metadata
 
 - 日期：2026-09-14（上午 full 六域重审 + 下午修复核实轮/独立重扫 + 晚间第二修复轮）
@@ -282,6 +284,29 @@
 - **验证**：本机单元 **1822 通过 / 0 失败 / 2 可见跳过（总 1824）**、Headless **184 通过 / 0 失败**；`Build` 作业在发布提交 `e1045b6` 上 **success**（两套件 + 覆盖率棘轮），`linux-unit-tests` 在 `0060855` 上绿。
 - **残留**：未动的同类收集——`GameDownloadServiceTests` 的 `runningStates`（`IsRunningChanged` 每次操作只触发一次，不与并行 worker 并发）与其余单点触发的事件处理器收集。这类竞态本机复现不出，若 CI 再现，优先检查是否又有新站点绕开了 `CallbackRecorder`。
 
+### AUD-TEST-009 — 测试设施三处各自重写：临时目录、异步等待、主窗口装配（含两个日志句柄在装配返回时已被释放、无头上下文共用程序集级数据根）【2026-09-16 新立案；同日解决】
+
+- 类别：测试 / 维护成本·隔离性·反馈速度
+- 置信度：高（全树统计 + 改造前后同配置 TRX 逐条对照）
+- **证据**：
+  - 64 个测试源文件、115 处 `Path.GetTempPath()` 各自拼唯一目录；清理按类重写（5 处手写 3–5 轮退避），失败有的抛 `IOException`、有的空 `catch` 吞掉。
+  - 异步等待三套并行实现：`HeadlessTestHost.WaitUntilAsync`（`DateTime.UtcNow` 墙钟）、`ToastHostViewModelTests`/`ResourcePanelViewModelTests`/`RemoteContentViewModelTests`/`BackgroundViewModelHeadlessTests` 各持一份私有轮询。墙钟计时在宿主时钟跳变时会提前超时。
+  - `MainWindowViewModelTests.CreateViewModelAsync` 以局部 `using var settingsLogger/testLogger` 持有两个 `UnifiedLogger`，方法返回即释放；而 `SettingsViewModel` 与 `LogViewerDialogViewModel`（连同它构造的 `LogExportService`）在用例整个活期内继续持有并写入——写入静默落进已释放的管道，且没有任何断言能看见。
+  - `HeadlessTestHost.CreateServiceProvider` 只换日志目录，其余持久化仍走程序集级进程根（`TestUserDataIsolation` 的共享目录）：同程序集的两个上下文互相看得见对方的 `settings.json`、下载检查点、公告状态与崩溃快照。
+  - 既有 TRX 中 `ResourcePanelApplySettings_UsesCafeSourceAndSystemProxyWhenOpeningPanel` 单条 **10.26s**：监听器接受连接后立刻断开，用例再等真实传输的 3 次尝试退避（两条请求，800ms+1600ms 各一轮）走完。
+- **影响**：维护成本（改一处惯例要动 60+ 文件）、隔离性（跨用例状态串味 ＋ 句柄提前释放这类不会被断言发现的缺陷）、反馈速度（单条 10s 的用例占单元套件测试用时约三分之一）。
+- **处置（Fix，已执行）**：
+  - `tests/Support/TestDirectory.cs` — 短路径独立目录 ＋ 派生 `LauncherDataRoot` ＋ 释放即删除（5 轮递增退避，约 1s）；删除失败默认抛 `IOException`（普通测试可见），`TestDirectoryCleanup.BestEffort` 留下目录并写诊断（无头拆卸）。隐式转换为自身路径，使既有「把临时目录当路径用」的调用点不必逐个改写。
+  - `tests/Support/TestRepository.cs` — 仓库/应用目录与 `.resx` 解析结果的唯一缓存点；`InitializeLocalizationResources()` 每次调用都重装（避免先装自定义资源的用例污染其后用例）；`TestLocalizationHelper` 退化为转发面。
+  - `tests/Support/TestWait.cs` — 唯一的有截止时间轮询（`Stopwatch` 单调计时、取消、可注入推进动作、带上下文的 `TimeoutException`）；无头侧 `HeadlessTestHost.WaitUntilAsync` 在同一实现上补「先泵一次 UI 线程」与 UI 调度推进。
+  - `MainWindowTestContext` — 主窗口对象图装配集中于此并书面化所有权（只释放自建对象；日志器活到用例结束且在 ViewModel 之后释放）；`MainWindowViewModelTests` 退化为创建 ＋ 登记的薄包装。外部夹具（工厂、图片缓存）仍由用例创建与释放。
+  - `ServiceConfiguration.AddLauncherServices(launcherDataRoot:)` — 显式数据根一次性覆盖登记项与闭包捕获的构造参数（日志、崩溃快照、设置、下载检查点、公告状态）；缺省仍按进程解析，生产行为不变。
+  - 无头：`HeadlessTestHost.CreateServiceProvider(TestDirectory)` 每上下文一个数据根；三个自建 provider 的用例（`NeutralStrategyHeadlessTests`、`ThemeSubscriptionTeardownHeadlessTests`、`SavedSettingsWriterThreadingTests`）同步。
+  - 资源面板代理用例拆分：呈现层一条（桩传输，断言以系统代理打开面板不需二次确认、各端点各请求一次）＋ 传输层一条（回环明文代理应答绝对形式请求并读回 JSON，`WaitAsync` 整体超时）。
+  - `test.ps1` 增 `-Suite All|Unit|Headless` 与 `-Filter`；`-UpdateGolden` 保持原行为并拒绝与二者混用。
+- **实测（同配置 Debug，改造前 → 改造后）**：单元 1831 → 1853 条（新增 22 条守卫），测试用时 31.8s → 23.9s，最慢用例 10.26s → 2.07s（既有用例 `DownloadAsync_WhenBodyStallsAfterHeaders_…`，非本轮引入）；无头 185 → 185 条，56.4s → 57.1s（同量级）；两套件均 0 失败，可见跳过 2 条不变（平台门控），golden 基线未更新且 12 项全绿；受影响异步用例（单元 19 条 ×10、无头 13 条 ×10）全部稳定通过。
+- **后续性能机会（本轮明确不做）**：两套件仍是程序集级串行（依赖静态状态，拆分是独立议题）；Windows CI 仍普通测试与覆盖率双跑；`-Filter` 不进 CI。新增的两条清理失败守卫各约 1.5s（有意走完有界退避），若后续要给单元套件再挤时间，先看这两条与串行策略。
+
 ### AUD-ARCH-007 — 代理指纹变化可在下载批次进行中 Dispose 其底层 handler【新立案】
 
 - 类别：架构 / 生命周期所有权
@@ -411,7 +436,7 @@
 
 ## Testing
 
-**结论：纪律持续兑现。上轮 4 项测试发现全部真实解决；修复轮的守卫测试逐项核实到位（SEC-003 两用例、PERF-006 两用例断言与 `DownloadSession.cs:439` 的显式归零兼容、`IsSameAuthority` 双向钉住）。复审新立案的 3 项测试缺口（TEST-005/006/007）已随第二修复轮全部补齐并配套元契约/哨兵守卫；收口实测单元 1717 通过 / 0 失败 / 2 可见跳过 + Headless 178 通过 / 0 失败。功能轮（2026-09-15）复测：单元 1819 通过 / 0 失败 / 1 可见跳过（总 1820）+ Headless 184 通过 / 0 失败；同日跟进修复后为单元 1820 / 1 跳过（总 1821）· Headless 184；新增守卫集中在破坏性删除路径与进程家族判据（见 Automated Guards Added 11-16），并修掉一处随环境变色的用例——`GameDownloadServiceTests` 原先用真实进程扫描，开发机上开着游戏就会让提交路径用例集体撞上「游戏在跑」闸门。**
+**结论：纪律持续兑现。上轮 4 项测试发现全部真实解决；修复轮的守卫测试逐项核实到位（SEC-003 两用例、PERF-006 两用例断言与 `DownloadSession.cs:439` 的显式归零兼容、`IsSameAuthority` 双向钉住）。复审新立案的 3 项测试缺口（TEST-005/006/007）已随第二修复轮全部补齐并配套元契约/哨兵守卫；收口实测单元 1717 通过 / 0 失败 / 2 可见跳过 + Headless 178 通过 / 0 失败。功能轮（2026-09-15）复测：单元 1819 通过 / 0 失败 / 1 可见跳过（总 1820）+ Headless 184 通过 / 0 失败；同日跟进修复后为单元 1820 / 1 跳过（总 1821）· Headless 184；新增守卫集中在破坏性删除路径与进程家族判据（见 Automated Guards Added 11-16），并修掉一处随环境变色的用例——`GameDownloadServiceTests` 原先用真实进程扫描，开发机上开着游戏就会让提交路径用例集体撞上「游戏在跑」闸门。** 测试设施轮（2026-09-16）复测：单元 1853 通过 / 0 失败 / 2 可见跳过（总 1855）· Headless 185 通过 / 0 失败，`verify.ps1` 全绿（覆盖率行 87.17% / 分支 93.62%）；临时目录、异步等待与主窗口装配改由 `tests/Support/` 与 `MainWindowTestContext` 统一提供（AUD-TEST-009），两个测试工程从此共用同一份设施源码。**
 
 - **关键路径保护**（复核保持 + 一处降级）：下载续传/CRC/限速、安装状态损坏矩阵、设置兼容（legacy 字段 + DeepClone 棘轮）、卸载边界、URL 校验、更新流三分支 + 确认接线（AUD-TEST-002 解决）均钉住；**例外**：并行安装校验的并发语义无多文件用例（AUD-TEST-005，Medium）。
 - **确定性**：正面等待全部有截止/迭代上限（复审全树检索无悬挂面）；程序集级串行 + 静态清单 + 用户数据隔离保持；`Assert.Skip*` 16 处，平台分支全部可见跳过（复审复核保持，零隐藏跳过）；`ResourcePanelApiClient` 5 个专用用例。复审另发现一处确定性边角：`NeutralStrategyHeadlessTests.cs:100` 裸 `Directory.Delete`（advisory）。
@@ -490,6 +515,10 @@ CI 对账轮（2026-09-14 晚，AUD-CI-001 守卫首跑产出）：
 
 CI 对账轮验证：本地（Windows，Debug，`08c53f8`）全量单元 1720 总量 = 1718 通过 / 0 失败 / 2 可见跳过；Linux 侧行为以推送后 CI 首绿为最终确认（守卫首跑与三例失败均与推送无涉——schedule 跑的是推送前旧 HEAD `67229b5`，同样红出相同三例）。
 
+测试设施轮（2026-09-16）结案：
+
+- **AUD-TEST-009**：见 Low 节（共享设施 + 上下文所有权 + 慢用例拆分；同配置实测单元 31.8s → 23.9s 测试用时，最慢 10.26s → 2.07s）。
+
 ## Automated Guards Added
 
 本窗口由修复顺带落地的守卫：
@@ -531,6 +560,13 @@ CI 对账轮（2026-09-14 晚）顺带落地的守卫：
 17. `GameDownloadServiceTests.InstallOrUpdateAsync_WhenTheRemoteDeclaredExecutableIsRunning_RefusesBeforeWritingAnything`——远端兜底判据（AUD-ARCH-009 守卫；替身只在请求的名字含 `BlueArchive` 时报在跑，等价于证明名字来自远端配置）。
 18. `GameDownloadServiceTests.InstallOrUpdateAsync_WhenTheGameStartsDuringTheDownload_RefusesBeforeTouchingTheGameDirectory`——下载的写入边界复查（AUD-ARCH-009 守卫；断言目标文件未落地而 `.tmp` 留在盘上）。与 17 同批变异验证：拆掉兜底与复查即红。
 19. `GameProcessNamesTests.DescribeForDisplay_AppendsTheExecutableExtensionAndJoinsWithASeparator`——用户可见的运行中进程报法（两个入口共用一处的守卫）。
+
+测试设施轮（2026-09-16）顺带落地的守卫：
+
+1. `TestSupportFacilityTests`（14 例）——共享设施自身的行为：目录独立与派生数据根、`Dispose` 幂等且真的删除、删除失败在 `ReportFailure` 下抛出（Windows 句柄占用，其它平台可见跳过）与 `BestEffort` 下留下目录不抛、`TestWait` 的立即返回/轮询/超时消息/取消/推进动作、`TestRepository` 的路径缓存与「每次重装资源快照」（先装自定义资源再调用必须恢复仓库资源）。
+2. `MainWindowTestContextTests`（3 例）——上下文契约：装配返回后日志仍可写并落到自己的文件、`Dispose` 后日志文件可删（句柄释放）、两个上下文互不可见对方的 `settings.json`。
+3. `ServiceConfigurationTests` 增 2 例——显式数据根贯穿登记项与闭包（设置/崩溃快照/日志/图片缓存/下载检查点/公告状态都落在指定根），缺省仍解析进程根（生产行为不回归）。
+4. `RemoteHttpTransportTests.GetJsonAsync_WhenSystemProxyConfigured_DialsTheProxyAndReadsItsAnswer`——回环明文代理实证「系统代理租约真的把请求发到代理」（原来由资源面板用例顺带覆盖，靠失败重试结束）。
 
 ## Verified Strengths
 
