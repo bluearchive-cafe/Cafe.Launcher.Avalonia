@@ -201,6 +201,33 @@
 
 **为什么第三批**：纯删除，零行为风险；但需先确认「无引用」判定正确——本仓库有「靠 `InternalsVisibleTo` 被测试直接调用」与「靠字符串键被 XAML 消费」两类陷阱，逐项已核。
 
+> **状态：已落地 6／8（2026-09-16，`5ec1999`..`f42e5a6` 四个提交）。** 全部 `verify.ps1` 退出码 0。
+> 落地：`C1`（4 条不可达样式 + 1 个未消费 token）、`C2`（22 处不生效类）、`C3`（4 个转发包装）、
+> `C4`（同步加载路径 + 3 个协作者去可空）、`C6`（1 个死访问器 + 1 个接缝由 public 收窄为
+> internal）、`C7`（进程接缝迁到消费者旁）。
+>
+> **两项经核实后不做，理由是扫描的「无引用」判定在这些点上不成立：**
+> - **`C8`（四对字节相同的样式合并）**：四对里有两对是**承重的语义标记**。`Border.motion-bottom`
+>   与 `Border.motion-surface` 的样式体确实逐字相同，但 `motion-bottom` 是 ADR-016 用来区分
+>   「游戏操作表面」与各叠层的标记——`UiStyleContractTests.Motion.cs:184` 把两个选择器都列进
+>   穷尽集合，`:271` 另断言全仓只有一个元素带它且必须是 `OperationSurface`。`Border.banner-media`
+>   被无头用例当作定位器（`MainWindowHeadlessTests.Banner.cs:213` 用
+>   `Classes.Contains("banner-media")` 找元素），改名即找不到。另外两对不破坏守卫，但同样保留：
+>   样式体相同是当前设计令牌的巧合，类名各自标记不同角色。带 `C8` 的版本实测确实让那两条 Motion
+>   守卫失败——这正是它们存在的意义。
+> - **`C5`（`ResourcePanelService` 的 7 个转发成员）**：方法体确实是纯转发，但它是否「多余」不看
+>   方法体而看消费者要知道多少——该类的文档注释明确写着它是「拥有资源面板工作流的深模块：
+>   **UID 解析**、并行远程读取、版本与模式映射、保存序列化；ViewModel 只留可观察状态、命令与
+>   本地化」。实测消费者只有 ViewModel（7 处）与测试（7 处），改成暴露协作者会让 ViewModel 多依赖
+>   两个服务（`ResourcePanelUidService`、`LocalDiagnostics`），依赖面变宽即变浅——与阶段 D 的
+>   「深模块」方向相反。
+>
+> **两处计数与计划不符**：`C2` 的 23 处里**有 1 处是活的**（`:246` 在 `StackPanel` 上，两条选择器
+> 都命中它），只删了 TextBlock 上的 22 处；`C3` 的 4 个包装里**有 2 个一个调用者都没有**
+> （`GetReadableOnAccentColor`、`AdjustColor`），计划写的「唯一使用者在测试里」低估了。
+> `C6` 的第二项也未按计划删除（四条测试是解码与来源解析的单元测试，改指 `Apply` 会变成断言
+> 另一件事），而是按 §5.3 把仅供测试的接缝由 `public` 收窄为 `internal`。
+
 | 编号 | 项 | 证据锚点 | 落地改动 | 陷阱提示 |
 | --- | --- | --- | --- | --- |
 | `C1` | 死样式规则与未引用 token | `Views/MainWindow.Styles.axaml:490-496` `Border.surface`——全仓无 `Classes="surface"` 应用（已 grep 确认，只有定义），且 `UiStyleContractTests.MainWindow.cs:525-528` 反而断言它**不得**出现在远内容表面；`:1021-1024,1038-1040,1047-1049` 的 `.warning` 变体——`warning` 类全仓零应用（同族的 `.danger` 有应用，`:256`）；`App.axaml:55` `Launcher.Component.Dialog.HeaderAction.Margin`——视图/样式/C#/测试全无引用 | 删四处规则 + 一个 token；日志导出若仍需警示语气，改用它处已有的 `dialog-alert.warning` 配方（`MainWindowLogExportOverlay.axaml:47,112` 已用 `dialog-card log-export-warning`） | token 集合里 `Launcher.Motion.Offset.*` **看似**未被 XAML 引用，实际由代码后置的字符串键消费（`SetupWizardOverlay.axaml.cs:27-28`、`Helpers/BannerCarouselTransition.cs:27`）——删 token 前必须 grep 字符串键 |
