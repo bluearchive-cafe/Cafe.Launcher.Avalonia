@@ -1,10 +1,11 @@
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Cafe.Launcher.Avalonia.Helpers;
 
 namespace Cafe.Launcher.Avalonia.Services.GameRuntime;
 
@@ -150,7 +151,7 @@ public static class RuntimeVersionProbe
             return process.ExitCode;
         }
         catch (Exception exception)
-            when (exception is InvalidOperationException or Win32Exception or ObjectDisposedException)
+            when (ProcessService.IsProcessUnavailable(exception))
         {
             // e.g. terminated by a signal on Unix — treat as probe failure.
             return null;
@@ -177,7 +178,7 @@ public static class RuntimeVersionProbe
             process.Kill(entireProcessTree: true);
         }
         catch (Exception exception)
-            when (exception is InvalidOperationException or Win32Exception or ObjectDisposedException)
+            when (ProcessService.IsProcessUnavailable(exception))
         {
             // Already exited or no longer killable; nothing left to clean up.
         }

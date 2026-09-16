@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using Cafe.Launcher.Avalonia.Constants;
 
@@ -132,17 +132,12 @@ internal sealed class FatalCrashService : IFatalCrashService
     private static CrashReport CreateTransientReport(CrashOrigin origin, Exception exception)
     {
         var now = DateTimeOffset.Now;
-        return new CrashReport
-        {
-            Id = $"CR-{now:yyyyMMdd-HHmmss}-LOCAL",
-            OccurredAt = now,
-            Source = origin.ToSourceLabel(),
-            AppVersion = BuildInfo.LauncherVersion,
-            BuildSha = BuildInfo.CommitSha,
-            OperatingSystem = Environment.OSVersion.ToString(),
-            UiCulture = System.Globalization.CultureInfo.CurrentUICulture.Name,
-            ExceptionType = exception.GetType().FullName ?? exception.GetType().Name,
-            TechnicalDetails = CrashReportStore.Sanitize(exception.ToString())
-        };
+        return CrashReport.Build(
+            $"CR-{now:yyyyMMdd-HHmmss}-LOCAL",
+            now,
+            origin.ToSourceLabel(),
+            Environment.OSVersion.ToString(),
+            exception.GetType().FullName ?? exception.GetType().Name,
+            CrashReportStore.Sanitize(exception.ToString()));
     }
 }

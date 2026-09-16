@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -166,7 +166,7 @@ public sealed class GameUninstallService
             {
                 checkpointStore.Clear();
             }
-            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            catch (Exception exception) when (StorageFailure.IsRecoverable(exception))
             {
                 // Best-effort cleanup of the resume marker; preserve uninstall success.
             }
@@ -211,7 +211,7 @@ public sealed class GameUninstallService
                 AffectedFileCount = files.Count + 2
             };
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        catch (Exception exception) when (StorageFailure.IsRecoverable(exception))
         {
             await diagnostics.ErrorAsync(
                 "GameUninstall",

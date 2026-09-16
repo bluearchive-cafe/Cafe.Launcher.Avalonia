@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
@@ -37,7 +37,7 @@ public sealed class NoticeStateService
                 JsonDefaults.Strict,
                 cancellationToken).ConfigureAwait(false) ?? [];
         }
-        catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
+        catch (Exception exception) when (StorageFailure.IsRecoverableOrInvalidJson(exception))
         {
             return [];
         }
@@ -58,7 +58,7 @@ public sealed class NoticeStateService
                 JsonDefaults.Strict,
                 cancellationToken).ConfigureAwait(false);
         }
-        catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
+        catch (Exception exception) when (StorageFailure.IsRecoverableOrInvalidJson(exception))
         {
             // Notice state is best-effort and must not block launcher startup.
         }

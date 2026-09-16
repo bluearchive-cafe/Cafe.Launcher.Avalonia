@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -77,24 +77,30 @@ public sealed class HttpClientFactory : IDisposable
         ThrowIfDisposed();
         if (proxyMode == ProxyModes.Direct)
         {
-            var client = new HttpClient(defaultHandler, disposeHandler: false);
-            if (baseAddress is not null) client.BaseAddress = baseAddress;
-            if (timeout.HasValue) client.Timeout = timeout.Value;
-            ApplyHttpVersion(client);
-            return new HttpClientLease(client, ownsClient: true);
+            return new HttpClientLease(CreateClient(defaultHandler, baseAddress, timeout), ownsClient: true);
         }
 
         var handler = await proxySettingsService
             .GetOrCreateHandlerAsync(proxyMode, cancellationToken)
             .ConfigureAwait(false);
-        var proxyClient = new HttpClient(handler, disposeHandler: false);
-        if (baseAddress is not null) proxyClient.BaseAddress = baseAddress;
-        if (timeout.HasValue) proxyClient.Timeout = timeout.Value;
-        ApplyHttpVersion(proxyClient);
+        var proxyClient = CreateClient(handler, baseAddress, timeout);
         return new HttpClientLease(proxyClient, ownsClient: true)
         {
             ConnectionProxy = handler.UseProxy ? handler.Proxy : null
         };
+    }
+
+    /// <summary>
+    /// 两条租约分支共用的客户端构造：handler 始终归工厂所有（disposeHandler: false），
+    /// 租约只释放自己那个 HttpClient。
+    /// </summary>
+    private HttpClient CreateClient(SocketsHttpHandler handler, Uri? baseAddress, TimeSpan? timeout)
+    {
+        var client = new HttpClient(handler, disposeHandler: false);
+        if (baseAddress is not null) client.BaseAddress = baseAddress;
+        if (timeout.HasValue) client.Timeout = timeout.Value;
+        ApplyHttpVersion(client);
+        return client;
     }
 
     private void ApplyHttpVersion(HttpClient client)

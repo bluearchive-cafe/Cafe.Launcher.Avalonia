@@ -309,47 +309,7 @@ public sealed partial class LauncherUpdateService
         }
 
         // Both prerelease — compare prerelease labels per SemVer 2.0.0 §11.
-        return ComparePrereleaseLabels(latest.PrereleaseLabel, current.PrereleaseLabel) > 0;
-    }
-
-    /// <summary>
-    /// Compares two dot-separated prerelease labels following SemVer 2.0.0 precedence rules:
-    /// 1. Numeric identifiers compare numerically.
-    /// 2. Alphanumeric identifiers compare by ASCII sort order.
-    /// 3. Numeric identifiers have lower precedence than alphanumeric.
-    /// 4. More identifiers (fields) have higher precedence when all preceding fields are equal.
-    /// </summary>
-    private static int ComparePrereleaseLabels(string latestLabel, string currentLabel)
-    {
-        var latestParts = latestLabel.Split('.');
-        var currentParts = currentLabel.Split('.');
-        var maxParts = Math.Max(latestParts.Length, currentParts.Length);
-
-        for (var i = 0; i < maxParts; i++)
-        {
-            if (i >= latestParts.Length) return -1;
-            if (i >= currentParts.Length) return 1;
-
-            var latestIsNumeric = int.TryParse(latestParts[i], out var latestNum);
-            var currentIsNumeric = int.TryParse(currentParts[i], out var currentNum);
-
-            if (latestIsNumeric && currentIsNumeric)
-            {
-                if (latestNum > currentNum) return 1;
-                if (latestNum < currentNum) return -1;
-            }
-            else if (latestIsNumeric != currentIsNumeric)
-            {
-                return latestIsNumeric ? -1 : 1;
-            }
-            else
-            {
-                var comparison = string.Compare(latestParts[i], currentParts[i], StringComparison.Ordinal);
-                if (comparison != 0) return comparison;
-            }
-        }
-
-        return 0;
+        return VersionComparer.ComparePrerelease(latest.PrereleaseLabel, current.PrereleaseLabel) > 0;
     }
 
     private static bool TryParseSemanticVersion(string value, out SemanticVersion version)

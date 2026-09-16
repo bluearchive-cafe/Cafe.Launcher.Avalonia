@@ -1,5 +1,6 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
+using Cafe.Launcher.Avalonia.Helpers;
 
 namespace Cafe.Launcher.Avalonia.Services.GameRuntime;
 
@@ -28,28 +29,13 @@ public sealed record GameRuntimeDiagnosticSnapshot(
             "[GameRuntime]",
             $"Runner: {RunnerId}"
         };
-        if (!string.IsNullOrWhiteSpace(RunnerVersion))
-        {
-            lines.Add($"RunnerVersion: {RunnerVersion}");
-        }
-
-        if (!string.IsNullOrWhiteSpace(RunnerExecutable))
-        {
-            lines.Add($"Executable: {RunnerExecutable}");
-        }
-
+        DiagnosticLines.Optional(lines, "RunnerVersion", RunnerVersion);
+        DiagnosticLines.Optional(lines, "Executable", RunnerExecutable);
         lines.Add($"GameId: {GameId}");
         lines.Add($"GameExecutable: {GameExecutable}");
         lines.Add($"WorkingDirectory: {WorkingDirectory}");
-        if (!string.IsNullOrWhiteSpace(PrefixPath))
-        {
-            lines.Add($"Prefix: {PrefixPath}");
-        }
-
-        if (!string.IsNullOrWhiteSpace(ProtonPath))
-        {
-            lines.Add($"Proton: {ProtonPath}");
-        }
+        DiagnosticLines.Optional(lines, "Prefix", PrefixPath);
+        DiagnosticLines.Optional(lines, "Proton", ProtonPath);
 
         return string.Join(Environment.NewLine, lines);
     }

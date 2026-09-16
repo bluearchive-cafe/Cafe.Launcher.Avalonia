@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
@@ -146,7 +146,7 @@ public sealed class LocalInstallationStateStore
                 manifestPath,
                 cancellationToken).ConfigureAwait(false);
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        catch (Exception exception) when (StorageFailure.IsRecoverable(exception))
         {
             return CreateFailure(
                 LocalInstallationStateKind.IoFailure,
@@ -180,7 +180,7 @@ public sealed class LocalInstallationStateStore
                 manifestPath,
                 null);
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        catch (Exception exception) when (StorageFailure.IsRecoverable(exception))
         {
             return CreateFailure(
                 LocalInstallationStateKind.IoFailure,
@@ -197,40 +197,29 @@ public sealed class LocalInstallationStateStore
         string manifestPath,
         CancellationToken cancellationToken)
     {
+        // 六个失败出口只差 kind 与错误文本，路径三件套是本方法的局部变量。
+        LocalInstallationState Failure(LocalInstallationStateKind kind, string? error = null) =>
+            CreateFailure(kind, gamePath, configPath, manifestPath, error);
+
         try
         {
             var configExists = File.Exists(configPath);
             var manifestExists = File.Exists(manifestPath);
             if (!configExists && !manifestExists)
             {
-                return CreateFailure(
-                    LocalInstallationStateKind.NotInstalled,
-                    gamePath,
-                    configPath,
-                    manifestPath,
-                    null);
+                return Failure(LocalInstallationStateKind.NotInstalled);
             }
 
             if (!configExists || !manifestExists)
             {
-                return CreateFailure(
-                    LocalInstallationStateKind.Corrupted,
-                    gamePath,
-                    configPath,
-                    manifestPath,
-                    null);
+                return Failure(LocalInstallationStateKind.Corrupted);
             }
 
             var config = await ReadConfigAsync(configPath, cancellationToken).ConfigureAwait(false);
             var manifest = await ReadManifestAsync(manifestPath, cancellationToken).ConfigureAwait(false);
             if (!string.Equals(config.Version, manifest.Version, StringComparison.Ordinal))
             {
-                return CreateFailure(
-                    LocalInstallationStateKind.Corrupted,
-                    gamePath,
-                    configPath,
-                    manifestPath,
-                    null);
+                return Failure(LocalInstallationStateKind.Corrupted);
             }
 
             return new LocalInstallationState
@@ -245,30 +234,15 @@ public sealed class LocalInstallationStateStore
         }
         catch (JsonException)
         {
-            return CreateFailure(
-                LocalInstallationStateKind.Corrupted,
-                gamePath,
-                configPath,
-                manifestPath,
-                null);
+            return Failure(LocalInstallationStateKind.Corrupted);
         }
         catch (InvalidDataException)
         {
-            return CreateFailure(
-                LocalInstallationStateKind.Corrupted,
-                gamePath,
-                configPath,
-                manifestPath,
-                null);
+            return Failure(LocalInstallationStateKind.Corrupted);
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        catch (Exception exception) when (StorageFailure.IsRecoverable(exception))
         {
-            return CreateFailure(
-                LocalInstallationStateKind.IoFailure,
-                gamePath,
-                configPath,
-                manifestPath,
-                exception.Message);
+            return Failure(LocalInstallationStateKind.IoFailure, exception.Message);
         }
     }
 
