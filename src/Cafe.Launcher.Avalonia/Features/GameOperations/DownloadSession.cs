@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -488,7 +488,7 @@ internal sealed class DownloadSession : IDisposable
                 return gameRunning;
             }
 
-            DownloadExecutor.RemoveFiles(gamePath, downloadPlan.NeedDelete, null);
+            ManifestFileRemover.DeleteAll(gamePath, downloadPlan.NeedDelete, cancellationToken: activeToken);
 
             progress(CreateProgress(operationKind, GameOperationStage.FileCheck, 0));
             var failedFiles = await downloadExecutor.InstallDownloadedFilesAsync(
