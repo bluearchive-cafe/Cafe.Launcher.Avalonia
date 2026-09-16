@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Cafe.Launcher.Avalonia.ViewModels"
              xmlns:controls="using:Cafe.Launcher.Avalonia.Controls"
@@ -72,37 +72,37 @@
                                             CommandParameter="Verbose"
                                             AutomationProperties.Name="{Binding Shell.I18n[logLevelVerbose]}"
                                             Margin="{StaticResource Launcher.Spacing.Thickness.Xs}">
-                                        <TextBlock Text="{Binding Shell.I18n[logLevelVerbose]}" Classes="button-content"/>
+                                        <TextBlock Text="{Binding Shell.I18n[logLevelVerbose]}"/>
                                     </Button>
                                     <Button Classes="flat-action dialog-action" Command="{Binding Debug.WriteTestLogCommand}"
                                             CommandParameter="Debug"
                                             AutomationProperties.Name="{Binding Shell.I18n[logLevelDebug]}"
                                             Margin="{StaticResource Launcher.Spacing.Thickness.Xs}">
-                                        <TextBlock Text="{Binding Shell.I18n[logLevelDebug]}" Classes="button-content"/>
+                                        <TextBlock Text="{Binding Shell.I18n[logLevelDebug]}"/>
                                     </Button>
                                     <Button Classes="flat-action dialog-action" Command="{Binding Debug.WriteTestLogCommand}"
                                             CommandParameter="Info"
                                             AutomationProperties.Name="{Binding Shell.I18n[logLevelInformation]}"
                                             Margin="{StaticResource Launcher.Spacing.Thickness.Xs}">
-                                        <TextBlock Text="{Binding Shell.I18n[logLevelInformation]}" Classes="button-content"/>
+                                        <TextBlock Text="{Binding Shell.I18n[logLevelInformation]}"/>
                                     </Button>
                                     <Button Classes="flat-action dialog-action" Command="{Binding Debug.WriteTestLogCommand}"
                                             CommandParameter="Warn"
                                             AutomationProperties.Name="{Binding Shell.I18n[logLevelWarning]}"
                                             Margin="{StaticResource Launcher.Spacing.Thickness.Xs}">
-                                        <TextBlock Text="{Binding Shell.I18n[logLevelWarning]}" Classes="button-content"/>
+                                        <TextBlock Text="{Binding Shell.I18n[logLevelWarning]}"/>
                                     </Button>
                                     <Button Classes="flat-action dialog-action" Command="{Binding Debug.WriteTestLogCommand}"
                                             CommandParameter="Error"
                                             AutomationProperties.Name="{Binding Shell.I18n[logLevelError]}"
                                             Margin="{StaticResource Launcher.Spacing.Thickness.Xs}">
-                                        <TextBlock Text="{Binding Shell.I18n[logLevelError]}" Classes="button-content"/>
+                                        <TextBlock Text="{Binding Shell.I18n[logLevelError]}"/>
                                     </Button>
                                     <Button Classes="flat-action dialog-action" Command="{Binding Debug.WriteTestLogCommand}"
                                             CommandParameter="Fatal"
                                             AutomationProperties.Name="{Binding Shell.I18n[logLevelFatal]}"
                                             Margin="{StaticResource Launcher.Spacing.Thickness.Xs}">
-                                        <TextBlock Text="{Binding Shell.I18n[logLevelFatal]}" Classes="button-content"/>
+                                        <TextBlock Text="{Binding Shell.I18n[logLevelFatal]}"/>
                                     </Button>
                                 </WrapPanel>
 
@@ -111,41 +111,41 @@
                                             CommandParameter="Info"
                                             AutomationProperties.Name="{Binding Shell.I18n[debugTestInfoToast]}"
                                             Margin="{StaticResource Launcher.Spacing.Thickness.Xs}">
-                                        <TextBlock Text="{Binding Shell.I18n[debugTestInfoToast]}" Classes="button-content"/>
+                                        <TextBlock Text="{Binding Shell.I18n[debugTestInfoToast]}"/>
                                     </Button>
                                     <Button Classes="flat-action dialog-action" Command="{Binding Debug.TestToastCommand}"
                                             CommandParameter="Success"
                                             AutomationProperties.Name="{Binding Shell.I18n[debugTestSuccessToast]}"
                                             Margin="{StaticResource Launcher.Spacing.Thickness.Xs}">
-                                        <TextBlock Text="{Binding Shell.I18n[debugTestSuccessToast]}" Classes="button-content"/>
+                                        <TextBlock Text="{Binding Shell.I18n[debugTestSuccessToast]}"/>
                                     </Button>
                                     <Button Classes="flat-action dialog-action" Command="{Binding Debug.TestToastCommand}"
                                             CommandParameter="Warning"
                                             AutomationProperties.Name="{Binding Shell.I18n[debugTestWarningToast]}"
                                             Margin="{StaticResource Launcher.Spacing.Thickness.Xs}">
-                                        <TextBlock Text="{Binding Shell.I18n[debugTestWarningToast]}" Classes="button-content"/>
+                                        <TextBlock Text="{Binding Shell.I18n[debugTestWarningToast]}"/>
                                     </Button>
                                     <Button Classes="flat-action dialog-action" Command="{Binding Debug.TestToastCommand}"
                                             CommandParameter="Error"
                                             AutomationProperties.Name="{Binding Shell.I18n[debugTestErrorToast]}"
                                             Margin="{StaticResource Launcher.Spacing.Thickness.Xs}">
-                                        <TextBlock Text="{Binding Shell.I18n[debugTestErrorToast]}" Classes="button-content"/>
+                                        <TextBlock Text="{Binding Shell.I18n[debugTestErrorToast]}"/>
                                     </Button>
                                     <Button Classes="flat-action dialog-action" Command="{Binding Debug.TestActionToastCommand}"
                                             AutomationProperties.Name="{Binding Shell.I18n[debugTestActionToast]}"
                                             Margin="{StaticResource Launcher.Spacing.Thickness.Xs}">
-                                        <TextBlock Text="{Binding Shell.I18n[debugTestActionToast]}" Classes="button-content"/>
+                                        <TextBlock Text="{Binding Shell.I18n[debugTestActionToast]}"/>
                                     </Button>
                                 </WrapPanel>
 
                                 <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}">
                                     <Button Classes="flat-action dialog-action" Command="{Binding Debug.TriggerErrorDialogCommand}"
                                             AutomationProperties.Name="{Binding Shell.I18n[errorDialogTitle]}">
-                                        <TextBlock Text="{Binding Shell.I18n[errorDialogTitle]}" Classes="button-content"/>
+                                        <TextBlock Text="{Binding Shell.I18n[errorDialogTitle]}"/>
                                     </Button>
                                     <Button Classes="flat-action dialog-action" Command="{Binding Debug.SimulateHandledErrorCommand}"
                                             AutomationProperties.Name="{Binding Shell.I18n[debugSimulateError]}">
-                                        <TextBlock Text="{Binding Shell.I18n[debugSimulateError]}" Classes="button-content"/>
+                                        <TextBlock Text="{Binding Shell.I18n[debugSimulateError]}"/>
                                     </Button>
                                 </StackPanel>
 
@@ -154,12 +154,12 @@
                                     <Button Classes="flat-action dialog-action danger-action"
                                             Command="{Binding Debug.SimulateFatalCrashCommand}"
                                             AutomationProperties.Name="{Binding Shell.I18n[debugSimulateFatalCrash]}">
-                                        <TextBlock Text="{Binding Shell.I18n[debugSimulateFatalCrash]}" Classes="button-content"/>
+                                        <TextBlock Text="{Binding Shell.I18n[debugSimulateFatalCrash]}"/>
                                     </Button>
                                     <Button Classes="flat-action dialog-action danger-action"
                                             Command="{Binding Debug.SimulateUnhandledCrashCommand}"
                                             AutomationProperties.Name="{Binding Shell.I18n[debugSimulateUnhandledCrash]}">
-                                        <TextBlock Text="{Binding Shell.I18n[debugSimulateUnhandledCrash]}" Classes="button-content"/>
+                                        <TextBlock Text="{Binding Shell.I18n[debugSimulateUnhandledCrash]}"/>
                                     </Button>
                                 </StackPanel>
                             </StackPanel>
@@ -179,17 +179,17 @@
                                 <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}">
                                     <Button Classes="flat-action dialog-action" Command="{Binding Debug.RefreshStateCommand}"
                                             AutomationProperties.Name="{Binding Shell.I18n[refresh]}">
-                                        <TextBlock Text="{Binding Shell.I18n[refresh]}" Classes="button-content"/>
+                                        <TextBlock Text="{Binding Shell.I18n[refresh]}"/>
                                     </Button>
                                     <Button Classes="flat-action dialog-action" Command="{Binding Debug.TogglePauseResumeCommand}"
                                             AutomationProperties.Name="{Binding Shell.I18n[debugPauseResume]}"
                                             IsVisible="{Binding Debug.IsDownloadRunning}">
-                                        <TextBlock Text="{Binding Shell.I18n[debugPauseResume]}" Classes="button-content"/>
+                                        <TextBlock Text="{Binding Shell.I18n[debugPauseResume]}"/>
                                     </Button>
                                     <Button Classes="flat-action dialog-action" Command="{Binding Debug.StopDownloadCommand}"
                                             AutomationProperties.Name="{Binding Shell.I18n[stopDownloadTitle]}"
                                             IsVisible="{Binding Debug.IsDownloadRunning}">
-                                        <TextBlock Text="{Binding Shell.I18n[stop]}" Classes="button-content"/>
+                                        <TextBlock Text="{Binding Shell.I18n[stop]}"/>
                                     </Button>
                                 </StackPanel>
                             </StackPanel>
@@ -208,7 +208,7 @@
                                 </Border>
                                 <Button Classes="flat-action dialog-action" Command="{Binding Debug.ResetSettingsCommand}"
                                         AutomationProperties.Name="{Binding Shell.I18n[debugResetSettingsConfirm]}">
-                                    <TextBlock Text="{Binding Shell.I18n[debugResetSettingsConfirm]}" Classes="button-content"/>
+                                    <TextBlock Text="{Binding Shell.I18n[debugResetSettingsConfirm]}"/>
                                 </Button>
                             </StackPanel>
                         </Border>
@@ -223,15 +223,15 @@
                                 <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}">
                                     <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.Gallery.OpenCommand}"
                                             AutomationProperties.Name="{Binding Shell.I18n[openDesignGallery]}">
-                                        <TextBlock Text="{Binding Shell.I18n[openDesignGallery]}" Classes="button-content"/>
+                                        <TextBlock Text="{Binding Shell.I18n[openDesignGallery]}"/>
                                     </Button>
                                     <Button Classes="flat-action dialog-action" Command="{Binding LogExport.OpenCommand}"
                                             AutomationProperties.Name="{Binding Shell.I18n[exportLogs]}">
-                                        <TextBlock Text="{Binding Shell.I18n[exportLogs]}" Classes="button-content"/>
+                                        <TextBlock Text="{Binding Shell.I18n[exportLogs]}"/>
                                     </Button>
                                     <Button Classes="flat-action dialog-action" Command="{Binding Debug.OpenDataDirectoryCommand}"
                                             AutomationProperties.Name="{Binding Shell.I18n[openDataDirectory]}">
-                                        <TextBlock Text="{Binding Shell.I18n[openDataDirectory]}" Classes="button-content"/>
+                                        <TextBlock Text="{Binding Shell.I18n[openDataDirectory]}"/>
                                     </Button>
                                 </StackPanel>
                             </StackPanel>
