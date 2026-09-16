@@ -1,3 +1,4 @@
+using Cafe.Launcher.Avalonia.Testing;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
@@ -110,7 +111,7 @@ public sealed class ConfirmationDialogViewModelTests
     [Fact]
     public async Task ConfirmCommand_WhenSubscriberThrows_UsesInjectedDiagnosticsAndStableModuleTag()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var tempDir = TestDirectory.Create();
         var logger = new UnifiedLogger(tempDir);
         try
         {
@@ -130,10 +131,7 @@ public sealed class ConfirmationDialogViewModelTests
         finally
         {
             logger.Dispose();
-            if (Directory.Exists(tempDir))
-            {
-                Directory.Delete(tempDir, recursive: true);
-            }
+            tempDir.Dispose();
         }
     }
 

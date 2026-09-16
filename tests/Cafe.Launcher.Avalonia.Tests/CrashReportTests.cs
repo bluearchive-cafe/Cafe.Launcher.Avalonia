@@ -1,15 +1,13 @@
-using System.Text;
+﻿using System.Text;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed class CrashReportTests : IDisposable
 {
-    private readonly string tempDirectory = Path.Combine(
-        Path.GetTempPath(),
-        "Cafe.Launcher.Avalonia.Tests",
-        Guid.NewGuid().ToString("N"));
+    private readonly TestDirectory tempDirectory = TestDirectory.Create();
 
     [Fact]
     public void Create_WhenExceptionContainsUserProfile_PersistsReadableSanitizedSnapshot()
@@ -59,7 +57,6 @@ public sealed class CrashReportTests : IDisposable
     [Fact]
     public void Create_WhenPrimaryDirectoryIsBlocked_UsesFallbackDirectory()
     {
-        Directory.CreateDirectory(tempDirectory);
         var blockedPath = Path.Combine(tempDirectory, "blocked");
         File.WriteAllText(blockedPath, "not a directory");
         var fallbackPath = Path.Combine(tempDirectory, "fallback");
@@ -96,7 +93,6 @@ public sealed class CrashReportTests : IDisposable
     [Fact]
     public void HandleUnhandledCrash_WhenFailuresRepeat_LaunchesOnceAndAppendsLaterFailure()
     {
-        Directory.CreateDirectory(tempDirectory);
         using var logger = new UnifiedLogger(tempDirectory);
         var reportDirectory = Path.Combine(tempDirectory, "reports");
         var reportsDirectory = Path.Combine(reportDirectory, LauncherDataRoot.CrashReportsFolderName);
@@ -116,7 +112,6 @@ public sealed class CrashReportTests : IDisposable
     [Fact]
     public void HandleFatalCrash_WhenUiSubscriberExists_RaisesOnceWithoutExternalReporter()
     {
-        Directory.CreateDirectory(tempDirectory);
         using var logger = new UnifiedLogger(tempDirectory);
         var store = new CrashReportStore( TestDataRoot.ForDirectory(Path.Combine(tempDirectory, "reports")) );
         var launcher = new RecordingCrashReporterLauncher();
@@ -137,7 +132,6 @@ public sealed class CrashReportTests : IDisposable
         // Tier-2 sources (AppDomain, dispatcher, entry escape) must never hand control to
         // the in-process window, even while a healthy UI is subscribed: the crashing
         // process is the one being abandoned, so the report has to survive it.
-        Directory.CreateDirectory(tempDirectory);
         using var logger = new UnifiedLogger(tempDirectory);
         var store = new CrashReportStore( TestDataRoot.ForDirectory(Path.Combine(tempDirectory, "reports")) );
         var launcher = new RecordingCrashReporterLauncher();
@@ -153,7 +147,6 @@ public sealed class CrashReportTests : IDisposable
     [Fact]
     public void HandleUnhandledCrash_WhenBothDirectoriesAreBlocked_StillLaunchesReporterWithoutSnapshot()
     {
-        Directory.CreateDirectory(tempDirectory);
         using var logger = new UnifiedLogger(tempDirectory);
         var blockedPrimary = Path.Combine(tempDirectory, "primary-file");
         var blockedFallback = Path.Combine(tempDirectory, "fallback-file");
@@ -173,7 +166,6 @@ public sealed class CrashReportTests : IDisposable
     [Fact]
     public void HandleUnhandledCrash_WhenPrimaryDirectoryIsBlocked_LaunchesReporterWithFallbackSnapshot()
     {
-        Directory.CreateDirectory(tempDirectory);
         using var logger = new UnifiedLogger(tempDirectory);
         var blockedPrimary = Path.Combine(tempDirectory, "primary-file");
         File.WriteAllText(blockedPrimary, "not a directory");
@@ -192,7 +184,6 @@ public sealed class CrashReportTests : IDisposable
     [Fact]
     public void CleanupOldReports_WhenFallbackDirectoryHoldsStaleReports_PrunesThemToo()
     {
-        Directory.CreateDirectory(tempDirectory);
         var primary = Path.Combine(tempDirectory, "primary");
         var fallback = Path.Combine(tempDirectory, "fallback");
         Directory.CreateDirectory(primary);
@@ -293,10 +284,7 @@ public sealed class CrashReportTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(tempDirectory))
-        {
-            Directory.Delete(tempDirectory, recursive: true);
-        }
+        tempDirectory.Dispose();
     }
 
     private sealed class RecordingCrashReporterLauncher : ICrashReporterLauncher

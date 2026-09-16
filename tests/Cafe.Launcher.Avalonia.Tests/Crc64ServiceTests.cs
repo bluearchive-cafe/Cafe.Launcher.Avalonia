@@ -1,15 +1,11 @@
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed class Crc64ServiceTests : IDisposable
 {
-    private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-
-    public Crc64ServiceTests()
-    {
-        Directory.CreateDirectory(tempDir);
-    }
+    private readonly TestDirectory tempDir = TestDirectory.Create();
 
     [Fact]
     public async Task ComputeFileAsync_WhenCanonicalCrc64XzVector_MatchesSpecCheckValue()
@@ -122,7 +118,6 @@ public sealed class Crc64ServiceTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(tempDir))
-            Directory.Delete(tempDir, recursive: true);
+        tempDir.Dispose();
     }
 }

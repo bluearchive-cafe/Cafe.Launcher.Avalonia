@@ -7,7 +7,7 @@ namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed class ImageCacheServiceTests : IDisposable
 {
-    private readonly string rootDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+    private readonly TestDirectory rootDir = TestDirectory.Create();
     private readonly string tempDir;
 
     public ImageCacheServiceTests()
@@ -192,10 +192,7 @@ public sealed class ImageCacheServiceTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(rootDir))
-        {
-            Directory.Delete(rootDir, recursive: true);
-        }
+        rootDir.Dispose();
     }
 
     /// <summary>声明长度缺失、纯累计超限的响应体：声明长度守卫放行后由累计守卫兜住。</summary>

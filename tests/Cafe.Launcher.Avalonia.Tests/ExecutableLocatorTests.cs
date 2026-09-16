@@ -1,17 +1,17 @@
 using System;
 using System.IO;
 using Cafe.Launcher.Avalonia.Services.GameRuntime;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed class ExecutableLocatorTests : IDisposable
 {
-    private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+    private readonly TestDirectory tempDir = TestDirectory.Create();
 
     [Fact]
     public void FindInPath_WhenExplicitPathExists_ReturnsExplicitPath()
     {
-        Directory.CreateDirectory(tempDir);
         var executablePath = Path.Combine(tempDir, "umu-run");
         File.WriteAllText(executablePath, "#!/bin/sh\n");
 
@@ -23,7 +23,6 @@ public sealed class ExecutableLocatorTests : IDisposable
     [Fact]
     public void FindInPath_WhenExplicitPathMissing_ReturnsNullWithoutScanning()
     {
-        Directory.CreateDirectory(tempDir);
         var executablePath = Path.Combine(tempDir, "umu-run");
         File.WriteAllText(executablePath, "#!/bin/sh\n");
 
@@ -61,7 +60,7 @@ public sealed class ExecutableLocatorTests : IDisposable
     {
         try
         {
-            Directory.Delete(tempDir, recursive: true);
+            tempDir.Dispose();
         }
         catch (DirectoryNotFoundException)
         {

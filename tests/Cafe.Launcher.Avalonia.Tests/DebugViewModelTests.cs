@@ -13,7 +13,7 @@ namespace Cafe.Launcher.Avalonia.Tests;
 [Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class DebugViewModelTests : IDisposable
 {
-    private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+    private readonly TestDirectory tempDir = TestDirectory.Create();
 
     static DebugViewModelTests()
     {
@@ -197,15 +197,11 @@ public sealed class DebugViewModelTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(tempDir))
-        {
-            Directory.Delete(tempDir, recursive: true);
-        }
+        tempDir.Dispose();
     }
 
     private TestContext CreateContext(string language = LauncherLanguages.English)
     {
-        Directory.CreateDirectory(tempDir);
         var localizer = new LocalizationService();
         localizer.SetLanguage(language);
         var toastService = new ToastService();

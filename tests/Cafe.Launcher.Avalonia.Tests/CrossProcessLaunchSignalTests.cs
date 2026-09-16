@@ -1,21 +1,17 @@
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed class CrossProcessLaunchSignalTests : IDisposable
 {
-    private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-
-    public CrossProcessLaunchSignalTests()
-    {
-        Directory.CreateDirectory(tempDir);
-    }
+    private readonly TestDirectory tempDir = TestDirectory.Create();
 
     public void Dispose()
     {
         try
         {
-            Directory.Delete(tempDir, recursive: true);
+            tempDir.Dispose();
         }
         catch
         {

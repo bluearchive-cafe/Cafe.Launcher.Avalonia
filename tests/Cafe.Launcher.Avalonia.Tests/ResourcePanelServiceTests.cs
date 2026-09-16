@@ -10,18 +10,13 @@ namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed class ResourcePanelServiceTests : IDisposable
 {
-    private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-
-    public ResourcePanelServiceTests()
-    {
-        Directory.CreateDirectory(tempDir);
-    }
+    private readonly TestDirectory tempDir = TestDirectory.Create();
 
     public void Dispose()
     {
         try
         {
-            Directory.Delete(tempDir, recursive: true);
+            tempDir.Dispose();
         }
         catch
         {

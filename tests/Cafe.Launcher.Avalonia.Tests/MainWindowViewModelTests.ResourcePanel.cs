@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Text;
 using Cafe.Launcher.Avalonia.Features.ResourcePanel;
 using Cafe.Launcher.Avalonia.Models;
@@ -98,22 +98,16 @@ public partial class MainWindowViewModelTests
         Assert.Equal(1, CountRequests(transport, "/config/get"));
     }
 
+    /// <summary>
+    /// 呈现层：以系统代理打开面板不引入任何二次确认（源为 Cafe 时直接打开）。
+    /// 「请求真的经系统代理发出」属于传输层，由
+    /// <c>RemoteHttpTransportTests.GetJsonAsync_WhenSystemProxyConfigured_DialsTheProxyAndReadsItsAnswer</c>
+    /// 用回环代理覆盖——此前这条用例让监听器接受连接后立刻断开，再等真实传输的重试退避走完，
+    /// 一次约 10 秒；拆开后两边都在确定的结果上收口。
+    /// </summary>
     [Fact]
-    public async Task ResourcePanelApplySettings_UsesCafeSourceAndSystemProxyWhenOpeningPanel()
+    public async Task ResourcePanelApplySettings_WhenSystemProxyAndCafeSource_OpensPanelWithoutSourceConfirm()
     {
-        using var listener = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0);
-        listener.Start();
-        var proxyEndpoint = (IPEndPoint)listener.LocalEndpoint;
-        var proxySettings = new ProxySettingsService(() => new SystemProxySettings(
-            $"http://127.0.0.1:{proxyEndpoint.Port}",
-            []));
-        using var clientFactory = new HttpClientFactory(proxySettings);
-        // 代理租约与出口校验属于传输层：用真实 RemoteHttpTransport 验证面板请求经系统代理发出。
-        var transport = new RemoteHttpTransport(
-            clientFactory,
-            new RemoteHttpUrlValidator(),
-            () => ProxyModes.System);
-        var apiClient = new ResourcePanelApiClient(transport);
         var savedSettings = new SavedSettingsTestRig(
             Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
         await savedSettings.SeedAsync(new LauncherSettings { ResourcePanelUid = "UIDTESTA" });
@@ -122,26 +116,26 @@ public partial class MainWindowViewModelTests
             savedSettings.SettingsService,
             savedSettings.Writer,
             Path.Combine(tempDir, "missing"));
+        var transport = CreateResourcePanelTransport();
         using var viewModel = await CreateViewModelAsync(
             new CountingCoreService(CreateSnapshot()),
             savedSettings,
             uidService,
-            apiClient);
+            new ResourcePanelApiClient(transport));
         viewModel.ResourcePanel.ApplySettings(new LauncherSettings
         {
             ProxyMode = ProxyModes.System,
             PatchUrlGroup = PatchUrlGroups.Cafe
         });
-        var proxyConnection = listener.AcceptTcpClientAsync();
 
-        var openTask = viewModel.ResourcePanel.OpenResourcePanelCommand.ExecuteAsync(null);
-        using var acceptedClient = await proxyConnection.WaitAsync(TimeSpan.FromSeconds(5));
-        acceptedClient.Close();
-        listener.Stop();
-        await openTask;
+        await viewModel.ResourcePanel.OpenResourcePanelCommand
+            .ExecuteAsync(null)
+            .WaitAsync(TimeSpan.FromSeconds(5));
 
         Assert.True(viewModel.ResourcePanel.IsResourcePanelVisible);
         Assert.False(viewModel.Dialogs.ResourcePanelSourceConfirm.IsVisible);
+        Assert.Equal(1, CountRequests(transport, "/status/list"));
+        Assert.Equal(1, CountRequests(transport, "/config/get"));
     }
 
     [Fact]
@@ -246,15 +240,8 @@ public partial class MainWindowViewModelTests
         writer.Flush();
     }
 
-    private static async Task WaitForConditionAsync(Func<bool> condition)
-    {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
-        while (!condition())
-        {
-            cts.Token.ThrowIfCancellationRequested();
-            await Task.Delay(10, cts.Token);
-        }
-    }
+    private static Task WaitForConditionAsync(Func<bool> condition) =>
+        TestWait.UntilAsync(condition, TimeSpan.FromSeconds(2), "Resource panel command did not settle.");
 
     private static int CountRequests(StubRemoteHttpTransport transport, string path) =>
         transport.RequestedUris.Count(uri => uri.AbsolutePath == path);

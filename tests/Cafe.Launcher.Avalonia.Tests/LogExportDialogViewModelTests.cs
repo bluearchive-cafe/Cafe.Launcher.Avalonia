@@ -5,13 +5,14 @@ using Cafe.Launcher.Avalonia.Features.Diagnostics;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
 [Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class LogExportDialogViewModelTests : IDisposable
 {
-    private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+    private readonly TestDirectory tempDir = TestDirectory.Create();
     private readonly UnifiedLogger logger;
 
     static LogExportDialogViewModelTests()
@@ -21,7 +22,6 @@ public sealed class LogExportDialogViewModelTests : IDisposable
 
     public LogExportDialogViewModelTests()
     {
-        Directory.CreateDirectory(tempDir);
         var logDirectory = Path.Combine(tempDir, "logs");
         Directory.CreateDirectory(logDirectory);
         // Created before the logger opens it: the async sink decides on its own when to touch the
@@ -286,9 +286,6 @@ public sealed class LogExportDialogViewModelTests : IDisposable
     public void Dispose()
     {
         logger.Dispose();
-        if (Directory.Exists(tempDir))
-        {
-            Directory.Delete(tempDir, recursive: true);
-        }
+        tempDir.Dispose();
     }
 }

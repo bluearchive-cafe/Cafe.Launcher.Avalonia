@@ -1,15 +1,15 @@
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed class NoticeStateServiceTests : IDisposable
 {
-    private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+    private readonly TestDirectory tempDir = TestDirectory.Create();
     private readonly string statePath;
 
     public NoticeStateServiceTests()
     {
-        Directory.CreateDirectory(tempDir);
         statePath = Path.Combine(tempDir, "notices.json");
     }
 
@@ -66,7 +66,6 @@ public sealed class NoticeStateServiceTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(tempDir))
-            Directory.Delete(tempDir, recursive: true);
+        tempDir.Dispose();
     }
 }

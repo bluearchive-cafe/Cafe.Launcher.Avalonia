@@ -1,9 +1,10 @@
-using Cafe.Launcher.Avalonia.Constants;
+﻿using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Services.GameRuntime;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -16,7 +17,7 @@ namespace Cafe.Launcher.Avalonia.Tests;
 [Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class GameUninstallServiceTests : IDisposable
 {
-    private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+    private readonly TestDirectory tempDir = TestDirectory.Create();
 
     /// <summary>
     /// 实测的 Blue Archive 启动配置（ADR-032）：宿主名是配置里的 <c>name</c>，游戏可执行文件
@@ -578,35 +579,6 @@ public sealed class GameUninstallServiceTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(tempDir))
-        {
-            const int maxRetries = 5;
-            for (var attempt = 0; attempt < maxRetries; attempt++)
-            {
-                try
-                {
-                    Directory.Delete(tempDir, recursive: true);
-                    break;
-                }
-                catch (IOException)
-                {
-                    if (attempt == maxRetries - 1)
-                    {
-                        throw;
-                    }
-
-                    Thread.Sleep(TimeSpan.FromMilliseconds(200 * (attempt + 1)));
-                }
-                catch (UnauthorizedAccessException)
-                {
-                    if (attempt == maxRetries - 1)
-                    {
-                        throw;
-                    }
-
-                    Thread.Sleep(TimeSpan.FromMilliseconds(200 * (attempt + 1)));
-                }
-            }
-        }
+        tempDir.Dispose();
     }
 }

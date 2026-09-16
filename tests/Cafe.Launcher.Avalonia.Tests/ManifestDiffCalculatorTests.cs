@@ -1,12 +1,13 @@
 using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed class ManifestDiffCalculatorTests : IDisposable
 {
-    private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+    private readonly TestDirectory tempDir = TestDirectory.Create();
 
     [Fact]
     public void GameManifestDiff_WhenFilesChangeAddAndRemove_ReturnsExpectedPlan()
@@ -39,7 +40,6 @@ public sealed class ManifestDiffCalculatorTests : IDisposable
     [Fact]
     public async Task CheckStat_WhenFileIsMissingOrWrongSize_ReturnsBothAndReportsProgress()
     {
-        Directory.CreateDirectory(tempDir);
         await System.IO.File.WriteAllBytesAsync(Path.Combine(tempDir, "valid.bin"), [1]);
         await System.IO.File.WriteAllBytesAsync(Path.Combine(tempDir, "wrong.bin"), [1]);
         var progress = new List<int>();
@@ -149,7 +149,6 @@ public sealed class ManifestDiffCalculatorTests : IDisposable
         // 守卫（AUD-PERF-011）：修复差异算出的哈希必须交回调用方，安装阶段才能凭
         // 见证跳过对同一批健康文件的第二次整读。只有通过校验的文件进入计划，
         // 见证须在当下成立。
-        Directory.CreateDirectory(tempDir);
         var healthyPath = Path.Combine(tempDir, "healthy.bin");
         await System.IO.File.WriteAllBytesAsync(healthyPath, [1, 2, 3]);
         var healthyHash = await new Crc64Service().ComputeFileAsync(healthyPath);
@@ -175,10 +174,7 @@ public sealed class ManifestDiffCalculatorTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(tempDir))
-        {
-            Directory.Delete(tempDir, recursive: true);
-        }
+        tempDir.Dispose();
     }
 
     private static ManifestFile CreateManifestFile(string path, string hash, long size) => new()

@@ -1,4 +1,4 @@
-using Cafe.Launcher.Avalonia.Helpers;
+﻿using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
@@ -758,15 +758,9 @@ public sealed class RemoteContentViewModelTests
         await WaitUntil(() => context.Timer.IsRunning);
     }
 
-    private static async Task WaitUntil(Func<bool> condition)
-    {
-        for (var attempt = 0; attempt < 200 && !condition(); attempt++)
-        {
-            await Task.Delay(10);
-        }
-
-        Assert.True(condition());
-    }
+    /// <summary>等轮播计时器状态落定；机制与超时语义在 <see cref="TestWait"/>。</summary>
+    private static Task WaitUntil(Func<bool> condition) =>
+        TestWait.UntilAsync(condition, TimeSpan.FromSeconds(2), "Banner timer state did not settle.");
 
     private static LauncherRemoteState CreateBannerState(int count, bool loop) =>
         new()

@@ -1,14 +1,12 @@
-using System.Globalization;
+﻿using System.Globalization;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed class CrashReportBootstrapTests : IDisposable
 {
-    private readonly string tempDirectory = Path.Combine(
-        Path.GetTempPath(),
-        "Cafe.Launcher.Avalonia.Tests",
-        Guid.NewGuid().ToString("N"));
+    private readonly TestDirectory tempDirectory = TestDirectory.Create();
 
     [Theory]
     [InlineData(null)]
@@ -61,7 +59,6 @@ public sealed class CrashReportBootstrapTests : IDisposable
     [Fact]
     public void Resolve_WhenSnapshotIsMalformed_ReturnsTheUnreadableReport()
     {
-        Directory.CreateDirectory(tempDirectory);
         var path = Path.Combine(tempDirectory, "garbage.json");
         File.WriteAllText(path, "{not json");
 
@@ -71,7 +68,6 @@ public sealed class CrashReportBootstrapTests : IDisposable
     [Fact]
     public void Resolve_WhenRequiredMemberIsMissing_ReturnsTheUnreadableReport()
     {
-        Directory.CreateDirectory(tempDirectory);
         var path = Path.Combine(tempDirectory, "missing-member.json");
         File.WriteAllText(path, """
             {
@@ -92,7 +88,6 @@ public sealed class CrashReportBootstrapTests : IDisposable
     [Fact]
     public void Resolve_WhenSnapshotWasPersisted_ReturnsTheStoredReport()
     {
-        Directory.CreateDirectory(tempDirectory);
         var store = new CrashReportStore(TestDataRoot.ForDirectory(tempDirectory));
         var stored = store.Create(CrashOrigin.Main, new InvalidOperationException("persisted"));
 
@@ -110,7 +105,6 @@ public sealed class CrashReportBootstrapTests : IDisposable
         // carrying "UiCulture": null deserializes successfully and hands the culture
         // application a null name. The reporter must survive it: this is the field
         // that once made the isolated reporter exit without ever showing a window.
-        Directory.CreateDirectory(tempDirectory);
         var path = Path.Combine(tempDirectory, "null-culture.json");
         File.WriteAllText(path, """
             {
@@ -138,10 +132,7 @@ public sealed class CrashReportBootstrapTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(tempDirectory))
-        {
-            Directory.Delete(tempDirectory, recursive: true);
-        }
+        tempDirectory.Dispose();
     }
 
     /// <summary>

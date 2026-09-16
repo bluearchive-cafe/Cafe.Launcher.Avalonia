@@ -1,10 +1,11 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using Cafe.Launcher.Avalonia.Composition;
 using Cafe.Launcher.Avalonia.Features.Settings;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Testing;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -14,7 +15,7 @@ namespace Cafe.Launcher.Avalonia.Tests;
 public sealed class ToastHostViewModelTests : IDisposable
 {
     private readonly object invokeGate = new();
-    private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+    private readonly TestDirectory tempDir = TestDirectory.Create();
 
     static ToastHostViewModelTests()
     {
@@ -795,7 +796,6 @@ public sealed class ToastHostViewModelTests : IDisposable
 
     private ServiceProvider CreateProvider()
     {
-        Directory.CreateDirectory(tempDir);
         var services = new ServiceCollection();
         services.AddLauncherServices();
         services.AddSingleton(_ => new UnifiedLogger(Path.Combine(tempDir, "logs")));
@@ -829,19 +829,9 @@ public sealed class ToastHostViewModelTests : IDisposable
         return Task.CompletedTask;
     }
 
-    private static async Task WaitUntilAsync(Func<bool> condition)
-    {
-        var timeout = DateTime.UtcNow + TimeSpan.FromSeconds(2);
-        while (!condition())
-        {
-            if (DateTime.UtcNow >= timeout)
-            {
-                throw new TimeoutException("Condition was not reached.");
-            }
-
-            await Task.Delay(10);
-        }
-    }
+    /// <summary>等提示条状态落定；机制与超时语义在 <see cref="TestWait"/>。</summary>
+    private static Task WaitUntilAsync(Func<bool> condition) =>
+        TestWait.UntilAsync(condition, TimeSpan.FromSeconds(2), "Toast state did not settle.");
 
     private sealed class ControlledDelay
     {
@@ -901,9 +891,6 @@ public sealed class ToastHostViewModelTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(tempDir))
-        {
-            Directory.Delete(tempDir, recursive: true);
-        }
+        tempDir.Dispose();
     }
 }

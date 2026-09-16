@@ -28,18 +28,13 @@ public sealed class GameDownloadServiceTests : IDisposable
 
     // xUnit 为每个测试方法创建新实例：实例字段即每测试独立的临时目录，
     // 断言失败时由 Dispose 统一清理，不再泄漏 %TEMP% 垃圾。
-    private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-
-    public GameDownloadServiceTests()
-    {
-        Directory.CreateDirectory(tempDir);
-    }
+    private readonly TestDirectory tempDir = TestDirectory.Create();
 
     public void Dispose()
     {
         try
         {
-            Directory.Delete(tempDir, recursive: true);
+            tempDir.Dispose();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -276,7 +271,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         }
         finally
         {
-            Directory.Delete(tempDir, recursive: true);
+            tempDir.Dispose();
         }
     }
 
@@ -321,7 +316,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         }
         finally
         {
-            Directory.Delete(tempDir, recursive: true);
+            tempDir.Dispose();
         }
     }
 
@@ -376,7 +371,7 @@ public sealed class GameDownloadServiceTests : IDisposable
             transport.RequestedUris.Select(uri => uri.Host).ToArray());
         Assert.Contains(0, reportedBytes);
         Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(Path.Combine(gamePath, "data", "file.bin.tmp")));
-        Directory.Delete(tempDir, recursive: true);
+        tempDir.Dispose();
     }
 
     [Fact]
@@ -411,7 +406,7 @@ public sealed class GameDownloadServiceTests : IDisposable
 
         Assert.Equal(FileDownloadService.RetryDomainOrder.Length, transport.RequestedUris.Count);
         Assert.False(File.Exists(Path.Combine(gamePath, "data", "file.bin.tmp")));
-        Directory.Delete(tempDir, recursive: true);
+        tempDir.Dispose();
     }
 
     [Fact]
@@ -450,7 +445,7 @@ public sealed class GameDownloadServiceTests : IDisposable
 
         Assert.Equal(4, transport.RangeStarts.Single());
         Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
-        Directory.Delete(tempDir, recursive: true);
+        tempDir.Dispose();
     }
 
     [Fact]
@@ -505,7 +500,7 @@ public sealed class GameDownloadServiceTests : IDisposable
 
         Assert.Equal(2, transport.RequestedUris.Count);
         Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
-        Directory.Delete(tempDir, recursive: true);
+        tempDir.Dispose();
     }
 
     [Fact]
@@ -565,7 +560,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         }
         finally
         {
-            Directory.Delete(tempDir, recursive: true);
+            tempDir.Dispose();
         }
     }
 
@@ -627,7 +622,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         }
         finally
         {
-            Directory.Delete(tempDir, recursive: true);
+            tempDir.Dispose();
         }
     }
 
@@ -648,7 +643,7 @@ public sealed class GameDownloadServiceTests : IDisposable
 
         Assert.True(result.Success);
         Assert.False(File.Exists(statePath));
-        Directory.Delete(tempDir, recursive: true);
+        tempDir.Dispose();
     }
 
     [Fact]
@@ -690,7 +685,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         // 提交没发生：本地清单逐字未变，续传检查点也没落盘。
         Assert.Equal(manifestBefore, await File.ReadAllTextAsync(manifestPath));
         Assert.False(File.Exists(statePath));
-        Directory.Delete(tempDir, recursive: true);
+        tempDir.Dispose();
     }
 
     [Fact]
@@ -728,7 +723,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         Assert.True(result.Success);
         Assert.Contains("keep", await File.ReadAllTextAsync(manifestPath));
         Assert.False(File.Exists(statePath));
-        Directory.Delete(tempDir, recursive: true);
+        tempDir.Dispose();
     }
 
     [Fact]
@@ -842,7 +837,7 @@ public sealed class GameDownloadServiceTests : IDisposable
             item.Stage == GameOperationStage.DownloadCompleted && item.Progress == 100);
         Assert.Equal([true, false], runningStates);
         Assert.False(File.Exists(statePath));
-        Directory.Delete(tempDir, recursive: true);
+        tempDir.Dispose();
     }
 
     [Fact]
@@ -878,7 +873,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         Assert.True(result.Success);
         Assert.False(service.IsPaused);
         Assert.Equal(fileBytes, await File.ReadAllBytesAsync(Path.Combine(gamePath, "data", "file.bin")));
-        Directory.Delete(tempDir, recursive: true);
+        tempDir.Dispose();
     }
 
     [Theory]
@@ -919,7 +914,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         Assert.Equal([true, false], runningStates);
         Assert.Contains(progress, item => item.Stage == GameOperationStage.Stopped);
         Assert.Equal(expectedStateFileExists, File.Exists(statePath));
-        Directory.Delete(tempDir, recursive: true);
+        tempDir.Dispose();
     }
 
     [Fact]
@@ -948,7 +943,7 @@ public sealed class GameDownloadServiceTests : IDisposable
 
         Assert.False(result.Success);
         Assert.True(File.Exists(statePath));
-        Directory.Delete(tempDir, recursive: true);
+        tempDir.Dispose();
     }
 
     [Fact]
@@ -979,7 +974,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         Assert.Equal(GameOperationErrorCode.InsufficientDiskSpace, result.ErrorCode);
         Assert.Equal(1, result.AffectedFileCount);
         Assert.Equal(0, downloader.InvocationCount);
-        Directory.Delete(tempDir, recursive: true);
+        tempDir.Dispose();
     }
 
     [Fact]
@@ -1023,7 +1018,7 @@ public sealed class GameDownloadServiceTests : IDisposable
             item.Stage == GameOperationStage.DiskCheck
             && item.RequiredDiskBytes == decompressionBytes
             && item.AvailableDiskBytes == availableBytes);
-        Directory.Delete(tempDir, recursive: true);
+        tempDir.Dispose();
     }
 
     [Theory]
@@ -1061,7 +1056,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         Assert.False(result.Success);
         Assert.Contains($"required: {FileSizeFormatter.Format(10)}", logText, StringComparison.Ordinal);
         Assert.Contains($"available: {expectedAvailable}", logText, StringComparison.Ordinal);
-        Directory.Delete(tempDir, recursive: true);
+        tempDir.Dispose();
     }
 
     [Fact]
@@ -1097,7 +1092,7 @@ public sealed class GameDownloadServiceTests : IDisposable
             item.Stage == GameOperationStage.DiskCheck
             && item.RequiredDiskBytes == 10
             && item.AvailableDiskBytes == 15);
-        Directory.Delete(tempDir, recursive: true);
+        tempDir.Dispose();
     }
 
     [Fact]
@@ -1134,7 +1129,7 @@ public sealed class GameDownloadServiceTests : IDisposable
             item.Stage == GameOperationStage.DiskCheck
             && item.RequiredDiskBytes == 10
             && item.AvailableDiskBytes == 15);
-        Directory.Delete(tempDir, recursive: true);
+        tempDir.Dispose();
     }
 
     [Fact]
@@ -1162,7 +1157,7 @@ public sealed class GameDownloadServiceTests : IDisposable
 
         Assert.False(result.Success);
         Assert.False(File.Exists(statePath));
-        Directory.Delete(tempDir, recursive: true);
+        tempDir.Dispose();
     }
 
     [Theory]
@@ -1214,7 +1209,7 @@ public sealed class GameDownloadServiceTests : IDisposable
                 result.Message,
                 StringComparison.Ordinal);
         }
-        Directory.Delete(tempDir, recursive: true);
+        tempDir.Dispose();
     }
 
     [Fact]
@@ -1258,7 +1253,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         Assert.All(
             manifestFiles,
             file => Assert.True(File.Exists(Path.Combine(gamePath, file.Path.Replace('/', Path.DirectorySeparatorChar)))));
-        Directory.Delete(tempDir, recursive: true);
+        tempDir.Dispose();
     }
 
     [Fact]
@@ -1286,7 +1281,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         Assert.True(result.Success);
         Assert.Equal(2, downloader.InvocationCount);
         Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(Path.Combine(gamePath, "data", "file.bin")));
-        Directory.Delete(tempDir, recursive: true);
+        tempDir.Dispose();
     }
 
     [Fact]
@@ -1319,7 +1314,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         Assert.True(
             watch.Elapsed >= TimeSpan.FromMilliseconds(800),
             $"Expected throttled install to take at least 800 ms, actual: {watch.Elapsed}.");
-        Directory.Delete(tempDir, recursive: true);
+        tempDir.Dispose();
     }
 
     [Fact]
@@ -1352,7 +1347,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         Assert.Equal(fileBytes.Length, finalDownloadProgress.DownloadedSize);
         Assert.Equal(fileBytes.Length, finalDownloadProgress.TotalSize);
         Assert.True(finalDownloadProgress.BytesPerSecond > 0);
-        Directory.Delete(tempDir, recursive: true);
+        tempDir.Dispose();
     }
 
     [Fact]
@@ -1386,7 +1381,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         Assert.Equal(400, downloadProgress[0].DownloadedSize);
         Assert.Equal(1000, downloadProgress[^1].DownloadedSize);
         Assert.Equal(100, downloadProgress[^1].Progress);
-        Directory.Delete(tempDir, recursive: true);
+        tempDir.Dispose();
     }
 
     [Fact]
@@ -1526,7 +1521,7 @@ public sealed class GameDownloadServiceTests : IDisposable
             && item.FailedFileCount == 1);
         Assert.False(File.Exists(Path.Combine(gamePath, "data", "file.bin.tmp")));
         Assert.False(File.Exists(Path.Combine(gamePath, "data", "file.bin")));
-        Directory.Delete(tempDir, recursive: true);
+        tempDir.Dispose();
     }
 
     [Fact]
@@ -1561,7 +1556,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         Assert.False(File.Exists(Path.Combine(gamePath, "data", "file.bin")));
         Assert.False(File.Exists(Path.Combine(gamePath, "manifest.json")));
         Assert.False(File.Exists(statePath));
-        Directory.Delete(tempDir, recursive: true);
+        tempDir.Dispose();
     }
 
     [Fact]
@@ -1606,7 +1601,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         // 拒绝发生在计划阶段：游戏文件与本地清单都没落地。
         Assert.False(File.Exists(Path.Combine(gamePath, "data", "file.bin")));
         Assert.False(File.Exists(Path.Combine(gamePath, "manifest.json")));
-        Directory.Delete(tempDir, recursive: true);
+        tempDir.Dispose();
     }
 
     [Fact]
@@ -1644,7 +1639,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         // 已经下好的暂存文件留在盘上：用户关掉游戏后重试会按已有字节继续（检查点按既有终局
         // 语义在失败出口丢弃，所以这里不断言它——续传材料的断言落在 .tmp 上）。
         Assert.True(File.Exists(Path.Combine(gamePath, "data", "file.bin.tmp")), $"probeCalls={probeCalls}");
-        Directory.Delete(tempDir, recursive: true);
+        tempDir.Dispose();
     }
 
     [Fact]
@@ -1665,7 +1660,7 @@ public sealed class GameDownloadServiceTests : IDisposable
 
         Assert.Null(result);
         Assert.False(File.Exists(statePath));
-        Directory.Delete(tempDir, recursive: true);
+        tempDir.Dispose();
     }
 
     [Fact]
@@ -1690,7 +1685,7 @@ public sealed class GameDownloadServiceTests : IDisposable
 
         Assert.Null(result);
         Assert.False(File.Exists(statePath));
-        Directory.Delete(tempDir, recursive: true);
+        tempDir.Dispose();
     }
 
     [Fact]
@@ -1731,7 +1726,7 @@ public sealed class GameDownloadServiceTests : IDisposable
             transport.Release.TrySetResult();
             service.Stop(DownloadStopReason.ApplicationExit);
             await repairTask;
-            Directory.Delete(tempDir, recursive: true);
+            tempDir.Dispose();
         }
     }
 
@@ -1770,7 +1765,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         Assert.Equal(LocalInstallationStateKind.Valid, state.Kind);
         Assert.Equal("1.0.0", state.Manifest?.Version);
         Assert.True(File.Exists(Path.Combine(gamePath, "unknown.bin")));
-        Directory.Delete(tempDir, recursive: true);
+        tempDir.Dispose();
     }
 
     private static GameDownloadService CreateService(LauncherApiClient apiClient)

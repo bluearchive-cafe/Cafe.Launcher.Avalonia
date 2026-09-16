@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Text;
 using System.Text.Json;
 using Cafe.Launcher.Avalonia.Constants;
@@ -7,6 +7,7 @@ using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -340,21 +341,15 @@ public sealed class ResourcePanelViewModelTests
         return placeholderIndex < 0 ? template : template[..placeholderIndex];
     }
 
-    private static async Task WaitUntilAsync(Func<bool> condition)
-    {
-        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        while (!condition())
-        {
-            await Task.Delay(10, timeoutCts.Token);
-        }
-    }
+    /// <summary>等面板状态落定；机制与超时语义在 <see cref="TestWait"/>。</summary>
+    private static Task WaitUntilAsync(Func<bool> condition) =>
+        TestWait.UntilAsync(condition, TimeSpan.FromSeconds(5), "Resource panel state did not settle.");
 
     private async Task<TestContext> CreateContextAsync(
         string? cookieUid = null,
         Action<GatedResourcePanelTransport>? configure = null)
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(tempDir);
+        var tempDir = TestDirectory.Create();
         var cookiePath = Path.Combine(tempDir, "Library");
         if (cookieUid is not null)
         {

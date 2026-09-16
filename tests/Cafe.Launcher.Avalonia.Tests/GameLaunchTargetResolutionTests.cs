@@ -1,23 +1,18 @@
-using System;
+﻿using System;
 using System.IO;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed class GameLaunchTargetResolutionTests : IDisposable
 {
-    private readonly string tempDirectory;
-
-    public GameLaunchTargetResolutionTests()
-    {
-        tempDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(tempDirectory);
-    }
+    private readonly TestDirectory tempDirectory = TestDirectory.Create();
 
     public void Dispose()
     {
-        Directory.Delete(tempDirectory, recursive: true);
+        tempDirectory.Dispose();
     }
 
     [Fact]

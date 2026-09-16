@@ -15,7 +15,7 @@ namespace Cafe.Launcher.Avalonia.Tests;
 [Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class WindowChromeViewModelTests : IDisposable
 {
-    private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+    private readonly TestDirectory tempDir = TestDirectory.Create();
 
     static WindowChromeViewModelTests()
     {
@@ -252,7 +252,6 @@ Assert.Equal(DownloadStopReason.UserRequested, context.Backend.LastStopReason);
 
     private TestContext CreateContext()
     {
-        Directory.CreateDirectory(tempDir);
         var services = new ServiceCollection();
         var logger = new UnifiedLogger(Path.Combine(tempDir, "logs"));
         services.AddLauncherServices(logger);
@@ -299,10 +298,7 @@ Assert.Equal(DownloadStopReason.UserRequested, context.Backend.LastStopReason);
 
     public void Dispose()
     {
-        if (Directory.Exists(tempDir))
-        {
-            Directory.Delete(tempDir, recursive: true);
-        }
+        tempDir.Dispose();
     }
 
     private sealed record TestContext(

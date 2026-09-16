@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
@@ -14,7 +14,7 @@ namespace Cafe.Launcher.Avalonia.Tests;
 [Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class InstallationOperationStateTests : IDisposable
 {
-    private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+    private readonly TestDirectory tempDir = TestDirectory.Create();
 
     private static IGameRuntime CreateGameRuntime() =>
         new GameRuntime(
@@ -803,39 +803,12 @@ public sealed class InstallationOperationStateTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(tempDir))
-        {
-            const int maxRetries = 5;
-            for (var attempt = 0; attempt < maxRetries; attempt++)
-            {
-                try
-                {
-                    Directory.Delete(tempDir, recursive: true);
-                    break;
-                }
-                catch (UnauthorizedAccessException)
-                {
-                    if (attempt == maxRetries - 1) throw;
-                    Thread.Sleep(TimeSpan.FromMilliseconds(200 * (attempt + 1)));
-                }
-            }
-        }
+        tempDir.Dispose();
     }
 
-    private static string CreateTempDir()
-    {
-        var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(path);
-        return path;
-    }
+    private static TestDirectory CreateTempDir() => TestDirectory.Create();
 
-    private static void DeleteTempDir(string path)
-    {
-        if (Directory.Exists(path))
-        {
-            Directory.Delete(path, recursive: true);
-        }
-    }
+    private static void DeleteTempDir(TestDirectory tempDir) => tempDir.Dispose();
 
     /// <summary>Reports the game as running so the uninstall guard can be exercised.</summary>
     private sealed class RunningGameProcessTracker : IGameProcessTracker

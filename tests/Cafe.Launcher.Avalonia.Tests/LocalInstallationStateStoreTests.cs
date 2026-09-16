@@ -1,12 +1,13 @@
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Testing;
 using System.Text.Json;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed class LocalInstallationStateStoreTests : IDisposable
 {
-    private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+    private readonly TestDirectory tempDir = TestDirectory.Create();
     private readonly string gamePath;
     private readonly LocalInstallationStateStore store = new();
 
@@ -291,9 +292,6 @@ public sealed class LocalInstallationStateStoreTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(tempDir))
-        {
-            Directory.Delete(tempDir, recursive: true);
-        }
+        tempDir.Dispose();
     }
 }

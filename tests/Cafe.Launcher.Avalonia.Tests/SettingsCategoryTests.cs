@@ -3,6 +3,7 @@ using Cafe.Launcher.Avalonia.Composition;
 using Cafe.Launcher.Avalonia.Features.Settings;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Testing;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -390,7 +391,7 @@ public sealed class SettingsCategoryTests
 
     private static SettingsViewModelScope CreateSettingsViewModel()
     {
-        var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var directory = TestDirectory.Create();
         var settingsPath = Path.Combine(directory, "settings.json");
         var services = new ServiceCollection();
         services.AddLauncherServices();
@@ -407,7 +408,7 @@ public sealed class SettingsCategoryTests
         ServiceProvider provider,
         SettingsViewModel viewModel,
         string settingsPath,
-        string directory) : IDisposable
+        TestDirectory directory) : IDisposable
     {
         public SettingsViewModel ViewModel { get; } = viewModel;
         public string SettingsPath { get; } = settingsPath;
@@ -415,10 +416,7 @@ public sealed class SettingsCategoryTests
         public void Dispose()
         {
             provider.Dispose();
-            if (Directory.Exists(directory))
-            {
-                Directory.Delete(directory, recursive: true);
-            }
+            directory.Dispose();
         }
     }
 }

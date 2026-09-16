@@ -49,6 +49,9 @@
   <ItemGroup>
     <Compile Include="..\TestUserDataIsolation.cs" Link="TestUserDataIsolation.cs" />
     <Compile Include="..\TestAnimationSetup.cs" Link="TestAnimationSetup.cs" />
+    <Compile Include="..\Support\TestDirectory.cs" Link="Support\TestDirectory.cs" />
+    <Compile Include="..\Support\TestRepository.cs" Link="Support\TestRepository.cs" />
+    <Compile Include="..\Support\TestWait.cs" Link="Support\TestWait.cs" />
     <Compile Include="..\TestDoubles\CallbackRecorder.cs" Link="TestDoubles\CallbackRecorder.cs" />
     <Compile Include="..\TestDoubles\StubFatalCrashService.cs" Link="TestDoubles\StubFatalCrashService.cs" />
     <Compile Include="..\TestDoubles\StubFileDownloadService.cs" Link="TestDoubles\StubFileDownloadService.cs" />

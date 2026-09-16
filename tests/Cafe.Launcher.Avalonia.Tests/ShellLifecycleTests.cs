@@ -30,7 +30,7 @@ public sealed class ShellLifecycleTests : IDisposable
         TestLocalizationHelper.Initialize();
     }
 
-    private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+    private readonly TestDirectory tempDir = TestDirectory.Create();
     private readonly HttpClientFactory httpClientFactory;
     private readonly ToastService toastService = new();
     private readonly List<ToastNotification> raisedToasts = [];
@@ -40,7 +40,6 @@ public sealed class ShellLifecycleTests : IDisposable
 
     public ShellLifecycleTests()
     {
-        Directory.CreateDirectory(tempDir);
         httpClientFactory = new HttpClientFactory(new ProxySettingsService());
         toastService.ToastRaised += notification => raisedToasts.Add(notification);
     }
@@ -304,10 +303,7 @@ public sealed class ShellLifecycleTests : IDisposable
         }
 
         httpClientFactory.Dispose();
-        if (Directory.Exists(tempDir))
-        {
-            Directory.Delete(tempDir, recursive: true);
-        }
+        tempDir.Dispose();
     }
 
     /// <summary>

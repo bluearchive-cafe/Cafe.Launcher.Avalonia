@@ -1071,8 +1071,7 @@ public sealed class GameOperationsViewModelTests
     [Fact]
     public async Task StartGameCommand_WhenLaunchIsBlocked_WritesDiagnosticDetailsAsWarning()
     {
-        var logDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(logDirectory);
+        var logDirectory = TestDirectory.Create();
         try
         {
             using var logger = new UnifiedLogger(logDirectory);
@@ -1100,7 +1099,7 @@ public sealed class GameOperationsViewModelTests
         }
         finally
         {
-            Directory.Delete(logDirectory, recursive: true);
+            logDirectory.Dispose();
         }
     }
 

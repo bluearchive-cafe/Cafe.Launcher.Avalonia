@@ -16,7 +16,7 @@ public sealed class BackgroundViewModelTests : IDisposable
     private static readonly byte[] PngBytes = Convert.FromBase64String(
         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=");
 
-    private readonly string rootDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+    private readonly TestDirectory rootDir = TestDirectory.Create();
     private readonly string tempDir;
 
     public BackgroundViewModelTests()
@@ -491,10 +491,7 @@ public sealed class BackgroundViewModelTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(rootDir))
-        {
-            Directory.Delete(rootDir, recursive: true);
-        }
+        rootDir.Dispose();
     }
 
     private sealed class TestImage : IImage, IDisposable

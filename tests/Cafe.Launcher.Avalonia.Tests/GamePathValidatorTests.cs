@@ -1,4 +1,5 @@
 using Cafe.Launcher.Avalonia.Helpers;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -80,7 +81,7 @@ public sealed class GamePathValidatorTests
     [Fact]
     public void GetSafePath_WhenExistingDirectoryIsSymbolicLink_ThrowsInvalidOperation()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var tempDir = TestDirectory.Create();
         var gamePath = Path.Combine(tempDir, "GameDir");
         var outsidePath = Path.Combine(tempDir, "Outside");
         var linkPath = Path.Combine(gamePath, "linked");
@@ -103,14 +104,14 @@ public sealed class GamePathValidatorTests
                 Directory.Delete(linkPath);
             }
 
-            Directory.Delete(tempDir, recursive: true);
+            tempDir.Dispose();
         }
     }
 
     [Fact]
     public void GetSafePath_WhenGameRootIsSymbolicLink_ThrowsInvalidOperation()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var tempDir = TestDirectory.Create();
         var actualGamePath = Path.Combine(tempDir, "ActualGameDir");
         var linkedGamePath = Path.Combine(tempDir, "LinkedGameDir");
         Directory.CreateDirectory(actualGamePath);
@@ -131,7 +132,7 @@ public sealed class GamePathValidatorTests
                 Directory.Delete(linkedGamePath);
             }
 
-            Directory.Delete(tempDir, recursive: true);
+            tempDir.Dispose();
         }
     }
 
