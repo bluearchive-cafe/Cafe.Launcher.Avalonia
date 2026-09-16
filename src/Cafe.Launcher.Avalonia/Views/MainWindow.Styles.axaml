@@ -1,4 +1,4 @@
-<Styles xmlns="https://github.com/avaloniaui"
+﻿<Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:views="using:Cafe.Launcher.Avalonia.Views"
         xmlns:helpers="using:Cafe.Launcher.Avalonia.Helpers"
@@ -486,13 +486,6 @@
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Md}"/>
         <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
-    </Style>
-    <Style Selector="Border.surface">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Surface}"/>
-        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
-        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Lg}"/>
-        <!-- 阴影经 BoxShadowsExtension 消费 token（BoxShadows 无 TypeConverter）。 -->
-        <Setter Property="BoxShadow" Value="{helpers:BoxShadows {StaticResource Launcher.Elevation.Shadow.Md}}"/>
     </Style>
     <Style Selector="Border.remote-surface">
         <Setter Property="HorizontalAlignment" Value="Left"/>
@@ -1018,10 +1011,6 @@
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Md}"/>
     </Style>
-    <Style Selector="Border.dialog-alert.warning">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Warning.Background}"/>
-        <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Warning}"/>
-    </Style>
     <Style Selector="Border.dialog-alert.danger">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Danger.Soft}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Danger}"/>
@@ -1035,17 +1024,11 @@
         <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
         <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Info}"/>
     </Style>
-    <Style Selector="TextBlock.dialog-alert-title.warning">
-        <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Warning}"/>
-    </Style>
     <Style Selector="TextBlock.dialog-alert-title.danger">
         <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Danger}"/>
     </Style>
     <Style Selector="materialIcons|MaterialIcon.dialog-alert-icon">
         <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Info}"/>
-    </Style>
-    <Style Selector="materialIcons|MaterialIcon.dialog-alert-icon.warning">
-        <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Warning}"/>
     </Style>
     <Style Selector="materialIcons|MaterialIcon.dialog-alert-icon.danger">
         <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Danger}"/>

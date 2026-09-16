@@ -1,4 +1,4 @@
-<Application xmlns="https://github.com/avaloniaui"
+﻿<Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="Cafe.Launcher.Avalonia.App"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
@@ -52,7 +52,6 @@
             <Thickness x:Key="Launcher.Component.TitleBar.Actions.Margin">0,0,8,0</Thickness>
             <Thickness x:Key="Launcher.Component.TitleBar.Settings.Margin">0,0,4,0</Thickness>
             <Thickness x:Key="Launcher.Component.Dialog.Title.Margin">16,0,0,0</Thickness>
-            <Thickness x:Key="Launcher.Component.Dialog.HeaderAction.Margin">0,0,16,0</Thickness>
             <Thickness x:Key="Launcher.Component.Dialog.Footer.BorderThickness">0,1,0,0</Thickness>
             <Thickness x:Key="Launcher.Component.Dialog.FooterLeading.Margin">0,0,12,0</Thickness>
             <Thickness x:Key="Launcher.Component.Settings.Group.Margin">0,16,0,0</Thickness>
