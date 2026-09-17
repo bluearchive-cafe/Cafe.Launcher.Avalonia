@@ -136,4 +136,4 @@ None of this is mechanically enforced — the `main` ruleset blocks only deletio
 
 ## Audit State
 
-`CODEBASE_AUDIT.md` is the current-state repository audit; dated audit reports and ledgers are archived under `.repository-audit/history/`. Treat both as engineering records: update the current report when a finding is fixed or accepted, and archive superseded reports rather than deleting them.
+`CODEBASE_AUDIT.md` is the current-state repository audit; dated audit reports and ledgers are archived under `.repository-audit/history/`. Treat both as engineering records: update the current report when a finding is fixed or accepted, and archive superseded reports rather than deleting them. The single query entry point for candidates, findings and pending decisions is `docs/design/candidates-ledger-2026-09.md` — it is a view whose owners are the documents above, so change the owner first and update its row afterwards; it does not replace the archived reports, which stay as evidence (its §4 records what only exists there).

@@ -89,5 +89,6 @@ desktop-launcher 基线按仓库证据调整：
 ## Previous Audit State
 
 - 本轮为 full 全量重审（用户指令）+ 同日修复轮；上一报告（2026-09-13 full+delta @ `ab156dd`/`1619d35`）归档于 `history/2026-09-13-full-audit.md`
-- 现行台账 `findings.json`（2026-09-14 @ `95b9f8b`）：开放 6 项（全 Low：PERF-001/004/005 残留、SEC-001/002、ARCH-005，均为决策/待设计项）
-- 累计结案 17 项：14 resolved + 3 accepted-risk（MAINT-002、SEC-004、ARCH-007）；修复轮提交清单见 audit-state.json note
+- 现行台账 `findings.json`（计数修正于 2026-09-17；地图本体仍为 v15 @ `95b9f8b`）：开放 7 项（全 Low：PERF-001/004/005 残留、SEC-001/002、ARCH-005、TEST-012，均为决策/待设计项）
+- 累计结案 43 项：39 resolved + 4 accepted-risk（MAINT-002、SEC-004、SEC-006、ARCH-007）；修复轮提交清单见 audit-state.json note
+- 候选、发现与待决项的日常查询入口：`docs/design/candidates-ledger-2026-09.md`（含历史轮次索引与「唯一记录在此」标注）
