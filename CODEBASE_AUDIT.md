@@ -56,6 +56,15 @@
 > - **编号提醒**：重新立案一律用**新编号**（`AUD-CI-007`、`AUD-MAINT-006/007`、`AUD-TEST-014`、`AUD-ARCH-013`）。重置前的旧编号已被 2026-09-13 的清零重置回收再利用（旧 `ARCH-007` 是同步 logger 静态字段，现行 `ARCH-007` 是代理指纹变化处置在途 handler），复用会造成同号两题。
 > - **文档后果**：候选总表 §4 的「删归档目录前先搬 §3.5 那 20 条」这一前置条件**就此解除**（只剩四份 release 放行证据需先抽成 release-gate 台账）。开放计数 **6 → 11 项 Low**（新立案 5 条），informational 0、accepted-risk 4。
 
+> **重新立案 5 条同日结案（2026-09-17，用户指令「先修重新立案的」）**：上一轮从重置前台账重新立案的 5 条逐项修复、逐项验证，全部结案：
+>
+> - **`AUD-TEST-014`（有界等待）做得最实**：原台账点名 14 处，实测同类共 **19 处**（扫描另发现 `GameRuntimeSettingsUiTests` 的 3 处 `PendingGameRuntimeStatusRefresh` 与 2 处同类任务局部变量）。逐个加 `.WaitAsync(TimeSpan.FromSeconds(5))`；**刻意不改**替身与事件处理体里的 9 处故意阻塞点（`firstSubscriberRelease`/`gate`/`Release`/`releaseUnrelatedCancellation` 等）——那里的长阻塞是场景本身，加上限会把「模拟在飞操作」变成定时失败。两层守卫：新增 `TestSourceWaitContractTests`（只盯被测 VM 暴露的 `Pending*` 家族，零误伤，带反空转基线：扫描面 ≥200 文件、有界站点 ≥17 实测值；变异验证拆掉任一 `.WaitAsync` 即红）；`test.ps1` 增运行器侧净网（blame-hang，5 分钟无活动即中止 testhost 并失败），**实证** 1 秒版本确实中止了运行并给退出码 1。`Tests.csproj` 原先声称「门控等待统一用 WaitAsync/预算轮询加超时上限」的抑制理由按实测改写（xUnit v3 的 runner 配置没有全局超时键——已在 `xunit.v3.runner.common` 包内核实，故取运行器侧的路）。**本报告 Testing 节「正面等待全部有截止/迭代上限」的表述据此更正。**
+> - **`AUD-MAINT-006`（横幅版本契约）**：新增契约断言「当前 `VersionPrefix` 对应的横幅存在、PNG 签名与 IHDR 合法、画布等于模板声明的 2000×1125」（单元工程不初始化 Avalonia，故「可解码」以签名+IHDR 为准；位图像素解码属无头工程的域）。三处缺口同批收口：契约测试补文件断言、指南改写画布表述并写明历史尺寸（beta.1–5 为 2400×1350、beta.6 起为 2000×1125，契约只校验当前版本那一张）、版本读取从两份同形正则收敛到 `ProjectMetadata.ReadVersionPrefix()`。**变异验证**：把当前版本横幅换成 beta.1 那张后立刻变红。`release.yml` 的 tag 门禁保持「只查存在」不变——它挡「忘了提交」，契约测试挡「提交了坏文件」。
+> - **`AUD-CI-007`（Release 配置的测试）**：build.yml 在 Debug 测试后增 `Test (Release)` 步骤（`-Suite Unit`）。步骤注释写明了为什么是单元套件（`#if DEBUG` 级别开关这类分歧的宿主就是单元断言）以及残留（无头套件的 Release 运行仍留在 release.yml 的 installer 作业）。**本机实测该步骤全绿**（Release 单元 1872 通过 / 0 失败 / 2 可见跳过），即新增的 CI 步骤本身不会红。
+> - **`AUD-MAINT-007`**：类摘要改为引用 `GamePaths.GameConfigFileName`/`ManifestFileName` 常量——引用常量而非重抄文件名，本次的成因正是一次改名只改了常量。
+> - **`AUD-ARCH-013`（决策记录）**：ADR-032 增决策 9（游戏在跑时**拒绝执行、不先强制结束进程再继续**；三条依据：拒绝的代价可见可逆而强杀的不可逆；强杀的前提是可靠识别进程，而本 ADR 的已知限制写明判据只有名字、Unix 上还被 `comm` 15 字符截断削弱；反作弊兄弟比宿主活得久，要真做完就得结束一整族）与决策 10（表述边界：参考实现那一侧的说法来自重置前台账登记的一次对比，该分析文档按 `AUD-MAINT-002` 不在版本管理内且工作树文件已移除，故只主张 Cafe 这一侧），并在「被否决的替代方案」「后果」各补一条；`CONTEXT.md` 的「游戏进程家族」词条补一句指向决策 9。
+> - **计数**：开放 11 → **6 项 Low**（余 `PERF-001`／`PERF-004`／`PERF-005`／`SEC-001`／`SEC-002`／`ARCH-005`，全部决策/设计轮门控）；accepted-risk 保持 4；本窗口未立案新发现。候选总表 §3.5 的五行已就地标注结案。
+
 ## Audit Metadata
 
 - 日期：2026-09-14（上午 full 六域重审 + 下午修复核实轮/独立重扫 + 晚间第二修复轮）
@@ -70,12 +79,12 @@
 
 仓库健康状况：**良好，且较上一审计实质性改善**。desktop-launcher 四个关键风险面（下载完整性、文件系统边界、进程启动、外部链接）防御纵深不变且全部有测试；上一轮全部 5 项 Medium 级结构/测试发现中 4 项已随 `1f09bc8`/`a6d3794`/`08c53f8`/`cf353cd`/`67229b5` 真实解决（不是纸面解决——本审计逐项读码 + 本地实测全绿确认），其余 2 项（AUD-PERF-001、AUD-CI-001）部分解决后降档。同日修复轮 9 项提交经复审逐项读码核实为真实落地。**复审新立案 1 项 Medium（测试覆盖缺口），其余 6 项新发现为 Low。**
 
-开放发现（2026-09-17 可直接推进项落地 + 历史遗留复核后）：
+开放发现（2026-09-17 可直接推进项落地 + 历史遗留复核并结案后）：
 
 - Critical：0
 - High：0
 - Medium：0
-- Low：11 open（决策/设计轮门控：AUD-PERF-001、AUD-PERF-004、AUD-PERF-005 残留、AUD-SEC-001、AUD-SEC-002、AUD-ARCH-005 ＋ 2026-09-17 从重置前台账重新立案的 5 条：AUD-CI-007、AUD-MAINT-006、AUD-MAINT-007、AUD-TEST-014、AUD-ARCH-013）+ 4 accepted-risk（MAINT-002、SEC-004、SEC-006、ARCH-007）
+- Low：6 open（决策/设计轮门控：AUD-PERF-001、AUD-PERF-004、AUD-PERF-005 残留、AUD-SEC-001、AUD-SEC-002、AUD-ARCH-005）+ 4 accepted-risk（MAINT-002、SEC-004、SEC-006、ARCH-007）
 - 本窗口解决：14 项（8 项随上轮修复落地：ARCH-002/003、TEST-002/003/004、PERF-002/003、MAINT-002；6 项随同日修复轮：ARCH-004/006、CI-001、PERF-006、SEC-003/005）；第二修复轮再解决 6 项（TEST-005/006/007、MAINT-003/004、PERF-007）并将 SEC-006 结案为 accepted-risk；CI 对账轮新立案 3 项（AUD-CI-002/003/004）并同日全部解决；功能轮（2026-09-15）新立案 1 项（ARCH-008）并于同日跟进按建议 (a) 解决（`6408c58`）；随后按用户追问再立案 AUD-ARCH-009（下载/安装/修复闸门的三处缺口）并同日解决（`6408c58`）；CI 对账复核结案 AUD-CI-001（其建议已落地为 `build.yml` 的 push/PR linux 作业）、新立案 AUD-CI-005（该作业连续红且非 required）并于同日修复、作业首绿（`08c53f8`）；CI 复查（2026-09-15 深夜）新立案 AUD-CI-006（生产侧平台假设：`Path.GetFileName` 在 Unix 上切不开配置里 Windows 形状的 `params`，游戏可执行文件静默移出家族）并同日解决（`8461044`）；CI 续查（2026-09-15 深夜）新立案 AUD-TEST-008（并行校验／下载路径上测试侧收集未加锁或非原子自增，两次 CI 偶发红）并同日解决（`e83334b` + `0060855`）；计划落地期间 `779664f` 解决 AUD-TEST-013（= `DEF-4`，无头套件主题变体泄漏：golden 侧钉住基线值 + 新增 `ThemeVariantSnapshot` 设施，两条新守卫各做变异验证，两处锚点复核为一真一假）；`59647cc` 解决 AUD-TEST-010（= `DEF-2`，动效叠层扫描改为按目录发现 + 反空转基线）、`588d80c` 解决 AUD-ARCH-012（= `DEF-5`，快照过期的拒绝改为可见，同批 `D3` 把修复的两道闸门收进旅程并钉住「不得停在 Progress」的顺序不变量）；同窗口另有 `B5`（`28b842b`）把 `LocalDiagnostics` 的九处包装收成两个核心，其守卫由加强后的 `LocalDiagnostics_NewFacades_WriteExpectedLevels` 承担
 
 **一处上轮审计证据更正（重要）**：上轮安全节声明「签名 Authorization 头绝不跟随重定向转发」——复核证实该头经 `RemoteRequestOptions.ConfigureRequest` 钩子在**每一重定向跳重发**（含跨主机），已立案为 AUD-SEC-003（Low）。这推翻了上轮对 DNS 重绑定残余风险影响边界的部分论证。

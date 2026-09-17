@@ -10,7 +10,7 @@
 >
 > 原始记录（各轮的证据叙述、行锚点、发布放行证据）留存于 `.repository-audit/history/`，本表**不取代**它们：那里面有本表装不下的三类东西（release 放行证据、当时的证据叙述、20 条只在旧台账里存在的非 resolved 项），详见 §4。
 
-<!-- open-findings: AUD-PERF-001 AUD-PERF-004 AUD-PERF-005 AUD-SEC-001 AUD-SEC-002 AUD-ARCH-005 AUD-CI-007 AUD-MAINT-006 AUD-MAINT-007 AUD-TEST-014 AUD-ARCH-013 -->
+<!-- open-findings: AUD-PERF-001 AUD-PERF-004 AUD-PERF-005 AUD-SEC-001 AUD-SEC-002 AUD-ARCH-005 -->
 <!-- 上面这一行是契约守卫的唯一输入：`CandidatesLedgerContractTests` 断言它与 findings.json 的 open 集完全相等。
      改这一行就等于声明台账状态变了——请先改所有者文档，再改这里。 -->
 
@@ -188,25 +188,25 @@
 
 ### 3.4 审计台账（`.repository-audit/findings.json`，55 条）
 
-**已解决 40 条**（题目、证据与 `resolved_commit` 以台账为准，此处只给编号以便检索）：
+**已解决 45 条**（题目、证据与 `resolved_commit` 以台账为准，此处只给编号以便检索）：
 
 | 类别 | 条数 | 编号 |
 | --- | --- | --- |
-| `AUD-ARCH` | 10 | `001` `002` `003` `004` `006` `008` `009` `010` `011` `012` |
-| `AUD-TEST` | 13 | `001` `002` `003` `004` `005` `006` `007` `008` `009` `010` `011` `012` `013` |
-| `AUD-CI` | 6 | `001` `002` `003` `004` `005` `006` |
+| `AUD-ARCH` | 11 | `001` `002` `003` `004` `006` `008` `009` `010` `011` `012` `013` |
+| `AUD-TEST` | 14 | `001` `002` `003` `004` `005` `006` `007` `008` `009` `010` `011` `012` `013` `014` |
+| `AUD-CI` | 7 | `001` `002` `003` `004` `005` `006` `007` |
 | `AUD-PERF` | 5 | `002` `003` `006` `007` `008` |
-| `AUD-MAINT` | 4 | `001` `003` `004` `005` |
+| `AUD-MAINT` | 7 | `001` `003` `004` `005` `006` `007` `008` |
 | `AUD-SEC` | 2 | `003` `005` |
 
 **已书面接受风险 4 条**（已终结，不再作为候选）：`AUD-MAINT-002`（官方协议对比分析未入库）、`AUD-SEC-004`（手写代理发送当前用户默认凭据）、`AUD-SEC-006`（私有地址黑名单遗漏 CGNAT 与基准测试段——其补救已被 `5a38be9` 刻意否决）、`AUD-ARCH-007`（代理指纹变化时旧 handler 仍被在途租约持有）。
 
-**开放 11 条**：见 §1 与文档头部的 `open-findings` 标记（含 2026-09-17 从重置前台账重新立案的 5 条）。
+**开放 6 条**：见 §1 与文档头部的 `open-findings` 标记（2026-09-17 从重置前台账重新立案的 5 条已全部结案，见 §3.5）。
 
 ### 3.5 历史遗留：已逐条复核完毕（重置前台账 `H-AUD-*`，20 条）
 
-**复核已于 2026-09-17 执行完毕**（用户指令「先复核」），依据是各条**现行源码逐行**核验，不是转抄。20 条的结论分布：
-**重新立案 5 条**（处置为 Fix／Add Guard／Document，已进现行台账并出现在 `open-findings` 标记里）、
+**复核已于 2026-09-17 执行完毕并同日收口**（用户指令「先复核」→「先修重新立案的」），依据是各条**现行源码逐行**核验，不是转抄。20 条的结论分布：
+**重新立案 5 条，并已全部结案**（处置为 Fix／Add Guard／Document；结案记录逐条在下方表格与 `findings.json` 的 `resolution_note`）、
 **已失效或已收口 6 条**（不再适用／被后续发现取代／已被新机制关闭，理由逐条记在表内）、
 **已裁定不行动 1 条**（评审第二轮显式排除）、
 **处置维持 No Action／Accept Risk 3 条**（原台账即如此判定，故不进开放集，仅在此留档）、
@@ -218,13 +218,13 @@
 
 | 编号 | 旧状态 | 一句话 | **复核结论（2026-09-17）** |
 | --- | --- | --- | --- |
-| `H-AUD-CI-008` | open/medium | Release 配置的测试只在打 tag 的 `release.yml` 里跑 | **重新立案 `AUD-CI-007`**（low；由 medium 降档，理由见条目：发布作业的 `needs` 使失败只折算成一次补提交+重打 tag，无坏产物外流） |
-| `H-AUD-REL-008` | open/low | 发布横幅的版本契约无机械守卫 | **重新立案 `AUD-MAINT-006`**；三处缺口（契约测试只读模板 JSON、tag 门禁只查存在、指南画布尺寸与五份横幅不符）逐条仍在 |
+| `H-AUD-CI-008` | open/medium | Release 配置的测试只在打 tag 的 `release.yml` 里跑 | **重新立案 `AUD-CI-007` → 同日结案**（build.yml 增 `Test (Release)` 步骤） |
+| `H-AUD-REL-008` | open/low | 发布横幅的版本契约无机械守卫 | **重新立案 `AUD-MAINT-006` → 同日结案**（契约测试钉住「当前版本的横幅存在、是 PNG、画布等于模板」＋指南写明历史尺寸＋版本读取收敛到 `ProjectMetadata`） |
 | `H-AUD-MTN-017` | open/low | 新增主叠层仍需约 14 个未守卫编辑点，语言刷新清单漏改静默失败 | **部分失效 + 并入 `R2-c08`**：语言刷新清单那半项已由 `D10`（`68e6efa`）收口——清单从手工逐处调用变成「装配后注入的单一名单 + 一个契约」；剩余「新增主叠层仍有未守卫编辑点」正是 `R2-c08` 提议的那条补守卫，故不重复立案 |
 | `H-AUD-MTN-020` | open/low | `CLAUDE.md:103` 仍把 click code 列为启动器数据 | **不再适用**：`CLAUDE.md` 已不存在于仓库（工程契约文档现为 `AGENTS.md`），全仓库 `click code` 只剩审计历史与总表本行 |
-| `H-AUD-MTN-021` | open/low | `LocalInstallationStateStore` 类注释写 `game_config.json` | **重新立案 `AUD-MAINT-007`**（注释仍在 `:17`，实际常量是 `GamePaths.cs:30` 的 `game-launcher-config.json`） |
-| `H-AUD-TST-005` | open/low | 测试门控等待仍有未加上限的残留 | **重新立案 `AUD-TEST-014`**（实测仍 14 处裸 `await`，csproj 抑制理由仍与事实不符） |
-| `H-AUD-ARCH-009` | open/low | 与官方「强杀目录内进程」的相对分歧无决策记录 | **重新立案 `AUD-ARCH-013`**；拒绝语义已成文（ADR-032 决策 5-8、CONTEXT 词条），但「与官方行为的相对关系」仍无记录 |
+| `H-AUD-MTN-021` | open/low | `LocalInstallationStateStore` 类注释写 `game_config.json` | **重新立案 `AUD-MAINT-007` → 同日结案**（注释改为引用 `GamePaths` 常量，不再重抄文件名） |
+| `H-AUD-TST-005` | open/low | 测试门控等待仍有未加上限的残留 | **重新立案 `AUD-TEST-014` → 同日结案**（实测同类共 19 处，逐个加 `WaitAsync`；新增 `TestSourceWaitContractTests` 扫描守卫；`test.ps1` 加 blame-hang 整类净网） |
+| `H-AUD-ARCH-009` | open/low | 与官方「强杀目录内进程」的相对分歧无决策记录 | **重新立案 `AUD-ARCH-013` → 同日结案**（ADR-032 决策 9/10 ＋「被否决的替代方案」＋「后果」各一条，CONTEXT 词条补指向） |
 | `H-AUD-PERF-012` | open/info | 校验/安装/卸载每文件一次 UI 线程 Post 且无去重 | **已被后续发现取代**：即现行 `AUD-PERF-007`（`608d888`，`PercentProgressGate` 百分比门控；`D6` 又把它与另三处收进 `StageProgressReporter`），已 resolved |
 | `H-AUD-MTN-018` | open/info | `BannerImageDecoder` 重新实现 `BackgroundImageDecoder.ClampLargestSide` | **仍成立，处置维持 No Action**（原台账即判 No Action）：两份策略体仍逐行相同（`BannerImageDecoder.cs:30-43` ≡ `BackgroundImageDecoder.cs:99-115`，阈值常量 `:18` 已共享）；不排期 |
 | `H-AUD-ARCH-006` | open/info | `ModalEntry.Content` / `IModalContentViewModel` 只被写入、从不被读取 | **仍成立，但已裁定不行动**：评审第二轮把它列入「不重开／不触碰／不行动」；现行代码仍是「写入 `entries`（`ModalHostViewModel.cs:50`）、只读 `Top.Kind` 与 `Is*Interactive`」 |
