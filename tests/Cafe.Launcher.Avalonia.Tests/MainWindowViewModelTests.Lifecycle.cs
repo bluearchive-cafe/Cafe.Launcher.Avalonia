@@ -152,7 +152,7 @@ public partial class MainWindowViewModelTests
         finally
         {
             coreService.ReleaseSecondLoad.TrySetResult();
-            await refreshTask;
+            await refreshTask.WaitAsync(TimeSpan.FromSeconds(5));
         }
 
         Assert.False(viewModel.IsBusy);

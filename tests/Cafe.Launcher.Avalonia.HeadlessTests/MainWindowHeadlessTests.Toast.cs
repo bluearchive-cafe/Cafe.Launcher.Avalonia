@@ -64,7 +64,7 @@ public sealed partial class MainWindowHeadlessTests
         Assert.True(actionProgress.IsEffectivelyVisible);
 
         release.SetResult(ToastActionResult.Failure("Still offline", "Retry failed"));
-        await executeTask;
+        await executeTask.WaitAsync(TimeSpan.FromSeconds(5));
         Dispatcher.UIThread.RunJobs();
     }
 

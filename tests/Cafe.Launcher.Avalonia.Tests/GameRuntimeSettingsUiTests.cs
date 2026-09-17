@@ -54,7 +54,7 @@ public sealed class GameRuntimeSettingsUiTests
         using var settings = CreateSettingsViewModel(localizer, options, runtime);
 
         settings.LoadFromSnapshot(new LauncherSettings());
-        await settings.PendingGameRuntimeStatusRefresh!;
+        await settings.PendingGameRuntimeStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
 
         var summary = settings.GameRuntimeStatusSummary;
         var expectedDetail = localizer.F("gameRuntimeStatusDetailFormat", "/usr/bin/umu-run", "1.4.4");
@@ -103,7 +103,7 @@ public sealed class GameRuntimeSettingsUiTests
         using var settings = CreateSettingsViewModel(localizer, options, runtime);
 
         settings.LoadFromSnapshot(new LauncherSettings());
-        await settings.PendingGameRuntimeStatusRefresh!;
+        await settings.PendingGameRuntimeStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
         Assert.Contains(
             localizer.T("gameRuntimeStatusNotFound"),
             settings.GameRuntimeStatusSummary,
@@ -119,7 +119,7 @@ public sealed class GameRuntimeSettingsUiTests
                     ExecutablePath: "/usr/bin/umu-run"))
         ];
         settings.RefreshGameRuntimeStatus();
-        await settings.PendingGameRuntimeStatusRefresh!;
+        await settings.PendingGameRuntimeStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
         Assert.Contains("1.4.4", settings.GameRuntimeStatusSummary, StringComparison.Ordinal);
 
         // The display-name rebuild (language switch path) replays the cached

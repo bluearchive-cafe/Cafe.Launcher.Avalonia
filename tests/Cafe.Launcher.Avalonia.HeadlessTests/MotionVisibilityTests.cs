@@ -144,7 +144,7 @@ public sealed class MotionVisibilityTests
             SynchronizationContext.SetSynchronizationContext(originalContext);
         }
 
-        await context.WaitForPostAsync();
+        await context.WaitForPostAsync().WaitAsync(TimeSpan.FromSeconds(5));
         return new QueuedExit(context, pendingExit);
     }
 

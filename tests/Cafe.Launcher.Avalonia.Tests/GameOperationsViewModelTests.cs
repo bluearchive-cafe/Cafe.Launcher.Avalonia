@@ -69,7 +69,7 @@ public sealed class GameOperationsViewModelTests : IDisposable
 
         Assert.Equal(["first-start"], sequence);
         firstSubscriberRelease.SetResult();
-        await commandTask;
+        await commandTask.WaitAsync(TimeSpan.FromSeconds(5));
         Assert.Equal(["first-start", "first-end", "second"], sequence);
     }
 
@@ -953,7 +953,7 @@ public sealed class GameOperationsViewModelTests : IDisposable
         Assert.Equal("Sync", context.ViewModel.ProgressIconKind);
 
         context.Backend.InstallCompletion.SetResult(new GameOperationResult());
-        await commandTask;
+        await commandTask.WaitAsync(TimeSpan.FromSeconds(5));
     }
 
     [Fact]
@@ -976,7 +976,7 @@ public sealed class GameOperationsViewModelTests : IDisposable
         Assert.True(context.ViewModel.IsProgressPanelVisible);
 
         context.Backend.UninstallCompletion.SetResult(new GameOperationResult());
-        await uninstallTask;
+        await uninstallTask.WaitAsync(TimeSpan.FromSeconds(5));
     }
 
     [Theory]

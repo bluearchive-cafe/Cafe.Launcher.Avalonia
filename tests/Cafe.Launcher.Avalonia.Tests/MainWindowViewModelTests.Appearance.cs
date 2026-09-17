@@ -45,7 +45,7 @@ public partial class MainWindowViewModelTests
         viewModel.Settings.Editor.Current.CustomBackgroundPath = "first";
         await firstPreviewStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
         viewModel.Settings.Editor.Current.CustomBackgroundPath = "second";
-        await viewModel.Settings.PendingAppearancePreview;
+        await viewModel.Settings.PendingAppearancePreview.WaitAsync(TimeSpan.FromSeconds(5));
 
         await firstPreviewCanceled.Task.WaitAsync(TimeSpan.FromSeconds(2));
         Assert.Equal("second", appliedPath);
@@ -87,7 +87,7 @@ public partial class MainWindowViewModelTests
             releasePreview.TrySetResult();
         }
 
-        await saveTask;
+        await saveTask.WaitAsync(TimeSpan.FromSeconds(5));
     }
 
     [Fact]
@@ -129,7 +129,7 @@ public partial class MainWindowViewModelTests
         viewModel.Settings.Editor.Current.BackgroundFit = BackgroundFits.Uniform;
         viewModel.Settings.Appearance.SelectedBackgroundFillColor =
             Color.FromArgb(0xFF, 0x12, 0x34, 0x56);
-        await viewModel.Settings.PendingAppearancePreview;
+        await viewModel.Settings.PendingAppearancePreview.WaitAsync(TimeSpan.FromSeconds(5));
 
         Assert.Equal(Stretch.Uniform, viewModel.Background.BackgroundStretch);
         var fill = Assert.IsType<SolidColorBrush>(viewModel.Background.BackgroundFillBrush);

@@ -441,7 +441,7 @@ public sealed class SetupWizardViewModelTests
         Assert.False(vm.CanGoNext);
 
         releaseCommit.TrySetResult();
-        await commitTask;
+        await commitTask.WaitAsync(TimeSpan.FromSeconds(5));
         await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.ValidInstallation);
         Assert.True(vm.CanGoNext);
     }
@@ -472,7 +472,7 @@ public sealed class SetupWizardViewModelTests
         vm.GamePath = newGamePath;
         await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.AvailableForInstallation);
         releaseCommit.TrySetResult();
-        await commitTask;
+        await commitTask.WaitAsync(TimeSpan.FromSeconds(5));
 
         Assert.Equal(SetupWizardGamePathStatus.AvailableForInstallation, vm.GamePathStatus);
     }

@@ -150,7 +150,7 @@ public sealed class DebugViewModelTests : IDisposable
 
         Assert.Equal(["first-start"], sequence);
         firstSubscriberRelease.SetResult();
-        await commandTask;
+        await commandTask.WaitAsync(TimeSpan.FromSeconds(5));
         Assert.Equal(["first-start", "first-end", "second"], sequence);
     }
 
@@ -178,7 +178,7 @@ public sealed class DebugViewModelTests : IDisposable
 
         Assert.Equal(["first-start"], sequence);
         firstSubscriberRelease.SetResult();
-        await resetTask;
+        await resetTask.WaitAsync(TimeSpan.FromSeconds(5));
         Assert.Equal(["first-start", "first-end", "second"], sequence);
     }
 

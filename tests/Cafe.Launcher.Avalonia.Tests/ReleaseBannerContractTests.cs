@@ -1,4 +1,6 @@
-﻿using System.Text.Json;
+﻿using System.Buffers.Binary;
+using System.Text;
+using System.Text.Json;
 using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
@@ -68,6 +70,26 @@ public sealed class ReleaseBannerContractTests
         Assert.Equal("#2E7DF6", primary.GetString());
         Assert.False(material.TryGetProperty("seed_color", out _));
         Assert.False(material.TryGetProperty("source_asset", out _));
+    }
+
+    [Fact]
+    public void CommittedBanner_ForTheDeclaredProjectVersion_IsARealPngAtTheTemplatesCanvas()
+    {
+        // AUD-MAINT-006：本卷此前只读模板 JSON——全文件没有 File.Exists、没有解码、没有尺寸，
+        // :33 那条断言作用于模板里 output.image 的字符串。于是零字节或尺寸错误的横幅照样全绿，
+        // 而 release.yml 的 tag 门禁（Test-Path -PathType Leaf）也只查存在性：真到发版那一刻
+        // 才会发现横幅本身是坏的。这条把「csproj 声明的版本 ↔ 该版本的横幅文件」钉死。
+        var version = ProjectMetadata.ReadVersionPrefix();
+        var relativePath = $"{BannerDirectoryRelativePath}/cafe-launcher-v{version}-release-banner.png";
+        var bannerPath = TestRepository.FromRepositoryRoot(relativePath);
+
+        Assert.True(
+            File.Exists(bannerPath),
+            $"The banner for the declared version must be committed before tagging (AGENTS.md, Release Notes): {relativePath}");
+
+        var (width, height) = ReadPngSize(bannerPath);
+        Assert.Equal(CanvasWidth, width);
+        Assert.Equal(CanvasHeight, height);
     }
 
     [Fact]
@@ -315,5 +337,28 @@ public sealed class ReleaseBannerContractTests
             Path.Combine(repositoryRoot, TemplateRelativePath)));
 
         return document.RootElement.GetProperty("output").GetProperty("image").GetString()!;
+    }
+
+    /// <summary>
+    /// 读 PNG 的 IHDR 尺寸。单元工程不初始化 Avalonia，因此「可解码」以签名与 IHDR 校验为准：
+    /// 这已经覆盖本条要找的失败形态（截断、零字节、非 PNG、画布不符）；真正的位图像素解码
+    /// 属于无头工程的域（见它自己的 golden 用例）。
+    /// </summary>
+    private static (int Width, int Height) ReadPngSize(string path)
+    {
+        var bytes = File.ReadAllBytes(path);
+        Assert.True(
+            bytes.Length > 24,
+            $"{path} is too short to be a PNG ({bytes.Length} bytes).");
+
+        byte[] signature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+        Assert.True(
+            bytes.AsSpan(0, 8).SequenceEqual(signature),
+            $"{path} does not start with the PNG signature.");
+        Assert.Equal("IHDR", Encoding.ASCII.GetString(bytes, 12, 4));
+
+        return (
+            BinaryPrimitives.ReadInt32BigEndian(bytes.AsSpan(16, 4)),
+            BinaryPrimitives.ReadInt32BigEndian(bytes.AsSpan(20, 4)));
     }
 }

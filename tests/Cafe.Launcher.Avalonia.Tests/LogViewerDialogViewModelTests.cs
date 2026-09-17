@@ -33,7 +33,7 @@ public sealed class LogViewerDialogViewModelTests : IDisposable
         Assert.NotEmpty(viewModel.FilteredEntries);
 
         viewModel.FilterText = "text-that-does-not-exist";
-        await viewModel.PendingFilterTask;
+        await viewModel.PendingFilterTask.WaitAsync(TimeSpan.FromSeconds(5));
 
         Assert.Empty(viewModel.FilteredEntries);
         Assert.True(viewModel.IsEmpty);
@@ -71,7 +71,7 @@ public sealed class LogViewerDialogViewModelTests : IDisposable
         Assert.True(viewModel.IsVisible);
 
         entriesLoaded.SetResult([]);
-        await openTask;
+        await openTask.WaitAsync(TimeSpan.FromSeconds(5));
 
         Assert.True(viewModel.IsVisible);
         Assert.False(viewModel.HasFilteredEntries);
@@ -185,7 +185,7 @@ public sealed class LogViewerDialogViewModelTests : IDisposable
 
         viewModel.FilterText = "First";
         viewModel.FilterText = "Second";
-        await viewModel.PendingFilterTask;
+        await viewModel.PendingFilterTask.WaitAsync(TimeSpan.FromSeconds(5));
 
         var entry = Assert.Single(viewModel.FilteredEntries);
         Assert.Equal("Second entry", entry.Title);
