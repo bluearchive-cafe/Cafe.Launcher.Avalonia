@@ -9,14 +9,14 @@
 
 ## 0. 落地状态（2026-09-16）
 
-**阶段 A 全部（13/13）· 阶段 B 19/22 · 阶段 C 6/8 · 阶段 D 2/17；§2 的 6 项正确性问题中 3 项已修、3 项开放。**
+**阶段 A 全部（13/13）· 阶段 B 19/22 · 阶段 C 6/8 · 阶段 D 2/17；§2 的 6 项正确性问题中 4 项已修、2 项开放。**
 每个提交前跑 `.\verify.ps1` 且退出码 0。收口实测：单元 **1857 通过 / 0 失败 / 2 可见跳过**、
 无头 **185 通过 / 0 失败**、覆盖率行 **87.27%** / 分支 **93.63%**（棘轮余量 +1.42pp / +0.93pp）、
 Debug 与 Release 构建各 0 警告 0 错误。
 
 | 批次 | 状态 | 提交 | 说明 |
 | --- | --- | --- | --- |
-| §2 正确性问题 | 3 修 / 3 开放 | `0db316d` `d2d4bc6` `7161f4c` `56e0509` | `DEF-1`（唯一用户可见、且已随 beta.9／beta.10 出货）、`DEF-3`、`DEF-6` 已修；`DEF-2`、`DEF-4`、`DEF-5` 开放，已分别立案为 `AUD-TEST-010`、`AUD-TEST-013`、`AUD-ARCH-012` |
+| §2 正确性问题 | 4 修 / 2 开放 | `0db316d` `d2d4bc6` `7161f4c` `56e0509` `779664f` | `DEF-1`（唯一用户可见、且已随 beta.9／beta.10 出货）、`DEF-3`、`DEF-6`、`DEF-4` 已修；`DEF-2`、`DEF-5` 开放，已分别立案为 `AUD-TEST-010`、`AUD-ARCH-012` |
 | A 测试设施复用 | **13/13** | `fe9a012`..`0db316d` | 净 −814 行测试代码、生产零改动；`%TEMP%` 残留目录由 15 个／轮降到 **0 个／轮**（实测）；两处偏离原议见 A 节注 |
 | B 生产侧等价收敛 | **19/22** | `7161f4c`..`9044998` | `B5` 并入评审候选 11 待裁决；`B12`／`B15` 评估后判定收益不抵成本；`B17` 两侧完成并暴露 `AUD-TEST-012` |
 | C 死代码删除 | **6/8** | `5ec1999`..`ed7b290` | `C5`／`C8` 经核实为深模块边界与承重语义标记，判定不做 |
@@ -27,7 +27,7 @@ Debug 与 Release 构建各 0 警告 0 错误。
 （1 Medium + 7 Low）：`AUD-ARCH-010`（= `DEF-1`，resolved）、`AUD-ARCH-011`（= `DEF-6`，resolved）、
 `AUD-MAINT-005`（resolved，`B10` 补的往返守卫）、`AUD-TEST-011`（= `DEF-3`，resolved）、
 `AUD-ARCH-012`（= `DEF-5`，open）、`AUD-TEST-010`（= `DEF-2`，open）、`AUD-TEST-012`（`B17` 暴露，open）、
-`AUD-TEST-013`（= `DEF-4`，open，两处锚点待复核）。
+`AUD-TEST-013`（= `DEF-4`，resolved，两处锚点复核结果为一真一假）。
 
 **发布归属**：`DEF-1` 已随 `v1.1.0-beta.9` 与 `beta.10` 出货，**下一版需要一条面向用户的 `fix`
 条目**（「卸载遇到只读文件不再整体失败」）。本计划未改 `CHANGELOG_RELEASE.md`——它当前是 beta.10
@@ -118,13 +118,17 @@ Debug 与 Release 构建各 0 警告 0 错误。
 
 ### DEF-4 无头套件泄漏 `Application.RequestedThemeVariant`，golden 结果依赖用例顺序
 
-- **状态**：**开放**（立案 `AUD-TEST-013`）。两处锚定的是方法调用而非直接赋值，**尚未逐行复核**，故审计置信度只给 60。
+- **状态**：**已修**（`779664f`，立案 `AUD-TEST-013`，同日解决）。两处锚点已逐行复核，结论是**一真一假**；像素影响实测为零。
 
-- **证据**：生产写入点唯一，`D14` 落地前在 `Features/Settings/SettingsAppearanceViewModel.cs:584`，**现随该次搬移转到 `src/Cafe.Launcher.Avalonia/Services/ThemeApplier.cs` 的 `ApplyThemeMode`**（本条的锚点须按新位置读）。无头侧 `CrashReportWindowHeadlessTests.cs:28-29/56` 与 `ThemeSubscriptionTeardownHeadlessTests.cs:33/53-62`（`D14` 后直接构造 applier，快照与 `finally` 复位照旧）做了快照+`finally` 复位（证明危险已知），而扫描报告称 `MainWindowHeadlessTests.Dialogs.cs:332`（经 `ApplyTheme`）与 `SystemThemeColorHeadlessTests.cs:26-33`（经 `ApplyPlatformColorValues`）**未复位**；`MainWindowHeadlessTests.Golden.cs` 的 `PrepareGoldenWindow` 只固定语言、动效与字体，不固定变体。
+- **证据（复核后）**：生产写入点唯一，`D14` 落地前在 `Features/Settings/SettingsAppearanceViewModel.cs:584`，现为 `src/Cafe.Launcher.Avalonia/Services/ThemeApplier.cs` 的 `ApplyThemeMode`。两处待复核锚点的实测结果：
+  - `MainWindowHeadlessTests.Dialogs.cs:332` **为真**——经 `ApplyTheme` 写变体且从不复位（原报告的推测成立）。
+  - `SystemThemeColorHeadlessTests.cs:26-33` **为假**——该用例打的是 `ApplyPlatformColorValues`，那条路径只按当前草稿算出 isDark 并落方案，**从不写** `RequestedThemeVariant`，故该用例无需改动。没读码就照报告改，会白改一个文件。
+  - `PrepareGoldenWindow` 只固定语言、动效与字体、不固定变体这一点成立。
 - **影响**：共享一个 `Application` 的套件里，golden 截图截到亮色还是暗色取决于同批次哪个用例先跑。这是「偶然绿」的典型形态。
-- **落地前须复核**：本条的行号锚定于方法调用而非直接赋值，落地时先读那两处方法确认是否真的漏了复位。
-- **建议**：加 `ThemeVariantSnapshot : IDisposable`（或 `ThemeProbe`）设施放在 `HeadlessTestHost` 旁，四处统一走它；并让 `PrepareGoldenWindow` 显式设定变体，使 golden 不再依赖顺序。
-- **像素影响**：若今天的环境变体恰好是亮色，改后像素不变；否则**会移动 golden**——先跑一次 `Golden_*` 对比再决定是否 `-UpdateGolden`。
+- **修法（两半缺一不可）**：①`PrepareGoldenWindow` 每次显式钉住基线变体（默认亮色），golden 从此与执行顺序无关；②新增 `ThemeVariantSnapshot` 设施（`HeadlessTestHost` 旁：记下进入前的变体、改为指定值、释放时还原），Dialogs 用例与两个原本手写 `previousTheme` 加 `try/finally` 的用例统一走它。
+- **守卫与变异验证**：新增两条——`GoldenPrep_WhenTheAmbientVariantWasLeftDark_StillPinsTheBaselineVariant`（哨兵法：先造出泄漏态再断言基线胜出）与 `ThemeVariantSnapshotHeadlessTests.Capture_WhenDisposed_RestoresTheVariantItFound`。拆掉钉住、拆掉还原，各让对应用例变红。
+- **一处刻意的覆盖缺口**：Dialogs 用例改用快照这件事本身**无法独立观察**——golden 的钉住会掩盖泄漏的后果，所以没有测试会因为「忘记用快照」而变红。钉住才是确定性的来源，这是取舍而非漏测。
+- **像素影响**：golden 未重生即全绿，说明钉住的亮色正是今天的像素（无头平台的 `ThemeVariant.Default` 就解析为亮色）；若将来把基线改成暗色，`Golden_*` 会整体移动，属预期。
 
 ### DEF-5 `GameOperationJourney` 的 `Ready` 分支是唯一不报告的拒绝
 

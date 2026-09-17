@@ -718,19 +718,19 @@
       "resolution_note": null
     },
     "AUD-TEST-013": {
-      "title": "无头套件泄漏 Application.RequestedThemeVariant，golden 截图依赖用例顺序（须先复核两处锚点）",
+      "title": "无头套件泄漏 Application.RequestedThemeVariant，golden 截图依赖用例顺序",
       "category": "testing/isolation",
       "severity": "low",
-      "confidence": 60,
-      "status": "open",
-      "disposition": "Investigate",
-      "recommendation_validation": "Needs External Verification",
+      "confidence": 95,
+      "status": "resolved",
+      "disposition": "Fix",
+      "recommendation_validation": "Verified",
       "first_seen_commit": "8250756",
-      "last_verified_commit": "8aab531",
-      "resolved_commit": null,
-      "guard": null,
-      "delta_note": "生产写入点唯一，D14（8aab531）搬移前在 Features/Settings/SettingsAppearanceViewModel.cs:584，现为 src/Cafe.Launcher.Avalonia/Services/ThemeApplier.cs 的 ApplyThemeMode（设置外观 VM 已不再写它，读本条时按新位置定位）。无头侧 CrashReportWindowHeadlessTests.cs:28-29/56 与 ThemeSubscriptionTeardownHeadlessTests.cs:33/53-62（D14 后直接构造 applier） 做了快照 + finally 复位（证明危险已知）；扫描报告称 MainWindowHeadlessTests.Dialogs.cs:332（经 ApplyTheme）与 SystemThemeColorHeadlessTests.cs:26-33（经 ApplyPlatformColorValues）未复位——但那两条锚定的是方法调用而非直接赋值，**本审计未逐行确认**，故置信度只给 60。MainWindowHeadlessTests.Golden.cs 的 PrepareGoldenWindow 只固定语言、动效与字体，不固定变体。",
-      "resolution_note": null
+      "last_verified_commit": "779664f",
+      "resolved_commit": "779664f",
+      "guard": "GoldenPrep_WhenTheAmbientVariantWasLeftDark_StillPinsTheBaselineVariant（哨兵法：先造泄漏态再断言基线胜出；拆掉钉住即红） + ThemeVariantSnapshotHeadlessTests.Capture_WhenDisposed_RestoresTheVariantItFound（拆掉还原即红）",
+      "delta_note": "两处待复核锚点已逐行读码，结论一真一假：①MainWindowHeadlessTests.Dialogs.cs:332（LogExport_WhenAContentRowIsChecked_KeepsItsGlyphReadable 的暗色分支）为真——经 ApplyTheme 写变体且从不复位，是唯一真实泄漏点；②SystemThemeColorHeadlessTests.cs:26-33 为假——该用例打的是 ApplyPlatformColorValues，那条路径只按当前草稿算出 isDark 并落方案，从不写 RequestedThemeVariant，无需改动。无头侧 CrashReportWindowHeadlessTests.cs 与 ThemeSubscriptionTeardownHeadlessTests.cs 当时各自手写快照 + finally 复位（证明危险已知）；MainWindowHeadlessTests.Golden.cs 的 PrepareGoldenWindow 只固定语言、动效与字体，不固定变体（成立）。生产写入点唯一，D14（8aab531）搬移前在 Features/Settings/SettingsAppearanceViewModel.cs:584，现为 src/Cafe.Launcher.Avalonia/Services/ThemeApplier.cs 的 ApplyThemeMode。",
+      "resolution_note": "779664f：两半缺一不可——①PrepareGoldenWindow 每次显式钉住基线变体（默认亮色＝无头平台把 ThemeVariant.Default 解析到的值），golden 从此与执行顺序无关；它是整套 golden 的基线而非某用例的临时覆盖，故不还原。②新增 tests/Cafe.Launcher.Avalonia.HeadlessTests/ThemeVariantSnapshot.cs（记下进入前的变体、改为指定值、释放时还原），Dialogs 用例与两个原本手写复位逻辑的用例统一走它。两条新守卫均做变异验证（拆钉住／拆还原各让对应用例变红）。像素影响实测为零：golden 未重生即全绿，证明钉住的亮色正是今天的像素。一处刻意的覆盖缺口：Dialogs 用例改用快照这件事本身无法独立观察（钉住会掩盖泄漏的后果），没有测试会因「忘记用快照」而变红——属取舍。"
     }
   }
 }

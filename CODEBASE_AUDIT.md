@@ -55,8 +55,8 @@
 - Critical：0
 - High：0
 - Medium：0
-- Low：10 open（决策/设计轮门控：AUD-PERF-001、AUD-PERF-004、AUD-PERF-005 残留、AUD-SEC-001、AUD-SEC-002、AUD-ARCH-005 + 本窗口新立案 4 项：AUD-ARCH-012、AUD-TEST-010、AUD-TEST-012、AUD-TEST-013）+ 4 accepted-risk（MAINT-002、SEC-004、SEC-006、ARCH-007）
-- 本窗口解决：14 项（8 项随上轮修复落地：ARCH-002/003、TEST-002/003/004、PERF-002/003、MAINT-002；6 项随同日修复轮：ARCH-004/006、CI-001、PERF-006、SEC-003/005）；第二修复轮再解决 6 项（TEST-005/006/007、MAINT-003/004、PERF-007）并将 SEC-006 结案为 accepted-risk；CI 对账轮新立案 3 项（AUD-CI-002/003/004）并同日全部解决；功能轮（2026-09-15）新立案 1 项（ARCH-008）并于同日跟进按建议 (a) 解决（`6408c58`）；随后按用户追问再立案 AUD-ARCH-009（下载/安装/修复闸门的三处缺口）并同日解决（`6408c58`）；CI 对账复核结案 AUD-CI-001（其建议已落地为 `build.yml` 的 push/PR linux 作业）、新立案 AUD-CI-005（该作业连续红且非 required）并于同日修复、作业首绿（`08c53f8`）；CI 复查（2026-09-15 深夜）新立案 AUD-CI-006（生产侧平台假设：`Path.GetFileName` 在 Unix 上切不开配置里 Windows 形状的 `params`，游戏可执行文件静默移出家族）并同日解决（`8461044`）；CI 续查（2026-09-15 深夜）新立案 AUD-TEST-008（并行校验／下载路径上测试侧收集未加锁或非原子自增，两次 CI 偶发红）并同日解决（`e83334b` + `0060855`）
+- Low：9 open（决策/设计轮门控：AUD-PERF-001、AUD-PERF-004、AUD-PERF-005 残留、AUD-SEC-001、AUD-SEC-002、AUD-ARCH-005 + 本窗口新立案 3 项：AUD-ARCH-012、AUD-TEST-010、AUD-TEST-012）+ 4 accepted-risk（MAINT-002、SEC-004、SEC-006、ARCH-007）
+- 本窗口解决：14 项（8 项随上轮修复落地：ARCH-002/003、TEST-002/003/004、PERF-002/003、MAINT-002；6 项随同日修复轮：ARCH-004/006、CI-001、PERF-006、SEC-003/005）；第二修复轮再解决 6 项（TEST-005/006/007、MAINT-003/004、PERF-007）并将 SEC-006 结案为 accepted-risk；CI 对账轮新立案 3 项（AUD-CI-002/003/004）并同日全部解决；功能轮（2026-09-15）新立案 1 项（ARCH-008）并于同日跟进按建议 (a) 解决（`6408c58`）；随后按用户追问再立案 AUD-ARCH-009（下载/安装/修复闸门的三处缺口）并同日解决（`6408c58`）；CI 对账复核结案 AUD-CI-001（其建议已落地为 `build.yml` 的 push/PR linux 作业）、新立案 AUD-CI-005（该作业连续红且非 required）并于同日修复、作业首绿（`08c53f8`）；CI 复查（2026-09-15 深夜）新立案 AUD-CI-006（生产侧平台假设：`Path.GetFileName` 在 Unix 上切不开配置里 Windows 形状的 `params`，游戏可执行文件静默移出家族）并同日解决（`8461044`）；CI 续查（2026-09-15 深夜）新立案 AUD-TEST-008（并行校验／下载路径上测试侧收集未加锁或非原子自增，两次 CI 偶发红）并同日解决（`e83334b` + `0060855`）；计划落地期间 `779664f` 解决 AUD-TEST-013（= `DEF-4`，无头套件主题变体泄漏：golden 侧钉住基线值 + 新增 `ThemeVariantSnapshot` 设施，两条新守卫各做变异验证，两处锚点复核为一真一假）
 
 **一处上轮审计证据更正（重要）**：上轮安全节声明「签名 Authorization 头绝不跟随重定向转发」——复核证实该头经 `RemoteRequestOptions.ConfigureRequest` 钩子在**每一重定向跳重发**（含跨主机），已立案为 AUD-SEC-003（Low）。这推翻了上轮对 DNS 重绑定残余风险影响边界的部分论证。
 
@@ -432,19 +432,26 @@
 - **建议**：在生命周期记录上挂本次任务引用作为测试缝，补一条「挂起态提示条被拆除后其等待被唤醒」的用例。**建议验证**：Verified（变异实测）。
 - **对照（同提交的另一半**有**覆盖）**：退出信号的移交去掉后 `ToastExit_WhenAutomaticAndManualRequestsOverlap_WaitsAndRemovesOnce` 立刻变红。
 
-### AUD-TEST-013 — 无头套件泄漏 `Application.RequestedThemeVariant`，golden 截图依赖用例顺序【简并扫描轮新立案；两处锚点待复核】
+### AUD-TEST-013 — 无头套件泄漏 `Application.RequestedThemeVariant`，golden 截图依赖用例顺序【简并扫描轮新立案；同日解决 `779664f`】
 
 - 类别：测试 / 隔离性
-- 严重度：Low｜置信度：60（两处锚定的是方法调用而非直接赋值，本审计未逐行确认）｜状态：open｜处置：Investigate
-- **证据**：生产写入点唯一，`D14`（`8aab531`）搬移前在 `Features/Settings/SettingsAppearanceViewModel.cs:584`，**现为 `src/Cafe.Launcher.Avalonia/Services/ThemeApplier.cs` 的 `ApplyThemeMode`**（读本条时按新位置定位；设置外观 VM 已不再写它）。无头侧 `CrashReportWindowHeadlessTests.cs:28-29/56` 与 `ThemeSubscriptionTeardownHeadlessTests.cs:33/53-62`（`D14` 后直接构造 applier，快照与 `finally` 复位照旧）做了快照 + `finally` 复位（证明危险已知）；扫描报告称 `MainWindowHeadlessTests.Dialogs.cs:332`（经 `ApplyTheme`）与 `SystemThemeColorHeadlessTests.cs:26-33`（经 `ApplyPlatformColorValues`）未复位。`MainWindowHeadlessTests.Golden.cs` 的 `PrepareGoldenWindow` 只固定语言、动效与字体，**不固定变体**。
+- 严重度：Low｜置信度：95（复核后由 60 上调：两处锚点已逐行读码，一真一假，见下）｜状态：**resolved**（`779664f`）｜处置：Fix（已执行）
+- **证据**：生产写入点唯一，`D14`（`8aab531`）搬移前在 `Features/Settings/SettingsAppearanceViewModel.cs:584`，**现为 `src/Cafe.Launcher.Avalonia/Services/ThemeApplier.cs` 的 `ApplyThemeMode`**（读历史描述时按新位置定位；设置外观 VM 已不再写它）。无头侧 `CrashReportWindowHeadlessTests.cs` 与 `ThemeSubscriptionTeardownHeadlessTests.cs` 当时各自手写快照 + `finally` 复位（证明危险已知）；`MainWindowHeadlessTests.Golden.cs` 的 `PrepareGoldenWindow` 只固定语言、动效与字体，**不固定变体**。
+- **两处待复核锚点的复核结果（本条置信度只有 60 的原因）**：
+  - `MainWindowHeadlessTests.Dialogs.cs:332`（`LogExport_WhenAContentRowIsChecked_KeepsItsGlyphReadable` 的暗色分支）**为真**：经 `ApplyTheme` 写变体且从不复位，是唯一真实泄漏点。
+  - `SystemThemeColorHeadlessTests.cs:26-33` **为假**：该用例打的是 `ApplyPlatformColorValues`，那条路径只按当前草稿算出 isDark 并落方案，从不写 `RequestedThemeVariant`。若照原报告直接改这个文件，就是白改一处。
 - **影响**：共享一个 `Application` 的套件里，golden 截到亮色还是暗色取决于同批次哪个用例先跑——属「偶然绿」。
-- **建议**：先读那两处方法的实现复核是否真的漏复位；确认后加 `ThemeVariantSnapshot : IDisposable` 设施（置于 `HeadlessTestHost` 旁）并让 `PrepareGoldenWindow` 显式设定变体，使 golden 不再依赖顺序。**注意**：若今天的环境变体恰好是亮色，改后像素不变；否则会移动 golden。**建议验证**：Needs External Verification。
+- **解决记录（`779664f`）**：两半缺一不可——①`PrepareGoldenWindow` 每次显式钉住基线变体（默认亮色＝无头平台把 `ThemeVariant.Default` 解析到的值），golden 从此与执行顺序无关，且它是整套 golden 的基线而非某用例的临时覆盖，故不还原；②新增 `tests/Cafe.Launcher.Avalonia.HeadlessTests/ThemeVariantSnapshot.cs`（`HeadlessTestHost` 旁：记下进入前的变体、改为指定值、释放时还原），Dialogs 用例与两个原本手写复位逻辑的用例统一走它。**守卫与变异验证**：新增 `GoldenPrep_WhenTheAmbientVariantWasLeftDark_StillPinsTheBaselineVariant`（哨兵法）与 `ThemeVariantSnapshotHeadlessTests.Capture_WhenDisposed_RestoresTheVariantItFound`；拆掉钉住、拆掉还原各让对应用例变红。**像素影响**：golden 未重生即全绿，证明钉住的亮色正是今天的像素。**一处刻意的覆盖缺口**：Dialogs 用例改用快照这件事本身无法独立观察（钉住会掩盖泄漏的后果），没有测试会因「忘记用快照」而变红——钉住才是确定性来源，属取舍。
 
 ## Informational Findings
 
 无（AUD-ARCH-004 已随 `95b9f8b` 归入 `Features/Diagnostics`；AUD-ARCH-006 已随 `700e674` 修正并结案，均转 Resolved Findings）。
 
 ## Advisory（不立案汇总）
+
+计划落地期间新增（2026-09-16，置信度低于报告线或属决策项）：
+
+- **`DownloadExecutorTests.InstallDownloadedFilesAsync_WhenManyFilesVerifyInParallel_ReassemblesFailuresInManifestOrder` 一次未复现的失败**（置信度 40）：当日 `verify.ps1` 内带 coverlet 插桩的单元运行里失败过一次（耗时 37 ms，正序第 2 次插桩运行），此后 12 次定向插桩 + 9 次全量插桩 + 2 次普通全量运行全部通过；失败消息因 TRX 被下一次运行覆盖而丢失。该用例正在 AUD-TEST-008 处理过的那个家族里（并行校验路径的测试侧收集），但那次修复已让 `CallbackRecorder` 线程安全，本次也指不出具体竞态点。**不立案**：没有消息就没有可行动的判据。若 CI 再出现同名红，请连消息与 TRX 一起留下再立案——先按「测试侧偶发」怀疑，再按「生产侧并行校验真有竞态」怀疑。
 
 功能轮新增（2026-09-15，置信度低于报告线或属决策项）：
 
