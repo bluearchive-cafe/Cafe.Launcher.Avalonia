@@ -1,8 +1,14 @@
 # 发布横幅生成流程
 
-本仓库每个发行版本配一张 2000×1125 的发布横幅，位于 `docs/assets/release-banners/`，
-文件名固定为 `cafe-launcher-<tag>-release-banner.png`，由 `CHANGELOG_RELEASE.md` 引用。
-`release.yml` 的「Verify release banner」步骤在打 tag 时校验该文件存在，缺失即构建失败。
+本仓库每个发行版本配一张 2000×1125 的发布横幅（当前画布，见下方模板），位于
+`docs/assets/release-banners/`，文件名固定为 `cafe-launcher-<tag>-release-banner.png`，
+由 `CHANGELOG_RELEASE.md` 引用。`release.yml` 的「Verify release banner」步骤在打 tag 时
+校验该文件存在，缺失即构建失败；契约测试另钉住「当前版本的同名横幅确实存在、是 PNG 且
+画布与模板一致」（`ReleaseBannerContractTests.CommittedBanner_ForTheDeclaredProjectVersion_…`），
+所以坏文件在发版前就会红。
+
+> 历史尺寸：`beta.1`–`beta.5` 早于当前画布，是 2400×1350；`beta.6` 起为 2000×1125。
+> 契约测试只校验**当前 `VersionPrefix` 对应的那一张**，故旧文件不参与断言。
 
 横幅由 `promotional-image` skill 的声明式管线产出：spec 描述设计，渲染器把 spec 变成
 PNG，manifest 记录这次渲染的证据。**操作说明书在 skill 自己那里，不在本仓库**

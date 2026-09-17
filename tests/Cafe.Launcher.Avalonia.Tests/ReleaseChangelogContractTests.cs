@@ -50,7 +50,7 @@ public sealed class ReleaseChangelogContractTests
             .Select(match => match.Value)
             .ToArray();
 
-        var expected = new[] { $"## v{ReadProjectVersion()}" };
+        var expected = new[] { $"## v{ProjectMetadata.ReadVersionPrefix()}" };
 
         Assert.Equal(expected, headings);
     }
@@ -79,12 +79,4 @@ public sealed class ReleaseChangelogContractTests
 
     private static string ReadChangelog() => File.ReadAllText(TestRepository.FromRepositoryRoot("CHANGELOG_RELEASE.md"));
 
-    private static string ReadProjectVersion()
-    {
-        var project = File.ReadAllText(TestRepository.FromRepositoryRoot("src/Cafe.Launcher.Avalonia/Cafe.Launcher.Avalonia.csproj"));
-        var match = Regex.Match(project, "<VersionPrefix>([^<]+)</VersionPrefix>");
-
-        Assert.True(match.Success, "Cafe.Launcher.Avalonia.csproj must declare <VersionPrefix>.");
-        return match.Groups[1].Value;
-    }
 }
