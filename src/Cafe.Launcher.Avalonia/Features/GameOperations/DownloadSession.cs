@@ -139,28 +139,28 @@ internal sealed class DownloadSession : IDisposable
         }
         catch (OperationCanceledException) when (activeToken.IsCancellationRequested)
         {
-            progress(CreateProgress(operationKind, GameOperationStage.Stopped, 0));
-            return Failed(localizer.T(LocalizationKeys.OperationStopped), GameOperationErrorCode.Stopped);
+            progress(GameOperationProgressFactory.CreateProgress(operationKind, GameOperationStage.Stopped, 0));
+            return GameOperationOutcomes.Failed(localizer.T(LocalizationKeys.OperationStopped), GameOperationErrorCode.Stopped);
         }
         catch (IOException exception) when (exception.HResult == unchecked((int)0x80070070))
         {
             await diagnostics.ErrorAsync("GameDownload", exception, CancellationToken.None).ConfigureAwait(false);
-            return Failed(localizer.T(LocalizationKeys.DiskSpaceInsufficient), GameOperationErrorCode.InsufficientDiskSpace);
+            return GameOperationOutcomes.Failed(localizer.T(LocalizationKeys.DiskSpaceInsufficient), GameOperationErrorCode.InsufficientDiskSpace);
         }
         catch (UnauthorizedAccessException exception)
         {
             await diagnostics.ErrorAsync("GameDownload", exception, CancellationToken.None).ConfigureAwait(false);
-            return Failed(localizer.F(LocalizationKeys.FileAccessDenied, gamePath), GameOperationErrorCode.System);
+            return GameOperationOutcomes.Failed(localizer.F(LocalizationKeys.FileAccessDenied, gamePath), GameOperationErrorCode.System);
         }
         catch (IOException exception)
         {
             await diagnostics.ErrorAsync("GameDownload", exception, CancellationToken.None).ConfigureAwait(false);
-            return Failed(localizer.F(LocalizationKeys.FileOperationFailed, exception.Message), GameOperationErrorCode.System);
+            return GameOperationOutcomes.Failed(localizer.F(LocalizationKeys.FileOperationFailed, exception.Message), GameOperationErrorCode.System);
         }
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
         {
             await diagnostics.ErrorAsync("GameDownload", exception, CancellationToken.None).ConfigureAwait(false);
-            return Failed(localizer.F(LocalizationKeys.NetworkErrorDetail, exception.Message), GameOperationErrorCode.Network);
+            return GameOperationOutcomes.Failed(localizer.F(LocalizationKeys.NetworkErrorDetail, exception.Message), GameOperationErrorCode.Network);
         }
         catch (Exception exception)
         {
@@ -168,7 +168,7 @@ internal sealed class DownloadSession : IDisposable
                 "GameDownload",
                 exception,
                 CancellationToken.None);
-            return Failed(localizer.F(LocalizationKeys.UnexpectedError, exception.Message), GameOperationErrorCode.System);
+            return GameOperationOutcomes.Failed(localizer.F(LocalizationKeys.UnexpectedError, exception.Message), GameOperationErrorCode.System);
         }
         finally
         {
@@ -209,7 +209,7 @@ internal sealed class DownloadSession : IDisposable
             || string.IsNullOrWhiteSpace(gameConfig.GameLatestFilePath)
             || string.IsNullOrWhiteSpace(gameConfig.GameStartExeName))
         {
-            return DownloadPlanPreparation.Stop(Failed(
+            return DownloadPlanPreparation.Stop(GameOperationOutcomes.Failed(
                 localizer.T(LocalizationKeys.DownloadRemoteConfigIncomplete),
                 GameOperationErrorCode.RemoteConfiguration));
         }
@@ -217,14 +217,14 @@ internal sealed class DownloadSession : IDisposable
         var speedLimitBytesPerSec = DownloadSpeedLimits.ToBytesPerSecond(settings.DownloadSpeedLimit);
         if (string.IsNullOrWhiteSpace(settings.GamePath))
         {
-            return DownloadPlanPreparation.Stop(Failed(
+            return DownloadPlanPreparation.Stop(GameOperationOutcomes.Failed(
                 localizer.T(LocalizationKeys.GameInstallPathNotConfigured),
                 GameOperationErrorCode.PathMissing));
         }
 
         var gamePath = installationPath.NormalizeGamePath(settings.GamePath);
         reportGamePath(gamePath);
-        EnsureGamePath(gamePath);
+        GamePathValidator.EnsureGameDirectoryName(gamePath);
         Directory.CreateDirectory(gamePath);
 
         var localGame = await localInstallationStateStore.ReadAsync(gamePath, activeToken).ConfigureAwait(false);
@@ -245,7 +245,7 @@ internal sealed class DownloadSession : IDisposable
             StartedAt = DateTimeOffset.Now.ToString("O")
         }, activeToken);
 
-        progress(CreateProgress(
+        progress(GameOperationProgressFactory.CreateProgress(
             operationKind,
             profile.CheckStage,
             0));
@@ -256,7 +256,7 @@ internal sealed class DownloadSession : IDisposable
                 activeToken).ConfigureAwait(false);
         if (string.IsNullOrWhiteSpace(cdnConfig.PrimaryCdn) || string.IsNullOrWhiteSpace(cdnConfig.BackUpCdn))
         {
-            return DownloadPlanPreparation.Stop(Failed(
+            return DownloadPlanPreparation.Stop(GameOperationOutcomes.Failed(
                 localizer.T(LocalizationKeys.CdnConfigIncomplete),
                 GameOperationErrorCode.CdnConfiguration));
         }
@@ -355,7 +355,7 @@ internal sealed class DownloadSession : IDisposable
                 "GameDownload",
                 $"path: {gamePath}{Environment.NewLine}required: {FileSizeFormatter.Format(diskCheck.RequiredBytes)}{Environment.NewLine}available: {(diskCheck.AvailableBytes.HasValue ? FileSizeFormatter.Format(diskCheck.AvailableBytes.Value) : "--")}",
                 activeToken);
-            return DownloadPlanPreparation.Stop(Failed(
+            return DownloadPlanPreparation.Stop(GameOperationOutcomes.Failed(
                 localizer.F(
                     LocalizationKeys.DiskSpaceInsufficientDetail,
                     FileSizeFormatter.Format(diskCheck.RequiredBytes),
@@ -422,11 +422,11 @@ internal sealed class DownloadSession : IDisposable
             $"Write probe failed: {gamePath}",
             activeToken).ConfigureAwait(false);
         return DownloadPlanPreparation.Stop(affectedCount.HasValue
-            ? Failed(
+            ? GameOperationOutcomes.Failed(
                 localizer.F(LocalizationKeys.FileAccessDenied, gamePath),
                 GameOperationErrorCode.System,
                 affectedCount.Value)
-            : Failed(
+            : GameOperationOutcomes.Failed(
                 localizer.F(LocalizationKeys.FileAccessDenied, gamePath),
                 GameOperationErrorCode.System));
     }
@@ -482,14 +482,14 @@ internal sealed class DownloadSession : IDisposable
 
             ManifestFileRemover.DeleteAll(gamePath, downloadPlan.NeedDelete, cancellationToken: activeToken);
 
-            progress(CreateProgress(operationKind, GameOperationStage.FileCheck, 0));
+            progress(GameOperationProgressFactory.CreateProgress(operationKind, GameOperationStage.FileCheck, 0));
             var failedFiles = await downloadExecutor.InstallDownloadedFilesAsync(
                 gamePath,
                 downloadPlan.ManifestFiles,
                 currentDownloadList,
                 verifiedHashes,
                 downloadPlan.PlannedHashes,
-                value => progress(CreateProgress(operationKind, GameOperationStage.FileCheck, value)),
+                value => progress(GameOperationProgressFactory.CreateProgress(operationKind, GameOperationStage.FileCheck, value)),
                 activeToken).ConfigureAwait(false);
 
             if (failedFiles.Count == 0)
@@ -500,7 +500,7 @@ internal sealed class DownloadSession : IDisposable
                         ?? throw new InvalidOperationException("Game config was resolved during planning."),
                     downloadPlan.ManifestFiles,
                     activeToken).ConfigureAwait(false);
-                progress(CreateProgress(
+                progress(GameOperationProgressFactory.CreateProgress(
                     operationKind,
                     profile.CompletedStage,
                     100));
@@ -546,7 +546,7 @@ internal sealed class DownloadSession : IDisposable
             IsRunning = true,
             CanStop = true
         });
-        return Failed(
+        return GameOperationOutcomes.Failed(
             localizer.F(LocalizationKeys.VerificationFailed, currentDownloadList.Count),
             GameOperationErrorCode.Network,
             affectedCount,
@@ -636,50 +636,6 @@ internal sealed class DownloadSession : IDisposable
         if (state.Kind != LocalInstallationStateKind.Valid)
         {
             throw new IOException(state.Error ?? $"Local installation state commit failed: {state.Kind}.");
-        }
-    }
-
-    /// <summary>Builds a progress snapshot for a phase boundary of an operation.</summary>
-    internal static GameOperationProgress CreateProgress(
-        GameOperationKind kind,
-        GameOperationStage stage,
-        int value)
-    {
-        return new GameOperationProgress
-        {
-            OperationKind = kind,
-            Stage = stage,
-            Progress = value,
-            IsRunning = true,
-            CanStop = kind is GameOperationKind.Download or GameOperationKind.Repair,
-            CanPause = false
-        };
-    }
-
-    /// <summary>Creates a failed <see cref="GameOperationResult"/> with the given details.</summary>
-    internal static GameOperationResult Failed(
-        string message,
-        GameOperationErrorCode errorCode,
-        int affectedFileCount = 0,
-        int failedFileCount = 0)
-    {
-        return new GameOperationResult
-        {
-            Success = false,
-            Message = message,
-            ErrorCode = errorCode,
-            AffectedFileCount = affectedFileCount,
-            FailedFileCount = failedFileCount
-        };
-    }
-
-    /// <summary>Validates that the game directory has the expected folder name.</summary>
-    internal static void EnsureGamePath(string gamePath)
-    {
-        var fullPath = Path.GetFullPath(gamePath);
-        if (!string.Equals(Path.GetFileName(fullPath), GamePaths.GameFolderName, StringComparison.Ordinal))
-        {
-            throw new InvalidOperationException($"Game directory name must be {GamePaths.GameFolderName}.");
         }
     }
 

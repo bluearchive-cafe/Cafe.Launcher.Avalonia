@@ -119,7 +119,7 @@ public sealed class GameUninstallService
                     // 报本地化的拒绝理由，守卫那句英文说明只留在日志里（2026-09-15 复核轮）：
                     // GamePathValidator/DirectoryTreeDeleter 抛的是仓库自己写的英文，
                     // 套进「卸载失败：{0}」就会让本地化界面显示英文开发文档。
-                    return DownloadSession.Failed(
+                    return GameOperationOutcomes.Failed(
                         localizer.F(LocalizationKeys.UninstallRefusedByPathGuard, gamePath),
                         GameOperationErrorCode.System);
                 }
@@ -414,32 +414,32 @@ public sealed class GameUninstallService
     {
         if (!Directory.Exists(gamePath))
         {
-            return (DownloadSession.Failed(localizer.F(LocalizationKeys.GamePathMissing, gamePath), GameOperationErrorCode.Uninstall), null);
+            return (GameOperationOutcomes.Failed(localizer.F(LocalizationKeys.GamePathMissing, gamePath), GameOperationErrorCode.Uninstall), null);
         }
 
         if (IsSystemProtectPath(gamePath))
         {
-            return (DownloadSession.Failed(localizer.F(LocalizationKeys.GamePathProtected, gamePath), GameOperationErrorCode.Uninstall), null);
+            return (GameOperationOutcomes.Failed(localizer.F(LocalizationKeys.GamePathProtected, gamePath), GameOperationErrorCode.Uninstall), null);
         }
 
         try
         {
-            DownloadSession.EnsureGamePath(gamePath);
+            GamePathValidator.EnsureGameDirectoryName(gamePath);
         }
         catch (InvalidOperationException)
         {
-            return (DownloadSession.Failed(localizer.F(LocalizationKeys.GameDirectoryNameInvalid, GamePaths.GameFolderName), GameOperationErrorCode.Uninstall), null);
+            return (GameOperationOutcomes.Failed(localizer.F(LocalizationKeys.GameDirectoryNameInvalid, GamePaths.GameFolderName), GameOperationErrorCode.Uninstall), null);
         }
 
         var localGame = await localInstallationStateStore.ReadAsync(gamePath, cancellationToken).ConfigureAwait(false);
         if (localGame.Kind != LocalInstallationStateKind.Valid)
         {
-            return (DownloadSession.Failed(localizer.F(LocalizationKeys.GameConfigMetadataMissing, GamePaths.GameConfigFileName), GameOperationErrorCode.Uninstall), null);
+            return (GameOperationOutcomes.Failed(localizer.F(LocalizationKeys.GameConfigMetadataMissing, GamePaths.GameConfigFileName), GameOperationErrorCode.Uninstall), null);
         }
 
         if (string.IsNullOrWhiteSpace(localGame.GameConfig?.Version) || string.IsNullOrWhiteSpace(localGame.GameConfig?.Name))
         {
-            return (DownloadSession.Failed(localizer.F(LocalizationKeys.GameConfigMetadataMissing, GamePaths.GameConfigFileName), GameOperationErrorCode.Uninstall), null);
+            return (GameOperationOutcomes.Failed(localizer.F(LocalizationKeys.GameConfigMetadataMissing, GamePaths.GameConfigFileName), GameOperationErrorCode.Uninstall), null);
         }
 
         return (null, localGame);

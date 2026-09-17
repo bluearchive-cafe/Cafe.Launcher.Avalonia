@@ -77,7 +77,7 @@ internal sealed class ManifestDiffCalculator
             {
                 if (statGate.ShouldDeliver(value))
                 {
-                    progress(DownloadSession.CreateProgress(GameOperationKind.Download, GameOperationStage.UpdateCheck, value));
+                    progress(GameOperationProgressFactory.CreateProgress(GameOperationKind.Download, GameOperationStage.UpdateCheck, value));
                 }
             });
         var expected = GameManifestDiff(currentFiles, latestManifest.File);
@@ -118,7 +118,7 @@ internal sealed class ManifestDiffCalculator
             {
                 if (hashGate.ShouldDeliver(value))
                 {
-                    progress(DownloadSession.CreateProgress(GameOperationKind.Repair, GameOperationStage.RepairCheck, value));
+                    progress(GameOperationProgressFactory.CreateProgress(GameOperationKind.Repair, GameOperationStage.RepairCheck, value));
                 }
             },
             cancellationToken).ConfigureAwait(false);

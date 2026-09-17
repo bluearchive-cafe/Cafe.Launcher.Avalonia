@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Cafe.Launcher.Avalonia.Constants;
 
 namespace Cafe.Launcher.Avalonia.Helpers;
 
@@ -46,6 +47,21 @@ public static class GamePathValidator
 
         EnsureExistingPathComponentsAreNotReparsePoints(root, target, relativePath);
         return target;
+    }
+
+    /// <summary>
+    /// Validates that the game directory has the expected folder name, throwing
+    /// <see cref="InvalidOperationException"/> otherwise. Moved here from
+    /// <c>DownloadSession</c> (D5): both the download plan and the uninstall
+    /// precheck guard the same leaf-name contract.
+    /// </summary>
+    public static void EnsureGameDirectoryName(string gamePath)
+    {
+        var fullPath = Path.GetFullPath(gamePath);
+        if (!string.Equals(Path.GetFileName(fullPath), GamePaths.GameFolderName, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException($"Game directory name must be {GamePaths.GameFolderName}.");
+        }
     }
 
     /// <summary>

@@ -1,5 +1,6 @@
 ﻿using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
+using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Auth;
@@ -17,7 +18,7 @@ public sealed class DownloadSessionTests
     {
         var path = Path.Combine(Path.GetTempPath(), GamePaths.GameFolderName);
 
-        DownloadSession.EnsureGamePath(path);
+        GamePathValidator.EnsureGameDirectoryName(path);
     }
 
     [Fact]
@@ -25,13 +26,13 @@ public sealed class DownloadSessionTests
     {
         var path = Path.Combine(Path.GetTempPath(), "NotTheGameFolder");
 
-        Assert.Throws<InvalidOperationException>(() => DownloadSession.EnsureGamePath(path));
+        Assert.Throws<InvalidOperationException>(() => GamePathValidator.EnsureGameDirectoryName(path));
     }
 
     [Fact]
     public void Failed_MapsMessageErrorCodeAndCounts()
     {
-        var result = DownloadSession.Failed("failed", GameOperationErrorCode.Network, affectedFileCount: 3, failedFileCount: 2);
+        var result = GameOperationOutcomes.Failed("failed", GameOperationErrorCode.Network, affectedFileCount: 3, failedFileCount: 2);
 
         Assert.False(result.Success);
         Assert.Equal("failed", result.Message);
@@ -43,7 +44,7 @@ public sealed class DownloadSessionTests
     [Fact]
     public void CreateProgress_ForDownload_EnablesStopAndDisablesPause()
     {
-        var progress = DownloadSession.CreateProgress(GameOperationKind.Download, GameOperationStage.UpdateCheck, 25);
+        var progress = GameOperationProgressFactory.CreateProgress(GameOperationKind.Download, GameOperationStage.UpdateCheck, 25);
 
         Assert.Equal(GameOperationKind.Download, progress.OperationKind);
         Assert.Equal(GameOperationStage.UpdateCheck, progress.Stage);

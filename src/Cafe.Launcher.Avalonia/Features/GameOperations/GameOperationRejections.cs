@@ -23,7 +23,7 @@ internal static class GameOperationRejections
 
     /// <summary>把拒绝表达成操作失败结果，供无界面的调用路径向上返回。</summary>
     public static GameOperationResult UnavailableResult(LocalizationService localizer) =>
-        DownloadSession.Failed(
+        GameOperationOutcomes.Failed(
             localizer.T(LocalizationKeys.OperationUnavailableForCurrentState),
             GameOperationErrorCode.InvalidState);
 }
