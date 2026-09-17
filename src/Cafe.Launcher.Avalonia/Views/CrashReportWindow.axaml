@@ -7,24 +7,48 @@
         x:DataType="vm:CrashReportWindowViewModel"
         Icon="/Assets/app-icon.ico"
         Title="{Binding WindowTitle}"
-        Width="700"
+        Width="{DynamicResource Crash.Layout.Window.Width}"
         SizeToContent="Height"
-        MaxHeight="720"
+        MaxHeight="{DynamicResource Crash.Layout.Window.MaxHeight}"
         CanResize="False"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource Crash.Color.Window.Background}">
     <!-- 豁免：隔离报告模式只用最小 CrashReportApp 启动，主 App 的资源字典可能不可用，
-         因此颜色与间距令牌就近定义在本窗口，不复用 App.axaml 的 Launcher.* 令牌。 -->
+         因此颜色与间距令牌就近定义在本窗口，不复用 App.axaml 的 Launcher.* 令牌。
+         窗口自身属性引用本字典时必须用 DynamicResource：属性在 Window.Resources 之前
+         解析，StaticResource 在此处解析不到（内部元素的 StaticResource 正常）。 -->
     <Window.Resources>
         <ResourceDictionary>
             <x:Double x:Key="Crash.Spacing.Xs">4</x:Double>
             <x:Double x:Key="Crash.Spacing.Sm">8</x:Double>
-            <x:Double x:Key="Crash.Spacing.Md">12</x:Double>
             <x:Double x:Key="Crash.Spacing.Lg">16</x:Double>
             <x:Double x:Key="Crash.Spacing.Xl">20</x:Double>
-            <x:Double x:Key="Crash.Spacing.Xxl">24</x:Double>
             <CornerRadius x:Key="Crash.Radius.Control">4</CornerRadius>
             <CornerRadius x:Key="Crash.Radius.Panel">8</CornerRadius>
+            <CornerRadius x:Key="Crash.Radius.Well">22</CornerRadius>
+            <!-- 布局与排版：这些值此前散在本文件各处（D16）。令牌族只保留被消费的条目，
+                 孤儿令牌由 UiStyleContractTests.CrashReport 的两条扫描挡住。 -->
+            <x:Double x:Key="Crash.Layout.Window.Width">700</x:Double>
+            <x:Double x:Key="Crash.Layout.Window.MaxHeight">720</x:Double>
+            <Thickness x:Key="Crash.Layout.Content.Margin">32,28,32,24</Thickness>
+            <x:Double x:Key="Crash.Layout.Description.MaxWidth">560</x:Double>
+            <x:Double x:Key="Crash.Layout.Mark.Size">44</x:Double>
+            <x:Double x:Key="Crash.Layout.MarkIcon.Size">24</x:Double>
+            <Thickness x:Key="Crash.Layout.Meta.Padding">14,12</Thickness>
+            <Thickness x:Key="Crash.Layout.Details.Margin">0,8,0,0</Thickness>
+            <x:Double x:Key="Crash.Layout.Details.MinHeight">132</x:Double>
+            <x:Double x:Key="Crash.Layout.Details.MaxHeight">220</x:Double>
+            <Thickness x:Key="Crash.Layout.Details.Padding">12</Thickness>
+            <x:Double x:Key="Crash.Layout.Action.MinWidth">108</x:Double>
+            <x:Double x:Key="Crash.Layout.Action.MinHeight">40</x:Double>
+            <Thickness x:Key="Crash.Layout.Action.Padding">16,8</Thickness>
+            <Thickness x:Key="Crash.Layout.Footer.Padding">32,16,32,24</Thickness>
+            <x:Double x:Key="Crash.Typography.Meta.FontSize">12</x:Double>
+            <x:Double x:Key="Crash.Typography.Title.FontSize">20</x:Double>
+            <x:Double x:Key="Crash.Typography.Body.FontSize">15</x:Double>
+            <x:Double x:Key="Crash.Typography.Body.LineHeight">23</x:Double>
+            <FontFamily x:Key="Crash.Typography.Mono.FontFamily">Consolas, Cascadia Mono</FontFamily>
+            <FontWeight x:Key="Crash.Typography.Weight.Emphasis">SemiBold</FontWeight>
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Light">
                     <SolidColorBrush x:Key="Crash.Color.Window.Background" Color="#FFF8FBFF"/>
@@ -66,11 +90,11 @@
 
     <Window.Styles>
         <Style Selector="Button.crash-action">
-            <Setter Property="MinWidth" Value="108"/>
-            <Setter Property="MinHeight" Value="40"/>
-            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="MinWidth" Value="{StaticResource Crash.Layout.Action.MinWidth}"/>
+            <Setter Property="MinHeight" Value="{StaticResource Crash.Layout.Action.MinHeight}"/>
+            <Setter Property="Padding" Value="{StaticResource Crash.Layout.Action.Padding}"/>
             <Setter Property="CornerRadius" Value="{StaticResource Crash.Radius.Control}"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontWeight" Value="{StaticResource Crash.Typography.Weight.Emphasis}"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
@@ -110,16 +134,16 @@
 
     <Grid RowDefinitions="*,Auto">
         <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-            <StackPanel Margin="32,28,32,24" Spacing="{StaticResource Crash.Spacing.Xl}">
+            <StackPanel Margin="{StaticResource Crash.Layout.Content.Margin}" Spacing="{StaticResource Crash.Spacing.Xl}">
                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Crash.Spacing.Lg}">
-                    <Border Width="44"
-                            Height="44"
-                            CornerRadius="22"
+                    <Border Width="{StaticResource Crash.Layout.Mark.Size}"
+                            Height="{StaticResource Crash.Layout.Mark.Size}"
+                            CornerRadius="{StaticResource Crash.Radius.Well}"
                             VerticalAlignment="Top"
                             Background="{DynamicResource Crash.Color.Surface.Danger}">
                         <materialIcons:MaterialIcon Kind="AlertCircle"
-                                                    Width="24"
-                                                    Height="24"
+                                                    Width="{StaticResource Crash.Layout.MarkIcon.Size}"
+                                                    Height="{StaticResource Crash.Layout.MarkIcon.Size}"
                                                     HorizontalAlignment="Center"
                                                     VerticalAlignment="Center"
                                                     Foreground="{DynamicResource Crash.Color.Danger}"/>
@@ -127,44 +151,44 @@
                     <StackPanel Grid.Column="1" Spacing="{StaticResource Crash.Spacing.Xs}">
                         <TextBlock Text="{Binding Status}"
                                    Foreground="{DynamicResource Crash.Color.Danger}"
-                                   FontSize="12"
-                                   FontWeight="SemiBold"/>
+                                   FontSize="{StaticResource Crash.Typography.Meta.FontSize}"
+                                   FontWeight="{StaticResource Crash.Typography.Weight.Emphasis}"/>
                         <TextBlock Text="{Binding Title}"
                                    Foreground="{DynamicResource Crash.Color.Text.Primary}"
-                                   FontSize="20"
-                                   FontWeight="SemiBold"
+                                   FontSize="{StaticResource Crash.Typography.Title.FontSize}"
+                                   FontWeight="{StaticResource Crash.Typography.Weight.Emphasis}"
                                    TextWrapping="Wrap"/>
                         <TextBlock Text="{Binding Description}"
-                                   MaxWidth="560"
+                                   MaxWidth="{StaticResource Crash.Layout.Description.MaxWidth}"
                                    HorizontalAlignment="Left"
                                    Foreground="{DynamicResource Crash.Color.Text.Body}"
-                                   FontSize="15"
-                                   LineHeight="23"
+                                   FontSize="{StaticResource Crash.Typography.Body.FontSize}"
+                                   LineHeight="{StaticResource Crash.Typography.Body.LineHeight}"
                                    TextWrapping="Wrap"/>
                     </StackPanel>
                 </Grid>
 
-                <Border Padding="14,12"
+                <Border Padding="{StaticResource Crash.Layout.Meta.Padding}"
                         CornerRadius="{StaticResource Crash.Radius.Panel}"
                         Background="{DynamicResource Crash.Color.Surface.Subtle}">
                     <WrapPanel Orientation="Horizontal"
                                ItemSpacing="{StaticResource Crash.Spacing.Xl}"
                                LineSpacing="{StaticResource Crash.Spacing.Sm}">
                         <StackPanel Orientation="Horizontal" Spacing="{StaticResource Crash.Spacing.Xs}">
-                            <TextBlock Text="{Binding ReportIdLabel}" Foreground="{DynamicResource Crash.Color.Text.Muted}" FontSize="12"/>
-                            <TextBlock Text="{Binding ReportId}" Foreground="{DynamicResource Crash.Color.Text.Body}" FontSize="12" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding ReportIdLabel}" Foreground="{DynamicResource Crash.Color.Text.Muted}" FontSize="{StaticResource Crash.Typography.Meta.FontSize}"/>
+                            <TextBlock Text="{Binding ReportId}" Foreground="{DynamicResource Crash.Color.Text.Body}" FontSize="{StaticResource Crash.Typography.Meta.FontSize}" FontWeight="{StaticResource Crash.Typography.Weight.Emphasis}"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Spacing="{StaticResource Crash.Spacing.Xs}">
-                            <TextBlock Text="{Binding TimeLabel}" Foreground="{DynamicResource Crash.Color.Text.Muted}" FontSize="12"/>
-                            <TextBlock Text="{Binding Time}" Foreground="{DynamicResource Crash.Color.Text.Body}" FontSize="12" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding TimeLabel}" Foreground="{DynamicResource Crash.Color.Text.Muted}" FontSize="{StaticResource Crash.Typography.Meta.FontSize}"/>
+                            <TextBlock Text="{Binding Time}" Foreground="{DynamicResource Crash.Color.Text.Body}" FontSize="{StaticResource Crash.Typography.Meta.FontSize}" FontWeight="{StaticResource Crash.Typography.Weight.Emphasis}"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Spacing="{StaticResource Crash.Spacing.Xs}">
-                            <TextBlock Text="{Binding VersionLabel}" Foreground="{DynamicResource Crash.Color.Text.Muted}" FontSize="12"/>
-                            <TextBlock Text="{Binding Version}" Foreground="{DynamicResource Crash.Color.Text.Body}" FontSize="12" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding VersionLabel}" Foreground="{DynamicResource Crash.Color.Text.Muted}" FontSize="{StaticResource Crash.Typography.Meta.FontSize}"/>
+                            <TextBlock Text="{Binding Version}" Foreground="{DynamicResource Crash.Color.Text.Body}" FontSize="{StaticResource Crash.Typography.Meta.FontSize}" FontWeight="{StaticResource Crash.Typography.Weight.Emphasis}"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Spacing="{StaticResource Crash.Spacing.Xs}">
-                            <TextBlock Text="{Binding BuildLabel}" Foreground="{DynamicResource Crash.Color.Text.Muted}" FontSize="12"/>
-                            <TextBlock Text="{Binding Build}" Foreground="{DynamicResource Crash.Color.Text.Body}" FontSize="12" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding BuildLabel}" Foreground="{DynamicResource Crash.Color.Text.Muted}" FontSize="{StaticResource Crash.Typography.Meta.FontSize}"/>
+                            <TextBlock Text="{Binding Build}" Foreground="{DynamicResource Crash.Color.Text.Body}" FontSize="{StaticResource Crash.Typography.Meta.FontSize}" FontWeight="{StaticResource Crash.Typography.Weight.Emphasis}"/>
                         </StackPanel>
                     </WrapPanel>
                 </Border>
@@ -174,22 +198,22 @@
                           Header="{Binding TechnicalDetailsLabel}"
                           IsExpanded="False"
                           AutomationProperties.Name="{Binding TechnicalDetailsLabel}">
-                    <TextBox Margin="0,8,0,0"
-                             MinHeight="132"
-                             MaxHeight="220"
-                             Padding="12"
+                    <TextBox Margin="{StaticResource Crash.Layout.Details.Margin}"
+                             MinHeight="{StaticResource Crash.Layout.Details.MinHeight}"
+                             MaxHeight="{StaticResource Crash.Layout.Details.MaxHeight}"
+                             Padding="{StaticResource Crash.Layout.Details.Padding}"
                              AcceptsReturn="True"
                              IsReadOnly="True"
                              TextWrapping="Wrap"
-                             FontFamily="Consolas, Cascadia Mono"
-                             FontSize="12"
+                             FontFamily="{StaticResource Crash.Typography.Mono.FontFamily}"
+                             FontSize="{StaticResource Crash.Typography.Meta.FontSize}"
                              Text="{Binding TechnicalDetails}"/>
                 </Expander>
             </StackPanel>
         </ScrollViewer>
 
         <Border Grid.Row="1"
-                Padding="32,16,32,24"
+                Padding="{StaticResource Crash.Layout.Footer.Padding}"
                 BorderBrush="{DynamicResource Crash.Color.Hairline}"
                 BorderThickness="0,1,0,0">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Crash.Spacing.Sm}">
