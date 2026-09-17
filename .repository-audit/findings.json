@@ -726,10 +726,10 @@
       "disposition": "Investigate",
       "recommendation_validation": "Needs External Verification",
       "first_seen_commit": "8250756",
-      "last_verified_commit": "d0f1255",
+      "last_verified_commit": "8aab531",
       "resolved_commit": null,
       "guard": null,
-      "delta_note": "生产写入点唯一：Features/Settings/SettingsAppearanceViewModel.cs:584 的 `application.RequestedThemeVariant = themeVariant;`。无头侧 CrashReportWindowHeadlessTests.cs:28-29/56 与 ThemeSubscriptionTeardownHeadlessTests.cs:32/51-62 做了快照 + finally 复位（证明危险已知）；扫描报告称 MainWindowHeadlessTests.Dialogs.cs:332（经 ApplyTheme）与 SystemThemeColorHeadlessTests.cs:26-33（经 ApplyPlatformColorValues）未复位——但那两条锚定的是方法调用而非直接赋值，**本审计未逐行确认**，故置信度只给 60。MainWindowHeadlessTests.Golden.cs 的 PrepareGoldenWindow 只固定语言、动效与字体，不固定变体。",
+      "delta_note": "生产写入点唯一，D14（8aab531）搬移前在 Features/Settings/SettingsAppearanceViewModel.cs:584，现为 src/Cafe.Launcher.Avalonia/Services/ThemeApplier.cs 的 ApplyThemeMode（设置外观 VM 已不再写它，读本条时按新位置定位）。无头侧 CrashReportWindowHeadlessTests.cs:28-29/56 与 ThemeSubscriptionTeardownHeadlessTests.cs:33/53-62（D14 后直接构造 applier） 做了快照 + finally 复位（证明危险已知）；扫描报告称 MainWindowHeadlessTests.Dialogs.cs:332（经 ApplyTheme）与 SystemThemeColorHeadlessTests.cs:26-33（经 ApplyPlatformColorValues）未复位——但那两条锚定的是方法调用而非直接赋值，**本审计未逐行确认**，故置信度只给 60。MainWindowHeadlessTests.Golden.cs 的 PrepareGoldenWindow 只固定语言、动效与字体，不固定变体。",
       "resolution_note": null
     }
   }

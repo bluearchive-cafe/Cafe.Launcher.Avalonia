@@ -9,7 +9,7 @@
 
 ## 0. 落地状态（2026-09-16）
 
-**阶段 A 全部（13/13）· 阶段 B 19/22 · 阶段 C 6/8 · 阶段 D 1/17；§2 的 6 项正确性问题中 3 项已修、3 项开放。**
+**阶段 A 全部（13/13）· 阶段 B 19/22 · 阶段 C 6/8 · 阶段 D 2/17；§2 的 6 项正确性问题中 3 项已修、3 项开放。**
 每个提交前跑 `.\verify.ps1` 且退出码 0。收口实测：单元 **1857 通过 / 0 失败 / 2 可见跳过**、
 无头 **185 通过 / 0 失败**、覆盖率行 **87.27%** / 分支 **93.63%**（棘轮余量 +1.42pp / +0.93pp）、
 Debug 与 Release 构建各 0 警告 0 错误。
@@ -20,7 +20,7 @@ Debug 与 Release 构建各 0 警告 0 错误。
 | A 测试设施复用 | **13/13** | `fe9a012`..`0db316d` | 净 −814 行测试代码、生产零改动；`%TEMP%` 残留目录由 15 个／轮降到 **0 个／轮**（实测）；两处偏离原议见 A 节注 |
 | B 生产侧等价收敛 | **19/22** | `7161f4c`..`9044998` | `B5` 并入评审候选 11 待裁决；`B12`／`B15` 评估后判定收益不抵成本；`B17` 两侧完成并暴露 `AUD-TEST-012` |
 | C 死代码删除 | **6/8** | `5ec1999`..`ed7b290` | `C5`／`C8` 经核实为深模块边界与承重语义标记，判定不做 |
-| D 结构收敛 | 1/17 | `d2d4bc6` | 仅 `D1`（即 `DEF-1`）；`D14`／`D15` 仍需先裁决，其余 14 项待做 |
+| D 结构收敛 | 2/17 | `d2d4bc6` `8aab531` | `D1`（即 `DEF-1`）与 `D14`（主题引擎搬进 `Services/ThemeApplier`，无接口）已落地；`D15` 仍需先裁决，其余 14 项待做 |
 | E 登记不排期 | 0/9 | — | 按定义为登记项，不排期 |
 
 新增发现已写入审计台账：`CODEBASE_AUDIT.md` 与 `.repository-audit/findings.json` 共**立案 8 项**
@@ -120,7 +120,7 @@ Debug 与 Release 构建各 0 警告 0 错误。
 
 - **状态**：**开放**（立案 `AUD-TEST-013`）。两处锚定的是方法调用而非直接赋值，**尚未逐行复核**，故审计置信度只给 60。
 
-- **证据**：生产写入点唯一（`Features/Settings/SettingsAppearanceViewModel.cs:584` `application.RequestedThemeVariant = themeVariant;`）。无头侧 `CrashReportWindowHeadlessTests.cs:28-29/56` 与 `ThemeSubscriptionTeardownHeadlessTests.cs:32/51-62` 做了快照+`finally` 复位（证明危险已知），而扫描报告称 `MainWindowHeadlessTests.Dialogs.cs:332`（经 `ApplyTheme`）与 `SystemThemeColorHeadlessTests.cs:26-33`（经 `ApplyPlatformColorValues`）**未复位**；`MainWindowHeadlessTests.Golden.cs` 的 `PrepareGoldenWindow` 只固定语言、动效与字体，不固定变体。
+- **证据**：生产写入点唯一，`D14` 落地前在 `Features/Settings/SettingsAppearanceViewModel.cs:584`，**现随该次搬移转到 `src/Cafe.Launcher.Avalonia/Services/ThemeApplier.cs` 的 `ApplyThemeMode`**（本条的锚点须按新位置读）。无头侧 `CrashReportWindowHeadlessTests.cs:28-29/56` 与 `ThemeSubscriptionTeardownHeadlessTests.cs:33/53-62`（`D14` 后直接构造 applier，快照与 `finally` 复位照旧）做了快照+`finally` 复位（证明危险已知），而扫描报告称 `MainWindowHeadlessTests.Dialogs.cs:332`（经 `ApplyTheme`）与 `SystemThemeColorHeadlessTests.cs:26-33`（经 `ApplyPlatformColorValues`）**未复位**；`MainWindowHeadlessTests.Golden.cs` 的 `PrepareGoldenWindow` 只固定语言、动效与字体，不固定变体。
 - **影响**：共享一个 `Application` 的套件里，golden 截图截到亮色还是暗色取决于同批次哪个用例先跑。这是「偶然绿」的典型形态。
 - **落地前须复核**：本条的行号锚定于方法调用而非直接赋值，落地时先读那两处方法确认是否真的漏了复位。
 - **建议**：加 `ThemeVariantSnapshot : IDisposable`（或 `ThemeProbe`）设施放在 `HeadlessTestHost` 旁，四处统一走它；并让 `PrepareGoldenWindow` 显式设定变体，使 golden 不再依赖顺序。
@@ -295,7 +295,7 @@ Debug 与 Release 构建各 0 警告 0 错误。
 
 **为什么最后**：这些项跨文件、动所有权或接缝，且部分与待裁决的评审候选重叠。**每项独立裁决、独立提交**，不要打包。
 
-> **状态：已落地 1／17（`D1`，`d2d4bc6`）。** 其余 16 项未动，其中 `D14`（主题引擎归属）与 `D15`
+> **状态：已落地 2／17（`D1` → `d2d4bc6`，`D14` → `8aab531`）。** 其余 15 项未动，其中 `D15`
 > （Wire/Unwire 形态）按 §5 仍需先裁决，`D15` 与架构评审候选 07 同源。
 >
 > `D1` 的落地形态与卡片一致（抽出 `ManifestFileRemover` 由下载与卸载共用），但**实测比卡片描述的
@@ -304,6 +304,13 @@ Debug 与 Release 构建各 0 警告 0 错误。
 > 计划未提的行为变化：`DownloadSession` 现在把 `activeToken` 传给删除循环（原先签名里没有令牌，
 > 是签名的偶然；该路径上其它每一步都转发同一令牌）。变异验证：拆掉只读清除后三条删除路径的
 > 用例同时变红。
+>
+> `D14` 的落地形态按卡片（`Services/ThemeApplier`），但**未按 §5 原议与候选 11/12 合并**——读码
+> 复核后认定两者无共同机制，理由与其裁定同址（§5 决策二）。搬移是逐行照抄：写入的键、颜色与
+> 顺序不变，订阅仍在首次落模式时懒建，`Dispose` 的退订随订阅一并归 applier；VM 侧无调用者的
+> `GetSystemAccentColor`／`IsDarkTheme` 静态包装直接删除，不留在原地。两条被重定向的 headless
+> 守卫**重新做了变异验证**（拆退订、拆中性策略传递各让一条用例变红），因为守卫换了宿主以后
+> 「原先它咬得住」不再是不需证明的事实。
 
 | 编号 | 项 | 证据锚点 | 落地改动 | 风险 |
 | --- | --- | --- | --- | --- |
@@ -325,7 +332,7 @@ Debug 与 Release 构建各 0 警告 0 错误。
 | `D16` | `CrashReportWindow` 用自己的 token 家族却大量写字面量 | `Views/CrashReportWindow.axaml:20-27` 声明 `Crash.Spacing.*`/`Crash.Radius.*`，但 `:10,12`（`Width="700"`/`MaxHeight="720"`）、`:113`、`:115-117`（`44`/`CornerRadius="22"`）、`:147,180,177-179,192` 及 6 处 `FontWeight="SemiBold"`、`:68-81` 的 `MinWidth="108"`/`Padding="16,8"` 等仍是裸数字；`Crash.Spacing.Md`（`:22`）与 `Crash.Spacing.Xxl`（`:25`）声明后从未被消费 | 补齐 `Crash.Layout.*`/`Crash.Typography.*` 条目并消费；两个未用 token 要么用、要么删 | 低——该文件被 `UiStyleContractTests` 显式豁免（`:11-17`），所以今天无守卫；建议顺带为 `Crash.*` 加一条扫描 |
 | `D17` | 三个手写 INPC 模型 vs 工具箱基类 | `Models/LauncherRuntimeModels.cs:243-249` ≡ `:267-273`（两个逐字相同的 `SetField<T>`）、`:38-43`（第三个，仅 `string` 变体）；三个类声明在 `:12,188,252`。同目录其余可观察模型**已经**派生自 `ObservableObject`（`GameRuntimeSettings.cs:7`、`LauncherSettings.cs:10`、`ToastNotification.cs:67`、`ResourcePanelItem.cs:67`、`ThemeColorPaletteItem.cs:6`、`BannerDot.cs:9`），基类已是承重结构 | 三个类改派生 `ObservableObject`；`SelectableOption` 的三个属性可用 `[ObservableProperty]`（工具箱产出的 `PropertyChanged` 契约相同） | 中——须保留 `RemoteContentItem.IsImageLoading`/`IsImageLoadFailed` 的私有 setter；补「每类一个属性的 `PropertyChanged` 名称断言」，避免通知被静默丢掉（横幅圆点会不再更新） |
 
-**逐项状态（1/17 落地）**：`D1` → `d2d4bc6`（即 `DEF-1` / `AUD-ARCH-010`）。其余 16 项未动，其中 `D14`·`D15` 需先裁决（见 §5），`D3` 建议与 `DEF-5` 同批落地。
+**逐项状态（2/17 落地）**：`D1` → `d2d4bc6`（即 `DEF-1` / `AUD-ARCH-010`）、`D14` → `8aab531`。其余 15 项未动，其中 `D15` 需先裁决（见 §5），`D3` 建议与 `DEF-5` 同批落地。
 
 ### 阶段 E — 登记不排期（9 项）
 
@@ -393,11 +400,25 @@ Debug 与 Release 构建各 0 警告 0 错误。
 
 **建议**：采纳 `Attach` 形态，在 `AUD-ARCH-005` 的条目上把候选 07 的「声明表」改写为「记录式拆卸」。两者都能消除漏配对称，但后者不动 30 个协作者的字段布局。落地时补一条「`Unwire()`/`Dispose()` 之后任何 shell 处理器都不再运行」的用例（把 `ShellLifecycleTests.cs:263` 的单条断言扩到 `dialogs.CloseRequested`、`debug.RefreshRequested`、`operations.OpenLogViewerRequested`）。
 
-### 决策二：主题引擎是否从 `SettingsAppearanceViewModel` 拆出（`D14`）
+### 决策二：主题引擎是否从 `SettingsAppearanceViewModel` 拆出（`D14`） —— **已裁定：独立拆出（`8aab531`）**
 
-`D14` 与评审候选 11（降级单适配器接缝）、候选 12（诊断注册所有方）落在同一片区域（进程级全局状态的归属）。三者若各自落地会互相踩。
+**裁定**：`D14` 单独推进，形态为「sealed 具体类 + DI 单例 + **无接口**」，不并入评审候选 11/12。
 
-**建议**：把 `D14` 与候选 11/12 作为一个「进程级状态归属」议题合并裁决，一次决定：主题应用器归 `Services/`、`LocalDiagnostics` 的吞异常收进 `UnifiedLogger`、诊断注册只有一个所有方。否则会出现「VM 拆出去了但静态注册还在测试提供者里」的半迁移态。
+**不合并的理由（读码复核后推翻了本节原议）**：候选 11 是 `ISettingsEditor`／`IShellRuntime`／
+`LocalDiagnostics` 三个「单适配器零替身」接缝的降级，候选 12 是诊断注册的单一所有方——两者都落在
+**日志**这条线上；`D14` 落在**外观资源**这条线上，引擎里没有任何失败路径要记日志（`ApplyScheme`
+全程无 try/catch，`SetBrush` 不抛），两边唯一的接触点是 `SettingsAppearanceViewModel` 里那一次
+`LocalDiagnostics.LogSync("ThemeColor", …)`。因此原议担心的「VM 拆出去了但静态注册还在测试提供者里」
+这种半迁移态并不存在——那是另一个全局量的议题，合并只会让 `D14` 无限期等一个与它无共同机制的裁决。
+
+**不加接口的理由**：单适配器、零替身的接口正是候选 11 要拆掉的那种假接缝（ADR-021 的标准），而
+仓库既有先例 `WindowsAnimationSettingsProvider` 同样是「DI 登记的 sealed 具体类，消费方直接持有」。
+
+**与 `DEF-4` 的顺序**：`DEF-4` 的唯一生产写入点已随本次搬移移到 `Services/ThemeApplier`，故 `D14`
+先落、`DEF-4` 的快照设施随后对着 applier 建；反过来会让 `DEF-4` 的锚点先失效一次。
+
+**与既有裁定的关系**：`AUD-MAINT-001`（方案缓存由静态改实例）不受影响——缓存仍居实例，只换了宿主；
+`AUD-TEST-007` 的哨兵守卫仍成立，并已随本次改动重新做变异验证（拆退订即红）。
 
 ### 决策三：`D1`（卸载只读文件）的性质与发布口径 —— **已判定：既有缺陷**
 
