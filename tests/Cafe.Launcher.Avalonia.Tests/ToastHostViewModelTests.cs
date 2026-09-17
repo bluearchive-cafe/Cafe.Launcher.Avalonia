@@ -734,6 +734,63 @@ public sealed class ToastHostViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task DismissToast_WhileCountdownIsParkedOnThePointer_WakesTheParkedWait()
+    {
+        await using var provider = CreateProvider();
+        var toastService = provider.GetRequiredService<ToastService>();
+        var delays = new ControlledDelay();
+        using var viewModel = new ToastHostViewModel(
+            toastService,
+            provider.GetRequiredService<LocalizationService>(),
+            new LocalDiagnostics(),
+            InvokeSerially,
+            delays.WaitAsync);
+
+        toastService.Show(new ToastOptions { Message = "saved", Duration = ToastDuration.Brief });
+        await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 1);
+        var toast = viewModel.ActiveToasts.Single();
+        viewModel.SetToastPointerOver(toast.Id, isPointerOver: true);
+        // 先确认倒计时已经真的停在「等指针移开」上，再拆除：否则拆除落在重新评估之前，
+        // 唤醒与「记录已移除」两条路都到得了终点，守卫咬不住缺失的唤醒。
+        await WaitUntilAsync(() => viewModel.IsCountdownAwaitingResume(toast.Id));
+        var parked = viewModel.PendingCountdownTask(toast.Id);
+
+        Assert.NotNull(parked);
+
+        await viewModel.DismissToastCommand.ExecuteAsync(toast.Id);
+
+        // 拆除必须唤醒挂起的等待；否则这个任务会一直阻塞到宿主 Dispose 才结束，
+        // 而那发生在本断言之后——超时即红（AUD-TEST-012）。
+        await parked!.WaitAsync(TimeSpan.FromSeconds(2));
+        Assert.Empty(viewModel.ActiveToasts);
+    }
+
+    [Fact]
+    public async Task DismissToast_WhileDisplayDelayIsInFlight_CancelsTheInFlightWait()
+    {
+        await using var provider = CreateProvider();
+        var toastService = provider.GetRequiredService<ToastService>();
+        var delays = new ControlledDelay();
+        using var viewModel = new ToastHostViewModel(
+            toastService,
+            provider.GetRequiredService<LocalizationService>(),
+            new LocalDiagnostics(),
+            InvokeSerially,
+            delays.WaitAsync);
+
+        toastService.Show(new ToastOptions { Message = "saved", Duration = ToastDuration.Brief });
+        await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 1);
+        var toast = viewModel.ActiveToasts.Single();
+        await WaitUntilAsync(() => delays.RequestCount == 1);
+
+        await viewModel.DismissToastCommand.ExecuteAsync(toast.Id);
+
+        // 拆除要打断在途的显示等待；不打断的话这条等待会一直挂到宿主 Dispose（AUD-TEST-012）。
+        await WaitUntilAsync(() => delays.CancellationCount == 1);
+        Assert.Equal(1, delays.RequestCount);
+    }
+
+    [Fact]
     public async Task ToastPointerOver_OnToastWithoutDisplayCountdown_IsIgnored()
     {
         await using var provider = CreateProvider();

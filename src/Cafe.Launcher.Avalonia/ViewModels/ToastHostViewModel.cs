@@ -75,6 +75,20 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
         && lifecycle.Countdown is { Suspended: true };
 
     /// <summary>
+    /// Gets whether the display countdown of <paramref name="toastId"/> is parked waiting for the
+    /// pointer to leave its card.
+    /// </summary>
+    internal bool IsCountdownAwaitingResume(string toastId) =>
+        lifecycles.TryGetValue(toastId, out var lifecycle)
+        && lifecycle.Countdown is { Resumed: not null };
+
+    /// <summary>Gets the in-flight display countdown task of <paramref name="toastId"/>, if any.</summary>
+    internal Task? PendingCountdownTask(string toastId) =>
+        lifecycles.TryGetValue(toastId, out var lifecycle)
+            ? lifecycle.CountdownTask
+            : null;
+
+    /// <summary>
     /// Suspends or resumes the display countdown of one toast as the pointer enters or leaves its
     /// card. A suspended toast never expires, and a resumed one restarts with its full duration —
     /// the same restart-on-resume semantics the banner carousel uses.
@@ -149,25 +163,26 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
                 return;
             }
 
-            await invokeOnUiAsync(() =>
+        var lifecycle = new ToastLifecycle();
+        await invokeOnUiAsync(() =>
+        {
+            // 记录的建立与拆除各只有一处：随提示条进入栈建立，随其离开栈拆除。
+            if (!notification.HasActions)
             {
-                // 记录的建立与拆除各只有一处：随提示条进入栈建立，随其离开栈拆除。
-                var lifecycle = new ToastLifecycle();
-                if (!notification.HasActions)
-                {
-                    lifecycle.Countdown = new ToastCountdown();
-                }
-
-                lifecycles[notification.Id] = lifecycle;
-                ActiveToasts.Insert(0, notification);
-            });
-            if (notification.HasActions)
-            {
-                return;
+                lifecycle.Countdown = new ToastCountdown();
             }
 
-            await RunDisplayCountdownAsync(notification, cancellationToken);
-            await ExitToastAsync(notification.Id, cancellationToken);
+            lifecycles[notification.Id] = lifecycle;
+            ActiveToasts.Insert(0, notification);
+        });
+        if (notification.HasActions)
+        {
+            return;
+        }
+
+        lifecycle.CountdownTask = RunDisplayCountdownAsync(notification, cancellationToken);
+        await lifecycle.CountdownTask;
+        await ExitToastAsync(notification.Id, cancellationToken);
         }
         catch (OperationCanceledException exception) when (
             exception.CancellationToken == cancellationToken
@@ -527,6 +542,12 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
     private sealed class ToastLifecycle
     {
         public ToastCountdown? Countdown { get; set; }
+
+        /// <summary>
+        /// 测试缝：倒计时循环随提示条 fire-and-forget，这里是唯一能拿到它引用的地方。
+        /// 拆除路径必须唤醒挂起的等待，否则这个任务会一直阻塞到宿主 Dispose——守卫用例盯的就是它。
+        /// </summary>
+        public Task? CountdownTask { get; set; }
 
         public CancellationTokenSource? ActionToken { get; set; }
 
