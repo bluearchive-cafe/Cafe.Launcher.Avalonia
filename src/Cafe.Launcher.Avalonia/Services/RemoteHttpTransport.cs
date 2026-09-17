@@ -11,13 +11,14 @@ using Cafe.Launcher.Avalonia.Helpers;
 namespace Cafe.Launcher.Avalonia.Services;
 
 /// <summary>
-/// The single outbound remote-HTTP module: one lease, one validation pass, one
-/// redirect loop, one status enforcement, one buffering/streaming guarantee per
-/// call. Callers describe <em>what</em> to fetch (a URI plus optional per-call
-/// policy); the transport owns <em>how</em> it is fetched safely — proxy-aware
-/// leasing, SSRF validation with per-URI egress resolution, manual redirects,
-/// non-2xx rejection, the buffered-JSON size cap with contextual parse errors,
-/// and the idle-read stall budget.
+/// The outbound remote-HTTP module for remote JSON/stream fetches — the API,
+/// update, resource-panel and image-cache clients: one lease, one validation
+/// pass, one redirect loop, one status enforcement, one buffering/streaming
+/// guarantee per call. Callers describe <em>what</em> to fetch (a URI plus
+/// optional per-call policy); the transport owns <em>how</em> it is fetched
+/// safely — proxy-aware leasing, SSRF validation with per-URI egress
+/// resolution, manual redirects, non-2xx rejection, the buffered-JSON size cap
+/// with contextual parse errors, and the idle-read stall budget.
 /// </summary>
 /// <remarks>
 /// <para>Interface contract (everything a caller must know):</para>
@@ -41,6 +42,15 @@ namespace Cafe.Launcher.Avalonia.Services;
 /// and its lease and must be disposed by the caller. Every read passes through
 /// the stall budget, so a silently stalled body surfaces as an
 /// <see cref="HttpRequestException"/> instead of hanging forever.</para>
+/// <para><b>Scope — there are two deliberate exits.</b> This module serves the
+/// JSON/stream fetches listed above. The game-file download channel is the
+/// second exit: a batch-scoped
+/// <see cref="IDownloadTransportSource"/>/<see cref="IDownloadTransport"/>
+/// wrapping one long-timeout lease from the same handler pool, sharing only the
+/// per-hop send core (<see cref="RemoteHttpRequestService.SendAsync"/>) and
+/// owning its own status and buffering discipline. The boundary is deliberate
+/// (ADR-022): a guarantee stated here is not claimed by the download exit, and
+/// the two exits are not to be merged without re-adjudicating.</para>
 /// </remarks>
 public interface IRemoteHttpTransport
 {
