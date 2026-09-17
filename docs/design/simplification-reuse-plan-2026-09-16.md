@@ -20,13 +20,13 @@ Debug 与 Release 构建各 0 警告 0 错误。
 | A 测试设施复用 | **13/13** | `fe9a012`..`0db316d` | 净 −814 行测试代码、生产零改动；`%TEMP%` 残留目录由 15 个／轮降到 **0 个／轮**（实测）；两处偏离原议见 A 节注 |
 | B 生产侧等价收敛 | **20/22** | `7161f4c`..`9044998`、`28b842b` | `B5` 独立落地（见 B 节注，未按原议并入候选 11）；`B12`／`B15` 评估后判定收益不抵成本；`B17` 两侧完成并暴露 `AUD-TEST-012` |
 | C 死代码删除 | **6/8** | `5ec1999`..`ed7b290` | `C5`／`C8` 经核实为深模块边界与承重语义标记，判定不做 |
-| D 结构收敛 | 3/17 | `d2d4bc6` `8aab531` `588d80c` | `D1`（即 `DEF-1`）、`D14`（主题引擎搬进 `Services/ThemeApplier`，无接口）、`D3`（修复的两道闸门归位到旅程，与 `DEF-5` 同批）已落地；`D15` 仍需先裁决，其余 13 项待做 |
+| D 结构收敛 | 14/17 | `d2d4bc6` `8aab531` `588d80c` `bf06ec0`…`5253311` | `D1`（即 `DEF-1`）、`D14`（主题引擎搬进 `Services/ThemeApplier`，无接口）、`D3`（修复的两道闸门归位到旅程，与 `DEF-5` 同批）＋ **A 组 10 项全部落地**；余 `D15`（需先裁决）与 B 组 `D7`／`D13`／`D17`（有外溢，逐项裁） |
 | E 登记不排期 | 0/9 | — | 按定义为登记项，不排期 |
 
 新增发现已写入审计台账：`CODEBASE_AUDIT.md` 与 `.repository-audit/findings.json` 共**立案 8 项**
 （1 Medium + 7 Low）：`AUD-ARCH-010`（= `DEF-1`，resolved）、`AUD-ARCH-011`（= `DEF-6`，resolved）、
 `AUD-MAINT-005`（resolved，`B10` 补的往返守卫）、`AUD-TEST-011`（= `DEF-3`，resolved）、
-`AUD-ARCH-012`（= `DEF-5`，resolved）、`AUD-TEST-010`（= `DEF-2`，resolved）、`AUD-TEST-012`（`B17` 暴露，open）、
+`AUD-ARCH-012`（= `DEF-5`，resolved）、`AUD-TEST-010`（= `DEF-2`，resolved）、`AUD-TEST-012`（`B17` 暴露，已结案 `4b7b987`）、
 `AUD-TEST-013`（= `DEF-4`，resolved，两处锚点复核结果为一真一假）。
 
 **发布归属**：`DEF-1` 已随 `v1.1.0-beta.9` 与 `beta.10` 出货，**下一版需要一条面向用户的 `fix`
@@ -302,8 +302,10 @@ Debug 与 Release 构建各 0 警告 0 错误。
 
 **为什么最后**：这些项跨文件、动所有权或接缝，且部分与待裁决的评审候选重叠。**每项独立裁决、独立提交**，不要打包。
 
-> **状态：已落地 3／17（`D1` → `d2d4bc6`，`D14` → `8aab531`，`D3` → `588d80c`）。** 其余 14 项未动，其中
-> `D15`（Wire/Unwire 形态）按 §5 仍需先裁决，`D15` 与架构评审候选 07 同源。
+> **状态：已落地 14／17——A 组 10 项（零外溢）全部完成（`bf06ec0`…`5253311`，逐项独立提交 ＋ 逐项门禁），
+> 加上此前的 `D1` → `d2d4bc6`、`D14` → `8aab531`、`D3` → `588d80c`，以及 `D16` → `5253311`。**
+> 剩余 3 项：`D15`（Wire/Unwire 形态）按 §5 仍需先裁决，`D15` 与架构评审候选 07 同源；
+> `D7`、`D13`、`D17` 属 B 组（有外溢：动四语 resx／golden／既有契约断言／公共类型形态），需逐项裁。
 >
 > `D1` 的落地形态与卡片一致（抽出 `ManifestFileRemover` 由下载与卸载共用），但**实测比卡片描述的
 > 缺陷更宽**：除了只读属性，两条路径的路径守卫也不同（卸载侧用 `GetSafePath`，下载侧用
@@ -339,7 +341,19 @@ Debug 与 Release 构建各 0 警告 0 错误。
 | `D16` | `CrashReportWindow` 用自己的 token 家族却大量写字面量 | `Views/CrashReportWindow.axaml:20-27` 声明 `Crash.Spacing.*`/`Crash.Radius.*`，但 `:10,12`（`Width="700"`/`MaxHeight="720"`）、`:113`、`:115-117`（`44`/`CornerRadius="22"`）、`:147,180,177-179,192` 及 6 处 `FontWeight="SemiBold"`、`:68-81` 的 `MinWidth="108"`/`Padding="16,8"` 等仍是裸数字；`Crash.Spacing.Md`（`:22`）与 `Crash.Spacing.Xxl`（`:25`）声明后从未被消费 | 补齐 `Crash.Layout.*`/`Crash.Typography.*` 条目并消费；两个未用 token 要么用、要么删 | 低——该文件被 `UiStyleContractTests` 显式豁免（`:11-17`），所以今天无守卫；建议顺带为 `Crash.*` 加一条扫描 |
 | `D17` | 三个手写 INPC 模型 vs 工具箱基类 | `Models/LauncherRuntimeModels.cs:243-249` ≡ `:267-273`（两个逐字相同的 `SetField<T>`）、`:38-43`（第三个，仅 `string` 变体）；三个类声明在 `:12,188,252`。同目录其余可观察模型**已经**派生自 `ObservableObject`（`GameRuntimeSettings.cs:7`、`LauncherSettings.cs:10`、`ToastNotification.cs:67`、`ResourcePanelItem.cs:67`、`ThemeColorPaletteItem.cs:6`、`BannerDot.cs:9`），基类已是承重结构 | 三个类改派生 `ObservableObject`；`SelectableOption` 的三个属性可用 `[ObservableProperty]`（工具箱产出的 `PropertyChanged` 契约相同） | 中——须保留 `RemoteContentItem.IsImageLoading`/`IsImageLoadFailed` 的私有 setter；补「每类一个属性的 `PropertyChanged` 名称断言」，避免通知被静默丢掉（横幅圆点会不再更新） |
 
-**逐项状态（3/17 落地）**：`D1` → `d2d4bc6`（即 `DEF-1` / `AUD-ARCH-010`）、`D14` → `8aab531`、`D3` → `588d80c`（与 `DEF-5` 同批）。其余 14 项未动，其中 `D15` 需先裁决（见 §5）。
+**逐项状态（14/17 落地）**：`D1` → `d2d4bc6`（即 `DEF-1` / `AUD-ARCH-010`）、`D14` → `8aab531`、
+`D3` → `588d80c`（与 `DEF-5` 同批）；A 组 10 项 → `D2` `bf06ec0`、`D4` `9bf1333`、`D5`、`D6`、
+`D8`、`D9`、`D10` `68e6efa`、`D11` `ead1ed3`、`D12`、`D16` `5253311`（同一条工作线，逐项提交）。
+余 3 项：`D15` 需先裁决（见 §5），`D7`／`D13`／`D17` 属 B 组需逐项裁。
+
+**A 组落地形态的三处偏离原议（以实测为准，不改判据）**：①`D10` 未按卡片把「刷新」直接挂在
+各个 VM 的公开方法上，而是收进根 `ViewModels/ILanguageAwarePresentation` 并把名单由
+`ShellLifecycle` 装配后注入 `Shell`——卡片要求的「Shell 遍历呈现族」得靠这一步才与
+「测试直调 `Shell.ApplyLanguage`」的既有调用点共用同一条刷新路径（否则无头用例会半途而废）；
+②`D12` 的横幅端到端用例此前**不存在**（卡片已写明），因此它是先补的测试而非顺带守卫，
+且它驱动的是真实 `ImageCacheService` 与真实解码器（缓存由桩传输喂字节），不做替身；
+③`D16` 发现窗口自身属性引用本元素 `Window.Resources` 时 `StaticResource` 解析不到
+（属性先于资源字典解析），这两处必须用 `DynamicResource`——与该窗口 `Background` 的既有先例一致。
 
 ### 阶段 E — 登记不排期（9 项）
 

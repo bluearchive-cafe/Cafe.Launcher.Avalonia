@@ -29,7 +29,9 @@ public sealed partial class MainWindowHeadlessTests
         (SettingsCategoryCodes.About, typeof(SettingsAboutSection))
     ];
 
-    private static TestContext CreateContext(IGameOperationExecutor? executor = null)
+    private static TestContext CreateContext(
+        IGameOperationExecutor? executor = null,
+        Action<IServiceCollection>? configure = null)
     {
         // 无头拆卸用尽力清理：窗口关闭与句柄释放是异步的。
         var directory = TestDirectory.Create(TestDirectoryCleanup.BestEffort);
@@ -40,12 +42,12 @@ public sealed partial class MainWindowHeadlessTests
             {
                 services.AddSingleton(executor);
             }
+
+            configure?.Invoke(services);
         });
         var viewModel = provider.GetRequiredService<MainWindowViewModel>();
         viewModel.Shell.ApplyLanguage(
             LauncherLanguages.English,
-            viewModel.Settings,
-            viewModel.ResourcePanel,
             hasSnapshot: false);
         // Apply the default M3 dynamic scheme so navigation selection visual
         // matches the real app's initialization behavior.

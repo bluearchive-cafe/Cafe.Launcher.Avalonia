@@ -37,10 +37,29 @@ public sealed class DialogsViewModelTests : IDisposable
 
         Assert.Equal(localizer.T(LocalizationKeys.StopDownloadMessage), viewModel.StopConfirm.Message);
         Assert.Equal(localizer.T(LocalizationKeys.CloseDownloadMessage), viewModel.DownloadRunningCloseConfirm.Message);
-        viewModel.ApplyLanguage();
+        viewModel.RefreshLocalizedText();
         Assert.Equal(localizer.T(LocalizationKeys.StopDownloadMessage), viewModel.StopConfirm.Message);
         Assert.Equal(localizer.T(LocalizationKeys.CloseDownloadMessage), viewModel.DownloadRunningCloseConfirm.Message);
         Assert.NotEqual(viewModel.StopConfirm.Message, viewModel.DownloadRunningCloseConfirm.Message);
+    }
+
+    [Fact]
+    public void RefreshLocalizedText_AlsoRefreshesTheHostedSetupWizard()
+    {
+        // D10：向导不再自订阅语言事件，它的宿主 DialogsViewModel 负责把刷新传下去。
+        var viewModel = CreateViewModel();
+        var notified = false;
+        viewModel.SetupWizard.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(SetupWizardViewModel.GamePathPresentation))
+            {
+                notified = true;
+            }
+        };
+
+        viewModel.RefreshLocalizedText();
+
+        Assert.True(notified);
     }
 
     [Fact]
@@ -301,7 +320,7 @@ public sealed class DialogsViewModelTests : IDisposable
         viewModel.ShowDownloadRunningCloseConfirm();
         viewModel.ShowUpdateAvailable("1.2.0", CreateFiles());
 
-        viewModel.ApplyLanguage();
+        viewModel.RefreshLocalizedText();
 
         Assert.NotEmpty(viewModel.StopConfirm.Message);
         Assert.NotEqual(viewModel.StopConfirm.Message, viewModel.DownloadRunningCloseConfirm.Message);

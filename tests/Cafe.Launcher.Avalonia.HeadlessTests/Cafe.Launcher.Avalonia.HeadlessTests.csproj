@@ -45,6 +45,7 @@
     <Compile Include="..\Support\TestWait.cs" Link="Support\TestWait.cs" />
     <Compile Include="..\TestDoubles\StubFileDownloadService.cs" Link="TestDoubles\StubFileDownloadService.cs" />
     <Compile Include="..\TestDoubles\StubGameOperationExecutor.cs" Link="TestDoubles\StubGameOperationExecutor.cs" />
+    <Compile Include="..\TestDoubles\StubRemoteHttpTransport.cs" Link="TestDoubles\StubRemoteHttpTransport.cs" />
   </ItemGroup>
 
   <ItemGroup>

@@ -193,7 +193,7 @@ public sealed class LocalizationTerminologyTests
             new LocalDiagnostics());
 
         settingsOptions.RefreshDisplayNames();
-        dialogs.ApplyLanguage();
+        dialogs.RefreshLocalizedText();
 
         Assert.Equal(
             localizer.T("languageAuto"),

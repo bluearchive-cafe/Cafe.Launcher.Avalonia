@@ -12,6 +12,7 @@ using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
+using Cafe.Launcher.Avalonia.Helpers;
 
 namespace Cafe.Launcher.Avalonia.Features.Diagnostics;
 
@@ -25,12 +26,12 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCont
     private readonly LocalDiagnostics diagnostics;
     private readonly Func<CancellationToken, Task<IReadOnlyList<LogEntryDisplay>>> entryLoader;
     private IReadOnlyList<LogEntryDisplay> allEntries = [];
-    private CancellationTokenSource? filterCancellationTokenSource;
+    private readonly LatestRefresh filterRefresh = new();
     private int loadedPageCount = 1;
     private int totalEntryCount;
 
     /// <summary>Gets the active debounced filter operation for deterministic coordination.</summary>
-    internal Task PendingFilterTask { get; private set; } = Task.CompletedTask;
+    internal Task PendingFilterTask => filterRefresh.Pending;
 
     /// <summary>Gets whether another 500-entry page is available before the loaded entries.</summary>
     public bool HasEarlierEntries => allEntries.Count < totalEntryCount;
@@ -91,25 +92,14 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCont
 
     partial void OnFilterTextChanged(string value)
     {
-        filterCancellationTokenSource?.Cancel();
-        filterCancellationTokenSource?.Dispose();
-        filterCancellationTokenSource = new CancellationTokenSource();
-        PendingFilterTask = ApplyFilterAfterDelayAsync(filterCancellationTokenSource.Token);
+        filterRefresh.Run(FilterDebounceDelay, _ =>
+        {
+            ApplyFilter();
+            return Task.CompletedTask;
+        });
     }
 
     partial void OnSeverityFilterChanged(LogEntrySeverity? value) => ApplyFilter();
-
-    private async Task ApplyFilterAfterDelayAsync(CancellationToken cancellationToken)
-    {
-        try
-        {
-            await Task.Delay(FilterDebounceDelay, cancellationToken);
-            ApplyFilter();
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-        }
-    }
 
     private void ApplyFilter()
     {
@@ -159,7 +149,7 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCont
     [RelayCommand]
     private void Close()
     {
-        filterCancellationTokenSource?.Cancel();
+        filterRefresh.Cancel();
         IsVisible = false;
     }
 

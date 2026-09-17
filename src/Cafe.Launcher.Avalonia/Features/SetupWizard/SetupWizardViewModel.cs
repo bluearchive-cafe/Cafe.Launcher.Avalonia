@@ -17,7 +17,7 @@ namespace Cafe.Launcher.Avalonia.Features.SetupWizard;
 /// <summary>
 /// Coordinates the first-launch setup wizard state, validation, and settings output.
 /// </summary>
-public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewModel, IDisposable
+public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewModel, IDisposable, ILanguageAwarePresentation
 {
     private const int StepCount = 5;
 
@@ -33,6 +33,7 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     private bool hasInitializedGamePath;
     private bool isDisposed;
     private CancellationTokenSource? gamePathStatusCancellationTokenSource;
+    private readonly LatestRefresh gamePathStatusDebounce = new();
     private int gamePathStatusVersion;
 
     /// <summary>
@@ -56,7 +57,6 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
         patchUrlGroup = defaults.PatchUrlGroup;
         gamePath = defaults.GamePath;
         proxyMode = defaults.ProxyMode;
-        localizer.LanguageChanged += OnLocalizerLanguageChanged;
         RefreshDownloadSources();
     }
 
@@ -135,7 +135,7 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     partial void OnGamePathChanged(string value)
     {
         // 击键驱动的变更走防抖；进入步骤等程序性刷新仍为立即（见 OnStepChanged）。
-        _ = RefreshGamePathStatusDebouncedAsync();
+        RefreshGamePathStatusDebounced();
     }
 
     [ObservableProperty]
@@ -286,7 +286,7 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
 
     // ── Internal ──────────────────────────────────────────────────
 
-    private async Task RefreshGamePathStatusDebouncedAsync()
+    private void RefreshGamePathStatusDebounced()
     {
         var version = ++gamePathStatusVersion;
         CancelPendingGamePathStatusRefresh();
@@ -299,22 +299,17 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
 
         GamePathStatus = SetupWizardGamePathStatus.Checking;
 
-        try
+        gamePathStatusDebounce.Run(GamePathStatusDebounce, _ =>
         {
-            await Task.Delay(GamePathStatusDebounce);
-        }
-        catch (OperationCanceledException)
-        {
-            return;
-        }
+            // 防抖窗口内又有击键/刷新（版本号已前进），或向导已释放，则放弃本轮。
+            if (version != gamePathStatusVersion || isDisposed)
+            {
+                return Task.CompletedTask;
+            }
 
-        // 防抖窗口内又有击键/刷新，或向导已释放则放弃本轮。
-        if (version != gamePathStatusVersion || isDisposed)
-        {
-            return;
-        }
-
-        RefreshGamePathStatus(version);
+            RefreshGamePathStatus(version);
+            return Task.CompletedTask;
+        });
     }
 
     private void RefreshGamePathStatus()
@@ -486,7 +481,12 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
         _ => GamePathStatusText
     };
 
-    private void OnLocalizerLanguageChanged(object? sender, EventArgs e)
+    /// <inheritdoc cref="ILanguageAwarePresentation.RefreshLocalizedText"/>
+    /// <remarks>
+    /// 此前靠自订阅 <c>localizer.LanguageChanged</c> 触发（D10 移除）：语言变化统一由
+    /// Shell 遍历呈现族分发，向导经 <see cref="DialogsViewModel"/>（它的宿主）被刷新。
+    /// </remarks>
+    public void RefreshLocalizedText()
     {
         OnPropertyChanged(nameof(GamePathStatusText));
         OnPropertyChanged(nameof(GamePathPresentation));
@@ -523,7 +523,6 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     public void Dispose()
     {
         isDisposed = true;
-        localizer.LanguageChanged -= OnLocalizerLanguageChanged;
         gamePathStatusCancellationTokenSource?.Dispose();
     }
 }

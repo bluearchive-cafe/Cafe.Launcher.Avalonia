@@ -18,7 +18,7 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace Cafe.Launcher.Avalonia.ViewModels;
 
-public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel
+public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel, ILanguageAwarePresentation
 {
     private readonly LocalizationService localizer;
     private readonly NoticeStateService noticeStateService;
@@ -182,7 +182,7 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel
         SetupWizardExitConfirm.Confirmed += () => SetupWizard.SkipCommand.ExecuteAsync(null);
     }
 
-    public void ApplyLanguage()
+    public void RefreshLocalizedText()
     {
         LanguageOptions.First(option => option.Code == LauncherLanguages.Auto).DisplayName = localizer.T(LocalizationKeys.LanguageAuto);
         if (StopConfirm.IsVisible)
@@ -199,6 +199,7 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel
         {
             UpdateAvailableText = localizer.F(LocalizationKeys.LauncherUpdateAvailableMessage, UpdateAvailableVersion);
         }
+        SetupWizard.RefreshLocalizedText();
     }
 
     /// <summary>Presents the stop-download confirmation with the localized stop message.</summary>

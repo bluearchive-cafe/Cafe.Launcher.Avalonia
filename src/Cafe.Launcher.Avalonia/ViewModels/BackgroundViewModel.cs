@@ -173,7 +173,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
                         cancellationToken.ThrowIfCancellationRequested();
                         // 远端背景图可能很大；解码放线程池，避免续体回到 UI 线程后卡帧。
                         var remoteImage = await Task.Run(() => imageLoader(cachedPath, decodeSize));
-                        ThrowIfCancellationRequested(remoteImage, cancellationToken);
+                        BitmapLifetime.ThrowIfCancellationRequested(remoteImage, cancellationToken);
                         if (TrySetBackgroundImage(
                                 remoteImage,
                                 settings,
@@ -209,7 +209,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
                         cancellationToken);
                     if (customBackground.Image is not null)
                     {
-                        ThrowIfCancellationRequested(customBackground.Image, cancellationToken);
+                        BitmapLifetime.ThrowIfCancellationRequested(customBackground.Image, cancellationToken);
                         if (TrySetBackgroundImage(
                                 customBackground.Image,
                                 settings,
@@ -230,7 +230,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         // 内置图与远端图同为全屏大图：解码同样放线程池，避免默认壁纸下每次
         // 回落都在 UI 线程重解码整图。
         var bundledImage = await Task.Run(() => bundledImageLoader());
-        ThrowIfCancellationRequested(bundledImage, cancellationToken);
+        BitmapLifetime.ThrowIfCancellationRequested(bundledImage, cancellationToken);
         TrySetBackgroundImage(
             bundledImage,
             settings,
@@ -513,17 +513,6 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
 
     private readonly record struct BackgroundLoadResult(IImage? Image, string? DecodedPath);
 
-    private static void ThrowIfCancellationRequested(IImage? image, CancellationToken cancellationToken)
-    {
-        if (!cancellationToken.IsCancellationRequested)
-        {
-            return;
-        }
-
-        (image as IDisposable)?.Dispose();
-        cancellationToken.ThrowIfCancellationRequested();
-    }
-
     public static string? ResolveRandomBackgroundImage(string folderPath)
     {
         if (!Directory.Exists(folderPath))
@@ -551,7 +540,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
 
     private void SetBackgroundImage(IImage? bitmap, LauncherSettings previewSettings)
     {
-        var old = BackgroundImageSource as IDisposable;
+        var old = BackgroundImageSource;
         BackgroundImageSource = bitmap;
         if (previewSettings.ThemeColorMode == ThemeColorModes.Wallpaper)
         {
@@ -560,13 +549,13 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
             wallpaperChanged(previewSettings);
         }
 
-        if (!isMotionReduced && old is not null && bitmap is not null && PreviousWallpaperFadingOut is not null)
+        if (!isMotionReduced && old is IDisposable oldDisposable && bitmap is not null && PreviousWallpaperFadingOut is not null)
         {
-            StartWallpaperCrossFade(old);
+            StartWallpaperCrossFade(oldDisposable);
         }
         else
         {
-            Dispatcher.UIThread.Post(() => old?.Dispose(), DispatcherPriority.Background);
+            BitmapLifetime.ReleaseAfterBindingsSettle(old);
         }
     }
 
@@ -593,10 +582,10 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
 
     private void ReplaceBackgroundImageAfterResize(IImage? bitmap)
     {
-        var old = BackgroundImageSource as IDisposable;
+        var old = BackgroundImageSource;
         BackgroundImageSource = bitmap;
         // 分辨率刷新没有改变逻辑壁纸，不重放交叉淡化或主题取色。
-        Dispatcher.UIThread.Post(() => old?.Dispose(), DispatcherPriority.Background);
+        BitmapLifetime.ReleaseAfterBindingsSettle(old);
     }
 
     /// <summary>

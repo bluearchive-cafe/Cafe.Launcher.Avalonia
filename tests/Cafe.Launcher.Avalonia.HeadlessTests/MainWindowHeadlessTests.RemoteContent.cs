@@ -1,4 +1,7 @@
-﻿using Avalonia;
+﻿using System;
+using System.IO;
+using System.Threading;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
@@ -6,6 +9,9 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Testing;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cafe.Launcher.Avalonia.HeadlessTests;
 
@@ -256,6 +262,31 @@ public sealed partial class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
+    public async Task RemoteContent_BannerImage_BindsDecodedBitmapAndReleasesItWithTheContent()
+    {
+        // D12：横幅流水线此前没有端到端用例——MarkImageLoaded/BannerBitmap 从无断言，
+        // 位图所有权的两条契约（绑定引用先换、离开内容时释放）因此无人守。
+        const string bannerUrl = "https://banner.example.invalid/decoded.png";
+        using var context = CreateContext(
+            configure: services => services.AddSingleton<IRemoteHttpTransport>(
+                new StubRemoteHttpTransport(_ => SolidPngBytes())));
+        ApplyRemoteState(context, state => state.OperationsResource = SingleBanner(bannerUrl));
+
+        await HeadlessTestHost.WaitUntilAsync(
+            () => context.ViewModel.RemoteContent.BannerItems.Count == 1
+                && context.ViewModel.RemoteContent.BannerItems[0].BannerBitmap is not null,
+            TimeSpan.FromSeconds(10),
+            "The banner bitmap was never bound.");
+        var bound = context.ViewModel.RemoteContent.BannerItems[0].BannerBitmap!;
+
+        // 下一轮刷新丢弃条目：位图必须随绑定引用一起释放，否则每轮刷新漏一张全宽位图。
+        ApplyRemoteState(context);
+
+        Assert.Empty(context.ViewModel.RemoteContent.BannerItems);
+        Assert.Throws<ObjectDisposedException>(() => _ = bound.PixelSize);
+    }
+
+    [AvaloniaFact]
     public void MainWindow_SocialChip_HoverKeepsOpaqueBackgroundOverWallpaper()
     {
         using var context = CreateContext();
@@ -289,5 +320,21 @@ public sealed partial class MainWindowHeadlessTests
         Assert.True(chip.IsPointerOver);
         var hoverBackground = Assert.IsType<SolidColorBrush>(chipBorder.Background);
         Assert.Equal((byte)0xFF, hoverBackground.Color.A);
+    }
+
+    private static OperationsResourceResponse SingleBanner(string bannerUrl) => new()
+    {
+        OperationsResourceOpen = true,
+        BannerLoop = false,
+        OperationsBannerList = [new OperationsBannerItem { BannerImg = bannerUrl, JumpUrl = "" }]
+    };
+
+    /// <summary>造一张真实 PNG（横幅解码器读的是编码字节）。</summary>
+    private static byte[] SolidPngBytes()
+    {
+        using var directory = TestDirectory.Create();
+        var path = Path.Combine(directory.Path, "banner.png");
+        HeadlessTestHost.WriteSolidPng(path, Brushes.Orange, 64, 24);
+        return File.ReadAllBytes(path);
     }
 }

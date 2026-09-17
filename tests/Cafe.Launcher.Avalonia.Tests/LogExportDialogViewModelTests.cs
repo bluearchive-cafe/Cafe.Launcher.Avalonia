@@ -195,7 +195,7 @@ public sealed class LogExportDialogViewModelTests : IDisposable
         var option = viewModel.RangeOptions.Single(item => item.Code == nameof(LogExportRangePreset.Last24Hours));
         option.DisplayName = "";
 
-        viewModel.ApplyLanguage();
+        viewModel.RefreshLocalizedText();
 
         Assert.False(string.IsNullOrWhiteSpace(option.DisplayName));
     }

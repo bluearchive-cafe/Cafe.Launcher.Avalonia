@@ -17,16 +17,12 @@ public partial class MainWindowViewModelTests
         await viewModel.InitializeAsync();
         viewModel.Shell.ApplyLanguage(
             LauncherLanguages.English,
-            viewModel.Settings,
-            viewModel.ResourcePanel,
             hasSnapshot: false);
         var draftLanguage = viewModel.Settings.Editor.Current.Language;
         var englishLabel = viewModel.Shell.I18n[LocalizationKeys.Settings];
 
         viewModel.Shell.ApplyLanguage(
             LauncherLanguages.Japanese,
-            viewModel.Settings,
-            viewModel.ResourcePanel,
             hasSnapshot: false);
 
         Assert.NotEqual(englishLabel, viewModel.Shell.I18n[LocalizationKeys.Settings]);
@@ -41,8 +37,6 @@ public partial class MainWindowViewModelTests
         await viewModel.InitializeAsync();
         viewModel.Shell.ApplyLanguage(
             LauncherLanguages.English,
-            viewModel.Settings,
-            viewModel.ResourcePanel,
             hasSnapshot: false);
         viewModel.Dialogs.IsSetupWizardVisible = true;
         var draftLanguage = viewModel.Settings.Editor.Current.Language;
