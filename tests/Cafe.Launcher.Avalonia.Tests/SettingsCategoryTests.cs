@@ -386,7 +386,7 @@ public sealed class SettingsCategoryTests
         Assert.False(secondSubscriberInvoked.Task.IsCompleted);
         firstSubscriberRelease.SetResult();
         await secondSubscriberInvoked.Task.WaitAsync(TimeSpan.FromSeconds(5));
-        await saveTask;
+        await saveTask.WaitAsync(TimeSpan.FromSeconds(5));
     }
 
     private static SettingsViewModelScope CreateSettingsViewModel()

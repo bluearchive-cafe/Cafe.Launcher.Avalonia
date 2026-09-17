@@ -46,7 +46,8 @@ if ($UpdateGolden) {
     try {
         dotnet test $projects[1].Project -c $Configuration `
             --results-directory $resultsRoot `
-            --filter 'FullyQualifiedName~Golden'
+            --filter 'FullyQualifiedName~Golden' `
+            @hangGuard
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
     finally {
@@ -55,6 +56,13 @@ if ($UpdateGolden) {
 
     exit 0
 }
+
+# 挂起防护（AUD-TEST-014）：有界等待已在各用例里加 WaitAsync 上限，这里再补一层整类的
+# 净网——任一处等待挂住（含替身里被故意阻塞、用例忘了释放的情况）都会在 5 分钟无活动后
+# 终止 testhost 并让运行失败，而不是吃掉 CI 的作业预算（build.yml 的 timeout-minutes）。
+# 用 --blame-hang-dump-type none：只要失败与挂起的用例名，不生成转储文件。
+# 实测（1s 版本）该门确实会中止运行并给出退出码 1。
+$hangGuard = @('--blame-hang', '--blame-hang-timeout', '5min', '--blame-hang-dump-type', 'none')
 
 $selected = if ($Suite -eq 'All') { $projects } else { $projects | Where-Object { $_.Name -eq $Suite } }
 
@@ -68,6 +76,7 @@ foreach ($projectInfo in $selected) {
         $arguments += @('--filter', $Filter)
     }
 
+    $arguments += $hangGuard
     dotnet @arguments
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }

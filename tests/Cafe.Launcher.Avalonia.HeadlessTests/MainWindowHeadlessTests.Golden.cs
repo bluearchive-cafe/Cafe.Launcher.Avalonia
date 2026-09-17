@@ -71,7 +71,7 @@ public sealed partial class MainWindowHeadlessTests
         // names only; feature dialogs are refreshed by ShellLifecycle during real startup.
         context.ViewModel.LogExport.RefreshLocalizedText();
         context.ViewModel.LogExport.OpenCommand.Execute(null);
-        await context.ViewModel.LogExport.PendingRangeProbeTask;
+        await context.ViewModel.LogExport.PendingRangeProbeTask.WaitAsync(TimeSpan.FromSeconds(5));
         Dispatcher.UIThread.RunJobs();
         GoldenScreenshot.Compare(context.Window, "log-export");
     }

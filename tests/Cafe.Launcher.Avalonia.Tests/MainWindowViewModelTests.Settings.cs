@@ -51,7 +51,7 @@ public partial class MainWindowViewModelTests
         finally
         {
             coreService.ReleaseSecondLoad.TrySetResult();
-            await saveTask;
+            await saveTask.WaitAsync(TimeSpan.FromSeconds(5));
         }
     }
 

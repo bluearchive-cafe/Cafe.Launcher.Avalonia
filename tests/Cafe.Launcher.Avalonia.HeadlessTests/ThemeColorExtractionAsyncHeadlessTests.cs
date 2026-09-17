@@ -90,7 +90,7 @@ public sealed class ThemeColorExtractionAsyncHeadlessTests
                 ThemeColorMode = ThemeColorModes.Wallpaper
             };
             await context.ViewModel.UpdateBackgroundImageAsync(settings, snapshot: null, CancellationToken.None);
-            await context.Appearance.PendingThemeRefresh;
+            await context.Appearance.PendingThemeRefresh.WaitAsync(TimeSpan.FromSeconds(5));
 
             Assert.True(
                 context.Appearance.ThemeColorPaletteItems.Count > 0,

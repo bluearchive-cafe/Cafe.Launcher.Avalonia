@@ -82,7 +82,7 @@ public sealed class LogExportDialogViewModelTests : IDisposable
         Assert.True(viewModel.IsExporting);
         viewModel.CloseCommand.Execute(null);
         pickerResult.SetResult(Path.Combine(tempDir, "cancelled-selected"));
-        await exportTask;
+        await exportTask.WaitAsync(TimeSpan.FromSeconds(5));
 
         Assert.False(viewModel.IsVisible);
         Assert.False(viewModel.IsExporting);
@@ -208,7 +208,7 @@ public sealed class LogExportDialogViewModelTests : IDisposable
         viewModel.OpenCommand.Execute(null);
 
         viewModel.SelectedRangeCode = nameof(LogExportRangePreset.LastHour);
-        await viewModel.PendingRangeProbeTask;
+        await viewModel.PendingRangeProbeTask.WaitAsync(TimeSpan.FromSeconds(5));
 
         Assert.True(viewModel.IsEmptyRangeWarningVisible);
         // Advisory only: a package with crash reports or user data may still be worth exporting.
@@ -224,7 +224,7 @@ public sealed class LogExportDialogViewModelTests : IDisposable
         viewModel.OpenCommand.Execute(null);
 
         viewModel.SelectedRangeCode = nameof(LogExportRangePreset.LastHour);
-        await viewModel.PendingRangeProbeTask;
+        await viewModel.PendingRangeProbeTask.WaitAsync(TimeSpan.FromSeconds(5));
 
         Assert.False(viewModel.IsEmptyRangeWarningVisible);
     }
@@ -236,11 +236,11 @@ public sealed class LogExportDialogViewModelTests : IDisposable
         var viewModel = CreateViewModel();
         viewModel.OpenCommand.Execute(null);
         viewModel.SelectedRangeCode = nameof(LogExportRangePreset.LastHour);
-        await viewModel.PendingRangeProbeTask;
+        await viewModel.PendingRangeProbeTask.WaitAsync(TimeSpan.FromSeconds(5));
         Assert.True(viewModel.IsEmptyRangeWarningVisible);
 
         viewModel.OpenCommand.Execute(null);
-        await viewModel.PendingRangeProbeTask;
+        await viewModel.PendingRangeProbeTask.WaitAsync(TimeSpan.FromSeconds(5));
 
         Assert.False(viewModel.IsEmptyRangeWarningVisible);
     }
@@ -252,7 +252,7 @@ public sealed class LogExportDialogViewModelTests : IDisposable
         var viewModel = CreateViewModel();
 
         viewModel.OpenCommand.Execute(null);
-        await viewModel.PendingRangeProbeTask;
+        await viewModel.PendingRangeProbeTask.WaitAsync(TimeSpan.FromSeconds(5));
 
         Assert.True(viewModel.IsEmptyRangeWarningVisible);
     }

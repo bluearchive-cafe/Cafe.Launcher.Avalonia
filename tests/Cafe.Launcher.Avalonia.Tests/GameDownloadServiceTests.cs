@@ -1668,7 +1668,7 @@ Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
         {
             transport.Release.TrySetResult();
             service.Stop(DownloadStopReason.ApplicationExit);
-            await repairTask;
+            await repairTask.WaitAsync(TimeSpan.FromSeconds(5));
         }
     }
 

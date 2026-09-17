@@ -284,7 +284,7 @@ public sealed class ToastHostViewModelTests : IDisposable
         Assert.Contains(toast, viewModel.ActiveToasts);
 
         exitDelay.TrySetResult();
-        await dismissTask;
+        await dismissTask.WaitAsync(TimeSpan.FromSeconds(5));
 
         Assert.Empty(viewModel.ActiveToasts);
         displayDelay.TrySetResult();
@@ -415,7 +415,7 @@ public sealed class ToastHostViewModelTests : IDisposable
         Assert.False(dismissTask.IsCompleted);
 
         exitDelay.TrySetResult();
-        await dismissTask;
+        await dismissTask.WaitAsync(TimeSpan.FromSeconds(5));
         await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 0);
 
         Assert.Equal(1, removeCount);
@@ -530,7 +530,7 @@ public sealed class ToastHostViewModelTests : IDisposable
         await exitDelayStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
         viewModel.Dispose();
 
-        await dismissTask;
+        await dismissTask.WaitAsync(TimeSpan.FromSeconds(5));
 
         Assert.True(dismissTask.IsCompletedSuccessfully);
         Assert.Empty(viewModel.ActiveToasts);

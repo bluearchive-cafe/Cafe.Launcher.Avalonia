@@ -19,9 +19,13 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <!--
       xUnit1051 要求所有带可选 CancellationToken 的调用（含全部文件 IO）显式传
-      TestContext.Current.CancellationToken，全项目约 1100+ 处；门控等待统一用
-      WaitAsync/预算轮询加超时上限（见各测试的 TimeSpan.FromSeconds），该规则的
-      悬挂防护由这些显式上限承担，故按项目整体抑制。
+      TestContext.Current.CancellationToken，全项目约 1100+ 处，故按项目整体抑制。
+      悬挂防护不由该规则承担，而是两层（AUD-TEST-014）：
+      ①等待被测代码产出的任务时显式给上限——被测 VM 暴露的 Pending* 系列统一写
+        .WaitAsync(TimeSpan.FromSeconds(5))，由 TestSourceWaitContractTests 扫描钉住
+        （替身与事件处理体里的故意阻塞点不在该扫描范围内：那里长阻塞是场景本身）；
+      ②整类净网在 test.ps1 的挂起检测（blame-hang，5 分钟无活动即中止 testhost 并失败），
+        覆盖扫描不到的一次性任务局部变量与未来新增站点。
     -->
     <NoWarn>$(NoWarn);xUnit1051</NoWarn>
     <IsPackable>false</IsPackable>
