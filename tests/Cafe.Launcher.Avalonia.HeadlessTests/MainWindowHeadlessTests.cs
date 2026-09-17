@@ -6,6 +6,7 @@ using Avalonia.VisualTree;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Features.Settings;
 using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Testing;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Cafe.Launcher.Avalonia.Views;
@@ -48,7 +49,7 @@ public sealed partial class MainWindowHeadlessTests
             hasSnapshot: false);
         // Apply the default M3 dynamic scheme so navigation selection visual
         // matches the real app's initialization behavior.
-        viewModel.Settings.Appearance.ApplyScheme(
+        provider.GetRequiredService<ThemeApplier>().ApplyScheme(
             Color.Parse("#FF2E7DF6"));
         var window = new MainWindow { DataContext = viewModel };
         window.ConfigureViewModel(viewModel);

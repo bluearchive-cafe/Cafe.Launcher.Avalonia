@@ -9,7 +9,6 @@ using Avalonia;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
-using Avalonia.Styling;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -25,6 +24,7 @@ namespace Cafe.Launcher.Avalonia.Features.Settings;
 public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
 {
     private readonly ISettingsEditor editor;
+    private readonly ThemeApplier themeApplier;
     private readonly IPlatformSettings? platformSettings;
     private readonly bool showHiddenSettings;
     private bool suppressEditorUpdates;
@@ -32,9 +32,13 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
     private int themeRefreshGeneration;
     private Task? inFlightThemeRefresh;
 
-    public SettingsAppearanceViewModel(ISettingsEditor editor, bool showHiddenSettings = false)
+    public SettingsAppearanceViewModel(
+        ISettingsEditor editor,
+        ThemeApplier themeApplier,
+        bool showHiddenSettings = false)
     {
         this.editor = editor;
+        this.themeApplier = themeApplier;
         this.showHiddenSettings = showHiddenSettings;
         editor.CurrentPropertyChanged += OnCurrentSettingChanged;
         platformSettings = Application.Current?.PlatformSettings;
@@ -296,6 +300,13 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         ApplyThemeColor(settings.ThemeColorMode, ParseColorOrDefault(settings.CustomThemeColor));
     }
 
+    /// <summary>
+    /// 应用主题模式。落色与系统变体订阅由 <see cref="Services.ThemeApplier"/> 承担；本方法留在
+    /// VM 上是因为壳层把「应用这份快照的外观」当作设置外观的公开入口，
+    /// 而 <c>ShellLifecycle.ApplySnapshotAsync</c> 需要在模式与主题色之间插入背景图更新。
+    /// </summary>
+    public void ApplyTheme(string themeMode) => themeApplier.ApplyThemeMode(themeMode);
+
     public void ApplyThemeColor(string themeColorMode, Color customColor)
     {
         if (themeColorMode == ThemeColorModes.Wallpaper && ThemeColorPaletteItems.Count == 0)
@@ -316,10 +327,10 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         var color = ResolveThemeColor(
             editor.Current.ThemeColorMode,
             SelectedCustomThemeColor);
-        ApplyScheme(
+        themeApplier.ApplyScheme(
             color,
             editor.Current.ThemeColorVariant,
-            IsDarkTheme(editor.Current.ThemeMode),
+            ThemeApplier.IsDarkTheme(editor.Current.ThemeMode),
             editor.Current.NeutralColorStrategy);
         RefreshThemeColorPaletteBrushes();
         UpdateThemeColorPreview();
@@ -521,7 +532,7 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
 
     private Color GetGeneratedPrimaryColor(Color seed)
     {
-        return GetGeneratedPrimaryColor(seed, IsDarkTheme(editor.Current.ThemeMode));
+        return GetGeneratedPrimaryColor(seed, ThemeApplier.IsDarkTheme(editor.Current.ThemeMode));
     }
 
     private Color GetGeneratedPrimaryColor(Color seed, bool isDark)
@@ -548,7 +559,7 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         var isDark = editor.Current.ThemeMode == ThemeModes.Dark
             || (editor.Current.ThemeMode == ThemeModes.System
                 && values.ThemeVariant == PlatformThemeVariant.Dark);
-        ApplyScheme(
+        themeApplier.ApplyScheme(
             values.AccentColor1,
             editor.Current.ThemeColorVariant,
             isDark,
@@ -561,7 +572,7 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
     private Color ResolveThemeColor(string themeColorMode, Color customColor) =>
         themeColorMode switch
         {
-            ThemeColorModes.System => GetSystemAccentColor(),
+            ThemeColorModes.System => ThemeApplier.GetSystemAccentColor(),
             ThemeColorModes.Custom => customColor,
             ThemeColorModes.Wallpaper =>
                 ResolveThemeColorFromPalette()
@@ -581,162 +592,6 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
             0,
             ThemeColorPaletteItems.Count - 1);
         return ParseThemeColorPaletteColor(ThemeColorPaletteItems[selectedIndex].ColorHex);
-    }
-
-    public void ApplyTheme(string themeMode)
-    {
-        var themeVariant = themeMode switch
-        {
-            ThemeModes.Light => ThemeVariant.Light,
-            ThemeModes.Dark => ThemeVariant.Dark,
-            _ => ThemeVariant.Default
-        };
-
-        if (Application.Current is { } application)
-        {
-            EnsureThemeSubscription(application);
-            lastThemeMode = themeMode;
-            application.RequestedThemeVariant = themeVariant;
-
-            // M3: scheme roles are theme-dependent; re-apply the last scheme so a
-            // theme-mode switch updates primary/secondary/tertiary and (optionally)
-            // surface roles without requiring a separate colour edit.
-            if (lastSchemeApplied)
-            {
-                ApplyScheme(
-                    lastSchemeSeed,
-                    lastSchemeVariant,
-                    IsDarkTheme(themeMode),
-                    lastSchemeStrategy);
-            }
-        }
-    }
-
-    internal static Color GetSystemAccentColor()
-    {
-        if (Application.Current?.TryGetResource(
-                "SystemAccentColor",
-                ThemeVariant.Default,
-                out var value) == true
-            && value is Color color)
-        {
-            return color;
-        }
-
-        return Color.Parse(LauncherConstants.DefaultThemeColor);
-    }
-
-    // 方案缓存居实例而非静态（AUD-MAINT-001）：VM 是 DI 单例，实例态即全局态，
-    // 但对对象图与测试可见；静态版本曾让缓存跨测试实例存续且不可见。
-    private bool lastSchemeApplied;
-    private string lastThemeMode = ThemeModes.System;
-    private Color lastSchemeSeed = Color.Parse(LauncherConstants.DefaultThemeColor);
-    private string lastSchemeVariant = ThemeColorVariants.TonalSpot;
-    private string lastSchemeStrategy = NeutralColorStrategies.BrandBlue;
-
-    /// <summary>
-    /// Applies the M3 dynamic scheme derived from <paramref name="seed"/> onto the
-    /// <c>Launcher.Color.*</c> brush keys (spec §3.4). Replaces the pre-M3
-    /// <c>ApplyAccentBrushes</c>; the previous accent-family override remains a
-    /// subset of <see cref="Services.MaterialSchemeGenerator.BuildRoleBrushes"/>.
-    /// </summary>
-    internal void ApplyScheme(
-        Color seed,
-        string variant = ThemeColorVariants.TonalSpot,
-        bool isDark = false,
-        string neutralStrategy = NeutralColorStrategies.BrandBlue)
-    {
-        if (Application.Current is not { } application)
-        {
-            return;
-        }
-
-        var scheme = MaterialSchemeGenerator.CreateScheme(seed, variant, isDark);
-        var roleBrushes = MaterialSchemeGenerator.BuildRoleBrushes(
-            scheme,
-            seedFollowingNeutrals: neutralStrategy == NeutralColorStrategies.SeedFollowing,
-            isDark: isDark);
-        foreach (var (key, brush) in roleBrushes)
-        {
-            SetBrush(application, key, brush.Color);
-        }
-
-        lastSchemeApplied = true;
-        lastSchemeSeed = seed;
-        lastSchemeVariant = variant;
-        lastSchemeStrategy = neutralStrategy;
-    }
-
-    private Application? themeApplication;
-
-    private void EnsureThemeSubscription(Application application)
-    {
-        if (ReferenceEquals(themeApplication, application))
-        {
-            return;
-        }
-
-        if (themeApplication is not null)
-        {
-            themeApplication.ActualThemeVariantChanged -= OnActualThemeVariantChanged;
-        }
-
-        themeApplication = application;
-        themeApplication.ActualThemeVariantChanged += OnActualThemeVariantChanged;
-    }
-
-    private void OnActualThemeVariantChanged(object? sender, EventArgs e)
-    {
-        if (lastThemeMode != ThemeModes.System || !lastSchemeApplied)
-        {
-            return;
-        }
-
-        ApplyScheme(
-            lastSchemeSeed,
-            lastSchemeVariant,
-            IsDarkTheme(ThemeModes.System),
-            lastSchemeStrategy);
-    }
-
-    /// <summary>Resolves whether the effective theme is dark for a theme mode.</summary>
-    internal static bool IsDarkTheme(string themeMode) =>
-        themeMode == ThemeModes.Dark
-        || (themeMode == ThemeModes.System
-            && Application.Current is { } application
-            && application.ActualThemeVariant == ThemeVariant.Dark);
-
-    private static void SetBrush(Application application, string key, Color color)
-    {
-        // Mutate in place where a brush already exists (root or per-theme
-        // dictionaries), so {DynamicResource} consumers observe the change.
-        bool mutated = false;
-        foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
-        {
-            if (application.Resources.TryGetResource(key, variant, out var themed)
-                && themed is SolidColorBrush themedBrush)
-            {
-                themedBrush.Color = color;
-                mutated = true;
-            }
-        }
-
-        if (mutated)
-        {
-            return;
-        }
-
-        if (application.Resources.TryGetResource(
-                key,
-                ThemeVariant.Default,
-                out var value)
-            && value is SolidColorBrush brush)
-        {
-            brush.Color = color;
-            return;
-        }
-
-        application.Resources[key] = new SolidColorBrush(color);
     }
 
     public static Color ParseColorOrDefault(string? value) =>
@@ -762,11 +617,6 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         if (platformSettings is not null)
         {
             platformSettings.ColorValuesChanged -= OnPlatformColorValuesChanged;
-        }
-        if (themeApplication is not null)
-        {
-            themeApplication.ActualThemeVariantChanged -= OnActualThemeVariantChanged;
-            themeApplication = null;
         }
     }
 }

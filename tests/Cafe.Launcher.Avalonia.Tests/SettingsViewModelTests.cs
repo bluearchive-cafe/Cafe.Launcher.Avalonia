@@ -138,7 +138,7 @@ public sealed class SettingsViewModelTests : IDisposable
             null!,
             null!,
             new SettingsOptionsViewModel(localizer, new DiskSpaceService()),
-            new SettingsAppearanceViewModel(new SettingsEditor()),
+            new SettingsAppearanceViewModel(new SettingsEditor(), new ThemeApplier()),
             new RecordingErrorHandlingService(),
             new StubGameRuntime(),
             new StubFilePickerService());

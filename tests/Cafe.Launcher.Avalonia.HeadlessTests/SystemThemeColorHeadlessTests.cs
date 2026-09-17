@@ -23,7 +23,7 @@ public sealed class SystemThemeColorHeadlessTests
         editor.Current.ThemeMode = ThemeModes.Light;
         editor.Current.ThemeColorMode = ThemeColorModes.System;
         editor.Current.ThemeColorVariant = ThemeColorVariants.TonalSpot;
-        using var viewModel = new SettingsAppearanceViewModel(editor);
+        using var viewModel = new SettingsAppearanceViewModel(editor, new ThemeApplier());
         var accent = Color.Parse("#FF2E9E46");
 
         viewModel.ApplyPlatformColorValues(new PlatformColorValues

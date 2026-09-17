@@ -4,6 +4,6 @@ using Xunit;
 // Collection 隔离（见 LocalizationServiceTestIsolation）：
 // - TestLocalizationHelper.Initialize 写入的 LocalizationService 测试资源（"最后者胜"）
 // - TestAnimationSetup 清零的 AnimationTimings.ExitAnimationDuration
-// - SettingsAppearanceViewModel.ApplyScheme 改写的 Application 级资源
+// - ThemeApplier.ApplyScheme 改写的 Application 级资源
 // - CultureInfo 的临时全局修改（LocalizationServiceTests / FileSizeFormatterTests 等）
 [assembly: CollectionBehavior(DisableTestParallelization = true)]

@@ -3,11 +3,8 @@ using Avalonia;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media;
 using Avalonia.Styling;
-using Cafe.Launcher.Avalonia.Features.Settings;
 using Cafe.Launcher.Avalonia.Models;
-using Cafe.Launcher.Avalonia.Testing;
-using Cafe.Launcher.Avalonia.ViewModels;
-using Microsoft.Extensions.DependencyInjection;
+using Cafe.Launcher.Avalonia.Services;
 using Xunit;
 
 namespace Cafe.Launcher.Avalonia.HeadlessTests;
@@ -19,6 +16,10 @@ namespace Cafe.Launcher.Avalonia.HeadlessTests;
 /// 把方案画刷改为哨兵色；对照相证明变体翻转确实触发处理器，随后 Dispose，
 /// 再翻转变体——哨兵色若被改写即订阅泄漏。
 /// </summary>
+/// <remarks>
+/// 订阅与退订自计划 D14 起归 <see cref="ThemeApplier"/>（此前长在设置外观 VM 上），
+/// 因此本用例直接构造应用器：经 VM 已无从观察这条不变量。
+/// </remarks>
 public sealed class ThemeSubscriptionTeardownHeadlessTests
 {
     private const string ProbeKey = "Launcher.Color.Dialog.Background";
@@ -30,16 +31,13 @@ public sealed class ThemeSubscriptionTeardownHeadlessTests
         var application = Application.Current
             ?? throw new InvalidOperationException("Headless application is not initialised.");
         var variantSnapshot = application.RequestedThemeVariant;
-        // 无头拆卸用尽力清理：窗口关闭与句柄释放是异步的。
-        var directory = TestDirectory.Create(TestDirectoryCleanup.BestEffort);
-        var provider = HeadlessTestHost.CreateServiceProvider(directory);
+        var applier = new ThemeApplier();
         try
         {
-            var appearance = provider.GetRequiredService<MainWindowViewModel>().Settings.Appearance;
             // 武装：System 模式 + 已应用方案，ActualThemeVariantChanged 处理器在位。
-            appearance.ApplyTheme(ThemeModes.System);
+            applier.ApplyThemeMode(ThemeModes.System);
             var seed = Color.Parse("#FF2E9E46");
-            appearance.ApplyScheme(
+            applier.ApplyScheme(
                 seed,
                 ThemeColorVariants.TonalSpot,
                 isDark: false,
@@ -52,15 +50,16 @@ public sealed class ThemeSubscriptionTeardownHeadlessTests
             Assert.NotEqual(SentinelColor, probeBrush.Color);
 
             // 拆卸相：Dispose 后变体翻转不得再改写方案——哨兵色存活即订阅已退订。
-            provider.Dispose();
+            applier.Dispose();
             probeBrush.Color = SentinelColor;
             application.RequestedThemeVariant = ThemeVariant.Light;
             Assert.Equal(SentinelColor, probeBrush.Color);
         }
         finally
         {
+            // 断言失败也要退订：共享 Application 上的残留订阅会污染同批次的后续用例。
+            applier.Dispose();
             application.RequestedThemeVariant = variantSnapshot;
-            directory.Dispose();
         }
     }
 

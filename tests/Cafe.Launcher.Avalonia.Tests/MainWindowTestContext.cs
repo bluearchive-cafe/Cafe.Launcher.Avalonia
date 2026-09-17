@@ -177,7 +177,7 @@ internal sealed class MainWindowTestContext : IDisposable
         var launcherUpdateSvc = launcherUpdateService ?? new LauncherUpdateService(new StubRemoteHttpTransport());
         var settingsEditor = savedSettings.Editor;
         var settingsOptions = new SettingsOptionsViewModel(localizationService, diskSpaceService);
-        var settingsAppearance = new SettingsAppearanceViewModel(settingsEditor);
+        var settingsAppearance = new SettingsAppearanceViewModel(settingsEditor, new ThemeApplier());
         var shellViewModel = new ShellViewModel(localizationService);
         var errorHandling = new ErrorHandlingService(localizationService, diagnostics, toastService);
         var noticeStateService = new NoticeStateService(
