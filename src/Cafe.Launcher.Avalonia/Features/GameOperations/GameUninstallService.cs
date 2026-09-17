@@ -80,21 +80,22 @@ public sealed class GameUninstallService
         var gamePath = installationPath.NormalizeGamePath(snapshot.LocalGame.GamePath ?? "");
         try
         {
-            var validation = await ValidateAsync(gamePath, cancellationToken).ConfigureAwait(false);
-            if (!validation.Success)
+            var (validationFailure, localGame) = await ValidateMetadataAsync(gamePath, cancellationToken)
+                .ConfigureAwait(false);
+            if (validationFailure is not null)
             {
-                return validation;
+                return validationFailure;
             }
 
-            var localGame = await localInstallationStateStore.ReadAsync(gamePath, cancellationToken).ConfigureAwait(false);
-            var files = localGame.Manifest?.Files ?? [];
+            var state = localGame!;
+            var files = state.Manifest?.Files ?? [];
 
             // 预检答的是「点卸载那一刻」的进程状态，而确认框可以一直开着（尺寸统计、用户离开），
             // 这期间从桌面快捷方式或 Steam 把游戏起来，预检的答复就已经过期。删除之前复查同一道
             // 闸门（ADR-032 的「只在整族退出后放行」），命中即按既有消息报出——与路径守卫的执行
             // 边界复查（EnsureCleanupTargetsAreDeletable）同构，且失败经 ConfirmUninstallAsync 的
             // ShowOperationResult 落地，不是静默（ADR-027）。
-            var gameRunning = await FindRunningGameFailureAsync(localGame.GameConfig, cancellationToken)
+            var gameRunning = await FindRunningGameFailureAsync(state.GameConfig, cancellationToken)
                 .ConfigureAwait(false);
             if (gameRunning is not null)
             {
@@ -370,39 +371,18 @@ public sealed class GameUninstallService
         string gamePath,
         CancellationToken cancellationToken = default)
     {
-        if (!Directory.Exists(gamePath))
+        var (failure, localGame) = await ValidateMetadataAsync(gamePath, cancellationToken)
+            .ConfigureAwait(false);
+        if (failure is not null)
         {
-            return DownloadSession.Failed(localizer.F(LocalizationKeys.GamePathMissing, gamePath), GameOperationErrorCode.Uninstall);
+            return failure;
         }
 
-        if (IsSystemProtectPath(gamePath))
-        {
-            return DownloadSession.Failed(localizer.F(LocalizationKeys.GamePathProtected, gamePath), GameOperationErrorCode.Uninstall);
-        }
-
-        try
-        {
-            DownloadSession.EnsureGamePath(gamePath);
-        }
-        catch (InvalidOperationException)
-        {
-            return DownloadSession.Failed(localizer.F(LocalizationKeys.GameDirectoryNameInvalid, GamePaths.GameFolderName), GameOperationErrorCode.Uninstall);
-        }
-
-        var localGame = await localInstallationStateStore.ReadAsync(gamePath, cancellationToken).ConfigureAwait(false);
-        if (localGame.Kind != LocalInstallationStateKind.Valid)
-        {
-            return DownloadSession.Failed(localizer.F(LocalizationKeys.GameConfigMetadataMissing, GamePaths.GameConfigFileName), GameOperationErrorCode.Uninstall);
-        }
-
-        if (string.IsNullOrWhiteSpace(localGame.GameConfig?.Version) || string.IsNullOrWhiteSpace(localGame.GameConfig?.Name))
-        {
-            return DownloadSession.Failed(localizer.F(LocalizationKeys.GameConfigMetadataMissing, GamePaths.GameConfigFileName), GameOperationErrorCode.Uninstall);
-        }
+        var state = localGame!;
 
         // 卸载会删掉整个安装目录，因此闸门要认整族进程，而不是只认配置里那个宿主：反作弊宿主
         // （名字是宿主名的同族变体）在强杀游戏后仍会占着目录，只认宿主就会放行（ADR-032）。
-        var gameRunning = await FindRunningGameFailureAsync(localGame.GameConfig, cancellationToken)
+        var gameRunning = await FindRunningGameFailureAsync(state.GameConfig, cancellationToken)
             .ConfigureAwait(false);
         if (gameRunning is not null)
         {
@@ -412,9 +392,57 @@ public sealed class GameUninstallService
         return new GameOperationResult
         {
             Success = true,
-            Message = localizer.F(LocalizationKeys.ReadyToUninstall, localGame.Manifest?.Files.Count ?? 0),
-            AffectedFileCount = (localGame.Manifest?.Files.Count ?? 0) + 2
+            Message = localizer.F(LocalizationKeys.ReadyToUninstall, state.Manifest?.Files.Count ?? 0),
+            AffectedFileCount = (state.Manifest?.Files.Count ?? 0) + 2
         };
+    }
+
+    /// <summary>
+    /// 卸载的元数据预检：目录存在、不在系统保护路径上、目录名合法、安装状态可读且元数据齐备。
+    /// 「游戏在跑」闸门不在这里——预检（<see cref="ValidateAsync"/>）与
+    /// <see cref="UninstallAsync"/> 的删除前边界各自过一次；<see cref="UninstallAsync"/> 内部
+    /// 于是只做一次完整进程枚举、只读一次安装状态，预检与边界也不共享读到的状态——它们之间
+    /// 隔着一次用户确认，各自以当时的安装状态作答（D2）。
+    /// </summary>
+    /// <returns>
+    /// 拒绝时 <see cref="GameOperationResult?"/> 为失败结果且状态为空；放行时失败为空、
+    /// 状态是读到的安装状态，调用方判空后经 <c>!</c> 续用。
+    /// </returns>
+    private async Task<(GameOperationResult? Failure, LocalInstallationState? LocalGame)> ValidateMetadataAsync(
+        string gamePath,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Directory.Exists(gamePath))
+        {
+            return (DownloadSession.Failed(localizer.F(LocalizationKeys.GamePathMissing, gamePath), GameOperationErrorCode.Uninstall), null);
+        }
+
+        if (IsSystemProtectPath(gamePath))
+        {
+            return (DownloadSession.Failed(localizer.F(LocalizationKeys.GamePathProtected, gamePath), GameOperationErrorCode.Uninstall), null);
+        }
+
+        try
+        {
+            DownloadSession.EnsureGamePath(gamePath);
+        }
+        catch (InvalidOperationException)
+        {
+            return (DownloadSession.Failed(localizer.F(LocalizationKeys.GameDirectoryNameInvalid, GamePaths.GameFolderName), GameOperationErrorCode.Uninstall), null);
+        }
+
+        var localGame = await localInstallationStateStore.ReadAsync(gamePath, cancellationToken).ConfigureAwait(false);
+        if (localGame.Kind != LocalInstallationStateKind.Valid)
+        {
+            return (DownloadSession.Failed(localizer.F(LocalizationKeys.GameConfigMetadataMissing, GamePaths.GameConfigFileName), GameOperationErrorCode.Uninstall), null);
+        }
+
+        if (string.IsNullOrWhiteSpace(localGame.GameConfig?.Version) || string.IsNullOrWhiteSpace(localGame.GameConfig?.Name))
+        {
+            return (DownloadSession.Failed(localizer.F(LocalizationKeys.GameConfigMetadataMissing, GamePaths.GameConfigFileName), GameOperationErrorCode.Uninstall), null);
+        }
+
+        return (null, localGame);
     }
 
     /// <summary>
