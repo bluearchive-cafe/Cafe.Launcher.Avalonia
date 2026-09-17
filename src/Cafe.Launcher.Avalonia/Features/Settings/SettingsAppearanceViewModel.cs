@@ -29,8 +29,7 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
     private readonly bool showHiddenSettings;
     private bool suppressEditorUpdates;
     private bool disposed;
-    private int themeRefreshGeneration;
-    private Task? inFlightThemeRefresh;
+    private readonly LatestRefresh themePaletteRefresh = new();
 
     public SettingsAppearanceViewModel(
         ISettingsEditor editor,
@@ -138,7 +137,7 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>最近一次取色任务；保存流程用它等待当前壁纸色板落定，测试也可观察。</summary>
-    internal Task PendingThemeRefresh => inFlightThemeRefresh ?? Task.CompletedTask;
+    internal Task PendingThemeRefresh => themePaletteRefresh.Pending;
 
     /// <summary>
     /// 等待最新取色任务落定的总预算；超时按当前色板继续，取色本身降采样到 64px 后
@@ -161,8 +160,7 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
                 return;
             }
 
-            if (ReferenceEquals(pending, inFlightThemeRefresh)
-                || inFlightThemeRefresh is null)
+            if (ReferenceEquals(pending, PendingThemeRefresh))
             {
                 return;
             }
@@ -183,17 +181,16 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
             return Task.CompletedTask;
         }
 
-        var generation = Interlocked.Increment(ref themeRefreshGeneration);
-        var refresh = RefreshThemeColorPaletteSafelyAsync(generation, markDirty, applySchemeAfter);
-        inFlightThemeRefresh = refresh;
-        return refresh;
+        themePaletteRefresh.Run(null, token => RefreshThemeColorPaletteSafelyAsync(markDirty, applySchemeAfter, token));
+        return themePaletteRefresh.Pending;
     }
 
     private async Task RefreshThemeColorPaletteSafelyAsync(
-        int generation,
         bool markDirty,
-        bool applySchemeAfter)
+        bool applySchemeAfter,
+        CancellationToken cancellationToken)
     {
+        // 「已过期」的判据从代数换成令牌：刷新槽换新或 Dispose 都会取消在飞的令牌。
         try
         {
             var bitmap = GetBackgroundBitmap?.Invoke();
@@ -201,7 +198,7 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
             {
                 await RunOnUiAsync(() =>
                 {
-                    if (generation != Volatile.Read(ref themeRefreshGeneration) || disposed)
+                    if (cancellationToken.IsCancellationRequested || disposed)
                     {
                         return;
                     }
@@ -220,7 +217,7 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
                 bitmap,
                 algorithm));
 
-            if (generation != Volatile.Read(ref themeRefreshGeneration) || disposed)
+            if (cancellationToken.IsCancellationRequested || disposed)
             {
                 return;
             }
@@ -231,7 +228,7 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
                 : 0;
             await RunOnUiAsync(() =>
             {
-                if (generation != Volatile.Read(ref themeRefreshGeneration) || disposed)
+                if (cancellationToken.IsCancellationRequested || disposed)
                 {
                     return;
                 }
@@ -607,7 +604,7 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         }
 
         disposed = true;
-        Interlocked.Increment(ref themeRefreshGeneration);
+        themePaletteRefresh.Cancel();
         editor.CurrentPropertyChanged -= OnCurrentSettingChanged;
         if (platformSettings is not null)
         {

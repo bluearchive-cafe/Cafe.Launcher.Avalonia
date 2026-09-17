@@ -33,6 +33,7 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     private bool hasInitializedGamePath;
     private bool isDisposed;
     private CancellationTokenSource? gamePathStatusCancellationTokenSource;
+    private readonly LatestRefresh gamePathStatusDebounce = new();
     private int gamePathStatusVersion;
 
     /// <summary>
@@ -135,7 +136,7 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     partial void OnGamePathChanged(string value)
     {
         // 击键驱动的变更走防抖；进入步骤等程序性刷新仍为立即（见 OnStepChanged）。
-        _ = RefreshGamePathStatusDebouncedAsync();
+        RefreshGamePathStatusDebounced();
     }
 
     [ObservableProperty]
@@ -286,7 +287,7 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
 
     // ── Internal ──────────────────────────────────────────────────
 
-    private async Task RefreshGamePathStatusDebouncedAsync()
+    private void RefreshGamePathStatusDebounced()
     {
         var version = ++gamePathStatusVersion;
         CancelPendingGamePathStatusRefresh();
@@ -299,22 +300,17 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
 
         GamePathStatus = SetupWizardGamePathStatus.Checking;
 
-        try
+        gamePathStatusDebounce.Run(GamePathStatusDebounce, _ =>
         {
-            await Task.Delay(GamePathStatusDebounce);
-        }
-        catch (OperationCanceledException)
-        {
-            return;
-        }
+            // 防抖窗口内又有击键/刷新（版本号已前进），或向导已释放，则放弃本轮。
+            if (version != gamePathStatusVersion || isDisposed)
+            {
+                return Task.CompletedTask;
+            }
 
-        // 防抖窗口内又有击键/刷新，或向导已释放则放弃本轮。
-        if (version != gamePathStatusVersion || isDisposed)
-        {
-            return;
-        }
-
-        RefreshGamePathStatus(version);
+            RefreshGamePathStatus(version);
+            return Task.CompletedTask;
+        });
     }
 
     private void RefreshGamePathStatus()

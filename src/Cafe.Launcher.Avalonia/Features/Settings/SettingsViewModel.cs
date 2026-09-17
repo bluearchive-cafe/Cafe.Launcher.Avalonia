@@ -32,8 +32,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
     private readonly IErrorHandlingService errorHandling;
     private readonly IGameRuntime gameRuntime;
     private readonly IFilePickerService filePickerService;
-    private CancellationTokenSource? appearancePreviewCts;
-    private Task appearancePreviewTask = Task.CompletedTask;
+    private readonly LatestRefresh appearancePreviewRefresh = new();
 
     /// <summary>
     /// 保存前等待在途外观预览落定的总预算。预览链路含远端图下载（受 HttpClient
@@ -41,8 +40,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
     /// 超时后按当前状态继续保存。测试可调小。
     /// </summary>
     internal static TimeSpan AppearancePreviewSettleTimeout = TimeSpan.FromMinutes(2);
-    private CancellationTokenSource? gameRuntimeStatusCts;
-    private Task gameRuntimeStatusRefreshTask = Task.CompletedTask;
+    private readonly LatestRefresh gameRuntimeStatusRefresh = new();
     private IReadOnlyList<GameRuntimeStatusEntry>? gameRuntimeStatusEntries;
     private bool disposed;
 
@@ -147,7 +145,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
     [ObservableProperty]
     private string gameRuntimeStatusSummary = string.Empty;
 
-    internal Task? PendingGameRuntimeStatusRefresh => gameRuntimeStatusRefreshTask;
+    internal Task PendingGameRuntimeStatusRefresh => gameRuntimeStatusRefresh.Pending;
 
     private string selectedCategory = SettingsCategoryCodes.General;
 
@@ -181,7 +179,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
     public bool IsAdvancedCategorySelected => SelectedCategory == SettingsCategoryCodes.Advanced;
     public bool IsAboutCategorySelected => SelectedCategory == SettingsCategoryCodes.About;
 
-    internal Task PendingAppearancePreview => appearancePreviewTask;
+    internal Task PendingAppearancePreview => appearancePreviewRefresh.Pending;
 
     // ── Public API for parent VM ──────────────────────────────────────────
 
@@ -425,11 +423,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
             return;
         }
 
-        gameRuntimeStatusCts?.Cancel();
-        gameRuntimeStatusCts?.Dispose();
-        gameRuntimeStatusCts = new CancellationTokenSource();
-        var cancellationToken = gameRuntimeStatusCts.Token;
-        gameRuntimeStatusRefreshTask = RefreshGameRuntimeStatusAsync(cancellationToken);
+        gameRuntimeStatusRefresh.Run(null, RefreshGameRuntimeStatusAsync);
     }
 
     private async Task RefreshGameRuntimeStatusAsync(CancellationToken cancellationToken)
@@ -489,9 +483,8 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         CancelAppearancePreview();
         editor.Discard();
         Appearance.Load(editor.Current);
-        appearancePreviewCts = new CancellationTokenSource();
-        appearancePreviewTask = PreviewCurrentAppearanceAsync(null, appearancePreviewCts.Token);
-        await appearancePreviewTask;
+        appearancePreviewRefresh.Run(null, token => PreviewCurrentAppearanceAsync(null, token));
+        await appearancePreviewRefresh.Pending;
     }
 
     public void KeepEditing()
@@ -501,24 +494,17 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
 
     private void RequestAppearancePreview(string? propertyName)
     {
-        CancelAppearancePreview();
-        appearancePreviewCts = new CancellationTokenSource();
-        appearancePreviewTask = PreviewCurrentAppearanceAsync(propertyName, appearancePreviewCts.Token);
+        appearancePreviewRefresh.Run(null, token => PreviewCurrentAppearanceAsync(propertyName, token));
     }
 
-    private void CancelAppearancePreview()
-    {
-        appearancePreviewCts?.Cancel();
-        appearancePreviewCts?.Dispose();
-        appearancePreviewCts = null;
-    }
+    private void CancelAppearancePreview() => appearancePreviewRefresh.Cancel();
 
     private async Task WaitForAppearancePreviewToSettleAsync()
     {
         using var settleBudget = new CancellationTokenSource(AppearancePreviewSettleTimeout);
         while (true)
         {
-            var pending = appearancePreviewTask;
+            var pending = appearancePreviewRefresh.Pending;
             try
             {
                 await pending.WaitAsync(settleBudget.Token);
@@ -529,7 +515,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
                 return;
             }
 
-            if (ReferenceEquals(pending, appearancePreviewTask))
+            if (ReferenceEquals(pending, appearancePreviewRefresh.Pending))
             {
                 return;
             }
@@ -612,9 +598,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
 
         disposed = true;
         CancelAppearancePreview();
-        gameRuntimeStatusCts?.Cancel();
-        gameRuntimeStatusCts?.Dispose();
-        gameRuntimeStatusCts = null;
+        gameRuntimeStatusRefresh.Cancel();
         editor.PropertyChanged -= OnEditorPropertyChanged;
         editor.CurrentPropertyChanged -= OnCurrentSettingChanged;
         Appearance.Dispose();

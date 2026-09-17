@@ -10,6 +10,7 @@ using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
+using Cafe.Launcher.Avalonia.Helpers;
 
 namespace Cafe.Launcher.Avalonia.Features.Diagnostics;
 
@@ -27,13 +28,12 @@ public sealed partial class LogExportDialogViewModel : ViewModelBase, IModalCont
     private readonly LocalizationService localizer;
     private readonly LocalDiagnostics diagnostics;
     private readonly Action<string> openDirectory;
-    private CancellationTokenSource? rangeProbeCancellationTokenSource;
+    private readonly LatestRefresh rangeProbeRefresh = new();
     private CancellationTokenSource? exportCancellationTokenSource;
-    private int rangeProbeGeneration;
     private bool isEmptyRangeWarningVisible;
 
     /// <summary>Gets the active debounced range probe, for deterministic coordination.</summary>
-    internal Task PendingRangeProbeTask { get; private set; } = Task.CompletedTask;
+    internal Task PendingRangeProbeTask => rangeProbeRefresh.Pending;
 
     [ObservableProperty]
     private bool isVisible;
@@ -138,7 +138,7 @@ public sealed partial class LogExportDialogViewModel : ViewModelBase, IModalCont
     [RelayCommand]
     private void Open()
     {
-        CancelRangeProbe();
+        rangeProbeRefresh.Cancel();
         SelectedRangeCode = LogExportRangePreset.All.ToString();
         IncludeCrashReports = false;
         IncludeUserData = false;
@@ -156,7 +156,7 @@ public sealed partial class LogExportDialogViewModel : ViewModelBase, IModalCont
             return;
         }
 
-        CancelRangeProbe();
+        rangeProbeRefresh.Cancel();
         IsVisible = false;
     }
 
@@ -167,31 +167,16 @@ public sealed partial class LogExportDialogViewModel : ViewModelBase, IModalCont
     /// only the latest selection decides, and the short delay keeps a dragged date picker from
     /// reading the log files on every intermediate value.
     /// </summary>
-    private void QueueRangeProbe()
-    {
-        CancelRangeProbe();
-        rangeProbeCancellationTokenSource = new CancellationTokenSource();
-        var generation = rangeProbeGeneration;
-        PendingRangeProbeTask = ProbeRangeAsync(generation, rangeProbeCancellationTokenSource.Token);
-    }
+    private void QueueRangeProbe() => rangeProbeRefresh.Run(RangeProbeDebounceDelay, ProbeRangeAsync);
 
-    private void CancelRangeProbe()
-    {
-        rangeProbeGeneration++;
-        rangeProbeCancellationTokenSource?.Cancel();
-        rangeProbeCancellationTokenSource?.Dispose();
-        rangeProbeCancellationTokenSource = null;
-    }
-
-    private async Task ProbeRangeAsync(int generation, CancellationToken cancellationToken)
+    private async Task ProbeRangeAsync(CancellationToken cancellationToken)
     {
         try
         {
-            await Task.Delay(RangeProbeDebounceDelay, cancellationToken);
             var hasEntries = await exportService.HasLogEntriesAsync(
                 BuildOptions(),
                 cancellationToken);
-            if (generation == rangeProbeGeneration && !cancellationToken.IsCancellationRequested)
+            if (!cancellationToken.IsCancellationRequested)
             {
                 IsEmptyRangeWarningVisible = !hasEntries;
             }
@@ -214,7 +199,7 @@ public sealed partial class LogExportDialogViewModel : ViewModelBase, IModalCont
     private async Task ExportAsync()
     {
         var options = BuildOptions();
-        CancelRangeProbe();
+        rangeProbeRefresh.Cancel();
         exportCancellationTokenSource?.Dispose();
         exportCancellationTokenSource = new CancellationTokenSource();
         var cancellationToken = exportCancellationTokenSource.Token;
