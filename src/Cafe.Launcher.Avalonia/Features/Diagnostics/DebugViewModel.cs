@@ -19,7 +19,7 @@ namespace Cafe.Launcher.Avalonia.Features.Diagnostics;
 /// <summary>
 /// Supplies the development-only diagnostics overlay with state, commands, and shell coordination hooks.
 /// </summary>
-public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewModel, IDisposable
+public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewModel, IDisposable, ILanguageAwarePresentation
 {
     private readonly LauncherDataRoot dataRoot;
     private readonly ToastService toastService;
@@ -144,7 +144,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
     ];
 
     /// <summary>Refreshes debug-panel text after the active UI language changes.</summary>
-    public void ApplyLanguage()
+    public void RefreshLocalizedText()
     {
         OnPropertyChanged(nameof(LogLevelOptions));
         RefreshSystemInfo();

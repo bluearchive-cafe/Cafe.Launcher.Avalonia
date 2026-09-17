@@ -19,7 +19,7 @@ namespace Cafe.Launcher.Avalonia.Features.ResourcePanel;
 /// The resource panel workflow (UID resolution, parallel API reads, mode mapping, save
 /// serialization) is delegated to <see cref="ResourcePanelService"/>.
 /// </summary>
-public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModalContentViewModel
+public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModalContentViewModel, ILanguageAwarePresentation
 {
     private readonly ResourcePanelService resourcePanelService;
     private readonly LocalizationService localizer;
@@ -115,6 +115,20 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
     ];
 
     // ── Public API for parent VM ──────────────────────────────────────────
+
+    /// <inheritdoc cref="ILanguageAwarePresentation.RefreshLocalizedText"/>
+    /// <remarks>
+    /// UID 展示文案的刷新也在这里（此前由 ShellViewModel.ApplyLanguage 代拉）：
+    /// UID 是本 VM 自己的状态，它的本地化包装不该由壳层代笔。
+    /// </remarks>
+    public void RefreshLocalizedText()
+    {
+        RefreshDisplayNames();
+        if (!string.IsNullOrWhiteSpace(ResourcePanelUid))
+        {
+            ResourcePanelUidText = localizer.F(LocalizationKeys.ResourcePanelCurrentUid, ResourcePanelUid);
+        }
+    }
 
     /// <summary>Called by parent ApplyLanguage to refresh display names.</summary>
     public void RefreshDisplayNames()

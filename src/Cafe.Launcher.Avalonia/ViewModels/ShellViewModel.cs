@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Avalonia.Media;
 using Cafe.Launcher.Avalonia.Constants;
@@ -111,10 +112,15 @@ public partial class ShellViewModel : ViewModelBase, IDisposable
         };
     }
 
+    /// <summary>
+    /// 语言变化时随 Shell 一并刷新的呈现成员（D10）：由 ShellLifecycle 装配后注入，
+    /// 与 <see cref="SettingsViewModel.ApplyLanguageAndTheme"/> 同一「父装配后接线」惯例。
+    /// 为 null 时（直构 ShellViewModel 的单元测试）只刷新 Shell 自己。
+    /// </summary>
+    public IReadOnlyList<ILanguageAwarePresentation>? LanguageAwarePresentations { get; set; }
+
     public void ApplyLanguage(
         string language,
-        SettingsViewModel settings,
-        ResourcePanelViewModel resourcePanel,
         bool hasSnapshot)
     {
         var effectiveLanguage = localizer.SetLanguage(language);
@@ -128,17 +134,19 @@ public partial class ShellViewModel : ViewModelBase, IDisposable
         CommitShaValue = BuildInfo.CommitSha;
         BuildConfigValue = BuildInfo.BuildConfiguration;
         PlatformValue = PlatformDescription;
-        settings.RefreshOptionDisplayNames();
-        resourcePanel.RefreshDisplayNames();
-        if (!string.IsNullOrWhiteSpace(resourcePanel.ResourcePanelUid))
-        {
-            resourcePanel.ResourcePanelUidText = localizer.F(LocalizationKeys.ResourcePanelCurrentUid, resourcePanel.ResourcePanelUid);
-        }
 
         // 展示刷新不写设置草稿：首次向导的语言预览也走这里，预览改了草稿就等于用户
         // 没保存过也把编辑器变脏（保存按钮亮起、设置页显示预览过的语言）。语言进入
         // 已保存设置只有两条路——设置页自己保存，或向导完成时整份替换。
         DiskSpaceText = localizer.T(LocalizationKeys.DiskSpaceEmpty);
+
+        if (LanguageAwarePresentations is not null)
+        {
+            foreach (var presentation in LanguageAwarePresentations)
+            {
+                presentation.RefreshLocalizedText();
+            }
+        }
 
         if (!hasSnapshot)
         {

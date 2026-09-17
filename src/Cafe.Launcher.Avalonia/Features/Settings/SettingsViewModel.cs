@@ -18,7 +18,7 @@ using Serilog.Events;
 
 namespace Cafe.Launcher.Avalonia.Features.Settings;
 
-public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalContentViewModel
+public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalContentViewModel, ILanguageAwarePresentation
 {
     private readonly LauncherSettingsService settingsService;
     private readonly ISavedSettingsWriter savedSettingsWriter;
@@ -212,6 +212,9 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
 
         RefreshGameRuntimeStatus();
     }
+
+    /// <inheritdoc cref="ILanguageAwarePresentation.RefreshLocalizedText"/>
+    public void RefreshLocalizedText() => RefreshOptionDisplayNames();
 
     /// <summary>Called by parent ApplyLanguage to refresh display names.</summary>
     public void RefreshOptionDisplayNames()

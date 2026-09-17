@@ -44,8 +44,6 @@ public sealed partial class MainWindowHeadlessTests
         var viewModel = provider.GetRequiredService<MainWindowViewModel>();
         viewModel.Shell.ApplyLanguage(
             LauncherLanguages.English,
-            viewModel.Settings,
-            viewModel.ResourcePanel,
             hasSnapshot: false);
         // Apply the default M3 dynamic scheme so navigation selection visual
         // matches the real app's initialization behavior.

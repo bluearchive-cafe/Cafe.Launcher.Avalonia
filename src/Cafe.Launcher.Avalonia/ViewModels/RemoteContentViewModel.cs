@@ -16,7 +16,7 @@ using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.ViewModels;
 
-public partial class RemoteContentViewModel : ViewModelBase, IDisposable
+public partial class RemoteContentViewModel : ViewModelBase, IDisposable, ILanguageAwarePresentation
 {
     private const int ManualNavResumeDelayMs = 5000;
     private const int MaxConcurrentBannerImageLoads = 4;
@@ -133,7 +133,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
         carouselTransition = bannerTransition;
     }
 
-    public void ApplyLanguage()
+    public void RefreshLocalizedText()
     {
         UpdateCarouselPageText();
         UpdateBannerDotAccessibleNames();

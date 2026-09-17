@@ -29,8 +29,6 @@ public sealed partial class MainWindowHeadlessTests
 
         context.ViewModel.Shell.ApplyLanguage(
             LauncherLanguages.SimplifiedChinese,
-            context.ViewModel.Settings,
-            context.ViewModel.ResourcePanel,
             hasSnapshot: false);
         Dispatcher.UIThread.RunJobs();
 
@@ -175,8 +173,6 @@ public sealed partial class MainWindowHeadlessTests
 
         context.ViewModel.Shell.ApplyLanguage(
             LauncherLanguages.TraditionalChinese,
-            context.ViewModel.Settings,
-            context.ViewModel.ResourcePanel,
             hasSnapshot: false);
         Dispatcher.UIThread.RunJobs();
 
@@ -185,8 +181,6 @@ public sealed partial class MainWindowHeadlessTests
 
         context.ViewModel.Shell.ApplyLanguage(
             LauncherLanguages.Japanese,
-            context.ViewModel.Settings,
-            context.ViewModel.ResourcePanel,
             hasSnapshot: false);
         Dispatcher.UIThread.RunJobs();
 

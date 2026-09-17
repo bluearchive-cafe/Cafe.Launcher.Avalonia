@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
@@ -53,6 +54,13 @@ public sealed class ShellLifecycle : IShellRuntime
     private readonly LogViewerDialogViewModel logViewer;
     private readonly LogExportDialogViewModel logExport;
     private readonly DebugViewModel debug;
+
+    /// <summary>
+    /// 语言变化时的刷新名单（D10）：呈现族里实现 <see cref="ILanguageAwarePresentation"/>
+    /// 的成员，顺序即迁移前 ApplyLanguage 的扇出顺序。向导不在族里，经它的宿主
+    /// DialogsViewModel 一并刷新。
+    /// </summary>
+    private readonly IReadOnlyList<ILanguageAwarePresentation> languageAwarePresentations;
     private readonly Func<Bitmap?> getBackgroundBitmap;
     private readonly Func<LauncherSettings, string?, CancellationToken, Task> previewAppearanceAsync;
     private readonly Func<LauncherSettings, Task> applyLanguageAndThemeAsync;
@@ -145,6 +153,17 @@ public sealed class ShellLifecycle : IShellRuntime
         logViewer = family.LogViewer;
         logExport = family.LogExport;
         debug = family.Debug;
+        languageAwarePresentations =
+        [
+            settings,
+            resourcePanel,
+            remoteContent,
+            dialogs,
+            operations,
+            debug,
+            logExport
+        ];
+        shell.LanguageAwarePresentations = languageAwarePresentations;
         this.ownsPresentationCollaborators = ownsPresentationCollaborators;
         ModalHost = family.ModalHost;
         modalRegistrar = new ModalRegistrar(ModalHost);
@@ -725,12 +744,9 @@ public sealed class ShellLifecycle : IShellRuntime
 
     private void ApplyLanguage(string language)
     {
-        shell.ApplyLanguage(language, settings, resourcePanel, currentSnapshot is not null);
-        remoteContent.ApplyLanguage();
-        dialogs.ApplyLanguage();
-        operations.ApplyLanguage();
-        debug.ApplyLanguage();
-        logExport.ApplyLanguage();
+        // 扇出名单已注入 shell（LanguageAwarePresentations）：任何入口（生命周期、
+        // 设置保存、直调 Shell.ApplyLanguage 的测试）都能得到同一份完整刷新。
+        shell.ApplyLanguage(language, currentSnapshot is not null);
     }
 
     private void OnLocalizationFailure(object? sender, LocalizationFailureEventArgs eventArgs)

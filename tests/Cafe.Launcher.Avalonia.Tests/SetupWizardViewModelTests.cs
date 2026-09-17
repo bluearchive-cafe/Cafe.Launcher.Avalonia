@@ -478,7 +478,7 @@ public sealed class SetupWizardViewModelTests
     }
 
     [Fact]
-    public async Task GamePathStatusText_WhenLanguageChanges_RaisesPropertyChanged()
+    public async Task RefreshLocalizedText_RaisesPropertyChangedAndIsNoLongerSelfSubscribed()
     {
         var localizer = new LocalizationService();
         var vm = new SetupWizardViewModel(
@@ -491,18 +491,23 @@ public sealed class SetupWizardViewModelTests
         };
         vm.NextCommand.Execute(null);
         await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.AvailableForInstallation);
-        var changed = false;
+        var changed = new List<string>();
         vm.PropertyChanged += (_, args) =>
         {
             if (args.PropertyName == nameof(SetupWizardViewModel.GamePathStatusText))
             {
-                changed = true;
+                changed.Add(args.PropertyName!);
             }
         };
 
+        // D10：向导不再自订阅 localizer.LanguageChanged——语言变化改由 Shell 遍历
+        // 呈现族分发（生产路径经它的宿主 DialogsViewModel）。本地化服务换语言本身
+        // 不得再触发向导刷新。
         localizer.SetLanguage(LauncherLanguages.Japanese);
+        Assert.Empty(changed);
 
-        Assert.True(changed);
+        vm.RefreshLocalizedText();
+        Assert.NotEmpty(changed);
     }
 
     private static async Task WaitForGamePathStatusAsync(

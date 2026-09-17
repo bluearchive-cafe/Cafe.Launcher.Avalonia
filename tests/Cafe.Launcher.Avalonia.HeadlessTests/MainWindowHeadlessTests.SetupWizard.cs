@@ -29,8 +29,6 @@ public sealed partial class MainWindowHeadlessTests
         context.ViewModel.Dialogs.ShowSetupWizard();
         context.ViewModel.Shell.ApplyLanguage(
             LauncherLanguages.Japanese,
-            context.ViewModel.Settings,
-            context.ViewModel.ResourcePanel,
             hasSnapshot: false);
         Dispatcher.UIThread.RunJobs();
 

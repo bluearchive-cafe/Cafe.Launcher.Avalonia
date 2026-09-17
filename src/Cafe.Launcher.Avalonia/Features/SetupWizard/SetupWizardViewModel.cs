@@ -17,7 +17,7 @@ namespace Cafe.Launcher.Avalonia.Features.SetupWizard;
 /// <summary>
 /// Coordinates the first-launch setup wizard state, validation, and settings output.
 /// </summary>
-public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewModel, IDisposable
+public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewModel, IDisposable, ILanguageAwarePresentation
 {
     private const int StepCount = 5;
 
@@ -57,7 +57,6 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
         patchUrlGroup = defaults.PatchUrlGroup;
         gamePath = defaults.GamePath;
         proxyMode = defaults.ProxyMode;
-        localizer.LanguageChanged += OnLocalizerLanguageChanged;
         RefreshDownloadSources();
     }
 
@@ -482,7 +481,12 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
         _ => GamePathStatusText
     };
 
-    private void OnLocalizerLanguageChanged(object? sender, EventArgs e)
+    /// <inheritdoc cref="ILanguageAwarePresentation.RefreshLocalizedText"/>
+    /// <remarks>
+    /// 此前靠自订阅 <c>localizer.LanguageChanged</c> 触发（D10 移除）：语言变化统一由
+    /// Shell 遍历呈现族分发，向导经 <see cref="DialogsViewModel"/>（它的宿主）被刷新。
+    /// </remarks>
+    public void RefreshLocalizedText()
     {
         OnPropertyChanged(nameof(GamePathStatusText));
         OnPropertyChanged(nameof(GamePathPresentation));
@@ -519,7 +523,6 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     public void Dispose()
     {
         isDisposed = true;
-        localizer.LanguageChanged -= OnLocalizerLanguageChanged;
         gamePathStatusCancellationTokenSource?.Dispose();
     }
 }

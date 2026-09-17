@@ -67,9 +67,9 @@ public sealed partial class MainWindowHeadlessTests
         using var context = CreateContext();
         PrepareGoldenWindow(context);
         context.Window.Show();
-        // The shell's own ApplyLanguage refreshes the settings and resource-panel option
+        // Refresh the log export dialog's localized display names directly; the shell's
         // names only; feature dialogs are refreshed by ShellLifecycle during real startup.
-        context.ViewModel.LogExport.ApplyLanguage();
+        context.ViewModel.LogExport.RefreshLocalizedText();
         context.ViewModel.LogExport.OpenCommand.Execute(null);
         await context.ViewModel.LogExport.PendingRangeProbeTask;
         Dispatcher.UIThread.RunJobs();
