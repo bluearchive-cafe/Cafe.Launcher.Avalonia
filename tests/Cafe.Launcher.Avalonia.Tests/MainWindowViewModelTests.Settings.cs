@@ -368,7 +368,7 @@ public partial class MainWindowViewModelTests
         var localizer = new LocalizationService();
         var toastService = new ToastService();
         var editor = savedSettings.Editor;
-        var appearance = new SettingsAppearanceViewModel(editor);
+        var appearance = new SettingsAppearanceViewModel(editor, new ThemeApplier());
         var dialogs = new DialogsViewModel(
             localizer,
             new NoticeStateService( TestDataRoot.ForDirectory(Path.Combine(tempDir, "save-failure-notices.json")) ),

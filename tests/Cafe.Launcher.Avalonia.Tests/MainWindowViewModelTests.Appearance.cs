@@ -266,7 +266,7 @@ public partial class MainWindowViewModelTests
             SelectedThemeColorPaletteIndex = 0
         };
         editor.ApplySnapshot(settings);
-        using var appearance = new SettingsAppearanceViewModel(editor);
+        using var appearance = new SettingsAppearanceViewModel(editor, new ThemeApplier());
 
         appearance.Load(settings);
 
@@ -289,7 +289,7 @@ public partial class MainWindowViewModelTests
             NeutralColorStrategy = NeutralColorStrategies.BrandBlue
         };
         editor.ApplySnapshot(settings);
-        using var appearance = new SettingsAppearanceViewModel(editor);
+        using var appearance = new SettingsAppearanceViewModel(editor, new ThemeApplier());
 
         appearance.Load(settings);
         Assert.False(appearance.IsSeedFollowingNeutralStrategySelected);
@@ -310,7 +310,7 @@ public partial class MainWindowViewModelTests
             ThemeColorMode = ThemeColorModes.Wallpaper
         };
         editor.ApplySnapshot(settings);
-        using var appearance = new SettingsAppearanceViewModel(editor);
+        using var appearance = new SettingsAppearanceViewModel(editor, new ThemeApplier());
 
         appearance.Load(settings);
         Assert.True(appearance.IsThemeColorExtractionAlgorithmVisible);
@@ -333,7 +333,7 @@ public partial class MainWindowViewModelTests
             BackgroundSource = BackgroundSources.Remote
         };
         editor.ApplySnapshot(settings);
-        using var appearance = new SettingsAppearanceViewModel(editor, showHiddenSettings: true);
+        using var appearance = new SettingsAppearanceViewModel(editor, new ThemeApplier(), showHiddenSettings: true);
 
         appearance.Load(settings);
 

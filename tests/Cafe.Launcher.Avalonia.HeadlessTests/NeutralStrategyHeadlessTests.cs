@@ -6,12 +6,8 @@ using Avalonia;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media;
 using Avalonia.Styling;
-using Cafe.Launcher.Avalonia.Features.Settings;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
-using Cafe.Launcher.Avalonia.Testing;
-using Cafe.Launcher.Avalonia.ViewModels;
-using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Cafe.Launcher.Avalonia.HeadlessTests;
@@ -42,16 +38,13 @@ public sealed class NeutralStrategyHeadlessTests
                 Color: ReadThemedColor(application, entry.Key, entry.variant)))
             .ToList();
 
-        // ApplyScheme is an instance member of the DI-singleton appearance VM
-        // (AUD-MAINT-001); scaffold the same provider the window tests use and
-        // dispose it so the theme-variant subscription detaches afterwards.
-        var directory = TestDirectory.Create(TestDirectoryCleanup.BestEffort);
-        var provider = HeadlessTestHost.CreateServiceProvider(directory);
-        var appearance = provider.GetRequiredService<MainWindowViewModel>().Settings.Appearance;
+        // ApplyScheme 是进程级应用器的成员（计划 D14 从设置外观 VM 搬出）：用例的断言
+        // 对象就是它，直接构造并释放，不再借窗口容器取得（释放即退订变体处理器）。
+        using var applier = new ThemeApplier();
         var seed = Color.Parse("#FF2E9E46");
         try
         {
-            appearance.ApplyScheme(
+            applier.ApplyScheme(
                 seed,
                 ThemeColorVariants.TonalSpot,
                 isDark: false,
@@ -60,7 +53,7 @@ public sealed class NeutralStrategyHeadlessTests
                 Color.Parse(dialogDefaults[0].Light),
                 ReadThemedColor(application, "Launcher.Color.Dialog.Background", ThemeVariant.Light));
 
-            appearance.ApplyScheme(
+            applier.ApplyScheme(
                 seed,
                 ThemeColorVariants.TonalSpot,
                 isDark: false,
@@ -73,7 +66,7 @@ public sealed class NeutralStrategyHeadlessTests
             }
 
             // The reset also holds for the dark theme path.
-            appearance.ApplyScheme(
+            applier.ApplyScheme(
                 seed,
                 ThemeColorVariants.TonalSpot,
                 isDark: true,
@@ -95,9 +88,6 @@ public sealed class NeutralStrategyHeadlessTests
                     brush.Color = color;
                 }
             }
-
-            provider.Dispose();
-            directory.Dispose();
         }
     }
 

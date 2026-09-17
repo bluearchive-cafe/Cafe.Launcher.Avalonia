@@ -146,7 +146,7 @@ public sealed class GameRuntimeSettingsUiTests
             null!,
             null!,
             options,
-            new SettingsAppearanceViewModel(new SettingsEditor()),
+            new SettingsAppearanceViewModel(new SettingsEditor(), new ThemeApplier()),
             new RecordingErrorHandlingService(),
             gameRuntime,
             new StubFilePickerService());

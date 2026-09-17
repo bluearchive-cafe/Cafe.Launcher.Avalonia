@@ -381,7 +381,7 @@ public sealed class ShellLifecycleTests : IDisposable
             new Crc64Service(), tempDir.DataRoot );
         var settingsEditor = new SettingsEditor();
         var savedSettingsWriter = new SavedSettingsWriter(settingsService, settingsEditor);
-        var settingsAppearance = new SettingsAppearanceViewModel(settingsEditor);
+        var settingsAppearance = new SettingsAppearanceViewModel(settingsEditor, new ThemeApplier());
         var settingsOptions = new SettingsOptionsViewModel(localizer, new DiskSpaceService());
         var shell = new ShellViewModel(localizer);
         var errorHandling = new ErrorHandlingService(localizer, diagnostics, toastService);

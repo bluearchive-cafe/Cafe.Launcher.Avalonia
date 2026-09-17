@@ -30,9 +30,9 @@
 
 > **测试设施轮（2026-09-16，用户指令「测试设施复用与可靠性改进」）**：以测试体系为对象做了一轮「先维护成本与隔离、再执行速度」的重构，分三项交付：①**共享设施收敛**——新增 `tests/Support/{TestDirectory,TestRepository,TestWait}.cs`（两工程 Compile-Link 共用），43 个测试文件的临时目录惯例、5 处各自的异步等待实现、仓库/资源定位与 `.resx` 解析全部换到它们上面；②**上下文所有权明确**——主窗口装配迁入 `MainWindowTestContext`（先前装配方法里的局部 `using` 日志在返回时即被释放，而 `SettingsViewModel`/`LogViewerDialogViewModel` 长期持有它们），`AddLauncherServices` 增可选 `launcherDataRoot`，无头上下文改为每用例一个独立数据根；③**反馈效率**——资源面板代理用例拆为呈现层与传输层回环两条（原单条 10.26s 靠「接受连接即断开、等真实传输退避走完」结束），`test.ps1` 增 `-Suite`/`-Filter`。同配置实测（Debug）：单元 1831 → 1853 条、测试用时 31.8s → 23.9s（最慢用例 10.26s → 2.07s），无头 185 条同量级；两套件 0 失败、可见跳过数不变、golden 基线未更新且全绿；受影响异步用例 19 条单元 + 13 条无头各重复 10 次全绿；`verify.ps1` 全绿（覆盖率行 87.17% / 分支 93.62%，余量 +1.32pp / +0.92pp）。立案 AUD-TEST-009 并同日结案（见 Low 节）；串行执行、Windows CI 双跑、`-Filter` 不进 CI 记为**后续性能机会**，本轮明确不碰。
 
-> **简并扫描轮 + 计划落地（2026-09-16，用户指令「全量扫描项目中可简化，可重用的逻辑 并编写修改计划」→「先实现一阶段」→「提交」→「落到 main，之后做 a3」→「进入 b」→「收尾 b17」→「c」→「d1?」）**：本窗口先以 8 路只读子代理对全树做「可简化／可重用逻辑」扫描（覆盖 `Services/`、`GameOperations/`、其余 `Features/`、`ViewModels/`+`Views/`+`Controls/`+`Converters/`、`Helpers/`+`Models/`+`Constants/`+`Composition/`+`scripts/`、单测 A–M、单测 N–Z、无头+`TestDoubles`+`Support`+XAML），产出报告与计划 `docs/design/simplification-reuse-plan-2026-09-16.md`（91 个候选去重为阶段 A 测试设施复用 13／B 生产侧等价收敛 22／C 死代码删除 8／D 结构收敛 17／E 登记不排期 9，另 22 项复核后明确不做）。扫描副产物另被证据钉住 6 项正确性问题与 2 项守卫缺口，本窗口立案 8 项：`AUD-ARCH-010`（**卸载删除清单文件不清只读属性、路径守卫宽于下载侧——已随 beta.9／beta.10 出货，用户可见**；`d2d4bc6` 抽出 `ManifestFileRemover` 由下载与卸载共用，变异验证拆掉只读清除即 3 条用例变红）、`AUD-ARCH-011`（`GameShortcutService` 公开创建路径绕过平台接缝；`56e0509`）、`AUD-MAINT-005`（日志级别词表两份独立声明且无守卫；`cfe9648` 补六级别往返守卫）、`AUD-TEST-011`（破坏性路径用例默认绑定真实进程扫描器；`7161f4c` 17 处默认改 `TestGameProcessTracker.None`，变异验证改成「在跑」即 36 条变红）**四项同日解决**；`AUD-ARCH-012`（journey 的 `Ready` 分支不报告拒绝）、`AUD-TEST-010`（**动效叠层守卫清单已实际漂移**：`DesignGalleryOverlay.axaml` 带 `motion-overlay` 却不在扫描集内，而 `Assert.Equal(9, …)` 仍通过——本审计实测该套件 153 条全绿）、`AUD-TEST-012`（提示条拆除时的倒计时唤醒无覆盖，删掉后 86 条用例全绿）、`AUD-TEST-013`（无头套件泄漏 `Application.RequestedThemeVariant`，两处锚点待复核故置信度只给 60）**四项开放**。
+> **简并扫描轮 + 计划落地（2026-09-16，用户指令「全量扫描项目中可简化，可重用的逻辑 并编写修改计划」→「先实现一阶段」→「提交」→「落到 main，之后做 a3」→「进入 b」→「收尾 b17」→「c」→「d1?」→「聚焦 d14」→「可以」）**：本窗口先以 8 路只读子代理对全树做「可简化／可重用逻辑」扫描（覆盖 `Services/`、`GameOperations/`、其余 `Features/`、`ViewModels/`+`Views/`+`Controls/`+`Converters/`、`Helpers/`+`Models/`+`Constants/`+`Composition/`+`scripts/`、单测 A–M、单测 N–Z、无头+`TestDoubles`+`Support`+XAML），产出报告与计划 `docs/design/simplification-reuse-plan-2026-09-16.md`（91 个候选去重为阶段 A 测试设施复用 13／B 生产侧等价收敛 22／C 死代码删除 8／D 结构收敛 17／E 登记不排期 9，另 22 项复核后明确不做）。扫描副产物另被证据钉住 6 项正确性问题与 2 项守卫缺口，本窗口立案 8 项：`AUD-ARCH-010`（**卸载删除清单文件不清只读属性、路径守卫宽于下载侧——已随 beta.9／beta.10 出货，用户可见**；`d2d4bc6` 抽出 `ManifestFileRemover` 由下载与卸载共用，变异验证拆掉只读清除即 3 条用例变红）、`AUD-ARCH-011`（`GameShortcutService` 公开创建路径绕过平台接缝；`56e0509`）、`AUD-MAINT-005`（日志级别词表两份独立声明且无守卫；`cfe9648` 补六级别往返守卫）、`AUD-TEST-011`（破坏性路径用例默认绑定真实进程扫描器；`7161f4c` 17 处默认改 `TestGameProcessTracker.None`，变异验证改成「在跑」即 36 条变红）**四项同日解决**；`AUD-ARCH-012`（journey 的 `Ready` 分支不报告拒绝）、`AUD-TEST-010`（**动效叠层守卫清单已实际漂移**：`DesignGalleryOverlay.axaml` 带 `motion-overlay` 却不在扫描集内，而 `Assert.Equal(9, …)` 仍通过——本审计实测该套件 153 条全绿）、`AUD-TEST-012`（提示条拆除时的倒计时唤醒无覆盖，删掉后 86 条用例全绿）、`AUD-TEST-013`（无头套件泄漏 `Application.RequestedThemeVariant`，两处锚点待复核故置信度只给 60）**四项开放**。
 >
-> 计划落地进度：**阶段 A 全部（13 项）**——测试设施复用与用例装配去重，净 −814 行测试代码、生产零改动、`%TEMP%` 残留目录由 15 个／轮降到 **0 个／轮**；**阶段 B 18/22**——`B5` 并入评审候选 11 待裁决、`B12`／`B15` 评估后判定收益不抵成本（理由见 `0a92d66`）、`B17` 两侧完成（并记下其暴露的 `AUD-TEST-012`）；**阶段 C 6/8**——`C5`（`ResourcePanelService` 转发成员）与 `C8`（四对字节相同的样式）经核实为深模块边界与承重语义标记（两对分别被穷尽集合守卫与无头定位器钉住），判定不做；**阶段 D 1/17**（`D1` 即 `AUD-ARCH-010`）。逐提交前跑 `.\verify.ps1` 退出码 0；收口实测单元 **1857 通过 / 0 失败 / 2 可见跳过**、无头 **185 通过 / 0 失败**、覆盖率行 **87.27%** / 分支 **93.63%**（棘轮余量 +1.42pp / +0.93pp），Release 构建 0 警告 0 错误。
+> 计划落地进度：**阶段 A 全部（13 项）**——测试设施复用与用例装配去重，净 −814 行测试代码、生产零改动、`%TEMP%` 残留目录由 15 个／轮降到 **0 个／轮**；**阶段 B 18/22**——`B5` 并入评审候选 11 待裁决、`B12`／`B15` 评估后判定收益不抵成本（理由见 `0a92d66`）、`B17` 两侧完成（并记下其暴露的 `AUD-TEST-012`）；**阶段 C 6/8**——`C5`（`ResourcePanelService` 转发成员）与 `C8`（四对字节相同的样式）经核实为深模块边界与承重语义标记（两对分别被穷尽集合守卫与无头定位器钉住），判定不做；**阶段 D 2/17**（`D1` 即 `AUD-ARCH-010`；另 `8aab531` 落地 `D14`——主题引擎从设置外观 VM 搬进 `Services/ThemeApplier`，无接口的具体类 + DI 单例，逐行搬移、行为等价，两条 headless 守卫经重新变异验证；「与候选 11/12 同域」的原议经读码复核推翻，裁定记录见计划文档 §5 决策二）。逐提交前跑 `.\verify.ps1` 退出码 0；收口实测单元 **1857 通过 / 0 失败 / 2 可见跳过**、无头 **185 通过 / 0 失败**、覆盖率行 **87.27%** / 分支 **93.63%**（棘轮余量 +1.42pp / +0.93pp），Release 构建 0 警告 0 错误。
 >
 > 本窗口另记两条方法论结论：①**涉及「是否存在泄漏」的条目必须以实测为准**——计划原把 22 处 `%TEMP%` 字面量计为泄漏，按计划自带的验证协议（比对 `%TEMP%` 顶层改名集合）实测后证伪一半：基线 15 个／轮 → 那 13 处收敛后 14 个／轮，即只去掉 1 处真实泄漏；真正的泄漏源是 14 处无人释放的 `TestDirectory` 局部变量，静态清点字面量会把「指向不存在目录的路径串」误计为泄漏。②**扫描的计数多次与实情不符，逐项先读码复核是必需的**：`B4` 实为 30 处而非 19 处、`C2` 的 23 处里有 1 处是活的（在 `StackPanel` 上，删掉会丢布局）、`C3` 的 4 个包装里 2 个完全无调用者、`C8` 四对里两对是承重标记。
 
@@ -55,8 +55,8 @@
 - Critical：0
 - High：0
 - Medium：0
-- Low：10 open（决策/设计轮门控：AUD-PERF-001、AUD-PERF-004、AUD-PERF-005 残留、AUD-SEC-001、AUD-SEC-002、AUD-ARCH-005 + 本窗口新立案 4 项：AUD-ARCH-012、AUD-TEST-010、AUD-TEST-012、AUD-TEST-013）+ 4 accepted-risk（MAINT-002、SEC-004、SEC-006、ARCH-007）
-- 本窗口解决：14 项（8 项随上轮修复落地：ARCH-002/003、TEST-002/003/004、PERF-002/003、MAINT-002；6 项随同日修复轮：ARCH-004/006、CI-001、PERF-006、SEC-003/005）；第二修复轮再解决 6 项（TEST-005/006/007、MAINT-003/004、PERF-007）并将 SEC-006 结案为 accepted-risk；CI 对账轮新立案 3 项（AUD-CI-002/003/004）并同日全部解决；功能轮（2026-09-15）新立案 1 项（ARCH-008）并于同日跟进按建议 (a) 解决（`6408c58`）；随后按用户追问再立案 AUD-ARCH-009（下载/安装/修复闸门的三处缺口）并同日解决（`6408c58`）；CI 对账复核结案 AUD-CI-001（其建议已落地为 `build.yml` 的 push/PR linux 作业）、新立案 AUD-CI-005（该作业连续红且非 required）并于同日修复、作业首绿（`08c53f8`）；CI 复查（2026-09-15 深夜）新立案 AUD-CI-006（生产侧平台假设：`Path.GetFileName` 在 Unix 上切不开配置里 Windows 形状的 `params`，游戏可执行文件静默移出家族）并同日解决（`8461044`）；CI 续查（2026-09-15 深夜）新立案 AUD-TEST-008（并行校验／下载路径上测试侧收集未加锁或非原子自增，两次 CI 偶发红）并同日解决（`e83334b` + `0060855`）
+- Low：9 open（决策/设计轮门控：AUD-PERF-001、AUD-PERF-004、AUD-PERF-005 残留、AUD-SEC-001、AUD-SEC-002、AUD-ARCH-005 + 本窗口新立案 3 项：AUD-ARCH-012、AUD-TEST-010、AUD-TEST-012）+ 4 accepted-risk（MAINT-002、SEC-004、SEC-006、ARCH-007）
+- 本窗口解决：14 项（8 项随上轮修复落地：ARCH-002/003、TEST-002/003/004、PERF-002/003、MAINT-002；6 项随同日修复轮：ARCH-004/006、CI-001、PERF-006、SEC-003/005）；第二修复轮再解决 6 项（TEST-005/006/007、MAINT-003/004、PERF-007）并将 SEC-006 结案为 accepted-risk；CI 对账轮新立案 3 项（AUD-CI-002/003/004）并同日全部解决；功能轮（2026-09-15）新立案 1 项（ARCH-008）并于同日跟进按建议 (a) 解决（`6408c58`）；随后按用户追问再立案 AUD-ARCH-009（下载/安装/修复闸门的三处缺口）并同日解决（`6408c58`）；CI 对账复核结案 AUD-CI-001（其建议已落地为 `build.yml` 的 push/PR linux 作业）、新立案 AUD-CI-005（该作业连续红且非 required）并于同日修复、作业首绿（`08c53f8`）；CI 复查（2026-09-15 深夜）新立案 AUD-CI-006（生产侧平台假设：`Path.GetFileName` 在 Unix 上切不开配置里 Windows 形状的 `params`，游戏可执行文件静默移出家族）并同日解决（`8461044`）；CI 续查（2026-09-15 深夜）新立案 AUD-TEST-008（并行校验／下载路径上测试侧收集未加锁或非原子自增，两次 CI 偶发红）并同日解决（`e83334b` + `0060855`）；计划落地期间 `779664f` 解决 AUD-TEST-013（= `DEF-4`，无头套件主题变体泄漏：golden 侧钉住基线值 + 新增 `ThemeVariantSnapshot` 设施，两条新守卫各做变异验证，两处锚点复核为一真一假）
 
 **一处上轮审计证据更正（重要）**：上轮安全节声明「签名 Authorization 头绝不跟随重定向转发」——复核证实该头经 `RemoteRequestOptions.ConfigureRequest` 钩子在**每一重定向跳重发**（含跨主机），已立案为 AUD-SEC-003（Low）。这推翻了上轮对 DNS 重绑定残余风险影响边界的部分论证。
 
@@ -432,19 +432,26 @@
 - **建议**：在生命周期记录上挂本次任务引用作为测试缝，补一条「挂起态提示条被拆除后其等待被唤醒」的用例。**建议验证**：Verified（变异实测）。
 - **对照（同提交的另一半**有**覆盖）**：退出信号的移交去掉后 `ToastExit_WhenAutomaticAndManualRequestsOverlap_WaitsAndRemovesOnce` 立刻变红。
 
-### AUD-TEST-013 — 无头套件泄漏 `Application.RequestedThemeVariant`，golden 截图依赖用例顺序【简并扫描轮新立案；两处锚点待复核】
+### AUD-TEST-013 — 无头套件泄漏 `Application.RequestedThemeVariant`，golden 截图依赖用例顺序【简并扫描轮新立案；同日解决 `779664f`】
 
 - 类别：测试 / 隔离性
-- 严重度：Low｜置信度：60（两处锚定的是方法调用而非直接赋值，本审计未逐行确认）｜状态：open｜处置：Investigate
-- **证据**：生产写入点唯一：`Features/Settings/SettingsAppearanceViewModel.cs:584` 的 `application.RequestedThemeVariant = themeVariant;`。无头侧 `CrashReportWindowHeadlessTests.cs:28-29/56` 与 `ThemeSubscriptionTeardownHeadlessTests.cs:32/51-62` 做了快照 + `finally` 复位（证明危险已知）；扫描报告称 `MainWindowHeadlessTests.Dialogs.cs:332`（经 `ApplyTheme`）与 `SystemThemeColorHeadlessTests.cs:26-33`（经 `ApplyPlatformColorValues`）未复位。`MainWindowHeadlessTests.Golden.cs` 的 `PrepareGoldenWindow` 只固定语言、动效与字体，**不固定变体**。
+- 严重度：Low｜置信度：95（复核后由 60 上调：两处锚点已逐行读码，一真一假，见下）｜状态：**resolved**（`779664f`）｜处置：Fix（已执行）
+- **证据**：生产写入点唯一，`D14`（`8aab531`）搬移前在 `Features/Settings/SettingsAppearanceViewModel.cs:584`，**现为 `src/Cafe.Launcher.Avalonia/Services/ThemeApplier.cs` 的 `ApplyThemeMode`**（读历史描述时按新位置定位；设置外观 VM 已不再写它）。无头侧 `CrashReportWindowHeadlessTests.cs` 与 `ThemeSubscriptionTeardownHeadlessTests.cs` 当时各自手写快照 + `finally` 复位（证明危险已知）；`MainWindowHeadlessTests.Golden.cs` 的 `PrepareGoldenWindow` 只固定语言、动效与字体，**不固定变体**。
+- **两处待复核锚点的复核结果（本条置信度只有 60 的原因）**：
+  - `MainWindowHeadlessTests.Dialogs.cs:332`（`LogExport_WhenAContentRowIsChecked_KeepsItsGlyphReadable` 的暗色分支）**为真**：经 `ApplyTheme` 写变体且从不复位，是唯一真实泄漏点。
+  - `SystemThemeColorHeadlessTests.cs:26-33` **为假**：该用例打的是 `ApplyPlatformColorValues`，那条路径只按当前草稿算出 isDark 并落方案，从不写 `RequestedThemeVariant`。若照原报告直接改这个文件，就是白改一处。
 - **影响**：共享一个 `Application` 的套件里，golden 截到亮色还是暗色取决于同批次哪个用例先跑——属「偶然绿」。
-- **建议**：先读那两处方法的实现复核是否真的漏复位；确认后加 `ThemeVariantSnapshot : IDisposable` 设施（置于 `HeadlessTestHost` 旁）并让 `PrepareGoldenWindow` 显式设定变体，使 golden 不再依赖顺序。**注意**：若今天的环境变体恰好是亮色，改后像素不变；否则会移动 golden。**建议验证**：Needs External Verification。
+- **解决记录（`779664f`）**：两半缺一不可——①`PrepareGoldenWindow` 每次显式钉住基线变体（默认亮色＝无头平台把 `ThemeVariant.Default` 解析到的值），golden 从此与执行顺序无关，且它是整套 golden 的基线而非某用例的临时覆盖，故不还原；②新增 `tests/Cafe.Launcher.Avalonia.HeadlessTests/ThemeVariantSnapshot.cs`（`HeadlessTestHost` 旁：记下进入前的变体、改为指定值、释放时还原），Dialogs 用例与两个原本手写复位逻辑的用例统一走它。**守卫与变异验证**：新增 `GoldenPrep_WhenTheAmbientVariantWasLeftDark_StillPinsTheBaselineVariant`（哨兵法）与 `ThemeVariantSnapshotHeadlessTests.Capture_WhenDisposed_RestoresTheVariantItFound`；拆掉钉住、拆掉还原各让对应用例变红。**像素影响**：golden 未重生即全绿，证明钉住的亮色正是今天的像素。**一处刻意的覆盖缺口**：Dialogs 用例改用快照这件事本身无法独立观察（钉住会掩盖泄漏的后果），没有测试会因「忘记用快照」而变红——钉住才是确定性来源，属取舍。
 
 ## Informational Findings
 
 无（AUD-ARCH-004 已随 `95b9f8b` 归入 `Features/Diagnostics`；AUD-ARCH-006 已随 `700e674` 修正并结案，均转 Resolved Findings）。
 
 ## Advisory（不立案汇总）
+
+计划落地期间新增（2026-09-16，置信度低于报告线或属决策项）：
+
+- **`DownloadExecutorTests.InstallDownloadedFilesAsync_WhenManyFilesVerifyInParallel_ReassemblesFailuresInManifestOrder` 一次未复现的失败**（置信度 40）：当日 `verify.ps1` 内带 coverlet 插桩的单元运行里失败过一次（耗时 37 ms，正序第 2 次插桩运行），此后 12 次定向插桩 + 9 次全量插桩 + 2 次普通全量运行全部通过；失败消息因 TRX 被下一次运行覆盖而丢失。该用例正在 AUD-TEST-008 处理过的那个家族里（并行校验路径的测试侧收集），但那次修复已让 `CallbackRecorder` 线程安全，本次也指不出具体竞态点。**不立案**：没有消息就没有可行动的判据。若 CI 再出现同名红，请连消息与 TRX 一起留下再立案——先按「测试侧偶发」怀疑，再按「生产侧并行校验真有竞态」怀疑。
 
 功能轮新增（2026-09-15，置信度低于报告线或属决策项）：
 

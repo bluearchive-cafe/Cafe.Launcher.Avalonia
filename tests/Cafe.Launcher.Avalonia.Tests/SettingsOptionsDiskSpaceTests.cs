@@ -156,7 +156,7 @@ public sealed class SettingsOptionsDiskSpaceTests
             null!,
             null!,
             options,
-            new SettingsAppearanceViewModel(editor),
+            new SettingsAppearanceViewModel(editor, new ThemeApplier()),
             errorHandling,
             new GameRuntime(
                 [],

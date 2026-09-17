@@ -1,5 +1,6 @@
 using System;
 using Avalonia.Media;
+using Cafe.Launcher.Avalonia.Constants;
 
 namespace Cafe.Launcher.Avalonia.Helpers;
 
@@ -10,6 +11,16 @@ namespace Cafe.Launcher.Avalonia.Helpers;
 /// </summary>
 internal static class ColorUtils
 {
+    /// <summary>
+    /// Parses a colour held as a hex string, falling back to the declared default theme colour
+    /// when it is absent or malformed. The fallback is what makes this the shared entry point:
+    /// callers are reading user-editable colour fields, not validating input.
+    /// </summary>
+    public static Color ParseColorOrDefault(string? value) =>
+        Color.TryParse(value, out var color)
+            ? color
+            : Color.Parse(LauncherConstants.DefaultThemeColor);
+
     /// <summary>
     /// Adjusts a colour's RGB channels by a uniform factor (e.g. 1.15 = 15% brighter, 0.85 = 15% darker).
     /// </summary>

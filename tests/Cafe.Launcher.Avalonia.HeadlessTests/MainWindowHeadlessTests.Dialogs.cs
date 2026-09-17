@@ -326,13 +326,17 @@ public sealed partial class MainWindowHeadlessTests
     public void LogExport_WhenAContentRowIsChecked_KeepsItsGlyphReadable(bool isDark)
     {
         using var context = CreateContext();
+        // 本用例自己改主题变体，因此显式还原：无头套件共享 Application，留下的值会决定后面
+        // golden 截到亮色还是暗色（AUD-TEST-013）。
+        using var themeVariant = ThemeVariantSnapshot.Capture(
+            isDark ? ThemeVariant.Dark : ThemeVariant.Light);
         // Applied through the settings view model: that is the path which also replays the M3
         // colour scheme with the tones belonging to the theme. Switching the variant alone would
         // leave the light-tone fill in place and hide the very problem this guard exists for.
         context.ViewModel.Settings.Appearance.ApplyTheme(isDark ? ThemeModes.Dark : ThemeModes.Light);
         Dispatcher.UIThread.RunJobs();
 
-        PrepareGoldenWindow(context);
+        PrepareGoldenWindow(context, isDark ? ThemeVariant.Dark : ThemeVariant.Light);
         context.Window.Show();
         ShowLogExport(context);
         context.ViewModel.LogExport.IncludeCrashReports = true;

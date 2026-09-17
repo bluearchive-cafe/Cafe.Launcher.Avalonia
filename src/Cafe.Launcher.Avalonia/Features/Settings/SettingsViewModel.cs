@@ -306,7 +306,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
             else
                 Appearance.ApplyThemeColor(
                     settings.ThemeColorMode,
-                    SettingsAppearanceViewModel.ParseColorOrDefault(settings.CustomThemeColor));
+                    ColorUtils.ParseColorOrDefault(settings.CustomThemeColor));
 
             toastService.ShowSuccess(localizer.T(LocalizationKeys.SettingsSaved));
             RefreshGameRuntimeStatus();

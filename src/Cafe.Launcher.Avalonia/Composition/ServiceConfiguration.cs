@@ -123,8 +123,11 @@ public static class ServiceConfiguration
         // 已保存设置的唯一写入方：依赖编辑器与设置服务，二者都登记在它之前。
         services.AddSingleton<ISavedSettingsWriter, SavedSettingsWriter>();
         services.AddSingleton<SettingsOptionsViewModel>();
+        // 主题应用器登记在设置外观 VM 之前：容器按登记逆序释放，它的退订要晚于消费它的 VM。
+        services.AddSingleton<ThemeApplier>();
         services.AddSingleton(sp => new SettingsAppearanceViewModel(
             sp.GetRequiredService<ISettingsEditor>(),
+            sp.GetRequiredService<ThemeApplier>(),
             Program.ShowHiddenSettings));
         services.AddSingleton<IProcessLauncher, DefaultProcessLauncher>();
         services.AddSingleton<IGameRuntime>(sp => new GameRuntime(
