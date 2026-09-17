@@ -281,7 +281,7 @@ internal sealed class DownloadExecutor
         var skippedCount = 0;
         var completedCount = 0;
         // AUD-PERF-007：校验阶段逐文件回调经百分比门控去重后抵达 UI 线程。
-        var progressGate = new PercentProgressGate();
+        var progressReporter = new StageProgressReporter(progress, monotonic: true);
 
         using var semaphore = new SemaphoreSlim(VerificationParallelism, VerificationParallelism);
         var tasks = manifestFiles.Select(async (file, index) =>
@@ -330,10 +330,7 @@ internal sealed class DownloadExecutor
             // 桶再报一遍，所以这里用单调判据——进度只增不减，每个桶也只报一次
             // （2026-09-15 复核轮：非单调判据下 400 文件去重用例会偶发红）。
             var percent = (int)Math.Round(Interlocked.Increment(ref completedCount) * 100d / manifestFiles.Count);
-            if (progressGate.ShouldDeliverMonotonic(percent))
-            {
-                progress(percent);
-            }
+            progressReporter.Report(percent);
         }).ToArray();
 
         await Task.WhenAll(tasks).ConfigureAwait(false);

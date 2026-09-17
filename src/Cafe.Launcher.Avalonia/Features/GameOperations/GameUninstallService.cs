@@ -127,25 +127,10 @@ public sealed class GameUninstallService
             // AUD-PERF-007：逐文件回调经百分比门控去重后抵达 UI 线程。删除语义（守卫、只读
             // 属性清除、已不在盘上不算错误）与更新/安装那条路径共用 ManifestFileRemover——
             // 卸载侧此前是另一份裸 File.Delete 循环，清单里有一个只读文件就整次失败。
-            var progressGate = new PercentProgressGate();
             ManifestFileRemover.DeleteAll(
                 gamePath,
                 files,
-                percent =>
-                {
-                    if (!progressGate.ShouldDeliver(percent))
-                    {
-                        return;
-                    }
-
-                    progress(new GameOperationProgress
-                    {
-                        OperationKind = GameOperationKind.Uninstall,
-                        Stage = GameOperationStage.Uninstalling,
-                        Progress = percent,
-                        IsRunning = true
-                    });
-                },
+                new StageProgressReporter(GameOperationKind.Uninstall, GameOperationStage.Uninstalling, progress).Report,
                 cancellationToken);
 
             var deletedState = await localInstallationStateStore.DeleteAsync(

@@ -69,17 +69,10 @@ internal sealed class ManifestDiffCalculator
             patchUrlGroup,
             cancellationToken).ConfigureAwait(false);
         // AUD-PERF-007：stat 扫描逐文件回调经百分比门控去重后抵达 UI 线程。
-        var statGate = new PercentProgressGate();
         var statDiff = CheckStat(
             currentFiles,
             gamePath,
-            value =>
-            {
-                if (statGate.ShouldDeliver(value))
-                {
-                    progress(GameOperationProgressFactory.CreateProgress(GameOperationKind.Download, GameOperationStage.UpdateCheck, value));
-                }
-            });
+            new StageProgressReporter(GameOperationKind.Download, GameOperationStage.UpdateCheck, progress).Report);
         var expected = GameManifestDiff(currentFiles, latestManifest.File);
         var actual = GameResultMerge(expected, new DownloadPlan { NeedDownload = statDiff });
 
@@ -109,18 +102,11 @@ internal sealed class ManifestDiffCalculator
             cancellationToken).ConfigureAwait(false);
 
         // AUD-PERF-007：修复哈希扫描逐文件回调同样经百分比门控去重。
-        var hashGate = new PercentProgressGate();
         var (hashDiff, plannedHashes) = await CheckHashAsync(
             crc64Service,
             latestManifest.File,
             gamePath,
-            value =>
-            {
-                if (hashGate.ShouldDeliver(value))
-                {
-                    progress(GameOperationProgressFactory.CreateProgress(GameOperationKind.Repair, GameOperationStage.RepairCheck, value));
-                }
-            },
+            new StageProgressReporter(GameOperationKind.Repair, GameOperationStage.RepairCheck, progress).Report,
             cancellationToken).ConfigureAwait(false);
         var needDelete = localGame.Kind == LocalInstallationStateKind.Valid
             ? GameManifestDiff(localGame.Manifest?.Files ?? [], latestManifest.File).NeedDelete
@@ -229,7 +215,7 @@ internal sealed class ManifestDiffCalculator
                 diff.Add(file);
             }
 
-            progress?.Invoke((int)Math.Round((i + 1) * 100d / files.Count));
+            progress?.Invoke(StageProgressReporter.Percent(i + 1, files.Count));
         }
 
         return diff;
@@ -269,7 +255,7 @@ internal sealed class ManifestDiffCalculator
                 planned[file.Path] = PlannedFileHash.Capture(filePath, crc64);
             }
 
-            progress?.Invoke((int)Math.Round((i + 1) * 100d / files.Count));
+            progress?.Invoke(StageProgressReporter.Percent(i + 1, files.Count));
         }
 
         return (diff, planned);
