@@ -40,7 +40,7 @@ internal static class ManifestFileRemover
         {
             cancellationToken.ThrowIfCancellationRequested();
             DeleteFileIfPresent(GamePathValidator.GetSafeFilePath(gamePath, files[i].Path));
-            progress?.Invoke(Percent(i + 1, files.Count));
+            progress?.Invoke(StageProgressReporter.Percent(i + 1, files.Count));
         }
     }
 
@@ -63,7 +63,4 @@ internal static class ManifestFileRemover
         info.Delete();
     }
 
-    /// <summary>逐文件百分比。存量调用都不以空清单进循环，这里的守卫只防后来者。</summary>
-    private static int Percent(int completed, int total) =>
-        total > 0 ? (int)Math.Round(completed * 100d / total) : 100;
 }

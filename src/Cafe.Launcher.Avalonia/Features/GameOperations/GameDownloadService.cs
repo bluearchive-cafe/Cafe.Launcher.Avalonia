@@ -118,7 +118,7 @@ public sealed class GameDownloadService : IDisposable
             return GameOperationRejections.UnavailableResult(localizer);
         }
 
-        return await RunSessionAsync(snapshot, repair: false, progress, cancellationToken).ConfigureAwait(false);
+        return await RunSessionAsync(snapshot, DownloadOperationProfile.ForDownload(), progress, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<GameOperationResult> RepairAsync(
@@ -132,7 +132,7 @@ public sealed class GameDownloadService : IDisposable
             return GameOperationRejections.UnavailableResult(localizer);
         }
 
-        return await RunSessionAsync(snapshot, repair: true, progress, cancellationToken).ConfigureAwait(false);
+        return await RunSessionAsync(snapshot, DownloadOperationProfile.ForRepair(), progress, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -256,7 +256,7 @@ public sealed class GameDownloadService : IDisposable
 
     private async Task<GameOperationResult> RunSessionAsync(
         LauncherStatusSnapshot snapshot,
-        bool repair,
+        DownloadOperationProfile profile,
         Action<GameOperationProgress> progress,
         CancellationToken cancellationToken)
     {
@@ -264,7 +264,7 @@ public sealed class GameDownloadService : IDisposable
         var session = DownloadSessionFactory.Create(
             sessionContext,
             snapshot,
-            repair,
+            profile,
             progress,
             cancellationToken);
         return await RunRegisteredSessionAsync(session);

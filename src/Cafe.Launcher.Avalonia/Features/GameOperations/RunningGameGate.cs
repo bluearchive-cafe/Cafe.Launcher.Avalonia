@@ -35,7 +35,7 @@ internal static class RunningGameGate
             .ConfigureAwait(false);
         return runningProcesses.Count == 0
             ? null
-            : DownloadSession.Failed(
+            : GameOperationOutcomes.Failed(
                 localizer.F(runningMessageKey, GameProcessNames.DescribeForDisplay(runningProcesses)),
                 GameOperationErrorCode.GameRunning);
     }
