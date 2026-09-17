@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Models;
@@ -78,12 +80,13 @@ public sealed class ResourcePanelService
         var status = await statusTask.ConfigureAwait(false);
         var config = await configTask.ConfigureAwait(false);
 
-        return new ResourcePanelLoadResult
-        {
-            Text = MapItem(status.Text, config.Text),
-            Voice = MapItem(status.Voice, config.Voice),
-            Media = MapItem(status.Media, config.Media),
-        };
+        // 与 VM 侧固定三元条目表（Text, Voice, Media）按位对齐（D11）。
+        return new ResourcePanelLoadResult(
+        [
+            MapItem(status.Text, config.Text),
+            MapItem(status.Voice, config.Voice),
+            MapItem(status.Media, config.Media),
+        ]);
     }
 
     /// <summary>
@@ -136,12 +139,23 @@ public sealed class ResourcePanelService
     }
 }
 
-/// <summary>Structured result from <see cref="ResourcePanelService.LoadDataAsync"/>.</summary>
-public sealed class ResourcePanelLoadResult
+/// <summary>
+/// Structured result from <see cref="ResourcePanelService.LoadDataAsync"/>：按位对齐
+/// 的有序条目（Text, Voice, Media）——同三样东西的两份声明不再各自按 code 查找（D11）。
+/// </summary>
+public sealed class ResourcePanelLoadResult : IReadOnlyList<ResourcePanelItemData>
 {
-    public ResourcePanelItemData Text { get; init; } = new();
-    public ResourcePanelItemData Voice { get; init; } = new();
-    public ResourcePanelItemData Media { get; init; } = new();
+    private readonly IReadOnlyList<ResourcePanelItemData> items;
+
+    public ResourcePanelLoadResult(IReadOnlyList<ResourcePanelItemData> items) => this.items = items;
+
+    public int Count => items.Count;
+
+    public ResourcePanelItemData this[int index] => items[index];
+
+    public IEnumerator<ResourcePanelItemData> GetEnumerator() => items.GetEnumerator();
+
+    IEnumerator IEnumerable.GetEnumerator() => items.GetEnumerator();
 }
 
 /// <summary>View-friendly projection of one resource-panel resource type.</summary>

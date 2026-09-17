@@ -77,19 +77,20 @@ public sealed class ResourcePanelServiceTests : IDisposable
 
         var result = await service.LoadDataAsync("UIDTESTA");
 
+        // 装载结果与条目表按位对齐：0 = Text、1 = Voice、2 = Media（D11）。
         // 文本：版本一致 → 就绪；配置为 cn → 已启用。
-        Assert.Equal("1.0.0", result.Text.OfficialVersion);
-        Assert.Equal("1.0.0", result.Text.LocalizedVersion);
-        Assert.True(result.Text.IsReady);
-        Assert.True(result.Text.IsEnabled);
+        Assert.Equal("1.0.0", result[0].OfficialVersion);
+        Assert.Equal("1.0.0", result[0].LocalizedVersion);
+        Assert.True(result[0].IsReady);
+        Assert.True(result[0].IsEnabled);
         // 语音：官方与本地化版本不同 → 等待中。
-        Assert.False(result.Voice.IsReady);
-        Assert.False(result.Voice.IsEnabled);
+        Assert.False(result[1].IsReady);
+        Assert.False(result[1].IsEnabled);
         // 媒体：空版本映射为 "--" 占位，两个占位按 Ordinal 相等 → 视为就绪（实现契约）。
-        Assert.Equal("--", result.Media.OfficialVersion);
-        Assert.Equal("--", result.Media.LocalizedVersion);
-        Assert.True(result.Media.IsReady);
-        Assert.False(result.Media.IsEnabled);
+        Assert.Equal("--", result[2].OfficialVersion);
+        Assert.Equal("--", result[2].LocalizedVersion);
+        Assert.True(result[2].IsReady);
+        Assert.False(result[2].IsEnabled);
     }
 
     [Fact]
@@ -151,9 +152,10 @@ public sealed class ResourcePanelServiceTests : IDisposable
         configJson = """{ "text": "cn", "voice": "jp", "media": "cn" }""";
         var result = await service.LoadDataAsync("UIDTESTA");
 
-        Assert.True(result.Text.IsEnabled);
-        Assert.False(result.Voice.IsEnabled);
-        Assert.True(result.Media.IsEnabled);
+        // 装载结果与条目表按位对齐（Text, Voice, Media）。
+        Assert.True(result[0].IsEnabled);
+        Assert.False(result[1].IsEnabled);
+        Assert.True(result[2].IsEnabled);
     }
 
     [Fact]

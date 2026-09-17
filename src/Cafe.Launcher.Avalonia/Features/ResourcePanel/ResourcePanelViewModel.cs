@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
@@ -31,13 +32,12 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
     private bool isLoadingSource;
     private bool isSettingUidSource;
     private string? lastLoadedUid;
-    private (bool Text, bool Voice, bool Media) savedResourceBaseline;
+    private IReadOnlyList<bool> savedResourceBaseline = [false, false, false];
 
     /// <summary>Gets whether any resource switch differs from the last saved/loaded baseline.</summary>
+    /// <remarks>基线与条目表按位对齐，比较塌成一次序列比较（D11）。</remarks>
     private bool HasUnsavedResourceChanges =>
-        GetResourcePanelItem(ResourcePanelResourceCodes.Text).IsEnabled != savedResourceBaseline.Text
-        || GetResourcePanelItem(ResourcePanelResourceCodes.Voice).IsEnabled != savedResourceBaseline.Voice
-        || GetResourcePanelItem(ResourcePanelResourceCodes.Media).IsEnabled != savedResourceBaseline.Media;
+        !savedResourceBaseline.SequenceEqual(ResourcePanelItems.Select(item => item.IsEnabled));
 
     /// <summary>Fired when the user tries to open the panel from a non-Cafe download source.</summary>
     public event Action? ResourcePanelSourceConfirmRequested;
@@ -133,9 +133,16 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
     /// <summary>Called by parent ApplyLanguage to refresh display names.</summary>
     public void RefreshDisplayNames()
     {
-        GetResourcePanelItem(ResourcePanelResourceCodes.Text).DisplayName = localizer.T(LocalizationKeys.ResourcePanelGameText);
-        GetResourcePanelItem(ResourcePanelResourceCodes.Voice).DisplayName = localizer.T(LocalizationKeys.ResourcePanelMainVoice);
-        GetResourcePanelItem(ResourcePanelResourceCodes.Media).DisplayName = localizer.T(LocalizationKeys.ResourcePanelMedia);
+        var displayNames = new[]
+        {
+            localizer.T(LocalizationKeys.ResourcePanelGameText),
+            localizer.T(LocalizationKeys.ResourcePanelMainVoice),
+            localizer.T(LocalizationKeys.ResourcePanelMedia)
+        };
+        for (var i = 0; i < ResourcePanelItems.Count; i++)
+        {
+            ResourcePanelItems[i].DisplayName = displayNames[i];
+        }
         if (ResourcePanelItems.All(item => string.IsNullOrWhiteSpace(item.StatusText)))
         {
             MarkItemsLoading(preserveVersions: true);
@@ -298,9 +305,9 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
         {
             await resourcePanelService.SaveConfigAsync(
                 ResourcePanelUid,
-                GetResourcePanelItem(ResourcePanelResourceCodes.Text).IsEnabled,
-                GetResourcePanelItem(ResourcePanelResourceCodes.Voice).IsEnabled,
-                GetResourcePanelItem(ResourcePanelResourceCodes.Media).IsEnabled,
+                ResourcePanelItems[0].IsEnabled,
+                ResourcePanelItems[1].IsEnabled,
+                ResourcePanelItems[2].IsEnabled,
                 lifetimeCts.Token);
             SetResourcePanelMessage(localizer.T(LocalizationKeys.ResourcePanelSaved));
             CaptureSavedResourceBaseline();
@@ -418,10 +425,7 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
 
     /// <summary>Freezes the current switch state as the "nothing to save" baseline.</summary>
     private void CaptureSavedResourceBaseline() =>
-        savedResourceBaseline = (
-            GetResourcePanelItem(ResourcePanelResourceCodes.Text).IsEnabled,
-            GetResourcePanelItem(ResourcePanelResourceCodes.Voice).IsEnabled,
-            GetResourcePanelItem(ResourcePanelResourceCodes.Media).IsEnabled);
+        savedResourceBaseline = ResourcePanelItems.Select(item => item.IsEnabled).ToArray();
 
     private async Task LoadResourcePanelDataAsync(string uid, CancellationToken cancellationToken)
     {
@@ -438,9 +442,11 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
 
     private void ApplyResult(ResourcePanelLoadResult result)
     {
-        ApplyItem(GetResourcePanelItem(ResourcePanelResourceCodes.Text), result.Text);
-        ApplyItem(GetResourcePanelItem(ResourcePanelResourceCodes.Voice), result.Voice);
-        ApplyItem(GetResourcePanelItem(ResourcePanelResourceCodes.Media), result.Media);
+        // 装载结果与条目表按位对齐（D11）：不再按 code 各自查找。
+        for (var i = 0; i < ResourcePanelItems.Count; i++)
+        {
+            ApplyItem(ResourcePanelItems[i], result[i]);
+        }
     }
 
     private void ApplyItem(ResourcePanelItem item, ResourcePanelItemData data)
@@ -450,16 +456,20 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
         item.IsEnabled = data.IsEnabled;
         if (data.IsReady)
         {
-            item.Status = ResourcePanelItemStatus.Ready;
-            item.StatusIconKind = "CheckCircle";
-            item.StatusText = localizer.T(LocalizationKeys.ResourcePanelReady);
+            SetState(item, ResourcePanelItemStatus.Ready, "CheckCircle", localizer.T(LocalizationKeys.ResourcePanelReady));
         }
         else
         {
-            item.Status = ResourcePanelItemStatus.Waiting;
-            item.StatusIconKind = "ClockOutline";
-            item.StatusText = localizer.T(LocalizationKeys.ResourcePanelWaiting);
+            SetState(item, ResourcePanelItemStatus.Waiting, "ClockOutline", localizer.T(LocalizationKeys.ResourcePanelWaiting));
         }
+    }
+
+    /// <summary>条目状态的三字段（枚举/图标/文案）由这一处统一写（D11）。</summary>
+    private static void SetState(ResourcePanelItem item, ResourcePanelItemStatus status, string iconKind, string statusText)
+    {
+        item.Status = status;
+        item.StatusIconKind = iconKind;
+        item.StatusText = statusText;
     }
 
     /// <summary>Marks every item loading; already loaded versions stay visible when preserved to avoid refresh flicker.</summary>
@@ -467,9 +477,7 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
     {
         foreach (var item in ResourcePanelItems)
         {
-            item.StatusText = localizer.T(LocalizationKeys.ResourcePanelLoading);
-            item.Status = ResourcePanelItemStatus.Loading;
-            item.StatusIconKind = "Sync";
+            SetState(item, ResourcePanelItemStatus.Loading, "Sync", localizer.T(LocalizationKeys.ResourcePanelLoading));
             if (!preserveVersions)
             {
                 item.OfficialVersion = "--";
@@ -483,9 +491,7 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
     {
         foreach (var item in ResourcePanelItems)
         {
-            item.StatusText = localizer.T(LocalizationKeys.ResourcePanelFailed);
-            item.Status = ResourcePanelItemStatus.Failed;
-            item.StatusIconKind = "AlertCircle";
+            SetState(item, ResourcePanelItemStatus.Failed, "AlertCircle", localizer.T(LocalizationKeys.ResourcePanelFailed));
         }
     }
 
@@ -494,12 +500,6 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
     {
         ResourcePanelMessage = message;
         IsResourcePanelMessageError = isError;
-    }
-
-    private ResourcePanelItem GetResourcePanelItem(string code)
-    {
-        return ResourcePanelItems.FirstOrDefault(item => item.Code == code)
-            ?? throw new InvalidOperationException($"Resource panel item not found: {code}");
     }
 
     public void Dispose()
