@@ -557,7 +557,7 @@
 **结论：上轮全部性能发现落地且质量好（修复非纸面）；复审独立重扫确认启动/首帧、定时器、事件泄漏、位图生命周期、ArrayPool 修复均干净，新立案一条 Low（PERF-007 非下载阶段逐文件 UI 回调）与四条 advisory。**
 
 - **复审核实干净**：启动/首帧路径除文档化壁纸解码外仅 `ImageCacheService` 一处 `Directory.CreateDirectory`；全仓库定时器清点（2 个自停一次性动效 timer、1 轮播、2 个 250ms 内核等待轮询 + 生成守卫的 debounce）；`Crc64Service`/`FileDownloadService` 池化租还并发正确；`ShellLifecycle`/`ShellStartup` Wire 有 `isWired` 守卫，overlay 重订阅先退订；壁纸旧位图交叉淡化释放握手与陈旧代次处置正确。
-- **AUD-PERF-001 残留**与 **AUD-PERF-005 残留**见 Low 节；PERF-006 已修复（`608d888`）；**AUD-PERF-007** 已随 `608d888` 解决（PercentProgressGate 百分比门控）；settings 双读双解析、reparse 游走重复 stat、M3 方案重建、cacheLocks 保留见 Advisory。
+- **AUD-PERF-001 残留已有基准实测（2026-09-17）**：在真实安装上按生产同形的循环测得——清单 157 文件 / 1119.9 MiB，全量重读 + CRC64（8 路并行）冷态 **5.92s（189 MiB/s）**、热态 **0.91s（1225 MiB/s）**；见证跳过（stat 比较）**0.003s**；单线程哈希 292 MiB/s。**并更正规模前提**：清单只覆盖启动器管理的客户端（157 文件，全部在盘上），审计此前引用的「37k 文件 / 24 GB」是**目录遍历**规模——其中 1054 个 `StreamingAssets/AssetBundles/*` 由游戏自己下载、不在清单内，校验不碰。故重读成本由客户端体积封顶（当前 1.09 GiB），与装了多少资源无关；成本模型为冷读 5.4s/GiB、热读 0.84s/GiB、见证 stat 20ms/千文件。触发条件也收窄：全新安装与零差异的检查更新都不付这笔成本，只有真正发生更新的那一次才全量重读未下载的文件。**建议维持现状**（收益由客户端体积封顶，而代价是新增跨会话持久化的见证索引并放弃每更新一次的内容自愈）。**AUD-PERF-005 残留**见 Low 节；PERF-006 已修复（`608d888`）；**AUD-PERF-007** 已随 `608d888` 解决（PercentProgressGate 百分比门控）；settings 双读双解析、reparse 游走重复 stat、M3 方案重建、cacheLocks 保留见 Advisory。
 
 ## Maintainability / Technical Debt
 
@@ -687,7 +687,7 @@ CI 对账轮（2026-09-14 晚）顺带落地的守卫：
 
 ## Recommended Priorities
 
-1.（决策后执行）AUD-PERF-001 见证摊销：先以新增的 Verbose 跳过计数日志基准实测，再决定是否引入。
+1.（**实测已交付，待裁**）AUD-PERF-001 见证摊销：2026-09-17 的基准实测给出全部系数（冷读 5.4s/GiB、热读 0.84s/GiB、见证 stat 20ms/千文件）并更正了规模前提（成本由**客户端**体积封顶，当前 1.09 GiB，与资源总量无关）。本报告的建议是**维持现状**：本机每次实际更新的收益上界为 5.9s（冷）/ 0.9s（热），而代价是要新增跨会话持久化的见证索引（`manifest.json` 是与官方启动器共享的格式契约，见证只能落在我们自己的状态里）并放弃「每次更新都校验未变更客户端文件」这一唯一自动自愈。重开判据：客户端体积显著增长时按每 GiB 系数换算（10 GiB ≈ 冷读 54s/次更新），无需重测。
 2.（专属设计轮）AUD-PERF-004 横幅位图备忘：Plausible 级补救，需先设计轮播位图的生命周期（复用/失效/陈旧释放）再动手。
 3.（随下次触碰）AUD-PERF-005 二次解码调查；AUD-ARCH-005 若再动 Shell 按声明表收敛 Wire/Unwire。
 4.（用户侧，可选）AUD-CI-005 残留：把 `linux-unit-tests` 加进 required status checks——作业现已首绿，加进去才能真正挡住平台回归，只有仓库管理员能改。
