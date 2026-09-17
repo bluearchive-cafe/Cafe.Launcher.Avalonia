@@ -123,15 +123,32 @@ public sealed class DiagnosticsServicesTests : IDisposable
 
         await diagnostics.DebugAsync("DebugFacade", "debug msg");
         await diagnostics.VerboseAsync("VerboseFacade", "verbose msg");
+        await diagnostics.MessageAsync("MessageFacade", "message msg");
         await diagnostics.WarningAsync("WarningFacade", "warning msg");
+        await diagnostics.ErrorAsync("ErrorFacade", "error msg", new InvalidOperationException("boom"));
         await diagnostics.FatalAsync("FatalFacade", new InvalidOperationException("fatal"));
 
         logger.Dispose();
-        var text = File.ReadAllText(logger.LogFilePath);
-        Assert.Contains("[DebugFacade]", text, StringComparison.Ordinal);
-        Assert.Contains("[VerboseFacade]", text, StringComparison.Ordinal);
-        Assert.Contains("[WarningFacade]", text, StringComparison.Ordinal);
-        Assert.Contains("[FatalFacade]", text, StringComparison.Ordinal);
+        var lines = File.ReadAllLines(logger.LogFilePath);
+
+        // 断言「标题出现在正确的严重级代码那一行」，而不只是标题出现过：六个门面收敛到同一个
+        // 核心之后（B5），映射写错——例如 Error 落到 Info——只会改变级别代码，标题标签照样在，
+        // 只看标题的断言对此完全无感。
+        foreach (var (code, title) in new[]
+                 {
+                     ("DBG", "DebugFacade"),
+                     ("VRB", "VerboseFacade"),
+                     ("INF", "MessageFacade"),
+                     ("WRN", "WarningFacade"),
+                     ("ERR", "ErrorFacade"),
+                     ("FTL", "FatalFacade")
+                 })
+        {
+            var line = Assert.Single(
+                lines,
+                candidate => candidate.Contains($"[{title}]", StringComparison.Ordinal));
+            Assert.Contains($"[{code}]", line, StringComparison.Ordinal);
+        }
     }
 
     [Fact]

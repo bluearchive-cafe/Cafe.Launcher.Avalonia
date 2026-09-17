@@ -594,6 +594,10 @@ public sealed class GameOperationsViewModelTests : IDisposable
         await context.ViewModel.RepairAsync();
 
         Assert.Equal(0, context.Backend.RepairCallCount);
+        // 闸门必须早于 PrepareOperation（D3）：后者会把面板 latch 到 Progress，而只有
+        // SetIdlePanels 能把它复位——被拒绝的修复若从它底下走过去，用户看到的是主界面卡在
+        // 进度态却什么都没发生，比原来的静默更糟。
+        Assert.Equal(GameOperationPanelMode.Install, context.ViewModel.PanelMode);
         var notification = Assert.Single(raised);
         Assert.Equal(ToastSeverity.Warning, notification.Severity);
         Assert.Equal(
@@ -1115,11 +1119,20 @@ public sealed class GameOperationsViewModelTests : IDisposable
     public async Task InstallOrUpdateCommand_WhenStateIsReady_ReturnsUnavailable()
     {
         var context = CreateContext();
+        var notifications = new List<ToastNotification>();
+        context.ToastService.ToastRaised += notifications.Add;
         context.ViewModel.ApplySnapshot(ReadySnapshot());
 
         await context.ViewModel.InstallOrUpdateCommand.ExecuteAsync(null);
 
         Assert.Equal(0, context.Backend.InstallCallCount);
+        // 名字承诺的是「报出不可用」，而这条分支从前只 return null——用户表现为「点了没反应」，
+        // 与 ADR-027/029 建立的口径不一致（DEF-5）。断言补成它名字承诺的东西。
+        var notification = Assert.Single(notifications);
+        Assert.Equal(ToastSeverity.Warning, notification.Severity);
+        Assert.Equal(
+            context.Localizer.T("operationUnavailableForCurrentState"),
+            notification.Message);
     }
 
     [Fact]

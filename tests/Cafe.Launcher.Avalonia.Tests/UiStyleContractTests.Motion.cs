@@ -195,30 +195,48 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void CoreMotionOverlays_UseMotionVisibilityWithoutDirectVisibilityBindings()
     {
-        var overlayFiles = new[]
-        {
-            "Views/MainWindowSettingsOverlay.axaml",
-            "Views/MainWindowLogViewerOverlay.axaml",
-            "Views/MainWindowLogExportOverlay.axaml",
-            "Views/MainWindowDebugOverlay.axaml",
-            "Views/MainWindowDialogsOverlay.axaml",
-            "Views/ResourcePanelOverlay.axaml",
-            "Views/SetupWizardOverlay.axaml"
-        };
-        var overlays = new List<(XElement Element, XNamespace ControlsNamespace)>();
-        foreach (var path in overlayFiles)
+        // AUD-TEST-010：扫描目标从磁盘发现，不再手写文件名清单。清单会在新建叠层时漂移，而
+        // 漂移的表现是守卫静默失效——当时 DesignGalleryOverlay 已带 motion-overlay 却不在清单内，
+        // 元素数断言仍停在旧值上照常通过。
+        var overlays = new List<(string File, XElement Element, XNamespace ControlsNamespace)>();
+        foreach (var path in FindXamlFiles("Views", SearchOption.TopDirectoryOnly))
         {
             var document = XDocument.Load(TestRepository.FromApplicationRoot(path));
+            var targets = document
+                .Descendants()
+                .Where(element => HasClass(element, "motion-overlay"))
+                .ToArray();
+            if (targets.Length == 0)
+            {
+                // 不承载叠层表面的文件（样式表、不含叠层的视图）不参与本契约。
+                continue;
+            }
+
             var controlsNamespace = document.Root?.GetNamespaceOfPrefix("controls");
             Assert.NotNull(controlsNamespace);
-            overlays.AddRange(
-                document
-                    .Descendants()
-                    .Where(element => HasClass(element, "motion-overlay"))
-                    .Select(element => (element, controlsNamespace)));
+            overlays.AddRange(targets.Select(element => (path, element, controlsNamespace)));
         }
 
-        Assert.Equal(9, overlays.Count);
+        // 反空转基线（刻意过度指定，与 ResxValues 的元素数锚点同型）：发现式扫描一旦因类名
+        // 改写、目录变动或文件合并而扫到 0 个元素，下面的 Assert.All 会全绿地什么都不检。
+        Assert.Equal(
+            new[]
+            {
+                "Views/DesignGalleryOverlay.axaml",
+                "Views/MainWindowDebugOverlay.axaml",
+                "Views/MainWindowDialogsOverlay.axaml",
+                "Views/MainWindowLogExportOverlay.axaml",
+                "Views/MainWindowLogViewerOverlay.axaml",
+                "Views/MainWindowSettingsOverlay.axaml",
+                "Views/ResourcePanelOverlay.axaml",
+                "Views/SetupWizardOverlay.axaml"
+            },
+            overlays
+                .Select(overlay => overlay.File)
+                .Distinct(StringComparer.Ordinal)
+                .Order(StringComparer.Ordinal));
+        Assert.Equal(10, overlays.Count);
+
         Assert.All(overlays, overlay =>
         {
             var element = overlay.Element;
