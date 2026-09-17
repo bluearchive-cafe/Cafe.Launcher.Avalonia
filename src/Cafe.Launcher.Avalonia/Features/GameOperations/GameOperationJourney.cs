@@ -227,9 +227,32 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
         ShowInstallUpdateFailureToast(result.Message, result.ErrorCode);
     }
 
+    /// <summary>
+    /// 请求修复：先过「当前状态还允许修复吗」的闸门，再经宿主打开确认框。闸门与确认后那道同址
+    /// （见 <see cref="RepairAsync"/>），展示层不再各写一遍。
+    /// </summary>
+    public Task RequestRepairAsync(LauncherStatusSnapshot snapshot)
+    {
+        if (RejectRepairIfUnavailable(snapshot))
+        {
+            return Task.CompletedTask;
+        }
+
+        host.ShowRepairConfirmation(localizer.T(LocalizationKeys.RepairWarning));
+        return Task.CompletedTask;
+    }
+
     /// <summary>Runs a confirmed repair and refreshes launcher state afterward.</summary>
     public async Task RepairAsync(LauncherStatusSnapshot snapshot)
     {
+        // 用户已经在确认框上点过确认：此时状态若又变得不允许，必须给可见反馈（ADR-027）。
+        // 这道闸门必须早于 PrepareOperation——后者会把面板 latch 到 Progress，而只有
+        // SetIdlePanels 能把它复位。
+        if (RejectRepairIfUnavailable(snapshot))
+        {
+            return;
+        }
+
         if (!PrepareOperation(snapshot))
         {
             return;
@@ -330,6 +353,23 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
     private void ShowOperationUnavailable() =>
         GameOperationRejections.WarnUnavailable(localizer, toastService);
 
+    /// <summary>
+    /// 修复的两道闸门（请求时与确认后）共用同一判据与同一处渲染：返回 true 表示已拒绝并已报出，
+    /// 调用方直接中止。策略判定仍归 <see cref="GameOperationPolicy.Decide"/>，这里只表态「被拒绝
+    /// 对修复意味着什么」——就地警告并停下（ADR-027）。
+    /// </summary>
+    private bool RejectRepairIfUnavailable(LauncherStatusSnapshot snapshot)
+    {
+        if (GameOperationPolicy.Decide(GameOperationPolicy.Operation.Repair, snapshot.RuntimeState)
+            != GameOperationDecision.RejectedForCurrentState)
+        {
+            return false;
+        }
+
+        ShowOperationUnavailable();
+        return true;
+    }
+
     /// <summary>Executes the stop after the confirmation flow has completed.</summary>
     public void PerformStop()
     {
@@ -423,6 +463,10 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 
             if (snapshot.RuntimeState == LauncherRuntimeState.Ready)
             {
+                // 快照过期：Ready 下安装按钮所在的面板本不可见，所以这条只在状态刚刚变过来时可达。
+                // 与上面两个分支同口径——拒绝必须报出来（ADR-027/029），静默 return 在用户那里
+                // 就是「点了没反应」。
+                ShowOperationUnavailable();
                 return null;
             }
 

@@ -300,37 +300,22 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
     [RelayCommand]
     private async Task RequestRepairAsync()
     {
-        if (currentSnapshot is null)
+        if (currentSnapshot is not null)
         {
-            return;
+            // 闸门与确认框都在旅程里：请求时与确认后两道闸门同址，展示层不再各写一遍
+            // 判定与渲染（ADR-027）。
+            await journey.RequestRepairAsync(currentSnapshot);
         }
-
-        if (GameOperationPolicy.Decide(GameOperationPolicy.Operation.Repair, currentSnapshot.RuntimeState)
-            == GameOperationDecision.RejectedForCurrentState)
-        {
-            ShowOperationUnavailable();
-            return;
-        }
-
-        dialogs.RepairConfirm.Show(localizer.T(LocalizationKeys.RepairWarning));
     }
 
     public async Task RepairAsync()
     {
-        // 确认框点过之后状态可能又变了：不能静默什么都不做（ADR-027）。
-        if (currentSnapshot is null)
+        // 确认框点过之后状态可能又变了：那道闸门现在与请求时的同址（GameOperationJourney），
+        // 展示层不再各写一遍，也不再各自记住要把它报出来。
+        if (currentSnapshot is not null)
         {
-            return;
+            await journey.RepairAsync(currentSnapshot);
         }
-
-        if (GameOperationPolicy.Decide(GameOperationPolicy.Operation.Repair, currentSnapshot.RuntimeState)
-            == GameOperationDecision.RejectedForCurrentState)
-        {
-            ShowOperationUnavailable();
-            return;
-        }
-
-        await journey.RepairAsync(currentSnapshot);
     }
 
     [RelayCommand]
