@@ -687,7 +687,7 @@ public sealed class ShellLifecycle : IShellRuntime
             refreshCoordinator.LifetimeToken);
         settings.Appearance.ApplyThemeColor(
             snapshot.Settings.ThemeColorMode,
-            SettingsAppearanceViewModel.ParseColorOrDefault(snapshot.Settings.CustomThemeColor));
+            ColorUtils.ParseColorOrDefault(snapshot.Settings.CustomThemeColor));
 
         shell.ApplySnapshot(snapshot, settings);
         operations.ApplySnapshot(snapshot);

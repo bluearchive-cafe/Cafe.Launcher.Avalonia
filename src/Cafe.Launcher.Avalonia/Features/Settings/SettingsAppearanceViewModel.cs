@@ -117,7 +117,7 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         suppressEditorUpdates = true;
         try
         {
-            SelectedCustomThemeColor = ParseColorOrDefault(settings.CustomThemeColor);
+            SelectedCustomThemeColor = ColorUtils.ParseColorOrDefault(settings.CustomThemeColor);
             IsCustomThemeColorSelected = settings.ThemeColorMode == ThemeColorModes.Custom;
             IsWallpaperThemeColorSelected = settings.ThemeColorMode == ThemeColorModes.Wallpaper;
             IsThemeColorExtractionAlgorithmVisible = IsWallpaperThemeColorSelected;
@@ -125,7 +125,7 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
                 settings.NeutralColorStrategy == NeutralColorStrategies.SeedFollowing;
             IsCustomBackground = !string.IsNullOrWhiteSpace(settings.CustomBackgroundPath);
             IsBackgroundFitSelected = settings.BackgroundFit == BackgroundFits.Uniform;
-            SelectedBackgroundFillColor = ParseColorOrDefault(settings.BackgroundFillColor);
+            SelectedBackgroundFillColor = ColorUtils.ParseColorOrDefault(settings.BackgroundFillColor);
             IsCustomBackgroundSelected = settings.BackgroundSource == BackgroundSources.Custom;
             ReplaceThemeColorPalette(
                 settings.ThemeColorPalette,
@@ -297,7 +297,7 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
     {
         ArgumentNullException.ThrowIfNull(settings);
         ApplyTheme(settings.ThemeMode);
-        ApplyThemeColor(settings.ThemeColorMode, ParseColorOrDefault(settings.CustomThemeColor));
+        ApplyThemeColor(settings.ThemeColorMode, ColorUtils.ParseColorOrDefault(settings.CustomThemeColor));
     }
 
     /// <summary>
@@ -477,7 +477,7 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
             ThemeColorPaletteItems.Clear();
             for (var i = 0; i < normalizedColors.Length; i++)
             {
-                var color = ParseColorOrDefault(normalizedColors[i]);
+                var color = ColorUtils.ParseColorOrDefault(normalizedColors[i]);
                 ThemeColorPaletteItems.Add(new ThemeColorPaletteItem
                 {
                     Index = i,
@@ -593,11 +593,6 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
             ThemeColorPaletteItems.Count - 1);
         return ParseThemeColorPaletteColor(ThemeColorPaletteItems[selectedIndex].ColorHex);
     }
-
-    public static Color ParseColorOrDefault(string? value) =>
-        Color.TryParse(value, out var color)
-            ? color
-            : Color.Parse(LauncherConstants.DefaultThemeColor);
 
     internal static Color? ParseThemeColorPaletteColor(string? value) =>
         Color.TryParse(value, out var color)

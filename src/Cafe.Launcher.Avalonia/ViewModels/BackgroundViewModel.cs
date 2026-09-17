@@ -300,7 +300,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
     {
         BackgroundStretch = ToStretch(settings.BackgroundFit);
         BackgroundFillBrush = settings.BackgroundFit == BackgroundFits.Uniform
-            ? new SolidColorBrush(SettingsAppearanceViewModel.ParseColorOrDefault(settings.BackgroundFillColor))
+            ? new SolidColorBrush(ColorUtils.ParseColorOrDefault(settings.BackgroundFillColor))
             : null;
     }
 
