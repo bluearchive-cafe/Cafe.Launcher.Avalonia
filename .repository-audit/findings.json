@@ -731,6 +731,76 @@
       "guard": "GoldenPrep_WhenTheAmbientVariantWasLeftDark_StillPinsTheBaselineVariant（哨兵法：先造泄漏态再断言基线胜出；拆掉钉住即红） + ThemeVariantSnapshotHeadlessTests.Capture_WhenDisposed_RestoresTheVariantItFound（拆掉还原即红）",
       "delta_note": "两处待复核锚点已逐行读码，结论一真一假：①MainWindowHeadlessTests.Dialogs.cs:332（LogExport_WhenAContentRowIsChecked_KeepsItsGlyphReadable 的暗色分支）为真——经 ApplyTheme 写变体且从不复位，是唯一真实泄漏点；②SystemThemeColorHeadlessTests.cs:26-33 为假——该用例打的是 ApplyPlatformColorValues，那条路径只按当前草稿算出 isDark 并落方案，从不写 RequestedThemeVariant，无需改动。无头侧 CrashReportWindowHeadlessTests.cs 与 ThemeSubscriptionTeardownHeadlessTests.cs 当时各自手写快照 + finally 复位（证明危险已知）；MainWindowHeadlessTests.Golden.cs 的 PrepareGoldenWindow 只固定语言、动效与字体，不固定变体（成立）。生产写入点唯一，D14（8aab531）搬移前在 Features/Settings/SettingsAppearanceViewModel.cs:584，现为 src/Cafe.Launcher.Avalonia/Services/ThemeApplier.cs 的 ApplyThemeMode。",
       "resolution_note": "779664f：两半缺一不可——①PrepareGoldenWindow 每次显式钉住基线变体（默认亮色＝无头平台把 ThemeVariant.Default 解析到的值），golden 从此与执行顺序无关；它是整套 golden 的基线而非某用例的临时覆盖，故不还原。②新增 tests/Cafe.Launcher.Avalonia.HeadlessTests/ThemeVariantSnapshot.cs（记下进入前的变体、改为指定值、释放时还原），Dialogs 用例与两个原本手写复位逻辑的用例统一走它。两条新守卫均做变异验证（拆钉住／拆还原各让对应用例变红）。像素影响实测为零：golden 未重生即全绿，证明钉住的亮色正是今天的像素。一处刻意的覆盖缺口：Dialogs 用例改用快照这件事本身无法独立观察（钉住会掩盖泄漏的后果），没有测试会因「忘记用快照」而变红——属取舍。"
+    },
+    "AUD-CI-007": {
+      "title": "Release 配置的测试只在 tag 触发的 release.yml 里跑：Debug/Release 分歧要到发版才暴露（重置前台账 AUD-CI-008 的重新立案）",
+      "category": "ci/testing",
+      "severity": "low",
+      "confidence": 95,
+      "status": "open",
+      "disposition": "Add Guard",
+      "recommendation_validation": "Verified",
+      "first_seen_commit": "490c2e5",
+      "last_verified_commit": "1095a5a",
+      "resolved_commit": null,
+      "guard": "在 build.yml 的 build 作业增一步 Release 配置的测试运行（或给 Configuration 加 matrix 维度），使 Debug/Release 分歧在 PR 上即失败。",
+      "delta_note": "2026-09-17 复核（重置前台账 AUD-CI-008 的重新立案）：证据在原地未变——build.yml:59-60 跑 `test.ps1 -Configuration Debug`，linux-tests.yml:49 是裸 `dotnet test`（默认 Debug），而 `test.ps1 -Configuration Release` 只出现在 release.yml:263，该工作流仅由 tag 推送与手动触发（release.yml:3-8）。build.yml 里确有 Release 的 `dotnet publish`（:85-90），但那只是编译，不跑测试，因此对构建配置敏感的断言（如 `UnifiedLogger` 的 `#if DEBUG` 级别开关）仍只在发版时被第一次执行。**严重度由原 medium 降为 low**：原判据含「配置相关失败要到发版才暴露」，而 release.yml 的发布作业有 `needs: [build, installer]`，Release 测试失败会挡住产物发布（重置前台账记录的实际事故即如此：失败 run 的发布作业被 skip，无坏产物外流，代价是一次补提交加重打 tag）。属发布流程摩擦，不构成用户可见损害。**若判「降档不成立」，把它改回 medium 即可——这是本轮唯一的降档判断。**"
+    },
+    "AUD-MAINT-006": {
+      "title": "发布横幅的版本契约无机械守卫：契约测试只校验模板 JSON，tag 门禁只查文件存在，且指南声明的画布尺寸与五份已提交横幅不符（重置前台账 AUD-REL-008 的重新立案）",
+      "category": "release/packaging",
+      "severity": "low",
+      "confidence": 92,
+      "status": "open",
+      "disposition": "Add Guard",
+      "recommendation_validation": "Strongly Supported",
+      "first_seen_commit": "490c2e5",
+      "last_verified_commit": "1095a5a",
+      "resolved_commit": null,
+      "guard": "按 ReleaseChangelogContractTests 从 csproj 读版本再断言 CHANGELOG 的既有写法，在 ReleaseBannerContractTests 中断言「与 csproj VersionPrefix 同名」的横幅确实存在、可解码且尺寸为模板声明的画布尺寸。",
+      "delta_note": "2026-09-17 复核（重置前台账 AUD-REL-008 的重新立案）：三处缺口逐条仍在——①ReleaseBannerContractTests 仍只读 `docs/promo/specs/release-banner.template.json`（:14 模板路径、:15 横幅目录常量），全文件无 `File.Exists`、无位图解码、无 `PixelSize` 断言，:33 的 `Assert.EndsWith(\"-release-banner.png\", resolved)` 作用于模板里 `output.image` 的字符串，不触碰任何文件——零字节或尺寸错误的横幅照样全绿。②release.yml:152-155 的 tag 门禁仍是 `Test-Path $bannerPath -PathType Leaf`，只查存在性。③docs/promo/release-banner-guide.md:3 与 :229 仍声明画布 2000×1125，而实测 docs/assets/release-banners/ 中 beta.1–beta.5 为 2400×1350、beta.6–beta.10 为 2000×1125（本轮逐一读取 PNG 头核实）。AGENTS.md 的发布说明也只承诺「tag 构建在缺失时失败」，即存在性。"
+    },
+    "AUD-MAINT-007": {
+      "title": "LocalInstallationStateStore 的类注释写 game_config.json，实际常量是 game-launcher-config.json（重置前台账 AUD-MTN-021 的重新立案）",
+      "category": "maintainability/doc-code-drift",
+      "severity": "low",
+      "confidence": 95,
+      "status": "open",
+      "disposition": "Fix",
+      "recommendation_validation": "Verified",
+      "first_seen_commit": "490c2e5",
+      "last_verified_commit": "1095a5a",
+      "resolved_commit": null,
+      "guard": null,
+      "delta_note": "2026-09-17 复核（重置前台账 AUD-MTN-021 的重新立案）：`src/Cafe.Launcher.Avalonia/Services/LocalInstallationStateStore.cs:17` 的类摘要仍写「游戏目录内安装状态（game_config.json + manifest 副本）的唯一读写入口」；全仓库 `grep game_config`（src 与 tests）只命中该注释本身，实际文件名来自 `Constants/GamePaths.cs:30` 的 `game-launcher-config.json`（该文件是与官方启动器互操作的契约文件，字段序与 vc 校验都依赖它）。读错名字会把排查引向不存在的文件。"
+    },
+    "AUD-TEST-014": {
+      "title": "测试仍有无上限的门控等待（回归会挂住 CI 而非失败），且 csproj 抑制 xUnit1051 的理由与事实不符（重置前台账 AUD-TST-005 的重新立案）",
+      "category": "testing/determinism",
+      "severity": "low",
+      "confidence": 90,
+      "status": "open",
+      "disposition": "Add Guard",
+      "recommendation_validation": "Verified",
+      "first_seen_commit": "cffbd4d",
+      "last_verified_commit": "1095a5a",
+      "resolved_commit": null,
+      "guard": "给这些等待加 `.WaitAsync(TimeSpan.FromSeconds(5))`（仓库既有写法），或给测试工程设全局 Timeout（当前无 xunit.runner.json）。",
+      "delta_note": "2026-09-17 复核（重置前台账 AUD-TST-005 的重新立案）：`tests/Cafe.Launcher.Avalonia.Tests/Cafe.Launcher.Avalonia.Tests.csproj:20-26` 的抑制理由仍写「门控等待统一用 WaitAsync/预算轮询加超时上限（见各测试的 TimeSpan.FromSeconds）」，而**实测仍有 14 处裸 await**（无 WaitAsync）：`MainWindowHeadlessTests.Golden.cs:74`、`ThemeColorExtractionAsyncHeadlessTests.cs:93`、`LogViewerDialogViewModelTests.cs:36,:74,:188`、`MainWindowViewModelTests.Appearance.cs:48,:132`、`LogExportDialogViewModelTests.cs:85,:211,:227,:239,:243,:255`；其中 `LogExportDialogViewModelTests.cs:85` 与 `LogViewerDialogViewModelTests.cs:74` 正是原台账点名过的那两处。同一夹具内也不一致：`MotionVisibilityTests.cs:147` 的 `await context.WaitForPostAsync()` 仍无上限（其 TCS 只在被包裹的 SynchronizationContext 窗口内同步 Post 才置位），而同文件 :31/:39/:87/:118 四处已加 `WaitAsync(5s)`。共享设施 `tests/Support/TestWait.cs`（AUD-TEST-009 落地）已提供有截止时间的轮询，这些站点没有走它。全仓无 xunit.runner.json、无 `[Fact(Timeout)]`、无 runsettings 超时，唯一兜底是 build.yml 的作业级 timeout-minutes——任一处挂起会吃掉整段预算而非快速失败。关联更正：现行报告的 Testing 节称「正面等待全部有截止/迭代上限（复审全树检索无悬挂面）」，该表述对这 14 处不成立。"
+    },
+    "AUD-ARCH-013": {
+      "title": "「游戏在跑时拒绝执行」与官方启动器「安装/更新时强杀游戏目录内进程」的相对分歧，在受版本管理的文档里无成文记录（重置前台账 AUD-ARCH-009 的重新立案）",
+      "category": "architecture/decision-record",
+      "severity": "low",
+      "confidence": 90,
+      "status": "open",
+      "disposition": "Document",
+      "recommendation_validation": "Strongly Supported",
+      "first_seen_commit": "490c2e5",
+      "last_verified_commit": "1095a5a",
+      "resolved_commit": null,
+      "guard": null,
+      "delta_note": "2026-09-17 复核（重置前台账 AUD-ARCH-009 的重新立案）：拒绝语义本身已在受版本管理的文档里成文——ADR-032 决策 5/6/7/8 记了「两道闸门同一套判据」「枚举失败按没在跑放行是防误删的取舍」「卸载删除前复查」「下载写入边界复查」，CONTEXT.md 的「游戏进程家族」词条也记了判据与两道闸门。但**与官方行为的相对关系仍无记录**：全仓库受版本管理文档里 `强杀` 只命中 ADR-032:20 一处，且那处说的是「强杀或异常退出后反作弊仍占着目录」（讲判据为什么按名字识别），不是「官方在安装/解压阶段强杀游戏目录内进程、Cafe 有意改为拒绝并报 GameRunning」这项决策。风险不变：后续维护者按官方行为「修回去」会削弱一项安全属性（运行中拒绝覆盖/删除游戏文件）而无人知晓这是刻意的。**一处证据限制须写明**：「官方强杀」这一侧的描述来自那份按 AUD-MAINT-002 决定不入库的对比分析文档（工作树文件已移除），因此本条能独立成立的部分是「Cafe 拒绝执行（含理由）是刻意设计、应写进 ADR 或 CONTEXT 的决策段」，而「官方怎么做」需重新取证或按外部契约表述。"
     }
   }
 }

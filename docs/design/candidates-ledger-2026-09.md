@@ -10,7 +10,7 @@
 >
 > 原始记录（各轮的证据叙述、行锚点、发布放行证据）留存于 `.repository-audit/history/`，本表**不取代**它们：那里面有本表装不下的三类东西（release 放行证据、当时的证据叙述、20 条只在旧台账里存在的非 resolved 项），详见 §4。
 
-<!-- open-findings: AUD-PERF-001 AUD-PERF-004 AUD-PERF-005 AUD-SEC-001 AUD-SEC-002 AUD-ARCH-005 -->
+<!-- open-findings: AUD-PERF-001 AUD-PERF-004 AUD-PERF-005 AUD-SEC-001 AUD-SEC-002 AUD-ARCH-005 AUD-CI-007 AUD-MAINT-006 AUD-MAINT-007 AUD-TEST-014 AUD-ARCH-013 -->
 <!-- 上面这一行是契约守卫的唯一输入：`CandidatesLedgerContractTests` 断言它与 findings.json 的 open 集完全相等。
      改这一行就等于声明台账状态变了——请先改所有者文档，再改这里。 -->
 
@@ -25,7 +25,7 @@
 | `A*` `B*` `C*` `D*` `E*` | 简化与重用扫描（91 项去重后 69 项编号候选） | `docs/design/simplification-reuse-plan-2026-09-16.md` |
 | `DEF-N` | 扫描副产物的正确性问题（6 项，明确不是简化项） | 同上 §2 |
 | `AUD-XXX-NNN` | 审计发现（现行台账 50 条） | `.repository-audit/findings.json` |
-| `H-AUD-XXX-NNN` | 重置前台账（2026-09-12）的非 resolved 残留（20 条） | `.repository-audit/history/2026-09-12-findings-ledger.json` |
+| `H-AUD-XXX-NNN` | 重置前台账（2026-09-12）的非 resolved 残留（20 条，**已逐条复核完毕**，见 §3.5） | `.repository-audit/history/2026-09-12-findings-ledger.json` |
 | `ADR-0NN-ALT` | 各 ADR 的「被否决的替代方案」（9 个 ADR 共 37 条） | `docs/design/adr/ADR-0NN-*.md` |
 
 **提交号可能成对出现**：2026-09-16 对未发布增量做过一次折叠重排（117 笔 → 76 笔），留下孪生提交（例：`0fb64e6` / `079666a` 同内容）。本表取其一。
@@ -186,7 +186,7 @@
 | §4 明确不做（标题写 22、实测 **23** 条） | 复核后否决，理由见该文档 §4 | — |
 | §5 开放决策（3） | 决策一（`D15` 形态）待裁；决策二（`D14`）已裁；决策三（`D1` 发布口径）已判定 | 见该文档 §5 |
 
-### 3.4 审计台账（`.repository-audit/findings.json`，50 条）
+### 3.4 审计台账（`.repository-audit/findings.json`，55 条）
 
 **已解决 40 条**（题目、证据与 `resolved_commit` 以台账为准，此处只给编号以便检索）：
 
@@ -201,34 +201,48 @@
 
 **已书面接受风险 4 条**（已终结，不再作为候选）：`AUD-MAINT-002`（官方协议对比分析未入库）、`AUD-SEC-004`（手写代理发送当前用户默认凭据）、`AUD-SEC-006`（私有地址黑名单遗漏 CGNAT 与基准测试段——其补救已被 `5a38be9` 刻意否决）、`AUD-ARCH-007`（代理指纹变化时旧 handler 仍被在途租约持有）。
 
-**开放 6 条**：见 §1 与文档头部的 `open-findings` 标记。
+**开放 11 条**：见 §1 与文档头部的 `open-findings` 标记（含 2026-09-17 从重置前台账重新立案的 5 条）。
 
-### 3.5 待复核的历史遗留（重置前台账 `H-AUD-*`，20 条）
+### 3.5 历史遗留：已逐条复核完毕（重置前台账 `H-AUD-*`，20 条）
 
-**这些都是「唯一记录`——它们的 ID 在现行 `findings.json` 里按 ID 查不到，2026-09-13 那次台账清零重置没有把它们带过来。它们**不是**当前候选：须先按现行源码逐条复核，能成立的重新立案，不成立的记明不再适用。
+**复核已于 2026-09-17 执行完毕**（用户指令「先复核」），依据是各条**现行源码逐行**核验，不是转抄。20 条的结论分布：
+**重新立案 5 条**（处置为 Fix／Add Guard／Document，已进现行台账并出现在 `open-findings` 标记里）、
+**已失效或已收口 6 条**（不再适用／被后续发现取代／已被新机制关闭，理由逐条记在表内）、
+**已裁定不行动 1 条**（评审第二轮显式排除）、
+**处置维持 No Action／Accept Risk 3 条**（原台账即如此判定，故不进开放集，仅在此留档）、
+**维持暂缓或接受 4 条**（处置未变）、
+**并入既有待裁项 1 条**（`H-AUD-MTN-017` 的剩余部分即 `R2-c08`）。
 
-| 编号 | 旧状态 | 一句话 |
-| --- | --- | --- |
-| `H-AUD-CI-008` | open/medium | Release 配置的测试只在打 tag 的 `release.yml` 里跑，配置相关失败要到发版才暴露 |
-| `H-AUD-REL-008` | open/low | 发布横幅的版本契约无机械守卫（契约测试只校验模板 JSON，tag 门禁只查文件存在） |
-| `H-AUD-MTN-017` | open/low | 新增一个主叠层仍需约 14 个未守卫编辑点，语言刷新清单漏改会静默失败 |
-| `H-AUD-MTN-020` | open/low | `CLAUDE.md:103` 仍把 click code 列为 `%LOCALAPPDATA%` 启动器数据（`3e95793` 删链路时漏改） |
-| `H-AUD-MTN-021` | open/low | `LocalInstallationStateStore` 类注释写 `game_config.json`，实际常量是 `game-launcher-config.json` |
-| `H-AUD-TST-005` | open/low | 测试门控等待仍有未加上限的残留（回归会挂住 CI 而非失败）；csproj 抑制 xUnit1051 的理由与事实不符 |
-| `H-AUD-ARCH-009` | open/low | 与官方「安装/更新时强杀游戏目录内进程」相对的有意分歧（拒绝执行）无决策记录 |
-| `H-AUD-PERF-012` | open/informational | 校验/安装/卸载阶段每个清单文件一次 UI 线程 Post 且无合并去重 |
-| `H-AUD-MTN-018` | open/informational | `BannerImageDecoder` 重新实现 `BackgroundImageDecoder.ClampLargestSide` |
-| `H-AUD-ARCH-006` | open/informational | `ModalEntry.Content` / `IModalContentViewModel` 只被写入、从不被读取 |
-| `H-AUD-ARCH-007` | open/informational | `LocalDiagnostics.syncLogger` 为静态可变，26 处生产调用点绕过已注入实例 |
-| `H-AUD-SEC-008` | open/informational | 两处可预测的 `*.tmp` 写路径未纳入 `AUD-SEC-004` 的随机名硬化 |
-| `H-AUD-DEP-010` | open/informational | 漏洞门禁为推送触发（无 schedule），且 Dependabot 不覆盖 `prototypes/` |
-| `H-AUD-DEP-011` | open/informational | Dependabot 的 nuget PR 必然 Build 红灯（触发 `PROJECT_CONVENTIONS` §12 工具链表契约） |
-| `H-AUD-ARCH-003` | deferred/low | `RemoteContentViewModel` 直接持有 `DispatcherTimer` |
-| `H-AUD-MTN-001` | deferred/low | `RemoteContentViewModel` 拆分（该半项已被根 `ViewModels/` 模态契约取代） |
-| `H-AUD-TST-001` | deferred/low | `GameDownloadServiceTests` 真实限速 + `Stopwatch` 下限断言 |
-| `H-AUD-DEP-002` | accepted-risk/low | `Shirasagi0012.MaterialColorUtilities` bus factor 1（有 spike 论证与 fork 预案） |
-| `H-AUD-DOC-003` | accepted-risk/low | 与官方互操作的分析文档按决定不纳入版本管理、也不加入 gitignore |
-| `H-AUD-DEP-012` | product-decision/informational | 发行产物无代码签名（Authenticode / macOS 公证），来源不可密码学验证 |
+重新立案用的是**新编号**（`AUD-CI-007`、`AUD-MAINT-006`、`AUD-MAINT-007`、`AUD-TEST-014`、`AUD-ARCH-013`）：
+重置前的旧编号已被 2026-09-13 的台账清零重置**回收再利用**（例：旧 `AUD-ARCH-007` 是同步 logger 静态字段，现行 `AUD-ARCH-007` 是代理指纹变化处置在途 handler），复用会造成同号两题，故不复用。
+
+| 编号 | 旧状态 | 一句话 | **复核结论（2026-09-17）** |
+| --- | --- | --- | --- |
+| `H-AUD-CI-008` | open/medium | Release 配置的测试只在打 tag 的 `release.yml` 里跑 | **重新立案 `AUD-CI-007`**（low；由 medium 降档，理由见条目：发布作业的 `needs` 使失败只折算成一次补提交+重打 tag，无坏产物外流） |
+| `H-AUD-REL-008` | open/low | 发布横幅的版本契约无机械守卫 | **重新立案 `AUD-MAINT-006`**；三处缺口（契约测试只读模板 JSON、tag 门禁只查存在、指南画布尺寸与五份横幅不符）逐条仍在 |
+| `H-AUD-MTN-017` | open/low | 新增主叠层仍需约 14 个未守卫编辑点，语言刷新清单漏改静默失败 | **部分失效 + 并入 `R2-c08`**：语言刷新清单那半项已由 `D10`（`68e6efa`）收口——清单从手工逐处调用变成「装配后注入的单一名单 + 一个契约」；剩余「新增主叠层仍有未守卫编辑点」正是 `R2-c08` 提议的那条补守卫，故不重复立案 |
+| `H-AUD-MTN-020` | open/low | `CLAUDE.md:103` 仍把 click code 列为启动器数据 | **不再适用**：`CLAUDE.md` 已不存在于仓库（工程契约文档现为 `AGENTS.md`），全仓库 `click code` 只剩审计历史与总表本行 |
+| `H-AUD-MTN-021` | open/low | `LocalInstallationStateStore` 类注释写 `game_config.json` | **重新立案 `AUD-MAINT-007`**（注释仍在 `:17`，实际常量是 `GamePaths.cs:30` 的 `game-launcher-config.json`） |
+| `H-AUD-TST-005` | open/low | 测试门控等待仍有未加上限的残留 | **重新立案 `AUD-TEST-014`**（实测仍 14 处裸 `await`，csproj 抑制理由仍与事实不符） |
+| `H-AUD-ARCH-009` | open/low | 与官方「强杀目录内进程」的相对分歧无决策记录 | **重新立案 `AUD-ARCH-013`**；拒绝语义已成文（ADR-032 决策 5-8、CONTEXT 词条），但「与官方行为的相对关系」仍无记录 |
+| `H-AUD-PERF-012` | open/info | 校验/安装/卸载每文件一次 UI 线程 Post 且无去重 | **已被后续发现取代**：即现行 `AUD-PERF-007`（`608d888`，`PercentProgressGate` 百分比门控；`D6` 又把它与另三处收进 `StageProgressReporter`），已 resolved |
+| `H-AUD-MTN-018` | open/info | `BannerImageDecoder` 重新实现 `BackgroundImageDecoder.ClampLargestSide` | **仍成立，处置维持 No Action**（原台账即判 No Action）：两份策略体仍逐行相同（`BannerImageDecoder.cs:30-43` ≡ `BackgroundImageDecoder.cs:99-115`，阈值常量 `:18` 已共享）；不排期 |
+| `H-AUD-ARCH-006` | open/info | `ModalEntry.Content` / `IModalContentViewModel` 只被写入、从不被读取 | **仍成立，但已裁定不行动**：评审第二轮把它列入「不重开／不触碰／不行动」；现行代码仍是「写入 `entries`（`ModalHostViewModel.cs:50`）、只读 `Top.Kind` 与 `Is*Interactive`」 |
+| `H-AUD-ARCH-007` | open/info | `LocalDiagnostics.syncLogger` 为静态可变，生产调用点绕过已注入实例 | **仍成立，处置维持 Accept Risk**：`LocalDiagnostics.cs:24` 的静态字段 + `:50-51` 的 `Volatile.Write` 注册 + `:128-144` 的静态入口都在；静态调用点由 26 处降到 **18 处**。注意与现行 `AUD-ARCH-007`（代理指纹处置在途 handler）**同号不同题**，故不复用该号 |
+| `H-AUD-SEC-008` | open/info | 两处可预测的 `*.tmp` 写路径未随机化 | **仍成立，处置维持 No Action**：`LocalInstallationStateStore.cs:73-74` 仍是固定名 `{path}.tmp`、`DownloadExecutor.cs:412` 仍是固定后缀，而 `AtomicJsonFileStore.cs:39` 已随机化；无权限提升，属一致性硬化 |
+| `H-AUD-DEP-010` | open/info | 漏洞门禁为推送触发（无 schedule）；Dependabot 不覆盖 `prototypes/` | **已收口**：`linux-tests.yml:9-10` 现有每周 cron，该作业会做还原+构建，`NuGetAudit`（`Directory.Build.props:19-20`，配合 `TreatWarningsAsErrors`）因此每周至少执行一次，闲置 HEAD 上的新公告一周内即被检出；`prototypes/` 那半项原台账已判定为有意为之 |
+| `H-AUD-DEP-011` | open/info | Dependabot 的 nuget PR 必然 Build 红灯（触发 §12 工具链表契约） | **已收口**：`AGENTS.md` 的依赖升级章节现有第 3 步「Update the §12 toolchain table in `PROJECT_CONVENTIONS.md` by hand」，并点名该守卫用例；文档缺口已补 |
+| `H-AUD-ARCH-003` | deferred/low | `RemoteContentViewModel` 直接持有 `DispatcherTimer` | **已失效**：轮播计时器已抽出为 `Helpers/CarouselTimer.cs`（`R1-c10` 收缩形态，`4aabccc`），`RemoteContentViewModel` 内 `DispatcherTimer` 零命中 |
+| `H-AUD-MTN-001` | deferred/low | `RemoteContentViewModel` 拆分 | **维持暂缓**：`IModalPresenter` 那半项已被根 `ViewModels/` 模态契约取代（该类型全仓零命中）；剩余拆分诉求仍在（该文件现 **722 行**） |
+| `H-AUD-TST-001` | deferred/low | `GameDownloadServiceTests` 真实限速 + `Stopwatch` 下限断言 | **维持暂缓**：`GameDownloadServiceTests.cs:1240-1268` 仍是真实限速 + `Stopwatch` 下限断言（≥800ms），D6 的进度门控收拢只换了产生侧写法、没动这条用例 |
+| `H-AUD-DEP-002` | accepted-risk/low | `Shirasagi0012.MaterialColorUtilities` bus factor 1 | **维持**：依赖仍在（`Directory.Packages.props:24`，`0.2.0`），fork 预案与年度重审照旧 |
+| `H-AUD-DOC-003` | accepted-risk/low | 与官方互操作的分析文档不入版本管理、也不加 gitignore | **已被取代**：该文档在工作树中亦已移除，现行 `AUD-MAINT-002`（accepted-risk）就是它的继承记录 |
+| `H-AUD-DEP-012` | product-decision/info | 发行产物无代码签名（Authenticode / 公证） | **维持**：`AUD-SEC-005`（`db941bf`）补的是 OIDC 构建来源证明（attestation），属「来源可验证」而非「发布者身份可验证」；证书签名仍待产品决策 |
+
+> **本轮未就 20 条之外新增任何判断**；`H-AUD-*` 各行的完整原始证据留在
+> `.repository-audit/history/2026-09-12-findings-ledger.json`（`note` 字段）与
+> `.repository-audit/history/2026-09-12-full-audit.md`，本表只记结论。
+> 五条重新立案的条目在 `findings.json` 里以 `delta_note` 记录了本轮实测锚点。
 
 ### 3.6 各 ADR 被否决的替代方案（9 个 ADR，37 条）
 
@@ -275,7 +289,7 @@
 | `2026-09-13-full-audit.md` | 09-13 | full + 同日 delta | 台账清零重置、从零重扫 | 重置的决策理由与当时的证据叙述 |
 | `2026-09-14-full-audit.md` | 09-14 | full（上午版） | 被 `CODEBASE_AUDIT.md` 取代 | 当日上午的复审取证 |
 
-> **要删这个目录，顺序是先搬「唯一记录」**：四份 release 放行证据（抽成一份 release-gate 台账）与 §3.5 的 20 条（逐条复核）。在那之前，删掉会同时丢掉本表 §3.5 的来源与出货审计的证据链。
+> **要删这个目录，顺序是先搬「唯一记录」**：四份 release 放行证据（抽成一份 release-gate 台账）。**§3.5 的 20 条已不再是前置条件**（2026-09-17 逐条复核完毕：结论与理由已进本表 §3.5，其中 5 条进了现行台账）；仍留在归档里的只是它们的原始证据叙述与旧编号词表。
 
 ---
 
