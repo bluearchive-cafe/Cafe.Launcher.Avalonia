@@ -30,7 +30,9 @@ public sealed class ThemeSubscriptionTeardownHeadlessTests
     {
         var application = Application.Current
             ?? throw new InvalidOperationException("Headless application is not initialised.");
-        var variantSnapshot = application.RequestedThemeVariant;
+        // 变体从固定值起、并显式还原：无头套件共享 Application，留下的值会决定后面
+        // golden 截到亮色还是暗色（AUD-TEST-013）。
+        using var themeVariant = ThemeVariantSnapshot.Capture(ThemeVariant.Light);
         var applier = new ThemeApplier();
         try
         {
@@ -59,7 +61,6 @@ public sealed class ThemeSubscriptionTeardownHeadlessTests
         {
             // 断言失败也要退订：共享 Application 上的残留订阅会污染同批次的后续用例。
             applier.Dispose();
-            application.RequestedThemeVariant = variantSnapshot;
         }
     }
 

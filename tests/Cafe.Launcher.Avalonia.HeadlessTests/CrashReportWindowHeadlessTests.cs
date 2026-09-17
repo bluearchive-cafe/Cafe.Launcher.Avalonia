@@ -23,10 +23,7 @@ public sealed class CrashReportWindowHeadlessTests
     [AvaloniaFact]
     public void CrashReportWindow_WhenTechnicalDetailsExpand_GrowsWithContent()
     {
-        var application = Application.Current
-            ?? throw new InvalidOperationException("Headless application is not initialised.");
-        var previousTheme = application.RequestedThemeVariant;
-        application.RequestedThemeVariant = ThemeVariant.Light;
+        using var themeVariant = ThemeVariantSnapshot.Capture(ThemeVariant.Light);
         var window = new CrashReportWindow(CreateReport(), TestDataRoot())
         {
             FontFamily = new FontFamily("Segoe UI")
@@ -53,7 +50,6 @@ public sealed class CrashReportWindowHeadlessTests
         finally
         {
             window.Close();
-            application.RequestedThemeVariant = previousTheme;
         }
     }
 
@@ -62,12 +58,9 @@ public sealed class CrashReportWindowHeadlessTests
     {
         var previousCulture = CultureInfo.CurrentCulture;
         var previousUiCulture = CultureInfo.CurrentUICulture;
-        var application = Application.Current
-            ?? throw new InvalidOperationException("Headless application is not initialised.");
-        var previousTheme = application.RequestedThemeVariant;
+        using var themeVariant = ThemeVariantSnapshot.Capture(ThemeVariant.Light);
         CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
         CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
-        application.RequestedThemeVariant = ThemeVariant.Light;
 
         var report = CreateReport();
         var window = new CrashReportWindow(report, TestDataRoot())
@@ -96,7 +89,6 @@ public sealed class CrashReportWindowHeadlessTests
         finally
         {
             window.Close();
-            application.RequestedThemeVariant = previousTheme;
             CultureInfo.CurrentCulture = previousCulture;
             CultureInfo.CurrentUICulture = previousUiCulture;
         }
