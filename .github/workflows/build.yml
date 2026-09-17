@@ -59,6 +59,15 @@ jobs:
       - name: Test
         run: .\test.ps1 -Configuration Debug
 
+      # AUD-CI-007：整套 Release 配置的测试此前只在 tag 触发的 release.yml 里跑，而 Debug/Release
+      # 的行为差异是真实的——UnifiedLogger 的级别开关在 #if DEBUG 下取 Verbose、否则取 Information，
+      # 于是「Debug 级条目在 Release 被丢弃」这类断言要到发版那一刻才第一次执行（重置前台账记录过
+      # 一次实际事故：tag 构建红、发布作业被 needs 挡住、补提交后重打 tag）。这里补上单元套件的
+      # Release 运行：它正是这类分歧的宿主，成本约 30 秒。无头套件的 Release 运行仍留在 release.yml
+      # 的 installer 作业（它的分歧面窄、且整套跑一遍要一分钟以上）。
+      - name: Test (Release)
+        run: .\test.ps1 -Configuration Release -Suite Unit
+
       - name: Coverage
         run: .\coverage.ps1
 
