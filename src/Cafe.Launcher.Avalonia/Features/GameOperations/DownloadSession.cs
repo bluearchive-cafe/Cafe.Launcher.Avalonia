@@ -37,7 +37,7 @@ internal sealed class DownloadSession : IDisposable
     private readonly DownloadCheckpointStore checkpointStore;
     private readonly IGameProcessTracker gameProcessTracker;
     private readonly LauncherStatusSnapshot snapshot;
-    private readonly bool repair;
+    private readonly DownloadOperationProfile profile;
     private readonly Action<GameOperationProgress> progress;
     private readonly object pauseLock = new();
     private TaskCompletionSource? pauseTcs;
@@ -67,7 +67,7 @@ internal sealed class DownloadSession : IDisposable
     public DownloadSession(
         DownloadSessionContext context,
         LauncherStatusSnapshot snapshot,
-        bool repair,
+        DownloadOperationProfile profile,
         Action<GameOperationProgress> progress,
         CancellationToken cancellationToken)
     {
@@ -81,7 +81,7 @@ internal sealed class DownloadSession : IDisposable
         checkpointStore = context.CheckpointStore;
         gameProcessTracker = context.GameProcessTracker;
         this.snapshot = snapshot;
-        this.repair = repair;
+        this.profile = profile;
         this.progress = progress;
         CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         diffCalculator = new ManifestDiffCalculator(
@@ -107,7 +107,7 @@ internal sealed class DownloadSession : IDisposable
     public async Task<GameOperationResult> RunAsync()
     {
         var activeToken = CancellationTokenSource.Token;
-        var operationKind = repair ? GameOperationKind.Repair : GameOperationKind.Download;
+        var operationKind = profile.Kind;
         string? gamePath = null;
 
         try
@@ -240,14 +240,14 @@ internal sealed class DownloadSession : IDisposable
             Version = gameConfig.GameLatestVersion,
             Basis = gameConfig.GameLatestFilePath,
             GamePath = gamePath,
-            IsRepair = repair,
+            IsRepair = profile.IsRepair,
             PatchUrlGroup = settings.PatchUrlGroup,
             StartedAt = DateTimeOffset.Now.ToString("O")
         }, activeToken);
 
         progress(CreateProgress(
             operationKind,
-            repair ? GameOperationStage.RepairCheck : GameOperationStage.UpdateCheck,
+            profile.CheckStage,
             0));
 
         var cdnConfig = snapshot.Remote.CdnConfig
@@ -261,20 +261,14 @@ internal sealed class DownloadSession : IDisposable
                 GameOperationErrorCode.CdnConfiguration));
         }
 
-        var downloadPlan = repair
-            ? await diffCalculator.BuildRepairPlanAsync(
-                gamePath,
-                gameConfig,
-                settings.PatchUrlGroup,
-                progress,
-                activeToken).ConfigureAwait(false)
-            : await diffCalculator.BuildInstallOrUpdatePlanAsync(
-                gamePath,
-                localGame,
-                gameConfig,
-                settings.PatchUrlGroup,
-                progress,
-                activeToken).ConfigureAwait(false);
+        var downloadPlan = await profile.BuildPlanAsync(
+            diffCalculator,
+            gamePath,
+            localGame,
+            gameConfig,
+            settings.PatchUrlGroup,
+            progress,
+            activeToken).ConfigureAwait(false);
 
         if (downloadPlan.NeedDownload.Count == 0 && downloadPlan.NeedDelete.Count == 0)
         {
@@ -284,9 +278,7 @@ internal sealed class DownloadSession : IDisposable
             var alreadyCurrentResult = new GameOperationResult
             {
                 Success = true,
-                Message = repair
-                    ? localizer.T(LocalizationKeys.RepairNoChanges)
-                    : localizer.T(LocalizationKeys.GameAlreadyCurrent)
+                Message = localizer.T(profile.NoChangesKey)
             };
 
             // 现有安装状态与将要提交的内容完全一致时，提交是纯粹的重写；
@@ -510,18 +502,16 @@ internal sealed class DownloadSession : IDisposable
                     activeToken).ConfigureAwait(false);
                 progress(CreateProgress(
                     operationKind,
-                    repair ? GameOperationStage.RepairCompleted : GameOperationStage.DownloadCompleted,
+                    profile.CompletedStage,
                     100));
                 await diagnostics.MessageAsync(
-                    repair ? "GameRepair" : "GameDownload",
+                    profile.LogCategory,
                     $"path: {gamePath}{Environment.NewLine}version: {snapshot.Remote.GameConfig?.GameLatestVersion}",
                     activeToken);
                 return new GameOperationResult
                 {
                     Success = true,
-                    Message = repair
-                        ? localizer.T(LocalizationKeys.RepairCompleted)
-                        : localizer.T(LocalizationKeys.InstallUpdateCompleted),
+                    Message = localizer.T(profile.CompletedKey),
                     AffectedFileCount = affectedCount
                 };
             }

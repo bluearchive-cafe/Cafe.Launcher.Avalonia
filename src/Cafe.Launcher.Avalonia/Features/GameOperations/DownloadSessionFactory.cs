@@ -18,10 +18,10 @@ internal static class DownloadSessionFactory
     internal static DownloadSession Create(
         DownloadSessionContext context,
         LauncherStatusSnapshot snapshot,
-        bool repair,
+        DownloadOperationProfile profile,
         Action<GameOperationProgress> progress,
         CancellationToken cancellationToken) =>
-        new(context, snapshot, repair, progress, cancellationToken);
+        new(context, snapshot, profile, progress, cancellationToken);
 
     /// <summary>
     /// Attempts to create a session from a persisted checkpoint.
@@ -53,6 +53,6 @@ internal static class DownloadSessionFactory
             return null;
         }
 
-        return Create(context, snapshot, state.IsRepair, progress, cancellationToken);
+        return Create(context, snapshot, DownloadOperationProfile.FromCheckpoint(state.IsRepair), progress, cancellationToken);
     }
 }

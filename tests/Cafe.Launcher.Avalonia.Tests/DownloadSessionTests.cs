@@ -240,7 +240,7 @@ public sealed class DownloadSessionTests
         return new DownloadSession(
             context,
             new LauncherStatusSnapshot { Remote = new LauncherRemoteState() },
-            repair: false,
+            DownloadOperationProfile.ForDownload(),
             _ => { },
             CancellationToken.None);
     }
