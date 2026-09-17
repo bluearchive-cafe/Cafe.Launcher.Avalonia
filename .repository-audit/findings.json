@@ -707,15 +707,15 @@
       "category": "testing/guard-coverage",
       "severity": "low",
       "confidence": 90,
-      "status": "open",
+      "status": "resolved",
       "disposition": "Add Guard",
       "recommendation_validation": "Verified",
       "first_seen_commit": "8250756",
-      "last_verified_commit": "d0f1255",
-      "resolved_commit": null,
-      "guard": null,
+      "last_verified_commit": "5253311",
+      "resolved_commit": "4b7b987",
+      "guard": "ToastHostViewModelTests.DismissToast_WhileCountdownIsParkedOnThePointer_WakesTheParkedWait + DismissToast_WhileDisplayDelayIsInFlight_CancelsTheInFlightWait",
       "delta_note": "ToastHostViewModel 的 EndLifecycle 里 `countdown.Interruption?.Cancel(); ResumeCountdown(countdown);`。变异验证（删除该段）后 86 条提示条用例全绿。失败形态是「挂起的倒计时任务一直阻塞到宿主 Dispose」——只漏一个 Task、不产生错值，因此没有断言看得见。属合并前即存在的缺口（原 StopCountdown 做同一件事，B17 的合并原样保留）。对照：同一提交里退出信号的移交**有**覆盖——去掉后 ToastExit_WhenAutomaticAndManualRequestsOverlap_WaitsAndRemovesOnce 立刻变红。",
-      "resolution_note": null
+      "resolution_note": "记录上补 CountdownTask 测试缝（internal PendingCountdownTask / IsCountdownAwaitingResume），两条守卫分别钉住 EndLifecycle 唤醒段的两个半边：挂起等待必须被唤醒、在途显示等待必须被打断。变异验证：把唤醒段换成对新记录的 no-op 后两条用例同时变红，还原转绿。"
     },
     "AUD-TEST-013": {
       "title": "无头套件泄漏 Application.RequestedThemeVariant，golden 截图依赖用例顺序",
