@@ -14,7 +14,7 @@ using Cafe.Launcher.Avalonia.Models;
 namespace Cafe.Launcher.Avalonia.Services;
 
 /// <summary>
-/// 游戏目录内安装状态（game_config.json + manifest 副本）的唯一读写入口。
+/// 游戏目录内安装状态（GamePaths.GameConfigFileName 与 GamePaths.ManifestFileName）的唯一读写入口。
 /// 同一路径的所有操作经引用计数信号量串行（见 <c>pathLocks</c>），跨线程安全；
 /// 写入先落临时文件再原子替换，进程中断不会留下半写的状态文件。
 /// </summary>
