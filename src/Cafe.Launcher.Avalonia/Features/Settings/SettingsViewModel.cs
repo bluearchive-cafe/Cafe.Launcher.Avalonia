@@ -499,28 +499,8 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
 
     private void CancelAppearancePreview() => appearancePreviewRefresh.Cancel();
 
-    private async Task WaitForAppearancePreviewToSettleAsync()
-    {
-        using var settleBudget = new CancellationTokenSource(AppearancePreviewSettleTimeout);
-        while (true)
-        {
-            var pending = appearancePreviewRefresh.Pending;
-            try
-            {
-                await pending.WaitAsync(settleBudget.Token);
-            }
-            catch (OperationCanceledException) when (settleBudget.IsCancellationRequested)
-            {
-                // 超出预算：按当前状态继续保存，不再等待更新的预览。
-                return;
-            }
-
-            if (ReferenceEquals(pending, appearancePreviewRefresh.Pending))
-            {
-                return;
-            }
-        }
-    }
+    private Task WaitForAppearancePreviewToSettleAsync() =>
+        TaskSettler.WaitAsync(() => appearancePreviewRefresh.Pending, AppearancePreviewSettleTimeout);
 
     private async Task PreviewCurrentAppearanceAsync(
         string? propertyName,

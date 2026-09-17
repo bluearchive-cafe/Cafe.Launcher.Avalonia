@@ -145,27 +145,8 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
     /// </summary>
     internal static TimeSpan ThemeRefreshSettleTimeout = TimeSpan.FromMinutes(2);
 
-    internal async Task WaitForThemeRefreshToSettleAsync()
-    {
-        using var settleBudget = new CancellationTokenSource(ThemeRefreshSettleTimeout);
-        while (true)
-        {
-            var pending = PendingThemeRefresh;
-            try
-            {
-                await pending.WaitAsync(settleBudget.Token);
-            }
-            catch (OperationCanceledException) when (settleBudget.IsCancellationRequested)
-            {
-                return;
-            }
-
-            if (ReferenceEquals(pending, PendingThemeRefresh))
-            {
-                return;
-            }
-        }
-    }
+    internal Task WaitForThemeRefreshToSettleAsync() =>
+        TaskSettler.WaitAsync(() => themePaletteRefresh.Pending, ThemeRefreshSettleTimeout);
 
     /// <summary>
     /// 从当前壁纸重新提取主题色板。提取（含整幅源图降采样与量化）在线程池执行，
