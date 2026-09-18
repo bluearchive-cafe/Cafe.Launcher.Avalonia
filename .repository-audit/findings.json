@@ -215,14 +215,15 @@
       "category": "performance/startup",
       "severity": "low",
       "confidence": 80,
-      "status": "open",
-      "disposition": "Document",
+      "status": "resolved",
+      "disposition": "Fix",
       "recommendation_validation": "Verified",
       "first_seen_commit": "67229b5",
       "last_verified_commit": "67229b5",
-      "resolved_commit": null,
-      "guard": "AGENTS.md 首帧承诺改为如实描述（记录刻意例外），或壁纸解码点改造后恢复承诺",
-      "delta_note": "新发现（2026-09-14）。BackgroundViewModel 构造函数 :122 backgroundImageSource = bundledImageLoader() 同步解码 Assets/launcher-background.png（2560×1388），经 App.axaml.cs:61 DI 解析链在 MainWindow 显示前于 UI 线程执行；AGENTS.md:75 原写明「no blocking work before the first frame」，revert 提交消息记录了产品理由（无它则窗口先开在主题底色上，golden 基线与 UX 回退）。第二处：首次刷新时跳过卫（BackgroundViewModel.cs:153-160）因 lastBackgroundSourceKey/lastDecodeTarget 未置而不能命中，:232 于线程池再次全量解码同一内置图。进展 2026-09-14（700e674）：必须做的文档半项已交付——AGENTS.md:75 改写为「重活不占首帧路径 + 内置壁纸构造期同步解码是唯一刻意例外，勿擅自改回异步」；CONTEXT.md 复核无同类声明无需改动。仍开放：消除首次刷新二次冗余解码的调查（需先确认跳过卫的解码目标可合法匹配）。"
+      "resolved_commit": "1ff7ec4",
+      "guard": "BackgroundViewModelTests.UpdateBackgroundImageAsync_WhenBundledSource_FirstRefreshReusesTheConstructorsBitmap + …_WhenBundledSourceButConstructorLoadFailed_RetriesTheDecode + …_WhenRemoteSource_StillReplacesTheConstructorBitmap",
+      "delta_note": "新发现（2026-09-14）。BackgroundViewModel 构造函数 :122 backgroundImageSource = bundledImageLoader() 同步解码 Assets/launcher-background.png（2560×1388），经 App.axaml.cs:61 DI 解析链在 MainWindow 显示前于 UI 线程执行；AGENTS.md:75 原写明「no blocking work before the first frame」，revert 提交消息记录了产品理由（无它则窗口先开在主题底色上，golden 基线与 UX 回退）。第二处：首次刷新时跳过卫（BackgroundViewModel.cs:153-160）因 lastBackgroundSourceKey/lastDecodeTarget 未置而不能命中，:232 于线程池再次全量解码同一内置图。进展 2026-09-14（700e674）：必须做的文档半项已交付——AGENTS.md:75 改写为「重活不占首帧路径 + 内置壁纸构造期同步解码是唯一刻意例外，勿擅自改回异步」；CONTEXT.md 复核无同类声明无需改动。仍开放：消除首次刷新二次冗余解码的调查（需先确认跳过卫的解码目标可合法匹配）。",
+      "resolution_note": "2026-09-17：文档半项（AGENTS.md 的首帧例外说明）早已随 `700e674` 交付；本轮解决的是残留的**二次冗余解码**。**先回答台账要求确认的那件事**：「跳过卫的解码目标能否合法匹配」——不能靠播种匹配，但**对内置来源而言目标比较本身无意义**：①构造点早于窗口 Attach（`App.axaml.cs:61` 先解析 VM、`:62` 才构造 `MainWindow`，后者在构造器里 Attach 度量服务），所以构造期只能取到兜底目标（1920×1080 → 目标框 2400×1350），而首次刷新在窗口显示后取到真实尺寸（例 1300×754 → 1625×943），两者必然不同；②`LoadBundledBackground` 是 `new Bitmap(stream)` 的原生解码，**忽略目标尺寸**（该图没有更大的一档可解），所以两次解码产出同一张 2560×1388 位图。**实测代价**（探针跑完已删）：内置壁纸 3317 KiB / 2560×1388，单次原生解码 32–46 ms（线程池上约 42 ms）——即每次启动白解一遍，并短暂多驻留约 14 MB 位图，外加一次在两帧间不可见的交叉淡化与一次重复的主题取色。**修复（两处，缺一不可）**：构造期把来源键与解码目标记为「已满足」（位图为 null 时不记，守卫的 not-null 条件自会让它重试）；守卫对内置来源不比较目标（`targetDecidesReuse`）。**实测门禁**：verify.ps1 退出码 0（单元 1875 通过 / 0 失败 / 2 可见跳过，无头 188，覆盖率行 87.57% / 分支 93.86%）。**变异验证**：拆掉目标无关性判断、或拆掉构造期播种，`…_WhenBundledSource_FirstRefreshReusesTheConstructorsBitmap` 各自变红（30 → 29 通过）。**一处过程教训（值得留在记录里）**：该用例的初版没注入窗口尺寸，构造期与首次刷新都取兜底目标、恰好相等，于是它对「目标无关性」这条关键分支并不敏感（第一次变异验证没红）——改为注入尺寸会变的假窗口、复现生产时序后才咬得住。"
     },
     "AUD-PERF-006": {
       "title": "并行安装校验的进度回调可瞬时回退（Interlocked 递增与回调非原子）",
