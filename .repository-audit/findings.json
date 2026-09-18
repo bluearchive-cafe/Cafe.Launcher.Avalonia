@@ -111,14 +111,15 @@
       "category": "performance/download-integrity",
       "severity": "low",
       "confidence": 95,
-      "status": "open",
-      "disposition": "Architecture Decision",
+      "status": "accepted-risk",
+      "disposition": "Accept Risk",
       "recommendation_validation": "Strongly Supported",
       "first_seen_commit": "ab156dd",
       "last_verified_commit": "67229b5",
       "resolved_commit": null,
       "guard": "已落地：校验跳过计数 Verbose 日志（DownloadExecutor.cs:341-344）。剩余决策：更新路径是否引入修复通道式见证摊销（须保自愈契约，Benchmark 后采纳）",
-      "delta_note": "2026-09-14 复核：Medium→Low 降档。67229b5 已交付有界并行 min(ProcessorCount,8)（DownloadExecutor.cs:28,284-330）、下载期 verifiedHashes 跨轮累积（DownloadSession.cs:413-435）、修复通道见证跳过（PlannedFileHash）。残留：更新计划的 plannedHashes 刻意为空（DownloadPlan.cs:21-29），未变更文件仍全读一遍——这是代码注释明示的唯一内容损坏自愈通道（:260-264）。"
+      "delta_note": "2026-09-14 复核：Medium→Low 降档。67229b5 已交付有界并行 min(ProcessorCount,8)（DownloadExecutor.cs:28,284-330）、下载期 verifiedHashes 跨轮累积（DownloadSession.cs:413-435）、修复通道见证跳过（PlannedFileHash）。残留：更新计划的 plannedHashes 刻意为空（DownloadPlan.cs:21-29），未变更文件仍全读一遍——这是代码注释明示的唯一内容损坏自愈通道（:260-264）。 2026-09-17 基准实测（用户指令「聚焦 perf 001」）：**测量已交付，且推翻了本条原判据里的规模前提**。方法：在真实安装（`F:\\YostarGames\\BlueArchive_JP`）上按生产同形的循环测量——只读清单指向的文件、`Crc64Service.ComputeFileAsync`、并行度同 `VerificationParallelism`（本机 12 逻辑核 → 取上限 8）、遇哈希不符只计数不删除（实测 0 处不符，故该循环与生产路径等价）。环境：F: 为 SanDisk SSD PLUS 1000GB（SATA SSD）。**测量结果**：清单 157 文件 / 1119.9 MiB（磁盘上另有 1054 个文件不在清单内）；现状的全量重读 + CRC64 冷态 **5.92s（189 MiB/s）**、热态 **0.91s（1225 MiB/s）**；见证跳过（`PlannedFileHash.Matches` 的 stat 比较）157 文件 **0.003s**（约 20 µs/文件）；单线程哈希最大文件（227 MiB）0.78s（292 MiB/s）。**规模前提更正**：本条原写「小更新 + 大安装场景仍是一次全树读（现最多 8 路并行）」，实测不成立——清单只覆盖**启动器管理的客户端**（157 文件 / 1.09 GiB，全部在盘上），而审计里那棵「37k 文件 / 24 GB」是**目录遍历**的规模，其中 1054 个 `BlueArchive_Data/StreamingAssets/AssetBundles/*` 是**游戏自己下载**的资源、不在清单内，校验根本不碰。因此重读成本由**客户端**大小决定（1.09 GiB），与用户装了多少资源无关。**成本模型（线性，供任意规模换算）**：冷读约 5.4s/GiB、热读约 0.84s/GiB、见证 stat 约 20ms/千文件。**触发条件也收窄了**：全新安装不付这笔成本（下载期 `verifiedHashes` 覆盖全部文件——本机现场日志即如此：`CRC check complete: 157 passed, 0 failed, 157 skipped by verified/witness hash`）；零差异的检查更新不进校验循环（`PrepareDownloadPlanAsync` 的零差异分支直接返回 `CompletedResult`）。**只有真正发生更新的那一次**才全量重读未下载的那些文件。**收益上界**：本机规模下每次实际更新省 5.9s（冷）/ 0.9s（热）。**建议**：维持现状（结案为 accepted-risk 或书面接受），理由——收益由客户端体积封顶（当前 1.09 GiB）、而代价是要新增一份**跨会话持久化**的见证索引（`manifest.json` 是与官方启动器共享的格式契约、字段序不可改，见证只能落在我们自己的状态里），并放弃「每次更新都对未变更客户端文件做内容校验」这一唯一的自动自愈（修复操作仍是显式的全量内容校验）。**重开判据**：客户端体积显著增长时按上面的每 GiB 系数换算即可（10 GiB 客户端 ≈ 冷读 54s/次更新），任一时刻也可直接用本段的系数复核，无需重测。",
+      "resolution_note": "2026-09-17 结案为接受风险（用户裁定「结案」，依据本条的基准实测）。测量：真实安装（F: SATA SSD，12 核 → 并行度 8）上按生产同形循环——清单 157 文件 / 1119.9 MiB，全量重读 + CRC64 冷态 5.92s（189 MiB/s）、热态 0.91s（1225 MiB/s）；见证跳过（stat）0.003s；单线程 292 MiB/s。成本模型：冷读 5.4s/GiB、热读 0.84s/GiB、见证 stat 20ms/千文件。**规模前提经实测更正**：重读成本由启动器管理的**客户端**体积封顶（当前 1.09 GiB），与安装总量无关——审计此前引用的「37k 文件 / 24 GB」是目录遍历规模，其中 1054 个游戏自下载的 AssetBundles 不在清单内、校验不碰；且全新安装（下载期 verifiedHashes 全覆盖）与零差异的检查更新都不付这笔成本。**接受理由**：收益上界为每次实际更新 5.9s（冷）/ 0.9s（热），而引入见证摊销需要新增一份跨会话持久化的见证索引（`manifest.json` 是与官方启动器共享的格式契约、字段序不可改，见证只能落在我们自己的状态里），并放弃「每次更新都对未变更客户端文件做内容校验」这一唯一的**自动**自愈（修复操作仍是显式的全量内容校验）。**重开判据（无需重测）**：客户端体积显著增长时按每 GiB 系数换算（10 GiB ≈ 冷读 54s/次更新）。**同批更正**：本条此前「小更新 + 大安装 = 一次全树读」的判据措辞已按实测改写（见 delta_note 末段）。"
     },
     "AUD-CI-001": {
       "title": "非 Windows 平台分支不随变更执行（linux-tests.yml 仅 dispatch+weekly；已由 build.yml ubuntu job 收口）",
@@ -199,14 +200,15 @@
       "category": "performance/ui-thread",
       "severity": "low",
       "confidence": 85,
-      "status": "open",
-      "disposition": "Refactor",
+      "status": "accepted-risk",
+      "disposition": "Accept Risk",
       "recommendation_validation": "Plausible",
       "first_seen_commit": "ab156dd",
       "last_verified_commit": "67229b5",
       "resolved_commit": null,
       "guard": null,
-      "delta_note": "2026-09-14 复核：仍成立。窗口内无提交触及 RemoteContentViewModel（git log 证实）。现行证据：Apply（:152-195）每次 DisposeBannerBitmaps（:696-704）后重取缓存重解码全部横幅（:546-558）；Apply 触发点为启动（ShellLifecycle.cs:240）、每次设置保存/重置（:310,:353）、每次游戏操作完成（:372→:686-704）。既有缓解：24h 磁盘字节缓存（ImageCacheService.cs:23,:179-184）、线程池解码（:555-558）、4 路并发上限（:22）、陈旧解码丢弃（:565-571）。残留成本为全量位图重解码，未量化。"
+      "delta_note": "2026-09-14 复核：仍成立。窗口内无提交触及 RemoteContentViewModel（git log 证实）。现行证据：Apply（:152-195）每次 DisposeBannerBitmaps（:696-704）后重取缓存重解码全部横幅（:546-558）；Apply 触发点为启动（ShellLifecycle.cs:240）、每次设置保存/重置（:310,:353）、每次游戏操作完成（:372→:686-704）。既有缓解：24h 磁盘字节缓存（ImageCacheService.cs:23,:179-184）、线程池解码（:555-558）、4 路并发上限（:22）、陈旧解码丢弃（:565-571）。残留成本为全量位图重解码，未量化。 2026-09-17 收益定量（用户指令「聚焦」后实测，**结论是本条建议的补救不划算**）：①**真实横幅的尺寸与解码成本**：本机 image-cache 里 5 张真实横幅是 **460×220 的 PNG、123–202 KiB**（已逐张核对像素尺寸，并抽看一张确认是官方宣传横幅而非社交二维码），单张解码 1.5–2.6 ms（首次 15.9 ms，冷启动），**5 张一轮合计约 10.6 ms CPU**、4 路并发墙钟 3.2–25.2 ms（随预热）；②**Apply 的同步部分**（条目与导航点重建，不含被 fire-and-forget 的解码）对 5 张横幅约 **0.7–1.5 ms/次**；③**上界探针**：合成 1920×800 的 PNG 解码 4.0 ms——注意该图是纯色低熵，真实大图的解码会明显更慢，故这只是下界形式的量级参考。**放在刷新路径里看**：触发 Apply 的那次刷新（设置保存/重置、游戏操作完成、资源面板源切换）经 `LauncherCoreService.LoadAsync` 会并发打**至少 6 个远端 API**（game-config、base-config、cdn-config、operations-resource、social-media-resource、installation-config），而横幅解码是**线程池上的本地 24h 字节缓存 + 约 10 ms CPU**（`ImageCacheService` 命中缓存即不联网）。即本条要消掉的那笔工作在它所在的刷新里低两到三个数量级，且不在 UI 线程上。**建议：不做本条建议的补救（每 URL 位图备忘）**——收益约 10 ms/次刷新的后台 CPU，代价是把位图所有权从条目移交给备忘（`DisposeBannerBitmaps`、`PreloadBannerImageAsync` 的陈旧丢弃与 `Dispose` 三处释放语义都要改），外加失效/寿命规则（`manifest`-式的共享契约不相关，但备忘必须与 `ImageCacheService` 的 24h 新鲜度对齐，否则同 URL 换图会长期不刷新）。**一并记录被否的替代设计**：不加备忘而改为「横幅 URL 列表未变则跳过整段重建」——同样省下这 10 ms 与那 0.7–1.5 ms 的条目重建，且不动所有权，但它引入第二条状态同步路径，且有一个具体陷阱：条目 `Title` 是本地化的，语言切换时若走跳过分支会留下旧语言的标题——故即便要做也须把本地化状态纳入跳过判据，收益与复杂度仍不匹配。**重开判据**：解码成本随横幅数量与尺寸线性增长（实测 460×220 ≈ 2 ms/张）；若远端 API 开始下发远大于此的横幅或数量显著增加（例如 10 张 1200×500 ≈ 100 ms 量级），或刷新路径的其它成本降到同一量级时，按这些系数重新评估即可。",
+      "resolution_note": "2026-09-17 结案为接受风险（用户裁定「可以」，依据本条的收益定量）。实测：真实横幅 460×220 PNG / 123–202 KiB，单张解码 1.5–2.6 ms（首次 15.9 ms），5 张一轮约 10.6 ms CPU（4 路并发墙钟 3.2–25.2 ms）；Apply 的同步重建部分 0.7–1.5 ms/次。**接受理由**：这笔工作在它所在的刷新里低两到三个数量级——触发 Apply 的刷新经 `LauncherCoreService.LoadAsync` 会并发打至少 6 个远端 API，而横幅解码是线程池上的本地 24h 字节缓存 + 约 10 ms CPU，且不在 UI 线程上；原建议的「每 URL 位图备忘」要把位图所有权从条目移交出去（`DisposeBannerBitmaps`、预加载的陈旧丢弃、`Dispose` 三处释放语义都要改）并新增与 24h 新鲜度对齐的失效规则，收益与复杂度不匹配。**一并否掉的替代设计**：「URL 列表未变则跳过整段重建」省下同一笔 10 ms 与条目重建、不动所有权，但引入第二条状态同步路径，且有具体陷阱——条目 `Title` 是本地化的，跳过分支会在语言切换后留下旧语言标题（要做也须把本地化状态纳入跳过判据）。**重开判据（按线性系数，无需重测）**：460×220 ≈ 2 ms/张；若远端开始下发远大于此或数量明显增加的横幅（10 张 1200×500 ≈ 100 ms 量级），或刷新路径其它成本降到同一量级时重新评估。本条不产生代码改动（原处置 Refactor 经定量后改判为不做）。"
     },
     "AUD-PERF-005": {
       "title": "revert c826f8a 恢复内置壁纸构造期同步解码：首帧前 UI 线程全分辨率 PNG 解码（与 AGENTS.md「首帧前无阻塞工作」表述冲突）+ 首次刷新二次冗余全量解码",

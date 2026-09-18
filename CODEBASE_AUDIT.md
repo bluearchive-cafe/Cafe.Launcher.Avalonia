@@ -84,14 +84,14 @@
 - Critical：0
 - High：0
 - Medium：0
-- Low：6 open（决策/设计轮门控：AUD-PERF-001、AUD-PERF-004、AUD-PERF-005 残留、AUD-SEC-001、AUD-SEC-002、AUD-ARCH-005）+ 4 accepted-risk（MAINT-002、SEC-004、SEC-006、ARCH-007）
+- Low：4 open（AUD-PERF-005 残留、AUD-SEC-001、AUD-SEC-002、AUD-ARCH-005）+ 6 accepted-risk（PERF-001、PERF-004、MAINT-002、SEC-004、SEC-006、ARCH-007）
 - 本窗口解决：14 项（8 项随上轮修复落地：ARCH-002/003、TEST-002/003/004、PERF-002/003、MAINT-002；6 项随同日修复轮：ARCH-004/006、CI-001、PERF-006、SEC-003/005）；第二修复轮再解决 6 项（TEST-005/006/007、MAINT-003/004、PERF-007）并将 SEC-006 结案为 accepted-risk；CI 对账轮新立案 3 项（AUD-CI-002/003/004）并同日全部解决；功能轮（2026-09-15）新立案 1 项（ARCH-008）并于同日跟进按建议 (a) 解决（`6408c58`）；随后按用户追问再立案 AUD-ARCH-009（下载/安装/修复闸门的三处缺口）并同日解决（`6408c58`）；CI 对账复核结案 AUD-CI-001（其建议已落地为 `build.yml` 的 push/PR linux 作业）、新立案 AUD-CI-005（该作业连续红且非 required）并于同日修复、作业首绿（`08c53f8`）；CI 复查（2026-09-15 深夜）新立案 AUD-CI-006（生产侧平台假设：`Path.GetFileName` 在 Unix 上切不开配置里 Windows 形状的 `params`，游戏可执行文件静默移出家族）并同日解决（`8461044`）；CI 续查（2026-09-15 深夜）新立案 AUD-TEST-008（并行校验／下载路径上测试侧收集未加锁或非原子自增，两次 CI 偶发红）并同日解决（`e83334b` + `0060855`）；计划落地期间 `779664f` 解决 AUD-TEST-013（= `DEF-4`，无头套件主题变体泄漏：golden 侧钉住基线值 + 新增 `ThemeVariantSnapshot` 设施，两条新守卫各做变异验证，两处锚点复核为一真一假）；`59647cc` 解决 AUD-TEST-010（= `DEF-2`，动效叠层扫描改为按目录发现 + 反空转基线）、`588d80c` 解决 AUD-ARCH-012（= `DEF-5`，快照过期的拒绝改为可见，同批 `D3` 把修复的两道闸门收进旅程并钉住「不得停在 Progress」的顺序不变量）；同窗口另有 `B5`（`28b842b`）把 `LocalDiagnostics` 的九处包装收成两个核心，其守卫由加强后的 `LocalDiagnostics_NewFacades_WriteExpectedLevels` 承担
 
 **一处上轮审计证据更正（重要）**：上轮安全节声明「签名 Authorization 头绝不跟随重定向转发」——复核证实该头经 `RemoteRequestOptions.ConfigureRequest` 钩子在**每一重定向跳重发**（含跨主机），已立案为 AUD-SEC-003（Low）。这推翻了上轮对 DNS 重绑定残余风险影响边界的部分论证。
 
 最重要的风险/行动（第二修复轮后剩余，全部为决策/设计轮门控）：
 
-1. **AUD-PERF-001**（Low）— 更新路径未变更文件的全读是文档化的损坏自愈设计（与官方启动器行为一致），已并行化 ≤8 + 下载期哈希跨轮复用；剩余的见证摊销须先基准实测再决策，不得弱化自愈语义。
+1. **AUD-PERF-001**（Low）— **已结案为接受风险**（2026-09-17，用户裁定）：基准实测交付并更正规模前提（成本由客户端体积封顶），收益上界 5.9s（冷）/0.9s（热）每次实际更新，不抵「新增跨会话持久化见证索引 + 放弃唯一自动自愈」的代价；系数与重开判据见条目。
 2. **AUD-PERF-004**（Low）— 每次壳层刷新全量重解码横幅位图；位图备忘的补救验证为 Plausible，需要专属设计轮处理轮播/陈旧释放生命周期，不宜顺手改。
 3. **AUD-PERF-005 残留**（Low）— 首帧权衡已文档化（700e674）；二次冗余解码的消除需先确认跳过卫可合法匹配。
 4. **AUD-ARCH-005**（Low，接受中）— ShellLifecycle 的 Wire/Unwire 密度：若再因结构原因触碰，按 ADR-023 声明表收敛。
@@ -398,7 +398,7 @@
 
 - 严重度：Low｜置信度：85｜状态：open（窗口内零提交触及该文件，git log 证实）｜处置：Refactor
 - **证据**：`ViewModels/RemoteContentViewModel.cs:152-195` 每次 `Apply`（启动 `ShellLifecycle.cs:240`、每次设置保存/重置 :310/:353、每次游戏操作完成 :372→:686-704）`DisposeBannerBitmaps()`（:696-704）后全量重取缓存重解码（:546-558）。既有缓解充分：24h 磁盘字节缓存（`ImageCacheService.cs:23,:179-184`）、线程池解码（:555-558）、4 路并发上限（:22）、陈旧解码丢弃（:565-571）。
-- **建议**：以 ImageCacheService 已有的 URL/CRC 键做每 URL 位图备忘。**建议验证**：Plausible。
+- **建议（已被 2026-09-17 实测取代）**：原建议「以 ImageCacheService 已有的 URL/CRC 键做每 URL 位图备忘」（验证级 Plausible）。**实测结论：不划算**——真实横幅是 **460×220 的 PNG（123–202 KiB）**，单张解码 1.5–2.6 ms，5 张一轮约 **10.6 ms CPU**（4 路并发墙钟 3.2–25.2 ms），Apply 的同步重建部分 0.7–1.5 ms/次；而触发 Apply 的那次刷新会并发打**至少 6 个远端 API**（`LauncherCoreService.LoadAsync`），即这笔工作在它所在的刷新里低两到三个数量级、且不在 UI 线程上。备忘的代价是把位图所有权从条目移交出去（三处释放语义都要改）并新增与 24h 缓存对齐的失效规则。
 
 ### AUD-SEC-001 — URL 校验与拨号间 DNS 重绑定 TOCTOU 窗口
 
@@ -557,7 +557,7 @@
 **结论：上轮全部性能发现落地且质量好（修复非纸面）；复审独立重扫确认启动/首帧、定时器、事件泄漏、位图生命周期、ArrayPool 修复均干净，新立案一条 Low（PERF-007 非下载阶段逐文件 UI 回调）与四条 advisory。**
 
 - **复审核实干净**：启动/首帧路径除文档化壁纸解码外仅 `ImageCacheService` 一处 `Directory.CreateDirectory`；全仓库定时器清点（2 个自停一次性动效 timer、1 轮播、2 个 250ms 内核等待轮询 + 生成守卫的 debounce）；`Crc64Service`/`FileDownloadService` 池化租还并发正确；`ShellLifecycle`/`ShellStartup` Wire 有 `isWired` 守卫，overlay 重订阅先退订；壁纸旧位图交叉淡化释放握手与陈旧代次处置正确。
-- **AUD-PERF-001 残留**与 **AUD-PERF-005 残留**见 Low 节；PERF-006 已修复（`608d888`）；**AUD-PERF-007** 已随 `608d888` 解决（PercentProgressGate 百分比门控）；settings 双读双解析、reparse 游走重复 stat、M3 方案重建、cacheLocks 保留见 Advisory。
+- **AUD-PERF-001 残留已有基准实测（2026-09-17）**：在真实安装上按生产同形的循环测得——清单 157 文件 / 1119.9 MiB，全量重读 + CRC64（8 路并行）冷态 **5.92s（189 MiB/s）**、热态 **0.91s（1225 MiB/s）**；见证跳过（stat 比较）**0.003s**；单线程哈希 292 MiB/s。**并更正规模前提**：清单只覆盖启动器管理的客户端（157 文件，全部在盘上），审计此前引用的「37k 文件 / 24 GB」是**目录遍历**规模——其中 1054 个 `StreamingAssets/AssetBundles/*` 由游戏自己下载、不在清单内，校验不碰。故重读成本由客户端体积封顶（当前 1.09 GiB），与装了多少资源无关；成本模型为冷读 5.4s/GiB、热读 0.84s/GiB、见证 stat 20ms/千文件。触发条件也收窄：全新安装与零差异的检查更新都不付这笔成本，只有真正发生更新的那一次才全量重读未下载的文件。**建议维持现状**（收益由客户端体积封顶，而代价是新增跨会话持久化的见证索引并放弃每更新一次的内容自愈）。**AUD-PERF-005 残留**见 Low 节；PERF-006 已修复（`608d888`）；**AUD-PERF-007** 已随 `608d888` 解决（PercentProgressGate 百分比门控）；settings 双读双解析、reparse 游走重复 stat、M3 方案重建、cacheLocks 保留见 Advisory。
 
 ## Maintainability / Technical Debt
 
@@ -687,9 +687,9 @@ CI 对账轮（2026-09-14 晚）顺带落地的守卫：
 
 ## Recommended Priorities
 
-1.（决策后执行）AUD-PERF-001 见证摊销：先以新增的 Verbose 跳过计数日志基准实测，再决定是否引入。
-2.（专属设计轮）AUD-PERF-004 横幅位图备忘：Plausible 级补救，需先设计轮播位图的生命周期（复用/失效/陈旧释放）再动手。
-3.（随下次触碰）AUD-PERF-005 二次解码调查；AUD-ARCH-005 若再动 Shell 按声明表收敛 Wire/Unwire。
+1.（**已结案**）AUD-PERF-001 见证摊销——2026-09-17 结案为接受风险。留档：2026-09-17 的基准实测给出全部系数（冷读 5.4s/GiB、热读 0.84s/GiB、见证 stat 20ms/千文件）并更正了规模前提（成本由**客户端**体积封顶，当前 1.09 GiB，与资源总量无关）。本报告的建议是**维持现状**：本机每次实际更新的收益上界为 5.9s（冷）/ 0.9s（热），而代价是要新增跨会话持久化的见证索引（`manifest.json` 是与官方启动器共享的格式契约，见证只能落在我们自己的状态里）并放弃「每次更新都校验未变更客户端文件」这一唯一自动自愈。重开判据：客户端体积显著增长时按每 GiB 系数换算（10 GiB ≈ 冷读 54s/次更新），无需重测。
+2.（**已结案**）AUD-PERF-004 横幅位图备忘——2026-09-17 收益定量后结案为接受风险（原处置 Refactor 改判为不做）。留档：真实横幅 460×220、5 张一轮约 10.6 ms CPU，而触发它的刷新并发打至少 6 个远端 API，收益低两到三个数量级；系数与重开判据（10 张 1200×500 ≈ 100 ms 量级）见条目。
+3.（**现行焦点**）AUD-PERF-005 残留：首次刷新的二次冗余解码——需先确认跳过卫的解码目标能否合法匹配；AUD-ARCH-005 若再动 Shell 按声明表收敛 Wire/Unwire。
 4.（用户侧，可选）AUD-CI-005 残留：把 `linux-unit-tests` 加进 required status checks——作业现已首绿，加进去才能真正挡住平台回归，只有仓库管理员能改。
 5.（维持接受）AUD-SEC-001/002 与已书面化的 SEC-004/SEC-006/ARCH-007：除非威胁模型变化。
 
