@@ -120,6 +120,23 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         }
 
         backgroundImageSource = bundledImageLoader();
+
+        // 构造期交付的那张内置图，就是首次刷新要的同一张：内置图由 `LoadBundledBackground`
+        // 按原生分辨率解码、**忽略目标尺寸**（该图也没有更大的一档可解），因此把来源键与解码
+        // 目标一并记为「已满足」，首次刷新即可走跳过卫、不再重解码一遍。
+        // 此前两个字段都为空，窗口尺寸落定后的第一次刷新必然重跑整条管线——实测那次冗余
+        // 解码 32–46 ms，并短暂多驻留一份 2560×1388 位图（约 14 MB），外加一次无意义的
+        // 交叉淡化与一次重复的主题取色（AUD-PERF-005 残留）。
+        // 注意构造点早于窗口 Attach（App.axaml.cs 先解析 VM 再构造 MainWindow），所以这里
+        // 取到的是兜底尺寸——正因为如此，首次刷新的目标与它不同，光播种还不够，守卫必须
+        // 知道内置来源的目标比较是无意义的（见下）。
+        // 位图为 null（内置图加载失败）时不记：守卫的 not-null 条件自会让它重试。
+        if (backgroundImageSource is not null)
+        {
+            lastBackgroundSourceKey = BackgroundSources.Bundled;
+            // 只用作重解码路径的增长基准；内置来源的实际解码与目标无关。
+            lastDecodeTarget = BackgroundImageDecoder.GetTargetBox(GetPhysicalSize());
+        }
     }
 
     /// <summary>窗口显著变大后的壁纸重解码去抖窗口；测试可调小。</summary>
@@ -151,9 +168,17 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         // 壁纸并重放交叉淡化与主题取色，用户可感知卡顿。仅稳定来源可跳过——
         // 文件夹壁纸每次随机选图、遥源失败回落均不可跳过（见下）。
         var sourceKey = ResolveStableBackgroundSourceKey(settings, snapshot);
+        // 目标比较只对「按目标解码」的来源有意义。内置图的解码不看目标
+        // （`LoadBundledBackground` 原生解码：该图没有更大的一档可解），重解码永远产出同一张
+        // 位图，所以对它比较目标只会判出「白解一遍」——构造点早于窗口 Attach，构造期记下的
+        // 目标必然与首次刷新算出的不同（实测兜底 1920×1080 → 2400×1350 vs 实际 1300×754 → 1625×943）。
+        var targetDecidesReuse = !string.Equals(
+            sourceKey,
+            BackgroundSources.Bundled,
+            StringComparison.Ordinal);
         if (sourceKey is not null
             && sourceKey == lastBackgroundSourceKey
-            && decodeTarget == lastDecodeTarget
+            && (!targetDecidesReuse || decodeTarget == lastDecodeTarget)
             && BackgroundImageSource is not null)
         {
             return;

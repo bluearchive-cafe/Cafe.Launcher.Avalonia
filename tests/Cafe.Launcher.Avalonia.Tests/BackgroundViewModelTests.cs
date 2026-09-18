@@ -160,6 +160,101 @@ public sealed class BackgroundViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateBackgroundImageAsync_WhenBundledSource_FirstRefreshReusesTheConstructorsBitmap()
+    {
+        // AUD-PERF-005 残留：构造期已经按原生分辨率交付了内置壁纸（该解码忽略目标尺寸），
+        // 首次刷新没有理由再解一遍同一张图——实测那次冗余解码 32–46 ms，并短暂多驻留一份
+        // 2560×1388 位图。
+        //
+        // 用例必须复现生产的时序，否则测不到关键分支：构造点在窗口 Attach 之前（构造期只能
+        // 取到兜底尺寸），首次刷新发生在窗口显示之后（取到真实尺寸）——两个目标框不同，
+        // 光靠播种匹配不上，靠的是「内置来源不比较目标」那一条。假窗口在这里负责这个落差。
+        var bundledDecodeCount = 0;
+        var metrics = new SteppedWindowMetrics();
+        using var cache = CreateCache(_ => PngBytes);
+        using var viewModel = new BackgroundViewModel(
+            cache,
+            new LocalDiagnostics(),
+            _ => { },
+            (path, _) => new TestImage(),
+            () =>
+            {
+                bundledDecodeCount++;
+                return new TestImage();
+            },
+            metrics);
+        var delivered = viewModel.BackgroundImageSource;
+
+        metrics.ReportRealWindowSize();
+
+        await viewModel.UpdateBackgroundImageAsync(
+            new LauncherSettings { BackgroundSource = BackgroundSources.Bundled },
+            snapshot: null,
+            CancellationToken.None);
+
+        Assert.Equal(1, bundledDecodeCount);
+        Assert.Same(delivered, viewModel.BackgroundImageSource);
+    }
+
+    [Fact]
+    public async Task UpdateBackgroundImageAsync_WhenBundledSourceButConstructorLoadFailed_RetriesTheDecode()
+    {
+        // 构造期加载失败（位图为 null）时不得把「已交付」记成事实：首次刷新必须重试。
+        var bundledDecodeCount = 0;
+        using var cache = CreateCache(_ => PngBytes);
+        using var viewModel = new BackgroundViewModel(
+            cache,
+            new LocalDiagnostics(),
+            _ => { },
+            (path, _) => new TestImage(),
+            () =>
+            {
+                bundledDecodeCount++;
+                return bundledDecodeCount == 1 ? null : new TestImage();
+            });
+
+        await viewModel.UpdateBackgroundImageAsync(
+            new LauncherSettings { BackgroundSource = BackgroundSources.Bundled },
+            snapshot: null,
+            CancellationToken.None);
+
+        Assert.Equal(2, bundledDecodeCount);
+        Assert.IsType<TestImage>(viewModel.BackgroundImageSource);
+    }
+
+    [Fact]
+    public async Task UpdateBackgroundImageAsync_WhenRemoteSource_StillReplacesTheConstructorBitmap()
+    {
+        // 跳过只对内置来源成立：远端来源的键不同，首次刷新仍必须装载并替换占位图。
+        var hash = await ComputeHashAsync(PngBytes);
+        var bundledDecodeCount = 0;
+        using var cache = CreateCache(_ => PngBytes);
+        using var viewModel = new BackgroundViewModel(
+            cache,
+            new LocalDiagnostics(),
+            _ => { },
+            (path, _) => new TestImage(),
+            () =>
+            {
+                bundledDecodeCount++;
+                return new TestImage();
+            });
+        var placeholder = viewModel.BackgroundImageSource;
+
+        await viewModel.UpdateBackgroundImageAsync(
+            new LauncherSettings
+            {
+                BackgroundSource = BackgroundSources.Remote,
+                ThemeColorMode = ThemeColorModes.Wallpaper
+            },
+            CreateRemoteSnapshot(hash),
+            CancellationToken.None);
+
+        Assert.NotSame(placeholder, viewModel.BackgroundImageSource);
+        Assert.Equal(1, bundledDecodeCount);
+    }
+
+    [Fact]
     public async Task UpdateBackgroundImageAsync_WhenSourceChangedToBundled_FadesPreviousWallpaper()
     {
         using var cache = CreateCache(_ => PngBytes);
@@ -492,6 +587,25 @@ public sealed class BackgroundViewModelTests : IDisposable
     public void Dispose()
     {
         rootDir.Dispose();
+    }
+
+    /// <summary>
+    /// 模拟「构造点在窗口 Attach 之前」的时序：起初报兜底尺寸，窗口显示后报真实尺寸。
+    /// 这正是生产里构造期与首次刷新目标框不同的原因（App.axaml.cs 先解析 VM 再构造 MainWindow）。
+    /// </summary>
+    private sealed class SteppedWindowMetrics : IWindowMetricsService
+    {
+        private PixelSize size = Cafe.Launcher.Avalonia.Helpers.BackgroundImageDecoder.FallbackTarget;
+
+        public event Action? PhysicalSizeChanged
+        {
+            add { }
+            remove { }
+        }
+
+        public void ReportRealWindowSize() => size = new PixelSize(1300, 754);
+
+        public PixelSize GetPhysicalClientSize() => size;
     }
 
     private sealed class TestImage : IImage, IDisposable
