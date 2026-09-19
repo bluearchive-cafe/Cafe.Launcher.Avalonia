@@ -111,5 +111,73 @@ public sealed class ModalHostViewModelTests
         Assert.True(host.IsSettingsInteractive);
     }
 
+    // 模态闸口守卫：NotifyStackChanged 是手工通知清单，新增闸口时漏改其中一行
+    // 会留下「表面可见但点不动」的永久过期闸口（R2-c08）。
+    private static readonly IReadOnlyDictionary<ModalKind, string> GatedKinds = new Dictionary<ModalKind, string>
+    {
+        [ModalKind.Settings] = nameof(ModalHostViewModel.IsSettingsInteractive),
+        [ModalKind.ResourcePanel] = nameof(ModalHostViewModel.IsResourcePanelInteractive),
+        [ModalKind.LogViewer] = nameof(ModalHostViewModel.IsLogViewerInteractive),
+        [ModalKind.LogExport] = nameof(ModalHostViewModel.IsLogExportInteractive),
+        [ModalKind.Debug] = nameof(ModalHostViewModel.IsDebugInteractive),
+        [ModalKind.DesignGallery] = nameof(ModalHostViewModel.IsDesignGalleryInteractive),
+        [ModalKind.SetupWizard] = nameof(ModalHostViewModel.IsSetupWizardInteractive),
+    };
+
+    [Fact]
+    public void NotifyStackChanged_WhenGatedKindOpensAndCloses_NotifiesEachGateProperty()
+    {
+        foreach (var (kind, gateProperty) in GatedKinds)
+        {
+            var host = new ModalHostViewModel();
+            var gate = typeof(ModalHostViewModel).GetProperty(gateProperty)!;
+            var notified = new List<string>();
+            host.PropertyChanged += (_, e) => notified.Add(e.PropertyName!);
+
+            host.Open(kind, new TestModalContent());
+
+            Assert.Contains(gateProperty, notified);
+            Assert.Contains(nameof(ModalHostViewModel.IsBaseLayerInteractive), notified);
+            Assert.True((bool)gate.GetValue(host)!);
+
+            notified.Clear();
+            host.Close(kind);
+
+            Assert.Contains(gateProperty, notified);
+            Assert.Contains(nameof(ModalHostViewModel.IsBaseLayerInteractive), notified);
+            Assert.False((bool)gate.GetValue(host)!);
+        }
+    }
+
+    [Fact]
+    public void ModalKind_Classification_CoversEveryKindExactlyOnce()
+    {
+        var classified = GatedKinds.Keys.Concat(DialogKinds).ToList();
+
+        var allKinds = Enum.GetValues<ModalKind>();
+        Assert.Empty(allKinds.Except(classified));
+        Assert.Equal(allKinds.Length, classified.Distinct().Count());
+        foreach (var gateProperty in GatedKinds.Values)
+        {
+            Assert.NotNull(typeof(ModalHostViewModel).GetProperty(gateProperty));
+        }
+    }
+
+    private static readonly IReadOnlyCollection<ModalKind> DialogKinds =
+    [
+        ModalKind.DebugResetConfirmation,
+        ModalKind.Notice,
+        ModalKind.Update,
+        ModalKind.Error,
+        ModalKind.SetupWizardExitConfirmation,
+        ModalKind.UnsavedSettingsConfirmation,
+        ModalKind.SettingsResetConfirmation,
+        ModalKind.RepairConfirmation,
+        ModalKind.ResourcePanelSourceConfirmation,
+        ModalKind.UninstallConfirmation,
+        ModalKind.StopConfirmation,
+        ModalKind.DownloadRunningCloseConfirmation,
+    ];
+
     private sealed class TestModalContent : IModalContentViewModel;
 }

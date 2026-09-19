@@ -6,56 +6,92 @@
              x:Class="Cafe.Launcher.Avalonia.Views.SettingsGeneralSection"
              x:Name="SettingsRoot"
              x:DataType="vm:MainWindowViewModel">
-    <StackPanel Classes="settings-group">
-        <TextBlock Text="{Binding Shell.I18n[settingsGroupAppPreferences]}" Classes="group-title"/>
+    <StackPanel>
+        <StackPanel Classes="settings-group">
+            <TextBlock Text="{Binding Shell.I18n[settingsGroupAppPreferences]}" Classes="group-title"/>
 
-        <controls:SettingSelect ShowTopDivider="False"
-                                Title="{Binding Shell.I18n[language]}"
-                                Description="{Binding Shell.I18n[languageDescription]}"
-                                AutomationName="{Binding Shell.I18n[language]}"
-                                ItemsSource="{Binding Settings.Options.Language}"
-                                SelectedValue="{Binding Settings.Editor.Current.Language, Mode=TwoWay}"/>
+            <controls:SettingSelect ShowTopDivider="False"
+                                    Title="{Binding Shell.I18n[language]}"
+                                    Description="{Binding Shell.I18n[languageDescription]}"
+                                    AutomationName="{Binding Shell.I18n[language]}"
+                                    ItemsSource="{Binding Settings.Options.Language}"
+                                    SelectedValue="{Binding Settings.Editor.Current.Language, Mode=TwoWay}"/>
 
-        <controls:SettingSelect Title="{Binding Shell.I18n[closeBehavior]}"
-                                Description="{Binding Shell.I18n[closeBehaviorDescription]}"
-                                AutomationName="{Binding Shell.I18n[closeBehavior]}"
-                                ItemsSource="{Binding Settings.Options.CloseBehavior}"
-                                SelectedValue="{Binding Settings.Editor.Current.CloseBehavior, Mode=TwoWay}"/>
+            <controls:SettingSelect Title="{Binding Shell.I18n[closeBehavior]}"
+                                    Description="{Binding Shell.I18n[closeBehaviorDescription]}"
+                                    AutomationName="{Binding Shell.I18n[closeBehavior]}"
+                                    ItemsSource="{Binding Settings.Options.CloseBehavior}"
+                                    SelectedValue="{Binding Settings.Editor.Current.CloseBehavior, Mode=TwoWay}"/>
 
-        <controls:SettingSelect Title="{Binding Shell.I18n[launchBehavior]}"
-                                Description="{Binding Shell.I18n[launchBehaviorDescription]}"
-                                AutomationName="{Binding Shell.I18n[launchBehavior]}"
-                                ItemsSource="{Binding Settings.Options.AfterLaunchBehavior}"
-                                SelectedValue="{Binding Settings.Editor.Current.AfterLaunchBehavior, Mode=TwoWay}"/>
+            <controls:SettingSelect Title="{Binding Shell.I18n[launchBehavior]}"
+                                    Description="{Binding Shell.I18n[launchBehaviorDescription]}"
+                                    AutomationName="{Binding Shell.I18n[launchBehavior]}"
+                                    ItemsSource="{Binding Settings.Options.AfterLaunchBehavior}"
+                                    SelectedValue="{Binding Settings.Editor.Current.AfterLaunchBehavior, Mode=TwoWay}"/>
 
-        <controls:SettingSelect Title="{Binding Shell.I18n[motionMode]}"
-                                Description="{Binding Shell.I18n[motionModeDescription]}"
-                                AutomationName="{Binding Shell.I18n[motionMode]}"
-                                ItemsSource="{Binding Settings.Options.MotionMode}"
-                                SelectedValue="{Binding Settings.Editor.Current.MotionMode, Mode=TwoWay}"/>
+            <controls:SettingSelect Title="{Binding Shell.I18n[motionMode]}"
+                                    Description="{Binding Shell.I18n[motionModeDescription]}"
+                                    AutomationName="{Binding Shell.I18n[motionMode]}"
+                                    ItemsSource="{Binding Settings.Options.MotionMode}"
+                                    SelectedValue="{Binding Settings.Editor.Current.MotionMode, Mode=TwoWay}"/>
 
-        <controls:SettingRow Title="{Binding Shell.I18n[rememberWindowPositionAndSize]}"
-                             Description="{Binding Shell.I18n[rememberWindowPositionAndSizeDescription]}">
-            <controls:SettingRow.Action>
-                <ToggleSwitch Classes="setting-toggle"
-                              AutomationProperties.Name="{Binding Shell.I18n[rememberWindowPositionAndSize]}"
-                              IsChecked="{Binding Settings.Editor.Current.RememberWindowPositionAndSize, Mode=TwoWay}"
-                              OnContent="{Binding Shell.I18n[toggleOn]}"
-                              OffContent="{Binding Shell.I18n[toggleOff]}"
-                              VerticalAlignment="Center"/>
-            </controls:SettingRow.Action>
-        </controls:SettingRow>
+            <controls:SettingRow Title="{Binding Shell.I18n[rememberWindowPositionAndSize]}"
+                                 Description="{Binding Shell.I18n[rememberWindowPositionAndSizeDescription]}">
+                <controls:SettingRow.Action>
+                    <ToggleSwitch Classes="setting-toggle"
+                                  AutomationProperties.Name="{Binding Shell.I18n[rememberWindowPositionAndSize]}"
+                                  IsChecked="{Binding Settings.Editor.Current.RememberWindowPositionAndSize, Mode=TwoWay}"
+                                  OnContent="{Binding Shell.I18n[toggleOn]}"
+                                  OffContent="{Binding Shell.I18n[toggleOff]}"
+                                  VerticalAlignment="Center"/>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+        </StackPanel>
 
-        <controls:SettingRow Title="{Binding Shell.I18n[enableStartupUpdateCheck]}"
-                             Description="{Binding Shell.I18n[enableStartupUpdateCheckDescription]}">
-            <controls:SettingRow.Action>
-                <ToggleSwitch Classes="setting-toggle"
-                              AutomationProperties.Name="{Binding Shell.I18n[enableStartupUpdateCheck]}"
-                              IsChecked="{Binding Settings.Editor.Current.EnableStartupUpdateCheck, Mode=TwoWay}"
-                              OnContent="{Binding Shell.I18n[toggleOn]}"
-                              OffContent="{Binding Shell.I18n[toggleOff]}"
-                              VerticalAlignment="Center"/>
-            </controls:SettingRow.Action>
-        </controls:SettingRow>
+        <StackPanel Classes="settings-group">
+            <TextBlock Text="{Binding Shell.I18n[settingsGroupDisplay]}" Classes="group-title"/>
+
+            <controls:SettingSelect ShowTopDivider="False"
+                                    Title="{Binding Shell.I18n[statusDetailMode]}"
+                                    Description="{Binding Shell.I18n[statusDetailModeDescription]}"
+                                    AutomationName="{Binding Shell.I18n[statusDetailMode]}"
+                                    ItemsSource="{Binding Settings.Options.StatusDetailMode}"
+                                    SelectedValue="{Binding Settings.Editor.Current.StatusDetailMode, Mode=TwoWay}"/>
+
+            <controls:SettingRow Title="{Binding Shell.I18n[remoteContentCard]}"
+                                 Description="{Binding Shell.I18n[remoteContentCardDescription]}">
+                <controls:SettingRow.Action>
+                    <ToggleSwitch Classes="setting-toggle"
+                                  AutomationProperties.Name="{Binding Shell.I18n[remoteContentCard]}"
+                                  IsChecked="{Binding Settings.Editor.Current.ShowRemoteContentCard, Mode=TwoWay}"
+                                  OnContent="{Binding Shell.I18n[toggleOn]}"
+                                  OffContent="{Binding Shell.I18n[toggleOff]}"
+                                  VerticalAlignment="Center"/>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+        </StackPanel>
+
+        <StackPanel Classes="settings-group">
+            <TextBlock Text="{Binding Shell.I18n[settingsGroupUpdates]}" Classes="group-title"/>
+
+            <controls:SettingRow ShowTopDivider="False"
+                                 Title="{Binding Shell.I18n[enableStartupUpdateCheck]}"
+                                 Description="{Binding Shell.I18n[enableStartupUpdateCheckDescription]}">
+                <controls:SettingRow.Action>
+                    <ToggleSwitch Classes="setting-toggle"
+                                  AutomationProperties.Name="{Binding Shell.I18n[enableStartupUpdateCheck]}"
+                                  IsChecked="{Binding Settings.Editor.Current.EnableStartupUpdateCheck, Mode=TwoWay}"
+                                  OnContent="{Binding Shell.I18n[toggleOn]}"
+                                  OffContent="{Binding Shell.I18n[toggleOff]}"
+                                  VerticalAlignment="Center"/>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+
+            <controls:SettingSelect Title="{Binding Shell.I18n[launcherUpdateChannel]}"
+                                    Description="{Binding Shell.I18n[launcherUpdateChannelDescription]}"
+                                    AutomationName="{Binding Shell.I18n[launcherUpdateChannel]}"
+                                    ItemsSource="{Binding Settings.Options.UpdateChannel}"
+                                    SelectedValue="{Binding Settings.Editor.Current.UpdateChannel, Mode=TwoWay}"/>
+        </StackPanel>
     </StackPanel>
 </UserControl>

@@ -280,16 +280,8 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
             await WaitForAppearancePreviewToSettleAsync();
             CancelAppearancePreview();
 
-            if (editor.Current.ThemeColorMode == ThemeColorModes.Wallpaper)
-            {
-                // 新壁纸取色期间会有意保留旧色板，因此不能以 Count == 0 判断是否仍
-                // 在取色。始终等待最新任务，必要时再主动提取一次，确保提交的是当前图。
-                await Appearance.WaitForThemeRefreshToSettleAsync();
-                if (Appearance.ThemeColorPaletteItems.Count == 0)
-                {
-                    await Appearance.RefreshThemeColorPaletteFromCurrentBackgroundAsync(markDirty: false);
-                }
-            }
+            // 提交前确保色板对应当前壁纸（等待与补提取的判据在 Appearance 侧收拢）。
+            await Appearance.EnsureThemePaletteReadyForSaveAsync();
 
             editor.Commit(s =>
             {
