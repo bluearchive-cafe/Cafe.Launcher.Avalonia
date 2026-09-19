@@ -19,7 +19,7 @@
                                 AutomationProperties.Name="{Binding Shell.I18n[choose]}"
                                 IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                <materialIcons:MaterialIcon Kind="FolderOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
                                 <TextBlock Text="{Binding Shell.I18n[choose]}"/>
                             </StackPanel>
                         </Button>
