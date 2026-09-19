@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -33,6 +34,8 @@ internal sealed class DownloadExecutor
     private readonly LocalDiagnostics diagnostics;
     private readonly Func<Task> getPauseTask;
     private readonly Func<bool> isPaused;
+    private readonly Func<long> timestampProvider;
+    private readonly long timestampFrequency;
 
     internal DownloadExecutor(
         IFileDownloadService fileDownloadService,
@@ -40,7 +43,9 @@ internal sealed class DownloadExecutor
         IDownloadTransportSource transportSource,
         LocalDiagnostics diagnostics,
         Func<Task> getPauseTask,
-        Func<bool> isPaused)
+        Func<bool> isPaused,
+        Func<long>? timestampProvider = null,
+        long? timestampFrequency = null)
     {
         this.fileDownloadService = fileDownloadService;
         this.crc64Service = crc64Service;
@@ -48,6 +53,8 @@ internal sealed class DownloadExecutor
         this.diagnostics = diagnostics;
         this.getPauseTask = getPauseTask;
         this.isPaused = isPaused;
+        this.timestampProvider = timestampProvider ?? Stopwatch.GetTimestamp;
+        this.timestampFrequency = timestampFrequency ?? Stopwatch.Frequency;
     }
 
     /// <summary>
@@ -95,12 +102,14 @@ internal sealed class DownloadExecutor
             "GameDownload",
             $"Downloading {fileList.Count} files, total {FileSizeFormatter.Format(totalSize)}", CancellationToken.None).ConfigureAwait(false);
         var throttleState = speedLimitBytesPerSec > 0
-            ? new DownloadTransferThrottle(speedLimitBytesPerSec)
+            ? new DownloadTransferThrottle(speedLimitBytesPerSec, timestampProvider, timestampFrequency)
             : null;
         var progressAccumulator = new DownloadProgressAccumulator(
             totalSize,
             initialDownloadedSize,
-            TimeSpan.FromMilliseconds(100));
+            timestampProvider,
+            timestampFrequency,
+            Math.Max(1, (long)(TimeSpan.FromMilliseconds(100).TotalSeconds * timestampFrequency)));
         var pauseMeasurementLock = new object();
         Task? measuredPauseTask = null;
 

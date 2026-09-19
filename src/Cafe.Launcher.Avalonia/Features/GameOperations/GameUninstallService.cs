@@ -190,7 +190,7 @@ public sealed class GameUninstallService
             {
                 Success = true,
                 Message = BuildCompletionMessage(localizer, leftovers, keptPrefixPath),
-                AffectedFileCount = files.Count + 2
+                AffectedFileCount = files.Count + GamePaths.InstallationStateFileCount
             };
         }
         catch (Exception exception) when (StorageFailure.IsRecoverable(exception))
@@ -378,7 +378,7 @@ public sealed class GameUninstallService
         {
             Success = true,
             Message = localizer.F(LocalizationKeys.ReadyToUninstall, state.Manifest?.Files.Count ?? 0),
-            AffectedFileCount = (state.Manifest?.Files.Count ?? 0) + 2
+            AffectedFileCount = (state.Manifest?.Files.Count ?? 0) + GamePaths.InstallationStateFileCount
         };
     }
 

@@ -8,6 +8,7 @@ internal sealed class DownloadTransferThrottle
 {
     private readonly object sync = new();
     private readonly int bytesPerSecond;
+    private readonly Func<long> timestampProvider;
     private readonly long timestampFrequency;
     private readonly long startedAtTimestamp;
     private long totalBytes;
@@ -15,13 +16,13 @@ internal sealed class DownloadTransferThrottle
     private long pausedTicks;
 
     internal DownloadTransferThrottle(int bytesPerSecond)
-        : this(bytesPerSecond, Stopwatch.GetTimestamp(), Stopwatch.Frequency)
+        : this(bytesPerSecond, Stopwatch.GetTimestamp, Stopwatch.Frequency)
     {
     }
 
     internal DownloadTransferThrottle(
         int bytesPerSecond,
-        long initialTimestamp,
+        Func<long> timestampProvider,
         long timestampFrequency)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(bytesPerSecond);
@@ -29,22 +30,15 @@ internal sealed class DownloadTransferThrottle
 
         this.bytesPerSecond = bytesPerSecond;
         this.timestampFrequency = timestampFrequency;
-        startedAtTimestamp = initialTimestamp;
+        this.timestampProvider = timestampProvider;
+        startedAtTimestamp = timestampProvider();
     }
 
     internal TimeSpan RecordBytes(long bytes)
     {
         lock (sync)
         {
-            return RecordBytesCore(bytes, Stopwatch.GetTimestamp());
-        }
-    }
-
-    internal TimeSpan RecordBytesAt(long bytes, long timestamp)
-    {
-        lock (sync)
-        {
-            return RecordBytesCore(bytes, timestamp);
+            return RecordBytesCore(bytes, timestampProvider());
         }
     }
 
@@ -52,7 +46,7 @@ internal sealed class DownloadTransferThrottle
     {
         lock (sync)
         {
-            PauseCore(Stopwatch.GetTimestamp());
+            PauseCore(timestampProvider());
         }
     }
 
@@ -60,23 +54,7 @@ internal sealed class DownloadTransferThrottle
     {
         lock (sync)
         {
-            ResumeCore(Stopwatch.GetTimestamp());
-        }
-    }
-
-    internal void PauseAt(long timestamp)
-    {
-        lock (sync)
-        {
-            PauseCore(timestamp);
-        }
-    }
-
-    internal void ResumeAt(long timestamp)
-    {
-        lock (sync)
-        {
-            ResumeCore(timestamp);
+            ResumeCore(timestampProvider());
         }
     }
 

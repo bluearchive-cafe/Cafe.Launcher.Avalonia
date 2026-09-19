@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
-using Avalonia.Media.Imaging;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Features.Diagnostics;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
@@ -61,15 +60,17 @@ public sealed class ShellLifecycle : IShellRuntime
     /// DialogsViewModel 一并刷新。
     /// </summary>
     private readonly IReadOnlyList<ILanguageAwarePresentation> languageAwarePresentations;
-    private readonly Func<Bitmap?> getBackgroundBitmap;
-    private readonly Func<LauncherSettings, string?, CancellationToken, Task> previewAppearanceAsync;
-    private readonly Func<LauncherSettings, Task> applyLanguageAndThemeAsync;
-    private readonly Action<string?> openExternalUrl;
     private readonly bool ownsPresentationCollaborators;
     private readonly ShellRefreshCoordinator refreshCoordinator;
     private readonly IFilePickerService filePickerService;
     private readonly ShellStartup startup;
     private readonly ModalRegistrar modalRegistrar;
+
+    /// <summary>
+    /// 退订记录表：Wire 的每条接线经 <see cref="Attach"/> 配对登记，Unwire 逆序执行
+    /// 后清空——两份手抄订阅清单由此收敛为一份（R2-c07／D15／AUD-ARCH-005）。
+    /// </summary>
+    private readonly List<Action> detachers = [];
     private bool disposed;
     private bool isBusy;
     private bool isMotionReduced = true;
@@ -167,11 +168,6 @@ public sealed class ShellLifecycle : IShellRuntime
         this.ownsPresentationCollaborators = ownsPresentationCollaborators;
         ModalHost = family.ModalHost;
         modalRegistrar = new ModalRegistrar(ModalHost);
-
-        getBackgroundBitmap = background.GetBackgroundBitmap;
-        previewAppearanceAsync = PreviewAppearanceAsync;
-        applyLanguageAndThemeAsync = ApplyLanguageAndThemeAsync;
-        openExternalUrl = windowChrome.OpenExternalUrl;
 
         errorHandling.CriticalErrorRequested += OnCriticalError;
         localizer.LocalizationFailure += OnLocalizationFailure;
@@ -380,9 +376,9 @@ public sealed class ShellLifecycle : IShellRuntime
 
     private Task OnResourcePanelSourceSwitchConfirmed() => SwitchSourceThenOpenPanelAsync();
 
-    // 经 openExternalUrl（windowChrome 的注入缝）而非直接调 ExternalLinkService.Open：
+    // 经 windowChrome 的注入缝而非直接调 ExternalLinkService.Open：
     // 壳的全部外部链接出口统一走这一条缝，测试可注入记录委托。
-    private void OnUpdateAvailableConfirmed(string downloadUrl) => openExternalUrl(downloadUrl);
+    private void OnUpdateAvailableConfirmed(string downloadUrl) => windowChrome.OpenExternalUrl(downloadUrl);
 
     /// <summary>Refreshes shell state after a game operation and records resume behavior.</summary>
     public async Task HandleOperationsRefreshRequestedAsync(GameOperationsRefreshMode mode)
@@ -429,40 +425,90 @@ public sealed class ShellLifecycle : IShellRuntime
         return Task.CompletedTask;
     }
 
-    /// <summary>Subscribes cross-feature events once for the active shell lifecycle.</summary>
+    /// <summary>
+    /// Subscribes cross-feature events once for the active shell lifecycle.
+    /// 每条接线经 <see cref="Attach"/> 配对登记退订，登记顺序即 <see cref="Unwire"/>
+    /// 的逆序拆卸顺序。
+    /// </summary>
     public void Wire()
     {
         if (isWired) return;
         isWired = true;
 
-        settings.Appearance.GetBackgroundBitmap = getBackgroundBitmap;
-        settings.PreviewAppearanceAsync = previewAppearanceAsync;
-        settings.ApplyLanguageAndTheme = applyLanguageAndThemeAsync;
-        settings.SettingsSaved += HandleSettingsSavedAsync;
+        Attach(
+            () => settings.Appearance.GetBackgroundBitmap = background.GetBackgroundBitmap,
+            () => settings.Appearance.GetBackgroundBitmap = null);
+        Attach(
+            () => settings.PreviewAppearanceAsync = PreviewAppearanceAsync,
+            () => settings.PreviewAppearanceAsync = null);
+        Attach(
+            () => settings.ApplyLanguageAndTheme = ApplyLanguageAndThemeAsync,
+            () => settings.ApplyLanguageAndTheme = null);
+        Attach(
+            () => settings.SettingsSaved += HandleSettingsSavedAsync,
+            () => settings.SettingsSaved -= HandleSettingsSavedAsync);
 
-        resourcePanel.ResourcePanelSourceConfirmRequested += ShowResourcePanelSourceConfirmDialog;
-        dialogs.ResourcePanelSourceConfirm.Confirmed += OnResourcePanelSourceSwitchConfirmed;
+        Attach(
+            () => resourcePanel.ResourcePanelSourceConfirmRequested += ShowResourcePanelSourceConfirmDialog,
+            () => resourcePanel.ResourcePanelSourceConfirmRequested -= ShowResourcePanelSourceConfirmDialog);
+        Attach(
+            () => dialogs.ResourcePanelSourceConfirm.Confirmed += OnResourcePanelSourceSwitchConfirmed,
+            () => dialogs.ResourcePanelSourceConfirm.Confirmed -= OnResourcePanelSourceSwitchConfirmed);
 
-        operations.RefreshRequested += HandleOperationsRefreshRequestedAsync;
-        operations.OpenLogViewerRequested += OpenLogViewerAsync;
+        Attach(
+            () => operations.RefreshRequested += HandleOperationsRefreshRequestedAsync,
+            () => operations.RefreshRequested -= HandleOperationsRefreshRequestedAsync);
+        Attach(
+            () => operations.OpenLogViewerRequested += OpenLogViewerAsync,
+            () => operations.OpenLogViewerRequested -= OpenLogViewerAsync);
 
-        dialogs.DownloadRunningCloseConfirm.Confirmed += windowChrome.CloseAfterStoppingDownload;
-        dialogs.CloseRequested += windowChrome.RequestClose;
-        dialogs.ConfirmUpdateAvailableRequested += OnUpdateAvailableConfirmed;
-        dialogs.ErrorViewLogRequested += OpenLogViewer;
+        Attach(
+            () => dialogs.DownloadRunningCloseConfirm.Confirmed += windowChrome.CloseAfterStoppingDownload,
+            () => dialogs.DownloadRunningCloseConfirm.Confirmed -= windowChrome.CloseAfterStoppingDownload);
+        Attach(
+            () => dialogs.CloseRequested += windowChrome.RequestClose,
+            () => dialogs.CloseRequested -= windowChrome.RequestClose);
+        Attach(
+            () => dialogs.ConfirmUpdateAvailableRequested += OnUpdateAvailableConfirmed,
+            () => dialogs.ConfirmUpdateAvailableRequested -= OnUpdateAvailableConfirmed);
+        Attach(
+            () => dialogs.ErrorViewLogRequested += OpenLogViewer,
+            () => dialogs.ErrorViewLogRequested -= OpenLogViewer);
 
-        debug.RefreshRequested += HandleDebugRefreshRequestedAsync;
-        debug.ResetSettingsRequested += ResetSettingsToDefaultsAsync;
-        debug.ResetSettingsConfirmationRequested += dialogs.DebugResetConfirm.Show;
-        dialogs.DebugResetConfirm.Confirmed += debug.ConfirmResetSettingsAsync;
-        dialogs.SettingsResetConfirm.Confirmed += ResetSettingsFromSettingsPageAsync;
+        Attach(
+            () => debug.RefreshRequested += HandleDebugRefreshRequestedAsync,
+            () => debug.RefreshRequested -= HandleDebugRefreshRequestedAsync);
+        Attach(
+            () => debug.ResetSettingsRequested += ResetSettingsToDefaultsAsync,
+            () => debug.ResetSettingsRequested -= ResetSettingsToDefaultsAsync);
+        Attach(
+            () => debug.ResetSettingsConfirmationRequested += dialogs.DebugResetConfirm.Show,
+            () => debug.ResetSettingsConfirmationRequested -= dialogs.DebugResetConfirm.Show);
+        Attach(
+            () => dialogs.DebugResetConfirm.Confirmed += debug.ConfirmResetSettingsAsync,
+            () => dialogs.DebugResetConfirm.Confirmed -= debug.ConfirmResetSettingsAsync);
+        Attach(
+            () => dialogs.SettingsResetConfirm.Confirmed += ResetSettingsFromSettingsPageAsync,
+            () => dialogs.SettingsResetConfirm.Confirmed -= ResetSettingsFromSettingsPageAsync);
 
-        remoteContent.OpenExternalUrlRequested = openExternalUrl;
+        Attach(
+            () => remoteContent.OpenExternalUrlRequested = windowChrome.OpenExternalUrl,
+            () => remoteContent.OpenExternalUrlRequested = null);
 
         startup.Wire();
 
-        settings.Editor.CurrentPropertyChanged += OnSettingPropertyChanged;
+        Attach(
+            () => settings.Editor.CurrentPropertyChanged += OnSettingPropertyChanged,
+            () => settings.Editor.CurrentPropertyChanged -= OnSettingPropertyChanged);
+
         RegisterModals();
+    }
+
+    /// <summary>Records the teardown half of one wiring so Unwire cannot miss it.</summary>
+    private void Attach(Action attach, Action detach)
+    {
+        attach();
+        detachers.Add(detach);
     }
 
     /// <summary>
@@ -570,49 +616,23 @@ public sealed class ShellLifecycle : IShellRuntime
             confirmation.CancelCommand));
     }
 
-    /// <summary>Removes cross-feature event subscriptions established by <see cref="Wire"/>.</summary>
+    /// <summary>
+    /// Removes cross-feature event subscriptions established by <see cref="Wire"/>.
+    /// 按登记的逆序执行退订——这是本次收敛唯一的行为差异；模态注册与
+    /// startup 接线不在记录表里，按同一逆序原则手工排在首尾。
+    /// </summary>
     public void Unwire()
     {
         if (!isWired) return;
         isWired = false;
 
-        settings.SettingsSaved -= HandleSettingsSavedAsync;
-        operations.RefreshRequested -= HandleOperationsRefreshRequestedAsync;
-        operations.OpenLogViewerRequested -= OpenLogViewerAsync;
-        resourcePanel.ResourcePanelSourceConfirmRequested -= ShowResourcePanelSourceConfirmDialog;
-        dialogs.ResourcePanelSourceConfirm.Confirmed -= OnResourcePanelSourceSwitchConfirmed;
-        dialogs.DownloadRunningCloseConfirm.Confirmed -= windowChrome.CloseAfterStoppingDownload;
-        dialogs.CloseRequested -= windowChrome.RequestClose;
-        dialogs.ConfirmUpdateAvailableRequested -= OnUpdateAvailableConfirmed;
-        dialogs.ErrorViewLogRequested -= OpenLogViewer;
-        debug.RefreshRequested -= HandleDebugRefreshRequestedAsync;
-        debug.ResetSettingsRequested -= ResetSettingsToDefaultsAsync;
-        debug.ResetSettingsConfirmationRequested -= dialogs.DebugResetConfirm.Show;
-        dialogs.DebugResetConfirm.Confirmed -= debug.ConfirmResetSettingsAsync;
-        dialogs.SettingsResetConfirm.Confirmed -= ResetSettingsFromSettingsPageAsync;
         modalRegistrar.Dispose();
-        settings.Editor.CurrentPropertyChanged -= OnSettingPropertyChanged;
-
-        if (settings.Appearance.GetBackgroundBitmap == getBackgroundBitmap)
+        for (var i = detachers.Count - 1; i >= 0; i--)
         {
-            settings.Appearance.GetBackgroundBitmap = null;
+            detachers[i]();
         }
 
-        if (settings.PreviewAppearanceAsync == previewAppearanceAsync)
-        {
-            settings.PreviewAppearanceAsync = null;
-        }
-
-        if (settings.ApplyLanguageAndTheme == applyLanguageAndThemeAsync)
-        {
-            settings.ApplyLanguageAndTheme = null;
-        }
-
-        if (remoteContent.OpenExternalUrlRequested == openExternalUrl)
-        {
-            remoteContent.OpenExternalUrlRequested = null;
-        }
-
+        detachers.Clear();
         startup.Unwire();
     }
 

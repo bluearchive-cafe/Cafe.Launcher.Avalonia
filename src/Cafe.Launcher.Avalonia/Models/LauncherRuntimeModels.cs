@@ -1,45 +1,34 @@
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Cafe.Launcher.Avalonia.Models;
 
 /// <summary>
 /// Base class for selectable dropdown options with observable Code/DisplayName properties.
 /// </summary>
-public abstract class SelectableOption : INotifyPropertyChanged
+public abstract class SelectableOption : ObservableObject
 {
     private string code = "";
     private string displayName = "";
     private string description = "";
 
-    public event PropertyChangedEventHandler? PropertyChanged;
-
     public string Code
     {
         get => code;
-        set => SetField(ref code, value);
+        set => SetProperty(ref code, value);
     }
 
     public string DisplayName
     {
         get => displayName;
-        set => SetField(ref displayName, value);
+        set => SetProperty(ref displayName, value);
     }
 
     public string Description
     {
         get => description;
-        set => SetField(ref description, value);
-    }
-
-    protected void SetField(ref string field, string value, [CallerMemberName] string? propertyName = null)
-    {
-        if (field == value) return;
-        field = value;
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        set => SetProperty(ref description, value);
     }
 }
 
@@ -185,7 +174,7 @@ public sealed class LauncherStatusSnapshot
     public DateTimeOffset CheckedAt { get; set; }
 }
 
-public sealed class RemoteContentItem : INotifyPropertyChanged
+public sealed class RemoteContentItem : ObservableObject
 {
     private string title = "";
     private string subtitle = "";
@@ -196,30 +185,28 @@ public sealed class RemoteContentItem : INotifyPropertyChanged
     private bool isImageLoading = true;
     private bool isImageLoadFailed;
 
-    public event PropertyChangedEventHandler? PropertyChanged;
-
-    public string Title { get => title; set => SetField(ref title, value); }
-    public string Subtitle { get => subtitle; set => SetField(ref subtitle, value); }
-    public string Url { get => url; set => SetField(ref url, value); }
-    public string ImageUrl { get => imageUrl; set => SetField(ref imageUrl, value); }
-    public string SocialIconKind { get => socialIconKind; set => SetField(ref socialIconKind, value); }
+    public string Title { get => title; set => SetProperty(ref title, value); }
+    public string Subtitle { get => subtitle; set => SetProperty(ref subtitle, value); }
+    public string Url { get => url; set => SetProperty(ref url, value); }
+    public string ImageUrl { get => imageUrl; set => SetProperty(ref imageUrl, value); }
+    public string SocialIconKind { get => socialIconKind; set => SetProperty(ref socialIconKind, value); }
 
     public global::Avalonia.Media.Imaging.Bitmap? BannerBitmap
     {
         get => bannerBitmap;
-        set => SetField(ref bannerBitmap, value);
+        set => SetProperty(ref bannerBitmap, value);
     }
 
     public bool IsImageLoading
     {
         get => isImageLoading;
-        private set => SetField(ref isImageLoading, value);
+        private set => SetProperty(ref isImageLoading, value);
     }
 
     public bool IsImageLoadFailed
     {
         get => isImageLoadFailed;
-        private set => SetField(ref isImageLoadFailed, value);
+        private set => SetProperty(ref isImageLoadFailed, value);
     }
 
     public void MarkImageLoading()
@@ -239,36 +226,18 @@ public sealed class RemoteContentItem : INotifyPropertyChanged
         IsImageLoading = false;
         IsImageLoadFailed = true;
     }
-
-    private void SetField<T>(ref T field, T value, [System.Runtime.CompilerServices.CallerMemberName] string? propertyName = null)
-    {
-        if (EqualityComparer<T>.Default.Equals(field, value))
-            return;
-        field = value;
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-    }
 }
 
-public sealed class NewsCategory : INotifyPropertyChanged
+public sealed class NewsCategory : ObservableObject
 {
     private string label = "";
     private readonly ObservableCollection<RemoteContentItem> items = [];
 
-    public event PropertyChangedEventHandler? PropertyChanged;
-
     public string Label
     {
         get => label;
-        set => SetField(ref label, value);
+        set => SetProperty(ref label, value);
     }
 
     public ObservableCollection<RemoteContentItem> Items { get => items; }
-
-    private void SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
-    {
-        if (EqualityComparer<T>.Default.Equals(field, value))
-            return;
-        field = value;
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-    }
 }

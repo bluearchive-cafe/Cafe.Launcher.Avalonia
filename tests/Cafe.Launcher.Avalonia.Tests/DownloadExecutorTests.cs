@@ -453,6 +453,66 @@ public sealed class DownloadExecutorTests : IDisposable
         Assert.Contains(progressSnapshots, snapshot => snapshot.DownloadedSize == 8);
     }
 
+    /// <summary>
+    /// 暂停握手聚焦测试（R2-c09）：暂停期间墙钟流逝不得计入速度——
+    /// WaitWhilePausedAsync 在暂停注册时停下节流器与累积器、在恢复时以
+    /// 当前时间戳重启采样（引用相等 + 共享锁保证每段暂停恰好计一次）。
+    /// 注入时钟后断言是确定性的：恢复后 101 tick 内传 1000 字节，速度
+    /// ≈9900 B/s；若暂停时长泄漏进采样窗，同样的字节只会报 ≈99 B/s。
+    /// </summary>
+    [Fact]
+    public async Task DownloadFilesAsync_WhenResumedAfterPause_ReportsSpeedExcludingPausedTime()
+    {
+        var clock = new MutableTimestampClock();
+        var pauseSource = new TaskCompletionSource();
+        var transferService = new StubFileDownloadService(async (request, operationControl, cancellationToken) =>
+        {
+            clock.Now = 101;
+            await operationControl.ReportProgressAsync(1000, cancellationToken);
+
+            // 同步注册段：WaitWhilePausedAsync 在挂起前先登记暂停并停下节拍器。
+            var waitTask = operationControl.WaitWhilePausedAsync();
+            clock.Now = 10101;
+            pauseSource.TrySetResult();
+            await waitTask.WaitAsync(TimeSpan.FromSeconds(2), cancellationToken);
+
+            clock.Now = 10202;
+            await operationControl.ReportProgressAsync(1000, cancellationToken);
+        });
+        transferService.OutcomeFactory = _ => DownloadOutcome.Transferred("handshake-hash");
+        var progressSnapshots = new List<GameOperationProgress>();
+        var executor = new DownloadExecutor(
+            transferService,
+            new Crc64Service(),
+            new StubDownloadTransportSource(),
+            new LocalDiagnostics(),
+            () => pauseSource.Task,
+            () => !pauseSource.Task.IsCompleted,
+            timestampProvider: clock.GetTimestamp,
+            timestampFrequency: 1000);
+
+        await executor.DownloadFilesAsync(
+            Path.Combine(tempDir, "YostarGames", "BlueArchive_JP"),
+            new CdnConfigResponse
+            {
+                PrimaryCdn = "https://primary.example.invalid",
+                BackUpCdn = "https://backup.example.invalid"
+            },
+            "source",
+            [new ManifestFile { Path = "handshake.bin", Size = "2000", Hash = "handshake-hash" }],
+            ProxyModes.Direct,
+            speedLimitBytesPerSec: 10_000_000,
+            GameOperationKind.Download,
+            progressSnapshots.Add,
+            CancellationToken.None);
+
+        // 速度只看活跃时间：报告里最快的采样必须接近 1000 字节 / 101 tick。
+        var maxSpeed = progressSnapshots.Max(snapshot => snapshot.BytesPerSecond);
+        Assert.True(
+            maxSpeed > 5000,
+            $"expected paused time excluded from speed, got {maxSpeed} B/s (≈99 would mean pause leaked in).");
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData(".")]
