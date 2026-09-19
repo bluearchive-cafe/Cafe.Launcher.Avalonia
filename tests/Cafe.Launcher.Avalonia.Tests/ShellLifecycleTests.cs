@@ -268,6 +268,61 @@ public sealed class ShellLifecycleTests : IDisposable
         Assert.Single(openedUrls);
     }
 
+    /// <summary>
+    /// Wire/Unwire 配对守卫（R2-c07）：收敛成 Attach 记录式拆卸后，逆序退订
+    /// 必须覆盖全部三个代表性方向——操作页开日志、诊断页刷新、通知弹窗关闭壳——
+    /// Unwire 之后再触发源事件，壳侧处理器不得再运行。
+    /// </summary>
+    [Fact]
+    public async Task Unwire_AfterWired_StopsCrossFeatureEventFlow()
+    {
+        var core = new ScriptedCoreService(CreateSnapshot());
+        var fixture = CreateLifecycle(
+            core,
+            uiInvoker: action =>
+            {
+                action();
+                return Task.CompletedTask;
+            });
+        var windowCloseCount = 0;
+        fixture.WindowChrome.CloseRequested += () => windowCloseCount++;
+
+        ShowExitNotice(fixture.Dialogs, "unwire-guard-before");
+        fixture.Dialogs.DismissNoticeCommand.Execute(null);
+        await ((IGameOperationJourneyHost)fixture.Operations).ShowLogViewerAsync()
+            .WaitAsync(TimeSpan.FromSeconds(2));
+        await fixture.Debug.RefreshStateCommand.ExecuteAsync(null).WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.Equal(1, windowCloseCount);
+        Assert.True(fixture.LogViewer.IsVisible);
+        Assert.Equal(1, core.LoadCount);
+
+        fixture.Lifecycle.Unwire();
+        fixture.LogViewer.CloseCommand.Execute(null);
+
+        ShowExitNotice(fixture.Dialogs, "unwire-guard-after");
+        fixture.Dialogs.DismissNoticeCommand.Execute(null);
+        await ((IGameOperationJourneyHost)fixture.Operations).ShowLogViewerAsync()
+            .WaitAsync(TimeSpan.FromSeconds(2));
+        await fixture.Debug.RefreshStateCommand.ExecuteAsync(null).WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.Equal(1, windowCloseCount);
+        Assert.False(fixture.LogViewer.IsVisible);
+        Assert.Equal(1, core.LoadCount);
+    }
+
+    private static void ShowExitNotice(DialogsViewModel dialogs, string noticeContent)
+    {
+        dialogs.ShowNoticeDialogIfNeededAsync(
+            new BaseConfigResponse
+            {
+                NoticePopOpen = true,
+                NoticeContent = noticeContent,
+                ExitLauncherOpen = true
+            },
+            CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(2)).GetAwaiter().GetResult();
+    }
+
     [Fact]
     public async Task InitializeAsync_WhenStartupUpdateCheckThrows_CompletesWithoutErrorToast()
     {
@@ -365,7 +420,8 @@ public sealed class ShellLifecycleTests : IDisposable
         ILauncherCoreService coreService,
         LauncherSettingsService? settingsService = null,
         LauncherUpdateService? launcherUpdateService = null,
-        StubGameOperationExecutor? operationsBackend = null)
+        StubGameOperationExecutor? operationsBackend = null,
+        Func<Action, Task>? uiInvoker = null)
     {
         settingsService ??= new LauncherSettingsService( tempDir.DataRoot );
         launcherUpdateService ??= new LauncherUpdateService(
@@ -392,11 +448,23 @@ public sealed class ShellLifecycleTests : IDisposable
             new LocalDiagnostics(),
             filePickerService);
         wizards.Add(wizard);
+        if (uiInvoker is null)
+        {
+            // 单元测试工程不引用 Avalonia；fixture 内没有任何既有测试依赖真实
+            // UI 线程，通知弹窗路径按同步直调执行。
+            uiInvoker = action =>
+            {
+                action();
+                return Task.CompletedTask;
+            };
+        }
+
         var dialogs = new DialogsViewModel(
             localizer,
             new NoticeStateService( tempDir.DataRoot ),
             wizard,
-            new LocalDiagnostics());
+            new LocalDiagnostics(),
+            uiInvoker);
         using var settingsLogger = new UnifiedLogger(tempDir.Sub("settings-log"));
         var settings = new SettingsViewModel(
             settingsService,
@@ -496,7 +564,11 @@ public sealed class ShellLifecycleTests : IDisposable
             dialogs,
             settings,
             resourcePanel,
-            operationsBackend);
+            operationsBackend,
+            operations,
+            windowChrome,
+            logViewer,
+            debug);
     }
 
     private sealed record ShellFixture(
@@ -506,7 +578,11 @@ public sealed class ShellLifecycleTests : IDisposable
         DialogsViewModel Dialogs,
         SettingsViewModel Settings,
         ResourcePanelViewModel ResourcePanel,
-        StubGameOperationExecutor OperationsBackend);
+        StubGameOperationExecutor OperationsBackend,
+        GameOperationsViewModel Operations,
+        WindowChromeViewModel WindowChrome,
+        LogViewerDialogViewModel LogViewer,
+        DebugViewModel Debug);
 
     /// <summary>按脚本逐次返回快照或抛异常的核心服务替身;最后一个步骤可重复命中。</summary>
     private sealed class ScriptedCoreService : ILauncherCoreService
