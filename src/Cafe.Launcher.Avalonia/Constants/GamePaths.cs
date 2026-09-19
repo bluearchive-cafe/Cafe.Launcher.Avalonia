@@ -28,6 +28,16 @@ public static class GamePaths
 
     public const string ManifestFileName = "manifest.json";
     public const string GameConfigFileName = "game-launcher-config.json";
+
+    /// <summary>
+    /// The two launcher-managed installation state files (<see cref="ManifestFileName"/>
+    /// and <see cref="GameConfigFileName"/>) that uninstall removes in addition to the
+    /// manifest-listed files. Affected-file counts are produced and consumed as
+    /// manifest count plus this constant, so the round-trip between them never
+    /// relies on a bare literal (D7).
+    /// </summary>
+    public const int InstallationStateFileCount = 2;
+
     public const string LauncherSettingsFileName = "settings.json";
     public const string DownloadStateFileName = "download_state.json";
     public const string NoticeStateFileName = "shown_notices.json";
