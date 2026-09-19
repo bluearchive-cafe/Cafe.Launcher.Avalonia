@@ -84,7 +84,7 @@
 - Critical：0
 - High：0
 - Medium：0
-- Low：3 open（AUD-SEC-001、AUD-SEC-002、AUD-ARCH-005，全部为书面接受或维持接受）+ 6 accepted-risk（PERF-001、PERF-004、MAINT-002、SEC-004、SEC-006、ARCH-007）
+- Low：2 open（AUD-SEC-001、AUD-SEC-002，书面接受；AUD-ARCH-005 已随 d0f4496 结案，见下）+ 6 accepted-risk（PERF-001、PERF-004、MAINT-002、SEC-004、SEC-006、ARCH-007）
 - 本窗口解决：14 项（8 项随上轮修复落地：ARCH-002/003、TEST-002/003/004、PERF-002/003、MAINT-002；6 项随同日修复轮：ARCH-004/006、CI-001、PERF-006、SEC-003/005）；第二修复轮再解决 6 项（TEST-005/006/007、MAINT-003/004、PERF-007）并将 SEC-006 结案为 accepted-risk；CI 对账轮新立案 3 项（AUD-CI-002/003/004）并同日全部解决；功能轮（2026-09-15）新立案 1 项（ARCH-008）并于同日跟进按建议 (a) 解决（`6408c58`）；随后按用户追问再立案 AUD-ARCH-009（下载/安装/修复闸门的三处缺口）并同日解决（`6408c58`）；CI 对账复核结案 AUD-CI-001（其建议已落地为 `build.yml` 的 push/PR linux 作业）、新立案 AUD-CI-005（该作业连续红且非 required）并于同日修复、作业首绿（`08c53f8`）；CI 复查（2026-09-15 深夜）新立案 AUD-CI-006（生产侧平台假设：`Path.GetFileName` 在 Unix 上切不开配置里 Windows 形状的 `params`，游戏可执行文件静默移出家族）并同日解决（`8461044`）；CI 续查（2026-09-15 深夜）新立案 AUD-TEST-008（并行校验／下载路径上测试侧收集未加锁或非原子自增，两次 CI 偶发红）并同日解决（`e83334b` + `0060855`）；计划落地期间 `779664f` 解决 AUD-TEST-013（= `DEF-4`，无头套件主题变体泄漏：golden 侧钉住基线值 + 新增 `ThemeVariantSnapshot` 设施，两条新守卫各做变异验证，两处锚点复核为一真一假）；`59647cc` 解决 AUD-TEST-010（= `DEF-2`，动效叠层扫描改为按目录发现 + 反空转基线）、`588d80c` 解决 AUD-ARCH-012（= `DEF-5`，快照过期的拒绝改为可见，同批 `D3` 把修复的两道闸门收进旅程并钉住「不得停在 Progress」的顺序不变量）；同窗口另有 `B5`（`28b842b`）把 `LocalDiagnostics` 的九处包装收成两个核心，其守卫由加强后的 `LocalDiagnostics_NewFacades_WriteExpectedLevels` 承担
 
 **一处上轮审计证据更正（重要）**：上轮安全节声明「签名 Authorization 头绝不跟随重定向转发」——复核证实该头经 `RemoteRequestOptions.ConfigureRequest` 钩子在**每一重定向跳重发**（含跨主机），已立案为 AUD-SEC-003（Low）。这推翻了上轮对 DNS 重绑定残余风险影响边界的部分论证。
@@ -94,7 +94,7 @@
 1. **AUD-PERF-001**（Low）— **已结案为接受风险**（2026-09-17，用户裁定）：基准实测交付并更正规模前提（成本由客户端体积封顶），收益上界 5.9s（冷）/0.9s（热）每次实际更新，不抵「新增跨会话持久化见证索引 + 放弃唯一自动自愈」的代价；系数与重开判据见条目。
 2. **AUD-PERF-004**（Low）— 每次壳层刷新全量重解码横幅位图；位图备忘的补救验证为 Plausible，需要专属设计轮处理轮播/陈旧释放生命周期，不宜顺手改。
 3. **AUD-PERF-005 残留**（Low）— 首帧权衡已文档化（700e674）；二次冗余解码的消除需先确认跳过卫可合法匹配。
-4. **AUD-ARCH-005**（Low，接受中）— ShellLifecycle 的 Wire/Unwire 密度：若再因结构原因触碰，按 ADR-023 声明表收敛。
+4. **AUD-ARCH-005**（Low）— **已结案**（`d0f4496`，2026-09-19）：Wire/Unwire 收敛为 Attach 记录式拆卸，对称性不再靠人工配对；守卫 `Unwire_AfterWired_StopsCrossFeatureEventFlow`。
 
 ## Changes Since Previous Audit
 
@@ -379,13 +379,14 @@
 - **解决**（`6408c58`，2026-09-15 功能轮跟进）：①`ResolveKnownProcessNames` 在没有本地配置时退回远端配置声明的启动程序名 `GameConfigResponse.GameStartExeName`（它与本地 `Name` 本就是同一身份——提交路径已在做相等校验）；②`RunDownloadVerifyLoopAsync` 在每轮下载之后、第一处写入（`RemoveFiles`）之前复查同一道闸门，命中即返回失败**而不是 Stop**，`.tmp` 留在盘上、用户关掉游戏后重试按已有字节继续（检查点按既有终局语义在该出口丢弃）；③判法与报法各收一处——`FindRunningGameFailureAsync` 同时服务计划阶段与写入边界，「运行中的进程怎么写给用户看」收进 `GameProcessNames.DescribeForDisplay`（卸载那条也改走它），下载文案因此从「游戏正在运行，请关闭游戏后再修改文件。」变为点名的「游戏正在运行：BlueArchive.exe。请关闭游戏后再修改文件。」（四语同步改写，键数不变）。守卫：`GameDownloadServiceTests.InstallOrUpdateAsync_WhenTheRemoteDeclaredExecutableIsRunning_RefusesBeforeWritingAnything`（替身只在请求的名字含 `BlueArchive` 时报在跑，等价于证明名字来自远端配置；断言游戏文件/本地清单/检查点一个都没写）、`..._WhenTheGameStartsDuringTheDownload_RefusesBeforeTouchingTheGameDirectory`（第二次探测才报在跑，断言目标文件未落地而 `.tmp` 留在盘上）、`GameProcessNamesTests.DescribeForDisplay_AppendsTheExecutableExtensionAndJoinsWithASeparator`。**变异验证**：把远端兜底改成空、把复查判据喂空后，前两条用例同时变红，还原后转绿。文档：ADR-032 第 8 条决策 + 已知限制第 3 条、AGENTS.md 游戏操作段、CONTEXT.md「游戏进程家族」词条。
 - **残留（ADR-032 已知限制第 3 条）**：远端兜底只有宿主一个名字，拿不到本地 `params`；全新安装且只剩反作弊宿主存活时仍可能放行。要彻底解决需要别的信号（例如随包发布的运行器清单），已书面记录。
 
-### AUD-ARCH-005 — `ShellLifecycle` 为 src/ 最高变更热点，Wire/Unwire 16 对订阅镜像靠人工配对【新立案】
+### AUD-ARCH-005 — `ShellLifecycle` 为 src/ 最高变更热点，Wire/Unwire 16 对订阅镜像靠人工配对【已结案】
 
 - 类别：架构 / 可维护性
-- 严重度：Low｜置信度：80｜状态：open｜处置：Accept Risk（下次因结构原因触碰时按 ADR-023 表驱动收敛）
+- 严重度：Low｜置信度：80｜状态：**resolved**（`d0f4496`）｜处置：Refactor（已执行）
 - **证据**：`Features/Shell/ShellLifecycle.cs` 784 行、25 commits/180d（src/ 第一热点；`ServiceConfiguration.cs` 24、`MainWindow.axaml.cs` 22——本审计 git 计数）。持 ~30 协作者（:35-63）、34 行 Wire（:421-454）+ 44 行 Unwire（:562-605）16 对订退对；现有覆盖仅验 Dispose 路径（`ShellLifecycleTests.cs:237-259`），无对称性断言。
 - **影响**：每次跨功能事件变更是双点编辑，漏配对称仅能靠人工评审发现。Shell 聚合本身是 sanctioned 例外，疑虑仅在密度。
 - **建议**：仓库先例（ADR-021/022）偏好书面接受而非投机抽取——现状接受；若再动 Shell，把订阅收敛为单张声明表由 Wire/Unwire 共同消费，对称性成为数据性质。**建议验证**：Verified（计数）；行动与否 Needs Architecture Decision。
+- **解决**（`d0f4496`，2026-09-19，裁定为 R2-c07＝D15 同源）：取 Attach 记录式拆卸而非声明表——每条接线经 `Attach(attach, detach)` 配对登记进 `detachers`，`Unwire` 逆序执行后清空，两份手抄清单收敛为一份；顺带删除 4 个只为身份比较存在的委托槽。唯一行为差异是退订顺序变为登记的严格逆序。守卫：`ShellLifecycleTests.Unwire_AfterWired_StopsCrossFeatureEventFlow`（三方向退订后不再运行）。评审侧同源裁定见总表 §1.1 的 R2-c07 行。
 - **与已解决项的关系**：AUD-ARCH-001（模态注册）已由 `ModalRegistrar` 解决；本项是同文件的另一根因（接线密度）。
 
 ### AUD-MAINT-001 — `SettingsAppearanceViewModel` 以 5 个静态字段保存主题方案缓存
@@ -516,7 +517,7 @@
 - **模态注册声明式收敛保持**：19 个 `ModalKind` ↔ 19 条注册（`ShellLifecycle.cs:461-548` ↔ `ModalKind.cs:5-25`），`TryHandleEscape` 2 行委托（:608-612）；`ResourcePanelOverlay` 拆分（`e56d54b`）未破坏裁定——新覆盖层自带 `IsResourcePanelInteractive` 门（`ResourcePanelOverlay.axaml:12-14`）且仍是主叠层FirstChild、位于对话框层之下。
 - **新抽取件干净**：`OperationSurfaceAnimator`（190 行）逐字搬移、ADR-016 注释保留、headless 动效套件未弱化；残留（两处未用 using、锚点退役回调跨文件）见 AUD-ARCH-002 解决记录。
 - **组合根纪律**：全 Singleton、纯构造注入、释放顺序显式注释且经读码核实（客户端注册于 `HttpClientFactory` 之后 :115-135）；`Program.ServiceProvider` 仅用于会话末释放。两处轻微偏离见 advisory。
-- 剩余 Low 发现：AUD-ARCH-005（接受中，若再动 Shell 按声明表收敛）；ARCH-004/006/007 已分别随 `95b9f8b`/`700e674`/`043279e` 结案。
+- 剩余 Low 发现：ARCH-004/005/006/007 已分别随 `95b9f8b`/`d0f4496`/`700e674`/`043279e` 结案（005 为 2026-09-19 裁定落地）。
 
 ## Security
 
@@ -572,7 +573,7 @@
 
 1. **AUD-PERF-001 残留**：更新路径是否在「自愈契约」前提下引入见证摊销（并行化已交付；需基准实测后再决策，未测量不得轻动）。
 2. **AUD-PERF-005 残留**：首次刷新二次解码是否消除（需先确认跳过卫的解码目标可合法匹配；与同步/异步之争互不绑定）。
-3. **AUD-ARCH-005**：若再因结构原因触碰 Shell，按 ADR-023 声明表收敛 Wire/Unwire（维持接受）。
+3. **AUD-ARCH-005**：**已结案**（`d0f4496`，2026-09-19）：Wire/Unwire 收敛为 Attach 记录式拆卸，接受状态随之终结。
 
 功能轮（2026-09-15）新立案的 AUD-ARCH-008 已于同日跟进按建议 (a) 解决（`6408c58`：`UninstallAsync` 删除前复查家族闸门 + 变异验证过的守卫用例），不留待决项。
 
@@ -689,7 +690,7 @@ CI 对账轮（2026-09-14 晚）顺带落地的守卫：
 
 1.（**已结案**）AUD-PERF-001 见证摊销——2026-09-17 结案为接受风险。留档：2026-09-17 的基准实测给出全部系数（冷读 5.4s/GiB、热读 0.84s/GiB、见证 stat 20ms/千文件）并更正了规模前提（成本由**客户端**体积封顶，当前 1.09 GiB，与资源总量无关）。本报告的建议是**维持现状**：本机每次实际更新的收益上界为 5.9s（冷）/ 0.9s（热），而代价是要新增跨会话持久化的见证索引（`manifest.json` 是与官方启动器共享的格式契约，见证只能落在我们自己的状态里）并放弃「每次更新都校验未变更客户端文件」这一唯一自动自愈。重开判据：客户端体积显著增长时按每 GiB 系数换算（10 GiB ≈ 冷读 54s/次更新），无需重测。
 2.（**已结案**）AUD-PERF-004 横幅位图备忘——2026-09-17 收益定量后结案为接受风险（原处置 Refactor 改判为不做）。留档：真实横幅 460×220、5 张一轮约 10.6 ms CPU，而触发它的刷新并发打至少 6 个远端 API，收益低两到三个数量级；系数与重开判据（10 张 1200×500 ≈ 100 ms 量级）见条目。
-3.（**已解决**）AUD-PERF-005 残留——2026-09-17 修复（`1ff7ec4`）：确认的结论是「不能靠播种匹配，但内置来源的目标比较本身无意义」（构造点早于窗口 Attach ＋ 内置解码忽略目标），于是构造期记「已满足」＋守卫对内置来源不比较目标，消掉每次启动一次 32–46 ms 的冗余解码与约 14 MB 临时位图。留档：AUD-ARCH-005 若再动 Shell 按声明表收敛 Wire/Unwire（维持接受）。
+3.（**已解决**）AUD-PERF-005 残留——2026-09-17 修复（`1ff7ec4`）：确认的结论是「不能靠播种匹配，但内置来源的目标比较本身无意义」（构造点早于窗口 Attach ＋ 内置解码忽略目标），于是构造期记「已满足」＋守卫对内置来源不比较目标，消掉每次启动一次 32–46 ms 的冗余解码与约 14 MB 临时位图。留档：AUD-ARCH-005 的 Wire/Unwire 收敛已于 2026-09-19 落地（`d0f4496`），该项结案。
 4.（用户侧，可选）AUD-CI-005 残留：把 `linux-unit-tests` 加进 required status checks——作业现已首绿，加进去才能真正挡住平台回归，只有仓库管理员能改。
 5.（维持接受）AUD-SEC-001/002 与已书面化的 SEC-004/SEC-006/ARCH-007：除非威胁模型变化。
 
