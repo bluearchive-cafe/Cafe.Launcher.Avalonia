@@ -57,6 +57,8 @@ public static class ServiceConfiguration
         {
             var logger = sp.GetRequiredService<UnifiedLogger>();
             var localDiagnostics = new LocalDiagnostics(logger);
+            // 本组合根是共享静态缝的唯一登记所有方（R2-c12）：先注册者胜，
+            // 后续容器（多容器测试）不改绑，也不得在其他文件登记（有源守卫）。
             LocalDiagnostics.RegisterSharedLogger(logger);
             return localDiagnostics;
         });

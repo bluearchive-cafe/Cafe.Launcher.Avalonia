@@ -47,12 +47,28 @@ public sealed class LocalDiagnostics
 
     /// <summary>
     /// Registers the process-wide logger backing the static <see cref="LogAsync"/>
-    /// and <see cref="LogSync"/> entry points. The composition root calls this
-    /// exactly once for the real pipeline; later constructions — including test
-    /// doubles writing to temporary directories — cannot hijack the shared path.
+    /// and <see cref="LogSync"/> entry points. <see cref="Composition.ServiceConfiguration"/>
+    /// 是唯一的登记所有方（R2-c12）；按进程先注册者胜——此后构造的容器（包括
+    /// 多容器测试）不得改绑共享静态缝，各自的实例门面走自己注入的
+    /// <see cref="UnifiedLogger"/>。返回是否由本次调用完成登记。
     /// </summary>
-    internal static void RegisterSharedLogger(UnifiedLogger logger) =>
+    internal static bool RegisterSharedLogger(UnifiedLogger logger)
+    {
+        if (Volatile.Read(ref syncLogger) is not null)
+        {
+            return false;
+        }
+
         Volatile.Write(ref syncLogger, logger);
+        return true;
+    }
+
+    /// <summary>Only for test projects (see <c>InternalsVisibleTo</c>): save/restore the shared slot around registration tests.</summary>
+    internal static UnifiedLogger? SharedLoggerForTests
+    {
+        get => Volatile.Read(ref syncLogger);
+        set => Volatile.Write(ref syncLogger, value);
+    }
 
     internal string LogFilePath => logger.LogFilePath;
 
