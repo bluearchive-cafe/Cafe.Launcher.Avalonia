@@ -15,6 +15,7 @@ public sealed partial class ResourcePanelUidService
     private const string ResourcePanelCookieName = "uid";
     private const string ResourcePanelCookieDomain = "bluearchive.cafe";
     private const string ResourcePanelCookiePath = "/";
+    private readonly LocalDiagnostics? diagnostics;
 
     /// <summary>
     /// UID format: exactly 8 uppercase ASCII letters (e.g. <c>ABCDEFGH</c>).
@@ -38,8 +39,9 @@ public sealed partial class ResourcePanelUidService
     public ResourcePanelUidService(
         BestHttpCookieLibraryService cookieLibraryService,
         LauncherSettingsService settingsService,
-        ISavedSettingsWriter savedSettingsWriter)
-        : this(cookieLibraryService, settingsService, savedSettingsWriter, GetDefaultCookieLibraryPath())
+        ISavedSettingsWriter savedSettingsWriter,
+        LocalDiagnostics? diagnostics = null)
+        : this(cookieLibraryService, settingsService, savedSettingsWriter, GetDefaultCookieLibraryPath(), diagnostics)
     {
     }
 
@@ -47,12 +49,14 @@ public sealed partial class ResourcePanelUidService
         BestHttpCookieLibraryService cookieLibraryService,
         LauncherSettingsService settingsService,
         ISavedSettingsWriter savedSettingsWriter,
-        string cookieLibraryPath)
+        string cookieLibraryPath,
+        LocalDiagnostics? diagnostics = null)
     {
         this.cookieLibraryService = cookieLibraryService;
         this.settingsService = settingsService;
         this.savedSettingsWriter = savedSettingsWriter;
         this.cookieLibraryPath = cookieLibraryPath;
+        this.diagnostics = diagnostics;
     }
 
     public string CookieLibraryPath => cookieLibraryPath;
@@ -144,8 +148,7 @@ public sealed partial class ResourcePanelUidService
         }
         catch (Exception exception)
         {
-            LocalDiagnostics.LogSync(
-                LogEntrySeverity.Warn,
+            _ = diagnostics?.WarningAsync(
                 "ResourcePanelUid",
                 $"Reading the cookie library failed: {exception.Message}");
             return "";

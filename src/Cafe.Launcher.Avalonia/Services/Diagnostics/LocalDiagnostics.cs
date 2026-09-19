@@ -9,6 +9,10 @@ namespace Cafe.Launcher.Avalonia.Services.Diagnostics;
 /// <summary>
 /// Thin compatibility wrapper around <see cref="UnifiedLogger"/>.
 /// All public signatures are preserved so existing call sites compile unchanged.
+/// 实例侧门面是拥有诊断实例的模块的首选；静态 <see cref="LogAsync"/>/
+/// <see cref="LogSync"/> 仅留给没有注入缝的调用点——组合根（App/Program 的
+/// pre-DI 阶段）、纯静态帮助类（ExternalLinkService、跨进程转发、注册表代
+/// 理读取）。新的可注入模块不要再走静态入口（R2-c11①）。
 /// </summary>
 public sealed class LocalDiagnostics
 {

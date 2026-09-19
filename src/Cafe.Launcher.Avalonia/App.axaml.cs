@@ -61,7 +61,8 @@ public partial class App : Application
             var viewModel = serviceProvider.GetRequiredService<MainWindowViewModel>();
             var mainWindow = new MainWindow(
                 serviceProvider.GetRequiredService<WindowFilePickerService>(),
-                serviceProvider.GetRequiredService<WindowMetricsService>())
+                serviceProvider.GetRequiredService<WindowMetricsService>(),
+                serviceProvider.GetRequiredService<Services.Diagnostics.LocalDiagnostics>())
             {
                 DataContext = viewModel,
             };
@@ -154,7 +155,10 @@ public partial class App : Application
             try
             {
                 var localizationService = serviceProvider.GetRequiredService<LocalizationService>();
-                trayService = new SystemTrayService(mainWindow, localizationService);
+                trayService = new SystemTrayService(
+                    mainWindow,
+                    localizationService,
+                    serviceProvider.GetRequiredService<Services.Diagnostics.LocalDiagnostics>());
                 if (trayService.Initialize())
                 {
                     mainWindow.SetSystemTray(trayService);

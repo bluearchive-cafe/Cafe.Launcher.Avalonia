@@ -33,6 +33,12 @@ internal sealed class OperationSurfaceAnimator
         MotionTokens.FastDuration.TotalMilliseconds / MotionTokens.NormalDuration.TotalMilliseconds;
 
     private CancellationTokenSource? transitionCts;
+    private readonly Services.Diagnostics.LocalDiagnostics? diagnostics;
+
+    public OperationSurfaceAnimator(Services.Diagnostics.LocalDiagnostics? diagnostics = null)
+    {
+        this.diagnostics = diagnostics;
+    }
 
     /// <summary>
     /// 以连续高度形变 + 下沉/恢复过渡到新状态。窗口侧通过 <paramref name="retireEntranceAnchor"/>
@@ -113,8 +119,7 @@ internal sealed class OperationSurfaceAnimator
         catch (Exception exception)
         {
             // 形变失败不得阻断状态切换本身；几何仍由 finally 结算，异常落日志而非静默丢弃。
-            await LocalDiagnostics.LogAsync(
-                LogEntrySeverity.Warn,
+            _ = diagnostics?.WarningAsync(
                 "OperationSurfaceMotion",
                 $"Operation surface transition failed: {exception.Message}");
         }

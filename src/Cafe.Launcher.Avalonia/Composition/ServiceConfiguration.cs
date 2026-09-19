@@ -114,7 +114,11 @@ public static class ServiceConfiguration
         services.AddSingleton<ProxySettingsService>();
         services.AddSingleton<ManifestValidationService>();
         services.AddSingleton<NoticeStateService>();
-        services.AddSingleton<ResourcePanelUidService>();
+        services.AddSingleton(sp => new ResourcePanelUidService(
+            sp.GetRequiredService<BestHttpCookieLibraryService>(),
+            sp.GetRequiredService<LauncherSettingsService>(),
+            sp.GetRequiredService<ISavedSettingsWriter>(),
+            sp.GetRequiredService<LocalDiagnostics>()));
         services.AddSingleton(sp => new LauncherSettingsService(
             dataRoot,
             sp.GetRequiredService<LocalDiagnostics>()));
@@ -128,6 +132,7 @@ public static class ServiceConfiguration
         services.AddSingleton(sp => new SettingsAppearanceViewModel(
             sp.GetRequiredService<ISettingsEditor>(),
             sp.GetRequiredService<ThemeApplier>(),
+            sp.GetRequiredService<LocalDiagnostics>(),
             Program.ShowHiddenSettings));
         services.AddSingleton<IProcessLauncher, DefaultProcessLauncher>();
         services.AddSingleton<IGameRuntime>(sp => new GameRuntime(
@@ -152,9 +157,17 @@ public static class ServiceConfiguration
         // ── IDisposable services ─────────────────────────────────────────
         // The container disposes created services in reverse order. This keeps
         // HttpClientFactory alive until all clients and download services are gone.
-        services.AddSingleton<LauncherApiClient>();
+        services.AddSingleton<LauncherApiClient>(sp => new LauncherApiClient(
+            sp.GetRequiredService<IRemoteHttpTransport>(),
+            sp.GetRequiredService<AuthorizationHeaderFactory>(),
+            sp.GetRequiredService<PatchUrlGroupService>(),
+            sp.GetRequiredService<LocalDiagnostics>()));
         services.AddSingleton<ResourcePanelApiClient>();
-        services.AddSingleton<ImageCacheService>();
+        services.AddSingleton<ImageCacheService>(sp => new ImageCacheService(
+            sp.GetRequiredService<IRemoteHttpTransport>(),
+            sp.GetRequiredService<Crc64Service>(),
+            dataRoot,
+            sp.GetRequiredService<LocalDiagnostics>()));
         services.AddSingleton(sp => new GameDownloadService(
             sp.GetRequiredService<LauncherApiClient>(),
             sp.GetRequiredService<RemoteManifestService>(),

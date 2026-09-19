@@ -87,7 +87,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
             diagnostics,
             wallpaperChanged,
             (path, targetPhysicalSize) => BackgroundImageDecoder.Decode(path, targetPhysicalSize),
-            LoadBundledBackground)
+            () => LoadBundledBackground(diagnostics))
     {
     }
 
@@ -662,7 +662,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         wallpaperFadeCancellation?.Cancel();
     }
 
-    private static Bitmap? LoadBundledBackground()
+    private static Bitmap? LoadBundledBackground(LocalDiagnostics diagnostics)
     {
         try
         {
@@ -672,7 +672,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         }
         catch (Exception ex)
         {
-            LocalDiagnostics.LogSync(
+            _ = diagnostics.WarningAsync(
                 "LoadBundledBackground",
                 $"Failed to load bundled background image: {ex.Message}");
             return null;
