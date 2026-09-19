@@ -329,14 +329,14 @@
       "category": "architecture/maintainability",
       "severity": "low",
       "confidence": 80,
-      "status": "open",
-      "disposition": "Accept Risk",
+      "status": "resolved",
+      "disposition": "Fix",
       "recommendation_validation": "Verified",
       "first_seen_commit": "67229b5",
-      "last_verified_commit": "67229b5",
-      "resolved_commit": null,
-      "guard": "若再动 Shell：按 ADR-023 模式把订阅收敛为单张声明表，由 Wire/Unwire 共同消费，对称性成为数据性质",
-      "delta_note": "新立案（2026-09-14；与已解决的 AUD-ARCH-001 残留同源但根因独立：热点密度而非模态注册）。ShellLifecycle 现 784 行、25 commits/180d（ServiceConfiguration 24、MainWindow.axaml.cs 22）；持 ~30 协作者（:35-63）、34 行 Wire + 44 行 Unwire（:421-454,:562-605）16 对订退对。现有覆盖仅验 Dispose 路径（ShellLifecycleTests.cs:237-259）。仓库先例（ADR-021/022）偏好书面接受而非投机抽取：现状接受，下次因结构原因触碰时按 ADR-023 表驱动收敛。"
+      "last_verified_commit": "d0f4496",
+      "resolved_commit": "d0f4496",
+      "guard": "ShellLifecycleTests.Unwire_AfterWired_StopsCrossFeatureEventFlow（Unwire 之后 dialogs.CloseRequested／debug.RefreshRequested／operations.OpenLogViewerRequested 三方向都不再运行）",
+      "delta_note": "新立案（2026-09-14；与已解决的 AUD-ARCH-001 残留同源但根因独立：热点密度而非模态注册）。ShellLifecycle 现 784 行、25 commits/180d（ServiceConfiguration 24、MainWindow.axaml.cs 22）；持 ~30 协作者（:35-63）、34 行 Wire + 44 行 Unwire（:421-454,:562-605）16 对订退对。现有覆盖仅验 Dispose 路径（ShellLifecycleTests.cs:237-259）。仓库先例（ADR-021/022）偏好书面接受而非投机抽取：现状接受，下次因结构原因触碰时按 ADR-023 表驱动收敛。 结案（d0f4496，2026-09-19）：Wire/Unwire 收敛为 Attach 记录式拆卸——每条接线经 Attach(attach, detach) 配对登记进 detachers，Unwire 逆序执行后清空，两份手抄清单收敛为一份；顺带删除 4 个只为身份比较存在的委托槽。唯一行为差异是退订顺序变为登记的严格逆序（提交信息已声明）。同源裁定：R2-c07（评审卡）与 D15（计划文档）一并结案。"
     },
     "AUD-ARCH-006": {
       "title": "AGENTS.md 声称叠层 ZIndex「declared once in Constants/LauncherConstants.cs」，实际四值中仅 toast 在常量中，其余三个为样式内联字面量",

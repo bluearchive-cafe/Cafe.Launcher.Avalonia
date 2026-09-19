@@ -17,22 +17,25 @@ public sealed class SystemTrayService : IDisposable
     private readonly Window mainWindow;
     private readonly LocalizationService localizer;
     private readonly ISystemTrayPlatform platform;
+    private readonly LocalDiagnostics? diagnostics;
     private bool initialized;
     private bool disposed;
 
-    public SystemTrayService(Window mainWindow, LocalizationService localizer)
-        : this(mainWindow, localizer, new AvaloniaSystemTrayPlatform())
+    public SystemTrayService(Window mainWindow, LocalizationService localizer, LocalDiagnostics? diagnostics = null)
+        : this(mainWindow, localizer, new AvaloniaSystemTrayPlatform(), diagnostics)
     {
     }
 
     internal SystemTrayService(
         Window mainWindow,
         LocalizationService localizer,
-        ISystemTrayPlatform platform)
+        ISystemTrayPlatform platform,
+        LocalDiagnostics? diagnostics = null)
     {
         this.mainWindow = mainWindow;
         this.localizer = localizer;
         this.platform = platform;
+        this.diagnostics = diagnostics;
     }
 
     public bool Initialize()
@@ -64,7 +67,7 @@ public sealed class SystemTrayService : IDisposable
         }
         catch (Exception ex)
         {
-            LocalDiagnostics.LogSync(LogEntrySeverity.Warn, "SystemTray", $"initialization failed: {ex.Message}");
+            _ = diagnostics?.WarningAsync("SystemTray", $"initialization failed: {ex.Message}");
             Dispose();
             return false;
         }

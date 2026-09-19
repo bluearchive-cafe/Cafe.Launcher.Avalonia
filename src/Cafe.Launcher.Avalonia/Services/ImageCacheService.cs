@@ -35,6 +35,7 @@ public sealed class ImageCacheService : IDisposable
     private readonly string cacheDir;
     private readonly IRemoteHttpTransport transport;
     private readonly Crc64Service crc64Service;
+    private readonly LocalDiagnostics? diagnostics;
     private readonly ConcurrentDictionary<string, SemaphoreSlim> cacheLocks =
         new(StringComparer.Ordinal);
     private bool disposed;
@@ -42,11 +43,13 @@ public sealed class ImageCacheService : IDisposable
     public ImageCacheService(
         IRemoteHttpTransport transport,
         Crc64Service crc64Service,
-        LauncherDataRoot dataRoot)
+        LauncherDataRoot dataRoot,
+        LocalDiagnostics? diagnostics = null)
     {
         ArgumentNullException.ThrowIfNull(dataRoot);
         this.transport = transport;
         this.crc64Service = crc64Service;
+        this.diagnostics = diagnostics;
         this.cacheDir = dataRoot.ImageCacheDirectory;
         try
         {
@@ -55,7 +58,7 @@ public sealed class ImageCacheService : IDisposable
         catch (Exception ex) when (StorageFailure.IsRecoverable(ex))
         {
             // Cache directory is non-critical — log and continue without caching
-            LocalDiagnostics.LogSync(LogEntrySeverity.Warn, "ImageCache", $"failed to create cache directory: {ex.Message}");
+            _ = diagnostics?.WarningAsync("ImageCache", $"failed to create cache directory: {ex.Message}");
         }
 
         _ = Task.Run(CleanupExpiredEntries);
@@ -310,7 +313,7 @@ public sealed class ImageCacheService : IDisposable
         }
         catch (Exception exception) when (StorageFailure.IsRecoverable(exception))
         {
-            LocalDiagnostics.LogSync(LogEntrySeverity.Warn, "ImageCache", $"cache sweep failed: {exception.Message}");
+            _ = diagnostics?.WarningAsync("ImageCache", $"cache sweep failed: {exception.Message}");
         }
     }
 

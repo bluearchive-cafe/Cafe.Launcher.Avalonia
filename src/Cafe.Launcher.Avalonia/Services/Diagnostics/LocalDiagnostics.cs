@@ -9,6 +9,10 @@ namespace Cafe.Launcher.Avalonia.Services.Diagnostics;
 /// <summary>
 /// Thin compatibility wrapper around <see cref="UnifiedLogger"/>.
 /// All public signatures are preserved so existing call sites compile unchanged.
+/// 实例侧门面是拥有诊断实例的模块的首选；静态 <see cref="LogAsync"/>/
+/// <see cref="LogSync"/> 仅留给没有注入缝的调用点——组合根（App/Program 的
+/// pre-DI 阶段）、纯静态帮助类（ExternalLinkService、跨进程转发、注册表代
+/// 理读取）。新的可注入模块不要再走静态入口（R2-c11①）。
 /// </summary>
 public sealed class LocalDiagnostics
 {
@@ -43,12 +47,28 @@ public sealed class LocalDiagnostics
 
     /// <summary>
     /// Registers the process-wide logger backing the static <see cref="LogAsync"/>
-    /// and <see cref="LogSync"/> entry points. The composition root calls this
-    /// exactly once for the real pipeline; later constructions — including test
-    /// doubles writing to temporary directories — cannot hijack the shared path.
+    /// and <see cref="LogSync"/> entry points. <see cref="Composition.ServiceConfiguration"/>
+    /// 是唯一的登记所有方（R2-c12）；按进程先注册者胜——此后构造的容器（包括
+    /// 多容器测试）不得改绑共享静态缝，各自的实例门面走自己注入的
+    /// <see cref="UnifiedLogger"/>。返回是否由本次调用完成登记。
     /// </summary>
-    internal static void RegisterSharedLogger(UnifiedLogger logger) =>
+    internal static bool RegisterSharedLogger(UnifiedLogger logger)
+    {
+        if (Volatile.Read(ref syncLogger) is not null)
+        {
+            return false;
+        }
+
         Volatile.Write(ref syncLogger, logger);
+        return true;
+    }
+
+    /// <summary>Only for test projects (see <c>InternalsVisibleTo</c>): save/restore the shared slot around registration tests.</summary>
+    internal static UnifiedLogger? SharedLoggerForTests
+    {
+        get => Volatile.Read(ref syncLogger);
+        set => Volatile.Write(ref syncLogger, value);
+    }
 
     internal string LogFilePath => logger.LogFilePath;
 

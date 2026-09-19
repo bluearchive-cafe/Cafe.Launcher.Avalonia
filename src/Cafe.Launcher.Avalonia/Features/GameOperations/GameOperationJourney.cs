@@ -377,8 +377,8 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
         try { toastService.ShowWarning(localizer.T(LocalizationKeys.StopRequested)); }
         catch (Exception ex)
         {
-            LocalDiagnostics.LogSync(
-                LogEntrySeverity.Warn,
+            // TryLogAsync 永不抛：同步语境下的实例侧日志走 fire-and-forget。
+            _ = diagnostics.WarningAsync(
                 "StopToastFailed",
                 $"Failed to show stop toast: {ex.Message}");
         }

@@ -31,9 +31,10 @@ public partial class MainWindow : Window
 {
     private SystemTrayService? systemTray;
     private MainWindowViewModel? configuredViewModel;
-    private readonly OperationSurfaceAnimator operationSurfaceAnimator = new();
+    private readonly OperationSurfaceAnimator operationSurfaceAnimator;
     private readonly WindowFilePickerService? filePickerService;
     private readonly WindowMetricsService? windowMetrics;
+    private readonly Services.Diagnostics.LocalDiagnostics? diagnostics;
 
     /// <summary>
     /// 无参公共构造：Avalonia 运行时 XAML 加载器可达性要求（AVLN3001，缺失即构建错误），
@@ -44,11 +45,16 @@ public partial class MainWindow : Window
     }
 
     /// <summary>生产入口注入文件选取与窗口度量服务，并在本构造器中挂接本窗口。</summary>
-    public MainWindow(WindowFilePickerService? filePickerService, WindowMetricsService? windowMetrics)
+    public MainWindow(
+        WindowFilePickerService? filePickerService,
+        WindowMetricsService? windowMetrics,
+        Services.Diagnostics.LocalDiagnostics? diagnostics = null)
     {
         InitializeComponent();
         this.filePickerService = filePickerService;
         this.windowMetrics = windowMetrics;
+        this.diagnostics = diagnostics;
+        operationSurfaceAnimator = new OperationSurfaceAnimator(diagnostics);
         filePickerService?.Attach(this);
         windowMetrics?.Attach(this);
         PointerPressed += OnPointerPressed;
@@ -504,8 +510,7 @@ public partial class MainWindow : Window
             }
             catch (Exception ex)
             {
-                await LocalDiagnostics.LogAsync(
-                    LogEntrySeverity.Warn,
+                _ = diagnostics?.WarningAsync(
                     "ClipboardCopyFailed",
                     $"Failed to copy error details to clipboard: {ex.Message}");
             }

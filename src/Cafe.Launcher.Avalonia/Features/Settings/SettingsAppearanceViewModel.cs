@@ -26,6 +26,7 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
     private readonly ISettingsEditor editor;
     private readonly ThemeApplier themeApplier;
     private readonly IPlatformSettings? platformSettings;
+    private readonly LocalDiagnostics? diagnostics;
     private readonly bool showHiddenSettings;
     private bool suppressEditorUpdates;
     private bool disposed;
@@ -34,10 +35,12 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
     public SettingsAppearanceViewModel(
         ISettingsEditor editor,
         ThemeApplier themeApplier,
+        LocalDiagnostics? diagnostics = null,
         bool showHiddenSettings = false)
     {
         this.editor = editor;
         this.themeApplier = themeApplier;
+        this.diagnostics = diagnostics;
         this.showHiddenSettings = showHiddenSettings;
         editor.CurrentPropertyChanged += OnCurrentSettingChanged;
         platformSettings = Application.Current?.PlatformSettings;
@@ -256,12 +259,10 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         {
             // 覆盖图片读取、后台提取、UI 调度与结果应用的完整边界，保证所有
             // fire-and-forget 调用都不会泄漏未观察异常。
-            // 豁免：此 catch 是 fire-and-forget 取色任务的最终边界，类内未注入
-            // 诊断实例；LogSync 的 Debug 回退保证不泄漏未观察异常。
-            LocalDiagnostics.LogSync(
-                LogEntrySeverity.Warn,
+            _ = diagnostics?.WarningAsync(
                 "ThemeColor",
-                $"Theme color refresh failed: {ex.Message}");
+                $"Theme color refresh failed: {ex.Message}",
+                CancellationToken.None);
         }
     }
 

@@ -23,6 +23,7 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel, I
     private readonly LocalizationService localizer;
     private readonly NoticeStateService noticeStateService;
     private readonly Func<Action, Task> invokeOnUiAsync;
+    private readonly LocalDiagnostics diagnostics;
     private bool closeOnNoticeDismiss;
 
     /// <summary>
@@ -60,8 +61,8 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel, I
 
     public void ShowSetupWizard()
     {
-        // UI 线程上不能阻塞等待日志写入；LogAsync 自吞异常，丢弃 Task 是安全的。
-        _ = LocalDiagnostics.LogAsync(LogEntrySeverity.Info, "SetupWizardShow", "Setup wizard visibility requested.");
+        // UI 线程上不能阻塞等待日志写入；TryLogAsync 自吞异常，丢弃 Task 是安全的。
+        _ = diagnostics.MessageAsync("SetupWizardShow", "Setup wizard visibility requested.");
         IsSetupWizardVisible = true;
     }
 
@@ -168,6 +169,7 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel, I
         this.localizer = localizer;
         this.noticeStateService = noticeStateService;
         this.invokeOnUiAsync = invokeOnUiAsync;
+        this.diagnostics = diagnostics;
         LanguageOptions = LocalizationService.GetLanguageOptions(localizer);
         SetupWizard = setupWizard;
         Gallery = new DesignGalleryViewModel(key => localizer.T(key));
@@ -300,7 +302,7 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel, I
         }
         catch (Exception ex)
         {
-            await LocalDiagnostics.LogAsync(LogEntrySeverity.Warn, "NoticeDialogLoadFailed", ex.Message);
+            await diagnostics.WarningAsync("NoticeDialogLoadFailed", ex.Message, CancellationToken.None);
         }
     }
 
