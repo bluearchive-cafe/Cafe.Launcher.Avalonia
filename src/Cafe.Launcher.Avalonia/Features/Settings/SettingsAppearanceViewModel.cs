@@ -145,9 +145,6 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
     /// </summary>
     internal static TimeSpan ThemeRefreshSettleTimeout = TimeSpan.FromMinutes(2);
 
-    internal Task WaitForThemeRefreshToSettleAsync() =>
-        TaskSettler.WaitAsync(() => themePaletteRefresh.Pending, ThemeRefreshSettleTimeout);
-
     /// <summary>
     /// 从当前壁纸重新提取主题色板。提取（含整幅源图降采样与量化）在线程池执行，
     /// 结果经代数校验后回到 UI 线程应用；期间壁纸可能再次切换并释放旧位图，
@@ -164,6 +161,26 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
 
         themePaletteRefresh.Run(null, token => RefreshThemeColorPaletteSafelyAsync(markDirty, applySchemeAfter, token));
         return themePaletteRefresh.Pending;
+    }
+
+    /// <summary>
+    /// 保存前的壁纸色板落定：仅壁纸取色模式需要——等待最新取色任务；色板仍为空时
+    /// （例如刚切到壁纸取色、首次提取尚未产出）再主动提取一次。取色期间会有意保留
+    /// 旧色板，因此不能以 Count == 0 判断是否仍在取色——等待与补提取的判据都在
+    /// 这一处收拢。
+    /// </summary>
+    public async Task EnsureThemePaletteReadyForSaveAsync()
+    {
+        if (editor.Current.ThemeColorMode != ThemeColorModes.Wallpaper)
+        {
+            return;
+        }
+
+        await TaskSettler.WaitAsync(() => themePaletteRefresh.Pending, ThemeRefreshSettleTimeout);
+        if (ThemeColorPaletteItems.Count == 0)
+        {
+            await RefreshThemeColorPaletteFromCurrentBackgroundAsync(markDirty: false);
+        }
     }
 
     private async Task RefreshThemeColorPaletteSafelyAsync(

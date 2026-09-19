@@ -19,12 +19,18 @@ public sealed partial class UiStyleContractTests
                 "Settings.Editor.Current.Language",
                 "Settings.Editor.Current.CloseBehavior",
                 "Settings.Editor.Current.AfterLaunchBehavior",
-                "Settings.Editor.Current.MotionMode"
+                "Settings.Editor.Current.MotionMode",
+                "Settings.Editor.Current.StatusDetailMode",
+                "Settings.Editor.Current.ShowRemoteContentCard",
+                "Settings.Editor.Current.UpdateChannel"
             ],
             ["SettingsGameSection"] =
             [
                 "Settings.Editor.Current.GamePath",
                 "Settings.Editor.Current.LaunchCheckMode",
+                "Settings.Editor.Current.GameRuntime.RunnerPath",
+                "Settings.Editor.Current.GameRuntime.PrefixPath",
+                "Settings.Editor.Current.GameRuntime.ProtonPath",
                 "Operations.OpenGameFolderCommand",
                 "Operations.RequestRepairCommand",
                 "Operations.RequestUninstallCommand"
@@ -41,7 +47,6 @@ public sealed partial class UiStyleContractTests
                 "Settings.Editor.Current.ThemeColorMode",
                 "Settings.Editor.Current.BackgroundSource",
                 "Settings.Editor.Current.BackgroundFit",
-                "Settings.Editor.Current.ShowRemoteContentCard",
                 "Settings.Appearance.ThemeColorPaletteItems",
                 "Settings.Appearance.SelectedCustomThemeColor",
                 "Settings.Appearance.SelectedBackgroundFillColor",
@@ -56,7 +61,6 @@ public sealed partial class UiStyleContractTests
             ],
             ["SettingsAdvancedSection"] =
             [
-                "Settings.Editor.Current.UpdateChannel",
                 "Settings.Editor.Current.LogLevel",
                 "LogViewer.OpenCommand",
                 "LogExport.OpenCommand",
@@ -454,6 +458,31 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void GeneralSection_UsesThreeSettingsGroupsInFixedOrder()
+    {
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/SettingsGeneralSection.axaml"));
+        var groups = document
+            .Descendants()
+            .Where(element =>
+                element.Name.LocalName == "StackPanel"
+                && HasClass(element, "settings-group"))
+            .ToList();
+
+        Assert.Equal(3, groups.Count);
+
+        Assert.Equal(
+            [
+                "{Binding Shell.I18n[settingsGroupAppPreferences]}",
+                "{Binding Shell.I18n[settingsGroupDisplay]}",
+                "{Binding Shell.I18n[settingsGroupUpdates]}"
+            ],
+            groups.Select(group => group
+                .Elements()
+                .First(element => element.Name.LocalName == "TextBlock")
+                .Attribute("Text")?.Value));
+    }
+
+    [Fact]
     public void AppearanceSection_UsesTwoSettingsGroupsForConsistentVerticalRhythm()
     {
         var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/SettingsAppearanceSection.axaml"));
@@ -464,7 +493,7 @@ public sealed partial class UiStyleContractTests
                 && HasClass(element, "settings-group"))
             .ToList();
 
-        Assert.Equal(3, groups.Count);
+        Assert.Equal(2, groups.Count);
 
         Assert.Equal(
             "{Binding Shell.I18n[settingsGroupThemeColor]}",
@@ -485,12 +514,6 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             "{Binding Settings.Options.NeutralColorStrategy}",
             neutralStrategyRow.Attribute("ItemsSource")?.Value);
-        Assert.Equal(
-            "{Binding Shell.I18n[settingsGroupDisplay]}",
-            groups[2]
-                .Elements()
-                .First(element => element.Name.LocalName == "TextBlock")
-                .Attribute("Text")?.Value);
     }
 
     [Fact]
@@ -579,7 +602,7 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void SettingsRuntimePaths_OnLinux_LiveOnlyInAdvancedSection()
+    public void SettingsRuntimePaths_OnLinux_LiveOnlyInGameSection()
     {
         var gameDocument = XDocument.Load(TestRepository.FromApplicationRoot("Views/SettingsGameSection.axaml"));
         var advancedDocument = XDocument.Load(TestRepository.FromApplicationRoot("Views/SettingsAdvancedSection.axaml"));
@@ -593,14 +616,14 @@ public sealed partial class UiStyleContractTests
         foreach (var binding in runtimeBindings)
         {
             Assert.DoesNotContain(
-                gameDocument.Descendants(),
+                advancedDocument.Descendants(),
                 element => element.Attribute("Text")?.Value == binding);
             Assert.Contains(
-                advancedDocument.Descendants(),
+                gameDocument.Descendants(),
                 element => element.Attribute("Text")?.Value == binding);
         }
 
-        var runnerPathInput = advancedDocument
+        var runnerPathInput = gameDocument
             .Descendants()
             .Single(element =>
                 element.Name.LocalName == "TextBox"
@@ -609,7 +632,7 @@ public sealed partial class UiStyleContractTests
             "{Binding Settings.IsGameRuntimeRunnerPathEnabled}",
             runnerPathInput.Attribute("IsEnabled")?.Value);
 
-        var runtimeInputs = advancedDocument
+        var runtimeInputs = gameDocument
             .Descendants()
             .Where(element =>
                 element.Name.LocalName == "TextBox"
@@ -621,6 +644,17 @@ public sealed partial class UiStyleContractTests
             input => Assert.Equal(
                 "{StaticResource Launcher.Component.Settings.Control.MinWidth}",
                 input.Attribute("Width")?.Value));
+
+        // 运行环境路径与运行器选择同组（兼容运行环境），组内不再依赖诊断分区的位置。
+        var runtimeGroup = runnerPathInput
+            .Ancestors()
+            .Single(element =>
+                element.Name.LocalName == "StackPanel"
+                && HasClass(element, "settings-group"));
+        Assert.Contains(
+            runtimeGroup.Descendants(),
+            element => element.Name.LocalName == "SettingSelect"
+                && element.Attribute("Title")?.Value == "{Binding Shell.I18n[gameRuntimeRunner]}");
 
         var styles = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
         var uidInputStyle = GetStyleSetters(styles, "TextBox.uid-input");
@@ -1045,7 +1079,7 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void AdvancedSettings_WithMultipleGroups_KeepsLogActionsInDiagnosticsRow()
+    public void AdvancedSettings_KeepsLogActionsInDiagnosticsRow()
     {
         var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/SettingsAdvancedSection.axaml"));
         var group = document
