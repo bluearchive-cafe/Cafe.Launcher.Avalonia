@@ -272,6 +272,17 @@
                                 <TextBlock Text="{Binding Shell.I18n[remoteContentLoadFailed]}"
                                            Classes="body"
                                            TextAlignment="Center"/>
+                                <!-- 失败态的就地恢复路径：文案指引"刷新重试"，按钮直接给出重试动作。 -->
+                                <Button Classes="flat-action"
+                                        Cursor="Hand"
+                                        HorizontalAlignment="Center"
+                                        Command="{Binding RefreshCommand}"
+                                        AutomationProperties.Name="{Binding Shell.I18n[retry]}">
+                                    <StackPanel Classes="button-content">
+                                        <materialIcons:MaterialIcon Kind="Refresh" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                        <TextBlock Text="{Binding Shell.I18n[retry]}"/>
+                                    </StackPanel>
+                                </Button>
                             </StackPanel>
                         </Border>
                         <controls:LoadingOverlay Classes="remote-content-loading-overlay"

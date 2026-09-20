@@ -14,8 +14,7 @@ public sealed class ResxResourceContractTests
     private static readonly string[] DynamicProductionKeys =
     [
         "fileOperationFailed",
-        "gameLaunchFailed",
-        "networkWithMessage"
+        "gameLaunchFailed"
     ];
     private static readonly Dictionary<string, Dictionary<string, string>> ResxValues = new(StringComparer.Ordinal);
 

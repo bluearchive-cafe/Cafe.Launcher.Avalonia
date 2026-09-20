@@ -421,8 +421,8 @@ public sealed partial class UiStyleContractTests
             "{StaticResource Launcher.Color.Danger}",
             GetStyleSetters(styles, "TextBlock.wizard-game-path-status.notwritable")["Foreground"]);
 
-        // 状态图标与文本共用语义色：检测中 Sync、就绪 CheckCircle、损坏/不可访问 Alert、
-        // 不可写入 Lock。
+        // 状态图标与文本共用语义色：检测中 Sync、就绪 CheckCircle、损坏/不可访问
+        // AlertCircle（与其他错误表面同族）、不可写入 Lock。
         var icons = statusRow
             .Elements()
             .Where(element => element.Name.LocalName == "MaterialIcon")
@@ -451,7 +451,7 @@ public sealed partial class UiStyleContractTests
             },
             icon =>
             {
-                Assert.Equal("Alert", icon.Attribute("Kind")?.Value);
+                Assert.Equal("AlertCircle", icon.Attribute("Kind")?.Value);
                 Assert.Equal(
                     "{Binding Dialogs.SetupWizard.IsGamePathCorruptedInstallation}",
                     icon.Attribute("IsVisible")?.Value);
@@ -461,7 +461,7 @@ public sealed partial class UiStyleContractTests
             },
             icon =>
             {
-                Assert.Equal("Alert", icon.Attribute("Kind")?.Value);
+                Assert.Equal("AlertCircle", icon.Attribute("Kind")?.Value);
                 Assert.Equal(
                     "{Binding Dialogs.SetupWizard.IsGamePathInaccessible}",
                     icon.Attribute("IsVisible")?.Value);

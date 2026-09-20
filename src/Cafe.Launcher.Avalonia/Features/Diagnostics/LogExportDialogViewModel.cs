@@ -231,7 +231,8 @@ public sealed partial class LogExportDialogViewModel : ViewModelBase, IModalCont
         {
             toastService.ShowError(ErrorHandlingService.FormatToastMessage(
                 localizer.T(LocalizationKeys.LogExportFailed),
-                exception));
+                exception,
+                localizer.T(LocalizationKeys.ErrorNetworkUnavailable)));
             await diagnostics.ErrorAsync(
                 LogExportService.LogTitle,
                 $"Exporting to {destination ?? "an unpicked folder"} failed.",

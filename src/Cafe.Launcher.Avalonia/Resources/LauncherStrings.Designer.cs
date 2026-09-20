@@ -346,6 +346,8 @@ internal static class LauncherStrings
 
     internal static string ErrorDialogViewLog => GetRequiredString("errorDialogViewLog");
 
+    internal static string ErrorNetworkUnavailable => GetRequiredString("errorNetworkUnavailable");
+
     internal static string EstimatedTimeRemaining => GetRequiredString("estimatedTimeRemaining");
 
     internal static string Executable => GetRequiredString("executable");
@@ -693,8 +695,6 @@ internal static class LauncherStrings
     internal static string NetworkErrorDetail => GetRequiredString("networkErrorDetail");
 
     internal static string NetworkLoading => GetRequiredString("networkLoading");
-
-    internal static string NetworkWithMessage => GetRequiredString("networkWithMessage");
 
     internal static string NeutralColorStrategy => GetRequiredString("neutralColorStrategy");
 

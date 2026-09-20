@@ -507,7 +507,14 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 
         if (isTerminal)
         {
-            toastService.ShowError(message);
+            // 终态错误不提供重试,但仍要给出查看日志的去处:
+            // 失败不能只存在于一条会自动消失的文案里。
+            toastService.Show(new ToastOptions
+            {
+                Message = message,
+                Severity = ToastSeverity.Error,
+                SecondaryAction = new ToastAction(localizer.T(LocalizationKeys.ViewLog), OpenLogViewerAsync)
+            });
             return;
         }
 

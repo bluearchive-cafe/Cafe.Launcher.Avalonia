@@ -178,7 +178,9 @@ public partial class ShellViewModel : ViewModelBase, IDisposable
 
     public void SetRefreshError(Exception exception)
     {
-        NetworkText = localizer.F(LocalizationKeys.NetworkWithMessage, exception.Message);
+        // 刷新失败在状态栏只报中性可行动的状态（与快照的远端不可用同措辞）；
+        // 异常原文已进诊断日志，不放进行内小空间。
+        NetworkText = localizer.T(LocalizationKeys.GameRemoteStateUnavailable);
         VersionText = localizer.T(LocalizationKeys.VersionUnavailable);
         SetLoadingPlaceholders();
     }

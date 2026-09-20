@@ -241,7 +241,8 @@ public sealed class GameOperationJourneyTests
         Assert.Contains(notifications, toast =>
             toast.Severity == ToastSeverity.Error
             && toast.Message == "path missing"
-            && toast.PrimaryAction is null);
+            && toast.PrimaryAction is null
+            && toast.SecondaryAction is not null);
     }
 
     [Fact]

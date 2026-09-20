@@ -57,7 +57,8 @@ public sealed class ShellLifecycleTests : IDisposable
         await fixture.Lifecycle.RefreshAsync().WaitAsync(TimeSpan.FromSeconds(2));
 
         // 失败被降级为壳上的错误状态,而不是把异常抛给调用方。
-        Assert.Contains("load failed", fixture.Shell.NetworkText, StringComparison.Ordinal);
+        // 行内状态栏只给中性可行动的状态;异常原文仅保留在 toast 与诊断日志里。
+        Assert.Equal(fixture.Shell.I18n["gameRemoteStateUnavailable"], fixture.Shell.NetworkText);
         Assert.Equal(fixture.Shell.I18n["versionUnavailable"], fixture.Shell.VersionText);
         Assert.False(fixture.Lifecycle.IsBusy);
         Assert.False(fixture.Shell.IsBusy);
@@ -112,7 +113,7 @@ public sealed class ShellLifecycleTests : IDisposable
 
         Assert.Equal(1, core.LoadCount);
         Assert.False(fixture.Lifecycle.IsBusy);
-        Assert.Contains("load failed", fixture.Shell.NetworkText, StringComparison.Ordinal);
+        Assert.Equal(fixture.Shell.I18n["gameRemoteStateUnavailable"], fixture.Shell.NetworkText);
         Assert.Contains(
             raisedToasts,
             t => t.Severity == ToastSeverity.Error && t.Message.Contains("load failed", StringComparison.Ordinal));
