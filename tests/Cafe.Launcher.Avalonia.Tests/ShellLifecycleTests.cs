@@ -549,7 +549,7 @@ public sealed class ShellLifecycleTests : IDisposable
             launcherUpdateService,
             diagnostics,
             errorHandling,
-            new WindowsAnimationSettingsProvider(),
+            new SystemAnimationSettingsProvider(),
             family,
             filePickerService);
 

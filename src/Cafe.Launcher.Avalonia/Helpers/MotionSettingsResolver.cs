@@ -4,11 +4,11 @@ namespace Cafe.Launcher.Avalonia.Helpers;
 
 public static class MotionSettingsResolver
 {
-    public static bool ShouldReduceMotion(string mode, bool? windowsAnimationsEnabled) => mode switch
+    public static bool ShouldReduceMotion(string mode, bool? systemAnimationsEnabled) => mode switch
     {
         MotionModes.Full => false,
         MotionModes.Reduced => true,
-        MotionModes.System => windowsAnimationsEnabled != true,
+        MotionModes.System => systemAnimationsEnabled != true,
         _ => true
     };
 }

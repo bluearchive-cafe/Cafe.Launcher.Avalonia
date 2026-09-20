@@ -48,7 +48,7 @@ public sealed partial class MainWindowViewModelTests : IDisposable
         ToastService? toastService = null,
         LauncherUpdateService? launcherUpdateService = null,
         StubGameOperationExecutor? gameOperationsBackend = null,
-        WindowsAnimationSettingsProvider? windowsAnimationSettingsProvider = null,
+        SystemAnimationSettingsProvider? systemAnimationSettingsProvider = null,
         Func<TimeSpan, CancellationToken, Task>? toastDelayAsync = null,
         StubFilePickerService? filePickerService = null)
     {
@@ -63,7 +63,7 @@ public sealed partial class MainWindowViewModelTests : IDisposable
             toastService,
             launcherUpdateService,
             gameOperationsBackend,
-            windowsAnimationSettingsProvider,
+            systemAnimationSettingsProvider,
             toastDelayAsync,
             filePickerService);
         contexts.Add(context);

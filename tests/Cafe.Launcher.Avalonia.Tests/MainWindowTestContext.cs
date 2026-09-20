@@ -70,7 +70,7 @@ internal sealed class MainWindowTestContext : IDisposable
         ToastService? toastService = null,
         LauncherUpdateService? launcherUpdateService = null,
         StubGameOperationExecutor? gameOperationsBackend = null,
-        WindowsAnimationSettingsProvider? windowsAnimationSettingsProvider = null,
+        SystemAnimationSettingsProvider? systemAnimationSettingsProvider = null,
         Func<TimeSpan, CancellationToken, Task>? toastDelayAsync = null,
         StubFilePickerService? filePickerService = null)
     {
@@ -87,7 +87,7 @@ internal sealed class MainWindowTestContext : IDisposable
                 toastService,
                 launcherUpdateService,
                 gameOperationsBackend,
-                windowsAnimationSettingsProvider,
+                systemAnimationSettingsProvider,
                 toastDelayAsync,
                 filePickerService,
                 owned),
@@ -105,7 +105,7 @@ internal sealed class MainWindowTestContext : IDisposable
         ToastService? toastService,
         LauncherUpdateService? launcherUpdateService,
         StubGameOperationExecutor? gameOperationsBackend,
-        WindowsAnimationSettingsProvider? windowsAnimationSettingsProvider,
+        SystemAnimationSettingsProvider? systemAnimationSettingsProvider,
         Func<TimeSpan, CancellationToken, Task>? toastDelayAsync,
         StubFilePickerService? filePickerService,
         List<IDisposable> owned)
@@ -290,7 +290,7 @@ internal sealed class MainWindowTestContext : IDisposable
                 debugViewModel,
                 new ModalHostViewModel()),
             errorHandling,
-            windowsAnimationSettingsProvider ?? new WindowsAnimationSettingsProvider(),
+            systemAnimationSettingsProvider ?? new SystemAnimationSettingsProvider(),
             filePickerService);
     }
 

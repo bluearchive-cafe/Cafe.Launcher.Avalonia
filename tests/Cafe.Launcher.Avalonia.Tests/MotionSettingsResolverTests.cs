@@ -11,9 +11,9 @@ public sealed class MotionSettingsResolverTests
     [InlineData(MotionModes.System, true, false)]
     [InlineData(MotionModes.System, false, true)]
     [InlineData(MotionModes.System, null, true)]
-    public void ShouldReduceMotion_ResolvesMode(string mode, bool? windowsAnimationsEnabled, bool expected)
+    public void ShouldReduceMotion_ResolvesMode(string mode, bool? systemAnimationsEnabled, bool expected)
     {
-        Assert.Equal(expected, MotionSettingsResolver.ShouldReduceMotion(mode, windowsAnimationsEnabled));
+        Assert.Equal(expected, MotionSettingsResolver.ShouldReduceMotion(mode, systemAnimationsEnabled));
     }
 
     [Fact]

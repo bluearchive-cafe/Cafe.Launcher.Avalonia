@@ -24,7 +24,7 @@ internal sealed record SystemProxySettings(string ProxyUrl, IReadOnlyList<string
 /// <para>
 /// The cached-handler invariant is structural: the only way to obtain a proxy
 /// handler is <see cref="GetOrCreateHandlerAsync"/>, which pairs fingerprint
-/// computation and handler construction internally — a changed registry
+/// computation and handler construction internally — a changed system-proxy
 /// snapshot always replaces the cached handler, an unchanged one always reuses
 /// it, and no caller can hold a fingerprint without its handler or vice versa.
 /// </para>
@@ -43,7 +43,7 @@ public sealed class ProxySettingsService : IDisposable
     private readonly object proxyHandlerLock = new();
     private bool disposed;
 
-    public ProxySettingsService() : this(WindowsRegistrySystemProxySettingsProvider.GetSettings)
+    public ProxySettingsService() : this(SystemProxySettingsProvider.GetSettings)
     {
     }
 

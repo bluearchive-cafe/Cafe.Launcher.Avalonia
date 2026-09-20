@@ -15,7 +15,7 @@ public partial class MainWindowViewModelTests
         snapshot.Settings.MotionMode = MotionModes.Reduced;
         using var viewModel = await CreateViewModelAsync(
             new CountingCoreService(snapshot),
-            windowsAnimationSettingsProvider: new WindowsAnimationSettingsProvider(() => (true, true)));
+            systemAnimationSettingsProvider: new SystemAnimationSettingsProvider(() => true));
 
         await viewModel.InitializeAsync();
 
@@ -31,7 +31,7 @@ public partial class MainWindowViewModelTests
         using var viewModel = await CreateViewModelAsync(
             new CountingCoreService(snapshot),
             gameOperationsBackend: new StubGameOperationExecutor { IsDownloadRunning = true },
-            windowsAnimationSettingsProvider: new WindowsAnimationSettingsProvider(() => (true, false)));
+            systemAnimationSettingsProvider: new SystemAnimationSettingsProvider(() => false));
         await viewModel.InitializeAsync();
         viewModel.Settings.Editor.Current.MotionMode = MotionModes.Full;
 
@@ -54,7 +54,7 @@ public partial class MainWindowViewModelTests
         };
         using var viewModel = await CreateViewModelAsync(
             new CountingCoreService(snapshot),
-            windowsAnimationSettingsProvider: new WindowsAnimationSettingsProvider(() => (true, true)));
+            systemAnimationSettingsProvider: new SystemAnimationSettingsProvider(() => true));
 
         await viewModel.InitializeAsync();
 
@@ -76,7 +76,7 @@ public partial class MainWindowViewModelTests
         using var viewModel = await CreateViewModelAsync(
             new CountingCoreService(snapshot),
             gameOperationsBackend: new StubGameOperationExecutor { IsDownloadRunning = true },
-            windowsAnimationSettingsProvider: new WindowsAnimationSettingsProvider(() => (true, true)));
+            systemAnimationSettingsProvider: new SystemAnimationSettingsProvider(() => true));
         await viewModel.InitializeAsync();
         Assert.True(viewModel.RemoteContent.IsCarouselTimerRunning);
 
@@ -95,8 +95,8 @@ public partial class MainWindowViewModelTests
         snapshot.Settings.MotionMode = MotionModes.System;
         using var viewModel = await CreateViewModelAsync(
             new CountingCoreService(snapshot),
-            windowsAnimationSettingsProvider: new WindowsAnimationSettingsProvider(
-                () => (true, animationsEnabled)));
+            systemAnimationSettingsProvider: new SystemAnimationSettingsProvider(
+                () => animationsEnabled));
         await viewModel.InitializeAsync();
         Assert.False(viewModel.IsMotionReduced);
         animationsEnabled = false;
@@ -114,11 +114,11 @@ public partial class MainWindowViewModelTests
         snapshot.Settings.MotionMode = MotionModes.System;
         using var viewModel = await CreateViewModelAsync(
             new CountingCoreService(snapshot),
-            windowsAnimationSettingsProvider: new WindowsAnimationSettingsProvider(
+            systemAnimationSettingsProvider: new SystemAnimationSettingsProvider(
                 () =>
                 {
                     providerReadCount++;
-                    return (true, true);
+                    return true;
                 }));
         await viewModel.InitializeAsync();
         var carouselTransition = viewModel.RemoteContent.CarouselTransition;
@@ -144,11 +144,11 @@ public partial class MainWindowViewModelTests
         using var viewModel = await CreateViewModelAsync(
             new CountingCoreService(snapshot),
             savedSettings: savedSettings,
-            windowsAnimationSettingsProvider: new WindowsAnimationSettingsProvider(
+            systemAnimationSettingsProvider: new SystemAnimationSettingsProvider(
                 () =>
                 {
                     providerReadCount++;
-                    return (true, false);
+                    return false;
                 }));
 
         await viewModel.InitializeAsync();
@@ -169,11 +169,11 @@ public partial class MainWindowViewModelTests
         using var viewModel = await CreateViewModelAsync(
             new CountingCoreService(snapshot),
             savedSettings: savedSettings,
-            windowsAnimationSettingsProvider: new WindowsAnimationSettingsProvider(
+            systemAnimationSettingsProvider: new SystemAnimationSettingsProvider(
                 () =>
                 {
                     providerReadCount++;
-                    return (true, true);
+                    return true;
                 }));
 
         viewModel.RefreshSystemMotionPreference();
@@ -203,11 +203,11 @@ public partial class MainWindowViewModelTests
         using var viewModel = await CreateViewModelAsync(
             new ThrowingCoreService(),
             savedSettings: savedSettings,
-            windowsAnimationSettingsProvider: new WindowsAnimationSettingsProvider(
+            systemAnimationSettingsProvider: new SystemAnimationSettingsProvider(
                 () =>
                 {
                     providerReadCount++;
-                    return (true, animationsEnabled);
+                    return animationsEnabled;
                 }));
 
         await viewModel.InitializeAsync();
