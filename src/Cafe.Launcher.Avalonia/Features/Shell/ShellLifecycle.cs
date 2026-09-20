@@ -40,7 +40,7 @@ public sealed class ShellLifecycle : IShellRuntime
     private readonly LauncherUpdateService launcherUpdateService;
     private readonly LocalDiagnostics diagnostics;
     private readonly IErrorHandlingService errorHandling;
-    private readonly WindowsAnimationSettingsProvider windowsAnimationSettingsProvider;
+    private readonly SystemAnimationSettingsProvider systemAnimationSettingsProvider;
     private readonly ShellViewModel shell;
     private readonly BackgroundViewModel background;
     private readonly RemoteContentViewModel remoteContent;
@@ -92,7 +92,7 @@ public sealed class ShellLifecycle : IShellRuntime
         LauncherUpdateService launcherUpdateService,
         LocalDiagnostics diagnostics,
         IErrorHandlingService errorHandling,
-        WindowsAnimationSettingsProvider windowsAnimationSettingsProvider,
+        SystemAnimationSettingsProvider systemAnimationSettingsProvider,
         ShellPresentationFamily family,
         IFilePickerService filePickerService)
         : this(
@@ -104,7 +104,7 @@ public sealed class ShellLifecycle : IShellRuntime
             launcherUpdateService,
             diagnostics,
             errorHandling,
-            windowsAnimationSettingsProvider,
+            systemAnimationSettingsProvider,
             family,
             filePickerService,
             ownsPresentationCollaborators: false)
@@ -120,7 +120,7 @@ public sealed class ShellLifecycle : IShellRuntime
         LauncherUpdateService launcherUpdateService,
         LocalDiagnostics diagnostics,
         IErrorHandlingService errorHandling,
-        WindowsAnimationSettingsProvider windowsAnimationSettingsProvider,
+        SystemAnimationSettingsProvider systemAnimationSettingsProvider,
         ShellPresentationFamily family,
         IFilePickerService filePickerService,
         bool ownsPresentationCollaborators)
@@ -141,7 +141,7 @@ public sealed class ShellLifecycle : IShellRuntime
         this.launcherUpdateService = launcherUpdateService;
         this.diagnostics = diagnostics;
         this.errorHandling = errorHandling;
-        this.windowsAnimationSettingsProvider = windowsAnimationSettingsProvider;
+        this.systemAnimationSettingsProvider = systemAnimationSettingsProvider;
         shell = family.Shell;
         background = family.Background;
         remoteContent = family.RemoteContent;
@@ -744,12 +744,12 @@ public sealed class ShellLifecycle : IShellRuntime
 
     private void ApplyMotionSettings(LauncherSettings savedSettings)
     {
-        var windowsAnimationsEnabled = savedSettings.MotionMode == MotionModes.System
-            ? windowsAnimationSettingsProvider.GetWindowsAnimationsEnabled()
+        var systemAnimationsEnabled = savedSettings.MotionMode == MotionModes.System
+            ? systemAnimationSettingsProvider.GetSystemAnimationsEnabled()
             : null;
         var reduceMotion = MotionSettingsResolver.ShouldReduceMotion(
             savedSettings.MotionMode,
-            windowsAnimationsEnabled);
+            systemAnimationsEnabled);
         if (motionSettingsApplied && reduceMotion == isMotionReduced)
         {
             return;

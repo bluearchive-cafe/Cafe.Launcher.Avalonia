@@ -440,7 +440,7 @@ public sealed class RemoteContentViewModelTests
     [InlineData(MotionModes.System, true)]
     public void ApplyMotionPreference_FullOrSystemEffectiveStateRestoresTransitionAndCarousel(
         string motionMode,
-        bool windowsAnimationsEnabled)
+        bool systemAnimationsEnabled)
     {
         using var context = CreateContext();
         context.ViewModel.Apply(
@@ -450,7 +450,7 @@ public sealed class RemoteContentViewModelTests
         context.ViewModel.ApplyMotionPreference(true);
 
         context.ViewModel.ApplyMotionPreference(
-            MotionSettingsResolver.ShouldReduceMotion(motionMode, windowsAnimationsEnabled));
+            MotionSettingsResolver.ShouldReduceMotion(motionMode, systemAnimationsEnabled));
 
         Assert.False(context.ViewModel.IsCarouselPaused);
         Assert.True(context.ViewModel.IsCarouselTimerRunning);

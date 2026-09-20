@@ -124,7 +124,7 @@ public static class ServiceConfiguration
         services.AddSingleton(sp => new LauncherSettingsService(
             dataRoot,
             sp.GetRequiredService<LocalDiagnostics>()));
-        services.AddSingleton<WindowsAnimationSettingsProvider>();
+        services.AddSingleton<SystemAnimationSettingsProvider>();
         services.AddSingleton<ISettingsEditor, SettingsEditor>();
         // 已保存设置的唯一写入方：依赖编辑器与设置服务，二者都登记在它之前。
         services.AddSingleton<ISavedSettingsWriter, SavedSettingsWriter>();

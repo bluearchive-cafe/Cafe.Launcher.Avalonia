@@ -336,11 +336,11 @@ public sealed partial class MainWindowHeadlessTests
         using var context = CreateContext();
         var runtime = context.Provider
             .GetRequiredService<Cafe.Launcher.Avalonia.Features.Shell.IShellRuntime>();
-        var windowsAnimationsEnabled = new WindowsAnimationSettingsProvider()
-            .GetWindowsAnimationsEnabled();
+        var systemAnimationsEnabled = new SystemAnimationSettingsProvider()
+            .GetSystemAnimationsEnabled();
         var expectedReduced = Cafe.Launcher.Avalonia.Helpers.MotionSettingsResolver.ShouldReduceMotion(
             MotionModes.System,
-            windowsAnimationsEnabled);
+            systemAnimationsEnabled);
 
         runtime.ApplyFirstLaunchMotionPreference();
         Dispatcher.UIThread.RunJobs();

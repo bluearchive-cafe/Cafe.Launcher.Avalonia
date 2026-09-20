@@ -93,7 +93,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         LocalDiagnostics diagnostics,
         ShellPresentationFamily family,
         IErrorHandlingService errorHandling,
-        WindowsAnimationSettingsProvider windowsAnimationSettingsProvider,
+        SystemAnimationSettingsProvider systemAnimationSettingsProvider,
         IFilePickerService filePickerService)
         : this(
             family,
@@ -106,7 +106,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 launcherUpdateService,
                 diagnostics,
                 errorHandling,
-                windowsAnimationSettingsProvider,
+                systemAnimationSettingsProvider,
                 family,
                 filePickerService,
                 ownsPresentationCollaborators: true))
