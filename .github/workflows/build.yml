@@ -66,6 +66,12 @@ jobs:
       # Release 运行：它正是这类分歧的宿主，成本约 30 秒。无头套件的 Release 运行仍留在 release.yml
       # 的 installer 作业（它的分歧面窄、且整套跑一遍要一分钟以上）。
       - name: Test (Release)
+        env:
+          # Release 配置在 csproj 中声明 SelfContained=true，dotnet test -c Release
+          # 的还原会按当前平台 RID（windows-latest 上为 win-x64）解析依赖图，与
+          # 提交的无 RID 段 lock 无法在 locked mode 下匹配（NU1004）。与 build job
+          # 对 RID 还原的显式豁免同理，测试还原也豁免 locked mode。
+          RestoreLockedMode: 'false'
         run: .\test.ps1 -Configuration Release -Suite Unit
 
       - name: Coverage
