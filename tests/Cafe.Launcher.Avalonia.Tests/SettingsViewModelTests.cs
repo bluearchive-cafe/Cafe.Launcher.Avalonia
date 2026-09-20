@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Features.Settings;
@@ -51,7 +52,7 @@ public sealed class SettingsViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task CheckForUpdatesCommand_WhenBothEndpointsFail_ShowsErrorToastWithExceptionDetail()
+    public async Task CheckForUpdatesCommand_WhenBothEndpointsFail_ShowsFriendlyNetworkAttribution()
     {
         var localizer = new LocalizationService();
         var transport = new StubRemoteHttpTransport(
@@ -66,7 +67,33 @@ public sealed class SettingsViewModelTests : IDisposable
             localizer.T(LocalizationKeys.LauncherUpdateCheckFailed),
             toast.Message,
             StringComparison.Ordinal);
-        Assert.Contains("simulated update endpoint outage", toast.Message, StringComparison.Ordinal);
+        // 网络家族失败给友好归因：原文不进 toast（已在诊断日志中）。
+        Assert.Contains(
+            localizer.T(LocalizationKeys.ErrorNetworkUnavailable),
+            toast.Message,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("simulated update endpoint outage", toast.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CheckForUpdatesCommand_WhenNonNetworkFailure_ShowsErrorToastWithExceptionDetail()
+    {
+        // JsonException 会被更新检查转为失败结果，且不属于网络家族：
+        // 原文保留在 toast 的「类型：消息」链里。
+        var localizer = new LocalizationService();
+        var transport = new StubRemoteHttpTransport(
+            _ => new JsonException("simulated update payload corruption"));
+        using var settings = CreateSettingsViewModel(localizer, transport);
+
+        await settings.CheckForUpdatesCommand.ExecuteAsync(null);
+
+        var toast = Assert.Single(raisedToasts);
+        Assert.Equal(ToastSeverity.Error, toast.Severity);
+        Assert.Contains(
+            localizer.T(LocalizationKeys.LauncherUpdateCheckFailed),
+            toast.Message,
+            StringComparison.Ordinal);
+        Assert.Contains("simulated update payload corruption", toast.Message, StringComparison.Ordinal);
     }
 
     [Fact]
