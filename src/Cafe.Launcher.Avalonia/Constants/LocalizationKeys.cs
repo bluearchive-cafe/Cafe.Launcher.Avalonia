@@ -174,6 +174,7 @@ public static class LocalizationKeys
     public const string ErrorDialogDescription = "errorDialogDescription";
     public const string ErrorDialogTitle = "errorDialogTitle";
     public const string ErrorDialogViewLog = "errorDialogViewLog";
+    public const string ErrorNetworkUnavailable = "errorNetworkUnavailable";
     public const string EstimatedTimeRemaining = "estimatedTimeRemaining";
     public const string Executable = "executable";
     public const string ExecutableLoading = "executableLoading";
@@ -348,7 +349,6 @@ public static class LocalizationKeys
     public const string MotionModeSystem = "motionModeSystem";
     public const string NetworkErrorDetail = "networkErrorDetail";
     public const string NetworkLoading = "networkLoading";
-    public const string NetworkWithMessage = "networkWithMessage";
     public const string NeutralColorStrategy = "neutralColorStrategy";
     public const string NeutralColorStrategyBrandBlue = "neutralColorStrategyBrandBlue";
     public const string NeutralColorStrategyDescription = "neutralColorStrategyDescription";

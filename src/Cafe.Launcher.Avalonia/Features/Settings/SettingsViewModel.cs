@@ -248,7 +248,10 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         {
             var operationMessage = localizer.T(LocalizationKeys.LauncherUpdateCheckFailed);
             var message = result.FailureException is not null
-                ? ErrorHandlingService.FormatToastMessage(operationMessage, result.FailureException)
+                ? ErrorHandlingService.FormatToastMessage(
+                    operationMessage,
+                    result.FailureException,
+                    localizer.T(LocalizationKeys.ErrorNetworkUnavailable))
                 : string.IsNullOrWhiteSpace(result.FailureMessage)
                     ? operationMessage
                     : $"{operationMessage}：{result.FailureMessage}";

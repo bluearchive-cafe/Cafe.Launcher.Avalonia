@@ -133,7 +133,8 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCont
             // 错误提示与本地日志记录，避免「加载失败」被误读成「没有日志」。
             toastService.ShowError(ErrorHandlingService.FormatToastMessage(
                 localizer.T(LocalizationKeys.LogLoadFailed),
-                ex));
+                ex,
+                localizer.T(LocalizationKeys.ErrorNetworkUnavailable)));
             await diagnostics.ErrorAsync(
                 "LogViewer",
                 "Loading the log entries failed.",
@@ -171,7 +172,8 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCont
             loadedPageCount--;
             toastService.ShowError(ErrorHandlingService.FormatToastMessage(
                 localizer.T(LocalizationKeys.LogLoadFailed),
-                ex));
+                ex,
+                localizer.T(LocalizationKeys.ErrorNetworkUnavailable)));
             await diagnostics.ErrorAsync(
                 "LogViewer",
                 "Loading the earlier log entries failed.",

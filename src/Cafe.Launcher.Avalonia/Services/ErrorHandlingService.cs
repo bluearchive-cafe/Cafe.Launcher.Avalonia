@@ -1,7 +1,11 @@
 using System;
+using System.Net;
+using System.Net.Http;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.Services;
@@ -86,16 +90,31 @@ public sealed class ErrorHandlingService : IErrorHandlingService
         if (options.ShowToast)
         {
             var toastMessage = options.IncludeExceptionDetails
-                ? FormatToastMessage(options.ToastMessage ?? context, exception)
+                ? FormatToastMessage(
+                    options.ToastMessage ?? context,
+                    exception,
+                    localizer.T(LocalizationKeys.ErrorNetworkUnavailable))
                 : options.ToastMessage ?? context;
             toastService.ShowError(toastMessage);
         }
     }
 
-    /// <summary>Formats a user-safe exception summary without stack traces or source locations.</summary>
-    internal static string FormatToastMessage(string? operationMessage, Exception exception)
+    /// <summary>
+    /// Formats a user-safe exception summary without stack traces or source locations.
+    /// Network-family failures get a friendly localized attribution instead of the
+    /// raw type/message chain: the actionable guidance is the same regardless of the
+    /// underlying socket error, and the exact cause is already in the diagnostic log.
+    /// </summary>
+    internal static string FormatToastMessage(string? operationMessage, Exception exception, string networkFailureText)
     {
         ArgumentNullException.ThrowIfNull(exception);
+
+        if (IsNetworkFamily(exception))
+        {
+            return string.IsNullOrWhiteSpace(operationMessage)
+                ? networkFailureText
+                : $"{operationMessage.Trim()}：{networkFailureText}";
+        }
 
         var message = new StringBuilder(operationMessage?.Trim());
         var isFirstException = true;
@@ -128,6 +147,19 @@ public sealed class ErrorHandlingService : IErrorHandlingService
 
         return message.ToString();
     }
+
+    /// <summary>
+    /// 判定最外层异常是否属于网络家族。超时常以 TaskCanceledException 呈现，
+    /// 用户能采取的动作与连接失败相同，归入同一文案；内层异常不改写判定，
+    /// 保留原有「类型：消息」链的诊断价值（IO 家族的失败由调用点给出专属文案）。
+    /// </summary>
+    private static bool IsNetworkFamily(Exception exception) =>
+        exception is HttpRequestException
+            or HttpIOException
+            or SocketException
+            or WebException
+            or TimeoutException
+            or TaskCanceledException;
 
     /// <summary>Logs a critical failure and requests that the shell show its modal error dialog.</summary>
     public async Task HandleCriticalErrorAsync(string context, Exception exception)

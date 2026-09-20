@@ -1,3 +1,4 @@
+using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
@@ -7,6 +8,8 @@ namespace Cafe.Launcher.Avalonia.Tests;
 [Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class ErrorHandlingServiceTests
 {
+    private const string NetworkFailureText = "friendly network attribution";
+
     static ErrorHandlingServiceTests()
     {
         TestLocalizationHelper.Initialize();
@@ -67,12 +70,12 @@ public sealed class ErrorHandlingServiceTests
     {
         var exception = new InvalidOperationException(
             "outer",
-            new IOException("inner", new TimeoutException("timeout")));
+            new IOException("inner", new IOException("disk")));
 
-        var message = ErrorHandlingService.FormatToastMessage("Download failed", exception);
+        var message = ErrorHandlingService.FormatToastMessage("Download failed", exception, NetworkFailureText);
 
         Assert.Equal(
-            "Download failed（InvalidOperationException）：outer → IOException：inner → TimeoutException：timeout",
+            "Download failed（InvalidOperationException）：outer → IOException：inner → IOException：disk",
             message);
     }
 
@@ -81,9 +84,59 @@ public sealed class ErrorHandlingServiceTests
     {
         var exception = new InvalidOperationException("", new IOException("disk unavailable"));
 
-        var message = ErrorHandlingService.FormatToastMessage("Save failed", exception);
+        var message = ErrorHandlingService.FormatToastMessage("Save failed", exception, NetworkFailureText);
 
         Assert.Equal("Save failed（InvalidOperationException） → IOException：disk unavailable", message);
+    }
+
+    [Theory]
+    [InlineData(typeof(HttpRequestException))]
+    [InlineData(typeof(TimeoutException))]
+    [InlineData(typeof(TaskCanceledException))]
+    public void FormatToastMessage_WithNetworkFamilyException_UsesFriendlyAttribution(Type exceptionType)
+    {
+        var exception = (Exception)Activator.CreateInstance(exceptionType, "raw socket detail")!;
+
+        var message = ErrorHandlingService.FormatToastMessage("Download failed", exception, NetworkFailureText);
+
+        // 原文不进 toast（已在诊断日志中），代之以可行动的友好归因。
+        Assert.DoesNotContain("raw socket detail", message, StringComparison.Ordinal);
+        Assert.Equal($"Download failed：{NetworkFailureText}", message);
+    }
+
+    [Fact]
+    public void FormatToastMessage_WithNetworkFamilyExceptionAndNoOperationMessage_ShowsAttributionOnly()
+    {
+        var message = ErrorHandlingService.FormatToastMessage(
+            null, new HttpRequestException("raw"), NetworkFailureText);
+
+        Assert.Equal(NetworkFailureText, message);
+    }
+
+    [Fact]
+    public void FormatToastMessage_WithNonNetworkOutermost_KeepsTheDetailChain()
+    {
+        // 内层是网络异常但最外层不是：不改写为友好归因，保留类型链。
+        var exception = new InvalidOperationException("outer", new HttpRequestException("inner"));
+
+        var message = ErrorHandlingService.FormatToastMessage("Save failed", exception, NetworkFailureText);
+
+        Assert.Equal("Save failed（InvalidOperationException）：outer → HttpRequestException：inner", message);
+    }
+
+    [Fact]
+    public async Task HandleErrorAsync_WithNetworkException_ShowsLocalizedFriendlyToast()
+    {
+        var (service, toastService) = CreateService();
+        ToastNotification? toast = null;
+        toastService.ToastRaised += notification => toast = notification;
+
+        await service.HandleErrorAsync("CheckUpdate", new HttpRequestException("socket refused"));
+
+        Assert.NotNull(toast);
+        var expected = new LocalizationService().T(LocalizationKeys.ErrorNetworkUnavailable);
+        Assert.Contains(expected, toast!.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("socket refused", toast.Message, StringComparison.Ordinal);
     }
 
     [Fact]
