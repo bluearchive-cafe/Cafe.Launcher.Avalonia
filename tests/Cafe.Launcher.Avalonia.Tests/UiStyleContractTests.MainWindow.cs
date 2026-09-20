@@ -151,9 +151,17 @@ public sealed partial class UiStyleContractTests
             ["{Binding Operations.RequestStopCommand}"] = ("{Binding Shell.I18n[stop]}", "secondary-operation")
         };
 
+        var operationSurface = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Border"
+                && HasClass(element, "operation-surface"));
+
         foreach (var (command, expected) in expectedButtons)
         {
-            var button = document
+            // 契约域是操作面板：动作优先级词汇（primary/secondary-operation）只在
+            // 该表面内约束，其他表面（如远程内容失败卡）复用同一命令时不受此管辖。
+            var button = operationSurface
                 .Descendants()
                 .First(element =>
                     element.Name.LocalName == "Button"
@@ -570,6 +578,12 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void MainWindow_RemoteContentLoadError_CarriesTheCardBackground()
     {
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.axaml"));
+        var errorCard = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Border"
+                && HasClass(element, "remote-content-load-error"));
         var styles = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
         var errorStyle = GetStyleSetters(styles, "Border.remote-content-load-error");
 
@@ -577,6 +591,18 @@ public sealed partial class UiStyleContractTests
         // 否则加载失败时透出壁纸，呈现为无背景的悬空错误文字。
         Assert.Equal("{DynamicResource Launcher.Color.Panel.Background}", errorStyle["Background"]);
         Assert.Equal("{StaticResource Launcher.Radius.Sm}", errorStyle["CornerRadius"]);
+
+        // 文案指引"刷新重试"，卡片必须就地给出重试动作，而不是让用户去别处找刷新按钮。
+        var retryButton = errorCard
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Button"
+                && element.Attribute("Command")?.Value == "{Binding RefreshCommand}");
+        Assert.Equal("{Binding Shell.I18n[retry]}", retryButton.Attribute("AutomationProperties.Name")?.Value);
+        Assert.Single(
+            retryButton.Descendants(),
+            icon => icon.Name.LocalName == "MaterialIcon"
+                && icon.Attribute("Kind")?.Value == "Refresh");
     }
 
     [Fact]
