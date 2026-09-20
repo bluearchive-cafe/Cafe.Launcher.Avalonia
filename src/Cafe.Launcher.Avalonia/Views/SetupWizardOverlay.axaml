@@ -142,12 +142,12 @@
                                                            Height="{StaticResource Launcher.Icon.Sm}"
                                                            Foreground="{DynamicResource Launcher.Color.Success}"
                                                            IsVisible="{Binding Dialogs.SetupWizard.IsGamePathReady}"/>
-                                <materialIcons:MaterialIcon Kind="Alert"
+                                <materialIcons:MaterialIcon Kind="AlertCircle"
                                                            Width="{StaticResource Launcher.Icon.Sm}"
                                                            Height="{StaticResource Launcher.Icon.Sm}"
                                                            Foreground="{StaticResource Launcher.Color.Danger}"
                                                            IsVisible="{Binding Dialogs.SetupWizard.IsGamePathCorruptedInstallation}"/>
-                                <materialIcons:MaterialIcon Kind="Alert"
+                                <materialIcons:MaterialIcon Kind="AlertCircle"
                                                            Width="{StaticResource Launcher.Icon.Sm}"
                                                            Height="{StaticResource Launcher.Icon.Sm}"
                                                            Foreground="{StaticResource Launcher.Color.Danger}"
