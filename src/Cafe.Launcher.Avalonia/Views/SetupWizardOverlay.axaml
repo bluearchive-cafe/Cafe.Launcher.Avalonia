@@ -46,7 +46,7 @@
                             ToolTip.Tip="{Binding Shell.I18n[setupWizardSkip]}"
                             AutomationProperties.Name="{Binding Shell.I18n[setupWizardSkip]}">
                         <StackPanel Classes="button-content">
-                            <materialIcons:MaterialIcon Kind="Close"
+                            <materialIcons:MaterialIcon Kind="SkipNextOutline"
                                                        Width="{StaticResource Launcher.Icon.Sm}"
                                                        Height="{StaticResource Launcher.Icon.Sm}"/>
                             <TextBlock Text="{Binding Shell.I18n[setupWizardSkip]}"/>
