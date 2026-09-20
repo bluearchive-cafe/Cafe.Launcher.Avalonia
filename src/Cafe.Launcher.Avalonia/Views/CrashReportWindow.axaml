@@ -220,15 +220,18 @@
                 <Button Classes="crash-action crash-subtle"
                         HorizontalAlignment="Left"
                         Content="{Binding OpenLogsText}"
+                        AutomationProperties.Name="{Binding OpenLogsText}"
                         Click="OnOpenLogsClick"/>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource Crash.Spacing.Sm}">
                     <Button x:Name="CopyDetailsButton"
                             Classes="crash-action crash-secondary"
                             Content="{Binding CopyDetailsText}"
+                            AutomationProperties.Name="{Binding CopyDetailsText}"
                             Click="OnCopyDetailsClick"/>
                     <Button x:Name="ExitButton"
                             Classes="crash-action crash-danger"
                             Content="{Binding ExitText}"
+                            AutomationProperties.Name="{Binding ExitText}"
                             Click="OnExitClick"/>
                 </StackPanel>
             </Grid>
