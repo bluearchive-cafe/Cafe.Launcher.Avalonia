@@ -568,6 +568,18 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void MainWindow_RemoteContentLoadError_CarriesTheCardBackground()
+    {
+        var styles = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
+        var errorStyle = GetStyleSetters(styles, "Border.remote-content-load-error");
+
+        // 失败态替代整块内容区，必须与 remote-content-card 同底同圆角，
+        // 否则加载失败时透出壁纸，呈现为无背景的悬空错误文字。
+        Assert.Equal("{DynamicResource Launcher.Color.Panel.Background}", errorStyle["Background"]);
+        Assert.Equal("{StaticResource Launcher.Radius.Sm}", errorStyle["CornerRadius"]);
+    }
+
+    [Fact]
     public void MainWindow_MultiRowGridChildren_DeclareTheirFirstRowExplicitly()
     {
         var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.axaml"));

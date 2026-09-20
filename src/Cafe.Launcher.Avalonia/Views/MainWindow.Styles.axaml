@@ -542,7 +542,11 @@
         <Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/>
         <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
     </Style>
+    <!-- 加载失败态与内容卡片同底：错误面板铺满 remote-surface，须自带 Panel.Background
+         与卡片圆角，否则内容消失后透出壁纸，呈现为无背景的悬空文字。 -->
     <Style Selector="Border.remote-content-load-error">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Panel.Background}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Xl}"/>
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="VerticalAlignment" Value="Stretch"/>
