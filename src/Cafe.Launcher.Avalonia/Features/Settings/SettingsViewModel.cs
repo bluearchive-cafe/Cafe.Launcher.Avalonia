@@ -251,7 +251,8 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
                 ? ErrorHandlingService.FormatToastMessage(
                     operationMessage,
                     result.FailureException,
-                    localizer.T(LocalizationKeys.ErrorNetworkUnavailable))
+                    localizer.T(LocalizationKeys.ErrorNetworkUnavailable),
+                    localizer.T(LocalizationKeys.ErrorFakeIpDns))
                 : string.IsNullOrWhiteSpace(result.FailureMessage)
                     ? operationMessage
                     : $"{operationMessage}：{result.FailureMessage}";

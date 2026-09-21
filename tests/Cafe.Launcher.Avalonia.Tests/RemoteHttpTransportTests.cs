@@ -65,6 +65,88 @@ public sealed class RemoteHttpTransportTests
     }
 
     [Fact]
+    public async Task GetStreamAsync_WhenDirectConnectionFailsOverFakeIpDns_AnnotatesException()
+    {
+        // 适配 Clash Fake-IP（含 mihomo fake-ip-range6 的 ULA 段）：直连路径把 fake-ip
+        // 应答拿去直拨，失败时在异常上钉 Fake-IP DNS 标记——类型与消息保持不变，由
+        // 表示层换成针对性指引。TUN 接管的 fake-ip 能直拨成功，所以只在真失败时标注。
+        var validator = new RemoteHttpUrlValidator(
+            static (_, _) => Task.FromResult(new[] { IPAddress.Parse("198.18.0.7") }));
+        var transport = CreateTransport(
+            new ScriptedHandler(ScriptedHandler.Fail(new HttpRequestException("connection refused"))),
+            validator: validator);
+
+        var exception = await Assert.ThrowsAsync<HttpRequestException>(
+            () => transport.GetStreamAsync(new Uri("https://example.test/start")));
+
+        Assert.True(RemoteHttpRequestService.HasFakeIpDnsMarker(exception));
+    }
+
+    [Fact]
+    public async Task GetStreamAsync_WhenProxyLeaseDegradesToDirectAndFailsOverFakeIpDns_AnnotatesException()
+    {
+        // 系统代理 bypass 命中目标时租约退化为本机直连——标注照样生效。
+        var validator = new RemoteHttpUrlValidator(
+            static (_, _) => Task.FromResult(new[] { IPAddress.Parse("fc00::1") }));
+        var transport = CreateTransport(
+            new ScriptedHandler(ScriptedHandler.Fail(new HttpRequestException("host unreachable"))),
+            validator: validator,
+            connectionProxy: new BypassingProxyStub());
+
+        var exception = await Assert.ThrowsAsync<HttpRequestException>(
+            () => transport.GetStreamAsync(new Uri("https://example.test/start")));
+
+        Assert.True(RemoteHttpRequestService.HasFakeIpDnsMarker(exception));
+    }
+
+    [Fact]
+    public async Task GetStreamAsync_WhenConnectionEgressesThroughProxyAndFails_DoesNotAnnotate()
+    {
+        // 代理出口的 DNS 由代理端完成，本机解析未发生——失败与 Fake-IP 无关，不得标注。
+        var validator = new RemoteHttpUrlValidator(
+            static (_, _) => Task.FromResult(new[] { IPAddress.Parse("198.18.0.7") }));
+        var transport = CreateTransport(
+            new ScriptedHandler(ScriptedHandler.Fail(new HttpRequestException("proxy unreachable"))),
+            validator: validator,
+            connectionProxy: new RoutingProxyStub());
+
+        var exception = await Assert.ThrowsAsync<HttpRequestException>(
+            () => transport.GetStreamAsync(new Uri("https://example.test/start")));
+
+        Assert.False(RemoteHttpRequestService.HasFakeIpDnsMarker(exception));
+    }
+
+    [Fact]
+    public async Task GetStreamAsync_WhenDirectConnectionSucceedsOverFakeIpDns_DoesNotThrow()
+    {
+        var validator = new RemoteHttpUrlValidator(
+            static (_, _) => Task.FromResult(new[] { IPAddress.Parse("198.18.0.7") }));
+        var transport = CreateTransport(new OkHandler(), validator: validator);
+
+        using var body = (await transport.GetStreamAsync(new Uri("https://example.test/start"))).Content;
+
+        Assert.True(body.CanRead);
+    }
+
+    [Fact]
+    public async Task GetStreamAsync_WhenCallerCancelsOverFakeIpDns_DoesNotAnnotate()
+    {
+        // 调用方主动取消不是网络失败，不属于 Fake-IP 指引的适用范围。
+        var validator = new RemoteHttpUrlValidator(
+            static (_, _) => Task.FromResult(new[] { IPAddress.Parse("198.18.0.7") }));
+        var transport = CreateTransport(
+            new ScriptedHandler(ScriptedHandler.Cancel()),
+            validator: validator);
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        var exception = await Assert.ThrowsAsync<OperationCanceledException>(
+            () => transport.GetStreamAsync(new Uri("https://example.test/start"), cancellationToken: cts.Token));
+
+        Assert.False(RemoteHttpRequestService.HasFakeIpDnsMarker(exception));
+    }
+
+    [Fact]
     public async Task GetStreamAsync_WhenResponseIsNotRedirect_ReturnsFirstResponse()
     {
         var handler = new OkHandler();

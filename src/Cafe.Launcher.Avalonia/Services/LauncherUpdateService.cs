@@ -153,6 +153,20 @@ public sealed partial class LauncherUpdateService
                     CancellationToken.None).ConfigureAwait(false);
             return LauncherUpdateCheckResult.Failed(exception: ex);
         }
+        catch (InvalidOperationException ex)
+        {
+            // 传输层契约把 URL 校验拒绝（scheme、端口、私网地址等）映射为
+            // InvalidOperationException；本方法 try 范围内没有其它该类型的来源，
+            // 此捕获是精确的。被拒绝的 URL 是一次失败的检查而非崩溃：让调用方
+            // 以失败 toast 呈现（CR-20260921-070313-7BDC）。
+            if (diagnostics is not null)
+                await diagnostics.ErrorAsync(
+                    "LauncherUpdate",
+                    "Launcher update check failed — request URL was rejected",
+                    ex,
+                    CancellationToken.None).ConfigureAwait(false);
+            return LauncherUpdateCheckResult.Failed(exception: ex);
+        }
     }
 
     private async Task<List<LauncherReleaseResponse>?> FetchReleasesAsync(
@@ -163,11 +177,16 @@ public sealed partial class LauncherUpdateService
             return await FetchProxyReleasesAsync(cancellationToken).ConfigureAwait(false);
         }
         catch (Exception exception) when (exception is HttpRequestException
+            || exception is InvalidOperationException
             || (exception is OperationCanceledException && !cancellationToken.IsCancellationRequested))
         {
             // A slow proxy endpoint surfaces as TaskCanceledException (HttpClient timeout)
             // rather than HttpRequestException; that is precisely when the GitHub fallback
-            // matters most, so both degrade to it. Caller cancellation still propagates.
+            // matters most, so both degrade to it. The URL validator's rejection (an
+            // InvalidOperationException per the transport contract — e.g. poisoned DNS
+            // answering a private address) is the same "no usable answer" condition, and
+            // the GitHub endpoint is resolved and validated independently of the proxy
+            // endpoint. Caller cancellation still propagates.
             return await FetchGitHubReleasesAsync(cancellationToken).ConfigureAwait(false);
         }
     }

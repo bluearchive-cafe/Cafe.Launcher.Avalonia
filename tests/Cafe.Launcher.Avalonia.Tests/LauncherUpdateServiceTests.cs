@@ -164,6 +164,44 @@ public sealed class LauncherUpdateServiceTests
     }
 
     [Fact]
+    public async Task CheckForUpdateAsync_WhenProxyUrlIsRejected_UsesGitHubReleases()
+    {
+        // 与 RemoteHttpUrlValidator 的拒绝异常同形：传输契约把 URL 校验失败
+        // 映射为 InvalidOperationException（CR-20260921-070313-7BDC——本机 DNS
+        // 以私网 ULA 应答更新端点曾使检查直接崩溃）。
+        var transport = CreateReleasesTransport(
+            gitHubReleasesJson: GitHubReleasesJson,
+            proxyFailure: new InvalidOperationException(
+                "Remote URL resolves to a blocked network address. Blocked: fdfe:dcba:9876::14a"));
+        var service = new LauncherUpdateService(transport, currentVersionOverride: "1.0.0-beta.7");
+
+        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
+
+        Assert.True(result.IsSuccessful);
+        Assert.True(result.IsUpdateAvailable);
+        Assert.Equal("1.0.0-beta.8", result.LatestVersion);
+        Assert.Single(result.Files);
+        Assert.Equal(GitHubReleasesUri, transport.RequestedUris[1]);
+    }
+
+    [Fact]
+    public async Task CheckForUpdateAsync_WhenUrlIsRejectedOnBothEndpoints_ReturnsFailure()
+    {
+        // 两个端点的 DNS 都被拒绝时检查必须落为失败返回值，而不是异常逃逸到
+        // Dispatcher（CR-20260921-070313-7BDC 的崩溃形态）。
+        var transport = new StubRemoteHttpTransport(_ => new InvalidOperationException(
+            "Remote URL resolves to a blocked network address. Blocked: fdfe:dcba:9876::14a"));
+        var service = new LauncherUpdateService(transport);
+
+        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
+
+        Assert.False(result.IsSuccessful);
+        Assert.False(result.IsUpdateAvailable);
+        Assert.IsType<InvalidOperationException>(result.FailureException);
+        Assert.Equal(2, transport.RequestedUris.Count);
+    }
+
+    [Fact]
     public async Task CheckForUpdateAsync_WhenRequiredFieldsAreMissing_ReturnsFailure()
     {
         var transport = CreateReleasesTransport("""[{"files":[]}]""");

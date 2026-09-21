@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Cafe.Launcher.Avalonia.Composition;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
+using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
@@ -206,9 +207,13 @@ public partial class App : Application
 
             // Register Opened handler BEFORE desktop.MainWindow is set — that assignment
             // may trigger the window to show and fire Opened synchronously.
+            // Both handlers are one-shot (WindowOpenedOnce): Avalonia re-raises Opened on
+            // every Show after a Hide, and a tray restore goes through Show, so a handler
+            // left attached re-ran the launch flow on every restore-from-tray — popping the
+            // "launcher minimized to tray" toast a second time.
             if (Program.FirstLaunch)
             {
-                mainWindow.Opened += (_, _) =>
+                WindowOpenedOnce.Subscribe(mainWindow, (_, _) =>
                 {
                     // Post at a priority that ensures layout/render/bindings are complete
                     // before we toggle visibility.
@@ -219,14 +224,14 @@ public partial class App : Application
                         viewModel.ApplyFirstLaunchMotionPreference();
                         viewModel.Dialogs.ShowSetupWizard();
                     }, DispatcherPriority.Background);
-                };
+                });
             }
             else
             {
-                mainWindow.Opened += (_, _) =>
+                WindowOpenedOnce.Subscribe(mainWindow, (_, _) =>
                 {
                     _ = InitializeViewModelAsync(mainWindow, viewModel, serviceProvider, shutdownCts.Token);
-                };
+                });
             }
 
             desktop.MainWindow = mainWindow;

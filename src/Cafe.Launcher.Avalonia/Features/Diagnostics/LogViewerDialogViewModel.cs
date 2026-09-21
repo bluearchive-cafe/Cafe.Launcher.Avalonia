@@ -134,7 +134,8 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCont
             toastService.ShowError(ErrorHandlingService.FormatToastMessage(
                 localizer.T(LocalizationKeys.LogLoadFailed),
                 ex,
-                localizer.T(LocalizationKeys.ErrorNetworkUnavailable)));
+                localizer.T(LocalizationKeys.ErrorNetworkUnavailable),
+                localizer.T(LocalizationKeys.ErrorFakeIpDns)));
             await diagnostics.ErrorAsync(
                 "LogViewer",
                 "Loading the log entries failed.",
@@ -173,7 +174,8 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCont
             toastService.ShowError(ErrorHandlingService.FormatToastMessage(
                 localizer.T(LocalizationKeys.LogLoadFailed),
                 ex,
-                localizer.T(LocalizationKeys.ErrorNetworkUnavailable)));
+                localizer.T(LocalizationKeys.ErrorNetworkUnavailable),
+                localizer.T(LocalizationKeys.ErrorFakeIpDns)));
             await diagnostics.ErrorAsync(
                 "LogViewer",
                 "Loading the earlier log entries failed.",
