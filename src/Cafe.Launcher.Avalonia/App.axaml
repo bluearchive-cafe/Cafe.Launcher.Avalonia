@@ -8,6 +8,7 @@
     <Application.Resources>
         <ResourceDictionary>
             <!-- Design Tokens — usage rules live in PROJECT_CONVENTIONS.md §2.3; gallery overlay shows live values -->
+            <x:Double x:Key="Launcher.Spacing.None">0</x:Double>
             <x:Double x:Key="Launcher.Spacing.Xs">4</x:Double>
             <x:Double x:Key="Launcher.Spacing.Sm">8</x:Double>
             <x:Double x:Key="Launcher.Spacing.Md">12</x:Double>

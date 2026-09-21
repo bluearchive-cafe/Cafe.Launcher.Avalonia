@@ -837,7 +837,7 @@
         <Setter Property="views:OverlayFocusBehavior.IsEnabled" Value="True"/>
     </Style>
     <Style Selector="Grid.settings-workspace">
-        <Setter Property="ColumnSpacing" Value="0"/>
+        <Setter Property="ColumnSpacing" Value="{StaticResource Launcher.Spacing.None}"/>
         <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
     </Style>
     <Style Selector="ListBox.settings-navigation">
@@ -968,7 +968,7 @@
         <Setter Property="TextWrapping" Value="Wrap"/>
     </Style>
     <Style Selector="StackPanel.settings-sections">
-        <Setter Property="Spacing" Value="0"/>
+        <Setter Property="Spacing" Value="{StaticResource Launcher.Spacing.None}"/>
     </Style>
     <Style Selector="StackPanel.settings-group">
         <Setter Property="Margin" Value="{StaticResource Launcher.Component.Settings.Group.Margin}"/>

@@ -289,7 +289,7 @@ public sealed partial class UiStyleContractTests
         var dialogSurfaceStyles = XDocument.Load(TestRepository.FromApplicationRoot("Views/Styles/DialogSurface.axaml"));
 
         Assert.Equal(
-            "0",
+            "{StaticResource Launcher.Spacing.None}",
             GetStyleSetters(document, "Grid.settings-workspace")["ColumnSpacing"]);
         Assert.Equal(
             "{StaticResource Launcher.Spacing.Thickness.None}",
@@ -400,7 +400,7 @@ public sealed partial class UiStyleContractTests
             document.Descendants(),
             element => HasClass(element, "settings-content-divider"));
         Assert.Equal(
-            "0",
+            "{StaticResource Launcher.Spacing.None}",
             GetStyleSetters(document, "StackPanel.settings-sections")["Spacing"]);
         Assert.Equal(
             "{StaticResource Launcher.Typography.FontSize.Body.Md}",
