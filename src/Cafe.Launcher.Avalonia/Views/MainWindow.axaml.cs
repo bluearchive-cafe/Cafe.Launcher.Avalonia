@@ -153,6 +153,7 @@ public partial class MainWindow : Window
         configuredViewModel = viewModel;
         viewModel.Operations.MinimizeRequested += MinimizeToTray;
         viewModel.Operations.ExitRequested += ExitAfterLaunch;
+        viewModel.Operations.ShowRequested += ShowWindow;
         viewModel.WindowChrome.MinimizeRequested += MinimizeWindow;
         viewModel.WindowChrome.CloseRequested += PerformClose;
         viewModel.WindowChrome.RestoreRequested += ShowWindow;
@@ -280,6 +281,7 @@ public partial class MainWindow : Window
         viewModel.Background.PreviousWallpaperFadingOut -= FadeOutPreviousWallpaper;
         viewModel.Operations.MinimizeRequested -= MinimizeToTray;
         viewModel.Operations.ExitRequested -= ExitAfterLaunch;
+        viewModel.Operations.ShowRequested -= ShowWindow;
         viewModel.WindowChrome.MinimizeRequested -= MinimizeWindow;
         viewModel.WindowChrome.CloseRequested -= PerformClose;
         viewModel.WindowChrome.RestoreRequested -= ShowWindow;

@@ -528,6 +528,8 @@
                             </Button>
                         </StackPanel>
                         <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="{StaticResource Launcher.Spacing.Lg}">
+                            <TextBlock Text="{Binding Operations.GameSessionStateText}" Classes="on-dark-caption"
+                                       IsVisible="{Binding Operations.IsGameSessionVisible}"/>
                             <TextBlock Text="{Binding Shell.VersionText}" Classes="on-dark-caption"/>
                             <TextBlock Text="{Binding Shell.LaunchCheckText}" Classes="on-dark-caption"/>
                             <TextBlock Text="{Binding Shell.NetworkText}" Classes="on-dark-caption"/>
@@ -537,6 +539,9 @@
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="{StaticResource Launcher.Spacing.Lg}"
                                     IsVisible="{Binding IsStatusDetailHidden}"
                                     VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Operations.GameSessionStateText}" Classes="on-dark-caption"
+                                       IsVisible="{Binding Operations.IsGameSessionVisible}"
+                                       VerticalAlignment="Center"/>
                             <Button Classes="launcher-control start primary-operation" Command="{Binding Operations.StartGameCommand}" ToolTip.Tip="{Binding Shell.I18n[startGame]}"
 
                                 IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}"

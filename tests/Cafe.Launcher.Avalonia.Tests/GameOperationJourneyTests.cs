@@ -3,6 +3,7 @@ using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Services.GameRuntime;
 using Cafe.Launcher.Avalonia.Testing;
 using Xunit;
 
@@ -182,6 +183,80 @@ public sealed class GameOperationJourneyTests
         Assert.Null(context.Host.RepairConfirmationShown);
         Assert.Contains(notifications, toast =>
             toast.Severity == ToastSeverity.Warning && toast.Message == "update available");
+    }
+
+    [Fact]
+    public async Task StartGameAsync_WhenLaunchSucceeds_HandsSessionToMonitor()
+    {
+        // 启动报告的「成功」只覆盖 spawn 那一刻；会话看护从旅程这里接管此后的事实（ADR-035）。
+        var context = CreateContext();
+        context.Executor.LaunchResult = new GameLaunchResult
+        {
+            Success = true,
+            Message = "launched",
+            RunnerId = "umu",
+            KnownExeNames = ["BlueArchive"],
+            Validation = new ManifestValidationResult { Message = "validation ok" }
+        };
+
+        await context.Journey.StartGameAsync(CreateSnapshot());
+
+        Assert.Equal(1, context.SessionMonitor.BeginSessionCallCount);
+        Assert.Equal(("umu", (IReadOnlyList<string>)["BlueArchive"]), context.SessionMonitor.LastBeginSession);
+    }
+
+    [Fact]
+    public async Task StartGameAsync_WhenLaunchFails_MonitorIsNotToldAboutASession()
+    {
+        var context = CreateContext();
+        context.Executor.LaunchResult = new GameLaunchResult
+        {
+            Success = false,
+            Message = "no runner",
+            Validation = new ManifestValidationResult { Message = "no runner" }
+        };
+
+        await context.Journey.StartGameAsync(CreateSnapshot());
+
+        Assert.Equal(0, context.SessionMonitor.BeginSessionCallCount);
+    }
+
+    [Fact]
+    public void NotifySessionStartFailed_RestoresWindowAndReportsTheExitCode()
+    {
+        // 运行器提前退出时窗口多半在托盘里：必须先恢复窗口，错误才送达得到（ADR-035）。
+        var context = CreateContext();
+        var notifications = context.SubscribeToasts();
+        var exitCode = unchecked((int)0xC0000135);
+        var exit = new GameLaunchExitInfo(exitCode, TimeSpan.FromSeconds(2.4), DateTimeOffset.Now, "wine");
+
+        context.Journey.NotifySessionStartFailed(exit);
+
+        Assert.True(context.Host.ShowRequested);
+        Assert.Contains(notifications, toast =>
+            toast.Severity == ToastSeverity.Error
+            && string.Equals(
+                toast.Message,
+                context.Localizer.F(LocalizationKeys.GameSessionStartFailed, exitCode),
+                StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void NotifySessionStartFailed_WhenExitInfoMissing_ReportsAnUnknownExitCode()
+    {
+        // 退出信息缺失（Register→订阅竞态的极端档）也必须报出来，退出码按未知 -1 呈现。
+        var context = CreateContext();
+        var notifications = context.SubscribeToasts();
+
+        context.Journey.NotifySessionStartFailed(null);
+
+        Assert.True(context.Host.ShowRequested);
+        Assert.Contains(notifications, toast =>
+            toast.Severity == ToastSeverity.Error
+            && string.Equals(
+                toast.Message,
+                context.Localizer.F(LocalizationKeys.GameSessionStartFailed, -1),
+                StringComparison.Ordinal));
     }
 
     [Fact]
@@ -481,16 +556,18 @@ public sealed class GameOperationJourneyTests
         var errorHandling = new RecordingErrorHandlingService();
         var toastService = new ToastService();
         var localizer = new LocalizationService();
+        var sessionMonitor = new FakeGameSessionMonitor();
         var journey = new GameOperationJourney(
             executor,
             new TestGameShortcutService(),
+            sessionMonitor,
             localizer,
             toastService,
             new LocalDiagnostics(),
             errorHandling,
             _ => Task.CompletedTask,
             host);
-        return new JourneyTestContext(journey, executor, host, errorHandling, toastService, localizer);
+        return new JourneyTestContext(journey, executor, host, errorHandling, toastService, localizer, sessionMonitor);
     }
 
     private sealed record JourneyTestContext(
@@ -499,7 +576,8 @@ public sealed class GameOperationJourneyTests
         RecordingJourneyHost Host,
         RecordingErrorHandlingService ErrorHandling,
         ToastService ToastService,
-        LocalizationService Localizer)
+        LocalizationService Localizer,
+        FakeGameSessionMonitor SessionMonitor)
     {
         public List<ToastNotification> SubscribeToasts()
         {
@@ -533,6 +611,8 @@ public sealed class GameOperationJourneyTests
 
         public bool ExitRequested { get; private set; }
 
+        public bool ShowRequested { get; private set; }
+
         public void PrepareOperation() => PrepareOperationCalled = true;
 
         public void ApplyProgress(GameOperationProgress progress)
@@ -562,5 +642,7 @@ public sealed class GameOperationJourneyTests
         public void RequestMinimize() => MinimizeRequested = true;
 
         public void RequestExit() => ExitRequested = true;
+
+        public void RequestShow() => ShowRequested = true;
     }
 }

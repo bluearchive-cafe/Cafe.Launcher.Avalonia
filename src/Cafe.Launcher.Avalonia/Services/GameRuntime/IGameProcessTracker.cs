@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,10 +16,22 @@ public interface IGameProcessTracker
     /// <summary>Starts tracking a host process returned by the game run-time module.</summary>
     void Register(GameProcess process);
 
+    /// <summary>
+    /// Raised once per <see cref="Register"/> when the registered host process has exited —
+    /// either through the exit event or because it had already exited by the time observation
+    /// hooked up. <see cref="LastExit"/> is current when this fires. A subscriber that attaches
+    /// only after <see cref="Register"/> must therefore also check <see cref="LastExit"/>:
+    /// an exit that happened in between is carried by the property, not by this event.
+    /// </summary>
+    event Action? TrackedProcessExited;
+
     /// <summary>Whether a process registered in this session is still alive.</summary>
     bool HasLiveTrackedProcess { get; }
 
-    /// <summary>Exit details of the most recent tracked process, or null if none has exited yet.</summary>
+    /// <summary>
+    /// Exit details of the process registered by the most recent <see cref="Register"/>, or
+    /// null while it is still running (a new registration clears a previous exit).
+    /// </summary>
     GameLaunchExitInfo? LastExit { get; }
 
     /// <summary>

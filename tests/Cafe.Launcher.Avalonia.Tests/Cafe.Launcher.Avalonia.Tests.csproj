@@ -58,6 +58,7 @@
     <Compile Include="..\Support\TestWait.cs" Link="Support\TestWait.cs" />
     <Compile Include="..\TestDoubles\CallbackRecorder.cs" Link="TestDoubles\CallbackRecorder.cs" />
     <Compile Include="..\TestDoubles\StubFatalCrashService.cs" Link="TestDoubles\StubFatalCrashService.cs" />
+    <Compile Include="..\TestDoubles\FakeGameSessionMonitor.cs" Link="TestDoubles\FakeGameSessionMonitor.cs" />
     <Compile Include="..\TestDoubles\StubFileDownloadService.cs" Link="TestDoubles\StubFileDownloadService.cs" />
     <Compile Include="..\TestDoubles\StubFilePickerService.cs" Link="TestDoubles\StubFilePickerService.cs" />
     <Compile Include="..\TestDoubles\TestGameProcessTracker.cs" Link="TestDoubles\TestGameProcessTracker.cs" />

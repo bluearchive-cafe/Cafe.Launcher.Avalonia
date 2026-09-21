@@ -495,6 +495,7 @@ public sealed class ShellLifecycleTests : IDisposable
         var operations = new GameOperationsViewModel(
             operationsBackend,
             new TestGameShortcutService(),
+            new FakeGameSessionMonitor(),
             localizer,
             toastService,
             diagnostics,

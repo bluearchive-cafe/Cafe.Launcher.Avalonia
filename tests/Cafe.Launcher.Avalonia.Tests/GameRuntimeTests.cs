@@ -436,6 +436,9 @@ public sealed class GameRuntimeTests
 
         public bool HasLiveTrackedProcess => false;
         public GameLaunchExitInfo? LastExit => null;
+        public event Action? TrackedProcessExited;
+
+        public void RaiseExited() => TrackedProcessExited?.Invoke();
 
         public Task<IReadOnlyList<string>> FindRunningGameProcessesAsync(
             IReadOnlyList<string> knownExeNames,

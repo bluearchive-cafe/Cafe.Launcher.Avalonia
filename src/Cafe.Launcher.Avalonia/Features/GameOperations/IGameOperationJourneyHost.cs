@@ -35,4 +35,9 @@ internal interface IGameOperationJourneyHost
     void RequestMinimize();
     /// <summary>Asks the host to exit the launcher after a successful game launch.</summary>
     void RequestExit();
+    /// <summary>
+    /// Asks the host to show (restore) the window — the session monitor found a launch that
+    /// never started the game, and the news must reach the user even from the tray.
+    /// </summary>
+    void RequestShow();
 }

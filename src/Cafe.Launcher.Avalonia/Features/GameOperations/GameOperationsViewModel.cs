@@ -27,6 +27,7 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
     private const string ResumeIcon = "Play";
 
     private readonly GameOperationJourney journey;
+    private readonly IGameSessionMonitor sessionMonitor;
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
     private readonly DialogsViewModel dialogs;
@@ -105,6 +106,16 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
     [ObservableProperty]
     private string thoroughUninstallOptionText = "";
 
+    /// <summary>
+    /// 会话状态行的呈现（ADR-035）：启动中/运行中/已退出/未能启动。空闲时整行隐藏，
+    /// 因此布局与金标准基线在无会话时不受影响。
+    /// </summary>
+    [ObservableProperty]
+    private string gameSessionStateText = "";
+
+    [ObservableProperty]
+    private bool isGameSessionVisible;
+
     [ObservableProperty]
     private bool canPauseOperation;
 
@@ -126,6 +137,12 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
     /// <summary>Raised when a successful launch should exit the launcher (driven by the journey host).</summary>
     public event Action? ExitRequested;
 
+    /// <summary>
+    /// Raised when the window must come back on screen: the session monitor classified the
+    /// launch as failed and the news has to reach the user even from the tray (ADR-035).
+    /// </summary>
+    public event Action? ShowRequested;
+
     bool IGameOperationJourneyHost.IsBusy => shell.IsBusy;
 
     LauncherStatusSnapshot? IGameOperationJourneyHost.CurrentSnapshot => currentSnapshot;
@@ -133,6 +150,7 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
     internal GameOperationsViewModel(
         IGameOperationExecutor executor,
         IGameShortcutService gameShortcutService,
+        IGameSessionMonitor sessionMonitor,
         LocalizationService localizer,
         ToastService toastService,
         LocalDiagnostics diagnostics,
@@ -145,9 +163,11 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
         this.toastService = toastService;
         this.dialogs = dialogs;
         this.shell = shell;
+        this.sessionMonitor = sessionMonitor;
         journey = new GameOperationJourney(
             executor,
             gameShortcutService,
+            sessionMonitor,
             localizer,
             toastService,
             diagnostics,
@@ -155,6 +175,7 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
             delayAsync ?? Task.Delay,
             this);
         journey.IsRunningChanged += OnInstallationIsRunningChanged;
+        sessionMonitor.StateChanged += OnGameSessionStateChanged;
         dialogs.RepairConfirm.Confirmed += RepairAsync;
         dialogs.UninstallConfirm.Confirmed += ConfirmUninstallAsync;
         dialogs.StopConfirm.Confirmed += PerformStop;
@@ -163,6 +184,13 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
     public void RefreshLocalizedText()
     {
         ApplyPausePresentation();
+        if (sessionMonitor.State is not GameSessionState.Idle)
+        {
+            // 语言切换时状态行跟着换词；只重排文案，不重放 StartFailed 的恢复与报错
+            // ——那是状态变化时刻的一次性动作。
+            ApplySessionStatePresentation();
+        }
+
         if (string.IsNullOrWhiteSpace(ProgressTitle))
         {
             ProgressTitle = localizer.T(LocalizationKeys.Preparing);
@@ -257,6 +285,8 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
     void IGameOperationJourneyHost.RequestMinimize() => MinimizeRequested?.Invoke();
 
     void IGameOperationJourneyHost.RequestExit() => ExitRequested?.Invoke();
+
+    void IGameOperationJourneyHost.RequestShow() => ShowRequested?.Invoke();
 
     [RelayCommand]
     private async Task StartGameAsync()
@@ -578,6 +608,48 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
         OnPropertyChanged(nameof(IsDownloadRunning));
     }
 
+    private void OnGameSessionStateChanged()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        if (!Dispatcher.UIThread.CheckAccess() && Application.Current is not null)
+        {
+            Dispatcher.UIThread.Post(OnGameSessionStateChanged);
+            return;
+        }
+
+        ApplySessionStatePresentation();
+        if (sessionMonitor.State == GameSessionState.StartFailed)
+        {
+            // 规则在旅程里（ADR-035）：先恢复窗口再报错，报错文案与状态行同源。
+            journey.NotifySessionStartFailed(sessionMonitor.LastSessionExit);
+        }
+    }
+
+    /// <summary>
+    /// 状态行只描述，不表态：<see cref="GameSessionState.StartFailed"/> 的恢复窗口与
+    /// 错误 Toast 是状态变化时刻的一次性动作，语言切换重排文案时不得重放。
+    /// </summary>
+    private void ApplySessionStatePresentation()
+    {
+        var exit = sessionMonitor.LastSessionExit;
+        GameSessionStateText = sessionMonitor.State switch
+        {
+            GameSessionState.Starting => localizer.T(LocalizationKeys.GameSessionStarting),
+            GameSessionState.Running => localizer.T(LocalizationKeys.GameSessionRunning),
+            GameSessionState.StartFailed => localizer.F(LocalizationKeys.GameSessionStartFailed, exit?.ExitCode ?? -1),
+            // 轮询判定的退出没有可归属的退出码（宿主的退出码属于宿主），不硬凑数字。
+            GameSessionState.Exited => exit is null
+                ? localizer.T(LocalizationKeys.GameSessionExitedNoCode)
+                : localizer.F(LocalizationKeys.GameSessionExited, exit.ExitCode),
+            _ => ""
+        };
+        IsGameSessionVisible = sessionMonitor.State is not GameSessionState.Idle;
+    }
+
     /// <inheritdoc />
     public event PropertyChangedEventHandler? ActivityPropertyChanged
     {
@@ -594,6 +666,7 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
 
         disposed = true;
         journey.IsRunningChanged -= OnInstallationIsRunningChanged;
+        sessionMonitor.StateChanged -= OnGameSessionStateChanged;
         dialogs.RepairConfirm.Confirmed -= RepairAsync;
         dialogs.UninstallConfirm.Confirmed -= ConfirmUninstallAsync;
         dialogs.StopConfirm.Confirmed -= PerformStop;

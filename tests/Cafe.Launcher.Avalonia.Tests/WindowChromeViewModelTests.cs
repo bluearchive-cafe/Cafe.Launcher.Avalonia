@@ -263,6 +263,7 @@ Assert.Equal(DownloadStopReason.UserRequested, context.Backend.LastStopReason);
         var operations = new GameOperationsViewModel(
             backend,
             new TestGameShortcutService(),
+            new FakeGameSessionMonitor(),
             provider.GetRequiredService<LocalizationService>(),
             provider.GetRequiredService<ToastService>(),
             provider.GetRequiredService<LocalDiagnostics>(),

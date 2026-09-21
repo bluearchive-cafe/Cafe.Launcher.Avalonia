@@ -147,7 +147,11 @@ public sealed class GameLaunchService
             Success = true,
             Message = localizer.T(LocalizationKeys.GameProcessStarted),
             DiagnosticMessage = BuildLaunchContext(launchResult, request),
-            Validation = validation
+            Validation = validation,
+            RunnerId = launchResult.RunnerId,
+            KnownExeNames = RunningGameGate.ResolveKnownProcessNames(
+                snapshot.LocalGame.GameConfig,
+                snapshot.Remote.GameConfig)
         };
     }
 
