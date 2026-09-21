@@ -31,6 +31,13 @@ internal sealed class CrossProcessLaunchSignal : IDisposable
     /// </summary>
     private const int BindWaitTimeoutMilliseconds = 2000;
 
+    /// <summary>
+    /// 单实例所有权判定中「存活监听者」的等待上限（毫秒）：只为了跨越旧实例正在
+    /// 退场的重启竞态窗口。正常二次启动会在窗口到期后立即判负并转发，
+    /// 因此这个值必须小到不被用户察觉（命名互斥量的判定是即时的，Windows 仍如此）。
+    /// </summary>
+    private const int ExclusiveBindWaitMilliseconds = 300;
+
     /// <summary>发起转发的进程等待监听端点出现的重试次数与间隔（毫秒）。</summary>
     private const int RaiseRetryAttempts = 6;
     private const int RaiseRetryIntervalMilliseconds = 25;
@@ -105,6 +112,82 @@ internal sealed class CrossProcessLaunchSignal : IDisposable
         {
             // 绑定失败不应影响启动器主流程（仅失去 --launch-game 转发能力）。
             LocalDiagnostics.LogSync(LogEntrySeverity.Warn, "CrossProcess", $"bind failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 争夺单实例所有权（仅 Unix 套接字传输有实义，Windows 由命名互斥量承担、恒返回 true）：
+    /// 内核原子的 <c>bind</c> 即胜负判定——绑定成功返回 true 并保持监听直至 <see cref="Dispose"/>；
+    /// 截止时间内端口后始终有存活监听者则返回 false（另一个实例在运行）。
+    /// 崩溃残留的陈旧套接字文件被删除后重绑，因此进程死亡不会永久堵死锁。
+    /// 与 <see cref="EnsureBound"/> 的降级语义不同：单实例门必须给出明确胜负，
+    /// 仅当套接字路径本身不可用（数据根所在文件系统不支持等）时才失败放行并记录警告——
+    /// 文件系统问题不应阻止用户启动应用。
+    /// </summary>
+    internal bool TryBindExclusive()
+    {
+        if (windowsEvent is not null || socketDirectory is null || disposed)
+        {
+            return !disposed;
+        }
+
+        if (unixListener is not null)
+        {
+            return true;
+        }
+
+        return TryBindExclusively(GetSocketFilePath(socketDirectory, signalName));
+    }
+
+    /// <summary>在截止时间前完成绑定争夺；存活监听者坚持到期即判负。</summary>
+    private bool TryBindExclusively(string socketPath)
+    {
+        Directory.CreateDirectory(socketDirectory!);
+        var listenerDeadline = Environment.TickCount64 + ExclusiveBindWaitMilliseconds;
+        var retryDeadline = Environment.TickCount64 + BindWaitTimeoutMilliseconds;
+        while (true)
+        {
+            if (TryBind(socketPath) is { } socket)
+            {
+                unixListener = socket;
+                unixPending = new AutoResetEvent(false);
+                acceptLoop = Task.Run(AcceptLoop);
+                return true;
+            }
+
+            if (IsLiveListener(socketPath))
+            {
+                // 有存活监听者持有锁：不是残留文件，是另一个实例。只在短窗口内等待，
+                // 跨越「旧实例正在退场」的重启竞态；坚持到期即判负。
+                if (Environment.TickCount64 >= listenerDeadline)
+                {
+                    return false;
+                }
+
+                Thread.Sleep(PollIntervalMilliseconds);
+                continue;
+            }
+
+            // 文件背后没有活着的监听者：上次进程的残留文件或路径不可用。
+            // 删除残留后重试；到期仍未成功视为路径不可用——放行启动（单实例失效）
+            // 并记录警告，绝不因文件系统问题拒绝用户启动。
+            try
+            {
+                File.Delete(socketPath);
+            }
+            catch (IOException)
+            {
+                // 文件不存在或权限问题——交给下一次重试或超时退出。
+            }
+
+            if (Environment.TickCount64 >= retryDeadline)
+            {
+                LocalDiagnostics.LogSync(LogEntrySeverity.Warn, "CrossProcess",
+                    $"single-instance lock socket '{socketPath}' is unusable; starting without single-instance enforcement.");
+                return true;
+            }
+
+            Thread.Sleep(PollIntervalMilliseconds);
         }
     }
 
