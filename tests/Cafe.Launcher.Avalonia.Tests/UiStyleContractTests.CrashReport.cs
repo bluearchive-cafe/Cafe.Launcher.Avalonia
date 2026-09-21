@@ -11,7 +11,8 @@ public sealed partial class UiStyleContractTests
 {
     private const string CrashReportView = "Views/CrashReportWindow.axaml";
 
-    /// <summary>CrashReportWindow 上必须走令牌的尺寸与排版属性（消费点，不含令牌自身定义）。</summary>
+    /// <summary>CrashReportWindow 上必须走令牌的尺寸与排版属性（消费点，不含令牌自身定义；
+    /// 属性形式与 Setter 的 Property/Value 形式都在扫描内）。</summary>
     private static readonly string[] CrashTokenizedAttributes =
     [
         "Width",
@@ -22,6 +23,7 @@ public sealed partial class UiStyleContractTests
         "MaxHeight",
         "Margin",
         "Padding",
+        "BorderThickness",
         "CornerRadius",
         "FontSize",
         "LineHeight",
@@ -40,7 +42,7 @@ public sealed partial class UiStyleContractTests
             .SelectMany(attribute => CrashTokenReferences(attribute.Value))
             .ToHashSet(StringComparer.Ordinal);
 
-        // 反空转基线：族里今天有 21 个条目（内含颜色主题字典），扫到零个即扫描失效。
+        // 反空转基线：族里今天有 24 个条目（内含颜色主题字典），扫到零个即扫描失效。
         Assert.True(declared.Count >= 20, $"Crash.* token family shrank unexpectedly: {declared.Count} declared.");
         Assert.Equal([], declared.Where(key => !referenced.Contains(key)).Order(StringComparer.Ordinal));
     }
@@ -50,16 +52,25 @@ public sealed partial class UiStyleContractTests
     {
         var document = XDocument.Load(TestRepository.FromApplicationRoot(CrashReportView));
         var xKey = XName.Get("Key", "http://schemas.microsoft.com/winfx/2006/xaml");
-        var raw = document
+        var rawAttributes = document
             .Descendants()
             .Where(element => element.Attribute(xKey) is null)
             .SelectMany(element => element.Attributes())
             .Where(attribute => CrashTokenizedAttributes.Contains(attribute.Name.LocalName, StringComparer.Ordinal))
             .Where(attribute => !attribute.Value.TrimStart().StartsWith('{'))
-            .Select(attribute => $"{CrashReportView}: {attribute.Name.LocalName}=\"{attribute.Value}\"")
-            .ToArray();
+            .Select(attribute => $"{CrashReportView}: {attribute.Name.LocalName}=\"{attribute.Value}\"");
+        var rawSetterValues = document
+            .Descendants()
+            .Where(element => element.Name.LocalName == "Setter")
+            .SelectMany(element => element.Attributes()
+                .Where(attribute => attribute.Name.LocalName == "Property"
+                    && CrashTokenizedAttributes.Contains(attribute.Value, StringComparer.Ordinal))
+                .Select(attribute => (Property: attribute.Value, Value: element.Attribute("Value")?.Value)))
+            .Where(item => item.Value is not null
+                && !item.Value.TrimStart().StartsWith('{'))
+            .Select(item => $"{CrashReportView}: Setter {item.Property}=\"{item.Value}\"");
 
-        Assert.Equal([], raw);
+        Assert.Equal([], rawAttributes.Concat(rawSetterValues).ToArray());
     }
 
     private static HashSet<string> DeclaredCrashTokenKeys(XDocument document)
