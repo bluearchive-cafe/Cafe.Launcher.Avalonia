@@ -59,6 +59,13 @@ sealed class Program
     internal static CrossProcessLaunchSignal? LaunchGameSignal { get; private set; }
 
     /// <summary>
+    /// The cross-process show-window signal endpoint owned by the first instance.
+    /// Set by <see cref="Main"/> after the single-instance mutex is won and bound,
+    /// then polled by the <see cref="App"/> show-window listener. Disposed with <see cref="Main"/>.
+    /// </summary>
+    internal static CrossProcessLaunchSignal? ShowWindowSignal { get; private set; }
+
+    /// <summary>
     /// True when the launcher settings file is missing at process startup.
     /// Used by <see cref="App"/> to show the first-launch setup wizard before normal refresh.
     /// </summary>
@@ -148,6 +155,7 @@ sealed class Program
             }
 
             LaunchGameSignal = launchBridge.Signal;
+            ShowWindowSignal = launchBridge.ShowSignal;
             LaunchGameRequested = HasLaunchGameArgument(args);
             ShowHiddenSettings = HasShowHiddenSettingsArgument(args);
             FirstLaunch = DetectFirstLaunch(dataRoot);

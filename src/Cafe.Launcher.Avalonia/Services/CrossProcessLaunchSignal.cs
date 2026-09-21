@@ -11,8 +11,10 @@ using Cafe.Launcher.Avalonia.Services.Diagnostics;
 namespace Cafe.Launcher.Avalonia.Services;
 
 /// <summary>
-/// 跨进程单向信号，用于把第二个启动器实例的 <c>--launch-game</c> 请求转发给
-/// 正在运行的第一个实例（单实例互斥量由 <see cref="Cafe.Launcher.Avalonia.Program"/> 持有）。
+/// 跨进程单向信号，用于第二个启动器实例与正在运行的第一个实例通信
+/// （单实例互斥量由 <see cref="Cafe.Launcher.Avalonia.Program"/> 持有）：
+/// 转发 <c>--launch-game</c> 请求、以及唤起显示窗口信号（由
+/// <see cref="CrossProcessLaunchBridge"/> 分别以两个端点持有）。
 /// Windows 使用命名 AutoReset <see cref="EventWaitHandle"/>（Win32 内核对象）；
 /// Unix 上 .NET 不提供命名事件（带 name 的 EventWaitHandle 直接抛出
 /// <see cref="PlatformNotSupportedException"/>），因此以本机 Unix 域套接字实现同一契约：
