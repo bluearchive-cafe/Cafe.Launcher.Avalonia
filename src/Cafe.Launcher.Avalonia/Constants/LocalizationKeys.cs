@@ -218,6 +218,7 @@ public static class LocalizationKeys
     public const string GamePathProtected = "gamePathProtected";
     public const string GamePathUpdated = "gamePathUpdated";
     public const string GamePathUpdateFailed = "gamePathUpdateFailed";
+    public const string GameProcessScanUnavailable = "gameProcessScanUnavailable";
     public const string GameProcessStarted = "gameProcessStarted";
     public const string GameRemoteStateUnavailable = "gameRemoteStateUnavailable";
     public const string GameRepairFailed = "gameRepairFailed";

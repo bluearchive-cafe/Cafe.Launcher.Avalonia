@@ -31,6 +31,9 @@ public static class ProcessService
             // 一次快照走完，而不是每个名字各扫一遍：名字数量随配置增长，扫描次数不该跟着长。
             foreach (var process in Process.GetProcesses())
             {
+                // 逐进程看一眼令牌：取消后没有必要把剩余的进程读完。真正的挂死（枚举本身
+                // 不返回）令牌拦不住，由闸门的限时赛跑兜住；这里省的是取消后的尾程。
+                cancellationToken.ThrowIfCancellationRequested();
                 using (process)
                 {
                     var name = TryReadProcessName(process);

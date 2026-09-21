@@ -43,7 +43,8 @@ public sealed class ResxResourceContractTests
         // 不该出现在本地化提示里，细节留给日志）。
         // → 572（区分停止与退出、远程清单不可用，以及目录选择提示）。
         // → 573（直连路径落在 Fake-IP 应答段失败时的针对性指引，适配 Clash Fake-IP）。
-        Assert.Equal(573, ResxValues["en"].Count);
+        // → 574（进程扫描没有答案时的拒绝串：反作弊挂住枚举时闸门限时拒绝，见 ADR-032）。
+        Assert.Equal(574, ResxValues["en"].Count);
     }
 
     [Fact]

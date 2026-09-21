@@ -434,6 +434,8 @@ internal static class LauncherStrings
 
     internal static string GamePathUpdateFailed => GetRequiredString("gamePathUpdateFailed");
 
+    internal static string GameProcessScanUnavailable => GetRequiredString("gameProcessScanUnavailable");
+
     internal static string GameProcessStarted => GetRequiredString("gameProcessStarted");
 
     internal static string GameRemoteStateUnavailable => GetRequiredString("gameRemoteStateUnavailable");
