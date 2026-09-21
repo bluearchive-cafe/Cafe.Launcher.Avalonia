@@ -93,7 +93,8 @@ public sealed class ErrorHandlingService : IErrorHandlingService
                 ? FormatToastMessage(
                     options.ToastMessage ?? context,
                     exception,
-                    localizer.T(LocalizationKeys.ErrorNetworkUnavailable))
+                    localizer.T(LocalizationKeys.ErrorNetworkUnavailable),
+                    localizer.T(LocalizationKeys.ErrorFakeIpDns))
                 : options.ToastMessage ?? context;
             toastService.ShowError(toastMessage);
         }
@@ -104,10 +105,28 @@ public sealed class ErrorHandlingService : IErrorHandlingService
     /// Network-family failures get a friendly localized attribution instead of the
     /// raw type/message chain: the actionable guidance is the same regardless of the
     /// underlying socket error, and the exact cause is already in the diagnostic log.
+    /// When the exception chain carries the Fake-IP DNS marker (a direct-path request
+    /// whose target resolved entirely into a Fake-IP answer band and then failed to
+    /// connect — <see cref="RemoteHttpRequestService.HasFakeIpDnsMarker"/>), the more
+    /// specific Fake-IP guidance replaces the generic attribution: that failure names
+    /// a cause the user can act on (switch proxy mode / enable TUN) while generic
+    /// network text cannot.
     /// </summary>
-    internal static string FormatToastMessage(string? operationMessage, Exception exception, string networkFailureText)
+    internal static string FormatToastMessage(
+        string? operationMessage,
+        Exception exception,
+        string networkFailureText,
+        string? fakeIpFailureText = null)
     {
         ArgumentNullException.ThrowIfNull(exception);
+
+        if (!string.IsNullOrEmpty(fakeIpFailureText)
+            && RemoteHttpRequestService.HasFakeIpDnsMarker(exception))
+        {
+            return string.IsNullOrWhiteSpace(operationMessage)
+                ? fakeIpFailureText
+                : $"{operationMessage.Trim()}：{fakeIpFailureText}";
+        }
 
         if (IsNetworkFamily(exception))
         {

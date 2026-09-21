@@ -346,6 +346,8 @@ internal static class LauncherStrings
 
     internal static string ErrorDialogViewLog => GetRequiredString("errorDialogViewLog");
 
+    internal static string ErrorFakeIpDns => GetRequiredString("errorFakeIpDns");
+
     internal static string ErrorNetworkUnavailable => GetRequiredString("errorNetworkUnavailable");
 
     internal static string EstimatedTimeRemaining => GetRequiredString("estimatedTimeRemaining");

@@ -42,7 +42,8 @@ public sealed class ResxResourceContractTests
         // → 566（复核轮：彻底清除被路径守卫拒绝时的结果串——守卫抛的是仓库自己的英文说明，
         // 不该出现在本地化提示里，细节留给日志）。
         // → 572（区分停止与退出、远程清单不可用，以及目录选择提示）。
-        Assert.Equal(572, ResxValues["en"].Count);
+        // → 573（直连路径落在 Fake-IP 应答段失败时的针对性指引，适配 Clash Fake-IP）。
+        Assert.Equal(573, ResxValues["en"].Count);
     }
 
     [Fact]

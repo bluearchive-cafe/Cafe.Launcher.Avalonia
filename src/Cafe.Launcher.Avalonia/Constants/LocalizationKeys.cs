@@ -174,6 +174,7 @@ public static class LocalizationKeys
     public const string ErrorDialogDescription = "errorDialogDescription";
     public const string ErrorDialogTitle = "errorDialogTitle";
     public const string ErrorDialogViewLog = "errorDialogViewLog";
+    public const string ErrorFakeIpDns = "errorFakeIpDns";
     public const string ErrorNetworkUnavailable = "errorNetworkUnavailable";
     public const string EstimatedTimeRemaining = "estimatedTimeRemaining";
     public const string Executable = "executable";
