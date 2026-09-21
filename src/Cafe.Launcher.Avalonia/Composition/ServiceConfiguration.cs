@@ -142,6 +142,9 @@ public static class ServiceConfiguration
             sp.GetRequiredService<IProcessLauncher>(),
             sp.GetRequiredService<IGameProcessTracker>()));
         services.AddSingleton<IGameProcessTracker, GameProcessTracker>();
+        // 会话看护订阅进程跟踪器的退出事件：登记在跟踪器之后，容器逆序释放时看护先于
+        // 跟踪器析构，退订不会落在已释放的订阅源上。
+        services.AddSingleton<IGameSessionMonitor, GameSessionMonitor>();
         // 持久化检查点存储全库单例：下载服务写入/清除，卸载服务清除——
         // 同一文件只允许一个所有者实例。
         services.AddSingleton(_ => new DownloadCheckpointStore(dataRoot));
@@ -196,6 +199,7 @@ public static class ServiceConfiguration
         services.AddSingleton(sp => new GameOperationsViewModel(
             sp.GetRequiredService<IGameOperationExecutor>(),
             sp.GetRequiredService<IGameShortcutService>(),
+            sp.GetRequiredService<IGameSessionMonitor>(),
             sp.GetRequiredService<LocalizationService>(),
             sp.GetRequiredService<ToastService>(),
             sp.GetRequiredService<LocalDiagnostics>(),

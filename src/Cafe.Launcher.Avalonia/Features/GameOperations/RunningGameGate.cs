@@ -27,6 +27,20 @@ internal static class RunningGameGate
     /// </summary>
     internal static readonly TimeSpan DefaultScanTimeout = TimeSpan.FromSeconds(5);
 
+    /// <summary>
+    /// 这道闸门认哪些名字（ADR-032）：本地配置带来宿主名与启动参数里的可执行文件；还没有本地
+    /// 配置时（全新安装，或配置缺失/损坏）退回远端配置声明的**同样两个字段**（启动程序名与
+    /// 启动参数）——本地配置落盘时写的就是这两项，两条路的判据因此一致。名字一个都取不到时
+    /// 返回空：闸门不做无根据的拒绝，会话看护也认同一份家族（ADR-035）——启动路径与破坏性
+    /// 操作路径的「游戏在跑」判据同源，不会分叉。
+    /// </summary>
+    internal static IReadOnlyList<string> ResolveKnownProcessNames(
+        GameLauncherConfig? localConfig,
+        GameConfigResponse? remoteConfig) =>
+        localConfig?.Name is { Length: > 0 } hostExeName
+            ? GameProcessNames.FromLaunchConfiguration(hostExeName, localConfig.Params)
+            : GameProcessNames.FromLaunchConfiguration(remoteConfig?.GameStartExeName, remoteConfig?.GameStartParams);
+
     public static async Task<GameOperationResult?> FindFailureAsync(
         IGameProcessTracker gameProcessTracker,
         LocalizationService localizer,

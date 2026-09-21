@@ -61,6 +61,9 @@ public sealed class GameProcessTracker : IGameProcessTracker
             trackedProcessName = ProcessService.TryReadProcessName(process.HostProcess);
             trackedRunnerId = process.RunnerId;
             startedAt = DateTimeOffset.Now;
+            // LastExit 归属当前被跟踪的进程：重开即清零。订阅方（会话看护）据此把
+            // 「Register 与订阅之间已退出」读成一次即时终态，而不是上一局的旧账。
+            lastExit = null;
             tracked.Exited += exitedHandler;
             tracked.StartObserving();
         }
@@ -95,6 +98,9 @@ public sealed class GameProcessTracker : IGameProcessTracker
             }
         }
     }
+
+    /// <inheritdoc />
+    public event Action? TrackedProcessExited;
 
     public async Task<IReadOnlyList<string>> FindRunningGameProcessesAsync(
         IReadOnlyList<string> knownExeNames,
@@ -135,6 +141,7 @@ public sealed class GameProcessTracker : IGameProcessTracker
         }
 
         ReleaseTracking(process, exitedHandler);
+        TrackedProcessExited?.Invoke();
     }
 
     private static void ReleaseTracking(ITrackedProcess? process, Action? exitedHandler)

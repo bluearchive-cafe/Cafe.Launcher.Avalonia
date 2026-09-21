@@ -247,6 +247,11 @@ public static class LocalizationKeys
     public const string GameRuntimeStatusNotFound = "gameRuntimeStatusNotFound";
     public const string GameRuntimeStatusTitle = "gameRuntimeStatusTitle";
     public const string GameRuntimeStatusUnsupported = "gameRuntimeStatusUnsupported";
+    public const string GameSessionExited = "gameSessionExited";
+    public const string GameSessionExitedNoCode = "gameSessionExitedNoCode";
+    public const string GameSessionRunning = "gameSessionRunning";
+    public const string GameSessionStartFailed = "gameSessionStartFailed";
+    public const string GameSessionStarting = "gameSessionStarting";
     public const string GameShortcutCreated = "gameShortcutCreated";
     public const string GameShortcutFailed = "gameShortcutFailed";
     public const string GameShortcutTargetMissing = "gameShortcutTargetMissing";

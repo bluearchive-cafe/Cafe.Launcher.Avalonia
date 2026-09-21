@@ -212,10 +212,12 @@ internal sealed class MainWindowTestContext : IDisposable
 
         var remoteContentViewModel = new RemoteContentViewModel(localizationService, imageCacheService, diagnostics);
         var backgroundViewModel = new BackgroundViewModel(imageCacheService, diagnostics, settingsViewModel);
+        var gameSessionMonitor = new FakeGameSessionMonitor();
         var gameOperationsViewModel = gameOperationsBackend is null
             ? new GameOperationsViewModel(
                 new GameOperationExecutor(gameLaunchService, gameDownloadService, gameUninstallService),
                 new GameShortcutService(localizationService),
+                gameSessionMonitor,
                 localizationService,
                 toastService,
                 diagnostics,
@@ -225,6 +227,7 @@ internal sealed class MainWindowTestContext : IDisposable
             : new GameOperationsViewModel(
                 gameOperationsBackend,
                 new TestGameShortcutService(),
+                gameSessionMonitor,
                 localizationService,
                 toastService,
                 diagnostics,

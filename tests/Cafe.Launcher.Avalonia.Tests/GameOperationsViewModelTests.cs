@@ -1,4 +1,5 @@
-﻿using Cafe.Launcher.Avalonia.Models;
+﻿using Cafe.Launcher.Avalonia.Constants;
+using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Features.SetupWizard;
 using Cafe.Launcher.Avalonia.Helpers;
@@ -1322,6 +1323,94 @@ public sealed class GameOperationsViewModelTests : IDisposable
         Assert.False(context.Shell.IsBusy);
     }
 
+    [Fact]
+    public void SessionStateChanged_WhenRunning_ShowsTheRunningLineWithoutToasts()
+    {
+        var context = CreateContext();
+        var notifications = SubscribeToasts(context);
+        context.ViewModel.ShowRequested += () => throw new InvalidOperationException("running must not restore the window");
+
+        context.SessionMonitor.Transition(GameSessionState.Running);
+
+        Assert.Equal(
+            context.Localizer.T(LocalizationKeys.GameSessionRunning),
+            context.ViewModel.GameSessionStateText);
+        Assert.True(context.ViewModel.IsGameSessionVisible);
+        Assert.Empty(notifications);
+    }
+
+    [Fact]
+    public void SessionStateChanged_WhenStartFailed_RestoresWindowReportsErrorAndShowsTheLine()
+    {
+        // 看护判成「启动失败」：先恢复窗口再报错，两件事都要发生（ADR-035）。
+        var context = CreateContext();
+        var notifications = SubscribeToasts(context);
+        var showRequested = false;
+        context.ViewModel.ShowRequested += () => showRequested = true;
+        context.SessionMonitor.Transition(
+            GameSessionState.StartFailed,
+            new Services.GameRuntime.GameLaunchExitInfo(53, TimeSpan.FromSeconds(2), DateTimeOffset.Now, "wine"));
+
+        Assert.True(showRequested);
+        Assert.Contains(notifications, toast =>
+            toast.Severity == ToastSeverity.Error
+            && string.Equals(
+                toast.Message,
+                context.Localizer.F(LocalizationKeys.GameSessionStartFailed, 53),
+                StringComparison.Ordinal));
+        Assert.Equal(
+            context.Localizer.F(LocalizationKeys.GameSessionStartFailed, 53),
+            context.ViewModel.GameSessionStateText);
+        Assert.True(context.ViewModel.IsGameSessionVisible);
+    }
+
+    [Fact]
+    public void SessionStateChanged_WhenExited_UpdatesTheLineSilently()
+    {
+        // 游戏正常退出不打扰（用户裁定）：不恢复窗口、不弹 Toast，只换状态行。
+        var context = CreateContext();
+        var notifications = SubscribeToasts(context);
+        context.ViewModel.ShowRequested += () => throw new InvalidOperationException("a normal exit must not restore the window");
+        context.SessionMonitor.Transition(GameSessionState.Running);
+        notifications.Clear();
+
+        context.SessionMonitor.Transition(
+            GameSessionState.Exited,
+            new Services.GameRuntime.GameLaunchExitInfo(0, TimeSpan.FromHours(2), DateTimeOffset.Now, "umu"));
+
+        Assert.Equal(
+            context.Localizer.F(LocalizationKeys.GameSessionExited, 0),
+            context.ViewModel.GameSessionStateText);
+        Assert.True(context.ViewModel.IsGameSessionVisible);
+        Assert.Empty(notifications);
+    }
+
+    [Fact]
+    public void SessionStateChanged_WhenExitedWithoutExitInfo_ShowsTheLineWithoutACode()
+    {
+        // 轮询判定的退出（宿主早已退出，家族消失才被看见）没有可归属的退出码：
+        // 不硬凑数字，用不带退出码的那句。
+        var context = CreateContext();
+        var notifications = SubscribeToasts(context);
+        context.SessionMonitor.Transition(GameSessionState.Running);
+        notifications.Clear();
+
+        context.SessionMonitor.Transition(GameSessionState.Exited);
+
+        Assert.Equal(
+            context.Localizer.T(LocalizationKeys.GameSessionExitedNoCode),
+            context.ViewModel.GameSessionStateText);
+        Assert.True(context.ViewModel.IsGameSessionVisible);
+        Assert.Empty(notifications);
+    }
+
+    private static List<ToastNotification> SubscribeToasts(TestContext context)
+    {
+        var notifications = new List<ToastNotification>();
+        context.ToastService.ToastRaised += notifications.Add;
+        return notifications;
+    }
+
     private string NextDataRoot() => tempDir.Sub(Guid.NewGuid().ToString("N"));
 
     private TestContext CreateContext(LocalDiagnostics? diagnostics = null)
@@ -1335,6 +1424,7 @@ public sealed class GameOperationsViewModelTests : IDisposable
             new SetupWizardViewModel(localizer, new GameInstallationPath(), new LocalInstallationStateStore(), diagnostics, new StubFilePickerService()),
             diagnostics);
         var backend = new StubGameOperationExecutor();
+        var sessionMonitor = new FakeGameSessionMonitor();
         var shortcutService = new TestGameShortcutService();
         var errorHandling = new ErrorHandlingService(
             localizer,
@@ -1343,6 +1433,7 @@ public sealed class GameOperationsViewModelTests : IDisposable
         var viewModel = new GameOperationsViewModel(
             backend,
             shortcutService,
+            sessionMonitor,
             localizer,
             toastService,
             diagnostics,
@@ -1350,7 +1441,7 @@ public sealed class GameOperationsViewModelTests : IDisposable
             dialogs,
             errorHandling,
             _ => Task.CompletedTask);
-        return new TestContext(viewModel, backend, shortcutService, shell, dialogs, toastService, localizer);
+        return new TestContext(viewModel, backend, sessionMonitor, shortcutService, shell, dialogs, toastService, localizer);
     }
 
     private static LauncherStatusSnapshot ReadySnapshot(
@@ -1366,6 +1457,7 @@ public sealed class GameOperationsViewModelTests : IDisposable
     private sealed record TestContext(
         GameOperationsViewModel ViewModel,
         StubGameOperationExecutor Backend,
+        FakeGameSessionMonitor SessionMonitor,
         TestGameShortcutService ShortcutService,
         ShellViewModel Shell,
         DialogsViewModel Dialogs,

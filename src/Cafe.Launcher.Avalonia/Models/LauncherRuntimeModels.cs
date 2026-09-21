@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 
@@ -81,6 +82,15 @@ public sealed class GameLaunchResult
     public Exception? DiagnosticException { get; set; }
 
     public ManifestValidationResult Validation { get; set; } = new();
+
+    /// <summary>Runner that won selection; non-null only on a successful launch that spawned a host process.</summary>
+    public string? RunnerId { get; set; }
+
+    /// <summary>
+    /// 游戏进程家族名（不含扩展名，<see cref="Features.GameOperations.RunningGameGate.ResolveKnownProcessNames"/>
+    /// 同源）：启动成功后会话看护据此辨认「游戏真的起来了」（ADR-035）。空表示无从辨认。
+    /// </summary>
+    public IReadOnlyList<string> KnownExeNames { get; set; } = [];
 }
 
 public sealed class GameOperationProgress

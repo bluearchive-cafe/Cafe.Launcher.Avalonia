@@ -228,7 +228,7 @@ internal sealed class DownloadSession : IDisposable
         Directory.CreateDirectory(gamePath);
 
         var localGame = await localInstallationStateStore.ReadAsync(gamePath, activeToken).ConfigureAwait(false);
-        var knownProcessNames = ResolveKnownProcessNames(localGame.GameConfig, gameConfig);
+        var knownProcessNames = RunningGameGate.ResolveKnownProcessNames(localGame.GameConfig, gameConfig);
         var gameRunning = await FindRunningGameFailureAsync(knownProcessNames, activeToken).ConfigureAwait(false);
         if (gameRunning is not null)
         {
@@ -380,19 +380,6 @@ internal sealed class DownloadSession : IDisposable
             Failure: null,
             CompletedResult: null);
     }
-
-    /// <summary>
-    /// 这道闸门认哪些名字（ADR-032）：本地配置带来宿主名与启动参数里的可执行文件；还没有本地
-    /// 配置时（全新安装，或配置缺失/损坏）退回远端配置声明的**同样两个字段**（启动程序名与
-    /// 启动参数）——本地配置落盘时写的就是这两项，两条路的判据因此一致。否则安装会在游戏
-    /// 运行时直接放行。名字一个都取不到时返回空，闸门不做无根据的拒绝。
-    /// </summary>
-    private static IReadOnlyList<string> ResolveKnownProcessNames(
-        GameLauncherConfig? localConfig,
-        GameConfigResponse remoteConfig) =>
-        localConfig?.Name is { Length: > 0 } hostExeName
-            ? GameProcessNames.FromLaunchConfiguration(hostExeName, localConfig.Params)
-            : GameProcessNames.FromLaunchConfiguration(remoteConfig.GameStartExeName, remoteConfig.GameStartParams);
 
     /// <summary>
     /// 「游戏是不是在跑」这道闸门（ADR-032）在本会话的入口：计划阶段与写入边界复查共用它，
