@@ -224,11 +224,15 @@ public sealed class DownloadExecutorTests : IDisposable
             }
         }
 
-        // 每个完成都落进新的百分比桶（12 文件下 round(k*100/12) 两两不同），所以投递次数
-        // 恰好等于文件数——收集必须线程安全：回调来自 ≤8 个并行 worker
-        // （2026-09-15 深夜 CI 复查：这里原为未加锁的 progressCount++，丢了一次更新，12 变 11）。
-        Assert.Equal(fileCount, progressCount.Count);
+        // 12 个完成算出两两不同的百分比桶（round(k*100/12)），但单调门控
+        // （PercentProgressGate.ShouldDeliverMonotonic）只承诺「每桶至多一次、值只增、
+        // 终桶 100 必达」，不承诺每个桶都抵达：worker 在自增完成数与门控读取之间可被
+        // 抢占，落后的低桶会被已投递的更高桶压掉，「投递次数 = 文件数」在并行下不可断言
+        // （2026-09-22 CI 复查：原断言 12 偶发实到 11）。这里只断言与到达顺序无关的
+        // 不变量；收集无重复仍是线程安全收集器的回归信号（回调来自 ≤8 个并行 worker）。
         Assert.Equal(progressCount.Count, progressCount.Distinct().Count());
+        Assert.All(progressCount, percent => Assert.InRange(percent, 0, 100));
+        Assert.Contains(100, progressCount);
     }
 
     [Fact]
