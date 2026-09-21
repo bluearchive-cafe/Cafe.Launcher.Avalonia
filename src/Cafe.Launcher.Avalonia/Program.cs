@@ -21,6 +21,13 @@ sealed class Program
     private const string SignalName = @"Local\Cafe_Launcher_SI_Show";
 
     /// <summary>
+    /// Unix 单实例锁的名字（只作锁套接字文件名的哈希键）：.NET 的 <c>Local\</c>
+    /// 命名空间在 Unix 上按 POSIX 会话隔离，不能承载跨启动环境的单实例语义（ADR-034），
+    /// 因此 Unix 的所有权判定走数据根内的锁套接字，互斥量只在 Windows 使用。
+    /// </summary>
+    internal const string LockSignalName = @"Local\Cafe_Launcher_SI_Lock";
+
+    /// <summary>
     /// Signal the first instance raises its launch-game listener on, so a second
     /// <c>--launch-game</c> invocation forwards the request instead of starting
     /// a duplicate process.
@@ -57,6 +64,13 @@ sealed class Program
     /// then polled by the <see cref="App"/> launch-game listener. Disposed with <see cref="Main"/>.
     /// </summary>
     internal static CrossProcessLaunchSignal? LaunchGameSignal { get; private set; }
+
+    /// <summary>
+    /// The cross-process show-window signal endpoint owned by the first instance.
+    /// Set by <see cref="Main"/> after the single-instance mutex is won and bound,
+    /// then polled by the <see cref="App"/> show-window listener. Disposed with <see cref="Main"/>.
+    /// </summary>
+    internal static CrossProcessLaunchSignal? ShowWindowSignal { get; private set; }
 
     /// <summary>
     /// True when the launcher settings file is missing at process startup.
@@ -141,13 +155,14 @@ sealed class Program
 
             // The isolated reporter bypasses this handshake above. Normal launches still
             // forward to the first instance instead of starting a duplicate process.
-            using var launchBridge = new CrossProcessLaunchBridge(LaunchGameSignalName, SignalName, dataRoot);
+            using var launchBridge = new CrossProcessLaunchBridge(LaunchGameSignalName, SignalName, LockSignalName, dataRoot);
             if (!launchBridge.TryEnterSingleInstance(MutexName, args))
             {
                 return;
             }
 
             LaunchGameSignal = launchBridge.Signal;
+            ShowWindowSignal = launchBridge.ShowSignal;
             LaunchGameRequested = HasLaunchGameArgument(args);
             ShowHiddenSettings = HasShowHiddenSettingsArgument(args);
             FirstLaunch = DetectFirstLaunch(dataRoot);

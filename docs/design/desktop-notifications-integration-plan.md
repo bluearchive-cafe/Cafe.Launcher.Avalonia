@@ -82,9 +82,10 @@ Func<CancellationToken, Task<ToastActionResult>>
 - Windows Named Mutex；
 - Windows Named Event；
 - Unix local socket；
-- `--launch-game` 二次实例转发。
+- `--launch-game` 二次实例转发；
+- show-window 二次实例唤起（与 `--launch-game` 同一传输：Windows 命名事件 / Unix local socket，由 `CrossProcessLaunchBridge` 统一持有）。
 
-但 Unix local socket 当前只处理 `--launch-game`；显示现有 Launcher 的 `RaiseShowWindow()` 仍是 Windows-only。
+（历史注：在单实例桥统一承载双信号之前，`RaiseShowWindow()` 曾是 Windows-only，Unix 上二次启动只是静默退出、不唤起已有窗口。）
 
 现有 `SystemTrayService.ShowWindow()` 已实现：
 
