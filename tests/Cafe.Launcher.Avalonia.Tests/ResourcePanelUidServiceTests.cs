@@ -127,6 +127,77 @@ public sealed class ResourcePanelUidServiceTests : IDisposable
         await Assert.ThrowsAsync<ArgumentException>(() => service.SaveManualUidAsync("bad-uid"));
     }
 
+    [Theory]
+    [InlineData(GameRuntimeRunners.Auto, GameRuntimeRunners.Umu, "gytxtx")]
+    [InlineData(GameRuntimeRunners.Auto, GameRuntimeRunners.Wine, "steamuser")]
+    [InlineData(GameRuntimeRunners.Wine, GameRuntimeRunners.Wine, "wineuser")]
+    public async Task ResolveLinuxCookieLibraryPath_ManagedPrefix_FindsExistingLibrary(
+        string selectedRunner, string installedRunner, string profile)
+    {
+        var expected = CreateCookiePath(Path.Combine(tempDir, installedRunner, "prefix"), profile);
+        await BestHttpCookieLibraryFixture.WriteUidAsync(expected, "COOKIEAA");
+
+        var actual = ResourcePanelUidService.ResolveLinuxCookieLibraryPath(
+            new GameRuntimeSettings { Runner = selectedRunner }, "gytxtx",
+            runner => Path.Combine(tempDir, runner, "prefix"));
+
+        Assert.Equal(expected, actual);
+    }
+
+    [Fact]
+    public void ResolveLinuxCookieLibraryPath_MissingCustomPrefix_DoesNotUseManagedPrefix()
+    {
+        var prefix = Path.Combine(tempDir, "custom");
+        var actual = ResourcePanelUidService.ResolveLinuxCookieLibraryPath(
+            new GameRuntimeSettings { PrefixPath = prefix }, "gytxtx",
+            _ => throw new InvalidOperationException("Custom prefix must take precedence."));
+
+        Assert.Equal(CreateCookiePath(prefix, "gytxtx"), actual);
+    }
+
+    [Fact]
+    public async Task ResolveLinuxCookieLibraryPath_ExplicitRunner_DoesNotReadOtherRunner()
+    {
+        var umuPrefix = Path.Combine(tempDir, GameRuntimeRunners.Umu);
+        await BestHttpCookieLibraryFixture.WriteUidAsync(CreateCookiePath(umuPrefix, "gytxtx"), "COOKIEAA");
+
+        var actual = ResourcePanelUidService.ResolveLinuxCookieLibraryPath(
+            new GameRuntimeSettings { Runner = GameRuntimeRunners.Wine }, "gytxtx",
+            runner => Path.Combine(tempDir, runner));
+
+        Assert.Equal(CreateCookiePath(Path.Combine(tempDir, GameRuntimeRunners.Wine), "gytxtx"), actual);
+    }
+
+    [Fact]
+    public async Task ResolveUidAsync_LinuxPrefixChanges_ReadsNewLibraryAndUpdatesDisplayedPath()
+    {
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "Linux compatibility prefix resolution.");
+        var savedSettings = new SavedSettingsTestRig(Path.Combine(tempDir, "settings.json"));
+        var service = new ResourcePanelUidService(
+            new BestHttpCookieLibraryService(), savedSettings.SettingsService, savedSettings.Writer);
+        foreach (var uid in new[] { "COOKIEAA", "COOKIEBB" })
+        {
+            var prefix = Path.Combine(tempDir, uid);
+            var cookiePath = CreateCookiePath(prefix, "steamuser");
+            await BestHttpCookieLibraryFixture.WriteUidAsync(cookiePath, uid);
+            await savedSettings.SeedAsync(new LauncherSettings
+            {
+                GameRuntime = new GameRuntimeSettings { PrefixPath = prefix }
+            });
+
+            Assert.Equal(uid, await service.ResolveUidAsync());
+            Assert.Equal(cookiePath, service.CookieLibraryPath);
+        }
+    }
+
+    private static string CreateCookiePath(string prefix, string profile)
+    {
+        var directory = Path.Combine(prefix, "drive_c", "users", profile,
+            "AppData", "LocalLow", "YostarJP", "BlueArchive", "Cookies");
+        Directory.CreateDirectory(directory);
+        return Path.Combine(directory, "Library");
+    }
+
     public void Dispose()
     {
         tempDir.Dispose();

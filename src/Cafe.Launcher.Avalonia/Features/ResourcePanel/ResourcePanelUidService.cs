@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Services.GameRuntime;
 
 namespace Cafe.Launcher.Avalonia.Features.ResourcePanel;
 
@@ -34,14 +35,15 @@ public sealed partial class ResourcePanelUidService
     private readonly BestHttpCookieLibraryService cookieLibraryService;
     private readonly LauncherSettingsService settingsService;
     private readonly ISavedSettingsWriter savedSettingsWriter;
-    private readonly string cookieLibraryPath;
+    private readonly string? cookieLibraryPathOverride;
+    private string cookieLibraryPath;
 
     public ResourcePanelUidService(
         BestHttpCookieLibraryService cookieLibraryService,
         LauncherSettingsService settingsService,
         ISavedSettingsWriter savedSettingsWriter,
         LocalDiagnostics? diagnostics = null)
-        : this(cookieLibraryService, settingsService, savedSettingsWriter, GetDefaultCookieLibraryPath(), diagnostics)
+        : this(cookieLibraryService, settingsService, savedSettingsWriter, null, diagnostics)
     {
     }
 
@@ -49,13 +51,14 @@ public sealed partial class ResourcePanelUidService
         BestHttpCookieLibraryService cookieLibraryService,
         LauncherSettingsService settingsService,
         ISavedSettingsWriter savedSettingsWriter,
-        string cookieLibraryPath,
+        string? cookieLibraryPath,
         LocalDiagnostics? diagnostics = null)
     {
         this.cookieLibraryService = cookieLibraryService;
         this.settingsService = settingsService;
         this.savedSettingsWriter = savedSettingsWriter;
-        this.cookieLibraryPath = cookieLibraryPath;
+        cookieLibraryPathOverride = cookieLibraryPath;
+        this.cookieLibraryPath = cookieLibraryPath ?? GetDefaultCookieLibraryPath();
         this.diagnostics = diagnostics;
     }
 
@@ -111,7 +114,7 @@ public sealed partial class ResourcePanelUidService
 
     private string ResolveAutoUidCore(LauncherSettings settings)
     {
-        var cookieUid = TryReadCookieUid();
+        var cookieUid = TryReadCookieUid(settings);
         if (IsValidUid(cookieUid))
         {
             return cookieUid;
@@ -134,10 +137,14 @@ public sealed partial class ResourcePanelUidService
             cancellationToken).ConfigureAwait(false);
     }
 
-    private string TryReadCookieUid()
+    private string TryReadCookieUid(LauncherSettings settings)
     {
         try
         {
+            cookieLibraryPath = cookieLibraryPathOverride ?? (OperatingSystem.IsLinux()
+                ? ResolveLinuxCookieLibraryPath(settings.GameRuntime, Environment.UserName,
+                    runner => GameCompatibilityPaths.GetDefaultPrefixPath(GameRuntimeIds.BlueArchiveJapan, runner))
+                : GetDefaultCookieLibraryPath());
             if (!File.Exists(cookieLibraryPath))
             {
                 return "";
@@ -162,6 +169,52 @@ public sealed partial class ResourcePanelUidService
             && cookie.Path == ResourcePanelCookiePath
             && !string.IsNullOrWhiteSpace(cookie.Value);
     }
+
+    /// <summary>
+    /// Finds the cookie library only within the configured compatibility environment.
+    /// Auto mode checks managed UMU then Wine prefixes; Wine user names need not match the host.
+    /// </summary>
+    internal static string ResolveLinuxCookieLibraryPath(
+        GameRuntimeSettings settings, string userName, Func<string, string> defaultPrefix)
+    {
+        string[] runners = settings.Runner == GameRuntimeRunners.Wine
+            ? [GameRuntimeRunners.Wine]
+            : settings.Runner == GameRuntimeRunners.Umu
+                ? [GameRuntimeRunners.Umu]
+                : [GameRuntimeRunners.Umu, GameRuntimeRunners.Wine];
+        string[] prefixes = !string.IsNullOrWhiteSpace(settings.PrefixPath)
+            ? [settings.PrefixPath]
+            : runners.Select(defaultPrefix).ToArray();
+        var fallback = CookiePath(Path.Combine(prefixes[0], "drive_c", "users", userName));
+        foreach (var prefix in prefixes)
+        {
+            var users = Path.Combine(prefix, "drive_c", "users");
+            var currentUserPath = CookiePath(Path.Combine(users, userName));
+            if (File.Exists(currentUserPath))
+            {
+                return currentUserPath;
+            }
+
+            if (!Directory.Exists(users))
+            {
+                continue;
+            }
+
+            foreach (var profile in Directory.EnumerateDirectories(users).Order(StringComparer.Ordinal))
+            {
+                var path = CookiePath(profile);
+                if (File.Exists(path))
+                {
+                    return path;
+                }
+            }
+        }
+
+        return fallback;
+    }
+
+    private static string CookiePath(string profile) =>
+        Path.Combine(profile, "AppData", "LocalLow", "YostarJP", "BlueArchive", "Cookies", "Library");
 
     private static string GetDefaultCookieLibraryPath()
     {
