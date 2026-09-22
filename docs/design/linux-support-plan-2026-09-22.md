@@ -1,6 +1,6 @@
 # Cafe Launcher Linux 支持推进清单（重排版）
 
-> 状态：**规划文档（未开工）** · 生成时点：**2026-09-22** · 基准提交：**29375e5**
+> 状态：**推进中**——P0-C 已落地（`a5d793f`…`7f93234`），P0-B 判据前移稿已完成（接线待 P0-A 样本），P0-A 仍为外部 gate，P1-D 预检已落地（记录级，`4f2dabf`） · 生成时点：**2026-09-22** · 基准提交：**29375e5**
 > 来历：基于一次代码与文档评估，对原 Linux 适配方案重排优先级。**本次未修改任何代码，也未做实机验证**——因此本文的每条结论都标注了证据类型（代码事实 / 文档记录 / 待实测）。
 > 相关专项：Wayland 激活与桌面通知沿用 [`desktop-notifications-integration-plan.md`](desktop-notifications-integration-plan.md)，本文不重复设计。
 
@@ -21,6 +21,8 @@
 | **P2** | Arch 包、Flatpak、更多运行器 | 需求驱动 | 有明确用户需求后再启动 |
 
 **关键排序约束**：P0-A 是 P0-B 的前置（其进程树样本来自 P0-A 的实机环境），P0-C 与 P0-A 可并行。把 P0-A 与另两项并列成"可提交的 P0"会让计划一开始就有个无法 assign 的条目。
+
+**当前进度（2026-09-22 更新）**：P0-C 已全部落地——`a5d793f` 诊断导出加入运行器进程快照、`a50f2b1` 运行器 stdout/stderr 有上限捕获、`c1ebdb4` 桌面会话信息、`7f93234` GPU/Vulkan 探测。P0-B 的判据前移稿已完成并附纯函数骨架（见 §3.2），**接线与 ADR 仍等 P0-A 样本**。P0-A 尚未开始（外部 gate）。P1-D 预检已落地（`4f2dabf`，记录级：不阻断启动、未接用户提示）。
 
 ---
 
@@ -144,7 +146,7 @@ cat /proc/<pid>/maps | rg -i 'BlueArchive|xldr|\.exe'
 
 ---
 
-## 4. P0-C：运行器日志与失败诊断（可立即开工）
+## 4. P0-C：运行器日志与失败诊断（已落地）
 
 **现状**：启动不重定向运行器输出；`ProtonPath` 记为 `"auto"`。
 
@@ -159,11 +161,14 @@ cat /proc/<pid>/maps | rg -i 'BlueArchive|xldr|\.exe'
 
 **完成标准**：导出包能解释失败发生在哪一层（运行器不存在 / 版本探测失败 / Prefix 初始化失败 / 反作弊拦截 / 游戏崩溃），且新增日志有上限、失败不影响启动。
 
+**落地记录（2026-09-22）**：Wine/UMU 启动重定向 stdout/stderr 到数据根 `runner_output.log`（`RunnerOutputCapture`，256 KB 上限、每次启动覆盖、失败不影响启动，`a50f2b1`）；导出包带上该文件，并新增 `linux-process-snapshot.txt`（`a5d793f`）；`system-info.json` 增 `session`（`c1ebdb4`）与 `graphics`（`vulkaninfo`/`glxinfo`，短超时、缺失即省略，`7f93234`）。实际 Proton 构建可从运行器输出读出，"auto" 仅剩诊断快照里的字面量。
+
 ---
 
 ## 5. P1
 
 - **P1-D 路径、文件系统与运行环境预检**：检查大小写冲突、读写权限、符号链接能力、Prefix 所在位置。**不要把"大小写敏感"本身判为不兼容**，也不要一刀切禁止 NTFS 上的游戏目录。发行版名称可记录，但决定启动的是运行器、图形能力、目录权限与会话条件。
+  - **已落地（2026-09-22，`4f2dabf`，记录级）**：`CompatibilityEnvironmentPrecheck` 在选中 Wine/UMU 运行器后、启动前对有效前缀预检——不可创建/写入、文件系统不支持符号链接、挂载点 `noexec` 记为阻断级发现；发行版与大小写敏感性只记录。失败不影响启动，报告写入数据根 `compatibility_environment.json` 并由诊断导出携带。**尚未接入启动拒绝与用户提示**（待 UI/本地化决策）。
 - **P1-E Prefix 元数据与 Proton 构建发现**：记录创建信息、最近运行器版本、最近成功组合（诊断价值）。**先记录，不做自动迁移**；版本变化不等于必须迁移，元数据也不保证 Prefix 可回滚，自定义 Prefix 的所有权要写明。发现 GE-Proton 安装目录可作为设置体验增强。
 - **P1-F Wayland 激活与桌面通知**：按 [`desktop-notifications-integration-plan.md`](desktop-notifications-integration-plan.md) 推进，验证 KDE/GNOME，避免重复设计。
 
