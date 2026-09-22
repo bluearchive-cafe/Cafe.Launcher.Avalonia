@@ -87,9 +87,10 @@ internal static class UnixGameProcessMatcher
     }
 
     private static bool HasOwnershipMarker(UnixProcessRecord record, UnixGameProcessQuery query) =>
-        !string.IsNullOrWhiteSpace(query.GameId)
-        && record.Environment.TryGetValue(OwnershipMarkerKey, out var marker)
-        && string.Equals(marker, query.GameId, StringComparison.Ordinal);
+        record.Environment.TryGetValue(OwnershipMarkerKey, out var marker)
+        && marker.Length > 0
+        && (string.IsNullOrWhiteSpace(query.GameId)
+            || string.Equals(marker, query.GameId, StringComparison.Ordinal));
 
     private static bool HasWinePrefix(UnixProcessRecord record, UnixGameProcessQuery query) =>
         !string.IsNullOrWhiteSpace(query.PrefixPath)

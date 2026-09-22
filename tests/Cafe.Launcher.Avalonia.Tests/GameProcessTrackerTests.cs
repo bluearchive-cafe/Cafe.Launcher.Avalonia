@@ -18,7 +18,7 @@ public sealed class GameProcessTrackerTests
         tracker.Register(new GameProcess(new Process(), "native"));
 
         Assert.True(tracker.HasLiveTrackedProcess);
-        Assert.NotEmpty(await tracker.FindRunningGameProcessesAsync(KnownNames));
+        Assert.NotEmpty(await tracker.FindRunningGameProcessesAsync(Query));
         Assert.Null(tracker.LastExit);
     }
 
@@ -28,10 +28,10 @@ public sealed class GameProcessTrackerTests
         var tracker = new GameProcessTracker(StubProbe("BlueArchive"));
 
         Assert.False(tracker.HasLiveTrackedProcess);
-        Assert.NotEmpty(await tracker.FindRunningGameProcessesAsync(KnownNames));
+        Assert.NotEmpty(await tracker.FindRunningGameProcessesAsync(Query));
 
         var falseTracker = new GameProcessTracker(StubProbe());
-        Assert.Empty(await falseTracker.FindRunningGameProcessesAsync(KnownNames));
+        Assert.Empty(await falseTracker.FindRunningGameProcessesAsync(Query));
     }
 
     [Fact]
@@ -49,7 +49,7 @@ public sealed class GameProcessTrackerTests
         Assert.True(tracker.LastExit.Duration >= TimeSpan.Zero);
 
         Assert.False(tracker.HasLiveTrackedProcess);
-        Assert.Empty(await tracker.FindRunningGameProcessesAsync(KnownNames));
+        Assert.Empty(await tracker.FindRunningGameProcessesAsync(Query));
     }
 
     [Fact]
@@ -113,8 +113,10 @@ public sealed class GameProcessTrackerTests
     private static readonly IReadOnlyList<string> KnownNames =
         GameProcessNames.FromLaunchConfiguration("xldr_BlueArchiveOnline_JP_loader_x64", ["BlueArchive.exe"]);
 
+    private static readonly RunningGameQuery Query = new(KnownNames);
+
     /// <summary>名字扫描的替身：返回给定的命中列表，空表示没在跑。</summary>
-    private static Func<IReadOnlyList<string>, CancellationToken, Task<IReadOnlyList<string>>> StubProbe(
+    private static Func<RunningGameQuery, CancellationToken, Task<IReadOnlyList<string>>> StubProbe(
         params string[] matches) =>
         (_, _) => Task.FromResult<IReadOnlyList<string>>(matches);
 
@@ -132,7 +134,7 @@ public sealed class GameProcessTrackerTests
         Assert.Equal(42, tracker.LastExit!.ExitCode);
         Assert.Equal("umu", tracker.LastExit.RunnerId);
         Assert.False(tracker.HasLiveTrackedProcess);
-        Assert.Empty(await tracker.FindRunningGameProcessesAsync(KnownNames));
+        Assert.Empty(await tracker.FindRunningGameProcessesAsync(Query));
         Assert.True(fake.DisposeSucceeded);
     }
 

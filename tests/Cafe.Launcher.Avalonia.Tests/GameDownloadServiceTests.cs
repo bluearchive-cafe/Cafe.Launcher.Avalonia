@@ -1498,7 +1498,7 @@ Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
             statePath,
             CreateWritingFileDownloadService(fileBytes),
             processTracker: new GameProcessTracker((names, _) => Task.FromResult<IReadOnlyList<string>>(
-                names.Contains("BlueArchive") ? ["BlueArchive"] : [])));
+                names.KnownExeNames.Contains("BlueArchive") ? ["BlueArchive"] : [])));
         var snapshot = CreateSnapshot(gamePath);
         snapshot.RuntimeState = LauncherRuntimeState.NotInstalled;
 
@@ -1534,10 +1534,10 @@ Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
             CreateWritingFileDownloadService(fileBytes),
             processTracker: new GameProcessTracker((names, _) =>
             {
-                asked.Add(names);
+                asked.Add(names.KnownExeNames);
                 // 与真实判据同形：宿主还没起，只有 params 声明的那一个在跑。
                 return Task.FromResult<IReadOnlyList<string>>(
-                    names.Contains("BlueArchive", StringComparer.OrdinalIgnoreCase) ? ["BlueArchive"] : []);
+                    names.KnownExeNames.Contains("BlueArchive", StringComparer.OrdinalIgnoreCase) ? ["BlueArchive"] : []);
             }));
         var snapshot = CreateSnapshot(gamePath);
         snapshot.RuntimeState = LauncherRuntimeState.NotInstalled;

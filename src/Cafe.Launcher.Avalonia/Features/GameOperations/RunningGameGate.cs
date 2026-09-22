@@ -34,29 +34,33 @@ internal static class RunningGameGate
     /// 返回空：闸门不做无根据的拒绝，会话看护也认同一份家族（ADR-035）——启动路径与破坏性
     /// 操作路径的「游戏在跑」判据同源，不会分叉。
     /// </summary>
-    internal static IReadOnlyList<string> ResolveKnownProcessNames(
+    internal static RunningGameQuery ResolveQuery(
         GameLauncherConfig? localConfig,
-        GameConfigResponse? remoteConfig) =>
-        localConfig?.Name is { Length: > 0 } hostExeName
+        GameConfigResponse? remoteConfig,
+        string? installDirectory)
+    {
+        var names = localConfig?.Name is { Length: > 0 } hostExeName
             ? GameProcessNames.FromLaunchConfiguration(hostExeName, localConfig.Params)
             : GameProcessNames.FromLaunchConfiguration(remoteConfig?.GameStartExeName, remoteConfig?.GameStartParams);
+        return new RunningGameQuery(names, installDirectory);
+    }
 
     public static async Task<GameOperationResult?> FindFailureAsync(
         IGameProcessTracker gameProcessTracker,
         LocalizationService localizer,
         string runningMessageKey,
-        IReadOnlyList<string> knownProcessNames,
+        RunningGameQuery query,
         CancellationToken cancellationToken,
         TimeSpan? scanTimeout = null)
     {
-        if (knownProcessNames.Count == 0)
+        if (query.KnownExeNames.Count == 0)
         {
             return null;
         }
 
         var scan = await ScanRunningProcessesAsync(
             gameProcessTracker,
-            knownProcessNames,
+            query,
             scanTimeout ?? DefaultScanTimeout,
             cancellationToken).ConfigureAwait(false);
         if (scan.TimedOut)
@@ -85,12 +89,12 @@ internal static class RunningGameGate
     /// </summary>
     private static async Task<RunningProcessScan> ScanRunningProcessesAsync(
         IGameProcessTracker gameProcessTracker,
-        IReadOnlyList<string> knownProcessNames,
+        RunningGameQuery query,
         TimeSpan scanTimeout,
         CancellationToken cancellationToken)
     {
         var scanTask = Task.Run(
-            () => gameProcessTracker.FindRunningGameProcessesAsync(knownProcessNames, cancellationToken),
+            () => gameProcessTracker.FindRunningGameProcessesAsync(query, cancellationToken),
             CancellationToken.None);
         var timeoutTask = Task.Delay(scanTimeout, cancellationToken);
         if (ReferenceEquals(await Task.WhenAny(scanTask, timeoutTask).ConfigureAwait(false), scanTask))

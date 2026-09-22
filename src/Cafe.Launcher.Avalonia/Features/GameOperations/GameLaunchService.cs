@@ -158,9 +158,10 @@ public sealed class GameLaunchService
             DiagnosticMessage = BuildLaunchContext(launchResult, request),
             Validation = validation,
             RunnerId = launchResult.RunnerId,
-            KnownExeNames = RunningGameGate.ResolveKnownProcessNames(
+            KnownExeNames = RunningGameGate.ResolveQuery(
                 snapshot.LocalGame.GameConfig,
-                snapshot.Remote.GameConfig)
+                snapshot.Remote.GameConfig,
+                target.WorkingDirectory).KnownExeNames
         };
     }
 

@@ -26,7 +26,7 @@ public sealed class RunningGameGateTests
             tracker,
             localizer,
             LocalizationKeys.GameExecutableRunning,
-            KnownNames,
+            Query,
             CancellationToken.None,
             TimeSpan.FromMilliseconds(50));
 
@@ -52,7 +52,7 @@ public sealed class RunningGameGateTests
             tracker,
             new LocalizationService(),
             LocalizationKeys.GameExecutableRunning,
-            KnownNames,
+            Query,
             stopSource.Token,
             TimeSpan.FromSeconds(30));
         stopSource.Cancel();
@@ -72,7 +72,7 @@ public sealed class RunningGameGateTests
             tracker,
             new LocalizationService(),
             LocalizationKeys.GameExecutableRunning,
-            KnownNames,
+            Query,
             CancellationToken.None,
             TimeSpan.FromSeconds(2));
 
@@ -84,4 +84,6 @@ public sealed class RunningGameGateTests
 
     private static readonly IReadOnlyList<string> KnownNames =
         GameProcessNames.FromLaunchConfiguration("xldr_BlueArchiveOnline_JP_loader_x64", ["BlueArchive.exe"]);
+
+    private static readonly RunningGameQuery Query = new(KnownNames);
 }

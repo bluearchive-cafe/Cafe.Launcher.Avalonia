@@ -95,7 +95,7 @@ public sealed class GameUninstallService
             // 闸门（ADR-032 的「只在整族退出后放行」），命中即按既有消息报出——与路径守卫的执行
             // 边界复查（EnsureCleanupTargetsAreDeletable）同构，且失败经 ConfirmUninstallAsync 的
             // ShowOperationResult 落地，不是静默（ADR-027）。
-            var gameRunning = await FindRunningGameFailureAsync(state.GameConfig, cancellationToken)
+            var gameRunning = await FindRunningGameFailureAsync(state.GameConfig, gamePath, cancellationToken)
                 .ConfigureAwait(false);
             if (gameRunning is not null)
             {
@@ -367,7 +367,7 @@ public sealed class GameUninstallService
 
         // 卸载会删掉整个安装目录，因此闸门要认整族进程，而不是只认配置里那个宿主：反作弊宿主
         // （名字是宿主名的同族变体）在强杀游戏后仍会占着目录，只认宿主就会放行（ADR-032）。
-        var gameRunning = await FindRunningGameFailureAsync(state.GameConfig, cancellationToken)
+        var gameRunning = await FindRunningGameFailureAsync(state.GameConfig, gamePath, cancellationToken)
             .ConfigureAwait(false);
         if (gameRunning is not null)
         {
@@ -437,6 +437,7 @@ public sealed class GameUninstallService
     /// </summary>
     private async Task<GameOperationResult?> FindRunningGameFailureAsync(
         GameLauncherConfig? gameConfig,
+        string installDirectory,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(gameConfig?.Name))
@@ -444,11 +445,14 @@ public sealed class GameUninstallService
             return null;
         }
 
+        var query = new RunningGameQuery(
+            GameProcessNames.FromLaunchConfiguration(gameConfig.Name, gameConfig.Params),
+            installDirectory);
         return await RunningGameGate.FindFailureAsync(
             gameProcessTracker,
             localizer,
             LocalizationKeys.GameIsRunning,
-            GameProcessNames.FromLaunchConfiguration(gameConfig.Name, gameConfig.Params),
+            query,
             cancellationToken).ConfigureAwait(false);
     }
 

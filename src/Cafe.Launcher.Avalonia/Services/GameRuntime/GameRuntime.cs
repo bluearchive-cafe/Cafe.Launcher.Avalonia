@@ -364,6 +364,11 @@ public sealed class GameRuntime : IGameRuntime
         startInfo.RedirectStandardOutput = captureOutput;
         startInfo.RedirectStandardError = captureOutput;
 
+        // P0-B ownership marker: a launcher-private env var that survives UMU/Proton into every
+        // process of the game's family, so the Linux running gate can identify it without the
+        // kernel-truncated comm (verified to propagate through pressure-vessel; design doc §6).
+        startInfo.Environment[UnixGameProcessMatcher.OwnershipMarkerKey] = request.GameId;
+
         if (runner.ExecutableName is not null)
         {
             startInfo.ArgumentList.Add(request.ExecutablePath);

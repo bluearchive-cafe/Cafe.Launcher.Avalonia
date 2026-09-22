@@ -38,8 +38,8 @@ public static class TestGameProcessTracker
     /// 确实来自配置声明的家族名，而不是替身自说自话。
     /// </summary>
     public static GameProcessTracker RunningWhenKnownFamilyContains(string match) =>
-        new((knownExeNames, _) => Task.FromResult<IReadOnlyList<string>>(
-            knownExeNames
+        new((query, _) => Task.FromResult<IReadOnlyList<string>>(
+            query.KnownExeNames
                 .Where(name => name.Contains(match, StringComparison.OrdinalIgnoreCase))
                 .ToList()));
 }
