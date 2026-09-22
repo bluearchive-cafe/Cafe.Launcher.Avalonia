@@ -412,6 +412,38 @@ public sealed class LogExportServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ExportAsync_RecordsTheDesktopSessionInSystemInfo()
+    {
+        const string variable = "XDG_SESSION_TYPE";
+        var original = Environment.GetEnvironmentVariable(variable);
+        Environment.SetEnvironmentVariable(variable, "wayland");
+        try
+        {
+            var dataRoot = Path.Combine(tempDir, "session-data");
+            Directory.CreateDirectory(dataRoot);
+            var logger = WriteDeterministicLog(
+                "session-source",
+                "2026-09-09T10:00:00.0000000+08:00 [INF] [Test] Entry\n");
+            var service = new LogExportService(
+                new LocalDiagnostics(logger),
+                TestDataRoot.ForDirectory(dataRoot),
+                new CrashReportStore(TestDataRoot.ForCurrentProcess()));
+
+            var zipPath = await service.ExportAsync(
+                Path.Combine(tempDir, "session-selected"),
+                LogExportOptions.Default);
+
+            using var document = JsonDocument.Parse(ReadEntry(zipPath, "system-info.json"));
+            var session = document.RootElement.GetProperty("session");
+            Assert.Equal("wayland", session.GetProperty("type").GetString());
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(variable, original);
+        }
+    }
+
+    [Fact]
     public async Task HasLogEntriesAsync_WithEntriesInsideTheWindow_ReturnsTrue()
     {
         var now = DateTimeOffset.Now;

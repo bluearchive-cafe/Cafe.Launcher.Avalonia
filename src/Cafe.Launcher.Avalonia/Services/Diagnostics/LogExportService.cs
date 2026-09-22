@@ -422,6 +422,7 @@ public sealed class LogExportService
             os = Environment.OSVersion.ToString(),
             framework = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription,
             buildConfig = BuildInfo.BuildConfiguration,
+            session = ReadDesktopSession(),
             export = new
             {
                 range = options.Range.ToString(),
@@ -442,6 +443,34 @@ public sealed class LogExportService
         using var stream = entry.Open();
         using var writer = new StreamWriter(stream, Encoding.UTF8);
         writer.Write(json);
+    }
+
+    /// <summary>
+    /// The desktop session the export ran in, or null where none is declared. Wine/UMU guidance
+    /// differs by Wayland/X11 and desktop, and the P0-A verification record asks for it, so it is
+    /// recorded rather than inferred.
+    /// </summary>
+    private static object? ReadDesktopSession()
+    {
+        var sessionType = Environment.GetEnvironmentVariable("XDG_SESSION_TYPE");
+        var desktop = Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP");
+        var waylandDisplay = Environment.GetEnvironmentVariable("WAYLAND_DISPLAY");
+        var x11Display = Environment.GetEnvironmentVariable("DISPLAY");
+        if (string.IsNullOrWhiteSpace(sessionType)
+            && string.IsNullOrWhiteSpace(desktop)
+            && string.IsNullOrWhiteSpace(waylandDisplay)
+            && string.IsNullOrWhiteSpace(x11Display))
+        {
+            return null;
+        }
+
+        return new
+        {
+            type = sessionType,
+            desktop,
+            waylandDisplay = !string.IsNullOrWhiteSpace(waylandDisplay),
+            x11Display = !string.IsNullOrWhiteSpace(x11Display)
+        };
     }
 
     /// <summary>
