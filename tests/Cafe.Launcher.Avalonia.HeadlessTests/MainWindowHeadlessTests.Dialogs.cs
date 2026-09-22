@@ -17,6 +17,31 @@ namespace Cafe.Launcher.Avalonia.HeadlessTests;
 public sealed partial class MainWindowHeadlessTests
 {
     [AvaloniaFact]
+    public void ResourcePanel_DismissUidHint_HidesBannerUntilNextSession()
+    {
+        using var context = CreateContext();
+        context.Window.Show();
+        ShowResourcePanel(context);
+        Dispatcher.UIThread.RunJobs();
+        var banner = context.Window.GetVisualDescendants().OfType<Border>()
+            .Single(border => border.Name == "UidGenerationHint");
+        var closeButton = banner.GetVisualDescendants().OfType<Button>().Single();
+        Assert.True(banner.IsEffectivelyVisible);
+        Assert.False(string.IsNullOrWhiteSpace(AutomationProperties.GetName(closeButton)));
+        AssertControlInsideWindow(closeButton, context.Window);
+
+        closeButton.Command!.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+        Assert.False(banner.IsVisible);
+        Assert.True(context.ViewModel.ResourcePanel.IsResourcePanelVisible);
+
+        context.ViewModel.ResourcePanel.CloseResourcePanelCommand.Execute(null);
+        ShowResourcePanel(context);
+        Dispatcher.UIThread.RunJobs();
+        Assert.False(banner.IsVisible);
+    }
+
+    [AvaloniaFact]
     public void LogViewer_EmptyState_KeepsConfiguredHeight()
     {
         using var context = CreateContext();

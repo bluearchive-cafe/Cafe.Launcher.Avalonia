@@ -322,7 +322,11 @@ internal static class LauncherStrings
 
     internal static string DownloadSourceDescription => GetRequiredString("downloadSourceDescription");
 
+    internal static string DownloadSourceLoading => GetRequiredString("downloadSourceLoading");
+
     internal static string DownloadSourceOfficial => GetRequiredString("downloadSourceOfficial");
+
+    internal static string DownloadSourceValue => GetRequiredString("downloadSourceValue");
 
     internal static string DownloadSpeedLimit => GetRequiredString("downloadSpeedLimit");
 
@@ -818,6 +822,8 @@ internal static class LauncherStrings
 
     internal static string ResourcePanelDescription => GetRequiredString("resourcePanelDescription");
 
+    internal static string ResourcePanelDismissUidHint => GetRequiredString("resourcePanelDismissUidHint");
+
     internal static string ResourcePanelEditUid => GetRequiredString("resourcePanelEditUid");
 
     internal static string ResourcePanelFailed => GetRequiredString("resourcePanelFailed");
@@ -853,6 +859,8 @@ internal static class LauncherStrings
     internal static string ResourcePanelUid => GetRequiredString("resourcePanelUid");
 
     internal static string ResourcePanelUidEmpty => GetRequiredString("resourcePanelUidEmpty");
+
+    internal static string ResourcePanelUidGenerationHint => GetRequiredString("resourcePanelUidGenerationHint");
 
     internal static string ResourcePanelUidInvalidFormat => GetRequiredString("resourcePanelUidInvalidFormat");
 

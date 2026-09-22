@@ -162,7 +162,9 @@ public static class LocalizationKeys
     public const string DownloadSourceCafe = "downloadSourceCafe";
     public const string DownloadSourceChangedRepairPrompt = "downloadSourceChangedRepairPrompt";
     public const string DownloadSourceDescription = "downloadSourceDescription";
+    public const string DownloadSourceLoading = "downloadSourceLoading";
     public const string DownloadSourceOfficial = "downloadSourceOfficial";
+    public const string DownloadSourceValue = "downloadSourceValue";
     public const string DownloadSpeedLimit = "downloadSpeedLimit";
     public const string DownloadSpeedLimitDescription = "downloadSpeedLimitDescription";
     public const string EnableHttp2 = "enableHttp2";
@@ -410,6 +412,7 @@ public static class LocalizationKeys
     public const string ResourcePanelChangeUid = "resourcePanelChangeUid";
     public const string ResourcePanelCurrentUid = "resourcePanelCurrentUid";
     public const string ResourcePanelDescription = "resourcePanelDescription";
+    public const string ResourcePanelDismissUidHint = "resourcePanelDismissUidHint";
     public const string ResourcePanelEditUid = "resourcePanelEditUid";
     public const string ResourcePanelFailed = "resourcePanelFailed";
     public const string ResourcePanelGameText = "resourcePanelGameText";
@@ -428,6 +431,7 @@ public static class LocalizationKeys
     public const string ResourcePanelSaveUid = "resourcePanelSaveUid";
     public const string ResourcePanelUid = "resourcePanelUid";
     public const string ResourcePanelUidEmpty = "resourcePanelUidEmpty";
+    public const string ResourcePanelUidGenerationHint = "resourcePanelUidGenerationHint";
     public const string ResourcePanelUidInvalidFormat = "resourcePanelUidInvalidFormat";
     public const string ResourcePanelUidMissing = "resourcePanelUidMissing";
     public const string ResourcePanelUidSaved = "resourcePanelUidSaved";

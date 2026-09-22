@@ -44,7 +44,9 @@ public sealed class ResxResourceContractTests
         // → 572（区分停止与退出、远程清单不可用，以及目录选择提示）。
         // → 573（直连路径落在 Fake-IP 应答段失败时的针对性指引，适配 Clash Fake-IP）。
         // → 579（会话看护的状态行与启动失败通报：启动报告只覆盖 spawn 那一刻，见 ADR-035）。
-        Assert.Equal(579, ResxValues["en"].Count);
+        // → 581（底部状态区展示下载源：加载占位与「下载源：{0}」组合串）。
+        // → 583（资源面板可关闭的 UID 生成提示：提示正文与关闭按钮，3cf0d7e 补记）。
+        Assert.Equal(583, ResxValues["en"].Count);
     }
 
     [Fact]
