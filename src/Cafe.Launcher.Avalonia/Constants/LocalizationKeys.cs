@@ -224,6 +224,9 @@ public static class LocalizationKeys
     public const string GameProcessStarted = "gameProcessStarted";
     public const string GameRemoteStateUnavailable = "gameRemoteStateUnavailable";
     public const string GameRepairFailed = "gameRepairFailed";
+    public const string GameRuntimeEnvironmentMountNoExec = "gameRuntimeEnvironmentMountNoExec";
+    public const string GameRuntimeEnvironmentPrefixNotWritable = "gameRuntimeEnvironmentPrefixNotWritable";
+    public const string GameRuntimeEnvironmentSymlinksUnsupported = "gameRuntimeEnvironmentSymlinksUnsupported";
     public const string GameRuntimeNoRunnerAvailable = "gameRuntimeNoRunnerAvailable";
     public const string GameRuntimePrefixPath = "gameRuntimePrefixPath";
     public const string GameRuntimePrefixPathDescription = "gameRuntimePrefixPathDescription";

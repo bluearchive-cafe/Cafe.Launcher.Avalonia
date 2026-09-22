@@ -101,7 +101,18 @@ public sealed class GameRuntime : IGameRuntime
                 continue;
             }
 
-            TryEnvironmentPrecheck(runner, request, runnerConfiguration);
+            var environmentFailures = TryEnvironmentPrecheck(runner, request, runnerConfiguration);
+            if (environmentFailures is not null)
+            {
+                return new GameRuntimeLaunchResult(
+                    Success: false,
+                    RunnerId: runner.Id,
+                    Process: null,
+                    Diagnostic: BuildDiagnostic(runner, availability, request, configuration),
+                    Candidates: candidates,
+                    Failure: GameRuntimeLaunchFailure.EnvironmentPrecheckFailed,
+                    EnvironmentFailures: environmentFailures);
+            }
 
             GameProcess process;
             try
@@ -268,26 +279,32 @@ public sealed class GameRuntime : IGameRuntime
     }
 
     /// <summary>
-    /// 记录兼容前缀的启动前环境预检（P1-D），但不改变启动结果：报告没写成或探针读不到不能因此
+    /// 记录兼容前缀的启动前环境预检（P1-D），并返回其中阻断级的发现；没有阻断项时返回 null。
+    /// 预检本身出错（报告写不进去、探针读不到）按「没有发现」处理——不能因为一次诊断失败就
     /// 拒绝一次本可成功的启动。原生 Windows 启动没有前缀，跳过。
     /// </summary>
-    private void TryEnvironmentPrecheck(
+    private IReadOnlyList<GameEnvironmentFailure>? TryEnvironmentPrecheck(
         GameRunnerDefinition runner,
         GameLaunchRequest request,
         GameRuntimeConfiguration configuration)
     {
         if (environmentPrecheck is null || runner.EnvironmentStyle == GameRuntimeEnvironmentStyle.Native)
         {
-            return;
+            return null;
         }
 
         try
         {
-            environmentPrecheck.Check(GetEffectivePrefixPath(request, runner.Id, configuration));
+            var report = environmentPrecheck.Check(GetEffectivePrefixPath(request, runner.Id, configuration));
+            List<GameEnvironmentFailure> failures = report.Findings
+                .Where(finding => finding.Severity == CompatibilityFindingSeverity.Error)
+                .Select(finding => new GameEnvironmentFailure(finding.Code, finding.Detail))
+                .ToList();
+            return failures.Count == 0 ? null : failures;
         }
         catch (Exception)
         {
-            // Diagnostic only: never let the precheck change the launch outcome.
+            return null;
         }
     }
 

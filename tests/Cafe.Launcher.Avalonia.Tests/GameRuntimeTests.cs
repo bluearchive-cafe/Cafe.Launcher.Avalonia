@@ -189,6 +189,28 @@ public sealed class GameRuntimeTests
     }
 
     [Fact]
+    public async Task LaunchAsync_WhenTheEnvironmentPrecheckFindsABlocker_RefusesBeforeStarting()
+    {
+        using var tempDir = TestDirectory.Create();
+        var blocker = Path.Combine(tempDir, "blocker");
+        File.WriteAllText(blocker, "");
+        var precheck = new CompatibilityEnvironmentPrecheck(tempDir.DataRoot);
+        var launcher = new RecordingProcessLauncher();
+        var runtime = CreateRuntime([Definition("umu")], launcher, precheck: precheck);
+        var configuration = new GameRuntimeConfiguration { PrefixPath = Path.Combine(blocker, "prefix") };
+
+        var result = await runtime.LaunchAsync(CreateRequest(), configuration);
+
+        Assert.False(result.Success);
+        Assert.Equal(GameRuntimeLaunchFailure.EnvironmentPrecheckFailed, result.Failure);
+        Assert.NotNull(result.EnvironmentFailures);
+        Assert.Contains(
+            result.EnvironmentFailures,
+            failure => failure.Code == CompatibilityFindingCode.PrefixNotWritable);
+        Assert.Empty(launcher.StartInfos);
+    }
+
+    [Fact]
     public async Task LaunchAsync_AutoMode_DoesNotProbeFallbackAfterFirstAvailableRunner()
     {
         var launcher = new RecordingProcessLauncher();

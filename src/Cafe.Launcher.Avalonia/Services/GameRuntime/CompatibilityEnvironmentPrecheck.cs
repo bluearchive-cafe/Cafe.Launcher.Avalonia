@@ -18,7 +18,7 @@ internal enum CompatibilityFindingSeverity
 }
 
 /// <summary>预检发现的具体类别。</summary>
-internal enum CompatibilityFindingCode
+public enum CompatibilityFindingCode
 {
     /// <summary>前缀位置不可创建或不可写。</summary>
     PrefixNotWritable,

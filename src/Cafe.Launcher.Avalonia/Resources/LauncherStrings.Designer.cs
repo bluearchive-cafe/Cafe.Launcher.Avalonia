@@ -446,6 +446,12 @@ internal static class LauncherStrings
 
     internal static string GameRepairFailed => GetRequiredString("gameRepairFailed");
 
+    internal static string GameRuntimeEnvironmentMountNoExec => GetRequiredString("gameRuntimeEnvironmentMountNoExec");
+
+    internal static string GameRuntimeEnvironmentPrefixNotWritable => GetRequiredString("gameRuntimeEnvironmentPrefixNotWritable");
+
+    internal static string GameRuntimeEnvironmentSymlinksUnsupported => GetRequiredString("gameRuntimeEnvironmentSymlinksUnsupported");
+
     internal static string GameRuntimeNoRunnerAvailable => GetRequiredString("gameRuntimeNoRunnerAvailable");
 
     internal static string GameRuntimePrefixPath => GetRequiredString("gameRuntimePrefixPath");
