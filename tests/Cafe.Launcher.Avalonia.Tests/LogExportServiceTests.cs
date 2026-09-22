@@ -102,6 +102,32 @@ public sealed class LogExportServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ExportAsync_WithPrefixMetadata_IncludesIt()
+    {
+        var dataRoot = Path.Combine(tempDir, "prefix-meta-data");
+        Directory.CreateDirectory(dataRoot);
+        File.WriteAllText(
+            Path.Combine(dataRoot, GamePaths.PrefixMetadataFileName),
+            "{\"prefixPath\":\"/home/u/pfx\",\"launchCount\":1}");
+        var logger = WriteDeterministicLog(
+            "prefix-meta-source",
+            "2026-09-09T10:00:00.0000000+08:00 [INF] [Test] Entry\n");
+        var service = new LogExportService(
+            new LocalDiagnostics(logger),
+            TestDataRoot.ForDirectory(dataRoot),
+            new CrashReportStore(TestDataRoot.ForCurrentProcess()));
+
+        var zipPath = await service.ExportAsync(
+            Path.Combine(tempDir, "prefix-meta-selected"),
+            LogExportOptions.Default);
+
+        Assert.Contains(
+            "launchCount",
+            ReadEntry(zipPath, GamePaths.PrefixMetadataFileName),
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void DefaultExportDirectory_UsesProductDataExportFolder()
     {
         var dataRoot = tempDir.DataRoot;

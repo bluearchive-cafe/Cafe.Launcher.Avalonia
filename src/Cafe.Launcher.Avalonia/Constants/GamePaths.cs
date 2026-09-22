@@ -57,4 +57,7 @@ public static class GamePaths
 
     /// <summary>Latest compatibility-prefix environment precheck report (overwritten per launch).</summary>
     public const string CompatibilityEnvironmentFileName = "compatibility_environment.json";
+
+    /// <summary>Metadata of the compatibility prefix used by the latest launch (overwritten per launch).</summary>
+    public const string PrefixMetadataFileName = "prefix_metadata.json";
 }

@@ -41,7 +41,8 @@ public sealed class GameRuntimeTests
         IGameProcessTracker? tracker = null,
         List<(string Name, string? Path)>? locateCalls = null,
         RunnerOutputCapture? capture = null,
-        CompatibilityEnvironmentPrecheck? precheck = null)
+        CompatibilityEnvironmentPrecheck? precheck = null,
+        PrefixMetadataStore? metadata = null)
     {
         return new GameRuntime(
             definitions,
@@ -55,7 +56,8 @@ public sealed class GameRuntimeTests
             probe ?? ((_, _, _, _) =>
                 Task.FromResult(RuntimeProbeResult.Success("9.0", 0, "", ""))),
             capture,
-            precheck);
+            precheck,
+            metadata);
     }
 
     [Fact]
@@ -208,6 +210,23 @@ public sealed class GameRuntimeTests
             result.EnvironmentFailures,
             failure => failure.Code == CompatibilityFindingCode.PrefixNotWritable);
         Assert.Empty(launcher.StartInfos);
+    }
+
+    [Fact]
+    public async Task LaunchAsync_WithPrefixMetadata_RecordsTheCombination()
+    {
+        using var tempDir = TestDirectory.Create();
+        var metadata = new PrefixMetadataStore(tempDir.DataRoot);
+        var runtime = CreateRuntime(
+            [Definition("umu")],
+            new RecordingProcessLauncher(),
+            metadata: metadata);
+        var configuration = new GameRuntimeConfiguration { PrefixPath = Path.Combine(tempDir, "prefix") };
+
+        var result = await runtime.LaunchAsync(CreateRequest(), configuration);
+
+        Assert.True(result.Success);
+        Assert.True(File.Exists(metadata.FilePath));
     }
 
     [Fact]

@@ -208,6 +208,14 @@ public sealed class LogExportService
             manifest,
             cancellationToken);
 
+        // Optional: the compatibility prefix metadata of the most recent launch.
+        TryCopyOptionalFileToZip(
+            zip,
+            dataRoot.PrefixMetadataPath,
+            GamePaths.PrefixMetadataFileName,
+            manifest,
+            cancellationToken);
+
         if (options.IncludeCrashReports)
             AddCrashReports(zip, CrashReportDirectories(), manifest, cancellationToken);
 
