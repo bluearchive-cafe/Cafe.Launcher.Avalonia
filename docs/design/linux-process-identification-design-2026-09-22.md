@@ -1,6 +1,6 @@
 # Linux 进程识别判据设计（P0-B 前移稿）
 
-> 状态：**设计稿**（判据的 ABI 层与强信号已定，弱信号与具体字段序待实机样本收口）· 生成时点：**2026-09-22** · 基准提交：**29375e5**
+> 状态：**设计稿 + 实机样本已取得**（2026-09-22 采到 UMU/Proton 运行中的真实进程树；强信号全部验证，字段细节按样本修正，见 §6）· 生成时点：**2026-09-22** · 基准提交：**29375e5**
 > 来历：`linux-support-plan-2026-09-22.md` §3（P0-B）选定「所有权标记为主」的方向后，把「能先于样本定稿的一半」抽出来：内核 ABI 决定的原始字段读取与纯判定骨架先落地，具体命中策略等 §3.1 的进程树样本回来再定。
 > 本文**不替代** `linux-support-plan-2026-09-22.md` 的排序：P0-A 仍是 P0-B 的实机前置；本文只把 P0-B 的「设计」部分前移。
 
@@ -29,12 +29,12 @@ ADR-032 的判据落在「名字家族」，前提是 **Windows 反作弊保护�
 
 | 序 | 信号 | 来源 | 强度 | 覆盖 |
 | --- | --- | --- | --- | --- |
-| 1 | 所有权标记 `CAFE_LAUNCHER_GAME_ID == gameId` | `BuildStartInfo` 写入的 env | 强 | 跨启动器重启、宿主退出后仍认；反作弊兄弟继承 env |
-| 2 | `WINEPREFIX == 启动器为该游戏选的 prefix` | env | 强（可能跨游戏误认，见 §4） | env 透传但标记被清洗时 |
-| 3 | 映射了安装目录下的文件 | `maps` | 强 | 直接对应「占着待删目录」；ADR-032 留的门 |
-| 4 | `comm` 落在名字家族 | 现状 | 弱（截断 + 命名约定） | 与 Windows 兼容的回退 |
+| 1 | 所有权标记 `CAFE_LAUNCHER_GAME_ID == gameId` | `BuildStartInfo` 写入的 env | 强 | 跨启动器重启、宿主退出后仍认；反作弊兄弟继承 env（实测 `GAMEID`/`WINEPREFIX` 已透传，自有标记同理） |
+| 2 | `STEAM_COMPAT_DATA_PATH == prefix`，或 `WINEPREFIX` 以该 prefix 为根 | env | 强（可能跨游戏误认，见 §4） | env 透传但标记被清洗时。**注意内层进程的 `WINEPREFIX` 是 `<prefix>/pfx/`，等值比较会失败**（§6） |
+| 3 | 映射了安装目录下的文件 | `maps` | 强 | 直接对应「占着待删目录」；ADR-032 留的门（实测游戏进程 maps 含游戏目录内的 PE/DLL，Unix 路径） |
+| 4 | `comm` 落在名字家族 | 现状 | 弱（截断 + 命名约定） | 与 Windows 兼容的回退：仅 ≤15 字符的名字可用（`BlueArchive.exe` 恰好 15 字符故幸存，长宿主名会截断） |
 
-`cmdline` 的 basename 家族匹配**故意不参与判定**（只用于显示名，见 §5）：它会把「某个编辑器恰好打开了游戏 exe 的路径」也认成游戏，是 Windows 名字判据没有的新误报类别。是否启用、如何加约束（如必须与 runner / `WINEPREFIX` 佐证）留待样本，见 §6。
+`cmdline` 的 basename 家族匹配**故意不参与判定**（只用于显示名，见 §5）：它会把「某个编辑器恰好打开了游戏 exe 的路径」也认成游戏，是 Windows 名字判据没有的新误报类别。实测 pressure-vessel **未重写**游戏进程的 argv（保留 `S:\...\BlueArchive.exe` 的 Windows 形态），所以它作为显示名可靠；若将来要参与判定，须先加安装目录/prefix 佐证。
 
 ## 4. 失败方向与误报边界
 
@@ -47,15 +47,39 @@ ADR-032 的判据落在「名字家族」，前提是 **Windows 反作弊保护�
 
 判定依据不总是给出名字（标记 / prefix 只回答「归属」）。展示优先用不截断来源：`argv` 里的游戏可执行文件 basename → `maps` 里安装目录下的文件名 → `comm`。最终仍经 `GameProcessNames.DescribeForDisplay` 补 `.exe`。
 
-## 6. 待样本收口的问题（映射到信号）
+## 6. 实机样本结论（2026-09-22）
 
-| 问题 | 影响的信号 |
+**环境**：Arch Linux；游戏在 NTFS3（`/dev/sdb1`，`rw,nosuid,nodev,...,uid=1000`，非 noexec）；前缀在 home 盘的 XDG 数据家；UMU 1.4.4，实际 Proton 为 `UMU-Proton-10.0-4`；启动器 1.1.0-beta.10。预检报告 `distribution=Arch Linux`、`caseSensitive=true`、0 findings。游戏数据根设定为 `gamePath=/run/media/gytxtx/Games/YostarGames/BlueArchive_JP`。
+
+**进程树**（UMU 启动后、游戏在跑）：
+
+| 节点 | comm | 关键事实 |
+| --- | --- | --- |
+| `umu-run` | `umu-run` | 宿主；env 里 `WINEPREFIX` = **精确前缀**、`GAMEID=blue-archive-jp` |
+| `srt-bwrap` / `pv-adverb` | 全名（>15） | pressure-vessel；env 增 `PROTONPATH=<实际构建>`、`STEAM_COMPAT_DATA_PATH=<精确前缀>` |
+| `proton` | `python3` | Proton 入口 |
+| `umu.exe` | `umu.exe` | wine 侧 shim；`WINEPREFIX=<前缀>/pfx/` |
+| `BlueArchive.exe` | `BlueArchive.exe` | **游戏 PE 是独立节点**；cmdline `S:\YostarGames\BlueArchive_JP\BlueArchive.exe`；maps 含游戏目录内的 PE/DLL |
+| `xxd-0.xem` | `xxd-0.xem` | XignCode 模块，独立节点 |
+| 其它 | `winedevice.exe` / `xalia.exe` / `UnityCrashHandl`（截断）/ `CrBrowserMain` 等 | 辅助进程 |
+
+配置声明的宿主 `xldr_BlueArchiveOnline_JP_loader_x64` **未作为存活节点观察到**（loader 已退出），与 ADR-032「宿主提前退出」一致。
+
+**逐题回答**：
+
+| 问题 | 结论 |
 | --- | --- |
-| 我们写入的 env 是否经 UMU / pressure-vessel / Proton 存活到游戏与反作弊进程 | 1、2 |
-| 游戏 PE 是独立 `/proc` 节点，还是只映射在 wine 宿主里 | 3、4 |
-| 宿主退出后剩下的那个节点长什么样 | 1、3、4 |
-| `maps` 里路径是 Unix 形态还是保留 Windows 形态 | 3 |
-| `cmdline` 是否被 pressure-vessel 重写 | 决定 §3 的 `cmdline` 是否可启用 |
+| 我们的 env 是否经 UMU / pressure-vessel 透传 | **是**。`WINEPREFIX`/`GAMEID`/`PROTONPATH`/`UMU_ID`/`STEAM_COMPAT_DATA_PATH` 都在 wine 侧进程上；`GAMEID` 一路保留为 `blue-archive-jp` |
+| 游戏 PE 是否独立节点 | **是**，`BlueArchive.exe` 是独立 `/proc` 节点，且有 maps |
+| 宿主退出后剩什么 | loader 已退出；UMU 宿主仍在。PE 独立成节点意味着判据不依赖宿主存活 |
+| `maps` 路径形态 | **Unix 形态**（`/run/media/.../BlueArchive.exe`），可做安装目录归属 |
+| `cmdline` 是否被重写 | **否**，保留 Windows 形态（`S:\...\BlueArchive.exe`） |
+| `WINEPREFIX` 能否等值匹配 | **不能**：内层是 `<前缀>/pfx/`；须用 `STEAM_COMPAT_DATA_PATH` 或按前缀根匹配 |
+| `comm` 够不够用 | 仅 ≤15 字符名（`BlueArchive.exe` 恰好 15）；长名（宿主 / Chromium helper）截断 |
+
+**对 P0-C 的修正**：`runner_output.log` 实测为 **0 字节**——UMU 不往 stdout/stderr 写东西。实际 Proton 构建应从进程 env 的 `PROTONPATH` 读（或 UMU 自己的日志），不能指望运行器输出。
+
+**仍未验证**：正常退出 + 再次启动（P0-A 第 4、5 步）；「运行器宿主退出、游戏仍在跑」这一档的进程表。
 
 ## 7. 已否决方案
 
@@ -72,11 +96,13 @@ ADR-032 的判据落在「名字家族」，前提是 **Windows 反作弊保护�
 - `Services/GameRuntime/UnixGameProcessMatcher.cs`：信号 1–4 的纯判定与显示名。
 - `tests/.../UnixProcessRecordsTests.cs`：合成记录表驱动，含误报反例。
 
-后续（等 P0-A 样本）：
+后续（样本已到，可接线）：
 
-1. 补平台读取层（`OperatingSystem.IsLinux()` 门控，先廉价过滤再读 `environ` / `maps`）。
-2. `BuildStartInfo` 写入 `CAFE_LAUNCHER_GAME_ID`；`IGameProcessTracker` 的查询从「名字」扩为「名字 + gameId + prefix + 安装目录」。
-3. 按样本确定信号 2/3/4 的去留与约束，写落地 ADR（暂定 ADR-036），把本文 §3、§7 收进去。
+1. 补平台读取层（`OperatingSystem.IsLinux()` 门控，枚举 `/proc`；先按 comm/cmdline 廉价过滤，再对候选读 `environ`/`maps`）。
+2. `BuildStartInfo` 写入 `CAFE_LAUNCHER_GAME_ID=gameId`；`IGameProcessTracker` 的查询从「名字」扩为「名字 + gameId + prefix + 安装目录」。
+3. 判据按 §6 修正：信号 2 用 `STEAM_COMPAT_DATA_PATH` 等值或 `WINEPREFIX` 前缀根匹配（**不是等值**）；信号 3 用安装目录归属（maps 为 Unix 路径）；信号 4 保留 comm 回退；`cmdline` 仍只做显示名。
+4. 写落地 ADR（暂定 ADR-036），把本文 §3、§6、§7 收进去，并说明 Unix 与 Windows 判据有意分叉。
+5. 诊断侧顺带修：实际 Proton 构建改从进程 env 的 `PROTONPATH` 读（`runner_output.log` 实测为空）。
 
 ## 9. 门禁
 
