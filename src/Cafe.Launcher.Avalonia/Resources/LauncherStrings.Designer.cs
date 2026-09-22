@@ -822,6 +822,8 @@ internal static class LauncherStrings
 
     internal static string ResourcePanelDescription => GetRequiredString("resourcePanelDescription");
 
+    internal static string ResourcePanelDismissUidHint => GetRequiredString("resourcePanelDismissUidHint");
+
     internal static string ResourcePanelEditUid => GetRequiredString("resourcePanelEditUid");
 
     internal static string ResourcePanelFailed => GetRequiredString("resourcePanelFailed");
@@ -857,6 +859,8 @@ internal static class LauncherStrings
     internal static string ResourcePanelUid => GetRequiredString("resourcePanelUid");
 
     internal static string ResourcePanelUidEmpty => GetRequiredString("resourcePanelUidEmpty");
+
+    internal static string ResourcePanelUidGenerationHint => GetRequiredString("resourcePanelUidGenerationHint");
 
     internal static string ResourcePanelUidInvalidFormat => GetRequiredString("resourcePanelUidInvalidFormat");
 
