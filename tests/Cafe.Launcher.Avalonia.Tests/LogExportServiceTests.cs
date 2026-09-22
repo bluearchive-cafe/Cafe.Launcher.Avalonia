@@ -5,6 +5,7 @@ using System.Text.Json;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Services.GameRuntime;
 using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
@@ -125,6 +126,34 @@ public sealed class LogExportServiceTests : IDisposable
             "launchCount",
             ReadEntry(zipPath, GamePaths.PrefixMetadataFileName),
             StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExportAsync_WithProtonBuildDiscovery_RecordsTheDiscoveredBuilds()
+    {
+        var dataRoot = Path.Combine(tempDir, "proton-data");
+        Directory.CreateDirectory(dataRoot);
+        var tools = Path.Combine(tempDir, "compatibilitytools.d");
+        var build = Path.Combine(tools, "GE-Proton9-1");
+        Directory.CreateDirectory(build);
+        File.WriteAllText(Path.Combine(build, "proton"), "#!/bin/sh\n");
+        var logger = WriteDeterministicLog(
+            "proton-source",
+            "2026-09-09T10:00:00.0000000+08:00 [INF] [Test] Entry\n");
+        var service = new LogExportService(
+            new LocalDiagnostics(logger),
+            TestDataRoot.ForDirectory(dataRoot),
+            new CrashReportStore(TestDataRoot.ForCurrentProcess()),
+            graphicsInfoProbe: null,
+            protonBuildDiscovery: new ProtonBuildDiscovery([tools]));
+
+        var zipPath = await service.ExportAsync(
+            Path.Combine(tempDir, "proton-selected"),
+            LogExportOptions.Default);
+
+        using var document = JsonDocument.Parse(ReadEntry(zipPath, "system-info.json"));
+        var protonBuilds = document.RootElement.GetProperty("protonBuilds");
+        Assert.Equal("GE-Proton9-1", protonBuilds[0].GetProperty("name").GetString());
     }
 
     [Fact]

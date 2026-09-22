@@ -51,6 +51,7 @@ public static class ServiceConfiguration
         else
             services.AddSingleton(_ => new UnifiedLogger(dataRoot.Root));
         services.AddSingleton<GraphicsInfoProbe>();
+        services.AddSingleton<ProtonBuildDiscovery>();
         services.AddSingleton<LogExportService>();
         services.AddSingleton<LogViewerDialogViewModel>();
         services.AddSingleton<LogExportDialogViewModel>();

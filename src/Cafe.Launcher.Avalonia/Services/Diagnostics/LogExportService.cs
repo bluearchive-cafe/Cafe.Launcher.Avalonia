@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Helpers;
+using Cafe.Launcher.Avalonia.Services.GameRuntime;
 
 namespace Cafe.Launcher.Avalonia.Services.Diagnostics;
 
@@ -31,6 +32,7 @@ public sealed class LogExportService
     private readonly LauncherDataRoot dataRoot;
     private readonly ICrashReportLocator crashReportLocator;
     private readonly GraphicsInfoProbe? graphicsInfoProbe;
+    private readonly ProtonBuildDiscovery? protonBuildDiscovery;
 
     /// <summary>Default directory offered to the user when exporting logs.</summary>
     public string DefaultExportDirectory => dataRoot.LogExportDirectory;
@@ -39,7 +41,7 @@ public sealed class LogExportService
         LocalDiagnostics diagnostics,
         LauncherDataRoot dataRoot,
         ICrashReportLocator crashReportLocator)
-        : this(diagnostics, dataRoot, crashReportLocator, graphicsInfoProbe: null)
+        : this(diagnostics, dataRoot, crashReportLocator, graphicsInfoProbe: null, protonBuildDiscovery: null)
     {
     }
 
@@ -48,12 +50,23 @@ public sealed class LogExportService
         LauncherDataRoot dataRoot,
         ICrashReportLocator crashReportLocator,
         GraphicsInfoProbe? graphicsInfoProbe)
+        : this(diagnostics, dataRoot, crashReportLocator, graphicsInfoProbe, protonBuildDiscovery: null)
+    {
+    }
+
+    public LogExportService(
+        LocalDiagnostics diagnostics,
+        LauncherDataRoot dataRoot,
+        ICrashReportLocator crashReportLocator,
+        GraphicsInfoProbe? graphicsInfoProbe,
+        ProtonBuildDiscovery? protonBuildDiscovery)
     {
         ArgumentNullException.ThrowIfNull(dataRoot);
         this.diagnostics = diagnostics;
         this.dataRoot = dataRoot;
         this.crashReportLocator = crashReportLocator;
         this.graphicsInfoProbe = graphicsInfoProbe;
+        this.protonBuildDiscovery = protonBuildDiscovery;
     }
 
     /// <summary>
@@ -234,7 +247,7 @@ public sealed class LogExportService
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        AddSystemInfo(zip, options, manifest, graphicsInfoProbe?.Probe());
+        AddSystemInfo(zip, options, manifest, graphicsInfoProbe?.Probe(), protonBuildDiscovery?.Discover());
         return manifest;
     }
 
@@ -440,7 +453,8 @@ public sealed class LogExportService
         ZipArchive zip,
         LogExportOptions options,
         ExportManifest manifest,
-        GraphicsInfo? graphics)
+        GraphicsInfo? graphics,
+        IReadOnlyList<ProtonBuild>? protonBuilds)
     {
         var systemInfo = new
         {
@@ -452,6 +466,9 @@ public sealed class LogExportService
             buildConfig = BuildInfo.BuildConfiguration,
             session = ReadDesktopSession(),
             graphics = graphics is null ? null : new { vulkan = graphics.Vulkan, opengl = graphics.OpenGl },
+            protonBuilds = protonBuilds is { Count: > 0 }
+                ? protonBuilds.Select(build => new { name = build.Name, path = build.Path }).ToArray()
+                : null,
             export = new
             {
                 range = options.Range.ToString(),
