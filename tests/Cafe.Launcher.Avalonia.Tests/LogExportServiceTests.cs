@@ -444,6 +444,39 @@ public sealed class LogExportServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ExportAsync_WithAGraphicsProbe_RecordsTheGpuAndOpenGlLines()
+    {
+        var dataRoot = Path.Combine(tempDir, "graphics-data");
+        Directory.CreateDirectory(dataRoot);
+        var logger = WriteDeterministicLog(
+            "graphics-source",
+            "2026-09-09T10:00:00.0000000+08:00 [INF] [Test] Entry\n");
+        var probe = new GraphicsInfoProbe((tool, _, _) => tool == "vulkaninfo"
+            ? "GPU0:\n\tdeviceName = Test GPU\n"
+            : "OpenGL renderer string: Test Renderer\n");
+        var service = new LogExportService(
+            new LocalDiagnostics(logger),
+            TestDataRoot.ForDirectory(dataRoot),
+            new CrashReportStore(TestDataRoot.ForCurrentProcess()),
+            probe);
+
+        var zipPath = await service.ExportAsync(
+            Path.Combine(tempDir, "graphics-selected"),
+            LogExportOptions.Default);
+
+        using var document = JsonDocument.Parse(ReadEntry(zipPath, "system-info.json"));
+        var graphics = document.RootElement.GetProperty("graphics");
+        Assert.Contains(
+            "deviceName = Test GPU",
+            graphics.GetProperty("vulkan").GetString(),
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Test Renderer",
+            graphics.GetProperty("opengl").GetString(),
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task HasLogEntriesAsync_WithEntriesInsideTheWindow_ReturnsTrue()
     {
         var now = DateTimeOffset.Now;

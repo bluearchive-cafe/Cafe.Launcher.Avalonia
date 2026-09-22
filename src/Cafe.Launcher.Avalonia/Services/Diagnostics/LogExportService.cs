@@ -30,6 +30,7 @@ public sealed class LogExportService
     private readonly LocalDiagnostics diagnostics;
     private readonly LauncherDataRoot dataRoot;
     private readonly ICrashReportLocator crashReportLocator;
+    private readonly GraphicsInfoProbe? graphicsInfoProbe;
 
     /// <summary>Default directory offered to the user when exporting logs.</summary>
     public string DefaultExportDirectory => dataRoot.LogExportDirectory;
@@ -38,11 +39,21 @@ public sealed class LogExportService
         LocalDiagnostics diagnostics,
         LauncherDataRoot dataRoot,
         ICrashReportLocator crashReportLocator)
+        : this(diagnostics, dataRoot, crashReportLocator, graphicsInfoProbe: null)
+    {
+    }
+
+    public LogExportService(
+        LocalDiagnostics diagnostics,
+        LauncherDataRoot dataRoot,
+        ICrashReportLocator crashReportLocator,
+        GraphicsInfoProbe? graphicsInfoProbe)
     {
         ArgumentNullException.ThrowIfNull(dataRoot);
         this.diagnostics = diagnostics;
         this.dataRoot = dataRoot;
         this.crashReportLocator = crashReportLocator;
+        this.graphicsInfoProbe = graphicsInfoProbe;
     }
 
     /// <summary>
@@ -207,7 +218,7 @@ public sealed class LogExportService
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        AddSystemInfo(zip, options, manifest);
+        AddSystemInfo(zip, options, manifest, graphicsInfoProbe?.Probe());
         return manifest;
     }
 
@@ -412,7 +423,8 @@ public sealed class LogExportService
     private static void AddSystemInfo(
         ZipArchive zip,
         LogExportOptions options,
-        ExportManifest manifest)
+        ExportManifest manifest,
+        GraphicsInfo? graphics)
     {
         var systemInfo = new
         {
@@ -423,6 +435,7 @@ public sealed class LogExportService
             framework = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription,
             buildConfig = BuildInfo.BuildConfiguration,
             session = ReadDesktopSession(),
+            graphics = graphics is null ? null : new { vulkan = graphics.Vulkan, opengl = graphics.OpenGl },
             export = new
             {
                 range = options.Range.ToString(),
