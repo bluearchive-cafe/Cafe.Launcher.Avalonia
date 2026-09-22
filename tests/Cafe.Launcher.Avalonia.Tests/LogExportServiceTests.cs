@@ -33,6 +33,26 @@ public sealed class LogExportServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ExportAsync_OnLinux_AddsTheLinuxProcessSnapshotEntry()
+    {
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "The /proc snapshot is Linux-only.");
+        var logger = WriteDeterministicLog(
+            "snapshot-source",
+            $"{DateTimeOffset.Now:O} [INF] [Test] Entry\n");
+        var service = new LogExportService(
+            new LocalDiagnostics(logger),
+            TestDataRoot.ForCurrentProcess(),
+            new CrashReportStore(TestDataRoot.ForCurrentProcess()));
+
+        var zipPath = await service.ExportAsync(
+            Path.Combine(tempDir, "snapshot-selected"),
+            LogExportOptions.Default);
+
+        using var zip = ZipFile.OpenRead(zipPath);
+        Assert.Contains(zip.Entries, entry => entry.FullName == LinuxProcessSnapshot.EntryName);
+    }
+
+    [Fact]
     public void DefaultExportDirectory_UsesProductDataExportFolder()
     {
         var dataRoot = tempDir.DataRoot;

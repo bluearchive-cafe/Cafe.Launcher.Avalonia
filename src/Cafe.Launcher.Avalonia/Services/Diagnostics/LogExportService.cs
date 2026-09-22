@@ -186,9 +186,50 @@ public sealed class LogExportService
         if (options.IncludeUserData)
             AddUserData(zip, manifest, cancellationToken);
 
+        // Linux-only sampling artifact for the Wine/UMU investigation (P0-A evidence, P0-B samples):
+        // a bounded, game-runner-filtered /proc snapshot. Other platforms have no /proc to read.
+        if (OperatingSystem.IsLinux())
+        {
+            AddGeneratedEntry(
+                zip,
+                LinuxProcessSnapshot.EntryName,
+                () => LinuxProcessSnapshot.Collect(cancellationToken),
+                manifest);
+        }
+
         cancellationToken.ThrowIfCancellationRequested();
         AddSystemInfo(zip, options, manifest);
         return manifest;
+    }
+
+    /// <summary>
+    /// Adds a text artifact produced on the fly (rather than copied from disk). The content is built
+    /// before the entry is created, and a failure is recorded as skipped instead of failing the
+    /// export — the snapshot is a diagnostic aid, not the archive's reason to exist.
+    /// </summary>
+    private static void AddGeneratedEntry(
+        ZipArchive zip,
+        string entryName,
+        Func<string> contentFactory,
+        ExportManifest manifest)
+    {
+        try
+        {
+            var content = contentFactory();
+            var entry = zip.CreateEntry(entryName, CompressionLevel.Optimal);
+            using var stream = entry.Open();
+            using var writer = new StreamWriter(stream, Utf8NoBom);
+            writer.Write(content);
+            manifest.Entries.Add(entryName);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            manifest.Skipped.Add(new SkippedItem(entryName, exception));
+        }
     }
 
     private static void AddLogFile(
