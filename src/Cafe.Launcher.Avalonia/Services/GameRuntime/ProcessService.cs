@@ -15,20 +15,30 @@ public static class ProcessService
     /// </summary>
     public static Task<IReadOnlyList<string>> FindRunningExeNamesAsync(
         IReadOnlyList<string> knownNames,
+        CancellationToken cancellationToken = default) =>
+        FindRunningGameProcessesAsync(new RunningGameQuery(knownNames), cancellationToken);
+
+    /// <summary>
+    /// 同 <see cref="FindRunningExeNamesAsync"/>，但额外接收安装目录：Linux 上用它经 <c>/proc</c>
+    /// 的 <c>maps</c> 认出映射着安装目录的进程（覆盖运行时标记不在场的外部启动）。
+    /// </summary>
+    public static Task<IReadOnlyList<string>> FindRunningGameProcessesAsync(
+        RunningGameQuery query,
         CancellationToken cancellationToken = default)
     {
-        if (knownNames is null || knownNames.Count == 0)
+        ArgumentNullException.ThrowIfNull(query);
+        if (query.KnownExeNames is null || query.KnownExeNames.Count == 0)
         {
             return Task.FromResult<IReadOnlyList<string>>([]);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        // Linux 走 /proc：comm 被内核截断，改以启动器所有权标记为主、家族名为回退（ADR-036）。
-        // 其余平台维持按进程快照的名字家族扫描。
+        // Linux 走 /proc：comm 被内核截断，改以启动器所有权标记为主、安装目录 maps 与家族名为辅
+        // （ADR-036）。其余平台维持按进程快照的名字家族扫描。
         var matches = OperatingSystem.IsLinux()
-            ? LinuxProcessScanner.Scan(knownNames, cancellationToken)
-            : FindRunningExeNamesBySnapshot(knownNames, cancellationToken);
+            ? LinuxProcessScanner.Scan(query, cancellationToken)
+            : FindRunningExeNamesBySnapshot(query.KnownExeNames, cancellationToken);
         return Task.FromResult(matches);
     }
 

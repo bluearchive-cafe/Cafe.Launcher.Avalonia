@@ -87,7 +87,7 @@ public sealed class GameLaunchResult
     public string? RunnerId { get; set; }
 
     /// <summary>
-    /// 游戏进程家族名（不含扩展名，<see cref="Features.GameOperations.RunningGameGate.ResolveKnownProcessNames"/>
+    /// 游戏进程家族名（不含扩展名，<see cref="Features.GameOperations.RunningGameGate.ResolveQuery"/>
     /// 同源）：启动成功后会话看护据此辨认「游戏真的起来了」（ADR-035）。空表示无从辨认。
     /// </summary>
     public IReadOnlyList<string> KnownExeNames { get; set; } = [];

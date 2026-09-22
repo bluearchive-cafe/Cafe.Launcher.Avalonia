@@ -186,12 +186,12 @@ internal sealed class DownloadSession : IDisposable
         DownloadPlan? Plan,
         CdnConfigResponse? CdnConfig,
         int SpeedLimitBytesPerSec,
-        IReadOnlyList<string> KnownProcessNames,
+        RunningGameQuery RunningQuery,
         GameOperationResult? Failure,
         GameOperationResult? CompletedResult)
     {
         public static DownloadPlanPreparation Stop(GameOperationResult result) =>
-            new(null, null, null, 0, [], result, null);
+            new(null, null, null, 0, new RunningGameQuery([]), result, null);
     }
 
     /// <summary>
@@ -228,8 +228,8 @@ internal sealed class DownloadSession : IDisposable
         Directory.CreateDirectory(gamePath);
 
         var localGame = await localInstallationStateStore.ReadAsync(gamePath, activeToken).ConfigureAwait(false);
-        var knownProcessNames = RunningGameGate.ResolveKnownProcessNames(localGame.GameConfig, gameConfig);
-        var gameRunning = await FindRunningGameFailureAsync(knownProcessNames, activeToken).ConfigureAwait(false);
+        var runningQuery = RunningGameGate.ResolveQuery(localGame.GameConfig, gameConfig, gamePath);
+        var gameRunning = await FindRunningGameFailureAsync(runningQuery, activeToken).ConfigureAwait(false);
         if (gameRunning is not null)
         {
             return DownloadPlanPreparation.Stop(gameRunning);
@@ -290,7 +290,7 @@ internal sealed class DownloadSession : IDisposable
                     downloadPlan,
                     cdnConfig,
                     speedLimitBytesPerSec,
-                    knownProcessNames,
+                    runningQuery,
                     Failure: null,
                     CompletedResult: alreadyCurrentResult);
             }
@@ -307,7 +307,7 @@ internal sealed class DownloadSession : IDisposable
             // 到这里的间隔不一定短——差异计算要逐一比对哈希——期间从桌面快捷方式把游戏起来
             // 就没人拦了（2026-09-15 复核轮）。
             var runningBeforeCommit = await FindRunningGameFailureAsync(
-                knownProcessNames, activeToken).ConfigureAwait(false);
+                runningQuery, activeToken).ConfigureAwait(false);
             if (runningBeforeCommit is not null)
             {
                 return DownloadPlanPreparation.Stop(runningBeforeCommit);
@@ -323,7 +323,7 @@ internal sealed class DownloadSession : IDisposable
                 downloadPlan,
                 cdnConfig,
                 speedLimitBytesPerSec,
-                knownProcessNames,
+                runningQuery,
                 Failure: null,
                 CompletedResult: alreadyCurrentResult);
         }
@@ -376,7 +376,7 @@ internal sealed class DownloadSession : IDisposable
             downloadPlan,
             cdnConfig,
             speedLimitBytesPerSec,
-            knownProcessNames,
+            runningQuery,
             Failure: null,
             CompletedResult: null);
     }
@@ -386,13 +386,13 @@ internal sealed class DownloadSession : IDisposable
     /// 正文在 <see cref="RunningGameGate"/>，与卸载侧的判据、报法不会分叉。返回 null 表示放行。
     /// </summary>
     private Task<GameOperationResult?> FindRunningGameFailureAsync(
-        IReadOnlyList<string> knownProcessNames,
+        RunningGameQuery query,
         CancellationToken activeToken) =>
         RunningGameGate.FindFailureAsync(
             gameProcessTracker,
             localizer,
             LocalizationKeys.GameExecutableRunning,
-            knownProcessNames,
+            query,
             activeToken);
 
     /// <summary>
@@ -460,7 +460,7 @@ internal sealed class DownloadSession : IDisposable
             // 命中即返回失败而不是 Stop：.tmp 留在盘上，用户关掉游戏后重试会按已有字节继续
             // （检查点按既有终局语义丢弃——只有应用退出那一档才保留供跨会话续传）。
             var gameRunning = await FindRunningGameFailureAsync(
-                preparation.KnownProcessNames,
+                preparation.RunningQuery,
                 activeToken).ConfigureAwait(false);
             if (gameRunning is not null)
             {

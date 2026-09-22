@@ -247,7 +247,13 @@ public sealed class LogExportService
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        AddSystemInfo(zip, options, manifest, graphicsInfoProbe?.Probe(), protonBuildDiscovery?.Discover());
+        AddSystemInfo(
+            zip,
+            options,
+            manifest,
+            graphicsInfoProbe?.Probe(),
+            protonBuildDiscovery?.Discover(),
+            LinuxProcessScanner.TryReadRunningProtonBuild());
         return manifest;
     }
 
@@ -454,7 +460,8 @@ public sealed class LogExportService
         LogExportOptions options,
         ExportManifest manifest,
         GraphicsInfo? graphics,
-        IReadOnlyList<ProtonBuild>? protonBuilds)
+        IReadOnlyList<ProtonBuild>? protonBuilds,
+        string? runningProtonBuild)
     {
         var systemInfo = new
         {
@@ -469,6 +476,7 @@ public sealed class LogExportService
             protonBuilds = protonBuilds is { Count: > 0 }
                 ? protonBuilds.Select(build => new { name = build.Name, path = build.Path }).ToArray()
                 : null,
+            runningProtonBuild,
             export = new
             {
                 range = options.Range.ToString(),

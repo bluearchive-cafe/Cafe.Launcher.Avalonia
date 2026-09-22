@@ -36,8 +36,8 @@ public interface IGameProcessTracker
 
     /// <summary>
     /// The game's currently running processes, by name without extension; empty means the game is
-    /// not running. <paramref name="knownExeNames"/> is the game's own process family, from
-    /// <see cref="GameProcessNames"/>; callers guarantee it is non-empty.
+    /// not running. <paramref name="query"/> carries the game's own process family plus the install
+    /// directory the Linux scan uses to recognise a process mapped onto the install tree.
     /// </summary>
     /// <remarks>
     /// A live tracked process wins, because a handle stays authoritative where a name scan cannot
@@ -46,6 +46,6 @@ public interface IGameProcessTracker
     /// would be a lie when it is the anti-cheat host that is still holding the install directory.
     /// </remarks>
     Task<IReadOnlyList<string>> FindRunningGameProcessesAsync(
-        IReadOnlyList<string> knownExeNames,
+        RunningGameQuery query,
         CancellationToken cancellationToken = default);
 }

@@ -598,7 +598,7 @@ public sealed class GameRuntimeTests
         public void RaiseExited() => TrackedProcessExited?.Invoke();
 
         public Task<IReadOnlyList<string>> FindRunningGameProcessesAsync(
-            IReadOnlyList<string> knownExeNames,
+            RunningGameQuery query,
             CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<string>>([]);
     }

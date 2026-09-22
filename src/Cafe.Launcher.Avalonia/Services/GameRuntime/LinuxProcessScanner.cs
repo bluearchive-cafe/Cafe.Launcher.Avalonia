@@ -22,16 +22,17 @@ namespace Cafe.Launcher.Avalonia.Services.GameRuntime;
 internal static class LinuxProcessScanner
 {
     /// <summary>扫一遍 <c>/proc</c>，返回在跑的家族名（去重，优先可读的家族名）。</summary>
-    public static IReadOnlyList<string> Scan(IReadOnlyList<string> knownNames, CancellationToken cancellationToken)
+    public static IReadOnlyList<string> Scan(RunningGameQuery query, CancellationToken cancellationToken)
     {
-        if (knownNames is null || knownNames.Count == 0)
+        ArgumentNullException.ThrowIfNull(query);
+        if (query.KnownExeNames is null || query.KnownExeNames.Count == 0)
         {
             return [];
         }
 
         try
         {
-            return SelectRunning(ReadRecords(knownNames, cancellationToken), knownNames);
+            return SelectRunning(ReadRecords(query, cancellationToken), query);
         }
         catch (Exception exception)
             when (exception is InvalidOperationException or IOException or UnauthorizedAccessException or Win32Exception)
@@ -44,14 +45,19 @@ internal static class LinuxProcessScanner
     /// <summary>纯选择：从记录里挑出属于家族的显示名，合成记录即可测。</summary>
     internal static IReadOnlyList<string> SelectRunning(
         IEnumerable<UnixProcessRecord> records,
-        IReadOnlyList<string> knownNames)
+        RunningGameQuery query)
     {
-        if (knownNames is null || knownNames.Count == 0)
+        if (query.KnownExeNames is null || query.KnownExeNames.Count == 0)
         {
             return [];
         }
 
-        var query = new UnixGameProcessQuery(knownNames, GameId: null, PrefixPath: null, InstallDirectory: null);
+        var knownNames = query.KnownExeNames;
+        var unixQuery = new UnixGameProcessQuery(
+            knownNames,
+            GameId: null,
+            PrefixPath: null,
+            InstallDirectory: query.InstallDirectory);
         var familyNames = new List<string>();
         var strongNames = new List<string>();
         var seenFamily = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -59,7 +65,7 @@ internal static class LinuxProcessScanner
 
         foreach (var record in records)
         {
-            var match = UnixGameProcessMatcher.Match(record, query);
+            var match = UnixGameProcessMatcher.Match(record, unixQuery);
             if (match is null || match.DisplayName.Length == 0)
             {
                 continue;
@@ -89,10 +95,76 @@ internal static class LinuxProcessScanner
         GameProcessNames.BelongsToFamily(record.Comm, knownNames)
         || record.Arguments.Any(argument => GameProcessNames.BelongsToFamily(argument, knownNames));
 
+    /// <summary>
+    /// 读「正在跑的游戏实际用了哪个 Proton 构建」：扫带 PE 参数的进程，认启动器标记，取环境里的
+    /// <c>PROTONPATH</c>。UMU 不往 stdout/stderr 写东西（实测），这是唯一能拿到实际构建的地方。
+    /// 只诊断用；读不到返回 null。
+    /// </summary>
+    public static string? TryReadRunningProtonBuild()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return null;
+        }
+
+        try
+        {
+            foreach (var directory in Directory.EnumerateDirectories("/proc"))
+            {
+                if (!int.TryParse(Path.GetFileName(directory), out _))
+                {
+                    continue;
+                }
+
+                var arguments = UnixProcessRecordParser.ParseArguments(ReadBytes(Path.Combine(directory, "cmdline")));
+                if (!arguments.Any(GameProcessNames.LooksLikeExecutable))
+                {
+                    continue;
+                }
+
+                var environment = UnixProcessRecordParser.ParseEnvironment(ReadBytes(Path.Combine(directory, "environ")));
+                var build = SelectRunningProtonBuild(
+                    [new UnixProcessRecord(0, 0, "", arguments, [], environment)]);
+                if (build is not null)
+                {
+                    return build;
+                }
+            }
+        }
+        catch (Exception exception)
+            when (exception is InvalidOperationException or IOException or UnauthorizedAccessException or Win32Exception)
+        {
+            // 诊断增强：读不到就没有。
+        }
+
+        return null;
+    }
+
+    /// <summary>纯选择：带启动器标记且声明了 <c>PROTONPATH</c> 的记录即给出实际构建。</summary>
+    internal static string? SelectRunningProtonBuild(IEnumerable<UnixProcessRecord> records)
+    {
+        foreach (var record in records)
+        {
+            if (!record.Environment.ContainsKey(UnixGameProcessMatcher.OwnershipMarkerKey))
+            {
+                continue;
+            }
+
+            if (record.Environment.TryGetValue("PROTONPATH", out var path) && path.Length > 0)
+            {
+                return path;
+            }
+        }
+
+        return null;
+    }
+
     private static IEnumerable<UnixProcessRecord> ReadRecords(
-        IReadOnlyList<string> knownNames,
+        RunningGameQuery query,
         CancellationToken cancellationToken)
     {
+        var knownNames = query.KnownExeNames;
+        var readMaps = !string.IsNullOrWhiteSpace(query.InstallDirectory);
         foreach (var directory in Directory.EnumerateDirectories("/proc"))
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -108,19 +180,23 @@ internal static class LinuxProcessScanner
                 continue;
             }
 
-            // environ 只对候选读：标记只会出现在游戏家族进程上，而家族进程必然带家族名或 PE 参数。
+            // environ/maps 只对候选读：标记与安装目录归属只会出现在游戏家族进程上，而家族进程
+            // 必然带家族名或 PE 参数。maps 仅在需要安装目录归属时才读（它比其余字段大得多）。
             var candidate = GameProcessNames.BelongsToFamily(comm, knownNames)
                 || arguments.Any(GameProcessNames.LooksLikeExecutable);
             var environment = candidate
                 ? UnixProcessRecordParser.ParseEnvironment(ReadBytes(Path.Combine(directory, "environ")))
                 : EmptyEnvironment;
+            IReadOnlyList<string> mappedFiles = candidate && readMaps
+                ? UnixProcessRecordParser.ParseMappedFiles(ReadBytes(Path.Combine(directory, "maps")))
+                : [];
 
             yield return new UnixProcessRecord(
                 ProcessId: processId,
                 ParentProcessId: 0,
                 Comm: comm,
                 Arguments: arguments,
-                MappedFiles: [],
+                MappedFiles: mappedFiles,
                 Environment: environment);
         }
     }

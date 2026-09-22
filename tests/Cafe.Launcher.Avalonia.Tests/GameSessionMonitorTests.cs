@@ -388,7 +388,7 @@ public sealed class GameSessionMonitorTests
         public void Register(GameProcess process) => throw new NotSupportedException();
 
         public Task<IReadOnlyList<string>> FindRunningGameProcessesAsync(
-            IReadOnlyList<string> knownExeNames,
+            RunningGameQuery query,
             CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<string>>([]);
 

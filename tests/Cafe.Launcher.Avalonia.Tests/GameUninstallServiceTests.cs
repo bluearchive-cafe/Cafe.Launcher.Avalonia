@@ -390,11 +390,11 @@ public sealed class GameUninstallServiceTests : IDisposable
             store,
             processTracker: new GameProcessTracker((names, _) =>
             {
-                asked.Add(names);
+                asked.Add(names.KnownExeNames);
                 // 与真实判据同形：只有请求的族里含配置宿主时，反作弊宿主才落在族内
                 // （ExtendsProcessName 那条规则的前提），否则它根本不该被判据认领。
                 return Task.FromResult<IReadOnlyList<string>>(
-                    names.Contains(LoaderExecutableName, StringComparer.OrdinalIgnoreCase)
+                    names.KnownExeNames.Contains(LoaderExecutableName, StringComparer.OrdinalIgnoreCase)
                         ? [AntiCheatSiblingName]
                         : []);
             }));

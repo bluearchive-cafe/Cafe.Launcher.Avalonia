@@ -98,8 +98,8 @@ ADR-032 的判据落在「名字家族」，前提是 **Windows 反作弊保护�
 
 **后续**：
 
-1. **前缀 / maps 归属**：需要把「名字 + gameId + prefix + 安装目录」扩进 `IGameProcessTracker` 查询（当前契约仍是名字）。它是 §3 的强信号，在标记缺失时更稳；本片未接线。
-2. **诊断侧**：实际 Proton 构建改从进程 env 的 `PROTONPATH` 读（`runner_output.log` 实测为空）。
+1. **前缀归属**：`maps`（安装目录）已接入 `RunningGameQuery` 并由扫描器读取；`STEAM_COMPAT_DATA_PATH` 等值 / `WINEPREFIX` 根匹配尚未接（标记已覆盖启动器发起的会话，边际收益小）。
+2. **诊断侧已落地**：`LinuxProcessScanner.TryReadRunningProtonBuild` 从带标记进程的 env 读 `PROTONPATH`，写入 `system-info.json` 的 `runningProtonBuild`（`runner_output.log` 实测为空）。
 3. macOS 未纳入。
 
 ## 9. 门禁
