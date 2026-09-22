@@ -47,6 +47,9 @@ public sealed class LauncherDataRoot
     /// <summary><c>shown_notices.json</c>：已读公告的指纹集合。</summary>
     public string NoticeStatePath => Path.Combine(Root, GamePaths.NoticeStateFileName);
 
+    /// <summary><c>runner_output.log</c>：最近一次运行器 stdout/stderr 的有上限捕获（每次启动覆盖）。</summary>
+    public string RunnerOutputPath => Path.Combine(Root, GamePaths.RunnerOutputFileName);
+
     /// <summary>图片缓存目录（可整体删除，缺失时按需重建）。</summary>
     public string ImageCacheDirectory => Path.Combine(Root, ImageCacheFolderName);
 

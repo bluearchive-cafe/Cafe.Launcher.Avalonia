@@ -180,6 +180,15 @@ public sealed class LogExportService
             AddLogFile(zip, log.FilePath, log.EntryName, log.Required, manifest, cancellationToken);
         }
 
+        // Optional: the most recent launch's captured runner stdout/stderr (bounded, overwritten
+        // per launch). A missing file is normal — no Wine/UMU launch has happened yet.
+        TryCopyOptionalFileToZip(
+            zip,
+            dataRoot.RunnerOutputPath,
+            GamePaths.RunnerOutputFileName,
+            manifest,
+            cancellationToken);
+
         if (options.IncludeCrashReports)
             AddCrashReports(zip, CrashReportDirectories(), manifest, cancellationToken);
 

@@ -53,6 +53,29 @@ public sealed class LogExportServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ExportAsync_WithARunnerOutputCapture_IncludesIt()
+    {
+        var dataRoot = Path.Combine(tempDir, "runner-output-root");
+        Directory.CreateDirectory(dataRoot);
+        File.WriteAllText(
+            Path.Combine(dataRoot, GamePaths.RunnerOutputFileName),
+            "[out] prefix initialized\n");
+        var logger = WriteDeterministicLog(
+            "runner-output-source",
+            "2026-09-09T10:00:00.0000000+08:00 [INF] [Test] Entry\n");
+        var service = new LogExportService(
+            new LocalDiagnostics(logger),
+            TestDataRoot.ForDirectory(dataRoot),
+            new CrashReportStore(TestDataRoot.ForCurrentProcess()));
+
+        var zipPath = await service.ExportAsync(
+            Path.Combine(tempDir, "runner-output-selected"),
+            LogExportOptions.Default);
+
+        Assert.Equal("[out] prefix initialized\n", ReadEntry(zipPath, GamePaths.RunnerOutputFileName));
+    }
+
+    [Fact]
     public void DefaultExportDirectory_UsesProductDataExportFolder()
     {
         var dataRoot = tempDir.DataRoot;

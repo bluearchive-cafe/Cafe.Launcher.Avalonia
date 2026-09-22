@@ -20,17 +20,20 @@ public sealed class GameRuntime : IGameRuntime
     private readonly IGameProcessTracker processTracker;
     private readonly Func<string, string?, string?> locateExecutable;
     private readonly Func<string, string, TimeSpan, CancellationToken, Task<RuntimeProbeResult>> probeVersion;
+    private readonly RunnerOutputCapture? runnerOutputCapture;
 
     public GameRuntime(
         IEnumerable<GameRunnerDefinition> runners,
         IProcessLauncher processLauncher,
-        IGameProcessTracker processTracker)
+        IGameProcessTracker processTracker,
+        RunnerOutputCapture? runnerOutputCapture = null)
         : this(
             runners,
             processLauncher,
             processTracker,
             (name, explicitPath) => ExecutableLocator.FindInPath(name, explicitPath),
-            RuntimeVersionProbe.ProbeAsync)
+            RuntimeVersionProbe.ProbeAsync,
+            runnerOutputCapture)
     {
     }
 
@@ -39,13 +42,15 @@ public sealed class GameRuntime : IGameRuntime
         IProcessLauncher processLauncher,
         IGameProcessTracker processTracker,
         Func<string, string?, string?> locateExecutable,
-        Func<string, string, TimeSpan, CancellationToken, Task<RuntimeProbeResult>> probeVersion)
+        Func<string, string, TimeSpan, CancellationToken, Task<RuntimeProbeResult>> probeVersion,
+        RunnerOutputCapture? runnerOutputCapture = null)
     {
         this.runners = runners.ToArray();
         this.processLauncher = processLauncher;
         this.processTracker = processTracker;
         this.locateExecutable = locateExecutable;
         this.probeVersion = probeVersion;
+        this.runnerOutputCapture = runnerOutputCapture;
     }
 
     public async Task<GameRuntimeLaunchResult> LaunchAsync(
@@ -242,8 +247,16 @@ public sealed class GameRuntime : IGameRuntime
                 ?? throw new InvalidOperationException(
                     $"{runner.ExecutableName} was not found. Install {runner.DisplayName} or configure its path.");
 
-        var process = processLauncher.Start(BuildStartInfo(runner, executable, request, configuration))
+        var startInfo = BuildStartInfo(runner, executable, request, configuration);
+        var process = processLauncher.Start(startInfo)
             ?? throw new InvalidOperationException(StartFailureMessage(runner));
+
+        // Drain the redirected pipes immediately: an unread pipe would block the game once its
+        // buffer fills. Only Wine/UMU launches redirect (see BuildStartInfo).
+        if (startInfo.RedirectStandardOutput)
+        {
+            runnerOutputCapture?.Begin(process.StandardOutput, process.StandardError);
+        }
 
         return new GameProcess(process, runner.Id);
     }
@@ -260,6 +273,12 @@ public sealed class GameRuntime : IGameRuntime
             WorkingDirectory = request.WorkingDirectory,
             UseShellExecute = false
         };
+
+        // Wine/UMU output is the only place a first-run failure explains itself; native Windows
+        // launches stay untouched. UseShellExecute is already false, so redirecting is safe.
+        var captureOutput = runner.EnvironmentStyle != GameRuntimeEnvironmentStyle.Native;
+        startInfo.RedirectStandardOutput = captureOutput;
+        startInfo.RedirectStandardError = captureOutput;
 
         if (runner.ExecutableName is not null)
         {

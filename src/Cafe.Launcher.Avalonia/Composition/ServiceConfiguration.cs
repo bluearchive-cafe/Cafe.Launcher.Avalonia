@@ -137,10 +137,12 @@ public static class ServiceConfiguration
             sp.GetRequiredService<LocalDiagnostics>(),
             Program.ShowHiddenSettings));
         services.AddSingleton<IProcessLauncher, DefaultProcessLauncher>();
+        services.AddSingleton<RunnerOutputCapture>();
         services.AddSingleton<IGameRuntime>(sp => new GameRuntime(
             [GameRunnerDefinition.Native, GameRunnerDefinition.Umu, GameRunnerDefinition.Wine],
             sp.GetRequiredService<IProcessLauncher>(),
-            sp.GetRequiredService<IGameProcessTracker>()));
+            sp.GetRequiredService<IGameProcessTracker>(),
+            sp.GetRequiredService<RunnerOutputCapture>()));
         services.AddSingleton<IGameProcessTracker, GameProcessTracker>();
         // 会话看护订阅进程跟踪器的退出事件：登记在跟踪器之后，容器逆序释放时看护先于
         // 跟踪器析构，退订不会落在已释放的订阅源上。
