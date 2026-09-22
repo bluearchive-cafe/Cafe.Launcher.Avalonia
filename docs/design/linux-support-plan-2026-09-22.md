@@ -1,6 +1,6 @@
 # Cafe Launcher Linux 支持推进清单（重排版）
 
-> 状态：**推进中**——P0-C 已落地（`a5d793f`…`7f93234`），P0-A 已取得部分实机证据（2026-09-22：首启/登录/入游戏通过，仍待正常退出与再次启动），P0-B 标记判据已落地（`LinuxProcessScanner` ＋ `CAFE_LAUNCHER_GAME_ID` 标记，见 [ADR-036](adr/ADR-036-Linux游戏进程按启动器所有权标记识别.md)；前缀/maps 待接），P1-D 已落地（预检＋启动拒绝/本地化，`4f2dabf`、`e628998`），P1-E 前缀元数据与 Proton 发现（服务＋诊断）已落地（`94050cf`、`583ea22`；设置页建议待做） · 生成时点：**2026-09-22** · 基准提交：**29375e5**
+> 状态：**推进中**——P0-C 已落地（`a5d793f`…`7f93234`），P0-A 实机验证通过（2026-09-22，五步全过，见 [验证记录](linux-p0a-verification-2026-09-22.md)），P0-B 所有权标记与安装目录 `maps` 判据已落地（[ADR-036](adr/ADR-036-Linux游戏进程按启动器所有权标记识别.md)），P1-D 已落地（预检＋启动拒绝/本地化，`4f2dabf`、`e628998`），P1-E 前缀元数据与 Proton 发现（服务＋诊断）已落地（`94050cf`、`583ea22`；设置页建议待做） · 生成时点：**2026-09-22** · 基准提交：**29375e5**
 > 来历：基于一次代码与文档评估，对原 Linux 适配方案重排优先级。**本次未修改任何代码，也未做实机验证**——因此本文的每条结论都标注了证据类型（代码事实 / 文档记录 / 待实测）。
 > 相关专项：Wayland 激活与桌面通知沿用 [`desktop-notifications-integration-plan.md`](desktop-notifications-integration-plan.md)，本文不重复设计。
 
@@ -24,9 +24,9 @@
 
 **当前进度（2026-09-22 更新）**：P0-C 已全部落地——`a5d793f` 诊断导出加入运行器进程快照、`a50f2b1` 运行器 stdout/stderr 有上限捕获、`c1ebdb4` 桌面会话信息、`7f93234` GPU/Vulkan 探测。P0-B 的判据前移稿已完成并附纯函数骨架（见 §3.2），**接线与 ADR 仍等 P0-A 样本**。P0-A 尚未开始（外部 gate）。P1-D 已落地（`4f2dabf` 预检记录、`e628998` 阻断启动＋本地化提示）。P1-E 的前缀元数据记录（`94050cf`）与 Proton 构建发现（`583ea22`，服务＋诊断记录）已落地；设置页的候选建议待有 Windows golden 的环境再做。
 
-**P0-A 部分证据（2026-09-22）**：实机（Arch Linux，UMU 1.4.4 + UMU-Proton-10.0-4，游戏在 NTFS3）观察到首启（含 Prefix 初始化）、登录、进入游戏三步通过，反作弊 XignCode 未拦截；真实进程树样本与逐题结论见 [`linux-process-identification-design-2026-09-22.md`](linux-process-identification-design-2026-09-22.md) §6。**仍待**：正常退出、再次启动两步，以及「运行器宿主退出、游戏仍在跑」档的进程表。
+**P0-A 实机验证通过（2026-09-22）**：实机（Arch Linux，UMU 1.4.4 + UMU-Proton-10.0-4，游戏在 NTFS3）五步全过、XignCode 未拦截；启动器退出后游戏仍在跑，所有权标记在整族进程上。完整记录见 [`linux-p0a-verification-2026-09-22.md`](linux-p0a-verification-2026-09-22.md)。
 
-**P0-B 已落地（2026-09-22）**：Linux 扫描改为读 `/proc` ＋启动器所有权标记 `CAFE_LAUNCHER_GAME_ID`（`BuildStartInfo` 写入、`LinuxProcessScanner` 认标记），名字家族退为回退；见 [ADR-036](adr/ADR-036-Linux游戏进程按启动器所有权标记识别.md)。前缀 / `maps` 归属待接（需扩 `IGameProcessTracker` 查询上下文）。
+**P0-B 已落地（2026-09-22）**：Linux 扫描改为读 `/proc` ＋启动器所有权标记 `CAFE_LAUNCHER_GAME_ID`（`BuildStartInfo` 写入、`LinuxProcessScanner` 认标记），并接入安装目录 `maps` 归属与实际 Proton 构建（`PROTONPATH`）；见 [ADR-036](adr/ADR-036-Linux游戏进程按启动器所有权标记识别.md)。前缀等值/根匹配待接（收益低）。
 
 ---
 
@@ -64,9 +64,9 @@
 
 **失败分支**：若卡在反作弊，则加 Runner 类型、Prefix 元数据、打包格式都不能直接解决——此时应把结论写回 README 与本文，而不是继续扩 Runner 架构。
 
-### 2.1 部分结果（2026-09-22）
+### 2.1 结果（2026-09-22）
 
-实机组合：Arch Linux / UMU 1.4.4 / UMU-Proton-10.0-4 / 游戏目录在 NTFS3。已观察到 **first_launch / login / in_game 三步通过**（XignCode 未拦截），进程树样本与逐题结论见 [`linux-process-identification-design-2026-09-22.md`](linux-process-identification-design-2026-09-22.md) §6。**仍待 normal_exit 与 relaunch**，以及宿主退出档的进程表。
+实机组合：Arch Linux / UMU 1.4.4 / UMU-Proton-10.0-4 / 游戏目录在 NTFS3。**五步全部通过**，反作弊 XignCode 未拦截；启动器退出后游戏仍在跑，所有权标记在整族进程上。完整字段与证据见 [`linux-p0a-verification-2026-09-22.md`](linux-p0a-verification-2026-09-22.md)。
 
 ### 2.2 验证记录模板
 
@@ -203,5 +203,5 @@ cat /proc/<pid>/maps | rg -i 'BlueArchive|xldr|\.exe'
 ## 7. 门禁与记录
 
 - 每次代码落地后跑 `.\verify.ps1`（Debug 构建 + 覆盖率 + Release 构建），XAML/样式改动加 `UiStyleContractTests`，资源改动跑 `.\scripts\Test-LocalizationContract.ps1`。
-- P0-B 落地需新 ADR；P0-A 的验证记录模板（§2.2）填毕后，同步更新 `README.md` 的平台支持描述。
+- P0-B 落地需新 ADR（已写 [ADR-036](adr/ADR-036-Linux游戏进程按启动器所有权标记识别.md)）；P0-A 的验证记录已填（§2.1 指向 [记录](linux-p0a-verification-2026-09-22.md)），`README.md` 的平台支持描述已同步。
 - 本文是**规划视图**；候选与裁定的唯一查询入口仍是 [`candidates-ledger-2026-09.md`](candidates-ledger-2026-09.md)。若这些条目要进入裁定流程，需按该表 §5 在所有者文档立案后加行。
