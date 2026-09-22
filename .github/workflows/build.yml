@@ -59,21 +59,6 @@ jobs:
       - name: Test
         run: .\test.ps1 -Configuration Debug
 
-      # AUD-CI-007：整套 Release 配置的测试此前只在 tag 触发的 release.yml 里跑，而 Debug/Release
-      # 的行为差异是真实的——UnifiedLogger 的级别开关在 #if DEBUG 下取 Verbose、否则取 Information，
-      # 于是「Debug 级条目在 Release 被丢弃」这类断言要到发版那一刻才第一次执行（重置前台账记录过
-      # 一次实际事故：tag 构建红、发布作业被 needs 挡住、补提交后重打 tag）。这里补上单元套件的
-      # Release 运行：它正是这类分歧的宿主，成本约 30 秒。无头套件的 Release 运行仍留在 release.yml
-      # 的 installer 作业（它的分歧面窄、且整套跑一遍要一分钟以上）。
-      - name: Test (Release)
-        env:
-          # Release 配置在 csproj 中声明 SelfContained=true，dotnet test -c Release
-          # 的还原会按当前平台 RID（windows-latest 上为 win-x64）解析依赖图，与
-          # 提交的无 RID 段 lock 无法在 locked mode 下匹配（NU1004）。与 build job
-          # 对 RID 还原的显式豁免同理，测试还原也豁免 locked mode。
-          RestoreLockedMode: 'false'
-        run: .\test.ps1 -Configuration Release -Suite Unit
-
       - name: Coverage
         run: .\coverage.ps1
 
@@ -90,6 +75,25 @@ jobs:
             # the only diff evidence for the one test class whose baselines are environment
             # sensitive, so a CI-only mismatch must not have to be reproduced locally to triage.
             TestResults/Golden/*.png
+
+      # AUD-CI-007：整套 Release 配置的测试此前只在 tag 触发的 release.yml 里跑，而 Debug/Release
+      # 的行为差异是真实的——UnifiedLogger 的级别开关在 #if DEBUG 下取 Verbose、否则取 Information，
+      # 于是「Debug 级条目在 Release 被丢弃」这类断言要到发版那一刻才第一次执行（重置前台账记录过
+      # 一次实际事故：tag 构建红、发布作业被 needs 挡住、补提交后重打 tag）。这里补上单元套件的
+      # Release 运行：它正是这类分歧的宿主，成本约 30 秒。无头套件的 Release 运行仍留在 release.yml
+      # 的 installer 作业（它的分歧面窄、且整套跑一遍要一分钟以上）。
+      #
+      # 这一步必须留在本作业所有 locked mode 还原（Debug 测试、coverage）之后：其还原把
+      # packages.lock.json 的 RID 段改写为 win-x64，再跑任何 locked mode 的无 RID 还原都会
+      # NU1004（2026-09-22 CI 复查：它原先排在 Coverage 之前，coverage.ps1 的还原因此失败）。
+      - name: Test (Release)
+        env:
+          # Release 配置在 csproj 中声明 SelfContained=true，dotnet test -c Release
+          # 的还原会按当前平台 RID（windows-latest 上为 win-x64）解析依赖图，与
+          # 提交的无 RID 段 lock 无法在 locked mode 下匹配（NU1004）。与 build job
+          # 对 RID 还原的显式豁免同理，测试还原也豁免 locked mode。
+          RestoreLockedMode: 'false'
+        run: .\test.ps1 -Configuration Release -Suite Unit
 
       - name: Restore (win-x64)
         env:

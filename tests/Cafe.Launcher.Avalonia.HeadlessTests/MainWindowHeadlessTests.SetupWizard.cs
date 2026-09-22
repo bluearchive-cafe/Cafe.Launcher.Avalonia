@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Automation.Peers;
 using Avalonia.Controls;
+using Avalonia.Data;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
 using Avalonia.Media;
@@ -314,80 +315,71 @@ public sealed partial class MainWindowHeadlessTests
     }
 
     /// <summary>
-    /// 断言目标面板的入场经历真实过渡而非瞬变。中间帧用「属性变更推送」观察：动画逐帧写入
-    /// Opacity / X 时同步触发 PropertyChanged，不存在轮询采样窗口——慢机上轮询一旦被调度停顿
-    /// 盖过入场窗口（前载曲线下约 100ms），会从「未入场」直接观察到「已落定」而漏采全部中间帧
-    /// （CI 曾实际发生）。帧泵极端停顿导致一帧都未落入窗口时靠重试区分：偶发重试通过即环境
-    /// 调度抖动，连续多次失败才判定为入场瞬变回归。
+    /// 断言目标面板的入场由真实的过渡机制承载而非瞬变。观察手段是「属性变更推送 + 绑定
+    /// 优先级」：入场目标值写入时 DoubleTransition 同步接管该属性，订阅即以
+    /// <see cref="BindingPriority.Animation"/> 推送起始帧（透明 0 / 位移 ±14），后续逐帧
+    /// 插值也经同一优先级推送。这些写入发生在属性写入的调用栈上，与无头环境的帧时钟
+    /// 节拍无关——无头渲染脉冲可以整段缺席（一次 166.5ms 的入场只收到起止两拍），而
+    /// 前载 Enter 曲线的可见中间窗口（约 22–144ms）窄于脉冲间隔，按「中间帧数值落窗」
+    /// 判定（含属性推送观察 + 重试的旧方案）会随脉冲间隔抖动整轮漏采，CI 与本地均曾
+    /// 实际发生。起始帧推送是确定性的：过渡真实接管则 Animation 优先级的非终值写入
+    /// 必然出现；瞬切换面（删除过渡、直接写终值）只剩 LocalValue 写入，两种形态可靠
+    /// 区分。开区间数值排除过渡完成时 publish 终值的那一拍（Animation 优先级的 1 / 0），
+    /// 与旧中间帧窗口同一边界。时长/曲线的具体数值在无头环境不可观测（缺脉冲时无法
+    /// 与起始帧区分），不属本用例守卫范围。
     /// </summary>
     private static async Task AssertEntranceIsAnimatedAsync(
         SetupWizardViewModel wizard,
         List<StackPanel> steps,
         int stepIndex)
     {
-        const int MaxAttempts = 3;
-        var attempts = new List<string>();
+        var sawFade = false;
+        var sawSlide = false;
 
-        for (var attempt = 1; attempt <= MaxAttempts; attempt++)
+        void ObserveTransitionCarriedValue(object? sender, AvaloniaPropertyChangedEventArgs e)
         {
-            // 重试时目标面板已落定可见，先换到锚点步令其退场，否则 from==to 走瞬时换面，
-            // 观察不到入场；锚点间隔两步，重试覆盖的仍是一次带方向变化的完整入场。
-            if (steps.FindIndex(panel => panel.IsVisible) == stepIndex)
-            {
-                var anchor = (stepIndex + 2) % steps.Count;
-                wizard.Step = anchor;
-                await WaitUntilStepSettledAsync(steps, anchor, $"步骤 {stepIndex} 重试前的锚点步 {anchor}");
-            }
-
-            var sawFade = false;
-            var sawSlide = false;
-
-            void ObserveAnimatedValue(object? sender, AvaloniaPropertyChangedEventArgs e)
-            {
-                // 精确判定：入场为前载曲线，起势帧与落定结算精确写 0 / ±14 / 1，
-                // 开区间只计入真实插值中间帧，排除两端的确定态。
-                if (e.Property == Visual.OpacityProperty
-                    && e.NewValue is double opacity
-                    && opacity is > 0.05 and < 0.95)
-                {
-                    sawFade = true;
-                }
-
-                if (e.Property == TranslateTransform.XProperty
-                    && e.NewValue is double x
-                    && Math.Abs(x) is > 0.5 and < 13.5)
-                {
-                    sawSlide = true;
-                }
-            }
-
-            var target = steps[stepIndex];
-            // X 的动画写入发生在 RenderTransform 实例上而非面板上，两个对象都要订阅。
-            var targetTransform = Assert.IsType<TranslateTransform>(target.RenderTransform);
-            target.PropertyChanged += ObserveAnimatedValue;
-            targetTransform.PropertyChanged += ObserveAnimatedValue;
-            try
-            {
-                wizard.Step = stepIndex;
-                await WaitUntilStepSettledAsync(steps, stepIndex, $"步骤 {stepIndex}（第 {attempt} 次尝试）");
-            }
-            finally
-            {
-                target.PropertyChanged -= ObserveAnimatedValue;
-                targetTransform.PropertyChanged -= ObserveAnimatedValue;
-            }
-
-            if (sawFade && sawSlide)
+            // 只认 Animation 优先级写入：pose 与收尾定格都是 LocalValue，不算数。
+            // 开区间数值排除完成拍（1 / 0），与旧中间帧窗口同一边界。
+            if (e.Priority != BindingPriority.Animation)
             {
                 return;
             }
 
-            attempts.Add($"第 {attempt} 次尝试 fade={sawFade} slide={sawSlide}");
+            if (e.Property == Visual.OpacityProperty
+                && e.NewValue is double opacity
+                && opacity < 0.95)
+            {
+                sawFade = true;
+            }
+
+            if (e.Property == TranslateTransform.XProperty
+                && e.NewValue is double x
+                && Math.Abs(x) > 0.5)
+            {
+                sawSlide = true;
+            }
         }
 
-        Assert.Fail(
-            $"步骤 {stepIndex} 连续 {MaxAttempts} 次未观察到入场中间帧（{string.Join("；", attempts)}）。" +
-            "多次重试仍复现疑似入场瞬变回归，而非环境调度抖动。");
+        var target = steps[stepIndex];
+        // X 的过渡写入发生在 RenderTransform 实例上而非面板上，两个对象都要订阅。
+        var targetTransform = Assert.IsType<TranslateTransform>(target.RenderTransform);
+        target.PropertyChanged += ObserveTransitionCarriedValue;
+        targetTransform.PropertyChanged += ObserveTransitionCarriedValue;
+        try
+        {
+            wizard.Step = stepIndex;
+            await WaitUntilStepSettledAsync(steps, stepIndex, $"步骤 {stepIndex}");
+        }
+        finally
+        {
+            target.PropertyChanged -= ObserveTransitionCarriedValue;
+            targetTransform.PropertyChanged -= ObserveTransitionCarriedValue;
+        }
+
+        Assert.True(
+            sawFade && sawSlide,
+            $"步骤 {stepIndex} 的入场未由过渡机制承载（fade={sawFade} slide={sawSlide}），" +
+            "未观察到 Animation 优先级的非终值写入，疑似瞬切换面回归。");
     }
 
     /// <summary>入场序列（退场对半 + 起势帧 + 入场对半 + 收尾缓冲）由真实帧时钟驱动，给硬性预算防挂死。</summary>

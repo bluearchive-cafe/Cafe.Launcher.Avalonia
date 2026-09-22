@@ -15,7 +15,7 @@
         <!-- Panel 形态：过滤栏走固定工具行，导出/关闭分居发丝底带左右槽。 -->
         <controls:DialogSurface
             Form="Panel"
-            Classes="motion-surface"
+            Classes="log-surface motion-surface"
             HorizontalAlignment="Stretch"
             VerticalAlignment="Center"
             Margin="{StaticResource Launcher.Spacing.Thickness.Xxl}"
