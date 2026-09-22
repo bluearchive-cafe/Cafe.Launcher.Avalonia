@@ -22,13 +22,15 @@ public sealed class GameRuntime : IGameRuntime
     private readonly Func<string, string, TimeSpan, CancellationToken, Task<RuntimeProbeResult>> probeVersion;
     private readonly RunnerOutputCapture? runnerOutputCapture;
     private readonly CompatibilityEnvironmentPrecheck? environmentPrecheck;
+    private readonly PrefixMetadataStore? prefixMetadata;
 
     public GameRuntime(
         IEnumerable<GameRunnerDefinition> runners,
         IProcessLauncher processLauncher,
         IGameProcessTracker processTracker,
         RunnerOutputCapture? runnerOutputCapture = null,
-        CompatibilityEnvironmentPrecheck? environmentPrecheck = null)
+        CompatibilityEnvironmentPrecheck? environmentPrecheck = null,
+        PrefixMetadataStore? prefixMetadata = null)
         : this(
             runners,
             processLauncher,
@@ -36,7 +38,8 @@ public sealed class GameRuntime : IGameRuntime
             (name, explicitPath) => ExecutableLocator.FindInPath(name, explicitPath),
             RuntimeVersionProbe.ProbeAsync,
             runnerOutputCapture,
-            environmentPrecheck)
+            environmentPrecheck,
+            prefixMetadata)
     {
     }
 
@@ -47,7 +50,8 @@ public sealed class GameRuntime : IGameRuntime
         Func<string, string?, string?> locateExecutable,
         Func<string, string, TimeSpan, CancellationToken, Task<RuntimeProbeResult>> probeVersion,
         RunnerOutputCapture? runnerOutputCapture = null,
-        CompatibilityEnvironmentPrecheck? environmentPrecheck = null)
+        CompatibilityEnvironmentPrecheck? environmentPrecheck = null,
+        PrefixMetadataStore? prefixMetadata = null)
     {
         this.runners = runners.ToArray();
         this.processLauncher = processLauncher;
@@ -56,6 +60,7 @@ public sealed class GameRuntime : IGameRuntime
         this.probeVersion = probeVersion;
         this.runnerOutputCapture = runnerOutputCapture;
         this.environmentPrecheck = environmentPrecheck;
+        this.prefixMetadata = prefixMetadata;
     }
 
     public async Task<GameRuntimeLaunchResult> LaunchAsync(
@@ -113,6 +118,8 @@ public sealed class GameRuntime : IGameRuntime
                     Failure: GameRuntimeLaunchFailure.EnvironmentPrecheckFailed,
                     EnvironmentFailures: environmentFailures);
             }
+
+            RecordPrefixMetadata(runner, request, runnerConfiguration, availability);
 
             GameProcess process;
             try
@@ -305,6 +312,36 @@ public sealed class GameRuntime : IGameRuntime
         catch (Exception)
         {
             return null;
+        }
+    }
+
+    /// <summary>
+    /// 记录这次启动使用的组合（P1-E）；只记录，不迁移。前缀元数据是诊断增强，写不进去不影响启动。
+    /// 原生 Windows 启动没有前缀，跳过。
+    /// </summary>
+    private void RecordPrefixMetadata(
+        GameRunnerDefinition runner,
+        GameLaunchRequest request,
+        GameRuntimeConfiguration configuration,
+        GameRunnerAvailability availability)
+    {
+        if (prefixMetadata is null || runner.EnvironmentStyle == GameRuntimeEnvironmentStyle.Native)
+        {
+            return;
+        }
+
+        try
+        {
+            prefixMetadata.Record(
+                GetEffectivePrefixPath(request, runner.Id, configuration),
+                request.GameId,
+                runner.Id,
+                availability.Version,
+                GetEffectiveProtonPath(runner.Id, configuration));
+        }
+        catch (Exception)
+        {
+            // Diagnostic only: never let the metadata record change the launch outcome.
         }
     }
 

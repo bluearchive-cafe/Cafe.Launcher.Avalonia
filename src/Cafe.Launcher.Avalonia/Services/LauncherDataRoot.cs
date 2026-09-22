@@ -53,6 +53,9 @@ public sealed class LauncherDataRoot
     /// <summary><c>compatibility_environment.json</c>：最近一次兼容前缀环境预检报告（每次启动覆盖）。</summary>
     public string CompatibilityEnvironmentPath => Path.Combine(Root, GamePaths.CompatibilityEnvironmentFileName);
 
+    /// <summary><c>prefix_metadata.json</c>：最近一次启动所用兼容前缀的元数据（每次启动覆盖）。</summary>
+    public string PrefixMetadataPath => Path.Combine(Root, GamePaths.PrefixMetadataFileName);
+
     /// <summary>图片缓存目录（可整体删除，缺失时按需重建）。</summary>
     public string ImageCacheDirectory => Path.Combine(Root, ImageCacheFolderName);
 
