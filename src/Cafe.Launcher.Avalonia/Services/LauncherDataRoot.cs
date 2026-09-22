@@ -29,6 +29,9 @@ public sealed class LauncherDataRoot
     /// <summary>崩溃快照目录名——崩溃进程与主进程共享的落点。</summary>
     public const string CrashReportsFolderName = "CrashReports";
 
+    /// <summary>启动器自更新下载的暂存目录名（可整体删除，缺失时按需重建）。</summary>
+    public const string UpdateFolderName = "update";
+
     public LauncherDataRoot(string root)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(root);
@@ -61,6 +64,9 @@ public sealed class LauncherDataRoot
 
     /// <summary>崩溃快照的默认目录。</summary>
     public string CrashReportsDirectory => Path.Combine(Root, CrashReportsFolderName);
+
+    /// <summary>启动器自更新的下载暂存目录。</summary>
+    public string UpdateDirectory => Path.Combine(Root, UpdateFolderName);
 
     /// <summary>日志导出的默认目录。</summary>
     public string LogExportDirectory => Path.Combine(Root, LauncherConstants.LogExportFolderName);

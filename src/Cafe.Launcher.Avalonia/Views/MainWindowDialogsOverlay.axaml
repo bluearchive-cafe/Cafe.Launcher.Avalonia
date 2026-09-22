@@ -108,6 +108,8 @@
                 </controls:DialogSurface.HeaderIcon>
                 <controls:DialogSurface.Content>
                     <StackPanel Spacing="{StaticResource Launcher.Spacing.Md}">
+                        <StackPanel Spacing="{StaticResource Launcher.Spacing.Md}"
+                                    IsVisible="{Binding !Dialogs.UpdateSupportsInAppApply}">
                         <StackPanel Classes="card-heading">
                             <materialIcons:MaterialIcon Kind="InformationOutline"
                                                        Width="{StaticResource Launcher.Icon.Sm}"
@@ -160,6 +162,18 @@
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>
+                        </StackPanel>
+                        <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}"
+                                    IsVisible="{Binding Dialogs.IsUpdateApplying}">
+                            <TextBlock Text="{Binding Dialogs.UpdateStatusText}"
+                                       Classes="dialog-alert-content"
+                                       TextWrapping="Wrap"/>
+                            <ProgressBar Minimum="0"
+                                         Maximum="100"
+                                         Value="{Binding Dialogs.UpdateProgress}"
+                                         IsVisible="{Binding Dialogs.IsUpdateDownloading}"
+                                         Height="{StaticResource Launcher.Component.Progress.Bar.Height}"/>
+                        </StackPanel>
                     </StackPanel>
                 </controls:DialogSurface.Content>
                 <controls:DialogSurface.Footer>
@@ -173,11 +187,21 @@
                         </Button>
                         <Button Classes="primary-action dialog-action"
                                 Command="{Binding Dialogs.ConfirmUpdateAvailableCommand}"
-                                IsEnabled="{Binding Dialogs.HasSelectedUpdateFile}"
+                                IsEnabled="{Binding Dialogs.CanConfirmUpdate}"
+                                IsVisible="{Binding !Dialogs.IsUpdateReadyToRestart}"
                                 AutomationProperties.Name="{Binding Shell.I18n[launcherUpdateDownload]}">
                             <StackPanel Classes="button-content">
                                 <materialIcons:MaterialIcon Kind="Download" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
                                 <TextBlock Text="{Binding Shell.I18n[launcherUpdateDownload]}"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="primary-action dialog-action"
+                                Command="{Binding Dialogs.ConfirmUpdateAvailableCommand}"
+                                IsVisible="{Binding Dialogs.IsUpdateReadyToRestart}"
+                                AutomationProperties.Name="{Binding Shell.I18n[launcherUpdateRestart]}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="Update" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                <TextBlock Text="{Binding Shell.I18n[launcherUpdateRestart]}"/>
                             </StackPanel>
                         </Button>
                     </StackPanel>

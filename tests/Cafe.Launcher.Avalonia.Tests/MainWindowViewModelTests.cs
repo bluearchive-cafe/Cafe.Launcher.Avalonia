@@ -62,6 +62,8 @@ public sealed partial class MainWindowViewModelTests : IDisposable
             resourcePanelApiClient,
             toastService,
             launcherUpdateService,
+            null,
+            null,
             gameOperationsBackend,
             systemAnimationSettingsProvider,
             toastDelayAsync,

@@ -576,6 +576,8 @@ internal static class LauncherStrings
 
     internal static string LauncherStateNotLoaded => GetRequiredString("launcherStateNotLoaded");
 
+    internal static string LauncherUpdateApplyFailed => GetRequiredString("launcherUpdateApplyFailed");
+
     internal static string LauncherUpdateAvailableMessage => GetRequiredString("launcherUpdateAvailableMessage");
 
     internal static string LauncherUpdateAvailableTitle => GetRequiredString("launcherUpdateAvailableTitle");
@@ -592,9 +594,17 @@ internal static class LauncherStrings
 
     internal static string LauncherUpdateDownload => GetRequiredString("launcherUpdateDownload");
 
+    internal static string LauncherUpdateDownloadFailed => GetRequiredString("launcherUpdateDownloadFailed");
+
+    internal static string LauncherUpdateDownloading => GetRequiredString("launcherUpdateDownloading");
+
     internal static string LauncherUpdateFileSize => GetRequiredString("launcherUpdateFileSize");
 
     internal static string LauncherUpdateLater => GetRequiredString("launcherUpdateLater");
+
+    internal static string LauncherUpdateReadyToRestart => GetRequiredString("launcherUpdateReadyToRestart");
+
+    internal static string LauncherUpdateRestart => GetRequiredString("launcherUpdateRestart");
 
     internal static string LauncherUpdateSelectFile => GetRequiredString("launcherUpdateSelectFile");
 

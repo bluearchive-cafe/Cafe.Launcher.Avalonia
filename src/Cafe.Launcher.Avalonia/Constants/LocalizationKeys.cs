@@ -289,6 +289,7 @@ public static class LocalizationKeys
     public const string LauncherInitFailed = "launcherInitFailed";
     public const string LauncherLoadingValue = "launcherLoadingValue";
     public const string LauncherStateNotLoaded = "launcherStateNotLoaded";
+    public const string LauncherUpdateApplyFailed = "launcherUpdateApplyFailed";
     public const string LauncherUpdateAvailableMessage = "launcherUpdateAvailableMessage";
     public const string LauncherUpdateAvailableTitle = "launcherUpdateAvailableTitle";
     public const string LauncherUpdateChannel = "launcherUpdateChannel";
@@ -297,8 +298,12 @@ public static class LocalizationKeys
     public const string LauncherUpdateChannelStable = "launcherUpdateChannelStable";
     public const string LauncherUpdateCheckFailed = "launcherUpdateCheckFailed";
     public const string LauncherUpdateDownload = "launcherUpdateDownload";
+    public const string LauncherUpdateDownloadFailed = "launcherUpdateDownloadFailed";
+    public const string LauncherUpdateDownloading = "launcherUpdateDownloading";
     public const string LauncherUpdateFileSize = "launcherUpdateFileSize";
     public const string LauncherUpdateLater = "launcherUpdateLater";
+    public const string LauncherUpdateReadyToRestart = "launcherUpdateReadyToRestart";
+    public const string LauncherUpdateRestart = "launcherUpdateRestart";
     public const string LauncherUpdateSelectFile = "launcherUpdateSelectFile";
     public const string LauncherUpdateUpToDate = "launcherUpdateUpToDate";
     public const string LauncherVersionLabel = "launcherVersionLabel";

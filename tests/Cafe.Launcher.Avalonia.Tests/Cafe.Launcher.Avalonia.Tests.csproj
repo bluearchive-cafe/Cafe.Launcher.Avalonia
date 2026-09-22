@@ -50,6 +50,19 @@
     <ProjectReference Include="..\..\src\Cafe.Launcher.Avalonia\Cafe.Launcher.Avalonia.csproj" />
   </ItemGroup>
 
+  <!--
+    The update helper's pure logic (argument parsing, path planning, integrity) is
+    compiled into this test assembly instead of referencing the helper executable
+    project, so the contract between the main app's argument builder and the helper's
+    parser can be tested without pulling the helper build into the test graph.
+  -->
+  <ItemGroup>
+    <Compile Include="..\..\src\Cafe.Launcher.Updater\UpdateApplyMode.cs" Link="Updater\UpdateApplyMode.cs" />
+    <Compile Include="..\..\src\Cafe.Launcher.Updater\UpdateApplyPlan.cs" Link="Updater\UpdateApplyPlan.cs" />
+    <Compile Include="..\..\src\Cafe.Launcher.Updater\PackageIntegrity.cs" Link="Updater\PackageIntegrity.cs" />
+    <Compile Include="..\..\src\Cafe.Launcher.Updater\UpdaterArguments.cs" Link="Updater\UpdaterArguments.cs" />
+  </ItemGroup>
+
   <ItemGroup>
     <Compile Include="..\TestUserDataIsolation.cs" Link="TestUserDataIsolation.cs" />
     <Compile Include="..\TestAnimationSetup.cs" Link="TestAnimationSetup.cs" />

@@ -139,9 +139,49 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel, I
 
     public bool HasSelectedUpdateFile => SelectedUpdateFile is not null;
 
+    /// <summary>True when this host can download and apply the update in-app.</summary>
+    [ObservableProperty]
+    private bool updateSupportsInAppApply;
+
+    /// <summary>True while the in-app download/verify/ready flow owns the dialog.</summary>
+    [ObservableProperty]
+    private bool isUpdateApplying;
+
+    /// <summary>True while the update package is being transferred.</summary>
+    [ObservableProperty]
+    private bool isUpdateDownloading;
+
+    /// <summary>True once the package is verified and the helper can be launched.</summary>
+    [ObservableProperty]
+    private bool isUpdateReadyToRestart;
+
+    /// <summary>Transfer completion percentage (0-100).</summary>
+    [ObservableProperty]
+    private double updateProgress;
+
+    private string updateStatusKey = "";
+
+    /// <summary>Localized status line shown while the in-app update flow is active.</summary>
+    public string UpdateStatusText => updateStatusKey.Length == 0 ? "" : localizer.T(updateStatusKey);
+
+    /// <summary>Whether the dialog's primary action can run right now.</summary>
+    public bool CanConfirmUpdate =>
+        IsUpdateReadyToRestart
+        || (UpdateSupportsInAppApply && !IsUpdateApplying)
+        || HasSelectedUpdateFile;
+
     public event Action? CloseRequested;
 
     public event Action<string>? ConfirmUpdateAvailableRequested;
+
+    /// <summary>Raised when the user confirms an in-app update download.</summary>
+    public event Action<string, IReadOnlyList<ReleaseFile>>? SelfUpdateStartRequested;
+
+    /// <summary>Raised when the user confirms restarting into the verified update.</summary>
+    public event Action? ApplyUpdateRequested;
+
+    /// <summary>Raised when the user cancels an in-progress in-app update.</summary>
+    public event Action? CancelUpdateRequested;
 
     /// <summary>Creates the application dialog family and its confirmation children.</summary>
     public DialogsViewModel(
@@ -200,6 +240,7 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel, I
         if (IsUpdateAvailableVisible)
         {
             UpdateAvailableText = localizer.F(LocalizationKeys.LauncherUpdateAvailableMessage, UpdateAvailableVersion);
+            OnPropertyChanged(nameof(UpdateStatusText));
         }
         SetupWizard.RefreshLocalizedText();
     }
@@ -216,7 +257,7 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel, I
         DownloadRunningCloseConfirm.Show(localizer.T(LocalizationKeys.CloseDownloadMessage));
     }
 
-    public void ShowUpdateAvailable(string version, IReadOnlyList<ReleaseFile> files)
+    public void ShowUpdateAvailable(string version, IReadOnlyList<ReleaseFile> files, bool canSelfUpdate)
     {
         UpdateAvailableVersion = version;
         UpdateAvailableText = localizer.F(LocalizationKeys.LauncherUpdateAvailableMessage, version);
@@ -227,20 +268,81 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel, I
             UpdateAvailableFiles.Add(file);
         }
 
+        UpdateSupportsInAppApply = canSelfUpdate;
+        ResetUpdateApply();
         IsUpdateAvailableVisible = true;
+    }
+
+    /// <summary>Switches the dialog into the in-app download state.</summary>
+    public void BeginUpdateApply()
+    {
+        IsUpdateApplying = true;
+        IsUpdateDownloading = true;
+        IsUpdateReadyToRestart = false;
+        UpdateProgress = 0;
+        updateStatusKey = LocalizationKeys.LauncherUpdateDownloading;
+        OnPropertyChanged(nameof(UpdateStatusText));
+        OnPropertyChanged(nameof(CanConfirmUpdate));
+    }
+
+    /// <summary>Reports transfer progress as a completion fraction in [0, 1].</summary>
+    public void ReportUpdateProgress(double fraction)
+    {
+        UpdateProgress = Math.Clamp(fraction, 0d, 1d) * 100d;
+    }
+
+    /// <summary>Shows that a verified update is ready and a restart will apply it.</summary>
+    public void MarkUpdateReady()
+    {
+        IsUpdateDownloading = false;
+        IsUpdateReadyToRestart = true;
+        UpdateProgress = 100;
+        updateStatusKey = LocalizationKeys.LauncherUpdateReadyToRestart;
+        OnPropertyChanged(nameof(UpdateStatusText));
+        OnPropertyChanged(nameof(CanConfirmUpdate));
+    }
+
+    /// <summary>Clears the in-app apply state and returns the dialog to its neutral form.</summary>
+    public void ResetUpdateApply()
+    {
+        IsUpdateApplying = false;
+        IsUpdateDownloading = false;
+        IsUpdateReadyToRestart = false;
+        UpdateProgress = 0;
+        updateStatusKey = "";
+        OnPropertyChanged(nameof(UpdateStatusText));
+        OnPropertyChanged(nameof(CanConfirmUpdate));
     }
 
     [RelayCommand]
     private void CancelUpdateAvailable()
     {
+        if (IsUpdateApplying && !IsUpdateReadyToRestart)
+        {
+            CancelUpdateRequested?.Invoke();
+        }
+
         IsUpdateAvailableVisible = false;
         SelectedUpdateFile = null;
         UpdateAvailableFiles.Clear();
+        ResetUpdateApply();
     }
 
     [RelayCommand]
     private void ConfirmUpdateAvailable()
     {
+        if (IsUpdateReadyToRestart)
+        {
+            ApplyUpdateRequested?.Invoke();
+            return;
+        }
+
+        if (UpdateSupportsInAppApply)
+        {
+            SelfUpdateStartRequested?.Invoke(UpdateAvailableVersion, UpdateAvailableFiles.ToArray());
+            return;
+        }
+
         if (SelectedUpdateFile is null)
         {
             return;
@@ -256,7 +358,12 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel, I
     partial void OnSelectedUpdateFileChanged(ReleaseFile? value)
     {
         OnPropertyChanged(nameof(HasSelectedUpdateFile));
+        OnPropertyChanged(nameof(CanConfirmUpdate));
     }
+
+    partial void OnIsUpdateApplyingChanged(bool value) => OnPropertyChanged(nameof(CanConfirmUpdate));
+
+    partial void OnUpdateSupportsInAppApplyChanged(bool value) => OnPropertyChanged(nameof(CanConfirmUpdate));
 
     [RelayCommand]
     private void DismissNotice()

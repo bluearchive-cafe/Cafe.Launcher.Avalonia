@@ -13,6 +13,7 @@ using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Auth;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Services.GameRuntime;
+using Cafe.Launcher.Avalonia.Services.Update;
 using Cafe.Launcher.Avalonia.Testing;
 using Cafe.Launcher.Avalonia.ViewModels;
 
@@ -69,6 +70,8 @@ internal sealed class MainWindowTestContext : IDisposable
         ResourcePanelApiClient? resourcePanelApiClient = null,
         ToastService? toastService = null,
         LauncherUpdateService? launcherUpdateService = null,
+        LauncherSelfUpdateService? launcherSelfUpdateService = null,
+        IWindowsLauncherUpdateApplier? launcherUpdateApplier = null,
         StubGameOperationExecutor? gameOperationsBackend = null,
         SystemAnimationSettingsProvider? systemAnimationSettingsProvider = null,
         Func<TimeSpan, CancellationToken, Task>? toastDelayAsync = null,
@@ -86,6 +89,8 @@ internal sealed class MainWindowTestContext : IDisposable
                 resourcePanelApiClient,
                 toastService,
                 launcherUpdateService,
+                launcherSelfUpdateService,
+                launcherUpdateApplier,
                 gameOperationsBackend,
                 systemAnimationSettingsProvider,
                 toastDelayAsync,
@@ -104,6 +109,8 @@ internal sealed class MainWindowTestContext : IDisposable
         ResourcePanelApiClient? resourcePanelApiClient,
         ToastService? toastService,
         LauncherUpdateService? launcherUpdateService,
+        LauncherSelfUpdateService? launcherSelfUpdateService,
+        IWindowsLauncherUpdateApplier? launcherUpdateApplier,
         StubGameOperationExecutor? gameOperationsBackend,
         SystemAnimationSettingsProvider? systemAnimationSettingsProvider,
         Func<TimeSpan, CancellationToken, Task>? toastDelayAsync,
@@ -175,6 +182,12 @@ internal sealed class MainWindowTestContext : IDisposable
 
         var diskSpaceService = new DiskSpaceService();
         var launcherUpdateSvc = launcherUpdateService ?? new LauncherUpdateService(new StubRemoteHttpTransport());
+        launcherSelfUpdateService ??= new LauncherSelfUpdateService(
+            new LauncherUpdateDownloader(new StubRemoteHttpTransport()),
+            new LauncherUpdateHostInfoProvider(),
+            directory.DataRoot,
+            diagnostics);
+        launcherUpdateApplier ??= new WindowsLauncherUpdateApplier(directory.DataRoot, diagnostics);
         var settingsEditor = savedSettings.Editor;
         var settingsOptions = new SettingsOptionsViewModel(localizationService, diskSpaceService);
         var settingsAppearance = new SettingsAppearanceViewModel(settingsEditor, new ThemeApplier());
@@ -192,7 +205,7 @@ internal sealed class MainWindowTestContext : IDisposable
         owned.Add(settingsLogger);
         var settingsViewModel = new SettingsViewModel(
             settingsService, savedSettingsWriter, localizationService, toastService,
-            launcherUpdateSvc, dialogsViewModel,
+            launcherUpdateSvc, launcherSelfUpdateService, dialogsViewModel,
             settingsLogger,
             new GameInstallationPath(),
             settingsOptions, settingsAppearance, errorHandling,
@@ -272,6 +285,8 @@ internal sealed class MainWindowTestContext : IDisposable
             localizationService,
             toastService,
             launcherUpdateSvc,
+            launcherSelfUpdateService,
+            launcherUpdateApplier,
             diagnostics,
             new ShellPresentationFamily(
                 shellViewModel,

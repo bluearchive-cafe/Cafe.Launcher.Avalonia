@@ -9,6 +9,7 @@ using Cafe.Launcher.Avalonia.Features.Shell;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Services.Update;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -90,6 +91,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         LocalizationService localizer,
         ToastService toastService,
         LauncherUpdateService launcherUpdateService,
+        LauncherSelfUpdateService launcherSelfUpdateService,
+        IWindowsLauncherUpdateApplier launcherUpdateApplier,
         LocalDiagnostics diagnostics,
         ShellPresentationFamily family,
         IErrorHandlingService errorHandling,
@@ -104,6 +107,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 localizer,
                 toastService,
                 launcherUpdateService,
+                launcherSelfUpdateService,
+                launcherUpdateApplier,
                 diagnostics,
                 errorHandling,
                 systemAnimationSettingsProvider,

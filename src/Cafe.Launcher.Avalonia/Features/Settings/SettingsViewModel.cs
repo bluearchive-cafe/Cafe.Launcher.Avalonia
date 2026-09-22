@@ -13,6 +13,7 @@ using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Services.GameRuntime;
+using Cafe.Launcher.Avalonia.Services.Update;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Serilog.Events;
 
@@ -25,6 +26,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
     private readonly LauncherUpdateService launcherUpdateService;
+    private readonly LauncherSelfUpdateService launcherSelfUpdateService;
     private readonly DialogsViewModel dialogs;
     private readonly ISettingsEditor editor;
     private readonly UnifiedLogger unifiedLogger;
@@ -65,6 +67,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         LocalizationService localizer,
         ToastService toastService,
         LauncherUpdateService launcherUpdateService,
+        LauncherSelfUpdateService launcherSelfUpdateService,
         DialogsViewModel dialogs,
         UnifiedLogger unifiedLogger,
         GameInstallationPath gameInstallationPath,
@@ -79,6 +82,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         this.localizer = localizer;
         this.toastService = toastService;
         this.launcherUpdateService = launcherUpdateService;
+        this.launcherSelfUpdateService = launcherSelfUpdateService;
         this.dialogs = dialogs;
         this.unifiedLogger = unifiedLogger;
         this.gameInstallationPath = gameInstallationPath;
@@ -266,7 +270,10 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
             return;
         }
 
-        dialogs.ShowUpdateAvailable(result.LatestVersion, result.Files);
+        dialogs.ShowUpdateAvailable(
+            result.LatestVersion,
+            result.Files,
+            launcherSelfUpdateService.CanApplyInApp(result.Files));
     }
 
     /// <summary>Opens the shared launcher-settings reset confirmation (shell performs the reset).</summary>

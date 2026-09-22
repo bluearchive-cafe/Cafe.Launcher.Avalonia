@@ -68,7 +68,7 @@ public sealed class DialogsViewModelTests : IDisposable
         var viewModel = CreateViewModel();
         var files = CreateFiles();
 
-        viewModel.ShowUpdateAvailable("1.2.0", files);
+        viewModel.ShowUpdateAvailable("1.2.0", files, canSelfUpdate: false);
 
         Assert.True(viewModel.IsUpdateAvailableVisible);
         Assert.Equal("1.2.0", viewModel.UpdateAvailableVersion);
@@ -83,7 +83,7 @@ public sealed class DialogsViewModelTests : IDisposable
         var viewModel = CreateViewModel();
         string? requestedUrl = null;
         viewModel.ConfirmUpdateAvailableRequested += url => requestedUrl = url;
-        viewModel.ShowUpdateAvailable("1.2.0", CreateFiles());
+        viewModel.ShowUpdateAvailable("1.2.0", CreateFiles(), canSelfUpdate: false);
 
         viewModel.ConfirmUpdateAvailableCommand.Execute(null);
 
@@ -98,7 +98,7 @@ public sealed class DialogsViewModelTests : IDisposable
         var files = CreateFiles();
         string? requestedUrl = null;
         viewModel.ConfirmUpdateAvailableRequested += url => requestedUrl = url;
-        viewModel.ShowUpdateAvailable("1.2.0", files);
+        viewModel.ShowUpdateAvailable("1.2.0", files, canSelfUpdate: false);
         viewModel.SelectedUpdateFile = files[1];
 
         viewModel.ConfirmUpdateAvailableCommand.Execute(null);
@@ -108,11 +108,91 @@ public sealed class DialogsViewModelTests : IDisposable
     }
 
     [Fact]
+    public void ShowUpdateAvailable_WhenSelfUpdateSupported_EnablesInAppFlow()
+    {
+        var viewModel = CreateViewModel();
+
+        viewModel.ShowUpdateAvailable("1.2.0", CreateFiles(), canSelfUpdate: true);
+
+        Assert.True(viewModel.UpdateSupportsInAppApply);
+        Assert.True(viewModel.CanConfirmUpdate);
+        Assert.False(viewModel.IsUpdateApplying);
+    }
+
+    [Fact]
+    public void ConfirmUpdateAvailable_WhenSelfUpdateSupported_RaisesStartWithoutSelection()
+    {
+        var viewModel = CreateViewModel();
+        var raised = 0;
+        viewModel.SelfUpdateStartRequested += (_, _) => raised++;
+        viewModel.ShowUpdateAvailable("1.2.0", CreateFiles(), canSelfUpdate: true);
+
+        viewModel.ConfirmUpdateAvailableCommand.Execute(null);
+
+        Assert.Equal(1, raised);
+    }
+
+    [Fact]
+    public void UpdateApplyStates_ToggleConfirmAndStatusText()
+    {
+        var viewModel = CreateViewModel();
+        viewModel.ShowUpdateAvailable("1.2.0", CreateFiles(), canSelfUpdate: true);
+
+        viewModel.BeginUpdateApply();
+
+        Assert.True(viewModel.IsUpdateApplying);
+        Assert.True(viewModel.IsUpdateDownloading);
+        Assert.False(viewModel.CanConfirmUpdate);
+
+        viewModel.ReportUpdateProgress(0.5);
+        Assert.Equal(50d, viewModel.UpdateProgress);
+
+        viewModel.MarkUpdateReady();
+
+        Assert.False(viewModel.IsUpdateDownloading);
+        Assert.True(viewModel.IsUpdateReadyToRestart);
+        Assert.True(viewModel.CanConfirmUpdate);
+        Assert.Equal(100d, viewModel.UpdateProgress);
+        Assert.False(string.IsNullOrWhiteSpace(viewModel.UpdateStatusText));
+    }
+
+    [Fact]
+    public void ConfirmUpdateAvailable_WhenReady_RaisesApply()
+    {
+        var viewModel = CreateViewModel();
+        var applied = 0;
+        viewModel.ApplyUpdateRequested += () => applied++;
+        viewModel.ShowUpdateAvailable("1.2.0", CreateFiles(), canSelfUpdate: true);
+        viewModel.BeginUpdateApply();
+        viewModel.MarkUpdateReady();
+
+        viewModel.ConfirmUpdateAvailableCommand.Execute(null);
+
+        Assert.Equal(1, applied);
+    }
+
+    [Fact]
+    public void CancelUpdateAvailable_WhileApplying_RaisesCancelAndResets()
+    {
+        var viewModel = CreateViewModel();
+        var cancelled = 0;
+        viewModel.CancelUpdateRequested += () => cancelled++;
+        viewModel.ShowUpdateAvailable("1.2.0", CreateFiles(), canSelfUpdate: true);
+        viewModel.BeginUpdateApply();
+
+        viewModel.CancelUpdateAvailableCommand.Execute(null);
+
+        Assert.Equal(1, cancelled);
+        Assert.False(viewModel.IsUpdateAvailableVisible);
+        Assert.False(viewModel.IsUpdateApplying);
+    }
+
+    [Fact]
     public void ShowUpdateAvailable_WhenReopened_ClearsPreviousSelection()
     {
         var viewModel = CreateViewModel();
         var firstFiles = CreateFiles();
-        viewModel.ShowUpdateAvailable("1.2.0", firstFiles);
+        viewModel.ShowUpdateAvailable("1.2.0", firstFiles, canSelfUpdate: false);
         viewModel.SelectedUpdateFile = firstFiles[0];
         viewModel.CancelUpdateAvailableCommand.Execute(null);
 
@@ -129,7 +209,7 @@ public sealed class DialogsViewModelTests : IDisposable
                 Size = 7000000
             }
         };
-        viewModel.ShowUpdateAvailable("1.3.0", secondFiles);
+        viewModel.ShowUpdateAvailable("1.3.0", secondFiles, canSelfUpdate: false);
 
         Assert.Equal(secondFiles, viewModel.UpdateAvailableFiles);
         Assert.Null(viewModel.SelectedUpdateFile);
@@ -318,7 +398,7 @@ public sealed class DialogsViewModelTests : IDisposable
         var viewModel = CreateViewModel();
         viewModel.ShowStopConfirm();
         viewModel.ShowDownloadRunningCloseConfirm();
-        viewModel.ShowUpdateAvailable("1.2.0", CreateFiles());
+        viewModel.ShowUpdateAvailable("1.2.0", CreateFiles(), canSelfUpdate: false);
 
         viewModel.RefreshLocalizedText();
 

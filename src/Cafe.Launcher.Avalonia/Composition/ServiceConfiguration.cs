@@ -9,6 +9,7 @@ using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Auth;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Services.GameRuntime;
+using Cafe.Launcher.Avalonia.Services.Update;
 using Cafe.Launcher.Avalonia.ViewModels;
 
 namespace Cafe.Launcher.Avalonia.Composition;
@@ -164,6 +165,14 @@ public static class ServiceConfiguration
             sp.GetRequiredService<GameDownloadService>(),
             sp.GetRequiredService<GameUninstallService>()));
         services.AddSingleton<LauncherUpdateService>();
+        services.AddSingleton<ILauncherUpdateHostInfoProvider, LauncherUpdateHostInfoProvider>();
+        services.AddSingleton<ILauncherUpdateDownloader, LauncherUpdateDownloader>();
+        services.AddSingleton(sp => new LauncherSelfUpdateService(
+            sp.GetRequiredService<ILauncherUpdateDownloader>(),
+            sp.GetRequiredService<ILauncherUpdateHostInfoProvider>(),
+            dataRoot,
+            sp.GetRequiredService<LocalDiagnostics>()));
+        services.AddSingleton<IWindowsLauncherUpdateApplier, WindowsLauncherUpdateApplier>();
         services.AddSingleton<ILauncherCoreService, LauncherCoreService>();
         services.AddSingleton<IErrorHandlingService, ErrorHandlingService>();
 

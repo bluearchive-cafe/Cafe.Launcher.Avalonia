@@ -6,6 +6,7 @@ using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Services.GameRuntime;
+using Cafe.Launcher.Avalonia.Services.Update;
 using Cafe.Launcher.Avalonia.Testing;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Cafe.Launcher.Avalonia.Constants;
@@ -381,6 +382,11 @@ public partial class MainWindowViewModelTests
             localizer,
             toastService,
             new LauncherUpdateService(new StubRemoteHttpTransport()),
+            new LauncherSelfUpdateService(
+                new LauncherUpdateDownloader(new StubRemoteHttpTransport()),
+                new LauncherUpdateHostInfoProvider(),
+                TestDataRoot.ForDirectory(Path.Combine(tempDir, "update-root")),
+                new LocalDiagnostics()),
             dialogs,
             testLogger,
             new GameInstallationPath(),
