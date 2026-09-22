@@ -33,6 +33,49 @@ public sealed class LogExportServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ExportAsync_OnLinux_AddsTheLinuxProcessSnapshotEntry()
+    {
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "The /proc snapshot is Linux-only.");
+        var logger = WriteDeterministicLog(
+            "snapshot-source",
+            $"{DateTimeOffset.Now:O} [INF] [Test] Entry\n");
+        var service = new LogExportService(
+            new LocalDiagnostics(logger),
+            TestDataRoot.ForCurrentProcess(),
+            new CrashReportStore(TestDataRoot.ForCurrentProcess()));
+
+        var zipPath = await service.ExportAsync(
+            Path.Combine(tempDir, "snapshot-selected"),
+            LogExportOptions.Default);
+
+        using var zip = ZipFile.OpenRead(zipPath);
+        Assert.Contains(zip.Entries, entry => entry.FullName == LinuxProcessSnapshot.EntryName);
+    }
+
+    [Fact]
+    public async Task ExportAsync_WithARunnerOutputCapture_IncludesIt()
+    {
+        var dataRoot = Path.Combine(tempDir, "runner-output-root");
+        Directory.CreateDirectory(dataRoot);
+        File.WriteAllText(
+            Path.Combine(dataRoot, GamePaths.RunnerOutputFileName),
+            "[out] prefix initialized\n");
+        var logger = WriteDeterministicLog(
+            "runner-output-source",
+            "2026-09-09T10:00:00.0000000+08:00 [INF] [Test] Entry\n");
+        var service = new LogExportService(
+            new LocalDiagnostics(logger),
+            TestDataRoot.ForDirectory(dataRoot),
+            new CrashReportStore(TestDataRoot.ForCurrentProcess()));
+
+        var zipPath = await service.ExportAsync(
+            Path.Combine(tempDir, "runner-output-selected"),
+            LogExportOptions.Default);
+
+        Assert.Equal("[out] prefix initialized\n", ReadEntry(zipPath, GamePaths.RunnerOutputFileName));
+    }
+
+    [Fact]
     public void DefaultExportDirectory_UsesProductDataExportFolder()
     {
         var dataRoot = tempDir.DataRoot;
@@ -366,6 +409,71 @@ public sealed class LogExportServiceTests : IDisposable
             .ToArray();
         Assert.Contains("unified.log", entries);
         Assert.Contains("user-data/settings.json", entries);
+    }
+
+    [Fact]
+    public async Task ExportAsync_RecordsTheDesktopSessionInSystemInfo()
+    {
+        const string variable = "XDG_SESSION_TYPE";
+        var original = Environment.GetEnvironmentVariable(variable);
+        Environment.SetEnvironmentVariable(variable, "wayland");
+        try
+        {
+            var dataRoot = Path.Combine(tempDir, "session-data");
+            Directory.CreateDirectory(dataRoot);
+            var logger = WriteDeterministicLog(
+                "session-source",
+                "2026-09-09T10:00:00.0000000+08:00 [INF] [Test] Entry\n");
+            var service = new LogExportService(
+                new LocalDiagnostics(logger),
+                TestDataRoot.ForDirectory(dataRoot),
+                new CrashReportStore(TestDataRoot.ForCurrentProcess()));
+
+            var zipPath = await service.ExportAsync(
+                Path.Combine(tempDir, "session-selected"),
+                LogExportOptions.Default);
+
+            using var document = JsonDocument.Parse(ReadEntry(zipPath, "system-info.json"));
+            var session = document.RootElement.GetProperty("session");
+            Assert.Equal("wayland", session.GetProperty("type").GetString());
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(variable, original);
+        }
+    }
+
+    [Fact]
+    public async Task ExportAsync_WithAGraphicsProbe_RecordsTheGpuAndOpenGlLines()
+    {
+        var dataRoot = Path.Combine(tempDir, "graphics-data");
+        Directory.CreateDirectory(dataRoot);
+        var logger = WriteDeterministicLog(
+            "graphics-source",
+            "2026-09-09T10:00:00.0000000+08:00 [INF] [Test] Entry\n");
+        var probe = new GraphicsInfoProbe((tool, _, _) => tool == "vulkaninfo"
+            ? "GPU0:\n\tdeviceName = Test GPU\n"
+            : "OpenGL renderer string: Test Renderer\n");
+        var service = new LogExportService(
+            new LocalDiagnostics(logger),
+            TestDataRoot.ForDirectory(dataRoot),
+            new CrashReportStore(TestDataRoot.ForCurrentProcess()),
+            probe);
+
+        var zipPath = await service.ExportAsync(
+            Path.Combine(tempDir, "graphics-selected"),
+            LogExportOptions.Default);
+
+        using var document = JsonDocument.Parse(ReadEntry(zipPath, "system-info.json"));
+        var graphics = document.RootElement.GetProperty("graphics");
+        Assert.Contains(
+            "deviceName = Test GPU",
+            graphics.GetProperty("vulkan").GetString(),
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Test Renderer",
+            graphics.GetProperty("opengl").GetString(),
+            StringComparison.Ordinal);
     }
 
     [Fact]

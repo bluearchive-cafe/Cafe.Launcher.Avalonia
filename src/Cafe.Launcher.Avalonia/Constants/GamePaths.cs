@@ -48,4 +48,10 @@ public static class GamePaths
     /// so renaming this constant carries the rotation scheme with it.
     /// </summary>
     public const string UnifiedLogFileName = "unified.log";
+
+    /// <summary>
+    /// Bounded stdout/stderr capture of the most recently launched game runner
+    /// (overwritten per launch). It is a diagnostic artifact, not user state.
+    /// </summary>
+    public const string RunnerOutputFileName = "runner_output.log";
 }
