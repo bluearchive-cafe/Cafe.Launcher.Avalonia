@@ -88,21 +88,19 @@ ADR-032 的判据落在「名字家族」，前提是 **Windows 反作弊保护�
 - **进程树追踪**：Wine 与 Windows 一样会 reparent，断链。
 - **只用 `maps`**：安装目录未知或未映射时全瞎，且读 maps 有开销。
 
-## 8. 本步产物与后续
+## 8. 产物、落地与后续
 
-本步（纯函数，**无生产调用方，刻意如此**）：
+**已落地（2026-09-22）**：
 
-- `Services/GameRuntime/UnixProcessRecord.cs`：`/proc` 原始字节 → 字段的纯解析（ABI 层，样本无关）。
-- `Services/GameRuntime/UnixGameProcessMatcher.cs`：信号 1–4 的纯判定与显示名。
-- `tests/.../UnixProcessRecordsTests.cs`：合成记录表驱动，含误报反例。
+- `BuildStartInfo` 写入私有所有权标记 `CAFE_LAUNCHER_GAME_ID`；`LinuxProcessScanner` 扫 `/proc` 认标记，`ProcessService` 在 Linux 走它；`comm` 家族名退为回退。判定与展示分离（标记 / 前缀 / maps / comm 决定在不在跑，家族名决定怎么报）。
+- ADR-036 记录本判据与「Windows 名字家族 / Linux 所有权标记」的有意分叉。
+- 纯函数骨架（`UnixProcessRecord`、`UnixGameProcessMatcher`）已接入扫描器，不再是脱离调用方的骨架；`tests/.../UnixProcessRecordsTests.cs`、`LinuxProcessScannerTests` 覆盖。
 
-后续（样本已到，可接线）：
+**后续**：
 
-1. 补平台读取层（`OperatingSystem.IsLinux()` 门控，枚举 `/proc`；先按 comm/cmdline 廉价过滤，再对候选读 `environ`/`maps`）。
-2. `BuildStartInfo` 写入 `CAFE_LAUNCHER_GAME_ID=gameId`；`IGameProcessTracker` 的查询从「名字」扩为「名字 + gameId + prefix + 安装目录」。
-3. 判据按 §6 修正：信号 2 用 `STEAM_COMPAT_DATA_PATH` 等值或 `WINEPREFIX` 前缀根匹配（**不是等值**）；信号 3 用安装目录归属（maps 为 Unix 路径）；信号 4 保留 comm 回退；`cmdline` 仍只做显示名。
-4. 写落地 ADR（暂定 ADR-036），把本文 §3、§6、§7 收进去，并说明 Unix 与 Windows 判据有意分叉。
-5. 诊断侧顺带修：实际 Proton 构建改从进程 env 的 `PROTONPATH` 读（`runner_output.log` 实测为空）。
+1. **前缀 / maps 归属**：需要把「名字 + gameId + prefix + 安装目录」扩进 `IGameProcessTracker` 查询（当前契约仍是名字）。它是 §3 的强信号，在标记缺失时更稳；本片未接线。
+2. **诊断侧**：实际 Proton 构建改从进程 env 的 `PROTONPATH` 读（`runner_output.log` 实测为空）。
+3. macOS 未纳入。
 
 ## 9. 门禁
 
