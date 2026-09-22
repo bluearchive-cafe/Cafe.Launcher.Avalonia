@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Globalization;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Constants;
@@ -69,6 +70,54 @@ public sealed class ShellLifecycleTests : IDisposable
     }
 
     [Fact]
+    public async Task RefreshAsync_WhenCoreLoadThrows_ShowsSavedDownloadSourceDespiteFailure()
+    {
+        // 下载源是本地配置而非远端状态:远端不可用时状态栏仍展示已保存的选择,
+        // 不停留在加载占位。
+        var settingsService = new LauncherSettingsService( tempDir.DataRoot );
+        await settingsService.SaveAsync(new LauncherSettings { PatchUrlGroup = PatchUrlGroups.Cafe });
+        var core = new ScriptedCoreService(new InvalidOperationException("load failed"));
+        var fixture = CreateLifecycle(core, settingsService: settingsService);
+
+        await fixture.Lifecycle.RefreshAsync().WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.Equal(
+            string.Format(
+                CultureInfo.InvariantCulture,
+                fixture.Shell.I18n["downloadSourceValue"],
+                fixture.Shell.I18n["downloadSourceCafe"]),
+            fixture.Shell.DownloadSourceText);
+    }
+
+    [Fact]
+    public async Task RefreshAsync_WhenSnapshotLoads_ShowsSnapshotDownloadSource()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.PatchUrlGroup = PatchUrlGroups.Cafe;
+        var core = new ScriptedCoreService(snapshot);
+        var fixture = CreateLifecycle(core);
+
+        await fixture.Lifecycle.RefreshAsync().WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.Equal(
+            string.Format(
+                CultureInfo.InvariantCulture,
+                fixture.Shell.I18n["downloadSourceValue"],
+                fixture.Shell.I18n["downloadSourceCafe"]),
+            fixture.Shell.DownloadSourceText);
+    }
+
+    [Fact]
+    public void ApplyInitialLanguage_WithoutSnapshot_ShowsDownloadSourceLoadingPlaceholder()
+    {
+        var core = new ScriptedCoreService(CreateSnapshot());
+        var fixture = CreateLifecycle(core);
+
+        // 首次快照到达前,下载源行与其余状态行一样展示"还在读"占位。
+        Assert.Equal(fixture.Shell.I18n["downloadSourceLoading"], fixture.Shell.DownloadSourceText);
+    }
+
+    [Fact]
     public async Task RefreshAsync_AfterRecoverableFailure_RestoresSnapshotOnNextRefresh()
     {
         var core = new ScriptedCoreService(new InvalidOperationException("load failed"), CreateSnapshot());
@@ -81,6 +130,12 @@ public sealed class ShellLifecycleTests : IDisposable
         Assert.Equal(2, core.LoadCount);
         Assert.Equal("BlueArchive.exe", fixture.Shell.ExecutableNameText);
         Assert.Equal(fixture.Shell.I18n["statusNetworkLoaded"], fixture.Shell.NetworkText);
+        Assert.Equal(
+            string.Format(
+                CultureInfo.InvariantCulture,
+                fixture.Shell.I18n["downloadSourceValue"],
+                fixture.Shell.I18n["downloadSourceOfficial"]),
+            fixture.Shell.DownloadSourceText);
         Assert.False(fixture.Lifecycle.IsBusy);
     }
 

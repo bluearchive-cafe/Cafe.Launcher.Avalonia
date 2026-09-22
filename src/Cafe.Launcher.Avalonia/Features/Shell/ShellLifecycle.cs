@@ -264,7 +264,7 @@ public sealed class ShellLifecycle : IShellRuntime
         }
         catch (Exception exception)
         {
-            shell.SetRefreshError(exception);
+            shell.SetRefreshError(exception, settings);
             operations.SetIdlePanels(currentSnapshot);
             await errorHandling.HandleErrorAsync("Launcher core refresh failed.", exception,
                 new ErrorHandlingOptions { ToastMessage = localizer.F(LocalizationKeys.LauncherCoreRefreshFailed, exception.Message) });

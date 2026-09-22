@@ -322,7 +322,11 @@ internal static class LauncherStrings
 
     internal static string DownloadSourceDescription => GetRequiredString("downloadSourceDescription");
 
+    internal static string DownloadSourceLoading => GetRequiredString("downloadSourceLoading");
+
     internal static string DownloadSourceOfficial => GetRequiredString("downloadSourceOfficial");
+
+    internal static string DownloadSourceValue => GetRequiredString("downloadSourceValue");
 
     internal static string DownloadSpeedLimit => GetRequiredString("downloadSpeedLimit");
 

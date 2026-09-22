@@ -351,9 +351,10 @@
                           IsVisible="{Binding IsStatusDetailHidden, Converter={x:Static BoolConverters.Not}}">
                         <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Lg}">
-                                <TextBlock Classes="caption" Text="{Binding Shell.VersionText}"/>
                                 <TextBlock Classes="caption" Text="{Binding Shell.DiskSpaceText}"/>
                                 <TextBlock Classes="caption" Text="{Binding Shell.NetworkText}"/>
+                                <TextBlock Classes="caption" Text="{Binding Shell.DownloadSourceText}"/>
+                                <TextBlock Classes="caption" Text="{Binding Shell.VersionText}"/>
                             </StackPanel>
                             <Border Classes="path-field">
                                 <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}">
@@ -530,9 +531,10 @@
                         <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="{StaticResource Launcher.Spacing.Lg}">
                             <TextBlock Text="{Binding Operations.GameSessionStateText}" Classes="on-dark-caption"
                                        IsVisible="{Binding Operations.IsGameSessionVisible}"/>
-                            <TextBlock Text="{Binding Shell.VersionText}" Classes="on-dark-caption"/>
                             <TextBlock Text="{Binding Shell.LaunchCheckText}" Classes="on-dark-caption"/>
                             <TextBlock Text="{Binding Shell.NetworkText}" Classes="on-dark-caption"/>
+                            <TextBlock Text="{Binding Shell.DownloadSourceText}" Classes="on-dark-caption"/>
+                            <TextBlock Text="{Binding Shell.VersionText}" Classes="on-dark-caption"/>
                         </StackPanel>
                     </Grid>
                     <!-- Hidden layout (buttons only) -->

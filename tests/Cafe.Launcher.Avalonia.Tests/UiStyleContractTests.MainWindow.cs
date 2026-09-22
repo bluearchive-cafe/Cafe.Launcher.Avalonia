@@ -193,6 +193,36 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void MainWindow_StatusCaptions_ExposeDownloadSource()
+    {
+        // 底部两个状态行（安装面板与控制面板）都必须展示当前下载源；
+        // 控制面板的隐藏布局只保留会话状态与按钮，不在此契约内。
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.axaml"));
+        var captionBindings = document
+            .Descendants()
+            .Where(element =>
+                element.Name.LocalName == "TextBlock"
+                && element.Attribute("Text")?.Value == "{Binding Shell.DownloadSourceText}");
+        Assert.Equal(2, captionBindings.Count());
+    }
+
+    [Theory]
+    [InlineData("OperationInstallState", new[] { "Shell.DiskSpaceText", "Shell.NetworkText", "Shell.DownloadSourceText", "Shell.VersionText" })]
+    [InlineData("OperationControlState", new[] { "Operations.GameSessionStateText", "Shell.LaunchCheckText", "Shell.NetworkText", "Shell.DownloadSourceText", "Shell.VersionText" })]
+    public void MainWindow_StatusCaptions_UseStatusFirstOrder(string panelName, string[] expectedBindings)
+    {
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.axaml"));
+        var panel = document.Descendants().Single(element =>
+            element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == panelName));
+        var statusRow = panel.Descendants().Single(element =>
+            element.Name.LocalName == "TextBlock"
+            && element.Attribute("Text")?.Value == "{Binding Shell.DownloadSourceText}").Parent!;
+        Assert.Equal(
+            expectedBindings.Select(binding => "{Binding " + binding + "}"),
+            statusRow.Elements().Select(element => element.Attribute("Text")?.Value));
+    }
+
+    [Fact]
     public void MainWindow_SettingsAdvancedSection_ExposesLauncherSettingsReset()
     {
         var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/SettingsAdvancedSection.axaml"));

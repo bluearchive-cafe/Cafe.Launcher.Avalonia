@@ -365,6 +365,13 @@ public sealed class SettingsOptionsViewModel
             _ => localizer.T(LocalizationKeys.StatusLaunchCheckLocal)
         };
 
+    public string ResolveDownloadSourceDisplayName(string patchUrlGroup) =>
+        patchUrlGroup switch
+        {
+            PatchUrlGroups.Cafe => localizer.T(LocalizationKeys.DownloadSourceCafe),
+            _ => localizer.T(LocalizationKeys.DownloadSourceOfficial)
+        };
+
     public DiskSpaceCheckResult ResolveDiskSpaceCheck(string gamePath, string? requiredSize)
     {
         var requiredBytes = DiskSpaceService.ResolveRequiredBytes(true, 0L, requiredSize);

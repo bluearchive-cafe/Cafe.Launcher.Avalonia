@@ -162,7 +162,9 @@ public static class LocalizationKeys
     public const string DownloadSourceCafe = "downloadSourceCafe";
     public const string DownloadSourceChangedRepairPrompt = "downloadSourceChangedRepairPrompt";
     public const string DownloadSourceDescription = "downloadSourceDescription";
+    public const string DownloadSourceLoading = "downloadSourceLoading";
     public const string DownloadSourceOfficial = "downloadSourceOfficial";
+    public const string DownloadSourceValue = "downloadSourceValue";
     public const string DownloadSpeedLimit = "downloadSpeedLimit";
     public const string DownloadSpeedLimitDescription = "downloadSpeedLimitDescription";
     public const string EnableHttp2 = "enableHttp2";

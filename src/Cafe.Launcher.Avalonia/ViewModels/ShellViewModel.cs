@@ -59,6 +59,9 @@ public partial class ShellViewModel : ViewModelBase, IDisposable
     private string networkText = "";
 
     [ObservableProperty]
+    private string downloadSourceText = "";
+
+    [ObservableProperty]
     private string launchCheckText = "";
 
     [ObservableProperty]
@@ -153,6 +156,7 @@ public partial class ShellViewModel : ViewModelBase, IDisposable
             SetLoadingPlaceholders();
             VersionText = localizer.T(LocalizationKeys.VersionLoading);
             NetworkText = localizer.T(LocalizationKeys.NetworkLoading);
+            DownloadSourceText = localizer.T(LocalizationKeys.DownloadSourceLoading);
             LaunchCheckText = localizer.T(LocalizationKeys.LaunchCheckLoading);
             SettingsSummary = localizer.T(LocalizationKeys.Settings);
         }
@@ -176,12 +180,16 @@ public partial class ShellViewModel : ViewModelBase, IDisposable
         LaunchCheckValueText = localizer.T(LocalizationKeys.LauncherLoadingValue);
     }
 
-    public void SetRefreshError(Exception exception)
+    public void SetRefreshError(Exception exception, SettingsViewModel settings)
     {
         // 刷新失败在状态栏只报中性可行动的状态（与快照的远端不可用同措辞）；
         // 异常原文已进诊断日志，不放进行内小空间。
         NetworkText = localizer.T(LocalizationKeys.GameRemoteStateUnavailable);
         VersionText = localizer.T(LocalizationKeys.VersionUnavailable);
+        // 下载源是本地配置而非远端状态，远端不可用时也照常展示已保存的选择。
+        DownloadSourceText = localizer.F(
+            LocalizationKeys.DownloadSourceValue,
+            settings.Options.ResolveDownloadSourceDisplayName(settings.Editor.GetSavedSnapshot().PatchUrlGroup));
         SetLoadingPlaceholders();
     }
 
@@ -199,6 +207,9 @@ public partial class ShellViewModel : ViewModelBase, IDisposable
             ? localizer.T(LocalizationKeys.GameRemoteStateUnavailable)
             : localizer.T(LocalizationKeys.StatusNetworkLoaded);
         NetworkText = networkStatus;
+        DownloadSourceText = localizer.F(
+            LocalizationKeys.DownloadSourceValue,
+            settings.Options.ResolveDownloadSourceDisplayName(snapshot.Settings.PatchUrlGroup));
         var launchCheckValue = settings.Options.ResolveLaunchCheckDisplayName(snapshot.Settings.LaunchCheckMode);
         SetLaunchCheckResult(launchCheckValue);
         var executableName = string.IsNullOrWhiteSpace(localConfig?.Name)
