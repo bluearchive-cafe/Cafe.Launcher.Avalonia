@@ -156,6 +156,20 @@ public sealed class GameRuntimeTests
     }
 
     [Fact]
+    public async Task LaunchAsync_WritesTheOwnershipMarkerIntoTheRunnerEnvironment()
+    {
+        var launcher = new RecordingProcessLauncher();
+        var runtime = CreateRuntime([Definition("umu")], launcher);
+
+        var result = await runtime.LaunchAsync(CreateRequest(), new GameRuntimeConfiguration());
+
+        Assert.True(result.Success);
+        Assert.Equal(
+            GameRuntimeIds.BlueArchiveJapan,
+            launcher.StartInfos[0].Environment[UnixGameProcessMatcher.OwnershipMarkerKey]);
+    }
+
+    [Fact]
     public async Task LaunchAsync_WhenTheRunnerWritesOutput_CapturesItUnderTheDataRoot()
     {
         Assert.SkipUnless(OperatingSystem.IsLinux(), "The output-producing runner stub uses /bin/sh.");

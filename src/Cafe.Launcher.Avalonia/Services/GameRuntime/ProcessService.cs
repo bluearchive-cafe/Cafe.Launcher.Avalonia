@@ -24,6 +24,18 @@ public static class ProcessService
 
         cancellationToken.ThrowIfCancellationRequested();
 
+        // Linux 走 /proc：comm 被内核截断，改以启动器所有权标记为主、家族名为回退（ADR-036）。
+        // 其余平台维持按进程快照的名字家族扫描。
+        var matches = OperatingSystem.IsLinux()
+            ? LinuxProcessScanner.Scan(knownNames, cancellationToken)
+            : FindRunningExeNamesBySnapshot(knownNames, cancellationToken);
+        return Task.FromResult(matches);
+    }
+
+    private static IReadOnlyList<string> FindRunningExeNamesBySnapshot(
+        IReadOnlyList<string> knownNames,
+        CancellationToken cancellationToken)
+    {
         var matches = new List<string>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         try
@@ -52,7 +64,7 @@ public static class ProcessService
             // 也不要因为一次枚举失败就把人永久挡在门外。
         }
 
-        return Task.FromResult<IReadOnlyList<string>>(matches);
+        return matches;
     }
 
     /// <summary>

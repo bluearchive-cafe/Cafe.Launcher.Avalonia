@@ -102,6 +102,19 @@ public sealed class UnixProcessRecordsTests
     }
 
     [Fact]
+    public void Match_WhenTheOwnershipMarkerIsPresentWithoutAGameId_IdentifiesByMarker()
+    {
+        var record = Record(
+            comm: "winedevice.exe",
+            environment: [(UnixGameProcessMatcher.OwnershipMarkerKey, "any-game")]);
+
+        var match = UnixGameProcessMatcher.Match(record, EmptyQuery);
+
+        Assert.NotNull(match);
+        Assert.Equal(UnixProcessMatchSignal.OwnershipMarker, match.Signal);
+    }
+
+    [Fact]
     public void Match_WhenWinePrefixMatches_IdentifiesByPrefixIgnoringATrailingSlash()
     {
         var record = Record(environment: [("WINEPREFIX", "/home/u/pfx/bluearchive-jp/")]);
