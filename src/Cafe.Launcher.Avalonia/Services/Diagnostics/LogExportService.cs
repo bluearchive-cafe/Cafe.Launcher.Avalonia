@@ -200,6 +200,14 @@ public sealed class LogExportService
             manifest,
             cancellationToken);
 
+        // Optional: the most recent compatibility-prefix environment precheck report.
+        TryCopyOptionalFileToZip(
+            zip,
+            dataRoot.CompatibilityEnvironmentPath,
+            GamePaths.CompatibilityEnvironmentFileName,
+            manifest,
+            cancellationToken);
+
         if (options.IncludeCrashReports)
             AddCrashReports(zip, CrashReportDirectories(), manifest, cancellationToken);
 

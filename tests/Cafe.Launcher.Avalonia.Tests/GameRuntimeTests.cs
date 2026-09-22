@@ -40,7 +40,8 @@ public sealed class GameRuntimeTests
         Func<string, string, TimeSpan, CancellationToken, Task<RuntimeProbeResult>>? probe = null,
         IGameProcessTracker? tracker = null,
         List<(string Name, string? Path)>? locateCalls = null,
-        RunnerOutputCapture? capture = null)
+        RunnerOutputCapture? capture = null,
+        CompatibilityEnvironmentPrecheck? precheck = null)
     {
         return new GameRuntime(
             definitions,
@@ -53,7 +54,8 @@ public sealed class GameRuntimeTests
             }),
             probe ?? ((_, _, _, _) =>
                 Task.FromResult(RuntimeProbeResult.Success("9.0", 0, "", ""))),
-            capture);
+            capture,
+            precheck);
     }
 
     [Fact]
@@ -167,6 +169,23 @@ public sealed class GameRuntimeTests
             TimeSpan.FromSeconds(5),
             "The runner output capture never recorded the stub output.");
         Assert.Contains("runner-stderr", ReadIfAvailable(capture.FilePath), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task LaunchAsync_WithAnEnvironmentPrecheck_WritesTheReportBeforeStarting()
+    {
+        using var tempDir = TestDirectory.Create();
+        var precheck = new CompatibilityEnvironmentPrecheck(tempDir.DataRoot);
+        var runtime = CreateRuntime(
+            [Definition("umu")],
+            new RecordingProcessLauncher(),
+            precheck: precheck);
+        var configuration = new GameRuntimeConfiguration { PrefixPath = Path.Combine(tempDir, "prefix") };
+
+        var result = await runtime.LaunchAsync(CreateRequest(), configuration);
+
+        Assert.True(result.Success);
+        Assert.True(File.Exists(precheck.ReportPath));
     }
 
     [Fact]

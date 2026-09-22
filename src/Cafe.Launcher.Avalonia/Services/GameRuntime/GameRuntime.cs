@@ -21,19 +21,22 @@ public sealed class GameRuntime : IGameRuntime
     private readonly Func<string, string?, string?> locateExecutable;
     private readonly Func<string, string, TimeSpan, CancellationToken, Task<RuntimeProbeResult>> probeVersion;
     private readonly RunnerOutputCapture? runnerOutputCapture;
+    private readonly CompatibilityEnvironmentPrecheck? environmentPrecheck;
 
     public GameRuntime(
         IEnumerable<GameRunnerDefinition> runners,
         IProcessLauncher processLauncher,
         IGameProcessTracker processTracker,
-        RunnerOutputCapture? runnerOutputCapture = null)
+        RunnerOutputCapture? runnerOutputCapture = null,
+        CompatibilityEnvironmentPrecheck? environmentPrecheck = null)
         : this(
             runners,
             processLauncher,
             processTracker,
             (name, explicitPath) => ExecutableLocator.FindInPath(name, explicitPath),
             RuntimeVersionProbe.ProbeAsync,
-            runnerOutputCapture)
+            runnerOutputCapture,
+            environmentPrecheck)
     {
     }
 
@@ -43,7 +46,8 @@ public sealed class GameRuntime : IGameRuntime
         IGameProcessTracker processTracker,
         Func<string, string?, string?> locateExecutable,
         Func<string, string, TimeSpan, CancellationToken, Task<RuntimeProbeResult>> probeVersion,
-        RunnerOutputCapture? runnerOutputCapture = null)
+        RunnerOutputCapture? runnerOutputCapture = null,
+        CompatibilityEnvironmentPrecheck? environmentPrecheck = null)
     {
         this.runners = runners.ToArray();
         this.processLauncher = processLauncher;
@@ -51,6 +55,7 @@ public sealed class GameRuntime : IGameRuntime
         this.locateExecutable = locateExecutable;
         this.probeVersion = probeVersion;
         this.runnerOutputCapture = runnerOutputCapture;
+        this.environmentPrecheck = environmentPrecheck;
     }
 
     public async Task<GameRuntimeLaunchResult> LaunchAsync(
@@ -62,10 +67,10 @@ public sealed class GameRuntime : IGameRuntime
         var candidates = new List<GameRuntimeStatusEntry>();
         foreach (var runner in SelectionOrder(configuration.PreferredRunnerId))
         {
+            var runnerConfiguration = ForSelectedRunner(configuration, runner.Id);
             GameRunnerAvailability availability;
             try
             {
-                var runnerConfiguration = ForSelectedRunner(configuration, runner.Id);
                 availability = await CheckAvailabilityAsync(runner, runnerConfiguration, cancellationToken)
                     .ConfigureAwait(false);
             }
@@ -96,10 +101,11 @@ public sealed class GameRuntime : IGameRuntime
                 continue;
             }
 
+            TryEnvironmentPrecheck(runner, request, runnerConfiguration);
+
             GameProcess process;
             try
             {
-                var runnerConfiguration = ForSelectedRunner(configuration, runner.Id);
                 process = Start(runner, request, runnerConfiguration);
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
@@ -259,6 +265,30 @@ public sealed class GameRuntime : IGameRuntime
         }
 
         return new GameProcess(process, runner.Id);
+    }
+
+    /// <summary>
+    /// 记录兼容前缀的启动前环境预检（P1-D），但不改变启动结果：报告没写成或探针读不到不能因此
+    /// 拒绝一次本可成功的启动。原生 Windows 启动没有前缀，跳过。
+    /// </summary>
+    private void TryEnvironmentPrecheck(
+        GameRunnerDefinition runner,
+        GameLaunchRequest request,
+        GameRuntimeConfiguration configuration)
+    {
+        if (environmentPrecheck is null || runner.EnvironmentStyle == GameRuntimeEnvironmentStyle.Native)
+        {
+            return;
+        }
+
+        try
+        {
+            environmentPrecheck.Check(GetEffectivePrefixPath(request, runner.Id, configuration));
+        }
+        catch (Exception)
+        {
+            // Diagnostic only: never let the precheck change the launch outcome.
+        }
     }
 
     private static ProcessStartInfo BuildStartInfo(

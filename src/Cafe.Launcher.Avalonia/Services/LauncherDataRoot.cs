@@ -50,6 +50,9 @@ public sealed class LauncherDataRoot
     /// <summary><c>runner_output.log</c>：最近一次运行器 stdout/stderr 的有上限捕获（每次启动覆盖）。</summary>
     public string RunnerOutputPath => Path.Combine(Root, GamePaths.RunnerOutputFileName);
 
+    /// <summary><c>compatibility_environment.json</c>：最近一次兼容前缀环境预检报告（每次启动覆盖）。</summary>
+    public string CompatibilityEnvironmentPath => Path.Combine(Root, GamePaths.CompatibilityEnvironmentFileName);
+
     /// <summary>图片缓存目录（可整体删除，缺失时按需重建）。</summary>
     public string ImageCacheDirectory => Path.Combine(Root, ImageCacheFolderName);
 

@@ -39,6 +39,7 @@ public sealed class LauncherDataRootTests : IDisposable
         Assert.Equal(Path.Combine(dataRoot.Root, GamePaths.DownloadStateFileName), dataRoot.DownloadStatePath);
         Assert.Equal(Path.Combine(dataRoot.Root, GamePaths.NoticeStateFileName), dataRoot.NoticeStatePath);
         Assert.Equal(Path.Combine(dataRoot.Root, GamePaths.RunnerOutputFileName), dataRoot.RunnerOutputPath);
+        Assert.Equal(Path.Combine(dataRoot.Root, GamePaths.CompatibilityEnvironmentFileName), dataRoot.CompatibilityEnvironmentPath);
         Assert.Equal(Path.Combine(dataRoot.Root, LauncherDataRoot.ImageCacheFolderName), dataRoot.ImageCacheDirectory);
         Assert.Equal(Path.Combine(dataRoot.Root, LauncherDataRoot.CrashReportsFolderName), dataRoot.CrashReportsDirectory);
         Assert.Equal(Path.Combine(dataRoot.Root, LauncherConstants.LogExportFolderName), dataRoot.LogExportDirectory);
@@ -49,6 +50,7 @@ public sealed class LauncherDataRootTests : IDisposable
             dataRoot.DownloadStatePath,
             dataRoot.NoticeStatePath,
             dataRoot.RunnerOutputPath,
+            dataRoot.CompatibilityEnvironmentPath,
             dataRoot.ImageCacheDirectory,
             dataRoot.CrashReportsDirectory,
             dataRoot.LogExportDirectory
