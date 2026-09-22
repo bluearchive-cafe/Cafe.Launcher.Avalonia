@@ -343,9 +343,39 @@ sealed class Program
 
         Dispatcher.UIThread.UnhandledException += (_, e) =>
         {
+            if (!DispatcherExceptionPolicy.IsFatal(e.Exception))
+            {
+                // Cancellation is teardown control flow, not a crash: the FreeDesktop tray
+                // watcher (Avalonia's async void DBusTrayIconImpl.WatchAsync) rethrows its
+                // OperationCanceledException onto the dispatcher when the icon is disposed at
+                // exit. Log it and let shutdown finish instead of reporting a crash.
+                LogNonFatalDispatcherCancellation(logger, e.Exception);
+                e.Handled = true;
+                return;
+            }
+
             fatalCrashService.HandleUnhandledCrash(CrashOrigin.DispatcherUnhandledException, e.Exception);
             e.Handled = false;
         };
+    }
+
+    private static void LogNonFatalDispatcherCancellation(UnifiedLogger logger, Exception exception)
+    {
+        try
+        {
+            logger.LogAsync(
+                    LogEntrySeverity.Warn,
+                    "Dispatcher.OperationCanceled",
+                    message: "Cancellation surfaced on the UI dispatcher; treated as shutdown teardown.",
+                    exception: exception,
+                    cancellationToken: CancellationToken.None)
+                .GetAwaiter()
+                .GetResult();
+        }
+        catch
+        {
+            // Best-effort diagnostics; the process is already shutting down.
+        }
     }
 
     private static void LogCrash(UnifiedLogger logger, string source, Exception? exception)
