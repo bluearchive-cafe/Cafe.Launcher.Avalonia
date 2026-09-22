@@ -159,7 +159,8 @@ public partial class App : Application
                 trayService = new SystemTrayService(
                     mainWindow,
                     localizationService,
-                    serviceProvider.GetRequiredService<Services.Diagnostics.LocalDiagnostics>());
+                    serviceProvider.GetRequiredService<Services.Diagnostics.LocalDiagnostics>(),
+                    serviceProvider.GetRequiredService<ISystemTrayActions>());
                 if (trayService.Initialize())
                 {
                     mainWindow.SetSystemTray(trayService);

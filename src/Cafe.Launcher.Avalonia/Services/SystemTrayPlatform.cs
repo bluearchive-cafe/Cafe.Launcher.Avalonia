@@ -10,14 +10,20 @@ internal sealed record SystemTrayMenuText(
     string Show,
     string ShowToolTip,
     string Exit,
-    string ExitToolTip);
+    string ExitToolTip,
+    string StartGame,
+    bool CanStartGame,
+    string Settings,
+    bool CanOpenSettings);
 
 internal interface ISystemTrayPlatform : IDisposable
 {
     bool Initialize(
         SystemTrayMenuText text,
         Action showWindow,
-        Action exitApplication);
+        Action exitApplication,
+        Action startGame,
+        Action openSettings);
 
     void UpdateText(SystemTrayMenuText text);
 }
@@ -28,17 +34,25 @@ internal sealed class AvaloniaSystemTrayPlatform : ISystemTrayPlatform
     private NativeMenuItem? titleItem;
     private NativeMenuItem? showItem;
     private NativeMenuItem? exitItem;
+    private NativeMenuItem? startItem;
+    private NativeMenuItem? settingsItem;
     private Action? showWindow;
     private Action? exitApplication;
+    private Action? startGame;
+    private Action? openSettings;
     private bool disposed;
 
     public bool Initialize(
         SystemTrayMenuText text,
         Action showWindow,
-        Action exitApplication)
+        Action exitApplication,
+        Action startGame,
+        Action openSettings)
     {
         this.showWindow = showWindow;
         this.exitApplication = exitApplication;
+        this.startGame = startGame;
+        this.openSettings = openSettings;
 
         using var iconStream = AssetLoader.Open(
             new Uri("avares://Cafe.Launcher.Avalonia/Assets/app-icon.ico"));
@@ -75,6 +89,18 @@ internal sealed class AvaloniaSystemTrayPlatform : ISystemTrayPlatform
             exitItem.ToolTip = text.ExitToolTip;
         }
 
+        if (startItem is not null)
+        {
+            startItem.Header = text.StartGame;
+            startItem.IsEnabled = text.CanStartGame;
+        }
+
+        if (settingsItem is not null)
+        {
+            settingsItem.Header = text.Settings;
+            settingsItem.IsEnabled = text.CanOpenSettings;
+        }
+
         if (trayIcon is not null)
         {
             trayIcon.ToolTipText = text.Title;
@@ -95,6 +121,15 @@ internal sealed class AvaloniaSystemTrayPlatform : ISystemTrayPlatform
         showItem = new NativeMenuItem();
         showItem.Click += OnShowClicked;
         menu.Add(showItem);
+
+        startItem = new NativeMenuItem();
+        startItem.Click += OnStartClicked;
+        menu.Add(startItem);
+        menu.Add(new NativeMenuItemSeparator());
+
+        settingsItem = new NativeMenuItem();
+        settingsItem.Click += OnSettingsClicked;
+        menu.Add(settingsItem);
         menu.Add(new NativeMenuItemSeparator());
 
         exitItem = new NativeMenuItem();
@@ -109,6 +144,10 @@ internal sealed class AvaloniaSystemTrayPlatform : ISystemTrayPlatform
     private void OnShowClicked(object? sender, EventArgs e) => showWindow?.Invoke();
 
     private void OnExitClicked(object? sender, EventArgs e) => exitApplication?.Invoke();
+
+    private void OnStartClicked(object? sender, EventArgs e) => startGame?.Invoke();
+
+    private void OnSettingsClicked(object? sender, EventArgs e) => openSettings?.Invoke();
 
     public void Dispose()
     {
@@ -133,9 +172,21 @@ internal sealed class AvaloniaSystemTrayPlatform : ISystemTrayPlatform
             exitItem.Click -= OnExitClicked;
         }
 
+        if (startItem is not null)
+        {
+            startItem.Click -= OnStartClicked;
+        }
+
+        if (settingsItem is not null)
+        {
+            settingsItem.Click -= OnSettingsClicked;
+        }
+
         trayIcon?.Dispose();
         trayIcon = null;
         showWindow = null;
         exitApplication = null;
+        startGame = null;
+        openSettings = null;
     }
 }
