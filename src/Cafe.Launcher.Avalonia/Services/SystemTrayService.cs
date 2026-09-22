@@ -18,11 +18,12 @@ public sealed class SystemTrayService : IDisposable
     private readonly LocalizationService localizer;
     private readonly ISystemTrayPlatform platform;
     private readonly LocalDiagnostics? diagnostics;
+    private readonly ISystemTrayActions? actions;
     private bool initialized;
     private bool disposed;
 
-    public SystemTrayService(Window mainWindow, LocalizationService localizer, LocalDiagnostics? diagnostics = null)
-        : this(mainWindow, localizer, new AvaloniaSystemTrayPlatform(), diagnostics)
+    public SystemTrayService(Window mainWindow, LocalizationService localizer, LocalDiagnostics? diagnostics = null, ISystemTrayActions? actions = null)
+        : this(mainWindow, localizer, new AvaloniaSystemTrayPlatform(), diagnostics, actions)
     {
     }
 
@@ -30,12 +31,14 @@ public sealed class SystemTrayService : IDisposable
         Window mainWindow,
         LocalizationService localizer,
         ISystemTrayPlatform platform,
-        LocalDiagnostics? diagnostics = null)
+        LocalDiagnostics? diagnostics = null,
+        ISystemTrayActions? actions = null)
     {
         this.mainWindow = mainWindow;
         this.localizer = localizer;
         this.platform = platform;
         this.diagnostics = diagnostics;
+        this.actions = actions;
     }
 
     public bool Initialize()
@@ -55,7 +58,9 @@ public sealed class SystemTrayService : IDisposable
             initialized = platform.Initialize(
                 CreateMenuText(),
                 ShowWindow,
-                ExitApplication);
+                ExitApplication,
+                StartGame,
+                OpenSettings);
             if (!initialized)
             {
                 Dispose();
@@ -63,6 +68,10 @@ public sealed class SystemTrayService : IDisposable
             }
 
             localizer.LanguageChanged += OnLanguageChanged;
+            if (actions is not null)
+            {
+                actions.Changed += RefreshMenu;
+            }
             return true;
         }
         catch (Exception ex)
@@ -73,15 +82,40 @@ public sealed class SystemTrayService : IDisposable
         }
     }
 
-    private void OnLanguageChanged(object? sender, EventArgs e)
+    private void OnLanguageChanged(object? sender, EventArgs e) => RefreshMenu();
+
+    private void RefreshMenu()
     {
-        if (Dispatcher.UIThread.CheckAccess())
+        if (disposed)
         {
-            platform.UpdateText(CreateMenuText());
             return;
         }
 
-        Dispatcher.UIThread.Post(() => platform.UpdateText(CreateMenuText()));
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            Dispatcher.UIThread.Post(RefreshMenu);
+            return;
+        }
+
+        platform.UpdateText(CreateMenuText());
+    }
+
+    private void StartGame()
+    {
+        if (!disposed && actions?.CanStartGame == true)
+        {
+            ShowWindow();
+            actions.StartGame();
+        }
+    }
+
+    private void OpenSettings()
+    {
+        if (!disposed && actions?.CanOpenSettings == true)
+        {
+            ShowWindow();
+            actions.OpenSettings();
+        }
     }
 
     private SystemTrayMenuText CreateMenuText() =>
@@ -90,7 +124,13 @@ public sealed class SystemTrayService : IDisposable
             localizer.T(LocalizationKeys.ShowLauncher),
             localizer.T(LocalizationKeys.TrayOpenLauncher),
             localizer.T(LocalizationKeys.ExitLauncher),
-            localizer.T(LocalizationKeys.TrayExitLauncher));
+            localizer.T(LocalizationKeys.TrayExitLauncher),
+            localizer.T(actions?.IsGameRunning == true ? LocalizationKeys.GameSessionRunning
+                : actions?.IsGameStarting == true ? LocalizationKeys.GameSessionStarting
+                : LocalizationKeys.StartGame),
+            actions?.CanStartGame == true,
+            localizer.T(LocalizationKeys.Settings),
+            actions?.CanOpenSettings == true);
 
     public void ShowWindow()
     {
@@ -125,6 +165,10 @@ public sealed class SystemTrayService : IDisposable
         if (initialized)
         {
             localizer.LanguageChanged -= OnLanguageChanged;
+            if (actions is not null)
+            {
+                actions.Changed -= RefreshMenu;
+            }
         }
 
         platform.Dispose();

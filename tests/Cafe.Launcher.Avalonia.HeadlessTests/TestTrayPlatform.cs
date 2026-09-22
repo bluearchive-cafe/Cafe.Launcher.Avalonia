@@ -19,21 +19,29 @@ internal sealed class TestTrayPlatform : ISystemTrayPlatform
 
     public bool Disposed { get; private set; }
 
-    public SystemTrayMenuText Text { get; private set; } = new("", "", "", "", "");
+    public SystemTrayMenuText Text { get; private set; } = new("", "", "", "", "", "", false, "", false);
 
     public Action? ShowWindow { get; private set; }
 
     public Action? ExitApplication { get; private set; }
 
+    public Action? StartGame { get; private set; }
+
+    public Action? OpenSettings { get; private set; }
+
     public bool Initialize(
         SystemTrayMenuText text,
         Action showWindow,
-        Action exitApplication)
+        Action exitApplication,
+        Action startGame,
+        Action openSettings)
     {
         InitializeCount++;
         Text = text;
         ShowWindow = showWindow;
         ExitApplication = exitApplication;
+        StartGame = startGame;
+        OpenSettings = openSettings;
         return InitializeResult;
     }
 

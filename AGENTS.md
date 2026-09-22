@@ -26,6 +26,8 @@ Features must not reference each other's concrete types. Extract a narrow abstra
 
 `Features/Shell` is the window shell layer above the other features, not a peer feature. It intentionally aggregates the concrete presentation ViewModels via `ShellPresentationFamily` and orchestrates them in `ShellLifecycle`/`ShellStartup`; this downward aggregation is the sanctioned exception to the no-cross-feature-references rule. Everything below Shell still holds: non-shell features must not reference each other's concrete types, and shared presentation contracts (such as the modal family) belong in the root `ViewModels/` folder, not inside `Features/Shell`.
 
+The native tray consumes `ISystemTrayActions`, implemented by `Features/Shell/SystemTrayActions`: it reuses the shell launch/settings commands and observes operation, session, and modal state. Native tray adapters own menu rendering only; command availability is rechecked at invocation, and settings opens without toggling an existing draft closed.
+
 ### Modal isolation ruling (2026-09-12 audit)
 
 Only the top surface of the modal stack may receive input (the principle in `CONTEXT.md` §模态交互权). The mechanism differs by layer and intentionally has two halves:

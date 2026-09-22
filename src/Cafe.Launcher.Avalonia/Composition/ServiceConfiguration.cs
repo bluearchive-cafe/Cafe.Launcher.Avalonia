@@ -215,6 +215,7 @@ public static class ServiceConfiguration
         services.AddSingleton<ShellPresentationFamily>();
         services.AddSingleton<IShellRuntime, ShellLifecycle>();
         services.AddSingleton<MainWindowViewModel>();
+        services.AddSingleton<ISystemTrayActions, SystemTrayActions>();
 
         return services;
     }
