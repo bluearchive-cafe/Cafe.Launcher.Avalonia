@@ -46,7 +46,8 @@ public sealed class ResxResourceContractTests
         // → 579（会话看护的状态行与启动失败通报：启动报告只覆盖 spawn 那一刻，见 ADR-035）。
         // → 581（底部状态区展示下载源：加载占位与「下载源：{0}」组合串）。
         // → 583（资源面板可关闭的 UID 生成提示：提示正文与关闭按钮，3cf0d7e 补记）。
-        Assert.Equal(583, ResxValues["en"].Count);
+        // → 586（P1-D 兼容前缀环境预检的三条可操作文案：不可写 / 不支持符号链接 / noexec）。
+        Assert.Equal(586, ResxValues["en"].Count);
     }
 
     [Fact]

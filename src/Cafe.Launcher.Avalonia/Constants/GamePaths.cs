@@ -54,4 +54,7 @@ public static class GamePaths
     /// (overwritten per launch). It is a diagnostic artifact, not user state.
     /// </summary>
     public const string RunnerOutputFileName = "runner_output.log";
+
+    /// <summary>Latest compatibility-prefix environment precheck report (overwritten per launch).</summary>
+    public const string CompatibilityEnvironmentFileName = "compatibility_environment.json";
 }

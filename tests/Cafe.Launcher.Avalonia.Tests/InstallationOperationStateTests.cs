@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
+using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
@@ -390,6 +391,37 @@ Assert.Equal(localizer.F("gameExecutableMissing", Path.Combine(gamePath, "BlueAr
     }
 
     [Fact]
+    public async Task StartAsync_WhenTheEnvironmentPrecheckBlocks_ReturnsTheLocalizedFinding()
+    {
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        Directory.CreateDirectory(gamePath);
+        await File.WriteAllTextAsync(Path.Combine(gamePath, "BlueArchive.exe"), "");
+        var localizer = new LocalizationService();
+        const string prefix = "/home/user/pfx";
+        var service = CreateLaunchService(
+            localizer,
+            runtime: new EnvironmentFailureRuntime(
+                new GameEnvironmentFailure(CompatibilityFindingCode.PrefixNotWritable, prefix)));
+
+        var result = await service.StartAsync(new LauncherStatusSnapshot
+        {
+            RuntimeState = LauncherRuntimeState.Ready,
+            LocalGame = new LocalInstallationState
+            {
+                Kind = LocalInstallationStateKind.Valid,
+                GamePath = gamePath,
+                GameConfig = new GameLauncherConfig { Name = "BlueArchive", Version = "1.0.0" }
+            },
+            Settings = new LauncherSettings { LaunchCheckMode = LaunchCheckModes.None }
+        });
+
+        Assert.False(result.Success);
+        Assert.Equal(
+            localizer.F(LocalizationKeys.GameRuntimeEnvironmentPrefixNotWritable, prefix),
+            result.Message);
+    }
+
+    [Fact]
     public async Task StartAsync_WhenInstallationIsReady_StartsConfiguredExecutable()
     {
         Assert.SkipUnless(OperatingSystem.IsWindows(), "ComSpec (cmd.exe) is only available on Windows.");
@@ -698,6 +730,35 @@ Assert.Equal(GameOperationErrorCode.Uninstall, result.ErrorCode);
         tempDir.Dispose();
     }
 
+    /// <summary>Runtime stub that reports a blocking environment precheck finding without launching.</summary>
+    private sealed class EnvironmentFailureRuntime(GameEnvironmentFailure failure) : IGameRuntime
+    {
+        public Task<GameRuntimeLaunchResult> LaunchAsync(
+            GameLaunchRequest request,
+            GameRuntimeConfiguration configuration,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(new GameRuntimeLaunchResult(
+                Success: false,
+                RunnerId: "umu",
+                Process: null,
+                Diagnostic: new GameRuntimeDiagnosticSnapshot(
+                    "umu",
+                    "1.0.0",
+                    "/usr/bin/umu-run",
+                    failure.Path,
+                    "auto",
+                    request.GameId,
+                    request.ExecutablePath,
+                    request.WorkingDirectory),
+                Candidates: [],
+                Failure: GameRuntimeLaunchFailure.EnvironmentPrecheckFailed,
+                EnvironmentFailures: [failure]));
+
+        public Task<IReadOnlyList<GameRuntimeStatusEntry>> GetStatusesAsync(
+            GameRuntimeConfiguration configuration,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<GameRuntimeStatusEntry>>([]);
+    }
 
     private sealed class FailingProcessLauncher : IProcessLauncher
     {

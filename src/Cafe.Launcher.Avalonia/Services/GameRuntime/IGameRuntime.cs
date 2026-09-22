@@ -16,11 +16,20 @@ public enum GameRuntimeLaunchFailure
     StartFailed,
 
     /// <summary>Availability collection failed before any runner could be chosen.</summary>
-    AvailabilityCheckFailed
+    AvailabilityCheckFailed,
+
+    /// <summary>The compatibility prefix failed the launch-time environment precheck (P1-D).</summary>
+    EnvironmentPrecheckFailed
 }
 
 /// <summary>One runner's current availability, as reported by the settings status display.</summary>
 public sealed record GameRuntimeStatusEntry(string RunnerId, GameRunnerAvailability Availability);
+
+/// <summary>
+/// One blocking compatibility-environment finding that stopped a launch (P1-D): the finding
+/// category plus the prefix path to act on. The internal report carries more detail.
+/// </summary>
+public sealed record GameEnvironmentFailure(CompatibilityFindingCode Code, string Path);
 
 /// <summary>
 /// Outcome of one runtime launch attempt: the selected runner (when any), the
@@ -34,7 +43,8 @@ public sealed record GameRuntimeLaunchResult(
     GameRuntimeDiagnosticSnapshot Diagnostic,
     IReadOnlyList<GameRuntimeStatusEntry> Candidates,
     GameRuntimeLaunchFailure Failure = GameRuntimeLaunchFailure.None,
-    Exception? FailureException = null);
+    Exception? FailureException = null,
+    IReadOnlyList<GameEnvironmentFailure>? EnvironmentFailures = null);
 
 /// <summary>
 /// The deep game-runtime module: resolves a runner, checks availability, starts
