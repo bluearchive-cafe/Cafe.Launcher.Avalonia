@@ -338,8 +338,7 @@ public sealed class InstallerContractTests
     {
         var script = ReadProjectFile("scripts/Build-Distribution.ps1");
         var control = ReadProjectFile("installer/linux/debian/control");
-        var launcher = ReadProjectFile("installer/linux/debian/cafe-launcher");
-        var desktop = ReadProjectFile("installer/linux/debian/cafe-launcher.desktop");
+        var launcher = ReadProjectFile("installer/linux/templates/cafe-launcher");
 
         Assert.Contains("linux-x64/deb-root", script, StringComparison.Ordinal);
         Assert.Contains("opt/cafe-launcher", script, StringComparison.Ordinal);
@@ -353,10 +352,15 @@ public sealed class InstallerContractTests
             StringComparison.Ordinal);
         Assert.Contains("Version: {VERSION}", control, StringComparison.Ordinal);
         Assert.Contains("Architecture: amd64", control, StringComparison.Ordinal);
-        Assert.Contains("CAFE_LAUNCHER_PACKAGE_FORMAT=deb", launcher, StringComparison.Ordinal);
+        // deb/rpm/pacman 共用一份 wrapper 模板，格式标记在打包时替换。
+        Assert.Contains("CAFE_LAUNCHER_PACKAGE_FORMAT={PACKAGE_FORMAT}", launcher, StringComparison.Ordinal);
         Assert.Contains("exec /opt/cafe-launcher/Cafe.Launcher.Avalonia", launcher, StringComparison.Ordinal);
-        Assert.Contains("Exec=cafe-launcher", desktop, StringComparison.Ordinal);
-        Assert.Contains("TryExec=cafe-launcher", desktop, StringComparison.Ordinal);
+        Assert.Contains("New-LinuxPackageAssets -PackageFormat \"deb\"", script, StringComparison.Ordinal);
+        // desktop 由共享模板生成，包安装替换为 cafe-launcher + TryExec。
+        Assert.Contains(
+            "New-LinuxDesktopEntry -ExecBlock \"Exec=cafe-launcher`nTryExec=cafe-launcher\"",
+            script,
+            StringComparison.Ordinal);
 
         var workflow = ReadProjectFile(".github/workflows/release.yml");
         Assert.Contains("Install Linux packaging and smoke-test dependencies", workflow, StringComparison.Ordinal);
@@ -372,8 +376,7 @@ public sealed class InstallerContractTests
     {
         var script = ReadProjectFile("scripts/Build-Distribution.ps1");
         var spec = ReadProjectFile("installer/linux/rpm/cafe-launcher.spec");
-        var launcher = ReadProjectFile("installer/linux/rpm/cafe-launcher");
-        var desktop = ReadProjectFile("installer/linux/rpm/cafe-launcher.desktop");
+        var launcher = ReadProjectFile("installer/linux/templates/cafe-launcher");
 
         Assert.Contains("linux-x64/rpmbuild", script, StringComparison.Ordinal);
         Assert.Contains("Invoke-Checked \"rpmbuild\"", script, StringComparison.Ordinal);
@@ -381,6 +384,13 @@ public sealed class InstallerContractTests
         // 预发布号必须转成 RPM 的 ~ 排序形式，1.1.0~beta.11 才会排在 1.1.0 之前。
         Assert.Contains(
             "[regex]::Replace($version.VersionPrefix, \"-\", \"~\", 1)",
+            script,
+            StringComparison.Ordinal);
+        // asset_dir 指向从模板生成的资产目录，而不是提交到 rpm/ 下的副本。
+        Assert.Contains("New-LinuxPackageAssets -PackageFormat \"rpm\"", script, StringComparison.Ordinal);
+        Assert.Contains("linux-x64/assets/rpm", script, StringComparison.Ordinal);
+        Assert.Contains(
+            "asset_dir $([System.IO.Path]::GetFullPath($rpmLaunchAssetsDir))",
             script,
             StringComparison.Ordinal);
 
@@ -400,13 +410,16 @@ public sealed class InstallerContractTests
             spec,
             StringComparison.Ordinal);
 
-        Assert.Contains("CAFE_LAUNCHER_PACKAGE_FORMAT=rpm", launcher, StringComparison.Ordinal);
+        Assert.Contains("CAFE_LAUNCHER_PACKAGE_FORMAT={PACKAGE_FORMAT}", launcher, StringComparison.Ordinal);
         Assert.Contains("exec /opt/cafe-launcher/Cafe.Launcher.Avalonia", launcher, StringComparison.Ordinal);
-        Assert.Contains("Exec=cafe-launcher", desktop, StringComparison.Ordinal);
-        Assert.Contains("TryExec=cafe-launcher", desktop, StringComparison.Ordinal);
-        // CRLF 落库的 #!/bin/sh 会被内核当成找不到解释器，故与 deb 资产同样强制 LF。
+        // desktop 由共享模板生成，包安装替换为 cafe-launcher + TryExec。
         Assert.Contains(
-            "installer/linux/rpm/* text eol=lf",
+            "New-LinuxDesktopEntry -ExecBlock \"Exec=cafe-launcher`nTryExec=cafe-launcher\"",
+            script,
+            StringComparison.Ordinal);
+        // CRLF 落库的 #!/bin/sh 会被内核当成找不到解释器，故模板强制 LF。
+        Assert.Contains(
+            "installer/linux/templates/* text eol=lf",
             ReadProjectFile(".gitattributes"),
             StringComparison.Ordinal);
 
@@ -419,10 +432,61 @@ public sealed class InstallerContractTests
     }
 
     [Fact]
+    public void LinuxPackages_GenerateOneWrapperAndDesktopFromSharedTemplates()
+    {
+        var script = ReadProjectFile("scripts/Build-Distribution.ps1");
+
+        // 单一来源：格式无关的 wrapper 与 desktop 模板。
+        foreach (var template in new[]
+        {
+            "installer/linux/templates/cafe-launcher",
+            "installer/linux/templates/cafe-launcher.desktop",
+        })
+        {
+            Assert.True(
+                File.Exists(TestRepository.FromRepositoryRoot(template)),
+                $"{template} must be the single source for the Linux launch assets.");
+        }
+
+        // 每格式不再各自提交副本；这些路径一旦回归就会重新引入漂移。
+        foreach (var leftover in new[]
+        {
+            "installer/linux/debian/cafe-launcher",
+            "installer/linux/debian/cafe-launcher.desktop",
+            "installer/linux/rpm/cafe-launcher",
+            "installer/linux/rpm/cafe-launcher.desktop",
+            "installer/linux/arch/cafe-launcher",
+            "installer/linux/arch/cafe-launcher.desktop",
+            "installer/linux/appimage/cafe-launcher.desktop",
+        })
+        {
+            Assert.False(
+                File.Exists(TestRepository.FromRepositoryRoot(leftover)),
+                $"{leftover} duplicates the shared template and must not exist.");
+        }
+
+        Assert.Contains("function New-LinuxPackageAssets", script, StringComparison.Ordinal);
+        Assert.Contains("function New-LinuxDesktopEntry", script, StringComparison.Ordinal);
+        Assert.Contains(
+            "$wrapper.Replace(\"{PACKAGE_FORMAT}\", $PackageFormat)",
+            script,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            ".Replace(\"{EXEC_BLOCK}\", $ExecBlock)",
+            script,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "New-LinuxDesktopEntry -ExecBlock \"Exec=cafe-launcher`nTryExec=cafe-launcher\"",
+            script,
+            StringComparison.Ordinal);
+        Assert.Contains("installer/linux/templates/* text eol=lf", ReadProjectFile(".gitattributes"), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void LinuxAppImage_HasStandardAppRunAndStartupSmokeTest()
     {
         var script = ReadProjectFile("scripts/Build-Distribution.ps1");
-        var appRun = ReadProjectFile("installer/linux/AppRun");
+        var appRun = ReadProjectFile("installer/linux/appimage/AppRun");
         var workflow = ReadProjectFile(".github/workflows/release.yml");
 
         Assert.StartsWith("#!/bin/sh", appRun, StringComparison.Ordinal);
@@ -431,6 +495,11 @@ public sealed class InstallerContractTests
             appRun,
             StringComparison.Ordinal);
         Assert.Contains("$appDirRoot \"AppRun\"", script, StringComparison.Ordinal);
+        // AppImage 的 desktop 也来自共享模板，只把命令块换成自身可执行名（无 TryExec）。
+        Assert.Contains(
+            "New-LinuxDesktopEntry -ExecBlock \"Exec=Cafe.Launcher.Avalonia\"",
+            script,
+            StringComparison.Ordinal);
         Assert.Contains("\"--runtime-file\"", script, StringComparison.Ordinal);
         Assert.Contains(
             "\"--appimage-extract-and-run\",\n                \"--version\"",
@@ -639,9 +708,9 @@ public sealed class InstallerContractTests
             Assert.True(png.Length > 4 && png.AsSpan(0, 4).SequenceEqual(new byte[] { 0x89, 0x50, 0x4E, 0x47 }), $"app-icon-{size}.png must be a valid PNG.");
         }
 
-        var desktop = ReadProjectFile("installer/linux/cafe-launcher.desktop");
-        Assert.Contains("Exec=Cafe.Launcher.Avalonia", desktop, StringComparison.Ordinal);
-        Assert.Contains("Icon=cafe-launcher", desktop, StringComparison.Ordinal);
+        var desktopTemplate = ReadProjectFile("installer/linux/templates/cafe-launcher.desktop");
+        Assert.Contains("Icon=cafe-launcher", desktopTemplate, StringComparison.Ordinal);
+        Assert.Contains("{EXEC_BLOCK}", desktopTemplate, StringComparison.Ordinal);
     }
 
     [Fact]
