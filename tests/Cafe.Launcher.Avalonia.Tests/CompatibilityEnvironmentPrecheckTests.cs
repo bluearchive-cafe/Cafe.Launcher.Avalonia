@@ -12,6 +12,10 @@ public sealed class CompatibilityEnvironmentPrecheckTests : IDisposable
     [Fact]
     public void IsNoExecMount_PicksTheMostSpecificMountAndReadsItsOptions()
     {
+        Assert.SkipUnless(
+            OperatingSystem.IsLinux(),
+            "Mount-table matching follows the Unix path separator semantics.");
+
         const string mounts =
             "/dev/sda1 / ext4 rw,relatime 0 0\n"
             + "/dev/sdb1 /home ext4 rw,noexec 0 0\n"
@@ -25,6 +29,10 @@ public sealed class CompatibilityEnvironmentPrecheckTests : IDisposable
     [Fact]
     public void IsNoExecMount_UnescapesSpacesInMountPoints()
     {
+        Assert.SkipUnless(
+            OperatingSystem.IsLinux(),
+            "Mount-table matching follows the Unix path separator semantics.");
+
         const string mounts = "/dev/sda1 /mnt/My\\040Games vfat rw,noexec 0 0\n";
 
         Assert.True(CompatibilityEnvironmentPrecheck.IsNoExecMount(mounts, "/mnt/My Games/prefix"));
