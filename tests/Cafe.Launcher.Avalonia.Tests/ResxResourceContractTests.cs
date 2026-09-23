@@ -9,6 +9,15 @@ namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed class ResxResourceContractTests
 {
+    /// <summary>
+    /// 中性资源里的键数。这不是随手钉住的数字，而是有意为之的**减速带**：新增一句 UI 串会让
+    /// 本测试变红，从而强制作者确认四个语言文件都补齐了。
+    /// 更新方式：先跑 <c>.\scripts\Test-LocalizationContract.ps1</c> 拿到实测键数，把这里改成
+    /// 实测值，并在 <see cref="Resx_NeutralContainsAllExpectedKeys"/> 的演进注释里补上
+    /// 「为什么加一」。
+    /// </summary>
+    private const int ExpectedNeutralResourceKeyCount = 592;
+
     private static readonly string ResxDir;
     private static readonly string[] AllLocales = ["en", "zh-Hans", "zh-Hant", "ja"];
     private static readonly string[] DynamicProductionKeys =
@@ -49,7 +58,7 @@ public sealed class ResxResourceContractTests
         // → 586（P1-D 兼容前缀环境预检的三条可操作文案：不可写 / 不支持符号链接 / noexec）。
         // → 591（Windows 应用内自更新：下载中、就绪待重启、重启按钮、下载失败、启动失败，见 ADR-037）。
         // → 592（启动更新提示的主行动改为「查看更新」）。
-        Assert.Equal(592, ResxValues["en"].Count);
+        Assert.Equal(ExpectedNeutralResourceKeyCount, ResxValues["en"].Count);
     }
 
     [Fact]
