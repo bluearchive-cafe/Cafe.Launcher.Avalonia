@@ -78,6 +78,21 @@ public sealed class DialogsViewModelTests : IDisposable
     }
 
     [Fact]
+    public void ShowUpdateAvailable_WithReleaseNotes_ExposesMarkdownPreview()
+    {
+        var viewModel = CreateViewModel();
+
+        viewModel.ShowUpdateAvailable(
+            "1.2.0",
+            CreateFiles(),
+            canSelfUpdate: true,
+            releaseNotes: "## Highlights\n\n- Faster updates");
+
+        Assert.True(viewModel.HasUpdateReleaseNotes);
+        Assert.Equal("## Highlights\n\n- Faster updates", viewModel.UpdateReleaseNotes);
+    }
+
+    [Fact]
     public void ConfirmUpdateAvailable_WithoutSelection_DoesNotCloseOrRequestDownload()
     {
         var viewModel = CreateViewModel();

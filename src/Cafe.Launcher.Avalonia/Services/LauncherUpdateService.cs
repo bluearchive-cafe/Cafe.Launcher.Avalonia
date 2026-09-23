@@ -114,10 +114,20 @@ public sealed partial class LauncherUpdateService
                 return LauncherUpdateCheckResult.Failed(message: validationError);
             }
 
+            var isUpdateAvailable = IsNewerVersion(targetRelease.Version, currentVersion);
+            var releaseNotes = targetRelease.ReleaseNotes;
+            if (isUpdateAvailable && string.IsNullOrWhiteSpace(releaseNotes))
+            {
+                releaseNotes = await TryFetchGitHubReleaseNotesAsync(
+                    targetRelease.Version,
+                    cancellationToken).ConfigureAwait(false);
+            }
+
             return LauncherUpdateCheckResult.Succeeded(
                 targetRelease.Version,
                 Array.AsReadOnly(targetRelease.Files.ToArray()),
-                IsNewerVersion(targetRelease.Version, currentVersion));
+                isUpdateAvailable,
+                releaseNotes);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -229,6 +239,7 @@ public sealed partial class LauncherUpdateService
             {
                 Version = NormalizeGitHubTag(release.TagName),
                 ReleaseDate = release.PublishedAt,
+                ReleaseNotes = release.Body,
                 Files = release.Assets
                     .Where(asset => string.Equals(asset.State, "uploaded", StringComparison.OrdinalIgnoreCase))
                     .Select(asset => new ReleaseFile
@@ -240,6 +251,46 @@ public sealed partial class LauncherUpdateService
                     .ToList()
             })
             .ToList();
+    }
+
+    private async Task<string> TryFetchGitHubReleaseNotesAsync(
+        string version,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var requestUri = new Uri(ApiConfig.GitHubReleaseByTagApiUrl + "v" + Uri.EscapeDataString(version));
+            var release = await transport.GetJsonAsync<GitHubRelease>(
+                requestUri,
+                new RemoteRequestOptions
+                {
+                    Timeout = TimeSpan.FromSeconds(15),
+                    Json = JsonOptions,
+                    ConfigureRequest = request => request.Headers.UserAgent.ParseAdd(
+                        $"CafeLauncher/{BuildInfo.LauncherVersion}")
+                },
+                cancellationToken).ConfigureAwait(false);
+            return release?.Body ?? "";
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception) when (exception is HttpRequestException
+            or JsonException
+            or InvalidOperationException
+            or TaskCanceledException)
+        {
+            if (diagnostics is not null)
+            {
+                await diagnostics.MessageAsync(
+                    "LauncherUpdate",
+                    $"Release notes could not be loaded: {exception.Message}",
+                    CancellationToken.None).ConfigureAwait(false);
+            }
+
+            return "";
+        }
     }
 
     private static string NormalizeGitHubTag(string tagName) =>
@@ -360,6 +411,9 @@ public sealed partial class LauncherUpdateService
         [JsonPropertyName("published_at")]
         public DateTime? PublishedAt { get; set; }
 
+        [JsonPropertyName("body")]
+        public string Body { get; set; } = "";
+
         [JsonPropertyName("assets")]
         public List<GitHubReleaseAsset> Assets { get; set; } = [];
     }
@@ -392,6 +446,7 @@ public sealed class LauncherUpdateCheckResult
         bool isUpdateAvailable,
         string latestVersion,
         IReadOnlyList<ReleaseFile> files,
+        string releaseNotes,
         Exception? failureException = null,
         string? failureMessage = null)
     {
@@ -399,6 +454,7 @@ public sealed class LauncherUpdateCheckResult
         IsUpdateAvailable = isUpdateAvailable;
         LatestVersion = latestVersion;
         Files = files;
+        ReleaseNotes = releaseNotes;
         FailureException = failureException;
         FailureMessage = failureMessage;
     }
@@ -408,19 +464,22 @@ public sealed class LauncherUpdateCheckResult
     public string LatestVersion { get; }
 
     public IReadOnlyList<ReleaseFile> Files { get; }
+    public string ReleaseNotes { get; }
     public Exception? FailureException { get; }
     public string? FailureMessage { get; }
 
     internal static LauncherUpdateCheckResult Succeeded(
         string latestVersion,
         IReadOnlyList<ReleaseFile> files,
-        bool isUpdateAvailable)
+        bool isUpdateAvailable,
+        string releaseNotes = "")
     {
         return new LauncherUpdateCheckResult(
             isSuccessful: true,
             isUpdateAvailable,
             latestVersion,
-            files);
+            files,
+            releaseNotes);
     }
 
     internal static LauncherUpdateCheckResult Failed(
@@ -432,6 +491,7 @@ public sealed class LauncherUpdateCheckResult
             isUpdateAvailable: false,
             latestVersion: "",
             files: [],
+            releaseNotes: "",
             failureException: exception,
             failureMessage: message);
     }

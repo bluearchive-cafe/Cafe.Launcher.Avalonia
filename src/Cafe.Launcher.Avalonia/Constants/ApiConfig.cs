@@ -36,4 +36,5 @@ public static class ApiConfig
     public const string LauncherReleasesPath = "/api/launcher/releases";
     public const string GitHubReleasesApiUrl =
         "https://api.github.com/repos/" + GitHubReleaseRepositorySlug + "/releases";
+    public const string GitHubReleaseByTagApiUrl = GitHubReleasesApiUrl + "/tags/";
 }

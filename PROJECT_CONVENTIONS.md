@@ -253,6 +253,7 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 | .NET SDK | 10.0.302 | Runtime / SDK（global.json 钉住，`latestFeature` 滚动） |
 | Avalonia / Avalonia.Desktop | 12.1.2 | UI Framework |
 | Avalonia.Controls.ColorPicker | 12.1.2 | 自定义主题色取色器 |
+| Markdown.Avalonia.Tight | 12.0.0-a3 | 更新说明 Markdown 预览 |
 | Avalonia.Themes.Fluent | 12.1.2 | Fluent 主题 |
 | Avalonia.Headless.XUnit | 12.1.2 | Headless UI testing |
 | AvaloniaUI.DiagnosticsSupport | 2.2.3 | 调试期 UI 诊断（Debug 专用，Release 不分发） |

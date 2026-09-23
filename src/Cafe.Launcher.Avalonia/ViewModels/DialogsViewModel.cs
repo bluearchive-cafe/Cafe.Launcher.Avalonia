@@ -133,6 +133,12 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel, I
     private string updateAvailableText = "";
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasUpdateReleaseNotes))]
+    private string updateReleaseNotes = "";
+
+    public bool HasUpdateReleaseNotes => !string.IsNullOrWhiteSpace(UpdateReleaseNotes);
+
+    [ObservableProperty]
     private ReleaseFile? selectedUpdateFile;
 
     public ObservableCollection<ReleaseFile> UpdateAvailableFiles { get; } = [];
@@ -257,10 +263,15 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel, I
         DownloadRunningCloseConfirm.Show(localizer.T(LocalizationKeys.CloseDownloadMessage));
     }
 
-    public void ShowUpdateAvailable(string version, IReadOnlyList<ReleaseFile> files, bool canSelfUpdate)
+    public void ShowUpdateAvailable(
+        string version,
+        IReadOnlyList<ReleaseFile> files,
+        bool canSelfUpdate,
+        string releaseNotes = "")
     {
         UpdateAvailableVersion = version;
         UpdateAvailableText = localizer.F(LocalizationKeys.LauncherUpdateAvailableMessage, version);
+        UpdateReleaseNotes = ReleaseNotesMarkdownSanitizer.Sanitize(releaseNotes);
         SelectedUpdateFile = null;
         UpdateAvailableFiles.Clear();
         foreach (var file in files)
@@ -325,6 +336,7 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel, I
         IsUpdateAvailableVisible = false;
         SelectedUpdateFile = null;
         UpdateAvailableFiles.Clear();
+        UpdateReleaseNotes = "";
         ResetUpdateApply();
     }
 

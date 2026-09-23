@@ -273,7 +273,8 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         dialogs.ShowUpdateAvailable(
             result.LatestVersion,
             result.Files,
-            launcherSelfUpdateService.CanApplyInApp(result.Files));
+            launcherSelfUpdateService.CanApplyInApp(result.Files),
+            result.ReleaseNotes);
     }
 
     /// <summary>Opens the shared launcher-settings reset confirmation (shell performs the reset).</summary>
