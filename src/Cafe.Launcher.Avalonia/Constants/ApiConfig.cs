@@ -33,7 +33,7 @@ public static class ApiConfig
     public const string GitHubReleaseRepositoryUrl =
         "https://github.com/" + GitHubReleaseRepositorySlug;
     public const string LauncherApiBaseUrl = "https://api-cafe-launcher.saibamidori.com/";
-    public const string LauncherReleasesPath = "/api/launcher/releases";
+    public const string LauncherReleasesPath = "/api/v2/launcher/releases";
     public const string GitHubReleasesApiUrl =
         "https://api.github.com/repos/" + GitHubReleaseRepositorySlug + "/releases";
     public const string GitHubReleaseByTagApiUrl = GitHubReleasesApiUrl + "/tags/";

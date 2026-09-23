@@ -35,6 +35,7 @@ public sealed class LauncherConstantsTests
     public void LauncherUpdateEndpoints_UseTheApplicationRepository()
     {
         Assert.Equal("bluearchive-cafe/Cafe.Launcher.Avalonia", ApiConfig.GitHubReleaseRepositorySlug);
+        Assert.Equal("/api/v2/launcher/releases", ApiConfig.LauncherReleasesPath);
         Assert.Equal(
             "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases",
             LauncherConstants.GitHubReleasesPageUrl);
