@@ -23,16 +23,16 @@ public sealed class ReleaseNotesMarkdownSanitizerTests
     }
 
     [Theory]
-    [InlineData("NOTE", "ℹ️ Note")]
-    [InlineData("TIP", "💡 Tip")]
-    [InlineData("IMPORTANT", "❗ Important")]
-    [InlineData("WARNING", "⚠️ Warning")]
-    [InlineData("CAUTION", "🚫 Caution")]
-    public void Sanitize_GitHubAlertHeader_BecomesBoldBlockquoteTitle(string marker, string label)
+    [InlineData("NOTE")]
+    [InlineData("TIP")]
+    [InlineData("IMPORTANT")]
+    [InlineData("WARNING")]
+    [InlineData("CAUTION")]
+    public void Sanitize_GitHubAlert_IsPreservedForMarkdig(string marker)
     {
-        var sanitized = ReleaseNotesMarkdownSanitizer.Sanitize("> [!" + marker + "]\n> 正文");
+        var markdown = "> [!" + marker + "]\n> 正文";
 
-        Assert.Equal("> **" + label + "**\n> 正文", sanitized);
+        Assert.Equal(markdown, ReleaseNotesMarkdownSanitizer.Sanitize(markdown));
     }
 
     [Fact]
@@ -52,12 +52,12 @@ public sealed class ReleaseNotesMarkdownSanitizerTests
     }
 
     [Fact]
-    public void Sanitize_TaskListCheckboxes_BecomeGlyphMarkers()
+    public void Sanitize_TaskListCheckboxes_ArePreservedForMarkdig()
     {
         var sanitized = ReleaseNotesMarkdownSanitizer.Sanitize(
             "- [ ] 未完成\n- [x] 已完成\n1. [X] 有序已完成");
 
-        Assert.Equal("- ☐ 未完成\n- ☑ 已完成\n1. ☑ 有序已完成", sanitized);
+        Assert.Equal("- [ ] 未完成\n- [x] 已完成\n1. [X] 有序已完成", sanitized);
     }
 
     [Fact]
@@ -66,5 +66,30 @@ public sealed class ReleaseNotesMarkdownSanitizerTests
         const string markdown = "- [普通方括号] 不是任务列表";
 
         Assert.Equal(markdown, ReleaseNotesMarkdownSanitizer.Sanitize(markdown));
+    }
+
+    [Fact]
+    public void Sanitize_GfmSyntaxInsideCode_IsNotRewritten()
+    {
+        const string markdown =
+            "`- [x] [inline](https://example.com)`\n\n```markdown\n> [!NOTE]\n![image](https://example.com/image.png)\n```";
+
+        Assert.Equal(markdown, ReleaseNotesMarkdownSanitizer.Sanitize(markdown));
+    }
+
+    [Fact]
+    public void Sanitize_TaskListInsideBlockQuote_IsPreservedForMarkdig()
+    {
+        const string markdown = "> - [ ] 未完成\n> - [X] 已完成";
+
+        Assert.Equal(markdown, ReleaseNotesMarkdownSanitizer.Sanitize(markdown));
+    }
+
+    [Fact]
+    public void Sanitize_LinkWithNestedLabelAndDestination_PreservesCompleteLabel()
+    {
+        const string markdown = "[the [nested] label](https://example.com/a_(b))";
+
+        Assert.Equal("the [nested] label", ReleaseNotesMarkdownSanitizer.Sanitize(markdown));
     }
 }

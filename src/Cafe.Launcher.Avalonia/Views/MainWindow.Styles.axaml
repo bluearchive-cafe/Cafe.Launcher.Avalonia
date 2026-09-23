@@ -1041,6 +1041,68 @@
         <Setter Property="TextWrapping" Value="Wrap"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Body}"/>
     </Style>
+    <!-- MarkView supplies the Markdown structure and alert variants; these scoped
+         overrides bind the release-notes surface to the launcher theme tokens. -->
+    <Style Selector="controls|ReleaseNotesMarkdownViewer :is(TextBlock)">
+        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Md}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
+    </Style>
+    <Style Selector="controls|ReleaseNotesMarkdownViewer :is(TextBlock).markdown-h1">
+        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Display}"/>
+        <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
+    </Style>
+    <Style Selector="controls|ReleaseNotesMarkdownViewer :is(TextBlock).markdown-h2">
+        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Headline.Md}"/>
+        <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
+    </Style>
+    <Style Selector="controls|ReleaseNotesMarkdownViewer :is(TextBlock).markdown-h3">
+        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Title.Md}"/>
+        <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
+    </Style>
+    <Style Selector="controls|ReleaseNotesMarkdownViewer :is(TextBlock).markdown-h4">
+        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Md}"/>
+        <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
+    </Style>
+    <Style Selector="controls|ReleaseNotesMarkdownViewer Border.markdown-blockquote">
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Border}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Component.Dialog.Alert.BorderThickness}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Soft}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Sm}"/>
+    </Style>
+    <Style Selector="controls|ReleaseNotesMarkdownViewer Border.markdown-code-block">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Xs}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Sm}"/>
+    </Style>
+    <Style Selector="controls|ReleaseNotesMarkdownViewer Border.markdown-code-block > TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource Launcher.Typography.FontFamily.Monospace}"/>
+        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Sm}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
+    </Style>
+    <Style Selector="controls|ReleaseNotesMarkdownViewer Run.markdown-code-inline">
+        <Setter Property="FontFamily" Value="{StaticResource Launcher.Typography.FontFamily.Monospace}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
+    </Style>
+    <Style Selector="controls|ReleaseNotesMarkdownViewer Border.markdown-table-cell">
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Sm}"/>
+    </Style>
+    <Style Selector="controls|ReleaseNotesMarkdownViewer Border.markdown-table-header">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
+    </Style>
+    <Style Selector="controls|ReleaseNotesMarkdownViewer Border.markdown-table-header TextBlock">
+        <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
+    </Style>
+    <Style Selector="controls|ReleaseNotesMarkdownViewer Separator.markdown-thematic-break">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Card.Border}"/>
+    </Style>
     <Style Selector="Border.dialog-card">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Card.Background}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Outline}"/>

@@ -31,15 +31,14 @@ The archives carry this file and `LICENSE` next to the binaries.
 | Avalonia.Win32 | 12.1.2 | MIT ([text](https://licenses.nuget.org/MIT)) | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
 | Avalonia.X11 | 12.1.2 | MIT ([text](https://licenses.nuget.org/MIT)) | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
 | AvaloniaUI.DiagnosticsSupport | 2.2.3 | see package | https://avaloniaui.net/ |
-| ColorDocument.Avalonia | 12.0.0-a3 | MIT ([text](https://licenses.nuget.org/MIT)) | https://github.com/whistyun/Markdown.Avalonia/tree/master/ColorDocument.Avalonia/ |
-| ColorTextBlock.Avalonia | 12.0.0-a3 | MIT ([text](https://licenses.nuget.org/MIT)) | https://github.com/whistyun/Markdown.Avalonia/tree/master/ColorTextBlock.Avalonia/ |
 | CommunityToolkit.Mvvm | 8.4.2 | MIT ([text](https://licenses.nuget.org/MIT)) | https://github.com/CommunityToolkit/dotnet |
 | HarfBuzzSharp | 8.3.1.3 | MIT ([text](https://licenses.nuget.org/MIT)) | https://go.microsoft.com/fwlink/?linkid=868515 |
 | HarfBuzzSharp.NativeAssets.Linux | 8.3.1.3 | MIT ([text](https://licenses.nuget.org/MIT)) | https://go.microsoft.com/fwlink/?linkid=868515 |
 | HarfBuzzSharp.NativeAssets.macOS | 8.3.1.3 | MIT ([text](https://licenses.nuget.org/MIT)) | https://go.microsoft.com/fwlink/?linkid=868515 |
 | HarfBuzzSharp.NativeAssets.WebAssembly | 8.3.1.3 | MIT ([text](https://licenses.nuget.org/MIT)) | https://go.microsoft.com/fwlink/?linkid=868515 |
 | HarfBuzzSharp.NativeAssets.Win32 | 8.3.1.3 | MIT ([text](https://licenses.nuget.org/MIT)) | https://go.microsoft.com/fwlink/?linkid=868515 |
-| Markdown.Avalonia.Tight | 12.0.0-a3 | MIT ([text](https://licenses.nuget.org/MIT)) | https://github.com/whistyun/Markdown.Avalonia |
+| Markdig | 1.3.2 | BSD-2-Clause ([text](https://licenses.nuget.org/BSD-2-Clause)) | https://xoofx.github.io/markdig |
+| MarkView.Avalonia | 12.2.1 | MIT ([text](https://licenses.nuget.org/MIT)) | https://github.com/Kryptos-FR/MarkView.Avalonia |
 | Material.Icons | 3.0.2 | MIT ([text](https://licenses.nuget.org/MIT)) | https://github.com/SKProCH/Material.Icons/ |
 | Material.Icons.Avalonia | 3.0.2 | MIT ([text](https://licenses.nuget.org/MIT)) | https://github.com/AvaloniaUtils/Material.Icons.Avalonia/ |
 | MicroCom.Runtime | 0.11.6 | MIT ([text](https://licenses.nuget.org/MIT)) | - |

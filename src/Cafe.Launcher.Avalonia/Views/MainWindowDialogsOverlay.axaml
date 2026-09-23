@@ -3,7 +3,6 @@
              xmlns:vm="using:Cafe.Launcher.Avalonia.ViewModels"
              xmlns:converters="using:Cafe.Launcher.Avalonia.Converters"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
-             xmlns:markdown="clr-namespace:Markdown.Avalonia;assembly=Markdown.Avalonia"
              xmlns:controls="using:Cafe.Launcher.Avalonia.Controls"
              xmlns:views="using:Cafe.Launcher.Avalonia.Views"
              x:Class="Cafe.Launcher.Avalonia.Views.MainWindowDialogsOverlay"
@@ -108,7 +107,7 @@
                 </controls:DialogSurface.HeaderIcon>
                 <controls:DialogSurface.Content>
                     <StackPanel Spacing="{StaticResource Launcher.Spacing.Md}">
-                        <markdown:MarkdownScrollViewer
+                        <controls:ReleaseNotesMarkdownViewer
                             IsVisible="{Binding Dialogs.HasUpdateReleaseNotes}"
                             Markdown="{Binding Dialogs.UpdateReleaseNotes}"
                             MaxHeight="240"/>

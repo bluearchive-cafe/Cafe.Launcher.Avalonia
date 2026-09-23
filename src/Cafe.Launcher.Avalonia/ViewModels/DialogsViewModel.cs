@@ -332,7 +332,8 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel, I
         }
 
         IsUpdateAvailableVisible = false;
-        UpdateReleaseNotes = "";
+        // MotionVisibility keeps the surface on screen during its exit animation.
+        // Preserve the preview until it disappears; ShowUpdateAvailable replaces it next time.
         ResetUpdateApply();
     }
 
