@@ -800,7 +800,7 @@ public sealed class ShellLifecycle : IShellRuntime
                     Severity = ToastSeverity.Info,
                     Duration = ToastDuration.Extended,
                     PrimaryAction = new ToastAction(
-                        localizer.T(LocalizationKeys.LauncherUpdateDownload),
+                        localizer.T(LocalizationKeys.LauncherUpdateView),
                         _ =>
                         {
                             settings.CheckForUpdatesCommand.Execute(null);
