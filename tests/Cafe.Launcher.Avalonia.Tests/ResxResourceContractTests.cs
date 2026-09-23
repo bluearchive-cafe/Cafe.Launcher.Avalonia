@@ -48,7 +48,8 @@ public sealed class ResxResourceContractTests
         // → 583（资源面板可关闭的 UID 生成提示：提示正文与关闭按钮，3cf0d7e 补记）。
         // → 586（P1-D 兼容前缀环境预检的三条可操作文案：不可写 / 不支持符号链接 / noexec）。
         // → 591（Windows 应用内自更新：下载中、就绪待重启、重启按钮、下载失败、启动失败，见 ADR-037）。
-        Assert.Equal(591, ResxValues["en"].Count);
+        // → 592（启动更新提示的主行动改为「查看更新」）。
+        Assert.Equal(592, ResxValues["en"].Count);
     }
 
     [Fact]

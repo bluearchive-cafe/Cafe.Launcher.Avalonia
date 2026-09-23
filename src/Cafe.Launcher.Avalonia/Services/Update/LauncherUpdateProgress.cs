@@ -5,7 +5,11 @@ namespace Cafe.Launcher.Avalonia.Services.Update;
 /// <summary>Progress of a launcher update package download.</summary>
 /// <param name="DownloadedBytes">Bytes written so far.</param>
 /// <param name="TotalBytes">Declared total size, or null when the server did not declare one.</param>
-public readonly record struct LauncherUpdateProgress(long DownloadedBytes, long? TotalBytes)
+/// <param name="BytesPerSecond">Average transfer rate since this download started.</param>
+public readonly record struct LauncherUpdateProgress(
+    long DownloadedBytes,
+    long? TotalBytes,
+    long BytesPerSecond = 0)
 {
     /// <summary>Completed fraction in [0, 1]; 0 while the total size is unknown.</summary>
     public double Fraction => TotalBytes is > 0

@@ -62,6 +62,9 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
     private string installButtonText = "";
 
     [ObservableProperty]
+    private string installButtonIconKind = "Download";
+
+    [ObservableProperty]
     private string installButtonToolTip = "";
 
     [ObservableProperty]
@@ -206,6 +209,13 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
             LauncherRuntimeState.Corrupted => localizer.T(LocalizationKeys.Repair),
             LauncherRuntimeState.IoFailure or LauncherRuntimeState.RemoteUnavailable => localizer.T(LocalizationKeys.Refresh),
             _ => localizer.T(LocalizationKeys.UpdateGame)
+        };
+        InstallButtonIconKind = snapshot.RuntimeState switch
+        {
+            LauncherRuntimeState.NotInstalled => "Download",
+            LauncherRuntimeState.Corrupted => "Tools",
+            LauncherRuntimeState.IoFailure or LauncherRuntimeState.RemoteUnavailable => "Refresh",
+            _ => "Update"
         };
         InstallButtonToolTip = shell.IsInstallBlockedByDiskSpace
             ? shell.InstallDiskSpaceMessage

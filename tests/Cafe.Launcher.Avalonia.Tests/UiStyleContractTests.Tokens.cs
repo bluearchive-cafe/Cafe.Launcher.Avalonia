@@ -162,7 +162,12 @@ public sealed partial class UiStyleContractTests
             "Button.primary-action",
             "Button.danger-action",
             "Button.confirm-dialog-action",
-            "Button.launcher-control.start"
+            "Button.launcher-control.start",
+            "controls|ReleaseNotesMarkdownViewer :is(TextBlock).markdown-h1",
+            "controls|ReleaseNotesMarkdownViewer :is(TextBlock).markdown-h2",
+            "controls|ReleaseNotesMarkdownViewer :is(TextBlock).markdown-h3",
+            "controls|ReleaseNotesMarkdownViewer :is(TextBlock).markdown-h4",
+            "controls|ReleaseNotesMarkdownViewer Border.markdown-table-header TextBlock"
         };
 
         Assert.True(

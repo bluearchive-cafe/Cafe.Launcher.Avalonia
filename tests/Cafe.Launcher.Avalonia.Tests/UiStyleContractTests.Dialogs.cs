@@ -10,6 +10,41 @@ namespace Cafe.Launcher.Avalonia.Tests;
 public sealed partial class UiStyleContractTests
 {
     [Fact]
+    public void UpdateProgressArea_UsesTopDividerAndShowsDownloadSpeed()
+    {
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowDialogsOverlay.axaml"));
+        var divider = document.Descendants().Single(element =>
+            element.Name.LocalName == "Separator"
+            && element.Attribute("Classes")?.Value == "update-progress-divider");
+        var speed = document.Descendants().Single(element =>
+            element.Name.LocalName == "TextBlock"
+            && element.Attribute("Text")?.Value == "{Binding Dialogs.UpdateDownloadSpeedText}");
+
+        Assert.Equal("{Binding Dialogs.IsUpdateApplying}", divider.Attribute("IsVisible")?.Value);
+        Assert.Equal("{StaticResource Launcher.Spacing.Thickness.None}", divider.Attribute("Margin")?.Value);
+        Assert.Equal("{DynamicResource Launcher.Color.Outline}", divider.Attribute("Background")?.Value);
+        Assert.Equal("{Binding Dialogs.IsUpdateDownloading}", speed.Attribute("IsVisible")?.Value);
+    }
+
+    [Fact]
+    public void UpdateReleaseNotesPreview_UsesGfmCompatibleParserProfile()
+    {
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowDialogsOverlay.axaml"));
+        XNamespace controls = "using:Cafe.Launcher.Avalonia.Controls";
+
+        Assert.Single(document.Descendants(controls + "ReleaseNotesMarkdownViewer"));
+
+        var styles = File.ReadAllText(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
+        Assert.Contains("controls|ReleaseNotesMarkdownViewer", styles, StringComparison.Ordinal);
+        Assert.Contains("{DynamicResource Launcher.Text.Primary}", styles, StringComparison.Ordinal);
+        Assert.Contains("{DynamicResource Launcher.Color.Content.Row}", styles, StringComparison.Ordinal);
+        Assert.Contains("{DynamicResource Launcher.Color.Card.Border}", styles, StringComparison.Ordinal);
+
+        var app = File.ReadAllText(TestRepository.FromApplicationRoot("App.axaml"));
+        Assert.Contains("avares://MarkView.Avalonia/Themes/MarkdownTheme.axaml", app, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void OverlayOrder_IsBaseThenSettingsThenDialogsThenToast()
     {
         var mainWindow = File.ReadAllText(TestRepository.FromApplicationRoot("Views/MainWindow.axaml"));

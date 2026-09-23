@@ -1,5 +1,6 @@
 using System;
 using System.Buffers;
+using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Security.Cryptography;
@@ -104,6 +105,7 @@ internal sealed class LauncherUpdateDownloader : ILauncherUpdateDownloader
                 {
                     long total = 0;
                     long lastReported = 0;
+                    var startedAt = Stopwatch.GetTimestamp();
                     int read;
                     while ((read = await source
                         .ReadAsync(buffer.AsMemory(0, BufferSize), cancellationToken)
@@ -116,12 +118,12 @@ internal sealed class LauncherUpdateDownloader : ILauncherUpdateDownloader
                         total += read;
                         if (total - lastReported >= ProgressReportThresholdBytes)
                         {
-                            progress?.Report(new LauncherUpdateProgress(total, body.DeclaredContentLength));
+                            progress?.Report(CreateProgress(total, body.DeclaredContentLength, startedAt));
                             lastReported = total;
                         }
                     }
 
-                    progress?.Report(new LauncherUpdateProgress(total, body.DeclaredContentLength));
+                    progress?.Report(CreateProgress(total, body.DeclaredContentLength, startedAt));
                 }
                 finally
                 {
@@ -176,6 +178,15 @@ internal sealed class LauncherUpdateDownloader : ILauncherUpdateDownloader
                 LauncherUpdateDownloadStatus.IoFailure,
                 exception.Message);
         }
+    }
+
+    private static LauncherUpdateProgress CreateProgress(long downloadedBytes, long? totalBytes, long startedAt)
+    {
+        var elapsedSeconds = Stopwatch.GetElapsedTime(startedAt).TotalSeconds;
+        var bytesPerSecond = elapsedSeconds > 0
+            ? (long)(downloadedBytes / elapsedSeconds)
+            : 0;
+        return new LauncherUpdateProgress(downloadedBytes, totalBytes, bytesPerSecond);
     }
 
     private static bool IsRecoverable(Exception exception) =>

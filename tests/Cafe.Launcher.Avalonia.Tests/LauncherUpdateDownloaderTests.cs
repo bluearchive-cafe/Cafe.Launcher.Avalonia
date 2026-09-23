@@ -119,6 +119,7 @@ public sealed class LauncherUpdateDownloaderTests
 
         Assert.NotEmpty(progress.Reports);
         Assert.Equal(PackageBytes.Length, progress.Reports[^1].DownloadedBytes);
+        Assert.True(progress.Reports[^1].BytesPerSecond > 0);
     }
 
     [Fact]
@@ -179,7 +180,7 @@ public sealed class LauncherUpdateDownloaderTests
     private static ReleaseFile PackageFile() => new()
     {
         Name = "Cafe.Launcher.Avalonia_v1.2.3_win-x64.zip",
-        Url = "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v1.2.3/Cafe.Launcher.Avalonia_v1.2.3_win-x64.zip",
+        Url = "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v1.2.3/Cafe.Launcher.Avalonia_v1.2.3_win-x64.zip",
         Size = PackageBytes.Length
     };
 

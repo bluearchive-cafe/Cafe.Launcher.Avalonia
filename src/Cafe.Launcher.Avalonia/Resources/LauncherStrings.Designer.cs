@@ -610,6 +610,8 @@ internal static class LauncherStrings
 
     internal static string LauncherUpdateUpToDate => GetRequiredString("launcherUpdateUpToDate");
 
+    internal static string LauncherUpdateView => GetRequiredString("launcherUpdateView");
+
     internal static string LauncherVersionLabel => GetRequiredString("launcherVersionLabel");
 
     internal static string LocalManifestMetadataMissing => GetRequiredString("localManifestMetadataMissing");

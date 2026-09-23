@@ -235,10 +235,11 @@ public partial class MainWindowViewModelTests
         var snapshot = CreateSnapshot();
         snapshot.Settings.EnableStartupUpdateCheck = true;
         snapshot.Settings.UpdateChannel = UpdateChannels.Stable;
+        snapshot.Settings.Language = LauncherLanguages.English;
         var coreService = new CountingCoreService(snapshot);
-        var toasts = new List<string>();
+        var toasts = new List<ToastNotification>();
         var toastService = new ToastService();
-        toastService.ToastRaised += notification => toasts.Add(notification.Message);
+        toastService.ToastRaised += toasts.Add;
         var releaseJson = """
             [
                 {
@@ -246,7 +247,7 @@ public partial class MainWindowViewModelTests
                     "files": [
                         {
                             "name": "installer.exe",
-                            "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v99.0.0/installer.exe",
+                            "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v99.0.0/installer.exe",
                             "size": 123456
                         }
                     ],
@@ -265,7 +266,8 @@ public partial class MainWindowViewModelTests
         await viewModel.InitializeAsync();
         await viewModel.PendingStartupUpdateCheck.WaitAsync(TimeSpan.FromSeconds(2));
 
-        Assert.Contains(toasts, t => t.Contains("99.0.0"));
+        ToastNotification updateToast = Assert.Single(toasts, t => t.Message.Contains("99.0.0"));
+        Assert.Equal("View Update", Assert.IsType<ToastAction>(updateToast.PrimaryAction).Label);
     }
 
     [Fact]

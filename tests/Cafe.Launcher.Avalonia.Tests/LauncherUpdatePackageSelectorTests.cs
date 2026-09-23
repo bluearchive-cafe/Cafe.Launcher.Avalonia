@@ -114,7 +114,7 @@ public sealed class LauncherUpdatePackageSelectorTests
         Assert.Equal(LauncherUpdateTarget.ExternalDownload, selection.Target);
     }
 
-    private const string Url = "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v1.2.3/Cafe.Launcher.Avalonia_v1.2.3_win-x64.zip";
+    private const string Url = "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v1.2.3/Cafe.Launcher.Avalonia_v1.2.3_win-x64.zip";
 
     private static List<ReleaseFile> ReleaseFiles() =>
     [

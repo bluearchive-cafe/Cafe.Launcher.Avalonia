@@ -306,6 +306,7 @@ public static class LocalizationKeys
     public const string LauncherUpdateReadyToRestart = "launcherUpdateReadyToRestart";
     public const string LauncherUpdateRestart = "launcherUpdateRestart";
     public const string LauncherUpdateUpToDate = "launcherUpdateUpToDate";
+    public const string LauncherUpdateView = "launcherUpdateView";
     public const string LauncherVersionLabel = "launcherVersionLabel";
     public const string LocalManifestMetadataMissing = "localManifestMetadataMissing";
     public const string LocalManifestMissing = "localManifestMissing";
