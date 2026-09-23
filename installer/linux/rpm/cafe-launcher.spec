@@ -2,8 +2,9 @@
 #
 # scripts/Build-Distribution.ps1 stamps {VERSION} and drives rpmbuild with
 # -D app_dir / -D asset_dir / -D icon_dir pointing at the already-published app
-# tree and at installer/linux/rpm, so this file is never built straight from a
-# checkout (there is no Source). Build it through the distribution script:
+# tree, at the wrapper/desktop generated from installer/linux/templates, and at
+# installer/linux, so this file is never built straight from a checkout (there
+# is no Source). Build it through the distribution script:
 #
 #   scripts/Build-Distribution.ps1 -Rids linux-x64
 #
