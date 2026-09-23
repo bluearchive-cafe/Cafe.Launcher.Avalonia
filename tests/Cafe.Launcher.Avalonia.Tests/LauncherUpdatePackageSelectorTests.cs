@@ -124,6 +124,7 @@ public sealed class LauncherUpdatePackageSelectorTests
         new() { Name = "Cafe.Launcher.Avalonia_v1.2.3_linux-x64.tar.gz", Url = Url, Size = 1 },
         new() { Name = "Cafe.Launcher.Avalonia_v1.2.3_linux-x64.AppImage", Url = Url, Size = 1 },
         new() { Name = "Cafe.Launcher.Avalonia_v1.2.3_linux-x64.deb", Url = Url, Size = 1 },
+        new() { Name = "Cafe.Launcher.Avalonia_v1.2.3_linux-x64.rpm", Url = Url, Size = 1 },
         new() { Name = "SHA256SUMS", Url = Url, Size = 1 }
     ];
 }

@@ -47,7 +47,7 @@ public sealed class ThirdPartyNoticesContractTests
         var script = File.ReadAllText(TestRepository.FromRepositoryRoot("scripts/Build-Distribution.ps1"));
 
         // Every packaging step below the publish loop copies the publish directory, so placing the
-        // two files there is what puts them inside the zip, .app, tar.gz, deb and AppImage.
+        // two files there is what puts them inside the zip, .app, tar.gz, deb, rpm and AppImage.
         Assert.Contains("\"LICENSE\", \"THIRD-PARTY-NOTICES.md\"", script, StringComparison.Ordinal);
         Assert.Contains("Copy-Item -LiteralPath (Join-Path $RootDir $noticeFile)", script, StringComparison.Ordinal);
     }

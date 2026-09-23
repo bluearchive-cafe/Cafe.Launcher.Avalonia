@@ -40,7 +40,7 @@
 | --- | --- | --- |
 | Windows x64 | 正式支持 | 安装程序、便携 ZIP |
 | macOS Apple Silicon | 实验性（暂不支持启动游戏） | `.app` 压缩包 |
-| Linux x64 | 实验性 | `.deb`、AppImage、`tar.gz` |
+| Linux x64 | 实验性 | `.deb`、`.rpm`、AppImage、`tar.gz` |
 
 所有发行包均为自包含应用，无需另外安装 .NET Runtime。macOS 与 Linux 构建尚未完成与 Windows 同等程度的适配和测试，请以具体 Release 说明为准。其中 macOS 版本目前只能安装、更新和修复游戏：在 macOS 上启动游戏需要额外的兼容运行层，当前不提供，也暂无支持计划。Linux 上可通过 Wine / UMU / Proton 运行环境启动游戏（实验性）：已在 Arch Linux + UMU/Proton 的单一组合上实机验证可登录并进入游戏（反作弊 XIGNCODE3 未拦截），详见[验证记录](docs/design/linux-p0a-verification-2026-09-22.md)；其余发行版、Proton 构建与显卡组合尚未验证。
 

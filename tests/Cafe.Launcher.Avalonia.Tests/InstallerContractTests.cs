@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
@@ -325,6 +325,10 @@ public sealed class InstallerContractTests
             "Cafe.Launcher.Avalonia_${Tag}_linux-x64.deb",
             script,
             StringComparison.Ordinal);
+        Assert.Contains(
+            "Cafe.Launcher.Avalonia_${Tag}_linux-x64.rpm",
+            script,
+            StringComparison.Ordinal);
         Assert.DoesNotContain("UninstallFiles.nsh", script, StringComparison.Ordinal);
         Assert.DoesNotContain("makensis", script, StringComparison.OrdinalIgnoreCase);
     }
@@ -361,6 +365,57 @@ public sealed class InstallerContractTests
         Assert.Contains("deb-root/opt/cafe-launcher/Cafe.Launcher.Avalonia", workflow, StringComparison.Ordinal);
         Assert.Contains("apt-get install --no-install-recommends -y \"./${debs[0]}\"", workflow, StringComparison.Ordinal);
         Assert.Contains("cafe-launcher --version", workflow, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void LinuxRpmPackage_UsesRpmbuildLayoutAndValidatedMetadata()
+    {
+        var script = ReadProjectFile("scripts/Build-Distribution.ps1");
+        var spec = ReadProjectFile("installer/linux/rpm/cafe-launcher.spec");
+        var launcher = ReadProjectFile("installer/linux/rpm/cafe-launcher");
+        var desktop = ReadProjectFile("installer/linux/rpm/cafe-launcher.desktop");
+
+        Assert.Contains("linux-x64/rpmbuild", script, StringComparison.Ordinal);
+        Assert.Contains("Invoke-Checked \"rpmbuild\"", script, StringComparison.Ordinal);
+        Assert.Contains("Invoke-Checked \"rpm\"", script, StringComparison.Ordinal);
+        // 预发布号必须转成 RPM 的 ~ 排序形式，1.1.0~beta.11 才会排在 1.1.0 之前。
+        Assert.Contains(
+            "[regex]::Replace($version.VersionPrefix, \"-\", \"~\", 1)",
+            script,
+            StringComparison.Ordinal);
+
+        Assert.Contains("Name:           cafe-launcher", spec, StringComparison.Ordinal);
+        Assert.Contains("Version:        {VERSION}", spec, StringComparison.Ordinal);
+        Assert.Contains("BuildArch:      x86_64", spec, StringComparison.Ordinal);
+        // 载荷是已发布的自包含应用：debug 包与构建后处理都会改写它。
+        Assert.Contains("%global debug_package %{nil}", spec, StringComparison.Ordinal);
+        Assert.Contains("%global __os_install_post %{nil}", spec, StringComparison.Ordinal);
+        // Avalonia 经 dlopen 使用的 X11 库 elfdeps 看不到，按 soname 显式声明。
+        Assert.Contains("Requires:       libX11.so.6()(64bit)", spec, StringComparison.Ordinal);
+        Assert.Contains("%{buildroot}/opt/cafe-launcher", spec, StringComparison.Ordinal);
+        Assert.Contains("\n/opt/cafe-launcher", spec, StringComparison.Ordinal);
+        Assert.Contains("%{_datadir}/applications/cafe-launcher.desktop", spec, StringComparison.Ordinal);
+        Assert.Contains(
+            "%{_datadir}/icons/hicolor/256x256/apps/cafe-launcher.png",
+            spec,
+            StringComparison.Ordinal);
+
+        Assert.Contains("CAFE_LAUNCHER_PACKAGE_FORMAT=rpm", launcher, StringComparison.Ordinal);
+        Assert.Contains("exec /opt/cafe-launcher/Cafe.Launcher.Avalonia", launcher, StringComparison.Ordinal);
+        Assert.Contains("Exec=cafe-launcher", desktop, StringComparison.Ordinal);
+        Assert.Contains("TryExec=cafe-launcher", desktop, StringComparison.Ordinal);
+        // CRLF 落库的 #!/bin/sh 会被内核当成找不到解释器，故与 deb 资产同样强制 LF。
+        Assert.Contains(
+            "installer/linux/rpm/* text eol=lf",
+            ReadProjectFile(".gitattributes"),
+            StringComparison.Ordinal);
+
+        var workflow = ReadProjectFile(".github/workflows/release.yml");
+        Assert.Contains("dpkg rpm xvfb", workflow, StringComparison.Ordinal);
+        Assert.Contains("rpm -qp --queryformat", workflow, StringComparison.Ordinal);
+        Assert.Contains("rpm --root \"$RUNNER_TEMP/rpm-root\" --initdb", workflow, StringComparison.Ordinal);
+        Assert.Contains("rpm-root/usr/bin/cafe-launcher", workflow, StringComparison.Ordinal);
+        Assert.Contains("rpm-root/opt/cafe-launcher/Cafe.Launcher.Avalonia", workflow, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -631,6 +686,7 @@ public sealed class InstallerContractTests
             "Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.tar.gz",
             "Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.AppImage",
             "Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.deb",
+            "Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.rpm",
         })
         {
             Assert.Equal(2, CountOccurrences(workflow, artifactName));
@@ -671,8 +727,8 @@ public sealed class InstallerContractTests
         Assert.Contains("sha256sum \"${packages[@]}\" > SHA256SUMS", workflow, StringComparison.Ordinal);
 
         // 产物集合变化时宁可让发布失败，也不要发出不完整或掺入意外文件的清单。
-        Assert.Contains("Expected 6 distribution packages, found", workflow, StringComparison.Ordinal);
-        Assert.Contains("if [[ ${#packages[@]} -ne 6 ]]; then", workflow, StringComparison.Ordinal);
+        Assert.Contains("Expected 7 distribution packages, found", workflow, StringComparison.Ordinal);
+        Assert.Contains("if [[ ${#packages[@]} -ne 7 ]]; then", workflow, StringComparison.Ordinal);
     }
 
     private static bool ContainsCjk(string text)

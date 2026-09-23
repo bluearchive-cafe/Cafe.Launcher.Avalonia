@@ -21,6 +21,7 @@ $BundleRoot = Join-Path $ArtifactsDir "bundle"
 $MacOSAssetsDir = Join-Path $RootDir "installer/macos"
 $LinuxAssetsDir = Join-Path $RootDir "installer/linux"
 $DebianAssetsDir = Join-Path $LinuxAssetsDir "debian"
+$RpmAssetsDir = Join-Path $LinuxAssetsDir "rpm"
 
 $version = & (Join-Path $ScriptDir "Read-LauncherVersion.ps1") -Tag $Tag
 $ProjectPath = $version.ProjectPath
@@ -243,6 +244,43 @@ if ($Rids -contains "linux-x64") {
         ) "dpkg-deb failed for the Linux Debian package."
         Invoke-Checked "dpkg-deb" @("--info", $debPath) "The generated Debian package metadata is invalid."
         $artifacts += [pscustomobject]@{ Rid = "linux-x64"; Kind = "deb"; Path = $debPath }
+
+        # RPM runs in parallel with deb: same published tree, same /opt layout, just
+        # assembled by rpmbuild from installer/linux/rpm/cafe-launcher.spec. rpmbuild
+        # executes each script section with a different working directory, so every
+        # macro below is passed as an absolute path.
+        $rpmTopDir = [System.IO.Path]::GetFullPath((Join-Path $BundleRoot "linux-x64/rpmbuild"))
+        $rpmSpecPath = Join-Path $rpmTopDir "SPECS/cafe-launcher.spec"
+        [void][System.IO.Directory]::CreateDirectory((Split-Path -Parent $rpmSpecPath))
+        # ~ is RPM's prerelease ordering (1.1.0~beta.11 < 1.1.0), the same conversion
+        # the Debian control file gets.
+        $rpmVersion = [regex]::Replace($version.VersionPrefix, "-", "~", 1)
+        $rpmSpec = (Get-Content -Raw -LiteralPath (Join-Path $RpmAssetsDir "cafe-launcher.spec")).Replace("{VERSION}", $rpmVersion)
+        [System.IO.File]::WriteAllText($rpmSpecPath, $rpmSpec, [System.Text.UTF8Encoding]::new($false))
+
+        Invoke-Checked "rpmbuild" @(
+            "-bb",
+            "--define", "_topdir $rpmTopDir",
+            "--define", "app_dir $([System.IO.Path]::GetFullPath($linuxPublishDir))",
+            "--define", "asset_dir $([System.IO.Path]::GetFullPath($RpmAssetsDir))",
+            "--define", "icon_dir $([System.IO.Path]::GetFullPath($LinuxAssetsDir))",
+            $rpmSpecPath
+        ) "rpmbuild failed for the Linux RPM package."
+
+        $builtRpms = @(Get-ChildItem -LiteralPath (Join-Path $rpmTopDir "RPMS") -Filter "*.rpm" -Recurse -File)
+        if ($builtRpms.Count -ne 1) {
+            throw "rpmbuild must produce exactly one RPM in '$rpmTopDir/RPMS', found $($builtRpms.Count)."
+        }
+
+        $rpmPath = Join-Path $DistributionDir "Cafe.Launcher.Avalonia_${Tag}_linux-x64.rpm"
+        Copy-Item -LiteralPath $builtRpms[0].FullName -Destination $rpmPath -Force
+        Invoke-Checked "rpm" @(
+            "-qp",
+            "--queryformat",
+            "%{NAME} %{VERSION}-%{RELEASE} %{ARCH}`n",
+            $rpmPath
+        ) "The generated RPM metadata is invalid."
+        $artifacts += [pscustomobject]@{ Rid = "linux-x64"; Kind = "rpm"; Path = $rpmPath }
 
         if ([string]::IsNullOrWhiteSpace($AppImageToolPath)) {
             Write-Warning "AppImage packaging skipped: pass -AppImageToolPath pointing at a Linux appimagetool build to produce the AppImage."
