@@ -45,11 +45,14 @@ jobs:
           # carried that day, which decides the Microsoft.NETCore.App version published inside
           # every self-contained artifact without leaving a trace in the repository.
           dotnet-version: 10.0.302
-          cache: true
-          cache-dependency-path: |
-            **/*.csproj
-            **/packages.lock.json
-            Directory.Packages.props
+
+      - name: Restore NuGet cache
+        id: nuget-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.nuget/packages
+          key: nuget-global-packages-${{ runner.os }}-${{ hashFiles('Directory.Packages.props') }}
+          restore-keys: nuget-global-packages-${{ runner.os }}-
 
       - name: Install Linux packaging and smoke-test dependencies
         shell: bash
@@ -177,6 +180,13 @@ jobs:
           path: changelog.md
           retention-days: 1
 
+      - name: Save NuGet cache
+        if: always()
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.nuget/packages
+          key: ${{ steps.nuget-cache.outputs.cache-primary-key }}
+
   installer:
     name: Release tests and Windows installer
     runs-on: windows-latest
@@ -210,11 +220,14 @@ jobs:
           # carried that day, which decides the Microsoft.NETCore.App version published inside
           # every self-contained artifact without leaving a trace in the repository.
           dotnet-version: 10.0.302
-          cache: true
-          cache-dependency-path: |
-            **/*.csproj
-            **/packages.lock.json
-            Directory.Packages.props
+
+      - name: Restore NuGet cache
+        id: nuget-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.nuget/packages
+          key: nuget-global-packages-${{ runner.os }}-${{ hashFiles('Directory.Packages.props') }}
+          restore-keys: nuget-global-packages-${{ runner.os }}-
 
       - name: Install Inno Setup 7
         env:
@@ -284,6 +297,13 @@ jobs:
           name: installer-package
           path: artifacts/distribution/Cafe.Launcher.Avalonia_*_setup.exe
           retention-days: 1
+
+      - name: Save NuGet cache
+        if: always()
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.nuget/packages
+          key: ${{ steps.nuget-cache.outputs.cache-primary-key }}
 
   release:
     name: Publish GitHub releases
