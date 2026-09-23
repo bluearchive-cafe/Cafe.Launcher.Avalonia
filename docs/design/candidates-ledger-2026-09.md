@@ -26,7 +26,7 @@
 | `DEF-N` | 扫描副产物的正确性问题（6 项，明确不是简化项） | 同上 §2 |
 | `AUD-XXX-NNN` | 审计发现（现行台账 50 条） | `.repository-audit/findings.json` |
 | `H-AUD-XXX-NNN` | 重置前台账（2026-09-12）的非 resolved 残留（20 条，**已逐条复核完毕**，见 §3.5） | `.repository-audit/history/2026-09-12-findings-ledger.json` |
-| `ADR-0NN-ALT` | 各 ADR 的「被否决的替代方案」（9 个 ADR 共 37 条） | `docs/design/adr/ADR-0NN-*.md` |
+| `ADR-0NN-ALT` | 各 ADR 的「被否决的替代方案」（12 个 ADR 共 53 条；ADR-034 没有该节） | `docs/design/adr/ADR-0NN-*.md` |
 
 **提交号可能成对出现**：2026-09-16 对未发布增量做过一次折叠重排（117 笔 → 76 笔），留下孪生提交（例：`0fb64e6` / `079666a` 同内容）。本表取其一。
 
@@ -246,7 +246,7 @@
 > `.repository-audit/history/2026-09-12-full-audit.md`，本表只记结论。
 > 五条重新立案的条目在 `findings.json` 里以 `delta_note` 记录了本轮实测锚点。
 
-### 3.6 各 ADR 被否决的替代方案（9 个 ADR，37 条）
+### 3.6 各 ADR 被否决的替代方案（12 个 ADR，53 条）
 
 它们是**已决裁定的脚注**，不是待决候选，故按 ADR 聚合；逐条见各 ADR 的「被否决的替代方案」节。
 
@@ -261,6 +261,9 @@
 | `ADR-031` | 5 | 启动后行为可配置且退出不走关闭路径 |
 | `ADR-032` | 5 | 游戏进程按名字家族识别 |
 | `ADR-033` | 7 | Toast 消失时长是固定档位且指针悬停暂停计时 |
+| `ADR-035` | 6 | 游戏会话状态可见（启动后看护与会话状态行） |
+| `ADR-036` | 4 | Linux 游戏进程按启动器所有权标记识别 |
+| `ADR-037` | 6 | Windows 自更新走独立 helper 且以 SHA256SUMS 为信任锚 |
 
 ---
 
