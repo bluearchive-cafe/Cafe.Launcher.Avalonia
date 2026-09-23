@@ -1,0 +1,5 @@
+# makepkg workspace: build tree, staged package root, downloaded source and built package.
+pkg/
+src/
+*.tar.gz
+*.pkg.tar.*

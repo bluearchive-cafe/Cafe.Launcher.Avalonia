@@ -80,6 +80,50 @@ function Set-UnixExecutableBit {
     }
 }
 
+function New-LinuxDesktopEntry {
+    param(
+        [Parameter(Mandatory)]
+        [string]$ExecBlock,
+        [Parameter(Mandatory)]
+        [string]$Destination
+    )
+
+    # One desktop template holds the KDE/localized fields; only the command block
+    # differs. Package installs run /usr/bin/cafe-launcher and declare TryExec so
+    # the entry hides when the binary is gone; the AppImage has no binary on PATH
+    # and must omit TryExec or the entry would always be hidden.
+    $templatePath = Join-Path $LinuxAssetsDir "templates/cafe-launcher.desktop"
+    $desktop = (Get-Content -Raw -Encoding UTF8 -LiteralPath $templatePath).Replace("{EXEC_BLOCK}", $ExecBlock)
+    [System.IO.File]::WriteAllText($Destination, $desktop, [System.Text.UTF8Encoding]::new($false))
+}
+
+function New-LinuxPackageAssets {
+    param(
+        [Parameter(Mandatory)]
+        [string]$PackageFormat,
+        [Parameter(Mandatory)]
+        [string]$Destination
+    )
+
+    # The deb, rpm and pacman wrappers and their desktop entry differ only in the
+    # package-format marker, so all three are produced from one template pair
+    # instead of three committed copies. The wrapper must be written with LF: a
+    # CRLF #!/bin/sh lands in the package and the kernel cannot exec it.
+    $templatesDir = Join-Path $LinuxAssetsDir "templates"
+    [void][System.IO.Directory]::CreateDirectory($Destination)
+
+    $wrapper = Get-Content -Raw -LiteralPath (Join-Path $templatesDir "cafe-launcher")
+    $wrapper = $wrapper.Replace("{PACKAGE_FORMAT}", $PackageFormat)
+    [System.IO.File]::WriteAllText(
+        (Join-Path $Destination "cafe-launcher"),
+        $wrapper,
+        [System.Text.UTF8Encoding]::new($false))
+    New-LinuxDesktopEntry -ExecBlock "Exec=cafe-launcher`nTryExec=cafe-launcher" `
+        -Destination (Join-Path $Destination "cafe-launcher.desktop")
+
+    Set-UnixExecutableBit -Paths @((Join-Path $Destination "cafe-launcher"))
+}
+
 Remove-Item -LiteralPath $DistributionDir -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $BundleRoot -Recurse -Force -ErrorAction SilentlyContinue
 [void][System.IO.Directory]::CreateDirectory($DistributionDir)
@@ -208,8 +252,13 @@ if ($Rids -contains "linux-x64") {
         }
 
         Copy-Item -Path (Join-Path $linuxPublishDir "*") -Destination $debAppDir -Recurse -Force
-        Copy-Item -LiteralPath (Join-Path $DebianAssetsDir "cafe-launcher") -Destination (Join-Path $debBinDir "cafe-launcher") -Force
-        Copy-Item -LiteralPath (Join-Path $DebianAssetsDir "cafe-launcher.desktop") -Destination (Join-Path $debApplicationsDir "cafe-launcher.desktop") -Force
+
+        # Wrapper and desktop entry are generated from installer/linux/templates,
+        # the same pair the rpm and pacman packages use.
+        $debLaunchAssetsDir = Join-Path $BundleRoot "linux-x64/assets/deb"
+        New-LinuxPackageAssets -PackageFormat "deb" -Destination $debLaunchAssetsDir
+        Copy-Item -LiteralPath (Join-Path $debLaunchAssetsDir "cafe-launcher") -Destination (Join-Path $debBinDir "cafe-launcher") -Force
+        Copy-Item -LiteralPath (Join-Path $debLaunchAssetsDir "cafe-launcher.desktop") -Destination (Join-Path $debApplicationsDir "cafe-launcher.desktop") -Force
 
         foreach ($size in @(256, 512)) {
             $iconSource = Join-Path $LinuxAssetsDir "app-icon-$size.png"
@@ -258,11 +307,15 @@ if ($Rids -contains "linux-x64") {
         $rpmSpec = (Get-Content -Raw -LiteralPath (Join-Path $RpmAssetsDir "cafe-launcher.spec")).Replace("{VERSION}", $rpmVersion)
         [System.IO.File]::WriteAllText($rpmSpecPath, $rpmSpec, [System.Text.UTF8Encoding]::new($false))
 
+        # Same generated wrapper/desktop pair as the deb package, format marker "rpm".
+        $rpmLaunchAssetsDir = Join-Path $BundleRoot "linux-x64/assets/rpm"
+        New-LinuxPackageAssets -PackageFormat "rpm" -Destination $rpmLaunchAssetsDir
+
         Invoke-Checked "rpmbuild" @(
             "-bb",
             "--define", "_topdir $rpmTopDir",
             "--define", "app_dir $([System.IO.Path]::GetFullPath($linuxPublishDir))",
-            "--define", "asset_dir $([System.IO.Path]::GetFullPath($RpmAssetsDir))",
+            "--define", "asset_dir $([System.IO.Path]::GetFullPath($rpmLaunchAssetsDir))",
             "--define", "icon_dir $([System.IO.Path]::GetFullPath($LinuxAssetsDir))",
             $rpmSpecPath
         ) "rpmbuild failed for the Linux RPM package."
@@ -304,8 +357,9 @@ if ($Rids -contains "linux-x64") {
             )
 
             $appRunPath = Join-Path $appDirRoot "AppRun"
-            Copy-Item -LiteralPath (Join-Path $LinuxAssetsDir "AppRun") -Destination $appRunPath -Force
-            Copy-Item -LiteralPath (Join-Path $LinuxAssetsDir "cafe-launcher.desktop") -Destination (Join-Path $appDirRoot "cafe-launcher.desktop") -Force
+            Copy-Item -LiteralPath (Join-Path $LinuxAssetsDir "appimage/AppRun") -Destination $appRunPath -Force
+            New-LinuxDesktopEntry -ExecBlock "Exec=Cafe.Launcher.Avalonia" `
+                -Destination (Join-Path $appDirRoot "cafe-launcher.desktop")
             Set-UnixExecutableBit -Paths @($appRunPath)
             Invoke-Checked "test" @("-x", $appRunPath) "AppDir/AppRun is missing or is not executable."
 

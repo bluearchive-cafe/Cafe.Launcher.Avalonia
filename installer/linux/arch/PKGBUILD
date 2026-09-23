@@ -1,0 +1,91 @@
+# Maintainer: BlueArchive Cafe contributors <bluearchive-cafe@users.noreply.github.com>
+#
+# Arch package for the experimental Linux build. It mirrors
+# installer/linux/debian and installer/linux/rpm:
+#
+#   /opt/cafe-launcher            self-contained publish tree
+#   /usr/bin/cafe-launcher        wrapper marking the install as package-managed
+#   /usr/share/applications       desktop entry
+#   /usr/share/icons/hicolor      the shared 256/512 app icons
+#
+# The wrapper and desktop entry are not committed here: they are generated from
+# the same installer/linux/templates pair the deb and rpm packages use, with the
+# package-format marker set to "pacman". The template lives inside the source
+# tarball; the $startdir fallback keeps `makepkg` working in a repository
+# checkout whose tag predates the templates.
+#
+# Pre-release ordering: upstream tags are 1.1.0-beta.11, but pkgver cannot hold
+# a hyphen. 1.1.0beta.11 sorts before 1.1.0 under vercmp while still ordering
+# correctly against 1.1.0beta.2, matching the rpm/deb `~`-converted versions.
+
+pkgname=cafe-launcher
+_realver=1.1.0-beta.11
+pkgver=1.1.0beta.11
+pkgrel=1
+pkgdesc='Cross-platform launcher for Blue Archive'
+arch=('x86_64')
+url='https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia'
+license=('MIT')
+depends=('libx11' 'libice' 'libsm' 'fontconfig' 'libxkbcommon')
+makedepends=('dotnet-sdk')
+# The payload is an already-published, self-contained .NET application; do not
+# let makepkg rewrite it (the rpm spec disables its post-install pass for the
+# same reason).
+options=('!strip' '!debug')
+source=("$pkgname-$_realver.tar.gz::$url/archive/refs/tags/v$_realver.tar.gz")
+sha256sums=('98eeafd9c6854af267d5964baa5ce363d8f65df97d1b2395ced44bd4db98a0b8')
+
+prepare() {
+  cd "Cafe.Launcher.Avalonia-$_realver"
+
+  # global.json pins SDK 10.0.302, which Arch's dotnet-sdk (10.0.1xx feature
+  # band) does not provide. A distribution package should build with the SDK the
+  # host ships, so drop the pin and let the resolver pick the newest installed
+  # SDK. On a host that does have 10.0.302 this changes nothing.
+  rm -f global.json
+
+  # Generate the wrapper and desktop entry from the shared templates.
+  local templates="installer/linux/templates"
+  if [[ ! -f "$templates/cafe-launcher" ]]; then
+    templates="$startdir/../templates"
+  fi
+
+  sed 's/{PACKAGE_FORMAT}/pacman/' "$templates/cafe-launcher" > "$srcdir/cafe-launcher"
+  chmod 0755 "$srcdir/cafe-launcher"
+  install -m644 "$templates/cafe-launcher.desktop" "$srcdir/cafe-launcher.desktop"
+}
+
+build() {
+  cd "Cafe.Launcher.Avalonia-$_realver"
+
+  export DOTNET_CLI_TELEMETRY_OPTOUT=1
+  export DOTNET_NOLOGO=1
+  export DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
+
+  dotnet publish src/Cafe.Launcher.Avalonia/Cafe.Launcher.Avalonia.csproj \
+    --configuration Release \
+    --runtime linux-x64 \
+    --self-contained true \
+    --output "$srcdir/publish"
+}
+
+package() {
+  local src="Cafe.Launcher.Avalonia-$_realver"
+
+  install -d "$pkgdir/opt/cafe-launcher"
+  cp -a "$srcdir/publish/." "$pkgdir/opt/cafe-launcher/"
+  chmod 0755 "$pkgdir/opt/cafe-launcher/Cafe.Launcher.Avalonia"
+
+  install -Dm755 "$srcdir/cafe-launcher" "$pkgdir/usr/bin/cafe-launcher"
+  install -Dm644 "$srcdir/cafe-launcher.desktop" \
+    "$pkgdir/usr/share/applications/cafe-launcher.desktop"
+
+  install -Dm644 "$src/installer/linux/app-icon-256.png" \
+    "$pkgdir/usr/share/icons/hicolor/256x256/apps/cafe-launcher.png"
+  install -Dm644 "$src/installer/linux/app-icon-512.png" \
+    "$pkgdir/usr/share/icons/hicolor/512x512/apps/cafe-launcher.png"
+
+  install -Dm644 "$src/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 "$src/THIRD-PARTY-NOTICES.md" \
+    "$pkgdir/usr/share/licenses/$pkgname/THIRD-PARTY-NOTICES.md"
+}
