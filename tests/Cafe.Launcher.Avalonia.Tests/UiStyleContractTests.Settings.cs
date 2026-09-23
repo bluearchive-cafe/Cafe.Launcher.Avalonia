@@ -665,61 +665,16 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void SettingsNavigationAndUpdateFileItems_TokenizeFocusVisibleRings() // spec §8 visible focus ring
+    public void SettingsNavigation_TokenizeFocusVisibleRings() // spec §8 visible focus ring
     {
         var styles = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
-        foreach (var selector in new[]
-                 {
-                     "ListBox.settings-navigation > ListBoxItem:focus-visible",
-                     "ListBox.update-file-list > ListBoxItem:focus-visible"
-                 })
-        {
-            Assert.Equal(
-                "{DynamicResource Launcher.Color.FocusRing}",
-                GetStyleSetters(styles, selector)["BorderBrush"]);
-            Assert.Equal(
-                "{StaticResource Launcher.Border.Thickness.Focus}",
-                GetStyleSetters(styles, selector)["BorderThickness"]);
-        }
-    }
-
-    [Fact]
-    public void UpdateFileList_HoverAndSelectionKeepReadableItemColors()
-    {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
-        var styles = document
-            .Descendants()
-            .Where(element => element.Name.LocalName == "Style")
-            .ToDictionary(
-                element => element.Attribute("Selector")?.Value ?? "",
-                element => element,
-                StringComparer.Ordinal);
-
-        foreach (var selector in new[]
-                 {
-                     "ListBox.update-file-list > ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter",
-                     "ListBox.update-file-list > ListBoxItem:pressed /template/ ContentPresenter#PART_ContentPresenter",
-                     "ListBox.update-file-list > ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter",
-                     "ListBox.update-file-list > ListBoxItem:selected:not(:focus) /template/ ContentPresenter#PART_ContentPresenter",
-                     "ListBox.update-file-list > ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter",
-                     "ListBox.update-file-list > ListBoxItem:selected:pressed /template/ ContentPresenter#PART_ContentPresenter"
-                 })
-        {
-            var setters = styles[selector]
-                .Elements()
-                .Where(element => element.Name.LocalName == "Setter")
-                .ToDictionary(
-                    element => element.Attribute("Property")?.Value ?? "",
-                    element => element.Attribute("Value")?.Value ?? "",
-                    StringComparer.Ordinal);
-
-            Assert.Equal(
-                "{DynamicResource Launcher.Color.Card.Background}",
-                setters["Background"]);
-            Assert.Equal(
-                "{DynamicResource Launcher.Text.Primary}",
-                setters["Foreground"]);
-        }
+        var selector = "ListBox.settings-navigation > ListBoxItem:focus-visible";
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.FocusRing}",
+            GetStyleSetters(styles, selector)["BorderBrush"]);
+        Assert.Equal(
+            "{StaticResource Launcher.Border.Thickness.Focus}",
+            GetStyleSetters(styles, selector)["BorderThickness"]);
     }
 
     [Fact]

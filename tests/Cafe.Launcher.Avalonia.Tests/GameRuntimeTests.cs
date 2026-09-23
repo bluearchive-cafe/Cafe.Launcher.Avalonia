@@ -190,6 +190,10 @@ public sealed class GameRuntimeTests
     [Fact]
     public async Task LaunchAsync_WithAnEnvironmentPrecheck_WritesTheReportBeforeStarting()
     {
+        Assert.SkipUnless(
+            OperatingSystem.IsLinux(),
+            "The stub runner definition is Linux-only, so the launch succeeds only there.");
+
         using var tempDir = TestDirectory.Create();
         var precheck = new CompatibilityEnvironmentPrecheck(tempDir.DataRoot);
         var runtime = CreateRuntime(

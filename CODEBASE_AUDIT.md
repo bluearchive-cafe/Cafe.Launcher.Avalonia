@@ -529,8 +529,8 @@
 
 - **TLS/重定向**：全仓库零证书校验覆盖（grep 证实）；手动重定向 ≤5 跳、每跳 URL 复验、HTTPS→HTTP 降级阻断（`RemoteHttpRequestService.cs:28-70`）。
 - **完整性**：续传 Content-Range 三元组校验（`FileDownloadService.cs:127-140`）；哈希不过即删重试（:166-177）；路径全部经 `GamePathValidator`（规范化 + 根前缀 + 全组件 reparse point 拒绝，`GamePathValidator.cs:24-112`）；并行校验基元线程安全（`Crc64Service.cs:21,33`）。
-- **进程执行**：四处 `Process.Start` 全部结构化（URL scheme 白名单、固定 explorer、`ArgumentList` 游戏启动、崩溃自重启 `Environment.ProcessPath`）；零 shell 字符串拼接。
-- **自更新**：仅 host 钉住的 GitHub 下载页跳转，从不下载执行自身二进制。
+- **进程执行**：原有四处 `Process.Start` 全部结构化（URL scheme 白名单、固定 explorer、`ArgumentList` 游戏启动、崩溃自重启 `Environment.ProcessPath`）；ADR-037 新增三处（helper 启动、`runas` 安装器、替换后重启），参数经 `ArgumentList` 传递、安装器仅执行 SHA256SUMS 校验通过的包。
+- **自更新**：Windows 上从「仅跳转下载页」升级为应用内执行（下载 → SHA256SUMS 校验 → 独立 helper 替换 → 重启，见 [ADR-037](docs/design/adr/ADR-037-Windows自更新走独立helper且以SHA256SUMS为信任锚.md)）；信任锚是同 release 的 SHA256SUMS，校验失败即中止。非 Windows 或无可用包时仍只跳转 GitHub 下载页。
 - **CI**：三工作流动作全 SHA 钉住；`permissions` 最小化（release 唯一 `contents: write`）；Inno Setup attestation 校验；`linux-tests.yml` 无新信任面（本审计专项评估：无 PR 触发故无缓存投毒面，`RestoreLockedMode` 开启）。
 - **安装器**：`PrivilegesRequired=admin`；卸载归属标记 + NSIS 遗留桥 basename/目录双重校验、篡改注册即删不执行（`installer/*.iss:197-334`）。
 - **密钥/日志/反序列化**：无真实凭据（`AuthorizationSalt` 为公开协议常量）；日志零 Authorization/salt/cookie/查询串（UID 全日志面 grep 证实）；纯 System.Text.Json 严格默认，零不安全反序列化/反射加载。

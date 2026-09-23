@@ -12,6 +12,7 @@ using Cafe.Launcher.Avalonia.Features.ResourcePanel;
 using Cafe.Launcher.Avalonia.Features.Settings;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Services.Update;
 using Cafe.Launcher.Avalonia.ViewModels;
 
 namespace Cafe.Launcher.Avalonia.Features.Shell;
@@ -38,6 +39,8 @@ public sealed class ShellLifecycle : IShellRuntime
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
     private readonly LauncherUpdateService launcherUpdateService;
+    private readonly LauncherSelfUpdateService launcherSelfUpdateService;
+    private readonly IWindowsLauncherUpdateApplier launcherUpdateApplier;
     private readonly LocalDiagnostics diagnostics;
     private readonly IErrorHandlingService errorHandling;
     private readonly SystemAnimationSettingsProvider systemAnimationSettingsProvider;
@@ -78,6 +81,8 @@ public sealed class ShellLifecycle : IShellRuntime
     private bool settingsSnapshotInitialized;
     private LauncherStatusSnapshot? currentSnapshot;
     private bool isWired;
+    private LauncherSelfUpdatePreparation? pendingUpdatePreparation;
+    private CancellationTokenSource? selfUpdateCts;
 
     /// <summary>Gets the active startup update check so tests can coordinate without timing delays.</summary>
     public Task PendingStartupUpdateCheck => refreshCoordinator.PendingAfterLoadWork;
@@ -90,6 +95,8 @@ public sealed class ShellLifecycle : IShellRuntime
         LocalizationService localizer,
         ToastService toastService,
         LauncherUpdateService launcherUpdateService,
+        LauncherSelfUpdateService launcherSelfUpdateService,
+        IWindowsLauncherUpdateApplier launcherUpdateApplier,
         LocalDiagnostics diagnostics,
         IErrorHandlingService errorHandling,
         SystemAnimationSettingsProvider systemAnimationSettingsProvider,
@@ -102,6 +109,8 @@ public sealed class ShellLifecycle : IShellRuntime
             localizer,
             toastService,
             launcherUpdateService,
+            launcherSelfUpdateService,
+            launcherUpdateApplier,
             diagnostics,
             errorHandling,
             systemAnimationSettingsProvider,
@@ -118,6 +127,8 @@ public sealed class ShellLifecycle : IShellRuntime
         LocalizationService localizer,
         ToastService toastService,
         LauncherUpdateService launcherUpdateService,
+        LauncherSelfUpdateService launcherSelfUpdateService,
+        IWindowsLauncherUpdateApplier launcherUpdateApplier,
         LocalDiagnostics diagnostics,
         IErrorHandlingService errorHandling,
         SystemAnimationSettingsProvider systemAnimationSettingsProvider,
@@ -139,6 +150,8 @@ public sealed class ShellLifecycle : IShellRuntime
         this.localizer = localizer;
         this.toastService = toastService;
         this.launcherUpdateService = launcherUpdateService;
+        this.launcherSelfUpdateService = launcherSelfUpdateService;
+        this.launcherUpdateApplier = launcherUpdateApplier;
         this.diagnostics = diagnostics;
         this.errorHandling = errorHandling;
         this.systemAnimationSettingsProvider = systemAnimationSettingsProvider;
@@ -194,8 +207,13 @@ public sealed class ShellLifecycle : IShellRuntime
     public bool IsMotionReduced => isMotionReduced;
 
     /// <summary>Initializes the shell once by loading settings and launcher state.</summary>
-    public Task InitializeAsync(CancellationToken cancellationToken = default) =>
-        startup.InitializeAsync(cancellationToken);
+    public Task InitializeAsync(CancellationToken cancellationToken = default)
+    {
+        // 上一次自更新残留在 %TEMP% 的 helper 副本此刻没有属主(helper 只在主
+        // 进程退出后短暂存活),启动时清掉;仍在运行的例外靠文件锁幸免。
+        launcherUpdateApplier.CleanupAbandonedHelperDirectories();
+        return startup.InitializeAsync(cancellationToken);
+    }
 
     /// <summary>Reapplies the system motion preference when the user chose the system option.</summary>
     public void RefreshSystemMotionPreference()
@@ -378,7 +396,76 @@ public sealed class ShellLifecycle : IShellRuntime
 
     // 经 windowChrome 的注入缝而非直接调 ExternalLinkService.Open：
     // 壳的全部外部链接出口统一走这一条缝，测试可注入记录委托。
-    private void OnUpdateAvailableConfirmed(string downloadUrl) => windowChrome.OpenExternalUrl(downloadUrl);
+    // 不支持应用内更新的平台上，这里收到的不是文件直链而是版本发布页。
+    private void OnUpdateAvailableConfirmed(string url) => windowChrome.OpenExternalUrl(url);
+
+    private void OnSelfUpdateStartRequested(string version, IReadOnlyList<ReleaseFile> files) =>
+        _ = RunSelfUpdateAsync(version, files);
+
+    private void OnApplyUpdateRequested()
+    {
+        var preparation = pendingUpdatePreparation;
+        if (preparation is null || preparation.Status != LauncherSelfUpdatePreparationStatus.Ready)
+        {
+            return;
+        }
+
+        if (!launcherUpdateApplier.TryStartApply(preparation))
+        {
+            dialogs.ResetUpdateApply();
+            toastService.ShowError(localizer.T(LocalizationKeys.LauncherUpdateApplyFailed));
+            return;
+        }
+
+        // 主进程必须退出，helper 才能替换文件；走正常关窗路径保存窗口与设置。
+        windowChrome.RequestShutdown();
+    }
+
+    private void OnCancelUpdateRequested() => selfUpdateCts?.Cancel();
+
+    /// <summary>
+    /// Downloads and verifies the Windows in-app update, then flips the dialog to
+    /// "restart to apply". Cancellation, verification failure, and helper failure all
+    /// return the dialog to its neutral state and report through a toast.
+    /// </summary>
+    private async Task RunSelfUpdateAsync(string version, IReadOnlyList<ReleaseFile> files)
+    {
+        pendingUpdatePreparation = null;
+        selfUpdateCts?.Dispose();
+        selfUpdateCts = CancellationTokenSource.CreateLinkedTokenSource(refreshCoordinator.LifetimeToken);
+        var token = selfUpdateCts.Token;
+        dialogs.BeginUpdateApply();
+        try
+        {
+            var progress = new Progress<LauncherUpdateProgress>(
+                update => dialogs.ReportUpdateProgress(update.Fraction));
+            var preparation = await launcherSelfUpdateService.PrepareAsync(files, version, progress, token);
+            if (token.IsCancellationRequested)
+            {
+                return;
+            }
+
+            if (preparation.Status == LauncherSelfUpdatePreparationStatus.Ready)
+            {
+                pendingUpdatePreparation = preparation;
+                dialogs.MarkUpdateReady();
+                return;
+            }
+
+            dialogs.ResetUpdateApply();
+            toastService.ShowError(localizer.T(LocalizationKeys.LauncherUpdateDownloadFailed));
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+            dialogs.ResetUpdateApply();
+        }
+        catch (Exception exception)
+        {
+            dialogs.ResetUpdateApply();
+            await errorHandling.HandleErrorAsync("Launcher self-update failed.", exception,
+                new ErrorHandlingOptions { ToastMessage = localizer.T(LocalizationKeys.LauncherUpdateDownloadFailed) });
+        }
+    }
 
     /// <summary>Refreshes shell state after a game operation and records resume behavior.</summary>
     public async Task HandleOperationsRefreshRequestedAsync(GameOperationsRefreshMode mode)
@@ -471,6 +558,15 @@ public sealed class ShellLifecycle : IShellRuntime
         Attach(
             () => dialogs.ConfirmUpdateAvailableRequested += OnUpdateAvailableConfirmed,
             () => dialogs.ConfirmUpdateAvailableRequested -= OnUpdateAvailableConfirmed);
+        Attach(
+            () => dialogs.SelfUpdateStartRequested += OnSelfUpdateStartRequested,
+            () => dialogs.SelfUpdateStartRequested -= OnSelfUpdateStartRequested);
+        Attach(
+            () => dialogs.ApplyUpdateRequested += OnApplyUpdateRequested,
+            () => dialogs.ApplyUpdateRequested -= OnApplyUpdateRequested);
+        Attach(
+            () => dialogs.CancelUpdateRequested += OnCancelUpdateRequested,
+            () => dialogs.CancelUpdateRequested -= OnCancelUpdateRequested);
         Attach(
             () => dialogs.ErrorViewLogRequested += OpenLogViewer,
             () => dialogs.ErrorViewLogRequested -= OpenLogViewer);
@@ -651,6 +747,7 @@ public sealed class ShellLifecycle : IShellRuntime
 
         Task pendingRefreshes = refreshCoordinator.BeginShutdown();
         refreshCoordinator.CancelLifetime();
+        selfUpdateCts?.Cancel();
         Unwire();
         operations.StopOperation(GameOperationStopIntent.ProcessExit);
         if (ownsPresentationCollaborators)
@@ -697,10 +794,20 @@ public sealed class ShellLifecycle : IShellRuntime
 
             if (result.IsSuccessful && result.IsUpdateAvailable)
             {
-                toastService.Show(
-                    localizer.F(LocalizationKeys.StartupUpdateAvailable, result.LatestVersion),
-                    ToastSeverity.Info,
-                    duration: ToastDuration.Extended);
+                toastService.Show(new ToastOptions
+                {
+                    Message = localizer.F(LocalizationKeys.StartupUpdateAvailable, result.LatestVersion),
+                    Severity = ToastSeverity.Info,
+                    Duration = ToastDuration.Extended,
+                    PrimaryAction = new ToastAction(
+                        localizer.T(LocalizationKeys.LauncherUpdateDownload),
+                        _ =>
+                        {
+                            settings.CheckForUpdatesCommand.Execute(null);
+                            return Task.FromResult(ToastActionResult.Success());
+                        },
+                        Timeout: null)
+                });
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

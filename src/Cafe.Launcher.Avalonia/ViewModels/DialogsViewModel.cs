@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Threading;
@@ -133,15 +132,67 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel, I
     private string updateAvailableText = "";
 
     [ObservableProperty]
-    private ReleaseFile? selectedUpdateFile;
+    [NotifyPropertyChangedFor(nameof(HasUpdateReleaseNotes))]
+    private string updateReleaseNotes = "";
 
-    public ObservableCollection<ReleaseFile> UpdateAvailableFiles { get; } = [];
+    public bool HasUpdateReleaseNotes => !string.IsNullOrWhiteSpace(UpdateReleaseNotes);
 
-    public bool HasSelectedUpdateFile => SelectedUpdateFile is not null;
+    /// <summary>Release assets of the offered version; consumed by the in-app self-update flow.</summary>
+    private IReadOnlyList<ReleaseFile> updateFiles = [];
+
+    /// <summary>True when this host can download and apply the update in-app.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(UpdatePrimaryActionText))]
+    private bool updateSupportsInAppApply;
+
+    /// <summary>True while the in-app download/verify/ready flow owns the dialog.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanConfirmUpdate), nameof(UpdatePrimaryActionText))]
+    private bool isUpdateApplying;
+
+    /// <summary>True while the update package is being transferred.</summary>
+    [ObservableProperty]
+    private bool isUpdateDownloading;
+
+    /// <summary>True once the package is verified and the helper can be launched.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanConfirmUpdate), nameof(UpdatePrimaryActionText))]
+    private bool isUpdateReadyToRestart;
+
+    /// <summary>Transfer completion percentage (0-100).</summary>
+    [ObservableProperty]
+    private double updateProgress;
+
+    private string updateStatusKey = "";
+
+    /// <summary>Localized status line shown while the in-app update flow is active.</summary>
+    public string UpdateStatusText => updateStatusKey.Length == 0 ? "" : localizer.T(updateStatusKey);
+
+    /// <summary>
+    /// Label of the dialog's primary action: restart-to-apply once the package is verified,
+    /// the in-app download while this host can apply updates, otherwise the browser hand-off
+    /// to the release page.
+    /// </summary>
+    public string UpdatePrimaryActionText =>
+        IsUpdateReadyToRestart ? localizer.T(LocalizationKeys.LauncherUpdateRestart)
+        : UpdateSupportsInAppApply ? localizer.T(LocalizationKeys.LauncherUpdateDownload)
+        : localizer.T(LocalizationKeys.LauncherUpdateOpenReleasePage);
+
+    /// <summary>Whether the dialog's primary action can run right now.</summary>
+    public bool CanConfirmUpdate => IsUpdateReadyToRestart || !IsUpdateApplying;
 
     public event Action? CloseRequested;
 
     public event Action<string>? ConfirmUpdateAvailableRequested;
+
+    /// <summary>Raised when the user confirms an in-app update download.</summary>
+    public event Action<string, IReadOnlyList<ReleaseFile>>? SelfUpdateStartRequested;
+
+    /// <summary>Raised when the user confirms restarting into the verified update.</summary>
+    public event Action? ApplyUpdateRequested;
+
+    /// <summary>Raised when the user cancels an in-progress in-app update.</summary>
+    public event Action? CancelUpdateRequested;
 
     /// <summary>Creates the application dialog family and its confirmation children.</summary>
     public DialogsViewModel(
@@ -200,6 +251,8 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel, I
         if (IsUpdateAvailableVisible)
         {
             UpdateAvailableText = localizer.F(LocalizationKeys.LauncherUpdateAvailableMessage, UpdateAvailableVersion);
+            OnPropertyChanged(nameof(UpdateStatusText));
+            OnPropertyChanged(nameof(UpdatePrimaryActionText));
         }
         SetupWizard.RefreshLocalizedText();
     }
@@ -216,46 +269,91 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel, I
         DownloadRunningCloseConfirm.Show(localizer.T(LocalizationKeys.CloseDownloadMessage));
     }
 
-    public void ShowUpdateAvailable(string version, IReadOnlyList<ReleaseFile> files)
+    public void ShowUpdateAvailable(
+        string version,
+        IReadOnlyList<ReleaseFile> files,
+        bool canSelfUpdate,
+        string releaseNotes = "")
     {
         UpdateAvailableVersion = version;
         UpdateAvailableText = localizer.F(LocalizationKeys.LauncherUpdateAvailableMessage, version);
-        SelectedUpdateFile = null;
-        UpdateAvailableFiles.Clear();
-        foreach (var file in files)
-        {
-            UpdateAvailableFiles.Add(file);
-        }
+        UpdateReleaseNotes = ReleaseNotesMarkdownSanitizer.Sanitize(releaseNotes);
+        updateFiles = files ?? [];
 
+        UpdateSupportsInAppApply = canSelfUpdate;
+        ResetUpdateApply();
         IsUpdateAvailableVisible = true;
+    }
+
+    /// <summary>Switches the dialog into the in-app download state.</summary>
+    public void BeginUpdateApply()
+    {
+        IsUpdateApplying = true;
+        IsUpdateDownloading = true;
+        IsUpdateReadyToRestart = false;
+        UpdateProgress = 0;
+        updateStatusKey = LocalizationKeys.LauncherUpdateDownloading;
+        OnPropertyChanged(nameof(UpdateStatusText));
+    }
+
+    /// <summary>Reports transfer progress as a completion fraction in [0, 1].</summary>
+    public void ReportUpdateProgress(double fraction)
+    {
+        UpdateProgress = Math.Clamp(fraction, 0d, 1d) * 100d;
+    }
+
+    /// <summary>Shows that a verified update is ready and a restart will apply it.</summary>
+    public void MarkUpdateReady()
+    {
+        IsUpdateDownloading = false;
+        IsUpdateReadyToRestart = true;
+        UpdateProgress = 100;
+        updateStatusKey = LocalizationKeys.LauncherUpdateReadyToRestart;
+        OnPropertyChanged(nameof(UpdateStatusText));
+    }
+
+    /// <summary>Clears the in-app apply state and returns the dialog to its neutral form.</summary>
+    public void ResetUpdateApply()
+    {
+        IsUpdateApplying = false;
+        IsUpdateDownloading = false;
+        IsUpdateReadyToRestart = false;
+        UpdateProgress = 0;
+        updateStatusKey = "";
+        OnPropertyChanged(nameof(UpdateStatusText));
     }
 
     [RelayCommand]
     private void CancelUpdateAvailable()
     {
+        if (IsUpdateApplying && !IsUpdateReadyToRestart)
+        {
+            CancelUpdateRequested?.Invoke();
+        }
+
         IsUpdateAvailableVisible = false;
-        SelectedUpdateFile = null;
-        UpdateAvailableFiles.Clear();
+        UpdateReleaseNotes = "";
+        ResetUpdateApply();
     }
 
     [RelayCommand]
     private void ConfirmUpdateAvailable()
     {
-        if (SelectedUpdateFile is null)
+        if (IsUpdateReadyToRestart)
         {
+            ApplyUpdateRequested?.Invoke();
             return;
         }
 
-        var downloadUrl = SelectedUpdateFile.Url;
-        IsUpdateAvailableVisible = false;
-        SelectedUpdateFile = null;
-        UpdateAvailableFiles.Clear();
-        ConfirmUpdateAvailableRequested?.Invoke(downloadUrl);
-    }
+        if (UpdateSupportsInAppApply)
+        {
+            SelfUpdateStartRequested?.Invoke(UpdateAvailableVersion, updateFiles);
+            return;
+        }
 
-    partial void OnSelectedUpdateFileChanged(ReleaseFile? value)
-    {
-        OnPropertyChanged(nameof(HasSelectedUpdateFile));
+        // 本机不支持应用内更新：跳转版本发布页，由用户手动获取安装包。
+        IsUpdateAvailableVisible = false;
+        ConfirmUpdateAvailableRequested?.Invoke(LauncherConstants.GitHubReleasesPageUrl);
     }
 
     [RelayCommand]

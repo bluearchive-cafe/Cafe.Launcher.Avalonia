@@ -48,6 +48,7 @@ public sealed class StubRemoteHttpTransport : IRemoteHttpTransport
         var body = Responder(uri) switch
         {
             Exception reason => throw reason,
+            RemoteBody remoteBody => remoteBody,
             byte[] bytes => CreateStream(bytes),
             string text => CreateStream(Encoding.UTF8.GetBytes(text)),
             var unexpected => throw new InvalidOperationException(

@@ -67,7 +67,7 @@ public partial class App : Application
             {
                 DataContext = viewModel,
             };
-            var shutdownDeferred = false;
+            var shutdownDeferral = new ShutdownDeferral();
             var fatalShutdown = false;
             CrashReportWindow? crashReportWindow = null;
 
@@ -117,7 +117,7 @@ public partial class App : Application
                     return;
                 }
 
-                if (shutdownDeferred)
+                if (shutdownDeferral.ShouldCancelRequest)
                 {
                     eventArgs.Cancel = true;
                     return;
@@ -134,7 +134,7 @@ public partial class App : Application
                 }
 
                 eventArgs.Cancel = true;
-                shutdownDeferred = true;
+                shutdownDeferral.Defer();
                 try
                 {
                     await shutdownTask;
@@ -145,6 +145,7 @@ public partial class App : Application
                 }
                 finally
                 {
+                    shutdownDeferral.Commit();
                     desktop.Shutdown();
                 }
             }

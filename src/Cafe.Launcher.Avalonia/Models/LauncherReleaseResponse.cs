@@ -18,6 +18,9 @@ public sealed class LauncherReleaseResponse
 
     [JsonPropertyName("releaseDate")]
     public DateTime? ReleaseDate { get; set; }
+
+    [JsonPropertyName("releaseNotes")]
+    public string ReleaseNotes { get; set; } = "";
 }
 
 /// <summary>

@@ -98,6 +98,14 @@ if (-not $SkipPublish) {
         foreach ($noticeFile in @("LICENSE", "THIRD-PARTY-NOTICES.md")) {
             Copy-Item -LiteralPath (Join-Path $RootDir $noticeFile) -Destination (Join-Path $publishDir $noticeFile) -Force
         }
+
+        # Windows self-update helper: a self-contained single-file executable dropped
+        # alongside the app. It is copied to a temp directory at apply time, so it never
+        # has to overwrite itself while running. Only the win-x64 package ships it.
+        if ($rid -eq "win-x64") {
+            $updaterProject = Join-Path $RootDir "src/Cafe.Launcher.Updater/Cafe.Launcher.Updater.csproj"
+            Invoke-Checked "dotnet" @("publish", $updaterProject, "-c", "Release", "-r", "win-x64", "-o", $publishDir) "dotnet publish failed for the update helper on RID '$rid'."
+        }
     }
 }
 

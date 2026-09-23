@@ -13,6 +13,7 @@ using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Services.GameRuntime;
+using Cafe.Launcher.Avalonia.Services.Update;
 using Cafe.Launcher.Avalonia.Testing;
 using Cafe.Launcher.Avalonia.ViewModels;
 
@@ -294,34 +295,86 @@ public sealed class ShellLifecycleTests : IDisposable
     }
 
     [Fact]
-    public void ConfirmUpdateAvailableRequested_WhenConfirmed_OpensSelectedFileUrlOnceAndStopsAfterDispose()
+    public void ConfirmUpdateAvailableRequested_WhenConfirmed_OpensReleasePageOnceAndStopsAfterDispose()
     {
         var fixture = CreateLifecycle(new ScriptedCoreService(CreateSnapshot()));
+        var files = Array.Empty<ReleaseFile>();
+
+        fixture.Dialogs.ShowUpdateAvailable("9.9.9", files, canSelfUpdate: false);
+        fixture.Dialogs.ConfirmUpdateAvailableCommand.Execute(null);
+
+        // 不支持应用内更新的平台,确认更新恰好打开一次版本发布页,且走的是壳的统一外部链接出口。
+        var opened = Assert.Single(openedUrls);
+        Assert.Equal(LauncherConstants.GitHubReleasesPageUrl, opened);
+
+        // Dispose 后退订:同一事件不得再触发外部打开。
+        fixture.Lifecycle.Dispose();
+        fixture.Dialogs.ShowUpdateAvailable("9.9.9", files, canSelfUpdate: false);
+        fixture.Dialogs.ConfirmUpdateAvailableCommand.Execute(null);
+
+        Assert.Single(openedUrls);
+    }
+
+    [Fact]
+    public async Task SelfUpdate_WhenConfirmed_DownloadsVerifiesAndRaisesApply()
+    {
+        var applier = new RecordingUpdateApplier();
+        var packageBytes = System.Text.Encoding.UTF8.GetBytes("launcher package payload");
+        var sha = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(packageBytes)).ToLowerInvariant();
+        var transport = new StubRemoteHttpTransport(uri =>
+            uri.AbsolutePath.EndsWith("SHA256SUMS", StringComparison.Ordinal)
+                ? $"{sha}  Cafe.Launcher.Avalonia_v9.9.9_win-x64.zip"
+                : packageBytes);
+        var selfUpdate = new LauncherSelfUpdateService(
+            new LauncherUpdateDownloader(transport),
+            new FixedHostInfoProvider(new LauncherUpdateHostInfo(
+                IsWindows: true,
+                IsX64: true,
+                IsInstallerInstall: false)),
+            tempDir.DataRoot,
+            new LocalDiagnostics());
+        var fixture = CreateLifecycle(
+            new ScriptedCoreService(CreateSnapshot()),
+            launcherSelfUpdateService: selfUpdate,
+            launcherUpdateApplier: applier);
         var files = new[]
         {
             new ReleaseFile
             {
-                Name = "Cafe.Launcher_v9.9.9.zip",
-                Url = "https://example.com/download/Cafe.Launcher_v9.9.9.zip",
-                Size = 100
+                Name = "Cafe.Launcher.Avalonia_v9.9.9_win-x64.zip",
+                Url = "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v9.9.9/Cafe.Launcher.Avalonia_v9.9.9_win-x64.zip",
+                Size = packageBytes.Length
+            },
+            new ReleaseFile
+            {
+                Name = "SHA256SUMS",
+                Url = "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v9.9.9/SHA256SUMS",
+                Size = 128
             }
         };
 
-        fixture.Dialogs.ShowUpdateAvailable("9.9.9", files);
-        fixture.Dialogs.SelectedUpdateFile = files[0];
+        fixture.Dialogs.ShowUpdateAvailable("9.9.9", files, canSelfUpdate: true);
         fixture.Dialogs.ConfirmUpdateAvailableCommand.Execute(null);
 
-        // 确认更新恰好打开一次所选文件的下载页,且走的是壳的统一外部链接出口。
-        var opened = Assert.Single(openedUrls);
-        Assert.Equal(files[0].Url, opened);
+        await TestWait.UntilAsync(
+            () => fixture.Dialogs.IsUpdateReadyToRestart,
+            TimeSpan.FromSeconds(5),
+            "The self-update should reach the ready-to-restart state.");
 
-        // Dispose 后退订:同一事件不得再触发外部打开。
-        fixture.Lifecycle.Dispose();
-        fixture.Dialogs.ShowUpdateAvailable("9.9.9", files);
-        fixture.Dialogs.SelectedUpdateFile = files[0];
+        Assert.True(fixture.Dialogs.IsUpdateApplying);
+        Assert.False(fixture.Dialogs.IsUpdateDownloading);
+        Assert.Equal(100d, fixture.Dialogs.UpdateProgress);
+
+        var closeCount = 0;
+        var shutdownCount = 0;
+        fixture.WindowChrome.CloseRequested += () => closeCount++;
+        fixture.WindowChrome.ShutdownRequested += () => shutdownCount++;
         fixture.Dialogs.ConfirmUpdateAvailableCommand.Execute(null);
 
-        Assert.Single(openedUrls);
+        Assert.Equal(1, applier.StartCount);
+        Assert.Equal(0, closeCount);
+        Assert.Equal(1, shutdownCount);
+        Assert.Equal(LauncherUpdateTarget.WindowsPortable, applier.LastTarget);
     }
 
     /// <summary>
@@ -477,7 +530,9 @@ public sealed class ShellLifecycleTests : IDisposable
         LauncherSettingsService? settingsService = null,
         LauncherUpdateService? launcherUpdateService = null,
         StubGameOperationExecutor? operationsBackend = null,
-        Func<Action, Task>? uiInvoker = null)
+        Func<Action, Task>? uiInvoker = null,
+        LauncherSelfUpdateService? launcherSelfUpdateService = null,
+        IWindowsLauncherUpdateApplier? launcherUpdateApplier = null)
     {
         settingsService ??= new LauncherSettingsService( tempDir.DataRoot );
         launcherUpdateService ??= new LauncherUpdateService(
@@ -487,6 +542,12 @@ public sealed class ShellLifecycleTests : IDisposable
 
         var localizer = new LocalizationService();
         var diagnostics = new LocalDiagnostics();
+        launcherSelfUpdateService ??= new LauncherSelfUpdateService(
+            new LauncherUpdateDownloader(new StubRemoteHttpTransport()),
+            new LauncherUpdateHostInfoProvider(),
+            tempDir.DataRoot,
+            diagnostics);
+        launcherUpdateApplier ??= new WindowsLauncherUpdateApplier(tempDir.DataRoot, diagnostics, tempDir.Path);
         var filePickerService = new StubFilePickerService();
         var imageCacheService = new ImageCacheService(
             new StubRemoteHttpTransport(),
@@ -528,6 +589,7 @@ public sealed class ShellLifecycleTests : IDisposable
             localizer,
             toastService,
             launcherUpdateService,
+            launcherSelfUpdateService,
             dialogs,
             settingsLogger,
             new GameInstallationPath(),
@@ -604,6 +666,8 @@ public sealed class ShellLifecycleTests : IDisposable
             localizer,
             toastService,
             launcherUpdateService,
+            launcherSelfUpdateService,
+            launcherUpdateApplier,
             diagnostics,
             errorHandling,
             new SystemAnimationSettingsProvider(),
@@ -666,6 +730,31 @@ public sealed class ShellLifecycleTests : IDisposable
                 _ => throw new InvalidOperationException("Unexpected script step.")
             });
         }
+    }
+
+    /// <summary>Records helper launches so the shell's apply step can be asserted without spawning a process.</summary>
+    private sealed class RecordingUpdateApplier : IWindowsLauncherUpdateApplier
+    {
+        public int StartCount { get; private set; }
+
+        public LauncherUpdateTarget LastTarget { get; private set; }
+
+        public bool TryStartApply(LauncherSelfUpdatePreparation preparation)
+        {
+            StartCount++;
+            LastTarget = preparation.Target;
+            return true;
+        }
+
+        public void CleanupAbandonedHelperDirectories()
+        {
+        }
+    }
+
+    /// <summary>Forces the host facts so the Windows self-update path is reachable on any test OS.</summary>
+    private sealed class FixedHostInfoProvider(LauncherUpdateHostInfo info) : ILauncherUpdateHostInfoProvider
+    {
+        public LauncherUpdateHostInfo GetHostInfo() => info;
     }
 
     /// <summary>所有远程请求都以 404 回答的替身,保证夹具不发真实网络请求。</summary>

@@ -22,6 +22,7 @@ public sealed class LauncherUpdateServiceTests
             "tag_name":"v1.0.0-beta.8",
             "draft":false,
             "published_at":"2026-07-19T14:28:42Z",
+            "body":"## Beta notes",
             "assets":[
               {
                 "name":"Cafe.Launcher.Avalonia_v1.0.0-beta.8_setup.exe",
@@ -42,6 +43,7 @@ public sealed class LauncherUpdateServiceTests
             [
               {
                 "version": "1.2.0",
+                "releaseNotes": "## Highlights\n\n- Faster updates",
                 "files": [
                   {
                     "name": "Cafe.Launcher_v1.2.0.zip",
@@ -67,6 +69,7 @@ public sealed class LauncherUpdateServiceTests
         Assert.True(result.IsSuccessful);
         Assert.True(result.IsUpdateAvailable);
         Assert.Equal("1.2.0", result.LatestVersion);
+        Assert.Equal("## Highlights\n\n- Faster updates", result.ReleaseNotes);
         Assert.Collection(
             result.Files,
             file =>
@@ -144,7 +147,35 @@ public sealed class LauncherUpdateServiceTests
         Assert.True(result.IsSuccessful);
         Assert.True(result.IsUpdateAvailable);
         Assert.Equal("1.0.0-beta.8", result.LatestVersion);
+        Assert.Equal("## Beta notes", result.ReleaseNotes);
         Assert.Single(result.Files);
+    }
+
+    [Fact]
+    public async Task CheckForUpdateAsync_WhenProxyOmitsNotes_LoadsBodyFromGitHubTag()
+    {
+        var transport = new StubRemoteHttpTransport(uri =>
+            uri == ProxyReleasesUri
+                ? """
+                  [{
+                    "version":"1.0.0-beta.8",
+                    "files":[{
+                      "name":"Cafe.Launcher.Avalonia_v1.0.0-beta.8_win-x64.zip",
+                      "url":"https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v1.0.0-beta.8/Cafe.Launcher.Avalonia_v1.0.0-beta.8_win-x64.zip",
+                      "size":100
+                    }]
+                  }]
+                  """
+                : """{"body":"## Highlights\n\n- Faster updates"}""");
+        var service = new LauncherUpdateService(transport, currentVersionOverride: "1.0.0-beta.7");
+
+        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
+
+        Assert.True(result.IsUpdateAvailable);
+        Assert.Equal("## Highlights\n\n- Faster updates", result.ReleaseNotes);
+        Assert.Equal(
+            new Uri(ApiConfig.GitHubReleaseByTagApiUrl + "v1.0.0-beta.8"),
+            transport.RequestedUris[1]);
     }
 
     [Fact]

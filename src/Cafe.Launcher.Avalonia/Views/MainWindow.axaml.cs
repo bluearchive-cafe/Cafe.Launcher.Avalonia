@@ -156,6 +156,7 @@ public partial class MainWindow : Window
         viewModel.Operations.ShowRequested += ShowWindow;
         viewModel.WindowChrome.MinimizeRequested += MinimizeWindow;
         viewModel.WindowChrome.CloseRequested += PerformClose;
+        viewModel.WindowChrome.ShutdownRequested += RequestShutdown;
         viewModel.WindowChrome.RestoreRequested += ShowWindow;
         viewModel.Dialogs.ErrorCopyDetailsRequested += CopyErrorDetailsToClipboard;
         viewModel.Background.PreviousWallpaperFadingOut += FadeOutPreviousWallpaper;
@@ -284,6 +285,7 @@ public partial class MainWindow : Window
         viewModel.Operations.ShowRequested -= ShowWindow;
         viewModel.WindowChrome.MinimizeRequested -= MinimizeWindow;
         viewModel.WindowChrome.CloseRequested -= PerformClose;
+        viewModel.WindowChrome.ShutdownRequested -= RequestShutdown;
         viewModel.WindowChrome.RestoreRequested -= ShowWindow;
         viewModel.Dialogs.ErrorCopyDetailsRequested -= CopyErrorDetailsToClipboard;
         viewModel.Operations.PropertyChanged -= OnOperationsPropertyChanged;

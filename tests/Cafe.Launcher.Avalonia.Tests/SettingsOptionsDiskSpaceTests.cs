@@ -155,6 +155,7 @@ public sealed class SettingsOptionsDiskSpaceTests
             null!,
             null!,
             null!,
+            null!,
             options,
             new SettingsAppearanceViewModel(editor, new ThemeApplier()),
             errorHandling,

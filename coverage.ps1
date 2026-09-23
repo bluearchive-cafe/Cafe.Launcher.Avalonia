@@ -6,11 +6,13 @@ $env:AVALONIA_TELEMETRY_OPTOUT = '1'
 $env:MSBUILDDISABLENODEREUSE = '1'
 $threshold = 0.50
 # 棘轮基线 = 最近一次全量 verify 实测值再留约 0.1–0.25pp 余量，不是「历史地板」。
-# 2026-09-11 全量重审实测：手写行 85.96%、分支 92.93%。此前长期停在 0.8430/0.8899
-# （注释记的 91.01% 分支从未写进闸口），使约 1.6pp 行、3.8pp 分支的静默回退可以落在
-# 闸口之下——改基线时请与本次实测值一起更新，并保持余量在同一量级。
-$lineBaseline = 0.8585
-$branchBaseline = 0.9270
+# 2026-09-23 全量重审实测：手写行 85.71%、分支 92.06%。三个 Linux 专属测试
+# （procfs 挂载表解析 ×2、UMU 前缀预检启动报告）按平台门规则改为可见跳过，
+# 而覆盖率闸口只在 Windows 作业强制，Linux 专属的预检与 procfs 路径在本平台
+# 结构性不可覆盖，基线随实测下移。改基线时请与本次实测值一起更新，并保持
+# 余量在同一量级。
+$lineBaseline = 0.8560
+$branchBaseline = 0.9180
 $resultsRoot = Join-Path $PSScriptRoot 'TestResults\Coverage'
 
 $repositoryRoot = [IO.Path]::GetFullPath($PSScriptRoot)

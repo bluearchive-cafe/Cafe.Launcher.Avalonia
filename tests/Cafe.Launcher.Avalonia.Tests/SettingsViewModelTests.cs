@@ -10,6 +10,7 @@ using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Services.GameRuntime;
+using Cafe.Launcher.Avalonia.Services.Update;
 using Cafe.Launcher.Avalonia.Testing;
 using Cafe.Launcher.Avalonia.ViewModels;
 
@@ -132,7 +133,7 @@ public sealed class SettingsViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task CheckForUpdatesCommand_WhenNewerReleaseAvailable_OpensUpdateDialogWithFiles()
+    public async Task CheckForUpdatesCommand_WhenNewerReleaseAvailable_OpensUpdateDialog()
     {
         var localizer = new LocalizationService();
         var dialogs = CreateDialogsViewModel();
@@ -145,10 +146,6 @@ public sealed class SettingsViewModelTests : IDisposable
         Assert.Empty(raisedToasts);
         Assert.True(dialogs.IsUpdateAvailableVisible);
         Assert.Equal("9.9.9", dialogs.UpdateAvailableVersion);
-        var file = Assert.Single(dialogs.UpdateAvailableFiles);
-        Assert.Equal(
-            "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v9.9.9/Cafe.Launcher_v9.9.9.zip",
-            file.Url);
     }
 
     private SettingsViewModel CreateSettingsViewModel(
@@ -161,6 +158,11 @@ public sealed class SettingsViewModelTests : IDisposable
             localizer,
             toastService,
             new LauncherUpdateService(transport),
+            new LauncherSelfUpdateService(
+                new LauncherUpdateDownloader(new StubRemoteHttpTransport()),
+                new LauncherUpdateHostInfoProvider(),
+                TestDataRoot.ForDirectory(NextDataRoot()),
+                new LocalDiagnostics()),
             dialogs ?? CreateDialogsViewModel(),
             null!,
             null!,
