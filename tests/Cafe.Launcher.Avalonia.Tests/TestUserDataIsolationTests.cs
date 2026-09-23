@@ -2,6 +2,20 @@ namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed class TestUserDataIsolationTests
 {
+    /// <summary>
+    /// 进程级数据根解析的入口名。这里用 <c>nameof</c> 而不是字面量：入口被改名时本文件不再
+    /// 编译，守卫不会退化成「模式过时、于是静默放行一切」。
+    /// </summary>
+    private static readonly string ProcessRootResolver =
+        nameof(Services.LauncherDataRoot.ForCurrentProcess);
+
+    /// <summary>
+    /// 除中央目录提供者外唯一被允许的数据根来源。这是 BCL 成员访问的文本形态，
+    /// 同样用 <c>nameof</c> 拼出来，避免字面量随 API 重命名而失效。
+    /// </summary>
+    private static readonly string LocalApplicationDataMember =
+        $"Environment.SpecialFolder.{nameof(Environment.SpecialFolder.LocalApplicationData)}";
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -110,10 +124,6 @@ public sealed class TestUserDataIsolationTests
         Assert.SkipUnless(
             !OperatingSystem.IsWindows(),
             "AF_UNIX 套接字路径上限仅在 Unix 平台约束 LauncherDataRoot.ForCurrentProcess().Root 的派生路径。");
-        if (OperatingSystem.IsWindows())
-        {
-            return;
-        }
 
         // AUD-CI-002：Root 派生 Unix 域套接字路径（<Root>/cl-signal-<12hex>.sock），
         // AF_UNIX 的 sockaddr_un 上限是 108 字节（含终止符即 107）。隔离目录过深
@@ -166,7 +176,7 @@ public sealed class TestUserDataIsolationTests
         const int landedScannedFiles = 231;
         const int landedResolvingFiles = 5;
         var resolving = scanned
-            .Where(path => File.ReadAllText(path).Contains("ForCurrentProcess", StringComparison.Ordinal))
+            .Where(path => File.ReadAllText(path).Contains(ProcessRootResolver, StringComparison.Ordinal))
             .ToArray();
 
         Assert.True(
@@ -175,12 +185,12 @@ public sealed class TestUserDataIsolationTests
             + "先确认扫描域仍是 src/ 全树（递归未退化成 TopDirectoryOnly）。");
         Assert.True(
             resolving.Length >= landedResolvingFiles,
-            $"只有 {resolving.Length} 个文件含 ForCurrentProcess，低于落地基线 {landedResolvingFiles}——"
-            + "要么解析点被删（同步下调基线），要么模式过时（重命名后本守卫会静默放行一切）。");
+            $"只有 {resolving.Length} 个文件含 {ProcessRootResolver}，低于落地基线 {landedResolvingFiles}——"
+            + "解析点被删了（同步下调基线）？");
 
         var offenders = scanned
             .Where(path => !declared.Contains(path))
-            .Where(path => File.ReadAllText(path).Contains("ForCurrentProcess", StringComparison.Ordinal))
+            .Where(path => File.ReadAllText(path).Contains(ProcessRootResolver, StringComparison.Ordinal))
             .Select(path => Path.GetRelativePath(projectRoot, path))
             .Order(StringComparer.Ordinal)
             .ToArray();
@@ -203,26 +213,20 @@ public sealed class TestUserDataIsolationTests
         };
         var offenders = Directory
             .EnumerateFiles(projectRoot, "*.cs", SearchOption.AllDirectories)
-            .Where(path =>
-            {
-                var relativePath = Path.GetRelativePath(projectRoot, path);
-                return !relativePath.StartsWith($"tests{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
-                    && !relativePath.StartsWith($".claude{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
-                    && !relativePath.StartsWith($".worktrees{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
-                    && !relativePath.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
-                    && !relativePath.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase);
-            })
+            .Where(path => !IsBuildOrTestArtifact(projectRoot, path))
             .Where(path => !allowedFiles.Contains(path))
             .Where(path => File
                 .ReadAllText(path)
-                .Contains(
-                    "Environment.SpecialFolder.LocalApplicationData",
-                    StringComparison.Ordinal))
+                .Contains(LocalApplicationDataMember, StringComparison.Ordinal))
             .Select(path => Path.GetRelativePath(projectRoot, path))
             .Order(StringComparer.Ordinal)
             .ToArray();
 
-        Assert.Empty(offenders);
+        Assert.True(
+            offenders.Length == 0,
+            "这些文件自己拼了 LocalApplicationData 路径，请改为走注入的 LauncherDataRoot；"
+            + "确属已声明例外时在 allowedFiles 里登记并注明理由："
+            + string.Join(", ", offenders));
     }
 
     private static bool IsBuildOrTestArtifact(string projectRoot, string path)

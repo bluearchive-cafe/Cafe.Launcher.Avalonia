@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Testing;
@@ -150,11 +150,23 @@ public sealed class SettingsWriteOwnershipTests
             .Distinct(StringComparer.Ordinal)
             .ToArray();
 
+    /// <summary>
+    /// 应用工程的源文件。<c>bin</c> 与 <c>obj</c> 必须排除：生成代码（AssemblyInfo、XAML 的
+    /// <c>.g.cs</c>）与旧输出副本会让「只有写入方调用 SaveAsync」变成假红，而判据本身
+    /// 并不需要它们。
+    /// </summary>
     private static IEnumerable<string> SourceFiles() =>
-        Directory.EnumerateFiles(
-            TestRepository.FromApplicationRoot("."),
-            "*.cs",
-            SearchOption.AllDirectories);
+        Directory
+            .EnumerateFiles(
+                TestRepository.FromApplicationRoot("."),
+                "*.cs",
+                SearchOption.AllDirectories)
+            .Where(file => !IsBuildArtifact(file));
+
+    private static bool IsBuildArtifact(string path) =>
+        Path.GetRelativePath(TestRepository.FromApplicationRoot("."), path)
+            .Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            .Any(segment => segment is "bin" or "obj");
 
     private static string RelativePath(string absolutePath) =>
         Path.GetRelativePath(TestRepository.FromApplicationRoot("."), absolutePath).Replace(Path.DirectorySeparatorChar, '/');
