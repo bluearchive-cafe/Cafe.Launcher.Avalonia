@@ -221,7 +221,7 @@
 | 编号 | 旧状态 | 一句话 | **复核结论（2026-09-17）** |
 | --- | --- | --- | --- |
 | `H-AUD-CI-008` | open/medium | Release 配置的测试只在打 tag 的 `release.yml` 里跑 | **重新立案 `AUD-CI-007` → 同日结案**（build.yml 增 `Test (Release)` 步骤） |
-| `H-AUD-REL-008` | open/low | 发布横幅的版本契约无机械守卫 | **重新立案 `AUD-MAINT-006` → 同日结案**（契约测试钉住「当前版本的横幅存在、是 PNG、画布等于模板」＋指南写明历史尺寸＋版本读取收敛到 `ProjectMetadata`） |
+| `H-AUD-REL-008` | open/low | 发布横幅的版本契约无机械守卫 | **重新立案 `AUD-MAINT-006` → 同日结案**（契约测试钉住「当前版本的横幅存在、是 PNG、画布等于模板」＋指南写明历史尺寸＋版本读取收敛到 `ProjectMetadata`）。**2026-09-24 修订**：画布断言从「等于模板声明的 2000×1125」放宽为「16:9 且宽度落在 1920–2400」，因为 `v1.1.0-beta.11` 的成品是外部交付的 1920×1080 整张海报；模板自身的 2000×1125 仍由 `BannerTemplate_DeclaresHouseCanvasAndDeterministicScale` 钉死 |
 | `H-AUD-MTN-017` | open/low | 新增主叠层仍需约 14 个未守卫编辑点，语言刷新清单漏改静默失败 | **部分失效 + 并入 `R2-c08`**：语言刷新清单那半项已由 `D10`（`68e6efa`）收口——清单从手工逐处调用变成「装配后注入的单一名单 + 一个契约」；剩余「新增主叠层仍有未守卫编辑点」正是 `R2-c08` 提议的那条补守卫，故不重复立案 |
 | `H-AUD-MTN-020` | open/low | `CLAUDE.md:103` 仍把 click code 列为启动器数据 | **不再适用**：`CLAUDE.md` 已不存在于仓库（工程契约文档现为 `AGENTS.md`），全仓库 `click code` 只剩审计历史与总表本行 |
 | `H-AUD-MTN-021` | open/low | `LocalInstallationStateStore` 类注释写 `game_config.json` | **重新立案 `AUD-MAINT-007` → 同日结案**（注释改为引用 `GamePaths` 常量，不再重抄文件名） |

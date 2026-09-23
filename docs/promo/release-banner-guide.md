@@ -1,14 +1,26 @@
 # 发布横幅生成流程
 
-本仓库每个发行版本配一张 2000×1125 的发布横幅（当前画布，见下方模板），位于
+本仓库每个发行版本配一张 16:9 的发布横幅，位于
 `docs/assets/release-banners/`，文件名固定为 `cafe-launcher-<tag>-release-banner.png`，
 由 `CHANGELOG_RELEASE.md` 引用。`release.yml` 的「Verify release banner」步骤在打 tag 时
 校验该文件存在，缺失即构建失败；契约测试另钉住「当前版本的同名横幅确实存在、是 PNG 且
-画布与模板一致」（`ReleaseBannerContractTests.CommittedBanner_ForTheDeclaredProjectVersion_…`），
+画布是本仓库接受的 16:9 尺寸」（`ReleaseBannerContractTests.CommittedBanner_ForTheDeclaredProjectVersion_…`），
 所以坏文件在发版前就会红。
 
-> 历史尺寸：`beta.1`–`beta.5` 早于当前画布，是 2400×1350；`beta.6` 起为 2000×1125。
-> 契约测试只校验**当前 `VersionPrefix` 对应的那一张**，故旧文件不参与断言。
+**画布**：管线渲染的房屋画布是模板里的 **2000×1125**（`BannerTemplate_DeclaresHouseCanvasAndDeterministicScale`
+把模板钉死在这一档，`device_scale_factor` 恒为 1）。入库的成品则不必等于这一档：外部交付的
+整张海报可以更小或更大，契约接受 **1920×1080 至 2400×1350 之间的任意 16:9 画布**
+（`AssertBannerCanvasIsAccepted`）。放宽的只是尺寸，比例仍是硬要求——发布说明、Release 页面与
+仓库首页都会原样缩放这张图，比例错了会被裁切，尺寸太小则在 2×/3× 屏上发虚。
+
+> 历史尺寸：`beta.1`–`beta.5` 是 2400×1350；`beta.6`–`beta.10` 是 2000×1125；
+> `beta.11` 是外部交付的 1920×1080（见下）。契约测试只校验**当前 `VersionPrefix` 对应的那一张**，
+> 故旧文件不参与断言。
+
+> 外部交付的成品：`beta.11` 的横幅不是本管线渲染的，而是直接交付的整张 1920×1080 PNG。
+> 这种情况下仍要补一份 spec（`DeclaredProjectVersion_HasItsBannerSpec` 要求它存在），
+> 且 spec 的 `canvas` 要写成**成品真实画布**，别照抄模板的 2000×1125——否则 spec 描述的几何
+> 与入库的图对不上，重跑也复现不出同一个尺寸。
 
 横幅由 `promotional-image` skill 的声明式管线产出：spec 描述设计，渲染器把 spec 变成
 PNG，manifest 记录这次渲染的证据。**操作说明书在 skill 自己那里，不在本仓库**
@@ -232,10 +244,10 @@ spec 与图标资产一并提交。**入库清单**：`docs/promo/specs/<tag>.sp
 | 项 | 取值 |
 | --- | --- |
 | `canvas.preset` | `custom`（尺寸由 width/height 决定，preset 只是标签，不做校验） |
-| `canvas.width` / `height` | `2000` / `1125` |
+| `canvas.width` / `height` | `2000` / `1125`（模板的房屋画布；单份 spec 可声明别的 16:9 画布，见文首「画布」） |
 | `canvas.device_scale_factor` | `1` |
 | `orientation` | 由宽高自动算出 `landscape`，写进 `prepared` 与 manifest |
-| 内部 `scale` | `sqrt((2000×1125)/(1920×1080))` ≈ `1.041667` |
+| 内部 `scale` | `sqrt((2000×1125)/(1920×1080))` ≈ `1.041667`（随该 spec 的画布而变：1920×1080 时即 `1`） |
 
 **`device_scale_factor` 的约束在 schema 里，不是约定。** `promo-v2.schema.json` 把它写成
 `{"const": 1}`，所以任何非 1 的取值在 `inspect`/`prepare` 阶段就被 schema 拒掉，根本走不到渲染器
