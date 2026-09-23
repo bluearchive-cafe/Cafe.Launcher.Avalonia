@@ -1,7 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Cafe.Launcher.Avalonia.ViewModels"
-             xmlns:models="using:Cafe.Launcher.Avalonia.Models"
              xmlns:converters="using:Cafe.Launcher.Avalonia.Converters"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              xmlns:markdown="clr-namespace:Markdown.Avalonia;assembly=Markdown.Avalonia"
@@ -113,61 +112,6 @@
                             IsVisible="{Binding Dialogs.HasUpdateReleaseNotes}"
                             Markdown="{Binding Dialogs.UpdateReleaseNotes}"
                             MaxHeight="240"/>
-                        <StackPanel Spacing="{StaticResource Launcher.Spacing.Md}"
-                                    IsVisible="{Binding !Dialogs.UpdateSupportsInAppApply}">
-                        <StackPanel Classes="card-heading">
-                            <materialIcons:MaterialIcon Kind="InformationOutline"
-                                                       Width="{StaticResource Launcher.Icon.Sm}"
-                                                       Height="{StaticResource Launcher.Icon.Sm}"
-                                                       Foreground="{DynamicResource Launcher.Color.Primary}"
-                                                       VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding Shell.I18n[launcherUpdateSelectFile]}"
-                                       Classes="dialog-alert-content"
-                                       VerticalAlignment="Center"/>
-                        </StackPanel>
-                            <ListBox ItemsSource="{Binding Dialogs.UpdateAvailableFiles}"
-                                     SelectedItem="{Binding Dialogs.SelectedUpdateFile, Mode=TwoWay}"
-                                     Classes="update-file-list"
-                                     MaxHeight="{StaticResource Launcher.Component.Dialog.Update.FileList.MaxHeight}">
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate x:DataType="models:ReleaseFile">
-                                        <Grid ColumnDefinitions="Auto,*,Auto"
-                                              ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
-                                            <Border Classes="update-file-icon">
-                                                <materialIcons:MaterialIcon Kind="Download"
-                                                                           Width="{StaticResource Launcher.Icon.Lg}"
-                                                                           Height="{StaticResource Launcher.Icon.Lg}"
-                                                                           Foreground="{DynamicResource Launcher.Color.Primary}"
-                                                                           HorizontalAlignment="Center"
-                                                                           VerticalAlignment="Center"/>
-                                            </Border>
-                                            <StackPanel Grid.Column="1"
-                                                        Spacing="{StaticResource Launcher.Spacing.Xs}"
-                                                        VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding Name}"
-                                                           Classes="update-file-name"
-                                                           TextWrapping="Wrap"/>
-                                                <TextBlock Text="{Binding Url}"
-                                                           Classes="caption"
-                                                           TextTrimming="CharacterEllipsis"
-                                                           MaxLines="1"/>
-                                            </StackPanel>
-                                            <Border Grid.Column="2"
-                                                    Classes="update-file-size"
-                                                    VerticalAlignment="Center">
-                                                <StackPanel Orientation="Horizontal"
-                                                            Spacing="{StaticResource Launcher.Spacing.Xs}">
-                                                    <TextBlock Text="{Binding #DialogsRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n[launcherUpdateFileSize]}"
-                                                               Classes="caption"/>
-                                                    <TextBlock Text="{Binding DisplaySize}"
-                                                               Classes="update-file-size-text"/>
-                                                </StackPanel>
-                                            </Border>
-                                        </Grid>
-                                    </DataTemplate>
-                                </ListBox.ItemTemplate>
-                            </ListBox>
-                        </StackPanel>
                         <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}"
                                     IsVisible="{Binding Dialogs.IsUpdateApplying}">
                             <TextBlock Text="{Binding Dialogs.UpdateStatusText}"
@@ -194,10 +138,19 @@
                                 Command="{Binding Dialogs.ConfirmUpdateAvailableCommand}"
                                 IsEnabled="{Binding Dialogs.CanConfirmUpdate}"
                                 IsVisible="{Binding !Dialogs.IsUpdateReadyToRestart}"
-                                AutomationProperties.Name="{Binding Shell.I18n[launcherUpdateDownload]}">
+                                AutomationProperties.Name="{Binding Dialogs.UpdatePrimaryActionText}">
+                            <!-- 单一 Content 内按是否支持应用内更新切换形态：下载（应用内）/ 前往发布页（浏览器交接）。 -->
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="Download" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                                <TextBlock Text="{Binding Shell.I18n[launcherUpdateDownload]}"/>
+                                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}"
+                                            IsVisible="{Binding Dialogs.UpdateSupportsInAppApply}">
+                                    <materialIcons:MaterialIcon Kind="Download" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                    <TextBlock Text="{Binding Shell.I18n[launcherUpdateDownload]}"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}"
+                                            IsVisible="{Binding !Dialogs.UpdateSupportsInAppApply}">
+                                    <materialIcons:MaterialIcon Kind="OpenInNew" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                    <TextBlock Text="{Binding Shell.I18n[launcherUpdateOpenReleasePage]}"/>
+                                </StackPanel>
                             </StackPanel>
                         </Button>
                         <Button Classes="primary-action dialog-action"

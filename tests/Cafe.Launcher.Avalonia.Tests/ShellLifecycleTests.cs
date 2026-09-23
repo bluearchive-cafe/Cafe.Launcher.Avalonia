@@ -295,31 +295,21 @@ public sealed class ShellLifecycleTests : IDisposable
     }
 
     [Fact]
-    public void ConfirmUpdateAvailableRequested_WhenConfirmed_OpensSelectedFileUrlOnceAndStopsAfterDispose()
+    public void ConfirmUpdateAvailableRequested_WhenConfirmed_OpensReleasePageOnceAndStopsAfterDispose()
     {
         var fixture = CreateLifecycle(new ScriptedCoreService(CreateSnapshot()));
-        var files = new[]
-        {
-            new ReleaseFile
-            {
-                Name = "Cafe.Launcher_v9.9.9.zip",
-                Url = "https://example.com/download/Cafe.Launcher_v9.9.9.zip",
-                Size = 100
-            }
-        };
+        var files = Array.Empty<ReleaseFile>();
 
         fixture.Dialogs.ShowUpdateAvailable("9.9.9", files, canSelfUpdate: false);
-        fixture.Dialogs.SelectedUpdateFile = files[0];
         fixture.Dialogs.ConfirmUpdateAvailableCommand.Execute(null);
 
-        // 确认更新恰好打开一次所选文件的下载页,且走的是壳的统一外部链接出口。
+        // 不支持应用内更新的平台,确认更新恰好打开一次版本发布页,且走的是壳的统一外部链接出口。
         var opened = Assert.Single(openedUrls);
-        Assert.Equal(files[0].Url, opened);
+        Assert.Equal(LauncherConstants.GitHubReleasesPageUrl, opened);
 
         // Dispose 后退订:同一事件不得再触发外部打开。
         fixture.Lifecycle.Dispose();
         fixture.Dialogs.ShowUpdateAvailable("9.9.9", files, canSelfUpdate: false);
-        fixture.Dialogs.SelectedUpdateFile = files[0];
         fixture.Dialogs.ConfirmUpdateAvailableCommand.Execute(null);
 
         Assert.Single(openedUrls);

@@ -133,7 +133,7 @@ public sealed class SettingsViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task CheckForUpdatesCommand_WhenNewerReleaseAvailable_OpensUpdateDialogWithFiles()
+    public async Task CheckForUpdatesCommand_WhenNewerReleaseAvailable_OpensUpdateDialog()
     {
         var localizer = new LocalizationService();
         var dialogs = CreateDialogsViewModel();
@@ -146,10 +146,6 @@ public sealed class SettingsViewModelTests : IDisposable
         Assert.Empty(raisedToasts);
         Assert.True(dialogs.IsUpdateAvailableVisible);
         Assert.Equal("9.9.9", dialogs.UpdateAvailableVersion);
-        var file = Assert.Single(dialogs.UpdateAvailableFiles);
-        Assert.Equal(
-            "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v9.9.9/Cafe.Launcher_v9.9.9.zip",
-            file.Url);
     }
 
     private SettingsViewModel CreateSettingsViewModel(

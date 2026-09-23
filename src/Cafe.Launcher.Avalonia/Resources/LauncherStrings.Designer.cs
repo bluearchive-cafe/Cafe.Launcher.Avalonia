@@ -602,11 +602,11 @@ internal static class LauncherStrings
 
     internal static string LauncherUpdateLater => GetRequiredString("launcherUpdateLater");
 
+    internal static string LauncherUpdateOpenReleasePage => GetRequiredString("launcherUpdateOpenReleasePage");
+
     internal static string LauncherUpdateReadyToRestart => GetRequiredString("launcherUpdateReadyToRestart");
 
     internal static string LauncherUpdateRestart => GetRequiredString("launcherUpdateRestart");
-
-    internal static string LauncherUpdateSelectFile => GetRequiredString("launcherUpdateSelectFile");
 
     internal static string LauncherUpdateUpToDate => GetRequiredString("launcherUpdateUpToDate");
 

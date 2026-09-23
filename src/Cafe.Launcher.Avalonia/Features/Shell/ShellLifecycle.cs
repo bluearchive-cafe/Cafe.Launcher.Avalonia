@@ -396,7 +396,8 @@ public sealed class ShellLifecycle : IShellRuntime
 
     // 经 windowChrome 的注入缝而非直接调 ExternalLinkService.Open：
     // 壳的全部外部链接出口统一走这一条缝，测试可注入记录委托。
-    private void OnUpdateAvailableConfirmed(string downloadUrl) => windowChrome.OpenExternalUrl(downloadUrl);
+    // 不支持应用内更新的平台上，这里收到的不是文件直链而是版本发布页。
+    private void OnUpdateAvailableConfirmed(string url) => windowChrome.OpenExternalUrl(url);
 
     private void OnSelfUpdateStartRequested(string version, IReadOnlyList<ReleaseFile> files) =>
         _ = RunSelfUpdateAsync(version, files);

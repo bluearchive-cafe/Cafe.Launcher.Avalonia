@@ -35,6 +35,12 @@ public static class LauncherConstants
     /// </summary>
     public const string GitHubReleaseRepositoryUrl =
         "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release";
+    /// <summary>
+    /// Releases list page of the release repository. The browser hand-off target for
+    /// hosts that cannot apply updates in-app; the list page always exists, unlike a
+    /// tag-specific page.
+    /// </summary>
+    public const string GitHubReleasesPageUrl = GitHubReleaseRepositoryUrl + "/releases";
     public const string IssueTrackerUrl =
         "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/issues";
 }

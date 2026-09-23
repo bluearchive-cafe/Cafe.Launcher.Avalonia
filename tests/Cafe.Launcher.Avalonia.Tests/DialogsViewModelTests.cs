@@ -63,8 +63,9 @@ public sealed class DialogsViewModelTests : IDisposable
     }
 
     [Fact]
-    public void ShowUpdateAvailable_ListsFilesWithoutSelectingOne()
+    public void ShowUpdateAvailable_WithoutSelfUpdate_EnablesBrowserHandOffImmediately()
     {
+        var localizer = new LocalizationService();
         var viewModel = CreateViewModel();
         var files = CreateFiles();
 
@@ -72,9 +73,12 @@ public sealed class DialogsViewModelTests : IDisposable
 
         Assert.True(viewModel.IsUpdateAvailableVisible);
         Assert.Equal("1.2.0", viewModel.UpdateAvailableVersion);
-        Assert.Equal(files, viewModel.UpdateAvailableFiles);
-        Assert.Null(viewModel.SelectedUpdateFile);
-        Assert.False(viewModel.HasSelectedUpdateFile);
+        Assert.False(viewModel.UpdateSupportsInAppApply);
+        Assert.True(viewModel.CanConfirmUpdate);
+        // 主动作文案是「前往发布页」而不是「下载」：浏览器交接分支的措辞即出口语义。
+        Assert.Equal(
+            localizer.T(LocalizationKeys.LauncherUpdateOpenReleasePage),
+            viewModel.UpdatePrimaryActionText);
     }
 
     [Fact]
@@ -93,7 +97,7 @@ public sealed class DialogsViewModelTests : IDisposable
     }
 
     [Fact]
-    public void ConfirmUpdateAvailable_WithoutSelection_DoesNotCloseOrRequestDownload()
+    public void ConfirmUpdateAvailable_WithoutSelfUpdate_OpensReleasePageAndCloses()
     {
         var viewModel = CreateViewModel();
         string? requestedUrl = null;
@@ -102,24 +106,8 @@ public sealed class DialogsViewModelTests : IDisposable
 
         viewModel.ConfirmUpdateAvailableCommand.Execute(null);
 
-        Assert.True(viewModel.IsUpdateAvailableVisible);
-        Assert.Null(requestedUrl);
-    }
-
-    [Fact]
-    public void ConfirmUpdateAvailable_WithSelection_RequestsSelectedFileUrl()
-    {
-        var viewModel = CreateViewModel();
-        var files = CreateFiles();
-        string? requestedUrl = null;
-        viewModel.ConfirmUpdateAvailableRequested += url => requestedUrl = url;
-        viewModel.ShowUpdateAvailable("1.2.0", files, canSelfUpdate: false);
-        viewModel.SelectedUpdateFile = files[1];
-
-        viewModel.ConfirmUpdateAvailableCommand.Execute(null);
-
         Assert.False(viewModel.IsUpdateAvailableVisible);
-        Assert.Equal(files[1].Url, requestedUrl);
+        Assert.Equal(LauncherConstants.GitHubReleasesPageUrl, requestedUrl);
     }
 
     [Fact]
@@ -135,7 +123,7 @@ public sealed class DialogsViewModelTests : IDisposable
     }
 
     [Fact]
-    public void ConfirmUpdateAvailable_WhenSelfUpdateSupported_RaisesStartWithoutSelection()
+    public void ConfirmUpdateAvailable_WhenSelfUpdateSupported_RaisesStart()
     {
         var viewModel = CreateViewModel();
         var raised = 0;
@@ -203,17 +191,13 @@ public sealed class DialogsViewModelTests : IDisposable
     }
 
     [Fact]
-    public void ShowUpdateAvailable_WhenReopened_ClearsPreviousSelection()
+    public void ShowUpdateAvailable_WhenReopened_InAppConfirmCarriesLatestFiles()
     {
         var viewModel = CreateViewModel();
-        var firstFiles = CreateFiles();
-        viewModel.ShowUpdateAvailable("1.2.0", firstFiles, canSelfUpdate: false);
-        viewModel.SelectedUpdateFile = firstFiles[0];
+        viewModel.ShowUpdateAvailable("1.2.0", CreateFiles(), canSelfUpdate: true);
         viewModel.CancelUpdateAvailableCommand.Execute(null);
 
         Assert.False(viewModel.IsUpdateAvailableVisible);
-        Assert.Empty(viewModel.UpdateAvailableFiles);
-        Assert.Null(viewModel.SelectedUpdateFile);
 
         var secondFiles = new[]
         {
@@ -224,11 +208,14 @@ public sealed class DialogsViewModelTests : IDisposable
                 Size = 7000000
             }
         };
-        viewModel.ShowUpdateAvailable("1.3.0", secondFiles, canSelfUpdate: false);
+        IReadOnlyList<ReleaseFile>? requestedFiles = null;
+        viewModel.SelfUpdateStartRequested += (_, files) => requestedFiles = files;
+        viewModel.ShowUpdateAvailable("1.3.0", secondFiles, canSelfUpdate: true);
 
-        Assert.Equal(secondFiles, viewModel.UpdateAvailableFiles);
-        Assert.Null(viewModel.SelectedUpdateFile);
-        Assert.False(viewModel.HasSelectedUpdateFile);
+        viewModel.ConfirmUpdateAvailableCommand.Execute(null);
+
+        // 文件清单不再作为可选项暴露，但应用内更新确认时必须携带最新一轮的文件。
+        Assert.Equal(secondFiles, requestedFiles);
     }
 
     [Fact]

@@ -302,9 +302,9 @@ public static class LocalizationKeys
     public const string LauncherUpdateDownloading = "launcherUpdateDownloading";
     public const string LauncherUpdateFileSize = "launcherUpdateFileSize";
     public const string LauncherUpdateLater = "launcherUpdateLater";
+    public const string LauncherUpdateOpenReleasePage = "launcherUpdateOpenReleasePage";
     public const string LauncherUpdateReadyToRestart = "launcherUpdateReadyToRestart";
     public const string LauncherUpdateRestart = "launcherUpdateRestart";
-    public const string LauncherUpdateSelectFile = "launcherUpdateSelectFile";
     public const string LauncherUpdateUpToDate = "launcherUpdateUpToDate";
     public const string LauncherVersionLabel = "launcherVersionLabel";
     public const string LocalManifestMetadataMissing = "localManifestMetadataMissing";
