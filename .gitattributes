@@ -15,3 +15,4 @@
 
 installer/linux/AppRun text eol=lf
 installer/linux/debian/* text eol=lf
+installer/linux/rpm/* text eol=lf
