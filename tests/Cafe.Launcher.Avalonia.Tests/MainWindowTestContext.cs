@@ -187,7 +187,7 @@ internal sealed class MainWindowTestContext : IDisposable
             new LauncherUpdateHostInfoProvider(),
             directory.DataRoot,
             diagnostics);
-        launcherUpdateApplier ??= new WindowsLauncherUpdateApplier(directory.DataRoot, diagnostics);
+        launcherUpdateApplier ??= new WindowsLauncherUpdateApplier(directory.DataRoot, diagnostics, directory.Path);
         var settingsEditor = savedSettings.Editor;
         var settingsOptions = new SettingsOptionsViewModel(localizationService, diskSpaceService);
         var settingsAppearance = new SettingsAppearanceViewModel(settingsEditor, new ThemeApplier());

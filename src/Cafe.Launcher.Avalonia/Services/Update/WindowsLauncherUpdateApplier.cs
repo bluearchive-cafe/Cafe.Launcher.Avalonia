@@ -19,11 +19,52 @@ internal sealed class WindowsLauncherUpdateApplier : IWindowsLauncherUpdateAppli
 
     private readonly LauncherDataRoot dataRoot;
     private readonly LocalDiagnostics diagnostics;
+    private readonly string tempRoot;
 
     public WindowsLauncherUpdateApplier(LauncherDataRoot dataRoot, LocalDiagnostics diagnostics)
+        : this(dataRoot, diagnostics, Path.GetTempPath())
+    {
+    }
+
+    /// <summary>Test seam: the temp root the helper copies live under.</summary>
+    internal WindowsLauncherUpdateApplier(LauncherDataRoot dataRoot, LocalDiagnostics diagnostics, string tempRoot)
     {
         this.dataRoot = dataRoot;
         this.diagnostics = diagnostics;
+        this.tempRoot = tempRoot;
+    }
+
+    /// <inheritdoc />
+    public void CleanupAbandonedHelperDirectories()
+    {
+        string[] directories;
+        try
+        {
+            directories = Directory.GetDirectories(Path.Combine(tempRoot, TempFolderName));
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // A missing root is the normal case on hosts that never applied an update.
+            return;
+        }
+
+        foreach (var directory in directories)
+        {
+            if (!Guid.TryParseExact(Path.GetFileName(directory), "N", out _))
+            {
+                continue;
+            }
+
+            try
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                // A running helper holds its executable on Windows; leave its directory
+                // for a later launch instead of failing the sweep.
+            }
+        }
     }
 
     /// <inheritdoc />
@@ -52,7 +93,7 @@ internal sealed class WindowsLauncherUpdateApplier : IWindowsLauncherUpdateAppli
         }
 
         var tempDirectory = Path.Combine(
-            Path.GetTempPath(),
+            tempRoot,
             TempFolderName,
             Guid.NewGuid().ToString("N"));
         try

@@ -61,6 +61,8 @@
     <Compile Include="..\..\src\Cafe.Launcher.Updater\UpdateApplyPlan.cs" Link="Updater\UpdateApplyPlan.cs" />
     <Compile Include="..\..\src\Cafe.Launcher.Updater\PackageIntegrity.cs" Link="Updater\PackageIntegrity.cs" />
     <Compile Include="..\..\src\Cafe.Launcher.Updater\UpdaterArguments.cs" Link="Updater\UpdaterArguments.cs" />
+    <Compile Include="..\..\src\Cafe.Launcher.Updater\UpdateLog.cs" Link="Updater\UpdateLog.cs" />
+    <Compile Include="..\..\src\Cafe.Launcher.Updater\UpdateApplier.cs" Link="Updater\UpdateApplier.cs" />
   </ItemGroup>
 
   <ItemGroup>

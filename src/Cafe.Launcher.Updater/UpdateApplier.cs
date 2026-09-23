@@ -23,6 +23,7 @@ public static class UpdateApplier
     public static async Task<int> ApplyAsync(UpdaterArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+        var stopwatch = Stopwatch.StartNew();
         UpdateLog.Write(arguments, $"Apply started (mode={arguments.Mode}, parentPid={arguments.ParentProcessId}).");
 
         try
@@ -44,8 +45,8 @@ public static class UpdateApplier
         }
 
         return arguments.Mode == UpdateApplyMode.Installer
-            ? RunInstaller(arguments)
-            : ReplacePortableDirectory(arguments);
+            ? RunInstaller(arguments, stopwatch)
+            : ReplacePortableDirectory(arguments, stopwatch);
     }
 
     private static async Task WaitForParentExitAsync(int parentProcessId, CancellationToken cancellationToken)
@@ -64,7 +65,7 @@ public static class UpdateApplier
         }
     }
 
-    private static int RunInstaller(UpdaterArguments arguments)
+    private static int RunInstaller(UpdaterArguments arguments, Stopwatch stopwatch)
     {
         var startInfo = new ProcessStartInfo
         {
@@ -102,10 +103,11 @@ public static class UpdateApplier
             }
         }
 
+        LogApplyCompleted(arguments, stopwatch);
         return LaunchApplication(arguments) ? 0 : 5;
     }
 
-    private static int ReplacePortableDirectory(UpdaterArguments arguments)
+    private static int ReplacePortableDirectory(UpdaterArguments arguments, Stopwatch stopwatch)
     {
         var staging = UpdateApplyPlan.StagingDirectory(arguments.InstallDirectory, arguments.ParentProcessId);
         var backup = UpdateApplyPlan.BackupDirectory(arguments.InstallDirectory, arguments.ParentProcessId);
@@ -153,8 +155,19 @@ public static class UpdateApplier
         }
 
         TryDeleteDirectory(backup);
+        LogApplyCompleted(arguments, stopwatch);
         return LaunchApplication(arguments) ? 0 : 9;
     }
+
+    /// <summary>
+    /// The success counterpart to the "Apply started" line: a helper run that replaces
+    /// the installation and hands over to the new executable otherwise leaves no trace
+    /// in the log, and success could only be inferred from the relaunched process.
+    /// </summary>
+    private static void LogApplyCompleted(UpdaterArguments arguments, Stopwatch stopwatch) =>
+        UpdateLog.Write(
+            arguments,
+            $"Apply completed (mode={arguments.Mode}, elapsed={stopwatch.Elapsed.TotalSeconds:0.0##}s).");
 
     private static void TryRollBack(UpdaterArguments arguments, string backup)
     {

@@ -207,8 +207,13 @@ public sealed class ShellLifecycle : IShellRuntime
     public bool IsMotionReduced => isMotionReduced;
 
     /// <summary>Initializes the shell once by loading settings and launcher state.</summary>
-    public Task InitializeAsync(CancellationToken cancellationToken = default) =>
-        startup.InitializeAsync(cancellationToken);
+    public Task InitializeAsync(CancellationToken cancellationToken = default)
+    {
+        // 上一次自更新残留在 %TEMP% 的 helper 副本此刻没有属主(helper 只在主
+        // 进程退出后短暂存活),启动时清掉;仍在运行的例外靠文件锁幸免。
+        launcherUpdateApplier.CleanupAbandonedHelperDirectories();
+        return startup.InitializeAsync(cancellationToken);
+    }
 
     /// <summary>Reapplies the system motion preference when the user chose the system option.</summary>
     public void RefreshSystemMotionPreference()

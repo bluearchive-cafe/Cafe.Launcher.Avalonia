@@ -557,7 +557,7 @@ public sealed class ShellLifecycleTests : IDisposable
             new LauncherUpdateHostInfoProvider(),
             tempDir.DataRoot,
             diagnostics);
-        launcherUpdateApplier ??= new WindowsLauncherUpdateApplier(tempDir.DataRoot, diagnostics);
+        launcherUpdateApplier ??= new WindowsLauncherUpdateApplier(tempDir.DataRoot, diagnostics, tempDir.Path);
         var filePickerService = new StubFilePickerService();
         var imageCacheService = new ImageCacheService(
             new StubRemoteHttpTransport(),
@@ -754,6 +754,10 @@ public sealed class ShellLifecycleTests : IDisposable
             StartCount++;
             LastTarget = preparation.Target;
             return true;
+        }
+
+        public void CleanupAbandonedHelperDirectories()
+        {
         }
     }
 
