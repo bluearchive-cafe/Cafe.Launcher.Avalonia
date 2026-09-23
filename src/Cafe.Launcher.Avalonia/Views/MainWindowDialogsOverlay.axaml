@@ -111,11 +111,22 @@
                             IsVisible="{Binding Dialogs.HasUpdateReleaseNotes}"
                             Markdown="{Binding Dialogs.UpdateReleaseNotes}"
                             MaxHeight="240"/>
+                        <Separator Classes="update-progress-divider"
+                                   IsVisible="{Binding Dialogs.IsUpdateApplying}"
+                                   Margin="{StaticResource Launcher.Spacing.Thickness.None}"
+                                   Background="{DynamicResource Launcher.Color.Outline}"/>
                         <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}"
                                     IsVisible="{Binding Dialogs.IsUpdateApplying}">
-                            <TextBlock Text="{Binding Dialogs.UpdateStatusText}"
-                                       Classes="dialog-alert-content"
-                                       TextWrapping="Wrap"/>
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                                <TextBlock Text="{Binding Dialogs.UpdateStatusText}"
+                                           Classes="dialog-alert-content"
+                                           TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding Dialogs.UpdateDownloadSpeedText}"
+                                           Classes="dialog-alert-content"
+                                           IsVisible="{Binding Dialogs.IsUpdateDownloading}"
+                                           VerticalAlignment="Center"/>
+                            </Grid>
                             <ProgressBar Minimum="0"
                                          Maximum="100"
                                          Value="{Binding Dialogs.UpdateProgress}"

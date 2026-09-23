@@ -34,7 +34,7 @@ public static class LauncherConstants
     /// (avoids referencing API config from view/viewmodel code).
     /// </summary>
     public const string GitHubReleaseRepositoryUrl =
-        "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release";
+        "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia";
     /// <summary>
     /// Releases list page of the release repository. The browser hand-off target for
     /// hosts that cannot apply updates in-app; the list page always exists, unlike a

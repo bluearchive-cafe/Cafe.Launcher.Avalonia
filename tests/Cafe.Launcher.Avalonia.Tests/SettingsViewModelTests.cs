@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Text.Json;
@@ -205,7 +205,7 @@ public sealed class SettingsViewModelTests : IDisposable
                     "files": [
                       {
                         "name": "Cafe.Launcher_v{{version}}.zip",
-                        "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v{{version}}/Cafe.Launcher_v{{version}}.zip",
+                        "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v{{version}}/Cafe.Launcher_v{{version}}.zip",
                         "sha512": "abc",
                         "size": 100
                       }

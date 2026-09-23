@@ -30,4 +30,16 @@ public sealed class LauncherConstantsTests
         // AuthorizationHeaderFactoryTests（字段序、签名拼装、版本变更对签名的影响）。
         Assert.Equal("1.7.2", ApiConfig.YostarAuthorizationVersion);
     }
+
+    [Fact]
+    public void LauncherUpdateEndpoints_UseTheApplicationRepository()
+    {
+        Assert.Equal("bluearchive-cafe/Cafe.Launcher.Avalonia", ApiConfig.GitHubReleaseRepositorySlug);
+        Assert.Equal(
+            "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases",
+            LauncherConstants.GitHubReleasesPageUrl);
+        Assert.Equal(
+            "https://api.github.com/repos/bluearchive-cafe/Cafe.Launcher.Avalonia/releases",
+            ApiConfig.GitHubReleasesApiUrl);
+    }
 }

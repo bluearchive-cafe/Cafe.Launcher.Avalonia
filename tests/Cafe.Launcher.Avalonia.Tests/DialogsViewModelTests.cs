@@ -147,8 +147,9 @@ public sealed class DialogsViewModelTests : IDisposable
         Assert.True(viewModel.IsUpdateDownloading);
         Assert.False(viewModel.CanConfirmUpdate);
 
-        viewModel.ReportUpdateProgress(0.5);
+        viewModel.ReportUpdateProgress(0.5, 5 * 1024 * 1024);
         Assert.Equal(50d, viewModel.UpdateProgress);
+        Assert.Equal("5MB/s", viewModel.UpdateDownloadSpeedText);
 
         viewModel.MarkUpdateReady();
 
@@ -156,6 +157,7 @@ public sealed class DialogsViewModelTests : IDisposable
         Assert.True(viewModel.IsUpdateReadyToRestart);
         Assert.True(viewModel.CanConfirmUpdate);
         Assert.Equal(100d, viewModel.UpdateProgress);
+        Assert.Empty(viewModel.UpdateDownloadSpeedText);
         Assert.False(string.IsNullOrWhiteSpace(viewModel.UpdateStatusText));
     }
 
@@ -172,6 +174,30 @@ public sealed class DialogsViewModelTests : IDisposable
         viewModel.ConfirmUpdateAvailableCommand.Execute(null);
 
         Assert.Equal(1, applied);
+    }
+
+    [Fact]
+    public void MarkUpdateFailed_ChangesPrimaryActionToReleasePage()
+    {
+        var localizer = new LocalizationService();
+        var viewModel = CreateViewModel();
+        string? requestedUrl = null;
+        viewModel.ConfirmUpdateAvailableRequested += url => requestedUrl = url;
+        viewModel.ShowUpdateAvailable("1.2.0", CreateFiles(), canSelfUpdate: true);
+        viewModel.BeginUpdateApply();
+
+        viewModel.MarkUpdateFailed();
+
+        Assert.False(viewModel.IsUpdateApplying);
+        Assert.False(viewModel.UpdateSupportsInAppApply);
+        Assert.Equal(
+            localizer.T(LocalizationKeys.LauncherUpdateOpenReleasePage),
+            viewModel.UpdatePrimaryActionText);
+
+        viewModel.ConfirmUpdateAvailableCommand.Execute(null);
+
+        Assert.Equal(LauncherConstants.GitHubReleasesPageUrl, requestedUrl);
+        Assert.False(viewModel.IsUpdateAvailableVisible);
     }
 
     [Fact]

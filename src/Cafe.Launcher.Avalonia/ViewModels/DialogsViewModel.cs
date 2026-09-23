@@ -163,6 +163,10 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel, I
     [ObservableProperty]
     private double updateProgress;
 
+    /// <summary>Human-readable transfer rate while the update package is downloading.</summary>
+    [ObservableProperty]
+    private string updateDownloadSpeedText = "";
+
     private string updateStatusKey = "";
 
     /// <summary>Localized status line shown while the in-app update flow is active.</summary>
@@ -292,14 +296,18 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel, I
         IsUpdateDownloading = true;
         IsUpdateReadyToRestart = false;
         UpdateProgress = 0;
+        UpdateDownloadSpeedText = "";
         updateStatusKey = LocalizationKeys.LauncherUpdateDownloading;
         OnPropertyChanged(nameof(UpdateStatusText));
     }
 
-    /// <summary>Reports transfer progress as a completion fraction in [0, 1].</summary>
-    public void ReportUpdateProgress(double fraction)
+    /// <summary>Reports transfer progress as a completion fraction in [0, 1] and bytes per second.</summary>
+    public void ReportUpdateProgress(double fraction, long bytesPerSecond = 0)
     {
         UpdateProgress = Math.Clamp(fraction, 0d, 1d) * 100d;
+        UpdateDownloadSpeedText = bytesPerSecond > 0
+            ? $"{FileSizeFormatter.Format(bytesPerSecond)}/s"
+            : "";
     }
 
     /// <summary>Shows that a verified update is ready and a restart will apply it.</summary>
@@ -308,8 +316,16 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel, I
         IsUpdateDownloading = false;
         IsUpdateReadyToRestart = true;
         UpdateProgress = 100;
+        UpdateDownloadSpeedText = "";
         updateStatusKey = LocalizationKeys.LauncherUpdateReadyToRestart;
         OnPropertyChanged(nameof(UpdateStatusText));
+    }
+
+    /// <summary>Returns from a failed in-app update and offers the release page as recovery.</summary>
+    public void MarkUpdateFailed()
+    {
+        ResetUpdateApply();
+        UpdateSupportsInAppApply = false;
     }
 
     /// <summary>Clears the in-app apply state and returns the dialog to its neutral form.</summary>
@@ -319,6 +335,7 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel, I
         IsUpdateDownloading = false;
         IsUpdateReadyToRestart = false;
         UpdateProgress = 0;
+        UpdateDownloadSpeedText = "";
         updateStatusKey = "";
         OnPropertyChanged(nameof(UpdateStatusText));
     }

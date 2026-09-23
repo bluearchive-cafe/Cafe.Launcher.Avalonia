@@ -10,8 +10,8 @@ namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed class LauncherSelfUpdateServiceTests
 {
-    private const string PackageUrl = "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v1.2.3/Cafe.Launcher.Avalonia_v1.2.3_win-x64.zip";
-    private const string ManifestUrl = "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v1.2.3/SHA256SUMS";
+    private const string PackageUrl = "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v1.2.3/Cafe.Launcher.Avalonia_v1.2.3_win-x64.zip";
+    private const string ManifestUrl = "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v1.2.3/SHA256SUMS";
     private const string PackageName = "Cafe.Launcher.Avalonia_v1.2.3_win-x64.zip";
     private const string Version = "1.2.3";
 

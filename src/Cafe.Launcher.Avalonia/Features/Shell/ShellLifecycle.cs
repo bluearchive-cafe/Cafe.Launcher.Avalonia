@@ -412,7 +412,7 @@ public sealed class ShellLifecycle : IShellRuntime
 
         if (!launcherUpdateApplier.TryStartApply(preparation))
         {
-            dialogs.ResetUpdateApply();
+            dialogs.MarkUpdateFailed();
             toastService.ShowError(localizer.T(LocalizationKeys.LauncherUpdateApplyFailed));
             return;
         }
@@ -425,8 +425,8 @@ public sealed class ShellLifecycle : IShellRuntime
 
     /// <summary>
     /// Downloads and verifies the Windows in-app update, then flips the dialog to
-    /// "restart to apply". Cancellation, verification failure, and helper failure all
-    /// return the dialog to its neutral state and report through a toast.
+    /// "restart to apply". Cancellation returns the dialog to its neutral state;
+    /// verification and preparation failures offer the release page and report through a toast.
     /// </summary>
     private async Task RunSelfUpdateAsync(string version, IReadOnlyList<ReleaseFile> files)
     {
@@ -438,7 +438,7 @@ public sealed class ShellLifecycle : IShellRuntime
         try
         {
             var progress = new Progress<LauncherUpdateProgress>(
-                update => dialogs.ReportUpdateProgress(update.Fraction));
+                update => dialogs.ReportUpdateProgress(update.Fraction, update.BytesPerSecond));
             var preparation = await launcherSelfUpdateService.PrepareAsync(files, version, progress, token);
             if (token.IsCancellationRequested)
             {
@@ -452,7 +452,7 @@ public sealed class ShellLifecycle : IShellRuntime
                 return;
             }
 
-            dialogs.ResetUpdateApply();
+            dialogs.MarkUpdateFailed();
             toastService.ShowError(localizer.T(LocalizationKeys.LauncherUpdateDownloadFailed));
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
@@ -461,7 +461,7 @@ public sealed class ShellLifecycle : IShellRuntime
         }
         catch (Exception exception)
         {
-            dialogs.ResetUpdateApply();
+            dialogs.MarkUpdateFailed();
             await errorHandling.HandleErrorAsync("Launcher self-update failed.", exception,
                 new ErrorHandlingOptions { ToastMessage = localizer.T(LocalizationKeys.LauncherUpdateDownloadFailed) });
         }

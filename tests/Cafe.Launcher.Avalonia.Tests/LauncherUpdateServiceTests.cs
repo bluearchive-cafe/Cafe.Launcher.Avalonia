@@ -26,7 +26,7 @@ public sealed class LauncherUpdateServiceTests
             "assets":[
               {
                 "name":"Cafe.Launcher.Avalonia_v1.0.0-beta.8_setup.exe",
-                "browser_download_url":"https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v1.0.0-beta.8/Cafe.Launcher.Avalonia_v1.0.0-beta.8_setup.exe",
+                "browser_download_url":"https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v1.0.0-beta.8/Cafe.Launcher.Avalonia_v1.0.0-beta.8_setup.exe",
                 "size":54170696,
                 "state":"uploaded"
               }
@@ -47,13 +47,13 @@ public sealed class LauncherUpdateServiceTests
                 "files": [
                   {
                     "name": "Cafe.Launcher_v1.2.0.zip",
-                    "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v1.2.0/Cafe.Launcher_v1.2.0.zip",
+                    "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v1.2.0/Cafe.Launcher_v1.2.0.zip",
                     "sha512": "",
                     "size": 5000000
                   },
                   {
                     "name": "Cafe.Launcher_Setup_v1.2.0.exe",
-                    "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v1.2.0/Cafe.Launcher_Setup_v1.2.0.exe",
+                    "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v1.2.0/Cafe.Launcher_Setup_v1.2.0.exe",
                     "sha512": "def456",
                     "size": 6000000
                   }
@@ -75,13 +75,13 @@ public sealed class LauncherUpdateServiceTests
             file =>
             {
                 Assert.Equal("Cafe.Launcher_v1.2.0.zip", file.Name);
-                Assert.Equal("https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v1.2.0/Cafe.Launcher_v1.2.0.zip", file.Url);
+                Assert.Equal("https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v1.2.0/Cafe.Launcher_v1.2.0.zip", file.Url);
                 Assert.Equal(5000000, file.Size);
             },
             file =>
             {
                 Assert.Equal("Cafe.Launcher_Setup_v1.2.0.exe", file.Name);
-                Assert.Equal("https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v1.2.0/Cafe.Launcher_Setup_v1.2.0.exe", file.Url);
+                Assert.Equal("https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v1.2.0/Cafe.Launcher_Setup_v1.2.0.exe", file.Url);
                 Assert.Equal(6000000, file.Size);
             });
         Assert.Equal(ProxyReleasesUri, Assert.Single(transport.RequestedUris));
@@ -99,7 +99,7 @@ public sealed class LauncherUpdateServiceTests
                 "files": [
                   {
                     "name": "Cafe.Launcher.zip",
-                    "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v1.0.0/Cafe.Launcher.zip",
+                    "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v1.0.0/Cafe.Launcher.zip",
                     "sha512": "abc",
                     "size": 100
                   }
@@ -161,7 +161,7 @@ public sealed class LauncherUpdateServiceTests
                     "version":"1.0.0-beta.8",
                     "files":[{
                       "name":"Cafe.Launcher.Avalonia_v1.0.0-beta.8_win-x64.zip",
-                      "url":"https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v1.0.0-beta.8/Cafe.Launcher.Avalonia_v1.0.0-beta.8_win-x64.zip",
+                      "url":"https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v1.0.0-beta.8/Cafe.Launcher.Avalonia_v1.0.0-beta.8_win-x64.zip",
                       "size":100
                     }]
                   }]
@@ -254,7 +254,7 @@ public sealed class LauncherUpdateServiceTests
                 "files": [
                   {
                     "name": "Cafe.Launcher.zip",
-                    "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v1.0.0/Cafe.Launcher.zip",
+                    "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v1.0.0/Cafe.Launcher.zip",
                     "sha512": "abc",
                     "size": 100
                   }
@@ -292,7 +292,7 @@ public sealed class LauncherUpdateServiceTests
                 "files": [
                   {
                     "name": "Cafe.Launcher_v1.2.0.zip",
-                    "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v1.2.0/Cafe.Launcher_v1.2.0.zip",
+                    "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v1.2.0/Cafe.Launcher_v1.2.0.zip",
                     "sha512": "abc123",
                     "size": 5000000
                   }
@@ -384,7 +384,7 @@ public sealed class LauncherUpdateServiceTests
                 "files": [
                   {
                     "name": "Cafe.Launcher_v1.1.0-beta.2.zip",
-                    "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v1.1.0-beta.2/Cafe.Launcher_v1.1.0-beta.2.zip",
+                    "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v1.1.0-beta.2/Cafe.Launcher_v1.1.0-beta.2.zip",
                     "sha512": "abc",
                     "size": 100
                   }
@@ -396,7 +396,7 @@ public sealed class LauncherUpdateServiceTests
                 "files": [
                   {
                     "name": "Cafe.Launcher_v1.0.0.zip",
-                    "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v1.0.0/Cafe.Launcher_v1.0.0.zip",
+                    "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v1.0.0/Cafe.Launcher_v1.0.0.zip",
                     "sha512": "abc",
                     "size": 100
                   }
@@ -426,7 +426,7 @@ public sealed class LauncherUpdateServiceTests
                 "files": [
                   {
                     "name": "Cafe.Launcher_v2.0.0-beta.1.zip",
-                    "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v2.0.0-beta.1/Cafe.Launcher_v2.0.0-beta.1.zip",
+                    "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v2.0.0-beta.1/Cafe.Launcher_v2.0.0-beta.1.zip",
                     "sha512": "abc",
                     "size": 100
                   }
@@ -438,7 +438,7 @@ public sealed class LauncherUpdateServiceTests
                 "files": [
                   {
                     "name": "Cafe.Launcher_v1.5.0.zip",
-                    "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v1.5.0/Cafe.Launcher_v1.5.0.zip",
+                    "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v1.5.0/Cafe.Launcher_v1.5.0.zip",
                     "sha512": "abc",
                     "size": 100
                   }
@@ -467,7 +467,7 @@ public sealed class LauncherUpdateServiceTests
                 "files": [
                   {
                     "name": "Cafe.Launcher_v1.5.0-beta.1.zip",
-                    "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v1.5.0-beta.1/Cafe.Launcher_v1.5.0-beta.1.zip",
+                    "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v1.5.0-beta.1/Cafe.Launcher_v1.5.0-beta.1.zip",
                     "sha512": "abc",
                     "size": 100
                   }
@@ -493,7 +493,7 @@ public sealed class LauncherUpdateServiceTests
               "version": "1.0.0",
               "files": [{
                 "name": "Cafe.Launcher.Avalonia_v1.0.0_setup.exe",
-                "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v1.0.0/Cafe.Launcher.Avalonia_v1.0.0_setup.exe",
+                "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v1.0.0/Cafe.Launcher.Avalonia_v1.0.0_setup.exe",
                 "size": 100
               }]
             }]

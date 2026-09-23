@@ -247,7 +247,7 @@ public partial class MainWindowViewModelTests
                     "files": [
                         {
                             "name": "installer.exe",
-                            "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v99.0.0/installer.exe",
+                            "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v99.0.0/installer.exe",
                             "size": 123456
                         }
                     ],

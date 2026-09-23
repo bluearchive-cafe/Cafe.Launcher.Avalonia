@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -342,13 +342,13 @@ public sealed class ShellLifecycleTests : IDisposable
             new ReleaseFile
             {
                 Name = "Cafe.Launcher.Avalonia_v9.9.9_win-x64.zip",
-                Url = "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v9.9.9/Cafe.Launcher.Avalonia_v9.9.9_win-x64.zip",
+                Url = "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v9.9.9/Cafe.Launcher.Avalonia_v9.9.9_win-x64.zip",
                 Size = packageBytes.Length
             },
             new ReleaseFile
             {
                 Name = "SHA256SUMS",
-                Url = "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v9.9.9/SHA256SUMS",
+                Url = "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v9.9.9/SHA256SUMS",
                 Size = 128
             }
         };
@@ -375,6 +375,54 @@ public sealed class ShellLifecycleTests : IDisposable
         Assert.Equal(0, closeCount);
         Assert.Equal(1, shutdownCount);
         Assert.Equal(LauncherUpdateTarget.WindowsPortable, applier.LastTarget);
+    }
+
+    [Fact]
+    public async Task SelfUpdate_WhenVerificationFails_OffersReleasePage()
+    {
+        var packageBytes = System.Text.Encoding.UTF8.GetBytes("launcher package payload");
+        var transport = new StubRemoteHttpTransport(uri =>
+            uri.AbsolutePath.EndsWith("SHA256SUMS", StringComparison.Ordinal)
+                ? $"{new string('0', 64)}  Cafe.Launcher.Avalonia_v9.9.9_win-x64.zip"
+                : packageBytes);
+        var selfUpdate = new LauncherSelfUpdateService(
+            new LauncherUpdateDownloader(transport),
+            new FixedHostInfoProvider(new LauncherUpdateHostInfo(
+                IsWindows: true,
+                IsX64: true,
+                IsInstallerInstall: false)),
+            tempDir.DataRoot,
+            new LocalDiagnostics());
+        var fixture = CreateLifecycle(
+            new ScriptedCoreService(CreateSnapshot()),
+            launcherSelfUpdateService: selfUpdate);
+        var files = new[]
+        {
+            new ReleaseFile
+            {
+                Name = "Cafe.Launcher.Avalonia_v9.9.9_win-x64.zip",
+                Url = "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v9.9.9/Cafe.Launcher.Avalonia_v9.9.9_win-x64.zip",
+                Size = packageBytes.Length
+            },
+            new ReleaseFile
+            {
+                Name = "SHA256SUMS",
+                Url = "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v9.9.9/SHA256SUMS",
+                Size = 128
+            }
+        };
+
+        fixture.Dialogs.ShowUpdateAvailable("9.9.9", files, canSelfUpdate: true);
+        fixture.Dialogs.ConfirmUpdateAvailableCommand.Execute(null);
+
+        await TestWait.UntilAsync(
+            () => !fixture.Dialogs.UpdateSupportsInAppApply,
+            TimeSpan.FromSeconds(5),
+            "A failed self-update should expose the release-page fallback.");
+
+        fixture.Dialogs.ConfirmUpdateAvailableCommand.Execute(null);
+
+        Assert.Equal(LauncherConstants.GitHubReleasesPageUrl, Assert.Single(openedUrls));
     }
 
     /// <summary>
