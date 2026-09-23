@@ -36,8 +36,9 @@ jobs:
           # Pinned to the SDK named by global.json, same as the Windows build job.
           dotnet-version: 10.0.302
 
-      - name: Cache NuGet packages
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - name: Restore NuGet cache
+        id: nuget-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.nuget/packages
           key: nuget-global-packages-${{ runner.os }}-${{ hashFiles('Directory.Packages.props') }}
@@ -58,3 +59,10 @@ jobs:
           name: linux-unit-test-results
           retention-days: 7
           path: TestResults/**/*.trx
+
+      - name: Save NuGet cache
+        if: always()
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.nuget/packages
+          key: ${{ steps.nuget-cache.outputs.cache-primary-key }}

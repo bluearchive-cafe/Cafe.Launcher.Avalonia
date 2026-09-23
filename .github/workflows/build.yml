@@ -54,10 +54,12 @@ jobs:
       # NuGet 全局包缓存（~/.nuget/packages）。不使用 setup-dotnet 的 `cache: true`：
       # 它的键是 `dotnet-cache-<os>-<hashFiles(**/*.csproj, **/packages.lock.json, Directory.Packages.props)>`，
       # 每次依赖文件字节变化就产生一个全新的 600~800 MB 条目（旧条目不复用也不删除），单仓库 10 GB 缓存
-      # 上限被反复顶满。这里的键只由依赖版本清单决定：版本没动就命中同一条目，只有版本真的变化才新增一条。
-      # 键变化后只有 restore-keys 命中的上一代条目可复用，其后首个新键会写入一次缓存。
-      - name: Cache NuGet packages
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      # 上限被反复顶满。这里的键只由依赖版本清单决定：版本没动就命中同一条目，只有版本真的变化才写新条目。
+      # 读写拆成两步：`actions/cache` 的保存是 post 步骤且只在 success() 时执行，本仓库测试红着的时候
+      # 缓存永远写不进去，而拆开后的保存步骤带 `if: always()`。
+      - name: Restore NuGet cache
+        id: nuget-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.nuget/packages
           key: nuget-global-packages-${{ runner.os }}-${{ hashFiles('Directory.Packages.props') }}
@@ -115,6 +117,14 @@ jobs:
           RestoreLockedMode: 'false'
         run: dotnet publish $env:Project_Path -c Release -r win-x64 -o publish --no-restore
 
+      # 键已存在时 save 是空操作，测试失败也必须走到这里，否则缓存只在绿灯时更新。
+      - name: Save NuGet cache
+        if: always()
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.nuget/packages
+          key: ${{ steps.nuget-cache.outputs.cache-primary-key }}
+
   # AUD-CI-001：产品以实验性形态分发 Linux/macOS 包，平台分支（路径分隔符、
   # .desktop 快捷方式、runner 归一化）必须在随变更执行的 CI 上运行，而不只是
   # 每周的 linux-tests.yml。单元套件无 Avalonia 渲染依赖，提交的 lock 固定的
@@ -142,8 +152,9 @@ jobs:
           # Pinned to the SDK named by global.json, same as the Windows build job.
           dotnet-version: 10.0.302
 
-      - name: Cache NuGet packages
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - name: Restore NuGet cache
+        id: nuget-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.nuget/packages
           key: nuget-global-packages-${{ runner.os }}-${{ hashFiles('Directory.Packages.props') }}
@@ -161,3 +172,10 @@ jobs:
           name: linux-unit-test-results
           retention-days: 7
           path: TestResults/**/*.trx
+
+      - name: Save NuGet cache
+        if: always()
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.nuget/packages
+          key: ${{ steps.nuget-cache.outputs.cache-primary-key }}
