@@ -3,6 +3,7 @@
 - 状态：✅ 已接受
 - 日期：2026-09-23
 - 相关：`installer/linux/rpm/`、`installer/linux/debian/`、`scripts/Build-Distribution.ps1`、`.github/workflows/release.yml`、`tests/Cafe.Launcher.Avalonia.Tests/InstallerContractTests.cs`
+- 后续：第 2、8 条中「各格式各自提交 wrapper/desktop」的资产布局已由 [ADR-039](ADR-039-Linux打包启动资产共用模板去重.md) 收敛为共享模板；预发布版本转换、显式 `Requires`、关闭 debug 包、wrapper 契约等其余决定仍然有效。
 
 ## 背景
 
