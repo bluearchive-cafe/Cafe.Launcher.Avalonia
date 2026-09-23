@@ -28,6 +28,7 @@ public partial class WindowChromeViewModel : ViewModelBase
 
     public event Action? MinimizeRequested;
     public event Action? CloseRequested;
+    public event Action? ShutdownRequested;
     public event Action? RestoreRequested;
 
     public WindowChromeViewModel(
@@ -213,4 +214,6 @@ public partial class WindowChromeViewModel : ViewModelBase
     }
 
     public void RequestClose() => CloseRequested?.Invoke();
+
+    public void RequestShutdown() => ShutdownRequested?.Invoke();
 }

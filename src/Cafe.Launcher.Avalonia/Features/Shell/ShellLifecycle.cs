@@ -412,7 +412,7 @@ public sealed class ShellLifecycle : IShellRuntime
         }
 
         // 主进程必须退出，helper 才能替换文件；走正常关窗路径保存窗口与设置。
-        windowChrome.RequestClose();
+        windowChrome.RequestShutdown();
     }
 
     private void OnCancelUpdateRequested() => selfUpdateCts?.Cancel();

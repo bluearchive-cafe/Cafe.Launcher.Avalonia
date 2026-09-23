@@ -44,9 +44,9 @@ internal sealed class LauncherUpdateDownloader : ILauncherUpdateDownloader
                 .ConfigureAwait(false);
             await using var stream = body.Content;
             using var reader = new StreamReader(stream, Encoding.UTF8);
-            var buffer = new char[MaxTextAssetBytes];
+            var buffer = new char[MaxTextAssetBytes + 1];
             var read = await reader.ReadBlockAsync(buffer.AsMemory(), cancellationToken).ConfigureAwait(false);
-            if (reader.Peek() != -1)
+            if (read > MaxTextAssetBytes)
             {
                 return null;
             }

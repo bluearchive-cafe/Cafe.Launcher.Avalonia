@@ -376,11 +376,14 @@ public sealed class ShellLifecycleTests : IDisposable
         Assert.Equal(100d, fixture.Dialogs.UpdateProgress);
 
         var closeCount = 0;
+        var shutdownCount = 0;
         fixture.WindowChrome.CloseRequested += () => closeCount++;
+        fixture.WindowChrome.ShutdownRequested += () => shutdownCount++;
         fixture.Dialogs.ConfirmUpdateAvailableCommand.Execute(null);
 
         Assert.Equal(1, applier.StartCount);
-        Assert.Equal(1, closeCount);
+        Assert.Equal(0, closeCount);
+        Assert.Equal(1, shutdownCount);
         Assert.Equal(LauncherUpdateTarget.WindowsPortable, applier.LastTarget);
     }
 

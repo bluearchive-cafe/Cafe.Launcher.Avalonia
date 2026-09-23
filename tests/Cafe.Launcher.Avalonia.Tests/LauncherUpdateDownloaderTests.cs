@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Update;
 using Cafe.Launcher.Avalonia.Testing;
 
@@ -131,6 +132,18 @@ public sealed class LauncherUpdateDownloaderTests
     }
 
     [Fact]
+    public async Task ReadTextAsync_WhenStreamRejectsSynchronousReads_ReturnsText()
+    {
+        var bytes = Encoding.UTF8.GetBytes("hash  name");
+        var body = new RemoteBody(new AsyncOnlyReadStream(bytes), bytes.LongLength);
+        var downloader = new LauncherUpdateDownloader(new StubRemoteHttpTransport(_ => body));
+
+        var text = await downloader.ReadTextAsync(PackageFile(), TestContext.Current.CancellationToken);
+
+        Assert.Equal("hash  name", text);
+    }
+
+    [Fact]
     public async Task ReadTextAsync_WhenTransportThrowsHttp_ReturnsNull()
     {
         var downloader = new LauncherUpdateDownloader(
@@ -152,6 +165,17 @@ public sealed class LauncherUpdateDownloaderTests
         Assert.Null(text);
     }
 
+    [Fact]
+    public async Task ReadTextAsync_WhenBodyMatchesCap_ReturnsText()
+    {
+        var atLimit = new string('a', LauncherUpdateDownloader.MaxTextAssetBytes);
+        var downloader = new LauncherUpdateDownloader(new StubRemoteHttpTransport(_ => atLimit));
+
+        var text = await downloader.ReadTextAsync(PackageFile(), TestContext.Current.CancellationToken);
+
+        Assert.Equal(atLimit, text);
+    }
+
     private static ReleaseFile PackageFile() => new()
     {
         Name = "Cafe.Launcher.Avalonia_v1.2.3_win-x64.zip",
@@ -166,5 +190,55 @@ public sealed class LauncherUpdateDownloaderTests
         public List<LauncherUpdateProgress> Reports { get; } = [];
 
         public void Report(LauncherUpdateProgress value) => Reports.Add(value);
+    }
+
+    private sealed class AsyncOnlyReadStream(byte[] bytes) : Stream
+    {
+        private readonly MemoryStream inner = new(bytes);
+
+        public override bool CanRead => true;
+
+        public override bool CanSeek => false;
+
+        public override bool CanWrite => false;
+
+        public override long Length => inner.Length;
+
+        public override long Position
+        {
+            get => inner.Position;
+            set => throw new NotSupportedException();
+        }
+
+        public override int Read(byte[] buffer, int offset, int count) =>
+            throw new NotSupportedException("Synchronous reads are not supported.");
+
+        public override int Read(Span<byte> buffer) =>
+            throw new NotSupportedException("Synchronous reads are not supported.");
+
+        public override ValueTask<int> ReadAsync(
+            Memory<byte> buffer,
+            CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult(inner.Read(buffer.Span));
+
+        public override void Flush()
+        {
+        }
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                inner.Dispose();
+            }
+
+            base.Dispose(disposing);
+        }
     }
 }
