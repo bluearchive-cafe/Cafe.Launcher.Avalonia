@@ -50,11 +50,18 @@ jobs:
           # carried that day, which decides the Microsoft.NETCore.App version published inside
           # every self-contained artifact without leaving a trace in the repository.
           dotnet-version: 10.0.302
-          cache: true
-          cache-dependency-path: |
-            **/*.csproj
-            **/packages.lock.json
-            Directory.Packages.props
+
+      # NuGet 全局包缓存（~/.nuget/packages）。不使用 setup-dotnet 的 `cache: true`：
+      # 它的键是 `dotnet-cache-<os>-<hashFiles(**/*.csproj, **/packages.lock.json, Directory.Packages.props)>`，
+      # 每次依赖文件字节变化就产生一个全新的 600~800 MB 条目（旧条目不复用也不删除），单仓库 10 GB 缓存
+      # 上限被反复顶满。这里的键只由依赖版本清单决定：版本没动就命中同一条目，只有版本真的变化才新增一条。
+      # 键变化后只有 restore-keys 命中的上一代条目可复用，其后首个新键会写入一次缓存。
+      - name: Cache NuGet packages
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.nuget/packages
+          key: nuget-global-packages-${{ runner.os }}-${{ hashFiles('Directory.Packages.props') }}
+          restore-keys: nuget-global-packages-${{ runner.os }}-
 
       - name: Test
         run: .\test.ps1 -Configuration Debug
@@ -67,7 +74,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: test-and-coverage-reports
-          retention-days: 14
+          retention-days: 7
           path: |
             TestResults/**/*.trx
             TestResults/Coverage/**/coverage.cobertura.xml
@@ -134,11 +141,13 @@ jobs:
         with:
           # Pinned to the SDK named by global.json, same as the Windows build job.
           dotnet-version: 10.0.302
-          cache: true
-          cache-dependency-path: |
-            **/*.csproj
-            **/packages.lock.json
-            Directory.Packages.props
+
+      - name: Cache NuGet packages
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.nuget/packages
+          key: nuget-global-packages-${{ runner.os }}-${{ hashFiles('Directory.Packages.props') }}
+          restore-keys: nuget-global-packages-${{ runner.os }}-
 
       - name: Unit tests
         run: >
@@ -150,5 +159,5 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: linux-unit-test-results
-          retention-days: 14
+          retention-days: 7
           path: TestResults/**/*.trx

@@ -76,6 +76,15 @@ When changing package versions (including accepting a Dependabot PR):
 3. Update the §12 toolchain table in `PROJECT_CONVENTIONS.md` by hand — `InstallerContractTests.ProjectConventionsToolchainTable_MatchesDeclaredPackageVersions` fails while any row disagrees with `Directory.Packages.props`.
 4. Regenerate `THIRD-PARTY-NOTICES.md` with `.\scripts\New-ThirdPartyNotices.ps1`; no test guards its versions, so a stale entry drifts silently until the next audit. The script reads the resolved dependency graph, so it needs a prior `dotnet restore` in the same working tree.
 
+### CI cache and artifact storage budget
+
+The organization is on **GitHub Free for organizations**, whose included Actions storage is **500 MB**; the repository is already several times over it, which is why every month since 2026-06 bills a net cost for storage. Two rules keep that from growing:
+
+- Do **not** use `actions/setup-dotnet`'s `cache: true`. Its key is `dotnet-cache-<runner.os>-<hashFiles(csproj, lock files, Directory.Packages.props)>`, so any byte change in those files writes a **new** 600–800 MB cache entry — old entries are neither reused nor deleted, and the 10 GB per-repository cap gets pinned. The workflows instead run one explicit `actions/cache` step with `key: nuget-global-packages-${{ runner.os }}-${{ hashFiles('Directory.Packages.props') }}` and a `restore-keys` prefix, so the key moves only when the central version manifest moves and a version bump reuses the previous generation before writing one new entry.
+- Keep artifact retention at the shortest period that is still useful: **7 days** for test and coverage reports, **1 day** for release-transport artifacts.
+
+Both are storage-shrinking choices, not correctness ones — a cache miss only costs a NuGet download, so the failure mode of getting this wrong is slower CI, not broken CI.
+
 ## Application Architecture
 
 - `Program.cs` owns process lifetime: the single-instance gate (named mutex on Windows; on Unix a kernel-atomic socket lock in the data root, because .NET's `Local\` namespace is per-POSIX-session there and never dedups across launch contexts — [ADR-034](docs/design/adr/ADR-034-Unix单实例所有权用数据根内锁套接字判定.md)), the cross-platform second-instance forwarding signals (`--launch-game` and show-window; named events on Windows, local Unix-domain sockets elsewhere), the logger created before DI, crash handlers, first-launch detection, and session start/end logging. The pre-DI `UnifiedLogger` is passed into DI so the process has one Serilog pipeline, and is disposed only after session-end logging.
