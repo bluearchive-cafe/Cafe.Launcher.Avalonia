@@ -93,6 +93,24 @@ public sealed class GameOperationsViewModelTests : IDisposable
         Assert.False(context.ViewModel.IsProgressPanelVisible);
     }
 
+    [Theory]
+    [InlineData(LauncherRuntimeState.NotInstalled, "Download")]
+    [InlineData(LauncherRuntimeState.Corrupted, "Tools")]
+    [InlineData(LauncherRuntimeState.IoFailure, "Refresh")]
+    [InlineData(LauncherRuntimeState.RemoteUnavailable, "Refresh")]
+    [InlineData(LauncherRuntimeState.BelowLowestVersion, "Update")]
+    [InlineData(LauncherRuntimeState.UpdateAvailable, "Update")]
+    public void ApplySnapshot_MapsInstallButtonIconToAction(
+        LauncherRuntimeState state,
+        string expectedIconKind)
+    {
+        var context = CreateContext();
+
+        context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot { RuntimeState = state });
+
+        Assert.Equal(expectedIconKind, context.ViewModel.InstallButtonIconKind);
+    }
+
     [Fact]
     public void ApplySnapshot_WhenFreshInstallIsBlocked_DisablesCommandAndExplainsShortage()
     {

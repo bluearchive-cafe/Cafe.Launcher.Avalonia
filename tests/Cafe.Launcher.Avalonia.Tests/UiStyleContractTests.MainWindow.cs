@@ -26,6 +26,15 @@ public sealed partial class UiStyleContractTests
             "FolderSearchOutline",
             detectButton.Descendants().Single(element => element.Name.LocalName == "MaterialIcon").Attribute("Kind")?.Value);
 
+        var installOrUpdateButton = mainWindow
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Button"
+                && element.Attribute("Command")?.Value == "{Binding Operations.InstallOrUpdateCommand}");
+        Assert.Equal(
+            "{Binding Operations.InstallButtonIconKind}",
+            installOrUpdateButton.Descendants().Single(element => element.Name.LocalName == "MaterialIcon").Attribute("Kind")?.Value);
+
         var resourcePanelButton = mainWindow
             .Descendants()
             .Single(element =>

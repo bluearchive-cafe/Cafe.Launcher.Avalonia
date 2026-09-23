@@ -398,7 +398,7 @@
                                     AutomationProperties.Name="{Binding Operations.InstallButtonText}"
                                     AutomationProperties.HelpText="{Binding Operations.InstallButtonToolTip}">
                                 <StackPanel Classes="button-content">
-                                    <materialIcons:MaterialIcon Kind="Download" Width="{StaticResource Launcher.Icon.Xl}" Height="{StaticResource Launcher.Icon.Xl}"/>
+                                    <materialIcons:MaterialIcon Kind="{Binding Operations.InstallButtonIconKind}" Width="{StaticResource Launcher.Icon.Xl}" Height="{StaticResource Launcher.Icon.Xl}"/>
                                     <TextBlock Text="{Binding Operations.InstallButtonText}"/>
                                 </StackPanel>
                             </Button>
