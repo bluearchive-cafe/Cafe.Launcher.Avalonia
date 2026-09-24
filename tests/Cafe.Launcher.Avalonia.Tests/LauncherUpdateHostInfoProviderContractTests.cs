@@ -43,7 +43,7 @@ public sealed class LauncherUpdateHostInfoProviderContractTests
 
         Assert.True(
             appMutex is not null,
-            "installer/Cafe.Launcher.Avalonia.iss 必须用 #define APP_MUTEX \"…\" 声明单实例互斥体名。");
+            "installer/windows/Cafe.Launcher.Avalonia.iss 必须用 #define APP_MUTEX \"…\" 声明单实例互斥体名。");
         Assert.True(
             mutexName is not null,
             "src/Cafe.Launcher.Avalonia/Program.cs 必须用 MutexName 常量声明单实例互斥体名。");
@@ -83,7 +83,7 @@ public sealed class LauncherUpdateHostInfoProviderContractTests
             : null;
 
     private static string InstallerScript() =>
-        File.ReadAllText(Path.Combine(TestRepository.Root, "installer", "Cafe.Launcher.Avalonia.iss"));
+        File.ReadAllText(Path.Combine(TestRepository.Root, "installer", "windows", "Cafe.Launcher.Avalonia.iss"));
 
     private static string ReadProgramSource() =>
         File.ReadAllText(TestRepository.FromApplicationRoot("Program.cs"));

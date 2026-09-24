@@ -2,7 +2,7 @@
 
 - 状态：✅ 已接受
 - 日期：2026-09-23
-- 相关：`Services/LauncherUpdateService.cs`、`Features/Shell/ShellLifecycle.cs`、`src/Cafe.Launcher.Updater/`、`scripts/Build-Distribution.ps1`、`installer/Cafe.Launcher.Avalonia.iss`
+- 相关：`Services/LauncherUpdateService.cs`、`Features/Shell/ShellLifecycle.cs`、`src/Cafe.Launcher.Updater/`、`scripts/Build-Distribution.ps1`、`installer/windows/Cafe.Launcher.Avalonia.iss`
 
 ## 背景
 

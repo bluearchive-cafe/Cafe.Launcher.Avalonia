@@ -12,7 +12,7 @@ $ErrorActionPreference = "Stop"
 try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch { }
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RootDir = Split-Path -Parent $ScriptDir
-$InstallerScript = Join-Path $RootDir "installer/Cafe.Launcher.Avalonia.iss"
+$InstallerScript = Join-Path $RootDir "installer/windows/Cafe.Launcher.Avalonia.iss"
 
 $version = & (Join-Path $ScriptDir "Read-LauncherVersion.ps1") -Tag $Tag
 $Tag = $version.Tag

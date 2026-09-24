@@ -11,7 +11,7 @@ namespace Cafe.Launcher.Avalonia.Services.Update;
 /// </summary>
 internal sealed class LauncherUpdateHostInfoProvider : ILauncherUpdateHostInfoProvider
 {
-    /// <summary>Must match the marker written by <c>installer/Cafe.Launcher.Avalonia.iss</c>.</summary>
+    /// <summary>Must match the marker written by <c>installer/windows/Cafe.Launcher.Avalonia.iss</c>.</summary>
     internal const string InstallMarkerFileName = ".cafe-launcher-install";
 
     /// <inheritdoc />

@@ -11,10 +11,10 @@ public sealed class InstallerContractTests
         // The installer script and every per-language file hold localized text.
         foreach (var relativePath in new[]
         {
-            "installer/Cafe.Launcher.Avalonia.iss",
-            "installer/lang/CustomMessages.en.isl",
-            "installer/lang/CustomMessages.zh.isl",
-            "installer/lang/CustomMessages.ja.isl",
+            "installer/windows/Cafe.Launcher.Avalonia.iss",
+            "installer/windows/lang/CustomMessages.en.isl",
+            "installer/windows/lang/CustomMessages.zh.isl",
+            "installer/windows/lang/CustomMessages.ja.isl",
         })
         {
             var bytes = File.ReadAllBytes(TestRepository.FromRepositoryRoot(relativePath));
@@ -28,7 +28,7 @@ public sealed class InstallerContractTests
     [Fact]
     public void IssInstaller_DeclaresRequiredDefines()
     {
-        var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.iss");
+        var script = ReadProjectFile("installer/windows/Cafe.Launcher.Avalonia.iss");
 
         Assert.Contains("#ifndef APP_VERSION", script, StringComparison.Ordinal);
         Assert.Contains("#error \"APP_VERSION is required.\"", script, StringComparison.Ordinal);
@@ -41,7 +41,7 @@ public sealed class InstallerContractTests
     [Fact]
     public void IssInstaller_LocalizedMessagesLiveInPerLanguageTranslationFiles()
     {
-        var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.iss");
+        var script = ReadProjectFile("installer/windows/Cafe.Launcher.Avalonia.iss");
 
         // Script-level [CustomMessages] is language-independent global text where
         // the LAST entry wins for every language; no localized text may live in
@@ -52,7 +52,7 @@ public sealed class InstallerContractTests
         {
             Assert.False(
                 ContainsCjk(rawLine.Trim()),
-                "The installer script must not contain localized text; use installer/lang/CustomMessages.*.isl.");
+                "The installer script must not contain localized text; use installer/windows/lang/CustomMessages.*.isl.");
         }
 
         // The [Languages] section wires in the per-language translation files.
@@ -62,9 +62,9 @@ public sealed class InstallerContractTests
 
         foreach (var file in new[]
         {
-            "installer/lang/CustomMessages.en.isl",
-            "installer/lang/CustomMessages.zh.isl",
-            "installer/lang/CustomMessages.ja.isl",
+            "installer/windows/lang/CustomMessages.en.isl",
+            "installer/windows/lang/CustomMessages.zh.isl",
+            "installer/windows/lang/CustomMessages.ja.isl",
         })
         {
             var content = ReadProjectFile(file);
@@ -78,7 +78,7 @@ public sealed class InstallerContractTests
     [Fact]
     public void IssInstaller_UsesConfirmedMachineWideIdentity()
     {
-        var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.iss");
+        var script = ReadProjectFile("installer/windows/Cafe.Launcher.Avalonia.iss");
 
         Assert.Contains("AppName=Cafe Launcher", script, StringComparison.Ordinal);
         Assert.Contains("AppPublisher=BlueArchive Cafe", script, StringComparison.Ordinal);
@@ -99,7 +99,7 @@ public sealed class InstallerContractTests
     [Fact]
     public void IssInstaller_UsesStableGuidAppId()
     {
-        var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.iss");
+        var script = ReadProjectFile("installer/windows/Cafe.Launcher.Avalonia.iss");
 
         Assert.Matches(@"AppId=\{\{[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\}", script);
         Assert.Contains("NEVER change AppId", script, StringComparison.Ordinal);
@@ -108,7 +108,7 @@ public sealed class InstallerContractTests
     [Fact]
     public void IssInstaller_ProvidesASelectableDesktopShortcut()
     {
-        var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.iss");
+        var script = ReadProjectFile("installer/windows/Cafe.Launcher.Avalonia.iss");
 
         Assert.Contains("[Tasks]", script, StringComparison.Ordinal);
         Assert.Contains("Name: \"desktopicon\"", script, StringComparison.Ordinal);
@@ -119,7 +119,7 @@ public sealed class InstallerContractTests
     [Fact]
     public void IssInstaller_AlwaysOverwritesPublishedFilesOnUpgrade()
     {
-        var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.iss");
+        var script = ReadProjectFile("installer/windows/Cafe.Launcher.Avalonia.iss");
 
         Assert.Contains(
             "Source: \"{#PUBLISH_GLOB}\"; DestDir: \"{app}\"; Flags: recursesubdirs ignoreversion",
@@ -131,7 +131,7 @@ public sealed class InstallerContractTests
     [Fact]
     public void IssInstaller_CannotTouchSiblingGameDirectory()
     {
-        var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.iss");
+        var script = ReadProjectFile("installer/windows/Cafe.Launcher.Avalonia.iss");
 
         // The uninstaller only removes files it installed plus the ownership
         // marker; there must be no [UninstallDelete] entry above {app} level.
@@ -146,7 +146,7 @@ public sealed class InstallerContractTests
     [Fact]
     public void IssUninstaller_PreservesApplicationDataUnlessExplicitlySelected()
     {
-        var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.iss");
+        var script = ReadProjectFile("installer/windows/Cafe.Launcher.Avalonia.iss");
 
         Assert.Contains("ShouldDeleteUserData", script, StringComparison.Ordinal);
         Assert.Contains(
@@ -167,7 +167,7 @@ public sealed class InstallerContractTests
     [Fact]
     public void IssInstaller_BlocksFileChangesWhileLauncherIsRunning()
     {
-        var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.iss");
+        var script = ReadProjectFile("installer/windows/Cafe.Launcher.Avalonia.iss");
 
         Assert.Contains("Local\\Cafe_Launcher_SI", script, StringComparison.Ordinal);
         Assert.Contains("AppMutex={#APP_MUTEX}", script, StringComparison.Ordinal);
@@ -179,7 +179,7 @@ public sealed class InstallerContractTests
     [Fact]
     public void IssInstaller_CleansStaleRegistrationWhenOldUninstallerIsMissing()
     {
-        var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.iss");
+        var script = ReadProjectFile("installer/windows/Cafe.Launcher.Avalonia.iss");
 
         Assert.Contains(
             "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Cafe.Launcher.Avalonia",
@@ -198,7 +198,7 @@ public sealed class InstallerContractTests
     [Fact]
     public void IssInstaller_AdoptsExistingInstallPathOnUpgrade()
     {
-        var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.iss");
+        var script = ReadProjectFile("installer/windows/Cafe.Launcher.Avalonia.iss");
 
         // The directory page must default to the existing installation instead
         // of falling back to Program Files: previous Inno Setup records are
@@ -226,7 +226,7 @@ public sealed class InstallerContractTests
     [Fact]
     public void IssInstaller_UninstallsLegacyVersionOnlyAfterUserConfirms()
     {
-        var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.iss");
+        var script = ReadProjectFile("installer/windows/Cafe.Launcher.Avalonia.iss");
 
         // InitializeSetup runs before the wizard is shown; uninstalling there
         // would remove the old version even when the user cancels setup. The
@@ -253,7 +253,7 @@ public sealed class InstallerContractTests
     [Fact]
     public void IssInstaller_ValidatesLegacyUninstallerBeforeExecutingIt()
     {
-        var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.iss");
+        var script = ReadProjectFile("installer/windows/Cafe.Launcher.Avalonia.iss");
 
         // The upgrade bridge must never run an unverified path read from the
         // registry: it requires the known NSIS uninstaller name and a matching
@@ -286,7 +286,7 @@ public sealed class InstallerContractTests
     [Fact]
     public void IssInstaller_UninstallMarkerIsClaimedInBothInstallAndUninstallPaths()
     {
-        var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.iss");
+        var script = ReadProjectFile("installer/windows/Cafe.Launcher.Avalonia.iss");
 
         // The ownership marker must be written at install time and removed at
         // uninstall time under the same name so a rename can never strand it.
@@ -543,7 +543,7 @@ public sealed class InstallerContractTests
     public void WindowsInstallerScript_PassesPublishGlobAndOutputsToIscc()
     {
         var installerScript = ReadProjectFile("scripts/New-WindowsInstaller.ps1");
-        var issScript = ReadProjectFile("installer/Cafe.Launcher.Avalonia.iss");
+        var issScript = ReadProjectFile("installer/windows/Cafe.Launcher.Avalonia.iss");
 
         Assert.Contains("$publishGlob = Join-Path $publishRoot \"*\"", installerScript, StringComparison.Ordinal);
         Assert.Contains("\"-dPUBLISH_GLOB=$publishGlob\"", installerScript, StringComparison.Ordinal);
@@ -551,7 +551,7 @@ public sealed class InstallerContractTests
         Assert.Contains("\"-dAPP_FILE_VERSION=$($version.FileVersion)\"", installerScript, StringComparison.Ordinal);
         Assert.Contains("\"-o$OutputDir\"", installerScript, StringComparison.Ordinal);
         Assert.Contains("\"-f$setupBaseName\"", installerScript, StringComparison.Ordinal);
-        Assert.Contains("\"installer/Cafe.Launcher.Avalonia.iss\"", installerScript, StringComparison.Ordinal);
+        Assert.Contains("\"installer/windows/Cafe.Launcher.Avalonia.iss\"", installerScript, StringComparison.Ordinal);
         Assert.Contains("Source: \"{#PUBLISH_GLOB}\"", issScript, StringComparison.Ordinal);
     }
 
@@ -663,7 +663,7 @@ public sealed class InstallerContractTests
     [Fact]
     public void IssInstaller_ChineseLanguageFileIsVendored()
     {
-        var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.iss");
+        var script = ReadProjectFile("installer/windows/Cafe.Launcher.Avalonia.iss");
 
         // Vendoring keeps compilation independent of the translations bundled
         // with a particular Inno Setup release.
@@ -673,7 +673,7 @@ public sealed class InstallerContractTests
             script,
             StringComparison.Ordinal);
 
-        var chineseMessages = ReadProjectFile("installer/lang/ChineseSimplified.isl");
+        var chineseMessages = ReadProjectFile("installer/windows/lang/ChineseSimplified.isl");
         Assert.Contains("Chinese Simplified messages", chineseMessages, StringComparison.Ordinal);
         // The vendored translation is redistributed under the Inno Setup license;
         // its attribution header must be retained.
