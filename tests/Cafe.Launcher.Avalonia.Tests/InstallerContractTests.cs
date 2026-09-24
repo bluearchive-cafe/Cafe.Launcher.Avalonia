@@ -593,9 +593,8 @@ public sealed class InstallerContractTests
     [Fact]
     public void CurrentStateDocs_NeverDeclareAnInnoSetupVersionBelowTheEnforcedMinimum()
     {
-        // The script's minimum is the single source of truth; every current-state
-        // document must agree with it. Dated reports under .repository-audit/history/
-        // are snapshots of past audits and are deliberately excluded.
+        // The script's minimum is the single source of truth; every maintained
+        // current-state document must agree with it.
         var script = ReadProjectFile("scripts/New-WindowsInstaller.ps1");
         var minimumMatch = Regex.Match(script, @"\[version\]""(?<version>\d+\.\d+)""");
         Assert.True(minimumMatch.Success, "New-WindowsInstaller.ps1 must declare its minimum Inno Setup version.");

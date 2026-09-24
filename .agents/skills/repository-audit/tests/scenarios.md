@@ -16,7 +16,7 @@ These scenarios capture failure modes observed in real repository audits. Use th
 
 **Repository evidence:** Last report says GitHub Actions use floating tags; current workflow pins full SHAs.
 
-**Expected:** Reconcile the old ID, mark it `resolved`, and move it out of current open High findings. Preserve it in history/findings ledger.
+**Expected:** Reconcile the old ID and remove it from current open findings after verifying the fix. Preserve the prior state through Git history rather than a parallel ledger.
 
 **Failure:** Regenerates or leaves the stale finding as open because the historical report contains it.
 

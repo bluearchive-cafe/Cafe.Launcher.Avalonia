@@ -56,8 +56,7 @@ public sealed class ThirdPartyNoticesContractTests
     public void Notices_PackageVersionsMatchThePackagesTheAppShips()
     {
         // 生成器按 NuGet 解析出的依赖图重写整张表，所以「升了版本、忘了重跑
-        // scripts/New-ThirdPartyNotices.ps1」会留下一份写着旧版本号的许可披露——AGENTS.md 自己
-        // 也记着这一点没有守卫（`.repository-audit` 的 AUD-MAINT 系列）。只比对应用工程真的分发
+        // scripts/New-ThirdPartyNotices.ps1」会留下一份写着旧版本号的许可披露。本测试只比对应用工程真的分发
         // 的包：测试专用的包（xunit、coverlet、Test.Sdk）不进发行档案，本来就不该出现在表里。
         var referenced = XDocument.Load(TestRepository.FromRepositoryRoot(AppProjectRelativePath))
             .Descendants("PackageReference")

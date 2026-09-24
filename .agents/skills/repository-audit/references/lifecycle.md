@@ -1,53 +1,42 @@
-# Finding Lifecycle and Incremental Audits
+# Finding Lifecycle
 
-## State files
+## Single state file
 
-Maintain:
+Maintain audit state only in the repository-root `CODEBASE_AUDIT.md`. It contains:
 
-- `.repository-audit/findings.json`
-- `.repository-audit/audit-state.json`
-- `.repository-audit/history/`
+- audit date, commit, scope, and verification limits;
+- current open findings;
+- explicitly accepted risks and their reopening conditions;
+- the current priority order;
+- concise verified system facts needed to interpret the findings.
 
-Use the templates under `templates/`.
+Git history is the historical record. Do not create dated reports, JSON ledgers, repository maps, candidate lists, or audit archive directories.
 
 ## Lifecycle states
 
-Use:
+Use these states inside the current report:
 
-- `open`
-- `resolved`
-- `accepted-risk`
-- `deferred`
-- `architecture-decision`
-- `product-decision`
-- `false-positive`
-- `superseded`
+- `open`: actionable now;
+- `accepted-risk`: intentionally retained, with rationale and a reopening condition;
+- `deferred`, `architecture-decision`, or `product-decision`: retain only when a concrete decision is still pending.
 
-Do not delete historical findings when resolved.
+When a finding is resolved or proved false, remove it from the current report. The resolving commit and prior report revision remain available through Git.
 
 ## Stable IDs
 
-Prefer IDs such as `AUD-DEP-001` or `AUD-PERF-003`. Reuse the same ID when the same root cause persists across audits. Create a new ID for a genuinely different root cause.
+Prefer IDs such as `AUD-DEP-001` or `AUD-PERF-003`. Reuse the ID while the same root cause persists. Assign a new ID to a different root cause. Never renumber current entries merely to make the sequence contiguous.
 
 ## Delta reconciliation
 
 For a delta audit:
 
-1. read the previous audited commit;
-2. identify changed files/modules;
-3. map changes to risk domains;
-4. re-check affected open/deferred/decision findings;
-5. mark resolved findings only with evidence;
-6. detect recurrence or regression;
-7. inspect newly exposed risks;
-8. skip unaffected deep passes.
-
-## Current vs historical reports
-
-`CODEBASE_AUDIT.md` is a current-state view. Archive dated reports under `.repository-audit/history/`.
-
-If a High finding was fixed after the last full audit, the current report must show it as resolved rather than continue presenting stale evidence as open.
+1. read the previous `CODEBASE_AUDIT.md` from the last audited commit;
+2. identify changed files and risk domains;
+3. re-check affected open, accepted, deferred, and decision findings;
+4. remove entries only with evidence that they are resolved or no longer real;
+5. add only newly verified, decision-useful findings;
+6. refresh the report metadata, counts, priorities, and verification limits.
 
 ## Guard conversion
 
-When a recurring finding is fixed, ask whether a test/analyzer/CI contract can prevent recurrence. Record the guard in the finding ledger and reduce future manual audit effort for that pattern.
+When a recurring finding is fixed, add a test, analyzer, CI check, or contract when that guard has favorable maintenance cost. The current report should describe the guard only while it remains relevant to an open or accepted item.
