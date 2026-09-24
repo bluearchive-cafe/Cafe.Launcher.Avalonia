@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Cafe.Launcher.Avalonia.Composition;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
+using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
@@ -61,11 +62,12 @@ public partial class App : Application
             var viewModel = serviceProvider.GetRequiredService<MainWindowViewModel>();
             var mainWindow = new MainWindow(
                 serviceProvider.GetRequiredService<WindowFilePickerService>(),
-                serviceProvider.GetRequiredService<WindowMetricsService>())
+                serviceProvider.GetRequiredService<WindowMetricsService>(),
+                serviceProvider.GetRequiredService<Services.Diagnostics.LocalDiagnostics>())
             {
                 DataContext = viewModel,
             };
-            var shutdownDeferred = false;
+            var shutdownDeferral = new ShutdownDeferral();
             var fatalShutdown = false;
             CrashReportWindow? crashReportWindow = null;
 
@@ -115,7 +117,7 @@ public partial class App : Application
                     return;
                 }
 
-                if (shutdownDeferred)
+                if (shutdownDeferral.ShouldCancelRequest)
                 {
                     eventArgs.Cancel = true;
                     return;
@@ -132,7 +134,7 @@ public partial class App : Application
                 }
 
                 eventArgs.Cancel = true;
-                shutdownDeferred = true;
+                shutdownDeferral.Defer();
                 try
                 {
                     await shutdownTask;
@@ -143,6 +145,7 @@ public partial class App : Application
                 }
                 finally
                 {
+                    shutdownDeferral.Commit();
                     desktop.Shutdown();
                 }
             }
@@ -154,7 +157,11 @@ public partial class App : Application
             try
             {
                 var localizationService = serviceProvider.GetRequiredService<LocalizationService>();
-                trayService = new SystemTrayService(mainWindow, localizationService);
+                trayService = new SystemTrayService(
+                    mainWindow,
+                    localizationService,
+                    serviceProvider.GetRequiredService<Services.Diagnostics.LocalDiagnostics>(),
+                    serviceProvider.GetRequiredService<ISystemTrayActions>());
                 if (trayService.Initialize())
                 {
                     mainWindow.SetSystemTray(trayService);
@@ -192,8 +199,9 @@ public partial class App : Application
                 shutdownCts.Dispose();
             };
 
-            // Listen for show-window signal from second instances
-            showWindowListener = ShowWindowSignalListener.Start(mainWindow, trayService, SignalName);
+            // Listen for show-window signal from second instances (cross-platform:
+            // a plain second start or a forwarded launch brings this window up).
+            showWindowListener = new ShowWindowSignalListener(mainWindow, trayService, Program.ShowWindowSignal!);
 
             // Listen for --launch-game forwards from second instances (cross-platform:
             // the Linux .desktop shortcut relies on it; on Unix the transport is a
@@ -202,9 +210,13 @@ public partial class App : Application
 
             // Register Opened handler BEFORE desktop.MainWindow is set — that assignment
             // may trigger the window to show and fire Opened synchronously.
+            // Both handlers are one-shot (WindowOpenedOnce): Avalonia re-raises Opened on
+            // every Show after a Hide, and a tray restore goes through Show, so a handler
+            // left attached re-ran the launch flow on every restore-from-tray — popping the
+            // "launcher minimized to tray" toast a second time.
             if (Program.FirstLaunch)
             {
-                mainWindow.Opened += (_, _) =>
+                WindowOpenedOnce.Subscribe(mainWindow, (_, _) =>
                 {
                     // Post at a priority that ensures layout/render/bindings are complete
                     // before we toggle visibility.
@@ -215,14 +227,14 @@ public partial class App : Application
                         viewModel.ApplyFirstLaunchMotionPreference();
                         viewModel.Dialogs.ShowSetupWizard();
                     }, DispatcherPriority.Background);
-                };
+                });
             }
             else
             {
-                mainWindow.Opened += (_, _) =>
+                WindowOpenedOnce.Subscribe(mainWindow, (_, _) =>
                 {
                     _ = InitializeViewModelAsync(mainWindow, viewModel, serviceProvider, shutdownCts.Token);
-                };
+                });
             }
 
             desktop.MainWindow = mainWindow;
@@ -361,69 +373,33 @@ public partial class App : Application
     }
 
     /// <summary>
-    /// 基于命名事件的监听器(仅 Windows 使用):第二个实例通过同名内核事件唤醒本监听器。
-    /// 轮询循环与 UI 编组由 <see cref="CrossProcessSignalListener"/> 承载。
+    /// Receives the show-window signal from second instances so a forwarded launch
+    /// (or a plain second start) brings the running launcher up: restored from the
+    /// system tray when present, otherwise shown via the main window. On Windows
+    /// the transport is a named EventWaitHandle; on Unix it is a local socket
+    /// (CrossProcessLaunchSignal), because .NET has no named events there.
+    /// The polling loop and UI marshaling are delegated to
+    /// <see cref="CrossProcessSignalListener"/>.
     /// </summary>
-    private class EventWaitHandleListener : CrossProcessSignalListener
+    private sealed class ShowWindowSignalListener : CrossProcessSignalListener
     {
-        private readonly EventWaitHandle signal;
-
-        protected EventWaitHandleListener(string signalName, Action onSignalRaised)
-            : this(CreateEndpoint(signalName), onSignalRaised)
+        public ShowWindowSignalListener(MainWindow mainWindow, SystemTrayService? trayService, CrossProcessLaunchSignal signal)
+            : base(signal.WaitOne, () =>
         {
-        }
-
-        private EventWaitHandleListener(SignalEndpoint endpoint, Action onSignalRaised)
-            : base(endpoint.WaitOne, onSignalRaised)
-        {
-            signal = endpoint.Handle;
-        }
-
-        public override void Dispose()
-        {
-            base.Dispose();
-            signal.Dispose();
-        }
-
-        /// <summary>Owns the named event created before the mutex probe so a raise never misses the listener.</summary>
-        private sealed record SignalEndpoint(EventWaitHandle Handle)
-        {
-            public bool WaitOne(TimeSpan timeout) => Handle.WaitOne(timeout);
-        }
-
-        private static SignalEndpoint CreateEndpoint(string signalName) =>
-            new(new EventWaitHandle(false, EventResetMode.AutoReset, signalName));
-    }
-
-    private sealed class ShowWindowSignalListener : EventWaitHandleListener
-    {
-        private ShowWindowSignalListener(MainWindow mainWindow, SystemTrayService? trayService, string signalName)
-            : base(signalName, () =>
+            try
             {
-                try
-                {
-                    if (trayService is not null)
-                        trayService.ShowWindow();
-                    else
-                        mainWindow.ShowWindow();
-                }
-                catch (Exception ex)
-                {
-                    // Restore is best-effort.
-                    LocalDiagnostics.LogSync(LogEntrySeverity.Warn, "App", $"Window restore dispatch failed: {ex.Message}");
-                }
-            })
+                if (trayService is not null)
+                    trayService.ShowWindow();
+                else
+                    mainWindow.ShowWindow();
+            }
+            catch (Exception ex)
+            {
+                // Restore is best-effort.
+                LocalDiagnostics.LogSync(LogEntrySeverity.Warn, "App", $"Window restore dispatch failed: {ex.Message}");
+            }
+        })
         {
-        }
-
-        public static ShowWindowSignalListener? Start(
-            MainWindow mainWindow,
-            SystemTrayService? trayService,
-            string signalName)
-        {
-            return OperatingSystem.IsWindows()
-                ? new ShowWindowSignalListener(mainWindow, trayService, signalName)
-                : null;
         }
     }
 

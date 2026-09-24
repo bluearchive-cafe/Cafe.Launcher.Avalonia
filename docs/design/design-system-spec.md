@@ -41,6 +41,7 @@
 | 审计-0828 | 2026-08-28 设计系统一致性核查修复：向导 filled 型补 `:disabled` 组合、carousel 箭头 hover/pressed 改 chrome 态层、`wizard-option` 补 token 焦点环、DialogSurface 表面名 = 标题（无标题外壳显式给名 + Toast 宿主 live region）、对比度契约 +12 对并显式豁免 FocusRing/SecondaryContainer 族、时长双源同步测试、清理死 token（`Easing.Linear`/`IconButton.Compact/.Dot`，RowPanel 面板迁入 App.axaml） | 状态矩阵闭环；静态契约与运行时 M3 配对的分工显式化 |
 | ADR-018 | 2026-08-30 关于分区重设计（变体 A：身份 Hero + 分组行）：Hero（图标/产品名/副标题/版本+构建时间双徽章）→ 常规操作（检查更新唯一 compact filled + 3 outlined）→ 版本信息 key-value 行（7 项，等宽值，hairline）→ 法律信息不变；已落地并同步契约测试 | 设置浮层内身份表面获得与 ADR-013/014 一致的 M3 语言；原型 `prototypes/about-page/index.html` |
 | ADR-020 | 2026-09-08 崩溃窗口采用**独立 Fluent 设计系统**：自带 `Crash.*` 令牌（就近定义在窗口 `Window.Resources`）、不引用 `Launcher.*`、不随动态色漂移；`FluentTheme` + `MaterialIconStyles` 由最小 `CrashReportApp` 注册 | §1 原则 3 显式豁免、§4/§5；视觉由黄金截图守护 |
+| 统一-0921 | 2026-09-21 间距/图标/透明度统一收尾（零视觉变化）：补 `Launcher.Spacing.None`=0 Double 档并收编 2 处 Setter 零间距字面量；Crash 窗口 3 处字面量（BorderThickness×2、MinWidth）就近 token 化，Crash 扫描扩到 Setter 形式与 `BorderThickness`；新增 Opacity 契约——样式/视图/控件只允许结构性 0/1 或 `Launcher.StateLayer.*` 引用（StateLayer 五档全保留，分数透明度唯一合法来源；`OperationSurfaceAnimator.DipOpacity`=0.58 为 C# 动效编排值，不在样式词汇内，维持现状） | §3.2/§3.6；契约 = `Opacity_UsesOnlyStructuralValuesOrStateLayerTokens`、`StyleFiles_UseStaticTokensForVisualValues` 补 Spacing 族 |
 
 ## 3. Token 体系
 
@@ -57,7 +58,7 @@
 |---|---|---|
 | `Launcher.Color.*` | M3 scheme 角色（primary/secondary/tertiary + containers + surface/outline/error 族）+ 业务语义色（Success/Warning/Info）+ 主题无关特殊色（Chrome/Overlay/scrim/媒体占位） | `Color.Primary`、`Color.OnPrimary`、`Color.PrimaryContainer`、`Color.Surface`、`Color.Outline`、`Color.Danger`、`Color.Success`、`Color.Overlay.Scrim` |
 | `Launcher.Text.*` | 应用文本专用角色（Primary/Secondary/Body/Link/OnChrome/OnDark/Placeholder 等） | `Text.Primary`、`Text.OnChrome` |
-| `Launcher.Spacing.*` | 间距 4/8/12/16/20/24/40 全档（Double）+ Thickness 全档（`Spacing.Thickness.*`） | `Spacing.Md`、`Spacing.Thickness.Lg` |
+| `Launcher.Spacing.*` | 间距 0/4/8/12/16/20/24/40 全档（Double，`Spacing.None`=0 为零间距显式档）+ Thickness 全档（`Spacing.Thickness.*`） | `Spacing.Md`、`Spacing.Thickness.Lg` |
 | `Launcher.Radius.*` | 目标字阶 4/8/12/16（`Xs/Sm/Md/Lg`，含全部四档 token）；28（`Xxl` 或 full）无消费面，暂不落地（ADR-002 只重标四档） | `Radius.Xs`、`Radius.Md` |
 | `Launcher.Typography.*` | M3 角色字阶（Display/Headline/Title/Body/Label × 字号/字重/字距）+ 字体族 | `Typography.FontSize.Body.Md`、`Typography.FontWeight.Strong`、`Typography.FontFamily.Monospace` |
 | `Launcher.Icon.*` | 图标尺寸 16/18/20/22/24 | `Icon.Md` |
@@ -65,7 +66,7 @@
 | `Launcher.Layout.*` | 视口级布局常量（banner 高 220、news 视口 184、调试窗 720×540、日志窗 720×592 等） | `Layout.Banner.Height` |
 | `Launcher.Motion.*` | 时长/缓动/偏移（见 §3.7） | `Motion.Duration.Normal` |
 | `Launcher.Elevation.*` | **新增**：阴影 0–3 档（颜色/偏移/模糊 token 化） | `Elevation.Shadow.Md`、`Elevation.Level.Card` |
-| `Launcher.StateLayer.*` | **新增**：状态层不透明度 8%/12%/16%/24% | `StateLayer.Hover` |
+| `Launcher.StateLayer.*` | **新增**：状态层不透明度 8%/12%/16%/24% + `Disabled.Content` 38%；**消费纪律（统一-0921）**：样式/视图/控件的 `Opacity` 只允许结构性 `0`/`1` 或引用本族——分数透明度的唯一合法来源（契约锁定）；半透明视觉（hover/pressed 叠加、scrim、阴影）以画刷 alpha 在 token 定义处表达，不写元素 Opacity | `StateLayer.Hover`、`StateLayer.Disabled.Content` |
 | `Launcher.Border.*` | 边框厚度刻度（Default 1 / Focus 2，2026-08-26 补录） | `Border.Thickness.Default` |
 | `Launcher.Component.*` | 组件专属覆盖（Toast 宽度、对话框标题高度等） | `Component.Toast.Width` |
 
@@ -118,7 +119,7 @@
 - 本节旧有 M3 数值已由 [ADR-016](./adr/ADR-016-Fluent动效层.md) 取代；视觉层继续使用 M3 语义，行为型动效改用 Windows Fluent 原则并映射为 Avalonia 资源。
 - 时长收敛为 83ms（即时反馈）/ 167ms（快速转换）/ 250ms（标准转换）；仅较大的连续空间变化允许 333ms。进入、退出和点到点移动分别使用 Windows 减速、加速与点到点语义曲线，不再使用 `ExponentialEaseOut/In`。
 - 动效家族统一为即时反馈、内容切换、空间连续、临时表面与重要完成。常规控件不缩放、不弹跳；模态表面只移动外壳一次，内部内容不重复移动；自动轮播只淡化。向导步骤切换属空间连续家族的方向变体：以空间档 333ms 对半分做顺序两段换页（先退出加速淡出、后进入减速滑入 ±14px；入场前以起势帧消化布局、收尾留缓冲再结算，换页墙钟约 370ms），由后置代码编排并可中断（ADR-017）。
-- `Full` 始终启用完整动效，`System` 跟随 Windows 动画开关，`Reduced` 关闭空间移动、自动轮播和大面积淡化，仅允许临时表面保留最多 83ms 的纯透明度变化。**显式豁免（审计-0828）**：Fluent 基础模板内建的 indeterminate 进度条循环（`LoadingOverlay` 与 Toast 操作进度条）在 Reduced 下保留——「进行中」语义必需，且无空间位移或大面积淡化；如未来需要更强降级，应替换为静态"进行中"呈现而非直接隐藏。
+- `Full` 始终启用完整动效，`System` 跟随系统动画开关，`Reduced` 关闭空间移动、自动轮播和大面积淡化，仅允许临时表面保留最多 83ms 的纯透明度变化。**显式豁免（审计-0828）**：Fluent 基础模板内建的 indeterminate 进度条循环（`LoadingOverlay` 与 Toast 操作进度条）在 Reduced 下保留——「进行中」语义必需，且无空间位移或大面积淡化；如未来需要更强降级，应替换为静态"进行中"呈现而非直接隐藏。
 - 动画始终以最新状态为准且不得排队。连续容器变化无法保持流畅或正确中断时，降级为交叉淡化或立即切换。
 - 进度条厚度：主界面 `Component.Progress.Bar.Height` = 8px、Loading = 4px、Toast = 3px（M3 LinearProgressIndicator 4dp；主进度条 8px 为产品加粗值，记录性偏差）。
 

@@ -13,6 +13,7 @@ using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Services.GameRuntime;
+using Cafe.Launcher.Avalonia.Services.Update;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Serilog.Events;
 
@@ -25,8 +26,9 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
     private readonly LauncherUpdateService launcherUpdateService;
+    private readonly LauncherSelfUpdateService launcherSelfUpdateService;
     private readonly DialogsViewModel dialogs;
-    private readonly ISettingsEditor editor;
+    private readonly SettingsEditor editor;
     private readonly UnifiedLogger unifiedLogger;
     private readonly GameInstallationPath gameInstallationPath;
     private readonly IErrorHandlingService errorHandling;
@@ -55,7 +57,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
     /// The settings state editor. XAML binds to <c>Editor.Current.*</c> for
     /// setting values, and to ViewModel properties for option collections and UI state.
     /// </summary>
-    public ISettingsEditor Editor => editor;
+    public SettingsEditor Editor => editor;
     public SettingsOptionsViewModel Options { get; }
     public SettingsAppearanceViewModel Appearance { get; }
 
@@ -65,6 +67,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         LocalizationService localizer,
         ToastService toastService,
         LauncherUpdateService launcherUpdateService,
+        LauncherSelfUpdateService launcherSelfUpdateService,
         DialogsViewModel dialogs,
         UnifiedLogger unifiedLogger,
         GameInstallationPath gameInstallationPath,
@@ -79,6 +82,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         this.localizer = localizer;
         this.toastService = toastService;
         this.launcherUpdateService = launcherUpdateService;
+        this.launcherSelfUpdateService = launcherSelfUpdateService;
         this.dialogs = dialogs;
         this.unifiedLogger = unifiedLogger;
         this.gameInstallationPath = gameInstallationPath;
@@ -94,14 +98,14 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
 
     private void OnEditorPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(ISettingsEditor.IsDirty))
+        if (e.PropertyName == nameof(SettingsEditor.IsDirty))
         {
             OnPropertyChanged(nameof(IsSettingsDirty));
             OnPropertyChanged(nameof(CanSaveSettings));
             SaveSettingsCommand.NotifyCanExecuteChanged();
         }
 
-        if (e.PropertyName == nameof(ISettingsEditor.Current))
+        if (e.PropertyName == nameof(SettingsEditor.Current))
         {
             OnPropertyChanged(nameof(IsGameRuntimeRunnerPathEnabled));
         }
@@ -248,7 +252,11 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         {
             var operationMessage = localizer.T(LocalizationKeys.LauncherUpdateCheckFailed);
             var message = result.FailureException is not null
-                ? ErrorHandlingService.FormatToastMessage(operationMessage, result.FailureException)
+                ? ErrorHandlingService.FormatToastMessage(
+                    operationMessage,
+                    result.FailureException,
+                    localizer.T(LocalizationKeys.ErrorNetworkUnavailable),
+                    localizer.T(LocalizationKeys.ErrorFakeIpDns))
                 : string.IsNullOrWhiteSpace(result.FailureMessage)
                     ? operationMessage
                     : $"{operationMessage}：{result.FailureMessage}";
@@ -262,7 +270,11 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
             return;
         }
 
-        dialogs.ShowUpdateAvailable(result.LatestVersion, result.Files);
+        dialogs.ShowUpdateAvailable(
+            result.LatestVersion,
+            result.Files,
+            launcherSelfUpdateService.CanApplyInApp(result.Files),
+            result.ReleaseNotes);
     }
 
     /// <summary>Opens the shared launcher-settings reset confirmation (shell performs the reset).</summary>
@@ -280,16 +292,8 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
             await WaitForAppearancePreviewToSettleAsync();
             CancelAppearancePreview();
 
-            if (editor.Current.ThemeColorMode == ThemeColorModes.Wallpaper)
-            {
-                // 新壁纸取色期间会有意保留旧色板，因此不能以 Count == 0 判断是否仍
-                // 在取色。始终等待最新任务，必要时再主动提取一次，确保提交的是当前图。
-                await Appearance.WaitForThemeRefreshToSettleAsync();
-                if (Appearance.ThemeColorPaletteItems.Count == 0)
-                {
-                    await Appearance.RefreshThemeColorPaletteFromCurrentBackgroundAsync(markDirty: false);
-                }
-            }
+            // 提交前确保色板对应当前壁纸（等待与补提取的判据在 Appearance 侧收拢）。
+            await Appearance.EnsureThemePaletteReadyForSaveAsync();
 
             editor.Commit(s =>
             {

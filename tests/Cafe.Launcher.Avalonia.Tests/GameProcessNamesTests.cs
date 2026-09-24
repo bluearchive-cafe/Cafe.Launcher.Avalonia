@@ -106,4 +106,12 @@ public sealed class GameProcessNamesTests
         Assert.Equal("BlueArchive.exe", GameProcessNames.DescribeForDisplay(["BlueArchive"]));
         Assert.Equal("", GameProcessNames.DescribeForDisplay([]));
     }
+
+    [Theory]
+    [InlineData("BlueArchive.exe")]
+    [InlineData("BlueArchive.EXE")]
+    public void DescribeForDisplay_WhenNameIncludesExtension_DoesNotDuplicateExtension(string processName)
+    {
+        Assert.Equal("BlueArchive.exe", GameProcessNames.DescribeForDisplay([processName]));
+    }
 }

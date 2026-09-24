@@ -125,7 +125,7 @@ public sealed class RemoteHttpUrlValidatorTests
     [Fact]
     public async Task ValidateAsync_WhenLiteralAddressIsBenchmarkRange_ReturnsUri()
     {
-        // 守卫（AUD-SEC-006，接受风险）：RFC 2544 基准段 198.18.0.0/15 被
+        // 守卫（AUD-SEC-006，接受风险）：RFC 2544 基准段 198.18/15 被
         // fake-ip 模式代理软件（如 Clash）用作 DNS 应答段，直连路径的域名
         // 解析结果落在这里——拦截会弄坏真实用户的横幅/下载（5a38be9 曾为此
         // 移除拦截）。与 CGNAT 一并刻意放行；重审该让步前不得收紧。
@@ -134,6 +134,108 @@ public sealed class RemoteHttpUrlValidatorTests
         var uri = await validator.ValidateAsync("https://198.18.0.1/file");
 
         Assert.Equal("198.18.0.1", uri.Host);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_WhenDnsAnswerIsEntirelyFakeIpv4Range_ReturnsUri()
+    {
+        // fake-ip 模式下 A 应答整体落在 198.18/15：放行（拨号能否成功由 TUN/代理决定），
+        // 且解析结果带 Fake-IP 标记，供直连失败时的针对性指引使用。
+        var validator = new RemoteHttpUrlValidator(
+            static (_, _) => Task.FromResult(new[] { IPAddress.Parse("198.18.0.7") }));
+
+        var uri = await validator.ValidateAsync("https://example.test/file");
+
+        Assert.Equal("example.test", uri.Host);
+        Assert.True(validator.IsFakeIpResolution("example.test"));
+    }
+
+    [Fact]
+    public async Task ValidateAsync_WhenDnsAnswerIsEntirelyFakeIpv6Range_ReturnsUri()
+    {
+        // 守卫（AUD-SEC-006 的 IPv6 延伸）：双栈 fake-ip 的 AAAA 应答落在 ULA
+        // （fc00::/7；mihomo fake-ip-range6 无默认、官方示例 fdfe:dcba:9876::1/64，
+        // sing-box 默认 fc00::/18）——按私网整体拒绝会弄坏 IPv6 fake-ip 用户。
+        var validator = new RemoteHttpUrlValidator(
+            static (_, _) => Task.FromResult(new[] { IPAddress.Parse("fdfe:dcba:9876::1") }));
+
+        var uri = await validator.ValidateAsync("https://example.test/file");
+
+        Assert.Equal("example.test", uri.Host);
+        Assert.True(validator.IsFakeIpResolution("example.test"));
+    }
+
+    [Fact]
+    public async Task ValidateAsync_WhenDnsAnswerMixesFakeIpv6WithPublicAddress_ReturnsUri()
+    {
+        var validator = new RemoteHttpUrlValidator(static (_, _) => Task.FromResult(
+            new[] { IPAddress.Parse("fc00::1"), IPAddress.Parse("93.184.216.34") }));
+
+        var uri = await validator.ValidateAsync("https://example.test/file");
+
+        Assert.Equal("example.test", uri.Host);
+        // 混有真实地址的应答不是纯 Fake-IP DNS 签名，不做失败标注。
+        Assert.False(validator.IsFakeIpResolution("example.test"));
+    }
+
+    [Fact]
+    public async Task ValidateAsync_WhenDnsAnswerMixesFakeIpv6WithPrivateAddress_Throws()
+    {
+        // Fake-IP 段只豁免自身：应答里混入真实私网地址仍按私网拦截。
+        var validator = new RemoteHttpUrlValidator(static (_, _) => Task.FromResult(
+            new[] { IPAddress.Parse("fc00::1"), IPAddress.Parse("192.168.1.1") }));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => validator.ValidateAsync("https://example.test/file"));
+
+        Assert.False(validator.IsFakeIpResolution("example.test"));
+    }
+
+    [Fact]
+    public async Task IsFakeIpResolution_WhenCacheLifetimeExpires_ReturnsFalse()
+    {
+        var now = new DateTimeOffset(2026, 9, 10, 0, 0, 0, TimeSpan.Zero);
+        var validator = new RemoteHttpUrlValidator(
+            static (_, _) => Task.FromResult(new[] { IPAddress.Parse("198.18.0.7") }),
+            cacheLifetime: RemoteHttpUrlValidator.DefaultCacheLifetime,
+            utcNow: () => now);
+
+        await validator.ValidateAsync("https://example.test/file");
+        Assert.True(validator.IsFakeIpResolution("example.test"));
+
+        now += RemoteHttpUrlValidator.DefaultCacheLifetime;
+        Assert.False(validator.IsFakeIpResolution("example.test"));
+    }
+
+    [Fact]
+    public async Task IsFakeIpResolution_WhenHostIsLiteralAddress_ReturnsFalse()
+    {
+        // 字面 IP 主机不经过 DNS 解析， Fake-IP 标记无从谈起。
+        var validator = new RemoteHttpUrlValidator(
+            static (_, _) => throw new InvalidOperationException("DNS must not be resolved."));
+
+        var uri = await validator.ValidateAsync("https://198.18.0.1/file");
+
+        Assert.Equal("198.18.0.1", uri.Host);
+        Assert.False(validator.IsFakeIpResolution("198.18.0.1"));
+    }
+
+    [Theory]
+    [InlineData("198.18.0.1", true)]
+    [InlineData("198.19.255.255", true)]
+    [InlineData("::ffff:198.18.0.1", true)]
+    [InlineData("fc00::1", true)]
+    [InlineData("fdfe:dcba:9876::1", true)]
+    [InlineData("93.184.216.34", false)]
+    [InlineData("100.64.0.1", false)]
+    [InlineData("192.168.1.1", false)]
+    [InlineData("2001:db8::1", false)]
+    [InlineData("fe80::1", false)]
+    public void IsFakeIpRange_MatchesOnlyTheFakeIpAnswerBands(string addressText, bool expected)
+    {
+        var address = IPAddress.Parse(addressText);
+
+        Assert.Equal(expected, RemoteHttpUrlValidator.IsFakeIpRange(address));
     }
 
     [Fact]

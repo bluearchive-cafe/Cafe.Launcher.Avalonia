@@ -335,12 +335,12 @@ public sealed partial class MainWindowHeadlessTests
         // System 档先行解析并应用，否则 IsMotionReduced 停留在默认 true，首启向导全程瞬切。
         using var context = CreateContext();
         var runtime = context.Provider
-            .GetRequiredService<Cafe.Launcher.Avalonia.Features.Shell.IShellRuntime>();
-        var windowsAnimationsEnabled = new WindowsAnimationSettingsProvider()
-            .GetWindowsAnimationsEnabled();
+            .GetRequiredService<Cafe.Launcher.Avalonia.Features.Shell.ShellLifecycle>();
+        var systemAnimationsEnabled = new SystemAnimationSettingsProvider()
+            .GetSystemAnimationsEnabled();
         var expectedReduced = Cafe.Launcher.Avalonia.Helpers.MotionSettingsResolver.ShouldReduceMotion(
             MotionModes.System,
-            windowsAnimationsEnabled);
+            systemAnimationsEnabled);
 
         runtime.ApplyFirstLaunchMotionPreference();
         Dispatcher.UIThread.RunJobs();

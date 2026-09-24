@@ -22,6 +22,17 @@
 | **Resource Panel** | The launcher interface for managing localized game resources for a UID. | Resource Control Panel |
 | **Localized resources** | Game text, voice, image, and video resources managed through the Resource Panel. | Translation files |
 
+## Launcher updates
+
+| Term | Definition | Aliases to avoid |
+| --- | --- | --- |
+| **Update channel** | The release track the launcher follows when checking for its own updates. | Update frequency, channel setting |
+| **Stable** | The update channel that follows releases published without a prerelease tag. | Production build |
+| **Beta** | The update channel that also follows prerelease builds. | Preview, nightly |
+| **Launcher self-update** | The Windows flow that downloads the matching release package, verifies it against the release `SHA256SUMS`, and replaces the installation from an independent helper after the launcher exits. | Auto update, in-app upgrade |
+| **Restart to Update** | The action that hands a verified package to the updater and exits the launcher. | Update now, apply update |
+| **Open Release Page** | The fallback action that opens the release page in the browser when no verifiable package is available. | Manual download |
+
 ## Canonical translations
 
 | English | Simplified Chinese | Traditional Chinese | Japanese |
@@ -35,6 +46,15 @@
 | Localized resources | 本地化资源 | 本地化資源 | ローカライズリソース |
 | Banner | 横幅 | 橫幅 | バナー |
 | Fatal | 致命 | 致命 | 致命的 |
+| Update channel | 更新通道 | 更新頻道 | 更新チャンネル |
+| Stable | 稳定版 | 穩定版 | 安定版 |
+| Beta | 测试版 | 測試版 | ベータ版 |
+| Restart to Update | 重启以更新 | 重啟以更新 | 再起動して更新 |
+| View Update | 查看更新 | 查看更新 | 更新を見る |
+| Open Release Page | 前往发布页 | 前往發布頁 | リリースページを開く |
+| Game starting | 游戏启动中 | 遊戲啟動中 | ゲーム起動中 |
+| Game running | 游戏运行中 | 遊戲執行中 | ゲーム実行中 |
+| Game exited | 游戏已退出 | 遊戲已結束 | ゲームが終了しました |
 
 ## Proxy modes
 
@@ -64,6 +84,9 @@
 - **Launch verification** checks a **game installation** before launch.
 - **Repair** restores a **game installation** against the selected **download source**.
 - The **Resource Panel** manages **localized resources** when the **Cafe download source** is selected.
+- An **update channel** decides which launcher releases are offered; a **launcher self-update** installs the offered release only after verifying it against the release checksum manifest.
+- The stable update channel (“稳定版”) and the 正式版 label on the download badges name the same release track; keep each label where it ships rather than unifying them.
+- The game **session status** line reports the state of a launched **game installation** (starting, running, exited), which is separate from **launch verification**.
 
 ## Flagged ambiguities
 

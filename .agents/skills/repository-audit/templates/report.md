@@ -1,76 +1,51 @@
-# Repository Audit Report
+# Project Audit State
 
-## Audit Metadata
+This file is the single source of truth for current audit findings, accepted risks, and priorities. Git history retains resolved findings.
+
+## Current Assessment
 
 - Date:
 - Commit:
-- Mode:
-- Previous baseline:
 - Scope:
 - Project profile:
+- Health:
+- Open counts:
+- Accepted-risk count:
 
-## Executive Summary
+Current priority order:
 
-Repository health:
-
-Open findings:
-- Critical:
-- High:
-- Medium:
-
-Resolved since previous audit:
-
-Decisions required:
-
-Most important risks/actions:
 1.
 2.
 3.
 
-## Changes Since Previous Audit
-
-## Critical Issues
-
-## High Priority Findings
+## Open Findings
 
 ### AUD-XXX-001 — Title
 
-- Category:
 - Severity:
 - Confidence:
-- Status:
 - Disposition:
 
-**Evidence**
+Evidence and impact.
 
-**Impact**
+Recommended action and completion guard.
 
-**Recommendation**
+## Accepted Risks
 
-**Recommendation validation**
+| ID | Current tradeoff | Reopen when |
+| --- | --- | --- |
 
-**Suggested guard**
+## Verified Engineering State
 
-## Architecture
+Include only facts that materially explain the current findings or prevent unnecessary work.
 
-## Security
+## Verification Limits
 
-## Dependencies / Supply Chain
+List commands actually completed and relevant environments not exercised.
 
-## Testing
+## Maintenance Rules
 
-## Performance
-
-## Maintainability / Technical Debt
-
-## Decisions Required
-
-## Resolved Findings
-
-## Automated Guards Added
-
-## Verified Strengths
-
-## Recommended Priorities
-
-## Audit Method and Limitations
+- Add only verified, decision-useful findings.
+- Reuse stable IDs for the same root cause.
+- Remove resolved entries; Git history retains them.
+- Refresh metadata, counts, priorities, and verification limits together.

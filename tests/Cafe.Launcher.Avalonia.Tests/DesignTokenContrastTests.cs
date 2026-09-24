@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Xml.Linq;
 using Avalonia.Media;
 using Cafe.Launcher.Avalonia.Helpers;
@@ -120,6 +120,26 @@ public sealed class DesignTokenContrastTests
         "Launcher.Color.SecondaryContainer.Pressed",
         "Launcher.Color.OnSecondaryContainer"
     ];
+
+    /// <summary>
+    /// 反空转：从配对表里删掉一条是让红色变绿最快的办法，而被删掉的那一对往往正是当初
+    /// 出事的地方。数量只允许往上走；确实要收掉某一对时，把键连同理由写进
+    /// <c>ExemptedKeys</c>。</summary>
+    [Fact]
+    public void ContrastPairs_KeepTheirLandedCoverage()
+    {
+        const int landedTextPairs = 37;
+        const int landedUiPairs = 7;
+
+        Assert.True(
+            TextPairs.Length >= landedTextPairs,
+            $"文本对比对只剩 {TextPairs.Length} 对，低于落地基线 {landedTextPairs}——"
+            + "如果是删掉一条让红色变绿，请改为写进豁免表并说明理由。");
+        Assert.True(
+            UiPairs.Length >= landedUiPairs,
+            $"非文字对比对只剩 {UiPairs.Length} 对，低于落地基线 {landedUiPairs}——"
+            + "如果是删掉一条让红色变绿，请改为写进豁免表并说明理由。");
+    }
 
     [Fact]
     public void TextTokenPairs_MeetWcagAa_AcrossLightAndDark()

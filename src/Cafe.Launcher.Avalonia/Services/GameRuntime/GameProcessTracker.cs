@@ -10,7 +10,7 @@ namespace Cafe.Launcher.Avalonia.Services.GameRuntime;
 public sealed class GameProcessTracker : IGameProcessTracker
 {
     private readonly object gate = new();
-    private readonly Func<IReadOnlyList<string>, CancellationToken, Task<IReadOnlyList<string>>> exeRunningProbe;
+    private readonly Func<RunningGameQuery, CancellationToken, Task<IReadOnlyList<string>>> exeRunningProbe;
     private readonly Func<Process, ITrackedProcess> processAdapter;
 
     private ITrackedProcess? trackedProcess;
@@ -21,11 +21,11 @@ public sealed class GameProcessTracker : IGameProcessTracker
     private GameLaunchExitInfo? lastExit;
 
     public GameProcessTracker()
-        : this(ProcessService.FindRunningExeNamesAsync)
+        : this(ProcessService.FindRunningGameProcessesAsync)
     {
     }
 
-    internal GameProcessTracker(Func<IReadOnlyList<string>, CancellationToken, Task<IReadOnlyList<string>>> exeRunningProbe)
+    internal GameProcessTracker(Func<RunningGameQuery, CancellationToken, Task<IReadOnlyList<string>>> exeRunningProbe)
         : this(exeRunningProbe, static process => new SystemTrackedProcess(process))
     {
     }
@@ -36,7 +36,7 @@ public sealed class GameProcessTracker : IGameProcessTracker
     /// verified without spawning a real process.
     /// </summary>
     internal GameProcessTracker(
-        Func<IReadOnlyList<string>, CancellationToken, Task<IReadOnlyList<string>>> exeRunningProbe,
+        Func<RunningGameQuery, CancellationToken, Task<IReadOnlyList<string>>> exeRunningProbe,
         Func<Process, ITrackedProcess> processAdapter)
     {
         this.exeRunningProbe = exeRunningProbe;
@@ -61,6 +61,9 @@ public sealed class GameProcessTracker : IGameProcessTracker
             trackedProcessName = ProcessService.TryReadProcessName(process.HostProcess);
             trackedRunnerId = process.RunnerId;
             startedAt = DateTimeOffset.Now;
+            // LastExit 归属当前被跟踪的进程：重开即清零。订阅方（会话看护）据此把
+            // 「Register 与订阅之间已退出」读成一次即时终态，而不是上一局的旧账。
+            lastExit = null;
             tracked.Exited += exitedHandler;
             tracked.StartObserving();
         }
@@ -96,11 +99,15 @@ public sealed class GameProcessTracker : IGameProcessTracker
         }
     }
 
+    /// <inheritdoc />
+    public event Action? TrackedProcessExited;
+
     public async Task<IReadOnlyList<string>> FindRunningGameProcessesAsync(
-        IReadOnlyList<string> knownExeNames,
+        RunningGameQuery query,
         CancellationToken cancellationToken = default)
     {
-        var scanned = await exeRunningProbe(knownExeNames, cancellationToken).ConfigureAwait(false);
+        ArgumentNullException.ThrowIfNull(query);
+        var scanned = await exeRunningProbe(query, cancellationToken).ConfigureAwait(false);
         if (scanned.Count > 0 || !HasLiveTrackedProcess)
         {
             return scanned;
@@ -109,7 +116,7 @@ public sealed class GameProcessTracker : IGameProcessTracker
         // 句柄还活着但名字扫描没看见：宿主进程在本会话里由我们启动，句柄比扫描权威。
         var name = trackedProcessName.Length > 0
             ? trackedProcessName
-            : knownExeNames.Count > 0 ? knownExeNames[0] : "";
+            : query.KnownExeNames.Count > 0 ? query.KnownExeNames[0] : "";
         return name.Length > 0 ? [name] : [];
     }
 
@@ -135,6 +142,7 @@ public sealed class GameProcessTracker : IGameProcessTracker
         }
 
         ReleaseTracking(process, exitedHandler);
+        TrackedProcessExited?.Invoke();
     }
 
     private static void ReleaseTracking(ITrackedProcess? process, Action? exitedHandler)

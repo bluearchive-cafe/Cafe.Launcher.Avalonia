@@ -82,9 +82,10 @@ Func<CancellationToken, Task<ToastActionResult>>
 - Windows Named Mutex；
 - Windows Named Event；
 - Unix local socket；
-- `--launch-game` 二次实例转发。
+- `--launch-game` 二次实例转发；
+- show-window 二次实例唤起（与 `--launch-game` 同一传输：Windows 命名事件 / Unix local socket，由 `CrossProcessLaunchBridge` 统一持有）。
 
-但 Unix local socket 当前只处理 `--launch-game`；显示现有 Launcher 的 `RaiseShowWindow()` 仍是 Windows-only。
+（历史注：在单实例桥统一承载双信号之前，`RaiseShowWindow()` 曾是 Windows-only，Unix 上二次启动只是静默退出、不唤起已有窗口。）
 
 现有 `SystemTrayService.ShowWindow()` 已实现：
 
@@ -1482,9 +1483,10 @@ AppImage 仍使用不声明 D-Bus activation 的 desktop 文件。
 因此建议拆成：
 
 ```text
-installer/linux/cafe-launcher.desktop
-installer/linux/debian/cafe-launcher.desktop
+installer/linux/templates/cafe-launcher.desktop    # 所有格式共用的 desktop 来源
 ```
+
+desktop 条目自 [ADR-039](adr/ADR-039-Linux打包启动资产共用模板去重.md) 起由模板生成：包安装（deb/rpm/pacman）替换为 `Exec=cafe-launcher` + `TryExec=cafe-launcher`，AppImage 替换为仅 `Exec=Cafe.Launcher.Avalonia`。若只有 `.deb` 需要 `DBusActivatable=true`，应在生成步骤里对该格式追加，而不是新增一份独立文件。
 
 不要让 AppImage 意外声明它没有安装的 D-Bus service。
 

@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Helpers;
+using Cafe.Launcher.Avalonia.Services.GameRuntime;
 
 namespace Cafe.Launcher.Avalonia.Services.Diagnostics;
 
@@ -30,6 +31,8 @@ public sealed class LogExportService
     private readonly LocalDiagnostics diagnostics;
     private readonly LauncherDataRoot dataRoot;
     private readonly ICrashReportLocator crashReportLocator;
+    private readonly GraphicsInfoProbe? graphicsInfoProbe;
+    private readonly ProtonBuildDiscovery? protonBuildDiscovery;
 
     /// <summary>Default directory offered to the user when exporting logs.</summary>
     public string DefaultExportDirectory => dataRoot.LogExportDirectory;
@@ -38,11 +41,32 @@ public sealed class LogExportService
         LocalDiagnostics diagnostics,
         LauncherDataRoot dataRoot,
         ICrashReportLocator crashReportLocator)
+        : this(diagnostics, dataRoot, crashReportLocator, graphicsInfoProbe: null, protonBuildDiscovery: null)
+    {
+    }
+
+    public LogExportService(
+        LocalDiagnostics diagnostics,
+        LauncherDataRoot dataRoot,
+        ICrashReportLocator crashReportLocator,
+        GraphicsInfoProbe? graphicsInfoProbe)
+        : this(diagnostics, dataRoot, crashReportLocator, graphicsInfoProbe, protonBuildDiscovery: null)
+    {
+    }
+
+    public LogExportService(
+        LocalDiagnostics diagnostics,
+        LauncherDataRoot dataRoot,
+        ICrashReportLocator crashReportLocator,
+        GraphicsInfoProbe? graphicsInfoProbe,
+        ProtonBuildDiscovery? protonBuildDiscovery)
     {
         ArgumentNullException.ThrowIfNull(dataRoot);
         this.diagnostics = diagnostics;
         this.dataRoot = dataRoot;
         this.crashReportLocator = crashReportLocator;
+        this.graphicsInfoProbe = graphicsInfoProbe;
+        this.protonBuildDiscovery = protonBuildDiscovery;
     }
 
     /// <summary>
@@ -180,15 +204,87 @@ public sealed class LogExportService
             AddLogFile(zip, log.FilePath, log.EntryName, log.Required, manifest, cancellationToken);
         }
 
+        // Optional: the most recent launch's captured runner stdout/stderr (bounded, overwritten
+        // per launch). A missing file is normal — no Wine/UMU launch has happened yet.
+        TryCopyOptionalFileToZip(
+            zip,
+            dataRoot.RunnerOutputPath,
+            GamePaths.RunnerOutputFileName,
+            manifest,
+            cancellationToken);
+
+        // Optional: the most recent compatibility-prefix environment precheck report.
+        TryCopyOptionalFileToZip(
+            zip,
+            dataRoot.CompatibilityEnvironmentPath,
+            GamePaths.CompatibilityEnvironmentFileName,
+            manifest,
+            cancellationToken);
+
+        // Optional: the compatibility prefix metadata of the most recent launch.
+        TryCopyOptionalFileToZip(
+            zip,
+            dataRoot.PrefixMetadataPath,
+            GamePaths.PrefixMetadataFileName,
+            manifest,
+            cancellationToken);
+
         if (options.IncludeCrashReports)
             AddCrashReports(zip, CrashReportDirectories(), manifest, cancellationToken);
 
         if (options.IncludeUserData)
             AddUserData(zip, manifest, cancellationToken);
 
+        // Linux-only sampling artifact for the Wine/UMU investigation (P0-A evidence, P0-B samples):
+        // a bounded, game-runner-filtered /proc snapshot. Other platforms have no /proc to read.
+        if (OperatingSystem.IsLinux())
+        {
+            AddGeneratedEntry(
+                zip,
+                LinuxProcessSnapshot.EntryName,
+                () => LinuxProcessSnapshot.Collect(cancellationToken),
+                manifest);
+        }
+
         cancellationToken.ThrowIfCancellationRequested();
-        AddSystemInfo(zip, options, manifest);
+        AddSystemInfo(
+            zip,
+            options,
+            manifest,
+            graphicsInfoProbe?.Probe(),
+            protonBuildDiscovery?.Discover(),
+            LinuxProcessScanner.TryReadRunningProtonBuild());
         return manifest;
+    }
+
+    /// <summary>
+    /// Adds a text artifact produced on the fly (rather than copied from disk). The content is built
+    /// before the entry is created, and a failure is recorded as skipped instead of failing the
+    /// export — the snapshot is a diagnostic aid, not the archive's reason to exist.
+    /// </summary>
+    private static void AddGeneratedEntry(
+        ZipArchive zip,
+        string entryName,
+        Func<string> contentFactory,
+        ExportManifest manifest)
+    {
+        try
+        {
+            var content = contentFactory();
+            var entry = zip.CreateEntry(entryName, CompressionLevel.Optimal);
+            using var stream = entry.Open();
+            using var writer = new StreamWriter(stream, Utf8NoBom);
+            writer.Write(content);
+            manifest.Entries.Add(entryName);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            manifest.Skipped.Add(new SkippedItem(entryName, exception));
+        }
     }
 
     private static void AddLogFile(
@@ -362,7 +458,10 @@ public sealed class LogExportService
     private static void AddSystemInfo(
         ZipArchive zip,
         LogExportOptions options,
-        ExportManifest manifest)
+        ExportManifest manifest,
+        GraphicsInfo? graphics,
+        IReadOnlyList<ProtonBuild>? protonBuilds,
+        string? runningProtonBuild)
     {
         var systemInfo = new
         {
@@ -372,6 +471,12 @@ public sealed class LogExportService
             os = Environment.OSVersion.ToString(),
             framework = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription,
             buildConfig = BuildInfo.BuildConfiguration,
+            session = ReadDesktopSession(),
+            graphics = graphics is null ? null : new { vulkan = graphics.Vulkan, opengl = graphics.OpenGl },
+            protonBuilds = protonBuilds is { Count: > 0 }
+                ? protonBuilds.Select(build => new { name = build.Name, path = build.Path }).ToArray()
+                : null,
+            runningProtonBuild,
             export = new
             {
                 range = options.Range.ToString(),
@@ -392,6 +497,34 @@ public sealed class LogExportService
         using var stream = entry.Open();
         using var writer = new StreamWriter(stream, Encoding.UTF8);
         writer.Write(json);
+    }
+
+    /// <summary>
+    /// The desktop session the export ran in, or null where none is declared. Wine/UMU guidance
+    /// differs by Wayland/X11 and desktop, and the P0-A verification record asks for it, so it is
+    /// recorded rather than inferred.
+    /// </summary>
+    private static object? ReadDesktopSession()
+    {
+        var sessionType = Environment.GetEnvironmentVariable("XDG_SESSION_TYPE");
+        var desktop = Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP");
+        var waylandDisplay = Environment.GetEnvironmentVariable("WAYLAND_DISPLAY");
+        var x11Display = Environment.GetEnvironmentVariable("DISPLAY");
+        if (string.IsNullOrWhiteSpace(sessionType)
+            && string.IsNullOrWhiteSpace(desktop)
+            && string.IsNullOrWhiteSpace(waylandDisplay)
+            && string.IsNullOrWhiteSpace(x11Display))
+        {
+            return null;
+        }
+
+        return new
+        {
+            type = sessionType,
+            desktop,
+            waylandDisplay = !string.IsNullOrWhiteSpace(waylandDisplay),
+            x11Display = !string.IsNullOrWhiteSpace(x11Display)
+        };
     }
 
     /// <summary>

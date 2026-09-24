@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Features.Settings;
@@ -9,6 +10,7 @@ using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Services.GameRuntime;
+using Cafe.Launcher.Avalonia.Services.Update;
 using Cafe.Launcher.Avalonia.Testing;
 using Cafe.Launcher.Avalonia.ViewModels;
 
@@ -51,7 +53,7 @@ public sealed class SettingsViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task CheckForUpdatesCommand_WhenBothEndpointsFail_ShowsErrorToastWithExceptionDetail()
+    public async Task CheckForUpdatesCommand_WhenBothEndpointsFail_ShowsFriendlyNetworkAttribution()
     {
         var localizer = new LocalizationService();
         var transport = new StubRemoteHttpTransport(
@@ -66,7 +68,33 @@ public sealed class SettingsViewModelTests : IDisposable
             localizer.T(LocalizationKeys.LauncherUpdateCheckFailed),
             toast.Message,
             StringComparison.Ordinal);
-        Assert.Contains("simulated update endpoint outage", toast.Message, StringComparison.Ordinal);
+        // 网络家族失败给友好归因：原文不进 toast（已在诊断日志中）。
+        Assert.Contains(
+            localizer.T(LocalizationKeys.ErrorNetworkUnavailable),
+            toast.Message,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("simulated update endpoint outage", toast.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CheckForUpdatesCommand_WhenNonNetworkFailure_ShowsErrorToastWithExceptionDetail()
+    {
+        // JsonException 会被更新检查转为失败结果，且不属于网络家族：
+        // 原文保留在 toast 的「类型：消息」链里。
+        var localizer = new LocalizationService();
+        var transport = new StubRemoteHttpTransport(
+            _ => new JsonException("simulated update payload corruption"));
+        using var settings = CreateSettingsViewModel(localizer, transport);
+
+        await settings.CheckForUpdatesCommand.ExecuteAsync(null);
+
+        var toast = Assert.Single(raisedToasts);
+        Assert.Equal(ToastSeverity.Error, toast.Severity);
+        Assert.Contains(
+            localizer.T(LocalizationKeys.LauncherUpdateCheckFailed),
+            toast.Message,
+            StringComparison.Ordinal);
+        Assert.Contains("simulated update payload corruption", toast.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -105,7 +133,7 @@ public sealed class SettingsViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task CheckForUpdatesCommand_WhenNewerReleaseAvailable_OpensUpdateDialogWithFiles()
+    public async Task CheckForUpdatesCommand_WhenNewerReleaseAvailable_OpensUpdateDialog()
     {
         var localizer = new LocalizationService();
         var dialogs = CreateDialogsViewModel();
@@ -118,10 +146,6 @@ public sealed class SettingsViewModelTests : IDisposable
         Assert.Empty(raisedToasts);
         Assert.True(dialogs.IsUpdateAvailableVisible);
         Assert.Equal("9.9.9", dialogs.UpdateAvailableVersion);
-        var file = Assert.Single(dialogs.UpdateAvailableFiles);
-        Assert.Equal(
-            "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v9.9.9/Cafe.Launcher_v9.9.9.zip",
-            file.Url);
     }
 
     private SettingsViewModel CreateSettingsViewModel(
@@ -134,6 +158,11 @@ public sealed class SettingsViewModelTests : IDisposable
             localizer,
             toastService,
             new LauncherUpdateService(transport),
+            new LauncherSelfUpdateService(
+                new LauncherUpdateDownloader(new StubRemoteHttpTransport()),
+                new LauncherUpdateHostInfoProvider(),
+                TestDataRoot.ForDirectory(NextDataRoot()),
+                new LocalDiagnostics()),
             dialogs ?? CreateDialogsViewModel(),
             null!,
             null!,
@@ -176,7 +205,7 @@ public sealed class SettingsViewModelTests : IDisposable
                     "files": [
                       {
                         "name": "Cafe.Launcher_v{{version}}.zip",
-                        "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v{{version}}/Cafe.Launcher_v{{version}}.zip",
+                        "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v{{version}}/Cafe.Launcher_v{{version}}.zip",
                         "sha512": "abc",
                         "size": 100
                       }

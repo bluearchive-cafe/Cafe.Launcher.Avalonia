@@ -15,15 +15,37 @@ public static class ProcessService
     /// </summary>
     public static Task<IReadOnlyList<string>> FindRunningExeNamesAsync(
         IReadOnlyList<string> knownNames,
+        CancellationToken cancellationToken = default) =>
+        FindRunningGameProcessesAsync(new RunningGameQuery(knownNames), cancellationToken);
+
+    /// <summary>
+    /// 同 <see cref="FindRunningExeNamesAsync"/>，但额外接收安装目录：Linux 上用它经 <c>/proc</c>
+    /// 的 <c>maps</c> 认出映射着安装目录的进程（覆盖运行时标记不在场的外部启动）。
+    /// </summary>
+    public static Task<IReadOnlyList<string>> FindRunningGameProcessesAsync(
+        RunningGameQuery query,
         CancellationToken cancellationToken = default)
     {
-        if (knownNames is null || knownNames.Count == 0)
+        ArgumentNullException.ThrowIfNull(query);
+        if (query.KnownExeNames is null || query.KnownExeNames.Count == 0)
         {
             return Task.FromResult<IReadOnlyList<string>>([]);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
 
+        // Linux 走 /proc：comm 被内核截断，改以启动器所有权标记为主、安装目录 maps 与家族名为辅
+        // （ADR-036）。其余平台维持按进程快照的名字家族扫描。
+        var matches = OperatingSystem.IsLinux()
+            ? LinuxProcessScanner.Scan(query, cancellationToken)
+            : FindRunningExeNamesBySnapshot(query.KnownExeNames, cancellationToken);
+        return Task.FromResult(matches);
+    }
+
+    private static IReadOnlyList<string> FindRunningExeNamesBySnapshot(
+        IReadOnlyList<string> knownNames,
+        CancellationToken cancellationToken)
+    {
         var matches = new List<string>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         try
@@ -31,6 +53,9 @@ public static class ProcessService
             // 一次快照走完，而不是每个名字各扫一遍：名字数量随配置增长，扫描次数不该跟着长。
             foreach (var process in Process.GetProcesses())
             {
+                // 逐进程看一眼令牌：取消后没有必要把剩余的进程读完。真正的挂死（枚举本身
+                // 不返回）令牌拦不住，由闸门的限时赛跑兜住；这里省的是取消后的尾程。
+                cancellationToken.ThrowIfCancellationRequested();
                 using (process)
                 {
                     var name = TryReadProcessName(process);
@@ -49,7 +74,7 @@ public static class ProcessService
             // 也不要因为一次枚举失败就把人永久挡在门外。
         }
 
-        return Task.FromResult<IReadOnlyList<string>>(matches);
+        return matches;
     }
 
     /// <summary>

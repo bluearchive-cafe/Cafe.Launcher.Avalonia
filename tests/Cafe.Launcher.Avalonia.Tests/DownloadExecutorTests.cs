@@ -224,11 +224,15 @@ public sealed class DownloadExecutorTests : IDisposable
             }
         }
 
-        // 每个完成都落进新的百分比桶（12 文件下 round(k*100/12) 两两不同），所以投递次数
-        // 恰好等于文件数——收集必须线程安全：回调来自 ≤8 个并行 worker
-        // （2026-09-15 深夜 CI 复查：这里原为未加锁的 progressCount++，丢了一次更新，12 变 11）。
-        Assert.Equal(fileCount, progressCount.Count);
+        // 12 个完成算出两两不同的百分比桶（round(k*100/12)），但单调门控
+        // （PercentProgressGate.ShouldDeliverMonotonic）只承诺「每桶至多一次、值只增、
+        // 终桶 100 必达」，不承诺每个桶都抵达：worker 在自增完成数与门控读取之间可被
+        // 抢占，落后的低桶会被已投递的更高桶压掉，「投递次数 = 文件数」在并行下不可断言
+        // （2026-09-22 CI 复查：原断言 12 偶发实到 11）。这里只断言与到达顺序无关的
+        // 不变量；收集无重复仍是线程安全收集器的回归信号（回调来自 ≤8 个并行 worker）。
         Assert.Equal(progressCount.Count, progressCount.Distinct().Count());
+        Assert.All(progressCount, percent => Assert.InRange(percent, 0, 100));
+        Assert.Contains(100, progressCount);
     }
 
     [Fact]
@@ -451,6 +455,66 @@ public sealed class DownloadExecutorTests : IDisposable
         Assert.Equal(16, progressSnapshots[^1].TotalSize);
         // 重置回退必须可见：回退快照携带磁盘权威值 8（丢弃了内存计数的 12）。
         Assert.Contains(progressSnapshots, snapshot => snapshot.DownloadedSize == 8);
+    }
+
+    /// <summary>
+    /// 暂停握手聚焦测试（R2-c09）：暂停期间墙钟流逝不得计入速度——
+    /// WaitWhilePausedAsync 在暂停注册时停下节流器与累积器、在恢复时以
+    /// 当前时间戳重启采样（引用相等 + 共享锁保证每段暂停恰好计一次）。
+    /// 注入时钟后断言是确定性的：恢复后 101 tick 内传 1000 字节，速度
+    /// ≈9900 B/s；若暂停时长泄漏进采样窗，同样的字节只会报 ≈99 B/s。
+    /// </summary>
+    [Fact]
+    public async Task DownloadFilesAsync_WhenResumedAfterPause_ReportsSpeedExcludingPausedTime()
+    {
+        var clock = new MutableTimestampClock();
+        var pauseSource = new TaskCompletionSource();
+        var transferService = new StubFileDownloadService(async (request, operationControl, cancellationToken) =>
+        {
+            clock.Now = 101;
+            await operationControl.ReportProgressAsync(1000, cancellationToken);
+
+            // 同步注册段：WaitWhilePausedAsync 在挂起前先登记暂停并停下节拍器。
+            var waitTask = operationControl.WaitWhilePausedAsync();
+            clock.Now = 10101;
+            pauseSource.TrySetResult();
+            await waitTask.WaitAsync(TimeSpan.FromSeconds(2), cancellationToken);
+
+            clock.Now = 10202;
+            await operationControl.ReportProgressAsync(1000, cancellationToken);
+        });
+        transferService.OutcomeFactory = _ => DownloadOutcome.Transferred("handshake-hash");
+        var progressSnapshots = new List<GameOperationProgress>();
+        var executor = new DownloadExecutor(
+            transferService,
+            new Crc64Service(),
+            new StubDownloadTransportSource(),
+            new LocalDiagnostics(),
+            () => pauseSource.Task,
+            () => !pauseSource.Task.IsCompleted,
+            timestampProvider: clock.GetTimestamp,
+            timestampFrequency: 1000);
+
+        await executor.DownloadFilesAsync(
+            Path.Combine(tempDir, "YostarGames", "BlueArchive_JP"),
+            new CdnConfigResponse
+            {
+                PrimaryCdn = "https://primary.example.invalid",
+                BackUpCdn = "https://backup.example.invalid"
+            },
+            "source",
+            [new ManifestFile { Path = "handshake.bin", Size = "2000", Hash = "handshake-hash" }],
+            ProxyModes.Direct,
+            speedLimitBytesPerSec: 10_000_000,
+            GameOperationKind.Download,
+            progressSnapshots.Add,
+            CancellationToken.None);
+
+        // 速度只看活跃时间：报告里最快的采样必须接近 1000 字节 / 101 tick。
+        var maxSpeed = progressSnapshots.Max(snapshot => snapshot.BytesPerSecond);
+        Assert.True(
+            maxSpeed > 5000,
+            $"expected paused time excluded from speed, got {maxSpeed} B/s (≈99 would mean pause leaked in).");
     }
 
     [Theory]

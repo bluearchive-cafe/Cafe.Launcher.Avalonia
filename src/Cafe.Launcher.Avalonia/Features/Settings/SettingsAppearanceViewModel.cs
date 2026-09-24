@@ -23,21 +23,24 @@ namespace Cafe.Launcher.Avalonia.Features.Settings;
 
 public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
 {
-    private readonly ISettingsEditor editor;
+    private readonly SettingsEditor editor;
     private readonly ThemeApplier themeApplier;
     private readonly IPlatformSettings? platformSettings;
+    private readonly LocalDiagnostics? diagnostics;
     private readonly bool showHiddenSettings;
     private bool suppressEditorUpdates;
     private bool disposed;
     private readonly LatestRefresh themePaletteRefresh = new();
 
     public SettingsAppearanceViewModel(
-        ISettingsEditor editor,
+        SettingsEditor editor,
         ThemeApplier themeApplier,
+        LocalDiagnostics? diagnostics = null,
         bool showHiddenSettings = false)
     {
         this.editor = editor;
         this.themeApplier = themeApplier;
+        this.diagnostics = diagnostics;
         this.showHiddenSettings = showHiddenSettings;
         editor.CurrentPropertyChanged += OnCurrentSettingChanged;
         platformSettings = Application.Current?.PlatformSettings;
@@ -47,7 +50,7 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         }
     }
 
-    public ISettingsEditor Editor => editor;
+    public SettingsEditor Editor => editor;
     public Func<Bitmap?>? GetBackgroundBitmap { get; set; }
 
     [ObservableProperty]
@@ -145,9 +148,6 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
     /// </summary>
     internal static TimeSpan ThemeRefreshSettleTimeout = TimeSpan.FromMinutes(2);
 
-    internal Task WaitForThemeRefreshToSettleAsync() =>
-        TaskSettler.WaitAsync(() => themePaletteRefresh.Pending, ThemeRefreshSettleTimeout);
-
     /// <summary>
     /// 从当前壁纸重新提取主题色板。提取（含整幅源图降采样与量化）在线程池执行，
     /// 结果经代数校验后回到 UI 线程应用；期间壁纸可能再次切换并释放旧位图，
@@ -164,6 +164,26 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
 
         themePaletteRefresh.Run(null, token => RefreshThemeColorPaletteSafelyAsync(markDirty, applySchemeAfter, token));
         return themePaletteRefresh.Pending;
+    }
+
+    /// <summary>
+    /// 保存前的壁纸色板落定：仅壁纸取色模式需要——等待最新取色任务；色板仍为空时
+    /// （例如刚切到壁纸取色、首次提取尚未产出）再主动提取一次。取色期间会有意保留
+    /// 旧色板，因此不能以 Count == 0 判断是否仍在取色——等待与补提取的判据都在
+    /// 这一处收拢。
+    /// </summary>
+    public async Task EnsureThemePaletteReadyForSaveAsync()
+    {
+        if (editor.Current.ThemeColorMode != ThemeColorModes.Wallpaper)
+        {
+            return;
+        }
+
+        await TaskSettler.WaitAsync(() => themePaletteRefresh.Pending, ThemeRefreshSettleTimeout);
+        if (ThemeColorPaletteItems.Count == 0)
+        {
+            await RefreshThemeColorPaletteFromCurrentBackgroundAsync(markDirty: false);
+        }
     }
 
     private async Task RefreshThemeColorPaletteSafelyAsync(
@@ -239,12 +259,10 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         {
             // 覆盖图片读取、后台提取、UI 调度与结果应用的完整边界，保证所有
             // fire-and-forget 调用都不会泄漏未观察异常。
-            // 豁免：此 catch 是 fire-and-forget 取色任务的最终边界，类内未注入
-            // 诊断实例；LogSync 的 Debug 回退保证不泄漏未观察异常。
-            LocalDiagnostics.LogSync(
-                LogEntrySeverity.Warn,
+            _ = diagnostics?.WarningAsync(
                 "ThemeColor",
-                $"Theme color refresh failed: {ex.Message}");
+                $"Theme color refresh failed: {ex.Message}",
+                CancellationToken.None);
         }
     }
 

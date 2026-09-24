@@ -26,6 +26,15 @@ public sealed partial class UiStyleContractTests
             "FolderSearchOutline",
             detectButton.Descendants().Single(element => element.Name.LocalName == "MaterialIcon").Attribute("Kind")?.Value);
 
+        var installOrUpdateButton = mainWindow
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Button"
+                && element.Attribute("Command")?.Value == "{Binding Operations.InstallOrUpdateCommand}");
+        Assert.Equal(
+            "{Binding Operations.InstallButtonIconKind}",
+            installOrUpdateButton.Descendants().Single(element => element.Name.LocalName == "MaterialIcon").Attribute("Kind")?.Value);
+
         var resourcePanelButton = mainWindow
             .Descendants()
             .Single(element =>
@@ -151,9 +160,17 @@ public sealed partial class UiStyleContractTests
             ["{Binding Operations.RequestStopCommand}"] = ("{Binding Shell.I18n[stop]}", "secondary-operation")
         };
 
+        var operationSurface = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Border"
+                && HasClass(element, "operation-surface"));
+
         foreach (var (command, expected) in expectedButtons)
         {
-            var button = document
+            // 契约域是操作面板：动作优先级词汇（primary/secondary-operation）只在
+            // 该表面内约束，其他表面（如远程内容失败卡）复用同一命令时不受此管辖。
+            var button = operationSurface
                 .Descendants()
                 .First(element =>
                     element.Name.LocalName == "Button"
@@ -182,6 +199,36 @@ public sealed partial class UiStyleContractTests
             controlPanel.Descendants(),
             element => element.Name.LocalName == "TextBlock"
                 && element.Attribute("Text")?.Value == "{Binding Shell.LaunchCheckText}");
+    }
+
+    [Fact]
+    public void MainWindow_StatusCaptions_ExposeDownloadSource()
+    {
+        // 底部两个状态行（安装面板与控制面板）都必须展示当前下载源；
+        // 控制面板的隐藏布局只保留会话状态与按钮，不在此契约内。
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.axaml"));
+        var captionBindings = document
+            .Descendants()
+            .Where(element =>
+                element.Name.LocalName == "TextBlock"
+                && element.Attribute("Text")?.Value == "{Binding Shell.DownloadSourceText}");
+        Assert.Equal(2, captionBindings.Count());
+    }
+
+    [Theory]
+    [InlineData("OperationInstallState", new[] { "Shell.DiskSpaceText", "Shell.NetworkText", "Shell.DownloadSourceText", "Shell.VersionText" })]
+    [InlineData("OperationControlState", new[] { "Operations.GameSessionStateText", "Shell.LaunchCheckText", "Shell.NetworkText", "Shell.DownloadSourceText", "Shell.VersionText" })]
+    public void MainWindow_StatusCaptions_UseStatusFirstOrder(string panelName, string[] expectedBindings)
+    {
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.axaml"));
+        var panel = document.Descendants().Single(element =>
+            element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == panelName));
+        var statusRow = panel.Descendants().Single(element =>
+            element.Name.LocalName == "TextBlock"
+            && element.Attribute("Text")?.Value == "{Binding Shell.DownloadSourceText}").Parent!;
+        Assert.Equal(
+            expectedBindings.Select(binding => "{Binding " + binding + "}"),
+            statusRow.Elements().Select(element => element.Attribute("Text")?.Value));
     }
 
     [Fact]
@@ -565,6 +612,36 @@ public sealed partial class UiStyleContractTests
         Assert.Equal("{StaticResource Launcher.Spacing.Thickness.Md}", layoutHostStyle["Padding"]);
         Assert.Equal("Auto", layoutHostStyle["VerticalScrollBarVisibility"]);
         Assert.Equal("Disabled", layoutHostStyle["HorizontalScrollBarVisibility"]);
+    }
+
+    [Fact]
+    public void MainWindow_RemoteContentLoadError_CarriesTheCardBackground()
+    {
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.axaml"));
+        var errorCard = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Border"
+                && HasClass(element, "remote-content-load-error"));
+        var styles = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
+        var errorStyle = GetStyleSetters(styles, "Border.remote-content-load-error");
+
+        // 失败态替代整块内容区，必须与 remote-content-card 同底同圆角，
+        // 否则加载失败时透出壁纸，呈现为无背景的悬空错误文字。
+        Assert.Equal("{DynamicResource Launcher.Color.Panel.Background}", errorStyle["Background"]);
+        Assert.Equal("{StaticResource Launcher.Radius.Sm}", errorStyle["CornerRadius"]);
+
+        // 文案指引"刷新重试"，卡片必须就地给出重试动作，而不是让用户去别处找刷新按钮。
+        var retryButton = errorCard
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Button"
+                && element.Attribute("Command")?.Value == "{Binding RefreshCommand}");
+        Assert.Equal("{Binding Shell.I18n[retry]}", retryButton.Attribute("AutomationProperties.Name")?.Value);
+        Assert.Single(
+            retryButton.Descendants(),
+            icon => icon.Name.LocalName == "MaterialIcon"
+                && icon.Attribute("Kind")?.Value == "Refresh");
     }
 
     [Fact]

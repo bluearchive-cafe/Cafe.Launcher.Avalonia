@@ -37,6 +37,8 @@ The archives carry this file and `LICENSE` next to the binaries.
 | HarfBuzzSharp.NativeAssets.macOS | 8.3.1.3 | MIT ([text](https://licenses.nuget.org/MIT)) | https://go.microsoft.com/fwlink/?linkid=868515 |
 | HarfBuzzSharp.NativeAssets.WebAssembly | 8.3.1.3 | MIT ([text](https://licenses.nuget.org/MIT)) | https://go.microsoft.com/fwlink/?linkid=868515 |
 | HarfBuzzSharp.NativeAssets.Win32 | 8.3.1.3 | MIT ([text](https://licenses.nuget.org/MIT)) | https://go.microsoft.com/fwlink/?linkid=868515 |
+| Markdig | 1.3.2 | BSD-2-Clause ([text](https://licenses.nuget.org/BSD-2-Clause)) | https://xoofx.github.io/markdig |
+| MarkView.Avalonia | 12.2.1 | MIT ([text](https://licenses.nuget.org/MIT)) | https://github.com/Kryptos-FR/MarkView.Avalonia |
 | Material.Icons | 3.0.2 | MIT ([text](https://licenses.nuget.org/MIT)) | https://github.com/SKProCH/Material.Icons/ |
 | Material.Icons.Avalonia | 3.0.2 | MIT ([text](https://licenses.nuget.org/MIT)) | https://github.com/AvaloniaUtils/Material.Icons.Avalonia/ |
 | MicroCom.Runtime | 0.11.6 | MIT ([text](https://licenses.nuget.org/MIT)) | - |

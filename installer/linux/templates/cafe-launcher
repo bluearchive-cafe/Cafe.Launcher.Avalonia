@@ -1,0 +1,11 @@
+#!/bin/sh
+set -eu
+
+# Package-managed installs live under /opt. Tell the launcher to choose a
+# writable user-home default for game files instead of a sibling of /opt.
+#
+# The package-format marker below is substituted at packaging time (deb / rpm /
+# pacman); GameInstallationPath only checks it is non-empty, so it is diagnostic.
+export CAFE_LAUNCHER_PACKAGE_FORMAT={PACKAGE_FORMAT}
+
+exec /opt/cafe-launcher/Cafe.Launcher.Avalonia "$@"

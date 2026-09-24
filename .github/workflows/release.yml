@@ -45,17 +45,20 @@ jobs:
           # carried that day, which decides the Microsoft.NETCore.App version published inside
           # every self-contained artifact without leaving a trace in the repository.
           dotnet-version: 10.0.302
-          cache: true
-          cache-dependency-path: |
-            **/*.csproj
-            **/packages.lock.json
-            Directory.Packages.props
+
+      - name: Restore NuGet cache
+        id: nuget-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.nuget/packages
+          key: nuget-global-packages-${{ runner.os }}-${{ hashFiles('Directory.Packages.props') }}
+          restore-keys: nuget-global-packages-${{ runner.os }}-
 
       - name: Install Linux packaging and smoke-test dependencies
         shell: bash
         run: |
           sudo apt-get update
-          sudo apt-get install --no-install-recommends -y dpkg xvfb xauth libx11-6 libice6 libsm6 libfontconfig1 libxkbcommon0
+          sudo apt-get install --no-install-recommends -y dpkg rpm xvfb xauth libx11-6 libice6 libsm6 libfontconfig1 libxkbcommon0
 
       - name: Acquire pinned AppImage tools
         env:
@@ -87,7 +90,7 @@ jobs:
           }
           ./scripts/Build-Distribution.ps1 @buildArguments
 
-      - name: Verify Debian package and smoke test AppImage
+      - name: Verify Debian and RPM packages and smoke test AppImage
         shell: bash
         run: |
           debs=(artifacts/distribution/*_linux-x64.deb)
@@ -104,6 +107,24 @@ jobs:
           sudo apt-get install --no-install-recommends -y "./${debs[0]}"
           test "$(command -v cafe-launcher)" = /usr/bin/cafe-launcher
           cafe-launcher --version
+
+          rpms=(artifacts/distribution/*_linux-x64.rpm)
+          if [[ ${#rpms[@]} -ne 1 || ! -f "${rpms[0]}" ]]; then
+            echo "Expected exactly one Linux RPM package." >&2
+            exit 1
+          fi
+          [[ $(rpm -qp --queryformat '%{NAME}' "${rpms[0]}") == cafe-launcher ]]
+          [[ $(rpm -qp --queryformat '%{ARCH}' "${rpms[0]}") == x86_64 ]]
+          rpm -qp --queryformat '%{NAME} %{VERSION}-%{RELEASE} %{ARCH}\n' "${rpms[0]}"
+          # Install into an alternate root rather than onto the runner: this exercises
+          # the payload and its file modes without touching the host, and --nodeps keeps
+          # it usable where the declared capabilities are not installed.
+          rpm --root "$RUNNER_TEMP/rpm-root" --initdb
+          rpm --root "$RUNNER_TEMP/rpm-root" -ivh --nodeps --noscripts "${rpms[0]}"
+          test -x "$RUNNER_TEMP/rpm-root/usr/bin/cafe-launcher"
+          test -x "$RUNNER_TEMP/rpm-root/opt/cafe-launcher/Cafe.Launcher.Avalonia"
+          sh -n "$RUNNER_TEMP/rpm-root/usr/bin/cafe-launcher"
+          "$RUNNER_TEMP/rpm-root/opt/cafe-launcher/Cafe.Launcher.Avalonia" --version
 
           appimages=(artifacts/distribution/*_linux-x64.AppImage)
           if [[ ${#appimages[@]} -ne 1 || ! -f "${appimages[0]}" ]]; then
@@ -177,6 +198,13 @@ jobs:
           path: changelog.md
           retention-days: 1
 
+      - name: Save NuGet cache
+        if: always()
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.nuget/packages
+          key: ${{ steps.nuget-cache.outputs.cache-primary-key }}
+
   installer:
     name: Release tests and Windows installer
     runs-on: windows-latest
@@ -210,11 +238,14 @@ jobs:
           # carried that day, which decides the Microsoft.NETCore.App version published inside
           # every self-contained artifact without leaving a trace in the repository.
           dotnet-version: 10.0.302
-          cache: true
-          cache-dependency-path: |
-            **/*.csproj
-            **/packages.lock.json
-            Directory.Packages.props
+
+      - name: Restore NuGet cache
+        id: nuget-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.nuget/packages
+          key: nuget-global-packages-${{ runner.os }}-${{ hashFiles('Directory.Packages.props') }}
+          restore-keys: nuget-global-packages-${{ runner.os }}-
 
       - name: Install Inno Setup 7
         env:
@@ -285,6 +316,13 @@ jobs:
           path: artifacts/distribution/Cafe.Launcher.Avalonia_*_setup.exe
           retention-days: 1
 
+      - name: Save NuGet cache
+        if: always()
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.nuget/packages
+          key: ${{ steps.nuget-cache.outputs.cache-primary-key }}
+
   release:
     name: Publish GitHub releases
     runs-on: ubuntu-latest
@@ -349,6 +387,7 @@ jobs:
           linux-x64.tar.gz|Linux 便携压缩包（x64）
           linux-x64.AppImage|Linux AppImage（x64）
           linux-x64.deb|Linux deb 安装包（x64）
+          linux-x64.rpm|Linux rpm 安装包（x64）
           ORDER
             } >> "$output"
           }
@@ -367,8 +406,8 @@ jobs:
           # （不另抄一份产物清单），但数量不符即失败——宁可让发布中断，也不要发出不完整
           # 或掺入意外文件的清单。
           mapfile -t packages < <(LC_ALL=C ls -1 Cafe.Launcher.Avalonia_* | LC_ALL=C sort)
-          if [[ ${#packages[@]} -ne 6 ]]; then
-            echo "Expected 6 distribution packages, found ${#packages[@]}: ${packages[*]}" >&2
+          if [[ ${#packages[@]} -ne 7 ]]; then
+            echo "Expected 7 distribution packages, found ${#packages[@]}: ${packages[*]}" >&2
             exit 1
           fi
 
@@ -396,6 +435,7 @@ jobs:
             artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.tar.gz
             artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.AppImage
             artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.deb
+            artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.rpm
             artifacts/distribution/SHA256SUMS
           prerelease: ${{ contains(github.ref_name, '-') }}
           fail_on_unmatched_files: true
@@ -416,6 +456,7 @@ jobs:
             artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.tar.gz
             artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.AppImage
             artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.deb
+            artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.rpm
             artifacts/distribution/SHA256SUMS
           prerelease: ${{ contains(github.ref_name, '-') }}
           fail_on_unmatched_files: true

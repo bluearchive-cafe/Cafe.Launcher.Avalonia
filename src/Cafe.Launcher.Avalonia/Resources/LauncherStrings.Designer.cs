@@ -322,7 +322,11 @@ internal static class LauncherStrings
 
     internal static string DownloadSourceDescription => GetRequiredString("downloadSourceDescription");
 
+    internal static string DownloadSourceLoading => GetRequiredString("downloadSourceLoading");
+
     internal static string DownloadSourceOfficial => GetRequiredString("downloadSourceOfficial");
+
+    internal static string DownloadSourceValue => GetRequiredString("downloadSourceValue");
 
     internal static string DownloadSpeedLimit => GetRequiredString("downloadSpeedLimit");
 
@@ -345,6 +349,10 @@ internal static class LauncherStrings
     internal static string ErrorDialogTitle => GetRequiredString("errorDialogTitle");
 
     internal static string ErrorDialogViewLog => GetRequiredString("errorDialogViewLog");
+
+    internal static string ErrorFakeIpDns => GetRequiredString("errorFakeIpDns");
+
+    internal static string ErrorNetworkUnavailable => GetRequiredString("errorNetworkUnavailable");
 
     internal static string EstimatedTimeRemaining => GetRequiredString("estimatedTimeRemaining");
 
@@ -430,11 +438,19 @@ internal static class LauncherStrings
 
     internal static string GamePathUpdateFailed => GetRequiredString("gamePathUpdateFailed");
 
+    internal static string GameProcessScanUnavailable => GetRequiredString("gameProcessScanUnavailable");
+
     internal static string GameProcessStarted => GetRequiredString("gameProcessStarted");
 
     internal static string GameRemoteStateUnavailable => GetRequiredString("gameRemoteStateUnavailable");
 
     internal static string GameRepairFailed => GetRequiredString("gameRepairFailed");
+
+    internal static string GameRuntimeEnvironmentMountNoExec => GetRequiredString("gameRuntimeEnvironmentMountNoExec");
+
+    internal static string GameRuntimeEnvironmentPrefixNotWritable => GetRequiredString("gameRuntimeEnvironmentPrefixNotWritable");
+
+    internal static string GameRuntimeEnvironmentSymlinksUnsupported => GetRequiredString("gameRuntimeEnvironmentSymlinksUnsupported");
 
     internal static string GameRuntimeNoRunnerAvailable => GetRequiredString("gameRuntimeNoRunnerAvailable");
 
@@ -485,6 +501,16 @@ internal static class LauncherStrings
     internal static string GameRuntimeStatusTitle => GetRequiredString("gameRuntimeStatusTitle");
 
     internal static string GameRuntimeStatusUnsupported => GetRequiredString("gameRuntimeStatusUnsupported");
+
+    internal static string GameSessionExited => GetRequiredString("gameSessionExited");
+
+    internal static string GameSessionExitedNoCode => GetRequiredString("gameSessionExitedNoCode");
+
+    internal static string GameSessionRunning => GetRequiredString("gameSessionRunning");
+
+    internal static string GameSessionStartFailed => GetRequiredString("gameSessionStartFailed");
+
+    internal static string GameSessionStarting => GetRequiredString("gameSessionStarting");
 
     internal static string GameShortcutCreated => GetRequiredString("gameShortcutCreated");
 
@@ -550,6 +576,8 @@ internal static class LauncherStrings
 
     internal static string LauncherStateNotLoaded => GetRequiredString("launcherStateNotLoaded");
 
+    internal static string LauncherUpdateApplyFailed => GetRequiredString("launcherUpdateApplyFailed");
+
     internal static string LauncherUpdateAvailableMessage => GetRequiredString("launcherUpdateAvailableMessage");
 
     internal static string LauncherUpdateAvailableTitle => GetRequiredString("launcherUpdateAvailableTitle");
@@ -566,13 +594,23 @@ internal static class LauncherStrings
 
     internal static string LauncherUpdateDownload => GetRequiredString("launcherUpdateDownload");
 
+    internal static string LauncherUpdateDownloadFailed => GetRequiredString("launcherUpdateDownloadFailed");
+
+    internal static string LauncherUpdateDownloading => GetRequiredString("launcherUpdateDownloading");
+
     internal static string LauncherUpdateFileSize => GetRequiredString("launcherUpdateFileSize");
 
     internal static string LauncherUpdateLater => GetRequiredString("launcherUpdateLater");
 
-    internal static string LauncherUpdateSelectFile => GetRequiredString("launcherUpdateSelectFile");
+    internal static string LauncherUpdateOpenReleasePage => GetRequiredString("launcherUpdateOpenReleasePage");
+
+    internal static string LauncherUpdateReadyToRestart => GetRequiredString("launcherUpdateReadyToRestart");
+
+    internal static string LauncherUpdateRestart => GetRequiredString("launcherUpdateRestart");
 
     internal static string LauncherUpdateUpToDate => GetRequiredString("launcherUpdateUpToDate");
+
+    internal static string LauncherUpdateView => GetRequiredString("launcherUpdateView");
 
     internal static string LauncherVersionLabel => GetRequiredString("launcherVersionLabel");
 
@@ -694,8 +732,6 @@ internal static class LauncherStrings
 
     internal static string NetworkLoading => GetRequiredString("networkLoading");
 
-    internal static string NetworkWithMessage => GetRequiredString("networkWithMessage");
-
     internal static string NeutralColorStrategy => GetRequiredString("neutralColorStrategy");
 
     internal static string NeutralColorStrategyBrandBlue => GetRequiredString("neutralColorStrategyBrandBlue");
@@ -804,6 +840,8 @@ internal static class LauncherStrings
 
     internal static string ResourcePanelDescription => GetRequiredString("resourcePanelDescription");
 
+    internal static string ResourcePanelDismissUidHint => GetRequiredString("resourcePanelDismissUidHint");
+
     internal static string ResourcePanelEditUid => GetRequiredString("resourcePanelEditUid");
 
     internal static string ResourcePanelFailed => GetRequiredString("resourcePanelFailed");
@@ -839,6 +877,8 @@ internal static class LauncherStrings
     internal static string ResourcePanelUid => GetRequiredString("resourcePanelUid");
 
     internal static string ResourcePanelUidEmpty => GetRequiredString("resourcePanelUidEmpty");
+
+    internal static string ResourcePanelUidGenerationHint => GetRequiredString("resourcePanelUidGenerationHint");
 
     internal static string ResourcePanelUidInvalidFormat => GetRequiredString("resourcePanelUidInvalidFormat");
 

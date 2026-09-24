@@ -41,7 +41,7 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 
 ### 2.3 XAML 规范
 
-- 所有可视值使用 `StaticResource`/`DynamicResource` 设计 token（`App.axaml` 中的 `Launcher.*` 家族），**禁止**在 View XAML 中写裸色号、`Transparent`、裸图标尺寸、裸 `4`/`6`/`8` 圆角半径。运行中的 token 取值可在 Debug 门的设计画廊叠层里查看。
+- 所有可视值使用 `StaticResource`/`DynamicResource` 设计 token（`App.axaml` 中的 `Launcher.*` 家族），**禁止**在 View XAML 中写裸色号、`Transparent`、裸图标尺寸、裸 `4`/`6`/`8` 圆角半径。样式 Setter 与视图内联的 `Spacing`/`ColumnSpacing`/`RowSpacing` 同样必须引用 `Launcher.Spacing.*`（含 `Spacing.None`=0）。透明度只允许两种形态：结构性 `0`/`1`（可见/隐藏、动画关键帧）或引用 `Launcher.StateLayer.*`；分数透明度词汇以 `Launcher.StateLayer.*` 五档为唯一来源（契约锁定）。运行中的 token 取值可在 Debug 门的设计画廊叠层里查看。
 - 主题无关的渐变和阴影定义仅允许在 `App.axaml` 或 `MainWindow.Styles.axaml` 中。
 - `AutomationProperties.Name` 绑定到本地化字符串的**所有**交互控件都必须有。
 - 控件使用语义化的 `Classes` 属性而非内联 Style。
@@ -221,7 +221,7 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 - [ ] XAML 改动 → `UiStyleContractTests` 通过
 - [ ] 新功能的测试覆盖了预期行为
 - [ ] 新增的本地化 key 存在于 4 个 `LauncherStrings*.resx` 文件中，已生成 `LauncherStrings.Designer.cs` 与 `LocalizationKeys.cs`，且资源合约测试通过
-- [ ] 未引入裸色号、裸图标尺寸、裸圆角在 View XAML 中
+- [ ] 未引入裸色号、裸图标尺寸、裸圆角、裸分数透明度（透明度只允许 0/1 或 `Launcher.StateLayer.*` 引用）在 View XAML 中
 - [ ] 新增的 public/internal API 有 XML doc comment
 - [ ] IDisposable 新增类注册顺序不影响现有 disposal order
 - [ ] 日志调用使用 `LocalDiagnostics`（不直接 `UnifiedLogger`），`title` 为 PascalCase 模块标签
@@ -253,6 +253,7 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 | .NET SDK | 10.0.302 | Runtime / SDK（global.json 钉住，`latestFeature` 滚动） |
 | Avalonia / Avalonia.Desktop | 12.1.2 | UI Framework |
 | Avalonia.Controls.ColorPicker | 12.1.2 | 自定义主题色取色器 |
+| MarkView.Avalonia | 12.2.1 | 基于 Markdig 的更新说明 Markdown 预览 |
 | Avalonia.Themes.Fluent | 12.1.2 | Fluent 主题 |
 | Avalonia.Headless.XUnit | 12.1.2 | Headless UI testing |
 | AvaloniaUI.DiagnosticsSupport | 2.2.3 | 调试期 UI 诊断（Debug 专用，Release 不分发） |

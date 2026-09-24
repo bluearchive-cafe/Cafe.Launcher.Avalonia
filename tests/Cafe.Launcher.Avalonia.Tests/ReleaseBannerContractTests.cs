@@ -1,4 +1,4 @@
-﻿using System.Buffers.Binary;
+using System.Buffers.Binary;
 using System.Text;
 using System.Text.Json;
 using Cafe.Launcher.Avalonia.Testing;
@@ -14,9 +14,17 @@ namespace Cafe.Launcher.Avalonia.Tests;
 public sealed class ReleaseBannerContractTests
 {
     private const string TemplateRelativePath = "docs/promo/specs/release-banner.template.json";
+    private const string SpecsDirectoryRelativePath = "docs/promo/specs";
+    private const string SpecFileNameSuffix = ".spec.json";
     private const string BannerDirectoryRelativePath = "docs/assets/release-banners";
     private const int CanvasWidth = 2000;
     private const int CanvasHeight = 1125;
+
+    // 模板仍是房屋画布（上面两个常量，由模板用例钉死），但入库的成品不必再等于那一档：
+    // 外部交付的整张海报可以更小或更大。约束收成「16:9 且落在量级带内」——发布说明、Release
+    // 页面与仓库首页都会原样缩放这张图，比例错了会被裁切，尺寸太小则在 2×/3× 屏上发虚。
+    private const int MinimumCanvasWidth = 1920;
+    private const int MaximumCanvasWidth = 2400;
     private const double BleedTolerance = 0.5;
 
     [Fact]
@@ -79,6 +87,8 @@ public sealed class ReleaseBannerContractTests
         // :33 那条断言作用于模板里 output.image 的字符串。于是零字节或尺寸错误的横幅照样全绿，
         // 而 release.yml 的 tag 门禁（Test-Path -PathType Leaf）也只查存在性：真到发版那一刻
         // 才会发现横幅本身是坏的。这条把「csproj 声明的版本 ↔ 该版本的横幅文件」钉死。
+        // 画布只查「16:9 且在量级带内」：本版本的成品是外部交付的 1920×1080，房屋画布 2000×1125
+        // 仍是模板默认值（由 BannerTemplate_DeclaresHouseCanvasAndDeterministicScale 钉死）。
         var version = ProjectMetadata.ReadVersionPrefix();
         var relativePath = $"{BannerDirectoryRelativePath}/cafe-launcher-v{version}-release-banner.png";
         var bannerPath = TestRepository.FromRepositoryRoot(relativePath);
@@ -88,8 +98,69 @@ public sealed class ReleaseBannerContractTests
             $"The banner for the declared version must be committed before tagging (AGENTS.md, Release Notes): {relativePath}");
 
         var (width, height) = ReadPngSize(bannerPath);
-        Assert.Equal(CanvasWidth, width);
-        Assert.Equal(CanvasHeight, height);
+        AssertBannerCanvasIsAccepted(width, height, relativePath);
+    }
+
+    [Fact]
+    public void CommittedBannerSpecs_ResolveTheirOutputIntoACommittedPng()
+    {
+        // 每份 spec 都是模板的副本，而 output.image 相对 spec 自己的目录解析。这条把「spec 声明的
+        // 落盘位置」与「那张图真的入库了」钉在一起：spec 表过态但没人渲染过，等于到发版那一刻才
+        // 发现图不在 release.yml 会看的地方。此前没有任何测试读过这些 spec（模板是唯一被读的
+        // JSON），历史版本的横幅因此可以悄悄与它的 spec 脱节。
+        var root = TestLocalizationHelper.FindRepositoryRoot();
+        var specDirectory = Path.Combine(root, SpecsDirectoryRelativePath);
+        var schema = ReadTemplateSchemaVersion(root);
+
+        var specs = Directory.GetFiles(specDirectory, "*" + SpecFileNameSuffix);
+        Assert.True(
+            specs.Length >= 2,
+            $"{SpecsDirectoryRelativePath} 里只剩 {specs.Length} 份 spec：目录或命名约定已经变了。");
+
+        foreach (var specPath in specs)
+        {
+            var fileName = Path.GetFileName(specPath);
+            var tag = fileName[..^SpecFileNameSuffix.Length];
+            var relativeSpecPath = $"{SpecsDirectoryRelativePath}/{fileName}";
+
+            using var document = JsonDocument.Parse(File.ReadAllText(specPath));
+            var declared = document.RootElement.GetProperty("output").GetProperty("image").GetString()!;
+            var resolved = Path.GetFullPath(Path.Combine(specDirectory, declared));
+            var expected = Path.GetFullPath(Path.Combine(
+                root,
+                BannerDirectoryRelativePath,
+                $"cafe-launcher-{tag}-release-banner.png"));
+
+            Assert.True(
+                string.Equals(expected, resolved, StringComparison.OrdinalIgnoreCase),
+                $"{relativeSpecPath} 的 output.image 落到了 {resolved}，而本仓库的约定是 {expected}。");
+
+            Assert.True(
+                File.Exists(resolved),
+                $"{relativeSpecPath} 声明的横幅没有入库：{declared}（有 spec 就该有图，否则这份 spec 从未被渲染过）。");
+
+            // 渲染路径只有 v2 能跑 release profile；模板升版时历史 spec 必须一起迁移。
+            Assert.True(
+                document.RootElement.GetProperty("schema_version").GetInt32() == schema,
+                $"{relativeSpecPath} 的 schema_version 与模板（{schema}）不一致：模板升版后历史 spec 也必须迁移。");
+
+            var (width, height) = ReadPngSize(resolved);
+            AssertBannerCanvasIsAccepted(width, height, relativeSpecPath);
+        }
+    }
+
+    [Fact]
+    public void DeclaredProjectVersion_HasItsBannerSpec()
+    {
+        // spec 与 PNG 是同一件入库物（docs/promo/release-banner-guide.md）：只提交了 PNG 而没有
+        // spec，下一版就复现不出这张图，而 release.yml 的 tag 门禁只查 PNG 存在性——这一半只能在
+        // 这里钉。只约束当前声明版本：spec 是 beta.9 起才成为入库物的，历史版本没有 spec 属正常。
+        var version = ProjectMetadata.ReadVersionPrefix();
+        var relativePath = $"{SpecsDirectoryRelativePath}/v{version}{SpecFileNameSuffix}";
+
+        Assert.True(
+            File.Exists(TestRepository.FromRepositoryRoot(relativePath)),
+            $"声明版本 {version} 的横幅 spec 必须与横幅一起入库（docs/promo/release-banner-guide.md）：{relativePath}");
     }
 
     [Fact]
@@ -337,6 +408,28 @@ public sealed class ReleaseBannerContractTests
             Path.Combine(repositoryRoot, TemplateRelativePath)));
 
         return document.RootElement.GetProperty("output").GetProperty("image").GetString()!;
+    }
+
+    private static int ReadTemplateSchemaVersion(string repositoryRoot)
+    {
+        using var document = JsonDocument.Parse(File.ReadAllText(
+            Path.Combine(repositoryRoot, TemplateRelativePath)));
+
+        return document.RootElement.GetProperty("schema_version").GetInt32();
+    }
+
+    /// <summary>
+    /// 入库横幅的可接受画布：16:9，且宽度落在 <see cref="MinimumCanvasWidth"/> 与
+    /// <see cref="MaximumCanvasWidth"/> 之间。用交叉相乘比较比例，避免整数除法把 16:9 之外的
+    /// 比例（如 1920×1081）放行。
+    /// </summary>
+    private static void AssertBannerCanvasIsAccepted(int width, int height, string subject)
+    {
+        var isSixteenByNine = (long)height * 16 == (long)width * 9;
+        Assert.True(
+            isSixteenByNine && width >= MinimumCanvasWidth && width <= MaximumCanvasWidth,
+            $"{subject} 的画布是 {width}×{height}；本仓库接受 {MinimumCanvasWidth}×{MinimumCanvasWidth * 9 / 16}"
+            + $" 到 {MaximumCanvasWidth}×{MaximumCanvasWidth * 9 / 16} 之间的 16:9 画布。");
     }
 
     /// <summary>

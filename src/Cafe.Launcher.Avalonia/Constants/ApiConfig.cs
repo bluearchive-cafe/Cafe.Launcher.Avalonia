@@ -22,9 +22,9 @@ public static class ApiConfig
     /// </summary>
     public const string YostarAuthorizationVersion = "1.7.2";
 
-    public const string GitHubReleaseRepositorySlug = "bluearchive-cafe/Cafe.Launcher.Avalonia_Release";
+    public const string GitHubReleaseRepositorySlug = "bluearchive-cafe/Cafe.Launcher.Avalonia";
     public const string GitHubReleaseDownloadPathPrefix =
-        "/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/";
+        "/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/";
     /// <summary>
     /// Full repository URL. Constrained by <see cref="LauncherConstants.GitHubReleaseRepositoryUrl"/>
     /// to the same value. Defined here for API-config cohesion; prefer
@@ -33,7 +33,8 @@ public static class ApiConfig
     public const string GitHubReleaseRepositoryUrl =
         "https://github.com/" + GitHubReleaseRepositorySlug;
     public const string LauncherApiBaseUrl = "https://api-cafe-launcher.saibamidori.com/";
-    public const string LauncherReleasesPath = "/api/launcher/releases";
+    public const string LauncherReleasesPath = "/api/v2/launcher/releases";
     public const string GitHubReleasesApiUrl =
         "https://api.github.com/repos/" + GitHubReleaseRepositorySlug + "/releases";
+    public const string GitHubReleaseByTagApiUrl = GitHubReleasesApiUrl + "/tags/";
 }

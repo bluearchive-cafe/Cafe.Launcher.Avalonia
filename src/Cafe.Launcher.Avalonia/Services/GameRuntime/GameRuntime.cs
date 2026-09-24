@@ -20,17 +20,26 @@ public sealed class GameRuntime : IGameRuntime
     private readonly IGameProcessTracker processTracker;
     private readonly Func<string, string?, string?> locateExecutable;
     private readonly Func<string, string, TimeSpan, CancellationToken, Task<RuntimeProbeResult>> probeVersion;
+    private readonly RunnerOutputCapture? runnerOutputCapture;
+    private readonly CompatibilityEnvironmentPrecheck? environmentPrecheck;
+    private readonly PrefixMetadataStore? prefixMetadata;
 
     public GameRuntime(
         IEnumerable<GameRunnerDefinition> runners,
         IProcessLauncher processLauncher,
-        IGameProcessTracker processTracker)
+        IGameProcessTracker processTracker,
+        RunnerOutputCapture? runnerOutputCapture = null,
+        CompatibilityEnvironmentPrecheck? environmentPrecheck = null,
+        PrefixMetadataStore? prefixMetadata = null)
         : this(
             runners,
             processLauncher,
             processTracker,
             (name, explicitPath) => ExecutableLocator.FindInPath(name, explicitPath),
-            RuntimeVersionProbe.ProbeAsync)
+            RuntimeVersionProbe.ProbeAsync,
+            runnerOutputCapture,
+            environmentPrecheck,
+            prefixMetadata)
     {
     }
 
@@ -39,13 +48,19 @@ public sealed class GameRuntime : IGameRuntime
         IProcessLauncher processLauncher,
         IGameProcessTracker processTracker,
         Func<string, string?, string?> locateExecutable,
-        Func<string, string, TimeSpan, CancellationToken, Task<RuntimeProbeResult>> probeVersion)
+        Func<string, string, TimeSpan, CancellationToken, Task<RuntimeProbeResult>> probeVersion,
+        RunnerOutputCapture? runnerOutputCapture = null,
+        CompatibilityEnvironmentPrecheck? environmentPrecheck = null,
+        PrefixMetadataStore? prefixMetadata = null)
     {
         this.runners = runners.ToArray();
         this.processLauncher = processLauncher;
         this.processTracker = processTracker;
         this.locateExecutable = locateExecutable;
         this.probeVersion = probeVersion;
+        this.runnerOutputCapture = runnerOutputCapture;
+        this.environmentPrecheck = environmentPrecheck;
+        this.prefixMetadata = prefixMetadata;
     }
 
     public async Task<GameRuntimeLaunchResult> LaunchAsync(
@@ -57,10 +72,10 @@ public sealed class GameRuntime : IGameRuntime
         var candidates = new List<GameRuntimeStatusEntry>();
         foreach (var runner in SelectionOrder(configuration.PreferredRunnerId))
         {
+            var runnerConfiguration = ForSelectedRunner(configuration, runner.Id);
             GameRunnerAvailability availability;
             try
             {
-                var runnerConfiguration = ForSelectedRunner(configuration, runner.Id);
                 availability = await CheckAvailabilityAsync(runner, runnerConfiguration, cancellationToken)
                     .ConfigureAwait(false);
             }
@@ -91,10 +106,24 @@ public sealed class GameRuntime : IGameRuntime
                 continue;
             }
 
+            var environmentFailures = TryEnvironmentPrecheck(runner, request, runnerConfiguration);
+            if (environmentFailures is not null)
+            {
+                return new GameRuntimeLaunchResult(
+                    Success: false,
+                    RunnerId: runner.Id,
+                    Process: null,
+                    Diagnostic: BuildDiagnostic(runner, availability, request, configuration),
+                    Candidates: candidates,
+                    Failure: GameRuntimeLaunchFailure.EnvironmentPrecheckFailed,
+                    EnvironmentFailures: environmentFailures);
+            }
+
+            RecordPrefixMetadata(runner, request, runnerConfiguration, availability);
+
             GameProcess process;
             try
             {
-                var runnerConfiguration = ForSelectedRunner(configuration, runner.Id);
                 process = Start(runner, request, runnerConfiguration);
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
@@ -242,10 +271,78 @@ public sealed class GameRuntime : IGameRuntime
                 ?? throw new InvalidOperationException(
                     $"{runner.ExecutableName} was not found. Install {runner.DisplayName} or configure its path.");
 
-        var process = processLauncher.Start(BuildStartInfo(runner, executable, request, configuration))
+        var startInfo = BuildStartInfo(runner, executable, request, configuration);
+        var process = processLauncher.Start(startInfo)
             ?? throw new InvalidOperationException(StartFailureMessage(runner));
 
+        // Drain the redirected pipes immediately: an unread pipe would block the game once its
+        // buffer fills. Only Wine/UMU launches redirect (see BuildStartInfo).
+        if (startInfo.RedirectStandardOutput)
+        {
+            runnerOutputCapture?.Begin(process.StandardOutput, process.StandardError);
+        }
+
         return new GameProcess(process, runner.Id);
+    }
+
+    /// <summary>
+    /// 记录兼容前缀的启动前环境预检（P1-D），并返回其中阻断级的发现；没有阻断项时返回 null。
+    /// 预检本身出错（报告写不进去、探针读不到）按「没有发现」处理——不能因为一次诊断失败就
+    /// 拒绝一次本可成功的启动。原生 Windows 启动没有前缀，跳过。
+    /// </summary>
+    private IReadOnlyList<GameEnvironmentFailure>? TryEnvironmentPrecheck(
+        GameRunnerDefinition runner,
+        GameLaunchRequest request,
+        GameRuntimeConfiguration configuration)
+    {
+        if (environmentPrecheck is null || runner.EnvironmentStyle == GameRuntimeEnvironmentStyle.Native)
+        {
+            return null;
+        }
+
+        try
+        {
+            var report = environmentPrecheck.Check(GetEffectivePrefixPath(request, runner.Id, configuration));
+            List<GameEnvironmentFailure> failures = report.Findings
+                .Where(finding => finding.Severity == CompatibilityFindingSeverity.Error)
+                .Select(finding => new GameEnvironmentFailure(finding.Code, finding.Detail))
+                .ToList();
+            return failures.Count == 0 ? null : failures;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// 记录这次启动使用的组合（P1-E）；只记录，不迁移。前缀元数据是诊断增强，写不进去不影响启动。
+    /// 原生 Windows 启动没有前缀，跳过。
+    /// </summary>
+    private void RecordPrefixMetadata(
+        GameRunnerDefinition runner,
+        GameLaunchRequest request,
+        GameRuntimeConfiguration configuration,
+        GameRunnerAvailability availability)
+    {
+        if (prefixMetadata is null || runner.EnvironmentStyle == GameRuntimeEnvironmentStyle.Native)
+        {
+            return;
+        }
+
+        try
+        {
+            prefixMetadata.Record(
+                GetEffectivePrefixPath(request, runner.Id, configuration),
+                request.GameId,
+                runner.Id,
+                availability.Version,
+                GetEffectiveProtonPath(runner.Id, configuration));
+        }
+        catch (Exception)
+        {
+            // Diagnostic only: never let the metadata record change the launch outcome.
+        }
     }
 
     private static ProcessStartInfo BuildStartInfo(
@@ -260,6 +357,17 @@ public sealed class GameRuntime : IGameRuntime
             WorkingDirectory = request.WorkingDirectory,
             UseShellExecute = false
         };
+
+        // Wine/UMU output is the only place a first-run failure explains itself; native Windows
+        // launches stay untouched. UseShellExecute is already false, so redirecting is safe.
+        var captureOutput = runner.EnvironmentStyle != GameRuntimeEnvironmentStyle.Native;
+        startInfo.RedirectStandardOutput = captureOutput;
+        startInfo.RedirectStandardError = captureOutput;
+
+        // P0-B ownership marker: a launcher-private env var that survives UMU/Proton into every
+        // process of the game's family, so the Linux running gate can identify it without the
+        // kernel-truncated comm (verified to propagate through pressure-vessel; design doc §6).
+        startInfo.Environment[UnixGameProcessMatcher.OwnershipMarkerKey] = request.GameId;
 
         if (runner.ExecutableName is not null)
         {

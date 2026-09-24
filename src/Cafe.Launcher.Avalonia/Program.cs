@@ -21,6 +21,13 @@ sealed class Program
     private const string SignalName = @"Local\Cafe_Launcher_SI_Show";
 
     /// <summary>
+    /// Unix 单实例锁的名字（只作锁套接字文件名的哈希键）：.NET 的 <c>Local\</c>
+    /// 命名空间在 Unix 上按 POSIX 会话隔离，不能承载跨启动环境的单实例语义（ADR-034），
+    /// 因此 Unix 的所有权判定走数据根内的锁套接字，互斥量只在 Windows 使用。
+    /// </summary>
+    internal const string LockSignalName = @"Local\Cafe_Launcher_SI_Lock";
+
+    /// <summary>
     /// Signal the first instance raises its launch-game listener on, so a second
     /// <c>--launch-game</c> invocation forwards the request instead of starting
     /// a duplicate process.
@@ -57,6 +64,13 @@ sealed class Program
     /// then polled by the <see cref="App"/> launch-game listener. Disposed with <see cref="Main"/>.
     /// </summary>
     internal static CrossProcessLaunchSignal? LaunchGameSignal { get; private set; }
+
+    /// <summary>
+    /// The cross-process show-window signal endpoint owned by the first instance.
+    /// Set by <see cref="Main"/> after the single-instance mutex is won and bound,
+    /// then polled by the <see cref="App"/> show-window listener. Disposed with <see cref="Main"/>.
+    /// </summary>
+    internal static CrossProcessLaunchSignal? ShowWindowSignal { get; private set; }
 
     /// <summary>
     /// True when the launcher settings file is missing at process startup.
@@ -141,13 +155,14 @@ sealed class Program
 
             // The isolated reporter bypasses this handshake above. Normal launches still
             // forward to the first instance instead of starting a duplicate process.
-            using var launchBridge = new CrossProcessLaunchBridge(LaunchGameSignalName, SignalName, dataRoot);
+            using var launchBridge = new CrossProcessLaunchBridge(LaunchGameSignalName, SignalName, LockSignalName, dataRoot);
             if (!launchBridge.TryEnterSingleInstance(MutexName, args))
             {
                 return;
             }
 
             LaunchGameSignal = launchBridge.Signal;
+            ShowWindowSignal = launchBridge.ShowSignal;
             LaunchGameRequested = HasLaunchGameArgument(args);
             ShowHiddenSettings = HasShowHiddenSettingsArgument(args);
             FirstLaunch = DetectFirstLaunch(dataRoot);
@@ -328,9 +343,39 @@ sealed class Program
 
         Dispatcher.UIThread.UnhandledException += (_, e) =>
         {
+            if (!DispatcherExceptionPolicy.IsFatal(e.Exception))
+            {
+                // Cancellation is teardown control flow, not a crash: the FreeDesktop tray
+                // watcher (Avalonia's async void DBusTrayIconImpl.WatchAsync) rethrows its
+                // OperationCanceledException onto the dispatcher when the icon is disposed at
+                // exit. Log it and let shutdown finish instead of reporting a crash.
+                LogNonFatalDispatcherCancellation(logger, e.Exception);
+                e.Handled = true;
+                return;
+            }
+
             fatalCrashService.HandleUnhandledCrash(CrashOrigin.DispatcherUnhandledException, e.Exception);
             e.Handled = false;
         };
+    }
+
+    private static void LogNonFatalDispatcherCancellation(UnifiedLogger logger, Exception exception)
+    {
+        try
+        {
+            logger.LogAsync(
+                    LogEntrySeverity.Warn,
+                    "Dispatcher.OperationCanceled",
+                    message: "Cancellation surfaced on the UI dispatcher; treated as shutdown teardown.",
+                    exception: exception,
+                    cancellationToken: CancellationToken.None)
+                .GetAwaiter()
+                .GetResult();
+        }
+        catch
+        {
+            // Best-effort diagnostics; the process is already shutting down.
+        }
     }
 
     private static void LogCrash(UnifiedLogger logger, string source, Exception? exception)

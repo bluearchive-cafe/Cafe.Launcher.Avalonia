@@ -162,7 +162,9 @@ public static class LocalizationKeys
     public const string DownloadSourceCafe = "downloadSourceCafe";
     public const string DownloadSourceChangedRepairPrompt = "downloadSourceChangedRepairPrompt";
     public const string DownloadSourceDescription = "downloadSourceDescription";
+    public const string DownloadSourceLoading = "downloadSourceLoading";
     public const string DownloadSourceOfficial = "downloadSourceOfficial";
+    public const string DownloadSourceValue = "downloadSourceValue";
     public const string DownloadSpeedLimit = "downloadSpeedLimit";
     public const string DownloadSpeedLimitDescription = "downloadSpeedLimitDescription";
     public const string EnableHttp2 = "enableHttp2";
@@ -174,6 +176,8 @@ public static class LocalizationKeys
     public const string ErrorDialogDescription = "errorDialogDescription";
     public const string ErrorDialogTitle = "errorDialogTitle";
     public const string ErrorDialogViewLog = "errorDialogViewLog";
+    public const string ErrorFakeIpDns = "errorFakeIpDns";
+    public const string ErrorNetworkUnavailable = "errorNetworkUnavailable";
     public const string EstimatedTimeRemaining = "estimatedTimeRemaining";
     public const string Executable = "executable";
     public const string ExecutableLoading = "executableLoading";
@@ -216,9 +220,13 @@ public static class LocalizationKeys
     public const string GamePathProtected = "gamePathProtected";
     public const string GamePathUpdated = "gamePathUpdated";
     public const string GamePathUpdateFailed = "gamePathUpdateFailed";
+    public const string GameProcessScanUnavailable = "gameProcessScanUnavailable";
     public const string GameProcessStarted = "gameProcessStarted";
     public const string GameRemoteStateUnavailable = "gameRemoteStateUnavailable";
     public const string GameRepairFailed = "gameRepairFailed";
+    public const string GameRuntimeEnvironmentMountNoExec = "gameRuntimeEnvironmentMountNoExec";
+    public const string GameRuntimeEnvironmentPrefixNotWritable = "gameRuntimeEnvironmentPrefixNotWritable";
+    public const string GameRuntimeEnvironmentSymlinksUnsupported = "gameRuntimeEnvironmentSymlinksUnsupported";
     public const string GameRuntimeNoRunnerAvailable = "gameRuntimeNoRunnerAvailable";
     public const string GameRuntimePrefixPath = "gameRuntimePrefixPath";
     public const string GameRuntimePrefixPathDescription = "gameRuntimePrefixPathDescription";
@@ -244,6 +252,11 @@ public static class LocalizationKeys
     public const string GameRuntimeStatusNotFound = "gameRuntimeStatusNotFound";
     public const string GameRuntimeStatusTitle = "gameRuntimeStatusTitle";
     public const string GameRuntimeStatusUnsupported = "gameRuntimeStatusUnsupported";
+    public const string GameSessionExited = "gameSessionExited";
+    public const string GameSessionExitedNoCode = "gameSessionExitedNoCode";
+    public const string GameSessionRunning = "gameSessionRunning";
+    public const string GameSessionStartFailed = "gameSessionStartFailed";
+    public const string GameSessionStarting = "gameSessionStarting";
     public const string GameShortcutCreated = "gameShortcutCreated";
     public const string GameShortcutFailed = "gameShortcutFailed";
     public const string GameShortcutTargetMissing = "gameShortcutTargetMissing";
@@ -276,6 +289,7 @@ public static class LocalizationKeys
     public const string LauncherInitFailed = "launcherInitFailed";
     public const string LauncherLoadingValue = "launcherLoadingValue";
     public const string LauncherStateNotLoaded = "launcherStateNotLoaded";
+    public const string LauncherUpdateApplyFailed = "launcherUpdateApplyFailed";
     public const string LauncherUpdateAvailableMessage = "launcherUpdateAvailableMessage";
     public const string LauncherUpdateAvailableTitle = "launcherUpdateAvailableTitle";
     public const string LauncherUpdateChannel = "launcherUpdateChannel";
@@ -284,10 +298,15 @@ public static class LocalizationKeys
     public const string LauncherUpdateChannelStable = "launcherUpdateChannelStable";
     public const string LauncherUpdateCheckFailed = "launcherUpdateCheckFailed";
     public const string LauncherUpdateDownload = "launcherUpdateDownload";
+    public const string LauncherUpdateDownloadFailed = "launcherUpdateDownloadFailed";
+    public const string LauncherUpdateDownloading = "launcherUpdateDownloading";
     public const string LauncherUpdateFileSize = "launcherUpdateFileSize";
     public const string LauncherUpdateLater = "launcherUpdateLater";
-    public const string LauncherUpdateSelectFile = "launcherUpdateSelectFile";
+    public const string LauncherUpdateOpenReleasePage = "launcherUpdateOpenReleasePage";
+    public const string LauncherUpdateReadyToRestart = "launcherUpdateReadyToRestart";
+    public const string LauncherUpdateRestart = "launcherUpdateRestart";
     public const string LauncherUpdateUpToDate = "launcherUpdateUpToDate";
+    public const string LauncherUpdateView = "launcherUpdateView";
     public const string LauncherVersionLabel = "launcherVersionLabel";
     public const string LocalManifestMetadataMissing = "localManifestMetadataMissing";
     public const string LocalManifestMissing = "localManifestMissing";
@@ -348,7 +367,6 @@ public static class LocalizationKeys
     public const string MotionModeSystem = "motionModeSystem";
     public const string NetworkErrorDetail = "networkErrorDetail";
     public const string NetworkLoading = "networkLoading";
-    public const string NetworkWithMessage = "networkWithMessage";
     public const string NeutralColorStrategy = "neutralColorStrategy";
     public const string NeutralColorStrategyBrandBlue = "neutralColorStrategyBrandBlue";
     public const string NeutralColorStrategyDescription = "neutralColorStrategyDescription";
@@ -403,6 +421,7 @@ public static class LocalizationKeys
     public const string ResourcePanelChangeUid = "resourcePanelChangeUid";
     public const string ResourcePanelCurrentUid = "resourcePanelCurrentUid";
     public const string ResourcePanelDescription = "resourcePanelDescription";
+    public const string ResourcePanelDismissUidHint = "resourcePanelDismissUidHint";
     public const string ResourcePanelEditUid = "resourcePanelEditUid";
     public const string ResourcePanelFailed = "resourcePanelFailed";
     public const string ResourcePanelGameText = "resourcePanelGameText";
@@ -421,6 +440,7 @@ public static class LocalizationKeys
     public const string ResourcePanelSaveUid = "resourcePanelSaveUid";
     public const string ResourcePanelUid = "resourcePanelUid";
     public const string ResourcePanelUidEmpty = "resourcePanelUidEmpty";
+    public const string ResourcePanelUidGenerationHint = "resourcePanelUidGenerationHint";
     public const string ResourcePanelUidInvalidFormat = "resourcePanelUidInvalidFormat";
     public const string ResourcePanelUidMissing = "resourcePanelUidMissing";
     public const string ResourcePanelUidSaved = "resourcePanelUidSaved";

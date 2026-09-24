@@ -61,49 +61,46 @@
                                     ItemsSource="{Binding Settings.Options.NeutralColorStrategy}"
                                     SelectedValue="{Binding Settings.Editor.Current.NeutralColorStrategy, Mode=TwoWay}"/>
 
-            <Grid Classes="settings-row" ColumnDefinitions="*,Auto"
-                  IsVisible="{Binding Settings.Appearance.IsThemeColorPaletteVisible}">
-                <Border Classes="settings-row-divider" Grid.ColumnSpan="2"/>
-                <StackPanel Classes="dialog-heading-copy settings-row-copy"
-                            Margin="{StaticResource Launcher.Spacing.Thickness.None}">
-                    <TextBlock Text="{Binding Shell.I18n[themeColorPalette]}" Classes="section-title"/>
-                    <TextBlock Text="{Binding Shell.I18n[themeColorPaletteDescription]}" Classes="caption" TextWrapping="Wrap"/>
-                </StackPanel>
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
-                    <ItemsControl Width="{StaticResource Launcher.Layout.Appearance.Preview.Width}"
-                                  ItemsSource="{Binding Settings.Appearance.ThemeColorPaletteItems}">
-                        <ItemsControl.ItemsPanel>
-                            <StaticResource ResourceKey="Launcher.Component.RowPanel.Sm"/>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="models:ThemeColorPaletteItem">
-                                <Button Classes="color-swatch-button"
-                                        AutomationProperties.Name="{Binding ColorHex}"
-                                        ToolTip.Tip="{Binding ColorHex}"
-                                        Command="{Binding #SettingsRoot.((vm:MainWindowViewModel)DataContext).Settings.Appearance.SelectThemeColorPaletteCommand}"
-                                        CommandParameter="{Binding Index}">
-                                    <Border Classes="color-swatch"
-                                            Background="{Binding Brush}">
-                                        <materialIcons:MaterialIcon Kind="Check"
-                                                                    Width="{StaticResource Launcher.Icon.Sm}"
-                                                                    Height="{StaticResource Launcher.Icon.Sm}"
-                                                                    HorizontalAlignment="Center"
-                                                                    VerticalAlignment="Center"
-                                                                    Foreground="{DynamicResource Launcher.Color.OnPrimary}"
-                                                                    IsVisible="{Binding IsSelected}"/>
-                                    </Border>
-                                </Button>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                    <Button Classes="flat-action icon-only"
-                            Command="{Binding Settings.Appearance.RefreshThemeColorPaletteCommand}"
-                            ToolTip.Tip="{Binding Shell.I18n[refreshThemeColorPalette]}"
-                            AutomationProperties.Name="{Binding Shell.I18n[refreshThemeColorPalette]}">
-                        <materialIcons:MaterialIcon Kind="Refresh" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                    </Button>
-                </StackPanel>
-            </Grid>
+            <controls:SettingRow Title="{Binding Shell.I18n[themeColorPalette]}"
+                                 Description="{Binding Shell.I18n[themeColorPaletteDescription]}"
+                                 IsVisible="{Binding Settings.Appearance.IsThemeColorPaletteVisible}">
+                <controls:SettingRow.Action>
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
+                        <ItemsControl Width="{StaticResource Launcher.Layout.Appearance.Preview.Width}"
+                                      ItemsSource="{Binding Settings.Appearance.ThemeColorPaletteItems}">
+                            <ItemsControl.ItemsPanel>
+                                <StaticResource ResourceKey="Launcher.Component.RowPanel.Sm"/>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="models:ThemeColorPaletteItem">
+                                    <Button Classes="color-swatch-button"
+                                            AutomationProperties.Name="{Binding ColorHex}"
+                                            ToolTip.Tip="{Binding ColorHex}"
+                                            Command="{Binding #SettingsRoot.((vm:MainWindowViewModel)DataContext).Settings.Appearance.SelectThemeColorPaletteCommand}"
+                                            CommandParameter="{Binding Index}">
+                                        <Border Classes="color-swatch"
+                                                Background="{Binding Brush}">
+                                            <materialIcons:MaterialIcon Kind="Check"
+                                                                        Width="{StaticResource Launcher.Icon.Sm}"
+                                                                        Height="{StaticResource Launcher.Icon.Sm}"
+                                                                        HorizontalAlignment="Center"
+                                                                        VerticalAlignment="Center"
+                                                                        Foreground="{DynamicResource Launcher.Color.OnPrimary}"
+                                                                        IsVisible="{Binding IsSelected}"/>
+                                        </Border>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <Button Classes="flat-action icon-only"
+                                Command="{Binding Settings.Appearance.RefreshThemeColorPaletteCommand}"
+                                ToolTip.Tip="{Binding Shell.I18n[refreshThemeColorPalette]}"
+                                AutomationProperties.Name="{Binding Shell.I18n[refreshThemeColorPalette]}">
+                            <materialIcons:MaterialIcon Kind="Refresh" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                        </Button>
+                    </StackPanel>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
 
             <controls:SettingRow Title="{Binding Shell.I18n[themeColorCustom]}"
                                  Description="{Binding Shell.I18n[themeColorDescription]}"
@@ -186,29 +183,6 @@
                             </StackPanel>
                         </Button>
                     </StackPanel>
-                </controls:SettingRow.Action>
-            </controls:SettingRow>
-        </StackPanel>
-
-        <StackPanel Classes="settings-group">
-            <TextBlock Text="{Binding Shell.I18n[settingsGroupDisplay]}" Classes="group-title"/>
-
-            <controls:SettingSelect ShowTopDivider="False"
-                                    Title="{Binding Shell.I18n[statusDetailMode]}"
-                                    Description="{Binding Shell.I18n[statusDetailModeDescription]}"
-                                    AutomationName="{Binding Shell.I18n[statusDetailMode]}"
-                                    ItemsSource="{Binding Settings.Options.StatusDetailMode}"
-                                    SelectedValue="{Binding Settings.Editor.Current.StatusDetailMode, Mode=TwoWay}"/>
-
-            <controls:SettingRow Title="{Binding Shell.I18n[remoteContentCard]}"
-                                 Description="{Binding Shell.I18n[remoteContentCardDescription]}">
-                <controls:SettingRow.Action>
-                    <ToggleSwitch Classes="setting-toggle"
-                                  AutomationProperties.Name="{Binding Shell.I18n[remoteContentCard]}"
-                                  IsChecked="{Binding Settings.Editor.Current.ShowRemoteContentCard, Mode=TwoWay}"
-                                  OnContent="{Binding Shell.I18n[toggleOn]}"
-                                  OffContent="{Binding Shell.I18n[toggleOff]}"
-                                  VerticalAlignment="Center"/>
                 </controls:SettingRow.Action>
             </controls:SettingRow>
         </StackPanel>

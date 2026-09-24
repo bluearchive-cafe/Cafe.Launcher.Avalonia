@@ -9,6 +9,7 @@ using Cafe.Launcher.Avalonia.Features.Shell;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Services.Update;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -16,7 +17,7 @@ namespace Cafe.Launcher.Avalonia.ViewModels;
 
 public partial class MainWindowViewModel : ViewModelBase, IDisposable
 {
-    private readonly IShellRuntime runtime;
+    private readonly ShellLifecycle runtime;
     private bool disposed;
 
     [ObservableProperty]
@@ -61,7 +62,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     public MainWindowViewModel(
         ShellPresentationFamily family,
-        IShellRuntime runtime)
+        ShellLifecycle runtime)
     {
         this.runtime = runtime;
         Shell = family.Shell;
@@ -90,10 +91,12 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         LocalizationService localizer,
         ToastService toastService,
         LauncherUpdateService launcherUpdateService,
+        LauncherSelfUpdateService launcherSelfUpdateService,
+        IWindowsLauncherUpdateApplier launcherUpdateApplier,
         LocalDiagnostics diagnostics,
         ShellPresentationFamily family,
         IErrorHandlingService errorHandling,
-        WindowsAnimationSettingsProvider windowsAnimationSettingsProvider,
+        SystemAnimationSettingsProvider systemAnimationSettingsProvider,
         IFilePickerService filePickerService)
         : this(
             family,
@@ -104,9 +107,11 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 localizer,
                 toastService,
                 launcherUpdateService,
+                launcherSelfUpdateService,
+                launcherUpdateApplier,
                 diagnostics,
                 errorHandling,
-                windowsAnimationSettingsProvider,
+                systemAnimationSettingsProvider,
                 family,
                 filePickerService,
                 ownsPresentationCollaborators: true))
@@ -116,7 +121,10 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     public Task InitializeAsync(CancellationToken cancellationToken = default) =>
         runtime.InitializeAsync(cancellationToken);
 
-    /// <inheritdoc cref="IShellRuntime.ApplyFirstLaunchMotionPreference" />
+    /// <summary>
+    /// 首启分支不执行完整初始化（快照由向导驱动后再加载）；动效偏好需在向导显示前
+    /// 按默认配置先行应用，否则首启向导全程处于降动效。
+    /// </summary>
     public void ApplyFirstLaunchMotionPreference() =>
         runtime.ApplyFirstLaunchMotionPreference();
 

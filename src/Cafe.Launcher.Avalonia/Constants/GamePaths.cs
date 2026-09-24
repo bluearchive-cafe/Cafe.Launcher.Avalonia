@@ -28,6 +28,16 @@ public static class GamePaths
 
     public const string ManifestFileName = "manifest.json";
     public const string GameConfigFileName = "game-launcher-config.json";
+
+    /// <summary>
+    /// The two launcher-managed installation state files (<see cref="ManifestFileName"/>
+    /// and <see cref="GameConfigFileName"/>) that uninstall removes in addition to the
+    /// manifest-listed files. Affected-file counts are produced and consumed as
+    /// manifest count plus this constant, so the round-trip between them never
+    /// relies on a bare literal (D7).
+    /// </summary>
+    public const int InstallationStateFileCount = 2;
+
     public const string LauncherSettingsFileName = "settings.json";
     public const string DownloadStateFileName = "download_state.json";
     public const string NoticeStateFileName = "shown_notices.json";
@@ -38,4 +48,16 @@ public static class GamePaths
     /// so renaming this constant carries the rotation scheme with it.
     /// </summary>
     public const string UnifiedLogFileName = "unified.log";
+
+    /// <summary>
+    /// Bounded stdout/stderr capture of the most recently launched game runner
+    /// (overwritten per launch). It is a diagnostic artifact, not user state.
+    /// </summary>
+    public const string RunnerOutputFileName = "runner_output.log";
+
+    /// <summary>Latest compatibility-prefix environment precheck report (overwritten per launch).</summary>
+    public const string CompatibilityEnvironmentFileName = "compatibility_environment.json";
+
+    /// <summary>Metadata of the compatibility prefix used by the latest launch (overwritten per launch).</summary>
+    public const string PrefixMetadataFileName = "prefix_metadata.json";
 }

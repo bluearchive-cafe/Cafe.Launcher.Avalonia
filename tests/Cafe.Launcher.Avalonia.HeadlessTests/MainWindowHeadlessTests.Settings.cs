@@ -346,8 +346,8 @@ public sealed partial class MainWindowHeadlessTests
             .Where(row => row.IsEffectivelyVisible)
             .ToArray();
 
-        // 更新通道 / 日志级别 / 日志文件操作 / 重置设置四行。
-        Assert.Equal(4, rows.Length);
+        // 日志级别 / 日志文件操作 / 重置设置三行。
+        Assert.Equal(3, rows.Length);
         var levelRow = Assert.Single(
             rows,
             row => row.GetVisualDescendants().OfType<ComboBox>().Any()

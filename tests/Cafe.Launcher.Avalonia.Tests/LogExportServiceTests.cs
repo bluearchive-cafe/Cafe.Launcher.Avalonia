@@ -5,6 +5,7 @@ using System.Text.Json;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Services.GameRuntime;
 using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
@@ -30,6 +31,129 @@ public sealed class LogExportServiceTests : IDisposable
         using var zip = ZipFile.OpenRead(zipPath);
         Assert.Contains(zip.Entries, entry => entry.FullName == "unified.log");
         Assert.Contains(zip.Entries, entry => entry.FullName == "system-info.json");
+    }
+
+    [Fact]
+    public async Task ExportAsync_OnLinux_AddsTheLinuxProcessSnapshotEntry()
+    {
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "The /proc snapshot is Linux-only.");
+        var logger = WriteDeterministicLog(
+            "snapshot-source",
+            $"{DateTimeOffset.Now:O} [INF] [Test] Entry\n");
+        var service = new LogExportService(
+            new LocalDiagnostics(logger),
+            TestDataRoot.ForCurrentProcess(),
+            new CrashReportStore(TestDataRoot.ForCurrentProcess()));
+
+        var zipPath = await service.ExportAsync(
+            Path.Combine(tempDir, "snapshot-selected"),
+            LogExportOptions.Default);
+
+        using var zip = ZipFile.OpenRead(zipPath);
+        Assert.Contains(zip.Entries, entry => entry.FullName == LinuxProcessSnapshot.EntryName);
+    }
+
+    [Fact]
+    public async Task ExportAsync_WithARunnerOutputCapture_IncludesIt()
+    {
+        var dataRoot = Path.Combine(tempDir, "runner-output-root");
+        Directory.CreateDirectory(dataRoot);
+        File.WriteAllText(
+            Path.Combine(dataRoot, GamePaths.RunnerOutputFileName),
+            "[out] prefix initialized\n");
+        var logger = WriteDeterministicLog(
+            "runner-output-source",
+            "2026-09-09T10:00:00.0000000+08:00 [INF] [Test] Entry\n");
+        var service = new LogExportService(
+            new LocalDiagnostics(logger),
+            TestDataRoot.ForDirectory(dataRoot),
+            new CrashReportStore(TestDataRoot.ForCurrentProcess()));
+
+        var zipPath = await service.ExportAsync(
+            Path.Combine(tempDir, "runner-output-selected"),
+            LogExportOptions.Default);
+
+        Assert.Equal("[out] prefix initialized\n", ReadEntry(zipPath, GamePaths.RunnerOutputFileName));
+    }
+
+    [Fact]
+    public async Task ExportAsync_WithACompatibilityReport_IncludesIt()
+    {
+        var dataRoot = Path.Combine(tempDir, "compat-data");
+        Directory.CreateDirectory(dataRoot);
+        File.WriteAllText(
+            Path.Combine(dataRoot, GamePaths.CompatibilityEnvironmentFileName),
+            "{\"prefixPath\":\"/home/u/pfx\",\"findings\":[]}");
+        var logger = WriteDeterministicLog(
+            "compat-source",
+            "2026-09-09T10:00:00.0000000+08:00 [INF] [Test] Entry\n");
+        var service = new LogExportService(
+            new LocalDiagnostics(logger),
+            TestDataRoot.ForDirectory(dataRoot),
+            new CrashReportStore(TestDataRoot.ForCurrentProcess()));
+
+        var zipPath = await service.ExportAsync(
+            Path.Combine(tempDir, "compat-selected"),
+            LogExportOptions.Default);
+
+        Assert.Contains(
+            "prefixPath",
+            ReadEntry(zipPath, GamePaths.CompatibilityEnvironmentFileName),
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExportAsync_WithPrefixMetadata_IncludesIt()
+    {
+        var dataRoot = Path.Combine(tempDir, "prefix-meta-data");
+        Directory.CreateDirectory(dataRoot);
+        File.WriteAllText(
+            Path.Combine(dataRoot, GamePaths.PrefixMetadataFileName),
+            "{\"prefixPath\":\"/home/u/pfx\",\"launchCount\":1}");
+        var logger = WriteDeterministicLog(
+            "prefix-meta-source",
+            "2026-09-09T10:00:00.0000000+08:00 [INF] [Test] Entry\n");
+        var service = new LogExportService(
+            new LocalDiagnostics(logger),
+            TestDataRoot.ForDirectory(dataRoot),
+            new CrashReportStore(TestDataRoot.ForCurrentProcess()));
+
+        var zipPath = await service.ExportAsync(
+            Path.Combine(tempDir, "prefix-meta-selected"),
+            LogExportOptions.Default);
+
+        Assert.Contains(
+            "launchCount",
+            ReadEntry(zipPath, GamePaths.PrefixMetadataFileName),
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExportAsync_WithProtonBuildDiscovery_RecordsTheDiscoveredBuilds()
+    {
+        var dataRoot = Path.Combine(tempDir, "proton-data");
+        Directory.CreateDirectory(dataRoot);
+        var tools = Path.Combine(tempDir, "compatibilitytools.d");
+        var build = Path.Combine(tools, "GE-Proton9-1");
+        Directory.CreateDirectory(build);
+        File.WriteAllText(Path.Combine(build, "proton"), "#!/bin/sh\n");
+        var logger = WriteDeterministicLog(
+            "proton-source",
+            "2026-09-09T10:00:00.0000000+08:00 [INF] [Test] Entry\n");
+        var service = new LogExportService(
+            new LocalDiagnostics(logger),
+            TestDataRoot.ForDirectory(dataRoot),
+            new CrashReportStore(TestDataRoot.ForCurrentProcess()),
+            graphicsInfoProbe: null,
+            protonBuildDiscovery: new ProtonBuildDiscovery([tools]));
+
+        var zipPath = await service.ExportAsync(
+            Path.Combine(tempDir, "proton-selected"),
+            LogExportOptions.Default);
+
+        using var document = JsonDocument.Parse(ReadEntry(zipPath, "system-info.json"));
+        var protonBuilds = document.RootElement.GetProperty("protonBuilds");
+        Assert.Equal("GE-Proton9-1", protonBuilds[0].GetProperty("name").GetString());
     }
 
     [Fact]
@@ -366,6 +490,71 @@ public sealed class LogExportServiceTests : IDisposable
             .ToArray();
         Assert.Contains("unified.log", entries);
         Assert.Contains("user-data/settings.json", entries);
+    }
+
+    [Fact]
+    public async Task ExportAsync_RecordsTheDesktopSessionInSystemInfo()
+    {
+        const string variable = "XDG_SESSION_TYPE";
+        var original = Environment.GetEnvironmentVariable(variable);
+        Environment.SetEnvironmentVariable(variable, "wayland");
+        try
+        {
+            var dataRoot = Path.Combine(tempDir, "session-data");
+            Directory.CreateDirectory(dataRoot);
+            var logger = WriteDeterministicLog(
+                "session-source",
+                "2026-09-09T10:00:00.0000000+08:00 [INF] [Test] Entry\n");
+            var service = new LogExportService(
+                new LocalDiagnostics(logger),
+                TestDataRoot.ForDirectory(dataRoot),
+                new CrashReportStore(TestDataRoot.ForCurrentProcess()));
+
+            var zipPath = await service.ExportAsync(
+                Path.Combine(tempDir, "session-selected"),
+                LogExportOptions.Default);
+
+            using var document = JsonDocument.Parse(ReadEntry(zipPath, "system-info.json"));
+            var session = document.RootElement.GetProperty("session");
+            Assert.Equal("wayland", session.GetProperty("type").GetString());
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(variable, original);
+        }
+    }
+
+    [Fact]
+    public async Task ExportAsync_WithAGraphicsProbe_RecordsTheGpuAndOpenGlLines()
+    {
+        var dataRoot = Path.Combine(tempDir, "graphics-data");
+        Directory.CreateDirectory(dataRoot);
+        var logger = WriteDeterministicLog(
+            "graphics-source",
+            "2026-09-09T10:00:00.0000000+08:00 [INF] [Test] Entry\n");
+        var probe = new GraphicsInfoProbe((tool, _, _) => tool == "vulkaninfo"
+            ? "GPU0:\n\tdeviceName = Test GPU\n"
+            : "OpenGL renderer string: Test Renderer\n");
+        var service = new LogExportService(
+            new LocalDiagnostics(logger),
+            TestDataRoot.ForDirectory(dataRoot),
+            new CrashReportStore(TestDataRoot.ForCurrentProcess()),
+            probe);
+
+        var zipPath = await service.ExportAsync(
+            Path.Combine(tempDir, "graphics-selected"),
+            LogExportOptions.Default);
+
+        using var document = JsonDocument.Parse(ReadEntry(zipPath, "system-info.json"));
+        var graphics = document.RootElement.GetProperty("graphics");
+        Assert.Contains(
+            "deviceName = Test GPU",
+            graphics.GetProperty("vulkan").GetString(),
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Test Renderer",
+            graphics.GetProperty("opengl").GetString(),
+            StringComparison.Ordinal);
     }
 
     [Fact]

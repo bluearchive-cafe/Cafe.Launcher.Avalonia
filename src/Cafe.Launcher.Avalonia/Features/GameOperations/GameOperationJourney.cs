@@ -6,6 +6,7 @@ using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Services.GameRuntime;
 
 namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 
@@ -27,6 +28,7 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 
     private readonly IGameOperationExecutor executor;
     private readonly IGameShortcutService shortcutService;
+    private readonly IGameSessionMonitor sessionMonitor;
     private readonly Func<TimeSpan, Task> delayAsync;
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
@@ -46,6 +48,7 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
     public GameOperationJourney(
         IGameOperationExecutor executor,
         IGameShortcutService shortcutService,
+        IGameSessionMonitor sessionMonitor,
         LocalizationService localizer,
         ToastService toastService,
         LocalDiagnostics diagnostics,
@@ -55,6 +58,7 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
     {
         this.executor = executor;
         this.shortcutService = shortcutService;
+        this.sessionMonitor = sessionMonitor;
         this.delayAsync = delayAsync;
         this.localizer = localizer;
         this.toastService = toastService;
@@ -86,6 +90,9 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
             if (launchResult.Success)
             {
                 await diagnostics.MessageAsync("GameLaunch", launchDiagnostic);
+                // 会话看护从这一刻接管「游戏到底起没起来」：原生启动时宿主即游戏，
+                // 运行器启动时要等游戏进程家族现身（ADR-035）。
+                sessionMonitor.BeginSession(launchResult.RunnerId ?? "", launchResult.KnownExeNames);
                 await ApplyAfterLaunchBehaviorAsync(snapshot.Settings.AfterLaunchBehavior);
             }
             else
@@ -138,6 +145,22 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
                 host.RequestMinimize();
                 break;
         }
+    }
+
+    /// <summary>
+    /// 会话看护判成「启动失败」后的呈现规则（ADR-035）：先恢复窗口再报错——Toast 渲染在
+    /// 窗口内，窗口还最小化在托盘就等于没报。退出码原样透传，不做成败解读之外的修辞；
+    /// 游戏的「正常退出」不走这里，只在状态行静默更新。
+    /// </summary>
+    public void NotifySessionStartFailed(GameLaunchExitInfo? exit)
+    {
+        host.RequestShow();
+        toastService.ShowError(localizer.F(LocalizationKeys.GameSessionStartFailed, exit?.ExitCode ?? -1));
+        _ = diagnostics.WarningAsync(
+            "GameLaunch",
+            $"Session monitor: the host process exited with code {exit?.ExitCode.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "unknown"} "
+            + $"after {exit?.Duration.TotalSeconds.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) ?? "unknown"} s "
+            + "and the game process family never appeared.");
     }
 
     /// <summary>Refreshes launcher state and reports whether a game update is available.</summary>
@@ -377,8 +400,8 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
         try { toastService.ShowWarning(localizer.T(LocalizationKeys.StopRequested)); }
         catch (Exception ex)
         {
-            LocalDiagnostics.LogSync(
-                LogEntrySeverity.Warn,
+            // TryLogAsync 永不抛：同步语境下的实例侧日志走 fire-and-forget。
+            _ = diagnostics.WarningAsync(
                 "StopToastFailed",
                 $"Failed to show stop toast: {ex.Message}");
         }
@@ -507,7 +530,14 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 
         if (isTerminal)
         {
-            toastService.ShowError(message);
+            // 终态错误不提供重试,但仍要给出查看日志的去处:
+            // 失败不能只存在于一条会自动消失的文案里。
+            toastService.Show(new ToastOptions
+            {
+                Message = message,
+                Severity = ToastSeverity.Error,
+                SecondaryAction = new ToastAction(localizer.T(LocalizationKeys.ViewLog), OpenLogViewerAsync)
+            });
             return;
         }
 

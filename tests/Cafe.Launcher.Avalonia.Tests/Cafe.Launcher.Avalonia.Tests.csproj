@@ -50,6 +50,21 @@
     <ProjectReference Include="..\..\src\Cafe.Launcher.Avalonia\Cafe.Launcher.Avalonia.csproj" />
   </ItemGroup>
 
+  <!--
+    The update helper's pure logic (argument parsing, path planning, integrity) is
+    compiled into this test assembly instead of referencing the helper executable
+    project, so the contract between the main app's argument builder and the helper's
+    parser can be tested without pulling the helper build into the test graph.
+  -->
+  <ItemGroup>
+    <Compile Include="..\..\src\Cafe.Launcher.Updater\UpdateApplyMode.cs" Link="Updater\UpdateApplyMode.cs" />
+    <Compile Include="..\..\src\Cafe.Launcher.Updater\UpdateApplyPlan.cs" Link="Updater\UpdateApplyPlan.cs" />
+    <Compile Include="..\..\src\Cafe.Launcher.Updater\PackageIntegrity.cs" Link="Updater\PackageIntegrity.cs" />
+    <Compile Include="..\..\src\Cafe.Launcher.Updater\UpdaterArguments.cs" Link="Updater\UpdaterArguments.cs" />
+    <Compile Include="..\..\src\Cafe.Launcher.Updater\UpdateLog.cs" Link="Updater\UpdateLog.cs" />
+    <Compile Include="..\..\src\Cafe.Launcher.Updater\UpdateApplier.cs" Link="Updater\UpdateApplier.cs" />
+  </ItemGroup>
+
   <ItemGroup>
     <Compile Include="..\TestUserDataIsolation.cs" Link="TestUserDataIsolation.cs" />
     <Compile Include="..\TestAnimationSetup.cs" Link="TestAnimationSetup.cs" />
@@ -58,6 +73,7 @@
     <Compile Include="..\Support\TestWait.cs" Link="Support\TestWait.cs" />
     <Compile Include="..\TestDoubles\CallbackRecorder.cs" Link="TestDoubles\CallbackRecorder.cs" />
     <Compile Include="..\TestDoubles\StubFatalCrashService.cs" Link="TestDoubles\StubFatalCrashService.cs" />
+    <Compile Include="..\TestDoubles\FakeGameSessionMonitor.cs" Link="TestDoubles\FakeGameSessionMonitor.cs" />
     <Compile Include="..\TestDoubles\StubFileDownloadService.cs" Link="TestDoubles\StubFileDownloadService.cs" />
     <Compile Include="..\TestDoubles\StubFilePickerService.cs" Link="TestDoubles\StubFilePickerService.cs" />
     <Compile Include="..\TestDoubles\TestGameProcessTracker.cs" Link="TestDoubles\TestGameProcessTracker.cs" />
@@ -66,6 +82,7 @@
     <Compile Include="..\TestDoubles\StubGameOperationExecutor.cs" Link="TestDoubles\StubGameOperationExecutor.cs" />
     <Compile Include="..\TestDoubles\StubRemoteHttpTransport.cs" Link="TestDoubles\StubRemoteHttpTransport.cs" />
     <Compile Include="..\TestDoubles\StubDownloadTransport.cs" Link="TestDoubles\StubDownloadTransport.cs" />
+    <Compile Include="..\TestDoubles\MutableTimestampClock.cs" Link="TestDoubles\MutableTimestampClock.cs" />
     <Compile Include="..\TestDoubles\RecordingErrorHandlingService.cs" Link="TestDoubles\RecordingErrorHandlingService.cs" />
   </ItemGroup>
 

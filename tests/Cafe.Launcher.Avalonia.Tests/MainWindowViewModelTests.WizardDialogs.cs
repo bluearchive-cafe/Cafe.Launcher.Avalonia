@@ -109,7 +109,7 @@ public partial class MainWindowViewModelTests
                 viewModel.Dialogs.IsNoticeDialogVisible = true;
                 break;
             case ModalKind.Update:
-                viewModel.Dialogs.ShowUpdateAvailable("1.0.0", []);
+                viewModel.Dialogs.ShowUpdateAvailable("1.0.0", [], canSelfUpdate: false);
                 break;
             case ModalKind.Error:
                 // Set the flag directly: ShowCriticalError posts to the dispatcher when the
