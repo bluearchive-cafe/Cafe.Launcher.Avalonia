@@ -50,23 +50,23 @@ jobs:
           # carried that day, which decides the Microsoft.NETCore.App version published inside
           # every self-contained artifact without leaving a trace in the repository.
           dotnet-version: 10.0.302
-          cache: true
-          cache-dependency-path: |
-            **/*.csproj
-            **/packages.lock.json
-            Directory.Packages.props
+
+      # NuGet 全局包缓存（~/.nuget/packages）。不使用 setup-dotnet 的 `cache: true`：
+      # 它的键是 `dotnet-cache-<os>-<hashFiles(**/*.csproj, **/packages.lock.json, Directory.Packages.props)>`，
+      # 每次依赖文件字节变化就产生一个全新的 600~800 MB 条目（旧条目不复用也不删除），单仓库 10 GB 缓存
+      # 上限被反复顶满。这里的键只由依赖版本清单决定：版本没动就命中同一条目，只有版本真的变化才写新条目。
+      # 读写拆成两步：`actions/cache` 的保存是 post 步骤且只在 success() 时执行，本仓库测试红着的时候
+      # 缓存永远写不进去，而拆开后的保存步骤带 `if: always()`。
+      - name: Restore NuGet cache
+        id: nuget-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.nuget/packages
+          key: nuget-global-packages-${{ runner.os }}-${{ hashFiles('Directory.Packages.props') }}
+          restore-keys: nuget-global-packages-${{ runner.os }}-
 
       - name: Test
         run: .\test.ps1 -Configuration Debug
-
-      # AUD-CI-007：整套 Release 配置的测试此前只在 tag 触发的 release.yml 里跑，而 Debug/Release
-      # 的行为差异是真实的——UnifiedLogger 的级别开关在 #if DEBUG 下取 Verbose、否则取 Information，
-      # 于是「Debug 级条目在 Release 被丢弃」这类断言要到发版那一刻才第一次执行（重置前台账记录过
-      # 一次实际事故：tag 构建红、发布作业被 needs 挡住、补提交后重打 tag）。这里补上单元套件的
-      # Release 运行：它正是这类分歧的宿主，成本约 30 秒。无头套件的 Release 运行仍留在 release.yml
-      # 的 installer 作业（它的分歧面窄、且整套跑一遍要一分钟以上）。
-      - name: Test (Release)
-        run: .\test.ps1 -Configuration Release -Suite Unit
 
       - name: Coverage
         run: .\coverage.ps1
@@ -76,7 +76,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: test-and-coverage-reports
-          retention-days: 14
+          retention-days: 7
           path: |
             TestResults/**/*.trx
             TestResults/Coverage/**/coverage.cobertura.xml
@@ -84,6 +84,25 @@ jobs:
             # the only diff evidence for the one test class whose baselines are environment
             # sensitive, so a CI-only mismatch must not have to be reproduced locally to triage.
             TestResults/Golden/*.png
+
+      # AUD-CI-007：整套 Release 配置的测试此前只在 tag 触发的 release.yml 里跑，而 Debug/Release
+      # 的行为差异是真实的——UnifiedLogger 的级别开关在 #if DEBUG 下取 Verbose、否则取 Information，
+      # 于是「Debug 级条目在 Release 被丢弃」这类断言要到发版那一刻才第一次执行（重置前台账记录过
+      # 一次实际事故：tag 构建红、发布作业被 needs 挡住、补提交后重打 tag）。这里补上单元套件的
+      # Release 运行：它正是这类分歧的宿主，成本约 30 秒。无头套件的 Release 运行仍留在 release.yml
+      # 的 installer 作业（它的分歧面窄、且整套跑一遍要一分钟以上）。
+      #
+      # 这一步必须留在本作业所有 locked mode 还原（Debug 测试、coverage）之后：其还原把
+      # packages.lock.json 的 RID 段改写为 win-x64，再跑任何 locked mode 的无 RID 还原都会
+      # NU1004（2026-09-22 CI 复查：它原先排在 Coverage 之前，coverage.ps1 的还原因此失败）。
+      - name: Test (Release)
+        env:
+          # Release 配置在 csproj 中声明 SelfContained=true，dotnet test -c Release
+          # 的还原会按当前平台 RID（windows-latest 上为 win-x64）解析依赖图，与
+          # 提交的无 RID 段 lock 无法在 locked mode 下匹配（NU1004）。与 build job
+          # 对 RID 还原的显式豁免同理，测试还原也豁免 locked mode。
+          RestoreLockedMode: 'false'
+        run: .\test.ps1 -Configuration Release -Suite Unit
 
       - name: Restore (win-x64)
         env:
@@ -97,6 +116,14 @@ jobs:
         env:
           RestoreLockedMode: 'false'
         run: dotnet publish $env:Project_Path -c Release -r win-x64 -o publish --no-restore
+
+      # 键已存在时 save 是空操作，测试失败也必须走到这里，否则缓存只在绿灯时更新。
+      - name: Save NuGet cache
+        if: always()
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.nuget/packages
+          key: ${{ steps.nuget-cache.outputs.cache-primary-key }}
 
   # AUD-CI-001：产品以实验性形态分发 Linux/macOS 包，平台分支（路径分隔符、
   # .desktop 快捷方式、runner 归一化）必须在随变更执行的 CI 上运行，而不只是
@@ -124,11 +151,14 @@ jobs:
         with:
           # Pinned to the SDK named by global.json, same as the Windows build job.
           dotnet-version: 10.0.302
-          cache: true
-          cache-dependency-path: |
-            **/*.csproj
-            **/packages.lock.json
-            Directory.Packages.props
+
+      - name: Restore NuGet cache
+        id: nuget-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.nuget/packages
+          key: nuget-global-packages-${{ runner.os }}-${{ hashFiles('Directory.Packages.props') }}
+          restore-keys: nuget-global-packages-${{ runner.os }}-
 
       - name: Unit tests
         run: >
@@ -140,5 +170,12 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: linux-unit-test-results
-          retention-days: 14
+          retention-days: 7
           path: TestResults/**/*.trx
+
+      - name: Save NuGet cache
+        if: always()
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.nuget/packages
+          key: ${{ steps.nuget-cache.outputs.cache-primary-key }}

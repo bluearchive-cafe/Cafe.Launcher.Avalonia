@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -123,6 +124,14 @@ public sealed class GameLaunchService
 
         if (!launchResult.Success)
         {
+            if (launchResult.Failure == GameRuntimeLaunchFailure.EnvironmentPrecheckFailed
+                && launchResult.EnvironmentFailures is { Count: > 0 } environmentFailures)
+            {
+                return Failed(
+                    BuildEnvironmentFailureMessage(environmentFailures),
+                    BuildLaunchContext(launchResult, request));
+            }
+
             if (launchResult.FailureException is not null)
             {
                 var exception = launchResult.FailureException;
@@ -147,7 +156,12 @@ public sealed class GameLaunchService
             Success = true,
             Message = localizer.T(LocalizationKeys.GameProcessStarted),
             DiagnosticMessage = BuildLaunchContext(launchResult, request),
-            Validation = validation
+            Validation = validation,
+            RunnerId = launchResult.RunnerId,
+            KnownExeNames = RunningGameGate.ResolveQuery(
+                snapshot.LocalGame.GameConfig,
+                snapshot.Remote.GameConfig,
+                target.WorkingDirectory).KnownExeNames
         };
     }
 
@@ -164,6 +178,23 @@ public sealed class GameLaunchService
                 Message = message
             }
         };
+    }
+
+    /// <summary>
+    /// 把预检的阻断级发现翻成可操作文案（P1-D）。只有 Error 级发现会进到这里，三种类别因此
+    /// 覆盖了全部输入；末行兜底只为防御未知类别。
+    /// </summary>
+    private string BuildEnvironmentFailureMessage(IReadOnlyList<GameEnvironmentFailure> failures)
+    {
+        var lines = failures.Select(failure => localizer.F(
+            failure.Code switch
+            {
+                CompatibilityFindingCode.SymlinksUnsupported => LocalizationKeys.GameRuntimeEnvironmentSymlinksUnsupported,
+                CompatibilityFindingCode.MountNoExec => LocalizationKeys.GameRuntimeEnvironmentMountNoExec,
+                _ => LocalizationKeys.GameRuntimeEnvironmentPrefixNotWritable
+            },
+            failure.Path));
+        return string.Join(Environment.NewLine, lines);
     }
 
     private string BuildLaunchContext(GameRuntimeLaunchResult launchResult, GameLaunchRequest request)

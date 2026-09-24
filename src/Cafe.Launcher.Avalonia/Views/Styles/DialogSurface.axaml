@@ -138,6 +138,11 @@
     <Setter Property="Padding" Value="{StaticResource Launcher.Component.Dialog.Panel.Body.Padding}"/>
   </Style>
 
+  <!-- 日志查看器：正文顶端无边距，与过滤栏的间距由固定工具行的下边距承担（不随内容滚动）。 -->
+  <Style Selector="controls|DialogSurface.log-surface:panel /template/ ScrollViewer#PART_ScrollViewer">
+    <Setter Property="Padding" Value="{StaticResource Launcher.Component.LogViewer.Body.Padding}"/>
+  </Style>
+
   <Style Selector="controls|DialogSurface /template/ Border#PART_FooterBand">
     <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
     <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>

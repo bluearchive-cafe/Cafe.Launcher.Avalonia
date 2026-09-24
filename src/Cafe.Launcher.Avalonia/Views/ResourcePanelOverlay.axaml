@@ -36,6 +36,20 @@
             </controls:DialogSurface.HeaderIcon>
             <controls:DialogSurface.Content>
                 <StackPanel Spacing="{StaticResource Launcher.Spacing.Md}">
+                    <Border Classes="info-strip" x:Name="UidGenerationHint"
+                            IsVisible="{Binding ResourcePanel.IsUidGenerationHintVisible}">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                            <TextBlock Text="{Binding Shell.I18n[resourcePanelUidGenerationHint]}" Classes="body"
+                                       TextWrapping="Wrap" VerticalAlignment="Center"/>
+                            <Button Grid.Column="1" Classes="dialog-close"
+                                    Command="{Binding ResourcePanel.DismissUidGenerationHintCommand}"
+                                    AutomationProperties.Name="{Binding Shell.I18n[resourcePanelDismissUidHint]}"
+                                    ToolTip.Tip="{Binding Shell.I18n[resourcePanelDismissUidHint]}">
+                                <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                            </Button>
+                        </Grid>
+                    </Border>
+
                     <Border Classes="info-strip resource-panel-status"
                             Classes.danger="{Binding ResourcePanel.IsResourcePanelMessageError}"
                             IsVisible="{Binding ResourcePanel.ResourcePanelMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">

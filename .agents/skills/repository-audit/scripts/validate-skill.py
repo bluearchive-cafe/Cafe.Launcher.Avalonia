@@ -47,7 +47,6 @@ required = [
     "references/modes.md",
     "references/report-generation.md",
     "templates/report.md",
-    "templates/repository-map.md",
     "tests/scenarios.md",
 ]
 for ref in required:

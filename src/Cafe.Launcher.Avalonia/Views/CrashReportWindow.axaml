@@ -26,6 +26,7 @@
             <CornerRadius x:Key="Crash.Radius.Control">4</CornerRadius>
             <CornerRadius x:Key="Crash.Radius.Panel">8</CornerRadius>
             <CornerRadius x:Key="Crash.Radius.Well">22</CornerRadius>
+            <Thickness x:Key="Crash.Border.Thickness.Default">1</Thickness>
             <!-- 布局与排版：这些值此前散在本文件各处（D16）。令牌族只保留被消费的条目，
                  孤儿令牌由 UiStyleContractTests.CrashReport 的两条扫描挡住。 -->
             <x:Double x:Key="Crash.Layout.Window.Width">700</x:Double>
@@ -40,9 +41,11 @@
             <x:Double x:Key="Crash.Layout.Details.MaxHeight">220</x:Double>
             <Thickness x:Key="Crash.Layout.Details.Padding">12</Thickness>
             <x:Double x:Key="Crash.Layout.Action.MinWidth">108</x:Double>
+            <x:Double x:Key="Crash.Control.MinWidth.None">0</x:Double>
             <x:Double x:Key="Crash.Layout.Action.MinHeight">40</x:Double>
             <Thickness x:Key="Crash.Layout.Action.Padding">16,8</Thickness>
             <Thickness x:Key="Crash.Layout.Footer.Padding">32,16,32,24</Thickness>
+            <Thickness x:Key="Crash.Layout.Footer.BorderThickness">0,1,0,0</Thickness>
             <x:Double x:Key="Crash.Typography.Meta.FontSize">12</x:Double>
             <x:Double x:Key="Crash.Typography.Title.FontSize">20</x:Double>
             <x:Double x:Key="Crash.Typography.Body.FontSize">15</x:Double>
@@ -102,7 +105,7 @@
             <Setter Property="Foreground" Value="{DynamicResource Crash.Color.Text.Primary}"/>
             <Setter Property="Background" Value="{DynamicResource Crash.Color.Surface}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource Crash.Color.Outline}"/>
-            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderThickness" Value="{StaticResource Crash.Border.Thickness.Default}"/>
         </Style>
         <Style Selector="Button.crash-danger">
             <Setter Property="Foreground" Value="{DynamicResource Crash.Color.OnDanger}"/>
@@ -119,7 +122,7 @@
         </Style>
         <!-- 三级（subtle）动作：无边框、透明底、accent 文字，用中性填充表达 hover/pressed。 -->
         <Style Selector="Button.crash-subtle">
-            <Setter Property="MinWidth" Value="0"/>
+            <Setter Property="MinWidth" Value="{StaticResource Crash.Control.MinWidth.None}"/>
             <Setter Property="Foreground" Value="{DynamicResource Crash.Color.Accent}"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderBrush" Value="Transparent"/>
@@ -215,20 +218,23 @@
         <Border Grid.Row="1"
                 Padding="{StaticResource Crash.Layout.Footer.Padding}"
                 BorderBrush="{DynamicResource Crash.Color.Hairline}"
-                BorderThickness="0,1,0,0">
+                BorderThickness="{StaticResource Crash.Layout.Footer.BorderThickness}">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Crash.Spacing.Sm}">
                 <Button Classes="crash-action crash-subtle"
                         HorizontalAlignment="Left"
                         Content="{Binding OpenLogsText}"
+                        AutomationProperties.Name="{Binding OpenLogsText}"
                         Click="OnOpenLogsClick"/>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource Crash.Spacing.Sm}">
                     <Button x:Name="CopyDetailsButton"
                             Classes="crash-action crash-secondary"
                             Content="{Binding CopyDetailsText}"
+                            AutomationProperties.Name="{Binding CopyDetailsText}"
                             Click="OnCopyDetailsClick"/>
                     <Button x:Name="ExitButton"
                             Classes="crash-action crash-danger"
                             Content="{Binding ExitText}"
+                            AutomationProperties.Name="{Binding ExitText}"
                             Click="OnExitClick"/>
                 </StackPanel>
             </Grid>

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
-using Avalonia.Media.Imaging;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Features.Diagnostics;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
@@ -13,6 +12,7 @@ using Cafe.Launcher.Avalonia.Features.ResourcePanel;
 using Cafe.Launcher.Avalonia.Features.Settings;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Services.Update;
 using Cafe.Launcher.Avalonia.ViewModels;
 
 namespace Cafe.Launcher.Avalonia.Features.Shell;
@@ -22,7 +22,7 @@ namespace Cafe.Launcher.Avalonia.Features.Shell;
 /// resource-panel switching, and every cross-feature subscription.
 /// The window (MainWindowViewModel) only presents shell state.
 /// </summary>
-public sealed class ShellLifecycle : IShellRuntime
+public sealed class ShellLifecycle : IDisposable
 {
     /// <summary>Raised when shell presentation state changes.</summary>
     public event Action? PresentationChanged;
@@ -39,9 +39,11 @@ public sealed class ShellLifecycle : IShellRuntime
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
     private readonly LauncherUpdateService launcherUpdateService;
+    private readonly LauncherSelfUpdateService launcherSelfUpdateService;
+    private readonly IWindowsLauncherUpdateApplier launcherUpdateApplier;
     private readonly LocalDiagnostics diagnostics;
     private readonly IErrorHandlingService errorHandling;
-    private readonly WindowsAnimationSettingsProvider windowsAnimationSettingsProvider;
+    private readonly SystemAnimationSettingsProvider systemAnimationSettingsProvider;
     private readonly ShellViewModel shell;
     private readonly BackgroundViewModel background;
     private readonly RemoteContentViewModel remoteContent;
@@ -61,15 +63,17 @@ public sealed class ShellLifecycle : IShellRuntime
     /// DialogsViewModel 一并刷新。
     /// </summary>
     private readonly IReadOnlyList<ILanguageAwarePresentation> languageAwarePresentations;
-    private readonly Func<Bitmap?> getBackgroundBitmap;
-    private readonly Func<LauncherSettings, string?, CancellationToken, Task> previewAppearanceAsync;
-    private readonly Func<LauncherSettings, Task> applyLanguageAndThemeAsync;
-    private readonly Action<string?> openExternalUrl;
     private readonly bool ownsPresentationCollaborators;
     private readonly ShellRefreshCoordinator refreshCoordinator;
     private readonly IFilePickerService filePickerService;
     private readonly ShellStartup startup;
     private readonly ModalRegistrar modalRegistrar;
+
+    /// <summary>
+    /// 退订记录表：Wire 的每条接线经 <see cref="Attach"/> 配对登记，Unwire 逆序执行
+    /// 后清空——两份手抄订阅清单由此收敛为一份（R2-c07／D15／AUD-ARCH-005）。
+    /// </summary>
+    private readonly List<Action> detachers = [];
     private bool disposed;
     private bool isBusy;
     private bool isMotionReduced = true;
@@ -77,6 +81,8 @@ public sealed class ShellLifecycle : IShellRuntime
     private bool settingsSnapshotInitialized;
     private LauncherStatusSnapshot? currentSnapshot;
     private bool isWired;
+    private LauncherSelfUpdatePreparation? pendingUpdatePreparation;
+    private CancellationTokenSource? selfUpdateCts;
 
     /// <summary>Gets the active startup update check so tests can coordinate without timing delays.</summary>
     public Task PendingStartupUpdateCheck => refreshCoordinator.PendingAfterLoadWork;
@@ -89,9 +95,11 @@ public sealed class ShellLifecycle : IShellRuntime
         LocalizationService localizer,
         ToastService toastService,
         LauncherUpdateService launcherUpdateService,
+        LauncherSelfUpdateService launcherSelfUpdateService,
+        IWindowsLauncherUpdateApplier launcherUpdateApplier,
         LocalDiagnostics diagnostics,
         IErrorHandlingService errorHandling,
-        WindowsAnimationSettingsProvider windowsAnimationSettingsProvider,
+        SystemAnimationSettingsProvider systemAnimationSettingsProvider,
         ShellPresentationFamily family,
         IFilePickerService filePickerService)
         : this(
@@ -101,9 +109,11 @@ public sealed class ShellLifecycle : IShellRuntime
             localizer,
             toastService,
             launcherUpdateService,
+            launcherSelfUpdateService,
+            launcherUpdateApplier,
             diagnostics,
             errorHandling,
-            windowsAnimationSettingsProvider,
+            systemAnimationSettingsProvider,
             family,
             filePickerService,
             ownsPresentationCollaborators: false)
@@ -117,9 +127,11 @@ public sealed class ShellLifecycle : IShellRuntime
         LocalizationService localizer,
         ToastService toastService,
         LauncherUpdateService launcherUpdateService,
+        LauncherSelfUpdateService launcherSelfUpdateService,
+        IWindowsLauncherUpdateApplier launcherUpdateApplier,
         LocalDiagnostics diagnostics,
         IErrorHandlingService errorHandling,
-        WindowsAnimationSettingsProvider windowsAnimationSettingsProvider,
+        SystemAnimationSettingsProvider systemAnimationSettingsProvider,
         ShellPresentationFamily family,
         IFilePickerService filePickerService,
         bool ownsPresentationCollaborators)
@@ -138,9 +150,11 @@ public sealed class ShellLifecycle : IShellRuntime
         this.localizer = localizer;
         this.toastService = toastService;
         this.launcherUpdateService = launcherUpdateService;
+        this.launcherSelfUpdateService = launcherSelfUpdateService;
+        this.launcherUpdateApplier = launcherUpdateApplier;
         this.diagnostics = diagnostics;
         this.errorHandling = errorHandling;
-        this.windowsAnimationSettingsProvider = windowsAnimationSettingsProvider;
+        this.systemAnimationSettingsProvider = systemAnimationSettingsProvider;
         shell = family.Shell;
         background = family.Background;
         remoteContent = family.RemoteContent;
@@ -168,11 +182,6 @@ public sealed class ShellLifecycle : IShellRuntime
         ModalHost = family.ModalHost;
         modalRegistrar = new ModalRegistrar(ModalHost);
 
-        getBackgroundBitmap = background.GetBackgroundBitmap;
-        previewAppearanceAsync = PreviewAppearanceAsync;
-        applyLanguageAndThemeAsync = ApplyLanguageAndThemeAsync;
-        openExternalUrl = windowChrome.OpenExternalUrl;
-
         errorHandling.CriticalErrorRequested += OnCriticalError;
         localizer.LocalizationFailure += OnLocalizationFailure;
         refreshCoordinator = new ShellRefreshCoordinator(
@@ -198,8 +207,13 @@ public sealed class ShellLifecycle : IShellRuntime
     public bool IsMotionReduced => isMotionReduced;
 
     /// <summary>Initializes the shell once by loading settings and launcher state.</summary>
-    public Task InitializeAsync(CancellationToken cancellationToken = default) =>
-        startup.InitializeAsync(cancellationToken);
+    public Task InitializeAsync(CancellationToken cancellationToken = default)
+    {
+        // 上一次自更新残留在 %TEMP% 的 helper 副本此刻没有属主(helper 只在主
+        // 进程退出后短暂存活),启动时清掉;仍在运行的例外靠文件锁幸免。
+        launcherUpdateApplier.CleanupAbandonedHelperDirectories();
+        return startup.InitializeAsync(cancellationToken);
+    }
 
     /// <summary>Reapplies the system motion preference when the user chose the system option.</summary>
     public void RefreshSystemMotionPreference()
@@ -268,7 +282,7 @@ public sealed class ShellLifecycle : IShellRuntime
         }
         catch (Exception exception)
         {
-            shell.SetRefreshError(exception);
+            shell.SetRefreshError(exception, settings);
             operations.SetIdlePanels(currentSnapshot);
             await errorHandling.HandleErrorAsync("Launcher core refresh failed.", exception,
                 new ErrorHandlingOptions { ToastMessage = localizer.F(LocalizationKeys.LauncherCoreRefreshFailed, exception.Message) });
@@ -380,9 +394,78 @@ public sealed class ShellLifecycle : IShellRuntime
 
     private Task OnResourcePanelSourceSwitchConfirmed() => SwitchSourceThenOpenPanelAsync();
 
-    // 经 openExternalUrl（windowChrome 的注入缝）而非直接调 ExternalLinkService.Open：
+    // 经 windowChrome 的注入缝而非直接调 ExternalLinkService.Open：
     // 壳的全部外部链接出口统一走这一条缝，测试可注入记录委托。
-    private void OnUpdateAvailableConfirmed(string downloadUrl) => openExternalUrl(downloadUrl);
+    // 不支持应用内更新的平台上，这里收到的不是文件直链而是版本发布页。
+    private void OnUpdateAvailableConfirmed(string url) => windowChrome.OpenExternalUrl(url);
+
+    private void OnSelfUpdateStartRequested(string version, IReadOnlyList<ReleaseFile> files) =>
+        _ = RunSelfUpdateAsync(version, files);
+
+    private void OnApplyUpdateRequested()
+    {
+        var preparation = pendingUpdatePreparation;
+        if (preparation is null || preparation.Status != LauncherSelfUpdatePreparationStatus.Ready)
+        {
+            return;
+        }
+
+        if (!launcherUpdateApplier.TryStartApply(preparation))
+        {
+            dialogs.MarkUpdateFailed();
+            toastService.ShowError(localizer.T(LocalizationKeys.LauncherUpdateApplyFailed));
+            return;
+        }
+
+        // 主进程必须退出，helper 才能替换文件；走正常关窗路径保存窗口与设置。
+        windowChrome.RequestShutdown();
+    }
+
+    private void OnCancelUpdateRequested() => selfUpdateCts?.Cancel();
+
+    /// <summary>
+    /// Downloads and verifies the Windows in-app update, then flips the dialog to
+    /// "restart to apply". Cancellation returns the dialog to its neutral state;
+    /// verification and preparation failures offer the release page and report through a toast.
+    /// </summary>
+    private async Task RunSelfUpdateAsync(string version, IReadOnlyList<ReleaseFile> files)
+    {
+        pendingUpdatePreparation = null;
+        selfUpdateCts?.Dispose();
+        selfUpdateCts = CancellationTokenSource.CreateLinkedTokenSource(refreshCoordinator.LifetimeToken);
+        var token = selfUpdateCts.Token;
+        dialogs.BeginUpdateApply();
+        try
+        {
+            var progress = new Progress<LauncherUpdateProgress>(
+                update => dialogs.ReportUpdateProgress(update.Fraction, update.BytesPerSecond));
+            var preparation = await launcherSelfUpdateService.PrepareAsync(files, version, progress, token);
+            if (token.IsCancellationRequested)
+            {
+                return;
+            }
+
+            if (preparation.Status == LauncherSelfUpdatePreparationStatus.Ready)
+            {
+                pendingUpdatePreparation = preparation;
+                dialogs.MarkUpdateReady();
+                return;
+            }
+
+            dialogs.MarkUpdateFailed();
+            toastService.ShowError(localizer.T(LocalizationKeys.LauncherUpdateDownloadFailed));
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+            dialogs.ResetUpdateApply();
+        }
+        catch (Exception exception)
+        {
+            dialogs.MarkUpdateFailed();
+            await errorHandling.HandleErrorAsync("Launcher self-update failed.", exception,
+                new ErrorHandlingOptions { ToastMessage = localizer.T(LocalizationKeys.LauncherUpdateDownloadFailed) });
+        }
+    }
 
     /// <summary>Refreshes shell state after a game operation and records resume behavior.</summary>
     public async Task HandleOperationsRefreshRequestedAsync(GameOperationsRefreshMode mode)
@@ -429,40 +512,99 @@ public sealed class ShellLifecycle : IShellRuntime
         return Task.CompletedTask;
     }
 
-    /// <summary>Subscribes cross-feature events once for the active shell lifecycle.</summary>
+    /// <summary>
+    /// Subscribes cross-feature events once for the active shell lifecycle.
+    /// 每条接线经 <see cref="Attach"/> 配对登记退订，登记顺序即 <see cref="Unwire"/>
+    /// 的逆序拆卸顺序。
+    /// </summary>
     public void Wire()
     {
         if (isWired) return;
         isWired = true;
 
-        settings.Appearance.GetBackgroundBitmap = getBackgroundBitmap;
-        settings.PreviewAppearanceAsync = previewAppearanceAsync;
-        settings.ApplyLanguageAndTheme = applyLanguageAndThemeAsync;
-        settings.SettingsSaved += HandleSettingsSavedAsync;
+        Attach(
+            () => settings.Appearance.GetBackgroundBitmap = background.GetBackgroundBitmap,
+            () => settings.Appearance.GetBackgroundBitmap = null);
+        Attach(
+            () => settings.PreviewAppearanceAsync = PreviewAppearanceAsync,
+            () => settings.PreviewAppearanceAsync = null);
+        Attach(
+            () => settings.ApplyLanguageAndTheme = ApplyLanguageAndThemeAsync,
+            () => settings.ApplyLanguageAndTheme = null);
+        Attach(
+            () => settings.SettingsSaved += HandleSettingsSavedAsync,
+            () => settings.SettingsSaved -= HandleSettingsSavedAsync);
 
-        resourcePanel.ResourcePanelSourceConfirmRequested += ShowResourcePanelSourceConfirmDialog;
-        dialogs.ResourcePanelSourceConfirm.Confirmed += OnResourcePanelSourceSwitchConfirmed;
+        Attach(
+            () => resourcePanel.ResourcePanelSourceConfirmRequested += ShowResourcePanelSourceConfirmDialog,
+            () => resourcePanel.ResourcePanelSourceConfirmRequested -= ShowResourcePanelSourceConfirmDialog);
+        Attach(
+            () => dialogs.ResourcePanelSourceConfirm.Confirmed += OnResourcePanelSourceSwitchConfirmed,
+            () => dialogs.ResourcePanelSourceConfirm.Confirmed -= OnResourcePanelSourceSwitchConfirmed);
 
-        operations.RefreshRequested += HandleOperationsRefreshRequestedAsync;
-        operations.OpenLogViewerRequested += OpenLogViewerAsync;
+        Attach(
+            () => operations.RefreshRequested += HandleOperationsRefreshRequestedAsync,
+            () => operations.RefreshRequested -= HandleOperationsRefreshRequestedAsync);
+        Attach(
+            () => operations.OpenLogViewerRequested += OpenLogViewerAsync,
+            () => operations.OpenLogViewerRequested -= OpenLogViewerAsync);
 
-        dialogs.DownloadRunningCloseConfirm.Confirmed += windowChrome.CloseAfterStoppingDownload;
-        dialogs.CloseRequested += windowChrome.RequestClose;
-        dialogs.ConfirmUpdateAvailableRequested += OnUpdateAvailableConfirmed;
-        dialogs.ErrorViewLogRequested += OpenLogViewer;
+        Attach(
+            () => dialogs.DownloadRunningCloseConfirm.Confirmed += windowChrome.CloseAfterStoppingDownload,
+            () => dialogs.DownloadRunningCloseConfirm.Confirmed -= windowChrome.CloseAfterStoppingDownload);
+        Attach(
+            () => dialogs.CloseRequested += windowChrome.RequestClose,
+            () => dialogs.CloseRequested -= windowChrome.RequestClose);
+        Attach(
+            () => dialogs.ConfirmUpdateAvailableRequested += OnUpdateAvailableConfirmed,
+            () => dialogs.ConfirmUpdateAvailableRequested -= OnUpdateAvailableConfirmed);
+        Attach(
+            () => dialogs.SelfUpdateStartRequested += OnSelfUpdateStartRequested,
+            () => dialogs.SelfUpdateStartRequested -= OnSelfUpdateStartRequested);
+        Attach(
+            () => dialogs.ApplyUpdateRequested += OnApplyUpdateRequested,
+            () => dialogs.ApplyUpdateRequested -= OnApplyUpdateRequested);
+        Attach(
+            () => dialogs.CancelUpdateRequested += OnCancelUpdateRequested,
+            () => dialogs.CancelUpdateRequested -= OnCancelUpdateRequested);
+        Attach(
+            () => dialogs.ErrorViewLogRequested += OpenLogViewer,
+            () => dialogs.ErrorViewLogRequested -= OpenLogViewer);
 
-        debug.RefreshRequested += HandleDebugRefreshRequestedAsync;
-        debug.ResetSettingsRequested += ResetSettingsToDefaultsAsync;
-        debug.ResetSettingsConfirmationRequested += dialogs.DebugResetConfirm.Show;
-        dialogs.DebugResetConfirm.Confirmed += debug.ConfirmResetSettingsAsync;
-        dialogs.SettingsResetConfirm.Confirmed += ResetSettingsFromSettingsPageAsync;
+        Attach(
+            () => debug.RefreshRequested += HandleDebugRefreshRequestedAsync,
+            () => debug.RefreshRequested -= HandleDebugRefreshRequestedAsync);
+        Attach(
+            () => debug.ResetSettingsRequested += ResetSettingsToDefaultsAsync,
+            () => debug.ResetSettingsRequested -= ResetSettingsToDefaultsAsync);
+        Attach(
+            () => debug.ResetSettingsConfirmationRequested += dialogs.DebugResetConfirm.Show,
+            () => debug.ResetSettingsConfirmationRequested -= dialogs.DebugResetConfirm.Show);
+        Attach(
+            () => dialogs.DebugResetConfirm.Confirmed += debug.ConfirmResetSettingsAsync,
+            () => dialogs.DebugResetConfirm.Confirmed -= debug.ConfirmResetSettingsAsync);
+        Attach(
+            () => dialogs.SettingsResetConfirm.Confirmed += ResetSettingsFromSettingsPageAsync,
+            () => dialogs.SettingsResetConfirm.Confirmed -= ResetSettingsFromSettingsPageAsync);
 
-        remoteContent.OpenExternalUrlRequested = openExternalUrl;
+        Attach(
+            () => remoteContent.OpenExternalUrlRequested = windowChrome.OpenExternalUrl,
+            () => remoteContent.OpenExternalUrlRequested = null);
 
         startup.Wire();
 
-        settings.Editor.CurrentPropertyChanged += OnSettingPropertyChanged;
+        Attach(
+            () => settings.Editor.CurrentPropertyChanged += OnSettingPropertyChanged,
+            () => settings.Editor.CurrentPropertyChanged -= OnSettingPropertyChanged);
+
         RegisterModals();
+    }
+
+    /// <summary>Records the teardown half of one wiring so Unwire cannot miss it.</summary>
+    private void Attach(Action attach, Action detach)
+    {
+        attach();
+        detachers.Add(detach);
     }
 
     /// <summary>
@@ -570,49 +712,23 @@ public sealed class ShellLifecycle : IShellRuntime
             confirmation.CancelCommand));
     }
 
-    /// <summary>Removes cross-feature event subscriptions established by <see cref="Wire"/>.</summary>
+    /// <summary>
+    /// Removes cross-feature event subscriptions established by <see cref="Wire"/>.
+    /// 按登记的逆序执行退订——这是本次收敛唯一的行为差异；模态注册与
+    /// startup 接线不在记录表里，按同一逆序原则手工排在首尾。
+    /// </summary>
     public void Unwire()
     {
         if (!isWired) return;
         isWired = false;
 
-        settings.SettingsSaved -= HandleSettingsSavedAsync;
-        operations.RefreshRequested -= HandleOperationsRefreshRequestedAsync;
-        operations.OpenLogViewerRequested -= OpenLogViewerAsync;
-        resourcePanel.ResourcePanelSourceConfirmRequested -= ShowResourcePanelSourceConfirmDialog;
-        dialogs.ResourcePanelSourceConfirm.Confirmed -= OnResourcePanelSourceSwitchConfirmed;
-        dialogs.DownloadRunningCloseConfirm.Confirmed -= windowChrome.CloseAfterStoppingDownload;
-        dialogs.CloseRequested -= windowChrome.RequestClose;
-        dialogs.ConfirmUpdateAvailableRequested -= OnUpdateAvailableConfirmed;
-        dialogs.ErrorViewLogRequested -= OpenLogViewer;
-        debug.RefreshRequested -= HandleDebugRefreshRequestedAsync;
-        debug.ResetSettingsRequested -= ResetSettingsToDefaultsAsync;
-        debug.ResetSettingsConfirmationRequested -= dialogs.DebugResetConfirm.Show;
-        dialogs.DebugResetConfirm.Confirmed -= debug.ConfirmResetSettingsAsync;
-        dialogs.SettingsResetConfirm.Confirmed -= ResetSettingsFromSettingsPageAsync;
         modalRegistrar.Dispose();
-        settings.Editor.CurrentPropertyChanged -= OnSettingPropertyChanged;
-
-        if (settings.Appearance.GetBackgroundBitmap == getBackgroundBitmap)
+        for (var i = detachers.Count - 1; i >= 0; i--)
         {
-            settings.Appearance.GetBackgroundBitmap = null;
+            detachers[i]();
         }
 
-        if (settings.PreviewAppearanceAsync == previewAppearanceAsync)
-        {
-            settings.PreviewAppearanceAsync = null;
-        }
-
-        if (settings.ApplyLanguageAndTheme == applyLanguageAndThemeAsync)
-        {
-            settings.ApplyLanguageAndTheme = null;
-        }
-
-        if (remoteContent.OpenExternalUrlRequested == openExternalUrl)
-        {
-            remoteContent.OpenExternalUrlRequested = null;
-        }
-
+        detachers.Clear();
         startup.Unwire();
     }
 
@@ -631,6 +747,7 @@ public sealed class ShellLifecycle : IShellRuntime
 
         Task pendingRefreshes = refreshCoordinator.BeginShutdown();
         refreshCoordinator.CancelLifetime();
+        selfUpdateCts?.Cancel();
         Unwire();
         operations.StopOperation(GameOperationStopIntent.ProcessExit);
         if (ownsPresentationCollaborators)
@@ -677,10 +794,20 @@ public sealed class ShellLifecycle : IShellRuntime
 
             if (result.IsSuccessful && result.IsUpdateAvailable)
             {
-                toastService.Show(
-                    localizer.F(LocalizationKeys.StartupUpdateAvailable, result.LatestVersion),
-                    ToastSeverity.Info,
-                    duration: ToastDuration.Extended);
+                toastService.Show(new ToastOptions
+                {
+                    Message = localizer.F(LocalizationKeys.StartupUpdateAvailable, result.LatestVersion),
+                    Severity = ToastSeverity.Info,
+                    Duration = ToastDuration.Extended,
+                    PrimaryAction = new ToastAction(
+                        localizer.T(LocalizationKeys.LauncherUpdateView),
+                        _ =>
+                        {
+                            settings.CheckForUpdatesCommand.Execute(null);
+                            return Task.FromResult(ToastActionResult.Success());
+                        },
+                        Timeout: null)
+                });
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -724,12 +851,12 @@ public sealed class ShellLifecycle : IShellRuntime
 
     private void ApplyMotionSettings(LauncherSettings savedSettings)
     {
-        var windowsAnimationsEnabled = savedSettings.MotionMode == MotionModes.System
-            ? windowsAnimationSettingsProvider.GetWindowsAnimationsEnabled()
+        var systemAnimationsEnabled = savedSettings.MotionMode == MotionModes.System
+            ? systemAnimationSettingsProvider.GetSystemAnimationsEnabled()
             : null;
         var reduceMotion = MotionSettingsResolver.ShouldReduceMotion(
             savedSettings.MotionMode,
-            windowsAnimationsEnabled);
+            systemAnimationsEnabled);
         if (motionSettingsApplied && reduceMotion == isMotionReduced)
         {
             return;

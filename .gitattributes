@@ -13,5 +13,8 @@
 *.md text eol=lf
 *.ps1 text eol=lf
 
-installer/linux/AppRun text eol=lf
+installer/linux/appimage/* text eol=lf
+installer/linux/arch/* text eol=lf
 installer/linux/debian/* text eol=lf
+installer/linux/rpm/* text eol=lf
+installer/linux/templates/* text eol=lf

@@ -4,7 +4,7 @@
 
 Inspect high-information files first: README, AGENTS/CLAUDE/CONTRIBUTING, architecture docs/ADRs, solution/project manifests, dependency manifests, build props, CI workflows, scripts, installer/packaging, tests, and release configuration.
 
-Create or refresh `.repository-audit/repository-map.md` from `templates/repository-map.md`.
+Build a repository map in working notes. Put only the structural facts needed to understand current findings in `CODEBASE_AUDIT.md`; do not create a separate map artifact.
 
 Skip generated output, package caches, vendored dependencies, binaries, build artifacts, and large snapshots unless directly relevant.
 
@@ -67,4 +67,4 @@ Then validate the recommendation separately.
 
 ## 9. Finalization
 
-Reconcile lifecycle state, update the current report, archive historical reports, and propose automated guards where a recurring pattern can be mechanically prevented.
+Reconcile lifecycle state in `CODEBASE_AUDIT.md`, remove resolved entries from the current view, and propose automated guards where a recurring pattern can be mechanically prevented. Git history preserves prior states.

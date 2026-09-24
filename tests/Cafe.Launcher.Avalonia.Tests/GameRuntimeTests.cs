@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services.GameRuntime;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -33,11 +35,14 @@ public sealed class GameRuntimeTests
 
     private static GameRuntime CreateRuntime(
         IReadOnlyList<GameRunnerDefinition> definitions,
-        RecordingProcessLauncher launcher,
+        IProcessLauncher launcher,
         Func<string, string?, string?>? locate = null,
         Func<string, string, TimeSpan, CancellationToken, Task<RuntimeProbeResult>>? probe = null,
         IGameProcessTracker? tracker = null,
-        List<(string Name, string? Path)>? locateCalls = null)
+        List<(string Name, string? Path)>? locateCalls = null,
+        RunnerOutputCapture? capture = null,
+        CompatibilityEnvironmentPrecheck? precheck = null,
+        PrefixMetadataStore? metadata = null)
     {
         return new GameRuntime(
             definitions,
@@ -49,7 +54,10 @@ public sealed class GameRuntimeTests
                 return explicitPath ?? $"/usr/bin/{name}";
             }),
             probe ?? ((_, _, _, _) =>
-                Task.FromResult(RuntimeProbeResult.Success("9.0", 0, "", ""))));
+                Task.FromResult(RuntimeProbeResult.Success("9.0", 0, "", ""))),
+            capture,
+            precheck,
+            metadata);
     }
 
     [Fact]
@@ -119,6 +127,124 @@ public sealed class GameRuntimeTests
         var startInfo = Assert.Single(launcher.StartInfos);
         Assert.Equal("/usr/bin/umu-run", startInfo.FileName);
         Assert.Equal("blue-archive-jp", startInfo.Environment["GAMEID"]);
+    }
+
+    [Fact]
+    public async Task LaunchAsync_RedirectsRunnerOutputOnlyForCompatibilityRunners()
+    {
+        var launcher = new RecordingProcessLauncher();
+        var runtime = CreateRuntime(
+            [
+                Definition("native", true, null, GameRuntimeEnvironmentStyle.Native, "Native execution"),
+                Definition("umu")
+            ],
+            launcher);
+
+        var native = await runtime.LaunchAsync(
+            CreateRequest(),
+            new GameRuntimeConfiguration { PreferredRunnerId = "native" });
+        var umu = await runtime.LaunchAsync(
+            CreateRequest(),
+            new GameRuntimeConfiguration { PreferredRunnerId = "umu" });
+
+        Assert.True(native.Success);
+        Assert.True(umu.Success);
+        Assert.False(launcher.StartInfos[0].RedirectStandardOutput);
+        Assert.False(launcher.StartInfos[0].RedirectStandardError);
+        Assert.True(launcher.StartInfos[1].RedirectStandardOutput);
+        Assert.True(launcher.StartInfos[1].RedirectStandardError);
+    }
+
+    [Fact]
+    public async Task LaunchAsync_WritesTheOwnershipMarkerIntoTheRunnerEnvironment()
+    {
+        var launcher = new RecordingProcessLauncher();
+        var runtime = CreateRuntime([Definition("umu")], launcher);
+
+        var result = await runtime.LaunchAsync(CreateRequest(), new GameRuntimeConfiguration());
+
+        Assert.True(result.Success);
+        Assert.Equal(
+            GameRuntimeIds.BlueArchiveJapan,
+            launcher.StartInfos[0].Environment[UnixGameProcessMatcher.OwnershipMarkerKey]);
+    }
+
+    [Fact]
+    public async Task LaunchAsync_WhenTheRunnerWritesOutput_CapturesItUnderTheDataRoot()
+    {
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "The output-producing runner stub uses /bin/sh.");
+        using var tempDir = TestDirectory.Create();
+        var capture = new RunnerOutputCapture(tempDir.DataRoot);
+        var runtime = CreateRuntime([Definition("umu")], new ShellOutputLauncher(), capture: capture);
+
+        var result = await runtime.LaunchAsync(CreateRequest(), new GameRuntimeConfiguration());
+
+        Assert.True(result.Success);
+        await TestWait.UntilAsync(
+            () => ReadIfAvailable(capture.FilePath).Contains("runner-stdout", StringComparison.Ordinal),
+            TimeSpan.FromSeconds(5),
+            "The runner output capture never recorded the stub output.");
+        Assert.Contains("runner-stderr", ReadIfAvailable(capture.FilePath), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task LaunchAsync_WithAnEnvironmentPrecheck_WritesTheReportBeforeStarting()
+    {
+        Assert.SkipUnless(
+            OperatingSystem.IsLinux(),
+            "The stub runner definition is Linux-only, so the launch succeeds only there.");
+
+        using var tempDir = TestDirectory.Create();
+        var precheck = new CompatibilityEnvironmentPrecheck(tempDir.DataRoot);
+        var runtime = CreateRuntime(
+            [Definition("umu")],
+            new RecordingProcessLauncher(),
+            precheck: precheck);
+        var configuration = new GameRuntimeConfiguration { PrefixPath = Path.Combine(tempDir, "prefix") };
+
+        var result = await runtime.LaunchAsync(CreateRequest(), configuration);
+
+        Assert.True(result.Success);
+        Assert.True(File.Exists(precheck.ReportPath));
+    }
+
+    [Fact]
+    public async Task LaunchAsync_WhenTheEnvironmentPrecheckFindsABlocker_RefusesBeforeStarting()
+    {
+        using var tempDir = TestDirectory.Create();
+        var blocker = Path.Combine(tempDir, "blocker");
+        File.WriteAllText(blocker, "");
+        var precheck = new CompatibilityEnvironmentPrecheck(tempDir.DataRoot);
+        var launcher = new RecordingProcessLauncher();
+        var runtime = CreateRuntime([Definition("umu")], launcher, precheck: precheck);
+        var configuration = new GameRuntimeConfiguration { PrefixPath = Path.Combine(blocker, "prefix") };
+
+        var result = await runtime.LaunchAsync(CreateRequest(), configuration);
+
+        Assert.False(result.Success);
+        Assert.Equal(GameRuntimeLaunchFailure.EnvironmentPrecheckFailed, result.Failure);
+        Assert.NotNull(result.EnvironmentFailures);
+        Assert.Contains(
+            result.EnvironmentFailures,
+            failure => failure.Code == CompatibilityFindingCode.PrefixNotWritable);
+        Assert.Empty(launcher.StartInfos);
+    }
+
+    [Fact]
+    public async Task LaunchAsync_WithPrefixMetadata_RecordsTheCombination()
+    {
+        using var tempDir = TestDirectory.Create();
+        var metadata = new PrefixMetadataStore(tempDir.DataRoot);
+        var runtime = CreateRuntime(
+            [Definition("umu")],
+            new RecordingProcessLauncher(),
+            metadata: metadata);
+        var configuration = new GameRuntimeConfiguration { PrefixPath = Path.Combine(tempDir, "prefix") };
+
+        var result = await runtime.LaunchAsync(CreateRequest(), configuration);
+
+        Assert.True(result.Success);
+        Assert.True(File.Exists(metadata.FilePath));
     }
 
     [Fact]
@@ -411,6 +537,41 @@ public sealed class GameRuntimeTests
         Assert.Equal("umu", tracker.LastRegisteredRunnerId);
     }
 
+    private static string ReadIfAvailable(string path)
+    {
+        try
+        {
+            using var stream = new FileStream(
+                path,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.ReadWrite | FileShare.Delete);
+            using var reader = new StreamReader(stream);
+            return reader.ReadToEnd();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return "";
+        }
+    }
+
+    /// <summary>Starts a real shell that writes to both streams, to drive the capture end-to-end.</summary>
+    private sealed class ShellOutputLauncher : IProcessLauncher
+    {
+        public Process? Start(ProcessStartInfo startInfo)
+        {
+            var shell = new ProcessStartInfo("/bin/sh")
+            {
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            };
+            shell.ArgumentList.Add("-c");
+            shell.ArgumentList.Add("echo runner-stdout; echo runner-stderr >&2");
+            return Process.Start(shell);
+        }
+    }
+
     private sealed class RecordingProcessLauncher : IProcessLauncher
     {
         public List<ProcessStartInfo> StartInfos { get; } = [];
@@ -436,9 +597,12 @@ public sealed class GameRuntimeTests
 
         public bool HasLiveTrackedProcess => false;
         public GameLaunchExitInfo? LastExit => null;
+        public event Action? TrackedProcessExited;
+
+        public void RaiseExited() => TrackedProcessExited?.Invoke();
 
         public Task<IReadOnlyList<string>> FindRunningGameProcessesAsync(
-            IReadOnlyList<string> knownExeNames,
+            RunningGameQuery query,
             CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<string>>([]);
     }

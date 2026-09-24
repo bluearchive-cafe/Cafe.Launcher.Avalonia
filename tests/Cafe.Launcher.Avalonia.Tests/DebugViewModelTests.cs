@@ -221,6 +221,7 @@ public sealed class DebugViewModelTests : IDisposable
         var operations = new GameOperationsViewModel(
             backend,
             new TestGameShortcutService(),
+            new FakeGameSessionMonitor(),
             localizer,
             toastService,
             diagnostics,

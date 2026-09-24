@@ -1334,102 +1334,109 @@ Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
     }
 
     [Fact]
-    public void TryRecordAt_WhenTransferRateChanges_ReportsMostRecentSampleSpeed()
+    public void TryRecord_WhenTransferRateChanges_ReportsMostRecentSampleSpeed()
     {
+        var clock = new MutableTimestampClock();
         var accumulator = new DownloadProgressAccumulator(
             totalSize: 3000,
             initialDownloadedSize: 0,
-            initialTimestamp: 0,
+            timestampProvider: clock.GetTimestamp,
             timestampFrequency: 1000,
             reportIntervalTicks: 100);
 
-        Assert.True(accumulator.TryRecordAt(
+        clock.Now = 100;
+        Assert.True(accumulator.TryRecord(
             transferredBytes: 1000,
             downloadedBytesDelta: 1000,
             paused: false,
-            timestamp: 100,
             out var first));
         Assert.Equal(10_000, first.BytesPerSecond);
 
-        Assert.True(accumulator.TryRecordAt(
+        clock.Now = 600;
+        Assert.True(accumulator.TryRecord(
             transferredBytes: 1000,
             downloadedBytesDelta: 1000,
             paused: false,
-            timestamp: 600,
             out var second));
         Assert.Equal(2_000, second.BytesPerSecond);
         Assert.Equal(2000, second.DownloadedSize);
     }
 
     [Fact]
-    public void TryRecordAt_WhenExistingBytesAreDiscarded_RollsBackProgressWithoutNegativeSpeed()
+    public void TryRecord_WhenExistingBytesAreDiscarded_RollsBackProgressWithoutNegativeSpeed()
     {
+        var clock = new MutableTimestampClock();
         var accumulator = new DownloadProgressAccumulator(
             totalSize: 1000,
             initialDownloadedSize: 400,
-            initialTimestamp: 0,
+            timestampProvider: clock.GetTimestamp,
             timestampFrequency: 1000,
             reportIntervalTicks: 100);
 
-        Assert.True(accumulator.TryRecordAt(
+        clock.Now = 100;
+        Assert.True(accumulator.TryRecord(
             transferredBytes: 600,
             downloadedBytesDelta: 600,
             paused: false,
-            timestamp: 100,
             out var completed));
         Assert.Equal(1000, completed.DownloadedSize);
 
-        Assert.True(accumulator.TryRecordAt(
+        clock.Now = 101;
+        Assert.True(accumulator.TryRecord(
             transferredBytes: 0,
             downloadedBytesDelta: -1000,
             paused: false,
-            timestamp: 101,
             out var rolledBack));
         Assert.Equal(0, rolledBack.DownloadedSize);
         Assert.Equal(0, rolledBack.BytesPerSecond);
     }
 
     [Fact]
-    public void TryRecordAt_WhenSamplingResumes_DoesNotIncludePausedTime()
+    public void TryRecord_WhenSamplingResumes_DoesNotIncludePausedTime()
     {
+        var clock = new MutableTimestampClock();
         var accumulator = new DownloadProgressAccumulator(
             totalSize: 2000,
             initialDownloadedSize: 0,
-            initialTimestamp: 0,
+            timestampProvider: clock.GetTimestamp,
             timestampFrequency: 1000,
             reportIntervalTicks: 100);
-        Assert.True(accumulator.TryRecordAt(
+        clock.Now = 100;
+        Assert.True(accumulator.TryRecord(
             transferredBytes: 1000,
             downloadedBytesDelta: 1000,
             paused: false,
-            timestamp: 100,
             out _));
 
         accumulator.Pause();
-        accumulator.ResumeAt(timestamp: 1100);
+        clock.Now = 1100;
+        accumulator.Resume();
 
-        Assert.True(accumulator.TryRecordAt(
+        clock.Now = 1200;
+        Assert.True(accumulator.TryRecord(
             transferredBytes: 1000,
             downloadedBytesDelta: 1000,
             paused: false,
-            timestamp: 1200,
             out var resumed));
         Assert.Equal(10_000, resumed.BytesPerSecond);
     }
 
     [Fact]
-    public void RecordBytesAt_WhenThrottleResumes_ExcludesPausedTime()
+    public void RecordBytes_WhenThrottleResumes_ExcludesPausedTime()
     {
+        var clock = new MutableTimestampClock();
         var throttle = new DownloadTransferThrottle(
             bytesPerSecond: 1000,
-            initialTimestamp: 0,
+            timestampProvider: clock.GetTimestamp,
             timestampFrequency: 1000);
 
-        Assert.Equal(TimeSpan.FromSeconds(1), throttle.RecordBytesAt(1000, timestamp: 0));
-        throttle.PauseAt(timestamp: 1000);
-        throttle.ResumeAt(timestamp: 6000);
+        Assert.Equal(TimeSpan.FromSeconds(1), throttle.RecordBytes(1000));
+        clock.Now = 1000;
+        throttle.Pause();
+        clock.Now = 6000;
+        throttle.Resume();
 
-        Assert.Equal(TimeSpan.FromSeconds(1), throttle.RecordBytesAt(1000, timestamp: 6000));
+        Assert.Equal(TimeSpan.FromSeconds(1), throttle.RecordBytes(1000));
     }
 
     [Fact]
@@ -1491,7 +1498,7 @@ Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
             statePath,
             CreateWritingFileDownloadService(fileBytes),
             processTracker: new GameProcessTracker((names, _) => Task.FromResult<IReadOnlyList<string>>(
-                names.Contains("BlueArchive") ? ["BlueArchive"] : [])));
+                names.KnownExeNames.Contains("BlueArchive") ? ["BlueArchive"] : [])));
         var snapshot = CreateSnapshot(gamePath);
         snapshot.RuntimeState = LauncherRuntimeState.NotInstalled;
 
@@ -1527,10 +1534,10 @@ Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
             CreateWritingFileDownloadService(fileBytes),
             processTracker: new GameProcessTracker((names, _) =>
             {
-                asked.Add(names);
+                asked.Add(names.KnownExeNames);
                 // 与真实判据同形：宿主还没起，只有 params 声明的那一个在跑。
                 return Task.FromResult<IReadOnlyList<string>>(
-                    names.Contains("BlueArchive", StringComparer.OrdinalIgnoreCase) ? ["BlueArchive"] : []);
+                    names.KnownExeNames.Contains("BlueArchive", StringComparer.OrdinalIgnoreCase) ? ["BlueArchive"] : []);
             }));
         var snapshot = CreateSnapshot(gamePath);
         snapshot.RuntimeState = LauncherRuntimeState.NotInstalled;

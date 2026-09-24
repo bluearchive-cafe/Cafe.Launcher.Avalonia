@@ -8,7 +8,7 @@ namespace Cafe.Launcher.Avalonia.Tests;
 /// <summary>
 /// 已保存设置的测试装配：设置服务 ＋ 它们的编辑器 ＋ 唯一写入方，三者的关系与生产一致。
 ///
-/// 生产里 <see cref="ISettingsEditor"/> 与 <see cref="ISavedSettingsWriter"/> 都是全局单例，
+/// 生产里 <see cref="SettingsEditor"/> 与 <see cref="ISavedSettingsWriter"/> 都是全局单例，
 /// 测试里必须成对创建并贯穿同一张对象图：写入方以编辑器的设置快照为基底，随手 new 一个
 /// 空编辑器会把「在已保存设置上改一个字段」变成「把已保存设置改回默认值再改一个字段」，
 /// 于是测试里的落盘内容与生产不同。

@@ -33,6 +33,7 @@
 - 使用 English、简体中文、繁體中文和日本語界面
 - 查看公告与运营内容，并通过 UID 使用 Cafe 资源面板
 - 检查稳定版或测试版更新，导出诊断信息用于故障排查：可选时间范围（全部 / 最近 1 小时 / 最近 24 小时 / 最近 7 天 / 最近 30 天），始终包含系统信息，并可按需附带崩溃报告与用户数据
+- 在 Windows 上直接更新启动器：查看新版本说明并下载，经发布附带的 `SHA256SUMS` 校验后「重启以更新」；校验信息缺失时回退到发布页（macOS 与 Linux 仍前往发布页）
 
 下载任务状态和应用设置保存在本地。启动器不会修改游戏进程，也不会向游戏注入代码。
 
@@ -42,9 +43,9 @@
 | --- | --- | --- |
 | Windows x64 | 正式支持 | 安装程序、便携 ZIP |
 | macOS Apple Silicon | 实验性（暂不支持启动游戏） | `.app` 压缩包 |
-| Linux x64 | 实验性 | `.deb`、AppImage、`tar.gz` |
+| Linux x64 | 实验性 | `.deb`、`.rpm`、AppImage、`tar.gz` |
 
-所有发行包均为自包含应用，无需另外安装 .NET Runtime。macOS 与 Linux 构建尚未完成与 Windows 同等程度的适配和测试，请以具体 Release 说明为准。其中 macOS 版本目前只能安装、更新和修复游戏：在 macOS 上启动游戏需要额外的兼容运行层，当前不提供，也暂无支持计划。Linux 上可通过 Wine / UMU / Proton 运行环境启动游戏（实验性，反作弊兼容性未验证）。
+所有发行包均为自包含应用，无需另外安装 .NET Runtime。macOS 与 Linux 构建尚未完成与 Windows 同等程度的适配和测试，请以具体 Release 说明为准。其中 macOS 版本目前只能安装、更新和修复游戏：在 macOS 上启动游戏需要额外的兼容运行层，当前不提供，也暂无支持计划。Linux 上可通过 Wine / UMU / Proton 运行环境启动游戏（实验性）：已在 Arch Linux + UMU/Proton 的单一组合上实机验证可登录并进入游戏（反作弊 XIGNCODE3 未拦截），详见[验证记录](docs/design/linux-p0a-verification-2026-09-22.md)；其余发行版、Proton 构建与显卡组合尚未验证。
 
 面向普通用户的安装、首次设置和故障排查说明统一维护在[文档站](https://docs.bluearchive.cafe/cafe-launcher/)。本 README 主要面向参与开发和审阅源码的贡献者。
 
@@ -101,6 +102,8 @@ src/Cafe.Launcher.Avalonia/
 ├── Resources/       # 多语言 .resx 资源
 └── Assets/          # 图标、字体、音频与图片
 
+src/Cafe.Launcher.Updater/   # 自更新 helper：等主进程退出后替换安装并重启（Windows）
+
 tests/
 ├── Cafe.Launcher.Avalonia.Tests/          # xUnit 单元测试
 └── Cafe.Launcher.Avalonia.HeadlessTests/  # Avalonia Headless UI 与黄金截图测试
@@ -110,7 +113,7 @@ tests/
 
 ## 本地数据
 
-Windows 默认将设置和诊断数据写入 `%LOCALAPPDATA%\Cafe Launcher\`，包括 `settings.json`、`download_state.json`、`unified.log` 和日志导出文件。游戏目录（规范化为 `YostarGames\BlueArchive_JP`）中的 `manifest.json` 与 `game-launcher-config.json` 用于记录游戏安装状态，并与官方启动器保持兼容。
+Windows 默认将设置和诊断数据写入 `%LOCALAPPDATA%\Cafe Launcher\`，包括 `settings.json`、`download_state.json`、`unified.log` 和日志导出文件；Windows 自更新应用失败时另写 `update-apply.log`。游戏目录（规范化为 `YostarGames\BlueArchive_JP`）中的 `manifest.json` 与 `game-launcher-config.json` 用于记录游戏安装状态，并与官方启动器保持兼容。
 
 卸载启动器不会默认删除游戏文件。详细的数据保留规则见[卸载与数据](https://docs.bluearchive.cafe/cafe-launcher/uninstall)。
 

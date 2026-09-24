@@ -16,6 +16,29 @@ internal static class RemoteHttpRequestService
 {
     private const int MaxRedirects = 5;
 
+    /// <summary>
+    /// <see cref="Exception.Data"/> 标记键：本次失败发生在直连出口，且目标主机在
+    /// 失败前的 DNS 解析整体落在 Fake-IP 应答段（198.18/15、fc00::/7）。异常类型
+    /// 保持不变——传输层的错误模式契约是"没有第二种异常类型"；表示层经由
+    /// <see cref="HasFakeIpDnsMarker"/> 读出标记，把笼统的网络归因换成针对性的
+    /// Fake-IP 指引。
+    /// </summary>
+    internal const string FakeIpDnsDataKey = "Cafe.Launcher.Avalonia.FakeIpDns";
+
+    /// <summary>Checks the exception chain for the Fake-IP DNS failure marker.</summary>
+    internal static bool HasFakeIpDnsMarker(Exception exception)
+    {
+        for (var current = exception; current is not null; current = current.InnerException)
+        {
+            if (current.Data.Contains(FakeIpDnsDataKey))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public static async Task<HttpResponseMessage> SendAsync(
         HttpClient client,
         Uri initialUri,
@@ -27,8 +50,9 @@ internal static class RemoteHttpRequestService
         var currentUri = initialUri;
         for (var redirectCount = 0; ; redirectCount++)
         {
+            var egressesThroughProxy = EgressesThroughProxy(connectionProxy, currentUri);
             currentUri = await urlValidator
-                .ValidateAsync(currentUri, EgressesThroughProxy(connectionProxy, currentUri), cancellationToken)
+                .ValidateAsync(currentUri, egressesThroughProxy, cancellationToken)
                 .ConfigureAwait(false);
 
             using var request = createRequest(currentUri);
@@ -39,12 +63,25 @@ internal static class RemoteHttpRequestService
                 // 凭据头只允许交给初始授权方，不跟随跨主机跳外泄（AUD-SEC-003）。
                 request.Headers.Remove("Authorization");
             }
-            var response = await SendAsync(
-                    client,
-                    request,
-                    HttpCompletionOption.ResponseHeadersRead,
-                    cancellationToken)
-                .ConfigureAwait(false);
+            HttpResponseMessage response;
+            try
+            {
+                response = await SendAsync(
+                        client,
+                        request,
+                        HttpCompletionOption.ResponseHeadersRead,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception exception) when (IsAnnotatableNetworkFailure(exception, cancellationToken)
+                && !egressesThroughProxy
+                && urlValidator.IsFakeIpResolution(currentUri.IdnHost))
+            {
+                // 直连出口 + Fake-IP DNS 解析 + 连接失败：把可行动的根因钉在异常上
+                // （TUN 接管的 fake-ip 能直拨成功，所以只在真失败时标注，不预判）。
+                exception.Data[FakeIpDnsDataKey] = true;
+                throw;
+            }
 
             if (!IsRedirect(response.StatusCode))
             {
@@ -130,4 +167,13 @@ internal static class RemoteHttpRequestService
 
         return proxy.GetProxy(uri) is { } via && !via.Equals(uri);
     }
+
+    /// <summary>
+    /// 连接级失败家族：连接被拒、不可达以 <see cref="HttpRequestException"/>（无状态码）
+    /// 浮出，拨号超时以 <see cref="TaskCanceledException"/> 浮出。调用方主动取消
+    /// （<c>cancellationToken.IsCancellationRequested</c>）不是网络失败，不做标注。
+    /// </summary>
+    private static bool IsAnnotatableNetworkFailure(Exception exception, CancellationToken cancellationToken) =>
+        exception is HttpRequestException or TaskCanceledException
+        && !cancellationToken.IsCancellationRequested;
 }

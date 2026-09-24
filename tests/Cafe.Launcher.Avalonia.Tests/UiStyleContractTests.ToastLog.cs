@@ -219,6 +219,39 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void LogViewer_ListTopIsFlush_GapLivesInFixedFilterBarRow()
+    {
+        // 列表顶端无边距：与过滤栏的间距由固定工具行的下边距承担（不随内容滚动），
+        // 滚动正文顶端必须显式归零。
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowLogViewerOverlay.axaml"));
+        var dialog = document
+            .Descendants()
+            .Single(element => element.Name.LocalName == "DialogSurface");
+        Assert.True(HasClass(dialog, "log-surface"));
+
+        var surfaceStyles = XDocument.Load(TestRepository.FromApplicationRoot("Views/Styles/DialogSurface.axaml"));
+        Assert.Equal(
+            "{StaticResource Launcher.Component.LogViewer.Body.Padding}",
+            GetStyleSetters(
+                surfaceStyles,
+                "controls|DialogSurface.log-surface:panel /template/ ScrollViewer#PART_ScrollViewer")["Padding"]);
+
+        var app = XDocument.Load(TestRepository.FromApplicationRoot("App.axaml"));
+        var xKey = XNamespace.Get("http://schemas.microsoft.com/winfx/2006/xaml") + "Key";
+        string TokenValue(string key) => app
+            .Descendants()
+            .Single(element => (string?)element.Attribute(xKey) == key)
+            .Value
+            .Trim();
+        var bodyPadding = TokenValue("Launcher.Component.LogViewer.Body.Padding").Split(',');
+        var filterMargin = TokenValue("Launcher.Component.LogViewer.FilterBar.Margin").Split(',');
+        Assert.Equal("0", bodyPadding[1]);
+        Assert.Equal(bodyPadding[0], filterMargin[0]);
+        Assert.Equal(bodyPadding[2], filterMargin[2]);
+        Assert.Equal(bodyPadding[3], filterMargin[3]);
+    }
+
+    [Fact]
     public void ToastAndDebugOverlay_NewMeasurements_UseLauncherTokens()
     {
         var debugOverlay = File.ReadAllText(TestRepository.FromApplicationRoot("Views/MainWindowDebugOverlay.axaml"));

@@ -8,6 +8,7 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Cafe.Launcher.Avalonia.Constants;
+using Cafe.Launcher.Avalonia.Controls;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
@@ -16,6 +17,77 @@ namespace Cafe.Launcher.Avalonia.HeadlessTests;
 
 public sealed partial class MainWindowHeadlessTests
 {
+    [AvaloniaFact]
+    public void UpdateDialog_WhenClosingWithMotion_KeepsReleaseNotesVisibleDuringExit()
+    {
+        var originalDuration = AnimationTimings.ExitAnimationDuration;
+        try
+        {
+            AnimationTimings.ExitAnimationDuration = Timeout.InfiniteTimeSpan;
+            using var context = CreateContext();
+            context.ViewModel.IsMotionReduced = false;
+            context.Window.Show();
+            context.ViewModel.Dialogs.ShowUpdateAvailable(
+                "1.2.0", [], canSelfUpdate: false, releaseNotes: "## 更新内容");
+            Dispatcher.UIThread.RunJobs();
+
+            var viewer = context.Window.GetVisualDescendants()
+                .OfType<ReleaseNotesMarkdownViewer>()
+                .Single();
+            var overlay = viewer.GetVisualAncestors()
+                .OfType<Grid>()
+                .First(grid => grid.Classes.Contains("motion-overlay"));
+            Assert.True(viewer.IsEffectivelyVisible);
+            Assert.True(MotionVisibility.GetIsOpen(overlay));
+
+            try
+            {
+                context.ViewModel.Dialogs.CancelUpdateAvailableCommand.Execute(null);
+                Dispatcher.UIThread.RunJobs();
+
+                Assert.False(MotionVisibility.GetIsOpen(overlay));
+                Assert.True(overlay.IsVisible);
+                Assert.Contains("motion-exit", overlay.Classes);
+                Assert.True(viewer.IsEffectivelyVisible);
+                Assert.Equal("## 更新内容", viewer.Markdown);
+            }
+            finally
+            {
+                context.ViewModel.Dialogs.ShowUpdateAvailable(
+                    "1.2.0", [], canSelfUpdate: false, releaseNotes: "## 更新内容");
+            }
+        }
+        finally
+        {
+            AnimationTimings.ExitAnimationDuration = originalDuration;
+        }
+    }
+
+    [AvaloniaFact]
+    public void ResourcePanel_DismissUidHint_HidesBannerUntilNextSession()
+    {
+        using var context = CreateContext();
+        context.Window.Show();
+        ShowResourcePanel(context);
+        Dispatcher.UIThread.RunJobs();
+        var banner = context.Window.GetVisualDescendants().OfType<Border>()
+            .Single(border => border.Name == "UidGenerationHint");
+        var closeButton = banner.GetVisualDescendants().OfType<Button>().Single();
+        Assert.True(banner.IsEffectivelyVisible);
+        Assert.False(string.IsNullOrWhiteSpace(AutomationProperties.GetName(closeButton)));
+        AssertControlInsideWindow(closeButton, context.Window);
+
+        closeButton.Command!.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+        Assert.False(banner.IsVisible);
+        Assert.True(context.ViewModel.ResourcePanel.IsResourcePanelVisible);
+
+        context.ViewModel.ResourcePanel.CloseResourcePanelCommand.Execute(null);
+        ShowResourcePanel(context);
+        Dispatcher.UIThread.RunJobs();
+        Assert.False(banner.IsVisible);
+    }
+
     [AvaloniaFact]
     public void LogViewer_EmptyState_KeepsConfiguredHeight()
     {

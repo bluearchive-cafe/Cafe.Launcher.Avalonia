@@ -11,6 +11,7 @@ internal sealed class DownloadProgressAccumulator
 {
     private readonly object sync = new();
     private readonly long totalSize;
+    private readonly Func<long> timestampProvider;
     private readonly long timestampFrequency;
     private readonly long reportIntervalTicks;
     private long downloadedSize;
@@ -25,7 +26,7 @@ internal sealed class DownloadProgressAccumulator
         : this(
             totalSize,
             initialDownloadedSize,
-            Stopwatch.GetTimestamp(),
+            Stopwatch.GetTimestamp,
             Stopwatch.Frequency,
             Math.Max(1, (long)(reportInterval.TotalSeconds * Stopwatch.Frequency)))
     {
@@ -34,7 +35,7 @@ internal sealed class DownloadProgressAccumulator
     internal DownloadProgressAccumulator(
         long totalSize,
         long initialDownloadedSize,
-        long initialTimestamp,
+        Func<long> timestampProvider,
         long timestampFrequency,
         long reportIntervalTicks)
     {
@@ -45,9 +46,10 @@ internal sealed class DownloadProgressAccumulator
 
         this.totalSize = totalSize;
         this.timestampFrequency = timestampFrequency;
+        this.timestampProvider = timestampProvider;
         this.reportIntervalTicks = reportIntervalTicks;
         downloadedSize = Math.Min(initialDownloadedSize, totalSize);
-        lastReportTimestamp = initialTimestamp;
+        lastReportTimestamp = timestampProvider();
     }
 
     internal bool TryRecord(
@@ -62,26 +64,7 @@ internal sealed class DownloadProgressAccumulator
                 transferredBytes,
                 downloadedBytesDelta,
                 paused,
-                Stopwatch.GetTimestamp(),
-                out snapshot);
-        }
-    }
-
-    /// <summary>Records a transfer at a supplied timestamp for deterministic tests.</summary>
-    internal bool TryRecordAt(
-        long transferredBytes,
-        long downloadedBytesDelta,
-        bool paused,
-        long timestamp,
-        out DownloadProgressSnapshot snapshot)
-    {
-        lock (sync)
-        {
-            return TryRecordCore(
-                transferredBytes,
-                downloadedBytesDelta,
-                paused,
-                timestamp,
+                timestampProvider(),
                 out snapshot);
         }
     }
@@ -107,17 +90,7 @@ internal sealed class DownloadProgressAccumulator
         lock (sync)
         {
             bytesSinceLastReport = 0;
-            lastReportTimestamp = Stopwatch.GetTimestamp();
-        }
-    }
-
-    /// <summary>Resumes sampling at a supplied timestamp for deterministic tests.</summary>
-    internal void ResumeAt(long timestamp)
-    {
-        lock (sync)
-        {
-            bytesSinceLastReport = 0;
-            lastReportTimestamp = timestamp;
+            lastReportTimestamp = timestampProvider();
         }
     }
 

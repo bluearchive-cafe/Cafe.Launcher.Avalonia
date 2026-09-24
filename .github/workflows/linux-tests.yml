@@ -35,11 +35,14 @@ jobs:
         with:
           # Pinned to the SDK named by global.json, same as the Windows build job.
           dotnet-version: 10.0.302
-          cache: true
-          cache-dependency-path: |
-            **/*.csproj
-            **/packages.lock.json
-            Directory.Packages.props
+
+      - name: Restore NuGet cache
+        id: nuget-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.nuget/packages
+          key: nuget-global-packages-${{ runner.os }}-${{ hashFiles('Directory.Packages.props') }}
+          restore-keys: nuget-global-packages-${{ runner.os }}-
 
       # 提交的 packages.lock.json 固定的是无 RID 的 net10.0 依赖图，locked mode
       # 还原在 Linux 上同样成立；本 job 只跑单元套件（无 Avalonia 渲染依赖），
@@ -54,5 +57,12 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: linux-unit-test-results
-          retention-days: 14
+          retention-days: 7
           path: TestResults/**/*.trx
+
+      - name: Save NuGet cache
+        if: always()
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.nuget/packages
+          key: ${{ steps.nuget-cache.outputs.cache-primary-key }}

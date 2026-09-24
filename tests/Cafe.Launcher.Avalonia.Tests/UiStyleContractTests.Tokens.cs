@@ -23,6 +23,7 @@ public sealed partial class UiStyleContractTests
                 StringComparer.Ordinal);
 
         Assert.Equal("40", resources["Launcher.Spacing.Section"]);
+        Assert.Equal("0", resources["Launcher.Spacing.None"]);
         Assert.Equal("16,0,4,0", resources["Launcher.Component.PathField.Padding"]);
         var pathFieldPadding = document
             .Descendants()
@@ -161,7 +162,12 @@ public sealed partial class UiStyleContractTests
             "Button.primary-action",
             "Button.danger-action",
             "Button.confirm-dialog-action",
-            "Button.launcher-control.start"
+            "Button.launcher-control.start",
+            "controls|ReleaseNotesMarkdownViewer :is(TextBlock).markdown-h1",
+            "controls|ReleaseNotesMarkdownViewer :is(TextBlock).markdown-h2",
+            "controls|ReleaseNotesMarkdownViewer :is(TextBlock).markdown-h3",
+            "controls|ReleaseNotesMarkdownViewer :is(TextBlock).markdown-h4",
+            "controls|ReleaseNotesMarkdownViewer Border.markdown-table-header TextBlock"
         };
 
         Assert.True(
@@ -606,6 +612,9 @@ public sealed partial class UiStyleContractTests
             "Padding",
             "Margin",
             "BorderThickness",
+            "Spacing",
+            "ColumnSpacing",
+            "RowSpacing",
             "Width",
             "Height",
             "MinWidth",
@@ -633,6 +642,47 @@ public sealed partial class UiStyleContractTests
 
             Assert.Empty(rawValues);
         }
+    }
+
+    [Fact]
+    public void Opacity_UsesOnlyStructuralValuesOrStateLayerTokens()
+    {
+        const string stateLayerPrefix = "{StaticResource Launcher.StateLayer.";
+        var scanned = new List<(string Path, string Value)>();
+
+        // 属性形式（内联 Opacity="…"）与 Setter/关键帧形式（Property="Opacity" Value="…"）
+        // 各收一次；CrashReportWindow 也在 ProjectMarkupFiles 内，一并受管。
+        foreach (var relativePath in ProjectMarkupFiles())
+        {
+            var document = XDocument.Load(TestRepository.FromApplicationRoot(relativePath));
+            var attributeForm = document
+                .Descendants()
+                .SelectMany(element => element.Attributes())
+                .Where(attribute => attribute.Name.LocalName == "Opacity")
+                .Select(attribute => (relativePath, attribute.Value));
+            var setterForm = document
+                .Descendants()
+                .Where(element => element.Name.LocalName == "Setter")
+                .SelectMany(element => element.Attributes()
+                    .Where(attribute => attribute.Name.LocalName == "Property"
+                        && attribute.Value == "Opacity")
+                    .Select(attribute => element.Attribute("Value")?.Value))
+                .Where(value => value is not null)
+                .Select(value => (relativePath, value!));
+            scanned.AddRange(attributeForm.Concat(setterForm));
+        }
+
+        // 反空转基线：今天全部命中都是结构性 0/1（可见/隐藏与动画关键帧）加
+        // StateLayer.Disabled.Content 消费；扫描域漂移到零命中即失效。
+        Assert.True(scanned.Count >= 40, $"Opacity scan lost its coverage: only {scanned.Count} occurrences.");
+
+        var offenders = scanned
+            .Where(item => item.Value is not "0" and not "1"
+                && !item.Value.StartsWith(stateLayerPrefix, StringComparison.Ordinal))
+            .Select(item => $"{item.Path}: Opacity=\"{item.Value}\"")
+            .ToArray();
+
+        Assert.Equal([], offenders);
     }
 
     [Fact]

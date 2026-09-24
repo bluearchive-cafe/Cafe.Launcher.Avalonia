@@ -29,6 +29,9 @@ public sealed class LauncherDataRoot
     /// <summary>崩溃快照目录名——崩溃进程与主进程共享的落点。</summary>
     public const string CrashReportsFolderName = "CrashReports";
 
+    /// <summary>启动器自更新下载的暂存目录名（可整体删除，缺失时按需重建）。</summary>
+    public const string UpdateFolderName = "update";
+
     public LauncherDataRoot(string root)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(root);
@@ -47,11 +50,23 @@ public sealed class LauncherDataRoot
     /// <summary><c>shown_notices.json</c>：已读公告的指纹集合。</summary>
     public string NoticeStatePath => Path.Combine(Root, GamePaths.NoticeStateFileName);
 
+    /// <summary><c>runner_output.log</c>：最近一次运行器 stdout/stderr 的有上限捕获（每次启动覆盖）。</summary>
+    public string RunnerOutputPath => Path.Combine(Root, GamePaths.RunnerOutputFileName);
+
+    /// <summary><c>compatibility_environment.json</c>：最近一次兼容前缀环境预检报告（每次启动覆盖）。</summary>
+    public string CompatibilityEnvironmentPath => Path.Combine(Root, GamePaths.CompatibilityEnvironmentFileName);
+
+    /// <summary><c>prefix_metadata.json</c>：最近一次启动所用兼容前缀的元数据（每次启动覆盖）。</summary>
+    public string PrefixMetadataPath => Path.Combine(Root, GamePaths.PrefixMetadataFileName);
+
     /// <summary>图片缓存目录（可整体删除，缺失时按需重建）。</summary>
     public string ImageCacheDirectory => Path.Combine(Root, ImageCacheFolderName);
 
     /// <summary>崩溃快照的默认目录。</summary>
     public string CrashReportsDirectory => Path.Combine(Root, CrashReportsFolderName);
+
+    /// <summary>启动器自更新的下载暂存目录。</summary>
+    public string UpdateDirectory => Path.Combine(Root, UpdateFolderName);
 
     /// <summary>日志导出的默认目录。</summary>
     public string LogExportDirectory => Path.Combine(Root, LauncherConstants.LogExportFolderName);

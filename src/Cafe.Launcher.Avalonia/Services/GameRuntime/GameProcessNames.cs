@@ -89,12 +89,12 @@ public static class GameProcessNames
         && processName.Contains('_', StringComparison.Ordinal);
 
     /// <summary>
-    /// 一组正在运行的游戏进程名在界面上怎么写：不含扩展名的进程名补回 <c>.exe</c>（与启动器
+    /// 一组正在运行的游戏进程名在界面上怎么写：统一为恰好一个 <c>.exe</c> 扩展名（与启动器
     /// 别处称呼可执行文件一致），多条用语言中立的分隔符连接。卸载与下载/安装/修复两道闸门
     /// 共用它，用户看到的名字因此不会因入口不同而变样（ADR-032）。
     /// </summary>
     public static string DescribeForDisplay(IReadOnlyList<string> processNames) =>
-        string.Join(" / ", processNames.Select(name => $"{name}{ExecutableExtension}"));
+        string.Join(" / ", processNames.Select(name => $"{WithoutExtension(name)}{ExecutableExtension}"));
 
     /// <summary>去掉路径与 <c>.exe</c> 扩展名，留下可直接比较的进程名。</summary>
     /// <remarks>
@@ -143,7 +143,7 @@ public static class GameProcessNames
     /// 后缀会因结尾那个引号被当成「不是可执行文件」丢掉：游戏可执行文件静默移出家族，判据少一半。
     /// 判据与提取必须走同一份归一（<see cref="WithoutExtension"/>），否则两者会各说各话。
     /// </summary>
-    private static bool LooksLikeExecutable(string? parameter) =>
+    internal static bool LooksLikeExecutable(string? parameter) =>
         Unquoted(parameter).EndsWith(ExecutableExtension, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>去掉首尾空白与成对的首尾引号（<c>"x.exe"</c> 与 <c> x.exe </c> 都归一成 <c>x.exe</c>）。</summary>

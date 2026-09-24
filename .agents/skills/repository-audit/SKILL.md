@@ -52,11 +52,11 @@ For mode routing, load `references/modes.md`. For project-specific weighting, lo
 7. Reconcile current findings with prior audit state when available.
 8. Generate the current report and suggest automated guards for recurring patterns.
 
-Use `templates/report.md` for the report shape and `templates/repository-map.md` for discovery output.
+Use `templates/report.md` for the report shape. Keep repository discovery, current findings, accepted risks, and priorities in that one report rather than creating side ledgers.
 
 ## Output Rule
 
-`CODEBASE_AUDIT.md` represents the **current known state**. Historical reports belong under `.repository-audit/history/`. Do not leave resolved High/Critical findings presented as currently open.
+`CODEBASE_AUDIT.md` is the repository's only audit state file. Keep it focused on the **current known state**. Remove resolved findings from the current view and rely on Git history; do not create `.repository-audit/`, dated reports, maps, or candidate ledgers.
 
 ## Verification
 
