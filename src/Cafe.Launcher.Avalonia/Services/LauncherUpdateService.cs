@@ -11,6 +11,7 @@ using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Services.Update;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
@@ -100,7 +101,7 @@ public sealed partial class LauncherUpdateService
                     isUpdateAvailable: false);
             }
 
-            if (!TryValidateReleaseFiles(targetRelease.Files, out var validationError))
+            if (!TryValidateReleaseFiles(targetRelease.Version, targetRelease.Files, out var validationError))
             {
                 if (diagnostics is not null)
                 {
@@ -305,7 +306,15 @@ public sealed partial class LauncherUpdateService
     private static bool IsPrereleaseVersion(string version) =>
         version.Contains('-');
 
+    /// <summary>
+    /// Validates one release's asset metadata with the self-update trust chain bound:
+    /// the declared version, the download URLs' release tag, and the Windows package
+    /// asset names must all carry the same version. A proxy that declares a high
+    /// version while pointing the package and the checksum manifest at an older
+    /// release's assets would otherwise pass hash verification as a trusted downgrade.
+    /// </summary>
     private static bool TryValidateReleaseFiles(
+        string version,
         IReadOnlyList<ReleaseFile>? files,
         out string validationError)
     {
@@ -314,6 +323,10 @@ public sealed partial class LauncherUpdateService
             validationError = "files must contain at least one entry";
             return false;
         }
+
+        // GitHub 把 tag 命名为 v{version}，资产下载路径是
+        // /releases/download/v{version}/；用完整前缀同时钉住仓库与 tag。
+        var expectedDownloadPrefix = ApiConfig.GitHubReleaseDownloadPathPrefix + "v" + version + "/";
 
         for (var index = 0; index < files.Count; index++)
         {
@@ -324,9 +337,16 @@ public sealed partial class LauncherUpdateService
                 return false;
             }
 
-            if (!IsReleaseDownloadUri(file.Url))
+            if (!IsReleaseDownloadUri(file.Url, expectedDownloadPrefix))
             {
-                validationError = $"files[{index}].url must be a GitHub release download URL";
+                validationError = $"files[{index}].url must be a GitHub release download URL for v{version}";
+                return false;
+            }
+
+            if (IsWindowsPackageAsset(file.Name)
+                && !file.Name.Contains("v" + version + "_", StringComparison.Ordinal))
+            {
+                validationError = $"files[{index}].name must carry the release version v{version}";
                 return false;
             }
 
@@ -341,15 +361,24 @@ public sealed partial class LauncherUpdateService
         return true;
     }
 
-    private static bool IsReleaseDownloadUri(string url)
+    private static bool IsReleaseDownloadUri(string url, string downloadPathPrefix)
     {
         return Uri.TryCreate(url, UriKind.Absolute, out var downloadUri)
             && downloadUri.Scheme == Uri.UriSchemeHttps
             && string.Equals(downloadUri.Host, "github.com", StringComparison.OrdinalIgnoreCase)
             && downloadUri.AbsolutePath.StartsWith(
-                ApiConfig.GitHubReleaseDownloadPathPrefix,
+                downloadPathPrefix,
                 StringComparison.Ordinal);
     }
+
+    /// <summary>
+    /// The two assets the Windows self-update can apply in-app. Only their names are
+    /// bound to the version: SHA256SUMS has no version segment by design, and other
+    /// platforms' assets are only ever handed to the browser.
+    /// </summary>
+    private static bool IsWindowsPackageAsset(string name) =>
+        name.EndsWith(LauncherUpdatePackageSelector.WindowsInstallerSuffix, StringComparison.OrdinalIgnoreCase)
+        || name.EndsWith(LauncherUpdatePackageSelector.WindowsPortableSuffix, StringComparison.OrdinalIgnoreCase);
 
     internal static bool IsNewerVersion(string latestVersion, string currentVersion)
     {
