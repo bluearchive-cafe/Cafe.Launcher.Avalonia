@@ -9,7 +9,7 @@ using Cafe.Launcher.Avalonia.Helpers;
 
 namespace Cafe.Launcher.Avalonia.Services.GameRuntime;
 
-/// <summary>预检发现的严重度。Error 是「会挡住 Wine/Proton」的档，将来可供启动拒绝路径使用。</summary>
+/// <summary>预检发现的严重度。Error 是「会挡住 Wine/Proton」的档，触发时启动直接以 EnvironmentPrecheckFailed 拒绝。</summary>
 internal enum CompatibilityFindingSeverity
 {
     Info,
@@ -51,8 +51,9 @@ internal sealed record CompatibilityEnvironmentReport(
 /// 也不凭大小写一刀切拒绝 NTFS 上的目录。
 /// </summary>
 /// <remarks>
-/// <para>本片只做记录，不改变启动结果：预检在 <see cref="GameRuntime.LaunchAsync"/> 选中运行器后、
-/// 启动之前运行，任何失败都吞掉。报告写到数据根，由诊断导出作为条目携带。</para>
+/// <para>阻断级（Error）发现会改变启动结果：预检在 <see cref="GameRuntime.LaunchAsync"/> 选中运行器后、
+/// 启动之前运行，存在阻断级发现时启动以 <c>EnvironmentPrecheckFailed</c> 拒绝；预检自身出错
+/// 则按「没有发现」处理，不因诊断失败拒绝本可成功的启动。报告写到数据根，由诊断导出作为条目携带。</para>
 /// <para>前缀路径可能还不存在（首启），因此文件系统探针落在最近的已存在祖先目录上；无法确定时
 /// 记 null，不臆断。</para>
 /// </remarks>

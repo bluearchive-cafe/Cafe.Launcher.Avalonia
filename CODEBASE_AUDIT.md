@@ -6,60 +6,24 @@
 
 - 审计日期：2026-09-24
 - 审计基线：`f27ce001018984428f8e5ca9ae8c83ba11c861bd`（`d7f5b10` 全量审计后仅追加单适配器接缝收敛；不影响下列发现）
+- 增量复核：2026-09-24 对基线后两个依赖升级提交（Test.Sdk 18.10.1、xunit.v3 4.0.1）做了 delta 审计；Linux Arch 打包与安装器资产归组已在全量审计树内覆盖
 - 范围：文件结构、架构、可靠性、安全与供应链、依赖、测试、性能、可维护性
 - 项目画像：.NET 10 / Avalonia 12 跨平台桌面游戏启动器，含独立 Windows 自更新 helper
 - 健康度：良好；没有 Critical 或 High 发现
-- 当前开放：3 项 Medium、1 项 Low
-- 已接受风险：8 项 Low
+- 当前开放：0 项（本轮四项开放发现已全部修复并提交：AUD-ARCH-014、AUD-SEC-007、AUD-ARCH-001、AUD-MAINT-008，见 Git 历史）
+- 已接受风险：9 项 Low
 
-下一步依次是：修复便携更新回滚、绑定更新版本信任链、抽离 Shell 自更新协调器、修正文档漂移。当前没有值得优先投入的新性能问题。
+当前没有待办优先级；新的工作应从新的 delta 审计或产品需求出发，不要凭记忆重开已解决事项。
 
 ## 开放发现
 
-### AUD-ARCH-014 — 便携更新启动失败时无法回滚
-
-- 严重度：Medium
-- 置信度：98
-- 处置：Fix
-
-`src/Cafe.Launcher.Updater/UpdateApplier.cs:138-159` 在目录交换后先删除旧版本 backup，再启动新版本。`UpdateApplierPortableApplyTests.cs:13,64,68` 已明确覆盖“重启失败但 backup 不存在”的行为，因此新包缺文件、被安全软件隔离或无法启动时，用户会失去最后一个可用版本。
-
-修复应在交换前确认 staging 包含预期主程序；新版本启动成功后才删除 backup。启动失败时恢复旧目录并尝试重启旧版本。测试至少覆盖缺主程序、启动失败、目录交换失败和成功清理四条路径。
-
-### AUD-SEC-007 — 更新版本未与 GitHub release 资产绑定
-
-- 严重度：Medium
-- 置信度：90
-- 处置：Fix
-
-`src/Cafe.Launcher.Avalonia/Services/LauncherUpdateService.cs:103-127,308-350` 只验证版本格式与仓库下载前缀；`Services/Update/LauncherUpdatePackageSelector.cs:43-44` 只按资产后缀和 `SHA256SUMS` 名称选择。代理可声明高版本，却把包和校验文件同时指向本仓库的旧 release；哈希仍会通过并导致可信旧版本降级。
-
-修复应把 metadata version、下载 URL 的 release tag、包名版本和 `SHA256SUMS` 来源绑定为同一版本。表驱动测试覆盖跨 tag、跨版本文件名和合法 stable/prerelease。
-
-### AUD-ARCH-001 — ShellLifecycle 再次成为变化汇聚点
-
-- 严重度：Medium
-- 置信度：95
-- 处置：Refactor
-
-提交态的 `Features/Shell/ShellLifecycle.cs` 约 829 个非空行，同时承担启动与刷新、设置保存、资源面板切换、自更新下载与应用、跨功能订阅、模态注册和关闭编排；自更新状态机集中在约 `:403-476`。这使高风险更新恢复逻辑与窗口事件、Toast 和模态测试装配耦合。
-
-先抽出自更新协调器，以 release/version 和生命周期令牌为输入，以结果或窄事件驱动 UI 与 shutdown。先完成前两项更新修复，再做行为不变的提取；不要按行数机械拆分，也不要顺带重写现有 `ModalRegistrar` 或刷新协调器。
-
-### AUD-MAINT-008 — Linux 行为文档落后于实现
-
-- 严重度：Low
-- 置信度：98
-- 处置：Document
-
-`CompatibilityEnvironmentPrecheck.cs:12,54` 仍称阻断级发现“将来可供启动拒绝”“只做记录”，而当前实现已经返回 `EnvironmentPrecheckFailed` 并拒绝启动。`ADR-035:19,48` 仍称进程家族出现后停止轮询、只在 Starting 阶段轮询，但决策 7 和 `GameSessionMonitor.WatchRunningAsync` 已在 Running 阶段持续看护。
-
-只修正文档，不改运行行为；把旧决策明确标注为已被后续决策修订。
+（无——上一轮的四项开放发现均已修复：便携更新在新版本启动成功后才释放备份并支持恢复旧版、自更新信任链绑定版本/tag/包名、Shell 自更新状态机抽离为 `ShellSelfUpdateCoordinator`、Linux 预检与会话看护的文档漂移修正。）
 
 ## 已接受风险
 
 | ID | 当前取舍 | 重开条件 |
 | --- | --- | --- |
+| `AUD-DEP-002` | 单元测试已升 xunit.v3 4.0.1，Headless 项目经 `VersionOverride` 钉在 3.2.2，`Avalonia.Headless.XUnit` 12.1.2 尚不兼容 xUnit 4（上游 [AvaloniaUI/Avalonia#22072](https://github.com/AvaloniaUI/Avalonia/issues/22072)）；取舍已记录在 `PROJECT_CONVENTIONS.md` §12。 | 上游发布兼容版本后移除覆盖，并把程序集并行化配置迁到 xUnit 4 API。 |
 | `AUD-ARCH-007` | 系统代理指纹变化会释放旧 handler，使在途下载批次最多失败一轮；下一轮新租约可恢复，引用计数方案的并发复杂度更高。 | 出现不可恢复下载失败，或重试无法切换到新 handler。 |
 | `AUD-MAINT-002` | 官方启动器协议对比分析不入库；兼容行为由字段序、签名和版本契约测试守护。 | 需要修改协议兼容行为且现有代码、测试和捕获数据不足以重建依据。 |
 | `AUD-PERF-001` | 实际更新对约 1.09 GiB 客户端做 CRC64 自愈校验：冷读约 5.9 秒、热读约 0.9 秒；只在真实更新发生，保留内容自愈价值更高。 | 受管理客户端接近 10 GiB，按现有系数冷读将接近 54 秒。 |
@@ -72,16 +36,16 @@
 ## 已验证的工程状态
 
 - 架构仍以垂直 `Features/` 和共享 `Services/Helpers/Models` 为主；未发现新的非 Shell feature 具体类型越界。
-- Windows updater 已独立成项目，下载包与 helper 应用前均验证 SHA-256；当前缺口集中在恢复时序和版本绑定。
+- Windows updater 已独立成项目，下载包与 helper 应用前均验证 SHA-256；便携换位在新版本启动成功前保留备份、失败可恢复旧版，更新版本与 release tag/包名已绑定。
 - GitHub Actions 第三方 action 使用完整 SHA，默认权限为 `contents: read`；NuGet 使用中央版本、锁文件、locked restore 和 `NuGetAuditMode=all`。
 - 2026-09-24 的依赖查询未发现已知漏洞或弃用包；Avalonia 12.1.3 等可用更新不构成当前缺陷。
 - 下载、校验和进度回调有并发上限与回归守卫；本轮没有形成新性能发现。
 
 ## 验证边界
 
-本轮实际完成过 Debug 构建、单元测试、Headless 测试和覆盖率棘轮：单元 2178 通过、15 跳过；Headless 199 通过；手写代码行覆盖率 85.77%、分支覆盖率 92.17%。随后另一项并行任务开始修改设置与 Shell 接口，用户要求忽略其中间测试结果，因此这里不把并行工作树的最终 `verify.ps1` 状态记为已验证。
+2026-09-24 的修复序列（AUD-ARCH-014 → AUD-SEC-007 → AUD-ARCH-001 → AUD-MAINT-008）每个阶段都在其提交前实测：前三个功能阶段各跑过全量 `test.ps1`（单元 2176→2185 通过、15 跳过，Headless 199 通过），文档阶段仅改注释与 ADR 文本、由编译守卫。此前全量审计轮（基线内容）完成过 Debug 构建、覆盖率棘轮（手写代码行 85.77%、分支 92.17%）；覆盖率棘轮未在修复序列后重跑。
 
-Linux/Proton 真实运行和 Windows 自更新启动握手没有在本轮重新做实机实验；相关结论来自源码、现有测试、CI 契约和已记录的运行证据。
+Linux/Proton 真实运行和 Windows 自更新启动握手没有做实机实验：便携换位恢复路径由真实目录集成测试覆盖（`UpdateApplierPortableApplyTests`），信任链绑定由表驱动测试覆盖，但 helper 在真实杀软/UAC 环境下的行为结论仍来自源码与既有测试。
 
 ## 维护规则
 
