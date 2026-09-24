@@ -12,7 +12,10 @@ namespace Cafe.Launcher.Updater;
 /// Applies a verified launcher update once the parent process has exited. Installer
 /// builds hand off to the Inno setup executable (elevating); portable builds swap the
 /// installation directory with the extracted package, rolling back if the swap fails.
-/// Every failure names itself in the log and leaves the previous version in place.
+/// The portable swap keeps the previous version until the new one has actually started:
+/// a package without the launcher executable is rejected before the swap, and a new
+/// version that fails to start is replaced by the restored previous version. Every
+/// failure names itself in the log and leaves a runnable launcher behind.
 /// </summary>
 public static class UpdateApplier
 {
@@ -128,6 +131,15 @@ public static class UpdateApplier
             return 6;
         }
 
+        if (!File.Exists(UpdateApplyPlan.ExecutablePath(staging, arguments.ExecutableName)))
+        {
+            UpdateLog.Write(
+                arguments,
+                $"The package does not contain '{arguments.ExecutableName}'; keeping the current installation.");
+            TryDeleteDirectory(staging);
+            return 10;
+        }
+
         try
         {
             if (Directory.Exists(backup))
@@ -140,6 +152,7 @@ public static class UpdateApplier
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             UpdateLog.Write(arguments, $"Failed to move the current installation aside: {exception.Message}");
+            TryDeleteDirectory(staging);
             return 7;
         }
 
@@ -154,9 +167,67 @@ public static class UpdateApplier
             return 8;
         }
 
-        TryDeleteDirectory(backup);
-        LogApplyCompleted(arguments, stopwatch);
-        return LaunchApplication(arguments) ? 0 : 9;
+        if (LaunchApplication(arguments))
+        {
+            TryDeleteDirectory(backup);
+            LogApplyCompleted(arguments, stopwatch);
+            return 0;
+        }
+
+        UpdateLog.Write(arguments, "The new version did not start; restoring the previous version.");
+        RestorePreviousVersion(arguments, staging, backup);
+        return 9;
+    }
+
+    /// <summary>
+    /// Puts the previous version back after the new one failed to start. The new version
+    /// is moved to the now-free staging path (deleted when that rename is refused), the
+    /// backup returns to the installation path, and the old launcher is started best
+    /// effort. The backup directory is only consumed once it has been restored, so a
+    /// failure here still leaves the old version on disk under the backup path.
+    /// </summary>
+    private static void RestorePreviousVersion(UpdaterArguments arguments, string staging, string backup)
+    {
+        try
+        {
+            if (!Directory.Exists(backup))
+            {
+                UpdateLog.Write(arguments, "No backup directory exists to restore; keeping the new version in place.");
+                return;
+            }
+
+            if (Directory.Exists(arguments.InstallDirectory))
+            {
+                try
+                {
+                    Directory.Move(arguments.InstallDirectory, staging);
+                }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+                {
+                    UpdateLog.Write(
+                        arguments,
+                        $"Could not move the new version aside ({exception.Message}); deleting it instead.");
+                    Directory.Delete(arguments.InstallDirectory, recursive: true);
+                }
+            }
+
+            Directory.Move(backup, arguments.InstallDirectory);
+            UpdateLog.Write(arguments, "Restored the previous version.");
+            TryDeleteDirectory(staging);
+
+            if (!LaunchApplication(arguments))
+            {
+                UpdateLog.Write(
+                    arguments,
+                    "The previous version did not start either; start it manually from the installation directory.");
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            UpdateLog.Write(
+                arguments,
+                $"Restoring the previous version failed: {exception.Message}. The backup is kept at '{backup}'.");
+        }
     }
 
     /// <summary>

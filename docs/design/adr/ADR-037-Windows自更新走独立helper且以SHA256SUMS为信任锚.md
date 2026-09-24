@@ -22,7 +22,7 @@ Windows 的现实约束：
 2. **信任锚是同 release 的 `SHA256SUMS`**。下载包完成后计算 SHA-256 与之比对，不符即中止、不执行。选择逻辑把 `SHA256SUMS` 资产当作自更新的必要项：缺失或未命中目标文件名时退化为「打开浏览器下载页」，绝不无校验执行。
 3. **目标资产钉死**：安装版（安装目录存在 `.cafe-launcher-install` 标记，Inno 写入）取 `_setup.exe`；便携版取 `_win-x64.zip`。其它平台或非 x64 一律走既有浏览器跳转。
 4. **安装版通过 Inno 提权**：helper 以 `runas` 启动 `setup.exe /SILENT /SUPPRESSMSGBOXES /NORESTART`。UAC 弹窗是用户主动触发更新的一部分，不做静默提权。因为主进程已先退出，安装器的 `AppMutex` 与 `CloseApplications=no` 契约不冲突；`skipifsilent` 意味着安装器不自行拉起，helper 在安装器结束后显式启动应用。
-5. **便携版整目录换位**：helper 解压到同卷 staging，旧目录改名备份，staging 移入原位，尽力删除备份；删除失败留给下次启动清理。失败则回滚到旧目录。
+5. **便携版整目录换位，新版本跑起来之前不删备份**：helper 解压到同卷 staging，先确认包内有预期主程序（缺主程序在换位前直接拒绝），旧目录改名备份，staging 移入原位；新版本启动成功才尽力删除备份（删除失败留给下次启动清理）。换位失败回滚到旧目录；新版本启动失败则把备份移回原位恢复旧版本，并尽力重启旧版本。
 6. **helper 二次校验**：启动参数携带期望 SHA-256，helper 在解压/执行前重新校验包，作为纵深防御。
 7. **失败保留原版本并记录**：任何一步失败写 `%LOCALAPPDATA%\Cafe Launcher\update-apply.log`，用户主动更新失败不改变仍可用的现版本。
 
