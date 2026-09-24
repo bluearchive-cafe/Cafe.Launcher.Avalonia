@@ -10,33 +10,7 @@ namespace Cafe.Launcher.Avalonia.Services;
 /// to the saved settings goes through <see cref="ISavedSettingsWriter"/>, which persists and then
 /// applies the persisted value back here so the draft never disagrees with disk.
 /// </summary>
-public interface ISettingsEditor : INotifyPropertyChanged
-{
-    LauncherSettings Current { get; }
-
-    /// <summary>
-    /// Whether <see cref="Current"/> differs from the last saved snapshot — the state identity
-    /// defined by <see cref="LauncherSettings.HasSameSettingsState"/>. Recomputed whenever a field
-    /// on <see cref="Current"/> changes; the settings page's save button tracks nothing else.
-    /// </summary>
-    bool IsDirty { get; }
-
-    /// <summary>
-    /// Fires for per-field changes on the <see cref="Current"/> settings object.
-    /// Distinct from <see cref="INotifyPropertyChanged.PropertyChanged"/>, which fires
-    /// for editor-level state changes (<see cref="Current"/> reference replacement,
-    /// <see cref="IsDirty"/> transitions).
-    /// </summary>
-    event PropertyChangedEventHandler? CurrentPropertyChanged;
-
-    LauncherSettings GetSnapshot();
-    LauncherSettings GetSavedSnapshot();
-    void ApplySnapshot(LauncherSettings settings);
-    void Commit(Action<LauncherSettings> apply);
-    void Discard();
-}
-
-public sealed class SettingsEditor : ISettingsEditor
+public sealed class SettingsEditor : INotifyPropertyChanged
 {
     private LauncherSettings current;
     private LauncherSettings snapshot;
@@ -52,9 +26,21 @@ public sealed class SettingsEditor : ISettingsEditor
 
     public LauncherSettings Current => current;
 
+    /// <summary>
+    /// Whether <see cref="Current"/> differs from the last saved snapshot — the state identity
+    /// defined by <see cref="LauncherSettings.HasSameSettingsState"/>. Recomputed whenever a field
+    /// on <see cref="Current"/> changes; the settings page's save button tracks nothing else.
+    /// </summary>
     public bool IsDirty => isDirty;
 
     public event PropertyChangedEventHandler? PropertyChanged;
+
+    /// <summary>
+    /// Fires for per-field changes on the <see cref="Current"/> settings object.
+    /// Distinct from <see cref="INotifyPropertyChanged.PropertyChanged"/>, which fires
+    /// for editor-level state changes (<see cref="Current"/> reference replacement,
+    /// <see cref="IsDirty"/> transitions).
+    /// </summary>
     public event PropertyChangedEventHandler? CurrentPropertyChanged;
 
     public LauncherSettings GetSnapshot() => current.DeepClone();

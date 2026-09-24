@@ -22,7 +22,7 @@ namespace Cafe.Launcher.Avalonia.Features.Shell;
 /// resource-panel switching, and every cross-feature subscription.
 /// The window (MainWindowViewModel) only presents shell state.
 /// </summary>
-public sealed class ShellLifecycle : IShellRuntime
+public sealed class ShellLifecycle : IDisposable
 {
     /// <summary>Raised when shell presentation state changes.</summary>
     public event Action? PresentationChanged;

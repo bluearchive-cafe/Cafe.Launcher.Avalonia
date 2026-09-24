@@ -28,7 +28,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
     private readonly LauncherUpdateService launcherUpdateService;
     private readonly LauncherSelfUpdateService launcherSelfUpdateService;
     private readonly DialogsViewModel dialogs;
-    private readonly ISettingsEditor editor;
+    private readonly SettingsEditor editor;
     private readonly UnifiedLogger unifiedLogger;
     private readonly GameInstallationPath gameInstallationPath;
     private readonly IErrorHandlingService errorHandling;
@@ -57,7 +57,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
     /// The settings state editor. XAML binds to <c>Editor.Current.*</c> for
     /// setting values, and to ViewModel properties for option collections and UI state.
     /// </summary>
-    public ISettingsEditor Editor => editor;
+    public SettingsEditor Editor => editor;
     public SettingsOptionsViewModel Options { get; }
     public SettingsAppearanceViewModel Appearance { get; }
 
@@ -98,14 +98,14 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
 
     private void OnEditorPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(ISettingsEditor.IsDirty))
+        if (e.PropertyName == nameof(SettingsEditor.IsDirty))
         {
             OnPropertyChanged(nameof(IsSettingsDirty));
             OnPropertyChanged(nameof(CanSaveSettings));
             SaveSettingsCommand.NotifyCanExecuteChanged();
         }
 
-        if (e.PropertyName == nameof(ISettingsEditor.Current))
+        if (e.PropertyName == nameof(SettingsEditor.Current))
         {
             OnPropertyChanged(nameof(IsGameRuntimeRunnerPathEnabled));
         }

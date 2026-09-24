@@ -204,4 +204,4 @@ cat /proc/<pid>/maps | rg -i 'BlueArchive|xldr|\.exe'
 
 - 每次代码落地后跑 `.\verify.ps1`（Debug 构建 + 覆盖率 + Release 构建），XAML/样式改动加 `UiStyleContractTests`，资源改动跑 `.\scripts\Test-LocalizationContract.ps1`。
 - P0-B 落地需新 ADR（已写 [ADR-036](adr/ADR-036-Linux游戏进程按启动器所有权标记识别.md)）；P0-A 的验证记录已填（§2.1 指向 [记录](linux-p0a-verification-2026-09-22.md)），`README.md` 的平台支持描述已同步。
-- 本文是**规划视图**；候选与裁定的唯一查询入口仍是 [`candidates-ledger-2026-09.md`](candidates-ledger-2026-09.md)。若这些条目要进入裁定流程，需按该表 §5 在所有者文档立案后加行。
+- 本文只记录 Linux 支持计划；经过验证、仍需行动或明确接受的仓库级风险统一登记到根目录 [`CODEBASE_AUDIT.md`](../../CODEBASE_AUDIT.md)。
