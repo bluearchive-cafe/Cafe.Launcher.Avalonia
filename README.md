@@ -18,9 +18,6 @@
 > [!IMPORTANT]
 > Cafe Launcher 是社区维护的第三方项目，与 Nexon、Nexon Games、Yostar 及 Blue Archive 官方无隶属或合作关系。使用前请阅读[隐私政策](./PRIVACY.md)。
 
-> [!WARNING]
-> 由于开发者个人原因，项目无限期停止更新。
-
 ![Cafe Launcher 主视觉](./docs/assets/key-visual.webp)
 
 ## 能做什么
