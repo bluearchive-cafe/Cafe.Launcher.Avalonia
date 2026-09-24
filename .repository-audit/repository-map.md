@@ -43,7 +43,7 @@
 ### Packaging / installer
 
 - `scripts/Build-Distribution.ps1`、`New-WindowsInstaller.ps1`、`New-ThirdPartyNotices.ps1`、`Test-LocalizationContract.ps1`、`Generate-*.ps1`
-- `installer/Cafe.Launcher.Avalonia.iss` — 机器级安装（`PrivilegesRequired=admin`），卸载器有安装归属标记 + NSIS 遗留注册表桥 basename/目录双重校验
+- `installer/windows/Cafe.Launcher.Avalonia.iss` — 机器级安装（`PrivilegesRequired=admin`），卸载器有安装归属标记 + NSIS 遗留注册表桥 basename/目录双重校验
 
 ### Documentation / ADRs
 

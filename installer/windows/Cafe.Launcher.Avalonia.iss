@@ -50,7 +50,7 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 UninstallDisplayName=Cafe Launcher
 UninstallDisplayIcon={app}\{#EXECUTABLE_NAME}
-SetupIconFile=..\src\Cafe.Launcher.Avalonia\Assets\app-icon.ico
+SetupIconFile=..\..\src\Cafe.Launcher.Avalonia\Assets\app-icon.ico
 Compression=lzma2
 SolidCompression=yes
 OutputBaseFilename=Cafe.Launcher.Avalonia_setup
@@ -75,11 +75,11 @@ UsedUserAreasWarning=no
 
 [Languages]
 ; Per-language custom messages (DeleteDataQuestion, InvalidInstallLocation,
-; PreviousUninstallFailed) live in installer/lang/CustomMessages.*.isl:
+; PreviousUninstallFailed) live in installer/windows/lang/CustomMessages.*.isl:
 ; language-independent message text in the script would apply globally (the
 ; last entry wins for every language), so localized messages are supplied
 ; through each language's translation files instead.
-; ChineseSimplified.isl is vendored in installer/lang/ so compilation does not
+; ChineseSimplified.isl is vendored in installer/windows/lang/ so compilation does not
 ; depend on the translations bundled with a particular Inno Setup release.
 Name: "english"; MessagesFile: "compiler:Default.isl, lang\CustomMessages.en.isl"
 Name: "chinesesimplified"; MessagesFile: "lang\ChineseSimplified.isl, lang\CustomMessages.zh.isl"
