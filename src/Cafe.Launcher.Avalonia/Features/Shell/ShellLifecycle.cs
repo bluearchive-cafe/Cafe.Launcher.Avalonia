@@ -19,7 +19,9 @@ namespace Cafe.Launcher.Avalonia.Features.Shell;
 
 /// <summary>
 /// Owns shell startup, refresh, settings-save, first-run wizard completion,
-/// resource-panel switching, and every cross-feature subscription.
+/// resource-panel switching, and every cross-feature subscription, and maps the
+/// in-app self-update state machine (<see cref="ShellSelfUpdateCoordinator"/>) onto
+/// dialogs, toasts, and shutdown.
 /// The window (MainWindowViewModel) only presents shell state.
 /// </summary>
 public sealed class ShellLifecycle : IDisposable
@@ -81,8 +83,7 @@ public sealed class ShellLifecycle : IDisposable
     private bool settingsSnapshotInitialized;
     private LauncherStatusSnapshot? currentSnapshot;
     private bool isWired;
-    private LauncherSelfUpdatePreparation? pendingUpdatePreparation;
-    private CancellationTokenSource? selfUpdateCts;
+    private readonly ShellSelfUpdateCoordinator selfUpdateCoordinator;
 
     /// <summary>Gets the active startup update check so tests can coordinate without timing delays.</summary>
     public Task PendingStartupUpdateCheck => refreshCoordinator.PendingAfterLoadWork;
@@ -187,6 +188,13 @@ public sealed class ShellLifecycle : IDisposable
         refreshCoordinator = new ShellRefreshCoordinator(
             LoadHostStateAsync,
             AfterLoadAsync);
+        selfUpdateCoordinator = new ShellSelfUpdateCoordinator(
+            launcherSelfUpdateService,
+            launcherUpdateApplier,
+            refreshCoordinator.LifetimeToken);
+        selfUpdateCoordinator.PreparationStarted += OnSelfUpdatePreparationStarted;
+        selfUpdateCoordinator.ProgressReported += OnSelfUpdateProgressReported;
+        selfUpdateCoordinator.Finished += OnSelfUpdateFinished;
         startup = new ShellStartup(
             RefreshAsync,
             ApplyMotionSettings,
@@ -400,72 +408,55 @@ public sealed class ShellLifecycle : IDisposable
     private void OnUpdateAvailableConfirmed(string url) => windowChrome.OpenExternalUrl(url);
 
     private void OnSelfUpdateStartRequested(string version, IReadOnlyList<ReleaseFile> files) =>
-        _ = RunSelfUpdateAsync(version, files);
+        selfUpdateCoordinator.Begin(version, files);
+
+    private void OnSelfUpdatePreparationStarted() => dialogs.BeginUpdateApply();
+
+    private void OnSelfUpdateProgressReported(LauncherUpdateProgress progress) =>
+        dialogs.ReportUpdateProgress(progress.Fraction, progress.BytesPerSecond);
+
+    /// <summary>Maps one coordinator outcome onto the update dialog, toast, and error pipeline.</summary>
+    private void OnSelfUpdateFinished(ShellSelfUpdateOutcome outcome, Exception? exception)
+    {
+        switch (outcome)
+        {
+            case ShellSelfUpdateOutcome.Ready:
+                dialogs.MarkUpdateReady();
+                break;
+            case ShellSelfUpdateOutcome.DownloadFailed:
+                dialogs.MarkUpdateFailed();
+                toastService.ShowError(localizer.T(LocalizationKeys.LauncherUpdateDownloadFailed));
+                break;
+            case ShellSelfUpdateOutcome.Cancelled:
+                dialogs.ResetUpdateApply();
+                break;
+            case ShellSelfUpdateOutcome.UnexpectedError:
+                dialogs.MarkUpdateFailed();
+                _ = errorHandling.HandleErrorAsync("Launcher self-update failed.", exception!,
+                    new ErrorHandlingOptions { ToastMessage = localizer.T(LocalizationKeys.LauncherUpdateDownloadFailed) });
+                break;
+        }
+    }
 
     private void OnApplyUpdateRequested()
     {
-        var preparation = pendingUpdatePreparation;
-        if (preparation is null || preparation.Status != LauncherSelfUpdatePreparationStatus.Ready)
+        // 与下载失败不同：没有就绪包时的“应用”是无人可应的按钮事件，保持沉默；
+        // helper 拒收才是用户可见的失败。
+        switch (selfUpdateCoordinator.TryApplyPending())
         {
-            return;
-        }
-
-        if (!launcherUpdateApplier.TryStartApply(preparation))
-        {
-            dialogs.MarkUpdateFailed();
-            toastService.ShowError(localizer.T(LocalizationKeys.LauncherUpdateApplyFailed));
-            return;
+            case ShellSelfUpdateApplyResult.NotReady:
+                return;
+            case ShellSelfUpdateApplyResult.StartFailed:
+                dialogs.MarkUpdateFailed();
+                toastService.ShowError(localizer.T(LocalizationKeys.LauncherUpdateApplyFailed));
+                return;
         }
 
         // 主进程必须退出，helper 才能替换文件；走正常关窗路径保存窗口与设置。
         windowChrome.RequestShutdown();
     }
 
-    private void OnCancelUpdateRequested() => selfUpdateCts?.Cancel();
-
-    /// <summary>
-    /// Downloads and verifies the Windows in-app update, then flips the dialog to
-    /// "restart to apply". Cancellation returns the dialog to its neutral state;
-    /// verification and preparation failures offer the release page and report through a toast.
-    /// </summary>
-    private async Task RunSelfUpdateAsync(string version, IReadOnlyList<ReleaseFile> files)
-    {
-        pendingUpdatePreparation = null;
-        selfUpdateCts?.Dispose();
-        selfUpdateCts = CancellationTokenSource.CreateLinkedTokenSource(refreshCoordinator.LifetimeToken);
-        var token = selfUpdateCts.Token;
-        dialogs.BeginUpdateApply();
-        try
-        {
-            var progress = new Progress<LauncherUpdateProgress>(
-                update => dialogs.ReportUpdateProgress(update.Fraction, update.BytesPerSecond));
-            var preparation = await launcherSelfUpdateService.PrepareAsync(files, version, progress, token);
-            if (token.IsCancellationRequested)
-            {
-                return;
-            }
-
-            if (preparation.Status == LauncherSelfUpdatePreparationStatus.Ready)
-            {
-                pendingUpdatePreparation = preparation;
-                dialogs.MarkUpdateReady();
-                return;
-            }
-
-            dialogs.MarkUpdateFailed();
-            toastService.ShowError(localizer.T(LocalizationKeys.LauncherUpdateDownloadFailed));
-        }
-        catch (OperationCanceledException) when (token.IsCancellationRequested)
-        {
-            dialogs.ResetUpdateApply();
-        }
-        catch (Exception exception)
-        {
-            dialogs.MarkUpdateFailed();
-            await errorHandling.HandleErrorAsync("Launcher self-update failed.", exception,
-                new ErrorHandlingOptions { ToastMessage = localizer.T(LocalizationKeys.LauncherUpdateDownloadFailed) });
-        }
-    }
+    private void OnCancelUpdateRequested() => selfUpdateCoordinator.CancelPreparation();
 
     /// <summary>Refreshes shell state after a game operation and records resume behavior.</summary>
     public async Task HandleOperationsRefreshRequestedAsync(GameOperationsRefreshMode mode)
@@ -747,7 +738,7 @@ public sealed class ShellLifecycle : IDisposable
 
         Task pendingRefreshes = refreshCoordinator.BeginShutdown();
         refreshCoordinator.CancelLifetime();
-        selfUpdateCts?.Cancel();
+        selfUpdateCoordinator.Dispose();
         Unwire();
         operations.StopOperation(GameOperationStopIntent.ProcessExit);
         if (ownsPresentationCollaborators)
