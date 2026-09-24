@@ -264,10 +264,12 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 | Serilog | 4.4.0 | Logging pipeline |
 | Serilog.Sinks.Async | 2.1.0 | 异步日志 sink |
 | Serilog.Sinks.File | 7.0.0 | 文件日志 sink |
-| xunit.v3 | 3.2.2 | Test framework |
+| xunit.v3 | 4.0.1 | Test framework |
 | xunit.runner.visualstudio | 3.1.5 | xUnit VS 适配器 |
 | Microsoft.NET.Test.Sdk | 18.10.1 | 测试宿主 |
 | coverlet.msbuild | 10.0.1 | Code coverage |
 | Inno Setup | 7.0+ | Windows installer（脚本强制最低 7.0，CI 安装 7.1.0） |
 
 > 版本以 `Directory.Packages.props` 中声明的为准；升级依赖时同步更新本表（受 `InstallerContractTests` 守护），并再生 `THIRD-PARTY-NOTICES.md` 与 lock 文件（流程见 AGENTS.md「Dependency upgrades」）。
+
+`Cafe.Launcher.Avalonia.HeadlessTests` 暂时通过 `VersionOverride` 固定 `xunit.v3` 3.2.2；`Avalonia.Headless.XUnit` 12.1.2 尚不兼容 xUnit 4（[AvaloniaUI/Avalonia#22072](https://github.com/AvaloniaUI/Avalonia/issues/22072)）。上游修复后应移除该覆盖，并将程序集并行化配置迁移到 xUnit 4 API。

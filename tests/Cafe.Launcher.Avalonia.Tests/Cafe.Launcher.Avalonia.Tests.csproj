@@ -18,6 +18,12 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <!--
+      xunit.v3 4.x defaults to Microsoft Testing Platform v2. Keep the VSTest
+      adapter path because the repository scripts use its filtering, TRX, hang
+      detection, and Coverlet MSBuild contracts.
+    -->
+    <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
+    <!--
       xUnit1051 要求所有带可选 CancellationToken 的调用（含全部文件 IO）显式传
       TestContext.Current.CancellationToken，全项目约 1100+ 处，故按项目整体抑制。
       悬挂防护不由该规则承担，而是两层（AUD-TEST-014）：
