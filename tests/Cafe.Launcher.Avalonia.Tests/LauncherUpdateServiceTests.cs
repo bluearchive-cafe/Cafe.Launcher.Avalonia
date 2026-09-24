@@ -99,7 +99,7 @@ public sealed class LauncherUpdateServiceTests
                 "files": [
                   {
                     "name": "Cafe.Launcher.zip",
-                    "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v1.0.0/Cafe.Launcher.zip",
+                    "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v{{currentVersion}}/Cafe.Launcher.zip",
                     "sha512": "abc",
                     "size": 100
                   }
@@ -550,6 +550,90 @@ public sealed class LauncherUpdateServiceTests
     public void IsNewerVersion_WhenBothPrereleases_Beta11VsBeta2_ReturnsTrue()
     {
         Assert.True(LauncherUpdateService.IsNewerVersion("1.0.0-beta.11", "1.0.0-beta.2"));
+    }
+
+    // ── 自更新信任链绑定：声明版本、下载 tag 与包名必须是同一版本 ──────────
+
+    [Theory]
+    // 跨 tag：声明新版本，包与清单却指向旧 release 的资产。
+    [InlineData("1.2.0", "v1.1.0", "Cafe.Launcher.Avalonia_v1.1.0_win-x64.zip")]
+    // 跨版本文件名：tag 对，包名仍是旧版本。
+    [InlineData("1.2.0", "v1.2.0", "Cafe.Launcher.Avalonia_v1.1.0_win-x64.zip")]
+    // 前缀混淆：beta.11 的资产不能冒充 beta.1（纯子串匹配会放过这一例）。
+    [InlineData("1.2.0-beta.1", "v1.2.0-beta.1", "Cafe.Launcher.Avalonia_v1.2.0-beta.11_win-x64.zip")]
+    // 稳定版 tag 不能携带预发布命名的包。
+    [InlineData("1.2.0", "v1.2.0", "Cafe.Launcher.Avalonia_v1.2.0-beta.1_win-x64.zip")]
+    public async Task CheckForUpdateAsync_WhenPackageTrustChainIsMismatched_ReturnsFailure(
+        string declaredVersion,
+        string downloadTag,
+        string packageName)
+    {
+        var transport = CreateReleasesTransport(
+            $$"""
+            [
+              {
+                "version": "{{declaredVersion}}",
+                "files": [
+                  {
+                    "name": "{{packageName}}",
+                    "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/{{downloadTag}}/{{packageName}}",
+                    "size": 100
+                  },
+                  {
+                    "name": "SHA256SUMS",
+                    "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/{{downloadTag}}/SHA256SUMS",
+                    "size": 100
+                  }
+                ],
+                "releaseDate": "2026-06-15T00:00:00Z"
+              }
+            ]
+            """);
+        var service = new LauncherUpdateService(transport, currentVersionOverride: "1.0.0");
+
+        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
+
+        Assert.False(result.IsSuccessful);
+        Assert.False(result.IsUpdateAvailable);
+    }
+
+    [Theory]
+    // 合法 stable：安装版包名与 SHA256SUMS 都在同一 tag 下。
+    [InlineData("1.2.0", "Cafe.Launcher.Avalonia_v1.2.0_setup.exe")]
+    // 合法 prerelease：便携包名与 SHA256SUMS 都在同一 tag 下。
+    [InlineData("1.2.0-beta.1", "Cafe.Launcher.Avalonia_v1.2.0-beta.1_win-x64.zip")]
+    public async Task CheckForUpdateAsync_WhenPackageTrustChainIsBound_Succeeds(
+        string version,
+        string packageName)
+    {
+        var transport = CreateReleasesTransport(
+            $$"""
+            [
+              {
+                "version": "{{version}}",
+                "files": [
+                  {
+                    "name": "{{packageName}}",
+                    "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v{{version}}/{{packageName}}",
+                    "size": 100
+                  },
+                  {
+                    "name": "SHA256SUMS",
+                    "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v{{version}}/SHA256SUMS",
+                    "size": 100
+                  }
+                ],
+                "releaseDate": "2026-06-15T00:00:00Z"
+              }
+            ]
+            """);
+        var service = new LauncherUpdateService(transport, currentVersionOverride: "1.0.0");
+
+        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
+
+        Assert.True(result.IsSuccessful);
+        Assert.True(result.IsUpdateAvailable);
+        Assert.Equal(version, result.LatestVersion);
     }
 
     /// <summary>
