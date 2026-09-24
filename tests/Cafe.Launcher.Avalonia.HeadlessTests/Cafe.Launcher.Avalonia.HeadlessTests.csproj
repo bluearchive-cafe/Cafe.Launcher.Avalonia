@@ -29,7 +29,8 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
-    <PackageReference Include="xunit.v3" />
+    <!-- Avalonia.Headless.XUnit 12.1.2 is not compatible with xunit.v3 4.x yet. -->
+    <PackageReference Include="xunit.v3" VersionOverride="3.2.2" />
     <PackageReference Include="xunit.runner.visualstudio" />
   </ItemGroup>
 
