@@ -266,7 +266,7 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 | Serilog.Sinks.File | 7.0.0 | 文件日志 sink |
 | xunit.v3 | 4.0.1 | Test framework |
 | xunit.runner.visualstudio | 3.1.5 | xUnit VS 适配器 |
-| Microsoft.NET.Test.Sdk | 18.10.0 | 测试宿主 |
+| Microsoft.NET.Test.Sdk | 18.10.1 | 测试宿主 |
 | coverlet.msbuild | 10.0.1 | Code coverage |
 | Inno Setup | 7.0+ | Windows installer（脚本强制最低 7.0，CI 安装 7.1.0） |
 
