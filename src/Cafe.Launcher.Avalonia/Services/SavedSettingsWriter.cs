@@ -39,14 +39,14 @@ public interface ISavedSettingsWriter
 
 /// <summary>
 /// <see cref="ISavedSettingsWriter"/> 的实现：<see cref="LauncherSettingsService"/> 负责
-/// 盘上的归一化写入，<see cref="ISettingsEditor"/> 负责草稿与快照；本类只维护二者的一致性。
+/// 盘上的归一化写入，<see cref="SettingsEditor"/> 负责草稿与快照；本类只维护二者的一致性。
 /// </summary>
 public sealed class SavedSettingsWriter : ISavedSettingsWriter
 {
     private readonly LauncherSettingsService settingsService;
-    private readonly ISettingsEditor editor;
+    private readonly SettingsEditor editor;
 
-    public SavedSettingsWriter(LauncherSettingsService settingsService, ISettingsEditor editor)
+    public SavedSettingsWriter(LauncherSettingsService settingsService, SettingsEditor editor)
     {
         this.settingsService = settingsService;
         this.editor = editor;
@@ -84,7 +84,7 @@ public sealed class SavedSettingsWriter : ISavedSettingsWriter
     }
 
     /// <summary>
-    /// 收口编辑器必须落在 UI 线程：<see cref="ISettingsEditor.PropertyChanged"/> 直接驱动绑定与
+    /// 收口编辑器必须落在 UI 线程：<see cref="SettingsEditor.PropertyChanged"/> 直接驱动绑定与
     /// 命令可用性（按钮在处理 CanExecuteChanged 时会读 Button.Command），而落盘的续体在线程池
     /// 线程上，就地收口会在绑定层抛出 VerifyAccess。编辑器是 UI 可观察状态，与调用方线程无关。
     /// </summary>

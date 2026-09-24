@@ -72,14 +72,14 @@ public sealed class SavedSettingsWriterThreadingTests
             directory = TestDirectory.Create(TestDirectoryCleanup.BestEffort);
             provider = HeadlessTestHost.CreateServiceProvider(directory);
             Writer = provider.GetRequiredService<ISavedSettingsWriter>();
-            Editor = provider.GetRequiredService<ISettingsEditor>();
+            Editor = provider.GetRequiredService<SettingsEditor>();
             Editor.PropertyChanged += (_, eventArgs) => notifications.Add(
                 (eventArgs.PropertyName ?? "", Dispatcher.UIThread.CheckAccess()));
         }
 
         public ISavedSettingsWriter Writer { get; }
 
-        public ISettingsEditor Editor { get; }
+        public SettingsEditor Editor { get; }
 
         public void AssertSnapshotAppliedOnUiThread()
         {
@@ -90,7 +90,7 @@ public sealed class SavedSettingsWriterThreadingTests
             // 没有 Current 通知说明压根没走到收口，断言不能因为「没有通知」而空过。
             Assert.Contains(
                 notifications,
-                entry => entry.Property == nameof(ISettingsEditor.Current));
+                entry => entry.Property == nameof(SettingsEditor.Current));
             Assert.All(
                 notifications,
                 entry => Assert.True(

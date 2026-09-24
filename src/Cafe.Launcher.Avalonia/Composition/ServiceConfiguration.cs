@@ -91,16 +91,16 @@ public static class ServiceConfiguration
         {
             // HTTP/2 偏好与代理模式同源：都按使用时机读编辑器的已保存快照，
             // 于是调用方不必「记得推」，也不会有租约用到过期的开关（ADR-028）。
-            var settingsEditor = sp.GetRequiredService<ISettingsEditor>();
+            var settingsEditor = sp.GetRequiredService<SettingsEditor>();
             return new HttpClientFactory(
                 sp.GetRequiredService<ProxySettingsService>(),
                 () => settingsEditor.GetSavedSnapshot().EnableHttp2);
         });
         services.AddSingleton<IRemoteHttpTransport>(sp =>
         {
-            // ISettingsEditor 是无依赖单例，在传输构造时一次解析并闭包引用；
+            // SettingsEditor 是无依赖单例，在传输构造时一次解析并闭包引用；
             // 代理模式解析不再每次走服务定位。
-            var settingsEditor = sp.GetRequiredService<ISettingsEditor>();
+            var settingsEditor = sp.GetRequiredService<SettingsEditor>();
             return new RemoteHttpTransport(
                 sp.GetRequiredService<HttpClientFactory>(),
                 sp.GetRequiredService<RemoteHttpUrlValidator>(),
@@ -128,14 +128,14 @@ public static class ServiceConfiguration
             dataRoot,
             sp.GetRequiredService<LocalDiagnostics>()));
         services.AddSingleton<SystemAnimationSettingsProvider>();
-        services.AddSingleton<ISettingsEditor, SettingsEditor>();
+        services.AddSingleton<SettingsEditor>();
         // 已保存设置的唯一写入方：依赖编辑器与设置服务，二者都登记在它之前。
         services.AddSingleton<ISavedSettingsWriter, SavedSettingsWriter>();
         services.AddSingleton<SettingsOptionsViewModel>();
         // 主题应用器登记在设置外观 VM 之前：容器按登记逆序释放，它的退订要晚于消费它的 VM。
         services.AddSingleton<ThemeApplier>();
         services.AddSingleton(sp => new SettingsAppearanceViewModel(
-            sp.GetRequiredService<ISettingsEditor>(),
+            sp.GetRequiredService<SettingsEditor>(),
             sp.GetRequiredService<ThemeApplier>(),
             sp.GetRequiredService<LocalDiagnostics>(),
             Program.ShowHiddenSettings));
@@ -230,7 +230,7 @@ public static class ServiceConfiguration
         services.AddSingleton<WindowChromeViewModel>();
         services.AddSingleton<ModalHostViewModel>();
         services.AddSingleton<ShellPresentationFamily>();
-        services.AddSingleton<IShellRuntime, ShellLifecycle>();
+        services.AddSingleton<ShellLifecycle>();
         services.AddSingleton<MainWindowViewModel>();
         services.AddSingleton<ISystemTrayActions, SystemTrayActions>();
 

@@ -17,7 +17,7 @@ namespace Cafe.Launcher.Avalonia.ViewModels;
 
 public partial class MainWindowViewModel : ViewModelBase, IDisposable
 {
-    private readonly IShellRuntime runtime;
+    private readonly ShellLifecycle runtime;
     private bool disposed;
 
     [ObservableProperty]
@@ -62,7 +62,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     public MainWindowViewModel(
         ShellPresentationFamily family,
-        IShellRuntime runtime)
+        ShellLifecycle runtime)
     {
         this.runtime = runtime;
         Shell = family.Shell;
@@ -121,7 +121,10 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     public Task InitializeAsync(CancellationToken cancellationToken = default) =>
         runtime.InitializeAsync(cancellationToken);
 
-    /// <inheritdoc cref="IShellRuntime.ApplyFirstLaunchMotionPreference" />
+    /// <summary>
+    /// 首启分支不执行完整初始化（快照由向导驱动后再加载）；动效偏好需在向导显示前
+    /// 按默认配置先行应用，否则首启向导全程处于降动效。
+    /// </summary>
     public void ApplyFirstLaunchMotionPreference() =>
         runtime.ApplyFirstLaunchMotionPreference();
 

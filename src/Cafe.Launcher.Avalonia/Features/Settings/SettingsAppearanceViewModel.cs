@@ -23,7 +23,7 @@ namespace Cafe.Launcher.Avalonia.Features.Settings;
 
 public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
 {
-    private readonly ISettingsEditor editor;
+    private readonly SettingsEditor editor;
     private readonly ThemeApplier themeApplier;
     private readonly IPlatformSettings? platformSettings;
     private readonly LocalDiagnostics? diagnostics;
@@ -33,7 +33,7 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
     private readonly LatestRefresh themePaletteRefresh = new();
 
     public SettingsAppearanceViewModel(
-        ISettingsEditor editor,
+        SettingsEditor editor,
         ThemeApplier themeApplier,
         LocalDiagnostics? diagnostics = null,
         bool showHiddenSettings = false)
@@ -50,7 +50,7 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         }
     }
 
-    public ISettingsEditor Editor => editor;
+    public SettingsEditor Editor => editor;
     public Func<Bitmap?>? GetBackgroundBitmap { get; set; }
 
     [ObservableProperty]

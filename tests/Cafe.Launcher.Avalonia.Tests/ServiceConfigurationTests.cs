@@ -102,12 +102,9 @@ public sealed class ServiceConfigurationTests : IDisposable
 
         var runtimeDescriptor = Assert.Single(
             services,
-            descriptor => descriptor.ServiceType == typeof(IShellRuntime));
+            descriptor => descriptor.ServiceType == typeof(ShellLifecycle));
 
         Assert.Equal(typeof(ShellLifecycle), runtimeDescriptor.ImplementationType);
-        Assert.DoesNotContain(
-            services,
-            descriptor => descriptor.ServiceType == typeof(ShellLifecycle));
     }
 
     [Fact]
@@ -153,7 +150,7 @@ public sealed class ServiceConfigurationTests : IDisposable
     public async Task SavedHttp2Setting_IsReadByLeasesCreatedAfterwards_WithoutAnyPush()
     {
         await using var provider = CreateServices().BuildServiceProvider();
-        var editor = provider.GetRequiredService<ISettingsEditor>();
+        var editor = provider.GetRequiredService<SettingsEditor>();
         using var factory = provider.GetRequiredService<HttpClientFactory>();
 
         foreach (var (enabled, expected) in new[]
