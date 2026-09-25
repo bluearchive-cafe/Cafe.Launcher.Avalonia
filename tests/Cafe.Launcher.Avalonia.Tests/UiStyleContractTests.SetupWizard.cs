@@ -1,4 +1,4 @@
-﻿using System.Xml.Linq;
+using System.Xml.Linq;
 using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
@@ -251,10 +251,11 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void SetupWizardCompletion_StepTitleUsesSuccessColor()
+    public void SetupWizardCompletion_HeroBadgeCarriesSuccessSemantics()
     {
-        // 实验台完成态语义：最后一步（复核）即完成确认，标题以 Success 色标识，无庆祝动画。
-        // 各面板标题静态绑定自身资源键——共享 StepTitle 绑定会在 Step 变化的 t=0 让全部
+        // 复核页重设计：完成语义由 Hero 徽章（Success.Soft 底 + Success 勾）承载，
+        // 标题回归中性——原 wizard-complete Success 标题色已退场，不得回归。
+        // 各面板标题仍静态绑定自身资源键——共享 StepTitle 绑定会在 Step 变化的 t=0 让全部
         // 标题（含淡出中的旧面板）同帧跳到新标题，破坏中点换面的次序语义。
         var overlay = XDocument.Load(TestRepository.FromApplicationRoot("Views/SetupWizardOverlay.axaml"));
         var expectedTitleKeys = new[]
@@ -271,8 +272,7 @@ public sealed partial class UiStyleContractTests
                 element.Name.LocalName == "TextBlock"
                 && element.Attribute("Text")?.Value == $"{{Binding Shell.I18n[{key}]}}"
                 && HasClass(element, "wizard-step-title"));
-            Assert.Null(headline.Attribute("Classes.wizard-complete"));
-            Assert.Equal(key == "setupWizardReview", HasClass(headline, "wizard-complete"));
+            Assert.False(HasClass(headline, "wizard-complete"));
         }
 
         Assert.DoesNotContain(
@@ -280,15 +280,41 @@ public sealed partial class UiStyleContractTests
             element => element.Name.LocalName == "TextBlock"
                 && (element.Attribute("Text")?.Value.Contains("SetupWizard.StepTitle") ?? false));
 
-        var styles = XDocument.Load(TestRepository.FromApplicationRoot("Views/Styles/SetupWizard.axaml"));
+        // 徽章结构：WizardStep4 内单个整圆徽章，内含 Success 勾。
+        var xNamespace = overlay.Root?.GetNamespaceOfPrefix("x");
+        Assert.NotNull(xNamespace);
+        var reviewStep = overlay
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "StackPanel"
+                && element.Attribute(xNamespace + "Name")?.Value == "WizardStep4");
+        var heroBadge = Assert.Single(reviewStep.Descendants(), element =>
+            element.Name.LocalName == "Border"
+            && HasClass(element, "wizard-hero-badge"));
+        var heroIcon = Assert.Single(heroBadge.Descendants(), element =>
+            element.Name.LocalName == "MaterialIcon");
+        Assert.Equal("Check", heroIcon.Attribute("Kind")?.Value);
         Assert.Equal(
             "{DynamicResource Launcher.Color.Success}",
-            GetStyleSetters(styles, "TextBlock.wizard-step-title.wizard-complete")["Foreground"]);
+            heroIcon.Attribute("Foreground")?.Value);
+
+        var styles = XDocument.Load(TestRepository.FromApplicationRoot("Views/Styles/SetupWizard.axaml"));
+        var heroStyle = GetStyleSetters(styles, "Border.wizard-hero-badge");
+        Assert.Equal("{StaticResource Launcher.Component.Wizard.HeroBadge.Size}", heroStyle["Width"]);
+        Assert.Equal("{StaticResource Launcher.Component.Wizard.HeroBadge.Size}", heroStyle["Height"]);
+        Assert.Equal("{StaticResource Launcher.Radius.Full}", heroStyle["CornerRadius"]);
+        Assert.Equal("{DynamicResource Launcher.Color.Success.Soft}", heroStyle["Background"]);
+        Assert.Equal("Center", heroStyle["HorizontalAlignment"]);
+        Assert.DoesNotContain(
+            styles.Descendants().Where(element => element.Name.LocalName == "Style"),
+            style => style.Attribute("Selector")?.Value?.Contains("wizard-complete") == true);
     }
 
     [Fact]
-    public void SetupWizard_Review_UsesSeparatedCenteredRows()
+    public void SetupWizard_Review_UsesIconSummaryRows()
     {
+        // 复核页重设计：摘要 = 图标摘要行（图标 chip + 标签/值两行 + 尾部编辑图标钮），
+        // 行间 Dialog.Section.Divider 发丝线；info-strip 着色卡不再承载摘要。
         var overlay = XDocument.Load(TestRepository.FromApplicationRoot("Views/SetupWizardOverlay.axaml"));
         var xNamespace = overlay.Root?.GetNamespaceOfPrefix("x");
         Assert.NotNull(xNamespace);
@@ -297,58 +323,115 @@ public sealed partial class UiStyleContractTests
             .Single(element =>
                 element.Name.LocalName == "StackPanel"
                 && element.Attribute(xNamespace + "Name")?.Value == "WizardStep4");
-        var reviewContent = reviewStep
+        var reviewRows = reviewStep
             .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "Border"
-                && HasClass(element, "info-strip"))
-            .Elements()
-            .Single(element => element.Name.LocalName == "StackPanel");
-        var reviewRows = reviewContent
-            .Elements()
-            .Where(element => element.Name.LocalName == "Grid")
+            .Where(element =>
+                element.Name.LocalName == "Grid"
+                && HasClass(element, "wizard-summary-row"))
             .ToList();
-        var dividers = reviewContent
+        var rowContainer = Assert.Single(reviewRows
+            .Select(row => row.Parent)
+            .Cast<XElement>()
+            .Distinct());
+        Assert.Equal("StackPanel", rowContainer.Name.LocalName);
+        var dividers = rowContainer
             .Elements()
             .Where(element =>
                 element.Name.LocalName == "Border"
-                && HasClass(element, "wizard-review-divider"))
+                && HasClass(element, "wizard-summary-divider"))
             .ToList();
 
         Assert.Equal(4, reviewRows.Count);
-        Assert.All(reviewRows, row => Assert.True(HasClass(row, "wizard-review-row")));
         Assert.Equal(3, dividers.Count);
         Assert.Collection(
-            reviewContent.Elements(),
+            rowContainer.Elements(),
             element => Assert.True(
-                element.Name.LocalName == "Grid" && HasClass(element, "wizard-review-row")),
+                element.Name.LocalName == "Grid" && HasClass(element, "wizard-summary-row")),
             element => Assert.True(
-                element.Name.LocalName == "Border" && HasClass(element, "wizard-review-divider")),
+                element.Name.LocalName == "Border" && HasClass(element, "wizard-summary-divider")),
             element => Assert.True(
-                element.Name.LocalName == "Grid" && HasClass(element, "wizard-review-row")),
+                element.Name.LocalName == "Grid" && HasClass(element, "wizard-summary-row")),
             element => Assert.True(
-                element.Name.LocalName == "Border" && HasClass(element, "wizard-review-divider")),
+                element.Name.LocalName == "Border" && HasClass(element, "wizard-summary-divider")),
             element => Assert.True(
-                element.Name.LocalName == "Grid" && HasClass(element, "wizard-review-row")),
+                element.Name.LocalName == "Grid" && HasClass(element, "wizard-summary-row")),
             element => Assert.True(
-                element.Name.LocalName == "Border" && HasClass(element, "wizard-review-divider")),
+                element.Name.LocalName == "Border" && HasClass(element, "wizard-summary-divider")),
             element => Assert.True(
-                element.Name.LocalName == "Grid" && HasClass(element, "wizard-review-row")));
-        Assert.All(
-            reviewRows,
-            row => Assert.All(
-                row.Elements().Where(element =>
-                    element.Name.LocalName is "TextBlock" or "Button"),
-                element => Assert.Equal("Center", element.Attribute("VerticalAlignment")?.Value)));
+                element.Name.LocalName == "Grid" && HasClass(element, "wizard-summary-row")));
+
+        // 行序即回跳步序：语言(0) → 下载源(2) → 路径(1) → 代理(3)，与无头测试一致。
+        var expectedRows = new[]
+        {
+            (LabelKey: "setupWizardLanguage", ValueBinding: "{Binding Dialogs.SetupWizard.LanguageDisplayName}", TargetStep: "0"),
+            (LabelKey: "setupWizardDownloadSource", ValueBinding: "{Binding Dialogs.SetupWizard.DownloadSourceDisplayName}", TargetStep: "2"),
+            (LabelKey: "setupWizardGamePath", ValueBinding: "{Binding Dialogs.SetupWizard.GamePath}", TargetStep: "1"),
+            (LabelKey: "setupWizardProxy", ValueBinding: "{Binding Dialogs.SetupWizard.ProxyDisplayName}", TargetStep: "3"),
+        };
+        Assert.Equal(expectedRows.Length, reviewRows.Count);
+        foreach (var (row, expected) in reviewRows.Zip(expectedRows))
+        {
+            var chip = Assert.Single(row.Elements(), element =>
+                element.Name.LocalName == "Border"
+                && HasClass(element, "wizard-summary-icon"));
+            var chipIcon = Assert.Single(chip.Descendants(), element =>
+                element.Name.LocalName == "MaterialIcon");
+            Assert.False(string.IsNullOrEmpty(chipIcon.Attribute("Kind")?.Value));
+
+            var text = Assert.Single(row.Elements(), element => element.Name.LocalName == "StackPanel");
+            var label = Assert.Single(text.Elements(), element =>
+                element.Name.LocalName == "TextBlock"
+                && HasClass(element, "caption"));
+            Assert.Equal($"{{Binding Shell.I18n[{expected.LabelKey}]}}", label.Attribute("Text")?.Value);
+            var value = Assert.Single(text.Elements(), element =>
+                element.Name.LocalName == "TextBlock"
+                && HasClass(element, "value"));
+            Assert.Equal(expected.ValueBinding, value.Attribute("Text")?.Value);
+
+            var edit = Assert.Single(row.Elements(), element =>
+                element.Name.LocalName == "Button"
+                && HasClass(element, "wizard-summary-edit"));
+            Assert.Equal(
+                "{Binding Dialogs.SetupWizard.GoToStepCommand}",
+                edit.Attribute("Command")?.Value);
+            var parameter = Assert.Single(edit.Elements(), element =>
+                element.Name.LocalName == "Button.CommandParameter");
+            Assert.Equal(expected.TargetStep, parameter.Value);
+            Assert.Equal(
+                "{Binding Shell.I18n[setupWizardEditStep]}",
+                edit.Attributes()
+                    .Single(attribute => attribute.Name.LocalName == "AutomationProperties.Name")
+                    .Value);
+        }
+
+        // 路径值换行展示（其余行单行）。
+        var pathRow = reviewRows[2];
+        var pathText = Assert.Single(pathRow.Elements(), element => element.Name.LocalName == "StackPanel");
+        var pathValue = Assert.Single(pathText.Elements(), element =>
+            element.Name.LocalName == "TextBlock"
+            && HasClass(element, "value"));
+        Assert.Equal("Wrap", pathValue.Attribute("TextWrapping")?.Value);
 
         var styles = XDocument.Load(TestRepository.FromApplicationRoot("Views/Styles/SetupWizard.axaml"));
-        var rowStyle = GetStyleSetters(styles, "Grid.wizard-review-row");
-        var dividerStyle = GetStyleSetters(styles, "Border.wizard-review-divider");
-
-        Assert.Equal("{StaticResource Launcher.Control.Height.Dialog}", rowStyle["MinHeight"]);
-        Assert.Equal("Center", rowStyle["VerticalAlignment"]);
+        var rowStyle = GetStyleSetters(styles, "Grid.wizard-summary-row");
+        Assert.Equal(
+            "{StaticResource Launcher.Component.Wizard.Summary.Row.MinHeight}",
+            rowStyle["MinHeight"]);
+        var chipStyle = GetStyleSetters(styles, "Border.wizard-summary-icon");
+        Assert.Equal("{StaticResource Launcher.Component.Wizard.Summary.IconChip.Size}", chipStyle["Width"]);
+        Assert.Equal("{StaticResource Launcher.Component.Wizard.Summary.IconChip.Size}", chipStyle["Height"]);
+        Assert.Equal("{StaticResource Launcher.Radius.Sm}", chipStyle["CornerRadius"]);
+        Assert.Equal("{DynamicResource Launcher.Color.Field.Background}", chipStyle["Background"]);
+        var dividerStyle = GetStyleSetters(styles, "Border.wizard-summary-divider");
         Assert.Equal("{StaticResource Launcher.Component.Wizard.Divider.Height}", dividerStyle["Height"]);
-        Assert.Equal("{DynamicResource Launcher.Color.Card.Border}", dividerStyle["Background"]);
+        Assert.Equal("{DynamicResource Launcher.Color.Dialog.Section.Divider}", dividerStyle["Background"]);
+        var editStyle = GetStyleSetters(styles, "Button.wizard-summary-edit");
+        Assert.Equal("{StaticResource Launcher.Control.Height.Setting}", editStyle["Width"]);
+        Assert.Equal("{StaticResource Launcher.Control.Height.Setting}", editStyle["Height"]);
+        Assert.Equal("{StaticResource Launcher.Color.Transparent}", editStyle["Background"]);
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Content.Row.Hover}",
+            GetStyleSetters(styles, "Button.wizard-summary-edit:pointerover")["Background"]);
     }
 
     [Fact]

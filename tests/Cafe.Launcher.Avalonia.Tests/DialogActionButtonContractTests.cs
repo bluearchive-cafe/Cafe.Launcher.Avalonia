@@ -1,4 +1,4 @@
-﻿using System.Xml.Linq;
+using System.Xml.Linq;
 using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
@@ -93,8 +93,10 @@ public sealed class DialogActionButtonContractTests
 
         // ADR-017：向导"上一步"改用 wizard-action tonal 族离开本计数；
         // 向导"下一步/完成"仍为 primary-action + dialog-action，继续受本契约约束。
+        // 复核页重设计：四个文字"修改"钮改为向导自家的安静图标钮（wizard-summary-edit），
+        // 同样离开本计数（31 → 27）。
         // ADR-037：更新对话框在“就绪待重启”时把主按钮换成重启按钮，两个按钮都在本计数内。
-        Assert.Equal(31, actionButtons.Length);
+        Assert.Equal(27, actionButtons.Length);
         Assert.All(
             actionButtons,
             button =>

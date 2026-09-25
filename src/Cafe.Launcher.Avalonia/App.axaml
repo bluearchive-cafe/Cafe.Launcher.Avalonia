@@ -177,6 +177,10 @@
             <!-- 实验台向导解剖（ADR-017）：居中单列内容的最大宽度。 -->
             <x:Double x:Key="Launcher.Component.Wizard.Content.MaxWidth">520</x:Double>
             <x:Double x:Key="Launcher.Component.Wizard.Divider.Height">1</x:Double>
+            <!-- 复核页重设计：完成 Hero 徽章与图标摘要行的度量（徽章整圆经 Radius.Full）。 -->
+            <x:Double x:Key="Launcher.Component.Wizard.HeroBadge.Size">56</x:Double>
+            <x:Double x:Key="Launcher.Component.Wizard.Summary.Row.MinHeight">56</x:Double>
+            <x:Double x:Key="Launcher.Component.Wizard.Summary.IconChip.Size">36</x:Double>
             <!-- M3 选项行：两行内容（标题 + 说明）的最小命中行高与内容内边距。 -->
             <x:Double x:Key="Launcher.Component.Wizard.Option.MinHeight">56</x:Double>
             <Thickness x:Key="Launcher.Component.Wizard.Option.Padding">4,0</Thickness>
