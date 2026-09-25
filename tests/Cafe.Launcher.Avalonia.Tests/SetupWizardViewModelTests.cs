@@ -1,6 +1,7 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Features.SetupWizard;
+using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
@@ -214,6 +215,34 @@ public sealed class SetupWizardViewModelTests
         Assert.NotNull(vm.LanguageDisplayName);
         Assert.NotNull(vm.DownloadSourceDisplayName);
         Assert.NotNull(vm.ProxyDisplayName);
+    }
+
+    [Fact]
+    public void GamePathDisplay_PathWithinBudget_EqualsRawPath()
+    {
+        var vm = CreateViewModel();
+        vm.GamePath = @"D:\Test\Path";
+
+        Assert.Equal(@"D:\Test\Path", vm.GamePathDisplay);
+    }
+
+    [Fact]
+    public void GamePathChange_RaisesGamePathDisplayNotification()
+    {
+        var vm = CreateViewModel();
+        var changes = 0;
+        vm.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(vm.GamePathDisplay))
+            {
+                changes++;
+            }
+        };
+
+        vm.GamePath = @"E:\" + new string('a', 80) + @"\YostarGames\BlueArchive_JP";
+
+        Assert.Equal(1, changes);
+        Assert.Contains(PathMiddleEllipsis.Ellipsis, vm.GamePathDisplay);
     }
 
     [Fact]

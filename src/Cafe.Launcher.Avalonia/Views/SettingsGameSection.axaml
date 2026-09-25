@@ -12,7 +12,7 @@
 
             <controls:SettingRow ShowTopDivider="False"
                                  Title="{Binding Shell.I18n[gamePath]}"
-                                 Description="{Binding Settings.Editor.Current.GamePath}">
+                                 Description="{Binding Settings.GamePathDisplay}">
                 <controls:SettingRow.Action>
                     <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
                         <Button Classes="flat-action" Command="{Binding Settings.ChooseGamePathCommand}"

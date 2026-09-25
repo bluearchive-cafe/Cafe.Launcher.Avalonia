@@ -26,7 +26,7 @@ public sealed partial class UiStyleContractTests
             ],
             ["SettingsGameSection"] =
             [
-                "Settings.Editor.Current.GamePath",
+                "Settings.GamePathDisplay",
                 "Settings.Editor.Current.LaunchCheckMode",
                 "Settings.Editor.Current.GameRuntime.RunnerPath",
                 "Settings.Editor.Current.GameRuntime.PrefixPath",
@@ -847,7 +847,7 @@ public sealed partial class UiStyleContractTests
         var mainWindowCodeBehind = File.ReadAllText(TestRepository.FromApplicationRoot("Views/MainWindow.axaml.cs"));
 
         Assert.Contains(
-            "Description=\"{Binding Settings.Editor.Current.GamePath}\"",
+            "Description=\"{Binding Settings.GamePathDisplay}\"",
             gameSection,
             StringComparison.Ordinal);
         Assert.Contains(

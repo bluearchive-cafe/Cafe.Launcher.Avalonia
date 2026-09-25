@@ -357,9 +357,9 @@
                                                 Spacing="{StaticResource Launcher.Spacing.Xs}"
                                                 VerticalAlignment="Center">
                                         <TextBlock Text="{Binding Shell.I18n[setupWizardGamePath]}" Classes="caption"/>
-                                        <TextBlock Text="{Binding Dialogs.SetupWizard.GamePath}"
+                                        <TextBlock Text="{Binding Dialogs.SetupWizard.GamePathDisplay}"
                                                    Classes="value"
-                                                   TextWrapping="Wrap"/>
+                                                   TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="2" Classes="wizard-summary-edit"
                                             Command="{Binding Dialogs.SetupWizard.GoToStepCommand}"

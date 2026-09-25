@@ -365,7 +365,7 @@ public sealed partial class UiStyleContractTests
         {
             (LabelKey: "setupWizardLanguage", ValueBinding: "{Binding Dialogs.SetupWizard.LanguageDisplayName}", TargetStep: "0"),
             (LabelKey: "setupWizardDownloadSource", ValueBinding: "{Binding Dialogs.SetupWizard.DownloadSourceDisplayName}", TargetStep: "2"),
-            (LabelKey: "setupWizardGamePath", ValueBinding: "{Binding Dialogs.SetupWizard.GamePath}", TargetStep: "1"),
+            (LabelKey: "setupWizardGamePath", ValueBinding: "{Binding Dialogs.SetupWizard.GamePathDisplay}", TargetStep: "1"),
             (LabelKey: "setupWizardProxy", ValueBinding: "{Binding Dialogs.SetupWizard.ProxyDisplayName}", TargetStep: "3"),
         };
         Assert.Equal(expectedRows.Length, reviewRows.Count);
@@ -404,13 +404,14 @@ public sealed partial class UiStyleContractTests
                     .Value);
         }
 
-        // 路径值换行展示（其余行单行）。
+        // 路径值经 VM 段感知中间省略（GamePathDisplay，保留首段与末两段），
+        // TextTrimming 作极端超长段（宽字形溢出预算）的末尾省略兜底。
         var pathRow = reviewRows[2];
         var pathText = Assert.Single(pathRow.Elements(), element => element.Name.LocalName == "StackPanel");
         var pathValue = Assert.Single(pathText.Elements(), element =>
             element.Name.LocalName == "TextBlock"
             && HasClass(element, "value"));
-        Assert.Equal("Wrap", pathValue.Attribute("TextWrapping")?.Value);
+        Assert.Equal("CharacterEllipsis", pathValue.Attribute("TextTrimming")?.Value);
 
         var styles = XDocument.Load(TestRepository.FromApplicationRoot("Views/Styles/SetupWizard.axaml"));
         var rowStyle = GetStyleSetters(styles, "Grid.wizard-summary-row");

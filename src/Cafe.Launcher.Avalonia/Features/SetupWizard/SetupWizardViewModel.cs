@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -130,6 +130,7 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanGoNext))]
     [NotifyPropertyChangedFor(nameof(IsGamePathEmpty))]
+    [NotifyPropertyChangedFor(nameof(GamePathDisplay))]
     private string gamePath;
 
     partial void OnGamePathChanged(string value)
@@ -216,6 +217,12 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     }
 
     public bool IsGamePathEmpty => string.IsNullOrWhiteSpace(GamePath);
+
+    /// <summary>
+    /// 复核页路径展示值：段感知中间省略（见 <see cref="PathMiddleEllipsis"/>）。
+    /// 仅作展示；设置输出的真值仍是 <see cref="GamePath"/>（BuildSettings 内再归一化）。
+    /// </summary>
+    public string GamePathDisplay => PathMiddleEllipsis.MiddleEllipsize(GamePath);
 
     // ── Summary display names (computed on last step) ─────────────
 
