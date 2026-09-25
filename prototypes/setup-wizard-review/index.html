@@ -1,0 +1,834 @@
+<!doctype html>
+<html lang="zh-Hans" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cafe Launcher — 设置向导确认页重设计原型</title>
+  <style>
+    /* =====================================================================
+       设置向导确认页（第 5 步「复核」）重设计原型 · 一次性设计稿
+       问题：确认页应当长什么样？四个变体经 ?variant= 切换（←/→ 方向键亦可）。
+       变体：current 现状（对照） / a 图标摘要列表 / b 完成导向 / c 分组卡片。
+       Token 镜像：CSS 变量 ↔ App.axaml 的 Launcher.* 键（仅声明处允许原始值）。
+       Accent 为运行时派生（SystemAccentColor → M3 Primary），取代表性品牌蓝。
+       ===================================================================== */
+    :root {
+      color-scheme: light;
+      --ink: #232a31;                 /* Launcher.Text.Primary (Light) */
+      --body-ink: #3f4954;            /* Launcher.Text.Body (Light) */
+      --muted: #646d79;               /* Launcher.Text.Secondary (Light) */
+      --dialog-bg: #ffffff;           /* Launcher.Color.Dialog.Background (Light) */
+      --card-bg: #fafcff;             /* Launcher.Color.Card.Background (Light) */
+      --card-border: #d6e2ee;         /* Launcher.Color.Card.Border (Light) */
+      --divider: #e0e3eb;             /* Launcher.Color.Dialog.Section.Divider (Light) — 对话框正文发丝线，弱于 Card.Border（ADR-041） */
+      --content-row: #f1f5f9;         /* Launcher.Color.Content.Row (Light) — tonal 按钮底 */
+      --row-hover: rgba(0, 0, 0, .04);/* Launcher.Color.Content.Row.Hover (Light) */
+      --flat-hover: #eef6ff;          /* Launcher.Color.Button.Flat.Hover (Light) */
+      --field-bg: #f0f6fd;            /* Launcher.Color.Field.Background (Light) */
+      --success: #15803d;             /* Launcher.Color.Success (Light) */
+      --success-soft: #d9f4e9;        /* Launcher.Color.Success.Soft (Light) */
+      --focus-ring: rgba(61, 107, 198, .6); /* Launcher.Color.FocusRing（accent @60%） */
+      --primary: #3d6bc6;             /* 代表性 scheme Primary（tone 40；运行时派生） */
+      --primary-strong: #3159a8;      /* 代表性 Primary 按压态 */
+      --on-primary: #ffffff;          /* Launcher.Color.OnPrimary */
+      --shadow-dialog: 0 26px 68px rgba(15, 18, 34, .30), 4px 12px 14px rgba(15, 18, 34, .14); /* Launcher.Elevation.Shadow.Dialog */
+      --scrim: rgba(0, 0, 0, .60);    /* Launcher.Color.Overlay.Scrim.Md — setup-wizard-overlay 实际值 */
+    }
+
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --ink: #e8eef6;                 /* Launcher.Text.Primary (Dark) */
+      --body-ink: #c8d2df;            /* Launcher.Text.Body (Dark) */
+      --muted: #a8b3c2;               /* Launcher.Text.Secondary (Dark) */
+      --dialog-bg: #161c26;           /* Launcher.Color.Dialog.Background (Dark) */
+      --card-bg: #202733;             /* Launcher.Color.Card.Background (Dark) */
+      --card-border: #344150;         /* Launcher.Color.Card.Border (Dark) */
+      --divider: #2c3844;             /* Launcher.Color.Dialog.Section.Divider (Dark) */
+      --content-row: #202833;         /* Launcher.Color.Content.Row (Dark) */
+      --row-hover: rgba(255, 255, 255, .09); /* Launcher.Color.Content.Row.Hover (Dark) */
+      --flat-hover: #243653;          /* Launcher.Color.Button.Flat.Hover (Dark) */
+      --field-bg: #1e2834;            /* Launcher.Color.Field.Background (Dark) */
+      --success: #4ade80;             /* Launcher.Color.Success (Dark) */
+      --success-soft: #16302a;        /* Launcher.Color.Success.Soft (Dark) */
+      --focus-ring: rgba(140, 180, 240, .6);
+      --primary: #8cb4f0;             /* 代表性 scheme Primary（tone 80；运行时派生） */
+      --primary-strong: #a7c5f4;
+      --on-primary: #10182c;          /* 原型可读性取深色前景；产品内 OnPrimary 恒白，实施时按 token */
+      --shadow-dialog: 0 26px 68px rgba(0, 0, 0, .55), 4px 12px 14px rgba(0, 0, 0, .35);
+      --scrim: rgba(0, 0, 0, .60);
+    }
+
+    /* 字阶（Launcher.Typography.*）：Display 22 / Headline 19 / Body 14·13 / Label 12 */
+    :root {
+      --font-display: 22px;
+      --font-headline: 19px;
+      --font-body: 14px;
+      --font-body-sm: 13px;
+      /* 间距（Launcher.Spacing.*）：4/8/12/16/20/24 */
+      --sp-xs: 4px; --sp-sm: 8px; --sp-md: 12px; --sp-lg: 16px; --sp-xl: 20px; --sp-xxl: 24px;
+      /* 形状 / 控件高度（Radius.Xs 4 / Sm 8 / Md 12 / Full 999；Height.Dialog 42） */
+      --radius-xs: 4px; --radius-sm: 8px; --radius-md: 12px;
+      --height-dialog: 42px;
+      --motion-fast: 167ms cubic-bezier(.2, .8, .2, 1);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      color: var(--ink);
+      background: #171a2d;
+      font: var(--font-body)/1.45 "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+    }
+    button { font: inherit; cursor: pointer; }
+    button:focus-visible {
+      outline: 2px solid var(--focus-ring); /* Launcher.Border.Thickness.Focus */
+      outline-offset: 2px;
+    }
+
+    /* ---- 原型外框（非产品 UI）：壁纸 + 向导遮罩 + 工具条 ---- */
+    .prototype-frame {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 96px;
+      background:
+        linear-gradient(var(--scrim), var(--scrim)),
+        url("../../src/Cafe.Launcher.Avalonia/Assets/launcher-background.png") center / cover;
+    }
+    .prototype-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--sp-lg);
+      width: min(920px, 100%);
+      margin-bottom: var(--sp-xl);
+    }
+    .prototype-title {
+      color: #fff;
+      font-size: var(--font-body-sm);
+      letter-spacing: .5px; /* Typography.LetterSpacing.Sm */
+      opacity: .85;
+    }
+    .theme-toggle { display: flex; gap: var(--sp-sm); }
+    .theme-toggle button {
+      height: 36px;
+      padding: 0 var(--sp-lg);
+      border: 1px solid rgba(255, 255, 255, .35);
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, .08);
+      color: #fff;
+      transition: background var(--motion-fast);
+    }
+    .theme-toggle button:hover { background: rgba(255, 255, 255, .16); }
+    .theme-toggle button[aria-pressed="true"] {
+      background: rgba(255, 255, 255, .92);
+      border-color: transparent;
+      color: #1a1b22;
+    }
+
+    /* ---- 浮动变体切换条（非产品 UI，UI 原型规范件） ---- */
+    .proto-switcher {
+      position: fixed;
+      left: 50%;
+      bottom: 24px;
+      transform: translateX(-50%);
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      gap: var(--sp-xs);
+      height: 48px;
+      padding: 0 var(--sp-sm);
+      border: 1px solid rgba(255, 255, 255, .28);
+      border-radius: 999px; /* Radius.Full */
+      background: #10131f;
+      color: #fff;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, .45);
+    }
+    .proto-switcher button {
+      display: grid;
+      place-items: center;
+      width: 32px;
+      height: 32px;
+      border: 0;
+      border-radius: 50%;
+      background: transparent;
+      color: #fff;
+      transition: background var(--motion-fast);
+    }
+    .proto-switcher button:hover { background: rgba(255, 255, 255, .16); }
+    .proto-switcher .variant-label {
+      min-width: 200px;
+      text-align: center;
+      font-size: var(--font-body-sm);
+      letter-spacing: .3px;
+    }
+
+    /* =====================================================================
+       向导外壳（产品契约区，四变体共享；ADR-017：进度行 + 居中单列 + 动作带）
+       ===================================================================== */
+    .wizard-surface {
+      display: flex;
+      flex-direction: column;
+      width: min(920px, 100%);   /* Launcher.Layout.SetupWizard.Width */
+      height: min(560px, calc(100vh - 150px)); /* Launcher.Layout.SetupWizard.Height */
+      min-height: 480px;
+      border-radius: 20px;       /* Launcher.Component.Dialog.CornerRadius */
+      background: var(--dialog-bg);
+      box-shadow: var(--shadow-dialog);
+    }
+    .wizard-body {
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-lg);
+      padding: 18px 24px;        /* Launcher.Component.Dialog.Panel.Body.Padding 24,18 */
+      min-height: 0;
+    }
+
+    /* 进度行：标题 + 步骤进度 + 跳过（居右） */
+    .progress-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--sp-md);
+    }
+    .progress-copy { display: flex; flex-direction: column; gap: var(--sp-xs); }
+    .wizard-title {
+      font-size: var(--font-headline); /* dialog-title = Headline.Lg 19 */
+      font-weight: 600;
+      color: var(--ink);
+    }
+    .progress-step { color: var(--muted); font-size: var(--font-body-sm); } /* caption */
+    .skip-button {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--sp-sm);
+      height: var(--height-dialog);   /* Control.Height.Dialog */
+      padding: 0 var(--sp-lg);        /* Action.Dialog.Padding 16,0 */
+      border: 0;
+      border-radius: var(--radius-xs);
+      background: transparent;
+      color: var(--ink);
+      font-size: var(--font-body-sm);
+      font-weight: 600;
+      transition: background var(--motion-fast);
+    }
+    .skip-button:hover { background: var(--flat-hover); }
+    .skip-button .button-icon { width: 16px; height: 16px; } /* Icon.Sm */
+
+    /* 内容区：居中单列，最大 520 */
+    .wizard-content {
+      flex: 1 1 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 0;
+    }
+    .wizard-content > .variant {
+      width: 100%;
+      max-width: 520px;          /* Launcher.Component.Wizard.Content.MaxWidth */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--sp-lg);
+      text-align: center;
+    }
+    .variant[hidden] { display: none; }
+    .step-title {
+      margin: 0;
+      font-size: var(--font-display); /* wizard-step-title = Display 22 */
+      font-weight: 600;
+      color: var(--ink);
+    }
+    .step-title.complete { color: var(--success); } /* wizard-complete：现状契约 */
+    .step-hint { margin: 0; color: var(--body-ink); font-size: var(--font-body); }
+
+    /* 动作带：上一步 tonal（左）+ 完成 filled（右），并入内容区（ADR-017） */
+    .actions-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--sp-md);
+    }
+    .wizard-button {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--sp-sm);
+      height: var(--height-dialog);
+      padding: 0 var(--sp-lg);
+      border: 0;
+      border-radius: var(--radius-xs); /* wizard-action Radius.Xs */
+      font-size: var(--font-body-sm);
+      font-weight: 600;
+      transition: background var(--motion-fast);
+    }
+    .wizard-button .button-icon { width: 16px; height: 16px; } /* Icon.Sm */
+    .wizard-button.tonal { background: var(--content-row); color: var(--ink); }      /* Button.wizard-action */
+    .wizard-button.tonal:hover { background: var(--flat-hover); }
+    .wizard-button.tonal:active { background: var(--divider); }
+    .wizard-button.filled { background: var(--primary); color: var(--on-primary); }  /* primary-action */
+    .wizard-button.filled:hover { background: color-mix(in srgb, var(--on-primary) 8%, var(--primary)); }
+    .wizard-button.filled:active { background: var(--primary-strong); }
+
+    /* =====================================================================
+       变体 0：现状（对照）——info-strip 着色卡 + 4 行 label/value/文字修改钮
+       ===================================================================== */
+    .info-strip {
+      width: 100%;
+      padding: var(--sp-md);          /* info-strip Padding 12 */
+      border-radius: var(--radius-sm);/* info-strip Radius.Sm 8 */
+      background: color-mix(in srgb, var(--primary) 10%, transparent); /* Launcher.Color.Primary.Soft */
+      text-align: left;
+    }
+    .review-row {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: var(--sp-md);
+      min-height: var(--height-dialog); /* wizard-review-row MinHeight 42 */
+    }
+    .review-row .caption { color: var(--muted); font-size: var(--font-body-sm); }
+    .review-row .value { color: var(--ink); font-size: var(--font-body); overflow-wrap: anywhere; }
+    .review-row .edit-text {
+      height: 36px;
+      padding: 0 var(--sp-lg);
+      border: 0;
+      border-radius: var(--radius-xs);
+      background: transparent;
+      color: var(--ink);
+      font-size: var(--font-body-sm);
+      font-weight: 600;
+      transition: background var(--motion-fast);
+    }
+    .review-row .edit-text:hover { background: var(--flat-hover); }
+    .review-divider { height: 1px; background: var(--card-border); } /* wizard-review-divider = Card.Border */
+
+    /* =====================================================================
+       变体 A：图标摘要列表（推荐）——语义图标 + 标签/值两行 + 尾部编辑图标钮；
+       无着色底，安静列表 + 对话框正文发丝线；标题下「准备就绪」状态行。
+       ===================================================================== */
+    .ready-line {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--sp-sm);
+      margin-top: calc(-1 * var(--sp-sm));
+      color: var(--success);
+      font-size: var(--font-body-sm);
+    }
+    .ready-line .button-icon { width: 16px; height: 16px; }
+    .summary-list {
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      text-align: left;
+    }
+    .summary-row {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-md);
+      min-height: 56px;
+      padding: var(--sp-xs) 0;
+    }
+    .summary-row + .summary-row { border-top: 1px solid var(--divider); } /* Dialog.Section.Divider（ADR-041） */
+    .row-icon {
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-sm);
+      background: var(--field-bg);
+      color: var(--muted);
+    }
+    .row-icon svg { width: 18px; height: 18px; } /* Icon.Md */
+    .row-text {
+      flex: 1 1 auto;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .row-text .caption { color: var(--muted); font-size: var(--font-body-sm); }
+    .row-text .value { color: var(--ink); font-size: var(--font-body); overflow-wrap: anywhere; }
+    .icon-btn {
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      width: 36px;
+      height: 36px;
+      border: 0;
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: var(--muted);
+      transition: background var(--motion-fast), color var(--motion-fast);
+    }
+    .icon-btn:hover { background: var(--row-hover); color: var(--ink); }
+    .icon-btn svg { width: 18px; height: 18px; }
+
+    /* =====================================================================
+       变体 B：完成导向——大号成功图标开场，摘要弱化为 2×2 可点格子，
+       悬停浮现编辑钮；成功语义由图标承载，标题回归中性。
+       ===================================================================== */
+    .hero-check {
+      display: grid;
+      place-items: center;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--success-soft); /* Success.Soft 成对底色（ADR-041 同配方） */
+      color: var(--success);
+    }
+    .hero-check svg { width: 26px; height: 26px; }
+    .summary-grid {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--sp-sm);
+      text-align: left;
+    }
+    .summary-cell {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-height: 64px;
+      padding: var(--sp-md) var(--sp-lg);
+      border: 0;
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: var(--ink);
+      text-align: left;
+      transition: background var(--motion-fast);
+    }
+    .summary-cell:hover { background: var(--row-hover); }
+    .summary-cell .caption { color: var(--muted); font-size: var(--font-body-sm); }
+    .summary-cell .value {
+      max-width: calc(100% - 28px);
+      color: var(--ink);
+      font-size: var(--font-body);
+      overflow-wrap: anywhere;
+    }
+    .summary-cell .cell-edit {
+      position: absolute;
+      top: var(--sp-md);
+      right: var(--sp-md);
+      width: 18px;
+      height: 18px;
+      color: var(--muted);
+      opacity: .45;
+      transition: opacity var(--motion-fast);
+    }
+    .summary-cell:hover .cell-edit { opacity: 1; }
+
+    /* =====================================================================
+       变体 C：分组卡片——四项设置各占一张小卡（2×2），卡内图标 chip +
+       标签 + 值 + 编辑图标钮。
+       ===================================================================== */
+    .card-grid {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--sp-md);
+      text-align: left;
+    }
+    .summary-card {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-sm);
+      padding: var(--sp-md) var(--sp-lg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      background: var(--card-bg);
+    }
+    .card-head { display: flex; align-items: center; gap: var(--sp-sm); }
+    .card-icon {
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-sm);
+      background: var(--field-bg);
+      color: var(--muted);
+    }
+    .card-icon svg { width: 16px; height: 16px; } /* Icon.Sm */
+    .card-head .caption { flex: 1 1 auto; color: var(--muted); font-size: var(--font-body-sm); }
+    .card-head .icon-btn { width: 28px; height: 28px; }
+    .card-head .icon-btn svg { width: 16px; height: 16px; }
+    .summary-card .value { color: var(--ink); font-size: var(--font-body); overflow-wrap: anywhere; }
+
+    /* ---- 原型注释区（非产品 UI） ---- */
+    .prototype-notes {
+      width: min(920px, 100%);
+      margin-top: var(--sp-xl);
+      color: rgba(255, 255, 255, .75);
+      font-size: var(--font-body-sm);
+    }
+    .prototype-notes summary { cursor: pointer; }
+    .prototype-notes h3 { margin: var(--sp-lg) 0 var(--sp-xs); font-size: var(--font-body); color: #fff; }
+    .prototype-notes table { border-collapse: collapse; margin-top: var(--sp-sm); }
+    .prototype-notes th, .prototype-notes td {
+      padding: var(--sp-xs) var(--sp-md);
+      border: 1px solid rgba(255, 255, 255, .2);
+      text-align: left;
+    }
+    .prototype-notes code {
+      padding: 1px 5px;
+      border-radius: var(--radius-xs);
+      background: rgba(255, 255, 255, .12);
+      font-family: Consolas, ui-monospace, monospace;
+      font-size: 12px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="prototype-frame">
+    <div class="prototype-bar">
+      <span class="prototype-title">Cafe Launcher — 设置向导确认页重设计原型（?variant= 切换 · ←/→ 方向键）</span>
+      <div class="theme-toggle" role="group" aria-label="主题切换">
+        <button type="button" id="btn-light" aria-pressed="true">浅色</button>
+        <button type="button" id="btn-dark" aria-pressed="false">深色</button>
+      </div>
+    </div>
+
+    <!-- 向导表面：DialogSurface Panel 语境（920×560 · Radius 20 · Dialog 阴影） -->
+    <div class="wizard-surface" role="dialog" aria-label="设置向导">
+      <div class="wizard-body">
+        <!-- 进度行（外壳契约，四变体共享） -->
+        <div class="progress-row">
+          <div class="progress-copy">
+            <span class="wizard-title">设置向导</span>
+            <span class="progress-step">5 / 5</span>
+          </div>
+          <button type="button" class="skip-button">
+            <svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 5l8 7-8 7V5Z"/><path d="M17 5v14"/></svg>
+            跳过引导
+          </button>
+        </div>
+
+        <!-- 内容区：变体经 JS 切换（结构与样式各自独立） -->
+        <div class="wizard-content" id="variant-root">
+
+          <!-- ═══ 变体 0：现状（对照）——info-strip 着色卡 + 纯文本行 ═══ -->
+          <section class="variant" data-variant="current" role="group" aria-label="现状（对照）">
+            <h2 class="step-title complete">确认您的设置</h2>
+            <p class="step-hint">以下设置将被应用。您之后可以在设置面板中修改。</p>
+            <div class="info-strip">
+              <div class="review-row">
+                <span class="caption">语言</span>
+                <span class="value">简体中文</span>
+                <button type="button" class="edit-text">修改</button>
+              </div>
+              <div class="review-divider"></div>
+              <div class="review-row">
+                <span class="caption">下载源</span>
+                <span class="value">Cafe</span>
+                <button type="button" class="edit-text">修改</button>
+              </div>
+              <div class="review-divider"></div>
+              <div class="review-row">
+                <span class="caption">游戏安装路径</span>
+                <span class="value">C:\Games\YostarGames\<wbr>BlueArchive_JP</span>
+                <button type="button" class="edit-text">修改</button>
+              </div>
+              <div class="review-divider"></div>
+              <div class="review-row">
+                <span class="caption">代理</span>
+                <span class="value">自动检测系统代理</span>
+                <button type="button" class="edit-text">修改</button>
+              </div>
+            </div>
+          </section>
+
+          <!-- ═══ 变体 A：图标摘要列表（推荐） ═══ -->
+          <section class="variant" data-variant="a" role="group" aria-label="方案 A · 图标摘要列表">
+            <h2 class="step-title complete">确认您的设置</h2>
+            <p class="step-hint">以下设置将被应用。您之后可以在设置面板中修改。</p>
+            <p class="ready-line">
+              <svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 5-5.5"/></svg>
+              所有设置已就绪
+            </p>
+            <ul class="summary-list">
+              <li class="summary-row">
+                <span class="row-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 3.8 5.6 3.8 9S14.5 18.5 12 21c-2.5-2.5-3.8-5.6-3.8-9S9.5 5.5 12 3Z"/></svg>
+                </span>
+                <span class="row-text">
+                  <span class="caption">语言</span>
+                  <span class="value">简体中文</span>
+                </span>
+                <button type="button" class="icon-btn" aria-label="修改语言">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m14.5 5.5 4 4L8 20H4v-4L14.5 5.5Z"/><path d="m12.5 7.5 4 4"/></svg>
+                </button>
+              </li>
+              <li class="summary-row">
+                <span class="row-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 18a4.5 4.5 0 0 1-.36-8.99 6.5 6.5 0 0 1 12.44-1.02A4 4 0 0 1 18 16"/><path d="M12 12v7m0 0 3-3m-3 3-3-3"/></svg>
+                </span>
+                <span class="row-text">
+                  <span class="caption">下载源</span>
+                  <span class="value">Cafe</span>
+                </span>
+                <button type="button" class="icon-btn" aria-label="修改下载源">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m14.5 5.5 4 4L8 20H4v-4L14.5 5.5Z"/><path d="m12.5 7.5 4 4"/></svg>
+                </button>
+              </li>
+              <li class="summary-row">
+                <span class="row-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3.5 6.5A1.5 1.5 0 0 1 5 5h4l2 2.5h8A1.5 1.5 0 0 1 20.5 9v8a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 17v-10.5Z"/></svg>
+                </span>
+                <span class="row-text">
+                  <span class="caption">游戏安装路径</span>
+                  <span class="value">C:\Games\YostarGames\<wbr>BlueArchive_JP</span>
+                </span>
+                <button type="button" class="icon-btn" aria-label="修改游戏安装路径">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m14.5 5.5 4 4L8 20H4v-4L14.5 5.5Z"/><path d="m12.5 7.5 4 4"/></svg>
+                </button>
+              </li>
+              <li class="summary-row">
+                <span class="row-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3.5 5 6v5.5c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6l-7-2.5Z"/></svg>
+                </span>
+                <span class="row-text">
+                  <span class="caption">代理</span>
+                  <span class="value">自动检测系统代理</span>
+                </span>
+                <button type="button" class="icon-btn" aria-label="修改代理">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m14.5 5.5 4 4L8 20H4v-4L14.5 5.5Z"/><path d="m12.5 7.5 4 4"/></svg>
+                </button>
+              </li>
+            </ul>
+          </section>
+
+          <!-- ═══ 变体 B：完成导向 ═══ -->
+          <section class="variant" data-variant="b" role="group" aria-label="方案 B · 完成导向">
+            <span class="hero-check" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
+            </span>
+            <h2 class="step-title">确认您的设置</h2>
+            <p class="step-hint">以下设置将被应用。您之后可以在设置面板中修改。</p>
+            <div class="summary-grid">
+              <button type="button" class="summary-cell">
+                <span class="caption">语言</span>
+                <span class="value">简体中文</span>
+                <svg class="cell-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m14.5 5.5 4 4L8 20H4v-4L14.5 5.5Z"/><path d="m12.5 7.5 4 4"/></svg>
+              </button>
+              <button type="button" class="summary-cell">
+                <span class="caption">下载源</span>
+                <span class="value">Cafe</span>
+                <svg class="cell-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m14.5 5.5 4 4L8 20H4v-4L14.5 5.5Z"/><path d="m12.5 7.5 4 4"/></svg>
+              </button>
+              <button type="button" class="summary-cell">
+                <span class="caption">游戏安装路径</span>
+                <span class="value">C:\Games\YostarGames\<wbr>BlueArchive_JP</span>
+                <svg class="cell-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m14.5 5.5 4 4L8 20H4v-4L14.5 5.5Z"/><path d="m12.5 7.5 4 4"/></svg>
+              </button>
+              <button type="button" class="summary-cell">
+                <span class="caption">代理</span>
+                <span class="value">自动检测系统代理</span>
+                <svg class="cell-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m14.5 5.5 4 4L8 20H4v-4L14.5 5.5Z"/><path d="m12.5 7.5 4 4"/></svg>
+              </button>
+            </div>
+          </section>
+
+          <!-- ═══ 变体 C：分组卡片 ═══ -->
+          <section class="variant" data-variant="c" role="group" aria-label="方案 C · 分组卡片">
+            <h2 class="step-title complete">确认您的设置</h2>
+            <p class="step-hint">以下设置将被应用。您之后可以在设置面板中修改。</p>
+            <div class="card-grid">
+              <div class="summary-card">
+                <div class="card-head">
+                  <span class="card-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 3.8 5.6 3.8 9S14.5 18.5 12 21c-2.5-2.5-3.8-5.6-3.8-9S9.5 5.5 12 3Z"/></svg>
+                  </span>
+                  <span class="caption">语言</span>
+                  <button type="button" class="icon-btn" aria-label="修改语言">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m14.5 5.5 4 4L8 20H4v-4L14.5 5.5Z"/><path d="m12.5 7.5 4 4"/></svg>
+                  </button>
+                </div>
+                <span class="value">简体中文</span>
+              </div>
+              <div class="summary-card">
+                <div class="card-head">
+                  <span class="card-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 18a4.5 4.5 0 0 1-.36-8.99 6.5 6.5 0 0 1 12.44-1.02A4 4 0 0 1 18 16"/><path d="M12 12v7m0 0 3-3m-3 3-3-3"/></svg>
+                  </span>
+                  <span class="caption">下载源</span>
+                  <button type="button" class="icon-btn" aria-label="修改下载源">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m14.5 5.5 4 4L8 20H4v-4L14.5 5.5Z"/><path d="m12.5 7.5 4 4"/></svg>
+                  </button>
+                </div>
+                <span class="value">Cafe</span>
+              </div>
+              <div class="summary-card">
+                <div class="card-head">
+                  <span class="card-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3.5 6.5A1.5 1.5 0 0 1 5 5h4l2 2.5h8A1.5 1.5 0 0 1 20.5 9v8a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 17v-10.5Z"/></svg>
+                  </span>
+                  <span class="caption">游戏安装路径</span>
+                  <button type="button" class="icon-btn" aria-label="修改游戏安装路径">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m14.5 5.5 4 4L8 20H4v-4L14.5 5.5Z"/><path d="m12.5 7.5 4 4"/></svg>
+                  </button>
+                </div>
+                <span class="value">C:\Games\YostarGames\<wbr>BlueArchive_JP</span>
+              </div>
+              <div class="summary-card">
+                <div class="card-head">
+                  <span class="card-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3.5 5 6v5.5c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6l-7-2.5Z"/></svg>
+                  </span>
+                  <span class="caption">代理</span>
+                  <button type="button" class="icon-btn" aria-label="修改代理">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m14.5 5.5 4 4L8 20H4v-4L14.5 5.5Z"/><path d="m12.5 7.5 4 4"/></svg>
+                  </button>
+                </div>
+                <span class="value">自动检测系统代理</span>
+              </div>
+            </div>
+          </section>
+
+        </div>
+
+        <!-- 动作带（外壳契约，四变体共享）：上一步 tonal + 完成 filled -->
+        <div class="actions-row">
+          <button type="button" class="wizard-button tonal">
+            <svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5m0 0 6-6m-6 6 6 6"/></svg>
+            上一步
+          </button>
+          <button type="button" class="wizard-button filled">
+            <svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
+            完成
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <details class="prototype-notes">
+      <summary>原型说明：变体结构、Token 映射、实施注意（非产品 UI）</summary>
+
+      <h3>变体一览</h3>
+      <table>
+        <tr><th>变体</th><th>结构主张</th><th>新增资源键</th></tr>
+        <tr>
+          <td>current · 现状（对照）</td>
+          <td>info-strip 着色卡（Primary.Soft 10%）+ 4 行 label/value/文字修改钮 + Card.Border 分隔线。问题：状态面语感误用、四行标签宽度不一导致值不对齐、修改钮文字重复四次视觉偏重。</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td>a · 图标摘要列表（推荐）</td>
+          <td>去着色底：安静列表行 = 语义图标（Field.Background chip）+ 标签/值两行 + 尾部编辑图标钮；发丝线用 Dialog.Section.Divider（弱于 Card.Border，ADR-041）。标题下增「准备就绪」状态行，Success 色 icon+text 双通道。</td>
+          <td><code>setupWizardReviewReady</code>（zh-Hans「所有设置已就绪」，四语言同步）</td>
+        </tr>
+        <tr>
+          <td>b · 完成导向</td>
+          <td>大号 Success 图标（Success.Soft 底圆形）开场承载完成语义，标题回归中性；摘要弱化为 2×2 无底格子，整格可点回跳该步，铅笔编辑钮悬停浮现。视觉重心让给「完成」主行动。</td>
+          <td>—（编辑钮 aria 复用 <code>setupWizardEditStep</code>）</td>
+        </tr>
+        <tr>
+          <td>c · 分组卡片</td>
+          <td>四项设置各占一张 Card.Background 小卡（2×2，Card.Border 描边 Radius.Md），卡内图标 chip + 标签 + 值 + 编辑钮。信息密度最高但表面最重，与向导壳的双层阴影叠加需验证。</td>
+          <td>—</td>
+        </tr>
+      </table>
+
+      <h3>Token 映射速查（原型 CSS 变量 ↔ Launcher.* 键）</h3>
+      <table>
+        <tr><th>CSS 变量</th><th>Launcher.* 键</th><th>备注</th></tr>
+        <tr><td>--ink / --body-ink / --muted</td><td>Text.Primary / Text.Body / Text.Secondary</td><td>caption=13 Secondary、value=14 Primary、body=14 Body</td></tr>
+        <tr><td>--dialog-bg / --card-bg / --card-border</td><td>Color.Dialog.Background / Color.Card.*</td><td>向导表面用 Dialog.Background（非 Card）</td></tr>
+        <tr><td>--divider</td><td>Color.Dialog.Section.Divider</td><td>方案 A 行分隔线（ADR-041）；现状用 Card.Border</td></tr>
+        <tr><td>--content-row / --row-hover / --flat-hover</td><td>Color.Content.Row / Content.Row.Hover / Button.Flat.Hover</td><td>tonal 动作钮与悬停状态层</td></tr>
+        <tr><td>--field-bg</td><td>Color.Field.Background</td><td>行图标 chip / 卡片图标 chip 底</td></tr>
+        <tr><td>--success / --success-soft</td><td>Color.Success / Color.Success.Soft</td><td>完成标题、就绪行、方案 B 图标底</td></tr>
+        <tr><td>--primary / --on-primary</td><td>Color.Primary（运行时 scheme 派生）/ Color.OnPrimary</td><td>原型取代表性 tone 40/80；dark 档 on-primary 为原型可读性偏离，实施按 token</td></tr>
+        <tr><td>--shadow-dialog</td><td>Elevation.Shadow.Dialog</td><td>0 26 68 #4D0F1222, 4 12 14 #240F1222</td></tr>
+        <tr><td>--scrim</td><td>Color.Overlay.Scrim.Md</td><td>setup-wizard-overlay 实际遮罩值</td></tr>
+        <tr><td>表面尺寸 / 圆角 / 高度</td><td>Layout.SetupWizard.* / Component.Wizard.Content.MaxWidth / Dialog.CornerRadius / Control.Height.Dialog</td><td>920×560 · 内容列 520 · 20 · 42</td></tr>
+      </table>
+
+      <h3>实施注意（选定方案后）</h3>
+      <p>外壳为契约区（ADR-017 + UiStyleContractTests）：进度行/动作带四变体一律未动，只重排步骤内容。落地时需同步：
+      ① 新增 component token 进 App.axaml（行高/chip 尺寸/格距不得裸值）；
+      ② 重写 <code>UiStyleContractTests.SetupWizard</code> 的 review 结构断言（现状锚定 4 行 + 3 divider + info-strip）；
+      ③ 图标为装饰性呈现，不绑 AutomationProperties.Name；编辑钮保留绑定 <code>setupWizardEditStep</code>（无头测试按 wizard-review-edit 类定位）；
+      ④ 方案 A/B 的图标在 XAML 中用 Material.Icons.Avalonia 对应 Kind（Globe/CloudDownload/Folder/Shield 等），文案经 Shell.I18n 绑定四语言。</p>
+    </details>
+  </div>
+
+  <!-- 浮动变体切换条（非产品 UI） -->
+  <div class="proto-switcher" role="group" aria-label="变体切换">
+    <button type="button" id="variant-prev" aria-label="上一个变体">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 5l-7 7 7 7"/></svg>
+    </button>
+    <span class="variant-label" id="variant-label">a · 图标摘要列表（推荐）</span>
+    <button type="button" id="variant-next" aria-label="下一个变体">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 5 7 7-7 7"/></svg>
+    </button>
+  </div>
+
+  <script>
+    // 变体注册与切换：?variant= 决定初始变体（reload 稳定、可分享），←/→ 循环。
+    const variants = [
+      { key: "current", name: "现状（对照）" },
+      { key: "a", name: "A · 图标摘要列表（推荐）" },
+      { key: "b", name: "B · 完成导向" },
+      { key: "c", name: "C · 分组卡片" },
+    ];
+    const sections = Array.from(document.querySelectorAll(".variant"));
+    const label = document.getElementById("variant-label");
+    let index = Math.max(0, variants.findIndex(v => v.key === new URLSearchParams(location.search).get("variant")));
+
+    function applyVariant() {
+      const variant = variants[index];
+      sections.forEach(section => {
+        section.hidden = section.dataset.variant !== variant.key;
+      });
+      label.textContent = variant.name;
+      // file:// 下 replaceState 仍可用；失败则退化为仅内存切换。
+      try {
+        history.replaceState(null, "", "?variant=" + variant.key);
+      } catch (_) { /* 原型：忽略 */ }
+    }
+    function cycle(delta) {
+      index = (index + delta + variants.length) % variants.length;
+      applyVariant();
+    }
+    document.getElementById("variant-prev").addEventListener("click", () => cycle(-1));
+    document.getElementById("variant-next").addEventListener("click", () => cycle(1));
+    document.addEventListener("keydown", event => {
+      const tag = (event.target.tagName || "").toLowerCase();
+      if (tag === "input" || tag === "textarea" || event.target.isContentEditable) return;
+      if (event.key === "ArrowLeft") cycle(-1);
+      if (event.key === "ArrowRight") cycle(1);
+    });
+
+    // 主题切换（原型内临时态，不持久化）；?theme=dark 允许深色档直链分享/截图。
+    const root = document.documentElement;
+    const lightBtn = document.getElementById("btn-light");
+    const darkBtn = document.getElementById("btn-dark");
+    function applyTheme(theme) {
+      root.dataset.theme = theme;
+      lightBtn.setAttribute("aria-pressed", String(theme === "light"));
+      darkBtn.setAttribute("aria-pressed", String(theme === "dark"));
+    }
+    lightBtn.addEventListener("click", () => applyTheme("light"));
+    darkBtn.addEventListener("click", () => applyTheme("dark"));
+
+    const themeParam = new URLSearchParams(location.search).get("theme");
+    if (themeParam === "dark" || themeParam === "light") {
+      applyTheme(themeParam);
+    }
+
+    applyVariant();
+  </script>
+</body>
+</html>
