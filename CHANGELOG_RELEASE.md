@@ -1,5 +1,7 @@
 ## v1.1.0
 
+![Cafe Launcher v1.1.0 更新概览](https://raw.githubusercontent.com/bluearchive-cafe/Cafe.Launcher.Avalonia/v1.1.0/docs/assets/release-banners/cafe-launcher-v1.1.0-release-banner.png)
+
 自上个稳定版 `v1.0.0` 以来的一个多月里，Cafe Launcher 迎来了第二个正式版。我们重塑了整个界面，把游戏的安装、更新、修复与卸载做得更透明，补上了 Windows 应用内更新，并首次带来 macOS 与 Linux 实验构建。愿这一版让你少操一点心，多留一点时间给游戏。
 
 感谢各位一直以来的支持。如果你在使用中遇到问题，欢迎通过 Issue 反馈；愿各位节日愉快，游戏顺利。
