@@ -129,21 +129,22 @@
                 </StackPanel>
             </controls:DialogSurface.Content>
             <controls:DialogSurface.Footer>
+                <!-- ADR-040：do-it（导出）在最左，安全动作（取消）在最右。 -->
                 <StackPanel Classes="confirm-actions">
-                    <Button Classes="flat-action dialog-action"
-                            Command="{Binding LogExport.CloseCommand}"
-                            AutomationProperties.Name="{Binding Shell.I18n[cancel]}">
-                        <StackPanel Classes="button-content">
-                            <materialIcons:MaterialIcon Kind="CloseCircleOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                            <TextBlock Text="{Binding Shell.I18n[cancel]}"/>
-                        </StackPanel>
-                    </Button>
                     <Button Classes="primary-action dialog-action"
                             Command="{Binding LogExport.ExportCommand}"
                             AutomationProperties.Name="{Binding Shell.I18n[logExportConfirm]}">
                         <StackPanel Classes="button-content">
                             <materialIcons:MaterialIcon Kind="ExitToApp" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
                             <TextBlock Text="{Binding Shell.I18n[logExportConfirm]}"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="flat-action dialog-action"
+                            Command="{Binding LogExport.CloseCommand}"
+                            AutomationProperties.Name="{Binding Shell.I18n[cancel]}">
+                        <StackPanel Classes="button-content">
+                            <materialIcons:MaterialIcon Kind="CloseCircleOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                            <TextBlock Text="{Binding Shell.I18n[cancel]}"/>
                         </StackPanel>
                     </Button>
                 </StackPanel>

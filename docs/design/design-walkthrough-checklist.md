@@ -22,6 +22,7 @@
 - 状态反馈以「预混色状态变体」实现（`Primary.Hover/.Pressed`、`SecondaryContainer.Hover/.Pressed` 等），未采用叠加状态层机制（ADR-004 落地记录）。
 - 向导组件（ADR-017）随审计-0828 对齐本矩阵：`wizard-action.primary-action` 补齐 filled 禁用态（预混配方），`wizard-option` 键盘聚焦铺 token 焦点环。
 - 焦点环（`FocusRing`，运行时 accent 派生）逐表面复核：明/暗主题 + 壁纸模式目测 ≥3:1 可辨识（含 banner 箭头、chrome 态区域）；本项不进静态对比度契约。
+- **焦点环只应在键盘导航时出现（ADR-040）**：打开对话框/叠层、鼠标点击后都**不该**看到焦点环；按 Tab / 方向键才出现。框体框架默认的焦点矩形（`FocusAdorner`）已全局关闭，应用用各控件的 `:focus-visible` 规则自绘。走查时按一次 Tab 确认焦点可见，再关掉叠层确认没有残留的环。
 
 ## 2. 无障碍豁免区（spec §8，逐项人工复核）
 
@@ -49,10 +50,14 @@
 - 控件统一 Field 形态（`Field.Background`/`Field.Border`/`Radius.Md`/2px 聚焦环）；Field.Border 双档 ≥3:1（Light `#788EA7` / Dark `#5E7494`）。
 - 底部操作带（取消 / 保存）语义与焦点默认落在安全操作。
 
-### 3.3 对话框族（ADR-014）
-- 确认/通知/更新/错误四类统一解剖：头部（icon + 标题 + ✕）→ 可滚动内容 → `dialog-footer` hairline 操作带（取消左、确认右；危险确认用 `danger-action`）。
-- 无特殊强调的确认对话框默认焦点落在安全操作（`ConfirmDialog.SafeActionButton` 打开时聚焦）。
+### 3.3 对话框族（ADR-015 外壳 / ADR-040 动作）
+- 确认/通知/更新/错误四类统一解剖：头部（icon + 标题 + ✕）→ 可滚动内容 → `dialog-footer` hairline 操作带；危险确认用 `danger-action`。
+- **动作顺序（ADR-040，Fluent/WinUI）**：do-it（确认 / 下载 / 导出）在**最左**，安全动作（取消 / 稍后 / 关闭）在**最右**——与「取消左、确认右」相反。
+- **默认按钮（ADR-040）**：非破坏性确认的确认动作是默认按钮（强调填充 + Enter + 打开时初始焦点）；破坏性确认（`IsDangerConfirm`）**不设默认按钮**，初始焦点仍在安全动作上，Enter 不会带走破坏性操作。
+- **动作底色与边框（ADR-040）**：次要动作不再是透明描边，而是中性静止填充（`Launcher.Color.Dialog.Action.Background`）；动作带按钮无可见边框，且焦点环的 2px 厚度**常驻预留**（聚焦只改颜色，几何不动）。
+- **焦点视觉（ADR-040）**：只在键盘导航时出现（程序式聚焦与鼠标点击不画）；框架默认焦点矩形全局清掉，焦点环由各控件既有 `:focus-visible` 规则绘制。
 - 明示关闭路径完整：✕ 按钮 + 取消/次要操作按钮；不依赖手势或仅有遮罩交互的路径。
+- 禁用态的既有约定不变：禁用按钮保留 1px 描边（`PrimaryActionButtons_..._DisabledStatesKeepTheirBorders`）。
 
 ### 3.4 Toast（ADR-014）
 - 无自动消失进度条；仅操作执行中显示 indeterminate 进度条（底部边缘，厚度 token）。

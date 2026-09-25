@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Testing;
@@ -583,7 +583,10 @@ public sealed partial class UiStyleContractTests
                 "OverlayFocusBehavior.IsEnabled\" Value=\"True",
                 RegexOptions.CultureInvariant));
         Assert.Contains("previousFocus = focusManager.GetFocusedElement()", behavior, StringComparison.Ordinal);
-        Assert.Contains("focus?.Focus(NavigationMethod.Tab)", behavior, StringComparison.Ordinal);
+        // ADR-040（修订）：自动聚焦与归还焦点都不是键盘导航 —— 必须用 Unspecified，
+        // 否则打开叠层的一瞬间就会画出焦点环（Tab 会把焦点判成键盘导航）。
+        Assert.Contains("?.Focus(NavigationMethod.Unspecified)", behavior, StringComparison.Ordinal);
+        Assert.Contains("focus?.Focus(NavigationMethod.Unspecified)", behavior, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -659,6 +662,143 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             "{StaticResource Launcher.Component.Dialog.Panel.Body.Padding}",
             GetStyleSetters(document, "controls|DialogSurface:panel /template/ ScrollViewer#PART_ScrollViewer")["Padding"]);
+    }
+
+    /// <summary>
+    /// ADR-040：动作顺序按 Fluent/WinUI —— do-it（primary/danger）在安全动作（flat）之前。
+    /// 这是一条不变量而非逐文件断言：任何新的动作带只要同时含两类动作就受约束。
+    /// </summary>
+    [Theory]
+    [InlineData("Controls/ConfirmDialog.axaml")]
+    [InlineData("Views/MainWindowDialogsOverlay.axaml")]
+    [InlineData("Views/MainWindowLogExportOverlay.axaml")]
+    [InlineData("Views/MainWindowLogViewerOverlay.axaml")]
+    [InlineData("Views/ResourcePanelOverlay.axaml")]
+    [InlineData("Views/MainWindowDebugOverlay.axaml")]
+    [InlineData("Views/DesignGalleryOverlay.axaml")]
+    public void DialogActionBands_PutDoItActionsBeforeSafeActions(string relativePath)
+    {
+        var document = XDocument.Load(TestRepository.FromApplicationRoot(relativePath));
+        var bands = document
+            .Descendants()
+            .Where(element => element.Name.LocalName == "StackPanel" && HasClass(element, "confirm-actions"))
+            .ToArray();
+
+        Assert.NotEmpty(bands);
+
+        foreach (var band in bands)
+        {
+            var buttons = band.Descendants().Where(element => element.Name.LocalName == "Button").ToList();
+            var lastDoIt = buttons.FindLastIndex(button =>
+                HasClass(button, "primary-action") || HasClass(button, "danger-action"));
+            var firstSafe = buttons.FindIndex(button => HasClass(button, "flat-action"));
+
+            if (lastDoIt < 0 || firstSafe < 0)
+            {
+                continue;
+            }
+
+            Assert.True(
+                lastDoIt < firstSafe,
+                $"{relativePath}: do-it 动作必须在安全动作之前（do-it #{lastDoIt}, safe #{firstSafe}）。");
+        }
+    }
+
+    /// <summary>ADR-040：确认框的动作顺序（确认 → 危险确认 → 取消）。</summary>
+    [Fact]
+    public void ConfirmDialog_PlacesConfirmAndDangerBeforeCancel()
+    {
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Controls/ConfirmDialog.axaml"));
+        var band = document
+            .Descendants()
+            .Single(element => element.Name.LocalName == "StackPanel" && HasClass(element, "confirm-actions"));
+        var names = band
+            .Elements()
+            .Where(element => element.Name.LocalName == "Button")
+            .Select(element => element.Attributes().Single(attribute =>
+                attribute.Name.LocalName == "Name").Value)
+            .ToArray();
+
+        Assert.Equal(["PrimaryActionButton", "DangerActionButton", "SafeActionButton"], names);
+    }
+
+    /// <summary>
+    /// ADR-040（修订）：对话框动作按钮不画边框 —— 底色即形状。焦点视觉由全局开关统一关掉
+    /// （见 <c>GlobalFocusVisual_IsDisabledAppWide</c>）。
+    /// </summary>
+    [Fact]
+    public void DialogActionButtons_UseNeutralFillAndNoVisibleBorder()
+    {
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
+
+        const string neutralFill = "{DynamicResource Launcher.Color.Dialog.Action.Background}";
+        var family = GetStyleSetters(document, "Button.confirm-dialog-action");
+        Assert.Equal(neutralFill, family["Background"]);
+        // 家族规则不再自己声明描边：无边框外观与预留厚度都由动作带那条规则统一给。
+        Assert.DoesNotContain("BorderThickness", family.Keys);
+        Assert.DoesNotContain("BorderBrush", family.Keys);
+
+        var bandStandard = GetStyleSetters(document, "StackPanel.confirm-actions Button.flat-action");
+        Assert.Equal(neutralFill, bandStandard["Background"]);
+
+        // 新 token 必须同时落在两套 ThemeDictionary 里（生成器的中性重置表由
+        // AppDialogSurfaceTokens_MatchGeneratorDeclaredDefaults 成对守护）。
+        var application = XDocument.Load(TestRepository.FromApplicationRoot("App.axaml"));
+        Assert.Equal("#FFF4F8FC", ReadThemeBrushColor(application, "Light", "Launcher.Color.Dialog.Action.Background"));
+        Assert.Equal("#FF222B38", ReadThemeBrushColor(application, "Dark", "Launcher.Color.Dialog.Action.Background"));
+    }
+
+    /// <summary>
+    /// ADR-040（修订）：焦点视觉「默认不显示、键盘导航时显示」。
+    /// 框架默认焦点矩形（FocusAdorner）全局清掉；应用自己的 FocusRing 挂在 :focus-visible 上保留 ——
+    /// 因此这条契约同时钉住「矩形不出现」和「键盘环仍然存在且覆盖得到动作带的无边框规则」。
+    /// </summary>
+    [Fact]
+    public void FocusVisual_IsKeyboardOnly()
+    {
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
+        var styles = document.Descendants().Where(element => element.Name.LocalName == "Style").ToList();
+
+        // 1. 框架默认焦点矩形：全局清掉（它不是本仓语言，且会与 FocusRing 叠成双层框）。
+        Assert.Equal("{x:Null}", GetStyleSetters(document, "Control")["FocusAdorner"]);
+
+        // 2. 应用自己的焦点环：仍然挂在 :focus-visible 上（没有被抹掉）。
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.FocusRing}",
+            GetStyleSetters(document, "Button:focus-visible")["BorderBrush"]);
+        Assert.Equal(
+            "{StaticResource Launcher.Border.Thickness.Focus}",
+            GetStyleSetters(document, "Button:focus-visible")["BorderThickness"]);
+
+        // 3. 动作带按钮：可见边框为零，但焦点环的厚度**常驻预留**（静止时描边透明），
+        //    所以聚焦只改颜色、不改几何 —— 否则聚焦那一刻按钮会变宽、右对齐的动作带整体位移。
+        var bandReserve = GetStyleSetters(document, "StackPanel.confirm-actions Button");
+        Assert.Equal("{StaticResource Launcher.Color.Transparent}", bandReserve["BorderBrush"]);
+        Assert.Equal("{StaticResource Launcher.Border.Thickness.Focus}", bandReserve["BorderThickness"]);
+
+        var bandFocus = GetStyleSetters(document, "StackPanel.confirm-actions Button:focus-visible");
+        Assert.Equal("{DynamicResource Launcher.Color.FocusRing}", bandFocus["BorderBrush"]);
+        Assert.DoesNotContain(
+            "BorderThickness",
+            bandFocus.Keys); // 聚焦不许再动厚度（这条是「宽度不变」的样式侧守卫）
+
+        var bandReserveIndex = styles.FindIndex(element =>
+            element.Attribute("Selector")?.Value == "StackPanel.confirm-actions Button");
+        var borderlessIndex = styles.FindIndex(element =>
+            element.Attribute("Selector")?.Value == "StackPanel.confirm-actions Button.flat-action");
+        var bandFocusIndex = styles.FindIndex(element =>
+            element.Attribute("Selector")?.Value == "StackPanel.confirm-actions Button:focus-visible");
+        Assert.True(
+            bandReserveIndex > borderlessIndex,
+            "预留厚度的规则必须排在 flat-action 的静止样式之后（Avalonia 取最后一个匹配的 Setter）。");
+        Assert.True(bandFocusIndex > bandReserveIndex, "颜色规则必须排在预留厚度之后。");
+
+        // 4. 程序式聚焦不得被判成键盘导航：源码里不能出现 NavigationMethod.Tab。
+        foreach (var relativePath in new[] { "Views/OverlayFocusBehavior.cs", "Controls/ConfirmDialog.axaml.cs" })
+        {
+            var source = File.ReadAllText(TestRepository.FromApplicationRoot(relativePath));
+            Assert.DoesNotContain("Focus(NavigationMethod.Tab)", source, StringComparison.Ordinal);
+        }
     }
 
     [Fact]

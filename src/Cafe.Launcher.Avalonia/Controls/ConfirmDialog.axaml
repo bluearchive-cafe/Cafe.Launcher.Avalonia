@@ -38,27 +38,31 @@
                 </StackPanel>
             </controls:DialogSurface.Content>
             <controls:DialogSurface.Footer>
+                <!-- ADR-040：动作顺序按 Fluent/WinUI —— do-it（确认）在最左，安全动作（取消）在最右。
+                     破坏性确认由 danger-action 变体承担强调，非破坏性确认走默认按钮语义。 -->
                 <StackPanel Classes="confirm-actions">
-                    <Button x:Name="SafeActionButton"
-                            Classes="flat-action dialog-action confirm-dialog-action"
-                            Command="{Binding CancelCommand, ElementName=Root}"
-                            ToolTip.Tip="{Binding CancelText, ElementName=Root}"
-                            AutomationProperties.Name="{Binding CancelText, ElementName=Root}">
-                        <TextBlock Text="{Binding CancelText, ElementName=Root}"/>
-                    </Button>
-                    <Button Classes="primary-action dialog-action confirm-dialog-action"
+                    <Button x:Name="PrimaryActionButton"
+                            Classes="primary-action dialog-action confirm-dialog-action"
                             Command="{Binding ConfirmCommand, ElementName=Root}"
                             IsVisible="{Binding !IsDangerConfirm, ElementName=Root}"
                             ToolTip.Tip="{Binding ConfirmText, ElementName=Root}"
                             AutomationProperties.Name="{Binding ConfirmText, ElementName=Root}">
                         <TextBlock Text="{Binding ConfirmText, ElementName=Root}"/>
                     </Button>
-                    <Button Classes="danger-action dialog-action confirm-dialog-action"
+                    <Button x:Name="DangerActionButton"
+                            Classes="danger-action dialog-action confirm-dialog-action"
                             Command="{Binding ConfirmCommand, ElementName=Root}"
                             IsVisible="{Binding IsDangerConfirm, ElementName=Root}"
                             ToolTip.Tip="{Binding ConfirmText, ElementName=Root}"
                             AutomationProperties.Name="{Binding ConfirmText, ElementName=Root}">
                         <TextBlock Text="{Binding ConfirmText, ElementName=Root}"/>
+                    </Button>
+                    <Button x:Name="SafeActionButton"
+                            Classes="flat-action dialog-action confirm-dialog-action"
+                            Command="{Binding CancelCommand, ElementName=Root}"
+                            ToolTip.Tip="{Binding CancelText, ElementName=Root}"
+                            AutomationProperties.Name="{Binding CancelText, ElementName=Root}">
+                        <TextBlock Text="{Binding CancelText, ElementName=Root}"/>
                     </Button>
                 </StackPanel>
             </controls:DialogSurface.Footer>

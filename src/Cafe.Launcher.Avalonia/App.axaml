@@ -1,4 +1,4 @@
-﻿<Application xmlns="https://github.com/avaloniaui"
+<Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="Cafe.Launcher.Avalonia.App"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
@@ -312,6 +312,8 @@
                     <SolidColorBrush x:Key="Launcher.Color.Button.Border" Color="#FFC8D2DE"/>
                     <SolidColorBrush x:Key="Launcher.Color.Button.Flat.Hover" Color="#FFEEF6FF"/>
                     <SolidColorBrush x:Key="Launcher.Color.Button.Flat.Pressed" Color="#FFDCEFFF"/>
+                    <!-- 对话框动作带的标准（次要）动作底色：Fluent 标准按钮有静止填充，不是透明描边。 -->
+                    <SolidColorBrush x:Key="Launcher.Color.Dialog.Action.Background" Color="#FFF4F8FC"/>
                     <SolidColorBrush x:Key="Launcher.Color.SocialChip.Hover" Color="#FFE2ECF9"/>
                     <SolidColorBrush x:Key="Launcher.Color.SocialChip.Pressed" Color="#FFD2E2F9"/>
                     <SolidColorBrush x:Key="Launcher.Color.SiteButton.Background" Color="#FFFFFFFF"/>
@@ -346,6 +348,8 @@
                     <SolidColorBrush x:Key="Launcher.Color.Button.Border" Color="#FF4A5B73"/>
                     <SolidColorBrush x:Key="Launcher.Color.Button.Flat.Hover" Color="#FF243653"/>
                     <SolidColorBrush x:Key="Launcher.Color.Button.Flat.Pressed" Color="#FF1D426C"/>
+                    <!-- 对话框动作带的标准（次要）动作底色：Fluent 标准按钮有静止填充，不是透明描边。 -->
+                    <SolidColorBrush x:Key="Launcher.Color.Dialog.Action.Background" Color="#FF222B38"/>
                     <SolidColorBrush x:Key="Launcher.Color.SocialChip.Hover" Color="#FF243653"/>
                     <SolidColorBrush x:Key="Launcher.Color.SocialChip.Pressed" Color="#FF1D426C"/>
                     <SolidColorBrush x:Key="Launcher.Color.SiteButton.Background" Color="#FF192232"/>

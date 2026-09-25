@@ -176,6 +176,8 @@ internal static class MaterialSchemeGenerator
         ("Launcher.Text.Body", "#FF3F4954", "#FFC8D2DF"),
         ("Launcher.Color.Field.Background", "#FFF0F6FD", "#FF1E2834"),
         ("Launcher.Color.Field.Border", "#FF788EA7", "#FF5E7494"),
+        // 对话框标准动作底色是中性层色，不跟随种子（ADR-040）。
+        ("Launcher.Color.Dialog.Action.Background", "#FFF4F8FC", "#FF222B38"),
     ];
 
     private static Color Blend(Color background, Color foreground, double opacity) =>
