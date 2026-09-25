@@ -79,6 +79,8 @@
             <CornerRadius x:Key="Launcher.Radius.Sm">8</CornerRadius>
             <CornerRadius x:Key="Launcher.Radius.Md">12</CornerRadius>
             <CornerRadius x:Key="Launcher.Radius.Lg">16</CornerRadius>
+            <!-- 整圆（分段按钮端头 / 状态 chip / pill 形状）；ADR-041 资源面板重设计引入。 -->
+            <CornerRadius x:Key="Launcher.Radius.Full">999</CornerRadius>
             <CornerRadius x:Key="Launcher.Component.Banner.Indicator.CornerRadius">1</CornerRadius>
             <Thickness x:Key="Launcher.Component.Banner.Indicator.Margin">0,0,0,16</Thickness>
             <x:Double x:Key="Launcher.Icon.Sm">16</x:Double>
@@ -143,7 +145,14 @@
             <x:Double x:Key="Launcher.Component.LogViewer.EntryDetails.MaxHeight">120</x:Double>
             <x:Double x:Key="Launcher.Layout.LogExport.Width">560</x:Double>
             <x:Double x:Key="Launcher.Layout.LogExport.MaxHeight">640</x:Double>
-            <x:Double x:Key="Launcher.Component.ResourcePanel.UidSource.MinWidth">140</x:Double>
+            <!-- 资源面板 MD3 重设计（ADR-041）：分段按钮段度量、状态 chip 与条目行密度。
+                 旧 ComboBox 的 UidSource.MinWidth=140 随之退场。 -->
+            <x:Double x:Key="Launcher.Component.Segmented.Segment.MinWidth">96</x:Double>
+            <Thickness x:Key="Launcher.Component.Segmented.Segment.Padding">12,0</Thickness>
+            <x:Double x:Key="Launcher.Component.Segmented.Divider.Width">1</x:Double>
+            <x:Double x:Key="Launcher.Component.ResourcePanel.StatusChip.Height">24</x:Double>
+            <Thickness x:Key="Launcher.Component.ResourcePanel.StatusChip.Padding">9,0</Thickness>
+            <Thickness x:Key="Launcher.Component.ResourcePanel.Row.Padding">14,16</Thickness>
             <x:Double x:Key="Launcher.Component.SetupWizard.Select.MinWidth">280</x:Double>
             <Thickness x:Key="Launcher.Component.Dialog.Content.BottomMargin">0,0,0,8</Thickness>
             <x:Double x:Key="Launcher.Layout.DesignGallery.Width">1000</x:Double>
@@ -321,6 +330,10 @@
                     <SolidColorBrush x:Key="Launcher.Color.Toast.Background" Color="#FFFFFFFF"/>
                     <SolidColorBrush x:Key="Launcher.Text.Info" Color="#FF24415E"/>
                     <SolidColorBrush x:Key="Launcher.Color.Success" Color="#FF15803D"/>
+                    <!-- 状态 chip（Ready）的浅色底色；与 Success 前景成对（ADR-041）。 -->
+                    <SolidColorBrush x:Key="Launcher.Color.Success.Soft" Color="#FFD9F4E9"/>
+                    <!-- 对话框正文内的发丝分隔线：弱于 Card.Border 的一阶（ADR-041）。 -->
+                    <SolidColorBrush x:Key="Launcher.Color.Dialog.Section.Divider" Color="#FFE0E3EB"/>
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Dark">
                     <SolidColorBrush x:Key="Launcher.Color.Carousel.Dot.Inactive" Color="#FF5A6270"/>
@@ -357,6 +370,8 @@
                     <SolidColorBrush x:Key="Launcher.Color.Toast.Background" Color="#FF1C2533"/>
                     <SolidColorBrush x:Key="Launcher.Text.Info" Color="#FFD6E8FF"/>
                     <SolidColorBrush x:Key="Launcher.Color.Success" Color="#FF4ADE80"/>
+                    <SolidColorBrush x:Key="Launcher.Color.Success.Soft" Color="#FF16302A"/>
+                    <SolidColorBrush x:Key="Launcher.Color.Dialog.Section.Divider" Color="#FF2C3844"/>
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
         </ResourceDictionary>

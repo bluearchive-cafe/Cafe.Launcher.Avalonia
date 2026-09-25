@@ -1,4 +1,4 @@
-﻿using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Features.Settings;
 using Cafe.Launcher.Avalonia.Features.SetupWizard;
 using Cafe.Launcher.Avalonia.Services;
@@ -129,6 +129,76 @@ public sealed class LocalizationTerminologyTests
 
         Assert.Equal(locale["launchCheckLocalManifest"], locale["statusLaunchCheckLocal"]);
         Assert.Equal(locale["launchCheckRemoteManifest"], locale["statusLaunchCheckRemote"]);
+    }
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("zh-Hans")]
+    [InlineData("zh-Hant")]
+    [InlineData("ja")]
+    public void LocaleFiles_SetupWizardDownloadSourceLabel_MatchesSettingsLabel(string fileName)
+    {
+        var locale = ReadLocale(fileName);
+
+        Assert.Equal(locale["downloadSource"], locale["setupWizardDownloadSource"]);
+    }
+
+    /// <summary>
+    /// 下载源句子文案口径（UBIQUITOUS_LANGUAGE.md）：凡指称下载源的句子必须使用全称，
+    /// 且不得把提供方说成网络路线（CDN）。短显示名（"Cafe"/"官方"）只允许出现在选项标签等
+    /// 非句子文案中，不在本断言范围内。
+    /// </summary>
+    [Theory]
+    [InlineData("en", "download source")]
+    [InlineData("zh-Hans", "下载源")]
+    [InlineData("zh-Hant", "下載來源")]
+    [InlineData("ja", "ダウンロードソース")]
+    public void LocaleFiles_DownloadSourceSentenceCopy_UsesCanonicalFullTerm(string fileName, string fullTerm)
+    {
+        var locale = ReadLocale(fileName);
+
+        var sentenceKeys = new[]
+        {
+            "downloadSourceDescription",
+            "setupWizardDownloadSourceHint",
+            "downloadSourceChangedRepairPrompt",
+            "resourcePanelUidGenerationHint",
+            "resourcePanelCafeOnlyMessage"
+        };
+
+        Assert.All(sentenceKeys, key =>
+        {
+            var value = GetRequiredValue(locale, key);
+            Assert.Contains(fullTerm, value, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("CDN", value, StringComparison.OrdinalIgnoreCase);
+        });
+    }
+
+    /// <summary>
+    /// 简中资源术语口径（UBIQUITOUS_LANGUAGE.md）：「本地化（汉化）资源」已收敛为
+    /// 「汉化资源」，资源相关文案不得再出现「本地化」双写。含「汉化资源」的一侧由
+    /// <see cref="LocaleFiles_ConsumedResourceCopy_UsesLocalizedResourcesTerm"/> 以锚点继续覆盖。
+    /// </summary>
+    [Fact]
+    public void LocaleFiles_SimplifiedChineseResourceCopy_UsesHanhuaTerm()
+    {
+        var locale = ReadLocale("zh-Hans");
+
+        var resourceKeys = new[]
+        {
+            "resourcePanelLocalizedVersion",
+            "resourcePanelDescription",
+            "resourcePanelVersionAligned",
+            "setupWizardDownloadSourceCafeDescription",
+            "setupWizardDownloadSourceCafeRecommendationReason"
+        };
+
+        Assert.All(resourceKeys, key =>
+        {
+            var value = GetRequiredValue(locale, key);
+            Assert.Contains("汉化资源", value, StringComparison.Ordinal);
+            Assert.DoesNotContain("本地化", value, StringComparison.Ordinal);
+        });
     }
 
     [Fact]

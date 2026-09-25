@@ -64,10 +64,6 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
     [ObservableProperty]
     private bool isResourcePanelVisible;
 
-    /// <summary>Whether the first-launch UID hint is shown; dismissal lasts for this launcher session.</summary>
-    [ObservableProperty]
-    private bool isUidGenerationHintVisible = true;
-
     [ObservableProperty]
     private bool isResourcePanelBusy;
 
@@ -195,12 +191,6 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
     {
         IsResourcePanelVisible = true;
         await LoadResourcePanelAsync(lifetimeCts.Token);
-    }
-
-    [RelayCommand]
-    private void DismissUidGenerationHint()
-    {
-        IsUidGenerationHintVisible = false;
     }
 
     [RelayCommand]

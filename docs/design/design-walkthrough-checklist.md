@@ -70,8 +70,12 @@
 - 完成确认态：最后一步（复核）即完成态，标题 Success 色，Footer 切"完成"，无庆祝动画、不缩放。
 - 动效（ADR-016/017）：步骤切换 = 顺序换页——空间档 333ms 对半分：旧内容 166.5ms 加速淡出（禁命中）→ 中点换内容并复位滚动、壳层（步骤进度文本 + 动作钮可见性）同帧随显示步翻转 → 起势帧渲染入场 pose（消化首次布局）→ 新内容 166.5ms 减速淡入 + ±14px 方向滑入（透明度与位移同批 `DoubleTransition`，收尾留缓冲再结算）；快速连点最新状态生效；外壳遮罩 Fast 淡入、表面单次进出场；降动效瞬切换面并定格。
 
-### 3.6 诊断/日志/资源面板（Q3 例外声明）
+### 3.6 诊断/日志（Q3 例外声明）
 - 仅 token 兼容；列表维持 Fluent 基础模板；不做 M3 视觉重设计。
+
+### 3.6b 资源面板（ADR-041）
+- 外层骨架 = `DialogSurface` Panel 形态不动（头带 / 滚动正文 / 发丝底带，ADR-015）；正文解剖已 M3 化：UID 单卡三态（展示 / 编辑 / 缺失互斥面板，UID 值等宽 + 字距）、来源 = MD3 分段按钮（`RadioButton.segment-option`，选中段 accent 家族 + 勾选图标）、条目 = 单卡三行（`Border.resource-row` + 发丝分隔线，行 = 标题 + 状态 chip + 版本行 + 无标签 Switch）。
+- 状态 chip：Ready=Success/`Success.Soft`、Waiting/Loading=Secondary/`Content.Row`、Failed=Danger/`Danger.Soft`；类映射由 `ResourcePanelItem` 的四个表象布尔驱动。
 
 ### 3.7 崩溃窗口（ADR-019 / ADR-020，独立 Fluent 设计系统）
 - 设计系统边界：`Crash.*` 令牌就近定义在 `CrashReportWindow.axaml` 的 `Window.Resources`（Light/Dark 两档），**不引用 `Launcher.*`**；`CrashReportApp.axaml` 注册 `FluentTheme` + `MaterialIconStyles`（缺后者图标渲染为空白）。

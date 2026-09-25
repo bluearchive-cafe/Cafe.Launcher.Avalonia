@@ -421,7 +421,6 @@ public static class LocalizationKeys
     public const string ResourcePanelChangeUid = "resourcePanelChangeUid";
     public const string ResourcePanelCurrentUid = "resourcePanelCurrentUid";
     public const string ResourcePanelDescription = "resourcePanelDescription";
-    public const string ResourcePanelDismissUidHint = "resourcePanelDismissUidHint";
     public const string ResourcePanelEditUid = "resourcePanelEditUid";
     public const string ResourcePanelFailed = "resourcePanelFailed";
     public const string ResourcePanelGameText = "resourcePanelGameText";

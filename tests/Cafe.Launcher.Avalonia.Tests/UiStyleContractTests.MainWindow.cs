@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Cafe.Launcher.Avalonia.Testing;
 
@@ -43,7 +43,10 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             "ClipboardText",
             resourcePanelButton.Descendants().Single(element => element.Name.LocalName == "MaterialIcon").Attribute("Kind")?.Value);
+        // ADR-041：面板正文里出现了模板内的状态图标，头部徽章按解剖槽位定位，不再依赖文档顺序。
         var resourcePanelHeadingIcon = resourcePanelOverlay
+            .Descendants()
+            .First(element => element.Name.LocalName == "DialogSurface.HeaderIcon")
             .Descendants()
             .First(element => element.Name.LocalName == "MaterialIcon");
         Assert.Equal("Web", resourcePanelHeadingIcon.Attribute("Kind")?.Value);

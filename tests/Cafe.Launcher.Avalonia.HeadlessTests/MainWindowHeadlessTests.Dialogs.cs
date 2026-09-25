@@ -64,28 +64,88 @@ public sealed partial class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
-    public void ResourcePanel_DismissUidHint_HidesBannerUntilNextSession()
+    public void ResourcePanel_HintStrip_IsAPermanentNoteWithoutDismissAffordance()
     {
+        // 2026-09-28 用户裁决：UID 提示条是常驻说明行，没有关闭钮；
+        // 「每会话关闭一次」的行为与其命令一并退场。
         using var context = CreateContext();
         context.Window.Show();
         ShowResourcePanel(context);
         Dispatcher.UIThread.RunJobs();
-        var banner = context.Window.GetVisualDescendants().OfType<Border>()
-            .Single(border => border.Name == "UidGenerationHint");
-        var closeButton = banner.GetVisualDescendants().OfType<Button>().Single();
-        Assert.True(banner.IsEffectivelyVisible);
-        Assert.False(string.IsNullOrWhiteSpace(AutomationProperties.GetName(closeButton)));
-        AssertControlInsideWindow(closeButton, context.Window);
+        var expectedHint = context.ViewModel.Shell.I18n[LocalizationKeys.ResourcePanelUidGenerationHint];
 
-        closeButton.Command!.Execute(null);
-        Dispatcher.UIThread.RunJobs();
-        Assert.False(banner.IsVisible);
-        Assert.True(context.ViewModel.ResourcePanel.IsResourcePanelVisible);
+        var hintStrip = context.Window.GetVisualDescendants().OfType<Border>()
+            .Single(border =>
+                border.Classes.Contains("info-strip")
+                && !border.Classes.Contains("resource-panel-status")
+                && border.GetVisualDescendants().OfType<TextBlock>()
+                    .Any(text => string.Equals(text.Text, expectedHint, StringComparison.Ordinal)));
 
-        context.ViewModel.ResourcePanel.CloseResourcePanelCommand.Execute(null);
+        Assert.True(hintStrip.IsEffectivelyVisible);
+        Assert.Empty(hintStrip.GetVisualDescendants().OfType<Button>());
+    }
+
+    [AvaloniaFact]
+    public void ResourcePanel_Content_RendersSegmentedSourceSwitchesAndStatusChips()
+    {
+        // ADR-041 内容解剖的渲染级守卫：UID 展示态 + 分段来源 + 单卡三行（Switch/chip），
+        // 状态类随 Status 与消息语调联动。VM 状态机不因视图测试被驱动（不触发任何命令）。
+        using var context = CreateContext();
+        context.Window.Show();
         ShowResourcePanel(context);
         Dispatcher.UIThread.RunJobs();
-        Assert.False(banner.IsVisible);
+        var resourcePanel = context.ViewModel.ResourcePanel;
+
+        // UID 展示态：两个编辑/缺失态输入框隐藏，分段按钮成对渲染且勾选段跟随来源。
+        var uidInputs = context.Window.GetVisualDescendants().OfType<TextBox>()
+            .Where(box => box.Classes.Contains("uid-input"))
+            .ToArray();
+        Assert.Equal(2, uidInputs.Length);
+        Assert.All(uidInputs, input => Assert.False(input.IsEffectivelyVisible));
+
+        var segments = context.Window.GetVisualDescendants().OfType<RadioButton>()
+            .Where(button => button.Classes.Contains("segment-option"))
+            .ToArray();
+        Assert.Equal(2, segments.Length);
+        var autoName = context.ViewModel.Shell.I18n[LocalizationKeys.ResourcePanelUidSourceAuto];
+        var autoSegment = Assert.Single(segments, segment =>
+            AutomationProperties.GetName(segment) == autoName);
+        Assert.True(autoSegment.IsChecked == true);
+        Assert.All(segments.Where(segment => segment != autoSegment),
+            segment => Assert.False(segment.IsChecked == true));
+
+        // 单卡三行：Switch 跟随条目启用状态，chip 的状态类跟随条目 Status。
+        var switches = context.Window.GetVisualDescendants().OfType<ToggleSwitch>()
+            .ToArray();
+        Assert.Equal(3, switches.Length);
+        var chips = context.Window.GetVisualDescendants().OfType<Border>()
+            .Where(border => border.Classes.Contains("status-chip"))
+            .ToArray();
+        Assert.Equal(3, chips.Length);
+        var items = resourcePanel.ResourcePanelItems;
+        for (var index = 0; index < items.Count; index++)
+        {
+            Assert.Equal(items[index].IsEnabled, switches[index].IsChecked == true);
+            Assert.Equal(items[index].IsOperable, switches[index].IsEnabled);
+            Assert.Contains("loading", chips[index].Classes);
+        }
+
+        items[0].Status = ResourcePanelItemStatus.Ready;
+        items[1].IsEnabled = true;
+        Dispatcher.UIThread.RunJobs();
+        Assert.Contains("ready", chips[0].Classes);
+        Assert.DoesNotContain("loading", chips[0].Classes);
+        Assert.True(switches[1].IsChecked == true);
+
+        // 消息条随内容显隐、随语调换 danger 类（前导图标同时切换，颜色之外的线索）。
+        var statusStrip = context.Window.GetVisualDescendants().OfType<Border>()
+            .Single(border => border.Classes.Contains("resource-panel-status"));
+        Assert.False(statusStrip.IsEffectivelyVisible);
+        resourcePanel.ResourcePanelMessage = "boom";
+        resourcePanel.IsResourcePanelMessageError = true;
+        Dispatcher.UIThread.RunJobs();
+        Assert.True(statusStrip.IsEffectivelyVisible);
+        Assert.Contains("danger", statusStrip.Classes);
     }
 
     [AvaloniaFact]

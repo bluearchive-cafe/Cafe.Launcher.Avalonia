@@ -41,9 +41,11 @@
 | Manifest | 文件清单 | 檔案清單 | マニフェスト |
 | Launch verification | 启动校验 | 啟動校驗 | 起動チェック |
 | Download source | 下载源 | 下載來源 | ダウンロードソース |
+| Cafe download source | Cafe 下载源 | Cafe 下載來源 | Cafe ダウンロードソース |
+| Official download source | 官方下载源 | 官方下載來源 | 公式ダウンロードソース |
 | Remote | 远程 | 遠端 | リモート |
 | Resource Panel | 资源面板 | 資源面板 | リソースパネル |
-| Localized resources | 本地化资源 | 本地化資源 | ローカライズリソース |
+| Localized resources | 汉化资源 | 中文化資源 | 中国語化リソース |
 | Banner | 横幅 | 橫幅 | バナー |
 | Fatal | 致命 | 致命 | 致命的 |
 | Update channel | 更新通道 | 更新頻道 | 更新チャンネル |
@@ -71,6 +73,8 @@
 - Automatic language selection uses the localized `languageAuto` value; never build it by appending a fixed English `(Auto)` suffix.
 - `banner` and `banners` mean **Banner**, not an event or activity. Chinese copy uses “横幅” or “橫幅”.
 - Log filters and log-level settings use the same **Fatal** translation within each language.
+- Download-source sentence copy uses the full term — “Cafe 下载源 / Cafe 下載來源 / Cafe ダウンロードソース / Cafe download source” and “官方下载源 / 官方下載來源 / 公式ダウンロードソース / Official download source”. The bare display names (“Cafe”, “官方”, “Official”, “公式”) are only for option labels, buttons, and status-bar values. Do not shorten to “Cafe 源 / Cafe 來源 / Cafe ソース” or name the source a “Cafe CDN / CDN サーバー”; the setting selects a provider, not a network route.
+- The localized-resources term must say Chinese: zh-Hans “汉化资源”, zh-Hant “中文化資源”, ja “中国語化リソース”, en “Chinese-localized resources”. The bare “本地化资源 / 本地化資源 / ローカライズリソース” is not used in user-facing copy because it does not say what the resources are localized to.
 
 ## Reserved terms
 
@@ -97,3 +101,5 @@
 - “活动” and “活動” were used for **Banner**, but they mean an event; use “横幅” and “橫幅”.
 - “跟随系统” and the unqualified “系统代理” made two proxy modes appear equivalent; use **Automatic system proxy** and **System proxy (configured first)** to expose the explicit-configuration priority and automatic fallback.
 - “汉化管理,” “中文化管理,” and “中国語化設定” named the **Resource Panel** after one resource type; use the canonical panel name and reserve localization wording for **localized resources**.
+- “Cafe 源,” “Cafe 來源,” “Cafe ソース,” and “Cafe source” shortened the **Cafe download source**, and “官方源/官方來源” the **Official download source**; “Cafe CDN” and “CDN サーバー” described the provider as a network route. Sentence copy uses the full terms; short display names remain only on labels and buttons.
+- “本地化（汉化）资源” double-named the **localized resources** in Simplified Chinese; use “汉化资源”.
