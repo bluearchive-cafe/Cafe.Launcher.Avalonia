@@ -1,0 +1,433 @@
+{
+  "schema_version": 2,
+  "delivery_class": "concept",
+  "material": {
+    "version": "md3",
+    "mode": "dark",
+    "tokens": {
+      "primary": "#2E7DF6",
+      "on_primary": "#FFFFFF",
+      "primary_container": "#12335E",
+      "on_primary_container": "#001A41",
+      "secondary": "#565E71",
+      "on_secondary": "#FFFFFF",
+      "surface": "#FDFBFF",
+      "surface_container": "#1A212B",
+      "on_surface": "#F5F7FA",
+      "on_surface_variant": "#C3CAD6",
+      "outline": "#3A4150"
+    }
+  },
+  "campaign": {
+    "name": "Cafe Launcher 发布横幅",
+    "claims": []
+  },
+  "canvas": {
+    "preset": "custom",
+    "width": 1920,
+    "height": 1080,
+    "device_scale_factor": 1
+  },
+  "scene": {
+    "id": "poster",
+    "type": "group",
+    "layout": "absolute",
+    "style": {
+      "color": "$on_surface",
+      "background": "radial-gradient(circle at 82% 16%, color-mix(in srgb, $primary 25%, transparent), transparent 31%), linear-gradient(145deg, var(--background-top), var(--background-bottom))"
+    },
+    "children": [
+      {
+        "id": "glow-disc",
+        "type": "shape",
+        "shape": "circle",
+        "intent": {
+          "allow_bleed": true
+        },
+        "style": {
+          "x": 1280,
+          "y": -320,
+          "width": 900,
+          "height": 900,
+          "background": "color-mix(in srgb, $primary_container 55%, transparent)"
+        }
+      },
+      {
+        "id": "base-disc",
+        "type": "shape",
+        "shape": "circle",
+        "intent": {
+          "allow_bleed": true
+        },
+        "style": {
+          "x": -330,
+          "y": 755,
+          "width": 840,
+          "height": 840,
+          "background": "color-mix(in srgb, $surface_container 95%, transparent)"
+        }
+      },
+      {
+        "id": "ring-top-right",
+        "type": "shape",
+        "shape": "circle",
+        "intent": {
+          "allow_bleed": true
+        },
+        "style": {
+          "x": 1390,
+          "y": -210,
+          "width": 680,
+          "height": 680,
+          "border": "2px solid color-mix(in srgb, $primary 12%, transparent)"
+        }
+      },
+      {
+        "id": "ring-bottom-left",
+        "type": "shape",
+        "shape": "circle",
+        "intent": {
+          "allow_bleed": true
+        },
+        "style": {
+          "x": -210,
+          "y": 875,
+          "width": 600,
+          "height": 600,
+          "border": "2px solid color-mix(in srgb, $primary 12%, transparent)"
+        }
+      },
+      {
+        "id": "surface-card",
+        "type": "shape",
+        "shape": "rect",
+        "style": {
+          "x": 1400,
+          "y": 500,
+          "width": 380,
+          "height": 380,
+          "radius": 48,
+          "rotation": -14,
+          "background": "color-mix(in srgb, $primary 5%, transparent)",
+          "border": "1px solid color-mix(in srgb, $primary 14%, transparent)"
+        }
+      },
+      {
+        "id": "icon-uninstall",
+        "type": "image",
+        "asset": "icon-uninstall",
+        "style": {
+          "x": 1310,
+          "y": 96,
+          "width": 320,
+          "height": 320,
+          "rotation": 16
+        }
+      },
+      {
+        "id": "icon-network",
+        "type": "image",
+        "asset": "icon-network",
+        "style": {
+          "x": 1700,
+          "y": 232,
+          "width": 272,
+          "height": 272,
+          "rotation": 12
+        }
+      },
+      {
+        "id": "icon-launch",
+        "type": "image",
+        "asset": "icon-launch",
+        "style": {
+          "x": 1420,
+          "y": 520,
+          "width": 340,
+          "height": 340,
+          "rotation": -14
+        }
+      },
+      {
+        "id": "icon-shield",
+        "type": "image",
+        "asset": "icon-shield",
+        "intent": {
+          "allow_bleed": true
+        },
+        "style": {
+          "x": 1832,
+          "y": 716,
+          "width": 300,
+          "height": 300,
+          "rotation": -20
+        }
+      },
+      {
+        "id": "copy-zone",
+        "type": "group",
+        "layout": "stack",
+        "style": {
+          "x": 150,
+          "y": 0,
+          "width": 1080,
+          "height": 1080,
+          "justify": "center"
+        },
+        "children": [
+          {
+            "id": "copy",
+            "type": "group",
+            "layout": "stack",
+            "style": {
+              "gap": 10.4167
+            },
+            "children": [
+              {
+                "id": "brand-row",
+                "type": "group",
+                "layout": "stack",
+                "style": {
+                  "direction": "row",
+                  "gap": 18.75,
+                  "align": "center",
+                  "padding": "0 0 24px 0"
+                },
+                "children": [
+                  {
+                    "id": "brand",
+                    "type": "text",
+                    "tag": "div",
+                    "text": "BLUEARCHIVE CAFE",
+                    "style": {
+                      "color": "$primary",
+                      "font_size": 21,
+                      "font_weight": "800",
+                      "line_height": "1.1",
+                      "letter_spacing": 3.57
+                    }
+                  },
+                  {
+                    "id": "brand-separator",
+                    "type": "text",
+                    "tag": "div",
+                    "text": "•",
+                    "style": {
+                      "color": "$outline",
+                      "font_size": 21,
+                      "font_weight": "600",
+                      "line_height": "1.1"
+                    }
+                  },
+                  {
+                    "id": "eyebrow",
+                    "type": "text",
+                    "tag": "div",
+                    "text": "MATERIAL DESIGN 3 · DESKTOP LAUNCHER",
+                    "style": {
+                      "color": "$on_surface_variant",
+                      "font_size": 21,
+                      "font_weight": "600",
+                      "line_height": "1.1",
+                      "letter_spacing": 3.57
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "product",
+                "type": "text",
+                "tag": "div",
+                "text": "Cafe Launcher",
+                "style": {
+                  "color": "$on_surface_variant",
+                  "font_size": 34,
+                  "font_weight": "600",
+                  "line_height": "1.15",
+                  "letter_spacing": 3.06,
+                  "padding": "0 0 16px 0"
+                }
+              },
+              {
+                "id": "headline",
+                "type": "text",
+                "tag": "h1",
+                "text": "v1.1.0，正式到站",
+                "style": {
+                  "color": "$on_surface",
+                  "font_size": 152,
+                  "font_weight": "800",
+                  "line_height": "1.22",
+                  "letter_spacing": -5.016,
+                  "padding": "0 0 28px 0"
+                }
+              },
+              {
+                "id": "subtitle",
+                "type": "group",
+                "layout": "stack",
+                "style": {
+                  "padding": "0 0 52px 0"
+                },
+                "children": [
+                  {
+                    "id": "subtitle-line-1",
+                    "type": "text",
+                    "tag": "p",
+                    "text": "界面焕然一新，安装、更新、修复与卸载每一步都透明可见；",
+                    "style": {
+                      "color": "$on_surface_variant",
+                      "font_size": 36,
+                      "font_weight": "400",
+                      "line_height": "1.55"
+                    }
+                  },
+                  {
+                    "id": "subtitle-line-2",
+                    "type": "text",
+                    "tag": "p",
+                    "text": "Windows 应用内更新转正，macOS 与 Linux 实验构建首次随版发行。",
+                    "style": {
+                      "color": "$on_surface_variant",
+                      "font_size": 36,
+                      "font_weight": "400",
+                      "line_height": "1.55"
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "actions",
+                "type": "group",
+                "layout": "stack",
+                "style": {
+                  "direction": "row",
+                  "gap": 16,
+                  "align": "center"
+                },
+                "children": [
+                  {
+                    "id": "badge",
+                    "type": "text",
+                    "tag": "div",
+                    "text": "v1.1.0",
+                    "style": {
+                      "height": 78,
+                      "line_height": "78px",
+                      "padding": "0 28px",
+                      "radius": 999,
+                      "background": "$primary",
+                      "color": "$on_primary",
+                      "font_size": 29,
+                      "font_weight": "700",
+                      "letter_spacing": 0.87
+                    }
+                  },
+                  {
+                    "id": "highlight-1",
+                    "type": "text",
+                    "tag": "div",
+                    "text": "下载、校验、安装一体",
+                    "style": {
+                      "height": 78,
+                      "line_height": "74px",
+                      "padding": "0 28px",
+                      "radius": 999,
+                      "background": "color-mix(in srgb, $primary 9%, transparent)",
+                      "border": "2px solid color-mix(in srgb, $primary 22%, transparent)",
+                      "color": "#1A5FD0",
+                      "font_size": 29,
+                      "font_weight": "600"
+                    }
+                  },
+                  {
+                    "id": "highlight-2",
+                    "type": "text",
+                    "tag": "div",
+                    "text": "跨平台实验构建",
+                    "style": {
+                      "height": 78,
+                      "line_height": "74px",
+                      "padding": "0 28px",
+                      "radius": 999,
+                      "background": "color-mix(in srgb, $primary 9%, transparent)",
+                      "border": "2px solid color-mix(in srgb, $primary 22%, transparent)",
+                      "color": "#1A5FD0",
+                      "font_size": 29,
+                      "font_weight": "600"
+                    }
+                  },
+                  {
+                    "id": "highlight-3",
+                    "type": "text",
+                    "tag": "div",
+                    "text": "会话状态可见",
+                    "style": {
+                      "height": 78,
+                      "line_height": "74px",
+                      "padding": "0 28px",
+                      "radius": 999,
+                      "background": "color-mix(in srgb, $primary 9%, transparent)",
+                      "border": "2px solid color-mix(in srgb, $primary 22%, transparent)",
+                      "color": "#1A5FD0",
+                      "font_size": 29,
+                      "font_weight": "600"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "assets": [
+    {
+      "id": "icon-uninstall",
+      "file": "../assets/icons/icon-uninstall.png",
+      "origin_class": "decorative",
+      "kind": "icon"
+    },
+    {
+      "id": "icon-launch",
+      "file": "../assets/icons/icon-launch.png",
+      "origin_class": "decorative",
+      "kind": "icon"
+    },
+    {
+      "id": "icon-network",
+      "file": "../assets/icons/icon-network.png",
+      "origin_class": "decorative",
+      "kind": "icon"
+    },
+    {
+      "id": "icon-shield",
+      "file": "../assets/icons/icon-shield.png",
+      "origin_class": "decorative",
+      "kind": "icon"
+    }
+  ],
+  "theme": {
+    "background_top": "#0D121C",
+    "background_bottom": "#101826",
+    "accent": "#2E7DF6",
+    "text": "#F5F7FA",
+    "muted": "#C3CAD6",
+    "surface": "#141B26",
+    "outline": "#3A4150"
+  },
+  "typography": {
+    "font_family": "Segoe UI, Microsoft YaHei UI, Microsoft YaHei, Noto Sans SC, sans-serif"
+  },
+  "validation": {
+    "profile": "release",
+    "layout": "advisory"
+  },
+  "output": {
+    "image": "../../assets/release-banners/cafe-launcher-v1.1.0-release-banner.png",
+    "manifest": "../../../artifacts/release-banner/v1.1.0.manifest.json",
+    "prepared": "../../../artifacts/release-banner/v1.1.0.prepared.json",
+    "components_dir": "../../../artifacts/release-banner/v1.1.0-components"
+  }
+}
