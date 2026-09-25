@@ -143,6 +143,8 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void ResourcePanel_InputsAndResourceSwitchesExposeMeaningfulAutomationNames()
     {
+        // ADR-041：来源选择是分段 RadioButton 对，条目开关是 ToggleSwitch——
+        // 控件语义换了，自动化名仍是「本地化、可读、逐控件」的。
         var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/ResourcePanelOverlay.axaml"));
         var resourcePanel = FindMotionOverlay(
             document,
@@ -154,25 +156,29 @@ public sealed partial class UiStyleContractTests
                 && element.Attribute("Text")?.Value
                     == "{Binding ResourcePanel.ManualResourcePanelUid, Mode=TwoWay}")
             .ToList();
-        var uidSource = resourcePanel
+        var uidSourceSegments = resourcePanel
             .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "ComboBox"
-                && element.Attribute("ItemsSource")?.Value
-                    == "{Binding ResourcePanel.ResourcePanelUidSourceOptions}");
-        var resourceSwitch = resourcePanel
+            .Where(element =>
+                element.Name.LocalName == "RadioButton"
+                && HasClass(element, "segment-option"))
+            .ToList();
+        var resourceSwitch = document
             .Descendants()
-            .Single(element => element.Name.LocalName == "CheckBox");
+            .Single(element => element.Name.LocalName == "ToggleSwitch");
 
         Assert.Equal(2, uidInputs.Count);
         Assert.All(uidInputs, input => Assert.Equal(
             "{Binding Shell.I18n[resourcePanelUid]}",
             input.Attributes().SingleOrDefault(attribute =>
                 attribute.Name.LocalName == "AutomationProperties.Name")?.Value));
-        Assert.Equal(
-            "{Binding Shell.I18n[resourcePanelUidSource]}",
-            uidSource.Attributes().SingleOrDefault(attribute =>
-                attribute.Name.LocalName == "AutomationProperties.Name")?.Value);
+        Assert.Equal(2, uidSourceSegments.Count);
+        Assert.All(uidSourceSegments, segment => Assert.True(
+            new[]
+            {
+                "{Binding Shell.I18n[resourcePanelUidSourceAuto]}",
+                "{Binding Shell.I18n[resourcePanelUidSourceCustom]}"
+            }.Contains(segment.Attributes().SingleOrDefault(attribute =>
+                attribute.Name.LocalName == "AutomationProperties.Name")?.Value)));
         Assert.Equal(
             "{Binding DisplayName}",
             resourceSwitch.Attributes().SingleOrDefault(attribute =>
@@ -546,6 +552,165 @@ public sealed partial class UiStyleContractTests
         var dangerStyle = GetStyleSetters(styles, "Border.info-strip.danger");
         Assert.Equal("{DynamicResource Launcher.Color.Danger.Soft}", dangerStyle["Background"]);
         Assert.Equal("{DynamicResource Launcher.Color.Danger}", dangerStyle["BorderBrush"]);
+    }
+
+    [Fact]
+    public void ResourcePanel_UidCard_IsSingleCardWithThreeMutuallyExclusiveStates()
+    {
+        // ADR-041：三张互斥卡并成一张卡内的三个互斥可见面板；共享 dialog-card 类不动，
+        // 圆角升档由资源面板专属的 uid-card 类承担。
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/ResourcePanelOverlay.axaml"));
+        var uidCard = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Border"
+                && HasClass(element, "uid-card"));
+        Assert.True(HasClass(uidCard, "dialog-card"));
+
+        var stateBindings = new[]
+        {
+            "{Binding ResourcePanel.IsResourcePanelUidMissing}",
+            "{Binding ResourcePanel.IsResourcePanelUidEditing}",
+            "{Binding ResourcePanel.IsResourcePanelUidPresent}"
+        };
+        foreach (var binding in stateBindings)
+        {
+            Assert.Single(uidCard.Descendants(), element =>
+                element.Attribute("IsVisible")?.Value == binding);
+        }
+
+        var styleSetters = GetStyleSetters(document, "Border.uid-card");
+        Assert.Equal(
+            "{StaticResource Launcher.Radius.Md}",
+            styleSetters["CornerRadius"]);
+    }
+
+    [Fact]
+    public void ResourcePanel_UidSource_IsSegmentedPairWithoutComboBox()
+    {
+        // ADR-041：两个互斥选项直接常显为 MD3 分段按钮；ComboBox 与其专属 token 退场。
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/ResourcePanelOverlay.axaml"));
+        Assert.DoesNotContain(
+            document.Descendants(),
+            element => element.Name.LocalName == "ComboBox");
+        Assert.DoesNotContain(
+            document.Descendants(),
+            element => element.Attribute("MinWidth")?.Value
+                == "{StaticResource Launcher.Component.ResourcePanel.UidSource.MinWidth}");
+
+        var segments = document
+            .Descendants()
+            .Where(element =>
+                element.Name.LocalName == "RadioButton"
+                && HasClass(element, "segment-option"))
+            .ToArray();
+        Assert.Equal(2, segments.Length);
+        Assert.All(segments, segment => Assert.Equal(
+            "ResourcePanelUidSource",
+            segment.Attribute("GroupName")?.Value));
+        Assert.Contains(segments, segment => segment.Attribute("IsChecked")?.Value
+            .Contains("ConverterParameter={x:Static models:ResourcePanelUidSources.Auto}", StringComparison.Ordinal) == true);
+        Assert.Contains(segments, segment => segment.Attribute("IsChecked")?.Value
+            .Contains("ConverterParameter={x:Static models:ResourcePanelUidSources.Custom}", StringComparison.Ordinal) == true);
+        Assert.All(segments, segment => Assert.True(
+            segment.Attribute("IsChecked")?.Value
+                .Contains("Converter={x:Static converters:ResourcePanelSourceSegmentConverter.Instance}", StringComparison.Ordinal) == true
+            && segment.Attribute("IsChecked")?.Value.EndsWith(", Mode=TwoWay}", StringComparison.Ordinal) == true));
+
+        // busy 时整组禁用（分段容器承载 IsEnabled，与旧 ComboBox 一致）。
+        var segmented = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Border"
+                && HasClass(element, "segmented"));
+        Assert.Equal(
+            "{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}",
+            segmented.Attribute("IsEnabled")?.Value);
+
+        // 选中段 = accent 家族（Primary.Soft 底 + Primary 字），不是静态 SecondaryContainer。
+        var checkedStyle = GetStyleSetters(document, "RadioButton.segment-option:checked");
+        Assert.Equal("{DynamicResource Launcher.Color.Primary.Soft}", checkedStyle["Background"]);
+        Assert.Equal("{DynamicResource Launcher.Color.Primary}", checkedStyle["Foreground"]);
+    }
+
+    [Fact]
+    public void ResourcePanel_ResourceEntries_UseSingleCardRowsWithSwitchAndChip()
+    {
+        // ADR-041：三张条目卡并成一张卡的三行（显式发丝分隔线），开关换 Switch，
+        // 状态装进 chip（底色 + 图标 + 文案，不只靠颜色）。
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/ResourcePanelOverlay.axaml"));
+        var resourceCard = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Border"
+                && HasClass(element, "resource-card"));
+        Assert.True(HasClass(resourceCard, "dialog-card"));
+        Assert.Equal(
+            "{StaticResource Launcher.Radius.Md}",
+            GetStyleSetters(document, "Border.resource-card")["CornerRadius"]);
+
+        var template = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "DataTemplate"
+                && element.Attributes().Any(attribute =>
+                    attribute.Name.LocalName == "Key"
+                    && attribute.Value == "ResourcePanelItemRowTemplate"));
+        Assert.DoesNotContain(
+            template.Descendants(),
+            element => element.Name.LocalName == "CheckBox");
+        var resourceSwitch = template
+            .Descendants()
+            .Single(element => element.Name.LocalName == "ToggleSwitch");
+        Assert.Equal("{Binding IsEnabled, Mode=TwoWay}", resourceSwitch.Attribute("IsChecked")?.Value);
+        Assert.Equal("{Binding IsOperable}", resourceSwitch.Attribute("IsEnabled")?.Value);
+
+        var chip = template
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Border"
+                && HasClass(element, "status-chip"));
+        Assert.Equal(
+            "{Binding IsStatusLoading}",
+            chip.Attribute("Classes.loading")?.Value);
+        Assert.Equal(
+            "{Binding IsStatusReady}",
+            chip.Attribute("Classes.ready")?.Value);
+        Assert.Equal(
+            "{Binding IsStatusWaiting}",
+            chip.Attribute("Classes.waiting")?.Value);
+        Assert.Equal(
+            "{Binding IsStatusFailed}",
+            chip.Attribute("Classes.failed")?.Value);
+
+        // 三行两线：分隔线是行与行之间的显式发丝元素（与向导复核列表同一手法）。
+        Assert.Equal(3, resourceCard.Descendants().Count(element =>
+            element.Name.LocalName == "ContentControl"));
+        Assert.Equal(2, resourceCard.Descendants().Count(element =>
+            element.Name.LocalName == "Border"
+            && HasClass(element, "resource-row-divider")));
+    }
+
+    [Fact]
+    public void ResourcePanel_StatusChipStyles_MapStatusClassesToSemanticColors()
+    {
+        // ADR-041 提案 1：Ready=Success（配新增 Success.Soft 底），Failed=Danger，
+        // Loading/Waiting 用中性的 Content.Row 底与 Text.Secondary 前景。
+        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/ResourcePanelOverlay.axaml"));
+
+        var baseStyle = GetStyleSetters(document, "Border.status-chip");
+        Assert.Equal("{DynamicResource Launcher.Color.Content.Row}", baseStyle["Background"]);
+        Assert.Equal("{StaticResource Launcher.Radius.Full}", baseStyle["CornerRadius"]);
+
+        var readyBackground = GetStyleSetters(document, "Border.status-chip.ready");
+        Assert.Equal("{DynamicResource Launcher.Color.Success.Soft}", readyBackground["Background"]);
+        var readyIcon = GetStyleSetters(document, "Border.status-chip.ready materialIcons|MaterialIcon.status-chip-icon");
+        Assert.Equal("{DynamicResource Launcher.Color.Success}", readyIcon["Foreground"]);
+
+        var failedBackground = GetStyleSetters(document, "Border.status-chip.failed");
+        Assert.Equal("{DynamicResource Launcher.Color.Danger.Soft}", failedBackground["Background"]);
+        var failedText = GetStyleSetters(document, "Border.status-chip.failed TextBlock.status-chip-text");
+        Assert.Equal("{StaticResource Launcher.Color.Danger}", failedText["Foreground"]);
     }
 
     [Fact]

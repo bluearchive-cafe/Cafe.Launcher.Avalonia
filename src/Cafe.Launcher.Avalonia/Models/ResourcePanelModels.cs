@@ -93,9 +93,26 @@ public sealed partial class ResourcePanelItem : ObservableObject
 
     public bool IsOperable => Status is ResourcePanelItemStatus.Ready or ResourcePanelItemStatus.Waiting;
 
+    /// <summary>
+    /// Gets the four per-status presentation flags the view maps to status-chip style classes
+    /// (ADR-041). They are view-facing derivatives of <see cref="Status"/> — the state machine
+    /// itself keeps writing the enum only.
+    /// </summary>
+    public bool IsStatusLoading => Status == ResourcePanelItemStatus.Loading;
+
+    public bool IsStatusReady => Status == ResourcePanelItemStatus.Ready;
+
+    public bool IsStatusWaiting => Status == ResourcePanelItemStatus.Waiting;
+
+    public bool IsStatusFailed => Status == ResourcePanelItemStatus.Failed;
+
     partial void OnStatusChanged(ResourcePanelItemStatus value)
     {
         OnPropertyChanged(nameof(IsOperable));
+        OnPropertyChanged(nameof(IsStatusLoading));
+        OnPropertyChanged(nameof(IsStatusReady));
+        OnPropertyChanged(nameof(IsStatusWaiting));
+        OnPropertyChanged(nameof(IsStatusFailed));
     }
 
     [ObservableProperty]

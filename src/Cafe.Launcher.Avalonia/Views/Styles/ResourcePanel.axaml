@@ -1,0 +1,174 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia">
+  <!-- 资源面板 MD3 结构级重设计的视觉契约（ADR-041）。
+       骨架仍由 DialogSurface（ADR-015）承担；本文件只描述面板正文内的解剖：
+       UID 单卡三态、资源单卡三行、状态 chip、分段来源按钮与条带前导图标。 -->
+
+  <Styles.Resources>
+    <!-- 分段按钮的 Border+Content 模板：RadioButton 语义、普通按钮的几何，
+         与 LauncherBorderButtonTemplate 同构（TargetType 须为 RadioButton 分支）。 -->
+    <ControlTemplate x:Key="ResourcePanelSegmentOptionTemplate" TargetType="RadioButton">
+      <Border Background="{TemplateBinding Background}"
+              BorderBrush="{TemplateBinding BorderBrush}"
+              BorderThickness="{TemplateBinding BorderThickness}"
+              CornerRadius="{TemplateBinding CornerRadius}">
+        <ContentPresenter Content="{TemplateBinding Content}"
+                          ContentTemplate="{TemplateBinding ContentTemplate}"
+                          Padding="{TemplateBinding Padding}"
+                          HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                          VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
+      </Border>
+    </ControlTemplate>
+  </Styles.Resources>
+
+  <!-- 卡片圆角升档只作用于资源面板自己的卡（提案 6 收窄）：共享 dialog-card 不动。 -->
+  <Style Selector="Border.uid-card">
+    <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
+  </Style>
+  <Style Selector="Border.resource-card">
+    <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
+    <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
+    <Setter Property="ClipToBounds" Value="True"/>
+  </Style>
+
+  <!-- UID 展示值：等宽 + 字距，八位大写字形便于 O/0、I/1 核对（提案 2 采纳）。 -->
+  <Style Selector="TextBlock.uid-value">
+    <Setter Property="FontFamily" Value="{StaticResource Launcher.Typography.FontFamily.Monospace}"/>
+    <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Headline.Lg}"/>
+    <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
+    <Setter Property="LetterSpacing" Value="{StaticResource Launcher.Typography.LetterSpacing.Lg}"/>
+    <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
+    <Setter Property="VerticalAlignment" Value="Center"/>
+  </Style>
+
+  <!-- 卡内发丝分隔线（正文内一阶，弱于 Card.Border）：uid 来源行与资源条目行共用。 -->
+  <Style Selector="Border.uid-section-divider">
+    <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Dialog.Section.Divider}"/>
+    <Setter Property="BorderThickness" Value="{StaticResource Launcher.Component.Dialog.Footer.BorderThickness}"/>
+  </Style>
+  <Style Selector="Border.resource-row-divider">
+    <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Dialog.Section.Divider}"/>
+    <Setter Property="BorderThickness" Value="{StaticResource Launcher.Component.Dialog.Footer.BorderThickness}"/>
+  </Style>
+
+  <!-- 资源条目行：标题 + 状态 chip + 版本支撑行 + trailing Switch；行密度走专属 token。 -->
+  <Style Selector="Border.resource-row">
+    <Setter Property="Padding" Value="{StaticResource Launcher.Component.ResourcePanel.Row.Padding}"/>
+  </Style>
+
+  <!-- 状态 chip（pill：底色 + 图标 + 文案，不只靠颜色）。Ready=Success、
+       Waiting/Loading=Secondary、Failed=Danger；映射由条目上的四个表象布尔驱动。 -->
+  <Style Selector="Border.status-chip">
+    <Setter Property="Height" Value="{StaticResource Launcher.Component.ResourcePanel.StatusChip.Height}"/>
+    <Setter Property="Padding" Value="{StaticResource Launcher.Component.ResourcePanel.StatusChip.Padding}"/>
+    <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Full}"/>
+    <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
+    <Setter Property="HorizontalAlignment" Value="Left"/>
+  </Style>
+  <Style Selector="materialIcons|MaterialIcon.status-chip-icon">
+    <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
+    <Setter Property="VerticalAlignment" Value="Center"/>
+  </Style>
+  <Style Selector="TextBlock.status-chip-text">
+    <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Label.Md}"/>
+    <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
+    <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
+    <Setter Property="VerticalAlignment" Value="Center"/>
+  </Style>
+  <Style Selector="Border.status-chip.ready">
+    <Setter Property="Background" Value="{DynamicResource Launcher.Color.Success.Soft}"/>
+  </Style>
+  <Style Selector="Border.status-chip.ready materialIcons|MaterialIcon.status-chip-icon">
+    <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Success}"/>
+  </Style>
+  <Style Selector="Border.status-chip.ready TextBlock.status-chip-text">
+    <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Success}"/>
+  </Style>
+  <Style Selector="Border.status-chip.failed">
+    <Setter Property="Background" Value="{DynamicResource Launcher.Color.Danger.Soft}"/>
+  </Style>
+  <Style Selector="Border.status-chip.failed materialIcons|MaterialIcon.status-chip-icon">
+    <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Danger}"/>
+  </Style>
+  <Style Selector="Border.status-chip.failed TextBlock.status-chip-text">
+    <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Danger}"/>
+  </Style>
+
+  <!-- UID 来源分段按钮（替代 ComboBox）：两端整圆、段间发丝竖线、选中段 accent 家族、
+       段内勾选图标仅 :checked 显形（非颜色线索）；busy 禁用整组。 -->
+  <Style Selector="Border.segmented">
+    <Setter Property="HorizontalAlignment" Value="Left"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Button.Border}"/>
+    <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
+    <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Full}"/>
+    <Setter Property="ClipToBounds" Value="True"/>
+  </Style>
+  <Style Selector="Border.segmented-divider">
+    <Setter Property="Width" Value="{StaticResource Launcher.Component.Segmented.Divider.Width}"/>
+    <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Border}"/>
+  </Style>
+  <Style Selector="RadioButton.segment-option">
+    <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
+    <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Body}"/>
+    <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Sm}"/>
+    <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
+    <Setter Property="MinWidth" Value="{StaticResource Launcher.Component.Segmented.Segment.MinWidth}"/>
+    <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Chip}"/>
+    <Setter Property="Padding" Value="{StaticResource Launcher.Component.Segmented.Segment.Padding}"/>
+    <Setter Property="HorizontalContentAlignment" Value="Center"/>
+    <Setter Property="VerticalContentAlignment" Value="Center"/>
+    <Setter Property="Template" Value="{StaticResource ResourcePanelSegmentOptionTemplate}"/>
+  </Style>
+  <Style Selector="RadioButton.segment-option > StackPanel.segment-content">
+    <Setter Property="Orientation" Value="Horizontal"/>
+    <Setter Property="Spacing" Value="{StaticResource Launcher.Spacing.Xs}"/>
+  </Style>
+  <!-- 勾选图标只在选中段参与布局（IsVisible 而非 Opacity：透明占位会让未选中段
+       左侧出现一截空白）；非颜色线索由「选中段多一枚图标」继续承担。 -->
+  <Style Selector="materialIcons|MaterialIcon.segment-check">
+    <Setter Property="IsVisible" Value="False"/>
+  </Style>
+  <Style Selector="RadioButton.segment-option:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Hover}"/>
+  </Style>
+  <Style Selector="RadioButton.segment-option:pressed">
+    <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Pressed}"/>
+  </Style>
+  <!-- 选中段 = accent 家族的 SecondaryContainer 角色（提案 3：不用静态基线紫）。 -->
+  <Style Selector="RadioButton.segment-option:checked">
+    <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Soft}"/>
+    <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary}"/>
+  </Style>
+  <Style Selector="RadioButton.segment-option:checked:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Soft}"/>
+    <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary}"/>
+  </Style>
+  <Style Selector="RadioButton.segment-option:checked:pressed">
+    <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Soft}"/>
+    <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary}"/>
+  </Style>
+  <Style Selector="RadioButton.segment-option:disabled">
+    <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
+  </Style>
+  <Style Selector="RadioButton.segment-option:focus-visible">
+    <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
+    <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
+  </Style>
+  <Style Selector="RadioButton.segment-option:checked materialIcons|MaterialIcon.segment-check">
+    <Setter Property="IsVisible" Value="True"/>
+  </Style>
+
+  <!-- 条带前导图标（提案 5）：提示条 info 调，消息条中性/危险两种语调各一枚。 -->
+  <Style Selector="materialIcons|MaterialIcon.info-strip-icon">
+    <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Info}"/>
+    <Setter Property="VerticalAlignment" Value="Center"/>
+  </Style>
+  <Style Selector="materialIcons|MaterialIcon.status-strip-icon">
+    <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Body}"/>
+    <Setter Property="VerticalAlignment" Value="Center"/>
+  </Style>
+  <Style Selector="materialIcons|MaterialIcon.status-strip-icon.danger">
+    <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Danger}"/>
+  </Style>
+</Styles>

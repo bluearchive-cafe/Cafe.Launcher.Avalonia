@@ -1462,13 +1462,15 @@
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
+    <!-- UID 输入框：等宽 + 字距与展示值同构，八位大写字形易于核对（ADR-041）。 -->
     <Style Selector="TextBox.uid-input">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Field.Background}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Field.Border}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Component.Input.Padding}"/>
-        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Md}"/>
+        <Setter Property="FontFamily" Value="{StaticResource Launcher.Typography.FontFamily.Monospace}"/>
+        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Title.Md}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
         <Setter Property="MinWidth" Value="{StaticResource Launcher.Component.Input.MinWidth}"/>
         <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Field}"/>
@@ -1595,6 +1597,7 @@
     <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/Styles/SetupWizard.axaml"/>
     <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/Styles/Toast.axaml"/>
     <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/Styles/DialogSurface.axaml"/>
+    <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/Styles/ResourcePanel.axaml"/>
 
     <!-- ==================================================================
          焦点视觉策略（ADR-040 修订）：默认不显示，键盘导航时显示

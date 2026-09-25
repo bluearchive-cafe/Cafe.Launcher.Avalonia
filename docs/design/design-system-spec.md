@@ -20,7 +20,7 @@
 |---|---|---|
 | Q1 | 动因 = 系统化 + 视觉现代化 + 一致性 | 体系先行，观感随后 |
 | Q2 | 分阶段：P1 token 体系 → P2 组件 → P3 表面 | 见 §10 |
-| Q3 | 范围 = 全部表面分批：第一批主壳/设置/对话框/Toast/向导；第二批诊断/日志/资源面板**仅 token 兼容** | 排障界面不做视觉重设计 |
+| Q3 | 范围 = 全部表面分批：第一批主壳/设置/对话框/Toast/向导；第二批诊断/日志**仅 token 兼容**；资源面板后由 [ADR-041](adr/ADR-041-资源面板MD3结构级重设计.md) 补做结构级重设计 | 排障界面不做视觉重设计 |
 | Q4 | 交付 = 代码 + 仓库内人读规范（本文件）；无 Figma 工作流 | 活文档随 PR 维护 |
 | Q5 | **M3/Material You 为规范骨架**；FluentTheme 底座；不引入 Material.Avalonia | 本节全部后续分支 |
 | Q9 | WCAG AA 对比度自动化 + 键盘/焦点/覆盖层审计（硬契约） | §8 |
@@ -140,7 +140,7 @@
 - 单窗口 + 覆盖层：Z 序 = 主内容 → 设置 100 → 对话框 200 → 向导 500 → Toast 1000，**不动**。
 - 功能分区（Shell / GameOperations / Settings / SetupWizard / Diagnostics / ResourcePanel）与"单窗口内选分类"模型不变；表现级布局自由（如设置页留白、卡片形态）。
 - **设置页重设计蓝图（P3 表面执行；** [ADR-013](adr/ADR-013-设置页重设计方向.md) **+ M3 审核定稿）**：标题栏拆分（「设置」并入导航列顶部 header；关闭 ✕ 并入内容区标题行右端）；导航列 = SecondaryContainer 激活填充 + leading icon（Material Symbols）+ 标签，无指示条；内容区 = 变体 B 纯列表 + 组间空档 + 行间 inset hairline（以 `Color.Card.Border` 为分隔色，不新增 token）；覆盖层 `Radius.Lg`(16) + `Elevation.Shadow.Lg` + `Dialog.Background`（Q13 表面中性；种子跟随时由 scheme neutral 覆盖，见 §3.4）；控件统一 `Field` 形态。**修正清单（随 P2/P3 落地）**：`Field.Border` 双档对比度（浅 `#788EA7`/深 `#5E7494`，≥3:1）、hairline inset 规则、抽屉 leading icons。
-- **其余表面蓝图（P3 执行；[ADR-014](adr/ADR-014-其余表面M3重设计方向.md)）**：~~对话框族（确认/通知/更新/错误）= 统一 `dialog` 表面 + 头部（icon+标题+关闭）+ 可滚动内容 + `dialog-footer` hairline 操作带~~（对话框族部分已被 [ADR-015](adr/ADR-015-对话框家族v2统一框架.md) 取代；对话框的**动作顺序 / 默认按钮 / 动作底色与边框 / 焦点视觉**随后由 [ADR-040](adr/ADR-040-对话框动作按Fluent对齐顺序与默认按钮.md) 按 Fluent 重新裁决）；Toast = 删除自动消失进度条，仅保留操作执行中的 indeterminate 进度条，关闭命中区提升到 36px；~~设置向导 = 复用设置导航语言（`settings-navigation-pane` + header + SecondaryContainer 激活态）且底部动作带统一为 `dialog-footer`~~（已由 [ADR-017](adr/ADR-017-设置向导动效落地与M3界面细化.md) 重设计：模态面板内落地实验台居中单列解剖——进度行（向导标题 + 步骤进度 + 跳过）→ `wizard-step` 单列内容（`wizard-option` 选项行、`wizard-status-row` 图标+文本状态行、复核 hairline 列表、完成态标题 Success 色）→ 动作带并入内容区（`wizard-action` tonal/filled 双型；`DialogSurface.Footer` 不再使用，空动作带由 `RefreshChrome` 折叠）；侧栏导航移除；步骤切换 = 后置代码顺序换页（先淡出后方向滑入），换面时滚动复位）。资源面板/日志/调试与主壳首页/**底栏形态**保持本节既有状态。
+- **其余表面蓝图（P3 执行；[ADR-014](adr/ADR-014-其余表面M3重设计方向.md)）**：~~对话框族（确认/通知/更新/错误）= 统一 `dialog` 表面 + 头部（icon+标题+关闭）+ 可滚动内容 + `dialog-footer` hairline 操作带~~（对话框族部分已被 [ADR-015](adr/ADR-015-对话框家族v2统一框架.md) 取代；对话框的**动作顺序 / 默认按钮 / 动作底色与边框 / 焦点视觉**随后由 [ADR-040](adr/ADR-040-对话框动作按Fluent对齐顺序与默认按钮.md) 按 Fluent 重新裁决）；Toast = 删除自动消失进度条，仅保留操作执行中的 indeterminate 进度条，关闭命中区提升到 36px；~~设置向导 = 复用设置导航语言（`settings-navigation-pane` + header + SecondaryContainer 激活态）且底部动作带统一为 `dialog-footer`~~（已由 [ADR-017](adr/ADR-017-设置向导动效落地与M3界面细化.md) 重设计：模态面板内落地实验台居中单列解剖——进度行（向导标题 + 步骤进度 + 跳过）→ `wizard-step` 单列内容（`wizard-option` 选项行、`wizard-status-row` 图标+文本状态行、复核 hairline 列表、完成态标题 Success 色）→ 动作带并入内容区（`wizard-action` tonal/filled 双型；`DialogSurface.Footer` 不再使用，空动作带由 `RefreshChrome` 折叠）；侧栏导航移除；步骤切换 = 后置代码顺序换页（先淡出后方向滑入），换面时滚动复位）。~~资源面板/日志/调试与主壳首页/底栏形态保持本节既有状态~~——资源面板已由 [ADR-041](adr/ADR-041-资源面板MD3结构级重设计.md) 完成 MD3 结构级重设计（UID 单卡三态、分段来源、单卡三行 + 状态 chip，`DialogSurface` 外层骨架与命令接线不动）；日志/调试与主壳首页/**底栏形态**仍保持本节既有状态。
 - **底栏形态**：**Q18 仲裁结论已撤销（2026-08-25，用户决定放弃首页布局相关决策）——形态重新开放**。前期结论（M3 贴边：对比度恒定 ≥7:1、三态一致；浮动胶囊：浅壁纸 ≈4.8:1 边缘 + 安装态高度需验证）保留为决策素材，`prototype/bottom-bar` 分支保留；重新裁决时按 ADR-001 标准重走（走查/原型流程不变）。
 - **崩溃窗口（[ADR-019](adr/ADR-019-不可恢复崩溃两级兜底.md) / [ADR-020](adr/ADR-020-崩溃窗口独立Fluent设计系统.md)）**：独立于主壳的终端表面，**不参与主窗口 MD3 令牌体系**——中性冷灰蓝表面（不随动态色）+ 4/8 圆角 + 12/15/20 字阶 + 危险红/链接蓝双语义色；700 固定宽、高度随内容、不可缩放；默认折叠技术详情，动作带仅「打开日志目录 / 复制详情 / 退出启动器」。同进程（tier-1）与隔离报告进程（tier-2）共用同一窗口实现。
 
@@ -199,7 +199,7 @@
 ## 11. 有意搁置（Don't-do 清单）
 
 - 文本缩放 125–150% 支持（尺寸体系改造，评估期）。
-- 诊断/日志/资源面板的视觉重设计（仅 token 兼容）。
+- 诊断/日志的视觉重设计（仅 token 兼容；资源面板已由 [ADR-041](adr/ADR-041-资源面板MD3结构级重设计.md) 完成）。
 - 独立"画廊预览窗口"（Q11-c 叠加项，暂不启用）。
 - 对外部设计工具（Figma 等）的同步链路。
 - 若 spike 判定 NuGet 包不可用 → **回退方案**：vendor `Shirasagi0012` 裁剪核心（Apache-2.0，砍 quantize/Score，HCT+palette+scheme+dynamic ≈4–5k 行，2–4 人日），已调研备档；同谱系 `MaterialColorUtilities`（albi005）源码仅作交叉参考，不进入产品依赖（其 API 为 2023 旧世代，差异量化表见 M0 产物）。

@@ -16,7 +16,7 @@ public sealed class ResxResourceContractTests
     /// 实测值，并在 <see cref="Resx_NeutralContainsAllExpectedKeys"/> 的演进注释里补上
     /// 「为什么加一」。
     /// </summary>
-    private const int ExpectedNeutralResourceKeyCount = 592;
+    private const int ExpectedNeutralResourceKeyCount = 591;
 
     private static readonly string ResxDir;
     private static readonly string[] AllLocales = ["en", "zh-Hans", "zh-Hant", "ja"];
@@ -58,6 +58,7 @@ public sealed class ResxResourceContractTests
         // → 586（P1-D 兼容前缀环境预检的三条可操作文案：不可写 / 不支持符号链接 / noexec）。
         // → 591（Windows 应用内自更新：下载中、就绪待重启、重启按钮、下载失败、启动失败，见 ADR-037）。
         // → 592（启动更新提示的主行动改为「查看更新」）。
+        // → 591（ADR-041 修订：UID 提示条去关闭钮成常驻说明行，关闭钮的 automation 串随命令退场）。
         Assert.Equal(ExpectedNeutralResourceKeyCount, ResxValues["en"].Count);
     }
 
