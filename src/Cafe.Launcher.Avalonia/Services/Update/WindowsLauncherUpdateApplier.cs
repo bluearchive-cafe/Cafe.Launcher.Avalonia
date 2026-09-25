@@ -20,19 +20,31 @@ internal sealed class WindowsLauncherUpdateApplier : IWindowsLauncherUpdateAppli
     private readonly LauncherDataRoot dataRoot;
     private readonly LocalDiagnostics diagnostics;
     private readonly string tempRoot;
+    private readonly string installDirectory;
 
     public WindowsLauncherUpdateApplier(LauncherDataRoot dataRoot, LocalDiagnostics diagnostics)
-        : this(dataRoot, diagnostics, Path.GetTempPath())
+        : this(dataRoot, diagnostics, Path.GetTempPath(), AppContext.BaseDirectory)
     {
     }
 
-    /// <summary>Test seam: the temp root the helper copies live under.</summary>
-    internal WindowsLauncherUpdateApplier(LauncherDataRoot dataRoot, LocalDiagnostics diagnostics, string tempRoot)
+    /// <summary>Test seam: the temp root the helper copies live under, and the directory the helper ships in.</summary>
+    internal WindowsLauncherUpdateApplier(
+        LauncherDataRoot dataRoot,
+        LocalDiagnostics diagnostics,
+        string tempRoot,
+        string installDirectory)
     {
         this.dataRoot = dataRoot;
         this.diagnostics = diagnostics;
         this.tempRoot = tempRoot;
+        this.installDirectory = TrimTrailingSeparator(installDirectory);
     }
+
+    /// <inheritdoc />
+    public bool IsAvailable => File.Exists(HelperSourcePath);
+
+    private string HelperSourcePath =>
+        Path.Combine(installDirectory, UpdateHelperCommand.HelperExecutableName);
 
     /// <inheritdoc />
     public void CleanupAbandonedHelperDirectories()
@@ -77,8 +89,7 @@ internal sealed class WindowsLauncherUpdateApplier : IWindowsLauncherUpdateAppli
             return false;
         }
 
-        var installDirectory = TrimTrailingSeparator(AppContext.BaseDirectory);
-        var helperSource = Path.Combine(installDirectory, UpdateHelperCommand.HelperExecutableName);
+        var helperSource = HelperSourcePath;
         if (!File.Exists(helperSource))
         {
             ReportFailure($"The update helper is missing: {helperSource}");

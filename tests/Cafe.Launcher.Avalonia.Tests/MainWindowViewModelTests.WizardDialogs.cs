@@ -1,5 +1,6 @@
 using Cafe.Launcher.Avalonia.ViewModels;
 using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Avalonia.Services.Update;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -109,7 +110,7 @@ public partial class MainWindowViewModelTests
                 viewModel.Dialogs.IsNoticeDialogVisible = true;
                 break;
             case ModalKind.Update:
-                viewModel.Dialogs.ShowUpdateAvailable("1.0.0", [], canSelfUpdate: false);
+                viewModel.Dialogs.ShowUpdateAvailable("1.0.0", [], LauncherUpdateInAppAvailability.PlatformUnsupported);
                 break;
             case ModalKind.Error:
                 // Set the flag directly: ShowCriticalError posts to the dispatcher when the

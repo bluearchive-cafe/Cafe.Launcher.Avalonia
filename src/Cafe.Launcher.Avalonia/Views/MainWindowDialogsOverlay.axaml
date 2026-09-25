@@ -107,6 +107,12 @@
                 </controls:DialogSurface.HeaderIcon>
                 <controls:DialogSurface.Content>
                     <StackPanel Spacing="{StaticResource Launcher.Spacing.Md}">
+                        <!-- 本机没有应用内更新路径时，主动作是「前往发布页」；这一行说明出口换了。 -->
+                        <Border Classes="dialog-alert"
+                                IsVisible="{Binding Dialogs.IsUpdateInAppUnavailable}">
+                            <TextBlock Text="{Binding Dialogs.UpdateInAppUnavailableNoticeText}"
+                                       Classes="dialog-alert-content"/>
+                        </Border>
                         <controls:ReleaseNotesMarkdownViewer
                             IsVisible="{Binding Dialogs.HasUpdateReleaseNotes}"
                             Markdown="{Binding Dialogs.UpdateReleaseNotes}"

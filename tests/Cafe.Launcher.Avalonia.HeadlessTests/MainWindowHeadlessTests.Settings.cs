@@ -8,8 +8,10 @@ using Avalonia.Headless.XUnit;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Views;
 
@@ -40,7 +42,7 @@ public sealed partial class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
-    public void SettingsAbout_InlineLegalLinks_DoNotExpandCaptionLineHeight()
+    public void SettingsAbout_LegalLinks_DoNotExpandCaptionLineHeight()
     {
         using var context = CreateContext();
         OpenSettings(context);
@@ -59,13 +61,56 @@ public sealed partial class MainWindowHeadlessTests
             Assert.InRange(link.Bounds.Height, 1, 20);
             Assert.False(string.IsNullOrWhiteSpace(AutomationProperties.GetName(link)));
 
-            var caption = link
-                .GetVisualAncestors()
-                .OfType<TextBlock>()
-                .Single();
+            var row = link.GetVisualAncestors().OfType<Grid>().First();
+            var caption = row.Children.OfType<TextBlock>().Single();
 
             Assert.Equal(caption.FontSize, link.FontSize);
         });
+    }
+
+    [AvaloniaFact]
+    public async Task SettingsAbout_WhenLanguageChanges_ShowsLegalCopy()
+    {
+        using var themeVariant = ThemeVariantSnapshot.Capture(ThemeVariant.Dark);
+        using var context = CreateContext();
+        OpenSettings(context);
+        context.ViewModel.Settings.Editor.Current.ThemeMode = ThemeModes.Dark;
+        await context.ViewModel.Settings.SaveSettingsCommand.ExecuteAsync(null);
+
+        foreach (var language in new[]
+                 {
+                     LauncherLanguages.English,
+                     LauncherLanguages.SimplifiedChinese,
+                     LauncherLanguages.TraditionalChinese,
+                     LauncherLanguages.Japanese
+                 })
+        {
+            context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.General;
+            Dispatcher.UIThread.RunJobs();
+            context.ViewModel.Settings.Editor.Current.Language = language;
+            await context.ViewModel.Settings.SaveSettingsCommand.ExecuteAsync(null);
+            context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.About;
+            Dispatcher.UIThread.RunJobs();
+
+            var links = context.Window.GetVisualDescendants().OfType<HyperlinkButton>()
+                .Where(control => control.Classes.Contains("inline-legal-link"))
+                .ToArray();
+
+            Assert.Equal(2, links.Length);
+            var expectedKeys = new[]
+            {
+                LocalizationKeys.AboutCopyrightText,
+                LocalizationKeys.DefaultBackgroundCopyrightText
+            };
+            for (var index = 0; index < links.Length; index++)
+            {
+                var row = links[index].GetVisualAncestors().OfType<Grid>().First();
+                var caption = row.Children.OfType<TextBlock>().Single();
+                Assert.Equal(context.ViewModel.Shell.I18n[expectedKeys[index]], caption.Text);
+                Assert.True(caption.Bounds.Height > 0, $"Missing legal caption layout for {language}.");
+                Assert.True(links[index].Bounds.Width > 0, $"Missing legal link for {language}.");
+            }
+        }
     }
 
     [AvaloniaFact]

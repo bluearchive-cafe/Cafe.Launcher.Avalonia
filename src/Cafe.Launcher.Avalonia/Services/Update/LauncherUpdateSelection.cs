@@ -3,24 +3,20 @@ using Cafe.Launcher.Avalonia.Models;
 namespace Cafe.Launcher.Avalonia.Services.Update;
 
 /// <summary>
-/// The result of matching a release against the current host: which package to fetch,
-/// the checksum manifest that must accompany it, and whether an in-app apply is possible.
+/// The result of matching a release against the current host: which package to fetch, the
+/// checksum manifest that must accompany it, and why an in-app apply is possible or not.
 /// </summary>
 internal sealed record LauncherUpdateSelection(
     LauncherUpdateTarget Target,
     ReleaseFile? Package,
-    ReleaseFile? ChecksumManifest)
+    ReleaseFile? ChecksumManifest,
+    LauncherUpdateInAppAvailability Availability)
 {
     /// <summary>
-    /// True when the host has a package to download and the manifest to verify it against.
-    /// <see cref="LauncherUpdateTarget.ExternalDownload"/> is the only selection without both.
+    /// The browser hand-off selection, tagged with the release-side reason this host cannot
+    /// apply the offered release itself. Reasons that belong to the host (a missing helper)
+    /// are not the selector's to answer and are resolved by the self-update service.
     /// </summary>
-    public bool CanApplyInApp =>
-        Target != LauncherUpdateTarget.ExternalDownload
-        && Package is not null
-        && ChecksumManifest is not null;
-
-    /// <summary>The browser hand-off selection used for unsupported hosts.</summary>
-    public static LauncherUpdateSelection External() =>
-        new(LauncherUpdateTarget.ExternalDownload, Package: null, ChecksumManifest: null);
+    public static LauncherUpdateSelection External(LauncherUpdateInAppAvailability reason) =>
+        new(LauncherUpdateTarget.ExternalDownload, Package: null, ChecksumManifest: null, reason);
 }

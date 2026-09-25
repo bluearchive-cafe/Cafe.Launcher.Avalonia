@@ -12,6 +12,7 @@ using Cafe.Launcher.Avalonia.Controls;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Services.Update;
 
 namespace Cafe.Launcher.Avalonia.HeadlessTests;
 
@@ -28,7 +29,7 @@ public sealed partial class MainWindowHeadlessTests
             context.ViewModel.IsMotionReduced = false;
             context.Window.Show();
             context.ViewModel.Dialogs.ShowUpdateAvailable(
-                "1.2.0", [], canSelfUpdate: false, releaseNotes: "## 更新内容");
+                "1.2.0", [], LauncherUpdateInAppAvailability.PlatformUnsupported, releaseNotes: "## 更新内容");
             Dispatcher.UIThread.RunJobs();
 
             var viewer = context.Window.GetVisualDescendants()
@@ -54,13 +55,61 @@ public sealed partial class MainWindowHeadlessTests
             finally
             {
                 context.ViewModel.Dialogs.ShowUpdateAvailable(
-                    "1.2.0", [], canSelfUpdate: false, releaseNotes: "## 更新内容");
+                    "1.2.0", [], LauncherUpdateInAppAvailability.PlatformUnsupported, releaseNotes: "## 更新内容");
             }
         }
         finally
         {
             AnimationTimings.ExitAnimationDuration = originalDuration;
         }
+    }
+
+    [AvaloniaFact]
+    public void UpdateDialog_WhenThisHostHasNoInAppPath_ExplainsTheReleasePageHandOff()
+    {
+        using var context = CreateContext();
+        context.Window.Show();
+        // 这份安装缺更新组件：说明行必须归因到安装，而不是笼统地说「设备无法」。
+        context.ViewModel.Dialogs.ShowUpdateAvailable(
+            "1.2.0", [], LauncherUpdateInAppAvailability.HelperMissing);
+        Dispatcher.UIThread.RunJobs();
+
+        // 说明行按资源键定位：抄一遍文案的话，改词或改翻译就会让定位悄悄脱钩。
+        var expectedNotice = context.ViewModel.Shell.I18n[LocalizationKeys.LauncherUpdateInAppUnavailableHelper];
+        var notice = context.Window.GetVisualDescendants().OfType<Border>()
+            .Single(border =>
+                border.Classes.Contains("dialog-alert")
+                && border.IsEffectivelyVisible
+                && border.GetVisualDescendants().OfType<TextBlock>()
+                    .Any(text => string.Equals(text.Text, expectedNotice, StringComparison.Ordinal)));
+        var primary = context.Window.GetVisualDescendants().OfType<Button>()
+            .Single(button =>
+                button.IsEffectivelyVisible
+                && ReferenceEquals(button.Command, context.ViewModel.Dialogs.ConfirmUpdateAvailableCommand));
+
+        Assert.True(notice.IsEffectivelyVisible);
+        // 左侧 3px 强调边要直上直下：起始两角平角、结束两角 8（Radius.Sm），
+        // 断言运行时几何而不是 XAML 文本——样式没挂上时这里同样会红。
+        Assert.Equal(new CornerRadius(0, 8, 8, 0), notice.CornerRadius);
+        Assert.Equal(
+            context.ViewModel.Shell.I18n[LocalizationKeys.LauncherUpdateOpenReleasePage],
+            AutomationProperties.GetName(primary));
+    }
+
+    [AvaloniaFact]
+    public void UpdateDialog_WhenInAppUpdateIsAvailable_HidesTheHandOffNotice()
+    {
+        using var context = CreateContext();
+        context.Window.Show();
+        context.ViewModel.Dialogs.ShowUpdateAvailable("1.2.0", [], LauncherUpdateInAppAvailability.Available);
+        Dispatcher.UIThread.RunJobs();
+
+        var expectedNotice = context.ViewModel.Shell.I18n[LocalizationKeys.LauncherUpdateInAppUnavailableHelper];
+
+        Assert.DoesNotContain(
+            context.Window.GetVisualDescendants().OfType<TextBlock>(),
+            text => text.IsEffectivelyVisible
+                && string.Equals(text.Text, expectedNotice, StringComparison.Ordinal));
     }
 
     [AvaloniaFact]
@@ -176,6 +225,7 @@ public sealed partial class MainWindowHeadlessTests
     [InlineData("log-export")]
     [InlineData("confirmation")]
     [InlineData("setup-wizard")]
+    [InlineData("update")]
     public void SecondaryOverlay_AtMinimumWindowSize_KeepsCriticalActionsReachable(string overlay)
     {
         using var context = CreateContext();
@@ -190,6 +240,7 @@ public sealed partial class MainWindowHeadlessTests
             "log-export" => ShowLogExport(context),
             "confirmation" => ShowLongConfirmation(context),
             "setup-wizard" => ShowSetupWizard(context),
+            "update" => ShowUpdateDialog(context),
             _ => throw new ArgumentOutOfRangeException(nameof(overlay))
         };
         Dispatcher.UIThread.RunJobs();
@@ -513,6 +564,22 @@ public sealed partial class MainWindowHeadlessTests
             .Where(button =>
                 ReferenceEquals(button.Command, context.ViewModel.Dialogs.SetupWizardExitConfirm.ShowCommand)
                 || ReferenceEquals(button.Command, context.ViewModel.Dialogs.SetupWizard.NextCommand))
+            .ToArray();
+    }
+
+    /// <summary>
+    /// 退到发布页的形态：多一行说明，因此这一形态也要在最小窗口下量一次动作可达性。
+    /// </summary>
+    private static Button[] ShowUpdateDialog(TestContext context)
+    {
+        context.ViewModel.Dialogs.ShowUpdateAvailable(
+            "1.2.0", [], LauncherUpdateInAppAvailability.PlatformUnsupported, releaseNotes: "## 更新内容");
+        Dispatcher.UIThread.RunJobs();
+        return context.Window.GetVisualDescendants().OfType<Button>()
+            .Where(button =>
+                button.IsEffectivelyVisible
+                && (ReferenceEquals(button.Command, context.ViewModel.Dialogs.ConfirmUpdateAvailableCommand)
+                    || ReferenceEquals(button.Command, context.ViewModel.Dialogs.CancelUpdateAvailableCommand)))
             .ToArray();
     }
 }

@@ -12,6 +12,7 @@ using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Services.Update;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -145,6 +146,33 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel, I
     [NotifyPropertyChangedFor(nameof(UpdatePrimaryActionText))]
     private bool updateSupportsInAppApply;
 
+    /// <summary>
+    /// Why the dialog offers the release page instead of an in-app update, or null when that is
+    /// not the question: either in-app apply is offered, or an attempt was made and failed (that
+    /// failure reports itself through its toast, and a failure is not a missing capability).
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsUpdateInAppUnavailable), nameof(UpdateInAppUnavailableNoticeText))]
+    private LauncherUpdateInAppAvailability? updateUnavailableReason;
+
+    /// <summary>True when the dialog explains a capability verdict before the download starts.</summary>
+    public bool IsUpdateInAppUnavailable => UpdateUnavailableReason is not null;
+
+    /// <summary>
+    /// Explains why the primary action is <see cref="LocalizationKeys.LauncherUpdateOpenReleasePage"/>,
+    /// naming the cause the verdict actually reported: the platform, this installation, or the release.
+    /// </summary>
+    public string UpdateInAppUnavailableNoticeText => UpdateUnavailableReason switch
+    {
+        LauncherUpdateInAppAvailability.PlatformUnsupported =>
+            localizer.T(LocalizationKeys.LauncherUpdateInAppUnavailablePlatform),
+        LauncherUpdateInAppAvailability.HelperMissing =>
+            localizer.T(LocalizationKeys.LauncherUpdateInAppUnavailableHelper),
+        LauncherUpdateInAppAvailability.PackageUnverifiable =>
+            localizer.T(LocalizationKeys.LauncherUpdateInAppUnavailablePackage),
+        _ => ""
+    };
+
     /// <summary>True while the in-app download/verify/ready flow owns the dialog.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanConfirmUpdate), nameof(UpdatePrimaryActionText))]
@@ -257,6 +285,7 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel, I
             UpdateAvailableText = localizer.F(LocalizationKeys.LauncherUpdateAvailableMessage, UpdateAvailableVersion);
             OnPropertyChanged(nameof(UpdateStatusText));
             OnPropertyChanged(nameof(UpdatePrimaryActionText));
+            OnPropertyChanged(nameof(UpdateInAppUnavailableNoticeText));
         }
         SetupWizard.RefreshLocalizedText();
     }
@@ -273,10 +302,17 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel, I
         DownloadRunningCloseConfirm.Show(localizer.T(LocalizationKeys.CloseDownloadMessage));
     }
 
+    /// <summary>
+    /// Shows the offered launcher release and sets the primary action from the in-app update verdict.
+    /// </summary>
+    /// <param name="version">The offered release version.</param>
+    /// <param name="files">The release assets used by the in-app update flow.</param>
+    /// <param name="availability">Whether this installation can apply the release in-app, or why it cannot.</param>
+    /// <param name="releaseNotes">The release notes displayed in the dialog.</param>
     public void ShowUpdateAvailable(
         string version,
         IReadOnlyList<ReleaseFile> files,
-        bool canSelfUpdate,
+        LauncherUpdateInAppAvailability availability,
         string releaseNotes = "")
     {
         UpdateAvailableVersion = version;
@@ -284,7 +320,9 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel, I
         UpdateReleaseNotes = ReleaseNotesMarkdownSanitizer.Sanitize(releaseNotes);
         updateFiles = files ?? [];
 
-        UpdateSupportsInAppApply = canSelfUpdate;
+        UpdateSupportsInAppApply = availability == LauncherUpdateInAppAvailability.Available;
+        UpdateUnavailableReason =
+            availability == LauncherUpdateInAppAvailability.Available ? null : availability;
         ResetUpdateApply();
         IsUpdateAvailableVisible = true;
     }
@@ -326,6 +364,8 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel, I
     {
         ResetUpdateApply();
         UpdateSupportsInAppApply = false;
+        // 失败恢复不是能力判定：说明由失败 toast 承担，对话框不能改口归因给平台或安装。
+        UpdateUnavailableReason = null;
     }
 
     /// <summary>Clears the in-app apply state and returns the dialog to its neutral form.</summary>

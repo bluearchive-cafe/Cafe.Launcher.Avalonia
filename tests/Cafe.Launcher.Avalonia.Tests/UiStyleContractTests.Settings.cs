@@ -543,7 +543,7 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void AboutSection_LegalLinks_AreInlineHyperlinks()
+    public void AboutSection_LegalLinks_ShareRowsWithTheirCopyrightText()
     {
         var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/SettingsAboutSection.axaml"));
         var links = document
@@ -556,7 +556,10 @@ public sealed partial class UiStyleContractTests
         {
             Assert.True(HasClass(link, "inline-legal-link"));
             Assert.False(HasClass(link, "text-link"));
-            Assert.Equal("InlineUIContainer", link.Parent?.Name.LocalName);
+            Assert.Equal("Grid", link.Parent?.Name.LocalName);
+            Assert.Contains(link.Parent!.Elements(), element =>
+                element.Name.LocalName == "TextBlock"
+                && element.Attribute("Text")?.Value.Contains("Shell.I18n[", StringComparison.Ordinal) == true);
         });
         Assert.Equal(
             [

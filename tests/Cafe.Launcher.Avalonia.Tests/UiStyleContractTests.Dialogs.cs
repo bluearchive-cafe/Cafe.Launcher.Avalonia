@@ -27,6 +27,22 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void DialogAlert_LeftAccentBar_IsNotClippedByARoundedCorner()
+    {
+        // 警示卡只有左侧 3px 强调边：起始两角必须是平角，否则圆弧把强调边两端切圆。
+        // 两处绑定一起钉住——厚度退回「四边等宽」或圆角退回对称档都会让这个形态消失。
+        var styles = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
+        var alert = GetStyleSetters(styles, "Border.dialog-alert");
+
+        Assert.Equal(
+            "{StaticResource Launcher.Component.Dialog.Alert.BorderThickness}",
+            alert["BorderThickness"]);
+        Assert.Equal(
+            "{StaticResource Launcher.Component.Dialog.Alert.CornerRadius}",
+            alert["CornerRadius"]);
+    }
+
+    [Fact]
     public void UpdateReleaseNotesPreview_UsesGfmCompatibleParserProfile()
     {
         var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowDialogsOverlay.axaml"));
@@ -978,6 +994,7 @@ public sealed partial class UiStyleContractTests
             .Value;
 
         Assert.Equal("20", TokenValue("Launcher.Component.Dialog.CornerRadius"));
+        Assert.Equal("0,8,8,0", TokenValue("Launcher.Component.Dialog.Alert.CornerRadius"));
         Assert.Equal(2, TokenValue("Launcher.Elevation.Shadow.Dialog").Split(',').Length);
         Assert.Equal("32", TokenValue("Launcher.Component.Dialog.Badge.Size"));
         Assert.Equal("16", TokenValue("Launcher.Component.Dialog.Badge.CornerRadius"));
