@@ -70,7 +70,7 @@
                         <TextBlock Text="{Binding Shell.I18n[logFilterFatal]}"/>
                     </Button>
                     <TextBox Text="{Binding LogViewer.FilterText, Mode=TwoWay}" PlaceholderText="{Binding Shell.I18n[logSearchPlaceholder]}"
-                             Classes="uid-input log-search"
+                             Classes="field-input log-search"
                              MinWidth="{StaticResource Launcher.Component.LogViewer.Search.MinWidth}"
                              AutomationProperties.Name="{Binding Shell.I18n[logSearchPlaceholder]}"
                              Height="{StaticResource Launcher.Control.Height.Setting}" VerticalAlignment="Center"/>

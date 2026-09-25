@@ -133,11 +133,11 @@ public sealed partial class MainWindowHeadlessTests
         // ApplyLanguageAndThemeAsync 可能落地，AutomationProperties.Name 的解析
         // 依赖线程 Culture（T() 按 CurrentUICulture 回退），await 后的测试延续
         // 与 UI 线程语言可能瞬时分叉——类选择与文化无关且语义等价（该类仅这
-        // 四个按钮使用），同时仍断言名称已本地化为非空。
+        // 四个编辑钮使用），同时仍断言名称已本地化为非空。
         var editButtons = context.Window
             .GetVisualDescendants()
             .OfType<Button>()
-            .Where(control => control.Classes.Contains("wizard-review-edit"))
+            .Where(control => control.Classes.Contains("wizard-summary-edit"))
             .ToArray();
 
         Assert.Equal(4, editButtons.Length);

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Features.Settings;
 using Cafe.Launcher.Avalonia.Features.SetupWizard;
+using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
@@ -148,10 +149,57 @@ public sealed class SettingsViewModelTests : IDisposable
         Assert.Equal("9.9.9", dialogs.UpdateAvailableVersion);
     }
 
+    [Fact]
+    public void GamePathDisplay_LongDraftPath_IsMiddleEllipsized()
+    {
+        // 设置页游戏路径行与向导复核行共用同一展示规则：长路径保首段与末两段。
+        var localizer = new LocalizationService();
+        var editor = new SettingsEditor();
+        using var settings = CreateSettingsViewModel(
+            localizer,
+            new StubRemoteHttpTransport(),
+            editor: editor);
+        editor.Current.GamePath =
+            @"E:\Repos\Cafe.Launcher.Avalonia\src\Cafe.Launcher.Avalonia\bin\Debug\YostarGames\BlueArchive_JP";
+
+        Assert.Equal(
+            PathMiddleEllipsis.MiddleEllipsize(editor.Current.GamePath),
+            settings.GamePathDisplay);
+        Assert.Contains(PathMiddleEllipsis.Ellipsis, settings.GamePathDisplay);
+        Assert.EndsWith(@"YostarGames\BlueArchive_JP", settings.GamePathDisplay, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void GamePathDisplay_WhenDraftPathChanges_RaisesPropertyChanged()
+    {
+        var localizer = new LocalizationService();
+        var editor = new SettingsEditor();
+        using var settings = CreateSettingsViewModel(
+            localizer,
+            new StubRemoteHttpTransport(),
+            editor: editor);
+        var changes = 0;
+        settings.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(SettingsViewModel.GamePathDisplay))
+            {
+                changes++;
+            }
+        };
+
+        editor.Current.GamePath = @"D:\Games\YostarGames\BlueArchive_JP";
+
+        // 编辑器对单次草稿改动同时抛 CurrentPropertyChanged 与 PropertyChanged(Current)，
+        // 展示值会被重播（幂等）；此处只断言「已重算并通告」，不锁定重播次数。
+        Assert.True(changes >= 1, "草稿路径变化未通告 GamePathDisplay。");
+        Assert.Equal(@"D:\Games\YostarGames\BlueArchive_JP", settings.GamePathDisplay);
+    }
+
     private SettingsViewModel CreateSettingsViewModel(
         LocalizationService localizer,
         StubRemoteHttpTransport transport,
-        DialogsViewModel? dialogs = null) =>
+        DialogsViewModel? dialogs = null,
+        SettingsEditor? editor = null) =>
         new(
             null!,
             null!,
@@ -167,7 +215,7 @@ public sealed class SettingsViewModelTests : IDisposable
             null!,
             null!,
             new SettingsOptionsViewModel(localizer, new DiskSpaceService()),
-            new SettingsAppearanceViewModel(new SettingsEditor(), new ThemeApplier()),
+            new SettingsAppearanceViewModel(editor ?? new SettingsEditor(), new ThemeApplier()),
             new RecordingErrorHandlingService(),
             new StubGameRuntime(),
             new StubFilePickerService());

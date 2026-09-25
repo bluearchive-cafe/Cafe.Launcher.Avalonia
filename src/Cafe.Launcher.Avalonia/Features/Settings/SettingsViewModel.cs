@@ -108,6 +108,8 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         if (e.PropertyName == nameof(SettingsEditor.Current))
         {
             OnPropertyChanged(nameof(IsGameRuntimeRunnerPathEnabled));
+            // Current 实例会被整体替换（保存后草稿换成归一化值），展示值须随之重算。
+            OnPropertyChanged(nameof(GamePathDisplay));
         }
     }
 
@@ -116,6 +118,11 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         if (e.PropertyName == nameof(GameRuntimeSettings.Runner))
         {
             OnPropertyChanged(nameof(IsGameRuntimeRunnerPathEnabled));
+        }
+
+        if (e.PropertyName == nameof(LauncherSettings.GamePath))
+        {
+            OnPropertyChanged(nameof(GamePathDisplay));
         }
 
         if (!IsAppearanceSetting(e.PropertyName))
@@ -135,6 +142,12 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
     /// <summary>A custom executable path is only applied to an explicitly selected runner.</summary>
     public bool IsGameRuntimeRunnerPathEnabled =>
         editor.Current.GameRuntime.Runner is GameRuntimeRunners.Umu or GameRuntimeRunners.Wine;
+
+    /// <summary>
+    /// 游戏路径行的展示值：长路径做段感知中间省略（见 <see cref="PathMiddleEllipsis"/>），
+    /// 保住盘符与末段目录名；草稿真值仍是 <c>Editor.Current.GamePath</c>。
+    /// </summary>
+    public string GamePathDisplay => PathMiddleEllipsis.MiddleEllipsize(editor.Current.GamePath);
 
     [ObservableProperty]
     private bool isUnsavedChangesVisible;
