@@ -111,7 +111,7 @@
                                        Classes="body"
                                        TextAlignment="Center"/>
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
-                                <TextBox Classes="uid-input"
+                                <TextBox Classes="field-input"
                                          Text="{Binding Dialogs.SetupWizard.GamePath, Mode=TwoWay}"
                                          AutomationProperties.Name="{Binding Shell.I18n[setupWizardGamePath]}"/>
                                 <Button Grid.Column="1"

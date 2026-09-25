@@ -182,7 +182,7 @@
                             <StackPanel Spacing="{StaticResource Launcher.Spacing.Md}"
                                         IsVisible="{Binding ResourcePanel.IsResourcePanelUidEditing}">
                                 <TextBlock Text="{Binding Shell.I18n[resourcePanelEditUid]}" Classes="group-title"/>
-                                <TextBox Classes="uid-input"
+                                <TextBox Classes="field-input uid-input"
                                          Text="{Binding ResourcePanel.ManualResourcePanelUid, Mode=TwoWay}"
                                          PlaceholderText="{Binding Shell.I18n[resourcePanelUid]}"
                                          AutomationProperties.Name="{Binding Shell.I18n[resourcePanelUid]}"
@@ -213,7 +213,7 @@
                             <StackPanel Spacing="{StaticResource Launcher.Spacing.Md}"
                                         IsVisible="{Binding ResourcePanel.IsResourcePanelUidMissing}">
                                 <TextBlock Text="{Binding Shell.I18n[resourcePanelManualUid]}" Classes="group-title"/>
-                                <TextBox Classes="uid-input"
+                                <TextBox Classes="field-input uid-input"
                                          Text="{Binding ResourcePanel.ManualResourcePanelUid, Mode=TwoWay}"
                                          PlaceholderText="{Binding Shell.I18n[resourcePanelUid]}"
                                          AutomationProperties.Name="{Binding Shell.I18n[resourcePanelUid]}"

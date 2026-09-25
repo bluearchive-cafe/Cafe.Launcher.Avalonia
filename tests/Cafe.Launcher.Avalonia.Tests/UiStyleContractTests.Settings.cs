@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Cafe.Launcher.Avalonia.Testing;
@@ -644,6 +644,15 @@ public sealed partial class UiStyleContractTests
             input => Assert.Equal(
                 "{StaticResource Launcher.Component.Settings.Control.MinWidth}",
                 input.Attribute("Width")?.Value));
+        // 路径字段是普通文本输入：字段外观经 field-input；等宽（uid-input 叠层）
+        // 只属于 UID 字段，不得随字段外观捆绑回归。
+        Assert.All(
+            runtimeInputs,
+            input =>
+            {
+                Assert.True(HasClass(input, "field-input"));
+                Assert.False(HasClass(input, "uid-input"));
+            });
 
         // 运行环境路径与运行器选择同组（兼容运行环境），组内不再依赖诊断分区的位置。
         var runtimeGroup = runnerPathInput
@@ -657,11 +666,18 @@ public sealed partial class UiStyleContractTests
                 && element.Attribute("Title")?.Value == "{Binding Shell.I18n[gameRuntimeRunner]}");
 
         var styles = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
-        var uidInputStyle = GetStyleSetters(styles, "TextBox.uid-input");
+        var fieldInputStyle = GetStyleSetters(styles, "TextBox.field-input");
         Assert.Equal(
             "{StaticResource Launcher.Control.Height.Field}",
-            uidInputStyle["MinHeight"]);
-        Assert.Equal("Center", uidInputStyle["VerticalAlignment"]);
+            fieldInputStyle["MinHeight"]);
+        Assert.Equal("Center", fieldInputStyle["VerticalAlignment"]);
+        var uidInputStyle = GetStyleSetters(styles, "TextBox.uid-input");
+        Assert.Equal(
+            "{StaticResource Launcher.Typography.FontFamily.Monospace}",
+            uidInputStyle["FontFamily"]);
+        Assert.Equal(
+            "{StaticResource Launcher.Typography.FontSize.Title.Md}",
+            uidInputStyle["FontSize"]);
     }
 
     [Fact]

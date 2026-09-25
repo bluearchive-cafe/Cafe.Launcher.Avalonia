@@ -78,7 +78,7 @@
             <controls:SettingRow Title="{Binding Shell.I18n[gameRuntimeRunnerPath]}"
                                  Description="{Binding Shell.I18n[gameRuntimeRunnerPathDescription]}">
                 <controls:SettingRow.Action>
-                    <TextBox Classes="uid-input"
+                    <TextBox Classes="field-input"
                              Width="{StaticResource Launcher.Component.Settings.Control.MinWidth}"
                              Text="{Binding Settings.Editor.Current.GameRuntime.RunnerPath, Mode=TwoWay}"
                              PlaceholderText="{Binding Shell.I18n[gameRuntimeRunnerPathPlaceholder]}"
@@ -90,7 +90,7 @@
             <controls:SettingRow Title="{Binding Shell.I18n[gameRuntimePrefixPath]}"
                                  Description="{Binding Shell.I18n[gameRuntimePrefixPathDescription]}">
                 <controls:SettingRow.Action>
-                    <TextBox Classes="uid-input"
+                    <TextBox Classes="field-input"
                              Width="{StaticResource Launcher.Component.Settings.Control.MinWidth}"
                              Text="{Binding Settings.Editor.Current.GameRuntime.PrefixPath, Mode=TwoWay}"
                              PlaceholderText="{Binding Shell.I18n[gameRuntimePrefixPathPlaceholder]}"
@@ -101,7 +101,7 @@
             <controls:SettingRow Title="{Binding Shell.I18n[gameRuntimeProtonPath]}"
                                  Description="{Binding Shell.I18n[gameRuntimeProtonPathDescription]}">
                 <controls:SettingRow.Action>
-                    <TextBox Classes="uid-input"
+                    <TextBox Classes="field-input"
                              Width="{StaticResource Launcher.Component.Settings.Control.MinWidth}"
                              Text="{Binding Settings.Editor.Current.GameRuntime.ProtonPath, Mode=TwoWay}"
                              PlaceholderText="{Binding Shell.I18n[gameRuntimeProtonPathPlaceholder]}"

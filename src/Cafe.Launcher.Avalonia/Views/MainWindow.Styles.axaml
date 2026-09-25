@@ -1462,15 +1462,16 @@
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
-    <!-- UID 输入框：等宽 + 字距与展示值同构，八位大写字形易于核对（ADR-041）。 -->
-    <Style Selector="TextBox.uid-input">
+    <!-- 单行字段基类（field-input）：字段外观（底色/描边/圆角/内边距/高度/字号）。
+         等宽不再随字段外观捆绑——UID 类字段以 uid-input 叠层启用等宽（ADR-041），
+         路径/搜索等普通文本字段保持正文字号与字体。 -->
+    <Style Selector="TextBox.field-input">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Field.Background}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Field.Border}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Component.Input.Padding}"/>
-        <Setter Property="FontFamily" Value="{StaticResource Launcher.Typography.FontFamily.Monospace}"/>
-        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Title.Md}"/>
+        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Md}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
         <Setter Property="MinWidth" Value="{StaticResource Launcher.Component.Input.MinWidth}"/>
         <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Field}"/>
@@ -1478,11 +1479,18 @@
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="CaretBrush" Value="{DynamicResource Launcher.Color.Primary}"/>
     </Style>
-    <Style Selector="TextBox.uid-input:focus">
+    <Style Selector="TextBox.field-input:focus">
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary}"/>
     </Style>
-    <Style Selector="TextBox.uid-input:pointerover">
+    <Style Selector="TextBox.field-input:pointerover">
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Hover}"/>
+    </Style>
+    <!-- UID 输入框叠层：等宽 + Title.Md 字号，与展示值（uid-value）同构，八位大写
+         字形易于 O/0、I/1 核对（ADR-041）。须声明在 field-input 之后，两类叠加时
+         字体/字号以本层为准（同集合内后声明者胜）。 -->
+    <Style Selector="TextBox.uid-input">
+        <Setter Property="FontFamily" Value="{StaticResource Launcher.Typography.FontFamily.Monospace}"/>
+        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Title.Md}"/>
     </Style>
     <Style Selector="ToggleSwitch:checked /template/ Border#SwitchKnobBounds">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary}"/>
