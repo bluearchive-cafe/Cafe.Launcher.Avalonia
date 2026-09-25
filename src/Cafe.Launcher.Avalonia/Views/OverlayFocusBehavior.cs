@@ -140,7 +140,9 @@ public static class OverlayFocusBehavior
                             && control.IsEffectivelyVisible
                             && control.IsEnabled
                             && control.IsTabStop)
-                        ?.Focus(NavigationMethod.Tab);
+                        // ADR-040：程序式聚焦不算键盘导航，故用 Unspecified
+                        // （Tab 会让焦点环在鼠标/自动聚焦时也画出来）。
+                        ?.Focus(NavigationMethod.Unspecified);
                 },
                 DispatcherPriority.Input);
         }
@@ -149,7 +151,8 @@ public static class OverlayFocusBehavior
         {
             var focus = previousFocus;
             previousFocus = null;
-            focus?.Focus(NavigationMethod.Tab);
+            // 归还焦点同样不是键盘导航：归还时不该突然画出一个焦点环。
+            focus?.Focus(NavigationMethod.Unspecified);
         }
     }
 

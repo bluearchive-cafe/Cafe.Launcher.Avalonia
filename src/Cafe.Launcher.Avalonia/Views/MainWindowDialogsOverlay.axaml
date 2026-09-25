@@ -136,14 +136,8 @@
                     </StackPanel>
                 </controls:DialogSurface.Content>
                 <controls:DialogSurface.Footer>
+                    <!-- ADR-040：do-it（下载 / 重启）在最左，「稍后」作为安全动作在最右。 -->
                     <StackPanel Classes="confirm-actions">
-                        <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.CancelUpdateAvailableCommand}"
-                                AutomationProperties.Name="{Binding Shell.I18n[launcherUpdateLater]}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="ClockOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                                <TextBlock Text="{Binding Shell.I18n[launcherUpdateLater]}"/>
-                            </StackPanel>
-                        </Button>
                         <Button Classes="primary-action dialog-action"
                                 Command="{Binding Dialogs.ConfirmUpdateAvailableCommand}"
                                 IsEnabled="{Binding Dialogs.CanConfirmUpdate}"
@@ -170,6 +164,13 @@
                             <StackPanel Classes="button-content">
                                 <materialIcons:MaterialIcon Kind="Update" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
                                 <TextBlock Text="{Binding Shell.I18n[launcherUpdateRestart]}"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.CancelUpdateAvailableCommand}"
+                                AutomationProperties.Name="{Binding Shell.I18n[launcherUpdateLater]}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="ClockOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                <TextBlock Text="{Binding Shell.I18n[launcherUpdateLater]}"/>
                             </StackPanel>
                         </Button>
                     </StackPanel>

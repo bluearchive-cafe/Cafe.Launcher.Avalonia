@@ -1,4 +1,4 @@
-﻿<Styles xmlns="https://github.com/avaloniaui"
+<Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:views="using:Cafe.Launcher.Avalonia.Views"
         xmlns:helpers="using:Cafe.Launcher.Avalonia.Helpers"
@@ -335,15 +335,44 @@
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Md}"/>
     </Style>
     <Style Selector="Button.confirm-dialog-action">
-        <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
-        <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Transparent}"/>
-        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Action.Background}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary}"/>
         <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
         <Setter Property="MinWidth" Value="{StaticResource Launcher.Component.Dialog.BasicAction.MinWidth}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Component.Dialog.BasicAction.Padding}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Xs}"/>
         <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
+    </Style>
+    <!-- ADR-040（修订）：对话框动作按钮不画边框，底色即形状；作用域限定 `StackPanel.confirm-actions`，
+         免得改到设置区/内容区里同样用 flat-action 的按钮。 -->
+    <Style Selector="StackPanel.confirm-actions Button.flat-action">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Action.Background}"/>
+    </Style>
+    <Style Selector="StackPanel.confirm-actions Button.flat-action:pointerover">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Hover}"/>
+    </Style>
+    <Style Selector="StackPanel.confirm-actions Button.flat-action:pressed">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Pressed}"/>
+    </Style>
+    <Style Selector="StackPanel.confirm-actions Button.flat-action:disabled">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
+    </Style>
+    <!-- ==================================================================
+         动作带按钮的焦点环：厚度常驻预留，只有颜色变
+         ==================================================================
+         焦点环用 BorderThickness 画，而按钮宽度是内容驱动的 —— 如果静止 0px、聚焦 2px，
+         聚焦那一刻按钮会变宽 4px，右对齐的动作带还会整体左移（用户报的正是这一条）。
+         这里把 2px 常驻下来、静止时描边透明，于是聚焦只改颜色、几何完全不动。
+
+         同一条规则顺带把动作带里所有按钮的 BorderBrush 收成透明（无边框外观），
+         因此不需要在家族/类规则里各写一遍。厚度必须与下方 :focus-visible 规则一致。
+         ================================================================== -->
+    <Style Selector="StackPanel.confirm-actions Button">
+        <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
+    </Style>
+    <Style Selector="StackPanel.confirm-actions Button:focus-visible">
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
     </Style>
     <Style Selector="Button.confirm-dialog-action.primary-action">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary}"/>
@@ -370,8 +399,8 @@
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnError}"/>
     </Style>
     <Style Selector="Button.confirm-dialog-action:disabled">
-        <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
-        <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
     </Style>
     <Style Selector="Button.primary-action.dialog-action:disabled">
@@ -1566,4 +1595,27 @@
     <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/Styles/SetupWizard.axaml"/>
     <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/Styles/Toast.axaml"/>
     <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/Styles/DialogSurface.axaml"/>
+
+    <!-- ==================================================================
+         焦点视觉策略（ADR-040 修订）：默认不显示，键盘导航时显示
+         ==================================================================
+         目标行为：
+           · 程序式聚焦（打开对话框/叠层时自动聚焦）与鼠标点击 → **不画**焦点视觉；
+           · 键盘导航（Tab / 方向键）→ 画应用自己的 FocusRing 描边，位置可见。
+
+         实现分工：
+           1. 本块清掉**框架默认的焦点矩形**（FocusAdorner）。它不是本仓的语言，
+              且与下面的 FocusRing 叠在一起会变成双层框；
+           2. 焦点环本身由各控件既有的 `:focus-visible` 规则绘制（Button / ComboBox /
+              ToggleSwitch / ListBoxItem / RadioButton 等，见文件上方），不去动它们；
+           3. 程序式聚焦改用 `NavigationMethod.Unspecified`（Views/OverlayFocusBehavior.cs、
+              Controls/ConfirmDialog.axaml.cs），因此不会被判定为键盘聚焦、不触发
+              `:focus-visible`；用户真按 Tab 时 Avalonia 自己会置上该伪类。
+
+         注意：FluentTheme 在少数控件的**模板内部**绘制的焦点反馈（TextBox 底线、
+         CheckBox/ToggleSwitch 的模板边框等）不受本块影响，它们本来就只在键盘导航时出现。
+         ================================================================== -->
+    <Style Selector="Control">
+        <Setter Property="FocusAdorner" Value="{x:Null}"/>
+    </Style>
 </Styles>
