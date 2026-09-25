@@ -128,6 +128,10 @@
                  模态表面比页面常驻面板高一档；-padding 家族按形态区分。 -->
             <x:String x:Key="Launcher.Elevation.Shadow.Dialog">0 26 68 0 #4D0F1222, 4 12 14 0 #240F1222</x:String>
             <CornerRadius x:Key="Launcher.Component.Dialog.CornerRadius">20</CornerRadius>
+            <!-- 警示卡只有左侧 3px 强调边（Alert.BorderThickness）：起始两角取平角，
+                 强调边才直上直下不被圆弧切掉，结束两角沿用 Radius.Sm 档。方向性圆角四档
+                 对称 token 表达不了，故按组件 token 单独声明。 -->
+            <CornerRadius x:Key="Launcher.Component.Dialog.Alert.CornerRadius">0,8,8,0</CornerRadius>
             <x:Double x:Key="Launcher.Component.Dialog.Badge.Size">32</x:Double>
             <CornerRadius x:Key="Launcher.Component.Dialog.Badge.CornerRadius">16</CornerRadius>
             <Thickness x:Key="Launcher.Component.Dialog.Badge.Margin">0,0,12,0</Thickness>

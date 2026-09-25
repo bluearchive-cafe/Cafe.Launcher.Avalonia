@@ -90,6 +90,7 @@
     <Compile Include="..\TestDoubles\StubDownloadTransport.cs" Link="TestDoubles\StubDownloadTransport.cs" />
     <Compile Include="..\TestDoubles\MutableTimestampClock.cs" Link="TestDoubles\MutableTimestampClock.cs" />
     <Compile Include="..\TestDoubles\RecordingErrorHandlingService.cs" Link="TestDoubles\RecordingErrorHandlingService.cs" />
+    <Compile Include="..\TestDoubles\StubWindowsLauncherUpdateApplier.cs" Link="TestDoubles\StubWindowsLauncherUpdateApplier.cs" />
   </ItemGroup>
 
 </Project>

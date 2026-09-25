@@ -7,6 +7,14 @@ namespace Cafe.Launcher.Avalonia.Services.Update;
 /// </summary>
 public interface IWindowsLauncherUpdateApplier
 {
+    /// <summary>
+    /// Whether this installation ships the detached helper the apply step runs. Only where
+    /// this is true does an in-app update path exist at all: without the helper a verified
+    /// package could be downloaded but never applied, so the dialog offers the release page
+    /// instead of starting a download that is guaranteed to end in a fallback.
+    /// </summary>
+    bool IsAvailable { get; }
+
     bool TryStartApply(LauncherSelfUpdatePreparation preparation);
 
     /// <summary>

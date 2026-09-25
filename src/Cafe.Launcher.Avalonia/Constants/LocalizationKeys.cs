@@ -301,6 +301,9 @@ public static class LocalizationKeys
     public const string LauncherUpdateDownloadFailed = "launcherUpdateDownloadFailed";
     public const string LauncherUpdateDownloading = "launcherUpdateDownloading";
     public const string LauncherUpdateFileSize = "launcherUpdateFileSize";
+    public const string LauncherUpdateInAppUnavailableHelper = "launcherUpdateInAppUnavailableHelper";
+    public const string LauncherUpdateInAppUnavailablePackage = "launcherUpdateInAppUnavailablePackage";
+    public const string LauncherUpdateInAppUnavailablePlatform = "launcherUpdateInAppUnavailablePlatform";
     public const string LauncherUpdateLater = "launcherUpdateLater";
     public const string LauncherUpdateOpenReleasePage = "launcherUpdateOpenReleasePage";
     public const string LauncherUpdateReadyToRestart = "launcherUpdateReadyToRestart";

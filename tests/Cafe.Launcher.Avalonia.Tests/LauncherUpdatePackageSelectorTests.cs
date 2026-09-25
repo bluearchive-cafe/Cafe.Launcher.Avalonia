@@ -25,7 +25,7 @@ public sealed class LauncherUpdatePackageSelectorTests
         Assert.Equal(LauncherUpdateTarget.ExternalDownload, selection.Target);
         Assert.Null(selection.Package);
         Assert.Null(selection.ChecksumManifest);
-        Assert.False(selection.CanApplyInApp);
+        Assert.Equal(LauncherUpdateInAppAvailability.PlatformUnsupported, selection.Availability);
     }
 
     [Fact]
@@ -36,7 +36,7 @@ public sealed class LauncherUpdatePackageSelectorTests
             ReleaseFiles());
 
         Assert.Equal(LauncherUpdateTarget.ExternalDownload, selection.Target);
-        Assert.False(selection.CanApplyInApp);
+        Assert.Equal(LauncherUpdateInAppAvailability.PlatformUnsupported, selection.Availability);
     }
 
     [Fact]
@@ -47,7 +47,7 @@ public sealed class LauncherUpdatePackageSelectorTests
         Assert.Equal(LauncherUpdateTarget.WindowsPortable, selection.Target);
         Assert.Equal("Cafe.Launcher.Avalonia_v1.2.3_win-x64.zip", selection.Package?.Name);
         Assert.Equal("SHA256SUMS", selection.ChecksumManifest?.Name);
-        Assert.True(selection.CanApplyInApp);
+        Assert.Equal(LauncherUpdateInAppAvailability.Available, selection.Availability);
     }
 
     [Fact]
@@ -57,7 +57,7 @@ public sealed class LauncherUpdatePackageSelectorTests
 
         Assert.Equal(LauncherUpdateTarget.WindowsInstaller, selection.Target);
         Assert.Equal("Cafe.Launcher.Avalonia_v1.2.3_setup.exe", selection.Package?.Name);
-        Assert.True(selection.CanApplyInApp);
+        Assert.Equal(LauncherUpdateInAppAvailability.Available, selection.Availability);
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public sealed class LauncherUpdatePackageSelectorTests
         var selection = LauncherUpdatePackageSelector.Select(WindowsPortableHost, files);
 
         Assert.Equal(LauncherUpdateTarget.ExternalDownload, selection.Target);
-        Assert.False(selection.CanApplyInApp);
+        Assert.Equal(LauncherUpdateInAppAvailability.PackageUnverifiable, selection.Availability);
     }
 
     [Fact]
@@ -79,7 +79,7 @@ public sealed class LauncherUpdatePackageSelectorTests
         var selection = LauncherUpdatePackageSelector.Select(WindowsPortableHost, files);
 
         Assert.Equal(LauncherUpdateTarget.ExternalDownload, selection.Target);
-        Assert.False(selection.CanApplyInApp);
+        Assert.Equal(LauncherUpdateInAppAvailability.PackageUnverifiable, selection.Availability);
     }
 
     [Fact]
@@ -103,7 +103,7 @@ public sealed class LauncherUpdatePackageSelectorTests
         var selection = LauncherUpdatePackageSelector.Select(WindowsPortableHost, files);
 
         Assert.Equal(LauncherUpdateTarget.WindowsPortable, selection.Target);
-        Assert.True(selection.CanApplyInApp);
+        Assert.Equal(LauncherUpdateInAppAvailability.Available, selection.Availability);
     }
 
     [Fact]
@@ -112,6 +112,7 @@ public sealed class LauncherUpdatePackageSelectorTests
         var selection = LauncherUpdatePackageSelector.Select(WindowsPortableHost, []);
 
         Assert.Equal(LauncherUpdateTarget.ExternalDownload, selection.Target);
+        Assert.Equal(LauncherUpdateInAppAvailability.PackageUnverifiable, selection.Availability);
     }
 
     private const string Url = "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v1.2.3/Cafe.Launcher.Avalonia_v1.2.3_win-x64.zip";

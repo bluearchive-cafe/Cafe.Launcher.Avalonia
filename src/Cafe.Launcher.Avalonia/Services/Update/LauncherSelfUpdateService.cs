@@ -19,36 +19,48 @@ public sealed class LauncherSelfUpdateService
 {
     private readonly ILauncherUpdateDownloader downloader;
     private readonly ILauncherUpdateHostInfoProvider hostInfoProvider;
+    private readonly IWindowsLauncherUpdateApplier updateApplier;
     private readonly LauncherDataRoot dataRoot;
     private readonly LocalDiagnostics diagnostics;
 
+    /// <summary>Creates the coordinator that checks, verifies, and stages launcher update packages.</summary>
+    /// <param name="downloader">Reads the checksum manifest and downloads update packages.</param>
+    /// <param name="hostInfoProvider">Describes the current platform and launcher installation.</param>
+    /// <param name="updateApplier">Reports whether the local helper is available for applying a verified package.</param>
+    /// <param name="dataRoot">Provides the application-owned directory for staged update files.</param>
+    /// <param name="diagnostics">Records recoverable update download failures.</param>
     public LauncherSelfUpdateService(
         ILauncherUpdateDownloader downloader,
         ILauncherUpdateHostInfoProvider hostInfoProvider,
+        IWindowsLauncherUpdateApplier updateApplier,
         LauncherDataRoot dataRoot,
         LocalDiagnostics diagnostics)
     {
         this.downloader = downloader;
         this.hostInfoProvider = hostInfoProvider;
+        this.updateApplier = updateApplier;
         this.dataRoot = dataRoot;
         this.diagnostics = diagnostics;
     }
 
     /// <summary>
-    /// True when this host has an in-app apply path for the given release: Windows x64
-    /// with the expected package and the SHA256SUMS manifest both present.
+    /// The single availability verdict for the given release: the release must offer a verifiable
+    /// package for this host <em>and</em> this installation must carry the helper that applies it.
+    /// The dialog's pre-check and the download gate ask the same question here, so both agree, and
+    /// a negative answer carries the cause the user is told about.
     /// </summary>
-    public bool CanApplyInApp(IReadOnlyList<ReleaseFile> files)
+    public LauncherUpdateInAppAvailability ResolveInAppAvailability(IReadOnlyList<ReleaseFile> files)
     {
         ArgumentNullException.ThrowIfNull(files);
-        return LauncherUpdatePackageSelector.Select(hostInfoProvider.GetHostInfo(), files).CanApplyInApp;
+        return AvailabilityOf(LauncherUpdatePackageSelector.Select(hostInfoProvider.GetHostInfo(), files));
     }
 
     /// <summary>
     /// Prepares the update described by <paramref name="files"/>. The result is
     /// <see cref="LauncherSelfUpdatePreparationStatus.ExternalDownload"/> when this
-    /// host has no in-app path (non-Windows, non-x64, or a release missing a package
-    /// or its checksum manifest), and <see cref="LauncherSelfUpdatePreparationStatus.Failed"/>
+    /// host has no in-app path (non-Windows, non-x64, a release missing a package
+    /// or its checksum manifest, or a missing update helper), and
+    /// <see cref="LauncherSelfUpdatePreparationStatus.Failed"/>
     /// when an in-app path existed but verification did not complete.
     /// </summary>
     public async Task<LauncherSelfUpdatePreparation> PrepareAsync(
@@ -60,7 +72,7 @@ public sealed class LauncherSelfUpdateService
         ArgumentNullException.ThrowIfNull(files);
 
         var selection = LauncherUpdatePackageSelector.Select(hostInfoProvider.GetHostInfo(), files);
-        if (!selection.CanApplyInApp)
+        if (!CanStartDownload(selection))
         {
             return LauncherSelfUpdatePreparation.External();
         }
@@ -92,6 +104,25 @@ public sealed class LauncherSelfUpdateService
 
         return LauncherSelfUpdatePreparation.Ready(selection.Target, download.FilePath!, expectedSha256);
     }
+
+    /// <summary>
+    /// Completes the selector's answer with the fact only this installation can answer: whether
+    /// the helper that applies a verified package is actually here. A release-side reason is
+    /// reported as-is — there is no point blaming the installation for an unusable release.
+    /// </summary>
+    private LauncherUpdateInAppAvailability AvailabilityOf(LauncherUpdateSelection selection) =>
+        selection.Availability != LauncherUpdateInAppAvailability.Available
+            ? selection.Availability
+            : updateApplier.IsAvailable
+                ? LauncherUpdateInAppAvailability.Available
+                : LauncherUpdateInAppAvailability.HelperMissing;
+
+    /// <summary>
+    /// The download gate: only an available verdict may start a transfer. A host without a helper
+    /// never downloads a package it could not apply.
+    /// </summary>
+    private bool CanStartDownload(LauncherUpdateSelection selection) =>
+        AvailabilityOf(selection) == LauncherUpdateInAppAvailability.Available;
 
     /// <summary>Keeps the version segment inside one directory name on every platform.</summary>
     private static string SanitizeVersionSegment(string version)

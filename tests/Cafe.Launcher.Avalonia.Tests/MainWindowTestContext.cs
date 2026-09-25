@@ -182,12 +182,14 @@ internal sealed class MainWindowTestContext : IDisposable
 
         var diskSpaceService = new DiskSpaceService();
         var launcherUpdateSvc = launcherUpdateService ?? new LauncherUpdateService(new StubRemoteHttpTransport());
+        launcherUpdateApplier ??= new WindowsLauncherUpdateApplier(
+            directory.DataRoot, diagnostics, directory.Path, directory.Path);
         launcherSelfUpdateService ??= new LauncherSelfUpdateService(
             new LauncherUpdateDownloader(new StubRemoteHttpTransport()),
             new LauncherUpdateHostInfoProvider(),
+            launcherUpdateApplier,
             directory.DataRoot,
             diagnostics);
-        launcherUpdateApplier ??= new WindowsLauncherUpdateApplier(directory.DataRoot, diagnostics, directory.Path);
         var settingsEditor = savedSettings.Editor;
         var settingsOptions = new SettingsOptionsViewModel(localizationService, diskSpaceService);
         var settingsAppearance = new SettingsAppearanceViewModel(settingsEditor, new ThemeApplier());

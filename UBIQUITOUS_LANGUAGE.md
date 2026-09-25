@@ -32,6 +32,7 @@
 | **Launcher self-update** | The Windows flow that downloads the matching release package, verifies it against the release `SHA256SUMS`, and replaces the installation from an independent helper after the launcher exits. | Auto update, in-app upgrade |
 | **Restart to Update** | The action that hands a verified package to the updater and exits the launcher. | Update now, apply update |
 | **Open Release Page** | The fallback action that opens the release page in the browser when no verifiable package is available. | Manual download |
+| **In-app update unavailable** | The state where this host cannot apply an update itself, always with the cause the verdict reported: an unsupported platform, an installation without the Windows update helper, or a release with no verifiable package. The dialog names that cause before the download starts and the primary action is **Open Release Page**. | Not supported, download manually, this device cannot |
 
 ## Canonical translations
 
@@ -89,6 +90,7 @@
 - **Repair** restores a **game installation** against the selected **download source**.
 - The **Resource Panel** manages **localized resources** when the **Cafe download source** is selected.
 - An **update channel** decides which launcher releases are offered; a **launcher self-update** installs the offered release only after verifying it against the release checksum manifest.
+- A **launcher self-update** exists only where the host carries the Windows update helper and the release offers a verifiable package; otherwise the state is **in-app update unavailable** and the exit is **Open Release Page**.
 - The stable update channel (“稳定版”) and the 正式版 label on the download badges name the same release track; keep each label where it ships rather than unifying them.
 - The game **session status** line reports the state of a launched **game installation** (starting, running, exited), which is separate from **launch verification**.
 

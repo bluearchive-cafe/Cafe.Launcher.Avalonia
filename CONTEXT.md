@@ -118,7 +118,7 @@ _Avoid_: 启动完成动作、启动后处理
 _Avoid_: 启动结果、游戏运行状态
 
 **启动器自更新**:
-Windows 上启动器自行完成更新的一条路径：按本机形态选定 release 资产（安装版取 `_setup.exe`、便携版取 `_win-x64.zip`，由安装目录里的 `.cafe-launcher-install` 标记区分）、与同 release 的 `SHA256SUMS` 比对 SHA-256、再交给独立 helper（`src/Cafe.Launcher.Updater`，复制到 `%TEMP%` 运行）在主进程退出后静默安装或整目录换位并重启。信任锚是 `SHA256SUMS` 本身：缺校验值或缺目标资产即退化为打开浏览器下载页，**绝不无校验执行**；非 Windows 仍只跳转下载页。这是对「不执行自身二进制」的既有决定的推翻（[ADR-037](docs/design/adr/ADR-037-Windows自更新走独立helper且以SHA256SUMS为信任锚.md)）。
+Windows 上启动器自行完成更新的一条路径：按本机形态选定 release 资产（安装版取 `_setup.exe`、便携版取 `_win-x64.zip`，由安装目录里的 `.cafe-launcher-install` 标记区分）、与同 release 的 `SHA256SUMS` 比对 SHA-256、再交给独立 helper（`src/Cafe.Launcher.Updater`，复制到 `%TEMP%` 运行）在主进程退出后静默安装或整目录换位并重启。信任锚是 `SHA256SUMS` 本身：缺校验值、缺目标资产或本机不带 helper 即退化为打开浏览器下载页，**绝不无校验执行**。可用性判定给的是**原因**而不是布尔（`LauncherUpdateInAppAvailability`：平台不支持 / 此安装缺 helper / 该版本无可校验包），对话框据此在下载之前说明是哪一种，并把主操作换成「前往发布页」——不会先下载一个注定装不上的包，也不会把三种原因笼统归成「设备不行」；非 Windows 仍只跳转下载页。这是对「不执行自身二进制」的既有决定的推翻（[ADR-037](docs/design/adr/ADR-037-Windows自更新走独立helper且以SHA256SUMS为信任锚.md)）。
 _Avoid_: 自动更新、在线升级
 
 ---

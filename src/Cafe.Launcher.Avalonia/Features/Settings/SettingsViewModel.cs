@@ -286,7 +286,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         dialogs.ShowUpdateAvailable(
             result.LatestVersion,
             result.Files,
-            launcherSelfUpdateService.CanApplyInApp(result.Files),
+            launcherSelfUpdateService.ResolveInAppAvailability(result.Files),
             result.ReleaseNotes);
     }
 

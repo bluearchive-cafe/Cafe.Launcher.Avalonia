@@ -300,7 +300,7 @@ public sealed class ShellLifecycleTests : IDisposable
         var fixture = CreateLifecycle(new ScriptedCoreService(CreateSnapshot()));
         var files = Array.Empty<ReleaseFile>();
 
-        fixture.Dialogs.ShowUpdateAvailable("9.9.9", files, canSelfUpdate: false);
+        fixture.Dialogs.ShowUpdateAvailable("9.9.9", files, LauncherUpdateInAppAvailability.PlatformUnsupported);
         fixture.Dialogs.ConfirmUpdateAvailableCommand.Execute(null);
 
         // 不支持应用内更新的平台,确认更新恰好打开一次版本发布页,且走的是壳的统一外部链接出口。
@@ -309,7 +309,7 @@ public sealed class ShellLifecycleTests : IDisposable
 
         // Dispose 后退订:同一事件不得再触发外部打开。
         fixture.Lifecycle.Dispose();
-        fixture.Dialogs.ShowUpdateAvailable("9.9.9", files, canSelfUpdate: false);
+        fixture.Dialogs.ShowUpdateAvailable("9.9.9", files, LauncherUpdateInAppAvailability.PlatformUnsupported);
         fixture.Dialogs.ConfirmUpdateAvailableCommand.Execute(null);
 
         Assert.Single(openedUrls);
@@ -331,6 +331,7 @@ public sealed class ShellLifecycleTests : IDisposable
                 IsWindows: true,
                 IsX64: true,
                 IsInstallerInstall: false)),
+            applier,
             tempDir.DataRoot,
             new LocalDiagnostics());
         var fixture = CreateLifecycle(
@@ -353,7 +354,7 @@ public sealed class ShellLifecycleTests : IDisposable
             }
         };
 
-        fixture.Dialogs.ShowUpdateAvailable("9.9.9", files, canSelfUpdate: true);
+        fixture.Dialogs.ShowUpdateAvailable("9.9.9", files, LauncherUpdateInAppAvailability.Available);
         fixture.Dialogs.ConfirmUpdateAvailableCommand.Execute(null);
 
         await TestWait.UntilAsync(
@@ -391,6 +392,7 @@ public sealed class ShellLifecycleTests : IDisposable
                 IsWindows: true,
                 IsX64: true,
                 IsInstallerInstall: false)),
+            new StubWindowsLauncherUpdateApplier(),
             tempDir.DataRoot,
             new LocalDiagnostics());
         var fixture = CreateLifecycle(
@@ -412,7 +414,7 @@ public sealed class ShellLifecycleTests : IDisposable
             }
         };
 
-        fixture.Dialogs.ShowUpdateAvailable("9.9.9", files, canSelfUpdate: true);
+        fixture.Dialogs.ShowUpdateAvailable("9.9.9", files, LauncherUpdateInAppAvailability.Available);
         fixture.Dialogs.ConfirmUpdateAvailableCommand.Execute(null);
 
         await TestWait.UntilAsync(
@@ -590,12 +592,15 @@ public sealed class ShellLifecycleTests : IDisposable
 
         var localizer = new LocalizationService();
         var diagnostics = new LocalDiagnostics();
+        // 应用器先定下来，可用性判定与真正应用走的是同一个实例。
+        launcherUpdateApplier ??= new WindowsLauncherUpdateApplier(
+            tempDir.DataRoot, diagnostics, tempDir.Path, tempDir.Path);
         launcherSelfUpdateService ??= new LauncherSelfUpdateService(
             new LauncherUpdateDownloader(new StubRemoteHttpTransport()),
             new LauncherUpdateHostInfoProvider(),
+            launcherUpdateApplier,
             tempDir.DataRoot,
             diagnostics);
-        launcherUpdateApplier ??= new WindowsLauncherUpdateApplier(tempDir.DataRoot, diagnostics, tempDir.Path);
         var filePickerService = new StubFilePickerService();
         var imageCacheService = new ImageCacheService(
             new StubRemoteHttpTransport(),
@@ -783,6 +788,9 @@ public sealed class ShellLifecycleTests : IDisposable
     /// <summary>Records helper launches so the shell's apply step can be asserted without spawning a process.</summary>
     private sealed class RecordingUpdateApplier : IWindowsLauncherUpdateApplier
     {
+        /// <summary>These fixtures describe a Windows install that ships the helper.</summary>
+        public bool IsAvailable => true;
+
         public int StartCount { get; private set; }
 
         public LauncherUpdateTarget LastTarget { get; private set; }

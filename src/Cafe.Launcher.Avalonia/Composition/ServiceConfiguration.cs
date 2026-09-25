@@ -167,12 +167,16 @@ public static class ServiceConfiguration
         services.AddSingleton<LauncherUpdateService>();
         services.AddSingleton<ILauncherUpdateHostInfoProvider, LauncherUpdateHostInfoProvider>();
         services.AddSingleton<ILauncherUpdateDownloader, LauncherUpdateDownloader>();
+        // 应用器先于自更新服务注册：可用性判定（本机是否带 helper）由应用器回答，
+        // 自更新服务据此决定是应用内下载还是回退发布页。
+        services.AddSingleton<IWindowsLauncherUpdateApplier, WindowsLauncherUpdateApplier>();
         services.AddSingleton(sp => new LauncherSelfUpdateService(
             sp.GetRequiredService<ILauncherUpdateDownloader>(),
             sp.GetRequiredService<ILauncherUpdateHostInfoProvider>(),
+            sp.GetRequiredService<IWindowsLauncherUpdateApplier>(),
             dataRoot,
             sp.GetRequiredService<LocalDiagnostics>()));
-        services.AddSingleton<IWindowsLauncherUpdateApplier, WindowsLauncherUpdateApplier>();
+
         services.AddSingleton<ILauncherCoreService, LauncherCoreService>();
         services.AddSingleton<IErrorHandlingService, ErrorHandlingService>();
 

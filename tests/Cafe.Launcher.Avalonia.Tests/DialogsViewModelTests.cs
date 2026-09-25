@@ -3,6 +3,7 @@ using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Features.SetupWizard;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Services.Update;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Cafe.Launcher.Avalonia.Testing;
 
@@ -69,7 +70,8 @@ public sealed class DialogsViewModelTests : IDisposable
         var viewModel = CreateViewModel();
         var files = CreateFiles();
 
-        viewModel.ShowUpdateAvailable("1.2.0", files, canSelfUpdate: false);
+        viewModel.ShowUpdateAvailable(
+            "1.2.0", files, LauncherUpdateInAppAvailability.PlatformUnsupported);
 
         Assert.True(viewModel.IsUpdateAvailableVisible);
         Assert.Equal("1.2.0", viewModel.UpdateAvailableVersion);
@@ -89,7 +91,7 @@ public sealed class DialogsViewModelTests : IDisposable
         viewModel.ShowUpdateAvailable(
             "1.2.0",
             CreateFiles(),
-            canSelfUpdate: true,
+            LauncherUpdateInAppAvailability.Available,
             releaseNotes: "## Highlights\n\n- Faster updates");
 
         Assert.True(viewModel.HasUpdateReleaseNotes);
@@ -102,7 +104,8 @@ public sealed class DialogsViewModelTests : IDisposable
         var viewModel = CreateViewModel();
         string? requestedUrl = null;
         viewModel.ConfirmUpdateAvailableRequested += url => requestedUrl = url;
-        viewModel.ShowUpdateAvailable("1.2.0", CreateFiles(), canSelfUpdate: false);
+        viewModel.ShowUpdateAvailable(
+            "1.2.0", CreateFiles(), LauncherUpdateInAppAvailability.PackageUnverifiable);
 
         viewModel.ConfirmUpdateAvailableCommand.Execute(null);
 
@@ -115,11 +118,103 @@ public sealed class DialogsViewModelTests : IDisposable
     {
         var viewModel = CreateViewModel();
 
-        viewModel.ShowUpdateAvailable("1.2.0", CreateFiles(), canSelfUpdate: true);
+        viewModel.ShowUpdateAvailable("1.2.0", CreateFiles(), LauncherUpdateInAppAvailability.Available);
 
         Assert.True(viewModel.UpdateSupportsInAppApply);
         Assert.True(viewModel.CanConfirmUpdate);
         Assert.False(viewModel.IsUpdateApplying);
+    }
+
+    [Theory]
+    [InlineData(
+        LauncherUpdateInAppAvailability.PlatformUnsupported,
+        LocalizationKeys.LauncherUpdateInAppUnavailablePlatform)]
+    [InlineData(
+        LauncherUpdateInAppAvailability.HelperMissing,
+        LocalizationKeys.LauncherUpdateInAppUnavailableHelper)]
+    [InlineData(
+        LauncherUpdateInAppAvailability.PackageUnverifiable,
+        LocalizationKeys.LauncherUpdateInAppUnavailablePackage)]
+    public void ShowUpdateAvailable_WhenInAppApplyIsUnavailable_NamesTheCauseTheVerdictReported(
+        LauncherUpdateInAppAvailability availability,
+        string expectedKey)
+    {
+        var localizer = new LocalizationService();
+        var viewModel = CreateViewModel();
+
+        viewModel.ShowUpdateAvailable("1.2.0", CreateFiles(), availability);
+
+        // 「前往发布页」必须说清是哪一种「不行」：平台、这份安装，还是这一版发布。
+        Assert.True(viewModel.IsUpdateInAppUnavailable);
+        Assert.Equal(localizer.T(expectedKey), viewModel.UpdateInAppUnavailableNoticeText);
+        Assert.NotEmpty(viewModel.UpdateInAppUnavailableNoticeText);
+    }
+
+    [Fact]
+    public void ShowUpdateAvailable_ForEveryUnavailableCause_StaysThreeDistinctExplanations()
+    {
+        var viewModel = CreateViewModel();
+        var notices = new List<string>();
+
+        foreach (var availability in new[]
+                 {
+                     LauncherUpdateInAppAvailability.PlatformUnsupported,
+                     LauncherUpdateInAppAvailability.HelperMissing,
+                     LauncherUpdateInAppAvailability.PackageUnverifiable
+                 })
+        {
+            viewModel.ShowUpdateAvailable("1.2.0", CreateFiles(), availability);
+            notices.Add(viewModel.UpdateInAppUnavailableNoticeText);
+        }
+
+        // 三种原因必须说三件事：压回一句话就是又回到「此设备无法…」那种笼统归因。
+        Assert.Equal(3, notices.Distinct(StringComparer.Ordinal).Count());
+    }
+
+    [Fact]
+    public void ShowUpdateAvailable_WhenAvailable_ShowsNoHandOffNotice()
+    {
+        var viewModel = CreateViewModel();
+
+        viewModel.ShowUpdateAvailable("1.2.0", CreateFiles(), LauncherUpdateInAppAvailability.Available);
+
+        Assert.False(viewModel.IsUpdateInAppUnavailable);
+        Assert.Empty(viewModel.UpdateInAppUnavailableNoticeText);
+    }
+
+    [Fact]
+    public void MarkUpdateFailed_AfterAnAttempt_ReportsNoCapabilityVerdict()
+    {
+        var viewModel = CreateViewModel();
+        viewModel.ShowUpdateAvailable("1.2.0", CreateFiles(), LauncherUpdateInAppAvailability.Available);
+        viewModel.BeginUpdateApply();
+
+        viewModel.MarkUpdateFailed();
+
+        // 一次失败不是能力判定：失败缘由由 toast 说明，对话框不能改口归因给平台或安装。
+        Assert.False(viewModel.UpdateSupportsInAppApply);
+        Assert.False(viewModel.IsUpdateInAppUnavailable);
+        Assert.Empty(viewModel.UpdateInAppUnavailableNoticeText);
+    }
+
+    [Fact]
+    public void RefreshLocalizedText_WhileTheHandOffNoticeIsVisible_RecomputesItsText()
+    {
+        var viewModel = CreateViewModel();
+        viewModel.ShowUpdateAvailable(
+            "1.2.0", CreateFiles(), LauncherUpdateInAppAvailability.HelperMissing);
+        var notified = false;
+        viewModel.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(DialogsViewModel.UpdateInAppUnavailableNoticeText))
+            {
+                notified = true;
+            }
+        };
+
+        viewModel.RefreshLocalizedText();
+
+        Assert.True(notified, "切换语言后说明行未通告重算。");
     }
 
     [Fact]
@@ -128,7 +223,7 @@ public sealed class DialogsViewModelTests : IDisposable
         var viewModel = CreateViewModel();
         var raised = 0;
         viewModel.SelfUpdateStartRequested += (_, _) => raised++;
-        viewModel.ShowUpdateAvailable("1.2.0", CreateFiles(), canSelfUpdate: true);
+        viewModel.ShowUpdateAvailable("1.2.0", CreateFiles(), LauncherUpdateInAppAvailability.Available);
 
         viewModel.ConfirmUpdateAvailableCommand.Execute(null);
 
@@ -139,7 +234,7 @@ public sealed class DialogsViewModelTests : IDisposable
     public void UpdateApplyStates_ToggleConfirmAndStatusText()
     {
         var viewModel = CreateViewModel();
-        viewModel.ShowUpdateAvailable("1.2.0", CreateFiles(), canSelfUpdate: true);
+        viewModel.ShowUpdateAvailable("1.2.0", CreateFiles(), LauncherUpdateInAppAvailability.Available);
 
         viewModel.BeginUpdateApply();
 
@@ -167,7 +262,7 @@ public sealed class DialogsViewModelTests : IDisposable
         var viewModel = CreateViewModel();
         var applied = 0;
         viewModel.ApplyUpdateRequested += () => applied++;
-        viewModel.ShowUpdateAvailable("1.2.0", CreateFiles(), canSelfUpdate: true);
+        viewModel.ShowUpdateAvailable("1.2.0", CreateFiles(), LauncherUpdateInAppAvailability.Available);
         viewModel.BeginUpdateApply();
         viewModel.MarkUpdateReady();
 
@@ -183,7 +278,7 @@ public sealed class DialogsViewModelTests : IDisposable
         var viewModel = CreateViewModel();
         string? requestedUrl = null;
         viewModel.ConfirmUpdateAvailableRequested += url => requestedUrl = url;
-        viewModel.ShowUpdateAvailable("1.2.0", CreateFiles(), canSelfUpdate: true);
+        viewModel.ShowUpdateAvailable("1.2.0", CreateFiles(), LauncherUpdateInAppAvailability.Available);
         viewModel.BeginUpdateApply();
 
         viewModel.MarkUpdateFailed();
@@ -206,7 +301,7 @@ public sealed class DialogsViewModelTests : IDisposable
         var viewModel = CreateViewModel();
         var cancelled = 0;
         viewModel.CancelUpdateRequested += () => cancelled++;
-        viewModel.ShowUpdateAvailable("1.2.0", CreateFiles(), canSelfUpdate: true);
+        viewModel.ShowUpdateAvailable("1.2.0", CreateFiles(), LauncherUpdateInAppAvailability.Available);
         viewModel.BeginUpdateApply();
 
         viewModel.CancelUpdateAvailableCommand.Execute(null);
@@ -220,7 +315,7 @@ public sealed class DialogsViewModelTests : IDisposable
     public void ShowUpdateAvailable_WhenReopened_InAppConfirmCarriesLatestFiles()
     {
         var viewModel = CreateViewModel();
-        viewModel.ShowUpdateAvailable("1.2.0", CreateFiles(), canSelfUpdate: true);
+        viewModel.ShowUpdateAvailable("1.2.0", CreateFiles(), LauncherUpdateInAppAvailability.Available);
         viewModel.CancelUpdateAvailableCommand.Execute(null);
 
         Assert.False(viewModel.IsUpdateAvailableVisible);
@@ -236,7 +331,7 @@ public sealed class DialogsViewModelTests : IDisposable
         };
         IReadOnlyList<ReleaseFile>? requestedFiles = null;
         viewModel.SelfUpdateStartRequested += (_, files) => requestedFiles = files;
-        viewModel.ShowUpdateAvailable("1.3.0", secondFiles, canSelfUpdate: true);
+        viewModel.ShowUpdateAvailable("1.3.0", secondFiles, LauncherUpdateInAppAvailability.Available);
 
         viewModel.ConfirmUpdateAvailableCommand.Execute(null);
 
@@ -426,7 +521,8 @@ public sealed class DialogsViewModelTests : IDisposable
         var viewModel = CreateViewModel();
         viewModel.ShowStopConfirm();
         viewModel.ShowDownloadRunningCloseConfirm();
-        viewModel.ShowUpdateAvailable("1.2.0", CreateFiles(), canSelfUpdate: false);
+        viewModel.ShowUpdateAvailable(
+            "1.2.0", CreateFiles(), LauncherUpdateInAppAvailability.PlatformUnsupported);
 
         viewModel.RefreshLocalizedText();
 

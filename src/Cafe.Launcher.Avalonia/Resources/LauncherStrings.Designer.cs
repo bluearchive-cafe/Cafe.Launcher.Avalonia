@@ -600,6 +600,12 @@ internal static class LauncherStrings
 
     internal static string LauncherUpdateFileSize => GetRequiredString("launcherUpdateFileSize");
 
+    internal static string LauncherUpdateInAppUnavailableHelper => GetRequiredString("launcherUpdateInAppUnavailableHelper");
+
+    internal static string LauncherUpdateInAppUnavailablePackage => GetRequiredString("launcherUpdateInAppUnavailablePackage");
+
+    internal static string LauncherUpdateInAppUnavailablePlatform => GetRequiredString("launcherUpdateInAppUnavailablePlatform");
+
     internal static string LauncherUpdateLater => GetRequiredString("launcherUpdateLater");
 
     internal static string LauncherUpdateOpenReleasePage => GetRequiredString("launcherUpdateOpenReleasePage");

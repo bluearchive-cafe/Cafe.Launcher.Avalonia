@@ -385,6 +385,7 @@ public partial class MainWindowViewModelTests
             new LauncherSelfUpdateService(
                 new LauncherUpdateDownloader(new StubRemoteHttpTransport()),
                 new LauncherUpdateHostInfoProvider(),
+                new StubWindowsLauncherUpdateApplier(),
                 TestDataRoot.ForDirectory(Path.Combine(tempDir, "update-root")),
                 new LocalDiagnostics()),
             dialogs,

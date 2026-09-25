@@ -9,7 +9,7 @@ namespace Cafe.Launcher.Avalonia.Services.Update;
 /// the installer build takes the Inno setup executable, the portable build takes the
 /// win-x64 zip. Any other host, or a release that is missing either the package or the
 /// SHA256SUMS manifest, degrades to the browser hand-off rather than applying unverified
-/// bits.
+/// bits — and says which of the two it is, so the dialog can name the cause.
 /// </summary>
 internal static class LauncherUpdatePackageSelector
 {
@@ -34,7 +34,7 @@ internal static class LauncherUpdatePackageSelector
 
         if (!host.IsWindows || !host.IsX64)
         {
-            return LauncherUpdateSelection.External();
+            return LauncherUpdateSelection.External(LauncherUpdateInAppAvailability.PlatformUnsupported);
         }
 
         var packageSuffix = host.IsInstallerInstall
@@ -44,13 +44,17 @@ internal static class LauncherUpdatePackageSelector
         var checksumManifest = FindByName(files, ChecksumManifestFileName);
         if (package is null || checksumManifest is null)
         {
-            return LauncherUpdateSelection.External();
+            return LauncherUpdateSelection.External(LauncherUpdateInAppAvailability.PackageUnverifiable);
         }
 
         var target = host.IsInstallerInstall
             ? LauncherUpdateTarget.WindowsInstaller
             : LauncherUpdateTarget.WindowsPortable;
-        return new LauncherUpdateSelection(target, package, checksumManifest);
+        return new LauncherUpdateSelection(
+            target,
+            package,
+            checksumManifest,
+            LauncherUpdateInAppAvailability.Available);
     }
 
     /// <summary>Finds the single asset whose name ends with <paramref name="suffix"/>, case-insensitively.</summary>

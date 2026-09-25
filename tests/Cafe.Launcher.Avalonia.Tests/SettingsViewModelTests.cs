@@ -209,6 +209,7 @@ public sealed class SettingsViewModelTests : IDisposable
             new LauncherSelfUpdateService(
                 new LauncherUpdateDownloader(new StubRemoteHttpTransport()),
                 new LauncherUpdateHostInfoProvider(),
+                new StubWindowsLauncherUpdateApplier(),
                 TestDataRoot.ForDirectory(NextDataRoot()),
                 new LocalDiagnostics()),
             dialogs ?? CreateDialogsViewModel(),

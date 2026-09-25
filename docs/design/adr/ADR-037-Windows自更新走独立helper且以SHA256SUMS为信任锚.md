@@ -42,3 +42,24 @@ Windows 的现实约束：
 - 需要新的本地化文案、对话框进度态、两处入口接线，以及 helper 的打包/发布步骤。
 - 守卫：`LauncherUpdatePackageSelectorTests`（平台/安装态/资产矩阵）、`LauncherUpdateChecksumManifestTests`（解析与畸形输入）、下载与应用编排的单元测试（假传输/假进程）、helper 纯逻辑的编译链接测试。
 - 已知限制：无代码签名，信任仍建立在 GitHub 发布账号与 TLS 之上；来源证明（attestation）校验未接入，可后续在 `SHA256SUMS` 之上加一层。
+
+## 修订（2026-09-25）：可用性判据把「本机带 helper」也算进去，并以原因代替布尔
+
+第 2、3 条把可用性写成「发布资产齐备」，实际还差一环：本机得真的带着 helper。缺了它，
+原来的流程会先下载一整个包，直到用户按下「重启以更新」才在应用阶段失败——下载白花，
+按钮却已经在邀请重试。
+
+- 新增 `IWindowsLauncherUpdateApplier.IsAvailable`（helper 就在启动器同目录）。判定集中在
+  `LauncherSelfUpdateService` 的一处私有判据上，下载闸门与对话框预检共用它，所以没有 helper
+  的安装根本不会开始下载。
+- 判定返回 `LauncherUpdateInAppAvailability` 原因而不是布尔（ADR-027 的同一条规矩，
+  `LauncherSelfUpdateServiceTests.ResolveInAppAvailability_IsTheOnlyPublicVerdict_NoBareBoolean`
+  钉住形状）：平台不支持 / 此安装缺 helper / 该版本无可校验包，三种互不相同的事实。原来的
+  裸布尔把所有否定压成一句「此设备无法在应用内完成更新」，对后两种原因是错误归因——设备与
+  安装其实都能装，是发布资产无法校验（启动器主动拒绝无校验执行），或这份副本缺组件。
+- 表现层据此把「能力判定」与「尝试失败」分开：`DialogsViewModel.UpdateUnavailableReason`
+  由 `ShowUpdateAvailable` 按原因置位，`MarkUpdateFailed()` 明确清空它——一次失败不是能力
+  判定，其缘由由 toast 说明。说明行按原因取三条文案。
+- 打包侧的对应约束由契约测试钉住：
+  `UpdateHelperCommandTests.HelperExecutableName_MatchesTheUpdaterProjectAndTheWindowsPackagingStep`
+  （helper 只随 win-x64 包发布，安装器整目录收编发布目录）。

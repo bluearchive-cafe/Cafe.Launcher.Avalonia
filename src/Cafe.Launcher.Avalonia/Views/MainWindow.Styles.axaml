@@ -1041,7 +1041,7 @@
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Info.Background}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Info}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Component.Dialog.Alert.BorderThickness}"/>
-        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Component.Dialog.Alert.CornerRadius}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Md}"/>
     </Style>
     <Style Selector="Border.dialog-alert.danger">
