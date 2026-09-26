@@ -79,12 +79,16 @@
     <Exec Command="git rev-parse --short=7 HEAD" WorkingDirectory="$(MSBuildProjectDirectory)" ConsoleToMSBuild="true" IgnoreExitCode="true" StandardOutputImportance="Low">
       <Output TaskParameter="ConsoleOutput" PropertyName="GitCommitSha" />
     </Exec>
+    <Exec Command="git show -s --format=%cI HEAD" WorkingDirectory="$(MSBuildProjectDirectory)" ConsoleToMSBuild="true" IgnoreExitCode="true" StandardOutputImportance="Low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitCommitTime" />
+    </Exec>
     <PropertyGroup>
       <GitCommitSha Condition="'$(GitCommitSha)' == ''">unknown</GitCommitSha>
+      <GitCommitTime Condition="'$(GitCommitTime)' == ''">unknown</GitCommitTime>
     </PropertyGroup>
     <ItemGroup>
       <AssemblyMetadata Include="CommitSha" Value="$(GitCommitSha)" />
-      <AssemblyMetadata Include="BuildTime" Value="$([System.DateTime]::UtcNow.ToString(yyyy-MM-dd HH:mm))" />
+      <AssemblyMetadata Include="BuildTime" Value="$(GitCommitTime)" />
     </ItemGroup>
   </Target>
 </Project>

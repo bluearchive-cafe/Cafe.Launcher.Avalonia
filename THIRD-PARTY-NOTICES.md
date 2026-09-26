@@ -8,7 +8,7 @@ Cafe Launcher itself is licensed under the MIT License; see `LICENSE`.
 ## Self-contained .NET runtime
 
 Release archives are self-contained: besides the packages below they redistribute the .NET
-runtime and apphost bundled with the publishing SDK — `Microsoft.NETCore.App 10.0.11` on the machine that generated this file.
+runtime and apphost bundled with the publishing SDK — `Microsoft.NETCore.App` from pinned .NET SDK `10.0.302`.
 Both are MIT-licensed (https://github.com/dotnet/runtime/blob/main/LICENSE.TXT) and are not
 resolved as NuGet packages, so they cannot appear in the table below: the table lists exactly
 what `dotnet restore` resolves, and the RID-specific publish closure is outside its scope.

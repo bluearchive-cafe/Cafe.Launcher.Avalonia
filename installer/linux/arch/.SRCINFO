@@ -1,11 +1,24 @@
 pkgbase = cafe-launcher
 	pkgdesc = Cross-platform launcher for Blue Archive
-	pkgver = 1.1.0beta.11
+	pkgver = 1.1.0
 	pkgrel = 1
 	url = https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia
 	arch = x86_64
-	license = MIT
+	license = MIT AND Apache-2.0 AND BSD-2-Clause
 	makedepends = dotnet-sdk
+	makedepends = git
+	depends = ca-certificates
+	depends = glibc
+	depends = icu
+	depends = krb5
+	depends = libgcc
+	depends = libstdc++
+	depends = libunwind
+	depends = lttng-ust2.12
+	depends = openssl
+	depends = tzdata
+	depends = zlib
+	depends = hicolor-icon-theme
 	depends = libx11
 	depends = libice
 	depends = libsm
@@ -13,7 +26,7 @@ pkgbase = cafe-launcher
 	depends = libxkbcommon
 	options = !strip
 	options = !debug
-	source = cafe-launcher-1.1.0-beta.11.tar.gz::https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/archive/refs/tags/v1.1.0-beta.11.tar.gz
-	sha256sums = 98eeafd9c6854af267d5964baa5ce363d8f65df97d1b2395ced44bd4db98a0b8
+	source = cafe-launcher-source::git+https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia.git#tag=v1.1.0
+	sha256sums = SKIP
 
 pkgname = cafe-launcher

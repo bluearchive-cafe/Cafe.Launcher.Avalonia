@@ -52,23 +52,22 @@ foreach ($property in $assets.libraries.PSObject.Properties) {
     }
 }
 
-# The archives are self-contained, so the disclosure must name the runtime they redistribute
-# even though it never appears in project.assets.json. --list-runtimes reports every runtime
-# installed beside the SDK, so the newest one is taken rather than the first line.
-$runtimeVersion = $null
-foreach ($runtimeLine in (& dotnet --list-runtimes)) {
-    if ($runtimeLine -match '^Microsoft\.NETCore\.App\s+(\S+)') {
-        $candidate = $Matches[1]
-        if (-not $runtimeVersion -or [version]$candidate -gt [version]$runtimeVersion) {
-            $runtimeVersion = $candidate
-        }
-    }
-}
-$runtimeDescription = if ($runtimeVersion) {
-    "``Microsoft.NETCore.App $runtimeVersion`` on the machine that generated this file"
+# The archives are self-contained, so the disclosure must name the runtime they
+# redistribute even though it never appears in project.assets.json. Do not copy
+# the newest globally installed runtime into the notice: that may be unrelated
+# to the pinned SDK and makes regeneration host-dependent.
+$globalJsonPath = Join-Path $RootDir "global.json"
+$pinnedSdkVersion = if (Test-Path -LiteralPath $globalJsonPath) {
+    (Get-Content -Raw -LiteralPath $globalJsonPath | ConvertFrom-Json).sdk.version
 }
 else {
-    "the ``Microsoft.NETCore.App`` runtime bundled with the pinned SDK"
+    $null
+}
+$runtimeDescription = if ($pinnedSdkVersion) {
+    "``Microsoft.NETCore.App`` from pinned .NET SDK ``$pinnedSdkVersion``"
+}
+else {
+    "``Microsoft.NETCore.App`` from the publishing SDK"
 }
 
 $entries = @()

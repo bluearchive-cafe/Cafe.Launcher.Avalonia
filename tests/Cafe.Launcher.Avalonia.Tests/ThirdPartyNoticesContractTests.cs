@@ -38,7 +38,8 @@ public sealed class ThirdPartyNoticesContractTests
         var generator = File.ReadAllText(TestRepository.FromRepositoryRoot("scripts/New-ThirdPartyNotices.ps1"));
 
         Assert.Contains("## Self-contained .NET runtime", generator, StringComparison.Ordinal);
-        Assert.Contains("dotnet --list-runtimes", generator, StringComparison.Ordinal);
+        Assert.Contains("global.json", generator, StringComparison.Ordinal);
+        Assert.DoesNotContain("dotnet --list-runtimes", generator, StringComparison.Ordinal);
     }
 
     [Fact]

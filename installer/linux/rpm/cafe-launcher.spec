@@ -16,7 +16,7 @@ Name:           cafe-launcher
 Version:        {VERSION}
 Release:        1%{?dist}
 Summary:        Cross-platform launcher for Blue Archive
-License:        MIT
+License:        MIT AND Apache-2.0 AND BSD-2-Clause
 URL:            https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia
 BuildArch:      x86_64
 
@@ -37,6 +37,25 @@ Requires:       libICE.so.6()(64bit)
 Requires:       libSM.so.6()(64bit)
 Requires:       libfontconfig.so.1()(64bit)
 Requires:       libxkbcommon.so.0()(64bit)
+# Self-contained .NET still relies on the platform ABI and dynamically loads
+# crypto, globalization, Kerberos, unwind and compression libraries. Soname
+# capabilities keep the package portable across modern RPM distributions.
+Requires:       ca-certificates
+Requires:       tzdata
+Requires:       libc.so.6()(64bit)
+Requires:       libgcc_s.so.1()(64bit)
+Requires:       libstdc++.so.6()(64bit)
+Requires:       libssl.so.3()(64bit)
+Requires:       libcrypto.so.3()(64bit)
+Requires:       libgssapi_krb5.so.2()(64bit)
+Requires:       libunwind.so.8()(64bit)
+Requires:       libz.so.1()(64bit)
+Requires:       liblttng-ust.so.0()(64bit)
+Requires:       hicolor-icon-theme
+# ICU's soname tracks its major version and differs between supported RPM
+# distributions. One provider is enough because each distro's ICU package
+# ships the full uc/i18n/data set together.
+Requires:       (libicuuc.so.78()(64bit) or libicuuc.so.77()(64bit) or libicuuc.so.76()(64bit) or libicuuc.so.75()(64bit) or libicuuc.so.74()(64bit) or libicuuc.so.73()(64bit) or libicuuc.so.72()(64bit) or libicuuc.so.71()(64bit) or libicuuc.so.69()(64bit) or libicuuc.so.67()(64bit) or libicuuc.so.60()(64bit))
 
 %description
 Experimental Linux package of Cafe Launcher with UMU/Proton and Wine runtime
@@ -56,6 +75,8 @@ install -D -m 0644 "%{asset_dir}/cafe-launcher.desktop" "%{buildroot}%{_datadir}
 install -D -m 0644 "%{icon_dir}/app-icon-256.png" "%{buildroot}%{_datadir}/icons/hicolor/256x256/apps/cafe-launcher.png"
 install -D -m 0644 "%{icon_dir}/app-icon-512.png" "%{buildroot}%{_datadir}/icons/hicolor/512x512/apps/cafe-launcher.png"
 install -D -m 0644 "%{app_dir}/LICENSE" "%{buildroot}%{_datadir}/licenses/cafe-launcher/LICENSE"
+install -D -m 0644 "%{app_dir}/THIRD-PARTY-NOTICES.md" "%{buildroot}%{_datadir}/licenses/cafe-launcher/THIRD-PARTY-NOTICES.md"
+install -D -m 0644 "%{template_dir}/cafe-launcher.metainfo.xml" "%{buildroot}%{_datadir}/metainfo/cafe-launcher.metainfo.xml"
 
 %files
 %{_bindir}/cafe-launcher
@@ -63,4 +84,6 @@ install -D -m 0644 "%{app_dir}/LICENSE" "%{buildroot}%{_datadir}/licenses/cafe-l
 %{_datadir}/icons/hicolor/256x256/apps/cafe-launcher.png
 %{_datadir}/icons/hicolor/512x512/apps/cafe-launcher.png
 %license %{_datadir}/licenses/cafe-launcher/LICENSE
+%license %{_datadir}/licenses/cafe-launcher/THIRD-PARTY-NOTICES.md
+%{_datadir}/metainfo/cafe-launcher.metainfo.xml
 /opt/cafe-launcher
