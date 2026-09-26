@@ -70,6 +70,10 @@ $ScriptDir   = Split-Path -Parent $MyInvocation.MyCommand.Path
 $CsprojRelativePath = "src\Cafe.Launcher.Avalonia\Cafe.Launcher.Avalonia.csproj"
 $CsprojPath  = Join-Path $ScriptDir $CsprojRelativePath
 $CsprojName  = "Cafe.Launcher.Avalonia.csproj"
+$ArchPkgbuildRelativePath = "installer\linux\arch\PKGBUILD"
+$ArchPkgbuildPath = Join-Path $ScriptDir $ArchPkgbuildRelativePath
+$ArchSrcinfoRelativePath = "installer\linux\arch\.SRCINFO"
+$ArchSrcinfoPath = Join-Path $ScriptDir $ArchSrcinfoRelativePath
 $ChangelogFile = Join-Path $ScriptDir "CHANGELOG_RELEASE.md"
 $ChangelogScript = Join-Path $ScriptDir "scripts\New-ReleaseChangelog.ps1"
 
@@ -107,6 +111,24 @@ function Invoke-External(
         throw "$description failed (exit code: $LASTEXITCODE)"
     }
     return $true
+}
+
+function ConvertTo-ArchPackageVersion([string]$version) {
+    $match = [regex]::Match(
+        $version,
+        '^(?<core>[0-9]+\.[0-9]+\.[0-9]+)(?:-(?<prerelease>[0-9A-Za-z.-]+))?(?<metadata>\+[0-9A-Za-z.-]+)?$')
+    if (-not $match.Success) {
+        throw "Cannot convert non-SemVer version '$version' to an Arch pkgver."
+    }
+
+    $result = $match.Groups['core'].Value
+    if ($match.Groups['prerelease'].Success) {
+        $result += $match.Groups['prerelease'].Value.Replace('-', '.')
+    }
+    if ($match.Groups['metadata'].Success) {
+        $result += $match.Groups['metadata'].Value.Replace('-', '.')
+    }
+    return $result
 }
 
 # ── Prerequisites ───────────────────────────────────────────────────────────
@@ -267,7 +289,7 @@ if ($DryRun) {
     Write-Host "  Prerelease:    $isPrerelease"
     Write-Host "  Commits since: $($lastTag ?? 'initial')"
     Write-Host "  Changelog:     preview above"
-    Write-Host "  Would modify:  $CsprojName"
+    Write-Host "  Would modify:  $CsprojName, PKGBUILD, .SRCINFO"
     Write-Host "  Would commit:  chore: bump version to $tagName"
     exit 0
 }
@@ -293,17 +315,38 @@ if ($csprojContent -match '<FileVersion>[^<]+</FileVersion>') {
 Set-Content $CsprojPath -Value $csprojContent -NoNewline
 Write-OK "VersionPrefix updated: $currentVersion → $newVersion"
 
+$archPackageVersion = ConvertTo-ArchPackageVersion $newVersion
+$pkgbuildContent = Get-Content $ArchPkgbuildPath -Raw
+$pkgbuildContent = $pkgbuildContent -replace '(?m)^_realver=\S+$', "_realver=$newVersion"
+$pkgbuildContent = $pkgbuildContent -replace '(?m)^pkgver=\S+$', "pkgver=$archPackageVersion"
+if ($pkgbuildContent -notmatch "(?m)^_realver=$([regex]::Escape($newVersion))$" -or
+    $pkgbuildContent -notmatch "(?m)^pkgver=$([regex]::Escape($archPackageVersion))$") {
+    throw "Could not stamp the Arch version in $ArchPkgbuildRelativePath."
+}
+Set-Content $ArchPkgbuildPath -Value $pkgbuildContent -NoNewline
+
+$srcinfoContent = Get-Content $ArchSrcinfoPath -Raw
+$srcinfoContent = $srcinfoContent -replace '(?m)^\tpkgver = \S+$', "`tpkgver = $archPackageVersion"
+$srcinfoContent = $srcinfoContent -replace '(?m)^\tsource = cafe-launcher-source::git\+.+#tag=v\S+$', "`tsource = cafe-launcher-source::git+https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia.git#tag=v$newVersion"
+if ($srcinfoContent -notmatch "(?m)^`tpkgver = $([regex]::Escape($archPackageVersion))$" -or
+    $srcinfoContent -notmatch "(?m)^`tsource = cafe-launcher-source::git\+https://github\.com/bluearchive-cafe/Cafe\.Launcher\.Avalonia\.git#tag=v$([regex]::Escape($newVersion))$") {
+    throw "Could not stamp the Arch metadata in $ArchSrcinfoRelativePath."
+}
+Set-Content $ArchSrcinfoPath -Value $srcinfoContent -NoNewline
+Write-OK "Arch package pin updated: $newVersion ($archPackageVersion)"
+
 # ── Commit ──────────────────────────────────────────────────────────────────
 Write-Step "Committing version bump"
 
 $commitMsg = "chore: bump version to $tagName"
-Invoke-External "git" @("-C", $ScriptDir, "add", $CsprojRelativePath) "git add $CsprojRelativePath" | Out-Null
+$releaseVersionFiles = @($CsprojRelativePath, $ArchPkgbuildRelativePath, $ArchSrcinfoRelativePath)
+Invoke-External "git" (@("-C", $ScriptDir, "add") + $releaseVersionFiles) "git add release version files" | Out-Null
 
 $global:LASTEXITCODE = 0
-& git -C $ScriptDir diff --cached --quiet -- $CsprojRelativePath
+& git -C $ScriptDir diff --cached --quiet -- @releaseVersionFiles
 $stagedDiffExitCode = $LASTEXITCODE
 if ($stagedDiffExitCode -eq 1) {
-    Invoke-External "git" @("-C", $ScriptDir, "commit", "-m", $commitMsg) "git commit" | Out-Null
+    Invoke-External "git" (@("-C", $ScriptDir, "commit", "--only", "-m", $commitMsg, "--") + $releaseVersionFiles) "git commit release version files" | Out-Null
     Write-OK "Committed: $commitMsg"
 }
 elseif ($stagedDiffExitCode -eq 0) {
