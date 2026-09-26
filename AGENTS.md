@@ -59,6 +59,13 @@ Repository commands run under either Bash or PowerShell 7 (`pwsh`). Windows Powe
 | `.\scripts\New-WindowsInstaller.ps1` | Build the Inno Setup installer from `artifacts/publish/win-x64` (requires Inno Setup 7.0+) |
 | `.\scripts\New-AppIconAssets.ps1` | Regenerate committed macOS `.icns` and Linux `.png` icon assets after changing `Assets/app-icon-source.png` |
 
+Linux package metadata is shared where the formats permit it: the desktop entry,
+wrapper, and AppStream component live under `installer/linux/templates/`. Debian
+versions always carry a `-1` packaging revision; `release.ps1` updates the Arch
+`_realver`/`pkgver` and `.SRCINFO` tag source in the same version commit before
+creating the tag. Release CI validates Debian metadata, performs a native Fedora
+dependency install for the RPM, and rejects Arch `namcap` errors.
+
 Run one test class:
 
 ```powershell

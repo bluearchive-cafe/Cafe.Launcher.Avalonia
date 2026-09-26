@@ -46,4 +46,4 @@ Linux 发行包此前是 `.tar.gz`、AppImage 与 `.deb`。RPM 系发行版（Fe
 - 本地构建需要 `rpmbuild`（CI 由 `rpm` 包提供）；非 Linux 主机上 rpm 块与 deb 块一样被跳过，不影响 Windows / macOS 构建。
 - 守卫：`InstallerContractTests` 的产物名断言、`LinuxRpmPackage_UsesRpmbuildLayoutAndValidatedMetadata`、`ReleaseWorkflow_AttachesPackagesAndKeepsBannerInSourceRepository`（两处附件各一次）与 `ReleaseWorkflow_PublishesChecksumManifestForEveryDistributionPackage`（计数 7）。
 - 未做：仓库托管（repodata）、RPM GPG 签名。`docs/design/desktop-notifications-integration-plan.md` 的冷启动集成目前只覆盖 `.deb`，该计划落地时需把 RPM 安装视为同一类「包管理安装」。
-- 已知限制：未在真实 RPM 发行版上实装验证，冒烟只在临时根目录内完成；spec 按保守写法（不使用更新版 rpm 才有的特性）编写，以兼容 ubuntu-24.04 自带的 rpm 4.18。
+- 2026-09-26 后续收口：release CI 除 Ubuntu 临时根目录布局检查外，还会在 Fedora 容器中用 `dnf install` 解析并安装真实依赖，再运行 `cafe-launcher --version`。这覆盖 Fedora 的原生安装链路；RHEL 系与 openSUSE 仍依赖同一组 soname capability 声明，尚未逐发行版实机验证。

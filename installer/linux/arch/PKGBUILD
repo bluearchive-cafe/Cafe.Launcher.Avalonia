@@ -1,42 +1,50 @@
 # Maintainer: BlueArchive Cafe contributors <bluearchive-cafe@users.noreply.github.com>
 #
-# Arch package for the experimental Linux build. It mirrors
-# installer/linux/debian and installer/linux/rpm:
+# Arch package for the experimental Linux build. It shares launcher assets
+# with installer/linux/debian and installer/linux/rpm while using Arch's
+# standard /usr/lib application layout:
 #
-#   /opt/cafe-launcher            self-contained publish tree
+#   /usr/lib/cafe-launcher        self-contained publish tree
 #   /usr/bin/cafe-launcher        wrapper marking the install as package-managed
 #   /usr/share/applications       desktop entry
 #   /usr/share/icons/hicolor      the shared 256/512 app icons
 #
-# The wrapper and desktop entry are not committed here: they are generated from
-# the same installer/linux/templates pair the deb and rpm packages use, with the
-# package-format marker set to "pacman". The template lives inside the source
-# tarball; the $startdir fallback keeps `makepkg` working in a repository
-# checkout whose tag predates the templates.
+# The wrapper and desktop entry are generated from the same templates as the
+# deb and rpm packages. The source is the tagged Git checkout instead of the
+# GitHub-generated archive: a release commit cannot contain the checksum of an
+# archive that only exists after that same commit is tagged.
 #
-# Pre-release ordering: upstream tags are 1.1.0-beta.11, but pkgver cannot hold
-# a hyphen. 1.1.0beta.11 sorts before 1.1.0 under vercmp while still ordering
-# correctly against 1.1.0beta.2, matching the rpm/deb `~`-converted versions.
+# Pre-release ordering: upstream prerelease tags like 1.1.0-beta.11 cannot be
+# pkgver (no hyphen). 1.1.0beta.11 sorts before 1.1.0 under vercmp while still
+# ordering correctly against 1.1.0beta.2, matching the rpm/deb `~`-converted
+# versions; a stable tag is used as-is. _realver must track the application's
+# VersionPrefix (deb/rpm get their version injected at build time; this pin is
+# the one release site) — InstallerContractTests fails when they drift.
+# Regenerate .SRCINFO with `makepkg --printsrcinfo` in the same change.
 
 pkgname=cafe-launcher
-_realver=1.1.0-beta.11
-pkgver=1.1.0beta.11
+_realver=1.1.0
+pkgver=1.1.0
 pkgrel=1
 pkgdesc='Cross-platform launcher for Blue Archive'
 arch=('x86_64')
 url='https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia'
-license=('MIT')
-depends=('libx11' 'libice' 'libsm' 'fontconfig' 'libxkbcommon')
-makedepends=('dotnet-sdk')
+license=('MIT AND Apache-2.0 AND BSD-2-Clause')
+depends=(
+  'ca-certificates' 'glibc' 'icu' 'krb5' 'libgcc' 'libstdc++' 'libunwind'
+  'lttng-ust2.12' 'openssl' 'tzdata' 'zlib' 'hicolor-icon-theme'
+  'libx11' 'libice' 'libsm' 'fontconfig' 'libxkbcommon'
+)
+makedepends=('dotnet-sdk' 'git')
 # The payload is an already-published, self-contained .NET application; do not
 # let makepkg rewrite it (the rpm spec disables its post-install pass for the
 # same reason).
 options=('!strip' '!debug')
-source=("$pkgname-$_realver.tar.gz::$url/archive/refs/tags/v$_realver.tar.gz")
-sha256sums=('98eeafd9c6854af267d5964baa5ce363d8f65df97d1b2395ced44bd4db98a0b8')
+source=("$pkgname-source::git+$url.git#tag=v$_realver")
+sha256sums=('SKIP')
 
 prepare() {
-  cd "Cafe.Launcher.Avalonia-$_realver"
+  cd "$pkgname-source"
 
   # global.json pins SDK 10.0.302, which Arch's dotnet-sdk (10.0.1xx feature
   # band) does not provide. A distribution package should build with the SDK the
@@ -44,23 +52,35 @@ prepare() {
   # SDK. On a host that does have 10.0.302 this changes nothing.
   rm -f global.json
 
-  # Generate the wrapper and desktop entry from the shared templates.
-  local templates="installer/linux/templates"
-  if [[ ! -f "$templates/cafe-launcher" ]]; then
-    templates="$startdir/../templates"
+  # v1.1.0 embedded the wall-clock build time. Patch only that legacy form to
+  # the tagged commit time; newer sources already embed GitCommitTime directly.
+  local project="src/Cafe.Launcher.Avalonia/Cafe.Launcher.Avalonia.csproj"
+  if grep -q 'UtcNow.ToString' "$project"; then
+    local commit_time
+    commit_time=$(git show -s --format=%cI HEAD)
+    sed -i "s|      <AssemblyMetadata Include=\"BuildTime\".*|      <AssemblyMetadata Include=\"BuildTime\" Value=\"$commit_time\" />|" "$project"
   fi
 
-  sed 's/{PACKAGE_FORMAT}/pacman/' "$templates/cafe-launcher" > "$srcdir/cafe-launcher"
+  # Generate the wrapper and desktop entry from the shared templates.
+  local templates="installer/linux/templates"
+
+  sed -e 's/{PACKAGE_FORMAT}/pacman/' -e 's|{APP_DIR}|/usr/lib/cafe-launcher|' \
+    "$templates/cafe-launcher" > "$srcdir/cafe-launcher"
   chmod 0755 "$srcdir/cafe-launcher"
-  install -m644 "$templates/cafe-launcher.desktop" "$srcdir/cafe-launcher.desktop"
+  # Same block Build-Distribution.ps1 substitutes for deb and rpm: the entry
+  # must carry Exec, and TryExec hides it when the wrapper is gone.
+  sed 's/{EXEC_BLOCK}/Exec=cafe-launcher\nTryExec=cafe-launcher/' \
+    "$templates/cafe-launcher.desktop" > "$srcdir/cafe-launcher.desktop"
 }
 
 build() {
-  cd "Cafe.Launcher.Avalonia-$_realver"
+  cd "$pkgname-source"
 
   export DOTNET_CLI_TELEMETRY_OPTOUT=1
   export DOTNET_NOLOGO=1
   export DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
+  export SOURCE_DATE_EPOCH
+  SOURCE_DATE_EPOCH=$(git show -s --format=%ct HEAD)
 
   dotnet publish src/Cafe.Launcher.Avalonia/Cafe.Launcher.Avalonia.csproj \
     --configuration Release \
@@ -70,11 +90,11 @@ build() {
 }
 
 package() {
-  local src="Cafe.Launcher.Avalonia-$_realver"
+  local src="$pkgname-source"
 
-  install -d "$pkgdir/opt/cafe-launcher"
-  cp -a "$srcdir/publish/." "$pkgdir/opt/cafe-launcher/"
-  chmod 0755 "$pkgdir/opt/cafe-launcher/Cafe.Launcher.Avalonia"
+  install -d "$pkgdir/usr/lib/cafe-launcher"
+  cp -a "$srcdir/publish/." "$pkgdir/usr/lib/cafe-launcher/"
+  chmod 0755 "$pkgdir/usr/lib/cafe-launcher/Cafe.Launcher.Avalonia"
 
   install -Dm755 "$srcdir/cafe-launcher" "$pkgdir/usr/bin/cafe-launcher"
   install -Dm644 "$srcdir/cafe-launcher.desktop" \
@@ -88,4 +108,9 @@ package() {
   install -Dm644 "$src/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
   install -Dm644 "$src/THIRD-PARTY-NOTICES.md" \
     "$pkgdir/usr/share/licenses/$pkgname/THIRD-PARTY-NOTICES.md"
+  # v1.1.0 predates AppStream metadata; newer tagged sources carry it.
+  if [[ -f "$src/installer/linux/templates/cafe-launcher.metainfo.xml" ]]; then
+    install -Dm644 "$src/installer/linux/templates/cafe-launcher.metainfo.xml" \
+      "$pkgdir/usr/share/metainfo/cafe-launcher.metainfo.xml"
+  fi
 }

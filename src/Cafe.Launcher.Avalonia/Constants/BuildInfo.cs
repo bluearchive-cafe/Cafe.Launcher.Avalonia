@@ -30,10 +30,10 @@ public static class BuildInfo
             ?.Value;
         if (string.IsNullOrWhiteSpace(raw)) return "";
 
-        // The .csproj embeds BuildTime as UTC (yyyy-MM-dd HH:mm).
-        // Parse as UTC then convert to local time for display.
-        if (DateTime.TryParse(raw, null, out var utcTime))
-            return DateTime.SpecifyKind(utcTime, DateTimeKind.Utc).ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
+        // The .csproj embeds the commit timestamp instead of the wall-clock
+        // build time, keeping release outputs deterministic for one commit.
+        if (DateTimeOffset.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.None, out var commitTime))
+            return commitTime.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
 
         return raw;
     }
