@@ -11,8 +11,9 @@
 - 项目画像：.NET 10 / Avalonia 12 跨平台桌面游戏启动器，含独立 Windows 自更新 helper
 - 健康度：良好；没有 Critical 或 High 发现
 - 当前开放：0 项（本轮四项开放发现已全部修复并提交：AUD-ARCH-014、AUD-SEC-007、AUD-ARCH-001、AUD-MAINT-008，见 Git 历史）
-- 已接受风险：8 项 Low
+- 已接受风险：9 项 Low
 - 2026-09-25 文档状态更新：按用户要求已将官方启动器 v1.7.2 与本项目的静态对比写入 `docs/research/official-launcher-v1.7.2-comparison.md`，原 `AUD-MAINT-002` 的“不入库”取舍不再成立；其余审计结论仍以 2026-09-24 基线为准。
+- 2026-09-26 打包状态更新：Linux `.deb`/RPM/AppImage/Arch 的元数据、依赖声明与版本同步已按当轮复核补齐（Debian copyright、`changelog.Debian.gz` 与 `-1` 打包修订号，三格式共用 AppStream metainfo，RPM/Arch 声明自包含 .NET 仍需的系统库与真实许可证集，`release.ps1` 在版本提交内同步 Arch `_realver`/`pkgver`/`.SRCINFO`）；发布 CI 已加入 Fedora 容器 RPM 实装与 Arch `makepkg`+`namcap` 门禁，尚未随真实 tag 运行过。本轮发现均在同一变更内修复，不产生开放发现。
 
 当前没有待办优先级；新的工作应从新的 delta 审计或产品需求出发，不要凭记忆重开已解决事项。
 
@@ -32,6 +33,7 @@
 | `AUD-SEC-002` | 上游协议要求资源面板 UID 位于 HTTPS 查询串；应用日志会剥离查询串，但代理和服务端访问日志仍可见。 | 上游支持请求体传输，或 UID 的敏感级别提高。 |
 | `AUD-SEC-004` | System 代理模式向 WinINet 配置的代理发送当前用户默认凭据；这是同用户信任边界内的兼容性取舍。 | 支持来自更低信任来源的代理配置，或默认凭据不再是产品要求。 |
 | `AUD-SEC-006` | 直接路径容忍 CGNAT/Fake-IP 地址段以兼容 Clash/mihomo 与部分 CDN；请求仍限 GET、80/443，并剥离跨主机重定向凭据。 | 能可靠识别代理接管而不影响双栈/Fake-IP 用户，或请求能力扩大。 |
+| `AUD-PKG-001` | Linux 三格式按“随 GitHub Release 分发的上游 vendor 包”定位：RPM 安装在 `/opt`、无 `Source`、关闭 `%__os_install_post`；满足可安装、依赖可解析、元数据可校验，不宣称满足 Fedora/openSUSE/Debian 官方仓库收录规范。 | 计划提交任一官方仓库（含 OBS/COPR/AUR 正式收录）时，按该仓库规范重审。 |
 
 ## 已验证的工程状态
 
@@ -46,6 +48,8 @@
 2026-09-24 的修复序列（AUD-ARCH-014 → AUD-SEC-007 → AUD-ARCH-001 → AUD-MAINT-008）每个阶段都在其提交前实测：前三个功能阶段各跑过全量 `test.ps1`（单元 2176→2185 通过、15 跳过，Headless 199 通过），文档阶段仅改注释与 ADR 文本、由编译守卫。此前全量审计轮（基线内容）完成过 Debug 构建、覆盖率棘轮（手写代码行 85.77%、分支 92.17%）；覆盖率棘轮未在修复序列后重跑。
 
 Linux/Proton 真实运行和 Windows 自更新启动握手没有做实机实验：便携换位恢复路径由真实目录集成测试覆盖（`UpdateApplierPortableApplyTests`），信任链绑定由表驱动测试覆盖，但 helper 在真实杀软/UAC 环境下的行为结论仍来自源码与既有测试。
+
+2026-09-26 的 Linux 打包收口在本地完成实测：`.deb` 实构建并解包校验（copyright、`changelog.Debian.gz`、metainfo、desktop 分别通过 `appstreamcli`/`desktop-file-validate`），两次构建哈希一致；Arch 完成 `makepkg` 全量构建，PKGBUILD 与产物 `namcap` 无 Error。RPM 只做规格静态校验，真实依赖安装依赖发布 CI 新增的 Fedora 容器 `dnf` 步骤（该工作流尚未随真实 tag 执行）；所有 Linux 包未在真实桌面环境做过 GUI 实机启动与软件中心展示验证，openSUSE 未覆盖。
 
 ## 维护规则
 
