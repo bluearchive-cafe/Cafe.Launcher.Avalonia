@@ -329,6 +329,9 @@ public sealed class InstallerContractTests
             "Cafe.Launcher.Avalonia_${Tag}_linux-x64.rpm",
             script,
             StringComparison.Ordinal);
+        Assert.Contains("SOURCE_DATE_EPOCH", script, StringComparison.Ordinal);
+        Assert.Contains("function New-DeterministicZip", script, StringComparison.Ordinal);
+        Assert.Contains("tar --sort=name --mtime=\"@$sourceDateEpoch\"", script, StringComparison.Ordinal);
         Assert.DoesNotContain("UninstallFiles.nsh", script, StringComparison.Ordinal);
         Assert.DoesNotContain("makensis", script, StringComparison.OrdinalIgnoreCase);
     }
@@ -352,9 +355,18 @@ public sealed class InstallerContractTests
             StringComparison.Ordinal);
         Assert.Contains("Version: {VERSION}", control, StringComparison.Ordinal);
         Assert.Contains("Architecture: amd64", control, StringComparison.Ordinal);
+        Assert.Contains("libgssapi-krb5-2", control, StringComparison.Ordinal);
+        Assert.Contains("libssl3t64 | libssl3", control, StringComparison.Ordinal);
+        Assert.Contains("hicolor-icon-theme", control, StringComparison.Ordinal);
+        Assert.Contains("$debianVersion = \"$linuxUpstreamVersion-1\"", script, StringComparison.Ordinal);
+        Assert.Contains("usr/share/doc/cafe-launcher", script, StringComparison.Ordinal);
+        Assert.Contains("changelog.Debian", script, StringComparison.Ordinal);
+        Assert.Contains("cafe-launcher.metainfo.xml", script, StringComparison.Ordinal);
+        Assert.True(File.Exists(TestRepository.FromRepositoryRoot("installer/linux/debian/copyright")));
         // deb/rpm/pacman 共用一份 wrapper 模板，格式标记在打包时替换。
         Assert.Contains("CAFE_LAUNCHER_PACKAGE_FORMAT={PACKAGE_FORMAT}", launcher, StringComparison.Ordinal);
-        Assert.Contains("exec /opt/cafe-launcher/Cafe.Launcher.Avalonia", launcher, StringComparison.Ordinal);
+        Assert.Contains("exec {APP_DIR}/Cafe.Launcher.Avalonia", launcher, StringComparison.Ordinal);
+        Assert.Contains(".Replace(\"{APP_DIR}\", \"/opt/cafe-launcher\")", script, StringComparison.Ordinal);
         Assert.Contains("New-LinuxPackageAssets -PackageFormat \"deb\"", script, StringComparison.Ordinal);
         // desktop 由共享模板生成，包安装替换为 cafe-launcher + TryExec。
         Assert.Contains(
@@ -382,10 +394,8 @@ public sealed class InstallerContractTests
         Assert.Contains("Invoke-Checked \"rpmbuild\"", script, StringComparison.Ordinal);
         Assert.Contains("Invoke-Checked \"rpm\"", script, StringComparison.Ordinal);
         // 预发布号必须转成 RPM 的 ~ 排序形式，1.1.0~beta.11 才会排在 1.1.0 之前。
-        Assert.Contains(
-            "[regex]::Replace($version.VersionPrefix, \"-\", \"~\", 1)",
-            script,
-            StringComparison.Ordinal);
+        Assert.Contains("ConvertTo-LinuxUpstreamVersion", script, StringComparison.Ordinal);
+        Assert.Contains("$rpmVersion = $linuxUpstreamVersion", script, StringComparison.Ordinal);
         // asset_dir 指向从模板生成的资产目录，而不是提交到 rpm/ 下的副本。
         Assert.Contains("New-LinuxPackageAssets -PackageFormat \"rpm\"", script, StringComparison.Ordinal);
         Assert.Contains("linux-x64/assets/rpm", script, StringComparison.Ordinal);
@@ -402,6 +412,11 @@ public sealed class InstallerContractTests
         Assert.Contains("%global __os_install_post %{nil}", spec, StringComparison.Ordinal);
         // Avalonia 经 dlopen 使用的 X11 库 elfdeps 看不到，按 soname 显式声明。
         Assert.Contains("Requires:       libX11.so.6()(64bit)", spec, StringComparison.Ordinal);
+        Assert.Contains("Requires:       libssl.so.3()(64bit)", spec, StringComparison.Ordinal);
+        Assert.Contains("Requires:       libgssapi_krb5.so.2()(64bit)", spec, StringComparison.Ordinal);
+        Assert.Contains("Requires:       liblttng-ust.so.0()(64bit)", spec, StringComparison.Ordinal);
+        Assert.Contains("libicuuc.so.78()(64bit) or", spec, StringComparison.Ordinal);
+        Assert.Contains("MIT AND Apache-2.0 AND BSD-2-Clause", spec, StringComparison.Ordinal);
         Assert.Contains("%{buildroot}/opt/cafe-launcher", spec, StringComparison.Ordinal);
         Assert.Contains("\n/opt/cafe-launcher", spec, StringComparison.Ordinal);
         Assert.Contains("%{_datadir}/applications/cafe-launcher.desktop", spec, StringComparison.Ordinal);
@@ -411,7 +426,7 @@ public sealed class InstallerContractTests
             StringComparison.Ordinal);
 
         Assert.Contains("CAFE_LAUNCHER_PACKAGE_FORMAT={PACKAGE_FORMAT}", launcher, StringComparison.Ordinal);
-        Assert.Contains("exec /opt/cafe-launcher/Cafe.Launcher.Avalonia", launcher, StringComparison.Ordinal);
+        Assert.Contains("exec {APP_DIR}/Cafe.Launcher.Avalonia", launcher, StringComparison.Ordinal);
         // desktop 由共享模板生成，包安装替换为 cafe-launcher + TryExec。
         Assert.Contains(
             "New-LinuxDesktopEntry -ExecBlock \"Exec=cafe-launcher`nTryExec=cafe-launcher\"",
@@ -424,11 +439,15 @@ public sealed class InstallerContractTests
             StringComparison.Ordinal);
 
         var workflow = ReadProjectFile(".github/workflows/release.yml");
-        Assert.Contains("dpkg rpm xvfb", workflow, StringComparison.Ordinal);
+        Assert.Contains("dpkg rpm xvfb", workflow.Replace("appstream desktop-file-utils ", string.Empty, StringComparison.Ordinal), StringComparison.Ordinal);
         Assert.Contains("rpm -qp --queryformat", workflow, StringComparison.Ordinal);
         Assert.Contains("rpm --root \"$RUNNER_TEMP/rpm-root\" --initdb", workflow, StringComparison.Ordinal);
         Assert.Contains("rpm-root/usr/bin/cafe-launcher", workflow, StringComparison.Ordinal);
         Assert.Contains("rpm-root/opt/cafe-launcher/Cafe.Launcher.Avalonia", workflow, StringComparison.Ordinal);
+        Assert.Contains("Verify native RPM dependency installation on Fedora", workflow, StringComparison.Ordinal);
+        Assert.Contains("dnf install --setopt=install_weak_deps=False", workflow, StringComparison.Ordinal);
+        Assert.Contains("Build and validate Arch package with namcap", workflow, StringComparison.Ordinal);
+        Assert.Contains("makepkg --nodeps --noconfirm", workflow, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -479,7 +498,58 @@ public sealed class InstallerContractTests
             "New-LinuxDesktopEntry -ExecBlock \"Exec=cafe-launcher`nTryExec=cafe-launcher\"",
             script,
             StringComparison.Ordinal);
+        // Arch 在 PKGBUILD 的 prepare() 里从同一对模板生成两份资产：
+        // wrapper 标记与 desktop 命令块（漏掉 EXEC_BLOCK 替换会装出无 Exec 的菜单项）。
+        var pkgbuild = ReadProjectFile("installer/linux/arch/PKGBUILD");
+        Assert.Contains(
+            "sed -e 's/{PACKAGE_FORMAT}/pacman/' -e 's|{APP_DIR}|/usr/lib/cafe-launcher|'",
+            pkgbuild,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "sed 's/{EXEC_BLOCK}/Exec=cafe-launcher\\nTryExec=cafe-launcher/'",
+            pkgbuild,
+            StringComparison.Ordinal);
         Assert.Contains("installer/linux/templates/* text eol=lf", ReadProjectFile(".gitattributes"), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void LinuxArchPackageVersionPin_MatchesApplicationVersion()
+    {
+        // deb/rpm 的版本由构建期注入，Arch 的 PKGBUILD 是唯一手工固定的版本点：
+        // AUR 规范要求静态 pkgver，发布漏改会让用户装到旧版本。pkgver 不允许
+        // 连字符，预发布按 1.1.0-beta.11 → 1.1.0beta.11 转换（vercmp 排序见
+        // PKGBUILD 内注释）；.SRCINFO 必须在同一改动里重新生成。
+        var csproj = ReadProjectFile("src/Cafe.Launcher.Avalonia/Cafe.Launcher.Avalonia.csproj");
+        var versionPrefix = Regex.Match(csproj, @"<VersionPrefix>(?<version>[^<]+)</VersionPrefix>")
+            .Groups["version"]
+            .Value
+            .Trim();
+        Assert.NotEqual(string.Empty, versionPrefix);
+
+        var pkgbuild = ReadProjectFile("installer/linux/arch/PKGBUILD");
+        var realver = Regex.Match(pkgbuild, @"^_realver=(?<version>\S+)", RegexOptions.Multiline).Groups["version"].Value;
+        var pkgver = Regex.Match(pkgbuild, @"^pkgver=(?<version>\S+)", RegexOptions.Multiline).Groups["version"].Value;
+        Assert.NotEqual(string.Empty, realver);
+        Assert.NotEqual(string.Empty, pkgver);
+
+        Assert.Equal(versionPrefix, realver);
+        Assert.Equal(versionPrefix.Replace("-", string.Empty, StringComparison.Ordinal), pkgver);
+        Assert.Contains("sha256sums=('SKIP')", pkgbuild, StringComparison.Ordinal);
+        Assert.DoesNotContain("$startdir", pkgbuild, StringComparison.Ordinal);
+        Assert.Contains("makedepends=('dotnet-sdk' 'git')", pkgbuild, StringComparison.Ordinal);
+        Assert.Contains("'libunwind'", pkgbuild, StringComparison.Ordinal);
+        Assert.Contains("'lttng-ust2.12'", pkgbuild, StringComparison.Ordinal);
+        Assert.Contains("'hicolor-icon-theme'", pkgbuild, StringComparison.Ordinal);
+        Assert.Contains("$pkgdir/usr/lib/cafe-launcher", pkgbuild, StringComparison.Ordinal);
+        Assert.Contains("UtcNow.ToString", pkgbuild, StringComparison.Ordinal);
+        Assert.Contains("SOURCE_DATE_EPOCH=$(git show -s --format=%ct HEAD)", pkgbuild, StringComparison.Ordinal);
+
+        var srcinfo = ReadProjectFile("installer/linux/arch/.SRCINFO");
+        // Git 标签源避免了“标签提交必须预先知道自身 GitHub 自动归档哈希”的循环。
+        // .SRCINFO 由 makepkg --printsrcinfo 生成，字段行以制表符缩进。
+        var url = Regex.Match(pkgbuild, @"^url=(?<url>\S+)", RegexOptions.Multiline).Groups["url"].Value.Trim('\'');
+        Assert.Contains($"source = cafe-launcher-source::git+{url}.git#tag=v{realver}", srcinfo, StringComparison.Ordinal);
+        Assert.Contains("sha256sums = SKIP", srcinfo, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -23,6 +23,17 @@ $LinuxAssetsDir = Join-Path $RootDir "installer/linux"
 $DebianAssetsDir = Join-Path $LinuxAssetsDir "debian"
 $RpmAssetsDir = Join-Path $LinuxAssetsDir "rpm"
 
+if ([string]::IsNullOrWhiteSpace($env:SOURCE_DATE_EPOCH)) {
+    $sourceDateEpoch = (& git -C $RootDir show -s --format=%ct HEAD 2>$null | Select-Object -First 1)
+    if ($LASTEXITCODE -ne 0 -or $sourceDateEpoch -notmatch '^\d+$') {
+        $sourceDateEpoch = '315532800' # 1980-01-01, the minimum ZIP timestamp.
+    }
+    $env:SOURCE_DATE_EPOCH = $sourceDateEpoch
+}
+else {
+    $sourceDateEpoch = $env:SOURCE_DATE_EPOCH
+}
+
 $version = & (Join-Path $ScriptDir "Read-LauncherVersion.ps1") -Tag $Tag
 $ProjectPath = $version.ProjectPath
 $Tag = $version.Tag
@@ -80,6 +91,40 @@ function Set-UnixExecutableBit {
     }
 }
 
+function New-DeterministicZip {
+    param(
+        [Parameter(Mandatory)]
+        [string]$SourceDirectory,
+        [Parameter(Mandatory)]
+        [string]$Destination
+    )
+
+    Add-Type -AssemblyName System.IO.Compression.ZipFile
+    Remove-Item -LiteralPath $Destination -Force -ErrorAction SilentlyContinue
+    $archive = [System.IO.Compression.ZipFile]::Open($Destination, [System.IO.Compression.ZipArchiveMode]::Create)
+    try {
+        $timestamp = [DateTimeOffset]::FromUnixTimeSeconds([long]$sourceDateEpoch)
+        $files = Get-ChildItem -LiteralPath $SourceDirectory -File -Recurse | Sort-Object FullName
+        foreach ($file in $files) {
+            $entryName = [System.IO.Path]::GetRelativePath($SourceDirectory, $file.FullName).Replace('\', '/')
+            $entry = $archive.CreateEntry($entryName, [System.IO.Compression.CompressionLevel]::Optimal)
+            $entry.LastWriteTime = $timestamp
+            $entryStream = $entry.Open()
+            $fileStream = $file.OpenRead()
+            try {
+                $fileStream.CopyTo($entryStream)
+            }
+            finally {
+                $fileStream.Dispose()
+                $entryStream.Dispose()
+            }
+        }
+    }
+    finally {
+        $archive.Dispose()
+    }
+}
+
 function New-LinuxDesktopEntry {
     param(
         [Parameter(Mandatory)]
@@ -113,7 +158,7 @@ function New-LinuxPackageAssets {
     [void][System.IO.Directory]::CreateDirectory($Destination)
 
     $wrapper = Get-Content -Raw -LiteralPath (Join-Path $templatesDir "cafe-launcher")
-    $wrapper = $wrapper.Replace("{PACKAGE_FORMAT}", $PackageFormat)
+    $wrapper = $wrapper.Replace("{PACKAGE_FORMAT}", $PackageFormat).Replace("{APP_DIR}", "/opt/cafe-launcher")
     [System.IO.File]::WriteAllText(
         (Join-Path $Destination "cafe-launcher"),
         $wrapper,
@@ -122,6 +167,34 @@ function New-LinuxPackageAssets {
         -Destination (Join-Path $Destination "cafe-launcher.desktop")
 
     Set-UnixExecutableBit -Paths @((Join-Path $Destination "cafe-launcher"))
+}
+
+function ConvertTo-LinuxUpstreamVersion {
+    param(
+        [Parameter(Mandatory)]
+        [string]$Version
+    )
+
+    # SemVer permits hyphens inside prerelease identifiers, while RPM forbids
+    # hyphens in Version and Debian treats the final hyphen as its revision
+    # separator. Keep the first hyphen's ordering meaning and normalize any
+    # remaining prerelease hyphens to dots for both package managers.
+    $match = [regex]::Match(
+        $Version,
+        '^(?<core>[0-9]+\.[0-9]+\.[0-9]+)(?:-(?<prerelease>[0-9A-Za-z.-]+))?(?<metadata>\+[0-9A-Za-z.-]+)?$')
+    if (-not $match.Success) {
+        throw "Cannot convert non-SemVer version '$Version' to a Linux package version."
+    }
+
+    $converted = $match.Groups['core'].Value
+    if ($match.Groups['prerelease'].Success) {
+        $converted += '~' + $match.Groups['prerelease'].Value.Replace('-', '.')
+    }
+    if ($match.Groups['metadata'].Success) {
+        $converted += $match.Groups['metadata'].Value.Replace('-', '.')
+    }
+
+    return $converted
 }
 
 Remove-Item -LiteralPath $DistributionDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -158,7 +231,7 @@ $artifacts = @()
 
 if ($Rids -contains "win-x64") {
     $winZipPath = Join-Path $DistributionDir "Cafe.Launcher.Avalonia_${Tag}_win-x64.zip"
-    Compress-Archive -Path (Join-Path $PublishRoot "win-x64/*") -DestinationPath $winZipPath -Force
+    New-DeterministicZip -SourceDirectory (Join-Path $PublishRoot "win-x64") -Destination $winZipPath
     $artifacts += [pscustomobject]@{ Rid = "win-x64"; Kind = "zip"; Path = $winZipPath }
 }
 
@@ -194,7 +267,11 @@ if ($Rids -contains "osx-arm64") {
         $osxZipPath = Join-Path $DistributionDir "Cafe.Launcher.Avalonia_${Tag}_osx-arm64.zip"
         Push-Location $bundleParent
         try {
-            & zip -ry $osxZipPath "Cafe Launcher.app"
+            if ($IsLinux) {
+                Invoke-Checked "find" @("Cafe Launcher.app", "-exec", "touch", "-h", "-d", "@$sourceDateEpoch", "{}", "+") "Could not normalize macOS bundle timestamps."
+            }
+            $zipEntries = @(& find "Cafe Launcher.app" -print | Sort-Object)
+            $zipEntries | & zip -X -y $osxZipPath -@
             if ($LASTEXITCODE -ne 0) {
                 throw "zip failed for the macOS bundle."
             }
@@ -222,7 +299,7 @@ if ($Rids -contains "linux-x64") {
     # Pack with a relative archive name: GNU tar reads "E:\...\x.tar.gz" as a remote host path.
     Push-Location $DistributionDir
     try {
-        & tar -czf $linuxTarName -C $linuxPublishDir .
+        & tar --sort=name --mtime="@$sourceDateEpoch" --owner=0 --group=0 --numeric-owner -czf $linuxTarName -C $linuxPublishDir .
         if ($LASTEXITCODE -ne 0) {
             throw "tar failed for the Linux package."
         }
@@ -238,6 +315,8 @@ if ($Rids -contains "linux-x64") {
         $debAppDir = Join-Path $debRoot "opt/cafe-launcher"
         $debBinDir = Join-Path $debRoot "usr/bin"
         $debApplicationsDir = Join-Path $debRoot "usr/share/applications"
+        $debMetainfoDir = Join-Path $debRoot "usr/share/metainfo"
+        $debDocDir = Join-Path $debRoot "usr/share/doc/cafe-launcher"
         $debIcon256Dir = Join-Path $debRoot "usr/share/icons/hicolor/256x256/apps"
         $debIcon512Dir = Join-Path $debRoot "usr/share/icons/hicolor/512x512/apps"
         foreach ($directory in @(
@@ -245,6 +324,8 @@ if ($Rids -contains "linux-x64") {
             $debAppDir,
             $debBinDir,
             $debApplicationsDir,
+            $debMetainfoDir,
+            $debDocDir,
             $debIcon256Dir,
             $debIcon512Dir
         )) {
@@ -259,6 +340,9 @@ if ($Rids -contains "linux-x64") {
         New-LinuxPackageAssets -PackageFormat "deb" -Destination $debLaunchAssetsDir
         Copy-Item -LiteralPath (Join-Path $debLaunchAssetsDir "cafe-launcher") -Destination (Join-Path $debBinDir "cafe-launcher") -Force
         Copy-Item -LiteralPath (Join-Path $debLaunchAssetsDir "cafe-launcher.desktop") -Destination (Join-Path $debApplicationsDir "cafe-launcher.desktop") -Force
+        Copy-Item -LiteralPath (Join-Path $LinuxAssetsDir "templates/cafe-launcher.metainfo.xml") -Destination (Join-Path $debMetainfoDir "cafe-launcher.metainfo.xml") -Force
+        Copy-Item -LiteralPath (Join-Path $DebianAssetsDir "copyright") -Destination (Join-Path $debDocDir "copyright") -Force
+        Copy-Item -LiteralPath (Join-Path $RootDir "THIRD-PARTY-NOTICES.md") -Destination (Join-Path $debDocDir "THIRD-PARTY-NOTICES.md") -Force
 
         foreach ($size in @(256, 512)) {
             $iconSource = Join-Path $LinuxAssetsDir "app-icon-$size.png"
@@ -270,13 +354,23 @@ if ($Rids -contains "linux-x64") {
             Copy-Item -LiteralPath $iconSource -Destination (Join-Path $iconDestinationDir "cafe-launcher.png") -Force
         }
 
-        $debianVersion = [regex]::Replace($version.VersionPrefix, "-", "~", 1)
+        $linuxUpstreamVersion = ConvertTo-LinuxUpstreamVersion -Version $version.VersionPrefix
+        $debianVersion = "$linuxUpstreamVersion-1"
         $controlTemplate = Get-Content -Raw -LiteralPath (Join-Path $DebianAssetsDir "control")
         $control = $controlTemplate.Replace("{VERSION}", $debianVersion)
         [System.IO.File]::WriteAllText(
             (Join-Path $debControlDir "control"),
             $control,
             [System.Text.UTF8Encoding]::new($false))
+
+        $changelogDate = (& git -C $RootDir show -s --format=%aD HEAD 2>$null | Select-Object -First 1)
+        if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($changelogDate)) {
+            $changelogDate = [DateTimeOffset]::UnixEpoch.ToString('r', [Globalization.CultureInfo]::InvariantCulture)
+        }
+        $changelog = "cafe-launcher ($debianVersion) unstable; urgency=medium`n`n  * Upstream release $($version.VersionPrefix).`n`n -- BlueArchive Cafe contributors <bluearchive-cafe@users.noreply.github.com>  $changelogDate`n"
+        $changelogPath = Join-Path $debDocDir "changelog.Debian"
+        [System.IO.File]::WriteAllText($changelogPath, $changelog, [System.Text.UTF8Encoding]::new($false))
+        Invoke-Checked "gzip" @("-9n", $changelogPath) "gzip failed for the Debian changelog."
 
         Set-UnixExecutableBit -Paths @(
             (Join-Path $debAppDir "Cafe.Launcher.Avalonia"),
@@ -301,9 +395,9 @@ if ($Rids -contains "linux-x64") {
         $rpmTopDir = [System.IO.Path]::GetFullPath((Join-Path $BundleRoot "linux-x64/rpmbuild"))
         $rpmSpecPath = Join-Path $rpmTopDir "SPECS/cafe-launcher.spec"
         [void][System.IO.Directory]::CreateDirectory((Split-Path -Parent $rpmSpecPath))
-        # ~ is RPM's prerelease ordering (1.1.0~beta.11 < 1.1.0), the same conversion
-        # the Debian control file gets.
-        $rpmVersion = [regex]::Replace($version.VersionPrefix, "-", "~", 1)
+        # ~ is RPM's prerelease ordering (1.1.0~beta.11 < 1.1.0), the same
+        # normalized upstream version used by the Debian package.
+        $rpmVersion = $linuxUpstreamVersion
         $rpmSpec = (Get-Content -Raw -LiteralPath (Join-Path $RpmAssetsDir "cafe-launcher.spec")).Replace("{VERSION}", $rpmVersion)
         [System.IO.File]::WriteAllText($rpmSpecPath, $rpmSpec, [System.Text.UTF8Encoding]::new($false))
 
@@ -317,6 +411,7 @@ if ($Rids -contains "linux-x64") {
             "--define", "app_dir $([System.IO.Path]::GetFullPath($linuxPublishDir))",
             "--define", "asset_dir $([System.IO.Path]::GetFullPath($rpmLaunchAssetsDir))",
             "--define", "icon_dir $([System.IO.Path]::GetFullPath($LinuxAssetsDir))",
+            "--define", "template_dir $([System.IO.Path]::GetFullPath((Join-Path $LinuxAssetsDir 'templates')))",
             $rpmSpecPath
         ) "rpmbuild failed for the Linux RPM package."
 
@@ -347,8 +442,10 @@ if ($Rids -contains "linux-x64") {
             $appDirRoot = Join-Path $BundleRoot "linux-x64/AppDir"
             $appBinDir = Join-Path $appDirRoot "usr/bin"
             $hicolorDir = Join-Path $appDirRoot "usr/share/icons/hicolor/256x256/apps"
+            $appMetainfoDir = Join-Path $appDirRoot "usr/share/metainfo"
             [void][System.IO.Directory]::CreateDirectory($appBinDir)
             [void][System.IO.Directory]::CreateDirectory($hicolorDir)
+            [void][System.IO.Directory]::CreateDirectory($appMetainfoDir)
 
             Copy-Item -Path (Join-Path $linuxPublishDir "*") -Destination $appBinDir -Recurse -Force
             Set-UnixExecutableBit -Paths @(
@@ -360,6 +457,7 @@ if ($Rids -contains "linux-x64") {
             Copy-Item -LiteralPath (Join-Path $LinuxAssetsDir "appimage/AppRun") -Destination $appRunPath -Force
             New-LinuxDesktopEntry -ExecBlock "Exec=Cafe.Launcher.Avalonia" `
                 -Destination (Join-Path $appDirRoot "cafe-launcher.desktop")
+            Copy-Item -LiteralPath (Join-Path $LinuxAssetsDir "templates/cafe-launcher.metainfo.xml") -Destination (Join-Path $appMetainfoDir "cafe-launcher.metainfo.xml") -Force
             Set-UnixExecutableBit -Paths @($appRunPath)
             Invoke-Checked "test" @("-x", $appRunPath) "AppDir/AppRun is missing or is not executable."
 

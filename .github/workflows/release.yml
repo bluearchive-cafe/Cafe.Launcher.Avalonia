@@ -16,7 +16,7 @@ jobs:
   build:
     name: Build platform packages
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     defaults:
       run:
@@ -58,7 +58,8 @@ jobs:
         shell: bash
         run: |
           sudo apt-get update
-          sudo apt-get install --no-install-recommends -y dpkg rpm xvfb xauth libx11-6 libice6 libsm6 libfontconfig1 libxkbcommon0
+          sudo apt-get install --no-install-recommends -y appstream desktop-file-utils dpkg rpm xvfb xauth libx11-6 libice6 libsm6 libfontconfig1 libxkbcommon0
+          appstreamcli validate --pedantic installer/linux/templates/cafe-launcher.metainfo.xml
 
       - name: Acquire pinned AppImage tools
         env:
@@ -104,6 +105,11 @@ jobs:
           dpkg-deb --extract "${debs[0]}" "$RUNNER_TEMP/deb-root"
           test -x "$RUNNER_TEMP/deb-root/usr/bin/cafe-launcher"
           test -x "$RUNNER_TEMP/deb-root/opt/cafe-launcher/Cafe.Launcher.Avalonia"
+          test -f "$RUNNER_TEMP/deb-root/usr/share/doc/cafe-launcher/copyright"
+          test -f "$RUNNER_TEMP/deb-root/usr/share/doc/cafe-launcher/changelog.Debian.gz"
+          test -f "$RUNNER_TEMP/deb-root/usr/share/doc/cafe-launcher/THIRD-PARTY-NOTICES.md"
+          desktop-file-validate "$RUNNER_TEMP/deb-root/usr/share/applications/cafe-launcher.desktop"
+          appstreamcli validate --pedantic "$RUNNER_TEMP/deb-root/usr/share/metainfo/cafe-launcher.metainfo.xml"
           sudo apt-get install --no-install-recommends -y "./${debs[0]}"
           test "$(command -v cafe-launcher)" = /usr/bin/cafe-launcher
           cafe-launcher --version
@@ -123,7 +129,10 @@ jobs:
           rpm --root "$RUNNER_TEMP/rpm-root" -ivh --nodeps --noscripts "${rpms[0]}"
           test -x "$RUNNER_TEMP/rpm-root/usr/bin/cafe-launcher"
           test -x "$RUNNER_TEMP/rpm-root/opt/cafe-launcher/Cafe.Launcher.Avalonia"
+          test -f "$RUNNER_TEMP/rpm-root/usr/share/metainfo/cafe-launcher.metainfo.xml"
           sh -n "$RUNNER_TEMP/rpm-root/usr/bin/cafe-launcher"
+          desktop-file-validate "$RUNNER_TEMP/rpm-root/usr/share/applications/cafe-launcher.desktop"
+          appstreamcli validate --pedantic "$RUNNER_TEMP/rpm-root/usr/share/metainfo/cafe-launcher.metainfo.xml"
           "$RUNNER_TEMP/rpm-root/opt/cafe-launcher/Cafe.Launcher.Avalonia" --version
 
           appimages=(artifacts/distribution/*_linux-x64.AppImage)
@@ -138,6 +147,38 @@ jobs:
           set -e
           if [[ $status -ne 124 ]]; then
             echo "AppImage exited before the desktop startup smoke-test timeout (status $status)." >&2
+            exit 1
+          fi
+
+      - name: Verify native RPM dependency installation on Fedora
+        shell: bash
+        run: |
+          rpm_path=$(realpath artifacts/distribution/*_linux-x64.rpm)
+          docker run --rm -v "$rpm_path:/tmp/cafe-launcher.rpm:ro" fedora:43 bash -euxo pipefail -c '
+            dnf install --setopt=install_weak_deps=False -y /tmp/cafe-launcher.rpm
+            test "$(command -v cafe-launcher)" = /usr/bin/cafe-launcher
+            cafe-launcher --version
+          '
+
+      - name: Build and validate Arch package with namcap
+        shell: bash
+        run: |
+          arch_dir="$RUNNER_TEMP/arch-package"
+          cp -a installer/linux/arch "$arch_dir"
+          output=$(docker run --rm -v "$arch_dir:/pkg" archlinux:base bash -c '
+            pacman -Syu --noconfirm --needed base-devel dotnet-sdk git namcap \
+              ca-certificates glibc icu krb5 gcc-libs libunwind lttng-ust2.12 \
+              openssl tzdata zlib libx11 libice libsm fontconfig libxkbcommon \
+              hicolor-icon-theme >/dev/null
+            useradd --create-home builder
+            chown -R builder:builder /pkg
+            su builder -c "cd /pkg && makepkg --nodeps --noconfirm"
+            namcap /pkg/PKGBUILD
+            namcap /pkg/*.pkg.tar.*
+          ' 2>&1)
+          printf '%s\n' "$output"
+          if grep -q '^E:' <<< "$output"; then
+            echo "namcap reported an Arch package error." >&2
             exit 1
           fi
 
