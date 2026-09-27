@@ -230,7 +230,7 @@ if (-not $SkipPublish) {
 $artifacts = @()
 
 if ($Rids -contains "win-x64") {
-    $winZipPath = Join-Path $DistributionDir "Cafe.Launcher.Avalonia_${Tag}_win-x64.zip"
+    $winZipPath = Join-Path $DistributionDir "Cafe.Launcher_${Tag}_win-x64.zip"
     New-DeterministicZip -SourceDirectory (Join-Path $PublishRoot "win-x64") -Destination $winZipPath
     $artifacts += [pscustomobject]@{ Rid = "win-x64"; Kind = "zip"; Path = $winZipPath }
 }
@@ -260,11 +260,11 @@ if ($Rids -contains "osx-arm64") {
 
     if ($IsUnixHost) {
         Set-UnixExecutableBit -Paths @(
-            (Join-Path $macOsDir "Cafe.Launcher.Avalonia"),
+            (Join-Path $macOsDir "Cafe.Launcher"),
             (Join-Path $macOsDir "createdump")
         )
 
-        $osxZipPath = Join-Path $DistributionDir "Cafe.Launcher.Avalonia_${Tag}_osx-arm64.zip"
+        $osxZipPath = Join-Path $DistributionDir "Cafe.Launcher_${Tag}_osx-arm64.zip"
         Push-Location $bundleParent
         try {
             if ($IsLinux) {
@@ -282,7 +282,7 @@ if ($Rids -contains "osx-arm64") {
     }
     else {
         Write-Warning "Non-Unix host: the macOS bundle is created without executable bits and falls back to Compress-Archive. Build the macOS archive from Linux/macOS for release (the release workflow does this)."
-        $osxZipPath = Join-Path $DistributionDir "Cafe.Launcher.Avalonia_${Tag}_osx-arm64.zip"
+        $osxZipPath = Join-Path $DistributionDir "Cafe.Launcher_${Tag}_osx-arm64.zip"
         Compress-Archive -Path $appDirectory -DestinationPath $osxZipPath -Force
     }
 
@@ -291,7 +291,7 @@ if ($Rids -contains "osx-arm64") {
 
 if ($Rids -contains "linux-x64") {
     $linuxPublishDir = Join-Path $PublishRoot "linux-x64"
-    $linuxTarName = "Cafe.Launcher.Avalonia_${Tag}_linux-x64.tar.gz"
+    $linuxTarName = "Cafe.Launcher_${Tag}_linux-x64.tar.gz"
     $linuxTarPath = Join-Path $DistributionDir $linuxTarName
     if (-not $IsUnixHost) {
         Write-Warning "Non-Unix host: the tar.gz may lose executable bits. Build the Linux archive from Linux for release (the release workflow does this)."
@@ -373,12 +373,12 @@ if ($Rids -contains "linux-x64") {
         Invoke-Checked "gzip" @("-9n", $changelogPath) "gzip failed for the Debian changelog."
 
         Set-UnixExecutableBit -Paths @(
-            (Join-Path $debAppDir "Cafe.Launcher.Avalonia"),
+            (Join-Path $debAppDir "Cafe.Launcher"),
             (Join-Path $debAppDir "createdump"),
             (Join-Path $debBinDir "cafe-launcher")
         )
 
-        $debPath = Join-Path $DistributionDir "Cafe.Launcher.Avalonia_${Tag}_linux-x64.deb"
+        $debPath = Join-Path $DistributionDir "Cafe.Launcher_${Tag}_linux-x64.deb"
         Invoke-Checked "dpkg-deb" @(
             "--root-owner-group",
             "--build",
@@ -420,7 +420,7 @@ if ($Rids -contains "linux-x64") {
             throw "rpmbuild must produce exactly one RPM in '$rpmTopDir/RPMS', found $($builtRpms.Count)."
         }
 
-        $rpmPath = Join-Path $DistributionDir "Cafe.Launcher.Avalonia_${Tag}_linux-x64.rpm"
+        $rpmPath = Join-Path $DistributionDir "Cafe.Launcher_${Tag}_linux-x64.rpm"
         Copy-Item -LiteralPath $builtRpms[0].FullName -Destination $rpmPath -Force
         Invoke-Checked "rpm" @(
             "-qp",
@@ -449,13 +449,13 @@ if ($Rids -contains "linux-x64") {
 
             Copy-Item -Path (Join-Path $linuxPublishDir "*") -Destination $appBinDir -Recurse -Force
             Set-UnixExecutableBit -Paths @(
-                (Join-Path $appBinDir "Cafe.Launcher.Avalonia"),
+                (Join-Path $appBinDir "Cafe.Launcher"),
                 (Join-Path $appBinDir "createdump")
             )
 
             $appRunPath = Join-Path $appDirRoot "AppRun"
             Copy-Item -LiteralPath (Join-Path $LinuxAssetsDir "appimage/AppRun") -Destination $appRunPath -Force
-            New-LinuxDesktopEntry -ExecBlock "Exec=Cafe.Launcher.Avalonia" `
+            New-LinuxDesktopEntry -ExecBlock "Exec=Cafe.Launcher" `
                 -Destination (Join-Path $appDirRoot "cafe-launcher.desktop")
             Copy-Item -LiteralPath (Join-Path $LinuxAssetsDir "templates/cafe-launcher.metainfo.xml") -Destination (Join-Path $appMetainfoDir "cafe-launcher.metainfo.xml") -Force
             Set-UnixExecutableBit -Paths @($appRunPath)
@@ -471,7 +471,7 @@ if ($Rids -contains "linux-x64") {
                 Write-Warning "installer/linux/app-icon-256.png is missing; the AppImage will have no icon. Run scripts/New-AppIconAssets.ps1 to generate it."
             }
 
-            $appImagePath = Join-Path $DistributionDir "Cafe.Launcher.Avalonia_${Tag}_linux-x64.AppImage"
+            $appImagePath = Join-Path $DistributionDir "Cafe.Launcher_${Tag}_linux-x64.AppImage"
             Invoke-Checked $AppImageToolPath @(
                 "--appimage-extract-and-run",
                 "--runtime-file",

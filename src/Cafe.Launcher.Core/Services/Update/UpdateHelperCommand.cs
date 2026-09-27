@@ -1,5 +1,5 @@
 using System;
-using Cafe.Launcher.Updater;
+using Cafe.Launcher.Updater.Core;
 
 namespace Cafe.Launcher.Core.Services.Update;
 

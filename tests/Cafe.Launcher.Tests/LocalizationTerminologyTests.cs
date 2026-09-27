@@ -1,0 +1,297 @@
+using Cafe.Launcher.UI.Models;
+using Cafe.Launcher.UI.Features.Settings;
+using Cafe.Launcher.UI.Features.SetupWizard;
+using Cafe.Launcher.UI.Services;
+using Cafe.Launcher.Core.Services.Diagnostics;
+using Cafe.Launcher.UI.ViewModels;
+using Cafe.Launcher.Testing;
+using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Services;
+
+namespace Cafe.Launcher.Tests;
+
+[Collection(nameof(LocalizationServiceTestIsolation))]
+public sealed class LocalizationTerminologyTests
+{
+    /// <summary>向导路径校验（防抖 + 后台写探测）的就绪预算。</summary>
+    private static readonly TimeSpan GateSettleBudget = TimeSpan.FromSeconds(5);
+
+    static LocalizationTerminologyTests()
+    {
+        TestLocalizationHelper.Initialize();
+    }
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("zh-Hans")]
+    [InlineData("zh-Hant")]
+    [InlineData("ja")]
+    public void LocaleFiles_CanonicalDomainTerms_ArePresentAndDistinct(string fileName)
+    {
+        var locale = ReadLocale(fileName);
+
+        var launchCheck = GetRequiredValue(locale, "launchCheck");
+        var resourcePanel = GetRequiredValue(locale, "resourcePanel");
+        Assert.False(string.IsNullOrWhiteSpace(launchCheck));
+        Assert.False(string.IsNullOrWhiteSpace(resourcePanel));
+        Assert.NotEqual(launchCheck, resourcePanel);
+    }
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("zh-Hans")]
+    [InlineData("zh-Hant")]
+    [InlineData("ja")]
+    public void LocaleFiles_ConsumedResourceCopy_UsesLocalizedResourcesTerm(string fileName)
+    {
+        var locale = ReadLocale(fileName);
+        var consumedKeys = new[]
+        {
+            "resourcePanelDescription",
+            "resourcePanelLocalizedVersion",
+            "setupWizardDownloadSourceCafeDescription",
+            "setupWizardDownloadSourceCafeRecommendationReason",
+            "setupWizardDownloadSourceHint"
+        };
+
+        var localizedResourcesTerm = GetRequiredValue(locale, "resourcePanelLocalizedVersion");
+        Assert.All(consumedKeys, key => Assert.Contains(
+            localizedResourcesTerm,
+            GetRequiredValue(locale, key),
+            StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("zh-Hans")]
+    [InlineData("zh-Hant")]
+    [InlineData("ja")]
+    public void LocaleFiles_CarouselPage_UsesCompactLanguageNeutralFormat(string fileName)
+    {
+        var locale = ReadLocale(fileName);
+
+        Assert.Equal("{0} / {1}", locale["carouselPage"]);
+    }
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("zh-Hans")]
+    [InlineData("zh-Hant")]
+    [InlineData("ja")]
+    public void LocaleFiles_FatalConcept_UsesSameTermAcrossFilterAndLevel(string fileName)
+    {
+        var locale = ReadLocale(fileName);
+
+        Assert.Equal(locale["logFilterFatal"], locale["logLevelFatal"]);
+    }
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("zh-Hans")]
+    [InlineData("zh-Hant")]
+    [InlineData("ja")]
+    public void LocaleFiles_ProxyModes_HaveDistinctNamesAndDescriptions(string fileName)
+    {
+        var locale = ReadLocale(fileName);
+        var names = new[] { locale["proxyAuto"], locale["proxyDirect"], locale["proxySystem"] };
+        var descriptions = new[]
+        {
+            locale["setupWizardProxyAutoDescription"],
+            locale["setupWizardProxyDirectDescription"],
+            locale["setupWizardProxySystemDescription"]
+        };
+
+        Assert.All(names, value => Assert.False(string.IsNullOrWhiteSpace(value)));
+        Assert.All(descriptions, value => Assert.False(string.IsNullOrWhiteSpace(value)));
+        Assert.Equal(3, names.Distinct(StringComparer.Ordinal).Count());
+        Assert.Equal(3, descriptions.Distinct(StringComparer.Ordinal).Count());
+    }
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("zh-Hans")]
+    [InlineData("zh-Hant")]
+    [InlineData("ja")]
+    public void LocaleFiles_RefreshTooltip_ExplainsUserVisibleScope(string fileName)
+    {
+        var locale = ReadLocale(fileName);
+
+        Assert.False(string.IsNullOrWhiteSpace(locale["refreshTooltip"]));
+        Assert.DoesNotContain("API", locale["refreshTooltip"], StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("zh-Hans")]
+    [InlineData("zh-Hant")]
+    [InlineData("ja")]
+    public void LocaleFiles_ManifestModeLabels_AreConsistentAcrossSettingsAndStatus(string fileName)
+    {
+        var locale = ReadLocale(fileName);
+
+        Assert.Equal(locale["launchCheckLocalManifest"], locale["statusLaunchCheckLocal"]);
+        Assert.Equal(locale["launchCheckRemoteManifest"], locale["statusLaunchCheckRemote"]);
+    }
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("zh-Hans")]
+    [InlineData("zh-Hant")]
+    [InlineData("ja")]
+    public void LocaleFiles_SetupWizardDownloadSourceLabel_MatchesSettingsLabel(string fileName)
+    {
+        var locale = ReadLocale(fileName);
+
+        Assert.Equal(locale["downloadSource"], locale["setupWizardDownloadSource"]);
+    }
+
+    /// <summary>
+    /// 下载源句子文案口径（UBIQUITOUS_LANGUAGE.md）：凡指称下载源的句子必须使用全称，
+    /// 且不得把提供方说成网络路线（CDN）。短显示名（"Cafe"/"官方"）只允许出现在选项标签等
+    /// 非句子文案中，不在本断言范围内。
+    /// </summary>
+    [Theory]
+    [InlineData("en", "download source")]
+    [InlineData("zh-Hans", "下载源")]
+    [InlineData("zh-Hant", "下載來源")]
+    [InlineData("ja", "ダウンロードソース")]
+    public void LocaleFiles_DownloadSourceSentenceCopy_UsesCanonicalFullTerm(string fileName, string fullTerm)
+    {
+        var locale = ReadLocale(fileName);
+
+        var sentenceKeys = new[]
+        {
+            "downloadSourceDescription",
+            "setupWizardDownloadSourceHint",
+            "downloadSourceChangedRepairPrompt",
+            "resourcePanelUidGenerationHint",
+            "resourcePanelCafeOnlyMessage"
+        };
+
+        Assert.All(sentenceKeys, key =>
+        {
+            var value = GetRequiredValue(locale, key);
+            Assert.Contains(fullTerm, value, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("CDN", value, StringComparison.OrdinalIgnoreCase);
+        });
+    }
+
+    /// <summary>
+    /// 简中资源术语口径（UBIQUITOUS_LANGUAGE.md）：「本地化（汉化）资源」已收敛为
+    /// 「汉化资源」，资源相关文案不得再出现「本地化」双写。含「汉化资源」的一侧由
+    /// <see cref="LocaleFiles_ConsumedResourceCopy_UsesLocalizedResourcesTerm"/> 以锚点继续覆盖。
+    /// </summary>
+    [Fact]
+    public void LocaleFiles_SimplifiedChineseResourceCopy_UsesHanhuaTerm()
+    {
+        var locale = ReadLocale("zh-Hans");
+
+        var resourceKeys = new[]
+        {
+            "resourcePanelLocalizedVersion",
+            "resourcePanelDescription",
+            "resourcePanelVersionAligned",
+            "setupWizardDownloadSourceCafeDescription",
+            "setupWizardDownloadSourceCafeRecommendationReason"
+        };
+
+        Assert.All(resourceKeys, key =>
+        {
+            var value = GetRequiredValue(locale, key);
+            Assert.Contains("汉化资源", value, StringComparison.Ordinal);
+            Assert.DoesNotContain("本地化", value, StringComparison.Ordinal);
+        });
+    }
+
+    [Fact]
+    public async Task SetupWizard_AutomaticLanguageSummary_UsesLocalizedLocaleKey()
+    {
+        var localizer = new LocalizationService();
+        localizer.SetLanguage(LauncherLanguages.SimplifiedChinese);
+        var viewModel = new SetupWizardViewModel(
+            localizer,
+            new GameInstallationPath(),
+            new LocalInstallationStateStore(),
+            new LocalDiagnostics(), new StubFilePickerService())
+        {
+            Language = LauncherLanguages.Auto
+        };
+
+        viewModel.GamePath = @"D:\Test\Path";
+        // Step 1 的 CanGoNext 由后台 fire-and-forget 路径校验门控：先以有界
+        // 轮询等校验落定，再用步数上限推进，消除热自旋竞态（调度异常时快速
+        // 失败而非挂死测试进程）。
+        await TestWait.UntilAsync(
+            () => viewModel.GamePathStatus == SetupWizardGamePathStatus.AvailableForInstallation,
+            GateSettleBudget,
+            "路径校验未在 5 秒预算内完成。");
+
+        for (var guard = 0; !viewModel.IsLastStep && guard < 100; guard++)
+        {
+            if (viewModel.CanGoNext)
+            {
+                viewModel.NextCommand.Execute(null);
+            }
+            else
+            {
+                await TestWait.UntilAsync(
+                    () => viewModel.IsLastStep || viewModel.CanGoNext,
+                    GateSettleBudget,
+                    "向导门控未在 5 秒预算内就绪。");
+            }
+        }
+
+        Assert.True(viewModel.IsLastStep, "向导未在上限步数内推进到末步。");
+        Assert.Equal(localizer.T("languageAuto"), viewModel.LanguageDisplayName);
+        Assert.DoesNotContain("Auto", viewModel.LanguageDisplayName, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void LanguageSelectors_AutomaticOption_UsesLocalizedLocaleKey()
+    {
+        var localizer = new LocalizationService();
+        localizer.SetLanguage(LauncherLanguages.SimplifiedChinese);
+        var settingsOptions = new SettingsOptionsViewModel(localizer, new DiskSpaceService());
+        var setupWizard = new SetupWizardViewModel(
+            localizer,
+            new GameInstallationPath(),
+            new LocalInstallationStateStore(),
+            new LocalDiagnostics(), new StubFilePickerService());
+        using var tempDir = TestDirectory.Create();
+        var dialogs = new DialogsViewModel(
+            localizer,
+            new NoticeStateService(tempDir.DataRoot),
+            setupWizard,
+            new LocalDiagnostics());
+
+        settingsOptions.RefreshDisplayNames();
+        dialogs.RefreshLocalizedText();
+
+        Assert.Equal(
+            localizer.T("languageAuto"),
+            settingsOptions.Language.Single(option => option.Code == LauncherLanguages.Auto).DisplayName);
+        Assert.Equal(
+            localizer.T("languageAuto"),
+            dialogs.LanguageOptions.Single(option => option.Code == LauncherLanguages.Auto).DisplayName);
+    }
+
+    private static Dictionary<string, string> ReadLocale(string locale)
+    {
+        if (locale is not ("en" or "zh-Hans" or "zh-Hant" or "ja"))
+        {
+            throw new ArgumentException($"Unexpected locale: {locale}", nameof(locale));
+        }
+
+        var resxFile = locale == "en"
+            ? "LauncherStrings.resx"
+            : $"LauncherStrings.{locale}.resx";
+        var path = Path.Combine(TestLocalizationHelper.FindProjectRoot(), "Resources", resxFile);
+        return TestLocalizationHelper.ReadResx(path);
+    }
+
+    private static string GetRequiredValue(Dictionary<string, string> locale, string key)
+    {
+        Assert.True(locale.TryGetValue(key, out var value), $"Missing locale key: {key}");
+        return value;
+    }
+}

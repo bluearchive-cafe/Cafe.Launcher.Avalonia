@@ -1,5 +1,5 @@
 {
-    "dotnet.defaultSolution": "Cafe.Launcher.Avalonia.slnx",
+    "dotnet.defaultSolution": "Cafe.Launcher.slnx",
     "files.exclude": {
         ".worktrees": true
     },

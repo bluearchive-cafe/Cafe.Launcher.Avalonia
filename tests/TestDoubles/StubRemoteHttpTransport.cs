@@ -5,12 +5,12 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Cafe.Launcher.Avalonia.Helpers;
-using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.UI.Helpers;
+using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.Core.Services;
 using Cafe.Launcher.Core.Helpers;
 
-namespace Cafe.Launcher.Avalonia.Testing;
+namespace Cafe.Launcher.Testing;
 
 /// <summary>
 /// Scriptable <see cref="IRemoteHttpTransport"/> test double. Outcomes are

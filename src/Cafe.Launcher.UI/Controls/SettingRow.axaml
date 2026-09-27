@@ -1,0 +1,28 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:Cafe.Launcher.UI.Controls"
+             x:Class="Cafe.Launcher.UI.Controls.SettingRow"
+             x:Name="Root"
+             x:DataType="controls:SettingRow">
+    <Grid Classes="settings-row" ColumnDefinitions="*,Auto">
+        <Border x:Name="TopDivider"
+                Classes="settings-row-divider"
+                Grid.ColumnSpan="2"
+                IsVisible="{Binding ShowTopDivider, ElementName=Root}"/>
+        <StackPanel Classes="dialog-heading-copy settings-row-copy"
+                    MinWidth="{StaticResource Launcher.Component.Settings.Row.Content.MinWidth}"
+                    HorizontalAlignment="Stretch"
+                    Margin="{StaticResource Launcher.Component.Settings.Row.Content.Padding}">
+            <TextBlock x:Name="RowTitle" Text="{Binding Title, ElementName=Root}" Classes="section-title" TextWrapping="Wrap"/>
+            <TextBlock x:Name="RowDescription" Text="{Binding Description, ElementName=Root}" Classes="caption" TextWrapping="Wrap"/>
+            <TextBlock
+                       Text="{Binding Hint, ElementName=Root}"
+                       Classes="caption"
+                       TextWrapping="Wrap"
+                       IsVisible="{Binding IsHintVisible, ElementName=Root}"/>
+        </StackPanel>
+        <ContentPresenter Grid.Column="1"
+                          x:Name="ActionPresenter"
+                          Content="{Binding Action, ElementName=Root}"/>
+    </Grid>
+</UserControl>

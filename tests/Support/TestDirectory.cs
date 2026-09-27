@@ -1,10 +1,10 @@
 using System;
 using System.IO;
 using System.Threading;
-using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.Core.Services;
 
-namespace Cafe.Launcher.Avalonia.Testing;
+namespace Cafe.Launcher.Testing;
 
 /// <summary>临时目录删除失败时的处理方式。</summary>
 public enum TestDirectoryCleanup

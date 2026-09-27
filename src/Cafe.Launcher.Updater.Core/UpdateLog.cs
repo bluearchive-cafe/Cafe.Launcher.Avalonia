@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 
-namespace Cafe.Launcher.Updater;
+namespace Cafe.Launcher.Updater.Core;
 
 /// <summary>Best-effort helper log: console stderr plus the app-data file the launcher names.</summary>
 internal static class UpdateLog

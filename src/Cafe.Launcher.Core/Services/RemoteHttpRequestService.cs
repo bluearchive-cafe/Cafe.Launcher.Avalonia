@@ -23,7 +23,7 @@ public static class RemoteHttpRequestService
     /// <see cref="HasFakeIpDnsMarker"/> 读出标记，把笼统的网络归因换成针对性的
     /// Fake-IP 指引。
     /// </summary>
-    public const string FakeIpDnsDataKey = "Cafe.Launcher.Avalonia.FakeIpDns";
+    public const string FakeIpDnsDataKey = "Cafe.Launcher.FakeIpDns";
 
     /// <summary>Checks the exception chain for the Fake-IP DNS failure marker.</summary>
     public static bool HasFakeIpDnsMarker(Exception exception)

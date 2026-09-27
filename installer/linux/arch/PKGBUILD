@@ -54,7 +54,7 @@ prepare() {
 
   # v1.1.0 embedded the wall-clock build time. Patch only that legacy form to
   # the tagged commit time; newer sources already embed GitCommitTime directly.
-  local project="src/Cafe.Launcher.Avalonia/Cafe.Launcher.Avalonia.csproj"
+  local project="src/Cafe.Launcher/Cafe.Launcher.csproj"
   if grep -q 'UtcNow.ToString' "$project"; then
     local commit_time
     commit_time=$(git show -s --format=%cI HEAD)
@@ -82,7 +82,7 @@ build() {
   export SOURCE_DATE_EPOCH
   SOURCE_DATE_EPOCH=$(git show -s --format=%ct HEAD)
 
-  dotnet publish src/Cafe.Launcher.Avalonia/Cafe.Launcher.Avalonia.csproj \
+  dotnet publish src/Cafe.Launcher/Cafe.Launcher.csproj \
     --configuration Release \
     --runtime linux-x64 \
     --self-contained true \
@@ -94,7 +94,7 @@ package() {
 
   install -d "$pkgdir/usr/lib/cafe-launcher"
   cp -a "$srcdir/publish/." "$pkgdir/usr/lib/cafe-launcher/"
-  chmod 0755 "$pkgdir/usr/lib/cafe-launcher/Cafe.Launcher.Avalonia"
+  chmod 0755 "$pkgdir/usr/lib/cafe-launcher/Cafe.Launcher"
 
   install -Dm755 "$srcdir/cafe-launcher" "$pkgdir/usr/bin/cafe-launcher"
   install -Dm644 "$srcdir/cafe-launcher.desktop" \

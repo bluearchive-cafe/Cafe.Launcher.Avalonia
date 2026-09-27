@@ -1,6 +1,6 @@
 param(
-    [string]$ResourceFile = (Join-Path $PSScriptRoot '..\src\Cafe.Launcher.Avalonia.UI\Resources\LauncherStrings.resx'),
-    [string]$OutputFile = (Join-Path $PSScriptRoot '..\src\Cafe.Launcher.Avalonia.UI\Resources\LauncherStrings.Designer.cs')
+    [string]$ResourceFile = (Join-Path $PSScriptRoot '..\src\Cafe.Launcher.UI\Resources\LauncherStrings.resx'),
+    [string]$OutputFile = (Join-Path $PSScriptRoot '..\src\Cafe.Launcher.UI\Resources\LauncherStrings.Designer.cs')
 )
 
 $ErrorActionPreference = 'Stop'
@@ -33,7 +33,7 @@ foreach ($key in $keys) {
 $lines = [System.Collections.Generic.List[string]]::new()
 $lines.Add('#nullable enable')
 $lines.Add('')
-$lines.Add('namespace Cafe.Launcher.Avalonia.Resources;')
+$lines.Add('namespace Cafe.Launcher.UI.Resources;')
 $lines.Add('')
 $lines.Add('using System.Globalization;')
 $lines.Add('using System.Resources;')
@@ -53,7 +53,7 @@ $lines.Add('    private static ResourceManager? resourceMan;')
 $lines.Add('')
 $lines.Add('    public static ResourceManager ResourceManager =>')
 $lines.Add('        resourceMan ??= new ResourceManager(')
-$lines.Add('            "Cafe.Launcher.Avalonia.Resources.LauncherStrings",')
+$lines.Add('            "Cafe.Launcher.UI.Resources.LauncherStrings",')
 $lines.Add('            typeof(LauncherStrings).Assembly);')
 $lines.Add('')
 $lines.Add('    private static string GetRequiredString(string key) =>')

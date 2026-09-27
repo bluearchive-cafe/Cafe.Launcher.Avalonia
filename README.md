@@ -137,7 +137,7 @@ Linux 版除了安装、更新、修复游戏外，还可以通过兼容运行�
 
 默认壁纸裁剪自 Pixiv 画师 **めるき（Meruki）** 的插画 **[初めてのゲーム](https://www.pixiv.net/artworks/142932674)**（作品 ID `142932674`）。
 
-- 随应用打包的文件是 `src/Cafe.Launcher.Avalonia/Assets/launcher-background.png`（2560 × 1388），由原图居中裁剪并转为 PNG 后得到。
+- 随应用打包的文件是 `src/Cafe.Launcher/Assets/launcher-background.png`（2560 × 1388），由原图居中裁剪并转为 PNG 后得到。
 - 原图与裁剪后的源素材一并存档在 [`docs/assets/art-sources/`](./docs/assets/art-sources/)，不参与应用打包：`142932674_p0.jpg` 为原始插画（2970 × 1610），`142932674_p0_cut.jpg` 为裁剪版本（2560 × 1388）。
 - 出处同时写在应用内的「设置 → 关于 → 法律信息」中，其中的「查看原始作品」会打开[该作品在 Pixiv 的页面](https://www.pixiv.net/artworks/142932674)。
 
@@ -167,13 +167,13 @@ Linux 版除了安装、更新、修复游戏外，还可以通过兼容运行�
 
 | 项目 | 说明 |
 | --- | --- |
-| [`src/Cafe.Launcher.Avalonia`](./src/Cafe.Launcher.Avalonia/) | WinExe 宿主：进程生命周期、单实例、依赖注入组合根 |
-| [`src/Cafe.Launcher.Avalonia.UI`](./src/Cafe.Launcher.Avalonia.UI/) | Avalonia 表现层程序集（分批迁移中，Views/资源尚未迁入） |
+| [`src/Cafe.Launcher`](./src/Cafe.Launcher/) | WinExe 宿主：进程生命周期、单实例、依赖注入组合根 |
+| [`src/Cafe.Launcher.UI`](./src/Cafe.Launcher.UI/) | Avalonia 表现层程序集：Views、ViewModel、主题、本地化资源与运行时资产 |
 | [`src/Cafe.Launcher.Core`](./src/Cafe.Launcher.Core/) | 无 Avalonia 的应用核心：协议、安装状态、网络传输、设置、下载与运行时 |
 | [`src/Cafe.Launcher.Updater.Core`](./src/Cafe.Launcher.Updater.Core/) | 自更新参数契约、校验、路径计划与应用实现 |
 | [`src/Cafe.Launcher.Updater`](./src/Cafe.Launcher.Updater/) | Windows 自更新 helper 宿主（单文件，复制到临时目录后调用 Core 应用更新） |
-| [`tests/Cafe.Launcher.Avalonia.Tests`](./tests/Cafe.Launcher.Avalonia.Tests/) | xUnit v3 单元测试 |
-| [`tests/Cafe.Launcher.Avalonia.HeadlessTests`](./tests/Cafe.Launcher.Avalonia.HeadlessTests/) | Avalonia Headless UI 测试，含金标截图基线 |
+| [`tests/Cafe.Launcher.Tests`](./tests/Cafe.Launcher.Tests/) | xUnit v3 单元测试 |
+| [`tests/Cafe.Launcher.HeadlessTests`](./tests/Cafe.Launcher.HeadlessTests/) | Avalonia Headless UI 测试，含金标截图基线 |
 
 ### 环境要求
 
@@ -187,7 +187,7 @@ Linux 版除了安装、更新、修复游戏外，还可以通过兼容运行�
 
 ```powershell
 .\build.ps1
-dotnet run --project .\src\Cafe.Launcher.Avalonia\Cafe.Launcher.Avalonia.csproj
+dotnet run --project .\src\Cafe.Launcher\Cafe.Launcher.csproj
 ```
 
 ### 常用命令
@@ -207,7 +207,7 @@ dotnet run --project .\src\Cafe.Launcher.Avalonia\Cafe.Launcher.Avalonia.csproj
 运行单个测试类：
 
 ```powershell
-dotnet test .\tests\Cafe.Launcher.Avalonia.Tests\Cafe.Launcher.Avalonia.Tests.csproj --filter "FullyQualifiedName~VersionComparerTests"
+dotnet test .\tests\Cafe.Launcher.Tests\Cafe.Launcher.Tests.csproj --filter "FullyQualifiedName~VersionComparerTests"
 ```
 
 提交代码前请运行 `.\verify.ps1`。金标截图基线通过 `.\test.ps1 -UpdateGolden` 重新生成。
@@ -215,34 +215,37 @@ dotnet test .\tests\Cafe.Launcher.Avalonia.Tests\Cafe.Launcher.Avalonia.Tests.cs
 ### 代码结构
 
 ```text
-src/Cafe.Launcher.Avalonia/       # WinExe 宿主：Program、App、组合根、单实例转发
+src/Cafe.Launcher/       # WinExe 宿主：Program、App、组合根、单实例转发、崩溃进程拉起
 ├── Composition/       # 依赖注入组合根
-├── Features/          # Shell、游戏操作、设置、向导、诊断和资源面板（迁移目标：UI 程序集）
-├── Services/          # 网络、下载、清单、设置、本地化和日志（部分已迁入 Core）
-├── Models/            # 设置、API、清单和运行状态模型
-├── ViewModels/        # 主窗口级 ViewModel 与模态契约
-├── Views/             # Avalonia 视图和样式
-├── Helpers/           # 路径校验、图片解码、目录遍历等共用工具
-├── Resources/         # （已迁出）多语言资源见 src/Cafe.Launcher.Avalonia.UI/Resources/
-└── Assets/            # 图标、字体、音频和内置壁纸
+├── Constants/         # 构建标识（BuildInfo）
+├── Services/          # 跨进程转发、关闭延迟、崩溃进程拉起
+├── Properties/        # InternalsVisibleTo（仅测试程序集）
+└── Assets/            # 图标流水线输入 app-icon-source.png
 
 src/Cafe.Launcher.Core/           # 无 Avalonia 的应用核心（协议、安装状态、传输、设置）
-src/Cafe.Launcher.Avalonia.UI/    # Avalonia 表现层程序集（生命周期门面已就位，视图待迁入）
+src/Cafe.Launcher.UI/             # Avalonia 表现层：Views/ ViewModels/ Features/ Controls/
+                                  # Converters/ Models/ Helpers/ Services/ Resources/ Assets/
 
 src/Cafe.Launcher.Updater.Core/  # 自更新契约与应用实现
 src/Cafe.Launcher.Updater/       # Windows 自更新单文件宿主
 tests/
-├── Cafe.Launcher.Avalonia.Tests/          # xUnit 单元测试
-├── Cafe.Launcher.Avalonia.HeadlessTests/  # Avalonia Headless UI 测试
-└── Support/                               # 两个套件共用的测试设施
+├── Cafe.Launcher.Tests/          # xUnit 单元测试
+├── Cafe.Launcher.HeadlessTests/  # Avalonia Headless UI 测试
+└── Support/                      # 两个套件共用的测试设施
 ```
+
+工程目录名、`.csproj` 名、`AssemblyName`、`RootNamespace` 与源码命名空间同名（宿主是
+`Cafe.Launcher`，表现层是 `Cafe.Launcher.UI`），发行资产共用同一个产品 token；规则与取舍见
+[ADR-043](docs/design/adr/ADR-043-程序集与命名空间同名.md)。GitHub 仓库名
+（`Cafe.Launcher.Avalonia`）是历史标识，保持不变。
 
 ### 架构要点
 
 - 程序集依赖是单向的：宿主 → UI → Core → Updater.Core（宿主也直接引用 Core 与 Updater.Core）。
   Core 不得引用 Avalonia、MarkView、Material Icons 或 UI 资源；生产程序集之间禁止
-  `InternalsVisibleTo`（只允许测试程序集作为 friend）。分批迁移规则与剩余清单见
-  [ADR-042](docs/design/adr/ADR-042-Avalonia启动器按Core与UI程序集分层.md)。
+  `InternalsVisibleTo`（只允许测试程序集作为 friend）。分层规则见
+  [ADR-042](docs/design/adr/ADR-042-Avalonia启动器按Core与UI程序集分层.md)，命名规则见
+  [ADR-043](docs/design/adr/ADR-043-程序集与命名空间同名.md)。
 - `Composition/ServiceConfiguration.cs` 是唯一的依赖注入组合根；Core 的后端登记项由
   `AddLauncherCore` 负责，组合根必须先调用它再注册表现层，容器反向释放时才会先释放 UI。
   所有服务与 ViewModel 都是单例（单窗口桌面应用）。
@@ -251,7 +254,7 @@ tests/
 - 游戏文件操作必须经过 `Helpers/GamePathValidator`，确保始终落在规范化的 `YostarGames\BlueArchive_JP` 目录内。
 - 启动器数据根由组合根解析一次后注入各模块，不通过静态属性在运行期解析，便于测试隔离。
 - `settings.json` 只通过 `ISavedSettingsWriter` 写入，其余模块一律经 `LauncherSettingsService` 读取。
-- 界面文本必须同时补齐 `src/Cafe.Launcher.Avalonia.UI/Resources/LauncherStrings.resx` 及其 `zh-Hans`、`zh-Hant`、`ja` 对应文件，并按字母序排列。
+- 界面文本必须同时补齐 `src/Cafe.Launcher.UI/Resources/LauncherStrings.resx` 及其 `zh-Hans`、`zh-Hant`、`ja` 对应文件，并按字母序排列。
 
 更完整的边界与约定见 [`AGENTS.md`](./AGENTS.md)、[`PROJECT_CONVENTIONS.md`](./PROJECT_CONVENTIONS.md)、[`CONTEXT.md`](./CONTEXT.md) 和 [`UBIQUITOUS_LANGUAGE.md`](./UBIQUITOUS_LANGUAGE.md)；设计决策记录见 [`docs/design/adr/`](./docs/design/adr/)。
 

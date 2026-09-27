@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using Cafe.Launcher.Updater.Core;
 
 namespace Cafe.Launcher.Updater;
 

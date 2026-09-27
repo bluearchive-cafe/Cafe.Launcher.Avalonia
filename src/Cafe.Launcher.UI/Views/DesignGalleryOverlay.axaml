@@ -1,0 +1,223 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cafe.Launcher.UI.ViewModels"
+             xmlns:h="using:Cafe.Launcher.UI.Helpers"
+             xmlns:controls="using:Cafe.Launcher.UI.Controls"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Cafe.Launcher.UI.Views.DesignGalleryOverlay"
+             x:Name="GalleryRoot"
+             x:DataType="vm:MainWindowViewModel">
+    <Grid Classes="dialog-overlay motion-overlay"
+          IsEnabled="{Binding ModalHost.IsDesignGalleryInteractive}"
+          Classes.motion-enabled="{Binding IsMotionEnabled}"
+          controls:MotionVisibility.IsOpen="{Binding Dialogs.Gallery.IsVisible}"
+          controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
+        <!-- Panel 形态：调试工具同样走统一外壳；尺寸自适应（token 封顶）。 -->
+        <controls:DialogSurface
+            Form="Panel"
+            Classes="motion-surface"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Center"
+            Margin="{StaticResource Launcher.Spacing.Thickness.Xxl}"
+            MaxWidth="{StaticResource Launcher.Layout.DesignGallery.Width}"
+            MaxHeight="{StaticResource Launcher.Layout.DesignGallery.Height}"
+            Title="{Binding Shell.I18n[designGalleryTitle]}"
+            CloseCommand="{Binding Dialogs.Gallery.CloseCommand}"
+            CloseAutomationName="{Binding Shell.I18n[close]}"
+            CloseToolTip="{Binding Shell.I18n[close]}">
+            <controls:DialogSurface.RenderTransform>
+                <TranslateTransform/>
+            </controls:DialogSurface.RenderTransform>
+            <controls:DialogSurface.Content>
+            <StackPanel Spacing="{StaticResource Launcher.Spacing.Md}">
+                        <TextBlock Text="{Binding Shell.I18n[designGalleryHint]}" Classes="caption"/>
+                        <Border Classes="dialog-card design-state-matrix-card">
+                            <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}">
+                                <TextBlock Text="{Binding Shell.I18n[designGalleryTitle]}" Classes="section-title"/>
+                                <TextBlock Text="{Binding Shell.I18n[designGalleryHint]}" Classes="caption"/>
+                                <Grid Classes="design-state-matrix"
+                                      ColumnDefinitions="Auto,*,*,*,*,*,*"
+                                      RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+                                    <TextBlock Grid.Row="0" Classes="design-state-header" Text=" "/>
+                                    <TextBlock Grid.Row="0" Grid.Column="1" Classes="design-state-header"
+                                               Text="{Binding Shell.I18n[designStateNormal]}"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="2" Classes="design-state-header"
+                                               Text="{Binding Shell.I18n[designStateHover]}"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="3" Classes="design-state-header"
+                                               Text="{Binding Shell.I18n[designStatePressed]}"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="4" Classes="design-state-header"
+                                               Text="{Binding Shell.I18n[designStateDisabled]}"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="5" Classes="design-state-header"
+                                               Text="{Binding Shell.I18n[designStateFocus]}"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="6" Classes="design-state-header"
+                                               Text="{Binding Shell.I18n[designStateInvalid]}"/>
+
+                                    <!-- Filled (primary) button -->
+                                    <TextBlock Grid.Row="1" Classes="design-state-component"
+                                               Text="{Binding Shell.I18n[designMatrixFilledButton]}"/>
+                                    <Button Grid.Row="1" Grid.Column="1" Classes="gallery-button state-normal" IsTabStop="False"
+                                            Content="{Binding Shell.I18n[designStateNormal]}"/>
+                                    <Button Grid.Row="1" Grid.Column="2" Classes="gallery-button state-hover" IsTabStop="False"
+                                            Content="{Binding Shell.I18n[designStateHover]}"/>
+                                    <Button Grid.Row="1" Grid.Column="3" Classes="gallery-button state-pressed" IsTabStop="False"
+                                            Content="{Binding Shell.I18n[designStatePressed]}"/>
+                                    <Button Grid.Row="1" Grid.Column="4" Classes="gallery-button state-disabled" IsTabStop="False"
+                                            IsEnabled="False" Content="{Binding Shell.I18n[designStateDisabled]}"/>
+                                    <Button Grid.Row="1" Grid.Column="5" Classes="gallery-button state-focus" IsTabStop="False"
+                                            Content="{Binding Shell.I18n[designStateFocus]}"/>
+                                    <Border Grid.Row="1" Grid.Column="6" Classes="gallery-invalid-unused"
+                                            Width="{StaticResource Launcher.Component.DesignGallery.StateCell.Width}"
+                                            MinHeight="{StaticResource Launcher.Control.Height.Setting}"/>
+
+                                    <!-- Outlined button -->
+                                    <TextBlock Grid.Row="2" Classes="design-state-component"
+                                               Text="{Binding Shell.I18n[designMatrixOutlinedButton]}"/>
+                                    <Button Grid.Row="2" Grid.Column="1" Classes="gallery-button outlined state-normal" IsTabStop="False"
+                                            Content="{Binding Shell.I18n[designStateNormal]}"/>
+                                    <Button Grid.Row="2" Grid.Column="2" Classes="gallery-button outlined state-hover" IsTabStop="False"
+                                            Content="{Binding Shell.I18n[designStateHover]}"/>
+                                    <Button Grid.Row="2" Grid.Column="3" Classes="gallery-button outlined state-pressed" IsTabStop="False"
+                                            Content="{Binding Shell.I18n[designStatePressed]}"/>
+                                    <Button Grid.Row="2" Grid.Column="4" Classes="gallery-button outlined state-disabled" IsTabStop="False"
+                                            IsEnabled="False" Content="{Binding Shell.I18n[designStateDisabled]}"/>
+                                    <Button Grid.Row="2" Grid.Column="5" Classes="gallery-button outlined state-focus" IsTabStop="False"
+                                            Content="{Binding Shell.I18n[designStateFocus]}"/>
+                                    <Border Grid.Row="2" Grid.Column="6" Classes="gallery-invalid-unused"
+                                            Width="{StaticResource Launcher.Component.DesignGallery.StateCell.Width}"
+                                            MinHeight="{StaticResource Launcher.Control.Height.Setting}"/>
+
+                                    <!-- Text button -->
+                                    <TextBlock Grid.Row="3" Classes="design-state-component"
+                                               Text="{Binding Shell.I18n[designMatrixTextButton]}"/>
+                                    <Button Grid.Row="3" Grid.Column="1" Classes="gallery-button text state-normal" IsTabStop="False"
+                                            Content="{Binding Shell.I18n[designStateNormal]}"/>
+                                    <Button Grid.Row="3" Grid.Column="2" Classes="gallery-button text state-hover" IsTabStop="False"
+                                            Content="{Binding Shell.I18n[designStateHover]}"/>
+                                    <Button Grid.Row="3" Grid.Column="3" Classes="gallery-button text state-pressed" IsTabStop="False"
+                                            Content="{Binding Shell.I18n[designStatePressed]}"/>
+                                    <Button Grid.Row="3" Grid.Column="4" Classes="gallery-button text state-disabled" IsTabStop="False"
+                                            IsEnabled="False" Content="{Binding Shell.I18n[designStateDisabled]}"/>
+                                    <Button Grid.Row="3" Grid.Column="5" Classes="gallery-button text state-focus" IsTabStop="False"
+                                            Content="{Binding Shell.I18n[designStateFocus]}"/>
+                                    <Border Grid.Row="3" Grid.Column="6" Classes="gallery-invalid-unused"
+                                            Width="{StaticResource Launcher.Component.DesignGallery.StateCell.Width}"
+                                            MinHeight="{StaticResource Launcher.Control.Height.Setting}"/>
+
+                                    <!-- Error-filled button -->
+                                    <TextBlock Grid.Row="4" Classes="design-state-component"
+                                               Text="{Binding Shell.I18n[designMatrixErrorButton]}"/>
+                                    <Button Grid.Row="4" Grid.Column="1" Classes="gallery-button error state-normal" IsTabStop="False"
+                                            Content="{Binding Shell.I18n[designStateNormal]}"/>
+                                    <Button Grid.Row="4" Grid.Column="2" Classes="gallery-button error state-hover" IsTabStop="False"
+                                            Content="{Binding Shell.I18n[designStateHover]}"/>
+                                    <Button Grid.Row="4" Grid.Column="3" Classes="gallery-button error state-pressed" IsTabStop="False"
+                                            Content="{Binding Shell.I18n[designStatePressed]}"/>
+                                    <Button Grid.Row="4" Grid.Column="4" Classes="gallery-button error state-disabled" IsTabStop="False"
+                                            IsEnabled="False" Content="{Binding Shell.I18n[designStateDisabled]}"/>
+                                    <Button Grid.Row="4" Grid.Column="5" Classes="gallery-button error state-focus" IsTabStop="False"
+                                            Content="{Binding Shell.I18n[designStateFocus]}"/>
+                                    <Border Grid.Row="4" Grid.Column="6" Classes="gallery-invalid-unused"
+                                            Width="{StaticResource Launcher.Component.DesignGallery.StateCell.Width}"
+                                            MinHeight="{StaticResource Launcher.Control.Height.Setting}"/>
+
+                                    <!-- Card (Toast) -->
+                                    <TextBlock Grid.Row="5" Classes="design-state-component"
+                                               Text="{Binding Shell.I18n[designMatrixCardWithToast]}"/>
+                                    <Border Grid.Row="5" Grid.Column="1" Classes="gallery-card toast state-normal">
+                                        <TextBlock Text="{Binding Shell.I18n[designStateNormal]}" Classes="caption"/>
+                                    </Border>
+                                    <Border Grid.Row="5" Grid.Column="2" Classes="gallery-card toast state-hover">
+                                        <TextBlock Text="{Binding Shell.I18n[designStateHover]}" Classes="caption"/>
+                                    </Border>
+                                    <Border Grid.Row="5" Grid.Column="3" Classes="gallery-card toast state-pressed">
+                                        <TextBlock Text="{Binding Shell.I18n[designStatePressed]}" Classes="caption"/>
+                                    </Border>
+                                    <Border Grid.Row="5" Grid.Column="4" Classes="gallery-card toast state-disabled">
+                                        <TextBlock Text="{Binding Shell.I18n[designStateDisabled]}" Classes="caption"/>
+                                    </Border>
+                                    <Border Grid.Row="5" Grid.Column="5" Classes="gallery-card toast state-focus">
+                                        <TextBlock Text="{Binding Shell.I18n[designStateFocus]}" Classes="caption"/>
+                                    </Border>
+                                    <Border Grid.Row="5" Grid.Column="6" Classes="gallery-invalid-unused"
+                                            Width="{StaticResource Launcher.Component.DesignGallery.StateCell.Width}"
+                                            MinHeight="{StaticResource Launcher.Control.Height.Setting}"/>
+
+                                    <!-- Settings row (select input) -->
+                                    <TextBlock Grid.Row="6" Classes="design-state-component"
+                                               Text="{Binding Shell.I18n[designMatrixSettingsRow]}"/>
+                                    <ComboBox Grid.Row="6" Grid.Column="1" Classes="gallery-select state-normal" IsTabStop="False" SelectedIndex="0">
+                                        <ComboBoxItem Content="{Binding Shell.I18n[designStateNormal]}"/>
+                                    </ComboBox>
+                                    <ComboBox Grid.Row="6" Grid.Column="2" Classes="gallery-select state-hover" IsTabStop="False" SelectedIndex="0">
+                                        <ComboBoxItem Content="{Binding Shell.I18n[designStateHover]}"/>
+                                    </ComboBox>
+                                    <ComboBox Grid.Row="6" Grid.Column="3" Classes="gallery-select state-pressed" IsTabStop="False" SelectedIndex="0">
+                                        <ComboBoxItem Content="{Binding Shell.I18n[designStatePressed]}"/>
+                                    </ComboBox>
+                                    <ComboBox Grid.Row="6" Grid.Column="4" Classes="gallery-select state-disabled" IsTabStop="False" IsEnabled="False" SelectedIndex="0">
+                                        <ComboBoxItem Content="{Binding Shell.I18n[designStateDisabled]}"/>
+                                    </ComboBox>
+                                    <ComboBox Grid.Row="6" Grid.Column="5" Classes="gallery-select state-focus" IsTabStop="False" SelectedIndex="0">
+                                        <ComboBoxItem Content="{Binding Shell.I18n[designStateFocus]}"/>
+                                    </ComboBox>
+                                    <ComboBox Grid.Row="6" Grid.Column="6" Classes="gallery-select state-invalid" IsTabStop="False" SelectedIndex="0">
+                                        <ComboBoxItem Content="{Binding Shell.I18n[designStateInvalid]}"/>
+                                    </ComboBox>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                        <ItemsControl ItemsSource="{Binding Dialogs.Gallery.Groups}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Spacing="{StaticResource Launcher.Spacing.Lg}"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="h:DesignTokenGroup">
+                                    <Border Classes="dialog-card">
+                                        <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}">
+                                            <TextBlock Text="{Binding DisplayName}" Classes="section-title"/>
+                                            <ItemsControl ItemsSource="{Binding Items}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="h:DesignTokenItem">
+                                                        <Grid ColumnDefinitions="Auto,*,Auto">
+                                                            <Border Width="{StaticResource Launcher.Control.Size.Swatch}"
+                                                                    Height="{StaticResource Launcher.Control.Size.Swatch}"
+                                                                    CornerRadius="{StaticResource Launcher.Radius.Sm}"
+                                                                    Background="{Binding Swatch}"
+                                                                    BorderBrush="{DynamicResource Launcher.Color.Card.Border}"
+                                                                    BorderThickness="{StaticResource Launcher.Border.Thickness.Default}"
+                                                                    VerticalAlignment="Center"/>
+                                                            <TextBlock Grid.Column="1" Text="{Binding Key}"
+                                                                       Classes="caption"
+                                                                       FontFamily="{StaticResource Launcher.Typography.FontFamily.Monospace}"
+                                                                       TextTrimming="CharacterEllipsis"
+                                                                       Margin="{StaticResource Launcher.Spacing.Thickness.Sm}"/>
+                                                            <TextBlock Grid.Column="2" Text="{Binding ValueText}"
+                                                                       Classes="caption"
+                                                                       FontFamily="{StaticResource Launcher.Typography.FontFamily.Monospace}"/>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+            </controls:DialogSurface.Content>
+            <controls:DialogSurface.Footer>
+                <StackPanel Classes="confirm-actions">
+                    <Button Classes="primary-action dialog-action" Command="{Binding Dialogs.Gallery.CloseCommand}"
+                            AutomationProperties.Name="{Binding Shell.I18n[close]}">
+                        <StackPanel Classes="button-content">
+                            <materialIcons:MaterialIcon Kind="Check" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                            <TextBlock Text="{Binding Shell.I18n[close]}"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </controls:DialogSurface.Footer>
+        </controls:DialogSurface>
+    </Grid>
+</UserControl>

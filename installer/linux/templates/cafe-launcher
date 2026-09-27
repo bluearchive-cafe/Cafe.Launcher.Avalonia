@@ -9,4 +9,4 @@ set -eu
 # pacman); GameInstallationPath only checks it is non-empty, so it is diagnostic.
 export CAFE_LAUNCHER_PACKAGE_FORMAT={PACKAGE_FORMAT}
 
-exec {APP_DIR}/Cafe.Launcher.Avalonia "$@"
+exec {APP_DIR}/Cafe.Launcher "$@"

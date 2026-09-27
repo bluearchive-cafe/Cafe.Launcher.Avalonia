@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
-using Cafe.Launcher.Avalonia.Features.GameOperations;
-using Cafe.Launcher.Avalonia.Models;
-using Cafe.Launcher.Avalonia.Services.GameRuntime;
+using Cafe.Launcher.UI.Features.GameOperations;
+using Cafe.Launcher.UI.Models;
+using Cafe.Launcher.UI.Services.GameRuntime;
 using Cafe.Launcher.Core.Services.GameRuntime;
 using Cafe.Launcher.Core.Models;
 
-namespace Cafe.Launcher.Avalonia.Testing;
+namespace Cafe.Launcher.Testing;
 
 /// <summary>
 /// <see cref="IGameSessionMonitor"/> 的共享测试替身，由两个测试工程通过 csproj Link 共用。

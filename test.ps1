@@ -10,7 +10,7 @@ param(
     [string]$Filter,
     # Regenerate golden screenshot baselines instead of comparing:
     # .\test.ps1 -UpdateGolden  ->  runs the Golden tests with CAFE_GOLDEN_UPDATE=1.
-    # Commit the refreshed PNGs under tests/Cafe.Launcher.Avalonia.HeadlessTests/Baselines
+    # Commit the refreshed PNGs under tests/Cafe.Launcher.HeadlessTests/Baselines
     # together with the intentional visual change.
     [switch]$UpdateGolden
 )
@@ -23,11 +23,11 @@ $resultsRoot = Join-Path $PSScriptRoot 'TestResults\Tests'
 $projects = @(
     @{
         Name = 'Unit'
-        Project = '.\tests\Cafe.Launcher.Avalonia.Tests\Cafe.Launcher.Avalonia.Tests.csproj'
+        Project = '.\tests\Cafe.Launcher.Tests\Cafe.Launcher.Tests.csproj'
     },
     @{
         Name = 'Headless'
-        Project = '.\tests\Cafe.Launcher.Avalonia.HeadlessTests\Cafe.Launcher.Avalonia.HeadlessTests.csproj'
+        Project = '.\tests\Cafe.Launcher.HeadlessTests\Cafe.Launcher.HeadlessTests.csproj'
     }
 )
 

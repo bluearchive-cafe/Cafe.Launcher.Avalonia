@@ -23,7 +23,7 @@ jobs:
         shell: pwsh
 
     env:
-      Project_Path: src/Cafe.Launcher.Avalonia/Cafe.Launcher.Avalonia.csproj
+      Project_Path: src/Cafe.Launcher/Cafe.Launcher.csproj
       DOTNET_CLI_TELEMETRY_OPTOUT: 1
       DOTNET_NOLOGO: 1
       AVALONIA_TELEMETRY_OPTOUT: 1
@@ -104,7 +104,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/deb-root"
           dpkg-deb --extract "${debs[0]}" "$RUNNER_TEMP/deb-root"
           test -x "$RUNNER_TEMP/deb-root/usr/bin/cafe-launcher"
-          test -x "$RUNNER_TEMP/deb-root/opt/cafe-launcher/Cafe.Launcher.Avalonia"
+          test -x "$RUNNER_TEMP/deb-root/opt/cafe-launcher/Cafe.Launcher"
           test -f "$RUNNER_TEMP/deb-root/usr/share/doc/cafe-launcher/copyright"
           test -f "$RUNNER_TEMP/deb-root/usr/share/doc/cafe-launcher/changelog.Debian.gz"
           test -f "$RUNNER_TEMP/deb-root/usr/share/doc/cafe-launcher/THIRD-PARTY-NOTICES.md"
@@ -128,12 +128,12 @@ jobs:
           rpm --root "$RUNNER_TEMP/rpm-root" --initdb
           rpm --root "$RUNNER_TEMP/rpm-root" -ivh --nodeps --noscripts "${rpms[0]}"
           test -x "$RUNNER_TEMP/rpm-root/usr/bin/cafe-launcher"
-          test -x "$RUNNER_TEMP/rpm-root/opt/cafe-launcher/Cafe.Launcher.Avalonia"
+          test -x "$RUNNER_TEMP/rpm-root/opt/cafe-launcher/Cafe.Launcher"
           test -f "$RUNNER_TEMP/rpm-root/usr/share/metainfo/cafe-launcher.metainfo.xml"
           sh -n "$RUNNER_TEMP/rpm-root/usr/bin/cafe-launcher"
           desktop-file-validate "$RUNNER_TEMP/rpm-root/usr/share/applications/cafe-launcher.desktop"
           appstreamcli validate --pedantic "$RUNNER_TEMP/rpm-root/usr/share/metainfo/cafe-launcher.metainfo.xml"
-          "$RUNNER_TEMP/rpm-root/opt/cafe-launcher/Cafe.Launcher.Avalonia" --version
+          "$RUNNER_TEMP/rpm-root/opt/cafe-launcher/Cafe.Launcher" --version
 
           appimages=(artifacts/distribution/*_linux-x64.AppImage)
           if [[ ${#appimages[@]} -ne 1 || ! -f "${appimages[0]}" ]]; then
@@ -257,7 +257,7 @@ jobs:
         shell: pwsh
 
     env:
-      Project_Path: src/Cafe.Launcher.Avalonia/Cafe.Launcher.Avalonia.csproj
+      Project_Path: src/Cafe.Launcher/Cafe.Launcher.csproj
       INNO_SETUP_VERSION: 7.1.0
       DOTNET_CLI_TELEMETRY_OPTOUT: 1
       DOTNET_NOLOGO: 1
@@ -354,7 +354,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: installer-package
-          path: artifacts/distribution/Cafe.Launcher.Avalonia_*_setup.exe
+          path: artifacts/distribution/Cafe.Launcher_*_setup.exe
           retention-days: 1
 
       - name: Save NuGet cache
@@ -415,7 +415,7 @@ jobs:
               echo ""
               local entry name
               while IFS='|' read -r suffix label; do
-                for entry in artifacts/distribution/Cafe.Launcher.Avalonia_*_"${suffix}"; do
+                for entry in artifacts/distribution/Cafe.Launcher_*_"${suffix}"; do
                   if [[ -f "$entry" ]]; then
                     name="$(basename "$entry")"
                     echo "- ${label}：[${name}](${base}/${name})"
@@ -446,7 +446,7 @@ jobs:
           # 摘要清单随产物一并发布，用户据此校验下载内容。文件集合由该目录实际内容推导
           # （不另抄一份产物清单），但数量不符即失败——宁可让发布中断，也不要发出不完整
           # 或掺入意外文件的清单。
-          mapfile -t packages < <(LC_ALL=C ls -1 Cafe.Launcher.Avalonia_* | LC_ALL=C sort)
+          mapfile -t packages < <(LC_ALL=C ls -1 Cafe.Launcher_* | LC_ALL=C sort)
           if [[ ${#packages[@]} -ne 7 ]]; then
             echo "Expected 7 distribution packages, found ${#packages[@]}: ${packages[*]}" >&2
             exit 1
@@ -470,13 +470,13 @@ jobs:
           name: ${{ github.ref_name }}
           body_path: changelog.md
           files: |
-            artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_win-x64.zip
-            artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_setup.exe
-            artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_osx-arm64.zip
-            artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.tar.gz
-            artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.AppImage
-            artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.deb
-            artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.rpm
+            artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_win-x64.zip
+            artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_setup.exe
+            artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_osx-arm64.zip
+            artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_linux-x64.tar.gz
+            artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_linux-x64.AppImage
+            artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_linux-x64.deb
+            artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_linux-x64.rpm
             artifacts/distribution/SHA256SUMS
           prerelease: ${{ contains(github.ref_name, '-') }}
           fail_on_unmatched_files: true
@@ -491,13 +491,13 @@ jobs:
           name: ${{ github.ref_name }}
           body_path: changelog-distribution.md
           files: |
-            artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_win-x64.zip
-            artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_setup.exe
-            artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_osx-arm64.zip
-            artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.tar.gz
-            artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.AppImage
-            artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.deb
-            artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.rpm
+            artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_win-x64.zip
+            artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_setup.exe
+            artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_osx-arm64.zip
+            artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_linux-x64.tar.gz
+            artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_linux-x64.AppImage
+            artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_linux-x64.deb
+            artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_linux-x64.rpm
             artifacts/distribution/SHA256SUMS
           prerelease: ${{ contains(github.ref_name, '-') }}
           fail_on_unmatched_files: true

@@ -1,8 +1,8 @@
-using Cafe.Launcher.Avalonia.Features.GameOperations;
-using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.UI.Features.GameOperations;
+using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.Core.Models;
 
-namespace Cafe.Launcher.Avalonia.Testing;
+namespace Cafe.Launcher.Testing;
 
 /// <summary>
 /// <see cref="IGameOperationExecutor"/>（internal）的共享测试替身，由两个测试工程通过

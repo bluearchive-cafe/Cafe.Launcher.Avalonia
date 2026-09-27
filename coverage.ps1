@@ -32,12 +32,12 @@ New-Item -ItemType Directory -Path $resultsRoot | Out-Null
 $projects = @(
     @{
         Name = 'Unit'
-        Project = '.\tests\Cafe.Launcher.Avalonia.Tests\Cafe.Launcher.Avalonia.Tests.csproj'
+        Project = '.\tests\Cafe.Launcher.Tests\Cafe.Launcher.Tests.csproj'
         ResultsDirectory = Join-Path $resultsRoot 'unit'
     },
     @{
         Name = 'Headless'
-        Project = '.\tests\Cafe.Launcher.Avalonia.HeadlessTests\Cafe.Launcher.Avalonia.HeadlessTests.csproj'
+        Project = '.\tests\Cafe.Launcher.HeadlessTests\Cafe.Launcher.HeadlessTests.csproj'
         ResultsDirectory = Join-Path $resultsRoot 'headless'
     }
 )
@@ -130,8 +130,8 @@ $branchCoverage = @{}
 # 这里按项目目录要求它们各自贡献被计数的行，缺一个就直接失败。
 $requiredAssemblyRoots = @(
     'src\Cafe.Launcher.Core',
-    'src\Cafe.Launcher.Avalonia',
-    'src\Cafe.Launcher.Avalonia.UI'
+    'src\Cafe.Launcher',
+    'src\Cafe.Launcher.UI'
 )
 $countedSourceFiles = @{}
 foreach ($requiredRoot in $requiredAssemblyRoots) {
