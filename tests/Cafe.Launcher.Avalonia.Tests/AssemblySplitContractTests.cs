@@ -41,6 +41,7 @@ public sealed class AssemblySplitContractTests
         Assert.True(File.Exists(TestRepository.FromCoreRoot("Services/RetryPolicy.cs")));
         Assert.True(File.Exists(TestRepository.FromCoreRoot("Services/RemoteBodyReader.cs")));
         Assert.True(File.Exists(TestRepository.FromCoreRoot("Services/ResponseBodyReader.cs")));
+        Assert.True(File.Exists(TestRepository.FromCoreRoot("Services/RemoteHttpRequestService.cs")));
         Assert.True(File.Exists(TestRepository.FromCoreRoot("Helpers/HttpClientLease.cs")));
         Assert.False(File.Exists(TestRepository.FromHostRoot("Services/LauncherDataRoot.cs")));
         Assert.False(File.Exists(TestRepository.FromHostRoot("Services/LauncherSettingsService.cs")));
@@ -52,6 +53,7 @@ public sealed class AssemblySplitContractTests
         Assert.False(File.Exists(TestRepository.FromHostRoot("Services/RetryPolicy.cs")));
         Assert.False(File.Exists(TestRepository.FromHostRoot("Services/RemoteBodyReader.cs")));
         Assert.False(File.Exists(TestRepository.FromHostRoot("Services/ResponseBodyReader.cs")));
+        Assert.False(File.Exists(TestRepository.FromHostRoot("Services/RemoteHttpRequestService.cs")));
         Assert.False(File.Exists(TestRepository.FromHostRoot("Helpers/HttpClientLease.cs")));
     }
 
