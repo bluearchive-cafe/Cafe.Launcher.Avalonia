@@ -26,7 +26,6 @@ public partial class App : Application
     private const string SignalName = @"Local\Cafe_Launcher_SI_Show";
     private readonly CancellationTokenSource shutdownCts = new();
     private ServiceProvider? serviceProvider;
-    private SystemTrayService? trayService;
     private ShowWindowSignalListener? showWindowListener;
     private LaunchGameSignalListener? launchGameListener;
 
@@ -48,51 +47,12 @@ public partial class App : Application
             // Build DI container, reusing the pre-DI UnifiedLogger so there is
             // a single Serilog pipeline for the entire process.
             var serviceCollection = new ServiceCollection();
-            MainWindow? presentationWindow = null;
-            MainWindowViewModel? presentationViewModel = null;
+            var shutdownDeferral = new ShutdownDeferral();
             // 组合根解析唯一的数据根并先注册 Core；表现层随后注册，容器反向释放时先释放 UI。
             // 宿主不再自己解析数据根，也不再单独调用 AddLauncherCore（那会造成两处注册顺序契约）。
             serviceCollection.AddLauncherServices(
                 existingLogger: Program.PreDiLogger,
                 existingFatalCrashService: Program.PreDiFatalCrashService);
-            serviceCollection.AddLauncherPresentation(
-                new LauncherPresentationCallbacks(
-                    CreateMainWindow: () => presentationWindow
-                        ?? throw new InvalidOperationException("Presentation window has not been created."),
-                    InitializeAsync: cancellationToken => InitializeViewModelAsync(
-                        presentationWindow
-                            ?? throw new InvalidOperationException("Presentation window has not been created."),
-                        presentationViewModel
-                            ?? throw new InvalidOperationException("Presentation view model has not been created."),
-                        serviceProvider
-                            ?? throw new InvalidOperationException("Presentation services have not been built."),
-                        cancellationToken),
-                    ShowWindow: () =>
-                    {
-                        if (trayService is not null)
-                        {
-                            trayService.ShowWindow();
-                        }
-                        else
-                        {
-                            presentationWindow?.ShowWindow();
-                        }
-                    },
-                    LaunchGameAsync: _ =>
-                    {
-                        (presentationViewModel
-                            ?? throw new InvalidOperationException("Presentation view model has not been created."))
-                            .Operations.StartGameCommand.Execute(null);
-                        return Task.CompletedTask;
-                    },
-                    PrepareForShutdownAsync: _ => CompleteShutdownAsync(
-                        presentationWindow
-                            ?? throw new InvalidOperationException("Presentation window has not been created."),
-                        presentationViewModel
-                            ?? throw new InvalidOperationException("Presentation view model has not been created."),
-                        serviceProvider
-                            ?? throw new InvalidOperationException("Presentation services have not been built.")),
-                    Dispose: () => presentationViewModel?.Dispose()));
             serviceProvider = serviceCollection.BuildServiceProvider();
             Program.ServiceProvider = serviceProvider;
 
@@ -104,18 +64,9 @@ public partial class App : Application
             _ = serviceProvider.GetRequiredService<Cafe.Launcher.Core.Services.Diagnostics.LocalDiagnostics>()
                 .DebugAsync("Application", "Application started, DI container built", CancellationToken.None);
 
-            var viewModel = serviceProvider.GetRequiredService<MainWindowViewModel>();
-            presentationViewModel = viewModel;
-            var mainWindow = new MainWindow(
-                serviceProvider.GetRequiredService<WindowFilePickerService>(),
-                serviceProvider.GetRequiredService<WindowMetricsService>(),
-                serviceProvider.GetRequiredService<Cafe.Launcher.Core.Services.Diagnostics.LocalDiagnostics>())
-            {
-                DataContext = viewModel,
-            };
-            presentationWindow = mainWindow;
-            var shutdownDeferral = new ShutdownDeferral();
+            // 表现层自己构造窗口、ViewModel 与托盘：宿主只拿到一个 Window 交回应用生命周期。
             var presentationSession = serviceProvider.GetRequiredService<LauncherPresentationSession>();
+            var mainWindow = presentationSession.CreateMainWindow();
             var fatalShutdown = false;
             CrashReportWindow? crashReportWindow = null;
 
@@ -133,12 +84,9 @@ public partial class App : Application
                     shutdownCts.Cancel();
                     showWindowListener?.Dispose();
                     launchGameListener?.Dispose();
-                    trayService?.Dispose();
-                    mainWindow.Hide();
+                    presentationSession.HideMainWindow();
 
-                    crashReportWindow = new CrashReportWindow(
-                        report,
-                        serviceProvider.GetRequiredService<LauncherDataRoot>());
+                    crashReportWindow = (CrashReportWindow)presentationSession.CreateCrashReportWindow(report);
                     crashReportWindow.Closed += (_, _) => desktop.Shutdown(1);
                     desktop.MainWindow = crashReportWindow;
                     crashReportWindow.Show();
@@ -196,35 +144,9 @@ public partial class App : Application
             }
 
             desktop.ShutdownRequested += HandleShutdownRequested;
-            mainWindow.ConfigureViewModel(viewModel);
 
-            // Initialize system tray (depends on Window — kept outside DI)
-            try
-            {
-                var localizationService = serviceProvider.GetRequiredService<LocalizationService>();
-                trayService = new SystemTrayService(
-                    mainWindow,
-                    localizationService,
-                    serviceProvider.GetRequiredService<Cafe.Launcher.Core.Services.Diagnostics.LocalDiagnostics>(),
-                    serviceProvider.GetRequiredService<ISystemTrayActions>());
-                if (trayService.Initialize())
-                {
-                    mainWindow.SetSystemTray(trayService);
-                }
-                else
-                {
-                    trayService = null;
-                }
-            }
-            catch (Exception ex)
-            {
-                LocalDiagnostics.LogSync(LogEntrySeverity.Warn, "App", $"SystemTrayService init failed: {ex.Message}");
-            }
-
-            // Clean up on app exit. The service provider is disposed by Program.RunSession.
-            // Avalonia can raise Exit more than once for a single shutdown: the fatal crash
-            // path calls the forced Shutdown(1), and the lifetime then replays its own
-            // window-close shutdown. Cleanup disposes the CTS, so it must run exactly once.
+            // 清理：容器由 Program.RunSession 释放。Avalonia 对同一次关闭可能触发多次 Exit，
+            // 因此清理只跑一次（致命崩溃路径会走强制的 Shutdown(1)，随后生命周期再补一次）。
             var exited = false;
             desktop.Exit += (_, _) =>
             {
@@ -240,7 +162,6 @@ public partial class App : Application
                 launchGameListener?.Dispose();
                 shutdownCts.Cancel();
                 presentationSession.Dispose();
-                trayService?.Dispose();
                 shutdownCts.Dispose();
             };
 
@@ -253,138 +174,16 @@ public partial class App : Application
             // local socket, since .NET has no named events outside Windows).
             launchGameListener = new LaunchGameSignalListener(presentationSession, Program.LaunchGameSignal!);
 
-            // Register Opened handler BEFORE desktop.MainWindow is set — that assignment
-            // may trigger the window to show and fire Opened synchronously.
-            // Both handlers are one-shot (WindowOpenedOnce): Avalonia re-raises Opened on
-            // every Show after a Hide, and a tray restore goes through Show, so a handler
-            // left attached re-ran the launch flow on every restore-from-tray — popping the
-            // "launcher minimized to tray" toast a second time.
-            if (Program.FirstLaunch)
-            {
-                WindowOpenedOnce.Subscribe(mainWindow, (_, _) =>
-                {
-                    // Post at a priority that ensures layout/render/bindings are complete
-                    // before we toggle visibility.
-                    Dispatcher.UIThread.Post(() =>
-                    {
-                        // 首启不做完整初始化（快照由向导驱动后再加载），但动效偏好必须先行
-                        // 应用，否则 IsMotionReduced 停留在字段默认 true，首启向导全程瞬切。
-                        viewModel.ApplyFirstLaunchMotionPreference();
-                        viewModel.Dialogs.ShowSetupWizard();
-                    }, DispatcherPriority.Background);
-                });
-            }
-            else
-            {
-                WindowOpenedOnce.Subscribe(mainWindow, (_, _) =>
-                {
-                    _ = InitializePresentationAsync(presentationSession, shutdownCts.Token);
-                });
-            }
+            // 启动行为由表现层挂载：首启走向导，否则完整初始化（两者都只跑一次）。
+            presentationSession.AttachStartupBehavior(
+                Program.FirstLaunch,
+                Program.LaunchGameRequested,
+                shutdownCts.Token);
 
             desktop.MainWindow = mainWindow;
         }
 
         base.OnFrameworkInitializationCompleted();
-    }
-
-    private static async Task InitializeViewModelAsync(
-        MainWindow mainWindow,
-        MainWindowViewModel viewModel,
-        ServiceProvider serviceProvider,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var settingsService = serviceProvider.GetRequiredService<LauncherSettingsService>();
-            var savedSettings = await settingsService.ReadAsync(cancellationToken);
-            mainWindow.ApplySavedWindowState(savedSettings);
-            await viewModel.InitializeAsync(cancellationToken);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-        }
-        catch (Exception exception)
-        {
-            // 初始化失败本身由下方 HandleErrorAsync 记录，不在此重复打点。
-            try
-            {
-                // Initialization itself failed, so localization may be unavailable; keep an
-                // English fallback so the toast never shows the raw "Localization unavailable." text.
-                var toastMessage = "Launcher initialization failed.";
-                try
-                {
-                    toastMessage = serviceProvider
-                        .GetRequiredService<LocalizationService>()
-                        .F(LocalizationKeys.LauncherInitFailed, exception.Message);
-                }
-                catch (Exception localizationException)
-                {
-                    // 豁免：本地化失败的兜底路径——此时诊断/本地化本身不可用，
-                    // Debug 输出是最后一级无依赖通道。
-                    Debug.WriteLine($"Failure-toast localization unavailable: {localizationException.Message}");
-                }
-
-                await serviceProvider
-                    .GetRequiredService<IErrorHandlingService>()
-                    .HandleErrorAsync("Launcher initialization failed.", exception,
-                        new ErrorHandlingOptions { ToastMessage = toastMessage });
-            }
-            catch (Exception diagnosticsException)
-            {
-                // 豁免：诊断管道自身失败的兜底路径，不得再回调诊断。
-                Debug.WriteLine($"Initialization diagnostics failed: {diagnosticsException.Message}");
-            }
-        }
-        finally
-        {
-            if (!cancellationToken.IsCancellationRequested)
-            {
-                mainWindow.ApplySavedWindowState(viewModel.Settings.Editor.GetSavedSnapshot());
-            }
-        }
-    }
-
-    private static async Task InitializePresentationAsync(
-        LauncherPresentationSession presentationSession,
-        CancellationToken cancellationToken)
-    {
-        await presentationSession.InitializeAsync(cancellationToken);
-        if (Program.LaunchGameRequested && !Program.FirstLaunch)
-        {
-            // The initial refresh has finished, so auto-launch uses the same
-            // presentation entry point as a forwarded --launch-game request.
-            await Dispatcher.UIThread.InvokeAsync(
-                () => presentationSession.LaunchGameAsync(cancellationToken));
-        }
-    }
-
-    private static async Task CompleteShutdownAsync(
-        MainWindow mainWindow,
-        MainWindowViewModel viewModel,
-        ServiceProvider serviceProvider)
-    {
-        try
-        {
-            await viewModel.PrepareForShutdownAsync();
-
-            if (viewModel.Settings.Editor.GetSavedSnapshot().RememberWindowPositionAndSize)
-            {
-                await serviceProvider.GetRequiredService<ISavedSettingsWriter>()
-                    .UpdateAsync(mainWindow.CaptureWindowState);
-            }
-        }
-        catch (Exception exception)
-        {
-            // 关窗持久化失败发生在每次正常退出路径上：必须写入本地日志，
-            // 否则用户报告「窗口位置记不住」时无任何诊断线索（Debug 输出在
-            // Release 构建不可见）。此刻 serviceProvider 尚未 Dispose，
-            // LocalDiagnostics.ErrorAsync 自身全量吞异常，不会反向影响退出流程。
-            await serviceProvider.GetRequiredService<LocalDiagnostics>().ErrorAsync(
-                "Shutdown persistence failed.",
-                exception,
-                CancellationToken.None);
-        }
     }
 
     /// <summary>
