@@ -1,4 +1,4 @@
-namespace Cafe.Launcher.Avalonia.Services.Diagnostics;
+namespace Cafe.Launcher.Core.Services.Diagnostics;
 
 /// <summary>
 /// Closed set of boundaries that may raise an unrecoverable failure. Snapshots and logs
@@ -23,7 +23,7 @@ public enum CrashOrigin
     DebugSimulation
 }
 
-internal static class CrashOriginExtensions
+public static class CrashOriginExtensions
 {
     /// <summary>Stable snapshot and log label for one crash origin.</summary>
     public static string ToSourceLabel(this CrashOrigin origin) => origin switch

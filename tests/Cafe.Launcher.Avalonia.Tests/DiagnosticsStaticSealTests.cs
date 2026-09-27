@@ -1,5 +1,5 @@
 using System.IO;
-using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
@@ -15,8 +15,8 @@ public sealed class DiagnosticsStaticSealTests
     /// <summary>允许出现 <c>RegisterSharedLogger(</c> 的生产文件：定义与唯一所有方。</summary>
     private static readonly string[] AllowedFiles =
     [
-        "Composition/ServiceConfiguration.cs",
-        "Services/Diagnostics/LocalDiagnostics.cs",
+        "src/Cafe.Launcher.Avalonia/Composition/ServiceConfiguration.cs",
+        "src/Cafe.Launcher.Core/Services/Diagnostics/LocalDiagnostics.cs",
     ];
 
     [Fact]
@@ -43,11 +43,12 @@ public sealed class DiagnosticsStaticSealTests
     [Fact]
     public void RegisterSharedLogger_IsCalledOnlyByTheCompositionRoot()
     {
-        var applicationRoot = TestRepository.FromApplicationRoot(".");
-        var callers = Directory
-            .EnumerateFiles(applicationRoot, "*.cs", SearchOption.AllDirectories)
+        // 扫描域是全部生产源码（host + Core）：共享日志器的定义已随诊断实现迁入 Core，
+        // 只扫宿主会让这条守卫随搬迁静默缩小。路径一律相对仓库根。
+        var callers = new[] { TestRepository.HostPath, TestRepository.CorePath }
+            .SelectMany(root => Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories))
             .Where(file => File.ReadAllText(file).Contains("RegisterSharedLogger(", StringComparison.Ordinal))
-            .Select(file => Path.GetRelativePath(applicationRoot, file).Replace(Path.DirectorySeparatorChar, '/'))
+            .Select(file => Path.GetRelativePath(TestRepository.Root, file).Replace(Path.DirectorySeparatorChar, '/'))
             .OrderBy(path => path, StringComparer.Ordinal)
             .ToArray();
 

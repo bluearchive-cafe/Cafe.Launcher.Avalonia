@@ -11,7 +11,7 @@ using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Features.ResourcePanel;
 using Cafe.Launcher.Avalonia.Features.Settings;
 using Cafe.Launcher.Avalonia.Services;
-using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Core.Services.Update;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Cafe.Launcher.Core;

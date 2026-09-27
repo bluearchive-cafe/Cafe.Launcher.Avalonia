@@ -8,6 +8,7 @@ using Cafe.Launcher.Avalonia.Features.Settings;
 using Cafe.Launcher.Avalonia.Features.SetupWizard;
 using Cafe.Launcher.Avalonia.Features.Shell;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Core.Services.GameRuntime;
 using Cafe.Launcher.Core.Services.Update;
@@ -48,7 +49,7 @@ public static class ServiceConfiguration
         if (existingLogger is not null)
             services.AddSingleton(existingLogger);
         else
-            services.AddSingleton(_ => new UnifiedLogger(dataRoot.Root));
+            services.AddSingleton(_ => new UnifiedLogger(dataRoot.Root, BuildInfo.Identity));
         services.AddSingleton<GraphicsInfoProbe>();
         services.AddSingleton<ProtonBuildDiscovery>();
         services.AddSingleton<LogExportService>();

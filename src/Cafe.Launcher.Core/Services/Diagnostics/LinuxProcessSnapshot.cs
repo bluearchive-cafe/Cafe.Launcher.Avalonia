@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading;
 using Cafe.Launcher.Core.Services.GameRuntime;
 
-namespace Cafe.Launcher.Avalonia.Services.Diagnostics;
+namespace Cafe.Launcher.Core.Services.Diagnostics;
 
 /// <summary>
 /// 诊断导出里的 Linux 进程快照（P0-A 取证与 P0-B 采样共用）：把导出时刻与游戏运行器相关的进程
@@ -22,13 +22,13 @@ namespace Cafe.Launcher.Avalonia.Services.Diagnostics;
 /// 挡在包外。环境变量同样只导出这组键，不是整份 <c>environ</c>。</para>
 /// <para>maps 暂不导出，作为 §6 那批待采样问题之后的增量；本类不做判定，只做采集与格式化。</para>
 /// </remarks>
-internal static class LinuxProcessSnapshot
+public static class LinuxProcessSnapshot
 {
     /// <summary>归档里的条目名。</summary>
-    internal const string EntryName = "linux-process-snapshot.txt";
+    public const string EntryName = "linux-process-snapshot.txt";
 
     /// <summary>输出上限，超过即截断并写明，避免异常大的进程表让导出包失控。</summary>
-    internal const int MaxCharacters = 256 * 1024;
+    public const int MaxCharacters = 256 * 1024;
 
     private static readonly string[] EnvironmentKeys =
     [
@@ -51,7 +51,7 @@ internal static class LinuxProcessSnapshot
     /// 枚举 <c>/proc</c> 下的进程。argv 为空的（内核线程）跳过以减少噪声；单个进程的字段读不到就
     /// 留空，不影响其余进程。
     /// </summary>
-    internal static IReadOnlyList<UnixProcessRecord> ReadProcesses(CancellationToken cancellationToken)
+    public static IReadOnlyList<UnixProcessRecord> ReadProcesses(CancellationToken cancellationToken)
     {
         var records = new List<UnixProcessRecord>();
         foreach (var directory in Directory.EnumerateDirectories("/proc"))
@@ -82,7 +82,7 @@ internal static class LinuxProcessSnapshot
     }
 
     /// <summary>纯格式化：只保留运行器相关进程，按 pid 排序，并在超限处截断。</summary>
-    internal static string Format(IEnumerable<UnixProcessRecord> records)
+    public static string Format(IEnumerable<UnixProcessRecord> records)
     {
         var relevant = records.Where(IsRelevant).OrderBy(record => record.ProcessId).ToList();
 

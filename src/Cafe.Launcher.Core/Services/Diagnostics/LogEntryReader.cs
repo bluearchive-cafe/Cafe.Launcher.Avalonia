@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text.RegularExpressions;
 
-namespace Cafe.Launcher.Avalonia.Services.Diagnostics;
+namespace Cafe.Launcher.Core.Services.Diagnostics;
 
 /// <summary>
 /// One unified-log entry: its header line plus every continuation line that belongs to it
 /// (multi-line message body and exception text).
 /// </summary>
-internal sealed record LogRecord(
+public sealed record LogRecord(
     string TimestampText,
     DateTimeOffset? Timestamp,
     string SeverityCode,
@@ -22,7 +22,7 @@ internal sealed record LogRecord(
 /// text, so any line that is not a header belongs to the entry above it. Shared by the log
 /// viewer and the export filter so both agree on entry boundaries.
 /// </summary>
-internal static class LogEntryReader
+public static class LogEntryReader
 {
     internal static readonly Regex HeaderLineRegex = new(
         @"^(\d{4}-\d{2}-\d{2}T[\d:.+-]+) \[(ERR|WRN|INF|VRB|DBG|FTL)\] (.+)",

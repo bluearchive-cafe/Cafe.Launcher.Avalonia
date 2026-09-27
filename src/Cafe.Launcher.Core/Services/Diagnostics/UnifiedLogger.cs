@@ -6,12 +6,12 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Cafe.Launcher.Avalonia.Constants;
+using Cafe.Launcher.Core.Constants;
 using Serilog;
 using Serilog.Core;
 using Serilog.Events;
 
-namespace Cafe.Launcher.Avalonia.Services.Diagnostics;
+namespace Cafe.Launcher.Core.Services.Diagnostics;
 
 /// <summary>
 /// Centralised logging engine. All error, warning, and informational messages
@@ -23,16 +23,26 @@ public sealed class UnifiedLogger : IDisposable
     private readonly Logger serilogLogger;
     private readonly LoggingLevelSwitch levelSwitch;
     private readonly string logFilePath;
+    private readonly string launcherVersion;
+    private readonly string commitSha;
+    private readonly string buildConfiguration;
     private bool disposed;
 
     /// <summary>
     /// 日志目录必须显式给出：进程根由组合根或 ADR-019 保护的 pre-DI 路径解析，
     /// 日志器本身不再是「谁都能读一次」的静态消费点。
     /// </summary>
-    internal UnifiedLogger(string logDirectory)
+    /// <param name="buildIdentity">
+    /// 宿主注入的构建标识：版本、提交与配置写进日志头与 Serilog 属性。此前读宿主
+    /// <c>BuildInfo</c>，迁入 Core 后改为注入（缺省时留空，测试与辅助宿主不必伪造）。
+    /// </param>
+    public UnifiedLogger(string logDirectory, LauncherBuildIdentity? buildIdentity = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(logDirectory);
         logFilePath = Path.Combine(logDirectory, GamePaths.UnifiedLogFileName);
+        launcherVersion = buildIdentity?.LauncherVersion ?? "";
+        commitSha = buildIdentity?.CommitSha ?? "";
+        buildConfiguration = buildIdentity?.BuildConfiguration ?? "";
 
         // Verbose in Debug builds so developers see everything; Information in
         // Release so production logs stay lean. The switch can be adjusted at
@@ -48,8 +58,8 @@ public sealed class UnifiedLogger : IDisposable
         serilogLogger = new LoggerConfiguration()
             .MinimumLevel.ControlledBy(levelSwitch)
             .Enrich.FromLogContext()
-            .Enrich.WithProperty("AppVersion", BuildInfo.LauncherVersion)
-            .Enrich.WithProperty("CommitSha", BuildInfo.CommitSha)
+            .Enrich.WithProperty("AppVersion", launcherVersion)
+            .Enrich.WithProperty("CommitSha", commitSha)
             .WriteTo.Async(a => a.File(
                 logFilePath,
                 formatProvider: CultureInfo.InvariantCulture,
@@ -69,7 +79,7 @@ public sealed class UnifiedLogger : IDisposable
 
     // ── diagnostics / testing ──────────────────────────────────────────
 
-    internal string LogFilePath => logFilePath;
+    public string LogFilePath => logFilePath;
 
     // ── public API ──────────────────────────────────────────────────────
 
@@ -138,11 +148,11 @@ public sealed class UnifiedLogger : IDisposable
     {
         try
         {
-            var version = BuildInfo.LauncherVersion;
-            var commitSha = BuildInfo.CommitSha;
+            var version = launcherVersion;
+            var commitSha = this.commitSha;
             var os = Environment.OSVersion.ToString();
             var framework = RuntimeInformation.FrameworkDescription;
-            var buildConfig = BuildInfo.BuildConfiguration;
+            var buildConfig = buildConfiguration;
 
             var message = new StringBuilder();
             message.AppendLine("Session started");

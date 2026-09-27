@@ -4,7 +4,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Cafe.Launcher.Avalonia.Services.Diagnostics;
+namespace Cafe.Launcher.Core.Services.Diagnostics;
 
 /// <summary>
 /// Thin compatibility wrapper around <see cref="UnifiedLogger"/>.
@@ -33,7 +33,7 @@ public sealed class LocalDiagnostics : ILauncherDiagnostics
     /// Production code should always go through the DI container which provides the real
     /// <see cref="UnifiedLogger"/> path via <see cref="LocalDiagnostics(UnifiedLogger)"/>.
     /// </summary>
-    internal LocalDiagnostics() : this(new UnifiedLogger(Path.Combine(
+    public LocalDiagnostics() : this(new UnifiedLogger(Path.Combine(
         Path.GetTempPath(),
         "Cafe.Launcher.Avalonia.Tests",
         Environment.ProcessId.ToString(CultureInfo.InvariantCulture))))
@@ -52,7 +52,7 @@ public sealed class LocalDiagnostics : ILauncherDiagnostics
     /// 多容器测试）不得改绑共享静态缝，各自的实例门面走自己注入的
     /// <see cref="UnifiedLogger"/>。返回是否由本次调用完成登记。
     /// </summary>
-    internal static bool RegisterSharedLogger(UnifiedLogger logger)
+    public static bool RegisterSharedLogger(UnifiedLogger logger)
     {
         if (Volatile.Read(ref syncLogger) is not null)
         {
@@ -70,7 +70,7 @@ public sealed class LocalDiagnostics : ILauncherDiagnostics
         set => Volatile.Write(ref syncLogger, value);
     }
 
-    internal string LogFilePath => logger.LogFilePath;
+    public string LogFilePath => logger.LogFilePath;
 
     /// <summary><see cref="ILauncherDiagnostics"/>：同步诊断，转发到静态实现。</summary>
     public void LogMessage(LogEntrySeverity severity, string title, string? message = null) =>

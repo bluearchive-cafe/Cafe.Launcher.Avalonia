@@ -406,8 +406,10 @@
         "type": "Project",
         "dependencies": {
           "Cafe.Launcher.Updater.Core": "[1.0.0, )",
-          "CommunityToolkit.Mvvm": "[8.4.2, )",
-          "Microsoft.Extensions.DependencyInjection": "[10.0.12, )"
+          "Microsoft.Extensions.DependencyInjection": "[10.0.12, )",
+          "Serilog": "[4.4.0, )",
+          "Serilog.Sinks.Async": "[2.1.0, )",
+          "Serilog.Sinks.File": "[7.0.0, )"
         }
       },
       "cafe.launcher.updater.core": {

@@ -1,6 +1,6 @@
 using System;
 
-namespace Cafe.Launcher.Avalonia.Services.Diagnostics;
+namespace Cafe.Launcher.Core.Services.Diagnostics;
 
 /// <summary>Selectable time window for a diagnostics export.</summary>
 public enum LogExportRangePreset

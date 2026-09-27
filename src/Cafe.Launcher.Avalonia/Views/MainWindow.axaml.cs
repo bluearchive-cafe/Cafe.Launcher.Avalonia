@@ -15,7 +15,7 @@ using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
-using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
 using System;
 using System.Collections.Generic;
@@ -34,7 +34,7 @@ public partial class MainWindow : Window
     private readonly OperationSurfaceAnimator operationSurfaceAnimator;
     private readonly WindowFilePickerService? filePickerService;
     private readonly WindowMetricsService? windowMetrics;
-    private readonly Services.Diagnostics.LocalDiagnostics? diagnostics;
+    private readonly Cafe.Launcher.Core.Services.Diagnostics.LocalDiagnostics? diagnostics;
 
     /// <summary>
     /// 无参公共构造：Avalonia 运行时 XAML 加载器可达性要求（AVLN3001，缺失即构建错误），
@@ -48,7 +48,7 @@ public partial class MainWindow : Window
     public MainWindow(
         WindowFilePickerService? filePickerService,
         WindowMetricsService? windowMetrics,
-        Services.Diagnostics.LocalDiagnostics? diagnostics = null)
+        Cafe.Launcher.Core.Services.Diagnostics.LocalDiagnostics? diagnostics = null)
     {
         InitializeComponent();
         this.filePickerService = filePickerService;
