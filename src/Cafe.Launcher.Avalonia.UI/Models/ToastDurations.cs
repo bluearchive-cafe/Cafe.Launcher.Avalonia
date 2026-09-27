@@ -28,7 +28,7 @@ public enum ToastDuration
 /// This is developer-side vocabulary: not a user setting, and not a value callers can vary —
 /// a toast disappears after one of the tiers in <see cref="ToastDuration"/>.
 /// </summary>
-public static class ToastDurations
+internal static class ToastDurations
 {
     private static readonly TimeSpan BriefDuration = TimeSpan.FromSeconds(4);
     private static readonly TimeSpan MediumDuration = TimeSpan.FromSeconds(6);

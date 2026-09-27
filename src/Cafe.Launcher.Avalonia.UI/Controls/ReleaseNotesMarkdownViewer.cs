@@ -8,7 +8,7 @@ namespace Cafe.Launcher.Avalonia.Controls;
 /// <summary>
 /// 更新说明专用 Markdown 表面：启用 GFM/Alerts，但不允许内容触发外部导航或图片请求。
 /// </summary>
-public sealed class ReleaseNotesMarkdownViewer : MarkdownViewer
+internal sealed class ReleaseNotesMarkdownViewer : MarkdownViewer
 {
     public ReleaseNotesMarkdownViewer()
     {

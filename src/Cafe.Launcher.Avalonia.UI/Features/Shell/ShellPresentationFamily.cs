@@ -12,7 +12,7 @@ namespace Cafe.Launcher.Avalonia.Features.Shell;
 /// MainWindowViewModel 的构造器签名（对齐 GameShortcutService.ShortcutEnvironment
 /// 的聚合模式）。
 /// </summary>
-public sealed record ShellPresentationFamily(
+internal sealed record ShellPresentationFamily(
     ShellViewModel Shell,
     BackgroundViewModel Background,
     RemoteContentViewModel RemoteContent,

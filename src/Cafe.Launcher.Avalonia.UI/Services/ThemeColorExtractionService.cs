@@ -13,7 +13,7 @@ using MaterialColorUtilities.Utils;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
-public static class ThemeColorExtractionService
+internal static class ThemeColorExtractionService
 {
     private const int MaxScaledSide = 64;
     private const int MaxLeafCount = 16;

@@ -10,7 +10,7 @@ namespace Cafe.Launcher.Avalonia.Helpers;
 /// 退为一段，再退化到字符级中切。输出保持单行，视图层可再以 TextTrimming
 /// 兜底极端超长段（预算按字符估定，宽字形路径可能仍溢出）。
 /// </summary>
-public static class PathMiddleEllipsis
+internal static class PathMiddleEllipsis
 {
     /// <summary>默认字符预算：按 520 内容列减去图标 chip 与编辑钮后的宽度估定。</summary>
     public const int DefaultMaxCharacters = 48;

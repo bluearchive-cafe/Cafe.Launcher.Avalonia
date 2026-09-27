@@ -3,7 +3,7 @@ using Avalonia.Controls;
 
 namespace Cafe.Launcher.Avalonia.Controls;
 
-public partial class SettingRow : UserControl
+internal partial class SettingRow : UserControl
 {
     public static readonly StyledProperty<string?> TitleProperty =
         AvaloniaProperty.Register<SettingRow, string?>(nameof(Title));

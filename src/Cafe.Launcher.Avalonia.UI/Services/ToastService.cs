@@ -8,7 +8,7 @@ namespace Cafe.Launcher.Avalonia.Services;
 /// Centralized service for showing transient toast notifications.
 /// Subscribers (e.g., the main ViewModel) listen for ToastRaised events to display toasts in the UI.
 /// </summary>
-public sealed class ToastService
+internal sealed class ToastService
 {
     /// <summary>
     /// Raised whenever a toast notification should be displayed.

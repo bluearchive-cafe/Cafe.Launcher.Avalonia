@@ -16,7 +16,7 @@ using Cafe.Launcher.Avalonia.Helpers;
 
 namespace Cafe.Launcher.Avalonia.Features.Diagnostics;
 
-public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalContentViewModel
+internal sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalContentViewModel
 {
     private const int PageSize = 500;
     private static readonly TimeSpan FilterDebounceDelay = TimeSpan.FromMilliseconds(200);

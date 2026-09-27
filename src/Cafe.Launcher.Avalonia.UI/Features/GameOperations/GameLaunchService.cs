@@ -11,7 +11,7 @@ using Cafe.Launcher.Core.Services.GameRuntime;
 
 namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 
-public sealed class GameLaunchService
+internal sealed class GameLaunchService
 {
     private readonly ManifestValidationService manifestValidationService;
     private readonly IGameRuntime gameRuntime;

@@ -16,7 +16,7 @@ namespace Cafe.Launcher.Avalonia.Features.Diagnostics;
 /// <see cref="DesignTokenGrouping"/>, so the gallery never drifts from the token
 /// set. Visibility is gated like the debug panel (Debug builds only).
 /// </summary>
-public sealed partial class DesignGalleryViewModel : ViewModelBase, IModalContentViewModel
+internal sealed partial class DesignGalleryViewModel : ViewModelBase, IModalContentViewModel
 {
     private readonly Func<string, string> localize;
 

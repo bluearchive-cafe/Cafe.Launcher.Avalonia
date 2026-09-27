@@ -6,7 +6,7 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 /// 策略判定的结果。刻意不是 <see cref="bool"/>：调用方必须对「被拒绝」这一支表态，
 /// 于是「拒绝之后什么都不做」只能是有意写出来的，而不是漏掉了 else。
 /// </summary>
-public enum GameOperationDecision
+internal enum GameOperationDecision
 {
     /// <summary>当前状态下允许执行该操作。</summary>
     Allowed,
@@ -23,7 +23,7 @@ public enum GameOperationDecision
 /// 新增 LauncherRuntimeState 或操作种类时，GameOperationPolicyTests 的全表测试
 /// 会强制显式表态。
 /// </summary>
-public static class GameOperationPolicy
+internal static class GameOperationPolicy
 {
     /// <summary>策略自有的操作轴：与承载进度语义的 GameOperationKind（Idle/Download/Repair/Uninstall）刻意分开——它没有 Launch，权限轴也不该波及 UI 进度 switch。</summary>
     public enum Operation

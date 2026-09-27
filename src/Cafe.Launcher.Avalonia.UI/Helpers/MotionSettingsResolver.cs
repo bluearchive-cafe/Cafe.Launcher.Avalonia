@@ -2,7 +2,7 @@ using Cafe.Launcher.Avalonia.Models;
 
 namespace Cafe.Launcher.Avalonia.Helpers;
 
-public static class MotionSettingsResolver
+internal static class MotionSettingsResolver
 {
     public static bool ShouldReduceMotion(string mode, bool? systemAnimationsEnabled) => mode switch
     {

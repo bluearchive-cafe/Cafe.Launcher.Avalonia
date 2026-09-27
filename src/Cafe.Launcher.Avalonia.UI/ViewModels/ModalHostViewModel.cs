@@ -6,7 +6,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 namespace Cafe.Launcher.Avalonia.ViewModels;
 
 /// <summary>Maintains open modal entries in their actual opening order.</summary>
-public sealed partial class ModalHostViewModel : ObservableObject
+internal sealed partial class ModalHostViewModel : ObservableObject
 {
     private readonly ObservableCollection<ModalEntry> entries = [];
 

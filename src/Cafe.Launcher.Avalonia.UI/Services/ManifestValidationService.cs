@@ -11,7 +11,7 @@ using Cafe.Launcher.Avalonia.Models;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
-public sealed class ManifestValidationService
+internal sealed class ManifestValidationService
 {
     private readonly LauncherApiClient apiClient;
     private readonly RemoteManifestService remoteManifestService;

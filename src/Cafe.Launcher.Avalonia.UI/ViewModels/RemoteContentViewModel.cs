@@ -16,7 +16,7 @@ using Cafe.Launcher.Core.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.ViewModels;
 
-public partial class RemoteContentViewModel : ViewModelBase, IDisposable, ILanguageAwarePresentation
+internal partial class RemoteContentViewModel : ViewModelBase, IDisposable, ILanguageAwarePresentation
 {
     private const int ManualNavResumeDelayMs = 5000;
     private const int MaxConcurrentBannerImageLoads = 4;

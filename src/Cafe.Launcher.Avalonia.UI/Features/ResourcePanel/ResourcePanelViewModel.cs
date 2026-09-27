@@ -20,7 +20,7 @@ namespace Cafe.Launcher.Avalonia.Features.ResourcePanel;
 /// The resource panel workflow (UID resolution, parallel API reads, mode mapping, save
 /// serialization) is delegated to <see cref="ResourcePanelService"/>.
 /// </summary>
-public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModalContentViewModel, ILanguageAwarePresentation
+internal partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModalContentViewModel, ILanguageAwarePresentation
 {
     private readonly ResourcePanelService resourcePanelService;
     private readonly LocalizationService localizer;

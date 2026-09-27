@@ -7,7 +7,7 @@ using Cafe.Launcher.Avalonia.ViewModels;
 namespace Cafe.Launcher.Avalonia.Features.Shell;
 
 /// <summary>Aggregates shell presentation for the tray; native adapters do not depend on feature types.</summary>
-public sealed class SystemTrayActions : ISystemTrayActions, IDisposable
+internal sealed class SystemTrayActions : ISystemTrayActions, IDisposable
 {
     private readonly MainWindowViewModel viewModel;
     private readonly IGameSessionMonitor sessionMonitor;

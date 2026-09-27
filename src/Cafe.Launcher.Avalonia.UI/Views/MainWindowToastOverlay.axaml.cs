@@ -5,7 +5,7 @@ using Cafe.Launcher.Avalonia.ViewModels;
 
 namespace Cafe.Launcher.Avalonia.Views;
 
-public partial class MainWindowToastOverlay : UserControl
+internal partial class MainWindowToastOverlay : UserControl
 {
     public MainWindowToastOverlay()
     {

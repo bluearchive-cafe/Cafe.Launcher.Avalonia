@@ -10,7 +10,7 @@ namespace Cafe.Launcher.Avalonia.Services.Diagnostics;
 /// Implemented by <see cref="CrashReportStore"/>, the single owner of the
 /// primary + fallback location policy (ADR-019).
 /// </summary>
-public interface ICrashReportLocator
+internal interface ICrashReportLocator
 {
     /// <summary>Returns every directory that may contain crash reports for the supplied user-data root.</summary>
     IEnumerable<string> GetCrashReportDirectories(string userDataRoot);

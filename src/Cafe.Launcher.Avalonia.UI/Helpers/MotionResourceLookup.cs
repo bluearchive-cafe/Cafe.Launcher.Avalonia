@@ -7,7 +7,7 @@ namespace Cafe.Launcher.Avalonia.Helpers;
 /// Reads shared motion values defined in App.axaml so C# helpers stay on the design-token
 /// source of truth, falling back to literal constants for headless/test scenarios.
 /// </summary>
-public static class MotionResourceLookup
+internal static class MotionResourceLookup
 {
     public static double GetDouble(string key, double fallback)
     {

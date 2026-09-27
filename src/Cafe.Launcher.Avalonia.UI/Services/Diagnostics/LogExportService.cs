@@ -18,7 +18,7 @@ namespace Cafe.Launcher.Avalonia.Services.Diagnostics;
 /// Creates a ZIP archive containing log files, a system-info summary, and — when the caller
 /// opts in — crash reports and launcher user data, for offline diagnostic review.
 /// </summary>
-public sealed class LogExportService
+internal sealed class LogExportService
 {
     /// <summary>
     /// Log title of every diagnostic the log export feature writes, shared with the export

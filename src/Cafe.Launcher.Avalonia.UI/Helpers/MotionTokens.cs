@@ -3,7 +3,7 @@ using System;
 namespace Cafe.Launcher.Avalonia.Helpers;
 
 /// <summary>Defines shared durations for launcher motion and overlay transitions (ADR-016 ladder).</summary>
-public static class MotionTokens
+internal static class MotionTokens
 {
     /// <summary>Gets the shortest duration used for immediate feedback transitions.</summary>
     public static readonly TimeSpan FasterDuration = TimeSpan.FromMilliseconds(83);

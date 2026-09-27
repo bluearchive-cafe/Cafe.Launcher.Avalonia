@@ -16,7 +16,7 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 
-public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJourneyHost, IGameOperationActivity, IDisposable, ILanguageAwarePresentation
+internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJourneyHost, IGameOperationActivity, IDisposable, ILanguageAwarePresentation
 {
     /// <summary>
     /// 暂停/恢复按钮的两个图标名。按「按钮此刻提供什么」命名而不是按状态命名：暂停态下按钮

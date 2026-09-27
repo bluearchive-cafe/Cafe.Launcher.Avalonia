@@ -8,7 +8,7 @@ using Cafe.Launcher.Avalonia.Helpers;
 
 namespace Cafe.Launcher.Avalonia.Controls;
 
-public static class MotionVisibility
+internal static class MotionVisibility
 {
     public static readonly AttachedProperty<bool> IsOpenProperty =
         AvaloniaProperty.RegisterAttached<MotionVisibilityOwner, Control, bool>("IsOpen");

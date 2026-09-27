@@ -18,7 +18,7 @@ namespace Cafe.Launcher.Avalonia.Features.SetupWizard;
 /// <summary>
 /// Coordinates the first-launch setup wizard state, validation, and settings output.
 /// </summary>
-public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewModel, IDisposable, ILanguageAwarePresentation
+internal partial class SetupWizardViewModel : ViewModelBase, IModalContentViewModel, IDisposable, ILanguageAwarePresentation
 {
     private const int StepCount = 5;
 

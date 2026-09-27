@@ -11,7 +11,7 @@ namespace Cafe.Launcher.Avalonia.Helpers;
 /// 输出的任意边仍不会超过 <see cref="MaxDecodeSidePixels"/>；极端宽高比在该上限下
 /// 无法完全覆盖窗口时，宁可保留上限以控制长期渲染成本。
 /// </summary>
-public static class BackgroundImageDecoder
+internal static class BackgroundImageDecoder
 {
     /// <summary>宽度钳制下限：窗口再小也不把壁纸解码得更小，避免窗口放大后明显模糊。</summary>
     public const int MinDecodeWidthPixels = 1280;

@@ -9,7 +9,7 @@ using Cafe.Launcher.Avalonia.Services;
 
 namespace Cafe.Launcher.Avalonia.Features.ResourcePanel;
 
-public sealed class ResourcePanelApiClient
+internal sealed class ResourcePanelApiClient
 {
     private static readonly string ApiBaseUrl = ApiConfig.ResourcePanelApiBaseUrl;
 

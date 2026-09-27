@@ -2,7 +2,7 @@ using System;
 
 namespace Cafe.Launcher.Avalonia.Helpers;
 
-public static class AnimationTimings
+internal static class AnimationTimings
 {
     /// <summary>
     /// 退场动画窗口，默认对齐 ADR-016 快速档。可写属性是测试接缝：

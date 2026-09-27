@@ -18,7 +18,7 @@ namespace Cafe.Launcher.Avalonia.ViewModels;
 /// the session. <see cref="DialogsViewModel"/> aggregates one instance per
 /// confirmation; a new confirmation is a field plus an AXAML block.
 /// </summary>
-public sealed partial class ConfirmationDialogViewModel : ViewModelBase
+internal sealed partial class ConfirmationDialogViewModel : ViewModelBase
 {
     private const string LogTitle = "ConfirmationDialog";
     private readonly LocalDiagnostics diagnostics;

@@ -1,7 +1,7 @@
 namespace Cafe.Launcher.Avalonia.Models;
 
 /// <summary>Identifies a presentation-independent game operation failure.</summary>
-public enum GameOperationErrorCode
+internal enum GameOperationErrorCode
 {
     None,
     InvalidState,

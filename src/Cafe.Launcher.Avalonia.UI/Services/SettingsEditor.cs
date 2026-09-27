@@ -16,7 +16,7 @@ namespace Cafe.Launcher.Avalonia.Services;
 /// to the saved settings goes through <see cref="ISavedSettingsWriter"/>, which persists and then
 /// applies the persisted value back here so the draft never disagrees with disk.
 /// </summary>
-public sealed class SettingsEditor : INotifyPropertyChanged, ISettingsDraftOwner
+internal sealed class SettingsEditor : INotifyPropertyChanged, ISettingsDraftOwner
 {
     private LauncherSettings current;
     private LauncherSettings snapshot;

@@ -19,7 +19,7 @@ namespace Cafe.Launcher.Avalonia.Controls;
 /// </summary>
 [TemplatePart("PART_CloseButton", typeof(Button))]
 [PseudoClasses(":panel", ":info", ":warning", ":danger")]
-public class DialogSurface : TemplatedControl
+internal class DialogSurface : TemplatedControl
 {
     private Button? closeButton;
     private Border? headerBorder;

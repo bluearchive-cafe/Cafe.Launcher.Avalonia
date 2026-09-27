@@ -2,7 +2,7 @@ using Avalonia.Controls;
 
 namespace Cafe.Launcher.Avalonia.Views;
 
-public partial class SettingsGameSection : UserControl
+internal partial class SettingsGameSection : UserControl
 {
     public SettingsGameSection()
     {

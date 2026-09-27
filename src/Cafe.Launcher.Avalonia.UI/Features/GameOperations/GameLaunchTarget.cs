@@ -4,7 +4,7 @@ using Cafe.Launcher.Avalonia.Models;
 namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 
 /// <summary>Structured reason a game launch target could not be resolved.</summary>
-public enum GameLaunchTargetStatus
+internal enum GameLaunchTargetStatus
 {
     Resolved,
     ExecutableNameEmpty,
@@ -16,14 +16,14 @@ public enum GameLaunchTargetStatus
 /// The start target shared by game launch and shortcut creation: a locally named
 /// executable that exists on disk, its working directory, and its arguments.
 /// </summary>
-public sealed record GameLaunchTarget(
+internal sealed record GameLaunchTarget(
     string ExecutableName,
     string ExecutablePath,
     string WorkingDirectory,
     System.Collections.Generic.IReadOnlyList<string> Arguments);
 
 /// <summary>Outcome of resolving the game launch target from a status snapshot.</summary>
-public sealed record GameLaunchTargetResolution(
+internal sealed record GameLaunchTargetResolution(
     GameLaunchTargetStatus Status,
     GameLaunchTarget? Target = null,
     string ExpectedExecutablePath = "")

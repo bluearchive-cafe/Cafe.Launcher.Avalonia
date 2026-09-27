@@ -12,7 +12,7 @@ namespace Cafe.Launcher.Avalonia.Services;
 /// Manages minimize-to-tray behavior while delegating native tray construction
 /// to an internal platform adapter.
 /// </summary>
-public sealed class SystemTrayService : IDisposable
+internal sealed class SystemTrayService : IDisposable
 {
     private readonly Window mainWindow;
     private readonly LocalizationService localizer;

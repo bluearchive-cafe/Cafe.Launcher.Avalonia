@@ -13,7 +13,7 @@ using Cafe.Launcher.Core.Services.GameRuntime;
 
 namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 
-public sealed class GameUninstallService
+internal sealed class GameUninstallService
 {
     /// <summary>
     /// 完成文案里最多点名几个删不掉的项目。实际只会是个位数（反作弊留下的目录项），

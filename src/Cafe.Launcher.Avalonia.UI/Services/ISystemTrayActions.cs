@@ -3,7 +3,7 @@ using System;
 namespace Cafe.Launcher.Avalonia.Services;
 
 /// <summary>Shell-owned actions and availability for the native tray. Call actions on the UI thread.</summary>
-public interface ISystemTrayActions
+internal interface ISystemTrayActions
 {
     /// <summary>Raised when menu availability or game session presentation changes; may run off the UI thread.</summary>
     event Action? Changed;

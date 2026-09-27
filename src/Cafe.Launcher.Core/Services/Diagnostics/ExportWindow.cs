@@ -11,7 +11,7 @@ namespace Cafe.Launcher.Core.Services.Diagnostics;
 public readonly record struct ExportWindow(DateTimeOffset? From, DateTimeOffset? To)
 {
     /// <summary>A window that keeps every entry and every artifact.</summary>
-    public static ExportWindow Unbounded => default;
+    internal static ExportWindow Unbounded => default;
 
     /// <summary>Gets whether the window keeps everything.</summary>
     public bool IsUnbounded => From is null && To is null;

@@ -17,7 +17,7 @@ namespace Cafe.Launcher.Avalonia.Services;
 /// and ManifestValidationService, each of which re-implemented the same
 /// two-phase fetch with different failure semantics.
 /// </summary>
-public sealed class RemoteManifestService
+internal sealed class RemoteManifestService
 {
     private readonly LauncherApiClient apiClient;
 

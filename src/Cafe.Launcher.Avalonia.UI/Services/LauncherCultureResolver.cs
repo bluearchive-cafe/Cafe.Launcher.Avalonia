@@ -11,7 +11,7 @@ namespace Cafe.Launcher.Avalonia.Services;
 /// mapping setting codes → effective launcher language → .NET CultureInfo,
 /// plus system-language detection. Stateless and safe to call from any thread.
 /// </summary>
-public static class LauncherCultureResolver
+internal static class LauncherCultureResolver
 {
     /// <summary>
     /// Resolves a language setting value to one of the four

@@ -11,7 +11,7 @@ namespace Cafe.Launcher.Avalonia.Constants;
 /// reference these constants instead of raw string literals so a renamed or
 /// misspelled key breaks the build rather than rendering a raw key at runtime.
 /// </summary>
-public static class LocalizationKeys
+internal static class LocalizationKeys
 {
     public const string AboutCopyrightText = "aboutCopyrightText";
     public const string AboutDescription = "aboutDescription";

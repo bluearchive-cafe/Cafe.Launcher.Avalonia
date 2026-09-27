@@ -33,7 +33,7 @@ public abstract class SelectableOption : ObservableObject
     }
 }
 
-public sealed class SettingOption : SelectableOption
+internal sealed class SettingOption : SelectableOption
 {
     public string IconKind { get; init; } = "CogOutline";
 
@@ -44,11 +44,11 @@ public sealed class LanguageOption : SelectableOption
 {
 }
 
-public sealed class ThemeOption : SelectableOption
+internal sealed class ThemeOption : SelectableOption
 {
 }
 
-public sealed class GameOperationProgress
+internal sealed class GameOperationProgress
 {
     public GameOperationKind OperationKind { get; set; } = GameOperationKind.Idle;
 
@@ -87,7 +87,7 @@ public sealed class GameOperationProgress
     public bool IsPaused { get; set; }
 }
 
-public sealed class GameOperationResult
+internal sealed class GameOperationResult
 {
     public bool Success { get; set; }
 
@@ -100,7 +100,7 @@ public sealed class GameOperationResult
     public int FailedFileCount { get; set; }
 }
 
-public sealed class RemoteContentItem : ObservableObject
+internal sealed class RemoteContentItem : ObservableObject
 {
     private string title = "";
     private string subtitle = "";
@@ -154,7 +154,7 @@ public sealed class RemoteContentItem : ObservableObject
     }
 }
 
-public sealed class NewsCategory : ObservableObject
+internal sealed class NewsCategory : ObservableObject
 {
     private string label = "";
     private readonly ObservableCollection<RemoteContentItem> items = [];

@@ -20,7 +20,7 @@ namespace Cafe.Launcher.Avalonia.Features.Diagnostics;
 /// <summary>
 /// Supplies the development-only diagnostics overlay with state, commands, and shell coordination hooks.
 /// </summary>
-public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewModel, IDisposable, ILanguageAwarePresentation
+internal sealed partial class DebugViewModel : ViewModelBase, IModalContentViewModel, IDisposable, ILanguageAwarePresentation
 {
     private readonly LauncherDataRoot dataRoot;
     private readonly ToastService toastService;

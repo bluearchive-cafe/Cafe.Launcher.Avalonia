@@ -9,7 +9,7 @@ using Cafe.Launcher.Avalonia.Services.Diagnostics;
 namespace Cafe.Launcher.Avalonia.ViewModels;
 
 /// <summary>Presentation model for the independent, terminal crash-report window.</summary>
-public sealed class CrashReportWindowViewModel
+internal sealed class CrashReportWindowViewModel
 {
     private readonly CrashReport report;
     private readonly LauncherDataRoot dataRoot;

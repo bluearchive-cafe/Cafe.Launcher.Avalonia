@@ -7,14 +7,14 @@ using Avalonia.Media;
 
 namespace Cafe.Launcher.Avalonia.Helpers;
 
-public sealed class DesignTokenItem
+internal sealed class DesignTokenItem
 {
     public required string Key { get; init; }
     public required string ValueText { get; init; }
     public IBrush? Swatch { get; init; }
 }
 
-public sealed class DesignTokenGroup
+internal sealed class DesignTokenGroup
 {
     public required string Family { get; init; }
     public required string DisplayName { get; init; }
@@ -28,7 +28,7 @@ public sealed class DesignTokenGroup
 /// segments and formats their resource values for the debug design gallery.
 /// Pure logic (no Avalonia dependencies) so it is unit-testable without an app.
 /// </summary>
-public static class DesignTokenGrouping
+internal static class DesignTokenGrouping
 {
     public static readonly string[] FamilyOrder =
     [

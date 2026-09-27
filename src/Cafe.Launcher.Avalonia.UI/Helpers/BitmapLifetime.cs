@@ -11,7 +11,7 @@ namespace Cafe.Launcher.Avalonia.Helpers;
 /// 才释放旧位图」的延迟释放。两条流水线的输入、解码策略与陈旧判定各不相同（刻意不合并），
 /// 只有这两条契约相同——此前壁纸侧各有一份具名实现，横幅侧各有一份内联副本。
 /// </summary>
-public static class BitmapLifetime
+internal static class BitmapLifetime
 {
     /// <summary>
     /// 取消已请求时先释放 <paramref name="image"/> 再抛出，避免取消路径漏掉解码产物。

@@ -9,13 +9,13 @@ namespace Cafe.Launcher.Avalonia.Models;
 /// <param name="Label">Localized label displayed for the action.</param>
 /// <param name="ExecuteAsync">Operation executed when the user selects the action.</param>
 /// <param name="Timeout">Maximum duration for <paramref name="ExecuteAsync"/> before cancellation.</param>
-public sealed record ToastAction(
+internal sealed record ToastAction(
     string Label,
     Func<CancellationToken, Task<ToastActionResult>> ExecuteAsync,
     TimeSpan? Timeout = null);
 
 /// <summary>Represents the outcome of a toast action execution.</summary>
-public sealed record ToastActionResult
+internal sealed record ToastActionResult
 {
     private ToastActionResult(bool isSuccess, string? message, string? title)
     {
@@ -45,7 +45,7 @@ public sealed record ToastActionResult
 }
 
 /// <summary>Configures the content, severity, lifetime, and actions of a toast notification.</summary>
-public sealed class ToastOptions
+internal sealed class ToastOptions
 {
     public string? Title { get; init; }
     public required string Message { get; init; }
@@ -64,7 +64,7 @@ public sealed class ToastOptions
 /// <summary>
 /// Represents a single toast notification to be displayed in the UI.
 /// </summary>
-public sealed partial class ToastNotification : ObservableObject
+internal sealed partial class ToastNotification : ObservableObject
 {
     [ObservableProperty]
     private bool isExiting;

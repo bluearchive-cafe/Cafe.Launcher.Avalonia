@@ -5,7 +5,7 @@ namespace Cafe.Launcher.Avalonia.Controls;
 /// Panel 服务特性面板。形态决定解剖：Basic 无头带与发丝底带；
 /// Panel 具备 56px 头带、固定发丝 footer 与左侧辅助动作槽。
 /// </summary>
-public enum DialogSurfaceForm
+internal enum DialogSurfaceForm
 {
     Basic,
     Panel,

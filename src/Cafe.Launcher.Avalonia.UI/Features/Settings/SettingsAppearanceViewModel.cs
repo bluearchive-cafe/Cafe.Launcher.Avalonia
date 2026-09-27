@@ -21,7 +21,7 @@ using Cafe.Launcher.Avalonia.ViewModels;
 
 namespace Cafe.Launcher.Avalonia.Features.Settings;
 
-public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
+internal partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
 {
     private readonly SettingsEditor editor;
     private readonly ThemeApplier themeApplier;

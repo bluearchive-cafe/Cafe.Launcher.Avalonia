@@ -8,7 +8,7 @@ namespace Cafe.Launcher.Avalonia.Services;
 /// 两者都只依赖本抽象而非 GameOperations 本体，避免窗口层／Diagnostics 与
 /// GameOperations 产生横向耦合。放在共享 Services 层使各 Feature 都只向下依赖。
 /// </summary>
-public interface IGameOperationActivity
+internal interface IGameOperationActivity
 {
     /// <summary>Raised when IsDownloadRunning, IsPaused, or CanPauseOperation changes.</summary>
     event PropertyChangedEventHandler? ActivityPropertyChanged;

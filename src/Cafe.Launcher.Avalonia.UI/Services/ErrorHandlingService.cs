@@ -39,7 +39,7 @@ public sealed class CriticalErrorInfo
 /// Combines diagnostic logging, toast notification, and inline status update
 /// so call sites no longer hand-roll the triad.
 /// </summary>
-public interface IErrorHandlingService
+internal interface IErrorHandlingService
 {
     /// <summary>
     /// Logs the error and optionally shows a toast.
@@ -60,7 +60,7 @@ public interface IErrorHandlingService
 /// <summary>
 /// Implements recoverable and critical error handling with local diagnostics and shell notifications.
 /// </summary>
-public sealed class ErrorHandlingService : IErrorHandlingService
+internal sealed class ErrorHandlingService : IErrorHandlingService
 {
     private readonly LocalizationService localizer;
     private readonly LocalDiagnostics diagnostics;

@@ -41,7 +41,7 @@ public sealed record UnixGameProcessQuery(
 /// <see cref="UnixProcessRecord"/>，不碰 <c>/proc</c>，因此可以用合成记录做表驱动测试；平台读取层
 /// （薄、按 <see cref="OperatingSystem.IsLinux"/> 门控）留待接线时补。
 /// </summary>
-public static class UnixGameProcessMatcher
+internal static class UnixGameProcessMatcher
 {
     /// <summary>
     /// 启动器写进游戏进程环境的归属标记名。用稳定的 gameId 而不是每次随机会话令牌，因为闸门要能跨

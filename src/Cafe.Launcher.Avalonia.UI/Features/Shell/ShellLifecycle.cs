@@ -25,7 +25,7 @@ namespace Cafe.Launcher.Avalonia.Features.Shell;
 /// dialogs, toasts, and shutdown.
 /// The window (MainWindowViewModel) only presents shell state.
 /// </summary>
-public sealed class ShellLifecycle : IDisposable
+internal sealed class ShellLifecycle : IDisposable
 {
     /// <summary>Raised when shell presentation state changes.</summary>
     public event Action? PresentationChanged;

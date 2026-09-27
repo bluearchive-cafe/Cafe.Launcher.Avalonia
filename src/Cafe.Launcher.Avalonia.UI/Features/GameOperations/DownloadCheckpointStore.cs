@@ -11,7 +11,7 @@ using Cafe.Launcher.Avalonia.Services;
 namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 
 /// <summary>Persists and clears resumable game download state atomically.</summary>
-public sealed class DownloadCheckpointStore
+internal sealed class DownloadCheckpointStore
 {
     private static readonly JsonSerializerOptions JsonOptions = JsonDefaults.Indented;
     private readonly string filePath;

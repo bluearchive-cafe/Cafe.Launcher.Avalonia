@@ -8,7 +8,7 @@ namespace Cafe.Launcher.Avalonia.Services;
 /// Returns the local file-system path of the single picked item, or null when
 /// the dialog is cancelled or no window-owning storage provider is attached.
 /// </summary>
-public interface IFilePickerService
+internal interface IFilePickerService
 {
     /// <summary>Picks a single folder, optionally starting at <paramref name="startLocation"/>.</summary>
     Task<string?> PickFolderAsync(string title, string? startLocation = null);

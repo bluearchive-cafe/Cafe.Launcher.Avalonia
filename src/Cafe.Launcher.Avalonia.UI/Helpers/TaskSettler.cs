@@ -9,7 +9,7 @@ namespace Cafe.Launcher.Avalonia.Helpers;
 /// （引用变化）则继续等，直到引用稳定或预算耗尽。两个设置侧「保存前等预览/取色落定」
 /// 的循环此前各持一份同构实现，收拢到这里。null 视为没有在飞任务，立即返回。
 /// </summary>
-public static class TaskSettler
+internal static class TaskSettler
 {
     /// <summary>
     /// Waits until the task returned by <paramref name="current"/> stops being replaced by a

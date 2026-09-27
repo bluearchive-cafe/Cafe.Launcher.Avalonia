@@ -7,7 +7,7 @@ using Cafe.Launcher.Avalonia.Models;
 
 namespace Cafe.Launcher.Avalonia.Converters;
 
-public sealed class ToastSeverityToBrushConverter : IValueConverter
+internal sealed class ToastSeverityToBrushConverter : IValueConverter
 {
     public static readonly ToastSeverityToBrushConverter Instance = new();
 
