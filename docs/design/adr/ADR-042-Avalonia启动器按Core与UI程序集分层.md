@@ -217,7 +217,14 @@ Core API 后应改回显式 using。`AssemblySplitContractTests.CoreSources_UseO
    另立公开静态入口 `LauncherLog` 供 pre-DI 阶段与静态帮助类使用（含 `CreateDetached()`，替代测试里
    直接 new 实现类的写法），登记移入 `AddLauncherCore`。`LauncherSelfUpdateService` /
    `ImageCacheService` / `GameInstallationPath` 也已收窄（三个窄接口 + 实现 internal）。
-   最后剩下 **HTTP 族**（`HttpClientFactory` / `RemoteHttpTransport` / `LauncherApiClient` /
+   HTTP 族也已完成（登记移入
+   `AddLauncherCore`，偏好闭包读 `ISettingsDraftOwner.GetSavedSnapshot()`，缺草稿所有者时退回默认设置），
+   `LauncherApiClient`/`HttpClientFactory`/`RemoteHttpTransport` 及一批内部实现（`AuthorizationHeaderFactory`、
+   `PatchUrlGroupService`、`PrefixMetadataStore`、`ProxySettingsService`、`DefaultProcessLauncher`、
+   `GameRuntime`、`LauncherCoreService` 等）均收回 `internal`：Core 顶层 public class 由 56 降到 45，
+   剩下的 public 类全是数据模型/响应体、进程日志器 `UnifiedLogger` 与表现层按批次超时构造的
+   `LeaseBackedDownloadTransportSource`；`HttpClientLease` 因是公开接口的返回类型而保留。
+   至此 S3 的收窄项完成，只剩项目级 `<Using>` 收敛。原计划里描述的做法（保留作记录）：（`HttpClientFactory` / `RemoteHttpTransport` / `LauncherApiClient` /
    `AuthorizationHeaderFactory` / `PatchUrlGroupService`）。收尾盘点已确定它的做法，不需要新接缝：
    Core 的 `ISettingsDraftOwner.GetSavedSnapshot()` 正是那两个偏好闭包需要的快照（ADR-028 的
    「按使用时机拉取」），因此 `AddLauncherCore` 可以直接登记 `HttpClientFactory`（HTTP/2 偏好）、
