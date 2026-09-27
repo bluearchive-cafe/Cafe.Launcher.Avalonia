@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
@@ -18,7 +18,7 @@ namespace Cafe.Launcher.Core.Services;
 /// 同一路径的所有操作经引用计数信号量串行（见 <c>pathLocks</c>），跨线程安全；
 /// 写入先落临时文件再原子替换，进程中断不会留下半写的状态文件。
 /// </summary>
-public sealed class LocalInstallationStateStore
+internal sealed class LocalInstallationStateStore : ILocalInstallationStateStore
 {
     private static readonly JsonSerializerOptions JsonOptions = JsonDefaults.Indented;
 

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Cafe.Launcher.Core.Services;
 
-public sealed class Crc64Service
+internal sealed class Crc64Service : ICrc64Service
 {
     // CRC-64 as used by Blue Archive catalog:
     //   crcmod.mkCrcFun(0x142F0E1EBA9EA3693, initCrc=0, rev=True, xorOut=0xFFFFFFFFFFFFFFFF)

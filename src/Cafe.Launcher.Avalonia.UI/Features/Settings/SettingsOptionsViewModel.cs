@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using Cafe.Launcher.Avalonia.Constants;
@@ -11,11 +11,11 @@ namespace Cafe.Launcher.Avalonia.Features.Settings;
 internal sealed class SettingsOptionsViewModel
 {
     private readonly LocalizationService localizer;
-    private readonly DiskSpaceService diskSpaceService;
+    private readonly IDiskSpaceService diskSpaceService;
 
     public SettingsOptionsViewModel(
         LocalizationService localizer,
-        DiskSpaceService diskSpaceService)
+        IDiskSpaceService diskSpaceService)
     {
         this.localizer = localizer;
         this.diskSpaceService = diskSpaceService;
@@ -374,7 +374,7 @@ internal sealed class SettingsOptionsViewModel
 
     public DiskSpaceCheckResult ResolveDiskSpaceCheck(string gamePath, string? requiredSize)
     {
-        var requiredBytes = DiskSpaceService.ResolveRequiredBytes(true, 0L, requiredSize);
+        var requiredBytes = diskSpaceService.ResolveRequiredBytes(true, 0L, requiredSize);
         return diskSpaceService.Check(gamePath, requiredBytes);
     }
 

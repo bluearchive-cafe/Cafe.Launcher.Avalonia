@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -27,9 +27,9 @@ internal sealed class DownloadSession : IDisposable
 
     private readonly LauncherApiClient apiClient;
     private readonly LauncherSettingsService settingsService;
-    private readonly LocalInstallationStateStore localInstallationStateStore;
+    private readonly ILocalInstallationStateStore localInstallationStateStore;
     private readonly GameInstallationPath installationPath;
-    private readonly DiskSpaceService diskSpaceService;
+    private readonly IDiskSpaceService diskSpaceService;
     private readonly LocalDiagnostics diagnostics;
     private readonly LocalizationService localizer;
     private readonly ManifestDiffCalculator diffCalculator;
@@ -72,10 +72,10 @@ internal sealed class DownloadSession : IDisposable
         CancellationToken cancellationToken)
     {
         apiClient = context.ApiClient;
-        localInstallationStateStore = context.LocalInstallationStateStore;
+        localInstallationStateStore = context.ILocalInstallationStateStore;
         installationPath = context.InstallationPath;
         settingsService = context.SettingsService;
-        diskSpaceService = context.DiskSpaceService;
+        diskSpaceService = context.IDiskSpaceService;
         diagnostics = context.Diagnostics;
         localizer = context.Localizer;
         checkpointStore = context.CheckpointStore;
@@ -86,11 +86,11 @@ internal sealed class DownloadSession : IDisposable
         CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         diffCalculator = new ManifestDiffCalculator(
             context.RemoteManifestService,
-            context.LocalInstallationStateStore,
-            context.Crc64Service);
+            context.ILocalInstallationStateStore,
+            context.ICrc64Service);
         downloadExecutor = new DownloadExecutor(
             context.FileDownloadService,
-            context.Crc64Service,
+            context.ICrc64Service,
             context.TransportSource,
             context.Diagnostics,
             GetPauseTaskSnapshot,
@@ -335,7 +335,7 @@ internal sealed class DownloadSession : IDisposable
         var affectedCount = downloadPlan.NeedDownload.Count + downloadPlan.NeedDelete.Count;
         var plannedDownloadBytes = downloadPlan.NeedDownload.Sum(item => item.SizeBytes);
         var isFreshInstall = snapshot.RuntimeState == LauncherRuntimeState.NotInstalled;
-        var requiredBytes = DiskSpaceService.ResolveRequiredBytes(
+        var requiredBytes = diskSpaceService.ResolveRequiredBytes(
             isFreshInstall,
             plannedDownloadBytes,
             gameConfig.DecompressionSize);
