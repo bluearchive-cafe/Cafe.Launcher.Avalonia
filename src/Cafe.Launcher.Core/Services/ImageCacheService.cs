@@ -17,7 +17,7 @@ namespace Cafe.Launcher.Core.Services;
 /// Caches downloaded images (e.g., launcher background) by CRC64 hash.
 /// Mirrors the original Electron launcher's IndexedDB image cache.
 /// </summary>
-public sealed class ImageCacheService : IDisposable
+internal sealed class ImageCacheService : IImageCacheService
 {
     private const int MaxImageBytes = 25 * 1024 * 1024;
     private static readonly TimeSpan RemoteImageCacheLifetime = TimeSpan.FromHours(24);

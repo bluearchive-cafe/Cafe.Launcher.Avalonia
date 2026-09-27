@@ -27,7 +27,7 @@ internal partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMo
     private static readonly TimeSpan GamePathStatusDebounce = TimeSpan.FromMilliseconds(300);
 
     private readonly LocalizationService localizer;
-    private readonly GameInstallationPath gameInstallationPath;
+    private readonly IGameInstallationPath gameInstallationPath;
     private readonly ILocalInstallationStateStore localInstallationStateStore;
     private readonly ILauncherDiagnostics diagnostics;
     private readonly IFilePickerService filePickerService;
@@ -45,7 +45,7 @@ internal partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMo
     /// </summary>
     public SetupWizardViewModel(
         LocalizationService localizer,
-        GameInstallationPath gameInstallationPath,
+        IGameInstallationPath gameInstallationPath,
         ILocalInstallationStateStore localInstallationStateStore,
         ILauncherDiagnostics diagnostics,
         IFilePickerService filePickerService,

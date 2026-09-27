@@ -4,7 +4,7 @@ using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Core.Services;
 
-public sealed class GameInstallationPath
+internal sealed class GameInstallationPath : IGameInstallationPath
 {
     public string GetDefaultGamePath()
     {

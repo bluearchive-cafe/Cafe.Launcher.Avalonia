@@ -15,7 +15,7 @@ namespace Cafe.Launcher.Core.Services.Update;
 /// SHA256SUMS, download the package and verify it, and report where it landed.
 /// Applying (spawning the helper) is a separate seam the caller owns.
 /// </summary>
-public sealed class LauncherSelfUpdateService
+internal sealed class LauncherSelfUpdateService : ILauncherSelfUpdateService
 {
     private readonly ILauncherUpdateDownloader downloader;
     private readonly ILauncherUpdateHostInfoProvider hostInfoProvider;

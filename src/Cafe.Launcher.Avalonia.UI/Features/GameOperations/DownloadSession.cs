@@ -28,7 +28,7 @@ internal sealed class DownloadSession : IDisposable
     private readonly LauncherApiClient apiClient;
     private readonly ILauncherSettingsService settingsService;
     private readonly ILocalInstallationStateStore localInstallationStateStore;
-    private readonly GameInstallationPath installationPath;
+    private readonly IGameInstallationPath installationPath;
     private readonly IDiskSpaceService diskSpaceService;
     private readonly ILauncherDiagnostics diagnostics;
     private readonly LocalizationService localizer;

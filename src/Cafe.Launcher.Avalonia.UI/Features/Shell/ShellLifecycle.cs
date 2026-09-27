@@ -42,7 +42,7 @@ internal sealed class ShellLifecycle : IDisposable
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
     private readonly LauncherUpdateService launcherUpdateService;
-    private readonly LauncherSelfUpdateService launcherSelfUpdateService;
+    private readonly ILauncherSelfUpdateService launcherSelfUpdateService;
     private readonly IWindowsLauncherUpdateApplier launcherUpdateApplier;
     private readonly ILauncherDiagnostics diagnostics;
     private readonly IErrorHandlingService errorHandling;
@@ -98,7 +98,7 @@ internal sealed class ShellLifecycle : IDisposable
         LocalizationService localizer,
         ToastService toastService,
         LauncherUpdateService launcherUpdateService,
-        LauncherSelfUpdateService launcherSelfUpdateService,
+        ILauncherSelfUpdateService launcherSelfUpdateService,
         IWindowsLauncherUpdateApplier launcherUpdateApplier,
         ILauncherDiagnostics diagnostics,
         IErrorHandlingService errorHandling,
@@ -132,7 +132,7 @@ internal sealed class ShellLifecycle : IDisposable
         LocalizationService localizer,
         ToastService toastService,
         LauncherUpdateService launcherUpdateService,
-        LauncherSelfUpdateService launcherSelfUpdateService,
+        ILauncherSelfUpdateService launcherSelfUpdateService,
         IWindowsLauncherUpdateApplier launcherUpdateApplier,
         ILauncherDiagnostics diagnostics,
         IErrorHandlingService errorHandling,

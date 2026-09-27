@@ -80,7 +80,8 @@ public static class LauncherCoreServiceCollectionExtensions
             sp.GetRequiredService<Crc64Service>(),
             sp.GetRequiredService<LauncherDataRoot>(),
             sp.GetRequiredService<ILauncherDiagnostics>(),
-            sp.GetRequiredService<LauncherBuildIdentity>()));        // 自更新：检查、宿主信息、下载器、应用器与自更新服务。应用器先于自更新服务注册：
+            sp.GetRequiredService<LauncherBuildIdentity>()));
+        services.TryAddSingleton<IImageCacheService>(sp => sp.GetRequiredService<ImageCacheService>());        // 自更新：检查、宿主信息、下载器、应用器与自更新服务。应用器先于自更新服务注册：
         // 可用性判定（本机是否带 helper）由应用器回答。
         services.TryAddSingleton<LauncherUpdateService>();
         services.TryAddSingleton<ILauncherUpdateHostInfoProvider, LauncherUpdateHostInfoProvider>();
@@ -91,9 +92,12 @@ public static class LauncherCoreServiceCollectionExtensions
             sp.GetRequiredService<ILauncherUpdateHostInfoProvider>(),
             sp.GetRequiredService<IWindowsLauncherUpdateApplier>(),
             sp.GetRequiredService<LauncherDataRoot>(),
-            sp.GetRequiredService<ILauncherDiagnostics>()));        services.TryAddSingleton<IFileDownloadService, FileDownloadService>();
+            sp.GetRequiredService<ILauncherDiagnostics>()));
+        services.TryAddSingleton<ILauncherSelfUpdateService>(sp => sp.GetRequiredService<LauncherSelfUpdateService>());
+        services.TryAddSingleton<IFileDownloadService, FileDownloadService>();
         // 游戏运行时：进程启动、跟踪、兼容预检、前缀元数据与会话运行器定义。
         services.TryAddSingleton<GameInstallationPath>();
+        services.TryAddSingleton<IGameInstallationPath>(sp => sp.GetRequiredService<GameInstallationPath>());
         services.TryAddSingleton<IProcessLauncher, DefaultProcessLauncher>();
         services.TryAddSingleton<RunnerOutputCapture>();
         services.TryAddSingleton<CompatibilityEnvironmentPrecheck>();

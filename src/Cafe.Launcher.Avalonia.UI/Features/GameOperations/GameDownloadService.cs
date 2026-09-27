@@ -27,7 +27,7 @@ internal sealed class GameDownloadService : IDisposable
     private readonly IDiskSpaceService diskSpaceService;
     private readonly ILauncherDiagnostics diagnostics;
     private readonly LocalizationService localizer;
-    private readonly GameInstallationPath installationPath;
+    private readonly IGameInstallationPath installationPath;
     private readonly DownloadCheckpointStore checkpointStore;
     private readonly IGameProcessTracker gameProcessTracker;
     private readonly object activeDownloadLock = new();
@@ -50,7 +50,7 @@ internal sealed class GameDownloadService : IDisposable
         IDiskSpaceService diskSpaceService,
         ILauncherDiagnostics diagnostics,
         LocalizationService localizer,
-        GameInstallationPath installationPath,
+        IGameInstallationPath installationPath,
         IGameProcessTracker gameProcessTracker,
         DownloadCheckpointStore checkpointStore)
     {
@@ -85,7 +85,7 @@ internal sealed class GameDownloadService : IDisposable
         IDiskSpaceService diskSpaceService,
         ILauncherDiagnostics diagnostics,
         LocalizationService localizer,
-        GameInstallationPath installationPath,
+        IGameInstallationPath installationPath,
         IGameProcessTracker gameProcessTracker,
         LauncherDataRoot dataRoot)
         : this(

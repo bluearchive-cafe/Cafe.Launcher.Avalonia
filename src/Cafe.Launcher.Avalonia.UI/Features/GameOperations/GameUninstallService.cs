@@ -22,7 +22,7 @@ internal sealed class GameUninstallService
     private const int MaxReportedLeftovers = 5;
 
     private readonly ILocalInstallationStateStore localInstallationStateStore;
-    private readonly GameInstallationPath installationPath;
+    private readonly IGameInstallationPath installationPath;
     private readonly ILauncherDiagnostics diagnostics;
     private readonly LocalizationService localizer;
     private readonly DownloadCheckpointStore checkpointStore;
@@ -33,7 +33,7 @@ internal sealed class GameUninstallService
         ILocalInstallationStateStore localInstallationStateStore,
         ILauncherDiagnostics diagnostics,
         LocalizationService localizer,
-        GameInstallationPath installationPath,
+        IGameInstallationPath installationPath,
         DownloadCheckpointStore checkpointStore,
         IGameProcessTracker gameProcessTracker,
         IGameShortcutService shortcutService)

@@ -27,11 +27,11 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
     private readonly LauncherUpdateService launcherUpdateService;
-    private readonly LauncherSelfUpdateService launcherSelfUpdateService;
+    private readonly ILauncherSelfUpdateService launcherSelfUpdateService;
     private readonly DialogsViewModel dialogs;
     private readonly SettingsEditor editor;
     private readonly UnifiedLogger unifiedLogger;
-    private readonly GameInstallationPath gameInstallationPath;
+    private readonly IGameInstallationPath gameInstallationPath;
     private readonly IErrorHandlingService errorHandling;
     private readonly LauncherBuildIdentity? buildIdentity;
     private readonly IGameRuntime gameRuntime;
@@ -69,10 +69,10 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
         LocalizationService localizer,
         ToastService toastService,
         LauncherUpdateService launcherUpdateService,
-        LauncherSelfUpdateService launcherSelfUpdateService,
+        ILauncherSelfUpdateService launcherSelfUpdateService,
         DialogsViewModel dialogs,
         UnifiedLogger unifiedLogger,
-        GameInstallationPath gameInstallationPath,
+        IGameInstallationPath gameInstallationPath,
         SettingsOptionsViewModel options,
         SettingsAppearanceViewModel appearance,
         IErrorHandlingService errorHandling,

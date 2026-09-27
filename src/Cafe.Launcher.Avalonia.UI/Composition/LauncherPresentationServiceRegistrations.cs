@@ -165,7 +165,7 @@ public static class LauncherPresentationServiceRegistrations
             sp.GetRequiredService<IDiskSpaceService>(),
             sp.GetRequiredService<ILauncherDiagnostics>(),
             sp.GetRequiredService<LocalizationService>(),
-            sp.GetRequiredService<GameInstallationPath>(),
+            sp.GetRequiredService<IGameInstallationPath>(),
             sp.GetRequiredService<IGameProcessTracker>(),
             sp.GetRequiredService<DownloadCheckpointStore>()));
 

@@ -19,7 +19,7 @@ namespace Cafe.Launcher.Avalonia.ViewModels;
 
 internal partial class BackgroundViewModel : ViewModelBase, IDisposable
 {
-    private readonly ImageCacheService imageCacheService;
+    private readonly IImageCacheService imageCacheService;
     private readonly ILauncherDiagnostics diagnostics;
     private readonly Action<LauncherSettings> wallpaperChanged;
     private readonly Func<string, PixelSize, IImage?> imageLoader;
@@ -59,7 +59,7 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
     private CancellationTokenSource? wallpaperFadeCancellation;
 
     public BackgroundViewModel(
-        ImageCacheService imageCacheService,
+        IImageCacheService imageCacheService,
         ILauncherDiagnostics diagnostics,
         SettingsViewModel settings,
         IWindowMetricsService? windowMetrics = null)
@@ -78,7 +78,7 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
     }
 
     internal BackgroundViewModel(
-        ImageCacheService imageCacheService,
+        IImageCacheService imageCacheService,
         ILauncherDiagnostics diagnostics,
         Action<LauncherSettings> wallpaperChanged,
         IWindowMetricsService? windowMetrics = null)
@@ -99,7 +99,7 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
     /// bitmap was actually decoded for.
     /// </param>
     internal BackgroundViewModel(
-        ImageCacheService imageCacheService,
+        IImageCacheService imageCacheService,
         ILauncherDiagnostics diagnostics,
         Action<LauncherSettings> wallpaperChanged,
         Func<string, PixelSize, IImage?> imageLoader,
