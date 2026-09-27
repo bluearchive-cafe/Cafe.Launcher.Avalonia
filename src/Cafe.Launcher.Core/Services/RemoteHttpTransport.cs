@@ -152,12 +152,12 @@ public sealed class RemoteHttpTransport : IRemoteHttpTransport
 
     /// <summary>Production constructor — resolves proxy modes from launcher settings and leases from the shared factory.</summary>
     public RemoteHttpTransport(
-        HttpClientFactory httpClientFactory,
+        IRemoteHttpClientLeaseSource leaseSource,
         RemoteHttpUrlValidator urlValidator,
         Func<string> resolveProxyMode)
         : this(
             (proxyMode, timeout, cancellationToken) =>
-                httpClientFactory.CreateLeaseAsync(proxyMode, baseAddress: null, timeout, cancellationToken),
+                leaseSource.CreateLeaseAsync(proxyMode, baseAddress: null, timeout, cancellationToken),
             urlValidator,
             resolveProxyMode,
             delayAsync: null,
