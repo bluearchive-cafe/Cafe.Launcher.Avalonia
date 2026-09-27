@@ -14,7 +14,7 @@ public sealed partial class UiStyleContractTests
     [InlineData("LauncherStrings.zh-Hant.resx")]
     public void LogSeverityNames_MatchBetweenViewerFiltersAndSettings(string resxFile)
     {
-        var values = TestLocalizationHelper.ReadResx(TestRepository.FromApplicationRoot($"Resources/{resxFile}"));
+        var values = TestLocalizationHelper.ReadResx(TestRepository.FromPresentationRoot($"Resources/{resxFile}"));
         Dictionary<string, string> matchingKeys = new(StringComparer.Ordinal)
         {
             ["logFilterVerbose"] = "logLevelVerbose",

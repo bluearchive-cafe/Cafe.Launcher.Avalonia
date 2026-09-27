@@ -42,7 +42,7 @@ public static class TestRepository
         new(ReadAllResx);
 
     private static readonly Lazy<string> ApplicationResourcesRoot =
-        new(() => Path.Combine(ApplicationRoot.Value, "Resources"));
+        new(() => Path.Combine(PresentationRoot.Value, "Resources"));
 
     /// <summary>仓库根：含解决方案文件的目录。面向读 workflow、release 脚本等仓库级文件的用例。</summary>
     public static string Root => RepositoryRoot.Value;
@@ -59,7 +59,7 @@ public static class TestRepository
     /// <summary>Avalonia 表现工程目录。</summary>
     public static string PresentationPath => PresentationRoot.Value;
 
-    /// <summary>本地化资源目录。</summary>
+    /// <summary>本地化资源目录（.resx 随表现层归 UI 工程）。</summary>
     public static string ResourcesPath => ApplicationResourcesRoot.Value;
 
     /// <summary>仓库根下的路径。</summary>

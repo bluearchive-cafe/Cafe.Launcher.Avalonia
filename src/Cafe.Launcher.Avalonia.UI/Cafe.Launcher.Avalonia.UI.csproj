@@ -2,7 +2,10 @@
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <AssemblyName>Cafe.Launcher.Avalonia.UI</AssemblyName>
-    <RootNamespace>Cafe.Launcher.Avalonia.UI</RootNamespace>
+    <!-- 表现层代码沿用 Cafe.Launcher.Avalonia.* 命名空间（搬迁只换程序集，不换命名空间），
+         RootNamespace 因此与之一致：附带效果是 Resources/*.resx 的清单名仍推导为
+         Cafe.Launcher.Avalonia.Resources.LauncherStrings，与生成的 Designer 完全对齐。 -->
+    <RootNamespace>Cafe.Launcher.Avalonia</RootNamespace>
     <Nullable>enable</Nullable>
     <AnalysisLevel>latest-recommended</AnalysisLevel>
     <AnalysisMode>Minimum</AnalysisMode>

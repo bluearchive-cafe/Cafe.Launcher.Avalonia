@@ -272,9 +272,8 @@ public sealed class CrashReportTests : IDisposable
     [Fact]
     public void CrashReportApp_RegistersIconStylesUsedByCrashReportWindow()
     {
-        var projectRoot = TestLocalizationHelper.FindProjectRoot();
-        var windowXaml = File.ReadAllText(Path.Combine(projectRoot, "Views", "CrashReportWindow.axaml"));
-        var appXaml = File.ReadAllText(Path.Combine(projectRoot, "CrashReportApp.axaml"));
+        var windowXaml = File.ReadAllText(TestRepository.FromApplicationRoot("Views/CrashReportWindow.axaml"));
+        var appXaml = File.ReadAllText(TestRepository.FromApplicationRoot("CrashReportApp.axaml"));
 
         // The isolated reporter builds its own minimal Application, so every control
         // theme the crash window relies on must be registered there and not only in

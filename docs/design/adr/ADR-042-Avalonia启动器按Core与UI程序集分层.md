@@ -146,6 +146,14 @@ Core API 后应改回显式 using。`AssemblySplitContractTests.CoreSources_UseO
   崩溃报告与导出内容里的版本/提交/构建配置不再来自宿主 `BuildInfo`；`CrashReportStore` 的注册
   由组合根显式传身份。它们因此可以在 UI 程序集落位时整体搬走——唯一仍与宿主耦合的是
   `CrashReporterLauncher`（拉起独立崩溃报告进程，依赖 `Program`）。
+- UI 程序集开始承载内容（第一步：本地化资源）：`Resources/*.resx` 与生成的 `LauncherStrings.Designer.cs`
+  迁入 `src/Cafe.Launcher.Avalonia.UI/`；UI 的 `RootNamespace` 定为 `Cafe.Launcher.Avalonia`（表现层
+  代码本就沿用该命名空间，搬迁只换程序集），因此 resx 的清单名仍是
+  `Cafe.Launcher.Avalonia.Resources.LauncherStrings`，与 Designer 对齐；`LauncherStrings` 及其成员
+  由 `internal` 改为 `public`（宿主与测试要经程序集引用使用），`Generate-LauncherStringsDesigner.ps1`
+  同步改成生成 public。资源目录的定位点（`TestRepository.ResourcesPath`、
+  `TestLocalizationHelper.FindProjectRoot`、三个本地化脚本）一并改指 UI 工程；四个语言文件的
+  卫星程序集已验证按文化解析正确。
 - 混合模型文件拆分：`ManifestValidationResult`、`GameLaunchResult`、`LauncherRemoteState`、
   `LauncherRuntimeState`、`LauncherStatusSnapshot` 迁到 `Cafe.Launcher.Core.Models`
   （`Models/LauncherStatusModels.cs`）；宿主的 `LauncherRuntimeModels.cs` 只剩表现类型

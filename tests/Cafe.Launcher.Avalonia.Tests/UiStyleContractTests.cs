@@ -45,7 +45,7 @@ public sealed partial class UiStyleContractTests
 
     private static string[] FindXamlFiles(string relativeDirectory, SearchOption searchOption)
     {
-        var projectRoot = TestLocalizationHelper.FindProjectRoot();
+        var projectRoot = TestRepository.ApplicationPath;
         // 程序集拆分后 Views/Controls 会搬进 UI 工程，而本契约的扫描域与声明表都是按宿主
         // 相对路径写的。搬文件的那次提交必须把两者一起切到 TestRepository.PresentationPath；
         // 在这里 fail loudly，免得扫描域安静地变空、契约退化成永远为真。
