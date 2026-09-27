@@ -21,10 +21,19 @@ public sealed class AssemblySplitContractTests
         Assert.DoesNotContain(packageNames, package => package.StartsWith("Avalonia", StringComparison.Ordinal));
         Assert.DoesNotContain(packageNames, package => package.StartsWith("MarkView", StringComparison.Ordinal));
         Assert.DoesNotContain(packageNames, package => package.StartsWith("Material.Icons", StringComparison.Ordinal));
+        // MVVM 工具包属于表现层：Core 的设置模型只实现 BCL 的 INotifyPropertyChanged
+        // （Models/SettingsModel.cs），引用它会让「无表现依赖」只剩名义。
+        Assert.DoesNotContain(packageNames, package => package.StartsWith("CommunityToolkit", StringComparison.Ordinal));
 
-        var coreSources = Directory.GetFiles(TestRepository.CorePath, "*.cs", SearchOption.AllDirectories);
+        var separator = Path.DirectorySeparatorChar;
+        var coreSources = Directory.GetFiles(TestRepository.CorePath, "*.cs", SearchOption.AllDirectories)
+            .Where(path => !path.Contains($"{separator}obj{separator}", StringComparison.OrdinalIgnoreCase))
+            .Where(path => !path.Contains($"{separator}bin{separator}", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
         Assert.DoesNotContain(coreSources, path =>
             File.ReadAllText(path).Contains("using Avalonia", StringComparison.Ordinal));
+        Assert.DoesNotContain(coreSources, path =>
+            File.ReadAllText(path).Contains("using CommunityToolkit", StringComparison.Ordinal));
     }
 
     [Fact]

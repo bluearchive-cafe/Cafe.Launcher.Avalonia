@@ -4,11 +4,10 @@ using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core;
-using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Cafe.Launcher.Core.Models;
 
-public sealed class LauncherSettings : ObservableObject
+public sealed class LauncherSettings : SettingsModel
 {
     private string gamePath = "";
     private string launchCheckMode = LaunchCheckModes.LocalManifest;
