@@ -36,6 +36,8 @@ public static class TestRepository
 
     private static readonly Lazy<string> RepositoryRoot = new(FindRepositoryRoot);
     private static readonly Lazy<string> ApplicationRoot = new(FindApplicationRoot);
+    private static readonly Lazy<string> CoreRoot = new(() => FindProjectRoot("Cafe.Launcher.Core"));
+    private static readonly Lazy<string> PresentationRoot = new(() => FindProjectRoot("Cafe.Launcher.Avalonia.UI"));
     private static readonly Lazy<Dictionary<string, Dictionary<string, string>>> Localization =
         new(ReadAllResx);
 
@@ -48,6 +50,15 @@ public static class TestRepository
     /// <summary>应用工程目录：<c>src/Cafe.Launcher.Avalonia</c>。面向读源码与资源文件的用例。</summary>
     public static string ApplicationPath => ApplicationRoot.Value;
 
+    /// <summary>WinExe 宿主工程目录。保留旧名 <see cref="ApplicationPath"/> 以免让既有源码契约失效。</summary>
+    public static string HostPath => ApplicationRoot.Value;
+
+    /// <summary>无 Avalonia 后端工程目录。</summary>
+    public static string CorePath => CoreRoot.Value;
+
+    /// <summary>Avalonia 表现工程目录。</summary>
+    public static string PresentationPath => PresentationRoot.Value;
+
     /// <summary>本地化资源目录。</summary>
     public static string ResourcesPath => ApplicationResourcesRoot.Value;
 
@@ -57,6 +68,12 @@ public static class TestRepository
     /// <summary>应用工程目录下的路径。</summary>
     public static string InApplication(params string[] segments) => Combine(ApplicationPath, segments);
 
+    public static string InHost(params string[] segments) => Combine(HostPath, segments);
+
+    public static string InCore(params string[] segments) => Combine(CorePath, segments);
+
+    public static string InPresentation(params string[] segments) => Combine(PresentationPath, segments);
+
     /// <summary>
     /// 仓库根下的路径，接受以 <c>'/'</c> 分隔的相对路径——契约测试的字面量习惯沿用仓库的
     /// 相对引用（Bash 与 CI 里也是这个形状），由这里一次性换算成宿主分隔符。
@@ -65,6 +82,12 @@ public static class TestRepository
 
     /// <summary>应用工程目录下的路径，接受以 <c>'/'</c> 分隔的相对路径。</summary>
     public static string FromApplicationRoot(string relativePath) => CombineRelative(ApplicationPath, relativePath);
+
+    public static string FromHostRoot(string relativePath) => CombineRelative(HostPath, relativePath);
+
+    public static string FromCoreRoot(string relativePath) => CombineRelative(CorePath, relativePath);
+
+    public static string FromPresentationRoot(string relativePath) => CombineRelative(PresentationPath, relativePath);
 
     /// <summary>
     /// 把仓库里的四种语言资源装进 <see cref="LocalizationService"/> 的测试资源槽位。
@@ -153,6 +176,23 @@ public static class TestRepository
 
         throw new DirectoryNotFoundException(
             "src/Cafe.Launcher.Avalonia/Cafe.Launcher.Avalonia.csproj was not found.");
+    }
+
+    private static string FindProjectRoot(string projectName)
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            var project = Path.Combine(directory.FullName, "src", projectName, projectName + ".csproj");
+            if (File.Exists(project))
+            {
+                return Path.GetDirectoryName(project)!;
+            }
+
+            directory = directory.Parent;
+        }
+
+        throw new DirectoryNotFoundException($"src/{projectName}/{projectName}.csproj was not found.");
     }
 
     private static string FindRepositoryRoot()

@@ -53,6 +53,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Cafe.Launcher.Core\Cafe.Launcher.Core.csproj" />
     <ProjectReference Include="..\..\src\Cafe.Launcher.Avalonia\Cafe.Launcher.Avalonia.csproj" />
     <ProjectReference Include="..\..\src\Cafe.Launcher.Updater.Core\Cafe.Launcher.Updater.Core.csproj" />
   </ItemGroup>

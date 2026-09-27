@@ -7,6 +7,9 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using Cafe.Launcher.Core.Composition;
+using Cafe.Launcher.Avalonia.UI;
+using Cafe.Launcher.Avalonia.UI.Composition;
 using Cafe.Launcher.Avalonia.Composition;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
@@ -45,6 +48,47 @@ public partial class App : Application
             // Build DI container, reusing the pre-DI UnifiedLogger so there is
             // a single Serilog pipeline for the entire process.
             var serviceCollection = new ServiceCollection();
+            MainWindow? presentationWindow = null;
+            MainWindowViewModel? presentationViewModel = null;
+            serviceCollection.AddLauncherCore(BuildInfo.Identity);
+            serviceCollection.AddLauncherPresentation(
+                new LauncherPresentationCallbacks(
+                    CreateMainWindow: () => presentationWindow
+                        ?? throw new InvalidOperationException("Presentation window has not been created."),
+                    InitializeAsync: cancellationToken => InitializeViewModelAsync(
+                        presentationWindow
+                            ?? throw new InvalidOperationException("Presentation window has not been created."),
+                        presentationViewModel
+                            ?? throw new InvalidOperationException("Presentation view model has not been created."),
+                        serviceProvider
+                            ?? throw new InvalidOperationException("Presentation services have not been built."),
+                        cancellationToken),
+                    ShowWindow: () =>
+                    {
+                        if (trayService is not null)
+                        {
+                            trayService.ShowWindow();
+                        }
+                        else
+                        {
+                            presentationWindow?.ShowWindow();
+                        }
+                    },
+                    LaunchGameAsync: _ =>
+                    {
+                        (presentationViewModel
+                            ?? throw new InvalidOperationException("Presentation view model has not been created."))
+                            .Operations.StartGameCommand.Execute(null);
+                        return Task.CompletedTask;
+                    },
+                    PrepareForShutdownAsync: _ => CompleteShutdownAsync(
+                        presentationWindow
+                            ?? throw new InvalidOperationException("Presentation window has not been created."),
+                        presentationViewModel
+                            ?? throw new InvalidOperationException("Presentation view model has not been created."),
+                        serviceProvider
+                            ?? throw new InvalidOperationException("Presentation services have not been built.")),
+                    Dispose: () => presentationViewModel?.Dispose()));
             serviceCollection.AddLauncherServices(
                 existingLogger: Program.PreDiLogger,
                 existingFatalCrashService: Program.PreDiFatalCrashService);
@@ -60,6 +104,7 @@ public partial class App : Application
                 .DebugAsync("Application", "Application started, DI container built", CancellationToken.None);
 
             var viewModel = serviceProvider.GetRequiredService<MainWindowViewModel>();
+            presentationViewModel = viewModel;
             var mainWindow = new MainWindow(
                 serviceProvider.GetRequiredService<WindowFilePickerService>(),
                 serviceProvider.GetRequiredService<WindowMetricsService>(),
@@ -67,7 +112,9 @@ public partial class App : Application
             {
                 DataContext = viewModel,
             };
+            presentationWindow = mainWindow;
             var shutdownDeferral = new ShutdownDeferral();
+            var presentationSession = serviceProvider.GetRequiredService<LauncherPresentationSession>();
             var fatalShutdown = false;
             CrashReportWindow? crashReportWindow = null;
 
@@ -124,10 +171,7 @@ public partial class App : Application
                 }
 
                 shutdownCts.Cancel();
-                Task shutdownTask = CompleteShutdownAsync(
-                    mainWindow,
-                    viewModel,
-                    serviceProvider);
+                Task shutdownTask = presentationSession.PrepareForShutdownAsync();
                 if (shutdownTask.IsCompletedSuccessfully)
                 {
                     return;
@@ -194,19 +238,19 @@ public partial class App : Application
                 showWindowListener?.Dispose();
                 launchGameListener?.Dispose();
                 shutdownCts.Cancel();
-                viewModel.Dispose();
+                presentationSession.Dispose();
                 trayService?.Dispose();
                 shutdownCts.Dispose();
             };
 
             // Listen for show-window signal from second instances (cross-platform:
             // a plain second start or a forwarded launch brings this window up).
-            showWindowListener = new ShowWindowSignalListener(mainWindow, trayService, Program.ShowWindowSignal!);
+            showWindowListener = new ShowWindowSignalListener(presentationSession, Program.ShowWindowSignal!);
 
             // Listen for --launch-game forwards from second instances (cross-platform:
             // the Linux .desktop shortcut relies on it; on Unix the transport is a
             // local socket, since .NET has no named events outside Windows).
-            launchGameListener = new LaunchGameSignalListener(viewModel.Operations, Program.LaunchGameSignal!);
+            launchGameListener = new LaunchGameSignalListener(presentationSession, Program.LaunchGameSignal!);
 
             // Register Opened handler BEFORE desktop.MainWindow is set — that assignment
             // may trigger the window to show and fire Opened synchronously.
@@ -233,7 +277,7 @@ public partial class App : Application
             {
                 WindowOpenedOnce.Subscribe(mainWindow, (_, _) =>
                 {
-                    _ = InitializeViewModelAsync(mainWindow, viewModel, serviceProvider, shutdownCts.Token);
+                    _ = InitializePresentationAsync(presentationSession, shutdownCts.Token);
                 });
             }
 
@@ -255,17 +299,6 @@ public partial class App : Application
             var savedSettings = await settingsService.ReadAsync(cancellationToken);
             mainWindow.ApplySavedWindowState(savedSettings);
             await viewModel.InitializeAsync(cancellationToken);
-            if (Program.LaunchGameRequested && !Program.FirstLaunch)
-            {
-                // --launch-game first-instance flow: the initial state refresh has
-                // finished, so the launch runs through the same command the UI
-                // button uses (validation, runner selection, toasts).
-                // First-launch installs are deliberately excluded: the setup wizard
-                // owns that session and the game cannot be installed yet, so an
-                // auto-launch would only fire a "not installed" toast over the wizard.
-                await Dispatcher.UIThread.InvokeAsync(
-                    () => viewModel.Operations.StartGameCommand.Execute(null));
-            }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -308,6 +341,20 @@ public partial class App : Application
             {
                 mainWindow.ApplySavedWindowState(viewModel.Settings.Editor.GetSavedSnapshot());
             }
+        }
+    }
+
+    private static async Task InitializePresentationAsync(
+        LauncherPresentationSession presentationSession,
+        CancellationToken cancellationToken)
+    {
+        await presentationSession.InitializeAsync(cancellationToken);
+        if (Program.LaunchGameRequested && !Program.FirstLaunch)
+        {
+            // The initial refresh has finished, so auto-launch uses the same
+            // presentation entry point as a forwarded --launch-game request.
+            await Dispatcher.UIThread.InvokeAsync(
+                () => presentationSession.LaunchGameAsync(cancellationToken));
         }
     }
 
@@ -383,15 +430,12 @@ public partial class App : Application
     /// </summary>
     private sealed class ShowWindowSignalListener : CrossProcessSignalListener
     {
-        public ShowWindowSignalListener(MainWindow mainWindow, SystemTrayService? trayService, CrossProcessLaunchSignal signal)
+        public ShowWindowSignalListener(LauncherPresentationSession presentationSession, CrossProcessLaunchSignal signal)
             : base(signal.WaitOne, () =>
         {
             try
             {
-                if (trayService is not null)
-                    trayService.ShowWindow();
-                else
-                    mainWindow.ShowWindow();
+                presentationSession.ShowWindow();
             }
             catch (Exception ex)
             {
@@ -413,12 +457,12 @@ public partial class App : Application
     /// </summary>
     private sealed class LaunchGameSignalListener : CrossProcessSignalListener
     {
-        public LaunchGameSignalListener(GameOperationsViewModel operations, CrossProcessLaunchSignal signal)
+        public LaunchGameSignalListener(LauncherPresentationSession presentationSession, CrossProcessLaunchSignal signal)
             : base(signal.WaitOne, () =>
             {
                 try
                 {
-                    operations.StartGameCommand.Execute(null);
+                _ = presentationSession.LaunchGameAsync();
                 }
                 catch (Exception ex)
                 {
