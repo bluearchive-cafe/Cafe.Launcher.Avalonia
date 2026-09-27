@@ -12,7 +12,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void DesignTokens_NewFamilies_DeclareExpectedScaleValues()
     {
-        var app = XDocument.Load(TestRepository.FromApplicationRoot("App.axaml"));
+        var app = XDocument.Load(TestRepository.FromHostRoot("App.axaml"));
         var keyed = app
             .Descendants()
             .Where(element => element.Attributes().Any(attribute => attribute.Name.LocalName == "Key"))

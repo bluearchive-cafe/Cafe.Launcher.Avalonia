@@ -10,16 +10,17 @@
 - 范围：文件结构、架构、可靠性、安全与供应链、依赖、测试、性能、可维护性
 - 项目画像：.NET 10 / Avalonia 12 跨平台桌面游戏启动器，含独立 Windows 自更新 helper
 - 健康度：良好；没有 Critical 或 High 发现
-- 当前开放：0 项（本轮四项开放发现已全部修复并提交：AUD-ARCH-014、AUD-SEC-007、AUD-ARCH-001、AUD-MAINT-008，见 Git 历史）
+- 当前开放：1 项（`AUD-ARCH-015`，2026-09-27 由 ADR-042 迁移收尾登记；其余四项开放发现已修复并提交：AUD-ARCH-014、AUD-SEC-007、AUD-ARCH-001、AUD-MAINT-008，见 Git 历史）
 - 已接受风险：9 项 Low
 - 2026-09-25 文档状态更新：按用户要求已将官方启动器 v1.7.2 与本项目的静态对比写入 `docs/research/official-launcher-v1.7.2-comparison.md`，原 `AUD-MAINT-002` 的“不入库”取舍不再成立；其余审计结论仍以 2026-09-24 基线为准。
 - 2026-09-26 打包状态更新：Linux `.deb`/RPM/AppImage/Arch 的元数据、依赖声明与版本同步已按当轮复核补齐（Debian copyright、`changelog.Debian.gz` 与 `-1` 打包修订号，三格式共用 AppStream metainfo，RPM/Arch 声明自包含 .NET 仍需的系统库与真实许可证集，`release.ps1` 在版本提交内同步 Arch `_realver`/`pkgver`/`.SRCINFO`）；发布 CI 已加入 Fedora 容器 RPM 实装与 Arch `makepkg`+`namcap` 门禁，尚未随真实 tag 运行过。本轮发现均在同一变更内修复，不产生开放发现。
-
-当前没有待办优先级；新的工作应从新的 delta 审计或产品需求出发，不要凭记忆重开已解决事项。
+- 2026-09-27 分层重构更新：ADR-042 的 Core/UI 程序集拆分与其迁移清单已落地（`verify.ps1` 全绿：单元 2287、Headless 219、覆盖率 86.41%/92.83%）。收尾盘点把「Core 公开面仍为实现默认 public」登记为 `AUD-ARCH-015`——原来的缺口「没有守卫防止新增 public 实现」已在同一变更内补上守卫。
 
 ## 开放发现
 
-（无——上一轮的四项开放发现均已修复：便携更新在新版本启动成功后才释放备份并支持恢复旧版、自更新信任链绑定版本/tag/包名、Shell 自更新状态机抽离为 `ShellSelfUpdateCoordinator`、Linux 预检与会话看护的文档漂移修正。）
+| ID | 证据 | 影响 | 严重度 | 置信度 | 处置 | 完成条件 |
+| --- | --- | --- | --- | --- | --- | --- |
+| `AUD-ARCH-015` | `src/Cafe.Launcher.Core` 里 `Models/` 之外仍有 46 个顶层 public class（含 `FileDownloadService`、`NoticeStateService`、`GameProcessTracker`、`ProtonBuildDiscovery`、`LinuxProcessScanner`、`RemoteBodyReader` 等服务实现），消费方仍有按具体类型取用的地方；ADR-042 的收窄只做到「消费方改成只经接口取用」的那一批。 | 后端实现细节跨程序集可见，UI/测试可以绕过窄接口直接依赖实现，接缝的收窄无法靠编译器维持。 | Low | 高 | 分批把消费方改成只经接口取用，随后把实现收回 `internal`；增量已由 `AssemblySplitContractTests.CorePublicImplementationsOutsideModels_AreTheDeclaredSet` 的显式声明集挡住（新增/移除都会红）。 | `Models/` 之外的顶层 public class 只剩数据模型辅助类型与确需公开的进程级类型，或声明表不再包含任何服务实现。 |
 
 ## 已接受风险
 

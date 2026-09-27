@@ -207,17 +207,17 @@ public sealed class TestSupportFacilityTests
     }
 
     [Fact]
-    public void Repository_LocatesTheApplicationAndItsResources()
+    public void Repository_LocatesTheHostProjectAndItsResources()
     {
         Assert.True(File.Exists(Path.Combine(TestRepository.Root, "Cafe.Launcher.Avalonia.slnx")));
         Assert.True(File.Exists(Path.Combine(
-            TestRepository.ApplicationPath,
+            TestRepository.HostPath,
             "Cafe.Launcher.Avalonia.csproj")));
         Assert.True(Directory.Exists(TestRepository.ResourcesPath));
 
         // 缓存路径：重复读取得到同一结果，而不是每次上溯目录树。
         Assert.Same(TestRepository.Root, TestRepository.Root);
-        Assert.Same(TestRepository.ApplicationPath, TestRepository.ApplicationPath);
+        Assert.Same(TestRepository.HostPath, TestRepository.HostPath);
     }
 
     [Fact]

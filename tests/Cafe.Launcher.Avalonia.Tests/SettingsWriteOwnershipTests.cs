@@ -28,6 +28,7 @@ public sealed class SettingsWriteOwnershipTests
     /// </summary>
     private static readonly string[] SettingsServiceHolders =
     [
+        "src/Cafe.Launcher.Avalonia.UI/Composition/LauncherPresentationServiceCollectionExtensions.cs",
         "src/Cafe.Launcher.Avalonia.UI/Composition/LauncherPresentationServiceRegistrations.cs",
         "src/Cafe.Launcher.Avalonia.UI/Features/Diagnostics/DebugViewModel.cs",
         "src/Cafe.Launcher.Avalonia.UI/Features/GameOperations/DownloadSession.cs",

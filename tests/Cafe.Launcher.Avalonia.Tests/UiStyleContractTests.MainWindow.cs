@@ -456,7 +456,7 @@ public sealed partial class UiStyleContractTests
     {
         const string sharedStylesSource =
             "avares://Cafe.Launcher.Avalonia.UI/Views/MainWindow.Styles.axaml";
-        var application = XDocument.Load(TestRepository.FromApplicationRoot("App.axaml"));
+        var application = XDocument.Load(TestRepository.FromHostRoot("App.axaml"));
         var mainWindow = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
 
         Assert.Contains(
@@ -779,7 +779,7 @@ public sealed partial class UiStyleContractTests
                 .Elements()
                 .Single(element => element.Name.LocalName == "Setter")
                 .Attribute("Value")?.Value);
-        var appResources = XDocument.Load(TestRepository.FromApplicationRoot("App.axaml"));
+        var appResources = XDocument.Load(TestRepository.FromHostRoot("App.axaml"));
         var tabIndicatorMargin = appResources
             .Descendants()
             .Single(element => element.Name.LocalName == "Thickness"

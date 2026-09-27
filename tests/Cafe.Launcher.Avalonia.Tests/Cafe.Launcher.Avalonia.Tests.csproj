@@ -50,7 +50,6 @@
 
   <ItemGroup>
     <Using Include="Xunit" />
-    <!-- 过渡期：Core 的源命名空间已收口为 Cafe.Launcher.Core.*（见宿主 csproj 的同一段说明）。 -->
   </ItemGroup>
 
   <ItemGroup>

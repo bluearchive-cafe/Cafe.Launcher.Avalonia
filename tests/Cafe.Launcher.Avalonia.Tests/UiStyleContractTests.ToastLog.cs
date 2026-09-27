@@ -183,7 +183,7 @@ public sealed partial class UiStyleContractTests
             "{StaticResource Launcher.Component.LogViewer.FilterBar.Margin}",
             GetStyleSetters(styles, "StackPanel.log-filter-bar")["Margin"]);
 
-        var app = XDocument.Load(TestRepository.FromApplicationRoot("App.axaml"));
+        var app = XDocument.Load(TestRepository.FromHostRoot("App.axaml"));
         var xKey = XNamespace.Get("http://schemas.microsoft.com/winfx/2006/xaml") + "Key";
         string TokenValue(string key) => app
             .Descendants()
@@ -236,7 +236,7 @@ public sealed partial class UiStyleContractTests
                 surfaceStyles,
                 "controls|DialogSurface.log-surface:panel /template/ ScrollViewer#PART_ScrollViewer")["Padding"]);
 
-        var app = XDocument.Load(TestRepository.FromApplicationRoot("App.axaml"));
+        var app = XDocument.Load(TestRepository.FromHostRoot("App.axaml"));
         var xKey = XNamespace.Get("http://schemas.microsoft.com/winfx/2006/xaml") + "Key";
         string TokenValue(string key) => app
             .Descendants()

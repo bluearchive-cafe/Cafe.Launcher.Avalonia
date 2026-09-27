@@ -17,7 +17,8 @@ public sealed class DiskSpaceServiceTests
         string? decompressionSize,
         long expected)
     {
-        var result = DiskSpaceService.ResolveRequiredBytes(isFreshInstall, plannedDownloadBytes, decompressionSize);
+        var result = new DiskSpaceService()
+            .ResolveRequiredBytes(isFreshInstall, plannedDownloadBytes, decompressionSize);
 
         Assert.Equal(expected, result);
     }

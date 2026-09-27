@@ -10,7 +10,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void DesignTokens_ContainExactSpacingRadiusIconAndControlHeightValues()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("App.axaml"));
+        var document = XDocument.Load(TestRepository.FromHostRoot("App.axaml"));
         var resources = document
             .Descendants()
             .Where(element => element.Attributes().Any(attribute => attribute.Name.LocalName == "Key"))
@@ -63,7 +63,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void TypographyTokens_ContainExactScaleWeightAndFamilyValues()
     {
-        var appDocument = XDocument.Load(TestRepository.FromApplicationRoot("App.axaml"));
+        var appDocument = XDocument.Load(TestRepository.FromHostRoot("App.axaml"));
         var resources = appDocument
             .Descendants()
             .Where(element => element.Attributes().Any(attribute => attribute.Name.LocalName == "Key"))
@@ -109,8 +109,8 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void FontConfiguration_UsesLanguageFontsWithoutInterDefault()
     {
-        var program = File.ReadAllText(TestRepository.FromApplicationRoot("Program.cs"));
-        var project = XDocument.Load(TestRepository.FromApplicationRoot("Cafe.Launcher.Avalonia.csproj"));
+        var program = File.ReadAllText(TestRepository.FromHostRoot("Program.cs"));
+        var project = XDocument.Load(TestRepository.FromHostRoot("Cafe.Launcher.Avalonia.csproj"));
         var packageNames = project
             .Descendants()
             .Where(element => element.Name.LocalName == "PackageReference")
@@ -120,7 +120,7 @@ public sealed partial class UiStyleContractTests
         Assert.DoesNotContain(".WithInterFont()", program, StringComparison.Ordinal);
         Assert.DoesNotContain("Avalonia.Fonts.Inter", packageNames);
 
-        var appDocument = XDocument.Load(TestRepository.FromApplicationRoot("App.axaml"));
+        var appDocument = XDocument.Load(TestRepository.FromHostRoot("App.axaml"));
         var monospace = appDocument
             .Descendants()
             .Single(element =>
@@ -403,7 +403,7 @@ public sealed partial class UiStyleContractTests
     {
         // Gallery group titles are composed at runtime as "designGroup" + family segment,
         // so static localization scans cannot see them; this locks the mapping instead.
-        var application = XDocument.Load(TestRepository.FromApplicationRoot("App.axaml"));
+        var application = XDocument.Load(TestRepository.FromHostRoot("App.axaml"));
         var tokenFamilies = application
             .Descendants()
             .Select(element => element.Attributes()

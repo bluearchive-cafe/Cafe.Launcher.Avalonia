@@ -15,7 +15,7 @@ using Cafe.Launcher.Core;
 using Cafe.Launcher.Core.Services;
 using Cafe.Launcher.Core.Services.Diagnostics;
 
-namespace Cafe.Launcher.Avalonia.Composition;
+namespace Cafe.Launcher.Avalonia.UI.Composition;
 
 /// <summary>
 /// 表现层（UI 程序集）的服务登记入口。宿主只调用本方法与 Core 的 <c>AddLauncherCore</c>，
@@ -41,6 +41,7 @@ public static class LauncherPresentationServiceRegistrations
         IFatalCrashService? existingFatalCrashService = null,
         bool showHiddenSettings = false)
     {
+        ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(launcherDataRoot);
         ArgumentNullException.ThrowIfNull(buildIdentity);
 

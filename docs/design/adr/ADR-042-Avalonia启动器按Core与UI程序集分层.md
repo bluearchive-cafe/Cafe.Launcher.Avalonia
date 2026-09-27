@@ -151,7 +151,8 @@ Core API 后应改回显式 using。`AssemblySplitContractTests.CoreSources_UseO
   逐包列出「Required by」并在文件头列出已扫描工程；同一包在两个工程解析出不同版本时直接失败而不是
   猜一个。`ThirdPartyNoticesContractTests` 从「只比对宿主工程」扩到全部生产工程，并新增
   「已扫描工程清单 == 磁盘上的生产工程」这条断言。
-- **UI 公开面收窄**：表现层 172 个顶层 public 类型收到 27 个（internal 185 个）。仍然 public 的
+- **UI 公开面收窄**：表现层 172 个顶层 public 类型收到 27 个（internal 184 个，判据：UI 工程里
+  顶格的类型声明，`LauncherStrings.Designer.cs` 除外）。仍然 public 的
   只有三类：宿主真正使用的门面与入口（`LauncherPresentationSession`、两个组合扩展、
   `ICrashReporterLauncher`、`FatalCrashService`/`IFatalCrashService`、`CrashReport`/`CrashReportStore`/
   `CrashReportBootstrap`/`CrashReportWindow`、`LocalizationService` 及其签名里出现的
@@ -159,12 +160,16 @@ Core API 后应改回显式 using。`AssemblySplitContractTests.CoreSources_UseO
   领域枚举（`GameOperationStage`、`DownloadStopReason`、`UninstallScope`、`ModalKind`、`ToastSeverity`
   等——public 测试方法不能带 internal 参数类型）。其余视图、ViewModel、服务与辅助类型全部 internal，
   测试经 UI 程序集的 `InternalsVisibleTo`（只对两个测试程序集）访问。
-- **接缝反转完成**：`LauncherPresentationSession` 不再转发宿主回调，而是自己从容器解析
-  `MainWindow`、`MainWindowViewModel` 与托盘并组装（`CreateMainWindow`），并接管原来宿主里的
+- **接缝反转完成**：`LauncherPresentationSession` 不再转发宿主回调，而是自己组装
+  `MainWindow` 与托盘（`CreateMainWindow`）并接管原来宿主里的
   `InitializeViewModelAsync`/`CompleteShutdownAsync` 两个方法与启动行为挂载
   （`AttachStartupBehavior(firstLaunch, launchGameRequested, shutdownToken)`：首启走向导、否则初始化后
-  按 `--launch-game` 自动启动）。`LauncherPresentationCallbacks` 记录随之删除，
-  `AddLauncherPresentation()` 只登记会话本身；宿主 `App.axaml.cs` 只剩 277 行，且不再解析任何表现层类型
+  按 `--launch-game` 自动启动）。它的协作者（`MainWindowViewModel`、取文件/窗口尺寸服务、诊断、设置读写、
+  本地化、错误处理、托盘动作与数据根）全部经构造函数注入，由 UI 的登记入口
+  `AddLauncherPresentation()` 装配——门面里因此没有 `IServiceProvider`，也没有服务定位
+  （`PROJECT_CONVENTIONS.md` §5.3）；协作者里有 internal 类型，所以构造函数是 `internal`，
+  只有同程序集的登记方能拼装它。`LauncherPresentationCallbacks` 记录随之删除，
+  宿主 `App.axaml.cs` 只剩 277 行，且不再解析任何表现层类型
   （窗口、VM、托盘、文件选择器、窗口尺寸服务都不再出现在宿主里）。宿主保留：应用生命周期、
   跨进程转发信号、崩溃窗口替换（`CreateCrashReportWindow` + `HideMainWindow` + `desktop.Shutdown(1)`）
   与关闭延迟。会话登记并入宿主 `AddLauncherServices`，因此任何从组合根构建的容器
@@ -195,20 +200,24 @@ Core API 后应改回显式 using。`AssemblySplitContractTests.CoreSources_UseO
 - UI 程序集开始承载内容（第一步：本地化资源）：`Resources/*.resx` 与生成的 `LauncherStrings.Designer.cs`
   迁入 `src/Cafe.Launcher.Avalonia.UI/`；UI 的 `RootNamespace` 定为 `Cafe.Launcher.Avalonia`（表现层
   代码本就沿用该命名空间，搬迁只换程序集），因此 resx 的清单名仍是
-  `Cafe.Launcher.Avalonia.Resources.LauncherStrings`，与 Designer 对齐；`LauncherStrings` 及其成员
-  由 `internal` 改为 `public`（宿主与测试要经程序集引用使用），`Generate-LauncherStringsDesigner.ps1`
-  同步改成生成 public。资源目录的定位点（`TestRepository.ResourcesPath`、
-  `TestLocalizationHelper.FindProjectRoot`、三个本地化脚本）一并改指 UI 工程；四个语言文件的
-  卫星程序集已验证按文化解析正确。
+  `Cafe.Launcher.Avalonia.Resources.LauncherStrings`，与 Designer 对齐。`LauncherStrings` 在搬迁时
+  一度改为 `public`（当时的假设是宿主也要用）；随后的「UI 公开面收窄」批次确认宿主并不消费它
+  （宿主只用 `Constants/LocalizationKeys` 与 XAML 的 `Shell.I18n[...]`），于是又改回 `internal`，
+  测试经 UI 程序集的 `InternalsVisibleTo` 访问。生成器 `Generate-LauncherStringsDesigner.ps1`
+  同步生成 `internal`：产物与脚本一致由 `LauncherStringsDesigner_DeclaresWhatItsGeneratorEmits`
+  钉住——否则下次「加了键就重跑脚本」会静默放宽刚收窄的公开面。资源目录的定位点
+  （`TestRepository.ResourcesPath`、`TestLocalizationHelper.FindProjectRoot`、三个本地化脚本）一并
+  改指 UI 工程；四个语言文件的卫星程序集已验证按文化解析正确。
 - 混合模型文件拆分：`ManifestValidationResult`、`GameLaunchResult`、`LauncherRemoteState`、
   `LauncherRuntimeState`、`LauncherStatusSnapshot` 迁到 `Cafe.Launcher.Core.Models`
   （`Models/LauncherStatusModels.cs`）；宿主的 `LauncherRuntimeModels.cs` 只剩表现类型
   （下拉选项族、操作进度、带 Avalonia `Bitmap` 的远程内容卡）。
 
-剩余（2026-09-27 迁移收尾盘点）：S1–S5 列出的迁移项已全部完成，下面是收尾时留下的两项，
-其中第 2 项已在本批完成；第 1 项（Core 实现收窄）也已完成，故此处只记录最终状态与判据。
+剩余（2026-09-27 迁移收尾盘点）：S1–S5 列出的迁移项已全部完成。第 1 项（Core 实现收窄）按
+「消费方改成只经接口取用」的范围完成，未覆盖的公开实现与缺失的增量守卫已登记为
+`CODEBASE_AUDIT.md` 的 `AUD-ARCH-015`；第 2 项（项目级 `<Using>` 收敛）已在本批完成。
 
-1. **Core 公开面收窄（进行中）**：已完成两批——`ICrc64Service`、`IDiskSpaceService`、
+1. **Core 公开面收窄（按接口化范围完成）**：已完成两批——`ICrc64Service`、`IDiskSpaceService`、
    `ILocalInstallationStateStore`、`ILauncherSettingsService`（刻意只含 `ReadAsync`，让表现层在
    类型层面无法绕开写入协调器）、`IRemoteHttpUrlValidator` 五个接口就位，对应实现与
    `SavedSettingsWriter` 均收回 `internal`，接口与实现在 `AddLauncherCore` 里映射到同一单例
@@ -222,9 +231,12 @@ Core API 后应改回显式 using。`AssemblySplitContractTests.CoreSources_UseO
    `AddLauncherCore`，偏好闭包读 `ISettingsDraftOwner.GetSavedSnapshot()`，缺草稿所有者时退回默认设置），
    `LauncherApiClient`/`HttpClientFactory`/`RemoteHttpTransport` 及一批内部实现（`AuthorizationHeaderFactory`、
    `PatchUrlGroupService`、`PrefixMetadataStore`、`ProxySettingsService`、`DefaultProcessLauncher`、
-   `GameRuntime`、`LauncherCoreService` 等）均收回 `internal`：Core 顶层 public class 由 56 降到 45，
-   剩下的 public 类全是数据模型/响应体、进程日志器 `UnifiedLogger` 与表现层按批次超时构造的
-   `LeaseBackedDownloadTransportSource`；`HttpClientLease` 因是公开接口的返回类型而保留。
+   `GameRuntime`、`LauncherCoreService` 等）均收回 `internal`：`Models/` 之外的顶层 public class
+   由 57 降到 46（判据见守卫 `CorePublicImplementationsOutsideModels_AreTheDeclaredSet`；收窄前
+   实测于 `c6455ff3`）。收窄批次当时的记账写作 56 → 45，那条判据略窄，本 ADR 以守卫的判据为准。
+   剩下的 public 类除了数据模型/响应体、进程日志器 `UnifiedLogger` 与表现层按批次超时构造的
+   `LeaseBackedDownloadTransportSource` 之外，还有一批静态帮助类与工具类型；
+   `HttpClientLease` 因是公开接口的返回类型而保留。
    至此 S3 的收窄项完成；项目级 `<Using>` 收敛见下文「剩余」第 2 项（已完成）。原计划里描述的做法（保留作记录）：（`HttpClientFactory` / `RemoteHttpTransport` / `LauncherApiClient` /
    `AuthorizationHeaderFactory` / `PatchUrlGroupService`）。收尾盘点已确定它的做法，不需要新接缝：
    Core 的 `ISettingsDraftOwner.GetSavedSnapshot()` 正是那两个偏好闭包需要的快照（ADR-028 的
@@ -246,9 +258,13 @@ Core API 后应改回显式 using。`AssemblySplitContractTests.CoreSources_UseO
    其它 Core public 成员的签名里（`LauncherApiClient.GetInstallationConfigAsync` 返回
    `InstallationConfigResponse`、`LogEntryReader.Read` 返回 `IEnumerable<LogRecord>`……），
    收窄会逐级级联，因此全部回退——**唯一可行的路径是先把消费方改成只经接口取用**。
-   这已超出本次「按程序集分层」的范围，作为独立重构登记；当前没有守卫防止新增 public 实现。
-2. **项目级 `<Using>` 收敛（已完成）**：四个工程 csproj 里的 33 条
-   `<Using Include="Cafe.Launcher.Core.*" />` 全部移除，218 个源文件补上显式 using（用
+   这已超出本次「按程序集分层」的范围，作为独立重构登记为 `CODEBASE_AUDIT.md` 的
+   `AUD-ARCH-015`；「没有守卫防止新增 public 实现」这一缺口已补上：
+   `CorePublicImplementationsOutsideModels_AreTheDeclaredSet` 把 `Models/` 之外的顶层
+   public class 钉成显式声明集，新增或移除都必须同时改那张表。
+2. **项目级 `<Using>` 收敛（已完成）**：迁移期四个工程 csproj 里一度加过 33 条
+   `<Using Include="Cafe.Launcher.Core.*" />`（相对 `origin/main` 是净新增后净删除，因此没有
+   可对比的旧态），现已全部移除，218 个源文件补上显式 using（用
    「类型/方法 → Core 命名空间」映射驱动编译器错误迭代完成）。新增守卫
    `AssemblySplitContractTests.Projects_ResolveCoreNamespacesWithExplicitUsings` 挡住回退。
    AGENTS.md 里「过渡解析」的说明同步改写为「每个工程显式列出自己用到的 Core 命名空间」。

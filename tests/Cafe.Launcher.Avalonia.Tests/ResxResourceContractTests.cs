@@ -221,6 +221,26 @@ public sealed class ResxResourceContractTests
     }
 
     [Fact]
+    public void LauncherStringsDesigner_DeclaresWhatItsGeneratorEmits()
+    {
+        // Designer 是生成产物：它的可见性属于表现层公开面的一部分（收窄批次把 LauncherStrings
+        // 改回 internal——宿主不消费它，测试经 UI 程序集的 InternalsVisibleTo 访问）。生成器与
+        // 产物一旦分叉，下一次「加了键就重跑脚本」会静默放宽公开面，所以这里钉住两者的类声明。
+        var generatorPath = TestRepository.FromRepositoryRoot("scripts/Generate-LauncherStringsDesigner.ps1");
+        var generator = File.ReadAllText(generatorPath);
+        var emitted = Regex.Match(
+            generator,
+            "\\$lines\\.Add\\('(?<declaration>(?:public|internal) static class LauncherStrings)'\\)");
+
+        Assert.True(emitted.Success, $"{generatorPath} 里找不到 LauncherStrings 的类声明。");
+
+        var designer = File.ReadAllText(
+            TestRepository.FromRepositoryRoot("src/Cafe.Launcher.Avalonia.UI/Resources/LauncherStrings.Designer.cs"));
+
+        Assert.Contains(emitted.Groups["declaration"].Value, designer, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ProductionCallSites_DoNotUseRawResourceKeyLiterals()
     {
         var separator = Path.DirectorySeparatorChar;
