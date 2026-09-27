@@ -52,7 +52,15 @@ public static class LauncherCoreServiceCollectionExtensions
         // 代理解析与连接池属于后端：HttpClientFactory 的注册仍留在组合根，因为它的
         // 偏好闭包读的是表现层的设置快照（ADR-028 的按使用时机拉取）。
         services.TryAddSingleton<ProxySettingsService>();
-        // 自更新：检查、宿主信息、下载器、应用器与自更新服务。应用器先于自更新服务注册：
+        services.TryAddSingleton<NoticeStateService>();
+        services.TryAddSingleton<SystemAnimationSettingsProvider>();
+        services.TryAddSingleton<ILauncherCoreService, LauncherCoreService>();
+        services.TryAddSingleton(sp => new ImageCacheService(
+            sp.GetRequiredService<IRemoteHttpTransport>(),
+            sp.GetRequiredService<Crc64Service>(),
+            sp.GetRequiredService<LauncherDataRoot>(),
+            sp.GetRequiredService<ILauncherDiagnostics>(),
+            sp.GetRequiredService<LauncherBuildIdentity>()));        // 自更新：检查、宿主信息、下载器、应用器与自更新服务。应用器先于自更新服务注册：
         // 可用性判定（本机是否带 helper）由应用器回答。
         services.TryAddSingleton<LauncherUpdateService>();
         services.TryAddSingleton<ILauncherUpdateHostInfoProvider, LauncherUpdateHostInfoProvider>();

@@ -1,13 +1,13 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Cafe.Launcher.Avalonia.Constants;
-using Cafe.Launcher.Avalonia.Helpers;
+using Cafe.Launcher.Core.Constants;
+using Cafe.Launcher.Core.Helpers;
 
-namespace Cafe.Launcher.Avalonia.Services;
+namespace Cafe.Launcher.Core.Services;
 
 public sealed class NoticeStateService
 {

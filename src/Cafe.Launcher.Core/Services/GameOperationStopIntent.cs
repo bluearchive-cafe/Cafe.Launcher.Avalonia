@@ -1,4 +1,4 @@
-namespace Cafe.Launcher.Avalonia.Services;
+namespace Cafe.Launcher.Core.Services;
 
 /// <summary>
 /// 停止活动工作流的意图。调用方只表达「为什么停」，检查点去留由游戏操作域自己决定：

@@ -41,7 +41,7 @@ public sealed class SettingsWriteOwnershipTests
         "src/Cafe.Launcher.Avalonia/Features/ResourcePanel/ResourcePanelUidService.cs",
         "src/Cafe.Launcher.Avalonia/Features/Settings/SettingsViewModel.cs",
         "src/Cafe.Launcher.Avalonia/Features/Shell/ShellLifecycle.cs",
-        "src/Cafe.Launcher.Avalonia/Services/LauncherCoreService.cs",
+        "src/Cafe.Launcher.Core/Services/LauncherCoreService.cs",
         "src/Cafe.Launcher.Avalonia/ViewModels/MainWindowViewModel.cs"
     ];
 

@@ -115,13 +115,11 @@ public static class ServiceConfiguration
 
         // ── Services with dependencies ────────────────────────────────────
         services.AddSingleton<ManifestValidationService>();
-        services.AddSingleton<NoticeStateService>();
         services.AddSingleton(sp => new ResourcePanelUidService(
             sp.GetRequiredService<BestHttpCookieLibraryService>(),
             sp.GetRequiredService<LauncherSettingsService>(),
             sp.GetRequiredService<ISavedSettingsWriter>(),
             sp.GetRequiredService<LocalDiagnostics>()));
-        services.AddSingleton<SystemAnimationSettingsProvider>();
         services.AddSingleton<SettingsEditor>();
         // 设置草稿所有者：Core 的写入协调器只认这个窄接缝，不认识 SettingsEditor 本身
         // （UI 线程编排留在编辑器里）。
@@ -149,7 +147,6 @@ public static class ServiceConfiguration
             sp.GetRequiredService<GameUninstallService>()));
 
 
-        services.AddSingleton<ILauncherCoreService, LauncherCoreService>();
         services.AddSingleton<IErrorHandlingService, ErrorHandlingService>();
 
         // ── IDisposable services ─────────────────────────────────────────
@@ -161,11 +158,6 @@ public static class ServiceConfiguration
             sp.GetRequiredService<PatchUrlGroupService>(),
             sp.GetRequiredService<ILauncherDiagnostics>()));
         services.AddSingleton<ResourcePanelApiClient>();
-        services.AddSingleton<ImageCacheService>(sp => new ImageCacheService(
-            sp.GetRequiredService<IRemoteHttpTransport>(),
-            sp.GetRequiredService<Crc64Service>(),
-            dataRoot,
-            sp.GetRequiredService<LocalDiagnostics>()));
         services.AddSingleton(sp => new GameDownloadService(
             sp.GetRequiredService<LauncherApiClient>(),
             sp.GetRequiredService<RemoteManifestService>(),

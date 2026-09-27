@@ -1,7 +1,7 @@
 using System;
 using System.Diagnostics;
 
-namespace Cafe.Launcher.Avalonia.Services;
+namespace Cafe.Launcher.Core.Services;
 
 /// <summary>
 /// 统一的"用系统文件管理器打开本地目录"实现。此前 WindowChromeViewModel、
