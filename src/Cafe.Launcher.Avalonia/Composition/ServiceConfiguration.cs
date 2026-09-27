@@ -79,7 +79,6 @@ public static class ServiceConfiguration
             services.AddSingleton<IFatalCrashService, FatalCrashService>();
         }
         services.AddSingleton<SetupWizardViewModel>();
-        services.AddSingleton<PatchUrlGroupService>();
         services.AddSingleton<RemoteManifestService>();
         services.AddSingleton<IFileDownloadService, FileDownloadService>();
         services.AddSingleton<ResourcePanelService>();
