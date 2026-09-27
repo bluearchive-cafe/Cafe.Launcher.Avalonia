@@ -80,7 +80,6 @@ public static class ServiceConfiguration
             services.AddSingleton<IFatalCrashService, FatalCrashService>();
         }
         services.AddSingleton<SetupWizardViewModel>();
-        services.AddSingleton<RemoteHttpUrlValidator>();
         services.AddSingleton<PatchUrlGroupService>();
         services.AddSingleton<RemoteManifestService>();
         services.AddSingleton<IFileDownloadService, FileDownloadService>();

@@ -140,7 +140,7 @@ public sealed class RemoteHttpUrlValidator
     /// presentation turns into targeted guidance instead of the generic network
     /// attribution. Literal-IP hosts never resolve and therefore never match.
     /// </summary>
-    internal bool IsFakeIpResolution(string host)
+    public bool IsFakeIpResolution(string host)
     {
         return resolutionCache.TryGetValue(host, out var entry)
             && utcNow() < entry.ExpiresAt
