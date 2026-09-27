@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
-using Cafe.Launcher.Avalonia.Helpers;
+using Cafe.Launcher.Core.Helpers;
 
-namespace Cafe.Launcher.Avalonia.Models;
+namespace Cafe.Launcher.Core.Models;
 
 /// <summary>
 /// Release information returned by the launcher update server proxy.

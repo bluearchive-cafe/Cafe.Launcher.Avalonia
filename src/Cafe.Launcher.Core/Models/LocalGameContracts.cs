@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-namespace Cafe.Launcher.Avalonia.Models;
+namespace Cafe.Launcher.Core.Models;
 
 public sealed class LocalManifest
 {

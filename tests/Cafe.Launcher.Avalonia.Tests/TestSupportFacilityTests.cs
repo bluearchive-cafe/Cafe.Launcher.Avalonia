@@ -38,7 +38,7 @@ public sealed class TestSupportFacilityTests
 
         Assert.Equal(Path.GetFullPath(directory.Path), directory.DataRoot.Root);
         Assert.Equal(
-            Path.Combine(directory.Path, Constants.GamePaths.LauncherSettingsFileName),
+            Path.Combine(directory.Path, Cafe.Launcher.Core.Constants.GamePaths.LauncherSettingsFileName),
             directory.DataRoot.SettingsPath);
     }
 

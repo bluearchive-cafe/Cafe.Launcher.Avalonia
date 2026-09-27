@@ -9,7 +9,7 @@ public sealed class TestUserDataIsolationTests
     /// 编译，守卫不会退化成「模式过时、于是静默放行一切」。
     /// </summary>
     private static readonly string ProcessRootResolver =
-        nameof(Services.LauncherDataRoot.ForCurrentProcess);
+        nameof(Cafe.Launcher.Core.Services.LauncherDataRoot.ForCurrentProcess);
 
     /// <summary>
     /// 除中央目录提供者外唯一被允许的数据根来源。这是 BCL 成员访问的文本形态，
@@ -31,12 +31,12 @@ public sealed class TestUserDataIsolationTests
             Path.GetTempPath(),
             Guid.NewGuid().ToString("N"));
 
-        var result = Services.LauncherDataRoot.ResolveProcessRoot(
+        var result = Cafe.Launcher.Core.Services.LauncherDataRoot.ResolveProcessRoot(
             testOverride,
             localApplicationData);
 
         Assert.Equal(
-            Path.Combine(localApplicationData, Constants.LauncherConstants.ProductName),
+            Path.Combine(localApplicationData, Cafe.Launcher.Core.Constants.LauncherConstants.ProductName),
             result);
     }
 
@@ -49,7 +49,7 @@ public sealed class TestUserDataIsolationTests
             "..",
             "isolated-user-data");
 
-        var result = Services.LauncherDataRoot.ResolveProcessRoot(
+        var result = Cafe.Launcher.Core.Services.LauncherDataRoot.ResolveProcessRoot(
             relativeOverride,
             "unused");
 
@@ -60,7 +60,7 @@ public sealed class TestUserDataIsolationTests
     public void TestProcess_DefaultSettingsPathUsesIsolatedUserDataDirectory()
     {
         var isolatedDirectory = Environment.GetEnvironmentVariable(
-            Services.LauncherDataRoot.TestOverrideEnvironmentVariable);
+            Cafe.Launcher.Core.Services.LauncherDataRoot.TestOverrideEnvironmentVariable);
 
         Assert.False(string.IsNullOrWhiteSpace(isolatedDirectory));
         Assert.StartsWith(
@@ -68,12 +68,12 @@ public sealed class TestUserDataIsolationTests
             Path.GetFullPath(isolatedDirectory),
             StringComparison.OrdinalIgnoreCase);
 
-        using var settingsService = new Services.LauncherSettingsService(
-            Services.LauncherDataRoot.ForCurrentProcess());
+        using var settingsService = new Cafe.Launcher.Core.Services.LauncherSettingsService(
+            Cafe.Launcher.Core.Services.LauncherDataRoot.ForCurrentProcess());
         Assert.Equal(
             Path.Combine(
                 Path.GetFullPath(isolatedDirectory),
-                Constants.GamePaths.LauncherSettingsFileName),
+                Cafe.Launcher.Core.Constants.GamePaths.LauncherSettingsFileName),
             settingsService.SettingsPath);
     }
 
@@ -88,7 +88,7 @@ public sealed class TestUserDataIsolationTests
     public void TestProcess_ManagedCompatibilityRootStaysInsideTheIsolatedDirectory()
     {
         var isolatedDirectory = Environment.GetEnvironmentVariable(
-            Services.LauncherDataRoot.TestOverrideEnvironmentVariable);
+            Cafe.Launcher.Core.Services.LauncherDataRoot.TestOverrideEnvironmentVariable);
 
         Assert.False(string.IsNullOrWhiteSpace(isolatedDirectory));
         Assert.StartsWith(
@@ -109,7 +109,7 @@ public sealed class TestUserDataIsolationTests
             "Windows 分支的兼容前缀复用启动器数据根，不读 XDG_DATA_HOME。");
 
         var isolatedDirectory = Environment.GetEnvironmentVariable(
-            Services.LauncherDataRoot.TestOverrideEnvironmentVariable);
+            Cafe.Launcher.Core.Services.LauncherDataRoot.TestOverrideEnvironmentVariable);
 
         Assert.Equal(
             Path.GetFullPath(isolatedDirectory!),
@@ -131,7 +131,7 @@ public sealed class TestUserDataIsolationTests
         // AF_UNIX 的 sockaddr_un 上限是 108 字节（含终止符即 107）。隔离目录过深
         // 会让 Listen/Raise 的绑定永远失败——linux-unit-tests 首跑即因此红过。
         var isolatedDirectory = Environment.GetEnvironmentVariable(
-            Services.LauncherDataRoot.TestOverrideEnvironmentVariable);
+            Cafe.Launcher.Core.Services.LauncherDataRoot.TestOverrideEnvironmentVariable);
 
         Assert.False(string.IsNullOrWhiteSpace(isolatedDirectory));
         var socketPath = Services.CrossProcessLaunchSignal.GetSocketFilePath(

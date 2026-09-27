@@ -1,8 +1,8 @@
 using System;
-using Cafe.Launcher.Avalonia.Constants;
-using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Core.Constants;
+using Cafe.Launcher.Core.Models;
 
-namespace Cafe.Launcher.Avalonia.Services;
+namespace Cafe.Launcher.Core.Services;
 
 public sealed class PatchUrlGroupService
 {

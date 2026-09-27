@@ -2,7 +2,7 @@ using System;
 using System.Text.Json.Serialization;
 using CommunityToolkit.Mvvm.ComponentModel;
 
-namespace Cafe.Launcher.Avalonia.Models;
+namespace Cafe.Launcher.Core.Models;
 
 public sealed class GameRuntimeSettings : ObservableObject
 {

@@ -106,7 +106,7 @@ public sealed class SettingsWriteOwnershipTests
     }
 
     [Theory]
-    [InlineData("/// <see cref=\"Services.LauncherSettingsService\"/>")]
+    [InlineData("/// <see cref=\"Cafe.Launcher.Core.Services.LauncherSettingsService\"/>")]
     [InlineData("/// <c>LauncherSettingsService.NormalizeSettings</c>")]
     public void HolderPattern_IgnoresDocumentationMentions(string source)
     {

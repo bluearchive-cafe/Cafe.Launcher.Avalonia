@@ -471,7 +471,7 @@ public partial class MainWindow : Window
     private void PerformClose()
     {
         if (DataContext is MainWindowViewModel vm
-            && vm.Settings.Editor.GetSavedSnapshot().CloseBehavior == Models.CloseBehaviors.Minimize)
+            && vm.Settings.Editor.GetSavedSnapshot().CloseBehavior == Cafe.Launcher.Core.Models.CloseBehaviors.Minimize)
         {
             if (systemTray is not null)
             {

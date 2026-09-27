@@ -1,8 +1,8 @@
 using System;
 using System.IO;
-using Cafe.Launcher.Avalonia.Constants;
+using Cafe.Launcher.Core.Constants;
 
-namespace Cafe.Launcher.Avalonia.Helpers;
+namespace Cafe.Launcher.Core.Helpers;
 
 /// <summary>
 /// Shared path-safety validation used by GameDownloadService and GameUninstallService.

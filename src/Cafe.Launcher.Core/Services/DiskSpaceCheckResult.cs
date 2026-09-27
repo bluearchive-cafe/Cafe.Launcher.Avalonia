@@ -1,4 +1,4 @@
-namespace Cafe.Launcher.Avalonia.Services;
+namespace Cafe.Launcher.Core.Services;
 
 public readonly record struct DiskSpaceCheckResult(long RequiredBytes, long? AvailableBytes)
 {

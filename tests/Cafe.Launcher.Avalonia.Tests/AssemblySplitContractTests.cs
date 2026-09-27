@@ -3,7 +3,6 @@ using Cafe.Launcher.Core;
 using Cafe.Launcher.Core.Composition;
 using Cafe.Launcher.Avalonia.Testing;
 using Cafe.Launcher.Avalonia.Services;
-using Cafe.Launcher.Avalonia.Services.Auth;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cafe.Launcher.Avalonia.Tests;
@@ -26,6 +25,23 @@ public sealed class AssemblySplitContractTests
         var coreSources = Directory.GetFiles(TestRepository.CorePath, "*.cs", SearchOption.AllDirectories);
         Assert.DoesNotContain(coreSources, path =>
             File.ReadAllText(path).Contains("using Avalonia", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void CoreSources_UseOnlyTheCoreNamespaces()
+    {
+        // Core 的源命名空间已收口为 Cafe.Launcher.Core.*；回退到 Cafe.Launcher.Avalonia.* 会让
+        // 一个物理上属于 Core 的类型看起来属于宿主，边界从源码上读不出来。
+        var separator = Path.DirectorySeparatorChar;
+        var offenders = Directory.GetFiles(TestRepository.CorePath, "*.cs", SearchOption.AllDirectories)
+            .Where(path => !path.Contains($"{separator}obj{separator}", StringComparison.OrdinalIgnoreCase))
+            .Where(path => !path.Contains($"{separator}bin{separator}", StringComparison.OrdinalIgnoreCase))
+            .SelectMany(path => File.ReadAllLines(path)
+                .Where(line => line.StartsWith("namespace Cafe.Launcher.Avalonia", StringComparison.Ordinal))
+                .Select(line => $"{Path.GetFileName(path)}: {line.Trim()}"))
+            .ToArray();
+
+        Assert.Empty(offenders);
     }
 
     [Fact]

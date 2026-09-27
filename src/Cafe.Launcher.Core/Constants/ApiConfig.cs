@@ -1,4 +1,4 @@
-namespace Cafe.Launcher.Avalonia.Constants;
+namespace Cafe.Launcher.Core.Constants;
 
 /// <summary>
 /// API endpoints, authentication, and GitHub release configuration.

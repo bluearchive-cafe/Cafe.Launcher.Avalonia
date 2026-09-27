@@ -3,7 +3,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Cafe.Launcher.Avalonia.Services;
+namespace Cafe.Launcher.Core.Services;
 
 /// <summary>远程响应正文超过调用方给定的字节上限。</summary>
 public sealed class RemoteBodyTooLargeException(long actualBytes, long? declaredBytes)

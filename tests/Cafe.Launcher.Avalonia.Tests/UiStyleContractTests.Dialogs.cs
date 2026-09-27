@@ -624,10 +624,12 @@ public sealed partial class UiStyleContractTests
         Assert.All(segments, segment => Assert.Equal(
             "ResourcePanelUidSource",
             segment.Attribute("GroupName")?.Value));
+        // 前缀由 xmlns 决定（Core 命名空间收口后是 coreModels），断言只看枚举类型与成员，
+        // 免得每次调整 xmlns 前缀都要改契约。
         Assert.Contains(segments, segment => segment.Attribute("IsChecked")?.Value
-            .Contains("ConverterParameter={x:Static models:ResourcePanelUidSources.Auto}", StringComparison.Ordinal) == true);
+            .Contains(":ResourcePanelUidSources.Auto}", StringComparison.Ordinal) == true);
         Assert.Contains(segments, segment => segment.Attribute("IsChecked")?.Value
-            .Contains("ConverterParameter={x:Static models:ResourcePanelUidSources.Custom}", StringComparison.Ordinal) == true);
+            .Contains(":ResourcePanelUidSources.Custom}", StringComparison.Ordinal) == true);
         Assert.All(segments, segment => Assert.True(
             segment.Attribute("IsChecked")?.Value
                 .Contains("Converter={x:Static converters:ResourcePanelSourceSegmentConverter.Instance}", StringComparison.Ordinal) == true

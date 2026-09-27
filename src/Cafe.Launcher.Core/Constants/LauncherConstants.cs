@@ -1,4 +1,4 @@
-namespace Cafe.Launcher.Avalonia.Constants;
+namespace Cafe.Launcher.Core.Constants;
 
 /// <summary>
 /// Cross-cutting constants used by both the UI and service layers.
