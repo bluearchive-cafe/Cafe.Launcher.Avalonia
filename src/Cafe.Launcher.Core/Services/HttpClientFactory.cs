@@ -14,7 +14,7 @@ namespace Cafe.Launcher.Core.Services;
 /// from <see cref="ProxySettingsService"/>) and owns the connection-level defaults.
 /// 客户端偏好由注入的来源按租约解析（见 ADR-028），本模块不接受偏好推送。
 /// </summary>
-public sealed class HttpClientFactory : IDisposable, IRemoteHttpClientLeaseSource
+internal sealed class HttpClientFactory : IDisposable, IRemoteHttpClientLeaseSource
 {
     private readonly SocketsHttpHandler defaultHandler;
     private readonly ProxySettingsService proxySettingsService;

@@ -77,30 +77,6 @@ public static class LauncherPresentationServiceRegistrations
         services.AddSingleton<RemoteManifestService>();
         services.AddSingleton<ResourcePanelService>();
 
-        // ── HttpClient factory (shared pool, proxy-aware) ────────────────
-        services.AddSingleton(sp =>
-        {
-            // HTTP/2 偏好与代理模式同源：都按使用时机读编辑器的已保存快照，
-            // 于是调用方不必「记得推」，也不会有租约用到过期的开关（ADR-028）。
-            var settingsEditor = sp.GetRequiredService<SettingsEditor>();
-            return new HttpClientFactory(
-                sp.GetRequiredService<ProxySettingsService>(),
-                () => settingsEditor.GetSavedSnapshot().EnableHttp2);
-        });
-        services.AddSingleton<IRemoteHttpClientLeaseSource>(sp =>
-            sp.GetRequiredService<HttpClientFactory>());
-        services.AddSingleton<IRemoteHttpTransport>(sp =>
-        {
-            // SettingsEditor 是无依赖单例，在传输构造时一次解析并闭包引用；
-            // 代理模式解析不再每次走服务定位。
-            var settingsEditor = sp.GetRequiredService<SettingsEditor>();
-            return new RemoteHttpTransport(
-                sp.GetRequiredService<IRemoteHttpClientLeaseSource>(),
-                sp.GetRequiredService<IRemoteHttpUrlValidator>(),
-                // 代理模式解析自设置编辑器的已保存快照——与各调用方此前传入的
-                // snapshot.ProxyMode 同源；options.ProxyMode 仍可按调用覆盖。
-                () => settingsEditor.GetSavedSnapshot().ProxyMode);
-        });
         services.AddSingleton<WindowFilePickerService>();
         services.AddSingleton<IFilePickerService>(sp =>
             sp.GetRequiredService<WindowFilePickerService>());
@@ -147,19 +123,14 @@ public static class LauncherPresentationServiceRegistrations
         // ── IDisposable services ─────────────────────────────────────────
         // The container disposes created services in reverse order. This keeps
         // HttpClientFactory alive until all clients and download services are gone.
-        services.AddSingleton<LauncherApiClient>(sp => new LauncherApiClient(
-            sp.GetRequiredService<IRemoteHttpTransport>(),
-            sp.GetRequiredService<AuthorizationHeaderFactory>(),
-            sp.GetRequiredService<PatchUrlGroupService>(),
-            sp.GetRequiredService<ILauncherDiagnostics>()));
         services.AddSingleton<ResourcePanelApiClient>();
         services.AddSingleton(sp => new GameDownloadService(
-            sp.GetRequiredService<LauncherApiClient>(),
+            sp.GetRequiredService<ILauncherApiClient>(),
             sp.GetRequiredService<RemoteManifestService>(),
             sp.GetRequiredService<IFileDownloadService>(),
             sp.GetRequiredService<ILocalInstallationStateStore>(),
             sp.GetRequiredService<ILauncherSettingsService>(),
-            sp.GetRequiredService<HttpClientFactory>(),
+            sp.GetRequiredService<IRemoteHttpClientLeaseSource>(),
             sp.GetRequiredService<IRemoteHttpUrlValidator>(),
             sp.GetRequiredService<ICrc64Service>(),
             sp.GetRequiredService<IDiskSpaceService>(),

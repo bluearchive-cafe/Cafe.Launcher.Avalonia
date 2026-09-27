@@ -1,6 +1,7 @@
 using System;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services;
 using Cafe.Launcher.Core.Services.Auth;
 using Cafe.Launcher.Core.Services.Diagnostics;
@@ -50,7 +51,37 @@ public static class LauncherCoreServiceCollectionExtensions
             LocalDiagnostics.RegisterSharedLogger(logger);
             return new LocalDiagnostics(logger);
         });
-        services.TryAddSingleton<ILauncherDiagnostics>(sp => sp.GetRequiredService<LocalDiagnostics>());        services.TryAddSingleton<Crc64Service>();
+        services.TryAddSingleton<ILauncherDiagnostics>(sp => sp.GetRequiredService<LocalDiagnostics>());        // ── HTTP 族（连接池、代理感知传输与官方 API 客户端）─────────────────
+        // 偏好闭包按使用时机读设置草稿所有者的已保存快照（ADR-028）：调用方不必「记得推」。
+        // 草稿所有者是表现层的设置编辑器；Core-only 容器（测试、辅助宿主）没有它，
+        // 退回与更新渠道无关的默认设置，而不是让构造失败。
+        services.TryAddSingleton(sp =>
+        {
+            LauncherSettings Snapshot() =>
+                sp.GetService<ISettingsDraftOwner>()?.GetSavedSnapshot()
+                ?? LauncherSettings.CreateDefaults(sp.GetRequiredService<LauncherBuildIdentity>());
+            return new HttpClientFactory(
+                sp.GetRequiredService<ProxySettingsService>(),
+                () => Snapshot().EnableHttp2);
+        });
+        services.TryAddSingleton<IRemoteHttpClientLeaseSource>(sp =>
+            sp.GetRequiredService<HttpClientFactory>());
+        services.TryAddSingleton<IRemoteHttpTransport>(sp =>
+        {
+            LauncherSettings Snapshot() =>
+                sp.GetService<ISettingsDraftOwner>()?.GetSavedSnapshot()
+                ?? LauncherSettings.CreateDefaults(sp.GetRequiredService<LauncherBuildIdentity>());
+            return new RemoteHttpTransport(
+                sp.GetRequiredService<IRemoteHttpClientLeaseSource>(),
+                sp.GetRequiredService<IRemoteHttpUrlValidator>(),
+                () => Snapshot().ProxyMode);
+        });
+        services.TryAddSingleton<LauncherApiClient>(sp => new LauncherApiClient(
+            sp.GetRequiredService<IRemoteHttpTransport>(),
+            sp.GetRequiredService<AuthorizationHeaderFactory>(),
+            sp.GetRequiredService<PatchUrlGroupService>(),
+            sp.GetRequiredService<ILauncherDiagnostics>()));
+        services.TryAddSingleton<ILauncherApiClient>(sp => sp.GetRequiredService<LauncherApiClient>());        services.TryAddSingleton<Crc64Service>();
         services.TryAddSingleton<ICrc64Service>(sp => sp.GetRequiredService<Crc64Service>());
         services.TryAddSingleton<DiskSpaceService>();
         services.TryAddSingleton<IDiskSpaceService>(sp => sp.GetRequiredService<DiskSpaceService>());

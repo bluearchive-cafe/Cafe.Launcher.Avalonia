@@ -20,7 +20,7 @@ namespace Cafe.Launcher.Core.Services;
 /// transport's <see cref="RemoteRequestOptions.ConfigureRequest"/>), envelope
 /// business codes, and manifest URL rewriting.
 /// </summary>
-public sealed class LauncherApiClient
+internal sealed class LauncherApiClient : ILauncherApiClient
 {
     private readonly IRemoteHttpTransport transport;
     private readonly AuthorizationHeaderFactory authorizationHeaderFactory;

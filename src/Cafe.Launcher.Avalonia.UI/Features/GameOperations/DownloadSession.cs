@@ -25,7 +25,7 @@ internal sealed class DownloadSession : IDisposable
 {
     private const int MaxInstallVerificationRetry = 3;
 
-    private readonly LauncherApiClient apiClient;
+    private readonly ILauncherApiClient apiClient;
     private readonly ILauncherSettingsService settingsService;
     private readonly ILocalInstallationStateStore localInstallationStateStore;
     private readonly IGameInstallationPath installationPath;
