@@ -205,7 +205,8 @@ Core API 后应改回显式 using。`AssemblySplitContractTests.CoreSources_UseO
   （`Models/LauncherStatusModels.cs`）；宿主的 `LauncherRuntimeModels.cs` 只剩表现类型
   （下拉选项族、操作进度、带 Avalonia `Bitmap` 的远程内容卡）。
 
-剩余（2026-09-27 迁移收尾盘点，两项）：
+剩余（2026-09-27 迁移收尾盘点）：S1–S5 列出的迁移项已全部完成，下面是收尾时留下的两项，
+其中第 2 项已在本批完成；第 1 项（Core 实现收窄）也已完成，故此处只记录最终状态与判据。
 
 1. **Core 公开面收窄（进行中）**：已完成两批——`ICrc64Service`、`IDiskSpaceService`、
    `ILocalInstallationStateStore`、`ILauncherSettingsService`（刻意只含 `ReadAsync`，让表现层在
@@ -252,8 +253,10 @@ Core API 后应改回显式 using。`AssemblySplitContractTests.CoreSources_UseO
    `AssemblySplitContractTests.Projects_ResolveCoreNamespacesWithExplicitUsings` 挡住回退。
    AGENTS.md 里「过渡解析」的说明同步改写为「每个工程显式列出自己用到的 Core 命名空间」。
 
-覆盖率（2026-09-27 全量实测，Debug verify + coverlet）：手写代码行 **86.51%** / 分支 **92.88%**，
-基线 0.8560 / 0.9180 **未下调**，余量 +0.91pp / +1.08pp。脚本约定「基线 = 实测值再留
+覆盖率（2026-09-27 迁移收尾后全量实测，`coverage.ps1`）：手写代码行 **86.41%** / 分支 **92.83%**，
+基线 0.8560 / 0.9180 **未下调**，余量 +0.81pp / +1.03pp，闸口通过。
+（迁移中途曾出现行 85.55–85.57% 低于基线 0.03–0.05pp 的状态，随程序集归属变化与收窄后的
+接口化自然消失；基线全程未动。）脚本约定「基线 = 实测值再留
 0.1–0.25pp 余量」，因此可以把基线**上调**收紧余量；上调是安全方向（不会放过回退），
 是否调整留待下次全量 verify 决定。迁移期间行指标曾长期比基线低 0.03–0.05pp，那一状态已随
 程序集归属变化自然消失，基线全程保持在 0.8560 / 0.9180。
