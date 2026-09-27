@@ -207,7 +207,17 @@ Core API 后应改回显式 using。`AssemblySplitContractTests.CoreSources_UseO
 
 剩余（2026-09-27 迁移收尾盘点，两项）：
 
-1. **Core 公开面收窄（部分完成）**：UI 程序集的公开面已收窄（172 → 27 个顶层 public 类型，
+1. **Core 公开面收窄（进行中）**：已完成两批——`ICrc64Service`、`IDiskSpaceService`、
+   `ILocalInstallationStateStore`、`ILauncherSettingsService`（刻意只含 `ReadAsync`，让表现层在
+   类型层面无法绕开写入协调器）、`IRemoteHttpUrlValidator` 五个接口就位，对应实现与
+   `SavedSettingsWriter` 均收回 `internal`，接口与实现在 `AddLauncherCore` 里映射到同一单例
+   （这些服务都持有状态，重复注册会让表现层拿到另一个实例）。剩下的最大一块是
+   `LocalDiagnostics`：表现层仍有 14 处 `WarningAsync`、3 处 `LogFilePath`、2 处 `SetMinimumLevel`
+   的直接调用，而接缝里只有 `LogMessage(LogEntrySeverity, …)`——要把这些调用点先迁到
+   `LogMessage`，并为日志文件访问另立窄接口，然后才能把实现收回 `internal`。其余仍 public 的
+   Core 类型是**数据模型**（`LauncherSettings`、`LauncherStatusSnapshot`、`ManifestFile`、
+   `LauncherDataRoot` 等）与进程级日志器 `UnifiedLogger`，它们本来就该公开。
+   UI 程序集的公开面已收窄（172 → 27 个顶层 public 类型，
    见上），Core 仍是「实现默认 public」。原因是 UI 现在是独立程序集，要跨边界消费 Core 的服务与
    模型；把实现改 `internal` 的前提是消费方只经接口取用，而仍有直接使用具体类型的地方
    （例如 `Crc64Service`、`LauncherSettingsService`、`DiskSpaceService`）。收尾时试过按「Core 之外
