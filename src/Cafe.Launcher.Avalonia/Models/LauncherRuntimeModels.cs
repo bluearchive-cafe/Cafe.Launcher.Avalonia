@@ -48,51 +48,6 @@ public sealed class ThemeOption : SelectableOption
 {
 }
 
-public sealed class ManifestValidationResult
-{
-    public bool Success { get; set; }
-
-    public int DamagedFileCount { get; set; }
-
-    public int MissingFileCount { get; set; }
-
-    public int SizeMismatchFileCount { get; set; }
-
-    /// <summary>
-    /// Whether this result reports file-integrity damage rather than a state, path,
-    /// or configuration failure. Only the manifest file scan produces a non-zero
-    /// count; every other failure reports <see cref="Success"/> false with all
-    /// counts left at zero.
-    /// </summary>
-    public bool HasDamagedFiles => DamagedFileCount > 0;
-
-    public string Message { get; set; } = "";
-}
-
-public sealed class GameLaunchResult
-{
-    public bool Success { get; set; }
-
-    public string Message { get; set; } = "";
-
-    /// <summary>Technical details for local diagnostics, kept separate from the user-facing message.</summary>
-    public string DiagnosticMessage { get; set; } = "";
-
-    /// <summary>Original launch exception retained for local diagnostic logging only.</summary>
-    public Exception? DiagnosticException { get; set; }
-
-    public ManifestValidationResult Validation { get; set; } = new();
-
-    /// <summary>Runner that won selection; non-null only on a successful launch that spawned a host process.</summary>
-    public string? RunnerId { get; set; }
-
-    /// <summary>
-    /// 游戏进程家族名（不含扩展名，<see cref="Features.GameOperations.RunningGameGate.ResolveQuery"/>
-    /// 同源）：启动成功后会话看护据此辨认「游戏真的起来了」（ADR-035）。空表示无从辨认。
-    /// </summary>
-    public IReadOnlyList<string> KnownExeNames { get; set; } = [];
-}
-
 public sealed class GameOperationProgress
 {
     public GameOperationKind OperationKind { get; set; } = GameOperationKind.Idle;
@@ -143,45 +98,6 @@ public sealed class GameOperationResult
     public int AffectedFileCount { get; set; }
 
     public int FailedFileCount { get; set; }
-}
-
-public sealed class LauncherRemoteState
-{
-    public GameConfigResponse? GameConfig { get; set; }
-
-    public BaseConfigResponse? BaseConfig { get; set; }
-
-    public CdnConfigResponse? CdnConfig { get; set; }
-
-    public OperationsResourceResponse? OperationsResource { get; set; }
-
-    public SocialMediaResourceResponse? SocialMediaResource { get; set; }
-
-    public InstallationConfigResponse? InstallationConfig { get; set; }
-}
-
-public enum LauncherRuntimeState
-{
-    NotInstalled,
-    Corrupted,
-    IoFailure,
-    RemoteUnavailable,
-    BelowLowestVersion,
-    UpdateAvailable,
-    Ready
-}
-
-public sealed class LauncherStatusSnapshot
-{
-    public LauncherSettings Settings { get; set; } = new();
-
-    public LocalInstallationState LocalGame { get; set; } = new();
-
-    public LauncherRemoteState Remote { get; set; } = new();
-
-    public LauncherRuntimeState RuntimeState { get; set; }
-
-    public DateTimeOffset CheckedAt { get; set; }
 }
 
 public sealed class RemoteContentItem : ObservableObject

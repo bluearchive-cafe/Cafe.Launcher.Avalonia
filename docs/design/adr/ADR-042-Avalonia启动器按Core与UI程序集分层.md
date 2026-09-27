@@ -108,32 +108,34 @@ Core API 后应改回显式 using。`AssemblySplitContractTests.CoreSources_UseO
   `Cafe.Launcher.Core.Services`，Avalonia 的 UI 线程编排移进 `SettingsEditor.ApplyPersistedAsync`；
   `ISettingsDraftOwner` 是 Core 到表现层的唯一反向接缝（窄且可等待）。
   `SettingsWriteOwnershipTests` 的扫描域随之扩到 host + Core，路径改为仓库相对。
+- 混合模型文件拆分：`ManifestValidationResult`、`GameLaunchResult`、`LauncherRemoteState`、
+  `LauncherRuntimeState`、`LauncherStatusSnapshot` 迁到 `Cafe.Launcher.Core.Models`
+  （`Models/LauncherStatusModels.cs`）；宿主的 `LauncherRuntimeModels.cs` 只剩表现类型
+  （下拉选项族、操作进度、带 Avalonia `Bitmap` 的远程内容卡）。
 
 未完成：
 
 1. Core 公开面收窄：96 个顶层类型中 95 个是 `public`；"实现默认 internal、只公开窄接口"
    未做，也无守卫。
-2. 混合模型文件拆分：`Models/LauncherRuntimeModels.cs` 仍同时承载 Core DTO
-   （`LocalInstallationState`）与 Avalonia 表现状态（`RemoteContentItem.BannerBitmap`）。
-3. 后端模块继续迁入 Core：`Services/Update/*`（自更新）、`FileDownloadService` /
+2. 后端模块继续迁入 Core：`Services/Update/*`（自更新）、`FileDownloadService` /
    `DownloadTransport`、`Services/GameRuntime/*`、`Services/Diagnostics/*`、
    `HttpClientFactory`、`GameShortcutService`、`ManifestValidationService`、
    `RemoteManifestService`、`ProxySettingsService` 等，以及全部 `Features/*`；
    随之把 `GameOperationExecutor` 等实现内部化，并把它们的注册从宿主组合根搬进 Core。
-4. UI 程序集落位：Views/Controls/Converters/ViewModels/Features/Resources/Assets 搬迁；
+3. UI 程序集落位：Views/Controls/Converters/ViewModels/Features/Resources/Assets 搬迁；
    9 处 `avares://Cafe.Launcher.Avalonia/...` 改指 UI；`AvaloniaResource` 与
    `EmbeddedResource` 从宿主 csproj 迁走；卫星资源程序集断言改指 UI。
-5. 表现层接缝反向：当前 `LauncherPresentationSession.CreateMainWindow` 无人调用，宿主仍
+4. 表现层接缝反向：当前 `LauncherPresentationSession.CreateMainWindow` 无人调用，宿主仍
    `new MainWindow(...)` 并直接解析 `MainWindowViewModel`；阶段 4 要由 UI 自己构造窗口与
    ViewModel，宿主只保留生命周期调用。
-6. 扫描契约随文件搬迁：`UiStyleContractTests` 的扫描域与声明表切到 `UI`（`FindXamlFiles`
+5. 扫描契约随文件搬迁：`UiStyleContractTests` 的扫描域与声明表切到 `UI`（`FindXamlFiles`
    已加 fail-loud 守卫，搬迁时会红而不是静默缩小），约 230 处
    `TestRepository.FromApplicationRoot("Views/…")` 与 `scripts/` 内宿主路径同步迁移。
    生命周期门面目前由 Headless 套件的 `LauncherPresentationSessionTests` 覆盖（UI 程序集
    在该跑批里 100% 行覆盖），但视图形状本身还没有 UI 测试。
-7. 第三方通知生成按生产工程逐个进行：`New-ThirdPartyNotices.ps1` 目前只读宿主 csproj，
+6. 第三方通知生成按生产工程逐个进行：`New-ThirdPartyNotices.ps1` 目前只读宿主 csproj，
    `ThirdPartyNoticesContractTests` 也只检查宿主的 `PackageReference`。
-8. 覆盖率基线重锚：闸口已加"每个生产程序集必须出现在报告里"的断言，拆分后实测
+7. 覆盖率基线重锚：闸口已加"每个生产程序集必须出现在报告里"的断言，拆分后实测
     （2026-09-27 全量 verify）为行 85.63% / 分支 91.85%，基线 0.8560 / 0.9180 未下调，
     余量 +0.03pp / +0.05pp。脚本自己的约定是"基线 = 实测值再留 0.1–0.25pp 余量"，
     是否按该约定重锚（会下调数值）留待下次全量 verify 决定。
