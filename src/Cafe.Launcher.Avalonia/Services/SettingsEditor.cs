@@ -1,7 +1,12 @@
 using System;
 using System.ComponentModel;
+using System.Threading;
+using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Threading;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Core;
+using Cafe.Launcher.Core.Services;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
@@ -11,7 +16,7 @@ namespace Cafe.Launcher.Avalonia.Services;
 /// to the saved settings goes through <see cref="ISavedSettingsWriter"/>, which persists and then
 /// applies the persisted value back here so the draft never disagrees with disk.
 /// </summary>
-public sealed class SettingsEditor : INotifyPropertyChanged
+public sealed class SettingsEditor : INotifyPropertyChanged, ISettingsDraftOwner
 {
     private LauncherSettings current;
     private LauncherSettings snapshot;
@@ -67,6 +72,30 @@ public sealed class SettingsEditor : INotifyPropertyChanged
     public void Commit(Action<LauncherSettings> apply)
     {
         apply(current);
+    }
+
+    LauncherSettings ISettingsDraftOwner.GetDraftSnapshot() => GetSnapshot();
+
+    LauncherSettings ISettingsDraftOwner.GetSavedSnapshot() => GetSavedSnapshot();
+
+    /// <summary>
+    /// <see cref="ISettingsDraftOwner"/>：把落盘的归一化值收口成新的草稿与快照。
+    /// 收口必须落在 UI 线程——<see cref="PropertyChanged"/> 直接驱动绑定与命令可用性（按钮在处理
+    /// CanExecuteChanged 时会读 Button.Command），而落盘的续体在线程池线程上，就地收口会在绑定层
+    /// 抛出 VerifyAccess。等待调度完成而非 Post：ADR-024 要求写入方返回时编辑器已经拿掉落盘值。
+    /// </summary>
+    async Task ISettingsDraftOwner.ApplyPersistedAsync(
+        LauncherSettings persisted,
+        CancellationToken cancellationToken)
+    {
+        // 无 Avalonia 应用（纯单元测试）时没有可调度的 UI 线程，就地收口。
+        if (Application.Current is null || Dispatcher.UIThread.CheckAccess())
+        {
+            ApplySnapshot(persisted);
+            return;
+        }
+
+        await Dispatcher.UIThread.InvokeAsync(() => ApplySnapshot(persisted));
     }
 
     public void Discard()

@@ -44,6 +44,9 @@ public static class LauncherCoreServiceCollectionExtensions
             sp.GetRequiredService<LauncherDataRoot>(),
             sp.GetService<ILauncherDiagnostics>(),
             buildIdentity: buildIdentity));
+        // 已保存设置的唯一写入方。草稿所有者由表现层登记（ISettingsDraftOwner）——写入方不认识
+        // 具体编辑器，UI 线程编排留在实现方。
+        services.TryAddSingleton<ISavedSettingsWriter, SavedSettingsWriter>();
         return services;
     }
 }

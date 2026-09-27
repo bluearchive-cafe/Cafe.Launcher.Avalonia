@@ -126,8 +126,9 @@ public static class ServiceConfiguration
             sp.GetRequiredService<LocalDiagnostics>()));
         services.AddSingleton<SystemAnimationSettingsProvider>();
         services.AddSingleton<SettingsEditor>();
-        // 已保存设置的唯一写入方：依赖编辑器与设置服务，二者都登记在它之前。
-        services.AddSingleton<ISavedSettingsWriter, SavedSettingsWriter>();
+        // 设置草稿所有者：Core 的写入协调器只认这个窄接缝，不认识 SettingsEditor 本身
+        // （UI 线程编排留在编辑器里）。
+        services.AddSingleton<ISettingsDraftOwner>(sp => sp.GetRequiredService<SettingsEditor>());
         services.AddSingleton<SettingsOptionsViewModel>();
         // 主题应用器登记在设置外观 VM 之前：容器按登记逆序释放，它的退订要晚于消费它的 VM。
         services.AddSingleton<ThemeApplier>();

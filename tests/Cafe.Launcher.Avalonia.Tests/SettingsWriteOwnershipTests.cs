@@ -29,23 +29,23 @@ public sealed class SettingsWriteOwnershipTests
     private static readonly string[] SettingsServiceHolders =
     [
         // 组合根：构造设置服务、把它交给写入方与各消费方
-        "Composition/ServiceConfiguration.cs",
+        "src/Cafe.Launcher.Avalonia/Composition/ServiceConfiguration.cs",
         // pre-DI：窗口打开前读一次已保存设置（窗口几何与初始化）
-        "App.axaml.cs",
+        "src/Cafe.Launcher.Avalonia/App.axaml.cs",
         // 以下为读取方
-        "Features/Diagnostics/DebugViewModel.cs",
-        "Features/GameOperations/DownloadSession.cs",
+        "src/Cafe.Launcher.Avalonia/Features/Diagnostics/DebugViewModel.cs",
+        "src/Cafe.Launcher.Avalonia/Features/GameOperations/DownloadSession.cs",
         // record 主构造参数里的 SettingsService（会话协作者簇）
-        "Features/GameOperations/DownloadSessionContext.cs",
-        "Features/GameOperations/GameDownloadService.cs",
-        "Features/ResourcePanel/ResourcePanelUidService.cs",
-        "Features/Settings/SettingsViewModel.cs",
-        "Features/Shell/ShellLifecycle.cs",
-        "Services/LauncherCoreService.cs",
-        "ViewModels/MainWindowViewModel.cs"
+        "src/Cafe.Launcher.Avalonia/Features/GameOperations/DownloadSessionContext.cs",
+        "src/Cafe.Launcher.Avalonia/Features/GameOperations/GameDownloadService.cs",
+        "src/Cafe.Launcher.Avalonia/Features/ResourcePanel/ResourcePanelUidService.cs",
+        "src/Cafe.Launcher.Avalonia/Features/Settings/SettingsViewModel.cs",
+        "src/Cafe.Launcher.Avalonia/Features/Shell/ShellLifecycle.cs",
+        "src/Cafe.Launcher.Avalonia/Services/LauncherCoreService.cs",
+        "src/Cafe.Launcher.Avalonia/ViewModels/MainWindowViewModel.cs"
     ];
 
-    private const string WriterFile = "Services/SavedSettingsWriter.cs";
+    private const string WriterFile = "src/Cafe.Launcher.Core/Services/SavedSettingsWriter.cs";
 
     /// <summary>
     /// 持有形态：字段/参数/局部变量声明（名字任意），以及从容器解析。
@@ -151,23 +151,20 @@ public sealed class SettingsWriteOwnershipTests
             .ToArray();
 
     /// <summary>
-    /// 应用工程的源文件。<c>bin</c> 与 <c>obj</c> 必须排除：生成代码（AssemblyInfo、XAML 的
-    /// <c>.g.cs</c>）与旧输出副本会让「只有写入方调用 SaveAsync」变成假红，而判据本身
-    /// 并不需要它们。
+    /// 生产源码（host + Core）。<c>bin</c> 与 <c>obj</c> 必须排除：生成代码（AssemblyInfo、XAML 的
+    /// <c>.g.cs</c>）与旧输出副本会让「只有写入方调用 SaveAsync」变成假红，而判据本身并不需要它们。
+    /// 程序集拆分后写入方住在 Core，路径一律相对仓库根，两个工程的文件不会互相遮蔽。
     /// </summary>
     private static IEnumerable<string> SourceFiles() =>
-        Directory
-            .EnumerateFiles(
-                TestRepository.FromApplicationRoot("."),
-                "*.cs",
-                SearchOption.AllDirectories)
+        new[] { TestRepository.HostPath, TestRepository.CorePath }
+            .SelectMany(root => Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories))
             .Where(file => !IsBuildArtifact(file));
 
     private static bool IsBuildArtifact(string path) =>
-        Path.GetRelativePath(TestRepository.FromApplicationRoot("."), path)
+        Path.GetRelativePath(TestRepository.Root, path)
             .Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
             .Any(segment => segment is "bin" or "obj");
 
     private static string RelativePath(string absolutePath) =>
-        Path.GetRelativePath(TestRepository.FromApplicationRoot("."), absolutePath).Replace(Path.DirectorySeparatorChar, '/');
+        Path.GetRelativePath(TestRepository.Root, absolutePath).Replace(Path.DirectorySeparatorChar, '/');
 }
