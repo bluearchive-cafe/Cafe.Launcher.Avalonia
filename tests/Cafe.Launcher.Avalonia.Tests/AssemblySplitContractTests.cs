@@ -38,6 +38,10 @@ public sealed class AssemblySplitContractTests
         Assert.True(File.Exists(TestRepository.FromCoreRoot("Services/BestHttpCookieLibraryService.cs")));
         Assert.True(File.Exists(TestRepository.FromCoreRoot("Models/LauncherApiContracts.cs")));
         Assert.True(File.Exists(TestRepository.FromCoreRoot("Models/LauncherReleaseResponse.cs")));
+        Assert.True(File.Exists(TestRepository.FromCoreRoot("Services/RetryPolicy.cs")));
+        Assert.True(File.Exists(TestRepository.FromCoreRoot("Services/RemoteBodyReader.cs")));
+        Assert.True(File.Exists(TestRepository.FromCoreRoot("Services/ResponseBodyReader.cs")));
+        Assert.True(File.Exists(TestRepository.FromCoreRoot("Helpers/HttpClientLease.cs")));
         Assert.False(File.Exists(TestRepository.FromHostRoot("Services/LauncherDataRoot.cs")));
         Assert.False(File.Exists(TestRepository.FromHostRoot("Services/LauncherSettingsService.cs")));
         Assert.False(File.Exists(TestRepository.FromHostRoot("Helpers/AtomicJsonFileStore.cs")));
@@ -45,6 +49,10 @@ public sealed class AssemblySplitContractTests
         Assert.False(File.Exists(TestRepository.FromHostRoot("Services/BestHttpCookieLibraryService.cs")));
         Assert.False(File.Exists(TestRepository.FromHostRoot("Models/LauncherApiContracts.cs")));
         Assert.False(File.Exists(TestRepository.FromHostRoot("Models/LauncherReleaseResponse.cs")));
+        Assert.False(File.Exists(TestRepository.FromHostRoot("Services/RetryPolicy.cs")));
+        Assert.False(File.Exists(TestRepository.FromHostRoot("Services/RemoteBodyReader.cs")));
+        Assert.False(File.Exists(TestRepository.FromHostRoot("Services/ResponseBodyReader.cs")));
+        Assert.False(File.Exists(TestRepository.FromHostRoot("Helpers/HttpClientLease.cs")));
     }
 
     [Fact]
