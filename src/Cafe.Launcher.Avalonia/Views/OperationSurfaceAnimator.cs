@@ -9,7 +9,7 @@ using Avalonia.Layout;
 using Avalonia.Styling;
 using Avalonia.VisualTree;
 using Cafe.Launcher.Avalonia.Helpers;
-using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Core.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.Views;
 
@@ -33,9 +33,9 @@ internal sealed class OperationSurfaceAnimator
         MotionTokens.FastDuration.TotalMilliseconds / MotionTokens.NormalDuration.TotalMilliseconds;
 
     private CancellationTokenSource? transitionCts;
-    private readonly Services.Diagnostics.LocalDiagnostics? diagnostics;
+    private readonly Cafe.Launcher.Core.Services.Diagnostics.LocalDiagnostics? diagnostics;
 
-    public OperationSurfaceAnimator(Services.Diagnostics.LocalDiagnostics? diagnostics = null)
+    public OperationSurfaceAnimator(Cafe.Launcher.Core.Services.Diagnostics.LocalDiagnostics? diagnostics = null)
     {
         this.diagnostics = diagnostics;
     }

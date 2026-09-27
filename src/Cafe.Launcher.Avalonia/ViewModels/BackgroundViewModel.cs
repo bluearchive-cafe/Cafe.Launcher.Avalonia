@@ -12,7 +12,7 @@ using Cafe.Launcher.Avalonia.Features.Settings;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
-using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Core.Services.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Cafe.Launcher.Avalonia.ViewModels;

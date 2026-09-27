@@ -3,7 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Services;
-using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Core.Services.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 

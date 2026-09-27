@@ -133,6 +133,14 @@ Core API 后应改回显式 using。`AssemblySplitContractTests.CoreSources_UseO
   `AddLauncherCore`。`ImageCacheService` 的 User-Agent 与 `LauncherCoreService` 的失败日志分别改走
   注入的 `LauncherBuildIdentity` 与 `ILauncherDiagnostics.ErrorAsync(title, message, exception)`。
   设置写入方的持有者声明表同步改指 Core 路径。
+- 诊断批次（部分）：`UnifiedLogger`、`LocalDiagnostics`、`LogEntryReader`、`LogExportOptions`、
+  `ExportWindow`、`CrashOrigin`、`GraphicsInfoProbe`、`LinuxProcessSnapshot` 迁入 Core
+  （Core 因此新增 Serilog 三个包，lock 同步重生成）。`UnifiedLogger` 不再读宿主 `BuildInfo`：
+  版本/提交/构建配置由构造参数注入，`Program.cs` 与组合根传宿主身份，测试与辅助宿主留空。
+  仍留宿主的诊断文件是崩溃报告族与导出器（`CrashReport`/`CrashReportStore`/`FatalCrashService`/
+  `LogExportService`/`CrashReportBootstrap`/`CrashReporterLauncher`/`ICrashReportLocator`/
+  `DispatcherExceptionPolicy`）——它们还依赖宿主 `BuildInfo` 与 `Program`，等下一步换成注入身份后再搬。
+  `DiagnosticsStaticSealTests` 的扫描域随之扩到 host + Core，声明表改仓库相对路径。
 - 混合模型文件拆分：`ManifestValidationResult`、`GameLaunchResult`、`LauncherRemoteState`、
   `LauncherRuntimeState`、`LauncherStatusSnapshot` 迁到 `Cafe.Launcher.Core.Models`
   （`Models/LauncherStatusModels.cs`）；宿主的 `LauncherRuntimeModels.cs` 只剩表现类型
@@ -179,11 +187,11 @@ Core API 后应改回显式 using。`AssemblySplitContractTests.CoreSources_UseO
 2. **游戏运行时**（`Services/GameRuntime/*`）依赖几乎都在自身目录内，但
    `GameRuntimeRunnerDisplay` 依赖 `LocalizationService`/`LocalizationKeys`（表现层）：搬迁时
    要么把该显示映射留在宿主，要么先引入窄的本地化接缝。
-3. **诊断**（下一批）：`UnifiedLogger`/`LocalDiagnostics`/`LogEntry`（已迁）/`LogEntryReader`
-   可先走；`LogExportService` 还依赖 `GraphicsInfoProbe`、`LinuxProcessScanner`、
-   `CrashReportStore`，`CrashReporterLauncher` 依赖 `Program`，`LocalDiagnostics` 还被
-   `Program.cs` 的 pre-DI 路径与 `ServiceConfiguration` 的静态登记使用——这一批需要为
-   「pre-DI 单例」设计一条 Core 侧的接缝（不能把宿主 `Program` 拖进 Core）。
+3. **诊断收尾**：崩溃报告族与导出器仍在宿主（`CrashReport`、`CrashReportStore`、
+   `FatalCrashService`、`LogExportService`、`CrashReportBootstrap`、`CrashReporterLauncher`、
+   `ICrashReportLocator`、`DispatcherExceptionPolicy`）。搬迁前要把它们对宿主 `BuildInfo`
+   的读取换成注入的 `LauncherBuildIdentity`，并决定 `CrashReporterLauncher`（拉起独立崩溃
+   报告进程）留在宿主还是经窄接缝调用。
 4. **自更新已完成**（见上）：`LauncherUpdateService` 与 `Services/Update/*` 均在 Core，
    当前版本/User-Agent 取注入的 `LauncherBuildIdentity`，告警走 `ILauncherDiagnostics`。
 5. **`GameShortcutService`、`ManifestValidationService`、`RemoteManifestService`、

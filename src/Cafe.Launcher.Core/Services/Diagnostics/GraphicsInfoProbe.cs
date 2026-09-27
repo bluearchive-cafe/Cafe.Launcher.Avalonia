@@ -5,10 +5,10 @@ using System.Diagnostics;
 using System.Linq;
 using Cafe.Launcher.Core.Services.GameRuntime;
 
-namespace Cafe.Launcher.Avalonia.Services.Diagnostics;
+namespace Cafe.Launcher.Core.Services.Diagnostics;
 
 /// <summary>The GPU/Vulkan facts a diagnostics export records, when the tools are available.</summary>
-internal sealed record GraphicsInfo(string? Vulkan, string? OpenGl);
+public sealed record GraphicsInfo(string? Vulkan, string? OpenGl);
 
 /// <summary>
 /// Best-effort GPU/Vulkan probe for the diagnostics export: runs <c>vulkaninfo --summary</c> and
@@ -24,9 +24,9 @@ internal sealed record GraphicsInfo(string? Vulkan, string? OpenGl);
 /// </remarks>
 public sealed class GraphicsInfoProbe
 {
-    internal static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(2);
+    public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(2);
 
-    internal const int MaxCharactersPerTool = 4096;
+    public const int MaxCharactersPerTool = 4096;
 
     private readonly Func<string, string, TimeSpan, string?> runTool;
 
@@ -35,14 +35,14 @@ public sealed class GraphicsInfoProbe
     {
     }
 
-    internal GraphicsInfoProbe(Func<string, string, TimeSpan, string?> runTool)
+    public GraphicsInfoProbe(Func<string, string, TimeSpan, string?> runTool)
     {
         ArgumentNullException.ThrowIfNull(runTool);
         this.runTool = runTool;
     }
 
     /// <summary>Probes both tools; returns null when neither produced a usable line.</summary>
-    internal GraphicsInfo? Probe()
+    public GraphicsInfo? Probe()
     {
         var vulkan = Capture("vulkaninfo", "--summary", IsVulkanSummaryLine);
         var opengl = Capture("glxinfo", "-B", IsOpenGlLine);

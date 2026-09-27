@@ -1,6 +1,6 @@
 using System;
 
-namespace Cafe.Launcher.Avalonia.Services.Diagnostics;
+namespace Cafe.Launcher.Core.Services.Diagnostics;
 
 /// <summary>
 /// Half-open time window of a diagnostics export: <see cref="From"/> is inclusive and

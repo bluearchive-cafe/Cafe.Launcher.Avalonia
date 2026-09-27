@@ -14,6 +14,7 @@ using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Cafe.Launcher.Avalonia.Views;
@@ -100,7 +101,7 @@ public partial class App : Application
             _ = serviceProvider.GetRequiredService<LocalizationService>();
 
             // Application-started trace (best-effort, fire-and-forget)
-            _ = serviceProvider.GetRequiredService<Services.Diagnostics.LocalDiagnostics>()
+            _ = serviceProvider.GetRequiredService<Cafe.Launcher.Core.Services.Diagnostics.LocalDiagnostics>()
                 .DebugAsync("Application", "Application started, DI container built", CancellationToken.None);
 
             var viewModel = serviceProvider.GetRequiredService<MainWindowViewModel>();
@@ -108,7 +109,7 @@ public partial class App : Application
             var mainWindow = new MainWindow(
                 serviceProvider.GetRequiredService<WindowFilePickerService>(),
                 serviceProvider.GetRequiredService<WindowMetricsService>(),
-                serviceProvider.GetRequiredService<Services.Diagnostics.LocalDiagnostics>())
+                serviceProvider.GetRequiredService<Cafe.Launcher.Core.Services.Diagnostics.LocalDiagnostics>())
             {
                 DataContext = viewModel,
             };
@@ -204,7 +205,7 @@ public partial class App : Application
                 trayService = new SystemTrayService(
                     mainWindow,
                     localizationService,
-                    serviceProvider.GetRequiredService<Services.Diagnostics.LocalDiagnostics>(),
+                    serviceProvider.GetRequiredService<Cafe.Launcher.Core.Services.Diagnostics.LocalDiagnostics>(),
                     serviceProvider.GetRequiredService<ISystemTrayActions>());
                 if (trayService.Initialize())
                 {

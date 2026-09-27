@@ -11,6 +11,7 @@ using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Composition;
 using Cafe.Launcher.Avalonia.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia;
@@ -125,7 +126,7 @@ sealed class Program
         UnifiedLogger crashLogger;
         try
         {
-            crashLogger = new UnifiedLogger(dataRoot.Root);
+            crashLogger = new UnifiedLogger(dataRoot.Root, BuildInfo.Identity);
         }
         catch (Exception exception)
         {

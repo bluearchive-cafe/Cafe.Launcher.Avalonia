@@ -52,12 +52,38 @@
         "type": "Project",
         "dependencies": {
           "Cafe.Launcher.Updater.Core": "[1.0.0, )",
-          "CommunityToolkit.Mvvm": "[8.4.2, )",
-          "Microsoft.Extensions.DependencyInjection": "[10.0.12, )"
+          "Microsoft.Extensions.DependencyInjection": "[10.0.12, )",
+          "Serilog": "[4.4.0, )",
+          "Serilog.Sinks.Async": "[2.1.0, )",
+          "Serilog.Sinks.File": "[7.0.0, )"
         }
       },
       "cafe.launcher.updater.core": {
         "type": "Project"
+      },
+      "Serilog": {
+        "type": "CentralTransitive",
+        "requested": "[4.4.0, )",
+        "resolved": "4.4.0",
+        "contentHash": "ZC6Le3rr4TVJJjS4KsQAesxeF1EhW9qcZmmG7eP5Y2G3+gTGkJEUXkq4+tZNPtyp05I0wWOxnIjwtxFweJsObw=="
+      },
+      "Serilog.Sinks.Async": {
+        "type": "CentralTransitive",
+        "requested": "[2.1.0, )",
+        "resolved": "2.1.0",
+        "contentHash": "SnmRknWsSMgyo9wDXeZZCqSp48kkQYy44taSM6vcpxfiRICzSf09oLKEmVr0RCwQnfd8mJQ2WNN6nvhqf0RowQ==",
+        "dependencies": {
+          "Serilog": "4.1.0"
+        }
+      },
+      "Serilog.Sinks.File": {
+        "type": "CentralTransitive",
+        "requested": "[7.0.0, )",
+        "resolved": "7.0.0",
+        "contentHash": "fKL7mXv7qaiNBUC71ssvn/dU0k9t0o45+qm2XgKAlSt19xF+ijjxyA3R6HmCgfKEKwfcfkwWjayuQtRueZFkYw==",
+        "dependencies": {
+          "Serilog": "4.2.0"
+        }
       }
     }
   }

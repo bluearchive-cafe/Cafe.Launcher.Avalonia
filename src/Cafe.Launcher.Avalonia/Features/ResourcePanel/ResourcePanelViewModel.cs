@@ -10,7 +10,7 @@ using CommunityToolkit.Mvvm.Input;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
-using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
 
 namespace Cafe.Launcher.Avalonia.Features.ResourcePanel;
