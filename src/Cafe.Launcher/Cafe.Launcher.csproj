@@ -67,9 +67,18 @@
     <Exec Command="git rev-parse --short=7 HEAD" WorkingDirectory="$(MSBuildProjectDirectory)" ConsoleToMSBuild="true" IgnoreExitCode="true" StandardOutputImportance="Low">
       <Output TaskParameter="ConsoleOutput" PropertyName="GitCommitSha" />
     </Exec>
-    <!-- MSBuild 会把 Command 属性里的单个百分号当作转义/表达式前缀吃掉，git 因此收到
-         残缺的 pretty 格式参数并把致命错误写到标准输出；写两个百分号才是传给 git 的一个。 -->
-    <Exec Command="git show -s --format=%%cI HEAD" WorkingDirectory="$(MSBuildProjectDirectory)" ConsoleToMSBuild="true" IgnoreExitCode="true" StandardOutputImportance="Low">
+    <!-- 提交时间要按平台各写一份，因为百分号要穿过三层不同的处理：
+         MSBuild 只认 %25（它会把 %25 还原成一个百分号，孤立的 % 会被它吃掉），
+         Windows 的 cmd 会把 %% 折成一个百分号，而 Unix 的 sh 两者都不处理。
+         因此 Windows 写 %%cI（cmd 折成 %cI），Unix 写 %25cI（MSBuild 还原成 %cI）：
+         两边交给 git 的都是「一个百分号 + cI」。写成同一个 %%cI 会让 Linux 上的 git 收到
+         两个字面百分号并原样输出 "%cI"（linux-unit-tests 抓到过）。 -->
+    <Exec Condition="$([MSBuild]::IsOSPlatform('Windows'))"
+          Command="git show -s --format=%%cI HEAD" WorkingDirectory="$(MSBuildProjectDirectory)" ConsoleToMSBuild="true" IgnoreExitCode="true" StandardOutputImportance="Low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitCommitTime" />
+    </Exec>
+    <Exec Condition="!$([MSBuild]::IsOSPlatform('Windows'))"
+          Command="git show -s --format=%25cI HEAD" WorkingDirectory="$(MSBuildProjectDirectory)" ConsoleToMSBuild="true" IgnoreExitCode="true" StandardOutputImportance="Low">
       <Output TaskParameter="ConsoleOutput" PropertyName="GitCommitTime" />
     </Exec>
     <PropertyGroup>
