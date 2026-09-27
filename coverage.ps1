@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference = 'Stop'
+$ErrorActionPreference = 'Stop'
 $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 $env:AVALONIA_TELEMETRY_OPTOUT = '1'
 # MSBuild 常驻复用节点会跨构建持有刚拷贝文件的句柄，coverlet 紧随其后的插桩重写
@@ -125,6 +125,19 @@ foreach ($projectInfo in $projects) {
 $lineCoverage = @{}
 $branchCoverage = @{}
 
+# 程序集拆分后每个生产程序集都必须真的出现在报告里。coverlet 的 <sources> 根一旦退回旧的
+# 单项目形状，被移走的代码会从分子和分母同时消失，比例反而可能上升——静默通过闸口。
+# 这里按项目目录要求它们各自贡献被计数的行，缺一个就直接失败。
+$requiredAssemblyRoots = @(
+    'src\Cafe.Launcher.Core',
+    'src\Cafe.Launcher.Avalonia',
+    'src\Cafe.Launcher.Avalonia.UI'
+)
+$countedSourceFiles = @{}
+foreach ($requiredRoot in $requiredAssemblyRoots) {
+    $countedSourceFiles[$requiredRoot] = @{}
+}
+
 foreach ($reportPath in $reportPaths.Values) {
     [xml]$coverageXml = Get-Content -LiteralPath $reportPath -Raw
     $sourceRoots = @($coverageXml.coverage.sources.source | ForEach-Object {
@@ -161,6 +174,15 @@ foreach ($reportPath in $reportPaths.Values) {
                 $pathSegments -contains 'obj'
             ) {
                 continue
+            }
+
+            foreach ($requiredRoot in $requiredAssemblyRoots) {
+                $requiredPrefix = [IO.Path]::GetFullPath((Join-Path $repositoryRoot $requiredRoot)) +
+                    [IO.Path]::DirectorySeparatorChar
+                if ($fullPath.StartsWith($requiredPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+                    $countedSourceFiles[$requiredRoot][$fullPath] = $true
+                    break
+                }
             }
 
             foreach ($line in @($class.lines.line)) {
@@ -200,6 +222,15 @@ foreach ($reportPath in $reportPaths.Values) {
 $validLineCount = $lineCoverage.Count
 if ($validLineCount -eq 0) {
     throw 'Expected at least one handwritten C# line in coverage reports.'
+}
+
+foreach ($requiredRoot in $requiredAssemblyRoots) {
+    $countedFileCount = $countedSourceFiles[$requiredRoot].Count
+    if ($countedFileCount -eq 0) {
+        throw ("Coverage report contains no counted source file from {0}. " -f $requiredRoot) +
+            'The report <sources> root probably no longer resolves this project''s class filenames; ' +
+            'fix the resolution in coverage.ps1 instead of letting the assembly drop out of the ratio.'
+    }
 }
 
 $coveredLineCount = @($lineCoverage.Values | Where-Object { $_ }).Count

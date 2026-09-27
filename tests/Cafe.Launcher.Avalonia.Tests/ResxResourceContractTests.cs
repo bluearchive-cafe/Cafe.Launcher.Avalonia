@@ -4,6 +4,7 @@ using System.Resources;
 using System.Text.RegularExpressions;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Resources;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -222,13 +223,21 @@ public sealed class ResxResourceContractTests
     [Fact]
     public void ProductionCallSites_DoNotUseRawResourceKeyLiterals()
     {
-        var root = TestLocalizationHelper.FindProjectRoot();
+        var separator = Path.DirectorySeparatorChar;
         var tCallPattern = new Regex("\\.(?:T|F)\\(\\\"(?<key>[^\\\"]+)\\\"", RegexOptions.Compiled);
         var i18nIndexPattern = new Regex("\\bI18n\\[\\\"(?<key>[^\\\"]+)\\\"\\]", RegexOptions.Compiled);
-        var productionFiles = Directory.GetFiles(root, "*.cs", SearchOption.AllDirectories)
-            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}tests{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
-            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
-            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase));
+        var productionFiles = ProductionSourceRoots()
+            .SelectMany(root => Directory.GetFiles(root, "*.cs", SearchOption.AllDirectories))
+            .Where(path => !path.Contains($"{separator}tests{separator}", StringComparison.OrdinalIgnoreCase))
+            .Where(path => !path.Contains($"{separator}bin{separator}", StringComparison.OrdinalIgnoreCase))
+            .Where(path => !path.Contains($"{separator}obj{separator}", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+
+        // 反空转：扫描域写错时这条「必须为空」的守卫会安静地通过。
+        Assert.True(
+            productionFiles.Length >= 250,
+            $"只枚举到 {productionFiles.Length} 个生产 .cs 文件（基线 250）——"
+            + "先确认 ProductionSourceRoots 仍覆盖 host/Core/UI 三棵树。");
 
         var rawLiterals = productionFiles
             .SelectMany(path => tCallPattern.Matches(File.ReadAllText(path))
@@ -244,6 +253,17 @@ public sealed class ResxResourceContractTests
             "resource-key literals (see AGENTS.md). Raw keys found: " +
             string.Join(", ", rawLiterals));
     }
+
+    /// <summary>
+    /// 生产源码的三棵树：宿主、Core、UI。程序集拆分后「宿主工程 = 全部生产代码」不再成立，
+    /// 按单一工程根扫描会让移走的文件悄悄离开扫描域。
+    /// </summary>
+    private static string[] ProductionSourceRoots() =>
+    [
+        TestRepository.HostPath,
+        TestRepository.CorePath,
+        TestRepository.PresentationPath
+    ];
 
     [Fact]
     public void LocalizationKeys_Constants_CoverEveryNeutralResourceKey()
@@ -285,16 +305,16 @@ public sealed class ResxResourceContractTests
         RegexOptions.Compiled | RegexOptions.Singleline);
 
     /// <summary>
-    /// 扫描域＝应用工程下全部 <c>.axaml</c>（递归，排除 bin/obj），不维护手抄文件清单：
+    /// 扫描域＝宿主与 UI 工程下全部 <c>.axaml</c>（递归，排除 bin/obj），不维护手抄文件清单：
     /// AUD-TEST-006 已证明这类清单会漂移一次（拆分出主叠层时漏掉共享的 ViewFiles，
-    /// 令牌扫描就此失去对最新叠层的覆盖）。
+    /// 令牌扫描就此失去对最新叠层的覆盖）。UI 工程现在还没有 .axaml，但它一旦承载
+    /// Views 就必须仍在扫描域内，否则键契约会随着搬文件静默缩小。
     /// </summary>
     private static string[] XamlFilesInScope()
     {
-        var root = TestLocalizationHelper.FindProjectRoot();
         var separator = Path.DirectorySeparatorChar;
-        var files = Directory
-            .GetFiles(root, "*.axaml", SearchOption.AllDirectories)
+        var files = new[] { TestRepository.HostPath, TestRepository.PresentationPath }
+            .SelectMany(root => Directory.GetFiles(root, "*.axaml", SearchOption.AllDirectories))
             .Where(path => !path.Contains($"{separator}bin{separator}", StringComparison.OrdinalIgnoreCase))
             .Where(path => !path.Contains($"{separator}obj{separator}", StringComparison.OrdinalIgnoreCase))
             .Order(StringComparer.Ordinal)
@@ -372,7 +392,7 @@ public sealed class ResxResourceContractTests
     [Fact]
     public void XamlResourceBindings_UseOnlyKeysThatExistInNeutralResources()
     {
-        var root = TestLocalizationHelper.FindProjectRoot();
+        var root = TestRepository.Root;
         var missing = XamlFilesInScope()
             .SelectMany(path => ResourceKeysInXaml(File.ReadAllText(path))
                 .Select(entry => (

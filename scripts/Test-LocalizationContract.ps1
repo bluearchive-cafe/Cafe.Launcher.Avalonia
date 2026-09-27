@@ -1,6 +1,12 @@
 param(
     [string]$ResourcesDirectory = (Join-Path $PSScriptRoot '..\src\Cafe.Launcher.Avalonia\Resources'),
-    [string]$SourceDirectory = (Join-Path $PSScriptRoot '..\src\Cafe.Launcher.Avalonia')
+    # 全生产程序集：Core/UI 拆分后 .cs 不再只属于宿主工程，漏扫一处就等于放弃那部分
+    # 裸 key 字面量的守卫。
+    [string[]]$SourceDirectories = @(
+        (Join-Path $PSScriptRoot '..\src\Cafe.Launcher.Avalonia'),
+        (Join-Path $PSScriptRoot '..\src\Cafe.Launcher.Core'),
+        (Join-Path $PSScriptRoot '..\src\Cafe.Launcher.Avalonia.UI')
+    )
 )
 
 $ErrorActionPreference = 'Stop'
@@ -76,12 +82,20 @@ if ($hasErrors) {
 # （含 LocalizationService.T(...) 静态形式与 Shell.I18n["..."] 索引器
 # 形式），跨行首参也命中；XAML 绑定 Shell.I18n[key] 是设计内用法，
 # 且本扫描只针对 .cs，不受影响。
-$sourceFiles = Get-ChildItem -LiteralPath $SourceDirectory -Recurse -Filter *.cs |
+$sourceFiles = @($SourceDirectories |
+    ForEach-Object { Get-ChildItem -LiteralPath $_ -Recurse -Filter *.cs } |
     Where-Object {
         ($_.FullName -notmatch '\\(bin|obj)\\') -and
         ($_.FullName -notmatch '\\Constants\\LocalizationKeys\.cs$') -and
         ($_.FullName -notmatch '\\Resources\\.+\.Designer\.cs$')
-    }
+    })
+
+# 反空转基线：根目录写错时上面的枚举会安静地返回零个文件，"没有裸 key" 与 "什么都没扫"
+# 不可区分。真的删除大批文件时同步下调这里。
+if ($sourceFiles.Count -lt 250) {
+    Write-Error "只枚举到 $($sourceFiles.Count) 个生产 .cs 文件（基线 250）——先确认 SourceDirectories 仍覆盖 host/Core/UI 三棵树。"
+    exit 1
+}
 $rawKeyPatterns = @(
     '(?s)\.[TF]\(\s*"[A-Za-z]',
     '(?s)\.I18n\[\s*"[A-Za-z]'

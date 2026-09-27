@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
 using Cafe.Launcher.Avalonia.Testing;
@@ -46,6 +46,13 @@ public sealed partial class UiStyleContractTests
     private static string[] FindXamlFiles(string relativeDirectory, SearchOption searchOption)
     {
         var projectRoot = TestLocalizationHelper.FindProjectRoot();
+        // 程序集拆分后 Views/Controls 会搬进 UI 工程，而本契约的扫描域与声明表都是按宿主
+        // 相对路径写的。搬文件的那次提交必须把两者一起切到 TestRepository.PresentationPath；
+        // 在这里 fail loudly，免得扫描域安静地变空、契约退化成永远为真。
+        Assert.False(
+            Directory.Exists(TestRepository.InPresentation(relativeDirectory)),
+            $"{relativeDirectory} 已同时存在于 UI 工程：请把 UiStyleContractTests 的扫描域"
+            + "（FindXamlFiles / ProjectMarkupFiles）与全部声明表从宿主切到 TestRepository.PresentationPath。");
         return Directory
             .GetFiles(TestRepository.FromApplicationRoot(relativeDirectory), "*.axaml", searchOption)
             .Select(path => Path.GetRelativePath(projectRoot, path).Replace('\\', '/'))
