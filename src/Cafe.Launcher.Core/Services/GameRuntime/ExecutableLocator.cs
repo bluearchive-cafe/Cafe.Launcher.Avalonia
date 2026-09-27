@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 
-namespace Cafe.Launcher.Avalonia.Services.GameRuntime;
+namespace Cafe.Launcher.Core.Services.GameRuntime;
 
 /// <summary>
 /// Locates executables such as umu-run, first honoring an explicitly

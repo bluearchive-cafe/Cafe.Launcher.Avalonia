@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace Cafe.Launcher.Avalonia.Services.GameRuntime;
+namespace Cafe.Launcher.Core.Services.GameRuntime;
 
 /// <summary>一个已安装的 Proton 构建：目录名与绝对路径。</summary>
-internal sealed record ProtonBuild(string Name, string Path);
+public sealed record ProtonBuild(string Name, string Path);
 
 /// <summary>
 /// 发现本机的 Proton 构建（P1-E）：扫描 Steam/兼容工具常见的 <c>compatibilitytools.d</c> 目录，
@@ -25,14 +25,14 @@ public sealed class ProtonBuildDiscovery
     {
     }
 
-    internal ProtonBuildDiscovery(IEnumerable<string> searchDirectories)
+    public ProtonBuildDiscovery(IEnumerable<string> searchDirectories)
     {
         ArgumentNullException.ThrowIfNull(searchDirectories);
         this.searchDirectories = searchDirectories.ToArray();
     }
 
     /// <summary>扫描并返回去重、按名字排序的构建；没有则为空。</summary>
-    internal IReadOnlyList<ProtonBuild> Discover()
+    public IReadOnlyList<ProtonBuild> Discover()
     {
         var builds = new Dictionary<string, ProtonBuild>(StringComparer.Ordinal);
         foreach (var directory in searchDirectories)

@@ -5,7 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 
-namespace Cafe.Launcher.Avalonia.Services.GameRuntime;
+namespace Cafe.Launcher.Core.Services.GameRuntime;
 
 /// <summary>
 /// Linux 上「游戏家族在不在跑」的扫描（P0-B）：枚举 <c>/proc</c>，先按 <c>comm</c>/<c>cmdline</c>
@@ -19,7 +19,7 @@ namespace Cafe.Launcher.Avalonia.Services.GameRuntime;
 /// <para>前缀 / <c>maps</c> 归属需要调用方提供 prefix 与安装目录上下文，本片未接；标记足够覆盖
 /// 计划里 P0-B 的三条完成标准（外部启动、宿主退出、不误报），见 ADR-036。</para>
 /// </remarks>
-internal static class LinuxProcessScanner
+public static class LinuxProcessScanner
 {
     /// <summary>扫一遍 <c>/proc</c>，返回在跑的家族名（去重，优先可读的家族名）。</summary>
     public static IReadOnlyList<string> Scan(RunningGameQuery query, CancellationToken cancellationToken)

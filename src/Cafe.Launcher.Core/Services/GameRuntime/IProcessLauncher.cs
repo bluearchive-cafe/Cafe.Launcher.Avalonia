@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace Cafe.Launcher.Avalonia.Services.GameRuntime;
+namespace Cafe.Launcher.Core.Services.GameRuntime;
 
 /// <summary>
 /// Seam between "build a ProcessStartInfo" and "actually spawn the process",

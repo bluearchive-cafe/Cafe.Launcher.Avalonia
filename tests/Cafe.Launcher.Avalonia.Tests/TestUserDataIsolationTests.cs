@@ -93,7 +93,7 @@ public sealed class TestUserDataIsolationTests
         Assert.False(string.IsNullOrWhiteSpace(isolatedDirectory));
         Assert.StartsWith(
             Path.GetFullPath(isolatedDirectory),
-            Path.GetFullPath(Services.GameRuntime.GameCompatibilityPaths.GetDefaultCompatibilityRoot()),
+            Path.GetFullPath(GameCompatibilityPaths.GetDefaultCompatibilityRoot()),
             StringComparison.OrdinalIgnoreCase);
     }
 
@@ -167,7 +167,7 @@ public sealed class TestUserDataIsolationTests
             // 崩溃报告进程没有容器，也没有别的解析点
             Path.Combine(hostRoot, "CrashReportApp.axaml.cs"),
             // 兼容前缀在 Windows 上复用启动器数据根；Unix 分支自取 XDG 目录，不读数据根
-            Path.Combine(hostRoot, "Services", "GameRuntime", "GameCompatibilityPaths.cs")
+            Path.Combine(coreRoot, "Services", "GameRuntime", "GameCompatibilityPaths.cs")
         };
 
         var scanned = new[] { hostRoot, coreRoot, presentationRoot }

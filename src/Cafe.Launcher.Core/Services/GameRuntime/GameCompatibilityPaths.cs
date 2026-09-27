@@ -1,8 +1,8 @@
 using System;
 using System.IO;
-using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Core.Services;
 
-namespace Cafe.Launcher.Avalonia.Services.GameRuntime;
+namespace Cafe.Launcher.Core.Services.GameRuntime;
 
 /// <summary>
 /// Filesystem layout for launcher-managed compatibility environments. Prefixes

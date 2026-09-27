@@ -3,9 +3,9 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Cafe.Launcher.Avalonia.Constants;
+using Cafe.Launcher.Core.Constants;
 
-namespace Cafe.Launcher.Avalonia.Services.GameRuntime;
+namespace Cafe.Launcher.Core.Services.GameRuntime;
 
 /// <summary>
 /// 把一次运行器启动的 stdout/stderr 捕获到数据根下一个有大小上限的文件里（每次启动覆盖），

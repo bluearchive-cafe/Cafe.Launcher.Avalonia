@@ -1,8 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using Cafe.Launcher.Avalonia.Helpers;
+using Cafe.Launcher.Core.Helpers;
 
-namespace Cafe.Launcher.Avalonia.Services.GameRuntime;
+namespace Cafe.Launcher.Core.Services.GameRuntime;
 
 /// <summary>Reason a runtime version probe did not produce a usable version.</summary>
 public enum RuntimeProbeFailureKind

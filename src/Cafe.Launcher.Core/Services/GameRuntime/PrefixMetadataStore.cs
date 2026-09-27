@@ -1,11 +1,12 @@
 using System;
+using Cafe.Launcher.Core;
 using System.Globalization;
 using System.IO;
 using System.Text.Json;
-using Cafe.Launcher.Avalonia.Constants;
-using Cafe.Launcher.Avalonia.Helpers;
+using Cafe.Launcher.Core.Constants;
+using Cafe.Launcher.Core.Helpers;
 
-namespace Cafe.Launcher.Avalonia.Services.GameRuntime;
+namespace Cafe.Launcher.Core.Services.GameRuntime;
 
 /// <summary>
 /// 「这个兼容前缀是哪次组合创建/使用的」（P1-E）：创建时间、最近运行器与版本、最近 Proton、
@@ -30,11 +31,17 @@ internal sealed record PrefixMetadata(
 public sealed class PrefixMetadataStore
 {
     private readonly LauncherDataRoot dataRoot;
+    private readonly LauncherBuildIdentity? buildIdentity;
 
-    public PrefixMetadataStore(LauncherDataRoot dataRoot)
+    /// <param name="buildIdentity">
+    /// 写入元数据的启动器版本。此前读宿主的 <c>BuildInfo</c>，迁入 Core 后改为注入的构建标识
+    /// （与默认更新渠道同一来源）。
+    /// </param>
+    public PrefixMetadataStore(LauncherDataRoot dataRoot, LauncherBuildIdentity? buildIdentity = null)
     {
         ArgumentNullException.ThrowIfNull(dataRoot);
         this.dataRoot = dataRoot;
+        this.buildIdentity = buildIdentity;
     }
 
     internal string FilePath => dataRoot.PrefixMetadataPath;
@@ -125,7 +132,7 @@ public sealed class PrefixMetadataStore
                 runnerId = metadata.RunnerId,
                 runnerVersion = metadata.RunnerVersion,
                 protonPath = metadata.ProtonPath,
-                launcherVersion = BuildInfo.LauncherVersion,
+                launcherVersion = buildIdentity?.LauncherVersion ?? "",
                 createdAt = metadata.CreatedAt.ToString("O", CultureInfo.InvariantCulture),
                 lastLaunchedAt = metadata.LastLaunchedAt.ToString("O", CultureInfo.InvariantCulture),
                 launchCount = metadata.LaunchCount

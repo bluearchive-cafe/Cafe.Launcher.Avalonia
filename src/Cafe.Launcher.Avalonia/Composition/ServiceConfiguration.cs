@@ -9,7 +9,7 @@ using Cafe.Launcher.Avalonia.Features.SetupWizard;
 using Cafe.Launcher.Avalonia.Features.Shell;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
-using Cafe.Launcher.Avalonia.Services.GameRuntime;
+using Cafe.Launcher.Core.Services.GameRuntime;
 using Cafe.Launcher.Avalonia.Services.Update;
 using Cafe.Launcher.Avalonia.ViewModels;
 
@@ -39,7 +39,6 @@ public static class ServiceConfiguration
         services.AddLauncherCore(BuildInfo.Identity, dataRoot);
 
         // ── Leaf services (parameterless constructors, no deps) ──────────
-        services.AddSingleton<GameInstallationPath>();
         services.AddSingleton<SystemCultureSnapshot>();
         services.AddSingleton<LocalizationService>();
         services.AddSingleton<ToastService>();
@@ -135,18 +134,6 @@ public static class ServiceConfiguration
             sp.GetRequiredService<ThemeApplier>(),
             sp.GetRequiredService<LocalDiagnostics>(),
             Program.ShowHiddenSettings));
-        services.AddSingleton<IProcessLauncher, DefaultProcessLauncher>();
-        services.AddSingleton<RunnerOutputCapture>();
-        services.AddSingleton<CompatibilityEnvironmentPrecheck>();
-        services.AddSingleton<PrefixMetadataStore>();
-        services.AddSingleton<IGameRuntime>(sp => new GameRuntime(
-            [GameRunnerDefinition.Native, GameRunnerDefinition.Umu, GameRunnerDefinition.Wine],
-            sp.GetRequiredService<IProcessLauncher>(),
-            sp.GetRequiredService<IGameProcessTracker>(),
-            sp.GetRequiredService<RunnerOutputCapture>(),
-            sp.GetRequiredService<CompatibilityEnvironmentPrecheck>(),
-            sp.GetRequiredService<PrefixMetadataStore>()));
-        services.AddSingleton<IGameProcessTracker, GameProcessTracker>();
         // 会话看护订阅进程跟踪器的退出事件：登记在跟踪器之后，容器逆序释放时看护先于
         // 跟踪器析构，退订不会落在已释放的订阅源上。
         services.AddSingleton<IGameSessionMonitor, GameSessionMonitor>();

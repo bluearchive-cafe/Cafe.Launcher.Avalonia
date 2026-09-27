@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Cafe.Launcher.Core.Services;
 using Cafe.Launcher.Core.Services.Auth;
 using Cafe.Launcher.Core.Services.Diagnostics;
+using Cafe.Launcher.Core.Services.GameRuntime;
 
 namespace Cafe.Launcher.Core.Composition;
 
@@ -51,6 +52,20 @@ public static class LauncherCoreServiceCollectionExtensions
         // 偏好闭包读的是表现层的设置快照（ADR-028 的按使用时机拉取）。
         services.TryAddSingleton<ProxySettingsService>();
         services.TryAddSingleton<IFileDownloadService, FileDownloadService>();
+        // 游戏运行时：进程启动、跟踪、兼容预检、前缀元数据与会话运行器定义。
+        services.TryAddSingleton<GameInstallationPath>();
+        services.TryAddSingleton<IProcessLauncher, DefaultProcessLauncher>();
+        services.TryAddSingleton<RunnerOutputCapture>();
+        services.TryAddSingleton<CompatibilityEnvironmentPrecheck>();
+        services.TryAddSingleton<PrefixMetadataStore>();
+        services.TryAddSingleton<IGameProcessTracker, GameProcessTracker>();
+        services.TryAddSingleton<IGameRuntime>(sp => new GameRuntime(
+            [GameRunnerDefinition.Native, GameRunnerDefinition.Umu, GameRunnerDefinition.Wine],
+            sp.GetRequiredService<IProcessLauncher>(),
+            sp.GetRequiredService<IGameProcessTracker>(),
+            sp.GetRequiredService<RunnerOutputCapture>(),
+            sp.GetRequiredService<CompatibilityEnvironmentPrecheck>(),
+            sp.GetRequiredService<PrefixMetadataStore>()));
         return services;
     }
 }

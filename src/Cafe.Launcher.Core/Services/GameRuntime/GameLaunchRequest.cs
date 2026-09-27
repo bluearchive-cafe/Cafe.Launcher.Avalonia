@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Cafe.Launcher.Avalonia.Services.GameRuntime;
+namespace Cafe.Launcher.Core.Services.GameRuntime;
 
 /// <summary>
 /// Platform-agnostic description of a single game launch: what to start,
