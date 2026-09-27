@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json.Serialization;
 using Cafe.Launcher.Avalonia.Constants;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -386,7 +387,7 @@ public sealed class LauncherSettings : ObservableObject
     {
         var settings = new LauncherSettings();
 
-        if (Constants.BuildInfo.LauncherVersion.Contains('-'))
+        if (ResolveRunningVersion().Contains('-'))
         {
             settings.UpdateChannel = UpdateChannels.Beta;
         }
@@ -407,4 +408,12 @@ public sealed class LauncherSettings : ObservableObject
         return culture is "zh-CN" or "zh-TW" or "zh-HK" or "zh-MO" or "zh-SG"
             or "zh-Hans" or "zh-Hant";
     }
+
+    private static string ResolveRunningVersion() =>
+        System.Reflection.Assembly.GetEntryAssembly()?
+            .GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), inherit: false)
+            .OfType<System.Reflection.AssemblyInformationalVersionAttribute>()
+            .FirstOrDefault()?
+            .InformationalVersion
+        ?? "";
 }
