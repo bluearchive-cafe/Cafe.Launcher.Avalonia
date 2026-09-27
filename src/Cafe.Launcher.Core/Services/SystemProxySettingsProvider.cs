@@ -4,9 +4,9 @@ using System.Globalization;
 using System.Linq;
 using System.Runtime.Versioning;
 using Microsoft.Win32;
-using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Core.Services.Diagnostics;
 
-namespace Cafe.Launcher.Avalonia.Services;
+namespace Cafe.Launcher.Core.Services;
 
 /// <summary>
 /// 读取操作系统的系统代理快照，供 ProxySettingsService 的 System 档消费
@@ -23,11 +23,11 @@ internal static class SystemProxySettingsProvider
     private static bool gnomeResolved;
     private static SystemProxySettings? gnomeResult;
 
-    public static SystemProxySettings? GetSettings()
+    public static SystemProxySettings? GetSettings(ILauncherDiagnostics? diagnostics = null)
     {
         if (OperatingSystem.IsWindows())
         {
-            return ReadWindowsSettings();
+            return ReadWindowsSettings(diagnostics);
         }
 
         if (OperatingSystem.IsLinux())
@@ -43,7 +43,7 @@ internal static class SystemProxySettingsProvider
     /// instead of shelling out to reg.exe (avoids PATH-hijacking risk and is faster).
     /// </summary>
     [SupportedOSPlatform("windows")]
-    private static SystemProxySettings? ReadWindowsSettings()
+    private static SystemProxySettings? ReadWindowsSettings(ILauncherDiagnostics? diagnostics)
     {
         try
         {
@@ -82,7 +82,7 @@ internal static class SystemProxySettingsProvider
         }
         catch (Exception ex)
         {
-            LocalDiagnostics.LogSync(LogEntrySeverity.Warn, "Proxy", $"failed to read system proxy settings from registry: {ex.Message}");
+            diagnostics?.LogMessage(LogEntrySeverity.Warn, "Proxy", $"failed to read system proxy settings from registry: {ex.Message}");
             return null;
         }
     }

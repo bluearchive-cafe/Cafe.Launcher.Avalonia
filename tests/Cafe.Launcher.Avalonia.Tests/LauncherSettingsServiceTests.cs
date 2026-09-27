@@ -622,6 +622,17 @@ public sealed class LauncherSettingsServiceTests : IDisposable
             string? message = null,
             CancellationToken cancellationToken = default) => Task.CompletedTask;
 
+        public List<string> Messages { get; } = [];
+
+        public Task MessageAsync(string title, string message, CancellationToken cancellationToken = default)
+        {
+            Messages.Add($"{title}: {message}");
+            return Task.CompletedTask;
+        }
+
+        public void LogMessage(LogEntrySeverity severity, string title, string? message = null) =>
+            Messages.Add($"{severity}: {title}: {message}");
+
         public Task ErrorAsync(
             string title,
             string? message,

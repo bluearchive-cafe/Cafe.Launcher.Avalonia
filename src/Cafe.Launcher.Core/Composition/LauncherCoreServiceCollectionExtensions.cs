@@ -47,6 +47,9 @@ public static class LauncherCoreServiceCollectionExtensions
         // 已保存设置的唯一写入方。草稿所有者由表现层登记（ISettingsDraftOwner）——写入方不认识
         // 具体编辑器，UI 线程编排留在实现方。
         services.TryAddSingleton<ISavedSettingsWriter, SavedSettingsWriter>();
+        // 代理解析与连接池属于后端：HttpClientFactory 的注册仍留在组合根，因为它的
+        // 偏好闭包读的是表现层的设置快照（ADR-028 的按使用时机拉取）。
+        services.TryAddSingleton<ProxySettingsService>();
         return services;
     }
 }

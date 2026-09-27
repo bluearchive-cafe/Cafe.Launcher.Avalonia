@@ -116,7 +116,6 @@ public static class ServiceConfiguration
             sp.GetRequiredService<WindowMetricsService>());
 
         // ── Services with dependencies ────────────────────────────────────
-        services.AddSingleton<ProxySettingsService>();
         services.AddSingleton<ManifestValidationService>();
         services.AddSingleton<NoticeStateService>();
         services.AddSingleton(sp => new ResourcePanelUidService(

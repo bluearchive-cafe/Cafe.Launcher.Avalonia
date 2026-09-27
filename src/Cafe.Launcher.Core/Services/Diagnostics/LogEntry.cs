@@ -1,6 +1,6 @@
 using System;
 
-namespace Cafe.Launcher.Avalonia.Services.Diagnostics;
+namespace Cafe.Launcher.Core.Services.Diagnostics;
 
 /// <summary>Severity level for unified log entries.</summary>
 public enum LogEntrySeverity
