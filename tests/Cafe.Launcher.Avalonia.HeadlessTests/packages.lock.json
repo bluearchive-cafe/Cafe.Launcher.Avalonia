@@ -380,6 +380,8 @@
           "Avalonia.Desktop": "[12.1.2, )",
           "Avalonia.Themes.Fluent": "[12.1.2, )",
           "AvaloniaUI.DiagnosticsSupport": "[2.2.3, )",
+          "Cafe.Launcher.Avalonia.UI": "[1.0.0, )",
+          "Cafe.Launcher.Core": "[1.0.0, )",
           "Cafe.Launcher.Updater.Core": "[1.0.0, )",
           "CommunityToolkit.Mvvm": "[8.4.2, )",
           "MarkView.Avalonia": "[12.2.1, )",
@@ -389,6 +391,22 @@
           "Serilog.Sinks.Async": "[2.1.0, )",
           "Serilog.Sinks.File": "[7.0.0, )",
           "Shirasagi0012.MaterialColorUtilities": "[0.2.0, )"
+        }
+      },
+      "cafe.launcher.avalonia.ui": {
+        "type": "Project",
+        "dependencies": {
+          "Avalonia": "[12.1.2, )",
+          "Cafe.Launcher.Core": "[1.0.0, )",
+          "CommunityToolkit.Mvvm": "[8.4.2, )",
+          "Microsoft.Extensions.DependencyInjection": "[10.0.12, )"
+        }
+      },
+      "cafe.launcher.core": {
+        "type": "Project",
+        "dependencies": {
+          "Cafe.Launcher.Updater.Core": "[1.0.0, )",
+          "Microsoft.Extensions.DependencyInjection": "[10.0.12, )"
         }
       },
       "cafe.launcher.updater.core": {

@@ -1,4 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
+using Cafe.Launcher.Core.Composition;
+using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Features.Diagnostics;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Features.ResourcePanel;
@@ -30,6 +32,10 @@ public static class ServiceConfiguration
         IFatalCrashService? existingFatalCrashService = null,
         LauncherDataRoot? launcherDataRoot = null)
     {
+        // Keep direct composition in tests and auxiliary hosts compatible while
+        // the registration body is moved into the Core/UI assemblies in batches.
+        services.AddLauncherCore(BuildInfo.Identity);
+
         // 进程根在这里解析一次，其余登记项与所有消费方共用这一个实例——
         // 「数据放哪」不再是各模块各自读一次的进程级静态。
         var dataRoot = launcherDataRoot ?? LauncherDataRoot.ForCurrentProcess();
@@ -37,8 +43,6 @@ public static class ServiceConfiguration
 
         // ── Leaf services (parameterless constructors, no deps) ──────────
         services.AddSingleton<GameInstallationPath>();
-        services.AddSingleton<LocalInstallationStateStore>();
-        services.AddSingleton<Crc64Service>();
         services.AddSingleton<DiskSpaceService>();
         services.AddSingleton<SystemCultureSnapshot>();
         services.AddSingleton<LocalizationService>();
@@ -79,7 +83,6 @@ public static class ServiceConfiguration
             services.AddSingleton<IFatalCrashService, FatalCrashService>();
         }
         services.AddSingleton<SetupWizardViewModel>();
-        services.AddSingleton<AuthorizationHeaderFactory>();
         services.AddSingleton<RemoteHttpUrlValidator>();
         services.AddSingleton<PatchUrlGroupService>();
         services.AddSingleton<RemoteManifestService>();

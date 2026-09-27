@@ -17,6 +17,14 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 
 ---
 
+### 1.1 程序集边界
+
+`Cafe.Launcher.Core` 是无表现依赖的后端边界：不得引用 Avalonia、MarkView、Material Icons
+或 UI 资源；用户可见文案以结构化结果传给 UI，由 UI 本地化。`Cafe.Launcher.Avalonia.UI`
+承载所有 Avalonia 控件、ViewModel、主题、资源与图像。WinExe 宿主只保留进程生命周期和
+顶层 Avalonia 生命周期，必须先注册 Core 再注册 UI。生产程序集不能使用
+`InternalsVisibleTo`；测试程序集是唯一允许的 friend。边界细则见 ADR-042。
+
 ## 2. 代码格式与风格
 
 ### 2.1 命名

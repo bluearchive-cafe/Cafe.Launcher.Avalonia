@@ -1,6 +1,8 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/Cafe.Launcher.Avalonia/Cafe.Launcher.Avalonia.csproj" />
+    <Project Path="src/Cafe.Launcher.Avalonia.UI/Cafe.Launcher.Avalonia.UI.csproj" />
+    <Project Path="src/Cafe.Launcher.Core/Cafe.Launcher.Core.csproj" />
     <Project Path="src/Cafe.Launcher.Updater.Core/Cafe.Launcher.Updater.Core.csproj" />
     <Project Path="src/Cafe.Launcher.Updater/Cafe.Launcher.Updater.csproj" />
   </Folder>

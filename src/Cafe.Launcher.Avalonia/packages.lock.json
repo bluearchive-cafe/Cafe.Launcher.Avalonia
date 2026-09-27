@@ -302,6 +302,22 @@
         "resolved": "0.94.1",
         "contentHash": "11YMr7FnAbL83bQmVxlhbIKHvSLxjO81D12Ej0QMSGXMDTxNA9MTOa4MQxx43nv5el/efuPHwzyrj6a5ha2gug=="
       },
+      "cafe.launcher.avalonia.ui": {
+        "type": "Project",
+        "dependencies": {
+          "Avalonia": "[12.1.2, )",
+          "Cafe.Launcher.Core": "[1.0.0, )",
+          "CommunityToolkit.Mvvm": "[8.4.2, )",
+          "Microsoft.Extensions.DependencyInjection": "[10.0.12, )"
+        }
+      },
+      "cafe.launcher.core": {
+        "type": "Project",
+        "dependencies": {
+          "Cafe.Launcher.Updater.Core": "[1.0.0, )",
+          "Microsoft.Extensions.DependencyInjection": "[10.0.12, )"
+        }
+      },
       "cafe.launcher.updater.core": {
         "type": "Project"
       }

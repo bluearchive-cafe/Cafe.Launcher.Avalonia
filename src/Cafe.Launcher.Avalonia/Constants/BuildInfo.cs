@@ -1,7 +1,4 @@
-using System;
-using System.Globalization;
-using System.Linq;
-using System.Reflection;
+using Cafe.Launcher.Core;
 
 namespace Cafe.Launcher.Avalonia.Constants;
 
@@ -10,39 +7,20 @@ namespace Cafe.Launcher.Avalonia.Constants;
 /// </summary>
 public static class BuildInfo
 {
-    public static readonly string LauncherVersion =
-        typeof(BuildInfo).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
-        ?? "1.0.0";
-    public static readonly string CommitSha =
-        typeof(BuildInfo).Assembly
-            .GetCustomAttributes<AssemblyMetadataAttribute>()
-            .SingleOrDefault(attribute => attribute.Key == "CommitSha")
-            ?.Value
-        ?? "unknown";
+    // BuildInfo still lives in the WinExe during the first extraction stage.
+    // Subsequent Core consumers receive this identity from the composition root;
+    // using the declaring host assembly keeps test-host loading from reporting
+    // vstest's version as the launcher version in the meantime.
+    public static readonly LauncherBuildIdentity Identity =
+        LauncherBuildIdentity.FromAssembly(typeof(BuildInfo).Assembly);
 
-    public static readonly string BuildTime = ResolveBuildTime();
+    public static readonly string LauncherVersion = Identity.LauncherVersion;
 
-    private static string ResolveBuildTime()
-    {
-        var raw = typeof(BuildInfo).Assembly
-            .GetCustomAttributes<AssemblyMetadataAttribute>()
-            .SingleOrDefault(attribute => attribute.Key == "BuildTime")
-            ?.Value;
-        if (string.IsNullOrWhiteSpace(raw)) return "";
+    public static readonly string CommitSha = Identity.CommitSha;
 
-        // The .csproj embeds the commit timestamp instead of the wall-clock
-        // build time, keeping release outputs deterministic for one commit.
-        if (DateTimeOffset.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.None, out var commitTime))
-            return commitTime.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
+    public static readonly string BuildTime = Identity.BuildTime;
 
-        return raw;
-    }
-
-#if DEBUG
-    public const string BuildConfiguration = "Debug";
-#else
-    public const string BuildConfiguration = "Release";
-#endif
+    public static readonly string BuildConfiguration = Identity.BuildConfiguration;
 
     /// <summary>
     /// Avalonia framework version resolved at runtime from the Avalonia assembly.

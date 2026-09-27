@@ -57,7 +57,7 @@ public static class VersionComparer
     /// than keeping its own copy: two implementations of §11 drift silently, and both sides are
     /// pinned by tests over the same version vectors.
     /// </remarks>
-    internal static int ComparePrerelease(string s1, string s2)
+    public static int ComparePrerelease(string s1, string s2)
     {
         var parts1 = s1.Split('.');
         var parts2 = s2.Split('.');

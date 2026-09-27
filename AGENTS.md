@@ -4,9 +4,15 @@ Authoritative workflow for AI coding agents and human contributors working in th
 
 ## Project Structure & Module Organization
 
-This is a .NET 10 Avalonia desktop launcher for Blue Archive (JP). The solution (`Cafe.Launcher.Avalonia.slnx`) contains the application project `src/Cafe.Launcher.Avalonia/` (entry points: `Program.cs`, `App.axaml`, `App.axaml.cs`), the Windows self-update projects `src/Cafe.Launcher.Updater/` and `src/Cafe.Launcher.Updater.Core/`, and two test projects under `tests/`.
+This is a .NET 10 Avalonia desktop launcher for Blue Archive (JP). The solution (`Cafe.Launcher.Avalonia.slnx`) contains the WinExe host `src/Cafe.Launcher.Avalonia/` (entry points: `Program.cs`, `App.axaml`, `App.axaml.cs`), the application-core project `src/Cafe.Launcher.Core/`, the Avalonia presentation project `src/Cafe.Launcher.Avalonia.UI/`, the Windows self-update projects `src/Cafe.Launcher.Updater/` and `src/Cafe.Launcher.Updater.Core/`, and two test projects under `tests/`.
 
-- `Composition/ServiceConfiguration.cs` — the DI composition root. Every DI-managed service and view model is registered here, all as singletons (single-window desktop app).
+The assembly graph is one-way: host → UI → Core → Updater.Core (the host may also consume Core for
+process-owned values). Core must not reference Avalonia, MarkView, Material Icons, or UI resources.
+Do not add production `InternalsVisibleTo`; only test assemblies may be friends. The host calls
+`AddLauncherCore` before presentation registration so reverse DI disposal releases UI first. See
+[ADR-042](docs/design/adr/ADR-042-Avalonia启动器按Core与UI程序集分层.md) for the migration rules.
+
+- `Composition/ServiceConfiguration.cs` — current presentation composition root. During the staged move, backend registrations are being transferred to `Cafe.Launcher.Core`; every DI-managed service and view model remains a singleton (single-window desktop app).
 - `Features/` — major behavior, organized vertically: `Shell`, `GameOperations`, `Settings`, `SetupWizard`, `Diagnostics`, `ResourcePanel`.
 - `Services/`, `Helpers/`, `Models/`, `Constants/`, `Controls/`, `Converters/` — shared infrastructure.
 - `Views/` — Avalonia views; large style/overlay blocks live in separate `.axaml` files (`MainWindow.Styles.axaml` and per-overlay files). `MainWindow.axaml` keeps only the window shell and content grid.

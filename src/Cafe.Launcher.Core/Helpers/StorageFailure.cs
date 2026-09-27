@@ -15,7 +15,7 @@ namespace Cafe.Launcher.Avalonia.Helpers;
 /// <para>路径探测类调用方（<c>DiskSpaceService</c>）刻意容忍更多失败类型（非法/不支持的
 /// 路径参数），继续写自己的过滤而不是走这里——那是不同的策略，不是本策略的实例。</para>
 /// </remarks>
-internal static class StorageFailure
+public static class StorageFailure
 {
     /// <summary>读写用户数据时由文件系统抛出、且原因在程序控制之外的失败。</summary>
     public static bool IsRecoverable(Exception exception) =>
