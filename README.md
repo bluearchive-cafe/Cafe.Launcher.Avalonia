@@ -223,7 +223,7 @@ src/Cafe.Launcher.Avalonia/       # WinExe 宿主：Program、App、组合根、
 ├── ViewModels/        # 主窗口级 ViewModel 与模态契约
 ├── Views/             # Avalonia 视图和样式
 ├── Helpers/           # 路径校验、图片解码、目录遍历等共用工具
-├── Resources/         # 多语言资源（.resx）
+├── Resources/         # （已迁出）多语言资源见 src/Cafe.Launcher.Avalonia.UI/Resources/
 └── Assets/            # 图标、字体、音频和内置壁纸
 
 src/Cafe.Launcher.Core/           # 无 Avalonia 的应用核心（协议、安装状态、传输、设置）
@@ -251,7 +251,7 @@ tests/
 - 游戏文件操作必须经过 `Helpers/GamePathValidator`，确保始终落在规范化的 `YostarGames\BlueArchive_JP` 目录内。
 - 启动器数据根由组合根解析一次后注入各模块，不通过静态属性在运行期解析，便于测试隔离。
 - `settings.json` 只通过 `ISavedSettingsWriter` 写入，其余模块一律经 `LauncherSettingsService` 读取。
-- 界面文本必须同时补齐 `Resources/LauncherStrings.resx` 及其 `zh-Hans`、`zh-Hant`、`ja` 对应文件，并按字母序排列。
+- 界面文本必须同时补齐 `src/Cafe.Launcher.Avalonia.UI/Resources/LauncherStrings.resx` 及其 `zh-Hans`、`zh-Hant`、`ja` 对应文件，并按字母序排列。
 
 更完整的边界与约定见 [`AGENTS.md`](./AGENTS.md)、[`PROJECT_CONVENTIONS.md`](./PROJECT_CONVENTIONS.md)、[`CONTEXT.md`](./CONTEXT.md) 和 [`UBIQUITOUS_LANGUAGE.md`](./UBIQUITOUS_LANGUAGE.md)；设计决策记录见 [`docs/design/adr/`](./docs/design/adr/)。
 

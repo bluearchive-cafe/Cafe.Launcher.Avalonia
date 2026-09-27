@@ -18,7 +18,7 @@ sanctioned way to change it.
 $ErrorActionPreference = 'Stop'
 
 $resolvedRepoRoot = if ($PSScriptRoot) { Split-Path -Parent $PSScriptRoot } else { (Get-Location).Path }
-$resxPath = Join-Path $resolvedRepoRoot 'src/Cafe.Launcher.Avalonia/Resources/LauncherStrings.resx'
+$resxPath = Join-Path $resolvedRepoRoot 'src/Cafe.Launcher.Avalonia.UI/Resources/LauncherStrings.resx'
 $outputPath = Join-Path $resolvedRepoRoot 'src/Cafe.Launcher.Avalonia/Constants/LocalizationKeys.cs'
 
 $resx = New-Object System.Xml.XmlDocument

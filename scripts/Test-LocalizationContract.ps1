@@ -1,5 +1,5 @@
 param(
-    [string]$ResourcesDirectory = (Join-Path $PSScriptRoot '..\src\Cafe.Launcher.Avalonia\Resources'),
+    [string]$ResourcesDirectory = (Join-Path $PSScriptRoot '..\src\Cafe.Launcher.Avalonia.UI\Resources'),
     # 全生产程序集：Core/UI 拆分后 .cs 不再只属于宿主工程，漏扫一处就等于放弃那部分
     # 裸 key 字面量的守卫。
     [string[]]$SourceDirectories = @(

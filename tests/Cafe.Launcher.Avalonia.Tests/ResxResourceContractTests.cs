@@ -207,7 +207,7 @@ public sealed class ResxResourceContractTests
     public void LauncherStrings_StronglyTypedAccessors_CoverEveryNeutralResourceKey()
     {
         var accessors = typeof(LauncherStrings)
-            .GetProperties(BindingFlags.Static | BindingFlags.NonPublic)
+            .GetProperties(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
             .Where(property => property.PropertyType == typeof(string))
             .Select(property => property.Name)
             .ToHashSet(StringComparer.Ordinal);

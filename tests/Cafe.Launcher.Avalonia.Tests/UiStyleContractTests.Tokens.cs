@@ -413,7 +413,7 @@ public sealed partial class UiStyleContractTests
             .Distinct(StringComparer.Ordinal)
             .ToList();
 
-        var neutral = XDocument.Load(TestRepository.FromApplicationRoot("Resources/LauncherStrings.resx"));
+        var neutral = XDocument.Load(TestRepository.FromPresentationRoot("Resources/LauncherStrings.resx"));
         var groupKeys = neutral
             .Descendants()
             .Select(element => element.Attribute("name")?.Value)
@@ -761,7 +761,7 @@ public sealed partial class UiStyleContractTests
                 || path.Contains(
                     $"{Path.DirectorySeparatorChar}Styles{Path.DirectorySeparatorChar}",
                     StringComparison.Ordinal))
-            .Select(path => Path.GetRelativePath(TestLocalizationHelper.FindProjectRoot(), path).Replace('\\', '/'))
+            .Select(path => Path.GetRelativePath(TestRepository.ApplicationPath, path).Replace('\\', '/'))
             .Order(StringComparer.Ordinal)
             .ToArray();
 
