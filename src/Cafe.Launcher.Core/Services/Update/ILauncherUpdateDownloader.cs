@@ -1,9 +1,9 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Core.Models;
 
-namespace Cafe.Launcher.Avalonia.Services.Update;
+namespace Cafe.Launcher.Core.Services.Update;
 
 /// <summary>
 /// Fetches launcher release assets: small text assets (the SHA256SUMS manifest) and

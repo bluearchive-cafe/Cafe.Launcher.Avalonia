@@ -1,4 +1,4 @@
-namespace Cafe.Launcher.Avalonia.Services.Update;
+namespace Cafe.Launcher.Core.Services.Update;
 
 /// <summary>
 /// The host facts the package selector answers from. Passed in instead of read from

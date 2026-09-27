@@ -1,4 +1,4 @@
-namespace Cafe.Launcher.Avalonia.Services.Update;
+namespace Cafe.Launcher.Core.Services.Update;
 
 /// <summary>
 /// Why this host can — or cannot — apply an offered launcher release itself. The judgement

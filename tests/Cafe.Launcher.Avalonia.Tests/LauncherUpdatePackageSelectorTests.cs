@@ -1,5 +1,5 @@
 using Cafe.Launcher.Avalonia.Models;
-using Cafe.Launcher.Avalonia.Services.Update;
+using Cafe.Launcher.Core.Services.Update;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 

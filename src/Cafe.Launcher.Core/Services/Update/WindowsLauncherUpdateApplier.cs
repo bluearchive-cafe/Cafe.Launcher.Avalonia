@@ -2,9 +2,9 @@ using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
-using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Core.Services.Diagnostics;
 
-namespace Cafe.Launcher.Avalonia.Services.Update;
+namespace Cafe.Launcher.Core.Services.Update;
 
 /// <summary>
 /// Starts the update helper: copies the shipped helper executable into a fresh temp
@@ -18,11 +18,11 @@ internal sealed class WindowsLauncherUpdateApplier : IWindowsLauncherUpdateAppli
     internal const string ApplyLogFileName = "update-apply.log";
 
     private readonly LauncherDataRoot dataRoot;
-    private readonly LocalDiagnostics diagnostics;
+    private readonly ILauncherDiagnostics diagnostics;
     private readonly string tempRoot;
     private readonly string installDirectory;
 
-    public WindowsLauncherUpdateApplier(LauncherDataRoot dataRoot, LocalDiagnostics diagnostics)
+    public WindowsLauncherUpdateApplier(LauncherDataRoot dataRoot, ILauncherDiagnostics diagnostics)
         : this(dataRoot, diagnostics, Path.GetTempPath(), AppContext.BaseDirectory)
     {
     }
@@ -30,7 +30,7 @@ internal sealed class WindowsLauncherUpdateApplier : IWindowsLauncherUpdateAppli
     /// <summary>Test seam: the temp root the helper copies live under, and the directory the helper ships in.</summary>
     internal WindowsLauncherUpdateApplier(
         LauncherDataRoot dataRoot,
-        LocalDiagnostics diagnostics,
+        ILauncherDiagnostics diagnostics,
         string tempRoot,
         string installDirectory)
     {
@@ -145,7 +145,7 @@ internal sealed class WindowsLauncherUpdateApplier : IWindowsLauncherUpdateAppli
     }
 
     private void ReportFailure(string message) =>
-        _ = diagnostics.WarningAsync("LauncherSelfUpdate", message, System.Threading.CancellationToken.None);
+        diagnostics.LogMessage(LogEntrySeverity.Warn, "LauncherSelfUpdate", message);
 
     private static string TrimTrailingSeparator(string path)
     {

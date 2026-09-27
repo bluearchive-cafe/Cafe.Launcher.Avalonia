@@ -1,7 +1,7 @@
 using System;
 using Cafe.Launcher.Updater;
 
-namespace Cafe.Launcher.Avalonia.Services.Update;
+namespace Cafe.Launcher.Core.Services.Update;
 
 /// <summary>
 /// Builds the detached helper's command line through the updater core's shared contract.
