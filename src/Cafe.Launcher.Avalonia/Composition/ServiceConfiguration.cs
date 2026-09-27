@@ -94,13 +94,15 @@ public static class ServiceConfiguration
                 sp.GetRequiredService<ProxySettingsService>(),
                 () => settingsEditor.GetSavedSnapshot().EnableHttp2);
         });
+        services.AddSingleton<IRemoteHttpClientLeaseSource>(sp =>
+            sp.GetRequiredService<HttpClientFactory>());
         services.AddSingleton<IRemoteHttpTransport>(sp =>
         {
             // SettingsEditor 是无依赖单例，在传输构造时一次解析并闭包引用；
             // 代理模式解析不再每次走服务定位。
             var settingsEditor = sp.GetRequiredService<SettingsEditor>();
             return new RemoteHttpTransport(
-                sp.GetRequiredService<HttpClientFactory>(),
+                sp.GetRequiredService<IRemoteHttpClientLeaseSource>(),
                 sp.GetRequiredService<RemoteHttpUrlValidator>(),
                 // 代理模式解析自设置编辑器的已保存快照——与各调用方此前传入的
                 // snapshot.ProxyMode 同源；options.ProxyMode 仍可按调用覆盖。
