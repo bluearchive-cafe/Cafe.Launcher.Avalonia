@@ -1,4 +1,4 @@
-namespace Cafe.Launcher.Avalonia.Services.GameRuntime;
+namespace Cafe.Launcher.Core.Services.GameRuntime;
 
 /// <summary>
 /// Stable per-game runtime identities used for UMU GAMEID values and

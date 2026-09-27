@@ -1,4 +1,4 @@
-namespace Cafe.Launcher.Avalonia.Services.GameRuntime;
+namespace Cafe.Launcher.Core.Services.GameRuntime;
 
 /// <summary>
 /// Distinguishes why a runner's runtime environment is or is not usable:

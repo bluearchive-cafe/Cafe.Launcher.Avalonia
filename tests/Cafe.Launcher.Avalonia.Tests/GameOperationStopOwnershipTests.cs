@@ -14,8 +14,8 @@ namespace Cafe.Launcher.Avalonia.Tests;
 /// </summary>
 public sealed class GameOperationStopOwnershipTests
 {
-    /// <summary>策略词表的归属地：只有游戏操作域内部可以命名停止原因。</summary>
-    private const string FeatureDirectory = "Features/GameOperations/";
+    /// <summary>策略词表的归属地：只有游戏操作域内部可以命名停止原因（路径相对仓库根）。</summary>
+    private const string FeatureDirectory = "src/Cafe.Launcher.Avalonia/Features/GameOperations/";
 
     [Fact]
     public void DownloadStopReason_IsNamedOnlyInsideTheGameOperationsFeature()
@@ -138,16 +138,17 @@ public sealed class GameOperationStopOwnershipTests
     /// </summary>
     private static string[] SourceFiles()
     {
-        var root = TestRepository.FromApplicationRoot(".");
-        var files = Directory
-            .EnumerateFiles(root, "*.cs", SearchOption.AllDirectories)
-            .Where(path => !IsBuildArtifact(root, path))
+        // 扫描域是全部生产源码（host + Core）：程序集拆分后下载模块的一部分住在 Core，
+        // 只扫宿主会让守卫随搬迁静默缩小。
+        var files = new[] { TestRepository.HostPath, TestRepository.CorePath }
+            .SelectMany(root => Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories))
+            .Where(path => !IsBuildArtifact(TestRepository.Root, path))
             .Order(StringComparer.Ordinal)
             .ToArray();
 
         Assert.True(
-            files.Length >= 230,
-            $"只扫到 {files.Length} 个 .cs 文件，低于基线 230——先确认扫描域没退化成子目录或后缀写错。");
+            files.Length >= 280,
+            $"只扫到 {files.Length} 个 .cs 文件，低于基线 280——先确认扫描域没退化成子目录或后缀写错。");
         return files;
     }
 
@@ -162,5 +163,5 @@ public sealed class GameOperationStopOwnershipTests
     }
 
     private static string RelativePath(string absolutePath) =>
-        Path.GetRelativePath(TestRepository.FromApplicationRoot("."), absolutePath).Replace(Path.DirectorySeparatorChar, '/');
+        Path.GetRelativePath(TestRepository.Root, absolutePath).Replace(Path.DirectorySeparatorChar, '/');
 }

@@ -1,6 +1,6 @@
 using System;
 
-namespace Cafe.Launcher.Avalonia.Services.GameRuntime;
+namespace Cafe.Launcher.Core.Services.GameRuntime;
 
 /// <summary>How a runner injects compatibility environment variables into a launch.</summary>
 public enum GameRuntimeEnvironmentStyle

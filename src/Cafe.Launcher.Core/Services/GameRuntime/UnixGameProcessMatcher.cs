@@ -2,13 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Cafe.Launcher.Avalonia.Services.GameRuntime;
+namespace Cafe.Launcher.Core.Services.GameRuntime;
 
 /// <summary>
 /// 判定依据，供诊断与测试分辨「为什么认了」。强信号（标记 / prefix / 映射）回答的是「归不归这次
 /// 游戏会话」，弱信号（截断的 comm）只是与 Windows 判据兼容的回退。
 /// </summary>
-internal enum UnixProcessMatchSignal
+public enum UnixProcessMatchSignal
 {
     /// <summary>进程环境含启动器写入的所有权标记，值等于本次游戏 id。</summary>
     OwnershipMarker,
@@ -23,14 +23,14 @@ internal enum UnixProcessMatchSignal
     TruncatedNameFamily,
 }
 
-internal sealed record UnixProcessMatch(string DisplayName, UnixProcessMatchSignal Signal);
+public sealed record UnixProcessMatch(string DisplayName, UnixProcessMatchSignal Signal);
 
 /// <summary>
 /// 这次扫描要回答的问题（Linux）：已知名字家族之外，再带上启动器自己掌握的两个归属键——写进游戏
 /// 进程环境的所有权标记值（gameId）与为该游戏选择的 <c>WINEPREFIX</c>；安装目录用于只认「占着待删
 /// 目录」的映射。名字只作回退。
 /// </summary>
-internal sealed record UnixGameProcessQuery(
+public sealed record UnixGameProcessQuery(
     IReadOnlyList<string> KnownNames,
     string? GameId,
     string? PrefixPath,
@@ -41,14 +41,14 @@ internal sealed record UnixGameProcessQuery(
 /// <see cref="UnixProcessRecord"/>，不碰 <c>/proc</c>，因此可以用合成记录做表驱动测试；平台读取层
 /// （薄、按 <see cref="OperatingSystem.IsLinux"/> 门控）留待接线时补。
 /// </summary>
-internal static class UnixGameProcessMatcher
+public static class UnixGameProcessMatcher
 {
     /// <summary>
     /// 启动器写进游戏进程环境的归属标记名。用稳定的 gameId 而不是每次随机会话令牌，因为闸门要能跨
     /// 「启动器重启」认出上一次启动的游戏；标记由启动路径在 <c>GameRuntime.BuildStartInfo</c> 里补写
     /// （接线时落地，见设计稿 §8）。
     /// </summary>
-    internal const string OwnershipMarkerKey = "CAFE_LAUNCHER_GAME_ID";
+    public const string OwnershipMarkerKey = "CAFE_LAUNCHER_GAME_ID";
 
     private const string WinePrefixKey = "WINEPREFIX";
 

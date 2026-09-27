@@ -1,4 +1,5 @@
 using System;
+using Cafe.Launcher.Avalonia.Services.GameRuntime;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -6,7 +7,7 @@ using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
-using Cafe.Launcher.Avalonia.Services.GameRuntime;
+using Cafe.Launcher.Core.Services.GameRuntime;
 
 namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 

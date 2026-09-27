@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Cafe.Launcher.Avalonia.Services.GameRuntime;
+namespace Cafe.Launcher.Core.Services.GameRuntime;
 
 /// <summary>
 /// Why a launch did not start a process. Selection failures return no process

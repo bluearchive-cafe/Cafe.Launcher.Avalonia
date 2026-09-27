@@ -5,7 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using Cafe.Launcher.Avalonia.Services.GameRuntime;
+using Cafe.Launcher.Core.Services.GameRuntime;
 
 namespace Cafe.Launcher.Avalonia.Services.Diagnostics;
 

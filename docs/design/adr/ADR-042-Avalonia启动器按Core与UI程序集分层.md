@@ -114,6 +114,15 @@ Core API 后应改回显式 using。`AssemblySplitContractTests.CoreSources_UseO
   静态 `LogSync`，接口成员不能同名），系统代理读取失败的告警由此走 Core 接缝而不是表现层静态入口。
   `ProxySettingsService` 的注册随实现移到 `AddLauncherCore`；`HttpClientFactory` 的注册留在组合根
   （它的偏好闭包读表现层设置快照，ADR-028 的按使用时机拉取）。
+- 游戏运行时批次：`Services/GameRuntime/*` 除 `GameRuntimeRunnerDisplay.cs`（它是依赖
+  `LocalizationService`/`LocalizationKeys` 的显示映射，留在宿主）全部迁入 Core，
+  `GameInstallationPath` 与 `Helpers/DiagnosticLines` 随迁；运行时的 DI 登记
+  （`IProcessLauncher`、`RunnerOutputCapture`、`CompatibilityEnvironmentPrecheck`、
+  `PrefixMetadataStore`、`IGameProcessTracker`、`IGameRuntime`）从宿主移到 `AddLauncherCore`。
+  `PrefixMetadataStore` 不再读宿主 `BuildInfo`，改用注入的 `LauncherBuildIdentity`。
+  跨程序集暂需公开的成员（`UnixProcessRecord`/`UnixProcessRecordParser`/
+  `UnixGameProcessMatcher`(+`OwnershipMarkerKey`)/`LinuxProcessScanner`/`ProtonBuildDiscovery`）
+  记在公开面收窄那一批重新裁定。`GameOperationStopOwnershipTests` 的扫描域随之扩到 host + Core。
 - 混合模型文件拆分：`ManifestValidationResult`、`GameLaunchResult`、`LauncherRemoteState`、
   `LauncherRuntimeState`、`LauncherStatusSnapshot` 迁到 `Cafe.Launcher.Core.Models`
   （`Models/LauncherStatusModels.cs`）；宿主的 `LauncherRuntimeModels.cs` 只剩表现类型

@@ -44,7 +44,7 @@ public interface IGameSessionMonitor
     GameSessionState State { get; }
 
     /// <summary>Gets the exit details of the current session's host process, once it has exited.</summary>
-    Services.GameRuntime.GameLaunchExitInfo? LastSessionExit { get; }
+    Cafe.Launcher.Core.Services.GameRuntime.GameLaunchExitInfo? LastSessionExit { get; }
 
     /// <summary>
     /// Raised on a worker thread when the session reaches a state worth reporting; rapid

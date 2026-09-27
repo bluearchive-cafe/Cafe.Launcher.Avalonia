@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Cafe.Launcher.Avalonia.Helpers;
+namespace Cafe.Launcher.Core.Helpers;
 
 /// <summary>
 /// 诊断文本的「<c>Label: value</c>」行装配：值为空（null 或全空白）时整行不出现。

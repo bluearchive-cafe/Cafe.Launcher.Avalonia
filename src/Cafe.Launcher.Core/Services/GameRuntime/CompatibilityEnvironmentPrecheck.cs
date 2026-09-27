@@ -4,10 +4,10 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using Cafe.Launcher.Avalonia.Constants;
-using Cafe.Launcher.Avalonia.Helpers;
+using Cafe.Launcher.Core.Constants;
+using Cafe.Launcher.Core.Helpers;
 
-namespace Cafe.Launcher.Avalonia.Services.GameRuntime;
+namespace Cafe.Launcher.Core.Services.GameRuntime;
 
 /// <summary>预检发现的严重度。Error 是「会挡住 Wine/Proton」的档，触发时启动直接以 EnvironmentPrecheckFailed 拒绝。</summary>
 internal enum CompatibilityFindingSeverity

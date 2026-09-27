@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Cafe.Launcher.Avalonia.Services.GameRuntime;
+namespace Cafe.Launcher.Core.Services.GameRuntime;
 
 /// <summary>
 /// 一次 <c>/proc/&lt;pid&gt;</c> 快照里用于判定「是不是这个游戏」的原始事实（Linux 进程识别
@@ -14,7 +14,7 @@ namespace Cafe.Launcher.Avalonia.Services.GameRuntime;
 /// 与映射文件，判据从「名字像不像」升级为「归不归这次游戏会话」。本类型只承载事实，不做判定，
 /// 判定在 <see cref="UnixGameProcessMatcher"/>。
 /// </remarks>
-internal sealed record UnixProcessRecord(
+public sealed record UnixProcessRecord(
     int ProcessId,
     int ParentProcessId,
     string Comm,
@@ -29,7 +29,7 @@ internal sealed record UnixProcessRecord(
 /// 信号阶梯（那才是要靠样本收口的策略）。平台读取层（读文件、门控 <see cref="OperatingSystem.IsLinux"/>）
 /// 留待接线时补。
 /// </summary>
-internal static class UnixProcessRecordParser
+public static class UnixProcessRecordParser
 {
     /// <summary><c>/proc/&lt;pid&gt;/cmdline</c>：NUL 分隔的 argv，末尾通常多一个 NUL。</summary>
     public static IReadOnlyList<string> ParseArguments(ReadOnlySpan<byte> content) =>
