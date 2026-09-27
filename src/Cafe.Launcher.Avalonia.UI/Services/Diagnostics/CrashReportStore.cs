@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -30,7 +30,7 @@ public sealed class CrashReportStore : ICrashReportLocator
     private readonly LauncherBuildIdentity? buildIdentity;
 
     /// <summary>Temp location the store falls back to when the user-data root is unwritable.</summary>
-    internal static string DefaultFallbackDirectory => Path.Combine(
+    public static string DefaultFallbackDirectory => Path.Combine(
         Path.GetTempPath(),
         "Cafe.Launcher",
         LauncherDataRoot.CrashReportsFolderName);

@@ -81,11 +81,11 @@ public sealed partial class UiStyleContractTests
 
         var allSectionText = string.Join(
             Environment.NewLine,
-            expectedBindings.Keys.Select(name => File.ReadAllText(TestRepository.FromApplicationRoot($"Views/{name}.axaml"))));
+            expectedBindings.Keys.Select(name => File.ReadAllText(TestRepository.FromPresentationRoot($"Views/{name}.axaml"))));
 
         foreach (var (sectionName, bindings) in expectedBindings)
         {
-            var text = File.ReadAllText(TestRepository.FromApplicationRoot($"Views/{sectionName}.axaml"));
+            var text = File.ReadAllText(TestRepository.FromPresentationRoot($"Views/{sectionName}.axaml"));
             Assert.Contains("x:DataType=\"vm:MainWindowViewModel\"", text, StringComparison.Ordinal);
 
             foreach (var binding in bindings)
@@ -101,7 +101,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void SettingsOverlay_ReferencesSixCategorySectionsWithoutOwningSettingsRows()
     {
-        var overlay = File.ReadAllText(TestRepository.FromApplicationRoot("Views/MainWindowSettingsOverlay.axaml"));
+        var overlay = File.ReadAllText(TestRepository.FromPresentationRoot("Views/MainWindowSettingsOverlay.axaml"));
         var document = XDocument.Parse(overlay);
         Dictionary<string, string> sectionVisibility = new(StringComparer.Ordinal)
         {
@@ -129,7 +129,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void SettingsOverlay_UsesResponsiveTwoColumnCategoryWorkspace()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowSettingsOverlay.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowSettingsOverlay.axaml"));
         // ADR-015：外壳为无头带 DialogSurface（身份区折叠），token 仅作 Max 封顶。
         var surface = document
             .Descendants()
@@ -245,7 +245,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void SettingsOverlay_UsesFinalM3SurfaceBlueprint()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowSettingsOverlay.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowSettingsOverlay.axaml"));
         // ADR-015：外壳表面自带滑移动效类；内容层不再拆分。
         var surface = document.Descendants().Single(element =>
             element.Name.LocalName == "DialogSurface");
@@ -285,8 +285,8 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void SettingsWorkspaceStyles_UseSemanticBrushesAndDesignTokens()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
-        var dialogSurfaceStyles = XDocument.Load(TestRepository.FromApplicationRoot("Views/Styles/DialogSurface.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
+        var dialogSurfaceStyles = XDocument.Load(TestRepository.FromPresentationRoot("Views/Styles/DialogSurface.axaml"));
 
         Assert.Equal(
             "{StaticResource Launcher.Spacing.None}",
@@ -448,7 +448,7 @@ public sealed partial class UiStyleContractTests
                     && attribute.Value == "Launcher.Component.Settings.Footer.Padding"));
         Assert.Equal("24,8,16,20", contentActionsPadding.Value);
 
-        var overlayDocument = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowSettingsOverlay.axaml"));
+        var overlayDocument = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowSettingsOverlay.axaml"));
         var scrollViewer = overlayDocument
             .Descendants()
             .Single(element => element.Name.LocalName == "ScrollViewer");
@@ -460,7 +460,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void GeneralSection_UsesThreeSettingsGroupsInFixedOrder()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/SettingsGeneralSection.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/SettingsGeneralSection.axaml"));
         var groups = document
             .Descendants()
             .Where(element =>
@@ -485,7 +485,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void AppearanceSection_UsesTwoSettingsGroupsForConsistentVerticalRhythm()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/SettingsAppearanceSection.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/SettingsAppearanceSection.axaml"));
         var groups = document
             .Descendants()
             .Where(element =>
@@ -519,7 +519,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void AppearancePalette_ReservesWidthForFiveInteractiveSwatches()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/SettingsAppearanceSection.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/SettingsAppearanceSection.axaml"));
         var palette = document
             .Descendants()
             .Single(element =>
@@ -535,7 +535,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void AboutSection_UsesSettingsGroupForTopLevelRhythm()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/SettingsAboutSection.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/SettingsAboutSection.axaml"));
         var root = document.Root?.Elements().Single(element => element.Name.LocalName == "StackPanel");
 
         Assert.NotNull(root);
@@ -545,7 +545,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void AboutSection_LegalLinks_ShareRowsWithTheirCopyrightText()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/SettingsAboutSection.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/SettingsAboutSection.axaml"));
         var links = document
             .Descendants()
             .Where(element => element.Name.LocalName == "HyperlinkButton")
@@ -572,7 +572,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void AboutSection_WithRedesignedLayout_RendersIdentityCardAndKeyValueRows()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/SettingsAboutSection.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/SettingsAboutSection.axaml"));
 
         // ADR-018 融合变体：身份卡 = 产品名 + 版本 caption + 副标题，操作行内收。
         Assert.Single(document.Descendants(), element =>
@@ -607,8 +607,8 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void SettingsRuntimePaths_OnLinux_LiveOnlyInGameSection()
     {
-        var gameDocument = XDocument.Load(TestRepository.FromApplicationRoot("Views/SettingsGameSection.axaml"));
-        var advancedDocument = XDocument.Load(TestRepository.FromApplicationRoot("Views/SettingsAdvancedSection.axaml"));
+        var gameDocument = XDocument.Load(TestRepository.FromPresentationRoot("Views/SettingsGameSection.axaml"));
+        var advancedDocument = XDocument.Load(TestRepository.FromPresentationRoot("Views/SettingsAdvancedSection.axaml"));
         var runtimeBindings = new[]
         {
             "{Binding Settings.Editor.Current.GameRuntime.RunnerPath, Mode=TwoWay}",
@@ -668,7 +668,7 @@ public sealed partial class UiStyleContractTests
             element => element.Name.LocalName == "SettingSelect"
                 && element.Attribute("Title")?.Value == "{Binding Shell.I18n[gameRuntimeRunner]}");
 
-        var styles = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
+        var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
         var fieldInputStyle = GetStyleSetters(styles, "TextBox.field-input");
         Assert.Equal(
             "{StaticResource Launcher.Control.Height.Field}",
@@ -686,7 +686,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void SettingsNavigation_TokenizeFocusVisibleRings() // spec §8 visible focus ring
     {
-        var styles = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
+        var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
         var selector = "ListBox.settings-navigation > ListBoxItem:focus-visible";
         Assert.Equal(
             "{DynamicResource Launcher.Color.FocusRing}",
@@ -699,7 +699,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void SettingsNavigation_HoverAndSelectionOverrideFluentDefaultColors()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
         var styles = document
             .Descendants()
             .Where(element => element.Name.LocalName == "Style")
@@ -779,7 +779,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void AppearanceSection_NeutralStrategyHint_IsLocalizedAndConditionallyVisible() // ADR-010
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/SettingsAppearanceSection.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/SettingsAppearanceSection.axaml"));
         // The hint renders inside the neutral-strategy row (SettingRow.Hint) so
         // multi-line copy keeps the row's internal spacing instead of an
         // out-of-row margin stacking on the row's min-height padding.
@@ -800,7 +800,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void SettingRow_LongCopyWrapsInFlexibleContentColumn()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Controls/SettingRow.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Controls/SettingRow.axaml"));
         var layout = document
             .Descendants()
             .Single(element => element.Name.LocalName == "Grid" && HasClass(element, "settings-row"));
@@ -845,9 +845,9 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void SettingsPanel_UsesTransactionalSaveAndCancelActions()
     {
-        var settingsOverlay = File.ReadAllText(TestRepository.FromApplicationRoot("Views/MainWindowSettingsOverlay.axaml"));
-        var gameSection = File.ReadAllText(TestRepository.FromApplicationRoot("Views/SettingsGameSection.axaml"));
-        var mainWindowCodeBehind = File.ReadAllText(TestRepository.FromApplicationRoot("Views/MainWindow.axaml.cs"));
+        var settingsOverlay = File.ReadAllText(TestRepository.FromPresentationRoot("Views/MainWindowSettingsOverlay.axaml"));
+        var gameSection = File.ReadAllText(TestRepository.FromPresentationRoot("Views/SettingsGameSection.axaml"));
+        var mainWindowCodeBehind = File.ReadAllText(TestRepository.FromPresentationRoot("Views/MainWindow.axaml.cs"));
 
         Assert.Contains(
             "Description=\"{Binding Settings.GamePathDisplay}\"",
@@ -895,7 +895,7 @@ public sealed partial class UiStyleContractTests
         // The escape-key resolution for the settings modal is a ModalRegistration
         // (ADR-023): kind, visibility source, content, and escape command colocated
         // in ShellLifecycle's RegisterModals.
-        var shellLifecycle = File.ReadAllText(TestRepository.FromApplicationRoot("Features/Shell/ShellLifecycle.cs"));
+        var shellLifecycle = File.ReadAllText(TestRepository.FromPresentationRoot("Features/Shell/ShellLifecycle.cs"));
         Assert.Contains(
             "ModalKind.Settings,",
             shellLifecycle,
@@ -915,7 +915,7 @@ public sealed partial class UiStyleContractTests
     [InlineData("Views/SettingsAdvancedSection.axaml", "{Binding Settings.RequestResetSettingsCommand}")]
     public void SettingsDangerActions_WithDestructiveCommands_UseDangerActionStyle(string sectionPath, string command)
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot(sectionPath));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot(sectionPath));
         var button = document
             .Descendants()
             .Single(element =>
@@ -929,7 +929,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void SettingsDangerActionStyle_WithDangerOverrides_RestoresFlatActionGeometry()
     {
-        var styles = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
+        var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
         var settingDanger = GetStyleSetters(styles, "Button.flat-action.danger-action");
 
         Assert.Equal("{DynamicResource Launcher.Color.Error}", settingDanger["BorderBrush"]);
@@ -941,7 +941,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void SettingsOverlay_RemovesTopStatusSummaryAndUsesInlineContentHeading()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowSettingsOverlay.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowSettingsOverlay.axaml"));
         var settingsContent = document
             .Descendants()
             .Single(element =>
@@ -973,7 +973,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void SettingsNavigation_SelectedItemUsesSemiboldText()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
         var selected = GetStyleSetters(
             document,
             "ListBox.settings-navigation > ListBoxItem:selected");
@@ -989,7 +989,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void SettingsGroups_UseAvailableContentWidth()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
         var settingsGroup = GetStyleSetters(document, "StackPanel.settings-group");
 
         Assert.DoesNotContain("MaxWidth", settingsGroup.Keys);
@@ -1020,7 +1020,7 @@ public sealed partial class UiStyleContractTests
 
         foreach (var sectionPath in sectionPaths)
         {
-            var document = XDocument.Load(TestRepository.FromApplicationRoot(sectionPath));
+            var document = XDocument.Load(TestRepository.FromPresentationRoot(sectionPath));
             var controls = document
                 .Descendants()
                 .Where(element => interactiveControlNames.Contains(element.Name.LocalName))
@@ -1055,7 +1055,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void AdvancedSettings_KeepsLogActionsInDiagnosticsRow()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/SettingsAdvancedSection.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/SettingsAdvancedSection.axaml"));
         var group = document
             .Descendants()
             .Single(element =>
@@ -1125,9 +1125,9 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void SettingsAboutAndAdvancedActions_UsePurposeBasedOrderAndExclusiveOwnership()
     {
-        var aboutText = File.ReadAllText(TestRepository.FromApplicationRoot("Views/SettingsAboutSection.axaml"));
-        var advancedText = File.ReadAllText(TestRepository.FromApplicationRoot("Views/SettingsAdvancedSection.axaml"));
-        var overlay = File.ReadAllText(TestRepository.FromApplicationRoot("Views/MainWindowSettingsOverlay.axaml"));
+        var aboutText = File.ReadAllText(TestRepository.FromPresentationRoot("Views/SettingsAboutSection.axaml"));
+        var advancedText = File.ReadAllText(TestRepository.FromPresentationRoot("Views/SettingsAdvancedSection.axaml"));
+        var overlay = File.ReadAllText(TestRepository.FromPresentationRoot("Views/MainWindowSettingsOverlay.axaml"));
 
         // ADR-018 融合变体顺序：身份卡（版本 caption + 操作行）→ 版本信息 kv（5 行详情）
         // → 链接行（仓库/问题反馈）→ 法律信息（版权/署名/免责声明）。

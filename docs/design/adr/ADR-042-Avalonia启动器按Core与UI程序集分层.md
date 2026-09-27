@@ -146,6 +146,28 @@ Core API 后应改回显式 using。`AssemblySplitContractTests.CoreSources_UseO
   崩溃报告与导出内容里的版本/提交/构建配置不再来自宿主 `BuildInfo`；`CrashReportStore` 的注册
   由组合根显式传身份。它们因此可以在 UI 程序集落位时整体搬走——唯一仍与宿主耦合的是
   `CrashReporterLauncher`（拉起独立崩溃报告进程，依赖 `Program`）。
+- **表现层整体落位 UI 程序集**：`Views/`、`ViewModels/`、`Features/`、`Controls/`、`Converters/`、
+  `Models/`、`Helpers/`、表现层 `Services/`（本地化、主题、托盘、取文件/窗口尺寸、设置编辑器、
+  下载与启动工作流、崩溃报告族）、运行期 `Assets/`（`app-icon.ico`、`launcher-background.png`）
+  全部迁入 `Cafe.Launcher.Avalonia.UI`；**命名空间保持不变**（搬迁只换程序集），因此 XAML 的
+  `x:Class`、绑定、`avares://` 之外的代码无需改写。宿主只留进程与入口相关：`Program.cs`、
+  `App.axaml(.cs)`、`CrashReportApp.axaml(.cs)`、`Composition/`、`Constants/BuildInfo.cs`、
+  跨进程转发、`ShutdownDeferral`、`CrashReporterLauncher`（实现 UI 声明的 `ICrashReporterLauncher`）
+  以及图标流水线输入 `Assets/app-icon-source.png`。
+- **组合根一分为二**：宿主 `ServiceConfiguration` 只解析数据根、登记 Core（`AddLauncherCore`）、
+  登记进程级服务，然后调用 UI 的 `AddLauncherPresentationServices(dataRoot, identity, logger,
+  fatalCrashService, showHiddenSettings)`——表现层登记不再从宿主逐条写，宿主因此不再引用 UI 内部类型
+  （`IGameOperationExecutor` 等随之收回 `internal`）。`LocalDiagnostics.RegisterSharedLogger` 这一
+  静态缝的「唯一登记所有方」也随之落在 UI 的登记入口，`DiagnosticsStaticSealTests` 的扫描域与声明表
+  已同步。
+- 表现层此前直接读宿主的 `BuildInfo`/`Program` 的三处已改为注入：`ShellViewModel`/`DebugViewModel`/
+  `SettingsViewModel` 收 `LauncherBuildIdentity`（容器已由 `AddLauncherCore` 登记），
+  `MainWindowViewModel` 收 `PresentationOptions`（`bool` 无法由容器解析，故包一层记录类型），
+  `GameShortcutService` 用的 CLI 参数常量移到 Core 的 `LauncherConstants`。
+- 载体资源随之改指 UI：`Assets/app-icon.ico`（`<ApplicationIcon>` 指 UI 工程路径）、
+  `launcher-background.png`、`Views/Styles/*.axaml` 的 `avares://Cafe.Launcher.Avalonia.UI/...`；
+  测试的扫描域与声明表切到 `TestRepository.PresentationPath`（含反向失效保护：宿主里再出现
+  `Views`/`Controls` 目录即失败）。
 - UI 程序集开始承载内容（第一步：本地化资源）：`Resources/*.resx` 与生成的 `LauncherStrings.Designer.cs`
   迁入 `src/Cafe.Launcher.Avalonia.UI/`；UI 的 `RootNamespace` 定为 `Cafe.Launcher.Avalonia`（表现层
   代码本就沿用该命名空间，搬迁只换程序集），因此 resx 的清单名仍是

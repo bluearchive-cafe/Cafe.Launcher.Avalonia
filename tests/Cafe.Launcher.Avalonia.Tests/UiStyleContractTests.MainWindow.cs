@@ -11,10 +11,10 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void LauncherIcons_UserFacingActions_UseApprovedSemanticMappings()
     {
-        var mainWindow = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.axaml"));
-        var dialogs = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowDialogsOverlay.axaml"));
-        var resourcePanelOverlay = XDocument.Load(TestRepository.FromApplicationRoot("Views/ResourcePanelOverlay.axaml"));
-        var settingsOverlay = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowSettingsOverlay.axaml"));
+        var mainWindow = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
+        var dialogs = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowDialogsOverlay.axaml"));
+        var resourcePanelOverlay = XDocument.Load(TestRepository.FromPresentationRoot("Views/ResourcePanelOverlay.axaml"));
+        var settingsOverlay = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowSettingsOverlay.axaml"));
 
         var detectButton = mainWindow
             .Descendants()
@@ -63,7 +63,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void MainWindow_OperationPanels_UseStableStatusAndActionColumns()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
         var operationLayouts = document
             .Descendants()
             .Where(element =>
@@ -124,7 +124,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void MainWindow_InstallPanel_UsesCompactLayoutWithoutDetailedStatus()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
         var installLayout = document
             .Descendants()
             .Single(element =>
@@ -151,7 +151,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void MainWindow_OperationButtons_ExposeLocalizedNamesAndActionPriority()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
         Dictionary<string, (string Name, string Priority)> expectedButtons = new(StringComparer.Ordinal)
         {
             ["{Binding RefreshCommand}"] = ("{Binding Shell.I18n[refresh]}", "secondary-operation"),
@@ -192,7 +192,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void MainWindow_ControlPanel_ExplainsTheStartAction()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
         var controlPanel = document
             .Descendants()
             .Single(element =>
@@ -209,7 +209,7 @@ public sealed partial class UiStyleContractTests
     {
         // 底部两个状态行（安装面板与控制面板）都必须展示当前下载源；
         // 控制面板的隐藏布局只保留会话状态与按钮，不在此契约内。
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
         var captionBindings = document
             .Descendants()
             .Where(element =>
@@ -223,7 +223,7 @@ public sealed partial class UiStyleContractTests
     [InlineData("OperationControlState", new[] { "Operations.GameSessionStateText", "Shell.LaunchCheckText", "Shell.NetworkText", "Shell.DownloadSourceText", "Shell.VersionText" })]
     public void MainWindow_StatusCaptions_UseStatusFirstOrder(string panelName, string[] expectedBindings)
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
         var panel = document.Descendants().Single(element =>
             element.Attributes().Any(attribute => attribute.Name.LocalName == "Name" && attribute.Value == panelName));
         var statusRow = panel.Descendants().Single(element =>
@@ -237,7 +237,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void MainWindow_SettingsAdvancedSection_ExposesLauncherSettingsReset()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/SettingsAdvancedSection.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/SettingsAdvancedSection.axaml"));
         var resetButton = document
             .Descendants()
             .Single(element =>
@@ -253,7 +253,7 @@ public sealed partial class UiStyleContractTests
                 && element.Attribute("Text")?.Value == "{Binding Shell.I18n[debugResetSettingsConfirm]}");
 
         // 复用 ADR-014 确认对话框族：设置页重置拥有独立可见性通道，但共享同一套文案键。
-        var overlay = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowDialogsOverlay.axaml"));
+        var overlay = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowDialogsOverlay.axaml"));
         var dialog = overlay
             .Descendants()
             .Single(element =>
@@ -276,7 +276,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void MainWindow_GameManageButtons_ExposeFlyoutMenuWithOperationBindings()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
         var manageButtons = document
             .Descendants()
             .Where(element =>
@@ -340,7 +340,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void MainWindow_ProgressPanel_BindsOperationSpecificIcon()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
         var progressPanel = document
             .Descendants()
             .Single(element =>
@@ -362,8 +362,8 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void MainWindow_TitleBarActions_ExposeAccessibleTokenizedPointerAndKeyboardFeedback()
     {
-        var view = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.axaml"));
-        var styles = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
+        var view = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
+        var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
         Dictionary<string, string> expectedNames = new(StringComparer.Ordinal)
         {
             ["{Binding WindowChrome.OpenDebugPanelCommand}"] = "{Binding Shell.I18n[debugPanel]}",
@@ -432,7 +432,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void MainWindow_DataTemplateRootBindings_UseTypedNamedElementSyntax()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
         var bindingValues = document
             .Descendants()
             .SelectMany(element => element.Attributes())
@@ -455,9 +455,9 @@ public sealed partial class UiStyleContractTests
     public void SharedLauncherStyles_AreApplicationScopedForSplitViews()
     {
         const string sharedStylesSource =
-            "avares://Cafe.Launcher.Avalonia/Views/MainWindow.Styles.axaml";
+            "avares://Cafe.Launcher.Avalonia.UI/Views/MainWindow.Styles.axaml";
         var application = XDocument.Load(TestRepository.FromApplicationRoot("App.axaml"));
-        var mainWindow = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.axaml"));
+        var mainWindow = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
 
         Assert.Contains(
             application.Descendants(),
@@ -487,13 +487,13 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void DebugResetDialogMembers_AreExplicitlyDeclared()
     {
-        var source = File.ReadAllText(TestRepository.FromApplicationRoot("ViewModels/DialogsViewModel.cs"));
+        var source = File.ReadAllText(TestRepository.FromPresentationRoot("ViewModels/DialogsViewModel.cs"));
 
         Assert.Contains("public ConfirmationDialogViewModel DebugResetConfirm { get; }", source, StringComparison.Ordinal);
 
         // 确认机制（可见性/文案/命令/顺序调用错误策略）由共享模块单点实现，
         // 家族成员不再各自手写命令与事件。
-        var module = File.ReadAllText(TestRepository.FromApplicationRoot("ViewModels/ConfirmationDialogViewModel.cs"));
+        var module = File.ReadAllText(TestRepository.FromPresentationRoot("ViewModels/ConfirmationDialogViewModel.cs"));
         Assert.Contains("public IRelayCommand CancelCommand", module, StringComparison.Ordinal);
         Assert.Contains("public IAsyncRelayCommand ConfirmCommand", module, StringComparison.Ordinal);
     }
@@ -510,7 +510,7 @@ public sealed partial class UiStyleContractTests
 
         foreach (var path in paths)
         {
-            var markup = File.ReadAllText(TestRepository.FromApplicationRoot(path));
+            var markup = File.ReadAllText(TestRepository.FromPresentationRoot(path));
             Assert.DoesNotContain("DataContext.", markup, StringComparison.Ordinal);
             Assert.DoesNotContain("$parent[UserControl].DataContext.", markup, StringComparison.Ordinal);
         }
@@ -524,7 +524,7 @@ public sealed partial class UiStyleContractTests
             "Views/MainWindow.Styles.axaml",
             "Views/Styles/RemoteContent.axaml"
         }
-            .Select(path => XDocument.Load(TestRepository.FromApplicationRoot(path)))
+            .Select(path => XDocument.Load(TestRepository.FromPresentationRoot(path)))
             .SelectMany(document => document.Descendants())
             .Where(element => element.Name.LocalName == "Style")
             .Select(element => element.Attribute("Selector")?.Value ?? "")
@@ -554,7 +554,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void MainWindow_RemoteContent_UsesIndependentCardsWithOuterVerticalScroll()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
         var remoteSurface = document
             .Descendants()
             .Single(element =>
@@ -606,7 +606,7 @@ public sealed partial class UiStyleContractTests
         Assert.Equal("Auto", newsViewport.Attribute("VerticalScrollBarVisibility")?.Value);
         Assert.Equal("Disabled", newsViewport.Attribute("HorizontalScrollBarVisibility")?.Value);
 
-        var styles = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
+        var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
         var cardStyle = GetStyleSetters(styles, "Border.remote-content-card");
         Assert.Equal("{DynamicResource Launcher.Color.Panel.Background}", cardStyle["Background"]);
         Assert.Equal("{StaticResource Launcher.Radius.Sm}", cardStyle["CornerRadius"]);
@@ -620,13 +620,13 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void MainWindow_RemoteContentLoadError_CarriesTheCardBackground()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
         var errorCard = document
             .Descendants()
             .Single(element =>
                 element.Name.LocalName == "Border"
                 && HasClass(element, "remote-content-load-error"));
-        var styles = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
+        var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
         var errorStyle = GetStyleSetters(styles, "Border.remote-content-load-error");
 
         // 失败态替代整块内容区，必须与 remote-content-card 同底同圆角，
@@ -650,7 +650,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void MainWindow_MultiRowGridChildren_DeclareTheirFirstRowExplicitly()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
         var expectedBindings = new[]
         {
             "{Binding Operations.ProgressTitle}"
@@ -679,7 +679,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void MainWindow_NewsTabs_UseNativeSelectionAndScrollableReadableRows()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
         var newsCard = document
             .Descendants()
             .Single(element => HasClass(element, "news-card"));
@@ -716,7 +716,7 @@ public sealed partial class UiStyleContractTests
             "{Binding RemoteContent.SelectedNewsCategory, Mode=TwoWay}",
             tabs.Attribute("SelectedItem")?.Value);
         Assert.Equal("{x:Null}", tabs.Attribute("PageTransition")?.Value);
-        var remoteStyles = XDocument.Load(TestRepository.FromApplicationRoot("Views/Styles/RemoteContent.axaml"));
+        var remoteStyles = XDocument.Load(TestRepository.FromPresentationRoot("Views/Styles/RemoteContent.axaml"));
         var tabControlTheme = remoteStyles
             .Descendants()
             .Single(element => element.Name.LocalName == "ControlTheme"
@@ -818,7 +818,7 @@ public sealed partial class UiStyleContractTests
         Assert.Equal("Right", date.Attribute("HorizontalAlignment")?.Value);
         Assert.Equal("Right", date.Attribute("TextAlignment")?.Value);
 
-        var styles = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
+        var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
         var newsContentRow = GetStyleSetters(styles, "Border.content-row.news-content-row");
         Assert.Equal("{StaticResource Launcher.Spacing.Thickness.Sm}", newsContentRow["Padding"]);
         Assert.Equal("{StaticResource Launcher.Spacing.Thickness.None}", newsContentRow["Margin"]);
@@ -827,8 +827,8 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void MainWindow_CarouselNavigation_UsesTokenizedHitTargetsAndLocalizedNames()
     {
-        var view = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.axaml"));
-        var styles = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
+        var view = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
+        var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
         Dictionary<string, string> expectedNames = new(StringComparer.Ordinal)
         {
             ["{Binding RemoteContent.SelectPreviousBannerCommand}"] = "{Binding Shell.I18n[previousBanner]}",
@@ -871,7 +871,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void MainWindow_CarouselControls_OverlayNavigationWithoutPageText()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
         var bannerStage = document
             .Descendants()
             .Single(element =>
@@ -933,7 +933,7 @@ public sealed partial class UiStyleContractTests
                 attribute.Value.Contains("ToggleCarouselLoop", StringComparison.Ordinal)
                 || attribute.Value.Contains("CarouselPause", StringComparison.Ordinal)));
 
-        var styles = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
+        var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
         var bannerLinkStyle = GetStyleSetters(styles, "Button.banner-link");
         Assert.Equal("{StaticResource Launcher.Color.Transparent}", bannerLinkStyle["Background"]);
         Assert.DoesNotContain(
@@ -961,7 +961,7 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             "1",
             GetStyleSetters(styles, "Grid.banner-stage.active > Border.banner-edge-gradient")["Opacity"]);
-        var remoteContentStyles = XDocument.Load(TestRepository.FromApplicationRoot("Views/Styles/RemoteContent.axaml"));
+        var remoteContentStyles = XDocument.Load(TestRepository.FromPresentationRoot("Views/Styles/RemoteContent.axaml"));
         var bannerDots = GetStyleSetters(remoteContentStyles, "Border.banner-dot");
         Assert.Equal("{DynamicResource Launcher.Color.Carousel.Dot.Inactive}", bannerDots["Background"]);
         Assert.Equal("{StaticResource Launcher.Spacing.Xs}", bannerDots["Width"]);
@@ -983,7 +983,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void MainWindow_IsResizableWithMinimumViewportConstraints()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
         var window = document.Root;
 
         Assert.NotNull(window);
@@ -995,7 +995,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void MainWindow_GamePathUsesPersistedSnapshotAndImmediateCommand()
     {
-        var mainWindow = File.ReadAllText(TestRepository.FromApplicationRoot("Views/MainWindow.axaml"));
+        var mainWindow = File.ReadAllText(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
 
         Assert.Contains(
             "Text=\"{Binding Shell.PathText}\"",
@@ -1014,7 +1014,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void MainWindow_SocialActions_AddTopRightVerticalIconButtonsAndUseRemoteContentVisibilitySetting()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
         var actions = document.Descendants().Single(element =>
             element.Name.LocalName == "StackPanel" && HasClass(element, "social-actions"));
         var officialSiteButton = actions.Elements().Single(element =>
@@ -1059,8 +1059,8 @@ public sealed partial class UiStyleContractTests
             actions.Elements().First().Name.LocalName);
         Assert.True(HasClass(actions.Elements().First(), "official-site"));
 
-        var mainStyles = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
-        var remoteStyles = XDocument.Load(TestRepository.FromApplicationRoot("Views/Styles/RemoteContent.axaml"));
+        var mainStyles = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
+        var remoteStyles = XDocument.Load(TestRepository.FromPresentationRoot("Views/Styles/RemoteContent.axaml"));
         var actionsStyle = GetStyleSetters(mainStyles, "StackPanel.social-actions");
         var actionButtonStyle = GetStyleSetters(remoteStyles, "Button.social-chip.social-action");
         Assert.Equal("Right", actionsStyle["HorizontalAlignment"]);

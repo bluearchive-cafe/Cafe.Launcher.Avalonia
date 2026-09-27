@@ -34,7 +34,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void CrashReportTokens_AreEveryDeclaredTokenConsumed()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot(CrashReportView));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot(CrashReportView));
         var declared = DeclaredCrashTokenKeys(document);
         var referenced = document
             .Descendants()
@@ -50,7 +50,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void CrashReportView_SizingAndTypographyAttributes_DoNotUseRawLiterals()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot(CrashReportView));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot(CrashReportView));
         var xKey = XName.Get("Key", "http://schemas.microsoft.com/winfx/2006/xaml");
         var rawAttributes = document
             .Descendants()

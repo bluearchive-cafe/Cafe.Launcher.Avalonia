@@ -45,16 +45,14 @@ public sealed partial class UiStyleContractTests
 
     private static string[] FindXamlFiles(string relativeDirectory, SearchOption searchOption)
     {
-        var projectRoot = TestRepository.ApplicationPath;
-        // 程序集拆分后 Views/Controls 会搬进 UI 工程，而本契约的扫描域与声明表都是按宿主
-        // 相对路径写的。搬文件的那次提交必须把两者一起切到 TestRepository.PresentationPath；
-        // 在这里 fail loudly，免得扫描域安静地变空、契约退化成永远为真。
+        // 产品 XAML 归 UI 工程：扫描域与声明表都按 UI 工程相对路径写（与搬迁前同名）。
+        var projectRoot = TestRepository.PresentationPath;
+        // 反向失效保护：宿主里再出现同名标记目录，说明搬迁被回退或有新文件放错了程序集。
         Assert.False(
-            Directory.Exists(TestRepository.InPresentation(relativeDirectory)),
-            $"{relativeDirectory} 已同时存在于 UI 工程：请把 UiStyleContractTests 的扫描域"
-            + "（FindXamlFiles / ProjectMarkupFiles）与全部声明表从宿主切到 TestRepository.PresentationPath。");
+            Directory.Exists(TestRepository.InApplication(relativeDirectory)),
+            $"{relativeDirectory} 又出现在宿主工程：产品 XAML 应全部归 Cafe.Launcher.Avalonia.UI。");
         return Directory
-            .GetFiles(TestRepository.FromApplicationRoot(relativeDirectory), "*.axaml", searchOption)
+            .GetFiles(TestRepository.FromPresentationRoot(relativeDirectory), "*.axaml", searchOption)
             .Select(path => Path.GetRelativePath(projectRoot, path).Replace('\\', '/'))
             .Order(StringComparer.Ordinal)
             .ToArray();
@@ -367,7 +365,7 @@ public sealed partial class UiStyleContractTests
                 element.Name.LocalName == "Style"
                 && element.Attribute("Selector")?.Value == selector);
         matchingStyle ??= StyleFiles
-            .Select(path => XDocument.Load(TestRepository.FromApplicationRoot(path)))
+            .Select(path => XDocument.Load(TestRepository.FromPresentationRoot(path)))
             .SelectMany(styleDocument => styleDocument.Descendants())
             .Single(element =>
                 element.Name.LocalName == "Style"

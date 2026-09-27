@@ -1600,12 +1600,12 @@
     <Style Selector="Grid.operation-status"/>
     <Style Selector="Button.primary-operation"/>
     <Style Selector="Button.secondary-operation"/>
-    <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/Styles/Diagnostics.axaml"/>
-    <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/Styles/RemoteContent.axaml"/>
-    <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/Styles/SetupWizard.axaml"/>
-    <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/Styles/Toast.axaml"/>
-    <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/Styles/DialogSurface.axaml"/>
-    <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/Styles/ResourcePanel.axaml"/>
+    <StyleInclude Source="avares://Cafe.Launcher.Avalonia.UI/Views/Styles/Diagnostics.axaml"/>
+    <StyleInclude Source="avares://Cafe.Launcher.Avalonia.UI/Views/Styles/RemoteContent.axaml"/>
+    <StyleInclude Source="avares://Cafe.Launcher.Avalonia.UI/Views/Styles/SetupWizard.axaml"/>
+    <StyleInclude Source="avares://Cafe.Launcher.Avalonia.UI/Views/Styles/Toast.axaml"/>
+    <StyleInclude Source="avares://Cafe.Launcher.Avalonia.UI/Views/Styles/DialogSurface.axaml"/>
+    <StyleInclude Source="avares://Cafe.Launcher.Avalonia.UI/Views/Styles/ResourcePanel.axaml"/>
 
     <!-- ==================================================================
          焦点视觉策略（ADR-040 修订）：默认不显示，键盘导航时显示

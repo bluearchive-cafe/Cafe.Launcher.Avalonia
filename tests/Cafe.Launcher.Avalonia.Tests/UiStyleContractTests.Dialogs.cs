@@ -12,7 +12,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void UpdateProgressArea_UsesTopDividerAndShowsDownloadSpeed()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowDialogsOverlay.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowDialogsOverlay.axaml"));
         var divider = document.Descendants().Single(element =>
             element.Name.LocalName == "Separator"
             && element.Attribute("Classes")?.Value == "update-progress-divider");
@@ -31,7 +31,7 @@ public sealed partial class UiStyleContractTests
     {
         // 警示卡只有左侧 3px 强调边：起始两角必须是平角，否则圆弧把强调边两端切圆。
         // 两处绑定一起钉住——厚度退回「四边等宽」或圆角退回对称档都会让这个形态消失。
-        var styles = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
+        var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
         var alert = GetStyleSetters(styles, "Border.dialog-alert");
 
         Assert.Equal(
@@ -45,12 +45,12 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void UpdateReleaseNotesPreview_UsesGfmCompatibleParserProfile()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowDialogsOverlay.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowDialogsOverlay.axaml"));
         XNamespace controls = "using:Cafe.Launcher.Avalonia.Controls";
 
         Assert.Single(document.Descendants(controls + "ReleaseNotesMarkdownViewer"));
 
-        var styles = File.ReadAllText(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
+        var styles = File.ReadAllText(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
         Assert.Contains("controls|ReleaseNotesMarkdownViewer", styles, StringComparison.Ordinal);
         Assert.Contains("{DynamicResource Launcher.Text.Primary}", styles, StringComparison.Ordinal);
         Assert.Contains("{DynamicResource Launcher.Color.Content.Row}", styles, StringComparison.Ordinal);
@@ -63,7 +63,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void OverlayOrder_IsBaseThenSettingsThenDialogsThenToast()
     {
-        var mainWindow = File.ReadAllText(TestRepository.FromApplicationRoot("Views/MainWindow.axaml"));
+        var mainWindow = File.ReadAllText(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
         var settingsIndex = mainWindow.IndexOf("<views:MainWindowSettingsOverlay/>", StringComparison.Ordinal);
         var logViewerIndex = mainWindow.IndexOf("<views:MainWindowLogViewerOverlay/>", StringComparison.Ordinal);
         var debugIndex = mainWindow.IndexOf("<views:MainWindowDebugOverlay/>", StringComparison.Ordinal);
@@ -88,7 +88,7 @@ public sealed partial class UiStyleContractTests
                      "Views/SetupWizardOverlay.axaml"
                  })
         {
-            var text = File.ReadAllText(TestRepository.FromApplicationRoot(relativePath));
+            var text = File.ReadAllText(TestRepository.FromPresentationRoot(relativePath));
             Assert.DoesNotContain("ZIndex=\"500\"", text, StringComparison.Ordinal);
             Assert.DoesNotContain("ZIndex=\"1001\"", text, StringComparison.Ordinal);
         }
@@ -135,7 +135,7 @@ public sealed partial class UiStyleContractTests
 
         foreach (var (path, expectedByCommand) in expectedActions)
         {
-            var document = XDocument.Load(TestRepository.FromApplicationRoot(path));
+            var document = XDocument.Load(TestRepository.FromPresentationRoot(path));
             foreach (var (command, expectedName) in expectedByCommand)
             {
                 var matchingButtons = document
@@ -161,7 +161,7 @@ public sealed partial class UiStyleContractTests
     {
         // ADR-041：来源选择是分段 RadioButton 对，条目开关是 ToggleSwitch——
         // 控件语义换了，自动化名仍是「本地化、可读、逐控件」的。
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/ResourcePanelOverlay.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/ResourcePanelOverlay.axaml"));
         var resourcePanel = FindMotionOverlay(
             document,
             "{Binding ResourcePanel.IsResourcePanelVisible}");
@@ -204,7 +204,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void ErrorDialog_HeaderProvidesLocalizedCloseAction() // ADR-015 dialog surface anatomy
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowDialogsOverlay.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowDialogsOverlay.axaml"));
         var errorSurface = document
             .Descendants()
             .Single(element =>
@@ -240,7 +240,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void ToastCloseButton_WhenRendered_UsesLocalizedAutomationNameAndToolTip()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowToastOverlay.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowToastOverlay.axaml"));
         var closeButton = document
             .Descendants()
             .Single(element =>
@@ -263,7 +263,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void ConfirmDialog_LongContentScrollsWhileActionsRemainFixed()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Controls/ConfirmDialog.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Controls/ConfirmDialog.axaml"));
         var surface = document
             .Descendants()
             .Single(element => element.Name.LocalName == "DialogSurface");
@@ -305,7 +305,7 @@ public sealed partial class UiStyleContractTests
         // ADR-015：发丝动作带内化为 DialogSurface Panel 模板；视图文件只承载
         // 表面实例（主 overlay 三 Panel + 一 Basic 公告，资源面板独立文件一个 Panel），
         // 辅助动作进左槽。
-        var text = File.ReadAllText(TestRepository.FromApplicationRoot("Views/MainWindowDialogsOverlay.axaml"));
+        var text = File.ReadAllText(TestRepository.FromPresentationRoot("Views/MainWindowDialogsOverlay.axaml"));
 
         Assert.Equal(2, Regex.Count(text, @"Form=""Panel""", RegexOptions.CultureInvariant));
         Assert.Equal(1, Regex.Count(text, @"Form=""Basic""", RegexOptions.CultureInvariant));
@@ -329,7 +329,7 @@ public sealed partial class UiStyleContractTests
             text);
 
         // 资源面板覆盖层拆分后仍是一个 Panel 表面（与 SetupWizard 拆分模式同构）。
-        var resourcePanelText = File.ReadAllText(TestRepository.FromApplicationRoot("Views/ResourcePanelOverlay.axaml"));
+        var resourcePanelText = File.ReadAllText(TestRepository.FromPresentationRoot("Views/ResourcePanelOverlay.axaml"));
         Assert.Equal(1, Regex.Count(resourcePanelText, @"Form=""Panel""", RegexOptions.CultureInvariant));
         Assert.Equal(1, Regex.Count(resourcePanelText, @"Classes=""motion-surface""", RegexOptions.CultureInvariant));
         Assert.DoesNotContain("dialog-footer", resourcePanelText, StringComparison.Ordinal);
@@ -338,7 +338,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void CriticalDialogActions_ExposeMatchingLocalizedTooltipsAndAutomationNames()
     {
-        var confirmDialog = XDocument.Load(TestRepository.FromApplicationRoot("Controls/ConfirmDialog.axaml"));
+        var confirmDialog = XDocument.Load(TestRepository.FromPresentationRoot("Controls/ConfirmDialog.axaml"));
         Dictionary<string, string> confirmActions = new(StringComparer.Ordinal)
         {
             ["flat-action"] = "{Binding CancelText, ElementName=Root}",
@@ -362,7 +362,7 @@ public sealed partial class UiStyleContractTests
                     .Value);
         }
 
-        var settingsOverlay = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowSettingsOverlay.axaml"));
+        var settingsOverlay = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowSettingsOverlay.axaml"));
         Dictionary<string, string> settingsActions = new(StringComparer.Ordinal)
         {
             ["{Binding WindowChrome.ShowSettingsCommand}"] = "{Binding Shell.I18n[cancel]}",
@@ -390,7 +390,7 @@ public sealed partial class UiStyleContractTests
     public void LocalizationManagement_UsesFixedDialogDimensions()
     {
         // ADR-015 尺寸律：自适应优先，固定宽高退场；token 仅作 Max 上限背书。
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/ResourcePanelOverlay.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/ResourcePanelOverlay.axaml"));
         var dialog = FindMotionOverlay(
                 document,
                 "{Binding ResourcePanel.IsResourcePanelVisible}")
@@ -406,7 +406,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void DialogClose_FocusUsesSubtleAccentTreatment()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
         var focus = GetStyleSetters(document, "Button.dialog-close:focus-visible");
 
         Assert.Equal("{DynamicResource Launcher.Color.Primary.Soft}", focus["Background"]);
@@ -417,7 +417,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void ConfirmDialogs_UseBasicMessageAndFilledPrimaryActions()
     {
-        var control = XDocument.Load(TestRepository.FromApplicationRoot("Controls/ConfirmDialog.axaml"));
+        var control = XDocument.Load(TestRepository.FromPresentationRoot("Controls/ConfirmDialog.axaml"));
         var message = control
             .Descendants()
             .Single(element =>
@@ -450,7 +450,7 @@ public sealed partial class UiStyleContractTests
             "{Binding OptionText, ElementName=Root}",
             option.Attribute("AutomationProperties.Name")?.Value);
 
-        var styles = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
+        var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
         Assert.Equal(
             "{DynamicResource Launcher.Color.Primary}",
             GetStyleSetters(styles, "Button.confirm-dialog-action")["Foreground"]);
@@ -500,7 +500,7 @@ public sealed partial class UiStyleContractTests
             "Description"
         };
 
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowDialogsOverlay.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowDialogsOverlay.axaml"));
         var usages = document
             .Descendants()
             .Where(element => element.Name.LocalName == "ConfirmDialog")
@@ -527,7 +527,7 @@ public sealed partial class UiStyleContractTests
     public void ResourcePanel_ChangeUidAction_RemainsVisibleForAutoSource()
     {
         // 修改 UID 入口常驻：自动获取来源下也必须可见，避免"先切来源才能改 UID"的隐藏操作链。
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/ResourcePanelOverlay.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/ResourcePanelOverlay.axaml"));
         var changeUidButton = document
             .Descendants()
             .Single(element =>
@@ -540,7 +540,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void ResourcePanel_StatusStripHasVisibleSurfaceAndBorder()
     {
-        var dialogs = XDocument.Load(TestRepository.FromApplicationRoot("Views/ResourcePanelOverlay.axaml"));
+        var dialogs = XDocument.Load(TestRepository.FromPresentationRoot("Views/ResourcePanelOverlay.axaml"));
         var statusStrip = dialogs
             .Descendants()
             .Single(element =>
@@ -555,7 +555,7 @@ public sealed partial class UiStyleContractTests
             statusStrip.Descendants(),
             element => element.Attribute("Text")?.Value == "{Binding ResourcePanel.ResourcePanelUidText}");
 
-        var styles = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
+        var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
         var statusStyle = GetStyleSetters(styles, "Border.info-strip.resource-panel-status");
         Assert.Equal(
             "{DynamicResource Launcher.Color.Content.Row}",
@@ -575,7 +575,7 @@ public sealed partial class UiStyleContractTests
     {
         // ADR-041：三张互斥卡并成一张卡内的三个互斥可见面板；共享 dialog-card 类不动，
         // 圆角升档由资源面板专属的 uid-card 类承担。
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/ResourcePanelOverlay.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/ResourcePanelOverlay.axaml"));
         var uidCard = document
             .Descendants()
             .Single(element =>
@@ -605,7 +605,7 @@ public sealed partial class UiStyleContractTests
     public void ResourcePanel_UidSource_IsSegmentedPairWithoutComboBox()
     {
         // ADR-041：两个互斥选项直接常显为 MD3 分段按钮；ComboBox 与其专属 token 退场。
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/ResourcePanelOverlay.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/ResourcePanelOverlay.axaml"));
         Assert.DoesNotContain(
             document.Descendants(),
             element => element.Name.LocalName == "ComboBox");
@@ -656,7 +656,7 @@ public sealed partial class UiStyleContractTests
     {
         // ADR-041：三张条目卡并成一张卡的三行（显式发丝分隔线），开关换 Switch，
         // 状态装进 chip（底色 + 图标 + 文案，不只靠颜色）。
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/ResourcePanelOverlay.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/ResourcePanelOverlay.axaml"));
         var resourceCard = document
             .Descendants()
             .Single(element =>
@@ -714,7 +714,7 @@ public sealed partial class UiStyleContractTests
     {
         // ADR-041 提案 1：Ready=Success（配新增 Success.Soft 底），Failed=Danger，
         // Loading/Waiting 用中性的 Content.Row 底与 Text.Secondary 前景。
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/ResourcePanelOverlay.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/ResourcePanelOverlay.axaml"));
 
         var baseStyle = GetStyleSetters(document, "Border.status-chip");
         Assert.Equal("{DynamicResource Launcher.Color.Content.Row}", baseStyle["Background"]);
@@ -734,7 +734,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void OverlayStyles_DefineSettingsDialogAndSetupWizardLayerOrder()
     {
-        var styles = File.ReadAllText(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
+        var styles = File.ReadAllText(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
 
         Assert.Matches(
             """(?s)<Style Selector="Grid\.settings-overlay">.*?<Setter Property="ZIndex" Value="100"/>.*?</Style>""",
@@ -750,8 +750,8 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void OverlayStyles_TrapAndRestoreKeyboardFocus()
     {
-        var styles = File.ReadAllText(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
-        var behavior = File.ReadAllText(TestRepository.FromApplicationRoot("Views/OverlayFocusBehavior.cs"));
+        var styles = File.ReadAllText(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
+        var behavior = File.ReadAllText(TestRepository.FromPresentationRoot("Views/OverlayFocusBehavior.cs"));
 
         Assert.Equal(
             3,
@@ -775,7 +775,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void DialogSurface_ControlTheme_CarriesAnatomyPartsAndProfileTokens()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/Styles/DialogSurface.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/Styles/DialogSurface.axaml"));
         var templateText = document.ToString();
 
         foreach (var partName in new[]
@@ -861,7 +861,7 @@ public sealed partial class UiStyleContractTests
     [InlineData("Views/DesignGalleryOverlay.axaml")]
     public void DialogActionBands_PutDoItActionsBeforeSafeActions(string relativePath)
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot(relativePath));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot(relativePath));
         var bands = document
             .Descendants()
             .Where(element => element.Name.LocalName == "StackPanel" && HasClass(element, "confirm-actions"))
@@ -891,7 +891,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void ConfirmDialog_PlacesConfirmAndDangerBeforeCancel()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Controls/ConfirmDialog.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Controls/ConfirmDialog.axaml"));
         var band = document
             .Descendants()
             .Single(element => element.Name.LocalName == "StackPanel" && HasClass(element, "confirm-actions"));
@@ -912,7 +912,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void DialogActionButtons_UseNeutralFillAndNoVisibleBorder()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
 
         const string neutralFill = "{DynamicResource Launcher.Color.Dialog.Action.Background}";
         var family = GetStyleSetters(document, "Button.confirm-dialog-action");
@@ -939,7 +939,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void FocusVisual_IsKeyboardOnly()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
         var styles = document.Descendants().Where(element => element.Name.LocalName == "Style").ToList();
 
         // 1. 框架默认焦点矩形：全局清掉（它不是本仓语言，且会与 FocusRing 叠成双层框）。
@@ -979,7 +979,7 @@ public sealed partial class UiStyleContractTests
         // 4. 程序式聚焦不得被判成键盘导航：源码里不能出现 NavigationMethod.Tab。
         foreach (var relativePath in new[] { "Views/OverlayFocusBehavior.cs", "Controls/ConfirmDialog.axaml.cs" })
         {
-            var source = File.ReadAllText(TestRepository.FromApplicationRoot(relativePath));
+            var source = File.ReadAllText(TestRepository.FromPresentationRoot(relativePath));
             Assert.DoesNotContain("Focus(NavigationMethod.Tab)", source, StringComparison.Ordinal);
         }
     }

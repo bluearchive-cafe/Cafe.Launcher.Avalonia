@@ -36,7 +36,7 @@ sealed class Program
     internal const string LaunchGameSignalName = @"Local\Cafe_Launcher_SI_LaunchGame";
 
     /// <summary>CLI argument that launches the game through the full launcher pipeline.</summary>
-    internal const string LaunchGameArgument = "--launch-game";
+    internal const string LaunchGameArgument = Cafe.Launcher.Core.Constants.LauncherConstants.LaunchGameArgument;
 
     /// <summary>
     /// CLI argument that exposes conditional settings controls for diagnostics.

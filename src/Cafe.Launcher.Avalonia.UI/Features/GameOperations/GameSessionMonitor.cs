@@ -13,7 +13,7 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 /// 「运行器提前退出」与「游戏正常退出」在这里分开——启动报告的「成功」只覆盖
 /// <c>Process.Start</c> 那一刻，兼容层内部失败要等看护来揭穿（ADR-035）。
 /// </summary>
-internal sealed class GameSessionMonitor : IGameSessionMonitor, IDisposable
+public sealed class GameSessionMonitor : IGameSessionMonitor, IDisposable
 {
     /// <summary>轮询节奏：一次全系统进程枚举远不到一秒，五秒看一眼足够细，也不构成
     /// 可感知的开销。「启动中」与「运行中」两态共用这个节奏。</summary>

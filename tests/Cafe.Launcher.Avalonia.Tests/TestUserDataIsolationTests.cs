@@ -218,7 +218,7 @@ public sealed class TestUserDataIsolationTests
         var allowedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             Path.Combine(coreRoot, "Services", "LauncherDataRoot.cs"),
-            Path.Combine(hostRoot, "Features", "GameOperations", "GameUninstallService.cs")
+            Path.Combine(TestRepository.PresentationPath, "Features", "GameOperations", "GameUninstallService.cs")
         };
         var offenders = new[] { hostRoot, coreRoot, presentationRoot }
             .SelectMany(root => Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories)

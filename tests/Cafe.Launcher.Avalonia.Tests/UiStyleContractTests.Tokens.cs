@@ -89,7 +89,7 @@ public sealed partial class UiStyleContractTests
         Assert.Equal("SemiBold", resources["Launcher.Typography.FontWeight.Strong"]);
         Assert.Equal("Consolas", resources["Launcher.Typography.FontFamily.Monospace"]);
 
-        var stylesDocument = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
+        var stylesDocument = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
         var typographySetters = stylesDocument
             .Descendants()
             .Where(element =>
@@ -133,7 +133,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void FontWeight_StrongIsLimitedToConfirmedEmphasisScenarios()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
         var strongSelectors = document
             .Descendants()
             .Where(element =>
@@ -187,7 +187,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void SemanticComponents_UseBalancedDensityTokens()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
 
         var contentRow = GetStyleSetters(document, "Border.content-row");
         Assert.Equal("{StaticResource Launcher.Spacing.Thickness.Md}", contentRow["Padding"]);
@@ -195,7 +195,7 @@ public sealed partial class UiStyleContractTests
         Assert.Equal("{StaticResource Launcher.Radius.Sm}", contentRow["CornerRadius"]);
 
         // ADR-015：Border.dialog 退役，表面档案（圆角/底色）由 DialogSurface 主题承载。
-        var dialogTheme = File.ReadAllText(TestRepository.FromApplicationRoot("Views/Styles/DialogSurface.axaml"));
+        var dialogTheme = File.ReadAllText(TestRepository.FromPresentationRoot("Views/Styles/DialogSurface.axaml"));
         Assert.Contains(
             "{StaticResource Launcher.Component.Dialog.CornerRadius}",
             dialogTheme,
@@ -239,7 +239,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void InteractiveControlStyles_UseSharedFocusAndHeightTokens()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
 
         var iconLink = GetStyleSetters(document, "Button.icon-link");
         Assert.Equal("{StaticResource Launcher.Radius.Sm}", iconLink["CornerRadius"]);
@@ -263,7 +263,7 @@ public sealed partial class UiStyleContractTests
                 "{StaticResource LauncherBorderButtonTemplate}",
                 GetStyleSetters(document, selector)["Template"]);
         }
-        var toastStyles = XDocument.Load(TestRepository.FromApplicationRoot("Views/Styles/Toast.axaml"));
+        var toastStyles = XDocument.Load(TestRepository.FromPresentationRoot("Views/Styles/Toast.axaml"));
         Assert.Equal(
             "{StaticResource LauncherBorderButtonTemplate}",
             GetStyleSetters(toastStyles, "Button.toast-close")["Template"]);
@@ -294,7 +294,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void ButtonVariants_CoverM3InteractiveAndDisabledStates()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
 
         var iconButtonDisabled = GetStyleSetters(document, "Button.icon-button:disabled");
         Assert.Equal(
@@ -331,7 +331,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void ExistingM3Components_CoverPressedFocusAndDisabledStates()
     {
-        var remoteStyles = XDocument.Load(TestRepository.FromApplicationRoot("Views/Styles/RemoteContent.axaml"));
+        var remoteStyles = XDocument.Load(TestRepository.FromPresentationRoot("Views/Styles/RemoteContent.axaml"));
 
         var socialHover = GetStyleSetters(remoteStyles, "Button.social-chip:pointerover");
         Assert.Equal(
@@ -348,7 +348,7 @@ public sealed partial class UiStyleContractTests
             "{DynamicResource Launcher.Color.FocusRing}",
             GetStyleSetters(remoteStyles, "Button.social-chip:focus-visible")["BorderBrush"]);
 
-        var filterTabStyles = XDocument.Load(TestRepository.FromApplicationRoot("Views/Styles/Diagnostics.axaml"));
+        var filterTabStyles = XDocument.Load(TestRepository.FromPresentationRoot("Views/Styles/Diagnostics.axaml"));
         var filterTab = GetStyleSetters(filterTabStyles, "Button.filter-tab");
         Assert.Equal("{StaticResource LauncherBorderButtonTemplate}", filterTab["Template"]);
         Assert.Equal("{StaticResource Launcher.Radius.Sm}", filterTab["CornerRadius"]);
@@ -359,7 +359,7 @@ public sealed partial class UiStyleContractTests
             "{StaticResource Launcher.StateLayer.Disabled.Content}",
             GetStyleSetters(filterTabStyles, "Button.filter-tab:disabled")["Opacity"]);
 
-        var mainStyles = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
+        var mainStyles = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
         var settingRow = GetStyleSetters(mainStyles, "Grid.settings-row");
         Assert.Equal("Center", settingRow["VerticalAlignment"]);
     }
@@ -367,7 +367,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void SelectControls_UseOutlinedFieldTokensAcrossStates()
     {
-        var styles = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
+        var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
 
         var select = GetStyleSetters(styles, "ComboBox.setting-control");
         Assert.Equal(
@@ -436,7 +436,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void DesignGallery_ProvidesFourButtonTypesCardAndSettingsRowAcrossSixStates()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/DesignGalleryOverlay.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/DesignGalleryOverlay.axaml"));
         var dialogContent = document
             .Descendants()
             .Single(element => element.Name.LocalName == "DialogSurface.Content");
@@ -495,7 +495,7 @@ public sealed partial class UiStyleContractTests
                      .Concat(StyleFiles)
                      .Append("Views/MainWindowDebugOverlay.axaml"))
         {
-            var text = File.ReadAllText(TestRepository.FromApplicationRoot(relativePath));
+            var text = File.ReadAllText(TestRepository.FromPresentationRoot(relativePath));
 
             // BoxShadow literals (Avalonia 12.1.1 has no TypeConverter) are
             // contract-exempt; see StyleControlAndDebugFiles_DoNotDefineRawColorValues.
@@ -553,7 +553,7 @@ public sealed partial class UiStyleContractTests
         };
 
         var controlFiles = Directory.GetFiles(
-            TestRepository.FromApplicationRoot("Controls"),
+            TestRepository.FromPresentationRoot("Controls"),
             "*.axaml",
             SearchOption.TopDirectoryOnly);
         var colorScannedFiles = StyleFiles
@@ -563,7 +563,7 @@ public sealed partial class UiStyleContractTests
 
         foreach (var relativePath in colorScannedFiles)
         {
-            var document = XDocument.Load(TestRepository.FromApplicationRoot(relativePath));
+            var document = XDocument.Load(TestRepository.FromPresentationRoot(relativePath));
             var rawValues = document
                 .Descendants()
                 .SelectMany(element => element.Attributes())
@@ -584,7 +584,7 @@ public sealed partial class UiStyleContractTests
     {
         foreach (var relativePath in ViewFiles)
         {
-            var document = XDocument.Load(TestRepository.FromApplicationRoot(relativePath));
+            var document = XDocument.Load(TestRepository.FromPresentationRoot(relativePath));
             var attributes = document
                 .Descendants()
                 .SelectMany(element => element.Attributes())
@@ -628,7 +628,7 @@ public sealed partial class UiStyleContractTests
 
         foreach (var relativePath in StyleFiles)
         {
-            var document = XDocument.Load(TestRepository.FromApplicationRoot(relativePath));
+            var document = XDocument.Load(TestRepository.FromPresentationRoot(relativePath));
             var rawValues = document
                 .Descendants()
                 .Where(element => element.Name.LocalName == "Setter")
@@ -654,7 +654,7 @@ public sealed partial class UiStyleContractTests
         // 各收一次；CrashReportWindow 也在 ProjectMarkupFiles 内，一并受管。
         foreach (var relativePath in ProjectMarkupFiles())
         {
-            var document = XDocument.Load(TestRepository.FromApplicationRoot(relativePath));
+            var document = XDocument.Load(TestRepository.FromPresentationRoot(relativePath));
             var attributeForm = document
                 .Descendants()
                 .SelectMany(element => element.Attributes())
@@ -703,7 +703,7 @@ public sealed partial class UiStyleContractTests
 
         foreach (var relativePath in ViewFiles.Append("Views/MainWindow.Styles.axaml"))
         {
-            var document = XDocument.Load(TestRepository.FromApplicationRoot(relativePath));
+            var document = XDocument.Load(TestRepository.FromPresentationRoot(relativePath));
             var radiusValues = document
                 .Descendants()
                 .SelectMany(element => element.Attributes())
@@ -719,8 +719,8 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void PrimaryActionButtons_NormalStateUsesNoBorderWhileFocusAndDisabledStatesKeepTheirBorders()
     {
-        var mainStyles = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
-        var toastStyles = XDocument.Load(TestRepository.FromApplicationRoot("Views/Styles/Toast.axaml"));
+        var mainStyles = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
+        var toastStyles = XDocument.Load(TestRepository.FromPresentationRoot("Views/Styles/Toast.axaml"));
 
         Assert.Equal("{StaticResource Launcher.Spacing.Thickness.None}", GetStyleSetters(mainStyles, "Button.primary-action")["BorderThickness"]);
         Assert.Equal("{StaticResource Launcher.Spacing.Thickness.None}", GetStyleSetters(toastStyles, "Button.toast-primary-action")["BorderThickness"]);
@@ -731,7 +731,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void LogFilterTabs_UseNoThemeBorderForAccentStates()
     {
-        var styles = XDocument.Load(TestRepository.FromApplicationRoot("Views/Styles/Diagnostics.axaml"));
+        var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/Styles/Diagnostics.axaml"));
 
         Assert.Equal("{StaticResource Launcher.Spacing.Thickness.None}", GetStyleSetters(styles, "Button.filter-tab")["BorderThickness"]);
         Assert.Equal("{DynamicResource Launcher.Color.Primary}", GetStyleSetters(styles, "Button.filter-tab.active")["Background"]);
@@ -740,7 +740,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void SocialChips_UseCrispBorderTemplateAcrossInteractiveStates()
     {
-        var styles = XDocument.Load(TestRepository.FromApplicationRoot("Views/Styles/RemoteContent.axaml"));
+        var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/Styles/RemoteContent.axaml"));
 
         var socialChip = GetStyleSetters(styles, "Button.social-chip");
         Assert.Equal("{StaticResource LauncherBorderButtonTemplate}", socialChip["Template"]);
@@ -756,17 +756,17 @@ public sealed partial class UiStyleContractTests
     public void StyleFiles_AreExplicitAndParseable()
     {
         var discoveredFiles = Directory
-            .GetFiles(TestRepository.FromApplicationRoot("Views"), "*.axaml", SearchOption.AllDirectories)
+            .GetFiles(TestRepository.FromPresentationRoot("Views"), "*.axaml", SearchOption.AllDirectories)
             .Where(path => path.EndsWith(".Styles.axaml", StringComparison.Ordinal)
                 || path.Contains(
                     $"{Path.DirectorySeparatorChar}Styles{Path.DirectorySeparatorChar}",
                     StringComparison.Ordinal))
-            .Select(path => Path.GetRelativePath(TestRepository.ApplicationPath, path).Replace('\\', '/'))
+            .Select(path => Path.GetRelativePath(TestRepository.PresentationPath, path).Replace('\\', '/'))
             .Order(StringComparer.Ordinal)
             .ToArray();
 
         Assert.Equal(StyleFiles.Order(StringComparer.Ordinal), discoveredFiles);
-        Assert.All(StyleFiles, path => XDocument.Load(TestRepository.FromApplicationRoot(path)));
+        Assert.All(StyleFiles, path => XDocument.Load(TestRepository.FromPresentationRoot(path)));
     }
 
     [Fact]
@@ -774,7 +774,7 @@ public sealed partial class UiStyleContractTests
     {
         foreach (var relativePath in ViewFiles)
         {
-            var document = XDocument.Load(TestRepository.FromApplicationRoot(relativePath));
+            var document = XDocument.Load(TestRepository.FromPresentationRoot(relativePath));
             var iconOnlyButtons = document
                 .Descendants()
                 .Where(element => element.Name.LocalName == "Button")
@@ -796,7 +796,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void DynamicAccent_DoesNotReplaceThemeSpecificInformationTextBrush()
     {
-        var settingsViewModel = File.ReadAllText(TestRepository.FromApplicationRoot("Features/Settings/SettingsViewModel.cs"));
+        var settingsViewModel = File.ReadAllText(TestRepository.FromPresentationRoot("Features/Settings/SettingsViewModel.cs"));
 
         Assert.DoesNotContain(
             "SetBrush(application, \"Launcher.Text.Info\"",
@@ -810,7 +810,7 @@ public sealed partial class UiStyleContractTests
         var literalShadowValues = new List<string>();
         foreach (var relativePath in StyleFiles)
         {
-            var document = XDocument.Load(TestRepository.FromApplicationRoot(relativePath));
+            var document = XDocument.Load(TestRepository.FromPresentationRoot(relativePath));
             literalShadowValues.AddRange(document
                 .Descendants()
                 .Where(element => element.Name.LocalName == "Setter"

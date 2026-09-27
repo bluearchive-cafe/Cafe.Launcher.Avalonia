@@ -43,4 +43,7 @@ public static class LauncherConstants
     public const string GitHubReleasesPageUrl = GitHubReleaseRepositoryUrl + "/releases";
     public const string IssueTrackerUrl =
         "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/issues";
+
+    /// <summary>第二实例转发「直接启动游戏」的 CLI 参数（宿主与快捷方式生成共用一处字面量）。</summary>
+    public const string LaunchGameArgument = "--launch-game";
 }
