@@ -10,7 +10,7 @@ public sealed class UiAccessibilityContractTests
     [Fact]
     public void LogViewer_InteractiveControls_ExposeLocalizedAccessibleNames()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowLogViewerOverlay.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowLogViewerOverlay.axaml"));
         var filterButtons = document
             .Descendants(Avalonia + "Button")
             .Where(element => HasClass(element, "log-filter"))
@@ -32,7 +32,7 @@ public sealed class UiAccessibilityContractTests
     [Fact]
     public void UpdateAndNoticeActions_ExposeLocalizedAccessibleNames()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowDialogsOverlay.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowDialogsOverlay.axaml"));
         var commands = new[]
         {
             "{Binding Dialogs.DismissNoticeCommand}",
@@ -56,7 +56,7 @@ public sealed class UiAccessibilityContractTests
     [Fact]
     public void DesignGallery_StateSamples_DoNotEnterKeyboardTabOrder()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/DesignGalleryOverlay.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/DesignGalleryOverlay.axaml"));
         var samples = document
             .Descendants()
             .Where(element => HasClass(element, "gallery-button") || HasClass(element, "gallery-select"))
@@ -71,7 +71,7 @@ public sealed class UiAccessibilityContractTests
     {
         // §8（2026-08-28 审计修复）：DialogSurface 表面名 = 标题文本；
         // 无标题外壳（设置/向导）由使用方显式给名；Toast 宿主命名并声明 live region。
-        var dialogTheme = XDocument.Load(TestRepository.FromApplicationRoot("Views/Styles/DialogSurface.axaml"));
+        var dialogTheme = XDocument.Load(TestRepository.FromPresentationRoot("Views/Styles/DialogSurface.axaml"));
         var surfaceStyle = dialogTheme
             .Descendants(Avalonia + "Style")
             .Single(element => element.Attribute("Selector")?.Value == "controls|DialogSurface");
@@ -81,7 +81,7 @@ public sealed class UiAccessibilityContractTests
                 .Single(setter => setter.Attribute("Property")?.Value == "AutomationProperties.Name")
                 .Attribute("Value")?.Value);
 
-        var settings = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowSettingsOverlay.axaml"));
+        var settings = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowSettingsOverlay.axaml"));
         var settingsSurface = settings
             .Descendants()
             .Single(element => element.Name.LocalName == "DialogSurface");
@@ -89,7 +89,7 @@ public sealed class UiAccessibilityContractTests
             "{Binding Shell.I18n[settings]}",
             settingsSurface.Attribute("AutomationProperties.Name")?.Value);
 
-        var wizard = XDocument.Load(TestRepository.FromApplicationRoot("Views/SetupWizardOverlay.axaml"));
+        var wizard = XDocument.Load(TestRepository.FromPresentationRoot("Views/SetupWizardOverlay.axaml"));
         var wizardSurface = wizard
             .Descendants()
             .Single(element => element.Name.LocalName == "DialogSurface");
@@ -97,7 +97,7 @@ public sealed class UiAccessibilityContractTests
             "{Binding Shell.I18n[setupWizardStepTitle]}",
             wizardSurface.Attribute("AutomationProperties.Name")?.Value);
 
-        var toast = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowToastOverlay.axaml"));
+        var toast = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowToastOverlay.axaml"));
         var toastHost = toast
             .Descendants(Avalonia + "Grid")
             .Single(element => HasClass(element, "toast-host"));

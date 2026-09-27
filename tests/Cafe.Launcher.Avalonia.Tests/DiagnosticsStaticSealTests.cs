@@ -15,7 +15,7 @@ public sealed class DiagnosticsStaticSealTests
     /// <summary>允许出现 <c>RegisterSharedLogger(</c> 的生产文件：定义与唯一所有方。</summary>
     private static readonly string[] AllowedFiles =
     [
-        "src/Cafe.Launcher.Avalonia/Composition/ServiceConfiguration.cs",
+        "src/Cafe.Launcher.Avalonia.UI/Composition/LauncherPresentationServiceRegistrations.cs",
         "src/Cafe.Launcher.Core/Services/Diagnostics/LocalDiagnostics.cs",
     ];
 
@@ -45,7 +45,7 @@ public sealed class DiagnosticsStaticSealTests
     {
         // 扫描域是全部生产源码（host + Core）：共享日志器的定义已随诊断实现迁入 Core，
         // 只扫宿主会让这条守卫随搬迁静默缩小。路径一律相对仓库根。
-        var callers = new[] { TestRepository.HostPath, TestRepository.CorePath }
+        var callers = new[] { TestRepository.HostPath, TestRepository.CorePath, TestRepository.PresentationPath }
             .SelectMany(root => Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories))
             .Where(file => File.ReadAllText(file).Contains("RegisterSharedLogger(", StringComparison.Ordinal))
             .Select(file => Path.GetRelativePath(TestRepository.Root, file).Replace(Path.DirectorySeparatorChar, '/'))

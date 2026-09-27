@@ -13,11 +13,41 @@
           "MicroCom.Runtime": "0.11.6"
         }
       },
+      "Avalonia.Controls.ColorPicker": {
+        "type": "Direct",
+        "requested": "[12.1.2, )",
+        "resolved": "12.1.2",
+        "contentHash": "RqbGnsGr5Rs/nXalqiwVyw/BqOlhaDu15hPSl+KyCIUp9ih0CPQ247p7wHP1sZmrZrlMbNSMQnrNEhMRrDh9tw==",
+        "dependencies": {
+          "Avalonia": "12.1.2",
+          "Avalonia.Remote.Protocol": "12.1.2"
+        }
+      },
       "CommunityToolkit.Mvvm": {
         "type": "Direct",
         "requested": "[8.4.2, )",
         "resolved": "8.4.2",
         "contentHash": "WadCzGEc2U+3e20avRLng4qNtt4zoOGWrdUISqJWrHe3/FSnrYjuM5Sb4yQb09LhkBXrrI4Zt3dLKgRMbItsrg=="
+      },
+      "MarkView.Avalonia": {
+        "type": "Direct",
+        "requested": "[12.2.1, )",
+        "resolved": "12.2.1",
+        "contentHash": "M5pFmWAZ0ZXd+EacfHvbRSgPJ4sW4kp6UJcvjHkRfz77TQes26LpILLjF8lGAgoXZnB5rAr8QiCmCxEpNx0atQ==",
+        "dependencies": {
+          "Avalonia": "12.1.1",
+          "Markdig": "1.3.2"
+        }
+      },
+      "Material.Icons.Avalonia": {
+        "type": "Direct",
+        "requested": "[3.0.2, )",
+        "resolved": "3.0.2",
+        "contentHash": "zXUS04QfxgSv0oMbsIf+6fZqcQbyh3L920Ucif8UHLaaFRK9E5R80ixUPnBpFRwGNe4sTDNhUS2Ti1T1wT3g5A==",
+        "dependencies": {
+          "Avalonia": "12.0.0",
+          "Material.Icons": "3.0.2"
+        }
       },
       "Microsoft.Extensions.DependencyInjection": {
         "type": "Direct",
@@ -28,6 +58,12 @@
           "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.12"
         }
       },
+      "Shirasagi0012.MaterialColorUtilities": {
+        "type": "Direct",
+        "requested": "[0.2.0, )",
+        "resolved": "0.2.0",
+        "contentHash": "oO7YaaVdViENB0AFT7sCEfdu3SfTht1NfQtMX4zhbT2hftoLzP9o6RLekYeEJA2vuar6TqSyWqAh6YJCw8TM/Q=="
+      },
       "Avalonia.BuildServices": {
         "type": "Transitive",
         "resolved": "11.3.2",
@@ -37,6 +73,16 @@
         "type": "Transitive",
         "resolved": "12.1.2",
         "contentHash": "DdLTe9xKXxxfRcXmUw1trXZpBpz1YiZYWXx0DfMVPFAnkCszKsHLi67kaZfGJqtfQq2EySKd2qgRYX2QYkSxcg=="
+      },
+      "Markdig": {
+        "type": "Transitive",
+        "resolved": "1.3.2",
+        "contentHash": "fZgOC/3CswUrndjDTac70aQpYdtxbW5+5bRumR7vzvI2HJbkmgKisB1c9oT+GA6v0jB/JDR9BLa9FiPzQmaK6A=="
+      },
+      "Material.Icons": {
+        "type": "Transitive",
+        "resolved": "3.0.2",
+        "contentHash": "vzeJjXu0PWJSZDCG0lL8+xx4Zf3i+iKOmu4GjGXtgAex22JPKDOaYPUU77Fd21LEsKrkrAQ1cZ61mrHPX1Elsg=="
       },
       "MicroCom.Runtime": {
         "type": "Transitive",

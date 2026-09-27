@@ -272,7 +272,7 @@ public sealed class CrashReportTests : IDisposable
     [Fact]
     public void CrashReportApp_RegistersIconStylesUsedByCrashReportWindow()
     {
-        var windowXaml = File.ReadAllText(TestRepository.FromApplicationRoot("Views/CrashReportWindow.axaml"));
+        var windowXaml = File.ReadAllText(TestRepository.FromPresentationRoot("Views/CrashReportWindow.axaml"));
         var appXaml = File.ReadAllText(TestRepository.FromApplicationRoot("CrashReportApp.axaml"));
 
         // The isolated reporter builds its own minimal Application, so every control

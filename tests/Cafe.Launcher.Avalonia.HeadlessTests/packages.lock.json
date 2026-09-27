@@ -397,9 +397,13 @@
         "type": "Project",
         "dependencies": {
           "Avalonia": "[12.1.2, )",
+          "Avalonia.Controls.ColorPicker": "[12.1.2, )",
           "Cafe.Launcher.Core": "[1.0.0, )",
           "CommunityToolkit.Mvvm": "[8.4.2, )",
-          "Microsoft.Extensions.DependencyInjection": "[10.0.12, )"
+          "MarkView.Avalonia": "[12.2.1, )",
+          "Material.Icons.Avalonia": "[3.0.2, )",
+          "Microsoft.Extensions.DependencyInjection": "[10.0.12, )",
+          "Shirasagi0012.MaterialColorUtilities": "[0.2.0, )"
         }
       },
       "cafe.launcher.core": {

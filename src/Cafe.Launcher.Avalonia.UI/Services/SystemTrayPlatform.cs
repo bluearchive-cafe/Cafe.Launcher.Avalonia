@@ -55,7 +55,7 @@ internal sealed class AvaloniaSystemTrayPlatform : ISystemTrayPlatform
         this.openSettings = openSettings;
 
         using var iconStream = AssetLoader.Open(
-            new Uri("avares://Cafe.Launcher.Avalonia/Assets/app-icon.ico"));
+            new Uri("avares://Cafe.Launcher.Avalonia.UI/Assets/app-icon.ico"));
         var menu = CreateMenu();
 
         trayIcon = new TrayIcon

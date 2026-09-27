@@ -74,11 +74,11 @@ public sealed class AssemblySplitContractTests
         Assert.True(File.Exists(TestRepository.FromCoreRoot("Helpers/HttpClientLease.cs")));
         Assert.False(File.Exists(TestRepository.FromHostRoot("Services/LauncherDataRoot.cs")));
         Assert.False(File.Exists(TestRepository.FromHostRoot("Services/LauncherSettingsService.cs")));
-        Assert.False(File.Exists(TestRepository.FromHostRoot("Helpers/AtomicJsonFileStore.cs")));
+        Assert.False(File.Exists(TestRepository.FromPresentationRoot("Helpers/AtomicJsonFileStore.cs")));
         Assert.False(File.Exists(TestRepository.FromHostRoot("Services/RemoteHttpUrlValidator.cs")));
         Assert.False(File.Exists(TestRepository.FromHostRoot("Services/BestHttpCookieLibraryService.cs")));
-        Assert.False(File.Exists(TestRepository.FromHostRoot("Models/LauncherApiContracts.cs")));
-        Assert.False(File.Exists(TestRepository.FromHostRoot("Models/LauncherReleaseResponse.cs")));
+        Assert.False(File.Exists(TestRepository.FromPresentationRoot("Models/LauncherApiContracts.cs")));
+        Assert.False(File.Exists(TestRepository.FromPresentationRoot("Models/LauncherReleaseResponse.cs")));
         Assert.False(File.Exists(TestRepository.FromHostRoot("Services/RetryPolicy.cs")));
         Assert.False(File.Exists(TestRepository.FromHostRoot("Services/RemoteBodyReader.cs")));
         Assert.False(File.Exists(TestRepository.FromHostRoot("Services/ResponseBodyReader.cs")));
@@ -87,7 +87,7 @@ public sealed class AssemblySplitContractTests
         Assert.False(File.Exists(TestRepository.FromHostRoot("Services/IRemoteHttpClientLeaseSource.cs")));
         Assert.False(File.Exists(TestRepository.FromHostRoot("Services/PatchUrlGroupService.cs")));
         Assert.False(File.Exists(TestRepository.FromHostRoot("Services/LauncherApiClient.cs")));
-        Assert.False(File.Exists(TestRepository.FromHostRoot("Helpers/HttpClientLease.cs")));
+        Assert.False(File.Exists(TestRepository.FromPresentationRoot("Helpers/HttpClientLease.cs")));
     }
 
     [Fact]

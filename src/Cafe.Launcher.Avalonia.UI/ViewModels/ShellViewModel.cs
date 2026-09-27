@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Avalonia.Media;
@@ -15,6 +15,7 @@ namespace Cafe.Launcher.Avalonia.ViewModels;
 public partial class ShellViewModel : ViewModelBase, IDisposable
 {
     private readonly LocalizationService localizer;
+    private readonly LauncherBuildIdentity? buildIdentity;
 
     private static readonly string RuntimeDescription =
         $"{RuntimeInformation.FrameworkDescription} · {RuntimeInformation.RuntimeIdentifier}";
@@ -94,9 +95,13 @@ public partial class ShellViewModel : ViewModelBase, IDisposable
 
     public LocalizedTextCatalog I18n { get; }
 
-    public ShellViewModel(LocalizationService localizer)
+    /// <param name="buildIdentity">
+    /// 宿主注入的构建标识（版本/提交/构建时间/配置）。此前读宿主 <c>BuildInfo</c>，迁入 UI 后改为注入。
+    /// </param>
+    public ShellViewModel(LocalizationService localizer, LauncherBuildIdentity? buildIdentity = null)
     {
         this.localizer = localizer;
+        this.buildIdentity = buildIdentity;
         I18n = new LocalizedTextCatalog(localizer);
     }
 
@@ -128,14 +133,16 @@ public partial class ShellViewModel : ViewModelBase, IDisposable
     {
         var effectiveLanguage = localizer.SetLanguage(language);
         FontFamily = LanguageFontFamilyService.GetForEffectiveLanguage(effectiveLanguage);
-        LauncherVersionText = localizer.F(LocalizationKeys.LauncherVersionLabel, BuildInfo.LauncherVersion);
+        LauncherVersionText = localizer.F(LocalizationKeys.LauncherVersionLabel, buildIdentity?.LauncherVersion ?? "");
         FrameworkVersionText = RuntimeDescription;
-        AvaloniaVersionText = BuildInfo.AvaloniaVersion;
-        VersionCaptionText = string.IsNullOrWhiteSpace(BuildInfo.BuildTime)
-            ? localizer.F(LocalizationKeys.LauncherVersionLabel, BuildInfo.LauncherVersion)
-            : localizer.F(LocalizationKeys.AboutVersionCaption, BuildInfo.LauncherVersion, BuildInfo.BuildTime);
-        CommitShaValue = BuildInfo.CommitSha;
-        BuildConfigValue = BuildInfo.BuildConfiguration;
+        AvaloniaVersionText = ResolveAvaloniaVersion();
+        var launcherVersion = buildIdentity?.LauncherVersion ?? "";
+        var buildTime = buildIdentity?.BuildTime ?? "";
+        VersionCaptionText = string.IsNullOrWhiteSpace(buildTime)
+            ? localizer.F(LocalizationKeys.LauncherVersionLabel, launcherVersion)
+            : localizer.F(LocalizationKeys.AboutVersionCaption, launcherVersion, buildTime);
+        CommitShaValue = buildIdentity?.CommitSha ?? "";
+        BuildConfigValue = buildIdentity?.BuildConfiguration ?? "";
         PlatformValue = PlatformDescription;
 
         // 展示刷新不写设置草稿：首次向导的语言预览也走这里，预览改了草稿就等于用户
@@ -246,5 +253,19 @@ public partial class ShellViewModel : ViewModelBase, IDisposable
     public void Dispose()
     {
         I18n.Dispose();
+    }
+
+    /// <summary>Avalonia 框架版本：UI 程序集自己就能读到，不再经宿主 BuildInfo 转手。</summary>
+    private static string ResolveAvaloniaVersion()
+    {
+        try
+        {
+            var version = typeof(global::Avalonia.Application).Assembly.GetName().Version;
+            return version is not null ? $"{version.Major}.{version.Minor}.{version.Build}" : "0.0.0";
+        }
+        catch
+        {
+            return "0.0.0";
+        }
     }
 }

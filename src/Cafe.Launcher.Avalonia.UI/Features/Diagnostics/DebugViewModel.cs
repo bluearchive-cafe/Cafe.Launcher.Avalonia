@@ -30,6 +30,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
     private readonly LauncherSettingsService settingsService;
     private readonly IGameOperationActivity operations;
     private readonly ShellViewModel shell;
+    private readonly LauncherBuildIdentity? buildIdentity;
     private bool disposed;
 
     [ObservableProperty]
@@ -83,9 +84,11 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
         IFatalCrashService fatalCrashService,
         LauncherSettingsService settingsService,
         IGameOperationActivity operations,
-        ShellViewModel shell)
+        ShellViewModel shell,
+        LauncherBuildIdentity? buildIdentity = null)
     {
         ArgumentNullException.ThrowIfNull(dataRoot);
+        this.buildIdentity = buildIdentity;
         this.dataRoot = dataRoot;
         this.toastService = toastService;
         this.unifiedLogger = unifiedLogger;
@@ -123,11 +126,11 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
 
         SystemInfoText = Format(
             shell.I18n[LocalizationKeys.DebugSystemInfoFormat],
-            BuildInfo.LauncherVersion,
-            BuildInfo.CommitSha,
+            buildIdentity?.LauncherVersion ?? "",
+            buildIdentity?.CommitSha ?? "",
             System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription,
             Environment.OSVersion,
-            BuildInfo.BuildConfiguration,
+            buildIdentity?.BuildConfiguration ?? "",
             typeof(global::Avalonia.Application).Assembly.GetName().Version ?? new Version());
     }
 

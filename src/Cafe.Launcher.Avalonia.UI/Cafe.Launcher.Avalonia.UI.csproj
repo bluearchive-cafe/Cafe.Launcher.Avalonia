@@ -16,12 +16,37 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- 与宿主同一套过渡期项目级 using：表现层代码引用 Core 类型时不逐个文件写 using。 -->
+    <Using Include="Cafe.Launcher.Core" />
+    <Using Include="Cafe.Launcher.Core.Constants" />
+    <Using Include="Cafe.Launcher.Core.Helpers" />
+    <Using Include="Cafe.Launcher.Core.Models" />
+    <Using Include="Cafe.Launcher.Core.Services" />
+    <Using Include="Cafe.Launcher.Core.Services.Auth" />
+    <Using Include="Cafe.Launcher.Core.Services.Diagnostics" />
+    <Using Include="Cafe.Launcher.Core.Services.GameRuntime" />
+    <Using Include="Cafe.Launcher.Core.Services.Update" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Cafe.Launcher.Core\Cafe.Launcher.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>
+    <!-- 运行时资产归表现层：/Assets/app-icon.ico 是窗口与托盘的图标（同时拷到输出目录供磁盘路径读取），
+         launcher-background.png 通过 avares 载入。app-icon-source.png（图标流水线输入）留在宿主。 -->
+    <AvaloniaResource Include="Assets\**" />
+    <None Update="Assets\app-icon.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Controls.ColorPicker" />
     <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="MarkView.Avalonia" />
+    <PackageReference Include="Material.Icons.Avalonia" />
+    <PackageReference Include="Shirasagi0012.MaterialColorUtilities" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
   </ItemGroup>
 </Project>

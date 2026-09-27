@@ -15,7 +15,7 @@ namespace Cafe.Launcher.Avalonia.Tests;
 public sealed class GameOperationStopOwnershipTests
 {
     /// <summary>策略词表的归属地：只有游戏操作域内部可以命名停止原因（路径相对仓库根）。</summary>
-    private const string FeatureDirectory = "src/Cafe.Launcher.Avalonia/Features/GameOperations/";
+    private const string FeatureDirectory = "src/Cafe.Launcher.Avalonia.UI/Features/GameOperations/";
 
     [Fact]
     public void DownloadStopReason_IsNamedOnlyInsideTheGameOperationsFeature()
@@ -140,7 +140,7 @@ public sealed class GameOperationStopOwnershipTests
     {
         // 扫描域是全部生产源码（host + Core）：程序集拆分后下载模块的一部分住在 Core，
         // 只扫宿主会让守卫随搬迁静默缩小。
-        var files = new[] { TestRepository.HostPath, TestRepository.CorePath }
+        var files = new[] { TestRepository.HostPath, TestRepository.CorePath, TestRepository.PresentationPath }
             .SelectMany(root => Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories))
             .Where(path => !IsBuildArtifact(TestRepository.Root, path))
             .Order(StringComparer.Ordinal)

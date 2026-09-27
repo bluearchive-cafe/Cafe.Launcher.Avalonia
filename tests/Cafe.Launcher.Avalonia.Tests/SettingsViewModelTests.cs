@@ -219,7 +219,8 @@ public sealed class SettingsViewModelTests : IDisposable
             new SettingsAppearanceViewModel(editor ?? new SettingsEditor(), new ThemeApplier()),
             new RecordingErrorHandlingService(),
             new StubGameRuntime(),
-            new StubFilePickerService());
+            new StubFilePickerService(),
+            BuildInfo.Identity);
 
     private string NextDataRoot() => tempDir.Sub(Guid.NewGuid().ToString("N"));
 

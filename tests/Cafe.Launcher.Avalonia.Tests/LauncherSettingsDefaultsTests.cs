@@ -66,7 +66,7 @@ public sealed class LauncherSettingsDefaultsTests
         var declared = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             // 只取动效偏好，与更新渠道无关
-            Path.Combine(TestRepository.HostPath, "Features", "Shell", "ShellStartup.cs")
+            Path.Combine(TestRepository.PresentationPath, "Features", "Shell", "ShellStartup.cs")
         };
 
         var callSites = ProductionSources()

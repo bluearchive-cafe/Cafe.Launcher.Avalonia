@@ -31,7 +31,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     public bool IsMotionEnabled => !IsMotionReduced;
     public bool IsStatusDetailHidden => Settings.Editor.Current.StatusDetailMode == StatusDetailModes.Hidden;
     public bool IsPlatformSpecificSettingsVisible =>
-        Shell.IsLinuxPlatform || Program.ShowHiddenSettings;
+        Shell.IsLinuxPlatform || showHiddenSettings;
 
     public ShellViewModel Shell { get; }
     public BackgroundViewModel Background { get; }
@@ -61,11 +61,15 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     internal Task PendingStartupUpdateCheck => runtime.PendingStartupUpdateCheck;
 
+    private readonly bool showHiddenSettings;
+
     public MainWindowViewModel(
         ShellPresentationFamily family,
-        ShellLifecycle runtime)
+        ShellLifecycle runtime,
+        PresentationOptions? options = null)
     {
         this.runtime = runtime;
+        showHiddenSettings = options?.ShowHiddenSettings ?? false;
         Shell = family.Shell;
         Background = family.Background;
         RemoteContent = family.RemoteContent;
@@ -99,7 +103,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         IErrorHandlingService errorHandling,
         SystemAnimationSettingsProvider systemAnimationSettingsProvider,
         IFilePickerService filePickerService,
-        LauncherBuildIdentity? buildIdentity = null)
+        LauncherBuildIdentity? buildIdentity = null,
+        PresentationOptions? options = null)
         : this(
             family,
             new ShellLifecycle(
@@ -117,7 +122,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 family,
                 filePickerService,
                 ownsPresentationCollaborators: true,
-                buildIdentity: buildIdentity))
+                buildIdentity: buildIdentity),
+            options)
     {
     }
 
@@ -131,7 +137,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     public void ApplyFirstLaunchMotionPreference() =>
         runtime.ApplyFirstLaunchMotionPreference();
 
-    internal Task PrepareForShutdownAsync() => runtime.PrepareForShutdownAsync();
+    public Task PrepareForShutdownAsync() => runtime.PrepareForShutdownAsync();
 
     public void RefreshSystemMotionPreference() => runtime.RefreshSystemMotionPreference();
 

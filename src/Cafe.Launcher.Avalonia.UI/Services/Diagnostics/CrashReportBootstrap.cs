@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 using Cafe.Launcher.Avalonia.Constants;
 
@@ -10,7 +10,7 @@ namespace Cafe.Launcher.Avalonia.Services.Diagnostics;
 /// stay reachable when the application lifetime cannot be trusted, and this is
 /// the part of that path worth testing directly.
 /// </summary>
-internal static class CrashReportBootstrap
+public static class CrashReportBootstrap
 {
     /// <summary>
     /// Resolves the snapshot at <paramref name="snapshotPath"/>. A missing,

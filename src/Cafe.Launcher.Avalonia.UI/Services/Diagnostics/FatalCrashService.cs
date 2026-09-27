@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using Cafe.Launcher.Avalonia.Constants;
 
@@ -19,7 +19,7 @@ public interface IFatalCrashService
 }
 
 /// <summary>Coordinates first-failure capture, deduplication, logging, and reporter presentation.</summary>
-internal sealed class FatalCrashService : IFatalCrashService
+public sealed class FatalCrashService : IFatalCrashService
 {
     private readonly object gate = new();
     private readonly UnifiedLogger? logger;
@@ -69,7 +69,7 @@ internal sealed class FatalCrashService : IFatalCrashService
     }
 
     /// <summary>Captures a process-boundary failure and starts the isolated reporter once.</summary>
-    internal void HandleUnhandledCrash(CrashOrigin origin, Exception exception)
+    public void HandleUnhandledCrash(CrashOrigin origin, Exception exception)
     {
         var (report, isPrimary) = Capture(origin, exception);
         if (isPrimary)

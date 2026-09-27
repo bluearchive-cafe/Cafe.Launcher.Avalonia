@@ -28,21 +28,17 @@ public sealed class SettingsWriteOwnershipTests
     /// </summary>
     private static readonly string[] SettingsServiceHolders =
     [
-        // 组合根：构造设置服务、把它交给写入方与各消费方
-        "src/Cafe.Launcher.Avalonia/Composition/ServiceConfiguration.cs",
-        // pre-DI：窗口打开前读一次已保存设置（窗口几何与初始化）
+        "src/Cafe.Launcher.Avalonia.UI/Composition/LauncherPresentationServiceRegistrations.cs",
+        "src/Cafe.Launcher.Avalonia.UI/Features/Diagnostics/DebugViewModel.cs",
+        "src/Cafe.Launcher.Avalonia.UI/Features/GameOperations/DownloadSession.cs",
+        "src/Cafe.Launcher.Avalonia.UI/Features/GameOperations/DownloadSessionContext.cs",
+        "src/Cafe.Launcher.Avalonia.UI/Features/GameOperations/GameDownloadService.cs",
+        "src/Cafe.Launcher.Avalonia.UI/Features/ResourcePanel/ResourcePanelUidService.cs",
+        "src/Cafe.Launcher.Avalonia.UI/Features/Settings/SettingsViewModel.cs",
+        "src/Cafe.Launcher.Avalonia.UI/Features/Shell/ShellLifecycle.cs",
+        "src/Cafe.Launcher.Avalonia.UI/ViewModels/MainWindowViewModel.cs",
         "src/Cafe.Launcher.Avalonia/App.axaml.cs",
-        // 以下为读取方
-        "src/Cafe.Launcher.Avalonia/Features/Diagnostics/DebugViewModel.cs",
-        "src/Cafe.Launcher.Avalonia/Features/GameOperations/DownloadSession.cs",
-        // record 主构造参数里的 SettingsService（会话协作者簇）
-        "src/Cafe.Launcher.Avalonia/Features/GameOperations/DownloadSessionContext.cs",
-        "src/Cafe.Launcher.Avalonia/Features/GameOperations/GameDownloadService.cs",
-        "src/Cafe.Launcher.Avalonia/Features/ResourcePanel/ResourcePanelUidService.cs",
-        "src/Cafe.Launcher.Avalonia/Features/Settings/SettingsViewModel.cs",
-        "src/Cafe.Launcher.Avalonia/Features/Shell/ShellLifecycle.cs",
         "src/Cafe.Launcher.Core/Services/LauncherCoreService.cs",
-        "src/Cafe.Launcher.Avalonia/ViewModels/MainWindowViewModel.cs"
     ];
 
     private const string WriterFile = "src/Cafe.Launcher.Core/Services/SavedSettingsWriter.cs";
@@ -156,7 +152,7 @@ public sealed class SettingsWriteOwnershipTests
     /// 程序集拆分后写入方住在 Core，路径一律相对仓库根，两个工程的文件不会互相遮蔽。
     /// </summary>
     private static IEnumerable<string> SourceFiles() =>
-        new[] { TestRepository.HostPath, TestRepository.CorePath }
+        new[] { TestRepository.HostPath, TestRepository.CorePath, TestRepository.PresentationPath }
             .SelectMany(root => Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories))
             .Where(file => !IsBuildArtifact(file));
 

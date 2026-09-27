@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -666,7 +666,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
     {
         try
         {
-            var uri = new Uri("avares://Cafe.Launcher.Avalonia/Assets/launcher-background.png");
+            var uri = new Uri("avares://Cafe.Launcher.Avalonia.UI/Assets/launcher-background.png");
             using var stream = AssetLoader.Open(uri);
             return new Bitmap(stream);
         }

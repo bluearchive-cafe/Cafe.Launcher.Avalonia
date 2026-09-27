@@ -87,7 +87,7 @@ public sealed partial class UiStyleContractTests
 
         foreach (var relativePath in ProjectMarkupFiles())
         {
-            var text = File.ReadAllText(TestRepository.FromApplicationRoot(relativePath));
+            var text = File.ReadAllText(TestRepository.FromPresentationRoot(relativePath));
             Assert.False(
                 dynamicStaticReference.IsMatch(text),
                 $"Static-family tokens must use {{StaticResource}}, not {{DynamicResource}}: {relativePath}");
@@ -100,11 +100,12 @@ public sealed partial class UiStyleContractTests
         var legacyReference = new Regex(
             @"\bLauncher[A-Z][A-Za-z0-9]*",
             RegexOptions.CultureInvariant);
-        var files = ProjectMarkupFiles().Append("App.axaml");
+        // App.axaml 是宿主自己的应用定义（合并 UI 的资源字典），不属于表现层扫描域。
+        var files = ProjectMarkupFiles();
 
         foreach (var relativePath in files)
         {
-            var text = File.ReadAllText(TestRepository.FromApplicationRoot(relativePath));
+            var text = File.ReadAllText(TestRepository.FromPresentationRoot(relativePath));
             foreach (Match match in legacyReference.Matches(text))
             {
                 var preceded = match.Index > 0 ? text[match.Index - 1] : '\0';

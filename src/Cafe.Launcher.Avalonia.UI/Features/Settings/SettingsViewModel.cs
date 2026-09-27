@@ -33,6 +33,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
     private readonly UnifiedLogger unifiedLogger;
     private readonly GameInstallationPath gameInstallationPath;
     private readonly IErrorHandlingService errorHandling;
+    private readonly LauncherBuildIdentity? buildIdentity;
     private readonly IGameRuntime gameRuntime;
     private readonly IFilePickerService filePickerService;
     private readonly LatestRefresh appearancePreviewRefresh = new();
@@ -76,7 +77,8 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         SettingsAppearanceViewModel appearance,
         IErrorHandlingService errorHandling,
         IGameRuntime gameRuntime,
-        IFilePickerService filePickerService)
+        IFilePickerService filePickerService,
+        LauncherBuildIdentity? buildIdentity = null)
     {
         this.settingsService = settingsService;
         this.savedSettingsWriter = savedSettingsWriter;
@@ -91,6 +93,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         Options = options;
         Appearance = appearance;
         this.errorHandling = errorHandling;
+        this.buildIdentity = buildIdentity;
         this.gameRuntime = gameRuntime;
         this.filePickerService = filePickerService;
         editor.PropertyChanged += OnEditorPropertyChanged;
@@ -280,7 +283,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
 
         if (!result.IsUpdateAvailable)
         {
-            toastService.ShowSuccess(localizer.F(LocalizationKeys.LauncherUpdateUpToDate, BuildInfo.LauncherVersion));
+            toastService.ShowSuccess(localizer.F(LocalizationKeys.LauncherUpdateUpToDate, buildIdentity?.LauncherVersion ?? ""));
             return;
         }
 

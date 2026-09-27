@@ -358,7 +358,7 @@ public partial class MainWindow : Window
         systemTray = trayService;
     }
 
-    internal void ApplySavedWindowState(LauncherSettings settings)
+    public void ApplySavedWindowState(LauncherSettings settings)
     {
         if (!settings.RememberWindowPositionAndSize)
         {
@@ -381,7 +381,7 @@ public partial class MainWindow : Window
         }
     }
 
-    internal void CaptureWindowState(LauncherSettings settings)
+    public void CaptureWindowState(LauncherSettings settings)
     {
         if (!settings.RememberWindowPositionAndSize || WindowState != WindowState.Normal)
         {

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -265,7 +265,7 @@ public sealed class GameShortcutService : IGameShortcutService
         builder.AppendLine("[Desktop Entry]");
         builder.AppendLine("Type=Application");
         builder.AppendLine(CultureInfo.InvariantCulture, $"Name={displayName}");
-        builder.AppendLine(CultureInfo.InvariantCulture, $"Exec=\"{launcherPath}\" {Program.LaunchGameArgument}");
+        builder.AppendLine(CultureInfo.InvariantCulture, $"Exec=\"{launcherPath}\" {LauncherConstants.LaunchGameArgument}");
         if (!string.IsNullOrWhiteSpace(iconPath))
         {
             builder.AppendLine(CultureInfo.InvariantCulture, $"Icon={iconPath}");

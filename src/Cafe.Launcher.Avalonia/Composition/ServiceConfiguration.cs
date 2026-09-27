@@ -1,21 +1,15 @@
 using Microsoft.Extensions.DependencyInjection;
 using Cafe.Launcher.Core.Composition;
 using Cafe.Launcher.Avalonia.Constants;
-using Cafe.Launcher.Avalonia.Features.Diagnostics;
-using Cafe.Launcher.Avalonia.Features.GameOperations;
-using Cafe.Launcher.Avalonia.Features.ResourcePanel;
-using Cafe.Launcher.Avalonia.Features.Settings;
-using Cafe.Launcher.Avalonia.Features.SetupWizard;
-using Cafe.Launcher.Avalonia.Features.Shell;
-using Cafe.Launcher.Avalonia.Services;
-using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
-using Cafe.Launcher.Core.Services.GameRuntime;
-using Cafe.Launcher.Core.Services.Update;
-using Cafe.Launcher.Avalonia.ViewModels;
+using Cafe.Launcher.Avalonia.Composition;
 
 namespace Cafe.Launcher.Avalonia.Composition;
 
+/// <summary>
+/// 宿主的服务登记入口：解析数据根、登记 Core 与宿主自有服务，然后把表现层
+/// 整体交给 UI 程序集的 <c>AddLauncherPresentation</c>。宿主不再逐个命名表现层类型。
+/// </summary>
 public static class ServiceConfiguration
 {
     /// <summary>
@@ -35,174 +29,22 @@ public static class ServiceConfiguration
         // 进程根在这里解析一次，其余登记项与所有消费方共用这一个实例——
         // 「数据放哪」不再是各模块各自读一次的进程级静态。
         var dataRoot = launcherDataRoot ?? LauncherDataRoot.ForCurrentProcess();
-        // Keep direct composition in tests and auxiliary hosts compatible while
-        // the registration body is moved into the Core/UI assemblies in batches.
-        services.AddLauncherCore(BuildInfo.Identity, dataRoot);
+        var buildIdentity = BuildInfo.Identity;
 
-        // ── Leaf services (parameterless constructors, no deps) ──────────
-        services.AddSingleton<SystemCultureSnapshot>();
-        services.AddSingleton<LocalizationService>();
-        services.AddSingleton<ToastService>();
+        // Core 服务先入容器：逆序释放时表现层先析构。
+        services.AddLauncherCore(buildIdentity, dataRoot);
 
-        // Reuse the pre-DI logger when provided so there is a single Serilog
-        // pipeline for the entire process (crash handling + application logging).
-        if (existingLogger is not null)
-            services.AddSingleton(existingLogger);
-        else
-            services.AddSingleton(_ => new UnifiedLogger(dataRoot.Root, BuildInfo.Identity));
-        services.AddSingleton<GraphicsInfoProbe>();
-        services.AddSingleton<ProtonBuildDiscovery>();
-        services.AddSingleton<LogExportService>();
-        services.AddSingleton<LogViewerDialogViewModel>();
-        services.AddSingleton<LogExportDialogViewModel>();
-        services.AddSingleton(sp =>
-        {
-            var logger = sp.GetRequiredService<UnifiedLogger>();
-            var localDiagnostics = new LocalDiagnostics(logger);
-            // 本组合根是共享静态缝的唯一登记所有方（R2-c12）：先注册者胜，
-            // 后续容器（多容器测试）不改绑，也不得在其他文件登记（有源守卫）。
-            LocalDiagnostics.RegisterSharedLogger(logger);
-            return localDiagnostics;
-        });
-        services.AddSingleton<ILauncherDiagnostics>(sp =>
-            sp.GetRequiredService<LocalDiagnostics>());
-        services.AddSingleton(_ => new CrashReportStore(
-            dataRoot,
-            CrashReportStore.DefaultFallbackDirectory,
-            BuildInfo.Identity));
-        services.AddSingleton<ICrashReportLocator>(sp => sp.GetRequiredService<CrashReportStore>());
+        // 宿主自有：拉起独立崩溃报告进程要用本进程的可执行文件与崩溃参数，
+        // 是进程入口的知识。接口由 UI 声明（消费者在那边），实现在这里。
         services.AddSingleton<ICrashReporterLauncher, CrashReporterLauncher>();
-        if (existingFatalCrashService is not null)
-        {
-            services.AddSingleton(existingFatalCrashService);
-        }
-        else
-        {
-            services.AddSingleton<IFatalCrashService, FatalCrashService>();
-        }
-        services.AddSingleton<SetupWizardViewModel>();
-        services.AddSingleton<RemoteManifestService>();
-        services.AddSingleton<ResourcePanelService>();
 
-        // ── HttpClient factory (shared pool, proxy-aware) ────────────────
-        services.AddSingleton(sp =>
-        {
-            // HTTP/2 偏好与代理模式同源：都按使用时机读编辑器的已保存快照，
-            // 于是调用方不必「记得推」，也不会有租约用到过期的开关（ADR-028）。
-            var settingsEditor = sp.GetRequiredService<SettingsEditor>();
-            return new HttpClientFactory(
-                sp.GetRequiredService<ProxySettingsService>(),
-                () => settingsEditor.GetSavedSnapshot().EnableHttp2);
-        });
-        services.AddSingleton<IRemoteHttpClientLeaseSource>(sp =>
-            sp.GetRequiredService<HttpClientFactory>());
-        services.AddSingleton<IRemoteHttpTransport>(sp =>
-        {
-            // SettingsEditor 是无依赖单例，在传输构造时一次解析并闭包引用；
-            // 代理模式解析不再每次走服务定位。
-            var settingsEditor = sp.GetRequiredService<SettingsEditor>();
-            return new RemoteHttpTransport(
-                sp.GetRequiredService<IRemoteHttpClientLeaseSource>(),
-                sp.GetRequiredService<RemoteHttpUrlValidator>(),
-                // 代理模式解析自设置编辑器的已保存快照——与各调用方此前传入的
-                // snapshot.ProxyMode 同源；options.ProxyMode 仍可按调用覆盖。
-                () => settingsEditor.GetSavedSnapshot().ProxyMode);
-        });
-        services.AddSingleton<WindowFilePickerService>();
-        services.AddSingleton<IFilePickerService>(sp =>
-            sp.GetRequiredService<WindowFilePickerService>());
-        services.AddSingleton<WindowMetricsService>();
-        services.AddSingleton<IWindowMetricsService>(sp =>
-            sp.GetRequiredService<WindowMetricsService>());
-
-        // ── Services with dependencies ────────────────────────────────────
-        services.AddSingleton<ManifestValidationService>();
-        services.AddSingleton(sp => new ResourcePanelUidService(
-            sp.GetRequiredService<BestHttpCookieLibraryService>(),
-            sp.GetRequiredService<LauncherSettingsService>(),
-            sp.GetRequiredService<ISavedSettingsWriter>(),
-            sp.GetRequiredService<LocalDiagnostics>()));
-        services.AddSingleton<SettingsEditor>();
-        // 设置草稿所有者：Core 的写入协调器只认这个窄接缝，不认识 SettingsEditor 本身
-        // （UI 线程编排留在编辑器里）。
-        services.AddSingleton<ISettingsDraftOwner>(sp => sp.GetRequiredService<SettingsEditor>());
-        services.AddSingleton<SettingsOptionsViewModel>();
-        // 主题应用器登记在设置外观 VM 之前：容器按登记逆序释放，它的退订要晚于消费它的 VM。
-        services.AddSingleton<ThemeApplier>();
-        services.AddSingleton(sp => new SettingsAppearanceViewModel(
-            sp.GetRequiredService<SettingsEditor>(),
-            sp.GetRequiredService<ThemeApplier>(),
-            sp.GetRequiredService<LocalDiagnostics>(),
-            Program.ShowHiddenSettings));
-        // 会话看护订阅进程跟踪器的退出事件：登记在跟踪器之后，容器逆序释放时看护先于
-        // 跟踪器析构，退订不会落在已释放的订阅源上。
-        services.AddSingleton<IGameSessionMonitor, GameSessionMonitor>();
-        // 持久化检查点存储全库单例：下载服务写入/清除，卸载服务清除——
-        // 同一文件只允许一个所有者实例。
-        services.AddSingleton(_ => new DownloadCheckpointStore(dataRoot));
-        services.AddSingleton<GameLaunchService>();
-        services.AddSingleton<GameUninstallService>();
-        services.AddSingleton<IGameShortcutService, GameShortcutService>();
-        services.AddSingleton<IGameOperationExecutor>(sp => new GameOperationExecutor(
-            sp.GetRequiredService<GameLaunchService>(),
-            sp.GetRequiredService<GameDownloadService>(),
-            sp.GetRequiredService<GameUninstallService>()));
-
-
-        services.AddSingleton<IErrorHandlingService, ErrorHandlingService>();
-
-        // ── IDisposable services ─────────────────────────────────────────
-        // The container disposes created services in reverse order. This keeps
-        // HttpClientFactory alive until all clients and download services are gone.
-        services.AddSingleton<LauncherApiClient>(sp => new LauncherApiClient(
-            sp.GetRequiredService<IRemoteHttpTransport>(),
-            sp.GetRequiredService<AuthorizationHeaderFactory>(),
-            sp.GetRequiredService<PatchUrlGroupService>(),
-            sp.GetRequiredService<ILauncherDiagnostics>()));
-        services.AddSingleton<ResourcePanelApiClient>();
-        services.AddSingleton(sp => new GameDownloadService(
-            sp.GetRequiredService<LauncherApiClient>(),
-            sp.GetRequiredService<RemoteManifestService>(),
-            sp.GetRequiredService<IFileDownloadService>(),
-            sp.GetRequiredService<LocalInstallationStateStore>(),
-            sp.GetRequiredService<LauncherSettingsService>(),
-            sp.GetRequiredService<HttpClientFactory>(),
-            sp.GetRequiredService<RemoteHttpUrlValidator>(),
-            sp.GetRequiredService<Crc64Service>(),
-            sp.GetRequiredService<DiskSpaceService>(),
-            sp.GetRequiredService<LocalDiagnostics>(),
-            sp.GetRequiredService<LocalizationService>(),
-            sp.GetRequiredService<GameInstallationPath>(),
-            sp.GetRequiredService<IGameProcessTracker>(),
-            sp.GetRequiredService<DownloadCheckpointStore>()));
-
-        // ── ViewModels (all singleton — single-window desktop app) ─────────
-        services.AddSingleton<SettingsViewModel>();
-        services.AddSingleton<ResourcePanelViewModel>();
-        services.AddSingleton<ShellViewModel>();
-        services.AddSingleton<BackgroundViewModel>();
-        services.AddSingleton<RemoteContentViewModel>();
-        services.AddSingleton<DialogsViewModel>();
-        services.AddSingleton(sp => new GameOperationsViewModel(
-            sp.GetRequiredService<IGameOperationExecutor>(),
-            sp.GetRequiredService<IGameShortcutService>(),
-            sp.GetRequiredService<IGameSessionMonitor>(),
-            sp.GetRequiredService<LocalizationService>(),
-            sp.GetRequiredService<ToastService>(),
-            sp.GetRequiredService<LocalDiagnostics>(),
-            sp.GetRequiredService<ShellViewModel>(),
-            sp.GetRequiredService<DialogsViewModel>(),
-            sp.GetRequiredService<IErrorHandlingService>()));
-        services.AddSingleton<DebugViewModel>();
-        services.AddSingleton<IGameOperationActivity>(sp =>
-            sp.GetRequiredService<GameOperationsViewModel>());
-        services.AddSingleton<ToastHostViewModel>();
-        services.AddSingleton<WindowChromeViewModel>();
-        services.AddSingleton<ModalHostViewModel>();
-        services.AddSingleton<ShellPresentationFamily>();
-        services.AddSingleton<ShellLifecycle>();
-        services.AddSingleton<MainWindowViewModel>();
-        services.AddSingleton<ISystemTrayActions, SystemTrayActions>();
+        // 表现层整体登记，参数只传宿主才知道的值。
+        services.AddLauncherPresentationServices(
+            dataRoot,
+            buildIdentity,
+            existingLogger,
+            existingFatalCrashService,
+            Program.ShowHiddenSettings);
 
         return services;
     }
