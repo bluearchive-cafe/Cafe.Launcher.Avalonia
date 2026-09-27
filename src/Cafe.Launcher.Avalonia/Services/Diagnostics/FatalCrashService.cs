@@ -25,16 +25,19 @@ internal sealed class FatalCrashService : IFatalCrashService
     private readonly UnifiedLogger? logger;
     private readonly CrashReportStore reportStore;
     private readonly ICrashReporterLauncher reporterLauncher;
+    private readonly LauncherBuildIdentity? buildIdentity;
     private CrashReport? primaryReport;
 
     public FatalCrashService(
         UnifiedLogger? logger,
         CrashReportStore reportStore,
-        ICrashReporterLauncher reporterLauncher)
+        ICrashReporterLauncher reporterLauncher,
+        LauncherBuildIdentity? buildIdentity = null)
     {
         this.logger = logger;
         this.reportStore = reportStore;
         this.reporterLauncher = reporterLauncher;
+        this.buildIdentity = buildIdentity;
     }
 
     public event Action<CrashReport>? FatalCrashRequested;
@@ -117,7 +120,7 @@ internal sealed class FatalCrashService : IFatalCrashService
             logger?.LogAsync(
                     LogEntrySeverity.Fatal,
                     origin.ToSourceLabel(),
-                    message: $"Commit: {BuildInfo.CommitSha}",
+                    message: $"Commit: {buildIdentity?.CommitSha ?? ""}",
                     exception: exception,
                     cancellationToken: CancellationToken.None)
                 .GetAwaiter()
@@ -129,7 +132,7 @@ internal sealed class FatalCrashService : IFatalCrashService
         }
     }
 
-    private static CrashReport CreateTransientReport(CrashOrigin origin, Exception exception)
+    private CrashReport CreateTransientReport(CrashOrigin origin, Exception exception)
     {
         var now = DateTimeOffset.Now;
         return CrashReport.Build(
@@ -138,6 +141,7 @@ internal sealed class FatalCrashService : IFatalCrashService
             origin.ToSourceLabel(),
             Environment.OSVersion.ToString(),
             exception.GetType().FullName ?? exception.GetType().Name,
-            CrashReportStore.Sanitize(exception.ToString()));
+            CrashReportStore.Sanitize(exception.ToString()),
+            buildIdentity);
     }
 }

@@ -13,7 +13,7 @@ public sealed class CrashReportTests : IDisposable
     [Fact]
     public void Create_WhenExceptionContainsUserProfile_PersistsReadableSanitizedSnapshot()
     {
-        var store = new CrashReportStore(TestDataRoot.ForDirectory(tempDirectory));
+        var store = new CrashReportStore(TestDataRoot.ForDirectory(tempDirectory), buildIdentity: Constants.BuildInfo.Identity);
         var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         var secretPath = Path.Combine(userProfile, "private", "file.txt");
 
@@ -82,7 +82,7 @@ public sealed class CrashReportTests : IDisposable
             File.SetLastWriteTimeUtc(path, now.AddDays(-index).UtcDateTime);
         }
 
-        var store = new CrashReportStore(TestDataRoot.ForDirectory(tempDirectory));
+        var store = new CrashReportStore(TestDataRoot.ForDirectory(tempDirectory), buildIdentity: Constants.BuildInfo.Identity);
         store.CleanupOldReports(now);
 
         Assert.Equal(

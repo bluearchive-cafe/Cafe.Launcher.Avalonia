@@ -27,6 +27,7 @@ public sealed class CrashReportStore : ICrashReportLocator
 
     private readonly string primaryDirectory;
     private readonly string fallbackDirectory;
+    private readonly LauncherBuildIdentity? buildIdentity;
 
     /// <summary>Temp location the store falls back to when the user-data root is unwritable.</summary>
     internal static string DefaultFallbackDirectory => Path.Combine(
@@ -38,11 +39,18 @@ public sealed class CrashReportStore : ICrashReportLocator
     /// 生产接线显式传入 <see cref="DefaultFallbackDirectory"/>；测试通常省略，
     /// 让回退目录等于传入的根。
     /// </summary>
-    public CrashReportStore(LauncherDataRoot dataRoot, string? fallbackDirectory = null)
+    /// <param name="buildIdentity">
+    /// 宿主注入的构建标识：崩溃报告的版本/提交以前读宿主 <c>BuildInfo</c>，迁出宿主前改为注入。
+    /// </param>
+    public CrashReportStore(
+        LauncherDataRoot dataRoot,
+        string? fallbackDirectory = null,
+        LauncherBuildIdentity? buildIdentity = null)
     {
         ArgumentNullException.ThrowIfNull(dataRoot);
         this.primaryDirectory = dataRoot.CrashReportsDirectory;
         this.fallbackDirectory = Path.GetFullPath(fallbackDirectory ?? this.primaryDirectory);
+        this.buildIdentity = buildIdentity;
     }
 
     internal string PrimaryDirectory => primaryDirectory;
@@ -70,7 +78,8 @@ public sealed class CrashReportStore : ICrashReportLocator
             source,
             $"{RuntimeInformation.OSDescription} · {RuntimeInformation.OSArchitecture}",
             exception.GetType().FullName ?? exception.GetType().Name,
-            BuildTechnicalDetails(id, now, source, exception));
+            BuildTechnicalDetails(id, now, source, exception),
+            buildIdentity);
 
         Exception? primaryFailure = null;
         try
@@ -238,7 +247,7 @@ public sealed class CrashReportStore : ICrashReportLocator
         return persisted;
     }
 
-    private static string BuildTechnicalDetails(
+    private string BuildTechnicalDetails(
         string id,
         DateTimeOffset occurredAt,
         string source,
@@ -247,8 +256,8 @@ public sealed class CrashReportStore : ICrashReportLocator
         var details = new StringBuilder()
             .Append("Crash ID: ").AppendLine(id)
             .Append("Time: ").AppendLine(occurredAt.ToString("O", CultureInfo.InvariantCulture))
-            .Append("Version: ").AppendLine(BuildInfo.LauncherVersion)
-            .Append("Commit: ").AppendLine(BuildInfo.CommitSha)
+            .Append("Version: ").AppendLine(buildIdentity?.LauncherVersion ?? "")
+            .Append("Commit: ").AppendLine(buildIdentity?.CommitSha ?? "")
             .Append("OS: ").Append(RuntimeInformation.OSDescription).Append(" · ")
             .AppendLine(RuntimeInformation.OSArchitecture.ToString())
             .Append("Source: ").AppendLine(source)

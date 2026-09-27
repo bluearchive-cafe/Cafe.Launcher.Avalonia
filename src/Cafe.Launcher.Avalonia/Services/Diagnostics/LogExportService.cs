@@ -32,6 +32,7 @@ public sealed class LogExportService
     private readonly LauncherDataRoot dataRoot;
     private readonly ICrashReportLocator crashReportLocator;
     private readonly GraphicsInfoProbe? graphicsInfoProbe;
+    private readonly LauncherBuildIdentity? buildIdentity;
     private readonly ProtonBuildDiscovery? protonBuildDiscovery;
 
     /// <summary>Default directory offered to the user when exporting logs.</summary>
@@ -40,8 +41,9 @@ public sealed class LogExportService
     public LogExportService(
         LocalDiagnostics diagnostics,
         LauncherDataRoot dataRoot,
-        ICrashReportLocator crashReportLocator)
-        : this(diagnostics, dataRoot, crashReportLocator, graphicsInfoProbe: null, protonBuildDiscovery: null)
+        ICrashReportLocator crashReportLocator,
+        LauncherBuildIdentity? buildIdentity = null)
+        : this(diagnostics, dataRoot, crashReportLocator, graphicsInfoProbe: null, protonBuildDiscovery: null, buildIdentity: buildIdentity)
     {
     }
 
@@ -59,7 +61,8 @@ public sealed class LogExportService
         LauncherDataRoot dataRoot,
         ICrashReportLocator crashReportLocator,
         GraphicsInfoProbe? graphicsInfoProbe,
-        ProtonBuildDiscovery? protonBuildDiscovery)
+        ProtonBuildDiscovery? protonBuildDiscovery,
+        LauncherBuildIdentity? buildIdentity = null)
     {
         ArgumentNullException.ThrowIfNull(dataRoot);
         this.diagnostics = diagnostics;
@@ -67,6 +70,7 @@ public sealed class LogExportService
         this.crashReportLocator = crashReportLocator;
         this.graphicsInfoProbe = graphicsInfoProbe;
         this.protonBuildDiscovery = protonBuildDiscovery;
+        this.buildIdentity = buildIdentity;
     }
 
     /// <summary>
@@ -455,7 +459,7 @@ public sealed class LogExportService
         }
     }
 
-    private static void AddSystemInfo(
+    private void AddSystemInfo(
         ZipArchive zip,
         LogExportOptions options,
         ExportManifest manifest,
@@ -466,11 +470,11 @@ public sealed class LogExportService
         var systemInfo = new
         {
             timestamp = DateTimeOffset.Now.ToString("O"),
-            version = BuildInfo.LauncherVersion,
-            commitSha = BuildInfo.CommitSha,
+            version = buildIdentity?.LauncherVersion ?? "",
+            commitSha = buildIdentity?.CommitSha ?? "",
             os = Environment.OSVersion.ToString(),
             framework = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription,
-            buildConfig = BuildInfo.BuildConfiguration,
+            buildConfig = buildIdentity?.BuildConfiguration ?? "",
             session = ReadDesktopSession(),
             graphics = graphics is null ? null : new { vulkan = graphics.Vulkan, opengl = graphics.OpenGl },
             protonBuilds = protonBuilds is { Count: > 0 }

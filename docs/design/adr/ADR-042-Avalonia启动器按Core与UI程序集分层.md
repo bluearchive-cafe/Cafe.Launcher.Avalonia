@@ -141,6 +141,11 @@ Core API 后应改回显式 using。`AssemblySplitContractTests.CoreSources_UseO
   `LogExportService`/`CrashReportBootstrap`/`CrashReporterLauncher`/`ICrashReportLocator`/
   `DispatcherExceptionPolicy`）——它们还依赖宿主 `BuildInfo` 与 `Program`，等下一步换成注入身份后再搬。
   `DiagnosticsStaticSealTests` 的扫描域随之扩到 host + Core，声明表改仓库相对路径。
+- 诊断家族与宿主解耦：`CrashReport.Build`、`CrashReportStore`、`FatalCrashService`、`LogExportService`
+  与 `CrashReportBootstrap.Resolve` 都改为接收注入的 `LauncherBuildIdentity`（缺省留空，不猜），
+  崩溃报告与导出内容里的版本/提交/构建配置不再来自宿主 `BuildInfo`；`CrashReportStore` 的注册
+  由组合根显式传身份。它们因此可以在 UI 程序集落位时整体搬走——唯一仍与宿主耦合的是
+  `CrashReporterLauncher`（拉起独立崩溃报告进程，依赖 `Program`）。
 - 混合模型文件拆分：`ManifestValidationResult`、`GameLaunchResult`、`LauncherRemoteState`、
   `LauncherRuntimeState`、`LauncherStatusSnapshot` 迁到 `Cafe.Launcher.Core.Models`
   （`Models/LauncherStatusModels.cs`）；宿主的 `LauncherRuntimeModels.cs` 只剩表现类型
@@ -187,11 +192,10 @@ Core API 后应改回显式 using。`AssemblySplitContractTests.CoreSources_UseO
 2. **游戏运行时**（`Services/GameRuntime/*`）依赖几乎都在自身目录内，但
    `GameRuntimeRunnerDisplay` 依赖 `LocalizationService`/`LocalizationKeys`（表现层）：搬迁时
    要么把该显示映射留在宿主，要么先引入窄的本地化接缝。
-3. **诊断收尾**：崩溃报告族与导出器仍在宿主（`CrashReport`、`CrashReportStore`、
-   `FatalCrashService`、`LogExportService`、`CrashReportBootstrap`、`CrashReporterLauncher`、
-   `ICrashReportLocator`、`DispatcherExceptionPolicy`）。搬迁前要把它们对宿主 `BuildInfo`
-   的读取换成注入的 `LauncherBuildIdentity`，并决定 `CrashReporterLauncher`（拉起独立崩溃
-   报告进程）留在宿主还是经窄接缝调用。
+3. **诊断收尾已完成到可搬迁状态**：崩溃报告族与导出器已改成消费注入的 `LauncherBuildIdentity`，
+   随 UI 程序集落位一起搬（它们被表现层的调试/导出面板直接使用）。唯一例外是
+   `CrashReporterLauncher`（拉起独立崩溃报告进程、依赖宿主 `Program`），随落位批次再决定是留宿主
+   还是经窄接缝调用。
 4. **自更新已完成**（见上）：`LauncherUpdateService` 与 `Services/Update/*` 均在 Core，
    当前版本/User-Agent 取注入的 `LauncherBuildIdentity`，告警走 `ILauncherDiagnostics`。
 5. **`GameShortcutService`、`ManifestValidationService`、`RemoteManifestService`、
