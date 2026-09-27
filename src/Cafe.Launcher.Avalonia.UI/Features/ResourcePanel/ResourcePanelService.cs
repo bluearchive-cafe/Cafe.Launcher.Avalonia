@@ -17,12 +17,12 @@ internal sealed class ResourcePanelService
 {
     private readonly ResourcePanelUidService uidService;
     private readonly ResourcePanelApiClient apiClient;
-    private readonly LocalDiagnostics diagnostics;
+    private readonly ILauncherDiagnostics diagnostics;
 
     public ResourcePanelService(
         ResourcePanelUidService uidService,
         ResourcePanelApiClient apiClient,
-        LocalDiagnostics diagnostics)
+        ILauncherDiagnostics diagnostics)
     {
         this.uidService = uidService;
         this.apiClient = apiClient;

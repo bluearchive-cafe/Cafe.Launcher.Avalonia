@@ -34,7 +34,7 @@ internal partial class MainWindow : Window
     private readonly OperationSurfaceAnimator operationSurfaceAnimator;
     private readonly WindowFilePickerService? filePickerService;
     private readonly WindowMetricsService? windowMetrics;
-    private readonly Cafe.Launcher.Core.Services.Diagnostics.LocalDiagnostics? diagnostics;
+    private readonly Cafe.Launcher.Core.Services.Diagnostics.ILauncherDiagnostics? diagnostics;
 
     /// <summary>
     /// 无参公共构造：Avalonia 运行时 XAML 加载器可达性要求（AVLN3001，缺失即构建错误），
@@ -48,7 +48,7 @@ internal partial class MainWindow : Window
     public MainWindow(
         WindowFilePickerService? filePickerService,
         WindowMetricsService? windowMetrics,
-        Cafe.Launcher.Core.Services.Diagnostics.LocalDiagnostics? diagnostics = null)
+        Cafe.Launcher.Core.Services.Diagnostics.ILauncherDiagnostics? diagnostics = null)
     {
         InitializeComponent();
         this.filePickerService = filePickerService;

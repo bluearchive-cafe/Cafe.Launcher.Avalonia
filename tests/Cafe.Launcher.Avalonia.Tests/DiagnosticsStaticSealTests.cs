@@ -15,7 +15,7 @@ public sealed class DiagnosticsStaticSealTests
     /// <summary>允许出现 <c>RegisterSharedLogger(</c> 的生产文件：定义与唯一所有方。</summary>
     private static readonly string[] AllowedFiles =
     [
-        "src/Cafe.Launcher.Avalonia.UI/Composition/LauncherPresentationServiceRegistrations.cs",
+        "src/Cafe.Launcher.Core/Composition/LauncherCoreServiceCollectionExtensions.cs",
         "src/Cafe.Launcher.Core/Services/Diagnostics/LocalDiagnostics.cs",
     ];
 

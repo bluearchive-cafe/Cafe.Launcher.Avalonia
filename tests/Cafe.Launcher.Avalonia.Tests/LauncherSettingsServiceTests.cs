@@ -642,5 +642,28 @@ public sealed class LauncherSettingsServiceTests : IDisposable
             Errors.Add((title, message));
             return Task.CompletedTask;
         }
+        public Task VerboseAsync(
+            string title,
+            string? message = null,
+            CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public Task WarningAsync(string title, string message, CancellationToken cancellationToken = default)
+        {
+            Messages.Add($"Warn: {title}: {message}");
+            return Task.CompletedTask;
+        }
+
+        public Task ErrorAsync(string title, Exception exception, CancellationToken cancellationToken = default) =>
+            ErrorAsync(title, exception.Message, exception, cancellationToken);
+
+        public Task FatalAsync(string title, Exception exception, CancellationToken cancellationToken = default) =>
+            ErrorAsync(title, exception.Message, exception, cancellationToken);
+
+        // 日志文件与级别只在真实实现上有意义：假实现记录调用即可。
+        public string LogFilePath => string.Empty;
+
+        public LogEntrySeverity MinimumLevel { get; private set; } = LogEntrySeverity.Info;
+
+        public void SetMinimumLevel(LogEntrySeverity severity) => MinimumLevel = severity;
     }
 }

@@ -23,7 +23,7 @@ internal sealed class GameUninstallService
 
     private readonly ILocalInstallationStateStore localInstallationStateStore;
     private readonly GameInstallationPath installationPath;
-    private readonly LocalDiagnostics diagnostics;
+    private readonly ILauncherDiagnostics diagnostics;
     private readonly LocalizationService localizer;
     private readonly DownloadCheckpointStore checkpointStore;
     private readonly IGameProcessTracker gameProcessTracker;
@@ -31,7 +31,7 @@ internal sealed class GameUninstallService
 
     public GameUninstallService(
         ILocalInstallationStateStore localInstallationStateStore,
-        LocalDiagnostics diagnostics,
+        ILauncherDiagnostics diagnostics,
         LocalizationService localizer,
         GameInstallationPath installationPath,
         DownloadCheckpointStore checkpointStore,

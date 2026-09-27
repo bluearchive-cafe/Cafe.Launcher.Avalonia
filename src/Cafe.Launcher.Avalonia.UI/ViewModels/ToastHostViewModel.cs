@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -18,7 +18,7 @@ internal partial class ToastHostViewModel : ViewModelBase, IDisposable
 {
     private readonly ToastService toastService;
     private readonly LocalizationService localizer;
-    private readonly LocalDiagnostics diagnostics;
+    private readonly ILauncherDiagnostics diagnostics;
     private readonly Func<Action, Task> invokeOnUiAsync;
     private readonly Func<TimeSpan, CancellationToken, Task> delayAsync;
     private readonly CancellationTokenSource lifetimeCts = new();
@@ -32,7 +32,7 @@ internal partial class ToastHostViewModel : ViewModelBase, IDisposable
     public ToastHostViewModel(
         ToastService toastService,
         LocalizationService localizer,
-        LocalDiagnostics diagnostics)
+        ILauncherDiagnostics diagnostics)
         : this(
             toastService,
             localizer,
@@ -45,7 +45,7 @@ internal partial class ToastHostViewModel : ViewModelBase, IDisposable
     internal ToastHostViewModel(
         ToastService toastService,
         LocalizationService localizer,
-        LocalDiagnostics diagnostics,
+        ILauncherDiagnostics diagnostics,
         Func<Action, Task> invokeOnUiAsync,
         Func<TimeSpan, CancellationToken, Task> delayAsync)
     {

@@ -31,7 +31,7 @@ internal sealed class DownloadExecutor
     private readonly IFileDownloadService fileDownloadService;
     private readonly ICrc64Service crc64Service;
     private readonly IDownloadTransportSource transportSource;
-    private readonly LocalDiagnostics diagnostics;
+    private readonly ILauncherDiagnostics diagnostics;
     private readonly Func<Task> getPauseTask;
     private readonly Func<bool> isPaused;
     private readonly Func<long> timestampProvider;
@@ -41,7 +41,7 @@ internal sealed class DownloadExecutor
         IFileDownloadService fileDownloadService,
         ICrc64Service crc64Service,
         IDownloadTransportSource transportSource,
-        LocalDiagnostics diagnostics,
+        ILauncherDiagnostics diagnostics,
         Func<Task> getPauseTask,
         Func<bool> isPaused,
         Func<long>? timestampProvider = null,

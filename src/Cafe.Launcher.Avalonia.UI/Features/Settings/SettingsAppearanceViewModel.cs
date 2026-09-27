@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -26,7 +26,7 @@ internal partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
     private readonly SettingsEditor editor;
     private readonly ThemeApplier themeApplier;
     private readonly IPlatformSettings? platformSettings;
-    private readonly LocalDiagnostics? diagnostics;
+    private readonly ILauncherDiagnostics? diagnostics;
     private readonly bool showHiddenSettings;
     private bool suppressEditorUpdates;
     private bool disposed;
@@ -35,7 +35,7 @@ internal partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
     public SettingsAppearanceViewModel(
         SettingsEditor editor,
         ThemeApplier themeApplier,
-        LocalDiagnostics? diagnostics = null,
+        ILauncherDiagnostics? diagnostics = null,
         bool showHiddenSettings = false)
     {
         this.editor = editor;

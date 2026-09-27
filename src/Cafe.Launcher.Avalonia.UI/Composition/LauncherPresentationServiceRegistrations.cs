@@ -59,17 +59,7 @@ public static class LauncherPresentationServiceRegistrations
         services.AddSingleton<LogExportService>();
         services.AddSingleton<LogViewerDialogViewModel>();
         services.AddSingleton<LogExportDialogViewModel>();
-        services.AddSingleton(sp =>
-        {
-            var logger = sp.GetRequiredService<UnifiedLogger>();
-            var localDiagnostics = new LocalDiagnostics(logger);
-            // 本登记入口是共享静态缝的唯一登记所有方（R2-c12）：先注册者胜，
-            // 后续容器（多容器测试）不改绑，也不得在其他文件登记（有源守卫）。
-            LocalDiagnostics.RegisterSharedLogger(logger);
-            return localDiagnostics;
-        });
-        services.AddSingleton<ILauncherDiagnostics>(sp =>
-            sp.GetRequiredService<LocalDiagnostics>());
+
         services.AddSingleton(_ => new CrashReportStore(
             dataRoot,
             CrashReportStore.DefaultFallbackDirectory,
@@ -124,7 +114,7 @@ public static class LauncherPresentationServiceRegistrations
             sp.GetRequiredService<BestHttpCookieLibraryService>(),
             sp.GetRequiredService<ILauncherSettingsService>(),
             sp.GetRequiredService<ISavedSettingsWriter>(),
-            sp.GetRequiredService<LocalDiagnostics>()));
+            sp.GetRequiredService<ILauncherDiagnostics>()));
         services.AddSingleton(new PresentationOptions(showHiddenSettings));
         services.AddSingleton<SettingsEditor>();
         // 设置草稿所有者：Core 的写入协调器只认这个窄接缝，不认识 SettingsEditor 本身
@@ -136,7 +126,7 @@ public static class LauncherPresentationServiceRegistrations
         services.AddSingleton(sp => new SettingsAppearanceViewModel(
             sp.GetRequiredService<SettingsEditor>(),
             sp.GetRequiredService<ThemeApplier>(),
-            sp.GetRequiredService<LocalDiagnostics>(),
+            sp.GetRequiredService<ILauncherDiagnostics>(),
             showHiddenSettings));
         // 会话看护订阅进程跟踪器的退出事件：登记在跟踪器之后，容器逆序释放时看护先于
         // 跟踪器析构，退订不会落在已释放的订阅源上。
@@ -173,7 +163,7 @@ public static class LauncherPresentationServiceRegistrations
             sp.GetRequiredService<IRemoteHttpUrlValidator>(),
             sp.GetRequiredService<ICrc64Service>(),
             sp.GetRequiredService<IDiskSpaceService>(),
-            sp.GetRequiredService<LocalDiagnostics>(),
+            sp.GetRequiredService<ILauncherDiagnostics>(),
             sp.GetRequiredService<LocalizationService>(),
             sp.GetRequiredService<GameInstallationPath>(),
             sp.GetRequiredService<IGameProcessTracker>(),
@@ -192,7 +182,7 @@ public static class LauncherPresentationServiceRegistrations
             sp.GetRequiredService<IGameSessionMonitor>(),
             sp.GetRequiredService<LocalizationService>(),
             sp.GetRequiredService<ToastService>(),
-            sp.GetRequiredService<LocalDiagnostics>(),
+            sp.GetRequiredService<ILauncherDiagnostics>(),
             sp.GetRequiredService<ShellViewModel>(),
             sp.GetRequiredService<DialogsViewModel>(),
             sp.GetRequiredService<IErrorHandlingService>()));

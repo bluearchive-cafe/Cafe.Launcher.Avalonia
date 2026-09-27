@@ -1,4 +1,5 @@
 using System;
+using Serilog.Events;
 using System.Globalization;
 using System.IO;
 using System.Threading;
@@ -14,7 +15,7 @@ namespace Cafe.Launcher.Core.Services.Diagnostics;
 /// pre-DI 阶段）、纯静态帮助类（ExternalLinkService、跨进程转发、注册表代
 /// 理读取）。新的可注入模块不要再走静态入口（R2-c11①）。
 /// </summary>
-public sealed class LocalDiagnostics : ILauncherDiagnostics
+internal sealed class LocalDiagnostics : ILauncherDiagnostics
 {
     private readonly UnifiedLogger logger;
 
@@ -52,7 +53,7 @@ public sealed class LocalDiagnostics : ILauncherDiagnostics
     /// 多容器测试）不得改绑共享静态缝，各自的实例门面走自己注入的
     /// <see cref="UnifiedLogger"/>。返回是否由本次调用完成登记。
     /// </summary>
-    public static bool RegisterSharedLogger(UnifiedLogger logger)
+    internal static bool RegisterSharedLogger(UnifiedLogger logger)
     {
         if (Volatile.Read(ref syncLogger) is not null)
         {
@@ -71,6 +72,34 @@ public sealed class LocalDiagnostics : ILauncherDiagnostics
     }
 
     public string LogFilePath => logger.LogFilePath;
+
+    /// <inheritdoc />
+    public LogEntrySeverity MinimumLevel => FromSerilog(logger.MinimumLevel);
+
+    /// <inheritdoc />
+    public void SetMinimumLevel(LogEntrySeverity severity) => logger.SetMinimumLevel(ToSerilog(severity));
+
+    private static LogEventLevel ToSerilog(LogEntrySeverity severity) => severity switch
+    {
+        LogEntrySeverity.Verbose => LogEventLevel.Verbose,
+        LogEntrySeverity.Debug => LogEventLevel.Debug,
+        LogEntrySeverity.Info => LogEventLevel.Information,
+        LogEntrySeverity.Warn => LogEventLevel.Warning,
+        LogEntrySeverity.Error => LogEventLevel.Error,
+        LogEntrySeverity.Fatal => LogEventLevel.Fatal,
+        _ => LogEventLevel.Information
+    };
+
+    private static LogEntrySeverity FromSerilog(LogEventLevel level) => level switch
+    {
+        LogEventLevel.Verbose => LogEntrySeverity.Verbose,
+        LogEventLevel.Debug => LogEntrySeverity.Debug,
+        LogEventLevel.Information => LogEntrySeverity.Info,
+        LogEventLevel.Warning => LogEntrySeverity.Warn,
+        LogEventLevel.Error => LogEntrySeverity.Error,
+        LogEventLevel.Fatal => LogEntrySeverity.Fatal,
+        _ => LogEntrySeverity.Info
+    };
 
     /// <summary><see cref="ILauncherDiagnostics"/>：同步诊断，转发到静态实现。</summary>
     public void LogMessage(LogEntrySeverity severity, string title, string? message = null) =>

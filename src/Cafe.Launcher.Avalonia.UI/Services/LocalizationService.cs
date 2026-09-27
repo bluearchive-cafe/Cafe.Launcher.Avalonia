@@ -71,7 +71,7 @@ public sealed class LocalizationService
     private static volatile IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>>? testResources;
 
     private readonly SystemCultureSnapshot cultureSnapshot;
-    private readonly LocalDiagnostics diagnostics;
+    private readonly ILauncherDiagnostics diagnostics;
     private string currentAutoResolvedLanguage = LauncherLanguages.English;
 
     /// <summary>
@@ -79,7 +79,7 @@ public sealed class LocalizationService
     /// auto-resolved language at construction time so "auto" can restore the
     /// genuine startup culture even after a manual language selection.
     /// </summary>
-    public LocalizationService(SystemCultureSnapshot cultureSnapshot, LocalDiagnostics diagnostics)
+    public LocalizationService(SystemCultureSnapshot cultureSnapshot, ILauncherDiagnostics diagnostics)
     {
         this.cultureSnapshot = cultureSnapshot;
         this.diagnostics = diagnostics;
@@ -88,7 +88,7 @@ public sealed class LocalizationService
 
     /// <summary>Parameterless constructor for tests and static factory methods.</summary>
     internal LocalizationService()
-        : this(new SystemCultureSnapshot(), new LocalDiagnostics())
+        : this(new SystemCultureSnapshot(), LauncherLog.CreateDetached())
     {
     }
 

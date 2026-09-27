@@ -55,7 +55,7 @@ internal sealed class CrossProcessPollingListener : IDisposable
         catch (Exception ex)
         {
             // Listener stopped — non-critical.
-            LocalDiagnostics.LogSync(LogEntrySeverity.Warn, "CrossProcess", "listener loop exited: " + ex.Message);
+            LauncherLog.LogSync(LogEntrySeverity.Warn, "CrossProcess", "listener loop exited: " + ex.Message);
         }
     }
 

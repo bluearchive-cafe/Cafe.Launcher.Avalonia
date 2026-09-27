@@ -98,7 +98,7 @@ internal partial class MainWindowViewModel : ViewModelBase, IDisposable
         LauncherUpdateService launcherUpdateService,
         LauncherSelfUpdateService launcherSelfUpdateService,
         IWindowsLauncherUpdateApplier launcherUpdateApplier,
-        LocalDiagnostics diagnostics,
+        ILauncherDiagnostics diagnostics,
         ShellPresentationFamily family,
         IErrorHandlingService errorHandling,
         SystemAnimationSettingsProvider systemAnimationSettingsProvider,

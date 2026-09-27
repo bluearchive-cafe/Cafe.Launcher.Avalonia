@@ -20,7 +20,7 @@ namespace Cafe.Launcher.Avalonia.ViewModels;
 internal partial class BackgroundViewModel : ViewModelBase, IDisposable
 {
     private readonly ImageCacheService imageCacheService;
-    private readonly LocalDiagnostics diagnostics;
+    private readonly ILauncherDiagnostics diagnostics;
     private readonly Action<LauncherSettings> wallpaperChanged;
     private readonly Func<string, PixelSize, IImage?> imageLoader;
     private readonly Func<IImage?> bundledImageLoader;
@@ -60,7 +60,7 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
 
     public BackgroundViewModel(
         ImageCacheService imageCacheService,
-        LocalDiagnostics diagnostics,
+        ILauncherDiagnostics diagnostics,
         SettingsViewModel settings,
         IWindowMetricsService? windowMetrics = null)
         : this(
@@ -79,7 +79,7 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
 
     internal BackgroundViewModel(
         ImageCacheService imageCacheService,
-        LocalDiagnostics diagnostics,
+        ILauncherDiagnostics diagnostics,
         Action<LauncherSettings> wallpaperChanged,
         IWindowMetricsService? windowMetrics = null)
         : this(
@@ -100,7 +100,7 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
     /// </param>
     internal BackgroundViewModel(
         ImageCacheService imageCacheService,
-        LocalDiagnostics diagnostics,
+        ILauncherDiagnostics diagnostics,
         Action<LauncherSettings> wallpaperChanged,
         Func<string, PixelSize, IImage?> imageLoader,
         Func<IImage?> bundledImageLoader,
@@ -662,7 +662,7 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
         wallpaperFadeCancellation?.Cancel();
     }
 
-    private static Bitmap? LoadBundledBackground(LocalDiagnostics diagnostics)
+    private static Bitmap? LoadBundledBackground(ILauncherDiagnostics diagnostics)
     {
         try
         {

@@ -16,7 +16,7 @@ internal sealed partial class ResourcePanelUidService
     private const string ResourcePanelCookieName = "uid";
     private const string ResourcePanelCookieDomain = "bluearchive.cafe";
     private const string ResourcePanelCookiePath = "/";
-    private readonly LocalDiagnostics? diagnostics;
+    private readonly ILauncherDiagnostics? diagnostics;
 
     /// <summary>
     /// UID format: exactly 8 uppercase ASCII letters (e.g. <c>ABCDEFGH</c>).
@@ -42,7 +42,7 @@ internal sealed partial class ResourcePanelUidService
         BestHttpCookieLibraryService cookieLibraryService,
         ILauncherSettingsService settingsService,
         ISavedSettingsWriter savedSettingsWriter,
-        LocalDiagnostics? diagnostics = null)
+        ILauncherDiagnostics? diagnostics = null)
         : this(cookieLibraryService, settingsService, savedSettingsWriter, null, diagnostics)
     {
     }
@@ -52,7 +52,7 @@ internal sealed partial class ResourcePanelUidService
         ILauncherSettingsService settingsService,
         ISavedSettingsWriter savedSettingsWriter,
         string? cookieLibraryPath,
-        LocalDiagnostics? diagnostics = null)
+        ILauncherDiagnostics? diagnostics = null)
     {
         this.cookieLibraryService = cookieLibraryService;
         this.settingsService = settingsService;

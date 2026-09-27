@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Helpers;
@@ -21,12 +21,12 @@ namespace Cafe.Launcher.Avalonia.ViewModels;
 internal sealed partial class ConfirmationDialogViewModel : ViewModelBase
 {
     private const string LogTitle = "ConfirmationDialog";
-    private readonly LocalDiagnostics diagnostics;
+    private readonly ILauncherDiagnostics diagnostics;
     private readonly string operationContext;
 
     /// <summary>Creates one confirmation dialog with instance-scoped diagnostics and operation context.</summary>
     public ConfirmationDialogViewModel(
-        LocalDiagnostics diagnostics,
+        ILauncherDiagnostics diagnostics,
         string operationContext)
     {
         this.diagnostics = diagnostics;

@@ -25,7 +25,7 @@ internal sealed class GameDownloadService : IDisposable
     private readonly IDownloadTransportSource transportSource;
     private readonly ICrc64Service crc64Service;
     private readonly IDiskSpaceService diskSpaceService;
-    private readonly LocalDiagnostics diagnostics;
+    private readonly ILauncherDiagnostics diagnostics;
     private readonly LocalizationService localizer;
     private readonly GameInstallationPath installationPath;
     private readonly DownloadCheckpointStore checkpointStore;
@@ -48,7 +48,7 @@ internal sealed class GameDownloadService : IDisposable
         IRemoteHttpUrlValidator urlValidator,
         ICrc64Service crc64Service,
         IDiskSpaceService diskSpaceService,
-        LocalDiagnostics diagnostics,
+        ILauncherDiagnostics diagnostics,
         LocalizationService localizer,
         GameInstallationPath installationPath,
         IGameProcessTracker gameProcessTracker,
@@ -83,7 +83,7 @@ internal sealed class GameDownloadService : IDisposable
         IRemoteHttpUrlValidator urlValidator,
         ICrc64Service crc64Service,
         IDiskSpaceService diskSpaceService,
-        LocalDiagnostics diagnostics,
+        ILauncherDiagnostics diagnostics,
         LocalizationService localizer,
         GameInstallationPath installationPath,
         IGameProcessTracker gameProcessTracker,

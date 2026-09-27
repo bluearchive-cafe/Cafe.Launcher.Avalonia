@@ -62,7 +62,7 @@ public partial class App : Application
             _ = serviceProvider.GetRequiredService<LocalizationService>();
 
             // Application-started trace (best-effort, fire-and-forget)
-            _ = serviceProvider.GetRequiredService<Cafe.Launcher.Core.Services.Diagnostics.LocalDiagnostics>()
+            _ = serviceProvider.GetRequiredService<Cafe.Launcher.Core.Services.Diagnostics.ILauncherDiagnostics>()
                 .DebugAsync("Application", "Application started, DI container built", CancellationToken.None);
 
             // 表现层自己构造窗口、ViewModel 与托盘：宿主只拿到一个 Window 交回应用生命周期。
@@ -135,7 +135,7 @@ public partial class App : Application
                 }
                 catch (Exception exception)
                 {
-                    LocalDiagnostics.LogSync(LogEntrySeverity.Error, "App", $"Launcher shutdown coordination failed: {exception}");
+                    LauncherLog.LogSync(LogEntrySeverity.Error, "App", $"Launcher shutdown coordination failed: {exception}");
                 }
                 finally
                 {
@@ -241,7 +241,7 @@ public partial class App : Application
             catch (Exception ex)
             {
                 // Restore is best-effort.
-                LocalDiagnostics.LogSync(LogEntrySeverity.Warn, "App", $"Window restore dispatch failed: {ex.Message}");
+                LauncherLog.LogSync(LogEntrySeverity.Warn, "App", $"Window restore dispatch failed: {ex.Message}");
             }
         })
         {
@@ -268,7 +268,7 @@ public partial class App : Application
                 catch (Exception ex)
                 {
                     // The launch journey reports its own failures; this only guards dispatch.
-                    LocalDiagnostics.LogSync(LogEntrySeverity.Warn, "App", $"Launch-game signal dispatch failed: {ex.Message}");
+                    LauncherLog.LogSync(LogEntrySeverity.Warn, "App", $"Launch-game signal dispatch failed: {ex.Message}");
                 }
             })
         {

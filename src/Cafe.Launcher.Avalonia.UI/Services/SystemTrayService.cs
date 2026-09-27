@@ -17,12 +17,12 @@ internal sealed class SystemTrayService : IDisposable
     private readonly Window mainWindow;
     private readonly LocalizationService localizer;
     private readonly ISystemTrayPlatform platform;
-    private readonly LocalDiagnostics? diagnostics;
+    private readonly ILauncherDiagnostics? diagnostics;
     private readonly ISystemTrayActions? actions;
     private bool initialized;
     private bool disposed;
 
-    public SystemTrayService(Window mainWindow, LocalizationService localizer, LocalDiagnostics? diagnostics = null, ISystemTrayActions? actions = null)
+    public SystemTrayService(Window mainWindow, LocalizationService localizer, ILauncherDiagnostics? diagnostics = null, ISystemTrayActions? actions = null)
         : this(mainWindow, localizer, new AvaloniaSystemTrayPlatform(), diagnostics, actions)
     {
     }
@@ -31,7 +31,7 @@ internal sealed class SystemTrayService : IDisposable
         Window mainWindow,
         LocalizationService localizer,
         ISystemTrayPlatform platform,
-        LocalDiagnostics? diagnostics = null,
+        ILauncherDiagnostics? diagnostics = null,
         ISystemTrayActions? actions = null)
     {
         this.mainWindow = mainWindow;

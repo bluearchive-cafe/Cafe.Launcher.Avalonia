@@ -21,7 +21,7 @@ internal static class ExternalLinkService
 
         if (!TryCreateAllowedUri(url, out var uri))
         {
-            LocalDiagnostics.LogSync("External link blocked by scheme validation", $"url: {url}");
+            LauncherLog.LogSync("External link blocked by scheme validation", $"url: {url}");
             return;
         }
 
@@ -35,7 +35,7 @@ internal static class ExternalLinkService
         }
         catch (Exception ex)
         {
-            LocalDiagnostics.LogSync("External link failed to open", $"url: {uri.AbsoluteUri}\nexception: {ex.Message}");
+            LauncherLog.LogSync("External link failed to open", $"url: {uri.AbsoluteUri}\nexception: {ex.Message}");
         }
     }
 

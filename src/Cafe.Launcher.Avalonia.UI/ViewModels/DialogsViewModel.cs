@@ -23,7 +23,7 @@ internal partial class DialogsViewModel : ViewModelBase, IModalContentViewModel,
     private readonly LocalizationService localizer;
     private readonly NoticeStateService noticeStateService;
     private readonly Func<Action, Task> invokeOnUiAsync;
-    private readonly LocalDiagnostics diagnostics;
+    private readonly ILauncherDiagnostics diagnostics;
     private bool closeOnNoticeDismiss;
 
     /// <summary>
@@ -231,7 +231,7 @@ internal partial class DialogsViewModel : ViewModelBase, IModalContentViewModel,
         LocalizationService localizer,
         NoticeStateService noticeStateService,
         SetupWizardViewModel setupWizard,
-        LocalDiagnostics diagnostics)
+        ILauncherDiagnostics diagnostics)
         : this(
             localizer,
             noticeStateService,
@@ -246,7 +246,7 @@ internal partial class DialogsViewModel : ViewModelBase, IModalContentViewModel,
         LocalizationService localizer,
         NoticeStateService noticeStateService,
         SetupWizardViewModel setupWizard,
-        LocalDiagnostics diagnostics,
+        ILauncherDiagnostics diagnostics,
         Func<Action, Task> invokeOnUiAsync)
     {
         this.localizer = localizer;
