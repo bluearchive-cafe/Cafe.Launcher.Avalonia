@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 
-namespace Cafe.Launcher.Avalonia.Services.Update;
+namespace Cafe.Launcher.Core.Services.Update;
 
 /// <summary>
 /// Parses the release's <c>SHA256SUMS</c> manifest (the <c>sha256sum</c> text format:

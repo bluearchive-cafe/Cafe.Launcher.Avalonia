@@ -4,10 +4,10 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Cafe.Launcher.Avalonia.Models;
-using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Services.Diagnostics;
 
-namespace Cafe.Launcher.Avalonia.Services.Update;
+namespace Cafe.Launcher.Core.Services.Update;
 
 /// <summary>
 /// Orchestrates a Windows launcher self-update up to the point of a verified,
@@ -21,7 +21,7 @@ public sealed class LauncherSelfUpdateService
     private readonly ILauncherUpdateHostInfoProvider hostInfoProvider;
     private readonly IWindowsLauncherUpdateApplier updateApplier;
     private readonly LauncherDataRoot dataRoot;
-    private readonly LocalDiagnostics diagnostics;
+    private readonly ILauncherDiagnostics diagnostics;
 
     /// <summary>Creates the coordinator that checks, verifies, and stages launcher update packages.</summary>
     /// <param name="downloader">Reads the checksum manifest and downloads update packages.</param>
@@ -34,7 +34,7 @@ public sealed class LauncherSelfUpdateService
         ILauncherUpdateHostInfoProvider hostInfoProvider,
         IWindowsLauncherUpdateApplier updateApplier,
         LauncherDataRoot dataRoot,
-        LocalDiagnostics diagnostics)
+        ILauncherDiagnostics diagnostics)
     {
         this.downloader = downloader;
         this.hostInfoProvider = hostInfoProvider;
@@ -96,9 +96,10 @@ public sealed class LauncherSelfUpdateService
             .ConfigureAwait(false);
         if (!download.IsSuccess)
         {
-            await diagnostics
-                .WarningAsync("LauncherUpdateDownload", download.FailureMessage, CancellationToken.None)
-                .ConfigureAwait(false);
+            diagnostics.LogMessage(
+                LogEntrySeverity.Warn,
+                "LauncherUpdateDownload",
+                download.FailureMessage);
             return LauncherSelfUpdatePreparation.Failed(download.FailureMessage);
         }
 

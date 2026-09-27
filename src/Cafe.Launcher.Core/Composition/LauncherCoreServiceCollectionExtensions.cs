@@ -5,6 +5,7 @@ using Cafe.Launcher.Core.Services;
 using Cafe.Launcher.Core.Services.Auth;
 using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Core.Services.GameRuntime;
+using Cafe.Launcher.Core.Services.Update;
 
 namespace Cafe.Launcher.Core.Composition;
 
@@ -51,7 +52,18 @@ public static class LauncherCoreServiceCollectionExtensions
         // 代理解析与连接池属于后端：HttpClientFactory 的注册仍留在组合根，因为它的
         // 偏好闭包读的是表现层的设置快照（ADR-028 的按使用时机拉取）。
         services.TryAddSingleton<ProxySettingsService>();
-        services.TryAddSingleton<IFileDownloadService, FileDownloadService>();
+        // 自更新：检查、宿主信息、下载器、应用器与自更新服务。应用器先于自更新服务注册：
+        // 可用性判定（本机是否带 helper）由应用器回答。
+        services.TryAddSingleton<LauncherUpdateService>();
+        services.TryAddSingleton<ILauncherUpdateHostInfoProvider, LauncherUpdateHostInfoProvider>();
+        services.TryAddSingleton<ILauncherUpdateDownloader, LauncherUpdateDownloader>();
+        services.TryAddSingleton<IWindowsLauncherUpdateApplier, WindowsLauncherUpdateApplier>();
+        services.TryAddSingleton(sp => new LauncherSelfUpdateService(
+            sp.GetRequiredService<ILauncherUpdateDownloader>(),
+            sp.GetRequiredService<ILauncherUpdateHostInfoProvider>(),
+            sp.GetRequiredService<IWindowsLauncherUpdateApplier>(),
+            sp.GetRequiredService<LauncherDataRoot>(),
+            sp.GetRequiredService<ILauncherDiagnostics>()));        services.TryAddSingleton<IFileDownloadService, FileDownloadService>();
         // 游戏运行时：进程启动、跟踪、兼容预检、前缀元数据与会话运行器定义。
         services.TryAddSingleton<GameInstallationPath>();
         services.TryAddSingleton<IProcessLauncher, DefaultProcessLauncher>();

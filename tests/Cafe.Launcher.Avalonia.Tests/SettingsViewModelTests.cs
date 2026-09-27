@@ -11,7 +11,7 @@ using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Services.GameRuntime;
-using Cafe.Launcher.Avalonia.Services.Update;
+using Cafe.Launcher.Core.Services.Update;
 using Cafe.Launcher.Avalonia.Testing;
 using Cafe.Launcher.Avalonia.ViewModels;
 
@@ -205,7 +205,7 @@ public sealed class SettingsViewModelTests : IDisposable
             null!,
             localizer,
             toastService,
-            new LauncherUpdateService(transport),
+            new LauncherUpdateService(transport, buildIdentity: BuildInfo.Identity),
             new LauncherSelfUpdateService(
                 new LauncherUpdateDownloader(new StubRemoteHttpTransport()),
                 new LauncherUpdateHostInfoProvider(),

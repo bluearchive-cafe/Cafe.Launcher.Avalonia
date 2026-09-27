@@ -7,13 +7,13 @@ using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Cafe.Launcher.Avalonia.Constants;
-using Cafe.Launcher.Avalonia.Helpers;
-using Cafe.Launcher.Avalonia.Models;
-using Cafe.Launcher.Avalonia.Services.Diagnostics;
-using Cafe.Launcher.Avalonia.Services.Update;
+using Cafe.Launcher.Core.Constants;
+using Cafe.Launcher.Core.Helpers;
+using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Services.Diagnostics;
+using Cafe.Launcher.Core.Services.Update;
 
-namespace Cafe.Launcher.Avalonia.Services;
+namespace Cafe.Launcher.Core.Services;
 
 /// <summary>
 /// Checks for launcher self-updates via the server proxy endpoint.
@@ -23,15 +23,16 @@ public sealed partial class LauncherUpdateService
     private static readonly JsonSerializerOptions JsonOptions = JsonDefaults.Strict;
     private readonly IRemoteHttpTransport transport;
     private readonly string currentVersion;
-    private readonly LocalDiagnostics? diagnostics;
+    private readonly ILauncherDiagnostics? diagnostics;
 
     /// <summary>Production constructor — accepts dependencies from DI.</summary>
     public LauncherUpdateService(
         IRemoteHttpTransport transport,
-        LocalDiagnostics diagnostics)
+        ILauncherDiagnostics diagnostics,
+        LauncherBuildIdentity? buildIdentity = null)
     {
         this.transport = transport;
-        currentVersion = BuildInfo.LauncherVersion;
+        currentVersion = buildIdentity?.LauncherVersion ?? "";
         this.diagnostics = diagnostics;
     }
 
@@ -42,10 +43,11 @@ public sealed partial class LauncherUpdateService
     internal LauncherUpdateService(
         IRemoteHttpTransport transport,
         string? currentVersionOverride = null,
-        LocalDiagnostics? diagnosticsOverride = null)
+        ILauncherDiagnostics? diagnosticsOverride = null,
+        LauncherBuildIdentity? buildIdentity = null)
     {
         this.transport = transport;
-        currentVersion = currentVersionOverride ?? BuildInfo.LauncherVersion;
+        currentVersion = currentVersionOverride ?? buildIdentity?.LauncherVersion ?? "";
         diagnostics = diagnosticsOverride;
     }
 
@@ -231,7 +233,7 @@ public sealed partial class LauncherUpdateService
                 Timeout = TimeSpan.FromSeconds(15),
                 Json = JsonOptions,
                 ConfigureRequest = request => request.Headers.UserAgent.ParseAdd(
-                    $"CafeLauncher/{BuildInfo.LauncherVersion}")
+                    $"CafeLauncher/{currentVersion}")
             },
             cancellationToken).ConfigureAwait(false) ?? [];
         return releases
@@ -268,7 +270,7 @@ public sealed partial class LauncherUpdateService
                     Timeout = TimeSpan.FromSeconds(15),
                     Json = JsonOptions,
                     ConfigureRequest = request => request.Headers.UserAgent.ParseAdd(
-                        $"CafeLauncher/{BuildInfo.LauncherVersion}")
+                        $"CafeLauncher/{currentVersion}")
                 },
                 cancellationToken).ConfigureAwait(false);
             return release?.Body ?? "";

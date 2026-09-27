@@ -1,6 +1,6 @@
-using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Core.Models;
 
-namespace Cafe.Launcher.Avalonia.Services.Update;
+namespace Cafe.Launcher.Core.Services.Update;
 
 /// <summary>
 /// The result of matching a release against the current host: which package to fetch, the

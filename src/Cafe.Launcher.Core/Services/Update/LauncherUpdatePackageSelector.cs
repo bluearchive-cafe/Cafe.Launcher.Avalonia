@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Core.Models;
 
-namespace Cafe.Launcher.Avalonia.Services.Update;
+namespace Cafe.Launcher.Core.Services.Update;
 
 /// <summary>
 /// Picks the release asset a Windows self-update should download. Windows x64 only:

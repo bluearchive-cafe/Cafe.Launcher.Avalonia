@@ -1,5 +1,5 @@
 using System.Text.RegularExpressions;
-using Cafe.Launcher.Avalonia.Services.Update;
+using Cafe.Launcher.Core.Services.Update;
 using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;

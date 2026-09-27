@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 
-namespace Cafe.Launcher.Avalonia.Services.Update;
+namespace Cafe.Launcher.Core.Services.Update;
 
 /// <summary>
 /// Reads the current host facts. Installed-vs-portable is decided by the ownership

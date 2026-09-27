@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
-using Cafe.Launcher.Avalonia.Services.Update;
+using Cafe.Launcher.Core.Services.Update;
 
 namespace Cafe.Launcher.Avalonia.Features.Shell;
 

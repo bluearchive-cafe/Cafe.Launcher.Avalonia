@@ -123,6 +123,11 @@ Core API 后应改回显式 using。`AssemblySplitContractTests.CoreSources_UseO
   跨程序集暂需公开的成员（`UnixProcessRecord`/`UnixProcessRecordParser`/
   `UnixGameProcessMatcher`(+`OwnershipMarkerKey`)/`LinuxProcessScanner`/`ProtonBuildDiscovery`）
   记在公开面收窄那一批重新裁定。`GameOperationStopOwnershipTests` 的扫描域随之扩到 host + Core。
+- 自更新批次：`Services/Update/*` 与 `LauncherUpdateService` 迁入 Core；它的注册
+  （检查服务、宿主信息、下载器、应用器、自更新服务）随实现移到 `AddLauncherCore`；
+  `LauncherUpdateService` 不再读宿主 `BuildInfo`，当前版本与 User-Agent 都取注入的
+  `LauncherBuildIdentity`（测试按同一方式传入宿主标识）；自更新的告警改走
+  `ILauncherDiagnostics.LogMessage`。
 - 混合模型文件拆分：`ManifestValidationResult`、`GameLaunchResult`、`LauncherRemoteState`、
   `LauncherRuntimeState`、`LauncherStatusSnapshot` 迁到 `Cafe.Launcher.Core.Models`
   （`Models/LauncherStatusModels.cs`）；宿主的 `LauncherRuntimeModels.cs` 只剩表现类型
@@ -166,13 +171,13 @@ Core API 后应改回显式 using。`AssemblySplitContractTests.CoreSources_UseO
 2. **游戏运行时**（`Services/GameRuntime/*`）依赖几乎都在自身目录内，但
    `GameRuntimeRunnerDisplay` 依赖 `LocalizationService`/`LocalizationKeys`（表现层）：搬迁时
    要么把该显示映射留在宿主，要么先引入窄的本地化接缝。
-3. **诊断**：`UnifiedLogger`/`LocalDiagnostics`/`LogEntry`/`LogEntryReader` 可先走；
-   `LogExportService` 还依赖 `GraphicsInfoProbe`、`LinuxProcessScanner`、`CrashReportStore`，
-   因此诊断必须排在运行时之后，或与该批一起搬。
-4. **自更新**（`Services/Update/*`）当前读宿主 `Constants/BuildInfo`；搬迁前必须改用注入的
-   `LauncherBuildIdentity`（`LauncherUpdateHostInfo`/`LauncherUpdateSelection`/`LauncherUpdateTarget`
-   同理），否则 Core 会被迫引用宿主类型。`WindowsLauncherUpdateApplier` 依赖进程启动与
-   `LocalDiagnostics`，与第 1 批同法处理。
+3. **诊断**（下一批）：`UnifiedLogger`/`LocalDiagnostics`/`LogEntry`（已迁）/`LogEntryReader`
+   可先走；`LogExportService` 还依赖 `GraphicsInfoProbe`、`LinuxProcessScanner`、
+   `CrashReportStore`，`CrashReporterLauncher` 依赖 `Program`，`LocalDiagnostics` 还被
+   `Program.cs` 的 pre-DI 路径与 `ServiceConfiguration` 的静态登记使用——这一批需要为
+   「pre-DI 单例」设计一条 Core 侧的接缝（不能把宿主 `Program` 拖进 Core）。
+4. **自更新已完成**（见上）：`LauncherUpdateService` 与 `Services/Update/*` 均在 Core，
+   当前版本/User-Agent 取注入的 `LauncherBuildIdentity`，告警走 `ILauncherDiagnostics`。
 5. **`GameShortcutService`、`ManifestValidationService`、`RemoteManifestService`、
    `LauncherCoreService`、`NoticeStateService`** 零星依赖表现层（`LocalizationService`、
    `GameDownloadService`），随各自的上游批次一起搬，或先用窄接缝替换依赖。

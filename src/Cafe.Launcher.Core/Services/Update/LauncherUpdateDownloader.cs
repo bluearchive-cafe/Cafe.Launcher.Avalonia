@@ -7,9 +7,9 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Core.Models;
 
-namespace Cafe.Launcher.Avalonia.Services.Update;
+namespace Cafe.Launcher.Core.Services.Update;
 
 /// <summary>
 /// Downloads launcher release assets over the shared remote transport. The package

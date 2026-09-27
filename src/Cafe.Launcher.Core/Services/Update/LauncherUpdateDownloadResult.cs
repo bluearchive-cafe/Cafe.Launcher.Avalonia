@@ -1,4 +1,4 @@
-namespace Cafe.Launcher.Avalonia.Services.Update;
+namespace Cafe.Launcher.Core.Services.Update;
 
 /// <summary>How a launcher update package download terminated.</summary>
 public enum LauncherUpdateDownloadStatus

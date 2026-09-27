@@ -1,4 +1,4 @@
-namespace Cafe.Launcher.Avalonia.Services.Update;
+namespace Cafe.Launcher.Core.Services.Update;
 
 /// <summary>
 /// Hands a verified, staged package to the detached helper. The caller shuts the

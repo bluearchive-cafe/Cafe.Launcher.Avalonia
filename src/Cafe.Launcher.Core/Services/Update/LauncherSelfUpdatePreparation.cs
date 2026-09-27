@@ -1,4 +1,4 @@
-namespace Cafe.Launcher.Avalonia.Services.Update;
+namespace Cafe.Launcher.Core.Services.Update;
 
 /// <summary>Outcome of preparing a launcher self-update.</summary>
 public enum LauncherSelfUpdatePreparationStatus

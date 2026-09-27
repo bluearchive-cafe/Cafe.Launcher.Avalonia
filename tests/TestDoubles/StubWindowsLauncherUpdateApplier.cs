@@ -1,4 +1,4 @@
-using Cafe.Launcher.Avalonia.Services.Update;
+using Cafe.Launcher.Core.Services.Update;
 
 namespace Cafe.Launcher.Avalonia.Testing;
 

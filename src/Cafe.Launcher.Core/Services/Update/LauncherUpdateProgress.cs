@@ -1,6 +1,6 @@
 using System;
 
-namespace Cafe.Launcher.Avalonia.Services.Update;
+namespace Cafe.Launcher.Core.Services.Update;
 
 /// <summary>Progress of a launcher update package download.</summary>
 /// <param name="DownloadedBytes">Bytes written so far.</param>

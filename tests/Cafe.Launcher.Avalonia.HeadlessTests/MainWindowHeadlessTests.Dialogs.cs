@@ -12,7 +12,7 @@ using Cafe.Launcher.Avalonia.Controls;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
-using Cafe.Launcher.Avalonia.Services.Update;
+using Cafe.Launcher.Core.Services.Update;
 
 namespace Cafe.Launcher.Avalonia.HeadlessTests;
 
