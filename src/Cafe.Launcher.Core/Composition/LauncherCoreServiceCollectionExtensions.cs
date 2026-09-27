@@ -32,6 +32,7 @@ public static class LauncherCoreServiceCollectionExtensions
         services.TryAddSingleton<DiskSpaceService>();
         services.TryAddSingleton<LocalInstallationStateStore>();
         services.TryAddSingleton<AuthorizationHeaderFactory>();
+        services.TryAddSingleton<BestHttpCookieLibraryService>();
         services.TryAddSingleton<RemoteHttpUrlValidator>();
         services.TryAddSingleton(sp => new LauncherSettingsService(
             sp.GetRequiredService<LauncherDataRoot>(),

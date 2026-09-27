@@ -44,7 +44,6 @@ public static class ServiceConfiguration
         services.AddSingleton<SystemCultureSnapshot>();
         services.AddSingleton<LocalizationService>();
         services.AddSingleton<ToastService>();
-        services.AddSingleton<BestHttpCookieLibraryService>();
 
         // Reuse the pre-DI logger when provided so there is a single Serilog
         // pipeline for the entire process (crash handling + application logging).
