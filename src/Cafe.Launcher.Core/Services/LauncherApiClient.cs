@@ -25,7 +25,7 @@ public sealed class LauncherApiClient
     private readonly IRemoteHttpTransport transport;
     private readonly AuthorizationHeaderFactory authorizationHeaderFactory;
     private readonly PatchUrlGroupService patchUrlGroupService;
-    private readonly LocalDiagnostics? diagnostics;
+    private readonly ILauncherDiagnostics? diagnostics;
     private readonly JsonSerializerOptions jsonOptions = JsonDefaults.Strict;
 
     /// <summary>
@@ -49,7 +49,7 @@ public sealed class LauncherApiClient
         IRemoteHttpTransport transport,
         AuthorizationHeaderFactory authorizationHeaderFactory,
         PatchUrlGroupService patchUrlGroupService,
-        LocalDiagnostics? diagnostics = null)
+        ILauncherDiagnostics? diagnostics = null)
     {
         this.transport = transport;
         this.authorizationHeaderFactory = authorizationHeaderFactory;
@@ -154,7 +154,7 @@ public sealed class LauncherApiClient
         return patchUrlGroupService.RewriteManifestUrl(response, patchUrlGroup);
     }
 
-    internal string RestoreOfficialPackageUrl(string url)
+    public string RestoreOfficialPackageUrl(string url)
     {
         return patchUrlGroupService.RestoreOfficialPackageUrl(url);
     }

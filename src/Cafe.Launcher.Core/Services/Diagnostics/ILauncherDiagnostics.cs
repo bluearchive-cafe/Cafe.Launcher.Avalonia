@@ -10,6 +10,11 @@ namespace Cafe.Launcher.Avalonia.Services.Diagnostics;
 /// </summary>
 public interface ILauncherDiagnostics
 {
+    Task DebugAsync(
+        string title,
+        string? message = null,
+        CancellationToken cancellationToken = default);
+
     Task ErrorAsync(
         string title,
         string? message,

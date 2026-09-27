@@ -65,6 +65,8 @@ public static class ServiceConfiguration
             LocalDiagnostics.RegisterSharedLogger(logger);
             return localDiagnostics;
         });
+        services.AddSingleton<ILauncherDiagnostics>(sp =>
+            sp.GetRequiredService<LocalDiagnostics>());
         services.AddSingleton(_ => new CrashReportStore(
             dataRoot,
             CrashReportStore.DefaultFallbackDirectory));
@@ -183,7 +185,7 @@ public static class ServiceConfiguration
             sp.GetRequiredService<IRemoteHttpTransport>(),
             sp.GetRequiredService<AuthorizationHeaderFactory>(),
             sp.GetRequiredService<PatchUrlGroupService>(),
-            sp.GetRequiredService<LocalDiagnostics>()));
+            sp.GetRequiredService<ILauncherDiagnostics>()));
         services.AddSingleton<ResourcePanelApiClient>();
         services.AddSingleton<ImageCacheService>(sp => new ImageCacheService(
             sp.GetRequiredService<IRemoteHttpTransport>(),
