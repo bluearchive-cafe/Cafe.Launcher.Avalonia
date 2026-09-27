@@ -12,7 +12,7 @@ namespace Cafe.Launcher.Avalonia.Services;
 /// redirect limits and HTTPS→HTTP downgrade rejection. JSON buffering lives in the
 /// transport — this type no longer owns response-body handling.
 /// </summary>
-internal static class RemoteHttpRequestService
+public static class RemoteHttpRequestService
 {
     private const int MaxRedirects = 5;
 
@@ -23,10 +23,10 @@ internal static class RemoteHttpRequestService
     /// <see cref="HasFakeIpDnsMarker"/> 读出标记，把笼统的网络归因换成针对性的
     /// Fake-IP 指引。
     /// </summary>
-    internal const string FakeIpDnsDataKey = "Cafe.Launcher.Avalonia.FakeIpDns";
+    public const string FakeIpDnsDataKey = "Cafe.Launcher.Avalonia.FakeIpDns";
 
     /// <summary>Checks the exception chain for the Fake-IP DNS failure marker.</summary>
-    internal static bool HasFakeIpDnsMarker(Exception exception)
+    public static bool HasFakeIpDnsMarker(Exception exception)
     {
         for (var current = exception; current is not null; current = current.InnerException)
         {
@@ -158,7 +158,7 @@ internal static class RemoteHttpRequestService
     /// local DNS resolution must stay active. The decision is therefore made per URI from
     /// the effective proxy instead of from the proxy settings enum alone.
     /// </summary>
-    internal static bool EgressesThroughProxy(IWebProxy? proxy, Uri uri)
+    public static bool EgressesThroughProxy(IWebProxy? proxy, Uri uri)
     {
         if (proxy is null || proxy.IsBypassed(uri))
         {
