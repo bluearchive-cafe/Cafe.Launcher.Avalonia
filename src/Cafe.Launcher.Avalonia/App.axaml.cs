@@ -9,16 +9,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Cafe.Launcher.Avalonia.UI;
-using Cafe.Launcher.Avalonia.UI.Composition;
 using Cafe.Launcher.Avalonia.Composition;
 using Cafe.Launcher.Avalonia.Constants;
-using Cafe.Launcher.Avalonia.Features.GameOperations;
-using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
-using Cafe.Launcher.Avalonia.ViewModels;
-using Cafe.Launcher.Avalonia.Views;
 
 namespace Cafe.Launcher.Avalonia;
 

@@ -80,11 +80,11 @@ internal sealed class DiskSpaceService : IDiskSpaceService
         return new DiskSpaceCheckResult(normalizedRequiredBytes, availableBytes);
     }
 
-    // 显式接口实现：静态同名成员给 Core 内部与测试用，实例成员只经接口暴露。
-    long IDiskSpaceService.ResolveRequiredBytes(bool isFreshInstall, long plannedDownloadBytes, string? decompressionSize) =>
-        ResolveRequiredBytes(isFreshInstall, plannedDownloadBytes, decompressionSize);
-
-    public static long ResolveRequiredBytes(bool isFreshInstall, long plannedDownloadBytes, string? decompressionSize)
+    /// <summary>
+    /// 新装时需要为解压峰值预留的空间：已知解压体积时取「计划下载量」与它之中的较大者。
+    /// 与其它成员一样按接口隐式实现——本类已 internal，显式接口实现只会多出一层转发。
+    /// </summary>
+    public long ResolveRequiredBytes(bool isFreshInstall, long plannedDownloadBytes, string? decompressionSize)
     {
         var normalizedPlannedDownloadBytes = Math.Max(0, plannedDownloadBytes);
         if (!isFreshInstall

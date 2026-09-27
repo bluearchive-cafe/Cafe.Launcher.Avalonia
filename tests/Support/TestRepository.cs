@@ -36,7 +36,7 @@ public static class TestRepository
     ];
 
     private static readonly Lazy<string> RepositoryRoot = new(FindRepositoryRoot);
-    private static readonly Lazy<string> ApplicationRoot = new(FindApplicationRoot);
+    private static readonly Lazy<string> HostRoot = new(() => FindProjectRoot("Cafe.Launcher.Avalonia"));
     private static readonly Lazy<string> CoreRoot = new(() => FindProjectRoot("Cafe.Launcher.Core"));
     private static readonly Lazy<string> PresentationRoot = new(() => FindProjectRoot("Cafe.Launcher.Avalonia.UI"));
     private static readonly Lazy<Dictionary<string, Dictionary<string, string>>> Localization =
@@ -48,11 +48,8 @@ public static class TestRepository
     /// <summary>仓库根：含解决方案文件的目录。面向读 workflow、release 脚本等仓库级文件的用例。</summary>
     public static string Root => RepositoryRoot.Value;
 
-    /// <summary>应用工程目录：<c>src/Cafe.Launcher.Avalonia</c>。面向读源码与资源文件的用例。</summary>
-    public static string ApplicationPath => ApplicationRoot.Value;
-
-    /// <summary>WinExe 宿主工程目录。保留旧名 <see cref="ApplicationPath"/> 以免让既有源码契约失效。</summary>
-    public static string HostPath => ApplicationRoot.Value;
+    /// <summary>WinExe 宿主工程目录：<c>src/Cafe.Launcher.Avalonia</c>。</summary>
+    public static string HostPath => HostRoot.Value;
 
     /// <summary>无 Avalonia 后端工程目录。</summary>
     public static string CorePath => CoreRoot.Value;
@@ -66,9 +63,6 @@ public static class TestRepository
     /// <summary>仓库根下的路径。</summary>
     public static string InRepository(params string[] segments) => Combine(Root, segments);
 
-    /// <summary>应用工程目录下的路径。</summary>
-    public static string InApplication(params string[] segments) => Combine(ApplicationPath, segments);
-
     public static string InHost(params string[] segments) => Combine(HostPath, segments);
 
     public static string InCore(params string[] segments) => Combine(CorePath, segments);
@@ -80,9 +74,6 @@ public static class TestRepository
     /// 相对引用（Bash 与 CI 里也是这个形状），由这里一次性换算成宿主分隔符。
     /// </summary>
     public static string FromRepositoryRoot(string relativePath) => CombineRelative(Root, relativePath);
-
-    /// <summary>应用工程目录下的路径，接受以 <c>'/'</c> 分隔的相对路径。</summary>
-    public static string FromApplicationRoot(string relativePath) => CombineRelative(ApplicationPath, relativePath);
 
     public static string FromHostRoot(string relativePath) => CombineRelative(HostPath, relativePath);
 
@@ -154,31 +145,9 @@ public static class TestRepository
     }
 
     /// <summary>
-    /// 从测试程序集的输出目录向上寻找应用工程：容器与 IDE 的运行目录深度不同，
+    /// 从测试程序集的输出目录向上寻找工程：容器与 IDE 的运行目录深度不同，
     /// 相对层级不可依赖，只能按标志文件上溯。
     /// </summary>
-    private static string FindApplicationRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null)
-        {
-            var applicationProject = Path.Combine(
-                directory.FullName,
-                "src",
-                "Cafe.Launcher.Avalonia",
-                "Cafe.Launcher.Avalonia.csproj");
-            if (File.Exists(applicationProject))
-            {
-                return Path.GetDirectoryName(applicationProject)!;
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new DirectoryNotFoundException(
-            "src/Cafe.Launcher.Avalonia/Cafe.Launcher.Avalonia.csproj was not found.");
-    }
-
     private static string FindProjectRoot(string projectName)
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

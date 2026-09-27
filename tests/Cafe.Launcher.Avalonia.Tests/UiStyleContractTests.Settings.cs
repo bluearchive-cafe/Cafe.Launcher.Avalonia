@@ -418,7 +418,7 @@ public sealed partial class UiStyleContractTests
             "{StaticResource Launcher.Spacing.Thickness.None}",
             GetStyleSetters(document, "Border.settings-row-divider")["Margin"]);
 
-        var application = XDocument.Load(TestRepository.FromApplicationRoot("App.axaml"));
+        var application = XDocument.Load(TestRepository.FromHostRoot("App.axaml"));
         var navigationHeaderPadding = application
             .Descendants()
             .Single(element =>
@@ -816,7 +816,7 @@ public sealed partial class UiStyleContractTests
             .Single(element => element.Attributes().Any(attribute =>
                 attribute.Name.LocalName == "Name"
                 && attribute.Value == "ActionPresenter"));
-        var application = XDocument.Load(TestRepository.FromApplicationRoot("App.axaml"));
+        var application = XDocument.Load(TestRepository.FromHostRoot("App.axaml"));
         var minWidthToken = application
             .Descendants()
             .Single(element => element.Attributes().Any(attribute =>
@@ -1094,7 +1094,7 @@ public sealed partial class UiStyleContractTests
             "{StaticResource Launcher.Component.Settings.Row.Action.MaxWidth}",
             actionPanel.Attribute("MaxWidth")?.Value);
 
-        var app = XDocument.Load(TestRepository.FromApplicationRoot("App.axaml"));
+        var app = XDocument.Load(TestRepository.FromHostRoot("App.axaml"));
         var actionMaxWidth = app
             .Descendants()
             .Single(element =>

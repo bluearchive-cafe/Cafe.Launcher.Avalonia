@@ -56,7 +56,7 @@ public sealed partial class UiStyleContractTests
         Assert.Contains("{DynamicResource Launcher.Color.Content.Row}", styles, StringComparison.Ordinal);
         Assert.Contains("{DynamicResource Launcher.Color.Card.Border}", styles, StringComparison.Ordinal);
 
-        var app = File.ReadAllText(TestRepository.FromApplicationRoot("App.axaml"));
+        var app = File.ReadAllText(TestRepository.FromHostRoot("App.axaml"));
         Assert.Contains("avares://MarkView.Avalonia/Themes/MarkdownTheme.axaml", app, StringComparison.Ordinal);
     }
 
@@ -229,7 +229,7 @@ public sealed partial class UiStyleContractTests
         // The Brand Blue neutral strategy resets the dialog surface family to the
         // values declared here; this pin keeps the XAML and the reset table from
         // drifting apart.
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("App.axaml"));
+        var document = XDocument.Load(TestRepository.FromHostRoot("App.axaml"));
         foreach (var (key, light, dark) in MaterialSchemeGenerator.DialogSurfaceDefaults.Concat(MaterialSchemeGenerator.NeutralContentDefaults))
         {
             Assert.Equal(light, ReadThemeBrushColor(document, "Light", key));
@@ -284,7 +284,7 @@ public sealed partial class UiStyleContractTests
             document.Descendants(),
             element => element.Name.LocalName == "Border" && HasClass(element, "dialog-footer"));
 
-        var application = XDocument.Load(TestRepository.FromApplicationRoot("App.axaml"));
+        var application = XDocument.Load(TestRepository.FromHostRoot("App.axaml"));
         var maxHeightToken = application
             .Descendants()
             .Single(element => element.Attributes().Any(attribute =>
@@ -926,7 +926,7 @@ public sealed partial class UiStyleContractTests
 
         // 新 token 必须同时落在两套 ThemeDictionary 里（生成器的中性重置表由
         // AppDialogSurfaceTokens_MatchGeneratorDeclaredDefaults 成对守护）。
-        var application = XDocument.Load(TestRepository.FromApplicationRoot("App.axaml"));
+        var application = XDocument.Load(TestRepository.FromHostRoot("App.axaml"));
         Assert.Equal("#FFF4F8FC", ReadThemeBrushColor(application, "Light", "Launcher.Color.Dialog.Action.Background"));
         Assert.Equal("#FF222B38", ReadThemeBrushColor(application, "Dark", "Launcher.Color.Dialog.Action.Background"));
     }
@@ -987,7 +987,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void DialogFamily_ProfileTokens_AreDeclaredOnceInAppResources()
     {
-        var appResources = XDocument.Load(TestRepository.FromApplicationRoot("App.axaml"));
+        var appResources = XDocument.Load(TestRepository.FromHostRoot("App.axaml"));
         var xKey = XNamespace.Get("http://schemas.microsoft.com/winfx/2006/xaml") + "Key";
 
         string TokenValue(string key) => appResources

@@ -178,8 +178,9 @@ public sealed class TestUserDataIsolationTests
 
         // 反空转基线：本守卫的形状是「排除声明表后必须为空」，于是「根目录找错／后缀失效
         // 导致一个文件都没扫」与「树是干净的」不可区分。两条基线把这种退化态变成红的。
-        // 基线为 2026-09-27 的实测值（host 247 + Core 48 + UI 2）；真的删文件就同步下调，
-        // 扫描失效应表现为红而不是绿。
+        // landedScannedFiles 是迁移收尾时按 host+Core+UI 三根实测的总量，刻意只做下限：
+        // 计数含 obj/ 下生成的 .cs，会随构建配置（RID、clean）浮动，逐根拆开或追平每次实测值
+        // 都会让守卫随构建状态红绿。真的删文件就同步下调，扫描失效应表现为红而不是绿。
         const int landedScannedFiles = 297;
         const int landedResolvingFiles = 5;
         var resolving = scanned

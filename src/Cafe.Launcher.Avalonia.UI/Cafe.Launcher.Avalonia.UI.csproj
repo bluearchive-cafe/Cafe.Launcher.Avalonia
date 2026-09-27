@@ -16,9 +16,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- 与宿主同一套过渡期项目级 using：表现层代码引用 Core 类型时不逐个文件写 using。 -->
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\Cafe.Launcher.Core\Cafe.Launcher.Core.csproj" />
   </ItemGroup>
 

@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Cafe.Launcher.Core;
 using Cafe.Launcher.Core.Composition;
@@ -159,30 +160,110 @@ public sealed class AssemblySplitContractTests
     }
 
     [Fact]
-    public void ProductionAssemblyInfo_GrantsInternalsOnlyToTestAssemblies()
+    public void ProductionAssemblies_GrantInternalsOnlyToTestAssemblies()
     {
-        var propertiesDirectories = Directory.GetDirectories(
-            TestRepository.FromRepositoryRoot("src"),
-            "Properties",
-            SearchOption.AllDirectories);
-
-        foreach (var propertiesDirectory in propertiesDirectories)
+        // 两种声明形状都要覆盖：源码里的 [assembly: InternalsVisibleTo("…")] 与 csproj/props/targets
+        // 里的 <InternalsVisibleTo Include="…" />——只扫 AssemblyInfo.cs 的守卫会静默漏掉后者。
+        // 反空转基线：一条 friend 都没扫到时必须红，否则换个声明形状就能让本守卫永真。
+        var friendNames = new List<string>();
+        foreach (var source in Directory.EnumerateFiles(
+                     TestRepository.FromRepositoryRoot("src"),
+                     "*.cs",
+                     SearchOption.AllDirectories))
         {
-            var assemblyInfo = Path.Combine(propertiesDirectory, "AssemblyInfo.cs");
-            if (!File.Exists(assemblyInfo))
-            {
-                continue;
-            }
-
-            var source = File.ReadAllText(assemblyInfo);
-            foreach (System.Text.RegularExpressions.Match friend in System.Text.RegularExpressions.Regex.Matches(
-                         source,
-                         "InternalsVisibleTo\\(\\\"(?<name>[^\\\"]+)\\\"\\)"))
-            {
-                var name = friend.Groups["name"].Value;
-                Assert.EndsWith("Tests", name, StringComparison.Ordinal);
-            }
+            AddMatches(friendNames, File.ReadAllText(source), "InternalsVisibleTo\\(\\\"(?<name>[^\\\"]+)\\\"\\)");
         }
+
+        foreach (var projectFile in ProjectFilePaths())
+        {
+            AddMatches(
+                friendNames,
+                File.ReadAllText(projectFile),
+                "<InternalsVisibleTo[^>]*Include=\\\"(?<name>[^\\\"]+)\\\"");
+        }
+
+        Assert.True(
+            friendNames.Count >= 2,
+            $"只扫到 {friendNames.Count} 条 friend 声明，本守卫已空转（声明形状变了而守卫没跟上）。");
+        Assert.All(friendNames, name => Assert.EndsWith("Tests", name, StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// Core 仍是「实现默认 public」，因此这里把「Models/ 之外的顶层 public class」钉成显式声明集：
+    /// 新增或移除都必须同时改这张表，收窄只会前进，不会因为顺手加一个 public 实现而静默回退。
+    /// 判据：<c>src/Cafe.Launcher.Core</c> 下 <c>Models/</c> 之外的顶层 class 声明（文件作用域
+    /// 命名空间让顶层类型顶格，按行首匹配因此天然排除嵌套类型）。<c>Models/</c> 是数据模型的豁免域。
+    /// </summary>
+    [Fact]
+    public void CorePublicImplementationsOutsideModels_AreTheDeclaredSet()
+    {
+        string[] declared =
+        [
+            "ApiConfig",
+            "AtomicJsonFileStore",
+            "BestHttpCookieLibraryService",
+            "CrashOriginExtensions",
+            "DirectorySizeProbe",
+            "DirectoryTreeDeleter",
+            "DirectoryWriteProbe",
+            "ExecutableLocator",
+            "FileDownloadService",
+            "FileSizeFormatter",
+            "FlexibleBoolConverter",
+            "GSettingsCli",
+            "GameCompatibilityPaths",
+            "GamePathValidator",
+            "GamePaths",
+            "GameProcessNames",
+            "GameProcessTracker",
+            "GameRuntimeIds",
+            "GraphicsInfoProbe",
+            "HttpClientLease",
+            "JsonDefaults",
+            "LauncherConstants",
+            "LauncherCoreServiceCollectionExtensions",
+            "LauncherDataRoot",
+            "LauncherLog",
+            "LauncherUpdateCheckResult",
+            "LeaseBackedDownloadTransportSource",
+            "LinuxProcessScanner",
+            "LinuxProcessSnapshot",
+            "LogEntryReader",
+            "NoticeStateService",
+            "OfficialHashService",
+            "ProcessService",
+            "ProtonBuildDiscovery",
+            "RemoteBodyReader",
+            "RemoteBodyTooLargeException",
+            "RemoteHttpRequestService",
+            "ResponseBodyReader",
+            "RetryPolicy",
+            "RuntimeVersionProbe",
+            "ShellFolderOpener",
+            "StorageFailure",
+            "SystemAnimationSettingsProvider",
+            "UnifiedLogger",
+            "UnixProcessRecordParser",
+            "VersionComparer"
+        ];
+        const string publicClassPattern =
+            "^public\\s+(?:(?:sealed|abstract|static|partial|readonly|unsafe)\\s+)*class\\s+(?<name>\\w+)";
+
+        var actual = Directory
+            .EnumerateFiles(TestRepository.CorePath, "*.cs", SearchOption.AllDirectories)
+            .Where(path => !IsBuildOutput(path))
+            .Where(path => !path.Contains(
+                $"{Path.DirectorySeparatorChar}Models{Path.DirectorySeparatorChar}",
+                StringComparison.OrdinalIgnoreCase))
+            .SelectMany(File.ReadAllLines)
+            .Select(line => Regex.Match(line, publicClassPattern))
+            .Where(match => match.Success)
+            .Select(match => match.Groups["name"].Value)
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.Equal(declared.OrderBy(name => name, StringComparer.Ordinal).ToArray(), actual);
     }
 
     [Fact]
@@ -204,6 +285,7 @@ public sealed class AssemblySplitContractTests
 
         Assert.Empty(offenders);
     }
+
     [Fact]
     public void CompositionRoot_RegistersCoreFirstAndOnlyOnce()
     {
@@ -257,4 +339,29 @@ public sealed class AssemblySplitContractTests
         .Select(element => element.Attribute("Include")?.Value)
         .OfType<string>()
         .ToArray();
+
+    private static void AddMatches(List<string> names, string text, string pattern)
+    {
+        foreach (Match match in Regex.Matches(text, pattern))
+        {
+            names.Add(match.Groups["name"].Value);
+        }
+    }
+
+    /// <summary>工程与属性文件：friend 声明也可能写在这里，而不是 <c>Properties/AssemblyInfo.cs</c>。</summary>
+    private static IEnumerable<string> ProjectFilePaths() =>
+        new[] { "src", "tests" }
+            .Select(TestRepository.FromRepositoryRoot)
+            .SelectMany(root => Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories))
+            .Concat(Directory.EnumerateFiles(TestRepository.Root, "*.props"))
+            .Concat(Directory.EnumerateFiles(TestRepository.Root, "*.targets"))
+            .Where(path => path.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase)
+                || path.EndsWith(".props", StringComparison.OrdinalIgnoreCase)
+                || path.EndsWith(".targets", StringComparison.OrdinalIgnoreCase))
+            .Where(path => !IsBuildOutput(path))
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+
+    private static bool IsBuildOutput(string path) =>
+        path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
+        || path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase);
 }

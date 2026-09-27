@@ -39,10 +39,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- 过渡期：Core 的源命名空间已收口为 Cafe.Launcher.Core.*（见宿主 csproj 的同一段说明）。 -->
-  </ItemGroup>
-
-  <ItemGroup>
     <Compile Include="..\TestUserDataIsolation.cs" Link="TestUserDataIsolation.cs" />
     <Compile Include="..\TestAnimationSetup.cs" Link="TestAnimationSetup.cs" />
     <Compile Include="..\Support\TestDirectory.cs" Link="Support\TestDirectory.cs" />

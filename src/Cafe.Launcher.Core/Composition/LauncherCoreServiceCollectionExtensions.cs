@@ -51,37 +51,33 @@ public static class LauncherCoreServiceCollectionExtensions
             LocalDiagnostics.RegisterSharedLogger(logger);
             return new LocalDiagnostics(logger);
         });
-        services.TryAddSingleton<ILauncherDiagnostics>(sp => sp.GetRequiredService<LocalDiagnostics>());        // ── HTTP 族（连接池、代理感知传输与官方 API 客户端）─────────────────
+        services.TryAddSingleton<ILauncherDiagnostics>(sp => sp.GetRequiredService<LocalDiagnostics>());
+
+        // ── HTTP 族（连接池、代理感知传输与官方 API 客户端）─────────────────
         // 偏好闭包按使用时机读设置草稿所有者的已保存快照（ADR-028）：调用方不必「记得推」。
         // 草稿所有者是表现层的设置编辑器；Core-only 容器（测试、辅助宿主）没有它，
         // 退回与更新渠道无关的默认设置，而不是让构造失败。
         services.TryAddSingleton(sp =>
         {
-            LauncherSettings Snapshot() =>
-                sp.GetService<ISettingsDraftOwner>()?.GetSavedSnapshot()
-                ?? LauncherSettings.CreateDefaults(sp.GetRequiredService<LauncherBuildIdentity>());
             return new HttpClientFactory(
                 sp.GetRequiredService<ProxySettingsService>(),
-                () => Snapshot().EnableHttp2);
+                () => SavedSettingsSnapshot(sp).EnableHttp2);
         });
         services.TryAddSingleton<IRemoteHttpClientLeaseSource>(sp =>
             sp.GetRequiredService<HttpClientFactory>());
         services.TryAddSingleton<IRemoteHttpTransport>(sp =>
-        {
-            LauncherSettings Snapshot() =>
-                sp.GetService<ISettingsDraftOwner>()?.GetSavedSnapshot()
-                ?? LauncherSettings.CreateDefaults(sp.GetRequiredService<LauncherBuildIdentity>());
-            return new RemoteHttpTransport(
+            new RemoteHttpTransport(
                 sp.GetRequiredService<IRemoteHttpClientLeaseSource>(),
                 sp.GetRequiredService<IRemoteHttpUrlValidator>(),
-                () => Snapshot().ProxyMode);
-        });
+                () => SavedSettingsSnapshot(sp).ProxyMode));
         services.TryAddSingleton<LauncherApiClient>(sp => new LauncherApiClient(
             sp.GetRequiredService<IRemoteHttpTransport>(),
             sp.GetRequiredService<AuthorizationHeaderFactory>(),
             sp.GetRequiredService<PatchUrlGroupService>(),
             sp.GetRequiredService<ILauncherDiagnostics>()));
-        services.TryAddSingleton<ILauncherApiClient>(sp => sp.GetRequiredService<LauncherApiClient>());        services.TryAddSingleton<Crc64Service>();
+        services.TryAddSingleton<ILauncherApiClient>(sp => sp.GetRequiredService<LauncherApiClient>());
+
+        services.TryAddSingleton<Crc64Service>();
         services.TryAddSingleton<ICrc64Service>(sp => sp.GetRequiredService<Crc64Service>());
         services.TryAddSingleton<DiskSpaceService>();
         services.TryAddSingleton<IDiskSpaceService>(sp => sp.GetRequiredService<DiskSpaceService>());
@@ -100,8 +96,8 @@ public static class LauncherCoreServiceCollectionExtensions
         // 具体编辑器，UI 线程编排留在实现方。
         services.TryAddSingleton<ISavedSettingsWriter, SavedSettingsWriter>();
         services.TryAddSingleton<ILauncherSettingsService>(sp => sp.GetRequiredService<LauncherSettingsService>());
-        // 代理解析与连接池属于后端：HttpClientFactory 的注册仍留在组合根，因为它的
-        // 偏好闭包读的是表现层的设置快照（ADR-028 的按使用时机拉取）。
+        // 代理解析属于后端；连接池（HttpClientFactory）与其传输登记在本文件上方的 HTTP 族里，
+        // 偏好闭包读草稿所有者的已保存快照（ADR-028 的按使用时机拉取）。
         services.TryAddSingleton<ProxySettingsService>();
         services.TryAddSingleton<NoticeStateService>();
         services.TryAddSingleton<SystemAnimationSettingsProvider>();
@@ -112,7 +108,9 @@ public static class LauncherCoreServiceCollectionExtensions
             sp.GetRequiredService<LauncherDataRoot>(),
             sp.GetRequiredService<ILauncherDiagnostics>(),
             sp.GetRequiredService<LauncherBuildIdentity>()));
-        services.TryAddSingleton<IImageCacheService>(sp => sp.GetRequiredService<ImageCacheService>());        // 自更新：检查、宿主信息、下载器、应用器与自更新服务。应用器先于自更新服务注册：
+        services.TryAddSingleton<IImageCacheService>(sp => sp.GetRequiredService<ImageCacheService>());
+
+        // 自更新：检查、宿主信息、下载器、应用器与自更新服务。应用器先于自更新服务注册：
         // 可用性判定（本机是否带 helper）由应用器回答。
         services.TryAddSingleton<LauncherUpdateService>();
         services.TryAddSingleton<ILauncherUpdateService>(sp => sp.GetRequiredService<LauncherUpdateService>());
@@ -144,4 +142,12 @@ public static class LauncherCoreServiceCollectionExtensions
             sp.GetRequiredService<PrefixMetadataStore>()));
         return services;
     }
+
+    /// <summary>
+    /// 偏好闭包共用的一次求值：草稿所有者缺席（Core-only 容器）时退回默认设置，
+    /// 而不是让构造失败。
+    /// </summary>
+    private static LauncherSettings SavedSettingsSnapshot(IServiceProvider services) =>
+        services.GetService<ISettingsDraftOwner>()?.GetSavedSnapshot()
+        ?? LauncherSettings.CreateDefaults(services.GetRequiredService<LauncherBuildIdentity>());
 }

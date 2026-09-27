@@ -36,7 +36,7 @@ public sealed partial class UiStyleContractTests
         var mainWindow = File.ReadAllText(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
         var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
         var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
-        var app = XDocument.Load(TestRepository.FromApplicationRoot("App.axaml"));
+        var app = XDocument.Load(TestRepository.FromHostRoot("App.axaml"));
 
         Assert.Contains(
             "IsVisible=\"{Binding RemoteContent.IsPanelVisible}\"",
