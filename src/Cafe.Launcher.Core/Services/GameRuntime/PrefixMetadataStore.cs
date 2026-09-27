@@ -28,7 +28,7 @@ internal sealed record PrefixMetadata(
 /// 最近一次启动所用前缀的元数据存储：单文件、每次启动覆盖，前缀变化即重置创建信息与计数。
 /// 写入失败不影响启动。
 /// </summary>
-public sealed class PrefixMetadataStore
+internal sealed class PrefixMetadataStore
 {
     private readonly LauncherDataRoot dataRoot;
     private readonly LauncherBuildIdentity? buildIdentity;

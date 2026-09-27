@@ -1,6 +1,6 @@
 namespace Cafe.Launcher.Core.Models;
 
-public sealed class PatchUrlGroupDefinition
+internal sealed class PatchUrlGroupDefinition
 {
     public string Code { get; set; } = PatchUrlGroups.Official;
 

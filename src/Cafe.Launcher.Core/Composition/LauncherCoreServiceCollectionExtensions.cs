@@ -115,6 +115,7 @@ public static class LauncherCoreServiceCollectionExtensions
         services.TryAddSingleton<IImageCacheService>(sp => sp.GetRequiredService<ImageCacheService>());        // 自更新：检查、宿主信息、下载器、应用器与自更新服务。应用器先于自更新服务注册：
         // 可用性判定（本机是否带 helper）由应用器回答。
         services.TryAddSingleton<LauncherUpdateService>();
+        services.TryAddSingleton<ILauncherUpdateService>(sp => sp.GetRequiredService<LauncherUpdateService>());
         services.TryAddSingleton<ILauncherUpdateHostInfoProvider, LauncherUpdateHostInfoProvider>();
         services.TryAddSingleton<ILauncherUpdateDownloader, LauncherUpdateDownloader>();
         services.TryAddSingleton<IWindowsLauncherUpdateApplier, WindowsLauncherUpdateApplier>();

@@ -33,7 +33,7 @@ public interface IDownloadTransportSource
 }
 
 /// <summary>Production transport over one proxy-aware lease.</summary>
-public sealed class LeaseBackedDownloadTransport(
+internal sealed class LeaseBackedDownloadTransport(
     HttpClientLease lease,
     IRemoteHttpUrlValidator urlValidator) : IDownloadTransport
 {

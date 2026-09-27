@@ -18,7 +18,7 @@ namespace Cafe.Launcher.Core.Services;
 /// <summary>
 /// Checks for launcher self-updates via the server proxy endpoint.
 /// </summary>
-public sealed partial class LauncherUpdateService
+internal sealed partial class LauncherUpdateService : ILauncherUpdateService
 {
     private static readonly JsonSerializerOptions JsonOptions = JsonDefaults.Strict;
     private readonly IRemoteHttpTransport transport;

@@ -17,7 +17,7 @@ namespace Cafe.Launcher.Core.Services.GameRuntime;
 /// 把管道读干（不读会让子进程写满管道而卡住），只是不再写文件。</para>
 /// <para>文件路径由 <see cref="LauncherDataRoot"/> 拥有；本类不解析进程级静态。</para>
 /// </remarks>
-public sealed class RunnerOutputCapture
+internal sealed class RunnerOutputCapture
 {
     /// <summary>写入文件的上限；超过即停止记录并在末尾标注截断。</summary>
     internal const int MaxCharacters = 256 * 1024;

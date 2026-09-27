@@ -16,7 +16,7 @@ public interface ILauncherCoreService
     Task<LauncherStatusSnapshot> LoadAsync(CancellationToken cancellationToken = default);
 }
 
-public sealed class LauncherCoreService : ILauncherCoreService
+internal sealed class LauncherCoreService : ILauncherCoreService
 {
     /// <summary>
     /// Overall deadline for the six concurrent remote reads that form the startup

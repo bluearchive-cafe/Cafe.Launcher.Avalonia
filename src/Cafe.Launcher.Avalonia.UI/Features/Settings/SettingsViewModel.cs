@@ -26,7 +26,7 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
     private readonly ISavedSettingsWriter savedSettingsWriter;
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
-    private readonly LauncherUpdateService launcherUpdateService;
+    private readonly ILauncherUpdateService launcherUpdateService;
     private readonly ILauncherSelfUpdateService launcherSelfUpdateService;
     private readonly DialogsViewModel dialogs;
     private readonly SettingsEditor editor;
@@ -68,7 +68,7 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
         ISavedSettingsWriter savedSettingsWriter,
         LocalizationService localizer,
         ToastService toastService,
-        LauncherUpdateService launcherUpdateService,
+        ILauncherUpdateService launcherUpdateService,
         ILauncherSelfUpdateService launcherSelfUpdateService,
         DialogsViewModel dialogs,
         UnifiedLogger unifiedLogger,
