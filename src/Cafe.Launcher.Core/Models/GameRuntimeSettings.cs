@@ -1,10 +1,9 @@
 using System;
 using System.Text.Json.Serialization;
-using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Cafe.Launcher.Core.Models;
 
-public sealed class GameRuntimeSettings : ObservableObject
+public sealed class GameRuntimeSettings : SettingsModel
 {
     private string runner = GameRuntimeRunners.Auto;
     private string? runnerPath;
