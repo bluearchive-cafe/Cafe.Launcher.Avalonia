@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 using System.IO;
 using System.Net;
@@ -145,7 +145,7 @@ public readonly record struct RemoteBody(Stream Content, long? DeclaredContentLe
 public sealed class RemoteHttpTransport : IRemoteHttpTransport
 {
     private readonly Func<string, TimeSpan?, CancellationToken, Task<HttpClientLease>> createLeaseAsync;
-    private readonly RemoteHttpUrlValidator urlValidator;
+    private readonly IRemoteHttpUrlValidator urlValidator;
     private readonly Func<string> resolveProxyMode;
     private readonly Func<TimeSpan, CancellationToken, Task>? delayAsync;
     private readonly TimeSpan? idleReadTimeout;
@@ -153,7 +153,7 @@ public sealed class RemoteHttpTransport : IRemoteHttpTransport
     /// <summary>Production constructor — resolves proxy modes from launcher settings and leases from the shared factory.</summary>
     public RemoteHttpTransport(
         IRemoteHttpClientLeaseSource leaseSource,
-        RemoteHttpUrlValidator urlValidator,
+        IRemoteHttpUrlValidator urlValidator,
         Func<string> resolveProxyMode)
         : this(
             (proxyMode, timeout, cancellationToken) =>
@@ -173,7 +173,7 @@ public sealed class RemoteHttpTransport : IRemoteHttpTransport
     /// </summary>
     internal RemoteHttpTransport(
         Func<string, TimeSpan?, CancellationToken, Task<HttpClientLease>> createLeaseAsync,
-        RemoteHttpUrlValidator urlValidator,
+        IRemoteHttpUrlValidator urlValidator,
         string fixedProxyMode,
         Func<TimeSpan, CancellationToken, Task>? delayAsync = null,
         TimeSpan? idleReadTimeout = null)
@@ -188,7 +188,7 @@ public sealed class RemoteHttpTransport : IRemoteHttpTransport
 
     private RemoteHttpTransport(
         Func<string, TimeSpan?, CancellationToken, Task<HttpClientLease>> createLeaseAsync,
-        RemoteHttpUrlValidator urlValidator,
+        IRemoteHttpUrlValidator urlValidator,
         Func<string> resolveProxyMode,
         Func<TimeSpan, CancellationToken, Task>? delayAsync,
         TimeSpan? idleReadTimeout)

@@ -114,7 +114,7 @@ public sealed class LauncherPresentationSession : IDisposable
 
         try
         {
-            var settingsService = services.GetRequiredService<LauncherSettingsService>();
+            var settingsService = services.GetRequiredService<ILauncherSettingsService>();
             var savedSettings = await settingsService.ReadAsync(cancellationToken);
             window.ApplySavedWindowState(savedSettings);
             await resolvedViewModel.InitializeAsync(cancellationToken);

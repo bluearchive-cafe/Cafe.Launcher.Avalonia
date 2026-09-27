@@ -106,7 +106,7 @@ public static class LauncherPresentationServiceRegistrations
             var settingsEditor = sp.GetRequiredService<SettingsEditor>();
             return new RemoteHttpTransport(
                 sp.GetRequiredService<IRemoteHttpClientLeaseSource>(),
-                sp.GetRequiredService<RemoteHttpUrlValidator>(),
+                sp.GetRequiredService<IRemoteHttpUrlValidator>(),
                 // 代理模式解析自设置编辑器的已保存快照——与各调用方此前传入的
                 // snapshot.ProxyMode 同源；options.ProxyMode 仍可按调用覆盖。
                 () => settingsEditor.GetSavedSnapshot().ProxyMode);
@@ -122,7 +122,7 @@ public static class LauncherPresentationServiceRegistrations
         services.AddSingleton<ManifestValidationService>();
         services.AddSingleton(sp => new ResourcePanelUidService(
             sp.GetRequiredService<BestHttpCookieLibraryService>(),
-            sp.GetRequiredService<LauncherSettingsService>(),
+            sp.GetRequiredService<ILauncherSettingsService>(),
             sp.GetRequiredService<ISavedSettingsWriter>(),
             sp.GetRequiredService<LocalDiagnostics>()));
         services.AddSingleton(new PresentationOptions(showHiddenSettings));
@@ -168,9 +168,9 @@ public static class LauncherPresentationServiceRegistrations
             sp.GetRequiredService<RemoteManifestService>(),
             sp.GetRequiredService<IFileDownloadService>(),
             sp.GetRequiredService<ILocalInstallationStateStore>(),
-            sp.GetRequiredService<LauncherSettingsService>(),
+            sp.GetRequiredService<ILauncherSettingsService>(),
             sp.GetRequiredService<HttpClientFactory>(),
-            sp.GetRequiredService<RemoteHttpUrlValidator>(),
+            sp.GetRequiredService<IRemoteHttpUrlValidator>(),
             sp.GetRequiredService<ICrc64Service>(),
             sp.GetRequiredService<IDiskSpaceService>(),
             sp.GetRequiredService<LocalDiagnostics>(),

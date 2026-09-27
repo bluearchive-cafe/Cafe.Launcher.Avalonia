@@ -37,7 +37,7 @@ internal sealed class ShellLifecycle : IDisposable
     public ModalHostViewModel ModalHost { get; }
 
     private readonly ILauncherCoreService launcherCoreService;
-    private readonly LauncherSettingsService settingsService;
+    private readonly ILauncherSettingsService settingsService;
     private readonly ISavedSettingsWriter savedSettingsWriter;
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
@@ -93,7 +93,7 @@ internal sealed class ShellLifecycle : IDisposable
     /// <summary>Initializes shell lifecycle dependencies and subscribes error handling callbacks.</summary>
     public ShellLifecycle(
         ILauncherCoreService launcherCoreService,
-        LauncherSettingsService settingsService,
+        ILauncherSettingsService settingsService,
         ISavedSettingsWriter savedSettingsWriter,
         LocalizationService localizer,
         ToastService toastService,
@@ -127,7 +127,7 @@ internal sealed class ShellLifecycle : IDisposable
 
     internal ShellLifecycle(
         ILauncherCoreService launcherCoreService,
-        LauncherSettingsService settingsService,
+        ILauncherSettingsService settingsService,
         ISavedSettingsWriter savedSettingsWriter,
         LocalizationService localizer,
         ToastService toastService,

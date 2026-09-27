@@ -22,7 +22,7 @@ namespace Cafe.Launcher.Avalonia.Features.Settings;
 
 internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalContentViewModel, ILanguageAwarePresentation
 {
-    private readonly LauncherSettingsService settingsService;
+    private readonly ILauncherSettingsService settingsService;
     private readonly ISavedSettingsWriter savedSettingsWriter;
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
@@ -64,7 +64,7 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
     public SettingsAppearanceViewModel Appearance { get; }
 
     public SettingsViewModel(
-        LauncherSettingsService settingsService,
+        ILauncherSettingsService settingsService,
         ISavedSettingsWriter savedSettingsWriter,
         LocalizationService localizer,
         ToastService toastService,

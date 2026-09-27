@@ -31,7 +31,7 @@ public sealed class LauncherCoreService : ILauncherCoreService
     private readonly LauncherApiClient apiClient;
     private readonly ILocalInstallationStateStore localInstallationStateStore;
     private readonly GameInstallationPath installationPath;
-    private readonly LauncherSettingsService settingsService;
+    private readonly ILauncherSettingsService settingsService;
     private readonly ILauncherDiagnostics diagnostics;
     private readonly TimeSpan remoteStateBudget;
 
@@ -39,7 +39,7 @@ public sealed class LauncherCoreService : ILauncherCoreService
         LauncherApiClient apiClient,
         ILocalInstallationStateStore localInstallationStateStore,
         GameInstallationPath installationPath,
-        LauncherSettingsService settingsService,
+        ILauncherSettingsService settingsService,
         ILauncherDiagnostics diagnostics)
         : this(
             apiClient,
@@ -55,7 +55,7 @@ public sealed class LauncherCoreService : ILauncherCoreService
         LauncherApiClient apiClient,
         ILocalInstallationStateStore localInstallationStateStore,
         GameInstallationPath installationPath,
-        LauncherSettingsService settingsService,
+        ILauncherSettingsService settingsService,
         ILauncherDiagnostics diagnostics,
         TimeSpan remoteStateBudget)
     {

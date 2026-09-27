@@ -19,7 +19,7 @@ namespace Cafe.Launcher.Core.Services;
 /// 读取可以由任何模块直接调用；写入在生产代码里只由 <see cref="ISavedSettingsWriter"/>
 /// 调用——它负责把落盘值同步给设置编辑器，绕过去就会让草稿与磁盘分叉。
 /// </summary>
-public sealed class LauncherSettingsService : IDisposable
+internal sealed class LauncherSettingsService : ILauncherSettingsService, IDisposable
 {
     private readonly SemaphoreSlim writeLock = new(1, 1);
     private readonly LauncherDataRoot dataRoot;

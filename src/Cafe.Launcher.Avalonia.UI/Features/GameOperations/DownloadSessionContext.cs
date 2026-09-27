@@ -18,7 +18,7 @@ internal sealed record DownloadSessionContext(
     IDownloadTransportSource TransportSource,
     ICrc64Service ICrc64Service,
     ILocalInstallationStateStore ILocalInstallationStateStore,
-    LauncherSettingsService SettingsService,
+    ILauncherSettingsService SettingsService,
     IDiskSpaceService IDiskSpaceService,
     LocalDiagnostics Diagnostics,
     LocalizationService Localizer,

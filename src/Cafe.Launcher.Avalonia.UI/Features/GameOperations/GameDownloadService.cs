@@ -21,7 +21,7 @@ internal sealed class GameDownloadService : IDisposable
     private readonly RemoteManifestService remoteManifestService;
     private readonly IFileDownloadService fileDownloadService;
     private readonly ILocalInstallationStateStore localInstallationStateStore;
-    private readonly LauncherSettingsService settingsService;
+    private readonly ILauncherSettingsService settingsService;
     private readonly IDownloadTransportSource transportSource;
     private readonly ICrc64Service crc64Service;
     private readonly IDiskSpaceService diskSpaceService;
@@ -43,9 +43,9 @@ internal sealed class GameDownloadService : IDisposable
         RemoteManifestService remoteManifestService,
         IFileDownloadService fileDownloadService,
         ILocalInstallationStateStore localInstallationStateStore,
-        LauncherSettingsService settingsService,
+        ILauncherSettingsService settingsService,
         HttpClientFactory httpClientFactory,
-        RemoteHttpUrlValidator urlValidator,
+        IRemoteHttpUrlValidator urlValidator,
         ICrc64Service crc64Service,
         IDiskSpaceService diskSpaceService,
         LocalDiagnostics diagnostics,
@@ -78,9 +78,9 @@ internal sealed class GameDownloadService : IDisposable
         RemoteManifestService remoteManifestService,
         IFileDownloadService fileDownloadService,
         ILocalInstallationStateStore localInstallationStateStore,
-        LauncherSettingsService settingsService,
+        ILauncherSettingsService settingsService,
         HttpClientFactory httpClientFactory,
-        RemoteHttpUrlValidator urlValidator,
+        IRemoteHttpUrlValidator urlValidator,
         ICrc64Service crc64Service,
         IDiskSpaceService diskSpaceService,
         LocalDiagnostics diagnostics,
