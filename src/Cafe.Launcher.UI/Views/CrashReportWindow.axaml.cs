@@ -1,0 +1,88 @@
+using System;
+using System.IO;
+using Avalonia.Controls;
+using Avalonia.Input.Platform;
+using Avalonia.Interactivity;
+using Avalonia.Threading;
+using Cafe.Launcher.UI.Services;
+using Cafe.Launcher.Core.Services.Diagnostics;
+using Cafe.Launcher.UI.Services.Diagnostics;
+using Cafe.Launcher.UI.ViewModels;
+using Cafe.Launcher.Core.Services;
+
+namespace Cafe.Launcher.UI.Views;
+
+/// <summary>Independent terminal window for a persisted crash report.</summary>
+public partial class CrashReportWindow : Window
+{
+    private readonly CrashReportWindowViewModel viewModel;
+
+    public CrashReportWindow()
+        : this(new CrashReport
+        {
+            Id = "CR-PREVIEW",
+            OccurredAt = DateTimeOffset.Now,
+            Source = "Preview",
+            AppVersion = "preview",
+            BuildSha = "preview",
+            OperatingSystem = Environment.OSVersion.ToString(),
+            UiCulture = System.Globalization.CultureInfo.CurrentUICulture.Name,
+            ExceptionType = nameof(InvalidOperationException),
+            TechnicalDetails = "Preview crash details"
+        },
+        // 设计期预览不接触真实用户数据目录。
+        new LauncherDataRoot(Path.GetTempPath()))
+    {
+    }
+
+    public CrashReportWindow(CrashReport report, LauncherDataRoot dataRoot)
+    {
+        ArgumentNullException.ThrowIfNull(report);
+        InitializeComponent();
+        viewModel = new CrashReportWindowViewModel(report, dataRoot);
+        DataContext = viewModel;
+        Opened += OnOpened;
+    }
+
+    private void OnOpened(object? sender, EventArgs e)
+    {
+        Opened -= OnOpened;
+        Dispatcher.UIThread.Post(() => ExitButton.Focus(), DispatcherPriority.Background);
+    }
+
+    private async void OnCopyDetailsClick(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+            if (clipboard is null)
+            {
+                return;
+            }
+
+            await clipboard.SetTextAsync(viewModel.TechnicalDetails);
+            CopyDetailsButton.Content = viewModel.CopiedText;
+        }
+        catch
+        {
+            // Clipboard is optional on some platforms; the selectable details remain available.
+        }
+    }
+
+    private void OnOpenLogsClick(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            _ = ShellFolderOpener.OpenInFileManager(viewModel.LogDirectory);
+        }
+        catch
+        {
+            // Opening the shell must not destabilize the already-failing process.
+        }
+    }
+
+    private void OnExitClick(object? sender, RoutedEventArgs e)
+    {
+        Close();
+    }
+}

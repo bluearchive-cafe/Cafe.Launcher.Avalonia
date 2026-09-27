@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 
-namespace Cafe.Launcher.Updater;
+namespace Cafe.Launcher.Updater.Core;
 
 /// <summary>
 /// The private command line shared by the launcher and its update helper: everything

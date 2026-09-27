@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 
-namespace Cafe.Launcher.Avalonia.Testing;
+namespace Cafe.Launcher.Testing;
 
 /// <summary>
 /// 收集回调的线程安全列表。进度回调不是单线程抵达的：安装校验阶段由 ≤8 个 worker 上报、

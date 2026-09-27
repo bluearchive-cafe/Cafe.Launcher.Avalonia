@@ -37,7 +37,7 @@ function Get-TargetFileList {
 }
 
 # --- Validate map completeness against App.axaml token definitions. ----------
-$appPath = Join-Path $RepositoryRoot 'src\Cafe.Launcher.Avalonia\App.axaml'
+$appPath = Join-Path $RepositoryRoot 'src\Cafe.Launcher\App.axaml'
 $appText = [System.IO.File]::ReadAllText($appPath)
 $definedKeys = [regex]::Matches($appText, 'x:Key="(Launcher[A-Z][A-Za-z0-9]*)"') |
     ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique

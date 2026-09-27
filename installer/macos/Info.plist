@@ -7,9 +7,9 @@
     <key>CFBundleDisplayName</key>
     <string>Cafe Launcher</string>
     <key>CFBundleIdentifier</key>
-    <string>cafe.bluearchive.Cafe-Launcher-Avalonia</string>
+    <string>cafe.bluearchive.Cafe-Launcher</string>
     <key>CFBundleExecutable</key>
-    <string>Cafe.Launcher.Avalonia</string>
+    <string>Cafe.Launcher</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleInfoDictionaryVersion</key>

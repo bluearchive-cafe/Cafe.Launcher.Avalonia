@@ -1,0 +1,271 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Cafe.Launcher.UI.Constants;
+using Cafe.Launcher.UI.Services;
+using Cafe.Launcher.Core.Services.Diagnostics;
+using Cafe.Launcher.UI.ViewModels;
+using Cafe.Launcher.UI.Helpers;
+
+namespace Cafe.Launcher.UI.Features.Diagnostics;
+
+internal sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalContentViewModel
+{
+    private const int PageSize = 500;
+    private static readonly TimeSpan FilterDebounceDelay = TimeSpan.FromMilliseconds(200);
+    private readonly UnifiedLogger logger;
+    private readonly ToastService toastService;
+    private readonly LocalizationService localizer;
+    private readonly ILauncherDiagnostics diagnostics;
+    private readonly Func<CancellationToken, Task<IReadOnlyList<LogEntryDisplay>>> entryLoader;
+    private IReadOnlyList<LogEntryDisplay> allEntries = [];
+    private readonly LatestRefresh filterRefresh = new();
+    private int loadedPageCount = 1;
+    private int totalEntryCount;
+
+    /// <summary>Gets the active debounced filter operation for deterministic coordination.</summary>
+    internal Task PendingFilterTask => filterRefresh.Pending;
+
+    /// <summary>Gets whether another 500-entry page is available before the loaded entries.</summary>
+    public bool HasEarlierEntries => allEntries.Count < totalEntryCount;
+
+    [ObservableProperty]
+    private bool isVisible;
+
+    [ObservableProperty]
+    private string filterText = "";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsFilterAllActive))]
+    [NotifyPropertyChangedFor(nameof(IsFilterVerboseActive))]
+    [NotifyPropertyChangedFor(nameof(IsFilterDebugActive))]
+    [NotifyPropertyChangedFor(nameof(IsFilterInfoActive))]
+    [NotifyPropertyChangedFor(nameof(IsFilterWarnActive))]
+    [NotifyPropertyChangedFor(nameof(IsFilterErrorActive))]
+    [NotifyPropertyChangedFor(nameof(IsFilterFatalActive))]
+    private LogEntrySeverity? severityFilter; // null = show all
+
+    public bool IsFilterAllActive => SeverityFilter is null;
+    public bool IsFilterVerboseActive => SeverityFilter == LogEntrySeverity.Verbose;
+    public bool IsFilterDebugActive => SeverityFilter == LogEntrySeverity.Debug;
+    public bool IsFilterInfoActive => SeverityFilter == LogEntrySeverity.Info;
+    public bool IsFilterWarnActive => SeverityFilter == LogEntrySeverity.Warn;
+    public bool IsFilterErrorActive => SeverityFilter == LogEntrySeverity.Error;
+    public bool IsFilterFatalActive => SeverityFilter == LogEntrySeverity.Fatal;
+    public bool HasFilteredEntries => FilteredEntries.Count > 0;
+    public bool IsEmpty => FilteredEntries.Count == 0;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasFilteredEntries))]
+    [NotifyPropertyChangedFor(nameof(IsEmpty))]
+    private ObservableCollection<LogEntryDisplay> filteredEntries = [];
+
+    public LogViewerDialogViewModel(
+        UnifiedLogger logger,
+        ToastService toastService,
+        LocalizationService localizer,
+        ILauncherDiagnostics diagnostics)
+        : this(logger, toastService, localizer, diagnostics, null)
+    {
+    }
+
+    internal LogViewerDialogViewModel(
+        UnifiedLogger logger,
+        ToastService toastService,
+        LocalizationService localizer,
+        ILauncherDiagnostics diagnostics,
+        Func<CancellationToken, Task<IReadOnlyList<LogEntryDisplay>>>? entryLoader = null)
+    {
+        this.logger = logger;
+        this.toastService = toastService;
+        this.localizer = localizer;
+        this.diagnostics = diagnostics;
+        this.entryLoader = entryLoader ?? LoadEntriesAsync;
+    }
+
+    partial void OnFilterTextChanged(string value)
+    {
+        filterRefresh.Run(FilterDebounceDelay, _ =>
+        {
+            ApplyFilter();
+            return Task.CompletedTask;
+        });
+    }
+
+    partial void OnSeverityFilterChanged(LogEntrySeverity? value) => ApplyFilter();
+
+    private void ApplyFilter()
+    {
+        IEnumerable<LogEntryDisplay> filtered = allEntries;
+        if (SeverityFilter is not null)
+            filtered = filtered.Where(e => e.Severity == SeverityFilter.Value);
+        if (!string.IsNullOrWhiteSpace(FilterText))
+            filtered = filtered.Where(e =>
+                e.Title.Contains(FilterText, StringComparison.OrdinalIgnoreCase) ||
+                e.Details.Contains(FilterText, StringComparison.OrdinalIgnoreCase));
+
+        FilteredEntries = new ObservableCollection<LogEntryDisplay>(filtered);
+    }
+
+    [RelayCommand]
+    private async Task OpenAsync(CancellationToken cancellationToken)
+    {
+        IsVisible = true;
+        loadedPageCount = 1;
+        try
+        {
+            SetLoadedEntries(await entryLoader(cancellationToken));
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            // 日志读取失败正是用户最需要日志的时刻：空列表必须伴随显式的
+            // 错误提示与本地日志记录，避免「加载失败」被误读成「没有日志」。
+            toastService.ShowError(ErrorHandlingService.FormatToastMessage(
+                localizer.T(LocalizationKeys.LogLoadFailed),
+                ex,
+                localizer.T(LocalizationKeys.ErrorNetworkUnavailable),
+                localizer.T(LocalizationKeys.ErrorFakeIpDns)));
+            await diagnostics.ErrorAsync(
+                "LogViewer",
+                "Loading the log entries failed.",
+                ex,
+                CancellationToken.None);
+
+            allEntries = [];
+        }
+
+        ApplyFilter();
+    }
+
+    [RelayCommand]
+    private void Close()
+    {
+        filterRefresh.Cancel();
+        IsVisible = false;
+    }
+
+    [RelayCommand(CanExecute = nameof(HasEarlierEntries))]
+    private async Task LoadEarlierAsync(CancellationToken cancellationToken)
+    {
+        loadedPageCount++;
+        try
+        {
+            SetLoadedEntries(await entryLoader(cancellationToken));
+            ApplyFilter();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            loadedPageCount--;
+        }
+        catch (Exception ex)
+        {
+            loadedPageCount--;
+            toastService.ShowError(ErrorHandlingService.FormatToastMessage(
+                localizer.T(LocalizationKeys.LogLoadFailed),
+                ex,
+                localizer.T(LocalizationKeys.ErrorNetworkUnavailable),
+                localizer.T(LocalizationKeys.ErrorFakeIpDns)));
+            await diagnostics.ErrorAsync(
+                "LogViewer",
+                "Loading the earlier log entries failed.",
+                ex,
+                CancellationToken.None);
+        }
+    }
+
+    [RelayCommand]
+    private void SetFilterAll() => SeverityFilter = null;
+    [RelayCommand]
+    private void SetFilterVerbose() => SeverityFilter = LogEntrySeverity.Verbose;
+    [RelayCommand]
+    private void SetFilterDebug() => SeverityFilter = LogEntrySeverity.Debug;
+    [RelayCommand]
+    private void SetFilterInfo() => SeverityFilter = LogEntrySeverity.Info;
+    [RelayCommand]
+    private void SetFilterWarn() => SeverityFilter = LogEntrySeverity.Warn;
+    [RelayCommand]
+    private void SetFilterError() => SeverityFilter = LogEntrySeverity.Error;
+    [RelayCommand]
+    private void SetFilterFatal() => SeverityFilter = LogEntrySeverity.Fatal;
+
+    private void SetLoadedEntries(IReadOnlyList<LogEntryDisplay> entries)
+    {
+        totalEntryCount = entries.Count;
+        var takeCount = Math.Min(entries.Count, checked(loadedPageCount * PageSize));
+        allEntries = entries.Skip(entries.Count - takeCount).ToArray();
+        OnPropertyChanged(nameof(HasEarlierEntries));
+        LoadEarlierCommand.NotifyCanExecuteChanged();
+    }
+
+    private async Task<IReadOnlyList<LogEntryDisplay>> LoadEntriesAsync(CancellationToken cancellationToken)
+    {
+        var logPath = logger.LogFilePath;
+        if (!File.Exists(logPath))
+            return [];
+
+        using var reader = OpenLogReader(logPath);
+        var lines = new List<string>();
+        while (await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false) is { } line)
+            lines.Add(line);
+
+        return ParseEntries(lines);
+    }
+
+    private static StreamReader OpenLogReader(string logPath)
+    {
+        var stream = new FileStream(
+            logPath,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.ReadWrite | FileShare.Delete);
+        return new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+    }
+
+    private static IReadOnlyList<LogEntryDisplay> ParseEntries(IEnumerable<string> lines)
+    {
+        var entries = new List<LogEntryDisplay>();
+        foreach (var record in LogEntryReader.Read(lines))
+        {
+            var (severity, severityLabel) = MapSeverity(record.SeverityCode);
+            entries.Add(new LogEntryDisplay
+            {
+                TimestampText = record.TimestampText,
+                SeverityLabel = severityLabel,
+                Title = record.Title,
+                Details = record.Lines.Count > 1
+                    ? string.Join("\n", record.Lines.Skip(1))
+                    : "",
+                Severity = severity
+            });
+        }
+
+        return entries;
+    }
+
+    /// <summary>
+    /// Maps a Serilog level code to the severity the filter runs on and the label the list shows.
+    /// An unrecognised code stays visible as written and filters as informational.
+    /// </summary>
+    private static (LogEntrySeverity Severity, string Label) MapSeverity(string severityCode) =>
+        severityCode switch
+        {
+            "VRB" => (LogEntrySeverity.Verbose, "VERBOSE"),
+            "DBG" => (LogEntrySeverity.Debug, "DEBUG"),
+            "INF" => (LogEntrySeverity.Info, "INFO"),
+            "WRN" => (LogEntrySeverity.Warn, "WARN"),
+            "ERR" => (LogEntrySeverity.Error, "ERROR"),
+            "FTL" => (LogEntrySeverity.Fatal, "FATAL"),
+            _ => (LogEntrySeverity.Info, severityCode)
+        };
+}

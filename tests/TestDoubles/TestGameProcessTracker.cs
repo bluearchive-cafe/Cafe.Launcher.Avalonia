@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Cafe.Launcher.Avalonia.Services.GameRuntime;
+using Cafe.Launcher.UI.Services.GameRuntime;
 using Cafe.Launcher.Core.Services.GameRuntime;
 
-namespace Cafe.Launcher.Avalonia.Testing;
+namespace Cafe.Launcher.Testing;
 
 /// <summary>
 /// <see cref="GameProcessTracker"/> 的测试工厂。

@@ -1,7 +1,7 @@
-using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.UI.Services.Diagnostics;
 using Cafe.Launcher.Core.Services.Diagnostics;
 
-namespace Cafe.Launcher.Avalonia.Testing;
+namespace Cafe.Launcher.Testing;
 
 /// <summary>
 /// Records fatal-crash requests and replays them to subscribers without touching

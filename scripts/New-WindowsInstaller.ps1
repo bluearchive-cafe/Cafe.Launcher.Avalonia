@@ -12,7 +12,7 @@ $ErrorActionPreference = "Stop"
 try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch { }
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RootDir = Split-Path -Parent $ScriptDir
-$InstallerScript = Join-Path $RootDir "installer/windows/Cafe.Launcher.Avalonia.iss"
+$InstallerScript = Join-Path $RootDir "installer/windows/Cafe.Launcher.iss"
 
 $version = & (Join-Path $ScriptDir "Read-LauncherVersion.ps1") -Tag $Tag
 $Tag = $version.Tag
@@ -132,8 +132,8 @@ Assert-InnoSafeDefineValue $publishGlob
 
 [void][System.IO.Directory]::CreateDirectory($OutputDir)
 
-$setupName = "Cafe.Launcher.Avalonia_${Tag}_setup.exe"
-$setupBaseName = "Cafe.Launcher.Avalonia_${Tag}_setup"
+$setupName = "Cafe.Launcher_${Tag}_setup.exe"
+$setupBaseName = "Cafe.Launcher_${Tag}_setup"
 $setupPath = Join-Path $OutputDir $setupName
 
 & $isccPath `

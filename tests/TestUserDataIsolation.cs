@@ -1,8 +1,8 @@
 using System.Runtime.CompilerServices;
-using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Services;
 using Cafe.Launcher.Core.Services;
 
-namespace Cafe.Launcher.Avalonia.Testing;
+namespace Cafe.Launcher.Testing;
 
 internal static class TestUserDataIsolation
 {

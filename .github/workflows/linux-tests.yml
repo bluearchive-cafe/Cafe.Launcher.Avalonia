@@ -49,7 +49,7 @@ jobs:
       # 不做 RID 专属发布还原。
       - name: Unit tests
         run: >
-          dotnet test tests/Cafe.Launcher.Avalonia.Tests/Cafe.Launcher.Avalonia.Tests.csproj
+          dotnet test tests/Cafe.Launcher.Tests/Cafe.Launcher.Tests.csproj
           -c Debug --logger "trx" --results-directory TestResults
 
       - name: Upload test results

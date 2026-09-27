@@ -36,7 +36,7 @@ internal sealed class LocalDiagnostics : ILauncherDiagnostics
     /// </summary>
     public LocalDiagnostics() : this(new UnifiedLogger(Path.Combine(
         Path.GetTempPath(),
-        "Cafe.Launcher.Avalonia.Tests",
+        "Cafe.Launcher.Tests",
         Environment.ProcessId.ToString(CultureInfo.InvariantCulture))))
     {
     }

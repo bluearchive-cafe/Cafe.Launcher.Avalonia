@@ -1,0 +1,291 @@
+using System;
+using Cafe.Launcher.UI.Services.GameRuntime;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Cafe.Launcher.UI.Constants;
+using Cafe.Launcher.UI.Models;
+using Cafe.Launcher.UI.Services;
+using Cafe.Launcher.Core.Services.GameRuntime;
+using Cafe.Launcher.Core.Models;
+
+namespace Cafe.Launcher.UI.Features.GameOperations;
+
+internal sealed class GameLaunchService
+{
+    private readonly ManifestValidationService manifestValidationService;
+    private readonly IGameRuntime gameRuntime;
+    private readonly LocalizationService localizer;
+
+    public GameLaunchService(
+        ManifestValidationService manifestValidationService,
+        IGameRuntime gameRuntime,
+        LocalizationService localizer)
+    {
+        this.manifestValidationService = manifestValidationService;
+        this.gameRuntime = gameRuntime;
+        this.localizer = localizer;
+    }
+
+    public async Task<GameLaunchResult> StartAsync(
+        LauncherStatusSnapshot snapshot,
+        CancellationToken cancellationToken = default)
+    {
+        if (snapshot.RuntimeState == LauncherRuntimeState.NotInstalled)
+        {
+            return Failed(localizer.T(LocalizationKeys.GameNotInstalled));
+        }
+
+        if (snapshot.RuntimeState == LauncherRuntimeState.BelowLowestVersion)
+        {
+            return Failed(localizer.T(LocalizationKeys.GameBelowLowestVersion));
+        }
+
+        if (GameOperationPolicy.Decide(GameOperationPolicy.Operation.Launch, snapshot.RuntimeState)
+            == GameOperationDecision.RejectedForCurrentState)
+        {
+            return Failed(snapshot.RuntimeState switch
+            {
+                LauncherRuntimeState.Corrupted => localizer.T(LocalizationKeys.GameCorruptedInstallationState),
+                LauncherRuntimeState.IoFailure => localizer.T(LocalizationKeys.GameInstallationStateReadFailed),
+                LauncherRuntimeState.RemoteUnavailable => localizer.T(LocalizationKeys.GameRemoteStateUnavailable),
+                LauncherRuntimeState.UpdateAvailable => localizer.T(LocalizationKeys.UpdateAvailable),
+                _ => localizer.T(LocalizationKeys.GameNotInstalled)
+            });
+        }
+
+        var targetResolution = GameLaunchTargetResolution.Resolve(snapshot);
+        if (!targetResolution.Resolved)
+        {
+            return Failed(targetResolution.Status switch
+            {
+                GameLaunchTargetStatus.ExecutableNameInvalid => localizer.T(LocalizationKeys.GameExecutableNameInvalid),
+                GameLaunchTargetStatus.ExecutableMissing => localizer.F(
+                    LocalizationKeys.GameExecutableMissing, targetResolution.ExpectedExecutablePath),
+                _ => localizer.T(LocalizationKeys.GameExecutableNameEmpty)
+            });
+        }
+
+        var target = targetResolution.Target!;
+
+        var validation = await manifestValidationService.ValidateAsync(
+            target.WorkingDirectory,
+            snapshot.LocalGame,
+            snapshot.Settings.LaunchCheckMode,
+            snapshot.Settings.PatchUrlGroup,
+            cancellationToken).ConfigureAwait(false);
+
+        if (!validation.Success)
+        {
+            return new GameLaunchResult
+            {
+                Success = false,
+                Message = validation.Message,
+                Validation = validation
+            };
+        }
+
+        var runtimeConfiguration = GameRuntimeConfiguration.FromSettings(snapshot.Settings.GameRuntime);
+
+        // A stable runtime id decouples compatibility state (prefix layout, UMU
+        // GAMEID) from the game executable name, so renaming the EXE cannot orphan
+        // an existing environment.
+        var request = new GameLaunchRequest(
+            GameId: GameRuntimeIds.BlueArchiveJapan,
+            ExecutablePath: target.ExecutablePath,
+            WorkingDirectory: target.WorkingDirectory,
+            Arguments: target.Arguments);
+
+        GameRuntimeLaunchResult launchResult;
+        try
+        {
+            launchResult = await gameRuntime
+                .LaunchAsync(request, runtimeConfiguration, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            return new GameLaunchResult
+            {
+                Success = false,
+                Message = localizer.F(LocalizationKeys.GameLaunchFailed, exception.Message),
+                DiagnosticMessage =
+                    $"{localizer.T(LocalizationKeys.GameRuntimeRunner)}: {runtimeConfiguration.PreferredRunnerId ?? localizer.T(LocalizationKeys.GameRuntimeRunnerAuto)}{Environment.NewLine}" +
+                    $"{localizer.T(LocalizationKeys.Executable)}: {request.ExecutablePath}{Environment.NewLine}" +
+                    $"{localizer.T(LocalizationKeys.Path)}: {request.WorkingDirectory}{Environment.NewLine}" +
+                    $"{exception.Message}",
+                DiagnosticException = exception,
+                Validation = validation
+            };
+        }
+
+        if (!launchResult.Success)
+        {
+            if (launchResult.Failure == GameRuntimeLaunchFailure.EnvironmentPrecheckFailed
+                && launchResult.EnvironmentFailures is { Count: > 0 } environmentFailures)
+            {
+                return Failed(
+                    BuildEnvironmentFailureMessage(environmentFailures),
+                    BuildLaunchContext(launchResult, request));
+            }
+
+            if (launchResult.FailureException is not null)
+            {
+                var exception = launchResult.FailureException;
+                return new GameLaunchResult
+                {
+                    Success = false,
+                    Message = localizer.F(LocalizationKeys.GameLaunchFailed, exception.Message),
+                    DiagnosticMessage =
+                        $"{BuildLaunchContext(launchResult, request)}{Environment.NewLine}{exception.Message}",
+                    DiagnosticException = exception,
+                    Validation = validation
+                };
+            }
+
+            return Failed(
+                BuildRunnerSelectionMessage(launchResult, runtimeConfiguration.PreferredRunnerId),
+                BuildRunnerSelectionFailure(launchResult, runtimeConfiguration.PreferredRunnerId));
+        }
+
+        return new GameLaunchResult
+        {
+            Success = true,
+            Message = localizer.T(LocalizationKeys.GameProcessStarted),
+            DiagnosticMessage = BuildLaunchContext(launchResult, request),
+            Validation = validation,
+            RunnerId = launchResult.RunnerId,
+            KnownExeNames = RunningGameGate.ResolveQuery(
+                snapshot.LocalGame.GameConfig,
+                snapshot.Remote.GameConfig,
+                target.WorkingDirectory).KnownExeNames
+        };
+    }
+
+    private static GameLaunchResult Failed(string message, string? diagnosticMessage = null)
+    {
+        return new GameLaunchResult
+        {
+            Success = false,
+            Message = message,
+            DiagnosticMessage = diagnosticMessage ?? message,
+            Validation = new ManifestValidationResult
+            {
+                Success = false,
+                Message = message
+            }
+        };
+    }
+
+    /// <summary>
+    /// 把预检的阻断级发现翻成可操作文案（P1-D）。只有 Error 级发现会进到这里，三种类别因此
+    /// 覆盖了全部输入；末行兜底只为防御未知类别。
+    /// </summary>
+    private string BuildEnvironmentFailureMessage(IReadOnlyList<GameEnvironmentFailure> failures)
+    {
+        var lines = failures.Select(failure => localizer.F(
+            failure.Code switch
+            {
+                CompatibilityFindingCode.SymlinksUnsupported => LocalizationKeys.GameRuntimeEnvironmentSymlinksUnsupported,
+                CompatibilityFindingCode.MountNoExec => LocalizationKeys.GameRuntimeEnvironmentMountNoExec,
+                _ => LocalizationKeys.GameRuntimeEnvironmentPrefixNotWritable
+            },
+            failure.Path));
+        return string.Join(Environment.NewLine, lines);
+    }
+
+    private string BuildLaunchContext(GameRuntimeLaunchResult launchResult, GameLaunchRequest request)
+    {
+        var runnerLine = string.IsNullOrWhiteSpace(launchResult.RunnerId)
+            ? $"{localizer.T(LocalizationKeys.GameRuntimeRunner)}: {localizer.T(LocalizationKeys.GameRuntimeRunnerAuto)}"
+            : $"{localizer.T(LocalizationKeys.GameRuntimeRunner)}: {launchResult.RunnerId}";
+        var candidates = launchResult.Candidates.Count == 0
+            ? ""
+            : Environment.NewLine + string.Join(
+                Environment.NewLine,
+                launchResult.Candidates.Select(candidate =>
+                    $"- {candidate.RunnerId}: {AvailabilityReason(candidate.Availability)}"));
+        return runnerLine + candidates + Environment.NewLine +
+            $"{localizer.T(LocalizationKeys.Executable)}: {request.ExecutablePath}{Environment.NewLine}" +
+            $"{localizer.T(LocalizationKeys.Path)}: {request.WorkingDirectory}{Environment.NewLine}" +
+            launchResult.Diagnostic.Describe();
+    }
+
+    /// <summary>
+    /// User-facing reason for a launch that never reached a runner. Reports the candidate
+    /// that explains the failure — the configured runner when one is pinned, otherwise the
+    /// first missing/broken runner (actionable), else the first candidate (typically an
+    /// unsupported platform) — instead of a generic "did not start" message.
+    /// </summary>
+    private string BuildRunnerSelectionMessage(
+        GameRuntimeLaunchResult launchResult,
+        string? preferredRunnerId)
+    {
+        var candidate = SelectExplainingCandidate(launchResult, preferredRunnerId);
+        var runnerName = GameRuntimeRunnerDisplay.RunnerName(
+            localizer,
+            candidate?.RunnerId ?? preferredRunnerId);
+        var status = candidate is null
+            ? localizer.T(LocalizationKeys.Unknown)
+            : GameRuntimeRunnerDisplay.Status(localizer, candidate.Availability.Status);
+        return localizer.F(LocalizationKeys.GameRuntimeNoRunnerAvailable, runnerName, status);
+    }
+
+    private static GameRuntimeStatusEntry? SelectExplainingCandidate(
+        GameRuntimeLaunchResult launchResult,
+        string? preferredRunnerId)
+    {
+        if (!string.IsNullOrWhiteSpace(preferredRunnerId))
+        {
+            return launchResult.Candidates.FirstOrDefault(candidate =>
+                string.Equals(candidate.RunnerId, preferredRunnerId, StringComparison.OrdinalIgnoreCase));
+        }
+
+        return launchResult.Candidates.FirstOrDefault(candidate =>
+                   candidate.Availability.Status is GameRunnerAvailabilityStatus.NotFound
+                       or GameRunnerAvailabilityStatus.Broken)
+               ?? launchResult.Candidates.FirstOrDefault();
+    }
+
+    private string BuildRunnerSelectionFailure(
+        GameRuntimeLaunchResult launchResult,
+        string? preferredRunnerId)
+    {
+        if (!string.IsNullOrWhiteSpace(preferredRunnerId))
+        {
+            if (launchResult.Candidates.Count == 0)
+            {
+                return $"{localizer.T(LocalizationKeys.GameRuntimeRunner)}: {preferredRunnerId}{Environment.NewLine}" +
+                    localizer.T(LocalizationKeys.Unknown);
+            }
+
+            var candidate = launchResult.Candidates[0];
+            return $"{localizer.T(LocalizationKeys.GameRuntimeRunner)}: {preferredRunnerId}{Environment.NewLine}" +
+                $"{candidate.RunnerId}: {AvailabilityReason(candidate.Availability)}";
+        }
+
+        if (launchResult.Candidates.Count == 0)
+        {
+            return $"{localizer.T(LocalizationKeys.GameRuntimeRunner)}: {localizer.T(LocalizationKeys.GameRuntimeRunnerAuto)}{Environment.NewLine}" +
+                localizer.T(LocalizationKeys.Unknown);
+        }
+
+        var details = string.Join(
+            Environment.NewLine,
+            launchResult.Candidates.Select(candidate =>
+                $"- {candidate.RunnerId}: {AvailabilityReason(candidate.Availability)}"));
+        return $"{localizer.T(LocalizationKeys.GameRuntimeRunner)}: {localizer.T(LocalizationKeys.GameRuntimeRunnerAuto)}{Environment.NewLine}{details}";
+    }
+
+    private string AvailabilityReason(GameRunnerAvailability availability) =>
+        string.IsNullOrWhiteSpace(availability.Message)
+            ? localizer.T(LocalizationKeys.Unknown)
+            : string.IsNullOrWhiteSpace(availability.TechnicalDetail)
+                ? availability.Message
+                : $"{availability.Message}{Environment.NewLine}{availability.TechnicalDetail}";
+}

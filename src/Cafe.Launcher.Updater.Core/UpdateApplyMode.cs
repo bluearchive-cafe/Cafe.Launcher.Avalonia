@@ -1,4 +1,4 @@
-namespace Cafe.Launcher.Updater;
+namespace Cafe.Launcher.Updater.Core;
 
 /// <summary>How the downloaded package should be applied.</summary>
 public enum UpdateApplyMode

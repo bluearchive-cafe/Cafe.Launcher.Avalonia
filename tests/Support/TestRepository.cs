@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Xml.Linq;
-using Cafe.Launcher.Avalonia.Models;
-using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.UI.Models;
+using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.Core.Models;
 
-namespace Cafe.Launcher.Avalonia.Testing;
+namespace Cafe.Launcher.Testing;
 
 /// <summary>
 /// 测试对仓库与本地化资源的唯一定位点：路径与 <c>.resx</c> 的解析结果各缓存一次，
@@ -36,9 +36,9 @@ public static class TestRepository
     ];
 
     private static readonly Lazy<string> RepositoryRoot = new(FindRepositoryRoot);
-    private static readonly Lazy<string> HostRoot = new(() => FindProjectRoot("Cafe.Launcher.Avalonia"));
+    private static readonly Lazy<string> HostRoot = new(() => FindProjectRoot("Cafe.Launcher"));
     private static readonly Lazy<string> CoreRoot = new(() => FindProjectRoot("Cafe.Launcher.Core"));
-    private static readonly Lazy<string> PresentationRoot = new(() => FindProjectRoot("Cafe.Launcher.Avalonia.UI"));
+    private static readonly Lazy<string> PresentationRoot = new(() => FindProjectRoot("Cafe.Launcher.UI"));
     private static readonly Lazy<Dictionary<string, Dictionary<string, string>>> Localization =
         new(ReadAllResx);
 
@@ -48,7 +48,7 @@ public static class TestRepository
     /// <summary>仓库根：含解决方案文件的目录。面向读 workflow、release 脚本等仓库级文件的用例。</summary>
     public static string Root => RepositoryRoot.Value;
 
-    /// <summary>WinExe 宿主工程目录：<c>src/Cafe.Launcher.Avalonia</c>。</summary>
+    /// <summary>WinExe 宿主工程目录：<c>src/Cafe.Launcher</c>。</summary>
     public static string HostPath => HostRoot.Value;
 
     /// <summary>无 Avalonia 后端工程目录。</summary>
@@ -170,7 +170,7 @@ public static class TestRepository
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
         while (directory is not null)
         {
-            if (File.Exists(Path.Combine(directory.FullName, "Cafe.Launcher.Avalonia.slnx")))
+            if (File.Exists(Path.Combine(directory.FullName, "Cafe.Launcher.slnx")))
             {
                 return directory.FullName;
             }
@@ -178,6 +178,6 @@ public static class TestRepository
             directory = directory.Parent;
         }
 
-        throw new DirectoryNotFoundException("Cafe.Launcher.Avalonia.slnx was not found.");
+        throw new DirectoryNotFoundException("Cafe.Launcher.slnx was not found.");
     }
 }
