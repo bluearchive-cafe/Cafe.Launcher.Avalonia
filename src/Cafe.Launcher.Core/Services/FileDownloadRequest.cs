@@ -1,6 +1,6 @@
-using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Core.Models;
 
-namespace Cafe.Launcher.Avalonia.Services;
+namespace Cafe.Launcher.Core.Services;
 
 /// <summary>Describes one manifest file transfer without transport implementation details.</summary>
 public sealed record FileDownloadRequest(

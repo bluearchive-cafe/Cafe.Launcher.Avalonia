@@ -50,6 +50,7 @@ public static class LauncherCoreServiceCollectionExtensions
         // 代理解析与连接池属于后端：HttpClientFactory 的注册仍留在组合根，因为它的
         // 偏好闭包读的是表现层的设置快照（ADR-028 的按使用时机拉取）。
         services.TryAddSingleton<ProxySettingsService>();
+        services.TryAddSingleton<IFileDownloadService, FileDownloadService>();
         return services;
     }
 }

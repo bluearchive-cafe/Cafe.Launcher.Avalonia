@@ -81,7 +81,6 @@ public static class ServiceConfiguration
         }
         services.AddSingleton<SetupWizardViewModel>();
         services.AddSingleton<RemoteManifestService>();
-        services.AddSingleton<IFileDownloadService, FileDownloadService>();
         services.AddSingleton<ResourcePanelService>();
 
         // ── HttpClient factory (shared pool, proxy-aware) ────────────────
