@@ -13,8 +13,8 @@ public sealed record CrashReport
     /// 构建身份字段：版本、提交、UI 区域性。OS 描述、异常类型与细节三者各不相同，由调用方传入。
     /// </summary>
     /// <remarks>
-    /// 构建身份必须只有一处：版本与提交来自 <see cref="BuildInfo"/>，漏填其一会让用户回报的
-    /// 快照指不到具体构建，而这类字段此前正是靠逐处手抄保持一致的。
+    /// 构建身份必须只有一处：版本与提交由宿主注入的 <see cref="LauncherBuildIdentity"/> 提供，
+    /// 漏填会让用户回报的快照指不到具体构建（缺省时留空，不猜）。
     /// </remarks>
     public static CrashReport Build(
         string id,
@@ -22,13 +22,14 @@ public sealed record CrashReport
         string source,
         string operatingSystem,
         string exceptionType,
-        string technicalDetails) => new()
+        string technicalDetails,
+        LauncherBuildIdentity? buildIdentity = null) => new()
         {
             Id = id,
             OccurredAt = occurredAt,
             Source = source,
-            AppVersion = BuildInfo.LauncherVersion,
-            BuildSha = BuildInfo.CommitSha,
+            AppVersion = buildIdentity?.LauncherVersion ?? "",
+            BuildSha = buildIdentity?.CommitSha ?? "",
             OperatingSystem = operatingSystem,
             UiCulture = CultureInfo.CurrentUICulture.Name,
             ExceptionType = exceptionType,

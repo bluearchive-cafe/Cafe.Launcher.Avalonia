@@ -17,8 +17,8 @@ internal static class CrashReportBootstrap
     /// unreadable, or malformed snapshot yields the "snapshot unavailable"
     /// report, so the reporter always has a surface to show.
     /// </summary>
-    public static CrashReport Resolve(string? snapshotPath) =>
-        CrashReportStore.TryRead(snapshotPath) ?? CreateUnreadableReport();
+    public static CrashReport Resolve(string? snapshotPath, LauncherBuildIdentity? buildIdentity = null) =>
+        CrashReportStore.TryRead(snapshotPath) ?? CreateUnreadableReport(buildIdentity);
 
     /// <summary>
     /// Applies the UI culture captured with the snapshot. An absent or invalid
@@ -47,11 +47,12 @@ internal static class CrashReportBootstrap
     }
 
     /// <summary>Report shown when no snapshot could be read from disk.</summary>
-    private static CrashReport CreateUnreadableReport() => CrashReport.Build(
+    private static CrashReport CreateUnreadableReport(LauncherBuildIdentity? buildIdentity = null) => CrashReport.Build(
         "CR-UNAVAILABLE",
         DateTimeOffset.Now,
         "CrashReportMode",
         Environment.OSVersion.ToString(),
         nameof(InvalidOperationException),
-        "The crash snapshot could not be read. Open the log directory for any diagnostics that were saved.");
+        "The crash snapshot could not be read. Open the log directory for any diagnostics that were saved.",
+        buildIdentity);
 }

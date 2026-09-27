@@ -68,7 +68,8 @@ public static class ServiceConfiguration
             sp.GetRequiredService<LocalDiagnostics>());
         services.AddSingleton(_ => new CrashReportStore(
             dataRoot,
-            CrashReportStore.DefaultFallbackDirectory));
+            CrashReportStore.DefaultFallbackDirectory,
+            BuildInfo.Identity));
         services.AddSingleton<ICrashReportLocator>(sp => sp.GetRequiredService<CrashReportStore>());
         services.AddSingleton<ICrashReporterLauncher, CrashReporterLauncher>();
         if (existingFatalCrashService is not null)
