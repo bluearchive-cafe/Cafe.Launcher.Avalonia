@@ -6,7 +6,7 @@ namespace Cafe.Launcher.Avalonia.Models;
 /// Represents a single carousel indicator dot. Colors are applied via theme-aware style classes
 /// (Border.banner-dot / Border.banner-dot.active in MainWindow.Styles.axaml).
 /// </summary>
-public sealed partial class BannerDot : CommunityToolkit.Mvvm.ComponentModel.ObservableObject
+internal sealed partial class BannerDot : CommunityToolkit.Mvvm.ComponentModel.ObservableObject
 {
     public int Index { get; init; }
 

@@ -11,7 +11,7 @@ using Cafe.Launcher.Core.Services.GameRuntime;
 
 namespace Cafe.Launcher.Avalonia.Features.ResourcePanel;
 
-public sealed partial class ResourcePanelUidService
+internal sealed partial class ResourcePanelUidService
 {
     private const string ResourcePanelCookieName = "uid";
     private const string ResourcePanelCookieDomain = "bluearchive.cafe";

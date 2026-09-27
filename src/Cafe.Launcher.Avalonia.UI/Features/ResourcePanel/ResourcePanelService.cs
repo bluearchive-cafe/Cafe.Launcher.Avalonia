@@ -13,7 +13,7 @@ namespace Cafe.Launcher.Avalonia.Features.ResourcePanel;
 /// UID resolution, parallel remote reads, version &amp; mode mapping, save serialization.
 /// The ViewModel only keeps observable state, commands, and localization.
 /// </summary>
-public sealed class ResourcePanelService
+internal sealed class ResourcePanelService
 {
     private readonly ResourcePanelUidService uidService;
     private readonly ResourcePanelApiClient apiClient;
@@ -143,7 +143,7 @@ public sealed class ResourcePanelService
 /// Structured result from <see cref="ResourcePanelService.LoadDataAsync"/>：按位对齐
 /// 的有序条目（Text, Voice, Media）——同三样东西的两份声明不再各自按 code 查找（D11）。
 /// </summary>
-public sealed class ResourcePanelLoadResult : IReadOnlyList<ResourcePanelItemData>
+internal sealed class ResourcePanelLoadResult : IReadOnlyList<ResourcePanelItemData>
 {
     private readonly IReadOnlyList<ResourcePanelItemData> items;
 
@@ -159,7 +159,7 @@ public sealed class ResourcePanelLoadResult : IReadOnlyList<ResourcePanelItemDat
 }
 
 /// <summary>View-friendly projection of one resource-panel resource type.</summary>
-public sealed class ResourcePanelItemData
+internal sealed class ResourcePanelItemData
 {
     public string OfficialVersion { get; init; } = "--";
     public string LocalizedVersion { get; init; } = "--";

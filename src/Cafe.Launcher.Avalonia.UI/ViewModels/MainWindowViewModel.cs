@@ -16,7 +16,7 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace Cafe.Launcher.Avalonia.ViewModels;
 
-public partial class MainWindowViewModel : ViewModelBase, IDisposable
+internal partial class MainWindowViewModel : ViewModelBase, IDisposable
 {
     private readonly ShellLifecycle runtime;
     private bool disposed;

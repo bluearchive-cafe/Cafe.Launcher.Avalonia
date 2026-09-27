@@ -9,7 +9,7 @@ namespace Cafe.Launcher.Avalonia.Helpers;
 /// BoxShadows 没有 XAML TypeConverter，Setter 无法直接引用字符串资源（AVLN3000），
 /// 因此经本扩展在加载期完成解析，使阴影值保持单一 token 来源。
 /// </summary>
-public sealed class BoxShadowsExtension : MarkupExtension
+internal sealed class BoxShadowsExtension : MarkupExtension
 {
     public BoxShadowsExtension()
     {

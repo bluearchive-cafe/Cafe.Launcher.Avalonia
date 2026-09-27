@@ -22,7 +22,7 @@ namespace Cafe.Launcher.Avalonia.Views;
 /// 收尾多留一拍缓冲再结算；壳层（步骤进度与动作钮）在换面中点随显示步翻转，不先于内容跳变。
 /// 最新状态优先、可中断、不排队；降动效、未附着或无可见面板时直接换内容定格。
 /// </summary>
-public partial class SetupWizardOverlay : UserControl
+internal partial class SetupWizardOverlay : UserControl
 {
     private const string StepForwardOffsetKey = "Launcher.Motion.Offset.StepForward";
     private const string StepBackwardOffsetKey = "Launcher.Motion.Offset.StepBackward";

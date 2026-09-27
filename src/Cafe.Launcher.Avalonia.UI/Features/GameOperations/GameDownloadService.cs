@@ -12,7 +12,7 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 /// <summary>
 /// Coordinates game download, update, repair, pause, and persisted-resume operations.
 /// </summary>
-public sealed class GameDownloadService : IDisposable
+internal sealed class GameDownloadService : IDisposable
 {
     /// <summary>Raised when <see cref="IsRunning"/> changes value.</summary>
     internal event Action? IsRunningChanged;

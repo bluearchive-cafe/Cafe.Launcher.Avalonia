@@ -17,7 +17,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Cafe.Launcher.Avalonia.ViewModels;
 
-public partial class BackgroundViewModel : ViewModelBase, IDisposable
+internal partial class BackgroundViewModel : ViewModelBase, IDisposable
 {
     private readonly ImageCacheService imageCacheService;
     private readonly LocalDiagnostics diagnostics;

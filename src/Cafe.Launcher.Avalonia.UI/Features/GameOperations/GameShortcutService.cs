@@ -12,7 +12,7 @@ using Cafe.Launcher.Avalonia.Services;
 namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 
 /// <summary>Terminal outcome of a desktop shortcut creation or removal attempt.</summary>
-public enum GameShortcutStatus
+internal enum GameShortcutStatus
 {
     Created,
     UnsupportedPlatform,
@@ -27,10 +27,10 @@ public enum GameShortcutStatus
 }
 
 /// <summary>Result of a desktop shortcut creation attempt, with failure detail when applicable.</summary>
-public sealed record GameShortcutResult(GameShortcutStatus Status, string Detail = "");
+internal sealed record GameShortcutResult(GameShortcutStatus Status, string Detail = "");
 
 /// <summary>Desktop-level integrations for the installed game: shortcuts and folder access.</summary>
-public interface IGameShortcutService
+internal interface IGameShortcutService
 {
     /// <summary>Creates a desktop shortcut that starts the installed game.</summary>
     Task<GameShortcutResult> CreateDesktopShortcutAsync(LauncherStatusSnapshot snapshot);
@@ -45,7 +45,7 @@ public interface IGameShortcutService
     bool TryOpenGameFolder(LauncherStatusSnapshot snapshot);
 }
 
-public sealed class GameShortcutService : IGameShortcutService
+internal sealed class GameShortcutService : IGameShortcutService
 {
     private readonly LocalizationService localizer;
     private readonly Func<string, bool> openDirectory;

@@ -19,7 +19,7 @@ namespace Cafe.Launcher.Avalonia.Features.Diagnostics;
 /// Collects the diagnostics export options (time range and optional content) and owns the
 /// export flow, so every export entry point shares one implementation.
 /// </summary>
-public sealed partial class LogExportDialogViewModel : ViewModelBase, IModalContentViewModel, ILanguageAwarePresentation
+internal sealed partial class LogExportDialogViewModel : ViewModelBase, IModalContentViewModel, ILanguageAwarePresentation
 {
     private static readonly TimeSpan RangeProbeDebounceDelay = TimeSpan.FromMilliseconds(200);
 

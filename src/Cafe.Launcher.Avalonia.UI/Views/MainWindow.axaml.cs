@@ -27,7 +27,7 @@ using System.Threading.Tasks;
 
 namespace Cafe.Launcher.Avalonia.Views;
 
-public partial class MainWindow : Window
+internal partial class MainWindow : Window
 {
     private SystemTrayService? systemTray;
     private MainWindowViewModel? configuredViewModel;

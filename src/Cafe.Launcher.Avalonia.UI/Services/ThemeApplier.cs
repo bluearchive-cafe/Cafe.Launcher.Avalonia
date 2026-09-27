@@ -20,7 +20,7 @@ namespace Cafe.Launcher.Avalonia.Services;
 /// 状态居实例而非静态（AUD-MAINT-001）：与 VM 一样是 DI 单例，实例态即进程态，但对对象图与
 /// 测试可见；静态版本曾让缓存跨测试实例存续且不可见。
 /// </remarks>
-public sealed class ThemeApplier : IDisposable
+internal sealed class ThemeApplier : IDisposable
 {
     private bool lastSchemeApplied;
     private string lastThemeMode = ThemeModes.System;

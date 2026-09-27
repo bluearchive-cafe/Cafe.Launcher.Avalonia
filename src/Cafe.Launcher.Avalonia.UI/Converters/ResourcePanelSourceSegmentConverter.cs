@@ -12,7 +12,7 @@ namespace Cafe.Launcher.Avalonia.Converters;
 /// segment is checked, letting the partner segment's uncheck pass through untouched so two
 /// RadioButtons can share one binding source without fighting over it.
 /// </summary>
-public sealed class ResourcePanelSourceSegmentConverter : IValueConverter
+internal sealed class ResourcePanelSourceSegmentConverter : IValueConverter
 {
     public static readonly ResourcePanelSourceSegmentConverter Instance = new();
 

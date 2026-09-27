@@ -18,7 +18,7 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace Cafe.Launcher.Avalonia.ViewModels;
 
-public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel, ILanguageAwarePresentation
+internal partial class DialogsViewModel : ViewModelBase, IModalContentViewModel, ILanguageAwarePresentation
 {
     private readonly LocalizationService localizer;
     private readonly NoticeStateService noticeStateService;

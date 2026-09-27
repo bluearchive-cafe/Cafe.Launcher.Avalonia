@@ -5,4 +5,4 @@ namespace Cafe.Launcher.Avalonia.Services;
 /// （<c>bool</c>），所以显式包一层记录类型，而不是让 ViewModel 去读宿主 <c>Program</c> 的静态字段。
 /// </summary>
 /// <param name="ShowHiddenSettings">是否显示隐藏设置分区（宿主从命令行开关解析）。</param>
-public sealed record PresentationOptions(bool ShowHiddenSettings = false);
+internal sealed record PresentationOptions(bool ShowHiddenSettings = false);

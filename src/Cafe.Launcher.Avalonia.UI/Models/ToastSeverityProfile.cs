@@ -13,7 +13,7 @@ namespace Cafe.Launcher.Avalonia.Models;
 /// 表达式要求穷尽（CS8524），所以完备性由 <c>ToastSeverityProfileTests</c> 遍历
 /// <see cref="Enum.GetValues{T}"/> 来守——新增一档严重度而忘了补这里，该用例立刻红。</para>
 /// </remarks>
-public readonly record struct ToastSeverityProfile(string IconKind, string BrushResourceKey)
+internal readonly record struct ToastSeverityProfile(string IconKind, string BrushResourceKey)
 {
     /// <summary>返回该严重度的呈现属性。</summary>
     public static ToastSeverityProfile For(ToastSeverity severity) => severity switch

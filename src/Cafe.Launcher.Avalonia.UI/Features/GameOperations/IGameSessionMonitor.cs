@@ -9,7 +9,7 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 /// runner under Wine/UMU) was spawned; this monitor turns what happens after
 /// that spawn into a state the UI can show.
 /// </summary>
-public enum GameSessionState
+internal enum GameSessionState
 {
     /// <summary>No launch has happened yet in this launcher session.</summary>
     Idle,
@@ -38,7 +38,7 @@ public enum GameSessionState
 /// runner that dies — so the family scan decides between <see cref="GameSessionState.StartFailed"/>
 /// and <see cref="GameSessionState.Exited"/>, per ADR-035.
 /// </summary>
-public interface IGameSessionMonitor
+internal interface IGameSessionMonitor
 {
     /// <summary>Gets the current session state.</summary>
     GameSessionState State { get; }

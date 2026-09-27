@@ -11,7 +11,7 @@ using System.Resources;
 /// </summary>
 [System.CodeDom.Compiler.GeneratedCodeAttribute("scripts/Generate-LauncherStringsDesigner.ps1", "1.0.0.0")]
 [System.Diagnostics.DebuggerNonUserCodeAttribute]
-public static class LauncherStrings
+internal static class LauncherStrings
 {
     private static ResourceManager? resourceMan;
 

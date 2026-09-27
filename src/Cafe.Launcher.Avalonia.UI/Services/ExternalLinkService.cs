@@ -9,7 +9,7 @@ namespace Cafe.Launcher.Avalonia.Services;
 /// file://, cmd://, and other schemes that could trigger arbitrary process execution
 /// are rejected.
 /// </summary>
-public static class ExternalLinkService
+internal static class ExternalLinkService
 {
     /// <summary>
     /// Opens a URL in the system browser. Only http, https, and mailto schemes are allowed.

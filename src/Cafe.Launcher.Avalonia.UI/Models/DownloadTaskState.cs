@@ -6,7 +6,7 @@ namespace Cafe.Launcher.Avalonia.Models;
 /// Serializable state of an in-progress game download for resume after restart.
 /// Mirrors the original Electron launcher's localStorage "download-task" key.
 /// </summary>
-public sealed class DownloadTaskState
+internal sealed class DownloadTaskState
 {
     [JsonPropertyName("version")]
     public string Version { get; set; } = "";

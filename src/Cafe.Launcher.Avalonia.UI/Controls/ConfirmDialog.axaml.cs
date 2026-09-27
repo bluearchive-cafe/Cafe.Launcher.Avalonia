@@ -21,7 +21,7 @@ namespace Cafe.Launcher.Avalonia.Controls;
 /// （各自 IsOpen 互斥），而 IsDefault 是窗口级候选，隐藏实例之间的默认按钮归属无法在本地约束。
 /// WinUI 的规则是「焦点所在控件若自行处理 Enter，则默认按钮不响应」，本类的处理函数遵守同一条。
 /// </summary>
-public partial class ConfirmDialog : UserControl
+internal partial class ConfirmDialog : UserControl
 {
     public static readonly StyledProperty<bool> IsOpenProperty =
         AvaloniaProperty.Register<ConfirmDialog, bool>(nameof(IsOpen));

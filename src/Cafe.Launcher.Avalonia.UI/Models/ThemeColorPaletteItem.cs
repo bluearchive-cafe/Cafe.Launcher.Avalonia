@@ -3,7 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Cafe.Launcher.Avalonia.Models;
 
-public sealed partial class ThemeColorPaletteItem : ObservableObject
+internal sealed partial class ThemeColorPaletteItem : ObservableObject
 {
     [ObservableProperty]
     private int index;

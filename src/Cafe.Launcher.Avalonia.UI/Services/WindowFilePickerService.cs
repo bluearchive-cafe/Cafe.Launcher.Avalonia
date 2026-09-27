@@ -12,7 +12,7 @@ namespace Cafe.Launcher.Avalonia.Services;
 /// on construction (and detaches on close) so the singleton never roots a dead window.
 /// Without an attached storage provider — e.g. in headless tests — pickers return null.
 /// </summary>
-public sealed class WindowFilePickerService : IFilePickerService
+internal sealed class WindowFilePickerService : IFilePickerService
 {
     private static readonly string[] ImagePatterns = ["*.png", "*.jpg", "*.jpeg", "*.bmp", "*.webp"];
 

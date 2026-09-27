@@ -12,7 +12,7 @@ namespace Cafe.Launcher.Avalonia.Helpers;
 /// 解码，绝不放大（Bitmap.DecodeToWidth 总是缩放到请求宽度，会把小图放大，
 /// 故此处以原尺寸解码后再等比缩小）。
 /// </summary>
-public static class BannerImageDecoder
+internal static class BannerImageDecoder
 {
     /// <summary>钳制上限：与壁纸解码共用同一驻留成本预算。</summary>
     public const int MaxDecodeSidePixels = BackgroundImageDecoder.MaxDecodeSidePixels;

@@ -3,7 +3,7 @@ using Cafe.Launcher.Core.Services.Diagnostics;
 namespace Cafe.Launcher.Avalonia.Features.Diagnostics;
 
 /// <summary>Presentation model for one parsed diagnostic log entry.</summary>
-public sealed class LogEntryDisplay
+internal sealed class LogEntryDisplay
 {
     /// <summary>Gets or sets the serialized timestamp shown to the user.</summary>
     public string TimestampText { get; set; } = "";

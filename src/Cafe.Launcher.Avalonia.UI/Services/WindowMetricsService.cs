@@ -12,7 +12,7 @@ namespace Cafe.Launcher.Avalonia.Services;
 /// background threads can query them without touching Avalonia properties.
 /// Without an attached window — e.g. in headless tests — the default target applies.
 /// </summary>
-public sealed class WindowMetricsService : IWindowMetricsService
+internal sealed class WindowMetricsService : IWindowMetricsService
 {
     private readonly object attachLock = new();
     private TopLevel? owner;

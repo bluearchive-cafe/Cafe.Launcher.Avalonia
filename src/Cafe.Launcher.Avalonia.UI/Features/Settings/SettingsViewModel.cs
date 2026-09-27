@@ -20,7 +20,7 @@ using Serilog.Events;
 
 namespace Cafe.Launcher.Avalonia.Features.Settings;
 
-public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalContentViewModel, ILanguageAwarePresentation
+internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalContentViewModel, ILanguageAwarePresentation
 {
     private readonly LauncherSettingsService settingsService;
     private readonly ISavedSettingsWriter savedSettingsWriter;

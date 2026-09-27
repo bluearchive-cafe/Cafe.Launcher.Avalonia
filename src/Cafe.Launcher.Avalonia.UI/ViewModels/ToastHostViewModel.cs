@@ -14,7 +14,7 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace Cafe.Launcher.Avalonia.ViewModels;
 
-public partial class ToastHostViewModel : ViewModelBase, IDisposable
+internal partial class ToastHostViewModel : ViewModelBase, IDisposable
 {
     private readonly ToastService toastService;
     private readonly LocalizationService localizer;

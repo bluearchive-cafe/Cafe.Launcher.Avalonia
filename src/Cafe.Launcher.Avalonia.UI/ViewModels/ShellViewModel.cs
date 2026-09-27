@@ -12,7 +12,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Cafe.Launcher.Avalonia.ViewModels;
 
-public partial class ShellViewModel : ViewModelBase, IDisposable
+internal partial class ShellViewModel : ViewModelBase, IDisposable
 {
     private readonly LocalizationService localizer;
     private readonly LauncherBuildIdentity? buildIdentity;

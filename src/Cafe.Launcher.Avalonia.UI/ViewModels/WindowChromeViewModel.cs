@@ -12,7 +12,7 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace Cafe.Launcher.Avalonia.ViewModels;
 
-public partial class WindowChromeViewModel : ViewModelBase
+internal partial class WindowChromeViewModel : ViewModelBase
 {
     private readonly LauncherDataRoot dataRoot;
     private readonly SettingsViewModel settings;

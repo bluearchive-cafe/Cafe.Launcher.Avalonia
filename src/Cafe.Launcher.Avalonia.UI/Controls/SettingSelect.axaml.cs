@@ -8,7 +8,7 @@ namespace Cafe.Launcher.Avalonia.Controls;
 /// <summary>
 /// Reusable M3 settings row for selectable launcher options.
 /// </summary>
-public partial class SettingSelect : UserControl
+internal partial class SettingSelect : UserControl
 {
     public static readonly StyledProperty<string?> TitleProperty =
         AvaloniaProperty.Register<SettingSelect, string?>(nameof(Title));

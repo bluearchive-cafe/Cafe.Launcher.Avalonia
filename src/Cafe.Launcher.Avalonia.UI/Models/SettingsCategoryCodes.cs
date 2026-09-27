@@ -1,6 +1,6 @@
 namespace Cafe.Launcher.Avalonia.Models;
 
-public static class SettingsCategoryCodes
+internal static class SettingsCategoryCodes
 {
     public const string General = "general";
     public const string Game = "game";

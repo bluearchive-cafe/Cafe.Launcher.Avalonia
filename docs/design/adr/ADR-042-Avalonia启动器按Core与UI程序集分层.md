@@ -146,6 +146,14 @@ Core API 后应改回显式 using。`AssemblySplitContractTests.CoreSources_UseO
   崩溃报告与导出内容里的版本/提交/构建配置不再来自宿主 `BuildInfo`；`CrashReportStore` 的注册
   由组合根显式传身份。它们因此可以在 UI 程序集落位时整体搬走——唯一仍与宿主耦合的是
   `CrashReporterLauncher`（拉起独立崩溃报告进程，依赖 `Program`）。
+- **UI 公开面收窄**：表现层 172 个顶层 public 类型收到 27 个（internal 185 个）。仍然 public 的
+  只有三类：宿主真正使用的门面与入口（`LauncherPresentationSession`、两个组合扩展、
+  `ICrashReporterLauncher`、`FatalCrashService`/`IFatalCrashService`、`CrashReport`/`CrashReportStore`/
+  `CrashReportBootstrap`/`CrashReportWindow`、`LocalizationService` 及其签名里出现的
+  `SystemCultureSnapshot`/`LanguageOption`/`SelectableOption`），以及测试用 Theory 签名里出现的
+  领域枚举（`GameOperationStage`、`DownloadStopReason`、`UninstallScope`、`ModalKind`、`ToastSeverity`
+  等——public 测试方法不能带 internal 参数类型）。其余视图、ViewModel、服务与辅助类型全部 internal，
+  测试经 UI 程序集的 `InternalsVisibleTo`（只对两个测试程序集）访问。
 - **接缝反转完成**：`LauncherPresentationSession` 不再转发宿主回调，而是自己从容器解析
   `MainWindow`、`MainWindowViewModel` 与托盘并组装（`CreateMainWindow`），并接管原来宿主里的
   `InitializeViewModelAsync`/`CompleteShutdownAsync` 两个方法与启动行为挂载

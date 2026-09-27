@@ -15,7 +15,7 @@ namespace Cafe.Launcher.Avalonia.Controls;
 /// <summary>
 /// Animates vertical Toast stack reflow while preserving each child's original render transform.
 /// </summary>
-public static class ToastStackMotion
+internal static class ToastStackMotion
 {
     /// <summary>Attached property that enables vertical stack reflow animation for a panel.</summary>
     public static readonly AttachedProperty<bool> IsEnabledProperty =

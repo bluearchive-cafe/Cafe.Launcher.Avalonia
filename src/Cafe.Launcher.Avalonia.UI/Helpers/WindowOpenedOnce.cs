@@ -11,7 +11,7 @@ namespace Cafe.Launcher.Avalonia.Helpers;
 /// 从托盘恢复窗口时重跑——重新执行启动命令、再次弹出「启动器已最小化到托盘」提示并把
 /// 窗口再次最小化。与 <c>MainWindow.PlayShellEntranceOnce</c> 的自摘除是同一契约。
 /// </summary>
-public static class WindowOpenedOnce
+internal static class WindowOpenedOnce
 {
     /// <summary>
     /// Subscribes <paramref name="handler"/> to the window's first Opened and detaches it

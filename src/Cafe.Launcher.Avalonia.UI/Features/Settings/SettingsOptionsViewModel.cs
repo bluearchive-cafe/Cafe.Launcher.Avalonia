@@ -8,7 +8,7 @@ using Cafe.Launcher.Avalonia.Services;
 
 namespace Cafe.Launcher.Avalonia.Features.Settings;
 
-public sealed class SettingsOptionsViewModel
+internal sealed class SettingsOptionsViewModel
 {
     private readonly LocalizationService localizer;
     private readonly DiskSpaceService diskSpaceService;

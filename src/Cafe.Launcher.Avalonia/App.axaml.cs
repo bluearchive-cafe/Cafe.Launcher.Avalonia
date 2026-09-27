@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
@@ -68,7 +69,7 @@ public partial class App : Application
             var presentationSession = serviceProvider.GetRequiredService<LauncherPresentationSession>();
             var mainWindow = presentationSession.CreateMainWindow();
             var fatalShutdown = false;
-            CrashReportWindow? crashReportWindow = null;
+            Window? crashReportWindow = null;
 
             void HandleFatalCrashRequested(CrashReport report)
             {
@@ -86,7 +87,7 @@ public partial class App : Application
                     launchGameListener?.Dispose();
                     presentationSession.HideMainWindow();
 
-                    crashReportWindow = (CrashReportWindow)presentationSession.CreateCrashReportWindow(report);
+                    crashReportWindow = presentationSession.CreateCrashReportWindow(report);
                     crashReportWindow.Closed += (_, _) => desktop.Shutdown(1);
                     desktop.MainWindow = crashReportWindow;
                     crashReportWindow.Show();

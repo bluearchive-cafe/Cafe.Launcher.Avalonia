@@ -16,7 +16,7 @@ namespace Cafe.Launcher.Avalonia.Helpers;
 /// 槽在同一条 UI 线程上调用（与迁移前各站点的 CTS 换取一致）；工作延续不脱离调用方
 /// 的同步上下文——多数工作 lambda 要回到 UI 线程写可观察状态。
 /// </remarks>
-public sealed class LatestRefresh
+internal sealed class LatestRefresh
 {
     private CancellationTokenSource? cancellationTokenSource;
     private Task pending = Task.CompletedTask;

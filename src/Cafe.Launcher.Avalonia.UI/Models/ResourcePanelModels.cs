@@ -4,7 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Cafe.Launcher.Avalonia.Models;
 
-public enum ResourcePanelItemStatus
+internal enum ResourcePanelItemStatus
 {
     Loading,
     Ready,
@@ -12,20 +12,20 @@ public enum ResourcePanelItemStatus
     Failed
 }
 
-public static class ResourcePanelResourceCodes
+internal static class ResourcePanelResourceCodes
 {
     public const string Text = "text";
     public const string Voice = "voice";
     public const string Media = "media";
 }
 
-public static class ResourcePanelResourceModes
+internal static class ResourcePanelResourceModes
 {
     public const string Chinese = "cn";
     public const string Japanese = "jp";
 }
 
-public sealed class ResourcePanelStatusResponse
+internal sealed class ResourcePanelStatusResponse
 {
     [JsonPropertyName("text")]
     public ResourcePanelStatusGroup Text { get; set; } = new();
@@ -37,7 +37,7 @@ public sealed class ResourcePanelStatusResponse
     public ResourcePanelStatusGroup Media { get; set; } = new();
 }
 
-public sealed class ResourcePanelStatusGroup
+internal sealed class ResourcePanelStatusGroup
 {
     [JsonPropertyName("official")]
     public ResourcePanelVersionInfo Official { get; set; } = new();
@@ -46,13 +46,13 @@ public sealed class ResourcePanelStatusGroup
     public ResourcePanelVersionInfo Localized { get; set; } = new();
 }
 
-public sealed class ResourcePanelVersionInfo
+internal sealed class ResourcePanelVersionInfo
 {
     [JsonPropertyName("version")]
     public string? Version { get; set; }
 }
 
-public sealed class ResourcePanelConfigResponse
+internal sealed class ResourcePanelConfigResponse
 {
     [JsonPropertyName("text")]
     public string? Text { get; set; }
@@ -64,7 +64,7 @@ public sealed class ResourcePanelConfigResponse
     public string? Media { get; set; }
 }
 
-public sealed partial class ResourcePanelItem : ObservableObject
+internal sealed partial class ResourcePanelItem : ObservableObject
 {
     public ResourcePanelItem(string code)
     {

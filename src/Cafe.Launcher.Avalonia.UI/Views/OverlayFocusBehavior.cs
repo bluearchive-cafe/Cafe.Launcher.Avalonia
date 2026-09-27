@@ -9,7 +9,7 @@ using Avalonia.VisualTree;
 
 namespace Cafe.Launcher.Avalonia.Views;
 
-public static class OverlayFocusBehavior
+internal static class OverlayFocusBehavior
 {
     public static readonly AttachedProperty<bool> IsEnabledProperty =
         AvaloniaProperty.RegisterAttached<OverlayFocusBehaviorOwner, Control, bool>("IsEnabled");
