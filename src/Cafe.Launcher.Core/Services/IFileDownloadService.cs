@@ -1,7 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Cafe.Launcher.Avalonia.Services;
+namespace Cafe.Launcher.Core.Services;
 
 /// <summary>How a download call terminated for one manifest file.</summary>
 public enum DownloadOutcomeKind

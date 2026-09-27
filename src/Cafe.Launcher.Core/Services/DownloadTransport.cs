@@ -1,10 +1,10 @@
 using System;
 using System.Net.Http;
-using Cafe.Launcher.Avalonia.Helpers;
+using Cafe.Launcher.Core.Helpers;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Cafe.Launcher.Avalonia.Services;
+namespace Cafe.Launcher.Core.Services;
 
 /// <summary>
 /// Batch-scoped connection for the game-file download channel: one transport

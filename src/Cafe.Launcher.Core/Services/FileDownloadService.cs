@@ -8,11 +8,11 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
-using Cafe.Launcher.Avalonia.Helpers;
-using Cafe.Launcher.Avalonia.Models;
-using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Core.Helpers;
+using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Services.Diagnostics;
 
-namespace Cafe.Launcher.Avalonia.Services;
+namespace Cafe.Launcher.Core.Services;
 
 /// <summary>
 /// Production implementation of <see cref="IFileDownloadService"/>.
@@ -26,12 +26,12 @@ public sealed class FileDownloadService : IFileDownloadService
     internal static readonly int[] RetryDomainOrder = [1, 1, 1, 1, 0, 0, 0, 1, 1, 1];
 
     private readonly Crc64Service crc64Service;
-    private readonly LocalDiagnostics diagnostics;
+    private readonly ILauncherDiagnostics diagnostics;
     private readonly TimeSpan? idleReadTimeout;
 
     public FileDownloadService(
         Crc64Service crc64Service,
-        LocalDiagnostics diagnostics,
+        ILauncherDiagnostics diagnostics,
         TimeSpan? idleReadTimeout = null)
     {
         this.crc64Service = crc64Service;
