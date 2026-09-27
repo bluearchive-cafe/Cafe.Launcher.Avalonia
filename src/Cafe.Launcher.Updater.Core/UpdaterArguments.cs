@@ -5,9 +5,10 @@ using System.Globalization;
 namespace Cafe.Launcher.Updater;
 
 /// <summary>
-/// The helper's command line: everything needed to replace the launcher on disk after
-/// its process has exited. Parsing is strict so a malformed argument never degrades
-/// into applying the wrong package to the wrong directory.
+/// The private command line shared by the launcher and its update helper: everything
+/// needed to replace the launcher on disk after its process has exited. Parsing is
+/// strict so a malformed or incompatible invocation never degrades into applying the
+/// wrong package to the wrong directory.
 /// </summary>
 /// <remarks>
 /// The main application constructs this record and calls <see cref="ToArgumentArray"/>,
@@ -22,6 +23,9 @@ public sealed record UpdaterArguments(
     string ExpectedSha256,
     string LogPath)
 {
+    public const string ApplyCommand = "apply";
+    public const string ProtocolVersionOption = "--protocol-version";
+    public const int CurrentProtocolVersion = 1;
     public const string ModeOption = "--mode";
     public const string PackageOption = "--package";
     public const string InstallDirOption = "--install-dir";
@@ -35,6 +39,7 @@ public sealed record UpdaterArguments(
 
     private static readonly HashSet<string> KnownOptions = new(StringComparer.Ordinal)
     {
+        ProtocolVersionOption,
         ModeOption,
         PackageOption,
         InstallDirOption,
@@ -52,9 +57,11 @@ public sealed record UpdaterArguments(
         _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unknown update apply mode.")
     };
 
-    /// <summary>Serializes this command as alternating option/value tokens.</summary>
+    /// <summary>Serializes this command using the current private protocol version.</summary>
     public string[] ToArgumentArray() =>
     [
+        ApplyCommand,
+        ProtocolVersionOption, CurrentProtocolVersion.ToString(CultureInfo.InvariantCulture),
         ModeOption, ModeName(Mode),
         PackageOption, PackagePath,
         InstallDirOption, InstallDirectory,
@@ -75,14 +82,20 @@ public sealed record UpdaterArguments(
             return false;
         }
 
-        if (args.Length % 2 != 0)
+        if (!string.Equals(args[0], ApplyCommand, StringComparison.Ordinal))
+        {
+            error = $"Unknown command '{args[0]}'.";
+            return false;
+        }
+
+        if ((args.Length - 1) % 2 != 0)
         {
             error = $"Option '{args[^1]}' is missing a value.";
             return false;
         }
 
         var values = new Dictionary<string, string>(StringComparer.Ordinal);
-        for (var index = 0; index < args.Length; index += 2)
+        for (var index = 1; index < args.Length; index += 2)
         {
             var option = args[index];
             if (!KnownOptions.Contains(option))
@@ -96,6 +109,22 @@ public sealed record UpdaterArguments(
                 error = $"Option '{option}' is repeated.";
                 return false;
             }
+        }
+
+        if (!TryGetRequired(values, ProtocolVersionOption, out var protocolVersionText, out error))
+        {
+            return false;
+        }
+
+        if (!int.TryParse(
+                protocolVersionText,
+                NumberStyles.None,
+                CultureInfo.InvariantCulture,
+                out var protocolVersion)
+            || protocolVersion != CurrentProtocolVersion)
+        {
+            error = $"Unsupported updater protocol version '{protocolVersionText}'; expected '{CurrentProtocolVersion}'.";
+            return false;
         }
 
         if (!TryGetRequired(values, ModeOption, out var modeText, out error)

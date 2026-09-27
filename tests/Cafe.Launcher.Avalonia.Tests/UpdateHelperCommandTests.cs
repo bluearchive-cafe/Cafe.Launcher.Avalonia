@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Cafe.Launcher.Avalonia.Services.Update;
@@ -126,6 +127,10 @@ public sealed class UpdateHelperCommandTests
             expectedSha256: Sha,
             logPath: "/opt/data/update-apply.log");
 
+        Assert.Equal(UpdaterArguments.ApplyCommand, arguments[0]);
+        Assert.Equal(
+            UpdaterArguments.CurrentProtocolVersion.ToString(CultureInfo.InvariantCulture),
+            arguments[Array.IndexOf(arguments, UpdaterArguments.ProtocolVersionOption) + 1]);
         Assert.True(UpdaterArguments.TryParse(arguments, out var parsed, out var error), error);
         Assert.NotNull(parsed);
         Assert.Equal(UpdateHelperCommand.ModeName(target), parsed!.Mode.ToString().ToLowerInvariant());

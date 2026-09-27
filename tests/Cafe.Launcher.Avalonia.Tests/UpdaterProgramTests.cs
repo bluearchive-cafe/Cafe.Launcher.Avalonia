@@ -10,7 +10,20 @@ public sealed class UpdaterProgramTests
     {
         var exitCode = await UpdaterProgram.RunAsync([]);
 
-        Assert.Equal(64, exitCode);
+        Assert.Equal((int)UpdaterExitCode.Usage, exitCode);
+    }
+
+    [Theory]
+    [InlineData("--help")]
+    [InlineData("-h")]
+    public async Task RunAsync_WhenHelpIsRequested_ReturnsSuccess(string helpOption)
+    {
+        var exitCode = await UpdaterProgram.RunAsync([helpOption]);
+
+        Assert.Equal((int)UpdaterExitCode.Success, exitCode);
+        Assert.Contains("internal protocol", UpdaterProgram.HelpText, StringComparison.Ordinal);
+        Assert.Contains(UpdaterArguments.ApplyCommand, UpdaterProgram.HelpText, StringComparison.Ordinal);
+        Assert.Contains(UpdaterArguments.ProtocolVersionOption, UpdaterProgram.HelpText, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -29,7 +42,7 @@ public sealed class UpdaterProgramTests
 
         var exitCode = await UpdaterProgram.RunAsync(arguments.ToArgumentArray());
 
-        Assert.Equal(1, exitCode);
+        Assert.Equal((int)UpdaterExitCode.UnexpectedFailure, exitCode);
         Assert.Contains("Fatal:", await File.ReadAllTextAsync(logPath), StringComparison.Ordinal);
     }
 }

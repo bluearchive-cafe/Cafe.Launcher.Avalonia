@@ -63,3 +63,16 @@ Windows 的现实约束：
 - 打包侧的对应约束由契约测试钉住：
   `UpdateHelperCommandTests.HelperExecutableName_MatchesTheUpdaterProjectAndTheWindowsPackagingStep`
   （helper 只随 win-x64 包发布，安装器整目录收编发布目录）。
+
+## 修订（2026-09-27）：helper CLI 只作为版本化的内部进程协议
+
+拆出 Core 后，helper 的命令行边界变得可复用，但这不表示要提供面向用户或运维人员的更新器
+CLI。它仍由主程序独占调用，主程序仍是发布资产选择、下载与首次校验的唯一生产入口。
+
+- 唯一动作显式写成 `apply`，并要求 `--protocol-version 1`。未知动作、缺少版本或版本不匹配
+  一律以 usage 失败，避免不同版本的启动器与 helper 对同一参数产生不同解释。
+- 参数序列化与严格解析仍由 `UpdaterArguments` 同一处拥有；主程序不手拼内部协议。
+- 退出状态由 `UpdaterExitCode` 命名并固定，区分参数错误、父进程超时、完整性失败、安装器失败、
+  目录换位失败和已回滚等结果，日志继续承载细节。
+- `--help` 只说明这是 internal protocol；不增加下载、检查更新、选择资产、任意 URL、JSON 输出或
+  面向脚本的兼容承诺。若未来确需公开 CLI，应另立决策并重新审视鉴权、稳定性和支持边界。
