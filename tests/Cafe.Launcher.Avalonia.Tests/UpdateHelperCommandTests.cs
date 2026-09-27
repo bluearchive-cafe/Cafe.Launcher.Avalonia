@@ -1,4 +1,6 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using Cafe.Launcher.Avalonia.Services.Update;
 using Cafe.Launcher.Avalonia.Testing;
 using Cafe.Launcher.Updater;
@@ -53,6 +55,49 @@ public sealed class UpdateHelperCommandTests
         return match.Groups["name"].Value;
     }
 
+    [Fact]
+    public void UpdaterCore_IsSharedThroughProjectReferencesInsteadOfSourceLinks()
+    {
+        var appReferences = ProjectReferencesOf(
+            "src/Cafe.Launcher.Avalonia/Cafe.Launcher.Avalonia.csproj");
+        var updaterReferences = ProjectReferencesOf(
+            "src/Cafe.Launcher.Updater/Cafe.Launcher.Updater.csproj");
+        var testProjectPath = TestRepository.FromRepositoryRoot(
+            "tests/Cafe.Launcher.Avalonia.Tests/Cafe.Launcher.Avalonia.Tests.csproj");
+        var testProject = XDocument.Load(testProjectPath);
+        var testReferences = ProjectReferencesOf(
+            "tests/Cafe.Launcher.Avalonia.Tests/Cafe.Launcher.Avalonia.Tests.csproj");
+
+        Assert.Contains(
+            @"..\Cafe.Launcher.Updater.Core\Cafe.Launcher.Updater.Core.csproj",
+            appReferences);
+        Assert.Contains(
+            @"..\Cafe.Launcher.Updater.Core\Cafe.Launcher.Updater.Core.csproj",
+            updaterReferences);
+        Assert.Contains(
+            @"..\..\src\Cafe.Launcher.Updater.Core\Cafe.Launcher.Updater.Core.csproj",
+            testReferences);
+
+        var productionSourceLinks = testProject
+            .Descendants("Compile")
+            .Select(element => element.Attribute("Include")?.Value)
+            .OfType<string>()
+            .Where(include => include.Contains(
+                @"src\Cafe.Launcher.Updater\",
+                StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+
+        Assert.Empty(productionSourceLinks);
+    }
+
+    private static string[] ProjectReferencesOf(string projectRelativePath) =>
+        XDocument
+            .Load(TestRepository.FromRepositoryRoot(projectRelativePath))
+            .Descendants("ProjectReference")
+            .Select(element => element.Attribute("Include")?.Value)
+            .OfType<string>()
+            .ToArray();
+
     [Theory]
     [InlineData(LauncherUpdateTarget.WindowsInstaller, "installer")]
     [InlineData(LauncherUpdateTarget.WindowsPortable, "portable")]
@@ -82,6 +127,10 @@ public sealed class UpdateHelperCommandTests
             expectedSha256: Sha,
             logPath: "/opt/data/update-apply.log");
 
+        Assert.Equal(UpdaterArguments.ApplyCommand, arguments[0]);
+        Assert.Equal(
+            UpdaterArguments.CurrentProtocolVersion.ToString(CultureInfo.InvariantCulture),
+            arguments[Array.IndexOf(arguments, UpdaterArguments.ProtocolVersionOption) + 1]);
         Assert.True(UpdaterArguments.TryParse(arguments, out var parsed, out var error), error);
         Assert.NotNull(parsed);
         Assert.Equal(UpdateHelperCommand.ModeName(target), parsed!.Mode.ToString().ToLowerInvariant());

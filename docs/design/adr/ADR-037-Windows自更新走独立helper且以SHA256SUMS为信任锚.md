@@ -2,7 +2,7 @@
 
 - 状态：✅ 已接受
 - 日期：2026-09-23
-- 相关：`Services/LauncherUpdateService.cs`、`Features/Shell/ShellLifecycle.cs`、`src/Cafe.Launcher.Updater/`、`scripts/Build-Distribution.ps1`、`installer/windows/Cafe.Launcher.Avalonia.iss`
+- 相关：`Services/LauncherUpdateService.cs`、`Features/Shell/ShellLifecycle.cs`、`src/Cafe.Launcher.Updater.Core/`、`src/Cafe.Launcher.Updater/`、`scripts/Build-Distribution.ps1`、`installer/windows/Cafe.Launcher.Avalonia.iss`
 
 ## 背景
 
@@ -18,7 +18,7 @@ Windows 的现实约束：
 
 ## 决策
 
-1. **新增独立 helper 项目 `src/Cafe.Launcher.Updater/`**。主程序下载并校验完成后，把 helper 复制到 `%TEMP%` 运行，自身优雅退出；helper 等主进程退出后再替换、再拉起新版本。helper 不从被替换的目录运行，因此不受文件锁影响；helper 只依赖目标框架之外无第三方依赖，发布为自包含单文件可裁剪 exe。
+1. **独立 helper 由 Core 类库与单文件宿主组成**。`src/Cafe.Launcher.Updater.Core/` 拥有参数契约、校验、路径计划与应用实现；`src/Cafe.Launcher.Updater/` 只保留可执行入口，并在发布时把 Core 收进自包含单文件。主程序下载并校验完成后，把 helper 复制到 `%TEMP%` 运行，自身优雅退出；helper 等主进程退出后再替换、再拉起新版本。helper 不从被替换的目录运行，因此不受文件锁影响，且两个项目都没有第三方依赖。
 2. **信任锚是同 release 的 `SHA256SUMS`**。下载包完成后计算 SHA-256 与之比对，不符即中止、不执行。选择逻辑把 `SHA256SUMS` 资产当作自更新的必要项：缺失或未命中目标文件名时退化为「打开浏览器下载页」，绝不无校验执行。
 3. **目标资产钉死**：安装版（安装目录存在 `.cafe-launcher-install` 标记，Inno 写入）取 `_setup.exe`；便携版取 `_win-x64.zip`。其它平台或非 x64 一律走既有浏览器跳转。
 4. **安装版通过 Inno 提权**：helper 以 `runas` 启动 `setup.exe /SILENT /SUPPRESSMSGBOXES /NORESTART`。UAC 弹窗是用户主动触发更新的一部分，不做静默提权。因为主进程已先退出，安装器的 `AppMutex` 与 `CloseApplications=no` 契约不冲突；`skipifsilent` 意味着安装器不自行拉起，helper 在安装器结束后显式启动应用。
@@ -40,7 +40,7 @@ Windows 的现实约束：
 - Windows 上自更新成为一条真实的代码执行路径：下载并运行 `setup.exe` 或替换安装目录。安全边界由「目标后缀钉死 + URL 校验 + SHA256SUMS 失败闭合 + 用户触发提权 + helper 二次校验」共同给出。
 - 非 Windows 行为不变，仍是 `OpenExternalUrl`；`LauncherUpdatePackageSelector` 对它们返回 `ExternalDownload`。
 - 需要新的本地化文案、对话框进度态、两处入口接线，以及 helper 的打包/发布步骤。
-- 守卫：`LauncherUpdatePackageSelectorTests`（平台/安装态/资产矩阵）、`LauncherUpdateChecksumManifestTests`（解析与畸形输入）、下载与应用编排的单元测试（假传输/假进程）、helper 纯逻辑的编译链接测试。
+- 守卫：`LauncherUpdatePackageSelectorTests`（平台/安装态/资产矩阵）、`LauncherUpdateChecksumManifestTests`（解析与畸形输入）、下载与应用编排的单元测试（假传输/假进程），以及直接引用 `Cafe.Launcher.Updater.Core` 的 helper 参数、路径、完整性与便携替换测试。
 - 已知限制：无代码签名，信任仍建立在 GitHub 发布账号与 TLS 之上；来源证明（attestation）校验未接入，可后续在 `SHA256SUMS` 之上加一层。
 
 ## 修订（2026-09-25）：可用性判据把「本机带 helper」也算进去，并以原因代替布尔
@@ -63,3 +63,16 @@ Windows 的现实约束：
 - 打包侧的对应约束由契约测试钉住：
   `UpdateHelperCommandTests.HelperExecutableName_MatchesTheUpdaterProjectAndTheWindowsPackagingStep`
   （helper 只随 win-x64 包发布，安装器整目录收编发布目录）。
+
+## 修订（2026-09-27）：helper CLI 只作为版本化的内部进程协议
+
+拆出 Core 后，helper 的命令行边界变得可复用，但这不表示要提供面向用户或运维人员的更新器
+CLI。它仍由主程序独占调用，主程序仍是发布资产选择、下载与首次校验的唯一生产入口。
+
+- 唯一动作显式写成 `apply`，并要求 `--protocol-version 1`。未知动作、缺少版本或版本不匹配
+  一律以 usage 失败，避免不同版本的启动器与 helper 对同一参数产生不同解释。
+- 参数序列化与严格解析仍由 `UpdaterArguments` 同一处拥有；主程序不手拼内部协议。
+- 退出状态由 `UpdaterExitCode` 命名并固定，区分参数错误、父进程超时、完整性失败、安装器失败、
+  目录换位失败和已回滚等结果，日志继续承载细节。
+- `--help` 只说明这是 internal protocol；不增加下载、检查更新、选择资产、任意 URL、JSON 输出或
+  面向脚本的兼容承诺。若未来确需公开 CLI，应另立决策并重新审视鉴权、稳定性和支持边界。

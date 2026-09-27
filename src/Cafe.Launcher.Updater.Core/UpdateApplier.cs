@@ -22,8 +22,10 @@ public static class UpdateApplier
     /// <summary>How long to wait for the launcher to exit before giving up.</summary>
     internal static readonly TimeSpan ParentExitTimeout = TimeSpan.FromMinutes(2);
 
-    /// <summary>Runs the apply flow and returns a process exit code (0 on success).</summary>
-    public static async Task<int> ApplyAsync(UpdaterArguments arguments, CancellationToken cancellationToken)
+    /// <summary>Runs the apply flow and returns a stable private-protocol exit code.</summary>
+    public static async Task<UpdaterExitCode> ApplyAsync(
+        UpdaterArguments arguments,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
         var stopwatch = Stopwatch.StartNew();
@@ -36,7 +38,7 @@ public static class UpdateApplier
         catch (TimeoutException)
         {
             UpdateLog.Write(arguments, "The launcher process did not exit in time; aborting.");
-            return 1;
+            return UpdaterExitCode.ParentExitTimeout;
         }
 
         if (!await PackageIntegrity
@@ -44,7 +46,7 @@ public static class UpdateApplier
             .ConfigureAwait(false))
         {
             UpdateLog.Write(arguments, "Package SHA-256 verification failed; aborting.");
-            return 2;
+            return UpdaterExitCode.PackageIntegrityFailure;
         }
 
         return arguments.Mode == UpdateApplyMode.Installer
@@ -68,7 +70,7 @@ public static class UpdateApplier
         }
     }
 
-    private static int RunInstaller(UpdaterArguments arguments, Stopwatch stopwatch)
+    private static UpdaterExitCode RunInstaller(UpdaterArguments arguments, Stopwatch stopwatch)
     {
         var startInfo = new ProcessStartInfo
         {
@@ -87,13 +89,13 @@ public static class UpdateApplier
         catch (Exception exception) when (exception is Win32Exception or InvalidOperationException)
         {
             UpdateLog.Write(arguments, $"Failed to start the installer: {exception.Message}");
-            return 3;
+            return UpdaterExitCode.InstallerStartFailure;
         }
 
         if (installer is null)
         {
             UpdateLog.Write(arguments, "The installer did not start.");
-            return 3;
+            return UpdaterExitCode.InstallerStartFailure;
         }
 
         using (installer)
@@ -102,15 +104,19 @@ public static class UpdateApplier
             if (installer.ExitCode != 0)
             {
                 UpdateLog.Write(arguments, $"The installer exited with code {installer.ExitCode}.");
-                return 4;
+                return UpdaterExitCode.InstallerFailure;
             }
         }
 
         LogApplyCompleted(arguments, stopwatch);
-        return LaunchApplication(arguments) ? 0 : 5;
+        return LaunchApplication(arguments)
+            ? UpdaterExitCode.Success
+            : UpdaterExitCode.LauncherStartFailure;
     }
 
-    private static int ReplacePortableDirectory(UpdaterArguments arguments, Stopwatch stopwatch)
+    private static UpdaterExitCode ReplacePortableDirectory(
+        UpdaterArguments arguments,
+        Stopwatch stopwatch)
     {
         var staging = UpdateApplyPlan.StagingDirectory(arguments.InstallDirectory, arguments.ParentProcessId);
         var backup = UpdateApplyPlan.BackupDirectory(arguments.InstallDirectory, arguments.ParentProcessId);
@@ -128,7 +134,7 @@ public static class UpdateApplier
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException or NotSupportedException)
         {
             UpdateLog.Write(arguments, $"Failed to extract the package: {exception.Message}");
-            return 6;
+            return UpdaterExitCode.PackageExtractionFailure;
         }
 
         if (!File.Exists(UpdateApplyPlan.ExecutablePath(staging, arguments.ExecutableName)))
@@ -137,7 +143,7 @@ public static class UpdateApplier
                 arguments,
                 $"The package does not contain '{arguments.ExecutableName}'; keeping the current installation.");
             TryDeleteDirectory(staging);
-            return 10;
+            return UpdaterExitCode.PackageLayoutInvalid;
         }
 
         try
@@ -153,7 +159,7 @@ public static class UpdateApplier
         {
             UpdateLog.Write(arguments, $"Failed to move the current installation aside: {exception.Message}");
             TryDeleteDirectory(staging);
-            return 7;
+            return UpdaterExitCode.BackupMoveFailure;
         }
 
         try
@@ -164,19 +170,19 @@ public static class UpdateApplier
         {
             UpdateLog.Write(arguments, $"Failed to install the new version: {exception.Message}");
             TryRollBack(arguments, backup);
-            return 8;
+            return UpdaterExitCode.InstallMoveFailure;
         }
 
         if (LaunchApplication(arguments))
         {
             TryDeleteDirectory(backup);
             LogApplyCompleted(arguments, stopwatch);
-            return 0;
+            return UpdaterExitCode.Success;
         }
 
         UpdateLog.Write(arguments, "The new version did not start; restoring the previous version.");
         RestorePreviousVersion(arguments, staging, backup);
-        return 9;
+        return UpdaterExitCode.PreviousVersionRestored;
     }
 
     /// <summary>

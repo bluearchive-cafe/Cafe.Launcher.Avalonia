@@ -20,4 +20,8 @@
     <PublishTrimmed>true</PublishTrimmed>
     <DebugType>none</DebugType>
   </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Cafe.Launcher.Updater.Core\Cafe.Launcher.Updater.Core.csproj" />
+  </ItemGroup>
 </Project>
