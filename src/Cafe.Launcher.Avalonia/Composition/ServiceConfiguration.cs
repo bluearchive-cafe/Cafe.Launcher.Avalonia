@@ -32,14 +32,12 @@ public static class ServiceConfiguration
         IFatalCrashService? existingFatalCrashService = null,
         LauncherDataRoot? launcherDataRoot = null)
     {
-        // Keep direct composition in tests and auxiliary hosts compatible while
-        // the registration body is moved into the Core/UI assemblies in batches.
-        services.AddLauncherCore(BuildInfo.Identity);
-
         // 进程根在这里解析一次，其余登记项与所有消费方共用这一个实例——
         // 「数据放哪」不再是各模块各自读一次的进程级静态。
         var dataRoot = launcherDataRoot ?? LauncherDataRoot.ForCurrentProcess();
-        services.AddSingleton(dataRoot);
+        // Keep direct composition in tests and auxiliary hosts compatible while
+        // the registration body is moved into the Core/UI assemblies in batches.
+        services.AddLauncherCore(BuildInfo.Identity, dataRoot);
 
         // ── Leaf services (parameterless constructors, no deps) ──────────
         services.AddSingleton<GameInstallationPath>();
@@ -125,9 +123,6 @@ public static class ServiceConfiguration
             sp.GetRequiredService<BestHttpCookieLibraryService>(),
             sp.GetRequiredService<LauncherSettingsService>(),
             sp.GetRequiredService<ISavedSettingsWriter>(),
-            sp.GetRequiredService<LocalDiagnostics>()));
-        services.AddSingleton(sp => new LauncherSettingsService(
-            dataRoot,
             sp.GetRequiredService<LocalDiagnostics>()));
         services.AddSingleton<SystemAnimationSettingsProvider>();
         services.AddSingleton<SettingsEditor>();

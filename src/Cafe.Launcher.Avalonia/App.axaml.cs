@@ -48,9 +48,10 @@ public partial class App : Application
             // Build DI container, reusing the pre-DI UnifiedLogger so there is
             // a single Serilog pipeline for the entire process.
             var serviceCollection = new ServiceCollection();
+            var launcherDataRoot = LauncherDataRoot.ForCurrentProcess();
             MainWindow? presentationWindow = null;
             MainWindowViewModel? presentationViewModel = null;
-            serviceCollection.AddLauncherCore(BuildInfo.Identity);
+            serviceCollection.AddLauncherCore(BuildInfo.Identity, launcherDataRoot);
             serviceCollection.AddLauncherPresentation(
                 new LauncherPresentationCallbacks(
                     CreateMainWindow: () => presentationWindow
@@ -91,7 +92,8 @@ public partial class App : Application
                     Dispose: () => presentationViewModel?.Dispose()));
             serviceCollection.AddLauncherServices(
                 existingLogger: Program.PreDiLogger,
-                existingFatalCrashService: Program.PreDiFatalCrashService);
+                existingFatalCrashService: Program.PreDiFatalCrashService,
+                launcherDataRoot: launcherDataRoot);
             serviceProvider = serviceCollection.BuildServiceProvider();
             Program.ServiceProvider = serviceProvider;
 

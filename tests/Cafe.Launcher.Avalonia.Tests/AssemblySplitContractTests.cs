@@ -68,16 +68,20 @@ public sealed class AssemblySplitContractTests
     {
         var services = new ServiceCollection();
         var identity = new LauncherBuildIdentity("1.2.3", "abc1234", "2026-09-27", "Debug");
+        var dataRoot = new LauncherDataRoot(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N")));
 
-        services.AddLauncherCore(identity);
-        services.AddLauncherCore(identity);
+        services.AddLauncherCore(identity, dataRoot);
+        services.AddLauncherCore(identity, dataRoot);
 
         using var provider = services.BuildServiceProvider();
         Assert.Same(identity, provider.GetRequiredService<LauncherBuildIdentity>());
+        Assert.Same(dataRoot, provider.GetRequiredService<LauncherDataRoot>());
         Assert.NotNull(provider.GetRequiredService<Crc64Service>());
         Assert.NotNull(provider.GetRequiredService<LocalInstallationStateStore>());
         Assert.NotNull(provider.GetRequiredService<AuthorizationHeaderFactory>());
+        Assert.NotNull(provider.GetRequiredService<LauncherSettingsService>());
         Assert.Single(provider.GetServices<Crc64Service>());
+        Assert.Single(provider.GetServices<LauncherSettingsService>());
     }
 
     [Fact]
