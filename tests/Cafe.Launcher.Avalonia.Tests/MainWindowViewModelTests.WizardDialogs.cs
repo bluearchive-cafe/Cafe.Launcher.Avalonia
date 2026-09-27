@@ -1,6 +1,7 @@
 using Cafe.Launcher.Avalonia.ViewModels;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Core.Services.Update;
+using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 

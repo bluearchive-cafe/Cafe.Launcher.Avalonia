@@ -2,6 +2,7 @@
 using System.Globalization;
 using System.Text.Json.Serialization;
 using Cafe.Launcher.Avalonia.Constants;
+using Cafe.Launcher.Core;
 
 namespace Cafe.Launcher.Avalonia.Services.Diagnostics;
 

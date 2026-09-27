@@ -4,6 +4,8 @@ using System.IO;
 using System.Threading;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Helpers;
 
 namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 

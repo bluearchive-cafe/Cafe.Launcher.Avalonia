@@ -16,6 +16,9 @@ using Cafe.Launcher.Avalonia.Services.GameRuntime;
 using Cafe.Launcher.Core.Services.Update;
 using Cafe.Launcher.Avalonia.Testing;
 using Cafe.Launcher.Avalonia.ViewModels;
+using Cafe.Launcher.Core.Services;
+using Cafe.Launcher.Core.Services.Auth;
+using Cafe.Launcher.Core.Services.GameRuntime;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 

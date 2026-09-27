@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using Cafe.Launcher.Avalonia.Constants;
+using Cafe.Launcher.Core;
 
 namespace Cafe.Launcher.Avalonia.Services.Diagnostics;
 

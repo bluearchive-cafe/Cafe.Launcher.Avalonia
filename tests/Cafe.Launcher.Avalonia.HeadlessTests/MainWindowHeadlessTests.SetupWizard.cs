@@ -15,6 +15,9 @@ using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Cafe.Launcher.Avalonia.Views;
+using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Constants;
+using Cafe.Launcher.Core.Services;
 
 namespace Cafe.Launcher.Avalonia.HeadlessTests;
 

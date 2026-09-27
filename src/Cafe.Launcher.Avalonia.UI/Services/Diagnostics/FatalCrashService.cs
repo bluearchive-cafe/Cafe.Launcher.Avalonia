@@ -1,6 +1,8 @@
 using System;
 using System.Threading;
 using Cafe.Launcher.Avalonia.Constants;
+using Cafe.Launcher.Core;
+using Cafe.Launcher.Core.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.Services.Diagnostics;
 

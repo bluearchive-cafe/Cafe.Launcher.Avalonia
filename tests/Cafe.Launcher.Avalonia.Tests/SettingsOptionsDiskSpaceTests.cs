@@ -5,6 +5,10 @@ using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.GameRuntime;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Cafe.Launcher.Avalonia.Testing;
+using Cafe.Launcher.Core.Services;
+using Cafe.Launcher.Core.Helpers;
+using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Services.GameRuntime;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 

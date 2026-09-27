@@ -12,6 +12,9 @@ using Cafe.Launcher.Core;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Linq;
+using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Services;
+using Cafe.Launcher.Core.Helpers;
 
 namespace Cafe.Launcher.Avalonia.Features.SetupWizard;
 

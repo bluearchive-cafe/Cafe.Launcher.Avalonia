@@ -13,6 +13,8 @@ using Cafe.Launcher.Avalonia.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cafe.Launcher.Core.Services.Diagnostics;
+using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Services;
 
 namespace Cafe.Launcher.Avalonia.ViewModels;
 

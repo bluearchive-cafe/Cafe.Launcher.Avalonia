@@ -4,6 +4,8 @@ using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Composition;
 using Cafe.Launcher.Avalonia.UI.Composition;
+using Cafe.Launcher.Core.Services;
+using Cafe.Launcher.Core.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.Composition;
 

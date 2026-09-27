@@ -11,6 +11,9 @@ using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Cafe.Launcher.Core.Services.GameRuntime;
 using Cafe.Launcher.Core.Services.Update;
+using Cafe.Launcher.Core;
+using Cafe.Launcher.Core.Services;
+using Cafe.Launcher.Core.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.Composition;
 

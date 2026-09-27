@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.Avalonia.Services;
 

@@ -9,6 +9,7 @@ using Avalonia.Styling;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Xunit;
+using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.Avalonia.HeadlessTests;
 

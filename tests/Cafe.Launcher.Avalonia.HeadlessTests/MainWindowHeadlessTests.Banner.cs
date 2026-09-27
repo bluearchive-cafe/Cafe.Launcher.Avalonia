@@ -7,6 +7,7 @@ using Avalonia.Input;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.Avalonia.HeadlessTests;
 

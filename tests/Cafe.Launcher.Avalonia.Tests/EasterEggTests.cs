@@ -1,5 +1,6 @@
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.ViewModels;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 

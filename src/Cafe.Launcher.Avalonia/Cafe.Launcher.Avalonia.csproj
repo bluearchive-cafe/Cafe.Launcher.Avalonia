@@ -44,14 +44,6 @@
   <ItemGroup>
     <!-- 过渡期：Core 的源命名空间已收口为 Cafe.Launcher.Core.*。宿主通过项目级 using 解析这些
          类型，避免为纯搬迁做一次全仓库 using 改写；调用方迁到窄接口后按需改回显式 using。 -->
-    <Using Include="Cafe.Launcher.Core" />
-    <Using Include="Cafe.Launcher.Core.Constants" />
-    <Using Include="Cafe.Launcher.Core.Helpers" />
-    <Using Include="Cafe.Launcher.Core.Models" />
-    <Using Include="Cafe.Launcher.Core.Services" />
-    <Using Include="Cafe.Launcher.Core.Services.Auth" />
-    <Using Include="Cafe.Launcher.Core.Services.Diagnostics" />
-    <Using Include="Cafe.Launcher.Core.Services.GameRuntime" />
   </ItemGroup>
 
   <ItemGroup>

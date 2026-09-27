@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Core.Services.Diagnostics;
+using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 

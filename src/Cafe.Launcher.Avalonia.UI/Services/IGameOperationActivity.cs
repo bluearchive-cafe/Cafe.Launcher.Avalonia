@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using Cafe.Launcher.Core.Services;
 
 namespace Cafe.Launcher.Avalonia.Services;
 

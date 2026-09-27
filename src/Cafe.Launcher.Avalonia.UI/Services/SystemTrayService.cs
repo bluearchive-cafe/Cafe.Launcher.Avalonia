@@ -5,6 +5,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Core.Services.Diagnostics;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Avalonia.Services;
 

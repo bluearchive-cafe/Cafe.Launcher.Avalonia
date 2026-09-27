@@ -10,6 +10,7 @@ using Avalonia.Platform;
 using Cafe.Launcher.Avalonia.Models;
 using MaterialColorUtilities.Quantize;
 using MaterialColorUtilities.Utils;
+using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.Avalonia.Services;
 

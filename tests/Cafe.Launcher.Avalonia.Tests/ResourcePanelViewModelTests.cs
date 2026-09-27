@@ -8,6 +8,9 @@ using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Testing;
+using Cafe.Launcher.Core.Services;
+using Cafe.Launcher.Core.Helpers;
+using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 

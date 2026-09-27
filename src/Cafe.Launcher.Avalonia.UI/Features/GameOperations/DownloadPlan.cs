@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 

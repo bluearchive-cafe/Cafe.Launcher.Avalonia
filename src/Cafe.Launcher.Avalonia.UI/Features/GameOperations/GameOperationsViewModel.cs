@@ -13,6 +13,10 @@ using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Services;
+using Cafe.Launcher.Core.Constants;
+using Cafe.Launcher.Core.Helpers;
 
 namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 
