@@ -85,7 +85,9 @@
     <Exec Command="git rev-parse --short=7 HEAD" WorkingDirectory="$(MSBuildProjectDirectory)" ConsoleToMSBuild="true" IgnoreExitCode="true" StandardOutputImportance="Low">
       <Output TaskParameter="ConsoleOutput" PropertyName="GitCommitSha" />
     </Exec>
-    <Exec Command="git show -s --format=%cI HEAD" WorkingDirectory="$(MSBuildProjectDirectory)" ConsoleToMSBuild="true" IgnoreExitCode="true" StandardOutputImportance="Low">
+    <!-- MSBuild 会把 Command 属性里的单个百分号当作转义/表达式前缀吃掉，git 因此收到
+         残缺的 pretty 格式参数并把致命错误写到标准输出；写两个百分号才是传给 git 的一个。 -->
+    <Exec Command="git show -s --format=%%cI HEAD" WorkingDirectory="$(MSBuildProjectDirectory)" ConsoleToMSBuild="true" IgnoreExitCode="true" StandardOutputImportance="Low">
       <Output TaskParameter="ConsoleOutput" PropertyName="GitCommitTime" />
     </Exec>
     <PropertyGroup>

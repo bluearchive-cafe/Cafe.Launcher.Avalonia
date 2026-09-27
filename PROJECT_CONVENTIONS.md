@@ -20,10 +20,17 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 ### 1.1 程序集边界
 
 `Cafe.Launcher.Core` 是无表现依赖的后端边界：不得引用 Avalonia、MarkView、Material Icons
-或 UI 资源；用户可见文案以结构化结果传给 UI，由 UI 本地化。`Cafe.Launcher.Avalonia.UI`
-承载所有 Avalonia 控件、ViewModel、主题、资源与图像。WinExe 宿主只保留进程生命周期和
-顶层 Avalonia 生命周期，必须先注册 Core 再注册 UI。生产程序集不能使用
-`InternalsVisibleTo`；测试程序集是唯一允许的 friend。边界细则见 ADR-042。
+或 UI 资源；用户可见文案以稳定 code（或领域结果）传给 UI，由 UI 本地化。Core 不自己解析
+进程数据根，也不反射入口程序集判断运行版本：前者由组合根解析一次后经 `AddLauncherCore`
+的必填参数注入（ADR-025），后者消费注入的 `LauncherBuildIdentity`。
+
+`Cafe.Launcher.Avalonia.UI` 是目标态下全部 Avalonia 控件、ViewModel、主题、资源与图像的
+归属；分批迁移完成前这些文件仍在 WinExe 宿主工程内，搬迁规则与剩余清单见 ADR-042。
+
+WinExe 宿主只保留进程生命周期和顶层 Avalonia 生命周期；Core 的登记项由
+`Composition/ServiceConfiguration.AddLauncherCore` 负责，并由 `AddLauncherServices` 在
+所有表现层登记项之前调用一次。生产程序集不能使用 `InternalsVisibleTo`；测试程序集是唯一
+允许的 friend，且其程序集名必须以 `Tests` 结尾（`AssemblySplitContractTests` 按此断言）。
 
 ## 2. 代码格式与风格
 
@@ -117,7 +124,7 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 
 ### 5.1 注册规则
 
-- 所有 DI 管理的 Service 和 ViewModel 在 `Composition/ServiceConfiguration.AddLauncherServices()` 中注册。
+- 所有 DI 管理的 Service 和 ViewModel 在 `Composition/ServiceConfiguration.AddLauncherServices()` 中注册；已迁入 `Cafe.Launcher.Core` 的后端服务由同一组合根先调用的 `AddLauncherCore` 登记（见 §1.1）。
 - 单窗口桌面应用：全部注册为 `AddSingleton`（无 scoped 边界）。
 - `UnifiedLogger` 在 `Program.cs` 预创建，通过 `Composition.ServiceConfiguration.AddLauncherServices(existingLogger:)` 传入 DI 容器复用同一实例。
 
