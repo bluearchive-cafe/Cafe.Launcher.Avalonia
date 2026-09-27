@@ -1,12 +1,12 @@
-﻿using System;
+using System;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Cafe.Launcher.Avalonia.Helpers;
-using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Core.Helpers;
+using Cafe.Launcher.Core.Models;
 
-namespace Cafe.Launcher.Avalonia.Services;
+namespace Cafe.Launcher.Core.Services;
 
 /// <summary>
 /// Lease/client plumbing over the shared connection pool: hands out proxy-aware

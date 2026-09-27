@@ -108,6 +108,12 @@ Core API 后应改回显式 using。`AssemblySplitContractTests.CoreSources_UseO
   `Cafe.Launcher.Core.Services`，Avalonia 的 UI 线程编排移进 `SettingsEditor.ApplyPersistedAsync`；
   `ISettingsDraftOwner` 是 Core 到表现层的唯一反向接缝（窄且可等待）。
   `SettingsWriteOwnershipTests` 的扫描域随之扩到 host + Core，路径改为仓库相对。
+- 网络与代理半批：`HttpClientFactory`、`ProxySettingsService`、`SystemProxySettingsProvider`、
+  `GSettingsCli`、`LogEntry`（含 `LogEntrySeverity`）迁入 `Cafe.Launcher.Core.Services`；
+  `ILauncherDiagnostics` 扩出 `MessageAsync`/`LogMessage`（后者是同步入口，因为实现类已有同签名的
+  静态 `LogSync`，接口成员不能同名），系统代理读取失败的告警由此走 Core 接缝而不是表现层静态入口。
+  `ProxySettingsService` 的注册随实现移到 `AddLauncherCore`；`HttpClientFactory` 的注册留在组合根
+  （它的偏好闭包读表现层设置快照，ADR-028 的按使用时机拉取）。
 - 混合模型文件拆分：`ManifestValidationResult`、`GameLaunchResult`、`LauncherRemoteState`、
   `LauncherRuntimeState`、`LauncherStatusSnapshot` 迁到 `Cafe.Launcher.Core.Models`
   （`Models/LauncherStatusModels.cs`）；宿主的 `LauncherRuntimeModels.cs` 只剩表现类型
@@ -144,10 +150,10 @@ Core API 后应改回显式 using。`AssemblySplitContractTests.CoreSources_UseO
 
 按「宿主类型依赖」逐一盘点剩余后端模块后，批次顺序与已知阻碍如下：
 
-1. **网络与下载**（`HttpClientFactory`、`ProxySettingsService`、`SystemProxySettingsProvider`、
-   `GSettingsCli`、`DownloadTransport`、`FileDownloadService`/`IFileDownloadService`/
-   `FileDownloadRequest`/`FileDownloadOperationControl`）内部自洽、不引用 Avalonia；把
-   `LocalDiagnostics` 参数换成 Core 的 `ILauncherDiagnostics` 即可整体搬迁。**建议作为下一批。**
+1. **网络与下载**：代理与连接池一半已完成（见上）。剩下的下载一半
+   （`DownloadTransport`、`FileDownloadService`/`IFileDownloadService`/`FileDownloadRequest`/
+   `FileDownloadOperationControl`）不引用 Avalonia，只需把 `LocalDiagnostics` 参数换成
+   `ILauncherDiagnostics`（`MessageAsync` 已在接缝里）。**下一批做这里。**
 2. **游戏运行时**（`Services/GameRuntime/*`）依赖几乎都在自身目录内，但
    `GameRuntimeRunnerDisplay` 依赖 `LocalizationService`/`LocalizationKeys`（表现层）：搬迁时
    要么把该显示映射留在宿主，要么先引入窄的本地化接缝。

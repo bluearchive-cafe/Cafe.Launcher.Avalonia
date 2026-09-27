@@ -72,6 +72,10 @@ public sealed class LocalDiagnostics : ILauncherDiagnostics
 
     internal string LogFilePath => logger.LogFilePath;
 
+    /// <summary><see cref="ILauncherDiagnostics"/>：同步诊断，转发到静态实现。</summary>
+    public void LogMessage(LogEntrySeverity severity, string title, string? message = null) =>
+        LogSync(severity, title, message);
+
     public Task ErrorAsync(string title, Exception exception, CancellationToken cancellationToken = default)
         => ErrorAsync(title, message: null, exception, cancellationToken);
 

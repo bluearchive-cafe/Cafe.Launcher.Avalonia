@@ -20,4 +20,16 @@ public interface ILauncherDiagnostics
         string? message,
         Exception exception,
         CancellationToken cancellationToken = default);
+
+    /// <summary>信息级诊断：可恢复但需要留痕的事件（下载校验失败、文件损坏等）。</summary>
+    Task MessageAsync(
+        string title,
+        string message,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 同步诊断：调用点无法等待时使用（例如在属性读取里解析系统代理）。
+    /// 名字刻意不同于实现类的静态 <c>LogSync</c>——同名同参会与静态重载冲突（CS0111）。
+    /// </summary>
+    void LogMessage(LogEntrySeverity severity, string title, string? message = null);
 }

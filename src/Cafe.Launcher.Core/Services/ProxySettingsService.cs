@@ -6,9 +6,10 @@ using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Services.Diagnostics;
 
-namespace Cafe.Launcher.Avalonia.Services;
+namespace Cafe.Launcher.Core.Services;
 
 internal sealed record SystemProxySettings(string ProxyUrl, IReadOnlyList<string> NoProxy, string? AutoConfigUrl = null);
 
@@ -43,7 +44,16 @@ public sealed class ProxySettingsService : IDisposable
     private readonly object proxyHandlerLock = new();
     private bool disposed;
 
-    public ProxySettingsService() : this(SystemProxySettingsProvider.GetSettings)
+    public ProxySettingsService() : this(() => SystemProxySettingsProvider.GetSettings())
+    {
+    }
+
+    /// <summary>
+    /// 组合根路径：系统代理读取失败的告警经 Core 诊断接缝落到 unified.log，
+    /// 而不是调用表现层的静态日志入口。
+    /// </summary>
+    public ProxySettingsService(ILauncherDiagnostics? diagnostics)
+        : this(() => SystemProxySettingsProvider.GetSettings(diagnostics))
     {
     }
 

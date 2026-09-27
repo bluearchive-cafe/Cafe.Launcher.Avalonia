@@ -3,14 +3,14 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 
-namespace Cafe.Launcher.Avalonia.Services;
+namespace Cafe.Launcher.Core.Services;
 
 /// <summary>
 /// gsettings CLI 的唯一进程接缝：超时回收 + 输出捕获。GNOME 家族的设置存在 dconf，
 /// 没有可读的稳定落盘文件，只能经 gsettings 读取；子进程生成不可在每次调用路径上
 /// 重复，缓存策略由调用方自持（如 SystemAnimationSettingsProvider / SystemProxySettingsProvider）。
 /// </summary>
-internal static class GSettingsCli
+public static class GSettingsCli
 {
     public const int DefaultTimeoutMilliseconds = 750;
 
