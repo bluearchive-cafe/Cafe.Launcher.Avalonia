@@ -63,7 +63,7 @@ public sealed class UpdateApplierPortableApplyTests
         var exitCode = await UpdateApplier.ApplyAsync(arguments, CancellationToken.None);
         KillLeftoverProcesses(startableExeName);
 
-        Assert.Equal(0, exitCode);
+        Assert.Equal(UpdaterExitCode.Success, exitCode);
         Assert.True(File.Exists(Path.Combine(install, "new-marker.txt")));
         Assert.False(File.Exists(Path.Combine(install, "old-marker.txt")));
         Assert.False(Directory.Exists(UpdateApplyPlan.StagingDirectory(install, parentPid)));
@@ -109,7 +109,7 @@ public sealed class UpdateApplierPortableApplyTests
 
         var exitCode = await UpdateApplier.ApplyAsync(arguments, CancellationToken.None);
 
-        Assert.Equal(9, exitCode);
+        Assert.Equal(UpdaterExitCode.PreviousVersionRestored, exitCode);
         Assert.Equal("old launcher", await File.ReadAllTextAsync(Path.Combine(install, LauncherExeName)));
         Assert.True(File.Exists(Path.Combine(install, "old-marker.txt")));
         Assert.False(File.Exists(Path.Combine(install, "new-marker.txt")));
@@ -155,7 +155,7 @@ public sealed class UpdateApplierPortableApplyTests
 
         var exitCode = await UpdateApplier.ApplyAsync(arguments, CancellationToken.None);
 
-        Assert.Equal(10, exitCode);
+        Assert.Equal(UpdaterExitCode.PackageLayoutInvalid, exitCode);
         Assert.Equal("old launcher", await File.ReadAllTextAsync(Path.Combine(install, LauncherExeName)));
         Assert.True(File.Exists(Path.Combine(install, "old-marker.txt")));
         Assert.False(Directory.Exists(UpdateApplyPlan.StagingDirectory(install, parentPid)));
@@ -203,7 +203,7 @@ public sealed class UpdateApplierPortableApplyTests
         {
             var exitCode = await UpdateApplier.ApplyAsync(arguments, CancellationToken.None);
 
-            Assert.Equal(7, exitCode);
+            Assert.Equal(UpdaterExitCode.BackupMoveFailure, exitCode);
         }
 
         Assert.Equal("old launcher", await File.ReadAllTextAsync(Path.Combine(install, LauncherExeName)));

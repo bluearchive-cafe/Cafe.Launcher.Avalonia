@@ -1,3 +1,4 @@
+using System.Globalization;
 using Cafe.Launcher.Updater;
 
 namespace Cafe.Launcher.Avalonia.Tests;
@@ -28,7 +29,7 @@ public sealed class UpdaterArgumentsTests
     public void TryParse_ParsesBothModes(string mode, UpdateApplyMode expected)
     {
         var arguments = ValidArguments();
-        arguments[1] = mode;
+        SetOption(arguments, UpdaterArguments.ModeOption, mode);
 
         Assert.True(UpdaterArguments.TryParse(arguments, out var parsed, out var error), error);
         Assert.Equal(expected, parsed!.Mode);
@@ -37,15 +38,25 @@ public sealed class UpdaterArgumentsTests
     [Fact]
     public void TryParse_WhenAnOptionHasNoValue_Fails()
     {
-        Assert.False(UpdaterArguments.TryParse(["--mode"], out _, out var error));
+        Assert.False(UpdaterArguments.TryParse([UpdaterArguments.ApplyCommand, "--mode"], out _, out var error));
         Assert.Contains("missing a value", error, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TryParse_WhenCommandIsUnknown_Fails()
+    {
+        var arguments = ValidArguments();
+        arguments[0] = "inspect";
+
+        Assert.False(UpdaterArguments.TryParse(arguments, out _, out var error));
+        Assert.Contains("Unknown command", error, StringComparison.Ordinal);
     }
 
     [Fact]
     public void TryParse_WhenOptionIsUnknown_Fails()
     {
         var arguments = ValidArguments();
-        arguments[0] = "--nope";
+        arguments[1] = "--nope";
 
         Assert.False(UpdaterArguments.TryParse(arguments, out _, out var error));
         Assert.Contains("Unknown option", error, StringComparison.Ordinal);
@@ -55,7 +66,7 @@ public sealed class UpdaterArgumentsTests
     public void TryParse_WhenModeIsUnknown_Fails()
     {
         var arguments = ValidArguments();
-        arguments[1] = "sideload";
+        SetOption(arguments, UpdaterArguments.ModeOption, "sideload");
 
         Assert.False(UpdaterArguments.TryParse(arguments, out _, out var error));
         Assert.Contains("Unknown mode", error, StringComparison.Ordinal);
@@ -68,7 +79,7 @@ public sealed class UpdaterArgumentsTests
     public void TryParse_WhenParentPidIsInvalid_Fails(string pid)
     {
         var arguments = ValidArguments();
-        arguments[9] = pid;
+        SetOption(arguments, UpdaterArguments.ParentPidOption, pid);
 
         Assert.False(UpdaterArguments.TryParse(arguments, out _, out var error));
         Assert.Contains("parent process id", error, StringComparison.Ordinal);
@@ -78,10 +89,35 @@ public sealed class UpdaterArgumentsTests
     public void TryParse_WhenSha256IsInvalid_Fails()
     {
         var arguments = ValidArguments();
-        arguments[11] = "not-a-hash";
+        SetOption(arguments, UpdaterArguments.Sha256Option, "not-a-hash");
 
         Assert.False(UpdaterArguments.TryParse(arguments, out _, out var error));
         Assert.Contains("SHA-256", error, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("0")]
+    [InlineData("2")]
+    [InlineData("next")]
+    public void TryParse_WhenProtocolVersionIsUnsupported_Fails(string protocolVersion)
+    {
+        var arguments = ValidArguments();
+        SetOption(arguments, UpdaterArguments.ProtocolVersionOption, protocolVersion);
+
+        Assert.False(UpdaterArguments.TryParse(arguments, out _, out var error));
+        Assert.Contains("Unsupported updater protocol version", error, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TryParse_WhenProtocolVersionIsMissing_Fails()
+    {
+        var arguments = ValidArguments()
+            .Where(value => value != UpdaterArguments.ProtocolVersionOption
+                && value != UpdaterArguments.CurrentProtocolVersion.ToString(CultureInfo.InvariantCulture))
+            .ToArray();
+
+        Assert.False(UpdaterArguments.TryParse(arguments, out _, out var error));
+        Assert.Contains(UpdaterArguments.ProtocolVersionOption, error, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -104,6 +140,9 @@ public sealed class UpdaterArgumentsTests
 
     private static string[] ValidArguments() =>
     [
+        UpdaterArguments.ApplyCommand,
+        UpdaterArguments.ProtocolVersionOption,
+        UpdaterArguments.CurrentProtocolVersion.ToString(CultureInfo.InvariantCulture),
         UpdaterArguments.ModeOption, "portable",
         UpdaterArguments.PackageOption, "/tmp/pkg.zip",
         UpdaterArguments.InstallDirOption, "/tmp/app",
@@ -112,4 +151,11 @@ public sealed class UpdaterArgumentsTests
         UpdaterArguments.Sha256Option, ValidSha,
         UpdaterArguments.LogOption, "/tmp/log"
     ];
+
+    private static void SetOption(string[] arguments, string option, string value)
+    {
+        var optionIndex = Array.IndexOf(arguments, option);
+        Assert.True(optionIndex >= 0, $"Option '{option}' was not present in the test arguments.");
+        arguments[optionIndex + 1] = value;
+    }
 }

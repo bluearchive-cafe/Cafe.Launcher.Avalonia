@@ -380,6 +380,7 @@
           "Avalonia.Desktop": "[12.1.2, )",
           "Avalonia.Themes.Fluent": "[12.1.2, )",
           "AvaloniaUI.DiagnosticsSupport": "[2.2.3, )",
+          "Cafe.Launcher.Updater.Core": "[1.0.0, )",
           "CommunityToolkit.Mvvm": "[8.4.2, )",
           "MarkView.Avalonia": "[12.2.1, )",
           "Material.Icons.Avalonia": "[3.0.2, )",
@@ -389,6 +390,9 @@
           "Serilog.Sinks.File": "[7.0.0, )",
           "Shirasagi0012.MaterialColorUtilities": "[0.2.0, )"
         }
+      },
+      "cafe.launcher.updater.core": {
+        "type": "Project"
       },
       "Avalonia": {
         "type": "CentralTransitive",
