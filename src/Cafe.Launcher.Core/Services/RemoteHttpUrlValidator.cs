@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Cafe.Launcher.Core.Services;
 
-public sealed class RemoteHttpUrlValidator
+internal sealed class RemoteHttpUrlValidator : IRemoteHttpUrlValidator
 {
     /// <summary>
     /// How long a successful all-public DNS resolution may be reused across

@@ -38,6 +38,7 @@ public sealed class SettingsWriteOwnershipTests
         "src/Cafe.Launcher.Avalonia.UI/Features/Shell/ShellLifecycle.cs",
         "src/Cafe.Launcher.Avalonia.UI/LauncherPresentationSession.cs",
         "src/Cafe.Launcher.Avalonia.UI/ViewModels/MainWindowViewModel.cs",
+        "src/Cafe.Launcher.Core/Composition/LauncherCoreServiceCollectionExtensions.cs",
         "src/Cafe.Launcher.Core/Services/LauncherCoreService.cs",
     ];
 
@@ -48,7 +49,7 @@ public sealed class SettingsWriteOwnershipTests
     /// 只认某一个拼写会让换个名字的持有者隐身。
     /// </summary>
     private static readonly Regex HolderPattern = new(
-        @"LauncherSettingsService\s+[A-Za-z_]|Get(?:Required)?Service<LauncherSettingsService>",
+        @"I?LauncherSettingsService\s+[A-Za-z_]|Get(?:Required)?Service<I?LauncherSettingsService>",
         RegexOptions.Compiled);
 
     /// <summary>

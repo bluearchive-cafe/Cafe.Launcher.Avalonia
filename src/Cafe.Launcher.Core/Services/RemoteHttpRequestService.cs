@@ -43,7 +43,7 @@ public static class RemoteHttpRequestService
         HttpClient client,
         Uri initialUri,
         Func<Uri, HttpRequestMessage> createRequest,
-        RemoteHttpUrlValidator urlValidator,
+        IRemoteHttpUrlValidator urlValidator,
         CancellationToken cancellationToken,
         IWebProxy? connectionProxy = null)
     {

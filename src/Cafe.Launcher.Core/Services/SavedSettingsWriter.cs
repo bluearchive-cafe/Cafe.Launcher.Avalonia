@@ -58,7 +58,7 @@ public interface ISettingsDraftOwner
 /// 归一化写入，<see cref="ISettingsDraftOwner"/>（表现层的设置编辑器）负责草稿与快照；本类只维护
 /// 二者的一致性，因此不需要知道任何表现层类型。
 /// </summary>
-public sealed class SavedSettingsWriter : ISavedSettingsWriter
+internal sealed class SavedSettingsWriter : ISavedSettingsWriter
 {
     private readonly LauncherSettingsService settingsService;
     private readonly ISettingsDraftOwner draftOwner;

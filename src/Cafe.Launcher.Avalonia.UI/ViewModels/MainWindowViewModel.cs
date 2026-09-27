@@ -91,7 +91,7 @@ internal partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     internal MainWindowViewModel(
         ILauncherCoreService launcherCoreService,
-        LauncherSettingsService settingsService,
+        ILauncherSettingsService settingsService,
         ISavedSettingsWriter savedSettingsWriter,
         LocalizationService localizer,
         ToastService toastService,

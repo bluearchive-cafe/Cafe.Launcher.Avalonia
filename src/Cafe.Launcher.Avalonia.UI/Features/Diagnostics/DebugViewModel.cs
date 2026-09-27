@@ -27,7 +27,7 @@ internal sealed partial class DebugViewModel : ViewModelBase, IModalContentViewM
     private readonly UnifiedLogger unifiedLogger;
     private readonly IErrorHandlingService errorHandling;
     private readonly IFatalCrashService fatalCrashService;
-    private readonly LauncherSettingsService settingsService;
+    private readonly ILauncherSettingsService settingsService;
     private readonly IGameOperationActivity operations;
     private readonly ShellViewModel shell;
     private readonly LauncherBuildIdentity? buildIdentity;
@@ -82,7 +82,7 @@ internal sealed partial class DebugViewModel : ViewModelBase, IModalContentViewM
         UnifiedLogger unifiedLogger,
         IErrorHandlingService errorHandling,
         IFatalCrashService fatalCrashService,
-        LauncherSettingsService settingsService,
+        ILauncherSettingsService settingsService,
         IGameOperationActivity operations,
         ShellViewModel shell,
         LauncherBuildIdentity? buildIdentity = null)

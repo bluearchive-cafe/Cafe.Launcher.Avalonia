@@ -33,14 +33,14 @@ internal sealed partial class ResourcePanelUidService
     }
 
     private readonly BestHttpCookieLibraryService cookieLibraryService;
-    private readonly LauncherSettingsService settingsService;
+    private readonly ILauncherSettingsService settingsService;
     private readonly ISavedSettingsWriter savedSettingsWriter;
     private readonly string? cookieLibraryPathOverride;
     private string cookieLibraryPath;
 
     public ResourcePanelUidService(
         BestHttpCookieLibraryService cookieLibraryService,
-        LauncherSettingsService settingsService,
+        ILauncherSettingsService settingsService,
         ISavedSettingsWriter savedSettingsWriter,
         LocalDiagnostics? diagnostics = null)
         : this(cookieLibraryService, settingsService, savedSettingsWriter, null, diagnostics)
@@ -49,7 +49,7 @@ internal sealed partial class ResourcePanelUidService
 
     internal ResourcePanelUidService(
         BestHttpCookieLibraryService cookieLibraryService,
-        LauncherSettingsService settingsService,
+        ILauncherSettingsService settingsService,
         ISavedSettingsWriter savedSettingsWriter,
         string? cookieLibraryPath,
         LocalDiagnostics? diagnostics = null)

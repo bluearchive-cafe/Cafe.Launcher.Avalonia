@@ -35,7 +35,7 @@ public interface IDownloadTransportSource
 /// <summary>Production transport over one proxy-aware lease.</summary>
 public sealed class LeaseBackedDownloadTransport(
     HttpClientLease lease,
-    RemoteHttpUrlValidator urlValidator) : IDownloadTransport
+    IRemoteHttpUrlValidator urlValidator) : IDownloadTransport
 {
     public async Task<HttpResponseMessage> SendAsync(
         Uri uri,
@@ -58,7 +58,7 @@ public sealed class LeaseBackedDownloadTransport(
 /// </summary>
 public sealed class LeaseBackedDownloadTransportSource(
     HttpClientFactory httpClientFactory,
-    RemoteHttpUrlValidator urlValidator,
+    IRemoteHttpUrlValidator urlValidator,
     TimeSpan leaseTimeout) : IDownloadTransportSource
 {
     public async Task<IDownloadTransport> CreateAsync(
