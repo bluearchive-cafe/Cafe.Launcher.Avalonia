@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace Cafe.Launcher.Updater;
 
 /// <summary>Entry point logic for the detached update helper.</summary>
-internal static class UpdaterProgram
+public static class UpdaterProgram
 {
     public static async Task<int> RunAsync(string[] args)
     {

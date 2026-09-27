@@ -57,6 +57,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Cafe.Launcher.Updater.Core\Cafe.Launcher.Updater.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Avalonia" />
     <PackageReference Include="Avalonia.Controls.ColorPicker" />
     <PackageReference Include="MarkView.Avalonia" />

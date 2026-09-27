@@ -18,8 +18,10 @@ $resultsRoot = Join-Path $PSScriptRoot 'TestResults\Coverage'
 $repositoryRoot = [IO.Path]::GetFullPath($PSScriptRoot)
 $repositoryRootPrefix = $repositoryRoot.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
 
-# Coverlet reports class filenames relative to the instrumented project directory.
-$applicationProjectDirectory = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot 'src\Cafe.Launcher.Avalonia'))
+# Coverlet reports class filenames relative to the <sources> roots in each Cobertura
+# document. With one production project that root happened to be the application
+# directory; once another referenced production assembly exists Coverlet lifts it to
+# their common src/ parent. Resolve against the report instead of assuming either shape.
 
 if (Test-Path -LiteralPath $resultsRoot) {
     Remove-Item -LiteralPath $resultsRoot -Recurse -Force
@@ -125,18 +127,38 @@ $branchCoverage = @{}
 
 foreach ($reportPath in $reportPaths.Values) {
     [xml]$coverageXml = Get-Content -LiteralPath $reportPath -Raw
+    $sourceRoots = @($coverageXml.coverage.sources.source | ForEach-Object {
+        [IO.Path]::GetFullPath([string]$_)
+    })
 
     foreach ($package in @($coverageXml.coverage.packages.package)) {
         foreach ($class in @($package.classes.class)) {
             $relativePath = $class.filename -replace '[\\/]', [string][IO.Path]::DirectorySeparatorChar
-            $fullPath = [IO.Path]::GetFullPath((Join-Path $applicationProjectDirectory $relativePath))
+            $fullPath = $null
+            foreach ($sourceRoot in $sourceRoots) {
+                $candidate = [IO.Path]::GetFullPath((Join-Path $sourceRoot $relativePath))
+                if (
+                    $candidate.StartsWith($repositoryRootPrefix, [StringComparison]::OrdinalIgnoreCase) -and
+                    (Test-Path -LiteralPath $candidate -PathType Leaf)
+                ) {
+                    $fullPath = $candidate
+                    break
+                }
+            }
+
+            if ($null -eq $fullPath) {
+                continue
+            }
+
             $extension = [IO.Path]::GetExtension($fullPath)
+            $pathSegments = $relativePath.Split(
+                [IO.Path]::DirectorySeparatorChar,
+                [IO.Path]::AltDirectorySeparatorChar)
 
             if (
                 $extension -ne '.cs' -or
-                -not $fullPath.StartsWith($repositoryRootPrefix, [StringComparison]::OrdinalIgnoreCase) -or
-                $relativePath.StartsWith('obj\', [StringComparison]::OrdinalIgnoreCase) -or
-                -not (Test-Path -LiteralPath $fullPath -PathType Leaf)
+                $pathSegments -contains 'bin' -or
+                $pathSegments -contains 'obj'
             ) {
                 continue
             }

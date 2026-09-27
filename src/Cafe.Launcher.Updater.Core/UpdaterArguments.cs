@@ -10,9 +10,8 @@ namespace Cafe.Launcher.Updater;
 /// into applying the wrong package to the wrong directory.
 /// </summary>
 /// <remarks>
-/// The option names are mirrored by the production argument builder in the main
-/// application (<c>Services/Update/UpdateHelperCommand.cs</c>); a round-trip test keeps
-/// the two halves in sync.
+/// The main application constructs this record and calls <see cref="ToArgumentArray"/>,
+/// so option names, mode values, formatting, and parsing have one owner.
 /// </remarks>
 public sealed record UpdaterArguments(
     UpdateApplyMode Mode,
@@ -44,6 +43,26 @@ public sealed record UpdaterArguments(
         Sha256Option,
         LogOption
     };
+
+    /// <summary>Returns the command-line value used for an apply mode.</summary>
+    public static string ModeName(UpdateApplyMode mode) => mode switch
+    {
+        UpdateApplyMode.Installer => InstallerMode,
+        UpdateApplyMode.Portable => PortableMode,
+        _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unknown update apply mode.")
+    };
+
+    /// <summary>Serializes this command as alternating option/value tokens.</summary>
+    public string[] ToArgumentArray() =>
+    [
+        ModeOption, ModeName(Mode),
+        PackageOption, PackagePath,
+        InstallDirOption, InstallDirectory,
+        ExeOption, ExecutableName,
+        ParentPidOption, ParentProcessId.ToString(CultureInfo.InvariantCulture),
+        Sha256Option, ExpectedSha256,
+        LogOption, LogPath
+    ];
 
     /// <summary>Parses the helper command line, reporting the first problem it finds.</summary>
     public static bool TryParse(string[] args, out UpdaterArguments? parsed, out string error)

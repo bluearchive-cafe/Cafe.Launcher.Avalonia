@@ -163,12 +163,13 @@ Linux 版除了安装、更新、修复游戏外，还可以通过兼容运行�
 
 ## 开发者指南
 
-本仓库是启动器的完整源代码，包含 Avalonia 桌面应用、Windows 自更新 helper，以及单元测试与 Headless UI 测试两个测试项目。
+本仓库是启动器的完整源代码，包含 Avalonia 桌面应用、Windows 自更新 helper 及其 Core 类库，以及单元测试与 Headless UI 测试两个测试项目。
 
 | 项目 | 说明 |
 | --- | --- |
 | [`src/Cafe.Launcher.Avalonia`](./src/Cafe.Launcher.Avalonia/) | 桌面应用主体 |
-| [`src/Cafe.Launcher.Updater`](./src/Cafe.Launcher.Updater/) | Windows 自更新 helper（单文件，复制到临时目录后应用更新） |
+| [`src/Cafe.Launcher.Updater.Core`](./src/Cafe.Launcher.Updater.Core/) | 自更新参数契约、校验、路径计划与应用实现 |
+| [`src/Cafe.Launcher.Updater`](./src/Cafe.Launcher.Updater/) | Windows 自更新 helper 宿主（单文件，复制到临时目录后调用 Core 应用更新） |
 | [`tests/Cafe.Launcher.Avalonia.Tests`](./tests/Cafe.Launcher.Avalonia.Tests/) | xUnit v3 单元测试 |
 | [`tests/Cafe.Launcher.Avalonia.HeadlessTests`](./tests/Cafe.Launcher.Avalonia.HeadlessTests/) | Avalonia Headless UI 测试，含金标截图基线 |
 
@@ -223,7 +224,8 @@ src/Cafe.Launcher.Avalonia/
 ├── Resources/         # 多语言资源（.resx）
 └── Assets/            # 图标、字体、音频和内置壁纸
 
-src/Cafe.Launcher.Updater/  # Windows 自更新 helper
+src/Cafe.Launcher.Updater.Core/  # 自更新契约与应用实现
+src/Cafe.Launcher.Updater/       # Windows 自更新单文件宿主
 tests/
 ├── Cafe.Launcher.Avalonia.Tests/          # xUnit 单元测试
 ├── Cafe.Launcher.Avalonia.HeadlessTests/  # Avalonia Headless UI 测试
