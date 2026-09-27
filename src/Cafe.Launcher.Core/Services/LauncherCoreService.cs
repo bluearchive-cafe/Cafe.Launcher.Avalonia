@@ -1,11 +1,11 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Cafe.Launcher.Avalonia.Helpers;
-using Cafe.Launcher.Avalonia.Models;
-using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Core.Helpers;
+using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Services.Diagnostics;
 
-namespace Cafe.Launcher.Avalonia.Services;
+namespace Cafe.Launcher.Core.Services;
 
 public interface ILauncherCoreService
 {
@@ -32,7 +32,7 @@ public sealed class LauncherCoreService : ILauncherCoreService
     private readonly LocalInstallationStateStore localInstallationStateStore;
     private readonly GameInstallationPath installationPath;
     private readonly LauncherSettingsService settingsService;
-    private readonly LocalDiagnostics diagnostics;
+    private readonly ILauncherDiagnostics diagnostics;
     private readonly TimeSpan remoteStateBudget;
 
     public LauncherCoreService(
@@ -40,7 +40,7 @@ public sealed class LauncherCoreService : ILauncherCoreService
         LocalInstallationStateStore localInstallationStateStore,
         GameInstallationPath installationPath,
         LauncherSettingsService settingsService,
-        LocalDiagnostics diagnostics)
+        ILauncherDiagnostics diagnostics)
         : this(
             apiClient,
             localInstallationStateStore,
@@ -56,7 +56,7 @@ public sealed class LauncherCoreService : ILauncherCoreService
         LocalInstallationStateStore localInstallationStateStore,
         GameInstallationPath installationPath,
         LauncherSettingsService settingsService,
-        LocalDiagnostics diagnostics,
+        ILauncherDiagnostics diagnostics,
         TimeSpan remoteStateBudget)
     {
         this.apiClient = apiClient;
@@ -203,6 +203,7 @@ public sealed class LauncherCoreService : ILauncherCoreService
         {
             await diagnostics.ErrorAsync(
                 $"Launcher remote state read failed: {operation}.",
+                exception.Message,
                 exception,
                 CancellationToken.None).ConfigureAwait(false);
             return default;

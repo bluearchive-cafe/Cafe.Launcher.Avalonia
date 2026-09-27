@@ -3,7 +3,7 @@ using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
 
-namespace Cafe.Launcher.Avalonia.Services;
+namespace Cafe.Launcher.Core.Services;
 
 /// <summary>
 /// 读取操作系统的「动画已启用」偏好，供 MotionSettingsResolver 在 System 档使用。

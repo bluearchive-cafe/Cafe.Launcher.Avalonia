@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Net.Http;
@@ -6,12 +6,12 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Cafe.Launcher.Avalonia.Constants;
-using Cafe.Launcher.Avalonia.Helpers;
-using Cafe.Launcher.Avalonia.Models;
-using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Core.Constants;
+using Cafe.Launcher.Core.Helpers;
+using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Services.Diagnostics;
 
-namespace Cafe.Launcher.Avalonia.Services;
+namespace Cafe.Launcher.Core.Services;
 
 /// <summary>
 /// Caches downloaded images (e.g., launcher background) by CRC64 hash.
@@ -33,9 +33,10 @@ public sealed class ImageCacheService : IDisposable
     internal static readonly TimeSpan CacheEntryLifetime = TimeSpan.FromDays(30);
 
     private readonly string cacheDir;
+    private readonly string launcherVersion;
     private readonly IRemoteHttpTransport transport;
     private readonly Crc64Service crc64Service;
-    private readonly LocalDiagnostics? diagnostics;
+    private readonly ILauncherDiagnostics? diagnostics;
     private readonly ConcurrentDictionary<string, SemaphoreSlim> cacheLocks =
         new(StringComparer.Ordinal);
     private bool disposed;
@@ -44,12 +45,14 @@ public sealed class ImageCacheService : IDisposable
         IRemoteHttpTransport transport,
         Crc64Service crc64Service,
         LauncherDataRoot dataRoot,
-        LocalDiagnostics? diagnostics = null)
+        ILauncherDiagnostics? diagnostics = null,
+        LauncherBuildIdentity? buildIdentity = null)
     {
         ArgumentNullException.ThrowIfNull(dataRoot);
         this.transport = transport;
         this.crc64Service = crc64Service;
         this.diagnostics = diagnostics;
+        launcherVersion = buildIdentity?.LauncherVersion ?? "";
         this.cacheDir = dataRoot.ImageCacheDirectory;
         try
         {
@@ -58,7 +61,7 @@ public sealed class ImageCacheService : IDisposable
         catch (Exception ex) when (StorageFailure.IsRecoverable(ex))
         {
             // Cache directory is non-critical — log and continue without caching
-            _ = diagnostics?.WarningAsync("ImageCache", $"failed to create cache directory: {ex.Message}");
+            diagnostics?.LogMessage(LogEntrySeverity.Warn, "ImageCache", $"failed to create cache directory: {ex.Message}");
         }
 
         _ = Task.Run(CleanupExpiredEntries);
@@ -252,23 +255,23 @@ public sealed class ImageCacheService : IDisposable
         }
     }
 
-    private static RemoteRequestOptions ResolvedModeOptions() => new()
+    private RemoteRequestOptions ResolvedModeOptions() => new()
     {
         Timeout = RequestTimeout,
         ConfigureRequest = ConfigureImageRequest
     };
 
-    private static RemoteRequestOptions DirectModeOptions() => new()
+    private RemoteRequestOptions DirectModeOptions() => new()
     {
         ProxyMode = ProxyModes.Direct,
         Timeout = RequestTimeout,
         ConfigureRequest = ConfigureImageRequest
     };
 
-    private static void ConfigureImageRequest(HttpRequestMessage request) =>
+    private void ConfigureImageRequest(HttpRequestMessage request) =>
         request.Headers.TryAddWithoutValidation(
             "User-Agent",
-            $"CafeLauncher/{BuildInfo.LauncherVersion} (.NET)");
+            $"CafeLauncher/{launcherVersion} (.NET)");
 
     private static void TryDelete(string path)
     {
@@ -313,7 +316,7 @@ public sealed class ImageCacheService : IDisposable
         }
         catch (Exception exception) when (StorageFailure.IsRecoverable(exception))
         {
-            _ = diagnostics?.WarningAsync("ImageCache", $"cache sweep failed: {exception.Message}");
+            diagnostics?.LogMessage(LogEntrySeverity.Warn, "ImageCache", $"cache sweep failed: {exception.Message}");
         }
     }
 

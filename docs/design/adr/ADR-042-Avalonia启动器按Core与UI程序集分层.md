@@ -128,6 +128,11 @@ Core API 后应改回显式 using。`AssemblySplitContractTests.CoreSources_UseO
   `LauncherUpdateService` 不再读宿主 `BuildInfo`，当前版本与 User-Agent 都取注入的
   `LauncherBuildIdentity`（测试按同一方式传入宿主标识）；自更新的告警改走
   `ILauncherDiagnostics.LogMessage`。
+- 零散后端批次：`NoticeStateService`、`LauncherCoreService`、`ImageCacheService`、`ShellFolderOpener`、
+  `SystemAnimationSettingsProvider`、`GameOperationStopIntent` 迁入 Core；注册随之移到
+  `AddLauncherCore`。`ImageCacheService` 的 User-Agent 与 `LauncherCoreService` 的失败日志分别改走
+  注入的 `LauncherBuildIdentity` 与 `ILauncherDiagnostics.ErrorAsync(title, message, exception)`。
+  设置写入方的持有者声明表同步改指 Core 路径。
 - 混合模型文件拆分：`ManifestValidationResult`、`GameLaunchResult`、`LauncherRemoteState`、
   `LauncherRuntimeState`、`LauncherStatusSnapshot` 迁到 `Cafe.Launcher.Core.Models`
   （`Models/LauncherStatusModels.cs`）；宿主的 `LauncherRuntimeModels.cs` 只剩表现类型
