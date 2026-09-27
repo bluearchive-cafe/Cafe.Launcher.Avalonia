@@ -12,7 +12,7 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 /// parameter list.
 /// </summary>
 internal sealed record DownloadSessionContext(
-    LauncherApiClient ApiClient,
+    ILauncherApiClient ApiClient,
     RemoteManifestService RemoteManifestService,
     IFileDownloadService FileDownloadService,
     IDownloadTransportSource TransportSource,

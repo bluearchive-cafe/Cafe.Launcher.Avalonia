@@ -28,7 +28,7 @@ public sealed class LauncherCoreService : ILauncherCoreService
     /// </summary>
     internal static readonly TimeSpan DefaultRemoteStateBudget = TimeSpan.FromSeconds(30);
 
-    private readonly LauncherApiClient apiClient;
+    private readonly ILauncherApiClient apiClient;
     private readonly ILocalInstallationStateStore localInstallationStateStore;
     private readonly IGameInstallationPath installationPath;
     private readonly ILauncherSettingsService settingsService;
@@ -36,7 +36,7 @@ public sealed class LauncherCoreService : ILauncherCoreService
     private readonly TimeSpan remoteStateBudget;
 
     public LauncherCoreService(
-        LauncherApiClient apiClient,
+        ILauncherApiClient apiClient,
         ILocalInstallationStateStore localInstallationStateStore,
         IGameInstallationPath installationPath,
         ILauncherSettingsService settingsService,
@@ -52,7 +52,7 @@ public sealed class LauncherCoreService : ILauncherCoreService
     }
 
     internal LauncherCoreService(
-        LauncherApiClient apiClient,
+        ILauncherApiClient apiClient,
         ILocalInstallationStateStore localInstallationStateStore,
         IGameInstallationPath installationPath,
         ILauncherSettingsService settingsService,

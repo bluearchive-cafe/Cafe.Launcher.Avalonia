@@ -19,9 +19,9 @@ namespace Cafe.Launcher.Avalonia.Services;
 /// </summary>
 internal sealed class RemoteManifestService
 {
-    private readonly LauncherApiClient apiClient;
+    private readonly ILauncherApiClient apiClient;
 
-    public RemoteManifestService(LauncherApiClient apiClient)
+    public RemoteManifestService(ILauncherApiClient apiClient)
     {
         this.apiClient = apiClient;
     }

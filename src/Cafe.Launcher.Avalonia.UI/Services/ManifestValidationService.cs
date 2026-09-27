@@ -13,12 +13,12 @@ namespace Cafe.Launcher.Avalonia.Services;
 
 internal sealed class ManifestValidationService
 {
-    private readonly LauncherApiClient apiClient;
+    private readonly ILauncherApiClient apiClient;
     private readonly RemoteManifestService remoteManifestService;
     private readonly LocalizationService localizer;
 
     public ManifestValidationService(
-        LauncherApiClient apiClient,
+        ILauncherApiClient apiClient,
         RemoteManifestService remoteManifestService,
         LocalizationService localizer)
     {

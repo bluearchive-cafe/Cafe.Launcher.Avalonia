@@ -142,7 +142,7 @@ public readonly record struct RemoteBody(Stream Content, long? DeclaredContentLe
 /// Executes validated, proxy-aware remote HTTP requests and owns redirect,
 /// retry, response-lifetime, buffering, and body-stall policies.
 /// </summary>
-public sealed class RemoteHttpTransport : IRemoteHttpTransport
+internal sealed class RemoteHttpTransport : IRemoteHttpTransport
 {
     private readonly Func<string, TimeSpan?, CancellationToken, Task<HttpClientLease>> createLeaseAsync;
     private readonly IRemoteHttpUrlValidator urlValidator;

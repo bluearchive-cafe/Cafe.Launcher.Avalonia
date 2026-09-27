@@ -57,7 +57,7 @@ public sealed class LeaseBackedDownloadTransport(
 /// <see cref="HttpClientFactory"/> with the download batch's long timeout.
 /// </summary>
 public sealed class LeaseBackedDownloadTransportSource(
-    HttpClientFactory httpClientFactory,
+    IRemoteHttpClientLeaseSource httpClientFactory,
     IRemoteHttpUrlValidator urlValidator,
     TimeSpan leaseTimeout) : IDownloadTransportSource
 {

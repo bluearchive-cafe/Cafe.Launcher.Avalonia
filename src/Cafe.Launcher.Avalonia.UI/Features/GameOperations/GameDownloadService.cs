@@ -17,7 +17,7 @@ internal sealed class GameDownloadService : IDisposable
     /// <summary>Raised when <see cref="IsRunning"/> changes value.</summary>
     internal event Action? IsRunningChanged;
 
-    private readonly LauncherApiClient apiClient;
+    private readonly ILauncherApiClient apiClient;
     private readonly RemoteManifestService remoteManifestService;
     private readonly IFileDownloadService fileDownloadService;
     private readonly ILocalInstallationStateStore localInstallationStateStore;
@@ -39,12 +39,12 @@ internal sealed class GameDownloadService : IDisposable
     private static readonly TimeSpan DownloadLeaseTimeout = TimeSpan.FromMinutes(10);
 
     public GameDownloadService(
-        LauncherApiClient apiClient,
+        ILauncherApiClient apiClient,
         RemoteManifestService remoteManifestService,
         IFileDownloadService fileDownloadService,
         ILocalInstallationStateStore localInstallationStateStore,
         ILauncherSettingsService settingsService,
-        HttpClientFactory httpClientFactory,
+        IRemoteHttpClientLeaseSource httpClientFactory,
         IRemoteHttpUrlValidator urlValidator,
         ICrc64Service crc64Service,
         IDiskSpaceService diskSpaceService,
@@ -74,12 +74,12 @@ internal sealed class GameDownloadService : IDisposable
     }
 
     internal GameDownloadService(
-        LauncherApiClient apiClient,
+        ILauncherApiClient apiClient,
         RemoteManifestService remoteManifestService,
         IFileDownloadService fileDownloadService,
         ILocalInstallationStateStore localInstallationStateStore,
         ILauncherSettingsService settingsService,
-        HttpClientFactory httpClientFactory,
+        IRemoteHttpClientLeaseSource httpClientFactory,
         IRemoteHttpUrlValidator urlValidator,
         ICrc64Service crc64Service,
         IDiskSpaceService diskSpaceService,
