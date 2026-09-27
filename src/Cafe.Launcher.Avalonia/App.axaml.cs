@@ -7,7 +7,6 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
-using Cafe.Launcher.Core.Composition;
 using Cafe.Launcher.Avalonia.UI;
 using Cafe.Launcher.Avalonia.UI.Composition;
 using Cafe.Launcher.Avalonia.Composition;
@@ -48,10 +47,13 @@ public partial class App : Application
             // Build DI container, reusing the pre-DI UnifiedLogger so there is
             // a single Serilog pipeline for the entire process.
             var serviceCollection = new ServiceCollection();
-            var launcherDataRoot = LauncherDataRoot.ForCurrentProcess();
             MainWindow? presentationWindow = null;
             MainWindowViewModel? presentationViewModel = null;
-            serviceCollection.AddLauncherCore(BuildInfo.Identity, launcherDataRoot);
+            // 组合根解析唯一的数据根并先注册 Core；表现层随后注册，容器反向释放时先释放 UI。
+            // 宿主不再自己解析数据根，也不再单独调用 AddLauncherCore（那会造成两处注册顺序契约）。
+            serviceCollection.AddLauncherServices(
+                existingLogger: Program.PreDiLogger,
+                existingFatalCrashService: Program.PreDiFatalCrashService);
             serviceCollection.AddLauncherPresentation(
                 new LauncherPresentationCallbacks(
                     CreateMainWindow: () => presentationWindow
@@ -90,10 +92,6 @@ public partial class App : Application
                         serviceProvider
                             ?? throw new InvalidOperationException("Presentation services have not been built.")),
                     Dispose: () => presentationViewModel?.Dispose()));
-            serviceCollection.AddLauncherServices(
-                existingLogger: Program.PreDiLogger,
-                existingFatalCrashService: Program.PreDiFatalCrashService,
-                launcherDataRoot: launcherDataRoot);
             serviceProvider = serviceCollection.BuildServiceProvider();
             Program.ServiceProvider = serviceProvider;
 

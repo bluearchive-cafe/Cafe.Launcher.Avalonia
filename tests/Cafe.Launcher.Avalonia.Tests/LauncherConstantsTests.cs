@@ -8,7 +8,10 @@ public sealed class LauncherConstantsTests
     [Fact]
     public void LauncherVersion_UsesApplicationSemVer()
     {
-        var expected = typeof(LauncherConstants).Assembly
+        // 版本来自 WinExe 宿主程序集，不是 BuildInfo 所在的类型碰巧属于哪个程序集：
+        // LauncherConstants 已随 Core 拆分离开宿主，用它的程序集会把 Core 默认的
+        // 1.0.0 当成产品版本（见 AssemblySplitContractTests.BuildIdentity_ReadsTheSuppliedHostAssembly）。
+        var expected = typeof(BuildInfo).Assembly
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
             ?.InformationalVersion;
         Assert.NotNull(expected);
@@ -19,6 +22,23 @@ public sealed class LauncherConstantsTests
     public void CommitSha_UsesSevenCharacterLowercaseGitHash()
     {
         Assert.Matches("^[0-9a-f]{7}$", BuildInfo.CommitSha);
+    }
+
+    [Fact]
+    public void BuildTime_IsAParsedTimestampOrEmpty()
+    {
+        // 宿主 csproj 的 git 元数据 Exec 曾把单个百分号交给 MSBuild 吃掉，git 的致命错误文本
+        // 被当成构建时间写进 AssemblyMetadata，再由 LauncherBuildIdentity 原样透出到关于页与日志。
+        // git 不可用时（源码包构建）允许空串。
+        Assert.DoesNotContain("fatal", BuildInfo.BuildTime, StringComparison.OrdinalIgnoreCase);
+        Assert.True(
+            BuildInfo.BuildTime.Length == 0
+            || DateTimeOffset.TryParse(
+                BuildInfo.BuildTime,
+                System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None,
+                out _),
+            $"BuildTime 必须是可解析的时间戳或空串，实际为 '{BuildInfo.BuildTime}'。");
     }
 
     [Fact]

@@ -155,6 +155,7 @@ public sealed class TestUserDataIsolationTests
         var repositoryRoot = TestRepository.Root;
         var hostRoot = TestRepository.HostPath;
         var coreRoot = TestRepository.CorePath;
+        var presentationRoot = TestRepository.PresentationPath;
         var declared = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             // 定义与唯一实现
@@ -169,15 +170,16 @@ public sealed class TestUserDataIsolationTests
             Path.Combine(hostRoot, "Services", "GameRuntime", "GameCompatibilityPaths.cs")
         };
 
-        var scanned = new[] { hostRoot, coreRoot }
+        var scanned = new[] { hostRoot, coreRoot, presentationRoot }
             .SelectMany(root => Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories)
                 .Where(path => !IsBuildOrTestArtifact(root, path)))
             .ToArray();
 
         // 反空转基线：本守卫的形状是「排除声明表后必须为空」，于是「根目录找错／后缀失效
         // 导致一个文件都没扫」与「树是干净的」不可区分。两条基线把这种退化态变成红的。
-        // 基线为 2026-09-15 的实测值；真的删文件就同步下调，扫描失效应表现为红而不是绿。
-        const int landedScannedFiles = 245;
+        // 基线为 2026-09-27 的实测值（host 247 + Core 48 + UI 2）；真的删文件就同步下调，
+        // 扫描失效应表现为红而不是绿。
+        const int landedScannedFiles = 297;
         const int landedResolvingFiles = 5;
         var resolving = scanned
             .Where(path => File.ReadAllText(path).Contains(ProcessRootResolver, StringComparison.Ordinal))
@@ -212,12 +214,13 @@ public sealed class TestUserDataIsolationTests
         var repositoryRoot = TestRepository.Root;
         var hostRoot = TestRepository.HostPath;
         var coreRoot = TestRepository.CorePath;
+        var presentationRoot = TestRepository.PresentationPath;
         var allowedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             Path.Combine(coreRoot, "Services", "LauncherDataRoot.cs"),
             Path.Combine(hostRoot, "Features", "GameOperations", "GameUninstallService.cs")
         };
-        var offenders = new[] { hostRoot, coreRoot }
+        var offenders = new[] { hostRoot, coreRoot, presentationRoot }
             .SelectMany(root => Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories)
                 .Where(path => !IsBuildOrTestArtifact(root, path)))
             .Where(path => !allowedFiles.Contains(path))

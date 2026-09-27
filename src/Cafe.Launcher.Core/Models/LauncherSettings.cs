@@ -1,9 +1,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text.Json.Serialization;
 using Cafe.Launcher.Avalonia.Constants;
+using Cafe.Launcher.Core;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Cafe.Launcher.Avalonia.Models;
@@ -383,11 +383,17 @@ public sealed class LauncherSettings : ObservableObject
     /// When the system UI language is Chinese, defaults to the Cafe patch URL group so Chinese
     /// players get the Cafe-localised version without manually changing the download source.
     /// </summary>
-    public static LauncherSettings CreateDefaults()
+    /// <param name="buildIdentity">
+    /// The host-supplied build identity. The pre-release channel default is decided by
+    /// <see cref="LauncherBuildIdentity.IsPrerelease"/> on the value the composition root injected —
+    /// never by reflecting over whatever assembly happens to be the entry point. Callers for which
+    /// the channel is irrelevant (motion preferences) may omit it and get the stable channel.
+    /// </param>
+    public static LauncherSettings CreateDefaults(LauncherBuildIdentity? buildIdentity = null)
     {
         var settings = new LauncherSettings();
 
-        if (ResolveRunningVersion().Contains('-'))
+        if (buildIdentity?.IsPrerelease == true)
         {
             settings.UpdateChannel = UpdateChannels.Beta;
         }
@@ -408,12 +414,4 @@ public sealed class LauncherSettings : ObservableObject
         return culture is "zh-CN" or "zh-TW" or "zh-HK" or "zh-MO" or "zh-SG"
             or "zh-Hans" or "zh-Hant";
     }
-
-    private static string ResolveRunningVersion() =>
-        System.Reflection.Assembly.GetEntryAssembly()?
-            .GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), inherit: false)
-            .OfType<System.Reflection.AssemblyInformationalVersionAttribute>()
-            .FirstOrDefault()?
-            .InformationalVersion
-        ?? "";
 }
