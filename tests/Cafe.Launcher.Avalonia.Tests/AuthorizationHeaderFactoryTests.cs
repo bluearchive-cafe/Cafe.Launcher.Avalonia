@@ -4,7 +4,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Cafe.Launcher.Avalonia.Constants;
-using Cafe.Launcher.Avalonia.Services.Auth;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 

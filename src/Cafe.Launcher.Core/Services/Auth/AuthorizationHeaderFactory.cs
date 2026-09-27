@@ -3,9 +3,9 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Cafe.Launcher.Avalonia.Constants;
+using Cafe.Launcher.Core.Constants;
 
-namespace Cafe.Launcher.Avalonia.Services.Auth;
+namespace Cafe.Launcher.Core.Services.Auth;
 
 /// <summary>
 /// Builds the MD5-signed authorization header required by the official launcher API.

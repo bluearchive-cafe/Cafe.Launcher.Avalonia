@@ -1,8 +1,8 @@
 using System.Text.Json.Serialization;
 using System.Collections.Generic;
-using Cafe.Launcher.Avalonia.Helpers;
+using Cafe.Launcher.Core.Helpers;
 
-namespace Cafe.Launcher.Avalonia.Models;
+namespace Cafe.Launcher.Core.Models;
 
 public sealed class LauncherApiEnvelope<T>
 {

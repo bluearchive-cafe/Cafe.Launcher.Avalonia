@@ -27,6 +27,11 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 `Cafe.Launcher.Avalonia.UI` 是目标态下全部 Avalonia 控件、ViewModel、主题、资源与图像的
 归属；分批迁移完成前这些文件仍在 WinExe 宿主工程内，搬迁规则与剩余清单见 ADR-042。
 
+Core 的源码命名空间是 `Cafe.Launcher.Core.*`。宿主与两个测试工程通过各自 csproj 里的过渡
+`<Using>` 解析它们（命名空间收口因此不需要全仓库 using 改写）；调用方迁到窄 Core API 后应
+改为显式 using，Core 侧不得回退到 `Cafe.Launcher.Avalonia.*`
+（`CoreSources_UseOnlyTheCoreNamespaces` 守着）。
+
 WinExe 宿主只保留进程生命周期和顶层 Avalonia 生命周期；Core 的登记项由
 `Composition/ServiceConfiguration.AddLauncherCore` 负责，并由 `AddLauncherServices` 在
 所有表现层登记项之前调用一次。生产程序集不能使用 `InternalsVisibleTo`；测试程序集是唯一

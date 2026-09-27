@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Text.Json;
 
-namespace Cafe.Launcher.Avalonia.Helpers;
+namespace Cafe.Launcher.Core.Helpers;
 
 /// <summary>
 /// 「哪些文件系统失败算可恢复」的唯一出处。

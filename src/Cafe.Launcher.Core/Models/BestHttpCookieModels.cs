@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Cafe.Launcher.Avalonia.Models;
+namespace Cafe.Launcher.Core.Models;
 
 public sealed record BestHttpCookieLibrary(
     int Version,

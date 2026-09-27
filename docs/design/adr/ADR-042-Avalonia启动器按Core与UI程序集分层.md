@@ -41,9 +41,10 @@ Cafe.Launcher.Updater → Cafe.Launcher.Updater.Core
   参数，Core 不提供 `ForCurrentProcess()` 兜底；宿主因此只有一处注册 Core 的调用点。
 - 生产程序集不得彼此 `InternalsVisibleTo`；仅各测试程序集可作为 friend。
 
-为维持每批迁移可构建，已经移入 Core 的既有公开协议工具暂保留
-`Cafe.Launcher.Avalonia.*` 源命名空间。它们的物理程序集边界已生效；在调用方迁移到窄
-Core API 时再做命名空间收口，避免一次迁移同时造成无意义的全仓库引用改写。
+Core 的源命名空间已收口为 `Cafe.Launcher.Core.*`。为避免 234 个调用点做一次无意义的引用改写，
+宿主与两个测试工程通过各自 csproj 里的项目级 `<Using>` 解析这些命名空间；调用方迁移到窄
+Core API 后应改回显式 using。`AssemblySplitContractTests.CoreSources_UseOnlyTheCoreNamespaces`
+钉住 Core 侧不再回退到 `Cafe.Launcher.Avalonia.*`。
 
 ## 被否决的替代方案
 
@@ -95,37 +96,38 @@ Core API 时再做命名空间收口，避免一次迁移同时造成无意义�
   数据根重复解析与重复注册（`TestUserDataIsolationTests` +
   `AssemblySplitContractTests.CompositionRoot_RegistersCoreFirstAndOnlyOnce`）、默认更新渠道
   靠入口程序集反射（`LauncherSettingsDefaultsTests`）。Unit、Headless 与覆盖率闸口恢复全绿。
+- Core 源命名空间收口为 `Cafe.Launcher.Core.*`（46 个文件、10 处 XAML `xmlns` 随之调整），
+  宿主与测试工程用项目级 `<Using>` 过渡解析，`CoreSources_UseOnlyTheCoreNamespaces` 守住回退。
 
 未完成：
 
-1. 命名空间收口：Core 的 48 个源文件中 44 个仍声明 `Cafe.Launcher.Avalonia.*`。
-2. Core 公开面收窄：96 个顶层类型中 95 个是 `public`；"实现默认 internal、只公开窄接口"
+1. Core 公开面收窄：96 个顶层类型中 95 个是 `public`；"实现默认 internal、只公开窄接口"
    未做，也无守卫。
-3. 混合模型文件拆分：`Models/LauncherRuntimeModels.cs` 仍同时承载 Core DTO
+2. 混合模型文件拆分：`Models/LauncherRuntimeModels.cs` 仍同时承载 Core DTO
    （`LocalInstallationState`）与 Avalonia 表现状态（`RemoteContentItem.BannerBitmap`）。
-4. 设置写入协调器：`ISavedSettingsWriter` / `SettingsEditor` 仍在宿主，ADR-024 的单写方与
+3. 设置写入协调器：`ISavedSettingsWriter` / `SettingsEditor` 仍在宿主，ADR-024 的单写方与
    `SavedSettingsChanged` 通知尚未落到 Core。
-5. 设置模型去 MVVM：`LauncherSettings` / `GameRuntimeSettings` 仍继承 `ObservableObject`，
+4. 设置模型去 MVVM：`LauncherSettings` / `GameRuntimeSettings` 仍继承 `ObservableObject`，
    Core 仍引用 `CommunityToolkit.Mvvm`。
-6. 后端模块继续迁入 Core：`Services/Update/*`（自更新）、`FileDownloadService` /
+5. 后端模块继续迁入 Core：`Services/Update/*`（自更新）、`FileDownloadService` /
    `DownloadTransport`、`Services/GameRuntime/*`、`Services/Diagnostics/*`、
    `HttpClientFactory`、`GameShortcutService`、`ManifestValidationService`、
    `RemoteManifestService`、`ProxySettingsService` 等，以及全部 `Features/*`；
-   随之把 `GameOperationExecutor` 等实现内部化。
-7. UI 程序集落位：Views/Controls/Converters/ViewModels/Features/Resources/Assets 搬迁；
+   随之把 `GameOperationExecutor` 等实现内部化，并把它们的注册从宿主组合根搬进 Core。
+6. UI 程序集落位：Views/Controls/Converters/ViewModels/Features/Resources/Assets 搬迁；
    9 处 `avares://Cafe.Launcher.Avalonia/...` 改指 UI；`AvaloniaResource` 与
    `EmbeddedResource` 从宿主 csproj 迁走；卫星资源程序集断言改指 UI。
-8. 表现层接缝反向：当前 `LauncherPresentationSession.CreateMainWindow` 无人调用，宿主仍
+7. 表现层接缝反向：当前 `LauncherPresentationSession.CreateMainWindow` 无人调用，宿主仍
    `new MainWindow(...)` 并直接解析 `MainWindowViewModel`；阶段 4 要由 UI 自己构造窗口与
    ViewModel，宿主只保留生命周期调用。
-9. 扫描契约随文件搬迁：`UiStyleContractTests` 的扫描域与声明表切到 `UI`（`FindXamlFiles`
+8. 扫描契约随文件搬迁：`UiStyleContractTests` 的扫描域与声明表切到 `UI`（`FindXamlFiles`
    已加 fail-loud 守卫，搬迁时会红而不是静默缩小），约 230 处
    `TestRepository.FromApplicationRoot("Views/…")` 与 `scripts/` 内宿主路径同步迁移。
    生命周期门面目前由 Headless 套件的 `LauncherPresentationSessionTests` 覆盖（UI 程序集
    在该跑批里 100% 行覆盖），但视图形状本身还没有 UI 测试。
-10. 第三方通知生成按生产工程逐个进行：`New-ThirdPartyNotices.ps1` 目前只读宿主 csproj，
-    `ThirdPartyNoticesContractTests` 也只检查宿主的 `PackageReference`。
-11. 覆盖率基线重锚：闸口已加"每个生产程序集必须出现在报告里"的断言，拆分后实测
+9. 第三方通知生成按生产工程逐个进行：`New-ThirdPartyNotices.ps1` 目前只读宿主 csproj，
+   `ThirdPartyNoticesContractTests` 也只检查宿主的 `PackageReference`。
+10. 覆盖率基线重锚：闸口已加"每个生产程序集必须出现在报告里"的断言，拆分后实测
     （2026-09-27 全量 verify）为行 85.63% / 分支 91.85%，基线 0.8560 / 0.9180 未下调，
     余量 +0.03pp / +0.05pp。脚本自己的约定是"基线 = 实测值再留 0.1–0.25pp 余量"，
     是否按该约定重锚（会下调数值）留待下次全量 verify 决定。

@@ -1,4 +1,4 @@
-namespace Cafe.Launcher.Avalonia.Constants;
+namespace Cafe.Launcher.Core.Constants;
 
 /// <summary>
 /// Game file structure, folder names, and identifiers shared across

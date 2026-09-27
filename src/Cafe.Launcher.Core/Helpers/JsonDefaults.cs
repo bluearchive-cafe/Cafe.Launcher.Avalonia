@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace Cafe.Launcher.Avalonia.Helpers;
+namespace Cafe.Launcher.Core.Helpers;
 
 /// <summary>
 /// Shared <see cref="JsonSerializerOptions"/> instances to avoid duplication across services.

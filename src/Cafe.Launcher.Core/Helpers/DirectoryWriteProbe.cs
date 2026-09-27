@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 
-namespace Cafe.Launcher.Avalonia.Helpers;
+namespace Cafe.Launcher.Core.Helpers;
 
 /// <summary>
 /// 目录可写性探测：以「创建即删的探针文件」验证对目标位置的真实写权限。

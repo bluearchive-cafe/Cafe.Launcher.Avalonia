@@ -2,7 +2,7 @@ using System;
 using System.Net;
 using System.Net.Http;
 
-namespace Cafe.Launcher.Avalonia.Helpers;
+namespace Cafe.Launcher.Core.Helpers;
 
 /// <summary>
 /// A scoped lease on an <see cref="HttpClient"/> that conditionally disposes its

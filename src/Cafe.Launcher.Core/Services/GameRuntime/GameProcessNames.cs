@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Cafe.Launcher.Avalonia.Services.GameRuntime;
+namespace Cafe.Launcher.Core.Services.GameRuntime;
 
 /// <summary>
 /// 「这个游戏自己的进程」叫什么（ADR-032）。游戏目录里的进程对象被反作弊保护：实机确认三个

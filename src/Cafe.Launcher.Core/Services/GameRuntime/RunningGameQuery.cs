@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Cafe.Launcher.Avalonia.Services.GameRuntime;
+namespace Cafe.Launcher.Core.Services.GameRuntime;
 
 /// <summary>
 /// 「游戏是不是在跑」一次扫描的输入（P0-B）：已知家族名之外再带上安装目录，让 Linux 侧能用

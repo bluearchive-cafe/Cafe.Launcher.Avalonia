@@ -7,11 +7,11 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Cafe.Launcher.Avalonia.Constants;
-using Cafe.Launcher.Avalonia.Helpers;
-using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Core.Constants;
+using Cafe.Launcher.Core.Helpers;
+using Cafe.Launcher.Core.Models;
 
-namespace Cafe.Launcher.Avalonia.Services;
+namespace Cafe.Launcher.Core.Services;
 
 /// <summary>
 /// 游戏目录内安装状态（GamePaths.GameConfigFileName 与 GamePaths.ManifestFileName）的唯一读写入口。

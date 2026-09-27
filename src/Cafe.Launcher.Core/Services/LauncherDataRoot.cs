@@ -1,8 +1,8 @@
 using System;
 using System.IO;
-using Cafe.Launcher.Avalonia.Constants;
+using Cafe.Launcher.Core.Constants;
 
-namespace Cafe.Launcher.Avalonia.Services;
+namespace Cafe.Launcher.Core.Services;
 
 /// <summary>
 /// 启动器私有数据的根，以及根内知名路径的唯一出处。
