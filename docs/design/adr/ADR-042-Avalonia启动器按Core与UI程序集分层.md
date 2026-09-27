@@ -215,10 +215,17 @@ Core API 后应改回显式 using。`AssemblySplitContractTests.CoreSources_UseO
    `internal`：`ILauncherDiagnostics` 扩成完整门面（Verbose/Warning/Fatal、ErrorAsync(title, exception)、
    `LogFilePath`、`MinimumLevel`、`SetMinimumLevel(LogEntrySeverity)`，级别换算留在实现里），
    另立公开静态入口 `LauncherLog` 供 pre-DI 阶段与静态帮助类使用（含 `CreateDetached()`，替代测试里
-   直接 new 实现类的写法），登记移入 `AddLauncherCore`。剩下的收窄候选是：HTTP 族
-   （`HttpClientFactory` / `RemoteHttpTransport` / `LauncherApiClient`——它们的构造要读表现层的设置快照，
-   目前由表现层组合登记，需先把偏好闭包注入 `AddLauncherCore`）与
-   `LauncherSelfUpdateService` / `ImageCacheService` / `GameInstallationPath`（三者只需补窄接口）。
+   直接 new 实现类的写法），登记移入 `AddLauncherCore`。`LauncherSelfUpdateService` /
+   `ImageCacheService` / `GameInstallationPath` 也已收窄（三个窄接口 + 实现 internal）。
+   最后剩下 **HTTP 族**（`HttpClientFactory` / `RemoteHttpTransport` / `LauncherApiClient` /
+   `AuthorizationHeaderFactory` / `PatchUrlGroupService`）。收尾盘点已确定它的做法，不需要新接缝：
+   Core 的 `ISettingsDraftOwner.GetSavedSnapshot()` 正是那两个偏好闭包需要的快照（ADR-028 的
+   「按使用时机拉取」），因此 `AddLauncherCore` 可以直接登记 `HttpClientFactory`（HTTP/2 偏好）、
+   `IRemoteHttpClientLeaseSource`、`IRemoteHttpTransport`（代理模式）与 `LauncherApiClient`，
+   草稿所有者缺席（Core-only 容器）时退回 `LauncherSettings.CreateDefaults(identity)`；
+   配套改动是 `LeaseBackedDownloadTransportSource` 与 `GameDownloadService` 的构造参数由
+   `HttpClientFactory` 换成已有的 `IRemoteHttpClientLeaseSource`（它们只调 `CreateLeaseAsync`），
+   并为 `LauncherApiClient` 补一个覆盖下载族与 `LauncherCoreService` 所用成员的 `ILauncherApiClient`。
    其余仍 public 的
    Core 类型是**数据模型**（`LauncherSettings`、`LauncherStatusSnapshot`、`ManifestFile`、
    `LauncherDataRoot` 等）与进程级日志器 `UnifiedLogger`，它们本来就该公开。
