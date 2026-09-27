@@ -146,6 +146,11 @@ Core API 后应改回显式 using。`AssemblySplitContractTests.CoreSources_UseO
   崩溃报告与导出内容里的版本/提交/构建配置不再来自宿主 `BuildInfo`；`CrashReportStore` 的注册
   由组合根显式传身份。它们因此可以在 UI 程序集落位时整体搬走——唯一仍与宿主耦合的是
   `CrashReporterLauncher`（拉起独立崩溃报告进程，依赖 `Program`）。
+- **第三方通知按生产工程生成**：`New-ThirdPartyNotices.ps1` 不再只读宿主工程，而是把 `src/` 下每个
+  生产工程的 `project.assets.json` 取并集（宿主图里看不到只被 Windows 自更新 helper 引用的包），
+  逐包列出「Required by」并在文件头列出已扫描工程；同一包在两个工程解析出不同版本时直接失败而不是
+  猜一个。`ThirdPartyNoticesContractTests` 从「只比对宿主工程」扩到全部生产工程，并新增
+  「已扫描工程清单 == 磁盘上的生产工程」这条断言。
 - **UI 公开面收窄**：表现层 172 个顶层 public 类型收到 27 个（internal 185 个）。仍然 public 的
   只有三类：宿主真正使用的门面与入口（`LauncherPresentationSession`、两个组合扩展、
   `ICrashReporterLauncher`、`FatalCrashService`/`IFatalCrashService`、`CrashReport`/`CrashReportStore`/

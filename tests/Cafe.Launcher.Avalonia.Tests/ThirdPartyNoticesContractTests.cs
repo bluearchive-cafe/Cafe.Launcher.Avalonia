@@ -16,7 +16,7 @@ public sealed class ThirdPartyNoticesContractTests
 {
     private const string NoticesRelativePath = "THIRD-PARTY-NOTICES.md";
     private const string PackagesPropsRelativePath = "Directory.Packages.props";
-    private const string AppProjectRelativePath = "src/Cafe.Launcher.Avalonia/Cafe.Launcher.Avalonia.csproj";
+    private const string ProductionProjectsRoot = "src";
 
     private static readonly Regex NoticesRow = new(
         @"^\|\s*(?<name>[^|]+?)\s*\|\s*(?<version>[^|]+?)\s*\|",
@@ -57,19 +57,26 @@ public sealed class ThirdPartyNoticesContractTests
     public void Notices_PackageVersionsMatchThePackagesTheAppShips()
     {
         // 生成器按 NuGet 解析出的依赖图重写整张表，所以「升了版本、忘了重跑
-        // scripts/New-ThirdPartyNotices.ps1」会留下一份写着旧版本号的许可披露。本测试只比对应用工程真的分发
-        // 的包：测试专用的包（xunit、coverlet、Test.Sdk）不进发行档案，本来就不该出现在表里。
-        var referenced = XDocument.Load(TestRepository.FromRepositoryRoot(AppProjectRelativePath))
-            .Descendants("PackageReference")
-            .Select(element => (string?)element.Attribute("Include"))
-            .OfType<string>()
+        // scripts/New-ThirdPartyNotices.ps1」会留下一份写着旧版本号的许可披露。这里比对每一个生产工程
+        // 直接引用的包：只要某个工程（例如 Windows 自更新 helper）引用了表里没有的包，披露就不完整——
+        // 测试专用的包（xunit、coverlet、Test.Sdk）不进发行档案，本来就不该出现在表里。
+        var projects = ProductionProjects().ToArray();
+        var referenced = projects
+            .SelectMany(project => XDocument.Load(project)
+                .Descendants("PackageReference")
+                .Select(element => (string?)element.Attribute("Include"))
+                .OfType<string>())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
         var declared = ReadDeclaredPackageVersions();
         var notices = ReadNoticesTable();
 
         Assert.True(
+            projects.Length >= 5,
+            $"src 下只找到 {projects.Length} 个生产工程，定位方式多半已经失效。");
+        Assert.True(
             referenced.Count >= 13,
-            $"应用工程只解析出 {referenced.Count} 个包引用，读法多半已经失效。");
+            $"生产工程只解析出 {referenced.Count} 个包引用，读法多半已经失效。");
         Assert.True(
             notices.Count >= 40,
             $"{NoticesRelativePath} 只解析出 {notices.Count} 行，表格格式或过滤条件已经对不上。");
@@ -100,6 +107,33 @@ public sealed class ThirdPartyNoticesContractTests
             $"许可披露与应用实际分发的版本不一致——改过依赖后要重跑 scripts/New-ThirdPartyNotices.ps1 并提交：{string.Join("；", drift)}。");
     }
 
+    [Fact]
+    public void Notices_NameEveryProductionProjectTheyWereGeneratedFrom()
+    {
+        var notices = File.ReadAllText(TestRepository.FromRepositoryRoot(NoticesRelativePath));
+        var declared = Regex
+            .Matches(notices, @"^- `(?<name>Cafe\.Launcher\.[A-Za-z0-9_.]+)`$", RegexOptions.Multiline)
+            .Select(match => match.Groups["name"].Value)
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToArray();
+        var onDisk = ProductionProjects()
+            .Select(project => Path.GetFileNameWithoutExtension(project))
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToArray();
+
+        // 少一个工程就意味着它的依赖没进披露表：这正是「按生产工程生成」要防的漂移。
+        Assert.Equal(onDisk, declared);
+    }
+
+    private static IEnumerable<string> ProductionProjects() =>
+        Directory
+            .EnumerateFiles(
+                TestRepository.FromRepositoryRoot(ProductionProjectsRoot),
+                "*.csproj",
+                SearchOption.AllDirectories)
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
+                && !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+            .OrderBy(path => path, StringComparer.Ordinal);
     private static Dictionary<string, string> ReadDeclaredPackageVersions() =>
         XDocument.Load(TestRepository.FromRepositoryRoot(PackagesPropsRelativePath))
             .Descendants("PackageVersion")
