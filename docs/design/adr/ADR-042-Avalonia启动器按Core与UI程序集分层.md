@@ -139,3 +139,29 @@ Core API 后应改回显式 using。`AssemblySplitContractTests.CoreSources_UseO
     （2026-09-27 全量 verify）为行 85.63% / 分支 91.85%，基线 0.8560 / 0.9180 未下调，
     余量 +0.03pp / +0.05pp。脚本自己的约定是"基线 = 实测值再留 0.1–0.25pp 余量"，
     是否按该约定重锚（会下调数值）留待下次全量 verify 决定。
+
+### 下一批搬迁的依赖结论（2026-09-27 盘点）
+
+按「宿主类型依赖」逐一盘点剩余后端模块后，批次顺序与已知阻碍如下：
+
+1. **网络与下载**（`HttpClientFactory`、`ProxySettingsService`、`SystemProxySettingsProvider`、
+   `GSettingsCli`、`DownloadTransport`、`FileDownloadService`/`IFileDownloadService`/
+   `FileDownloadRequest`/`FileDownloadOperationControl`）内部自洽、不引用 Avalonia；把
+   `LocalDiagnostics` 参数换成 Core 的 `ILauncherDiagnostics` 即可整体搬迁。**建议作为下一批。**
+2. **游戏运行时**（`Services/GameRuntime/*`）依赖几乎都在自身目录内，但
+   `GameRuntimeRunnerDisplay` 依赖 `LocalizationService`/`LocalizationKeys`（表现层）：搬迁时
+   要么把该显示映射留在宿主，要么先引入窄的本地化接缝。
+3. **诊断**：`UnifiedLogger`/`LocalDiagnostics`/`LogEntry`/`LogEntryReader` 可先走；
+   `LogExportService` 还依赖 `GraphicsInfoProbe`、`LinuxProcessScanner`、`CrashReportStore`，
+   因此诊断必须排在运行时之后，或与该批一起搬。
+4. **自更新**（`Services/Update/*`）当前读宿主 `Constants/BuildInfo`；搬迁前必须改用注入的
+   `LauncherBuildIdentity`（`LauncherUpdateHostInfo`/`LauncherUpdateSelection`/`LauncherUpdateTarget`
+   同理），否则 Core 会被迫引用宿主类型。`WindowsLauncherUpdateApplier` 依赖进程启动与
+   `LocalDiagnostics`，与第 1 批同法处理。
+5. **`GameShortcutService`、`ManifestValidationService`、`RemoteManifestService`、
+   `LauncherCoreService`、`NoticeStateService`** 零星依赖表现层（`LocalizationService`、
+   `GameDownloadService`），随各自的上游批次一起搬，或先用窄接缝替换依赖。
+6. **公开面收窄**（把实现改 `internal`）必须在上述批次完成后做：目前宿主组合根直接构造
+   `RemoteHttpTransport`、`LauncherApiClient`、`LauncherSettingsService` 等实现，只有当它们的
+   注册也搬进 Core、宿主只经接口消费时，实现才可能 internal。项目级 `<Using>` 也应在这一批
+   随调用点收敛为显式 using。
