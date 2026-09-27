@@ -96,7 +96,7 @@ internal partial class MainWindowViewModel : ViewModelBase, IDisposable
         LocalizationService localizer,
         ToastService toastService,
         LauncherUpdateService launcherUpdateService,
-        LauncherSelfUpdateService launcherSelfUpdateService,
+        ILauncherSelfUpdateService launcherSelfUpdateService,
         IWindowsLauncherUpdateApplier launcherUpdateApplier,
         ILauncherDiagnostics diagnostics,
         ShellPresentationFamily family,

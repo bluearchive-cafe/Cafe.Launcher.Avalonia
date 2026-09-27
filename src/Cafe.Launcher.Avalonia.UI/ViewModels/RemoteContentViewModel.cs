@@ -21,7 +21,7 @@ internal partial class RemoteContentViewModel : ViewModelBase, IDisposable, ILan
     private const int ManualNavResumeDelayMs = 5000;
     private const int MaxConcurrentBannerImageLoads = 4;
     private readonly LocalizationService localizer;
-    private readonly ImageCacheService imageCacheService;
+    private readonly IImageCacheService imageCacheService;
     private readonly ILauncherDiagnostics diagnostics;
     private readonly Func<TimeSpan, CancellationToken, Task> delayAsync;
     private readonly ICarouselTimer carouselTimer;
@@ -107,7 +107,7 @@ internal partial class RemoteContentViewModel : ViewModelBase, IDisposable, ILan
 
     public RemoteContentViewModel(
         LocalizationService localizer,
-        ImageCacheService imageCacheService,
+        IImageCacheService imageCacheService,
         ILauncherDiagnostics diagnostics)
         : this(
             localizer,
@@ -120,7 +120,7 @@ internal partial class RemoteContentViewModel : ViewModelBase, IDisposable, ILan
 
     internal RemoteContentViewModel(
         LocalizationService localizer,
-        ImageCacheService imageCacheService,
+        IImageCacheService imageCacheService,
         ILauncherDiagnostics diagnostics,
         Func<TimeSpan, CancellationToken, Task> delayAsync,
         ICarouselTimer carouselTimer)

@@ -22,6 +22,6 @@ internal sealed record DownloadSessionContext(
     IDiskSpaceService IDiskSpaceService,
     ILauncherDiagnostics Diagnostics,
     LocalizationService Localizer,
-    GameInstallationPath InstallationPath,
+    IGameInstallationPath InstallationPath,
     DownloadCheckpointStore CheckpointStore,
     IGameProcessTracker GameProcessTracker);

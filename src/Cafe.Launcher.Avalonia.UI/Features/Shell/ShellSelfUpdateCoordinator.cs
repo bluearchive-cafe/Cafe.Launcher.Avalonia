@@ -47,7 +47,7 @@ internal enum ShellSelfUpdateApplyResult
 /// </summary>
 internal sealed class ShellSelfUpdateCoordinator
 {
-    private readonly LauncherSelfUpdateService selfUpdateService;
+    private readonly ILauncherSelfUpdateService selfUpdateService;
     private readonly IWindowsLauncherUpdateApplier updateApplier;
     private readonly CancellationToken lifetimeToken;
     private CancellationTokenSource? preparationCts;
@@ -66,7 +66,7 @@ internal sealed class ShellSelfUpdateCoordinator
 
     /// <summary>Initializes the coordinator with the services it drives and the shell lifetime token.</summary>
     public ShellSelfUpdateCoordinator(
-        LauncherSelfUpdateService selfUpdateService,
+        ILauncherSelfUpdateService selfUpdateService,
         IWindowsLauncherUpdateApplier updateApplier,
         CancellationToken lifetimeToken)
     {
