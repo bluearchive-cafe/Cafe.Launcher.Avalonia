@@ -211,10 +211,15 @@ Core API 后应改回显式 using。`AssemblySplitContractTests.CoreSources_UseO
    `ILocalInstallationStateStore`、`ILauncherSettingsService`（刻意只含 `ReadAsync`，让表现层在
    类型层面无法绕开写入协调器）、`IRemoteHttpUrlValidator` 五个接口就位，对应实现与
    `SavedSettingsWriter` 均收回 `internal`，接口与实现在 `AddLauncherCore` 里映射到同一单例
-   （这些服务都持有状态，重复注册会让表现层拿到另一个实例）。剩下的最大一块是
-   `LocalDiagnostics`：表现层仍有 14 处 `WarningAsync`、3 处 `LogFilePath`、2 处 `SetMinimumLevel`
-   的直接调用，而接缝里只有 `LogMessage(LogEntrySeverity, …)`——要把这些调用点先迁到
-   `LogMessage`，并为日志文件访问另立窄接口，然后才能把实现收回 `internal`。其余仍 public 的
+   （这些服务都持有状态，重复注册会让表现层拿到另一个实例）。`LocalDiagnostics` 也已收回
+   `internal`：`ILauncherDiagnostics` 扩成完整门面（Verbose/Warning/Fatal、ErrorAsync(title, exception)、
+   `LogFilePath`、`MinimumLevel`、`SetMinimumLevel(LogEntrySeverity)`，级别换算留在实现里），
+   另立公开静态入口 `LauncherLog` 供 pre-DI 阶段与静态帮助类使用（含 `CreateDetached()`，替代测试里
+   直接 new 实现类的写法），登记移入 `AddLauncherCore`。剩下的收窄候选是：HTTP 族
+   （`HttpClientFactory` / `RemoteHttpTransport` / `LauncherApiClient`——它们的构造要读表现层的设置快照，
+   目前由表现层组合登记，需先把偏好闭包注入 `AddLauncherCore`）与
+   `LauncherSelfUpdateService` / `ImageCacheService` / `GameInstallationPath`（三者只需补窄接口）。
+   其余仍 public 的
    Core 类型是**数据模型**（`LauncherSettings`、`LauncherStatusSnapshot`、`ManifestFile`、
    `LauncherDataRoot` 等）与进程级日志器 `UnifiedLogger`，它们本来就该公开。
    UI 程序集的公开面已收窄（172 → 27 个顶层 public 类型，
