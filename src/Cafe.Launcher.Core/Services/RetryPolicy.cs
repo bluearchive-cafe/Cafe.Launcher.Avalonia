@@ -10,7 +10,7 @@ namespace Cafe.Launcher.Avalonia.Services;
 /// and backoff schedule. Unifies the retry logic previously duplicated in
 /// <see cref="LauncherApiClient"/> and <see cref="ResourcePanelApiClient"/>.
 /// </summary>
-internal static class RetryPolicy
+public static class RetryPolicy
 {
     /// <summary>
     /// Executes <paramref name="action"/> up to <paramref name="maxAttempts"/> times.

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 namespace Cafe.Launcher.Avalonia.Services;
 
 /// <summary>远程响应正文超过调用方给定的字节上限。</summary>
-internal sealed class RemoteBodyTooLargeException(long actualBytes, long? declaredBytes)
+public sealed class RemoteBodyTooLargeException(long actualBytes, long? declaredBytes)
     : Exception($"Remote body exceeded the byte budget ({actualBytes} bytes).")
 {
     /// <summary>触发上限的字节数：声明长度可判时即声明值，否则是流式读取的累计值。</summary>
@@ -28,7 +28,7 @@ internal sealed class RemoteBodyTooLargeException(long actualBytes, long? declar
 /// <c>HttpRequestException</c>，图片缓存只要一句 <see cref="InvalidDataException"/>），
 /// 因此这里只负责判定，映射由调用方做。</para>
 /// </remarks>
-internal static class RemoteBodyReader
+public static class RemoteBodyReader
 {
     /// <summary>分块读的块大小：与调用方原先各自的取值一致。</summary>
     private const int ChunkBytes = 64 * 1024;
