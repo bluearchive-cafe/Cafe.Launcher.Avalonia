@@ -34,9 +34,11 @@ public sealed class AssemblySplitContractTests
         Assert.True(File.Exists(TestRepository.FromCoreRoot("Services/LauncherDataRoot.cs")));
         Assert.True(File.Exists(TestRepository.FromCoreRoot("Services/LauncherSettingsService.cs")));
         Assert.True(File.Exists(TestRepository.FromCoreRoot("Helpers/AtomicJsonFileStore.cs")));
+        Assert.True(File.Exists(TestRepository.FromCoreRoot("Services/RemoteHttpUrlValidator.cs")));
         Assert.False(File.Exists(TestRepository.FromHostRoot("Services/LauncherDataRoot.cs")));
         Assert.False(File.Exists(TestRepository.FromHostRoot("Services/LauncherSettingsService.cs")));
         Assert.False(File.Exists(TestRepository.FromHostRoot("Helpers/AtomicJsonFileStore.cs")));
+        Assert.False(File.Exists(TestRepository.FromHostRoot("Services/RemoteHttpUrlValidator.cs")));
     }
 
     [Fact]
@@ -79,6 +81,7 @@ public sealed class AssemblySplitContractTests
         Assert.NotNull(provider.GetRequiredService<Crc64Service>());
         Assert.NotNull(provider.GetRequiredService<LocalInstallationStateStore>());
         Assert.NotNull(provider.GetRequiredService<AuthorizationHeaderFactory>());
+        Assert.NotNull(provider.GetRequiredService<RemoteHttpUrlValidator>());
         Assert.NotNull(provider.GetRequiredService<LauncherSettingsService>());
         Assert.Single(provider.GetServices<Crc64Service>());
         Assert.Single(provider.GetServices<LauncherSettingsService>());
