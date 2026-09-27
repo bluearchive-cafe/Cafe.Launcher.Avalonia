@@ -103,7 +103,11 @@ public static class GameProcessNames
     /// 下游戏跑在兼容层里也一样。让宿主约定参与进来时，Unix 上 <c>\</c> 不是分隔符，整个路径会被当成
     /// 文件名，游戏可执行文件静默移出家族——判据少一半，正是 ADR-032 要避免的那件事。
     /// </remarks>
-    internal static string WithoutExtension(string? exeName)
+    /// <summary>
+    /// Normalizes a configured executable or process name to its extensionless
+    /// filename. Runtime adapters use the same normalization before matching.
+    /// </summary>
+    public static string WithoutExtension(string? exeName)
     {
         var normalized = Unquoted(exeName);
         if (normalized.Length == 0)
@@ -143,7 +147,8 @@ public static class GameProcessNames
     /// 后缀会因结尾那个引号被当成「不是可执行文件」丢掉：游戏可执行文件静默移出家族，判据少一半。
     /// 判据与提取必须走同一份归一（<see cref="WithoutExtension"/>），否则两者会各说各话。
     /// </summary>
-    internal static bool LooksLikeExecutable(string? parameter) =>
+    /// <summary>Whether a launch parameter names an executable after protocol normalization.</summary>
+    public static bool LooksLikeExecutable(string? parameter) =>
         Unquoted(parameter).EndsWith(ExecutableExtension, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>去掉首尾空白与成对的首尾引号（<c>"x.exe"</c> 与 <c> x.exe </c> 都归一成 <c>x.exe</c>）。</summary>
