@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -29,7 +29,7 @@ internal sealed class DownloadExecutor
     private static readonly int VerificationParallelism = Math.Clamp(Environment.ProcessorCount, 1, 8);
 
     private readonly IFileDownloadService fileDownloadService;
-    private readonly Crc64Service crc64Service;
+    private readonly ICrc64Service crc64Service;
     private readonly IDownloadTransportSource transportSource;
     private readonly LocalDiagnostics diagnostics;
     private readonly Func<Task> getPauseTask;
@@ -39,7 +39,7 @@ internal sealed class DownloadExecutor
 
     internal DownloadExecutor(
         IFileDownloadService fileDownloadService,
-        Crc64Service crc64Service,
+        ICrc64Service crc64Service,
         IDownloadTransportSource transportSource,
         LocalDiagnostics diagnostics,
         Func<Task> getPauseTask,
@@ -283,7 +283,7 @@ internal sealed class DownloadExecutor
     {
         var downloadedPathSet = downloadedFiles.Select(item => item.Path).ToHashSet(StringComparer.Ordinal);
         // 有界并行校验：CRC64 全量重读是安装/更新阶段的主导等待，而各文件的校验彼此独立
-        // （Crc64Service 经共享 ArrayPool 保证并发安全，下载阶段已在并发使用）。结果按清单
+        // （ICrc64Service 经共享 ArrayPool 保证并发安全，下载阶段已在并发使用）。结果按清单
         // 下标收集，失败列表与进度仍保持与串行版本相同的清单顺序语义；自愈语义不变——
         // 未经 verifiedHashes/plannedHashes 见证豁免的文件仍全量重读。
         var failedFlags = new bool[manifestFiles.Count];

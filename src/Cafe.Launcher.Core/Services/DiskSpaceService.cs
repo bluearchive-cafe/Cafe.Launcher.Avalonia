@@ -5,7 +5,7 @@ using Cafe.Launcher.Core.Helpers;
 
 namespace Cafe.Launcher.Core.Services;
 
-public sealed class DiskSpaceService
+internal sealed class DiskSpaceService : IDiskSpaceService
 {
     private readonly record struct CacheEntry(long AvailableBytes, long Timestamp);
 
@@ -79,6 +79,10 @@ public sealed class DiskSpaceService
         var availableBytes = GetAvailableBytes(path);
         return new DiskSpaceCheckResult(normalizedRequiredBytes, availableBytes);
     }
+
+    // 显式接口实现：静态同名成员给 Core 内部与测试用，实例成员只经接口暴露。
+    long IDiskSpaceService.ResolveRequiredBytes(bool isFreshInstall, long plannedDownloadBytes, string? decompressionSize) =>
+        ResolveRequiredBytes(isFreshInstall, plannedDownloadBytes, decompressionSize);
 
     public static long ResolveRequiredBytes(bool isFreshInstall, long plannedDownloadBytes, string? decompressionSize)
     {

@@ -29,7 +29,7 @@ public sealed class LauncherCoreService : ILauncherCoreService
     internal static readonly TimeSpan DefaultRemoteStateBudget = TimeSpan.FromSeconds(30);
 
     private readonly LauncherApiClient apiClient;
-    private readonly LocalInstallationStateStore localInstallationStateStore;
+    private readonly ILocalInstallationStateStore localInstallationStateStore;
     private readonly GameInstallationPath installationPath;
     private readonly LauncherSettingsService settingsService;
     private readonly ILauncherDiagnostics diagnostics;
@@ -37,7 +37,7 @@ public sealed class LauncherCoreService : ILauncherCoreService
 
     public LauncherCoreService(
         LauncherApiClient apiClient,
-        LocalInstallationStateStore localInstallationStateStore,
+        ILocalInstallationStateStore localInstallationStateStore,
         GameInstallationPath installationPath,
         LauncherSettingsService settingsService,
         ILauncherDiagnostics diagnostics)
@@ -53,7 +53,7 @@ public sealed class LauncherCoreService : ILauncherCoreService
 
     internal LauncherCoreService(
         LauncherApiClient apiClient,
-        LocalInstallationStateStore localInstallationStateStore,
+        ILocalInstallationStateStore localInstallationStateStore,
         GameInstallationPath installationPath,
         LauncherSettingsService settingsService,
         ILauncherDiagnostics diagnostics,

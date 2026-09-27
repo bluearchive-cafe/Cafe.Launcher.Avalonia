@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Constants;
@@ -20,11 +20,11 @@ internal sealed class GameDownloadService : IDisposable
     private readonly LauncherApiClient apiClient;
     private readonly RemoteManifestService remoteManifestService;
     private readonly IFileDownloadService fileDownloadService;
-    private readonly LocalInstallationStateStore localInstallationStateStore;
+    private readonly ILocalInstallationStateStore localInstallationStateStore;
     private readonly LauncherSettingsService settingsService;
     private readonly IDownloadTransportSource transportSource;
-    private readonly Crc64Service crc64Service;
-    private readonly DiskSpaceService diskSpaceService;
+    private readonly ICrc64Service crc64Service;
+    private readonly IDiskSpaceService diskSpaceService;
     private readonly LocalDiagnostics diagnostics;
     private readonly LocalizationService localizer;
     private readonly GameInstallationPath installationPath;
@@ -42,12 +42,12 @@ internal sealed class GameDownloadService : IDisposable
         LauncherApiClient apiClient,
         RemoteManifestService remoteManifestService,
         IFileDownloadService fileDownloadService,
-        LocalInstallationStateStore localInstallationStateStore,
+        ILocalInstallationStateStore localInstallationStateStore,
         LauncherSettingsService settingsService,
         HttpClientFactory httpClientFactory,
         RemoteHttpUrlValidator urlValidator,
-        Crc64Service crc64Service,
-        DiskSpaceService diskSpaceService,
+        ICrc64Service crc64Service,
+        IDiskSpaceService diskSpaceService,
         LocalDiagnostics diagnostics,
         LocalizationService localizer,
         GameInstallationPath installationPath,
@@ -77,12 +77,12 @@ internal sealed class GameDownloadService : IDisposable
         LauncherApiClient apiClient,
         RemoteManifestService remoteManifestService,
         IFileDownloadService fileDownloadService,
-        LocalInstallationStateStore localInstallationStateStore,
+        ILocalInstallationStateStore localInstallationStateStore,
         LauncherSettingsService settingsService,
         HttpClientFactory httpClientFactory,
         RemoteHttpUrlValidator urlValidator,
-        Crc64Service crc64Service,
-        DiskSpaceService diskSpaceService,
+        ICrc64Service crc64Service,
+        IDiskSpaceService diskSpaceService,
         LocalDiagnostics diagnostics,
         LocalizationService localizer,
         GameInstallationPath installationPath,

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -21,7 +21,7 @@ internal sealed class GameUninstallService
     /// </summary>
     private const int MaxReportedLeftovers = 5;
 
-    private readonly LocalInstallationStateStore localInstallationStateStore;
+    private readonly ILocalInstallationStateStore localInstallationStateStore;
     private readonly GameInstallationPath installationPath;
     private readonly LocalDiagnostics diagnostics;
     private readonly LocalizationService localizer;
@@ -30,7 +30,7 @@ internal sealed class GameUninstallService
     private readonly IGameShortcutService shortcutService;
 
     public GameUninstallService(
-        LocalInstallationStateStore localInstallationStateStore,
+        ILocalInstallationStateStore localInstallationStateStore,
         LocalDiagnostics diagnostics,
         LocalizationService localizer,
         GameInstallationPath installationPath,

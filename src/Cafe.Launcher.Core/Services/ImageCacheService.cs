@@ -35,7 +35,7 @@ public sealed class ImageCacheService : IDisposable
     private readonly string cacheDir;
     private readonly string launcherVersion;
     private readonly IRemoteHttpTransport transport;
-    private readonly Crc64Service crc64Service;
+    private readonly ICrc64Service crc64Service;
     private readonly ILauncherDiagnostics? diagnostics;
     private readonly ConcurrentDictionary<string, SemaphoreSlim> cacheLocks =
         new(StringComparer.Ordinal);
@@ -43,7 +43,7 @@ public sealed class ImageCacheService : IDisposable
 
     public ImageCacheService(
         IRemoteHttpTransport transport,
-        Crc64Service crc64Service,
+        ICrc64Service crc64Service,
         LauncherDataRoot dataRoot,
         ILauncherDiagnostics? diagnostics = null,
         LauncherBuildIdentity? buildIdentity = null)

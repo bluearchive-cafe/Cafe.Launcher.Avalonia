@@ -25,12 +25,12 @@ public sealed class FileDownloadService : IFileDownloadService
     /// </summary>
     internal static readonly int[] RetryDomainOrder = [1, 1, 1, 1, 0, 0, 0, 1, 1, 1];
 
-    private readonly Crc64Service crc64Service;
+    private readonly ICrc64Service crc64Service;
     private readonly ILauncherDiagnostics diagnostics;
     private readonly TimeSpan? idleReadTimeout;
 
     public FileDownloadService(
-        Crc64Service crc64Service,
+        ICrc64Service crc64Service,
         ILauncherDiagnostics diagnostics,
         TimeSpan? idleReadTimeout = null)
     {
@@ -143,7 +143,7 @@ public sealed class FileDownloadService : IFileDownloadService
                 // Rented rather than allocated: the buffer sits inside the retry loop, so a fresh
                 // 256 KiB array per attempt (>85 KiB LOH threshold) would put every download into
                 // the large object heap up to RetryDomainOrder.Length times per file — same LOH
-                // concern Crc64Service already solves with the shared pool.
+                // concern ICrc64Service already solves with the shared pool.
                 var buffer = ArrayPool<byte>.Shared.Rent(1024 * 256);
                 try
                 {

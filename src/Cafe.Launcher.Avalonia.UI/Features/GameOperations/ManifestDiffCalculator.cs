@@ -17,13 +17,13 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 internal sealed class ManifestDiffCalculator
 {
     private readonly RemoteManifestService remoteManifestService;
-    private readonly LocalInstallationStateStore localInstallationStateStore;
-    private readonly Crc64Service crc64Service;
+    private readonly ILocalInstallationStateStore localInstallationStateStore;
+    private readonly ICrc64Service crc64Service;
 
     internal ManifestDiffCalculator(
         RemoteManifestService remoteManifestService,
-        LocalInstallationStateStore localInstallationStateStore,
-        Crc64Service crc64Service)
+        ILocalInstallationStateStore localInstallationStateStore,
+        ICrc64Service crc64Service)
     {
         this.remoteManifestService = remoteManifestService;
         this.localInstallationStateStore = localInstallationStateStore;
@@ -227,7 +227,7 @@ internal sealed class ManifestDiffCalculator
     /// re-checks the same untouched files can reuse the result instead of reading them again.
     /// </summary>
     internal static async Task<(List<ManifestFile> Diff, Dictionary<string, PlannedFileHash> Planned)> CheckHashAsync(
-        Crc64Service crc64Service,
+        ICrc64Service crc64Service,
         IReadOnlyList<ManifestFile> files,
         string gamePath,
         Action<int>? progress,

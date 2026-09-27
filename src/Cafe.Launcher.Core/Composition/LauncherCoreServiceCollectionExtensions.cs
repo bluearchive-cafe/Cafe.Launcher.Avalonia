@@ -35,9 +35,14 @@ public static class LauncherCoreServiceCollectionExtensions
         // These services already have a stable, presentation-free dependency
         // closure. Keeping their registration here is significant: UI services
         // registered afterwards are disposed first by the Microsoft DI container.
+        // 实现与接口映射到同一实例：这三个服务都持有状态（磁盘空间缓存、按路径的引用计数信号量），
+        // 各自注册两份会让表现层拿到另一个实例。
         services.TryAddSingleton<Crc64Service>();
+        services.TryAddSingleton<ICrc64Service>(sp => sp.GetRequiredService<Crc64Service>());
         services.TryAddSingleton<DiskSpaceService>();
+        services.TryAddSingleton<IDiskSpaceService>(sp => sp.GetRequiredService<DiskSpaceService>());
         services.TryAddSingleton<LocalInstallationStateStore>();
+        services.TryAddSingleton<ILocalInstallationStateStore>(sp => sp.GetRequiredService<LocalInstallationStateStore>());
         services.TryAddSingleton<AuthorizationHeaderFactory>();
         services.TryAddSingleton<BestHttpCookieLibraryService>();
         services.TryAddSingleton<PatchUrlGroupService>();
