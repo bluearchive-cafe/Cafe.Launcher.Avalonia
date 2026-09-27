@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Threading;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Core.Services;
 
 namespace Cafe.Launcher.Avalonia.Testing;
 

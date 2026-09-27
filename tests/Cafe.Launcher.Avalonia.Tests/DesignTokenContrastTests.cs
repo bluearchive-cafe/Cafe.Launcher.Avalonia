@@ -174,7 +174,7 @@ public sealed class DesignTokenContrastTests
     {
         var app = LoadTokenBrushes();
         var definedKeys = new HashSet<string>(
-            XDocument.Load(TestRepository.FromApplicationRoot("App.axaml"))
+            XDocument.Load(TestRepository.FromHostRoot("App.axaml"))
                 .Descendants()
                 .Where(element => element.Attributes().Any(attribute => attribute.Name.LocalName == "Key"))
                 .Select(element => element.Attributes()
@@ -288,7 +288,7 @@ public sealed class DesignTokenContrastTests
 
     private static TokenBrushes LoadTokenBrushes()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("App.axaml"));
+        var document = XDocument.Load(TestRepository.FromHostRoot("App.axaml"));
         var result = new TokenBrushes();
 
         foreach (var dictionary in document.Descendants().Where(element => element.Name.LocalName == "ResourceDictionary"))

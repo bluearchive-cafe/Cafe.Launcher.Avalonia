@@ -1,5 +1,6 @@
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Helpers;
+using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 

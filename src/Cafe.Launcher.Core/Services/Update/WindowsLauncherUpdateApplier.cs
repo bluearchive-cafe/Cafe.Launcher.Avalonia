@@ -1,0 +1,155 @@
+using System;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
+using Cafe.Launcher.Core.Services.Diagnostics;
+
+namespace Cafe.Launcher.Core.Services.Update;
+
+/// <summary>
+/// Starts the update helper: copies the shipped helper executable into a fresh temp
+/// directory (so it is not subject to the file locks that will be released when the
+/// launcher exits), then launches it with the staged package details. The helper
+/// waits for this process to exit before touching the installation.
+/// </summary>
+internal sealed class WindowsLauncherUpdateApplier : IWindowsLauncherUpdateApplier
+{
+    private const string TempFolderName = "CafeLauncherUpdate";
+    internal const string ApplyLogFileName = "update-apply.log";
+
+    private readonly LauncherDataRoot dataRoot;
+    private readonly ILauncherDiagnostics diagnostics;
+    private readonly string tempRoot;
+    private readonly string installDirectory;
+
+    public WindowsLauncherUpdateApplier(LauncherDataRoot dataRoot, ILauncherDiagnostics diagnostics)
+        : this(dataRoot, diagnostics, Path.GetTempPath(), AppContext.BaseDirectory)
+    {
+    }
+
+    /// <summary>Test seam: the temp root the helper copies live under, and the directory the helper ships in.</summary>
+    internal WindowsLauncherUpdateApplier(
+        LauncherDataRoot dataRoot,
+        ILauncherDiagnostics diagnostics,
+        string tempRoot,
+        string installDirectory)
+    {
+        this.dataRoot = dataRoot;
+        this.diagnostics = diagnostics;
+        this.tempRoot = tempRoot;
+        this.installDirectory = TrimTrailingSeparator(installDirectory);
+    }
+
+    /// <inheritdoc />
+    public bool IsAvailable => File.Exists(HelperSourcePath);
+
+    private string HelperSourcePath =>
+        Path.Combine(installDirectory, UpdateHelperCommand.HelperExecutableName);
+
+    /// <inheritdoc />
+    public void CleanupAbandonedHelperDirectories()
+    {
+        string[] directories;
+        try
+        {
+            directories = Directory.GetDirectories(Path.Combine(tempRoot, TempFolderName));
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // A missing root is the normal case on hosts that never applied an update.
+            return;
+        }
+
+        foreach (var directory in directories)
+        {
+            if (!Guid.TryParseExact(Path.GetFileName(directory), "N", out _))
+            {
+                continue;
+            }
+
+            try
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                // A running helper holds its executable on Windows; leave its directory
+                // for a later launch instead of failing the sweep.
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    public bool TryStartApply(LauncherSelfUpdatePreparation preparation)
+    {
+        ArgumentNullException.ThrowIfNull(preparation);
+        if (preparation.Status != LauncherSelfUpdatePreparationStatus.Ready
+            || string.IsNullOrWhiteSpace(preparation.PackagePath))
+        {
+            return false;
+        }
+
+        var helperSource = HelperSourcePath;
+        if (!File.Exists(helperSource))
+        {
+            ReportFailure($"The update helper is missing: {helperSource}");
+            return false;
+        }
+
+        var executableName = Path.GetFileName(Environment.ProcessPath);
+        if (string.IsNullOrWhiteSpace(executableName))
+        {
+            ReportFailure("The launcher executable name could not be resolved.");
+            return false;
+        }
+
+        var tempDirectory = Path.Combine(
+            tempRoot,
+            TempFolderName,
+            Guid.NewGuid().ToString("N"));
+        try
+        {
+            Directory.CreateDirectory(tempDirectory);
+            var helperPath = Path.Combine(tempDirectory, UpdateHelperCommand.HelperExecutableName);
+            File.Copy(helperSource, helperPath, overwrite: true);
+
+            var arguments = UpdateHelperCommand.BuildArguments(
+                preparation.Target,
+                preparation.PackagePath!,
+                installDirectory,
+                executableName,
+                Environment.ProcessId,
+                preparation.ExpectedSha256,
+                Path.Combine(dataRoot.Root, ApplyLogFileName));
+
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = helperPath,
+                WorkingDirectory = tempDirectory,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            foreach (var argument in arguments)
+            {
+                startInfo.ArgumentList.Add(argument);
+            }
+
+            Process.Start(startInfo);
+            return true;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or Win32Exception)
+        {
+            ReportFailure($"Failed to start the update helper: {exception.Message}");
+            return false;
+        }
+    }
+
+    private void ReportFailure(string message) =>
+        diagnostics.LogMessage(LogEntrySeverity.Warn, "LauncherSelfUpdate", message);
+
+    private static string TrimTrailingSeparator(string path)
+    {
+        var trimmed = path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        return trimmed.Length == 0 ? path : trimmed;
+    }
+}

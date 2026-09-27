@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
@@ -7,14 +8,12 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using Cafe.Launcher.Avalonia.UI;
 using Cafe.Launcher.Avalonia.Composition;
 using Cafe.Launcher.Avalonia.Constants;
-using Cafe.Launcher.Avalonia.Features.GameOperations;
-using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
-using Cafe.Launcher.Avalonia.ViewModels;
-using Cafe.Launcher.Avalonia.Views;
 
 namespace Cafe.Launcher.Avalonia;
 
@@ -23,7 +22,6 @@ public partial class App : Application
     private const string SignalName = @"Local\Cafe_Launcher_SI_Show";
     private readonly CancellationTokenSource shutdownCts = new();
     private ServiceProvider? serviceProvider;
-    private SystemTrayService? trayService;
     private ShowWindowSignalListener? showWindowListener;
     private LaunchGameSignalListener? launchGameListener;
 
@@ -45,6 +43,9 @@ public partial class App : Application
             // Build DI container, reusing the pre-DI UnifiedLogger so there is
             // a single Serilog pipeline for the entire process.
             var serviceCollection = new ServiceCollection();
+            var shutdownDeferral = new ShutdownDeferral();
+            // 组合根解析唯一的数据根并先注册 Core；表现层随后注册，容器反向释放时先释放 UI。
+            // 宿主不再自己解析数据根，也不再单独调用 AddLauncherCore（那会造成两处注册顺序契约）。
             serviceCollection.AddLauncherServices(
                 existingLogger: Program.PreDiLogger,
                 existingFatalCrashService: Program.PreDiFatalCrashService);
@@ -56,20 +57,14 @@ public partial class App : Application
             _ = serviceProvider.GetRequiredService<LocalizationService>();
 
             // Application-started trace (best-effort, fire-and-forget)
-            _ = serviceProvider.GetRequiredService<Services.Diagnostics.LocalDiagnostics>()
+            _ = serviceProvider.GetRequiredService<Cafe.Launcher.Core.Services.Diagnostics.ILauncherDiagnostics>()
                 .DebugAsync("Application", "Application started, DI container built", CancellationToken.None);
 
-            var viewModel = serviceProvider.GetRequiredService<MainWindowViewModel>();
-            var mainWindow = new MainWindow(
-                serviceProvider.GetRequiredService<WindowFilePickerService>(),
-                serviceProvider.GetRequiredService<WindowMetricsService>(),
-                serviceProvider.GetRequiredService<Services.Diagnostics.LocalDiagnostics>())
-            {
-                DataContext = viewModel,
-            };
-            var shutdownDeferral = new ShutdownDeferral();
+            // 表现层自己构造窗口、ViewModel 与托盘：宿主只拿到一个 Window 交回应用生命周期。
+            var presentationSession = serviceProvider.GetRequiredService<LauncherPresentationSession>();
+            var mainWindow = presentationSession.CreateMainWindow();
             var fatalShutdown = false;
-            CrashReportWindow? crashReportWindow = null;
+            Window? crashReportWindow = null;
 
             void HandleFatalCrashRequested(CrashReport report)
             {
@@ -85,12 +80,9 @@ public partial class App : Application
                     shutdownCts.Cancel();
                     showWindowListener?.Dispose();
                     launchGameListener?.Dispose();
-                    trayService?.Dispose();
-                    mainWindow.Hide();
+                    presentationSession.HideMainWindow();
 
-                    crashReportWindow = new CrashReportWindow(
-                        report,
-                        serviceProvider.GetRequiredService<LauncherDataRoot>());
+                    crashReportWindow = presentationSession.CreateCrashReportWindow(report);
                     crashReportWindow.Closed += (_, _) => desktop.Shutdown(1);
                     desktop.MainWindow = crashReportWindow;
                     crashReportWindow.Show();
@@ -124,10 +116,7 @@ public partial class App : Application
                 }
 
                 shutdownCts.Cancel();
-                Task shutdownTask = CompleteShutdownAsync(
-                    mainWindow,
-                    viewModel,
-                    serviceProvider);
+                Task shutdownTask = presentationSession.PrepareForShutdownAsync();
                 if (shutdownTask.IsCompletedSuccessfully)
                 {
                     return;
@@ -141,7 +130,7 @@ public partial class App : Application
                 }
                 catch (Exception exception)
                 {
-                    LocalDiagnostics.LogSync(LogEntrySeverity.Error, "App", $"Launcher shutdown coordination failed: {exception}");
+                    LauncherLog.LogSync(LogEntrySeverity.Error, "App", $"Launcher shutdown coordination failed: {exception}");
                 }
                 finally
                 {
@@ -151,35 +140,9 @@ public partial class App : Application
             }
 
             desktop.ShutdownRequested += HandleShutdownRequested;
-            mainWindow.ConfigureViewModel(viewModel);
 
-            // Initialize system tray (depends on Window — kept outside DI)
-            try
-            {
-                var localizationService = serviceProvider.GetRequiredService<LocalizationService>();
-                trayService = new SystemTrayService(
-                    mainWindow,
-                    localizationService,
-                    serviceProvider.GetRequiredService<Services.Diagnostics.LocalDiagnostics>(),
-                    serviceProvider.GetRequiredService<ISystemTrayActions>());
-                if (trayService.Initialize())
-                {
-                    mainWindow.SetSystemTray(trayService);
-                }
-                else
-                {
-                    trayService = null;
-                }
-            }
-            catch (Exception ex)
-            {
-                LocalDiagnostics.LogSync(LogEntrySeverity.Warn, "App", $"SystemTrayService init failed: {ex.Message}");
-            }
-
-            // Clean up on app exit. The service provider is disposed by Program.RunSession.
-            // Avalonia can raise Exit more than once for a single shutdown: the fatal crash
-            // path calls the forced Shutdown(1), and the lifetime then replays its own
-            // window-close shutdown. Cleanup disposes the CTS, so it must run exactly once.
+            // 清理：容器由 Program.RunSession 释放。Avalonia 对同一次关闭可能触发多次 Exit，
+            // 因此清理只跑一次（致命崩溃路径会走强制的 Shutdown(1)，随后生命周期再补一次）。
             var exited = false;
             desktop.Exit += (_, _) =>
             {
@@ -194,149 +157,29 @@ public partial class App : Application
                 showWindowListener?.Dispose();
                 launchGameListener?.Dispose();
                 shutdownCts.Cancel();
-                viewModel.Dispose();
-                trayService?.Dispose();
+                presentationSession.Dispose();
                 shutdownCts.Dispose();
             };
 
             // Listen for show-window signal from second instances (cross-platform:
             // a plain second start or a forwarded launch brings this window up).
-            showWindowListener = new ShowWindowSignalListener(mainWindow, trayService, Program.ShowWindowSignal!);
+            showWindowListener = new ShowWindowSignalListener(presentationSession, Program.ShowWindowSignal!);
 
             // Listen for --launch-game forwards from second instances (cross-platform:
             // the Linux .desktop shortcut relies on it; on Unix the transport is a
             // local socket, since .NET has no named events outside Windows).
-            launchGameListener = new LaunchGameSignalListener(viewModel.Operations, Program.LaunchGameSignal!);
+            launchGameListener = new LaunchGameSignalListener(presentationSession, Program.LaunchGameSignal!);
 
-            // Register Opened handler BEFORE desktop.MainWindow is set — that assignment
-            // may trigger the window to show and fire Opened synchronously.
-            // Both handlers are one-shot (WindowOpenedOnce): Avalonia re-raises Opened on
-            // every Show after a Hide, and a tray restore goes through Show, so a handler
-            // left attached re-ran the launch flow on every restore-from-tray — popping the
-            // "launcher minimized to tray" toast a second time.
-            if (Program.FirstLaunch)
-            {
-                WindowOpenedOnce.Subscribe(mainWindow, (_, _) =>
-                {
-                    // Post at a priority that ensures layout/render/bindings are complete
-                    // before we toggle visibility.
-                    Dispatcher.UIThread.Post(() =>
-                    {
-                        // 首启不做完整初始化（快照由向导驱动后再加载），但动效偏好必须先行
-                        // 应用，否则 IsMotionReduced 停留在字段默认 true，首启向导全程瞬切。
-                        viewModel.ApplyFirstLaunchMotionPreference();
-                        viewModel.Dialogs.ShowSetupWizard();
-                    }, DispatcherPriority.Background);
-                });
-            }
-            else
-            {
-                WindowOpenedOnce.Subscribe(mainWindow, (_, _) =>
-                {
-                    _ = InitializeViewModelAsync(mainWindow, viewModel, serviceProvider, shutdownCts.Token);
-                });
-            }
+            // 启动行为由表现层挂载：首启走向导，否则完整初始化（两者都只跑一次）。
+            presentationSession.AttachStartupBehavior(
+                Program.FirstLaunch,
+                Program.LaunchGameRequested,
+                shutdownCts.Token);
 
             desktop.MainWindow = mainWindow;
         }
 
         base.OnFrameworkInitializationCompleted();
-    }
-
-    private static async Task InitializeViewModelAsync(
-        MainWindow mainWindow,
-        MainWindowViewModel viewModel,
-        ServiceProvider serviceProvider,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var settingsService = serviceProvider.GetRequiredService<LauncherSettingsService>();
-            var savedSettings = await settingsService.ReadAsync(cancellationToken);
-            mainWindow.ApplySavedWindowState(savedSettings);
-            await viewModel.InitializeAsync(cancellationToken);
-            if (Program.LaunchGameRequested && !Program.FirstLaunch)
-            {
-                // --launch-game first-instance flow: the initial state refresh has
-                // finished, so the launch runs through the same command the UI
-                // button uses (validation, runner selection, toasts).
-                // First-launch installs are deliberately excluded: the setup wizard
-                // owns that session and the game cannot be installed yet, so an
-                // auto-launch would only fire a "not installed" toast over the wizard.
-                await Dispatcher.UIThread.InvokeAsync(
-                    () => viewModel.Operations.StartGameCommand.Execute(null));
-            }
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-        }
-        catch (Exception exception)
-        {
-            // 初始化失败本身由下方 HandleErrorAsync 记录，不在此重复打点。
-            try
-            {
-                // Initialization itself failed, so localization may be unavailable; keep an
-                // English fallback so the toast never shows the raw "Localization unavailable." text.
-                var toastMessage = "Launcher initialization failed.";
-                try
-                {
-                    toastMessage = serviceProvider
-                        .GetRequiredService<LocalizationService>()
-                        .F(LocalizationKeys.LauncherInitFailed, exception.Message);
-                }
-                catch (Exception localizationException)
-                {
-                    // 豁免：本地化失败的兜底路径——此时诊断/本地化本身不可用，
-                    // Debug 输出是最后一级无依赖通道。
-                    Debug.WriteLine($"Failure-toast localization unavailable: {localizationException.Message}");
-                }
-
-                await serviceProvider
-                    .GetRequiredService<IErrorHandlingService>()
-                    .HandleErrorAsync("Launcher initialization failed.", exception,
-                        new ErrorHandlingOptions { ToastMessage = toastMessage });
-            }
-            catch (Exception diagnosticsException)
-            {
-                // 豁免：诊断管道自身失败的兜底路径，不得再回调诊断。
-                Debug.WriteLine($"Initialization diagnostics failed: {diagnosticsException.Message}");
-            }
-        }
-        finally
-        {
-            if (!cancellationToken.IsCancellationRequested)
-            {
-                mainWindow.ApplySavedWindowState(viewModel.Settings.Editor.GetSavedSnapshot());
-            }
-        }
-    }
-
-    private static async Task CompleteShutdownAsync(
-        MainWindow mainWindow,
-        MainWindowViewModel viewModel,
-        ServiceProvider serviceProvider)
-    {
-        try
-        {
-            await viewModel.PrepareForShutdownAsync();
-
-            if (viewModel.Settings.Editor.GetSavedSnapshot().RememberWindowPositionAndSize)
-            {
-                await serviceProvider.GetRequiredService<ISavedSettingsWriter>()
-                    .UpdateAsync(mainWindow.CaptureWindowState);
-            }
-        }
-        catch (Exception exception)
-        {
-            // 关窗持久化失败发生在每次正常退出路径上：必须写入本地日志，
-            // 否则用户报告「窗口位置记不住」时无任何诊断线索（Debug 输出在
-            // Release 构建不可见）。此刻 serviceProvider 尚未 Dispose，
-            // LocalDiagnostics.ErrorAsync 自身全量吞异常，不会反向影响退出流程。
-            await serviceProvider.GetRequiredService<LocalDiagnostics>().ErrorAsync(
-                "Shutdown persistence failed.",
-                exception,
-                CancellationToken.None);
-        }
     }
 
     /// <summary>
@@ -383,20 +226,17 @@ public partial class App : Application
     /// </summary>
     private sealed class ShowWindowSignalListener : CrossProcessSignalListener
     {
-        public ShowWindowSignalListener(MainWindow mainWindow, SystemTrayService? trayService, CrossProcessLaunchSignal signal)
+        public ShowWindowSignalListener(LauncherPresentationSession presentationSession, CrossProcessLaunchSignal signal)
             : base(signal.WaitOne, () =>
         {
             try
             {
-                if (trayService is not null)
-                    trayService.ShowWindow();
-                else
-                    mainWindow.ShowWindow();
+                presentationSession.ShowWindow();
             }
             catch (Exception ex)
             {
                 // Restore is best-effort.
-                LocalDiagnostics.LogSync(LogEntrySeverity.Warn, "App", $"Window restore dispatch failed: {ex.Message}");
+                LauncherLog.LogSync(LogEntrySeverity.Warn, "App", $"Window restore dispatch failed: {ex.Message}");
             }
         })
         {
@@ -413,17 +253,17 @@ public partial class App : Application
     /// </summary>
     private sealed class LaunchGameSignalListener : CrossProcessSignalListener
     {
-        public LaunchGameSignalListener(GameOperationsViewModel operations, CrossProcessLaunchSignal signal)
+        public LaunchGameSignalListener(LauncherPresentationSession presentationSession, CrossProcessLaunchSignal signal)
             : base(signal.WaitOne, () =>
             {
                 try
                 {
-                    operations.StartGameCommand.Execute(null);
+                _ = presentationSession.LaunchGameAsync();
                 }
                 catch (Exception ex)
                 {
                     // The launch journey reports its own failures; this only guards dispatch.
-                    LocalDiagnostics.LogSync(LogEntrySeverity.Warn, "App", $"Launch-game signal dispatch failed: {ex.Message}");
+                    LauncherLog.LogSync(LogEntrySeverity.Warn, "App", $"Launch-game signal dispatch failed: {ex.Message}");
                 }
             })
         {

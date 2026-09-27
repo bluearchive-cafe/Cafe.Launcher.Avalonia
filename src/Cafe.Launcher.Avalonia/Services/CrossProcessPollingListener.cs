@@ -2,7 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Core.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
@@ -55,7 +55,7 @@ internal sealed class CrossProcessPollingListener : IDisposable
         catch (Exception ex)
         {
             // Listener stopped — non-critical.
-            LocalDiagnostics.LogSync(LogEntrySeverity.Warn, "CrossProcess", "listener loop exited: " + ex.Message);
+            LauncherLog.LogSync(LogEntrySeverity.Warn, "CrossProcess", "listener loop exited: " + ex.Message);
         }
     }
 

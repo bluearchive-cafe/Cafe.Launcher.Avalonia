@@ -8,6 +8,7 @@ using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Testing;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
+using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.Avalonia.HeadlessTests;
 

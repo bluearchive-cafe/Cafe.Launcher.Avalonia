@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -102,6 +103,30 @@ public sealed class LauncherSettingsTests
                 ?? throw new InvalidOperationException(
                     $"'{type.Name}.ComparedProperties' entries are no longer (Name, Read) tuples."))
         ];
+    }
+
+    /// <summary>
+    /// 状态同一性对空引用必须回答"不同"：设置页的脏标记先过这一关，比较才能安全继续。
+    /// </summary>
+    [Fact]
+    public void HasSameSettingsState_AgainstNull_IsNeverTheSame()
+    {
+        Assert.False(new LauncherSettings().HasSameSettingsState(null));
+    }
+
+    /// <summary>
+    /// 调色板逐元素比较：长度相同、只在同一位置换了颜色也算不同状态。长度不同的分支由
+    /// <see cref="EverySettableProperty_DrivesStateIdentityBothWays"/> 的探针值覆盖，
+    /// 这一条补的是取值差异——它决定"提取算法换了配色"能不能让保存按钮亮起来。
+    /// </summary>
+    [Fact]
+    public void HasSameSettingsState_WhenPaletteDiffersAtTheSameIndex_IsNotTheSame()
+    {
+        var left = new LauncherSettings { ThemeColorPalette = ["#FF112233", "#FF445566"] };
+        var right = new LauncherSettings { ThemeColorPalette = ["#FF112233", "#FF778899"] };
+
+        Assert.False(left.HasSameSettingsState(right));
+        Assert.False(right.HasSameSettingsState(left));
     }
 
     /// <summary>

@@ -302,6 +302,29 @@
         "resolved": "0.94.1",
         "contentHash": "11YMr7FnAbL83bQmVxlhbIKHvSLxjO81D12Ej0QMSGXMDTxNA9MTOa4MQxx43nv5el/efuPHwzyrj6a5ha2gug=="
       },
+      "cafe.launcher.avalonia.ui": {
+        "type": "Project",
+        "dependencies": {
+          "Avalonia": "[12.1.2, )",
+          "Avalonia.Controls.ColorPicker": "[12.1.2, )",
+          "Cafe.Launcher.Core": "[1.0.0, )",
+          "CommunityToolkit.Mvvm": "[8.4.2, )",
+          "MarkView.Avalonia": "[12.2.1, )",
+          "Material.Icons.Avalonia": "[3.0.2, )",
+          "Microsoft.Extensions.DependencyInjection": "[10.0.12, )",
+          "Shirasagi0012.MaterialColorUtilities": "[0.2.0, )"
+        }
+      },
+      "cafe.launcher.core": {
+        "type": "Project",
+        "dependencies": {
+          "Cafe.Launcher.Updater.Core": "[1.0.0, )",
+          "Microsoft.Extensions.DependencyInjection": "[10.0.12, )",
+          "Serilog": "[4.4.0, )",
+          "Serilog.Sinks.Async": "[2.1.0, )",
+          "Serilog.Sinks.File": "[7.0.0, )"
+        }
+      },
       "cafe.launcher.updater.core": {
         "type": "Project"
       }

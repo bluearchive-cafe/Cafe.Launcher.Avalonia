@@ -11,8 +11,8 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void LocalizedTextCatalog_DebugBindings_UseResourceKeys()
     {
-        var overlay = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowDebugOverlay.axaml"));
-        var source = File.ReadAllText(TestRepository.FromApplicationRoot("Services/LocalizationService.cs"));
+        var overlay = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowDebugOverlay.axaml"));
+        var source = File.ReadAllText(TestRepository.FromPresentationRoot("Services/LocalizationService.cs"));
         var debugProperties = overlay
             .Descendants()
             .SelectMany(element => element.Attributes())
@@ -35,7 +35,7 @@ public sealed partial class UiStyleContractTests
     {
         var violations = ProjectMarkupFiles()
             .SelectMany(relativePath => FindFixedEnglishLiterals(
-                XDocument.Load(TestRepository.FromApplicationRoot(relativePath), LoadOptions.SetLineInfo),
+                XDocument.Load(TestRepository.FromPresentationRoot(relativePath), LoadOptions.SetLineInfo),
                 relativePath))
             .Order(StringComparer.Ordinal)
             .ToList();

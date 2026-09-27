@@ -9,11 +9,14 @@ using Cafe.Launcher.Avalonia.Features.SetupWizard;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
-using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Services.GameRuntime;
-using Cafe.Launcher.Avalonia.Services.Update;
+using Cafe.Launcher.Core.Services.Update;
 using Cafe.Launcher.Avalonia.Testing;
 using Cafe.Launcher.Avalonia.ViewModels;
+using Cafe.Launcher.Core.Services.GameRuntime;
+using Cafe.Launcher.Core.Constants;
+using Cafe.Launcher.Core.Services;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -205,7 +208,7 @@ public sealed class SettingsViewModelTests : IDisposable
             null!,
             localizer,
             toastService,
-            new LauncherUpdateService(transport),
+            new LauncherUpdateService(transport, buildIdentity: BuildInfo.Identity),
             new LauncherSelfUpdateService(
                 new LauncherUpdateDownloader(new StubRemoteHttpTransport()),
                 new LauncherUpdateHostInfoProvider(),
@@ -219,7 +222,8 @@ public sealed class SettingsViewModelTests : IDisposable
             new SettingsAppearanceViewModel(editor ?? new SettingsEditor(), new ThemeApplier()),
             new RecordingErrorHandlingService(),
             new StubGameRuntime(),
-            new StubFilePickerService());
+            new StubFilePickerService(),
+            BuildInfo.Identity);
 
     private string NextDataRoot() => tempDir.Sub(Guid.NewGuid().ToString("N"));
 

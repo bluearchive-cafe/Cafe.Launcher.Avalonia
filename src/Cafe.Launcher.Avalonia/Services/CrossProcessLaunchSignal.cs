@@ -6,7 +6,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Core.Services.Diagnostics;
+using Cafe.Launcher.Core.Services;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
@@ -111,7 +112,7 @@ internal sealed class CrossProcessLaunchSignal : IDisposable
         catch (Exception ex)
         {
             // 绑定失败不应影响启动器主流程（仅失去 --launch-game 转发能力）。
-            LocalDiagnostics.LogSync(LogEntrySeverity.Warn, "CrossProcess", $"bind failed: {ex.Message}");
+            LauncherLog.LogSync(LogEntrySeverity.Warn, "CrossProcess", $"bind failed: {ex.Message}");
         }
     }
 
@@ -182,7 +183,7 @@ internal sealed class CrossProcessLaunchSignal : IDisposable
 
             if (Environment.TickCount64 >= retryDeadline)
             {
-                LocalDiagnostics.LogSync(LogEntrySeverity.Warn, "CrossProcess",
+                LauncherLog.LogSync(LogEntrySeverity.Warn, "CrossProcess",
                     $"single-instance lock socket '{socketPath}' is unusable; starting without single-instance enforcement.");
                 return true;
             }
@@ -235,7 +236,7 @@ internal sealed class CrossProcessLaunchSignal : IDisposable
             Thread.Sleep(PollIntervalMilliseconds);
         }
 
-        LocalDiagnostics.LogSync(LogEntrySeverity.Warn, "CrossProcess", $"could not bind Unix socket '{socketPath}' in time; --launch-game forwarding is unavailable for this process.");
+        LauncherLog.LogSync(LogEntrySeverity.Warn, "CrossProcess", $"could not bind Unix socket '{socketPath}' in time; --launch-game forwarding is unavailable for this process.");
     }
 
     /// <summary>

@@ -8,7 +8,7 @@ public sealed class DialogActionButtonContractTests
     [Fact]
     public void DialogActionStyle_UsesUnifiedMetrics()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
         var setters = GetStyleSetters(document, "Button.dialog-action");
 
         Assert.Equal(
@@ -30,7 +30,7 @@ public sealed class DialogActionButtonContractTests
     [Fact]
     public void DialogActionStyle_FollowsBaseSemanticActionStyles()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindow.Styles.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
         var styles = document
             .Descendants()
             .Where(element => element.Name.LocalName == "Style")
@@ -51,7 +51,7 @@ public sealed class DialogActionButtonContractTests
     [Fact]
     public void SettingsFooterActions_UseDialogActionClass()
     {
-        var settingsDocument = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowSettingsOverlay.axaml"));
+        var settingsDocument = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowSettingsOverlay.axaml"));
         var settingsButtons = settingsDocument
             .Descendants()
             .Where(element =>
@@ -72,13 +72,13 @@ public sealed class DialogActionButtonContractTests
     {
         var documents = new[]
         {
-            XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowDialogsOverlay.axaml")),
-            XDocument.Load(TestRepository.FromApplicationRoot("Views/ResourcePanelOverlay.axaml")),
-            XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowLogViewerOverlay.axaml")),
-            XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowLogExportOverlay.axaml")),
-            XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowSettingsOverlay.axaml")),
-            XDocument.Load(TestRepository.FromApplicationRoot("Views/SetupWizardOverlay.axaml")),
-            XDocument.Load(TestRepository.FromApplicationRoot("Controls/ConfirmDialog.axaml")),
+            XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowDialogsOverlay.axaml")),
+            XDocument.Load(TestRepository.FromPresentationRoot("Views/ResourcePanelOverlay.axaml")),
+            XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowLogViewerOverlay.axaml")),
+            XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowLogExportOverlay.axaml")),
+            XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowSettingsOverlay.axaml")),
+            XDocument.Load(TestRepository.FromPresentationRoot("Views/SetupWizardOverlay.axaml")),
+            XDocument.Load(TestRepository.FromPresentationRoot("Controls/ConfirmDialog.axaml")),
         };
         var actionButtons = documents
             .SelectMany(document => document.Descendants())
@@ -123,7 +123,7 @@ public sealed class DialogActionButtonContractTests
     [Fact]
     public void LogExportDialog_UsesExitToAppIcons()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Views/MainWindowLogExportOverlay.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowLogExportOverlay.axaml"));
         var headerIcon = document
             .Descendants()
             .Single(element =>

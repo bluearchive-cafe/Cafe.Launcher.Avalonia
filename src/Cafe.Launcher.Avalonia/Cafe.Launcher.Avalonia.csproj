@@ -22,7 +22,7 @@
     <!-- AVLN 码由 Avalonia XAML 编译器任务发出，TreatWarningsAsErrors（csc 范围）覆盖不到。 -->
     <MSBuildWarningsAsErrors>AVLN3001</MSBuildWarningsAsErrors>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <ApplicationIcon>Assets\app-icon.ico</ApplicationIcon>
+    <ApplicationIcon>..\Cafe.Launcher.Avalonia.UI\Assets\app-icon.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
 
@@ -39,24 +39,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- app-icon-source.png 是图标流水线的输入（New-AppIconAssets.ps1 与手工生成的 .ico），
-         运行时没有代码读它（About 分区不含 Image，托盘与窗口用的是 app-icon.ico），
-         因此不嵌进资源：它比其余素材都大，嵌进去会随全部六个分发包发出去。 -->
-    <AvaloniaResource Include="Assets\**" Exclude="Assets\app-icon-source.png" />
-    <EmbeddedResource Remove="Resources\LauncherStrings*" />
-    <None Update="Assets\app-icon.ico">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Include="Resources\LauncherStrings.resx" />
-    <EmbeddedResource Include="Resources\LauncherStrings.zh-Hans.resx" />
-    <EmbeddedResource Include="Resources\LauncherStrings.zh-Hant.resx" />
-    <EmbeddedResource Include="Resources\LauncherStrings.ja.resx" />
-  </ItemGroup>
-
-  <ItemGroup>
+    <ProjectReference Include="..\Cafe.Launcher.Avalonia.UI\Cafe.Launcher.Avalonia.UI.csproj" />
+    <ProjectReference Include="..\Cafe.Launcher.Core\Cafe.Launcher.Core.csproj" />
     <ProjectReference Include="..\Cafe.Launcher.Updater.Core\Cafe.Launcher.Updater.Core.csproj" />
   </ItemGroup>
 
@@ -83,7 +67,9 @@
     <Exec Command="git rev-parse --short=7 HEAD" WorkingDirectory="$(MSBuildProjectDirectory)" ConsoleToMSBuild="true" IgnoreExitCode="true" StandardOutputImportance="Low">
       <Output TaskParameter="ConsoleOutput" PropertyName="GitCommitSha" />
     </Exec>
-    <Exec Command="git show -s --format=%cI HEAD" WorkingDirectory="$(MSBuildProjectDirectory)" ConsoleToMSBuild="true" IgnoreExitCode="true" StandardOutputImportance="Low">
+    <!-- MSBuild 会把 Command 属性里的单个百分号当作转义/表达式前缀吃掉，git 因此收到
+         残缺的 pretty 格式参数并把致命错误写到标准输出；写两个百分号才是传给 git 的一个。 -->
+    <Exec Command="git show -s --format=%%cI HEAD" WorkingDirectory="$(MSBuildProjectDirectory)" ConsoleToMSBuild="true" IgnoreExitCode="true" StandardOutputImportance="Low">
       <Output TaskParameter="ConsoleOutput" PropertyName="GitCommitTime" />
     </Exec>
     <PropertyGroup>

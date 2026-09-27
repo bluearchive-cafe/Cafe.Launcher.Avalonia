@@ -4,6 +4,9 @@ using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Testing;
+using Cafe.Launcher.Core.Constants;
+using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Services;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -62,7 +65,7 @@ public sealed class LauncherUpdateServiceTests
               }
             ]
             """);
-        var service = new LauncherUpdateService(transport);
+        var service = new LauncherUpdateService(transport, buildIdentity: BuildInfo.Identity);
 
         var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
 
@@ -108,7 +111,7 @@ public sealed class LauncherUpdateServiceTests
               }
             ]
             """);
-        var service = new LauncherUpdateService(transport);
+        var service = new LauncherUpdateService(transport, buildIdentity: BuildInfo.Identity);
 
         var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
 
@@ -125,7 +128,7 @@ public sealed class LauncherUpdateServiceTests
         // 后者再次 404 后失败才落为返回值。
         var transport = new StubRemoteHttpTransport(
             _ => new HttpRequestException("Not Found", null, HttpStatusCode.NotFound));
-        var service = new LauncherUpdateService(transport);
+        var service = new LauncherUpdateService(transport, buildIdentity: BuildInfo.Identity);
 
         var result = await service.CheckForUpdateAsync(UpdateChannels.Stable);
 
@@ -222,7 +225,7 @@ public sealed class LauncherUpdateServiceTests
         // Dispatcher（CR-20260921-070313-7BDC 的崩溃形态）。
         var transport = new StubRemoteHttpTransport(_ => new InvalidOperationException(
             "Remote URL resolves to a blocked network address. Blocked: fdfe:dcba:9876::14a"));
-        var service = new LauncherUpdateService(transport);
+        var service = new LauncherUpdateService(transport, buildIdentity: BuildInfo.Identity);
 
         var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
 
@@ -236,7 +239,7 @@ public sealed class LauncherUpdateServiceTests
     public async Task CheckForUpdateAsync_WhenRequiredFieldsAreMissing_ReturnsFailure()
     {
         var transport = CreateReleasesTransport("""[{"files":[]}]""");
-        var service = new LauncherUpdateService(transport);
+        var service = new LauncherUpdateService(transport, buildIdentity: BuildInfo.Identity);
 
         var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
 
@@ -263,7 +266,7 @@ public sealed class LauncherUpdateServiceTests
               }
             ]
             """);
-        var service = new LauncherUpdateService(transport);
+        var service = new LauncherUpdateService(transport, buildIdentity: BuildInfo.Identity);
 
         var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
 

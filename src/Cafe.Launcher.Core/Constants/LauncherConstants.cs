@@ -1,0 +1,49 @@
+namespace Cafe.Launcher.Core.Constants;
+
+/// <summary>
+/// Cross-cutting constants used by both the UI and service layers.
+/// Domain-specific constants live in <see cref="GamePaths"/>,
+/// build metadata in <see cref="BuildInfo"/>,
+/// and API/auth configuration in <see cref="ApiConfig"/>.
+/// </summary>
+public static class LauncherConstants
+{
+    public const string ProductName = "Cafe Launcher";
+    public const string LogExportFolderName = "log-exports";
+    public const string DefaultThemeColor = "#FF2E7DF6";
+
+    /// <summary>
+    /// Z-index used by the toast notification overlay (MainWindowToastOverlay.axaml).
+    /// Toast renders above all other UI layers: base content, settings, and dialogs.
+    /// </summary>
+    public const int ZIndexToast = 1000;
+
+    public const string OfficialGameWebsiteUrl = "https://bluearchive.jp/";
+    public const string CafeWebsiteUrl = "https://bluearchive.cafe/";
+    public const string HelpDocsUrl = "https://docs.bluearchive.cafe/cafe-launcher/";
+    public const string PrivacyPolicyUrl =
+        "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/blob/main/PRIVACY.md";
+    public const string DefaultBackgroundArtworkUrl =
+        "https://www.pixiv.net/artworks/142932674";
+    public const string GitHubRepositoryUrl =
+        "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia";
+    /// <summary>
+    /// Full GitHub release repository URL.
+    /// Redundant with <see cref="ApiConfig.GitHubReleaseRepositoryUrl"/>;
+    /// both must match. Present here for UI-layer convenience
+    /// (avoids referencing API config from view/viewmodel code).
+    /// </summary>
+    public const string GitHubReleaseRepositoryUrl =
+        "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia";
+    /// <summary>
+    /// Releases list page of the release repository. The browser hand-off target for
+    /// hosts that cannot apply updates in-app; the list page always exists, unlike a
+    /// tag-specific page.
+    /// </summary>
+    public const string GitHubReleasesPageUrl = GitHubReleaseRepositoryUrl + "/releases";
+    public const string IssueTrackerUrl =
+        "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/issues";
+
+    /// <summary>第二实例转发「直接启动游戏」的 CLI 参数（宿主与快捷方式生成共用一处字面量）。</summary>
+    public const string LaunchGameArgument = "--launch-game";
+}
