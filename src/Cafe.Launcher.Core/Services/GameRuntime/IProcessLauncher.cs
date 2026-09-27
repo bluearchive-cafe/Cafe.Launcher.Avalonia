@@ -13,7 +13,7 @@ public interface IProcessLauncher
 }
 
 /// <summary>Default <see cref="IProcessLauncher"/> backed by <see cref="Process.Start(ProcessStartInfo)"/>.</summary>
-public sealed class DefaultProcessLauncher : IProcessLauncher
+internal sealed class DefaultProcessLauncher : IProcessLauncher
 {
     public Process? Start(ProcessStartInfo startInfo) => Process.Start(startInfo);
 }

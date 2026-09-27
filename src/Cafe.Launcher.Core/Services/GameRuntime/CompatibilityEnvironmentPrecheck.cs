@@ -57,7 +57,7 @@ internal sealed record CompatibilityEnvironmentReport(
 /// <para>前缀路径可能还不存在（首启），因此文件系统探针落在最近的已存在祖先目录上；无法确定时
 /// 记 null，不臆断。</para>
 /// </remarks>
-public sealed class CompatibilityEnvironmentPrecheck
+internal sealed class CompatibilityEnvironmentPrecheck
 {
     private readonly LauncherDataRoot dataRoot;
 

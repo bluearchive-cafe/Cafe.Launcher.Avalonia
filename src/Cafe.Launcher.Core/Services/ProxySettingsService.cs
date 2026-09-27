@@ -37,7 +37,7 @@ internal sealed record SystemProxySettings(string ProxyUrl, IReadOnlyList<string
 /// before and after the change.
 /// </para>
 /// </remarks>
-public sealed class ProxySettingsService : IDisposable
+internal sealed class ProxySettingsService : IDisposable
 {
     private readonly Func<SystemProxySettings?> systemProxySettingsProvider;
     private readonly Dictionary<string, CachedProxyHandler> proxyHandlers = new(StringComparer.Ordinal);

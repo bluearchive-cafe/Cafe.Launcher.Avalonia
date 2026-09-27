@@ -4,7 +4,7 @@ using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.Core.Services;
 
-public sealed class PatchUrlGroupService
+internal sealed class PatchUrlGroupService
 {
     private const string CafePackageHost = "launcher-pkg-ba-jp.bluearchive.cafe";
 

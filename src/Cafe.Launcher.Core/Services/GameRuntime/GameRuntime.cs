@@ -13,7 +13,7 @@ namespace Cafe.Launcher.Core.Services.GameRuntime;
 /// diagnostic snapshot. Runners are declarative <see cref="GameRunnerDefinition"/>
 /// specs; every rule lives here, in one place, across launch and status paths.
 /// </summary>
-public sealed class GameRuntime : IGameRuntime
+internal sealed class GameRuntime : IGameRuntime
 {
     private readonly IReadOnlyList<GameRunnerDefinition> runners;
     private readonly IProcessLauncher processLauncher;

@@ -95,7 +95,7 @@ internal partial class MainWindowViewModel : ViewModelBase, IDisposable
         ISavedSettingsWriter savedSettingsWriter,
         LocalizationService localizer,
         ToastService toastService,
-        LauncherUpdateService launcherUpdateService,
+        ILauncherUpdateService launcherUpdateService,
         ILauncherSelfUpdateService launcherSelfUpdateService,
         IWindowsLauncherUpdateApplier launcherUpdateApplier,
         ILauncherDiagnostics diagnostics,

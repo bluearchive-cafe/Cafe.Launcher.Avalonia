@@ -13,7 +13,7 @@ namespace Cafe.Launcher.Core.Services.Auth;
 /// signing (not password storage or certificate verification) this is acceptable.
 /// The server should additionally enforce timeliness via the `time` field.
 /// </summary>
-public sealed class AuthorizationHeaderFactory
+internal sealed class AuthorizationHeaderFactory
 {
     private readonly TimeProvider timeProvider;
 
