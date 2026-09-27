@@ -17,7 +17,7 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RootDir = Split-Path -Parent $ScriptDir
 
 if ([string]::IsNullOrWhiteSpace($SourcePath)) {
-    $SourcePath = Join-Path $RootDir "src/Cafe.Launcher.Avalonia/Assets/app-icon-source.png"
+    $SourcePath = Join-Path $RootDir "src/Cafe.Launcher/Assets/app-icon-source.png"
 }
 
 $MacOSOutputDir = Join-Path $RootDir "installer/macos"

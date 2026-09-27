@@ -24,14 +24,30 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 进程数据根，也不反射入口程序集判断运行版本：前者由组合根解析一次后经 `AddLauncherCore`
 的必填参数注入（ADR-025），后者消费注入的 `LauncherBuildIdentity`。
 
-`Cafe.Launcher.Avalonia.UI` 承载全部 Avalonia 控件、ViewModel、主题、资源与运行时资产
+`Cafe.Launcher.UI` 承载全部 Avalonia 控件、ViewModel、主题、资源与运行时资产
 （`Views/`、`ViewModels/`、`Features/`、`Controls/`、`Converters/`、`Models/`、`Helpers/`、表现层
-`Services/`、`Resources/` 与运行期 `Assets/`）；宿主只保留进程生命周期与入口相关文件。搬迁只换
-程序集、不换命名空间，表现层因此仍是 `Cafe.Launcher.Avalonia.*`。规则与落地批次见 ADR-042。
+`Services/`、`Resources/` 与运行期 `Assets/`）；宿主只保留进程生命周期与入口相关文件。分层规则
+与落地批次见 ADR-042，命名规则见 ADR-043。
 
 Core 的源码命名空间是 `Cafe.Launcher.Core.*`；每个工程在自己的源文件里显式列出用到的 Core
 命名空间（迁移期的项目级 `<Using>` 已全部移除，`Projects_ResolveCoreNamespacesWithExplicitUsings`
-挡住回退），Core 侧不得回退到 `Cafe.Launcher.Avalonia.*`（`CoreSources_UseOnlyTheCoreNamespaces` 守着）。
+挡住回退），Core 侧不得使用 `Cafe.Launcher.Core` 之外的 `Cafe.Launcher.*` 命名空间
+（`CoreSources_UseOnlyTheCoreNamespaces` 守着）。
+
+**程序集与命名空间命名。** 每个工程的目录名、`.csproj` 文件名、`AssemblyName`、`RootNamespace`
+与源码命名空间**同名**：宿主 `Cafe.Launcher`、表现层 `Cafe.Launcher.UI`、后端
+`Cafe.Launcher.Core`、自更新宿主与其库 `Cafe.Launcher.Updater` / `Cafe.Launcher.Updater.Core`；
+测试工程以 `Tests` 结尾（`InternalsVisibleTo` 只允许测试程序集）。由此得到两条硬规则：
+
+- **命名空间指明属主程序集**：同一个命名空间不得出现在两个程序集里。跨程序集的可见性只经
+  `internal` 与窄接口表达，不靠「命名空间看起来像一个包」；宿主与表现层因此不再共享
+  `Cafe.Launcher.*` 下的任何命名空间。
+- **产品 token 只有一个**：发行资产前缀（`Cafe.Launcher_<tag>_…`）、Windows 安装器的
+  `EXECUTABLE_NAME`、macOS `CFBundleExecutable`、Linux wrapper 的 exec 目标，与上述程序集名
+  都用同一个 `Cafe.Launcher`。GitHub 仓库名（`Cafe.Launcher.Avalonia`）是历史标识，刻意不改。
+
+`AssemblyNamingContractTests` 把这些关系逐条钉住（工程清单、同名词、命名空间前缀、资产前缀）。
+新增工程或新增发行资产时先改那张声明表——这是「名字」这类隐式契约在本仓库的落点（ADR-043）。
 
 Core 的服务实现正在按「消费方只经接口取用」逐批收回 `internal`，尚未收窄的公开实现用显式声明集
 钉住：`Models/` 之外的顶层 public class 必须出现在
@@ -119,7 +135,7 @@ WinExe 宿主只保留进程生命周期和顶层 Avalonia 生命周期；Core �
 
 ### 4.1 添加新字符串
 
-1. 在 4 个资源文件（`src/Cafe.Launcher.Avalonia.UI/Resources/LauncherStrings{,.zh-Hans,.zh-Hant,.ja}.resx`，随表现层归 UI 工程）中按字母序添加 key-value。
+1. 在 4 个资源文件（`src/Cafe.Launcher.UI/Resources/LauncherStrings{,.zh-Hans,.zh-Hant,.ja}.resx`，随表现层归 UI 工程）中按字母序添加 key-value。
 2. XAML 中绑定：`{Binding Shell.I18n[newKey]}`。绑定路径是字符串、引用不到 C# 常量，故这一面由 `ResxResourceContractTests.XamlResourceBindings_UseOnlyKeysThatExistInNeutralResources` 做存在性守卫——拼错的键以前构建与测试全绿，只在运行期降级为 `"Localization unavailable."`；同一测试类的 `XamlKeyScan_StillCoversTheKeyBearingFiles` 是它的反空转基线，扫描域为应用工程下全部 `.axaml`（无手抄文件清单）。
 3. C# 中一律引用 `Constants/LocalizationKeys` 的编译时常量，**禁止**向 `T()`/`F()`/`I18n[...]` 传裸 key 字符串字面量（`ResxResourceContractTests` 守护）。
 4. 所有 4 种语言都提供翻译（对专有名词可回退到英文文本，但不得留空）；术语与译名以 `UBIQUITOUS_LANGUAGE.md` 的规范译法为准。
@@ -156,8 +172,8 @@ WinExe 宿主只保留进程生命周期和顶层 Avalonia 生命周期；Core �
 
 ### 6.1 测试项目
 
-- 单元测试：`tests/Cafe.Launcher.Avalonia.Tests/`（xUnit v3 + coverlet.msbuild）
-- Headless UI 测试：`tests/Cafe.Launcher.Avalonia.HeadlessTests/`（xUnit v3 + Avalonia.Headless.XUnit，含黄金截图基线）
+- 单元测试：`tests/Cafe.Launcher.Tests/`（xUnit v3 + coverlet.msbuild）
+- Headless UI 测试：`tests/Cafe.Launcher.HeadlessTests/`（xUnit v3 + Avalonia.Headless.XUnit，含黄金截图基线）
 
 ### 6.2 测试结构
 
@@ -299,4 +315,4 @@ WinExe 宿主只保留进程生命周期和顶层 Avalonia 生命周期；Core �
 
 > 版本以 `Directory.Packages.props` 中声明的为准；升级依赖时同步更新本表（受 `InstallerContractTests` 守护），并再生 `THIRD-PARTY-NOTICES.md` 与 lock 文件（流程见 AGENTS.md「Dependency upgrades」）。
 
-`Cafe.Launcher.Avalonia.HeadlessTests` 暂时通过 `VersionOverride` 固定 `xunit.v3` 3.2.2；`Avalonia.Headless.XUnit` 12.1.2 尚不兼容 xUnit 4（[AvaloniaUI/Avalonia#22072](https://github.com/AvaloniaUI/Avalonia/issues/22072)）。上游修复后应移除该覆盖，并将程序集并行化配置迁移到 xUnit 4 API。
+`Cafe.Launcher.HeadlessTests` 暂时通过 `VersionOverride` 固定 `xunit.v3` 3.2.2；`Avalonia.Headless.XUnit` 12.1.2 尚不兼容 xUnit 4（[AvaloniaUI/Avalonia#22072](https://github.com/AvaloniaUI/Avalonia/issues/22072)）。上游修复后应移除该覆盖，并将程序集并行化配置迁移到 xUnit 4 API。

@@ -1,6 +1,6 @@
 using Cafe.Launcher.Core.Services.Update;
 
-namespace Cafe.Launcher.Avalonia.Testing;
+namespace Cafe.Launcher.Testing;
 
 /// <summary>
 /// Stands in for the Windows update helper. <see cref="IsAvailable"/> is the host fact the

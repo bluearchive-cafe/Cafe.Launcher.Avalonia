@@ -1,0 +1,299 @@
+using Cafe.Launcher.UI.Models;
+using Cafe.Launcher.UI.Services;
+using Cafe.Launcher.Testing;
+using System.Text.Json;
+using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Services;
+
+namespace Cafe.Launcher.Tests;
+
+public sealed class LocalInstallationStateStoreTests : IDisposable
+{
+    private readonly TestDirectory tempDir = TestDirectory.Create();
+    private readonly string gamePath;
+    private readonly LocalInstallationStateStore store = new();
+
+    public LocalInstallationStateStoreTests()
+    {
+        gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+    }
+
+    [Fact]
+    public async Task ReadAsync_WhenInstallationDirectoryDoesNotExist_ReturnsNotInstalled()
+    {
+        var state = await store.ReadAsync(gamePath);
+
+        Assert.Equal(LocalInstallationStateKind.NotInstalled, state.Kind);
+        Assert.Equal(Path.GetFullPath(gamePath), state.GamePath);
+        Assert.Null(state.GameConfig);
+        Assert.Null(state.Manifest);
+    }
+
+    [Fact]
+    public async Task CommitAsync_WhenDataIsValid_WritesAndReadsValidInstallationState()
+    {
+        Directory.CreateDirectory(gamePath);
+        var commit = new LocalInstallationStateCommit(
+            "1.2.3",
+            "manifest.json",
+            "BlueArchive",
+            ["--test"],
+            [new LocalInstallationFile("BlueArchive.exe", 4, "1234")]);
+
+        var committed = await store.CommitAsync(gamePath, commit);
+        var state = await store.ReadAsync(gamePath);
+
+        Assert.Equal(LocalInstallationStateKind.Valid, committed.Kind);
+        Assert.Equal(LocalInstallationStateKind.Valid, state.Kind);
+        var config = Assert.IsType<GameLauncherConfig>(state.GameConfig);
+        var manifest = Assert.IsType<LocalManifest>(state.Manifest);
+        Assert.Equal("1.2.3", config.Version);
+        Assert.Equal("1.2.3", manifest.Version);
+        Assert.Equal("BlueArchive", config.Name);
+        Assert.Equal(["--test"], config.Params);
+        var file = Assert.Single(manifest.Files);
+        Assert.Equal("BlueArchive.exe", file.Path);
+        Assert.Equal("4", file.Size);
+        Assert.Equal("1234", file.Hash);
+    }
+
+    [Fact]
+    public async Task ReadAsync_WhenOnlyOneStateDocumentExists_ReturnsCorruptedWithoutPartialData()
+    {
+        Directory.CreateDirectory(gamePath);
+        await File.WriteAllTextAsync(
+            Path.Combine(gamePath, "manifest.json"),
+            "{}");
+
+        var state = await store.ReadAsync(gamePath);
+
+        Assert.Equal(LocalInstallationStateKind.Corrupted, state.Kind);
+        Assert.Null(state.GameConfig);
+        Assert.Null(state.Manifest);
+    }
+
+    [Fact]
+    public async Task ReadAsync_WhenOnlyTempDocumentsExist_ReturnsNotInstalled()
+    {
+        Directory.CreateDirectory(gamePath);
+        await File.WriteAllTextAsync(Path.Combine(gamePath, "manifest.json.tmp"), "{}");
+        await File.WriteAllTextAsync(Path.Combine(gamePath, "game-launcher-config.json.tmp"), "{}");
+
+        var state = await store.ReadAsync(gamePath);
+
+        Assert.Equal(LocalInstallationStateKind.NotInstalled, state.Kind);
+    }
+
+    [Fact]
+    public async Task ReadAsync_WhenJsonIsInvalid_ReturnsCorrupted()
+    {
+        await CommitValidStateAsync();
+        await File.WriteAllTextAsync(Path.Combine(gamePath, "manifest.json"), "{");
+
+        var state = await store.ReadAsync(gamePath);
+
+        Assert.Equal(LocalInstallationStateKind.Corrupted, state.Kind);
+    }
+
+    [Fact]
+    public async Task ReadAsync_WhenRequiredPropertyUsesWrongCase_ReturnsCorrupted()
+    {
+        await CommitValidStateAsync();
+        var manifestPath = Path.Combine(gamePath, "manifest.json");
+        var manifest = await File.ReadAllTextAsync(manifestPath);
+        await File.WriteAllTextAsync(manifestPath, manifest.Replace("\"name\"", "\"Name\"", StringComparison.Ordinal));
+
+        var state = await store.ReadAsync(gamePath);
+
+        Assert.Equal(LocalInstallationStateKind.Corrupted, state.Kind);
+    }
+
+    [Fact]
+    public async Task ReadAsync_WhenVcIsInvalid_ReturnsCorrupted()
+    {
+        await CommitValidStateAsync();
+        var configPath = Path.Combine(gamePath, "game-launcher-config.json");
+        var config = JsonSerializer.Deserialize<GameLauncherConfig>(await File.ReadAllTextAsync(configPath));
+        Assert.NotNull(config);
+        config.Vc = "invalid";
+        await File.WriteAllTextAsync(configPath, JsonSerializer.Serialize(config));
+
+        var state = await store.ReadAsync(gamePath);
+
+        Assert.Equal(LocalInstallationStateKind.Corrupted, state.Kind);
+    }
+
+    [Fact]
+    public async Task ReadAsync_WhenDocumentVersionsDiffer_ReturnsCorrupted()
+    {
+        await CommitValidStateAsync();
+        var configPath = Path.Combine(gamePath, "game-launcher-config.json");
+        var config = JsonSerializer.Deserialize<GameLauncherConfig>(await File.ReadAllTextAsync(configPath));
+        Assert.NotNull(config);
+        config.Version = "9.9.9";
+        config.Vc = OfficialHashService.GetGameConfigHash(config);
+        await File.WriteAllTextAsync(configPath, JsonSerializer.Serialize(config));
+
+        var state = await store.ReadAsync(gamePath);
+
+        Assert.Equal(LocalInstallationStateKind.Corrupted, state.Kind);
+    }
+
+    [Fact]
+    public async Task ReadAsync_WhenStateDocumentCannotBeOpened_ReturnsIoFailure()
+    {
+        await CommitValidStateAsync();
+        await using var locked = new FileStream(
+            Path.Combine(gamePath, "manifest.json"),
+            FileMode.Open,
+            FileAccess.ReadWrite,
+            FileShare.None);
+
+        var state = await store.ReadAsync(gamePath);
+
+        Assert.Equal(LocalInstallationStateKind.IoFailure, state.Kind);
+        Assert.False(string.IsNullOrWhiteSpace(state.Error));
+    }
+
+    [Fact]
+    public async Task CommitAsync_WhenTempValidationFails_DoesNotReplaceFormalState()
+    {
+        await CommitValidStateAsync();
+        var failingStore = new LocalInstallationStateStore(
+            (path, cancellationToken) => File.WriteAllTextAsync(
+                Path.Combine(path, "manifest.json.tmp"),
+                "{}",
+                cancellationToken));
+
+        var result = await failingStore.CommitAsync(gamePath, CreateCommit("2.0.0"));
+        var state = await store.ReadAsync(gamePath);
+
+        Assert.Equal(LocalInstallationStateKind.Corrupted, result.Kind);
+        Assert.Equal(LocalInstallationStateKind.Valid, state.Kind);
+        Assert.Equal("1.2.3", state.Manifest?.Version);
+    }
+
+    [Fact]
+    public async Task CommitAsync_WhenSecondMoveFails_LeavesReadableCorruptedState()
+    {
+        Directory.CreateDirectory(gamePath);
+        var failingStore = new LocalInstallationStateStore(
+            (path, _) =>
+            {
+                Directory.CreateDirectory(Path.Combine(path, "game-launcher-config.json"));
+                return Task.CompletedTask;
+            });
+
+        var result = await failingStore.CommitAsync(gamePath, CreateCommit("2.0.0"));
+        var state = await store.ReadAsync(gamePath);
+
+        Assert.Equal(LocalInstallationStateKind.IoFailure, result.Kind);
+        Assert.Equal(LocalInstallationStateKind.Corrupted, state.Kind);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WhenRepeated_ReturnsNotInstalled()
+    {
+        await CommitValidStateAsync();
+
+        var first = await store.DeleteAsync(gamePath);
+        var second = await store.DeleteAsync(gamePath);
+
+        Assert.Equal(LocalInstallationStateKind.NotInstalled, first.Kind);
+        Assert.Equal(LocalInstallationStateKind.NotInstalled, second.Kind);
+        Assert.False(File.Exists(Path.Combine(gamePath, "manifest.json")));
+        Assert.False(File.Exists(Path.Combine(gamePath, "game-launcher-config.json")));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("-1")]
+    [InlineData("+1")]
+    [InlineData(" 1")]
+    [InlineData("1 ")]
+    [InlineData("18446744073709551616")]
+    public async Task CommitAsync_WhenCrc64IsNotUnsignedDecimal_ThrowsWithoutWritingState(string crc64)
+    {
+        Directory.CreateDirectory(gamePath);
+        var commit = CreateCommit("1.2.3") with
+        {
+            Files = [new LocalInstallationFile("BlueArchive.exe", 4, crc64)]
+        };
+
+        await Assert.ThrowsAsync<ArgumentException>(() => store.CommitAsync(gamePath, commit));
+
+        Assert.False(File.Exists(Path.Combine(gamePath, "manifest.json")));
+        Assert.False(File.Exists(Path.Combine(gamePath, "game-launcher-config.json")));
+        Assert.False(File.Exists(Path.Combine(gamePath, "manifest.json.tmp")));
+        Assert.False(File.Exists(Path.Combine(gamePath, "game-launcher-config.json.tmp")));
+    }
+
+    [Fact]
+    public async Task CommitAsync_WhenResolvedPathsRepeat_ThrowsWithoutWritingState()
+    {
+        Directory.CreateDirectory(gamePath);
+        var commit = CreateCommit("1.2.3") with
+        {
+            Files =
+            [
+                new LocalInstallationFile("Data/file.bin", 4, "1"),
+                new LocalInstallationFile("data/FILE.bin", 4, "2")
+            ]
+        };
+
+        await Assert.ThrowsAsync<ArgumentException>(() => store.CommitAsync(gamePath, commit));
+
+        Assert.False(File.Exists(Path.Combine(gamePath, "manifest.json.tmp")));
+        Assert.False(File.Exists(Path.Combine(gamePath, "game-launcher-config.json.tmp")));
+    }
+
+    [Fact]
+    public async Task Operations_SerializePerPathWithoutBlockingDifferentPaths()
+    {
+        Directory.CreateDirectory(gamePath);
+        var tempFilesWritten = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseCommit = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var blockingStore = new LocalInstallationStateStore(
+            async (_, cancellationToken) =>
+            {
+                tempFilesWritten.TrySetResult();
+                await releaseCommit.Task.WaitAsync(cancellationToken);
+            });
+        var commitTask = blockingStore.CommitAsync(gamePath, CreateCommit("1.2.3"));
+        await tempFilesWritten.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        var samePathRead = blockingStore.ReadAsync(gamePath);
+        var otherPathRead = blockingStore.ReadAsync(Path.Combine(tempDir, "other"));
+        var otherState = await otherPathRead.WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.False(samePathRead.IsCompleted);
+        Assert.Equal(LocalInstallationStateKind.NotInstalled, otherState.Kind);
+
+        releaseCommit.TrySetResult();
+        Assert.Equal(LocalInstallationStateKind.Valid, (await commitTask).Kind);
+        Assert.Equal(LocalInstallationStateKind.Valid, (await samePathRead).Kind);
+    }
+
+    private Task<LocalInstallationState> CommitValidStateAsync()
+    {
+        Directory.CreateDirectory(gamePath);
+        return store.CommitAsync(gamePath, CreateCommit("1.2.3"));
+    }
+
+    private static LocalInstallationStateCommit CreateCommit(string version)
+    {
+        return new LocalInstallationStateCommit(
+            version,
+            "manifest.json",
+            "BlueArchive",
+            ["--test"],
+            [new LocalInstallationFile("BlueArchive.exe", 4, "1234")]);
+    }
+
+    public void Dispose()
+    {
+        tempDir.Dispose();
+    }
+}

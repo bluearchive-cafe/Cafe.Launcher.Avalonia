@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Cafe.Launcher/Cafe.Launcher.csproj" />
+    <Project Path="src/Cafe.Launcher.UI/Cafe.Launcher.UI.csproj" />
+    <Project Path="src/Cafe.Launcher.Core/Cafe.Launcher.Core.csproj" />
+    <Project Path="src/Cafe.Launcher.Updater.Core/Cafe.Launcher.Updater.Core.csproj" />
+    <Project Path="src/Cafe.Launcher.Updater/Cafe.Launcher.Updater.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Cafe.Launcher.HeadlessTests/Cafe.Launcher.HeadlessTests.csproj" />
+    <Project Path="tests/Cafe.Launcher.Tests/Cafe.Launcher.Tests.csproj" />
+  </Folder>
+</Solution>

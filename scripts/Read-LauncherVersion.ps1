@@ -10,7 +10,7 @@ $ErrorActionPreference = "Stop"
 try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch { }
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RootDir = Split-Path -Parent $ScriptDir
-$ProjectPath = Join-Path $RootDir "src/Cafe.Launcher.Avalonia/Cafe.Launcher.Avalonia.csproj"
+$ProjectPath = Join-Path $RootDir "src/Cafe.Launcher/Cafe.Launcher.csproj"
 
 [xml]$project = Get-Content -Raw -LiteralPath $ProjectPath
 $versionNodes = @($project.SelectNodes("/Project/PropertyGroup/VersionPrefix"))

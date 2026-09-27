@@ -32,7 +32,7 @@ if ([string]::IsNullOrWhiteSpace($OutputPath)) {
     $OutputPath = Join-Path $RootDir "THIRD-PARTY-NOTICES.md"
 }
 
-# Short label used in the "Required by" column: "Cafe.Launcher.Avalonia.UI" -> "Avalonia.UI".
+# Short label used in the "Required by" column: "Cafe.Launcher.UI" -> "Avalonia.UI".
 function Get-ProjectLabel([string]$path) {
     $name = [System.IO.Path]::GetFileNameWithoutExtension($path)
     if ($name.StartsWith("Cafe.Launcher.", [System.StringComparison]::Ordinal)) {
@@ -72,7 +72,10 @@ $libraries = [ordered]@{}
 foreach ($projectPath in $ProjectPaths) {
     $resolvedProject = (Resolve-Path -LiteralPath $projectPath).Path
     $label = Get-ProjectLabel $resolvedProject
-    $scannedProjects += $label
+    # The disclosure header names the engineering project (the .csproj name); the table's
+    # "Required by" column uses the short label. The host project's label is its own name,
+    # so the header must not re-prefix it.
+    $scannedProjects += [System.IO.Path]::GetFileNameWithoutExtension($resolvedProject)
 
     $assetsPath = Join-Path (Split-Path -Parent $resolvedProject) "obj/project.assets.json"
     if (-not (Test-Path -LiteralPath $assetsPath)) {
@@ -155,8 +158,8 @@ $lines.Add("")
 $lines.Add("The table below is the union of the resolved dependency graphs of every production")
 $lines.Add("project, so a package referenced by only one of them is still disclosed:")
 $lines.Add("")
-foreach ($label in $scannedProjects) {
-    $lines.Add("- ``Cafe.Launcher.$label``")
+foreach ($projectName in ($scannedProjects | Sort-Object -CaseSensitive:$false)) {
+    $lines.Add("- ``$projectName``")
 }
 $lines.Add("")
 $lines.Add("## Self-contained .NET runtime")

@@ -1,0 +1,262 @@
+﻿using Cafe.Launcher.UI.Features.GameOperations;
+using Cafe.Launcher.UI.Features.SetupWizard;
+using Cafe.Launcher.UI.Constants;
+using Cafe.Launcher.UI.Features.Diagnostics;
+using Cafe.Launcher.UI.Models;
+using Cafe.Launcher.UI.Services;
+using Cafe.Launcher.UI.Services.Diagnostics;
+using Cafe.Launcher.Core.Services.Diagnostics;
+using Cafe.Launcher.Testing;
+using Cafe.Launcher.UI.ViewModels;
+using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Services;
+
+namespace Cafe.Launcher.Tests;
+
+[Collection(nameof(LocalizationServiceTestIsolation))]
+public sealed class DebugViewModelTests : IDisposable
+{
+    private readonly TestDirectory tempDir = TestDirectory.Create();
+
+    static DebugViewModelTests()
+    {
+        TestLocalizationHelper.Initialize();
+    }
+
+    [Fact]
+    public void TogglePauseResume_WhenOperationBecomesPaused_ReportsPaused()
+    {
+        using var context = CreateContext();
+        context.Operations.ApplyProgress(new GameOperationProgress
+        {
+            OperationKind = GameOperationKind.Download,
+            Stage = GameOperationStage.Downloading,
+            CanPause = true
+        });
+
+        context.ViewModel.TogglePauseResumeCommand.Execute(null);
+
+        Assert.Equal("Download paused.", context.ViewModel.LastActionResult);
+    }
+
+    [Fact]
+    public void TogglePauseResume_WhenLanguageIsJapanese_ReportsLocalizedResult()
+    {
+        using var context = CreateContext(LauncherLanguages.Japanese);
+        context.Operations.ApplyProgress(new GameOperationProgress
+        {
+            OperationKind = GameOperationKind.Download,
+            Stage = GameOperationStage.Downloading,
+            CanPause = true
+        });
+
+        context.ViewModel.TogglePauseResumeCommand.Execute(null);
+
+        Assert.Equal("ダウンロードを一時停止しました。", context.ViewModel.LastActionResult);
+    }
+
+    [Fact]
+    public void Dispose_WhenOperationPauseStateChanges_DoesNotUpdateDebugState()
+    {
+        using var context = CreateContext();
+        context.Operations.ApplyProgress(new GameOperationProgress
+        {
+            OperationKind = GameOperationKind.Download,
+            Stage = GameOperationStage.Downloading,
+            CanPause = true
+        });
+        context.ViewModel.Dispose();
+
+        context.Operations.PauseResumeCommand.Execute(null);
+
+        Assert.False(context.ViewModel.IsDownloadPaused);
+    }
+
+    [Fact]
+    public async Task InstallationRunningChanged_WhenJourneyForwardsEvent_UpdatesDebugState()
+    {
+        using var context = CreateContext();
+        await context.ViewModel.OpenCommand.ExecuteAsync(null);
+
+        Assert.True(context.ViewModel.IsDownloadRunning);
+
+        context.Backend.IsDownloadRunning = false;
+
+        Assert.False(context.ViewModel.IsDownloadRunning);
+        Assert.Equal(context.Localizer.T("debugIdle"), context.ViewModel.DownloadStatusText);
+    }
+
+    [Fact]
+    public async Task TestActionToastCommand_RaisesPrimarySuccessAndSecondaryFailureActions()
+    {
+        using var context = CreateContext();
+        ToastNotification? raised = null;
+        context.ToastService.ToastRaised += toast => raised = toast;
+
+        context.ViewModel.TestActionToastCommand.Execute(null);
+
+        Assert.NotNull(raised);
+        Assert.Equal(context.Localizer.T("debugActionToastTitle"), raised.Title);
+        Assert.Equal(context.Localizer.T("debugSimulateSuccess"), raised.PrimaryAction!.Label);
+        Assert.Equal(context.Localizer.T("debugSimulateFailure"), raised.SecondaryAction!.Label);
+        Assert.True((await raised.PrimaryAction.ExecuteAsync(CancellationToken.None)).IsSuccess);
+        var failure = await raised.SecondaryAction.ExecuteAsync(CancellationToken.None);
+        Assert.False(failure.IsSuccess);
+        Assert.Equal(context.Localizer.T("debugActionFailureTitle"), failure.Title);
+        Assert.Equal(context.Localizer.T("debugActionFailureMessage"), failure.Message);
+    }
+
+    [Fact]
+    public async Task ResetSettingsCommand_RequiresConfirmationBeforeResetting()
+    {
+        using var context = CreateContext();
+        var confirmationCount = 0;
+        var resetCount = 0;
+        context.ViewModel.ResetSettingsConfirmationRequested += () => confirmationCount++;
+        context.ViewModel.ResetSettingsRequested += () =>
+        {
+            resetCount++;
+            return Task.CompletedTask;
+        };
+
+        context.ViewModel.ResetSettingsCommand.Execute(null);
+
+        Assert.Equal(1, confirmationCount);
+        Assert.Equal(0, resetCount);
+
+        await context.ViewModel.ConfirmResetSettingsAsync();
+
+        Assert.Equal(1, resetCount);
+    }
+
+    [Fact]
+    public async Task RefreshStateCommand_AwaitsSubscribersStrictlyInRegistrationOrder()
+    {
+        using var context = CreateContext();
+        var sequence = new List<string>();
+        var firstSubscriberRelease = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        context.ViewModel.RefreshRequested += async () =>
+        {
+            sequence.Add("first-start");
+            await firstSubscriberRelease.Task;
+            sequence.Add("first-end");
+        };
+        context.ViewModel.RefreshRequested += () =>
+        {
+            sequence.Add("second");
+            return Task.CompletedTask;
+        };
+
+        var commandTask = context.ViewModel.RefreshStateCommand.ExecuteAsync(null);
+        await Task.Yield();
+
+        Assert.Equal(["first-start"], sequence);
+        firstSubscriberRelease.SetResult();
+        await commandTask.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(["first-start", "first-end", "second"], sequence);
+    }
+
+    [Fact]
+    public async Task ConfirmResetSettingsAsync_AwaitsSubscribersStrictlyInRegistrationOrder()
+    {
+        using var context = CreateContext();
+        var sequence = new List<string>();
+        var firstSubscriberRelease = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        context.ViewModel.ResetSettingsRequested += async () =>
+        {
+            sequence.Add("first-start");
+            await firstSubscriberRelease.Task;
+            sequence.Add("first-end");
+        };
+        context.ViewModel.ResetSettingsRequested += () =>
+        {
+            sequence.Add("second");
+            return Task.CompletedTask;
+        };
+
+        var resetTask = context.ViewModel.ConfirmResetSettingsAsync();
+        await Task.Yield();
+
+        Assert.Equal(["first-start"], sequence);
+        firstSubscriberRelease.SetResult();
+        await resetTask.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(["first-start", "first-end", "second"], sequence);
+    }
+
+    [Fact]
+    public void SimulateFatalCrash_WhenInvoked_RoutesThroughFatalCrashBoundary()
+    {
+        using var context = CreateContext();
+
+        context.ViewModel.SimulateFatalCrashCommand.Execute(null);
+
+        var request = Assert.Single(context.FatalCrash.Requests);
+        Assert.Equal(CrashOrigin.DebugSimulation, request.Origin);
+        Assert.IsType<InvalidOperationException>(request.Exception);
+        Assert.Equal("Fatal crash simulated.", context.ViewModel.LastActionResult);
+    }
+
+    public void Dispose()
+    {
+        tempDir.Dispose();
+    }
+
+    private TestContext CreateContext(string language = LauncherLanguages.English)
+    {
+        var localizer = new LocalizationService();
+        localizer.SetLanguage(language);
+        var toastService = new ToastService();
+        var shell = new ShellViewModel(localizer);
+        var diagnostics = new LocalDiagnostics();
+        var dialogs = new DialogsViewModel(
+            localizer,
+            new NoticeStateService( TestDataRoot.ForDirectory(Path.Combine(tempDir, "notices.json")) ),
+            new SetupWizardViewModel(
+                localizer,
+                new GameInstallationPath(),
+                new LocalInstallationStateStore(),
+                diagnostics, new StubFilePickerService()),
+            diagnostics);
+        var backend = new StubGameOperationExecutor { IsDownloadRunning = true };
+        var errorHandling = new ErrorHandlingService(localizer, diagnostics, toastService);
+        var operations = new GameOperationsViewModel(
+            backend,
+            new TestGameShortcutService(),
+            new FakeGameSessionMonitor(),
+            localizer,
+            toastService,
+            diagnostics,
+            shell,
+            dialogs,
+            errorHandling,
+            _ => Task.CompletedTask);
+        var logger = new UnifiedLogger(Path.Combine(tempDir, "logs"));
+        var fatalCrash = new StubFatalCrashService();
+        var viewModel = new DebugViewModel( tempDir.DataRoot ,
+            toastService,
+            logger,
+            errorHandling,
+            fatalCrash,
+            new LauncherSettingsService(tempDir.DataRoot),
+            operations,
+            shell);
+        return new TestContext(viewModel, operations, backend, logger, toastService, localizer, fatalCrash);
+    }
+
+    private sealed record TestContext(
+        DebugViewModel ViewModel,
+        GameOperationsViewModel Operations,
+        StubGameOperationExecutor Backend,
+        UnifiedLogger Logger,
+        ToastService ToastService,
+        LocalizationService Localizer,
+        StubFatalCrashService FatalCrash) : IDisposable
+    {
+        public void Dispose()
+        {
+            Logger.Dispose();
+        }
+    }
+}

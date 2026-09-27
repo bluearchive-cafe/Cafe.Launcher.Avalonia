@@ -1,0 +1,4 @@
+namespace Cafe.Launcher.UI.Features.SetupWizard;
+
+/// <summary>Represents the title and description shown for a game path status.</summary>
+internal sealed record SetupWizardGamePathPresentation(string Title, string Description);

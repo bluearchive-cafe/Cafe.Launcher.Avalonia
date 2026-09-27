@@ -1,8 +1,8 @@
 # ADR-042：Avalonia 启动器按 Core 与 UI 程序集分层
 
-- 状态：✅ 已接受（分批迁移进行中，剩余清单见文末）
+- 状态：✅ 已接受（迁移已完成；项目与程序集名随后由 [ADR-043](ADR-043-程序集与命名空间同名.md) 统一，本文中的旧路径只作为当时的记录保留）
 - 日期：2026-09-27
-- 相关：`src/Cafe.Launcher.Core/`、`src/Cafe.Launcher.Avalonia.UI/`、`src/Cafe.Launcher.Avalonia/App.axaml.cs`、`src/Cafe.Launcher.Avalonia/Composition/ServiceConfiguration.cs`、`src/Cafe.Launcher.Core/Composition/LauncherCoreServiceCollectionExtensions.cs`、`tests/Cafe.Launcher.Avalonia.Tests/AssemblySplitContractTests.cs`、`tests/Cafe.Launcher.Avalonia.Tests/LauncherSettingsDefaultsTests.cs`、`tests/Cafe.Launcher.Avalonia.Tests/TestUserDataIsolationTests.cs`、`coverage.ps1`、`scripts/Test-LocalizationContract.ps1`
+- 相关：`src/Cafe.Launcher.Core/`、`src/Cafe.Launcher.UI/`、`src/Cafe.Launcher/App.axaml.cs`、`src/Cafe.Launcher/Composition/ServiceConfiguration.cs`、`src/Cafe.Launcher.Core/Composition/LauncherCoreServiceCollectionExtensions.cs`、`tests/Cafe.Launcher.Tests/AssemblySplitContractTests.cs`、`tests/Cafe.Launcher.Tests/LauncherSettingsDefaultsTests.cs`、`tests/Cafe.Launcher.Tests/TestUserDataIsolationTests.cs`、`coverage.ps1`、`scripts/Test-LocalizationContract.ps1`、[ADR-043](ADR-043-程序集与命名空间同名.md)
 
 ## 背景
 

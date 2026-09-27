@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <AssemblyName>Cafe.Launcher.Updater.Core</AssemblyName>
-    <RootNamespace>Cafe.Launcher.Updater</RootNamespace>
+    <RootNamespace>Cafe.Launcher.Updater.Core</RootNamespace>
     <Nullable>enable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
     <AnalysisLevel>latest-recommended</AnalysisLevel>

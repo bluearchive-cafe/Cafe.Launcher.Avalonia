@@ -4,10 +4,10 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.Core.Services;
 
-namespace Cafe.Launcher.Avalonia.Testing;
+namespace Cafe.Launcher.Testing;
 
 /// <summary>
 /// Scriptable <see cref="IDownloadTransport"/> test double. <see cref="Responder"/>

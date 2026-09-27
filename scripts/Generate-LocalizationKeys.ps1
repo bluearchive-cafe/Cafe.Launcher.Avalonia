@@ -1,7 +1,7 @@
 # Requires -Version 7
 <#
 .SYNOPSIS
-Regenerates src/Cafe.Launcher.Avalonia/Constants/LocalizationKeys.cs from the
+Regenerates src/Cafe.Launcher.UI/Constants/LocalizationKeys.cs from the
 neutral Resources/LauncherStrings.resx.
 
 .DESCRIPTION
@@ -18,8 +18,8 @@ sanctioned way to change it.
 $ErrorActionPreference = 'Stop'
 
 $resolvedRepoRoot = if ($PSScriptRoot) { Split-Path -Parent $PSScriptRoot } else { (Get-Location).Path }
-$resxPath = Join-Path $resolvedRepoRoot 'src/Cafe.Launcher.Avalonia.UI/Resources/LauncherStrings.resx'
-$outputPath = Join-Path $resolvedRepoRoot 'src/Cafe.Launcher.Avalonia/Constants/LocalizationKeys.cs'
+$resxPath = Join-Path $resolvedRepoRoot 'src/Cafe.Launcher.UI/Resources/LauncherStrings.resx'
+$outputPath = Join-Path $resolvedRepoRoot 'src/Cafe.Launcher.UI/Constants/LocalizationKeys.cs'
 
 $resx = New-Object System.Xml.XmlDocument
 $resx.Load($resxPath)
@@ -79,7 +79,7 @@ $header = @'
 //     after adding or renaming a resource key.
 // </auto-generated>
 
-namespace Cafe.Launcher.Avalonia.Constants;
+namespace Cafe.Launcher.UI.Constants;
 
 /// <summary>
 /// Compile-time names for every LauncherStrings resource key. C# call sites must

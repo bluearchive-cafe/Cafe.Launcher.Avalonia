@@ -68,7 +68,7 @@ cp -a "%{app_dir}/." "%{buildroot}/opt/cafe-launcher/"
 # Mirror the Debian layout: the published tree keeps its own modes, but rpm
 # records whatever is in the buildroot, so pin the two exec bits explicitly.
 chmod 0755 \
-    "%{buildroot}/opt/cafe-launcher/Cafe.Launcher.Avalonia" \
+    "%{buildroot}/opt/cafe-launcher/Cafe.Launcher" \
     "%{buildroot}/opt/cafe-launcher/createdump"
 install -D -m 0755 "%{asset_dir}/cafe-launcher" "%{buildroot}%{_bindir}/cafe-launcher"
 install -D -m 0644 "%{asset_dir}/cafe-launcher.desktop" "%{buildroot}%{_datadir}/applications/cafe-launcher.desktop"

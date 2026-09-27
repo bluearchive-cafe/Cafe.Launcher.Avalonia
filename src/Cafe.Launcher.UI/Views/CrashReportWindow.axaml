@@ -1,0 +1,243 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Cafe.Launcher.UI.ViewModels"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+        x:Class="Cafe.Launcher.UI.Views.CrashReportWindow"
+        x:Name="Root"
+        x:DataType="vm:CrashReportWindowViewModel"
+        Icon="/Assets/app-icon.ico"
+        Title="{Binding WindowTitle}"
+        Width="{DynamicResource Crash.Layout.Window.Width}"
+        SizeToContent="Height"
+        MaxHeight="{DynamicResource Crash.Layout.Window.MaxHeight}"
+        CanResize="False"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource Crash.Color.Window.Background}">
+    <!-- 豁免：隔离报告模式只用最小 CrashReportApp 启动，主 App 的资源字典可能不可用，
+         因此颜色与间距令牌就近定义在本窗口，不复用 App.axaml 的 Launcher.* 令牌。
+         窗口自身属性引用本字典时必须用 DynamicResource：属性在 Window.Resources 之前
+         解析，StaticResource 在此处解析不到（内部元素的 StaticResource 正常）。 -->
+    <Window.Resources>
+        <ResourceDictionary>
+            <x:Double x:Key="Crash.Spacing.Xs">4</x:Double>
+            <x:Double x:Key="Crash.Spacing.Sm">8</x:Double>
+            <x:Double x:Key="Crash.Spacing.Lg">16</x:Double>
+            <x:Double x:Key="Crash.Spacing.Xl">20</x:Double>
+            <CornerRadius x:Key="Crash.Radius.Control">4</CornerRadius>
+            <CornerRadius x:Key="Crash.Radius.Panel">8</CornerRadius>
+            <CornerRadius x:Key="Crash.Radius.Well">22</CornerRadius>
+            <Thickness x:Key="Crash.Border.Thickness.Default">1</Thickness>
+            <!-- 布局与排版：这些值此前散在本文件各处（D16）。令牌族只保留被消费的条目，
+                 孤儿令牌由 UiStyleContractTests.CrashReport 的两条扫描挡住。 -->
+            <x:Double x:Key="Crash.Layout.Window.Width">700</x:Double>
+            <x:Double x:Key="Crash.Layout.Window.MaxHeight">720</x:Double>
+            <Thickness x:Key="Crash.Layout.Content.Margin">32,28,32,24</Thickness>
+            <x:Double x:Key="Crash.Layout.Description.MaxWidth">560</x:Double>
+            <x:Double x:Key="Crash.Layout.Mark.Size">44</x:Double>
+            <x:Double x:Key="Crash.Layout.MarkIcon.Size">24</x:Double>
+            <Thickness x:Key="Crash.Layout.Meta.Padding">14,12</Thickness>
+            <Thickness x:Key="Crash.Layout.Details.Margin">0,8,0,0</Thickness>
+            <x:Double x:Key="Crash.Layout.Details.MinHeight">132</x:Double>
+            <x:Double x:Key="Crash.Layout.Details.MaxHeight">220</x:Double>
+            <Thickness x:Key="Crash.Layout.Details.Padding">12</Thickness>
+            <x:Double x:Key="Crash.Layout.Action.MinWidth">108</x:Double>
+            <x:Double x:Key="Crash.Control.MinWidth.None">0</x:Double>
+            <x:Double x:Key="Crash.Layout.Action.MinHeight">40</x:Double>
+            <Thickness x:Key="Crash.Layout.Action.Padding">16,8</Thickness>
+            <Thickness x:Key="Crash.Layout.Footer.Padding">32,16,32,24</Thickness>
+            <Thickness x:Key="Crash.Layout.Footer.BorderThickness">0,1,0,0</Thickness>
+            <x:Double x:Key="Crash.Typography.Meta.FontSize">12</x:Double>
+            <x:Double x:Key="Crash.Typography.Title.FontSize">20</x:Double>
+            <x:Double x:Key="Crash.Typography.Body.FontSize">15</x:Double>
+            <x:Double x:Key="Crash.Typography.Body.LineHeight">23</x:Double>
+            <FontFamily x:Key="Crash.Typography.Mono.FontFamily">Consolas, Cascadia Mono</FontFamily>
+            <FontWeight x:Key="Crash.Typography.Weight.Emphasis">SemiBold</FontWeight>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="Crash.Color.Window.Background" Color="#FFF8FBFF"/>
+                    <SolidColorBrush x:Key="Crash.Color.Surface" Color="#FFFFFFFF"/>
+                    <SolidColorBrush x:Key="Crash.Color.Surface.Subtle" Color="#FFF1F5F9"/>
+                    <SolidColorBrush x:Key="Crash.Color.Surface.Danger" Color="#FFFFEDEE"/>
+                    <SolidColorBrush x:Key="Crash.Color.Text.Primary" Color="#FF232A31"/>
+                    <SolidColorBrush x:Key="Crash.Color.Text.Body" Color="#FF3F4954"/>
+                    <SolidColorBrush x:Key="Crash.Color.Text.Muted" Color="#FF646D79"/>
+                    <SolidColorBrush x:Key="Crash.Color.Outline" Color="#FFC8D2DE"/>
+                    <SolidColorBrush x:Key="Crash.Color.Hairline" Color="#FFD6E2EE"/>
+                    <SolidColorBrush x:Key="Crash.Color.Danger" Color="#FFC42B35"/>
+                    <SolidColorBrush x:Key="Crash.Color.Danger.Hover" Color="#FFA9242D"/>
+                    <SolidColorBrush x:Key="Crash.Color.Danger.Pressed" Color="#FF8F1F27"/>
+                    <SolidColorBrush x:Key="Crash.Color.OnDanger" Color="#FFFFFFFF"/>
+                    <SolidColorBrush x:Key="Crash.Color.Accent" Color="#FF3D6BC6"/>
+                    <SolidColorBrush x:Key="Crash.Color.Surface.Subtle.Pressed" Color="#FFE3EBF4"/>
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="Crash.Color.Window.Background" Color="#FF161C26"/>
+                    <SolidColorBrush x:Key="Crash.Color.Surface" Color="#FF202833"/>
+                    <SolidColorBrush x:Key="Crash.Color.Surface.Subtle" Color="#FF1E2834"/>
+                    <SolidColorBrush x:Key="Crash.Color.Surface.Danger" Color="#FF3A1D22"/>
+                    <SolidColorBrush x:Key="Crash.Color.Text.Primary" Color="#FFE8EEF6"/>
+                    <SolidColorBrush x:Key="Crash.Color.Text.Body" Color="#FFC8D2DF"/>
+                    <SolidColorBrush x:Key="Crash.Color.Text.Muted" Color="#FFA8B3C2"/>
+                    <SolidColorBrush x:Key="Crash.Color.Outline" Color="#FF4A5B73"/>
+                    <SolidColorBrush x:Key="Crash.Color.Hairline" Color="#FF344150"/>
+                    <SolidColorBrush x:Key="Crash.Color.Danger" Color="#FFD9535C"/>
+                    <SolidColorBrush x:Key="Crash.Color.Danger.Hover" Color="#FFE06B73"/>
+                    <SolidColorBrush x:Key="Crash.Color.Danger.Pressed" Color="#FFBB414B"/>
+                    <SolidColorBrush x:Key="Crash.Color.OnDanger" Color="#FF171012"/>
+                    <SolidColorBrush x:Key="Crash.Color.Accent" Color="#FF8CB4F0"/>
+                    <SolidColorBrush x:Key="Crash.Color.Surface.Subtle.Pressed" Color="#FF27313E"/>
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Window.Styles>
+        <Style Selector="Button.crash-action">
+            <Setter Property="MinWidth" Value="{StaticResource Crash.Layout.Action.MinWidth}"/>
+            <Setter Property="MinHeight" Value="{StaticResource Crash.Layout.Action.MinHeight}"/>
+            <Setter Property="Padding" Value="{StaticResource Crash.Layout.Action.Padding}"/>
+            <Setter Property="CornerRadius" Value="{StaticResource Crash.Radius.Control}"/>
+            <Setter Property="FontWeight" Value="{StaticResource Crash.Typography.Weight.Emphasis}"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="Button.crash-secondary">
+            <Setter Property="Foreground" Value="{DynamicResource Crash.Color.Text.Primary}"/>
+            <Setter Property="Background" Value="{DynamicResource Crash.Color.Surface}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Crash.Color.Outline}"/>
+            <Setter Property="BorderThickness" Value="{StaticResource Crash.Border.Thickness.Default}"/>
+        </Style>
+        <Style Selector="Button.crash-danger">
+            <Setter Property="Foreground" Value="{DynamicResource Crash.Color.OnDanger}"/>
+            <Setter Property="Background" Value="{DynamicResource Crash.Color.Danger}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Crash.Color.Danger}"/>
+        </Style>
+        <Style Selector="Button.crash-danger:pointerover">
+            <Setter Property="Background" Value="{DynamicResource Crash.Color.Danger.Hover}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Crash.Color.Danger.Hover}"/>
+        </Style>
+        <Style Selector="Button.crash-danger:pressed">
+            <Setter Property="Background" Value="{DynamicResource Crash.Color.Danger.Pressed}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Crash.Color.Danger.Pressed}"/>
+        </Style>
+        <!-- 三级（subtle）动作：无边框、透明底、accent 文字，用中性填充表达 hover/pressed。 -->
+        <Style Selector="Button.crash-subtle">
+            <Setter Property="MinWidth" Value="{StaticResource Crash.Control.MinWidth.None}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Crash.Color.Accent}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+        </Style>
+        <Style Selector="Button.crash-subtle:pointerover">
+            <Setter Property="Background" Value="{DynamicResource Crash.Color.Surface.Subtle}"/>
+        </Style>
+        <Style Selector="Button.crash-subtle:pressed">
+            <Setter Property="Background" Value="{DynamicResource Crash.Color.Surface.Subtle.Pressed}"/>
+        </Style>
+    </Window.Styles>
+
+    <Grid RowDefinitions="*,Auto">
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="{StaticResource Crash.Layout.Content.Margin}" Spacing="{StaticResource Crash.Spacing.Xl}">
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Crash.Spacing.Lg}">
+                    <Border Width="{StaticResource Crash.Layout.Mark.Size}"
+                            Height="{StaticResource Crash.Layout.Mark.Size}"
+                            CornerRadius="{StaticResource Crash.Radius.Well}"
+                            VerticalAlignment="Top"
+                            Background="{DynamicResource Crash.Color.Surface.Danger}">
+                        <materialIcons:MaterialIcon Kind="AlertCircle"
+                                                    Width="{StaticResource Crash.Layout.MarkIcon.Size}"
+                                                    Height="{StaticResource Crash.Layout.MarkIcon.Size}"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center"
+                                                    Foreground="{DynamicResource Crash.Color.Danger}"/>
+                    </Border>
+                    <StackPanel Grid.Column="1" Spacing="{StaticResource Crash.Spacing.Xs}">
+                        <TextBlock Text="{Binding Status}"
+                                   Foreground="{DynamicResource Crash.Color.Danger}"
+                                   FontSize="{StaticResource Crash.Typography.Meta.FontSize}"
+                                   FontWeight="{StaticResource Crash.Typography.Weight.Emphasis}"/>
+                        <TextBlock Text="{Binding Title}"
+                                   Foreground="{DynamicResource Crash.Color.Text.Primary}"
+                                   FontSize="{StaticResource Crash.Typography.Title.FontSize}"
+                                   FontWeight="{StaticResource Crash.Typography.Weight.Emphasis}"
+                                   TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding Description}"
+                                   MaxWidth="{StaticResource Crash.Layout.Description.MaxWidth}"
+                                   HorizontalAlignment="Left"
+                                   Foreground="{DynamicResource Crash.Color.Text.Body}"
+                                   FontSize="{StaticResource Crash.Typography.Body.FontSize}"
+                                   LineHeight="{StaticResource Crash.Typography.Body.LineHeight}"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Grid>
+
+                <Border Padding="{StaticResource Crash.Layout.Meta.Padding}"
+                        CornerRadius="{StaticResource Crash.Radius.Panel}"
+                        Background="{DynamicResource Crash.Color.Surface.Subtle}">
+                    <WrapPanel Orientation="Horizontal"
+                               ItemSpacing="{StaticResource Crash.Spacing.Xl}"
+                               LineSpacing="{StaticResource Crash.Spacing.Sm}">
+                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Crash.Spacing.Xs}">
+                            <TextBlock Text="{Binding ReportIdLabel}" Foreground="{DynamicResource Crash.Color.Text.Muted}" FontSize="{StaticResource Crash.Typography.Meta.FontSize}"/>
+                            <TextBlock Text="{Binding ReportId}" Foreground="{DynamicResource Crash.Color.Text.Body}" FontSize="{StaticResource Crash.Typography.Meta.FontSize}" FontWeight="{StaticResource Crash.Typography.Weight.Emphasis}"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Crash.Spacing.Xs}">
+                            <TextBlock Text="{Binding TimeLabel}" Foreground="{DynamicResource Crash.Color.Text.Muted}" FontSize="{StaticResource Crash.Typography.Meta.FontSize}"/>
+                            <TextBlock Text="{Binding Time}" Foreground="{DynamicResource Crash.Color.Text.Body}" FontSize="{StaticResource Crash.Typography.Meta.FontSize}" FontWeight="{StaticResource Crash.Typography.Weight.Emphasis}"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Crash.Spacing.Xs}">
+                            <TextBlock Text="{Binding VersionLabel}" Foreground="{DynamicResource Crash.Color.Text.Muted}" FontSize="{StaticResource Crash.Typography.Meta.FontSize}"/>
+                            <TextBlock Text="{Binding Version}" Foreground="{DynamicResource Crash.Color.Text.Body}" FontSize="{StaticResource Crash.Typography.Meta.FontSize}" FontWeight="{StaticResource Crash.Typography.Weight.Emphasis}"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Crash.Spacing.Xs}">
+                            <TextBlock Text="{Binding BuildLabel}" Foreground="{DynamicResource Crash.Color.Text.Muted}" FontSize="{StaticResource Crash.Typography.Meta.FontSize}"/>
+                            <TextBlock Text="{Binding Build}" Foreground="{DynamicResource Crash.Color.Text.Body}" FontSize="{StaticResource Crash.Typography.Meta.FontSize}" FontWeight="{StaticResource Crash.Typography.Weight.Emphasis}"/>
+                        </StackPanel>
+                    </WrapPanel>
+                </Border>
+
+                <Expander x:Name="TechnicalDetailsExpander"
+                          HorizontalAlignment="Stretch"
+                          Header="{Binding TechnicalDetailsLabel}"
+                          IsExpanded="False"
+                          AutomationProperties.Name="{Binding TechnicalDetailsLabel}">
+                    <TextBox Margin="{StaticResource Crash.Layout.Details.Margin}"
+                             MinHeight="{StaticResource Crash.Layout.Details.MinHeight}"
+                             MaxHeight="{StaticResource Crash.Layout.Details.MaxHeight}"
+                             Padding="{StaticResource Crash.Layout.Details.Padding}"
+                             AcceptsReturn="True"
+                             IsReadOnly="True"
+                             TextWrapping="Wrap"
+                             FontFamily="{StaticResource Crash.Typography.Mono.FontFamily}"
+                             FontSize="{StaticResource Crash.Typography.Meta.FontSize}"
+                             Text="{Binding TechnicalDetails}"/>
+                </Expander>
+            </StackPanel>
+        </ScrollViewer>
+
+        <Border Grid.Row="1"
+                Padding="{StaticResource Crash.Layout.Footer.Padding}"
+                BorderBrush="{DynamicResource Crash.Color.Hairline}"
+                BorderThickness="{StaticResource Crash.Layout.Footer.BorderThickness}">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Crash.Spacing.Sm}">
+                <Button Classes="crash-action crash-subtle"
+                        HorizontalAlignment="Left"
+                        Content="{Binding OpenLogsText}"
+                        AutomationProperties.Name="{Binding OpenLogsText}"
+                        Click="OnOpenLogsClick"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource Crash.Spacing.Sm}">
+                    <Button x:Name="CopyDetailsButton"
+                            Classes="crash-action crash-secondary"
+                            Content="{Binding CopyDetailsText}"
+                            AutomationProperties.Name="{Binding CopyDetailsText}"
+                            Click="OnCopyDetailsClick"/>
+                    <Button x:Name="ExitButton"
+                            Classes="crash-action crash-danger"
+                            Content="{Binding ExitText}"
+                            AutomationProperties.Name="{Binding ExitText}"
+                            Click="OnExitClick"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

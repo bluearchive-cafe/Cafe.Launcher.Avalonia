@@ -4,4 +4,4 @@ set -eu
 APPDIR="${APPDIR:-$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)}"
 export APPDIR
 
-exec "$APPDIR/usr/bin/Cafe.Launcher.Avalonia" "$@"
+exec "$APPDIR/usr/bin/Cafe.Launcher" "$@"

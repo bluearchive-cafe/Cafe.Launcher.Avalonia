@@ -1,8 +1,8 @@
 using System;
 using System.Threading.Tasks;
-using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.UI.Services;
 
-namespace Cafe.Launcher.Avalonia.Testing;
+namespace Cafe.Launcher.Testing;
 
 /// <summary>
 /// Test seam for <see cref="IFilePickerService"/>. Configure the per-call delegates

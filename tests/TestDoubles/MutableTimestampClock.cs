@@ -1,6 +1,6 @@
 using System;
 
-namespace Cafe.Launcher.Avalonia.Testing;
+namespace Cafe.Launcher.Testing;
 
 /// <summary>
 /// 可编程时间戳源替身：手动推进 <see cref="Now"/>，把需要时间流逝的节奏逻辑

@@ -1,0 +1,116 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cafe.Launcher.UI.ViewModels"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:controls="using:Cafe.Launcher.UI.Controls"
+             x:Class="Cafe.Launcher.UI.Views.SettingsGameSection"
+             x:Name="SettingsRoot"
+             x:DataType="vm:MainWindowViewModel">
+    <StackPanel>
+        <StackPanel Classes="settings-group">
+            <TextBlock Text="{Binding Shell.I18n[settingsGroupGameFiles]}" Classes="group-title"/>
+
+            <controls:SettingRow ShowTopDivider="False"
+                                 Title="{Binding Shell.I18n[gamePath]}"
+                                 Description="{Binding Settings.GamePathDisplay}">
+                <controls:SettingRow.Action>
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
+                        <Button Classes="flat-action" Command="{Binding Settings.ChooseGamePathCommand}"
+                                AutomationProperties.Name="{Binding Shell.I18n[choose]}"
+                                IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="FolderOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                <TextBlock Text="{Binding Shell.I18n[choose]}"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="flat-action" Command="{Binding Operations.OpenGameFolderCommand}"
+                                AutomationProperties.Name="{Binding Shell.I18n[gameOpenFolder]}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                <TextBlock Text="{Binding Shell.I18n[gameOpenFolder]}"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+
+            <controls:SettingSelect Title="{Binding Shell.I18n[launchCheck]}"
+                                    Description="{Binding Shell.I18n[launchCheckDescription]}"
+                                    AutomationName="{Binding Shell.I18n[launchCheck]}"
+                                    ItemsSource="{Binding Settings.Options.LaunchCheckMode}"
+                                    SelectedValue="{Binding Settings.Editor.Current.LaunchCheckMode, Mode=TwoWay}"/>
+
+            <controls:SettingRow Title="{Binding Shell.I18n[gameManagement]}"
+                                 Description="{Binding Shell.I18n[gameManagementDescription]}">
+                <controls:SettingRow.Action>
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
+                        <Button Classes="flat-action" Command="{Binding Operations.RequestRepairCommand}"
+                                AutomationProperties.Name="{Binding Shell.I18n[repair]}"
+                                IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="Tools" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                <TextBlock Text="{Binding Shell.I18n[repair]}"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="flat-action danger-action" Command="{Binding Operations.RequestUninstallCommand}"
+                                AutomationProperties.Name="{Binding Shell.I18n[uninstall]}"
+                                IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="TrashCanOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                <TextBlock Text="{Binding Shell.I18n[uninstall]}"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+        </StackPanel>
+
+        <StackPanel Classes="settings-group" IsVisible="{Binding IsPlatformSpecificSettingsVisible}">
+            <TextBlock Text="{Binding Shell.I18n[settingsGroupGameRuntime]}" Classes="group-title"/>
+
+            <controls:SettingSelect ShowTopDivider="False"
+                                    Title="{Binding Shell.I18n[gameRuntimeRunner]}"
+                                    Description="{Binding Shell.I18n[gameRuntimeRunnerDescription]}"
+                                    AutomationName="{Binding Shell.I18n[gameRuntimeRunner]}"
+                                    ItemsSource="{Binding Settings.Options.GameRuntimeRunner}"
+                                    SelectedValue="{Binding Settings.Editor.Current.GameRuntime.Runner, Mode=TwoWay}"/>
+
+            <controls:SettingRow Title="{Binding Shell.I18n[gameRuntimeRunnerPath]}"
+                                 Description="{Binding Shell.I18n[gameRuntimeRunnerPathDescription]}">
+                <controls:SettingRow.Action>
+                    <TextBox Classes="field-input"
+                             Width="{StaticResource Launcher.Component.Settings.Control.MinWidth}"
+                             Text="{Binding Settings.Editor.Current.GameRuntime.RunnerPath, Mode=TwoWay}"
+                             PlaceholderText="{Binding Shell.I18n[gameRuntimeRunnerPathPlaceholder]}"
+                             AutomationProperties.Name="{Binding Shell.I18n[gameRuntimeRunnerPath]}"
+                             IsEnabled="{Binding Settings.IsGameRuntimeRunnerPathEnabled}"/>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+
+            <controls:SettingRow Title="{Binding Shell.I18n[gameRuntimePrefixPath]}"
+                                 Description="{Binding Shell.I18n[gameRuntimePrefixPathDescription]}">
+                <controls:SettingRow.Action>
+                    <TextBox Classes="field-input"
+                             Width="{StaticResource Launcher.Component.Settings.Control.MinWidth}"
+                             Text="{Binding Settings.Editor.Current.GameRuntime.PrefixPath, Mode=TwoWay}"
+                             PlaceholderText="{Binding Shell.I18n[gameRuntimePrefixPathPlaceholder]}"
+                             AutomationProperties.Name="{Binding Shell.I18n[gameRuntimePrefixPath]}"/>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+
+            <controls:SettingRow Title="{Binding Shell.I18n[gameRuntimeProtonPath]}"
+                                 Description="{Binding Shell.I18n[gameRuntimeProtonPathDescription]}">
+                <controls:SettingRow.Action>
+                    <TextBox Classes="field-input"
+                             Width="{StaticResource Launcher.Component.Settings.Control.MinWidth}"
+                             Text="{Binding Settings.Editor.Current.GameRuntime.ProtonPath, Mode=TwoWay}"
+                             PlaceholderText="{Binding Shell.I18n[gameRuntimeProtonPathPlaceholder]}"
+                             AutomationProperties.Name="{Binding Shell.I18n[gameRuntimeProtonPath]}"/>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+
+            <controls:SettingRow Title="{Binding Shell.I18n[gameRuntimeStatusTitle]}"
+                                 Description="{Binding Settings.GameRuntimeStatusSummary}"/>
+        </StackPanel>
+    </StackPanel>
+</UserControl>

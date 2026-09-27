@@ -1,4 +1,4 @@
-namespace Cafe.Launcher.Updater;
+namespace Cafe.Launcher.Updater.Core;
 
 /// <summary>
 /// Stable process exit codes for the launcher's private updater protocol.
