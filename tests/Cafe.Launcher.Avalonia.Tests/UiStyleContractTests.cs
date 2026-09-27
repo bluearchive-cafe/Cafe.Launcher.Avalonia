@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
 using Cafe.Launcher.Avalonia.Testing;
@@ -45,9 +45,14 @@ public sealed partial class UiStyleContractTests
 
     private static string[] FindXamlFiles(string relativeDirectory, SearchOption searchOption)
     {
-        var projectRoot = TestLocalizationHelper.FindProjectRoot();
+        // 产品 XAML 归 UI 工程：扫描域与声明表都按 UI 工程相对路径写（与搬迁前同名）。
+        var projectRoot = TestRepository.PresentationPath;
+        // 反向失效保护：宿主里再出现同名标记目录，说明搬迁被回退或有新文件放错了程序集。
+        Assert.False(
+            Directory.Exists(TestRepository.InHost(relativeDirectory)),
+            $"{relativeDirectory} 又出现在宿主工程：产品 XAML 应全部归 Cafe.Launcher.Avalonia.UI。");
         return Directory
-            .GetFiles(TestRepository.FromApplicationRoot(relativeDirectory), "*.axaml", searchOption)
+            .GetFiles(TestRepository.FromPresentationRoot(relativeDirectory), "*.axaml", searchOption)
             .Select(path => Path.GetRelativePath(projectRoot, path).Replace('\\', '/'))
             .Order(StringComparer.Ordinal)
             .ToArray();
@@ -360,7 +365,7 @@ public sealed partial class UiStyleContractTests
                 element.Name.LocalName == "Style"
                 && element.Attribute("Selector")?.Value == selector);
         matchingStyle ??= StyleFiles
-            .Select(path => XDocument.Load(TestRepository.FromApplicationRoot(path)))
+            .Select(path => XDocument.Load(TestRepository.FromPresentationRoot(path)))
             .SelectMany(styleDocument => styleDocument.Descendants())
             .Single(element =>
                 element.Name.LocalName == "Style"

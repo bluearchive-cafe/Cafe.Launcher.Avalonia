@@ -3,13 +3,8 @@ using System.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.Services.Diagnostics;
 
-internal interface ICrashReporterLauncher
-{
-    bool TryLaunch(string snapshotPath);
-}
-
 /// <summary>Starts the current executable in its isolated crash-report mode.</summary>
-internal sealed class CrashReporterLauncher : ICrashReporterLauncher
+public sealed class CrashReporterLauncher : ICrashReporterLauncher
 {
     public bool TryLaunch(string snapshotPath)
     {

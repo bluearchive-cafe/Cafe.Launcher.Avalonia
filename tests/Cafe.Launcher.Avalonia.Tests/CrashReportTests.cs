@@ -1,7 +1,9 @@
 ﻿using System.Text;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Testing;
+using Cafe.Launcher.Core.Services;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -12,7 +14,7 @@ public sealed class CrashReportTests : IDisposable
     [Fact]
     public void Create_WhenExceptionContainsUserProfile_PersistsReadableSanitizedSnapshot()
     {
-        var store = new CrashReportStore(TestDataRoot.ForDirectory(tempDirectory));
+        var store = new CrashReportStore(TestDataRoot.ForDirectory(tempDirectory), buildIdentity: Constants.BuildInfo.Identity);
         var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         var secretPath = Path.Combine(userProfile, "private", "file.txt");
 
@@ -81,7 +83,7 @@ public sealed class CrashReportTests : IDisposable
             File.SetLastWriteTimeUtc(path, now.AddDays(-index).UtcDateTime);
         }
 
-        var store = new CrashReportStore(TestDataRoot.ForDirectory(tempDirectory));
+        var store = new CrashReportStore(TestDataRoot.ForDirectory(tempDirectory), buildIdentity: Constants.BuildInfo.Identity);
         store.CleanupOldReports(now);
 
         Assert.Equal(
@@ -271,9 +273,8 @@ public sealed class CrashReportTests : IDisposable
     [Fact]
     public void CrashReportApp_RegistersIconStylesUsedByCrashReportWindow()
     {
-        var projectRoot = TestLocalizationHelper.FindProjectRoot();
-        var windowXaml = File.ReadAllText(Path.Combine(projectRoot, "Views", "CrashReportWindow.axaml"));
-        var appXaml = File.ReadAllText(Path.Combine(projectRoot, "CrashReportApp.axaml"));
+        var windowXaml = File.ReadAllText(TestRepository.FromPresentationRoot("Views/CrashReportWindow.axaml"));
+        var appXaml = File.ReadAllText(TestRepository.FromHostRoot("CrashReportApp.axaml"));
 
         // The isolated reporter builds its own minimal Application, so every control
         // theme the crash window relies on must be registered there and not only in

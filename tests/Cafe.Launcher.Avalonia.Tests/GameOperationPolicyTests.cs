@@ -1,7 +1,8 @@
 using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Core.Models;
 using static Cafe.Launcher.Avalonia.Features.GameOperations.GameOperationPolicy;
-using static Cafe.Launcher.Avalonia.Models.LauncherRuntimeState;
+using static Cafe.Launcher.Core.Models.LauncherRuntimeState;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 

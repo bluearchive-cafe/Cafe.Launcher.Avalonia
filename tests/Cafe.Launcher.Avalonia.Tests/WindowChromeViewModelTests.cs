@@ -5,10 +5,13 @@ using Cafe.Launcher.Avalonia.Features.Diagnostics;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Features.Settings;
 using Cafe.Launcher.Avalonia.Services;
-using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Testing;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
+using Cafe.Launcher.Core.Constants;
+using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Services;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 

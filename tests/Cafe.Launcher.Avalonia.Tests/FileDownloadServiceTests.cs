@@ -3,8 +3,10 @@ using System.Net.Http.Headers;
 using System.Text;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
-using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Testing;
+using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Services;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 

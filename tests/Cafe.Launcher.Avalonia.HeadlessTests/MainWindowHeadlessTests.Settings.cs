@@ -14,6 +14,7 @@ using Avalonia.VisualTree;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Views;
+using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.Avalonia.HeadlessTests;
 

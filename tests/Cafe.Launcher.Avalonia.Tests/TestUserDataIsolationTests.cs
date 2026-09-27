@@ -1,3 +1,6 @@
+using Cafe.Launcher.Avalonia.Testing;
+using Cafe.Launcher.Core.Services.GameRuntime;
+
 namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed class TestUserDataIsolationTests
@@ -7,7 +10,7 @@ public sealed class TestUserDataIsolationTests
     /// 编译，守卫不会退化成「模式过时、于是静默放行一切」。
     /// </summary>
     private static readonly string ProcessRootResolver =
-        nameof(Services.LauncherDataRoot.ForCurrentProcess);
+        nameof(Cafe.Launcher.Core.Services.LauncherDataRoot.ForCurrentProcess);
 
     /// <summary>
     /// 除中央目录提供者外唯一被允许的数据根来源。这是 BCL 成员访问的文本形态，
@@ -29,12 +32,12 @@ public sealed class TestUserDataIsolationTests
             Path.GetTempPath(),
             Guid.NewGuid().ToString("N"));
 
-        var result = Services.LauncherDataRoot.ResolveProcessRoot(
+        var result = Cafe.Launcher.Core.Services.LauncherDataRoot.ResolveProcessRoot(
             testOverride,
             localApplicationData);
 
         Assert.Equal(
-            Path.Combine(localApplicationData, Constants.LauncherConstants.ProductName),
+            Path.Combine(localApplicationData, Cafe.Launcher.Core.Constants.LauncherConstants.ProductName),
             result);
     }
 
@@ -47,7 +50,7 @@ public sealed class TestUserDataIsolationTests
             "..",
             "isolated-user-data");
 
-        var result = Services.LauncherDataRoot.ResolveProcessRoot(
+        var result = Cafe.Launcher.Core.Services.LauncherDataRoot.ResolveProcessRoot(
             relativeOverride,
             "unused");
 
@@ -58,7 +61,7 @@ public sealed class TestUserDataIsolationTests
     public void TestProcess_DefaultSettingsPathUsesIsolatedUserDataDirectory()
     {
         var isolatedDirectory = Environment.GetEnvironmentVariable(
-            Services.LauncherDataRoot.TestOverrideEnvironmentVariable);
+            Cafe.Launcher.Core.Services.LauncherDataRoot.TestOverrideEnvironmentVariable);
 
         Assert.False(string.IsNullOrWhiteSpace(isolatedDirectory));
         Assert.StartsWith(
@@ -66,12 +69,12 @@ public sealed class TestUserDataIsolationTests
             Path.GetFullPath(isolatedDirectory),
             StringComparison.OrdinalIgnoreCase);
 
-        using var settingsService = new Services.LauncherSettingsService(
-            Services.LauncherDataRoot.ForCurrentProcess());
+        using var settingsService = new Cafe.Launcher.Core.Services.LauncherSettingsService(
+            Cafe.Launcher.Core.Services.LauncherDataRoot.ForCurrentProcess());
         Assert.Equal(
             Path.Combine(
                 Path.GetFullPath(isolatedDirectory),
-                Constants.GamePaths.LauncherSettingsFileName),
+                Cafe.Launcher.Core.Constants.GamePaths.LauncherSettingsFileName),
             settingsService.SettingsPath);
     }
 
@@ -86,12 +89,12 @@ public sealed class TestUserDataIsolationTests
     public void TestProcess_ManagedCompatibilityRootStaysInsideTheIsolatedDirectory()
     {
         var isolatedDirectory = Environment.GetEnvironmentVariable(
-            Services.LauncherDataRoot.TestOverrideEnvironmentVariable);
+            Cafe.Launcher.Core.Services.LauncherDataRoot.TestOverrideEnvironmentVariable);
 
         Assert.False(string.IsNullOrWhiteSpace(isolatedDirectory));
         Assert.StartsWith(
             Path.GetFullPath(isolatedDirectory),
-            Path.GetFullPath(Services.GameRuntime.GameCompatibilityPaths.GetDefaultCompatibilityRoot()),
+            Path.GetFullPath(GameCompatibilityPaths.GetDefaultCompatibilityRoot()),
             StringComparison.OrdinalIgnoreCase);
     }
 
@@ -107,7 +110,7 @@ public sealed class TestUserDataIsolationTests
             "Windows 分支的兼容前缀复用启动器数据根，不读 XDG_DATA_HOME。");
 
         var isolatedDirectory = Environment.GetEnvironmentVariable(
-            Services.LauncherDataRoot.TestOverrideEnvironmentVariable);
+            Cafe.Launcher.Core.Services.LauncherDataRoot.TestOverrideEnvironmentVariable);
 
         Assert.Equal(
             Path.GetFullPath(isolatedDirectory!),
@@ -129,7 +132,7 @@ public sealed class TestUserDataIsolationTests
         // AF_UNIX 的 sockaddr_un 上限是 108 字节（含终止符即 107）。隔离目录过深
         // 会让 Listen/Raise 的绑定永远失败——linux-unit-tests 首跑即因此红过。
         var isolatedDirectory = Environment.GetEnvironmentVariable(
-            Services.LauncherDataRoot.TestOverrideEnvironmentVariable);
+            Cafe.Launcher.Core.Services.LauncherDataRoot.TestOverrideEnvironmentVariable);
 
         Assert.False(string.IsNullOrWhiteSpace(isolatedDirectory));
         var socketPath = Services.CrossProcessLaunchSignal.GetSocketFilePath(
@@ -150,30 +153,35 @@ public sealed class TestUserDataIsolationTests
     [Fact]
     public void ProcessRootResolution_IsConfinedToDeclaredPreDiSites()
     {
-        var projectRoot = TestLocalizationHelper.FindProjectRoot();
+        var repositoryRoot = TestRepository.Root;
+        var hostRoot = TestRepository.HostPath;
+        var coreRoot = TestRepository.CorePath;
+        var presentationRoot = TestRepository.PresentationPath;
         var declared = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             // 定义与唯一实现
-            Path.Combine(projectRoot, "Services", "LauncherDataRoot.cs"),
+            Path.Combine(coreRoot, "Services", "LauncherDataRoot.cs"),
             // 组合根：解析一次后注入所有登记项
-            Path.Combine(projectRoot, "Composition", "ServiceConfiguration.cs"),
+            Path.Combine(hostRoot, "Composition", "ServiceConfiguration.cs"),
             // pre-DI：首启探测、崩溃日志器、单实例信号
-            Path.Combine(projectRoot, "Program.cs"),
+            Path.Combine(hostRoot, "Program.cs"),
             // 崩溃报告进程没有容器，也没有别的解析点
-            Path.Combine(projectRoot, "CrashReportApp.axaml.cs"),
+            Path.Combine(hostRoot, "CrashReportApp.axaml.cs"),
             // 兼容前缀在 Windows 上复用启动器数据根；Unix 分支自取 XDG 目录，不读数据根
-            Path.Combine(projectRoot, "Services", "GameRuntime", "GameCompatibilityPaths.cs")
+            Path.Combine(coreRoot, "Services", "GameRuntime", "GameCompatibilityPaths.cs")
         };
 
-        var scanned = Directory
-            .EnumerateFiles(projectRoot, "*.cs", SearchOption.AllDirectories)
-            .Where(path => !IsBuildOrTestArtifact(projectRoot, path))
+        var scanned = new[] { hostRoot, coreRoot, presentationRoot }
+            .SelectMany(root => Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories)
+                .Where(path => !IsBuildOrTestArtifact(root, path)))
             .ToArray();
 
         // 反空转基线：本守卫的形状是「排除声明表后必须为空」，于是「根目录找错／后缀失效
         // 导致一个文件都没扫」与「树是干净的」不可区分。两条基线把这种退化态变成红的。
-        // 基线为 2026-09-15 的实测值；真的删文件就同步下调，扫描失效应表现为红而不是绿。
-        const int landedScannedFiles = 231;
+        // landedScannedFiles 是迁移收尾时按 host+Core+UI 三根实测的总量，刻意只做下限：
+        // 计数含 obj/ 下生成的 .cs，会随构建配置（RID、clean）浮动，逐根拆开或追平每次实测值
+        // 都会让守卫随构建状态红绿。真的删文件就同步下调，扫描失效应表现为红而不是绿。
+        const int landedScannedFiles = 297;
         const int landedResolvingFiles = 5;
         var resolving = scanned
             .Where(path => File.ReadAllText(path).Contains(ProcessRootResolver, StringComparison.Ordinal))
@@ -191,7 +199,7 @@ public sealed class TestUserDataIsolationTests
         var offenders = scanned
             .Where(path => !declared.Contains(path))
             .Where(path => File.ReadAllText(path).Contains(ProcessRootResolver, StringComparison.Ordinal))
-            .Select(path => Path.GetRelativePath(projectRoot, path))
+            .Select(path => Path.GetRelativePath(repositoryRoot, path))
             .Order(StringComparer.Ordinal)
             .ToArray();
 
@@ -205,20 +213,23 @@ public sealed class TestUserDataIsolationTests
     [Fact]
     public void PersistentUserDataPaths_UseCentralDirectoryProvider()
     {
-        var projectRoot = TestLocalizationHelper.FindProjectRoot();
+        var repositoryRoot = TestRepository.Root;
+        var hostRoot = TestRepository.HostPath;
+        var coreRoot = TestRepository.CorePath;
+        var presentationRoot = TestRepository.PresentationPath;
         var allowedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            Path.Combine(projectRoot, "Services", "LauncherDataRoot.cs"),
-            Path.Combine(projectRoot, "Features", "GameOperations", "GameUninstallService.cs")
+            Path.Combine(coreRoot, "Services", "LauncherDataRoot.cs"),
+            Path.Combine(TestRepository.PresentationPath, "Features", "GameOperations", "GameUninstallService.cs")
         };
-        var offenders = Directory
-            .EnumerateFiles(projectRoot, "*.cs", SearchOption.AllDirectories)
-            .Where(path => !IsBuildOrTestArtifact(projectRoot, path))
+        var offenders = new[] { hostRoot, coreRoot, presentationRoot }
+            .SelectMany(root => Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories)
+                .Where(path => !IsBuildOrTestArtifact(root, path)))
             .Where(path => !allowedFiles.Contains(path))
             .Where(path => File
                 .ReadAllText(path)
                 .Contains(LocalApplicationDataMember, StringComparison.Ordinal))
-            .Select(path => Path.GetRelativePath(projectRoot, path))
+            .Select(path => Path.GetRelativePath(repositoryRoot, path))
             .Order(StringComparer.Ordinal)
             .ToArray();
 

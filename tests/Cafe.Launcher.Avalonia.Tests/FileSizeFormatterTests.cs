@@ -1,5 +1,6 @@
 using System.Globalization;
 using Cafe.Launcher.Avalonia.Helpers;
+using Cafe.Launcher.Core.Helpers;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 

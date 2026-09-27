@@ -11,7 +11,9 @@ using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Composition;
 using Cafe.Launcher.Avalonia.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Core.Services;
 
 namespace Cafe.Launcher.Avalonia;
 
@@ -35,7 +37,7 @@ sealed class Program
     internal const string LaunchGameSignalName = @"Local\Cafe_Launcher_SI_LaunchGame";
 
     /// <summary>CLI argument that launches the game through the full launcher pipeline.</summary>
-    internal const string LaunchGameArgument = "--launch-game";
+    internal const string LaunchGameArgument = Cafe.Launcher.Core.Constants.LauncherConstants.LaunchGameArgument;
 
     /// <summary>
     /// CLI argument that exposes conditional settings controls for diagnostics.
@@ -125,7 +127,7 @@ sealed class Program
         UnifiedLogger crashLogger;
         try
         {
-            crashLogger = new UnifiedLogger(dataRoot.Root);
+            crashLogger = new UnifiedLogger(dataRoot.Root, BuildInfo.Identity);
         }
         catch (Exception exception)
         {

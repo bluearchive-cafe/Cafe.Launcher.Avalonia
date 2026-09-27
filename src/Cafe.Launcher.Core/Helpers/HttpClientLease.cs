@@ -1,0 +1,50 @@
+using System;
+using System.Net;
+using System.Net.Http;
+
+namespace Cafe.Launcher.Core.Helpers;
+
+/// <summary>
+/// A scoped lease on an <see cref="HttpClient"/> that conditionally disposes its
+/// underlying handler when the client was created specifically for a single request
+/// (e.g. with a proxy-aware <see cref="SocketsHttpHandler"/>).
+/// </summary>
+public sealed class HttpClientLease : IDisposable
+{
+    private readonly bool ownsClient;
+
+    /// <summary>
+    /// Borrows a long-lived client. The lease does NOT take ownership.
+    /// </summary>
+    public HttpClientLease(HttpClient client)
+    {
+        Client = client;
+    }
+
+    /// <summary>
+    /// Wraps a client that owns only its own managed resources while its handler is shared.
+    /// </summary>
+    public HttpClientLease(HttpClient client, bool ownsClient)
+    {
+        Client = client;
+        this.ownsClient = ownsClient;
+    }
+
+    public HttpClient Client { get; }
+
+    /// <summary>
+    /// The proxy that carries connections made through this lease, or null when the
+    /// lease dials directly. Per-URI bypass decisions are resolved from this proxy
+    /// when validating remote URLs (see <c>RemoteHttpRequestService.EgressesThroughProxy</c>).
+    /// </summary>
+    public IWebProxy? ConnectionProxy { get; init; }
+
+    public void Dispose()
+    {
+        if (ownsClient)
+        {
+            Client.Dispose();
+        }
+        GC.SuppressFinalize(this);
+    }
+}

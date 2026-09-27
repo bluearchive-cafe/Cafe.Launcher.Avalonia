@@ -1,0 +1,254 @@
+using System;
+using System.Buffers;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Threading;
+using System.Threading.Tasks;
+using Cafe.Launcher.Core.Helpers;
+using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Services.Diagnostics;
+
+namespace Cafe.Launcher.Core.Services;
+
+/// <summary>
+/// Production implementation of <see cref="IFileDownloadService"/>.
+/// </summary>
+public sealed class FileDownloadService : IFileDownloadService
+{
+    /// <summary>
+    /// Retry domain order: 0 = backup CDN, 1 = primary CDN (matching the original Electron launcher).
+    /// The first 4 attempts use the primary CDN, then 3 on backup, then 3 on primary.
+    /// </summary>
+    internal static readonly int[] RetryDomainOrder = [1, 1, 1, 1, 0, 0, 0, 1, 1, 1];
+
+    private readonly ICrc64Service crc64Service;
+    private readonly ILauncherDiagnostics diagnostics;
+    private readonly TimeSpan? idleReadTimeout;
+
+    public FileDownloadService(
+        ICrc64Service crc64Service,
+        ILauncherDiagnostics diagnostics,
+        TimeSpan? idleReadTimeout = null)
+    {
+        this.crc64Service = crc64Service;
+        this.diagnostics = diagnostics;
+        this.idleReadTimeout = idleReadTimeout;
+    }
+
+    /// <inheritdoc />
+    public long GetExistingDownloadedSize(string targetTempPath, long expectedSize) =>
+        StatExistingBytes(targetTempPath, expectedSize);
+
+    /// <summary>
+    /// The single implementation of the .tmp length semantics shared by the
+    /// resume decisions in <see cref="DownloadAsync"/> and by batch-level
+    /// progress seeding: 0 when the file is absent or larger than expected.
+    /// </summary>
+    private static long StatExistingBytes(string targetTempPath, long expectedSize)
+    {
+        if (expectedSize <= 0 || !File.Exists(targetTempPath))
+        {
+            return 0;
+        }
+
+        var length = new FileInfo(targetTempPath).Length;
+        return length <= expectedSize ? length : 0;
+    }
+
+    public async Task<DownloadOutcome> DownloadAsync(
+        FileDownloadRequest request,
+        FileDownloadOperationControl control,
+        CancellationToken cancellationToken)
+    {
+        var targetTempPath = request.TargetTempPath;
+        var cdnConfig = request.CdnConfig;
+        var source = request.Source;
+        var expectedSize = request.ExpectedSize;
+        var expectedHash = request.ExpectedHash;
+        var filePath = request.FilePath;
+        var transport = control.Transport;
+        var pauseAwaiter = control.WaitWhilePausedAsync;
+        var onProgressAsync = control.ReportProgressAsync;
+        var onProgressResetAsync = control.ReportProgressResetAsync;
+        var targetDirectory = Path.GetDirectoryName(targetTempPath);
+        if (!string.IsNullOrWhiteSpace(targetDirectory))
+        {
+            Directory.CreateDirectory(targetDirectory);
+        }
+
+        Exception? lastError = null;
+        for (var retryIndex = 0; retryIndex < RetryDomainOrder.Length; retryIndex++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var retryType = RetryDomainOrder[retryIndex];
+            var downloadUrl = BuildDownloadUrl(ResolveRetryDomain(cdnConfig, retryType), source, filePath);
+
+            try
+            {
+                var existingLength = StatExistingBytes(targetTempPath, expectedSize);
+                if (expectedSize > 0 && existingLength == expectedSize)
+                {
+                    // 上次会话已下满但未验证：显式 AlreadyComplete，
+                    // 调用方在安装阶段自行校验。
+                    return DownloadOutcome.AlreadyComplete();
+                }
+
+                var declaredLength = File.Exists(targetTempPath)
+                    ? new FileInfo(targetTempPath).Length
+                    : 0;
+                if (declaredLength > expectedSize && expectedSize > 0)
+                {
+                    File.Delete(targetTempPath);
+                    existingLength = 0;
+                    await onProgressResetAsync(cancellationToken).ConfigureAwait(false);
+                }
+
+                var initialUri = new Uri(downloadUrl);
+                using var response = await transport.SendAsync(
+                    initialUri,
+                    uri =>
+                    {
+                        var request = new HttpRequestMessage(HttpMethod.Get, uri);
+                        if (existingLength > 0)
+                        {
+                            request.Headers.Range = new RangeHeaderValue(existingLength, null);
+                        }
+
+                        return request;
+                    },
+                    cancellationToken).ConfigureAwait(false);
+                response.EnsureSuccessStatusCode();
+
+                var fileMode = FileMode.Create;
+                if (existingLength > 0 && response.StatusCode == System.Net.HttpStatusCode.PartialContent)
+                {
+                    var contentRange = response.Content.Headers.ContentRange;
+                    if (contentRange?.Unit != "bytes"
+                        || contentRange.From != existingLength
+                        || contentRange.Length is { } contentLength
+                        && contentLength != expectedSize)
+                    {
+                        throw new InvalidDataException(
+                            $"Invalid Content-Range for resumed download: {filePath}.");
+                    }
+
+                    fileMode = FileMode.Append;
+                }
+
+                string crc64;
+                // Rented rather than allocated: the buffer sits inside the retry loop, so a fresh
+                // 256 KiB array per attempt (>85 KiB LOH threshold) would put every download into
+                // the large object heap up to RetryDomainOrder.Length times per file — same LOH
+                // concern ICrc64Service already solves with the shared pool.
+                var buffer = ArrayPool<byte>.Shared.Rent(1024 * 256);
+                try
+                {
+                    await using var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+                    await using var output = new FileStream(targetTempPath, fileMode, FileAccess.Write, FileShare.Read);
+                    while (true)
+                    {
+                        await pauseAwaiter().ConfigureAwait(false);
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        var read = await ResponseBodyReader
+                            .ReadAsync(responseStream, buffer, cancellationToken, idleReadTimeout)
+                            .ConfigureAwait(false);
+                        if (read == 0) break;
+                        await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+                        await onProgressAsync(read, cancellationToken).ConfigureAwait(false);
+                    }
+
+                    await output.FlushAsync(cancellationToken).ConfigureAwait(false);
+                    crc64 = await crc64Service.ComputeFileAsync(targetTempPath, null, cancellationToken).ConfigureAwait(false);
+                }
+                finally
+                {
+                    ArrayPool<byte>.Shared.Return(buffer);
+                }
+
+                if (crc64 == expectedHash) return DownloadOutcome.Transferred(crc64);
+
+                var downloadedLength = new FileInfo(targetTempPath).Length;
+                File.Delete(targetTempPath);
+                await onProgressResetAsync(cancellationToken).ConfigureAwait(false);
+
+                await diagnostics.MessageAsync(
+                    "FileDownload",
+                    $"CRC64 mismatch after download{Environment.NewLine}" +
+                    $"file: {filePath}{Environment.NewLine}" +
+                    $"expected: {expectedHash}{Environment.NewLine}" +
+                    $"actual:   {crc64}{Environment.NewLine}" +
+                    $"size: {downloadedLength} / expected: {expectedSize}",
+                    CancellationToken.None);
+
+                if (retryIndex >= RetryDomainOrder.Length - 1)
+                {
+                    throw new InvalidDataException(
+                        $"CRC64 mismatch after all retries: {filePath}.");
+                }
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                if (ex is InvalidDataException || ex is not (HttpRequestException or IOException))
+                {
+                    var deleted = false;
+                    try
+                    {
+                        if (File.Exists(targetTempPath))
+                        {
+                            File.Delete(targetTempPath);
+                            deleted = true;
+                        }
+                    }
+                    catch
+                    {
+                        // Best-effort cleanup; preserve the original transfer exception.
+                    }
+
+                    if (deleted)
+                    {
+                        await onProgressResetAsync(cancellationToken).ConfigureAwait(false);
+                    }
+                }
+
+                lastError = ex;
+                if (retryIndex >= RetryDomainOrder.Length - 1) throw;
+            }
+        }
+
+        throw new HttpRequestException($"Download failed: {filePath}", lastError);
+    }
+
+    /// <summary>
+    /// Build the full download URL from a CDN domain, source path, and file path.
+    /// The domain's authority (including an explicit port) and path prefix are
+    /// preserved: upstream CDN domains are plain hosts today, but silently dropping
+    /// a path or port would misroute every file request the moment one appears.
+    /// </summary>
+    internal static string BuildDownloadUrl(string? domain, string source, string filePath)
+    {
+        if (string.IsNullOrWhiteSpace(domain))
+        {
+            throw new InvalidOperationException("CDN domain is empty.");
+        }
+
+        var uri = new Uri(domain);
+        var pathItems = source
+            .Split('/', StringSplitOptions.RemoveEmptyEntries)
+            .Concat(filePath.Split('/', StringSplitOptions.RemoveEmptyEntries))
+            .Select(Uri.EscapeDataString)
+            .ToList();
+        var prefix = uri.AbsolutePath.TrimEnd('/');
+        return $"{uri.Scheme}://{uri.Authority}{prefix}/{string.Join("/", pathItems)}";
+    }
+
+    /// <summary>Resolve CDN URL for a retry attempt.</summary>
+    internal static string? ResolveRetryDomain(CdnConfigResponse cdnConfig, int retryType)
+    {
+        return retryType == 0 ? cdnConfig.BackUpCdn : cdnConfig.PrimaryCdn;
+    }
+}

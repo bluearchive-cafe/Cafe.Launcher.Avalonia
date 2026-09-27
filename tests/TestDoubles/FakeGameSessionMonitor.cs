@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services.GameRuntime;
+using Cafe.Launcher.Core.Services.GameRuntime;
+using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.Avalonia.Testing;
 

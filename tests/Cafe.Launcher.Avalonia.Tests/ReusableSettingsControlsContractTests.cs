@@ -18,7 +18,7 @@ public sealed class ReusableSettingsControlsContractTests
     public void SettingsSections_UseSettingSelectForSimpleOptionRows()
     {
         var documents = SettingsSections
-            .Select(file => XDocument.Load(TestRepository.FromApplicationRoot($"Views/{file}")))
+            .Select(file => XDocument.Load(TestRepository.FromPresentationRoot($"Views/{file}")))
             .ToArray();
 
         Assert.All(
@@ -45,7 +45,7 @@ public sealed class ReusableSettingsControlsContractTests
     [Fact]
     public void SettingSelect_ProvidesTypedOptionTemplateAndTwoWaySelection()
     {
-        var document = XDocument.Load(TestRepository.FromApplicationRoot("Controls/SettingSelect.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Controls/SettingSelect.axaml"));
         var comboBox = document
             .Descendants()
             .Single(element => element.Name.LocalName == "ComboBox");

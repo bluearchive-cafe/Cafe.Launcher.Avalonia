@@ -4,9 +4,12 @@ using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Features.SetupWizard;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Services;
-using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Testing;
 using Cafe.Launcher.Avalonia.ViewModels;
+using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Helpers;
+using Cafe.Launcher.Core.Services;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -1367,7 +1370,7 @@ public sealed class GameOperationsViewModelTests : IDisposable
         context.ViewModel.ShowRequested += () => showRequested = true;
         context.SessionMonitor.Transition(
             GameSessionState.StartFailed,
-            new Services.GameRuntime.GameLaunchExitInfo(53, TimeSpan.FromSeconds(2), DateTimeOffset.Now, "wine"));
+            new Cafe.Launcher.Core.Services.GameRuntime.GameLaunchExitInfo(53, TimeSpan.FromSeconds(2), DateTimeOffset.Now, "wine"));
 
         Assert.True(showRequested);
         Assert.Contains(notifications, toast =>
@@ -1394,7 +1397,7 @@ public sealed class GameOperationsViewModelTests : IDisposable
 
         context.SessionMonitor.Transition(
             GameSessionState.Exited,
-            new Services.GameRuntime.GameLaunchExitInfo(0, TimeSpan.FromHours(2), DateTimeOffset.Now, "umu"));
+            new Cafe.Launcher.Core.Services.GameRuntime.GameLaunchExitInfo(0, TimeSpan.FromHours(2), DateTimeOffset.Now, "umu"));
 
         Assert.Equal(
             context.Localizer.F(LocalizationKeys.GameSessionExited, 0),

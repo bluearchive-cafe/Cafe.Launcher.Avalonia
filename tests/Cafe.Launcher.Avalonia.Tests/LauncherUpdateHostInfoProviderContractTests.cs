@@ -1,5 +1,5 @@
 using System.Text.RegularExpressions;
-using Cafe.Launcher.Avalonia.Services.Update;
+using Cafe.Launcher.Core.Services.Update;
 using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
@@ -86,7 +86,7 @@ public sealed class LauncherUpdateHostInfoProviderContractTests
         File.ReadAllText(Path.Combine(TestRepository.Root, "installer", "windows", "Cafe.Launcher.Avalonia.iss"));
 
     private static string ReadProgramSource() =>
-        File.ReadAllText(TestRepository.FromApplicationRoot("Program.cs"));
+        File.ReadAllText(TestRepository.FromHostRoot("Program.cs"));
 
     private static int CountOccurrences(string text, string value)
     {

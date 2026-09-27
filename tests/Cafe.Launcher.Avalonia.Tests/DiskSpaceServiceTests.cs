@@ -1,4 +1,5 @@
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Core.Services;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -16,7 +17,8 @@ public sealed class DiskSpaceServiceTests
         string? decompressionSize,
         long expected)
     {
-        var result = DiskSpaceService.ResolveRequiredBytes(isFreshInstall, plannedDownloadBytes, decompressionSize);
+        var result = new DiskSpaceService()
+            .ResolveRequiredBytes(isFreshInstall, plannedDownloadBytes, decompressionSize);
 
         Assert.Equal(expected, result);
     }

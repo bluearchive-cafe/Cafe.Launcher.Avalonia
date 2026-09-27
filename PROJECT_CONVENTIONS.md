@@ -17,6 +17,33 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 
 ---
 
+### 1.1 程序集边界
+
+`Cafe.Launcher.Core` 是无表现依赖的后端边界：不得引用 Avalonia、MarkView、Material Icons
+或 UI 资源；用户可见文案以稳定 code（或领域结果）传给 UI，由 UI 本地化。Core 不自己解析
+进程数据根，也不反射入口程序集判断运行版本：前者由组合根解析一次后经 `AddLauncherCore`
+的必填参数注入（ADR-025），后者消费注入的 `LauncherBuildIdentity`。
+
+`Cafe.Launcher.Avalonia.UI` 承载全部 Avalonia 控件、ViewModel、主题、资源与运行时资产
+（`Views/`、`ViewModels/`、`Features/`、`Controls/`、`Converters/`、`Models/`、`Helpers/`、表现层
+`Services/`、`Resources/` 与运行期 `Assets/`）；宿主只保留进程生命周期与入口相关文件。搬迁只换
+程序集、不换命名空间，表现层因此仍是 `Cafe.Launcher.Avalonia.*`。规则与落地批次见 ADR-042。
+
+Core 的源码命名空间是 `Cafe.Launcher.Core.*`；每个工程在自己的源文件里显式列出用到的 Core
+命名空间（迁移期的项目级 `<Using>` 已全部移除，`Projects_ResolveCoreNamespacesWithExplicitUsings`
+挡住回退），Core 侧不得回退到 `Cafe.Launcher.Avalonia.*`（`CoreSources_UseOnlyTheCoreNamespaces` 守着）。
+
+Core 的服务实现正在按「消费方只经接口取用」逐批收回 `internal`，尚未收窄的公开实现用显式声明集
+钉住：`Models/` 之外的顶层 public class 必须出现在
+`CorePublicImplementationsOutsideModels_AreTheDeclaredSet` 的表里（新增要显式加进去）。收窄进度与
+剩余项见 ADR-042 与 `CODEBASE_AUDIT.md` 的 `AUD-ARCH-015`。
+
+WinExe 宿主只保留进程生命周期和顶层 Avalonia 生命周期；Core 的登记项由
+`Composition/ServiceConfiguration.AddLauncherCore` 负责，并由 `AddLauncherServices` 在
+所有表现层登记项之前调用一次。生产程序集不能使用 `InternalsVisibleTo`；测试程序集是唯一
+允许的 friend，且其程序集名必须以 `Tests` 结尾（`AssemblySplitContractTests` 按此断言，
+源码属性与 csproj 两种声明形状都在扫描范围内）。
+
 ## 2. 代码格式与风格
 
 ### 2.1 命名
@@ -92,7 +119,7 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 
 ### 4.1 添加新字符串
 
-1. 在 4 个资源文件（`Resources/LauncherStrings{,.zh-Hans,.zh-Hant,.ja}.resx`）中按字母序添加 key-value。
+1. 在 4 个资源文件（`src/Cafe.Launcher.Avalonia.UI/Resources/LauncherStrings{,.zh-Hans,.zh-Hant,.ja}.resx`，随表现层归 UI 工程）中按字母序添加 key-value。
 2. XAML 中绑定：`{Binding Shell.I18n[newKey]}`。绑定路径是字符串、引用不到 C# 常量，故这一面由 `ResxResourceContractTests.XamlResourceBindings_UseOnlyKeysThatExistInNeutralResources` 做存在性守卫——拼错的键以前构建与测试全绿，只在运行期降级为 `"Localization unavailable."`；同一测试类的 `XamlKeyScan_StillCoversTheKeyBearingFiles` 是它的反空转基线，扫描域为应用工程下全部 `.axaml`（无手抄文件清单）。
 3. C# 中一律引用 `Constants/LocalizationKeys` 的编译时常量，**禁止**向 `T()`/`F()`/`I18n[...]` 传裸 key 字符串字面量（`ResxResourceContractTests` 守护）。
 4. 所有 4 种语言都提供翻译（对专有名词可回退到英文文本，但不得留空）；术语与译名以 `UBIQUITOUS_LANGUAGE.md` 的规范译法为准。
@@ -109,7 +136,7 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 
 ### 5.1 注册规则
 
-- 所有 DI 管理的 Service 和 ViewModel 在 `Composition/ServiceConfiguration.AddLauncherServices()` 中注册。
+- 所有 DI 管理的 Service 和 ViewModel 在 `Composition/ServiceConfiguration.AddLauncherServices()` 中注册；已迁入 `Cafe.Launcher.Core` 的后端服务由同一组合根先调用的 `AddLauncherCore` 登记（见 §1.1）。
 - 单窗口桌面应用：全部注册为 `AddSingleton`（无 scoped 边界）。
 - `UnifiedLogger` 在 `Program.cs` 预创建，通过 `Composition.ServiceConfiguration.AddLauncherServices(existingLogger:)` 传入 DI 容器复用同一实例。
 
