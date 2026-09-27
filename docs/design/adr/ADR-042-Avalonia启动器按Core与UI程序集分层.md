@@ -205,39 +205,31 @@ Core API 后应改回显式 using。`AssemblySplitContractTests.CoreSources_UseO
   （`Models/LauncherStatusModels.cs`）；宿主的 `LauncherRuntimeModels.cs` 只剩表现类型
   （下拉选项族、操作进度、带 Avalonia `Bitmap` 的远程内容卡）。
 
-未完成：
+剩余（2026-09-27 迁移收尾盘点，两项）：
 
-1. Core 公开面收窄：96 个顶层类型中 95 个是 `public`；"实现默认 internal、只公开窄接口"
-   未做，也无守卫。
-2. 后端模块继续迁入 Core：`Services/Update/*`（自更新）、`FileDownloadService` /
-   `DownloadTransport`、`Services/GameRuntime/*`、`Services/Diagnostics/*`、
-   `HttpClientFactory`、`GameShortcutService`、`ManifestValidationService`、
-   `RemoteManifestService`、`ProxySettingsService` 等，以及全部 `Features/*`；
-   随之把 `GameOperationExecutor` 等实现内部化，并把它们的注册从宿主组合根搬进 Core。
-3. UI 程序集落位：Views/Controls/Converters/ViewModels/Features/Resources/Assets 搬迁；
-   9 处 `avares://Cafe.Launcher.Avalonia/...` 改指 UI；`AvaloniaResource` 与
-   `EmbeddedResource` 从宿主 csproj 迁走；卫星资源程序集断言改指 UI。
-4. 表现层接缝反向：当前 `LauncherPresentationSession.CreateMainWindow` 无人调用，宿主仍
-   `new MainWindow(...)` 并直接解析 `MainWindowViewModel`；阶段 4 要由 UI 自己构造窗口与
-   ViewModel，宿主只保留生命周期调用。
-5. 扫描契约随文件搬迁：`UiStyleContractTests` 的扫描域与声明表切到 `UI`（`FindXamlFiles`
-   已加 fail-loud 守卫，搬迁时会红而不是静默缩小），约 230 处
-   `TestRepository.FromApplicationRoot("Views/…")` 与 `scripts/` 内宿主路径同步迁移。
-   生命周期门面目前由 Headless 套件的 `LauncherPresentationSessionTests` 覆盖（UI 程序集
-   在该跑批里 100% 行覆盖），但视图形状本身还没有 UI 测试。
-6. 第三方通知生成按生产工程逐个进行：`New-ThirdPartyNotices.ps1` 目前只读宿主 csproj，
-   `ThirdPartyNoticesContractTests` 也只检查宿主的 `PackageReference`。
-    **当前状态（2026-09-27 第二轮迁移后）**：闸口实测行 85.55% / 分支 91.82%，行比基线低
-    0.05pp（分支已过）。为不把「因搬迁下调基线」变成既成事实，基线保持 0.8560 / 0.9180 未动；
-    收尾时二选一：补足缺失覆盖，或按脚本注释的约定「基线 = 本次全量实测值 − 0.1–0.25pp」重锚
-    （后者会下调数值，需用户确认）。7. 覆盖率基线重锚：闸口已加"每个生产程序集必须出现在报告里"的断言，拆分后实测
-    （2026-09-27 全量 verify）为行 85.63% / 分支 91.85%，基线 0.8560 / 0.9180 未下调，
-    余量 +0.03pp / +0.05pp。脚本自己的约定是"基线 = 实测值再留 0.1–0.25pp 余量"，
-    是否按该约定重锚（会下调数值）留待下次全量 verify 决定。
+1. **Core 公开面收窄（部分完成）**：UI 程序集的公开面已收窄（172 → 27 个顶层 public 类型，
+   见上），Core 仍是「实现默认 public」。原因是 UI 现在是独立程序集，要跨边界消费 Core 的服务与
+   模型；把实现改 `internal` 的前提是消费方只经接口取用，而仍有直接使用具体类型的地方
+   （例如 `Crc64Service`、`LauncherSettingsService`、`DiskSpaceService`）。收尾时试过按「Core 之外
+   从未出现该类型名」筛出 11 个候选（`GSettingsCli`、`LogRecord`、`PatchUrlGroupDefinition`、
+   `BestHttpCookieLibrary`、`ILauncherUpdateDownloader`、`UnixProcessMatch` 等），但它们都出现在
+   其它 Core public 成员的签名里（`LauncherApiClient.GetInstallationConfigAsync` 返回
+   `InstallationConfigResponse`、`LogEntryReader.Read` 返回 `IEnumerable<LogRecord>`……），
+   收窄会逐级级联，因此全部回退——**唯一可行的路径是先把消费方改成只经接口取用**。
+   这已超出本次「按程序集分层」的范围，作为独立重构登记；当前没有守卫防止新增 public 实现。
+2. **项目级 `<Using>` 收敛**：宿主、UI 与两个测试工程的 csproj 仍用
+   `<Using Include="Cafe.Launcher.Core.*" />` 过渡解析 Core 命名空间（这正是命名空间收口
+   不需要全仓改写 using 的原因）。按 AGENTS.md 的约定，等调用点收敛到窄接口后改为显式 using。
 
-### 下一批搬迁的依赖结论（2026-09-27 盘点）
+覆盖率（2026-09-27 全量实测，Debug verify + coverlet）：手写代码行 **86.51%** / 分支 **92.88%**，
+基线 0.8560 / 0.9180 **未下调**，余量 +0.91pp / +1.08pp。脚本约定「基线 = 实测值再留
+0.1–0.25pp 余量」，因此可以把基线**上调**收紧余量；上调是安全方向（不会放过回退），
+是否调整留待下次全量 verify 决定。迁移期间行指标曾长期比基线低 0.03–0.05pp，那一状态已随
+程序集归属变化自然消失，基线全程保持在 0.8560 / 0.9180。
 
-按「宿主类型依赖」逐一盘点剩余后端模块后，批次顺序与已知阻碍如下：
+### 当时的批次结论（已执行，留作记录）
+
+按「宿主类型依赖」逐一盘点剩余后端模块后，批次顺序与已知阻碍如下。六个批次（网络与下载、游戏运行时、诊断、自更新、零散后端、UI 程序集落位）均已执行完毕，本节只记录当时的判断依据：
 
 1. **网络与下载**：代理与连接池一半已完成（见上）。剩下的下载一半
    （`DownloadTransport`、`FileDownloadService`/`IFileDownloadService`/`FileDownloadRequest`/
