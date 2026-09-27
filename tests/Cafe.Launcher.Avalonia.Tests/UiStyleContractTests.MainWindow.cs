@@ -474,7 +474,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void LauncherSettings_JsonProperties_AreExplicitNonGeneratedDeclarations()
     {
-        var source = File.ReadAllText(TestRepository.FromApplicationRoot("Models/LauncherSettings.cs"));
+        var source = File.ReadAllText(TestRepository.FromCoreRoot("Models/LauncherSettings.cs"));
 
         Assert.DoesNotContain("[property:", source, StringComparison.Ordinal);
         Assert.DoesNotContain("[ObservableProperty]", source, StringComparison.Ordinal);
