@@ -163,11 +163,13 @@ Linux 版除了安装、更新、修复游戏外，还可以通过兼容运行�
 
 ## 开发者指南
 
-本仓库是启动器的完整源代码，包含 Avalonia 桌面应用、Windows 自更新 helper 及其 Core 类库，以及单元测试与 Headless UI 测试两个测试项目。
+本仓库是启动器的完整源代码，包含 Avalonia 宿主、表现层程序集、无 Avalonia 的应用核心、Windows 自更新 helper 及其 Core 类库，以及单元测试与 Headless UI 测试两个测试项目。
 
 | 项目 | 说明 |
 | --- | --- |
-| [`src/Cafe.Launcher.Avalonia`](./src/Cafe.Launcher.Avalonia/) | 桌面应用主体 |
+| [`src/Cafe.Launcher.Avalonia`](./src/Cafe.Launcher.Avalonia/) | WinExe 宿主：进程生命周期、单实例、依赖注入组合根 |
+| [`src/Cafe.Launcher.Avalonia.UI`](./src/Cafe.Launcher.Avalonia.UI/) | Avalonia 表现层程序集（分批迁移中，Views/资源尚未迁入） |
+| [`src/Cafe.Launcher.Core`](./src/Cafe.Launcher.Core/) | 无 Avalonia 的应用核心：协议、安装状态、网络传输、设置、下载与运行时 |
 | [`src/Cafe.Launcher.Updater.Core`](./src/Cafe.Launcher.Updater.Core/) | 自更新参数契约、校验、路径计划与应用实现 |
 | [`src/Cafe.Launcher.Updater`](./src/Cafe.Launcher.Updater/) | Windows 自更新 helper 宿主（单文件，复制到临时目录后调用 Core 应用更新） |
 | [`tests/Cafe.Launcher.Avalonia.Tests`](./tests/Cafe.Launcher.Avalonia.Tests/) | xUnit v3 单元测试 |
@@ -213,16 +215,19 @@ dotnet test .\tests\Cafe.Launcher.Avalonia.Tests\Cafe.Launcher.Avalonia.Tests.cs
 ### 代码结构
 
 ```text
-src/Cafe.Launcher.Avalonia/
+src/Cafe.Launcher.Avalonia/       # WinExe 宿主：Program、App、组合根、单实例转发
 ├── Composition/       # 依赖注入组合根
-├── Features/          # Shell、游戏操作、设置、向导、诊断和资源面板
-├── Services/          # 网络、下载、清单、设置、本地化和日志
+├── Features/          # Shell、游戏操作、设置、向导、诊断和资源面板（迁移目标：UI 程序集）
+├── Services/          # 网络、下载、清单、设置、本地化和日志（部分已迁入 Core）
 ├── Models/            # 设置、API、清单和运行状态模型
 ├── ViewModels/        # 主窗口级 ViewModel 与模态契约
 ├── Views/             # Avalonia 视图和样式
 ├── Helpers/           # 路径校验、图片解码、目录遍历等共用工具
 ├── Resources/         # 多语言资源（.resx）
 └── Assets/            # 图标、字体、音频和内置壁纸
+
+src/Cafe.Launcher.Core/           # 无 Avalonia 的应用核心（协议、安装状态、传输、设置）
+src/Cafe.Launcher.Avalonia.UI/    # Avalonia 表现层程序集（生命周期门面已就位，视图待迁入）
 
 src/Cafe.Launcher.Updater.Core/  # 自更新契约与应用实现
 src/Cafe.Launcher.Updater/       # Windows 自更新单文件宿主
@@ -234,7 +239,13 @@ tests/
 
 ### 架构要点
 
-- `Composition/ServiceConfiguration.cs` 是唯一的依赖注入组合根，所有服务与 ViewModel 都在此注册，且全部为单例（单窗口桌面应用）。
+- 程序集依赖是单向的：宿主 → UI → Core → Updater.Core（宿主也直接引用 Core 与 Updater.Core）。
+  Core 不得引用 Avalonia、MarkView、Material Icons 或 UI 资源；生产程序集之间禁止
+  `InternalsVisibleTo`（只允许测试程序集作为 friend）。分批迁移规则与剩余清单见
+  [ADR-042](docs/design/adr/ADR-042-Avalonia启动器按Core与UI程序集分层.md)。
+- `Composition/ServiceConfiguration.cs` 是唯一的依赖注入组合根；Core 的后端登记项由
+  `AddLauncherCore` 负责，组合根必须先调用它再注册表现层，容器反向释放时才会先释放 UI。
+  所有服务与 ViewModel 都是单例（单窗口桌面应用）。
 - `Features/` 按功能垂直组织；功能之间不引用彼此的具体类型，需要协作时把窄接口提取到 `Services/` 并在组合根绑定。`Features/Shell` 是窗口外壳层，聚合各功能的呈现 ViewModel，是这条规则的既定例外。
 - `Services/RemoteHttpTransport` 是唯一对外请求模块，统一负责代理、SSRF 校验、重定向、超时与重试；`Services/HttpClientFactory` 负责共享连接池与代理感知的租约，不要在别处新建 `HttpClient`。
 - 游戏文件操作必须经过 `Helpers/GamePathValidator`，确保始终落在规范化的 `YostarGames\BlueArchive_JP` 目录内。
