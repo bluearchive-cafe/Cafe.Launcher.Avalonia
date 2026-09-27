@@ -25,6 +25,7 @@ public static class LauncherCoreServiceCollectionExtensions
         // closure. Keeping their registration here is significant: UI services
         // registered afterwards are disposed first by the Microsoft DI container.
         services.TryAddSingleton<Crc64Service>();
+        services.TryAddSingleton<DiskSpaceService>();
         services.TryAddSingleton<LocalInstallationStateStore>();
         services.TryAddSingleton<AuthorizationHeaderFactory>();
         return services;
