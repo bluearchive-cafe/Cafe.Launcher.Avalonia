@@ -2,7 +2,9 @@ using System.Text.Json;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Testing;
+using Cafe.Launcher.Core;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -562,8 +564,72 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         Assert.Equal(new LauncherSettings().Language, reloaded.Language);
     }
 
+    [Fact]
+    public async Task ReadAsync_WithoutASettingsFile_OnAPrereleaseBuild_DefaultsToTheBetaChannel()
+    {
+        // 首次运行（或设置文件损坏后回退）落盘的默认值里，更新渠道来自注入的构建标识；
+        // settings.json 一旦由这个默认值写下，用户就会一直跟着那个渠道更新。
+        var missingPath = Path.Combine(tempDir, "beta-settings.json");
+        var service = new LauncherSettingsService(
+            TestDataRoot.ForFile(missingPath),
+            buildIdentity: new LauncherBuildIdentity("1.1.0-beta.8", "abc1234", "2026-09-27 17:06", "Release"));
+
+        var settings = await service.ReadAsync();
+
+        Assert.Equal(UpdateChannels.Beta, settings.UpdateChannel);
+    }
+
+    [Fact]
+    public async Task ReadAsync_WithoutASettingsFile_OnAStableBuild_KeepsTheStableChannel()
+    {
+        var missingPath = Path.Combine(tempDir, "stable-settings.json");
+        var service = new LauncherSettingsService(
+            TestDataRoot.ForFile(missingPath),
+            buildIdentity: new LauncherBuildIdentity("1.1.0", "abc1234", "2026-09-27 17:06", "Release"));
+
+        var settings = await service.ReadAsync();
+
+        Assert.Equal(UpdateChannels.Stable, settings.UpdateChannel);
+    }
+
+    [Fact]
+    public async Task ReadAsync_WhenSettingsFileIsMalformed_LogsTheRecoveryBeforeApplyingDefaults()
+    {
+        // 回退到默认值是可恢复路径，但必须留下一条 Error：否则用户报「设置被重置」时
+        // unified.log 里没有任何线索。
+        await File.WriteAllTextAsync(settingsPath, "{");
+        var diagnostics = new RecordingDiagnostics();
+        var service = new LauncherSettingsService(TestDataRoot.ForFile(settingsPath), diagnostics);
+
+        var reloaded = await service.ReadAsync();
+
+        Assert.Equal(new LauncherSettings().Language, reloaded.Language);
+        var entry = Assert.Single(diagnostics.Errors);
+        Assert.Equal("Settings", entry.Title);
+    }
+
     public void Dispose()
     {
         tempDir.Dispose();
+    }
+
+    private sealed class RecordingDiagnostics : ILauncherDiagnostics
+    {
+        public List<(string Title, string? Message)> Errors { get; } = [];
+
+        public Task DebugAsync(
+            string title,
+            string? message = null,
+            CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public Task ErrorAsync(
+            string title,
+            string? message,
+            Exception exception,
+            CancellationToken cancellationToken = default)
+        {
+            Errors.Add((title, message));
+            return Task.CompletedTask;
+        }
     }
 }

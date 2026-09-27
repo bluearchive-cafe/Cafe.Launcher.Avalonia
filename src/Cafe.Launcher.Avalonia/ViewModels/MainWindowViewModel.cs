@@ -10,6 +10,7 @@ using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Services.Update;
+using Cafe.Launcher.Core;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -97,7 +98,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         ShellPresentationFamily family,
         IErrorHandlingService errorHandling,
         SystemAnimationSettingsProvider systemAnimationSettingsProvider,
-        IFilePickerService filePickerService)
+        IFilePickerService filePickerService,
+        LauncherBuildIdentity? buildIdentity = null)
         : this(
             family,
             new ShellLifecycle(
@@ -114,7 +116,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 systemAnimationSettingsProvider,
                 family,
                 filePickerService,
-                ownsPresentationCollaborators: true))
+                ownsPresentationCollaborators: true,
+                buildIdentity: buildIdentity))
     {
     }
 

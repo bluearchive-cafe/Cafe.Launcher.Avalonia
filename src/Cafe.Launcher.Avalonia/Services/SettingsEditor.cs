@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel;
 using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Core;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
@@ -16,9 +17,14 @@ public sealed class SettingsEditor : INotifyPropertyChanged
     private LauncherSettings snapshot;
     private bool isDirty;
 
-    public SettingsEditor()
+    /// <summary>
+    /// Creates the editor over the default settings for a fresh draft. <paramref name="buildIdentity"/>
+    /// only decides the default update channel (pre-release builds default to Beta); the composition
+    /// root injects it, and a draft is replaced by the saved snapshot as soon as settings load.
+    /// </summary>
+    public SettingsEditor(LauncherBuildIdentity? buildIdentity = null)
     {
-        var defaults = LauncherSettings.CreateDefaults();
+        var defaults = LauncherSettings.CreateDefaults(buildIdentity);
         current = defaults;
         snapshot = defaults.DeepClone();
         AttachCurrentListeners();

@@ -76,26 +76,25 @@ public sealed class AssemblySplitContractTests
     }
 
     [Fact]
-    public void LauncherMessage_Create_SeparatesPresentationArgumentsFromDiagnostics()
+    public void BuildIdentity_FromAnAssemblyWithoutHostMetadata_DegradesInsteadOfThrowing()
     {
-        var message = LauncherMessage.Create(
-            LauncherMessageCode.DownloadFailed,
-            "HTTP 503 from example.invalid",
-            "manifest.json",
-            "503");
+        // 只有 WinExe 注入 CommitSha/BuildTime 元数据；类库程序集读它必须退回 unknown/空串，
+        // 而不是抛异常或把别人的版本当成产品版本（Core 默认的 1.0.0 就是这么暴露出来的）。
+        var identity = LauncherBuildIdentity.FromAssembly(typeof(LauncherBuildIdentity).Assembly);
 
-        Assert.Equal(LauncherMessageCode.DownloadFailed, message.Code);
-        Assert.Equal(["manifest.json", "503"], message.Arguments);
-        Assert.Equal("HTTP 503 from example.invalid", message.DiagnosticDetail);
+        Assert.Equal("unknown", identity.CommitSha);
+        Assert.Equal("", identity.BuildTime);
+        Assert.False(string.IsNullOrWhiteSpace(identity.LauncherVersion));
     }
 
     [Fact]
-    public void AddLauncherCore_RegistersTheExtractedBackendSliceExactlyOnce()
+    public void AddLauncherCore_IsIdempotent_SoRepeatedCompositionKeepsOneRegistrationPerService()
     {
         var services = new ServiceCollection();
         var identity = new LauncherBuildIdentity("1.2.3", "abc1234", "2026-09-27", "Debug");
         var dataRoot = new LauncherDataRoot(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N")));
 
+        // 重复登记必须收敛成一份：组合根在测试与辅助宿主里会被反复调用。
         services.AddLauncherCore(identity, dataRoot);
         services.AddLauncherCore(identity, dataRoot);
 
@@ -160,16 +159,42 @@ public sealed class AssemblySplitContractTests
     }
 
     [Fact]
-    public void HostRegistersCoreBeforePresentationComposition()
+    public void CompositionRoot_RegistersCoreFirstAndOnlyOnce()
     {
-        var source = File.ReadAllText(TestRepository.FromHostRoot("App.axaml.cs"));
-        var coreRegistration = source.IndexOf("AddLauncherCore", StringComparison.Ordinal);
-        var presentationRegistration = source.IndexOf("AddLauncherPresentation", StringComparison.Ordinal);
+        var hostSource = File.ReadAllText(TestRepository.FromHostRoot("App.axaml.cs"));
+        var compositionRoot = TestRepository.FromHostRoot("Composition/ServiceConfiguration.cs");
+        var rootSource = File.ReadAllText(compositionRoot);
 
-        Assert.True(coreRegistration >= 0, "宿主必须先调用 AddLauncherCore。");
-        Assert.True(presentationRegistration > coreRegistration,
+        var coreRegistration = rootSource.IndexOf("AddLauncherCore", StringComparison.Ordinal);
+        var firstSingleton = rootSource.IndexOf("AddSingleton", StringComparison.Ordinal);
+        Assert.True(coreRegistration >= 0, "组合根必须先调用 AddLauncherCore。");
+        Assert.True(firstSingleton > coreRegistration,
             "Core 必须先注册，确保容器反向释放时 UI 先于 Core 释放。");
+
+        var compositionRootCall = hostSource.IndexOf("AddLauncherServices", StringComparison.Ordinal);
+        var presentationCall = hostSource.IndexOf("AddLauncherPresentation", StringComparison.Ordinal);
+        Assert.True(compositionRootCall >= 0, "宿主必须调用组合根 AddLauncherServices。");
+        Assert.True(presentationCall > compositionRootCall, "表现层必须在组合根（含 Core）之后注册。");
+
+        // 数据根与 Core 登记只允许一个调用点：宿主若再调一次 AddLauncherCore，顺序契约就分裂成
+        // 两处，并迫使宿主自己解析进程数据根（ADR-025 的单点解析），Core 也只能再提供
+        // ForCurrentProcess 兜底——那正是 TestUserDataIsolationTests 要挡住的形状。
+        var callSites = ProductionSources()
+            .Where(path => File.ReadAllText(path).Contains(".AddLauncherCore(", StringComparison.Ordinal))
+            .Select(Path.GetFullPath)
+            .ToArray();
+        Assert.Equal([Path.GetFullPath(compositionRoot)], callSites);
     }
+
+    private static IEnumerable<string> ProductionSources() =>
+        new[] { TestRepository.HostPath, TestRepository.CorePath, TestRepository.PresentationPath }
+            .SelectMany(root => Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories))
+            .Where(path => !path.Contains(
+                $"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}",
+                StringComparison.OrdinalIgnoreCase))
+            .Where(path => !path.Contains(
+                $"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}",
+                StringComparison.OrdinalIgnoreCase));
 
     private static string[] ProjectReferences(XDocument project) => project
         .Descendants("ProjectReference")

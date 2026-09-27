@@ -8,6 +8,7 @@ using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
+using Cafe.Launcher.Core;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Linq;
@@ -30,6 +31,7 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     private readonly LocalInstallationStateStore localInstallationStateStore;
     private readonly LocalDiagnostics diagnostics;
     private readonly IFilePickerService filePickerService;
+    private readonly LauncherBuildIdentity? buildIdentity;
     private bool hasInitializedGamePath;
     private bool isDisposed;
     private CancellationTokenSource? gamePathStatusCancellationTokenSource;
@@ -38,21 +40,25 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
 
     /// <summary>
     /// Creates a setup wizard with defaults aligned to <see cref="LauncherSettings.CreateDefaults"/>.
+    /// <paramref name="buildIdentity"/> carries the host's release channel so a pre-release build
+    /// defaults the first-run settings to the beta update channel.
     /// </summary>
     public SetupWizardViewModel(
         LocalizationService localizer,
         GameInstallationPath gameInstallationPath,
         LocalInstallationStateStore localInstallationStateStore,
         LocalDiagnostics diagnostics,
-        IFilePickerService filePickerService)
+        IFilePickerService filePickerService,
+        LauncherBuildIdentity? buildIdentity = null)
     {
         this.localizer = localizer;
         this.gameInstallationPath = gameInstallationPath;
         this.localInstallationStateStore = localInstallationStateStore;
         this.diagnostics = diagnostics;
         this.filePickerService = filePickerService;
+        this.buildIdentity = buildIdentity;
 
-        var defaults = LauncherSettings.CreateDefaults();
+        var defaults = LauncherSettings.CreateDefaults(buildIdentity);
         language = defaults.Language;
         patchUrlGroup = defaults.PatchUrlGroup;
         gamePath = defaults.GamePath;
@@ -278,7 +284,7 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     [RelayCommand]
     private async Task SkipAsync()
     {
-        await AsyncEvent.InvokeSequentiallyAsync(SettingsApplied, LauncherSettings.CreateDefaults());
+        await AsyncEvent.InvokeSequentiallyAsync(SettingsApplied, LauncherSettings.CreateDefaults(buildIdentity));
     }
 
     [RelayCommand]
@@ -442,7 +448,7 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     private LauncherSettings BuildSettings()
     {
         var normalizedPath = gameInstallationPath.NormalizeGamePath(GamePath);
-        var settings = LauncherSettings.CreateDefaults();
+        var settings = LauncherSettings.CreateDefaults(buildIdentity);
         settings.Language = Language;
         settings.PatchUrlGroup = PatchUrlGroup;
         settings.GamePath = normalizedPath;

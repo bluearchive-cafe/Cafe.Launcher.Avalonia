@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -9,6 +9,7 @@ using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Core;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
@@ -23,20 +24,24 @@ public sealed class LauncherSettingsService : IDisposable
     private readonly SemaphoreSlim writeLock = new(1, 1);
     private readonly LauncherDataRoot dataRoot;
     private readonly ILauncherDiagnostics? diagnostics;
+    private readonly LauncherBuildIdentity? buildIdentity;
     private readonly Func<bool> isLinuxPlatform;
     private static readonly JsonSerializerOptions jsonOptions = JsonDefaults.Indented;
 
     /// <summary>
     /// <paramref name="isLinuxPlatform"/> 仅供测试注入平台判定；生产用运行时平台。
+    /// <paramref name="buildIdentity"/> 决定首次落盘默认值的发布渠道（预发布→Beta）。
     /// </summary>
     public LauncherSettingsService(
         LauncherDataRoot dataRoot,
         ILauncherDiagnostics? diagnostics = null,
-        Func<bool>? isLinuxPlatform = null)
+        Func<bool>? isLinuxPlatform = null,
+        LauncherBuildIdentity? buildIdentity = null)
     {
         ArgumentNullException.ThrowIfNull(dataRoot);
         this.dataRoot = dataRoot;
         this.diagnostics = diagnostics;
+        this.buildIdentity = buildIdentity;
         this.isLinuxPlatform = isLinuxPlatform ?? OperatingSystem.IsLinux;
     }
 
@@ -71,9 +76,9 @@ public sealed class LauncherSettingsService : IDisposable
         }
     }
 
-    private static LauncherSettings CreateDefaultSettings()
+    private LauncherSettings CreateDefaultSettings()
     {
-        return LauncherSettings.CreateDefaults();
+        return LauncherSettings.CreateDefaults(buildIdentity);
     }
 
     /// <summary>

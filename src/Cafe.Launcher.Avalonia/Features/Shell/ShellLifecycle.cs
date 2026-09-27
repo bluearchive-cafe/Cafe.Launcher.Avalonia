@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Threading;
@@ -14,6 +14,7 @@ using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Services.Update;
 using Cafe.Launcher.Avalonia.ViewModels;
+using Cafe.Launcher.Core;
 
 namespace Cafe.Launcher.Avalonia.Features.Shell;
 
@@ -46,6 +47,7 @@ public sealed class ShellLifecycle : IDisposable
     private readonly LocalDiagnostics diagnostics;
     private readonly IErrorHandlingService errorHandling;
     private readonly SystemAnimationSettingsProvider systemAnimationSettingsProvider;
+    private readonly LauncherBuildIdentity? buildIdentity;
     private readonly ShellViewModel shell;
     private readonly BackgroundViewModel background;
     private readonly RemoteContentViewModel remoteContent;
@@ -102,7 +104,8 @@ public sealed class ShellLifecycle : IDisposable
         IErrorHandlingService errorHandling,
         SystemAnimationSettingsProvider systemAnimationSettingsProvider,
         ShellPresentationFamily family,
-        IFilePickerService filePickerService)
+        IFilePickerService filePickerService,
+        LauncherBuildIdentity? buildIdentity = null)
         : this(
             launcherCoreService,
             settingsService,
@@ -117,7 +120,8 @@ public sealed class ShellLifecycle : IDisposable
             systemAnimationSettingsProvider,
             family,
             filePickerService,
-            ownsPresentationCollaborators: false)
+            ownsPresentationCollaborators: false,
+            buildIdentity: buildIdentity)
     {
     }
 
@@ -135,7 +139,8 @@ public sealed class ShellLifecycle : IDisposable
         SystemAnimationSettingsProvider systemAnimationSettingsProvider,
         ShellPresentationFamily family,
         IFilePickerService filePickerService,
-        bool ownsPresentationCollaborators)
+        bool ownsPresentationCollaborators,
+        LauncherBuildIdentity? buildIdentity = null)
     {
         // 所有权制度按构造路径分叉（受控测试缝，见 AUD-ARCH-003）：
         // - 生产 DI 路径走公开构造，ownsPresentationCollaborators: false——展示 VM 家族由
@@ -156,6 +161,7 @@ public sealed class ShellLifecycle : IDisposable
         this.diagnostics = diagnostics;
         this.errorHandling = errorHandling;
         this.systemAnimationSettingsProvider = systemAnimationSettingsProvider;
+        this.buildIdentity = buildIdentity;
         shell = family.Shell;
         background = family.Background;
         remoteContent = family.RemoteContent;
@@ -389,7 +395,7 @@ public sealed class ShellLifecycle : IDisposable
     /// <summary>Restores default settings from the debug panel.</summary>
     public async Task ResetSettingsToDefaultsAsync()
     {
-        await savedSettingsWriter.ReplaceAsync(LauncherSettings.CreateDefaults());
+        await savedSettingsWriter.ReplaceAsync(LauncherSettings.CreateDefaults(buildIdentity));
         await RefreshAsync();
     }
 

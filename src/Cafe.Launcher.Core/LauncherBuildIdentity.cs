@@ -16,6 +16,13 @@ public sealed record LauncherBuildIdentity(
     string BuildTime,
     string BuildConfiguration)
 {
+    /// <summary>
+    /// Whether this build is a pre-release (SemVer hyphen suffix). The single place that
+    /// decides "am I a beta build"; defaults that depend on the release channel consume this
+    /// instead of reflecting over the entry assembly.
+    /// </summary>
+    public bool IsPrerelease => LauncherVersion.Contains('-', StringComparison.Ordinal);
+
     public static LauncherBuildIdentity FromAssembly(Assembly assembly)
     {
         ArgumentNullException.ThrowIfNull(assembly);
@@ -37,9 +44,6 @@ public sealed record LauncherBuildIdentity(
             FormatBuildTime(rawBuildTime),
             ResolveBuildConfiguration());
     }
-
-    public static LauncherBuildIdentity ForEntryAssembly() =>
-        FromAssembly(Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly());
 
     private static string FormatBuildTime(string? rawBuildTime)
     {

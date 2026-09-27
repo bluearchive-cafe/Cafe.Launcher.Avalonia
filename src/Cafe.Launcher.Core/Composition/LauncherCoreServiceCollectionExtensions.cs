@@ -14,17 +14,22 @@ namespace Cafe.Launcher.Core.Composition;
 /// </summary>
 public static class LauncherCoreServiceCollectionExtensions
 {
+    /// <param name="launcherDataRoot">
+    /// The single process data root, resolved once by the composition root and injected here.
+    /// Core never resolves it itself: <c>TestUserDataIsolationTests</c> keeps that resolution
+    /// confined to the declared pre-DI sites (ADR-025).
+    /// </param>
     public static IServiceCollection AddLauncherCore(
         this IServiceCollection services,
         LauncherBuildIdentity buildIdentity,
-        LauncherDataRoot? launcherDataRoot = null)
+        LauncherDataRoot launcherDataRoot)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(buildIdentity);
+        ArgumentNullException.ThrowIfNull(launcherDataRoot);
 
-        var dataRoot = launcherDataRoot ?? LauncherDataRoot.ForCurrentProcess();
         services.TryAddSingleton(buildIdentity);
-        services.TryAddSingleton(dataRoot);
+        services.TryAddSingleton(launcherDataRoot);
         // These services already have a stable, presentation-free dependency
         // closure. Keeping their registration here is significant: UI services
         // registered afterwards are disposed first by the Microsoft DI container.
@@ -37,7 +42,8 @@ public static class LauncherCoreServiceCollectionExtensions
         services.TryAddSingleton<RemoteHttpUrlValidator>();
         services.TryAddSingleton(sp => new LauncherSettingsService(
             sp.GetRequiredService<LauncherDataRoot>(),
-            sp.GetService<ILauncherDiagnostics>()));
+            sp.GetService<ILauncherDiagnostics>(),
+            buildIdentity: buildIdentity));
         return services;
     }
 }
