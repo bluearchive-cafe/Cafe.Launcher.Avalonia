@@ -6,7 +6,7 @@ using System.IO.Compression;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Cafe.Launcher.Updater;
+namespace Cafe.Launcher.Updater.Core;
 
 /// <summary>
 /// Applies a verified launcher update once the parent process has exited. Installer

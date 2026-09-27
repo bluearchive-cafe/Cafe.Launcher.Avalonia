@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace Cafe.Launcher.Updater;
+namespace Cafe.Launcher.Updater.Core;
 
 /// <summary>
 /// Pure path planning for the portable apply step. The staging and backup directories

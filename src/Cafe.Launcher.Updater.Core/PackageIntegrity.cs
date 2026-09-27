@@ -4,7 +4,7 @@ using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Cafe.Launcher.Updater;
+namespace Cafe.Launcher.Updater.Core;
 
 /// <summary>SHA-256 integrity helpers shared by the helper's argument validation and apply step.</summary>
 public static class PackageIntegrity

@@ -1,0 +1,618 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Cafe.Launcher.UI.ViewModels"
+        xmlns:models="using:Cafe.Launcher.UI.Models"
+        xmlns:services="using:Cafe.Launcher.UI.Services"
+        xmlns:views="using:Cafe.Launcher.UI.Views"
+        xmlns:controls="using:Cafe.Launcher.UI.Controls"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1300" d:DesignHeight="754"
+        x:Class="Cafe.Launcher.UI.Views.MainWindow"
+        x:Name="Root"
+        x:DataType="vm:MainWindowViewModel"
+        Icon="/Assets/app-icon.ico"
+        Title="{Binding Shell.ProductName}"
+        FontFamily="{Binding Shell.FontFamily}"
+             Width="{StaticResource Launcher.Layout.Window.Width}"
+             Height="{StaticResource Launcher.Layout.Window.Height}"
+             MinWidth="{StaticResource Launcher.Layout.Window.MinWidth}"
+             MinHeight="{StaticResource Launcher.Layout.Window.MinHeight}"
+        CanResize="True"
+        WindowDecorations="BorderOnly"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="0"
+        Background="{DynamicResource Launcher.Color.Media.Placeholder}">
+        <Grid x:Name="ShellRoot"
+              KeyboardNavigation.TabNavigation="Cycle"
+              Classes="motion-shell"
+              Classes.motion-enabled="{Binding IsMotionEnabled}">
+        <Rectangle Fill="{Binding Background.BackgroundFillBrush}"/>
+        <Image Source="{Binding Background.BackgroundImageSource}"
+               Stretch="{Binding Background.BackgroundStretch}"
+               RenderOptions.BitmapInterpolationMode="HighQuality"/>
+        <Image x:Name="BackgroundCrossFade"
+               Stretch="{Binding Background.BackgroundStretch}"
+               RenderOptions.BitmapInterpolationMode="HighQuality"/>
+
+        <Grid RowDefinitions="Auto,*"
+              IsEnabled="{Binding ModalHost.IsBaseLayerInteractive}">
+            <Grid x:Name="TitleBar"
+                  ColumnDefinitions="*,Auto"
+                  Height="{StaticResource Launcher.Layout.TitleBar.Height}">
+                <Grid.Background>
+                    <StaticResource ResourceKey="Launcher.Color.TitleBar.Gradient"/>
+                </Grid.Background>
+                <!-- W3: Right-click context menu on title bar -->
+                <Grid.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="{Binding Shell.I18n[showLauncher]}" Command="{Binding WindowChrome.ExecuteRestoreWindowCommand}"/>
+                        <MenuItem Header="{Binding Shell.I18n[settings]}" Command="{Binding WindowChrome.ShowSettingsCommand}"/>
+                        <Separator/>
+                        <MenuItem Header="{Binding Shell.I18n[close]}" Command="{Binding WindowChrome.CloseCommand}"/>
+                    </ContextMenu>
+                </Grid.ContextMenu>
+                <StackPanel Classes="titlebar-brand-row">
+                    <TextBlock Text="{Binding Shell.ProductName}" Classes="titlebar-brand"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Classes="titlebar-actions">
+                    <Button Classes="chrome" Command="{Binding WindowChrome.OpenDebugPanelCommand}" ToolTip.Tip="{Binding Shell.I18n[debugPanel]}"
+                            IsVisible="{Binding IsDebugFeaturesEnabled}"
+                            AutomationProperties.Name="{Binding Shell.I18n[debugPanel]}">
+                        <materialIcons:MaterialIcon Kind="BugOutline" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}" Foreground="{StaticResource Launcher.Text.OnChrome}"/>
+                    </Button>
+                    <Button Classes="chrome" Command="{Binding ResourcePanel.OpenResourcePanelCommand}" ToolTip.Tip="{Binding Shell.I18n[resourcePanel]}"
+                            AutomationProperties.Name="{Binding Shell.I18n[resourcePanel]}">
+                        <materialIcons:MaterialIcon Kind="ClipboardText" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}" Foreground="{StaticResource Launcher.Text.OnChrome}"/>
+                    </Button>
+                    <Button Classes="chrome settings" Command="{Binding WindowChrome.ShowSettingsCommand}" ToolTip.Tip="{Binding Shell.I18n[settings]}"
+                            AutomationProperties.Name="{Binding Shell.I18n[settings]}">
+                        <materialIcons:MaterialIcon Kind="CogOutline" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}" Foreground="{StaticResource Launcher.Text.OnChrome}"/>
+                    </Button>
+                    <Button Classes="chrome" Command="{Binding WindowChrome.MinimizeCommand}" ToolTip.Tip="{Binding Shell.I18n[minimize]}"
+                            AutomationProperties.Name="{Binding Shell.I18n[minimize]}">
+                        <materialIcons:MaterialIcon Kind="Minus" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}" Foreground="{StaticResource Launcher.Text.OnChrome}"/>
+                    </Button>
+                    <Button Classes="chrome close" Command="{Binding WindowChrome.CloseCommand}" ToolTip.Tip="{Binding Shell.I18n[close]}"
+                            AutomationProperties.Name="{Binding Shell.I18n[close]}">
+                        <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}" Foreground="{StaticResource Launcher.Text.OnChrome}"/>
+                    </Button>
+                </StackPanel>
+            </Grid>
+
+            <Grid Grid.Row="1" RowDefinitions="*,Auto">
+                <Panel>
+                    <Border Classes="remote-surface"
+                            IsVisible="{Binding RemoteContent.IsPanelVisible}">
+                    <Panel>
+                        <ScrollViewer Classes="remote-content-layout-host">
+                            <StackPanel Spacing="{StaticResource Launcher.Spacing.Lg}">
+                            <Border IsVisible="{Binding RemoteContent.HasNotice}"
+                                    Classes="remote-content-card notice-card">
+                                <StackPanel Spacing="{StaticResource Launcher.Spacing.Xs}">
+                                    <TextBlock Text="{Binding Shell.I18n[notice]}" Classes="panel-title"/>
+                                    <TextBlock Text="{Binding RemoteContent.NoticeText}"
+                                               Classes="body"
+                        MaxHeight="{StaticResource Launcher.Component.Dialog.Notice.MaxHeight}"
+                                               TextWrapping="Wrap"
+                                               TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Classes="banner-frame"
+                                    IsVisible="{Binding RemoteContent.HasBannerItems}">
+                                <Grid x:Name="BannerStage"
+                                      Classes="banner-stage"
+                                      Classes.active="{Binding RemoteContent.IsBannerInteractionActive}"
+                                      PointerEntered="OnBannerPointerEntered"
+                                      PointerExited="OnBannerPointerExited"
+                                      GotFocus="OnBannerGotFocus"
+                                      LostFocus="OnBannerLostFocus">
+                                <!-- Banner carousel with horizontal page-slide transition -->
+                                <Carousel x:Name="BannerCarousel"
+                                          Classes="banner-carousel"
+                                          ItemsSource="{Binding RemoteContent.BannerItems}"
+                                          SelectedIndex="{Binding RemoteContent.CarouselSelectedIndex, Mode=TwoWay}"
+                                          PageTransition="{Binding RemoteContent.CarouselTransition}"
+                                          Height="{StaticResource Launcher.Layout.Banner.Height}"
+                                          CornerRadius="{StaticResource Launcher.Radius.Sm}" ClipToBounds="True">
+                                    <Carousel.ItemTemplate>
+                                        <DataTemplate x:DataType="models:RemoteContentItem">
+                                            <Grid Classes="banner-item"
+                                                  Width="{Binding #BannerCarousel.Bounds.Width}"
+                                                  Height="{Binding #BannerCarousel.Bounds.Height}">
+                                                <Border Classes="banner-media">
+                                                    <Panel>
+                                                        <Border Classes="media-placeholder"
+                                                                IsVisible="{Binding IsImageLoadFailed}">
+                                                            <TextBlock Text="{Binding #Root.((vm:MainWindowViewModel)DataContext).Shell.I18n[bannerLoadingFailed]}"
+                                                                       Classes="media-placeholder-text"/>
+                                                        </Border>
+                                                        <Image Source="{Binding BannerBitmap}"
+                                                               Stretch="UniformToFill"/>
+                                                        <controls:LoadingOverlay IsVisible="{Binding IsImageLoading}"
+                                                                                  Text="{Binding #Root.((vm:MainWindowViewModel)DataContext).Shell.I18n[bannerLoading]}"/>
+                                                    </Panel>
+                                                </Border>
+                                                <Button Classes="banner-link"
+                                                        Cursor="Hand"
+                                                        Width="{Binding #BannerCarousel.Bounds.Width}"
+                                                        Height="{Binding #BannerCarousel.Bounds.Height}"
+                                                        AutomationProperties.Name="{Binding #Root.((vm:MainWindowViewModel)DataContext).Shell.I18n[banner]}"
+                                                        Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).RemoteContent.OpenExternalUrlCommand}"
+                                                        CommandParameter="{Binding Url}"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </Carousel.ItemTemplate>
+                                </Carousel>
+                                <Border Classes="banner-edge-gradient banner-edge-gradient-left"
+                                        IsHitTestVisible="False"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Stretch"/>
+                                <Border Classes="banner-edge-gradient banner-edge-gradient-right"
+                                        IsHitTestVisible="False"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Stretch"/>
+                                <Button Classes="icon-button banner-control carousel-navigation banner-previous"
+                                        Cursor="Hand"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Center"
+                                        IsEnabled="{Binding RemoteContent.HasMultipleBanners}"
+                                        Command="{Binding RemoteContent.SelectPreviousBannerCommand}"
+                                        ToolTip.Tip="{Binding Shell.I18n[previousBanner]}"
+                                        AutomationProperties.Name="{Binding Shell.I18n[previousBanner]}">
+                                    <materialIcons:MaterialIcon Kind="ChevronLeft" Width="{StaticResource Launcher.Icon.Xxl}" Height="{StaticResource Launcher.Icon.Xxl}"
+                                                                Foreground="{StaticResource Launcher.Text.OnChrome}"/>
+                                </Button>
+                                <Grid Classes="banner-control banner-indicators"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Bottom"
+                                      IsHitTestVisible="False"
+                                      Margin="{StaticResource Launcher.Component.Banner.Indicator.Margin}">
+                                    <ItemsControl ItemsSource="{Binding RemoteContent.BannerDots}">
+                                        <ItemsControl.ItemsPanel>
+                                            <StaticResource ResourceKey="Launcher.Component.RowPanel.Sm"/>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="models:BannerDot">
+                                                <Border Classes="banner-dot"
+                                                        Classes.active="{Binding IsActive}"
+                                                        IsHitTestVisible="False"/>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Grid>
+                                <Button Classes="icon-button banner-control carousel-navigation banner-next"
+                                        Cursor="Hand"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Center"
+                                        IsEnabled="{Binding RemoteContent.HasMultipleBanners}"
+                                        Command="{Binding RemoteContent.SelectNextBannerCommand}"
+                                        ToolTip.Tip="{Binding Shell.I18n[nextBanner]}"
+                                        AutomationProperties.Name="{Binding Shell.I18n[nextBanner]}">
+                                    <materialIcons:MaterialIcon Kind="ChevronRight" Width="{StaticResource Launcher.Icon.Xxl}" Height="{StaticResource Launcher.Icon.Xxl}"
+                                                                Foreground="{StaticResource Launcher.Text.OnChrome}"/>
+                                </Button>
+                                </Grid>
+                            </Border>
+
+                            <Border Classes="remote-content-card news-card"
+                                    IsVisible="{Binding RemoteContent.HasNewsItems}">
+                                <TabControl Classes="news-tabs"
+                                            ItemsSource="{Binding RemoteContent.NewsCategories}"
+                                            SelectedItem="{Binding RemoteContent.SelectedNewsCategory, Mode=TwoWay}"
+                                            TabStripPlacement="Top"
+                                            PageTransition="{x:Null}"
+                                            Theme="{StaticResource Launcher.RemoteContent.NewsTabControlTheme}"
+                                            ItemContainerTheme="{StaticResource Launcher.RemoteContent.NewsTabItemTheme}">
+                                    <TabControl.ItemTemplate>
+                                        <DataTemplate x:DataType="models:NewsCategory">
+                                            <TextBlock Text="{Binding Label}" VerticalAlignment="Center"/>
+                                        </DataTemplate>
+                                    </TabControl.ItemTemplate>
+                                    <TabControl.ContentTemplate>
+                                        <DataTemplate x:DataType="models:NewsCategory">
+                                                    <ScrollViewer Classes="news-viewport"
+                                                          MaxHeight="{StaticResource Launcher.Layout.News.Viewport.Height}"
+                                                          HorizontalScrollBarVisibility="Disabled"
+                                                          VerticalScrollBarVisibility="Auto">
+                                                <ItemsControl ItemsSource="{Binding Items}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}"/>
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="models:RemoteContentItem">
+                                                            <Button Classes="content-link news-row"
+                                                                    Cursor="Hand"
+                                                                    MinHeight="{StaticResource Launcher.Control.Height.Setting}"
+                                                                    ToolTip.Tip="{Binding Title}"
+                                                                    AutomationProperties.Name="{Binding Title}"
+                                                                    Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).RemoteContent.OpenExternalUrlCommand}"
+                                                                    CommandParameter="{Binding Url}">
+                                                                <Border Classes="content-row news-content-row">
+                                                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Lg}">
+                                                                        <TextBlock Text="{Binding Title}"
+                                                                                   Classes="value"
+                                                                                   MaxLines="1"
+                                                                                   TextWrapping="NoWrap"
+                                                                                   TextTrimming="CharacterEllipsis"/>
+                                                                        <TextBlock Grid.Column="1"
+                                                                                   Text="{Binding Subtitle}"
+                                                                                   HorizontalAlignment="Right"
+                                                                                   TextAlignment="Right"
+                                                                                   TextTrimming="CharacterEllipsis"
+                                                                                   Classes="caption"/>
+                                                                    </Grid>
+                                                                </Border>
+                                                            </Button>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </ScrollViewer>
+                                        </DataTemplate>
+                                    </TabControl.ContentTemplate>
+                                </TabControl>
+                            </Border>
+
+                            </StackPanel>
+                        </ScrollViewer>
+                        <Border Classes="remote-content-load-error"
+                                IsVisible="{Binding RemoteContent.HasLoadError}">
+                            <StackPanel HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Spacing="{StaticResource Launcher.Spacing.Md}">
+                                <materialIcons:MaterialIcon Kind="AlertCircle"
+                                                            Width="{StaticResource Launcher.Icon.Md}"
+                                                            Height="{StaticResource Launcher.Icon.Md}"
+                                                            HorizontalAlignment="Center"
+                                                            Foreground="{StaticResource Launcher.Color.Danger}"/>
+                                <TextBlock Text="{Binding Shell.I18n[remoteContentLoadFailed]}"
+                                           Classes="body"
+                                           TextAlignment="Center"/>
+                                <!-- 失败态的就地恢复路径：文案指引"刷新重试"，按钮直接给出重试动作。 -->
+                                <Button Classes="flat-action"
+                                        Cursor="Hand"
+                                        HorizontalAlignment="Center"
+                                        Command="{Binding RefreshCommand}"
+                                        AutomationProperties.Name="{Binding Shell.I18n[retry]}">
+                                    <StackPanel Classes="button-content">
+                                        <materialIcons:MaterialIcon Kind="Refresh" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                        <TextBlock Text="{Binding Shell.I18n[retry]}"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </Border>
+                        <controls:LoadingOverlay Classes="remote-content-loading-overlay"
+                                                  IsVisible="{Binding RemoteContent.IsLoading}"
+                                                  Text="{Binding Shell.I18n[remoteContentLoading]}"/>
+                    </Panel>
+                    </Border>
+                <StackPanel Classes="social-actions" Spacing="{StaticResource Launcher.Spacing.Sm}">
+                    <Button Classes="social-chip social-action official-site"
+                            Cursor="Hand"
+                            IsVisible="{Binding RemoteContent.HasRemoteContent}"
+                            ToolTip.Tip="{Binding Shell.I18n[officialSite]}"
+                            AutomationProperties.Name="{Binding Shell.I18n[officialSite]}"
+                            Command="{Binding WindowChrome.OpenOfficialSiteCommand}">
+                        <materialIcons:MaterialIcon Kind="Web"
+                                                    Width="{StaticResource Launcher.Icon.Md}"
+                                                    Height="{StaticResource Launcher.Icon.Md}"
+                                                    Foreground="{DynamicResource Launcher.Text.Secondary}"/>
+                    </Button>
+                    <ItemsControl IsVisible="{Binding RemoteContent.HasRemoteContent}"
+                                  ItemsSource="{Binding RemoteContent.SocialMediaItems}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Vertical"
+                                            Spacing="{StaticResource Launcher.Spacing.Sm}"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="models:RemoteContentItem">
+                                <Button Classes="social-chip social-action"
+                                        Cursor="Hand"
+                                        ToolTip.Tip="{Binding Title}"
+                                        AutomationProperties.Name="{Binding Title}"
+                                        Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).RemoteContent.OpenExternalUrlCommand}"
+                                        CommandParameter="{Binding Url}">
+                                    <materialIcons:MaterialIcon Kind="{Binding SocialIconKind}"
+                                                                Width="{StaticResource Launcher.Icon.Md}"
+                                                                Height="{StaticResource Launcher.Icon.Md}"
+                                                                Foreground="{DynamicResource Launcher.Text.Secondary}"/>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Panel>
+
+
+                <!-- ADR-016 游戏操作表面：安装/进度/控制共用同一任务容器，状态在容器内原地切换；
+                     切换时由 code-behind 驱动高度点到点过渡与短暂透明度下沉表达任务延续，
+                     降动效直接瞬切。容器自身的 motion-enter 以静态类声明为一次性入场锚点，
+                     入场窗期后由 code-behind 摘除（任何面板可见即成立，不随状态切换重放）。
+                     外壳只承担定位与形变，底栏外观（含内边距与两档最小高度）仍由各状态
+                     自行承载，确保与重构前单面板的盒子几何完全一致。 -->
+                <Border Grid.Row="1"
+                        x:Name="OperationSurface"
+                        Classes="operation-surface motion-bottom motion-enter"
+                        Classes.motion-enabled="{Binding IsMotionEnabled}">
+                    <Border.RenderTransform>
+                        <TranslateTransform/>
+                    </Border.RenderTransform>
+                    <Panel>
+                        <Border x:Name="OperationInstallState" Classes="operation-state bottom-panel"
+                                IsVisible="{Binding Operations.IsInstallPanelVisible}">
+                    <!-- Compact layout -->
+                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Xl}"
+                          IsVisible="{Binding IsStatusDetailHidden, Converter={x:Static BoolConverters.Not}}">
+                        <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Lg}">
+                                <TextBlock Classes="caption" Text="{Binding Shell.DiskSpaceText}"/>
+                                <TextBlock Classes="caption" Text="{Binding Shell.NetworkText}"/>
+                                <TextBlock Classes="caption" Text="{Binding Shell.DownloadSourceText}"/>
+                                <TextBlock Classes="caption" Text="{Binding Shell.VersionText}"/>
+                            </StackPanel>
+                            <Border Classes="path-field">
+                                <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}">
+                                    <TextBlock Text="{Binding Shell.I18n[path]}" Classes="value" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding Shell.PathText}" Classes="caption" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                    <Button Grid.Column="2" Classes="icon-link secondary-operation" Command="{Binding Settings.ChangePersistedGamePathCommand}" VerticalAlignment="Center"
+                                            IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}"
+                                            ToolTip.Tip="{Binding Shell.I18n[changePath]}"
+                                            AutomationProperties.Name="{Binding Shell.I18n[changePath]}">
+                                        <StackPanel Classes="button-content">
+                                            <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                            <TextBlock Text="{Binding Shell.I18n[changePath]}"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Grid.Column="3" Classes="icon-link secondary-operation" Command="{Binding Settings.SelectInstalledGameCommand}" VerticalAlignment="Center"
+                                            IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}"
+                                            ToolTip.Tip="{Binding Shell.I18n[selectInstalledGameTooltip]}"
+                                            AutomationProperties.Name="{Binding Shell.I18n[selectInstalledGame]}">
+                                        <StackPanel Classes="button-content">
+                                            <materialIcons:MaterialIcon Kind="FolderSearchOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                            <TextBlock Text="{Binding Shell.I18n[selectInstalledGame]}"/>
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                        <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Md}" VerticalAlignment="Center">
+                            <Button Classes="flat-action bottom-action secondary-operation" Command="{Binding RefreshCommand}"
+                                    ToolTip.Tip="{Binding Shell.I18n[refreshTooltip]}"
+                                    IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}"
+                                    AutomationProperties.Name="{Binding Shell.I18n[refresh]}">
+                                <StackPanel Classes="button-content">
+                                    <materialIcons:MaterialIcon Kind="Refresh" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
+                                    <TextBlock Text="{Binding Shell.I18n[refresh]}"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="primary-action bottom-action primary-operation" Command="{Binding Operations.InstallOrUpdateCommand}"
+                                    ToolTip.Tip="{Binding Operations.InstallButtonToolTip}"
+                                    ToolTip.ShowOnDisabled="True"
+                                    IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}"
+                                    AutomationProperties.Name="{Binding Operations.InstallButtonText}"
+                                    AutomationProperties.HelpText="{Binding Operations.InstallButtonToolTip}">
+                                <StackPanel Classes="button-content">
+                                    <materialIcons:MaterialIcon Kind="{Binding Operations.InstallButtonIconKind}" Width="{StaticResource Launcher.Icon.Xl}" Height="{StaticResource Launcher.Icon.Xl}"/>
+                                    <TextBlock Text="{Binding Operations.InstallButtonText}"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                        </Border>
+
+                        <Border x:Name="OperationProgressState" Classes="operation-state bottom-panel"
+                                IsVisible="{Binding Operations.IsProgressPanelVisible}">
+                    <Grid Classes="operation-layout" ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Xl}" VerticalAlignment="Center">
+                        <Grid Classes="operation-status"
+                              RowDefinitions="Auto,Auto,Auto"
+                              ColumnSpacing="{StaticResource Launcher.Spacing.Md}"
+                              RowSpacing="{StaticResource Launcher.Spacing.Sm}"
+                              VerticalAlignment="Center">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" MinWidth="{StaticResource Launcher.Icon.Xxl}"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <!-- Title + percentage -->
+                            <materialIcons:MaterialIcon Kind="{Binding Operations.ProgressIconKind}"
+                                                        Width="{StaticResource Launcher.Icon.Lg}"
+                                                        Height="{StaticResource Launcher.Icon.Lg}"
+                                                        Foreground="{DynamicResource Launcher.Color.Primary}"
+                                                        VerticalAlignment="Center"/>
+                            <Grid Grid.Row="0" Grid.Column="1" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}">
+                                <TextBlock Text="{Binding Operations.ProgressTitle}" Classes="progress-title operation-status-title" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="2" Text="{Binding Operations.ProgressValue, StringFormat={}{0}%}"
+                                           Classes="progress-title" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource Launcher.Color.Primary}"/>
+                            </Grid>
+                            <!-- Progress bar -->
+                            <ProgressBar Grid.Row="1" Grid.Column="1" Value="{Binding Operations.ProgressValue}" Minimum="0" Maximum="100" Height="{StaticResource Launcher.Component.Progress.Bar.Height}"/>
+                            <!-- Stage | Speed | Size | ETA -->
+                            <Grid Grid.Row="2" Grid.Column="1" ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                                <TextBlock Text="{Binding Operations.ProgressDetail}" Classes="caption"/>
+                                <TextBlock Grid.Column="2" Text="{Binding Operations.ProgressSpeed}" Classes="caption"
+                                           IsVisible="{Binding Operations.ProgressSpeed, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                <TextBlock Grid.Column="3" Text="{Binding Operations.ProgressSize}" Classes="caption"
+                                           IsVisible="{Binding Operations.ProgressSize, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                <TextBlock Grid.Column="4" Text="{Binding Operations.ProgressEstimated}" Classes="caption"
+                                           Foreground="{DynamicResource Launcher.Color.Primary}"
+                                           IsVisible="{Binding Operations.ProgressEstimated, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                            </Grid>
+                        </Grid>
+                        <StackPanel Grid.Column="1" Classes="operation-actions" Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
+                            <Button Classes="flat-action bottom-action secondary-operation" Command="{Binding Operations.PauseResumeCommand}" VerticalAlignment="Center"
+                                    IsVisible="{Binding Operations.CanPauseOperation}"
+                                    ToolTip.Tip="{Binding Operations.PauseResumeText}"
+                                    AutomationProperties.Name="{Binding Operations.PauseResumeText}">
+                                <StackPanel Classes="button-content">
+                                    <materialIcons:MaterialIcon Kind="{Binding Operations.PauseResumeIcon}" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
+                                    <TextBlock Text="{Binding Operations.PauseResumeText}"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="flat-action bottom-action secondary-operation" Command="{Binding Operations.RequestStopCommand}" VerticalAlignment="Center"
+                                    ToolTip.Tip="{Binding Shell.I18n[stop]}"
+                                    AutomationProperties.Name="{Binding Shell.I18n[stop]}">
+                                <StackPanel Classes="button-content">
+                                    <materialIcons:MaterialIcon Kind="Stop" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
+                                    <TextBlock Text="{Binding Shell.I18n[stop]}"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                        </Border>
+
+                        <Border x:Name="OperationControlState" Classes="operation-state bottom-panel control-panel"
+                                IsVisible="{Binding Operations.IsControlPanelVisible}">
+                    <Panel>
+                    <!-- Compact layout -->
+                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Xxl}"
+                          IsVisible="{Binding IsStatusDetailHidden, Converter={x:Static BoolConverters.Not}}">
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Lg}" VerticalAlignment="Center">
+                            <Button Classes="launcher-control start primary-operation" Command="{Binding Operations.StartGameCommand}" ToolTip.Tip="{Binding Shell.I18n[startGame]}"
+                                    IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}"
+                                    AutomationProperties.Name="{Binding Shell.I18n[startGame]}">
+                                <StackPanel Classes="button-content">
+                                    <materialIcons:MaterialIcon Kind="PlayCircle" Width="{StaticResource Launcher.Icon.Xxl}" Height="{StaticResource Launcher.Icon.Xxl}"/>
+                                    <TextBlock Text="{Binding Shell.I18n[startGame]}"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="launcher-control manage secondary-operation"
+                                    IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}"
+                                    ToolTip.Tip="{Binding Shell.I18n[gameManagement]}"
+                                    AutomationProperties.Name="{Binding Shell.I18n[gameManagement]}">
+                                <materialIcons:MaterialIcon Kind="Menu" Width="{StaticResource Launcher.Icon.Lg}" Height="{StaticResource Launcher.Icon.Lg}"/>
+                                <Button.Flyout>
+                                    <MenuFlyout Placement="Top">
+                                        <MenuItem Header="{Binding Shell.I18n[gameCheckUpdate]}"
+                                                  Command="{Binding Operations.CheckForGameUpdateCommand}"
+                                                  AutomationProperties.Name="{Binding Shell.I18n[gameCheckUpdate]}">
+                                            <MenuItem.Icon>
+                                                <materialIcons:MaterialIcon Kind="Update" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem Header="{Binding Shell.I18n[gameCreateShortcut]}"
+                                                  Command="{Binding Operations.CreateGameShortcutCommand}"
+                                                  AutomationProperties.Name="{Binding Shell.I18n[gameCreateShortcut]}">
+                                            <MenuItem.Icon>
+                                                <materialIcons:MaterialIcon Kind="Monitor" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <Separator/>
+                                        <MenuItem Header="{Binding Shell.I18n[gameOpenFolder]}"
+                                                  Command="{Binding Operations.OpenGameFolderCommand}"
+                                                  AutomationProperties.Name="{Binding Shell.I18n[gameOpenFolder]}">
+                                            <MenuItem.Icon>
+                                                <materialIcons:MaterialIcon Kind="FolderOpenOutline" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem Header="{Binding Shell.I18n[repair]}"
+                                                  Command="{Binding Operations.RequestRepairCommand}"
+                                                  AutomationProperties.Name="{Binding Shell.I18n[repair]}">
+                                            <MenuItem.Icon>
+                                                <materialIcons:MaterialIcon Kind="Tools" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem Header="{Binding Shell.I18n[uninstall]}"
+                                                  Command="{Binding Operations.RequestUninstallCommand}"
+                                                  AutomationProperties.Name="{Binding Shell.I18n[uninstall]}">
+                                            <MenuItem.Icon>
+                                                <materialIcons:MaterialIcon Kind="DeleteOutline" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                    </MenuFlyout>
+                                </Button.Flyout>
+                            </Button>
+                        </StackPanel>
+                        <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="{StaticResource Launcher.Spacing.Lg}">
+                            <TextBlock Text="{Binding Operations.GameSessionStateText}" Classes="on-dark-caption"
+                                       IsVisible="{Binding Operations.IsGameSessionVisible}"/>
+                            <TextBlock Text="{Binding Shell.LaunchCheckText}" Classes="on-dark-caption"/>
+                            <TextBlock Text="{Binding Shell.NetworkText}" Classes="on-dark-caption"/>
+                            <TextBlock Text="{Binding Shell.DownloadSourceText}" Classes="on-dark-caption"/>
+                            <TextBlock Text="{Binding Shell.VersionText}" Classes="on-dark-caption"/>
+                        </StackPanel>
+                    </Grid>
+                    <!-- Hidden layout (buttons only) -->
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="{StaticResource Launcher.Spacing.Lg}"
+                                    IsVisible="{Binding IsStatusDetailHidden}"
+                                    VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Operations.GameSessionStateText}" Classes="on-dark-caption"
+                                       IsVisible="{Binding Operations.IsGameSessionVisible}"
+                                       VerticalAlignment="Center"/>
+                            <Button Classes="launcher-control start primary-operation" Command="{Binding Operations.StartGameCommand}" ToolTip.Tip="{Binding Shell.I18n[startGame]}"
+
+                                IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}"
+                                AutomationProperties.Name="{Binding Shell.I18n[startGame]}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="PlayCircle" Width="{StaticResource Launcher.Icon.Xxl}" Height="{StaticResource Launcher.Icon.Xxl}"/>
+                                <TextBlock Text="{Binding Shell.I18n[startGame]}"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="launcher-control manage secondary-operation"
+                                IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}"
+                                ToolTip.Tip="{Binding Shell.I18n[gameManagement]}"
+                                AutomationProperties.Name="{Binding Shell.I18n[gameManagement]}">
+                            <materialIcons:MaterialIcon Kind="Menu" Width="{StaticResource Launcher.Icon.Lg}" Height="{StaticResource Launcher.Icon.Lg}"/>
+                            <Button.Flyout>
+                                <MenuFlyout Placement="Top">
+                                    <MenuItem Header="{Binding Shell.I18n[gameCheckUpdate]}"
+                                              Command="{Binding Operations.CheckForGameUpdateCommand}"
+                                              AutomationProperties.Name="{Binding Shell.I18n[gameCheckUpdate]}">
+                                        <MenuItem.Icon>
+                                            <materialIcons:MaterialIcon Kind="Update" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="{Binding Shell.I18n[gameCreateShortcut]}"
+                                              Command="{Binding Operations.CreateGameShortcutCommand}"
+                                              AutomationProperties.Name="{Binding Shell.I18n[gameCreateShortcut]}">
+                                        <MenuItem.Icon>
+                                            <materialIcons:MaterialIcon Kind="Monitor" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <Separator/>
+                                    <MenuItem Header="{Binding Shell.I18n[gameOpenFolder]}"
+                                              Command="{Binding Operations.OpenGameFolderCommand}"
+                                              AutomationProperties.Name="{Binding Shell.I18n[gameOpenFolder]}">
+                                        <MenuItem.Icon>
+                                            <materialIcons:MaterialIcon Kind="FolderOpenOutline" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="{Binding Shell.I18n[repair]}"
+                                              Command="{Binding Operations.RequestRepairCommand}"
+                                              AutomationProperties.Name="{Binding Shell.I18n[repair]}">
+                                        <MenuItem.Icon>
+                                            <materialIcons:MaterialIcon Kind="Tools" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="{Binding Shell.I18n[uninstall]}"
+                                              Command="{Binding Operations.RequestUninstallCommand}"
+                                              AutomationProperties.Name="{Binding Shell.I18n[uninstall]}">
+                                        <MenuItem.Icon>
+                                            <materialIcons:MaterialIcon Kind="DeleteOutline" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                </MenuFlyout>
+                            </Button.Flyout>
+                        </Button>
+                    </StackPanel>
+                    </Panel>
+                        </Border>
+                    </Panel>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <views:MainWindowSettingsOverlay/>
+        <views:MainWindowDebugOverlay/>
+        <views:DesignGalleryOverlay/>
+        <views:MainWindowLogViewerOverlay/>
+        <views:MainWindowLogExportOverlay/>
+        <views:MainWindowDialogsOverlay/>
+        <views:MainWindowToastOverlay/>
+    </Grid>
+</Window>

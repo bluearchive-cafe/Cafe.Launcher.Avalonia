@@ -1,0 +1,170 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:helpers="using:Cafe.Launcher.UI.Helpers"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia">
+    <Style Selector="Border.toast-card">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Toast.Background}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
+        <Setter Property="MinWidth" Value="{StaticResource Launcher.Component.Toast.Width}"/>
+        <Setter Property="MaxWidth" Value="{StaticResource Launcher.Component.Toast.Width}"/>
+        <Setter Property="Opacity" Value="1"/>
+        <Setter Property="ClipToBounds" Value="True"/>
+    </Style>
+    <!-- ADR-016 Toast 进入：透明度走进入减速曲线，右侧短距滑入走点到点曲线，均为 167ms 快速档。 -->
+    <Style Selector="Border.toast-card.motion-enabled:not(.motion-exit)">
+        <Style.Animations>
+            <Animation Duration="{x:Static helpers:MotionTokens.FastDuration}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Enter}">
+                <KeyFrame Cue="0%">
+                    <Setter Property="Opacity" Value="0"/>
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                    <Setter Property="Opacity" Value="1"/>
+                </KeyFrame>
+            </Animation>
+            <Animation Duration="{x:Static helpers:MotionTokens.FastDuration}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.PointToPoint}">
+                <KeyFrame Cue="0%">
+                    <Setter Property="TranslateTransform.X" Value="{StaticResource Launcher.Motion.Offset.Toast}"/>
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                    <Setter Property="TranslateTransform.X" Value="0"/>
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
+    </Style>
+    <Style Selector="Border.toast-card.motion-enabled.motion-exit">
+        <Style.Animations>
+            <Animation Duration="{x:Static helpers:MotionTokens.FastDuration}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Exit}">
+                <KeyFrame Cue="0%">
+                    <Setter Property="Opacity" Value="1"/>
+                    <Setter Property="TranslateTransform.X" Value="0"/>
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                    <Setter Property="Opacity" Value="0"/>
+                    <Setter Property="TranslateTransform.X" Value="{StaticResource Launcher.Motion.Offset.Toast}"/>
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
+    </Style>
+    <Style Selector="Grid.toast-host">
+        <Setter Property="IsHitTestVisible" Value="True"/>
+        <Setter Property="Margin" Value="{StaticResource Launcher.Component.Toast.Host.Margin}"/>
+        <Setter Property="VerticalAlignment" Value="Top"/>
+        <Setter Property="HorizontalAlignment" Value="Right"/>
+    </Style>
+    <Style Selector="StackPanel.toast-list">
+        <Setter Property="Spacing" Value="{StaticResource Launcher.Spacing.Sm}"/>
+        <Setter Property="HorizontalAlignment" Value="Right"/>
+    </Style>
+    <Style Selector="Grid.toast-layout">
+        <Setter Property="ColumnSpacing" Value="{StaticResource Launcher.Spacing.Sm}"/>
+    </Style>
+    <Style Selector="Border.toast-content">
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Toast.Content.Padding}"/>
+    </Style>
+    <Style Selector="TextBlock.toast-message">
+        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Sm}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Body}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="MaxWidth" Value="{StaticResource Launcher.Component.Toast.Message.MaxWidth}"/>
+        <Setter Property="Margin" Value="{StaticResource Launcher.Component.Toast.Message.Margin}"/>
+    </Style>
+    <Style Selector="Button.toast-close">
+        <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
+        <Setter Property="Width" Value="{StaticResource Launcher.Control.Height.Setting}"/>
+        <Setter Property="Height" Value="{StaticResource Launcher.Control.Height.Setting}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Opacity" Value="1"/>
+        <Setter Property="VerticalAlignment" Value="Top"/>
+        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
+    </Style>
+    <Style Selector="Button.toast-close:pointerover">
+        <Setter Property="Opacity" Value="1"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Hover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
+    </Style>
+    <Style Selector="Button.toast-close:pressed">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Pressed}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
+    </Style>
+    <Style Selector="TextBlock.toast-title">
+        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Md}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+    <Style Selector="materialIcons|MaterialIcon.toast-icon">
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="WrapPanel.toast-actions">
+        <Setter Property="Margin" Value="{StaticResource Launcher.Component.Toast.Action.RowMargin}"/>
+    </Style>
+    <Style Selector="Button.toast-primary-action">
+        <Setter Property="MinWidth" Value="{StaticResource Launcher.Control.MinWidth.None}"/>
+        <Setter Property="MinHeight" Value="{StaticResource Launcher.Component.Toast.Action.MinHeight}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Toast.Action.Padding}"/>
+        <Setter Property="Margin" Value="{StaticResource Launcher.Component.Toast.Action.Primary.Margin}"/>
+        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Label.Md}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
+    </Style>
+    <Style Selector="Button.toast-primary-action:pointerover">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Hover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
+    </Style>
+    <Style Selector="Button.toast-primary-action:pressed">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
+    </Style>
+    <Style Selector="Button.toast-primary-action:disabled">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Border}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
+    </Style>
+    <Style Selector="Button.toast-secondary-action">
+        <Setter Property="MinWidth" Value="{StaticResource Launcher.Control.MinWidth.None}"/>
+        <Setter Property="MinHeight" Value="{StaticResource Launcher.Component.Toast.Action.MinHeight}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Toast.Action.Padding}"/>
+        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Label.Md}"/>
+        <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Button.Border}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
+    </Style>
+    <Style Selector="Button.toast-secondary-action:pointerover">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Hover}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Hover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary}"/>
+    </Style>
+    <Style Selector="Button.toast-secondary-action:pressed">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Pressed}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary}"/>
+    </Style>
+    <Style Selector="Button.toast-secondary-action:disabled">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
+    </Style>
+    <Style Selector="ProgressBar.toast-progress">
+        <Setter Property="Height" Value="{StaticResource Launcher.Component.Toast.Action.Progress.Height}"/>
+        <Setter Property="MinHeight" Value="{StaticResource Launcher.Component.Toast.Action.Progress.Height}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Card.Border}"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="VerticalAlignment" Value="Bottom"/>
+    </Style>
+</Styles>

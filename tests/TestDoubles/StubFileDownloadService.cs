@@ -1,7 +1,7 @@
-using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.Core.Services;
 
-namespace Cafe.Launcher.Avalonia.Testing;
+namespace Cafe.Launcher.Testing;
 
 /// <summary>
 /// <see cref="IFileDownloadService"/> 的共享测试替身，由两个测试工程通过 csproj Link

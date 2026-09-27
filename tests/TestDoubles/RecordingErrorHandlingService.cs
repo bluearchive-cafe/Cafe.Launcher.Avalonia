@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.UI.Services;
 
-namespace Cafe.Launcher.Avalonia.Testing;
+namespace Cafe.Launcher.Testing;
 
 /// <summary>一次 <see cref="IErrorHandlingService.HandleErrorAsync"/> 调用的完整记录。</summary>
 public readonly record struct HandledError(

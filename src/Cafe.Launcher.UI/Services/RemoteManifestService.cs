@@ -1,0 +1,130 @@
+using System;
+using System.Net;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using Cafe.Launcher.UI.Constants;
+using Cafe.Launcher.UI.Models;
+using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Services;
+
+namespace Cafe.Launcher.UI.Services;
+
+/// <summary>
+/// Deep module that owns the two-phase remote manifest protocol:
+///   1. Get manifest URL from server (metadata → URL)
+///   2. Download manifest from URL (URL → RemoteManifest)
+///
+/// Eliminates duplicate protocol interpretation across GameDownloadService
+/// and ManifestValidationService, each of which re-implemented the same
+/// two-phase fetch with different failure semantics.
+/// </summary>
+internal sealed class RemoteManifestService
+{
+    private readonly ILauncherApiClient apiClient;
+
+    public RemoteManifestService(ILauncherApiClient apiClient)
+    {
+        this.apiClient = apiClient;
+    }
+
+    /// <summary>
+    /// Fetch a remote manifest that the caller MUST have (e.g. latest version
+    /// for download/repair). Throws if the manifest URL is empty — the caller
+    /// cannot proceed without this manifest.
+    /// Cancellation propagates as <see cref="OperationCanceledException"/>.
+    /// </summary>
+    public async Task<RemoteManifest> GetRequiredManifestAsync(
+        string version,
+        string basis,
+        string patchUrlGroup,
+        CancellationToken cancellationToken = default)
+    {
+        var url = await apiClient.GetManifestUrlAsync(
+            version,
+            basis,
+            patchUrlGroup,
+            cancellationToken).ConfigureAwait(false);
+
+        if (string.IsNullOrWhiteSpace(url.Url))
+        {
+            throw new InvalidOperationException("Remote manifest URL is empty.");
+        }
+
+        return await FetchManifestAsync(
+            url.Url,
+            patchUrlGroup,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Fetch a remote manifest as a best-effort. Returns null on empty URL
+    /// or non-critical network/protocol failures. The caller can fall back
+    /// to local data.
+    /// Cancellation always propagates.
+    /// </summary>
+    public async Task<RemoteManifest?> GetOptionalManifestAsync(
+        string version,
+        string basis,
+        string patchUrlGroup,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var url = await apiClient.GetManifestUrlAsync(
+                version,
+                basis,
+                patchUrlGroup,
+                cancellationToken).ConfigureAwait(false);
+
+            if (string.IsNullOrWhiteSpace(url.Url))
+            {
+                return null;
+            }
+
+            return await FetchManifestAsync(
+                url.Url,
+                patchUrlGroup,
+                cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            // 豁免：manifest 拉取失败按上游语义 fail-open（返回 null 继续），
+            // 上层已有独立的错误上报通道。
+            System.Diagnostics.Debug.WriteLine(
+                $"RemoteManifest: fetch failed: {ex.Message}");
+            return null;
+        }
+    }
+
+    private async Task<RemoteManifest> FetchManifestAsync(
+        string manifestUrl,
+        string patchUrlGroup,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await apiClient.GetRemoteManifestAsync(
+                manifestUrl,
+                cancellationToken).ConfigureAwait(false);
+        }
+        catch (HttpRequestException exception)
+            when (exception.StatusCode == HttpStatusCode.NotFound
+                && patchUrlGroup == PatchUrlGroups.Cafe)
+        {
+            var officialUrl = apiClient.RestoreOfficialPackageUrl(manifestUrl);
+            if (string.Equals(officialUrl, manifestUrl, StringComparison.Ordinal))
+            {
+                throw;
+            }
+
+            return await apiClient.GetRemoteManifestAsync(
+                officialUrl,
+                cancellationToken).ConfigureAwait(false);
+        }
+    }
+}

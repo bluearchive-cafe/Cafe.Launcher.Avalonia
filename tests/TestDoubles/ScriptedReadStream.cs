@@ -3,7 +3,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Cafe.Launcher.Avalonia.Testing;
+namespace Cafe.Launcher.Testing;
 
 /// <summary>读尽交付字节预算之后的尾部行为。</summary>
 public enum ReadTail

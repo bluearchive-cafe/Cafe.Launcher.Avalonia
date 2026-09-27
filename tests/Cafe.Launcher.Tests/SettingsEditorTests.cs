@@ -1,0 +1,387 @@
+using System.ComponentModel;
+using Cafe.Launcher.Constants;
+using Cafe.Launcher.UI.Models;
+using Cafe.Launcher.UI.Services;
+using Cafe.Launcher.Core.Constants;
+using Cafe.Launcher.Core.Models;
+
+namespace Cafe.Launcher.Tests;
+
+public sealed class SettingsEditorTests
+{
+    [Fact]
+    public void GetSavedSnapshot_WhenCurrentHasUnsavedChanges_ReturnsAppliedSnapshot()
+    {
+        var editor = new SettingsEditor();
+        editor.ApplySnapshot(new LauncherSettings
+        {
+            PatchUrlGroup = PatchUrlGroups.Official
+        });
+
+        editor.Current.PatchUrlGroup = PatchUrlGroups.Cafe;
+
+        var saved = editor.GetSavedSnapshot();
+
+        Assert.Equal(PatchUrlGroups.Official, saved.PatchUrlGroup);
+    }
+
+    [Fact]
+    public void CurrentPropertyChange_MarksDirtyAndDiscardRestoresSnapshot()
+    {
+        var editor = new SettingsEditor();
+        editor.ApplySnapshot(new LauncherSettings { Language = LauncherLanguages.Auto });
+
+        editor.Current.Language = LauncherLanguages.Japanese;
+
+        Assert.True(editor.IsDirty);
+        Assert.Equal(LauncherLanguages.Japanese, editor.Current.Language);
+
+        editor.Discard();
+
+        Assert.False(editor.IsDirty);
+        Assert.Equal(LauncherLanguages.Auto, editor.Current.Language);
+    }
+
+    [Fact]
+    public void CurrentPropertyChange_WhenRevertedToSavedValue_ClearsDirty()
+    {
+        var editor = new SettingsEditor();
+        editor.ApplySnapshot(new LauncherSettings { Language = LauncherLanguages.Auto });
+
+        editor.Current.Language = LauncherLanguages.Japanese;
+        editor.Current.Language = LauncherLanguages.Auto;
+
+        Assert.False(editor.IsDirty);
+    }
+
+    [Fact]
+    public void EnableHttp2Change_MarksDirtyAndDiscardRestoresSnapshot()
+    {
+        var editor = new SettingsEditor();
+        editor.ApplySnapshot(new LauncherSettings { EnableHttp2 = false });
+
+        editor.Current.EnableHttp2 = true;
+
+        Assert.True(editor.IsDirty);
+
+        editor.Discard();
+
+        Assert.False(editor.IsDirty);
+        Assert.False(editor.Current.EnableHttp2);
+    }
+
+    [Fact]
+    public void ApplySnapshot_LoadsAllFields()
+    {
+        var editor = new SettingsEditor();
+        var settings = new LauncherSettings
+        {
+            GamePath = @"D:\Games",
+            LaunchCheckMode = LaunchCheckModes.RemoteManifest,
+            ProxyMode = ProxyModes.System,
+            CloseBehavior = CloseBehaviors.Exit,
+            Language = LauncherLanguages.Japanese,
+            ThemeMode = ThemeModes.Dark,
+            ThemeColorMode = ThemeColorModes.Custom,
+            ThemeColorExtractionAlgorithm = ThemeColorExtractionAlgorithms.Wu,
+            ThemeColorVariant = ThemeColorVariants.Expressive,
+            NeutralColorStrategy = NeutralColorStrategies.SeedFollowing,
+            CustomThemeColor = "#FF00FF00",
+            DownloadSpeedLimit = DownloadSpeedLimits.Speed10MBs,
+            EnableStartupUpdateCheck = false,
+            ShowRemoteContentCard = false,
+            PatchUrlGroup = PatchUrlGroups.Cafe,
+            CustomBackgroundPath = @"C:\wallpaper.png",
+            BackgroundSource = BackgroundSources.Custom,
+            BackgroundFit = BackgroundFits.Fill,
+            BackgroundFillColor = "#FF112233",
+            ResourcePanelUid = "12345",
+            UpdateChannel = UpdateChannels.Beta
+        };
+
+        editor.ApplySnapshot(settings);
+
+        var current = editor.Current;
+        Assert.Equal(@"D:\Games", current.GamePath);
+        Assert.Equal(LaunchCheckModes.RemoteManifest, current.LaunchCheckMode);
+        Assert.Equal(ProxyModes.System, current.ProxyMode);
+        Assert.Equal(CloseBehaviors.Exit, current.CloseBehavior);
+        Assert.Equal(LauncherLanguages.Japanese, current.Language);
+        Assert.Equal(ThemeModes.Dark, current.ThemeMode);
+        Assert.Equal(ThemeColorModes.Custom, current.ThemeColorMode);
+        Assert.Equal(ThemeColorExtractionAlgorithms.Wu, current.ThemeColorExtractionAlgorithm);
+        Assert.Equal(ThemeColorVariants.Expressive, current.ThemeColorVariant);
+        Assert.Equal(NeutralColorStrategies.SeedFollowing, current.NeutralColorStrategy);
+        Assert.Equal("#FF00FF00", current.CustomThemeColor);
+        Assert.Equal(DownloadSpeedLimits.Speed10MBs, current.DownloadSpeedLimit);
+        Assert.False(current.EnableStartupUpdateCheck);
+        Assert.False(current.ShowRemoteContentCard);
+        Assert.Equal(PatchUrlGroups.Cafe, current.PatchUrlGroup);
+        Assert.Equal(@"C:\wallpaper.png", current.CustomBackgroundPath);
+        Assert.Equal(BackgroundSources.Custom, current.BackgroundSource);
+        Assert.Equal(BackgroundFits.Fill, current.BackgroundFit);
+        Assert.Equal("#FF112233", current.BackgroundFillColor);
+        Assert.Equal("12345", current.ResourcePanelUid);
+        Assert.Equal(UpdateChannels.Beta, current.UpdateChannel);
+        Assert.False(editor.IsDirty);
+    }
+
+    [Fact]
+    public void Commit_ModifiesField_IsDirtyTrue()
+    {
+        var editor = new SettingsEditor();
+        editor.ApplySnapshot(new LauncherSettings { Language = LauncherLanguages.Auto });
+
+        editor.Commit(s => s.Language = LauncherLanguages.Japanese);
+
+        Assert.Equal(LauncherLanguages.Japanese, editor.Current.Language);
+        Assert.True(editor.IsDirty);
+    }
+
+    [Fact]
+    public void CurrentPropertyChange_WhenM3AppearanceSettingChanges_MarksDirtyAndDiscardRestoresSnapshot()
+    {
+        var editor = new SettingsEditor();
+        editor.ApplySnapshot(new LauncherSettings
+        {
+            ThemeColorExtractionAlgorithm = ThemeColorExtractionAlgorithms.CelebiScore,
+            ThemeColorVariant = ThemeColorVariants.TonalSpot,
+            NeutralColorStrategy = NeutralColorStrategies.BrandBlue
+        });
+
+        editor.Current.ThemeColorExtractionAlgorithm = ThemeColorExtractionAlgorithms.Wu;
+        editor.Current.ThemeColorVariant = ThemeColorVariants.Expressive;
+        editor.Current.NeutralColorStrategy = NeutralColorStrategies.SeedFollowing;
+
+        Assert.True(editor.IsDirty);
+
+        editor.Discard();
+
+        Assert.False(editor.IsDirty);
+        Assert.Equal(ThemeColorExtractionAlgorithms.CelebiScore, editor.Current.ThemeColorExtractionAlgorithm);
+        Assert.Equal(ThemeColorVariants.TonalSpot, editor.Current.ThemeColorVariant);
+        Assert.Equal(NeutralColorStrategies.BrandBlue, editor.Current.NeutralColorStrategy);
+    }
+
+    [Fact]
+    public void CurrentPropertyChange_WhenRememberWindowPositionAndSizeChanges_MarksDirty()
+    {
+        var editor = new SettingsEditor();
+        editor.ApplySnapshot(new LauncherSettings { RememberWindowPositionAndSize = false });
+
+        editor.Current.RememberWindowPositionAndSize = true;
+
+        Assert.True(editor.IsDirty);
+    }
+
+    [Fact]
+    public void Commit_ModifiesMultipleFields_AllApplied()
+    {
+        var editor = new SettingsEditor();
+        editor.ApplySnapshot(new LauncherSettings { Language = LauncherLanguages.Auto, ProxyMode = ProxyModes.Direct });
+
+        editor.Commit(s =>
+        {
+            s.Language = LauncherLanguages.Japanese;
+            s.ProxyMode = ProxyModes.System;
+        });
+
+        Assert.Equal(LauncherLanguages.Japanese, editor.Current.Language);
+        Assert.Equal(ProxyModes.System, editor.Current.ProxyMode);
+        Assert.True(editor.IsDirty);
+    }
+
+    [Fact]
+    public void ApplySnapshot_AfterCommit_ClearsDirty()
+    {
+        var editor = new SettingsEditor();
+        editor.ApplySnapshot(new LauncherSettings { Language = LauncherLanguages.Auto });
+        editor.Commit(s => s.Language = LauncherLanguages.Japanese);
+        Assert.True(editor.IsDirty);
+
+        editor.ApplySnapshot(new LauncherSettings { Language = LauncherLanguages.Japanese });
+
+        Assert.False(editor.IsDirty);
+        Assert.Equal(LauncherLanguages.Japanese, editor.Current.Language);
+    }
+
+    [Fact]
+    public void Discard_RevertsToLastSnapshot()
+    {
+        var editor = new SettingsEditor();
+        editor.ApplySnapshot(new LauncherSettings
+        {
+            Language = LauncherLanguages.Auto,
+            ThemeMode = ThemeModes.System
+        });
+        editor.Commit(s =>
+        {
+            s.Language = LauncherLanguages.Japanese;
+            s.ThemeMode = ThemeModes.Dark;
+        });
+
+        editor.Discard();
+
+        Assert.Equal(LauncherLanguages.Auto, editor.Current.Language);
+        Assert.Equal(ThemeModes.System, editor.Current.ThemeMode);
+        Assert.False(editor.IsDirty);
+    }
+
+    [Fact]
+    public void Discard_WithoutModification_NoOp()
+    {
+        var editor = new SettingsEditor();
+        editor.ApplySnapshot(new LauncherSettings { Language = LauncherLanguages.Japanese });
+
+        editor.Discard();
+
+        Assert.Equal(LauncherLanguages.Japanese, editor.Current.Language);
+        Assert.False(editor.IsDirty);
+    }
+
+    [Fact]
+    public void GetSnapshot_ReturnsCompleteLauncherSettings()
+    {
+        var editor = new SettingsEditor();
+        editor.ApplySnapshot(new LauncherSettings
+        {
+            Language = LauncherLanguages.English,
+            ThemeMode = ThemeModes.Light,
+            ProxyMode = ProxyModes.Direct
+        });
+
+        var snapshot = editor.GetSnapshot();
+        snapshot.Language = LauncherLanguages.Japanese;
+
+        Assert.Equal(LauncherLanguages.Japanese, snapshot.Language);
+        Assert.Equal(LauncherLanguages.English, editor.Current.Language);
+        Assert.Equal(ThemeModes.Light, snapshot.ThemeMode);
+        Assert.Equal(ProxyModes.Direct, snapshot.ProxyMode);
+        // Verify all default-valued fields are present (not null/missing)
+        Assert.NotNull(snapshot.GamePath);
+        Assert.NotNull(snapshot.LaunchCheckMode);
+    }
+
+    [Fact]
+    public void DefaultValues_MatchLauncherSettingsDefaults()
+    {
+        var editor = new SettingsEditor();
+
+        var current = editor.Current;
+        Assert.Equal("", current.GamePath);
+        Assert.Equal(LaunchCheckModes.LocalManifest, current.LaunchCheckMode);
+        Assert.Equal(ProxyModes.Auto, current.ProxyMode);
+        Assert.Equal(CloseBehaviors.Minimize, current.CloseBehavior);
+        Assert.Equal(LauncherLanguages.Auto, current.Language);
+        Assert.Equal(ThemeModes.System, current.ThemeMode);
+        Assert.Equal(ThemeColorModes.Default, current.ThemeColorMode);
+        Assert.Equal(LauncherConstants.DefaultThemeColor, current.CustomThemeColor);
+        Assert.Empty(current.ThemeColorPalette);
+        Assert.Equal(0, current.SelectedThemeColorPaletteIndex);
+        Assert.Equal(DownloadSpeedLimits.Unlimited, current.DownloadSpeedLimit);
+        Assert.True(current.EnableStartupUpdateCheck);
+        Assert.True(current.ShowRemoteContentCard);
+        // PatchUrlGroup defaults to Cafe when UI culture is Chinese, otherwise Official.
+        var expectedGroup = System.Globalization.CultureInfo.CurrentUICulture.Name is
+            "zh-CN" or "zh-TW" or "zh-HK" or "zh-MO" or "zh-SG" or "zh-Hans" or "zh-Hant"
+            ? PatchUrlGroups.Cafe
+            : PatchUrlGroups.Official;
+        Assert.Equal(expectedGroup, current.PatchUrlGroup);
+        Assert.Equal("", current.CustomBackgroundPath);
+        Assert.Equal(BackgroundSources.Bundled, current.BackgroundSource);
+        Assert.Equal(BackgroundFits.UniformToFill, current.BackgroundFit);
+        Assert.Equal("#FF000000", current.BackgroundFillColor);
+        Assert.Equal("", current.ResourcePanelUid);
+        Assert.Equal(
+            BuildInfo.LauncherVersion.Contains('-', StringComparison.Ordinal)
+                ? UpdateChannels.Beta
+                : UpdateChannels.Stable,
+            current.UpdateChannel);
+    }
+
+    [Fact]
+    public void PropertyChanged_FiresOnCommit()
+    {
+        var editor = new SettingsEditor();
+        editor.ApplySnapshot(new LauncherSettings());
+        string? changedProperty = null;
+        editor.PropertyChanged += (_, e) => changedProperty = e.PropertyName;
+
+        editor.Commit(s => s.Language = LauncherLanguages.Japanese);
+
+        // Current and IsDirty should both fire
+        Assert.NotNull(changedProperty);
+    }
+
+    [Fact]
+    public void PropertyChanged_FiresOnApplySnapshot()
+    {
+        var editor = new SettingsEditor();
+        string? changedProperty = null;
+        editor.PropertyChanged += (_, e) => changedProperty = e.PropertyName;
+
+        editor.ApplySnapshot(new LauncherSettings { Language = LauncherLanguages.Japanese });
+
+        Assert.NotNull(changedProperty);
+    }
+
+    [Fact]
+    public void PropertyChanged_FiresOnDiscard()
+    {
+        var editor = new SettingsEditor();
+        editor.ApplySnapshot(new LauncherSettings { Language = LauncherLanguages.Auto });
+        editor.Commit(s => s.Language = LauncherLanguages.Japanese);
+        string? changedProperty = null;
+        editor.PropertyChanged += (_, e) => changedProperty = e.PropertyName;
+
+        editor.Discard();
+
+        Assert.NotNull(changedProperty);
+    }
+
+    [Fact]
+    public void GameRuntimeRunnerChange_WhenDiscarded_MarksDirtyThenRestoresSnapshot()
+    {
+        var editor = new SettingsEditor();
+        editor.ApplySnapshot(new LauncherSettings());
+
+        editor.Current.GameRuntime.Runner = GameRuntimeRunners.Umu;
+
+        Assert.True(editor.IsDirty);
+
+        editor.Discard();
+
+        Assert.False(editor.IsDirty);
+        Assert.Equal(GameRuntimeRunners.Auto, editor.Current.GameRuntime.Runner);
+    }
+
+    [Fact]
+    public void GameRuntimePathChange_WhenReverted_MarksDirtyThenClearsIt()
+    {
+        var editor = new SettingsEditor();
+        editor.ApplySnapshot(new LauncherSettings());
+
+        editor.Current.GameRuntime.RunnerPath = "/opt/umu/bin/umu-run";
+        Assert.True(editor.IsDirty);
+
+        editor.Current.GameRuntime.PrefixPath = "/home/user/prefixes/ba";
+        Assert.True(editor.IsDirty);
+
+        editor.Current.GameRuntime.RunnerPath = null;
+        editor.Current.GameRuntime.PrefixPath = null;
+        Assert.False(editor.IsDirty);
+    }
+
+    [Fact]
+    public void GameRuntimePropertyChange_WhenNestedValueChanges_RaisesCurrentPropertyChanged()
+    {
+        var editor = new SettingsEditor();
+        editor.ApplySnapshot(new LauncherSettings());
+        var propertyNames = new List<string>();
+        editor.CurrentPropertyChanged += (_, e) => propertyNames.Add(e.PropertyName ?? string.Empty);
+
+        editor.Current.GameRuntime.ProtonPath = "/home/user/Proton";
+
+        Assert.Contains(nameof(GameRuntimeSettings.ProtonPath), propertyNames);
+    }
+}

@@ -1,0 +1,613 @@
+using System;
+using Cafe.Launcher.UI.Services.GameRuntime;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Cafe.Launcher.UI.Constants;
+using Cafe.Launcher.UI.Helpers;
+using Cafe.Launcher.UI.Models;
+using Cafe.Launcher.UI.Services;
+using Cafe.Launcher.Core.Services.Diagnostics;
+using Cafe.Launcher.Core.Services.GameRuntime;
+using Cafe.Launcher.Core.Services.Update;
+using Cafe.Launcher.UI.ViewModels;
+using Serilog.Events;
+using Cafe.Launcher.Core;
+using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Services;
+
+namespace Cafe.Launcher.UI.Features.Settings;
+
+internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalContentViewModel, ILanguageAwarePresentation
+{
+    private readonly ILauncherSettingsService settingsService;
+    private readonly ISavedSettingsWriter savedSettingsWriter;
+    private readonly LocalizationService localizer;
+    private readonly ToastService toastService;
+    private readonly ILauncherUpdateService launcherUpdateService;
+    private readonly ILauncherSelfUpdateService launcherSelfUpdateService;
+    private readonly DialogsViewModel dialogs;
+    private readonly SettingsEditor editor;
+    private readonly UnifiedLogger unifiedLogger;
+    private readonly IGameInstallationPath gameInstallationPath;
+    private readonly IErrorHandlingService errorHandling;
+    private readonly LauncherBuildIdentity? buildIdentity;
+    private readonly IGameRuntime gameRuntime;
+    private readonly IFilePickerService filePickerService;
+    private readonly LatestRefresh appearancePreviewRefresh = new();
+
+    /// <summary>
+    /// 保存前等待在途外观预览落定的总预算。预览链路含远端图下载（受 HttpClient
+    /// 默认超时约束）属有界等待，但仍设上限防止未来加入无超时操作后保存被无限挂起；
+    /// 超时后按当前状态继续保存。测试可调小。
+    /// </summary>
+    internal static TimeSpan AppearancePreviewSettleTimeout = TimeSpan.FromMinutes(2);
+    private readonly LatestRefresh gameRuntimeStatusRefresh = new();
+    private IReadOnlyList<GameRuntimeStatusEntry>? gameRuntimeStatusEntries;
+    private bool disposed;
+
+    // Coordination delegates — set by parent after construction.
+    public Func<LauncherSettings, Task>? ApplyLanguageAndTheme { get; set; }
+    public Func<LauncherSettings, string?, CancellationToken, Task>? PreviewAppearanceAsync { get; set; }
+
+    // Events — parent subscribes to these.
+    public event Func<Task>? SettingsSaved;
+
+    /// <summary>
+    /// The settings state editor. XAML binds to <c>Editor.Current.*</c> for
+    /// setting values, and to ViewModel properties for option collections and UI state.
+    /// </summary>
+    public SettingsEditor Editor => editor;
+    public SettingsOptionsViewModel Options { get; }
+    public SettingsAppearanceViewModel Appearance { get; }
+
+    public SettingsViewModel(
+        ILauncherSettingsService settingsService,
+        ISavedSettingsWriter savedSettingsWriter,
+        LocalizationService localizer,
+        ToastService toastService,
+        ILauncherUpdateService launcherUpdateService,
+        ILauncherSelfUpdateService launcherSelfUpdateService,
+        DialogsViewModel dialogs,
+        UnifiedLogger unifiedLogger,
+        IGameInstallationPath gameInstallationPath,
+        SettingsOptionsViewModel options,
+        SettingsAppearanceViewModel appearance,
+        IErrorHandlingService errorHandling,
+        IGameRuntime gameRuntime,
+        IFilePickerService filePickerService,
+        LauncherBuildIdentity? buildIdentity = null)
+    {
+        this.settingsService = settingsService;
+        this.savedSettingsWriter = savedSettingsWriter;
+        this.localizer = localizer;
+        this.toastService = toastService;
+        this.launcherUpdateService = launcherUpdateService;
+        this.launcherSelfUpdateService = launcherSelfUpdateService;
+        this.dialogs = dialogs;
+        this.unifiedLogger = unifiedLogger;
+        this.gameInstallationPath = gameInstallationPath;
+        editor = appearance.Editor;
+        Options = options;
+        Appearance = appearance;
+        this.errorHandling = errorHandling;
+        this.buildIdentity = buildIdentity;
+        this.gameRuntime = gameRuntime;
+        this.filePickerService = filePickerService;
+        editor.PropertyChanged += OnEditorPropertyChanged;
+        editor.CurrentPropertyChanged += OnCurrentSettingChanged;
+    }
+
+    private void OnEditorPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(SettingsEditor.IsDirty))
+        {
+            OnPropertyChanged(nameof(IsSettingsDirty));
+            OnPropertyChanged(nameof(CanSaveSettings));
+            SaveSettingsCommand.NotifyCanExecuteChanged();
+        }
+
+        if (e.PropertyName == nameof(SettingsEditor.Current))
+        {
+            OnPropertyChanged(nameof(IsGameRuntimeRunnerPathEnabled));
+            // Current 实例会被整体替换（保存后草稿换成归一化值），展示值须随之重算。
+            OnPropertyChanged(nameof(GamePathDisplay));
+        }
+    }
+
+    private void OnCurrentSettingChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(GameRuntimeSettings.Runner))
+        {
+            OnPropertyChanged(nameof(IsGameRuntimeRunnerPathEnabled));
+        }
+
+        if (e.PropertyName == nameof(LauncherSettings.GamePath))
+        {
+            OnPropertyChanged(nameof(GamePathDisplay));
+        }
+
+        if (!IsAppearanceSetting(e.PropertyName))
+        {
+            return;
+        }
+
+        RequestAppearancePreview(e.PropertyName);
+    }
+
+    // ── Settings UI state ────────────────────────────────────────────────
+
+    public bool IsSettingsDirty => editor.IsDirty;
+
+    public bool CanSaveSettings => IsSettingsDirty && !IsSaving;
+
+    /// <summary>A custom executable path is only applied to an explicitly selected runner.</summary>
+    public bool IsGameRuntimeRunnerPathEnabled =>
+        editor.Current.GameRuntime.Runner is GameRuntimeRunners.Umu or GameRuntimeRunners.Wine;
+
+    /// <summary>
+    /// 游戏路径行的展示值：长路径做段感知中间省略（见 <see cref="PathMiddleEllipsis"/>），
+    /// 保住盘符与末段目录名；草稿真值仍是 <c>Editor.Current.GamePath</c>。
+    /// </summary>
+    public string GamePathDisplay => PathMiddleEllipsis.MiddleEllipsize(editor.Current.GamePath);
+
+    [ObservableProperty]
+    private bool isUnsavedChangesVisible;
+
+    [ObservableProperty]
+    private bool isSaving;
+
+    /// <summary>
+    /// Multi-line per-runner availability summary for the Linux runtime section,
+    /// e.g. "UMU / Proton: Available · /usr/bin/umu-run · 1.4.4".
+    /// </summary>
+    [ObservableProperty]
+    private string gameRuntimeStatusSummary = string.Empty;
+
+    internal Task PendingGameRuntimeStatusRefresh => gameRuntimeStatusRefresh.Pending;
+
+    private string selectedCategory = SettingsCategoryCodes.General;
+
+    public string SelectedCategory
+    {
+        get => selectedCategory;
+        set
+        {
+            if (!SetProperty(ref selectedCategory, SettingsCategoryCodes.Normalize(value)))
+            {
+                return;
+            }
+
+            OnPropertyChanged(nameof(IsGeneralCategorySelected));
+            OnPropertyChanged(nameof(IsGameCategorySelected));
+            OnPropertyChanged(nameof(IsDownloadNetworkCategorySelected));
+            OnPropertyChanged(nameof(IsAppearanceCategorySelected));
+            OnPropertyChanged(nameof(IsAdvancedCategorySelected));
+            OnPropertyChanged(nameof(IsAboutCategorySelected));
+            if (selectedCategory == SettingsCategoryCodes.Game)
+            {
+                RefreshGameRuntimeStatus();
+            }
+        }
+    }
+
+    public bool IsGeneralCategorySelected => SelectedCategory == SettingsCategoryCodes.General;
+    public bool IsGameCategorySelected => SelectedCategory == SettingsCategoryCodes.Game;
+    public bool IsDownloadNetworkCategorySelected => SelectedCategory == SettingsCategoryCodes.DownloadNetwork;
+    public bool IsAppearanceCategorySelected => SelectedCategory == SettingsCategoryCodes.Appearance;
+    public bool IsAdvancedCategorySelected => SelectedCategory == SettingsCategoryCodes.Advanced;
+    public bool IsAboutCategorySelected => SelectedCategory == SettingsCategoryCodes.About;
+
+    internal Task PendingAppearancePreview => appearancePreviewRefresh.Pending;
+
+    // ── Public API for parent VM ──────────────────────────────────────────
+
+    /// <summary>Called by parent when settings panel opens or discards changes.</summary>
+    public void LoadFromSnapshot(LauncherSettings settings)
+    {
+        var currentWallpaperPalette = settings.ThemeColorMode == ThemeColorModes.Wallpaper
+            ? Appearance.GetThemeColorPaletteHexes()
+            : [];
+        var currentWallpaperPaletteIndex = Appearance.SelectedThemeColorPaletteIndex;
+
+        editor.ApplySnapshot(settings);
+        Appearance.Load(settings);
+
+        if (editor.Current.ThemeColorMode == ThemeColorModes.Wallpaper)
+        {
+            if (currentWallpaperPalette.Count > 0)
+            {
+                var snapshot = editor.GetSnapshot();
+                snapshot.ThemeColorPalette = currentWallpaperPalette;
+                snapshot.SelectedThemeColorPaletteIndex = currentWallpaperPaletteIndex;
+                Appearance.Load(snapshot);
+            }
+            else
+            {
+                // 后台取色；色板就绪前外观页暂显示空色板，就绪后自动填充。
+                _ = Appearance.RefreshThemeColorPaletteFromCurrentBackgroundAsync(markDirty: false);
+            }
+        }
+
+        RefreshGameRuntimeStatus();
+    }
+
+    /// <inheritdoc cref="ILanguageAwarePresentation.RefreshLocalizedText"/>
+    public void RefreshLocalizedText() => RefreshOptionDisplayNames();
+
+    /// <summary>Called by parent ApplyLanguage to refresh display names.</summary>
+    public void RefreshOptionDisplayNames()
+    {
+        Options.RefreshDisplayNames();
+        if (gameRuntimeStatusEntries is not null)
+        {
+            GameRuntimeStatusSummary = BuildGameRuntimeStatusSummary(gameRuntimeStatusEntries);
+        }
+    }
+
+    /// <summary>Loads a persisted settings snapshot into the active edit session.</summary>
+    public void ApplyLauncherSettings(LauncherSettings settings)
+    {
+        editor.ApplySnapshot(settings);
+        var snapshot = editor.GetSnapshot();
+        Appearance.Load(snapshot);
+        ApplyLogLevel(snapshot.LogLevel);
+    }
+
+    // ── Commands ──────────────────────────────────────────────────────────
+
+    [RelayCommand]
+    private async Task CheckForUpdatesAsync()
+    {
+        var savedSettings = editor.GetSavedSnapshot();
+        var result = await launcherUpdateService.CheckForUpdateAsync(
+            savedSettings.UpdateChannel);
+
+        if (!result.IsSuccessful)
+        {
+            var operationMessage = localizer.T(LocalizationKeys.LauncherUpdateCheckFailed);
+            var message = result.FailureException is not null
+                ? ErrorHandlingService.FormatToastMessage(
+                    operationMessage,
+                    result.FailureException,
+                    localizer.T(LocalizationKeys.ErrorNetworkUnavailable),
+                    localizer.T(LocalizationKeys.ErrorFakeIpDns))
+                : string.IsNullOrWhiteSpace(result.FailureMessage)
+                    ? operationMessage
+                    : $"{operationMessage}：{result.FailureMessage}";
+            toastService.ShowError(message);
+            return;
+        }
+
+        if (!result.IsUpdateAvailable)
+        {
+            toastService.ShowSuccess(localizer.F(LocalizationKeys.LauncherUpdateUpToDate, buildIdentity?.LauncherVersion ?? ""));
+            return;
+        }
+
+        dialogs.ShowUpdateAvailable(
+            result.LatestVersion,
+            result.Files,
+            launcherSelfUpdateService.ResolveInAppAvailability(result.Files),
+            result.ReleaseNotes);
+    }
+
+    /// <summary>Opens the shared launcher-settings reset confirmation (shell performs the reset).</summary>
+    [RelayCommand]
+    private void RequestResetSettings() => dialogs.SettingsResetConfirm.Show();
+
+    [RelayCommand(CanExecute = nameof(CanSaveSettings))]
+    private async Task SaveSettingsAsync()
+    {
+        IsSaving = true;
+        try
+        {
+            // 先让当前设置快照对应的壁纸预览完成；若此处先取消，新的壁纸可能尚未
+            // 落入 BackgroundViewModel，随后取色会错误地读取上一张壁纸。
+            await WaitForAppearancePreviewToSettleAsync();
+            CancelAppearancePreview();
+
+            // 提交前确保色板对应当前壁纸（等待与补提取的判据在 Appearance 侧收拢）。
+            await Appearance.EnsureThemePaletteReadyForSaveAsync();
+
+            editor.Commit(s =>
+            {
+                s.ThemeColorPalette = Appearance.GetThemeColorPaletteHexes();
+                s.SelectedThemeColorPaletteIndex = Appearance.SelectedThemeColorPaletteIndex;
+            });
+
+            // 落盘值而非草稿对象：归一化会改写草稿里的表示（大小写、trim、色板去重），
+            // 后续的跟随动作与编辑器都必须以真正落盘的那个值为准。
+            var settings = await savedSettingsWriter.SaveDraftAsync();
+            ApplyLogLevel(settings.LogLevel);
+
+            if (ApplyLanguageAndTheme is not null)
+                await ApplyLanguageAndTheme(settings);
+            else
+                Appearance.ApplyThemeColor(
+                    settings.ThemeColorMode,
+                    ColorUtils.ParseColorOrDefault(settings.CustomThemeColor));
+
+            toastService.ShowSuccess(localizer.T(LocalizationKeys.SettingsSaved));
+            RefreshGameRuntimeStatus();
+
+            await AsyncEvent.InvokeSequentiallyAsync(SettingsSaved);
+        }
+        catch (Exception exception)
+        {
+            await errorHandling.HandleErrorAsync("Settings save failed.", exception,
+                new ErrorHandlingOptions { ToastMessage = localizer.F(LocalizationKeys.SettingsSaveFailed, exception.Message) });
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ChooseGamePathAsync()
+    {
+        var pickedPath = await filePickerService.PickFolderAsync(
+            localizer.T(LocalizationKeys.ChooseInstallFolder),
+            editor.Current.GamePath);
+        if (string.IsNullOrWhiteSpace(pickedPath))
+        {
+            return;
+        }
+
+        // Normalise: append YostarGames/BlueArchive_JP subdirectory if missing,
+        // matching the original Yostar launcher behaviour.
+        editor.Current.GamePath = gameInstallationPath.NormalizeGamePath(pickedPath);
+    }
+
+    [RelayCommand]
+    private async Task ChangePersistedGamePathAsync()
+    {
+        var settings = await settingsService.ReadAsync();
+        await PickAndPersistGamePathAsync(settings.GamePath);
+    }
+
+    [RelayCommand]
+    private async Task SelectInstalledGameAsync()
+    {
+        var startPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        await PickAndPersistGamePathAsync(startPath);
+    }
+
+    private async Task PickAndPersistGamePathAsync(string startPath)
+    {
+        var pickedPath = await filePickerService.PickFolderAsync(
+            localizer.T(LocalizationKeys.ChooseInstallFolder),
+            startPath);
+        if (string.IsNullOrWhiteSpace(pickedPath))
+        {
+            return;
+        }
+
+        // Normalise: append YostarGames/BlueArchive_JP if missing.
+        pickedPath = gameInstallationPath.NormalizeGamePath(pickedPath);
+
+        try
+        {
+            await savedSettingsWriter.UpdateAsync(settings => settings.GamePath = pickedPath);
+            toastService.ShowSuccess(localizer.T(LocalizationKeys.GamePathUpdated));
+
+            await AsyncEvent.InvokeSequentiallyAsync(SettingsSaved);
+        }
+        catch (Exception exception)
+        {
+            await errorHandling.HandleErrorAsync("Settings game path update failed.", exception,
+                new ErrorHandlingOptions { ToastMessage = localizer.F(LocalizationKeys.GamePathUpdateFailed, exception.Message) });
+        }
+    }
+
+    [RelayCommand]
+    private async Task ChooseBackgroundImageAsync()
+    {
+        var pickedPath = await filePickerService.PickImageFileAsync(
+            localizer.T(LocalizationKeys.ChooseBackgroundImageTitle));
+        if (string.IsNullOrWhiteSpace(pickedPath))
+            return;
+
+        editor.Current.CustomBackgroundPath = pickedPath;
+        editor.Current.BackgroundSource = BackgroundSources.Custom;
+    }
+
+    [RelayCommand]
+    private async Task ChooseBackgroundFolderAsync()
+    {
+        var pickedPath = await filePickerService.PickFolderAsync(
+            localizer.T(LocalizationKeys.ChooseBackgroundFolderTitle));
+        if (string.IsNullOrWhiteSpace(pickedPath))
+            return;
+
+        editor.Current.CustomBackgroundPath = pickedPath;
+        editor.Current.BackgroundSource = BackgroundSources.Custom;
+    }
+
+    [RelayCommand]
+    private void ClearBackground()
+    {
+        editor.Current.CustomBackgroundPath = "";
+        editor.Current.BackgroundSource = BackgroundSources.Bundled;
+    }
+
+    // ── Game runtime status (Linux section) ───────────────────────────────
+
+    /// <summary>
+    /// Kicks off a fire-and-forget availability refresh for the runtime status row.
+    /// Runs the real version probes, so it must stay off the save/open critical path.
+    /// </summary>
+    public void RefreshGameRuntimeStatus()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        gameRuntimeStatusRefresh.Run(null, RefreshGameRuntimeStatusAsync);
+    }
+
+    private async Task RefreshGameRuntimeStatusAsync(CancellationToken cancellationToken)
+    {
+        GameRuntimeStatusSummary = localizer.T(LocalizationKeys.GameRuntimeStatusChecking);
+        try
+        {
+            var runtimeConfiguration = GameRuntimeConfiguration.FromSettings(editor.GetSnapshot().GameRuntime);
+            var entries = await gameRuntime
+                .GetStatusesAsync(runtimeConfiguration, cancellationToken)
+                .ConfigureAwait(true);
+            gameRuntimeStatusEntries = entries;
+            GameRuntimeStatusSummary = BuildGameRuntimeStatusSummary(entries);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            // Status is informational; launch diagnostics remain the authoritative
+            // runtime failure report, so a refresh failure only degrades this row.
+            // 豁免：状态行是纯信息性展示，运行时失败另有权威上报通道；
+            // 此处降级不注入诊断，避免为低价值路径扩构造面（见审计 7.2）。
+            Debug.WriteLine($"Settings: game runtime status refresh failed: {exception.Message}");
+        }
+    }
+
+    internal string BuildGameRuntimeStatusSummary(IReadOnlyList<GameRuntimeStatusEntry> entries)
+    {
+        var visibleRunnerIds = Options.GameRuntimeRunner.Select(option => option.Code).ToHashSet();
+        return string.Join(
+            Environment.NewLine,
+            entries.Where(entry => visibleRunnerIds.Contains(entry.RunnerId))
+                .Select(FormatGameRuntimeStatusEntry));
+    }
+
+    private string FormatGameRuntimeStatusEntry(GameRuntimeStatusEntry entry)
+    {
+        var name = GameRuntimeRunnerDisplay.RunnerName(localizer, entry.RunnerId);
+        var status = GameRuntimeRunnerDisplay.Status(localizer, entry.Availability.Status);
+
+        var path = entry.Availability.ExecutablePath;
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return localizer.F(LocalizationKeys.GameRuntimeStatusEntryFormat, name, status);
+        }
+
+        var detail = string.IsNullOrWhiteSpace(entry.Availability.Version)
+            ? path
+            : localizer.F(LocalizationKeys.GameRuntimeStatusDetailFormat, path, entry.Availability.Version);
+        return localizer.F(LocalizationKeys.GameRuntimeStatusEntryDetailFormat, name, status, detail);
+    }
+
+    public async Task DiscardChangesAsync()
+    {
+        IsUnsavedChangesVisible = false;
+        CancelAppearancePreview();
+        editor.Discard();
+        Appearance.Load(editor.Current);
+        appearancePreviewRefresh.Run(null, token => PreviewCurrentAppearanceAsync(null, token));
+        await appearancePreviewRefresh.Pending;
+    }
+
+    public void KeepEditing()
+    {
+        IsUnsavedChangesVisible = false;
+    }
+
+    private void RequestAppearancePreview(string? propertyName)
+    {
+        appearancePreviewRefresh.Run(null, token => PreviewCurrentAppearanceAsync(propertyName, token));
+    }
+
+    private void CancelAppearancePreview() => appearancePreviewRefresh.Cancel();
+
+    private Task WaitForAppearancePreviewToSettleAsync() =>
+        TaskSettler.WaitAsync(() => appearancePreviewRefresh.Pending, AppearancePreviewSettleTimeout);
+
+    private async Task PreviewCurrentAppearanceAsync(
+        string? propertyName,
+        CancellationToken cancellationToken)
+    {
+        if (PreviewAppearanceAsync is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await PreviewAppearanceAsync(editor.GetSnapshot(), propertyName, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            await errorHandling.HandleErrorAsync("Settings appearance preview failed.", exception,
+                new ErrorHandlingOptions { ToastMessage = localizer.F(LocalizationKeys.AppearancePreviewFailed, exception.Message) });
+        }
+    }
+
+    private static bool IsAppearanceSetting(string? propertyName) =>
+        propertyName is nameof(LauncherSettings.ThemeMode)
+            or nameof(LauncherSettings.ThemeColorMode)
+            or nameof(LauncherSettings.ThemeColorExtractionAlgorithm)
+            or nameof(LauncherSettings.ThemeColorVariant)
+            or nameof(LauncherSettings.NeutralColorStrategy)
+            or nameof(LauncherSettings.CustomThemeColor)
+            or nameof(LauncherSettings.ThemeColorPalette)
+            or nameof(LauncherSettings.SelectedThemeColorPaletteIndex)
+            or nameof(LauncherSettings.BackgroundSource)
+            or nameof(LauncherSettings.CustomBackgroundPath)
+            or nameof(LauncherSettings.BackgroundFit)
+            or nameof(LauncherSettings.BackgroundFillColor);
+
+    partial void OnIsSavingChanged(bool value)
+    {
+        OnPropertyChanged(nameof(CanSaveSettings));
+        SaveSettingsCommand.NotifyCanExecuteChanged();
+    }
+
+    private void ApplyLogLevel(string logLevelCode)
+    {
+        try
+        {
+            var level = logLevelCode switch
+            {
+                LogLevels.Verbose => LogEventLevel.Verbose,
+                LogLevels.Debug => LogEventLevel.Debug,
+                LogLevels.Warning => LogEventLevel.Warning,
+                LogLevels.Error => LogEventLevel.Error,
+                LogLevels.Fatal => LogEventLevel.Fatal,
+                _ => LogEventLevel.Information
+            };
+            unifiedLogger.SetMinimumLevel(level);
+        }
+        catch (Exception ex)
+        {
+            // 豁免：日志级别应用是 best-effort，绝不能反噬设置流程。
+            System.Diagnostics.Debug.WriteLine(
+                $"Settings: failed to apply log level: {ex.Message}");
+            // Best-effort — log level application must never disrupt settings flow.
+        }
+    }
+
+    public void Dispose()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        disposed = true;
+        CancelAppearancePreview();
+        gameRuntimeStatusRefresh.Cancel();
+        editor.PropertyChanged -= OnEditorPropertyChanged;
+        editor.CurrentPropertyChanged -= OnCurrentSettingChanged;
+        Appearance.Dispose();
+    }
+}

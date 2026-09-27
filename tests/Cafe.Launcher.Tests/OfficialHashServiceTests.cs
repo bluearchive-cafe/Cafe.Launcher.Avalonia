@@ -1,0 +1,108 @@
+using System.Linq;
+using System.Text.Json;
+using Cafe.Launcher.UI.Models;
+using Cafe.Launcher.UI.Services;
+using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Services;
+
+namespace Cafe.Launcher.Tests;
+
+/// <summary>
+/// Guards byte-for-byte vc compatibility with the official launcher. The expected values
+/// below are taken verbatim from a manifest.json / game-launcher-config.json produced by the
+/// official BlueArchive_JP launcher (v1.7.2). If these break, the official and rewritten
+/// launchers will reject each other's local state as corrupted when sharing a game directory.
+/// </summary>
+public sealed class OfficialHashServiceTests
+{
+    [Fact]
+    public void GetManifestFileHash_MatchesOfficialLauncherValue()
+    {
+        // Official key order is path, hash, size -> vc = MD5("path;hash;size").Base64
+        var file = new ManifestFile
+        {
+            Path = "/BlueArchive.exe",
+            Hash = "3728022668935248752",
+            Size = "653824"
+        };
+
+        Assert.Equal("Y9wcFnJEDjSOmyEb+MZbVg==", OfficialHashService.GetManifestFileHash(file));
+
+        file.Vc = OfficialHashService.GetManifestFileHash(file);
+        Assert.True(OfficialHashService.IsManifestFileHashValid(file));
+    }
+
+    [Fact]
+    public void GetManifestInfoHash_MatchesOfficialLauncherValue()
+    {
+        var hash = OfficialHashService.GetManifestInfoHash(
+            "BlueArchive_JP",
+            "1.70.0",
+            "prod/ZIP_TEMP/BlueArchive_JP_TEMP/BlueArchive_JP-1.70.436321-game.zip");
+
+        Assert.Equal("Atlr5dlO+GQmTpjmHGGGLQ==", hash);
+    }
+
+    [Fact]
+    public void GetGameConfigHash_MatchesOfficialLauncherValue()
+    {
+        var config = new GameLauncherConfig
+        {
+            Tag = "BlueArchive_JP",
+            Name = "xldr_BlueArchiveOnline_JP_loader_x64",
+            Params = ["BlueArchive.exe"],
+            Version = "1.70.0"
+        };
+
+        Assert.Equal("jeQcbtiEIHEKA2k6s2fw5A==", OfficialHashService.GetGameConfigHash(config));
+        Assert.True(OfficialHashService.IsGameConfigHashValid(
+            new GameLauncherConfig
+            {
+                Tag = config.Tag,
+                Name = config.Name,
+                Params = config.Params,
+                Version = config.Version,
+                Vc = "jeQcbtiEIHEKA2k6s2fw5A=="
+            }));
+    }
+
+    [Fact]
+    public void ManifestFile_SerializedKeyOrder_MatchesOfficialManifestOrder()
+    {
+        // The official launcher computes vc over Object.values(file) of the parsed object, so
+        // the serialized key order is part of the interop contract (see the ordering note in
+        // Models/LocalGameContracts.cs). Reordering these properties does not break our own
+        // reader — GetManifestFileHash takes explicit fields — it breaks the official launcher
+        // reading a manifest we wrote.
+        var json = JsonSerializer.Serialize(new ManifestFile
+        {
+            Path = "data/a.bin",
+            Hash = "1",
+            Size = "2",
+            Vc = "vc"
+        });
+
+        Assert.Equal(["path", "hash", "size", "vc"], ReadKeyOrder(json));
+    }
+
+    [Fact]
+    public void GameLauncherConfig_SerializedKeyOrder_MatchesOfficialConfigOrder()
+    {
+        var json = JsonSerializer.Serialize(new GameLauncherConfig
+        {
+            Tag = "tag",
+            Name = "name",
+            Params = ["param"],
+            Version = "version",
+            Vc = "vc"
+        });
+
+        Assert.Equal(["tag", "name", "params", "version", "vc"], ReadKeyOrder(json));
+    }
+
+    private static string[] ReadKeyOrder(string json)
+    {
+        using var document = JsonDocument.Parse(json);
+        return document.RootElement.EnumerateObject().Select(property => property.Name).ToArray();
+    }
+}

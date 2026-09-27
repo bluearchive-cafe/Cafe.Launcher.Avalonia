@@ -1,0 +1,174 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cafe.Launcher.UI.ViewModels"
+             xmlns:models="using:Cafe.Launcher.UI.Models"
+             xmlns:controls="using:Cafe.Launcher.UI.Controls"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:views="using:Cafe.Launcher.UI.Views"
+             x:Class="Cafe.Launcher.UI.Views.MainWindowSettingsOverlay"
+             x:Name="SettingsRoot"
+             x:DataType="vm:MainWindowViewModel">
+    <Grid Classes="settings-overlay motion-overlay"
+          IsEnabled="{Binding ModalHost.IsSettingsInteractive}"
+          Classes.motion-enabled="{Binding IsMotionEnabled}"
+          controls:MotionVisibility.IsOpen="{Binding WindowChrome.IsSettingsVisible}"
+          controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
+        <!-- 纯表面外壳：无头带（身份区折叠），工作区与钉死的关闭钮保持原样；
+             表面档案（圆角/阴影/底色）由 DialogSurface 承载（ADR-015）。
+             外壳模式无标题，表面对外语义由 §8 的本地化名显式给出。 -->
+        <controls:DialogSurface
+            Form="Panel"
+            Classes="motion-surface settings-surface"
+            AutomationProperties.Name="{Binding Shell.I18n[settings]}"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch"
+            Margin="{StaticResource Launcher.Spacing.Thickness.Xxl}"
+            MaxWidth="{StaticResource Launcher.Layout.Settings.MaxWidth}"
+            MaxHeight="{StaticResource Launcher.Layout.Settings.MaxHeight}">
+            <controls:DialogSurface.RenderTransform>
+                <TranslateTransform/>
+            </controls:DialogSurface.RenderTransform>
+            <controls:DialogSurface.Content>
+                <Grid Classes="settings-workspace" ColumnDefinitions="Auto,*">
+                    <Grid Classes="settings-navigation-pane"
+                          Width="{StaticResource Launcher.Component.Settings.Navigation.Width}"
+                          RowDefinitions="Auto,*">
+                        <Border Classes="settings-navigation-header">
+                            <StackPanel Classes="dialog-title-row">
+                                <TextBlock Text="{Binding Shell.I18n[settings]}" Classes="dialog-title" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <ListBox Grid.Row="1" Classes="settings-navigation"
+                             x:Name="SettingsNavigation"
+                             AutomationProperties.AutomationId="SettingsNavigation"
+                             Focusable="True"
+                             FocusAdorner="{x:Null}"
+                             ItemsSource="{Binding Settings.Options.SettingsCategories}"
+                             SelectedValue="{Binding Settings.SelectedCategory, Mode=TwoWay}"
+                             SelectedValueBinding="{Binding Code}"
+                             ScrollViewer.VerticalScrollBarVisibility="Hidden"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="models:SettingOption">
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}">
+                                    <materialIcons:MaterialIcon Kind="{Binding IconKind}"
+                                                                Width="{StaticResource Launcher.Icon.Md}"
+                                                                Height="{StaticResource Launcher.Icon.Md}"
+                                                                VerticalAlignment="Center"
+                                                                Classes="settings-navigation-icon-outline"/>
+                                    <materialIcons:MaterialIcon Kind="{Binding SelectedIconKind}"
+                                                                Width="{StaticResource Launcher.Icon.Md}"
+                                                                Height="{StaticResource Launcher.Icon.Md}"
+                                                                VerticalAlignment="Center"
+                                                                Classes="settings-navigation-icon-filled"/>
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding DisplayName}"
+                                               Classes="settings-navigation-item"
+                                               ToolTip.Tip="{Binding DisplayName}"
+                                               AutomationProperties.Name="{Binding DisplayName}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Grid>
+
+                    <Grid Grid.Column="1" Classes="settings-content" RowDefinitions="*,Auto">
+                        <Border Grid.Row="0" Classes="settings-content-padding">
+                                <Grid RowDefinitions="Auto,*">
+                                    <!-- 标题行与关闭按钮固定在内容区顶部，不随下方内容滚动。 -->
+                                    <Grid Classes="settings-content-heading" ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                                        <StackPanel DataContext="{Binding SelectedItem, ElementName=SettingsNavigation}"
+                                                    x:DataType="models:SettingOption"
+                                                    Classes="settings-content-heading-copy">
+                                            <TextBlock Classes="category-title"
+                                                       Text="{Binding DisplayName}"
+                                                       AutomationProperties.Name="{Binding DisplayName}"/>
+                                            <TextBlock Classes="category-subtitle"
+                                                       Text="{Binding Description}"/>
+                                        </StackPanel>
+                                        <Button Grid.Column="1"
+                                                Classes="dialog-close content-header-action"
+                                                Command="{Binding WindowChrome.ShowSettingsCommand}"
+                                                IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}"
+                                                ToolTip.Tip="{Binding Shell.I18n[close]}"
+                                                AutomationProperties.Name="{Binding Shell.I18n[close]}"
+                                                VerticalAlignment="Top">
+                                            <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
+                                        </Button>
+                                    </Grid>
+                                    <ScrollViewer Grid.Row="1"
+                                                  Classes="dialog-scroll settings-content-scroll"
+                                                  VerticalScrollBarVisibility="Auto"
+                                                  HorizontalScrollBarVisibility="Disabled"
+                                                  IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}">
+                                    <StackPanel Classes="settings-sections">
+                                    <views:SettingsGeneralSection IsVisible="{Binding Settings.IsGeneralCategorySelected}"
+                                                              Classes="motion-content"
+                                                              Classes.motion-enabled="{Binding IsMotionEnabled}"
+                                                              Classes.motion-enter="{Binding Settings.IsGeneralCategorySelected}">
+                                </views:SettingsGeneralSection>
+                                <views:SettingsGameSection IsVisible="{Binding Settings.IsGameCategorySelected}"
+                                                           Classes="motion-content"
+                                                           Classes.motion-enabled="{Binding IsMotionEnabled}"
+                                                           Classes.motion-enter="{Binding Settings.IsGameCategorySelected}">
+                                </views:SettingsGameSection>
+                                <views:SettingsDownloadNetworkSection IsVisible="{Binding Settings.IsDownloadNetworkCategorySelected}"
+                                                                      Classes="motion-content"
+                                                                      Classes.motion-enabled="{Binding IsMotionEnabled}"
+                                                                      Classes.motion-enter="{Binding Settings.IsDownloadNetworkCategorySelected}">
+                                </views:SettingsDownloadNetworkSection>
+                                <views:SettingsAppearanceSection IsVisible="{Binding Settings.IsAppearanceCategorySelected}"
+                                                                 Classes="motion-content"
+                                                                 Classes.motion-enabled="{Binding IsMotionEnabled}"
+                                                                 Classes.motion-enter="{Binding Settings.IsAppearanceCategorySelected}">
+                                </views:SettingsAppearanceSection>
+                                <views:SettingsAdvancedSection IsVisible="{Binding Settings.IsAdvancedCategorySelected}"
+                                                               Classes="motion-content"
+                                                               Classes.motion-enabled="{Binding IsMotionEnabled}"
+                                                               Classes.motion-enter="{Binding Settings.IsAdvancedCategorySelected}">
+                                </views:SettingsAdvancedSection>
+                                <views:SettingsAboutSection IsVisible="{Binding Settings.IsAboutCategorySelected}"
+                                                            Classes="motion-content"
+                                                            Classes.motion-enabled="{Binding IsMotionEnabled}"
+                                                            Classes.motion-enter="{Binding Settings.IsAboutCategorySelected}">
+                                </views:SettingsAboutSection>
+                                    </StackPanel>
+                                    </ScrollViewer>
+                                </Grid>
+                        </Border>
+                        <Border Grid.Row="1" Classes="settings-content-actions">
+                            <StackPanel Orientation="Horizontal"
+                                        Spacing="{StaticResource Launcher.Spacing.Sm}"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Center">
+                                <Button Classes="flat-action dialog-action"
+                                        Command="{Binding WindowChrome.ShowSettingsCommand}"
+                                        IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}"
+                                        ToolTip.Tip="{Binding Shell.I18n[cancel]}"
+                                        AutomationProperties.Name="{Binding Shell.I18n[cancel]}">
+                                    <StackPanel Classes="button-content" HorizontalAlignment="Center">
+                                        <materialIcons:MaterialIcon Kind="CloseCircleOutline"
+                                            Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                        <TextBlock Text="{Binding Shell.I18n[cancel]}"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Classes="primary-action dialog-action"
+                                        Command="{Binding Settings.SaveSettingsCommand}"
+                                        IsEnabled="{Binding Settings.CanSaveSettings}"
+                                        ToolTip.Tip="{Binding Shell.I18n[save]}"
+                                        AutomationProperties.Name="{Binding Shell.I18n[save]}">
+                                    <StackPanel Classes="button-content" HorizontalAlignment="Center">
+                                        <materialIcons:MaterialIcon Kind="ContentSave"
+                                            Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                        <TextBlock Text="{Binding Shell.I18n[save]}"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Grid>
+            </controls:DialogSurface.Content>
+        </controls:DialogSurface>
+    </Grid>
+</UserControl>

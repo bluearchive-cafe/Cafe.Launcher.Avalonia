@@ -1,8 +1,8 @@
 using System;
 using System.Runtime.CompilerServices;
-using Cafe.Launcher.Avalonia.Helpers;
+using Cafe.Launcher.UI.Helpers;
 
-namespace Cafe.Launcher.Avalonia.Testing;
+namespace Cafe.Launcher.Testing;
 
 /// <summary>
 /// 模块初始化器：把退场动画时长清零，让单元/无头测试不必等待真实退场动画。
