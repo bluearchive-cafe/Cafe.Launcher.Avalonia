@@ -10,7 +10,7 @@ namespace Cafe.Launcher.Avalonia.Helpers;
 /// Persists small JSON documents through a temporary file and a single replace
 /// operation so callers never expose a partially serialized document.
 /// </summary>
-internal static class AtomicJsonFileStore
+public static class AtomicJsonFileStore
 {
     public static async Task<T?> ReadAsync<T>(
         string path,

@@ -22,7 +22,7 @@ public sealed class LauncherSettingsService : IDisposable
 {
     private readonly SemaphoreSlim writeLock = new(1, 1);
     private readonly LauncherDataRoot dataRoot;
-    private readonly LocalDiagnostics? diagnostics;
+    private readonly ILauncherDiagnostics? diagnostics;
     private readonly Func<bool> isLinuxPlatform;
     private static readonly JsonSerializerOptions jsonOptions = JsonDefaults.Indented;
 
@@ -31,7 +31,7 @@ public sealed class LauncherSettingsService : IDisposable
     /// </summary>
     public LauncherSettingsService(
         LauncherDataRoot dataRoot,
-        LocalDiagnostics? diagnostics = null,
+        ILauncherDiagnostics? diagnostics = null,
         Func<bool>? isLinuxPlatform = null)
     {
         ArgumentNullException.ThrowIfNull(dataRoot);

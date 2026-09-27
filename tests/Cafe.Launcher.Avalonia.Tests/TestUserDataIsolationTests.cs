@@ -1,3 +1,5 @@
+using Cafe.Launcher.Avalonia.Testing;
+
 namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed class TestUserDataIsolationTests
@@ -150,30 +152,32 @@ public sealed class TestUserDataIsolationTests
     [Fact]
     public void ProcessRootResolution_IsConfinedToDeclaredPreDiSites()
     {
-        var projectRoot = TestLocalizationHelper.FindProjectRoot();
+        var repositoryRoot = TestRepository.Root;
+        var hostRoot = TestRepository.HostPath;
+        var coreRoot = TestRepository.CorePath;
         var declared = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             // 定义与唯一实现
-            Path.Combine(projectRoot, "Services", "LauncherDataRoot.cs"),
+            Path.Combine(coreRoot, "Services", "LauncherDataRoot.cs"),
             // 组合根：解析一次后注入所有登记项
-            Path.Combine(projectRoot, "Composition", "ServiceConfiguration.cs"),
+            Path.Combine(hostRoot, "Composition", "ServiceConfiguration.cs"),
             // pre-DI：首启探测、崩溃日志器、单实例信号
-            Path.Combine(projectRoot, "Program.cs"),
+            Path.Combine(hostRoot, "Program.cs"),
             // 崩溃报告进程没有容器，也没有别的解析点
-            Path.Combine(projectRoot, "CrashReportApp.axaml.cs"),
+            Path.Combine(hostRoot, "CrashReportApp.axaml.cs"),
             // 兼容前缀在 Windows 上复用启动器数据根；Unix 分支自取 XDG 目录，不读数据根
-            Path.Combine(projectRoot, "Services", "GameRuntime", "GameCompatibilityPaths.cs")
+            Path.Combine(hostRoot, "Services", "GameRuntime", "GameCompatibilityPaths.cs")
         };
 
-        var scanned = Directory
-            .EnumerateFiles(projectRoot, "*.cs", SearchOption.AllDirectories)
-            .Where(path => !IsBuildOrTestArtifact(projectRoot, path))
+        var scanned = new[] { hostRoot, coreRoot }
+            .SelectMany(root => Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories)
+                .Where(path => !IsBuildOrTestArtifact(root, path)))
             .ToArray();
 
         // 反空转基线：本守卫的形状是「排除声明表后必须为空」，于是「根目录找错／后缀失效
         // 导致一个文件都没扫」与「树是干净的」不可区分。两条基线把这种退化态变成红的。
         // 基线为 2026-09-15 的实测值；真的删文件就同步下调，扫描失效应表现为红而不是绿。
-        const int landedScannedFiles = 231;
+        const int landedScannedFiles = 245;
         const int landedResolvingFiles = 5;
         var resolving = scanned
             .Where(path => File.ReadAllText(path).Contains(ProcessRootResolver, StringComparison.Ordinal))
@@ -191,7 +195,7 @@ public sealed class TestUserDataIsolationTests
         var offenders = scanned
             .Where(path => !declared.Contains(path))
             .Where(path => File.ReadAllText(path).Contains(ProcessRootResolver, StringComparison.Ordinal))
-            .Select(path => Path.GetRelativePath(projectRoot, path))
+            .Select(path => Path.GetRelativePath(repositoryRoot, path))
             .Order(StringComparer.Ordinal)
             .ToArray();
 
@@ -205,20 +209,22 @@ public sealed class TestUserDataIsolationTests
     [Fact]
     public void PersistentUserDataPaths_UseCentralDirectoryProvider()
     {
-        var projectRoot = TestLocalizationHelper.FindProjectRoot();
+        var repositoryRoot = TestRepository.Root;
+        var hostRoot = TestRepository.HostPath;
+        var coreRoot = TestRepository.CorePath;
         var allowedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            Path.Combine(projectRoot, "Services", "LauncherDataRoot.cs"),
-            Path.Combine(projectRoot, "Features", "GameOperations", "GameUninstallService.cs")
+            Path.Combine(coreRoot, "Services", "LauncherDataRoot.cs"),
+            Path.Combine(hostRoot, "Features", "GameOperations", "GameUninstallService.cs")
         };
-        var offenders = Directory
-            .EnumerateFiles(projectRoot, "*.cs", SearchOption.AllDirectories)
-            .Where(path => !IsBuildOrTestArtifact(projectRoot, path))
+        var offenders = new[] { hostRoot, coreRoot }
+            .SelectMany(root => Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories)
+                .Where(path => !IsBuildOrTestArtifact(root, path)))
             .Where(path => !allowedFiles.Contains(path))
             .Where(path => File
                 .ReadAllText(path)
                 .Contains(LocalApplicationDataMember, StringComparison.Ordinal))
-            .Select(path => Path.GetRelativePath(projectRoot, path))
+            .Select(path => Path.GetRelativePath(repositoryRoot, path))
             .Order(StringComparer.Ordinal)
             .ToArray();
 

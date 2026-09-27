@@ -88,7 +88,7 @@ public sealed class LauncherDataRoot
     /// 当前进程的数据根。只有组合根与 ADR-019 保护的 pre-DI 路径可以调用；
     /// 其余模块接收注入的实例。
     /// </summary>
-    internal static LauncherDataRoot ForCurrentProcess() => new(ResolveProcessRoot(
+    public static LauncherDataRoot ForCurrentProcess() => new(ResolveProcessRoot(
         Environment.GetEnvironmentVariable(TestOverrideEnvironmentVariable),
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)));
 }
