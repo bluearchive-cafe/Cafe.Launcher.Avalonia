@@ -83,7 +83,7 @@ When changing package versions (including accepting a Dependabot PR):
 1. Run `dotnet restore` locally and commit the regenerated `packages.lock.json` files together with the version change. A PR that updates `Directory.Packages.props` without regenerating the locks fails CI with NU1004 — that failure means the locks need regenerating, not that the enforcement is broken.
 2. Local RID-specific restores (`verify.ps1`, `Build-Distribution.ps1`) rewrite the RID section of the lock files; restore them with `git restore` before committing.
 3. Update the §12 toolchain table in `PROJECT_CONVENTIONS.md` by hand — `InstallerContractTests.ProjectConventionsToolchainTable_MatchesDeclaredPackageVersions` fails while any row disagrees with `Directory.Packages.props`.
-4. Regenerate `THIRD-PARTY-NOTICES.md` with `.\scripts\New-ThirdPartyNotices.ps1`; no test guards its versions, so a stale entry drifts silently until the next audit. The script reads the resolved dependency graph, so it needs a prior `dotnet restore` in the same working tree.
+4. Regenerate `THIRD-PARTY-NOTICES.md` with `.\scripts\New-ThirdPartyNotices.ps1`. It unions the resolved dependency graphs of **every** production project under `src/` (a package referenced only by the Windows self-update helper never appears in the host's graph) and lists which projects each package comes from, so it needs a prior `dotnet restore` in the same working tree. `ThirdPartyNoticesContractTests` guards the three halves that drift silently: the runtime disclosure, the per-project version table against `Directory.Packages.props`, and the scanned-project list against the projects on disk.
 
 ### CI cache and artifact storage budget
 
