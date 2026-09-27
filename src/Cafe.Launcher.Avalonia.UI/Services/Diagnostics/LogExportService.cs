@@ -11,6 +11,11 @@ using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Core.Services.GameRuntime;
+using Cafe.Launcher.Core;
+using Cafe.Launcher.Core.Services;
+using Cafe.Launcher.Core.Services.Diagnostics;
+using Cafe.Launcher.Core.Constants;
+using Cafe.Launcher.Core.Helpers;
 
 namespace Cafe.Launcher.Avalonia.Services.Diagnostics;
 

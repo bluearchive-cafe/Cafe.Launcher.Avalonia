@@ -51,14 +51,6 @@
   <ItemGroup>
     <Using Include="Xunit" />
     <!-- 过渡期：Core 的源命名空间已收口为 Cafe.Launcher.Core.*（见宿主 csproj 的同一段说明）。 -->
-    <Using Include="Cafe.Launcher.Core" />
-    <Using Include="Cafe.Launcher.Core.Constants" />
-    <Using Include="Cafe.Launcher.Core.Helpers" />
-    <Using Include="Cafe.Launcher.Core.Models" />
-    <Using Include="Cafe.Launcher.Core.Services" />
-    <Using Include="Cafe.Launcher.Core.Services.Auth" />
-    <Using Include="Cafe.Launcher.Core.Services.Diagnostics" />
-    <Using Include="Cafe.Launcher.Core.Services.GameRuntime" />
   </ItemGroup>
 
   <ItemGroup>

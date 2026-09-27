@@ -11,6 +11,7 @@ using Cafe.Launcher.Avalonia.Testing;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Cafe.Launcher.Avalonia.Views;
 using Microsoft.Extensions.DependencyInjection;
+using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.Avalonia.HeadlessTests;
 

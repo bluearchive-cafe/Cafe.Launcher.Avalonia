@@ -8,6 +8,8 @@ using MaterialColorUtilities.DynamicColors;
 using MaterialColorUtilities.HCT;
 using MaterialColorUtilities.Scheme;
 using MaterialColorUtilities.Utils;
+using Cafe.Launcher.Core.Constants;
+using Cafe.Launcher.Core.Models;
 using CafeColorUtils = Cafe.Launcher.Avalonia.Helpers.ColorUtils;
 
 namespace Cafe.Launcher.Avalonia.Services;

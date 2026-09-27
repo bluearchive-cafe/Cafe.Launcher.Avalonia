@@ -17,15 +17,6 @@
 
   <ItemGroup>
     <!-- 与宿主同一套过渡期项目级 using：表现层代码引用 Core 类型时不逐个文件写 using。 -->
-    <Using Include="Cafe.Launcher.Core" />
-    <Using Include="Cafe.Launcher.Core.Constants" />
-    <Using Include="Cafe.Launcher.Core.Helpers" />
-    <Using Include="Cafe.Launcher.Core.Models" />
-    <Using Include="Cafe.Launcher.Core.Services" />
-    <Using Include="Cafe.Launcher.Core.Services.Auth" />
-    <Using Include="Cafe.Launcher.Core.Services.Diagnostics" />
-    <Using Include="Cafe.Launcher.Core.Services.GameRuntime" />
-    <Using Include="Cafe.Launcher.Core.Services.Update" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Cafe.Launcher.Core\Cafe.Launcher.Core.csproj" />

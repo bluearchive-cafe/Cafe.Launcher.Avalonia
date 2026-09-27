@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.Avalonia.Models;
 

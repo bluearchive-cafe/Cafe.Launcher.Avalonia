@@ -17,6 +17,9 @@ using Cafe.Launcher.Core.Services.GameRuntime;
 using Cafe.Launcher.Core.Services.Update;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Serilog.Events;
+using Cafe.Launcher.Core;
+using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Services;
 
 namespace Cafe.Launcher.Avalonia.Features.Settings;
 

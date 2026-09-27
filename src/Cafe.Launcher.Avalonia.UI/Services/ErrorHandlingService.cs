@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Core.Services.Diagnostics;
+using Cafe.Launcher.Core.Services;
 
 namespace Cafe.Launcher.Avalonia.Services;
 

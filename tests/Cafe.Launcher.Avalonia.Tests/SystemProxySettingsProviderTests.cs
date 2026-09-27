@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Core.Services;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 

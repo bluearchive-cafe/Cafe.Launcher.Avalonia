@@ -1,4 +1,5 @@
 using Cafe.Launcher.Avalonia.Testing;
+using Cafe.Launcher.Core.Services.GameRuntime;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 

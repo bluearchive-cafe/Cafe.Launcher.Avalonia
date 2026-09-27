@@ -13,6 +13,7 @@ using Cafe.Launcher.Avalonia.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Core.Services;
 
 namespace Cafe.Launcher.Avalonia;
 

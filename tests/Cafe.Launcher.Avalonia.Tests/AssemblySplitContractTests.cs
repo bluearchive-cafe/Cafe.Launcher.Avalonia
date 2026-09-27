@@ -4,6 +4,8 @@ using Cafe.Launcher.Core.Composition;
 using Cafe.Launcher.Avalonia.Testing;
 using Cafe.Launcher.Avalonia.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Cafe.Launcher.Core.Services;
+using Cafe.Launcher.Core.Services.Auth;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -183,6 +185,25 @@ public sealed class AssemblySplitContractTests
         }
     }
 
+    [Fact]
+    public void Projects_ResolveCoreNamespacesWithExplicitUsings()
+    {
+        // 迁移期为了让命名空间收口不必全仓改写 using，四个工程曾在 csproj 里用
+        // <Using Include="Cafe.Launcher.Core.*" /> 过渡解析；调用方收到窄接口后应改回显式 using。
+        // 这条守卫挡住「顺手再加一个项目级 using」——它会让 Core 命名空间再次变成隐式依赖。
+        var offenders = new[]
+            {
+                "src/Cafe.Launcher.Avalonia/Cafe.Launcher.Avalonia.csproj",
+                "src/Cafe.Launcher.Avalonia.UI/Cafe.Launcher.Avalonia.UI.csproj",
+                "tests/Cafe.Launcher.Avalonia.Tests/Cafe.Launcher.Avalonia.Tests.csproj",
+                "tests/Cafe.Launcher.Avalonia.HeadlessTests/Cafe.Launcher.Avalonia.HeadlessTests.csproj"
+            }
+            .Where(relative => File.ReadAllText(TestRepository.FromRepositoryRoot(relative))
+                .Contains("<Using Include=\"Cafe.Launcher.Core", StringComparison.Ordinal))
+            .ToArray();
+
+        Assert.Empty(offenders);
+    }
     [Fact]
     public void CompositionRoot_RegistersCoreFirstAndOnlyOnce()
     {

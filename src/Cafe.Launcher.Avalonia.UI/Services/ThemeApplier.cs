@@ -4,6 +4,8 @@ using Avalonia.Media;
 using Avalonia.Styling;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Avalonia.Services;
 

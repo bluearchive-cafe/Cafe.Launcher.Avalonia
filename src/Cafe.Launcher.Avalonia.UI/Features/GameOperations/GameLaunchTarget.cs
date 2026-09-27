@@ -1,5 +1,6 @@
 using System.IO;
 using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 

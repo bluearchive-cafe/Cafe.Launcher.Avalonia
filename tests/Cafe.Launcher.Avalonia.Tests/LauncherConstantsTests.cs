@@ -1,5 +1,6 @@
 using System.Reflection;
 using Cafe.Launcher.Avalonia.Constants;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 

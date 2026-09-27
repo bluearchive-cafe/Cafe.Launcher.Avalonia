@@ -1,6 +1,7 @@
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Testing;
 using Xunit;
+using Cafe.Launcher.Core.Helpers;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 

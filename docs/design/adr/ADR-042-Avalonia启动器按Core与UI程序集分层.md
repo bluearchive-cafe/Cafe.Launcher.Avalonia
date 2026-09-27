@@ -101,7 +101,7 @@ Core API 后应改回显式 using。`AssemblySplitContractTests.CoreSources_UseO
   `AssemblySplitContractTests.CompositionRoot_RegistersCoreFirstAndOnlyOnce`）、默认更新渠道
   靠入口程序集反射（`LauncherSettingsDefaultsTests`）。Unit、Headless 与覆盖率闸口恢复全绿。
 - Core 源命名空间收口为 `Cafe.Launcher.Core.*`（46 个文件、10 处 XAML `xmlns` 随之调整），
-  宿主与测试工程用项目级 `<Using>` 过渡解析，`CoreSources_UseOnlyTheCoreNamespaces` 守住回退。
+  宿主与测试工程当时用项目级 `<Using>` 过渡解析（迁移收尾时已全部改为显式 using，见「剩余」第 2 项），`CoreSources_UseOnlyTheCoreNamespaces` 守住回退。
 - 设置模型去 MVVM：新增 Core 本地的 `SettingsModel`（`INotifyPropertyChanged` + `SetProperty`），
   `LauncherSettings` / `GameRuntimeSettings` 改继承它，Core 不再引用 `CommunityToolkit.Mvvm`。
 - 设置写入协调器落到 Core：`SavedSettingsWriter` 与 `ISavedSettingsWriter` 迁入
@@ -224,7 +224,7 @@ Core API 后应改回显式 using。`AssemblySplitContractTests.CoreSources_UseO
    `GameRuntime`、`LauncherCoreService` 等）均收回 `internal`：Core 顶层 public class 由 56 降到 45，
    剩下的 public 类全是数据模型/响应体、进程日志器 `UnifiedLogger` 与表现层按批次超时构造的
    `LeaseBackedDownloadTransportSource`；`HttpClientLease` 因是公开接口的返回类型而保留。
-   至此 S3 的收窄项完成，只剩项目级 `<Using>` 收敛。原计划里描述的做法（保留作记录）：（`HttpClientFactory` / `RemoteHttpTransport` / `LauncherApiClient` /
+   至此 S3 的收窄项完成；项目级 `<Using>` 收敛见下文「剩余」第 2 项（已完成）。原计划里描述的做法（保留作记录）：（`HttpClientFactory` / `RemoteHttpTransport` / `LauncherApiClient` /
    `AuthorizationHeaderFactory` / `PatchUrlGroupService`）。收尾盘点已确定它的做法，不需要新接缝：
    Core 的 `ISettingsDraftOwner.GetSavedSnapshot()` 正是那两个偏好闭包需要的快照（ADR-028 的
    「按使用时机拉取」），因此 `AddLauncherCore` 可以直接登记 `HttpClientFactory`（HTTP/2 偏好）、
@@ -246,9 +246,11 @@ Core API 后应改回显式 using。`AssemblySplitContractTests.CoreSources_UseO
    `InstallationConfigResponse`、`LogEntryReader.Read` 返回 `IEnumerable<LogRecord>`……），
    收窄会逐级级联，因此全部回退——**唯一可行的路径是先把消费方改成只经接口取用**。
    这已超出本次「按程序集分层」的范围，作为独立重构登记；当前没有守卫防止新增 public 实现。
-2. **项目级 `<Using>` 收敛**：宿主、UI 与两个测试工程的 csproj 仍用
-   `<Using Include="Cafe.Launcher.Core.*" />` 过渡解析 Core 命名空间（这正是命名空间收口
-   不需要全仓改写 using 的原因）。按 AGENTS.md 的约定，等调用点收敛到窄接口后改为显式 using。
+2. **项目级 `<Using>` 收敛（已完成）**：四个工程 csproj 里的 33 条
+   `<Using Include="Cafe.Launcher.Core.*" />` 全部移除，218 个源文件补上显式 using（用
+   「类型/方法 → Core 命名空间」映射驱动编译器错误迭代完成）。新增守卫
+   `AssemblySplitContractTests.Projects_ResolveCoreNamespacesWithExplicitUsings` 挡住回退。
+   AGENTS.md 里「过渡解析」的说明同步改写为「每个工程显式列出自己用到的 Core 命名空间」。
 
 覆盖率（2026-09-27 全量实测，Debug verify + coverlet）：手写代码行 **86.51%** / 分支 **92.88%**，
 基线 0.8560 / 0.9180 **未下调**，余量 +0.91pp / +1.08pp。脚本约定「基线 = 实测值再留

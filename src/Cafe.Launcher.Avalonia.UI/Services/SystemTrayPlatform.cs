@@ -2,6 +2,7 @@ using System;
 using Avalonia.Controls;
 using Avalonia.Platform;
 using Cafe.Launcher.Avalonia.Constants;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
