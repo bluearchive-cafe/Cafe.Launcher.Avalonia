@@ -44,6 +44,7 @@ public sealed class AssemblySplitContractTests
         Assert.True(File.Exists(TestRepository.FromCoreRoot("Services/RemoteHttpRequestService.cs")));
         Assert.True(File.Exists(TestRepository.FromCoreRoot("Services/RemoteHttpTransport.cs")));
         Assert.True(File.Exists(TestRepository.FromCoreRoot("Services/IRemoteHttpClientLeaseSource.cs")));
+        Assert.True(File.Exists(TestRepository.FromCoreRoot("Services/PatchUrlGroupService.cs")));
         Assert.True(File.Exists(TestRepository.FromCoreRoot("Helpers/HttpClientLease.cs")));
         Assert.False(File.Exists(TestRepository.FromHostRoot("Services/LauncherDataRoot.cs")));
         Assert.False(File.Exists(TestRepository.FromHostRoot("Services/LauncherSettingsService.cs")));
@@ -58,6 +59,7 @@ public sealed class AssemblySplitContractTests
         Assert.False(File.Exists(TestRepository.FromHostRoot("Services/RemoteHttpRequestService.cs")));
         Assert.False(File.Exists(TestRepository.FromHostRoot("Services/RemoteHttpTransport.cs")));
         Assert.False(File.Exists(TestRepository.FromHostRoot("Services/IRemoteHttpClientLeaseSource.cs")));
+        Assert.False(File.Exists(TestRepository.FromHostRoot("Services/PatchUrlGroupService.cs")));
         Assert.False(File.Exists(TestRepository.FromHostRoot("Helpers/HttpClientLease.cs")));
     }
 
@@ -103,6 +105,7 @@ public sealed class AssemblySplitContractTests
         Assert.NotNull(provider.GetRequiredService<AuthorizationHeaderFactory>());
         Assert.NotNull(provider.GetRequiredService<RemoteHttpUrlValidator>());
         Assert.NotNull(provider.GetRequiredService<BestHttpCookieLibraryService>());
+        Assert.NotNull(provider.GetRequiredService<PatchUrlGroupService>());
         Assert.NotNull(provider.GetRequiredService<LauncherSettingsService>());
         Assert.Single(provider.GetServices<Crc64Service>());
         Assert.Single(provider.GetServices<LauncherSettingsService>());
