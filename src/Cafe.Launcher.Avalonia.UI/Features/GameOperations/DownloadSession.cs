@@ -30,7 +30,7 @@ internal sealed class DownloadSession : IDisposable
     private readonly ILocalInstallationStateStore localInstallationStateStore;
     private readonly GameInstallationPath installationPath;
     private readonly IDiskSpaceService diskSpaceService;
-    private readonly LocalDiagnostics diagnostics;
+    private readonly ILauncherDiagnostics diagnostics;
     private readonly LocalizationService localizer;
     private readonly ManifestDiffCalculator diffCalculator;
     private readonly DownloadExecutor downloadExecutor;

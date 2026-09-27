@@ -33,9 +33,9 @@ internal sealed class OperationSurfaceAnimator
         MotionTokens.FastDuration.TotalMilliseconds / MotionTokens.NormalDuration.TotalMilliseconds;
 
     private CancellationTokenSource? transitionCts;
-    private readonly Cafe.Launcher.Core.Services.Diagnostics.LocalDiagnostics? diagnostics;
+    private readonly Cafe.Launcher.Core.Services.Diagnostics.ILauncherDiagnostics? diagnostics;
 
-    public OperationSurfaceAnimator(Cafe.Launcher.Core.Services.Diagnostics.LocalDiagnostics? diagnostics = null)
+    public OperationSurfaceAnimator(Cafe.Launcher.Core.Services.Diagnostics.ILauncherDiagnostics? diagnostics = null)
     {
         this.diagnostics = diagnostics;
     }

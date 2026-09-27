@@ -29,7 +29,7 @@ internal partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMo
     private readonly LocalizationService localizer;
     private readonly GameInstallationPath gameInstallationPath;
     private readonly ILocalInstallationStateStore localInstallationStateStore;
-    private readonly LocalDiagnostics diagnostics;
+    private readonly ILauncherDiagnostics diagnostics;
     private readonly IFilePickerService filePickerService;
     private readonly LauncherBuildIdentity? buildIdentity;
     private bool hasInitializedGamePath;
@@ -47,7 +47,7 @@ internal partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMo
         LocalizationService localizer,
         GameInstallationPath gameInstallationPath,
         ILocalInstallationStateStore localInstallationStateStore,
-        LocalDiagnostics diagnostics,
+        ILauncherDiagnostics diagnostics,
         IFilePickerService filePickerService,
         LauncherBuildIdentity? buildIdentity = null)
     {

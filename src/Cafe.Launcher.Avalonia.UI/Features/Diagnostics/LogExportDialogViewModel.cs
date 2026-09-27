@@ -27,7 +27,7 @@ internal sealed partial class LogExportDialogViewModel : ViewModelBase, IModalCo
     private readonly IFilePickerService filePickerService;
     private readonly ToastService toastService;
     private readonly LocalizationService localizer;
-    private readonly LocalDiagnostics diagnostics;
+    private readonly ILauncherDiagnostics diagnostics;
     private readonly Action<string> openDirectory;
     private readonly LatestRefresh rangeProbeRefresh = new();
     private CancellationTokenSource? exportCancellationTokenSource;
@@ -59,7 +59,7 @@ internal sealed partial class LogExportDialogViewModel : ViewModelBase, IModalCo
         IFilePickerService filePickerService,
         ToastService toastService,
         LocalizationService localizer,
-        LocalDiagnostics diagnostics)
+        ILauncherDiagnostics diagnostics)
         : this(
             exportService,
             filePickerService,
@@ -75,7 +75,7 @@ internal sealed partial class LogExportDialogViewModel : ViewModelBase, IModalCo
         IFilePickerService filePickerService,
         ToastService toastService,
         LocalizationService localizer,
-        LocalDiagnostics diagnostics,
+        ILauncherDiagnostics diagnostics,
         Action<string> openDirectory)
     {
         this.exportService = exportService;

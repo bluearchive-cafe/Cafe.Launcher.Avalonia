@@ -20,7 +20,7 @@ internal sealed record DownloadSessionContext(
     ILocalInstallationStateStore ILocalInstallationStateStore,
     ILauncherSettingsService SettingsService,
     IDiskSpaceService IDiskSpaceService,
-    LocalDiagnostics Diagnostics,
+    ILauncherDiagnostics Diagnostics,
     LocalizationService Localizer,
     GameInstallationPath InstallationPath,
     DownloadCheckpointStore CheckpointStore,

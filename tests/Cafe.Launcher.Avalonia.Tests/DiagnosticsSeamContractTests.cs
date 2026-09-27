@@ -21,9 +21,23 @@ public sealed class DiagnosticsSeamContractTests
 
         Assert.True(seam.IsAssignableFrom(typeof(LocalDiagnostics)));
 
+        // 钉住接缝的**完整**成员集合：接口是 Core 与表现层之间唯一的诊断词汇表，
+        // 加成员必须是刻意决定（属性访问器也会出现在 GetMethods 里，故一并列出）。
         var members = seam.GetMethods().Select(method => method.Name).OrderBy(name => name, StringComparer.Ordinal).ToArray();
         Assert.Equal(
-            ["DebugAsync", "ErrorAsync", "LogMessage", "MessageAsync"],
+            [
+                "DebugAsync",
+                "ErrorAsync",
+                "ErrorAsync",
+                "FatalAsync",
+                "LogMessage",
+                "MessageAsync",
+                "SetMinimumLevel",
+                "VerboseAsync",
+                "WarningAsync",
+                "get_LogFilePath",
+                "get_MinimumLevel"
+            ],
             members);
     }
 

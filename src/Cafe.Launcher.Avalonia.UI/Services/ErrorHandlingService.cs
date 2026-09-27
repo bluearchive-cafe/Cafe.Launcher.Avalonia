@@ -63,13 +63,13 @@ internal interface IErrorHandlingService
 internal sealed class ErrorHandlingService : IErrorHandlingService
 {
     private readonly LocalizationService localizer;
-    private readonly LocalDiagnostics diagnostics;
+    private readonly ILauncherDiagnostics diagnostics;
     private readonly ToastService toastService;
 
     /// <summary>Initializes the service with its localization, diagnostics, and toast collaborators.</summary>
     public ErrorHandlingService(
         LocalizationService localizer,
-        LocalDiagnostics diagnostics,
+        ILauncherDiagnostics diagnostics,
         ToastService toastService)
     {
         this.localizer = localizer;

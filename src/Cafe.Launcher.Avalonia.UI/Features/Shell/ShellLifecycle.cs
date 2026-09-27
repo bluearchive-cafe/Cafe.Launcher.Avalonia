@@ -44,7 +44,7 @@ internal sealed class ShellLifecycle : IDisposable
     private readonly LauncherUpdateService launcherUpdateService;
     private readonly LauncherSelfUpdateService launcherSelfUpdateService;
     private readonly IWindowsLauncherUpdateApplier launcherUpdateApplier;
-    private readonly LocalDiagnostics diagnostics;
+    private readonly ILauncherDiagnostics diagnostics;
     private readonly IErrorHandlingService errorHandling;
     private readonly SystemAnimationSettingsProvider systemAnimationSettingsProvider;
     private readonly LauncherBuildIdentity? buildIdentity;
@@ -100,7 +100,7 @@ internal sealed class ShellLifecycle : IDisposable
         LauncherUpdateService launcherUpdateService,
         LauncherSelfUpdateService launcherSelfUpdateService,
         IWindowsLauncherUpdateApplier launcherUpdateApplier,
-        LocalDiagnostics diagnostics,
+        ILauncherDiagnostics diagnostics,
         IErrorHandlingService errorHandling,
         SystemAnimationSettingsProvider systemAnimationSettingsProvider,
         ShellPresentationFamily family,
@@ -134,7 +134,7 @@ internal sealed class ShellLifecycle : IDisposable
         LauncherUpdateService launcherUpdateService,
         LauncherSelfUpdateService launcherSelfUpdateService,
         IWindowsLauncherUpdateApplier launcherUpdateApplier,
-        LocalDiagnostics diagnostics,
+        ILauncherDiagnostics diagnostics,
         IErrorHandlingService errorHandling,
         SystemAnimationSettingsProvider systemAnimationSettingsProvider,
         ShellPresentationFamily family,

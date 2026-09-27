@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Constants;
@@ -32,7 +32,7 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
     private readonly Func<TimeSpan, Task> delayAsync;
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
-    private readonly LocalDiagnostics diagnostics;
+    private readonly ILauncherDiagnostics diagnostics;
     private readonly IErrorHandlingService errorHandling;
     private readonly IGameOperationJourneyHost host;
 
@@ -51,7 +51,7 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
         IGameSessionMonitor sessionMonitor,
         LocalizationService localizer,
         ToastService toastService,
-        LocalDiagnostics diagnostics,
+        ILauncherDiagnostics diagnostics,
         IErrorHandlingService errorHandling,
         Func<TimeSpan, Task> delayAsync,
         IGameOperationJourneyHost host)

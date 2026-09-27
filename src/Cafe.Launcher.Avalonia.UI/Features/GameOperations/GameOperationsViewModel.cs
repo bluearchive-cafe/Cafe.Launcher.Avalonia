@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.IO;
 using System.Threading;
@@ -156,7 +156,7 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
         IGameSessionMonitor sessionMonitor,
         LocalizationService localizer,
         ToastService toastService,
-        LocalDiagnostics diagnostics,
+        ILauncherDiagnostics diagnostics,
         ShellViewModel shell,
         DialogsViewModel dialogs,
         IErrorHandlingService errorHandling,

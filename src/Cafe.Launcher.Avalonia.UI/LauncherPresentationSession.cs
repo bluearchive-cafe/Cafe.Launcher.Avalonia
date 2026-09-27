@@ -52,7 +52,7 @@ public sealed class LauncherPresentationSession : IDisposable
         var window = new MainWindow(
             services.GetRequiredService<WindowFilePickerService>(),
             services.GetRequiredService<WindowMetricsService>(),
-            services.GetRequiredService<LocalDiagnostics>())
+            services.GetRequiredService<ILauncherDiagnostics>())
         {
             DataContext = resolvedViewModel,
         };
@@ -211,8 +211,8 @@ public sealed class LauncherPresentationSession : IDisposable
             // 关窗持久化失败发生在每次正常退出路径上：必须写入本地日志，
             // 否则用户报告「窗口位置记不住」时无任何诊断线索（Debug 输出在
             // Release 构建不可见）。此刻容器尚未 Dispose，
-            // LocalDiagnostics.ErrorAsync 自身全量吞异常，不会反向影响退出流程。
-            await services.GetRequiredService<LocalDiagnostics>().ErrorAsync(
+            // ILauncherDiagnostics.ErrorAsync 自身全量吞异常，不会反向影响退出流程。
+            await services.GetRequiredService<ILauncherDiagnostics>().ErrorAsync(
                 "Shutdown persistence failed.",
                 exception,
                 CancellationToken.None);
@@ -267,7 +267,7 @@ public sealed class LauncherPresentationSession : IDisposable
             var tray = new SystemTrayService(
                 window,
                 services.GetRequiredService<LocalizationService>(),
-                services.GetRequiredService<LocalDiagnostics>(),
+                services.GetRequiredService<ILauncherDiagnostics>(),
                 services.GetRequiredService<ISystemTrayActions>());
             if (tray.Initialize())
             {
@@ -281,7 +281,7 @@ public sealed class LauncherPresentationSession : IDisposable
         }
         catch (Exception ex)
         {
-            LocalDiagnostics.LogSync(LogEntrySeverity.Warn, "App", $"SystemTrayService init failed: {ex.Message}");
+            LauncherLog.LogSync(LogEntrySeverity.Warn, "App", $"SystemTrayService init failed: {ex.Message}");
         }
     }
 

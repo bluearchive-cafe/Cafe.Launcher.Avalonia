@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -28,7 +28,7 @@ internal sealed class LogExportService
 
     private const int MaxRetainedLogFiles = 3;
 
-    private readonly LocalDiagnostics diagnostics;
+    private readonly ILauncherDiagnostics diagnostics;
     private readonly LauncherDataRoot dataRoot;
     private readonly ICrashReportLocator crashReportLocator;
     private readonly GraphicsInfoProbe? graphicsInfoProbe;
@@ -39,7 +39,7 @@ internal sealed class LogExportService
     public string DefaultExportDirectory => dataRoot.LogExportDirectory;
 
     public LogExportService(
-        LocalDiagnostics diagnostics,
+        ILauncherDiagnostics diagnostics,
         LauncherDataRoot dataRoot,
         ICrashReportLocator crashReportLocator,
         LauncherBuildIdentity? buildIdentity = null)
@@ -48,7 +48,7 @@ internal sealed class LogExportService
     }
 
     public LogExportService(
-        LocalDiagnostics diagnostics,
+        ILauncherDiagnostics diagnostics,
         LauncherDataRoot dataRoot,
         ICrashReportLocator crashReportLocator,
         GraphicsInfoProbe? graphicsInfoProbe)
@@ -57,7 +57,7 @@ internal sealed class LogExportService
     }
 
     public LogExportService(
-        LocalDiagnostics diagnostics,
+        ILauncherDiagnostics diagnostics,
         LauncherDataRoot dataRoot,
         ICrashReportLocator crashReportLocator,
         GraphicsInfoProbe? graphicsInfoProbe,

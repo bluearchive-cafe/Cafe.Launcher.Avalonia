@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -23,7 +23,7 @@ internal sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCo
     private readonly UnifiedLogger logger;
     private readonly ToastService toastService;
     private readonly LocalizationService localizer;
-    private readonly LocalDiagnostics diagnostics;
+    private readonly ILauncherDiagnostics diagnostics;
     private readonly Func<CancellationToken, Task<IReadOnlyList<LogEntryDisplay>>> entryLoader;
     private IReadOnlyList<LogEntryDisplay> allEntries = [];
     private readonly LatestRefresh filterRefresh = new();
@@ -71,7 +71,7 @@ internal sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCo
         UnifiedLogger logger,
         ToastService toastService,
         LocalizationService localizer,
-        LocalDiagnostics diagnostics)
+        ILauncherDiagnostics diagnostics)
         : this(logger, toastService, localizer, diagnostics, null)
     {
     }
@@ -80,7 +80,7 @@ internal sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCo
         UnifiedLogger logger,
         ToastService toastService,
         LocalizationService localizer,
-        LocalDiagnostics diagnostics,
+        ILauncherDiagnostics diagnostics,
         Func<CancellationToken, Task<IReadOnlyList<LogEntryDisplay>>>? entryLoader = null)
     {
         this.logger = logger;

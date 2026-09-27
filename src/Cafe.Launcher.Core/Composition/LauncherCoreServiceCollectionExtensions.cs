@@ -37,7 +37,20 @@ public static class LauncherCoreServiceCollectionExtensions
         // registered afterwards are disposed first by the Microsoft DI container.
         // 实现与接口映射到同一实例：这三个服务都持有状态（磁盘空间缓存、按路径的引用计数信号量），
         // 各自注册两份会让表现层拿到另一个实例。
-        services.TryAddSingleton<Crc64Service>();
+        // 诊断门面：实现从容器里的 UnifiedLogger 惰性构造（宿主/表现层在各自登记阶段把它放进来），
+        // 共享静态缝的唯一登记所有方也在这里——AddLauncherCore 是整张对象图的起点，只调用一次。
+        services.TryAddSingleton(sp =>
+        {
+            // 进程日志器通常由组合根在 pre-DI 阶段建好并登记；Core-only 容器（测试、幂等性守卫）
+            // 没有它，此时按数据根与身份自建一个，语义与表现层的兜底一致。
+            var logger = sp.GetService<UnifiedLogger>()
+                ?? new UnifiedLogger(
+                    sp.GetRequiredService<LauncherDataRoot>().Root,
+                    sp.GetRequiredService<LauncherBuildIdentity>());
+            LocalDiagnostics.RegisterSharedLogger(logger);
+            return new LocalDiagnostics(logger);
+        });
+        services.TryAddSingleton<ILauncherDiagnostics>(sp => sp.GetRequiredService<LocalDiagnostics>());        services.TryAddSingleton<Crc64Service>();
         services.TryAddSingleton<ICrc64Service>(sp => sp.GetRequiredService<Crc64Service>());
         services.TryAddSingleton<DiskSpaceService>();
         services.TryAddSingleton<IDiskSpaceService>(sp => sp.GetRequiredService<DiskSpaceService>());
