@@ -3,12 +3,14 @@ using Cafe.Launcher.Core.Composition;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Composition;
+using Cafe.Launcher.Avalonia.UI.Composition;
 
 namespace Cafe.Launcher.Avalonia.Composition;
 
 /// <summary>
 /// 宿主的服务登记入口：解析数据根、登记 Core 与宿主自有服务，然后把表现层
-/// 整体交给 UI 程序集的 <c>AddLauncherPresentation</c>。宿主不再逐个命名表现层类型。
+/// 整体交给 UI 程序集（<c>AddLauncherPresentationServices</c> 与生命周期门面 <c>AddLauncherPresentation</c>）。
+/// 宿主不再逐个命名表现层类型。
 /// </summary>
 public static class ServiceConfiguration
 {
@@ -38,13 +40,16 @@ public static class ServiceConfiguration
         // 是进程入口的知识。接口由 UI 声明（消费者在那边），实现在这里。
         services.AddSingleton<ICrashReporterLauncher, CrashReporterLauncher>();
 
-        // 表现层整体登记，参数只传宿主才知道的值。
+        // 表现层整体登记（含生命周期门面），参数只传宿主才知道的值。
         services.AddLauncherPresentationServices(
             dataRoot,
             buildIdentity,
             existingLogger,
             existingFatalCrashService,
             Program.ShowHiddenSettings);
+
+        // 生命周期门面：宿主只通过它与表现层交互（窗口/VM/托盘由它自己构造）。
+        services.AddLauncherPresentation();
 
         return services;
     }

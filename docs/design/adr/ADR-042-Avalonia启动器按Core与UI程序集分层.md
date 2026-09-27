@@ -146,6 +146,17 @@ Core API 后应改回显式 using。`AssemblySplitContractTests.CoreSources_UseO
   崩溃报告与导出内容里的版本/提交/构建配置不再来自宿主 `BuildInfo`；`CrashReportStore` 的注册
   由组合根显式传身份。它们因此可以在 UI 程序集落位时整体搬走——唯一仍与宿主耦合的是
   `CrashReporterLauncher`（拉起独立崩溃报告进程，依赖 `Program`）。
+- **接缝反转完成**：`LauncherPresentationSession` 不再转发宿主回调，而是自己从容器解析
+  `MainWindow`、`MainWindowViewModel` 与托盘并组装（`CreateMainWindow`），并接管原来宿主里的
+  `InitializeViewModelAsync`/`CompleteShutdownAsync` 两个方法与启动行为挂载
+  （`AttachStartupBehavior(firstLaunch, launchGameRequested, shutdownToken)`：首启走向导、否则初始化后
+  按 `--launch-game` 自动启动）。`LauncherPresentationCallbacks` 记录随之删除，
+  `AddLauncherPresentation()` 只登记会话本身；宿主 `App.axaml.cs` 只剩 277 行，且不再解析任何表现层类型
+  （窗口、VM、托盘、文件选择器、窗口尺寸服务都不再出现在宿主里）。宿主保留：应用生命周期、
+  跨进程转发信号、崩溃窗口替换（`CreateCrashReportWindow` + `HideMainWindow` + `desktop.Shutdown(1)`）
+  与关闭延迟。会话登记并入宿主 `AddLauncherServices`，因此任何从组合根构建的容器
+  （含无头测试宿主）都拿到同一条接缝；`AssemblySplitContractTests` 的顺序契约改为
+  「宿主不得直接登记表现层」「组合根里 Core 调用点先于表现层调用点」。
 - **表现层整体落位 UI 程序集**：`Views/`、`ViewModels/`、`Features/`、`Controls/`、`Converters/`、
   `Models/`、`Helpers/`、表现层 `Services/`（本地化、主题、托盘、取文件/窗口尺寸、设置编辑器、
   下载与启动工作流、崩溃报告族）、运行期 `Assets/`（`app-icon.ico`、`launcher-background.png`）

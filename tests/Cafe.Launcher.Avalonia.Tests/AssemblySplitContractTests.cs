@@ -190,16 +190,26 @@ public sealed class AssemblySplitContractTests
         var compositionRoot = TestRepository.FromHostRoot("Composition/ServiceConfiguration.cs");
         var rootSource = File.ReadAllText(compositionRoot);
 
-        var coreRegistration = rootSource.IndexOf("AddLauncherCore", StringComparison.Ordinal);
-        var firstSingleton = rootSource.IndexOf("AddSingleton", StringComparison.Ordinal);
+        // 只匹配调用点：文档注释里也会出现这些方法名，按第一次出现定位会落进注释。
+        var coreRegistration = rootSource.IndexOf("services.AddLauncherCore(", StringComparison.Ordinal);
+        var firstSingleton = rootSource.IndexOf("services.AddSingleton", StringComparison.Ordinal);
         Assert.True(coreRegistration >= 0, "组合根必须先调用 AddLauncherCore。");
         Assert.True(firstSingleton > coreRegistration,
             "Core 必须先注册，确保容器反向释放时 UI 先于 Core 释放。");
 
-        var compositionRootCall = hostSource.IndexOf("AddLauncherServices", StringComparison.Ordinal);
-        var presentationCall = hostSource.IndexOf("AddLauncherPresentation", StringComparison.Ordinal);
-        Assert.True(compositionRootCall >= 0, "宿主必须调用组合根 AddLauncherServices。");
-        Assert.True(presentationCall > compositionRootCall, "表现层必须在组合根（含 Core）之后注册。");
+        Assert.True(
+            hostSource.Contains("AddLauncherServices", StringComparison.Ordinal),
+            "宿主必须调用组合根 AddLauncherServices。");
+        // 表现层登记整体归组合根：宿主只调 AddLauncherServices 这一个入口，
+        // 不再自己拼表现层（那会让宿主重新命名 UI 内部类型）。
+        Assert.False(
+            hostSource.Contains("AddLauncherPresentation", StringComparison.Ordinal),
+            "宿主不得直接登记表现层：表现层登记属于组合根。");
+        var presentationCall = rootSource.IndexOf("services.AddLauncherPresentationServices(", StringComparison.Ordinal);
+        Assert.True(presentationCall > coreRegistration, "表现层必须在 Core 之后注册。");
+        Assert.True(
+            rootSource.Contains("services.AddLauncherPresentation()", StringComparison.Ordinal),
+            "组合根必须登记表现层生命周期门面。");
 
         // 数据根与 Core 登记只允许一个调用点：宿主若再调一次 AddLauncherCore，顺序契约就分裂成
         // 两处，并迫使宿主自己解析进程数据根（ADR-025 的单点解析），Core 也只能再提供
