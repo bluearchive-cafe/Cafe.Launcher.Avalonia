@@ -29,6 +29,17 @@ public sealed class AssemblySplitContractTests
     }
 
     [Fact]
+    public void SettingsPersistenceAndDataRoot_AreOwnedByCore()
+    {
+        Assert.True(File.Exists(TestRepository.FromCoreRoot("Services/LauncherDataRoot.cs")));
+        Assert.True(File.Exists(TestRepository.FromCoreRoot("Services/LauncherSettingsService.cs")));
+        Assert.True(File.Exists(TestRepository.FromCoreRoot("Helpers/AtomicJsonFileStore.cs")));
+        Assert.False(File.Exists(TestRepository.FromHostRoot("Services/LauncherDataRoot.cs")));
+        Assert.False(File.Exists(TestRepository.FromHostRoot("Services/LauncherSettingsService.cs")));
+        Assert.False(File.Exists(TestRepository.FromHostRoot("Helpers/AtomicJsonFileStore.cs")));
+    }
+
+    [Fact]
     public void BuildIdentity_ReadsTheSuppliedHostAssembly()
     {
         var identity = LauncherBuildIdentity.FromAssembly(typeof(Constants.BuildInfo).Assembly);

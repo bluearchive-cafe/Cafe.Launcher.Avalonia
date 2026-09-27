@@ -14,7 +14,7 @@ namespace Cafe.Launcher.Avalonia.Services.Diagnostics;
 /// pre-DI 阶段）、纯静态帮助类（ExternalLinkService、跨进程转发、注册表代
 /// 理读取）。新的可注入模块不要再走静态入口（R2-c11①）。
 /// </summary>
-public sealed class LocalDiagnostics
+public sealed class LocalDiagnostics : ILauncherDiagnostics
 {
     private readonly UnifiedLogger logger;
 
