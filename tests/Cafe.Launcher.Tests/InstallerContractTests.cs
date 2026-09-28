@@ -414,9 +414,11 @@ public sealed class InstallerContractTests
         Assert.Contains("Requires:       libX11.so.6()(64bit)", spec, StringComparison.Ordinal);
         Assert.Contains("Requires:       libssl.so.3()(64bit)", spec, StringComparison.Ordinal);
         Assert.Contains("Requires:       libgssapi_krb5.so.2()(64bit)", spec, StringComparison.Ordinal);
-        // LTTng 是可选跟踪插件：载荷不带这个库，只有运行时按需 dlopen 的
-        // libcoreclrtraceptprovider.so 会去探测 2.12 的 soname。硬依赖会让已升到
-        // lttng-ust 2.13+ 的发行版（Fedora 43 只提供 .so.1）根本装不上，故只做弱依赖。
+        // LTTng 是可选跟踪插件：载荷里只有运行时按需 dlopen 的 libcoreclrtraceptprovider.so
+        // 带这条 DT_NEEDED，而 rpm 的内建 ELF 生成器会把它变成自动 Requires——手写的
+        // Recommends 覆盖不掉。已升到 lttng-ust 2.13+ 的发行版（Fedora 43 只提供 .so.1）
+        // 因此会直接装不上，所以既要过滤掉生成的那条，也不能再手写硬依赖。
+        Assert.Contains("%global __requires_exclude ^liblttng-ust[.]so[.]0", spec, StringComparison.Ordinal);
         Assert.Contains("Recommends:     liblttng-ust.so.0()(64bit)", spec, StringComparison.Ordinal);
         Assert.DoesNotContain("Requires:       liblttng-ust.so.0()(64bit)", spec, StringComparison.Ordinal);
         Assert.Contains("libicuuc.so.78()(64bit) or", spec, StringComparison.Ordinal);
