@@ -28,6 +28,7 @@ public sealed class UnifiedLogger : IDisposable
     private readonly string launcherVersion;
     private readonly string commitSha;
     private readonly string buildConfiguration;
+    private readonly Action? onDisposed;
     private bool disposed;
 
     /// <summary>
@@ -39,8 +40,22 @@ public sealed class UnifiedLogger : IDisposable
     /// <c>BuildInfo</c>，迁入 Core 后改为注入（缺省时留空，测试与辅助宿主不必伪造）。
     /// </param>
     public UnifiedLogger(string logDirectory, LauncherBuildIdentity? buildIdentity = null)
+        : this(logDirectory, buildIdentity, onDisposed: null)
+    {
+    }
+
+    /// <param name="onDisposed">
+    /// 测试缝：<see cref="Dispose"/> 真正关掉 Serilog 管道之后回调一次。日志是
+    /// <c>shared: true</c> 打开的（允许日志查看器边写边读），因此**无法**用「文件句柄是否
+    /// 已释放」观测释放动作；所有权语义（谁该释放兜底日志器）需要一个确定性信号。
+    /// </param>
+    internal UnifiedLogger(
+        string logDirectory,
+        LauncherBuildIdentity? buildIdentity,
+        Action? onDisposed)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(logDirectory);
+        this.onDisposed = onDisposed;
         logFilePath = Path.Combine(logDirectory, GamePaths.UnifiedLogFileName);
         launcherVersion = buildIdentity?.LauncherVersion ?? "";
         commitSha = buildIdentity?.CommitSha ?? "";
@@ -325,6 +340,7 @@ public sealed class UnifiedLogger : IDisposable
         if (disposed) return;
         disposed = true;
         serilogLogger.Dispose();
+        onDisposed?.Invoke();
         GC.SuppressFinalize(this);
     }
 }
