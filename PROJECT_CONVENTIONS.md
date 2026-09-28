@@ -315,4 +315,8 @@ WinExe 宿主只保留进程生命周期和顶层 Avalonia 生命周期；Core �
 
 > 版本以 `Directory.Packages.props` 中声明的为准；升级依赖时同步更新本表（受 `InstallerContractTests` 守护），并再生 `THIRD-PARTY-NOTICES.md` 与 lock 文件（流程见 AGENTS.md「Dependency upgrades」）。
 
-`Cafe.Launcher.HeadlessTests` 暂时通过 `VersionOverride` 固定 `xunit.v3` 3.2.2；`Avalonia.Headless.XUnit` 12.1.3 尚不兼容 xUnit 4（[AvaloniaUI/Avalonia#22072](https://github.com/AvaloniaUI/Avalonia/issues/22072)）。上游修复后应移除该覆盖，并将程序集并行化配置迁移到 xUnit 4 API。
+`Cafe.Launcher.HeadlessTests` 通过 `VersionOverride` 固定 `xunit.v3` 3.2.2。真正的原因不是「Headless 不支持 xUnit v3」——xUnit v3 支持本身已于 [AvaloniaUI/Avalonia#18356](https://github.com/AvaloniaUI/Avalonia/issues/18356) 完成——而是 `Avalonia.Headless.XUnit` 12.1.3 对 `xunit.v3.extensibility.core` 声明的是**精确版本** `[3.2.2]`，依赖图被迫收敛到 3.2.2。因此升级 `xunit.v3` 会撞上 NU1107/NU1605，而不是「换个版本号就行」。
+
+该约束沿依赖链下传：`xunit.v3` 3.2.2 → `xunit.v3.core.mtp-v1` 3.2.2 → `Microsoft.Testing.Platform` **1.9.1**，而 `Cafe.Launcher.Tests`（`xunit.v3` 4.0.1）拿到的是 `xunit.v3.core.mtp-v2` → MTP **2.4.0**。`VersionOverride` 只作用于本工程，两个工程各解析各的图，所以这两个版本可以并存。
+
+这也是改用 Microsoft.Testing.Platform 的阻塞点，规则是「不要在同一解决方案里混用 VSTest 与 MTP 工程」，而覆盖率工具同样卡版本：`Microsoft.Testing.Extensions.CodeCoverage` 18.10.1（与上表 `Microsoft.NET.Test.Sdk` 同版）要求 MTP ≥ 2.x，只有 18.0.4 及更早才兼容 MTP 1.9.1。上游放宽该约束前不要迁移。另注意程序集并行化的 API 两套并存：`Cafe.Launcher.Tests` 用 xUnit 4 的 `[assembly: Parallelization(Mode = ParallelMode.None)]`，`Cafe.Launcher.HeadlessTests` 仍是 xUnit 3 的 `[assembly: CollectionBehavior(DisableTestParallelization = true)]`。
