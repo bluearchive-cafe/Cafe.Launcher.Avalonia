@@ -16,6 +16,7 @@ The assembly graph is one-way: host → UI → Core → Updater.Core; the host a
 - `tests/Cafe.Launcher.Tests/` — xUnit v3 unit tests. `tests/Cafe.Launcher.HeadlessTests/` — Avalonia Headless UI tests, including golden-screenshot baselines.
 - `tests/Support/` — test facilities both suites use (temp directories, repository/resource lookup, bounded async waiting), compiled into each test assembly through the same `Compile-Link` mechanism as `tests/TestDoubles/`. A facility belongs here only when both projects need it and it carries no project-specific knowledge.
 - `scripts/` and `installer/` — packaging scripts and the Windows installer.
+- `docs/` — ADRs (`docs/design/adr/`), design specs and plans, research notes, release banners. Document references follow renames: a historical ADR keeps the decision it recorded, but its paths and identifiers are updated to the current names, and every Markdown relative link must resolve (`DocumentationLinkContractTests`; the batch that renamed the assemblies left 39 dead links behind).
 - `prototypes/` — throwaway design prototypes; not part of the app or release.
 
 ### ViewModel placement rule

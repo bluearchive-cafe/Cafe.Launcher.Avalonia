@@ -2,7 +2,7 @@
 
 - 状态：✅ 已接受
 - 日期：2026-09-23
-- 相关：`installer/linux/rpm/`、`installer/linux/debian/`、`scripts/Build-Distribution.ps1`、`.github/workflows/release.yml`、`tests/Cafe.Launcher.Avalonia.Tests/InstallerContractTests.cs`
+- 相关：`installer/linux/rpm/`、`installer/linux/debian/`、`scripts/Build-Distribution.ps1`、`.github/workflows/release.yml`、`tests/Cafe.Launcher.Tests/InstallerContractTests.cs`
 - 后续：第 2、8 条中「各格式各自提交 wrapper/desktop」的资产布局已由 [ADR-039](ADR-039-Linux打包启动资产共用模板去重.md) 收敛为共享模板；预发布版本转换、显式 `Requires`、关闭 debug 包、wrapper 契约等其余决定仍然有效。
 
 ## 背景
@@ -27,7 +27,7 @@ Linux 发行包此前是 `.tar.gz`、AppImage 与 `.deb`。RPM 系发行版（Fe
 3. **预发布版本转换与 deb 完全一致**（`-` → `~`），两套包对同一 `VersionPrefix` 得到语义相同的版本串。
 4. **关闭 debug 包与 `__os_install_post`**（`%global debug_package %{nil}`、`%global __os_install_post %{nil}`）：载荷已是自包含的已发布 .NET 应用，且发行工作流所在的 Debian 系主机的 rpm 不自带 `find-debuginfo`。
 5. **显式声明 X11 相关依赖**：`libX11.so.6()(64bit)`、`libICE.so.6()(64bit)`、`libSM.so.6()(64bit)`、`libfontconfig.so.1()(64bit)`、`libxkbcommon.so.0()(64bit)`，与 `debian/control` 的 `Depends` 一一对应，按 soname 声明以跨发行版可移植。
-6. **`scripts/Build-Distribution.ps1` 在 `if ($IsLinux)` 内、deb 块之后**插入 rpm 块：`rpmbuild -bb`（`-D` 一律传绝对路径，因为 rpm 的 `%mkbuilddir` 会切换工作目录），要求 `RPMS/` 下恰好一个 rpm，复制为 `Cafe.Launcher.Avalonia_<tag>_linux-x64.rpm`，再用 `rpm -qp --queryformat` 校验元数据。
+6. **`scripts/Build-Distribution.ps1` 在 `if ($IsLinux)` 内、deb 块之后**插入 rpm 块：`rpmbuild -bb`（`-D` 一律传绝对路径，因为 rpm 的 `%mkbuilddir` 会切换工作目录），要求 `RPMS/` 下恰好一个 rpm，复制为 `Cafe.Launcher_<tag>_linux-x64.rpm`，再用 `rpm -qp --queryformat` 校验元数据。
 7. **发布工作流同步四处**：依赖步骤加 `rpm`；在同一 bash 步骤里断言恰好一个 rpm、`%{NAME}` = `cafe-launcher`、`%{ARCH}` = `x86_64`，随后 `rpm --root "$RUNNER_TEMP/rpm-root" --initdb` + `-ivh --nodeps --noscripts` 装进临时根目录，校验可执行位与 `sh -n` wrapper，并跑 `--version` 冒烟；下载链接表、`SHA256SUMS` 计数（6 → 7）与两处 release 附件列表同步加入 rpm。
 8. **两套包共用同一布局与 wrapper 契约**：`/opt/cafe-launcher` + `/usr/bin/cafe-launcher`，只有 `CAFE_LAUNCHER_PACKAGE_FORMAT` 的取值不同（该值只判非空，仅用于可诊断性）。
 

@@ -1462,11 +1462,11 @@ Exec=/usr/bin/cafe-launcher
 [Desktop Entry]
 Type=Application
 Name=Cafe Launcher
-Exec=Cafe.Launcher.Avalonia
+Exec=Cafe.Launcher
 Icon=cafe-launcher
 Categories=Game;
 Terminal=false
-StartupWMClass=Cafe.Launcher.Avalonia
+StartupWMClass=Cafe.Launcher
 ```
 
 
@@ -1486,7 +1486,7 @@ AppImage 仍使用不声明 D-Bus activation 的 desktop 文件。
 installer/linux/templates/cafe-launcher.desktop    # 所有格式共用的 desktop 来源
 ```
 
-desktop 条目自 [ADR-039](adr/ADR-039-Linux打包启动资产共用模板去重.md) 起由模板生成：包安装（deb/rpm/pacman）替换为 `Exec=cafe-launcher` + `TryExec=cafe-launcher`，AppImage 替换为仅 `Exec=Cafe.Launcher.Avalonia`。若只有 `.deb` 需要 `DBusActivatable=true`，应在生成步骤里对该格式追加，而不是新增一份独立文件。
+desktop 条目自 [ADR-039](adr/ADR-039-Linux打包启动资产共用模板去重.md) 起由模板生成：包安装（deb/rpm/pacman）替换为 `Exec=cafe-launcher` + `TryExec=cafe-launcher`，AppImage 替换为仅 `Exec=Cafe.Launcher`。若只有 `.deb` 需要 `DBusActivatable=true`，应在生成步骤里对该格式追加，而不是新增一份独立文件。
 
 不要让 AppImage 意外声明它没有安装的 D-Bus service。
 
@@ -1506,7 +1506,7 @@ desktop 条目自 [ADR-039](adr/ADR-039-Linux打包启动资产共用模板去�
 
 ```sh
 export CAFE_LAUNCHER_DISTRIBUTION=deb
-exec /opt/cafe-launcher/Cafe.Launcher.Avalonia "$@"
+exec /opt/cafe-launcher/Cafe.Launcher "$@"
 ```
 
 D-Bus service 与 desktop entry 都调用：
@@ -1586,7 +1586,7 @@ LaunchGame
 这样：
 
 ```text
-./Cafe.Launcher.Avalonia
+./Cafe.Launcher
 ```
 
 在已有实例运行时，也能在 Linux 上显示首实例。
@@ -2454,8 +2454,8 @@ troubleshooting
 ```text
 Directory.Packages.props
 
-src/Cafe.Launcher.Avalonia/
-  Cafe.Launcher.Avalonia.csproj
+src/Cafe.Launcher/
+  Cafe.Launcher.csproj
   Program.cs
   App.axaml.cs
 
@@ -2499,7 +2499,7 @@ src/Cafe.Launcher.Avalonia/
     LauncherStrings*.resx
 
 installer/
-  Cafe.Launcher.Avalonia.iss
+  Cafe.Launcher.iss
 
   linux/
     cafe-launcher.desktop
@@ -2514,7 +2514,7 @@ scripts/
   New-WindowsInstaller.ps1
 
 tests/
-  Cafe.Launcher.Avalonia.Tests/
+  Cafe.Launcher.Tests/
     DesktopNotificationCoordinatorTests.cs
     DesktopActivationRouterTests.cs
     WindowsNotificationActivationParserTests.cs
