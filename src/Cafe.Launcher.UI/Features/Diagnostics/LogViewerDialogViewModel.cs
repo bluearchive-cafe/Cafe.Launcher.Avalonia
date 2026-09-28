@@ -210,8 +210,10 @@ internal sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCo
 
     private async Task<IReadOnlyList<LogEntryDisplay>> LoadEntriesAsync(CancellationToken cancellationToken)
     {
-        var logPath = logger.LogFilePath;
-        if (!File.Exists(logPath))
+        // 日志按大小轮转后，基名 unified.log 不再被创建，正在写的是 unified_001.log 一类兄弟文件：
+        // 直接读 LogFilePath 会在 5 MB 之后长期显示空列表。
+        var logPath = UnifiedLogger.ResolveActiveLogFile(logger.LogFilePath);
+        if (logPath is null)
             return [];
 
         using var reader = OpenLogReader(logPath);

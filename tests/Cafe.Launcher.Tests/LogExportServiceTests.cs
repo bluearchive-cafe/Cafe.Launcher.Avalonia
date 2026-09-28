@@ -1,4 +1,4 @@
-﻿using System.IO.Compression;
+using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -178,6 +178,33 @@ public sealed class LogExportServiceTests : IDisposable
             dataRoot,
             new CrashReportStore(dataRoot));
         Assert.Equal(dataRoot.LogExportDirectory, service.DefaultExportDirectory);
+    }
+
+    /// <summary>
+    /// 日志按大小轮转后基名不再被创建，正在写的只有 <c>unified_001.log</c>。导出必须把**这个**
+    /// 文件当作「当前日志」写进包内的 <c>unified.log</c>，否则用户报障时导出的包里没有他刚看到的日志。
+    /// </summary>
+    [Fact]
+    public async Task ExportAsync_WithOnlyARotatedLog_UsesTheRotatedFileAsTheCurrentLog()
+    {
+        var now = DateTimeOffset.Now;
+        var logDirectory = Path.Combine(tempDir, "rotated-only");
+        using var logger = new UnifiedLogger(logDirectory);
+        // 基名从未被创建：模拟「已经轮转过至少一次」的磁盘状态。Serilog 的文件 sink 是首次写入
+        // 才建目录，所以这里显式建目录，写一个磁盘上只有轮转文件的状态。
+        Directory.CreateDirectory(logDirectory);
+        File.WriteAllText(
+            Path.Combine(logDirectory, "unified_001.log"),
+            $"{now.AddMinutes(-1):O} [INF] [Test] Rotated entry\n");
+
+        var service = new LogExportService(new LocalDiagnostics(logger), TestDataRoot.ForCurrentProcess(), new CrashReportStore(TestDataRoot.ForCurrentProcess()) );
+
+        var zipPath = await service.ExportAsync(Path.Combine(tempDir, "rotated-only-selected"), LogExportOptions.Default);
+
+        using var zip = ZipFile.OpenRead(zipPath);
+        Assert.Contains("Rotated entry", ReadEntry(zipPath, "unified.log"), StringComparison.Ordinal);
+        // 同一份文件不作为轮转条目重复进包。
+        Assert.DoesNotContain(zip.Entries, entry => entry.FullName == "unified_001.log");
     }
 
     [Fact]
