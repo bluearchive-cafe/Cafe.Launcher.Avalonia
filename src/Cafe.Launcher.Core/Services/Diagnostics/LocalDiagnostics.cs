@@ -15,9 +15,17 @@ namespace Cafe.Launcher.Core.Services.Diagnostics;
 /// pre-DI 阶段）、纯静态帮助类（ExternalLinkService、跨进程转发、注册表代
 /// 理读取）。新的可注入模块不要再走静态入口（R2-c11①）。
 /// </summary>
-internal sealed class LocalDiagnostics : ILauncherDiagnostics
+internal sealed class LocalDiagnostics : ILauncherDiagnostics, IDisposable
 {
     private readonly UnifiedLogger logger;
+
+    /// <summary>
+    /// 这个门面是否**拥有** <see cref="logger"/>。只有「容器里没有 UnifiedLogger、由本类兜底
+    /// 自建」这一条路径为 true（Core-only 容器，例如单元测试的辅助容器）；生产路径由组合根
+    /// 把 pre-DI 的日志器登记进容器，所有权留在进程，<c>Program.RunSession</c> 最后显式释放。
+    /// 不区分的话，兜底日志器连同它的 Serilog 异步 sink 永远不会被释放。
+    /// </summary>
+    private readonly bool ownsLogger;
 
     /// <summary>
     /// Thread-safe static reference used by the static entry points to reach the
@@ -42,8 +50,33 @@ internal sealed class LocalDiagnostics : ILauncherDiagnostics
     }
 
     public LocalDiagnostics(UnifiedLogger logger)
+        : this(logger, ownsLogger: false)
+    {
+    }
+
+    /// <summary>
+    /// 兜底构造：调用方自建了日志器且不再有人释放它。容器会在释放本门面时一起释放它
+    /// （登记的是工厂，容器拥有工厂产出的实例）。
+    /// </summary>
+    internal static LocalDiagnostics Owning(UnifiedLogger logger)
+    {
+        ArgumentNullException.ThrowIfNull(logger);
+        return new LocalDiagnostics(logger, ownsLogger: true);
+    }
+
+    private LocalDiagnostics(UnifiedLogger logger, bool ownsLogger)
     {
         this.logger = logger;
+        this.ownsLogger = ownsLogger;
+    }
+
+    /// <summary>仅释放本类自己兜底创建的日志器；注入进来的那一个由它的所有者释放。</summary>
+    public void Dispose()
+    {
+        if (ownsLogger)
+        {
+            logger.Dispose();
+        }
     }
 
     /// <summary>

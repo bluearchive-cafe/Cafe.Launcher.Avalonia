@@ -21,7 +21,6 @@ namespace Cafe.Launcher;
 
 public partial class App : Application
 {
-    private const string SignalName = @"Local\Cafe_Launcher_SI_Show";
     private readonly CancellationTokenSource shutdownCts = new();
     private ServiceProvider? serviceProvider;
     private ShowWindowSignalListener? showWindowListener;
