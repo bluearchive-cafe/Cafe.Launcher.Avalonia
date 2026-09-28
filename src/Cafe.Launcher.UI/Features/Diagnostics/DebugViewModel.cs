@@ -123,7 +123,8 @@ internal sealed partial class DebugViewModel : ViewModelBase, IModalContentViewM
 
     private void RefreshSystemInfo()
     {
-        LogFilePath = unifiedLogger.LogFilePath;
+        // 轮转之后基名不再被创建，面板要显示的是真正在写的那个文件（无日志时留空）。
+        LogFilePath = UnifiedLogger.ResolveActiveLogFile(unifiedLogger.LogFilePath) ?? "";
         DataDirectoryPath = dataRoot.Root;
 
         SystemInfoText = Format(

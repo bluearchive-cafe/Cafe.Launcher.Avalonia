@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -79,7 +81,134 @@ public sealed class UnifiedLogger : IDisposable
 
     // ── diagnostics / testing ──────────────────────────────────────────
 
+    /// <summary>
+    /// 当前统一日志文件路径。这是<strong>词干</strong>而不是「一定存在的那个文件」：日志一旦按大小
+    /// 轮转（<c>rollOnFileSizeLimit</c> + <c>RollingInterval.Infinite</c>），Serilog 会把后续内容写进
+    /// <c>unified_001.log</c> 一类带序号的名字，基名从此不再被创建。需要读「现在正在写的那个文件」的
+    /// 调用点必须走 <see cref="ResolveActiveLogFile"/>，否则 5 MB 之后日志查看器会全空、导出会抛异常。
+    /// </summary>
     public string LogFilePath => logFilePath;
+
+    /// <summary>
+    /// 解析当前<strong>存在</strong>的统一日志文件：优先未经轮转的基名，否则取目录里最新的
+    /// <c>unified_*.log</c> 兄弟文件。日志目录读不到或没有任何候选时返回 <c>null</c>（调用点按
+    /// 「暂无日志」处理，而不是把基名当成一个必然存在的文件）。
+    /// </summary>
+    /// <param name="expectedPath">
+    /// <see cref="LogFilePath"/> 给出的基名路径。词干与扩展名由它推导，因此改 <see cref="GamePaths.UnifiedLogFileName"/>
+    /// 会带着轮转命名一起走。
+    /// </param>
+    public static string? ResolveActiveLogFile(string expectedPath)
+    {
+        if (string.IsNullOrWhiteSpace(expectedPath))
+        {
+            return null;
+        }
+
+        var existing = ExistingLogFiles(expectedPath);
+        if (existing.Count == 0)
+        {
+            return null;
+        }
+
+        if (File.Exists(expectedPath))
+        {
+            return expectedPath;
+        }
+
+        // 基名已经不再写入（轮转后就是这种状态），取写时间最新的那个兄弟文件。
+        return existing
+            .OrderByDescending(path => File.GetLastWriteTimeUtc(path))
+            .ThenByDescending(path => path, StringComparer.Ordinal)
+            .First();
+    }
+
+    /// <summary>
+    /// 目录里现有的统一日志文件：基名（若在）加上所有 <c>unified_*.log</c> 兄弟文件。
+    /// 供导出面板枚举「基名 + 轮转文件」使用，避免第二处自己拼序号名。
+    /// </summary>
+    public static IReadOnlyList<string> ExistingLogFiles(string expectedPath)
+    {
+        if (string.IsNullOrWhiteSpace(expectedPath))
+        {
+            return [];
+        }
+
+        var directory = Path.GetDirectoryName(expectedPath);
+        if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory))
+        {
+            return [];
+        }
+
+        var stem = Path.GetFileNameWithoutExtension(expectedPath);
+        var extension = Path.GetExtension(expectedPath);
+        if (string.IsNullOrEmpty(stem) || string.IsNullOrEmpty(extension))
+        {
+            return [];
+        }
+
+        var files = new List<string>();
+        try
+        {
+            if (File.Exists(expectedPath))
+            {
+                files.Add(expectedPath);
+            }
+
+            // 只认「词干 + 可选序号 + 原扩展名」：目录里同前缀的其他文件（例如用户手工留下的
+            // unified.log.bak）不该被当成轮转产物读进日志查看器。
+            foreach (var candidate in Directory.EnumerateFiles(directory, $"{stem}*{extension}"))
+            {
+                var name = Path.GetFileName(candidate);
+                if (files.Contains(candidate, StringComparer.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var middleLength = name.Length - stem.Length - extension.Length;
+                if (middleLength < 0
+                    || !name.StartsWith(stem, StringComparison.Ordinal)
+                    || !name.EndsWith(extension, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                // 序号段必须全为数字：unified_001.log 是轮转产物，unified_notes.log 不是。
+                // Serilog 的拼接是「词干 + _ + 序号 + 扩展名」（PathRoller），所以先吃掉那一个下划线。
+                var sequence = name.AsSpan(stem.Length, middleLength);
+                if (sequence.Length > 0 && sequence[0] == '_')
+                {
+                    sequence = sequence[1..];
+                }
+
+                if (middleLength == 0 || IsAllDigits(sequence))
+                {
+                    files.Add(candidate);
+                }
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // 读不到目录就是「没有日志可读」，不是错误：诊断读取本身不该把界面打断。
+            return files.Count > 0 ? files : [];
+        }
+
+        return files;
+    }
+
+    /// <summary>序号段是否为纯数字（空段按纯数字处理：基名本身没有序号）。</summary>
+    private static bool IsAllDigits(ReadOnlySpan<char> value)
+    {
+        foreach (var character in value)
+        {
+            if (!char.IsAsciiDigit(character))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     // ── public API ──────────────────────────────────────────────────────
 
