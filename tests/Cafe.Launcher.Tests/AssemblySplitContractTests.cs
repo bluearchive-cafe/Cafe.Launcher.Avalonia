@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Cafe.Launcher.Core;
@@ -266,6 +267,125 @@ public sealed class AssemblySplitContractTests
             .ToArray();
 
         Assert.Equal(declared.OrderBy(name => name, StringComparer.Ordinal).ToArray(), actual);
+    }
+
+    /// <summary>
+    /// 表现层程序集的公开面同样是显式声明集。Core 早有这条守卫，UI 一直没有——于是拆分后
+    /// 「宿主点名了哪些 UI 内部实现」只能靠读源码发现，而 ADR-042 的收窄目标正是把宿主
+    /// 对表现层的接触面压到窄接口/门面上。声明集把这个接触面摊开：新增公开类型必须同时改表，
+    /// 收窄（改 internal）也必须改表，两边都不会静默发生。
+    /// </summary>
+    /// <remarks>
+    /// 判据与 Core 那条同形：文件作用域命名空间让顶层类型顶格，按行首匹配因此天然排除嵌套类型；
+    /// 只比较顶层类型名（不含命名空间），所以文件内搬动不触发本守卫。
+    /// </remarks>
+    [Fact]
+    public void PresentationPublicSurface_IsTheDeclaredSet()
+    {
+        string[] declared =
+        [
+            // 宿主在 pre-DI 阶段必须亲手装配的崩溃路径：Program 与 CrashReportApp 直接 new
+            // 这些类型（身份由宿主注入），所以它们是公开的实现类型而不是窄接口。
+            "CrashReport",
+            "CrashReportBootstrap",
+            "CrashReportStore",
+            "CrashReportWindow",
+            "FatalCrashService",
+            "IFatalCrashService",
+            "ICrashReporterLauncher",
+
+            // 宿主与表现层之间的生命周期/登记门面（宿主只经这些入口接触表现层）。
+            "LauncherPresentationServiceCollectionExtensions",
+            "LauncherPresentationServiceRegistrations",
+            "LauncherPresentationSession",
+
+            // XAML/宿主登记直接引用的表现层类型。
+            "BannerCarouselTransition",
+            "LocalizationKeys",
+            "LocalizationService",
+            "LocalizedTextCatalog",
+            "LocalizationFailureEventArgs",
+            "LanguageFontFamilyService",
+            "SystemCultureSnapshot",
+
+            // 测试经 InternalsVisibleTo 之外仍需公开的数据表面。
+            "CriticalErrorInfo",
+            "DownloadStopReason",
+            "ErrorHandlingOptions",
+            "GameOperationKind",
+            "GameOperationStage",
+            "LanguageOption",
+            "ModalKind",
+            "SelectableOption",
+            "ToastDuration",
+            "ToastSeverity",
+            "UninstallScope"
+        ];
+        const string publicTypePattern =
+            "^public\\s+(?:(?:sealed|abstract|static|partial|readonly|unsafe)\\s+)*(?:class|record|interface|enum|struct)\\s+(?<name>\\w+)";
+
+        var actual = Directory
+            .EnumerateFiles(TestRepository.PresentationPath, "*.cs", SearchOption.AllDirectories)
+            .Where(path => !IsBuildOutput(path))
+            .SelectMany(File.ReadAllLines)
+            .Select(line => Regex.Match(line, publicTypePattern))
+            .Where(match => match.Success)
+            .Select(match => match.Groups["name"].Value)
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToArray();
+
+        // 反空转基线：扫不到任何公开类型时本守卫没有意义（正则或目录约定变了）。
+        Assert.True(
+            actual.Length >= 20,
+            $"只扫到 {actual.Length} 个表现层公开类型，本守卫已空转（目录或正则约定变了）。");
+
+        Assert.Equal(declared.OrderBy(name => name, StringComparer.Ordinal).ToArray(), actual);
+    }
+
+    /// <summary>
+    /// 两个测试工程的程序集并行化声明必须与它们各自的 xUnit 主版本配对。
+    /// xUnit 4 把 <c>[assembly: CollectionBehavior]</c> 的 <c>DisableTestParallelization</c>
+    /// 标成 obsolete 且**不可调用**，而 HeadlessTests 被 Avalonia.Headless.XUnit 的精确版本
+    /// 钉在 3.2.2、只能用这个旧形状。两侧不匹配的后果不是编译失败，而是并行化在升级那一刻
+    /// 静默恢复——共享静态状态（AnimationTimings、Application 级资源、生产静态改写）会开始
+    /// 互相污染。（另注意 xUnit 4 默认的 collections 模式本就允许不同 collection 并行。）
+    /// </summary>
+    [Theory]
+    [InlineData("tests/Cafe.Launcher.Tests", "Parallelization")]
+    [InlineData("tests/Cafe.Launcher.HeadlessTests", "CollectionBehavior")]
+    public void TestProjects_DeclareTheAssemblyParallelizationFormTheirXunitMajorSupports(
+        string projectDirectory,
+        string expectedAttribute)
+    {
+        var projectFile = $"{projectDirectory}/{Path.GetFileName(projectDirectory)}.csproj";
+        var project = XDocument.Load(TestRepository.FromRepositoryRoot(projectFile));
+        var reference = project.Descendants("PackageReference")
+            .Single(element => element.Attribute("Include")?.Value == "xunit.v3");
+
+        // 有效版本有三个来源，按优先级：工程内 VersionOverride → 工程内 Version → 中央版本清单
+        // （Directory.Packages.props）。单元工程正是第三种（它没有覆盖），Headless 是第一种。
+        var xunitVersion = reference.Attribute("VersionOverride")?.Value
+            ?? reference.Attribute("Version")?.Value
+            ?? XDocument.Load(TestRepository.FromRepositoryRoot("Directory.Packages.props"))
+                .Descendants("PackageVersion")
+                .Single(element => element.Attribute("Include")?.Value == "xunit.v3")
+                .Attribute("Version")?.Value;
+
+        Assert.True(
+            xunitVersion is not null,
+            $"{projectFile} 与 Directory.Packages.props 都读不到 xunit.v3 的版本：本守卫无法判定 xUnit 主版本。");
+
+        var major = int.Parse(xunitVersion!.Split('.')[0], CultureInfo.InvariantCulture);
+        var assemblyInfo = File.ReadAllText(TestRepository.FromRepositoryRoot($"{projectDirectory}/AssemblyInfo.cs"));
+
+        // 配对关系：3.x 只能用 CollectionBehavior，4.x 只能用 Parallelization。
+        var expected = major >= 4 ? "Parallelization" : "CollectionBehavior";
+        Assert.Equal(expectedAttribute, expected);
+        Assert.Contains($"assembly: {expectedAttribute}(", assemblyInfo, StringComparison.Ordinal);
+
+        var obsoleteForm = expectedAttribute == "Parallelization" ? "CollectionBehavior" : "Parallelization";
+        Assert.DoesNotContain($"assembly: {obsoleteForm}(", assemblyInfo, StringComparison.Ordinal);
     }
 
     [Fact]
