@@ -23,8 +23,8 @@
 # Regenerate .SRCINFO with `makepkg --printsrcinfo` in the same change.
 
 pkgname=cafe-launcher
-_realver=1.1.0
-pkgver=1.1.0
+_realver=1.1.1
+pkgver=1.1.1
 pkgrel=1
 pkgdesc='Cross-platform launcher for Blue Archive'
 arch=('x86_64')
