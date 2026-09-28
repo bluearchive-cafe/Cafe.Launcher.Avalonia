@@ -15,6 +15,11 @@ namespace Cafe.Launcher.Core.Composition;
 /// this before registering a presentation layer so Microsoft DI releases UI
 /// objects first during shutdown.
 /// </summary>
+/// <remarks>
+/// 说准一点：容器按**解析**顺序的逆序释放，而不是登记顺序。今天这条契约成立，是因为表现层
+/// 门面是第一个被解析的服务、Core 服务都作为它的依赖随后解析上来；换成一个先解析 Core 服务
+/// 的调用点，释放顺序就会跟着变。这不是「注册时排好序就一劳永逸」的保证。
+/// </remarks>
 public static class LauncherCoreServiceCollectionExtensions
 {
     /// <param name="launcherDataRoot">
@@ -43,13 +48,19 @@ public static class LauncherCoreServiceCollectionExtensions
         services.TryAddSingleton(sp =>
         {
             // 进程日志器通常由组合根在 pre-DI 阶段建好并登记；Core-only 容器（测试、幂等性守卫）
-            // 没有它，此时按数据根与身份自建一个，语义与表现层的兜底一致。
-            var logger = sp.GetService<UnifiedLogger>()
-                ?? new UnifiedLogger(
-                    sp.GetRequiredService<LauncherDataRoot>().Root,
-                    sp.GetRequiredService<LauncherBuildIdentity>());
-            LocalDiagnostics.RegisterSharedLogger(logger);
-            return new LocalDiagnostics(logger);
+            // 没有它，此时按数据根与身份自建一个，语义与表现层的兜底一致——并由门面持有所有权，
+            // 容器释放门面时把这条 Serilog 管道一起关掉。
+            if (sp.GetService<UnifiedLogger>() is { } registered)
+            {
+                LocalDiagnostics.RegisterSharedLogger(registered);
+                return new LocalDiagnostics(registered);
+            }
+
+            var fallback = new UnifiedLogger(
+                sp.GetRequiredService<LauncherDataRoot>().Root,
+                sp.GetRequiredService<LauncherBuildIdentity>());
+            LocalDiagnostics.RegisterSharedLogger(fallback);
+            return LocalDiagnostics.Owning(fallback);
         });
         services.TryAddSingleton<ILauncherDiagnostics>(sp => sp.GetRequiredService<LocalDiagnostics>());
 

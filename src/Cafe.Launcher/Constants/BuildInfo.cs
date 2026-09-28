@@ -21,26 +21,4 @@ public static class BuildInfo
     public static readonly string BuildTime = Identity.BuildTime;
 
     public static readonly string BuildConfiguration = Identity.BuildConfiguration;
-
-    /// <summary>
-    /// Avalonia framework version resolved at runtime from the Avalonia assembly.
-    /// Falls back to "0.0.0.0" if the runtime value cannot be read.
-    /// </summary>
-    public static readonly string AvaloniaVersion = ResolveAvaloniaVersion();
-
-    private static string ResolveAvaloniaVersion()
-    {
-        try
-        {
-            var assembly = typeof(global::Avalonia.Application).Assembly;
-            var version = assembly.GetName().Version;
-            return version is not null
-                ? $"{version.Major}.{version.Minor}.{version.Build}"
-                : "0.0.0";
-        }
-        catch
-        {
-            return "0.0.0";
-        }
-    }
 }
