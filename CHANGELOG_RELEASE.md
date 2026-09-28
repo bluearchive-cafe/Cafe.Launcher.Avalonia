@@ -33,5 +33,6 @@
 - 发布包可自行核对：每个 release 都附 `SHA256SUMS` 摘要清单与构建来源证明，启动器在应用内更新前会先核对摘要及对应版本，不会运行校验不通过的更新包。
 - 数据根与运行版本改由组合根注入，Core 不再解析进程级数据根、也不再反射入口程序集取版本；Core 的公开面按接口收窄，实现收回 `internal`，宿主与表现层的命名空间不再跨程序集共享。
 - 依赖更新：Avalonia 系列升至 `12.1.3`（`Avalonia`、`Avalonia.Desktop`、`Avalonia.Themes.Fluent`、`Avalonia.Controls.ColorPicker`、`Avalonia.Headless` 等），并提交无 RID 形态的 `packages.lock.json`；`New-ThirdPartyNotices.ps1` 改为按生产工程生成通知，`AddGitCommitMetadata` 的构建时间按平台分别转义百分号，修复 Linux 上 `%cI` 被原样输出的问题。
+- Linux 打包元数据补齐并加上产物门禁：RPM 与 Arch 按 soname 声明自包含 .NET 实际使用的系统库（X11、SSL/Kerberos、libunwind、zlib，ICU 按多个 soname 择一），三种格式共用一份 AppStream 元数据，deb 补 `copyright` 与 `changelog.Debian.gz`；发行流程新增 deb/RPM 实装、AppImage 启动与 Arch `namcap` 的验证步骤。LTTng 只是运行时按需 `dlopen` 的 `libcoreclrtraceptprovider.so` 需要的可选跟踪库，RPM 过滤掉 ELF 生成器为它自动生成的那条 `Requires` 并降为弱依赖，避免在 lttng-ust 2.13+（Fedora 43 只提供 `.so.1`）上装不上；Fedora 门禁改为按文件而不是路径名比较 wrapper（Fedora 41 起 `/usr/sbin` 并入 `/usr/bin`）。
 
 </details>
