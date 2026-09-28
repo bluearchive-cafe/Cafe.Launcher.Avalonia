@@ -254,6 +254,61 @@ public sealed class DiagnosticsServicesTests : IDisposable
             path => string.Equals(Path.GetFileName(path), "unified_001.log", StringComparison.Ordinal));
     }
 
+    /// <summary>
+    /// 兜底日志器的所有权：Core-only 容器（没有登记 <c>UnifiedLogger</c>）里由门面自建的那一个
+    /// 必须由门面负责释放——否则容器释放门面之后，那条 Serilog 异步 sink 永远不会关。注入进来
+    /// 的那一个则相反：它的所有者是进程（<c>Program.RunSession</c> 最后显式释放），门面不得替
+    /// 它做主。日志是 <c>shared: true</c> 打开的，句柄在释放后依然可读，所以判据用
+    /// <c>Dispose</c> 上的测试缝而不是文件锁。
+    /// </summary>
+    [Fact]
+    public void LocalDiagnostics_DisposesOnlyTheLoggerItOwns()
+    {
+        var ownedDisposed = false;
+        var owned = new UnifiedLogger(
+            Path.Combine(tempDir, "fallback-owned"),
+            buildIdentity: null,
+            onDisposed: () => ownedDisposed = true);
+
+        LocalDiagnostics.Owning(owned).Dispose();
+
+        Assert.True(ownedDisposed, "兜底日志器没有随门面一起释放，这条 Serilog 管道会永久泄漏。");
+
+        var injectedDisposed = false;
+        using var injected = new UnifiedLogger(
+            Path.Combine(tempDir, "fallback-injected"),
+            buildIdentity: null,
+            onDisposed: () => injectedDisposed = true);
+
+        new LocalDiagnostics(injected).Dispose();
+
+        Assert.False(
+            injectedDisposed,
+            "门面释放了注入进来的日志器：它的所有者是进程，不是门面。");
+    }
+
+    /// <summary>
+    /// 「谁可以创建自有日志器的门面」只允许一处：Core-only 容器的兜底分支。任何其它生产调用点
+    /// 都可能把一个由别处持有的日志器交给门面去释放。
+    /// </summary>
+    [Fact]
+    public void LocalDiagnostics_OwningFacadeIsCreatedOnlyByTheCoreFallbackBranch()
+    {
+        var callSites = Directory
+            .EnumerateFiles(TestRepository.CorePath, "*.cs", SearchOption.AllDirectories)
+            .Concat(Directory.EnumerateFiles(TestRepository.HostPath, "*.cs", SearchOption.AllDirectories))
+            .Concat(Directory.EnumerateFiles(TestRepository.PresentationPath, "*.cs", SearchOption.AllDirectories))
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+            .Where(path => File.ReadAllText(path).Contains("LocalDiagnostics.Owning(", StringComparison.Ordinal))
+            .Select(path => Path.GetRelativePath(TestRepository.Root, path))
+            .ToArray();
+
+        Assert.Equal(
+            [Path.Combine("src", "Cafe.Launcher.Core", "Composition", "LauncherCoreServiceCollectionExtensions.cs")],
+            callSites);
+    }
+
     public void Dispose()
     {
         tempDir.Dispose();

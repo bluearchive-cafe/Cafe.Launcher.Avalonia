@@ -37,6 +37,12 @@ public sealed class ReleaseNotesMarkdownViewerHeadlessTests
     /// 折叠技术附录靠 HTML 块实现，而 MarkView 会静默忽略 HTML 块：这里钉住两件事——
     /// 块内条目在应用内照常可见（发布说明对话框显示的是同一段文本），且不出现裸标签。
     /// </summary>
+    /// <remarks>
+    /// 断言必须与版本内容无关：此前它钉的是附录里恰好出现过的字面量 <c>SHA256SUMS</c>，
+    /// 于是一次重写附录就让它变红，而它想守的东西（条目在应用内可见）其实没坏——这类
+    /// 探针会训练维护者忽略它，正好放弃它本该抓住的那条信号。改为按结构断言：条目是
+    /// 有长度的文本、且不出现裸标签。
+    /// </remarks>
     [AvaloniaFact]
     public void Markdown_WithTechnicalAppendix_ShowsEntriesWithoutRawHtmlTags()
     {
@@ -60,7 +66,16 @@ public sealed class ReleaseNotesMarkdownViewerHeadlessTests
             .Where(text => text.Length > 0)
             .ToArray();
 
-        Assert.Contains(visibleText, text => text.Contains("SHA256SUMS", StringComparison.Ordinal));
+        // 条目本体的下限：一条被 HTML 块吞掉的条目不会留下这么长的文本，而列表符号（"•"）
+        // 本身也不会被算进来。阈值取 5：当前版本的附录远超这个数，写少一两条也不会误红。
+        const int MinimumRenderedEntries = 5;
+        const int MinimumEntryLength = 20;
+        var renderedEntries = visibleText.Count(text => text.Length >= MinimumEntryLength);
+        Assert.True(
+            renderedEntries >= MinimumRenderedEntries,
+            $"折叠技术附录在应用内只渲染出 {renderedEntries} 条有内容的文本（期望 ≥ {MinimumRenderedEntries}）："
+            + "HTML 块把条目吞掉了，或附录被改成了别的结构。");
+
         Assert.DoesNotContain(
             visibleText,
             text => text.Contains("<details>", StringComparison.Ordinal) || text.Contains("<summary>", StringComparison.Ordinal));
