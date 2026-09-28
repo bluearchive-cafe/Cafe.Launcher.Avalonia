@@ -65,6 +65,37 @@ public sealed partial class MainWindowHeadlessTests
         Assert.False(context.Window.IsWithinTitleBar(outsideTitleBar));
     }
 
+    /// <summary>
+    /// 标题栏是自绘的，拖动走 <c>OnPointerPressed</c> → <c>BeginMoveDrag</c>。触摸接触同样报
+    /// <c>IsLeftButtonPressed</c>，而同一窗口只有一个主指针：Win32 的 <c>BeginMoveDrag</c> 对
+    /// 非主指针**同步抛出** <c>InvalidOperationException</c>（Avalonia 12.1.3 把这个抛出从 Post
+    /// 回调里前移到了调用点），宿主的 dispatcher 策略会把它升级成致命崩溃——于是「第二根手指
+    /// 搭在标题栏上」会直接把启动器换成崩溃报告窗口。这里按多指接触钉住那条守卫。
+    /// </summary>
+    [AvaloniaFact]
+    public void MainWindow_TitleBarDrag_WithASecondTouchContact_DoesNotStartADrag()
+    {
+        using var context = CreateContext();
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var titleBar = context.Window.GetVisualDescendants()
+            .OfType<Grid>()
+            .Single(control => control.Name == "TitleBar");
+        var pressPoint = new Point(titleBar.Bounds.Width / 2, titleBar.Bounds.Height / 2);
+
+        var firstContact = context.Window.TouchBegin(pressPoint);
+        var secondContact = context.Window.TouchBegin(pressPoint);
+        Dispatcher.UIThread.RunJobs();
+
+        context.Window.TouchEnd(secondContact, pressPoint);
+        context.Window.TouchEnd(firstContact, pressPoint);
+        Dispatcher.UIThread.RunJobs();
+
+        // 报错即失败：修好之前这条在 Win32 上是 BeginMoveDrag 的同步抛出。
+        Assert.True(context.Window.IsVisible);
+    }
+
     [AvaloniaFact]
     public void ConfigureViewModel_WiresAndUnwiresPlatformCapabilities()
     {

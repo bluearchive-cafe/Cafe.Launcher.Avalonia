@@ -1,4 +1,5 @@
-﻿using System.Text;
+using System.Text;
+using System.Text.RegularExpressions;
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.UI.Services.Diagnostics;
 using Cafe.Launcher.Core.Services.Diagnostics;
@@ -282,6 +283,110 @@ public sealed class CrashReportTests : IDisposable
         Assert.Contains("materialIcons:MaterialIcon", windowXaml, StringComparison.Ordinal);
         Assert.Contains("materialIcons:MaterialIconStyles", appXaml, StringComparison.Ordinal);
     }
+
+    /// <summary>
+    /// 崩溃快照要解决的问题是「用户回报的这份报告对应哪个构建」，而版本与提交只能由 host 注入。
+    /// 表现层侧这三个入口曾把 identity 做成可选参数，于是 pre-DI 的装配点在程序集拆分时全部漏传，
+    /// 而单元测试一律显式传入——100% 的崩溃报告因此带着空的 Version/Commit，CI 却全绿。
+    /// 这里按源码扫生产构造点，与 <c>AssemblySplitContractTests</c> 的 CallSites 守卫同一形状。
+    /// </summary>
+    [Fact]
+    public void ProductionSources_PassBuildIdentityIntoEveryCrashReportSeam()
+    {
+        // 这两处不需要 identity：DI 登记本身就是那种形式，崩溃窗口的展示也不需要它。
+        string[] excludedFiles =
+        [
+            Path.Combine("Core", "Composition", "LauncherCoreServiceCollectionExtensions.cs"),
+            Path.Combine("UI", "LauncherPresentationSession.cs")
+        ];
+
+        // 参数表里有嵌套调用（new CrashReporterLauncher()），所以不能用非贪婪的 .*?——它会在
+        // 第一个右括号处截断，identity 恰好排在后面时就会假红。
+        var seamPattern = new Regex(
+            @"new CrashReportStore\s*\(|new FatalCrashService\s*\(|CrashReportBootstrap\.Resolve\s*\(",
+            RegexOptions.None);
+        var offenders = new List<string>();
+
+        foreach (var source in ProductionSources())
+        {
+            if (excludedFiles.Any(excluded => source.EndsWith(excluded, StringComparison.Ordinal)))
+            {
+                continue;
+            }
+
+            var sourceText = File.ReadAllText(source);
+            foreach (Match match in seamPattern.Matches(sourceText))
+            {
+                var args = ReadBalancedArguments(sourceText, match.Index + match.Length - 1);
+                if (args.Contains("buildIdentity", StringComparison.Ordinal)
+                    || args.Contains("BuildInfo.Identity", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                // 行号按匹配起点回算：报出「哪个文件哪一行漏了」才有可操作性。
+                var line = sourceText[..match.Index].Count(character => character == '\n') + 1;
+                offenders.Add($"{Path.GetRelativePath(TestRepository.Root, source)}:{line}: {Collapse(args)}");
+            }
+        }
+
+        Assert.True(
+            offenders.Count == 0,
+            "以下崩溃报告装配点没有传入构建身份，用户回报的快照会带着空的 Version/Commit：\n"
+            + string.Join("\n", offenders));
+
+        static string Collapse(string text) =>
+            Regex.Replace(text, @"\s+", " ").Trim();
+    }
+
+    /// <summary>从 <paramref name="openIndex"/> 的开括号读到配对的右括号，返回括号内的原文。</summary>
+    private static string ReadBalancedArguments(string text, int openIndex)
+    {
+        var depth = 0;
+        for (var index = openIndex; index < text.Length; index++)
+        {
+            switch (text[index])
+            {
+                case '(':
+                    depth++;
+                    break;
+                case ')':
+                    depth--;
+                    if (depth == 0)
+                    {
+                        return text[(openIndex + 1)..index];
+                    }
+
+                    break;
+                case '"':
+                    // 跳过字符串字面量：调用点里有 $"...{path}"，里面的括号不该参与配对。
+                    index++;
+                    while (index < text.Length && text[index] != '"')
+                    {
+                        if (text[index] == '\\')
+                        {
+                            index++;
+                        }
+
+                        index++;
+                    }
+
+                    break;
+            }
+        }
+
+        return text[(openIndex + 1)..];
+    }
+
+    private static IEnumerable<string> ProductionSources() =>
+        new[] { TestRepository.HostPath, TestRepository.CorePath, TestRepository.PresentationPath }
+            .SelectMany(root => Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories))
+            .Where(path => !path.Contains(
+                $"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}",
+                StringComparison.OrdinalIgnoreCase))
+            .Where(path => !path.Contains(
+                $"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}",
+                StringComparison.OrdinalIgnoreCase));
 
     public void Dispose()
     {

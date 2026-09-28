@@ -752,6 +752,39 @@ public sealed class InstallerContractTests
             StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// Inno 的 <c>SetupIconFile</c> 必须在编译期于「脚本所在目录」下可读，路径错了 ISCC 直接失败，
+    /// 而 <c>New-WindowsInstaller.ps1</c> 只把失败报成一句「Inno Setup compilation failed」——
+    /// tag 构建因此整条断在这里。图标随表现层程序集走（<c>Cafe.Launcher.UI/Assets</c>），
+    /// 宿主改名时最容易被顺手改错，所以这一条按 Inno 的解析规则把路径钉死并验证文件真的在。
+    /// </summary>
+    [Fact]
+    public void WindowsInstaller_SetupIconFileResolvesToACommittedIcon()
+    {
+        const string scriptRelativePath = "installer/windows/Cafe.Launcher.iss";
+        var script = ReadProjectFile(scriptRelativePath);
+
+        var line = Assert.Single(
+            script.Split('\n'),
+            candidate => candidate.TrimStart().StartsWith("SetupIconFile=", StringComparison.Ordinal));
+        var declared = line.TrimStart()["SetupIconFile=".Length..].Trim();
+
+        // 相对路径按 .iss 所在目录解析；编译期可读即可，因此这里同样不走 File.Exists 的宽松分支。
+        var scriptDirectory = Path.GetDirectoryName(TestRepository.FromRepositoryRoot(scriptRelativePath))!;
+        var resolved = Path.GetFullPath(Path.Combine(scriptDirectory, declared));
+
+        Assert.True(
+            File.Exists(resolved),
+            $"SetupIconFile 指向 {declared}，按 Inno 的规则解析为 {resolved}，该文件不存在："
+            + "ISCC 会在编译期失败，Windows 安装包因此产不出来。");
+
+        var icon = File.ReadAllBytes(resolved);
+        // .ico 容器头：reserved(0) + type(1=icon) + count(>0)。
+        Assert.True(
+            icon.Length > 6 && icon[0] == 0 && icon[1] == 0 && icon[2] == 1 && icon[3] == 0 && icon[4] > 0,
+            $"{declared} 必须是一个有效的 .ico 容器。");
+    }
+
     [Fact]
     public void MacOsBundle_AssetsArePresentAndVersioned()
     {

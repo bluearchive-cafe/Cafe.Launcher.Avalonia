@@ -1,4 +1,4 @@
-﻿using Cafe.Launcher.UI.Services;
+using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Testing;
 using Cafe.Launcher.Core.Services;
@@ -192,6 +192,66 @@ public sealed class DiagnosticsServicesTests : IDisposable
         // through the DI-resolved UnifiedLogger) is exercised by the instance-level facade tests.
         LocalDiagnostics.LogSync(LogEntrySeverity.Debug, "SyncDebug", "sync msg");
         LocalDiagnostics.LogSync("SyncInfo", "info msg");
+    }
+
+    /// <summary>
+    /// 日志按大小轮转后，Serilog 把后续内容写进 <c>unified_001.log</c> 一类带序号的名字，基名
+    /// <c>unified.log</c> 从此不再被创建。谁把 <c>LogFilePath</c> 当成「现在正在写的那个文件」
+    /// 读，谁就在 5 MB 之后永久拿到空内容——日志查看器全空、导出抛 <c>FileNotFoundException</c>。
+    /// </summary>
+    [Fact]
+    public void ResolveActiveLogFile_AfterRotation_ReturnsTheRotatedFileInsteadOfTheAbsentStem()
+    {
+        var stem = Path.Combine(tempDir, "unified.log");
+        var rotated = Path.Combine(tempDir, "unified_001.log");
+        File.WriteAllText(rotated, "rotated content");
+
+        Assert.False(File.Exists(stem));
+        Assert.Equal(rotated, UnifiedLogger.ResolveActiveLogFile(stem));
+    }
+
+    [Fact]
+    public void ResolveActiveLogFile_WithBothStemAndRotatedFile_PrefersTheStem()
+    {
+        var stem = Path.Combine(tempDir, "unified.log");
+        var rotated = Path.Combine(tempDir, "unified_001.log");
+        File.WriteAllText(stem, "current content");
+        File.WriteAllText(rotated, "rotated content");
+        // 基名最后一次写入早于轮转文件：解析必须按「基名优先」而不是「最新写入」，否则正在写的
+        // 那份会被旧的轮转文件盖过去。
+        File.SetLastWriteTimeUtc(stem, DateTime.UtcNow.AddHours(-2));
+
+        Assert.Equal(stem, UnifiedLogger.ResolveActiveLogFile(stem));
+    }
+
+    [Fact]
+    public void ResolveActiveLogFile_WithNoLogFiles_ReturnsNull()
+    {
+        Assert.Null(UnifiedLogger.ResolveActiveLogFile(Path.Combine(tempDir, "unified.log")));
+        Assert.Null(UnifiedLogger.ResolveActiveLogFile(""));
+    }
+
+    [Fact]
+    public void ExistingLogFiles_IgnoresSiblingsThatAreNotRotationOutput()
+    {
+        var stem = Path.Combine(tempDir, "unified.log");
+        var rotated = Path.Combine(tempDir, "unified_001.log");
+        File.WriteAllText(stem, "current");
+        File.WriteAllText(rotated, "rotated");
+        // 同词干但不是轮转产物：导出面板不能把它们当成日志读进来，也不能因为它们把
+        // 「当前日志不存在」的判定搅乱（例如 unified.log.bak 会让 EndsWith 通过）。
+        File.WriteAllText(Path.Combine(tempDir, "unified.log.bak"), "backup");
+        File.WriteAllText(Path.Combine(tempDir, "unified_notes.log"), "notes");
+
+        var files = UnifiedLogger.ExistingLogFiles(stem);
+
+        Assert.Equal(2, files.Count);
+        Assert.Contains(
+            files,
+            path => string.Equals(Path.GetFileName(path), "unified.log", StringComparison.Ordinal));
+        Assert.Contains(
+            files,
+            path => string.Equals(Path.GetFileName(path), "unified_001.log", StringComparison.Ordinal));
     }
 
     public void Dispose()
