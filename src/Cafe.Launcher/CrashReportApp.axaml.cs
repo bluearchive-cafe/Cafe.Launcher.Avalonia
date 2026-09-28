@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Cafe.Launcher.Constants;
 using Cafe.Launcher.Services;
 using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Services.Diagnostics;
@@ -22,7 +23,9 @@ public partial class CrashReportApp : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            var report = CrashReportBootstrap.Resolve(Program.CrashReportPath);
+            // 崩溃报告窗口展示的版本与提交来自宿主注入的构建标识：不传的话窗口上的
+            // Version/Commit 两行是空的，而独立报告进程拿不到别的来源。
+            var report = CrashReportBootstrap.Resolve(Program.CrashReportPath, BuildInfo.Identity);
             CrashReportBootstrap.ApplyCulture(report.UiCulture);
 
             var crashWindow = new CrashReportWindow(report, LauncherDataRoot.ForCurrentProcess());
