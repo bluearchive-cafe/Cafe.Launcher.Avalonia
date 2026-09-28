@@ -14,13 +14,15 @@
 仓库首页都会原样缩放这张图，比例错了会被裁切，尺寸太小则在 2×/3× 屏上发虚。
 
 > 历史尺寸：`beta.1`–`beta.5` 是 2400×1350；`beta.6`–`beta.10` 是 2000×1125；
-> `beta.11` 是外部交付的 1920×1080（见下）。契约测试只校验**当前 `VersionPrefix` 对应的那一张**，
+> `beta.11` 是外部交付的 1920×1080（见下）；**`v1.1.0` 起是深色 1920×1080**（`v1.1.0` 外部交付、
+> `v1.1.1` 由本管线渲染并重排装饰）。契约测试只校验**当前 `VersionPrefix` 对应的那一张**，
 > 故旧文件不参与断言。
 
-> 外部交付的成品：`beta.11` 的横幅不是本管线渲染的，而是直接交付的整张 1920×1080 PNG。
-> 这种情况下仍要补一份 spec（`DeclaredProjectVersion_HasItsBannerSpec` 要求它存在），
-> 且 spec 的 `canvas` 要写成**成品真实画布**，别照抄模板的 2000×1125——否则 spec 描述的几何
-> 与入库的图对不上，重跑也复现不出同一个尺寸。
+> 外部交付的成品：`beta.11` 与 `v1.1.0` 的横幅不是本管线渲染的，而是直接交付的整张 1920×1080 PNG
+> （`v1.1.1` 那版已经由本管线重渲染，所以有 manifest）。这种情况下仍要补一份 spec
+> （`DeclaredProjectVersion_HasItsBannerSpec` 要求它存在），且 spec 的 `canvas` 要写成**成品真实画布**，
+> 别照抄模板的 2000×1125——否则 spec 描述的几何与入库的图对不上，重跑也复现不出同一个尺寸。
+> 深色的 token / theme 同理要按成品实际取色写进 spec，见「配色」。
 
 横幅由 `promotional-image` skill 的声明式管线产出：spec 描述设计，渲染器把 spec 变成
 PNG，manifest 记录这次渲染的证据。**操作说明书在 skill 自己那里，不在本仓库**
@@ -167,7 +169,7 @@ python "$SKILL\scripts\prepare_assets.py" docs\promo\specs\v1.1.0-beta.9.spec.js
 把每个素材按声明裁切/做圆角后写入 `output.components_dir`，并产出 `output.prepared`，最后**只把
 prepared 的绝对路径打印到 stdout**。素材路径同样以 spec 文件目录为基准解析。零素材的海报也合法，
 该步骤仍会建立空的 `components/` 目录。图标都是 PNG（不是 SVG），因此这一步只做格式规整，不改像素
-——实测四个图标的 `source_sha256` 与 `component_sha256` 完全相同，连字节都没变。
+——实测这几枚图标的 `source_sha256` 与 `component_sha256` 完全相同，连字节都没变。
 
 复制这个打印出来的路径给第 4 步；`render_image.py` 不读 prepared 里的 `output.prepared`，
 只认它自己的命令行参数。
@@ -363,6 +365,38 @@ background.`——本模板不该出现这条 notice。
 不再用 `::before` / `::after`：
 伪元素对版式校验不可见，而 scene 节点可以被检查（见「出血与碰撞」）。
 
+### 深色交付（`v1.1.0` 起）
+
+`v1.1.0` 与 `v1.1.1` 走的是**深色**一套配色：`mode` 写 `dark`，令牌与 `theme` 都是深色取值。
+它与浅色模板的机制完全相同（同样是显式 `tokens` + 全套 `theme`、同样不碰 MCU、同样不需要 Node），
+**`mode` 依旧只是标签**——深浅由 `tokens` / `theme` 决定，不是由 `mode` 决定，所以写错了 `mode`
+不会变色，但会写进 manifest 骗过后人。
+
+| 令牌 | 深色取值 | 浅色模板取值 |
+| --- | --- | --- |
+| `primary` / `accent` | `#2E7DF6` | `#2E7DF6` |
+| `on_primary` | `#FFFFFF` | `#FFFFFF` |
+| `primary_container` | `#12335E` | `#D8E2FF` |
+| `surface_container` | `#1A212B` | `#EEF1FB` |
+| `on_surface` / `text` | `#F5F7FA` | `#191C20` |
+| `on_surface_variant` / `muted` | `#C3CAD6` | `#43474E` |
+| `outline` | `#3A4150` | `#C3C7CF` |
+
+`theme` 的其余键也不同：`background_top` `#0D121C`、`background_bottom` `#101826`、
+`surface` `#141B26`（浅色分别是 `#FDFBFF` / `#E9EFFC` / `#FFFFFF`）。
+
+两点与浅色版的差异要记住：
+
+- 描边胶囊的文字色仍是那处**手工挑的** `#1A5FD0`（见上），它在深色底上偏暗但仍是设计取值；
+  换配色时它和令牌一起看。
+- 浅色版那行 `inspect_campaign.py` notice（`mode: light` 且无配色来源才出现）在深色版同样适用：
+  深色 spec 也必须写全 `theme.background_top/bottom`，否则掉回 `base.css` 的默认底色，
+  而那个默认底色恰好也是深色——**它看起来没错，但已经不是你的设计了**。
+
+契约测试只钉模板（`BannerTemplate_UsesLightMd3WithExplicitTokens` 要求模板的 `primary` 是
+`#2E7DF6`、`mode` 是 `light`、且不出现 `seed_color` / `source_asset`），**不约束单版 spec 的深浅**：
+每版 spec 自己声明 `mode` 与令牌即可。
+
 ## 排版
 
 `typography.font_family` 是唯一被识别的排版键，写入 `--font` 并作用于 `body`。管线
@@ -512,20 +546,23 @@ skill 自带的 `examples/promo-v2-scene.example.json` 和迁移脚本 `scripts/
 v2 把海报表达成一棵递归的节点树，只有 `text` / `image` / `shape` / `group` 四种节点，
 每个节点一个稳定唯一的 `id`。**管线不支持注入 HTML**，所有元素都来自固定模板与节点树本身。
 
-本模板的结构（`scene.children`）：
+本模板的结构（`scene.children`）；单版 spec 可以自由重排装饰，见「装饰层的自由度」：
 
 1. `glow-disc`、`base-disc` — 两个柔光圆，`shape: circle`，各带 `intent.allow_bleed`，提供大面积底色。
 2. `ring-top-right`、`ring-bottom-left` — 两个细描边圆环，分别与上面两个柔光圆同心：只给 `border`
    不给 `background`，因此只有一圈描边；同样各带 `intent.allow_bleed`。
-3. `surface-card` — 承载图标的浅色卡片，`shape: rect` + `radius: 56` + `rotation: -14`，
-   `background` 取 `$primary 5%`、`border` 取 `$primary 14%`，与 `icon-launch` 同心同角度。
-4. `icon-uninstall`、`icon-network`、`icon-launch`、`icon-shield` — 四个图标素材，绝对定位 + 旋转；
-   只有 `icon-shield` 出血。
+3. `surface-card`（**可选装饰，不是必备**）— 承载中心图标的卡片，`shape: rect` + `radius` + `rotation`，
+   与该图标同心同角度：模板是 `radius: 56` / `rotation: -14` / `$primary 5%` 填充 + `14%` 描边。
+   它画出来的那一圈描边就是视觉上的「图标边框」；去掉这个节点，图标就直接浮在底色上——
+   `v1.1.1` 交付就是这么做的（该版 spec 里没有 `surface-card`）。保留卡片时，填充越重越像一块面板
+   而不是相框。
+4. 装饰图标 — 绝对定位 + 旋转的 `image` 节点，每版 3–4 枚；出血的那一枚必须带 `intent.allow_bleed`。
 
-   节点 id 与素材 id 同名，且**按当版用途命名**（上一版是 `icon-repair` / `icon-log`），因此换图标
-   集时这四个 id 会跟着改；位置、尺寸、旋转与透明度档位则按位次沿用，几何不变——`allowed_findings`
-   仍是那五处、五个矩形也逐个不变。两个胶囊节点则是另一套办法：它们改用 `highlight-1` / `highlight-2`
-   这类与版本无关的 id，因为里面装的是编辑性短语，按当版功能命名会让每版都改名。
+   节点 id 与素材 id 同名，且**按当版用途命名**，所以换一套图标时这些 id 会跟着改：模板是
+   `icon-uninstall` / `icon-network` / `icon-launch`，`beta.9` 是 `icon-repair` / `icon-log`，
+   `v1.1.1` 是 `icon-desktop` / `icon-label` / `icon-update` / `icon-shield`。
+   两个胶囊节点则是另一套办法：它们改用 `highlight-1` / `highlight-2` 这类与版本无关的 id，
+   因为里面装的是编辑性短语，按当版功能命名会让每版都改名。
 5. `copy-zone` — 文案区，`layout: stack`，`x:150 y:0 width:1080 height:1125` + `justify:"center"`，
    对应旧版 `.header` 的 flex 垂直居中；块内元素增长时它会自动重新居中。
 
@@ -546,32 +583,62 @@ v2 把海报表达成一棵递归的节点树，只有 `text` / `image` / `shape
 - `tag` 用 `h1` / `p` / `div`；组节点会带上 `.scene-group`，`base.css` 已把其中的
   `h1`/`p` 外边距归零。
 
+### 装饰层的自由度
+
+装饰是每版可以自己定的**自由区**，不是需要逐版沿用的固定几何（本文此前写的是「几何不变、按位次
+沿用」，那是 `beta.9`–`v1.1.0` 阶段的实况，不是契约）：
+
+- **可增删、可改位置 / 分布 / 大小 / 旋转**：柔光圆、细描边圆环、卡片、图标都只是 `shape` / `image`
+  节点，加进 `scene.children` 就是一个新装饰，删掉就不存在。模板给的是起点，不是版式规范。
+- **图标按当版更新内容挑**（Material Icons）：四枚图标是「这版更新了什么」的缩略图，换版就换图，
+  挑之前逐枚验证源站 URL（分类与名称都不能猜，见「图标资产」）。
+- **每版重新确认出血清单**：越界的节点必须自己声明 `intent.allow_bleed: true`，否则那条越界从
+  `allowed_findings` 掉进 `warnings`。计数与矩形**只对「这份 spec + 这个画布」有意义**：把模板的
+  几何原样搬到 1920×1080 上，出血会从五处变成六处（`icon-network` 那枚多溢出一角，实测矩形
+  `[1674.7, 206.7, 1997.3, 529.3]`）；`v1.1.1` 重排装饰后又回到五处。**「五处」不是契约**，
+  要的是「每一处越界都有 `allow_bleed` 兜着、报告里 0 errors / 0 warnings」。
+- **装饰不得进文案区**：`copy-zone` 的 `x + width` 是右边界（模板 1230、深色交付 1200），
+  装饰可以压在柔光底上，但不要压到标题、副标题与胶囊上。
+- **契约测试不管装饰几何**：`ReleaseBannerContractTests` 只钉模板的画布、字体栈、占位符、场景 id
+  唯一性、资产引用可解析，以及「该出血的节点声明了 `allow_bleed`」。所以重排装饰不会让 CI 变红，
+  判断标准是 `verify_export.py` 的 0 errors / 0 warnings 加第 7 步的目视复核。
+
 ### 出血与碰撞
 
-- 两处柔光圆、两处细描边圆环与右下角出血的盾牌图标都声明了 `intent.allow_bleed: true`，它们的
-  越界因此记入 `allowed_findings` 而不是 `warnings`（实测五处，见「实测基线」）。
-- **本模板不给装饰图标声明 `no_overlap_group`**：这几个图标互相叠压是设计意图，声明了反而
-  产生两条假的 collision 警告。`no_overlap_group` 是留给「绝不能重叠」的内容的。
+- 柔光圆、细描边圆环与右下角出血的那枚图标都声明了 `intent.allow_bleed: true`，它们的越界因此
+  记入 `allowed_findings` 而不是 `warnings`（模板与 `v1.1.1` 各实测五处，矩形见「实测基线」）。
+- **不要给装饰图标声明 `no_overlap_group`**：这几个图标互相叠压是设计意图，声明了反而
+  产生假的 collision 警告。`no_overlap_group` 是留给「绝不能重叠」的内容的。
 
 ## 图标资产
 
 `docs/promo/assets/icons/` 下的 PNG 是从 Material Icons 官方仓库光栅化来的，已入库，
-正常情况下无需重新生成。模板与本版 spec 引用的是下面这四个：
+正常情况下无需重新生成。**每份 spec 只引用它自己那四枚**，所以下表同时记「谁还在引用它」——
+这张表是「哪些文件不能删」的唯一依据：
 
-| 文件 | 图标 | 用途 | 上色 |
-| --- | --- | --- | --- |
-| `icon-uninstall.png` | `action/delete_forever` | 卸载彻底清除 | `#2E7DF6` |
-| `icon-launch.png` | `action/exit_to_app` | 游戏启动后的行为 | `#2E7DF6` |
-| `icon-network.png` | `hardware/router` | 网络与代理更稳 | `#2E7DF6` |
-| `icon-shield.png` | `action/verified_user` | 安全与隐私（发布产物可校验） | `#7A5AF8` |
+| 文件 | 图标 | 用途 | 上色 | 引用它的是 |
+| --- | --- | --- | --- | --- |
+| `icon-desktop.png` | `hardware/desktop_windows` | 界面与游戏流程保持不变 | `#2E7DF6` | `v1.1.1.spec.json` |
+| `icon-label.png` | `action/label` | 程序命名统一 | `#2E7DF6` | `v1.1.1.spec.json` |
+| `icon-update.png` | `action/system_update_alt` | 应用内升级 | `#2E7DF6` | `v1.1.1.spec.json` |
+| `icon-shield.png` | `action/verified_user` | 校验与可信（自更新以 `SHA256SUMS` 为锚） | `#7A5AF8` | 全部 spec |
+| `icon-uninstall.png` | `action/delete_forever` | 卸载彻底清除 | `#2E7DF6` | 模板、`beta.10`、`beta.11`、`v1.1.0` |
+| `icon-launch.png` | `action/exit_to_app` | 游戏启动后的行为 | `#2E7DF6` | 模板、`beta.10`、`beta.11`、`v1.1.0` |
+| `icon-network.png` | `hardware/router` | 网络与代理更稳 | `#2E7DF6` | 模板、`beta.10`、`beta.11`、`v1.1.0` |
+| `icon-repair.png` | 归档素材 | 一键修复（`beta.9` 的主题） | `#2E7DF6` | `v1.1.0-beta.9.spec.json` |
+| `icon-log.png` | 归档素材 | 日志导出（`beta.9` 的主题） | `#2E7DF6` | `v1.1.0-beta.9.spec.json` |
 
-这组图标是**装饰**，不承载事实：一套四个按当版更新的主题挑，换主题时按下面的命令重新生成
-并把新文件入库，同时更新本表。
+「归档素材」那两个的源图标名没有留在本文件里，只有成品 PNG；它们的字形是既成事实，
+不要再按名字去猜源地址。
+
+`v1.1.1` 的四枚是照着这版更新内容挑的：命名统一 → 标签、应用内升级 → 设备内下载、界面不变 →
+桌面、校验与可信 → 盾牌（沿用 `icon-shield`，它是唯一跨版复用的那一枚）。这组图标是**装饰**，
+不承载事实：一套 3–4 枚按当版更新的主题挑，选好后按下面的命令生成新文件并入库，同时更新本表。
 
 **换图标集时不要顺手删掉旧文件**：`v1.1.0-beta.9.spec.json` 这类归档 spec 仍按名字引用它们那一版
 的图标（`icon-repair.png` / `icon-log.png` 就是为它留的），而归档 spec 的价值正是「还能重跑」。
-判据与既有提交一致——**只移除任何 spec 都不再引用的文件**。想彻底停用某一版 spec 时，
-先删该 spec 再删它的图标。
+判据与既有提交一致——**只移除任何 spec 都不再引用的文件**（照上表最后一列核）。想彻底停用某一版
+spec 时，先删该 spec 再删它的图标。
 
 两点必须知道：
 
@@ -583,10 +650,11 @@ v2 把海报表达成一棵递归的节点树，只有 `text` / `image` / `shape
    光栅化成 512×512：把 SVG **内联**进页面再截图（见下方脚本）。不要用 `<img src="file://…">`——
    `set_content` 造出的文档取不到 `file://` 子资源，Chromium 会静默渲染成一张破图占位符，
    截图出来只有左上角一个小点，而 alpha 检查照样通过。
-2. **当前入库的四个文件是「已上色 + 已烘入透明度」的成品**：光栅化那一步得到的是纯 alpha 蒙版
+2. **当前入库的文件都是「已上色 + 已烘入透明度」的成品**：光栅化那一步得到的是纯 alpha 蒙版
    （`fill` 没被带进来，字形本身是对的；RGB 是黑是白都无所谓，下一步整个换掉）；随后按上表着色，
-   并把设计要求的透明度（`0.13` / `0.11` / `0.10` / `0.12`，对应 uninstall / launch / network / shield）
-   乘进 alpha 通道。两步都只改 RGB 与 alpha，字形几何完全不变。
+   并把设计要求的透明度乘进 alpha 通道（每枚一档，取值见下方 alpha 表；`v1.1.1` 新加的三枚是
+   label `0.12` / update `0.11` / desktop `0.10`，沿用同一档位）。两步都只改 RGB 与 alpha，
+   字形几何完全不变。
 
    对同一枚图标，本流程与入库文件是**可对照**的：拿未被改动的 `icon-shield.png` 当对照跑一遍，
    本仓库实测 262144 个像素全等（0 个差异）。
@@ -646,20 +714,22 @@ for path in sorted(Path("docs/promo/assets/icons").glob("*.png")):
 **`getextrema()` 分不出「字形正确」与「整张空白」**：空蒙版的 extrema 同样是 `(0, 255)`，
 着色后也能算出「正确」的 33 / 28 / 26 / 31——上一条那个破图占位符就是这样一路混过尺寸、
 模式、extrema 三项检查的。所以要连 `getbbox()` 一起看：它应大致落在 20–491 之间（24×24 视框
-自带的留白；本仓库现存六个文件的实测极值就是 20 与 491），而不是挤在左上角二三十个像素里；
+自带的留白；本仓库现存九个文件的实测极值就是 20 与 491），而不是挤在左上角二三十个像素里；
 再确认 `images: 4/4 healthy`（第 6 步）与肉眼能看见字形状（第 7 步）。
 
-本仓库当前引用的四个文件的实测值，可据此对照：
+本仓库九个入库文件的实测值，可据此对照：
 
 | 文件 | 尺寸 / 模式 | alpha 范围 | 对应透明度 |
 | --- | --- | --- | --- |
+| `icon-desktop.png` | 512×512 / RGBA | `(0, 26)` | 0.10 |
+| `icon-label.png` | 512×512 / RGBA | `(0, 31)` | 0.12 |
+| `icon-update.png` | 512×512 / RGBA | `(0, 28)` | 0.11 |
+| `icon-shield.png` | 512×512 / RGBA | `(0, 31)` | 0.12 |
 | `icon-uninstall.png` | 512×512 / RGBA | `(0, 33)` | 0.13 |
 | `icon-launch.png` | 512×512 / RGBA | `(0, 28)` | 0.11 |
 | `icon-network.png` | 512×512 / RGBA | `(0, 26)` | 0.10 |
-| `icon-shield.png` | 512×512 / RGBA | `(0, 31)` | 0.12 |
-
-另外两个为归档 spec 保留的文件（`icon-repair.png` `(0, 33)`、`icon-log.png` `(0, 28)`）沿用同一套
-口径，不必重新核对。
+| `icon-repair.png`（归档） | 512×512 / RGBA | `(0, 33)` | 0.13 |
+| `icon-log.png`（归档） | 512×512 / RGBA | `(0, 28)` | 0.11 |
 
 alpha 上界是**故意压得很低**的：图标只是背景点缀，最大值 26–33 意味着最不透明的像素也只有约
 10%–13% 不透明度。这正是设计意图，不要为了「看得更清楚」把它调亮。
@@ -723,6 +793,40 @@ alpha 上界是**故意压得很低**的：图标只是背景点缀，最大值 
 | `ring-top-right` | `[1390, -210, 2070, 470]` |
 | `ring-bottom-left` | `[-210, 875, 390, 1475]` |
 | `icon-shield` | `[1789.7, 673.7, 2174.3, 1058.3]` |
+
+### 实测基线（深色交付，1920×1080）
+
+2026-09-28 在本机重跑 `v1.1.1.spec.json`（`mode: dark`，四枚图标换成 desktop / label / update /
+shield，装饰层按 1920×1080 重排并**去掉了 `surface-card` 那圈图标边框**）的记录。它是**当前交付
+形态的对照**：同一条管线、同一个 `release` 档位，只是画布、配色与装饰几何不同。
+
+| 项 | 值 |
+| --- | --- |
+| 确定性 | `true` |
+| 尺寸 / 格式 | `[1920, 1080]` / PNG |
+| `profile` / `policy` | `release` / `advisory` |
+| `checks_passed` / `release_eligible` | `true` / `true` |
+| `errors` / `warnings` | 0 / 0 |
+| `font_availability` | 四项全 `true` |
+| `text_overflow` / `canvas_overflow` / `collisions` | 0 / 0 / 0 |
+| `images` | `4/4 healthy` |
+| `allowed_findings` | 5 |
+| `unchecked` | 3（同上） |
+| 无损压缩收益 | 11.5%（574307 → 508483 字节，逐像素一致） |
+
+五处出血（同样是 `intent.allow_bleed: true`；矩形与浅色模板不同，因为画布与装饰几何都变了）：
+
+| 节点 | 越界矩形 |
+| --- | --- |
+| `glow-disc` | `[1180, -380, 2180, 620]` |
+| `base-disc` | `[-360, 720, 500, 1580]` |
+| `ring-top-right` | `[1320, -240, 2040, 480]` |
+| `ring-bottom-left` | `[-250, 830, 390, 1470]` |
+| `icon-shield` | `[1708.6, 813.6, 2061.4, 1166.4]` |
+
+**别把这张表当契约**：它记录的是「一版重排后长什么样」，不是「必须重排出这个结果」。装饰几何一变，
+这张表就要按当版重跑的结果更新；稳定的只有「0 errors / 0 warnings / `checks_passed=true` /
+`images: 4/4 healthy`」这几项。
 
 `verify_export.py` 在本模板上**不会**打印「N actionable layout finding(s) were reported but NOT
 enforced」那一行：该计数只累加 `errors` + `warnings` + 不健康的图片，**故意排除 `allowed_findings`**
