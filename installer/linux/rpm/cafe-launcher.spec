@@ -28,6 +28,15 @@ BuildArch:      x86_64
 %global debug_package %{nil}
 %global __os_install_post %{nil}
 
+# RPM's built-in ELF dependency generator turns libcoreclrtraceptprovider.so's
+# DT_NEEDED on liblttng-ust.so.0 into a generated Requires, which the hand-written
+# Recommends below cannot override: the package then refuses to install wherever
+# lttng-ust moved past 2.12 (2.13 reved that soname to .so.1, so Fedora 43
+# provides no .so.0 at all). Filter the generated dependency instead — it is the
+# only lttng NEEDED entry in the whole payload, and the file carrying it is the
+# optional trace provider the runtime dlopen()s on demand.
+%global __requires_exclude ^liblttng-ust[.]so[.]0
+
 # Avalonia's X11 backend reaches these libraries through dlopen/P-Invoke, which
 # elfdeps cannot see, so they are declared the same way debian/control declares
 # its Depends. Soname capabilities are provided by every RPM distribution, so
@@ -50,12 +59,17 @@ Requires:       libcrypto.so.3()(64bit)
 Requires:       libgssapi_krb5.so.2()(64bit)
 Requires:       libunwind.so.8()(64bit)
 Requires:       libz.so.1()(64bit)
-Requires:       liblttng-ust.so.0()(64bit)
 Requires:       hicolor-icon-theme
 # ICU's soname tracks its major version and differs between supported RPM
 # distributions. One provider is enough because each distro's ICU package
 # ships the full uc/i18n/data set together.
 Requires:       (libicuuc.so.78()(64bit) or libicuuc.so.77()(64bit) or libicuuc.so.76()(64bit) or libicuuc.so.75()(64bit) or libicuuc.so.74()(64bit) or libicuuc.so.73()(64bit) or libicuuc.so.72()(64bit) or libicuuc.so.71()(64bit) or libicuuc.so.69()(64bit) or libicuuc.so.67()(64bit) or libicuuc.so.60()(64bit))
+# LTTng tracing is optional, and the payload does not ship the library: only
+# libcoreclrtraceptprovider.so — which the runtime dlopen()s on demand — needs
+# it. The generated Requires for it is filtered above, so what remains is this
+# weak declaration: distros that still provide the 2.12 soname install it and
+# keep LTTng tracing, the rest simply run without that provider.
+Recommends:     liblttng-ust.so.0()(64bit)
 
 %description
 Experimental Linux package of Cafe Launcher with UMU/Proton and Wine runtime

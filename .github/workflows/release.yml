@@ -156,7 +156,10 @@ jobs:
           rpm_path=$(realpath artifacts/distribution/*_linux-x64.rpm)
           docker run --rm -v "$rpm_path:/tmp/cafe-launcher.rpm:ro" fedora:43 bash -euxo pipefail -c '
             dnf install --setopt=install_weak_deps=False -y /tmp/cafe-launcher.rpm
-            test "$(command -v cafe-launcher)" = /usr/bin/cafe-launcher
+            # Fedora 41+ merged /usr/sbin into /usr/bin, so the first PATH hit is
+            # spelled /usr/sbin/cafe-launcher even though the package installs the
+            # wrapper into %{_bindir}; compare the file, not the spelling.
+            test "$(command -v cafe-launcher)" -ef /usr/bin/cafe-launcher
             cafe-launcher --version
           '
 
