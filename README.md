@@ -137,7 +137,7 @@ Linux 版除了安装、更新、修复游戏外，还可以通过兼容运行�
 
 默认壁纸裁剪自 Pixiv 画师 **めるき（Meruki）** 的插画 **[初めてのゲーム](https://www.pixiv.net/artworks/142932674)**（作品 ID `142932674`）。
 
-- 随应用打包的文件是 `src/Cafe.Launcher/Assets/launcher-background.png`（2560 × 1388），由原图居中裁剪并转为 PNG 后得到。
+- 随应用打包的文件是 `src/Cafe.Launcher.UI/Assets/launcher-background.png`（2560 × 1388），由原图居中裁剪并转为 PNG 后得到。
 - 原图与裁剪后的源素材一并存档在 [`docs/assets/art-sources/`](./docs/assets/art-sources/)，不参与应用打包：`142932674_p0.jpg` 为原始插画（2970 × 1610），`142932674_p0_cut.jpg` 为裁剪版本（2560 × 1388）。
 - 出处同时写在应用内的「设置 → 关于 → 法律信息」中，其中的「查看原始作品」会打开[该作品在 Pixiv 的页面](https://www.pixiv.net/artworks/142932674)。
 

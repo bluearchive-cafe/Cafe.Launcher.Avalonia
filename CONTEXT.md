@@ -221,7 +221,7 @@ _Avoid_: 遮罩点击穿透
 10. **中性色切换交互** → [ADR-010](docs/design/adr/ADR-010-中性色切换交互.md)：一行 ComboBox + caption 提示，无阻断。
 11. **字阶迁移时机** → [ADR-011](docs/design/adr/ADR-011-字阶迁移时机.md)：随组件批次。
 12. **底栏原型启动** → [ADR-012](docs/design/adr/ADR-012-底栏原型启动.md)：**已撤销**（2026-08-25 用户放弃首页布局决策；Q18 形态重新开放，仲裁标准 ADR-001 保留）。
-13. **设置页重设计方向** → [ADR-013](docs/design/adr/ADR-013-设置页重设计方向.md)：**变体 B（纯列表 + hairline 分隔线）**；导航选中态 = SecondaryContainer 底 + OnSecondaryContainer 字 + leading icon（无指示条）；设置页蓝图已定稿（原型见 `prototype/settings-page`）。
+13. **设置页重设计方向** → [ADR-013](docs/design/adr/ADR-013-设置页重设计方向.md)：**变体 B（纯列表 + hairline 分隔线）**；导航选中态 = SecondaryContainer 底 + OnSecondaryContainer 字 + leading icon（无指示条）；设置页蓝图已定稿（原型曾放在 `prototypes/settings-page/`，已随一次性原型清理移除；决策依据留在本 ADR）。
 14. **其余界面重设计方向** → [ADR-014](docs/design/adr/ADR-014-其余表面M3重设计方向.md)：对话框/Toast/设置向导；**主壳首页仍搁置**；日志/调试仅 token 兼容（Q3）；资源面板已由 [ADR-041](docs/design/adr/ADR-041-资源面板MD3结构级重设计.md) 结构级重设计（单卡三态 + 分段来源 + 行式条目，外层骨架不动）。
 
 ### Fluent 动效重设计（2026-08-27）
@@ -236,7 +236,7 @@ _Avoid_: 遮罩点击穿透
 
 ### 🔓 仍开放
 
-- **底栏形态（Q18）**：仲裁结论已撤销，重新开放（ADR-001 标准保留；`prototype/bottom-bar` 素材保留）。
+- **底栏形态（Q18）**：仲裁结论已撤销，重新开放（ADR-001 标准保留；`prototypes/bottom-bar` 素材已随一次性原型清理移除，重新裁决时按 ADR-001 重走）。
 - **首页（主壳）重设计**：已搁置（2026-08-25 用户放弃本轮设计稿与相关布局决策）；P3 主壳表面照旧包含，但无既定蓝图。
 
 ## ADR 索引
