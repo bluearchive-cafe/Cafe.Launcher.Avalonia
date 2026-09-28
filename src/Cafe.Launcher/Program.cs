@@ -124,7 +124,10 @@ sealed class Program
         // 单实例信号）与 DI 容器共用同一个实例。
         var dataRoot = LauncherDataRoot.ForCurrentProcess();
 
-        var reportStore = new CrashReportStore(dataRoot, CrashReportStore.DefaultFallbackDirectory);
+        var reportStore = new CrashReportStore(
+            dataRoot,
+            CrashReportStore.DefaultFallbackDirectory,
+            BuildInfo.Identity);
         UnifiedLogger crashLogger;
         try
         {
@@ -137,7 +140,8 @@ sealed class Program
             var emergencyCrashService = new FatalCrashService(
                 logger: null,
                 reportStore,
-                new CrashReporterLauncher());
+                new CrashReporterLauncher(),
+                BuildInfo.Identity);
             emergencyCrashService.HandleUnhandledCrash(CrashOrigin.DiagnosticsInitialization, exception);
             Environment.ExitCode = 1;
             return;
@@ -147,7 +151,8 @@ sealed class Program
         var fatalCrashService = new FatalCrashService(
             crashLogger,
             reportStore,
-            new CrashReporterLauncher());
+            new CrashReporterLauncher(),
+            BuildInfo.Identity);
         PreDiFatalCrashService = fatalCrashService;
         SetupCrashHandling(crashLogger, fatalCrashService);
 
