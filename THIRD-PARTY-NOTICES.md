@@ -27,20 +27,20 @@ The archives carry this file and `LICENSE` next to the binaries.
 
 | Package | Version | License | Required by | Source |
 | --- | --- | --- | --- | --- |
-| Avalonia | 12.1.2 | MIT ([text](https://licenses.nuget.org/MIT)) | UI, Cafe.Launcher | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
+| Avalonia | 12.1.3 | MIT ([text](https://licenses.nuget.org/MIT)) | UI, Cafe.Launcher | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
 | Avalonia.Angle.Windows.Natives | 2.1.27548.20260419 | LICENSE ([text](https://aka.ms/deprecateLicenseUrl)) | Cafe.Launcher | https://avaloniaui.net/ |
 | Avalonia.BuildServices | 11.3.2 | MIT ([text](https://licenses.nuget.org/MIT)) | UI, Cafe.Launcher | https://avaloniaui.net/ |
-| Avalonia.Controls.ColorPicker | 12.1.2 | MIT ([text](https://licenses.nuget.org/MIT)) | UI, Cafe.Launcher | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
-| Avalonia.Desktop | 12.1.2 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
-| Avalonia.FreeDesktop | 12.1.2 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
-| Avalonia.FreeDesktop.AtSpi | 12.1.2 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
-| Avalonia.HarfBuzz | 12.1.2 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
-| Avalonia.Native | 12.1.2 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
-| Avalonia.Remote.Protocol | 12.1.2 | MIT ([text](https://licenses.nuget.org/MIT)) | UI, Cafe.Launcher | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
-| Avalonia.Skia | 12.1.2 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
-| Avalonia.Themes.Fluent | 12.1.2 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
-| Avalonia.Win32 | 12.1.2 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
-| Avalonia.X11 | 12.1.2 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
+| Avalonia.Controls.ColorPicker | 12.1.3 | MIT ([text](https://licenses.nuget.org/MIT)) | UI, Cafe.Launcher | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
+| Avalonia.Desktop | 12.1.3 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
+| Avalonia.FreeDesktop | 12.1.3 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
+| Avalonia.FreeDesktop.AtSpi | 12.1.3 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
+| Avalonia.HarfBuzz | 12.1.3 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
+| Avalonia.Native | 12.1.3 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
+| Avalonia.Remote.Protocol | 12.1.3 | MIT ([text](https://licenses.nuget.org/MIT)) | UI, Cafe.Launcher | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
+| Avalonia.Skia | 12.1.3 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
+| Avalonia.Themes.Fluent | 12.1.3 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
+| Avalonia.Win32 | 12.1.3 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
+| Avalonia.X11 | 12.1.3 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
 | AvaloniaUI.DiagnosticsSupport | 2.2.3 | see package | Cafe.Launcher | https://avaloniaui.net/ |
 | CommunityToolkit.Mvvm | 8.4.2 | MIT ([text](https://licenses.nuget.org/MIT)) | UI, Cafe.Launcher | https://github.com/CommunityToolkit/dotnet |
 | HarfBuzzSharp | 8.3.1.3 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://go.microsoft.com/fwlink/?linkid=868515 |

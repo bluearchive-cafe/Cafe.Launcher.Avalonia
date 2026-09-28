@@ -294,11 +294,11 @@ WinExe 宿主只保留进程生命周期和顶层 Avalonia 生命周期；Core �
 | 工具/库 | 版本 | 用途 |
 |---|---|---|
 | .NET SDK | 10.0.302 | Runtime / SDK（global.json 钉住，`latestFeature` 滚动） |
-| Avalonia / Avalonia.Desktop | 12.1.2 | UI Framework |
-| Avalonia.Controls.ColorPicker | 12.1.2 | 自定义主题色取色器 |
+| Avalonia / Avalonia.Desktop | 12.1.3 | UI Framework |
+| Avalonia.Controls.ColorPicker | 12.1.3 | 自定义主题色取色器 |
 | MarkView.Avalonia | 12.2.1 | 基于 Markdig 的更新说明 Markdown 预览 |
-| Avalonia.Themes.Fluent | 12.1.2 | Fluent 主题 |
-| Avalonia.Headless.XUnit | 12.1.2 | Headless UI testing |
+| Avalonia.Themes.Fluent | 12.1.3 | Fluent 主题 |
+| Avalonia.Headless.XUnit | 12.1.3 | Headless UI testing |
 | AvaloniaUI.DiagnosticsSupport | 2.2.3 | 调试期 UI 诊断（Debug 专用，Release 不分发） |
 | CommunityToolkit.Mvvm | 8.4.2 | MVVM source generators |
 | Material.Icons.Avalonia | 3.0.2 | Icon library |
@@ -315,4 +315,4 @@ WinExe 宿主只保留进程生命周期和顶层 Avalonia 生命周期；Core �
 
 > 版本以 `Directory.Packages.props` 中声明的为准；升级依赖时同步更新本表（受 `InstallerContractTests` 守护），并再生 `THIRD-PARTY-NOTICES.md` 与 lock 文件（流程见 AGENTS.md「Dependency upgrades」）。
 
-`Cafe.Launcher.HeadlessTests` 暂时通过 `VersionOverride` 固定 `xunit.v3` 3.2.2；`Avalonia.Headless.XUnit` 12.1.2 尚不兼容 xUnit 4（[AvaloniaUI/Avalonia#22072](https://github.com/AvaloniaUI/Avalonia/issues/22072)）。上游修复后应移除该覆盖，并将程序集并行化配置迁移到 xUnit 4 API。
+`Cafe.Launcher.HeadlessTests` 暂时通过 `VersionOverride` 固定 `xunit.v3` 3.2.2；`Avalonia.Headless.XUnit` 12.1.3 尚不兼容 xUnit 4（[AvaloniaUI/Avalonia#22072](https://github.com/AvaloniaUI/Avalonia/issues/22072)）。上游修复后应移除该覆盖，并将程序集并行化配置迁移到 xUnit 4 API。
