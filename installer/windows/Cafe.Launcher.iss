@@ -50,7 +50,10 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 UninstallDisplayName=Cafe Launcher
 UninstallDisplayIcon={app}\{#EXECUTABLE_NAME}
-SetupIconFile=..\..\src\Cafe.Launcher\Assets\app-icon.ico
+; Resolved against this script's directory: the icon ships with the presentation
+; assembly (Cafe.Launcher.UI/Assets), so a rename of the host project must not
+; move it. Inno fails the compile outright when the path cannot be read.
+SetupIconFile=..\..\src\Cafe.Launcher.UI\Assets\app-icon.ico
 Compression=lzma2
 SolidCompression=yes
 OutputBaseFilename=Cafe.Launcher_setup
