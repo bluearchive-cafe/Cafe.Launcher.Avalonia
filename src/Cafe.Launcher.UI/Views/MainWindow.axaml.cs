@@ -402,6 +402,14 @@ internal partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// App-drawn title-bar drag. A touch contact reports <c>IsLeftButtonPressed</c> too, and the
+    /// window hands out only one primary pointer per concurrent contact — Win32's
+    /// <c>BeginMoveDrag</c> throws synchronously for a non-primary one (Avalonia 12.1.3 moved that
+    /// throw out of its posted callback), which the dispatcher policy escalates to a fatal crash.
+    /// So the second finger resting on the title bar would otherwise replace the window with the
+    /// crash report. Gate on <see cref="IPointer.IsPrimary"/> and never call it for touch extras.
+    /// </summary>
     private void OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (!IsWithinTitleBar(e.Source as Control)
@@ -410,7 +418,7 @@ internal partial class MainWindow : Window
             return;
         }
 
-        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed && e.Pointer.IsPrimary)
         {
             BeginMoveDrag(e);
         }
