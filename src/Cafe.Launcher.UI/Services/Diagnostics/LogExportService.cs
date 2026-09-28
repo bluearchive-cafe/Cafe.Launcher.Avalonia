@@ -31,8 +31,6 @@ internal sealed class LogExportService
     /// </summary>
     internal const string LogTitle = "LogExport";
 
-    private const int MaxRetainedLogFiles = 3;
-
     private readonly ILauncherDiagnostics diagnostics;
     private readonly LauncherDataRoot dataRoot;
     private readonly ICrashReportLocator crashReportLocator;
@@ -159,7 +157,7 @@ internal sealed class LogExportService
         ArgumentNullException.ThrowIfNull(options);
         var window = options.ResolveWindow(DateTimeOffset.Now);
         return await Task.Run(
-            () => LogFiles().Any(log => ContainsAnyEntry(log.FilePath, window, ct)),
+            () => ExistingLogFilesNewestFirst().Any(logPath => ContainsAnyEntry(logPath, window, ct)),
             ct).ConfigureAwait(false);
     }
 
@@ -183,20 +181,47 @@ internal sealed class LogExportService
         }
     }
 
-    /// <summary>The current log file followed by the rotated files the export considers.</summary>
+    /// <summary>
+    /// 当前正在写入的那个日志文件（必带），加上磁盘上现存的轮转兄弟文件（可选）。
+    /// 日志按大小轮转后基名 <c>unified.log</c> 不再被创建，因此「哪一个是当前文件」必须解析，
+    /// 否则导出要么打出一个不存在的基名，要么把轮转文件误判成可选而漏掉正在写的那一份。
+    /// </summary>
     private IEnumerable<(string FilePath, string EntryName, bool Required)> LogFiles()
     {
-        var logFilePath = diagnostics.LogFilePath;
-        yield return (logFilePath, GamePaths.UnifiedLogFileName, true);
-
-        var logDirectory = Path.GetDirectoryName(logFilePath)!;
-        var rotatedStem = Path.GetFileNameWithoutExtension(GamePaths.UnifiedLogFileName);
-        for (var i = 1; i <= MaxRetainedLogFiles; i++)
+        var activePath = UnifiedLogger.ResolveActiveLogFile(diagnostics.LogFilePath);
+        if (activePath is null)
         {
-            var entryName = $"{rotatedStem}_{i:D3}.log";
-            yield return (Path.Combine(logDirectory, entryName), entryName, false);
+            // 一份日志都没有：这条一直是有意义的不变量（导出包必须带日志，否则对诊断没用），
+            // 因此仍然抛而不是产出一个空包。
+            throw new FileNotFoundException(
+                "The current unified log file was not found.",
+                diagnostics.LogFilePath);
+        }
+
+        // 包内名固定为 unified.log：读者在导出包里找的是这一份「当前日志」。
+        yield return (activePath, GamePaths.UnifiedLogFileName, true);
+
+        foreach (var logFilePath in ExistingLogFilesNewestFirst())
+        {
+            // 正在写的那份已经作为 unified.log 进包；其余轮转文件沿用磁盘上的文件名。
+            if (string.Equals(logFilePath, activePath, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            yield return (logFilePath, Path.GetFileName(logFilePath), false);
         }
     }
+
+    /// <summary>
+    /// 磁盘上现存的日志文件（基名与轮转兄弟文件），最新写入的排在前面。不抛异常：问「有没有日志」
+    /// 的调用点（导出对话框的提示行）必须能在没有任何日志时直接得到空集合。
+    /// </summary>
+    private IReadOnlyList<string> ExistingLogFilesNewestFirst() =>
+        UnifiedLogger.ExistingLogFiles(diagnostics.LogFilePath)
+            .OrderByDescending(File.GetLastWriteTimeUtc)
+            .ThenByDescending(path => path, StringComparer.Ordinal)
+            .ToArray();
 
     private ExportManifest CreateZip(
         string zipPath,
