@@ -15,7 +15,7 @@
 - 2026-09-25 文档状态更新：按用户要求已将官方启动器 v1.7.2 与本项目的静态对比写入 `docs/research/official-launcher-v1.7.2-comparison.md`，原 `AUD-MAINT-002` 的“不入库”取舍不再成立；其余审计结论仍以 2026-09-24 基线为准。
 - 2026-09-26 打包状态更新：Linux `.deb`/RPM/AppImage/Arch 的元数据、依赖声明与版本同步已按当轮复核补齐（Debian copyright、`changelog.Debian.gz` 与 `-1` 打包修订号，三格式共用 AppStream metainfo，RPM/Arch 声明自包含 .NET 仍需的系统库与真实许可证集，`release.ps1` 在版本提交内同步 Arch `_realver`/`pkgver`/`.SRCINFO`）；发布 CI 已加入 Fedora 容器 RPM 实装与 Arch `makepkg`+`namcap` 门禁，尚未随真实 tag 运行过。本轮发现均在同一变更内修复，不产生开放发现。
 - 2026-09-27 分层重构更新：ADR-042 的 Core/UI 程序集拆分与其迁移清单已落地（`verify.ps1` 全绿：单元 2287、Headless 219、覆盖率 86.41%/92.83%）。收尾盘点把「Core 公开面仍为实现默认 public」登记为 `AUD-ARCH-015`——原来的缺口「没有守卫防止新增 public 实现」已在同一变更内补上守卫。
-- 2026-09-27 命名收口更新：ADR-043 把工程目录、`.csproj`、`AssemblyName`、`RootNamespace`、源码命名空间与发行资产统一到同一个产品 token（宿主 `Cafe.Launcher`、表现层 `Cafe.Launcher.UI`、`Updater.Core` 的命名空间补齐 `.Core`），`AssemblyNamingContractTests` 逐条钉住这些关系。用户可见的一次性变化（exe 名、release 资产前缀、macOS bundle id）见 ADR-043；GitHub 仓库名保持不变。本轮不产生新的开放发现。
+- 2026-09-27 命名收口更新：ADR-043 把工程目录、`.csproj`、`AssemblyName`、`RootNamespace`、源码命名空间与发行资产统一到同一个产品 token（宿主 `Cafe.Launcher`、表现层 `Cafe.Launcher.UI`、`Updater.Core` 的命名空间补齐 `.Core`），`AssemblyNamingContractTests` 逐条钉住这些关系。用户可见的一次性变化（exe 名、release 资产前缀、macOS bundle id）见 ADR-043；GitHub 仓库名保持不变。文档引用随之同步：历史 ADR 与 `docs/research` 的路径/标识符改为当前名（保留当时的决策叙述，被取代的条目加指向 ADR-043 的标注），新增 `DocumentationLinkContractTests` 钉住 Markdown 相对链接不再腐烂——改名那批一次性断掉了 39 条链接而此前无人察觉。本轮不产生新的开放发现。
 
 ## 开放发现
 

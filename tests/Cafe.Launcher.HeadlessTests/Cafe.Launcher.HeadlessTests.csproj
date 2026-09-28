@@ -29,7 +29,13 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
-    <!-- Avalonia.Headless.XUnit 12.1.2 is not compatible with xunit.v3 4.x yet. -->
+    <!--
+      Avalonia.Headless.XUnit 12.1.3 declares an exact dependency on
+      xunit.v3.extensibility.core [3.2.2], so the graph cannot take xunit.v3 4.x.
+      This also pins the MTP generation (v1 1.9.1 vs v2 2.4.0 in the sibling
+      project), which is why the MTP migration is blocked.
+      See PROJECT_CONVENTIONS.md §12 for the full constraint.
+    -->
     <PackageReference Include="xunit.v3" VersionOverride="3.2.2" />
     <PackageReference Include="xunit.runner.visualstudio" />
   </ItemGroup>
