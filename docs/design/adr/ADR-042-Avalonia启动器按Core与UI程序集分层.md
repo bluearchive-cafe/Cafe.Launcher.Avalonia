@@ -20,9 +20,9 @@
 程序集依赖固定为：
 
 ```text
-Cafe.Launcher.Avalonia (WinExe) → Cafe.Launcher.Avalonia.UI → Cafe.Launcher.Core → Cafe.Launcher.Updater.Core
-Cafe.Launcher.Avalonia (WinExe) → Cafe.Launcher.Core
-Cafe.Launcher.Avalonia (WinExe) → Cafe.Launcher.Updater.Core
+Cafe.Launcher (WinExe) → Cafe.Launcher.UI → Cafe.Launcher.Core → Cafe.Launcher.Updater.Core
+Cafe.Launcher (WinExe) → Cafe.Launcher.Core
+Cafe.Launcher (WinExe) → Cafe.Launcher.Updater.Core
 Cafe.Launcher.Updater → Cafe.Launcher.Updater.Core
 ```
 
@@ -30,10 +30,11 @@ Cafe.Launcher.Updater → Cafe.Launcher.Updater.Core
   `LauncherBuildIdentity` 和后端服务注册入口 `AddLauncherCore`。Core 不上抛已本地化的
   字符串：用户可见文案由表现层按稳定 code 映射到 `LocalizationKeys`；该结构化结果类型
   在第一个真实 Core→UI 结果落地时引入（见「被否决的替代方案」）。
-- `Cafe.Launcher.Avalonia.UI` 承载 Views、Controls、Converters、ViewModel、主题、本地化和
+- `Cafe.Launcher.UI` 承载 Views、Controls、Converters、ViewModel、主题、本地化和
   运行时资产。迁移完成后宿主只以 `LauncherPresentationSession` 调用生命周期操作。
-- 原 `Cafe.Launcher.Avalonia` 保留项目路径、程序集名和可执行文件名，只负责进程生命周期、
-  单实例信号和顶层 Avalonia 生命周期。
+- 原宿主工程（当时叫 `Cafe.Launcher.Avalonia`）保留项目路径、程序集名和可执行文件名，只负责
+  进程生命周期、单实例信号和顶层 Avalonia 生命周期。**这一条已被 [ADR-043](ADR-043-程序集与命名空间同名.md)
+  取代**：宿主现在是 `Cafe.Launcher`，工程路径、程序集名与命名空间同名。
 - `LauncherBuildIdentity` 必须由 WinExe 的程序集创建，避免类库把自己的版本误报为产品版本。
   任何"当前运行版本"的判断（例如默认更新渠道）都消费注入的 identity，不得反射
   `Assembly.GetEntryAssembly()`——测试宿主、崩溃报告进程与将来的宿主都不是启动器。
@@ -48,7 +49,7 @@ Cafe.Launcher.Updater → Cafe.Launcher.Updater.Core
 Core 的源命名空间已收口为 `Cafe.Launcher.Core.*`。为避免 234 个调用点做一次无意义的引用改写，
 宿主与两个测试工程通过各自 csproj 里的项目级 `<Using>` 解析这些命名空间；调用方迁移到窄
 Core API 后应改回显式 using。`AssemblySplitContractTests.CoreSources_UseOnlyTheCoreNamespaces`
-钉住 Core 侧不再回退到 `Cafe.Launcher.Avalonia.*`。
+钉住 Core 侧只使用 `Cafe.Launcher.Core.*`（ADR-043 起宿主的根命名空间就是 `Cafe.Launcher`）。
 
 ## 被否决的替代方案
 
@@ -178,7 +179,7 @@ Core API 后应改回显式 using。`AssemblySplitContractTests.CoreSources_UseO
 - **表现层整体落位 UI 程序集**：`Views/`、`ViewModels/`、`Features/`、`Controls/`、`Converters/`、
   `Models/`、`Helpers/`、表现层 `Services/`（本地化、主题、托盘、取文件/窗口尺寸、设置编辑器、
   下载与启动工作流、崩溃报告族）、运行期 `Assets/`（`app-icon.ico`、`launcher-background.png`）
-  全部迁入 `Cafe.Launcher.Avalonia.UI`；**命名空间保持不变**（搬迁只换程序集），因此 XAML 的
+  全部迁入 UI 工程；**当时命名空间保持不变**（搬迁只换程序集），因此 XAML 的
   `x:Class`、绑定、`avares://` 之外的代码无需改写。宿主只留进程与入口相关：`Program.cs`、
   `App.axaml(.cs)`、`CrashReportApp.axaml(.cs)`、`Composition/`、`Constants/BuildInfo.cs`、
   跨进程转发、`ShutdownDeferral`、`CrashReporterLauncher`（实现 UI 声明的 `ICrashReporterLauncher`）
@@ -194,13 +195,13 @@ Core API 后应改回显式 using。`AssemblySplitContractTests.CoreSources_UseO
   `MainWindowViewModel` 收 `PresentationOptions`（`bool` 无法由容器解析，故包一层记录类型），
   `GameShortcutService` 用的 CLI 参数常量移到 Core 的 `LauncherConstants`。
 - 载体资源随之改指 UI：`Assets/app-icon.ico`（`<ApplicationIcon>` 指 UI 工程路径）、
-  `launcher-background.png`、`Views/Styles/*.axaml` 的 `avares://Cafe.Launcher.Avalonia.UI/...`；
+  `launcher-background.png`、`Views/Styles/*.axaml` 的 `avares://Cafe.Launcher.UI/...`；
   测试的扫描域与声明表切到 `TestRepository.PresentationPath`（含反向失效保护：宿主里再出现
   `Views`/`Controls` 目录即失败）。
 - UI 程序集开始承载内容（第一步：本地化资源）：`Resources/*.resx` 与生成的 `LauncherStrings.Designer.cs`
-  迁入 `src/Cafe.Launcher.Avalonia.UI/`；UI 的 `RootNamespace` 定为 `Cafe.Launcher.Avalonia`（表现层
+  迁入 `src/Cafe.Launcher.UI/`；UI 的 `RootNamespace` 随后由 ADR-043 定为 `Cafe.Launcher.UI`（表现层
   代码本就沿用该命名空间，搬迁只换程序集），因此 resx 的清单名仍是
-  `Cafe.Launcher.Avalonia.Resources.LauncherStrings`，与 Designer 对齐。`LauncherStrings` 在搬迁时
+  `Cafe.Launcher.UI.Resources.LauncherStrings`，与 Designer 对齐。`LauncherStrings` 在搬迁时
   一度改为 `public`（当时的假设是宿主也要用）；随后的「UI 公开面收窄」批次确认宿主并不消费它
   （宿主只用 `Constants/LocalizationKeys` 与 XAML 的 `Shell.I18n[...]`），于是又改回 `internal`，
   测试经 UI 程序集的 `InternalsVisibleTo` 访问。生成器 `Generate-LauncherStringsDesigner.ps1`

@@ -21,7 +21,7 @@
 
 - 输入：`docs/design/token-migration-map.md`（旧键→新键映射表，按 §3.2 十二家族人工分类；含特例：`LauncherSpacingXsThickness`→`Launcher.Spacing.Thickness.Xs`、`LauncherTextBox*`→按家族归位、`LauncherRadiusMd(6)`→`Launcher.Radius.Md` 值暂不变）。
 - 脚本：`scripts/Rename-LauncherTokens.ps1`（读映射表 → 替换 `src/` 全部 .axaml/.cs 中的精确键引用 → 输出改动清单 + 旧键残留巡检，失败即退出非零）。映射表为 LF JSON/CSV。
-- 同步：`tests/Cafe.Launcher.Avalonia.Tests/UiStyleContractTests.cs`（键清单、token 值断言）、headless 测试中的资源键、`Features/Settings/SettingsAppearanceViewModel.cs`（动态覆盖的笔刷键）、`Controls/` 与 `Views/` 各样式分片。
+- 同步：`tests/Cafe.Launcher.Tests/UiStyleContractTests.cs`（键清单、token 值断言）、headless 测试中的资源键、`Features/Settings/SettingsAppearanceViewModel.cs`（动态覆盖的笔刷键）、`Controls/` 与 `Views/` 各样式分片。
 - 顺手修复：`Views\Styles\{Toast,RemoteContent,SetupWizard}.axaml` 33 处静态 token 的 `{DynamicResource}` → `{StaticResource}`。
 - 门禁：编译零警告、全部测试绿、`grep -r "Launcher\([A-Z]\)" src tests` 旧键 = 0 命中。
 
@@ -31,7 +31,7 @@
 
 - 新增族（`App.axaml` 按注释分区）：`Launcher.Elevation.*`（0–3 档阴影值：颜色/偏移/模糊；把 `MainWindow.Styles.axaml` 2 处硬编码 BoxShadow 迁为引用）、`Launcher.StateLayer.*`（8%/12%/16%/24%）、`Launcher.Color.Overlay.Scrim*`（3 档，替代/并列现有 overlay 用途）、`Launcher.Spacing.Thickness.*` 补齐全档、`Launcher.Typography.*` 角色键（P1 仅为别名/新增，消费方 P2 迁移）。
 - `UiStyleContractTests` 扩展：新族存在性、旧键清零（回归门）、`{StaticResource}` 规则（静态 token 不得被 DynamicResource 引用）、禁裸值规则覆盖新文件。
-- **新增 `DesignTokenContrastTests`**（`tests/Cafe.Launcher.Avalonia.Tests/`）：WCAG 相对亮度计算（`ColorUtils` 内部函数——注意提取可测试的纯函数）、token 对清单驱动断言（Text.Primary×Surface、Text.Secondary×Card、Text.Body×Dialog、OnAccent×Primary、Danger 系、Info/Notice/Warning/DangerSoft 底×文字、按钮文字×fill 等 ≥4.5:1 文本 / ≥3:1 UI）；豁免区清单显式列在测试中。
+- **新增 `DesignTokenContrastTests`**（`tests/Cafe.Launcher.Tests/`）：WCAG 相对亮度计算（`ColorUtils` 内部函数——注意提取可测试的纯函数）、token 对清单驱动断言（Text.Primary×Surface、Text.Secondary×Card、Text.Body×Dialog、OnAccent×Primary、Danger 系、Info/Notice/Warning/DangerSoft 底×文字、按钮文字×fill 等 ≥4.5:1 文本 / ≥3:1 UI）；豁免区清单显式列在测试中。
 - 调色：对不达标 token 做**最小**调整（记录 before/after；Light/Dark 双档），不得改变视觉意图（如 `TextSecondary` 只提暗/提亮到阈值）。
 - 门禁：契约测试 + 对比度测试全绿；零警告。
 
@@ -59,7 +59,7 @@
 
 > **状态：✅ 已执行（2026-08-25）**。headless 平台切换 Skia（`UseHeadlessDrawing=false` + `UseSkia()`）；`GoldenScreenshot` 基建（`RenderTargetBitmap` 捕获、平铺基线、每通道容差 8/255 + ≤1% 失配阈值、`CAFE_GOLDEN_UPDATE=1` 重生成、缺失基线明确报错）；5 个基线（壳默认/进度/设置/确认对话框/Toast）已生成入库；真实字体度量校准：Tab 页头缺口断言语义化（≥3px，注释记录 Skia 与旧无头绘制的 ±1px 差异）；README 记录 CI 字体稳定性与重生成流程。门禁：0 警告、单测 1105 通过、headless 105 通过（含基线比对）。**M5 门禁通过 — P1 全部里程碑完成**。
 
-- `tests/Cafe.Launcher.Avalonia.HeadlessTests/`：`AvaloniaHeadlessPlatformOptions` 启用 Skia 渲染（`UseHeadlessDrawing=false`）+ `RenderTargetBitmap` 捕获；基线 3–5 个（壳默认、进度态、设置覆盖层、确认对话框、Toast）√ 与基线平铺存储 + 阈值 diff；字体稳定性：固定测试呈现字体、CI（windows-latest）字体集合风险记录进 README 注释。
+- `tests/Cafe.Launcher.HeadlessTests/`：`AvaloniaHeadlessPlatformOptions` 启用 Skia 渲染（`UseHeadlessDrawing=false`）+ `RenderTargetBitmap` 捕获；基线 3–5 个（壳默认、进度态、设置覆盖层、确认对话框、Toast）√ 与基线平铺存储 + 阈值 diff；字体稳定性：固定测试呈现字体、CI（windows-latest）字体集合风险记录进 README 注释。
 - 门禁：基线测试本地绿；CI 跑同环境验证。
 
 ## 交付物与门禁汇总
