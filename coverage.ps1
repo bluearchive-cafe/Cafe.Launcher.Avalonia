@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference = 'Stop'
+$ErrorActionPreference = 'Stop'
 $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 $env:AVALONIA_TELEMETRY_OPTOUT = '1'
 # MSBuild 常驻复用节点会跨构建持有刚拷贝文件的句柄，coverlet 紧随其后的插桩重写
@@ -128,10 +128,13 @@ $branchCoverage = @{}
 # 程序集拆分后每个生产程序集都必须真的出现在报告里。coverlet 的 <sources> 根一旦退回旧的
 # 单项目形状，被移走的代码会从分子和分母同时消失，比例反而可能上升——静默通过闸口。
 # 这里按项目目录要求它们各自贡献被计数的行，缺一个就直接失败。
+# src\Cafe.Launcher.Updater 不在表内是有意的：没有任何测试工程引用它（它的实现都在
+# Updater.Core 里，由单元套件覆盖），所以它本来就不该出现在报告里。
 $requiredAssemblyRoots = @(
     'src\Cafe.Launcher.Core',
     'src\Cafe.Launcher',
-    'src\Cafe.Launcher.UI'
+    'src\Cafe.Launcher.UI',
+    'src\Cafe.Launcher.Updater.Core'
 )
 $countedSourceFiles = @{}
 foreach ($requiredRoot in $requiredAssemblyRoots) {
