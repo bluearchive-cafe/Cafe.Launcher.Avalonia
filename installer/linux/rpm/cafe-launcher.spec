@@ -50,12 +50,19 @@ Requires:       libcrypto.so.3()(64bit)
 Requires:       libgssapi_krb5.so.2()(64bit)
 Requires:       libunwind.so.8()(64bit)
 Requires:       libz.so.1()(64bit)
-Requires:       liblttng-ust.so.0()(64bit)
 Requires:       hicolor-icon-theme
 # ICU's soname tracks its major version and differs between supported RPM
 # distributions. One provider is enough because each distro's ICU package
 # ships the full uc/i18n/data set together.
 Requires:       (libicuuc.so.78()(64bit) or libicuuc.so.77()(64bit) or libicuuc.so.76()(64bit) or libicuuc.so.75()(64bit) or libicuuc.so.74()(64bit) or libicuuc.so.73()(64bit) or libicuuc.so.72()(64bit) or libicuuc.so.71()(64bit) or libicuuc.so.69()(64bit) or libicuuc.so.67()(64bit) or libicuuc.so.60()(64bit))
+# LTTng tracing is optional, and the payload does not ship the library: only
+# libcoreclrtraceptprovider.so — which the runtime dlopen()s on demand — names
+# the 2.12 soname. A hard Requires therefore made the package uninstallable
+# wherever lttng-ust moved on: 2.13 reved the soname to .so.1, so Fedora 43
+# provides no liblttng-ust.so.0()(64bit) and `dnf install` failed on it.
+# Declared weakly instead: distros that still provide the soname install it,
+# the rest simply run without the LTTng provider.
+Recommends:     liblttng-ust.so.0()(64bit)
 
 %description
 Experimental Linux package of Cafe Launcher with UMU/Proton and Wine runtime

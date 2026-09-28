@@ -414,7 +414,11 @@ public sealed class InstallerContractTests
         Assert.Contains("Requires:       libX11.so.6()(64bit)", spec, StringComparison.Ordinal);
         Assert.Contains("Requires:       libssl.so.3()(64bit)", spec, StringComparison.Ordinal);
         Assert.Contains("Requires:       libgssapi_krb5.so.2()(64bit)", spec, StringComparison.Ordinal);
-        Assert.Contains("Requires:       liblttng-ust.so.0()(64bit)", spec, StringComparison.Ordinal);
+        // LTTng 是可选跟踪插件：载荷不带这个库，只有运行时按需 dlopen 的
+        // libcoreclrtraceptprovider.so 会去探测 2.12 的 soname。硬依赖会让已升到
+        // lttng-ust 2.13+ 的发行版（Fedora 43 只提供 .so.1）根本装不上，故只做弱依赖。
+        Assert.Contains("Recommends:     liblttng-ust.so.0()(64bit)", spec, StringComparison.Ordinal);
+        Assert.DoesNotContain("Requires:       liblttng-ust.so.0()(64bit)", spec, StringComparison.Ordinal);
         Assert.Contains("libicuuc.so.78()(64bit) or", spec, StringComparison.Ordinal);
         Assert.Contains("MIT AND Apache-2.0 AND BSD-2-Clause", spec, StringComparison.Ordinal);
         Assert.Contains("%{buildroot}/opt/cafe-launcher", spec, StringComparison.Ordinal);
