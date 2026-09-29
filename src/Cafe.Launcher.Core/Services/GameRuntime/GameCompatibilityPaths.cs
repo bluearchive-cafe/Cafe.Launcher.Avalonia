@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Services;
 
 namespace Cafe.Launcher.Core.Services.GameRuntime;
@@ -39,7 +40,7 @@ public static class GameCompatibilityPaths
 
     private static string GetLauncherDataRoot() =>
         OperatingSystem.IsWindows()
-            ? LauncherDataRoot.ForCurrentProcess().Root
+            ? LauncherDataRoot.ForCurrentProcess(LauncherProfiles.Cafe.ProductName).Root
             : Path.Combine(GetUnixDataHome(), "cafe-launcher");
 
     private static string GetUnixDataHome()

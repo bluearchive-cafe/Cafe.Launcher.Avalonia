@@ -25,6 +25,7 @@ internal sealed class GameUninstallService
     /// </summary>
     private const int MaxReportedLeftovers = 5;
 
+    private readonly YostarGameProfile gameProfile;
     private readonly ILocalInstallationStateStore localInstallationStateStore;
     private readonly IGameInstallationPath installationPath;
     private readonly ILauncherDiagnostics diagnostics;
@@ -34,6 +35,7 @@ internal sealed class GameUninstallService
     private readonly IGameShortcutService shortcutService;
 
     public GameUninstallService(
+        YostarGameProfile gameProfile,
         ILocalInstallationStateStore localInstallationStateStore,
         ILauncherDiagnostics diagnostics,
         LocalizationService localizer,
@@ -42,6 +44,7 @@ internal sealed class GameUninstallService
         IGameProcessTracker gameProcessTracker,
         IGameShortcutService shortcutService)
     {
+        this.gameProfile = gameProfile;
         this.localInstallationStateStore = localInstallationStateStore;
         this.installationPath = installationPath;
         this.diagnostics = diagnostics;
@@ -194,7 +197,7 @@ internal sealed class GameUninstallService
             {
                 Success = true,
                 Message = BuildCompletionMessage(localizer, leftovers, keptPrefixPath),
-                AffectedFileCount = files.Count + GamePaths.InstallationStateFileCount
+                AffectedFileCount = files.Count + LauncherPaths.InstallationStateFileCount
             };
         }
         catch (Exception exception) when (StorageFailure.IsRecoverable(exception))
@@ -218,8 +221,8 @@ internal sealed class GameUninstallService
     /// （&lt;compatibilityRoot&gt;/&lt;gameId&gt;，覆盖该游戏各运行器的默认前缀）。
     /// 测量与删除都走这里，保证「显示多少就删多少」。
     /// </summary>
-    private static (string GameRoot, string ManagedPrefixRoot) ResolveCleanupTargets(string gamePath) =>
-        (gamePath, GameCompatibilityPaths.GetDefaultGameCompatibilityRoot(GameRuntimeIds.BlueArchiveJapan));
+    private (string GameRoot, string ManagedPrefixRoot) ResolveCleanupTargets(string gamePath) =>
+        (gamePath, GameCompatibilityPaths.GetDefaultGameCompatibilityRoot(gameProfile.RuntimeId));
 
     /// <summary>
     /// 用户自定义且落在受管子树之外的 Prefix（ADR-030）：保留不删，并在成功文案里回报。
@@ -230,7 +233,7 @@ internal sealed class GameUninstallService
     /// 把它填进安装目录里（便携安装），而安装目录整棵正是彻底清除的删除目标之一：树都删完了
     /// 再报「已保留：&lt;该路径&gt;」，是被同一次操作当场证伪的一句话。
     /// </remarks>
-    private static string? ResolveKeptPrefixPath(LauncherStatusSnapshot snapshot, string gamePath)
+    private string? ResolveKeptPrefixPath(LauncherStatusSnapshot snapshot, string gamePath)
     {
         var prefixPath = GameRuntimeConfiguration.FromSettings(snapshot.Settings.GameRuntime).PrefixPath;
         if (string.IsNullOrWhiteSpace(prefixPath))
@@ -253,7 +256,7 @@ internal sealed class GameUninstallService
     /// 受管根内。规则与 <see cref="DeleteThoroughCleanupTargetsAsync"/> 删除时复查的一致，
     /// 提前跑一次是为了「拒绝就什么都不删」。
     /// </summary>
-    private static void EnsureCleanupTargetsAreDeletable(string gamePath)
+    private void EnsureCleanupTargetsAreDeletable(string gamePath)
     {
         var (gameRoot, managedPrefixRoot) = ResolveCleanupTargets(gamePath);
         _ = GamePathValidator.GetSafePath(gameRoot, ".");
@@ -382,7 +385,7 @@ internal sealed class GameUninstallService
         {
             Success = true,
             Message = localizer.F(LocalizationKeys.ReadyToUninstall, state.Manifest?.Files.Count ?? 0),
-            AffectedFileCount = (state.Manifest?.Files.Count ?? 0) + GamePaths.InstallationStateFileCount
+            AffectedFileCount = (state.Manifest?.Files.Count ?? 0) + LauncherPaths.InstallationStateFileCount
         };
     }
 
@@ -413,22 +416,22 @@ internal sealed class GameUninstallService
 
         try
         {
-            GamePathValidator.EnsureGameDirectoryName(gamePath);
+            GamePathValidator.EnsureGameDirectoryName(gamePath, gameProfile.GameFolderName);
         }
         catch (InvalidOperationException)
         {
-            return (GameOperationOutcomes.Failed(localizer.F(LocalizationKeys.GameDirectoryNameInvalid, GamePaths.GameFolderName), GameOperationErrorCode.Uninstall), null);
+            return (GameOperationOutcomes.Failed(localizer.F(LocalizationKeys.GameDirectoryNameInvalid, gameProfile.GameFolderName), GameOperationErrorCode.Uninstall), null);
         }
 
         var localGame = await localInstallationStateStore.ReadAsync(gamePath, cancellationToken).ConfigureAwait(false);
         if (localGame.Kind != LocalInstallationStateKind.Valid)
         {
-            return (GameOperationOutcomes.Failed(localizer.F(LocalizationKeys.GameConfigMetadataMissing, GamePaths.GameConfigFileName), GameOperationErrorCode.Uninstall), null);
+            return (GameOperationOutcomes.Failed(localizer.F(LocalizationKeys.GameConfigMetadataMissing, LauncherPaths.GameConfigFileName), GameOperationErrorCode.Uninstall), null);
         }
 
         if (string.IsNullOrWhiteSpace(localGame.GameConfig?.Version) || string.IsNullOrWhiteSpace(localGame.GameConfig?.Name))
         {
-            return (GameOperationOutcomes.Failed(localizer.F(LocalizationKeys.GameConfigMetadataMissing, GamePaths.GameConfigFileName), GameOperationErrorCode.Uninstall), null);
+            return (GameOperationOutcomes.Failed(localizer.F(LocalizationKeys.GameConfigMetadataMissing, LauncherPaths.GameConfigFileName), GameOperationErrorCode.Uninstall), null);
         }
 
         return (null, localGame);

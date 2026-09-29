@@ -6,9 +6,9 @@ using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.UI.Services.Diagnostics;
 using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Testing;
-using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
@@ -39,12 +39,12 @@ public sealed class LauncherDataRootTests : IDisposable
         // GamePaths / LauncherConstants 声明，避免同一份命名散到各消费方。
         // unified.log 不在其中：它的落点由 UnifiedLogger 实例拥有（构造时给目录、
         // 由 LogFilePath 读出），根上再声明一份就成了同一份布局的第二个出处。
-        Assert.Equal(Path.Combine(dataRoot.Root, GamePaths.LauncherSettingsFileName), dataRoot.SettingsPath);
-        Assert.Equal(Path.Combine(dataRoot.Root, GamePaths.DownloadStateFileName), dataRoot.DownloadStatePath);
-        Assert.Equal(Path.Combine(dataRoot.Root, GamePaths.NoticeStateFileName), dataRoot.NoticeStatePath);
-        Assert.Equal(Path.Combine(dataRoot.Root, GamePaths.RunnerOutputFileName), dataRoot.RunnerOutputPath);
-        Assert.Equal(Path.Combine(dataRoot.Root, GamePaths.CompatibilityEnvironmentFileName), dataRoot.CompatibilityEnvironmentPath);
-        Assert.Equal(Path.Combine(dataRoot.Root, GamePaths.PrefixMetadataFileName), dataRoot.PrefixMetadataPath);
+        Assert.Equal(Path.Combine(dataRoot.Root, LauncherPaths.LauncherSettingsFileName), dataRoot.SettingsPath);
+        Assert.Equal(Path.Combine(dataRoot.Root, LauncherPaths.DownloadStateFileName), dataRoot.DownloadStatePath);
+        Assert.Equal(Path.Combine(dataRoot.Root, LauncherPaths.NoticeStateFileName), dataRoot.NoticeStatePath);
+        Assert.Equal(Path.Combine(dataRoot.Root, LauncherPaths.RunnerOutputFileName), dataRoot.RunnerOutputPath);
+        Assert.Equal(Path.Combine(dataRoot.Root, LauncherPaths.CompatibilityEnvironmentFileName), dataRoot.CompatibilityEnvironmentPath);
+        Assert.Equal(Path.Combine(dataRoot.Root, LauncherPaths.PrefixMetadataFileName), dataRoot.PrefixMetadataPath);
         Assert.Equal(Path.Combine(dataRoot.Root, LauncherDataRoot.ImageCacheFolderName), dataRoot.ImageCacheDirectory);
         Assert.Equal(Path.Combine(dataRoot.Root, LauncherDataRoot.CrashReportsFolderName), dataRoot.CrashReportsDirectory);
         Assert.Equal(Path.Combine(dataRoot.Root, LauncherConstants.LogExportFolderName), dataRoot.LogExportDirectory);
@@ -83,7 +83,7 @@ public sealed class LauncherDataRootTests : IDisposable
 
         using var settings = new LauncherSettingsService(dataRoot);
 
-        Assert.Equal(Path.Combine(tempDir, GamePaths.LauncherSettingsFileName), settings.SettingsPath);
+        Assert.Equal(Path.Combine(tempDir, LauncherPaths.LauncherSettingsFileName), settings.SettingsPath);
     }
 
     [Fact]

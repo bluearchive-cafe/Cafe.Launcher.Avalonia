@@ -4,6 +4,7 @@ using Avalonia.Threading;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.HeadlessTests;
 
@@ -17,7 +18,7 @@ public sealed class SystemTrayServiceTests
         var localizer = new LocalizationService();
         localizer.SetLanguage(LauncherLanguages.English);
         var platform = new TestTrayPlatform();
-        using var service = new SystemTrayService(window, localizer, platform);
+        using var service = new SystemTrayService(LauncherProfiles.Cafe, window, localizer, platform);
 
         Assert.True(service.Initialize());
         Assert.True(service.Initialize());
@@ -43,7 +44,7 @@ public sealed class SystemTrayServiceTests
     public void Initialize_WhenPlatformReturnsFalse_DisposesPlatform()
     {
         var platform = new TestTrayPlatform { InitializeResult = false };
-        using var service = new SystemTrayService(
+        using var service = new SystemTrayService(LauncherProfiles.Cafe, 
             new Window(),
             new LocalizationService(),
             platform);
@@ -56,7 +57,7 @@ public sealed class SystemTrayServiceTests
     public void Initialize_WhenDisposed_ReturnsFalse()
     {
         var platform = new TestTrayPlatform();
-        var service = new SystemTrayService(
+        var service = new SystemTrayService(LauncherProfiles.Cafe, 
             new Window(),
             new LocalizationService(),
             platform);
@@ -74,7 +75,7 @@ public sealed class SystemTrayServiceTests
         var localizer = new LocalizationService();
         localizer.SetLanguage(LauncherLanguages.English);
         var platform = new TestTrayPlatform();
-        using var service = new SystemTrayService(window, localizer, platform);
+        using var service = new SystemTrayService(LauncherProfiles.Cafe, window, localizer, platform);
 
         Assert.True(service.Initialize());
 

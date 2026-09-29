@@ -11,6 +11,7 @@ using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.UI.Views;
 using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.HeadlessTests;
 
@@ -410,7 +411,7 @@ public sealed partial class MainWindowHeadlessTests
         {
             CloseBehavior = CloseBehaviors.Minimize
         });
-        using var trayService = new SystemTrayService(
+        using var trayService = new SystemTrayService(LauncherProfiles.Cafe, 
             context.Window,
             new LocalizationService(),
             new TestTrayPlatform());
@@ -430,7 +431,7 @@ public sealed partial class MainWindowHeadlessTests
         // The game-launch toast reports "minimized to tray", so this path must hide the
         // window rather than leaving it on the taskbar.
         using var context = CreateContext();
-        using var trayService = new SystemTrayService(
+        using var trayService = new SystemTrayService(LauncherProfiles.Cafe, 
             context.Window,
             new LocalizationService(),
             new TestTrayPlatform());
@@ -469,7 +470,7 @@ public sealed partial class MainWindowHeadlessTests
         {
             CloseBehavior = CloseBehaviors.Minimize
         });
-        using var trayService = new SystemTrayService(
+        using var trayService = new SystemTrayService(LauncherProfiles.Cafe, 
             context.Window,
             new LocalizationService(),
             new TestTrayPlatform());
@@ -493,7 +494,7 @@ public sealed partial class MainWindowHeadlessTests
         // The launch path hides to tray, but the title-bar minimize button still asks for a
         // taskbar minimize — guard against the two paths being collapsed into one handler.
         using var context = CreateContext();
-        using var trayService = new SystemTrayService(
+        using var trayService = new SystemTrayService(LauncherProfiles.Cafe, 
             context.Window,
             new LocalizationService(),
             new TestTrayPlatform());

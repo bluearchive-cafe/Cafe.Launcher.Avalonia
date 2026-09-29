@@ -16,8 +16,8 @@ using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.UI.ViewModels;
 using Cafe.Launcher.UI.Views;
 using Cafe.Launcher.Core.Models;
-using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Services;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.HeadlessTests;
 
@@ -84,11 +84,11 @@ public sealed partial class MainWindowHeadlessTests
         Assert.True(context.ViewModel.Dialogs.SetupWizard.CanGoNext);
         Assert.True(nextButton.IsEnabled);
 
-        var corruptedInstallationPath = new GameInstallationPath().NormalizeGamePath(
+        var corruptedInstallationPath = new GameInstallationPath(LauncherProfiles.BlueArchiveJapan).NormalizeGamePath(
             Path.Combine(context.Directory.Path, "corrupted-installation"));
         Directory.CreateDirectory(corruptedInstallationPath);
         await File.WriteAllTextAsync(
-            Path.Combine(corruptedInstallationPath, GamePaths.ManifestFileName),
+            Path.Combine(corruptedInstallationPath, LauncherPaths.ManifestFileName),
             "{}");
         context.ViewModel.Dialogs.SetupWizard.GamePath = corruptedInstallationPath;
         await WaitForGamePathStatusAsync(

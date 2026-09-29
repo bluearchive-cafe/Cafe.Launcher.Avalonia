@@ -8,6 +8,7 @@ using Cafe.Launcher.UI.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Cafe.Launcher.Core.Services;
 using Cafe.Launcher.Core.Services.Auth;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
@@ -126,8 +127,8 @@ public sealed class AssemblySplitContractTests
         var dataRoot = new LauncherDataRoot(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N")));
 
         // 重复登记必须收敛成一份：组合根在测试与辅助宿主里会被反复调用。
-        services.AddLauncherCore(identity, dataRoot);
-        services.AddLauncherCore(identity, dataRoot);
+        services.AddLauncherCore(identity, dataRoot, LauncherProfiles.BlueArchiveJapan, LauncherProfiles.Cafe);
+        services.AddLauncherCore(identity, dataRoot, LauncherProfiles.BlueArchiveJapan, LauncherProfiles.Cafe);
 
         using var provider = services.BuildServiceProvider();
         Assert.Same(identity, provider.GetRequiredService<LauncherBuildIdentity>());
@@ -202,7 +203,6 @@ public sealed class AssemblySplitContractTests
     {
         string[] declared =
         [
-            "ApiConfig",
             "AtomicJsonFileStore",
             "BestHttpCookieLibraryService",
             "CrashOriginExtensions",
@@ -216,10 +216,8 @@ public sealed class AssemblySplitContractTests
             "GSettingsCli",
             "GameCompatibilityPaths",
             "GamePathValidator",
-            "GamePaths",
             "GameProcessNames",
             "GameProcessTracker",
-            "GameRuntimeIds",
             "GraphicsInfoProbe",
             "HttpClientLease",
             "JsonDefaults",
@@ -227,6 +225,8 @@ public sealed class AssemblySplitContractTests
             "LauncherCoreServiceCollectionExtensions",
             "LauncherDataRoot",
             "LauncherLog",
+            "LauncherPaths",
+            "LauncherProfiles",
             "LauncherUpdateCheckResult",
             "LeaseBackedDownloadTransportSource",
             "LinuxProcessScanner",

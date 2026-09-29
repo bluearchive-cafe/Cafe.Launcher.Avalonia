@@ -3,7 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Platform;
 using Cafe.Launcher.UI.Constants;
-using Cafe.Launcher.Core.Constants;
+using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.UI.Services;
 
@@ -32,6 +32,7 @@ internal interface ISystemTrayPlatform : IDisposable
 
 internal sealed class AvaloniaSystemTrayPlatform : ISystemTrayPlatform
 {
+    private readonly string productName;
     private TrayIcon? trayIcon;
     private NativeMenuItem? titleItem;
     private NativeMenuItem? showItem;
@@ -43,6 +44,11 @@ internal sealed class AvaloniaSystemTrayPlatform : ISystemTrayPlatform
     private Action? startGame;
     private Action? openSettings;
     private bool disposed;
+
+    public AvaloniaSystemTrayPlatform(LauncherProductProfile productProfile)
+    {
+        productName = productProfile.ProductName;
+    }
 
     public bool Initialize(
         SystemTrayMenuText text,
@@ -72,7 +78,7 @@ internal sealed class AvaloniaSystemTrayPlatform : ISystemTrayPlatform
         trayIcon = new TrayIcon
         {
             Icon = new WindowIcon(iconStream),
-            ToolTipText = LauncherConstants.ProductName,
+            ToolTipText = productName,
             Menu = menu,
             IsVisible = true
         };
@@ -132,7 +138,7 @@ internal sealed class AvaloniaSystemTrayPlatform : ISystemTrayPlatform
     {
         var menu = new NativeMenu();
 
-        titleItem = new NativeMenuItem(LauncherConstants.ProductName)
+        titleItem = new NativeMenuItem(productName)
         {
             IsEnabled = false
         };

@@ -15,7 +15,6 @@ using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Core.Services.GameRuntime;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services;
-using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Helpers;
 
 namespace Cafe.Launcher.UI.Features.GameOperations;
@@ -30,6 +29,7 @@ internal sealed class DownloadSession : IDisposable
     private const int MaxInstallVerificationRetry = 3;
 
     private readonly ILauncherApiClient apiClient;
+    private readonly YostarGameProfile gameProfile;
     private readonly ILauncherSettingsService settingsService;
     private readonly ILocalInstallationStateStore localInstallationStateStore;
     private readonly IGameInstallationPath installationPath;
@@ -76,6 +76,7 @@ internal sealed class DownloadSession : IDisposable
         CancellationToken cancellationToken)
     {
         apiClient = context.ApiClient;
+        gameProfile = context.GameProfile;
         localInstallationStateStore = context.ILocalInstallationStateStore;
         installationPath = context.InstallationPath;
         settingsService = context.SettingsService;
@@ -228,7 +229,7 @@ internal sealed class DownloadSession : IDisposable
 
         var gamePath = installationPath.NormalizeGamePath(settings.GamePath);
         reportGamePath(gamePath);
-        GamePathValidator.EnsureGameDirectoryName(gamePath);
+        GamePathValidator.EnsureGameDirectoryName(gamePath, gameProfile.GameFolderName);
         Directory.CreateDirectory(gamePath);
 
         var localGame = await localInstallationStateStore.ReadAsync(gamePath, activeToken).ConfigureAwait(false);
@@ -287,7 +288,11 @@ internal sealed class DownloadSession : IDisposable
 
             // 现有安装状态与将要提交的内容完全一致时，提交是纯粹的重写；
             // 跳过它让 Program Files 等只读位置下的“仅检查更新”安静通过。
-            if (LocalInstallationStateMatchesCommit(localGame, gameConfig, downloadPlan.ManifestFiles))
+            if (LocalInstallationStateMatchesCommit(
+                gameProfile.Tag,
+                localGame,
+                gameConfig,
+                downloadPlan.ManifestFiles))
             {
                 return new DownloadPlanPreparation(
                     gamePath,
@@ -635,6 +640,7 @@ internal sealed class DownloadSession : IDisposable
     /// 启动配置与全部文件清单）。一致时提交是纯粹的重写，可安全跳过。
     /// </summary>
     internal static bool LocalInstallationStateMatchesCommit(
+        string gameTag,
         LocalInstallationState localGame,
         GameConfigResponse gameConfig,
         IReadOnlyList<ManifestFile> files)
@@ -649,10 +655,10 @@ internal sealed class DownloadSession : IDisposable
         var manifest = localGame.Manifest;
         var config = localGame.GameConfig;
         var latestVersion = gameConfig.GameLatestVersion ?? "";
-        if (!string.Equals(manifest.Name, GamePaths.GameTag, StringComparison.Ordinal)
+        if (!string.Equals(manifest.Name, gameTag, StringComparison.Ordinal)
             || !string.Equals(manifest.Version, latestVersion, StringComparison.Ordinal)
             || !string.Equals(manifest.Basis, gameConfig.GameLatestFilePath ?? "", StringComparison.Ordinal)
-            || !string.Equals(config.Tag, GamePaths.GameTag, StringComparison.Ordinal)
+            || !string.Equals(config.Tag, gameTag, StringComparison.Ordinal)
             || !string.Equals(config.Version, latestVersion, StringComparison.Ordinal)
             || !string.Equals(config.Name, gameConfig.GameStartExeName ?? "", StringComparison.Ordinal))
         {

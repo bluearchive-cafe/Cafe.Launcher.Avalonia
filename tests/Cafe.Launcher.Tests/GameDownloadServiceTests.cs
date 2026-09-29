@@ -19,6 +19,7 @@ using Cafe.Launcher.Core.Services;
 using Cafe.Launcher.Core.Services.GameRuntime;
 using Cafe.Launcher.Core.Helpers;
 using Cafe.Launcher.Core.Services.Auth;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
@@ -70,7 +71,7 @@ public sealed class GameDownloadServiceTests : IDisposable
     [Fact]
     public void Dispose_WhenCalledTwice_DoesNotThrow()
     {
-        var apiClient = new LauncherApiClient(new StubRemoteHttpTransport(), new AuthorizationHeaderFactory(), new PatchUrlGroupService());
+        var apiClient = new LauncherApiClient(LauncherProfiles.BlueArchiveJapan, new StubRemoteHttpTransport(), new AuthorizationHeaderFactory(LauncherProfiles.BlueArchiveJapan), new PatchUrlGroupService(LauncherProfiles.BlueArchiveJapan, LauncherProfiles.Cafe));
         var service = CreateService(apiClient);
 
         service.Dispose();
@@ -80,7 +81,7 @@ public sealed class GameDownloadServiceTests : IDisposable
     [Fact]
     public void Dispose_AfterStop_DoesNotThrow()
     {
-        var apiClient = new LauncherApiClient(new StubRemoteHttpTransport(), new AuthorizationHeaderFactory(), new PatchUrlGroupService());
+        var apiClient = new LauncherApiClient(LauncherProfiles.BlueArchiveJapan, new StubRemoteHttpTransport(), new AuthorizationHeaderFactory(LauncherProfiles.BlueArchiveJapan), new PatchUrlGroupService(LauncherProfiles.BlueArchiveJapan, LauncherProfiles.Cafe));
         var service = CreateService(apiClient);
 
         service.Stop(DownloadStopReason.ApplicationExit);
@@ -92,7 +93,7 @@ public sealed class GameDownloadServiceTests : IDisposable
     {
         // Shutdown calls Stop() twice (lifecycle prepare + dispose) with no active session.
         // Only a real session counts as a user stop, so the log must stay clean.
-        var apiClient = new LauncherApiClient(new StubRemoteHttpTransport(), new AuthorizationHeaderFactory(), new PatchUrlGroupService());
+        var apiClient = new LauncherApiClient(LauncherProfiles.BlueArchiveJapan, new StubRemoteHttpTransport(), new AuthorizationHeaderFactory(LauncherProfiles.BlueArchiveJapan), new PatchUrlGroupService(LauncherProfiles.BlueArchiveJapan, LauncherProfiles.Cafe));
         using var logger = new UnifiedLogger(Path.Combine(tempDir, "logs"));
         // Debug builds default the switch to Verbose but Release defaults it to
         // Information, while the stop line and the sentinel below are both
@@ -188,7 +189,7 @@ public sealed class GameDownloadServiceTests : IDisposable
     [Fact]
     public void BuildDownloadUrl_WhenCafeGroupCdnConfigIsUsed_UsesCafePackageHost()
     {
-        var patchUrlGroupService = new PatchUrlGroupService();
+        var patchUrlGroupService = new PatchUrlGroupService(LauncherProfiles.BlueArchiveJapan, LauncherProfiles.Cafe);
         var cdnConfig = patchUrlGroupService.RewriteCdnConfig(
             new CdnConfigResponse
             {
@@ -319,7 +320,7 @@ Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
         var hashPath = Path.Combine(tempDir, "hash-source.bin");
         await File.WriteAllBytesAsync(hashPath, expectedBytes);
         var expectedHash = await new Crc64Service().ComputeFileAsync(hashPath);
-        var apiClient = new LauncherApiClient(new StubRemoteHttpTransport(), new AuthorizationHeaderFactory(), new PatchUrlGroupService());
+        var apiClient = new LauncherApiClient(LauncherProfiles.BlueArchiveJapan, new StubRemoteHttpTransport(), new AuthorizationHeaderFactory(LauncherProfiles.BlueArchiveJapan), new PatchUrlGroupService(LauncherProfiles.BlueArchiveJapan, LauncherProfiles.Cafe));
         using var service = CreateService(apiClient);
         var transport = new StubDownloadTransport((uri, _) => new HttpResponseMessage(HttpStatusCode.OK)
         {
@@ -372,7 +373,7 @@ Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
         var hashPath = Path.Combine(tempDir, "hash-source.bin");
         await File.WriteAllBytesAsync(hashPath, expectedBytes);
         var expectedHash = await new Crc64Service().ComputeFileAsync(hashPath);
-        var apiClient = new LauncherApiClient(new StubRemoteHttpTransport(), new AuthorizationHeaderFactory(), new PatchUrlGroupService());
+        var apiClient = new LauncherApiClient(LauncherProfiles.BlueArchiveJapan, new StubRemoteHttpTransport(), new AuthorizationHeaderFactory(LauncherProfiles.BlueArchiveJapan), new PatchUrlGroupService(LauncherProfiles.BlueArchiveJapan, LauncherProfiles.Cafe));
         using var service = CreateService(apiClient);
         var transport = new StubDownloadTransport((_, _) => new HttpResponseMessage(HttpStatusCode.OK)
         {
@@ -629,7 +630,7 @@ Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
         var settingsService = new LauncherSettingsService( TestDataRoot.ForFile(Path.Combine(tempDir, "settings.json")) );
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
         // 版本落后使状态不匹配 → 确需提交；清单两侧均为空 → diff==0。
-        var committed = await new LocalInstallationStateStore().CommitAsync(
+        var committed = await new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan).CommitAsync(
             gamePath,
             new LocalInstallationStateCommit(
                 Version: "0.9.0",
@@ -670,7 +671,7 @@ Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
         // 与 CreateSnapshot 的远端配置逐字段对齐（版本/basis/ExeName/Params/空清单），
         // 使 LocalInstallationStateMatchesCommit 命中「提交是纯重写，可跳过」分支。
         // 经 CommitAsync 落盘保证 Vc 哈希合法（手写 JSON 会被判 Corrupted）。
-        var committed = await new LocalInstallationStateStore().CommitAsync(
+        var committed = await new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan).CommitAsync(
             gamePath,
             new LocalInstallationStateCommit(
                 Version: "1.0.0",
@@ -712,7 +713,7 @@ Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
         var settingsService = new LauncherSettingsService( TestDataRoot.ForFile(settingsPath) );
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
         // 版本落后使状态不匹配 → 确需提交；清单两侧均为空 → diff==0 走写探测闸口。
-        var committed = await new LocalInstallationStateStore().CommitAsync(
+        var committed = await new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan).CommitAsync(
             gamePath,
             new LocalInstallationStateCommit(
                 Version: "0.9.0",
@@ -792,7 +793,7 @@ Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
         snapshot.RuntimeState = LauncherRuntimeState.NotInstalled;
 
         var result = await service.InstallOrUpdateAsync(snapshot, progress.Add);
-        var installationState = await new LocalInstallationStateStore().ReadAsync(gamePath);
+        var installationState = await new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan).ReadAsync(gamePath);
 
         Assert.True(result.Success);
         Assert.Equal(1, result.AffectedFileCount);
@@ -1655,10 +1656,10 @@ Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
             uri.PathAndQuery.Contains("/api/launcher/game/config/json", StringComparison.Ordinal)
                 ? "{\"code\":200,\"data\":{\"url\":\"https://manifest.example.invalid/manifest.json\"}}"
                 : "{\"source\":\"\",\"file\":[]}"));
-        var apiClient = new LauncherApiClient(
+        var apiClient = new LauncherApiClient(LauncherProfiles.BlueArchiveJapan, 
             transport,
-            new AuthorizationHeaderFactory(),
-            new PatchUrlGroupService());
+            new AuthorizationHeaderFactory(LauncherProfiles.BlueArchiveJapan),
+            new PatchUrlGroupService(LauncherProfiles.BlueArchiveJapan, LauncherProfiles.Cafe));
         using var service = CreateService(apiClient, settingsService, statePath);
         var snapshot = CreateSnapshot(gamePath);
         snapshot.RuntimeState = LauncherRuntimeState.Corrupted;
@@ -1696,10 +1697,10 @@ Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
             uri.PathAndQuery.Contains("/api/launcher/game/config/json", StringComparison.Ordinal)
                 ? "{\"code\":200,\"data\":{\"url\":\"https://manifest.example.invalid/manifest.json\"}}"
                 : "{\"source\":\"\",\"file\":[]}");
-        var apiClient = new LauncherApiClient(
+        var apiClient = new LauncherApiClient(LauncherProfiles.BlueArchiveJapan, 
             transport,
-            new AuthorizationHeaderFactory(),
-            new PatchUrlGroupService());
+            new AuthorizationHeaderFactory(LauncherProfiles.BlueArchiveJapan),
+            new PatchUrlGroupService(LauncherProfiles.BlueArchiveJapan, LauncherProfiles.Cafe));
         using var service = CreateService(
             apiClient,
             settingsService,
@@ -1708,7 +1709,7 @@ Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
         snapshot.RuntimeState = LauncherRuntimeState.Corrupted;
 
         var result = await service.RepairAsync(snapshot, _ => { });
-        var state = await new LocalInstallationStateStore().ReadAsync(gamePath);
+        var state = await new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan).ReadAsync(gamePath);
 
         Assert.True(result.Success);
         Assert.Equal(
@@ -1737,11 +1738,11 @@ Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
         LocalDiagnostics? diagnostics = null,
         GameProcessTracker? processTracker = null)
     {
-        var localInstallationStateStore = new LocalInstallationStateStore();
+        var localInstallationStateStore = new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan);
         diagnostics ??= new LocalDiagnostics();
         var remoteManifestService = new RemoteManifestService(apiClient);
         fileDownloadService ??= new FileDownloadService(new Crc64Service(), diagnostics);
-        return new GameDownloadService(
+        return new GameDownloadService(LauncherProfiles.BlueArchiveJapan, 
             apiClient,
             remoteManifestService,
             fileDownloadService,
@@ -1753,7 +1754,7 @@ Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
             diskSpaceService ?? new DiskSpaceService(),
             diagnostics,
             new LocalizationService(),
-            new GameInstallationPath(),
+            new GameInstallationPath(LauncherProfiles.BlueArchiveJapan),
             processTracker ?? TestGameProcessTracker.None(), TestDataRoot.ForFile(downloadStateFilePath) );
     }
 
@@ -1835,7 +1836,7 @@ Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
 
     private static LauncherApiClient CreateManifestApiClient(params ManifestFile[] files)
     {
-        return new LauncherApiClient(
+        return new LauncherApiClient(LauncherProfiles.BlueArchiveJapan, 
             new StubRemoteHttpTransport(uri =>
                 uri.PathAndQuery.Contains("/api/launcher/game/config/json", StringComparison.Ordinal)
                     ? "{\"code\":200,\"data\":{\"url\":\"https://manifest.example.invalid/manifest.json\"}}"
@@ -1844,8 +1845,8 @@ Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
                         Source = "source",
                         File = files.ToList()
                     })),
-            new AuthorizationHeaderFactory(),
-            new PatchUrlGroupService());
+            new AuthorizationHeaderFactory(LauncherProfiles.BlueArchiveJapan),
+            new PatchUrlGroupService(LauncherProfiles.BlueArchiveJapan, LauncherProfiles.Cafe));
     }
 
     private static async Task InvokeDownloadFileAsync(

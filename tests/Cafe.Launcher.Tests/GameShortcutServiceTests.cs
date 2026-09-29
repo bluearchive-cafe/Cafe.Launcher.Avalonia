@@ -10,8 +10,8 @@ using Cafe.Launcher.UI.Features.GameOperations;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.Testing;
-using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
@@ -35,14 +35,14 @@ public sealed class GameShortcutServiceTests : IDisposable
     {
         var shortcutDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "desktop")).FullName;
         var gameDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "game")).FullName;
-        var service = new GameShortcutService(new LocalizationService());
+        var service = new GameShortcutService(LauncherProfiles.BlueArchiveJapan, new LocalizationService());
         var snapshot = new LauncherStatusSnapshot
         {
             LocalGame = new LocalInstallationState { GamePath = gameDirectory }
         };
         // 名字必须与创建侧同源：本地化显示名 + 平台后缀（ADR-030）。
         var shortcutName = service.ResolveShortcutFileName(
-            Path.Combine(gameDirectory, GamePaths.GameExecutableFileName));
+            Path.Combine(gameDirectory, LauncherProfiles.BlueArchiveJapan.GameExecutableFileName));
         var extension = OperatingSystem.IsLinux() ? ".desktop" : ".lnk";
         var shortcutPath = Path.Combine(shortcutDirectory, $"{shortcutName}{extension}");
         File.WriteAllText(shortcutPath, "stub entry");
@@ -57,7 +57,7 @@ public sealed class GameShortcutServiceTests : IDisposable
     public void DeleteShortcutInDirectory_WhenShortcutIsMissing_ReportsNotFound()
     {
         var shortcutDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "desktop")).FullName;
-        var service = new GameShortcutService(new LocalizationService());
+        var service = new GameShortcutService(LauncherProfiles.BlueArchiveJapan, new LocalizationService());
         var snapshot = new LauncherStatusSnapshot
         {
             LocalGame = new LocalInstallationState
@@ -75,7 +75,7 @@ public sealed class GameShortcutServiceTests : IDisposable
     [Fact]
     public void DeleteShortcutInDirectory_WhenTargetDirectoryIsBlank_ReportsUnsupportedPlatform()
     {
-        var service = new GameShortcutService(new LocalizationService());
+        var service = new GameShortcutService(LauncherProfiles.BlueArchiveJapan, new LocalizationService());
 
         var result = service.DeleteShortcutInDirectory(new LauncherStatusSnapshot(), null);
 
@@ -89,7 +89,7 @@ public sealed class GameShortcutServiceTests : IDisposable
         File.WriteAllText(Path.Combine(gameDirectory, "RemoteGame.exe"), string.Empty);
         CreateStartScript(gameDirectory);
         var shortcutDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "desktop")).FullName;
-        var service = new GameShortcutService(new LocalizationService());
+        var service = new GameShortcutService(LauncherProfiles.BlueArchiveJapan, new LocalizationService());
         var snapshot = new LauncherStatusSnapshot
         {
             LocalGame = new LocalInstallationState
@@ -113,7 +113,7 @@ public sealed class GameShortcutServiceTests : IDisposable
     public void TryOpenGameFolder_WhenFolderMissing_ReturnsFalseAndSkipsOpener()
     {
         var openerCalls = 0;
-        var service = new GameShortcutService(new LocalizationService(), _ =>
+        var service = new GameShortcutService(LauncherProfiles.BlueArchiveJapan, new LocalizationService(), _ =>
         {
             openerCalls++;
             return true;
@@ -134,7 +134,7 @@ public sealed class GameShortcutServiceTests : IDisposable
     {
         var gameDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "game")).FullName;
         string? openedDirectory = null;
-        var service = new GameShortcutService(new LocalizationService(), directory =>
+        var service = new GameShortcutService(LauncherProfiles.BlueArchiveJapan, new LocalizationService(), directory =>
         {
             openedDirectory = directory;
             return true;
@@ -154,7 +154,7 @@ public sealed class GameShortcutServiceTests : IDisposable
     public void TryOpenGameFolder_WhenOpenerFails_ReturnsFalse()
     {
         var gameDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "game")).FullName;
-        var service = new GameShortcutService(new LocalizationService(), _ => false);
+        var service = new GameShortcutService(LauncherProfiles.BlueArchiveJapan, new LocalizationService(), _ => false);
         var snapshot = new LauncherStatusSnapshot
         {
             LocalGame = new LocalInstallationState { GamePath = gameDirectory }
@@ -173,7 +173,7 @@ public sealed class GameShortcutServiceTests : IDisposable
         File.WriteAllText(executablePath, string.Empty);
         CreateStartScript(gameDirectory);
         var shortcutDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "desktop")).FullName;
-        var service = new GameShortcutService(new LocalizationService());
+        var service = new GameShortcutService(LauncherProfiles.BlueArchiveJapan, new LocalizationService());
         var snapshot = new LauncherStatusSnapshot
         {
             LocalGame = new LocalInstallationState
@@ -198,7 +198,7 @@ public sealed class GameShortcutServiceTests : IDisposable
         File.WriteAllText(Path.Combine(gameDirectory, "CafeTestGame.exe"), string.Empty);
         var startScriptPath = CreateStartScript(gameDirectory);
         var shortcutDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "desktop")).FullName;
-        var service = new GameShortcutService(new LocalizationService());
+        var service = new GameShortcutService(LauncherProfiles.BlueArchiveJapan, new LocalizationService());
         var snapshot = new LauncherStatusSnapshot
         {
             LocalGame = new LocalInstallationState
@@ -225,7 +225,7 @@ public sealed class GameShortcutServiceTests : IDisposable
         var gameDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "game")).FullName;
         File.WriteAllText(Path.Combine(gameDirectory, "CafeTestGame.exe"), string.Empty);
         var shortcutDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "desktop")).FullName;
-        var service = new GameShortcutService(new LocalizationService());
+        var service = new GameShortcutService(LauncherProfiles.BlueArchiveJapan, new LocalizationService());
         var snapshot = new LauncherStatusSnapshot
         {
             LocalGame = new LocalInstallationState
@@ -247,10 +247,10 @@ public sealed class GameShortcutServiceTests : IDisposable
         var gameDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "game")).FullName;
         File.WriteAllText(Path.Combine(gameDirectory, "CafeTestGame.exe"), string.Empty);
         CreateStartScript(gameDirectory);
-        var gameClientPath = Path.Combine(gameDirectory, GamePaths.GameExecutableFileName);
+        var gameClientPath = Path.Combine(gameDirectory, LauncherProfiles.BlueArchiveJapan.GameExecutableFileName);
         File.WriteAllText(gameClientPath, string.Empty);
         var shortcutDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "desktop")).FullName;
-        var service = new GameShortcutService(new LocalizationService());
+        var service = new GameShortcutService(LauncherProfiles.BlueArchiveJapan, new LocalizationService());
         var snapshot = new LauncherStatusSnapshot
         {
             LocalGame = new LocalInstallationState
@@ -276,7 +276,7 @@ public sealed class GameShortcutServiceTests : IDisposable
         File.WriteAllText(executablePath, string.Empty);
         CreateStartScript(gameDirectory);
         var shortcutDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "desktop")).FullName;
-        var service = new GameShortcutService(new LocalizationService());
+        var service = new GameShortcutService(LauncherProfiles.BlueArchiveJapan, new LocalizationService());
         var snapshot = new LauncherStatusSnapshot
         {
             LocalGame = new LocalInstallationState
@@ -298,15 +298,15 @@ public sealed class GameShortcutServiceTests : IDisposable
     public void ResolveShortcutIconPath_WhenGameClientPresent_PrefersGameClientPath()
     {
         var gameDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "game")).FullName;
-        File.WriteAllText(Path.Combine(gameDirectory, GamePaths.GameExecutableFileName), string.Empty);
+        File.WriteAllText(Path.Combine(gameDirectory, LauncherProfiles.BlueArchiveJapan.GameExecutableFileName), string.Empty);
         var snapshot = new LauncherStatusSnapshot
         {
             LocalGame = new LocalInstallationState { GamePath = gameDirectory }
         };
 
-        var iconPath = GameShortcutService.ResolveShortcutIconPath(snapshot, @"C:\games\loader.exe");
+        var iconPath = GameShortcutService.ResolveShortcutIconPath(snapshot, @"C:\games\loader.exe", LauncherProfiles.BlueArchiveJapan.GameExecutableFileName);
 
-        Assert.Equal(Path.Combine(gameDirectory, GamePaths.GameExecutableFileName), iconPath);
+        Assert.Equal(Path.Combine(gameDirectory, LauncherProfiles.BlueArchiveJapan.GameExecutableFileName), iconPath);
     }
 
     [Fact]
@@ -318,7 +318,7 @@ public sealed class GameShortcutServiceTests : IDisposable
             LocalGame = new LocalInstallationState { GamePath = gameDirectory }
         };
 
-        var iconPath = GameShortcutService.ResolveShortcutIconPath(snapshot, @"C:\games\loader.exe");
+        var iconPath = GameShortcutService.ResolveShortcutIconPath(snapshot, @"C:\games\loader.exe", LauncherProfiles.BlueArchiveJapan.GameExecutableFileName);
 
         Assert.Equal(@"C:\games\loader.exe", iconPath);
     }
@@ -326,7 +326,7 @@ public sealed class GameShortcutServiceTests : IDisposable
     [Fact]
     public void ResolveShortcutFileName_UsesLocalizedGameDisplayName()
     {
-        var service = new GameShortcutService(new LocalizationService());
+        var service = new GameShortcutService(LauncherProfiles.BlueArchiveJapan, new LocalizationService());
 
         var fileName = service.ResolveShortcutFileName(@"C:\games\BlueArchive_JP.exe");
 
@@ -466,7 +466,7 @@ public sealed class GameShortcutServiceTests : IDisposable
     public async Task CreateShortcutInDirectoryAsync_WhenGameUnresolved_ReturnsGameNotResolved()
     {
         var shortcutDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "desktop")).FullName;
-        var service = new GameShortcutService(new LocalizationService());
+        var service = new GameShortcutService(LauncherProfiles.BlueArchiveJapan, new LocalizationService());
         var snapshot = new LauncherStatusSnapshot
         {
             LocalGame = new LocalInstallationState { GamePath = tempDirectory }
@@ -614,7 +614,7 @@ public sealed class GameShortcutServiceTests : IDisposable
     public async Task CreateShortcutInDirectoryAsync_OnUnsupportedPlatform_ReturnsUnsupportedPlatform()
     {
         var shortcutDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "desktop")).FullName;
-        var service = new GameShortcutService(
+        var service = new GameShortcutService(LauncherProfiles.BlueArchiveJapan, 
             new LocalizationService(),
             new GameShortcutService.ShortcutEnvironment(
                 OpenDirectory: _ => true,
@@ -631,6 +631,7 @@ public sealed class GameShortcutServiceTests : IDisposable
 
     private GameShortcutService CreateLinuxService(string launcherPath) =>
         new(
+            LauncherProfiles.BlueArchiveJapan,
             new LocalizationService(),
             new GameShortcutService.ShortcutEnvironment(
                 OpenDirectory: _ => true,
@@ -641,7 +642,7 @@ public sealed class GameShortcutServiceTests : IDisposable
     /// <summary>Creates the run.bat start script every valid game folder ships with.</summary>
     private static string CreateStartScript(string gameDirectory)
     {
-        var startScriptPath = Path.Combine(gameDirectory, GamePaths.GameStartScriptFileName);
+        var startScriptPath = Path.Combine(gameDirectory, LauncherProfiles.BlueArchiveJapan.GameStartScriptFileName);
         File.WriteAllText(startScriptPath, string.Empty);
         return startScriptPath;
     }

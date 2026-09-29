@@ -1,12 +1,24 @@
 using System;
-using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.Core.Services;
 
+/// <summary>
+/// 补丁下载源的 URL 归属改写：官方主机与产品自有镜像主机之间互转。
+/// 两个主机分别来自游戏档案与产品档案——官方主机随游戏变，镜像主机归产品方所有。
+/// </summary>
 internal sealed class PatchUrlGroupService
 {
-    private const string CafePackageHost = "launcher-pkg-ba-jp.bluearchive.cafe";
+    private readonly YostarGameProfile gameProfile;
+    private readonly LauncherProductProfile productProfile;
+
+    public PatchUrlGroupService(
+        YostarGameProfile gameProfile,
+        LauncherProductProfile productProfile)
+    {
+        this.gameProfile = gameProfile;
+        this.productProfile = productProfile;
+    }
 
     public PatchUrlGroupDefinition Resolve(string? group)
     {
@@ -14,8 +26,8 @@ internal sealed class PatchUrlGroupService
             ? new PatchUrlGroupDefinition
             {
                 Code = PatchUrlGroups.Cafe,
-                PackageHostFrom = ApiConfig.OfficialPackageHost,
-                PackageHostTo = CafePackageHost
+                PackageHostFrom = gameProfile.OfficialPackageHost,
+                PackageHostTo = productProfile.CafePackageHost
             }
             : new PatchUrlGroupDefinition
             {
@@ -42,7 +54,10 @@ internal sealed class PatchUrlGroupService
     /// </summary>
     public string RestoreOfficialPackageUrl(string? value)
     {
-        return RewritePackageHost(value ?? "", CafePackageHost, ApiConfig.OfficialPackageHost);
+        return RewritePackageHost(
+            value ?? "",
+            productProfile.CafePackageHost,
+            gameProfile.OfficialPackageHost);
     }
 
     public ManifestUrlResponse RewriteManifestUrl(ManifestUrlResponse response, string? group)

@@ -4,8 +4,8 @@ using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.Testing;
 using Cafe.Launcher.UI.Constants;
 using Cafe.Launcher.Core.Models;
-using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Services;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
@@ -142,7 +142,7 @@ public partial class MainWindowViewModelTests
         var snapshot = CreateSnapshot();
         snapshot.Settings.MotionMode = motionMode;
         using var savedSettings = new SavedSettingsTestRig(
-            tempDir.Sub(GamePaths.LauncherSettingsFileName));
+            tempDir.Sub(LauncherPaths.LauncherSettingsFileName));
         await savedSettings.SeedAsync(snapshot.Settings);
         using var viewModel = await CreateViewModelAsync(
             new CountingCoreService(snapshot),
@@ -167,7 +167,7 @@ public partial class MainWindowViewModelTests
         var snapshot = CreateSnapshot();
         snapshot.Settings.MotionMode = MotionModes.Full;
         using var savedSettings = new SavedSettingsTestRig(
-            tempDir.Sub(GamePaths.LauncherSettingsFileName));
+            tempDir.Sub(LauncherPaths.LauncherSettingsFileName));
         await savedSettings.SeedAsync(snapshot.Settings);
         using var viewModel = await CreateViewModelAsync(
             new CountingCoreService(snapshot),
@@ -201,7 +201,7 @@ public partial class MainWindowViewModelTests
             MotionMode = MotionModes.System
         };
         using var savedSettings = new SavedSettingsTestRig(
-            tempDir.Sub(GamePaths.LauncherSettingsFileName));
+            tempDir.Sub(LauncherPaths.LauncherSettingsFileName));
         await savedSettings.SeedAsync(persistedSettings);
         using var viewModel = await CreateViewModelAsync(
             new ThrowingCoreService(),
@@ -233,7 +233,7 @@ public partial class MainWindowViewModelTests
         var snapshot = CreateSnapshot();
         snapshot.Settings.MotionMode = MotionModes.Reduced;
         using var savedSettings = new SavedSettingsTestRig(
-            tempDir.Sub(GamePaths.LauncherSettingsFileName));
+            tempDir.Sub(LauncherPaths.LauncherSettingsFileName));
         await savedSettings.SeedAsync(snapshot.Settings);
         var toastService = new ToastService();
         var displayDelay = new TaskCompletionSource(

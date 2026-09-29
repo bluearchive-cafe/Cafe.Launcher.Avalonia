@@ -2,8 +2,8 @@
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.Testing;
 using Cafe.Launcher.UI.Constants;
-using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
@@ -97,7 +97,7 @@ public sealed class SavedSettingsWriterTests : IDisposable
     }
 
     private SavedSettingsTestRig CreateRig() =>
-        new(tempDir.Sub(GamePaths.LauncherSettingsFileName));
+        new(tempDir.Sub(LauncherPaths.LauncherSettingsFileName));
 
     public void Dispose()
     {
