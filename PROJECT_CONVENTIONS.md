@@ -213,7 +213,7 @@ WinExe 宿主只保留进程生命周期和顶层 Avalonia 生命周期；Core �
 
 ## 7. Settings 兼容性规则
 
-持久化落点一律经注入的 `LauncherDataRoot`（见 `CONTEXT.md` 的「数据根」与 [ADR-025](docs/design/adr/ADR-025-数据根由组合根解析并注入.md)），不要在模块内解析进程级数据根：进程根只由组合根与 ADR-019 保护的 pre-DI 路径解析，`TestUserDataIsolationTests.ProcessRootResolution_IsConfinedToDeclaredPreDiSites` 以声明表守这条边界。新增落盘位置时把路径加进 `LauncherDataRoot`，文件名仍声明在 `Constants/GamePaths.cs`。
+持久化落点一律经注入的 `LauncherDataRoot`（见 `CONTEXT.md` 的「数据根」与 [ADR-025](docs/design/adr/ADR-025-数据根由组合根解析并注入.md)），不要在模块内解析进程级数据根：进程根只由组合根与 ADR-019 保护的 pre-DI 路径解析，`TestUserDataIsolationTests.ProcessRootResolution_IsConfinedToDeclaredPreDiSites` 以声明表守这条边界。新增落盘位置时把路径加进 `LauncherDataRoot`，文件名仍声明在 `Constants/LauncherPaths.cs`（随游戏或随产品变化的值不放在这里：它们归 `Models/YostarGameProfile` 与 `Models/LauncherProductProfile`，唯一出处是 `Constants/LauncherProfiles.cs`）。
 
 停止活动工作流由调用方表达意图（`GameOperationStopIntent`），检查点去留那套策略词表留在 `Features/GameOperations/` 内、由域翻译一次（[ADR-026](docs/design/adr/ADR-026-停止意图由游戏操作域翻译.md)）；域外不要命名 `DownloadStopReason`，`GameOperationStopOwnershipTests` 守卫这条边界。
 
