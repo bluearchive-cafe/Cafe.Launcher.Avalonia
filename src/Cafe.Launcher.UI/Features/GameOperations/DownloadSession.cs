@@ -277,7 +277,7 @@ internal sealed class DownloadSession : IDisposable
 
         if (downloadPlan.NeedDownload.Count == 0 && downloadPlan.NeedDelete.Count == 0)
         {
-            await diagnostics.DebugAsync(
+            await diagnostics.MessageAsync(
                 "GameDownload",
                 "Manifest diff: 0 files changed (already current)", CancellationToken.None).ConfigureAwait(false);
             var alreadyCurrentResult = new GameOperationResult
@@ -337,12 +337,17 @@ internal sealed class DownloadSession : IDisposable
                 CompletedResult: alreadyCurrentResult);
         }
 
-        await diagnostics.DebugAsync(
-            "GameDownload",
-            $"Manifest diff: {downloadPlan.NeedDownload.Count} to download, {downloadPlan.NeedDelete.Count} to delete", CancellationToken.None).ConfigureAwait(false);
-
+        // 这两条是「安装/更新到底干了多少」的唯一书面凭据，因此走 Info 而不是 Debug
+        // （2026-09-29 反馈轮）：用户导出的日志默认是 information 级，而「秒过的安装」恰恰
+        // 只有这一行能解释——它当时被级别过滤掉了，排查只能靠猜。
         var affectedCount = downloadPlan.NeedDownload.Count + downloadPlan.NeedDelete.Count;
         var plannedDownloadBytes = downloadPlan.NeedDownload.Sum(item => item.SizeBytes);
+        await diagnostics.MessageAsync(
+            "GameDownload",
+            $"Manifest diff: {downloadPlan.NeedDownload.Count} to download ({plannedDownloadBytes} bytes),"
+            + $" {downloadPlan.NeedDelete.Count} to delete",
+            CancellationToken.None).ConfigureAwait(false);
+
         var isFreshInstall = snapshot.RuntimeState == LauncherRuntimeState.NotInstalled;
         var requiredBytes = diskSpaceService.ResolveRequiredBytes(
             isFreshInstall,

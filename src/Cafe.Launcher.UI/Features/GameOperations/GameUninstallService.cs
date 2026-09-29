@@ -134,7 +134,7 @@ internal sealed class GameUninstallService
             // AUD-PERF-007：逐文件回调经百分比门控去重后抵达 UI 线程。删除语义（守卫、只读
             // 属性清除、已不在盘上不算错误）与更新/安装那条路径共用 ManifestFileRemover——
             // 卸载侧此前是另一份裸 File.Delete 循环，清单里有一个只读文件就整次失败。
-            ManifestFileRemover.DeleteAll(
+            var removal = ManifestFileRemover.DeleteAll(
                 gamePath,
                 files,
                 new StageProgressReporter(GameOperationKind.Uninstall, GameOperationStage.Uninstalling, progress).Report,
@@ -158,6 +158,12 @@ internal sealed class GameUninstallService
             catch (Exception exception) when (StorageFailure.IsRecoverable(exception))
             {
                 // Best-effort cleanup of the resume marker; preserve uninstall success.
+                // 但要说出来：留下的续传标记会在下次安装时被当成可续传状态读一次。
+                // 令牌有意不传播：卸载已经成功，这条留痕不该被取消状态吞掉（与本类其他失败出口同口径）。
+                await diagnostics.WarningAsync(
+                    "GameUninstall",
+                    $"Failed to clear the download resume marker: {exception.Message}",
+                    CancellationToken.None).ConfigureAwait(false);
             }
 
             var leftovers = new List<string>();
@@ -171,16 +177,23 @@ internal sealed class GameUninstallService
             // 桌面本来就没有、或系统不支持，都不算失败。
             await DeleteDesktopShortcutAsync(snapshot).ConfigureAwait(false);
 
-            await diagnostics.MessageAsync(
-                "GameUninstall",
-                $"Game uninstall completed.{Environment.NewLine}path: {gamePath}{Environment.NewLine}files: {files.Count}{Environment.NewLine}leftovers: {leftovers.Count}",
-                cancellationToken).ConfigureAwait(false);
-
             // 落在两个删除目标之外的 Prefix 不会被删（ADR-030）：成功文案必须说出来，
             // 否则「彻底清除」看起来做了它没做的事。
             var keptPrefixPath = scope == UninstallScope.ThoroughCleanup
                 ? ResolveKeptPrefixPath(snapshot, gamePath)
                 : null;
+
+            // 标准卸载的范围从来不含目录本身（ADR-030：清单文件 + 两个状态文件 + 桌面快捷方式），
+            // 而启动器的清单只覆盖它自己安装的那部分文件：Blue Archive 日服 1.73.0 的清单是
+            // 157 个文件 / 1.06 GiB，而官方声明的整份安装是 18.5 GB——差额是游戏自行下载的内容，
+            // 清单里没有它们，启动器连文件名都不知道。因此「卸载完成。」必须把「目录还在、
+            // 其中有什么没删」一并说出来（2026-09-29 用户反馈：「删了游戏读取不到了但是文件还在」）。
+            // 判据只取「目录还在吗」而不去数里面还剩什么：文案说的是范围（清单外内容不随卸载删除），
+            // 不是「现在还剩几个条目」——后者要么多走一次目录枚举，要么在空目录上说出被证伪的话。
+            var retainedDirectoryPath = scope == UninstallScope.ManifestFilesOnly && Directory.Exists(gamePath)
+                ? gamePath
+                : null;
+
             if (leftovers.Count > 0)
             {
                 // 删不掉的项目不改变「游戏已卸载」这件事（manifest 与两个状态文件都已删除），
@@ -193,11 +206,17 @@ internal sealed class GameUninstallService
                     cancellationToken).ConfigureAwait(false);
             }
 
+            await diagnostics.MessageAsync(
+                "GameUninstall",
+                BuildCompletionLog(gamePath, scope, files.Count, removal, leftovers.Count, retainedDirectoryPath),
+                cancellationToken).ConfigureAwait(false);
+
             return new GameOperationResult
             {
                 Success = true,
-                Message = BuildCompletionMessage(localizer, leftovers, keptPrefixPath),
-                AffectedFileCount = files.Count + LauncherPaths.InstallationStateFileCount
+                Message = BuildCompletionMessage(localizer, leftovers, keptPrefixPath, retainedDirectoryPath),
+                AffectedFileCount = files.Count + LauncherPaths.InstallationStateFileCount,
+                AffectedBytes = files.Sum(file => file.SizeBytes)
             };
         }
         catch (Exception exception) when (StorageFailure.IsRecoverable(exception))
@@ -308,7 +327,27 @@ internal sealed class GameUninstallService
     /// 「Prefix 主动保留」是设计内说明，但它可能占着几十 GB，用户看不见就得自己去找目录。
     /// 残留清单点名（上限 <see cref="MaxReportedLeftovers"/>，完整清单始终留在日志里）。
     /// </summary>
+    /// <remarks>
+    /// 第三个事实走<strong>独立的一句</strong>（<paramref name="retainedDirectoryPath"/>）而不是再乘出
+    /// 组合态：标准卸载从不删目录，而目录里往往还有清单外的一大片（2026-09-29 反馈：157 个清单
+    /// 文件 1.06 GiB 之外，18.5 GB 的安装里其余部分是游戏自行下载的）。它与其他事实互不包含，
+    /// 因此与 ADR-030「两个事实各说各的」同构：基础文案四态不变，保留事实按需追一句。
+    /// </remarks>
     internal static string BuildCompletionMessage(
+        LocalizationService localizer,
+        IReadOnlyList<string> leftovers,
+        string? keptPrefixPath,
+        string? retainedDirectoryPath = null)
+    {
+        var message = BuildBaseCompletionMessage(localizer, leftovers, keptPrefixPath);
+        return retainedDirectoryPath is null
+            ? message
+            : message
+                + Environment.NewLine
+                + localizer.F(LocalizationKeys.UninstallCompletedDirectoryRetained, retainedDirectoryPath);
+    }
+
+    private static string BuildBaseCompletionMessage(
         LocalizationService localizer,
         IReadOnlyList<string> leftovers,
         string? keptPrefixPath)
@@ -327,6 +366,34 @@ internal sealed class GameUninstallService
         return keptPrefixPath is null
             ? localizer.T(LocalizationKeys.UninstallCompleted)
             : localizer.F(LocalizationKeys.UninstallCompletedKeptPrefix, keptPrefixPath);
+    }
+
+    /// <summary>
+    /// 卸载完成后的日志正文。与完成文案分开：文案只报用户看得见的事实，日志要能支撑排查——
+    /// 计划/实际删除数、实际字节数、本来就不在盘上的条目数、卸载范围，以及标准卸载下被保留的
+    /// 安装目录（2026-09-29 反馈轮）。
+    /// </summary>
+    /// <remarks>
+    /// 此前这一行是 <c>files: {清单条数}</c> + <c>leftovers: 0</c>：前者是「计划」，被当成「删掉了」
+    /// 读；而 <c>leftovers</c> 只在彻底清除时才会被填充，标准卸载恒为 0，于是「0 残留」的假象
+    /// 恰好掩盖了「目录里还有 17 GiB」这件事。
+    /// </remarks>
+    private static string BuildCompletionLog(
+        string gamePath,
+        UninstallScope scope,
+        int plannedCount,
+        ManifestRemovalResult removal,
+        int leftoverCount,
+        string? retainedDirectoryPath)
+    {
+        var newLine = Environment.NewLine;
+        var body = $"Game uninstall completed.{newLine}path: {gamePath}{newLine}scope: {scope}"
+            + $"{newLine}manifest files: {plannedCount} planned, {removal.RemovedCount} removed"
+            + $" ({removal.RemovedBytes} bytes), {removal.MissingCount} already absent";
+
+        return scope == UninstallScope.ThoroughCleanup
+            ? body + $"{newLine}leftovers: {leftoverCount}"
+            : body + $"{newLine}directory retained: {retainedDirectoryPath ?? "(not present)"}";
     }
 
     /// <summary>
@@ -385,7 +452,8 @@ internal sealed class GameUninstallService
         {
             Success = true,
             Message = localizer.F(LocalizationKeys.ReadyToUninstall, state.Manifest?.Files.Count ?? 0),
-            AffectedFileCount = (state.Manifest?.Files.Count ?? 0) + LauncherPaths.InstallationStateFileCount
+            AffectedFileCount = (state.Manifest?.Files.Count ?? 0) + LauncherPaths.InstallationStateFileCount,
+            AffectedBytes = state.Manifest?.Files.Sum(file => file.SizeBytes) ?? 0
         };
     }
 

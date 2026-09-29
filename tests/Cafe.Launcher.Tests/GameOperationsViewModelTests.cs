@@ -1,4 +1,4 @@
-﻿using Cafe.Launcher.UI.Constants;
+using Cafe.Launcher.UI.Constants;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Features.GameOperations;
 using Cafe.Launcher.UI.Features.SetupWizard;
@@ -778,13 +778,21 @@ public sealed class GameOperationsViewModelTests : IDisposable
         context.Backend.ValidateUninstallResult = new GameOperationResult
         {
             Success = true,
-            AffectedFileCount = 5
+            AffectedFileCount = 5,
+            AffectedBytes = 1_140_416_350
         };
 
         await context.ViewModel.RequestUninstallCommand.ExecuteAsync(null);
 
         Assert.True(context.Dialogs.UninstallConfirm.IsVisible);
         Assert.Contains("C:\\Game", context.Dialogs.UninstallConfirm.Message, StringComparison.Ordinal);
+        // 「启动器管理的文件：5 个（1.06 GiB）」——确认框必须给出将与不会删除的对比，
+        // 只报文件个数时 157 个文件会被读成「整个游戏」（2026-09-29 反馈轮）。
+        Assert.Contains(
+            FileSizeFormatter.Format(1_140_416_350),
+            context.Dialogs.UninstallConfirm.Message,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("{2}", context.Dialogs.UninstallConfirm.Message, StringComparison.Ordinal);
     }
 
     [Fact]

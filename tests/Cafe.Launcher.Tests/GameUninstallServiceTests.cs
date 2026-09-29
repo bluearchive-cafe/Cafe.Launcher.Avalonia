@@ -1,4 +1,4 @@
-﻿using Cafe.Launcher.UI.Constants;
+using Cafe.Launcher.UI.Constants;
 using Cafe.Launcher.UI.Features.GameOperations;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
@@ -138,6 +138,97 @@ public sealed class GameUninstallServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task UninstallAsync_WhenManifestOnly_ReportsThatTheFolderAndItsOtherContentRemain()
+    {
+        // 2026-09-29 反馈：「卸载完成。」被读成「目录空了」，而标准卸载从来不删目录本身，
+        // 目录里往往还剩着清单外的一大片——Blue Archive 日服 1.73.0 实测清单 157 个文件 /
+        // 1.06 GiB，而官方声明的整份安装是 18.5 GB，差额是游戏自行下载的内容。
+        var gamePath = CreateGameDirectory();
+        await WriteGameFileAsync(gamePath, "data/managed.bin");
+        var untrackedPath = await WriteGameFileAsync(gamePath, "StreamingAssets/game-downloaded.bin");
+        var store = await CreateCommittedStoreAsync(gamePath, "data/managed.bin");
+        var localGame = await store.ReadAsync(gamePath);
+        var localizer = new LocalizationService();
+        var service = CreateService(store, localizer);
+
+        var result = await service.UninstallAsync(Snapshot(localGame), UninstallScope.ManifestFilesOnly, _ => { });
+
+        Assert.True(result.Success);
+        Assert.True(File.Exists(untrackedPath));
+        // 保留事实必须点名目录：用户要能看见「还有东西、在哪」。
+        Assert.Contains(
+            localizer.F(LocalizationKeys.UninstallCompletedDirectoryRetained, gamePath),
+            result.Message,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task UninstallAsync_WhenThorough_DoesNotClaimTheFolderWasRetained()
+    {
+        var gamePath = CreateGameDirectory();
+        await WriteGameFileAsync(gamePath, "data/managed.bin");
+        var store = await CreateCommittedStoreAsync(gamePath, "data/managed.bin");
+        var localGame = await store.ReadAsync(gamePath);
+        var service = CreateService(store);
+
+        var result = await service.UninstallAsync(Snapshot(localGame), UninstallScope.ThoroughCleanup, _ => { });
+
+        Assert.True(result.Success);
+        Assert.False(Directory.Exists(gamePath));
+        // 目录整棵删掉了，就不许再提「仍位于」——那是被同一次操作当场证伪的一句话（ADR-030 口径）。
+        Assert.DoesNotContain(gamePath, result.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task UninstallAsync_WhenManifestOnly_LogsScopeAndWhatWasActuallyRemoved()
+    {
+        // 排查用的书面凭据（2026-09-29 反馈轮）：此前这一行是「清单条数」+ 恒为 0 的 leftovers，
+        // 于是「0 残留」的假象正好掩盖了「目录里还有 17 GiB」，而清单条数被当成删除条数读。
+        var gamePath = CreateGameDirectory();
+        await WriteGameFileAsync(gamePath, "data/managed.bin");
+        await WriteGameFileAsync(gamePath, "data/gone.bin");
+        var store = await CreateCommittedStoreAsync(gamePath, "data/managed.bin", "data/gone.bin");
+        var localGame = await store.ReadAsync(gamePath);
+        var diagnostics = new RecordingDiagnostics();
+        var service = CreateService(store, diagnostics: diagnostics);
+        // 提交之后再手工删掉一个清单条目：日志报的必须是实测，不是计划。
+        File.Delete(Path.Combine(gamePath, "data", "gone.bin"));
+
+        var result = await service.UninstallAsync(Snapshot(localGame), UninstallScope.ManifestFilesOnly, _ => { });
+
+        Assert.True(result.Success);
+        var completion = Assert.Single(
+            diagnostics.Messages,
+            message => message.Contains("Game uninstall completed", StringComparison.Ordinal));
+        Assert.Contains("scope: ManifestFilesOnly", completion, StringComparison.Ordinal);
+        Assert.Contains("2 planned, 1 removed", completion, StringComparison.Ordinal);
+        Assert.Contains("1 already absent", completion, StringComparison.Ordinal);
+        Assert.Contains($"directory retained: {gamePath}", completion, StringComparison.Ordinal);
+        // 标准卸载不再输出一个恒为 0 的 leftovers 字段。
+        Assert.DoesNotContain("leftovers:", completion, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_WhenMetadataIsReadable_ReportsTheManifestBytesForTheConfirmation()
+    {
+        // 确认框要给出「启动器管理的 1.06 GiB / 目录共 18.5 GB」的对比：只给文件个数时，
+        // 157 个文件会被读成「整个游戏」（2026-09-29 反馈轮）。
+        var gamePath = CreateGameDirectory();
+        await WriteGameFileAsync(gamePath, "data/one.bin");
+        await WriteGameFileAsync(gamePath, "data/two.bin");
+        var store = await CreateCommittedStoreAsync(gamePath, "data/one.bin", "data/two.bin");
+        var localGame = await store.ReadAsync(gamePath);
+        var expectedBytes = (localGame.Manifest?.Files ?? []).Sum(file => file.SizeBytes);
+        var service = CreateService(store);
+
+        var validation = await service.ValidateAsync(gamePath);
+
+        Assert.True(validation.Success);
+        Assert.True(expectedBytes > 0);
+        Assert.Equal(expectedBytes, validation.AffectedBytes);
+    }
+
+    [Fact]
     public async Task UninstallAsync_WhenCalledTwice_SecondCallFailsAsGuardedIdempotentOperation()
     {
         var gamePath = CreateGameDirectory();
@@ -200,13 +291,21 @@ public sealed class GameUninstallServiceTests : IDisposable
         Directory.CreateDirectory(Path.Combine(gamePath, "empty-folder"));
         var store = await CreateCommittedStoreAsync(gamePath, "data/managed.bin");
         var localGame = await store.ReadAsync(gamePath);
-        var service = CreateService(store);
+        var diagnostics = new RecordingDiagnostics();
+        var service = CreateService(store, diagnostics: diagnostics);
 
         var result = await service.UninstallAsync(Snapshot(localGame), UninstallScope.ThoroughCleanup, _ => { });
 
         Assert.True(result.Success);
         // 整棵安装目录连清单外残留、暂存文件与空目录一起消失。
         Assert.False(Directory.Exists(gamePath));
+        // 这一态才配得上 leftovers（它是实测的），也才不该出现「目录已保留」。
+        var completion = Assert.Single(
+            diagnostics.Messages,
+            message => message.Contains("Game uninstall completed", StringComparison.Ordinal));
+        Assert.Contains("scope: ThoroughCleanup", completion, StringComparison.Ordinal);
+        Assert.Contains("leftovers: 0", completion, StringComparison.Ordinal);
+        Assert.DoesNotContain("directory retained", completion, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -329,6 +428,31 @@ public sealed class GameUninstallServiceTests : IDisposable
         // 没保留就不许提保留，没残留就不许提残留——反向也要钉住，否则「多报一句」不会被发现。
         Assert.DoesNotContain(prefix, GameUninstallService.BuildCompletionMessage(localizer, leftovers, null), StringComparison.Ordinal);
         Assert.DoesNotContain(leftovers[0], GameUninstallService.BuildCompletionMessage(localizer, [], prefix), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BuildCompletionMessage_WhenTheFolderIsRetained_StatesItAsItsOwnSentence()
+    {
+        // 第三个事实（2026-09-29 反馈轮）与前两个互不包含，因此按需追一句而不是再乘出组合态：
+        // 项目落在「保留」这一维度上时，基础文案四态一个都不用改。
+        var localizer = new LocalizationService();
+        const string prefix = @"D:\shared-wine-prefix";
+        const string retained = @"D:\YostarGames\BlueArchive_JP";
+
+        var message = GameUninstallService.BuildCompletionMessage(localizer, [], prefix, retained);
+
+        Assert.Contains(
+            localizer.F(LocalizationKeys.UninstallCompletedDirectoryRetained, retained),
+            message,
+            StringComparison.Ordinal);
+        // 与「Prefix 已保留」共存：两个事实都在。
+        Assert.Contains(prefix, message, StringComparison.Ordinal);
+        Assert.DoesNotContain("{0}", message, StringComparison.Ordinal);
+        // 不保留就不许提保留（彻底清除删掉整棵目录之后走的就是这一态）。
+        Assert.DoesNotContain(
+            retained,
+            GameUninstallService.BuildCompletionMessage(localizer, [], null),
+            StringComparison.Ordinal);
     }
 
     [Fact]
@@ -598,17 +722,76 @@ public sealed class GameUninstallServiceTests : IDisposable
         LocalInstallationStateStore store,
         LocalizationService? localizer = null,
         TestGameShortcutService? shortcutService = null,
-        IGameProcessTracker? processTracker = null)
+        IGameProcessTracker? processTracker = null,
+        ILauncherDiagnostics? diagnostics = null)
     {
         // 检查点存储绑定到测试临时目录，避免卸载成功路径清除真实用户目录中的续传标记。
         return new GameUninstallService(LauncherProfiles.BlueArchiveJapan, 
             store,
-            new LocalDiagnostics(),
+            diagnostics ?? new LocalDiagnostics(),
             localizer ?? new LocalizationService(),
             new GameInstallationPath(LauncherProfiles.BlueArchiveJapan),
             new DownloadCheckpointStore( tempDir.DataRoot ),
             processTracker ?? TestGameProcessTracker.None(),
             shortcutService ?? new TestGameShortcutService());
+    }
+
+    /// <summary>
+    /// 记录诊断调用的替身：卸载的完成日志是排查这类反馈的唯一书面凭据（2026-09-29 反馈轮），
+    /// 因此它需要有断言的地方，而不是只落到测试进程的临时日志文件里。
+    /// </summary>
+    private sealed class RecordingDiagnostics : ILauncherDiagnostics
+    {
+        public List<string> Messages { get; } = [];
+
+        public Task DebugAsync(
+            string title,
+            string? message = null,
+            CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public Task MessageAsync(string title, string message, CancellationToken cancellationToken = default)
+        {
+            Messages.Add($"{title}: {message}");
+            return Task.CompletedTask;
+        }
+
+        public Task WarningAsync(string title, string message, CancellationToken cancellationToken = default)
+        {
+            Messages.Add($"Warn: {title}: {message}");
+            return Task.CompletedTask;
+        }
+
+        public void LogMessage(LogEntrySeverity severity, string title, string? message = null) =>
+            Messages.Add($"{severity}: {title}: {message}");
+
+        public Task ErrorAsync(
+            string title,
+            string? message,
+            Exception exception,
+            CancellationToken cancellationToken = default)
+        {
+            Messages.Add($"Error: {title}: {message}");
+            return Task.CompletedTask;
+        }
+
+        public Task ErrorAsync(string title, Exception exception, CancellationToken cancellationToken = default) =>
+            ErrorAsync(title, exception.Message, exception, cancellationToken);
+
+        public Task VerboseAsync(
+            string title,
+            string? message = null,
+            CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public Task FatalAsync(string title, Exception exception, CancellationToken cancellationToken = default) =>
+            ErrorAsync(title, exception.Message, exception, cancellationToken);
+
+        public string LogFilePath => string.Empty;
+
+        public LogEntrySeverity MinimumLevel => LogEntrySeverity.Info;
+
+        public void SetMinimumLevel(LogEntrySeverity severity)
+        {
+        }
     }
 
     public void Dispose()
