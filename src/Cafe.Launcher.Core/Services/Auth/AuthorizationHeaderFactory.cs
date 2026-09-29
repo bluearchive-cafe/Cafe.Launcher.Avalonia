@@ -3,7 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Cafe.Launcher.Core.Constants;
+using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.Core.Services.Auth;
 
@@ -13,12 +13,17 @@ namespace Cafe.Launcher.Core.Services.Auth;
 /// signing (not password storage or certificate verification) this is acceptable.
 /// The server should additionally enforce timeliness via the `time` field.
 /// </summary>
+/// <remarks>
+/// 被签名的两个游戏值（<c>game_tag</c> 与 salt）来自注入的 <see cref="YostarGameProfile"/>：
+/// 它们换游戏就换，且写错不会在本地报错、只会让服务端拒绝，因此不由静态常量兜底。
+/// </remarks>
 internal sealed class AuthorizationHeaderFactory
 {
+    private readonly YostarGameProfile gameProfile;
     private readonly TimeProvider timeProvider;
 
     /// <summary>Creates the factory against the system clock (production path).</summary>
-    public AuthorizationHeaderFactory() : this(TimeProvider.System)
+    public AuthorizationHeaderFactory(YostarGameProfile gameProfile) : this(gameProfile, TimeProvider.System)
     {
     }
 
@@ -26,8 +31,9 @@ internal sealed class AuthorizationHeaderFactory
     /// Creates the factory against an explicit clock. The `time` field is signed, so a
     /// fixed clock is what makes the signature reproducible in tests.
     /// </summary>
-    public AuthorizationHeaderFactory(TimeProvider timeProvider)
+    public AuthorizationHeaderFactory(YostarGameProfile gameProfile, TimeProvider timeProvider)
     {
+        this.gameProfile = gameProfile;
         this.timeProvider = timeProvider;
     }
 
@@ -35,13 +41,13 @@ internal sealed class AuthorizationHeaderFactory
     {
         var head = new AuthorizationHead
         {
-            GameTag = GamePaths.GameTag,
+            GameTag = gameProfile.Tag,
             Time = timeProvider.GetUtcNow().ToUnixTimeSeconds(),
             Version = version
         };
 
         var headJson = JsonSerializer.Serialize(head);
-        var signSource = $"{headJson}{data ?? ""}{ApiConfig.AuthorizationSalt}";
+        var signSource = $"{headJson}{data ?? ""}{gameProfile.AuthorizationSalt}";
         var sign = Convert.ToHexString(MD5.HashData(Encoding.UTF8.GetBytes(signSource))).ToLowerInvariant();
 
         return JsonSerializer.Serialize(new AuthorizationHeader

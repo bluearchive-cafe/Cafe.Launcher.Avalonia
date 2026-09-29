@@ -5,9 +5,9 @@ using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.Testing;
 using Cafe.Launcher.UI.Constants;
-using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
@@ -18,10 +18,10 @@ public partial class MainWindowViewModelTests
     {
         var cookiePath = Path.Combine(tempDir, "Library");
         await BestHttpCookieLibraryFixture.WriteUidAsync(cookiePath, "UIDTESTA");
-        var savedSettings = new SavedSettingsTestRig(tempDir.Sub(GamePaths.LauncherSettingsFileName));
-        var uidService = new ResourcePanelUidService(new BestHttpCookieLibraryService(), savedSettings.SettingsService, savedSettings.Writer, cookiePath);
+        var savedSettings = new SavedSettingsTestRig(tempDir.Sub(LauncherPaths.LauncherSettingsFileName));
+        var uidService = new ResourcePanelUidService(LauncherProfiles.BlueArchiveJapan, new BestHttpCookieLibraryService(), savedSettings.SettingsService, savedSettings.Writer, cookiePath);
         var transport = CreateResourcePanelTransport();
-        var apiClient = new ResourcePanelApiClient(transport);
+        var apiClient = new ResourcePanelApiClient(LauncherProfiles.Cafe, transport);
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = await CreateViewModelAsync(coreService, savedSettings, uidService, apiClient);
         viewModel.ResourcePanel.ApplySettings(new LauncherSettings { PatchUrlGroup = PatchUrlGroups.Cafe });
@@ -46,10 +46,10 @@ public partial class MainWindowViewModelTests
     {
         var cookiePath = Path.Combine(tempDir, "Library");
         await BestHttpCookieLibraryFixture.WriteUidAsync(cookiePath, "UIDTESTA");
-        var savedSettings = new SavedSettingsTestRig(tempDir.Sub(GamePaths.LauncherSettingsFileName));
-        var uidService = new ResourcePanelUidService(new BestHttpCookieLibraryService(), savedSettings.SettingsService, savedSettings.Writer, cookiePath);
+        var savedSettings = new SavedSettingsTestRig(tempDir.Sub(LauncherPaths.LauncherSettingsFileName));
+        var uidService = new ResourcePanelUidService(LauncherProfiles.BlueArchiveJapan, new BestHttpCookieLibraryService(), savedSettings.SettingsService, savedSettings.Writer, cookiePath);
         var transport = CreateResourcePanelTransport();
-        var apiClient = new ResourcePanelApiClient(transport);
+        var apiClient = new ResourcePanelApiClient(LauncherProfiles.Cafe, transport);
         using var viewModel = await CreateViewModelAsync(
             new CountingCoreService(CreateSnapshot()),
             savedSettings,
@@ -70,15 +70,15 @@ public partial class MainWindowViewModelTests
     {
         var cookiePath = Path.Combine(tempDir, "Library");
         await BestHttpCookieLibraryFixture.WriteUidAsync(cookiePath, "UIDTESTA");
-        var settingsPath = tempDir.Sub(GamePaths.LauncherSettingsFileName);
+        var settingsPath = tempDir.Sub(LauncherPaths.LauncherSettingsFileName);
         var savedSettings = new SavedSettingsTestRig(settingsPath);
         await savedSettings.SeedAsync(new LauncherSettings
         {
             PatchUrlGroup = PatchUrlGroups.Official
         });
-        var uidService = new ResourcePanelUidService(new BestHttpCookieLibraryService(), savedSettings.SettingsService, savedSettings.Writer, cookiePath);
+        var uidService = new ResourcePanelUidService(LauncherProfiles.BlueArchiveJapan, new BestHttpCookieLibraryService(), savedSettings.SettingsService, savedSettings.Writer, cookiePath);
         var transport = CreateResourcePanelTransport();
-        var apiClient = new ResourcePanelApiClient(transport);
+        var apiClient = new ResourcePanelApiClient(LauncherProfiles.Cafe, transport);
         var snapshot = CreateSnapshot();
         snapshot.Settings.PatchUrlGroup = PatchUrlGroups.Cafe;
         using var viewModel = await CreateViewModelAsync(
@@ -113,9 +113,9 @@ public partial class MainWindowViewModelTests
     public async Task ResourcePanelApplySettings_WhenSystemProxyAndCafeSource_OpensPanelWithoutSourceConfirm()
     {
         var savedSettings = new SavedSettingsTestRig(
-            tempDir.Sub(GamePaths.LauncherSettingsFileName));
+            tempDir.Sub(LauncherPaths.LauncherSettingsFileName));
         await savedSettings.SeedAsync(new LauncherSettings { ResourcePanelUid = "UIDTESTA" });
-        var uidService = new ResourcePanelUidService(
+        var uidService = new ResourcePanelUidService(LauncherProfiles.BlueArchiveJapan, 
             new BestHttpCookieLibraryService(),
             savedSettings.SettingsService,
             savedSettings.Writer,
@@ -125,7 +125,7 @@ public partial class MainWindowViewModelTests
             new CountingCoreService(CreateSnapshot()),
             savedSettings,
             uidService,
-            new ResourcePanelApiClient(transport));
+            new ResourcePanelApiClient(LauncherProfiles.Cafe, transport));
         viewModel.ResourcePanel.ApplySettings(new LauncherSettings
         {
             ProxyMode = ProxyModes.System,
@@ -145,15 +145,15 @@ public partial class MainWindowViewModelTests
     [Fact]
     public async Task SaveResourcePanelAsync_SendsCnForEnabledAndJpForDisabled()
     {
-        var savedSettings = new SavedSettingsTestRig(tempDir.Sub(GamePaths.LauncherSettingsFileName));
+        var savedSettings = new SavedSettingsTestRig(tempDir.Sub(LauncherPaths.LauncherSettingsFileName));
         await savedSettings.SeedAsync(new LauncherSettings { ResourcePanelUid = "UIDTESTA" });
-        var uidService = new ResourcePanelUidService(
+        var uidService = new ResourcePanelUidService(LauncherProfiles.BlueArchiveJapan, 
             new BestHttpCookieLibraryService(),
             savedSettings.SettingsService,
             savedSettings.Writer,
             Path.Combine(tempDir, "missing"));
         var transport = CreateResourcePanelTransport();
-        var apiClient = new ResourcePanelApiClient(transport);
+        var apiClient = new ResourcePanelApiClient(LauncherProfiles.Cafe, transport);
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = await CreateViewModelAsync(coreService, savedSettings, uidService, apiClient);
         viewModel.ResourcePanel.ApplySettings(new LauncherSettings { PatchUrlGroup = PatchUrlGroups.Cafe });
@@ -174,14 +174,14 @@ public partial class MainWindowViewModelTests
     [Fact]
     public async Task OpenResourcePanelAsync_WhenUidMissing_ShowsManualInputAndSkipsApiCalls()
     {
-        var savedSettings = new SavedSettingsTestRig(tempDir.Sub(GamePaths.LauncherSettingsFileName));
-        var uidService = new ResourcePanelUidService(
+        var savedSettings = new SavedSettingsTestRig(tempDir.Sub(LauncherPaths.LauncherSettingsFileName));
+        var uidService = new ResourcePanelUidService(LauncherProfiles.BlueArchiveJapan, 
             new BestHttpCookieLibraryService(),
             savedSettings.SettingsService,
             savedSettings.Writer,
             Path.Combine(tempDir, "missing"));
         var transport = CreateResourcePanelTransport();
-        var apiClient = new ResourcePanelApiClient(transport);
+        var apiClient = new ResourcePanelApiClient(LauncherProfiles.Cafe, transport);
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = await CreateViewModelAsync(coreService, savedSettings, uidService, apiClient);
         viewModel.ResourcePanel.ApplySettings(new LauncherSettings { PatchUrlGroup = PatchUrlGroups.Cafe });
@@ -199,14 +199,14 @@ public partial class MainWindowViewModelTests
     [Fact]
     public async Task SaveManualResourcePanelUidAsync_WhenUidIsBlank_ShowsValidationMessage()
     {
-        var savedSettings = new SavedSettingsTestRig(tempDir.Sub(GamePaths.LauncherSettingsFileName));
-        var uidService = new ResourcePanelUidService(
+        var savedSettings = new SavedSettingsTestRig(tempDir.Sub(LauncherPaths.LauncherSettingsFileName));
+        var uidService = new ResourcePanelUidService(LauncherProfiles.BlueArchiveJapan, 
             new BestHttpCookieLibraryService(),
             savedSettings.SettingsService,
             savedSettings.Writer,
             Path.Combine(tempDir, "missing"));
         var transport = CreateResourcePanelTransport();
-        var apiClient = new ResourcePanelApiClient(transport);
+        var apiClient = new ResourcePanelApiClient(LauncherProfiles.Cafe, transport);
         using var viewModel = await CreateViewModelAsync(
             new CountingCoreService(CreateSnapshot()),
             savedSettings,

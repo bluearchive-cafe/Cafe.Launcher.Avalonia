@@ -17,13 +17,13 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services;
-using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Helpers;
 
 namespace Cafe.Launcher.UI.ViewModels;
 
 internal partial class DialogsViewModel : ViewModelBase, IModalContentViewModel, ILanguageAwarePresentation
 {
+    private readonly LauncherProductProfile productProfile;
     private readonly LocalizationService localizer;
     private readonly NoticeStateService noticeStateService;
     private readonly Func<Action, Task> invokeOnUiAsync;
@@ -232,11 +232,13 @@ internal partial class DialogsViewModel : ViewModelBase, IModalContentViewModel,
 
     /// <summary>Creates the application dialog family and its confirmation children.</summary>
     public DialogsViewModel(
+        LauncherProductProfile productProfile,
         LocalizationService localizer,
         NoticeStateService noticeStateService,
         SetupWizardViewModel setupWizard,
         ILauncherDiagnostics diagnostics)
         : this(
+            productProfile,
             localizer,
             noticeStateService,
             setupWizard,
@@ -247,12 +249,14 @@ internal partial class DialogsViewModel : ViewModelBase, IModalContentViewModel,
 
     /// <summary>Creates the dialog family with an injectable UI dispatcher for deterministic tests.</summary>
     internal DialogsViewModel(
+        LauncherProductProfile productProfile,
         LocalizationService localizer,
         NoticeStateService noticeStateService,
         SetupWizardViewModel setupWizard,
         ILauncherDiagnostics diagnostics,
         Func<Action, Task> invokeOnUiAsync)
     {
+        this.productProfile = productProfile;
         this.localizer = localizer;
         this.noticeStateService = noticeStateService;
         this.invokeOnUiAsync = invokeOnUiAsync;
@@ -415,7 +419,7 @@ internal partial class DialogsViewModel : ViewModelBase, IModalContentViewModel,
 
         // 本机不支持应用内更新：跳转版本发布页，由用户手动获取安装包。
         IsUpdateAvailableVisible = false;
-        ConfirmUpdateAvailableRequested?.Invoke(LauncherConstants.GitHubReleasesPageUrl);
+        ConfirmUpdateAvailableRequested?.Invoke(productProfile.GitHubReleasesPageUrl);
     }
 
     [RelayCommand]

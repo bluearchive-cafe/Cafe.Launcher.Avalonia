@@ -4,6 +4,7 @@ using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.Testing;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
@@ -18,7 +19,7 @@ public sealed class ResourcePanelUidServiceTests : IDisposable
         await BestHttpCookieLibraryFixture.WriteUidAsync(cookiePath, "COOKIEAA");
         var savedSettings = new SavedSettingsTestRig(Path.Combine(tempDir, "settings.json"));
         await savedSettings.SeedAsync(new LauncherSettings { ResourcePanelUid = "SETTINGA" });
-        var service = new ResourcePanelUidService(new BestHttpCookieLibraryService(), savedSettings.SettingsService, savedSettings.Writer, cookiePath);
+        var service = new ResourcePanelUidService(LauncherProfiles.BlueArchiveJapan, new BestHttpCookieLibraryService(), savedSettings.SettingsService, savedSettings.Writer, cookiePath);
 
         var uid = await service.ResolveUidAsync();
 
@@ -30,7 +31,7 @@ public sealed class ResourcePanelUidServiceTests : IDisposable
     {
         var savedSettings = new SavedSettingsTestRig(Path.Combine(tempDir, "settings.json"));
         await savedSettings.SeedAsync(new LauncherSettings { ResourcePanelUid = "SETTINGA" });
-        var service = new ResourcePanelUidService(
+        var service = new ResourcePanelUidService(LauncherProfiles.BlueArchiveJapan, 
             new BestHttpCookieLibraryService(),
             savedSettings.SettingsService,
             savedSettings.Writer,
@@ -48,7 +49,7 @@ public sealed class ResourcePanelUidServiceTests : IDisposable
         await BestHttpCookieLibraryFixture.WriteUidAsync(cookiePath, "COOKIEAA", "example.com", "/");
         var savedSettings = new SavedSettingsTestRig(Path.Combine(tempDir, "settings.json"));
         await savedSettings.SeedAsync(new LauncherSettings { ResourcePanelUid = "SETTINGA" });
-        var service = new ResourcePanelUidService(new BestHttpCookieLibraryService(), savedSettings.SettingsService, savedSettings.Writer, cookiePath);
+        var service = new ResourcePanelUidService(LauncherProfiles.BlueArchiveJapan, new BestHttpCookieLibraryService(), savedSettings.SettingsService, savedSettings.Writer, cookiePath);
 
         var uid = await service.ResolveUidAsync();
 
@@ -61,7 +62,7 @@ public sealed class ResourcePanelUidServiceTests : IDisposable
         var cookiePath = Path.Combine(tempDir, "Library");
         await BestHttpCookieLibraryFixture.WriteUidAsync(cookiePath, "");
         var savedSettings = new SavedSettingsTestRig(Path.Combine(tempDir, "settings.json"));
-        var service = new ResourcePanelUidService(
+        var service = new ResourcePanelUidService(LauncherProfiles.BlueArchiveJapan, 
             new BestHttpCookieLibraryService(),
             savedSettings.SettingsService,
             savedSettings.Writer,
@@ -95,7 +96,7 @@ public sealed class ResourcePanelUidServiceTests : IDisposable
         await BestHttpCookieLibraryFixture.WriteUidAsync(cookiePath, "invalid");
         var savedSettings = new SavedSettingsTestRig(Path.Combine(tempDir, "settings.json"));
         await savedSettings.SeedAsync(new LauncherSettings { ResourcePanelUid = "SETTINGA" });
-        var service = new ResourcePanelUidService(new BestHttpCookieLibraryService(), savedSettings.SettingsService, savedSettings.Writer, cookiePath);
+        var service = new ResourcePanelUidService(LauncherProfiles.BlueArchiveJapan, new BestHttpCookieLibraryService(), savedSettings.SettingsService, savedSettings.Writer, cookiePath);
 
         var uid = await service.ResolveUidAsync();
 
@@ -109,7 +110,7 @@ public sealed class ResourcePanelUidServiceTests : IDisposable
         await BestHttpCookieLibraryFixture.WriteUidAsync(cookiePath, "bad");
         var savedSettings = new SavedSettingsTestRig(Path.Combine(tempDir, "settings.json"));
         await savedSettings.SeedAsync(new LauncherSettings { ResourcePanelUid = "also-bad" });
-        var service = new ResourcePanelUidService(new BestHttpCookieLibraryService(), savedSettings.SettingsService, savedSettings.Writer, cookiePath);
+        var service = new ResourcePanelUidService(LauncherProfiles.BlueArchiveJapan, new BestHttpCookieLibraryService(), savedSettings.SettingsService, savedSettings.Writer, cookiePath);
 
         var uid = await service.ResolveUidAsync();
 
@@ -120,7 +121,7 @@ public sealed class ResourcePanelUidServiceTests : IDisposable
     public async Task SaveManualUidAsync_WhenUidHasInvalidFormat_Throws()
     {
         var savedSettings = new SavedSettingsTestRig(Path.Combine(tempDir, "settings.json"));
-        var service = new ResourcePanelUidService(
+        var service = new ResourcePanelUidService(LauncherProfiles.BlueArchiveJapan, 
             new BestHttpCookieLibraryService(),
             savedSettings.SettingsService,
             savedSettings.Writer,
@@ -141,7 +142,8 @@ public sealed class ResourcePanelUidServiceTests : IDisposable
 
         var actual = ResourcePanelUidService.ResolveLinuxCookieLibraryPath(
             new GameRuntimeSettings { Runner = selectedRunner }, "gytxtx",
-            runner => Path.Combine(tempDir, runner, "prefix"));
+            runner => Path.Combine(tempDir, runner, "prefix"),
+            LauncherProfiles.BlueArchiveJapan.CookieLibraryRelativeSegments);
 
         Assert.Equal(expected, actual);
     }
@@ -152,7 +154,8 @@ public sealed class ResourcePanelUidServiceTests : IDisposable
         var prefix = Path.Combine(tempDir, "custom");
         var actual = ResourcePanelUidService.ResolveLinuxCookieLibraryPath(
             new GameRuntimeSettings { PrefixPath = prefix }, "gytxtx",
-            _ => throw new InvalidOperationException("Custom prefix must take precedence."));
+            _ => throw new InvalidOperationException("Custom prefix must take precedence."),
+            LauncherProfiles.BlueArchiveJapan.CookieLibraryRelativeSegments);
 
         Assert.Equal(CreateCookiePath(prefix, "gytxtx"), actual);
     }
@@ -165,7 +168,8 @@ public sealed class ResourcePanelUidServiceTests : IDisposable
 
         var actual = ResourcePanelUidService.ResolveLinuxCookieLibraryPath(
             new GameRuntimeSettings { Runner = GameRuntimeRunners.Wine }, "gytxtx",
-            runner => Path.Combine(tempDir, runner));
+            runner => Path.Combine(tempDir, runner),
+            LauncherProfiles.BlueArchiveJapan.CookieLibraryRelativeSegments);
 
         Assert.Equal(CreateCookiePath(Path.Combine(tempDir, GameRuntimeRunners.Wine), "gytxtx"), actual);
     }
@@ -175,7 +179,7 @@ public sealed class ResourcePanelUidServiceTests : IDisposable
     {
         Assert.SkipUnless(OperatingSystem.IsLinux(), "Linux compatibility prefix resolution.");
         var savedSettings = new SavedSettingsTestRig(Path.Combine(tempDir, "settings.json"));
-        var service = new ResourcePanelUidService(
+        var service = new ResourcePanelUidService(LauncherProfiles.BlueArchiveJapan, 
             new BestHttpCookieLibraryService(), savedSettings.SettingsService, savedSettings.Writer);
         foreach (var uid in new[] { "COOKIEAA", "COOKIEBB" })
         {

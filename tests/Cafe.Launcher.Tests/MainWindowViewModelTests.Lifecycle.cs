@@ -4,6 +4,7 @@ using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.Testing;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
@@ -257,7 +258,7 @@ public partial class MainWindowViewModelTests
                 }
             ]
             """;
-        var updateSvc = new LauncherUpdateService(
+        var updateSvc = new LauncherUpdateService(LauncherProfiles.Cafe, 
             new StubRemoteHttpTransport(_ => releaseJson),
             currentVersionOverride: "1.0.0");
         using var viewModel = await CreateViewModelAsync(

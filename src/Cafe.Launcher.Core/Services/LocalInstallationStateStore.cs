@@ -14,7 +14,7 @@ using Cafe.Launcher.Core.Models;
 namespace Cafe.Launcher.Core.Services;
 
 /// <summary>
-/// 游戏目录内安装状态（GamePaths.GameConfigFileName 与 GamePaths.ManifestFileName）的唯一读写入口。
+/// 游戏目录内安装状态（LauncherPaths.GameConfigFileName 与 LauncherPaths.ManifestFileName）的唯一读写入口。
 /// 同一路径的所有操作经引用计数信号量串行（见 <c>pathLocks</c>），跨线程安全；
 /// 写入先落临时文件再原子替换，进程中断不会留下半写的状态文件。
 /// </summary>
@@ -24,15 +24,19 @@ internal sealed class LocalInstallationStateStore : ILocalInstallationStateStore
 
     private readonly ConcurrentDictionary<string, PathLockEntry> pathLocks =
         new(StringComparer.OrdinalIgnoreCase);
+    private readonly YostarGameProfile gameProfile;
     private readonly Func<string, CancellationToken, Task>? beforeTempValidation;
 
-    public LocalInstallationStateStore()
+    public LocalInstallationStateStore(YostarGameProfile gameProfile)
     {
+        this.gameProfile = gameProfile;
     }
 
     internal LocalInstallationStateStore(
+        YostarGameProfile gameProfile,
         Func<string, CancellationToken, Task> beforeTempValidation)
     {
+        this.gameProfile = gameProfile;
         this.beforeTempValidation = beforeTempValidation;
     }
 
@@ -47,8 +51,8 @@ internal sealed class LocalInstallationStateStore : ILocalInstallationStateStore
             cancellationToken).ConfigureAwait(false);
         return await ReadCoreAsync(
             normalizedGamePath,
-            Path.Combine(normalizedGamePath, GamePaths.GameConfigFileName),
-            Path.Combine(normalizedGamePath, GamePaths.ManifestFileName),
+            Path.Combine(normalizedGamePath, LauncherPaths.GameConfigFileName),
+            Path.Combine(normalizedGamePath, LauncherPaths.ManifestFileName),
             cancellationToken).ConfigureAwait(false);
     }
 
@@ -68,8 +72,8 @@ internal sealed class LocalInstallationStateStore : ILocalInstallationStateStore
             normalizedGamePath,
             cancellationToken).ConfigureAwait(false);
 
-        var configPath = Path.Combine(normalizedGamePath, GamePaths.GameConfigFileName);
-        var manifestPath = Path.Combine(normalizedGamePath, GamePaths.ManifestFileName);
+        var configPath = Path.Combine(normalizedGamePath, LauncherPaths.GameConfigFileName);
+        var manifestPath = Path.Combine(normalizedGamePath, LauncherPaths.ManifestFileName);
         var tempConfigPath = $"{configPath}.tmp";
         var tempManifestPath = $"{manifestPath}.tmp";
 
@@ -96,7 +100,7 @@ internal sealed class LocalInstallationStateStore : ILocalInstallationStateStore
                 .ToList();
             var manifest = new LocalManifest
             {
-                Name = GamePaths.GameTag,
+                Name = gameProfile.Tag,
                 Version = copiedCommit.Version,
                 Basis = copiedCommit.ManifestBasis,
                 Files = manifestFiles
@@ -107,7 +111,7 @@ internal sealed class LocalInstallationStateStore : ILocalInstallationStateStore
                 manifest.Basis);
             var config = new GameLauncherConfig
             {
-                Tag = GamePaths.GameTag,
+                Tag = gameProfile.Tag,
                 Name = copiedCommit.ExecutableName,
                 Params = copiedCommit.LaunchParameters.ToArray(),
                 Version = copiedCommit.Version
@@ -166,8 +170,8 @@ internal sealed class LocalInstallationStateStore : ILocalInstallationStateStore
         await using var pathLock = await AcquirePathLockAsync(
             normalizedGamePath,
             cancellationToken).ConfigureAwait(false);
-        var configPath = Path.Combine(normalizedGamePath, GamePaths.GameConfigFileName);
-        var manifestPath = Path.Combine(normalizedGamePath, GamePaths.ManifestFileName);
+        var configPath = Path.Combine(normalizedGamePath, LauncherPaths.GameConfigFileName);
+        var manifestPath = Path.Combine(normalizedGamePath, LauncherPaths.ManifestFileName);
 
         try
         {

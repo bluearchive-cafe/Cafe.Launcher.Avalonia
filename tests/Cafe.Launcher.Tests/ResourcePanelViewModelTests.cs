@@ -11,6 +11,7 @@ using Cafe.Launcher.Testing;
 using Cafe.Launcher.Core.Services;
 using Cafe.Launcher.Core.Helpers;
 using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
@@ -360,14 +361,14 @@ public sealed class ResourcePanelViewModelTests
         }
 
         var savedSettings = new SavedSettingsTestRig(Path.Combine(tempDir, "settings.json"));
-        var uidService = new ResourcePanelUidService(
+        var uidService = new ResourcePanelUidService(LauncherProfiles.BlueArchiveJapan, 
             new BestHttpCookieLibraryService(),
             savedSettings.SettingsService,
             savedSettings.Writer,
             cookiePath);
         var transport = new GatedResourcePanelTransport();
         configure?.Invoke(transport);
-        var apiClient = new ResourcePanelApiClient(transport);
+        var apiClient = new ResourcePanelApiClient(LauncherProfiles.Cafe, transport);
         var localizer = new LocalizationService();
         var toastService = new ToastService();
         var errorHandling = new RecordingErrorHandlingService();

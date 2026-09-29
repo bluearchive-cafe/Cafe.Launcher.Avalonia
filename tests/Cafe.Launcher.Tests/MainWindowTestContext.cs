@@ -19,6 +19,7 @@ using Cafe.Launcher.UI.ViewModels;
 using Cafe.Launcher.Core.Services;
 using Cafe.Launcher.Core.Services.Auth;
 using Cafe.Launcher.Core.Services.GameRuntime;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
@@ -129,13 +130,13 @@ internal sealed class MainWindowTestContext : IDisposable
 
         var settingsService = savedSettings.SettingsService;
         var savedSettingsWriter = savedSettings.Writer;
-        var localInstallationStateStore = new LocalInstallationStateStore();
+        var localInstallationStateStore = new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan);
         var diagnostics = new LocalDiagnostics();
         var localizationService = new LocalizationService();
-        var apiClient = new LauncherApiClient(
+        var apiClient = new LauncherApiClient(LauncherProfiles.BlueArchiveJapan, 
             new StubRemoteHttpTransport(),
-            new AuthorizationHeaderFactory(),
-            new PatchUrlGroupService());
+            new AuthorizationHeaderFactory(LauncherProfiles.BlueArchiveJapan),
+            new PatchUrlGroupService(LauncherProfiles.BlueArchiveJapan, LauncherProfiles.Cafe));
         var remoteManifestService = new RemoteManifestService(apiClient);
         var downloadDiagnostics = new LocalDiagnostics();
         var fileDownloadService = new FileDownloadService(
@@ -146,13 +147,13 @@ internal sealed class MainWindowTestContext : IDisposable
             [GameRunnerDefinition.Native],
             new DefaultProcessLauncher(),
             TestGameProcessTracker.None());
-        var gameLaunchService = new GameLaunchService(
+        var gameLaunchService = new GameLaunchService(LauncherProfiles.BlueArchiveJapan, 
             manifestValidationService,
             gameRuntime,
             localizationService);
         var gameDownloadHttpClientFactory = new HttpClientFactory(new ProxySettingsService());
         owned.Add(gameDownloadHttpClientFactory);
-        var gameDownloadService = new GameDownloadService(
+        var gameDownloadService = new GameDownloadService(LauncherProfiles.BlueArchiveJapan, 
             apiClient,
             remoteManifestService,
             fileDownloadService,
@@ -164,19 +165,19 @@ internal sealed class MainWindowTestContext : IDisposable
             new DiskSpaceService(),
             diagnostics,
             localizationService,
-            new GameInstallationPath(),
+            new GameInstallationPath(LauncherProfiles.BlueArchiveJapan),
             TestGameProcessTracker.None(),
             TestDataRoot.ForDirectory(directory.Sub(Guid.NewGuid().ToString("N"))));
         if (resourcePanelUidService is null)
         {
-            resourcePanelUidService = new ResourcePanelUidService(
+            resourcePanelUidService = new ResourcePanelUidService(LauncherProfiles.BlueArchiveJapan, 
                 new BestHttpCookieLibraryService(),
                 settingsService,
                 savedSettingsWriter,
                 directory.Sub("missing-resource-panel-cookie"));
         }
 
-        resourcePanelApiClient ??= new ResourcePanelApiClient(new StubRemoteHttpTransport());
+        resourcePanelApiClient ??= new ResourcePanelApiClient(LauncherProfiles.Cafe, new StubRemoteHttpTransport());
 
         if (toastService is null)
         {
@@ -184,7 +185,7 @@ internal sealed class MainWindowTestContext : IDisposable
         }
 
         var diskSpaceService = new DiskSpaceService();
-        var launcherUpdateSvc = launcherUpdateService ?? new LauncherUpdateService(new StubRemoteHttpTransport());
+        var launcherUpdateSvc = launcherUpdateService ?? new LauncherUpdateService(LauncherProfiles.Cafe, new StubRemoteHttpTransport());
         launcherUpdateApplier ??= new WindowsLauncherUpdateApplier(
             directory.DataRoot, diagnostics, directory.Path, directory.Path);
         launcherSelfUpdateService ??= new LauncherSelfUpdateService(
@@ -196,14 +197,14 @@ internal sealed class MainWindowTestContext : IDisposable
         var settingsEditor = savedSettings.Editor;
         var settingsOptions = new SettingsOptionsViewModel(localizationService, diskSpaceService);
         var settingsAppearance = new SettingsAppearanceViewModel(settingsEditor, new ThemeApplier());
-        var shellViewModel = new ShellViewModel(localizationService);
+        var shellViewModel = new ShellViewModel(LauncherProfiles.Cafe, localizationService);
         var errorHandling = new ErrorHandlingService(localizationService, diagnostics, toastService);
         var noticeStateService = new NoticeStateService(
             TestDataRoot.ForDirectory(directory.Sub(Guid.NewGuid().ToString("N"))));
-        var dialogsViewModel = new DialogsViewModel(
+        var dialogsViewModel = new DialogsViewModel(LauncherProfiles.Cafe, 
             localizationService,
             noticeStateService,
-            new SetupWizardViewModel(localizationService, new GameInstallationPath(), new LocalInstallationStateStore(), diagnostics, filePickerService),
+            new SetupWizardViewModel(localizationService, new GameInstallationPath(LauncherProfiles.BlueArchiveJapan), new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan), diagnostics, filePickerService),
             diagnostics);
         // 这两个日志是上下文持有的资源：设置页与日志查看器在其整个活期内继续写入。
         var settingsLogger = new UnifiedLogger(directory.Sub(Guid.NewGuid().ToString("N")));
@@ -212,18 +213,18 @@ internal sealed class MainWindowTestContext : IDisposable
             settingsService, savedSettingsWriter, localizationService, toastService,
             launcherUpdateSvc, launcherSelfUpdateService, dialogsViewModel,
             settingsLogger,
-            new GameInstallationPath(),
+            new GameInstallationPath(LauncherProfiles.BlueArchiveJapan),
             settingsOptions, settingsAppearance, errorHandling,
             gameRuntime, filePickerService);
         var resourcePanelService = new ResourcePanelService(
             resourcePanelUidService, resourcePanelApiClient, diagnostics);
         var resourcePanelViewModel = new ResourcePanelViewModel(
             resourcePanelService, localizationService, toastService, errorHandling);
-        var gameUninstallService = new GameUninstallService(
+        var gameUninstallService = new GameUninstallService(LauncherProfiles.BlueArchiveJapan, 
             localInstallationStateStore,
             diagnostics,
             localizationService,
-            new GameInstallationPath(),
+            new GameInstallationPath(LauncherProfiles.BlueArchiveJapan),
             new DownloadCheckpointStore(TestDataRoot.ForDirectory(directory.Sub(Guid.NewGuid().ToString("N")))),
             TestGameProcessTracker.None(),
             new TestGameShortcutService());
@@ -234,7 +235,7 @@ internal sealed class MainWindowTestContext : IDisposable
         var gameOperationsViewModel = gameOperationsBackend is null
             ? new GameOperationsViewModel(
                 new GameOperationExecutor(gameLaunchService, gameDownloadService, gameUninstallService),
-                new GameShortcutService(localizationService),
+                new GameShortcutService(LauncherProfiles.BlueArchiveJapan, localizationService),
                 gameSessionMonitor,
                 localizationService,
                 toastService,
@@ -276,7 +277,7 @@ internal sealed class MainWindowTestContext : IDisposable
             settingsService,
             gameOperationsViewModel,
             shellViewModel);
-        var windowChromeViewModel = new WindowChromeViewModel(
+        var windowChromeViewModel = new WindowChromeViewModel(LauncherProfiles.Cafe, LauncherProfiles.BlueArchiveJapan, 
             directory.DataRoot,
             settingsViewModel, remoteContentViewModel, dialogsViewModel, gameOperationsViewModel,
             debugViewModel);

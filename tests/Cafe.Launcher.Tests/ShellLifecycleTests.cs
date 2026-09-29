@@ -19,8 +19,8 @@ using Cafe.Launcher.Testing;
 using Cafe.Launcher.UI.ViewModels;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services;
-using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Services.GameRuntime;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
@@ -310,7 +310,7 @@ public sealed class ShellLifecycleTests : IDisposable
 
         // 不支持应用内更新的平台,确认更新恰好打开一次版本发布页,且走的是壳的统一外部链接出口。
         var opened = Assert.Single(openedUrls);
-        Assert.Equal(LauncherConstants.GitHubReleasesPageUrl, opened);
+        Assert.Equal(LauncherProfiles.Cafe.GitHubReleasesPageUrl, opened);
 
         // Dispose 后退订:同一事件不得再触发外部打开。
         fixture.Lifecycle.Dispose();
@@ -429,7 +429,7 @@ public sealed class ShellLifecycleTests : IDisposable
 
         fixture.Dialogs.ConfirmUpdateAvailableCommand.Execute(null);
 
-        Assert.Equal(LauncherConstants.GitHubReleasesPageUrl, Assert.Single(openedUrls));
+        Assert.Equal(LauncherProfiles.Cafe.GitHubReleasesPageUrl, Assert.Single(openedUrls));
     }
 
     /// <summary>
@@ -495,7 +495,7 @@ public sealed class ShellLifecycleTests : IDisposable
         var core = new ScriptedCoreService(snapshot);
         var fixture = CreateLifecycle(
             core,
-            launcherUpdateService: new LauncherUpdateService(CreateThrowingTransport(), currentVersionOverride: "0.0.0"));
+            launcherUpdateService: new LauncherUpdateService(LauncherProfiles.Cafe, CreateThrowingTransport(), currentVersionOverride: "0.0.0"));
 
         await fixture.Lifecycle.InitializeAsync().WaitAsync(TimeSpan.FromSeconds(2));
         var pendingUpdateCheck = fixture.Lifecycle.PendingStartupUpdateCheck;
@@ -590,7 +590,7 @@ public sealed class ShellLifecycleTests : IDisposable
         IWindowsLauncherUpdateApplier? launcherUpdateApplier = null)
     {
         settingsService ??= new LauncherSettingsService( tempDir.DataRoot );
-        launcherUpdateService ??= new LauncherUpdateService(
+        launcherUpdateService ??= new LauncherUpdateService(LauncherProfiles.Cafe, 
             CreateNotFoundTransport(),
             currentVersionOverride: "0.0.0");
         operationsBackend ??= new StubGameOperationExecutor();
@@ -614,12 +614,12 @@ public sealed class ShellLifecycleTests : IDisposable
         var savedSettingsWriter = new SavedSettingsWriter(settingsService, settingsEditor);
         var settingsAppearance = new SettingsAppearanceViewModel(settingsEditor, new ThemeApplier());
         var settingsOptions = new SettingsOptionsViewModel(localizer, new DiskSpaceService());
-        var shell = new ShellViewModel(localizer);
+        var shell = new ShellViewModel(LauncherProfiles.Cafe, localizer);
         var errorHandling = new ErrorHandlingService(localizer, diagnostics, toastService);
         var wizard = new SetupWizardViewModel(
             localizer,
-            new GameInstallationPath(),
-            new LocalInstallationStateStore(),
+            new GameInstallationPath(LauncherProfiles.BlueArchiveJapan),
+            new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan),
             new LocalDiagnostics(),
             filePickerService);
         wizards.Add(wizard);
@@ -634,7 +634,7 @@ public sealed class ShellLifecycleTests : IDisposable
             };
         }
 
-        var dialogs = new DialogsViewModel(
+        var dialogs = new DialogsViewModel(LauncherProfiles.Cafe, 
             localizer,
             new NoticeStateService( tempDir.DataRoot ),
             wizard,
@@ -650,19 +650,19 @@ public sealed class ShellLifecycleTests : IDisposable
             launcherSelfUpdateService,
             dialogs,
             settingsLogger,
-            new GameInstallationPath(),
+            new GameInstallationPath(LauncherProfiles.BlueArchiveJapan),
             settingsOptions,
             settingsAppearance,
             errorHandling,
             new GameRuntime([GameRunnerDefinition.Native], new DefaultProcessLauncher(), new GameProcessTracker()),
             filePickerService);
         var resourcePanelService = new ResourcePanelService(
-            new ResourcePanelUidService(
+            new ResourcePanelUidService(LauncherProfiles.BlueArchiveJapan, 
                 new BestHttpCookieLibraryService(),
                 settingsService,
                 savedSettingsWriter,
                 Path.Combine(tempDir, "missing-resource-panel-cookie")),
-            new ResourcePanelApiClient(CreateNotFoundTransport()),
+            new ResourcePanelApiClient(LauncherProfiles.Cafe, CreateNotFoundTransport()),
             diagnostics);
         var resourcePanel = new ResourcePanelViewModel(resourcePanelService, localizer, toastService, errorHandling);
         var remoteContent = new RemoteContentViewModel(localizer, imageCacheService, diagnostics);
@@ -687,7 +687,7 @@ public sealed class ShellLifecycleTests : IDisposable
             settingsService,
             operations,
             shell);
-        var windowChrome = new WindowChromeViewModel( tempDir.DataRoot ,
+        var windowChrome = new WindowChromeViewModel(LauncherProfiles.Cafe, LauncherProfiles.BlueArchiveJapan,  tempDir.DataRoot ,
             settings,
             remoteContent,
             dialogs,

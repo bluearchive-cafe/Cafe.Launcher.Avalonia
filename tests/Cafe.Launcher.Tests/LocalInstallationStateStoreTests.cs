@@ -4,6 +4,7 @@ using Cafe.Launcher.Testing;
 using System.Text.Json;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
@@ -11,7 +12,7 @@ public sealed class LocalInstallationStateStoreTests : IDisposable
 {
     private readonly TestDirectory tempDir = TestDirectory.Create();
     private readonly string gamePath;
-    private readonly LocalInstallationStateStore store = new();
+    private readonly LocalInstallationStateStore store = new(LauncherProfiles.BlueArchiveJapan);
 
     public LocalInstallationStateStoreTests()
     {
@@ -159,7 +160,7 @@ public sealed class LocalInstallationStateStoreTests : IDisposable
     public async Task CommitAsync_WhenTempValidationFails_DoesNotReplaceFormalState()
     {
         await CommitValidStateAsync();
-        var failingStore = new LocalInstallationStateStore(
+        var failingStore = new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan, 
             (path, cancellationToken) => File.WriteAllTextAsync(
                 Path.Combine(path, "manifest.json.tmp"),
                 "{}",
@@ -177,7 +178,7 @@ public sealed class LocalInstallationStateStoreTests : IDisposable
     public async Task CommitAsync_WhenSecondMoveFails_LeavesReadableCorruptedState()
     {
         Directory.CreateDirectory(gamePath);
-        var failingStore = new LocalInstallationStateStore(
+        var failingStore = new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan, 
             (path, _) =>
             {
                 Directory.CreateDirectory(Path.Combine(path, "game-launcher-config.json"));
@@ -255,7 +256,7 @@ public sealed class LocalInstallationStateStoreTests : IDisposable
             TaskCreationOptions.RunContinuationsAsynchronously);
         var releaseCommit = new TaskCompletionSource(
             TaskCreationOptions.RunContinuationsAsynchronously);
-        var blockingStore = new LocalInstallationStateStore(
+        var blockingStore = new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan, 
             async (_, cancellationToken) =>
             {
                 tempFilesWritten.TrySetResult();

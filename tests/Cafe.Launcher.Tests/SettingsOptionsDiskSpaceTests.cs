@@ -9,6 +9,7 @@ using Cafe.Launcher.Core.Services;
 using Cafe.Launcher.Core.Helpers;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services.GameRuntime;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
@@ -149,7 +150,7 @@ public sealed class SettingsOptionsDiskSpaceTests
         var options = new SettingsOptionsViewModel(localizer, diskSpace);
         var editor = new SettingsEditor();
         var errorHandling = new RecordingErrorHandlingService();
-        var shell = new ShellViewModel(localizer);
+        var shell = new ShellViewModel(LauncherProfiles.Cafe, localizer);
         using var settings = new SettingsViewModel(
             null!,
             null!,

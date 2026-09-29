@@ -2,6 +2,7 @@ using System;
 using Microsoft.Extensions.DependencyInjection;
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.UI.ViewModels;
+using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services;
 using Cafe.Launcher.Core.Services.Diagnostics;
 
@@ -21,6 +22,7 @@ public static class LauncherPresentationServiceCollectionExtensions
         // 而它依赖的表现层类型是 internal——只有本程序集的登记方拼得出它，宿主因此拿不到
         // 「半个会话」，服务定位也不会渗进生命周期门面。
         services.AddSingleton(sp => new LauncherPresentationSession(
+            sp.GetRequiredService<LauncherProductProfile>(),
             sp.GetRequiredService<MainWindowViewModel>(),
             sp.GetRequiredService<WindowFilePickerService>(),
             sp.GetRequiredService<WindowMetricsService>(),

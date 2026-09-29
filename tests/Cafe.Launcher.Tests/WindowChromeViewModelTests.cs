@@ -9,9 +9,9 @@ using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Testing;
 using Cafe.Launcher.UI.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
-using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
@@ -41,13 +41,21 @@ public sealed class WindowChromeViewModelTests : IDisposable
     }
 
     [Theory]
-    [InlineData(PatchUrlGroups.Official, LauncherConstants.OfficialGameWebsiteUrl)]
-    [InlineData(PatchUrlGroups.Cafe, LauncherConstants.CafeWebsiteUrl)]
+    [InlineData(PatchUrlGroups.Official, "https://bluearchive.jp/")]
+    [InlineData(PatchUrlGroups.Cafe, "https://bluearchive.cafe/")]
     public void ResolveOfficialSiteUrl_UsesCurrentDownloadSource(
         string patchUrlGroup,
         string expectedUrl)
     {
-        Assert.Equal(expectedUrl, WindowChromeViewModel.ResolveOfficialSiteUrl(patchUrlGroup));
+        // 字面量对着档案核对：两条链接各自的归属（游戏官网 / 产品站点）是这次拆分的判据。
+        Assert.Equal("https://bluearchive.jp/", LauncherProfiles.BlueArchiveJapan.OfficialWebsiteUrl);
+        Assert.Equal("https://bluearchive.cafe/", LauncherProfiles.Cafe.CafeWebsiteUrl);
+        Assert.Equal(
+            expectedUrl,
+            WindowChromeViewModel.ResolveOfficialSiteUrl(
+                patchUrlGroup,
+                LauncherProfiles.Cafe.CafeWebsiteUrl,
+                LauncherProfiles.BlueArchiveJapan.OfficialWebsiteUrl));
     }
 
     [Fact]
@@ -196,7 +204,7 @@ Assert.Equal(DownloadStopReason.UserRequested, context.Backend.LastStopReason);
         using var context = CreateContext();
         var openedUrls = new List<string?>();
         string? openedDirectory = null;
-        var viewModel = new WindowChromeViewModel( tempDir.DataRoot ,
+        var viewModel = new WindowChromeViewModel(LauncherProfiles.Cafe, LauncherProfiles.BlueArchiveJapan,  tempDir.DataRoot ,
             context.Settings,
             context.RemoteContent,
             context.Dialogs,
@@ -219,13 +227,13 @@ Assert.Equal(DownloadStopReason.UserRequested, context.Backend.LastStopReason);
         viewModel.OpenExternalUrl("mailto:support@example.invalid");
         viewModel.OpenDataDirectoryCommand.Execute(null);
 
-        Assert.Equal(LauncherConstants.CafeWebsiteUrl, openedUrls[0]);
-        Assert.Equal(LauncherConstants.CafeWebsiteUrl, openedUrls[1]);
-        Assert.Equal(LauncherConstants.HelpDocsUrl, openedUrls[2]);
-        Assert.Equal(LauncherConstants.GitHubRepositoryUrl, openedUrls[3]);
-        Assert.Equal(LauncherConstants.GitHubReleaseRepositoryUrl, openedUrls[4]);
-        Assert.Equal(LauncherConstants.PrivacyPolicyUrl, openedUrls[5]);
-        Assert.Equal(LauncherConstants.DefaultBackgroundArtworkUrl, openedUrls[6]);
+        Assert.Equal(LauncherProfiles.Cafe.CafeWebsiteUrl, openedUrls[0]);
+        Assert.Equal(LauncherProfiles.Cafe.CafeWebsiteUrl, openedUrls[1]);
+        Assert.Equal(LauncherProfiles.Cafe.HelpDocsUrl, openedUrls[2]);
+        Assert.Equal(LauncherProfiles.Cafe.GitHubReleaseRepositoryUrl, openedUrls[3]);
+        Assert.Equal(LauncherProfiles.Cafe.GitHubReleaseRepositoryUrl, openedUrls[4]);
+        Assert.Equal(LauncherProfiles.Cafe.PrivacyPolicyUrl, openedUrls[5]);
+        Assert.Equal(LauncherProfiles.Cafe.DefaultBackgroundArtworkUrl, openedUrls[6]);
         Assert.Equal("mailto:support@example.invalid", openedUrls[7]);
         Assert.Equal(tempDir.DataRoot.Root, openedDirectory);
     }
@@ -282,7 +290,7 @@ Assert.Equal(DownloadStopReason.UserRequested, context.Backend.LastStopReason);
             provider.GetRequiredService<LauncherSettingsService>(),
             operations,
             provider.GetRequiredService<ShellViewModel>());
-        var viewModel = new WindowChromeViewModel( tempDir.DataRoot ,
+        var viewModel = new WindowChromeViewModel(LauncherProfiles.Cafe, LauncherProfiles.BlueArchiveJapan,  tempDir.DataRoot ,
             settings,
             remoteContent,
             dialogs,

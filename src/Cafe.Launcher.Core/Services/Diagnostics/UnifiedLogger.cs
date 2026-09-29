@@ -56,7 +56,7 @@ public sealed class UnifiedLogger : IDisposable
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(logDirectory);
         this.onDisposed = onDisposed;
-        logFilePath = Path.Combine(logDirectory, GamePaths.UnifiedLogFileName);
+        logFilePath = Path.Combine(logDirectory, LauncherPaths.UnifiedLogFileName);
         launcherVersion = buildIdentity?.LauncherVersion ?? "";
         commitSha = buildIdentity?.CommitSha ?? "";
         buildConfiguration = buildIdentity?.BuildConfiguration ?? "";
@@ -110,7 +110,7 @@ public sealed class UnifiedLogger : IDisposable
     /// 「暂无日志」处理，而不是把基名当成一个必然存在的文件）。
     /// </summary>
     /// <param name="expectedPath">
-    /// <see cref="LogFilePath"/> 给出的基名路径。词干与扩展名由它推导，因此改 <see cref="GamePaths.UnifiedLogFileName"/>
+    /// <see cref="LogFilePath"/> 给出的基名路径。词干与扩展名由它推导，因此改 <see cref="LauncherPaths.UnifiedLogFileName"/>
     /// 会带着轮转命名一起走。
     /// </param>
     public static string? ResolveActiveLogFile(string expectedPath)

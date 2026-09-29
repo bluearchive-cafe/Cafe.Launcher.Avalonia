@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Core.Helpers;
 
@@ -56,12 +55,16 @@ public static class GamePathValidator
     /// <c>DownloadSession</c> (D5): both the download plan and the uninstall
     /// precheck guard the same leaf-name contract.
     /// </summary>
-    public static void EnsureGameDirectoryName(string gamePath)
+    /// <param name="expectedFolderName">
+    /// 期望的目录名，由调用方从 <see cref="Models.YostarGameProfile.GameFolderName"/> 取。
+    /// 做成参数而不是读常量：「这是哪款游戏的目录」属于档案，不属于路径校验。
+    /// </param>
+    public static void EnsureGameDirectoryName(string gamePath, string expectedFolderName)
     {
         var fullPath = Path.GetFullPath(gamePath);
-        if (!string.Equals(Path.GetFileName(fullPath), GamePaths.GameFolderName, StringComparison.Ordinal))
+        if (!string.Equals(Path.GetFileName(fullPath), expectedFolderName, StringComparison.Ordinal))
         {
-            throw new InvalidOperationException($"Game directory name must be {GamePaths.GameFolderName}.");
+            throw new InvalidOperationException($"Game directory name must be {expectedFolderName}.");
         }
     }
 

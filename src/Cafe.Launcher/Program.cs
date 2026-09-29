@@ -11,6 +11,7 @@ using Cafe.Launcher.Constants;
 using Cafe.Launcher.Composition;
 using Cafe.Launcher.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Services.Diagnostics;
 using Cafe.Launcher.UI.Services.Diagnostics;
@@ -122,7 +123,7 @@ sealed class Program
 
         // 进程根在此解析一次：随后所有 pre-DI 落点（崩溃快照、日志器、首启探测、
         // 单实例信号）与 DI 容器共用同一个实例。
-        var dataRoot = LauncherDataRoot.ForCurrentProcess();
+        var dataRoot = LauncherDataRoot.ForCurrentProcess(LauncherProfiles.Cafe.ProductName);
 
         var reportStore = new CrashReportStore(
             dataRoot,

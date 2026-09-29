@@ -8,7 +8,7 @@ namespace Cafe.Launcher.Tests;
 
 public sealed class GameInstallationPathTests
 {
-    private readonly GameInstallationPath installationPath = new();
+    private readonly GameInstallationPath installationPath = new(LauncherProfiles.BlueArchiveJapan);
 
     [Fact]
     public void GetDefaultGamePath_UsesLauncherParentDirectory_MatchingOfficialLauncher()
@@ -20,8 +20,8 @@ public sealed class GameInstallationPathTests
             Path.TrimEndingDirectorySeparator(AppContext.BaseDirectory))!;
         var expected = Path.GetFullPath(Path.Combine(
             parentOfLauncherDir,
-            GamePaths.RootFolderName,
-            GamePaths.GameFolderName));
+            LauncherProfiles.BlueArchiveJapan.RootFolderName,
+            LauncherProfiles.BlueArchiveJapan.GameFolderName));
 
         var result = installationPath.GetDefaultGamePath();
 
@@ -36,8 +36,8 @@ public sealed class GameInstallationPathTests
         var userProfileDirectory = Path.Combine(testRoot, "home");
         var expected = Path.GetFullPath(Path.Combine(
             userProfileDirectory,
-            GamePaths.RootFolderName,
-            GamePaths.GameFolderName));
+            LauncherProfiles.BlueArchiveJapan.RootFolderName,
+            LauncherProfiles.BlueArchiveJapan.GameFolderName));
 
         var result = installationPath.GetDefaultGamePath(
             applicationBaseDirectory,
@@ -58,8 +58,8 @@ public sealed class GameInstallationPathTests
         var userProfileDirectory = Path.Combine(testRoot, "home");
         var expected = Path.GetFullPath(Path.Combine(
             userProfileDirectory,
-            GamePaths.RootFolderName,
-            GamePaths.GameFolderName));
+            LauncherProfiles.BlueArchiveJapan.RootFolderName,
+            LauncherProfiles.BlueArchiveJapan.GameFolderName));
 
         var result = installationPath.GetDefaultGamePath(
             applicationBaseDirectory,
@@ -79,7 +79,7 @@ public sealed class GameInstallationPathTests
         var result = installationPath.NormalizeGamePath(input);
 
         Assert.Equal(
-            Path.GetFullPath(Path.Combine(input, GamePaths.RootFolderName, GamePaths.GameFolderName)),
+            Path.GetFullPath(Path.Combine(input, LauncherProfiles.BlueArchiveJapan.RootFolderName, LauncherProfiles.BlueArchiveJapan.GameFolderName)),
             result);
     }
 
@@ -89,12 +89,12 @@ public sealed class GameInstallationPathTests
         var input = Path.Combine(
             Path.GetTempPath(),
             Guid.NewGuid().ToString("N"),
-            GamePaths.RootFolderName);
+            LauncherProfiles.BlueArchiveJapan.RootFolderName);
 
         var result = installationPath.NormalizeGamePath(input);
 
         Assert.Equal(
-            Path.GetFullPath(Path.Combine(input, GamePaths.GameFolderName)),
+            Path.GetFullPath(Path.Combine(input, LauncherProfiles.BlueArchiveJapan.GameFolderName)),
             result);
     }
 
@@ -104,8 +104,8 @@ public sealed class GameInstallationPathTests
         var input = Path.Combine(
             Path.GetTempPath(),
             Guid.NewGuid().ToString("N"),
-            GamePaths.RootFolderName,
-            GamePaths.GameFolderName);
+            LauncherProfiles.BlueArchiveJapan.RootFolderName,
+            LauncherProfiles.BlueArchiveJapan.GameFolderName);
 
         var result = installationPath.NormalizeGamePath(input);
 
@@ -118,8 +118,8 @@ public sealed class GameInstallationPathTests
         var input = Path.Combine(
             Path.GetTempPath(),
             Guid.NewGuid().ToString("N"),
-            GamePaths.RootFolderName,
-            GamePaths.GameFolderName) + Path.DirectorySeparatorChar;
+            LauncherProfiles.BlueArchiveJapan.RootFolderName,
+            LauncherProfiles.BlueArchiveJapan.GameFolderName) + Path.DirectorySeparatorChar;
 
         var result = installationPath.NormalizeGamePath(input);
 

@@ -8,6 +8,7 @@ using Cafe.Launcher.Testing;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services;
 using Cafe.Launcher.Core.Services.GameRuntime;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
@@ -119,7 +120,7 @@ public sealed class GameUninstallServiceTests : IDisposable
     {
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
         var localizer = new LocalizationService();
-        var service = CreateService(new LocalInstallationStateStore(), localizer);
+        var service = CreateService(new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan), localizer);
         var snapshot = new LauncherStatusSnapshot
         {
             RuntimeState = LauncherRuntimeState.Ready,
@@ -213,7 +214,7 @@ public sealed class GameUninstallServiceTests : IDisposable
     {
         var gamePath = CreateGameDirectory();
         await WriteGameFileAsync(gamePath, "data/managed.bin");
-        var managedPrefixRoot = GameCompatibilityPaths.GetDefaultGameCompatibilityRoot(GameRuntimeIds.BlueArchiveJapan);
+        var managedPrefixRoot = GameCompatibilityPaths.GetDefaultGameCompatibilityRoot(LauncherProfiles.BlueArchiveJapan.RuntimeId);
         var prefixMarker = Path.Combine(managedPrefixRoot, "wine", "prefix", "drive_c", "marker.txt");
         Directory.CreateDirectory(Path.GetDirectoryName(prefixMarker)!);
         await File.WriteAllTextAsync(prefixMarker, "prefix");
@@ -463,7 +464,7 @@ public sealed class GameUninstallServiceTests : IDisposable
         await WriteGameFileAsync(gamePath, "unknown.bin");
         var store = await CreateCommittedStoreAsync(gamePath, "data/managed.bin");
         var localGame = await store.ReadAsync(gamePath);
-        var managedPrefixRoot = GameCompatibilityPaths.GetDefaultGameCompatibilityRoot(GameRuntimeIds.BlueArchiveJapan);
+        var managedPrefixRoot = GameCompatibilityPaths.GetDefaultGameCompatibilityRoot(LauncherProfiles.BlueArchiveJapan.RuntimeId);
         var prefixMarker = Path.Combine(managedPrefixRoot, "wine", "prefix", "marker.bin");
         Directory.CreateDirectory(Path.GetDirectoryName(prefixMarker)!);
         await File.WriteAllTextAsync(prefixMarker, "0123456789");
@@ -577,7 +578,7 @@ public sealed class GameUninstallServiceTests : IDisposable
         IReadOnlyList<string> launchParameters,
         params string[] manifestPaths)
     {
-        var store = new LocalInstallationStateStore();
+        var store = new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan);
         var committed = await store.CommitAsync(
             gamePath,
             new LocalInstallationStateCommit(
@@ -600,11 +601,11 @@ public sealed class GameUninstallServiceTests : IDisposable
         IGameProcessTracker? processTracker = null)
     {
         // 检查点存储绑定到测试临时目录，避免卸载成功路径清除真实用户目录中的续传标记。
-        return new GameUninstallService(
+        return new GameUninstallService(LauncherProfiles.BlueArchiveJapan, 
             store,
             new LocalDiagnostics(),
             localizer ?? new LocalizationService(),
-            new GameInstallationPath(),
+            new GameInstallationPath(LauncherProfiles.BlueArchiveJapan),
             new DownloadCheckpointStore( tempDir.DataRoot ),
             processTracker ?? TestGameProcessTracker.None(),
             shortcutService ?? new TestGameShortcutService());

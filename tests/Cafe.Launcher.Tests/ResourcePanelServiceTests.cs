@@ -7,8 +7,8 @@ using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Testing;
 using Cafe.Launcher.UI.Constants;
 using Cafe.Launcher.Core.Models;
-using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Services;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
@@ -221,14 +221,14 @@ public sealed class ResourcePanelServiceTests : IDisposable
         var blocker = Path.Combine(tempDir, "blocker");
         await File.WriteAllTextAsync(blocker, "not a directory");
         var savedSettings = new SavedSettingsTestRig(Path.Combine(blocker, "settings.json"));
-        var uidService = new ResourcePanelUidService(
+        var uidService = new ResourcePanelUidService(LauncherProfiles.BlueArchiveJapan, 
             new BestHttpCookieLibraryService(),
             savedSettings.SettingsService,
             savedSettings.Writer,
             Path.Combine(tempDir, "missing"));
         var service = new ResourcePanelService(
             uidService,
-            new ResourcePanelApiClient(new StubRemoteHttpTransport()),
+            new ResourcePanelApiClient(LauncherProfiles.Cafe, new StubRemoteHttpTransport()),
             new LocalDiagnostics());
 
         // 存储写入失败按实现语义原样传播（不做吞并或降级）。
@@ -257,14 +257,14 @@ public sealed class ResourcePanelServiceTests : IDisposable
         }
 
         var savedSettings = new SavedSettingsTestRig(
-            tempDir.Sub(GamePaths.LauncherSettingsFileName));
+            tempDir.Sub(LauncherPaths.LauncherSettingsFileName));
         if (settings is not null)
         {
             await savedSettings.SeedAsync(settings);
         }
 
-        var uidService = new ResourcePanelUidService(new BestHttpCookieLibraryService(), savedSettings.SettingsService, savedSettings.Writer, cookiePath);
-        return new ResourcePanelService(uidService, new ResourcePanelApiClient(transport), new LocalDiagnostics());
+        var uidService = new ResourcePanelUidService(LauncherProfiles.BlueArchiveJapan, new BestHttpCookieLibraryService(), savedSettings.SettingsService, savedSettings.Writer, cookiePath);
+        return new ResourcePanelService(uidService, new ResourcePanelApiClient(LauncherProfiles.Cafe, transport), new LocalDiagnostics());
     }
 
     private static int CountRequests(StubRemoteHttpTransport transport, string path) =>

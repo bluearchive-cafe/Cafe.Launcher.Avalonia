@@ -1,4 +1,5 @@
 using System.IO;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
@@ -25,5 +26,5 @@ internal static class TestDataRoot
     /// 的那些用例，语义与改造前一致。
     /// </summary>
     internal static Cafe.Launcher.Core.Services.LauncherDataRoot ForCurrentProcess() =>
-        Cafe.Launcher.Core.Services.LauncherDataRoot.ForCurrentProcess();
+        Cafe.Launcher.Core.Services.LauncherDataRoot.ForCurrentProcess(LauncherProfiles.Cafe.ProductName);
 }

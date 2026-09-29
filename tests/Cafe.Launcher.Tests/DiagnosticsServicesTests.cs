@@ -2,6 +2,7 @@ using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Testing;
 using Cafe.Launcher.Core.Services;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
@@ -19,7 +20,7 @@ public sealed class DiagnosticsServicesTests : IDisposable
             diagnostics.LogFilePath,
             StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain(
-            LauncherDataRoot.ForCurrentProcess().Root,
+            LauncherDataRoot.ForCurrentProcess(LauncherProfiles.Cafe.ProductName).Root,
             diagnostics.LogFilePath,
             StringComparison.OrdinalIgnoreCase);
     }

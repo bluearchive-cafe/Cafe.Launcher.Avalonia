@@ -7,6 +7,7 @@ using Cafe.Launcher.UI.ViewModels;
 using Cafe.Launcher.Testing;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
@@ -210,8 +211,8 @@ public sealed class LocalizationTerminologyTests
         localizer.SetLanguage(LauncherLanguages.SimplifiedChinese);
         var viewModel = new SetupWizardViewModel(
             localizer,
-            new GameInstallationPath(),
-            new LocalInstallationStateStore(),
+            new GameInstallationPath(LauncherProfiles.BlueArchiveJapan),
+            new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan),
             new LocalDiagnostics(), new StubFilePickerService())
         {
             Language = LauncherLanguages.Auto
@@ -254,11 +255,11 @@ public sealed class LocalizationTerminologyTests
         var settingsOptions = new SettingsOptionsViewModel(localizer, new DiskSpaceService());
         var setupWizard = new SetupWizardViewModel(
             localizer,
-            new GameInstallationPath(),
-            new LocalInstallationStateStore(),
+            new GameInstallationPath(LauncherProfiles.BlueArchiveJapan),
+            new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan),
             new LocalDiagnostics(), new StubFilePickerService());
         using var tempDir = TestDirectory.Create();
-        var dialogs = new DialogsViewModel(
+        var dialogs = new DialogsViewModel(LauncherProfiles.Cafe, 
             localizer,
             new NoticeStateService(tempDir.DataRoot),
             setupWizard,

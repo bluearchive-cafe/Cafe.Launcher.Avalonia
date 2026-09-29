@@ -11,9 +11,9 @@ using Cafe.Launcher.Testing;
 using Cafe.Launcher.UI.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Cafe.Launcher.UI.Constants;
-using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
@@ -66,7 +66,7 @@ public sealed class ServiceConfigurationTests : IDisposable
         {
             Settings = new LauncherSettings
             {
-                GamePath = Path.Combine(tempDir, GamePaths.RootFolderName, GamePaths.GameFolderName)
+                GamePath = Path.Combine(tempDir, LauncherProfiles.BlueArchiveJapan.RootFolderName, LauncherProfiles.BlueArchiveJapan.GameFolderName)
             },
             RuntimeState = LauncherRuntimeState.Ready,
             Remote = new LauncherRemoteState
@@ -223,7 +223,7 @@ public sealed class ServiceConfigurationTests : IDisposable
         using var provider = services.BuildServiceProvider();
 
         Assert.Equal(
-            LauncherDataRoot.ForCurrentProcess().Root,
+            LauncherDataRoot.ForCurrentProcess(LauncherProfiles.Cafe.ProductName).Root,
             provider.GetRequiredService<LauncherDataRoot>().Root);
     }
 

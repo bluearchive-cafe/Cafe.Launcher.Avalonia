@@ -8,8 +8,8 @@ using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Testing;
 using Cafe.Launcher.UI.ViewModels;
 using Cafe.Launcher.Core.Models;
-using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Services;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
@@ -26,8 +26,8 @@ public sealed class SetupWizardViewModelTests
 
     private static SetupWizardViewModel CreateViewModel() => new(
         new LocalizationService(),
-        new GameInstallationPath(),
-        new LocalInstallationStateStore(),
+        new GameInstallationPath(LauncherProfiles.BlueArchiveJapan),
+        new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan),
         new LocalDiagnostics(),
         new StubFilePickerService());
 
@@ -57,11 +57,11 @@ public sealed class SetupWizardViewModelTests
     [Fact]
     public void NextCommand_FirstEntryToStep1WithEmptyGamePath_FillsDefaultGamePath()
     {
-        var installationPath = new GameInstallationPath();
+        var installationPath = new GameInstallationPath(LauncherProfiles.BlueArchiveJapan);
         var vm = new SetupWizardViewModel(
             new LocalizationService(),
             installationPath,
-            new LocalInstallationStateStore(),
+            new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan),
             new LocalDiagnostics(), new StubFilePickerService());
 
         vm.NextCommand.Execute(null);
@@ -177,8 +177,8 @@ public sealed class SetupWizardViewModelTests
         using var path = TestDirectory.Create();
         var vm = new SetupWizardViewModel(
             new LocalizationService(),
-            new GameInstallationPath(),
-            new LocalInstallationStateStore(),
+            new GameInstallationPath(LauncherProfiles.BlueArchiveJapan),
+            new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan),
             new LocalDiagnostics(), new StubFilePickerService());
         vm.GamePath = path;
         vm.NextCommand.Execute(null);
@@ -194,10 +194,10 @@ public sealed class SetupWizardViewModelTests
         File.WriteAllText(blocker, "not a directory");
         var vm = new SetupWizardViewModel(
             new LocalizationService(),
-            new GameInstallationPath(),
-            new LocalInstallationStateStore(),
+            new GameInstallationPath(LauncherProfiles.BlueArchiveJapan),
+            new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan),
             new LocalDiagnostics(), new StubFilePickerService());
-        vm.GamePath = Path.Combine(blocker, GamePaths.RootFolderName, GamePaths.GameFolderName);
+        vm.GamePath = Path.Combine(blocker, LauncherProfiles.BlueArchiveJapan.RootFolderName, LauncherProfiles.BlueArchiveJapan.GameFolderName);
         vm.NextCommand.Execute(null);
         await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.NotWritable);
         Assert.True(vm.IsGamePathNotWritable);
@@ -358,11 +358,11 @@ public sealed class SetupWizardViewModelTests
     public async Task GamePathStatus_WhenStateFilesAreValid_IsValidInstallationAndCanGoNext()
     {
         using var gamePath = TestDirectory.Create();
-        var normalizedGamePath = new GameInstallationPath().NormalizeGamePath(gamePath);
-        var store = new LocalInstallationStateStore();
+        var normalizedGamePath = new GameInstallationPath(LauncherProfiles.BlueArchiveJapan).NormalizeGamePath(gamePath);
+        var store = new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan);
         Directory.CreateDirectory(normalizedGamePath);
         await store.CommitAsync(normalizedGamePath, CreateCommit());
-        var vm = new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(), store, new LocalDiagnostics(), new StubFilePickerService())
+        var vm = new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(LauncherProfiles.BlueArchiveJapan), store, new LocalDiagnostics(), new StubFilePickerService())
         {
             GamePath = gamePath
         };
@@ -378,7 +378,7 @@ public sealed class SetupWizardViewModelTests
     public async Task GamePathStatus_WhenOnlyManifestExists_IsCorruptedInstallationAndCannotGoNext()
     {
         using var gamePath = TestDirectory.Create();
-        var normalizedGamePath = new GameInstallationPath().NormalizeGamePath(gamePath);
+        var normalizedGamePath = new GameInstallationPath(LauncherProfiles.BlueArchiveJapan).NormalizeGamePath(gamePath);
         Directory.CreateDirectory(normalizedGamePath);
         await File.WriteAllTextAsync(Path.Combine(normalizedGamePath, "manifest.json"), "{}");
         var vm = CreateViewModel();
@@ -395,14 +395,14 @@ public sealed class SetupWizardViewModelTests
     public async Task GamePathPresentation_WhenInstallationIsCorrupted_HasTitleAndDescription()
     {
         using var gamePath = TestDirectory.Create();
-        var normalizedGamePath = new GameInstallationPath().NormalizeGamePath(gamePath);
+        var normalizedGamePath = new GameInstallationPath(LauncherProfiles.BlueArchiveJapan).NormalizeGamePath(gamePath);
         Directory.CreateDirectory(normalizedGamePath);
         await File.WriteAllTextAsync(Path.Combine(normalizedGamePath, "manifest.json"), "{}");
         var localizer = new LocalizationService();
         var vm = new SetupWizardViewModel(
             localizer,
-            new GameInstallationPath(),
-            new LocalInstallationStateStore(),
+            new GameInstallationPath(LauncherProfiles.BlueArchiveJapan),
+            new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan),
             new LocalDiagnostics(), new StubFilePickerService());
         vm.GamePath = gamePath;
         vm.NextCommand.Execute(null);
@@ -417,13 +417,13 @@ public sealed class SetupWizardViewModelTests
     public async Task GamePathStatus_WhenStateFileIsLocked_IsInaccessibleAndCannotGoNext()
     {
         using var gamePath = TestDirectory.Create();
-        var normalizedGamePath = new GameInstallationPath().NormalizeGamePath(gamePath);
-        var store = new LocalInstallationStateStore();
+        var normalizedGamePath = new GameInstallationPath(LauncherProfiles.BlueArchiveJapan).NormalizeGamePath(gamePath);
+        var store = new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan);
         Directory.CreateDirectory(normalizedGamePath);
         await store.CommitAsync(normalizedGamePath, CreateCommit());
         await using var locked = new FileStream(
             Path.Combine(normalizedGamePath, "manifest.json"), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
-        var vm = new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(), store, new LocalDiagnostics(), new StubFilePickerService())
+        var vm = new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(LauncherProfiles.BlueArchiveJapan), store, new LocalDiagnostics(), new StubFilePickerService())
         {
             GamePath = gamePath
         };
@@ -452,18 +452,18 @@ public sealed class SetupWizardViewModelTests
     public async Task GamePathStatus_WhenChecking_CannotGoNextAndUpdatesWhenReadCompletes()
     {
         using var gamePath = TestDirectory.Create();
-        var normalizedGamePath = new GameInstallationPath().NormalizeGamePath(gamePath);
+        var normalizedGamePath = new GameInstallationPath(LauncherProfiles.BlueArchiveJapan).NormalizeGamePath(gamePath);
         Directory.CreateDirectory(normalizedGamePath);
         var tempFilesWritten = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var releaseCommit = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var store = new LocalInstallationStateStore(async (_, cancellationToken) =>
+        var store = new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan, async (_, cancellationToken) =>
         {
             tempFilesWritten.TrySetResult();
             await releaseCommit.Task.WaitAsync(cancellationToken);
         });
         var commitTask = store.CommitAsync(normalizedGamePath, CreateCommit());
         await tempFilesWritten.Task.WaitAsync(TimeSpan.FromSeconds(2));
-        var vm = new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(), store, new LocalDiagnostics(), new StubFilePickerService())
+        var vm = new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(LauncherProfiles.BlueArchiveJapan), store, new LocalDiagnostics(), new StubFilePickerService())
         {
             GamePath = gamePath
         };
@@ -482,19 +482,19 @@ public sealed class SetupWizardViewModelTests
     public async Task GamePathStatus_WhenOldReadIsCancelled_DoesNotOverwriteNewPathStatus()
     {
         using var oldGamePath = TestDirectory.Create();
-        var normalizedOldGamePath = new GameInstallationPath().NormalizeGamePath(oldGamePath);
+        var normalizedOldGamePath = new GameInstallationPath(LauncherProfiles.BlueArchiveJapan).NormalizeGamePath(oldGamePath);
         using var newGamePath = TestDirectory.Create();
         Directory.CreateDirectory(normalizedOldGamePath);
         var tempFilesWritten = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var releaseCommit = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var store = new LocalInstallationStateStore(async (_, cancellationToken) =>
+        var store = new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan, async (_, cancellationToken) =>
         {
             tempFilesWritten.TrySetResult();
             await releaseCommit.Task.WaitAsync(cancellationToken);
         });
         var commitTask = store.CommitAsync(normalizedOldGamePath, CreateCommit());
         await tempFilesWritten.Task.WaitAsync(TimeSpan.FromSeconds(2));
-        var vm = new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(), store, new LocalDiagnostics(), new StubFilePickerService())
+        var vm = new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(LauncherProfiles.BlueArchiveJapan), store, new LocalDiagnostics(), new StubFilePickerService())
         {
             GamePath = oldGamePath
         };
@@ -515,8 +515,8 @@ public sealed class SetupWizardViewModelTests
         var localizer = new LocalizationService();
         var vm = new SetupWizardViewModel(
             localizer,
-            new GameInstallationPath(),
-            new LocalInstallationStateStore(),
+            new GameInstallationPath(LauncherProfiles.BlueArchiveJapan),
+            new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan),
             new LocalDiagnostics(), new StubFilePickerService())
         {
             GamePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"))

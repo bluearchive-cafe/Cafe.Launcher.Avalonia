@@ -6,6 +6,7 @@ using Cafe.Launcher.Testing;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services;
 using Cafe.Launcher.Core.Services.Auth;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
@@ -118,7 +119,7 @@ public sealed class LauncherCoreServiceTests : IDisposable
         var service = await CreateServiceAsync(
             CreateLauncherStateTransport("/api/launcher/never"),
             useEmptySettingsDocument: true);
-        var expectedPath = new GameInstallationPath().GetDefaultGamePath();
+        var expectedPath = new GameInstallationPath(LauncherProfiles.BlueArchiveJapan).GetDefaultGamePath();
 
         var snapshot = await service.LoadAsync();
 
@@ -131,7 +132,7 @@ public sealed class LauncherCoreServiceTests : IDisposable
         bool useEmptySettingsDocument = false,
         TimeSpan? remoteStateBudget = null)
     {
-        var store = new LocalInstallationStateStore();
+        var store = new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan);
         var settingsPath = Path.Combine(tempDir, "settings.json");
         var settingsService = new LauncherSettingsService( TestDataRoot.ForFile(settingsPath) );
         if (useEmptySettingsDocument)
@@ -154,14 +155,14 @@ public sealed class LauncherCoreServiceTests : IDisposable
             await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
         }
 
-        var apiClient = new LauncherApiClient(
+        var apiClient = new LauncherApiClient(LauncherProfiles.BlueArchiveJapan, 
             transport,
-            new AuthorizationHeaderFactory(),
-            new PatchUrlGroupService());
+            new AuthorizationHeaderFactory(LauncherProfiles.BlueArchiveJapan),
+            new PatchUrlGroupService(LauncherProfiles.BlueArchiveJapan, LauncherProfiles.Cafe));
         return new LauncherCoreService(
             apiClient,
             store,
-            new GameInstallationPath(),
+            new GameInstallationPath(LauncherProfiles.BlueArchiveJapan),
             settingsService,
             new LocalDiagnostics(),
             remoteStateBudget ?? LauncherCoreService.DefaultRemoteStateBudget);

@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Helpers;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services.Auth;
@@ -22,6 +21,7 @@ namespace Cafe.Launcher.Core.Services;
 /// </summary>
 internal sealed class LauncherApiClient : ILauncherApiClient
 {
+    private readonly YostarGameProfile gameProfile;
     private readonly IRemoteHttpTransport transport;
     private readonly AuthorizationHeaderFactory authorizationHeaderFactory;
     private readonly PatchUrlGroupService patchUrlGroupService;
@@ -46,11 +46,13 @@ internal sealed class LauncherApiClient : ILauncherApiClient
     private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(30);
 
     public LauncherApiClient(
+        YostarGameProfile gameProfile,
         IRemoteHttpTransport transport,
         AuthorizationHeaderFactory authorizationHeaderFactory,
         PatchUrlGroupService patchUrlGroupService,
         ILauncherDiagnostics? diagnostics = null)
     {
+        this.gameProfile = gameProfile;
         this.transport = transport;
         this.authorizationHeaderFactory = authorizationHeaderFactory;
         this.patchUrlGroupService = patchUrlGroupService;
@@ -76,12 +78,10 @@ internal sealed class LauncherApiClient : ILauncherApiClient
         return response;
     }
 
-    private static string? ResolveLauncherBackgroundUrl(string? value)
+    private string? ResolveLauncherBackgroundUrl(string? value)
     {
-        const string packageRelativePrefix =
-            "/prod/BlueArchive_JP/launcher_background_img/";
-        return value?.StartsWith(packageRelativePrefix, StringComparison.Ordinal) == true
-            ? ApiConfig.OfficialPackageBaseUrl + value
+        return value?.StartsWith(gameProfile.PackageAssetPrefix, StringComparison.Ordinal) == true
+            ? gameProfile.OfficialPackageBaseUrl + value
             : value;
     }
 
@@ -186,9 +186,9 @@ internal sealed class LauncherApiClient : ILauncherApiClient
         string path,
         CancellationToken cancellationToken)
     {
-        // ApiConfig.ApiBaseUrl ends with '/' and the path starts with '/', so
+        // gameProfile.ApiBaseUrl ends with '/' and the path starts with '/', so
         // Uri-relative resolution replaces the base path instead of concatenating.
-        var requestUri = new Uri(new Uri(ApiConfig.ApiBaseUrl), path);
+        var requestUri = new Uri(new Uri(gameProfile.ApiBaseUrl), path);
         var stopwatch = Stopwatch.StartNew();
         var envelope = await transport.GetJsonAsync<LauncherApiEnvelope<T>>(
             requestUri,
@@ -200,7 +200,7 @@ internal sealed class LauncherApiClient : ILauncherApiClient
                 Timeout = RequestTimeout,
                 ConfigureRequest = request => request.Headers.TryAddWithoutValidation(
                     "Authorization",
-                    authorizationHeaderFactory.Create("", ApiConfig.YostarAuthorizationVersion)),
+                    authorizationHeaderFactory.Create("", gameProfile.AuthorizationVersion)),
                 Json = jsonOptions
             },
             cancellationToken).ConfigureAwait(false);

@@ -1,11 +1,18 @@
 using System;
 using System.IO;
-using Cafe.Launcher.Core.Constants;
+using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.Core.Services;
 
 internal sealed class GameInstallationPath : IGameInstallationPath
 {
+    private readonly YostarGameProfile gameProfile;
+
+    public GameInstallationPath(YostarGameProfile gameProfile)
+    {
+        this.gameProfile = gameProfile;
+    }
+
     public string GetDefaultGamePath()
     {
         return GetDefaultGamePath(
@@ -47,17 +54,17 @@ internal sealed class GameInstallationPath : IGameInstallationPath
             [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
             StringSplitOptions.RemoveEmptyEntries);
 
-        if (EndsWithSegments(segments, [GamePaths.RootFolderName, GamePaths.GameFolderName]))
+        if (EndsWithSegments(segments, [gameProfile.RootFolderName, gameProfile.GameFolderName]))
         {
             return normalized;
         }
 
-        if (EndsWithSegments(segments, [GamePaths.RootFolderName]))
+        if (EndsWithSegments(segments, [gameProfile.RootFolderName]))
         {
-            return Path.Combine(normalized, GamePaths.GameFolderName);
+            return Path.Combine(normalized, gameProfile.GameFolderName);
         }
 
-        return Path.Combine(normalized, GamePaths.RootFolderName, GamePaths.GameFolderName);
+        return Path.Combine(normalized, gameProfile.RootFolderName, gameProfile.GameFolderName);
     }
 
     private static bool EndsWithSegments(string[] value, string[] suffix)

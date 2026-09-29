@@ -4,6 +4,7 @@ using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.Testing;
 using Cafe.Launcher.UI.Constants;
 using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
@@ -39,7 +40,7 @@ public sealed class TestSupportFacilityTests
 
         Assert.Equal(Path.GetFullPath(directory.Path), directory.DataRoot.Root);
         Assert.Equal(
-            Path.Combine(directory.Path, Cafe.Launcher.Core.Constants.GamePaths.LauncherSettingsFileName),
+            Path.Combine(directory.Path, Cafe.Launcher.Core.Constants.LauncherPaths.LauncherSettingsFileName),
             directory.DataRoot.SettingsPath);
     }
 

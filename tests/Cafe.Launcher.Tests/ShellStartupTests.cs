@@ -10,6 +10,7 @@ using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Testing;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
@@ -27,8 +28,8 @@ public sealed class ShellStartupTests : IDisposable
     {
         wizard = new SetupWizardViewModel(
             new LocalizationService(),
-            new GameInstallationPath(),
-            new LocalInstallationStateStore(),
+            new GameInstallationPath(LauncherProfiles.BlueArchiveJapan),
+            new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan),
             new LocalDiagnostics(),
             new StubFilePickerService());
     }

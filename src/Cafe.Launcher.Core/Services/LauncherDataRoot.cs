@@ -42,22 +42,22 @@ public sealed class LauncherDataRoot
     public string Root { get; }
 
     /// <summary><c>settings.json</c>：设置与开关的唯一持久化落点。</summary>
-    public string SettingsPath => Path.Combine(Root, GamePaths.LauncherSettingsFileName);
+    public string SettingsPath => Path.Combine(Root, LauncherPaths.LauncherSettingsFileName);
 
     /// <summary><c>download_state.json</c>：可续传下载的检查点。</summary>
-    public string DownloadStatePath => Path.Combine(Root, GamePaths.DownloadStateFileName);
+    public string DownloadStatePath => Path.Combine(Root, LauncherPaths.DownloadStateFileName);
 
     /// <summary><c>shown_notices.json</c>：已读公告的指纹集合。</summary>
-    public string NoticeStatePath => Path.Combine(Root, GamePaths.NoticeStateFileName);
+    public string NoticeStatePath => Path.Combine(Root, LauncherPaths.NoticeStateFileName);
 
     /// <summary><c>runner_output.log</c>：最近一次运行器 stdout/stderr 的有上限捕获（每次启动覆盖）。</summary>
-    public string RunnerOutputPath => Path.Combine(Root, GamePaths.RunnerOutputFileName);
+    public string RunnerOutputPath => Path.Combine(Root, LauncherPaths.RunnerOutputFileName);
 
     /// <summary><c>compatibility_environment.json</c>：最近一次兼容前缀环境预检报告（每次启动覆盖）。</summary>
-    public string CompatibilityEnvironmentPath => Path.Combine(Root, GamePaths.CompatibilityEnvironmentFileName);
+    public string CompatibilityEnvironmentPath => Path.Combine(Root, LauncherPaths.CompatibilityEnvironmentFileName);
 
     /// <summary><c>prefix_metadata.json</c>：最近一次启动所用兼容前缀的元数据（每次启动覆盖）。</summary>
-    public string PrefixMetadataPath => Path.Combine(Root, GamePaths.PrefixMetadataFileName);
+    public string PrefixMetadataPath => Path.Combine(Root, LauncherPaths.PrefixMetadataFileName);
 
     /// <summary>图片缓存目录（可整体删除，缺失时按需重建）。</summary>
     public string ImageCacheDirectory => Path.Combine(Root, ImageCacheFolderName);
@@ -74,21 +74,30 @@ public sealed class LauncherDataRoot
     /// <summary>
     /// 按进程解析数据根：测试覆盖优先，否则本机 LocalApplicationData 下的产品目录。
     /// </summary>
-    internal static string ResolveProcessRoot(string? testOverride, string localApplicationData)
+    /// <param name="productName">
+    /// 产品名（数据根目录名），由调用方从
+    /// <see cref="Models.LauncherProductProfile.ProductName"/> 取。做成参数而不是读常量：
+    /// pre-DI 路径没有容器可用，产品身份必须在调用点显式写出来。
+    /// </param>
+    internal static string ResolveProcessRoot(
+        string? testOverride,
+        string localApplicationData,
+        string productName)
     {
         if (!string.IsNullOrWhiteSpace(testOverride))
         {
             return Path.GetFullPath(testOverride);
         }
 
-        return Path.Combine(localApplicationData, LauncherConstants.ProductName);
+        return Path.Combine(localApplicationData, productName);
     }
 
     /// <summary>
     /// 当前进程的数据根。只有组合根与 ADR-019 保护的 pre-DI 路径可以调用；
     /// 其余模块接收注入的实例。
     /// </summary>
-    public static LauncherDataRoot ForCurrentProcess() => new(ResolveProcessRoot(
+    public static LauncherDataRoot ForCurrentProcess(string productName) => new(ResolveProcessRoot(
         Environment.GetEnvironmentVariable(TestOverrideEnvironmentVariable),
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)));
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        productName));
 }

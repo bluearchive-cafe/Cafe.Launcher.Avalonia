@@ -4,8 +4,8 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 using Cafe.Launcher.UI.Constants;
+using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services.Diagnostics;
-using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.UI.Services;
 
@@ -15,6 +15,7 @@ namespace Cafe.Launcher.UI.Services;
 /// </summary>
 internal sealed class SystemTrayService : IDisposable
 {
+    private readonly string productName;
     private readonly Window mainWindow;
     private readonly LocalizationService localizer;
     private readonly ISystemTrayPlatform platform;
@@ -23,18 +24,31 @@ internal sealed class SystemTrayService : IDisposable
     private bool initialized;
     private bool disposed;
 
-    public SystemTrayService(Window mainWindow, LocalizationService localizer, ILauncherDiagnostics? diagnostics = null, ISystemTrayActions? actions = null)
-        : this(mainWindow, localizer, new AvaloniaSystemTrayPlatform(), diagnostics, actions)
+    public SystemTrayService(
+        LauncherProductProfile productProfile,
+        Window mainWindow,
+        LocalizationService localizer,
+        ILauncherDiagnostics? diagnostics = null,
+        ISystemTrayActions? actions = null)
+        : this(
+            productProfile,
+            mainWindow,
+            localizer,
+            new AvaloniaSystemTrayPlatform(productProfile),
+            diagnostics,
+            actions)
     {
     }
 
     internal SystemTrayService(
+        LauncherProductProfile productProfile,
         Window mainWindow,
         LocalizationService localizer,
         ISystemTrayPlatform platform,
         ILauncherDiagnostics? diagnostics = null,
         ISystemTrayActions? actions = null)
     {
+        productName = productProfile.ProductName;
         this.mainWindow = mainWindow;
         this.localizer = localizer;
         this.platform = platform;
@@ -121,7 +135,7 @@ internal sealed class SystemTrayService : IDisposable
 
     private SystemTrayMenuText CreateMenuText() =>
         new(
-            LauncherConstants.ProductName,
+            productName,
             localizer.T(LocalizationKeys.ShowLauncher),
             localizer.T(LocalizationKeys.TrayOpenLauncher),
             localizer.T(LocalizationKeys.ExitLauncher),

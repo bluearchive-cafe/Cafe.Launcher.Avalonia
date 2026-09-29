@@ -13,7 +13,7 @@ public sealed class EasterEggTests
         int randomIndex,
         string expected)
     {
-        var actual = ShellViewModel.ResolveProductName(
+        var actual = ShellViewModel.ResolveProductName(LauncherProfiles.Cafe.ProductName, 
             new DateTime(2026, 12, 8),
             randomIndex);
 
@@ -23,10 +23,10 @@ public sealed class EasterEggTests
     [Fact]
     public void ResolveProductName_OutsideDecemberEighth_ReturnsDefaultName()
     {
-        var actual = ShellViewModel.ResolveProductName(
+        var actual = ShellViewModel.ResolveProductName(LauncherProfiles.Cafe.ProductName, 
             new DateTime(2026, 12, 9),
             0);
 
-        Assert.Equal(LauncherConstants.ProductName, actual);
+        Assert.Equal(LauncherProfiles.Cafe.ProductName, actual);
     }
 }

@@ -7,13 +7,13 @@ using Cafe.Launcher.UI.Constants;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.Core.Services;
-using Cafe.Launcher.Core.Constants;
+using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.UI.Features.ResourcePanel;
 
 internal sealed class ResourcePanelApiClient
 {
-    private static readonly string ApiBaseUrl = ApiConfig.ResourcePanelApiBaseUrl;
+    private readonly string apiBaseUrl;
 
     /// <summary>
     /// Network resilience parameters mirrored from the dashboard's
@@ -30,8 +30,9 @@ internal sealed class ResourcePanelApiClient
 
     private readonly IRemoteHttpTransport transport;
 
-    public ResourcePanelApiClient(IRemoteHttpTransport transport)
+    public ResourcePanelApiClient(LauncherProductProfile productProfile, IRemoteHttpTransport transport)
     {
+        apiBaseUrl = productProfile.ResourcePanelApiBaseUrl;
         this.transport = transport;
     }
 
@@ -76,7 +77,7 @@ internal sealed class ResourcePanelApiClient
             + $"&voice={Uri.EscapeDataString(voice)}"
             + $"&media={Uri.EscapeDataString(media)}";
         var remote = await transport.GetStreamAsync(
-            new Uri(ApiBaseUrl + path),
+            new Uri(apiBaseUrl + path),
             CreateOptions(),
             cancellationToken).ConfigureAwait(false);
         using var body = remote.Content;
@@ -87,7 +88,7 @@ internal sealed class ResourcePanelApiClient
         CancellationToken cancellationToken)
     {
         return await transport.GetJsonAsync<T>(
-            new Uri(ApiBaseUrl + path),
+            new Uri(apiBaseUrl + path),
             CreateOptions(),
             cancellationToken).ConfigureAwait(false);
     }

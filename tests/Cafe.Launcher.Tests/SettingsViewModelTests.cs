@@ -16,8 +16,8 @@ using Cafe.Launcher.Core.Services.Update;
 using Cafe.Launcher.Testing;
 using Cafe.Launcher.UI.ViewModels;
 using Cafe.Launcher.Core.Services.GameRuntime;
-using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Services;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
@@ -40,9 +40,9 @@ public sealed class SettingsViewModelTests : IDisposable
 
     // 降级语义按 URI 区分两端点，常量与 LauncherUpdateServiceTests 一致。
     private static readonly Uri ProxyReleasesUri =
-        new(new Uri(ApiConfig.LauncherApiBaseUrl), ApiConfig.LauncherReleasesPath);
+        new(new Uri(LauncherProfiles.Cafe.LauncherApiBaseUrl), LauncherProfiles.Cafe.LauncherReleasesPath);
 
-    private static readonly Uri GitHubReleasesUri = new(ApiConfig.GitHubReleasesApiUrl);
+    private static readonly Uri GitHubReleasesUri = new(LauncherProfiles.Cafe.GitHubReleasesApiUrl);
 
     private readonly ToastService toastService = new();
     private readonly List<ToastNotification> raisedToasts = [];
@@ -209,7 +209,7 @@ public sealed class SettingsViewModelTests : IDisposable
             null!,
             localizer,
             toastService,
-            new LauncherUpdateService(transport, buildIdentity: BuildInfo.Identity),
+            new LauncherUpdateService(LauncherProfiles.Cafe, transport, buildIdentity: BuildInfo.Identity),
             new LauncherSelfUpdateService(
                 new LauncherUpdateDownloader(new StubRemoteHttpTransport()),
                 new LauncherUpdateHostInfoProvider(),
@@ -230,13 +230,13 @@ public sealed class SettingsViewModelTests : IDisposable
 
     private DialogsViewModel CreateDialogsViewModel()
     {
-        return new DialogsViewModel(
+        return new DialogsViewModel(LauncherProfiles.Cafe, 
             new LocalizationService(),
             new NoticeStateService(TestDataRoot.ForDirectory(NextDataRoot())),
             new SetupWizardViewModel(
                 new LocalizationService(),
-                new GameInstallationPath(),
-                new LocalInstallationStateStore(),
+                new GameInstallationPath(LauncherProfiles.BlueArchiveJapan),
+                new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan),
                 new LocalDiagnostics(),
                 new StubFilePickerService()),
             new LocalDiagnostics(),

@@ -2,6 +2,7 @@ using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
@@ -10,7 +11,7 @@ public sealed class PatchUrlGroupServiceTests
     [Fact]
     public void RewritePackageUrl_WhenOfficial_ReturnsOriginalUrl()
     {
-        var service = new PatchUrlGroupService();
+        var service = new PatchUrlGroupService(LauncherProfiles.BlueArchiveJapan, LauncherProfiles.Cafe);
         const string url = "https://launcher-pkg-ba-jp.yo-star.com/zip_online_config_json/test.json";
 
         var result = service.RewritePackageUrl(url, PatchUrlGroups.Official);
@@ -21,7 +22,7 @@ public sealed class PatchUrlGroupServiceTests
     [Fact]
     public void RewritePackageUrl_WhenCafe_RewritesPackageHost()
     {
-        var service = new PatchUrlGroupService();
+        var service = new PatchUrlGroupService(LauncherProfiles.BlueArchiveJapan, LauncherProfiles.Cafe);
         const string url = "https://launcher-pkg-ba-jp.yo-star.com/zip_online_config_json/test.json";
 
         var result = service.RewritePackageUrl(url, PatchUrlGroups.Cafe);
@@ -32,7 +33,7 @@ public sealed class PatchUrlGroupServiceTests
     [Fact]
     public void RestoreOfficialPackageUrl_WhenCafeManifestUrl_ReturnsOfficialHost()
     {
-        var service = new PatchUrlGroupService();
+        var service = new PatchUrlGroupService(LauncherProfiles.BlueArchiveJapan, LauncherProfiles.Cafe);
 
         var result = service.RestoreOfficialPackageUrl(
             "https://launcher-pkg-ba-jp.bluearchive.cafe/zip_online_config_json/test.json");
@@ -45,7 +46,7 @@ public sealed class PatchUrlGroupServiceTests
     [Fact]
     public void RewriteCdnConfig_WhenCafe_RewritesPrimaryAndUsesPrimaryForBackup()
     {
-        var service = new PatchUrlGroupService();
+        var service = new PatchUrlGroupService(LauncherProfiles.BlueArchiveJapan, LauncherProfiles.Cafe);
         var cdn = new CdnConfigResponse
         {
             PrimaryCdn = "https://launcher-pkg-ba-jp.yo-star.com",
@@ -61,7 +62,7 @@ public sealed class PatchUrlGroupServiceTests
     [Fact]
     public void RewriteCdnConfig_WhenOfficial_KeepsDistinctPrimaryAndBackup()
     {
-        var service = new PatchUrlGroupService();
+        var service = new PatchUrlGroupService(LauncherProfiles.BlueArchiveJapan, LauncherProfiles.Cafe);
         var cdn = new CdnConfigResponse
         {
             PrimaryCdn = "https://launcher-pkg-ba-jp.yo-star.com",
@@ -77,7 +78,7 @@ public sealed class PatchUrlGroupServiceTests
     [Fact]
     public void RewritePackageUrl_WhenInvalid_ReturnsOriginalUrl()
     {
-        var service = new PatchUrlGroupService();
+        var service = new PatchUrlGroupService(LauncherProfiles.BlueArchiveJapan, LauncherProfiles.Cafe);
         const string url = "https://launcher-pkg-ba-jp.yo-star.com/zip_online_config_json/test.json";
 
         var result = service.RewritePackageUrl(url, "invalid");
@@ -91,7 +92,7 @@ public sealed class PatchUrlGroupServiceTests
     [InlineData("https://launcher-pkg-ba-jp.yo-star.com.example.invalid/file.bin")]
     public void RewritePackageUrl_WhenPackageHostAppearsOutsideExactHost_ReturnsOriginalUrl(string url)
     {
-        var service = new PatchUrlGroupService();
+        var service = new PatchUrlGroupService(LauncherProfiles.BlueArchiveJapan, LauncherProfiles.Cafe);
 
         var result = service.RewritePackageUrl(url, PatchUrlGroups.Cafe);
 
@@ -106,7 +107,7 @@ public sealed class PatchUrlGroupServiceTests
     [Fact]
     public void Resolve_WhenCafe_DoesNotExposeStatusListOrGameConfigPatchTargets()
     {
-        var service = new PatchUrlGroupService();
+        var service = new PatchUrlGroupService(LauncherProfiles.BlueArchiveJapan, LauncherProfiles.Cafe);
 
         var group = service.Resolve(PatchUrlGroups.Cafe);
 

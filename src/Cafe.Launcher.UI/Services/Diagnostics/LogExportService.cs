@@ -199,7 +199,7 @@ internal sealed class LogExportService
         }
 
         // 包内名固定为 unified.log：读者在导出包里找的是这一份「当前日志」。
-        yield return (activePath, GamePaths.UnifiedLogFileName, true);
+        yield return (activePath, LauncherPaths.UnifiedLogFileName, true);
 
         foreach (var logFilePath in ExistingLogFilesNewestFirst())
         {
@@ -243,7 +243,7 @@ internal sealed class LogExportService
         TryCopyOptionalFileToZip(
             zip,
             dataRoot.RunnerOutputPath,
-            GamePaths.RunnerOutputFileName,
+            LauncherPaths.RunnerOutputFileName,
             manifest,
             cancellationToken);
 
@@ -251,7 +251,7 @@ internal sealed class LogExportService
         TryCopyOptionalFileToZip(
             zip,
             dataRoot.CompatibilityEnvironmentPath,
-            GamePaths.CompatibilityEnvironmentFileName,
+            LauncherPaths.CompatibilityEnvironmentFileName,
             manifest,
             cancellationToken);
 
@@ -259,7 +259,7 @@ internal sealed class LogExportService
         TryCopyOptionalFileToZip(
             zip,
             dataRoot.PrefixMetadataPath,
-            GamePaths.PrefixMetadataFileName,
+            LauncherPaths.PrefixMetadataFileName,
             manifest,
             cancellationToken);
 

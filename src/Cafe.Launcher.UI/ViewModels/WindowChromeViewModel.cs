@@ -10,13 +10,14 @@ using Cafe.Launcher.Core.Services.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cafe.Launcher.Core.Services;
-using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.UI.ViewModels;
 
 internal partial class WindowChromeViewModel : ViewModelBase
 {
+    private readonly LauncherProductProfile productProfile;
+    private readonly YostarGameProfile gameProfile;
     private readonly LauncherDataRoot dataRoot;
     private readonly SettingsViewModel settings;
     private readonly RemoteContentViewModel remoteContent;
@@ -35,6 +36,8 @@ internal partial class WindowChromeViewModel : ViewModelBase
     public event Action? RestoreRequested;
 
     public WindowChromeViewModel(
+        LauncherProductProfile productProfile,
+        YostarGameProfile gameProfile,
         LauncherDataRoot dataRoot,
         SettingsViewModel settings,
         RemoteContentViewModel remoteContent,
@@ -42,6 +45,8 @@ internal partial class WindowChromeViewModel : ViewModelBase
         IGameOperationActivity operations,
         DebugViewModel debug)
         : this(
+            productProfile,
+            gameProfile,
             dataRoot,
             settings,
             remoteContent,
@@ -54,6 +59,8 @@ internal partial class WindowChromeViewModel : ViewModelBase
     }
 
     internal WindowChromeViewModel(
+        LauncherProductProfile productProfile,
+        YostarGameProfile gameProfile,
         LauncherDataRoot dataRoot,
         SettingsViewModel settings,
         RemoteContentViewModel remoteContent,
@@ -64,6 +71,8 @@ internal partial class WindowChromeViewModel : ViewModelBase
         Action<string> openDirectory)
     {
         ArgumentNullException.ThrowIfNull(dataRoot);
+        this.productProfile = productProfile;
+        this.gameProfile = gameProfile;
         this.dataRoot = dataRoot;
         this.settings = settings;
         this.remoteContent = remoteContent;
@@ -129,55 +138,60 @@ internal partial class WindowChromeViewModel : ViewModelBase
     [RelayCommand]
     private void OpenOfficialSite()
     {
-        openExternalUrl(
-            ResolveOfficialSiteUrl(settings.Editor.GetSavedSnapshot().PatchUrlGroup));
+        openExternalUrl(ResolveOfficialSiteUrl(
+            settings.Editor.GetSavedSnapshot().PatchUrlGroup,
+            productProfile.CafeWebsiteUrl,
+            gameProfile.OfficialWebsiteUrl));
     }
 
-    internal static string ResolveOfficialSiteUrl(string patchUrlGroup) =>
+    internal static string ResolveOfficialSiteUrl(
+        string patchUrlGroup,
+        string cafeWebsiteUrl,
+        string officialGameWebsiteUrl) =>
         patchUrlGroup == PatchUrlGroups.Cafe
-            ? LauncherConstants.CafeWebsiteUrl
-            : LauncherConstants.OfficialGameWebsiteUrl;
+            ? cafeWebsiteUrl
+            : officialGameWebsiteUrl;
 
     [RelayCommand]
     private void OpenAboutOfficialSite()
     {
-        openExternalUrl(LauncherConstants.CafeWebsiteUrl);
+        openExternalUrl(productProfile.CafeWebsiteUrl);
     }
 
     [RelayCommand]
     private void OpenGitHubRepository()
     {
-        openExternalUrl(LauncherConstants.GitHubRepositoryUrl);
+        openExternalUrl(productProfile.GitHubReleaseRepositoryUrl);
     }
 
     [RelayCommand]
     private void OpenGitHubReleaseRepository()
     {
-        openExternalUrl(LauncherConstants.GitHubReleaseRepositoryUrl);
+        openExternalUrl(productProfile.GitHubReleaseRepositoryUrl);
     }
 
     [RelayCommand]
     private void OpenIssueTracker()
     {
-        openExternalUrl(LauncherConstants.IssueTrackerUrl);
+        openExternalUrl(productProfile.IssueTrackerUrl);
     }
 
     [RelayCommand]
     private void OpenHelpDocs()
     {
-        openExternalUrl(LauncherConstants.HelpDocsUrl);
+        openExternalUrl(productProfile.HelpDocsUrl);
     }
 
     [RelayCommand]
     private void OpenPrivacyPolicy()
     {
-        openExternalUrl(LauncherConstants.PrivacyPolicyUrl);
+        openExternalUrl(productProfile.PrivacyPolicyUrl);
     }
 
     [RelayCommand]
     private void OpenDefaultBackgroundArtwork()
     {
-        openExternalUrl(LauncherConstants.DefaultBackgroundArtworkUrl);
+        openExternalUrl(productProfile.DefaultBackgroundArtworkUrl);
     }
 
     [RelayCommand]

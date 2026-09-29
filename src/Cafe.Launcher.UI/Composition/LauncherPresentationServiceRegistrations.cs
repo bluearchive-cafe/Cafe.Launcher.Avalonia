@@ -9,6 +9,7 @@ using Cafe.Launcher.UI.Features.Shell;
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.UI.Services.Diagnostics;
 using Cafe.Launcher.UI.ViewModels;
+using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services.GameRuntime;
 using Cafe.Launcher.Core.Services.Update;
 using Cafe.Launcher.Core;
@@ -91,6 +92,7 @@ public static class LauncherPresentationServiceRegistrations
         // ── Services with dependencies ────────────────────────────────────
         services.AddSingleton<ManifestValidationService>();
         services.AddSingleton(sp => new ResourcePanelUidService(
+            sp.GetRequiredService<YostarGameProfile>(),
             sp.GetRequiredService<BestHttpCookieLibraryService>(),
             sp.GetRequiredService<ILauncherSettingsService>(),
             sp.GetRequiredService<ISavedSettingsWriter>(),
@@ -129,6 +131,7 @@ public static class LauncherPresentationServiceRegistrations
         // HttpClientFactory alive until all clients and download services are gone.
         services.AddSingleton<ResourcePanelApiClient>();
         services.AddSingleton(sp => new GameDownloadService(
+            sp.GetRequiredService<YostarGameProfile>(),
             sp.GetRequiredService<ILauncherApiClient>(),
             sp.GetRequiredService<RemoteManifestService>(),
             sp.GetRequiredService<IFileDownloadService>(),

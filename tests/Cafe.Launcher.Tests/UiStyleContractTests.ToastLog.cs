@@ -1,5 +1,6 @@
 ﻿using System.Xml.Linq;
 using Cafe.Launcher.Testing;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
