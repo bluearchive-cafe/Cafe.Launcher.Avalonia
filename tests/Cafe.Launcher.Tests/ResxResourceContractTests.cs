@@ -17,7 +17,7 @@ public sealed class ResxResourceContractTests
     /// 实测值，并在 <see cref="Resx_NeutralContainsAllExpectedKeys"/> 的演进注释里补上
     /// 「为什么加一」。
     /// </summary>
-    private const int ExpectedNeutralResourceKeyCount = 594;
+    private const int ExpectedNeutralResourceKeyCount = 596;
 
     private static readonly string ResxDir;
     private static readonly string[] AllLocales = ["en", "zh-Hans", "zh-Hant", "ja"];
@@ -63,6 +63,8 @@ public sealed class ResxResourceContractTests
         // → 592（本机没有应用内更新路径时的说明行：主动作退到「前往发布页」要把缘由一起说出来）。
         // → 594（该说明行按判定原因分三条——平台 / 此安装缺更新组件 / 该版本缺可校验安装包，
         // 删除原来那句笼统归因「此设备无法…」的串，净增 2）。
+        // → 596（2026-09-29 反馈轮：全新安装落到已有内容的目录上时的说明串，以及标准卸载完成
+        // 之后「目录与清单外内容仍在」的结果串。同轮改写的卸载确认框复用既有 key，不计入。）
         Assert.Equal(ExpectedNeutralResourceKeyCount, ResxValues["en"].Count);
     }
 

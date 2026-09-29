@@ -265,6 +265,7 @@ public static class LocalizationKeys
     public const string GitHubRepository = "gitHubRepository";
     public const string HelpDocs = "helpDocs";
     public const string InstallGame = "installGame";
+    public const string InstallOverExistingContentNotice = "installOverExistingContentNotice";
     public const string InstallUpdateCompleted = "installUpdateCompleted";
     public const string InstallUpdateFailedTitle = "installUpdateFailedTitle";
     public const string IssueTracker = "issueTracker";
@@ -582,6 +583,7 @@ public static class LocalizationKeys
     public const string UnexpectedError = "unexpectedError";
     public const string Uninstall = "uninstall";
     public const string UninstallCompleted = "uninstallCompleted";
+    public const string UninstallCompletedDirectoryRetained = "uninstallCompletedDirectoryRetained";
     public const string UninstallCompletedKeptPrefix = "uninstallCompletedKeptPrefix";
     public const string UninstallCompletedWithLeftovers = "uninstallCompletedWithLeftovers";
     public const string UninstallCompletedWithLeftoversKeptPrefix = "uninstallCompletedWithLeftoversKeptPrefix";

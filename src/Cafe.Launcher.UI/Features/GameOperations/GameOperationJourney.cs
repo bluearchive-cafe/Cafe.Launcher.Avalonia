@@ -378,6 +378,27 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
         GameOperationRejections.WarnUnavailable(localizer, toastService);
 
     /// <summary>
+    /// 全新安装落到一个已有内容的目录上时，先说明「启动器只管清单内那部分」。判据是两件事
+    /// 同时成立：状态是「未安装」（启动器不认这份安装），而目录里已经有条目（盘上还有东西）。
+    /// 单独任何一件都不足以提示——空目录上的全新安装没有任何意外，已安装状态走的是更新。
+    /// </summary>
+    private void NotifyInstallOverExistingContent(LauncherStatusSnapshot snapshot)
+    {
+        if (snapshot.RuntimeState != LauncherRuntimeState.NotInstalled)
+        {
+            return;
+        }
+
+        var gamePath = snapshot.LocalGame.GamePath;
+        if (!InstallDirectoryContent.HasEntries(gamePath))
+        {
+            return;
+        }
+
+        toastService.Show(localizer.F(LocalizationKeys.InstallOverExistingContentNotice, gamePath));
+    }
+
+    /// <summary>
     /// 修复的两道闸门（请求时与确认后）共用同一判据与同一处渲染：返回 true 表示已拒绝并已报出，
     /// 调用方直接中止。策略判定仍归 <see cref="GameOperationPolicy.Decide"/>，这里只表态「被拒绝
     /// 对修复意味着什么」——就地警告并停下（ADR-027）。
@@ -493,6 +514,11 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
                 ShowOperationUnavailable();
                 return null;
             }
+
+            // 装之前先说清楚「这次只会下清单里那部分」（2026-09-29 反馈轮）：卸载只删清单
+            // 文件，重启安装时目录里往往还留着游戏自行下载的一大片，而清单里没有它们——
+            // 于是用户看到的是「忙活一下就装好了」，因为他以为被删掉的东西其实从没被删过。
+            NotifyInstallOverExistingContent(snapshot);
 
             var result = await executor.InstallOrUpdateAsync(snapshot, host.ApplyProgress, cancellationToken);
             refreshHandled = await RequestRefresh(GameOperationsRefreshMode.SkipPersistedResume);

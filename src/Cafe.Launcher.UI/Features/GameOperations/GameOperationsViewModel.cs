@@ -451,7 +451,8 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
         dialogs.UninstallConfirm.Show(localizer.F(
             LocalizationKeys.UninstallConfirmText,
             currentSnapshot.LocalGame.GamePath,
-            Math.Max(0, validation.AffectedFileCount - LauncherPaths.InstallationStateFileCount)));
+            Math.Max(0, validation.AffectedFileCount - LauncherPaths.InstallationStateFileCount),
+            FileSizeFormatter.Format(validation.AffectedBytes)));
 
         var footprint = await journey.MeasureUninstallFootprintAsync(currentSnapshot);
         if (dialogs.UninstallConfirm.IsVisible)

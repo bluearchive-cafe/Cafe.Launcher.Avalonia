@@ -1,4 +1,4 @@
-﻿using Cafe.Launcher.UI.Constants;
+using Cafe.Launcher.UI.Constants;
 using Cafe.Launcher.UI.Features.GameOperations;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
@@ -276,6 +276,89 @@ public sealed class GameOperationJourneyTests
     }
 
     [Fact]
+    public async Task InstallOrUpdateAsync_WhenNotInstalledIntoAFolderThatHasContent_SaysOnlyTheManifestIsInstalled()
+    {
+        // 2026-09-29 反馈：卸载只删清单内的文件，重启安装时目录里还留着游戏自行下载的一大片
+        // （实测清单 157 个文件 / 1.06 GiB，而官方声明的安装是 18.5 GB）。那条路径下「安装」
+        // 只补回清单内的一小部分，用户看到的是「忙活一下就好了」——所以开始前就要说明。
+        using var temp = TestDirectory.Create();
+        var gamePath = Path.Combine(temp.Path, "BlueArchive_JP");
+        Directory.CreateDirectory(gamePath);
+        await File.WriteAllTextAsync(Path.Combine(gamePath, "leftover.bin"), "x");
+        var context = CreateContext();
+        var notifications = context.SubscribeToasts();
+
+        await context.Journey.InstallOrUpdateAsync(
+            CreateSnapshot(LauncherRuntimeState.NotInstalled, gamePath: gamePath));
+
+        Assert.Equal(1, context.Executor.InstallCallCount);
+        var expectedNotice = context.Localizer.F(LocalizationKeys.InstallOverExistingContentNotice, gamePath);
+        // 提示必须先出现：「安装完成」的成功 toast 也会升起（ShowOperationResult），
+        // 若它先到，用户读到的顺序就反了。
+        Assert.Same(notifications[0], Assert.Single(notifications, toast => toast.Message == expectedNotice));
+    }
+
+    [Fact]
+    public async Task InstallOrUpdateAsync_WhenNotInstalledIntoAnEmptyFolder_SaysNothingExtra()
+    {
+        // 空目录上的全新安装没有任何意外，多一句提示只是噪音。
+        using var temp = TestDirectory.Create();
+        var gamePath = Path.Combine(temp.Path, "BlueArchive_JP");
+        Directory.CreateDirectory(gamePath);
+        var context = CreateContext();
+        var notifications = context.SubscribeToasts();
+
+        await context.Journey.InstallOrUpdateAsync(
+            CreateSnapshot(LauncherRuntimeState.NotInstalled, gamePath: gamePath));
+
+        Assert.Equal(1, context.Executor.InstallCallCount);
+        Assert.DoesNotContain(
+            notifications,
+            toast => toast.Message
+                == context.Localizer.F(LocalizationKeys.InstallOverExistingContentNotice, gamePath));
+    }
+
+    [Fact]
+    public async Task InstallOrUpdateAsync_WhenTheFolderDoesNotExistYet_SaysNothingExtra()
+    {
+        using var temp = TestDirectory.Create();
+        var gamePath = Path.Combine(temp.Path, "not-created-yet");
+        var context = CreateContext();
+        var notifications = context.SubscribeToasts();
+
+        await context.Journey.InstallOrUpdateAsync(
+            CreateSnapshot(LauncherRuntimeState.NotInstalled, gamePath: gamePath));
+
+        Assert.Equal(1, context.Executor.InstallCallCount);
+        Assert.DoesNotContain(
+            notifications,
+            toast => toast.Message
+                == context.Localizer.F(LocalizationKeys.InstallOverExistingContentNotice, gamePath));
+    }
+
+    [Fact]
+    public async Task InstallOrUpdateAsync_WhenUpdatingAnExistingInstall_OnlyNotesTheFolderForFreshInstalls()
+    {
+        // 更新路径上「目录里本来就有东西」是常态、也是用户预期，不必提示；提示留给
+        // 启动器不认这份安装（NotInstalled）却看见目录非空的那一次。
+        using var temp = TestDirectory.Create();
+        var gamePath = Path.Combine(temp.Path, "BlueArchive_JP");
+        Directory.CreateDirectory(gamePath);
+        await File.WriteAllTextAsync(Path.Combine(gamePath, "managed.bin"), "x");
+        var context = CreateContext();
+        var notifications = context.SubscribeToasts();
+
+        await context.Journey.InstallOrUpdateAsync(
+            CreateSnapshot(LauncherRuntimeState.UpdateAvailable, gamePath: gamePath));
+
+        Assert.Equal(1, context.Executor.InstallCallCount);
+        Assert.DoesNotContain(
+            notifications,
+            toast => toast.Message
+                == context.Localizer.F(LocalizationKeys.InstallOverExistingContentNotice, gamePath));
+    }
+
+    [Fact]
     public async Task InstallOrUpdateAsync_WhenCorrupted_ShowsRepairConfirmationWithoutInstall()
     {
         var context = CreateContext();
@@ -538,12 +621,13 @@ public sealed class GameOperationJourneyTests
 
     private static LauncherStatusSnapshot CreateSnapshot(
         LauncherRuntimeState runtimeState = LauncherRuntimeState.Ready,
-        string afterLaunchBehavior = AfterLaunchBehaviors.Minimize)
+        string afterLaunchBehavior = AfterLaunchBehaviors.Minimize,
+        string gamePath = "")
     {
         return new LauncherStatusSnapshot
         {
             RuntimeState = runtimeState,
-            LocalGame = new LocalInstallationState(),
+            LocalGame = new LocalInstallationState { GamePath = gamePath },
             Remote = new LauncherRemoteState(),
             Settings = new LauncherSettings { AfterLaunchBehavior = afterLaunchBehavior }
         };

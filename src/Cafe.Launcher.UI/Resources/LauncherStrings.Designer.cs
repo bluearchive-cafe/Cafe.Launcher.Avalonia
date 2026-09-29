@@ -528,6 +528,8 @@ internal static class LauncherStrings
 
     public static string InstallGame => GetRequiredString("installGame");
 
+    public static string InstallOverExistingContentNotice => GetRequiredString("installOverExistingContentNotice");
+
     public static string InstallUpdateCompleted => GetRequiredString("installUpdateCompleted");
 
     public static string InstallUpdateFailedTitle => GetRequiredString("installUpdateFailedTitle");
@@ -1161,6 +1163,8 @@ internal static class LauncherStrings
     public static string Uninstall => GetRequiredString("uninstall");
 
     public static string UninstallCompleted => GetRequiredString("uninstallCompleted");
+
+    public static string UninstallCompletedDirectoryRetained => GetRequiredString("uninstallCompletedDirectoryRetained");
 
     public static string UninstallCompletedKeptPrefix => GetRequiredString("uninstallCompletedKeptPrefix");
 
