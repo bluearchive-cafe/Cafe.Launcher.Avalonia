@@ -776,8 +776,12 @@ public sealed class InstallerContractTests
         var declared = line.TrimStart()["SetupIconFile=".Length..].Trim();
 
         // 相对路径按 .iss 所在目录解析；编译期可读即可，因此这里同样不走 File.Exists 的宽松分支。
+        // .iss 是 Windows 脚本，路径写的是反斜杠；先换成本机分隔符再解析，否则这条守卫只在
+        // Windows 上成立——CI 在 ubuntu 上跑这套测试，`..\..\src\...` 在那里是一整段文件名，
+        // File.Exists 恒为 false（2026-09-29 首次在 Linux 上跑到这条守卫时暴露）。
         var scriptDirectory = Path.GetDirectoryName(TestRepository.FromRepositoryRoot(scriptRelativePath))!;
-        var resolved = Path.GetFullPath(Path.Combine(scriptDirectory, declared));
+        var resolved = Path.GetFullPath(
+            Path.Combine(scriptDirectory, declared.Replace('\\', Path.DirectorySeparatorChar)));
 
         Assert.True(
             File.Exists(resolved),
