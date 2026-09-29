@@ -97,6 +97,13 @@ internal sealed class GameOperationResult
 
     public int AffectedFileCount { get; set; }
 
+    /// <summary>
+    /// 本次操作涉及的<strong>文件清单</strong>合计字节数（2026-09-29 反馈轮）。预检与执行结果同义：
+    /// 启动器管理的文件集大小。卸载确认框用它给出「将删除多少 / 目录共多少」的对比——
+    /// 只报文件个数时，157 个文件会被读成「整个游戏」（实际 1.06 GiB vs 安装 18.5 GB）。
+    /// </summary>
+    public long AffectedBytes { get; set; }
+
     public int FailedFileCount { get; set; }
 }
 
