@@ -10,6 +10,7 @@ using Cafe.Launcher.UI.ViewModels;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Helpers;
 using Cafe.Launcher.Core.Services;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
@@ -1439,10 +1440,10 @@ public sealed class GameOperationsViewModelTests : IDisposable
         diagnostics ??= new LocalDiagnostics();
         var localizer = new LocalizationService();
         var toastService = new ToastService();
-        var shell = new ShellViewModel(localizer);
+        var shell = new ShellViewModel(LauncherProfiles.Cafe, localizer);
         shell.IsBusy = false;
-        var dialogs = new DialogsViewModel(localizer, new NoticeStateService(TestDataRoot.ForDirectory(NextDataRoot())),
-            new SetupWizardViewModel(localizer, new GameInstallationPath(), new LocalInstallationStateStore(), diagnostics, new StubFilePickerService()),
+        var dialogs = new DialogsViewModel(LauncherProfiles.Cafe, localizer, new NoticeStateService(TestDataRoot.ForDirectory(NextDataRoot())),
+            new SetupWizardViewModel(localizer, new GameInstallationPath(LauncherProfiles.BlueArchiveJapan), new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan), diagnostics, new StubFilePickerService()),
             diagnostics);
         var backend = new StubGameOperationExecutor();
         var sessionMonitor = new FakeGameSessionMonitor();

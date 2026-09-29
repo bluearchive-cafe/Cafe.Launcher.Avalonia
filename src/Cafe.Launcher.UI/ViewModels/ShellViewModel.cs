@@ -11,7 +11,6 @@ using Cafe.Launcher.UI.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Cafe.Launcher.Core;
 using Cafe.Launcher.Core.Models;
-using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Helpers;
 
 namespace Cafe.Launcher.UI.ViewModels;
@@ -27,7 +26,7 @@ internal partial class ShellViewModel : ViewModelBase, IDisposable
         $"{RuntimeInformation.OSDescription} · {RuntimeInformation.OSArchitecture}";
 
     [ObservableProperty]
-    private string productName = ResolveProductName(DateTime.Now, Random.Shared.Next(2));
+    private string productName = "";
 
     [ObservableProperty]
     private string launcherVersionText = "";
@@ -99,21 +98,28 @@ internal partial class ShellViewModel : ViewModelBase, IDisposable
 
     public LocalizedTextCatalog I18n { get; }
 
+    /// <param name="productProfile">
+    /// 产品档案：窗口标题、托盘与关于页展示的产品名来自它。
+    /// </param>
     /// <param name="buildIdentity">
     /// 宿主注入的构建标识（版本/提交/构建时间/配置）。此前读宿主 <c>BuildInfo</c>，迁入 UI 后改为注入。
     /// </param>
-    public ShellViewModel(LocalizationService localizer, LauncherBuildIdentity? buildIdentity = null)
+    public ShellViewModel(
+        LauncherProductProfile productProfile,
+        LocalizationService localizer,
+        LauncherBuildIdentity? buildIdentity = null)
     {
         this.localizer = localizer;
         this.buildIdentity = buildIdentity;
+        productName = ResolveProductName(productProfile.ProductName, DateTime.Now, Random.Shared.Next(2));
         I18n = new LocalizedTextCatalog(localizer);
     }
 
-    internal static string ResolveProductName(DateTime date, int randomIndex)
+    internal static string ResolveProductName(string productName, DateTime date, int randomIndex)
     {
         if (date.Month != 12 || date.Day != 8)
         {
-            return LauncherConstants.ProductName;
+            return productName;
         }
 
         return randomIndex switch

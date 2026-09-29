@@ -2,6 +2,7 @@ using System.Net;
 using Cafe.Launcher.UI.Features.ResourcePanel;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.Testing;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
@@ -10,7 +11,7 @@ public sealed class ResourcePanelApiClientTests
     [Fact]
     public async Task GetStatusAsync_ParsesExactStatusJsonPaths()
     {
-        var client = new ResourcePanelApiClient(new StubRemoteHttpTransport(
+        var client = new ResourcePanelApiClient(LauncherProfiles.Cafe, new StubRemoteHttpTransport(
             _ =>
             """
             {
@@ -42,7 +43,7 @@ public sealed class ResourcePanelApiClientTests
     [Fact]
     public async Task GetConfigAsync_ParsesResourceModes()
     {
-        var client = new ResourcePanelApiClient(new StubRemoteHttpTransport(
+        var client = new ResourcePanelApiClient(LauncherProfiles.Cafe, new StubRemoteHttpTransport(
             _ =>
             """
             {
@@ -63,7 +64,7 @@ public sealed class ResourcePanelApiClientTests
     public async Task SaveConfigAsync_SendsExactQueryString()
     {
         var transport = new StubRemoteHttpTransport(_ => "ok");
-        var client = new ResourcePanelApiClient(transport);
+        var client = new ResourcePanelApiClient(LauncherProfiles.Cafe, transport);
 
         await client.SaveConfigAsync(
             "UID123",
@@ -79,7 +80,7 @@ public sealed class ResourcePanelApiClientTests
     [Fact]
     public async Task GetConfigAsync_WhenNotFound_ReturnsEmptyConfig()
     {
-        var client = new ResourcePanelApiClient(new StubRemoteHttpTransport(
+        var client = new ResourcePanelApiClient(LauncherProfiles.Cafe, new StubRemoteHttpTransport(
             _ => throw new HttpRequestException("not found", null, HttpStatusCode.NotFound)));
 
         var config = await client.GetConfigAsync("UID_NOT_FOUND");
@@ -95,7 +96,7 @@ public sealed class ResourcePanelApiClientTests
     {
         var transport = new StubRemoteHttpTransport(
             _ => throw new HttpRequestException("persistent failure"));
-        var client = new ResourcePanelApiClient(transport);
+        var client = new ResourcePanelApiClient(LauncherProfiles.Cafe, transport);
 
         await Assert.ThrowsAsync<HttpRequestException>(() => client.GetStatusAsync());
 

@@ -4,9 +4,9 @@ using Cafe.Launcher.Constants;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.Testing;
-using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
@@ -14,9 +14,9 @@ public sealed class LauncherUpdateServiceTests
 {
     // 降级语义按 URI 区分两端点：server 端与 GitHub 端分别以配置常量组装。
     private static readonly Uri ProxyReleasesUri =
-        new(new Uri(ApiConfig.LauncherApiBaseUrl), ApiConfig.LauncherReleasesPath);
+        new(new Uri(LauncherProfiles.Cafe.LauncherApiBaseUrl), LauncherProfiles.Cafe.LauncherReleasesPath);
 
-    private static readonly Uri GitHubReleasesUri = new(ApiConfig.GitHubReleasesApiUrl);
+    private static readonly Uri GitHubReleasesUri = new(LauncherProfiles.Cafe.GitHubReleasesApiUrl);
 
     private const string GitHubReleasesJson =
         """
@@ -65,7 +65,7 @@ public sealed class LauncherUpdateServiceTests
               }
             ]
             """);
-        var service = new LauncherUpdateService(transport, buildIdentity: BuildInfo.Identity);
+        var service = new LauncherUpdateService(LauncherProfiles.Cafe, transport, buildIdentity: BuildInfo.Identity);
 
         var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
 
@@ -111,7 +111,7 @@ public sealed class LauncherUpdateServiceTests
               }
             ]
             """);
-        var service = new LauncherUpdateService(transport, buildIdentity: BuildInfo.Identity);
+        var service = new LauncherUpdateService(LauncherProfiles.Cafe, transport, buildIdentity: BuildInfo.Identity);
 
         var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
 
@@ -128,7 +128,7 @@ public sealed class LauncherUpdateServiceTests
         // 后者再次 404 后失败才落为返回值。
         var transport = new StubRemoteHttpTransport(
             _ => new HttpRequestException("Not Found", null, HttpStatusCode.NotFound));
-        var service = new LauncherUpdateService(transport, buildIdentity: BuildInfo.Identity);
+        var service = new LauncherUpdateService(LauncherProfiles.Cafe, transport, buildIdentity: BuildInfo.Identity);
 
         var result = await service.CheckForUpdateAsync(UpdateChannels.Stable);
 
@@ -143,7 +143,7 @@ public sealed class LauncherUpdateServiceTests
         var transport = CreateReleasesTransport(
             gitHubReleasesJson: GitHubReleasesJson,
             proxyFailure: new HttpRequestException("proxy unavailable"));
-        var service = new LauncherUpdateService(transport, currentVersionOverride: "1.0.0-beta.7");
+        var service = new LauncherUpdateService(LauncherProfiles.Cafe, transport, currentVersionOverride: "1.0.0-beta.7");
 
         var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
 
@@ -170,14 +170,14 @@ public sealed class LauncherUpdateServiceTests
                   }]
                   """
                 : """{"body":"## Highlights\n\n- Faster updates"}""");
-        var service = new LauncherUpdateService(transport, currentVersionOverride: "1.0.0-beta.7");
+        var service = new LauncherUpdateService(LauncherProfiles.Cafe, transport, currentVersionOverride: "1.0.0-beta.7");
 
         var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
 
         Assert.True(result.IsUpdateAvailable);
         Assert.Equal("## Highlights\n\n- Faster updates", result.ReleaseNotes);
         Assert.Equal(
-            new Uri(ApiConfig.GitHubReleaseByTagApiUrl + "v1.0.0-beta.8"),
+            new Uri(LauncherProfiles.Cafe.GitHubReleaseByTagApiUrl + "v1.0.0-beta.8"),
             transport.RequestedUris[1]);
     }
 
@@ -187,7 +187,7 @@ public sealed class LauncherUpdateServiceTests
         var transport = CreateReleasesTransport(
             gitHubReleasesJson: GitHubReleasesJson,
             proxyFailure: new TaskCanceledException("simulated proxy timeout"));
-        var service = new LauncherUpdateService(transport, currentVersionOverride: "1.0.0-beta.7");
+        var service = new LauncherUpdateService(LauncherProfiles.Cafe, transport, currentVersionOverride: "1.0.0-beta.7");
 
         var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
 
@@ -207,7 +207,7 @@ public sealed class LauncherUpdateServiceTests
             gitHubReleasesJson: GitHubReleasesJson,
             proxyFailure: new InvalidOperationException(
                 "Remote URL resolves to a blocked network address. Blocked: fdfe:dcba:9876::14a"));
-        var service = new LauncherUpdateService(transport, currentVersionOverride: "1.0.0-beta.7");
+        var service = new LauncherUpdateService(LauncherProfiles.Cafe, transport, currentVersionOverride: "1.0.0-beta.7");
 
         var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
 
@@ -225,7 +225,7 @@ public sealed class LauncherUpdateServiceTests
         // Dispatcher（CR-20260921-070313-7BDC 的崩溃形态）。
         var transport = new StubRemoteHttpTransport(_ => new InvalidOperationException(
             "Remote URL resolves to a blocked network address. Blocked: fdfe:dcba:9876::14a"));
-        var service = new LauncherUpdateService(transport, buildIdentity: BuildInfo.Identity);
+        var service = new LauncherUpdateService(LauncherProfiles.Cafe, transport, buildIdentity: BuildInfo.Identity);
 
         var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
 
@@ -239,7 +239,7 @@ public sealed class LauncherUpdateServiceTests
     public async Task CheckForUpdateAsync_WhenRequiredFieldsAreMissing_ReturnsFailure()
     {
         var transport = CreateReleasesTransport("""[{"files":[]}]""");
-        var service = new LauncherUpdateService(transport, buildIdentity: BuildInfo.Identity);
+        var service = new LauncherUpdateService(LauncherProfiles.Cafe, transport, buildIdentity: BuildInfo.Identity);
 
         var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
 
@@ -266,7 +266,7 @@ public sealed class LauncherUpdateServiceTests
               }
             ]
             """);
-        var service = new LauncherUpdateService(transport, buildIdentity: BuildInfo.Identity);
+        var service = new LauncherUpdateService(LauncherProfiles.Cafe, transport, buildIdentity: BuildInfo.Identity);
 
         var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
 
@@ -303,7 +303,7 @@ public sealed class LauncherUpdateServiceTests
               }
             ]
             """);
-        var service = new LauncherUpdateService(transport, currentVersionOverride: "1.0.0");
+        var service = new LauncherUpdateService(LauncherProfiles.Cafe, transport, currentVersionOverride: "1.0.0");
 
         var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
 
@@ -317,7 +317,7 @@ public sealed class LauncherUpdateServiceTests
     {
         var transport = CreateReleasesTransport(
             """[{"version":"1.2.0","files":[{"name":"update.zip","url":"https://example.com/update.zip","size":100}]}]""");
-        var service = new LauncherUpdateService(transport, currentVersionOverride: "1.0.0");
+        var service = new LauncherUpdateService(LauncherProfiles.Cafe, transport, currentVersionOverride: "1.0.0");
 
         var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
 
@@ -328,7 +328,7 @@ public sealed class LauncherUpdateServiceTests
     public async Task CheckForUpdateAsync_WhenReleaseFilesAreMissing_ReturnsValidationFailureMessage()
     {
         var transport = CreateReleasesTransport("""[{"version":"1.2.0","files":[]}]""");
-        var service = new LauncherUpdateService(transport, currentVersionOverride: "1.0.0");
+        var service = new LauncherUpdateService(LauncherProfiles.Cafe, transport, currentVersionOverride: "1.0.0");
 
         var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
 
@@ -348,7 +348,7 @@ public sealed class LauncherUpdateServiceTests
     public async Task CheckForUpdateAsync_WhenDownloadFileIsInvalid_ReturnsFailure(string response)
     {
         var transport = CreateReleasesTransport(response);
-        var service = new LauncherUpdateService(transport, currentVersionOverride: "1.0.0");
+        var service = new LauncherUpdateService(LauncherProfiles.Cafe, transport, currentVersionOverride: "1.0.0");
 
         var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
 
@@ -409,7 +409,7 @@ public sealed class LauncherUpdateServiceTests
             ]
             """);
         // Current version "1.0.0-beta.1" (prerelease) — override version
-        var service = new LauncherUpdateService(transport, currentVersionOverride: "1.0.0-beta.1");
+        var service = new LauncherUpdateService(LauncherProfiles.Cafe, transport, currentVersionOverride: "1.0.0-beta.1");
 
         var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
 
@@ -450,7 +450,7 @@ public sealed class LauncherUpdateServiceTests
               }
             ]
             """);
-        var service = new LauncherUpdateService(transport, currentVersionOverride: "1.0.0");
+        var service = new LauncherUpdateService(LauncherProfiles.Cafe, transport, currentVersionOverride: "1.0.0");
 
         var result = await service.CheckForUpdateAsync(UpdateChannels.Stable);
 
@@ -479,7 +479,7 @@ public sealed class LauncherUpdateServiceTests
               }
             ]
             """);
-        var service = new LauncherUpdateService(transport, currentVersionOverride: "1.0.0");
+        var service = new LauncherUpdateService(LauncherProfiles.Cafe, transport, currentVersionOverride: "1.0.0");
 
         var result = await service.CheckForUpdateAsync(UpdateChannels.Stable);
 
@@ -501,7 +501,7 @@ public sealed class LauncherUpdateServiceTests
               }]
             }]
             """);
-        var service = new LauncherUpdateService(transport, currentVersionOverride: "1.0.0-beta.10");
+        var service = new LauncherUpdateService(LauncherProfiles.Cafe, transport, currentVersionOverride: "1.0.0-beta.10");
 
         var result = await service.CheckForUpdateAsync(UpdateChannels.Stable);
 
@@ -592,7 +592,7 @@ public sealed class LauncherUpdateServiceTests
               }
             ]
             """);
-        var service = new LauncherUpdateService(transport, currentVersionOverride: "1.0.0");
+        var service = new LauncherUpdateService(LauncherProfiles.Cafe, transport, currentVersionOverride: "1.0.0");
 
         var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
 
@@ -630,7 +630,7 @@ public sealed class LauncherUpdateServiceTests
               }
             ]
             """);
-        var service = new LauncherUpdateService(transport, currentVersionOverride: "1.0.0");
+        var service = new LauncherUpdateService(LauncherProfiles.Cafe, transport, currentVersionOverride: "1.0.0");
 
         var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
 

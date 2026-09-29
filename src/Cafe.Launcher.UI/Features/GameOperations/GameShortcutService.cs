@@ -50,6 +50,7 @@ internal interface IGameShortcutService
 
 internal sealed class GameShortcutService : IGameShortcutService
 {
+    private readonly YostarGameProfile gameProfile;
     private readonly LocalizationService localizer;
     private readonly Func<string, bool> openDirectory;
     private readonly Func<bool> isWindowsPlatform;
@@ -73,13 +74,16 @@ internal sealed class GameShortcutService : IGameShortcutService
             () => Environment.ProcessPath);
     }
 
-    public GameShortcutService(LocalizationService localizer)
-        : this(localizer, ShortcutEnvironment.ForCurrentPlatform())
+    public GameShortcutService(YostarGameProfile gameProfile, LocalizationService localizer)
+        : this(gameProfile, localizer, ShortcutEnvironment.ForCurrentPlatform())
     {
     }
 
-    internal GameShortcutService(LocalizationService localizer, Func<string, bool> openDirectory)
-        : this(localizer, new ShortcutEnvironment(
+    internal GameShortcutService(
+        YostarGameProfile gameProfile,
+        LocalizationService localizer,
+        Func<string, bool> openDirectory)
+        : this(gameProfile, localizer, new ShortcutEnvironment(
             openDirectory,
             OperatingSystem.IsWindows,
             OperatingSystem.IsLinux,
@@ -87,8 +91,12 @@ internal sealed class GameShortcutService : IGameShortcutService
     {
     }
 
-    internal GameShortcutService(LocalizationService localizer, ShortcutEnvironment environment)
+    internal GameShortcutService(
+        YostarGameProfile gameProfile,
+        LocalizationService localizer,
+        ShortcutEnvironment environment)
     {
+        this.gameProfile = gameProfile;
         this.localizer = localizer;
         openDirectory = environment.OpenDirectory;
         isWindowsPlatform = environment.IsWindowsPlatform;
@@ -132,7 +140,7 @@ internal sealed class GameShortcutService : IGameShortcutService
 
         var executablePath = Path.Combine(
             snapshot.LocalGame.GamePath ?? "",
-            GamePaths.GameExecutableFileName);
+            gameProfile.GameExecutableFileName);
         var shortcutFileName = ResolveShortcutFileName(executablePath);
         var extension = isLinuxPlatform() ? ".desktop" : ".lnk";
         var shortcutPath = Path.Combine(targetDirectory, $"{shortcutFileName}{extension}");
@@ -183,7 +191,9 @@ internal sealed class GameShortcutService : IGameShortcutService
         // which routes through --launch-game): double-clicking must behave like a
         // direct game start. Running the game executable alone does not start the
         // game, so the target is the distribution's own run.bat start script.
-        var startScriptPath = Path.Combine(target.WorkingDirectory, GamePaths.GameStartScriptFileName);
+        var startScriptPath = Path.Combine(
+            target.WorkingDirectory,
+            gameProfile.GameStartScriptFileName);
         if (!File.Exists(startScriptPath))
         {
             return new GameShortcutResult(GameShortcutStatus.GameNotResolved);
@@ -191,7 +201,10 @@ internal sealed class GameShortcutService : IGameShortcutService
 
         var shortcutFileName = ResolveShortcutFileName(target.ExecutablePath);
         var shortcutPath = Path.Combine(targetDirectory, $"{shortcutFileName}.lnk");
-        var iconPath = ResolveShortcutIconPath(snapshot, target.ExecutablePath);
+        var iconPath = ResolveShortcutIconPath(
+            snapshot,
+            target.ExecutablePath,
+            gameProfile.GameExecutableFileName);
         try
         {
             CreateShortcut(startScriptPath, target.WorkingDirectory, iconPath, shortcutPath);
@@ -304,10 +317,15 @@ internal sealed class GameShortcutService : IGameShortcutService
     }
 
     /// <summary>
-    /// Takes the shortcut icon from the actual game client (BlueArchive.exe) when it
-    /// exists; the resolved start entry can be a loader wrapper without a game icon.
+    /// Takes the shortcut icon from the actual game client (<c>BlueArchive.exe</c> for this
+    /// game profile) when it exists; the resolved start entry can be a loader wrapper without
+    /// a game icon. Kept static and parameterised: it reads no service state, only the
+    /// profile's client file name.
     /// </summary>
-    internal static string ResolveShortcutIconPath(LauncherStatusSnapshot snapshot, string executablePath)
+    internal static string ResolveShortcutIconPath(
+        LauncherStatusSnapshot snapshot,
+        string executablePath,
+        string gameExecutableFileName)
     {
         var gamePath = snapshot.LocalGame.GamePath;
         if (string.IsNullOrWhiteSpace(gamePath))
@@ -315,7 +333,7 @@ internal sealed class GameShortcutService : IGameShortcutService
             return executablePath;
         }
 
-        var gameExecutablePath = Path.Combine(gamePath, GamePaths.GameExecutableFileName);
+        var gameExecutablePath = Path.Combine(gamePath, gameExecutableFileName);
         return File.Exists(gameExecutablePath) ? gameExecutablePath : executablePath;
     }
 

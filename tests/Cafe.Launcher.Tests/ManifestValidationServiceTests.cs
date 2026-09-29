@@ -5,6 +5,7 @@ using Cafe.Launcher.Testing;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services;
 using Cafe.Launcher.Core.Services.Auth;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
@@ -206,7 +207,7 @@ public sealed class ManifestValidationServiceTests : IDisposable
         };
 
     private static LauncherApiClient CreateApiClient(IRemoteHttpTransport transport) =>
-        new(transport, new AuthorizationHeaderFactory(), new PatchUrlGroupService());
+        new(LauncherProfiles.BlueArchiveJapan, transport, new AuthorizationHeaderFactory(LauncherProfiles.BlueArchiveJapan), new PatchUrlGroupService(LauncherProfiles.BlueArchiveJapan, LauncherProfiles.Cafe));
 
     private static ManifestValidationService CreateService(LauncherApiClient apiClient)
     {

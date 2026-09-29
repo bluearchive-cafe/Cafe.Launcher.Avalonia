@@ -9,13 +9,14 @@ using Cafe.Launcher.UI.Services.GameRuntime;
 using Cafe.Launcher.Testing;
 using Cafe.Launcher.Core.Services.GameRuntime;
 using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
 public sealed class GameRuntimeTests
 {
     private static GameLaunchRequest CreateRequest() => new(
-        GameId: GameRuntimeIds.BlueArchiveJapan,
+        GameId: LauncherProfiles.BlueArchiveJapan.RuntimeId,
         ExecutablePath: @"C:\Games\BlueArchive_JP\BlueArchive.exe",
         WorkingDirectory: @"C:\Games\BlueArchive_JP",
         Arguments: []);
@@ -167,7 +168,7 @@ public sealed class GameRuntimeTests
 
         Assert.True(result.Success);
         Assert.Equal(
-            GameRuntimeIds.BlueArchiveJapan,
+            LauncherProfiles.BlueArchiveJapan.RuntimeId,
             launcher.StartInfos[0].Environment[UnixGameProcessMatcher.OwnershipMarkerKey]);
     }
 
@@ -520,7 +521,7 @@ public sealed class GameRuntimeTests
         Assert.Equal("umu", result.Diagnostic.RunnerId);
         Assert.Equal("auto", result.Diagnostic.ProtonPath);
         Assert.Equal(
-            GameCompatibilityPaths.GetDefaultPrefixPath(GameRuntimeIds.BlueArchiveJapan, "umu"),
+            GameCompatibilityPaths.GetDefaultPrefixPath(LauncherProfiles.BlueArchiveJapan.RuntimeId, "umu"),
             result.Diagnostic.PrefixPath);
     }
 

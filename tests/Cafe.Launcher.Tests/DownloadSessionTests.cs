@@ -9,10 +9,10 @@ using Cafe.Launcher.Testing;
 using Xunit;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services;
-using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Helpers;
 using Cafe.Launcher.Core.Services.Auth;
 using Cafe.Launcher.Core.Services.GameRuntime;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
@@ -21,9 +21,9 @@ public sealed class DownloadSessionTests
     [Fact]
     public void EnsureGamePath_WhenFolderNameMatches_Passes()
     {
-        var path = Path.Combine(Path.GetTempPath(), GamePaths.GameFolderName);
+        var path = Path.Combine(Path.GetTempPath(), LauncherProfiles.BlueArchiveJapan.GameFolderName);
 
-        GamePathValidator.EnsureGameDirectoryName(path);
+        GamePathValidator.EnsureGameDirectoryName(path, LauncherProfiles.BlueArchiveJapan.GameFolderName);
     }
 
     [Fact]
@@ -31,7 +31,7 @@ public sealed class DownloadSessionTests
     {
         var path = Path.Combine(Path.GetTempPath(), "NotTheGameFolder");
 
-        Assert.Throws<InvalidOperationException>(() => GamePathValidator.EnsureGameDirectoryName(path));
+        Assert.Throws<InvalidOperationException>(() => GamePathValidator.EnsureGameDirectoryName(path, LauncherProfiles.BlueArchiveJapan.GameFolderName));
     }
 
     [Fact]
@@ -105,7 +105,7 @@ public sealed class DownloadSessionTests
     {
         var (state, gameConfig, files) = CreateMatchingStateFixture();
 
-        Assert.True(DownloadSession.LocalInstallationStateMatchesCommit(state, gameConfig, files));
+        Assert.True(DownloadSession.LocalInstallationStateMatchesCommit(LauncherProfiles.BlueArchiveJapan.Tag, state, gameConfig, files));
     }
 
     [Fact]
@@ -114,7 +114,7 @@ public sealed class DownloadSessionTests
         var (state, gameConfig, files) =
             CreateMatchingStateFixture(LocalInstallationStateKind.Corrupted);
 
-        Assert.False(DownloadSession.LocalInstallationStateMatchesCommit(state, gameConfig, files));
+        Assert.False(DownloadSession.LocalInstallationStateMatchesCommit(LauncherProfiles.BlueArchiveJapan.Tag, state, gameConfig, files));
     }
 
     [Fact]
@@ -123,7 +123,7 @@ public sealed class DownloadSessionTests
         var (state, gameConfig, files) = CreateMatchingStateFixture();
         gameConfig.GameLatestVersion = "1.73.0";
 
-        Assert.False(DownloadSession.LocalInstallationStateMatchesCommit(state, gameConfig, files));
+        Assert.False(DownloadSession.LocalInstallationStateMatchesCommit(LauncherProfiles.BlueArchiveJapan.Tag, state, gameConfig, files));
     }
 
     [Fact]
@@ -132,7 +132,7 @@ public sealed class DownloadSessionTests
         var (state, gameConfig, files) = CreateMatchingStateFixture();
         gameConfig.GameLatestFilePath = "basis-2";
 
-        Assert.False(DownloadSession.LocalInstallationStateMatchesCommit(state, gameConfig, files));
+        Assert.False(DownloadSession.LocalInstallationStateMatchesCommit(LauncherProfiles.BlueArchiveJapan.Tag, state, gameConfig, files));
     }
 
     [Fact]
@@ -141,7 +141,7 @@ public sealed class DownloadSessionTests
         var (state, gameConfig, files) = CreateMatchingStateFixture();
         gameConfig.GameStartExeName = "Other.exe";
 
-        Assert.False(DownloadSession.LocalInstallationStateMatchesCommit(state, gameConfig, files));
+        Assert.False(DownloadSession.LocalInstallationStateMatchesCommit(LauncherProfiles.BlueArchiveJapan.Tag, state, gameConfig, files));
     }
 
     [Fact]
@@ -150,7 +150,7 @@ public sealed class DownloadSessionTests
         var (state, gameConfig, files) = CreateMatchingStateFixture();
         gameConfig.GameStartParams = ["-op", "lite"];
 
-        Assert.False(DownloadSession.LocalInstallationStateMatchesCommit(state, gameConfig, files));
+        Assert.False(DownloadSession.LocalInstallationStateMatchesCommit(LauncherProfiles.BlueArchiveJapan.Tag, state, gameConfig, files));
     }
 
     [Fact]
@@ -159,7 +159,7 @@ public sealed class DownloadSessionTests
         var (state, gameConfig, files) = CreateMatchingStateFixture();
         files.RemoveAt(files.Count - 1);
 
-        Assert.False(DownloadSession.LocalInstallationStateMatchesCommit(state, gameConfig, files));
+        Assert.False(DownloadSession.LocalInstallationStateMatchesCommit(LauncherProfiles.BlueArchiveJapan.Tag, state, gameConfig, files));
     }
 
     [Fact]
@@ -168,7 +168,7 @@ public sealed class DownloadSessionTests
         var (state, gameConfig, files) = CreateMatchingStateFixture();
         state.Manifest!.Files[0].Hash = "999";
 
-        Assert.False(DownloadSession.LocalInstallationStateMatchesCommit(state, gameConfig, files));
+        Assert.False(DownloadSession.LocalInstallationStateMatchesCommit(LauncherProfiles.BlueArchiveJapan.Tag, state, gameConfig, files));
     }
 
     [Fact]
@@ -177,7 +177,7 @@ public sealed class DownloadSessionTests
         var (state, gameConfig, files) = CreateMatchingStateFixture();
         state.Manifest!.Files[0].Size = "11";
 
-        Assert.False(DownloadSession.LocalInstallationStateMatchesCommit(state, gameConfig, files));
+        Assert.False(DownloadSession.LocalInstallationStateMatchesCommit(LauncherProfiles.BlueArchiveJapan.Tag, state, gameConfig, files));
     }
 
     private static (LocalInstallationState State, GameConfigResponse GameConfig, List<ManifestFile> Files)
@@ -195,14 +195,14 @@ public sealed class DownloadSessionTests
             Kind = kind,
             GameConfig = new GameLauncherConfig
             {
-                Tag = GamePaths.GameTag,
+                Tag = LauncherProfiles.BlueArchiveJapan.Tag,
                 Name = "BlueArchiveOnline_JP",
                 Params = ["-op", "full"],
                 Version = "1.72.0",
             },
             Manifest = new LocalManifest
             {
-                Name = GamePaths.GameTag,
+                Name = LauncherProfiles.BlueArchiveJapan.Tag,
                 Version = "1.72.0",
                 Basis = "basis-1",
                 Files =
@@ -225,22 +225,22 @@ public sealed class DownloadSessionTests
     private static DownloadSession CreateSession()
     {
         var diagnostics = new LocalDiagnostics();
-        var apiClient = new LauncherApiClient(
+        var apiClient = new LauncherApiClient(LauncherProfiles.BlueArchiveJapan, 
             new StubRemoteHttpTransport(),
-            new AuthorizationHeaderFactory(),
-            new PatchUrlGroupService());
-        var context = new DownloadSessionContext(
+            new AuthorizationHeaderFactory(LauncherProfiles.BlueArchiveJapan),
+            new PatchUrlGroupService(LauncherProfiles.BlueArchiveJapan, LauncherProfiles.Cafe));
+        var context = new DownloadSessionContext(LauncherProfiles.BlueArchiveJapan, 
             apiClient,
             new RemoteManifestService(apiClient),
             new FileDownloadService(new Crc64Service(), diagnostics),
             new StubDownloadTransportSource(),
             new Crc64Service(),
-            new LocalInstallationStateStore(),
+            new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan),
             new LauncherSettingsService(TestDataRoot.ForCurrentProcess()),
             new DiskSpaceService(),
             diagnostics,
             new LocalizationService(),
-            new GameInstallationPath(),
+            new GameInstallationPath(LauncherProfiles.BlueArchiveJapan),
             new DownloadCheckpointStore(TestDataRoot.ForCurrentProcess()),
             new GameProcessTracker());
         return new DownloadSession(

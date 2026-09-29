@@ -7,8 +7,8 @@ using Cafe.Launcher.Core.Services.Update;
 using Cafe.Launcher.UI.ViewModels;
 using Cafe.Launcher.Testing;
 using Cafe.Launcher.Core.Models;
-using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Services;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
@@ -113,7 +113,7 @@ public sealed class DialogsViewModelTests : IDisposable
         viewModel.ConfirmUpdateAvailableCommand.Execute(null);
 
         Assert.False(viewModel.IsUpdateAvailableVisible);
-        Assert.Equal(LauncherConstants.GitHubReleasesPageUrl, requestedUrl);
+        Assert.Equal(LauncherProfiles.Cafe.GitHubReleasesPageUrl, requestedUrl);
     }
 
     [Fact]
@@ -294,7 +294,7 @@ public sealed class DialogsViewModelTests : IDisposable
 
         viewModel.ConfirmUpdateAvailableCommand.Execute(null);
 
-        Assert.Equal(LauncherConstants.GitHubReleasesPageUrl, requestedUrl);
+        Assert.Equal(LauncherProfiles.Cafe.GitHubReleasesPageUrl, requestedUrl);
         Assert.False(viewModel.IsUpdateAvailableVisible);
     }
 
@@ -469,10 +469,10 @@ public sealed class DialogsViewModelTests : IDisposable
     public async Task ShowNoticeDialogIfNeededAsync_WhenNoticeWasNotShown_ShowsAndPersistsNotice()
     {
         var stateService = new NoticeStateService(tempDir.DataRoot);
-        var viewModel = new DialogsViewModel(
+        var viewModel = new DialogsViewModel(LauncherProfiles.Cafe, 
             new LocalizationService(),
             stateService,
-            new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(), new LocalInstallationStateStore(), new LocalDiagnostics(), new StubFilePickerService()),
+            new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(LauncherProfiles.BlueArchiveJapan), new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan), new LocalDiagnostics(), new StubFilePickerService()),
             new LocalDiagnostics(),
             action =>
             {
@@ -590,10 +590,10 @@ public sealed class DialogsViewModelTests : IDisposable
 
     private DialogsViewModel CreateViewModel()
     {
-        return new DialogsViewModel(
+        return new DialogsViewModel(LauncherProfiles.Cafe, 
             new LocalizationService(),
             new NoticeStateService(TestDataRoot.ForDirectory(NextDataRoot())),
-            new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(), new LocalInstallationStateStore(), new LocalDiagnostics(), new StubFilePickerService()),
+            new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(LauncherProfiles.BlueArchiveJapan), new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan), new LocalDiagnostics(), new StubFilePickerService()),
             new LocalDiagnostics(),
             action =>
             {

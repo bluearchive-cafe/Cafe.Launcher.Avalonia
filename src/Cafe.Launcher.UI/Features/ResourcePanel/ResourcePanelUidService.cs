@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -34,6 +35,7 @@ internal sealed partial class ResourcePanelUidService
         return !string.IsNullOrEmpty(uid) && UidFormat.IsMatch(uid);
     }
 
+    private readonly YostarGameProfile gameProfile;
     private readonly BestHttpCookieLibraryService cookieLibraryService;
     private readonly ILauncherSettingsService settingsService;
     private readonly ISavedSettingsWriter savedSettingsWriter;
@@ -41,21 +43,24 @@ internal sealed partial class ResourcePanelUidService
     private string cookieLibraryPath;
 
     public ResourcePanelUidService(
+        YostarGameProfile gameProfile,
         BestHttpCookieLibraryService cookieLibraryService,
         ILauncherSettingsService settingsService,
         ISavedSettingsWriter savedSettingsWriter,
         ILauncherDiagnostics? diagnostics = null)
-        : this(cookieLibraryService, settingsService, savedSettingsWriter, null, diagnostics)
+        : this(gameProfile, cookieLibraryService, settingsService, savedSettingsWriter, null, diagnostics)
     {
     }
 
     internal ResourcePanelUidService(
+        YostarGameProfile gameProfile,
         BestHttpCookieLibraryService cookieLibraryService,
         ILauncherSettingsService settingsService,
         ISavedSettingsWriter savedSettingsWriter,
         string? cookieLibraryPath,
         ILauncherDiagnostics? diagnostics = null)
     {
+        this.gameProfile = gameProfile;
         this.cookieLibraryService = cookieLibraryService;
         this.settingsService = settingsService;
         this.savedSettingsWriter = savedSettingsWriter;
@@ -144,8 +149,11 @@ internal sealed partial class ResourcePanelUidService
         try
         {
             cookieLibraryPath = cookieLibraryPathOverride ?? (OperatingSystem.IsLinux()
-                ? ResolveLinuxCookieLibraryPath(settings.GameRuntime, Environment.UserName,
-                    runner => GameCompatibilityPaths.GetDefaultPrefixPath(GameRuntimeIds.BlueArchiveJapan, runner))
+                ? ResolveLinuxCookieLibraryPath(
+                    settings.GameRuntime,
+                    Environment.UserName,
+                    runner => GameCompatibilityPaths.GetDefaultPrefixPath(gameProfile.RuntimeId, runner),
+                    gameProfile.CookieLibraryRelativeSegments)
                 : GetDefaultCookieLibraryPath());
             if (!File.Exists(cookieLibraryPath))
             {
@@ -177,7 +185,10 @@ internal sealed partial class ResourcePanelUidService
     /// Auto mode checks managed UMU then Wine prefixes; Wine user names need not match the host.
     /// </summary>
     internal static string ResolveLinuxCookieLibraryPath(
-        GameRuntimeSettings settings, string userName, Func<string, string> defaultPrefix)
+        GameRuntimeSettings settings,
+        string userName,
+        Func<string, string> defaultPrefix,
+        IReadOnlyList<string> cookieLibraryRelativeSegments)
     {
         string[] runners = settings.Runner == GameRuntimeRunners.Wine
             ? [GameRuntimeRunners.Wine]
@@ -187,11 +198,11 @@ internal sealed partial class ResourcePanelUidService
         string[] prefixes = !string.IsNullOrWhiteSpace(settings.PrefixPath)
             ? [settings.PrefixPath]
             : runners.Select(defaultPrefix).ToArray();
-        var fallback = CookiePath(Path.Combine(prefixes[0], "drive_c", "users", userName));
+        var fallback = CookiePath(Path.Combine(prefixes[0], "drive_c", "users", userName), cookieLibraryRelativeSegments);
         foreach (var prefix in prefixes)
         {
             var users = Path.Combine(prefix, "drive_c", "users");
-            var currentUserPath = CookiePath(Path.Combine(users, userName));
+            var currentUserPath = CookiePath(Path.Combine(users, userName), cookieLibraryRelativeSegments);
             if (File.Exists(currentUserPath))
             {
                 return currentUserPath;
@@ -204,7 +215,7 @@ internal sealed partial class ResourcePanelUidService
 
             foreach (var profile in Directory.EnumerateDirectories(users).Order(StringComparer.Ordinal))
             {
-                var path = CookiePath(profile);
+                var path = CookiePath(profile, cookieLibraryRelativeSegments);
                 if (File.Exists(path))
                 {
                     return path;
@@ -215,18 +226,13 @@ internal sealed partial class ResourcePanelUidService
         return fallback;
     }
 
-    private static string CookiePath(string profile) =>
-        Path.Combine(profile, "AppData", "LocalLow", "YostarJP", "BlueArchive", "Cookies", "Library");
+    private static string CookiePath(string profile, IReadOnlyList<string> relativeSegments) =>
+        Path.Combine([profile, .. relativeSegments]);
 
-    private static string GetDefaultCookieLibraryPath()
+    private string GetDefaultCookieLibraryPath()
     {
-        return Path.Combine(
+        return CookiePath(
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            "AppData",
-            "LocalLow",
-            "YostarJP",
-            "BlueArchive",
-            "Cookies",
-            "Library");
+            gameProfile.CookieLibraryRelativeSegments);
     }
 }

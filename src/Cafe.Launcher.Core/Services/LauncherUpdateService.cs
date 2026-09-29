@@ -7,7 +7,6 @@ using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Helpers;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services.Diagnostics;
@@ -18,19 +17,26 @@ namespace Cafe.Launcher.Core.Services;
 /// <summary>
 /// Checks for launcher self-updates via the server proxy endpoint.
 /// </summary>
+/// <remarks>
+/// 发行通道与仓库地址来自注入的 <see cref="LauncherProductProfile"/>：
+/// 它们跟随的是「谁在发行这个启动器」，不是哪款游戏。
+/// </remarks>
 internal sealed partial class LauncherUpdateService : ILauncherUpdateService
 {
     private static readonly JsonSerializerOptions JsonOptions = JsonDefaults.Strict;
+    private readonly LauncherProductProfile productProfile;
     private readonly IRemoteHttpTransport transport;
     private readonly string currentVersion;
     private readonly ILauncherDiagnostics? diagnostics;
 
     /// <summary>Production constructor — accepts dependencies from DI.</summary>
     public LauncherUpdateService(
+        LauncherProductProfile productProfile,
         IRemoteHttpTransport transport,
         ILauncherDiagnostics diagnostics,
         LauncherBuildIdentity? buildIdentity = null)
     {
+        this.productProfile = productProfile;
         this.transport = transport;
         currentVersion = buildIdentity?.LauncherVersion ?? "";
         this.diagnostics = diagnostics;
@@ -41,11 +47,13 @@ internal sealed partial class LauncherUpdateService : ILauncherUpdateService
     /// testability (the stub transport is the second adapter at that seam).
     /// </summary>
     internal LauncherUpdateService(
+        LauncherProductProfile productProfile,
         IRemoteHttpTransport transport,
         string? currentVersionOverride = null,
         ILauncherDiagnostics? diagnosticsOverride = null,
         LauncherBuildIdentity? buildIdentity = null)
     {
+        this.productProfile = productProfile;
         this.transport = transport;
         currentVersion = currentVersionOverride ?? buildIdentity?.LauncherVersion ?? "";
         diagnostics = diagnosticsOverride;
@@ -103,7 +111,11 @@ internal sealed partial class LauncherUpdateService : ILauncherUpdateService
                     isUpdateAvailable: false);
             }
 
-            if (!TryValidateReleaseFiles(targetRelease.Version, targetRelease.Files, out var validationError))
+            if (!TryValidateReleaseFiles(
+                targetRelease.Version,
+                targetRelease.Files,
+                productProfile.GitHubReleaseDownloadPathPrefix,
+                out var validationError))
             {
                 if (diagnostics is not null)
                 {
@@ -211,7 +223,7 @@ internal sealed partial class LauncherUpdateService : ILauncherUpdateService
         // string concatenation would produce a double slash; Uri-relative resolution
         // replaces the base path instead. No transport-level retries: the endpoint's
         // failures degrade to the GitHub fallback instead of being replayed.
-        var requestUri = new Uri(new Uri(ApiConfig.LauncherApiBaseUrl), ApiConfig.LauncherReleasesPath);
+        var requestUri = new Uri(new Uri(productProfile.LauncherApiBaseUrl), productProfile.LauncherReleasesPath);
         return await transport.GetJsonAsync<List<LauncherReleaseResponse>>(
             requestUri,
             new RemoteRequestOptions
@@ -225,7 +237,7 @@ internal sealed partial class LauncherUpdateService : ILauncherUpdateService
     private async Task<List<LauncherReleaseResponse>> FetchGitHubReleasesAsync(
         CancellationToken cancellationToken)
     {
-        var requestUri = new Uri(ApiConfig.GitHubReleasesApiUrl);
+        var requestUri = new Uri(productProfile.GitHubReleasesApiUrl);
         var releases = await transport.GetJsonAsync<List<GitHubRelease>>(
             requestUri,
             new RemoteRequestOptions
@@ -262,7 +274,7 @@ internal sealed partial class LauncherUpdateService : ILauncherUpdateService
     {
         try
         {
-            var requestUri = new Uri(ApiConfig.GitHubReleaseByTagApiUrl + "v" + Uri.EscapeDataString(version));
+            var requestUri = new Uri(productProfile.GitHubReleaseByTagApiUrl + "v" + Uri.EscapeDataString(version));
             var release = await transport.GetJsonAsync<GitHubRelease>(
                 requestUri,
                 new RemoteRequestOptions
@@ -318,6 +330,7 @@ internal sealed partial class LauncherUpdateService : ILauncherUpdateService
     private static bool TryValidateReleaseFiles(
         string version,
         IReadOnlyList<ReleaseFile>? files,
+        string downloadPathPrefix,
         out string validationError)
     {
         if (files is null || files.Count == 0)
@@ -328,7 +341,7 @@ internal sealed partial class LauncherUpdateService : ILauncherUpdateService
 
         // GitHub 把 tag 命名为 v{version}，资产下载路径是
         // /releases/download/v{version}/；用完整前缀同时钉住仓库与 tag。
-        var expectedDownloadPrefix = ApiConfig.GitHubReleaseDownloadPathPrefix + "v" + version + "/";
+        var expectedDownloadPrefix = downloadPathPrefix + "v" + version + "/";
 
         for (var index = 0; index < files.Count; index++)
         {

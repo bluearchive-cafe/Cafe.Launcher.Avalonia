@@ -11,6 +11,7 @@ using Cafe.Launcher.UI.Services.Diagnostics;
 using Cafe.Launcher.UI.ViewModels;
 using Cafe.Launcher.UI.Views;
 using Cafe.Launcher.Core;
+using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services;
 using Cafe.Launcher.Core.Services.Diagnostics;
 
@@ -28,6 +29,7 @@ namespace Cafe.Launcher.UI;
 /// </remarks>
 public sealed class LauncherPresentationSession : IDisposable
 {
+    private readonly LauncherProductProfile productProfile;
     private readonly MainWindowViewModel viewModel;
     private readonly WindowFilePickerService filePickerService;
     private readonly WindowMetricsService windowMetricsService;
@@ -45,6 +47,7 @@ public sealed class LauncherPresentationSession : IDisposable
     private bool disposed;
 
     internal LauncherPresentationSession(
+        LauncherProductProfile productProfile,
         MainWindowViewModel viewModel,
         WindowFilePickerService filePickerService,
         WindowMetricsService windowMetricsService,
@@ -56,6 +59,7 @@ public sealed class LauncherPresentationSession : IDisposable
         ISystemTrayActions trayActions,
         LauncherDataRoot dataRoot)
     {
+        this.productProfile = productProfile;
         this.viewModel = viewModel;
         this.filePickerService = filePickerService;
         this.windowMetricsService = windowMetricsService;
@@ -303,6 +307,7 @@ public sealed class LauncherPresentationSession : IDisposable
         try
         {
             var tray = new SystemTrayService(
+                productProfile,
                 window,
                 localization,
                 diagnostics,

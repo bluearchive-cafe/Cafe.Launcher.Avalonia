@@ -27,17 +27,30 @@ public static class LauncherCoreServiceCollectionExtensions
     /// Core never resolves it itself: <c>TestUserDataIsolationTests</c> keeps that resolution
     /// confined to the declared pre-DI sites (ADR-025).
     /// </param>
+    /// <param name="gameProfile">
+    /// 本构建面向的游戏档案。宿主显式登记它——「这是哪款游戏」是宿主的知识，
+    /// Core 不提供静态兜底（写错游戏标识只会被服务端拒绝，本地不会报错）。
+    /// </param>
+    /// <param name="productProfile">
+    /// 本构建的产品档案（产品名、发行通道、自有服务地址）。
+    /// </param>
     public static IServiceCollection AddLauncherCore(
         this IServiceCollection services,
         LauncherBuildIdentity buildIdentity,
-        LauncherDataRoot launcherDataRoot)
+        LauncherDataRoot launcherDataRoot,
+        YostarGameProfile gameProfile,
+        LauncherProductProfile productProfile)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(buildIdentity);
         ArgumentNullException.ThrowIfNull(launcherDataRoot);
+        ArgumentNullException.ThrowIfNull(gameProfile);
+        ArgumentNullException.ThrowIfNull(productProfile);
 
         services.TryAddSingleton(buildIdentity);
         services.TryAddSingleton(launcherDataRoot);
+        services.TryAddSingleton(gameProfile);
+        services.TryAddSingleton(productProfile);
         // These services already have a stable, presentation-free dependency
         // closure. Keeping their registration here is significant: UI services
         // registered afterwards are disposed first by the Microsoft DI container.
@@ -82,6 +95,7 @@ public static class LauncherCoreServiceCollectionExtensions
                 sp.GetRequiredService<IRemoteHttpUrlValidator>(),
                 () => SavedSettingsSnapshot(sp).ProxyMode));
         services.TryAddSingleton<LauncherApiClient>(sp => new LauncherApiClient(
+            sp.GetRequiredService<YostarGameProfile>(),
             sp.GetRequiredService<IRemoteHttpTransport>(),
             sp.GetRequiredService<AuthorizationHeaderFactory>(),
             sp.GetRequiredService<PatchUrlGroupService>(),

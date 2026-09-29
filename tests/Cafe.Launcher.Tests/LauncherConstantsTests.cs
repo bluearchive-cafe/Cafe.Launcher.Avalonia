@@ -49,19 +49,19 @@ public sealed class LauncherConstantsTests
         // 官方启动器 1.7.2 核对过的。本用例只钉住这个字面量，并不证明它与官方当前产物一致——
         // 数值一旦变动必须先复核官方产物版本；算法层面的守卫见
         // AuthorizationHeaderFactoryTests（字段序、签名拼装、版本变更对签名的影响）。
-        Assert.Equal("1.7.2", ApiConfig.YostarAuthorizationVersion);
+        Assert.Equal("1.7.2", LauncherProfiles.BlueArchiveJapan.AuthorizationVersion);
     }
 
     [Fact]
     public void LauncherUpdateEndpoints_UseTheApplicationRepository()
     {
-        Assert.Equal("bluearchive-cafe/Cafe.Launcher.Avalonia", ApiConfig.GitHubReleaseRepositorySlug);
-        Assert.Equal("/api/v2/launcher/releases", ApiConfig.LauncherReleasesPath);
+        Assert.Equal("bluearchive-cafe/Cafe.Launcher.Avalonia", LauncherProfiles.Cafe.GitHubReleaseRepositorySlug);
+        Assert.Equal("/api/v2/launcher/releases", LauncherProfiles.Cafe.LauncherReleasesPath);
         Assert.Equal(
             "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases",
-            LauncherConstants.GitHubReleasesPageUrl);
+            LauncherProfiles.Cafe.GitHubReleasesPageUrl);
         Assert.Equal(
             "https://api.github.com/repos/bluearchive-cafe/Cafe.Launcher.Avalonia/releases",
-            ApiConfig.GitHubReleasesApiUrl);
+            LauncherProfiles.Cafe.GitHubReleasesApiUrl);
     }
 }

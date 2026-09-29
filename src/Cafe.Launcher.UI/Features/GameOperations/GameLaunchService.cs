@@ -14,15 +14,18 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
 
 internal sealed class GameLaunchService
 {
+    private readonly YostarGameProfile gameProfile;
     private readonly ManifestValidationService manifestValidationService;
     private readonly IGameRuntime gameRuntime;
     private readonly LocalizationService localizer;
 
     public GameLaunchService(
+        YostarGameProfile gameProfile,
         ManifestValidationService manifestValidationService,
         IGameRuntime gameRuntime,
         LocalizationService localizer)
     {
+        this.gameProfile = gameProfile;
         this.manifestValidationService = manifestValidationService;
         this.gameRuntime = gameRuntime;
         this.localizer = localizer;
@@ -92,7 +95,7 @@ internal sealed class GameLaunchService
         // GAMEID) from the game executable name, so renaming the EXE cannot orphan
         // an existing environment.
         var request = new GameLaunchRequest(
-            GameId: GameRuntimeIds.BlueArchiveJapan,
+            GameId: gameProfile.RuntimeId,
             ExecutablePath: target.ExecutablePath,
             WorkingDirectory: target.WorkingDirectory,
             Arguments: target.Arguments);

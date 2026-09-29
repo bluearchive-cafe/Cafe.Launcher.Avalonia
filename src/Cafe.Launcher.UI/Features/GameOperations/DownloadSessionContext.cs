@@ -1,6 +1,7 @@
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Core.Services.GameRuntime;
+using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.Core.Services;
 
@@ -13,6 +14,7 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
 /// parameter list.
 /// </summary>
 internal sealed record DownloadSessionContext(
+    YostarGameProfile GameProfile,
     ILauncherApiClient ApiClient,
     RemoteManifestService RemoteManifestService,
     IFileDownloadService FileDownloadService,

@@ -8,9 +8,9 @@ using Cafe.Launcher.UI.Services.Diagnostics;
 using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.UI.Services.GameRuntime;
 using Cafe.Launcher.Testing;
-using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Services;
 using Cafe.Launcher.Core.Services.GameRuntime;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
@@ -63,7 +63,7 @@ public sealed class LogExportServiceTests : IDisposable
         var dataRoot = Path.Combine(tempDir, "runner-output-root");
         Directory.CreateDirectory(dataRoot);
         File.WriteAllText(
-            Path.Combine(dataRoot, GamePaths.RunnerOutputFileName),
+            Path.Combine(dataRoot, LauncherPaths.RunnerOutputFileName),
             "[out] prefix initialized\n");
         var logger = WriteDeterministicLog(
             "runner-output-source",
@@ -77,7 +77,7 @@ public sealed class LogExportServiceTests : IDisposable
             Path.Combine(tempDir, "runner-output-selected"),
             LogExportOptions.Default);
 
-        Assert.Equal("[out] prefix initialized\n", ReadEntry(zipPath, GamePaths.RunnerOutputFileName));
+        Assert.Equal("[out] prefix initialized\n", ReadEntry(zipPath, LauncherPaths.RunnerOutputFileName));
     }
 
     [Fact]
@@ -86,7 +86,7 @@ public sealed class LogExportServiceTests : IDisposable
         var dataRoot = Path.Combine(tempDir, "compat-data");
         Directory.CreateDirectory(dataRoot);
         File.WriteAllText(
-            Path.Combine(dataRoot, GamePaths.CompatibilityEnvironmentFileName),
+            Path.Combine(dataRoot, LauncherPaths.CompatibilityEnvironmentFileName),
             "{\"prefixPath\":\"/home/u/pfx\",\"findings\":[]}");
         var logger = WriteDeterministicLog(
             "compat-source",
@@ -102,7 +102,7 @@ public sealed class LogExportServiceTests : IDisposable
 
         Assert.Contains(
             "prefixPath",
-            ReadEntry(zipPath, GamePaths.CompatibilityEnvironmentFileName),
+            ReadEntry(zipPath, LauncherPaths.CompatibilityEnvironmentFileName),
             StringComparison.Ordinal);
     }
 
@@ -112,7 +112,7 @@ public sealed class LogExportServiceTests : IDisposable
         var dataRoot = Path.Combine(tempDir, "prefix-meta-data");
         Directory.CreateDirectory(dataRoot);
         File.WriteAllText(
-            Path.Combine(dataRoot, GamePaths.PrefixMetadataFileName),
+            Path.Combine(dataRoot, LauncherPaths.PrefixMetadataFileName),
             "{\"prefixPath\":\"/home/u/pfx\",\"launchCount\":1}");
         var logger = WriteDeterministicLog(
             "prefix-meta-source",
@@ -128,7 +128,7 @@ public sealed class LogExportServiceTests : IDisposable
 
         Assert.Contains(
             "launchCount",
-            ReadEntry(zipPath, GamePaths.PrefixMetadataFileName),
+            ReadEntry(zipPath, LauncherPaths.PrefixMetadataFileName),
             StringComparison.Ordinal);
     }
 

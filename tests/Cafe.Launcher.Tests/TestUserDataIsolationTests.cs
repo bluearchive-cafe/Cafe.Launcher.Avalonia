@@ -1,5 +1,6 @@
 using Cafe.Launcher.Testing;
 using Cafe.Launcher.Core.Services.GameRuntime;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
@@ -34,10 +35,11 @@ public sealed class TestUserDataIsolationTests
 
         var result = Cafe.Launcher.Core.Services.LauncherDataRoot.ResolveProcessRoot(
             testOverride,
-            localApplicationData);
+            localApplicationData,
+            Cafe.Launcher.Core.Constants.LauncherProfiles.Cafe.ProductName);
 
         Assert.Equal(
-            Path.Combine(localApplicationData, Cafe.Launcher.Core.Constants.LauncherConstants.ProductName),
+            Path.Combine(localApplicationData, Cafe.Launcher.Core.Constants.LauncherProfiles.Cafe.ProductName),
             result);
     }
 
@@ -52,7 +54,8 @@ public sealed class TestUserDataIsolationTests
 
         var result = Cafe.Launcher.Core.Services.LauncherDataRoot.ResolveProcessRoot(
             relativeOverride,
-            "unused");
+            "unused",
+            Cafe.Launcher.Core.Constants.LauncherProfiles.Cafe.ProductName);
 
         Assert.Equal(Path.GetFullPath(relativeOverride), result);
     }
@@ -70,11 +73,11 @@ public sealed class TestUserDataIsolationTests
             StringComparison.OrdinalIgnoreCase);
 
         using var settingsService = new Cafe.Launcher.Core.Services.LauncherSettingsService(
-            Cafe.Launcher.Core.Services.LauncherDataRoot.ForCurrentProcess());
+            Cafe.Launcher.Core.Services.LauncherDataRoot.ForCurrentProcess(LauncherProfiles.Cafe.ProductName));
         Assert.Equal(
             Path.Combine(
                 Path.GetFullPath(isolatedDirectory),
-                Cafe.Launcher.Core.Constants.GamePaths.LauncherSettingsFileName),
+                Cafe.Launcher.Core.Constants.LauncherPaths.LauncherSettingsFileName),
             settingsService.SettingsPath);
     }
 
@@ -126,7 +129,7 @@ public sealed class TestUserDataIsolationTests
         // 未门控，在 runneradmin 上自证其误）。跳过在 Windows 上可见。
         Assert.SkipUnless(
             !OperatingSystem.IsWindows(),
-            "AF_UNIX 套接字路径上限仅在 Unix 平台约束 LauncherDataRoot.ForCurrentProcess().Root 的派生路径。");
+            "AF_UNIX 套接字路径上限仅在 Unix 平台约束 LauncherDataRoot.ForCurrentProcess(LauncherProfiles.Cafe.ProductName).Root 的派生路径。");
 
         // AUD-CI-002：Root 派生 Unix 域套接字路径（<Root>/cl-signal-<12hex>.sock），
         // AF_UNIX 的 sockaddr_un 上限是 108 字节（含终止符即 107）。隔离目录过深

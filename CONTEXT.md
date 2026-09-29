@@ -286,3 +286,4 @@ _Avoid_: 遮罩点击穿透
 | ADR-041 | 资源面板 MD3 结构级重设计（单卡三态、分段来源、行式条目） | ✅ 已接受 |
 | ADR-042 | Avalonia 启动器按 Core 与 UI 程序集分层 | ✅ 已接受 |
 | ADR-043 | 程序集、命名空间与发行资产同名（产品 token 只有一个） | ✅ 已接受 |
+| ADR-044 | 游戏身份与产品身份由档案声明并注入（`YostarGameProfile` / `LauncherProductProfile`） | ✅ 已接受 |

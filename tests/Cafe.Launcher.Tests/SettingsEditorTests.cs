@@ -2,8 +2,8 @@ using System.ComponentModel;
 using Cafe.Launcher.Constants;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
-using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 

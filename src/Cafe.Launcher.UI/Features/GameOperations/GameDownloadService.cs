@@ -27,6 +27,7 @@ internal sealed class GameDownloadService : IDisposable
     private readonly IDownloadTransportSource transportSource;
     private readonly ICrc64Service crc64Service;
     private readonly IDiskSpaceService diskSpaceService;
+    private readonly YostarGameProfile gameProfile;
     private readonly ILauncherDiagnostics diagnostics;
     private readonly LocalizationService localizer;
     private readonly IGameInstallationPath installationPath;
@@ -41,6 +42,7 @@ internal sealed class GameDownloadService : IDisposable
     private static readonly TimeSpan DownloadLeaseTimeout = TimeSpan.FromMinutes(10);
 
     public GameDownloadService(
+        YostarGameProfile gameProfile,
         ILauncherApiClient apiClient,
         RemoteManifestService remoteManifestService,
         IFileDownloadService fileDownloadService,
@@ -56,6 +58,7 @@ internal sealed class GameDownloadService : IDisposable
         IGameProcessTracker gameProcessTracker,
         DownloadCheckpointStore checkpointStore)
     {
+        this.gameProfile = gameProfile;
         this.apiClient = apiClient;
         this.remoteManifestService = remoteManifestService;
         this.fileDownloadService = fileDownloadService;
@@ -76,6 +79,7 @@ internal sealed class GameDownloadService : IDisposable
     }
 
     internal GameDownloadService(
+        YostarGameProfile gameProfile,
         ILauncherApiClient apiClient,
         RemoteManifestService remoteManifestService,
         IFileDownloadService fileDownloadService,
@@ -91,6 +95,7 @@ internal sealed class GameDownloadService : IDisposable
         IGameProcessTracker gameProcessTracker,
         LauncherDataRoot dataRoot)
         : this(
+            gameProfile,
             apiClient,
             remoteManifestService,
             fileDownloadService,
@@ -242,6 +247,7 @@ internal sealed class GameDownloadService : IDisposable
 
     private DownloadSessionContext BuildSessionContext(DownloadCheckpointStore checkpointStore) =>
         new(
+            gameProfile,
             apiClient,
             remoteManifestService,
             fileDownloadService,

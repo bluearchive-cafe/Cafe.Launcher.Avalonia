@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Cafe.Launcher.UI.Services;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.HeadlessTests;
 
@@ -24,7 +25,7 @@ public sealed class AvaloniaSystemTrayPlatformTests
         var application = Assert.IsAssignableFrom<Application>(Application.Current);
         int baseline = TrayIcon.GetIcons(application)?.Count ?? 0;
 
-        using (var platform = new AvaloniaSystemTrayPlatform())
+        using (var platform = new AvaloniaSystemTrayPlatform(LauncherProfiles.Cafe))
         {
             Assert.True(platform.Initialize(
                 new SystemTrayMenuText(Title, "show", "show tip", "exit", "exit tip", "start", true, "settings", true),

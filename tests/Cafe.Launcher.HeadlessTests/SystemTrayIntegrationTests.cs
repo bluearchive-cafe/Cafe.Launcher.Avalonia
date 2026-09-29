@@ -9,6 +9,7 @@ using Cafe.Launcher.Testing;
 using Cafe.Launcher.UI.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.HeadlessTests;
 
@@ -149,7 +150,7 @@ public sealed class SystemTrayIntegrationTests
             });
             ViewModel = provider.GetRequiredService<MainWindowViewModel>();
             Localizer = provider.GetRequiredService<LocalizationService>();
-            Tray = new SystemTrayService(Window, Localizer, Platform,
+            Tray = new SystemTrayService(LauncherProfiles.Cafe, Window, Localizer, Platform,
                 actions: provider.GetRequiredService<ISystemTrayActions>());
             Assert.True(Tray.Initialize());
         }

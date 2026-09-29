@@ -11,6 +11,7 @@ using Cafe.Launcher.Core.Helpers;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services;
 using Cafe.Launcher.Core.Services.Auth;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
@@ -30,10 +31,10 @@ public sealed class LauncherApiClientTests
             }
             """;
         var transport = new StubRemoteHttpTransport(_ => responseJson);
-        var client = new LauncherApiClient(
+        var client = new LauncherApiClient(LauncherProfiles.BlueArchiveJapan, 
             transport,
-            new AuthorizationHeaderFactory(),
-            new PatchUrlGroupService());
+            new AuthorizationHeaderFactory(LauncherProfiles.BlueArchiveJapan),
+            new PatchUrlGroupService(LauncherProfiles.BlueArchiveJapan, LauncherProfiles.Cafe));
 
         var result = await client.GetBaseConfigAsync();
 
@@ -45,7 +46,7 @@ public sealed class LauncherApiClientTests
     [Fact]
     public void RewriteManifestUrl_WhenCafe_RewritesPackageHost()
     {
-        var client = new LauncherApiClient(new StubRemoteHttpTransport(), new AuthorizationHeaderFactory(), new PatchUrlGroupService());
+        var client = new LauncherApiClient(LauncherProfiles.BlueArchiveJapan, new StubRemoteHttpTransport(), new AuthorizationHeaderFactory(LauncherProfiles.BlueArchiveJapan), new PatchUrlGroupService(LauncherProfiles.BlueArchiveJapan, LauncherProfiles.Cafe));
         var response = new ManifestUrlResponse
         {
             Url = "https://launcher-pkg-ba-jp.yo-star.com/zip_online_config_json/test.json"
@@ -59,7 +60,7 @@ public sealed class LauncherApiClientTests
     [Fact]
     public void RewriteCdnConfig_WhenCafe_RewritesPrimaryAndUsesPrimaryForBackup()
     {
-        var client = new LauncherApiClient(new StubRemoteHttpTransport(), new AuthorizationHeaderFactory(), new PatchUrlGroupService());
+        var client = new LauncherApiClient(LauncherProfiles.BlueArchiveJapan, new StubRemoteHttpTransport(), new AuthorizationHeaderFactory(LauncherProfiles.BlueArchiveJapan), new PatchUrlGroupService(LauncherProfiles.BlueArchiveJapan, LauncherProfiles.Cafe));
         var response = new CdnConfigResponse
         {
             PrimaryCdn = "https://launcher-pkg-ba-jp.yo-star.com",
@@ -77,10 +78,10 @@ public sealed class LauncherApiClientTests
     {
         var transport = new StubRemoteHttpTransport(
             _ => """{"code":503,"data":{"launcher_background_img":null},"message":"service under maintenance"}""");
-        var client = new LauncherApiClient(
+        var client = new LauncherApiClient(LauncherProfiles.BlueArchiveJapan, 
             transport,
-            new AuthorizationHeaderFactory(),
-            new PatchUrlGroupService());
+            new AuthorizationHeaderFactory(LauncherProfiles.BlueArchiveJapan),
+            new PatchUrlGroupService(LauncherProfiles.BlueArchiveJapan, LauncherProfiles.Cafe));
 
         var ex = await Assert.ThrowsAsync<LauncherApiEnvelopeException>(
             () => client.GetBaseConfigAsync());
@@ -95,10 +96,10 @@ public sealed class LauncherApiClientTests
         // 行为精炼：重试归传输层后，空 envelope 数据由客户端在首次请求后即以
         // InvalidOperationException 终结，不再进入客户端重试预算。
         var transport = new StubRemoteHttpTransport(_ => """{"code":200,"data":null}""");
-        var client = new LauncherApiClient(
+        var client = new LauncherApiClient(LauncherProfiles.BlueArchiveJapan, 
             transport,
-            new AuthorizationHeaderFactory(),
-            new PatchUrlGroupService());
+            new AuthorizationHeaderFactory(LauncherProfiles.BlueArchiveJapan),
+            new PatchUrlGroupService(LauncherProfiles.BlueArchiveJapan, LauncherProfiles.Cafe));
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => client.GetBaseConfigAsync());
@@ -110,10 +111,10 @@ public sealed class LauncherApiClientTests
     public async Task GetRemoteManifestAsync_WhenBodyIsEmpty_ReturnsEmptyManifestFallback()
     {
         var transport = new StubRemoteHttpTransport(_ => null);
-        var client = new LauncherApiClient(
+        var client = new LauncherApiClient(LauncherProfiles.BlueArchiveJapan, 
             transport,
-            new AuthorizationHeaderFactory(),
-            new PatchUrlGroupService());
+            new AuthorizationHeaderFactory(LauncherProfiles.BlueArchiveJapan),
+            new PatchUrlGroupService(LauncherProfiles.BlueArchiveJapan, LauncherProfiles.Cafe));
 
         var manifest = await client.GetRemoteManifestAsync("https://example.com/manifest.json");
 
