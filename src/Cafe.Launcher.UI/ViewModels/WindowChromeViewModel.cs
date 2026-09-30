@@ -214,6 +214,10 @@ internal partial class WindowChromeViewModel : ViewModelBase
     [RelayCommand]
     private void Close()
     {
+        if (operations.IsUninstallExecuting)
+        {
+            return;
+        }
         if (operations.IsDownloadRunning)
         {
             dialogs.ShowDownloadRunningCloseConfirm();
@@ -230,7 +234,19 @@ internal partial class WindowChromeViewModel : ViewModelBase
         return Task.CompletedTask;
     }
 
-    public void RequestClose() => CloseRequested?.Invoke();
+    public void RequestClose()
+    {
+        if (!operations.IsUninstallExecuting)
+        {
+            CloseRequested?.Invoke();
+        }
+    }
 
-    public void RequestShutdown() => ShutdownRequested?.Invoke();
+    public void RequestShutdown()
+    {
+        if (!operations.IsUninstallExecuting)
+        {
+            ShutdownRequested?.Invoke();
+        }
+    }
 }

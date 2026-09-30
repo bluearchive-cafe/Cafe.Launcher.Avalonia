@@ -506,7 +506,8 @@ public sealed partial class UiStyleContractTests
             .Where(element => element.Name.LocalName == "ConfirmDialog")
             .ToArray();
         // 调试重置 / 设置页重置共享同一对话框控件，各自独立实例。
-        Assert.Equal(9, usages.Length);
+        // 卸载独立表面跨确认、执行、结果三阶段，不再使用 ConfirmDialog。
+        Assert.Equal(8, usages.Length);
 
         foreach (var usage in usages)
         {

@@ -338,35 +338,35 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
         executor.MeasureUninstallFootprintAsync(snapshot);
 
     /// <summary>Runs a confirmed uninstall and refreshes launcher state afterward.</summary>
-    public async Task ConfirmUninstallAsync(LauncherStatusSnapshot snapshot, UninstallScope scope)
+    public async Task<GameOperationResult> ConfirmUninstallAsync(LauncherStatusSnapshot snapshot, UninstallScope scope)
     {
-        // 用户已经在确认框上点过确认：此时状态若又变得不允许，必须给可见反馈，
-        // 否则「点了没反应」（ADR-027）。
         if (GameOperationPolicy.Decide(GameOperationPolicy.Operation.Uninstall, snapshot.RuntimeState)
             == GameOperationDecision.RejectedForCurrentState)
         {
-            ShowOperationUnavailable();
-            return;
+            return GameOperationRejections.UnavailableResult(localizer);
         }
 
         host.SetBusy(true);
-
         try
         {
-            // Prepare for uninstall — the first progress update from the workflow
-            // will set the correct icon. Call PrepareOperation to reset panel state.
             host.PrepareOperation();
             var result = await executor.UninstallAsync(snapshot, scope, host.ApplyProgress);
-            // 终态必须落地（ADR-030）：从前这里把结果丢掉，卸载失败时用户什么也看不到。
-            ShowOperationResult(result);
-            await RequestRefresh(GameOperationsRefreshMode.Normal);
+            // 刷新失败不改写已经确定的删除终态；用户始终能在原表面查看实际结果。
+            try
+            {
+                await RequestRefresh(GameOperationsRefreshMode.Normal);
+            }
+            catch (Exception exception)
+            {
+                await diagnostics.ErrorAsync("GameUninstall", "Refreshing launcher state after uninstall failed.", exception);
+            }
+            return result;
         }
         catch (Exception exception)
         {
-            // 终态必须落地（ADR-030）：抛出路径和返回失败路径一样要给用户看得见的结果。
-            // 只剩日志时，一次抛出的彻底清除会表现为「界面回到未安装、目录还在盘上」而无任何说明。
-            await errorHandling.HandleErrorAsync("Game uninstall failed.", exception,
-                new ErrorHandlingOptions { ToastMessage = localizer.F(LocalizationKeys.UninstallFailed, exception.Message) });
+            await diagnostics.ErrorAsync("GameUninstall", "Game uninstall failed.", exception);
+            return GameOperationOutcomes.Failed(
+                localizer.F(LocalizationKeys.UninstallFailed, exception.Message), GameOperationErrorCode.System);
         }
         finally
         {

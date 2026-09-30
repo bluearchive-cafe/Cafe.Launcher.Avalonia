@@ -1,4 +1,4 @@
-﻿using Cafe.Launcher.UI.Constants;
+using Cafe.Launcher.UI.Constants;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Features.SetupWizard;
 using Cafe.Launcher.UI.Services;
@@ -347,18 +347,12 @@ public sealed class DialogsViewModelTests : IDisposable
     {
         var viewModel = CreateViewModel();
         var repair = false;
-        var uninstall = false;
         var stop = false;
         var switchSource = false;
         var closeAfterStop = false;
         viewModel.RepairConfirm.Confirmed += () =>
         {
             repair = true;
-            return Task.CompletedTask;
-        };
-        viewModel.UninstallConfirm.Confirmed += () =>
-        {
-            uninstall = true;
             return Task.CompletedTask;
         };
         viewModel.StopConfirm.Confirmed += () =>
@@ -379,8 +373,6 @@ public sealed class DialogsViewModelTests : IDisposable
 
         viewModel.RepairConfirm.Show("repair");
         await viewModel.RepairConfirm.ConfirmCommand.ExecuteAsync(null);
-        viewModel.UninstallConfirm.Show("uninstall");
-        await viewModel.UninstallConfirm.ConfirmCommand.ExecuteAsync(null);
         viewModel.ShowStopConfirm();
         await viewModel.StopConfirm.ConfirmCommand.ExecuteAsync(null);
         viewModel.ResourcePanelSourceConfirm.Show("switch");
@@ -389,12 +381,10 @@ public sealed class DialogsViewModelTests : IDisposable
         await viewModel.DownloadRunningCloseConfirm.ConfirmCommand.ExecuteAsync(null);
 
         Assert.True(repair);
-        Assert.True(uninstall);
         Assert.True(stop);
         Assert.True(switchSource);
         Assert.True(closeAfterStop);
         Assert.False(viewModel.RepairConfirm.IsVisible);
-        Assert.False(viewModel.UninstallConfirm.IsVisible);
         Assert.False(viewModel.StopConfirm.IsVisible);
         Assert.False(viewModel.ResourcePanelSourceConfirm.IsVisible);
         Assert.False(viewModel.DownloadRunningCloseConfirm.IsVisible);
@@ -446,20 +436,17 @@ public sealed class DialogsViewModelTests : IDisposable
             return Task.CompletedTask;
         };
         viewModel.RepairConfirm.Show("repair");
-        viewModel.UninstallConfirm.Show("uninstall");
         viewModel.ShowStopConfirm();
         viewModel.ResourcePanelSourceConfirm.Show("source");
         viewModel.ShowDownloadRunningCloseConfirm();
 
         viewModel.RepairConfirm.CancelCommand.Execute(null);
-        viewModel.UninstallConfirm.CancelCommand.Execute(null);
         viewModel.StopConfirm.CancelCommand.Execute(null);
         viewModel.ResourcePanelSourceConfirm.CancelCommand.Execute(null);
         viewModel.DownloadRunningCloseConfirm.CancelCommand.Execute(null);
 
         Assert.False(requested);
         Assert.False(viewModel.RepairConfirm.IsVisible);
-        Assert.False(viewModel.UninstallConfirm.IsVisible);
         Assert.False(viewModel.StopConfirm.IsVisible);
         Assert.False(viewModel.ResourcePanelSourceConfirm.IsVisible);
         Assert.False(viewModel.DownloadRunningCloseConfirm.IsVisible);

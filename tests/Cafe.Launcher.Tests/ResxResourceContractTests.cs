@@ -17,7 +17,8 @@ public sealed class ResxResourceContractTests
     /// 实测值，并在 <see cref="Resx_NeutralContainsAllExpectedKeys"/> 的演进注释里补上
     /// 「为什么加一」。
     /// </summary>
-    private const int ExpectedNeutralResourceKeyCount = 598;
+    // 完整卸载表面的确认、阶段与结构化结果新增 27 个四语资源。
+    private const int ExpectedNeutralResourceKeyCount = 625;
 
     private static readonly string ResxDir;
     private static readonly string[] AllLocales = ["en", "zh-Hans", "zh-Hant", "ja"];

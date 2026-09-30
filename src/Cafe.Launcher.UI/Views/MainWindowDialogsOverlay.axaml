@@ -204,17 +204,8 @@
                                 ConfirmCommand="{Binding Dialogs.DownloadRunningCloseConfirm.ConfirmCommand}"
                                 IsDangerConfirm="True"/>
 
-        <!-- Uninstall confirmation dialog -->
-        <controls:ConfirmDialog IsOpen="{Binding Dialogs.UninstallConfirm.IsVisible}"
-                                Title="{Binding Shell.I18n[confirmUninstall]}"
-                                Message="{Binding Dialogs.UninstallConfirm.Message}"
-                                OptionText="{Binding Operations.ManagedCompatibilityCleanupOptionText}"
-                                IsOptionChecked="{Binding Operations.IsManagedCompatibilityCleanupSelected, Mode=TwoWay}"
-                                CancelText="{Binding Shell.I18n[cancel]}"
-                                CancelCommand="{Binding Dialogs.UninstallConfirm.CancelCommand}"
-                                ConfirmText="{Binding Shell.I18n[uninstall]}"
-                                ConfirmCommand="{Binding Dialogs.UninstallConfirm.ConfirmCommand}"
-                                IsDangerConfirm="True"/>
+        <!-- Complete uninstall journey, kept open through execution and result. -->
+        <views:UninstallDialog/>
 
         <!-- Unsaved changes confirmation dialog -->
         <controls:ConfirmDialog IsOpen="{Binding Settings.IsUnsavedChangesVisible}"

@@ -37,7 +37,6 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
     private readonly DialogsViewModel dialogs;
     private readonly ShellViewModel shell;
     private LauncherStatusSnapshot? currentSnapshot;
-    private LauncherStatusSnapshot? uninstallConfirmationSnapshot;
     private long runningStateVersion;
     private bool disposed;
 
@@ -104,18 +103,11 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
     [ObservableProperty]
     private bool isPaused;
 
-    /// <summary>
-    /// 卸载确认框里额外清理受管兼容环境的勾选状态（ADR-046），每次打开重置为 false。
-    /// </summary>
-    [ObservableProperty]
-    private bool isManagedCompatibilityCleanupSelected;
+    /// <summary>卸载确认、执行与结果共用的特性表面。</summary>
+    public UninstallDialogViewModel Uninstall { get; }
 
-    /// <summary>
-    /// 额外清理受管兼容环境的标签，含该目录实测大小（ADR-046）。
-    /// 空字符串时确认框整行折叠（其他确认框都不设它）。
-    /// </summary>
-    [ObservableProperty]
-    private string managedCompatibilityCleanupOptionText = "";
+    /// <summary>扫描与删除期间禁止关闭窗口或发起正常退出。</summary>
+    public bool IsUninstallExecuting => Uninstall.IsExecuting;
 
     /// <summary>
     /// 会话状态行的呈现（ADR-035）：启动中/运行中/已退出/未能启动。空闲时整行隐藏，
@@ -188,13 +180,16 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
         journey.IsRunningChanged += OnInstallationIsRunningChanged;
         sessionMonitor.StateChanged += OnGameSessionStateChanged;
         dialogs.RepairConfirm.Confirmed += RepairAsync;
-        dialogs.UninstallConfirm.Confirmed += ConfirmUninstallAsync;
+        Uninstall = new UninstallDialogViewModel(localizer, ConfirmUninstallAsync,
+            () => AsyncEvent.InvokeSequentiallyAsync(OpenLogViewerRequested));
+        Uninstall.PropertyChanged += OnUninstallPresentationChanged;
         dialogs.StopConfirm.Confirmed += PerformStop;
     }
 
     public void RefreshLocalizedText()
     {
         ApplyPausePresentation();
+        Uninstall.RefreshLocalizedText();
         if (sessionMonitor.State is not GameSessionState.Idle)
         {
             // 语言切换时状态行跟着换词；只重排文案，不重放 StartFailed 的恢复与报错
@@ -244,6 +239,10 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
     void IGameOperationJourneyHost.PrepareOperation()
     {
         shell.IsBusy = true;
+        if (IsUninstallExecuting)
+        {
+            return;
+        }
         PanelMode = GameOperationPanelMode.Progress;
         ProgressTitle = localizer.T(LocalizationKeys.Preparing);
         ProgressIconKind = ResolveProgressPresentation(GameOperationKind.Idle).IconKind;
@@ -427,7 +426,7 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
     [RelayCommand]
     private async Task RequestUninstallAsync()
     {
-        if (currentSnapshot is null)
+        if (currentSnapshot is null || shell.IsBusy || Uninstall.IsVisible)
         {
             return;
         }
@@ -447,23 +446,11 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
             return;
         }
 
-        // 游戏目录始终删除；受管兼容环境是额外选项，每次打开默认保留。
-        IsManagedCompatibilityCleanupSelected = false;
-        ManagedCompatibilityCleanupOptionText = localizer.T(LocalizationKeys.UninstallManagedCompatibilityOptionPending);
-        var confirmedSnapshot = requestedSnapshot;
-        uninstallConfirmationSnapshot = confirmedSnapshot;
-        dialogs.UninstallConfirm.Show(localizer.F(
-            LocalizationKeys.UninstallConfirmTextPending, confirmedSnapshot.LocalGame.GamePath));
-
-        var footprint = await journey.MeasureUninstallFootprintAsync(confirmedSnapshot);
-        if (dialogs.UninstallConfirm.IsVisible && ReferenceEquals(uninstallConfirmationSnapshot, confirmedSnapshot))
+        var version = Uninstall.Open(requestedSnapshot);
+        var footprint = await journey.MeasureUninstallFootprintAsync(requestedSnapshot);
+        if (!disposed)
         {
-            dialogs.UninstallConfirm.Message = localizer.F(
-                LocalizationKeys.UninstallConfirmText, confirmedSnapshot.LocalGame.GamePath,
-                FileSizeFormatter.Format(footprint.InstallDirectoryBytes));
-            ManagedCompatibilityCleanupOptionText = localizer.F(
-                LocalizationKeys.UninstallManagedCompatibilityOption,
-                FileSizeFormatter.Format(footprint.PrefixBytes));
+            Uninstall.ApplyFootprint(version, footprint);
         }
     }
 
@@ -472,17 +459,23 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
 
     public async Task ConfirmUninstallAsync()
     {
-        var confirmedSnapshot = uninstallConfirmationSnapshot ?? currentSnapshot;
-        uninstallConfirmationSnapshot = null;
-        if (confirmedSnapshot is not null)
+        var snapshot = Uninstall.Snapshot;
+        var scope = Uninstall.IsCompatibilitySelected
+            ? UninstallScope.GameDirectoryAndManagedCompatibility : UninstallScope.GameDirectory;
+        if (snapshot is null || !Uninstall.BeginExecution())
         {
-            // Set uninstall icon before the journey runs so the test sees it
-            ProgressIconKind = ResolveProgressPresentation(GameOperationKind.Uninstall).IconKind;
-            await journey.ConfirmUninstallAsync(
-                confirmedSnapshot,
-                IsManagedCompatibilityCleanupSelected
-                    ? UninstallScope.GameDirectoryAndManagedCompatibility
-                    : UninstallScope.GameDirectory);
+            return;
+        }
+
+        var result = await journey.ConfirmUninstallAsync(snapshot, scope);
+        Uninstall.Complete(result);
+    }
+
+    private void OnUninstallPresentationChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(UninstallDialogViewModel.IsExecuting))
+        {
+            OnPropertyChanged(nameof(IsUninstallExecuting));
         }
     }
 
@@ -513,6 +506,11 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
 
     private void ApplyProgressCore(GameOperationProgress progress)
     {
+        if (progress.OperationKind == GameOperationKind.Uninstall)
+        {
+            Uninstall.ApplyProgress(progress);
+            return;
+        }
         PanelMode = GameOperationPanelMode.Progress;
         // 并行校验/下载的进度回调由多个线程池线程经 Dispatcher.Post 汇入，到达次序
         // 不保证递增：递增与回调非原子，百分比可瞬时回退（AUD-PERF-006）。同一阶段
@@ -564,6 +562,7 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
             GameOperationStage.Stopped => localizer.T(LocalizationKeys.OperationStopped),
             GameOperationStage.Downloading => localizer.T(LocalizationKeys.Downloading),
             GameOperationStage.UninstallScanning => localizer.T(LocalizationKeys.UninstallScanning),
+            GameOperationStage.UninstallCleanup => localizer.T(LocalizationKeys.UninstallCleanupDescription),
             GameOperationStage.Uninstalling => progress.TotalEntryCount > 0
                 ? localizer.F(LocalizationKeys.UninstallProgress, progress.ProcessedEntryCount, progress.TotalEntryCount)
                 : localizer.T(LocalizationKeys.Uninstalling),
@@ -691,7 +690,7 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
         journey.IsRunningChanged -= OnInstallationIsRunningChanged;
         sessionMonitor.StateChanged -= OnGameSessionStateChanged;
         dialogs.RepairConfirm.Confirmed -= RepairAsync;
-        dialogs.UninstallConfirm.Confirmed -= ConfirmUninstallAsync;
+        Uninstall.PropertyChanged -= OnUninstallPresentationChanged;
         dialogs.StopConfirm.Confirmed -= PerformStop;
     }
 

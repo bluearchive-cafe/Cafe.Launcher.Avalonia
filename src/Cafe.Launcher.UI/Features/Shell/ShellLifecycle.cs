@@ -692,7 +692,13 @@ internal sealed class ShellLifecycle : IDisposable
             dialogs.SetupWizardExitConfirm.ShowCommand));
         RegisterConfirmation(ModalKind.StopConfirmation, dialogs.StopConfirm);
         RegisterConfirmation(ModalKind.DownloadRunningCloseConfirmation, dialogs.DownloadRunningCloseConfirm);
-        RegisterConfirmation(ModalKind.UninstallConfirmation, dialogs.UninstallConfirm);
+        modalRegistrar.Register(new ModalRegistration(
+            ModalKind.UninstallConfirmation,
+            operations.Uninstall,
+            nameof(UninstallDialogViewModel.IsVisible),
+            () => operations.Uninstall.IsVisible,
+            operations.Uninstall,
+            operations.Uninstall.CloseCommand));
         RegisterConfirmation(ModalKind.RepairConfirmation, dialogs.RepairConfirm);
         RegisterConfirmation(ModalKind.ResourcePanelSourceConfirmation, dialogs.ResourcePanelSourceConfirm);
         RegisterConfirmation(ModalKind.DebugResetConfirmation, dialogs.DebugResetConfirm);

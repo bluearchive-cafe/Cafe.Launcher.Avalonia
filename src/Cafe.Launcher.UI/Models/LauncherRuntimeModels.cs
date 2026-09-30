@@ -110,6 +110,9 @@ internal sealed class GameOperationResult
     public long AffectedBytes { get; set; }
 
     public int FailedFileCount { get; set; }
+
+    /// <summary>仅卸载设置；完整残留与保留路径供结果表面直接绑定。</summary>
+    public UninstallResultDetails? UninstallDetails { get; set; }
 }
 
 internal sealed class RemoteContentItem : ObservableObject

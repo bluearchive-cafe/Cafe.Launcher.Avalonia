@@ -477,8 +477,21 @@ internal partial class MainWindow : Window
         return false;
     }
 
+    protected override void OnClosing(WindowClosingEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel vm && vm.Operations.IsUninstallExecuting)
+        {
+            e.Cancel = true;
+        }
+        base.OnClosing(e);
+    }
+
     private void PerformClose()
     {
+        if (DataContext is MainWindowViewModel active && active.Operations.IsUninstallExecuting)
+        {
+            return;
+        }
         if (DataContext is MainWindowViewModel vm
             && vm.Settings.Editor.GetSavedSnapshot().CloseBehavior == Cafe.Launcher.Core.Models.CloseBehaviors.Minimize)
         {

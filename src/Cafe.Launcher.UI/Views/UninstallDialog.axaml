@@ -1,0 +1,184 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cafe.Launcher.UI.ViewModels"
+             xmlns:controls="using:Cafe.Launcher.UI.Controls"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Cafe.Launcher.UI.Views.UninstallDialog"
+             x:Name="Root"
+             x:DataType="vm:MainWindowViewModel">
+    <UserControl.Styles>
+        <Style Selector="Border.uninstall-directory">
+            <Setter Property="Background" Value="{DynamicResource Launcher.Color.Field.Background}"/>
+            <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
+            <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Lg}"/>
+        </Style>
+        <Style Selector="SelectableTextBlock.uninstall-path">
+            <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Label.Md}"/>
+            <Setter Property="FontFamily" Value="{StaticResource Launcher.Typography.FontFamily.Monospace}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Body}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+        <Style Selector="TextBlock.uninstall-number">
+            <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Display}"/>
+            <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
+        </Style>
+        <Style Selector="TextBlock.uninstall-step">
+            <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Label.Md}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
+        </Style>
+        <Style Selector="TextBlock.uninstall-step.active">
+            <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary}"/>
+            <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
+        </Style>
+        <Style Selector="TextBlock.uninstall-step.done">
+            <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Success}"/>
+        </Style>
+        <Style Selector="controls|DialogSurface.uninstall-success /template/ ContentPresenter#PART_BadgePresenter">
+            <Setter Property="Background" Value="{DynamicResource Launcher.Color.Success.Soft}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Success}"/>
+        </Style>
+        <Style Selector="Border.dialog-alert.warning">
+            <Setter Property="Background" Value="{DynamicResource Launcher.Color.Warning.Background}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Warning}"/>
+        </Style>
+    </UserControl.Styles>
+    <Grid Classes="dialog-overlay motion-overlay"
+          Classes.motion-enabled="{Binding IsMotionEnabled}"
+          controls:MotionVisibility.IsOpen="{Binding Operations.Uninstall.IsVisible}"
+          controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
+        <controls:DialogSurface x:Name="UninstallSurface"
+                                Form="Panel"
+                                Status="{Binding Operations.Uninstall.Status}"
+                                Classes="motion-surface"
+                                Classes.uninstall-success="{Binding Operations.Uninstall.IsCleanCompletion}"
+                                HorizontalAlignment="Center" VerticalAlignment="Center"
+                                Margin="{StaticResource Launcher.Spacing.Thickness.Xxl}"
+                                Width="{StaticResource Launcher.Component.Dialog.Confirm.MaxWidth}"
+                                MaxWidth="{StaticResource Launcher.Component.Dialog.Confirm.MaxWidth}"
+                                MaxHeight="{StaticResource Launcher.Component.Dialog.Confirm.MaxHeight}"
+                                Focusable="True" IsTabStop="False"
+                                Title="{Binding Operations.Uninstall.Title}"
+                                Subtitle="{Binding Shell.I18n[gameDisplayName]}"
+                                CloseCommand="{Binding Operations.Uninstall.CloseCommand}"
+                                CloseAutomationName="{Binding Shell.I18n[close]}"
+                                CloseToolTip="{Binding Shell.I18n[close]}"
+                                AutomationProperties.Name="{Binding Operations.Uninstall.Title}">
+            <controls:DialogSurface.RenderTransform><TranslateTransform/></controls:DialogSurface.RenderTransform>
+            <controls:DialogSurface.HeaderIcon>
+                <materialIcons:MaterialIcon Kind="{Binding Operations.Uninstall.IconKind}"
+                                            Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
+            </controls:DialogSurface.HeaderIcon>
+            <controls:DialogSurface.Content>
+                <StackPanel Spacing="{StaticResource Launcher.Spacing.Lg}">
+                    <Border Classes="uninstall-directory" IsVisible="{Binding !Operations.Uninstall.IsResult}">
+                        <StackPanel Spacing="{StaticResource Launcher.Spacing.Xs}">
+                            <TextBlock Text="{Binding Shell.I18n[gamePath]}" Classes="caption"/>
+                            <SelectableTextBlock Text="{Binding Operations.Uninstall.GamePath}" Classes="uninstall-path"
+                                                 AutomationProperties.Name="{Binding Shell.I18n[gamePath]}"/>
+                        </StackPanel>
+                    </Border>
+                    <StackPanel IsVisible="{Binding Operations.Uninstall.IsConfirmation}" Spacing="{StaticResource Launcher.Spacing.Lg}">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{Binding Shell.I18n[uninstallEstimatedSize]}" Classes="caption" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1" Text="{Binding Operations.Uninstall.TotalSizeText}" Classes="uninstall-number"/>
+                        </Grid>
+                        <TextBlock Text="{Binding Shell.I18n[uninstallScopeDescription]}" Classes="category-subtitle"/>
+                        <Separator/>
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                            <CheckBox x:Name="CompatibilityOption" Classes="setting-checkbox"
+                                      IsChecked="{Binding Operations.Uninstall.IsCompatibilitySelected, Mode=TwoWay}"
+                                      AutomationProperties.Name="{Binding Shell.I18n[uninstallCompatibilityOption]}">
+                                <StackPanel Spacing="{StaticResource Launcher.Spacing.Xs}">
+                                    <TextBlock Text="{Binding Shell.I18n[uninstallCompatibilityOption]}" TextWrapping="Wrap"/>
+                                    <TextBlock Text="{Binding Shell.I18n[uninstallCompatibilityDescription]}" Classes="caption" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </CheckBox>
+                            <TextBlock Grid.Column="1" Text="{Binding Operations.Uninstall.CompatibilitySizeText}" Classes="caption"/>
+                        </Grid>
+                        <TextBlock Text="{Binding Shell.I18n[uninstallIrreversible]}" Classes="caption" TextWrapping="Wrap"
+                                   Foreground="{StaticResource Launcher.Color.Danger}"/>
+                    </StackPanel>
+                    <StackPanel IsVisible="{Binding Operations.Uninstall.IsExecuting}" Spacing="{StaticResource Launcher.Spacing.Lg}">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{Binding Operations.Uninstall.ProgressTitle}" Classes="section-title" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="UninstallPercentage" Grid.Column="1" Classes="uninstall-number"
+                                       Text="{Binding Operations.Uninstall.ProgressValue, StringFormat={}{0}%}"
+                                       IsVisible="{Binding !Operations.Uninstall.IsIndeterminate}"/>
+                        </Grid>
+                        <ProgressBar x:Name="UninstallProgressBar" Value="{Binding Operations.Uninstall.ProgressValue}"
+                                     IsIndeterminate="{Binding Operations.Uninstall.IsIndeterminate}" Minimum="0" Maximum="100"
+                                     Height="{StaticResource Launcher.Component.Progress.Bar.Height}"
+                                     AutomationProperties.Name="{Binding Shell.I18n[uninstallGame]}"/>
+                        <TextBlock Text="{Binding Operations.Uninstall.ProgressDetail}" Classes="caption" TextWrapping="Wrap"/>
+                        <Grid ColumnDefinitions="*,*,*" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}">
+                            <TextBlock Text="{Binding Shell.I18n[uninstallScanStep]}" Classes="uninstall-step"
+                                       Classes.active="{Binding Operations.Uninstall.IsScanActive}" Classes.done="{Binding Operations.Uninstall.IsScanDone}"/>
+                            <TextBlock Grid.Column="1" Text="{Binding Shell.I18n[uninstallDeleteStep]}" Classes="uninstall-step"
+                                       Classes.active="{Binding Operations.Uninstall.IsDeleteActive}" Classes.done="{Binding Operations.Uninstall.IsDeleteDone}"/>
+                            <TextBlock Grid.Column="2" Text="{Binding Shell.I18n[uninstallCleanupStep]}" Classes="uninstall-step"
+                                       Classes.active="{Binding Operations.Uninstall.IsCleanupActive}"/>
+                        </Grid>
+                        <TextBlock Text="{Binding Shell.I18n[uninstallKeepRunning]}" Classes="caption" TextWrapping="Wrap"/>
+                    </StackPanel>
+                    <StackPanel IsVisible="{Binding Operations.Uninstall.IsResult}" Spacing="{StaticResource Launcher.Spacing.Lg}">
+                        <SelectableTextBlock Text="{Binding Operations.Uninstall.ResultMessage}" TextWrapping="Wrap"
+                                             AutomationProperties.Name="{Binding Operations.Uninstall.Title}"/>
+                        <Border Classes="uninstall-directory" IsVisible="{Binding Operations.Uninstall.HasMetrics}">
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="{StaticResource Launcher.Spacing.Lg}">
+                                <StackPanel Spacing="{StaticResource Launcher.Spacing.Xs}">
+                                    <TextBlock Text="{Binding Shell.I18n[uninstallRemovedFiles]}" Classes="caption"/>
+                                    <TextBlock Text="{Binding Operations.Uninstall.RemovedFilesText}" Classes="uninstall-number"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Spacing="{StaticResource Launcher.Spacing.Xs}">
+                                    <TextBlock Text="{Binding Shell.I18n[uninstallRemovedSize]}" Classes="caption"/>
+                                    <TextBlock Text="{Binding Operations.Uninstall.RemovedSizeText}" Classes="uninstall-number"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                        <Border Classes="dialog-alert warning" IsVisible="{Binding Operations.Uninstall.HasLeftovers}">
+                            <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}">
+                                <TextBlock Text="{Binding Operations.Uninstall.LeftoversSummary}" Classes="section-title"/>
+                                <ItemsControl ItemsSource="{Binding Operations.Uninstall.Leftovers}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="x:String">
+                                            <SelectableTextBlock Text="{Binding}" Classes="uninstall-path"
+                                                AutomationProperties.Name="{Binding #Root.((vm:MainWindowViewModel)DataContext).Shell.I18n[uninstallLeftoverPath]}"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                    <StackPanel IsVisible="{Binding Operations.Uninstall.HasKeptPrefix}" Spacing="{StaticResource Launcher.Spacing.Xs}">
+                        <TextBlock Text="{Binding Shell.I18n[uninstallKeptPrefixTitle]}" Classes="section-title"/>
+                        <TextBlock Text="{Binding Shell.I18n[uninstallKeptPrefixDescription]}" Classes="caption" TextWrapping="Wrap"/>
+                        <SelectableTextBlock Text="{Binding Operations.Uninstall.KeptPrefixPath}" Classes="uninstall-path"
+                                             AutomationProperties.Name="{Binding Shell.I18n[uninstallKeptPrefixTitle]}"/>
+                    </StackPanel>
+                </StackPanel>
+            </controls:DialogSurface.Content>
+            <controls:DialogSurface.FooterLeading>
+                <TextBlock Text="{Binding Shell.I18n[uninstallCloseAfterCompletion]}" Classes="caption"
+                           IsVisible="{Binding Operations.Uninstall.IsExecuting}"/>
+            </controls:DialogSurface.FooterLeading>
+            <controls:DialogSurface.Footer>
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}">
+                    <Button x:Name="UninstallConfirmButton" Classes="danger-action dialog-action"
+                            IsVisible="{Binding Operations.Uninstall.IsConfirmation}" Command="{Binding Operations.Uninstall.ConfirmCommand}"
+                            Content="{Binding Shell.I18n[uninstallGame]}" AutomationProperties.Name="{Binding Shell.I18n[uninstallGame]}"/>
+                    <Button x:Name="UninstallCancelButton" Classes="flat-action dialog-action"
+                            IsVisible="{Binding Operations.Uninstall.IsConfirmation}" Command="{Binding Operations.Uninstall.CloseCommand}"
+                            Content="{Binding Shell.I18n[cancel]}" AutomationProperties.Name="{Binding Shell.I18n[cancel]}"/>
+                    <Button Classes="flat-action dialog-action" IsEnabled="False" IsVisible="{Binding Operations.Uninstall.IsExecuting}"
+                            Content="{Binding Shell.I18n[uninstalling]}" AutomationProperties.Name="{Binding Shell.I18n[uninstalling]}"/>
+                    <Button Classes="flat-action dialog-action" IsVisible="{Binding Operations.Uninstall.HasLogAction}"
+                            Command="{Binding Operations.Uninstall.ViewLogsCommand}"
+                            Content="{Binding Shell.I18n[viewLog]}" AutomationProperties.Name="{Binding Shell.I18n[viewLog]}"/>
+                    <Button x:Name="UninstallDoneButton" Classes="primary-action dialog-action" IsVisible="{Binding Operations.Uninstall.IsResult}"
+                            Command="{Binding Operations.Uninstall.CloseCommand}" Content="{Binding Operations.Uninstall.DoneText}"
+                            AutomationProperties.Name="{Binding Operations.Uninstall.DoneText}"/>
+                </StackPanel>
+            </controls:DialogSurface.Footer>
+        </controls:DialogSurface>
+    </Grid>
+</UserControl>

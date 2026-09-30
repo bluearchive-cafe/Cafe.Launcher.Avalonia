@@ -316,7 +316,7 @@ public sealed partial class MainWindowHeadlessTests
         context.ViewModel.Settings.IsUnsavedChangesVisible = false;
         context.ViewModel.Dialogs.RepairConfirm.IsVisible = false;
         context.ViewModel.Dialogs.ResourcePanelSourceConfirm.IsVisible = false;
-        context.ViewModel.Dialogs.UninstallConfirm.IsVisible = false;
+        context.ViewModel.Operations.Uninstall.CloseCommand.Execute(null);
         context.ViewModel.Dialogs.IsNoticeDialogVisible = false;
         context.ViewModel.ResourcePanel.IsResourcePanelVisible = false;
         context.ViewModel.WindowChrome.IsSettingsVisible = true;

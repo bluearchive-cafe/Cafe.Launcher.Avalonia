@@ -444,21 +444,15 @@ public sealed class GameOperationJourneyTests
     [Fact]
     public async Task ConfirmUninstallAsync_WhenStateNoLongerAllowsUninstall_ReportsInsteadOfSilence()
     {
-        // 用户已经点过确认：状态若在这之后变得不允许，不能什么都不做（ADR-027）。
         var context = CreateContext();
         var notifications = context.SubscribeToasts();
-
-        await context.Journey.ConfirmUninstallAsync(
-            CreateSnapshot(LauncherRuntimeState.NotInstalled),
-            UninstallScope.GameDirectory);
-
+        var result = await context.Journey.ConfirmUninstallAsync(
+            CreateSnapshot(LauncherRuntimeState.NotInstalled), UninstallScope.GameDirectory);
+        Assert.False(result.Success);
+        Assert.Equal(context.Localizer.T(LocalizationKeys.OperationUnavailableForCurrentState), result.Message);
         Assert.Equal(0, context.Executor.UninstallCallCount);
         Assert.Equal(0, context.Host.SetBusyCallCount);
-        var notification = Assert.Single(notifications);
-        Assert.Equal(ToastSeverity.Warning, notification.Severity);
-        Assert.Equal(
-            context.Localizer.T(LocalizationKeys.OperationUnavailableForCurrentState),
-            notification.Message);
+        Assert.Empty(notifications);
     }
 
     [Fact]
@@ -518,54 +512,35 @@ public sealed class GameOperationJourneyTests
     [Fact]
     public async Task ConfirmUninstallAsync_WhenUninstallSucceeds_ReportsTheResult()
     {
-        // 从前这里把终态丢掉，成功也没有回声（ADR-030 顺带修）。
         var context = CreateContext();
         var notifications = context.SubscribeToasts();
         context.Executor.UninstallResult = new GameOperationResult { Success = true, Message = "uninstalled" };
-
-        await context.Journey.ConfirmUninstallAsync(CreateSnapshot(), UninstallScope.GameDirectory);
-
-        var notification = Assert.Single(notifications);
-        Assert.Equal(ToastSeverity.Success, notification.Severity);
-        Assert.Equal("uninstalled", notification.Message);
+        var result = await context.Journey.ConfirmUninstallAsync(CreateSnapshot(), UninstallScope.GameDirectory);
+        Assert.Same(context.Executor.UninstallResult, result);
+        Assert.Empty(notifications);
     }
 
     [Fact]
     public async Task ConfirmUninstallAsync_WhenUninstallFails_ReportsTheFailureInsteadOfSilence()
     {
-        // 逐文件删除撞上占用/权限时用户必须看到发生了什么（ADR-030）。
         var context = CreateContext();
         var notifications = context.SubscribeToasts();
-        context.Executor.UninstallResult = new GameOperationResult
-        {
-            Success = false,
-            Message = "game files are locked",
-            ErrorCode = GameOperationErrorCode.System
-        };
-
-        await context.Journey.ConfirmUninstallAsync(CreateSnapshot(), UninstallScope.GameDirectoryAndManagedCompatibility);
-
-        var notification = Assert.Single(notifications);
-        Assert.Equal(ToastSeverity.Error, notification.Severity);
-        Assert.Equal("game files are locked", notification.Message);
+        context.Executor.UninstallResult = new GameOperationResult { Success = false, Message = "game files are locked", ErrorCode = GameOperationErrorCode.System };
+        var result = await context.Journey.ConfirmUninstallAsync(CreateSnapshot(), UninstallScope.GameDirectoryAndManagedCompatibility);
+        Assert.False(result.Success);
+        Assert.Equal("game files are locked", result.Message);
+        Assert.Empty(notifications);
     }
 
     [Fact]
     public async Task ConfirmUninstallAsync_WhenUninstallThrows_ReportsTheFailureInsteadOfSilence()
     {
-        // 抛出路径同样要落到用户眼前（ADR-030）。实测：彻底清除在倒序删除阶段抛出时，
-        // 从前只记日志——界面回到「未安装」、目录还留在盘上，而用户看不到任何原因。
         var context = CreateContext();
         context.Executor.UninstallException = new IOException("目录不是空的。");
-
-        await context.Journey.ConfirmUninstallAsync(CreateSnapshot(), UninstallScope.GameDirectoryAndManagedCompatibility);
-
-        var handled = Assert.Single(context.ErrorHandling.Handled);
-        Assert.Equal("Game uninstall failed.", handled.Context);
-        var options = Assert.Single(context.ErrorHandling.HandledOptions);
-        Assert.NotNull(options);
-        Assert.True(options!.ShowToast, "卸载抛出时不能只记日志，必须给用户可见结果。");
-        Assert.Contains("目录不是空的", options.ToastMessage, StringComparison.Ordinal);
+        var result = await context.Journey.ConfirmUninstallAsync(CreateSnapshot(), UninstallScope.GameDirectoryAndManagedCompatibility);
+        Assert.False(result.Success);
+        Assert.Contains("目录不是空的", result.Message, StringComparison.Ordinal);
+        Assert.Empty(context.ErrorHandling.Handled);
         Assert.False(context.Host.IsBusy);
     }
 
@@ -617,6 +592,17 @@ public sealed class GameOperationJourneyTests
         Assert.Equal(1, context.Executor.StopCallCount);
         Assert.Equal(DownloadStopReason.UserRequested, context.Executor.LastStopReason);
         Assert.Contains(notifications, toast => toast.Severity == ToastSeverity.Warning);
+    }
+
+    [Fact]
+    public async Task ConfirmUninstallAsync_WhenRefreshThrows_PreservesDeletionResultAndClearsBusy()
+    {
+        var context = CreateContext();
+        context.Host.RefreshException = new IOException("refresh failed");
+        context.Executor.UninstallResult = new GameOperationResult { Success = true, AffectedFileCount = 17, AffectedBytes = 2048 };
+        var result = await context.Journey.ConfirmUninstallAsync(CreateSnapshot(), UninstallScope.GameDirectory);
+        Assert.Same(context.Executor.UninstallResult, result);
+        Assert.False(context.Host.IsBusy);
     }
 
     private static LauncherStatusSnapshot CreateSnapshot(
@@ -692,6 +678,7 @@ public sealed class GameOperationJourneyTests
         public string? RepairConfirmationShown { get; private set; }
 
         public List<GameOperationsRefreshMode> RefreshRequests { get; } = [];
+        public Exception? RefreshException { get; set; }
 
         public bool MinimizeRequested { get; private set; }
 
@@ -720,6 +707,10 @@ public sealed class GameOperationJourneyTests
         public Task<bool> RefreshAsync(GameOperationsRefreshMode mode)
         {
             RefreshRequests.Add(mode);
+            if (RefreshException is not null)
+            {
+                throw RefreshException;
+            }
             return Task.FromResult(true);
         }
 

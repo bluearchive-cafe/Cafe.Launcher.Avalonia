@@ -11,11 +11,14 @@ namespace Cafe.Launcher.UI.Services;
 /// </summary>
 internal interface IGameOperationActivity
 {
-    /// <summary>Raised when IsDownloadRunning, IsPaused, or CanPauseOperation changes.</summary>
+    /// <summary>Raised when download, uninstall or pause availability changes.</summary>
     event PropertyChangedEventHandler? ActivityPropertyChanged;
 
     /// <summary>Gets whether a download or repair workflow is currently running.</summary>
     bool IsDownloadRunning { get; }
+
+    /// <summary>True while a confirmed uninstall is scanning, deleting or finishing cleanup.</summary>
+    bool IsUninstallExecuting { get; }
 
     /// <summary>Gets whether the active download workflow is paused.</summary>
     bool IsPaused { get; }

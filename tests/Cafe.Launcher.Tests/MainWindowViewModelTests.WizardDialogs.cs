@@ -138,7 +138,7 @@ public partial class MainWindowViewModelTests
                 viewModel.Dialogs.ResourcePanelSourceConfirm.Show("source");
                 break;
             case ModalKind.UninstallConfirmation:
-                viewModel.Dialogs.UninstallConfirm.Show("uninstall");
+                viewModel.Operations.Uninstall.Open(new LauncherStatusSnapshot());
                 break;
             case ModalKind.StopConfirmation:
                 viewModel.Dialogs.ShowStopConfirm();

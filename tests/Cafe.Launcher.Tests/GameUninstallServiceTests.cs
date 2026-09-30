@@ -75,7 +75,10 @@ public sealed class GameUninstallServiceTests : IDisposable
         Assert.Equal(205, updates[^1].TotalEntryCount); // 203 files + game/resources directories.
         Assert.Equal(205, updates[^1].ProcessedEntryCount);
         Assert.Equal(203, result.AffectedFileCount);
-        Assert.InRange(updates.Count, 3, 98); // Percentage gate avoids a UI dispatch for every file.
+        Assert.InRange(updates.Count, 4, 99); // Percentage gate plus an explicit final-cleanup stage.
+        Assert.Equal(GameOperationStage.UninstallCleanup, updates[^1].Stage);
+        Assert.NotNull(result.UninstallDetails);
+        Assert.Empty(result.UninstallDetails.Leftovers);
         Assert.All(updates, update => Assert.False(update.CanStop));
         Assert.Equal(updates.Select(update => update.Progress).Order(), updates.Select(update => update.Progress));
         Assert.All(updates.Skip(1).SkipLast(1), update => Assert.InRange(update.Progress, 0, 95));

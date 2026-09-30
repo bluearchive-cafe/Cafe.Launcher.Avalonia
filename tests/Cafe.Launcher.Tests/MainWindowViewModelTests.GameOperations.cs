@@ -66,7 +66,7 @@ public partial class MainWindowViewModelTests
         await viewModel.InitializeAsync();
         await viewModel.Operations.RequestUninstallCommand.ExecuteAsync(null);
 
-        await viewModel.Dialogs.UninstallConfirm.ConfirmCommand.ExecuteAsync(null);
+        await viewModel.Operations.Uninstall.ConfirmCommand.ExecuteAsync(null);
 
         Assert.Equal(1, backend.UninstallCallCount);
     }
@@ -88,8 +88,8 @@ public partial class MainWindowViewModelTests
         await viewModel.Operations.RequestUninstallCommand.ExecuteAsync(null);
 
         // 勾选经真实接线走到执行层：确认框上的选项最终变成卸载范围（ADR-030）。
-        viewModel.Operations.IsManagedCompatibilityCleanupSelected = true;
-        await viewModel.Dialogs.UninstallConfirm.ConfirmCommand.ExecuteAsync(null);
+        viewModel.Operations.Uninstall.IsCompatibilitySelected = true;
+        await viewModel.Operations.Uninstall.ConfirmCommand.ExecuteAsync(null);
 
         Assert.Equal(1, backend.UninstallCallCount);
         Assert.Equal(UninstallScope.GameDirectoryAndManagedCompatibility, backend.LastUninstallScope);

@@ -161,7 +161,11 @@ internal sealed class SystemTrayService : IDisposable
 
     private void ExitApplication()
     {
-        Dispose();
+        // 退出被拒绝时托盘仍必须可用；只有生命周期最终释放才 Dispose。
+        if (actions?.CanExit == false)
+        {
+            return;
+        }
 
         if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {

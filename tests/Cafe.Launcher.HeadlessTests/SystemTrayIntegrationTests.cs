@@ -129,6 +129,23 @@ public sealed class SystemTrayIntegrationTests
         Assert.False(context.ViewModel.WindowChrome.IsSettingsVisible);
     }
 
+    [AvaloniaFact]
+    public void Exit_WhileUninstalling_PreservesTrayAndAllowsWindowRestore()
+    {
+        using var context = new TrayContext();
+        context.Ready();
+        context.Window.Show();
+        var uninstall = context.ViewModel.Operations.Uninstall;
+        uninstall.Open(new LauncherStatusSnapshot());
+        uninstall.BeginExecution();
+        context.Tray.HideWindow();
+        context.Platform.ExitApplication?.Invoke();
+        Assert.False(context.Platform.Disposed);
+        context.Tray.ShowWindow();
+        Assert.True(context.Window.IsVisible);
+        uninstall.Complete(new GameOperationResult { Success = true });
+    }
+
     private sealed class TrayContext : IDisposable
     {
         private readonly ServiceProvider provider;

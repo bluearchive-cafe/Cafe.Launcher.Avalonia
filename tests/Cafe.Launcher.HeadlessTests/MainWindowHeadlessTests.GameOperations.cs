@@ -13,6 +13,8 @@ public sealed partial class MainWindowHeadlessTests
     {
         using var context = CreateContext();
         context.Window.Show();
+        context.ViewModel.Operations.Uninstall.Open(new Cafe.Launcher.Core.Models.LauncherStatusSnapshot());
+        context.ViewModel.Operations.Uninstall.BeginExecution();
         context.ViewModel.Operations.ApplyProgress(new GameOperationProgress
         {
             OperationKind = GameOperationKind.Uninstall,
@@ -20,12 +22,13 @@ public sealed partial class MainWindowHeadlessTests
             IsRunning = true
         });
         Dispatcher.UIThread.RunJobs();
-        var panel = context.Window.FindControl<Border>("OperationProgressState")!;
+        var panel = context.Window.GetVisualDescendants().OfType<Cafe.Launcher.UI.Controls.DialogSurface>()
+            .Single(surface => surface.Name == "UninstallSurface");
         var bar = panel.GetVisualDescendants().OfType<ProgressBar>().Single();
         var percentage = panel.GetVisualDescendants().OfType<TextBlock>()
-            .Single(text => text.Text == "0%" && text.Classes.Contains("progress-title"));
+            .Single(text => text.Name == "UninstallPercentage");
 
-        Assert.True(panel.IsVisible);
+        Assert.True(panel.IsEffectivelyVisible);
         Assert.True(bar.IsIndeterminate);
         Assert.False(percentage.IsVisible);
 
@@ -45,6 +48,7 @@ public sealed partial class MainWindowHeadlessTests
         Assert.True(percentage.IsVisible);
         Assert.Equal("47%", percentage.Text);
         Assert.Contains(panel.GetVisualDescendants().OfType<TextBlock>(),
-            text => text.Text == context.ViewModel.Operations.ProgressDetail && text.IsVisible);
+            text => text.Text == context.ViewModel.Operations.Uninstall.ProgressDetail && text.IsVisible);
+        context.ViewModel.Operations.Uninstall.Complete(new GameOperationResult { Success = true });
     }
 }

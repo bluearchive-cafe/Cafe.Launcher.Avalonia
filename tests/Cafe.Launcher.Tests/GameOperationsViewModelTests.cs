@@ -50,6 +50,8 @@ public sealed class GameOperationsViewModelTests : IDisposable
     public void ApplyProgress_ForUninstall_ShowsScanningThenProcessedEntries()
     {
         var context = CreateContext();
+        context.ViewModel.Uninstall.Open(ReadySnapshot());
+        context.ViewModel.Uninstall.BeginExecution();
         context.ViewModel.ApplyProgress(new GameOperationProgress
         {
             OperationKind = GameOperationKind.Uninstall,
@@ -57,8 +59,8 @@ public sealed class GameOperationsViewModelTests : IDisposable
             IsRunning = true
         });
 
-        Assert.True(context.ViewModel.IsProgressIndeterminate);
-        Assert.Equal(context.Localizer.T(LocalizationKeys.UninstallScanning), context.ViewModel.ProgressDetail);
+        Assert.True(context.ViewModel.Uninstall.IsIndeterminate);
+        Assert.Equal(context.Localizer.T(LocalizationKeys.UninstallScanning), context.ViewModel.Uninstall.ProgressDetail);
 
         context.ViewModel.ApplyProgress(new GameOperationProgress
         {
@@ -70,9 +72,9 @@ public sealed class GameOperationsViewModelTests : IDisposable
             IsRunning = true
         });
 
-        Assert.False(context.ViewModel.IsProgressIndeterminate);
-        Assert.Equal(47, context.ViewModel.ProgressValue);
-        Assert.Equal(context.Localizer.F(LocalizationKeys.UninstallProgress, 50, 100), context.ViewModel.ProgressDetail);
+        Assert.False(context.ViewModel.Uninstall.IsIndeterminate);
+        Assert.Equal(47, context.ViewModel.Uninstall.ProgressValue);
+        Assert.Equal(context.Localizer.F(LocalizationKeys.UninstallProgress, 50, 100), context.ViewModel.Uninstall.ProgressDetail);
     }
 
     [Fact]
@@ -748,14 +750,14 @@ public sealed class GameOperationsViewModelTests : IDisposable
         context.ViewModel.ApplySnapshot(ReadySnapshot("C:\\Game"));
         context.Backend.ValidateUninstallResult = new GameOperationResult { Success = true, AffectedFileCount = 5 };
         context.Backend.MeasureFootprintResult = new UninstallFootprint(1234567, 890);
-        context.ViewModel.IsManagedCompatibilityCleanupSelected = true;
+        context.ViewModel.Uninstall.IsCompatibilitySelected = true;
 
         await context.ViewModel.RequestUninstallCommand.ExecuteAsync(null);
 
-        Assert.False(context.ViewModel.IsManagedCompatibilityCleanupSelected);
+        Assert.False(context.ViewModel.Uninstall.IsCompatibilitySelected);
         Assert.Equal(1, context.Backend.MeasureFootprintCallCount);
-        Assert.Contains(FileSizeFormatter.Format(1234567), context.Dialogs.UninstallConfirm.Message, StringComparison.Ordinal);
-        Assert.Contains(FileSizeFormatter.Format(890), context.ViewModel.ManagedCompatibilityCleanupOptionText, StringComparison.Ordinal);
+        Assert.Contains(FileSizeFormatter.Format(1234567), context.ViewModel.Uninstall.TotalSizeText, StringComparison.Ordinal);
+        Assert.Contains(FileSizeFormatter.Format(890), context.ViewModel.Uninstall.CompatibilitySizeText, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -773,9 +775,9 @@ public sealed class GameOperationsViewModelTests : IDisposable
 
         await context.ViewModel.RequestUninstallCommand.ExecuteAsync(null);
 
-        Assert.True(context.Dialogs.UninstallConfirm.IsVisible);
-        Assert.True(context.Dialogs.UninstallConfirm.ConfirmCommand.CanExecute(null));
-        await context.Dialogs.UninstallConfirm.ConfirmCommand.ExecuteAsync(null);
+        Assert.True(context.ViewModel.Uninstall.IsVisible);
+        Assert.True(context.ViewModel.Uninstall.ConfirmCommand.CanExecute(null));
+        await context.ViewModel.Uninstall.ConfirmCommand.ExecuteAsync(null);
         Assert.Equal(1, context.Backend.UninstallCallCount);
         Assert.Equal(UninstallScope.GameDirectory, context.Backend.LastUninstallScope);
     }
@@ -791,11 +793,12 @@ public sealed class GameOperationsViewModelTests : IDisposable
 
         await context.ViewModel.RequestUninstallCommand.ExecuteAsync(null);
 
-        Assert.True(context.Dialogs.UninstallConfirm.IsVisible);
-        Assert.False(context.ViewModel.IsManagedCompatibilityCleanupSelected);
-        Assert.True(context.Dialogs.UninstallConfirm.ConfirmCommand.CanExecute(null));
-        await context.Dialogs.UninstallConfirm.ConfirmCommand.ExecuteAsync(null);
-        Assert.False(context.Dialogs.UninstallConfirm.IsVisible);
+        Assert.True(context.ViewModel.Uninstall.IsVisible);
+        Assert.False(context.ViewModel.Uninstall.IsCompatibilitySelected);
+        Assert.True(context.ViewModel.Uninstall.ConfirmCommand.CanExecute(null));
+        await context.ViewModel.Uninstall.ConfirmCommand.ExecuteAsync(null);
+        Assert.True(context.ViewModel.Uninstall.IsResult);
+        Assert.True(context.ViewModel.Uninstall.IsVisible);
         Assert.Equal(UninstallScope.GameDirectory, context.Backend.LastUninstallScope);
         Assert.Equal(1, context.Backend.UninstallCallCount);
     }
@@ -809,7 +812,7 @@ public sealed class GameOperationsViewModelTests : IDisposable
         await context.ViewModel.RequestUninstallCommand.ExecuteAsync(null);
         context.ViewModel.ApplySnapshot(ReadySnapshot("C:\\DifferentGame"));
 
-        await context.Dialogs.UninstallConfirm.ConfirmCommand.ExecuteAsync(null);
+        await context.ViewModel.Uninstall.ConfirmCommand.ExecuteAsync(null);
 
         Assert.Equal("C:\\ConfirmedGame", context.Backend.LastUninstallGamePath);
     }
@@ -826,17 +829,41 @@ public sealed class GameOperationsViewModelTests : IDisposable
 
         var pending = context.ViewModel.RequestUninstallCommand.ExecuteAsync(null);
 
-        Assert.True(context.Dialogs.UninstallConfirm.IsVisible);
+        Assert.True(context.ViewModel.Uninstall.IsVisible);
         Assert.Equal(
-            context.Localizer.T(LocalizationKeys.UninstallManagedCompatibilityOptionPending),
-            context.ViewModel.ManagedCompatibilityCleanupOptionText);
+            context.Localizer.T(LocalizationKeys.UninstallCalculating),
+            context.ViewModel.Uninstall.CompatibilitySizeText);
 
         context.Backend.MeasureFootprintCompletion.SetResult(new UninstallFootprint(1234567, 890));
         await pending;
 
         // 测量回来之后换成带数字的那句。
-        Assert.Contains(FileSizeFormatter.Format(1234567), context.Dialogs.UninstallConfirm.Message, StringComparison.Ordinal);
-        Assert.Contains(FileSizeFormatter.Format(890), context.ViewModel.ManagedCompatibilityCleanupOptionText, StringComparison.Ordinal);
+        Assert.Contains(FileSizeFormatter.Format(1234567), context.ViewModel.Uninstall.TotalSizeText, StringComparison.Ordinal);
+        Assert.Contains(FileSizeFormatter.Format(890), context.ViewModel.Uninstall.CompatibilitySizeText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ConfirmUninstallAsync_WhilePending_BlocksCloseAndDuplicateExecutionThenKeepsResult()
+    {
+        var context = CreateContext();
+        context.ViewModel.ApplySnapshot(ReadySnapshot("C:\\Game"));
+        context.Backend.ValidateUninstallResult = new GameOperationResult { Success = true };
+        context.Backend.UninstallCompletion = new TaskCompletionSource<GameOperationResult>();
+        await context.ViewModel.RequestUninstallCommand.ExecuteAsync(null);
+        var pending = context.ViewModel.ConfirmUninstallAsync();
+        Assert.True(context.ViewModel.IsUninstallExecuting);
+        Assert.True(context.Shell.IsBusy);
+        Assert.False(context.ViewModel.IsProgressPanelVisible);
+        context.ViewModel.Uninstall.CloseCommand.Execute(null);
+        await context.ViewModel.ConfirmUninstallAsync();
+        Assert.Equal(1, context.Backend.UninstallCallCount);
+        Assert.True(context.ViewModel.Uninstall.IsVisible);
+        context.Backend.UninstallCompletion.SetResult(new GameOperationResult { Success = true, AffectedFileCount = 12, AffectedBytes = 2048 });
+        await pending;
+        Assert.False(context.Shell.IsBusy);
+        Assert.False(context.ViewModel.IsUninstallExecuting);
+        Assert.True(context.ViewModel.Uninstall.IsVisible);
+        Assert.True(context.ViewModel.Uninstall.IsCleanCompletion);
     }
 
     [Theory]
@@ -848,8 +875,10 @@ public sealed class GameOperationsViewModelTests : IDisposable
     {
         var context = CreateContext();
         context.ViewModel.ApplySnapshot(ReadySnapshot("C:\\Game"));
-        context.ViewModel.IsManagedCompatibilityCleanupSelected = thoroughSelected;
+        context.ViewModel.Uninstall.IsCompatibilitySelected = thoroughSelected;
 
+        context.ViewModel.Uninstall.Open(((IGameOperationJourneyHost)context.ViewModel).CurrentSnapshot!);
+        context.ViewModel.Uninstall.IsCompatibilitySelected = thoroughSelected;
         await context.ViewModel.ConfirmUninstallAsync();
 
         Assert.Equal(expected, context.Backend.LastUninstallScope);
@@ -869,16 +898,17 @@ public sealed class GameOperationsViewModelTests : IDisposable
 
         await context.ViewModel.RequestUninstallCommand.ExecuteAsync(null);
 
-        Assert.True(context.Dialogs.UninstallConfirm.IsVisible);
-        Assert.Contains("C:\\Game", context.Dialogs.UninstallConfirm.Message, StringComparison.Ordinal);
-        Assert.Equal(context.Localizer.F(LocalizationKeys.UninstallConfirmText, "C:\\Game",
-            FileSizeFormatter.Format(1_140_416_350)), context.Dialogs.UninstallConfirm.Message);
+        Assert.True(context.ViewModel.Uninstall.IsVisible);
+        Assert.Contains("C:\\Game", context.ViewModel.Uninstall.GamePath, StringComparison.Ordinal);
+        Assert.Equal(context.Localizer.F(LocalizationKeys.UninstallEstimatedSizeValue,
+            FileSizeFormatter.Format(1_140_416_350)), context.ViewModel.Uninstall.TotalSizeText);
     }
 
     [Fact]
     public async Task ConfirmUninstallAsync_WhenUninstallCompletes_RefreshesState()
     {
         var context = CreateContext();
+        context.Backend.ValidateUninstallResult = new GameOperationResult { Success = true };
         var refreshCount = 0;
         context.ViewModel.ApplySnapshot(ReadySnapshot("C:\\Game"));
         context.Backend.UninstallResult = new GameOperationResult
@@ -892,6 +922,7 @@ public sealed class GameOperationsViewModelTests : IDisposable
             return Task.CompletedTask;
         };
 
+        await context.ViewModel.RequestUninstallCommand.ExecuteAsync(null);
         await context.ViewModel.ConfirmUninstallAsync();
 
         Assert.Equal(1, context.Backend.UninstallCallCount);
@@ -1024,7 +1055,6 @@ public sealed class GameOperationsViewModelTests : IDisposable
     [Theory]
     [InlineData(GameOperationKind.Download, GameOperationStage.Downloading, "Download")]
     [InlineData(GameOperationKind.Repair, GameOperationStage.RepairCheck, "Tools")]
-    [InlineData(GameOperationKind.Uninstall, GameOperationStage.Uninstalling, "DeleteOutline")]
     [InlineData(GameOperationKind.Idle, GameOperationStage.Idle, "Sync")]
     public void ApplyProgress_ForOperationKind_UsesSemanticProgressIcon(
         GameOperationKind operationKind,
@@ -1071,6 +1101,7 @@ public sealed class GameOperationsViewModelTests : IDisposable
     public async Task ConfirmUninstallAsync_WhenStartingAfterPreviousOperation_UsesUninstallProgressIcon()
     {
         var context = CreateContext();
+        context.Backend.ValidateUninstallResult = new GameOperationResult { Success = true };
         context.ViewModel.ApplyProgress(new GameOperationProgress
         {
             OperationKind = GameOperationKind.Download,
@@ -1080,11 +1111,12 @@ public sealed class GameOperationsViewModelTests : IDisposable
         context.Backend.UninstallCompletion = new TaskCompletionSource<GameOperationResult>(
             TaskCreationOptions.RunContinuationsAsynchronously);
 
+        await context.ViewModel.RequestUninstallCommand.ExecuteAsync(null);
         var uninstallTask = context.ViewModel.ConfirmUninstallAsync();
 
-        // The journey calls PrepareOperation which resets progress state (Idle icon).
-        // The first progress callback from the uninstall workflow will set the icon.
-        Assert.True(context.ViewModel.IsProgressPanelVisible);
+        Assert.True(context.ViewModel.Uninstall.IsExecuting);
+        Assert.Equal("DeleteOutline", context.ViewModel.Uninstall.IconKind);
+        Assert.False(context.ViewModel.IsProgressPanelVisible);
 
         context.Backend.UninstallCompletion.SetResult(new GameOperationResult());
         await uninstallTask.WaitAsync(TimeSpan.FromSeconds(5));
@@ -1297,7 +1329,7 @@ public sealed class GameOperationsViewModelTests : IDisposable
         var notification = Assert.Single(notifications);
         Assert.Equal(ToastSeverity.Warning, notification.Severity);
         Assert.Equal(context.Localizer.T("operationUnavailableForCurrentState"), notification.Message);
-        Assert.False(context.Dialogs.UninstallConfirm.IsVisible);
+        Assert.False(context.ViewModel.Uninstall.IsVisible);
     }
 
     [Fact]
@@ -1359,7 +1391,7 @@ public sealed class GameOperationsViewModelTests : IDisposable
 
         await context.ViewModel.RequestUninstallCommand.ExecuteAsync(null);
 
-        Assert.False(context.Dialogs.UninstallConfirm.IsVisible);
+        Assert.False(context.ViewModel.Uninstall.IsVisible);
         var notification = Assert.Single(notifications);
         Assert.Equal(ToastSeverity.Warning, notification.Severity);
         Assert.Equal("cannot uninstall", notification.Message);
@@ -1381,7 +1413,7 @@ public sealed class GameOperationsViewModelTests : IDisposable
 
         await context.ViewModel.RequestUninstallCommand.ExecuteAsync(null);
 
-        Assert.False(context.Dialogs.UninstallConfirm.IsVisible);
+        Assert.False(context.ViewModel.Uninstall.IsVisible);
         var notification = Assert.Single(notifications);
         Assert.Equal(ToastSeverity.Warning, notification.Severity);
         Assert.Equal(

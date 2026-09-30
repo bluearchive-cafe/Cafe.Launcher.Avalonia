@@ -63,7 +63,9 @@ internal sealed class GameUninstallService
         var (gameRoot, managedPrefixRoot) = ResolveCleanupTargets(
             installationPath.NormalizeGamePath(snapshot.LocalGame.GamePath ?? ""));
         return Task.Run(() => new UninstallFootprint(
-            DirectorySizeProbe.Measure(gameRoot), DirectorySizeProbe.Measure(managedPrefixRoot)), cancellationToken);
+            DirectorySizeProbe.Measure(gameRoot), DirectorySizeProbe.Measure(managedPrefixRoot),
+            ResolveKeptPrefixPath(snapshot, gameRoot, UninstallScope.GameDirectory),
+            ResolveKeptPrefixPath(snapshot, gameRoot, UninstallScope.GameDirectoryAndManagedCompatibility)), cancellationToken);
     }
 
     /// <summary>删除整个游戏目录，可额外清除受管兼容环境；进度覆盖清单外资源及目录项。</summary>
@@ -131,6 +133,8 @@ internal sealed class GameUninstallService
             // 扫描与逐项删除均在线程池执行，不占用 UI 线程；删除时复查属性，不跟随链接。
             var removal = await Task.Run(() => plan.Delete(ReportDeletion, cancellationToken), cancellationToken)
                 .ConfigureAwait(false);
+            progress(GameOperationProgressFactory.CreateProgress(
+                GameOperationKind.Uninstall, GameOperationStage.UninstallCleanup, 95));
             try
             {
                 checkpointStore.Clear();
@@ -160,7 +164,7 @@ internal sealed class GameUninstallService
             progress(new GameOperationProgress
             {
                 OperationKind = GameOperationKind.Uninstall,
-                Stage = GameOperationStage.Uninstalling,
+                Stage = GameOperationStage.UninstallCleanup,
                 Progress = 100,
                 ProcessedEntryCount = plan.TotalEntries,
                 TotalEntryCount = plan.TotalEntries,
@@ -171,7 +175,8 @@ internal sealed class GameUninstallService
                 Success = true,
                 Message = BuildCompletionMessage(localizer, removal.Leftovers, keptPrefixPath),
                 AffectedFileCount = removal.RemovedFiles,
-                AffectedBytes = removal.RemovedBytes
+                AffectedBytes = removal.RemovedBytes,
+                UninstallDetails = new UninstallResultDetails(removal.Leftovers.ToArray(), keptPrefixPath)
             };
         }
         catch (InvalidOperationException exception)

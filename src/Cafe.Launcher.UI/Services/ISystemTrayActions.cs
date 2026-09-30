@@ -20,6 +20,9 @@ internal interface ISystemTrayActions
     /// <summary>Whether settings can be opened without bypassing a modal surface.</summary>
     bool CanOpenSettings { get; }
 
+    /// <summary>Normal exit is unavailable while uninstall owns the filesystem.</summary>
+    bool CanExit { get; }
+
     /// <summary>Rechecks availability and invokes the existing game launch command.</summary>
     void StartGame();
 
