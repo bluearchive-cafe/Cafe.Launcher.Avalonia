@@ -54,24 +54,19 @@ internal sealed class GameUninstallService
         this.shortcutService = shortcutService;
     }
 
-    /// <summary>
-    /// 彻底清除会删除的两个目录的实测大小（ADR-030）。展示用；与删除共用同一段目标计算，
-    /// 所以对话框里显示多少就是随后会删多少。
-    /// </summary>
+    /// <summary>确认框展示的安装目录与受管兼容环境大小；展示统计不指导文件删除。</summary>
     public Task<UninstallFootprint> MeasureFootprintAsync(
         LauncherStatusSnapshot snapshot,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
-        var gamePath = installationPath.NormalizeGamePath(snapshot.LocalGame.GamePath ?? "");
-        var (gameRoot, managedPrefixRoot) = ResolveCleanupTargets(gamePath);
-        return Task.Run(
-            () => new UninstallFootprint(
-                DirectorySizeProbe.Measure(gameRoot),
-                DirectorySizeProbe.Measure(managedPrefixRoot)),
-            cancellationToken);
+        var (gameRoot, managedPrefixRoot) = ResolveCleanupTargets(
+            installationPath.NormalizeGamePath(snapshot.LocalGame.GamePath ?? ""));
+        return Task.Run(() => new UninstallFootprint(
+            DirectorySizeProbe.Measure(gameRoot), DirectorySizeProbe.Measure(managedPrefixRoot)), cancellationToken);
     }
 
+    /// <summary>删除整个游戏目录，可额外清除受管兼容环境；进度覆盖清单外资源及目录项。</summary>
     public async Task<GameOperationResult> UninstallAsync(
         LauncherStatusSnapshot snapshot,
         UninstallScope scope,
@@ -87,280 +82,155 @@ internal sealed class GameUninstallService
         var gamePath = installationPath.NormalizeGamePath(snapshot.LocalGame.GamePath ?? "");
         try
         {
-            var (validationFailure, localGame) = await ValidateMetadataAsync(gamePath, cancellationToken)
-                .ConfigureAwait(false);
-            if (validationFailure is not null)
+            var (failure, state) = await ValidateLocalInstallationAsync(gamePath, cancellationToken).ConfigureAwait(false);
+            if (failure is not null)
             {
-                return validationFailure;
+                return failure;
             }
 
-            var state = localGame!;
-            var files = state.Manifest?.Files ?? [];
+            // 所有目标先过守卫：额外清理目标被拒绝时，游戏目录也不能先删一半。
+            _ = GamePathValidator.GetSafePath(gamePath, ".");
+            var targets = ResolveDeletionTargets(gamePath, scope);
+            foreach (var target in targets)
+            {
+                DirectoryTreeDeleter.EnsureDeletable(target.Path, target.AllowedRoot);
+            }
 
-            // 预检答的是「点卸载那一刻」的进程状态，而确认框可以一直开着（尺寸统计、用户离开），
-            // 这期间从桌面快捷方式或 Steam 把游戏起来，预检的答复就已经过期。删除之前复查同一道
-            // 闸门（ADR-032 的「只在整族退出后放行」），命中即按既有消息报出——与路径守卫的执行
-            // 边界复查（EnsureCleanupTargetsAreDeletable）同构，且失败经 ConfirmUninstallAsync 的
-            // ShowOperationResult 落地，不是静默（ADR-027）。
-            var gameRunning = await FindRunningGameFailureAsync(state.GameConfig, gamePath, cancellationToken)
+            progress(GameOperationProgressFactory.CreateProgress(
+                GameOperationKind.Uninstall, GameOperationStage.UninstallScanning, 0));
+            var plan = await Task.Run(
+                () => DirectoryTreeDeleter.CreatePlan(targets, cancellationToken), cancellationToken).ConfigureAwait(false);
+
+            // 扫描也可能耗时数秒；真正删除之前再检查整族进程，避免使用确认或扫描前的过期答复。
+            var gameRunning = await FindRunningGameFailureAsync(state!.GameConfig, gamePath, cancellationToken)
                 .ConfigureAwait(false);
             if (gameRunning is not null)
             {
                 return gameRunning;
             }
 
-            // 彻底清除的守卫先行（ADR-030）：拒绝就什么都不删，别留下半删状态。
-            if (scope == UninstallScope.ThoroughCleanup)
+            var gate = new PercentProgressGate();
+            void ReportDeletion(DirectoryDeletionProgress update)
             {
-                try
+                // 95% 以前是目录树处理；最后 5% 留给续传标记与快捷方式，终态前不显示 100%。
+                var percent = update.TotalEntries == 0 ? 95 : (int)(update.ProcessedEntries * 95L / update.TotalEntries);
+                if (gate.ShouldDeliver(percent))
                 {
-                    EnsureCleanupTargetsAreDeletable(gamePath);
-                }
-                catch (InvalidOperationException exception)
-                {
-                    await diagnostics.ErrorAsync(
-                        "GameUninstall",
-                        "Thorough cleanup was refused by the path guards.",
-                        exception,
-                        CancellationToken.None).ConfigureAwait(false);
-                    // 报本地化的拒绝理由，守卫那句英文说明只留在日志里（2026-09-15 复核轮）：
-                    // GamePathValidator/DirectoryTreeDeleter 抛的是仓库自己写的英文，
-                    // 套进「卸载失败：{0}」就会让本地化界面显示英文开发文档。
-                    return GameOperationOutcomes.Failed(
-                        localizer.F(LocalizationKeys.UninstallRefusedByPathGuard, gamePath),
-                        GameOperationErrorCode.System);
+                    progress(new GameOperationProgress
+                    {
+                        OperationKind = GameOperationKind.Uninstall,
+                        Stage = GameOperationStage.Uninstalling,
+                        Progress = percent,
+                        ProcessedEntryCount = update.ProcessedEntries,
+                        TotalEntryCount = update.TotalEntries,
+                        IsRunning = true
+                    });
                 }
             }
-            // AUD-PERF-007：逐文件回调经百分比门控去重后抵达 UI 线程。删除语义（守卫、只读
-            // 属性清除、已不在盘上不算错误）与更新/安装那条路径共用 ManifestFileRemover——
-            // 卸载侧此前是另一份裸 File.Delete 循环，清单里有一个只读文件就整次失败。
-            var removal = ManifestFileRemover.DeleteAll(
-                gamePath,
-                files,
-                new StageProgressReporter(GameOperationKind.Uninstall, GameOperationStage.Uninstalling, progress).Report,
-                cancellationToken);
 
-            var deletedState = await localInstallationStateStore.DeleteAsync(
-                gamePath,
-                cancellationToken).ConfigureAwait(false);
-            if (deletedState.Kind == LocalInstallationStateKind.IoFailure)
-            {
-                throw new IOException(deletedState.Error);
-            }
-
-            // The download resume marker lives in LOCALAPPDATA and is not under the game
-            // directory, so the manifest-driven file deletion above never touches it. Remove
-            // it best-effort so a finished uninstall leaves no stale resume state behind.
+            // 扫描与逐项删除均在线程池执行，不占用 UI 线程；删除时复查属性，不跟随链接。
+            var removal = await Task.Run(() => plan.Delete(ReportDeletion, cancellationToken), cancellationToken)
+                .ConfigureAwait(false);
             try
             {
                 checkpointStore.Clear();
             }
             catch (Exception exception) when (StorageFailure.IsRecoverable(exception))
             {
-                // Best-effort cleanup of the resume marker; preserve uninstall success.
-                // 但要说出来：留下的续传标记会在下次安装时被当成可续传状态读一次。
-                // 令牌有意不传播：卸载已经成功，这条留痕不该被取消状态吞掉（与本类其他失败出口同口径）。
-                await diagnostics.WarningAsync(
-                    "GameUninstall",
-                    $"Failed to clear the download resume marker: {exception.Message}",
-                    CancellationToken.None).ConfigureAwait(false);
+                await diagnostics.WarningAsync("GameUninstall",
+                    $"Failed to clear the download resume marker: {exception.Message}", CancellationToken.None)
+                    .ConfigureAwait(false);
             }
 
-            var leftovers = new List<string>();
-            if (scope == UninstallScope.ThoroughCleanup)
-            {
-                leftovers.AddRange(
-                    await DeleteThoroughCleanupTargetsAsync(gamePath, cancellationToken).ConfigureAwait(false));
-            }
-
-            // 快捷方式只在卸载成功之后删（ADR-030）：中途失败会提前返回，快捷方式因此保留下来。
-            // 桌面本来就没有、或系统不支持，都不算失败。
             await DeleteDesktopShortcutAsync(snapshot).ConfigureAwait(false);
-
-            // 落在两个删除目标之外的 Prefix 不会被删（ADR-030）：成功文案必须说出来，
-            // 否则「彻底清除」看起来做了它没做的事。
-            var keptPrefixPath = scope == UninstallScope.ThoroughCleanup
-                ? ResolveKeptPrefixPath(snapshot, gamePath)
-                : null;
-
-            // 标准卸载的范围从来不含目录本身（ADR-030：清单文件 + 两个状态文件 + 桌面快捷方式），
-            // 而启动器的清单只覆盖它自己安装的那部分文件：Blue Archive 日服 1.73.0 的清单是
-            // 157 个文件 / 1.06 GiB，而官方声明的整份安装是 18.5 GB——差额是游戏自行下载的内容，
-            // 清单里没有它们，启动器连文件名都不知道。因此「卸载完成。」必须把「目录还在、
-            // 其中有什么没删」一并说出来（2026-09-29 用户反馈：「删了游戏读取不到了但是文件还在」）。
-            // 判据只取「目录还在吗」而不去数里面还剩什么：文案说的是范围（清单外内容不随卸载删除），
-            // 不是「现在还剩几个条目」——后者要么多走一次目录枚举，要么在空目录上说出被证伪的话。
-            var retainedDirectoryPath = scope == UninstallScope.ManifestFilesOnly && Directory.Exists(gamePath)
-                ? gamePath
-                : null;
-
-            if (leftovers.Count > 0)
+            var keptPrefixPath = ResolveKeptPrefixPath(snapshot, gamePath, scope);
+            if (removal.Leftovers.Count > 0)
             {
-                // 删不掉的项目不改变「游戏已卸载」这件事（manifest 与两个状态文件都已删除），
-                // 但它们确实留在盘上，必须点名——否则「彻底清除」一样说得比做得多。
-                await diagnostics.WarningAsync(
-                    "GameUninstall",
-                    $"Thorough cleanup left {leftovers.Count} item(s) behind:"
-                    + Environment.NewLine
-                    + string.Join(Environment.NewLine, leftovers),
-                    cancellationToken).ConfigureAwait(false);
+                await diagnostics.WarningAsync("GameUninstall",
+                    $"Uninstall left {removal.Leftovers.Count} item(s) behind:"
+                    + Environment.NewLine + string.Join(Environment.NewLine, removal.Leftovers), CancellationToken.None)
+                    .ConfigureAwait(false);
             }
 
-            await diagnostics.MessageAsync(
-                "GameUninstall",
-                BuildCompletionLog(gamePath, scope, files.Count, removal, leftovers.Count, retainedDirectoryPath),
-                cancellationToken).ConfigureAwait(false);
-
+            await diagnostics.MessageAsync("GameUninstall",
+                $"Game uninstall completed.{Environment.NewLine}path: {gamePath}{Environment.NewLine}scope: {scope}"
+                + $"{Environment.NewLine}entries processed: {plan.TotalEntries}"
+                + $"{Environment.NewLine}files removed: {removal.RemovedFiles} ({removal.RemovedBytes} bytes)"
+                + $"{Environment.NewLine}leftovers: {removal.Leftovers.Count}", CancellationToken.None).ConfigureAwait(false);
+            progress(new GameOperationProgress
+            {
+                OperationKind = GameOperationKind.Uninstall,
+                Stage = GameOperationStage.Uninstalling,
+                Progress = 100,
+                ProcessedEntryCount = plan.TotalEntries,
+                TotalEntryCount = plan.TotalEntries,
+                IsRunning = true
+            });
             return new GameOperationResult
             {
                 Success = true,
-                Message = BuildCompletionMessage(localizer, leftovers, keptPrefixPath, retainedDirectoryPath),
-                AffectedFileCount = files.Count + LauncherPaths.InstallationStateFileCount,
-                AffectedBytes = files.Sum(file => file.SizeBytes)
+                Message = BuildCompletionMessage(localizer, removal.Leftovers, keptPrefixPath),
+                AffectedFileCount = removal.RemovedFiles,
+                AffectedBytes = removal.RemovedBytes
             };
+        }
+        catch (InvalidOperationException exception)
+        {
+            await diagnostics.ErrorAsync("GameUninstall", "Cleanup was refused by the path guards.",
+                exception, CancellationToken.None).ConfigureAwait(false);
+            return GameOperationOutcomes.Failed(
+                localizer.F(LocalizationKeys.UninstallRefusedByPathGuard, gamePath), GameOperationErrorCode.System);
         }
         catch (Exception exception) when (StorageFailure.IsRecoverable(exception))
         {
-            await diagnostics.ErrorAsync(
-                "GameUninstall",
-                "Uninstalling the game failed.",
-                exception,
-                CancellationToken.None).ConfigureAwait(false);
-            return new GameOperationResult
-            {
-                Success = false,
-                Message = localizer.F(LocalizationKeys.UninstallFailed, exception.Message),
-                ErrorCode = GameOperationErrorCode.System
-            };
+            await diagnostics.ErrorAsync("GameUninstall", "Uninstalling the game failed.",
+                exception, CancellationToken.None).ConfigureAwait(false);
+            return GameOperationOutcomes.Failed(
+                localizer.F(LocalizationKeys.UninstallFailed, exception.Message), GameOperationErrorCode.System);
         }
     }
 
-    /// <summary>
-    /// 彻底清除的两个目标（ADR-030）：整棵安装目录，与本启动器托管的兼容子树
-    /// （&lt;compatibilityRoot&gt;/&lt;gameId&gt;，覆盖该游戏各运行器的默认前缀）。
-    /// 测量与删除都走这里，保证「显示多少就删多少」。
-    /// </summary>
     private (string GameRoot, string ManagedPrefixRoot) ResolveCleanupTargets(string gamePath) =>
         (gamePath, GameCompatibilityPaths.GetDefaultGameCompatibilityRoot(gameProfile.RuntimeId));
 
-    /// <summary>
-    /// 用户自定义且落在受管子树之外的 Prefix（ADR-030）：保留不删，并在成功文案里回报。
-    /// 它是用户自选的任意目录，可能与别的程序共用——删它是另一件事，不该由卸载顺手做掉。
-    /// </summary>
-    /// <remarks>
-    /// 只有「彻底清除确实没动它」才配得上「已保留」这句。<c>PrefixPath</c> 是自由文本，用户可以
-    /// 把它填进安装目录里（便携安装），而安装目录整棵正是彻底清除的删除目标之一：树都删完了
-    /// 再报「已保留：&lt;该路径&gt;」，是被同一次操作当场证伪的一句话。
-    /// </remarks>
-    private string? ResolveKeptPrefixPath(LauncherStatusSnapshot snapshot, string gamePath)
+    private IReadOnlyList<DirectoryDeletionTarget> ResolveDeletionTargets(string gamePath, UninstallScope scope)
+    {
+        var (gameRoot, managedPrefixRoot) = ResolveCleanupTargets(gamePath);
+        return scope switch
+        {
+            UninstallScope.GameDirectory => [new DirectoryDeletionTarget(gameRoot, gameRoot)],
+            UninstallScope.GameDirectoryAndManagedCompatibility =>
+            [
+                new DirectoryDeletionTarget(gameRoot, gameRoot),
+                new DirectoryDeletionTarget(managedPrefixRoot, GameCompatibilityPaths.GetDefaultCompatibilityRoot())
+            ],
+            _ => throw new ArgumentOutOfRangeException(nameof(scope), scope, null)
+        };
+    }
+
+    private string? ResolveKeptPrefixPath(LauncherStatusSnapshot snapshot, string gamePath, UninstallScope scope)
     {
         var prefixPath = GameRuntimeConfiguration.FromSettings(snapshot.Settings.GameRuntime).PrefixPath;
-        if (string.IsNullOrWhiteSpace(prefixPath))
+        if (string.IsNullOrWhiteSpace(prefixPath) || DirectoryTreeDeleter.IsUnder(prefixPath, gamePath))
         {
             return null;
         }
 
-        // 彻底清除的两个删除目标：安装目录整棵、受管兼容子树整棵（ResolveCleanupTargets）。
-        var (gameRoot, managedPrefixRoot) = ResolveCleanupTargets(gamePath);
-        if (DirectoryTreeDeleter.IsUnder(prefixPath, gameRoot))
-        {
-            return null;
-        }
-
-        return DirectoryTreeDeleter.IsUnder(prefixPath, managedPrefixRoot) ? null : prefixPath;
+        var (_, managedPrefixRoot) = ResolveCleanupTargets(gamePath);
+        return scope == UninstallScope.GameDirectoryAndManagedCompatibility
+            && DirectoryTreeDeleter.IsUnder(prefixPath, managedPrefixRoot) ? null : prefixPath;
     }
 
-    /// <summary>
-    /// 彻底清除的预检守卫（ADR-030）：游戏根必须是真实目录且不是链接，受管兼容子树必须落在
-    /// 受管根内。规则与 <see cref="DeleteThoroughCleanupTargetsAsync"/> 删除时复查的一致，
-    /// 提前跑一次是为了「拒绝就什么都不删」。
-    /// </summary>
-    private void EnsureCleanupTargetsAreDeletable(string gamePath)
-    {
-        var (gameRoot, managedPrefixRoot) = ResolveCleanupTargets(gamePath);
-        _ = GamePathValidator.GetSafePath(gameRoot, ".");
-        DirectoryTreeDeleter.EnsureDeletable(
-            managedPrefixRoot,
-            GameCompatibilityPaths.GetDefaultCompatibilityRoot());
-    }
-
-    /// <summary>
-    /// 删掉彻底清除的两个目标，返回删不掉的项目。Windows 上确实存在用户态删不掉的目录项
-    /// （Blue Archive 反作弊留下的 <c>Xigncode:{GUID}</c>：列得出来、打不开、无 8.3 短名），
-    /// 所以这里的结果由调用方如实上报，而不是当成调用方的错误抛出去。
-    /// </summary>
-    private async Task<IReadOnlyList<string>> DeleteThoroughCleanupTargetsAsync(
-        string gamePath,
-        CancellationToken cancellationToken)
-    {
-        var (gameRoot, managedPrefixRoot) = ResolveCleanupTargets(gamePath);
-        var compatibilityRoot = GameCompatibilityPaths.GetDefaultCompatibilityRoot();
-
-        // 整棵删除走线程池：安装目录与 Prefix 都可能有上万条目，不能占着 UI 线程。
-        return await Task.Run(
-            () =>
-            {
-                try
-                {
-                    // 先过游戏目录自己的守卫（顺带拒绝 reparse point 根），再删它本身。
-                    var safeGameRoot = GamePathValidator.GetSafePath(gameRoot, ".");
-                    var leftover = new List<string>(DirectoryTreeDeleter.Delete(safeGameRoot, gameRoot));
-                    leftover.AddRange(DirectoryTreeDeleter.Delete(managedPrefixRoot, compatibilityRoot));
-                    return (IReadOnlyList<string>)leftover;
-                }
-                catch (InvalidOperationException exception)
-                {
-                    // 预检之后路径又变了（竞争）：折算成 IO 失败，交给既有的失败呈现，
-                    // 否则它会冒泡成调用方只记日志的匿名异常。文案就地本地化：守卫抛的是
-                    // 仓库自己的英文说明，不该经「卸载失败：{0}」呈给用户（2026-09-15 复核轮），
-                    // 原文仍随内部异常进日志。
-                    throw new IOException(
-                        localizer.F(LocalizationKeys.UninstallRefusedByPathGuard, gamePath),
-                        exception);
-                }
-            },
-            cancellationToken).ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// 彻底清除的完成文案（ADR-030）：两个事实各说各的，缺一不可——删不掉的项目是实际缺口，
-    /// 「Prefix 主动保留」是设计内说明，但它可能占着几十 GB，用户看不见就得自己去找目录。
-    /// 残留清单点名（上限 <see cref="MaxReportedLeftovers"/>，完整清单始终留在日志里）。
-    /// </summary>
-    /// <remarks>
-    /// 第三个事实走<strong>独立的一句</strong>（<paramref name="retainedDirectoryPath"/>）而不是再乘出
-    /// 组合态：标准卸载从不删目录，而目录里往往还有清单外的一大片（2026-09-29 反馈：157 个清单
-    /// 文件 1.06 GiB 之外，18.5 GB 的安装里其余部分是游戏自行下载的）。它与其他事实互不包含，
-    /// 因此与 ADR-030「两个事实各说各的」同构：基础文案四态不变，保留事实按需追一句。
-    /// </remarks>
+    /// <summary>完成结果分别说明无法删除的项目与主动保留的自定义 Prefix；全部路径进日志。</summary>
     internal static string BuildCompletionMessage(
-        LocalizationService localizer,
-        IReadOnlyList<string> leftovers,
-        string? keptPrefixPath,
-        string? retainedDirectoryPath = null)
-    {
-        var message = BuildBaseCompletionMessage(localizer, leftovers, keptPrefixPath);
-        return retainedDirectoryPath is null
-            ? message
-            : message
-                + Environment.NewLine
-                + localizer.F(LocalizationKeys.UninstallCompletedDirectoryRetained, retainedDirectoryPath);
-    }
-
-    private static string BuildBaseCompletionMessage(
-        LocalizationService localizer,
-        IReadOnlyList<string> leftovers,
-        string? keptPrefixPath)
+        LocalizationService localizer, IReadOnlyList<string> leftovers, string? keptPrefixPath)
     {
         if (leftovers.Count > 0)
         {
             var listed = string.Join(Environment.NewLine, leftovers.Take(MaxReportedLeftovers));
             return keptPrefixPath is null
                 ? localizer.F(LocalizationKeys.UninstallCompletedWithLeftovers, listed)
-                : localizer.F(
-                    LocalizationKeys.UninstallCompletedWithLeftoversKeptPrefix,
-                    listed,
-                    keptPrefixPath);
+                : localizer.F(LocalizationKeys.UninstallCompletedWithLeftoversKeptPrefix, listed, keptPrefixPath);
         }
 
         return keptPrefixPath is null
@@ -368,38 +238,6 @@ internal sealed class GameUninstallService
             : localizer.F(LocalizationKeys.UninstallCompletedKeptPrefix, keptPrefixPath);
     }
 
-    /// <summary>
-    /// 卸载完成后的日志正文。与完成文案分开：文案只报用户看得见的事实，日志要能支撑排查——
-    /// 计划/实际删除数、实际字节数、本来就不在盘上的条目数、卸载范围，以及标准卸载下被保留的
-    /// 安装目录（2026-09-29 反馈轮）。
-    /// </summary>
-    /// <remarks>
-    /// 此前这一行是 <c>files: {清单条数}</c> + <c>leftovers: 0</c>：前者是「计划」，被当成「删掉了」
-    /// 读；而 <c>leftovers</c> 只在彻底清除时才会被填充，标准卸载恒为 0，于是「0 残留」的假象
-    /// 恰好掩盖了「目录里还有 17 GiB」这件事。
-    /// </remarks>
-    private static string BuildCompletionLog(
-        string gamePath,
-        UninstallScope scope,
-        int plannedCount,
-        ManifestRemovalResult removal,
-        int leftoverCount,
-        string? retainedDirectoryPath)
-    {
-        var newLine = Environment.NewLine;
-        var body = $"Game uninstall completed.{newLine}path: {gamePath}{newLine}scope: {scope}"
-            + $"{newLine}manifest files: {plannedCount} planned, {removal.RemovedCount} removed"
-            + $" ({removal.RemovedBytes} bytes), {removal.MissingCount} already absent";
-
-        return scope == UninstallScope.ThoroughCleanup
-            ? body + $"{newLine}leftovers: {leftoverCount}"
-            : body + $"{newLine}directory retained: {retainedDirectoryPath ?? "(not present)"}";
-    }
-
-    /// <summary>
-    /// 桌面快捷方式的删除是 best-effort（ADR-030）：桌面本来就没有、或系统不支持都不算失败，
-    /// 失败只记日志——它不该让一次已经完成的卸载变成失败。
-    /// </summary>
     private async Task DeleteDesktopShortcutAsync(LauncherStatusSnapshot snapshot)
     {
         try
@@ -426,49 +264,21 @@ internal sealed class GameUninstallService
         }
     }
 
-    public async Task<GameOperationResult> ValidateAsync(
-        string gamePath,
-        CancellationToken cancellationToken = default)
+    /// <summary>卸载的本地预检；损坏的元数据不会指导删除，整目录范围由确认框明确告知。</summary>
+    public async Task<GameOperationResult> ValidateAsync(string gamePath, CancellationToken cancellationToken = default)
     {
-        var (failure, localGame) = await ValidateMetadataAsync(gamePath, cancellationToken)
-            .ConfigureAwait(false);
+        var (failure, state) = await ValidateLocalInstallationAsync(gamePath, cancellationToken).ConfigureAwait(false);
         if (failure is not null)
         {
             return failure;
         }
 
-        var state = localGame!;
-
-        // 卸载会删掉整个安装目录，因此闸门要认整族进程，而不是只认配置里那个宿主：反作弊宿主
-        // （名字是宿主名的同族变体）在强杀游戏后仍会占着目录，只认宿主就会放行（ADR-032）。
-        var gameRunning = await FindRunningGameFailureAsync(state.GameConfig, gamePath, cancellationToken)
+        var gameRunning = await FindRunningGameFailureAsync(state!.GameConfig, gamePath, cancellationToken)
             .ConfigureAwait(false);
-        if (gameRunning is not null)
-        {
-            return gameRunning;
-        }
-
-        return new GameOperationResult
-        {
-            Success = true,
-            Message = localizer.F(LocalizationKeys.ReadyToUninstall, state.Manifest?.Files.Count ?? 0),
-            AffectedFileCount = (state.Manifest?.Files.Count ?? 0) + LauncherPaths.InstallationStateFileCount,
-            AffectedBytes = state.Manifest?.Files.Sum(file => file.SizeBytes) ?? 0
-        };
+        return gameRunning ?? new GameOperationResult { Success = true };
     }
 
-    /// <summary>
-    /// 卸载的元数据预检：目录存在、不在系统保护路径上、目录名合法、安装状态可读且元数据齐备。
-    /// 「游戏在跑」闸门不在这里——预检（<see cref="ValidateAsync"/>）与
-    /// <see cref="UninstallAsync"/> 的删除前边界各自过一次；<see cref="UninstallAsync"/> 内部
-    /// 于是只做一次完整进程枚举、只读一次安装状态，预检与边界也不共享读到的状态——它们之间
-    /// 隔着一次用户确认，各自以当时的安装状态作答（D2）。
-    /// </summary>
-    /// <returns>
-    /// 拒绝时 <see cref="GameOperationResult?"/> 为失败结果且状态为空；放行时失败为空、
-    /// 状态是读到的安装状态，调用方判空后经 <c>!</c> 续用。
-    /// </returns>
-    private async Task<(GameOperationResult? Failure, LocalInstallationState? LocalGame)> ValidateMetadataAsync(
+    private async Task<(GameOperationResult? Failure, LocalInstallationState? LocalGame)> ValidateLocalInstallationAsync(
         string gamePath,
         CancellationToken cancellationToken = default)
     {
@@ -492,6 +302,18 @@ internal sealed class GameUninstallService
         }
 
         var localGame = await localInstallationStateStore.ReadAsync(gamePath, cancellationToken).ConfigureAwait(false);
+        if (localGame.Kind == LocalInstallationStateKind.IoFailure)
+        {
+            return (GameOperationOutcomes.Failed(
+                localizer.F(LocalizationKeys.UninstallFailed, localGame.Error),
+                GameOperationErrorCode.System), null);
+        }
+
+        if (localGame.Kind == LocalInstallationStateKind.Corrupted)
+        {
+            return (null, localGame);
+        }
+
         if (localGame.Kind != LocalInstallationStateKind.Valid)
         {
             return (GameOperationOutcomes.Failed(localizer.F(LocalizationKeys.GameConfigMetadataMissing, LauncherPaths.GameConfigFileName), GameOperationErrorCode.Uninstall), null);
@@ -508,21 +330,23 @@ internal sealed class GameUninstallService
     /// <summary>
     /// 「游戏是不是在跑」这道闸门（ADR-032）在本类的入口：预检与删除前的复查共用它，正文在
     /// <see cref="RunningGameGate"/>，与下载／安装／修复侧的判据、报法不会分叉。返回 null 表示
-    /// 放行；配置里没有可用名字时不拦（无可识别的判据，闸门不做无根据的拒绝）。
+    /// 放行；本地配置不可用时从游戏档案取得已知家族，不依赖联网也不跳过检查。
     /// </summary>
     private async Task<GameOperationResult?> FindRunningGameFailureAsync(
         GameLauncherConfig? gameConfig,
         string installDirectory,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(gameConfig?.Name))
-        {
-            return null;
-        }
-
-        var query = new RunningGameQuery(
-            GameProcessNames.FromLaunchConfiguration(gameConfig.Name, gameConfig.Params),
-            installDirectory);
+        // 元数据损坏时也要能离线检查整族进程；可信的游戏档案提供已知宿主与客户端名，
+        // 不从损坏的 JSON 猜名字，更不能因取不到远端配置而跳过运行检查。
+        var launchConfig = string.IsNullOrWhiteSpace(gameConfig?.Name)
+            ? new GameLauncherConfig
+            {
+                Name = gameProfile.GameLauncherExecutableFileName,
+                Params = [gameProfile.GameExecutableFileName]
+            }
+            : gameConfig;
+        var query = RunningGameGate.ResolveQuery(launchConfig, null, installDirectory);
         return await RunningGameGate.FindFailureAsync(
             gameProcessTracker,
             localizer,

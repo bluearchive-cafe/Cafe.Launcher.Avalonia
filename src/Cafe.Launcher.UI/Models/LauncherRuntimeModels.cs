@@ -50,6 +50,12 @@ internal sealed class ThemeOption : SelectableOption
 
 internal sealed class GameOperationProgress
 {
+    /// <summary>卸载已处理的文件、链接与目录项数；失败条目也计为已处理。</summary>
+    public int ProcessedEntryCount { get; set; }
+
+    /// <summary>卸载扫描得到的条目总数；扫描阶段尚未确定时为零。</summary>
+    public int TotalEntryCount { get; set; }
+
     public GameOperationKind OperationKind { get; set; } = GameOperationKind.Idle;
 
     public GameOperationStage Stage { get; set; } = GameOperationStage.Idle;
@@ -98,9 +104,8 @@ internal sealed class GameOperationResult
     public int AffectedFileCount { get; set; }
 
     /// <summary>
-    /// 本次操作涉及的<strong>文件清单</strong>合计字节数（2026-09-29 反馈轮）。预检与执行结果同义：
-    /// 启动器管理的文件集大小。卸载确认框用它给出「将删除多少 / 目录共多少」的对比——
-    /// 只报文件个数时，157 个文件会被读成「整个游戏」（实际 1.06 GiB vs 安装 18.5 GB）。
+    /// 本次操作涉及的文件合计字节数。卸载执行结果是实际删除的普通文件字节数，
+    /// 包含清单外资源与安装状态；确认框的目录大小另由测量结果提供。
     /// </summary>
     public long AffectedBytes { get; set; }
 

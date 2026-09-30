@@ -427,11 +427,12 @@
                             <Grid Grid.Row="0" Grid.Column="1" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}">
                                 <TextBlock Text="{Binding Operations.ProgressTitle}" Classes="progress-title operation-status-title" VerticalAlignment="Center"/>
                                 <TextBlock Grid.Column="2" Text="{Binding Operations.ProgressValue, StringFormat={}{0}%}"
+                                           IsVisible="{Binding !Operations.IsProgressIndeterminate}"
                                            Classes="progress-title" VerticalAlignment="Center"
                                            Foreground="{DynamicResource Launcher.Color.Primary}"/>
                             </Grid>
                             <!-- Progress bar -->
-                            <ProgressBar Grid.Row="1" Grid.Column="1" Value="{Binding Operations.ProgressValue}" Minimum="0" Maximum="100" Height="{StaticResource Launcher.Component.Progress.Bar.Height}"/>
+                            <ProgressBar Grid.Row="1" Grid.Column="1" Value="{Binding Operations.ProgressValue}" IsIndeterminate="{Binding Operations.IsProgressIndeterminate}" Minimum="0" Maximum="100" Height="{StaticResource Launcher.Component.Progress.Bar.Height}"/>
                             <!-- Stage | Speed | Size | ETA -->
                             <Grid Grid.Row="2" Grid.Column="1" ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
                                 <TextBlock Text="{Binding Operations.ProgressDetail}" Classes="caption"/>

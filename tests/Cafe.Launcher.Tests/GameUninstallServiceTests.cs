@@ -36,6 +36,76 @@ public sealed class GameUninstallServiceTests : IDisposable
 
     private static readonly string[] LaunchParameters = ["BlueArchive.exe"];
 
+    [Fact]
+    public async Task UninstallAsync_WhenDeletingUnmanagedResources_ReportsProgressAndFinishesAfterShortcutCleanup()
+    {
+        var gamePath = CreateGameDirectory();
+        await WriteGameFileAsync(gamePath, "managed.bin");
+        for (var index = 0; index < 200; index++)
+        {
+            await WriteGameFileAsync(gamePath, $"resources/{index}.bin");
+        }
+
+        var store = await CreateCommittedStoreAsync(gamePath, "managed.bin");
+        var snapshot = Snapshot(await store.ReadAsync(gamePath));
+        var shortcut = new TestGameShortcutService();
+        var service = CreateService(store, shortcutService: shortcut);
+        var updates = new List<GameOperationProgress>();
+        var sawPartialDeletion = false;
+
+        var result = await service.UninstallAsync(snapshot, UninstallScope.GameDirectory, update =>
+        {
+            updates.Add(update);
+            if (update.Progress == 100)
+            {
+                Assert.False(Directory.Exists(gamePath));
+                Assert.Equal(1, shortcut.DeleteCallCount);
+            }
+            else if (update.Stage == GameOperationStage.Uninstalling && update.Progress > 0 && Directory.Exists(gamePath))
+            {
+                var remaining = Directory.EnumerateFiles(gamePath, "*", SearchOption.AllDirectories).Count();
+                sawPartialDeletion |= remaining > 0 && remaining < 203;
+            }
+        });
+
+        Assert.True(result.Success);
+        Assert.True(sawPartialDeletion);
+        Assert.Equal(GameOperationStage.UninstallScanning, updates[0].Stage);
+        Assert.Equal(100, updates[^1].Progress);
+        Assert.Equal(205, updates[^1].TotalEntryCount); // 203 files + game/resources directories.
+        Assert.Equal(205, updates[^1].ProcessedEntryCount);
+        Assert.Equal(203, result.AffectedFileCount);
+        Assert.InRange(updates.Count, 3, 98); // Percentage gate avoids a UI dispatch for every file.
+        Assert.All(updates, update => Assert.False(update.CanStop));
+        Assert.Equal(updates.Select(update => update.Progress).Order(), updates.Select(update => update.Progress));
+        Assert.All(updates.Skip(1).SkipLast(1), update => Assert.InRange(update.Progress, 0, 95));
+    }
+
+    [Fact]
+    public async Task UninstallAsync_WhenGameStartsDuringScanning_RefusesBeforeDeletingAnything()
+    {
+        var gamePath = CreateGameDirectory();
+        var keep = await WriteGameFileAsync(gamePath, "managed.bin");
+        var store = await CreateCommittedStoreAsync(gamePath, "managed.bin");
+        var gameStarted = false;
+        var service = CreateService(store, processTracker: new GameProcessTracker(
+            (_, _) => Task.FromResult<IReadOnlyList<string>>(gameStarted ? ["BlueArchive"] : [])));
+        var snapshot = Snapshot(await store.ReadAsync(gamePath));
+
+        var result = await service.UninstallAsync(snapshot, UninstallScope.GameDirectory, update =>
+        {
+            if (update.Stage == GameOperationStage.UninstallScanning)
+            {
+                gameStarted = true;
+            }
+        });
+
+        Assert.False(result.Success);
+        Assert.Equal(GameOperationErrorCode.GameRunning, result.ErrorCode);
+        Assert.True(File.Exists(keep));
+        Assert.Equal(LocalInstallationStateKind.Valid, (await store.ReadAsync(gamePath)).Kind);
+    }
+
     static GameUninstallServiceTests()
     {
         TestLocalizationHelper.Initialize();
@@ -62,7 +132,7 @@ public sealed class GameUninstallServiceTests : IDisposable
         };
         File.SetAttributes(readOnlyPath, FileAttributes.ReadOnly);
 
-        var result = await service.UninstallAsync(snapshot, UninstallScope.ManifestFilesOnly, _ => { });
+        var result = await service.UninstallAsync(snapshot, UninstallScope.GameDirectory, _ => { });
 
         Assert.True(result.Success, result.Message);
         // 只读的那个与它之后的文件都已删除：删除按清单一侧推进，不再中途抛出。
@@ -71,48 +141,152 @@ public sealed class GameUninstallServiceTests : IDisposable
         Assert.Equal(1, shortcut.DeleteCallCount);
     }
 
-    [Fact]
-    public async Task UninstallAsync_WhenManifestFileIsLocked_FailsAndKeepsRemainingFiles()
+    [Theory]
+    [InlineData(LauncherRuntimeState.RemoteUnavailable)]
+    [InlineData(LauncherRuntimeState.BelowLowestVersion)]
+    [InlineData(LauncherRuntimeState.UpdateAvailable)]
+    [InlineData(LauncherRuntimeState.Corrupted)]
+    [InlineData(LauncherRuntimeState.IoFailure)]
+    public async Task UninstallAsync_WhenSnapshotDoesNotAllowLaunchButMetadataIsValid_RemovesLocalInstallation(
+        LauncherRuntimeState runtimeState)
     {
-        Assert.SkipUnless(OperatingSystem.IsWindows(), "共享冲突导致的删除失败只能在 Windows 上用打开的文件流复现。");
+        var gamePath = CreateGameDirectory();
+        var managedPath = await WriteGameFileAsync(gamePath, "data/managed.bin");
+        var store = await CreateCommittedStoreAsync(gamePath, "data/managed.bin");
+        var snapshot = Snapshot(await store.ReadAsync(gamePath));
+        snapshot.RuntimeState = runtimeState;
+
+        var result = await CreateService(store).UninstallAsync(snapshot, UninstallScope.GameDirectory, _ => { });
+
+        Assert.True(result.Success, result.Message);
+        Assert.False(File.Exists(managedPath));
+        Assert.Equal(LocalInstallationStateKind.NotInstalled, (await store.ReadAsync(gamePath)).Kind);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task UninstallAsync_WhenMetadataIsCorrupted_DeletesTheWholeDirectoryByDefault(bool corruptConfig)
+    {
+        var gamePath = CreateGameDirectory();
+        await WriteGameFileAsync(gamePath, "data/managed.bin");
+        var store = await CreateCommittedStoreAsync(gamePath, "data/managed.bin");
+        await File.WriteAllTextAsync(Path.Combine(gamePath,
+            corruptConfig ? LauncherPaths.GameConfigFileName : LauncherPaths.ManifestFileName), "invalid JSON");
+        var snapshot = Snapshot(await store.ReadAsync(gamePath));
+        snapshot.RuntimeState = LauncherRuntimeState.Corrupted;
+        var service = CreateService(store);
+        Assert.True((await service.ValidateAsync(gamePath)).Success);
+        var progress = new List<GameOperationProgress>();
+
+        var result = await service.UninstallAsync(snapshot, UninstallScope.GameDirectory, progress.Add);
+
+        Assert.True(result.Success, result.Message);
+        Assert.False(Directory.Exists(gamePath));
+        Assert.Equal(GameOperationStage.UninstallScanning, progress[0].Stage);
+        Assert.Equal(100, progress[^1].Progress);
+        Assert.All(progress, item => Assert.False(item.CanStop));
+    }
+
+    [Fact]
+    public async Task UninstallAsync_WhenMetadataBreaksAfterConfirmation_StillDeletesTheConfirmedDirectory()
+    {
+        var gamePath = CreateGameDirectory();
+        await WriteGameFileAsync(gamePath, "data/managed.bin");
+        var store = await CreateCommittedStoreAsync(gamePath, "data/managed.bin");
+        var snapshot = Snapshot(await store.ReadAsync(gamePath));
+        var service = CreateService(store);
+        Assert.True((await service.ValidateAsync(gamePath)).Success);
+        await File.WriteAllTextAsync(Path.Combine(gamePath, LauncherPaths.ManifestFileName), "invalid JSON");
+
+        var result = await service.UninstallAsync(snapshot, UninstallScope.GameDirectory, _ => { });
+
+        Assert.True(result.Success, result.Message);
+        Assert.False(Directory.Exists(gamePath));
+    }
+
+    [Theory]
+    [InlineData(LoaderExecutableName)]
+    [InlineData(GameExecutableName)]
+    [InlineData(AntiCheatSiblingName)]
+    public async Task UninstallAsync_WhenMetadataIsCorruptedAndAProcessIsRunning_RefusesEvenWithoutRemoteConfig(
+        string runningName)
+    {
+        var gamePath = CreateGameDirectory();
+        var managedPath = await WriteGameFileAsync(gamePath, "data/managed.bin");
+        var store = await CreateCommittedStoreAsync(gamePath, "data/managed.bin");
+        await File.WriteAllTextAsync(Path.Combine(gamePath, LauncherPaths.GameConfigFileName), "invalid JSON");
+        var snapshot = Snapshot(await store.ReadAsync(gamePath));
+        snapshot.RuntimeState = LauncherRuntimeState.Corrupted;
+        var scans = 0;
+        var tracker = new GameProcessTracker((query, _) =>
+        {
+            scans++;
+            Assert.True(GameProcessNames.BelongsToFamily(runningName, query.KnownExeNames));
+            return Task.FromResult<IReadOnlyList<string>>([runningName]);
+        });
+        var service = CreateService(store, processTracker: tracker);
+
+        var validation = await service.ValidateAsync(gamePath);
+        var result = await service.UninstallAsync(snapshot, UninstallScope.GameDirectoryAndManagedCompatibility, _ => { });
+
+        Assert.False(validation.Success);
+        Assert.Equal(GameOperationErrorCode.GameRunning, validation.ErrorCode);
+        Assert.False(result.Success);
+        Assert.Equal(GameOperationErrorCode.GameRunning, result.ErrorCode);
+        Assert.Equal(2, scans);
+        Assert.True(File.Exists(managedPath));
+    }
+
+    [Fact]
+    public async Task UninstallAsync_WhenMetadataCannotBeRead_DoesNotTreatItAsCorrupted()
+    {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "共享冲突导致的读取失败只能在 Windows 上复现。");
+        var gamePath = CreateGameDirectory();
+        var managedPath = await WriteGameFileAsync(gamePath, "data/managed.bin");
+        var store = await CreateCommittedStoreAsync(gamePath, "data/managed.bin");
+        var snapshot = Snapshot(await store.ReadAsync(gamePath));
+        snapshot.RuntimeState = LauncherRuntimeState.IoFailure;
+        using var handle = File.Open(Path.Combine(gamePath, LauncherPaths.GameConfigFileName),
+            FileMode.Open, FileAccess.Read, FileShare.None);
+        var service = CreateService(store);
+
+        var validation = await service.ValidateAsync(gamePath);
+        var result = await service.UninstallAsync(snapshot, UninstallScope.GameDirectoryAndManagedCompatibility, _ => { });
+
+        Assert.False(validation.Success);
+        Assert.Equal(GameOperationErrorCode.System, validation.ErrorCode);
+        Assert.False(result.Success);
+        Assert.Equal(GameOperationErrorCode.System, result.ErrorCode);
+        Assert.True(File.Exists(managedPath));
+    }
+
+    [Fact]
+    public async Task UninstallAsync_WhenAFileIsLocked_RemovesTheOtherFilesAndReportsTheLeftover()
+    {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "共享冲突导致的删除失败只能在 Windows 上复现。");
         var gamePath = CreateGameDirectory();
         var beforePath = await WriteGameFileAsync(gamePath, "data/before.bin");
         var lockedPath = await WriteGameFileAsync(gamePath, "data/locked.bin");
         var afterPath = await WriteGameFileAsync(gamePath, "data/after.bin");
         var store = await CreateCommittedStoreAsync(gamePath, "data/before.bin", "data/locked.bin", "data/after.bin");
-        var localGame = await store.ReadAsync(gamePath);
-        Assert.Equal(LocalInstallationStateKind.Valid, localGame.Kind);
         var shortcut = new TestGameShortcutService();
         var service = CreateService(store, shortcutService: shortcut);
-        var snapshot = new LauncherStatusSnapshot
-        {
-            RuntimeState = LauncherRuntimeState.Ready,
-            LocalGame = localGame
-        };
+        var snapshot = Snapshot(await store.ReadAsync(gamePath));
         var progress = new List<GameOperationProgress>();
-        // FileShare.None 独占打开：File.Delete 将因共享冲突抛出 IOException。
-        await using var lockStream = File.Open(lockedPath, FileMode.Open, FileAccess.Read, FileShare.None);
+        using var handle = File.Open(lockedPath, FileMode.Open, FileAccess.Read, FileShare.Read);
 
-        var result = await service.UninstallAsync(snapshot, UninstallScope.ManifestFilesOnly, progress.Add);
-        var stateAfter = await store.ReadAsync(gamePath);
-        await lockStream.DisposeAsync();
+        var result = await service.UninstallAsync(snapshot, UninstallScope.GameDirectory, progress.Add);
 
-        // 实现语义：IO 异常中止整个卸载并上报 System 错误，错误信息带出被锁文件路径。
-        Assert.False(result.Success);
-        Assert.Equal(GameOperationErrorCode.System, result.ErrorCode);
+        Assert.True(result.Success, result.Message);
         Assert.Contains(lockedPath, result.Message, StringComparison.Ordinal);
-        // 被锁文件之前的文件已删除，被锁文件与其后的文件保持原样（删除按清单一侧推进）。
         Assert.False(File.Exists(beforePath));
         Assert.True(File.Exists(lockedPath));
-        Assert.True(File.Exists(afterPath));
-        // 卸载没有走到成功那一半，桌面快捷方式必须保留（ADR-030）。
-        Assert.Equal(0, shortcut.DeleteCallCount);
-        // 安装状态尚未进入删除阶段：状态仍为 Valid，目录结构完整保留。
-        Assert.Equal(LocalInstallationStateKind.Valid, stateAfter.Kind);
-        // 仅成功删除的首个文件上报了一次卸载进度，随后被锁中断。
-        var uninstalling = progress.Where(item => item.Stage == GameOperationStage.Uninstalling).ToList();
-        Assert.Single(uninstalling);
-        Assert.Equal(33, uninstalling[0].Progress);
+        Assert.False(File.Exists(afterPath));
+        Assert.Equal(1, shortcut.DeleteCallCount);
+        Assert.Equal(LocalInstallationStateKind.NotInstalled, (await store.ReadAsync(gamePath)).Kind);
+        Assert.Equal(100, progress[^1].Progress);
+        Assert.Equal(progress[^1].TotalEntryCount, progress[^1].ProcessedEntryCount);
     }
 
     [Fact]
@@ -128,7 +302,7 @@ public sealed class GameUninstallServiceTests : IDisposable
         };
         var progressInvoked = false;
 
-        var result = await service.UninstallAsync(snapshot, UninstallScope.ManifestFilesOnly, _ => progressInvoked = true);
+        var result = await service.UninstallAsync(snapshot, UninstallScope.GameDirectory, _ => progressInvoked = true);
 
         // 幂等守卫语义：目录不存在时按校验失败返回（不抛异常、不产生进度）。
         Assert.False(result.Success);
@@ -138,28 +312,23 @@ public sealed class GameUninstallServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task UninstallAsync_WhenManifestOnly_ReportsThatTheFolderAndItsOtherContentRemain()
+    public async Task UninstallAsync_WhenUsingTheDefaultScope_RemovesUnmanagedResourcesAndTheDirectory()
     {
-        // 2026-09-29 反馈：「卸载完成。」被读成「目录空了」，而标准卸载从来不删目录本身，
-        // 目录里往往还剩着清单外的一大片——Blue Archive 日服 1.73.0 实测清单 157 个文件 /
-        // 1.06 GiB，而官方声明的整份安装是 18.5 GB，差额是游戏自行下载的内容。
         var gamePath = CreateGameDirectory();
         await WriteGameFileAsync(gamePath, "data/managed.bin");
-        var untrackedPath = await WriteGameFileAsync(gamePath, "StreamingAssets/game-downloaded.bin");
+        await WriteGameFileAsync(gamePath, "StreamingAssets/game-downloaded.bin");
+        await WriteGameFileAsync(gamePath, "user-notes.txt");
+        await WriteGameFileAsync(gamePath, "download.tmp");
+        Directory.CreateDirectory(Path.Combine(gamePath, "empty-folder"));
         var store = await CreateCommittedStoreAsync(gamePath, "data/managed.bin");
-        var localGame = await store.ReadAsync(gamePath);
         var localizer = new LocalizationService();
-        var service = CreateService(store, localizer);
 
-        var result = await service.UninstallAsync(Snapshot(localGame), UninstallScope.ManifestFilesOnly, _ => { });
+        var result = await CreateService(store, localizer).UninstallAsync(
+            Snapshot(await store.ReadAsync(gamePath)), UninstallScope.GameDirectory, _ => { });
 
-        Assert.True(result.Success);
-        Assert.True(File.Exists(untrackedPath));
-        // 保留事实必须点名目录：用户要能看见「还有东西、在哪」。
-        Assert.Contains(
-            localizer.F(LocalizationKeys.UninstallCompletedDirectoryRetained, gamePath),
-            result.Message,
-            StringComparison.Ordinal);
+        Assert.True(result.Success, result.Message);
+        Assert.False(Directory.Exists(gamePath));
+        Assert.Equal(localizer.T(LocalizationKeys.UninstallCompleted), result.Message);
     }
 
     [Fact]
@@ -171,7 +340,7 @@ public sealed class GameUninstallServiceTests : IDisposable
         var localGame = await store.ReadAsync(gamePath);
         var service = CreateService(store);
 
-        var result = await service.UninstallAsync(Snapshot(localGame), UninstallScope.ThoroughCleanup, _ => { });
+        var result = await service.UninstallAsync(Snapshot(localGame), UninstallScope.GameDirectoryAndManagedCompatibility, _ => { });
 
         Assert.True(result.Success);
         Assert.False(Directory.Exists(gamePath));
@@ -180,52 +349,44 @@ public sealed class GameUninstallServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task UninstallAsync_WhenManifestOnly_LogsScopeAndWhatWasActuallyRemoved()
+    public async Task UninstallAsync_LogsTheActualDirectoryDeletionCountsAndBytes()
     {
-        // 排查用的书面凭据（2026-09-29 反馈轮）：此前这一行是「清单条数」+ 恒为 0 的 leftovers，
-        // 于是「0 残留」的假象正好掩盖了「目录里还有 17 GiB」，而清单条数被当成删除条数读。
         var gamePath = CreateGameDirectory();
         await WriteGameFileAsync(gamePath, "data/managed.bin");
-        await WriteGameFileAsync(gamePath, "data/gone.bin");
-        var store = await CreateCommittedStoreAsync(gamePath, "data/managed.bin", "data/gone.bin");
-        var localGame = await store.ReadAsync(gamePath);
+        await WriteGameFileAsync(gamePath, "untracked.bin");
+        var store = await CreateCommittedStoreAsync(gamePath, "data/managed.bin");
+        var expectedBytes = Directory.EnumerateFiles(gamePath, "*", SearchOption.AllDirectories)
+            .Sum(path => new FileInfo(path).Length);
         var diagnostics = new RecordingDiagnostics();
         var service = CreateService(store, diagnostics: diagnostics);
-        // 提交之后再手工删掉一个清单条目：日志报的必须是实测，不是计划。
-        File.Delete(Path.Combine(gamePath, "data", "gone.bin"));
 
-        var result = await service.UninstallAsync(Snapshot(localGame), UninstallScope.ManifestFilesOnly, _ => { });
+        var result = await service.UninstallAsync(Snapshot(await store.ReadAsync(gamePath)),
+            UninstallScope.GameDirectory, _ => { });
 
-        Assert.True(result.Success);
-        var completion = Assert.Single(
-            diagnostics.Messages,
+        Assert.True(result.Success, result.Message);
+        Assert.Equal(4, result.AffectedFileCount);
+        Assert.Equal(expectedBytes, result.AffectedBytes);
+        var completion = Assert.Single(diagnostics.Messages,
             message => message.Contains("Game uninstall completed", StringComparison.Ordinal));
-        Assert.Contains("scope: ManifestFilesOnly", completion, StringComparison.Ordinal);
-        Assert.Contains("2 planned, 1 removed", completion, StringComparison.Ordinal);
-        Assert.Contains("1 already absent", completion, StringComparison.Ordinal);
-        Assert.Contains($"directory retained: {gamePath}", completion, StringComparison.Ordinal);
-        // 标准卸载不再输出一个恒为 0 的 leftovers 字段。
-        Assert.DoesNotContain("leftovers:", completion, StringComparison.Ordinal);
+        Assert.Contains("scope: GameDirectory", completion, StringComparison.Ordinal);
+        Assert.Contains($"files removed: 4 ({expectedBytes} bytes)", completion, StringComparison.Ordinal);
+        Assert.Contains("leftovers: 0", completion, StringComparison.Ordinal);
+        Assert.DoesNotContain("manifest files:", completion, StringComparison.Ordinal);
+        Assert.DoesNotContain("directory retained:", completion, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task ValidateAsync_WhenMetadataIsReadable_ReportsTheManifestBytesForTheConfirmation()
+    public async Task ValidateAsync_WhenMetadataIsReadable_DoesNotDeleteOrRequireManifestStatistics()
     {
-        // 确认框要给出「启动器管理的 1.06 GiB / 目录共 18.5 GB」的对比：只给文件个数时，
-        // 157 个文件会被读成「整个游戏」（2026-09-29 反馈轮）。
         var gamePath = CreateGameDirectory();
-        await WriteGameFileAsync(gamePath, "data/one.bin");
-        await WriteGameFileAsync(gamePath, "data/two.bin");
-        var store = await CreateCommittedStoreAsync(gamePath, "data/one.bin", "data/two.bin");
-        var localGame = await store.ReadAsync(gamePath);
-        var expectedBytes = (localGame.Manifest?.Files ?? []).Sum(file => file.SizeBytes);
-        var service = CreateService(store);
+        var managedPath = await WriteGameFileAsync(gamePath, "data/managed.bin");
+        var store = await CreateCommittedStoreAsync(gamePath, "data/managed.bin");
 
-        var validation = await service.ValidateAsync(gamePath);
+        var validation = await CreateService(store).ValidateAsync(gamePath);
 
-        Assert.True(validation.Success);
-        Assert.True(expectedBytes > 0);
-        Assert.Equal(expectedBytes, validation.AffectedBytes);
+        Assert.True(validation.Success, validation.Message);
+        Assert.True(File.Exists(managedPath));
+        Assert.True(File.Exists(Path.Combine(gamePath, LauncherPaths.GameConfigFileName)));
     }
 
     [Fact]
@@ -243,25 +404,25 @@ public sealed class GameUninstallServiceTests : IDisposable
             LocalGame = localGame
         };
 
-        var first = await service.UninstallAsync(snapshot, UninstallScope.ManifestFilesOnly, _ => { });
-        var second = await service.UninstallAsync(snapshot, UninstallScope.ManifestFilesOnly, _ => { });
+        var first = await service.UninstallAsync(snapshot, UninstallScope.GameDirectory, _ => { });
+        var second = await service.UninstallAsync(snapshot, UninstallScope.GameDirectory, _ => { });
         var stateAfter = await store.ReadAsync(gamePath);
 
-        // 第一次：清单文件删除、安装状态被清除，非清单文件不受影响。
+        // 第一次：整个游戏目录删除，包括清单外文件。
         Assert.True(first.Success);
         Assert.False(File.Exists(managedPath));
-        Assert.True(File.Exists(unknownPath));
-        // 第二次：安装状态已不存在，守卫按元数据缺失拒绝并返回 Uninstall 错误码，
+        Assert.False(File.Exists(unknownPath));
+        // 第二次：游戏目录已经不存在，守卫返回 Uninstall 错误码，
         // 不再触碰文件系统，也不会把首次卸载的结果改写成失败。
         Assert.False(second.Success);
         Assert.Equal(GameOperationErrorCode.Uninstall, second.ErrorCode);
         Assert.False(File.Exists(managedPath));
-        Assert.True(File.Exists(unknownPath));
+        Assert.False(File.Exists(unknownPath));
         Assert.Equal(LocalInstallationStateKind.NotInstalled, stateAfter.Kind);
     }
 
     [Fact]
-    public async Task UninstallAsync_WhenManifestOnly_RemovesTheDesktopShortcutAndKeepsTheDirectory()
+    public async Task UninstallAsync_WhenUsingTheDefaultScope_RemovesTheDesktopShortcutAndDirectory()
     {
         var gamePath = CreateGameDirectory();
         var managedPath = await WriteGameFileAsync(gamePath, "data/managed.bin");
@@ -271,14 +432,14 @@ public sealed class GameUninstallServiceTests : IDisposable
         var shortcut = new TestGameShortcutService();
         var service = CreateService(store, shortcutService: shortcut);
 
-        var result = await service.UninstallAsync(Snapshot(localGame), UninstallScope.ManifestFilesOnly, _ => { });
+        var result = await service.UninstallAsync(Snapshot(localGame), UninstallScope.GameDirectory, _ => { });
 
         Assert.True(result.Success);
-        // 标准卸载也删桌面快捷方式，但清单外的文件与目录本身原样保留（ADR-030）。
+        // 默认卸载删除目录及其清单外内容，同时移除桌面快捷方式（ADR-046）。
         Assert.Equal(1, shortcut.DeleteCallCount);
         Assert.False(File.Exists(managedPath));
-        Assert.True(File.Exists(unknownPath));
-        Assert.True(Directory.Exists(gamePath));
+        Assert.False(File.Exists(unknownPath));
+        Assert.False(Directory.Exists(gamePath));
     }
 
     [Fact]
@@ -294,7 +455,7 @@ public sealed class GameUninstallServiceTests : IDisposable
         var diagnostics = new RecordingDiagnostics();
         var service = CreateService(store, diagnostics: diagnostics);
 
-        var result = await service.UninstallAsync(Snapshot(localGame), UninstallScope.ThoroughCleanup, _ => { });
+        var result = await service.UninstallAsync(Snapshot(localGame), UninstallScope.GameDirectoryAndManagedCompatibility, _ => { });
 
         Assert.True(result.Success);
         // 整棵安装目录连清单外残留、暂存文件与空目录一起消失。
@@ -303,13 +464,15 @@ public sealed class GameUninstallServiceTests : IDisposable
         var completion = Assert.Single(
             diagnostics.Messages,
             message => message.Contains("Game uninstall completed", StringComparison.Ordinal));
-        Assert.Contains("scope: ThoroughCleanup", completion, StringComparison.Ordinal);
+        Assert.Contains("scope: GameDirectoryAndManagedCompatibility", completion, StringComparison.Ordinal);
         Assert.Contains("leftovers: 0", completion, StringComparison.Ordinal);
         Assert.DoesNotContain("directory retained", completion, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public async Task UninstallAsync_WhenScopeIsThorough_RemovesTheManagedCompatibilitySubtree()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task UninstallAsync_WithManagedCompatibilityOption_DeletesPrefixOnlyWhenSelected(bool cleanCompatibility)
     {
         var gamePath = CreateGameDirectory();
         await WriteGameFileAsync(gamePath, "data/managed.bin");
@@ -323,11 +486,14 @@ public sealed class GameUninstallServiceTests : IDisposable
 
         try
         {
-            var result = await service.UninstallAsync(Snapshot(localGame), UninstallScope.ThoroughCleanup, _ => { });
+            var result = await service.UninstallAsync(Snapshot(localGame),
+                cleanCompatibility ? UninstallScope.GameDirectoryAndManagedCompatibility : UninstallScope.GameDirectory,
+                _ => { });
 
             Assert.True(result.Success);
-            // 受管子树的消费者是运行器，不是清单：彻底清除按目录删，不看清单。
-            Assert.False(Directory.Exists(managedPrefixRoot));
+            Assert.False(Directory.Exists(gamePath));
+            Assert.Equal(!cleanCompatibility, File.Exists(prefixMarker));
+            Assert.Equal(!cleanCompatibility, Directory.Exists(managedPrefixRoot));
         }
         finally
         {
@@ -352,7 +518,7 @@ public sealed class GameUninstallServiceTests : IDisposable
 
         var result = await service.UninstallAsync(
             Snapshot(localGame, customPrefix),
-            UninstallScope.ThoroughCleanup,
+            UninstallScope.GameDirectoryAndManagedCompatibility,
             _ => { });
 
         Assert.True(result.Success);
@@ -378,7 +544,7 @@ public sealed class GameUninstallServiceTests : IDisposable
 
         var result = await service.UninstallAsync(
             Snapshot(localGame, embeddedPrefix),
-            UninstallScope.ThoroughCleanup,
+            UninstallScope.GameDirectoryAndManagedCompatibility,
             _ => { });
 
         Assert.True(result.Success);
@@ -430,30 +596,7 @@ public sealed class GameUninstallServiceTests : IDisposable
         Assert.DoesNotContain(leftovers[0], GameUninstallService.BuildCompletionMessage(localizer, [], prefix), StringComparison.Ordinal);
     }
 
-    [Fact]
-    public void BuildCompletionMessage_WhenTheFolderIsRetained_StatesItAsItsOwnSentence()
-    {
-        // 第三个事实（2026-09-29 反馈轮）与前两个互不包含，因此按需追一句而不是再乘出组合态：
-        // 项目落在「保留」这一维度上时，基础文案四态一个都不用改。
-        var localizer = new LocalizationService();
-        const string prefix = @"D:\shared-wine-prefix";
-        const string retained = @"D:\YostarGames\BlueArchive_JP";
 
-        var message = GameUninstallService.BuildCompletionMessage(localizer, [], prefix, retained);
-
-        Assert.Contains(
-            localizer.F(LocalizationKeys.UninstallCompletedDirectoryRetained, retained),
-            message,
-            StringComparison.Ordinal);
-        // 与「Prefix 已保留」共存：两个事实都在。
-        Assert.Contains(prefix, message, StringComparison.Ordinal);
-        Assert.DoesNotContain("{0}", message, StringComparison.Ordinal);
-        // 不保留就不许提保留（彻底清除删掉整棵目录之后走的就是这一态）。
-        Assert.DoesNotContain(
-            retained,
-            GameUninstallService.BuildCompletionMessage(localizer, [], null),
-            StringComparison.Ordinal);
-    }
 
     [Fact]
     public void BuildCompletionMessage_WithMoreLeftoversThanTheCap_NamesOnlyTheFirstFew()
@@ -490,7 +633,7 @@ public sealed class GameUninstallServiceTests : IDisposable
 
         using var handle = new FileStream(lockedPath, FileMode.Open, FileAccess.Read, FileShare.Read);
 
-        var result = await service.UninstallAsync(Snapshot(localGame), UninstallScope.ThoroughCleanup, _ => { });
+        var result = await service.UninstallAsync(Snapshot(localGame), UninstallScope.GameDirectoryAndManagedCompatibility, _ => { });
 
         Assert.True(result.Success);
         Assert.Contains(lockedPath, result.Message, StringComparison.Ordinal);
@@ -527,7 +670,7 @@ public sealed class GameUninstallServiceTests : IDisposable
                         : []);
             }));
 
-        var result = await service.UninstallAsync(Snapshot(localGame), UninstallScope.ThoroughCleanup, _ => { });
+        var result = await service.UninstallAsync(Snapshot(localGame), UninstallScope.GameDirectoryAndManagedCompatibility, _ => { });
 
         Assert.False(result.Success);
         Assert.Equal(GameOperationErrorCode.GameRunning, result.ErrorCode);
@@ -568,7 +711,7 @@ public sealed class GameUninstallServiceTests : IDisposable
         Assert.True(validation.Success);
 
         gameStarted = true;
-        var result = await service.UninstallAsync(Snapshot(localGame), UninstallScope.ThoroughCleanup, _ => { });
+        var result = await service.UninstallAsync(Snapshot(localGame), UninstallScope.GameDirectoryAndManagedCompatibility, _ => { });
 
         Assert.False(result.Success);
         Assert.Equal(GameOperationErrorCode.GameRunning, result.ErrorCode);
@@ -639,7 +782,7 @@ public sealed class GameUninstallServiceTests : IDisposable
             Manifest = localGame.Manifest
         };
 
-        var result = await service.UninstallAsync(Snapshot(linkedGame), UninstallScope.ThoroughCleanup, _ => { });
+        var result = await service.UninstallAsync(Snapshot(linkedGame), UninstallScope.GameDirectoryAndManagedCompatibility, _ => { });
 
         Assert.False(result.Success);
         Assert.Equal(GameOperationErrorCode.System, result.ErrorCode);
@@ -681,7 +824,6 @@ public sealed class GameUninstallServiceTests : IDisposable
         return fullPath;
     }
 
-    /// <summary>为给定清单文件落盘安装状态，返回已初始化的存储实例。</summary>
     /// <summary>为给定清单文件落盘安装状态，返回已初始化的存储实例。</summary>
     private static Task<LocalInstallationStateStore> CreateCommittedStoreAsync(
         string gamePath,

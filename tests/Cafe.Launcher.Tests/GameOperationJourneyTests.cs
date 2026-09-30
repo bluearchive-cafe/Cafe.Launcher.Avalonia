@@ -450,7 +450,7 @@ public sealed class GameOperationJourneyTests
 
         await context.Journey.ConfirmUninstallAsync(
             CreateSnapshot(LauncherRuntimeState.NotInstalled),
-            UninstallScope.ManifestFilesOnly);
+            UninstallScope.GameDirectory);
 
         Assert.Equal(0, context.Executor.UninstallCallCount);
         Assert.Equal(0, context.Host.SetBusyCallCount);
@@ -503,8 +503,8 @@ public sealed class GameOperationJourneyTests
     }
 
     [Theory]
-    [InlineData(UninstallScope.ManifestFilesOnly)]
-    [InlineData(UninstallScope.ThoroughCleanup)]
+    [InlineData(UninstallScope.GameDirectory)]
+    [InlineData(UninstallScope.GameDirectoryAndManagedCompatibility)]
     public async Task ConfirmUninstallAsync_ForwardsTheRequestedScopeToTheExecutor(UninstallScope scope)
     {
         var context = CreateContext();
@@ -523,7 +523,7 @@ public sealed class GameOperationJourneyTests
         var notifications = context.SubscribeToasts();
         context.Executor.UninstallResult = new GameOperationResult { Success = true, Message = "uninstalled" };
 
-        await context.Journey.ConfirmUninstallAsync(CreateSnapshot(), UninstallScope.ManifestFilesOnly);
+        await context.Journey.ConfirmUninstallAsync(CreateSnapshot(), UninstallScope.GameDirectory);
 
         var notification = Assert.Single(notifications);
         Assert.Equal(ToastSeverity.Success, notification.Severity);
@@ -543,7 +543,7 @@ public sealed class GameOperationJourneyTests
             ErrorCode = GameOperationErrorCode.System
         };
 
-        await context.Journey.ConfirmUninstallAsync(CreateSnapshot(), UninstallScope.ThoroughCleanup);
+        await context.Journey.ConfirmUninstallAsync(CreateSnapshot(), UninstallScope.GameDirectoryAndManagedCompatibility);
 
         var notification = Assert.Single(notifications);
         Assert.Equal(ToastSeverity.Error, notification.Severity);
@@ -558,7 +558,7 @@ public sealed class GameOperationJourneyTests
         var context = CreateContext();
         context.Executor.UninstallException = new IOException("目录不是空的。");
 
-        await context.Journey.ConfirmUninstallAsync(CreateSnapshot(), UninstallScope.ThoroughCleanup);
+        await context.Journey.ConfirmUninstallAsync(CreateSnapshot(), UninstallScope.GameDirectoryAndManagedCompatibility);
 
         var handled = Assert.Single(context.ErrorHandling.Handled);
         Assert.Equal("Game uninstall failed.", handled.Context);

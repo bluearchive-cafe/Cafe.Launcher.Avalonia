@@ -1164,8 +1164,6 @@ internal static class LauncherStrings
 
     public static string UninstallCompleted => GetRequiredString("uninstallCompleted");
 
-    public static string UninstallCompletedDirectoryRetained => GetRequiredString("uninstallCompletedDirectoryRetained");
-
     public static string UninstallCompletedKeptPrefix => GetRequiredString("uninstallCompletedKeptPrefix");
 
     public static string UninstallCompletedWithLeftovers => GetRequiredString("uninstallCompletedWithLeftovers");
@@ -1174,15 +1172,21 @@ internal static class LauncherStrings
 
     public static string UninstallConfirmText => GetRequiredString("uninstallConfirmText");
 
+    public static string UninstallConfirmTextPending => GetRequiredString("uninstallConfirmTextPending");
+
     public static string UninstallFailed => GetRequiredString("uninstallFailed");
 
     public static string Uninstalling => GetRequiredString("uninstalling");
 
+    public static string UninstallManagedCompatibilityOption => GetRequiredString("uninstallManagedCompatibilityOption");
+
+    public static string UninstallManagedCompatibilityOptionPending => GetRequiredString("uninstallManagedCompatibilityOptionPending");
+
+    public static string UninstallProgress => GetRequiredString("uninstallProgress");
+
     public static string UninstallRefusedByPathGuard => GetRequiredString("uninstallRefusedByPathGuard");
 
-    public static string UninstallThoroughCleanupOption => GetRequiredString("uninstallThoroughCleanupOption");
-
-    public static string UninstallThoroughCleanupOptionPending => GetRequiredString("uninstallThoroughCleanupOptionPending");
+    public static string UninstallScanning => GetRequiredString("uninstallScanning");
 
     public static string Unknown => GetRequiredString("unknown");
 

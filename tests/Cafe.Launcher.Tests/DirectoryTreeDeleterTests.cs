@@ -1,4 +1,4 @@
-﻿using Cafe.Launcher.UI.Helpers;
+using Cafe.Launcher.UI.Helpers;
 using Cafe.Launcher.Testing;
 using Cafe.Launcher.Core.Helpers;
 
@@ -11,6 +11,105 @@ namespace Cafe.Launcher.Tests;
 public sealed class DirectoryTreeDeleterTests : IDisposable
 {
     private readonly TestDirectory tempDir = TestDirectory.Create();
+
+    [Fact]
+    public void CreatePlan_WhenBothTreesAreSelected_CountsEntriesAndReportsEveryProcessedEntry()
+    {
+        var game = Path.Combine(tempDir, "game");
+        var prefix = Path.Combine(tempDir, "prefix");
+        Directory.CreateDirectory(Path.Combine(game, "resources"));
+        Directory.CreateDirectory(prefix);
+        File.WriteAllText(Path.Combine(game, "resources", "data"), "abc");
+        File.WriteAllText(Path.Combine(prefix, "data"), "12345");
+
+        var plan = DirectoryTreeDeleter.CreatePlan([
+            new DirectoryDeletionTarget(game, game),
+            new DirectoryDeletionTarget(prefix, prefix)]);
+
+        Assert.Equal(5, plan.TotalEntries);
+        Assert.True(Directory.Exists(game));
+        var progress = new List<DirectoryDeletionProgress>();
+        var result = plan.Delete(progress.Add);
+
+        Assert.Empty(result.Leftovers);
+        Assert.Equal(2, result.RemovedFiles);
+        Assert.Equal(8, result.RemovedBytes);
+        Assert.Equal(Enumerable.Range(0, 6), progress.Select(item => item.ProcessedEntries));
+        Assert.All(progress, item => Assert.Equal(5, item.TotalEntries));
+        Assert.False(Directory.Exists(game));
+        Assert.False(Directory.Exists(prefix));
+    }
+
+    [Fact]
+    public void CreatePlan_WhenAnotherTargetEscapesItsRoot_RefusesBeforeDeletingAnything()
+    {
+        var root = Path.Combine(tempDir, "root");
+        var outside = Path.Combine(tempDir, "outside");
+        Directory.CreateDirectory(root);
+        Directory.CreateDirectory(outside);
+        var keep = Path.Combine(root, "keep");
+        File.WriteAllText(keep, "keep");
+
+        Assert.Throws<InvalidOperationException>(() => DirectoryTreeDeleter.CreatePlan([
+            new DirectoryDeletionTarget(root, root),
+            new DirectoryDeletionTarget(outside, root)]));
+
+        Assert.True(File.Exists(keep));
+        Assert.True(Directory.Exists(outside));
+    }
+
+    [Fact]
+    public void DeletePlan_WhenAnAncestorBecomesALink_KeepsFilesOutsideTheTree()
+    {
+        var root = Path.Combine(tempDir, "root");
+        var child = Path.Combine(root, "data");
+        var outside = Path.Combine(tempDir, "outside");
+        Directory.CreateDirectory(child);
+        Directory.CreateDirectory(outside);
+        File.WriteAllText(Path.Combine(child, "same.txt"), "original");
+        var keep = Path.Combine(outside, "same.txt");
+        File.WriteAllText(keep, "keep");
+        var plan = DirectoryTreeDeleter.CreatePlan([new DirectoryDeletionTarget(root, root)]);
+        DirectoryTreeDeleter.Delete(child, root);
+        TestSymlinks.CreateDirectorySymbolicLinkOrSkip(child, outside);
+
+        var result = plan.Delete();
+
+        Assert.Equal("keep", File.ReadAllText(keep));
+        Assert.Contains(Path.Combine(child, "same.txt"), result.Leftovers);
+    }
+
+    [Fact]
+    public void DeletePlan_WhenCancelledBeforeDeletion_KeepsAllFiles()
+    {
+        var root = Path.Combine(tempDir, "root");
+        Directory.CreateDirectory(root);
+        var keep = Path.Combine(root, "keep");
+        File.WriteAllText(keep, "keep");
+        var plan = DirectoryTreeDeleter.CreatePlan([new DirectoryDeletionTarget(root, root)]);
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        Assert.Throws<OperationCanceledException>(() => plan.Delete(cancellationToken: cancellation.Token));
+
+        Assert.True(File.Exists(keep));
+    }
+
+    [Fact]
+    public void DeletePlan_WhenANewFileAppearsAfterScanning_ReportsTheDirectoryAsRemaining()
+    {
+        var root = Path.Combine(tempDir, "root");
+        Directory.CreateDirectory(root);
+        var plan = DirectoryTreeDeleter.CreatePlan([new DirectoryDeletionTarget(root, root)]);
+        var keep = Path.Combine(root, "new-file");
+        File.WriteAllText(keep, "new");
+
+        var result = plan.Delete();
+
+        Assert.Contains(root, result.Leftovers);
+        Assert.True(File.Exists(keep));
+        Assert.Equal(0, result.RemovedFiles);
+    }
 
     [Fact]
     public void Delete_WhenTargetIsInsideAllowedRoot_RemovesTheWholeTree()

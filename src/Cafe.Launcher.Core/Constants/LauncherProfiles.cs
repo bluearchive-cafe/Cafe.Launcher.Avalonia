@@ -49,6 +49,7 @@ public static class LauncherProfiles
         RootFolderName = "YostarGames",
         GameFolderName = "BlueArchive_JP",
         GameExecutableFileName = "BlueArchive.exe",
+        GameLauncherExecutableFileName = "xldr_BlueArchiveOnline_JP_loader_x64.exe",
         GameStartScriptFileName = "run.bat",
         ApiBaseUrl = "https://api-launcher-jp.yo-star.com",
         AuthorizationSalt = "DE7108E9B2842FD460F4777702727869",

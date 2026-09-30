@@ -26,6 +26,9 @@ public sealed record YostarGameProfile
     /// <summary>游戏客户端本体的可执行文件名（不是官方配置里的宿主名）。</summary>
     public required string GameExecutableFileName { get; init; }
 
+    /// <summary>已知官方启动宿主；本地配置损坏且离线卸载时，用于识别游戏与反作弊进程家族。</summary>
+    public required string GameLauncherExecutableFileName { get; init; }
+
     /// <summary>游戏目录里官方分发自带的启动脚本名。</summary>
     public required string GameStartScriptFileName { get; init; }
 

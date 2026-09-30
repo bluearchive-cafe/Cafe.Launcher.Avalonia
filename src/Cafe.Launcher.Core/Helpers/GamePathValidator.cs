@@ -9,6 +9,10 @@ namespace Cafe.Launcher.Core.Helpers;
 /// </summary>
 public static class GamePathValidator
 {
+    /// <summary>与路径比较规则一致的集合比较器，用于删除计划的路径去重。</summary>
+    public static StringComparer PathComparer =>
+        OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+
     // Windows filesystems are typically case-insensitive; Linux/macOS are
     // case-sensitive, so a case-insensitive root check there would let a
     // differently-cased path bypass the escape validation.

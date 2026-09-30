@@ -16,5 +16,7 @@ public enum GameOperationStage
     DownloadCompleted,
     Stopped,
     Downloading,
+    /// <summary>扫描整棵卸载目标，条目总数尚未确定。</summary>
+    UninstallScanning,
     Uninstalling,
 }

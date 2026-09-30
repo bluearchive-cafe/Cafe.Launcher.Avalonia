@@ -1,8 +1,8 @@
 namespace Cafe.Launcher.UI.Features.GameOperations;
 
 /// <summary>
-/// 彻底清除会删除的两个目录的实测大小（ADR-030），单位字节；展示层用
+/// 游戏目录与可选受管兼容环境的实测大小（ADR-046），单位字节；展示层用
 /// <c>FileSizeFormatter.Format</c> 格式化。测量与删除共用同一段目标计算，所以对话框里
-/// 显示多少就是随后会删多少。
+/// 显示的是同一组目标；目录内容在测量后变化时，执行结果仍以实际删除为准。
 /// </summary>
 internal readonly record struct UninstallFootprint(long InstallDirectoryBytes, long PrefixBytes);

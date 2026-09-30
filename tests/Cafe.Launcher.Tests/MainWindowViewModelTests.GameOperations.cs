@@ -88,11 +88,11 @@ public partial class MainWindowViewModelTests
         await viewModel.Operations.RequestUninstallCommand.ExecuteAsync(null);
 
         // 勾选经真实接线走到执行层：确认框上的选项最终变成卸载范围（ADR-030）。
-        viewModel.Operations.IsThoroughUninstallSelected = true;
+        viewModel.Operations.IsManagedCompatibilityCleanupSelected = true;
         await viewModel.Dialogs.UninstallConfirm.ConfirmCommand.ExecuteAsync(null);
 
         Assert.Equal(1, backend.UninstallCallCount);
-        Assert.Equal(UninstallScope.ThoroughCleanup, backend.LastUninstallScope);
+        Assert.Equal(UninstallScope.GameDirectoryAndManagedCompatibility, backend.LastUninstallScope);
     }
 
     [Fact]

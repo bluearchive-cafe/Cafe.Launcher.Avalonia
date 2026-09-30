@@ -47,6 +47,35 @@ public sealed class GameOperationsViewModelTests : IDisposable
     }
 
     [Fact]
+    public void ApplyProgress_ForUninstall_ShowsScanningThenProcessedEntries()
+    {
+        var context = CreateContext();
+        context.ViewModel.ApplyProgress(new GameOperationProgress
+        {
+            OperationKind = GameOperationKind.Uninstall,
+            Stage = GameOperationStage.UninstallScanning,
+            IsRunning = true
+        });
+
+        Assert.True(context.ViewModel.IsProgressIndeterminate);
+        Assert.Equal(context.Localizer.T(LocalizationKeys.UninstallScanning), context.ViewModel.ProgressDetail);
+
+        context.ViewModel.ApplyProgress(new GameOperationProgress
+        {
+            OperationKind = GameOperationKind.Uninstall,
+            Stage = GameOperationStage.Uninstalling,
+            Progress = 47,
+            ProcessedEntryCount = 50,
+            TotalEntryCount = 100,
+            IsRunning = true
+        });
+
+        Assert.False(context.ViewModel.IsProgressIndeterminate);
+        Assert.Equal(47, context.ViewModel.ProgressValue);
+        Assert.Equal(context.Localizer.F(LocalizationKeys.UninstallProgress, 50, 100), context.ViewModel.ProgressDetail);
+    }
+
+    [Fact]
     public async Task RefreshRequested_AwaitsSubscribersStrictlyInRegistrationOrder()
     {
         var context = CreateContext();
@@ -712,21 +741,77 @@ public sealed class GameOperationsViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task RequestUninstallCommand_WhenOpened_ResetsTheThoroughOptionAndShowsBothSizes()
+    public async Task RequestUninstallCommand_WhenOpened_DefaultsToGameDirectoryAndShowsItsSizeAndTheOptionalPrefixSize()
     {
-        // 破坏性选项不预置（ADR-030）：上一次勾过也要归零；标签里带两个目录的实测大小。
+        // 游戏目录默认删除；兼容环境是额外选项，目录和兼容环境的大小分别展示。
         var context = CreateContext();
         context.ViewModel.ApplySnapshot(ReadySnapshot("C:\\Game"));
         context.Backend.ValidateUninstallResult = new GameOperationResult { Success = true, AffectedFileCount = 5 };
         context.Backend.MeasureFootprintResult = new UninstallFootprint(1234567, 890);
-        context.ViewModel.IsThoroughUninstallSelected = true;
+        context.ViewModel.IsManagedCompatibilityCleanupSelected = true;
 
         await context.ViewModel.RequestUninstallCommand.ExecuteAsync(null);
 
-        Assert.False(context.ViewModel.IsThoroughUninstallSelected);
+        Assert.False(context.ViewModel.IsManagedCompatibilityCleanupSelected);
         Assert.Equal(1, context.Backend.MeasureFootprintCallCount);
-        Assert.Contains(FileSizeFormatter.Format(1234567), context.ViewModel.ThoroughUninstallOptionText, StringComparison.Ordinal);
-        Assert.Contains(FileSizeFormatter.Format(890), context.ViewModel.ThoroughUninstallOptionText, StringComparison.Ordinal);
+        Assert.Contains(FileSizeFormatter.Format(1234567), context.Dialogs.UninstallConfirm.Message, StringComparison.Ordinal);
+        Assert.Contains(FileSizeFormatter.Format(890), context.ViewModel.ManagedCompatibilityCleanupOptionText, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(LauncherRuntimeState.RemoteUnavailable)]
+    [InlineData(LauncherRuntimeState.BelowLowestVersion)]
+    [InlineData(LauncherRuntimeState.UpdateAvailable)]
+    public async Task RequestUninstallCommand_WhenRemoteStateDoesNotAllowLaunch_StillConfirmsAndUninstalls(
+        LauncherRuntimeState runtimeState)
+    {
+        var context = CreateContext();
+        var snapshot = ReadySnapshot("C:\\Game");
+        snapshot.RuntimeState = runtimeState;
+        context.ViewModel.ApplySnapshot(snapshot);
+        context.Backend.ValidateUninstallResult = new GameOperationResult { Success = true, AffectedFileCount = 5 };
+
+        await context.ViewModel.RequestUninstallCommand.ExecuteAsync(null);
+
+        Assert.True(context.Dialogs.UninstallConfirm.IsVisible);
+        Assert.True(context.Dialogs.UninstallConfirm.ConfirmCommand.CanExecute(null));
+        await context.Dialogs.UninstallConfirm.ConfirmCommand.ExecuteAsync(null);
+        Assert.Equal(1, context.Backend.UninstallCallCount);
+        Assert.Equal(UninstallScope.GameDirectory, context.Backend.LastUninstallScope);
+    }
+
+    [Fact]
+    public async Task RequestUninstallCommand_WhenMetadataIsCorrupted_ConfirmsDirectoryDeletionWithoutAnExtraSelection()
+    {
+        var context = CreateContext();
+        var snapshot = ReadySnapshot("C:\\Game");
+        snapshot.RuntimeState = LauncherRuntimeState.Corrupted;
+        context.ViewModel.ApplySnapshot(snapshot);
+        context.Backend.ValidateUninstallResult = new GameOperationResult { Success = true };
+
+        await context.ViewModel.RequestUninstallCommand.ExecuteAsync(null);
+
+        Assert.True(context.Dialogs.UninstallConfirm.IsVisible);
+        Assert.False(context.ViewModel.IsManagedCompatibilityCleanupSelected);
+        Assert.True(context.Dialogs.UninstallConfirm.ConfirmCommand.CanExecute(null));
+        await context.Dialogs.UninstallConfirm.ConfirmCommand.ExecuteAsync(null);
+        Assert.False(context.Dialogs.UninstallConfirm.IsVisible);
+        Assert.Equal(UninstallScope.GameDirectory, context.Backend.LastUninstallScope);
+        Assert.Equal(1, context.Backend.UninstallCallCount);
+    }
+
+    [Fact]
+    public async Task ConfirmUninstallAsync_WhenCurrentPathChanges_UsesTheDirectoryShownInTheConfirmation()
+    {
+        var context = CreateContext();
+        context.ViewModel.ApplySnapshot(ReadySnapshot("C:\\ConfirmedGame"));
+        context.Backend.ValidateUninstallResult = new GameOperationResult { Success = true };
+        await context.ViewModel.RequestUninstallCommand.ExecuteAsync(null);
+        context.ViewModel.ApplySnapshot(ReadySnapshot("C:\\DifferentGame"));
+
+        await context.Dialogs.UninstallConfirm.ConfirmCommand.ExecuteAsync(null);
+
+        Assert.Equal("C:\\ConfirmedGame", context.Backend.LastUninstallGamePath);
     }
 
     [Fact]
@@ -743,27 +828,27 @@ public sealed class GameOperationsViewModelTests : IDisposable
 
         Assert.True(context.Dialogs.UninstallConfirm.IsVisible);
         Assert.Equal(
-            context.Localizer.T("uninstallThoroughCleanupOptionPending"),
-            context.ViewModel.ThoroughUninstallOptionText);
+            context.Localizer.T(LocalizationKeys.UninstallManagedCompatibilityOptionPending),
+            context.ViewModel.ManagedCompatibilityCleanupOptionText);
 
         context.Backend.MeasureFootprintCompletion.SetResult(new UninstallFootprint(1234567, 890));
         await pending;
 
         // 测量回来之后换成带数字的那句。
-        Assert.Contains(FileSizeFormatter.Format(1234567), context.ViewModel.ThoroughUninstallOptionText, StringComparison.Ordinal);
-        Assert.Contains(FileSizeFormatter.Format(890), context.ViewModel.ThoroughUninstallOptionText, StringComparison.Ordinal);
+        Assert.Contains(FileSizeFormatter.Format(1234567), context.Dialogs.UninstallConfirm.Message, StringComparison.Ordinal);
+        Assert.Contains(FileSizeFormatter.Format(890), context.ViewModel.ManagedCompatibilityCleanupOptionText, StringComparison.Ordinal);
     }
 
     [Theory]
-    [InlineData(false, UninstallScope.ManifestFilesOnly)]
-    [InlineData(true, UninstallScope.ThoroughCleanup)]
+    [InlineData(false, UninstallScope.GameDirectory)]
+    [InlineData(true, UninstallScope.GameDirectoryAndManagedCompatibility)]
     public async Task ConfirmUninstallAsync_WhenOptionIsToggled_ForwardsTheMatchingScope(
         bool thoroughSelected,
         UninstallScope expected)
     {
         var context = CreateContext();
         context.ViewModel.ApplySnapshot(ReadySnapshot("C:\\Game"));
-        context.ViewModel.IsThoroughUninstallSelected = thoroughSelected;
+        context.ViewModel.IsManagedCompatibilityCleanupSelected = thoroughSelected;
 
         await context.ViewModel.ConfirmUninstallAsync();
 
@@ -771,28 +856,23 @@ public sealed class GameOperationsViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task RequestUninstallCommand_WhenValidationSucceeds_ShowsConfirmation()
+    public async Task RequestUninstallCommand_WhenValidationSucceeds_ShowsTheWholeDirectorySize()
     {
         var context = CreateContext();
         context.ViewModel.ApplySnapshot(ReadySnapshot("C:\\Game"));
         context.Backend.ValidateUninstallResult = new GameOperationResult
         {
             Success = true,
-            AffectedFileCount = 5,
-            AffectedBytes = 1_140_416_350
+            AffectedBytes = 1024
         };
+        context.Backend.MeasureFootprintResult = new UninstallFootprint(1_140_416_350, 0);
 
         await context.ViewModel.RequestUninstallCommand.ExecuteAsync(null);
 
         Assert.True(context.Dialogs.UninstallConfirm.IsVisible);
         Assert.Contains("C:\\Game", context.Dialogs.UninstallConfirm.Message, StringComparison.Ordinal);
-        // 「启动器管理的文件：5 个（1.06 GiB）」——确认框必须给出将与不会删除的对比，
-        // 只报文件个数时 157 个文件会被读成「整个游戏」（2026-09-29 反馈轮）。
-        Assert.Contains(
-            FileSizeFormatter.Format(1_140_416_350),
-            context.Dialogs.UninstallConfirm.Message,
-            StringComparison.Ordinal);
-        Assert.DoesNotContain("{2}", context.Dialogs.UninstallConfirm.Message, StringComparison.Ordinal);
+        Assert.Equal(context.Localizer.F(LocalizationKeys.UninstallConfirmText, "C:\\Game",
+            FileSizeFormatter.Format(1_140_416_350)), context.Dialogs.UninstallConfirm.Message);
     }
 
     [Fact]

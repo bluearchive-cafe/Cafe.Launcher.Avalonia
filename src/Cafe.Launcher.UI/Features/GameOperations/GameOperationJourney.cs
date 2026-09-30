@@ -332,7 +332,7 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
     }
 
     /// <summary>
-    /// 彻底清除会删除的两个目录的实测大小（ADR-030），供确认框展示；与删除目标同源。
+    /// 游戏目录与可选受管兼容环境的实测大小（ADR-046），供确认框展示；与删除目标同源。
     /// </summary>
     public Task<UninstallFootprint> MeasureUninstallFootprintAsync(LauncherStatusSnapshot snapshot) =>
         executor.MeasureUninstallFootprintAsync(snapshot);

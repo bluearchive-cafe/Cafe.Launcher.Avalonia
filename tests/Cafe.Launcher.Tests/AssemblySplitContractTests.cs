@@ -206,6 +206,7 @@ public sealed class AssemblySplitContractTests
             "AtomicJsonFileStore",
             "BestHttpCookieLibraryService",
             "CrashOriginExtensions",
+            "DirectoryDeletionPlan", // Returned by DirectoryTreeDeleter; UI executes it after the game-process gate.
             "DirectorySizeProbe",
             "DirectoryTreeDeleter",
             "DirectoryWriteProbe",
