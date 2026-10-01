@@ -52,6 +52,8 @@ internal sealed class StubGameOperationExecutor : IGameOperationExecutor
     /// <summary>Gets 最近一次卸载收到的范围；尚未调用过卸载时为 null。</summary>
     public UninstallScope? LastUninstallScope { get; private set; }
 
+    public string? LastUninstallGamePath { get; private set; }
+
     public int ResumeCallCount { get; private set; }
 
     public int StopCallCount { get; private set; }
@@ -177,6 +179,7 @@ internal sealed class StubGameOperationExecutor : IGameOperationExecutor
     {
         UninstallCallCount++;
         LastUninstallScope = scope;
+        LastUninstallGamePath = snapshot.LocalGame.GamePath;
         if (UninstallException is not null)
         {
             throw UninstallException;

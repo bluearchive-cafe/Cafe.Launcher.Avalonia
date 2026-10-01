@@ -37,8 +37,9 @@ internal static class GameOperationPolicy
 
     /// <summary>
     /// 判定给定安装状态下是否允许执行该操作。对照 CONTEXT.md 安装生命周期
-    /// 词汇：可启动才允许启动与卸载；损坏或可启动允许修复；未安装、
-    /// 需要强制更新、有可用更新允许安装/更新。
+    /// 词汇：可启动才允许启动；损坏或可启动允许修复；未安装、
+    /// 需要强制更新、有可用更新允许安装/更新。卸载是本地操作，不依赖远端版本；
+    /// 除未安装外均进入本地预检，由执行层检查路径、元数据、删除范围与运行进程。
     /// </summary>
     public static GameOperationDecision Decide(Operation operation, LauncherRuntimeState state) =>
         Allows(operation, state) ? GameOperationDecision.Allowed : GameOperationDecision.RejectedForCurrentState;
@@ -50,7 +51,12 @@ internal static class GameOperationPolicy
             or LauncherRuntimeState.BelowLowestVersion
             or LauncherRuntimeState.UpdateAvailable,
         Operation.Repair => state is LauncherRuntimeState.Corrupted or LauncherRuntimeState.Ready,
-        Operation.Uninstall => state == LauncherRuntimeState.Ready,
+        Operation.Uninstall => state is LauncherRuntimeState.Corrupted
+            or LauncherRuntimeState.IoFailure
+            or LauncherRuntimeState.RemoteUnavailable
+            or LauncherRuntimeState.BelowLowestVersion
+            or LauncherRuntimeState.UpdateAvailable
+            or LauncherRuntimeState.Ready,
         _ => false
     };
 }

@@ -72,6 +72,9 @@ public sealed class LauncherPresentationSession : IDisposable
         this.dataRoot = dataRoot;
     }
 
+    /// <summary>正常退出是否允许；宿主必须在取消生命周期工作之前检查。</summary>
+    public bool CanShutdown => !viewModel.Operations.IsUninstallExecuting;
+
     /// <summary>创建并配置本会话唯一的桌面窗口（含托盘），重复调用返回同一实例。</summary>
     public Window CreateMainWindow()
     {

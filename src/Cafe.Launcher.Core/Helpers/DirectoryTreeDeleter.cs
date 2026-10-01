@@ -5,9 +5,8 @@ using System.IO;
 namespace Cafe.Launcher.Core.Helpers;
 
 /// <summary>
-/// 目录树的整体删除（ADR-030）。递归删除是卸载「彻底清除」才有的能力，因此
-/// 路径守卫与删除动作放在一处：目标必须落在调用方声明的根之内，且不得是盘根或
-/// reparse point。
+/// 目录树的整体删除（ADR-046）。路径守卫、扫描计划与删除动作放在一处：目标必须
+/// 落在调用方声明的根之内，且不得是盘根或 reparse point。
 /// </summary>
 /// <remarks>
 /// <para>与 <see cref="GamePathValidator"/> 的分工：后者面向「游戏目录内的单个文件」，
@@ -77,127 +76,115 @@ public static class DirectoryTreeDeleter
     /// 调用方要据此如实上报：安装目录能被删到什么程度不由调用方决定。
     /// </returns>
     /// <exception cref="InvalidOperationException">见 <see cref="EnsureDeletable"/>。</exception>
-    public static IReadOnlyList<string> Delete(string path, string allowedRoot)
-    {
-        EnsureDeletable(path, allowedRoot);
-
-        var fullPath = Path.GetFullPath(path);
-        if (!Directory.Exists(fullPath))
-        {
-            return [];
-        }
-
-        return DeleteLevelByLevel(fullPath);
-    }
+    public static IReadOnlyList<string> Delete(string path, string allowedRoot) =>
+        CreatePlan([new DirectoryDeletionTarget(path, allowedRoot)]).Delete().Leftovers;
 
     /// <summary>
-    /// 自顶向下收集、自底向上删除：每个目录被收集时它的子项已开始处理，因此逆序删除时
-    /// 目录必为空。链接在被遇到时就按链接删掉，父目录随即可能变空。
+    /// 扫描所有目标并生成一个删除计划；扫描不删除任何项目、不跟随链接、按子目录先于父目录
+    /// 排列。调用方可在扫描结束后重新检查游戏运行状态，再执行计划。
     /// </summary>
-    private static List<string> DeleteLevelByLevel(string root)
+    public static DirectoryDeletionPlan CreatePlan(
+        IReadOnlyList<DirectoryDeletionTarget> targets,
+        System.Threading.CancellationToken cancellationToken = default)
     {
-        var pending = new Stack<string>();
-        var directories = new List<string>();
-        var blocked = new List<string>();
-        pending.Push(root);
+        ArgumentNullException.ThrowIfNull(targets);
+        var normalizedTargets = new List<DirectoryDeletionTarget>();
+        foreach (var target in targets)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            EnsureDeletable(target.Path, target.AllowedRoot);
+            normalizedTargets.Add(new DirectoryDeletionTarget(
+                Path.TrimEndingDirectorySeparator(Path.GetFullPath(target.Path)),
+                Path.GetFullPath(target.AllowedRoot)));
+        }
+
+        var pending = new Stack<DirectoryDeletionEntry>();
+        var directories = new List<DirectoryDeletionEntry>();
+        var entries = new List<DirectoryDeletionEntry>();
+        var seen = new HashSet<string>(GamePathValidator.PathComparer);
+        foreach (var target in normalizedTargets)
+        {
+            if (Directory.Exists(target.Path))
+            {
+                pending.Push(new DirectoryDeletionEntry(target.Path, target.Path));
+            }
+        }
 
         while (pending.Count > 0)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var current = pending.Pop();
-            directories.Add(current);
-
-            foreach (var entry in EnumerateEntries(current, blocked))
+            if (!seen.Add(current.Path))
             {
-                DeleteEntry(entry, pending, blocked);
+                continue;
+            }
+
+            try
+            {
+                var attributes = File.GetAttributes(current.Path);
+                if ((attributes & FileAttributes.ReparsePoint) != 0
+                    || (attributes & FileAttributes.Directory) == 0)
+                {
+                    if (string.Equals(current.Path, current.Root, GamePathValidator.PathComparison))
+                    {
+                        EnsureDeletable(current.Path, current.Root);
+                    }
+
+                    entries.Add(current);
+                    continue;
+                }
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
+            {
+                entries.Add(current);
+                continue;
+            }
+
+            directories.Add(current);
+            foreach (var path in EnumerateEntries(current.Path))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var entry = new DirectoryDeletionEntry(path, current.Root);
+                try
+                {
+                    var attributes = File.GetAttributes(path);
+                    if ((attributes & FileAttributes.Directory) != 0
+                        && (attributes & FileAttributes.ReparsePoint) == 0)
+                    {
+                        pending.Push(entry);
+                        continue;
+                    }
+                }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
+                {
+                    // 扫描不了的项目仍纳入计划，执行时重试；失败时按路径交还，不能悄悄漏掉。
+                }
+
+                if (seen.Add(path))
+                {
+                    entries.Add(entry);
+                }
             }
         }
 
         for (var index = directories.Count - 1; index >= 0; index--)
         {
-            try
-            {
-                Directory.Delete(directories[index], recursive: false);
-            }
-            catch (Exception exception) when (IsFileSystemFailure(exception))
-            {
-                blocked.Add(directories[index]);
-            }
+            entries.Add(directories[index]);
         }
 
-        // 单点失败不中断整棵树的删除：能删的都删完，卡住的按路径回给调用方，而不是抛父目录
-        // 那句无信息量的「目录不是空的」——Windows 上有删不掉的项目并不是调用方做错了什么。
-        return blocked;
+        return new DirectoryDeletionPlan(normalizedTargets, entries);
     }
 
-    /// <summary>
-    /// 枚举目录项。名字在 Win32 命名空间里非法的条目（游戏反作弊留下的 <c>Xigncode:{GUID}</c>
-    /// 之类）列得出来却打不开，枚举本身也可能因此失败——这类失败记下来继续，不中断整棵树。
-    /// </summary>
-    private static string[] EnumerateEntries(string directory, List<string> blocked)
+    private static string[] EnumerateEntries(string directory)
     {
         try
         {
             return Directory.GetFileSystemEntries(directory);
         }
-        catch (Exception exception) when (IsFileSystemFailure(exception))
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            blocked.Add(directory);
+            // 目录本身仍在计划中；无法枚举时不会递归删除，非空或无权限会成为可见残留。
             return [];
         }
     }
-
-    private static void DeleteEntry(string entry, Stack<string> pending, List<string> blocked)
-    {
-        FileAttributes attributes;
-        try
-        {
-            attributes = File.GetAttributes(entry);
-        }
-        catch (Exception exception) when (IsFileSystemFailure(exception) || exception is ArgumentException)
-        {
-            // ArgumentException 也在这里：路径里带 ':' 的条目会被 .NET 直接判为非法字符，
-            // 连 <c>\\?\</c> 前缀都到不了 Win32。它是真实存在的目录项，不是调用方的参数错误。
-            blocked.Add(entry);
-            return;
-        }
-
-        try
-        {
-            if ((attributes & FileAttributes.ReparsePoint) != 0)
-            {
-                // 删目录项本身，不跟随进目标。
-                if ((attributes & FileAttributes.Directory) != 0)
-                {
-                    Directory.Delete(entry, recursive: false);
-                }
-                else
-                {
-                    File.Delete(entry);
-                }
-
-                return;
-            }
-
-            if ((attributes & FileAttributes.Directory) != 0)
-            {
-                pending.Push(entry);
-                return;
-            }
-
-            // 只读文件删不掉：与 Directory.Delete(recursive: true) 一样先摘掉该属性。
-            if ((attributes & FileAttributes.ReadOnly) != 0)
-            {
-                File.SetAttributes(entry, attributes & ~FileAttributes.ReadOnly);
-            }
-
-            File.Delete(entry);
-        }
-        catch (Exception exception) when (IsFileSystemFailure(exception))
-        {
-            blocked.Add(entry);
-        }
-    }
-
-    private static bool IsFileSystemFailure(Exception exception) =>
-        exception is IOException or UnauthorizedAccessException;
 }

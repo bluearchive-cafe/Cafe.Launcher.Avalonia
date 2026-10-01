@@ -45,6 +45,8 @@ internal sealed class SystemTrayActions : ISystemTrayActions, IDisposable
         && viewModel.Operations.StartGameCommand.CanExecute(null);
 
     /// <inheritdoc/>
+    public bool CanExit => !disposed && !viewModel.Operations.IsUninstallExecuting;
+
     public bool CanOpenSettings => !disposed && !viewModel.Settings.IsSaving
         && (viewModel.ModalHost.IsBaseLayerInteractive || viewModel.ModalHost.IsSettingsInteractive);
 
@@ -72,6 +74,7 @@ internal sealed class SystemTrayActions : ISystemTrayActions, IDisposable
             or nameof(ShellViewModel.IsBusy)
             or nameof(GameOperationsViewModel.IsControlPanelVisible)
             or nameof(GameOperationsViewModel.IsDownloadRunning)
+            or nameof(GameOperationsViewModel.IsUninstallExecuting)
             or nameof(ModalHostViewModel.IsBaseLayerInteractive)
             or nameof(ModalHostViewModel.IsSettingsInteractive)
             or nameof(Features.Settings.SettingsViewModel.IsSaving))
