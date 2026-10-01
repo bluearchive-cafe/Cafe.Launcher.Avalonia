@@ -46,6 +46,31 @@ public sealed class FileSizeFormatterTests
     }
 
     [Theory]
+    [InlineData(0, "0", "B")]
+    [InlineData(1, "1", "B")]
+    [InlineData(1536, "1.5", "KB")]
+    [InlineData(1073741824, "1", "GB")]
+    [InlineData(1_140_416_350, "1.06", "GB")]
+    [InlineData(-1, "0", "B")]
+    public void FormatParts_WhenGivenBytes_SplitsTheValueFromTheUnit(long bytes, string expectedValue, string expectedUnit)
+    {
+        // 界面把单位排成小字，因此数值与单位必须是两段：单一字符串会让单位跟着数字一起放大。
+        var savedCulture = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
+            var (value, unit) = FileSizeFormatter.FormatParts(bytes);
+            Assert.Equal(expectedValue, value);
+            Assert.Equal(expectedUnit, unit);
+            Assert.Equal($"{value}{unit}", FileSizeFormatter.Format(bytes));
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = savedCulture;
+        }
+    }
+
+    [Theory]
     [InlineData("1024", 1024)]
     [InlineData("0", 0)]
     [InlineData("", 0)]

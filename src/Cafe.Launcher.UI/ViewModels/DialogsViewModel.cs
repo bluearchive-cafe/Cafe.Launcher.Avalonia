@@ -39,8 +39,6 @@ internal partial class DialogsViewModel : ViewModelBase, IModalContentViewModel,
 
     public ConfirmationDialogViewModel DownloadRunningCloseConfirm { get; }
 
-    public ConfirmationDialogViewModel UninstallConfirm { get; }
-
     public ConfirmationDialogViewModel RepairConfirm { get; }
 
     public ConfirmationDialogViewModel ResourcePanelSourceConfirm { get; }
@@ -266,7 +264,6 @@ internal partial class DialogsViewModel : ViewModelBase, IModalContentViewModel,
         Gallery = new DesignGalleryViewModel(key => localizer.T(key));
         StopConfirm = new ConfirmationDialogViewModel(diagnostics, "Stop");
         DownloadRunningCloseConfirm = new ConfirmationDialogViewModel(diagnostics, "CloseWhileDownloading");
-        UninstallConfirm = new ConfirmationDialogViewModel(diagnostics, "Uninstall");
         RepairConfirm = new ConfirmationDialogViewModel(diagnostics, "Repair");
         ResourcePanelSourceConfirm = new ConfirmationDialogViewModel(diagnostics, "ResourceSourceSwitch");
         DebugResetConfirm = new ConfirmationDialogViewModel(diagnostics, "DebugReset");

@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="zh-Hans" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cafe Launcher · 游戏卸载 UI Demo</title>
+  <style>
+    /* Throwaway prototype: one unified uninstall dialog. All operations are simulated.
+       Mirrors App.axaml: Dialog 540 × max 480, spacing 4/8/12/16/20/24,
+       body 14, title 17, radius 20, DialogSurface Panel header/body/footer. */
+    :root {
+      color-scheme: light;
+      --ink:#232a31; --body:#3f4954; --muted:#646d79;
+      --surface:#fff; --head:#f4f8fd; --card:#fafcff; --line:#e0e3eb;
+      --row:#f1f5f9; --field:#f0f6fd; --border:#d6e2ee; --button:#f4f8fc;
+      --accent:#3d6bc6; --accent-soft:#edf3ff; --danger:#d93840; --danger-hover:#c9353a;
+      --danger-soft:#ffecee; --success:#15803d; --success-soft:#d9f4e9;
+      --warning:#826118; --warning-soft:#fff2c2;
+      --shadow:0 26px 68px #0f12224d,4px 12px 14px #0f122224;
+      --xs:4px; --sm:8px; --md:12px; --lg:16px; --xl:20px; --xxl:24px;
+      --radius:20px; --radius-sm:8px; --radius-md:12px;
+      --dialog-width:540px; --dialog-height:480px; --control-height:42px;
+    }
+    [data-theme="dark"] {
+      color-scheme:dark;
+      --ink:#e8eef6; --body:#c8d2df; --muted:#a8b3c2;
+      --surface:#161c26; --head:#1b2430; --card:#202733; --line:#2c3844;
+      --row:#202833; --field:#1e2834; --border:#344150; --button:#243040;
+      --accent:#8cb4f0; --accent-soft:#22324b; --danger-soft:#3a1d22;
+      --success:#4ade80; --success-soft:#16302a; --warning:#f4d77f; --warning-soft:#463817;
+      --shadow:0 26px 68px #0009,4px 12px 14px #0006;
+    }
+    * { box-sizing:border-box; }
+    [hidden] { display:none !important; }
+    body { margin:0; min-width:360px; background:#101926; color:var(--ink); font:14px/1.55 "Segoe UI","Microsoft YaHei",system-ui,sans-serif; }
+    button,select,input { font:inherit; }
+    button,select { cursor:pointer; }
+    button { display:inline-flex; justify-content:center; align-items:center; gap:var(--sm); border:1px solid var(--border); background:var(--button); color:var(--ink); border-radius:var(--radius-sm); min-height:var(--control-height); padding:0 var(--lg); font-weight:600; }
+    button:hover { background:var(--field); }
+    button:disabled { opacity:.4; cursor:not-allowed; }
+    button:focus-visible,select:focus-visible,input:focus-visible,[tabindex]:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+    svg.icon { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; }
+    .svg-library { position:absolute; width:0; height:0; overflow:hidden; }
+    .launcher { height:calc(100dvh - 92px); min-height:400px; position:relative; overflow:hidden; background:linear-gradient(145deg,#172d46,#274a62 50%,#7193a1); }
+    .wallpaper { position:absolute; width:100%; height:100%; inset:0; opacity:.6; }
+    .titlebar { position:relative; z-index:1; height:52px; display:flex; align-items:center; justify-content:space-between; padding:0 var(--xl); color:#f5faff; background:#1222385c; }
+    .brand { display:flex; align-items:center; gap:var(--sm); font-size:13px; font-weight:600; letter-spacing:.3px; }
+    .brand-mark { width:24px; height:24px; display:grid; place-items:center; border:1px solid #ffffff80; border-radius:8px; font-size:16px; }
+    .window-actions { display:flex; gap:var(--xs); }
+    .window-actions button { color:#fff; background:transparent; border:0; width:36px; min-height:32px; padding:0; }
+    .window-actions button:hover { background:#ffffff1a; }
+    .shell-content { position:relative; height:calc(100% - 52px); display:flex; flex-direction:column; justify-content:space-between; padding:32px 40px; }
+    .news { max-width:390px; color:#f5faff; }
+    .eyebrow { font-size:11px; font-weight:600; letter-spacing:2px; opacity:.65; }
+    .news h1 { font-size:32px; font-weight:600; margin:8px 0 0; letter-spacing:2px; }
+    .news p { margin:4px 0 24px; opacity:.7; font-size:13px; }
+    .news-card { padding:20px; background:#12263f70; border:1px solid #ffffff20; border-radius:12px; }
+    .news-card small { color:#adc7e2; }
+    .news-card h2 { margin:8px 0; font-size:17px; font-weight:600; }
+    .news-card p { margin:0; }
+    .shell-bottom { display:flex; align-items:center; justify-content:space-between; padding:20px 24px; gap:20px; border:1px solid #ffffff30; background:var(--surface); border-radius:16px; box-shadow:0 8px 30px #10203933; }
+    .game-name { font-size:17px; font-weight:600; }
+    .installed { color:var(--success); font-size:12px; display:flex; align-items:center; gap:6px; margin-top:3px; }
+    .installed::before { content:""; width:6px; height:6px; border-radius:50%; background:currentColor; }
+    .shell-buttons { display:flex; gap:var(--sm); }
+    .launch-button { background:var(--accent); color:white; border:0; min-width:130px; }
+    .overlay { position:absolute; inset:52px 0 0; display:grid; place-items:center; padding:var(--xl) var(--xxl); background:#0008; }
+    .dialog { width:min(var(--dialog-width),100%); height:min(var(--dialog-height),calc(100dvh - 184px)); display:flex; flex-direction:column; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow); animation:appear .18s ease-out; }
+    @keyframes appear { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+    .dialog-header { display:flex; align-items:center; gap:var(--md); min-height:76px; padding:var(--lg) var(--xl); background:var(--head); flex-shrink:0; }
+    .badge { display:grid; place-items:center; width:32px; height:32px; border-radius:16px; background:var(--accent-soft); color:var(--accent); flex-shrink:0; }
+    .badge.danger { background:var(--danger-soft); color:var(--danger); }
+    .badge.success { background:var(--success-soft); color:var(--success); }
+    .badge.warning { background:var(--warning-soft); color:var(--warning); }
+    .heading { flex:1; min-width:0; }
+    .heading h2 { font-size:17px; margin:0; font-weight:600; line-height:1.4; }
+    .heading p { font-size:12px; color:var(--muted); margin:3px 0 0; }
+    .close-button { background:transparent; border:0; padding:0; width:32px; min-height:32px; border-radius:50%; }
+    .dialog-body { padding:18px var(--xxl); overflow-y:auto; min-height:0; flex:1; scrollbar-width:thin; scrollbar-color:var(--border) transparent; }
+    .dialog-footer { display:flex; align-items:center; justify-content:flex-end; gap:var(--sm); padding:14px var(--xxl) 20px; border-top:1px solid var(--line); flex-shrink:0; background:var(--surface); min-height:76px; }
+    .danger-button { color:#fff; background:var(--danger); border-color:var(--danger); }
+    .danger-button:hover { background:var(--danger-hover); }
+    .primary-button { color:var(--surface); background:var(--accent); border-color:var(--accent); }
+    .primary-button:hover { filter:brightness(.95); background:var(--accent); }
+    .label { font-size:12px; color:var(--muted); margin-bottom:var(--xs); }
+    .path { font:12px/1.6 Consolas,"Microsoft YaHei",monospace; color:var(--body); overflow-wrap:anywhere; user-select:text; }
+    .directory { padding:var(--md) var(--lg); background:var(--field); border-radius:var(--radius-sm); }
+    .size-row { display:flex; align-items:baseline; justify-content:space-between; gap:var(--md); margin:var(--md) 0 var(--lg); }
+    .size-row .label { margin:0; }
+    .size-number { font-size:22px; font-weight:600; line-height:1.2; font-variant-numeric:tabular-nums; }
+    .size-number small { font-size:12px; color:var(--muted); font-weight:400; margin-left:6px; }
+    .scope { margin:0 0 var(--lg); color:var(--body); font-size:13px; }
+    .scope strong { font-weight:600; color:var(--ink); }
+    .option { display:flex; align-items:flex-start; gap:var(--md); cursor:pointer; padding:var(--md) 0; border-top:1px solid var(--line); }
+    .option input { width:18px; height:18px; margin:3px 0 0; accent-color:var(--accent); flex-shrink:0; }
+    .option-copy { flex:1; font-size:13px; }
+    .option-detail { font-size:12px; color:var(--muted); margin-top:2px; }
+    .option-size { color:var(--muted); font-size:12px; padding-top:2px; white-space:nowrap; }
+    .caution { display:flex; align-items:center; gap:var(--sm); font-size:12px; color:var(--danger); margin-top:var(--xs); }
+    .caution .icon { width:16px; height:16px; }
+    .progress-main { margin-top:var(--xxl); }
+    .progress-heading { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:var(--md); }
+    .progress-heading strong { font-size:15px; font-weight:600; }
+    .percent { font-size:24px; font-weight:600; font-variant-numeric:tabular-nums; line-height:1; }
+    .track { height:6px; background:var(--row); border-radius:8px; overflow:hidden; }
+    .fill { height:100%; width:0; background:var(--accent); border-radius:8px; transition:width .2s linear; }
+    .track.indeterminate .fill { width:32%; animation:scan 1.4s ease-in-out infinite; }
+    @keyframes scan { from { transform:translateX(-105%); } to { transform:translateX(415%); } }
+    .progress-caption { font-size:12px; color:var(--muted); margin-top:var(--sm); display:flex; justify-content:space-between; gap:var(--sm); }
+    .steps { display:flex; gap:var(--sm); list-style:none; padding:0; margin:var(--xxl) 0 0; }
+    .steps li { flex:1; display:flex; align-items:center; gap:var(--sm); color:var(--muted); font-size:12px; }
+    .step-dot { display:grid; place-items:center; width:22px; height:22px; border:1px solid var(--border); border-radius:50%; font-size:11px; flex-shrink:0; }
+    .steps li.active { color:var(--accent); font-weight:600; }
+    .steps li.active .step-dot { background:var(--accent-soft); border-color:var(--accent); }
+    .steps li.done .step-dot { background:var(--accent-soft); color:var(--accent); border-color:transparent; }
+    .execution-note { display:flex; align-items:center; gap:var(--sm); color:var(--muted); font-size:12px; margin:var(--xxl) 0 0; }
+    .execution-note .icon { width:16px; height:16px; }
+    .result-message { color:var(--body); font-size:13px; margin:0 0 var(--lg); }
+    .metrics { display:grid; grid-template-columns:1fr 1fr; gap:var(--lg); padding:var(--lg); background:var(--field); border-radius:var(--radius-sm); margin-bottom:var(--lg); }
+    .metric + .metric { border-left:1px solid var(--border); padding-left:var(--lg); }
+    .metric strong { font-size:22px; font-weight:600; line-height:1.3; }
+    .metric strong small { font-size:12px; font-weight:400; color:var(--muted); }
+    .result-detail { font-size:12px; color:var(--muted); margin-top:var(--lg); }
+    .result-detail strong { color:var(--body); font-weight:600; }
+    .result-detail p { margin:var(--xs) 0 0; }
+    .notice { border-left:3px solid var(--warning); background:var(--warning-soft); padding:var(--md); margin:var(--lg) 0; border-radius:0 var(--radius-sm) var(--radius-sm) 0; font-size:12px; color:var(--warning); }
+    .notice.error { background:var(--danger-soft); color:var(--ink); border-color:var(--danger); }
+    .leftover-list { padding:0; margin:var(--sm) 0 0; list-style:none; color:var(--body); }
+    .leftover-list li { padding:6px 0; border-bottom:1px solid var(--border); font:12px/1.5 Consolas,"Microsoft YaHei",monospace; overflow-wrap:anywhere; }
+    .leftover-list li:last-child { border:0; }
+    .footer-hint { margin-right:auto; color:var(--muted); font-size:12px; display:flex; align-items:center; gap:var(--sm); }
+    .footer-hint .icon { width:16px; height:16px; }
+    .demo-tools { min-height:92px; display:flex; align-items:center; justify-content:center; padding:14px 20px; gap:20px; background:#101926; color:#e3ebf5; border-top:1px solid #334155; position:relative; z-index:2; }
+    .demo-label { padding-right:20px; border-right:1px solid #334155; }
+    .demo-label strong { font-size:12px; font-weight:600; letter-spacing:.5px; }
+    .demo-label small { display:block; color:#91a2b9; font-size:11px; margin-top:3px; }
+    .tool-field { display:flex; flex-direction:column; gap:4px; font-size:11px; color:#91a2b9; }
+    .demo-tools select,.demo-tools button { color:#e3ebf5; background:#1b293a; border:1px solid #3e5067; border-radius:8px; min-height:34px; height:34px; font-size:12px; padding:0 10px; font-weight:400; }
+    .demo-tools select { color-scheme:dark; width:122px; }
+    .demo-tools button:hover { background:#2b3d52; }
+    .tool-buttons { display:flex; gap:8px; align-self:flex-end; margin-bottom:1px; }
+    .tool-buttons .icon { width:16px; height:16px; }
+    .tool-status { font-size:11px; color:#91a2b9; min-width:64px; }
+    .log-lines { margin:0; white-space:pre-wrap; overflow-wrap:anywhere; font:12px/1.8 Consolas,"Microsoft YaHei",monospace; color:var(--body); }
+    @media (max-width:800px) {
+      .demo-tools { gap:12px; flex-wrap:wrap; justify-content:flex-start; min-height:132px; padding:12px 16px; }
+      .demo-label { width:100%; border:0; padding:0; display:flex; align-items:center; gap:12px; }
+      .demo-label small { margin:0; }
+      .launcher { height:calc(100dvh - 132px); }
+      .dialog { height:min(480px,calc(100dvh - 216px)); }
+      .overlay { padding:16px; }
+      .shell-content { padding:24px; }
+      .tool-status { display:none; }
+    }
+    @media (max-width:480px) {
+      .demo-tools { gap:8px; min-height:176px; }
+      .launcher { height:calc(100dvh - 176px); }
+      .dialog { height:min(480px,calc(100dvh - 260px)); }
+      .demo-tools select { width:103px; }
+      .tool-buttons button { padding:0 8px; }
+      .dialog-body { padding:16px; }
+      .dialog-footer { padding:12px 16px; }
+      .steps { gap:4px; }
+      .steps li { gap:4px; font-size:11px; }
+      .shell-bottom { padding:16px; }
+      .shell-buttons .launch-button { display:none; }
+      .footer-hint { font-size:11px; }
+    }
+    @media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none !important; transition:none !important; } .track.indeterminate .fill { width:100%; opacity:.4; } }
+  </style>
+</head>
+<body>
+  <svg class="svg-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <defs>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 10v6M14 10v6"/></symbol>
+      <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+      <symbol id="i-warning" viewBox="0 0 24 24"><path d="m12 3 10 17H2L12 3ZM12 9v4M12 16h.01"/></symbol>
+      <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/></symbol>
+      <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></symbol>
+      <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5M6.5 6.5A8 8 0 0 1 20 12M4 12a8 8 0 0 0 13.5 5.5"/></symbol>
+      <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 15.3A9 9 0 0 1 8.7 4a9 9 0 1 0 11.3 11.3Z"/></symbol>
+      <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M5 19l1.5-1.5M17.5 6.5 19 5"/></symbol>
+      <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7V4h6l3 3h9v13H3V7Z"/></symbol>
+      <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 4 12 8-12 8V4Z"/></symbol>
+      <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    </defs>
+  </svg>
+
+  <main class="launcher">
+    <svg class="wallpaper" viewBox="0 0 1440 850" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <defs><linearGradient id="sky" x2="0" y2="1"><stop stop-color="#b1d2dd"/><stop offset="1" stop-color="#385c74"/></linearGradient></defs>
+      <path fill="url(#sky)" opacity=".35" d="M0 0h1440v850H0z"/>
+      <circle cx="1080" cy="180" r="115" fill="#dbeff0" opacity=".15"/>
+      <g fill="#243f55" opacity=".4"><path d="M610 530V330h110v200h35V280h100v250h40V360h160v170h30V230h125v300h40V350h160v500H610Z"/><path d="m835 280 50-60 50 60ZM1085 230l62-75 63 75Z"/></g>
+      <g fill="#96bdcb" opacity=".15"><path d="M775 315h20v45h-20zM815 315h20v45h-20zM775 395h20v45h-20zM815 395h20v45h-20zM1110 275h25v50h-25zM1160 275h25v50h-25zM1110 365h25v50h-25zM1160 365h25v50h-25z"/></g>
+      <path d="m0 750 1440-125v225H0Z" fill="#18374b" opacity=".5"/>
+      <path d="M0 730c260-70 390 40 610-10s460-130 830-75" fill="none" stroke="#a4cbd4" stroke-width="2" opacity=".2"/>
+    </svg>
+    <div id="appShell">
+      <header class="titlebar">
+        <div class="brand"><span class="brand-mark">C</span>Cafe Launcher</div>
+        <div class="window-actions"><button id="minimize" aria-label="模拟最小化"><svg class="icon"><use href="#i-minus"/></svg></button><button id="windowClose" aria-label="模拟关闭启动器"><svg class="icon"><use href="#i-close"/></svg></button></div>
+      </header>
+      <div class="shell-content" id="shellContent">
+        <section class="news"><div class="eyebrow">BLUE ARCHIVE · JAPAN</div><h1>ブルーアーカイブ</h1><p>欢迎回来，老师。</p><div class="news-card"><small>游戏公告</small><h2>今天，也在基沃托斯见面。</h2><p>查看最新活动与更新信息</p></div></section>
+        <div class="shell-bottom"><div><div class="game-name">蔚蓝档案（日服）</div><div class="installed" id="installationStatus">已安装 · 1.73.0</div></div><div class="shell-buttons"><button id="openUninstall"><svg class="icon"><use href="#i-trash"/></svg>卸载游戏</button><button class="launch-button" id="launchMock"><svg class="icon"><use href="#i-play"/></svg>启动游戏</button></div></div>
+      </div>
+    </div>
+    <div class="overlay" id="overlay">
+      <section class="dialog" id="dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle" aria-describedby="dialogSubtitle" tabindex="-1">
+        <header class="dialog-header"><span class="badge danger" id="badge"><svg class="icon"><use href="#i-trash"/></svg></span><div class="heading"><h2 id="dialogTitle">卸载游戏</h2><p id="dialogSubtitle">蔚蓝档案（日服）</p></div><button class="close-button" id="closeDialog" aria-label="关闭卸载对话框"><svg class="icon"><use href="#i-close"/></svg></button></header>
+        <div class="dialog-body" id="dialogBody"></div>
+        <footer class="dialog-footer" id="dialogFooter"></footer>
+      </section>
+    </div>
+  </main>
+
+  <aside class="demo-tools" aria-label="网页演示工具">
+    <div class="demo-label"><strong>卸载 UI · 网页 Demo</strong><small>模拟数据，不会删除任何文件</small></div>
+    <label class="tool-field">演示结果<select id="scenario"><option value="success">正常完成</option><option value="leftovers">有文件残留</option><option value="failure">卸载失败</option></select></label>
+    <label class="tool-field">直接查看阶段<select id="stage"><option value="confirm">卸载确认</option><option value="scanning">扫描文件</option><option value="deleting">删除文件</option><option value="cleanup">清理记录</option><option value="success">正常完成</option><option value="leftovers">残留结果</option><option value="failure">失败结果</option></select></label>
+    <div class="tool-buttons"><button id="theme" aria-label="切换到深色主题"><svg class="icon"><use href="#i-moon"/></svg><span>深色</span></button><button id="restart"><svg class="icon"><use href="#i-refresh"/></svg>重新演示</button></div>
+    <span class="tool-status" id="toolStatus" aria-live="polite">等待确认</span>
+  </aside>
+  <div id="announcer" role="status" aria-live="polite" style="position:absolute;top:0;left:0;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)"></div>
+
+  <script>
+    // In-memory simulation only. No fetch, storage, file API, or filesystem mutations.
+    const $ = id => document.getElementById(id);
+    const icon = name => `<svg class="icon" aria-hidden="true"><use href="#i-${name}"/></svg>`;
+    const gamePath = 'D:\\YostarGames\\BlueArchive_JP';
+    const prefixPath = 'C:\\Users\\Sensei\\AppData\\Local\\Cafe Launcher\\compatibility\\bluearchive-jp';
+    const customPrefixPath = 'E:\\Games\\Wine\\BlueArchive_CustomPrefix';
+    const leftovers = [gamePath + '\\BlueArchive_Data\\StreamingAssets\\Audio\\Japanese\\Voice\\Event_Archive_2026_09\\voice_000218.bundle', gamePath + '\\Screenshots\\2026-09-30_184205.png'];
+    const stages = { confirm:'等待确认', scanning:'正在扫描', deleting:'正在删除', cleanup:'正在清理', success:'卸载完成', leftovers:'完成 · 有残留', failure:'卸载失败', logs:'模拟日志', closed:'已关闭' };
+    let state = 'confirm', selected = false, measured = false, percent = 0, sequence = 0, jobs = [], resultState = 'success', runScenario = 'success';
+    const executing = () => ['scanning','deleting','cleanup'].includes(state);
+    function cancelJobs() { sequence++; jobs.forEach(clearTimeout); jobs=[]; }
+    function schedule(callback, delay) { const run=sequence; jobs.push(setTimeout(() => { if(run===sequence) callback(); },delay)); }
+    function announce(text) { $('announcer').textContent=text; }
+    function setFocus(id) { const control=$(id); if(control) control.focus({preventScroll:true}); else $('dialog').focus({preventScroll:true}); }
+    function directory() { return `<div class="directory"><div class="label">游戏目录</div><div class="path">${gamePath}</div></div>`; }
+    function keptPrefix() { return `<div class="result-detail"><strong>已保留自定义兼容环境</strong><p>此目录位于删除范围之外，未作改动。</p><p class="path">${customPrefixPath}</p></div>`; }
+    function footerButton(id, text, className='') { return `<button id="${id}" class="${className}">${text}</button>`; }
+    function setHeader(title, subtitle, tone, symbol) {
+      $('dialogTitle').textContent=title; $('dialogSubtitle').textContent=subtitle;
+      $('badge').className='badge '+tone; $('badge').innerHTML=icon(symbol);
+    }
+    function render(next, focus=true) {
+      state=next;
+      $('toolStatus').textContent=stages[state];
+      $('overlay').hidden=state==='closed';
+      $('shellContent').inert=state!=='closed';
+      $('windowClose').disabled=executing();
+      if(state==='closed') { announce('已关闭卸载对话框'); $('openUninstall').focus(); return; }
+      $('stage').value=state==='logs'?resultState:state;
+      $('closeDialog').disabled=executing();
+      $('closeDialog').title=executing()?'卸载进行中，请等待结束':'关闭';
+      $('dialogBody').scrollTop=0;
+      if(state==='confirm') {
+        setHeader('卸载游戏','蔚蓝档案（日服）','danger','trash');
+        $('dialogBody').innerHTML=directory()+`<div class="size-row"><span class="label">预计删除大小</span><span class="size-number" id="totalSize"></span></div><p class="scope"><strong>整个游戏目录将被删除。</strong><br>包括游戏自行下载的资源、用户放入的文件，同时清理续传记录与桌面快捷方式。</p><label class="option"><input type="checkbox" id="compatibility" ${selected?'checked':''}><span class="option-copy">同时清理启动器管理的兼容环境<div class="option-detail">用于 Wine / Proton 的独立运行环境</div></span><span class="option-size" id="prefixSize"></span></label><div class="caution">${icon('warning')}删除后无法恢复，请确认目录内没有需要保留的文件。</div>`;
+        $('dialogFooter').innerHTML=footerButton('confirmButton','卸载游戏','danger-button')+footerButton('cancelButton','取消');
+        $('compatibility').onchange=event=>{selected=event.target.checked;updateSize();};
+        $('confirmButton').onclick=start;
+        $('cancelButton').onclick=close;
+        updateSize(); if(focus)setFocus('cancelButton');
+      } else if(executing()) {
+        const stageNumber={scanning:0,deleting:1,cleanup:2}[state];
+        const titles=['正在扫描文件','正在删除文件','正在清理记录'];
+        setHeader('正在卸载','蔚蓝档案（日服）','','trash');
+        $('dialogBody').innerHTML=directory()+`<div class="progress-main"><div class="progress-heading"><strong>${titles[stageNumber]}</strong><span class="percent" id="percentage" ${state==='scanning'?'hidden':''}>${percent}%</span></div><div class="track ${state==='scanning'?'indeterminate':''}" id="progressBar" role="progressbar" aria-label="卸载进度" aria-valuemin="0" aria-valuemax="100" ${state==='scanning'?'':`aria-valuenow="${percent}"`}><div class="fill" id="progressFill" style="width:${state==='scanning'?32:percent}%"></div></div><div class="progress-caption"><span id="progressDetail">${state==='scanning'?'正在统计文件、链接和目录…':state==='cleanup'?'移除续传记录与桌面快捷方式…':''}</span><span>${selected?'含受管兼容环境':''}</span></div></div><ol class="steps">${['扫描文件','删除文件','清理记录'].map((text,index)=>`<li class="${index<stageNumber?'done':index===stageNumber?'active':''}" ${index===stageNumber?'aria-current="step"':''}><span class="step-dot">${index<stageNumber?'✓':index+1}</span>${text}</li>`).join('')}</ol><p class="execution-note">${icon('info')}卸载期间请保持启动器运行，可以最小化窗口。</p>`;
+        $('dialogFooter').innerHTML=`<span class="footer-hint">${icon('lock')}完成后即可关闭</span><button disabled>正在卸载…</button>`;
+        updateProgress(); if(focus)setFocus();
+      } else if(state==='logs') {
+        setHeader('卸载日志','演示记录 · 不读取实际日志文件','','info');
+        $('dialogBody').innerHTML=`<pre class="log-lines">[18:42:05] GameUninstall\npath: ${gamePath}\nscope: ${selected?'GameDirectoryAndManagedCompatibility':'GameDirectory'}\n\n[18:42:06] Scanning directory tree\nentries planned: 38,472\n\n[18:42:12] ${resultState==='failure'?'Uninstall failed: access denied': 'Directory deletion completed'}\n${resultState==='failure'?'Access denied: '+gamePath+'\\BlueArchive_Data':resultState==='leftovers'?'Leftovers:\n'+leftovers.join('\n'):'files removed: 37,804\nbytes removed: 19,595,789,312'}\n\nCustom Prefix retained:\n${customPrefixPath}</pre>`;
+        $('dialogFooter').innerHTML=footerButton('backToResult','返回结果');
+        $('backToResult').onclick=()=>render(resultState); if(focus)setFocus('backToResult');
+      } else {
+        resultState=state;
+        const failed=state==='failure', warning=state==='leftovers';
+        setHeader(failed?'卸载失败':warning?'卸载完成，但有残留':'卸载完成','蔚蓝档案（日服）',failed?'danger':warning?'warning':'success',failed?'close':warning?'warning':'check');
+        $('dialogBody').innerHTML=`<p class="result-message">${failed?'部分文件已删除，但卸载未能完成。请检查目录权限，并在查看日志后重新操作。':warning?'卸载已执行完毕。以下项目未能删除，请检查占用或权限后手动清理。':'游戏目录已删除，续传记录与桌面快捷方式已清理。'}</p><div class="metrics"><div class="metric"><div class="label">实际删除文件</div><strong>${failed?'21,687':warning?'37,802':'37,804'} <small>个</small></strong></div><div class="metric"><div class="label">已删除文件大小</div><strong>${failed?'10.58':warning?'18.23':'18.25'} <small>GiB</small></strong></div></div>${failed?`<div class="notice error"><strong>无法访问目标目录</strong><div class="path">${gamePath}\\BlueArchive_Data</div><div>当前账户没有足够的删除权限。</div></div>`:warning?`<div class="notice"><strong>2 个项目未删除</strong><ul class="leftover-list">${leftovers.map(path=>`<li>${path}</li>`).join('')}</ul></div>`:`<div class="result-detail"><strong>本次删除范围</strong><p>整个游戏目录${selected?'及启动器管理的兼容环境':'；启动器管理的兼容环境未选择清理'}。</p></div>`}${keptPrefix()}`;
+        $('dialogFooter').innerHTML=(failed||warning?footerButton('viewLogs','查看日志'):'')+footerButton('doneButton',failed?'关闭':'完成','primary-button');
+        $('doneButton').onclick=close;
+        if($('viewLogs'))$('viewLogs').onclick=()=>render('logs');
+        if(focus)setFocus('doneButton');
+        $('installationStatus').textContent=failed?'安装不完整 · 请检查':'未安装';
+      }
+      announce(stages[state]);
+    }
+    function updateSize() {
+      if(state!=='confirm')return;
+      $('totalSize').innerHTML=measured?`${selected?'20.67':'18.50'}<small>GiB · 估算</small>`:'<span style="font-size:13px;font-weight:400;color:var(--muted)">正在计算…</span>';
+      $('prefixSize').textContent=measured?'2.17 GiB':'计算中…';
+    }
+    function updateProgress() {
+      if(!executing()||state==='scanning')return;
+      $('percentage').textContent=percent+'%';
+      $('progressFill').style.width=percent+'%';
+      $('progressBar').setAttribute('aria-valuenow',percent);
+      if(state==='deleting')$('progressDetail').textContent=`已处理 ${Math.round(percent/95*38472).toLocaleString('en-US')} / 38,472 个条目`;
+    }
+    function close() { if(executing()){announce('卸载进行中，请等待结束。');return;} cancelJobs();render('closed'); }
+    function reset() {
+      cancelJobs(); selected=false;measured=false;percent=0;
+      $('installationStatus').textContent='已安装 · 1.73.0';
+      render('confirm');schedule(()=>{measured=true;updateSize();},850);
+    }
+    function start() {
+      cancelJobs();runScenario=$('scenario').value;percent=0;render('scanning');
+      schedule(()=>{render('deleting');tick();},1400);
+    }
+    function tick() {
+      schedule(()=>{
+        percent=Math.min(95,percent+3);updateProgress();
+        if(runScenario==='failure'&&percent>=57){render('failure');return;}
+        if(percent<95){tick();return;}
+        render('cleanup');schedule(()=>{percent=100;updateProgress();schedule(()=>render(runScenario),350);},1100);
+      },140);
+    }
+    $('closeDialog').onclick=close;
+    $('openUninstall').onclick=reset;
+    $('restart').onclick=reset;
+    $('stage').onchange=event=>{cancelJobs();measured=true;percent=event.target.value==='cleanup'?95:event.target.value==='deleting'?46:0;render(event.target.value);};
+    $('theme').onclick=()=>{
+      const dark=document.documentElement.dataset.theme!=='dark';
+      document.documentElement.dataset.theme=dark?'dark':'light';
+      $('theme').innerHTML=icon(dark?'sun':'moon')+`<span>${dark?'浅色':'深色'}</span>`;
+      $('theme').setAttribute('aria-label',dark?'切换到浅色主题':'切换到深色主题');
+    };
+    $('minimize').onclick=()=>{ $('toolStatus').textContent='模拟最小化'; announce('网页演示：真实启动器可以最小化。'); };
+    $('windowClose').onclick=()=>{ $('toolStatus').textContent='模拟关闭'; announce('网页演示：不关闭浏览器。'); };
+    $('launchMock').onclick=()=>{ $('toolStatus').textContent='模拟启动入口'; announce('此网页不启动实际游戏。'); };
+    document.addEventListener('keydown',event=>{
+      if(state==='closed')return;
+      if(event.key==='Escape'){event.preventDefault();close();return;}
+      if(event.key!=='Tab'||event.target.closest('.demo-tools'))return;
+      const controls=[...$('dialog').querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),[tabindex="0"]')].filter(element=>element.getClientRects().length);
+      if(!controls.length){event.preventDefault();setFocus();return;}
+      const first=controls[0],last=controls[controls.length-1],active=document.activeElement;
+      if(event.shiftKey&&(active===first||!controls.includes(active))){event.preventDefault();last.focus();}
+      else if(!event.shiftKey&&(active===last||!controls.includes(active))){event.preventDefault();first.focus();}
+    });
+    reset();
+  </script>
+</body>
+</html>

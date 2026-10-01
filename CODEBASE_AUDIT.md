@@ -11,21 +11,21 @@
 - 项目画像：.NET 10 / Avalonia 12 跨平台桌面游戏启动器，含独立 Windows 自更新 helper
 - 健康度：良好；没有 Critical 或 High 发现
 - 当前开放：2 项（`AUD-ARCH-015`，2026-09-27 由 ADR-042 迁移收尾登记；`AUD-TEST-015`，2026-09-28 本轮登记的一次负载敏感的 Headless 偶发失败。其余开放发现已修复并提交：AUD-ARCH-014、AUD-SEC-007、AUD-ARCH-001、AUD-MAINT-008，见 Git 历史）
-- 已接受风险：10 项 Low
+- 已接受风险：9 项 Low
 - 2026-09-25 文档状态更新：按用户要求已将官方启动器 v1.7.2 与本项目的静态对比写入 `docs/research/official-launcher-v1.7.2-comparison.md`，原 `AUD-MAINT-002` 的“不入库”取舍不再成立；其余审计结论仍以 2026-09-24 基线为准。
 - 2026-09-26 打包状态更新：Linux `.deb`/RPM/AppImage/Arch 的元数据、依赖声明与版本同步已按当轮复核补齐（Debian copyright、`changelog.Debian.gz` 与 `-1` 打包修订号，三格式共用 AppStream metainfo，RPM/Arch 声明自包含 .NET 仍需的系统库与真实许可证集，`release.ps1` 在版本提交内同步 Arch `_realver`/`pkgver`/`.SRCINFO`）；发布 CI 已加入 Fedora 容器 RPM 实装与 Arch `makepkg`+`namcap` 门禁，尚未随真实 tag 运行过。本轮发现均在同一变更内修复，不产生开放发现。
 - 2026-09-27 分层重构更新：ADR-042 的 Core/UI 程序集拆分与其迁移清单已落地（`verify.ps1` 全绿：单元 2287、Headless 219、覆盖率 86.41%/92.83%）。收尾盘点把「Core 公开面仍为实现默认 public」登记为 `AUD-ARCH-015`——原来的缺口「没有守卫防止新增 public 实现」已在同一变更内补上守卫。
 - 2026-09-27 命名收口更新：ADR-043 把工程目录、`.csproj`、`AssemblyName`、`RootNamespace`、源码命名空间与发行资产统一到同一个产品 token（宿主 `Cafe.Launcher`、表现层 `Cafe.Launcher.UI`、`Updater.Core` 的命名空间补齐 `.Core`），`AssemblyNamingContractTests` 逐条钉住这些关系。用户可见的一次性变化（exe 名、release 资产前缀、macOS bundle id）见 ADR-043；GitHub 仓库名保持不变。文档引用随之同步：历史 ADR 与 `docs/research` 的路径/标识符改为当前名（保留当时的决策叙述，被取代的条目加指向 ADR-043 的标注），新增 `DocumentationLinkContractTests` 钉住 Markdown 相对链接不再腐烂——改名那批一次性断掉了 39 条链接而此前无人察觉。本轮不产生新的开放发现。
 - 2026-09-28 增量审计（基线 `5b1b487d`，含其后 3 个未推送提交）：对「依赖更新的行为变更」「迁移到多程序集后的缺陷与维护风险」「文档与实现的偏差」三条线各做了一轮定向复核，并实测了构建、两套测试、覆盖率与文档守卫。四个真实缺陷已修复并各自补上守卫（详见「已验证的工程状态」）：安装器 `SetupIconFile` 的断链（ADR-043 改名直接造成，发行断链）、崩溃报告丢失构建身份（程序集拆分直接造成）、标题栏拖动对非主指针抛异常（Avalonia 12.1.3 把抛出前移到调用点）、日志按大小轮转后基名不再存在（日志查看器全空、导出抛异常）。台账自身两处过期按原 ID 就地更正：`AUD-ARCH-015`、`AUD-DEP-002`。两处文档过度承诺已改写：DI 释放顺序（逆序**登记** → 逆序**解析**）、宿主「从不点名 UI 内部实现」（补上 pre-DI 崩溃路径这一条受准例外）。另补齐三处守卫缺口：`coverage.ps1` 的反空转根清单缺 `Cafe.Launcher.Updater.Core`、UI 公开面此前没有声明集（Core 有）、Headless 的程序集并行化形状与 xUnit 主版本没有配对守卫；`ReleaseNotesMarkdownViewer` 的守卫原先钉的是版本相关字面量，已改为结构性断言。本轮修复后开放发现仍为 1 项。
 
-- 2026-09-29 用户反馈轮（基线 `f93bc48` 之后的未发布改动）：两条反馈（「删了游戏读取不到了但是文件还在」「点击下载之后假装忙活一下然后直接就让我进去了」）实为同一根因——启动器的文件清单只覆盖它自己安装的 1.06 GiB，而整份安装是 18.5 GB，其余由游戏自行下载、不在清单内。已按 ADR-045 落地：卸载完成文案与确认框如实给出「将删除 / 不会删除」的对比、卸载日志按实测与范围记录（`leftovers` 只在彻底清除时输出）、差异计数从 Debug 升到 Info、全新安装落到非空目录前先提示。残留行为（标准卸载不删清单外内容）登记为 `AUD-UX-001`。本轮不产生新的开放发现。
+- 2026-09-29 用户反馈轮：清单只覆盖游戏安装的一部分，已按 ADR-045 补齐范围说明、实际卸载日志、差异日志与非空安装目录提示。当时接受的默认卸载残留风险 `AUD-UX-001` 已于 2026-09-30 按用户要求解决：ADR-046 将整个游戏目录删除设为默认，并加入扫描和条目进度、实际删除统计与残留报告；兼容环境清理仍为可选附加范围。
 - 2026-09-29 CI 首次在 ubuntu runner 上跑到 2026-09-28 新增的 `SetupIconFile` 守卫即变红（2316 通过 / 1 失败）：`.iss` 写的是 Inno 的反斜杠路径，而 `Path.Combine` 在 POSIX 上不把 `\` 当分隔符，解析结果是一整段文件名。守卫改为按宿主分隔符解析（产品代码、安装器与图标本身都未改动——这一点已用 `git diff` 对基线核实），并在「验证边界」更正该守卫此前的验证范围。本轮不产生新的开放发现。
 
 ## 开放发现
 
 | ID | 证据 | 影响 | 严重度 | 置信度 | 处置 | 完成条件 |
 | --- | --- | --- | --- | --- | --- | --- |
-| `AUD-ARCH-015` | `src/Cafe.Launcher.Core` 里 `Models/` 之外仍有 46 个顶层 public class，`AssemblySplitContractTests.CorePublicImplementationsOutsideModels_AreTheDeclaredSet` 把它们钉成显式声明集（新增/移除都会红）。其中 `FileDownloadService`、`NoticeStateService`、`ProtonBuildDiscovery`、`RuntimeVersionProbe` 等仍是服务实现而非数据辅助类型；`GameProcessTracker`、`LinuxProcessScanner`、`RemoteBodyReader` 属「确需公开」的一类。 | 后端实现细节跨程序集可见，UI/测试可以绕过窄接口直接依赖实现；声明集能挡住「顺手加一个 public 实现」，但挡不住「这个类型本来就不该 public」——后者只能逐个收窄。 | Low | 高 | 消费方改经接口的那一批已于 ADR-042 完成，实现收回 `internal` 的批次也已把它能收的都收了；剩下的只能按类型逐个判断：服务实现继续收窄，数据辅助类型与进程级类型留在表内并逐条写明理由。 | 声明表里不再包含任何服务实现（只剩数据模型辅助类型与确需公开的进程级类型），且每条保留项都有注释说明为何必须公开。 |
+| `AUD-ARCH-015` | `src/Cafe.Launcher.Core` 里 `Models/` 之外仍有 47 个顶层 public class，`AssemblySplitContractTests.CorePublicImplementationsOutsideModels_AreTheDeclaredSet` 把它们钉成显式声明集（新增/移除都会红）。其中 `FileDownloadService`、`NoticeStateService`、`ProtonBuildDiscovery`、`RuntimeVersionProbe` 等仍是服务实现而非数据辅助类型；`GameProcessTracker`、`LinuxProcessScanner`、`RemoteBodyReader` 属「确需公开」的一类。 | 后端实现细节跨程序集可见，UI/测试可以绕过窄接口直接依赖实现；声明集能挡住「顺手加一个 public 实现」，但挡不住「这个类型本来就不该 public」——后者只能逐个收窄。 | Low | 高 | 消费方改经接口的那一批已于 ADR-042 完成，实现收回 `internal` 的批次也已把它能收的都收了；剩下的只能按类型逐个判断：服务实现继续收窄，数据辅助类型与进程级类型留在表内并逐条写明理由。 | 声明表里不再包含任何服务实现（只剩数据模型辅助类型与确需公开的进程级类型），且每条保留项都有注释说明为何必须公开。 |
 | `AUD-TEST-015` | `MainWindowHeadlessTests.SaveSettings_FromSettingsPage_ReportsSuccessInsteadOfThreadFailure`（`tests/Cafe.Launcher.HeadlessTests/MainWindowHeadlessTests.Settings.cs:287`）在 2026-09-28 的一次全量 `verify.ps1` 中失败：`Assert.Single(context.ViewModel.Toasts.ActiveToasts)` 收到空集合（该次 headless 222 通过 / 1 失败，退出码 1）。同一提交在随后三次全量运行中各跑一遍（`test.ps1` 双套、手工插桩的单套、`verify.ps1` 双套）均 223 全绿；单独运行该用例亦通过。失败只出现在负载最重（单元套件刚跑完 + 覆盖率插桩）的那一次。 | 该用例断言的是「设置页保存后有且只有一条成功提示」，空集合意味着保存路径上的成功提示没发出来或已被收走。它的失败会让 CI 在无法复现的情况下变红——而 `coverage.ps1` 在第一套测试失败时直接 `exit 1`，覆盖率闸口连带失去结论。 | Medium | 中 | 先按测试侧时序问题调查：该断言对「保存命令的异步落地 → Toast 入栈」这一段没有有界等待（与 AUD-TEST-014 同族，`TestSourceWaitContractTests` 只覆盖 `Pending*` 命名的那一族，这条不在其中）。定位后要么给等待加上限并说明观测点，要么把断言收到确定的接缝上。 | 连续 10 次全量 `verify.ps1`（含覆盖率插桩）该用例全绿，或给出并修复了可复现的根因。 |
 
 ## 已接受风险
@@ -41,7 +41,6 @@
 | `AUD-SEC-004` | System 代理模式向 WinINet 配置的代理发送当前用户默认凭据；这是同用户信任边界内的兼容性取舍。 | 支持来自更低信任来源的代理配置，或默认凭据不再是产品要求。 |
 | `AUD-SEC-006` | 直接路径容忍 CGNAT/Fake-IP 地址段以兼容 Clash/mihomo 与部分 CDN；请求仍限 GET、80/443，并剥离跨主机重定向凭据。 | 能可靠识别代理接管而不影响双栈/Fake-IP 用户，或请求能力扩大。 |
 | `AUD-PKG-001` | Linux 三格式按“随 GitHub Release 分发的上游 vendor 包”定位：RPM 安装在 `/opt`、无 `Source`、关闭 `%__os_install_post`；满足可安装、依赖可解析、元数据可校验，不宣称满足 Fedora/openSUSE/Debian 官方仓库收录规范。 | 计划提交任一官方仓库（含 OBS/COPR/AUR 正式收录）时，按该仓库规范重审。 |
-| `AUD-UX-001` | 标准卸载（默认范围，`ManifestFilesOnly`）只删启动器清单内的文件与两个状态文件：Blue Archive 日服 1.73.0 实测清单 157 个文件 / 1.06 GiB，而整份安装 18.5 GB（`decompression_size`），差额是游戏运行时自行下载的内容——启动器不知道它们的文件名、大小与版本，删不了也没法校验。取舍与文案口径见 ADR-030、ADR-045：范围不变，但完成文案、确认框对比、卸载日志与安装前提示都如实说出「清单外内容仍在」，用户可自行勾选「彻底清除」或手动删目录。 | 游戏改为随启动器清单分发全部内容（清单能覆盖整份安装），或产品决定把「彻底清除」改为默认——后者需要新的 ADR 覆盖 ADR-030 的「破坏性选项不预置」。 |
 
 ## 已验证的工程状态
 

@@ -49,7 +49,7 @@ internal interface IGameOperationExecutor
     Task<GameOperationResult> ValidateUninstallAsync(string gamePath);
 
     /// <summary>
-    /// 彻底清除会删除的两个目录的实测大小（ADR-030）。展示用；与删除共用目标计算。
+    /// 游戏目录与可选受管兼容环境的实测大小（ADR-046）。展示用；与删除共用目标计算。
     /// </summary>
     Task<UninstallFootprint> MeasureUninstallFootprintAsync(LauncherStatusSnapshot snapshot);
 

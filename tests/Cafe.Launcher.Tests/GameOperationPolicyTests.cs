@@ -39,11 +39,16 @@ public sealed class GameOperationPolicyTests
             (Operation.Repair, Corrupted),
             (Operation.Repair, Ready),
             (Operation.Uninstall, Ready),
+            (Operation.Uninstall, Corrupted),
+            (Operation.Uninstall, IoFailure),
+            (Operation.Uninstall, RemoteUnavailable),
+            (Operation.Uninstall, BelowLowestVersion),
+            (Operation.Uninstall, UpdateAvailable),
         };
 
-        // 28 格里允许 7 格。这个数字是这张表的形状本身：改了它就必须同时改策略，
+        // 28 格里允许 12 格。这个数字是这张表的形状本身：改了它就必须同时改策略，
         // 而改策略会让下面的遍历红。
-        Assert.Equal(7, permitted.Count);
+        Assert.Equal(12, permitted.Count);
 
         foreach (var operation in Enum.GetValues<Operation>())
         {

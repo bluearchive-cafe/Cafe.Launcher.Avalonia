@@ -110,6 +110,12 @@ public partial class App : Application
                     return;
                 }
 
+                if (!presentationSession.CanShutdown)
+                {
+                    eventArgs.Cancel = true;
+                    return;
+                }
+
                 if (shutdownDeferral.ShouldCancelRequest)
                 {
                     eventArgs.Cancel = true;

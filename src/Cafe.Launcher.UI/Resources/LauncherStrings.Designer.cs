@@ -1162,11 +1162,25 @@ internal static class LauncherStrings
 
     public static string Uninstall => GetRequiredString("uninstall");
 
+    public static string UninstallCalculating => GetRequiredString("uninstallCalculating");
+
+    public static string UninstallCleanupDescription => GetRequiredString("uninstallCleanupDescription");
+
+    public static string UninstallCleanupStep => GetRequiredString("uninstallCleanupStep");
+
+    public static string UninstallCloseAfterCompletion => GetRequiredString("uninstallCloseAfterCompletion");
+
+    public static string UninstallCloseBusy => GetRequiredString("uninstallCloseBusy");
+
+    public static string UninstallCompatibilityDescription => GetRequiredString("uninstallCompatibilityDescription");
+
+    public static string UninstallCompatibilityOption => GetRequiredString("uninstallCompatibilityOption");
+
     public static string UninstallCompleted => GetRequiredString("uninstallCompleted");
 
-    public static string UninstallCompletedDirectoryRetained => GetRequiredString("uninstallCompletedDirectoryRetained");
-
     public static string UninstallCompletedKeptPrefix => GetRequiredString("uninstallCompletedKeptPrefix");
+
+    public static string UninstallCompletedTitle => GetRequiredString("uninstallCompletedTitle");
 
     public static string UninstallCompletedWithLeftovers => GetRequiredString("uninstallCompletedWithLeftovers");
 
@@ -1174,15 +1188,73 @@ internal static class LauncherStrings
 
     public static string UninstallConfirmText => GetRequiredString("uninstallConfirmText");
 
-    public static string UninstallFailed => GetRequiredString("uninstallFailed");
+    public static string UninstallConfirmTextPending => GetRequiredString("uninstallConfirmTextPending");
+
+    public static string UninstallDeleteStep => GetRequiredString("uninstallDeleteStep");
+
+    public static string UninstallDeletingStep => GetRequiredString("uninstallDeletingStep");
+
+    public static string UninstallDone => GetRequiredString("uninstallDone");
+
+    public static string UninstallEstimatedSize => GetRequiredString("uninstallEstimatedSize");
+
+    public static string UninstallEstimatedSizeValue => GetRequiredString("uninstallEstimatedSizeValue");
+
+    public static string UninstallEstimatedUnit => GetRequiredString("uninstallEstimatedUnit");
+
+    public static string UninstallFailureGeneric => GetRequiredString("uninstallFailureGeneric");
+
+    public static string UninstallFailureTitle => GetRequiredString("uninstallFailureTitle");
+
+    public static string UninstallGame => GetRequiredString("uninstallGame");
 
     public static string Uninstalling => GetRequiredString("uninstalling");
 
+    public static string UninstallIrreversible => GetRequiredString("uninstallIrreversible");
+
+    public static string UninstallKeepRunning => GetRequiredString("uninstallKeepRunning");
+
+    public static string UninstallKeptPrefixDescription => GetRequiredString("uninstallKeptPrefixDescription");
+
+    public static string UninstallKeptPrefixTitle => GetRequiredString("uninstallKeptPrefixTitle");
+
+    public static string UninstallLeftoverPath => GetRequiredString("uninstallLeftoverPath");
+
+    public static string UninstallLeftoversCount => GetRequiredString("uninstallLeftoversCount");
+
+    public static string UninstallLeftoversDescription => GetRequiredString("uninstallLeftoversDescription");
+
+    public static string UninstallLeftoversTitle => GetRequiredString("uninstallLeftoversTitle");
+
+    public static string UninstallManagedCompatibilityOption => GetRequiredString("uninstallManagedCompatibilityOption");
+
+    public static string UninstallManagedCompatibilityOptionPending => GetRequiredString("uninstallManagedCompatibilityOptionPending");
+
+    public static string UninstallProgress => GetRequiredString("uninstallProgress");
+
     public static string UninstallRefusedByPathGuard => GetRequiredString("uninstallRefusedByPathGuard");
 
-    public static string UninstallThoroughCleanupOption => GetRequiredString("uninstallThoroughCleanupOption");
+    public static string UninstallRemovedFiles => GetRequiredString("uninstallRemovedFiles");
 
-    public static string UninstallThoroughCleanupOptionPending => GetRequiredString("uninstallThoroughCleanupOptionPending");
+    public static string UninstallRemovedFilesUnit => GetRequiredString("uninstallRemovedFilesUnit");
+
+    public static string UninstallRemovedFilesValue => GetRequiredString("uninstallRemovedFilesValue");
+
+    public static string UninstallRemovedSize => GetRequiredString("uninstallRemovedSize");
+
+    public static string UninstallResultScope => GetRequiredString("uninstallResultScope");
+
+    public static string UninstallResultScopeGameDirectory => GetRequiredString("uninstallResultScopeGameDirectory");
+
+    public static string UninstallResultScopeWithCompatibility => GetRequiredString("uninstallResultScopeWithCompatibility");
+
+    public static string UninstallScanning => GetRequiredString("uninstallScanning");
+
+    public static string UninstallScanStep => GetRequiredString("uninstallScanStep");
+
+    public static string UninstallScopeDescription => GetRequiredString("uninstallScopeDescription");
+
+    public static string UninstallSuccessDescription => GetRequiredString("uninstallSuccessDescription");
 
     public static string Unknown => GetRequiredString("unknown");
 

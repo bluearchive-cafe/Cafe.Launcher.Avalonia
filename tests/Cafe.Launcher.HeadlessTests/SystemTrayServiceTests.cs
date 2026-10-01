@@ -36,6 +36,9 @@ public sealed class SystemTrayServiceTests
         Assert.Equal(1, platform.UpdateCount);
 
         platform.ExitApplication?.Invoke();
+        // 生命周期确认退出后才释放托盘；无桌面生命周期的无头宿主保持适配器可用。
+        Assert.False(platform.Disposed);
+        service.Dispose();
         Assert.True(platform.Disposed);
         window.Close();
     }

@@ -1,4 +1,4 @@
-﻿using System.Xml.Linq;
+using System.Xml.Linq;
 using Cafe.Launcher.Testing;
 
 namespace Cafe.Launcher.Tests;
@@ -229,13 +229,14 @@ public sealed partial class UiStyleContractTests
                 "Views/MainWindowLogViewerOverlay.axaml",
                 "Views/MainWindowSettingsOverlay.axaml",
                 "Views/ResourcePanelOverlay.axaml",
-                "Views/SetupWizardOverlay.axaml"
+                "Views/SetupWizardOverlay.axaml",
+                "Views/UninstallDialog.axaml"
             },
             overlays
                 .Select(overlay => overlay.File)
                 .Distinct(StringComparer.Ordinal)
                 .Order(StringComparer.Ordinal));
-        Assert.Equal(10, overlays.Count);
+        Assert.Equal(11, overlays.Count);
 
         Assert.All(overlays, overlay =>
         {
