@@ -1,6 +1,7 @@
 using Cafe.Launcher.Core.Helpers;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Testing;
+using Cafe.Launcher.UI.Constants;
 using Cafe.Launcher.UI.Controls;
 using Cafe.Launcher.UI.Features.GameOperations;
 using Cafe.Launcher.UI.Models;
@@ -15,6 +16,17 @@ public sealed class UninstallDialogViewModelTests
     {
         TestLocalizationHelper.Initialize();
         return new UninstallDialogViewModel(new LocalizationService(), confirm ?? (() => Task.CompletedTask), logs ?? (() => Task.CompletedTask));
+    }
+
+    [Fact]
+    public void Open_WhileTheSizeIsPending_ShowsTheCalculatingPlaceholderOnlyOnce()
+    {
+        // 数值与单位是相邻两段：两段都回落到占位串时，界面上会连着出现两次「正在计算…」。
+        var vm = Create();
+        vm.Open(new LauncherStatusSnapshot());
+
+        Assert.Equal(vm.TotalSizeText, new LocalizationService().T(LocalizationKeys.UninstallCalculating));        Assert.Empty(vm.TotalSizeUnitText);
+        Assert.False(vm.HasTotalSizeUnit);
     }
 
     [Fact]

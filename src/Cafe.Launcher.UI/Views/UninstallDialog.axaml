@@ -145,6 +145,7 @@
                                 <TextBlock Text="{Binding Operations.Uninstall.TotalSizeText}" Classes="uninstall-number"
                                            VerticalAlignment="Bottom"/>
                                 <TextBlock Text="{Binding Operations.Uninstall.TotalSizeUnitText}" Classes="caption"
+                                           IsVisible="{Binding Operations.Uninstall.HasTotalSizeUnit}"
                                            VerticalAlignment="Bottom"/>
                             </StackPanel>
                         </Grid>

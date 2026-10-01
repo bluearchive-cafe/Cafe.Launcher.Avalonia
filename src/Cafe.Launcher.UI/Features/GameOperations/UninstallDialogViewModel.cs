@@ -74,10 +74,14 @@ internal sealed partial class UninstallDialogViewModel : ViewModelBase, IModalCo
     public string TotalSizeText => footprint is { } value
         ? FileSizeFormatter.FormatParts(value.InstallDirectoryBytes + (IsCompatibilitySelected ? value.PrefixBytes : 0)).Value
         : localizer.T(LocalizationKeys.UninstallCalculating);
-    /// <summary>单位 + 修饰（<c>GiB · 估算</c>）：小字呈现，修饰不该和数字抢同样的分量。</summary>
+    /// <summary>
+    /// 单位 + 修饰（<c>GB · 估算</c>）：小字呈现，修饰不该和数字抢同样的分量。
+    /// 尚未测出大小时为空——否则「正在计算…」会在数字位与单位位各显示一次。
+    /// </summary>
     public string TotalSizeUnitText => footprint is { } value
         ? localizer.F(LocalizationKeys.UninstallEstimatedUnit, FileSizeFormatter.FormatParts(value.InstallDirectoryBytes + (IsCompatibilitySelected ? value.PrefixBytes : 0)).Unit)
-        : localizer.T(LocalizationKeys.UninstallCalculating);
+        : "";
+    public bool HasTotalSizeUnit => TotalSizeUnitText.Length > 0;
     /// <summary>受管兼容环境的占用：0 是一个有意义的答案（未使用），不需要大写强调。</summary>
     public string CompatibilitySizeText => footprint is { } value
         ? FileSizeFormatter.Format(value.PrefixBytes) : localizer.T(LocalizationKeys.UninstallCalculating);
@@ -240,7 +244,7 @@ internal sealed partial class UninstallDialogViewModel : ViewModelBase, IModalCo
             nameof(GamePath), nameof(IsConfirmation), nameof(IsExecuting), nameof(IsResult), nameof(IsFailed),
             nameof(IsIndeterminate), nameof(HasLeftovers), nameof(HasLogAction), nameof(IsCleanCompletion), nameof(HasMetrics), nameof(Leftovers),
             nameof(KeptPrefixPath), nameof(HasKeptPrefix), nameof(TotalSizeText), nameof(TotalSizeUnitText),
-            nameof(CompatibilitySizeText),
+            nameof(HasTotalSizeUnit), nameof(CompatibilitySizeText),
             nameof(RemovedFilesText), nameof(RemovedFilesUnitText), nameof(RemovedSizeText), nameof(RemovedSizeUnitText),
             nameof(Title), nameof(IconKind), nameof(Status),
             nameof(ResultMessage), nameof(LeftoversSummary), nameof(ResultScopeText), nameof(DoneText), nameof(CloseToolTip),
