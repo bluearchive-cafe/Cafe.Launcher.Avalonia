@@ -2,10 +2,26 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Cafe.Launcher.UI.ViewModels"
              xmlns:controls="using:Cafe.Launcher.UI.Controls"
+             xmlns:converters="using:Avalonia.Data.Converters"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Cafe.Launcher.UI.Views.UninstallDialog"
              x:Name="Root"
              x:DataType="vm:MainWindowViewModel">
+    <UserControl.Resources>
+        <!-- 步骤徽章（对照 prototypes/uninstall-ui-demo）：几何复用对话框徽章 token（32 + 16 即整圆），
+             状态由 active/done 类驱动，底色与描边一律走语义色，不新增几何或色彩字面量。
+             外壳取 ContentControl：底色/描边/圆角都在它身上，内容里的两态文字各受控可见。 -->
+        <ControlTheme x:Key="UninstallStepBadge" TargetType="ContentControl">
+            <Setter Property="Width" Value="{StaticResource Launcher.Component.Dialog.Badge.Size}"/>
+            <Setter Property="Height" Value="{StaticResource Launcher.Component.Dialog.Badge.Size}"/>
+            <Setter Property="CornerRadius" Value="{StaticResource Launcher.Component.Dialog.Badge.CornerRadius}"/>
+            <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
+            <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </ControlTheme>
+    </UserControl.Resources>
     <UserControl.Styles>
         <Style Selector="Border.uninstall-directory">
             <Setter Property="Background" Value="{DynamicResource Launcher.Color.Field.Background}"/>
@@ -22,6 +38,20 @@
             <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Display}"/>
             <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
         </Style>
+        <!-- 确认页的段落级分隔：原型用发丝线（1px、Dialog.Section.Divider），
+             不是框架 Separator 的默认厚线。高度沿用向导分隔线的同一枚 token。 -->
+        <Style Selector="Border.uninstall-divider">
+            <Setter Property="Height" Value="{StaticResource Launcher.Component.Wizard.Divider.Height}"/>
+            <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Section.Divider}"/>
+            <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
+        </Style>
+        <!-- 行内小图标（执行说明 / 不可恢复警告 / 底带锁定提示）：16 = Icon.Sm。 -->
+        <Style Selector="materialIcons|MaterialIcon.uninstall-inline-icon">
+            <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
+        </Style>
+        <Style Selector="materialIcons|MaterialIcon.uninstall-inline-icon.danger">
+            <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Danger}"/>
+        </Style>
         <Style Selector="TextBlock.uninstall-step">
             <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Label.Md}"/>
             <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
@@ -33,9 +63,36 @@
         <Style Selector="TextBlock.uninstall-step.done">
             <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Success}"/>
         </Style>
+        <!-- 步骤徽章状态：active = 强调软底，done = 成功软底（与 DialogSurface 徽章、向导 Hero 徽章同配方），
+             待办项只有一枚浅描边的空圈——三态不靠颜色单一信号区分。 -->
+        <Style Selector="ContentControl.uninstall-step-badge.active">
+            <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Soft}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary}"/>
+        </Style>
+        <Style Selector="ContentControl.uninstall-step-badge.done">
+            <Setter Property="Background" Value="{DynamicResource Launcher.Color.Success.Soft}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Success.Soft}"/>
+        </Style>
+        <Style Selector="TextBlock.uninstall-step-badge-text">
+            <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Label.Sm}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
+        </Style>
+        <Style Selector="ContentControl.uninstall-step-badge.active TextBlock.uninstall-step-badge-text">
+            <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary}"/>
+        </Style>
+        <Style Selector="ContentControl.uninstall-step-badge.done TextBlock.uninstall-step-badge-text">
+            <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Success}"/>
+            <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Label.Md}"/>
+        </Style>
         <Style Selector="controls|DialogSurface.uninstall-success /template/ ContentPresenter#PART_BadgePresenter">
             <Setter Property="Background" Value="{DynamicResource Launcher.Color.Success.Soft}"/>
             <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Success}"/>
+        </Style>
+        <!-- 执行中头部 ✕ 只「点了没反应」会像坏掉的控件：置灰并说明原因。
+             :disabled 外观由 Button.dialog-close:disabled 提供，原因由 CloseToolTip 承载。 -->
+        <Style Selector="controls|DialogSurface /template/ Button#PART_CloseButton">
+            <Setter Property="IsEnabled"
+                    Value="{Binding Operations.Uninstall.IsExecuting, Converter={x:Static BoolConverters.Not}}"/>
         </Style>
         <Style Selector="Border.dialog-alert.warning">
             <Setter Property="Background" Value="{DynamicResource Launcher.Color.Warning.Background}"/>
@@ -61,7 +118,7 @@
                                 Subtitle="{Binding Shell.I18n[gameDisplayName]}"
                                 CloseCommand="{Binding Operations.Uninstall.CloseCommand}"
                                 CloseAutomationName="{Binding Shell.I18n[close]}"
-                                CloseToolTip="{Binding Shell.I18n[close]}"
+                                CloseToolTip="{Binding Operations.Uninstall.CloseToolTip}"
                                 AutomationProperties.Name="{Binding Operations.Uninstall.Title}">
             <controls:DialogSurface.RenderTransform><TranslateTransform/></controls:DialogSurface.RenderTransform>
             <controls:DialogSurface.HeaderIcon>
@@ -78,12 +135,29 @@
                         </StackPanel>
                     </Border>
                     <StackPanel IsVisible="{Binding Operations.Uninstall.IsConfirmation}" Spacing="{StaticResource Launcher.Spacing.Lg}">
-                        <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock Text="{Binding Shell.I18n[uninstallEstimatedSize]}" Classes="caption" VerticalAlignment="Center"/>
-                            <TextBlock Grid.Column="1" Text="{Binding Operations.Uninstall.TotalSizeText}" Classes="uninstall-number"/>
+                        <!-- 该行按底边对齐：尺寸数字的字号远大于左侧标签，居中对齐会让标签的
+                             基线比数字高出一截，只有两者底部齐平才读成同一行。 -->
+                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Bottom">
+                            <TextBlock Text="{Binding Shell.I18n[uninstallEstimatedSize]}" Classes="caption" VerticalAlignment="Bottom"/>
+                            <!-- 数值大字、单位与「估算」小字：「预计」是修饰，不该和数字同分量。 -->
+                            <StackPanel Grid.Column="1" Orientation="Horizontal"
+                                        Spacing="{StaticResource Launcher.Spacing.Xs}" VerticalAlignment="Bottom">
+                                <TextBlock Text="{Binding Operations.Uninstall.TotalSizeText}" Classes="uninstall-number"
+                                           VerticalAlignment="Bottom"/>
+                                <TextBlock Text="{Binding Operations.Uninstall.TotalSizeUnitText}" Classes="caption"
+                                           VerticalAlignment="Bottom"/>
+                            </StackPanel>
                         </Grid>
-                        <TextBlock Text="{Binding Shell.I18n[uninstallScopeDescription]}" Classes="category-subtitle"/>
-                        <Separator/>
+                        <!-- 删除范围：结论句加粗单独成行，细节句退到次要色——两段的分界来自
+                             资源串自己的换行，翻译漏了换行时整串仍是首段，不会丢文案。 -->
+                        <StackPanel Spacing="{StaticResource Launcher.Spacing.Xs}">
+                            <TextBlock Text="{Binding Operations.Uninstall.ScopeStatementText}"
+                                       Classes="section-title" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding Operations.Uninstall.ScopeDetailText}"
+                                       Classes="category-subtitle"
+                                       IsVisible="{Binding Operations.Uninstall.HasScopeDetail}"/>
+                        </StackPanel>
+                        <Border Classes="uninstall-divider"/>
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
                             <CheckBox x:Name="CompatibilityOption" Classes="setting-checkbox"
                                       IsChecked="{Binding Operations.Uninstall.IsCompatibilitySelected, Mode=TwoWay}"
@@ -93,10 +167,16 @@
                                     <TextBlock Text="{Binding Shell.I18n[uninstallCompatibilityDescription]}" Classes="caption" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </CheckBox>
-                            <TextBlock Grid.Column="1" Text="{Binding Operations.Uninstall.CompatibilitySizeText}" Classes="caption"/>
+                            <TextBlock Grid.Column="1" Text="{Binding Operations.Uninstall.CompatibilitySizeText}" Classes="caption"
+                                       VerticalAlignment="Top"/>
                         </Grid>
-                        <TextBlock Text="{Binding Shell.I18n[uninstallIrreversible]}" Classes="caption" TextWrapping="Wrap"
-                                   Foreground="{StaticResource Launcher.Color.Danger}"/>
+                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}">
+                            <materialIcons:MaterialIcon Kind="AlertOutline" Classes="uninstall-inline-icon danger"
+                                                        Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"
+                                                        VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding Shell.I18n[uninstallIrreversible]}" Classes="caption" TextWrapping="Wrap"
+                                       Foreground="{StaticResource Launcher.Color.Danger}" VerticalAlignment="Center"/>
+                        </StackPanel>
                     </StackPanel>
                     <StackPanel IsVisible="{Binding Operations.Uninstall.IsExecuting}" Spacing="{StaticResource Launcher.Spacing.Lg}">
                         <Grid ColumnDefinitions="*,Auto">
@@ -111,30 +191,96 @@
                                      AutomationProperties.Name="{Binding Shell.I18n[uninstallGame]}"/>
                         <TextBlock Text="{Binding Operations.Uninstall.ProgressDetail}" Classes="caption" TextWrapping="Wrap"/>
                         <Grid ColumnDefinitions="*,*,*" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}">
-                            <TextBlock Text="{Binding Shell.I18n[uninstallScanStep]}" Classes="uninstall-step"
-                                       Classes.active="{Binding Operations.Uninstall.IsScanActive}" Classes.done="{Binding Operations.Uninstall.IsScanDone}"/>
-                            <TextBlock Grid.Column="1" Text="{Binding Shell.I18n[uninstallDeleteStep]}" Classes="uninstall-step"
-                                       Classes.active="{Binding Operations.Uninstall.IsDeleteActive}" Classes.done="{Binding Operations.Uninstall.IsDeleteDone}"/>
-                            <TextBlock Grid.Column="2" Text="{Binding Shell.I18n[uninstallCleanupStep]}" Classes="uninstall-step"
-                                       Classes.active="{Binding Operations.Uninstall.IsCleanupActive}"/>
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}">
+                                <ContentControl Classes="uninstall-step-badge"
+                                                Classes.active="{Binding Operations.Uninstall.IsScanActive}"
+                                                Classes.done="{Binding Operations.Uninstall.IsScanDone}"
+                                                Theme="{StaticResource UninstallStepBadge}">
+                                    <Panel>
+                                        <TextBlock Text="1" Classes="uninstall-step-badge-text"
+                                                   IsVisible="{Binding !Operations.Uninstall.IsScanDone}"/>
+                                        <TextBlock Text="✓" Classes="uninstall-step-badge-text"
+                                                   IsVisible="{Binding Operations.Uninstall.IsScanDone}"/>
+                                    </Panel>
+                                </ContentControl>
+                                <TextBlock Grid.Column="1" Text="{Binding Shell.I18n[uninstallScanStep]}" Classes="uninstall-step"
+                                           VerticalAlignment="Center"
+                                           Classes.active="{Binding Operations.Uninstall.IsScanActive}"
+                                           Classes.done="{Binding Operations.Uninstall.IsScanDone}"/>
+                            </Grid>
+                            <Grid Grid.Column="1" ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}">
+                                <ContentControl Classes="uninstall-step-badge"
+                                                Classes.active="{Binding Operations.Uninstall.IsDeleteActive}"
+                                                Classes.done="{Binding Operations.Uninstall.IsDeleteDone}"
+                                                Theme="{StaticResource UninstallStepBadge}">
+                                    <Panel>
+                                        <TextBlock Text="2" Classes="uninstall-step-badge-text"
+                                                   IsVisible="{Binding !Operations.Uninstall.IsDeleteDone}"/>
+                                        <TextBlock Text="✓" Classes="uninstall-step-badge-text"
+                                                   IsVisible="{Binding Operations.Uninstall.IsDeleteDone}"/>
+                                    </Panel>
+                                </ContentControl>
+                                <TextBlock Grid.Column="1" Text="{Binding Shell.I18n[uninstallDeleteStep]}" Classes="uninstall-step"
+                                           VerticalAlignment="Center"
+                                           Classes.active="{Binding Operations.Uninstall.IsDeleteActive}"
+                                           Classes.done="{Binding Operations.Uninstall.IsDeleteDone}"/>
+                            </Grid>
+                            <Grid Grid.Column="2" ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}">
+                                <ContentControl Classes="uninstall-step-badge"
+                                                Classes.active="{Binding Operations.Uninstall.IsCleanupActive}"
+                                                Theme="{StaticResource UninstallStepBadge}">
+                                    <TextBlock Text="3" Classes="uninstall-step-badge-text"/>
+                                </ContentControl>
+                                <TextBlock Grid.Column="1" Text="{Binding Shell.I18n[uninstallCleanupStep]}" Classes="uninstall-step"
+                                           VerticalAlignment="Center"
+                                           Classes.active="{Binding Operations.Uninstall.IsCleanupActive}"/>
+                            </Grid>
                         </Grid>
-                        <TextBlock Text="{Binding Shell.I18n[uninstallKeepRunning]}" Classes="caption" TextWrapping="Wrap"/>
+                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}">
+                            <materialIcons:MaterialIcon Kind="InformationOutline" Classes="uninstall-inline-icon"
+                                                        Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"
+                                                        VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding Shell.I18n[uninstallKeepRunning]}" Classes="caption" TextWrapping="Wrap"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
                     </StackPanel>
                     <StackPanel IsVisible="{Binding Operations.Uninstall.IsResult}" Spacing="{StaticResource Launcher.Spacing.Lg}">
                         <SelectableTextBlock Text="{Binding Operations.Uninstall.ResultMessage}" TextWrapping="Wrap"
                                              AutomationProperties.Name="{Binding Operations.Uninstall.Title}"/>
                         <Border Classes="uninstall-directory" IsVisible="{Binding Operations.Uninstall.HasMetrics}">
+                            <!-- 两个指标都是「大字数字 + 小字单位」，底边对齐：实测删除大小的单位
+                                 （GiB）不该和数字一样大，两列也不该因字号差而错开底边。 -->
                             <Grid ColumnDefinitions="*,*" ColumnSpacing="{StaticResource Launcher.Spacing.Lg}">
-                                <StackPanel Spacing="{StaticResource Launcher.Spacing.Xs}">
+                                <StackPanel Spacing="{StaticResource Launcher.Spacing.Xs}" VerticalAlignment="Bottom">
                                     <TextBlock Text="{Binding Shell.I18n[uninstallRemovedFiles]}" Classes="caption"/>
-                                    <TextBlock Text="{Binding Operations.Uninstall.RemovedFilesText}" Classes="uninstall-number"/>
+                                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Xs}"
+                                                VerticalAlignment="Bottom">
+                                        <TextBlock Text="{Binding Operations.Uninstall.RemovedFilesText}" Classes="uninstall-number"
+                                                   VerticalAlignment="Bottom"/>
+                                        <TextBlock Text="{Binding Operations.Uninstall.RemovedFilesUnitText}" Classes="caption"
+                                                   VerticalAlignment="Bottom"/>
+                                    </StackPanel>
                                 </StackPanel>
-                                <StackPanel Grid.Column="1" Spacing="{StaticResource Launcher.Spacing.Xs}">
+                                <StackPanel Grid.Column="1" Spacing="{StaticResource Launcher.Spacing.Xs}" VerticalAlignment="Bottom">
                                     <TextBlock Text="{Binding Shell.I18n[uninstallRemovedSize]}" Classes="caption"/>
-                                    <TextBlock Text="{Binding Operations.Uninstall.RemovedSizeText}" Classes="uninstall-number"/>
+                                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Xs}"
+                                                VerticalAlignment="Bottom">
+                                        <TextBlock Text="{Binding Operations.Uninstall.RemovedSizeText}" Classes="uninstall-number"
+                                                   VerticalAlignment="Bottom"/>
+                                        <TextBlock Text="{Binding Operations.Uninstall.RemovedSizeUnitText}" Classes="caption"
+                                                   VerticalAlignment="Bottom"/>
+                                    </StackPanel>
                                 </StackPanel>
                             </Grid>
                         </Border>
+                        <!-- 删除成功才回报范围：用户最需要知道的就是「这次到底删了什么」。
+                             失败时不报（没删完，范围不是本次的事实）。 -->
+                        <StackPanel Spacing="{StaticResource Launcher.Spacing.Xs}"
+                                    IsVisible="{Binding Operations.Uninstall.HasMetrics}">
+                            <TextBlock Text="{Binding Shell.I18n[uninstallResultScope]}" Classes="section-title"/>
+                            <TextBlock Text="{Binding Operations.Uninstall.ResultScopeText}" Classes="caption"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
                         <Border Classes="dialog-alert warning" IsVisible="{Binding Operations.Uninstall.HasLeftovers}">
                             <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}">
                                 <TextBlock Text="{Binding Operations.Uninstall.LeftoversSummary}" Classes="section-title"/>
@@ -158,8 +304,14 @@
                 </StackPanel>
             </controls:DialogSurface.Content>
             <controls:DialogSurface.FooterLeading>
-                <TextBlock Text="{Binding Shell.I18n[uninstallCloseAfterCompletion]}" Classes="caption"
-                           IsVisible="{Binding Operations.Uninstall.IsExecuting}"/>
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}"
+                            IsVisible="{Binding Operations.Uninstall.IsExecuting}">
+                    <materialIcons:MaterialIcon Kind="LockOutline" Classes="uninstall-inline-icon"
+                                                Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"
+                                                VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding Shell.I18n[uninstallCloseAfterCompletion]}" Classes="caption"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
             </controls:DialogSurface.FooterLeading>
             <controls:DialogSurface.Footer>
                 <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}">

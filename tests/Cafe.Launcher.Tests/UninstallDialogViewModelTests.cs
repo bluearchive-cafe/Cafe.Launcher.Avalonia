@@ -28,9 +28,9 @@ public sealed class UninstallDialogViewModelTests
         var pending = vm.TotalSizeText;
         vm.ApplyFootprint(second, new UninstallFootprint(2048, 1024));
         Assert.NotEqual(pending, vm.TotalSizeText);
-        Assert.Contains(FileSizeFormatter.Format(2048), vm.TotalSizeText, StringComparison.Ordinal);
+        Assert.Equal(FileSizeFormatter.FormatParts(2048).Value, vm.TotalSizeText);
         vm.IsCompatibilitySelected = true;
-        Assert.Contains(FileSizeFormatter.Format(3072), vm.TotalSizeText, StringComparison.Ordinal);
+        Assert.Equal(FileSizeFormatter.FormatParts(3072).Value, vm.TotalSizeText);
     }
 
     [Fact]

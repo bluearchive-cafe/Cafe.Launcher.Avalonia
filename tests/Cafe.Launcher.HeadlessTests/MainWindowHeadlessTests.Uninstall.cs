@@ -123,6 +123,35 @@ public sealed partial class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
+    public void UninstallDialog_WhileExecuting_GreysOutTheCloseButtonAndSaysWhy()
+    {
+        // 关闭钮此前只「点了没反应」：命令不可执行，但外观仍活跃、也没有任何解释。
+        using var context = CreateContext();
+        context.ViewModel.IsMotionReduced = true;
+        context.Window.Show();
+        var uninstall = context.ViewModel.Operations.Uninstall;
+        uninstall.Open(UninstallSnapshot());
+        Dispatcher.UIThread.RunJobs();
+
+        var surface = context.Window.GetVisualDescendants()
+            .OfType<DialogSurface>()
+            .Single(control => control.Name == "UninstallSurface");
+        var close = surface.GetVisualDescendants().OfType<Button>().Single(button => button.Name == "PART_CloseButton");
+        Assert.True(close.IsEnabled);
+        Assert.Equal(context.ViewModel.Shell.I18n["close"], uninstall.CloseToolTip);
+
+        uninstall.BeginExecution();
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.False(close.IsEnabled);
+        Assert.Equal(context.ViewModel.Shell.I18n["uninstallCloseBusy"], uninstall.CloseToolTip);
+        // 执行结束后必须回到可用：置灰是阶段性的，不是一次性状态。
+        uninstall.Complete(new GameOperationResult { Success = true });
+        Dispatcher.UIThread.RunJobs();
+        Assert.True(close.IsEnabled);
+    }
+
+    [AvaloniaFact]
     public void Golden_UninstallConfirmation_MatchesBaseline()
     {
         using var context = CreateContext();

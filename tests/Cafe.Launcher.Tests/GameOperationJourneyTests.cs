@@ -539,7 +539,11 @@ public sealed class GameOperationJourneyTests
         context.Executor.UninstallException = new IOException("目录不是空的。");
         var result = await context.Journey.ConfirmUninstallAsync(CreateSnapshot(), UninstallScope.GameDirectoryAndManagedCompatibility);
         Assert.False(result.Success);
-        Assert.Contains("目录不是空的", result.Message, StringComparison.Ordinal);
+        // 界面拿到的是本地化原因，异常原文只进日志：抛出的措辞不该直达卸载表面。
+        Assert.Equal(
+            context.Localizer.T(LocalizationKeys.UninstallFailureGeneric),
+            result.Message);
+        Assert.DoesNotContain("目录不是空的", result.Message, StringComparison.Ordinal);
         Assert.Empty(context.ErrorHandling.Handled);
         Assert.False(context.Host.IsBusy);
     }

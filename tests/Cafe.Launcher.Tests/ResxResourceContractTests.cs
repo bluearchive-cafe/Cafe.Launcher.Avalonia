@@ -18,7 +18,7 @@ public sealed class ResxResourceContractTests
     /// 「为什么加一」。
     /// </summary>
     // 完整卸载表面的确认、阶段与结构化结果新增 27 个四语资源。
-    private const int ExpectedNeutralResourceKeyCount = 625;
+    private const int ExpectedNeutralResourceKeyCount = 632;
 
     private static readonly string ResxDir;
     private static readonly string[] AllLocales = ["en", "zh-Hans", "zh-Hant", "ja"];
@@ -68,6 +68,18 @@ public sealed class ResxResourceContractTests
         // 之后「目录与清单外内容仍在」的结果串。同轮改写的卸载确认框复用既有 key，不计入。）
         // → 598（离线卸载修复：元数据损坏时的确认说明，以及必须明确选择彻底清除的拒绝理由）。
         // → 598（ADR-046：移除旧卸载范围和损坏确认串，新增扫描、条目进度和兼容环境选项，净增 0）。
+        // → 626（对照 prototypes/uninstall-ui-demo 的复核轮：执行阶段的大标题此前回落到步骤名
+        // "Delete files"，补 uninstallDeletingStep 让标题说「正在做什么」；失败结果不再把原始异常
+        // 文本（英文）塞进本地化句子，补 uninstallFailureGeneric 指路日志，同时删除因此失去
+        // 唯一消费方的 uninstallFailed——净增 1。）
+        // → 627（同轮补 uninstallCloseBusy：执行中 ✕ 置灰后，提示要说明为什么现在不能关。）
+        // → 630（成功结果页补「本次删除范围」小节：标题 + 两种范围的正文。范围在确认页冻结时
+        // 捕获，因此结果页回报的是这次真正删了什么，而不是用户此刻的勾选状态。）
+        // → 631（同轮修预计删除大小的排版：数值与单位拆成两个 run，单位 + 「估算」走小字，
+        // 需要 uninstallEstimatedUnit 携带单位占位——原 uninstallEstimatedSizeValue 仍被
+        // 「{0}」整体拼接的调用点使用。）
+        // → 632（同轮统一结果页两个指标：实测删除文件数的量词拆成 uninstallRemovedFilesUnit，
+        // 实测删除大小的单位复用 FormatParts，二者都不再跟着 22px 数字一起放大。）
         Assert.Equal(ExpectedNeutralResourceKeyCount, ResxValues["en"].Count);
     }
 

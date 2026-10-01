@@ -586,6 +586,7 @@ public static class LocalizationKeys
     public const string UninstallCleanupDescription = "uninstallCleanupDescription";
     public const string UninstallCleanupStep = "uninstallCleanupStep";
     public const string UninstallCloseAfterCompletion = "uninstallCloseAfterCompletion";
+    public const string UninstallCloseBusy = "uninstallCloseBusy";
     public const string UninstallCompatibilityDescription = "uninstallCompatibilityDescription";
     public const string UninstallCompatibilityOption = "uninstallCompatibilityOption";
     public const string UninstallCompleted = "uninstallCompleted";
@@ -596,10 +597,12 @@ public static class LocalizationKeys
     public const string UninstallConfirmText = "uninstallConfirmText";
     public const string UninstallConfirmTextPending = "uninstallConfirmTextPending";
     public const string UninstallDeleteStep = "uninstallDeleteStep";
+    public const string UninstallDeletingStep = "uninstallDeletingStep";
     public const string UninstallDone = "uninstallDone";
     public const string UninstallEstimatedSize = "uninstallEstimatedSize";
     public const string UninstallEstimatedSizeValue = "uninstallEstimatedSizeValue";
-    public const string UninstallFailed = "uninstallFailed";
+    public const string UninstallEstimatedUnit = "uninstallEstimatedUnit";
+    public const string UninstallFailureGeneric = "uninstallFailureGeneric";
     public const string UninstallFailureTitle = "uninstallFailureTitle";
     public const string UninstallGame = "uninstallGame";
     public const string Uninstalling = "uninstalling";
@@ -616,8 +619,12 @@ public static class LocalizationKeys
     public const string UninstallProgress = "uninstallProgress";
     public const string UninstallRefusedByPathGuard = "uninstallRefusedByPathGuard";
     public const string UninstallRemovedFiles = "uninstallRemovedFiles";
+    public const string UninstallRemovedFilesUnit = "uninstallRemovedFilesUnit";
     public const string UninstallRemovedFilesValue = "uninstallRemovedFilesValue";
     public const string UninstallRemovedSize = "uninstallRemovedSize";
+    public const string UninstallResultScope = "uninstallResultScope";
+    public const string UninstallResultScopeGameDirectory = "uninstallResultScopeGameDirectory";
+    public const string UninstallResultScopeWithCompatibility = "uninstallResultScopeWithCompatibility";
     public const string UninstallScanning = "uninstallScanning";
     public const string UninstallScanStep = "uninstallScanStep";
     public const string UninstallScopeDescription = "uninstallScopeDescription";

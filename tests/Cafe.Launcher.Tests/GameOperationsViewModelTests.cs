@@ -78,6 +78,104 @@ public sealed class GameOperationsViewModelTests : IDisposable
     }
 
     [Fact]
+    public void UninstallStepStates_MarkOnlyTheStepsAlreadyFinishedAsDone()
+    {
+        // 扫描阶段的清理项还没开始：它此前被判成「已完成」，于是三个徽章同时处于完成态。
+        var context = CreateContext();
+        context.ViewModel.Uninstall.Open(ReadySnapshot());
+        context.ViewModel.Uninstall.BeginExecution();
+
+        var uninstall = context.ViewModel.Uninstall;
+        Assert.True(uninstall.IsScanActive);
+        Assert.False(uninstall.IsScanDone);
+        Assert.False(uninstall.IsDeleteActive);
+        Assert.False(uninstall.IsDeleteDone);
+        Assert.False(uninstall.IsCleanupActive);
+
+        context.ViewModel.ApplyProgress(new GameOperationProgress
+        {
+            OperationKind = GameOperationKind.Uninstall,
+            Stage = GameOperationStage.Uninstalling,
+            Progress = 47,
+            IsRunning = true
+        });
+        Assert.False(uninstall.IsScanActive);
+        Assert.True(uninstall.IsScanDone);
+        Assert.True(uninstall.IsDeleteActive);
+        Assert.False(uninstall.IsDeleteDone);
+        Assert.False(uninstall.IsCleanupActive);
+
+        context.ViewModel.ApplyProgress(new GameOperationProgress
+        {
+            OperationKind = GameOperationKind.Uninstall,
+            Stage = GameOperationStage.UninstallCleanup,
+            Progress = 95,
+            IsRunning = true
+        });
+        Assert.True(uninstall.IsScanDone);
+        Assert.True(uninstall.IsDeleteDone);
+        Assert.True(uninstall.IsCleanupActive);
+
+        // 结果页不再有「进行中」的步骤：进度板整体退场，徽章不能停在 active。
+        uninstall.Complete(new GameOperationResult { Success = true });
+        Assert.False(uninstall.IsScanActive);
+        Assert.False(uninstall.IsDeleteActive);
+        Assert.False(uninstall.IsCleanupActive);
+    }
+
+    [Fact]
+    public void UninstallResultScope_ReportsTheScopeThatWasExecutedNotTheCurrentSelection()
+    {
+        // 范围在确认页冻结时捕获：结果页说的必须是这次真正删了什么，
+        // 而不是用户事后（或结果页上残留控件）的勾选状态。
+        var context = CreateContext();
+        var uninstall = context.ViewModel.Uninstall;
+        uninstall.Open(ReadySnapshot());
+        uninstall.IsCompatibilitySelected = true;
+        uninstall.BeginExecution();
+        uninstall.IsCompatibilitySelected = false;
+        uninstall.Complete(new GameOperationResult { Success = true, AffectedFileCount = 12, AffectedBytes = 2048 });
+
+        Assert.Equal(
+            context.Localizer.T(LocalizationKeys.UninstallResultScopeWithCompatibility),
+            uninstall.ResultScopeText);
+    }
+
+    [Fact]
+    public void UninstallResultScope_WhenDirectoryWasDeletedWithoutTheOption_SaysTheCompatibilityEnvironmentWasKept()
+    {
+        var context = CreateContext();
+        var uninstall = context.ViewModel.Uninstall;
+        uninstall.Open(ReadySnapshot());
+        uninstall.BeginExecution();
+        uninstall.Complete(new GameOperationResult { Success = true, AffectedFileCount = 12, AffectedBytes = 2048 });
+
+        Assert.Equal(
+            context.Localizer.T(LocalizationKeys.UninstallResultScopeGameDirectory),
+            uninstall.ResultScopeText);
+    }
+
+    [Fact]
+    public void UninstallProgressTitle_WhileDeleting_SaysWhatIsHappeningInsteadOfRepeatingTheStepLabel()
+    {
+        // 标题此前回落到步骤名（"Delete files"），读起来像进度板下方那三个步骤标签之一。
+        var context = CreateContext();
+        var uninstall = context.ViewModel.Uninstall;
+        uninstall.Open(ReadySnapshot());
+        uninstall.BeginExecution();
+        context.ViewModel.ApplyProgress(new GameOperationProgress
+        {
+            OperationKind = GameOperationKind.Uninstall,
+            Stage = GameOperationStage.Uninstalling,
+            Progress = 47,
+            IsRunning = true
+        });
+
+        Assert.Equal(context.Localizer.T(LocalizationKeys.UninstallDeletingStep), uninstall.ProgressTitle);
+        Assert.NotEqual(context.Localizer.T(LocalizationKeys.UninstallDeleteStep), uninstall.ProgressTitle);
+    }
+
+    [Fact]
     public async Task RefreshRequested_AwaitsSubscribersStrictlyInRegistrationOrder()
     {
         var context = CreateContext();
@@ -756,7 +854,8 @@ public sealed class GameOperationsViewModelTests : IDisposable
 
         Assert.False(context.ViewModel.Uninstall.IsCompatibilitySelected);
         Assert.Equal(1, context.Backend.MeasureFootprintCallCount);
-        Assert.Contains(FileSizeFormatter.Format(1234567), context.ViewModel.Uninstall.TotalSizeText, StringComparison.Ordinal);
+        Assert.Equal("1.18", context.ViewModel.Uninstall.TotalSizeText);
+        Assert.Contains("MB", context.ViewModel.Uninstall.TotalSizeUnitText, StringComparison.Ordinal);
         Assert.Contains(FileSizeFormatter.Format(890), context.ViewModel.Uninstall.CompatibilitySizeText, StringComparison.Ordinal);
     }
 
@@ -838,7 +937,8 @@ public sealed class GameOperationsViewModelTests : IDisposable
         await pending;
 
         // 测量回来之后换成带数字的那句。
-        Assert.Contains(FileSizeFormatter.Format(1234567), context.ViewModel.Uninstall.TotalSizeText, StringComparison.Ordinal);
+        Assert.Equal("1.18", context.ViewModel.Uninstall.TotalSizeText);
+        Assert.Contains("MB", context.ViewModel.Uninstall.TotalSizeUnitText, StringComparison.Ordinal);
         Assert.Contains(FileSizeFormatter.Format(890), context.ViewModel.Uninstall.CompatibilitySizeText, StringComparison.Ordinal);
     }
 
@@ -900,8 +1000,11 @@ public sealed class GameOperationsViewModelTests : IDisposable
 
         Assert.True(context.ViewModel.Uninstall.IsVisible);
         Assert.Contains("C:\\Game", context.ViewModel.Uninstall.GamePath, StringComparison.Ordinal);
-        Assert.Equal(context.Localizer.F(LocalizationKeys.UninstallEstimatedSizeValue,
-            FileSizeFormatter.Format(1_140_416_350)), context.ViewModel.Uninstall.TotalSizeText);
+        // 数值与单位分居两个属性：数值走大字、单位与「估算」走小字。
+        Assert.Equal("1.06", context.ViewModel.Uninstall.TotalSizeText);
+        Assert.Equal(
+            context.Localizer.F(LocalizationKeys.UninstallEstimatedUnit, "GB"),
+            context.ViewModel.Uninstall.TotalSizeUnitText);
     }
 
     [Fact]

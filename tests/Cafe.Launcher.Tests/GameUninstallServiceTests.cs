@@ -801,6 +801,38 @@ public sealed class GameUninstallServiceTests : IDisposable
         Assert.True(Directory.Exists(linkedGamePath));
     }
 
+    [Fact]
+    public async Task UninstallAsync_WhenInstallationStateCannotBeRead_ReturnsLocalizedReasonInsteadOfTheRawIoText()
+    {
+        // 界面只说自己那一段：localGame.Error 装的是 IO 异常原文（英文），
+        // 它不该出现在本地化的失败结果里——和启动路径同一口径。
+        var gamePath = CreateGameDirectory();
+        await WriteGameFileAsync(gamePath, "data/managed.bin");
+        var store = await CreateCommittedStoreAsync(gamePath, "data/managed.bin");
+        var service = CreateService(store);
+        var localizer = new LocalizationService();
+
+        string message;
+        await using (new FileStream(
+            Path.Combine(gamePath, LauncherPaths.ManifestFileName),
+            FileMode.Open,
+            FileAccess.ReadWrite,
+            FileShare.None))
+        {
+            var result = await service.UninstallAsync(
+                Snapshot(new LocalInstallationState { GamePath = gamePath }),
+                UninstallScope.GameDirectory,
+                _ => { });
+
+            Assert.False(result.Success);
+            message = result.Message;
+        }
+
+        Assert.Equal(localizer.T(LocalizationKeys.GameInstallationStateReadFailed), message);
+        Assert.DoesNotContain("used by another process", message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("System.IO", message, StringComparison.Ordinal);
+    }
+
     private static LauncherStatusSnapshot Snapshot(LocalInstallationState localGame, string? prefixPath = null) =>
         new()
         {

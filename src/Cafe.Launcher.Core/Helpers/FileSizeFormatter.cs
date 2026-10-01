@@ -11,9 +11,19 @@ public static class FileSizeFormatter
 
     public static string Format(long bytes)
     {
+        var (value, unit) = FormatParts(bytes);
+        return $"{value}{unit}";
+    }
+
+    /// <summary>
+    /// 数值与单位分开返回，供界面把单位排成小字（如 22px 的数字配 12px 的 <c>GiB</c>）。
+    /// <see cref="Format"/> 拼接二者，两者对同一字节数必须给出同一组结果。
+    /// </summary>
+    public static (string Value, string Unit) FormatParts(long bytes)
+    {
         if (bytes <= 0)
         {
-            return "0B";
+            return ("0", "B");
         }
 
         var unit = (int)Math.Floor(Math.Log(bytes) / Math.Log(1024));
@@ -23,7 +33,7 @@ public static class FileSizeFormatter
         }
 
         var value = bytes / Math.Pow(1024, unit);
-        return $"{value:0.##}{Units[unit]}";
+        return ($"{value:0.##}", Units[unit]);
     }
 
     /// <summary>

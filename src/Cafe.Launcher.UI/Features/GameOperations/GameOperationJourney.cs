@@ -364,9 +364,10 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
         }
         catch (Exception exception)
         {
+            // 与执行层同一口径：异常原文只进日志，界面只说本地化的原因与下一步。
             await diagnostics.ErrorAsync("GameUninstall", "Game uninstall failed.", exception);
             return GameOperationOutcomes.Failed(
-                localizer.F(LocalizationKeys.UninstallFailed, exception.Message), GameOperationErrorCode.System);
+                localizer.T(LocalizationKeys.UninstallFailureGeneric), GameOperationErrorCode.System);
         }
         finally
         {

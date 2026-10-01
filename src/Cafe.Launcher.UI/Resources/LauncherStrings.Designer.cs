@@ -1170,6 +1170,8 @@ internal static class LauncherStrings
 
     public static string UninstallCloseAfterCompletion => GetRequiredString("uninstallCloseAfterCompletion");
 
+    public static string UninstallCloseBusy => GetRequiredString("uninstallCloseBusy");
+
     public static string UninstallCompatibilityDescription => GetRequiredString("uninstallCompatibilityDescription");
 
     public static string UninstallCompatibilityOption => GetRequiredString("uninstallCompatibilityOption");
@@ -1190,13 +1192,17 @@ internal static class LauncherStrings
 
     public static string UninstallDeleteStep => GetRequiredString("uninstallDeleteStep");
 
+    public static string UninstallDeletingStep => GetRequiredString("uninstallDeletingStep");
+
     public static string UninstallDone => GetRequiredString("uninstallDone");
 
     public static string UninstallEstimatedSize => GetRequiredString("uninstallEstimatedSize");
 
     public static string UninstallEstimatedSizeValue => GetRequiredString("uninstallEstimatedSizeValue");
 
-    public static string UninstallFailed => GetRequiredString("uninstallFailed");
+    public static string UninstallEstimatedUnit => GetRequiredString("uninstallEstimatedUnit");
+
+    public static string UninstallFailureGeneric => GetRequiredString("uninstallFailureGeneric");
 
     public static string UninstallFailureTitle => GetRequiredString("uninstallFailureTitle");
 
@@ -1230,9 +1236,17 @@ internal static class LauncherStrings
 
     public static string UninstallRemovedFiles => GetRequiredString("uninstallRemovedFiles");
 
+    public static string UninstallRemovedFilesUnit => GetRequiredString("uninstallRemovedFilesUnit");
+
     public static string UninstallRemovedFilesValue => GetRequiredString("uninstallRemovedFilesValue");
 
     public static string UninstallRemovedSize => GetRequiredString("uninstallRemovedSize");
+
+    public static string UninstallResultScope => GetRequiredString("uninstallResultScope");
+
+    public static string UninstallResultScopeGameDirectory => GetRequiredString("uninstallResultScopeGameDirectory");
+
+    public static string UninstallResultScopeWithCompatibility => GetRequiredString("uninstallResultScopeWithCompatibility");
 
     public static string UninstallScanning => GetRequiredString("uninstallScanning");
 

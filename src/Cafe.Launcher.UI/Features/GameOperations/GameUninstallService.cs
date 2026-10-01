@@ -188,10 +188,11 @@ internal sealed class GameUninstallService
         }
         catch (Exception exception) when (StorageFailure.IsRecoverable(exception))
         {
+            // 异常文本（英文）只进日志：它是仓库自己的措辞，不该出现在本地化界面上。
             await diagnostics.ErrorAsync("GameUninstall", "Uninstalling the game failed.",
                 exception, CancellationToken.None).ConfigureAwait(false);
             return GameOperationOutcomes.Failed(
-                localizer.F(LocalizationKeys.UninstallFailed, exception.Message), GameOperationErrorCode.System);
+                localizer.T(LocalizationKeys.UninstallFailureGeneric), GameOperationErrorCode.System);
         }
     }
 
@@ -309,8 +310,10 @@ internal sealed class GameUninstallService
         var localGame = await localInstallationStateStore.ReadAsync(gamePath, cancellationToken).ConfigureAwait(false);
         if (localGame.Kind == LocalInstallationStateKind.IoFailure)
         {
+            // 与启动路径同一口径（GameLaunchService）：状态读不出来时说本地化的原因，
+            // localGame.Error 里的 IO 异常原文只进日志。
             return (GameOperationOutcomes.Failed(
-                localizer.F(LocalizationKeys.UninstallFailed, localGame.Error),
+                localizer.T(LocalizationKeys.GameInstallationStateReadFailed),
                 GameOperationErrorCode.System), null);
         }
 
