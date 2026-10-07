@@ -98,6 +98,15 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 ; sibling game directory next to the install folder can never be touched.
 Source: "{#PUBLISH_GLOB}"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
 
+[InstallDelete]
+; v1.1.1 renamed the Windows executable to the product token (ADR-043) without changing
+; AppId, and [Files] only adds and overwrites the files this release ships. An installation
+; upgraded from 1.1.0 or earlier therefore kept the old executable runnable: the desktop
+; shortcut and the in-app updater's relaunch kept starting it, so the user landed back on
+; 1.1.0 with an update prompt again (issue #23, ADR-047). The pre-rename name below is a
+; one-time migration target and must never survive an install.
+Type: files; Name: "{app}\Cafe.Launcher.Avalonia.exe"
+
 [Icons]
 Name: "{autoprograms}\Cafe Launcher\Cafe Launcher"; Filename: "{app}\{#EXECUTABLE_NAME}"; WorkingDir: "{app}"
 Name: "{autoprograms}\Cafe Launcher\Uninstall Cafe Launcher"; Filename: "{uninstallexe}"; WorkingDir: "{app}"
@@ -105,6 +114,11 @@ Name: "{autodesktop}\Cafe Launcher"; Filename: "{app}\{#EXECUTABLE_NAME}"; Worki
 
 [Run]
 Filename: "{app}\{#EXECUTABLE_NAME}"; Description: "{cm:LaunchProgram,Cafe Launcher}"; Flags: nowait postinstall skipifsilent
+; The in-app updater applies a package by running this setup silently, and the helper that
+; does so comes from the PREVIOUS version: it relaunches the executable name it was started
+; with, which the rename above may just have deleted. A silent install therefore starts the
+; new version itself instead of leaving the user with a closed launcher (ADR-047).
+Filename: "{app}\{#EXECUTABLE_NAME}"; Flags: nowait skipifnotsilent
 
 [UninstallDelete]
 ; Installation ownership marker (written at install time; see CurStepChanged).
