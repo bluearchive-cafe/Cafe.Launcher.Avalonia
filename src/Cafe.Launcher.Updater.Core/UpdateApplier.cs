@@ -16,6 +16,10 @@ namespace Cafe.Launcher.Updater.Core;
 /// a package without the launcher executable is rejected before the swap, and a new
 /// version that fails to start is replaced by the restored previous version. Every
 /// failure names itself in the log and leaves a runnable launcher behind.
+/// The executable that is started afterwards is resolved inside the directory that received
+/// the package — the name the helper was started with when it is there, otherwise the
+/// product-token launcher name — because the helper always comes from the installed version
+/// and a release may have renamed the launcher (ADR-047).
 /// </summary>
 public static class UpdateApplier
 {
@@ -108,10 +112,22 @@ public static class UpdateApplier
             }
         }
 
+        var launcherName = UpdateApplyPlan.ResolveLauncherExecutableName(
+            arguments.InstallDirectory,
+            arguments.ExecutableName);
+        if (launcherName is null)
+        {
+            UpdateLog.Write(arguments, MissingLauncherMessage(arguments));
+            return UpdaterExitCode.LauncherStartFailure;
+        }
+
+        if (!LaunchApplication(arguments, launcherName))
+        {
+            return UpdaterExitCode.LauncherStartFailure;
+        }
+
         LogApplyCompleted(arguments, stopwatch);
-        return LaunchApplication(arguments)
-            ? UpdaterExitCode.Success
-            : UpdaterExitCode.LauncherStartFailure;
+        return UpdaterExitCode.Success;
     }
 
     private static UpdaterExitCode ReplacePortableDirectory(
@@ -137,11 +153,13 @@ public static class UpdateApplier
             return UpdaterExitCode.PackageExtractionFailure;
         }
 
-        if (!File.Exists(UpdateApplyPlan.ExecutablePath(staging, arguments.ExecutableName)))
+        var launcherName = UpdateApplyPlan.ResolveLauncherExecutableName(staging, arguments.ExecutableName);
+        if (launcherName is null)
         {
             UpdateLog.Write(
                 arguments,
-                $"The package does not contain '{arguments.ExecutableName}'; keeping the current installation.");
+                $"The package contains neither '{arguments.ExecutableName}' nor "
+                    + $"'{UpdateApplyPlan.LauncherExecutableName}'; keeping the current installation.");
             TryDeleteDirectory(staging);
             return UpdaterExitCode.PackageLayoutInvalid;
         }
@@ -173,7 +191,7 @@ public static class UpdateApplier
             return UpdaterExitCode.InstallMoveFailure;
         }
 
-        if (LaunchApplication(arguments))
+        if (LaunchApplication(arguments, launcherName))
         {
             TryDeleteDirectory(backup);
             LogApplyCompleted(arguments, stopwatch);
@@ -221,7 +239,10 @@ public static class UpdateApplier
             UpdateLog.Write(arguments, "Restored the previous version.");
             TryDeleteDirectory(staging);
 
-            if (!LaunchApplication(arguments))
+            var restoredLauncherName = UpdateApplyPlan.ResolveLauncherExecutableName(
+                arguments.InstallDirectory,
+                arguments.ExecutableName);
+            if (restoredLauncherName is null || !LaunchApplication(arguments, restoredLauncherName))
             {
                 UpdateLog.Write(
                     arguments,
@@ -239,7 +260,9 @@ public static class UpdateApplier
     /// <summary>
     /// The success counterpart to the "Apply started" line: a helper run that replaces
     /// the installation and hands over to the new executable otherwise leaves no trace
-    /// in the log, and success could only be inferred from the relaunched process.
+    /// in the log, and success could only be inferred from the relaunched process. It is
+    /// written only after the launcher has actually started, so the file cannot read as
+    /// success while nothing came up.
     /// </summary>
     private static void LogApplyCompleted(UpdaterArguments arguments, Stopwatch stopwatch) =>
         UpdateLog.Write(
@@ -278,15 +301,25 @@ public static class UpdateApplier
         }
     }
 
-    private static bool LaunchApplication(UpdaterArguments arguments)
+    /// <summary>
+    /// Names both candidates when the installation holds no launcher at all: an apply that cannot
+    /// find the executable it was told to start reports it instead of leaving a silent success
+    /// behind (the reading that hid the v1.1.1 rename, issue #23).
+    /// </summary>
+    private static string MissingLauncherMessage(UpdaterArguments arguments) =>
+        $"Neither '{arguments.ExecutableName}' nor '{UpdateApplyPlan.LauncherExecutableName}' exists in "
+            + $"'{arguments.InstallDirectory}'; the launcher was not started.";
+
+    private static bool LaunchApplication(UpdaterArguments arguments, string executableName)
     {
-        var executablePath = UpdateApplyPlan.ExecutablePath(arguments.InstallDirectory, arguments.ExecutableName);
+        var executablePath = UpdateApplyPlan.ExecutablePath(arguments.InstallDirectory, executableName);
         if (!File.Exists(executablePath))
         {
             UpdateLog.Write(arguments, $"The launcher executable was not found after applying: {executablePath}");
             return false;
         }
 
+        UpdateLog.Write(arguments, $"Starting the launcher: {executablePath}");
         try
         {
             Process.Start(new ProcessStartInfo

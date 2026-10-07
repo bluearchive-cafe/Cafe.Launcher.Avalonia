@@ -20,6 +20,7 @@
 
 - 2026-09-29 用户反馈轮：清单只覆盖游戏安装的一部分，已按 ADR-045 补齐范围说明、实际卸载日志、差异日志与非空安装目录提示。当时接受的默认卸载残留风险 `AUD-UX-001` 已于 2026-09-30 按用户要求解决：ADR-046 将整个游戏目录删除设为默认，并加入扫描和条目进度、实际删除统计与残留报告；兼容环境清理仍为可选附加范围。
 - 2026-09-29 CI 首次在 ubuntu runner 上跑到 2026-09-28 新增的 `SetupIconFile` 守卫即变红（2316 通过 / 1 失败）：`.iss` 写的是 Inno 的反斜杠路径，而 `Path.Combine` 在 POSIX 上不把 `\` 当分隔符，解析结果是一整段文件名。守卫改为按宿主分隔符解析（产品代码、安装器与图标本身都未改动——这一点已用 `git diff` 对基线核实），并在「验证边界」更正该守卫此前的验证范围。本轮不产生新的开放发现。
+- 2026-10-07 用户反馈修复（[issue #23](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/issues/23)）：ADR-043 的改名让升级后的安装目录里同时留下 `Cafe.Launcher.Avalonia.exe`（1.1.0）与 `Cafe.Launcher.exe`（1.1.1），而 helper 按启动它的进程名重启，于是拉起的是残留旧版——用户看到「关于」回到 1.1.0、更新提示重现。三条修复（安装器 `[InstallDelete]` 清理改名前的 exe、静默安装由安装器自己启动新版本、helper 按「下发名 → 产品 token 名」解析启动目标且启动成功后才写 `Apply completed`）连同 ADR-047 与守卫已在同一变更内落地，详见「已验证的工程状态」。本轮不产生新的开放发现；便携版 ≤ 1.1.0 的应用内更新无法事后修复（需手动下载一次），已记入 ADR-047 的后果而非开放发现。
 
 ## 开放发现
 
@@ -57,6 +58,10 @@
 - 2026-09-28 补齐的守卫缺口（此前无守卫，缺陷因此可以静默存在）：`coverage.ps1` 的反空转根清单补 `Cafe.Launcher.Updater.Core`（实测它的 10 个类本来就在比率里，缺的是「掉了会红」）；UI 公开面新增 `AssemblySplitContractTests.PresentationPublicSurface_IsTheDeclaredSet`（28 个顶层公开类型的显式声明集，此前只有 Core 有）；`TestProjects_DeclareTheAssemblyParallelizationFormTheirXunitMajorSupports` 钉住两套并行化 API 与 xUnit 主版本的配对。`ReleaseNotesMarkdownViewer` 的守卫原先钉版本相关字面量，已改为结构性断言（条目数 + 无裸标签）。
 - 2026-09-28 更正的文档过度承诺：DI 释放顺序是逆序**解析**而非逆序**登记**（`AGENTS.md` 与 `LauncherCoreServiceCollectionExtensions` 的注释已改写；今天的顺序仍成立，因为表现层门面是第一个被解析的服务）；`AGENTS.md` 的「宿主从不点名 UI 内部实现」补上唯一受准例外（pre-DI 崩溃路径必须直接构造那几个类型并注入身份）；`AGENTS.md` 的「构建强制代码风格」写明边界——`EnforceCodeStyleInBuild` 只覆盖 `.editorconfig` 严重级别到 warning 的 IDE 诊断，空白/缩进与文件编码属 formatter-only，仓库没有任何 formatter 门禁，因此 `dotnet format --verify-no-changes` 今天会报出大量既有偏差（未接入 CI），只应作为「改动到的文件」的工具使用。
 - 2026-09-28 清掉的重复实现与死代码：`BuildInfo.AvaloniaVersion`（拆分前由 `ShellViewModel` 读宿主静态；拆分后 UI 侧另写了一份 `ResolveAvaloniaVersion()`，宿主那份从此没有任何消费方）与 `App.axaml.cs` 里重复 `Program.SignalName` 值的未使用私有常量。
+- 2026-10-07 修复的跨改名升级缺陷（[issue #23](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/issues/23)，[ADR-047](docs/design/adr/ADR-047-改名跨版本的升级迁移由安装器清理旧可执行文件并启动新版本.md)），三条修复各自带守卫，且都是「挡住下一次」而不是「只改这一次」：
+  - 安装器只添加与覆盖本版清单里的文件，改名后旧 exe 仍可运行——用户自建快捷方式与 helper 的重启都会找到它。修复：`[InstallDelete]` 删除改名前的可执行文件。守卫：`InstallerContractTests.IssInstaller_RemovesThePreRenameLauncherOnUpgrade`（清理项必须在），`AssemblyNamingContractTests.ReleaseAssets_UseTheHostProductToken`（历史 exe 名在 `.iss` 里只允许出现一次，多了就红）。
+  - helper 的重启目标取自启动它的进程名，跨改名后该名字已不存在，而 `Apply completed` 照样写成功——这正是最初把「拉起旧版」读成「更新成功」的原因。修复：`UpdateApplyPlan.ResolveLauncherExecutableName`（下发名 → 产品 token 名，两者都没有即按启动失败上报），`Apply completed` 移到启动成功之后并新增 `Starting the launcher: <path>`。守卫：`UpdateApplyPlanTests` 三条 + `UpdateApplierPortableApplyTests.ApplyAsync_PortableSwap_WhenThePackageRenamedTheLauncher_AcceptsTheProductTokenName`。
+  - 跑 setup 的 helper 永远来自已安装版本，因此静默安装必须由安装器自己启动新版本（`[Run]` 的 `skipifnotsilent` 条目）。守卫：`InstallerContractTests.IssInstaller_StartsTheLauncherAfterASilentInstall`。
 
 ## 验证边界
 
@@ -67,6 +72,8 @@ Linux/Proton 真实运行和 Windows 自更新启动握手没有做实机实验�
 2026-09-26 的 Linux 打包收口在本地完成实测：`.deb` 实构建并解包校验（copyright、`changelog.Debian.gz`、metainfo、desktop 分别通过 `appstreamcli`/`desktop-file-validate`），两次构建哈希一致；Arch 完成 `makepkg` 全量构建，PKGBUILD 与产物 `namcap` 无 Error。RPM 只做规格静态校验，真实依赖安装依赖发布 CI 新增的 Fedora 容器 `dnf` 步骤（该工作流尚未随真实 tag 执行）；所有 Linux 包未在真实桌面环境做过 GUI 实机启动与软件中心展示验证，openSUSE 未覆盖。
 
 2026-09-28 的增量审计在本机完成实测：`verify.ps1` 退出码 0（Debug 构建 0 警告 → 本地化契约 → 覆盖率 → Release 构建 0 警告 → Release 测试 23 通过），单元 2306 通过 / 15 跳过、Headless 223 通过，覆盖率手写行 86.46% / 分支 92.98%（基线 0.8560/0.9180）。这轮共跑了四次全量：其中一次 Headless 出现一条不可复现的失败（记为 `AUD-TEST-015`），其余三次全绿。验证的边界同样明确：**Windows 安装器的真实 ISCC 编译没有执行**（本机未装 Inno Setup，`SetupIconFile` 的结论来自 Inno 官方文档的解析规则 + 新守卫），**日志轮转没有跑满真实 5 MB**（结论来自 Serilog `PathRoller`/`RollingFileSink` 源码语义与磁盘状态构造的用例），**触屏路径没有实机验证**（无头后端的 `BeginMoveDrag` 是空实现，该用例的价值在 Windows CI 上才体现为真实回归）。2026-09-29 更正其中一条：那条 `SetupIconFile` 守卫本身**只在 Windows 上成立**——`.iss` 用 Inno 的反斜杠路径，而 `Path.Combine` 在 POSIX 上不把 `\` 当分隔符，因此它在本机（Windows）恒绿、在 ubuntu runner 上恒红，直到 CI 第一次跑到它才暴露。守卫已改为按宿主分隔符解析，这条结论此后在两端都成立。
+
+2026-10-07 的跨改名升级修复在本机实测：`installer/windows/Cafe.Launcher.iss` 用真实 ISCC（`C:\Program Files\Inno Setup 7\ISCC.exe`，`/Qp`，退出码 0）编译通过，产物 `Cafe.Launcher_setup.exe` 生成——这更正了上一条「本机未装 Inno Setup」的边界（本机现已安装 Inno Setup 7），Windows 安装器脚本此后可以在本地做真实编译校验；单元套件按 `UpdateApplier|UpdateApplyPlan|InstallerContract*|AssemblyNamingContract*|Updater*` 过滤全绿。仍未实测的是安装器的**运行时**行为（`[InstallDelete]` 与 `skipifnotsilent` 在真实升级中的效果）：本机没有能复现 1.1.0 安装状态的干净环境，这部分结论来自 Inno 的语义与 issue #23 的现场证据（`update-apply.log`、同秒的 1.1.0 会话、安装目录里并存的两个 exe、用户的快捷方式目标）。
 
 ## 维护规则
 

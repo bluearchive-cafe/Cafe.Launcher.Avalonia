@@ -129,6 +129,43 @@ public sealed class InstallerContractTests
     }
 
     [Fact]
+    public void IssInstaller_RemovesThePreRenameLauncherOnUpgrade()
+    {
+        var script = ReadProjectFile("installer/windows/Cafe.Launcher.iss");
+
+        // ADR-043 renamed the Windows executable without changing AppId, and [Files]
+        // overwrites only what the release ships. Without this entry an installation
+        // upgraded from 1.1.0 or earlier keeps the old executable runnable, and both the
+        // desktop shortcut and the helper's relaunch start it again (issue #23, ADR-047).
+        Assert.Contains("[InstallDelete]", script, StringComparison.Ordinal);
+        Assert.Contains(
+            "Type: files; Name: \"{app}\\Cafe.Launcher.Avalonia.exe\"",
+            script,
+            StringComparison.Ordinal);
+        Assert.Equal(1, CountOccurrences(script, "Cafe.Launcher.Avalonia.exe"));
+    }
+
+    [Fact]
+    public void IssInstaller_StartsTheLauncherAfterASilentInstall()
+    {
+        var script = ReadProjectFile("installer/windows/Cafe.Launcher.iss");
+
+        // Interactive installs keep the finish-page checkbox. A silent install is how the
+        // in-app updater applies a package, and the helper that ran it belongs to the
+        // PREVIOUS version: it relaunches the executable name it was started with, which the
+        // install above may just have deleted. Setup therefore starts the new version itself
+        // instead of leaving the user with a closed launcher (ADR-047).
+        Assert.Contains(
+            "Filename: \"{app}\\{#EXECUTABLE_NAME}\"; Description: \"{cm:LaunchProgram,Cafe Launcher}\"; Flags: nowait postinstall skipifsilent",
+            script,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Filename: \"{app}\\{#EXECUTABLE_NAME}\"; Flags: nowait skipifnotsilent",
+            script,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void IssInstaller_CannotTouchSiblingGameDirectory()
     {
         var script = ReadProjectFile("installer/windows/Cafe.Launcher.iss");
