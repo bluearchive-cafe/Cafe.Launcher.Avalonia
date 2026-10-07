@@ -1,5 +1,6 @@
 using System.Xml.Linq;
 using Cafe.Launcher.Testing;
+using Cafe.Launcher.Updater.Core;
 
 namespace Cafe.Launcher.Tests;
 
@@ -76,7 +77,18 @@ public sealed class AssemblyNamingContractTests
             var text = File.ReadAllText(TestRepository.FromRepositoryRoot(relative));
 
             Assert.DoesNotMatch(@"(?<!bluearchive-cafe/)Cafe\.Launcher\.Avalonia_", text);
-            Assert.DoesNotContain("Cafe.Launcher.Avalonia.exe", text, StringComparison.Ordinal);
+            // ADR-047 的唯一例外：安装器要删掉改名前的可执行文件，因此 .iss 允许出现一次
+            // 那个历史 exe 名，且必须正是 [InstallDelete] 的那一条（InstallerContractTests
+            // 钉住它只作为清理目标，不是第二套产品身份）。
+            if (string.Equals(relative, "installer/windows/Cafe.Launcher.iss", StringComparison.Ordinal))
+            {
+                Assert.Equal(1, text.Split($"{HostToken}.Avalonia.exe", StringSplitOptions.None).Length - 1);
+            }
+            else
+            {
+                Assert.DoesNotContain($"{HostToken}.Avalonia.exe", text, StringComparison.Ordinal);
+            }
+
             Assert.Contains(HostToken, text, StringComparison.Ordinal);
         }
 
@@ -87,6 +99,9 @@ public sealed class AssemblyNamingContractTests
         var installer = File.ReadAllText(
             TestRepository.FromRepositoryRoot("installer/windows/Cafe.Launcher.iss"));
         Assert.Contains($"#define EXECUTABLE_NAME \"{HostToken}.exe\"", installer, StringComparison.Ordinal);
+
+        // helper 在改名跨版本时用的兜底名（ADR-047）必须与安装器、宿主同源。
+        Assert.Equal($"{HostToken}.exe", UpdateApplyPlan.LauncherExecutableName);
 
         var plist = File.ReadAllText(
             TestRepository.FromRepositoryRoot("installer/macos/Info.plist"));

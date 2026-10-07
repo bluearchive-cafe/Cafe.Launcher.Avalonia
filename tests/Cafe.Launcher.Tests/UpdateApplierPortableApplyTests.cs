@@ -20,6 +20,9 @@ public sealed class UpdateApplierPortableApplyTests
 {
     private const string LauncherExeName = "Cafe.Launcher.exe";
 
+    /// <summary>改名前的启动器文件名（v1.1.0 及更早），只作为旧版 helper 的命令行输入出现。</summary>
+    private const string LegacyLauncherExeName = "Cafe.Launcher.Avalonia.exe";
+
     [Fact]
     public async Task ApplyAsync_PortableSwap_WhenTheNewVersionStarts_ReplacesDirectoryAndCleansUp()
     {
@@ -161,7 +164,57 @@ public sealed class UpdateApplierPortableApplyTests
         Assert.False(Directory.Exists(UpdateApplyPlan.StagingDirectory(install, parentPid)));
         Assert.False(Directory.Exists(UpdateApplyPlan.BackupDirectory(install, parentPid)));
         var log = await File.ReadAllTextAsync(logPath);
-        Assert.Contains($"The package does not contain '{LauncherExeName}'", log);
+        Assert.Contains(
+            $"The package contains neither '{LauncherExeName}' nor '{UpdateApplyPlan.LauncherExecutableName}'",
+            log);
+    }
+
+    [Fact]
+    public async Task ApplyAsync_PortableSwap_WhenThePackageRenamedTheLauncher_AcceptsTheProductTokenName()
+    {
+        Assert.SkipUnless(
+            OperatingSystem.IsWindows(),
+            "The relaunch outcome of a placeholder executable is only deterministic under Windows ShellExecute.");
+        if (!OperatingSystem.IsWindows())
+        {
+            return; // CA1416 平台守卫：平台分析器不识别 SkipUnless，非 Windows 由上一行汇报跳过。
+        }
+
+        using var directory = TestDirectory.Create();
+        var install = Path.Combine(directory.Path, "install");
+        Directory.CreateDirectory(install);
+        // 旧版布局：安装目录里是改名前的名字（v1.1.0 及更早）。
+        File.WriteAllText(Path.Combine(install, LegacyLauncherExeName), "old launcher");
+        File.WriteAllText(Path.Combine(install, "old-marker.txt"), "old");
+
+        // 新包布局：同一个启动器改叫产品 token（v1.1.1 起，issue #23）。
+        var content = Path.Combine(directory.Path, "content");
+        Directory.CreateDirectory(content);
+        File.WriteAllText(Path.Combine(content, LauncherExeName), "not a real executable");
+        File.WriteAllText(Path.Combine(content, "new-marker.txt"), "new");
+        var (package, sha256) = await PackAsync(directory.Path, content);
+
+        var parentPid = StartExitedParentProcess();
+        var logPath = Path.Combine(directory.Path, "update-apply.log");
+        var arguments = new UpdaterArguments(
+            UpdateApplyMode.Portable,
+            package,
+            install,
+            LegacyLauncherExeName,
+            parentPid,
+            sha256,
+            logPath);
+
+        var exitCode = await UpdateApplier.ApplyAsync(arguments, CancellationToken.None);
+
+        // 包被接受了（不是 PackageLayoutInvalid），换位真的发生：占位 exe 起不来，于是回滚旧版；
+        // 关键断言是启动目标按包内实际名字解析，而不是沿用命令行里那个改名前的名字。
+        Assert.Equal(UpdaterExitCode.PreviousVersionRestored, exitCode);
+        Assert.Equal("old launcher", await File.ReadAllTextAsync(Path.Combine(install, LegacyLauncherExeName)));
+        Assert.True(File.Exists(Path.Combine(install, "old-marker.txt")));
+        Assert.False(File.Exists(Path.Combine(install, "new-marker.txt")));
+        var log = await File.ReadAllTextAsync(logPath);
+        Assert.Contains($"Starting the launcher: {Path.Combine(install, LauncherExeName)}", log);
     }
 
     [Fact]
