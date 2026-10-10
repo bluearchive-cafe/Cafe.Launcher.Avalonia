@@ -4,23 +4,23 @@
     "net10.0": {
       "Avalonia": {
         "type": "Direct",
-        "requested": "[12.1.3, )",
-        "resolved": "12.1.3",
-        "contentHash": "l0VGyGn1OwqFrhmIhIHivvrQP0DtBD4Vn2F1vLYgGA2X2qHg0DMVRAln/6xOTLBUYoTopiVAujN0jtH8MpVSeA==",
+        "requested": "[12.1.4, )",
+        "resolved": "12.1.4",
+        "contentHash": "Vlz+ebY0PBVsTFXAPIpM+7ySgezMtyJ3GMMGmccHwxXXjgLF2x5+NMwO4AqrdM/lrUPZremnYNO6MSg1r1vuxw==",
         "dependencies": {
           "Avalonia.BuildServices": "11.3.2",
-          "Avalonia.Remote.Protocol": "12.1.3",
+          "Avalonia.Remote.Protocol": "12.1.4",
           "MicroCom.Runtime": "0.11.6"
         }
       },
       "Avalonia.Controls.ColorPicker": {
         "type": "Direct",
-        "requested": "[12.1.3, )",
-        "resolved": "12.1.3",
-        "contentHash": "xzsA0K51Ibe9FnMo1MFpdlRvM0pTw/0Wx39fRJS0BV9c1dP7HiQcOCLqhmMsMpiXHnCDRs4SrWx7hgk+MWQxmg==",
+        "requested": "[12.1.4, )",
+        "resolved": "12.1.4",
+        "contentHash": "3MX5FRPqA1ilB9+FTnxuMluH9Q4hFuTBprPMQtM4fVRwlgdrscsnoKrOR1HAQR1GC9QumZ5il1x5+RbX0wyTvA==",
         "dependencies": {
-          "Avalonia": "12.1.3",
-          "Avalonia.Remote.Protocol": "12.1.3"
+          "Avalonia": "12.1.4",
+          "Avalonia.Remote.Protocol": "12.1.4"
         }
       },
       "CommunityToolkit.Mvvm": {
@@ -31,12 +31,12 @@
       },
       "MarkView.Avalonia": {
         "type": "Direct",
-        "requested": "[12.2.1, )",
-        "resolved": "12.2.1",
-        "contentHash": "M5pFmWAZ0ZXd+EacfHvbRSgPJ4sW4kp6UJcvjHkRfz77TQes26LpILLjF8lGAgoXZnB5rAr8QiCmCxEpNx0atQ==",
+        "requested": "[12.3.0, )",
+        "resolved": "12.3.0",
+        "contentHash": "O269q5WEVmOWy4LbbzrCGgVhp6m8Uo3XcYwjq9wwe41RH4uyOsQm7Bebz3OQIPXmP1WZZWh1utmHqf7wQujGOA==",
         "dependencies": {
-          "Avalonia": "12.1.1",
-          "Markdig": "1.3.2"
+          "Avalonia": "12.1.3",
+          "Markdig": "1.4.0"
         }
       },
       "Material.Icons.Avalonia": {
@@ -71,13 +71,13 @@
       },
       "Avalonia.Remote.Protocol": {
         "type": "Transitive",
-        "resolved": "12.1.3",
-        "contentHash": "HcF69DKyihgg5coLOSp7GTqxQvWAy58LMKauwcHA28uSBJVwu0h5+gTNdJA8Sn/nqJVTRDU98zYsk6i1QSwDVQ=="
+        "resolved": "12.1.4",
+        "contentHash": "9ajC+Ff+U9S21JJKGbJgnwp9fY+zwJG+bSEC//o/vJU2M6IEMRGp+D1+AUoqTR79FAA/iDYgf4f4EF4PZKhZsg=="
       },
       "Markdig": {
         "type": "Transitive",
-        "resolved": "1.3.2",
-        "contentHash": "fZgOC/3CswUrndjDTac70aQpYdtxbW5+5bRumR7vzvI2HJbkmgKisB1c9oT+GA6v0jB/JDR9BLa9FiPzQmaK6A=="
+        "resolved": "1.4.0",
+        "contentHash": "lLhaiI/mNDTNzgLqnmknhf4LjgTqOAyjx5+GNz0X3AxYMxUhmFppF2WVMdER+SDqwhE5wUF1pzs/cuLwFxs7xA=="
       },
       "Material.Icons": {
         "type": "Transitive",
