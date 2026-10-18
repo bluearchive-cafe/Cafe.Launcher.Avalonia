@@ -1,5 +1,7 @@
 # Cafe Launcher
 
+[简体中文](./README.md) · [English](./README.en.md)
+
 面向 Blue Archive 日服的社区第三方桌面启动器。基于 .NET 10 与 Avalonia 构建，把安装、更新、修复、启动和卸载集中在一个窗口里，并直接兼容官方启动器已经下载好的游戏目录。
 
 [![Stars](https://img.shields.io/github/stars/bluearchive-cafe/Cafe.Launcher.Avalonia?style=flat-square&label=Stars)](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia)
@@ -92,7 +94,7 @@ Cafe Launcher 与官方启动器**共用同一个游戏目录与清单格式**�
 | --- | --- | --- |
 | 游戏运行中 | 安装阶段用 `taskkill /F /T` 强杀游戏目录内的同名进程后继续覆盖文件 | 拒绝写入并说明原因，绝不代用户结束游戏；写入前二次检查，能识别反作弊等占目录的相关进程 |
 | 下载控制 | 任务写入浏览器 `localStorage`，重启后自动重进；无会话级暂停 | 暂停/继续、速度限制、退出后恢复，区分「用户停止」与「进程退出」 |
-| 卸载范围 | 删除清单文件与状态文件 | 默认范围相近（另删桌面快捷方式）；可选「彻底清除」安装目录与受管兼容前缀，保留用户自定义 Prefix |
+| 卸载范围 | 删除清单文件与状态文件 | 默认删除整个游戏目录、安装状态与桌面快捷方式；可选删除受管兼容环境，保留删除目标之外的自定义 Prefix |
 | 本地化资源 | 未见对应能力 | 通过 UID 管理 Cafe 下载源提供的汉化资源（独有功能） |
 | 诊断与隐私 | 本地日志 + 按远端开关的云端日志上报 + AIHelp 客服 | 只留本地：日志查看/导出、崩溃报告，无任何远程遥测 |
 | 界面语言 | 日服包固定日语 | English / 简体中文 / 繁體中文 / 日本語 |
