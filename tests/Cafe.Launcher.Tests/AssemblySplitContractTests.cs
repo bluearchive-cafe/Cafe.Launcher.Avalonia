@@ -347,10 +347,11 @@ public sealed class AssemblySplitContractTests
     /// <summary>
     /// 两个测试工程的程序集并行化声明必须与它们各自的 xUnit 主版本配对。
     /// xUnit 4 把 <c>[assembly: CollectionBehavior]</c> 的 <c>DisableTestParallelization</c>
-    /// 标成 obsolete 且**不可调用**，而 HeadlessTests 被 Avalonia.Headless.XUnit 的精确版本
-    /// 钉在 3.2.2、只能用这个旧形状。两侧不匹配的后果不是编译失败，而是并行化在升级那一刻
-    /// 静默恢复——共享静态状态（AnimationTimings、Application 级资源、生产静态改写）会开始
-    /// 互相污染。（另注意 xUnit 4 默认的 collections 模式本就允许不同 collection 并行。）
+    /// 标成 obsolete 且**不可调用**，而 HeadlessTests 为保持已验证的 Headless 扩展组合
+    /// 固定在 3.2.2、只能用这个旧形状。旧形状在 4.x 会直接编译失败；若为了通过编译而删掉
+    /// 属性却没补上 Parallelization，并行化会在升级那一刻静默恢复——共享静态状态
+    /// （AnimationTimings、Application 级资源、生产静态改写）会开始互相污染。
+    /// （另注意 xUnit 4 默认的 collections 模式本就允许不同 collection 并行。）
     /// </summary>
     [Theory]
     [InlineData("tests/Cafe.Launcher.Tests", "Parallelization")]
@@ -362,7 +363,7 @@ public sealed class AssemblySplitContractTests
         var projectFile = $"{projectDirectory}/{Path.GetFileName(projectDirectory)}.csproj";
         var project = XDocument.Load(TestRepository.FromRepositoryRoot(projectFile));
         var reference = project.Descendants("PackageReference")
-            .Single(element => element.Attribute("Include")?.Value == "xunit.v3");
+            .Single(element => element.Attribute("Include")?.Value == "xunit.v3.mtp-v2");
 
         // 有效版本有三个来源，按优先级：工程内 VersionOverride → 工程内 Version → 中央版本清单
         // （Directory.Packages.props）。单元工程正是第三种（它没有覆盖），Headless 是第一种。
@@ -370,12 +371,12 @@ public sealed class AssemblySplitContractTests
             ?? reference.Attribute("Version")?.Value
             ?? XDocument.Load(TestRepository.FromRepositoryRoot("Directory.Packages.props"))
                 .Descendants("PackageVersion")
-                .Single(element => element.Attribute("Include")?.Value == "xunit.v3")
+                .Single(element => element.Attribute("Include")?.Value == "xunit.v3.mtp-v2")
                 .Attribute("Version")?.Value;
 
         Assert.True(
             xunitVersion is not null,
-            $"{projectFile} 与 Directory.Packages.props 都读不到 xunit.v3 的版本：本守卫无法判定 xUnit 主版本。");
+            $"{projectFile} 与 Directory.Packages.props 都读不到 xunit.v3.mtp-v2 的版本：本守卫无法判定 xUnit 主版本。");
 
         var major = int.Parse(xunitVersion!.Split('.')[0], CultureInfo.InvariantCulture);
         var assemblyInfo = File.ReadAllText(TestRepository.FromRepositoryRoot($"{projectDirectory}/AssemblyInfo.cs"));

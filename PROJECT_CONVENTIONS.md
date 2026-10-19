@@ -172,7 +172,7 @@ WinExe 宿主只保留进程生命周期和顶层 Avalonia 生命周期；Core �
 
 ### 6.1 测试项目
 
-- 单元测试：`tests/Cafe.Launcher.Tests/`（xUnit v3 + coverlet.msbuild）
+- 单元测试：`tests/Cafe.Launcher.Tests/`（xUnit v3 + Microsoft.Testing.Platform 2 + Microsoft Code Coverage）
 - Headless UI 测试：`tests/Cafe.Launcher.HeadlessTests/`（xUnit v3 + Avalonia.Headless.XUnit，含黄金截图基线）
 
 ### 6.2 测试结构
@@ -307,16 +307,20 @@ WinExe 宿主只保留进程生命周期和顶层 Avalonia 生命周期；Core �
 | Serilog | 4.4.0 | Logging pipeline |
 | Serilog.Sinks.Async | 2.1.0 | 异步日志 sink |
 | Serilog.Sinks.File | 7.0.0 | 文件日志 sink |
-| xunit.v3 | 4.0.1 | Test framework |
-| xunit.runner.visualstudio | 3.1.5 | xUnit VS 适配器 |
-| Microsoft.NET.Test.Sdk | 18.10.1 | 测试宿主 |
-| coverlet.msbuild | 10.0.1 | Code coverage |
+| xunit.v3.mtp-v2 | 4.0.2 | Test framework / MTP 2 runner（Headless 覆盖为 3.2.2） |
+| Microsoft.Testing.Extensions.TrxReport | 2.5.1 | TRX 测试报告 |
+| Microsoft.Testing.Extensions.HangDump | 2.5.1 | 无活动超时保护（不生成 dump） |
+| Microsoft.Testing.Extensions.CodeCoverage | 18.12.0 | 运行时覆盖率（Cobertura） |
 | Inno Setup | 7.0+ | Windows installer（脚本强制最低 7.0，CI 安装 7.1.0） |
 
 > 版本以 `Directory.Packages.props` 中声明的为准；升级依赖时同步更新本表（受 `InstallerContractTests` 守护），并再生 `THIRD-PARTY-NOTICES.md` 与 lock 文件（流程见 AGENTS.md「Dependency upgrades」）。
 
-`Cafe.Launcher.HeadlessTests` 通过 `VersionOverride` 固定 `xunit.v3` 3.2.2。真正的原因不是「Headless 不支持 xUnit v3」——xUnit v3 支持本身已于 [AvaloniaUI/Avalonia#18356](https://github.com/AvaloniaUI/Avalonia/issues/18356) 完成——而是 `Avalonia.Headless.XUnit` 12.1.3 对 `xunit.v3.extensibility.core` 声明的是**精确版本** `[3.2.2]`，依赖图被迫收敛到 3.2.2。因此升级 `xunit.v3` 会撞上 NU1107/NU1605，而不是「换个版本号就行」。
+`global.json` 的 `test.runner` 选择 .NET 10 的原生 `Microsoft.Testing.Platform` 体验。两个测试工程都使用 `xunit.v3.mtp-v2`、`OutputType=Exe` 与 `UseMicrosoftTestingPlatformRunner=true`；不依赖 VSTest 的 Test.Sdk 或 VS 适配器。`dotnet test --project <工程>` 运行单个工程，`dotnet test --solution Cafe.Launcher.slnx` 运行整个解决方案。
 
-该约束沿依赖链下传：`xunit.v3` 3.2.2 → `xunit.v3.core.mtp-v1` 3.2.2 → `Microsoft.Testing.Platform` **1.9.1**，而 `Cafe.Launcher.Tests`（`xunit.v3` 4.0.1）拿到的是 `xunit.v3.core.mtp-v2` → MTP **2.4.0**。`VersionOverride` 只作用于本工程，两个工程各解析各的图，所以这两个版本可以并存。
+**平台与框架版本独立选择。** 普通单元测试使用 xUnit 4.0.2；`Cafe.Launcher.HeadlessTests` 通过 `VersionOverride` 保留 3.2.2 的 Headless 扩展 API，同时显式选用它的 `mtp-v2` 包。TRX、HangDump 与 CodeCoverage 扩展把两套的 MTP 依赖图统一到 2.5.1。Avalonia.Headless.XUnit 12.1.4 对扩展核心的 nuspec 声明是最低版本 3.2.2，并非精确版本；后续升级 Headless 的 xUnit 主版本仍需验证扩展兼容性。程序集并行化声明保持各自版本支持的形状：普通测试用 `[assembly: Parallelization(Mode = ParallelMode.None)]`，Headless 用 `[assembly: CollectionBehavior(DisableTestParallelization = true)]`。
 
-这也是改用 Microsoft.Testing.Platform 的阻塞点，规则是「不要在同一解决方案里混用 VSTest 与 MTP 工程」，而覆盖率工具同样卡版本：`Microsoft.Testing.Extensions.CodeCoverage` 18.10.1（与上表 `Microsoft.NET.Test.Sdk` 同版）要求 MTP ≥ 2.x，只有 18.0.4 及更早才兼容 MTP 1.9.1。上游放宽该约束前不要迁移。另注意程序集并行化的 API 两套并存：`Cafe.Launcher.Tests` 用 xUnit 4 的 `[assembly: Parallelization(Mode = ParallelMode.None)]`，`Cafe.Launcher.HeadlessTests` 仍是 xUnit 3 的 `[assembly: CollectionBehavior(DisableTestParallelization = true)]`。
+`test.ps1` 提供 `-FilterClass` / `-FilterMethod`，对应 xUnit 的完整限定名筛选，支持首尾 `*`。MTP 用 `--report-trx` 生成报告；所有仓库测试入口均以 `--hangdump --hangdump-timeout 5m --hangdump-type None` 保留五分钟无测试活动就终止的净网，Golden 再生使用同一保护。空筛选返回非零退出码，避免误报“测试通过”。
+
+`coverage.ps1` 使用 `Microsoft.Testing.Extensions.CodeCoverage` 的 `--coverage` 与 Cobertura 输出，保留生产程序集范围、设计器排除、四个程序集必须实际计数的检查，以及既有覆盖率基线。报告按套件命名并放在独立目录。该收集器通过运行时分析器工作，不重写磁盘上的生产程序集：coverlet.MTP 的静态插桩会因 MTP 控制器已加载 `Cafe.Launcher.UI` 而跳过整个表现层。MTP 遥测通过仓库脚本与 CI 的 `TESTINGPLATFORM_TELEMETRY_OPTOUT=1` 关闭。
+
+迁移依据与 CLI 对照见 [MTP 迁移核对](docs/research/mtp-migration.md)。

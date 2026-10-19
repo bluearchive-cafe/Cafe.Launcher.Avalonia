@@ -19,6 +19,7 @@ jobs:
 
     env:
       DOTNET_CLI_TELEMETRY_OPTOUT: 1
+      TESTINGPLATFORM_TELEMETRY_OPTOUT: 1
       DOTNET_NOLOGO: 1
       AVALONIA_TELEMETRY_OPTOUT: 1
       ContinuousIntegrationBuild: 'true'
@@ -49,8 +50,9 @@ jobs:
       # 不做 RID 专属发布还原。
       - name: Unit tests
         run: >
-          dotnet test tests/Cafe.Launcher.Tests/Cafe.Launcher.Tests.csproj
-          -c Debug --logger "trx" --results-directory TestResults
+          dotnet test --project tests/Cafe.Launcher.Tests/Cafe.Launcher.Tests.csproj
+          -c Debug --report-trx --results-directory TestResults
+          --hangdump --hangdump-timeout 5m --hangdump-type None
 
       - name: Upload test results
         if: always()

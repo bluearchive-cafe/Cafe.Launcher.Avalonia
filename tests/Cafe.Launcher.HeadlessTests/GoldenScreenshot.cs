@@ -17,7 +17,7 @@ namespace Cafe.Launcher.HeadlessTests;
 /// edges. The comparison therefore allows a small per-channel tolerance and a
 /// bounded mismatch ratio instead of requiring bit-exact output. If a baseline
 /// must be regenerated (intentional visual change), run:
-///   $env:CAFE_GOLDEN_UPDATE = "1"; dotnet test ... --filter FullyQualifiedName~Golden
+///   $env:CAFE_GOLDEN_UPDATE = "1"; dotnet test --project ... --filter-method '*Golden*'
 /// and commit the refreshed PNGs together with the visual change.
 /// </summary>
 internal static class GoldenScreenshot

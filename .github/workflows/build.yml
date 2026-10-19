@@ -25,6 +25,7 @@ jobs:
     env:
       Project_Path: src/Cafe.Launcher/Cafe.Launcher.csproj
       DOTNET_CLI_TELEMETRY_OPTOUT: 1
+      TESTINGPLATFORM_TELEMETRY_OPTOUT: 1
       DOTNET_NOLOGO: 1
       AVALONIA_TELEMETRY_OPTOUT: 1
       # 供应链闭环：SDK 不会从 CI 环境自动推断这两个属性（dotnet/sdk#23795），
@@ -79,7 +80,7 @@ jobs:
           retention-days: 7
           path: |
             TestResults/**/*.trx
-            TestResults/Coverage/**/coverage.cobertura.xml
+            TestResults/Coverage/**/*.cobertura.xml
             # Golden-screenshot failures write <name>-actual.png / <name>-diff.png here. They are
             # the only diff evidence for the one test class whose baselines are environment
             # sensitive, so a CI-only mismatch must not have to be reproduced locally to triage.
@@ -135,6 +136,7 @@ jobs:
 
     env:
       DOTNET_CLI_TELEMETRY_OPTOUT: 1
+      TESTINGPLATFORM_TELEMETRY_OPTOUT: 1
       DOTNET_NOLOGO: 1
       AVALONIA_TELEMETRY_OPTOUT: 1
       ContinuousIntegrationBuild: 'true'
@@ -162,8 +164,9 @@ jobs:
 
       - name: Unit tests
         run: >
-          dotnet test tests/Cafe.Launcher.Tests/Cafe.Launcher.Tests.csproj
-          -c Debug --logger "trx" --results-directory TestResults
+          dotnet test --project tests/Cafe.Launcher.Tests/Cafe.Launcher.Tests.csproj
+          -c Debug --report-trx --results-directory TestResults
+          --hangdump --hangdump-timeout 5m --hangdump-type None
 
       - name: Upload test results
         if: always()

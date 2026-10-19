@@ -183,7 +183,7 @@ dotnet run --project .\src\Cafe.Launcher\Cafe.Launcher.csproj
 | --- | --- |
 | `.\test.ps1` | Run unit and Headless UI tests |
 | `.\test.ps1 -Suite Unit` / `-Suite Headless` | Run one suite; choices are All, Unit, Headless |
-| `.\test.ps1 -Filter "FullyQualifiedName~VersionComparerTests"` | Run a filtered subset |
+| `.\test.ps1 -FilterClass '*VersionComparerTests'` | Run a filtered subset |
 | `.\dev.ps1 ui` | Run UI style contracts and Headless checks |
 | `.\coverage.ps1` | Run the coverage gate |
 | `.\verify.ps1` | Debug build, coverage, then Release build |
@@ -194,7 +194,7 @@ dotnet run --project .\src\Cafe.Launcher\Cafe.Launcher.csproj
 Run one test class:
 
 ```powershell
-dotnet test .\tests\Cafe.Launcher.Tests\Cafe.Launcher.Tests.csproj --filter "FullyQualifiedName~VersionComparerTests"
+dotnet test --project .\tests\Cafe.Launcher.Tests\Cafe.Launcher.Tests.csproj --filter-class '*VersionComparerTests'
 ```
 
 Run `.\verify.ps1` before submitting code. Regenerate golden screenshots with `.\test.ps1 -UpdateGolden`.
