@@ -42,7 +42,7 @@ Do not add a dialog-layer interaction gate without first making modal registrati
 
 ## Build, Test, and Development Commands
 
-Requires the .NET SDK pinned by `global.json` (`10.0.302`, rolling forward within the same feature band). Repository scripts disable .NET CLI and Avalonia telemetry. Builds enforce nullable reference types, compiled bindings, code style, and warnings-as-errors; a successful build has zero warnings. Be precise about what "code style" covers there: `EnforceCodeStyleInBuild` surfaces only the IDE diagnostics whose `.editorconfig` severity reaches warning; the whitespace/indentation and file-encoding rules are formatter-only, and no pipeline runs a formatter gate. `dotnet format --verify-no-changes` therefore reports a large backlog today (it is not wired into CI), so treat it as a tool for the files you touch — not as a repository-wide gate that must pass.
+Requires the .NET SDK pinned by `global.json` (`10.0.302`, rolling forward within the same feature band). Repository scripts disable .NET CLI, MTP, and Avalonia telemetry. Tests use the native Microsoft.Testing.Platform runner selected in `global.json`; invoke a project with `dotnet test --project <path>`. Class/method selection uses xUnit `--filter-class` / `--filter-method` with fully qualified names or leading/trailing `*` wildcards. Both suites use MTP 2; Headless keeps xUnit 3.2.2 through the explicit `xunit.v3.mtp-v2` package override. Builds enforce nullable reference types, compiled bindings, code style, and warnings-as-errors; a successful build has zero warnings. Be precise about what "code style" covers there: `EnforceCodeStyleInBuild` surfaces only the IDE diagnostics whose `.editorconfig` severity reaches warning; the whitespace/indentation and file-encoding rules are formatter-only, and no pipeline runs a formatter gate. `dotnet format --verify-no-changes` therefore reports a large backlog today (it is not wired into CI), so treat it as a tool for the files you touch — not as a repository-wide gate that must pass.
 
 Repository commands run under either Bash or PowerShell 7 (`pwsh`). Windows PowerShell 5.1 (`powershell.exe`) is not supported: the scripts use `??`, which its parser rejects, and it decodes their Chinese diagnostics with the ANSI code page (`coverage.ps1` carries a UTF-8 BOM carve-out in `.editorconfig` for that reason). CI reflects the same split — `shell: pwsh` and `shell: bash` only.
 
@@ -52,9 +52,9 @@ Repository commands run under either Bash or PowerShell 7 (`pwsh`). Windows Powe
 | `dotnet run --project .\src\Cafe.Launcher\Cafe.Launcher.csproj` | Run the launcher locally |
 | `.\test.ps1` | Run both xUnit test projects |
 | `.\test.ps1 -Suite Headless` | Run one suite only (`All`/`Unit`/`Headless`) |
-| `.\test.ps1 -Filter "FullyQualifiedName~VersionComparerTests"` | Run a filtered subset (`dotnet test --filter` expression) |
+| `.\test.ps1 -FilterClass '*VersionComparerTests'` | Run a filtered subset (xUnit class-name wildcard) |
 | `.\test.ps1 -Configuration Release` | Run both projects in Release (what the release workflow runs) |
-| `.\coverage.ps1` | Run tests with Coverlet; enforces the 50% line/branch minimum and rejects regressions below the repository baseline (baseline values live in `coverage.ps1`, which prints current slack) |
+| `.\coverage.ps1` | Run tests with Microsoft Code Coverage; enforces the 50% line/branch minimum and rejects regressions below the repository baseline (baseline values live in `coverage.ps1`, which prints current slack) |
 | `.\verify.ps1` | Full sequence: Debug build, coverage, Release build |
 | `.\dev.ps1 ui` | Run UI style-contract and headless UI tests after localized UI changes |
 | `.\scripts\Test-LocalizationContract.ps1` | Verify resource keys and composite-format placeholders across all localized `.resx` files |
@@ -72,7 +72,7 @@ dependency install for the RPM, and rejects Arch `namcap` errors.
 Run one test class:
 
 ```powershell
-dotnet test .\tests\Cafe.Launcher.Tests\Cafe.Launcher.Tests.csproj --filter "FullyQualifiedName~VersionComparerTests"
+dotnet test --project .\tests\Cafe.Launcher.Tests\Cafe.Launcher.Tests.csproj --filter-class '*VersionComparerTests'
 ```
 
 Restore before commands that use `--no-restore`. CI restores in locked mode (`RestoreLockedMode`), so dependency work has its own procedure below.
