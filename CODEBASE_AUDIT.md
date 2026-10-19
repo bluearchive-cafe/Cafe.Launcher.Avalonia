@@ -33,7 +33,7 @@
 
 | ID | 当前取舍 | 重开条件 |
 | --- | --- | --- |
-| `AUD-DEP-002` | 单元测试已升 xunit.v3 4.0.1，Headless 项目经 `VersionOverride` 钉在 3.2.2。真正的原因是 `Avalonia.Headless.XUnit` **12.1.3** 对 `xunit.v3.extensibility.core` 声明**精确版本** `[3.2.2]`，升级会撞 NU1107/NU1605（不是「不兼容 xUnit 4」）；该约束沿依赖链下传为 MTP v1 1.9.1，与单元工程的 mtp-v2 2.4.0 并存，因此 MTP 迁移也受阻（`Microsoft.Testing.Extensions.CodeCoverage` 18.10.1 要求 MTP ≥ 2.x）。取舍已记录在 `PROJECT_CONVENTIONS.md` §12。 | 上游放宽 `xunit.v3.extensibility.core` 的精确版本约束后移除覆盖，并把程序集并行化配置迁到 xUnit 4 API（`[assembly: CollectionBehavior(DisableTestParallelization = …)]` 在 4.x 已 obsolete 且不可调用；配对关系由 `AssemblySplitContractTests.TestProjects_DeclareTheAssemblyParallelizationFormTheirXunitMajorSupports` 钉住）。 |
+| `AUD-DEP-002` | 单元测试使用 `xunit.v3.mtp-v2` 4.0.2，Headless 项目经 `VersionOverride` 保留 3.2.2：`Avalonia.Headless.XUnit` 12.1.4 使用 xUnit 3.2.2 的扩展 API，而 xUnit 4 的扩展接口有破坏性变更；其 nuspec 只声明最低版本 `[3.2.2, )`，所以这是为已验证组合做的主动选择，不再是版本冲突。两套都通过显式 `mtp-v2` 包统一在 MTP 2.5.1，覆盖率、TRX 与挂起扩展不再受此约束。Headless 因此不获得 xUnit 4.0.2 的核心修复，程序集并行化也保留 xUnit 3 形状。取舍见 `PROJECT_CONVENTIONS.md` §12 与 `docs/research/mtp-migration.md`。 | `Avalonia.Headless.XUnit` 发布支持 xUnit 4 扩展 API 的版本并通过 Headless 套件验证后，升级 Headless 到 xUnit 4，并把并行化声明迁到 `[assembly: Parallelization(...)]`（配对关系由 `AssemblySplitContractTests.TestProjects_DeclareTheAssemblyParallelizationFormTheirXunitMajorSupports` 钉住）。 |
 | `AUD-ARCH-007` | 系统代理指纹变化会释放旧 handler，使在途下载批次最多失败一轮；下一轮新租约可恢复，引用计数方案的并发复杂度更高。 | 出现不可恢复下载失败，或重试无法切换到新 handler。 |
 | `AUD-PERF-001` | 实际更新对约 1.09 GiB 客户端做 CRC64 自愈校验：冷读约 5.9 秒、热读约 0.9 秒；只在真实更新发生，保留内容自愈价值更高。 | 受管理客户端接近 10 GiB，按现有系数冷读将接近 54 秒。 |
 | `AUD-PERF-004` | 五张 460×220 横幅每轮重解码约 10 ms 后台 CPU，显著低于同路径网络成本；位图缓存会增加所有权和失效复杂度。 | 横幅数量或尺寸使单轮解码接近 100 ms，或刷新路径其他成本降至同量级。 |

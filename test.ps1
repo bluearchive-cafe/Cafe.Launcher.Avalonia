@@ -5,9 +5,9 @@ param(
     # 提交前的完整验证仍然是一条命令（默认即全量）。
     [ValidateSet('All', 'Unit', 'Headless')]
     [string]$Suite = 'All',
-    # 只跑匹配的用例（`dotnet test --filter` 的表达式，如 "FullyQualifiedName~VersionComparerTests"）。
-    # 全量运行不带它，避免"我以为跑了全套"。
-    [string]$Filter,
+    # xUnit 原生筛选：完整限定类名或方法名，支持首尾 * 通配符。
+    [string]$FilterClass,
+    [string]$FilterMethod,
     # Regenerate golden screenshot baselines instead of comparing:
     # .\test.ps1 -UpdateGolden  ->  runs the Golden tests with CAFE_GOLDEN_UPDATE=1.
     # Commit the refreshed PNGs under tests/Cafe.Launcher.HeadlessTests/Baselines
@@ -18,6 +18,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 $env:AVALONIA_TELEMETRY_OPTOUT = '1'
+$env:TESTINGPLATFORM_TELEMETRY_OPTOUT = '1'
 
 $resultsRoot = Join-Path $PSScriptRoot 'TestResults\Tests'
 $projects = @(
@@ -31,11 +32,15 @@ $projects = @(
     }
 )
 
+# MTP 的挂起扩展在 5 分钟无测试活动后终止进程树并返回失败；None 保留
+# 原来的不生成 dump 策略。Golden 再生也必须先安装同一个挂起防护。
+$hangGuard = @('--hangdump', '--hangdump-timeout', '5m', '--hangdump-type', 'None')
+
 if ($UpdateGolden) {
     # 基线再生只对无头工程里的 Golden 用例有意义：与显式筛选混用会得到
     # "看起来跑过了、其实只跑了一条"的结果，宁可直接拒绝。
-    if ($Filter) {
-        throw '-UpdateGolden 与 -Filter 不能同时使用：基线再生固定跑 Golden 用例。'
+    if ($FilterClass -or $FilterMethod) {
+        throw '-UpdateGolden 与筛选参数不能同时使用：基线再生固定跑 Golden 用例。'
     }
 
     if ($Suite -eq 'Unit') {
@@ -44,9 +49,10 @@ if ($UpdateGolden) {
 
     $env:CAFE_GOLDEN_UPDATE = '1'
     try {
-        dotnet test $projects[1].Project -c $Configuration `
+        dotnet test --project $projects[1].Project -c $Configuration `
             --results-directory $resultsRoot `
-            --filter 'FullyQualifiedName~Golden' `
+            --filter-method '*Golden*' `
+            --report-trx --report-trx-filename 'Golden.trx' `
             @hangGuard
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
@@ -57,23 +63,19 @@ if ($UpdateGolden) {
     exit 0
 }
 
-# 挂起防护（AUD-TEST-014）：有界等待已在各用例里加 WaitAsync 上限，这里再补一层整类的
-# 净网——任一处等待挂住（含替身里被故意阻塞、用例忘了释放的情况）都会在 5 分钟无活动后
-# 终止 testhost 并让运行失败，而不是吃掉 CI 的作业预算（build.yml 的 timeout-minutes）。
-# 用 --blame-hang-dump-type none：只要失败与挂起的用例名，不生成转储文件。
-# 实测（1s 版本）该门确实会中止运行并给出退出码 1。
-$hangGuard = @('--blame-hang', '--blame-hang-timeout', '5min', '--blame-hang-dump-type', 'none')
-
 $selected = if ($Suite -eq 'All') { $projects } else { $projects | Where-Object { $_.Name -eq $Suite } }
 
 foreach ($projectInfo in $selected) {
     $arguments = @(
-        'test', $projectInfo.Project, '-c', $Configuration,
+        'test', '--project', $projectInfo.Project, '-c', $Configuration,
         '--results-directory', $resultsRoot,
-        '--logger', "trx;LogFileName=$($projectInfo.Name).trx"
+        '--report-trx', '--report-trx-filename', "$($projectInfo.Name).trx"
     )
-    if ($Filter) {
-        $arguments += @('--filter', $Filter)
+    if ($FilterClass) {
+        $arguments += @('--filter-class', $FilterClass)
+    }
+    if ($FilterMethod) {
+        $arguments += @('--filter-method', $FilterMethod)
     }
 
     $arguments += $hangGuard

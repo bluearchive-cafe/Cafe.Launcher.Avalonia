@@ -12,7 +12,7 @@ namespace Cafe.Launcher.Tests;
 /// </summary>
 /// <remarks>
 /// 覆盖的是「名字可枚举」的那一族。一次性任务局部变量（<c>commitTask</c> 之类）与未来
-/// 新增站点由 <c>test.ps1</c> 的 <c>--blame-hang</c> 兜底——两层各管一段，都在
+/// 新增站点由 <c>test.ps1</c> 的 <c>--hangdump</c> 兜底——两层各管一段，都在
 /// <c>Tests.csproj</c> 的抑制理由里写明。
 /// </remarks>
 public sealed partial class TestSourceWaitContractTests

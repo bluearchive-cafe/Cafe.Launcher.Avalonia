@@ -1,16 +1,15 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 $env:AVALONIA_TELEMETRY_OPTOUT = '1'
-# MSBuild 常驻复用节点会跨构建持有刚拷贝文件的句柄，coverlet 紧随其后的插桩重写
-# 会因 "file is being used by another process" 偶发失败并静默降级为无覆盖数据。
-$env:MSBUILDDISABLENODEREUSE = '1'
+$env:TESTINGPLATFORM_TELEMETRY_OPTOUT = '1'
 $threshold = 0.50
 # 棘轮基线 = 最近一次全量 verify 实测值再留约 0.1–0.25pp 余量，不是「历史地板」。
 # 2026-09-23 全量重审实测：手写行 85.71%、分支 92.06%。三个 Linux 专属测试
 # （procfs 挂载表解析 ×2、UMU 前缀预检启动报告）按平台门规则改为可见跳过，
 # 而覆盖率闸口只在 Windows 作业强制，Linux 专属的预检与 procfs 路径在本平台
 # 结构性不可覆盖，基线随实测下移。改基线时请与本次实测值一起更新，并保持
-# 余量在同一量级。
+# 余量在同一量级。2026-10-19 迁移到 Microsoft Code Coverage 后三次全量实测：
+# 行约 86.3%（18,563–18,571/21,502）、分支 92.29%（3,291/3,566），同一基线仍成立。
 $lineBaseline = 0.8560
 $branchBaseline = 0.9180
 $resultsRoot = Join-Path $PSScriptRoot 'TestResults\Coverage'
@@ -18,10 +17,10 @@ $resultsRoot = Join-Path $PSScriptRoot 'TestResults\Coverage'
 $repositoryRoot = [IO.Path]::GetFullPath($PSScriptRoot)
 $repositoryRootPrefix = $repositoryRoot.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
 
-# Coverlet reports class filenames relative to the <sources> roots in each Cobertura
-# document. With one production project that root happened to be the application
-# directory; once another referenced production assembly exists Coverlet lifts it to
-# their common src/ parent. Resolve against the report instead of assuming either shape.
+# Cobertura producers differ in how they name class files: Coverlet wrote paths
+# relative to the <sources> roots, while Microsoft Code Coverage writes absolute
+# paths and leaves <sources> empty. Resolve both against the report instead of
+# assuming either shape.
 
 if (Test-Path -LiteralPath $resultsRoot) {
     Remove-Item -LiteralPath $resultsRoot -Recurse -Force
@@ -49,40 +48,26 @@ function Invoke-CoverageRun {
 
     $project = $ProjectInfo.Project
     $projectResults = $ProjectInfo.ResultsDirectory
-    $coverletOutput = Join-Path $projectResults 'coverage'
-    $collectArgs = @(
-        '-p:CollectCoverage=true',
-        '-p:CoverletOutputFormat=cobertura',
-        '-p:ExcludeByFile=**/Resources/LauncherStrings.Designer.cs',
-        "-p:CoverletOutput=$coverletOutput"
-    )
-
-    # coverlet.msbuild 是编译期插桩，但它在同一构建里对刚拷贝到 bin 的被测 DLL 做
-    # 插桩重写时，会与 MSBuild 自身的文件拷贝句柄竞争（"file is being used by
-    # another process"，仅告警并静默降级为无覆盖数据）。拆成两步：先普通构建完成
-    # 编译与拷贝，再带 CollectCoverage 参数做一次增量构建——此时编译/拷贝全部
-    # up-to-date 跳过，coverlet 独占改写 DLL，插桩不再有竞争窗口。
-    dotnet build $project -c Debug --no-restore | Out-Host
-    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-    dotnet build $project -c Debug --no-restore -nodeReuse:false @collectArgs | Out-Host
-    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-    dotnet test $project -c Debug --no-build --no-restore `
+    # Microsoft Code Coverage 通过运行时分析器收集，不重写磁盘程序集。
+    # coverlet.MTP 会在控制器已加载 Cafe.Launcher.UI 后跳过该程序集，表现层
+    # 因此整体从报告里消失。
+    dotnet test --project $project -c Debug --no-restore `
         --results-directory $projectResults `
-        --logger "trx;LogFileName=$($ProjectInfo.Name).trx" `
-        @collectArgs | Out-Host
+        --report-trx --report-trx-filename "$($ProjectInfo.Name).trx" `
+        --hangdump --hangdump-timeout 5m --hangdump-type None `
+        --coverage --coverage-output-format cobertura `
+        --coverage-output "$($ProjectInfo.Name).cobertura.xml" | Out-Host
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-    $reports = @(Get-ChildItem -LiteralPath $projectResults -Filter 'coverage.cobertura.xml')
-    if ($reports.Count -ne 1) {
-        throw "Expected exactly one Cobertura report in '$projectResults', found $($reports.Count)."
+    $reportPath = Join-Path $projectResults "$($ProjectInfo.Name).cobertura.xml"
+    if (-not (Test-Path -LiteralPath $reportPath)) {
+        throw "Expected a Cobertura report at '$reportPath'."
     }
 
-    return $reports[0].FullName
+    return $reportPath
 }
 
-# 甄别"插桩未生效"的空壳报告：真实报告有数万条 line 记录，空壳只有个位到百位，
+# 甄别"收集未生效"的空壳报告：真实报告有数万条 line 记录，空壳只有个位到百位，
 # 阈值取 1000 与两侧均差数量级——只用于退化检测，不是覆盖率度量。
 $minimumReportedLines = 1000
 
@@ -111,11 +96,11 @@ foreach ($projectInfo in $projects) {
 
     $reportPath = Invoke-CoverageRun $projectInfo
     if (-not (Test-ReportHasData $reportPath)) {
-        # unit/headless 共享同一 src 插桩 DLL：前一个 testhost 的文件句柄在 Windows 上
-        # 延迟释放时，下一个项目的插桩重写会偶发锁冲突（coverlet 仅告警），产出空壳
-        # 报告。等待句柄释放后重试一次，把偶发抖动从验证失败降级为多一次运行。
+        # 收集器偶发在测试进程退出时来不及写完报告；等待后重试一次，
+        # 把一次性抖动从验证失败降级为多一次运行。
         Write-Output "Coverage report for $($projectInfo.Name) has no data; retrying once."
         Start-Sleep -Seconds 2
+        Remove-Item -LiteralPath $reportPath -ErrorAction SilentlyContinue
         $reportPath = Invoke-CoverageRun $projectInfo
     }
 
@@ -125,7 +110,7 @@ foreach ($projectInfo in $projects) {
 $lineCoverage = @{}
 $branchCoverage = @{}
 
-# 程序集拆分后每个生产程序集都必须真的出现在报告里。coverlet 的 <sources> 根一旦退回旧的
+# 程序集拆分后每个生产程序集都必须真的出现在报告里。报告里的 <sources> 根一旦退回旧的
 # 单项目形状，被移走的代码会从分子和分母同时消失，比例反而可能上升——静默通过闸口。
 # 这里按项目目录要求它们各自贡献被计数的行，缺一个就直接失败。
 # src\Cafe.Launcher.Updater 不在表内是有意的：没有任何测试工程引用它（它的实现都在
@@ -143,16 +128,25 @@ foreach ($requiredRoot in $requiredAssemblyRoots) {
 
 foreach ($reportPath in $reportPaths.Values) {
     [xml]$coverageXml = Get-Content -LiteralPath $reportPath -Raw
-    $sourceRoots = @($coverageXml.coverage.sources.source | ForEach-Object {
-        [IO.Path]::GetFullPath([string]$_)
-    })
+    $sourceRoots = @($coverageXml.coverage.sources.source |
+        ForEach-Object { [string]$_ } |
+        Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+        ForEach-Object { [IO.Path]::GetFullPath($_) })
 
     foreach ($package in @($coverageXml.coverage.packages.package)) {
         foreach ($class in @($package.classes.class)) {
             $relativePath = $class.filename -replace '[\\/]', [string][IO.Path]::DirectorySeparatorChar
+            # Coverlet 报告相对 <sources> 根；Microsoft Code Coverage 直接写绝对路径。
+            $candidates = if ([IO.Path]::IsPathRooted($relativePath)) {
+                @($relativePath)
+            }
+            else {
+                @($sourceRoots | ForEach-Object {
+                    [IO.Path]::GetFullPath((Join-Path $_ $relativePath))
+                })
+            }
             $fullPath = $null
-            foreach ($sourceRoot in $sourceRoots) {
-                $candidate = [IO.Path]::GetFullPath((Join-Path $sourceRoot $relativePath))
+            foreach ($candidate in $candidates) {
                 if (
                     $candidate.StartsWith($repositoryRootPrefix, [StringComparison]::OrdinalIgnoreCase) -and
                     (Test-Path -LiteralPath $candidate -PathType Leaf)
@@ -174,7 +168,8 @@ foreach ($reportPath in $reportPaths.Values) {
             if (
                 $extension -ne '.cs' -or
                 $pathSegments -contains 'bin' -or
-                $pathSegments -contains 'obj'
+                $pathSegments -contains 'obj' -or
+                $fullPath -match '[\\/]Resources[\\/]LauncherStrings\.Designer\.cs$'
             ) {
                 continue
             }

@@ -198,7 +198,7 @@ dotnet run --project .\src\Cafe.Launcher\Cafe.Launcher.csproj
 | --- | --- |
 | `.\test.ps1` | 运行单元测试和 Headless UI 测试 |
 | `.\test.ps1 -Suite Unit` / `-Suite Headless` | 只运行一个测试套件（`All`/`Unit`/`Headless`） |
-| `.\test.ps1 -Filter "FullyQualifiedName~VersionComparerTests"` | 只运行过滤出的子集 |
+| `.\test.ps1 -FilterClass '*VersionComparerTests'` | 只运行过滤出的子集 |
 | `.\dev.ps1 ui` | 运行 UI 样式契约和 Headless UI 检查 |
 | `.\coverage.ps1` | 运行覆盖率门禁 |
 | `.\verify.ps1` | 完整流程：Debug 构建、覆盖率、Release 构建 |
@@ -209,7 +209,7 @@ dotnet run --project .\src\Cafe.Launcher\Cafe.Launcher.csproj
 运行单个测试类：
 
 ```powershell
-dotnet test .\tests\Cafe.Launcher.Tests\Cafe.Launcher.Tests.csproj --filter "FullyQualifiedName~VersionComparerTests"
+dotnet test --project .\tests\Cafe.Launcher.Tests\Cafe.Launcher.Tests.csproj --filter-class '*VersionComparerTests'
 ```
 
 提交代码前请运行 `.\verify.ps1`。金标截图基线通过 `.\test.ps1 -UpdateGolden` 重新生成。

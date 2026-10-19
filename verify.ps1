@@ -1,6 +1,7 @@
 $ErrorActionPreference = 'Stop'
 $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 $env:AVALONIA_TELEMETRY_OPTOUT = '1'
+$env:TESTINGPLATFORM_TELEMETRY_OPTOUT = '1'
 
 # 纯文本扫描、无 dotnet 依赖，放在最前 fail-fast。
 # 成功路径为自然落空、不设 $LASTEXITCODE：全新会话中它仍是 $null，
@@ -29,5 +30,5 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 dotnet build .\src\Cafe.Launcher\Cafe.Launcher.csproj -c Release --no-restore
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-dotnet test .\tests\Cafe.Launcher.Tests\Cafe.Launcher.Tests.csproj -c Release --no-restore --filter "FullyQualifiedName~ResxResourceContractTests"
+dotnet test --project .\tests\Cafe.Launcher.Tests\Cafe.Launcher.Tests.csproj -c Release --no-restore --filter-class '*ResxResourceContractTests' --hangdump --hangdump-timeout 5m --hangdump-type None
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

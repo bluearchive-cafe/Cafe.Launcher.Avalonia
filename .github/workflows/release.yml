@@ -25,6 +25,7 @@ jobs:
     env:
       Project_Path: src/Cafe.Launcher/Cafe.Launcher.csproj
       DOTNET_CLI_TELEMETRY_OPTOUT: 1
+      TESTINGPLATFORM_TELEMETRY_OPTOUT: 1
       DOTNET_NOLOGO: 1
       AVALONIA_TELEMETRY_OPTOUT: 1
       # 供应链闭环：SDK 不会从 CI 环境自动推断这两个属性（dotnet/sdk#23795），
@@ -263,6 +264,7 @@ jobs:
       Project_Path: src/Cafe.Launcher/Cafe.Launcher.csproj
       INNO_SETUP_VERSION: 7.1.0
       DOTNET_CLI_TELEMETRY_OPTOUT: 1
+      TESTINGPLATFORM_TELEMETRY_OPTOUT: 1
       DOTNET_NOLOGO: 1
       AVALONIA_TELEMETRY_OPTOUT: 1
       # 供应链闭环：与 build job 相同的锁定还原与确定性构建。

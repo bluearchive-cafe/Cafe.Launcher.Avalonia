@@ -59,7 +59,7 @@ public sealed class ThirdPartyNoticesContractTests
         // 生成器按 NuGet 解析出的依赖图重写整张表，所以「升了版本、忘了重跑
         // scripts/New-ThirdPartyNotices.ps1」会留下一份写着旧版本号的许可披露。这里比对每一个生产工程
         // 直接引用的包：只要某个工程（例如 Windows 自更新 helper）引用了表里没有的包，披露就不完整——
-        // 测试专用的包（xunit、coverlet、Test.Sdk）不进发行档案，本来就不该出现在表里。
+        // 测试专用的包（xunit、CodeCoverage、Test.Sdk）不进发行档案，本来就不该出现在表里。
         var projects = ProductionProjects().ToArray();
         var referenced = projects
             .SelectMany(project => XDocument.Load(project)
