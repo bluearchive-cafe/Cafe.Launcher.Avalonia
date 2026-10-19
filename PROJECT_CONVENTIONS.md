@@ -294,15 +294,15 @@ WinExe 宿主只保留进程生命周期和顶层 Avalonia 生命周期；Core �
 | 工具/库 | 版本 | 用途 |
 |---|---|---|
 | .NET SDK | 10.0.302 | Runtime / SDK（global.json 钉住，`latestFeature` 滚动） |
-| Avalonia / Avalonia.Desktop | 12.1.3 | UI Framework |
-| Avalonia.Controls.ColorPicker | 12.1.3 | 自定义主题色取色器 |
-| MarkView.Avalonia | 12.2.1 | 基于 Markdig 的更新说明 Markdown 预览 |
-| Avalonia.Themes.Fluent | 12.1.3 | Fluent 主题 |
-| Avalonia.Headless.XUnit | 12.1.3 | Headless UI testing |
+| Avalonia / Avalonia.Desktop | 12.1.4 | UI Framework |
+| Avalonia.Controls.ColorPicker | 12.1.4 | 自定义主题色取色器 |
+| MarkView.Avalonia | 12.3.0 | 基于 Markdig 的更新说明 Markdown 预览 |
+| Avalonia.Themes.Fluent | 12.1.4 | Fluent 主题 |
+| Avalonia.Headless.XUnit | 12.1.4 | Headless UI testing |
 | AvaloniaUI.DiagnosticsSupport | 2.2.3 | 调试期 UI 诊断（Debug 专用，Release 不分发） |
 | CommunityToolkit.Mvvm | 8.4.2 | MVVM source generators |
 | Material.Icons.Avalonia | 3.0.2 | Icon library |
-| Microsoft.Extensions.DependencyInjection | 10.0.12 | DI 容器 |
+| Microsoft.Extensions.DependencyInjection | 10.0.13 | DI 容器 |
 | Shirasagi0012.MaterialColorUtilities | 0.2.0 | Material 色彩工具 |
 | Serilog | 4.4.0 | Logging pipeline |
 | Serilog.Sinks.Async | 2.1.0 | 异步日志 sink |
