@@ -14,15 +14,19 @@ namespace Cafe.Launcher.Core.Services.GameRuntime;
 /// 「宿主退出」认出上一次启动的游戏。
 /// </summary>
 /// <remarks>
-/// <para>读不到 <c>environ</c> 的进程（不同 uid）按「没有标记」处理；枚举失败整体吞掉，与
-/// <see cref="ProcessService"/> 的 fail-open 语义一致（宁可放行也不误拦）。</para>
+/// <para>读不到 <c>environ</c> 的进程（不同 uid）按「没有标记」处理；proc 根整体枚举失败
+/// 向上传播，让会话监控与破坏性操作闸门分别决定如何处理未知状态。</para>
 /// <para>前缀 / <c>maps</c> 归属需要调用方提供 prefix 与安装目录上下文，本片未接；标记足够覆盖
 /// 计划里 P0-B 的三条完成标准（外部启动、宿主退出、不误报），见 ADR-036。</para>
 /// </remarks>
 public static class LinuxProcessScanner
 {
     /// <summary>扫一遍 <c>/proc</c>，返回在跑的家族名（去重，优先可读的家族名）。</summary>
-    public static IReadOnlyList<string> Scan(RunningGameQuery query, CancellationToken cancellationToken)
+    public static IReadOnlyList<string> Scan(RunningGameQuery query, CancellationToken cancellationToken) =>
+        Scan(query, "/proc", cancellationToken);
+
+    /// <summary>以指定 proc 根扫描，测试用真实目录模拟枚举失败与逐进程消失。</summary>
+    internal static IReadOnlyList<string> Scan(RunningGameQuery query, string procRoot, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
         if (query.KnownExeNames is null || query.KnownExeNames.Count == 0)
@@ -30,16 +34,7 @@ public static class LinuxProcessScanner
             return [];
         }
 
-        try
-        {
-            return SelectRunning(ReadRecords(query, cancellationToken), query);
-        }
-        catch (Exception exception)
-            when (exception is InvalidOperationException or IOException or UnauthorizedAccessException or Win32Exception)
-        {
-            // 枚举失败按没在跑处理（与 ProcessService 同一取舍）。
-            return [];
-        }
+        return SelectRunning(ReadRecords(query, procRoot, cancellationToken), query);
     }
 
     /// <summary>纯选择：从记录里挑出属于家族的显示名，合成记录即可测。</summary>
@@ -161,11 +156,12 @@ public static class LinuxProcessScanner
 
     private static IEnumerable<UnixProcessRecord> ReadRecords(
         RunningGameQuery query,
+        string procRoot,
         CancellationToken cancellationToken)
     {
         var knownNames = query.KnownExeNames;
         var readMaps = !string.IsNullOrWhiteSpace(query.InstallDirectory);
-        foreach (var directory in Directory.EnumerateDirectories("/proc"))
+        foreach (var directory in Directory.EnumerateDirectories(procRoot))
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (!int.TryParse(Path.GetFileName(directory), out var processId))

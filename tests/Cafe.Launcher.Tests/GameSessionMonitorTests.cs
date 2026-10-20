@@ -13,6 +13,74 @@ namespace Cafe.Launcher.Tests;
 
 public sealed class GameSessionMonitorTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task WatchRunning_WhenRealScannerFails_KeepsRunningUntilSuccessfulScansConfirmAbsence(bool linux)
+    {
+        using var directory = TestDirectory.Create();
+        var procRoot = directory.Sub("proc");
+        var failing = true;
+        var resume = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var delays = 0;
+        using var monitor = CreateMonitor(
+            new FakeTracker(),
+            (names, token) => Task.FromResult(linux
+                ? LinuxProcessScanner.Scan(new RunningGameQuery(names), procRoot, token)
+                : ProcessService.FindRunningExeNamesBySnapshot(names,
+                    () => failing ? throw new System.ComponentModel.Win32Exception(5) : [], token)),
+            _ => ++delays == 2 ? resume.Task : Task.CompletedTask);
+
+        try
+        {
+            monitor.BeginSession(GameRuntimeRunners.Native, Family);
+            Assert.Equal(GameSessionState.Running, monitor.State);
+            Assert.Null(monitor.LastSessionExit);
+
+            failing = false;
+            Directory.CreateDirectory(procRoot);
+            resume.SetResult();
+            await TestWait.UntilAsync(() => monitor.State == GameSessionState.Exited,
+                TimeSpan.FromSeconds(5), "成功扫描连续确认缺席后应结束会话");
+        }
+        finally
+        {
+            resume.TrySetResult();
+        }
+    }
+
+    [Fact]
+    public void TrackedProcessExited_WhenConfirmationScanFails_KeepsRunningAndResumesWatching()
+    {
+        var failing = false;
+        var scans = 0;
+        var tracker = new FakeTracker();
+        using var monitor = CreateMonitor(tracker, Probe(() =>
+        {
+            scans++;
+            return failing ? throw new InvalidOperationException("scan unavailable") : FamilyRuns();
+        }), CountingDelay(0));
+        monitor.BeginSession(GameRuntimeRunners.Native, Family);
+
+        failing = true;
+        tracker.RaiseExited();
+
+        Assert.Equal(GameSessionState.Running, monitor.State);
+        Assert.Null(monitor.LastSessionExit);
+        Assert.True(scans >= 3, "核实失败后必须恢复看护，等待下一次成功扫描。");
+    }
+
+    [Fact]
+    public void WatchStarting_WhenScanFailsAndHostAlreadyExited_DoesNotTreatFailureAsAbsence()
+    {
+        using var monitor = CreateMonitor(new FakeTracker { HasLive = false },
+            Probe(() => throw new InvalidOperationException("scan unavailable")), CountingDelay(0));
+
+        monitor.BeginSession(GameRuntimeRunners.Wine, Family);
+
+        Assert.Equal(GameSessionState.Starting, monitor.State);
+    }
+
     private static readonly IReadOnlyList<string> Family =
         GameProcessNames.FromLaunchConfiguration("xldr_BlueArchiveOnline_JP_loader_x64", ["BlueArchive.exe"]);
 
