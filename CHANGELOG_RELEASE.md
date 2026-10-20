@@ -1,25 +1,38 @@
-## v1.1.1
+## v1.2.0
 
-![Cafe Launcher v1.1.1 更新概览](https://raw.githubusercontent.com/bluearchive-cafe/Cafe.Launcher.Avalonia/v1.1.1/docs/assets/release-banners/cafe-launcher-v1.1.1-release-banner.png)
+![Cafe Launcher v1.2.0 更新概览](https://raw.githubusercontent.com/bluearchive-cafe/Cafe.Launcher.Avalonia/v1.2.0/docs/assets/release-banners/cafe-launcher-v1.2.0-release-banner.png)
 
-`1.1.1` 是一次维护更新：主界面、游戏安装与更新、以及各项设置都与 `1.1.0` 一致，改动集中在文件命名、内部整理与日志读取的一处修正上，下载安装包的读者按往常方式升级即可。
+`1.2.0` 带来完整的游戏卸载流程：确认删除范围与占用空间、查看卸载进度，并在完成后核对实际删除结果。同时修复旧版本升级后仍启动旧程序、设置保存相互覆盖和游戏运行状态误判的问题，为 Linux 统一数据目录，并新增 Arch Linux 安装包。
 
 > [!NOTE]
-> 这是 Cafe Launcher `1.1.1` 的补丁版。下文列出自上一版 `1.1.0` 以来的变化。
+> 本文列出自 `1.1.1` 以来的变化。Windows 为正式支持平台；macOS 与 Linux 仍提供实验性构建。macOS 支持安装、更新和修复游戏，暂不支持启动游戏；Linux 可通过兼容运行环境启动游戏，实际效果取决于发行版、显卡驱动、Wine / Proton 版本及反作弊兼容性。
 >
-> 平台支持与上一版相同：Windows 为正式支持平台；macOS 与 Linux 仍提供实验性构建，其中 macOS 支持安装、更新和修复游戏，暂不支持启动游戏，Linux 可通过兼容运行环境启动游戏，实际效果仍取决于发行版、显卡驱动、Proton 版本及反作弊兼容性。
->
-> 从 `1.1.0` 升级到本版无需先卸载：Windows 上可以直接在应用内完成更新，更新通道选「稳定版」时即可看到本版；也可以直接从发布页下载安装程序或免安装压缩包覆盖升级。游戏目录、各项设置、启动器数据位置和桌面快捷方式都会原样保留，升级后不需要重新设置游戏路径。
+> Windows `1.1.1` 用户可在应用内更新，也可从发布页下载安装程序或免安装压缩包升级，无需先卸载游戏。macOS 与 Linux 用户请从发布页取得对应安装包。
 
 > [!WARNING]
-> 本次更新不包含可见的新功能，主要变更在于文件名与内部整理，另修正了日志查看与导出的一处问题，因此正常使用的读者也可以留在 `1.1.0`。如遇崩溃、启动失败或游戏文件异常，可从启动器导出诊断日志并反馈。macOS 与 Linux 支持仍是实验性功能：请在可回退的环境中试用，兼容运行环境在组件大版本更新后建议重新验证一次游戏启动。
+> **本版的「卸载游戏」默认删除整个游戏目录**，包括游戏自行下载的资源、临时文件和您自行放入的文件，并清理续传记录与桌面快捷方式。删除后无法恢复，请先备份需要保留的内容。启动器管理的兼容环境默认保留，可在确认页选择一并清理；位于所选删除范围之外的自定义 Prefix 会保留。
+>
+> **使用 `1.1.0` 或更早版本的 Windows 免安装版时，需要手动下载新版本并解压升级一次**：旧版更新程序无法识别改名后的程序文件。安装版可使用新版安装程序覆盖升级。若自行创建的快捷方式仍指向 `Cafe.Launcher.Avalonia.exe`，请改为指向 `Cafe.Launcher.exe`，安装版也可从开始菜单重新打开。
 
-### 自上一版 v1.1.0 以来
+### 游戏卸载
 
-- **程序名与安装包名以「Cafe Launcher」为准**：Windows 安装程序改名为 `Cafe.Launcher_<版本>_setup.exe`，免安装压缩包改名为 `Cafe.Launcher_<版本>_win-x64.zip`（macOS 与 Linux 的压缩包同理），便携版压缩包内的可执行文件改名为 `Cafe.Launcher.exe`。任务管理器的进程名、快捷方式图标说明与托盘提示因此统一为「Cafe Launcher」，下载时也更容易认出本启动器的文件。
-- **从旧版本升级仍然是平滑的**：已经安装 `1.1.0` 的读者可以直接在应用内更新，不需要先卸载，安装目录与安装记录会被沿用；改名后的辅助更新程序会随新版本一起就位，便携版更新后的备份与恢复行为也与之前一致。
-- **界面仍按同一套外观工作**：随本版更新了界面框架依赖并整理了内部结构，画面与操作方式没有变化，个别环境下的显示细节更为稳定；此前的修复也都保留在本版中。
-- **日志与诊断读取更准确**：日志文件写满 5 MB 后会自动另起一份，此前日志查看器会因此长期显示空列表、「导出诊断信息」也会失败；本版改为按实际正在写入的那份日志读取，导出的诊断包始终带上当前日志。
+- **确认前看清删除范围**：新的卸载窗口显示具体游戏路径和「预计删除大小」，明确说明整个目录都会删除。兼容环境作为独立选项展示占用空间，勾选后会计入预计大小；需要保留的自定义兼容环境也会单独说明。
+- **卸载过程可见**：同一窗口依次展示「扫描文件」「删除文件」「清理记录」，删除时显示进度和已处理项目数。执行期间可以最小化启动器，卸载结束前无法关闭窗口或退出启动器，避免中途退出打断清理。
+- **结果保留到您确认**：完成页展示「实际删除文件」和「已删除文件大小」。如果有文件因占用或权限问题未能删除，会显示「卸载完成，但有残留」并列出残留路径；发生失败时保留原因，可通过「查看日志」继续排查。
+- **不依赖远程服务完成卸载**：无法取得远程游戏信息，或本地安装状态文件损坏时，仍可进入整目录卸载；目录无法读取等错误会明确提示。删除前会再次检查游戏是否正在运行。
+
+### 安装与日常使用
+
+- **已有内容的安装目录会先提示**：全新安装时，如果目标目录已有文件，会先说明启动器只下载并校验文件清单内的文件，其他内容不会被校验或替换，便于判断是否继续使用这个目录。
+- **修复旧版本升级后反复提示更新**：Windows 安装程序会清理改名前残留的旧程序，并启动新版，解决升级后「关于」仍显示 `1.1.0`、再次提示更新的问题。新的更新程序也会按安装目录内实际存在的程序文件重启启动器。
+- **设置保存更可靠**：修复设置页保存与其他功能同时更新设置时可能相互覆盖的问题，减少已经保存的选项意外回到旧值的情况。
+- **游戏状态显示更准确**：读取系统进程列表临时失败时，不再直接把游戏判为「游戏已退出」，而是继续等待后续检查确认。
+
+### Linux 与使用文档
+
+- **新增 Arch Linux 安装包**：发布页提供 x86_64 的 `.pkg.tar.zst` 包，可使用 `pacman` 安装；同时保留原有压缩包、AppImage、deb 与 rpm 包。Linux 支持仍处于实验阶段。
+- **数据集中到同一个目录**：Linux 的设置、日志、缓存、下载检查点与启动器管理的兼容环境统一使用 `$XDG_DATA_HOME/cafe-launcher`，通常为 `~/.local/share/cafe-launcher`。首次启动会尝试将旧 `Cafe Launcher` 数据目录中的内容移入新目录；新目录已有同名内容时不会覆盖，未迁移成功的项目会留在旧目录。兼容环境原有的小写目录路径保持不变。
+- **补充英文使用说明**：仓库首页新增英文 README，并提供中英文切换入口，方便查阅安装、使用及问题反馈说明。
 
 ### 技术更改
 
@@ -27,12 +40,13 @@
 
 <details><summary>展开查看技术细节</summary>
 
-- 程序集结构按 ADR-042 拆分为宿主 `Cafe.Launcher`、`Cafe.Launcher.Core`（无 UI 依赖）与 `Cafe.Launcher.UI` 三层，并新增 `Cafe.Launcher.Updater.Core` 承载可复用的自更新实现；宿主只保留进程生命周期、组合根、跨进程转发与崩溃报告入口，表现层整体迁入 UI 程序集，本地化资源随之迁移（resx 清单名变为 `Cafe.Launcher.UI.Resources.LauncherStrings`）。
-- 命名按 ADR-043 统一为「目录名 = .csproj 名 = AssemblyName = RootNamespace = 源码命名空间前缀」，发行资产共用同一产品 token：可执行文件、release 资产前缀、Inno 的 `EXECUTABLE_NAME` 与 `OutputBaseFilename`、macOS 的 `CFBundleExecutable` 与 bundle id、Linux wrapper 的 exec 目标均为 `Cafe.Launcher`。为兼容既有安装，Inno 的 `AppId`、安装标记 `.cafe-launcher-install`、数据目录 `%LOCALAPPDATA%\Cafe Launcher`、单实例互斥名与自更新按后缀筛选包的逻辑都保持不变。
-- 自更新入口与包筛选随之对齐：`UpdateHelperCommand.HelperExecutableName` 为 `Cafe.Launcher.Updater.exe`，包选择仍按 `_setup.exe` / `_win-x64.zip` 后缀匹配，因此从 `1.1.0` 的应用内升级路径不受改名影响。
-- 发布包可自行核对：每个 release 都附 `SHA256SUMS` 摘要清单与构建来源证明，启动器在应用内更新前会先核对摘要及对应版本，不会运行校验不通过的更新包。
-- 数据根与运行版本改由组合根注入，Core 不再解析进程级数据根、也不再反射入口程序集取版本；Core 的公开面按接口收窄，实现收回 `internal`，宿主与表现层的命名空间不再跨程序集共享。
-- 依赖更新：Avalonia 系列升至 `12.1.3`（`Avalonia`、`Avalonia.Desktop`、`Avalonia.Themes.Fluent`、`Avalonia.Controls.ColorPicker`、`Avalonia.Headless` 等），并提交无 RID 形态的 `packages.lock.json`；`New-ThirdPartyNotices.ps1` 改为按生产工程生成通知，`AddGitCommitMetadata` 的构建时间按平台分别转义百分号，修复 Linux 上 `%cI` 被原样输出的问题。
-- Linux 打包元数据补齐并加上产物门禁：RPM 与 Arch 按 soname 声明自包含 .NET 实际使用的系统库（X11、SSL/Kerberos、libunwind、zlib，ICU 按多个 soname 择一），三种格式共用一份 AppStream 元数据，deb 补 `copyright` 与 `changelog.Debian.gz`；发行流程新增 deb/RPM 实装、AppImage 启动与 Arch `namcap` 的验证步骤。LTTng 只是运行时按需 `dlopen` 的 `libcoreclrtraceptprovider.so` 需要的可选跟踪库，RPM 过滤掉 ELF 生成器为它自动生成的那条 `Requires` 并降为弱依赖，避免在 lttng-ust 2.13+（Fedora 43 只提供 `.so.1`）上装不上；Fedora 门禁改为按文件而不是路径名比较 wrapper（Fedora 41 起 `/usr/sbin` 并入 `/usr/bin`）。
+- 卸载采用整目录删除计划，扫描阶段使用不定进度，删除阶段按已处理条目推进至 95%，清理记录与快捷方式后收尾。结果通过结构化数据传递实际删除文件数、字节数及残留路径，不再依赖瞬时通知呈现。路径守卫在执行前验证目标，树内链接只删除链接本身，扫描后出现的残留如实报告（ADR-046）。
+- 跨改名升级由安装器删除历史 `Cafe.Launcher.Avalonia.exe`，静默安装负责启动新程序；更新 helper 的重启目标优先使用下发的名称，再回退到实际存在的 `Cafe.Launcher.exe`，成功启动后才记录 `Apply completed`。旧版便携 helper 的包布局校验无法随新包补救，故保留手动升级说明（ADR-047）。
+- `SavedSettingsWriter` 串行化快照读取、修改、持久化与编辑器同步；磁盘提交成功后不再因调用方取消而跳过草稿同步。会话监控区分进程枚举失败与成功扫描后的空结果，只有成功扫描才能确认游戏进程家族已退出。
+- Linux 保留单一数据根并统一为小写 `cafe-launcher`，不按 XDG 的 config/state/cache 分类拆分；旧目录迁移不覆盖已有内容、失败项保留，运行期单实例套接字不迁移（ADR-049）。
+- 游戏与产品身份由注入的 `YostarGameProfile`、`LauncherProductProfile` 声明，路径、授权、运行环境、快捷方式与更新服务使用相同档案（ADR-044）。本版仍面向 Blue Archive 日服，不包含多游戏切换功能。
+- 依赖更新至 Avalonia `12.1.4`、MarkView.Avalonia `12.3.0`、Microsoft.Extensions.DependencyInjection `10.0.13`，并同步锁文件与第三方通知。
+- 测试入口迁移至 Microsoft.Testing.Platform 2，覆盖率使用 Microsoft Code Coverage；保留五分钟无活动挂起保护。开发命令与交付说明统一到 `docs/DEVELOPMENT.md`。
+- Arch 构建适配 `.NET 10` 的发行版 SDK，补齐原生容器构建、包元数据比对、`namcap` 和无系统 .NET 运行时的安装验证；通过验证的 `.pkg.tar.zst` 纳入发行资产与 `SHA256SUMS`，发行包总数由 7 个增至 8 个。
 
 </details>
