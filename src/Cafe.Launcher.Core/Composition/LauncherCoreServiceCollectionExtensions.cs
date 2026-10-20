@@ -70,7 +70,7 @@ public static class LauncherCoreServiceCollectionExtensions
             }
 
             var fallback = new UnifiedLogger(
-                sp.GetRequiredService<LauncherDataRoot>().Root,
+                sp.GetRequiredService<LauncherDataRoot>().LogDirectory,
                 sp.GetRequiredService<LauncherBuildIdentity>());
             LocalDiagnostics.RegisterSharedLogger(fallback);
             return LocalDiagnostics.Owning(fallback);
@@ -158,10 +158,13 @@ public static class LauncherCoreServiceCollectionExtensions
         services.TryAddSingleton<CompatibilityEnvironmentPrecheck>();
         services.TryAddSingleton<PrefixMetadataStore>();
         services.TryAddSingleton<IGameProcessTracker, GameProcessTracker>();
+        services.TryAddSingleton(sp => new GameCompatibilityPaths(
+            sp.GetRequiredService<LauncherDataRoot>()));
         services.TryAddSingleton<IGameRuntime>(sp => new GameRuntime(
             [GameRunnerDefinition.Native, GameRunnerDefinition.Umu, GameRunnerDefinition.Wine],
             sp.GetRequiredService<IProcessLauncher>(),
             sp.GetRequiredService<IGameProcessTracker>(),
+            sp.GetRequiredService<GameCompatibilityPaths>(),
             sp.GetRequiredService<RunnerOutputCapture>(),
             sp.GetRequiredService<CompatibilityEnvironmentPrecheck>(),
             sp.GetRequiredService<PrefixMetadataStore>()));

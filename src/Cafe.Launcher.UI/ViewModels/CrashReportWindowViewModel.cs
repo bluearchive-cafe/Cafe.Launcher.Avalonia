@@ -59,7 +59,7 @@ internal sealed class CrashReportWindowViewModel
     public string ExitText => T(LocalizationKeys.CrashWindowExit);
 
     /// <summary>Directory the "open log folder" action reveals: the launcher log lives there.</summary>
-    public string LogDirectory => dataRoot.Root;
+    public string LogDirectory => dataRoot.LogDirectory;
 
     private static string T(string key) =>
         LauncherStrings.ResourceManager.GetString(key, CultureInfo.CurrentUICulture)
