@@ -143,6 +143,7 @@
 ## 10. 网络与异步
 
 - 出站 HTTP 一律通过 `RemoteHttpTransport` 与 `HttpClientFactory`：共享代理感知租约、SSRF 校验、手动重定向、停滞预算和重试；不另建 `HttpClient` 或长寿命 handler。
+- 本地 DNS 预校验的 `SocketException` 在 URL 校验边界转换为 `HttpRequestException`（`NameResolutionError`），保留原始异常且不缓存失败；调用方复用既有重试、备用端点与失败提示，取消仍原样传播。
 - 客户端偏好在租约取得时读取已保存设置，语义见 [CONTEXT.md「客户端偏好」](CONTEXT.md#设置与操作)。直连容忍 Clash/mihomo 的 Fake-IP 地址段，代理出口不容忍；直连请求失败时保留针对 Fake-IP 的诊断指引。
 - 异步调用直接 `await`，避免 `.Result`、`.Wait()` 或 `Thread.Sleep` 阻塞。取消令牌显式传播，有意不传播时使用 `CancellationToken.None`。
 

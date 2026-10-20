@@ -2,6 +2,8 @@ using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -169,7 +171,20 @@ internal sealed class RemoteHttpUrlValidator : IRemoteHttpUrlValidator
             return entry.Addresses;
         }
 
-        var addresses = await resolveHostAsync(host, cancellationToken).ConfigureAwait(false);
+        IPAddress[] addresses;
+        try
+        {
+            addresses = await resolveHostAsync(host, cancellationToken).ConfigureAwait(false);
+        }
+        catch (SocketException exception)
+        {
+            // DNS 预校验先于 HttpClient 发送，必须提供与 HttpClient 相同的网络失败类型，
+            // 才能进入调用方的重试、备用端点及失败提示（CR-20261020-221945-951F）。
+            throw new HttpRequestException(
+                HttpRequestError.NameResolutionError,
+                $"DNS resolution failed for remote host '{host}'.",
+                exception);
+        }
         if (addresses.Length > 0 && addresses.All(address => IsPublicAddress(address) || IsFakeIpRange(address)))
         {
             resolutionCache[host] = new CacheEntry(

@@ -129,6 +129,7 @@ _Avoid_: 启动结果、游戏运行状态
 **启动器自更新**:
 Windows 上按本机形态选择 release 资产，核验后由独立 helper 在主进程退出后应用更新（[ADR-037](docs/design/adr/ADR-037-Windows自更新走独立helper且以SHA256SUMS为信任锚.md)）。
 
+- 更新检查的服务端端点遇到 DNS 解析失败、URL 校验拒绝或网络失败时，尝试 GitHub 备用端点；两个端点均不可用时显示检查失败，不导致崩溃。用户主动取消仍向调用方传播。
 - `.cafe-launcher-install` 标记区分安装版 `_setup.exe` 与便携版 `_win-x64.zip`；包必须与同 release 的 `SHA256SUMS` 比对 SHA-256。
 - 缺校验值、缺目标资产、暂存包/校验文件丢失或本机不带 helper 时，退化为浏览器发布页，绝不无校验执行。可用性判定返回原因（平台不支持／缺 helper／无可校验包），对话框在下载前说明并把主操作改成「前往发布页」；非 Windows 只跳转。
 - helper 的 `apply --protocol-version 1 ...` 是私有进程协议。应用时静默安装或整目录换位，重启目标从接收包的安装目录按「命令行下发名 → 产品 token 名 `Cafe.Launcher.exe`」查找；都不存在时报告失败。安装器保留改名前的旧可执行文件清理与静默安装重启行为，见 [ADR-047](docs/design/adr/ADR-047-改名跨版本的升级迁移由安装器清理旧可执行文件并启动新版本.md)。

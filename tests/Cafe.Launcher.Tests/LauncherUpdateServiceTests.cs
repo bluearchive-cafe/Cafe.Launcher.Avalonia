@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http;
+using System.Net.Sockets;
 using Cafe.Launcher.Constants;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
@@ -7,6 +8,7 @@ using Cafe.Launcher.Testing;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services;
 using Cafe.Launcher.Core.Constants;
+using Cafe.Launcher.Core.Helpers;
 
 namespace Cafe.Launcher.Tests;
 
@@ -195,6 +197,57 @@ public sealed class LauncherUpdateServiceTests
         Assert.True(result.IsUpdateAvailable);
         Assert.Equal("1.0.0-beta.8", result.LatestVersion);
         Assert.Single(result.Files);
+    }
+
+    [Theory]
+    [InlineData(SocketError.NoData, false)]
+    [InlineData(SocketError.HostNotFound, false)]
+    [InlineData(SocketError.NoData, true)]
+    [InlineData(SocketError.HostNotFound, true)]
+    public async Task CheckForUpdateAsync_WhenDnsFails_FallsBackOrReturnsFailure(
+        SocketError socketError,
+        bool failBothEndpoints)
+    {
+        // CR-20261020-221945-951F：使用真实校验器与传输层，避免替身先把裸 SocketException
+        // 包成 HttpRequestException 而掩盖从 DNS 一直逃逸到设置命令的崩溃路径。
+        var resolvedHosts = new List<string>();
+        var dnsFailure = new SocketException((int)socketError);
+        var validator = new RemoteHttpUrlValidator((host, _) =>
+        {
+            resolvedHosts.Add(host);
+            return host == ProxyReleasesUri.IdnHost || failBothEndpoints
+                ? Task.FromException<IPAddress[]>(dnsFailure)
+                : Task.FromResult(new[] { IPAddress.Parse("93.184.216.34") });
+        });
+        using var handler = new GitHubReleasesHandler();
+        using var client = new HttpClient(handler);
+        var transport = new RemoteHttpTransport(
+            (_, _, _) => Task.FromResult(new HttpClientLease(client)),
+            validator,
+            ProxyModes.Direct);
+        var service = new LauncherUpdateService(
+            LauncherProfiles.Cafe, transport, currentVersionOverride: "1.0.0-beta.7");
+
+        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
+
+        Assert.Equal(new[] { ProxyReleasesUri.IdnHost, GitHubReleasesUri.IdnHost }, resolvedHosts);
+        if (failBothEndpoints)
+        {
+            Assert.False(result.IsSuccessful);
+            Assert.False(result.IsUpdateAvailable);
+            var failure = Assert.IsType<HttpRequestException>(result.FailureException);
+            Assert.Equal(HttpRequestError.NameResolutionError, failure.HttpRequestError);
+            Assert.Same(dnsFailure, failure.InnerException);
+            Assert.Equal(0, handler.RequestCount);
+        }
+        else
+        {
+            Assert.True(result.IsSuccessful);
+            Assert.True(result.IsUpdateAvailable);
+            Assert.Equal("1.0.0-beta.8", result.LatestVersion);
+            Assert.Single(result.Files);
+            Assert.Equal(1, handler.RequestCount);
+        }
     }
 
     [Fact]
@@ -665,4 +718,22 @@ public sealed class LauncherUpdateServiceTests
 
             throw new InvalidOperationException($"Unexpected request URI: {uri}");
         });
+
+    /// <summary>只应答 GitHub 端点；DNS 失败的请求不得抵达发送阶段。</summary>
+    private sealed class GitHubReleasesHandler : HttpMessageHandler
+    {
+        public int RequestCount { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            Assert.Equal(GitHubReleasesUri, request.RequestUri);
+            RequestCount++;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(GitHubReleasesJson)
+            });
+        }
+    }
 }
