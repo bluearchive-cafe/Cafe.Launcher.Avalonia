@@ -162,105 +162,14 @@ Search [existing Issues](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalo
 
 ## Developer guide
 
-This repository contains the Avalonia host and UI assembly, an application core without Avalonia, the Windows update helper and its core library, and unit and Headless UI test projects.
+The [development guide (Chinese)](docs/DEVELOPMENT.md) is the shared reference for setup, build/run commands, tests, dependency upgrades, and releases. Repository scripts require PowerShell 7. Windows is supported; macOS/Linux builds are experimental.
 
-| Project | Responsibility |
-| --- | --- |
-| [`src/Cafe.Launcher`](./src/Cafe.Launcher/) | WinExe host: process lifetime, single instance, DI composition |
-| [`src/Cafe.Launcher.UI`](./src/Cafe.Launcher.UI/) | Views, ViewModels, themes, localization, and runtime assets |
-| [`src/Cafe.Launcher.Core`](./src/Cafe.Launcher.Core/) | Protocols, installation state, networking, settings, downloads, and runtimes; no Avalonia |
-| [`src/Cafe.Launcher.Updater.Core`](./src/Cafe.Launcher.Updater.Core/) | Update argument contract, validation, path planning, and application |
-| [`src/Cafe.Launcher.Updater`](./src/Cafe.Launcher.Updater/) | Single-file Windows helper, copied to a temporary directory to apply updates |
-| [`tests/Cafe.Launcher.Tests`](./tests/Cafe.Launcher.Tests/) | xUnit v3 unit tests |
-| [`tests/Cafe.Launcher.HeadlessTests`](./tests/Cafe.Launcher.HeadlessTests/) | Avalonia Headless UI tests and golden screenshots |
+- [Engineering conventions](PROJECT_CONVENTIONS.md): assembly and feature boundaries, coding, localization, DI, and tests.
+- [Domain contracts](CONTEXT.md) and [UI terminology](UBIQUITOUS_LANGUAGE.md): behavioral invariants and canonical translations.
+- [Architecture decisions](docs/design/adr/README.md) and [audit status](CODEBASE_AUDIT.md): rationale, current findings, and accepted risks.
+- [AGENTS.md](AGENTS.md): task routing for coding agents.
 
-### Requirements
-
-- .NET SDK `10.0.302`, pinned by `global.json`, with roll-forward within the same feature band.
-- PowerShell 7 (`pwsh`) for repository scripts. Windows PowerShell 5.1 cannot parse the scripts' `??` syntax.
-- Nullable references, compiled bindings, code-style checks, and warnings as errors are enabled. A successful build has no warnings.
-
-### Build and run
-
-From the repository root in `pwsh`:
-
-```powershell
-.\build.ps1
-dotnet run --project .\src\Cafe.Launcher\Cafe.Launcher.csproj
-```
-
-### Common commands
-
-| Command | Purpose |
-| --- | --- |
-| `.\test.ps1` | Run unit and Headless UI tests |
-| `.\test.ps1 -Suite Unit` / `-Suite Headless` | Run one suite; choices are All, Unit, Headless |
-| `.\test.ps1 -FilterClass '*VersionComparerTests'` | Run a filtered subset |
-| `.\dev.ps1 ui` | Run UI style contracts and Headless checks |
-| `.\coverage.ps1` | Run the coverage gate |
-| `.\verify.ps1` | Debug build, coverage, then Release build |
-| `.\scripts\Test-LocalizationContract.ps1` | Check resource keys and format placeholders |
-| `.\scripts\Build-Distribution.ps1` | Publish and package self-contained releases |
-| `.\scripts\New-WindowsInstaller.ps1` | Build the Inno Setup installer from `artifacts/publish/win-x64` |
-
-Run one test class:
-
-```powershell
-dotnet test --project .\tests\Cafe.Launcher.Tests\Cafe.Launcher.Tests.csproj --filter-class '*VersionComparerTests'
-```
-
-Run `.\verify.ps1` before submitting code. Regenerate golden screenshots with `.\test.ps1 -UpdateGolden`.
-
-### Code structure
-
-```text
-src/Cafe.Launcher/               # Program, App, composition, forwarding, crash reporter launch
-├── Composition/               # DI composition root
-├── Constants/                 # BuildInfo
-├── Services/                  # Cross-process forwarding, shutdown deferral, crash reporter launch
-├── Properties/                # Test-only InternalsVisibleTo
-└── Assets/                    # Icon pipeline input: app-icon-source.png
-
-src/Cafe.Launcher.Core/          # Protocols, state, transport, settings
-src/Cafe.Launcher.UI/            # Views, ViewModels, Features, Controls, Converters,
-                                # Models, Helpers, Services, Resources, Assets
-src/Cafe.Launcher.Updater.Core/  # Update contracts and implementation
-src/Cafe.Launcher.Updater/       # Single-file Windows helper host
-tests/
-├── Cafe.Launcher.Tests/         # Unit tests
-├── Cafe.Launcher.HeadlessTests/ # Headless UI tests
-└── Support/                    # Facilities shared by both suites
-```
-
-Each project's directory, `.csproj`, `AssemblyName`, `RootNamespace`, and source namespace use the same token. Release assets use the product token as well. See [ADR-043 (Chinese)](./docs/design/adr/ADR-043-程序集与命名空间同名.md). The GitHub repository keeps its historical name, `Cafe.Launcher.Avalonia`.
-
-### Architecture
-
-- Dependencies flow host → UI → Core → Updater.Core; the host also references Core and Updater.Core directly. Core cannot reference Avalonia, MarkView, Material Icons, or UI resources. Production assemblies do not use `InternalsVisibleTo` with each other. See [ADR-042](./docs/design/adr/ADR-042-Avalonia启动器按Core与UI程序集分层.md) and [ADR-043](./docs/design/adr/ADR-043-程序集与命名空间同名.md), both in Chinese.
-- `Composition/ServiceConfiguration.cs` is the DI composition root. It calls `AddLauncherCore` before registering presentation services. All services and ViewModels are singletons for this single-window app.
-- `Features/` is organized vertically. Features communicate through narrow shared service contracts rather than each other's concrete types. `Features/Shell` intentionally aggregates the feature ViewModels as the window shell.
-- `Services/RemoteHttpTransport` owns outbound requests, proxy behavior, SSRF validation, redirects, timeouts, and retries. `Services/HttpClientFactory` owns pooled connections and proxy-aware leases; do not create ad-hoc `HttpClient` instances elsewhere.
-- Game file operations go through `Helpers/GamePathValidator` and remain within the normalized `YostarGames\BlueArchive_JP` directory.
-- The composition root resolves the data root once and injects it for test isolation.
-- Only `ISavedSettingsWriter` writes `settings.json`; other modules read through `LauncherSettingsService`.
-- Interface strings must be added alphabetically to `src/Cafe.Launcher.UI/Resources/LauncherStrings.resx` and the `zh-Hans`, `zh-Hant`, and `ja` variants.
-
-Detailed contracts are in [`AGENTS.md`](./AGENTS.md), [`PROJECT_CONVENTIONS.md`](./PROJECT_CONVENTIONS.md), [`CONTEXT.md`](./CONTEXT.md), and [`UBIQUITOUS_LANGUAGE.md`](./UBIQUITOUS_LANGUAGE.md). Design decisions are in [`docs/design/adr/`](./docs/design/adr/). Some contributor documents are currently in Chinese.
-
-### Tests
-
-- xUnit v3, with `Avalonia.Headless.XUnit` for UI tests.
-- Name tests `Method_State_ExpectedResult`; source and resource contracts may use `Subject_Expectation`.
-- Use handwritten `HttpMessageHandler` subclasses, fakes, and stubs rather than mocking frameworks. Shared doubles live in `tests/TestDoubles/`.
-- Use `Assert.SkipUnless` / `Assert.SkipWhen` for explicit platform skips.
-- Run `UiStyleContractTests` after XAML or style edits, and `.\dev.ps1 ui` for larger UI changes.
-
-### Contributing
-
-- Search existing [Issues](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/issues) before reporting, and include your version, platform, and reproduction steps.
-- Follow Conventional Commits, for example `fix(settings): restore legal information after changing language`.
-- Keep commits focused. Include screenshots for visible UI changes and update all language resources for new interface text.
-- Update `AGENTS.md` in the same change when architecture or development workflows change.
+Contributor documentation is primarily in Chinese; both READMEs link to the same maintained rules.
 
 ## Local data and licensing
 

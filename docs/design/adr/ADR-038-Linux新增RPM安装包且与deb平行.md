@@ -1,20 +1,13 @@
 # ADR-038：Linux 新增 RPM 安装包，与 deb 平行
 
-- 状态：✅ 已接受
+- 状态：✅ 已接受（2026-09-23；2026-09-26 有后续收口，见文末）
 - 日期：2026-09-23
 - 相关：`installer/linux/rpm/`、`installer/linux/debian/`、`scripts/Build-Distribution.ps1`、`.github/workflows/release.yml`、`tests/Cafe.Launcher.Tests/InstallerContractTests.cs`
-- 后续：第 2、8 条中「各格式各自提交 wrapper/desktop」的资产布局已由 [ADR-039](ADR-039-Linux打包启动资产共用模板去重.md) 收敛为共享模板；预发布版本转换、显式 `Requires`、关闭 debug 包、wrapper 契约等其余决定仍然有效。
+- 后续：第 1、2 条中「各格式各自提交 wrapper/desktop」的资产布局已由 [ADR-039](ADR-039-Linux打包启动资产共用模板去重.md) 收敛为共享模板；预发布版本转换、显式 `Requires`、关闭 debug 包、wrapper 契约等其余决定仍然有效。
 
 ## 背景
 
-Linux 发行包此前是 `.tar.gz`、AppImage 与 `.deb`。RPM 系发行版（Fedora、RHEL / Alma / Rocky、openSUSE）的用户要么解压 tar.gz，要么自己转换 deb，缺少与 `.deb` 对等的安装包。
-
-已有 deb 路径的形态是本决定的模板：
-
-- 手写 `installer/linux/debian/control` 模板，构建时替换 `{VERSION}`，并把版本前缀的 `-` 转成 `~`（`1.1.0-beta.11` → `1.1.0~beta.11`，`~` 保证预发布排在正式版之前）。
-- 构建根 `artifacts/bundle/linux-x64/deb-root`，布局为 `/opt/cafe-launcher`（整份自包含发布树）+ `/usr/bin/cafe-launcher`（wrapper）+ `/usr/share/applications` + `/usr/share/icons/hicolor/...`。
-- wrapper 导出 `CAFE_LAUNCHER_PACKAGE_FORMAT=deb`，让 `GameInstallationPath.GetDefaultGamePath` 走包管理安装的分支（默认游戏目录取用户主目录，而不是 `/opt` 的兄弟目录）。
-- 收尾用 `dpkg-deb --build --root-owner-group` 打包，再以 `dpkg-deb --info` 校验元数据。
+Linux 发行包此前是 `.tar.gz`、AppImage 与 `.deb`。RPM 系发行版（Fedora、RHEL / Alma / Rocky、openSUSE）的用户要么解压 tar.gz，要么自己转换 deb，缺少与 `.deb` 对等的安装包。已有 deb 路径是本决定的模板：手写 `installer/linux/debian/control` 模板并替换 `{VERSION}`（版本前缀的 `-` 转成 `~`，`1.1.0-beta.11` → `1.1.0~beta.11`，`~` 保证预发布排在正式版之前）；构建根 `artifacts/bundle/linux-x64/deb-root` 布局为 `/opt/cafe-launcher`（整份自包含发布树）+ `/usr/bin/cafe-launcher`（wrapper）+ `/usr/share/applications` + `/usr/share/icons/hicolor/...`；wrapper 导出 `CAFE_LAUNCHER_PACKAGE_FORMAT=deb`，让 `GameInstallationPath.GetDefaultGamePath` 走包管理安装的分支（默认游戏目录取用户主目录，而不是 `/opt` 的兄弟目录）；收尾用 `dpkg-deb --build --root-owner-group` 打包，再以 `dpkg-deb --info` 校验元数据。
 
 发布工作流在 ubuntu 上执行：`build` job 用 pwsh 调 `scripts/Build-Distribution.ps1`，随后 bash 步骤断言产物清单、`dpkg-deb --extract` 校验布局、真的 `apt-get install` 本地 deb 并跑 `cafe-launcher --version`（`--version` 在 Avalonia 启动前返回，故可无头运行）。
 
@@ -31,14 +24,14 @@ Linux 发行包此前是 `.tar.gz`、AppImage 与 `.deb`。RPM 系发行版（Fe
 7. **发布工作流同步四处**：依赖步骤加 `rpm`；在同一 bash 步骤里断言恰好一个 rpm、`%{NAME}` = `cafe-launcher`、`%{ARCH}` = `x86_64`，随后 `rpm --root "$RUNNER_TEMP/rpm-root" --initdb` + `-ivh --nodeps --noscripts` 装进临时根目录，校验可执行位与 `sh -n` wrapper，并跑 `--version` 冒烟；下载链接表、`SHA256SUMS` 计数（6 → 7）与两处 release 附件列表同步加入 rpm。
 8. **两套包共用同一布局与 wrapper 契约**：`/opt/cafe-launcher` + `/usr/bin/cafe-launcher`，只有 `CAFE_LAUNCHER_PACKAGE_FORMAT` 的取值不同（该值只判非空，仅用于可诊断性）。
 
-## 被否决的替代方案
+## 备选方案
 
 - **只发 `.deb`，RPM 系用户自行用 `alien` 转换。** 转换产物的元数据与依赖不可靠，且把一步易错的手工操作推给用户。
 - **建立并托管 DNF / YUM 仓库（repodata）。** 用户明确只要 `.rpm` 产物；仓库还牵出托管位置与更新节奏的决定——deb 一侧同样没有自建 apt 仓库。
 - **用 `fpm` 之类的第三方打包器一次产出 deb 与 rpm。** 引入新的工具链依赖且元数据不受控；现有 deb 走的是手写模板 + `dpkg-deb`，rpm 沿用同构脚本更一致，也能被契约测试逐行钉住。
 - **RPM 改用 `/usr/lib/cafe-launcher` 等另一套布局。** 两套包布局不同会让文档、wrapper 与默认游戏目录逻辑分叉。
 - **不写显式 `Requires`，依赖 `elfdeps` 自动生成。** Avalonia 的 X11 后端经 dlopen / P-Invoke 使用这些库，elfdeps 看不到它们，自动生成的依赖会漏。
-- **在 CI 里用 Fedora 容器真装一遍。** 现有 `build` job 是单个 ubuntu-24.04；`rpm --root` 临时根目录安装已能验证载荷、布局与启动，成本低得多。
+- **在 CI 里用 Fedora 容器真装一遍。** 当时 `build` job 是单个 ubuntu-24.04；`rpm --root` 临时根目录安装已能验证载荷、布局与启动，成本低得多（2026-09-26 收口后 CI 另加了 Fedora 容器，见下文）。
 
 ## 后果
 
@@ -46,4 +39,4 @@ Linux 发行包此前是 `.tar.gz`、AppImage 与 `.deb`。RPM 系发行版（Fe
 - 本地构建需要 `rpmbuild`（CI 由 `rpm` 包提供）；非 Linux 主机上 rpm 块与 deb 块一样被跳过，不影响 Windows / macOS 构建。
 - 守卫：`InstallerContractTests` 的产物名断言、`LinuxRpmPackage_UsesRpmbuildLayoutAndValidatedMetadata`、`ReleaseWorkflow_AttachesPackagesAndKeepsBannerInSourceRepository`（两处附件各一次）与 `ReleaseWorkflow_PublishesChecksumManifestForEveryDistributionPackage`（计数 7）。
 - 未做：仓库托管（repodata）、RPM GPG 签名。`docs/design/desktop-notifications-integration-plan.md` 的冷启动集成目前只覆盖 `.deb`，该计划落地时需把 RPM 安装视为同一类「包管理安装」。
-- 2026-09-26 后续收口：release CI 除 Ubuntu 临时根目录布局检查外，还会在 Fedora 容器中用 `dnf install` 解析并安装真实依赖，再运行 `cafe-launcher --version`。这覆盖 Fedora 的原生安装链路；RHEL 系与 openSUSE 仍依赖同一组 soname capability 声明，尚未逐发行版实机验证。
+- **2026-09-26 后续收口**：release CI 除 Ubuntu 临时根目录布局检查外，还会在 Fedora 容器中用 `dnf install` 解析并安装真实依赖，再运行 `cafe-launcher --version`。这覆盖 Fedora 的原生安装链路；RHEL 系与 openSUSE 仍依赖同一组 soname capability 声明，尚未逐发行版实机验证。

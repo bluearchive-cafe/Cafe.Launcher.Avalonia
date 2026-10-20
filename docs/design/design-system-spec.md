@@ -1,6 +1,6 @@
 # Cafe Launcher 设计系统规范（Design System Specification）
 
-> 状态：**已确认**（grilling 会话 Q1–Q24 决策全景，2025-xx 基线）。本文件是 Q4-b 交付物：代码之外的人读设计规范。
+> 状态：**现行设计规范**。Q1–Q24 表保留最初决策脉络，后续变更以各节修订及 [ADR 索引](adr/README.md) 为准；当前实施范围见 [CONTEXT.md「设计系统现状」](../../CONTEXT.md#设计系统现状)。
 > 配套演示稿：[q5-direction-mockup.html](./q5-direction-mockup.html)（Q5 四方向对比 + 组件质感对照）。
 > 落地编排见 [p1-implementation-plan.md](./p1-implementation-plan.md)。
 

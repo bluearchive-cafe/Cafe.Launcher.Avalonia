@@ -1,299 +1,161 @@
-# PROJECT_CONVENTIONS.md
+# 开发规范
 
-[← Back to AGENTS.md](AGENTS.md)
+本文件维护实现规则。环境、命令与交付流程见[开发指南](docs/DEVELOPMENT.md)，领域行为见 [CONTEXT.md](CONTEXT.md)，界面译名见 [UBIQUITOUS_LANGUAGE.md](UBIQUITOUS_LANGUAGE.md)，代理入口见 [AGENTS.md](AGENTS.md)。
 
-AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、Codex 等）在为本仓库编写代码时提供强制性规则与模式参考。仓库结构、命令与发布流程见 [AGENTS.md](AGENTS.md)。
+## 1. 基本原则
 
----
+1. **行为有测试保护** — 新功能和行为变更附聚焦测试；先固定缺陷或风险边界，再改实现。
+2. **验证先于完成** — 运行受影响的检查并报告结果，完整交付流程见开发指南。
+3. **向后兼容** — `settings.json` 的新旧格式都要能读；公共 API 签名变更同步调用点。
+4. **零警告** — `TreatWarningsAsErrors` 与 `EnforceCodeStyleInBuild` 已启用，warning 即 error。
+5. **无远程遥测** — 诊断日志只留本地，不向第三方发送日志或遥测。
 
-## 1. 核心价值观
+## 2. 程序集与命名边界
 
-1. **行为有测试保护** — 新功能和行为变更应有聚焦测试；先用测试固定缺陷或风险边界，并在完成前运行受影响的测试。
-2. **按仓库工作流实施** — `AGENTS.md` 是代理工作流的权威来源：清晰且范围有限的修改直接实施；仅在其中列出的条件成立时才升级到设计或计划流程。
-3. **验证先于完成** — 声称完成前必须运行 `dotnet test`（至少跑受影响的测试类）。Don't claim "done" on trust.
-4. **向后兼容** — 对 `settings.json` 的修改与新增 key 均需保留对旧格式的兼容；修改公共 API 签名时，所有现有调用点不能断编。
-5. **零警告** — `TreatWarningsAsErrors` + `EnforceCodeStyleInBuild` 已启用，任何 warning = error。本地 build 后必须看到 `0 个警告 0 个错误`。
-6. **无远程遥测** — 诊断日志只留本地。不要添加任何向第三方服务器发送日志或遥测的代码。
+`Cafe.Launcher.Core` 是无表现依赖的后端边界：不得引用 Avalonia、MarkView、Material Icons 或 UI 资源；用户可见文案以稳定 code 或领域结果传给 UI，由 UI 本地化。Core 不解析进程数据根，也不反射入口程序集取版本：数据根由组合根解析一次后经 `AddLauncherCore` 的必填参数注入（[ADR-025](docs/design/adr/ADR-025-数据根由组合根解析并注入.md)），版本来自注入的 `LauncherBuildIdentity`。
 
----
+`Cafe.Launcher.UI` 承载全部 Avalonia 控件、ViewModel、主题、资源与运行时资产（`Views/`、`ViewModels/`、`Features/`、`Controls/`、`Converters/`、`Models/`、`Helpers/`、表现层 `Services/`、`Resources/`、`Assets/`）。宿主只保留进程生命周期与入口文件。分层见 [ADR-042](docs/design/adr/ADR-042-Avalonia启动器按Core与UI程序集分层.md)，命名见 [ADR-043](docs/design/adr/ADR-043-程序集与命名空间同名.md)。
 
-### 1.1 程序集边界
+| 工程 | 职责 |
+| --- | --- |
+| `src/Cafe.Launcher` | WinExe 宿主：入口、进程生命周期、组合根、单实例转发、关闭延迟、崩溃报告进程、图标流水线输入 |
+| `src/Cafe.Launcher.UI` | Avalonia 表现层 |
+| `src/Cafe.Launcher.Core` | 无表现依赖的后端：协议、HTTP、游戏运行时、安装状态、设置、诊断、更新选择 |
+| `src/Cafe.Launcher.Updater` | 独立 Windows 自更新 helper 宿主 |
+| `src/Cafe.Launcher.Updater.Core` | 更新参数与路径契约、校验和应用实现 |
 
-`Cafe.Launcher.Core` 是无表现依赖的后端边界：不得引用 Avalonia、MarkView、Material Icons
-或 UI 资源；用户可见文案以稳定 code（或领域结果）传给 UI，由 UI 本地化。Core 不自己解析
-进程数据根，也不反射入口程序集判断运行版本：前者由组合根解析一次后经 `AddLauncherCore`
-的必填参数注入（ADR-025），后者消费注入的 `LauncherBuildIdentity`。
+- **依赖单向**：host → UI → Core → Updater.Core；host 也直接引用 Core 与 Updater.Core。
+- **同名契约**：工程目录、`.csproj`、`AssemblyName`、`RootNamespace`、源码命名空间与发行资产前缀使用同一 token（宿主 `Cafe.Launcher`、表现层 `Cafe.Launcher.UI` 等）；测试程序集名以 `Tests` 结尾。GitHub 仓库名 `Cafe.Launcher.Avalonia` 是历史标识，刻意保留。
+- **命名空间指明属主**：同一命名空间不得出现在两个程序集；`InternalsVisibleTo` 仅向以 `Tests` 结尾的测试程序集开放。
+- **显式 using**：每个工程在源文件中显式列出 Core 命名空间，不使用项目级 `<Using>`；Core 源码只使用 `Cafe.Launcher.Core.*`。
+- **公开面受控**：Core 与 UI 的顶层 public 类型都有显式声明集测试；新增实现优先收回 `internal`，确实需要公开时在声明表中登记理由。
+- **功能垂直组织**：`Features/` 分为 Shell、GameOperations、Settings、SetupWizard、Diagnostics、ResourcePanel；功能 ViewModel 就近放置，根 `ViewModels/` 只放窗口级、跨功能及模态契约。非 Shell 功能通过共享 `Services/` 的窄接口协作，不引用彼此的具体类型；Shell 作为聚合者是既定例外。
 
-`Cafe.Launcher.UI` 承载全部 Avalonia 控件、ViewModel、主题、资源与运行时资产
-（`Views/`、`ViewModels/`、`Features/`、`Controls/`、`Converters/`、`Models/`、`Helpers/`、表现层
-`Services/`、`Resources/` 与运行期 `Assets/`）；宿主只保留进程生命周期与入口相关文件。分层规则
-与落地批次见 ADR-042，命名规则见 ADR-043。
+## 3. 代码风格
 
-Core 的源码命名空间是 `Cafe.Launcher.Core.*`；每个工程在自己的源文件里显式列出用到的 Core
-命名空间（迁移期的项目级 `<Using>` 已全部移除，`Projects_ResolveCoreNamespacesWithExplicitUsings`
-挡住回退），Core 侧不得使用 `Cafe.Launcher.Core` 之外的 `Cafe.Launcher.*` 命名空间
-（`CoreSources_UseOnlyTheCoreNamespaces` 守着）。
-
-**程序集与命名空间命名。** 每个工程的目录名、`.csproj` 文件名、`AssemblyName`、`RootNamespace`
-与源码命名空间**同名**：宿主 `Cafe.Launcher`、表现层 `Cafe.Launcher.UI`、后端
-`Cafe.Launcher.Core`、自更新宿主与其库 `Cafe.Launcher.Updater` / `Cafe.Launcher.Updater.Core`；
-测试工程以 `Tests` 结尾（`InternalsVisibleTo` 只允许测试程序集）。由此得到两条硬规则：
-
-- **命名空间指明属主程序集**：同一个命名空间不得出现在两个程序集里。跨程序集的可见性只经
-  `internal` 与窄接口表达，不靠「命名空间看起来像一个包」；宿主与表现层因此不再共享
-  `Cafe.Launcher.*` 下的任何命名空间。
-- **产品 token 只有一个**：发行资产前缀（`Cafe.Launcher_<tag>_…`）、Windows 安装器的
-  `EXECUTABLE_NAME`、macOS `CFBundleExecutable`、Linux wrapper 的 exec 目标，与上述程序集名
-  都用同一个 `Cafe.Launcher`。GitHub 仓库名（`Cafe.Launcher.Avalonia`）是历史标识，刻意不改。
-
-`AssemblyNamingContractTests` 把这些关系逐条钉住（工程清单、同名词、命名空间前缀、资产前缀）。
-新增工程或新增发行资产时先改那张声明表——这是「名字」这类隐式契约在本仓库的落点（ADR-043）。
-
-Core 的服务实现正在按「消费方只经接口取用」逐批收回 `internal`，尚未收窄的公开实现用显式声明集
-钉住：`Models/` 之外的顶层 public class 必须出现在
-`CorePublicImplementationsOutsideModels_AreTheDeclaredSet` 的表里（新增要显式加进去）。收窄进度与
-剩余项见 ADR-042 与 `CODEBASE_AUDIT.md` 的 `AUD-ARCH-015`。
-
-WinExe 宿主只保留进程生命周期和顶层 Avalonia 生命周期；Core 的登记项由
-`Composition/ServiceConfiguration.AddLauncherCore` 负责，并由 `AddLauncherServices` 在
-所有表现层登记项之前调用一次。生产程序集不能使用 `InternalsVisibleTo`；测试程序集是唯一
-允许的 friend，且其程序集名必须以 `Tests` 结尾（`AssemblySplitContractTests` 按此断言，
-源码属性与 csproj 两种声明形状都在扫描范围内）。
-
-## 2. 代码格式与风格
-
-### 2.1 命名
+### 3.1 命名
 
 | 实体 | 规范 | 示例 |
 |---|---|---|
-| 类/结构体/枚举 | PascalCase | `LauncherApiClient`, `LogEntrySeverity` |
-| 方法（异步） | PascalCase + `Async` 后缀 | `LoadAsync()`, `ReadEntries()` |
-| 字段（私有/readonly） | camelCase | `private readonly UnifiedLogger logger;` |
-| 属性（公共） | PascalCase | `public bool IsVisible { get; set; }` |
-| 枚举值 | PascalCase | `Verbose`, `Debug`, `Error` |
-| 本地常量 | PascalCase | `const int MaxRetry = 3;` |
+| 类 / 结构体 / 枚举 | PascalCase | `LauncherApiClient` |
+| 异步方法 | PascalCase + `Async` | `LoadAsync()` |
+| 私有字段 | camelCase | `private readonly LocalDiagnostics diagnostics;` |
+| 公共属性 / 枚举值 | PascalCase | `IsVisible`, `Verbose` |
+| 本地常量 | PascalCase | `MaxRetry` |
 | 测试方法 | `Method_State_ExpectedResult` | `SeverityFilter_WhenNoMatch_ReturnsEmpty` |
 
-### 2.2 文件组织
+源码/契约类守卫测试可用两段式 `Subject_Expectation`。
 
-- 默认每个文件一个主要类型；紧密协作的支持类型可以同文件放置，但应保持同一职责边界。
-- `Services/` 下的每个 Service 对应一个文件，文件名与类名一致。
-- `Models/` 下按领域分组文件，每个文件对应一个 DTO 或一组强相关的 DTO。
-- `Constants/` 下的每个文件独立一个常量类别。
-- 测试文件命名：`{TargetClassName}Tests.cs`。
+### 3.2 文件组织
 
-### 2.3 XAML 规范
+- 默认一个文件一个主要类型；紧密协作的支持类型可同文件，但保持同一职责。
+- `Services/` 下每个 Service 一个文件，文件名与类名一致。
+- `Models/` 按领域分组，每个文件一个 DTO 或一组强相关 DTO。
+- `Constants/` 每个文件一个常量类别；测试文件名为 `{TargetClassName}Tests.cs`。
 
-- 所有可视值使用 `StaticResource`/`DynamicResource` 设计 token（`App.axaml` 中的 `Launcher.*` 家族），**禁止**在 View XAML 中写裸色号、`Transparent`、裸图标尺寸、裸 `4`/`6`/`8` 圆角半径。样式 Setter 与视图内联的 `Spacing`/`ColumnSpacing`/`RowSpacing` 同样必须引用 `Launcher.Spacing.*`（含 `Spacing.None`=0）。透明度只允许两种形态：结构性 `0`/`1`（可见/隐藏、动画关键帧）或引用 `Launcher.StateLayer.*`；分数透明度词汇以 `Launcher.StateLayer.*` 五档为唯一来源（契约锁定）。运行中的 token 取值可在 Debug 门的设计画廊叠层里查看。
-- 主题无关的渐变和阴影定义仅允许在 `App.axaml` 或 `MainWindow.Styles.axaml` 中。
-- `AutomationProperties.Name` 绑定到本地化字符串的**所有**交互控件都必须有。
-- 控件使用语义化的 `Classes` 属性而非内联 Style。
-- 大块 XAML（样式、覆盖层）提取为独立 `.axaml` 文件，`MainWindow.axaml` 只保留窗口外壳与内容网格。
+### 3.3 注释
 
-### 2.4 代码注释
+公共类型和跨功能边界的 public/internal 成员应有 `/// <summary>`，说明稳定合约。线程安全、disposal order、线序等不变量必须写明。注释面向下一个维护者，解释 **why**，不只解释 **what**；分析器抑制项用单行注释说明原因。
 
-- 新增或修改的公共类型，以及跨功能边界的 public/internal 成员，应有 XML doc comment (`/// <summary>`) 说明其稳定合约。
-- 关键合约与不变量（线程安全、disposal order、线序）必须在注释中写明。
-- 注释面向**下一个维护者**（可能是 AI），解释 **why** 而不只是 **what**。
-- 符合 `CA2016` 等分析器的抑制项须单行注释说明原因。
+## 4. XAML 与视觉规范
 
----
+- 所有可视值使用 `StaticResource`/`DynamicResource` 设计 token（`App.axaml` 的 `Launcher.*` 家族）。禁止裸色号、`Transparent`、裸图标尺寸、裸 `4`/`6`/`8` 圆角半径；`Spacing`/`ColumnSpacing`/`RowSpacing` 也引用 `Launcher.Spacing.*`（含 `Spacing.None`）。
+- 透明度只允许结构性 `0`/`1`（可见性、动画关键帧）或 `Launcher.StateLayer.*`；分数透明度以 `Launcher.StateLayer.*` 五档为唯一来源。
+- 主题无关的渐变和阴影只允许定义在 `App.axaml` 或 `MainWindow.Styles.axaml`。
+- 每个交互控件都必须有绑定到本地化字符串的 `AutomationProperties.Name`。
+- 控件使用语义化 `Classes`，不写内联 Style；大块样式或覆盖层提取到独立 `.axaml`，`MainWindow.axaml` 只留窗口外壳与内容网格。
+- Avalonia 使用编译绑定与显式绑定，没有反射式 view locator。
+- 崩溃窗口独立使用 `Crash.*` 令牌，就近定义在自身资源中；隔离报告进程没有 `App.axaml`，见 [ADR-020](docs/design/adr/ADR-020-崩溃窗口独立Fluent设计系统.md)。
+- 模态栈交互权及对话框例外见 [CONTEXT.md「模态交互权」](CONTEXT.md#设计系统)。叠层次序为内容 → 设置（100）→ 对话框（200）→ 向导（500）→ Toast（1000）；使用 `LauncherConstants` 中的常量（含 `ZIndexToast`）。
+- `BackgroundViewModel` 在构造器中同步解码内置壁纸，以保证首帧；改为异步前先明确首帧壁纸来源。
 
-## 3. 日志记录规范
+组件、动态色及动效规格见[设计规范](docs/design/design-system-spec.md)与[动效交接](docs/design/fluent-motion-prototype-handoff.md)。
 
-### 3.1 何时记录
+## 5. 日志
 
-| 场景 | 级别 | 示例 |
-|---|---|---|
-| 应用启动/退出/会话边界 | Info | `"Session started"`, `"Session ended"` |
-| 关键流程成功完成 | Info | `"Game uninstall completed."` |
-| 关键流程失败（需人工关注） | Error | HTTP 请求失败、文件 I/O 错误、未处理异常 |
-| 可恢复的非严重问题 | Warn | 后台图片加载失败、临时数据不完整 |
-| 关键流程中间状态 | Debug | API 调用耗时、下载开始/停止、diff 结果 |
-| 极细粒度诊断（默认关闭） | Verbose | CRC 校验汇总、逐文件验证结果 |
-| 致命错误（进程即将退出） | Fatal | 初始化失败、未恢复的崩溃 |
+### 5.1 级别
 
-### 3.2 如何记录
-
-- **使用 `LocalDiagnostics`** 作为唯一入口（不直接调 `UnifiedLogger.LogAsync`，除了 `Program.cs` 和 `UnifiedLogger` 自身）。
-- 将 `LocalDiagnostics diagnostics` 通过构造函数注入，存储为 `private readonly` 字段。
-- `title` 参数是日志行的 `[LogTitle]` 标签：用简短的 PascalCase 标识调用方模块（如 `"GameDownload"`, `"LauncherCore"`, `"ApiClient"`）。该标签受 `DiagnosticsLogTitleContractTests` 源码契约守护。
-- `message`（可选）放上下文细节：文件路径、耗时毫秒、计数值、状态码。不记密钥/盐/Authorization 头。
-- 非热路径的同步上下文用 `LocalDiagnostics.LogSync(severity, title, message)`。**例外——UI 点击路径**（如 `GameDownloadService.Stop()`、`DownloadSession.Pause()/Resume()`）：LogSync 的 sync-over-async 会在 Serilog async sink 背压时阻塞 UI 线程，这类方法改用显式弃等 `_ = diagnostics.DebugAsync(...)` 并注释意图（`DebugAsync` 内部吞掉全部异常，弃等的 Task 不会产生未观察异常）。
-- 异步上下文用 `await diagnostics.DebugAsync(title, message, CancellationToken.None)`。不传播调用方的 cancellationToken（日志不应被取消）。
-
-### 3.3 不要做
-
-- 不要在每个下载块后记录逐字节的进度日志（进度已有 UI 通道）。
-- 不要在纯静态工具方法（`VersionComparer.Compare`）中记录日志。
-- 不要重复记录同一事件的不同级别。
-- 不要在日志消息中记录敏感信息（Authorization 头、API salt、user cookie）。
-
----
-
-## 4. 本地化 (i18n) 规范
-
-### 4.1 添加新字符串
-
-1. 在 4 个资源文件（`src/Cafe.Launcher.UI/Resources/LauncherStrings{,.zh-Hans,.zh-Hant,.ja}.resx`，随表现层归 UI 工程）中按字母序添加 key-value。
-2. XAML 中绑定：`{Binding Shell.I18n[newKey]}`。绑定路径是字符串、引用不到 C# 常量，故这一面由 `ResxResourceContractTests.XamlResourceBindings_UseOnlyKeysThatExistInNeutralResources` 做存在性守卫——拼错的键以前构建与测试全绿，只在运行期降级为 `"Localization unavailable."`；同一测试类的 `XamlKeyScan_StillCoversTheKeyBearingFiles` 是它的反空转基线，扫描域为应用工程下全部 `.axaml`（无手抄文件清单）。
-3. C# 中一律引用 `Constants/LocalizationKeys` 的编译时常量，**禁止**向 `T()`/`F()`/`I18n[...]` 传裸 key 字符串字面量（`ResxResourceContractTests` 守护）。
-4. 所有 4 种语言都提供翻译（对专有名词可回退到英文文本，但不得留空）；术语与译名以 `UBIQUITOUS_LANGUAGE.md` 的规范译法为准。
-5. 新增或重命名 key 后运行 `scripts/Generate-LauncherStringsDesigner.ps1` 与 `scripts/Generate-LocalizationKeys.ps1`，再运行 `scripts/Test-LocalizationContract.ps1`。
-
-### 4.2 测试中的本地化
-
-- 使用 `LocalizationService.T()` 的单元测试通过 `TestLocalizationHelper.Initialize()` 或 `LocalizationService.InitializeForTesting(...)` 提供测试资源（前者是 `TestRepository.InitializeLocalizationResources()` 的转发面，见 §6.5）。
-- 不要在测试中直接写死预期中文字符串（本地化可能变化）；改用 key 查找或只断言非空/非 null。
-
----
-
-## 5. DI 与 Service 注册
-
-### 5.1 注册规则
-
-- 所有 DI 管理的 Service 和 ViewModel 在 `Composition/ServiceConfiguration.AddLauncherServices()` 中注册；已迁入 `Cafe.Launcher.Core` 的后端服务由同一组合根先调用的 `AddLauncherCore` 登记（见 §1.1）。
-- 单窗口桌面应用：全部注册为 `AddSingleton`（无 scoped 边界）。
-- `UnifiedLogger` 在 `Program.cs` 预创建，通过 `Composition.ServiceConfiguration.AddLauncherServices(existingLogger:)` 传入 DI 容器复用同一实例。
-
-### 5.2 IDisposable 顺序
-
-`ServiceProvider` 按已创建服务的注册逆序调用 `Dispose()`。新增 `IDisposable` 服务时，检查 `Composition/ServiceConfiguration.cs` 中的注册位置，确保它在仍依赖它的服务之后释放。`Program.RunSession` 在会话结束日志写入后显式释放共享的预 DI `UnifiedLogger`。
-
-### 5.3 构造函数注入
-
-- 所有依赖通过构造函数注入，不使用属性注入或 Service Locator。
-- 测试用构造函数（接收 `HttpMessageHandler` 或其他测试替身）标记为 `internal`。
-- 不使用 Mocking 框架；测试用手写 stub/fake/handler 子类（共享替身放 `tests/TestDoubles/`，经 Compile-Link 编入两个测试程序集）。
-
----
-
-## 6. 测试规范
-
-### 6.1 测试项目
-
-- 单元测试：`tests/Cafe.Launcher.Tests/`（xUnit v3 + Microsoft.Testing.Platform 2 + Microsoft Code Coverage）
-- Headless UI 测试：`tests/Cafe.Launcher.HeadlessTests/`（xUnit v3 + Avalonia.Headless.XUnit，含黄金截图基线）
-
-### 6.2 测试结构
-
-- 一个测试类对应一个被测试类，文件名 `{Target}Tests.cs`。
-- 使用 `Fact`（同步/异步）和 `Theory`（参数化）。
-- 测试方法命名：`Method_State_ExpectedResult`（下划线风格，`CA1707` 已对测试文件关闭）；源码/契约类守卫测试可用两段式 `Subject_Expectation`。
-- IDisposable 的测试类可选实现 `IDisposable` 清理临时文件/目录；临时目录用 `TestDirectory` 持有（见 §6.5），不要自己拼 `Path.GetTempPath()` 再手写删除与退避。
-
-### 6.3 测试编写规则
-
-- **每个新功能必有测试。** 没有测试的 PR/分支不应合并。
-- 修改框架/基础设施（日志、本地化、DI）时，先跑现有的全套测试 → 再写新的覆盖新增行为。
-- `UiStyleContractTests` 在修改任何 XAML 文件后都必须跑一遍。
-- 平台门控的测试用 `Assert.SkipUnless`/`Assert.SkipWhen` 显式跳过，**禁止**用早期 `return` 静默跳过（跳过必须出现在测试结果里）。
-- 等待异步状态一律用有截止时间的轮询（统一走 `TestWait.UntilAsync`；无头侧用 `HeadlessTestHost.WaitUntilAsync`，它在同一实现上补一次 UI 调度推进），不要用裸 `Task.Delay(N)` 后断言；能直接等任务的地方直接 `await ... .WaitAsync(超时)`。确需固定延时的负向断言，延时从（internal 可见的）生产常量推导，不要手抄魔数。
-- 覆盖率最低阈值为 line ≥ 50%、branch ≥ 50%；`coverage.ps1` 还会验证仓库当前覆盖率基线未回退（基线数值以 `coverage.ps1` 为准，每次运行打印余量）。
-- 新增服务按适用情况覆盖：正向路径、典型失败路径（exception/validation failure）和关键边界条件（如 null input、empty collection）。
-
-### 6.4 测试替身
-
-- 不用 Moq/NSubstitute。伪造 `HttpMessageHandler` 时手写子类。
-- 伪造 DI 依赖时，创建简洁的内部构造函数接受 `Action<>` 或 `Func<>` 委托。
-- 伪造本地化时调用 `TestLocalizationHelper.Initialize()`。
-- 只合并**契约相同**的重复替身（共享的放 `tests/TestDoubles/`）；场景专属的故障模拟留在使用它的测试旁边，不要为了共用把替身做成瑞士军刀。
-
-### 6.5 共享测试设施（`tests/Support/`）
-
-两个测试工程通过 `Compile-Link` 共用同一份源码（与 `tests/TestDoubles/` 同一机制）。新增设施的门槛是「两套件都需要、且不含任何工程专属知识」：
-
-- **`TestDirectory`** — 临时目录的唯一创建与清理点：短路径独立目录、派生 `LauncherDataRoot`、释放即删除（有界重试）。删除失败默认**可见**（抛 `IOException`）；无头容器拆卸用 `TestDirectoryCleanup.BestEffort`（留下目录并写诊断，不让清理问题掩盖断言结论）。释放顺序是硬约束：先放掉容器/服务，再 `Dispose()` 目录。它隐式转换为自己的路径字符串，因此用例仍可把它当路径用（`Path.Combine(tempDir, ...)`），但**不要**再对它调用 `Directory.Delete`——删除归 `Dispose`。
-- **`TestRepository`** — 仓库与应用目录的唯一定位点，并缓存 `.resx` 的解析结果。`InitializeLocalizationResources()` **每次调用都重装**资源快照：`LocalizationService.InitializeForTesting` 是「最后者胜」的进程级状态，缓存住安装会让一个先装自定义资源的用例污染其后所有用例。
-- **`TestWait`** — 唯一的有截止时间轮询实现（单调计时、超时、取消、可注入的推进动作）。超时抛带上下文的 `TimeoutException`。
-- 主窗口 ViewModel 的装配走 `MainWindowTestContext`：它只释放自己创建的对象，调用方传入的替身与工厂归调用方。它持有的日志器活到用例结束（消费者——设置页与日志查看器——会在其整个活期内继续写入），因此**不要**把日志器放回装配方法里的局部 `using`。
-- 无头上下文每个用例一个独立数据根（`HeadlessTestHost.CreateServiceProvider(dataRoot:)`）：进程根是按程序集隔离的共享目录，用它会让同程序集的两个上下文互相看见对方的设置、下载检查点与崩溃快照。
-
----
-
-## 7. Settings 兼容性规则
-
-持久化落点一律经注入的 `LauncherDataRoot`（见 `CONTEXT.md` 的「数据根」与 [ADR-025](docs/design/adr/ADR-025-数据根由组合根解析并注入.md)），不要在模块内解析进程级数据根：进程根只由组合根与 ADR-019 保护的 pre-DI 路径解析，`TestUserDataIsolationTests.ProcessRootResolution_IsConfinedToDeclaredPreDiSites` 以声明表守这条边界。新增落盘位置时把路径加进 `LauncherDataRoot`，文件名仍声明在 `Constants/LauncherPaths.cs`（随游戏或随产品变化的值不放在这里：它们归 `Models/YostarGameProfile` 与 `Models/LauncherProductProfile`，唯一出处是 `Constants/LauncherProfiles.cs`）。
-
-停止活动工作流由调用方表达意图（`GameOperationStopIntent`），检查点去留那套策略词表留在 `Features/GameOperations/` 内、由域翻译一次（[ADR-026](docs/design/adr/ADR-026-停止意图由游戏操作域翻译.md)）；域外不要命名 `DownloadStopReason`，`GameOperationStopOwnershipTests` 守卫这条边界。
-
-`settings.json` 的 JSON 字段名必须向后兼容：
-
-- 新增字段：提供合理默认值（在 `LauncherSettings` 模型中），`LauncherSettingsService` 不因缺失字段而抛异常。
-- 重命名或删除字段前，明确旧 JSON 的读取策略；必要时在 `LauncherSettingsService` 中解析旧字段。
-- `LauncherSettings` 的新增字段需有默认值，并同步更新两张清单：`DeepClone()` 的拷贝构造与 `ComparedProperties`（状态同一性，见 `CONTEXT.md`）。漏前者会静默浅拷贝，漏后者会让设置页保存按钮不再跟踪该字段。`LauncherSettingsService.NormalizeSettings()` 负责将未知或不合法值兜底为有效默认值。`LauncherSettingsTests` 以反射守护两张清单：`DeepClone` 覆盖全部公共可写属性（比较用测试内独立渲染，不复用生产比较器，以免比较器缺陷被报成拷贝缺陷），状态同一性则是两相守卫（两份默认设置必须判为相同；逐属性改动必脏、还原必净），另有守卫断言两张表的名字与全部公共可写属性一一对应。
-- 写入已保存设置一律经 `ISavedSettingsWriter`（见 `CONTEXT.md` 的「已保存设置」与 [ADR-024](docs/design/adr/ADR-024-已保存设置唯一写入方.md)），不要直接调用 `LauncherSettingsService.SaveAsync`：绕过去就不会回写编辑器草稿，用户下一次保存设置会把这次写入的字段回滚掉。`SettingsWriteOwnershipTests` 守卫这条边界（生产调用方唯一性 ＋ 持有者声明表）。
-
----
-
-## 8. Commit 规范
-
-- 遵循 [Conventional Commits](https://www.conventionalcommits.org/) 前缀：`feat:` / `fix:` / `refactor:` / `perf:` / `chore:` / `test:` / `docs:` / `style:`。
-- 中文 Commit 消息不使用英文前缀中文正文混排（统一用英文或统一用中文）。
-- Release changelog 依赖 Conventional Commits 分组生成，不规范的 commit 前缀导致 changelog 混乱。
-
----
-
-## 9. 分支与 PR 流程
-
-- `main` 的**实际**保护规则（GitHub ruleset `Protect main branch`，2026-09-11 核对）：
-
-  | 规则 | 状态 |
-  |---|---|
-  | 禁止删除 `main` | ✅ 强制（`deletion`） |
-  | 禁止强制推送 / 非快进更新 | ✅ 强制（`non_fast_forward`） |
-  | 必须走 PR 才能合入 | ❌ 未强制 |
-  | 必须状态检查通过（CI 绿灯） | ❌ 未强制 |
-  | 必须评审人批准 | ❌ 未强制 |
-
-  即：向 `main` 推送快进提交在机制上是允许的，CI 红灯同样能合进 `main`。仓库允许 merge commit / squash / rebase 三种合并方式，关闭了 auto-merge 与「合并后自动删分支」。若要把 CI 变成真正的合并门禁，在 ruleset 上添加 `required_status_checks` 指向 build 的检查名即可。
-
-- 因此以下三条是**团队约定**，靠自觉遵守而非机制强制：
-  - 在功能分支上开发并走 PR。
-  - 合并前：`dotnet build` 零警告 → `dotnet test` 全部通过（至少受影响的测试 + 合约测试）→ plan mode 下的设计批准（如适用范围 > 2 个文件）。
-  - 合并后手动推送（不自动 rebase squash）。
-
----
-
-## 10. 代码审查检查清单
-
-在提交或 PR 之前，AI 编码助手应逐项确认：
-
-- [ ] `dotnet build -c Debug --no-restore` → 0 warnings, 0 errors
-- [ ] `dotnet test`（受影响的测试类）→ 全部通过
-- [ ] XAML 改动 → `UiStyleContractTests` 通过
-- [ ] 新功能的测试覆盖了预期行为
-- [ ] 新增的本地化 key 存在于 4 个 `LauncherStrings*.resx` 文件中，已生成 `LauncherStrings.Designer.cs` 与 `LocalizationKeys.cs`，且资源合约测试通过
-- [ ] 未引入裸色号、裸图标尺寸、裸圆角、裸分数透明度（透明度只允许 0/1 或 `Launcher.StateLayer.*` 引用）在 View XAML 中
-- [ ] 新增的 public/internal API 有 XML doc comment
-- [ ] IDisposable 新增类注册顺序不影响现有 disposal order
-- [ ] 日志调用使用 `LocalDiagnostics`（不直接 `UnifiedLogger`），`title` 为 PascalCase 模块标签
-- [ ] 未在日志/异常消息中写入敏感信息（密钥、salt、token）
-- [ ] AGENTS.md / CONTEXT.md 如有结构性变化一并更新
-
----
-
-## 11. 常见反模式
-
-| 反模式 | 正确做法 |
+| 场景 | 级别 |
 |---|---|
-| 在 View XAML 中写 `Foreground="#FF0000"` 等 | 使用 `{DynamicResource LauncherAccentBrush}` 等 |
-| 在非 App/Styles 文件中定义内联 Style | 提取到 `MainWindow.Styles.axaml` |
-| 用 `await task.Result` 代替 `await task` | 直接 `await task` |
-| 在 DI 构造中 `new` 一个 Service 而不是注入 | 通过构造函数注入 |
-| 用 `Thread.Sleep` 等待异步结果 | 用 `await` 或 `TaskCompletionSource` |
-| 在日志里记 `Authorization` 头内容 | 省略所有 secret/salt/token 字段 |
-| 对 `CancellationToken` 用 `default` 忽略 | 显式 `CancellationToken.None` 表示有意不传播 |
-| 新增 settings 字段不提供默认值导致旧用户启动就崩 | 在 `LauncherSettings` 模型中设合理默认值 |
-| 平台分支测试用早期 `return` 跳过 | 用 `Assert.SkipUnless`/`Assert.SkipWhen` 让跳过可见 |
+| 启动/退出/会话边界、关键流程成功 | Info |
+| 关键流程失败（需人工关注）、未处理异常 | Error |
+| 可恢复的非严重问题 | Warn |
+| 关键流程中间状态、耗时、diff 结果 | Debug |
+| 极细粒度诊断（默认关闭） | Verbose |
+| 致命错误（进程即将退出） | Fatal |
 
----
+### 5.2 写法
+
+- `LocalDiagnostics` 是唯一入口；只有 `Program.cs` 和 `UnifiedLogger` 自身可直接调 `UnifiedLogger.LogAsync`。
+- 通过构造函数注入 `LocalDiagnostics`，存为 `private readonly` 字段。
+- `title` 是日志行的 `[LogTitle]` 标签，用简短 PascalCase 模块名（如 `GameDownload`、`ApiClient`）；受 `DiagnosticsLogTitleContractTests` 守护。
+- `message` 放上下文：路径、耗时、计数、状态码。不记密钥、盐、Authorization 头或 cookie。
+- 非热路径可用 `LocalDiagnostics.LogSync`。UI 点击路径（如 `GameDownloadService.Stop()`、`DownloadSession.Pause()/Resume()`）不得 sync-over-async 阻塞 UI 线程，改用显式弃等的 `_ = diagnostics.DebugAsync(...)` 并注释意图。
+- 异步上下文用 `await diagnostics.DebugAsync(..., CancellationToken.None)`；日志不传播调用方的取消令牌。
+
+按事件记录，避免逐块下载进度、纯静态工具日志及同一事件的重复日志。
+
+## 6. 本地化
+
+1. 在四个资源文件（`src/Cafe.Launcher.UI/Resources/LauncherStrings{,.zh-Hans,.zh-Hant,.ja}.resx`）中按字母序添加 key-value。
+2. XAML 绑定 `{Binding Shell.I18n[newKey]}`；键存在性由 `ResxResourceContractTests.XamlResourceBindings_UseOnlyKeysThatExistInNeutralResources` 守护，`XamlKeyScan_StillCoversTheKeyBearingFiles` 防止扫描域退化。
+3. C# 中引用 `Constants/LocalizationKeys` 的编译时常量，禁止向 `T()`/`F()`/`I18n[...]` 传裸 key 字面量。
+4. 四种语言都必须有文本（专有名词可回退英文，但不得留空）；译名以 [UBIQUITOUS_LANGUAGE.md](UBIQUITOUS_LANGUAGE.md) 为准。C# 用 `LocalizationService.T()`/`F()` 获取文案。
+5. 新增或重命名 key 后运行 `scripts/Generate-LauncherStringsDesigner.ps1`、`scripts/Generate-LocalizationKeys.ps1`，再运行 `scripts/Test-LocalizationContract.ps1`。
+6. 测试中通过 `TestLocalizationHelper.Initialize()` 或 `LocalizationService.InitializeForTesting(...)` 提供资源；不要写死预期中文。
+
+## 7. DI 与生命周期
+
+- 所有 DI 管理的 Service 与 ViewModel 都是 `AddSingleton`；没有 scoped 边界。
+- `UnifiedLogger` 在 `Program.cs` 预创建，经 `existingLogger:` 注入并复用同一实例。
+- Microsoft DI 按**解析**的逆序释放服务，不是按登记逆序。新增 `IDisposable` 时检查解析顺序；`Program.RunSession` 在会话结束日志之后显式释放共享的预 DI 日志器。
+- 组合根解析 `LauncherDataRoot` 与 `BuildInfo.Identity` 一次，调用 `AddLauncherCore` 后登记宿主，再交给 `AddLauncherPresentationServices` 与 `AddLauncherPresentation()`。先解析 `LauncherPresentationSession`，由它拉入 Core 依赖；提前解析 Core 服务可能颠倒释放顺序，仅保持登记顺序不足以保证安全。
+- 组合完成后，宿主仅通过 `LauncherPresentationSession` 调用 UI 生命周期。pre-DI 崩溃路径为既定例外，可直接构造 crash-store、fatal-crash、bootstrap 和 crash-window，以便容器不可用时仍能报告启动失败。
+- 依赖一律构造函数注入，不用属性注入或 Service Locator。测试用构造函数标记 `internal`。
+- 单实例所有权在 Windows 使用命名 mutex，Unix 使用数据根中的锁套接字；.NET 的 `Local\` 命名空间在 Unix 仅覆盖同一 POSIX 会话。套接字保留在数据根而非 `XDG_RUNTIME_DIR` 是已接受的取舍，见 [ADR-034](docs/design/adr/ADR-034-Unix单实例所有权用数据根内锁套接字判定.md) 与[审计台账](CODEBASE_AUDIT.md)。
+
+## 8. 测试
+
+- 单元测试：`tests/Cafe.Launcher.Tests/`（xUnit v3 + Microsoft.Testing.Platform 2 + Microsoft Code Coverage）。
+- Headless UI 测试：`tests/Cafe.Launcher.HeadlessTests/`（xUnit v3 + Avalonia.Headless.XUnit，含黄金截图基线）。
+
+规则：
+
+- 一个测试类对应一个被测试类，文件名为 `{Target}Tests.cs`；使用 `Fact`/`Theory`。
+- 每个新功能必须有测试；修改日志、本地化、DI 等基础设施时先跑现有全套，再补新增行为。
+- 不引入 Mocking 框架；用手写 stub/fake/`HttpMessageHandler` 子类，共享替身放 `tests/TestDoubles/` 并 Compile-Link 到两个工程。
+- 运行入口、UI 验证和黄金截图更新见[开发指南「命令与验证」](docs/DEVELOPMENT.md#命令与验证)。
+- 平台门控测试用 `Assert.SkipUnless`/`Assert.SkipWhen` 显式跳过，禁止早期 `return`。
+- 等待异步状态用 `TestWait.UntilAsync`（Headless 用 `HeadlessTestHost.WaitUntilAsync`，额外推进 UI 调度）；能直接 `await` 就直接等待。有界轮询只走这些设施，测试运行使用仓库入口的挂起保护，不另加临时超时。负向断言确需固定延时时，从 internal 生产常量推导。
+- 新服务覆盖成功路径、典型失败路径和关键边界（null、空集合等）。
+- 临时目录用 `TestDirectory`（拥有创建与清理，派生 `LauncherDataRoot`）；释放顺序是先容器/服务、后目录。资源定位用 `TestRepository`，它每次调用都重装资源快照。
+- 主窗口 ViewModel 用 `MainWindowTestContext` 装配；它只释放自己创建的对象，调用方传入的替身与工厂归调用方，日志器必须活到用例结束。
+- Headless 每个用例使用独立数据根（`HeadlessTestHost.CreateServiceProvider(dataRoot:)`），避免同程序集上下文互相看见设置、检查点与崩溃快照。
+- 共享设施 `tests/Support/` 的门槛是「两套件都需要、且不含工程专属知识」；场景专属故障模拟留在使用它的测试旁。
+
+## 9. Settings 与持久化兼容性
+
+- 持久化落点一律经注入的 `LauncherDataRoot`；进程根只由组合根与 ADR-019 保护的 pre-DI 路径解析，`TestUserDataIsolationTests.ProcessRootResolution_IsConfinedToDeclaredPreDiSites` 守护边界。新增落点放进 `LauncherDataRoot.Root` 下的知名路径；文件名声明在 `Constants/LauncherPaths.cs`，随游戏或产品变化的值归 `Models/YostarGameProfile`、`Models/LauncherProductProfile`，唯一出处是 `Constants/LauncherProfiles.cs`（[ADR-025](docs/design/adr/ADR-025-数据根由组合根解析并注入.md)、[ADR-049](docs/design/adr/ADR-049-Linux保留单一数据根并统一小写目录名.md)）。
+- `settings.json` 字段名向后兼容：新增字段在 `LauncherSettings` 提供默认值；重命名/删除前明确旧 JSON 的读取策略；`LauncherSettingsService.NormalizeSettings()` 把未知或非法值兜底为有效默认值。
+- `LauncherSettings` 新增字段必须同步 `DeepClone()` 与 `ComparedProperties`。漏前者会浅拷贝，漏后者会让保存按钮不再跟踪该字段；`LauncherSettingsTests` 用反射守护两张清单。
+- 写入所有权与草稿同步语义见 [CONTEXT.md「已保存设置」](CONTEXT.md#设置与操作)。读取经 `LauncherSettingsService`，写入方由 `AddLauncherCore` 登记；调用方使用 `SaveDraftAsync`/`UpdateAsync`/`ReplaceAsync` 描述变更。`SettingsWriteOwnershipTests` 守护调用方唯一性与持有者声明表。
+
+## 10. 网络与异步
+
+- 出站 HTTP 一律通过 `RemoteHttpTransport` 与 `HttpClientFactory`：共享代理感知租约、SSRF 校验、手动重定向、停滞预算和重试；不另建 `HttpClient` 或长寿命 handler。
+- 客户端偏好在租约取得时读取已保存设置，语义见 [CONTEXT.md「客户端偏好」](CONTEXT.md#设置与操作)。直连容忍 Clash/mihomo 的 Fake-IP 地址段，代理出口不容忍；直连请求失败时保留针对 Fake-IP 的诊断指引。
+- 异步调用直接 `await`，避免 `.Result`、`.Wait()` 或 `Thread.Sleep` 阻塞。取消令牌显式传播，有意不传播时使用 `CancellationToken.None`。
+
+## 11. 文件与文档
+
+- C# 使用 UTF-8/CRLF；`.editorconfig` 声明的 XAML、工程/props/targets、YAML、JSON、Markdown、PowerShell 使用 UTF-8/LF，`coverage.ps1` 保留其 UTF-8 BOM 例外。`.editorconfig` 与 `.gitattributes` 必须一致。
+- 文档分工、维护与链接检查见[开发指南「文档职责」](docs/DEVELOPMENT.md#文档职责)。审计发现只维护在 [CODEBASE_AUDIT.md](CODEBASE_AUDIT.md)。
 
 ## 12. 工具链与依赖
 
 | 工具/库 | 版本 | 用途 |
 |---|---|---|
-| .NET SDK | 10.0.302 | Runtime / SDK（global.json 钉住，`latestFeature` 滚动） |
+| .NET SDK | 10.0.302 | Runtime / SDK（`global.json` 钉住，`latestFeature` 滚动） |
 | Avalonia / Avalonia.Desktop | 12.1.4 | UI Framework |
 | Avalonia.Controls.ColorPicker | 12.1.4 | 自定义主题色取色器 |
 | MarkView.Avalonia | 12.3.0 | 基于 Markdig 的更新说明 Markdown 预览 |
@@ -313,14 +175,8 @@ WinExe 宿主只保留进程生命周期和顶层 Avalonia 生命周期；Core �
 | Microsoft.Testing.Extensions.CodeCoverage | 18.12.0 | 运行时覆盖率（Cobertura） |
 | Inno Setup | 7.0+ | Windows installer（脚本强制最低 7.0，CI 安装 7.1.0） |
 
-> 版本以 `Directory.Packages.props` 中声明的为准；升级依赖时同步更新本表（受 `InstallerContractTests` 守护），并再生 `THIRD-PARTY-NOTICES.md` 与 lock 文件（流程见 AGENTS.md「Dependency upgrades」）。
+版本以 `Directory.Packages.props` 为准；升级时同步本表（受 `InstallerContractTests` 守护），流程见[开发指南「依赖与 CI」](docs/DEVELOPMENT.md#依赖与-ci)。
 
-`global.json` 的 `test.runner` 选择 .NET 10 的原生 `Microsoft.Testing.Platform` 体验。两个测试工程都使用 `xunit.v3.mtp-v2`、`OutputType=Exe` 与 `UseMicrosoftTestingPlatformRunner=true`；不依赖 VSTest 的 Test.Sdk 或 VS 适配器。`dotnet test --project <工程>` 运行单个工程，`dotnet test --solution Cafe.Launcher.slnx` 运行整个解决方案。
+测试基于 `global.json` 选择的原生 Microsoft.Testing.Platform 2。两个测试工程使用 `xunit.v3.mtp-v2`、`OutputType=Exe` 和 `UseMicrosoftTestingPlatformRunner=true`，不依赖 VSTest 适配器。Unit 使用中央 xUnit 版本，Headless 通过 `VersionOverride` 保留 3.2.2 扩展 API；升级前验证 Avalonia 扩展兼容性。并行化声明分别为 `[assembly: Parallelization(Mode = ParallelMode.None)]` 与 `[assembly: CollectionBehavior(DisableTestParallelization = true)]`。
 
-**平台与框架版本独立选择。** 普通单元测试使用 xUnit 4.0.2；`Cafe.Launcher.HeadlessTests` 通过 `VersionOverride` 保留 3.2.2 的 Headless 扩展 API，同时显式选用它的 `mtp-v2` 包。TRX、HangDump 与 CodeCoverage 扩展把两套的 MTP 依赖图统一到 2.5.1。Avalonia.Headless.XUnit 12.1.4 对扩展核心的 nuspec 声明是最低版本 3.2.2，并非精确版本；后续升级 Headless 的 xUnit 主版本仍需验证扩展兼容性。程序集并行化声明保持各自版本支持的形状：普通测试用 `[assembly: Parallelization(Mode = ParallelMode.None)]`，Headless 用 `[assembly: CollectionBehavior(DisableTestParallelization = true)]`。
-
-`test.ps1` 提供 `-FilterClass` / `-FilterMethod`，对应 xUnit 的完整限定名筛选，支持首尾 `*`。MTP 用 `--report-trx` 生成报告；所有仓库测试入口均以 `--hangdump --hangdump-timeout 5m --hangdump-type None` 保留五分钟无测试活动就终止的净网，Golden 再生使用同一保护。空筛选返回非零退出码，避免误报“测试通过”。
-
-`coverage.ps1` 使用 `Microsoft.Testing.Extensions.CodeCoverage` 的 `--coverage` 与 Cobertura 输出，保留生产程序集范围、设计器排除、四个程序集必须实际计数的检查，以及既有覆盖率基线。报告按套件命名并放在独立目录。该收集器通过运行时分析器工作，不重写磁盘上的生产程序集：coverlet.MTP 的静态插桩会因 MTP 控制器已加载 `Cafe.Launcher.UI` 而跳过整个表现层。MTP 遥测通过仓库脚本与 CI 的 `TESTINGPLATFORM_TELEMETRY_OPTOUT=1` 关闭。
-
-迁移依据与 CLI 对照见 [MTP 迁移核对](docs/research/mtp-migration.md)。
+覆盖率使用 Microsoft Code Coverage 的运行时分析器与 Cobertura 输出，保留生产程序集范围、设计器排除、四个程序集实际计数及基线检查。选择该收集器是因为 coverlet.MTP 静态插桩会跳过已被控制器加载的 UI 程序集。CLI 与迁移依据见 [MTP 迁移核对](docs/research/mtp-migration.md)，Headless 兼容性风险见[审计台账](CODEBASE_AUDIT.md)。
