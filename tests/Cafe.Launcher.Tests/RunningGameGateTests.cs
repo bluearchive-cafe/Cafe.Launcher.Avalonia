@@ -8,11 +8,29 @@ using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.UI.Services.GameRuntime;
 using Cafe.Launcher.Core.Services.GameRuntime;
+using Cafe.Launcher.Testing;
 
 namespace Cafe.Launcher.Tests;
 
 public sealed class RunningGameGateTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task FindFailureAsync_WhenRealScannerFails_PreservesFailOpenPolicy(bool linux)
+    {
+        using var directory = TestDirectory.Create();
+        var tracker = new GameProcessTracker((query, token) => Task.FromResult(linux
+            ? LinuxProcessScanner.Scan(query, directory.Sub("missing-proc"), token)
+            : ProcessService.FindRunningExeNamesBySnapshot(query.KnownExeNames,
+                () => throw new System.ComponentModel.Win32Exception(5), token)));
+
+        var result = await RunningGameGate.FindFailureAsync(tracker, new LocalizationService(),
+            LocalizationKeys.GameExecutableRunning, Query, CancellationToken.None);
+
+        Assert.Null(result);
+    }
+
     [Fact]
     public async Task FindFailureAsync_WhenTheScanNeverAnswers_RefusesInsteadOfHangingForever()
     {

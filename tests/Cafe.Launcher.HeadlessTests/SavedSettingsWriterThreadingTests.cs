@@ -17,6 +17,46 @@ namespace Cafe.Launcher.HeadlessTests;
 public sealed class SavedSettingsWriterThreadingTests
 {
     [AvaloniaFact]
+    public async Task UpdateAsync_WhenUiCallWaitsForWorkerCommit_PreservesChangesAndDispatchesBothSnapshots()
+    {
+        BlockingDraftOwner? owner = null;
+        using var rig = new WriterRig(services => services.AddSingleton<ISettingsDraftOwner>(provider =>
+            owner = new BlockingDraftOwner(provider.GetRequiredService<SettingsEditor>())));
+        var first = Task.Run(() => rig.Writer.UpdateAsync(settings => settings.ResourcePanelUid = "ABCDEFGH"));
+        await owner!.ApplyEntered.Task;
+
+        var second = rig.Writer.UpdateAsync(settings => settings.ShowRemoteContentCard = false);
+        owner.ReleaseApply.SetResult();
+        await Task.WhenAll(first, second);
+
+        var persisted = await rig.ReadAsync();
+        Assert.Equal("ABCDEFGH", persisted.ResourcePanelUid);
+        Assert.False(persisted.ShowRemoteContentCard);
+        Assert.True(persisted.HasSameSettingsState(rig.Editor.GetSavedSnapshot()));
+        rig.AssertSnapshotAppliedOnUiThread();
+    }
+
+    private sealed class BlockingDraftOwner(SettingsEditor editor) : ISettingsDraftOwner
+    {
+        private int applications;
+        public TaskCompletionSource ApplyEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource ReleaseApply { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public LauncherSettings GetDraftSnapshot() => editor.GetSnapshot();
+        public LauncherSettings GetSavedSnapshot() => editor.GetSavedSnapshot();
+
+        public async Task ApplyPersistedAsync(LauncherSettings persisted, CancellationToken cancellationToken = default)
+        {
+            if (Interlocked.Increment(ref applications) == 1)
+            {
+                ApplyEntered.SetResult();
+                await ReleaseApply.Task;
+            }
+
+            await ((ISettingsDraftOwner)editor).ApplyPersistedAsync(persisted, cancellationToken);
+        }
+    }
+
+    [AvaloniaFact]
     public async Task SaveDraftAsync_FromUiThread_AppliesEditorSnapshotOnUiThread()
     {
         using var rig = new WriterRig();
@@ -69,10 +109,10 @@ public sealed class SavedSettingsWriterThreadingTests
         private readonly ServiceProvider provider;
         private readonly List<(string Property, bool HasUiAccess)> notifications = [];
 
-        public WriterRig()
+        public WriterRig(Action<ServiceCollection>? configure = null)
         {
             directory = TestDirectory.Create(TestDirectoryCleanup.BestEffort);
-            provider = HeadlessTestHost.CreateServiceProvider(directory);
+            provider = HeadlessTestHost.CreateServiceProvider(directory, configure);
             Writer = provider.GetRequiredService<ISavedSettingsWriter>();
             Editor = provider.GetRequiredService<SettingsEditor>();
             Editor.PropertyChanged += (_, eventArgs) => notifications.Add(
@@ -82,6 +122,8 @@ public sealed class SavedSettingsWriterThreadingTests
         public ISavedSettingsWriter Writer { get; }
 
         public SettingsEditor Editor { get; }
+
+        public Task<LauncherSettings> ReadAsync() => provider.GetRequiredService<ILauncherSettingsService>().ReadAsync();
 
         public void AssertSnapshotAppliedOnUiThread()
         {

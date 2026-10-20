@@ -44,6 +44,9 @@ public interface IGameProcessTracker
     /// see the process; otherwise the scan covers games started outside this session. The returned
     /// names are what the caller should put in front of the user: naming only the configured host
     /// would be a lie when it is the anti-cheat host that is still holding the install directory.
+    /// This is the destructive-operation gate policy: whole-scan failures are treated as empty
+    /// unless a tracked host is still alive. Cancellation propagates. Session monitoring consumes
+    /// ProcessService directly so it can distinguish failed scans from confirmed absence.
     /// </remarks>
     Task<IReadOnlyList<string>> FindRunningGameProcessesAsync(
         RunningGameQuery query,

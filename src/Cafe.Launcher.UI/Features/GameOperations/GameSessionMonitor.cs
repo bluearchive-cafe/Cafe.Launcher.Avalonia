@@ -149,9 +149,9 @@ internal sealed class GameSessionMonitor : IGameSessionMonitor, IDisposable
             }
             catch (Exception)
             {
-                // 枚举没有答案时与「没在跑」无法区分（ProcessService 同一取舍）：
-                // 继续等——这里只是状态行，误不得也不会错得不可纠正，下一轮会再来。
-                running = [];
+                // 没有成功扫描就不能据此判定家族缺席，即使宿主已在订阅前退出。
+                await delayAsync(PollInterval).ConfigureAwait(false);
+                continue;
             }
 
             if (ContainsFamilyMember(running, names))
@@ -264,13 +264,15 @@ internal sealed class GameSessionMonitor : IGameSessionMonitor, IDisposable
     private async Task ConfirmExitAfterHostExitAsync(long version, GameLaunchExitInfo? exit)
     {
         IReadOnlyList<string> running = [];
+        var scanFailed = false;
         try
         {
             running = await scanRunningExeNames(knownExeNames, CancellationToken.None).ConfigureAwait(false);
         }
         catch (Exception)
         {
-            // 扫描没有答案：按已退出收尾。这里只影响状态行的一次纠正，不拦任何操作。
+            // 宿主已退出不意味着游戏家族退出；未知状态留给后续成功扫描确认。
+            scanFailed = true;
         }
 
         var familyStillVisible = ContainsFamilyMember(running, knownExeNames);
@@ -282,10 +284,10 @@ internal sealed class GameSessionMonitor : IGameSessionMonitor, IDisposable
                 return;
             }
 
-            if (familyStillVisible)
+            if (scanFailed || familyStillVisible)
             {
-                // 真身还在跑（ADR-032 的家族判据）：维持运行中，并重启运行期看护——
-                // 宿主已亡，此后的退出只剩这一条轮询信号可走。
+                // 家族仍在，或本轮没有答案：维持运行中并重启看护。
+                // 宿主已亡，此后的退出只能由成功的家族扫描确认。
                 StartRunningWatchLocked();
                 return;
             }

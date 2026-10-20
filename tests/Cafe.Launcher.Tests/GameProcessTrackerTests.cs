@@ -10,6 +10,41 @@ namespace Cafe.Launcher.Tests;
 
 public sealed class GameProcessTrackerTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task FindRunningGameProcessesAsync_WhenEnumerationFails_PreservesGatePolicyAndLiveHost(bool liveHost)
+    {
+        var fake = new FakeTrackedProcess();
+        var tracker = new GameProcessTracker((_, _) => throw new System.ComponentModel.Win32Exception(5), _ => fake);
+        using var process = new Process();
+        if (liveHost)
+        {
+            tracker.Register(new GameProcess(process, "native"));
+        }
+
+        var running = await tracker.FindRunningGameProcessesAsync(Query);
+
+        Assert.Equal(liveHost ? [Query.KnownExeNames[0]] : Array.Empty<string>(), running);
+        fake.RaiseExited();
+    }
+
+    [Fact]
+    public async Task FindRunningGameProcessesAsync_WhenScanIsCanceled_PropagatesCancellation()
+    {
+        var tracker = new GameProcessTracker((_, _) => throw new OperationCanceledException());
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => tracker.FindRunningGameProcessesAsync(Query));
+    }
+
+    [Fact]
+    public async Task FindRunningGameProcessesAsync_WhenProbeHasAProgrammingError_PropagatesIt()
+    {
+        var tracker = new GameProcessTracker((_, _) => throw new ArgumentException("invalid probe state"));
+
+        await Assert.ThrowsAsync<ArgumentException>(() => tracker.FindRunningGameProcessesAsync(Query));
+    }
+
     [Fact]
     public async Task FindRunningGameProcessesAsync_WhenTrackedProcessIsLive_ReportsItWithoutScanning()
     {
