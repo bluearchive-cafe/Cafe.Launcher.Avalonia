@@ -398,7 +398,11 @@ public partial class MainWindowViewModelTests
             new SettingsOptionsViewModel(localizer, new DiskSpaceService()),
             appearance,
             new ErrorHandlingService(localizer, new LocalDiagnostics(testLogger), toastService),
-            new GameRuntime([], new DefaultProcessLauncher(), new GameProcessTracker()), new StubFilePickerService());
+            new GameRuntime(
+                [],
+                new DefaultProcessLauncher(),
+                new GameProcessTracker(),
+                new GameCompatibilityPaths(TestDataRoot.ForCurrentProcess())), new StubFilePickerService());
         ToastNotification? errorToast = null;
         toastService.ToastRaised += notification =>
         {

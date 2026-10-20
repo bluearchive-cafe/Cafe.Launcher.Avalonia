@@ -132,7 +132,7 @@ sealed class Program
         UnifiedLogger crashLogger;
         try
         {
-            crashLogger = new UnifiedLogger(dataRoot.Root, BuildInfo.Identity);
+            crashLogger = new UnifiedLogger(dataRoot.LogDirectory, BuildInfo.Identity);
         }
         catch (Exception exception)
         {

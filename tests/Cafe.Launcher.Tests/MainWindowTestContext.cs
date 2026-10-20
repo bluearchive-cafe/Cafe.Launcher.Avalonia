@@ -146,7 +146,8 @@ internal sealed class MainWindowTestContext : IDisposable
         var gameRuntime = new GameRuntime(
             [GameRunnerDefinition.Native],
             new DefaultProcessLauncher(),
-            TestGameProcessTracker.None());
+            TestGameProcessTracker.None(),
+            new GameCompatibilityPaths(directory.DataRoot));
         var gameLaunchService = new GameLaunchService(LauncherProfiles.BlueArchiveJapan, 
             manifestValidationService,
             gameRuntime,
@@ -227,7 +228,8 @@ internal sealed class MainWindowTestContext : IDisposable
             new GameInstallationPath(LauncherProfiles.BlueArchiveJapan),
             new DownloadCheckpointStore(TestDataRoot.ForDirectory(directory.Sub(Guid.NewGuid().ToString("N")))),
             TestGameProcessTracker.None(),
-            new TestGameShortcutService());
+            new TestGameShortcutService(),
+            new GameCompatibilityPaths(directory.DataRoot));
 
         var remoteContentViewModel = new RemoteContentViewModel(localizationService, imageCacheService, diagnostics);
         var backgroundViewModel = new BackgroundViewModel(imageCacheService, diagnostics, settingsViewModel);

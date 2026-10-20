@@ -82,10 +82,9 @@ public sealed class TestUserDataIsolationTests
     }
 
     /// <summary>
-    /// 受管兼容子树也必须落在隔离目录内。它不是数据根的普通消费方：<c>GameCompatibilityPaths</c>
-    /// 是 ADR-025 的已声明例外（静态助手、无 DI 接缝），Unix 分支从 XDG 数据主目录派生，看不见
-    /// 数据根覆盖。少了这条守卫，<c>GameUninstallServiceTests</c> 的彻底清除用例会在开发机的
-    /// 真实 <c>~/.local/share/cafe-launcher</c> 上写 marker 再把整棵删掉——CI 容器是新的，
+    /// 受管兼容子树也必须落在隔离目录内。它现在是 <see cref="Cafe.Launcher.Core.Services.GameRuntime.GameCompatibilityPaths"/>
+    /// 的实例，根由注入的 <c>LauncherDataRoot</c> 提供，不再自行解析进程级目录（ADR-049）。
+    /// 少了这条守卫，彻底清除用例会在开发机的真实数据根上写 marker 再把整棵删掉——CI 容器是新的，
     /// 所以红不了，只有开发机受伤。
     /// </summary>
     [Fact]
@@ -95,30 +94,13 @@ public sealed class TestUserDataIsolationTests
             Cafe.Launcher.Core.Services.LauncherDataRoot.TestOverrideEnvironmentVariable);
 
         Assert.False(string.IsNullOrWhiteSpace(isolatedDirectory));
+        var compatibilityPaths = new Cafe.Launcher.Core.Services.GameRuntime.GameCompatibilityPaths(
+            Cafe.Launcher.Core.Services.LauncherDataRoot.ForCurrentProcess(
+                Cafe.Launcher.Core.Constants.LauncherProfiles.Cafe.ProductName));
         Assert.StartsWith(
             Path.GetFullPath(isolatedDirectory),
-            Path.GetFullPath(GameCompatibilityPaths.GetDefaultCompatibilityRoot()),
+            Path.GetFullPath(compatibilityPaths.GetDefaultCompatibilityRoot()),
             StringComparison.OrdinalIgnoreCase);
-    }
-
-    /// <summary>
-    /// Unix 侧的隔离手段本身也要被钉住（上一条只断言结果落在隔离目录内，把 XDG 变量改成
-    /// 别的目录它照样绿）。跳在 Windows 上可见：该分支不读 XDG。
-    /// </summary>
-    [Fact]
-    public void TestProcess_UnixDataHomeIsRedirectedToTheIsolatedDirectory()
-    {
-        Assert.SkipWhen(
-            OperatingSystem.IsWindows(),
-            "Windows 分支的兼容前缀复用启动器数据根，不读 XDG_DATA_HOME。");
-
-        var isolatedDirectory = Environment.GetEnvironmentVariable(
-            Cafe.Launcher.Core.Services.LauncherDataRoot.TestOverrideEnvironmentVariable);
-
-        Assert.Equal(
-            Path.GetFullPath(isolatedDirectory!),
-            Path.GetFullPath(Environment.GetEnvironmentVariable(
-                Testing.TestUserDataIsolation.UnixDataHomeVariable)!));
     }
 
     [Fact]
@@ -149,9 +131,8 @@ public sealed class TestUserDataIsolationTests
 
     /// <summary>
     /// 进程根解析只允许出现在声明表内：组合根解析一次，ADR-019 保护的 pre-DI 路径各解析
-    /// 一次，其余模块一律接收注入的 <c>LauncherDataRoot</c>。表里另有一处已声明例外
-    /// （<c>GameCompatibilityPaths</c>：静态助手、无 DI 接缝，Windows 分支在调用时解析）。
-    /// 少了这条守卫，进程级静态会重新在各模块里开花——那正是候选 03 要收掉的东西。
+    /// 一次，其余模块一律接收注入的 <c>LauncherDataRoot</c>。少了这条守卫，进程级静态会
+    /// 重新在各模块里开花——那正是候选 03 要收掉的东西。
     /// </summary>
     [Fact]
     public void ProcessRootResolution_IsConfinedToDeclaredPreDiSites()
@@ -169,9 +150,7 @@ public sealed class TestUserDataIsolationTests
             // pre-DI：首启探测、崩溃日志器、单实例信号
             Path.Combine(hostRoot, "Program.cs"),
             // 崩溃报告进程没有容器，也没有别的解析点
-            Path.Combine(hostRoot, "CrashReportApp.axaml.cs"),
-            // 兼容前缀在 Windows 上复用启动器数据根；Unix 分支自取 XDG 目录，不读数据根
-            Path.Combine(coreRoot, "Services", "GameRuntime", "GameCompatibilityPaths.cs")
+            Path.Combine(hostRoot, "CrashReportApp.axaml.cs")
         };
 
         var scanned = new[] { hostRoot, coreRoot, presentationRoot }
@@ -185,7 +164,7 @@ public sealed class TestUserDataIsolationTests
         // 计数含 obj/ 下生成的 .cs，会随构建配置（RID、clean）浮动，逐根拆开或追平每次实测值
         // 都会让守卫随构建状态红绿。真的删文件就同步下调，扫描失效应表现为红而不是绿。
         const int landedScannedFiles = 297;
-        const int landedResolvingFiles = 5;
+        const int landedResolvingFiles = 4;
         var resolving = scanned
             .Where(path => File.ReadAllText(path).Contains(ProcessRootResolver, StringComparison.Ordinal))
             .ToArray();
