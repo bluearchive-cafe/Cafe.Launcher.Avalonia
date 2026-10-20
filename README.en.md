@@ -54,7 +54,7 @@ Settings, download state, and logs stay on your device. The launcher does not mo
 | --- | --- | --- |
 | Windows 10 1809+ / Windows 11, x64 | Officially supported | Installer (recommended), portable ZIP |
 | macOS, Apple Silicon | Experimental; cannot launch the game | `.app` archive |
-| Linux, x64 | Experimental | `.deb`, `.rpm`, AppImage, `.tar.gz` |
+| Linux, x64 | Experimental | `.deb`, `.rpm`, `.pkg.tar.zst` (Arch), AppImage, `.tar.gz` |
 
 Packages include the .NET Runtime, so no separate installation is needed.
 
@@ -91,7 +91,7 @@ Official features not implemented here include `clickCode` file migration, tempo
 
 Linux can install, update, repair, and **launch** the game through a compatibility runtime. The full launch chain, including XIGNCODE3, has been verified on the single combination listed below.
 
-On Arch Linux x86_64, build and install from the release tag with the repository's [PKGBUILD](./installer/linux/arch/PKGBUILD):
+On Arch Linux x86_64, download the `.pkg.tar.zst` from [Releases](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases) and install the downloaded file with `sudo pacman -U`. Alternatively, build and install from the release tag with the repository's [PKGBUILD](./installer/linux/arch/PKGBUILD):
 
 ```bash
 sudo pacman -S --needed base-devel git

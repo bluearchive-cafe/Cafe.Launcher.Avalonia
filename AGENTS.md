@@ -74,6 +74,9 @@ uses `dotnet-sdk-10.0`, relaxes only the SDK version in its source checkout to
 `makepkg --syncdeps`, and installs the resulting package in a fresh Arch container
 without a system .NET SDK/runtime for a command smoke test. Published assemblies
 map build paths to `/_/` so the package does not embed its temporary source path.
+The validated Arch archive is staged in `artifacts/distribution/` before upload,
+alongside the other seven packages; include it in both release repositories,
+their download links, checksums, and provenance.
 Increment `pkgrel` for packaging changes to an existing upstream version;
 `release.ps1` resets it to 1 only when the Arch upstream version changes.
 

@@ -69,7 +69,7 @@ Cafe Launcher 既能接管官方启动器已经下载好的游戏目录，也能
 | --- | --- | --- |
 | Windows 10 1809+ / Windows 11，x64 | 正式支持 | 安装程序（推荐）、便携 ZIP |
 | macOS，Apple Silicon | 实验性；暂不支持启动游戏 | `.app` 压缩包 |
-| Linux，x64 | 实验性 | `.deb`、`.rpm`、AppImage、`.tar.gz` |
+| Linux，x64 | 实验性 | `.deb`、`.rpm`、`.pkg.tar.zst`（Arch）、AppImage、`.tar.gz` |
 
 发行包已包含 .NET Runtime，无需另行安装。
 
@@ -106,7 +106,7 @@ Cafe Launcher 与官方启动器**共用同一个游戏目录与清单格式**�
 
 Linux 版除了安装、更新、修复游戏外，还可以通过兼容运行环境**启动游戏**。整条链路（包括 XIGNCODE3 反作弊）已在下面列出的组合上实机验证过，但只有这一个组合，请据此设定预期。
 
-Arch Linux x86_64 用户可使用仓库提供的 [PKGBUILD](./installer/linux/arch/PKGBUILD) 从发布标签构建安装：
+Arch Linux x86_64 用户可从[发布页](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases)下载 `.pkg.tar.zst`，使用 `sudo pacman -U` 安装下载的文件。也可使用仓库提供的 [PKGBUILD](./installer/linux/arch/PKGBUILD) 从发布标签构建安装：
 
 ```bash
 sudo pacman -S --needed base-devel git

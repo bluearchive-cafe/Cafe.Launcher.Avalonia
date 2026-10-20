@@ -197,6 +197,23 @@ jobs:
             cafe-launcher --version
           '
 
+      - name: Stage Arch release package
+        env:
+          Release_Tag: ${{ github.ref_name }}
+        run: |
+          $versionArguments = @{}
+          if ($env:GITHUB_EVENT_NAME -eq 'push') {
+              $versionArguments.Tag = $env:Release_Tag
+          }
+          $version = ./scripts/Read-LauncherVersion.ps1 @versionArguments
+          $archPackages = @(Get-ChildItem -LiteralPath (Join-Path $env:RUNNER_TEMP 'arch-package') -Filter '*.pkg.tar.zst' -File)
+          if ($archPackages.Count -ne 1) {
+              throw "Expected exactly one validated Arch package, found $($archPackages.Count)."
+          }
+          New-Item -ItemType Directory -Path artifacts/distribution -Force | Out-Null
+          $destination = Join-Path artifacts/distribution "Cafe.Launcher_$($version.Tag)_linux-x64.pkg.tar.zst"
+          Copy-Item -LiteralPath $archPackages[0].FullName -Destination $destination
+
       - name: Prepare changelog
         if: github.event_name == 'push'
         env:
@@ -445,6 +462,7 @@ jobs:
           linux-x64.AppImage|Linux AppImage（x64）
           linux-x64.deb|Linux deb 安装包（x64）
           linux-x64.rpm|Linux rpm 安装包（x64）
+          linux-x64.pkg.tar.zst|Arch Linux 安装包（x86_64）
           ORDER
             } >> "$output"
           }
@@ -463,8 +481,8 @@ jobs:
           # （不另抄一份产物清单），但数量不符即失败——宁可让发布中断，也不要发出不完整
           # 或掺入意外文件的清单。
           mapfile -t packages < <(LC_ALL=C ls -1 Cafe.Launcher_* | LC_ALL=C sort)
-          if [[ ${#packages[@]} -ne 7 ]]; then
-            echo "Expected 7 distribution packages, found ${#packages[@]}: ${packages[*]}" >&2
+          if [[ ${#packages[@]} -ne 8 ]]; then
+            echo "Expected 8 distribution packages, found ${#packages[@]}: ${packages[*]}" >&2
             exit 1
           fi
 
@@ -493,6 +511,7 @@ jobs:
             artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_linux-x64.AppImage
             artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_linux-x64.deb
             artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_linux-x64.rpm
+            artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_linux-x64.pkg.tar.zst
             artifacts/distribution/SHA256SUMS
           prerelease: ${{ contains(github.ref_name, '-') }}
           fail_on_unmatched_files: true
@@ -514,6 +533,7 @@ jobs:
             artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_linux-x64.AppImage
             artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_linux-x64.deb
             artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_linux-x64.rpm
+            artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_linux-x64.pkg.tar.zst
             artifacts/distribution/SHA256SUMS
           prerelease: ${{ contains(github.ref_name, '-') }}
           fail_on_unmatched_files: true
