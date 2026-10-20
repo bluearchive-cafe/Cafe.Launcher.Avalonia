@@ -23,7 +23,7 @@ namespace Cafe.Launcher.Core.Services;
 /// <remarks>
 /// <para>Interface contract (everything a caller must know):</para>
 /// <para><b>Error modes.</b> Calls throw <see cref="HttpRequestException"/> for
-/// non-2xx answers, exceeded redirect limits, HTTPS→HTTP downgrade attempts, and
+/// DNS resolution failures, non-2xx answers, exceeded redirect limits, HTTPS→HTTP downgrade attempts, and
 /// stalled or oversized bodies; <see cref="JsonException"/> for bodies that are
 /// not valid JSON (the message carries the request URL, status, content type and
 /// a byte preview, without the query string); <see cref="TaskCanceledException"/>

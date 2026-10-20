@@ -16,7 +16,10 @@ public interface IRemoteHttpUrlValidator
     /// <summary>校验 <see cref="Uri"/>（直连路径）。</summary>
     Task<Uri> ValidateAsync(Uri uri, CancellationToken cancellationToken = default);
 
-    /// <summary>校验 <see cref="Uri"/>，并说明本次连接是否走代理出口。</summary>
+    /// <summary>
+    /// 校验 <see cref="Uri"/>，并说明本次连接是否走代理出口。DNS 解析失败以
+    /// <see cref="System.Net.Http.HttpRequestException"/> 返回并保留原始异常；取消原样传播。
+    /// </summary>
     Task<Uri> ValidateAsync(Uri uri, bool connectionUsesProxy, CancellationToken cancellationToken = default);
 
     /// <summary>该主机是否由 Fake-IP 模式的代理应答（用于把连接失败改写成针对性提示）。</summary>

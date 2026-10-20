@@ -1,4 +1,6 @@
 using System.Net;
+using System.Net.Http;
+using System.Net.Sockets;
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.Core.Services;
 
@@ -80,12 +82,14 @@ public sealed class RemoteHttpUrlValidatorTests
             () => validator.ValidateAsync(url));
     }
 
-    [Fact]
-    public async Task ValidateAsync_WhenDnsContainsPrivateAddress_Throws()
+    [Theory]
+    [InlineData("192.168.1.1")]
+    [InlineData("0.0.0.0")]
+    public async Task ValidateAsync_WhenDnsContainsPrivateAddress_Throws(string blockedAddress)
     {
         var validator = new RemoteHttpUrlValidator(
-            static (_, _) => Task.FromResult<IPAddress[]>(
-                [IPAddress.Parse("93.184.216.34"), IPAddress.Parse("192.168.1.1")]));
+            (_, _) => Task.FromResult<IPAddress[]>(
+                [IPAddress.Parse("93.184.216.34"), IPAddress.Parse(blockedAddress)]));
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => validator.ValidateAsync("https://example.test/image.png"));
@@ -321,6 +325,46 @@ public sealed class RemoteHttpUrlValidatorTests
 
         Assert.Equal(2, callCount);
         Assert.Equal("example.test", uri.Host);
+    }
+
+    [Theory]
+    [InlineData(SocketError.NoData)]
+    [InlineData(SocketError.HostNotFound)]
+    [InlineData(SocketError.TryAgain)]
+    public async Task ValidateAsync_WhenDnsFails_ThrowsHttpRequestExceptionAndDoesNotCache(SocketError error)
+    {
+        var failure = new SocketException((int)error);
+        var resolveCount = 0;
+        var validator = new RemoteHttpUrlValidator((_, _) =>
+            ++resolveCount == 1
+                ? Task.FromException<IPAddress[]>(failure)
+                : Task.FromResult(new[] { IPAddress.Parse("93.184.216.34") }));
+
+        var exception = await Assert.ThrowsAsync<HttpRequestException>(
+            () => validator.ValidateAsync("https://example.test/file?secret=not-for-diagnostics"));
+
+        Assert.Equal(HttpRequestError.NameResolutionError, exception.HttpRequestError);
+        Assert.Same(failure, exception.InnerException);
+        Assert.Null(exception.StatusCode);
+        Assert.Contains("example.test", exception.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("not-for-diagnostics", exception.Message, StringComparison.Ordinal);
+
+        await validator.ValidateAsync("https://example.test/file");
+        Assert.Equal(2, resolveCount);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_WhenDnsIsCanceled_PropagatesCancellation()
+    {
+        using var cancellation = new CancellationTokenSource();
+        await cancellation.CancelAsync();
+        var validator = new RemoteHttpUrlValidator(
+            (_, token) => Task.FromCanceled<IPAddress[]>(token));
+
+        var exception = await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => validator.ValidateAsync("https://example.test/file", cancellation.Token));
+
+        Assert.Equal(cancellation.Token, exception.CancellationToken);
     }
 
     [Fact]
