@@ -1,14 +1,12 @@
 # ADR-037：Windows 启动器自更新走独立 helper，且以 SHA256SUMS 为信任锚
 
-- 状态：✅ 已接受
+- 状态：✅ 已接受（2026-09-23；2026-09-25 与 2026-09-27 各有一次修订，见文末）
 - 日期：2026-09-23
 - 相关：`Services/LauncherUpdateService.cs`、`Features/Shell/ShellLifecycle.cs`、`src/Cafe.Launcher.Updater.Core/`、`src/Cafe.Launcher.Updater/`、`scripts/Build-Distribution.ps1`、`installer/windows/Cafe.Launcher.iss`
 
 ## 背景
 
-自更新此前只做「检查 + 弹框」：`LauncherUpdateService.CheckForUpdateAsync` 返回 release 资产列表，用户在对话框里选一个文件，`ShellLifecycle.OnUpdateAvailableConfirmed` 把下载直链交给 `OpenExternalUrl` 交给浏览器。审计据此记录「自更新仅 host 钉住的 GitHub 下载页跳转，从不下载执行自身二进制」。
-
-用户要求把 Windows 上的自更新补齐为应用内执行：下载 → 校验 → 替换 → 重启，且由启动检查与设置页两处入口触发。这推翻了「不执行自身二进制」的既有决定，必须重新立下安全边界。
+自更新此前只做「检查 + 弹框」：`LauncherUpdateService.CheckForUpdateAsync` 返回 release 资产列表，用户在对话框里选一个文件，`ShellLifecycle.OnUpdateAvailableConfirmed` 把下载直链交给 `OpenExternalUrl` 交给浏览器。用户要求把 Windows 上的自更新补齐为应用内执行（下载 → 校验 → 替换 → 重启），由启动检查与设置页两处入口触发；这推翻了「不执行自身二进制」的既有决定，必须重新立下安全边界。
 
 Windows 的现实约束：
 
@@ -19,18 +17,17 @@ Windows 的现实约束：
 ## 决策
 
 1. **独立 helper 由 Core 类库与单文件宿主组成**。`src/Cafe.Launcher.Updater.Core/` 拥有参数契约、校验、路径计划与应用实现；`src/Cafe.Launcher.Updater/` 只保留可执行入口，并在发布时把 Core 收进自包含单文件。主程序下载并校验完成后，把 helper 复制到 `%TEMP%` 运行，自身优雅退出；helper 等主进程退出后再替换、再拉起新版本。helper 不从被替换的目录运行，因此不受文件锁影响，且两个项目都没有第三方依赖。
-2. **信任锚是同 release 的 `SHA256SUMS`**。下载包完成后计算 SHA-256 与之比对，不符即中止、不执行。选择逻辑把 `SHA256SUMS` 资产当作自更新的必要项：缺失或未命中目标文件名时退化为「打开浏览器下载页」，绝不无校验执行。
+2. **信任锚是同 release 的 `SHA256SUMS`**。下载包完成后计算 SHA-256 与之比对，不符即中止、不执行。选择逻辑把 `SHA256SUMS` 当作自更新的必要项：缺失或未命中目标文件名时退化为「打开浏览器下载页」，绝不无校验执行。
 3. **目标资产钉死**：安装版（安装目录存在 `.cafe-launcher-install` 标记，Inno 写入）取 `_setup.exe`；便携版取 `_win-x64.zip`。其它平台或非 x64 一律走既有浏览器跳转。
 4. **安装版通过 Inno 提权**：helper 以 `runas` 启动 `setup.exe /SILENT /SUPPRESSMSGBOXES /NORESTART`。UAC 弹窗是用户主动触发更新的一部分，不做静默提权。因为主进程已先退出，安装器的 `AppMutex` 与 `CloseApplications=no` 契约不冲突；`skipifsilent` 意味着安装器不自行拉起，helper 在安装器结束后显式启动应用。
 5. **便携版整目录换位，新版本跑起来之前不删备份**：helper 解压到同卷 staging，先确认包内有预期主程序（缺主程序在换位前直接拒绝），旧目录改名备份，staging 移入原位；新版本启动成功才尽力删除备份（删除失败留给下次启动清理）。换位失败回滚到旧目录；新版本启动失败则把备份移回原位恢复旧版本，并尽力重启旧版本。
 6. **helper 二次校验**：启动参数携带期望 SHA-256，helper 在解压/执行前重新校验包，作为纵深防御。
 7. **失败保留原版本并记录**：任何一步失败写 `%LOCALAPPDATA%\Cafe Launcher\update-apply.log`，用户主动更新失败不改变仍可用的现版本。
 
-## 被否决的替代方案
+## 备选方案
 
 - **继续只跳转浏览器。** 用户明确要求应用内执行；保留的只是非 Windows / 无可用包时的回退。
-- **用被替换目录里的旧 exe 充当 helper。** 运行中的 exe 被锁定，无法覆盖自身；先复制到临时目录再运行又要把整套运行时复制一遍。
-- **用暂存的新版 exe 充当 helper（`--apply-update`）。** 首次自更新依赖被下载的构建自身可运行，把「更新器」与「被更新的代码」耦合在一起；独立 helper 在旧版本一侧已存在且稳定。
+- **用被替换目录里的旧 exe，或用暂存的新版 exe（`--apply-update`）充当 helper。** 前者被运行中的 exe 锁定，先复制到临时目录又要把整套运行时复制一遍；后者让首次自更新依赖被下载的构建自身可运行，把「更新器」与「被更新的代码」耦合在一起。独立 helper 在旧版本一侧已存在且稳定。
 - **运行时生成 `.cmd`/`.ps1` 脚本。** 免去一个项目，但不可测、易触发杀软，且脚本能力不足以稳健处理目录换位与回滚。
 - **仅靠 HTTPS 与 GitHub 域名钉住。** 提供传输完整性与来源收窄，但不提供包内容完整性；同 release 的 `SHA256SUMS` 成本极低且失败闭合。
 - **直接对安装目录做便携解压替换（含安装版）。** 绕过 Inno 的卸载登记与版本记账，且写 `Program Files` 需要提权，收益不明。
@@ -45,34 +42,18 @@ Windows 的现实约束：
 
 ## 修订（2026-09-25）：可用性判据把「本机带 helper」也算进去，并以原因代替布尔
 
-第 2、3 条把可用性写成「发布资产齐备」，实际还差一环：本机得真的带着 helper。缺了它，
-原来的流程会先下载一整个包，直到用户按下「重启以更新」才在应用阶段失败——下载白花，
-按钮却已经在邀请重试。
+「发布资产齐备」还差一环：本机得真的带着 helper。缺了它，原流程会先下载一整个包，直到用户按下「重启以更新」才在应用阶段失败——下载白花，按钮却已经在邀请重试。
 
-- 新增 `IWindowsLauncherUpdateApplier.IsAvailable`（helper 就在启动器同目录）。判定集中在
-  `LauncherSelfUpdateService` 的一处私有判据上，下载闸门与对话框预检共用它，所以没有 helper
-  的安装根本不会开始下载。
-- 判定返回 `LauncherUpdateInAppAvailability` 原因而不是布尔（ADR-027 的同一条规矩，
-  `LauncherSelfUpdateServiceTests.ResolveInAppAvailability_IsTheOnlyPublicVerdict_NoBareBoolean`
-  钉住形状）：平台不支持 / 此安装缺 helper / 该版本无可校验包，三种互不相同的事实。原来的
-  裸布尔把所有否定压成一句「此设备无法在应用内完成更新」，对后两种原因是错误归因——设备与
-  安装其实都能装，是发布资产无法校验（启动器主动拒绝无校验执行），或这份副本缺组件。
-- 表现层据此把「能力判定」与「尝试失败」分开：`DialogsViewModel.UpdateUnavailableReason`
-  由 `ShowUpdateAvailable` 按原因置位，`MarkUpdateFailed()` 明确清空它——一次失败不是能力
-  判定，其缘由由 toast 说明。说明行按原因取三条文案。
-- 打包侧的对应约束由契约测试钉住：
-  `UpdateHelperCommandTests.HelperExecutableName_MatchesTheUpdaterProjectAndTheWindowsPackagingStep`
-  （helper 只随 win-x64 包发布，安装器整目录收编发布目录）。
+- 新增 `IWindowsLauncherUpdateApplier.IsAvailable`（helper 就在启动器同目录）。判定集中在 `LauncherSelfUpdateService` 的一处私有判据上，下载闸门与对话框预检共用它，所以没有 helper 的安装根本不会开始下载。
+- 判定返回 `LauncherUpdateInAppAvailability` 原因而不是布尔（ADR-027 的同一条规矩，`LauncherSelfUpdateServiceTests.ResolveInAppAvailability_IsTheOnlyPublicVerdict_NoBareBoolean` 钉住形状）：平台不支持 / 此安装缺 helper / 该版本无可校验包，三种互不相同的事实。裸布尔会把后两种压成「此设备无法在应用内完成更新」——设备与安装其实都能装，是发布资产无法校验（启动器主动拒绝无校验执行），或这份副本缺组件。
+- 表现层据此把「能力判定」与「尝试失败」分开：`DialogsViewModel.UpdateUnavailableReason` 由 `ShowUpdateAvailable` 按原因置位，`MarkUpdateFailed()` 明确清空它——一次失败不是能力判定，其缘由由 toast 说明。说明行按原因取三条文案。
+- 打包侧的对应约束：`UpdateHelperCommandTests.HelperExecutableName_MatchesTheUpdaterProjectAndTheWindowsPackagingStep`（helper 只随 win-x64 包发布，安装器整目录收编发布目录）。
 
 ## 修订（2026-09-27）：helper CLI 只作为版本化的内部进程协议
 
-拆出 Core 后，helper 的命令行边界变得可复用，但这不表示要提供面向用户或运维人员的更新器
-CLI。它仍由主程序独占调用，主程序仍是发布资产选择、下载与首次校验的唯一生产入口。
+拆出 Core 后 helper 的命令行边界变得可复用，但这不表示要提供面向用户或运维人员的更新器 CLI：它仍由主程序独占调用，主程序仍是发布资产选择、下载与首次校验的唯一生产入口。
 
-- 唯一动作显式写成 `apply`，并要求 `--protocol-version 1`。未知动作、缺少版本或版本不匹配
-  一律以 usage 失败，避免不同版本的启动器与 helper 对同一参数产生不同解释。
-- 参数序列化与严格解析仍由 `UpdaterArguments` 同一处拥有；主程序不手拼内部协议。
-- 退出状态由 `UpdaterExitCode` 命名并固定，区分参数错误、父进程超时、完整性失败、安装器失败、
-  目录换位失败和已回滚等结果，日志继续承载细节。
-- `--help` 只说明这是 internal protocol；不增加下载、检查更新、选择资产、任意 URL、JSON 输出或
-  面向脚本的兼容承诺。若未来确需公开 CLI，应另立决策并重新审视鉴权、稳定性和支持边界。
+- 唯一动作显式写成 `apply`，并要求 `--protocol-version 1`。未知动作、缺少版本或版本不匹配一律以 usage 失败，避免不同版本的启动器与 helper 对同一参数产生不同解释。
+- 参数序列化与严格解析由 `UpdaterArguments` 同一处拥有；主程序不手拼内部协议。
+- 退出状态由 `UpdaterExitCode` 命名并固定，区分参数错误、父进程超时、完整性失败、安装器失败、目录换位失败和已回滚等结果，日志继续承载细节。
+- `--help` 只说明这是 internal protocol；不增加下载、检查更新、选择资产、任意 URL、JSON 输出或面向脚本的兼容承诺。若未来确需公开 CLI，应另立决策并重新审视鉴权、稳定性和支持边界。

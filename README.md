@@ -40,13 +40,6 @@
     - [自定义壁纸](#自定义壁纸)
   - [帮助与反馈](#帮助与反馈)
   - [开发者指南](#开发者指南)
-    - [环境要求](#环境要求)
-    - [构建与运行](#构建与运行)
-    - [常用命令](#常用命令)
-    - [代码结构](#代码结构)
-    - [架构要点](#架构要点)
-    - [测试](#测试)
-    - [参与贡献](#参与贡献)
   - [本地数据与许可](#本地数据与许可)
   - [致谢](#致谢)
 
@@ -177,115 +170,12 @@ cafe-launcher
 
 ## 开发者指南
 
-本仓库是启动器的完整源代码，包含 Avalonia 宿主、表现层程序集、无 Avalonia 的应用核心、Windows 自更新 helper 及其 Core 类库，以及单元测试与 Headless UI 测试两个测试项目。
+完整开发流程见[开发指南](docs/DEVELOPMENT.md)：环境、构建运行、测试、依赖升级与发布命令统一在此维护。脚本使用 PowerShell 7；Windows 为支持平台，macOS/Linux 为实验性构建。
 
-| 项目 | 说明 |
-| --- | --- |
-| [`src/Cafe.Launcher`](./src/Cafe.Launcher/) | WinExe 宿主：进程生命周期、单实例、依赖注入组合根 |
-| [`src/Cafe.Launcher.UI`](./src/Cafe.Launcher.UI/) | Avalonia 表现层程序集：Views、ViewModel、主题、本地化资源与运行时资产 |
-| [`src/Cafe.Launcher.Core`](./src/Cafe.Launcher.Core/) | 无 Avalonia 的应用核心：协议、安装状态、网络传输、设置、下载与运行时 |
-| [`src/Cafe.Launcher.Updater.Core`](./src/Cafe.Launcher.Updater.Core/) | 自更新参数契约、校验、路径计划与应用实现 |
-| [`src/Cafe.Launcher.Updater`](./src/Cafe.Launcher.Updater/) | Windows 自更新 helper 宿主（单文件，复制到临时目录后调用 Core 应用更新） |
-| [`tests/Cafe.Launcher.Tests`](./tests/Cafe.Launcher.Tests/) | xUnit v3 单元测试 |
-| [`tests/Cafe.Launcher.HeadlessTests`](./tests/Cafe.Launcher.HeadlessTests/) | Avalonia Headless UI 测试，含金标截图基线 |
-
-### 环境要求
-
-- .NET SDK `10.0.302`（见 `global.json`，允许在同一功能带内滚动到较新的 SDK）。
-- 仓库脚本使用 PowerShell 7（`pwsh`）；Windows PowerShell 5.1 不受支持，因为脚本使用了其解析器不接受的 `??`。
-- 构建启用可空引用类型、编译绑定、代码风格检查与「警告视为错误」。一次成功的构建应当没有任何警告。
-
-### 构建与运行
-
-在 `pwsh` 中从仓库根目录执行：
-
-```powershell
-.\build.ps1
-dotnet run --project .\src\Cafe.Launcher\Cafe.Launcher.csproj
-```
-
-### 常用命令
-
-| 命令 | 用途 |
-| --- | --- |
-| `.\test.ps1` | 运行单元测试和 Headless UI 测试 |
-| `.\test.ps1 -Suite Unit` / `-Suite Headless` | 只运行一个测试套件（`All`/`Unit`/`Headless`） |
-| `.\test.ps1 -FilterClass '*VersionComparerTests'` | 只运行过滤出的子集 |
-| `.\dev.ps1 ui` | 运行 UI 样式契约和 Headless UI 检查 |
-| `.\coverage.ps1` | 运行覆盖率门禁 |
-| `.\verify.ps1` | 完整流程：Debug 构建、覆盖率、Release 构建 |
-| `.\scripts\Test-LocalizationContract.ps1` | 检查多语言资源键和格式占位符 |
-| `.\scripts\Build-Distribution.ps1` | 发布并打包自包含发行包 |
-| `.\scripts\New-WindowsInstaller.ps1` | 从 `artifacts/publish/win-x64` 构建 Inno Setup 安装程序 |
-
-运行单个测试类：
-
-```powershell
-dotnet test --project .\tests\Cafe.Launcher.Tests\Cafe.Launcher.Tests.csproj --filter-class '*VersionComparerTests'
-```
-
-提交代码前请运行 `.\verify.ps1`。金标截图基线通过 `.\test.ps1 -UpdateGolden` 重新生成。
-
-### 代码结构
-
-```text
-src/Cafe.Launcher/       # WinExe 宿主：Program、App、组合根、单实例转发、崩溃进程拉起
-├── Composition/       # 依赖注入组合根
-├── Constants/         # 构建标识（BuildInfo）
-├── Services/          # 跨进程转发、关闭延迟、崩溃进程拉起
-├── Properties/        # InternalsVisibleTo（仅测试程序集）
-└── Assets/            # 图标流水线输入 app-icon-source.png
-
-src/Cafe.Launcher.Core/           # 无 Avalonia 的应用核心（协议、安装状态、传输、设置）
-src/Cafe.Launcher.UI/             # Avalonia 表现层：Views/ ViewModels/ Features/ Controls/
-                                  # Converters/ Models/ Helpers/ Services/ Resources/ Assets/
-
-src/Cafe.Launcher.Updater.Core/  # 自更新契约与应用实现
-src/Cafe.Launcher.Updater/       # Windows 自更新单文件宿主
-tests/
-├── Cafe.Launcher.Tests/          # xUnit 单元测试
-├── Cafe.Launcher.HeadlessTests/  # Avalonia Headless UI 测试
-└── Support/                      # 两个套件共用的测试设施
-```
-
-工程目录名、`.csproj` 名、`AssemblyName`、`RootNamespace` 与源码命名空间同名（宿主是
-`Cafe.Launcher`，表现层是 `Cafe.Launcher.UI`），发行资产共用同一个产品 token；规则与取舍见
-[ADR-043](docs/design/adr/ADR-043-程序集与命名空间同名.md)。GitHub 仓库名
-（`Cafe.Launcher.Avalonia`）是历史标识，保持不变。
-
-### 架构要点
-
-- 程序集依赖是单向的：宿主 → UI → Core → Updater.Core（宿主也直接引用 Core 与 Updater.Core）。
-  Core 不得引用 Avalonia、MarkView、Material Icons 或 UI 资源；生产程序集之间禁止
-  `InternalsVisibleTo`（只允许测试程序集作为 friend）。分层规则见
-  [ADR-042](docs/design/adr/ADR-042-Avalonia启动器按Core与UI程序集分层.md)，命名规则见
-  [ADR-043](docs/design/adr/ADR-043-程序集与命名空间同名.md)。
-- `Composition/ServiceConfiguration.cs` 是唯一的依赖注入组合根；Core 的后端登记项由
-  `AddLauncherCore` 负责，组合根必须先调用它再注册表现层，容器反向释放时才会先释放 UI。
-  所有服务与 ViewModel 都是单例（单窗口桌面应用）。
-- `Features/` 按功能垂直组织；功能之间不引用彼此的具体类型，需要协作时把窄接口提取到 `Services/` 并在组合根绑定。`Features/Shell` 是窗口外壳层，聚合各功能的呈现 ViewModel，是这条规则的既定例外。
-- `Services/RemoteHttpTransport` 是唯一对外请求模块，统一负责代理、SSRF 校验、重定向、超时与重试；`Services/HttpClientFactory` 负责共享连接池与代理感知的租约，不要在别处新建 `HttpClient`。
-- 游戏文件操作必须经过 `Helpers/GamePathValidator`，确保始终落在规范化的 `YostarGames\BlueArchive_JP` 目录内。
-- 启动器数据根由组合根解析一次后注入各模块，不通过静态属性在运行期解析，便于测试隔离。
-- `settings.json` 只通过 `ISavedSettingsWriter` 写入，其余模块一律经 `LauncherSettingsService` 读取。
-- 界面文本必须同时补齐 `src/Cafe.Launcher.UI/Resources/LauncherStrings.resx` 及其 `zh-Hans`、`zh-Hant`、`ja` 对应文件，并按字母序排列。
-
-更完整的边界与约定见 [`AGENTS.md`](./AGENTS.md)、[`PROJECT_CONVENTIONS.md`](./PROJECT_CONVENTIONS.md)、[`CONTEXT.md`](./CONTEXT.md) 和 [`UBIQUITOUS_LANGUAGE.md`](./UBIQUITOUS_LANGUAGE.md)；设计决策记录见 [`docs/design/adr/`](./docs/design/adr/)。
-
-### 测试
-
-- 测试使用 xUnit v3；UI 测试使用 `Avalonia.Headless.XUnit`。
-- 测试命名遵循 `Method_State_ExpectedResult`；针对源码或资源的契约测试可用两段式 `Subject_Expectation`。
-- 不引入 mock 框架；优先使用手写的 `HttpMessageHandler` 子类、fake 和 stub，共用的存放在 `tests/TestDoubles/`。
-- 平台限定的测试用 `Assert.SkipUnless` / `Assert.SkipWhen` 显式跳过，而不是提前 `return`。
-- 改动 XAML 或样式后运行 `UiStyleContractTests`，较大改动运行 `.\dev.ps1 ui`。
-
-### 参与贡献
-
-- 提交问题前搜索已有 [Issues](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/issues)，并说明版本、运行平台和复现步骤。
-- 提交信息遵循 [Conventional Commits](https://www.conventionalcommits.org/)，例如 `fix(settings): 修复切换语言后法律信息不显示`。
-- 保持每个提交聚焦。涉及可见 UI 的改动请附截图；新增界面文本时同步维护所有语言资源。
-- 改动架构或开发流程时，请在同一次改动中更新 `AGENTS.md`。
+- [开发规范](PROJECT_CONVENTIONS.md)：程序集与功能边界、编码、本地化、DI、测试。
+- [领域契约](CONTEXT.md)与[界面术语](UBIQUITOUS_LANGUAGE.md)：行为不变量及四语言译名。
+- [架构决策索引](docs/design/adr/README.md)与[审计状态](CODEBASE_AUDIT.md)：决策理由、当前问题和接受风险。
+- [AGENTS.md](AGENTS.md)：编码代理的任务入口。
 
 ## 本地数据与许可
 

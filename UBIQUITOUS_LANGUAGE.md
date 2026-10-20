@@ -1,6 +1,6 @@
 # Ubiquitous Language
 
-界面与文案的规范术语、四语言译法和翻译规则。安装生命周期与诊断领域概念（本地安装状态、损坏安装状态、崩溃快照等）定义在 [CONTEXT.md](CONTEXT.md)；工程结构见 [AGENTS.md](AGENTS.md)。
+界面与文案的规范术语、四语言译法和翻译规则。领域概念见 [CONTEXT.md](CONTEXT.md)，工程结构见[开发规范](PROJECT_CONVENTIONS.md)。
 
 ## Launcher and game files
 
@@ -32,7 +32,7 @@
 | **Launcher self-update** | The Windows flow that downloads the matching release package, verifies it against the release `SHA256SUMS`, and replaces the installation from an independent helper after the launcher exits. | Auto update, in-app upgrade |
 | **Restart to Update** | The action that hands a verified package to the updater and exits the launcher. | Update now, apply update |
 | **Open Release Page** | The fallback action that opens the release page in the browser when no verifiable package is available. | Manual download |
-| **In-app update unavailable** | The state where this host cannot apply an update itself, always with the cause the verdict reported: an unsupported platform, an installation without the Windows update helper, or a release with no verifiable package. The dialog names that cause before the download starts and the primary action is **Open Release Page**. | Not supported, download manually, this device cannot |
+| **In-app update unavailable** | The state where this host cannot apply an update itself, always with the cause the verdict reported: an unsupported platform, an installation without the Windows update helper, or a release with no verifiable package. The dialog names that cause before download and the primary action is **Open Release Page**. | Not supported, download manually, this device cannot |
 
 ## Canonical translations
 
@@ -69,13 +69,13 @@
 
 ## Translation rules
 
-- Prefer the natural localized name in user-facing copy; do not append the English source term mechanically.
-- A first explanation or a dangerous confirmation may retain `Manifest` in parentheses after “文件清单” or “檔案清單”; short labels use only the localized name. Japanese uses “マニフェスト” without a repeated English term.
+- Prefer the natural localized name; do not append the English source term mechanically.
+- A first explanation or dangerous confirmation may keep `Manifest` in parentheses after “文件清单”/“檔案清單”; short labels use only the localized name. Japanese uses “マニフェスト” without a repeated English term.
 - Automatic language selection uses the localized `languageAuto` value; never build it by appending a fixed English `(Auto)` suffix.
-- `banner` and `banners` mean **Banner**, not an event or activity. Chinese copy uses “横幅” or “橫幅”.
+- `banner`/`banners` mean **Banner**, not an event or activity. Chinese copy uses “横幅”/“橫幅”.
 - Log filters and log-level settings use the same **Fatal** translation within each language.
-- Download-source sentence copy uses the full term — “Cafe 下载源 / Cafe 下載來源 / Cafe ダウンロードソース / Cafe download source” and “官方下载源 / 官方下載來源 / 公式ダウンロードソース / Official download source”. The bare display names (“Cafe”, “官方”, “Official”, “公式”) are only for option labels, buttons, and status-bar values. Do not shorten to “Cafe 源 / Cafe 來源 / Cafe ソース” or name the source a “Cafe CDN / CDN サーバー”; the setting selects a provider, not a network route.
-- The localized-resources term must say Chinese: zh-Hans “汉化资源”, zh-Hant “中文化資源”, ja “中国語化リソース”, en “Chinese-localized resources”. The bare “本地化资源 / 本地化資源 / ローカライズリソース” is not used in user-facing copy because it does not say what the resources are localized to.
+- Download-source sentence copy uses the full term: “Cafe 下载源 / Cafe 下載來源 / Cafe ダウンロードソース / Cafe download source” and “官方下载源 / 官方下載來源 / 公式ダウンロードソース / Official download source”. Bare display names (“Cafe”, “官方”, “Official”, “公式”) are only for option labels, buttons, and status-bar values. Do not shorten to “Cafe 源 / Cafe 來源 / Cafe ソース” or call it a “Cafe CDN / CDN サーバー”; the setting selects a provider, not a network route.
+- The localized-resources term must say what the resources are localized to: zh-Hans “汉化资源”, zh-Hant “中文化資源”, ja “中国語化リソース”, en “Chinese-localized resources”. Do not use bare “本地化资源 / 本地化資源 / ローカライズリソース” in user-facing copy.
 
 ## Reserved terms
 
@@ -84,24 +84,9 @@
 
 ## Relationships
 
-- A **game installation** has one local **manifest**.
-- A **download source** supplies remote manifests and game patch files.
-- **Launch verification** checks a **game installation** before launch.
-- **Repair** restores a **game installation** against the selected **download source**.
+- A **game installation** has one local **manifest**; a **download source** supplies remote manifests and patch files.
+- **Launch verification** checks an installation before launch; **repair** restores it against the selected download source.
 - The **Resource Panel** manages **localized resources** when the **Cafe download source** is selected.
-- An **update channel** decides which launcher releases are offered; a **launcher self-update** installs the offered release only after verifying it against the release checksum manifest.
-- A **launcher self-update** exists only where the host carries the Windows update helper and the release offers a verifiable package; otherwise the state is **in-app update unavailable** and the exit is **Open Release Page**.
-- The stable update channel (“稳定版”) and the 正式版 label on the download badges name the same release track; keep each label where it ships rather than unifying them.
-- The game **session status** line reports the state of a launched **game installation** (starting, running, exited), which is separate from **launch verification**.
-
-## Flagged ambiguities
-
-- “Download line” and “CDN line” referred to a **download source**; use **download source** because the setting selects a provider, not a network route.
-- “Manifest,” “list,” and “file list” referred to the same domain object; use **manifest**, translated as “文件清单” and “マニフェスト.”
-- “Resource Control Panel” and “Resource Panel” referred to the same interface; use **Resource Panel**.
-- “Validation,” “verification,” and “check” overlapped in launch-related copy; use **launch verification** for the user-configurable pre-launch operation.
-- “活动” and “活動” were used for **Banner**, but they mean an event; use “横幅” and “橫幅”.
-- “跟随系统” and the unqualified “系统代理” made two proxy modes appear equivalent; use **Automatic system proxy** and **System proxy (configured first)** to expose the explicit-configuration priority and automatic fallback.
-- “汉化管理,” “中文化管理,” and “中国語化設定” named the **Resource Panel** after one resource type; use the canonical panel name and reserve localization wording for **localized resources**.
-- “Cafe 源,” “Cafe 來源,” “Cafe ソース,” and “Cafe source” shortened the **Cafe download source**, and “官方源/官方來源” the **Official download source**; “Cafe CDN” and “CDN サーバー” described the provider as a network route. Sentence copy uses the full terms; short display names remain only on labels and buttons.
-- “本地化（汉化）资源” double-named the **localized resources** in Simplified Chinese; use “汉化资源”.
+- An **update channel** decides which launcher releases are offered. A **launcher self-update** installs one only after verifying it against the release checksum manifest; otherwise the state is **in-app update unavailable** and the exit is **Open Release Page**.
+- The stable channel (“稳定版”) and the 正式版 label on download badges name the same release track; keep each label where it ships.
+- The game **session status** line (starting/running/exited) is separate from **launch verification**.
