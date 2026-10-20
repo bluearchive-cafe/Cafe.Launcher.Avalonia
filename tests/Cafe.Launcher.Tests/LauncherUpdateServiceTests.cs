@@ -65,7 +65,7 @@ public sealed class LauncherUpdateServiceTests
               }
             ]
             """);
-        var service = new LauncherUpdateService(LauncherProfiles.Cafe, transport, buildIdentity: BuildInfo.Identity);
+        var service = new LauncherUpdateService(LauncherProfiles.Cafe, transport, currentVersionOverride: "1.1.1");
 
         var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
 
