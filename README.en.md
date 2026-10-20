@@ -91,6 +91,18 @@ Official features not implemented here include `clickCode` file migration, tempo
 
 Linux can install, update, repair, and **launch** the game through a compatibility runtime. The full launch chain, including XIGNCODE3, has been verified on the single combination listed below.
 
+On Arch Linux x86_64, build and install from the release tag with the repository's [PKGBUILD](./installer/linux/arch/PKGBUILD):
+
+```bash
+sudo pacman -S --needed base-devel git
+git clone https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia.git
+cd Cafe.Launcher.Avalonia/installer/linux/arch
+makepkg -si
+cafe-launcher
+```
+
+`makepkg` installs the required .NET 10 SDK and system dependencies; the resulting package includes the .NET Runtime. Fetch the updated recipe and rebuild to update. Configure Wine, UMU, or Proton separately as described below.
+
 ### Configure a compatibility runtime
 
 Use Settings → Game → Compatibility Runtime:

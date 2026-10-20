@@ -106,6 +106,18 @@ Cafe Launcher 与官方启动器**共用同一个游戏目录与清单格式**�
 
 Linux 版除了安装、更新、修复游戏外，还可以通过兼容运行环境**启动游戏**。整条链路（包括 XIGNCODE3 反作弊）已在下面列出的组合上实机验证过，但只有这一个组合，请据此设定预期。
 
+Arch Linux x86_64 用户可使用仓库提供的 [PKGBUILD](./installer/linux/arch/PKGBUILD) 从发布标签构建安装：
+
+```bash
+sudo pacman -S --needed base-devel git
+git clone https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia.git
+cd Cafe.Launcher.Avalonia/installer/linux/arch
+makepkg -si
+cafe-launcher
+```
+
+`makepkg` 会安装所需的 .NET 10 SDK 和系统依赖；生成的包自带 .NET Runtime。后续更新需重新获取配方并构建安装。Wine、UMU 和 Proton 按下面的说明另行配置。
+
 ### 配置兼容运行环境
 
 在「设置 → 游戏 → 兼容运行环境」中选择启动方式：

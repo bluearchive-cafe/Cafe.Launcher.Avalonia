@@ -490,7 +490,7 @@ public sealed class InstallerContractTests
         Assert.Contains("Verify native RPM dependency installation on Fedora", workflow, StringComparison.Ordinal);
         Assert.Contains("dnf install --setopt=install_weak_deps=False", workflow, StringComparison.Ordinal);
         Assert.Contains("Build and validate Arch package with namcap", workflow, StringComparison.Ordinal);
-        Assert.Contains("makepkg --nodeps --noconfirm", workflow, StringComparison.Ordinal);
+        Assert.Contains("makepkg --syncdeps --noconfirm", workflow, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -579,7 +579,7 @@ public sealed class InstallerContractTests
         Assert.Equal(versionPrefix.Replace("-", string.Empty, StringComparison.Ordinal), pkgver);
         Assert.Contains("sha256sums=('SKIP')", pkgbuild, StringComparison.Ordinal);
         Assert.DoesNotContain("$startdir", pkgbuild, StringComparison.Ordinal);
-        Assert.Contains("makedepends=('dotnet-sdk' 'git')", pkgbuild, StringComparison.Ordinal);
+        Assert.Contains("makedepends=('dotnet-sdk-10.0' 'git')", pkgbuild, StringComparison.Ordinal);
         Assert.Contains("'libunwind'", pkgbuild, StringComparison.Ordinal);
         Assert.Contains("'lttng-ust2.12'", pkgbuild, StringComparison.Ordinal);
         Assert.Contains("'hicolor-icon-theme'", pkgbuild, StringComparison.Ordinal);
@@ -593,6 +593,45 @@ public sealed class InstallerContractTests
         var url = Regex.Match(pkgbuild, @"^url=(?<url>\S+)", RegexOptions.Multiline).Groups["url"].Value.Trim('\'');
         Assert.Contains($"source = cafe-launcher-source::git+{url}.git#tag=v{realver}", srcinfo, StringComparison.Ordinal);
         Assert.Contains("sha256sums = SKIP", srcinfo, StringComparison.Ordinal);
+        var pkgrel = Regex.Match(pkgbuild, @"^pkgrel=(?<release>\S+)", RegexOptions.Multiline).Groups["release"].Value;
+        Assert.NotEqual(string.Empty, pkgrel);
+        Assert.Contains($"\tpkgrel = {pkgrel}\n", srcinfo, StringComparison.Ordinal);
+        Assert.Contains("\tmakedepends = dotnet-sdk-10.0\n", srcinfo, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void LinuxArchPackage_PreservesSdkConfigurationAndChecksPublishedExecutable()
+    {
+        var pkgbuild = ReadProjectFile("installer/linux/arch/PKGBUILD");
+
+        Assert.DoesNotContain("rm -f global.json", pkgbuild, StringComparison.Ordinal);
+        Assert.Contains("sed -i 's/\"version\": \"10\\.0\\.[0-9]*\"/\"version\": \"10.0.100\"/' global.json", pkgbuild, StringComparison.Ordinal);
+        Assert.Contains("export AVALONIA_TELEMETRY_OPTOUT=1", pkgbuild, StringComparison.Ordinal);
+        Assert.Contains("export NUGET_PACKAGES=\"$srcdir/nuget-packages\"", pkgbuild, StringComparison.Ordinal);
+        Assert.Contains("-p:RestoreLockedMode=false", pkgbuild, StringComparison.Ordinal);
+        Assert.Contains("-p:PathMap=\"$PWD=/_/\"", pkgbuild, StringComparison.Ordinal);
+        Assert.Contains("-p:DebugType=none", pkgbuild, StringComparison.Ordinal);
+        Assert.Contains("check() {", pkgbuild, StringComparison.Ordinal);
+        Assert.Contains("\"$srcdir/publish/Cafe.Launcher\" --version", pkgbuild, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void LinuxArchWorkflow_ValidatesMetadataDependenciesAndInstalledCommand()
+    {
+        var workflow = ReadProjectFile(".github/workflows/release.yml");
+        var archStep = workflow.Split("      - name: Build and validate Arch package with namcap", StringSplitOptions.None)[1]
+            .Split("      - name:", StringSplitOptions.None)[0];
+
+        Assert.Contains("archlinux:base bash -euo pipefail", archStep, StringComparison.Ordinal);
+        Assert.Contains("makepkg --printsrcinfo > .SRCINFO.generated && diff -u .SRCINFO .SRCINFO.generated", archStep, StringComparison.Ordinal);
+        Assert.Contains("makepkg --syncdeps --noconfirm", archStep, StringComparison.Ordinal);
+        Assert.DoesNotContain("makepkg --nodeps", archStep, StringComparison.Ordinal);
+        Assert.Contains("pacman -U --noconfirm /pkg/*.pkg.tar.*", archStep, StringComparison.Ordinal);
+        Assert.Contains("test \"$(command -v cafe-launcher)\" -ef /usr/bin/cafe-launcher", archStep, StringComparison.Ordinal);
+        Assert.Contains("-v \"$arch_dir:/pkg:ro\" archlinux:base", archStep, StringComparison.Ordinal);
+        Assert.Contains("if command -v dotnet; then", archStep, StringComparison.Ordinal);
+        Assert.Contains("'(^|[[:space:]])E:'", archStep, StringComparison.Ordinal);
+        Assert.Contains("tee \"$RUNNER_TEMP/arch-package.log\"", archStep, StringComparison.Ordinal);
     }
 
     [Fact]

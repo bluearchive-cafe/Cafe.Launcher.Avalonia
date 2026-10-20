@@ -169,22 +169,33 @@ jobs:
         run: |
           arch_dir="$RUNNER_TEMP/arch-package"
           cp -a installer/linux/arch "$arch_dir"
-          output=$(docker run --rm -v "$arch_dir:/pkg" archlinux:base bash -c '
-            pacman -Syu --noconfirm --needed base-devel dotnet-sdk git namcap \
-              ca-certificates glibc icu krb5 gcc-libs libunwind lttng-ust2.12 \
-              openssl tzdata zlib libx11 libice libsm fontconfig libxkbcommon \
-              hicolor-icon-theme >/dev/null
+          docker run --rm -v "$arch_dir:/pkg" archlinux:base bash -euo pipefail -c '
+            pacman -Syu --noconfirm --needed base-devel dotnet-sdk-10.0 git namcap >/dev/null
             useradd --create-home builder
+            printf "builder ALL=(ALL) NOPASSWD: /usr/bin/pacman\n" > /etc/sudoers.d/builder
+            chmod 0440 /etc/sudoers.d/builder
             chown -R builder:builder /pkg
-            su builder -c "cd /pkg && makepkg --nodeps --noconfirm"
+            su builder -c "cd /pkg && makepkg --printsrcinfo > .SRCINFO.generated && diff -u .SRCINFO .SRCINFO.generated"
+            su builder -c "cd /pkg && makepkg --syncdeps --noconfirm"
             namcap /pkg/PKGBUILD
             namcap /pkg/*.pkg.tar.*
-          ' 2>&1)
-          printf '%s\n' "$output"
-          if grep -q '^E:' <<< "$output"; then
+          ' 2>&1 | tee "$RUNNER_TEMP/arch-package.log"
+          if grep -Eq '(^|[[:space:]])E:' "$RUNNER_TEMP/arch-package.log"; then
             echo "namcap reported an Arch package error." >&2
             exit 1
           fi
+          # Install into a fresh image so SDK dependencies cannot mask missing runtime dependencies.
+          docker run --rm -v "$arch_dir:/pkg:ro" archlinux:base bash -euo pipefail -c '
+            pacman -Syu --noconfirm >/dev/null
+            pacman -U --noconfirm /pkg/*.pkg.tar.*
+            # /usr/sbin aliases /usr/bin and can appear earlier in PATH.
+            test "$(command -v cafe-launcher)" -ef /usr/bin/cafe-launcher
+            if command -v dotnet; then
+              echo "Runtime smoke test must not have a system .NET SDK or runtime installed." >&2
+              exit 1
+            fi
+            cafe-launcher --version
+          '
 
       - name: Prepare changelog
         if: github.event_name == 'push'

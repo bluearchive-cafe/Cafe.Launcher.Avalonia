@@ -25,7 +25,7 @@
 pkgname=cafe-launcher
 _realver=1.1.1
 pkgver=1.1.1
-pkgrel=1
+pkgrel=2
 pkgdesc='Cross-platform launcher for Blue Archive'
 arch=('x86_64')
 url='https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia'
@@ -35,7 +35,7 @@ depends=(
   'lttng-ust2.12' 'openssl' 'tzdata' 'zlib' 'hicolor-icon-theme'
   'libx11' 'libice' 'libsm' 'fontconfig' 'libxkbcommon'
 )
-makedepends=('dotnet-sdk' 'git')
+makedepends=('dotnet-sdk-10.0' 'git')
 # The payload is an already-published, self-contained .NET application; do not
 # let makepkg rewrite it (the rpm spec disables its post-install pass for the
 # same reason).
@@ -46,11 +46,9 @@ sha256sums=('SKIP')
 prepare() {
   cd "$pkgname-source"
 
-  # global.json pins SDK 10.0.302, which Arch's dotnet-sdk (10.0.1xx feature
-  # band) does not provide. A distribution package should build with the SDK the
-  # host ships, so drop the pin and let the resolver pick the newest installed
-  # SDK. On a host that does have 10.0.302 this changes nothing.
-  rm -f global.json
+  # Arch builds SDKs from the 1xx feature band. Keep resolution within .NET 10
+  # while allowing its packaged SDK; preserve the test runner and other settings.
+  sed -i 's/"version": "10\.0\.[0-9]*"/"version": "10.0.100"/' global.json
 
   # v1.1.0 embedded the wall-clock build time. Patch only that legacy form to
   # the tagged commit time; newer sources already embed GitCommitTime directly.
@@ -77,16 +75,29 @@ build() {
   cd "$pkgname-source"
 
   export DOTNET_CLI_TELEMETRY_OPTOUT=1
+  export AVALONIA_TELEMETRY_OPTOUT=1
   export DOTNET_NOLOGO=1
   export DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
+  export NUGET_PACKAGES="$srcdir/nuget-packages"
   export SOURCE_DATE_EPOCH
   SOURCE_DATE_EPOCH=$(git show -s --format=%ct HEAD)
 
+  # Committed locks describe the RID-neutral graph; linux-x64 needs its own restore.
+  # Match the host's Release symbol policy in every project: Avalonia otherwise
+  # rewrites the UI assembly's PDB reference back to an absolute build path.
   dotnet publish src/Cafe.Launcher/Cafe.Launcher.csproj \
     --configuration Release \
     --runtime linux-x64 \
     --self-contained true \
+    -p:RestoreLockedMode=false \
+    -p:PathMap="$PWD=/_/" \
+    -p:DebugType=none \
     --output "$srcdir/publish"
+}
+
+check() {
+  # --version exits before creating user data or initializing the desktop.
+  "$srcdir/publish/Cafe.Launcher" --version
 }
 
 package() {

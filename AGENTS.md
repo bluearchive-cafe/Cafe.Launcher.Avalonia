@@ -67,7 +67,15 @@ wrapper, and AppStream component live under `installer/linux/templates/`. Debian
 versions always carry a `-1` packaging revision; `release.ps1` updates the Arch
 `_realver`/`pkgver` and `.SRCINFO` tag source in the same version commit before
 creating the tag. Release CI validates Debian metadata, performs a native Fedora
-dependency install for the RPM, and rejects Arch `namcap` errors.
+dependency install for the RPM, and rejects Arch `namcap` errors. The Arch recipe
+uses `dotnet-sdk-10.0`, relaxes only the SDK version in its source checkout to
+`10.0.100`, and checks the published executable with `--version`. Arch CI checks
+`.SRCINFO` against `makepkg --printsrcinfo`, resolves dependencies through
+`makepkg --syncdeps`, and installs the resulting package in a fresh Arch container
+without a system .NET SDK/runtime for a command smoke test. Published assemblies
+map build paths to `/_/` so the package does not embed its temporary source path.
+Increment `pkgrel` for packaging changes to an existing upstream version;
+`release.ps1` resets it to 1 only when the Arch upstream version changes.
 
 Run one test class:
 
