@@ -490,7 +490,7 @@ public sealed class InstallerContractTests
         Assert.Contains("Verify native RPM dependency installation on Fedora", workflow, StringComparison.Ordinal);
         Assert.Contains("dnf install --setopt=install_weak_deps=False", workflow, StringComparison.Ordinal);
         Assert.Contains("Build and validate Arch package with namcap", workflow, StringComparison.Ordinal);
-        Assert.Contains("makepkg --nodeps --noconfirm", workflow, StringComparison.Ordinal);
+        Assert.Contains("makepkg --syncdeps --noconfirm", workflow, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -579,7 +579,7 @@ public sealed class InstallerContractTests
         Assert.Equal(versionPrefix.Replace("-", string.Empty, StringComparison.Ordinal), pkgver);
         Assert.Contains("sha256sums=('SKIP')", pkgbuild, StringComparison.Ordinal);
         Assert.DoesNotContain("$startdir", pkgbuild, StringComparison.Ordinal);
-        Assert.Contains("makedepends=('dotnet-sdk' 'git')", pkgbuild, StringComparison.Ordinal);
+        Assert.Contains("makedepends=('dotnet-sdk-10.0' 'git')", pkgbuild, StringComparison.Ordinal);
         Assert.Contains("'libunwind'", pkgbuild, StringComparison.Ordinal);
         Assert.Contains("'lttng-ust2.12'", pkgbuild, StringComparison.Ordinal);
         Assert.Contains("'hicolor-icon-theme'", pkgbuild, StringComparison.Ordinal);
@@ -593,6 +593,69 @@ public sealed class InstallerContractTests
         var url = Regex.Match(pkgbuild, @"^url=(?<url>\S+)", RegexOptions.Multiline).Groups["url"].Value.Trim('\'');
         Assert.Contains($"source = cafe-launcher-source::git+{url}.git#tag=v{realver}", srcinfo, StringComparison.Ordinal);
         Assert.Contains("sha256sums = SKIP", srcinfo, StringComparison.Ordinal);
+        var pkgrel = Regex.Match(pkgbuild, @"^pkgrel=(?<release>\S+)", RegexOptions.Multiline).Groups["release"].Value;
+        Assert.NotEqual(string.Empty, pkgrel);
+        Assert.Contains($"\tpkgrel = {pkgrel}\n", srcinfo, StringComparison.Ordinal);
+        Assert.Contains("\tmakedepends = dotnet-sdk-10.0\n", srcinfo, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void LinuxArchPackage_PreservesSdkConfigurationAndChecksPublishedExecutable()
+    {
+        var pkgbuild = ReadProjectFile("installer/linux/arch/PKGBUILD");
+
+        Assert.DoesNotContain("rm -f global.json", pkgbuild, StringComparison.Ordinal);
+        Assert.Contains("sed -i 's/\"version\": \"10\\.0\\.[0-9]*\"/\"version\": \"10.0.100\"/' global.json", pkgbuild, StringComparison.Ordinal);
+        Assert.Contains("export AVALONIA_TELEMETRY_OPTOUT=1", pkgbuild, StringComparison.Ordinal);
+        Assert.Contains("export NUGET_PACKAGES=\"$srcdir/nuget-packages\"", pkgbuild, StringComparison.Ordinal);
+        Assert.Contains("-p:RestoreLockedMode=false", pkgbuild, StringComparison.Ordinal);
+        Assert.Contains("-p:PathMap=\"$PWD=/_/\"", pkgbuild, StringComparison.Ordinal);
+        Assert.Contains("-p:DebugType=none", pkgbuild, StringComparison.Ordinal);
+        Assert.Contains("check() {", pkgbuild, StringComparison.Ordinal);
+        Assert.Contains("\"$srcdir/publish/Cafe.Launcher\" --version", pkgbuild, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void LinuxArchWorkflow_ValidatesMetadataDependenciesAndInstalledCommand()
+    {
+        var workflow = ReadProjectFile(".github/workflows/release.yml");
+        var archStep = workflow.Split("      - name: Build and validate Arch package with namcap", StringSplitOptions.None)[1]
+            .Split("      - name:", StringSplitOptions.None)[0];
+
+        Assert.Contains("archlinux:base bash -euo pipefail", archStep, StringComparison.Ordinal);
+        Assert.Contains("makepkg --printsrcinfo > .SRCINFO.generated && diff -u .SRCINFO .SRCINFO.generated", archStep, StringComparison.Ordinal);
+        Assert.Contains("makepkg --syncdeps --noconfirm", archStep, StringComparison.Ordinal);
+        Assert.DoesNotContain("makepkg --nodeps", archStep, StringComparison.Ordinal);
+        Assert.Contains("pacman -U --noconfirm /pkg/*.pkg.tar.*", archStep, StringComparison.Ordinal);
+        Assert.Contains("test \"$(command -v cafe-launcher)\" -ef /usr/bin/cafe-launcher", archStep, StringComparison.Ordinal);
+        Assert.Contains("-v \"$arch_dir:/pkg:ro\" archlinux:base", archStep, StringComparison.Ordinal);
+        Assert.Contains("if command -v dotnet; then", archStep, StringComparison.Ordinal);
+        Assert.Contains("'(^|[[:space:]])E:'", archStep, StringComparison.Ordinal);
+        Assert.Contains("tee \"$RUNNER_TEMP/arch-package.log\"", archStep, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void LinuxArchWorkflow_StagesOneValidatedPackageBeforeArtifactUpload()
+    {
+        var workflow = ReadProjectFile(".github/workflows/release.yml");
+        var stageStart = workflow.IndexOf("      - name: Stage Arch release package", StringComparison.Ordinal);
+        var validationStart = workflow.IndexOf("      - name: Build and validate Arch package with namcap", StringComparison.Ordinal);
+        var uploadStart = workflow.IndexOf("      - name: Upload platform packages", StringComparison.Ordinal);
+
+        Assert.True(stageStart > validationStart && stageStart < uploadStart,
+            "The validated Arch package must enter the distribution directory before artifact upload.");
+        var stage = workflow[stageStart..].Split("      - name:", StringSplitOptions.None)[1];
+        Assert.Contains("./scripts/Read-LauncherVersion.ps1 @versionArguments", stage, StringComparison.Ordinal);
+        Assert.Contains("$env:GITHUB_EVENT_NAME -eq 'push'", stage, StringComparison.Ordinal);
+        Assert.Contains("$versionArguments.Tag = $env:Release_Tag", stage, StringComparison.Ordinal);
+        Assert.Contains("Join-Path $env:RUNNER_TEMP 'arch-package'", stage, StringComparison.Ordinal);
+        Assert.Contains("-Filter '*.pkg.tar.zst' -File", stage, StringComparison.Ordinal);
+        Assert.Contains("$archPackages.Count -ne 1", stage, StringComparison.Ordinal);
+        Assert.Contains("Cafe.Launcher_$($version.Tag)_linux-x64.pkg.tar.zst", stage, StringComparison.Ordinal);
+        Assert.Contains("$destination = Join-Path artifacts/distribution", stage, StringComparison.Ordinal);
+        Assert.Contains("Copy-Item -LiteralPath $archPackages[0].FullName -Destination $destination", stage, StringComparison.Ordinal);
+        Assert.Contains("path: artifacts/distribution/*", workflow, StringComparison.Ordinal);
+        Assert.Contains("subject-path: artifacts/distribution/*", workflow, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -905,6 +968,7 @@ public sealed class InstallerContractTests
             "Cafe.Launcher_${{ github.ref_name }}_linux-x64.AppImage",
             "Cafe.Launcher_${{ github.ref_name }}_linux-x64.deb",
             "Cafe.Launcher_${{ github.ref_name }}_linux-x64.rpm",
+            "Cafe.Launcher_${{ github.ref_name }}_linux-x64.pkg.tar.zst",
         })
         {
             Assert.Equal(2, CountOccurrences(workflow, artifactName));
@@ -933,6 +997,7 @@ public sealed class InstallerContractTests
         Assert.Contains("releases/download/${tag}", workflow, StringComparison.Ordinal);
         Assert.Contains("body_path: changelog.md", workflow, StringComparison.Ordinal);
         Assert.Contains("body_path: changelog-distribution.md", workflow, StringComparison.Ordinal);
+        Assert.Contains("linux-x64.pkg.tar.zst|Arch Linux 安装包（x86_64）", workflow, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -945,8 +1010,8 @@ public sealed class InstallerContractTests
         Assert.Contains("sha256sum \"${packages[@]}\" > SHA256SUMS", workflow, StringComparison.Ordinal);
 
         // 产物集合变化时宁可让发布失败，也不要发出不完整或掺入意外文件的清单。
-        Assert.Contains("Expected 7 distribution packages, found", workflow, StringComparison.Ordinal);
-        Assert.Contains("if [[ ${#packages[@]} -ne 7 ]]; then", workflow, StringComparison.Ordinal);
+        Assert.Contains("Expected 8 distribution packages, found", workflow, StringComparison.Ordinal);
+        Assert.Contains("if [[ ${#packages[@]} -ne 8 ]]; then", workflow, StringComparison.Ordinal);
     }
 
     private static bool ContainsCjk(string text)

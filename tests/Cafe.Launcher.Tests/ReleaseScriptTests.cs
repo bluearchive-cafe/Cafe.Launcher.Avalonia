@@ -37,6 +37,9 @@ public sealed class ReleaseScriptTests
         Assert.Contains("#tag=v$newVersion", script, StringComparison.Ordinal);
         Assert.Contains("$ArchPkgbuildRelativePath", script, StringComparison.Ordinal);
         Assert.Contains("$ArchSrcinfoRelativePath", script, StringComparison.Ordinal);
+        Assert.Contains("if ($archVersionChanged)", script, StringComparison.Ordinal);
+        Assert.Contains("'(?m)^pkgrel=\\S+$', 'pkgrel=1'", script, StringComparison.Ordinal);
+        Assert.Contains("\"`tpkgrel = 1\"", script, StringComparison.Ordinal);
     }
 
     [Fact]

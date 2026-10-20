@@ -169,22 +169,50 @@ jobs:
         run: |
           arch_dir="$RUNNER_TEMP/arch-package"
           cp -a installer/linux/arch "$arch_dir"
-          output=$(docker run --rm -v "$arch_dir:/pkg" archlinux:base bash -c '
-            pacman -Syu --noconfirm --needed base-devel dotnet-sdk git namcap \
-              ca-certificates glibc icu krb5 gcc-libs libunwind lttng-ust2.12 \
-              openssl tzdata zlib libx11 libice libsm fontconfig libxkbcommon \
-              hicolor-icon-theme >/dev/null
+          docker run --rm -v "$arch_dir:/pkg" archlinux:base bash -euo pipefail -c '
+            pacman -Syu --noconfirm --needed base-devel dotnet-sdk-10.0 git namcap >/dev/null
             useradd --create-home builder
+            printf "builder ALL=(ALL) NOPASSWD: /usr/bin/pacman\n" > /etc/sudoers.d/builder
+            chmod 0440 /etc/sudoers.d/builder
             chown -R builder:builder /pkg
-            su builder -c "cd /pkg && makepkg --nodeps --noconfirm"
+            su builder -c "cd /pkg && makepkg --printsrcinfo > .SRCINFO.generated && diff -u .SRCINFO .SRCINFO.generated"
+            su builder -c "cd /pkg && makepkg --syncdeps --noconfirm"
             namcap /pkg/PKGBUILD
             namcap /pkg/*.pkg.tar.*
-          ' 2>&1)
-          printf '%s\n' "$output"
-          if grep -q '^E:' <<< "$output"; then
+          ' 2>&1 | tee "$RUNNER_TEMP/arch-package.log"
+          if grep -Eq '(^|[[:space:]])E:' "$RUNNER_TEMP/arch-package.log"; then
             echo "namcap reported an Arch package error." >&2
             exit 1
           fi
+          # Install into a fresh image so SDK dependencies cannot mask missing runtime dependencies.
+          docker run --rm -v "$arch_dir:/pkg:ro" archlinux:base bash -euo pipefail -c '
+            pacman -Syu --noconfirm >/dev/null
+            pacman -U --noconfirm /pkg/*.pkg.tar.*
+            # /usr/sbin aliases /usr/bin and can appear earlier in PATH.
+            test "$(command -v cafe-launcher)" -ef /usr/bin/cafe-launcher
+            if command -v dotnet; then
+              echo "Runtime smoke test must not have a system .NET SDK or runtime installed." >&2
+              exit 1
+            fi
+            cafe-launcher --version
+          '
+
+      - name: Stage Arch release package
+        env:
+          Release_Tag: ${{ github.ref_name }}
+        run: |
+          $versionArguments = @{}
+          if ($env:GITHUB_EVENT_NAME -eq 'push') {
+              $versionArguments.Tag = $env:Release_Tag
+          }
+          $version = ./scripts/Read-LauncherVersion.ps1 @versionArguments
+          $archPackages = @(Get-ChildItem -LiteralPath (Join-Path $env:RUNNER_TEMP 'arch-package') -Filter '*.pkg.tar.zst' -File)
+          if ($archPackages.Count -ne 1) {
+              throw "Expected exactly one validated Arch package, found $($archPackages.Count)."
+          }
+          New-Item -ItemType Directory -Path artifacts/distribution -Force | Out-Null
+          $destination = Join-Path artifacts/distribution "Cafe.Launcher_$($version.Tag)_linux-x64.pkg.tar.zst"
+          Copy-Item -LiteralPath $archPackages[0].FullName -Destination $destination
 
       - name: Prepare changelog
         if: github.event_name == 'push'
@@ -434,6 +462,7 @@ jobs:
           linux-x64.AppImage|Linux AppImage（x64）
           linux-x64.deb|Linux deb 安装包（x64）
           linux-x64.rpm|Linux rpm 安装包（x64）
+          linux-x64.pkg.tar.zst|Arch Linux 安装包（x86_64）
           ORDER
             } >> "$output"
           }
@@ -452,8 +481,8 @@ jobs:
           # （不另抄一份产物清单），但数量不符即失败——宁可让发布中断，也不要发出不完整
           # 或掺入意外文件的清单。
           mapfile -t packages < <(LC_ALL=C ls -1 Cafe.Launcher_* | LC_ALL=C sort)
-          if [[ ${#packages[@]} -ne 7 ]]; then
-            echo "Expected 7 distribution packages, found ${#packages[@]}: ${packages[*]}" >&2
+          if [[ ${#packages[@]} -ne 8 ]]; then
+            echo "Expected 8 distribution packages, found ${#packages[@]}: ${packages[*]}" >&2
             exit 1
           fi
 
@@ -482,6 +511,7 @@ jobs:
             artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_linux-x64.AppImage
             artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_linux-x64.deb
             artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_linux-x64.rpm
+            artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_linux-x64.pkg.tar.zst
             artifacts/distribution/SHA256SUMS
           prerelease: ${{ contains(github.ref_name, '-') }}
           fail_on_unmatched_files: true
@@ -503,6 +533,7 @@ jobs:
             artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_linux-x64.AppImage
             artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_linux-x64.deb
             artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_linux-x64.rpm
+            artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_linux-x64.pkg.tar.zst
             artifacts/distribution/SHA256SUMS
           prerelease: ${{ contains(github.ref_name, '-') }}
           fail_on_unmatched_files: true

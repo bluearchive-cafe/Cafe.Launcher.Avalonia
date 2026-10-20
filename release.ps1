@@ -317,8 +317,12 @@ Write-OK "VersionPrefix updated: $currentVersion → $newVersion"
 
 $archPackageVersion = ConvertTo-ArchPackageVersion $newVersion
 $pkgbuildContent = Get-Content $ArchPkgbuildPath -Raw
+$archVersionChanged = $pkgbuildContent -notmatch "(?m)^_realver=$([regex]::Escape($newVersion))$"
 $pkgbuildContent = $pkgbuildContent -replace '(?m)^_realver=\S+$', "_realver=$newVersion"
 $pkgbuildContent = $pkgbuildContent -replace '(?m)^pkgver=\S+$', "pkgver=$archPackageVersion"
+if ($archVersionChanged) {
+    $pkgbuildContent = $pkgbuildContent -replace '(?m)^pkgrel=\S+$', 'pkgrel=1'
+}
 if ($pkgbuildContent -notmatch "(?m)^_realver=$([regex]::Escape($newVersion))$" -or
     $pkgbuildContent -notmatch "(?m)^pkgver=$([regex]::Escape($archPackageVersion))$") {
     throw "Could not stamp the Arch version in $ArchPkgbuildRelativePath."
@@ -327,6 +331,9 @@ Set-Content $ArchPkgbuildPath -Value $pkgbuildContent -NoNewline
 
 $srcinfoContent = Get-Content $ArchSrcinfoPath -Raw
 $srcinfoContent = $srcinfoContent -replace '(?m)^\tpkgver = \S+$', "`tpkgver = $archPackageVersion"
+if ($archVersionChanged) {
+    $srcinfoContent = $srcinfoContent -replace '(?m)^\tpkgrel = \S+$', "`tpkgrel = 1"
+}
 $srcinfoContent = $srcinfoContent -replace '(?m)^\tsource = cafe-launcher-source::git\+.+#tag=v\S+$', "`tsource = cafe-launcher-source::git+https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia.git#tag=v$newVersion"
 if ($srcinfoContent -notmatch "(?m)^`tpkgver = $([regex]::Escape($archPackageVersion))$" -or
     $srcinfoContent -notmatch "(?m)^`tsource = cafe-launcher-source::git\+https://github\.com/bluearchive-cafe/Cafe\.Launcher\.Avalonia\.git#tag=v$([regex]::Escape($newVersion))$") {
