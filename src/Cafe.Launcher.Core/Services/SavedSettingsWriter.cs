@@ -13,6 +13,10 @@ namespace Cafe.Launcher.Core.Services;
 /// 不再自己读盘、拼改、落盘、补草稿——那四步里的任何一步漏掉一次，磁盘与草稿就会分叉，而分叉
 /// 的后果是用户的下一次保存把别人的值写回旧值。
 /// </summary>
+/// <remarks>
+/// 三种写入串行执行：进入事务后读取草稿或快照，直到归一化值同步回编辑器才放行下一次。
+/// 等待与落盘支持取消；磁盘提交成功后，编辑器同步不再受调用方取消影响。
+/// </remarks>
 public interface ISavedSettingsWriter
 {
     /// <summary>保存设置草稿（设置页的保存）。</summary>
@@ -58,10 +62,11 @@ public interface ISettingsDraftOwner
 /// 归一化写入，<see cref="ISettingsDraftOwner"/>（表现层的设置编辑器）负责草稿与快照；本类只维护
 /// 二者的一致性，因此不需要知道任何表现层类型。
 /// </summary>
-internal sealed class SavedSettingsWriter : ISavedSettingsWriter
+internal sealed class SavedSettingsWriter : ISavedSettingsWriter, IDisposable
 {
     private readonly LauncherSettingsService settingsService;
     private readonly ISettingsDraftOwner draftOwner;
+    private readonly SemaphoreSlim transactionLock = new(1, 1);
 
     public SavedSettingsWriter(LauncherSettingsService settingsService, ISettingsDraftOwner draftOwner)
     {
@@ -73,7 +78,7 @@ internal sealed class SavedSettingsWriter : ISavedSettingsWriter
     }
 
     public Task<LauncherSettings> SaveDraftAsync(CancellationToken cancellationToken = default) =>
-        PersistAsync(draftOwner.GetDraftSnapshot(), cancellationToken);
+        PersistAsync(draftOwner.GetDraftSnapshot, cancellationToken);
 
     public Task<LauncherSettings> UpdateAsync(
         Action<LauncherSettings> change,
@@ -81,9 +86,12 @@ internal sealed class SavedSettingsWriter : ISavedSettingsWriter
     {
         ArgumentNullException.ThrowIfNull(change);
 
-        var next = draftOwner.GetSavedSnapshot();
-        change(next);
-        return PersistAsync(next, cancellationToken);
+        return PersistAsync(() =>
+        {
+            var next = draftOwner.GetSavedSnapshot();
+            change(next);
+            return next;
+        }, cancellationToken);
     }
 
     public Task<LauncherSettings> ReplaceAsync(
@@ -92,14 +100,26 @@ internal sealed class SavedSettingsWriter : ISavedSettingsWriter
     {
         ArgumentNullException.ThrowIfNull(settings);
 
-        return PersistAsync(settings, cancellationToken);
+        return PersistAsync(() => settings, cancellationToken);
     }
 
-    /// <summary>落盘并让草稿所有者收口：草稿与快照都是归一化后的那个值，两者因此不可能与磁盘分叉。</summary>
-    private async Task<LauncherSettings> PersistAsync(LauncherSettings settings, CancellationToken cancellationToken)
+    /// <summary>串行化读取基底、修改、落盘与编辑器同步；磁盘锁不能保护锁外的快照与 UI 调度。</summary>
+    private async Task<LauncherSettings> PersistAsync(Func<LauncherSettings> createSettings, CancellationToken cancellationToken)
     {
-        var persisted = await settingsService.SaveAsync(settings, cancellationToken).ConfigureAwait(false);
-        await draftOwner.ApplyPersistedAsync(persisted, cancellationToken).ConfigureAwait(false);
-        return persisted;
+        await transactionLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var persisted = await settingsService.SaveAsync(createSettings(), cancellationToken).ConfigureAwait(false);
+            // 落盘是提交点：此后即使调用方取消，也必须把同一值交回编辑器，才能放行下一笔事务。
+            await draftOwner.ApplyPersistedAsync(persisted, CancellationToken.None).ConfigureAwait(false);
+            return persisted;
+        }
+        finally
+        {
+            transactionLock.Release();
+        }
     }
+
+    /// <summary>所有写入结束后，由容器或测试装配释放事务信号量；不拥有编辑器与设置服务。</summary>
+    public void Dispose() => transactionLock.Dispose();
 }

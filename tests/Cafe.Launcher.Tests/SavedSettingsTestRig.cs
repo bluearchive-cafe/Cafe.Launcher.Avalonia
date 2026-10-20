@@ -38,10 +38,14 @@ internal sealed class SavedSettingsTestRig : IDisposable
 
     public SettingsEditor Editor { get; }
 
-    public ISavedSettingsWriter Writer { get; }
+    public SavedSettingsWriter Writer { get; }
 
     /// <summary>把设置作为已保存设置写下去：与生产同一条路，编辑器随后与磁盘一致。</summary>
     public Task<LauncherSettings> SeedAsync(LauncherSettings settings) => Writer.ReplaceAsync(settings);
 
-    public void Dispose() => SettingsService.Dispose();
+    public void Dispose()
+    {
+        Writer.Dispose();
+        SettingsService.Dispose();
+    }
 }
