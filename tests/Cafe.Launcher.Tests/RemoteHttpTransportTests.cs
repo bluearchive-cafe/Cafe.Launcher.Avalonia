@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Sockets;
 using System.Net.Http;
 using System.Text;
@@ -662,6 +662,33 @@ public sealed class RemoteHttpTransportTests
 
         Assert.Equal("hello", payload?.Name);
         Assert.Equal(2, handler.RequestCount);
+    }
+
+    [Theory]
+    [InlineData(RemoteRetryScope.Network)]
+    [InlineData(RemoteRetryScope.Transient)]
+    public async Task GetJsonAsync_WhenDnsFails_RetriesResolutionBeforeSending(RemoteRetryScope scope)
+    {
+        var resolveCount = 0;
+        var validator = new RemoteHttpUrlValidator((_, _) =>
+            ++resolveCount == 1
+                ? Task.FromException<IPAddress[]>(new SocketException((int)SocketError.NoData))
+                : Task.FromResult(new[] { IPAddress.Parse("93.184.216.34") }));
+        var handler = new ScriptedHandler(ScriptedHandler.Ok("""{"Name":"hello"}"""));
+        var transport = CreateTransport(handler, validator: validator);
+
+        var payload = await transport.GetJsonAsync<SamplePayload>(
+            new Uri("https://example.test/data"),
+            new RemoteRequestOptions
+            {
+                MaxAttempts = 2,
+                Backoff = _ => TimeSpan.Zero,
+                RetryScope = scope
+            });
+
+        Assert.Equal("hello", payload?.Name);
+        Assert.Equal(2, resolveCount);
+        Assert.Equal(1, handler.RequestCount);
     }
 
     [Fact]
