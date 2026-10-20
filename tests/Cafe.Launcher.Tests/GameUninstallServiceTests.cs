@@ -479,7 +479,7 @@ public sealed class GameUninstallServiceTests : IDisposable
     {
         var gamePath = CreateGameDirectory();
         await WriteGameFileAsync(gamePath, "data/managed.bin");
-        var managedPrefixRoot = GameCompatibilityPaths.GetDefaultGameCompatibilityRoot(LauncherProfiles.BlueArchiveJapan.RuntimeId);
+        var managedPrefixRoot = new GameCompatibilityPaths(tempDir.DataRoot).GetDefaultGameCompatibilityRoot(LauncherProfiles.BlueArchiveJapan.RuntimeId);
         var prefixMarker = Path.Combine(managedPrefixRoot, "wine", "prefix", "drive_c", "marker.txt");
         Directory.CreateDirectory(Path.GetDirectoryName(prefixMarker)!);
         await File.WriteAllTextAsync(prefixMarker, "prefix");
@@ -734,7 +734,7 @@ public sealed class GameUninstallServiceTests : IDisposable
         await WriteGameFileAsync(gamePath, "unknown.bin");
         var store = await CreateCommittedStoreAsync(gamePath, "data/managed.bin");
         var localGame = await store.ReadAsync(gamePath);
-        var managedPrefixRoot = GameCompatibilityPaths.GetDefaultGameCompatibilityRoot(LauncherProfiles.BlueArchiveJapan.RuntimeId);
+        var managedPrefixRoot = new GameCompatibilityPaths(tempDir.DataRoot).GetDefaultGameCompatibilityRoot(LauncherProfiles.BlueArchiveJapan.RuntimeId);
         var prefixMarker = Path.Combine(managedPrefixRoot, "wine", "prefix", "marker.bin");
         Directory.CreateDirectory(Path.GetDirectoryName(prefixMarker)!);
         await File.WriteAllTextAsync(prefixMarker, "0123456789");
@@ -910,7 +910,8 @@ public sealed class GameUninstallServiceTests : IDisposable
             new GameInstallationPath(LauncherProfiles.BlueArchiveJapan),
             new DownloadCheckpointStore( tempDir.DataRoot ),
             processTracker ?? TestGameProcessTracker.None(),
-            shortcutService ?? new TestGameShortcutService());
+            shortcutService ?? new TestGameShortcutService(),
+            new GameCompatibilityPaths(tempDir.DataRoot));
     }
 
     /// <summary>

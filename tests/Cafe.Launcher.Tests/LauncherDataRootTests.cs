@@ -47,7 +47,9 @@ public sealed class LauncherDataRootTests : IDisposable
         Assert.Equal(Path.Combine(dataRoot.Root, LauncherPaths.PrefixMetadataFileName), dataRoot.PrefixMetadataPath);
         Assert.Equal(Path.Combine(dataRoot.Root, LauncherDataRoot.ImageCacheFolderName), dataRoot.ImageCacheDirectory);
         Assert.Equal(Path.Combine(dataRoot.Root, LauncherDataRoot.CrashReportsFolderName), dataRoot.CrashReportsDirectory);
+        Assert.Equal(Path.Combine(dataRoot.Root, LauncherDataRoot.UpdateFolderName), dataRoot.UpdateDirectory);
         Assert.Equal(Path.Combine(dataRoot.Root, LauncherConstants.LogExportFolderName), dataRoot.LogExportDirectory);
+        Assert.Equal(dataRoot.Root, dataRoot.LogDirectory);
 
         foreach (var path in new[]
         {
@@ -64,6 +66,73 @@ public sealed class LauncherDataRootTests : IDisposable
         {
             Assert.Equal(dataRoot.Root, Path.GetDirectoryName(path));
         }
+    }
+
+    [Fact]
+    public void ResolveLayout_OnUnix_UsesTheLowercaseProductSlug()
+    {
+        var dataHome = tempDir.Sub("xdg-data");
+
+        var dataRoot = LauncherDataRoot.ResolveLayout(
+            "Cafe Launcher",
+            testOverride: null,
+            isUnix: true,
+            dataHome: dataHome);
+
+        Assert.Equal(Path.Combine(dataHome, "cafe-launcher"), dataRoot.Root);
+    }
+
+    [Fact]
+    public void ResolveLayout_OffUnix_KeepsTheProductDirectoryName()
+    {
+        var dataHome = tempDir.Sub("local");
+
+        var dataRoot = LauncherDataRoot.ResolveLayout(
+            "Cafe Launcher",
+            testOverride: null,
+            isUnix: false,
+            dataHome: dataHome);
+
+        Assert.Equal(Path.Combine(dataHome, "Cafe Launcher"), dataRoot.Root);
+    }
+
+    [Fact]
+    public void ResolveLayout_WhenTestOverrideIsSet_UsesTheIsolatedRoot()
+    {
+        var relativeOverride = Path.Combine(".", Guid.NewGuid().ToString("N"), "..", "isolated");
+
+        var dataRoot = LauncherDataRoot.ResolveLayout(
+            "Cafe Launcher",
+            relativeOverride,
+            isUnix: true,
+            dataHome: tempDir.Sub("xdg-data"));
+
+        Assert.Equal(Path.GetFullPath(relativeOverride), dataRoot.Root);
+    }
+
+    [Theory]
+    [InlineData("Cafe Launcher", "cafe-launcher")]
+    [InlineData("  Cafe   Launcher  ", "cafe-launcher")]
+    [InlineData("Launcher", "launcher")]
+    public void ToUnixDirectoryName_NormalizesCaseAndWhitespace(string productName, string expected)
+    {
+        Assert.Equal(expected, LauncherDataRoot.ToUnixDirectoryName(productName));
+    }
+
+    [Theory]
+    [InlineData("/absolute/xdg", true)]
+    [InlineData("relative/xdg", false)]
+    [InlineData("", false)]
+    [InlineData("   ", false)]
+    public void ResolveXdgDirectory_HonorsOnlyAbsoluteValues(string? configured, bool usesConfigured)
+    {
+        var expected = usesConfigured
+            ? Path.GetFullPath("/absolute/xdg")
+            : Path.Combine("/home/user", ".local/share");
+
+        Assert.Equal(
+            expected,
+            LauncherDataRoot.ResolveXdgDirectory(configured, "/home/user", ".local/share"));
     }
 
     [Theory]

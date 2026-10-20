@@ -40,6 +40,7 @@ internal sealed partial class ResourcePanelUidService
     private readonly ILauncherSettingsService settingsService;
     private readonly ISavedSettingsWriter savedSettingsWriter;
     private readonly string? cookieLibraryPathOverride;
+    private readonly GameCompatibilityPaths? compatibilityPaths;
     private string cookieLibraryPath;
 
     public ResourcePanelUidService(
@@ -47,8 +48,9 @@ internal sealed partial class ResourcePanelUidService
         BestHttpCookieLibraryService cookieLibraryService,
         ILauncherSettingsService settingsService,
         ISavedSettingsWriter savedSettingsWriter,
+        GameCompatibilityPaths compatibilityPaths,
         ILauncherDiagnostics? diagnostics = null)
-        : this(gameProfile, cookieLibraryService, settingsService, savedSettingsWriter, null, diagnostics)
+        : this(gameProfile, cookieLibraryService, settingsService, savedSettingsWriter, null, diagnostics, compatibilityPaths)
     {
     }
 
@@ -57,13 +59,15 @@ internal sealed partial class ResourcePanelUidService
         BestHttpCookieLibraryService cookieLibraryService,
         ILauncherSettingsService settingsService,
         ISavedSettingsWriter savedSettingsWriter,
-        string? cookieLibraryPath,
-        ILauncherDiagnostics? diagnostics = null)
+        string? cookieLibraryPath = null,
+        ILauncherDiagnostics? diagnostics = null,
+        GameCompatibilityPaths? compatibilityPaths = null)
     {
         this.gameProfile = gameProfile;
         this.cookieLibraryService = cookieLibraryService;
         this.settingsService = settingsService;
         this.savedSettingsWriter = savedSettingsWriter;
+        this.compatibilityPaths = compatibilityPaths;
         cookieLibraryPathOverride = cookieLibraryPath;
         this.cookieLibraryPath = cookieLibraryPath ?? GetDefaultCookieLibraryPath();
         this.diagnostics = diagnostics;
@@ -152,7 +156,10 @@ internal sealed partial class ResourcePanelUidService
                 ? ResolveLinuxCookieLibraryPath(
                     settings.GameRuntime,
                     Environment.UserName,
-                    runner => GameCompatibilityPaths.GetDefaultPrefixPath(gameProfile.RuntimeId, runner),
+                    runner => (compatibilityPaths
+                        ?? throw new InvalidOperationException(
+                            "The launcher data root is required to resolve the managed compatibility prefix."))
+                        .GetDefaultPrefixPath(gameProfile.RuntimeId, runner),
                     gameProfile.CookieLibraryRelativeSegments)
                 : GetDefaultCookieLibraryPath());
             if (!File.Exists(cookieLibraryPath))

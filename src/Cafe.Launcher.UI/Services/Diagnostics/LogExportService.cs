@@ -452,10 +452,11 @@ internal sealed class LogExportService
     }
 
     /// <summary>
-    /// Crash artifacts live under the user data root, with a temp fallback when that root is
-    /// unwritable. The fallback comes from <see cref="CrashReportStore"/> so the exporter and the
-    /// store cannot drift apart and silently lose the reports written there. The primary
-    /// directory is derived from this service's own root, which tests override.
+    /// Crash artifacts live under the state root (Windows/macOS: the single data root), with a
+    /// temp fallback when that root is unwritable. The fallback comes from
+    /// <see cref="CrashReportStore"/> so the exporter and the store cannot drift apart and
+    /// silently lose the reports written there. The primary directory is derived from this
+    /// service's own root, which tests override.
     /// </summary>
     private IEnumerable<string> CrashReportDirectories() =>
         crashReportLocator.GetCrashReportDirectories(dataRoot.Root);

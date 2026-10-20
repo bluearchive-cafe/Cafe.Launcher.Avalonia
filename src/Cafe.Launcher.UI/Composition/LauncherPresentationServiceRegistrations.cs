@@ -58,7 +58,7 @@ public static class LauncherPresentationServiceRegistrations
         if (existingLogger is not null)
             services.AddSingleton(existingLogger);
         else
-            services.AddSingleton(_ => new UnifiedLogger(dataRoot.Root, buildIdentity));
+            services.AddSingleton(_ => new UnifiedLogger(dataRoot.LogDirectory, buildIdentity));
         services.AddSingleton<GraphicsInfoProbe>();
         services.AddSingleton<ProtonBuildDiscovery>();
         services.AddSingleton<LogExportService>();
@@ -96,6 +96,7 @@ public static class LauncherPresentationServiceRegistrations
             sp.GetRequiredService<BestHttpCookieLibraryService>(),
             sp.GetRequiredService<ILauncherSettingsService>(),
             sp.GetRequiredService<ISavedSettingsWriter>(),
+            sp.GetRequiredService<GameCompatibilityPaths>(),
             sp.GetRequiredService<ILauncherDiagnostics>()));
         services.AddSingleton(new PresentationOptions(showHiddenSettings));
         services.AddSingleton<SettingsEditor>();

@@ -654,7 +654,11 @@ public sealed class ShellLifecycleTests : IDisposable
             settingsOptions,
             settingsAppearance,
             errorHandling,
-            new GameRuntime([GameRunnerDefinition.Native], new DefaultProcessLauncher(), new GameProcessTracker()),
+            new GameRuntime(
+                [GameRunnerDefinition.Native],
+                new DefaultProcessLauncher(),
+                new GameProcessTracker(),
+                new GameCompatibilityPaths(TestDataRoot.ForCurrentProcess())),
             filePickerService);
         var resourcePanelService = new ResourcePanelService(
             new ResourcePanelUidService(LauncherProfiles.BlueArchiveJapan, 

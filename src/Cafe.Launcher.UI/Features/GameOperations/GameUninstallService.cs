@@ -33,6 +33,7 @@ internal sealed class GameUninstallService
     private readonly DownloadCheckpointStore checkpointStore;
     private readonly IGameProcessTracker gameProcessTracker;
     private readonly IGameShortcutService shortcutService;
+    private readonly GameCompatibilityPaths compatibilityPaths;
 
     public GameUninstallService(
         YostarGameProfile gameProfile,
@@ -42,7 +43,8 @@ internal sealed class GameUninstallService
         IGameInstallationPath installationPath,
         DownloadCheckpointStore checkpointStore,
         IGameProcessTracker gameProcessTracker,
-        IGameShortcutService shortcutService)
+        IGameShortcutService shortcutService,
+        GameCompatibilityPaths compatibilityPaths)
     {
         this.gameProfile = gameProfile;
         this.localInstallationStateStore = localInstallationStateStore;
@@ -52,6 +54,7 @@ internal sealed class GameUninstallService
         this.checkpointStore = checkpointStore;
         this.gameProcessTracker = gameProcessTracker;
         this.shortcutService = shortcutService;
+        this.compatibilityPaths = compatibilityPaths;
     }
 
     /// <summary>确认框展示的安装目录与受管兼容环境大小；展示统计不指导文件删除。</summary>
@@ -197,7 +200,7 @@ internal sealed class GameUninstallService
     }
 
     private (string GameRoot, string ManagedPrefixRoot) ResolveCleanupTargets(string gamePath) =>
-        (gamePath, GameCompatibilityPaths.GetDefaultGameCompatibilityRoot(gameProfile.RuntimeId));
+        (gamePath, compatibilityPaths.GetDefaultGameCompatibilityRoot(gameProfile.RuntimeId));
 
     private IReadOnlyList<DirectoryDeletionTarget> ResolveDeletionTargets(string gamePath, UninstallScope scope)
     {
@@ -208,7 +211,7 @@ internal sealed class GameUninstallService
             UninstallScope.GameDirectoryAndManagedCompatibility =>
             [
                 new DirectoryDeletionTarget(gameRoot, gameRoot),
-                new DirectoryDeletionTarget(managedPrefixRoot, GameCompatibilityPaths.GetDefaultCompatibilityRoot())
+                new DirectoryDeletionTarget(managedPrefixRoot, compatibilityPaths.GetDefaultCompatibilityRoot())
             ],
             _ => throw new ArgumentOutOfRangeException(nameof(scope), scope, null)
         };

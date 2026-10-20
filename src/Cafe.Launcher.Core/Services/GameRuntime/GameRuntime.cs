@@ -18,6 +18,7 @@ internal sealed class GameRuntime : IGameRuntime
     private readonly IReadOnlyList<GameRunnerDefinition> runners;
     private readonly IProcessLauncher processLauncher;
     private readonly IGameProcessTracker processTracker;
+    private readonly GameCompatibilityPaths compatibilityPaths;
     private readonly Func<string, string?, string?> locateExecutable;
     private readonly Func<string, string, TimeSpan, CancellationToken, Task<RuntimeProbeResult>> probeVersion;
     private readonly RunnerOutputCapture? runnerOutputCapture;
@@ -28,6 +29,7 @@ internal sealed class GameRuntime : IGameRuntime
         IEnumerable<GameRunnerDefinition> runners,
         IProcessLauncher processLauncher,
         IGameProcessTracker processTracker,
+        GameCompatibilityPaths compatibilityPaths,
         RunnerOutputCapture? runnerOutputCapture = null,
         CompatibilityEnvironmentPrecheck? environmentPrecheck = null,
         PrefixMetadataStore? prefixMetadata = null)
@@ -35,6 +37,7 @@ internal sealed class GameRuntime : IGameRuntime
             runners,
             processLauncher,
             processTracker,
+            compatibilityPaths,
             (name, explicitPath) => ExecutableLocator.FindInPath(name, explicitPath),
             RuntimeVersionProbe.ProbeAsync,
             runnerOutputCapture,
@@ -47,6 +50,7 @@ internal sealed class GameRuntime : IGameRuntime
         IEnumerable<GameRunnerDefinition> runners,
         IProcessLauncher processLauncher,
         IGameProcessTracker processTracker,
+        GameCompatibilityPaths compatibilityPaths,
         Func<string, string?, string?> locateExecutable,
         Func<string, string, TimeSpan, CancellationToken, Task<RuntimeProbeResult>> probeVersion,
         RunnerOutputCapture? runnerOutputCapture = null,
@@ -56,6 +60,7 @@ internal sealed class GameRuntime : IGameRuntime
         this.runners = runners.ToArray();
         this.processLauncher = processLauncher;
         this.processTracker = processTracker;
+        this.compatibilityPaths = compatibilityPaths;
         this.locateExecutable = locateExecutable;
         this.probeVersion = probeVersion;
         this.runnerOutputCapture = runnerOutputCapture;
@@ -345,7 +350,7 @@ internal sealed class GameRuntime : IGameRuntime
         }
     }
 
-    private static ProcessStartInfo BuildStartInfo(
+    private ProcessStartInfo BuildStartInfo(
         GameRunnerDefinition runner,
         string executable,
         GameLaunchRequest request,
@@ -411,9 +416,9 @@ internal sealed class GameRuntime : IGameRuntime
     /// The compatibility prefix a launch targets: the configured path when set,
     /// otherwise the runner-managed default isolated per game and runner.
     /// </summary>
-    private static string GetEffectivePrefixPath(GameLaunchRequest request, string runnerId, GameRuntimeConfiguration configuration) =>
+    private string GetEffectivePrefixPath(GameLaunchRequest request, string runnerId, GameRuntimeConfiguration configuration) =>
         string.IsNullOrWhiteSpace(configuration.PrefixPath)
-            ? GameCompatibilityPaths.GetDefaultPrefixPath(request.GameId, runnerId)
+            ? compatibilityPaths.GetDefaultPrefixPath(request.GameId, runnerId)
             : configuration.PrefixPath;
 
     /// <summary>
@@ -430,7 +435,7 @@ internal sealed class GameRuntime : IGameRuntime
         return configuration.ProtonPath;
     }
 
-    private static GameRuntimeDiagnosticSnapshot BuildDiagnostic(
+    private GameRuntimeDiagnosticSnapshot BuildDiagnostic(
         GameRunnerDefinition? runner,
         GameRunnerAvailability? availability,
         GameLaunchRequest request,

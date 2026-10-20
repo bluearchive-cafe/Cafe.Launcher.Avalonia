@@ -43,7 +43,8 @@ public sealed class InstallationOperationStateTests : IDisposable
         new GameRuntime(
             [GameRunnerDefinition.Native],
             new DefaultProcessLauncher(),
-            TestGameProcessTracker.None());
+            TestGameProcessTracker.None(),
+            new GameCompatibilityPaths(TestDataRoot.ForCurrentProcess()));
 
     private static GameRunnerDefinition SupportedUmuDefinition() =>
         new(
@@ -60,6 +61,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             [SupportedUmuDefinition()],
             new DefaultProcessLauncher(),
             TestGameProcessTracker.None(),
+            new GameCompatibilityPaths(TestDataRoot.ForCurrentProcess()),
             locateExecutable: (_, _) => null,
             probeVersion: (_, _, _, _) =>
                 Task.FromResult(RuntimeProbeResult.Success("9.0", 0, "", "")));
@@ -69,6 +71,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             [SupportedUmuDefinition()],
             new FailingProcessLauncher(),
             TestGameProcessTracker.None(),
+            new GameCompatibilityPaths(TestDataRoot.ForCurrentProcess()),
             locateExecutable: (_, _) => "/usr/bin/umu-run",
             probeVersion: (_, _, _, _) =>
                 Task.FromResult(RuntimeProbeResult.Success("1.4.4", 0, "", "")));
@@ -89,6 +92,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             [UnsupportedNativeDefinition()],
             new DefaultProcessLauncher(),
             TestGameProcessTracker.None(),
+            new GameCompatibilityPaths(TestDataRoot.ForCurrentProcess()),
             locateExecutable: (_, _) => null,
             probeVersion: (_, _, _, _) =>
                 Task.FromResult(RuntimeProbeResult.Success("9.0", 0, "", "")));
@@ -389,7 +393,7 @@ Assert.Equal(localizer.F("gameExecutableMissing", Path.Combine(gamePath, "BlueAr
         Assert.Contains($"GameId: {LauncherProfiles.BlueArchiveJapan.RuntimeId}", result.DiagnosticMessage, StringComparison.Ordinal);
         Assert.Contains("Proton: auto", result.DiagnosticMessage, StringComparison.Ordinal);
         Assert.Contains(
-            GameCompatibilityPaths.GetDefaultPrefixPath(LauncherProfiles.BlueArchiveJapan.RuntimeId, "umu"),
+            new GameCompatibilityPaths(TestDataRoot.ForCurrentProcess()).GetDefaultPrefixPath(LauncherProfiles.BlueArchiveJapan.RuntimeId, "umu"),
             result.DiagnosticMessage,
             StringComparison.Ordinal);
     }
@@ -480,7 +484,8 @@ Assert.Equal(localizer.F("gameExecutableMissing", Path.Combine(gamePath, "BlueAr
             new LocalDiagnostics(),
             new LocalizationService(),
             new GameInstallationPath(LauncherProfiles.BlueArchiveJapan), new DownloadCheckpointStore( tempDir.DataRoot ), TestGameProcessTracker.None(),
-            new TestGameShortcutService());
+            new TestGameShortcutService(),
+            new GameCompatibilityPaths(tempDir.DataRoot));
 
         var result = await service.ValidateAsync(gamePath);
 
@@ -497,7 +502,8 @@ Assert.Equal(localizer.F("gameExecutableMissing", Path.Combine(gamePath, "BlueAr
             new LocalDiagnostics(),
             localizer,
             new GameInstallationPath(LauncherProfiles.BlueArchiveJapan), new DownloadCheckpointStore( tempDir.DataRoot ), TestGameProcessTracker.None(),
-            new TestGameShortcutService());
+            new TestGameShortcutService(),
+            new GameCompatibilityPaths(tempDir.DataRoot));
         var protectedPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         Assert.False(string.IsNullOrWhiteSpace(protectedPath));
 
@@ -526,7 +532,8 @@ var service = new GameUninstallService(LauncherProfiles.BlueArchiveJapan,
     new GameInstallationPath(LauncherProfiles.BlueArchiveJapan),
     new DownloadCheckpointStore( tempDir.DataRoot ),
     TestGameProcessTracker.Running("BlueArchive"),
-    new TestGameShortcutService());
+    new TestGameShortcutService(),
+    new GameCompatibilityPaths(tempDir.DataRoot));
 
 var result = await service.ValidateAsync(gamePath);
 
@@ -544,7 +551,8 @@ Assert.Equal(GameOperationErrorCode.GameRunning, result.ErrorCode);
             new LocalDiagnostics(),
             localizer,
             new GameInstallationPath(LauncherProfiles.BlueArchiveJapan), new DownloadCheckpointStore( tempDir.DataRoot ), TestGameProcessTracker.None(),
-            new TestGameShortcutService());
+            new TestGameShortcutService(),
+            new GameCompatibilityPaths(tempDir.DataRoot));
         var driveRoot = Path.GetPathRoot(Path.GetTempPath());
         Assert.False(string.IsNullOrWhiteSpace(driveRoot));
 
@@ -564,7 +572,8 @@ Assert.Equal(GameOperationErrorCode.GameRunning, result.ErrorCode);
             new LocalDiagnostics(),
             localizer,
             new GameInstallationPath(LauncherProfiles.BlueArchiveJapan), new DownloadCheckpointStore( tempDir.DataRoot ), TestGameProcessTracker.None(),
-            new TestGameShortcutService());
+            new TestGameShortcutService(),
+            new GameCompatibilityPaths(tempDir.DataRoot));
         var missingPath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
 
         var result = await service.ValidateAsync(missingPath);
@@ -586,7 +595,8 @@ var service = new GameUninstallService(LauncherProfiles.BlueArchiveJapan,
     new LocalDiagnostics(),
     localizer,
     new GameInstallationPath(LauncherProfiles.BlueArchiveJapan), new DownloadCheckpointStore( tempDir.DataRoot ), TestGameProcessTracker.None(),
-    new TestGameShortcutService());
+    new TestGameShortcutService(),
+    new GameCompatibilityPaths(tempDir.DataRoot));
 
 var result = await service.ValidateAsync(invalidGamePath);
 
@@ -628,7 +638,8 @@ var service = new GameUninstallService(LauncherProfiles.BlueArchiveJapan,
     new LocalDiagnostics(),
     localizer,
     new GameInstallationPath(LauncherProfiles.BlueArchiveJapan), new DownloadCheckpointStore( tempDir.DataRoot ), TestGameProcessTracker.None(),
-    new TestGameShortcutService());
+    new TestGameShortcutService(),
+    new GameCompatibilityPaths(tempDir.DataRoot));
 
 var result = await service.ValidateAsync(gamePath);
 
@@ -661,7 +672,8 @@ Assert.Equal(GameOperationErrorCode.None, result.ErrorCode);
             new LocalDiagnostics(),
             new LocalizationService(),
             new GameInstallationPath(LauncherProfiles.BlueArchiveJapan), new DownloadCheckpointStore( tempDir.DataRoot ), TestGameProcessTracker.None(),
-            new TestGameShortcutService());
+            new TestGameShortcutService(),
+            new GameCompatibilityPaths(tempDir.DataRoot));
         var snapshot = new LauncherStatusSnapshot
         {
             RuntimeState = LauncherRuntimeState.Ready,
@@ -714,7 +726,8 @@ Assert.Equal(GameOperationErrorCode.None, result.ErrorCode);
             new LocalDiagnostics(),
             new LocalizationService(),
             new GameInstallationPath(LauncherProfiles.BlueArchiveJapan), new DownloadCheckpointStore( tempDir.DataRoot ), TestGameProcessTracker.None(),
-            new TestGameShortcutService());
+            new TestGameShortcutService(),
+            new GameCompatibilityPaths(tempDir.DataRoot));
 
         var result = await service.UninstallAsync(
             new LauncherStatusSnapshot

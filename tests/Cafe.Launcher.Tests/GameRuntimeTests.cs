@@ -45,12 +45,14 @@ public sealed class GameRuntimeTests
         List<(string Name, string? Path)>? locateCalls = null,
         RunnerOutputCapture? capture = null,
         CompatibilityEnvironmentPrecheck? precheck = null,
-        PrefixMetadataStore? metadata = null)
+        PrefixMetadataStore? metadata = null,
+        GameCompatibilityPaths? compatibilityPaths = null)
     {
         return new GameRuntime(
             definitions,
             launcher,
             tracker ?? new RecordingProcessTracker(),
+            compatibilityPaths ?? new GameCompatibilityPaths(TestDataRoot.ForCurrentProcess()),
             locate ?? ((name, explicitPath) =>
             {
                 locateCalls?.Add((name, explicitPath));
@@ -457,7 +459,7 @@ public sealed class GameRuntimeTests
 
         var startInfo = Assert.Single(launcher.StartInfos);
         Assert.Equal(
-            GameCompatibilityPaths.GetDefaultPrefixPath(request.GameId, "wine"),
+            new GameCompatibilityPaths(TestDataRoot.ForCurrentProcess()).GetDefaultPrefixPath(request.GameId, "wine"),
             startInfo.Environment["WINEPREFIX"]);
     }
 
@@ -521,7 +523,7 @@ public sealed class GameRuntimeTests
         Assert.Equal("umu", result.Diagnostic.RunnerId);
         Assert.Equal("auto", result.Diagnostic.ProtonPath);
         Assert.Equal(
-            GameCompatibilityPaths.GetDefaultPrefixPath(LauncherProfiles.BlueArchiveJapan.RuntimeId, "umu"),
+            new GameCompatibilityPaths(TestDataRoot.ForCurrentProcess()).GetDefaultPrefixPath(LauncherProfiles.BlueArchiveJapan.RuntimeId, "umu"),
             result.Diagnostic.PrefixPath);
     }
 
