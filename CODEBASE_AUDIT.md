@@ -4,13 +4,16 @@
 
 ## 当前结论
 
-- 审计日期：2026-10-20（增量复核；基线仍为 2026-09-24 全量审计）
+- 审计日期：2026-10-20（过度防御与模块耦合专项复核，refactor 模式；全量基线仍为 2026-09-24）
 - 审计基线：`f27ce001018984428f8e5ca9ae8c83ba11c861bd`
+- 本次源码版本：`6ddd51b036e9a759d871ef1c98d80843388793dd` 及本次工作区修复；保留未受本次范围影响的既有发现与接受风险。
 - 范围：文件结构、架构、可靠性、安全与供应链、依赖、测试、性能、可维护性
 - 项目画像：.NET 10 / Avalonia 12 桌面游戏启动器，含独立 Windows 自更新 helper；Windows 为支持平台，macOS/Linux 构建为实验性
 - 健康度：良好，没有 Critical 或 High 发现
-- 当前开放：2 项（`AUD-ARCH-015`、`AUD-TEST-015`）
+- 当前待处理：3 项（1 项 Medium、2 项 Low；2 项 `open`、1 项 `deferred`）
 - 已接受风险：10 项 Low
+
+当前优先级：既有 Headless 时序问题（`AUD-TEST-015`）→ 公开实现收缩（`AUD-ARCH-015`）。Core 独立使用的配置来源（`AUD-ARCH-017`）按用户要求暂缓，扩展辅助宿主前重新裁决。
 
 ## 开放发现
 
@@ -18,6 +21,15 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | `AUD-ARCH-015` | `src/Cafe.Launcher.Core` 的 `Models/` 之外仍有 47 个顶层 public class，`AssemblySplitContractTests.CorePublicImplementationsOutsideModels_AreTheDeclaredSet` 把它们钉成显式声明集。其中 `FileDownloadService`、`NoticeStateService`、`ProtonBuildDiscovery`、`RuntimeVersionProbe` 等仍是服务实现；`GameProcessTracker`、`LinuxProcessScanner`、`RemoteBodyReader` 属确需公开的一类。 | 后端实现细节跨程序集可见，UI/测试可绕过窄接口直接依赖实现。声明集能挡住顺手新增 public 实现，但挡不住「这个类型本来就不该 public」。 | Low | 高 | 服务实现继续按类型逐个收回 `internal`；数据辅助类型与进程级类型留在表内并写明理由。 | 声明表不再包含服务实现，且每条保留项都有注释说明为何必须公开。 |
 | `AUD-TEST-015` | `MainWindowHeadlessTests.SaveSettings_FromSettingsPage_ReportsSuccessInsteadOfThreadFailure`（`tests/Cafe.Launcher.HeadlessTests/MainWindowHeadlessTests.Settings.cs:287`）在 2026-09-28 负载最重的一次全量 `verify.ps1` 中失败：`Assert.Single(context.ViewModel.Toasts.ActiveToasts)` 收到空集合；随后多次全量与单跑均通过。 | 该断言检查设置页保存后恰有一条成功提示。空集合意味着提示未发出或已被收走。偶发失败会让 CI 在无法复现时变红，且 `coverage.ps1` 在第一套失败时直接退出，覆盖率闸口连带失去结论。 | Medium | 中 | 按测试侧时序问题调查：该断言对「保存命令异步落地 → Toast 入栈」没有有界等待，与 `AUD-TEST-014` 同族。定位后给等待加上限并说明观测点，或把断言收到确定的接缝。 | 连续 10 次全量 `verify.ps1`（含覆盖率插桩）该用例全绿，或给出并修复可复现的根因。 |
+
+### AUD-ARCH-017 — Core 网络偏好依赖表现层草稿，缺席时静默使用默认设置
+
+- 严重度：Low；置信度：100；状态：`deferred`（用户要求暂缓）；处置：Architecture Decision。
+- 证据：`src/Cafe.Launcher.Core/Composition/LauncherCoreServiceCollectionExtensions.cs:88,96,178–180` 在每次租约／请求时通过容器查找 `ISettingsDraftOwner`，用它提供 HTTP/2 与代理偏好；没有草稿所有者时直接 `CreateDefaults`，不读取 Core 自己的设置服务。生产实现 `SettingsEditor` 位于 UI；Core-only 默认回退在源码中明确用于测试和辅助宿主。
+- 复现：临时探针仅调用 `AddLauncherCore`，通过真实设置服务保存 `EnableHttp2=false`，新建直连租约的 `DefaultRequestVersion` 仍为 `2.0`，预期已保存偏好对应的 `1.1`。未发网络请求。
+- 影响与边界：Core 的网络配置在运行时依赖表现层是否登记、是否完成快照初始化，缺失登记会被默认值掩盖。当前主程序由 Shell 在网络加载前播种快照，且 ADR-028 已有完整容器接线测试，因此不将其描述为当前主程序忽略用户设置。受影响的是 Core 独立使用和未来辅助宿主。
+- 建议：明确 Core-only 是否承诺读取已保存偏好。若承诺，提供由 Core 拥有且显式初始化的偏好来源，UI 草稿同步继续履行 ADR-024；若不承诺，让组合 API 明示默认策略或要求来源，避免把缺少依赖等同于用户选择默认值。无需恢复被 ADR-028 否决的逐调用方推送。
+- 建议验证：Needs Architecture Decision；完成条件／守卫：形成明确契约，并覆盖 Core-only、完整宿主、初始化前后与保存后新租约的配置行为。
 
 ## 已接受风险
 
@@ -37,6 +49,7 @@
 ## 已验证的工程状态
 
 - 架构以垂直 `Features/` 和共享 `Services/Helpers/Models` 为主；未发现新的非 Shell feature 具体类型越界。
+- 本次专项未将 Shell 的聚合职责、`IGameOperationExecutor` 的转发接缝、`DownloadSession` 的体积判为应拆分的问题：前者是规范声明的聚合边界，后两者受 ADR-021／ADR-022 的测试接缝与会话封装决策保护。文件安全、更新校验和确认后状态复查位于不同信任／时间边界，不因重复出现就视为过度防御。
 - Windows updater 已独立成项目，下载包与 helper 应用前均验证 SHA-256；便携换位在新版本启动成功前保留备份、失败可恢复旧版。
 - GitHub Actions 第三方 action 使用完整 SHA，默认权限 `contents: read`；NuGet 使用中央版本、锁文件、locked restore 与 `NuGetAuditMode=all`。2026-09-24 的依赖查询未发现已知漏洞或弃用包。
 - 下载、校验和进度回调有并发上限与回归守卫。
@@ -44,7 +57,8 @@
 
 ## 验证边界
 
-- **最近一次记录（2026-10-20，Windows）**：完整 `pwsh ./verify.ps1` 通过。本地化契约通过；Debug/Release 构建均为 0 警告、0 错误；单元测试 2413 项（2399 通过 / 14 项平台跳过），Headless 238 项全部通过，Release 资源契约 23 项全部通过。手写代码行覆盖率 86.24%（18672/21652）、分支覆盖率 92.25%（3310/3588），高于基线 0.8560 / 0.9180。该记录不替代后续改动的验证；Linux 专属路径仍受下列平台验证边界约束。
+- **本次修复回归**：设置写入覆盖三种入口交错、等待取消、落盘后取消、持久化失败后重试，以及 UI／后台调用交错下的 UI 线程通知。扫描覆盖 Windows 快照与 Linux proc 根整体失败传播、逐进程失效容忍、经真实扫描适配层的监控保留未知／恢复退出、闸门继续放行及存活宿主优先。新增用例在修复前复现丢 UID、错误退出和扫描异常被吞，修复后单元套件 2435 项通过（2421 通过／14 跳过），Headless 设置线程专项 5 项通过。Core-only 偏好保留原问题，未改动对应组合根。
+- **本次修复完整复验（2026-10-20，Windows）**：完整 `pwsh ./verify.ps1` 通过。本地化契约通过；Debug/Release 构建均为 0 警告、0 错误；单元测试 2435 项（2421 通过／14 项平台跳过），Headless 239 项全部通过，Release 资源契约 23 项全部通过。手写代码行覆盖率 86.63%（18766/21663）、分支覆盖率 92.62%（3328/3593），高于基线 0.8560／0.9180。Linux 扫描错误由临时 proc 目录夹具在 Windows 上覆盖，未重跑 Linux 实机流程；其余平台边界如下。
 - **Windows 安装器**：真实 ISCC 编译已在装有 Inno Setup 7 的本机通过，产物 `Cafe.Launcher_setup.exe` 生成。安装器的**运行时**升级行为（`[InstallDelete]`、`skipifnotsilent`）仍无干净环境复现，结论来自 Inno 语义与 issue #23 的现场证据。
 - **Linux 打包**：`.deb` 实构建并解包校验，Arch 完成 `makepkg` 全量构建与 `namcap` 无 Error；RPM 只做规格静态校验，真实依赖安装依赖发布 CI 的 Fedora 容器步骤。所有 Linux 包未在真实桌面做 GUI 启动与软件中心展示验证，openSUSE 未覆盖。
 - **平台路径**：触屏标题栏拖动没有实机验证（Headless 的 `BeginMoveDrag` 是空实现）；日志轮转没有跑满真实 5 MB，结论来自 Serilog 源码语义与构造用例；Linux/Proton 真实运行和 Windows 自更新启动握手没有实机实验，便携换位恢复路径由真实目录集成测试覆盖。

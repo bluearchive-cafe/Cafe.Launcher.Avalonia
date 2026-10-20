@@ -107,7 +107,17 @@ public sealed class GameProcessTracker : IGameProcessTracker
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(query);
-        var scanned = await exeRunningProbe(query, cancellationToken).ConfigureAwait(false);
+        IReadOnlyList<string> scanned;
+        try
+        {
+            scanned = await exeRunningProbe(query, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (ProcessService.IsEnumerationFailure(exception))
+        {
+            // 本接口服务于破坏性操作闸门：保留 ADR-032 的枚举失败放行策略，
+            // 但已知仍存活的宿主继续优先。会话监控直接消费扫描器，不继承此策略。
+            scanned = [];
+        }
         if (scanned.Count > 0 || !HasLiveTrackedProcess)
         {
             return scanned;

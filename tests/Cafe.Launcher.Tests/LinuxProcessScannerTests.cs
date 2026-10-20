@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using Cafe.Launcher.UI.Services.GameRuntime;
 using Cafe.Launcher.Core.Services.GameRuntime;
+using Cafe.Launcher.Testing;
 
 namespace Cafe.Launcher.Tests;
 
@@ -13,6 +14,26 @@ public sealed class LinuxProcessScannerTests
         ["BlueArchive.exe"]);
 
     private static readonly RunningGameQuery Query = new(Family);
+
+    [Fact]
+    public void Scan_WhenProcEnumerationFails_PropagatesTheFailure()
+    {
+        using var directory = TestDirectory.Create();
+
+        Assert.Throws<DirectoryNotFoundException>(() =>
+            LinuxProcessScanner.Scan(Query, directory.Sub("missing-proc"), CancellationToken.None));
+    }
+
+    [Fact]
+    public void Scan_WhenOneProcessDisappears_StillFindsTheFamily()
+    {
+        using var directory = TestDirectory.Create();
+        Directory.CreateDirectory(directory.Sub("123"));
+        Directory.CreateDirectory(directory.Sub("456"));
+        File.WriteAllText(Path.Combine(directory.Sub("456"), "comm"), "BlueArchive.exe");
+
+        Assert.Equal(["BlueArchive"], LinuxProcessScanner.Scan(Query, directory.Path, CancellationToken.None));
+    }
 
     [Fact]
     public void SelectRunning_PrefersFamilyNamesWhenBothMarkerAndFamilyMatch()
