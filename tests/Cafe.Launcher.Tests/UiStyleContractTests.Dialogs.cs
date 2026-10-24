@@ -997,7 +997,7 @@ public sealed partial class UiStyleContractTests
             .Value;
 
         Assert.Equal("20", TokenValue("Launcher.Component.Dialog.CornerRadius"));
-        Assert.Equal("0,8,8,0", TokenValue("Launcher.Component.Dialog.Alert.CornerRadius"));
+        Assert.Equal("8", TokenValue("Launcher.Component.Dialog.Alert.CornerRadius"));
         Assert.Equal(2, TokenValue("Launcher.Elevation.Shadow.Dialog").Split(',').Length);
         Assert.Equal("32", TokenValue("Launcher.Component.Dialog.Badge.Size"));
         Assert.Equal("16", TokenValue("Launcher.Component.Dialog.Badge.CornerRadius"));

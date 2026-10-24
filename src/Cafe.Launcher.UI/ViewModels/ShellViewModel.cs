@@ -21,9 +21,9 @@ internal partial class ShellViewModel : ViewModelBase, IDisposable
     private readonly LauncherBuildIdentity? buildIdentity;
 
     private static readonly string RuntimeDescription =
-        $"{RuntimeInformation.FrameworkDescription} · {RuntimeInformation.RuntimeIdentifier}";
+        $"{RuntimeInformation.FrameworkDescription} ({RuntimeInformation.RuntimeIdentifier})";
     private static readonly string PlatformDescription =
-        $"{RuntimeInformation.OSDescription} · {RuntimeInformation.OSArchitecture}";
+        $"{RuntimeInformation.OSDescription} ({RuntimeInformation.OSArchitecture})";
 
     [ObservableProperty]
     private string productName = "";

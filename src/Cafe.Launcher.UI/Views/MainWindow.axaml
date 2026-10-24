@@ -350,12 +350,12 @@
                     <Grid ColumnDefinitions="*,Auto" RowDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Xl}"
                           IsVisible="{Binding IsStatusDetailHidden, Converter={x:Static BoolConverters.Not}}">
                         <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
-                            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Lg}">
+                            <WrapPanel ItemSpacing="{StaticResource Launcher.Spacing.Lg}" LineSpacing="{StaticResource Launcher.Spacing.Xs}">
                                 <TextBlock Classes="caption" Text="{Binding Shell.DiskSpaceText}"/>
                                 <TextBlock Classes="caption" Text="{Binding Shell.NetworkText}"/>
                                 <TextBlock Classes="caption" Text="{Binding Shell.DownloadSourceText}"/>
                                 <TextBlock Classes="caption" Text="{Binding Shell.VersionText}"/>
-                            </StackPanel>
+                            </WrapPanel>
                             <Border Classes="path-field">
                                 <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}">
                                     <TextBlock Text="{Binding Shell.I18n[path]}" Classes="value" VerticalAlignment="Center"/>
@@ -434,16 +434,16 @@
                             <!-- Progress bar -->
                             <ProgressBar Grid.Row="1" Grid.Column="1" Value="{Binding Operations.ProgressValue}" IsIndeterminate="{Binding Operations.IsProgressIndeterminate}" Minimum="0" Maximum="100" Height="{StaticResource Launcher.Component.Progress.Bar.Height}"/>
                             <!-- Stage | Speed | Size | ETA -->
-                            <Grid Grid.Row="2" Grid.Column="1" ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                            <WrapPanel Grid.Row="2" Grid.Column="1" ItemSpacing="{StaticResource Launcher.Spacing.Md}" LineSpacing="{StaticResource Launcher.Spacing.Xs}">
                                 <TextBlock Text="{Binding Operations.ProgressDetail}" Classes="caption"/>
-                                <TextBlock Grid.Column="2" Text="{Binding Operations.ProgressSpeed}" Classes="caption"
+                                <TextBlock Text="{Binding Operations.ProgressSpeed}" Classes="caption"
                                            IsVisible="{Binding Operations.ProgressSpeed, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                                <TextBlock Grid.Column="3" Text="{Binding Operations.ProgressSize}" Classes="caption"
+                                <TextBlock Text="{Binding Operations.ProgressSize}" Classes="caption"
                                            IsVisible="{Binding Operations.ProgressSize, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                                <TextBlock Grid.Column="4" Text="{Binding Operations.ProgressEstimated}" Classes="caption"
+                                <TextBlock Text="{Binding Operations.ProgressEstimated}" Classes="caption"
                                            Foreground="{DynamicResource Launcher.Color.Primary}"
                                            IsVisible="{Binding Operations.ProgressEstimated, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                            </Grid>
+                            </WrapPanel>
                         </Grid>
                         <StackPanel Grid.Column="1" Classes="operation-actions" Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
                             <Button Classes="flat-action bottom-action secondary-operation" Command="{Binding Operations.PauseResumeCommand}" VerticalAlignment="Center"
@@ -529,14 +529,14 @@
                                 </Button.Flyout>
                             </Button>
                         </StackPanel>
-                        <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="{StaticResource Launcher.Spacing.Lg}">
+                        <WrapPanel Grid.Row="1" Grid.ColumnSpan="2" HorizontalAlignment="Right" ItemSpacing="{StaticResource Launcher.Spacing.Lg}" LineSpacing="{StaticResource Launcher.Spacing.Xs}">
                             <TextBlock Text="{Binding Operations.GameSessionStateText}" Classes="on-dark-caption"
                                        IsVisible="{Binding Operations.IsGameSessionVisible}"/>
                             <TextBlock Text="{Binding Shell.LaunchCheckText}" Classes="on-dark-caption"/>
                             <TextBlock Text="{Binding Shell.NetworkText}" Classes="on-dark-caption"/>
                             <TextBlock Text="{Binding Shell.DownloadSourceText}" Classes="on-dark-caption"/>
                             <TextBlock Text="{Binding Shell.VersionText}" Classes="on-dark-caption"/>
-                        </StackPanel>
+                        </WrapPanel>
                     </Grid>
                     <!-- Hidden layout (buttons only) -->
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="{StaticResource Launcher.Spacing.Lg}"

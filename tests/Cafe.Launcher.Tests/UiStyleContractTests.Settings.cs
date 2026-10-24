@@ -226,12 +226,7 @@ public sealed partial class UiStyleContractTests
             categoryTitle.Attributes()
                 .Single(attribute => attribute.Name.LocalName == "AutomationProperties.Name")
                 .Value);
-        var categorySubtitle = content
-            .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "TextBlock"
-                && HasClass(element, "category-subtitle"));
-        Assert.Equal("{Binding Description}", categorySubtitle.Attribute("Text")?.Value);
+        Assert.DoesNotContain(document.Descendants(), element => HasClass(element, "category-subtitle"));
         Assert.Single(
             content.Descendants(),
             element => element.Name.LocalName == "ScrollViewer");
@@ -393,9 +388,6 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             "{StaticResource Launcher.Spacing.Xs}",
             GetStyleSetters(document, "StackPanel.settings-content-heading-copy")["Spacing"]);
-        Assert.Equal(
-            "{DynamicResource Launcher.Text.Secondary}",
-            GetStyleSetters(document, "TextBlock.category-subtitle")["Foreground"]);
         Assert.DoesNotContain(
             document.Descendants(),
             element => HasClass(element, "settings-content-divider"));
@@ -425,14 +417,14 @@ public sealed partial class UiStyleContractTests
                 element.Attributes().Any(attribute =>
                     attribute.Name.LocalName == "Key"
                     && attribute.Value == "Launcher.Component.Settings.Navigation.Header.Padding"));
-        Assert.Equal("16,20", navigationHeaderPadding.Value);
+        Assert.Equal("16,16,16,4", navigationHeaderPadding.Value);
         var contentPadding = application
             .Descendants()
             .Single(element =>
                 element.Attributes().Any(attribute =>
                     attribute.Name.LocalName == "Key"
                     && attribute.Value == "Launcher.Component.Settings.Content.Padding"));
-        Assert.Equal("16,24,0,16", contentPadding.Value);
+        Assert.Equal("16,16,0,16", contentPadding.Value);
         var contentScrollPadding = application
             .Descendants()
             .Single(element =>
@@ -840,6 +832,30 @@ public sealed partial class UiStyleContractTests
         Assert.DoesNotContain(
             layout.Descendants(),
             element => element.Name.LocalName == "MaterialIcon");
+    }
+
+    [Fact]
+    public void SettingSelect_ForwardsAdaptiveRowMetricsWithMatchingDefaults()
+    {
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Controls/SettingSelect.axaml"));
+        var row = document
+            .Descendants()
+            .Single(element => element.Name.LocalName == "SettingRow");
+        Assert.Equal(
+            "{Binding MinimumCopyWidth, ElementName=Root}",
+            row.Attribute("MinimumCopyWidth")?.Value);
+        Assert.Equal(
+            "{Binding ContentSpacing, ElementName=Root}",
+            row.Attribute("ContentSpacing")?.Value);
+
+        // 包裹行的默认度量必须与 SettingRow 同刻度，否则转发绑定会把 0 压过内部行的样式默认值。
+        var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
+        Assert.Equal(
+            GetStyleSetters(styles, "controls|SettingRow")["MinimumCopyWidth"],
+            GetStyleSetters(styles, "controls|SettingSelect")["MinimumCopyWidth"]);
+        Assert.Equal(
+            GetStyleSetters(styles, "controls|SettingRow")["ContentSpacing"],
+            GetStyleSetters(styles, "controls|SettingSelect")["ContentSpacing"]);
     }
 
     [Fact]

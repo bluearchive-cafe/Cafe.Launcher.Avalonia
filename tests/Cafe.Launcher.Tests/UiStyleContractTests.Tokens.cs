@@ -75,7 +75,7 @@ public sealed partial class UiStyleContractTests
                 group => group.First().Value.Trim(),
                 StringComparer.Ordinal);
 
-        Assert.Equal("11", resources["Launcher.Typography.FontSize.Label.Sm"]);
+        Assert.Equal("12", resources["Launcher.Typography.FontSize.Label.Sm"]);
         Assert.Equal("12", resources["Launcher.Typography.FontSize.Label.Md"]);
         Assert.Equal("13", resources["Launcher.Typography.FontSize.Body.Sm"]);
         Assert.Equal("14", resources["Launcher.Typography.FontSize.Body.Md"]);
@@ -223,7 +223,7 @@ public sealed partial class UiStyleContractTests
         var dialogAction = GetStyleSetters(document, "Button.dialog-action");
         Assert.Equal(
             "{StaticResource Launcher.Control.Height.Dialog}",
-            dialogAction["Height"]);
+            dialogAction["MinHeight"]);
 
         var bottomAction = GetStyleSetters(document, "Button.bottom-action");
         Assert.Equal(

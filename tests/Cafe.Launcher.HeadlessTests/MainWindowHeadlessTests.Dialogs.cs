@@ -89,9 +89,9 @@ public sealed partial class MainWindowHeadlessTests
                 && ReferenceEquals(button.Command, context.ViewModel.Dialogs.ConfirmUpdateAvailableCommand));
 
         Assert.True(notice.IsEffectivelyVisible);
-        // 左侧 3px 强调边要直上直下：起始两角平角、结束两角 8（Radius.Sm），
-        // 断言运行时几何而不是 XAML 文本——样式没挂上时这里同样会红。
-        Assert.Equal(new CornerRadius(0, 8, 8, 0), notice.CornerRadius);
+        // 提示依靠图标、文字和背景表达；取消额外左边线后使用完整的共享圆角。
+        Assert.Equal(new CornerRadius(8), notice.CornerRadius);
+        Assert.Equal(new Thickness(0), notice.BorderThickness);
         Assert.Equal(
             context.ViewModel.Shell.I18n[LocalizationKeys.LauncherUpdateOpenReleasePage],
             AutomationProperties.GetName(primary));

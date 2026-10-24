@@ -150,6 +150,7 @@
   </Style>
 
   <Style Selector="controls|DialogSurface:panel /template/ Border#PART_FooterBand">
+    <Setter Property="UseLayoutRounding" Value="False"/>
     <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Footer}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
     <Setter Property="BorderThickness" Value="{StaticResource Launcher.Component.Dialog.Footer.BorderThickness}"/>
