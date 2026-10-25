@@ -202,6 +202,7 @@
                           IsExpanded="False"
                           AutomationProperties.Name="{Binding TechnicalDetailsLabel}">
                     <TextBox Margin="{StaticResource Crash.Layout.Details.Margin}"
+                             AutomationProperties.Name="{Binding TechnicalDetailsLabel}"
                              MinHeight="{StaticResource Crash.Layout.Details.MinHeight}"
                              MaxHeight="{StaticResource Crash.Layout.Details.MaxHeight}"
                              Padding="{StaticResource Crash.Layout.Details.Padding}"

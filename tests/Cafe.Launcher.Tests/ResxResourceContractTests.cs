@@ -18,7 +18,7 @@ public sealed class ResxResourceContractTests
     /// 「为什么加一」。
     /// </summary>
     // 完整卸载表面的确认、阶段与结构化结果新增 27 个四语资源。
-    private const int ExpectedNeutralResourceKeyCount = 632;
+    private const int ExpectedNeutralResourceKeyCount = 635;
 
     private static readonly string ResxDir;
     private static readonly string[] AllLocales = ["en", "zh-Hans", "zh-Hant", "ja"];
@@ -80,6 +80,7 @@ public sealed class ResxResourceContractTests
         // 「{0}」整体拼接的调用点使用。）
         // → 632（同轮统一结果页两个指标：实测删除文件数的量词拆成 uninstallRemovedFilesUnit，
         // 实测删除大小的单位复用 FormatParts，二者都不再跟着 22px 数字一起放大。）
+        // → 635（无障碍契约改为全量扫描后补齐三个区域名：设置分类、公告分类、日志条目。）
         Assert.Equal(ExpectedNeutralResourceKeyCount, ResxValues["en"].Count);
     }
 

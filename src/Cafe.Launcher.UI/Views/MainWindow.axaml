@@ -48,10 +48,16 @@
                 <!-- W3: Right-click context menu on title bar -->
                 <Grid.ContextMenu>
                     <ContextMenu>
-                        <MenuItem Header="{Binding Shell.I18n[showLauncher]}" Command="{Binding WindowChrome.ExecuteRestoreWindowCommand}"/>
-                        <MenuItem Header="{Binding Shell.I18n[settings]}" Command="{Binding WindowChrome.ShowSettingsCommand}"/>
+                        <MenuItem Header="{Binding Shell.I18n[showLauncher]}"
+                                  AutomationProperties.Name="{Binding Shell.I18n[showLauncher]}"
+                                  Command="{Binding WindowChrome.ExecuteRestoreWindowCommand}"/>
+                        <MenuItem Header="{Binding Shell.I18n[settings]}"
+                                  AutomationProperties.Name="{Binding Shell.I18n[settings]}"
+                                  Command="{Binding WindowChrome.ShowSettingsCommand}"/>
                         <Separator/>
-                        <MenuItem Header="{Binding Shell.I18n[close]}" Command="{Binding WindowChrome.CloseCommand}"/>
+                        <MenuItem Header="{Binding Shell.I18n[close]}"
+                                  AutomationProperties.Name="{Binding Shell.I18n[close]}"
+                                  Command="{Binding WindowChrome.CloseCommand}"/>
                     </ContextMenu>
                 </Grid.ContextMenu>
                 <StackPanel Classes="titlebar-brand-row">
@@ -201,6 +207,7 @@
                             <Border Classes="remote-content-card news-card"
                                     IsVisible="{Binding RemoteContent.HasNewsItems}">
                                 <TabControl Classes="news-tabs"
+                                            AutomationProperties.Name="{Binding Shell.I18n[newsCategories]}"
                                             ItemsSource="{Binding RemoteContent.NewsCategories}"
                                             SelectedItem="{Binding RemoteContent.SelectedNewsCategory, Mode=TwoWay}"
                                             TabStripPlacement="Top"

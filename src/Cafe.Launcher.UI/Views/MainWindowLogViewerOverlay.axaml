@@ -88,6 +88,7 @@
                         <TextBlock Text="{Binding Shell.I18n[logLoadEarlier]}"/>
                     </Button>
                     <ListBox Grid.Row="1"
+                             AutomationProperties.Name="{Binding Shell.I18n[logEntries]}"
                              ItemsSource="{Binding LogViewer.FilteredEntries}"
                              Classes="log-entry-list"
                              IsVisible="{Binding LogViewer.HasFilteredEntries}">

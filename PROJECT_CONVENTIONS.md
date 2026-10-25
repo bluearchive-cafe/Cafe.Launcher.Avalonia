@@ -62,7 +62,7 @@
 - 所有可视值使用 `StaticResource`/`DynamicResource` 设计 token（`App.axaml` 的 `Launcher.*` 家族）。禁止裸色号、`Transparent`、裸图标尺寸、裸 `4`/`6`/`8` 圆角半径；`Spacing`/`ColumnSpacing`/`RowSpacing` 也引用 `Launcher.Spacing.*`（含 `Spacing.None`）。
 - 透明度只允许结构性 `0`/`1`（可见性、动画关键帧）或 `Launcher.StateLayer.*`；分数透明度以 `Launcher.StateLayer.*` 五档为唯一来源。
 - 主题无关的渐变和阴影只允许定义在 `App.axaml` 或 `MainWindow.Styles.axaml`。
-- 每个交互控件都必须有绑定到本地化字符串的 `AutomationProperties.Name`。
+- 每个交互控件都必须有绑定到本地化字符串的 `AutomationProperties.Name`；契约测试全量扫描 `Views/` 与 `Controls/` 下的 XAML（`IsTabStop="False"` 的设计画廊展示件除外）。
 - 控件使用语义化 `Classes`，不写内联 Style；大块样式或覆盖层提取到独立 `.axaml`，`MainWindow.axaml` 只留窗口外壳与内容网格。
 - Avalonia 使用编译绑定与显式绑定，没有反射式 view locator。
 - 崩溃窗口独立使用 `Crash.*` 令牌，就近定义在自身资源中；隔离报告进程没有 `App.axaml`，见 [ADR-020](docs/design/adr/ADR-020-崩溃窗口独立Fluent设计系统.md)。

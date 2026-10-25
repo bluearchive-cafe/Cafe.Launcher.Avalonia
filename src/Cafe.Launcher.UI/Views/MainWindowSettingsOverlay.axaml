@@ -41,6 +41,7 @@
                         <ListBox Grid.Row="1" Classes="settings-navigation"
                              x:Name="SettingsNavigation"
                              AutomationProperties.AutomationId="SettingsNavigation"
+                             AutomationProperties.Name="{Binding Shell.I18n[settingsNavigation]}"
                              Focusable="True"
                              FocusAdorner="{x:Null}"
                              ItemsSource="{Binding Settings.Options.SettingsCategories}"
