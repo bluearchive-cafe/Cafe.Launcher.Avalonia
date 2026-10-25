@@ -34,7 +34,7 @@ ADR-032 的判据落在「名字家族」，前提是 **Windows 反作弊保护�
 | 3 | 映射了安装目录下的文件 | `maps` | 强 | 直接对应「占着待删目录」；ADR-032 留的门（实测游戏进程 maps 含游戏目录内的 PE/DLL，Unix 路径） |
 | 4 | `comm` 落在名字家族 | 现状 | 弱（截断 + 命名约定） | 与 Windows 兼容的回退：仅 ≤15 字符的名字可用（`BlueArchive.exe` 恰好 15 字符故幸存，长宿主名会截断） |
 
-`cmdline` 的 basename 家族匹配**故意不参与判定**（只用于显示名，见 §5）：它会把「某个编辑器恰好打开了游戏 exe 的路径」也认成游戏，是 Windows 名字判据没有的新误报类别。实测 pressure-vessel **未重写**游戏进程的 argv（保留 `S:\...\BlueArchive.exe` 的 Windows 形态），所以它作为显示名可靠；若将来要参与判定，须先加安装目录/prefix 佐证。
+`cmdline` 的 basename 家族匹配**明确不参与判定**（只用于显示名，见 §5）：它会把「某个编辑器恰好打开了游戏 exe 的路径」也认成游戏，是 Windows 名字判据没有的新误报类别。实测 pressure-vessel **未重写**游戏进程的 argv（保留 `S:\...\BlueArchive.exe` 的 Windows 形态），所以它作为显示名可靠；若将来要参与判定，须先加安装目录/prefix 佐证。
 
 ## 4. 失败方向与误报边界
 
@@ -77,7 +77,7 @@ ADR-032 的判据落在「名字家族」，前提是 **Windows 反作弊保护�
 | `WINEPREFIX` 能否等值匹配 | **不能**：内层是 `<前缀>/pfx/`；须用 `STEAM_COMPAT_DATA_PATH` 或按前缀根匹配 |
 | `comm` 够不够用 | 仅 ≤15 字符名（`BlueArchive.exe` 恰好 15）；长名（宿主 / Chromium helper）截断 |
 
-**对 P0-C 的修正**：`runner_output.log` 实测为 **0 字节**——UMU 不往 stdout/stderr 写东西。实际 Proton 构建应从进程 env 的 `PROTONPATH` 读（或 UMU 自己的日志），不能指望运行器输出。
+**对 P0-C 的修正**：`runner_output.log` 实测为 **0 字节**——UMU 不往 stdout/stderr 写东西。实际 Proton 构建从进程 env 的 `PROTONPATH` 读取（或读 UMU 自己的日志），不能指望运行器输出。
 
 **仍未验证**：正常退出 + 再次启动（P0-A 第 4、5 步）；「运行器宿主退出、游戏仍在跑」这一档的进程表。
 
@@ -93,7 +93,7 @@ ADR-032 的判据落在「名字家族」，前提是 **Windows 反作弊保护�
 **已落地（2026-09-22）**：
 
 - `BuildStartInfo` 写入私有所有权标记 `CAFE_LAUNCHER_GAME_ID`；`LinuxProcessScanner` 扫 `/proc` 认标记，`ProcessService` 在 Linux 走它；`comm` 家族名退为回退。判定与展示分离（标记 / 前缀 / maps / comm 决定在不在跑，家族名决定怎么报）。
-- ADR-036 记录本判据与「Windows 名字家族 / Linux 所有权标记」的有意分叉。
+- ADR-036 记录本判据与「Windows 名字家族 / Linux 所有权标记」的明确分叉。
 - 纯函数骨架（`UnixProcessRecord`、`UnixGameProcessMatcher`）已接入扫描器，不再是脱离调用方的骨架；`tests/.../UnixProcessRecordsTests.cs`、`LinuxProcessScannerTests` 覆盖。
 
 **后续**：

@@ -11,7 +11,7 @@
 把模板钉死在这一档，`device_scale_factor` 恒为 1）。入库的成品则不必等于这一档：外部交付的
 整张海报可以更小或更大，契约接受 **1920×1080 至 2400×1350 之间的任意 16:9 画布**
 （`AssertBannerCanvasIsAccepted`）。放宽的只是尺寸，比例仍是硬要求——发布说明、Release 页面与
-仓库首页都会原样缩放这张图，比例错了会被裁切，尺寸太小则在 2×/3× 屏上发虚。
+仓库首页都会原样缩放这张图。比例错了会被裁切，尺寸太小则在 2×/3× 屏上发虚。
 
 > 历史尺寸：`beta.1`–`beta.5` 是 2400×1350；`beta.6`–`beta.10` 是 2000×1125；
 > `beta.11` 是外部交付的 1920×1080（见下）；**`v1.1.0` 起是深色 1920×1080**（`v1.1.0` 外部交付、
@@ -81,8 +81,8 @@ skill 根为基准定位模板与 schema，可从任意工作目录调用（必�
 Copy-Item docs\promo\specs\release-banner.template.json docs\promo\specs\v1.1.0-beta.9.spec.json
 ```
 
-每个发版都留一份自己的 spec 并入库，这是「设计可复现」的全部意义所在——只留 PNG 的话，
-配色、字号、定位就全变成不可追溯的一次性结果了。
+每个发版都留一份自己的 spec 并入库，这是「设计可复现」的全部意义——只留 PNG，
+配色、字号、定位就全变成不可追溯的一次性结果。
 
 替换占位符用 PowerShell 7（`pwsh`）的 `-Encoding utf8NoBOM`——本机实测唯一可靠的写法：
 
@@ -294,7 +294,7 @@ spec 与图标资产一并提交。**入库清单**：`docs/promo/specs/<tag>.sp
   `promo.dataset.materialMode`，不改变任何颜色。模板之所以还是写 `light`，是因为它是语义标签，
   而且一旦将来换成种子色，它立刻变成有意义的选择器。
 
-反过来，一旦你改成种子色（`seed_color`）或取样素材（`source_asset`），这条短路分支就不再命中：
+反过来，一旦改成种子色（`seed_color`）或取样素材（`source_asset`），这条短路分支就不再命中：
 MCU 会生成明/暗两套方案，`mode` 负责选其中一套，显式 `tokens` 仍然覆盖生成值，`theme` 里没写的键
 也会由生成的方案补齐（`accent` ← `primary`、`text` ← `on_surface` 等）。那时才需要 Node。
 
@@ -337,7 +337,7 @@ schema 不要求 `tokens` 里出现哪些角色。
 渲染一致。
 
 一处例外：两个描边胶囊的文字色 `#1A5FD0` 是设计上手工挑的深蓝，没有对应令牌，直接写在节点
-`style.color` 里；要换配色时记得它也要一起看。
+`style.color` 里；换配色时把它一起核对。
 
 ### `theme`：背景与兜底
 
@@ -360,7 +360,7 @@ linear-gradient(145deg, var(--background-top), var(--background-bottom))
 它会打印 `notice: without a color source or explicit theme, v1 light mode keeps the legacy dark
 background.`——本模板不该出现这条 notice。
 
-`#promo` 自带 `overflow:hidden`，出血的图形会被裁切而不会报错——这是有意的，不是缺陷。
+`#promo` 自带 `overflow:hidden`，出血的图形会被裁切而不会报错——这是明确设计，不是缺陷。
 本模板的几何点缀（两个柔光圆、两个细描边圆环、一张浅色卡片）都改用 scene 里的 `shape` 节点，
 不再用 `::before` / `::after`：
 伪元素对版式校验不可见，而 scene 节点可以被检查（见「出血与碰撞」）。
@@ -369,8 +369,8 @@ background.`——本模板不该出现这条 notice。
 
 `v1.1.0` 与 `v1.1.1` 走的是**深色**一套配色：`mode` 写 `dark`，令牌与 `theme` 都是深色取值。
 它与浅色模板的机制完全相同（同样是显式 `tokens` + 全套 `theme`、同样不碰 MCU、同样不需要 Node），
-**`mode` 依旧只是标签**——深浅由 `tokens` / `theme` 决定，不是由 `mode` 决定，所以写错了 `mode`
-不会变色，但会写进 manifest 骗过后人。
+**`mode` 依旧只是标签**——深浅由 `tokens` / `theme` 决定，不是由 `mode` 决定，所以写错 `mode`
+不会变色，但错误值会写进 manifest，误导后人。
 
 | 令牌 | 深色取值 | 浅色模板取值 |
 | --- | --- | --- |
@@ -415,7 +415,7 @@ Segoe UI, Microsoft YaHei UI, Microsoft YaHei, Noto Sans SC, sans-serif
 
 #### 字体栈必须逐个探针，不能凭品牌名推
 
-这是本流程最容易翻车的一步，因为它不是「写错名字」而是「写了一个看起来合理但这台机器上不存在的名字」。
+这是本流程最容易出错的一步，因为它不是「写错名字」而是「写了一个看起来合理但这台机器上不存在的名字」。
 `font_availability` 的判定不是名字匹配，而是**用 Canvas 光栅比对字体指纹**：把一个探针字符串分别用
 `"<族名>", <通用族>` 和纯通用族渲染，只要像素指纹相同就判为「不可用」。因此「族名拼写正确」不等于
 `ok`——机器上没装就是 `MISSING`，而 `release` 档位下 `MISSING` 直接终止渲染。
@@ -427,7 +427,7 @@ Segoe UI, Microsoft YaHei UI, Microsoft YaHei, Noto Sans SC, sans-serif
 release profile requires available fonts: Noto Sans CJK SC
 ```
 
-`Noto Sans CJK SC` 是 **Linux** 侧的打包名；Windows 上装 Noto 的话族名是 `Noto Sans SC`（无 `CJK`）。
+`Noto Sans CJK SC` 是 **Linux** 侧的打包名；Windows 上安装 Noto 后族名是 `Noto Sans SC`（无 `CJK`）。
 改用 `Noto Sans SC` 后四项全 `ok`。
 
 新增或更换字体族前，先用渲染器自己的检测函数探一遍，别等渲染到一半才发现：
@@ -503,7 +503,7 @@ const unitlessStyle = new Set(["opacity", "z_index", "font_weight", "line_height
 
 - **长度键**（`font_size`、`letter_spacing`、`x`/`y`、`width`/`height`、`padding`、`gap`、`radius`）
   要么写**数字**，要么写**带单位的字符串**。最危险的是「长度键 + 无单位字符串」（`"32"`、`"400"`）：
-  `px()` 原样透传，浏览器判定非法后丢弃，**版式报告不会出声**——上面那个字号掉回 16px 的探针
+  `px()` 原样透传，浏览器判定非法后丢弃，**版式报告不提示**——上面那个字号掉回 16px 的探针
   就是 `text_overflow` 全 0 跑出来的。
 - **白名单那四个键**（`opacity` / `z_index` / `font_weight` / `line_height`）数字和字符串都行，
   但它们**永远不会被补单位**，所以别再自己写 `px`：`line_height: "1.22px"` 是个合法长度，
@@ -576,7 +576,7 @@ v2 把海报表达成一棵递归的节点树，只有 `text` / `image` / `shape
 - **胶囊高度对齐**：三个胶囊都写死 `height: 78`（`box-sizing: border-box` 全局生效），
   文字垂直居中靠 `line-height`——没有边框的版本胶囊用 `"78px"`，有 2px 边框的用 `"74px"`，
   这样三者外高都是 78，不会因为边框差 4px 而参差（实测读回就是 `78px` / `74px`）。
-  这是**有意**给白名单键补单位的少数场景：那里说的是别拿它做行距——把 `line-height` 写成等于盒高
+  这是**明确**给白名单键补单位的少数场景：那里说的是别拿它做行距——把 `line-height` 写成等于盒高
   正是居中手段，而给正文行距写 `px` 才会压塌行盒（见「样式值的类型」）。
 - `$role` 引用：`color` / `background` / `border` 里写 `$primary` 这类角色名即可（也支持在
   `color-mix()` 内部引用）。
@@ -596,7 +596,7 @@ v2 把海报表达成一棵递归的节点树，只有 `text` / `image` / `shape
   `allowed_findings` 掉进 `warnings`。计数与矩形**只对「这份 spec + 这个画布」有意义**：把模板的
   几何原样搬到 1920×1080 上，出血会从五处变成六处（`icon-network` 那枚多溢出一角，实测矩形
   `[1674.7, 206.7, 1997.3, 529.3]`）；`v1.1.1` 重排装饰后又回到五处。**「五处」不是契约**，
-  要的是「每一处越界都有 `allow_bleed` 兜着、报告里 0 errors / 0 warnings」。
+  要的是「每一处越界都有 `allow_bleed` 覆盖、报告里 0 errors / 0 warnings」。
 - **装饰不得进文案区**：`copy-zone` 的 `x + width` 是右边界（模板 1230、深色交付 1200），
   装饰可以压在柔光底上，但不要压到标题、副标题与胶囊上。
 - **契约测试不管装饰几何**：`ReleaseBannerContractTests` 只钉模板的画布、字体栈、占位符、场景 id
@@ -635,7 +635,7 @@ v2 把海报表达成一棵递归的节点树，只有 `text` / `image` / `shape
 桌面、校验与可信 → 盾牌（沿用 `icon-shield`，它是唯一跨版复用的那一枚）。这组图标是**装饰**，
 不承载事实：一套 3–4 枚按当版更新的主题挑，选好后按下面的命令生成新文件并入库，同时更新本表。
 
-**换图标集时不要顺手删掉旧文件**：`v1.1.0-beta.9.spec.json` 这类归档 spec 仍按名字引用它们那一版
+**换图标集时不要删除旧文件**：`v1.1.0-beta.9.spec.json` 这类归档 spec 仍按名字引用它们那一版
 的图标（`icon-repair.png` / `icon-log.png` 就是为它留的），而归档 spec 的价值正是「还能重跑」。
 判据与既有提交一致——**只移除任何 spec 都不再引用的文件**（照上表最后一列核）。想彻底停用某一版
 spec 时，先删该 spec 再删它的图标。
@@ -699,7 +699,7 @@ im = Image.merge("RGBA", (*[Image.new("L", im.size, c) for c in (0x2E, 0x7D, 0xF
 im.save("icon-uninstall.png", format="PNG", optimize=True)
 ```
 
-改完随手验一下「上色 + 烘透明度」是否真的生效（尺寸 512×512，RGB 三通道应全等于上表颜色，
+改完验证「上色 + 烘透明度」是否生效（尺寸 512×512，RGB 三通道应全等于上表颜色，
 alpha 最大值应约等于 `透明度 × 255`）：
 
 ```python
@@ -713,7 +713,7 @@ for path in sorted(Path("docs/promo/assets/icons").glob("*.png")):
 
 **`getextrema()` 分不出「字形正确」与「整张空白」**：空蒙版的 extrema 同样是 `(0, 255)`，
 着色后也能算出「正确」的 33 / 28 / 26 / 31——上一条那个破图占位符就是这样一路混过尺寸、
-模式、extrema 三项检查的。所以要连 `getbbox()` 一起看：它应大致落在 20–491 之间（24×24 视框
+模式、extrema 三项检查的。所以要连 `getbbox()` 一起看：它应落在 20–491 之间（24×24 视框
 自带的留白；本仓库现存九个文件的实测极值就是 20 与 491），而不是挤在左上角二三十个像素里；
 再确认 `images: 4/4 healthy`（第 6 步）与肉眼能看见字形状（第 7 步）。
 
@@ -731,7 +731,7 @@ for path in sorted(Path("docs/promo/assets/icons").glob("*.png")):
 | `icon-repair.png`（归档） | 512×512 / RGBA | `(0, 33)` | 0.13 |
 | `icon-log.png`（归档） | 512×512 / RGBA | `(0, 28)` | 0.11 |
 
-alpha 上界是**故意压得很低**的：图标只是背景点缀，最大值 26–33 意味着最不透明的像素也只有约
+alpha 上界是**明确压低的**：图标只是背景点缀，最大值 26–33 意味着最不透明的像素也只有约
 10%–13% 不透明度。这正是设计意图，不要为了「看得更清楚」把它调亮。
 
 图标是 `origin_class: "decorative"`，`immutable` 因此为 `false`：旋转、透明度这类改动不触发
@@ -829,7 +829,7 @@ shield，装饰层按 1920×1080 重排并**去掉了 `surface-card` 那圈图�
 `images: 4/4 healthy`」这几项。
 
 `verify_export.py` 在本模板上**不会**打印「N actionable layout finding(s) were reported but NOT
-enforced」那一行：该计数只累加 `errors` + `warnings` + 不健康的图片，**故意排除 `allowed_findings`**
+enforced」那一行：该计数只累加 `errors` + `warnings` + 不健康的图片，**明确排除 `allowed_findings`**
 （`describe_layout_report()` 里那句 `if key != "allowed_findings"` 就是为此写的），本模板这三项全是 0，
 合计为 0，提示行因此不出现。反过来说——**看到那行提示说明有真问题要复核**，它不是预期噪音。
 
@@ -843,17 +843,17 @@ enforced」那一行：该计数只累加 `errors` + `warnings` + 不健康的�
 - **改 spec 只能用 `pwsh -Encoding utf8NoBOM` 或编辑器**：Windows PowerShell 5.1 的 `Get-Content`
   会按系统 ANSI 代码页解码无 BOM 的 UTF-8，正文先坏；随后默认编码写回得到非法 UTF-8，
   `-Encoding UTF8` 写回则把乱码**二次编码**成控制字符。**BOM 本身无害**（管线用 `utf-8-sig` 读，
-  skill 也明说 BOM 可有可无），别把锅算在它头上——详见「步骤 1」。
+  skill 也明说 BOM 可有可无），不要把原因归到它头上——详见「步骤 1」。
 - **schema 会一次报出全部错误**（`schema_utils.validate_document` 用 `iter_errors` 收集、按路径排序、
   去重，拼成一段多行消息），所以一次 `inspect` 就能拿到完整清单，不必逐个错误来回试。
 - **`material.tokens` / `theme` / `typography` 都是封闭对象**：拼错或写 camelCase 会被拒，
   不是被忽略。合法角色只有 schema 里那 24 个 snake_case 名。
 - **样式值看单位不看类型**：长度键（`font_size` / `width` / `padding` / `gap` …）写数字，或写
-  **带单位**的字符串；「长度键 + 无单位字符串」（`"32"`）会被浏览器丢弃，而且版式报告不出声
+  **带单位**的字符串；「长度键 + 无单位字符串」（`"32"`）会被浏览器丢弃，而且版式报告不提示
   （实测字号静默掉回 16px）。`font_weight` / `line_height` 在白名单里，数字和字符串都行，
   但**别再补 `px`**——`"1.22px"` 是合法长度，会把行盒压塌而文字照旧压在盒外（**看不出**）。
   `opacity` 必须写数字，写字符串被 schema 拒。详见「样式值的类型」。
-- **fonts 必须逐个探针**（本流程最容易翻车的一项）：族名拼写正确不等于可用，`release` 档位下
+- **fonts 必须逐个探针**（本流程最容易出错的一项）：族名拼写正确不等于可用，`release` 档位下
   任一 `MISSING` 直接终止渲染（见「字体栈必须逐个探针」）。换机器渲染前先跑一次探针。
 - **v2 没有 `layout` 段**，`safe_margin` / `frame_radius` / `slots` / `background_asset` /
   `custom_css` 都是 v1 的东西，写到 v2 spec 上会被 schema 拒。
@@ -871,7 +871,7 @@ enforced」那一行：该计数只累加 `errors` + `warnings` + 不健康的�
   `SystemExit`（未知 schema 版本、`device_scale_factor != 1`、模板契约版本不匹配、确定性校验失败）
   同样是干净的。**唯一的例外是字体闸门**：它以 `RuntimeError` traceback 的形式抛出（见第 4 步）。
 - **相对路径全部以「spec 文件所在目录」为基准**，不是当前工作目录。所以脚本可以从仓库任意目录调用，
-  但**spec 文件本身不能随便挪**：把模板复制到 `%TEMP%` 再跑，`../assets/icons/…` 会解析到
+  但**spec 文件本身不能随意移动**：把模板复制到 `%TEMP%` 再跑，`../assets/icons/…` 会解析到
   `%TEMP%` 的上一级并报 `asset 'icon-uninstall' source does not exist`。每版 spec 必须留在
   `docs/promo/specs/` 下。
 - **渲染器没有 `--scale` 之类的参数**，唯一的开关是 `--verify-determinism`；画布相关的旋钮只能通过

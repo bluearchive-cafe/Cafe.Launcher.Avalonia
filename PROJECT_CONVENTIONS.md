@@ -12,7 +12,7 @@
 
 ## 2. 程序集与命名边界
 
-`Cafe.Launcher.Core` 是无表现依赖的后端边界：不得引用 Avalonia、MarkView、Material Icons 或 UI 资源；用户可见文案以稳定 code 或领域结果传给 UI，由 UI 本地化。Core 不解析进程数据根，也不反射入口程序集取版本：数据根由组合根解析一次后经 `AddLauncherCore` 的必填参数注入（[ADR-025](docs/design/adr/ADR-025-数据根由组合根解析并注入.md)），版本来自注入的 `LauncherBuildIdentity`。
+`Cafe.Launcher.Core` 是无表现依赖的后端边界：不得引用 Avalonia、MarkView、Material Icons 或 UI 资源；用户可见文案以稳定 code 或领域结果传给 UI，由 UI 本地化。Core 不解析进程数据根，也不反射入口程序集取版本。数据根由组合根解析一次后经 `AddLauncherCore` 的必填参数注入（[ADR-025](docs/design/adr/ADR-025-数据根由组合根解析并注入.md)）；版本来自注入的 `LauncherBuildIdentity`。
 
 `Cafe.Launcher.UI` 承载全部 Avalonia 控件、ViewModel、主题、资源与运行时资产（`Views/`、`ViewModels/`、`Features/`、`Controls/`、`Converters/`、`Models/`、`Helpers/`、表现层 `Services/`、`Resources/`、`Assets/`）。宿主只保留进程生命周期与入口文件。分层见 [ADR-042](docs/design/adr/ADR-042-Avalonia启动器按Core与UI程序集分层.md)，命名见 [ADR-043](docs/design/adr/ADR-043-程序集与命名空间同名.md)。
 
@@ -25,7 +25,7 @@
 | `src/Cafe.Launcher.Updater.Core` | 更新参数与路径契约、校验和应用实现 |
 
 - **依赖单向**：host → UI → Core → Updater.Core；host 也直接引用 Core 与 Updater.Core。
-- **同名契约**：工程目录、`.csproj`、`AssemblyName`、`RootNamespace`、源码命名空间与发行资产前缀使用同一 token（宿主 `Cafe.Launcher`、表现层 `Cafe.Launcher.UI` 等）；测试程序集名以 `Tests` 结尾。GitHub 仓库名 `Cafe.Launcher.Avalonia` 是历史标识，刻意保留。
+- **同名契约**：工程目录、`.csproj`、`AssemblyName`、`RootNamespace`、源码命名空间与发行资产前缀使用同一 token（宿主 `Cafe.Launcher`、表现层 `Cafe.Launcher.UI` 等）；测试程序集名以 `Tests` 结尾。GitHub 仓库名 `Cafe.Launcher.Avalonia` 是历史标识，明确保留。
 - **命名空间指明属主**：同一命名空间不得出现在两个程序集；`InternalsVisibleTo` 仅向以 `Tests` 结尾的测试程序集开放。
 - **显式 using**：每个工程在源文件中显式列出 Core 命名空间，不使用项目级 `<Using>`；Core 源码只使用 `Cafe.Launcher.Core.*`。
 - **公开面受控**：Core 与 UI 的顶层 public 类型都有显式声明集测试；新增实现优先收回 `internal`，确实需要公开时在声明表中登记理由。
@@ -135,7 +135,7 @@
 
 ## 9. Settings 与持久化兼容性
 
-- 持久化落点一律经注入的 `LauncherDataRoot`；进程根只由组合根与 ADR-019 保护的 pre-DI 路径解析，`TestUserDataIsolationTests.ProcessRootResolution_IsConfinedToDeclaredPreDiSites` 守护边界。新增落点放进 `LauncherDataRoot.Root` 下的知名路径；文件名声明在 `Constants/LauncherPaths.cs`，随游戏或产品变化的值归 `Models/YostarGameProfile`、`Models/LauncherProductProfile`，唯一出处是 `Constants/LauncherProfiles.cs`（[ADR-025](docs/design/adr/ADR-025-数据根由组合根解析并注入.md)、[ADR-049](docs/design/adr/ADR-049-Linux保留单一数据根并统一小写目录名.md)）。
+- 持久化落点一律经注入的 `LauncherDataRoot`；进程根只由组合根与 ADR-019 保护的 pre-DI 路径解析，`TestUserDataIsolationTests.ProcessRootResolution_IsConfinedToDeclaredPreDiSites` 守护边界。新增落点放进 `LauncherDataRoot.Root` 下的知名路径；文件名声明在 `Constants/LauncherPaths.cs`。随游戏或产品变化的值归 `Models/YostarGameProfile`、`Models/LauncherProductProfile`，唯一出处是 `Constants/LauncherProfiles.cs`（[ADR-025](docs/design/adr/ADR-025-数据根由组合根解析并注入.md)、[ADR-049](docs/design/adr/ADR-049-Linux保留单一数据根并统一小写目录名.md)）。
 - `settings.json` 字段名向后兼容：新增字段在 `LauncherSettings` 提供默认值；重命名/删除前明确旧 JSON 的读取策略；`LauncherSettingsService.NormalizeSettings()` 把未知或非法值兜底为有效默认值。
 - `LauncherSettings` 新增字段必须同步 `DeepClone()` 与 `ComparedProperties`。漏前者会浅拷贝，漏后者会让保存按钮不再跟踪该字段；`LauncherSettingsTests` 用反射守护两张清单。
 - 写入所有权与草稿同步语义见 [CONTEXT.md「已保存设置」](CONTEXT.md#设置与操作)。读取经 `LauncherSettingsService`，写入方由 `AddLauncherCore` 登记；调用方使用 `SaveDraftAsync`/`UpdateAsync`/`ReplaceAsync` 描述变更。`SettingsWriteOwnershipTests` 守护调用方唯一性与持有者声明表。
@@ -143,9 +143,9 @@
 ## 10. 网络与异步
 
 - 出站 HTTP 一律通过 `RemoteHttpTransport` 与 `HttpClientFactory`：共享代理感知租约、SSRF 校验、手动重定向、停滞预算和重试；不另建 `HttpClient` 或长寿命 handler。
-- 本地 DNS 预校验的 `SocketException` 在 URL 校验边界转换为 `HttpRequestException`（`NameResolutionError`），保留原始异常且不缓存失败；调用方复用既有重试、备用端点与失败提示，取消仍原样传播。
+- 本地 DNS 预校验的 `SocketException` 在 URL 校验边界转换为 `HttpRequestException`（`NameResolutionError`），保留原始异常且不缓存失败。调用方复用既有重试、备用端点与失败提示；取消仍原样传播。
 - 客户端偏好在租约取得时读取已保存设置，语义见 [CONTEXT.md「客户端偏好」](CONTEXT.md#设置与操作)。直连容忍 Clash/mihomo 的 Fake-IP 地址段，代理出口不容忍；直连请求失败时保留针对 Fake-IP 的诊断指引。
-- 异步调用直接 `await`，避免 `.Result`、`.Wait()` 或 `Thread.Sleep` 阻塞。取消令牌显式传播，有意不传播时使用 `CancellationToken.None`。
+- 异步调用直接 `await`，避免 `.Result`、`.Wait()` 或 `Thread.Sleep` 阻塞。取消令牌显式传播；明确不传播时使用 `CancellationToken.None`。
 
 ## 11. 文件与文档
 

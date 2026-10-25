@@ -59,7 +59,7 @@ HangDump 默认 30 分钟，必须显式给 `5m`。其计时是无活动时长�
 
 ## 覆盖率及边界
 
-实施时先按 `coverlet.MTP 10.1.0` 接入（其依赖要求 MTP >= 2.4.1，基础命令为 `--coverlet --coverlet-output-format cobertura`），但本地完整运行发现报告只有 `Cafe.Launcher.Core`、`Cafe.Launcher` 与 `Cafe.Launcher.Updater.Core`，整个 `Cafe.Launcher.UI` 缺失。Coverlet 的诊断日志给出原因：MTP 控制器在插桩前已经加载 `Cafe.Launcher.UI.dll`（测试发现会解析引用表现层的测试类型），静态插桩无法重写该文件，于是 `Skipping module ... Locked`。这不是配置能绕开的：任何被控制器提前加载的生产程序集都会消失，无法满足「四个程序集必须实际计数」的仓库契约。
+实施时先按 `coverlet.MTP 10.1.0` 接入（其依赖要求 MTP >= 2.4.1，基础命令为 `--coverlet --coverlet-output-format cobertura`）。本地完整运行发现报告只有 `Cafe.Launcher.Core`、`Cafe.Launcher` 与 `Cafe.Launcher.Updater.Core`；整个 `Cafe.Launcher.UI` 缺失。Coverlet 的诊断日志给出原因：MTP 控制器在插桩前已经加载 `Cafe.Launcher.UI.dll`（测试发现会解析引用表现层的测试类型），静态插桩无法重写该文件，于是 `Skipping module ... Locked`。这不是配置能绕开的：任何被控制器提前加载的生产程序集都会消失，无法满足「四个程序集必须实际计数」的仓库契约。
 
 最终改用 `Microsoft.Testing.Extensions.CodeCoverage 18.12.0`：它通过运行时分析器收集，不重写磁盘程序集，因此能覆盖控制器已加载的 UI。CLI 为 `--coverage --coverage-output-format cobertura --coverage-output <name>`；报告文件名固定、按套件放在独立目录。18.12.0 的包依赖要求 MTP >= 2.5.0，由仓库的 2.5.1 满足。[官方包依赖](https://www.nuget.org/packages/Microsoft.Testing.Extensions.CodeCoverage/18.12.0)
 
@@ -67,4 +67,4 @@ HangDump 默认 30 分钟，必须显式给 `5m`。其计时是无活动时长�
 
 报告解析随之适配：Microsoft 的 Cobertura 用绝对 `filename` 且 `<sources>` 为空，`coverage.ps1` 同时接受绝对路径与旧的相对根解析；`obj/` 下的生成文件与设计器文件继续排除。
 
-SDK 10 的项目参数、报告和过滤不需要使用文档中标明仅 .NET 11/12 可用的新选项；本次不采用全局 `--timeout` 等更高 SDK 入口能力。RID 特定的发行构建与测试执行分开验证，避免从过去 VSTest 可把测试项目当 Library 加载，推断 MTP 也能这样执行。
+SDK 10 的项目参数、报告和过滤不需要使用文档中标明仅 .NET 11/12 可用的新选项；本次不采用全局 `--timeout` 等更高 SDK 入口能力。RID 特定的发行构建与测试执行分开验证；不要从「VSTest 可把测试项目当 Library 加载」推断「MTP 也能这样执行」。

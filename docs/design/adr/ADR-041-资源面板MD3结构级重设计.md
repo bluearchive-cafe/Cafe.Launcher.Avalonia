@@ -23,7 +23,7 @@
 ### 原型遗留问题的裁决
 
 1. **Waiting 行的版本行**：原型前提已过时——`ResourcePanelItem.IsVersionAligned` 早已把 `"--"` 排除在「一致」之外，未加载行走「官方 -- / 本地化 --」两列分支。维持现状。
-2. **Waiting 的 Switch 不禁用**，`IsOperable` 保持 `Ready or Waiting`：Waiting 只是「暂无可启用内容」，但服务器可能返回 `IsEnabled=true` 的存量状态，禁用会让用户无法在维护期关掉它；且原型给禁用态配的解释文案没有既有 key，红线禁止新增字符串，无解释的禁用控件会被读成损坏。状态 chip（待维护）已携带状态语义。
+2. **Waiting 的 Switch 不禁用**，`IsOperable` 保持 `Ready or Waiting`：Waiting 只是「暂无可启用内容」，但服务器可能返回 `IsEnabled=true` 的存量状态，禁用会让用户无法在维护期关掉它。且原型给禁用态配的解释文案没有既有 key，红线禁止新增字符串，无解释的禁用控件会被读成损坏。状态 chip（待维护）已携带状态语义。
 3. **Missing 态与提示条并存**：提示条解释「UID 何时生成」，缺失卡承载「手动输入继续」的动作，两者互补。
 4. **面板高度**：`Launcher.Layout.ResourcePanel.Height`（592）是封顶不是定值，内容变矮时面板自然收缩（ADR-015 尺寸律）；`UiStyleContractTests` 对该值的钉住不动。
 

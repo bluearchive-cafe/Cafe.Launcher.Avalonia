@@ -36,7 +36,7 @@ dotnet run --project ./src/Cafe.Launcher/Cafe.Launcher.csproj
 | `pwsh ./scripts/New-WindowsInstaller.ps1` | 从 `artifacts/publish/win-x64` 构建 Windows 安装器 |
 | `pwsh ./scripts/New-AppIconAssets.ps1` | 修改宿主 `Assets/app-icon-source.png` 后再生 macOS/Linux 图标 |
 
-优先通过 `test.ps1` 运行测试，它保留五分钟无活动挂起保护（Golden 再生也使用同一保护）。空筛选返回失败；测试使用原生 Microsoft.Testing.Platform，直接调用时使用 `dotnet test --project <csproj>` 和 `--filter-class`，不用 VSTest 参数。
+优先通过 `test.ps1` 运行测试，它保留五分钟无活动挂起保护（Golden 再生也使用同一保护）。空筛选返回失败。测试使用原生 Microsoft.Testing.Platform；直接调用时使用 `dotnet test --project <csproj>` 和 `--filter-class`，不用 VSTest 参数。
 
 修改后先运行受影响的测试；XAML/样式变更运行 `UiStyleContractTests`，较大 UI 改动运行 `dev.ps1 ui`。有意改变视觉时，用 `-UpdateGolden` 再生并提交 [Baselines](../tests/Cafe.Launcher.HeadlessTests/Baselines/) 下的 PNG。Headless 和黄金截图在 Windows 上验证；Linux CI 只运行 Unit。测试设施与命名规则见[规范 §8](../PROJECT_CONVENTIONS.md#8-测试)。
 
