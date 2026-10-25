@@ -3,6 +3,7 @@
         xmlns:vm="using:Cafe.Launcher.UI.ViewModels"
         xmlns:models="using:Cafe.Launcher.UI.Models"
         xmlns:services="using:Cafe.Launcher.UI.Services"
+        xmlns:constants="using:Cafe.Launcher.Core.Constants"
         xmlns:views="using:Cafe.Launcher.UI.Views"
         xmlns:controls="using:Cafe.Launcher.UI.Controls"
         xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
@@ -608,12 +609,14 @@
             </Grid>
         </Grid>
 
-        <views:MainWindowSettingsOverlay/>
-        <views:MainWindowDebugOverlay/>
-        <views:DesignGalleryOverlay/>
-        <views:MainWindowLogViewerOverlay/>
-        <views:MainWindowLogExportOverlay/>
-        <views:MainWindowDialogsOverlay/>
-        <views:MainWindowToastOverlay/>
+        <!-- 覆盖层层级在真正的兄弟节点上声明：样式里的 ZIndex 只排序各 UserControl
+             内部的根 Grid，无法决定顶层覆盖层之间的绘制顺序。 -->
+        <views:MainWindowSettingsOverlay ZIndex="{x:Static constants:LauncherConstants.ZIndexSettings}"/>
+        <views:MainWindowDebugOverlay ZIndex="{x:Static constants:LauncherConstants.ZIndexDialog}"/>
+        <views:DesignGalleryOverlay ZIndex="{x:Static constants:LauncherConstants.ZIndexDialog}"/>
+        <views:MainWindowLogViewerOverlay ZIndex="{x:Static constants:LauncherConstants.ZIndexDialog}"/>
+        <views:MainWindowLogExportOverlay ZIndex="{x:Static constants:LauncherConstants.ZIndexDialog}"/>
+        <views:MainWindowDialogsOverlay ZIndex="{x:Static constants:LauncherConstants.ZIndexDialog}"/>
+        <views:MainWindowToastOverlay ZIndex="{x:Static constants:LauncherConstants.ZIndexToast}"/>
     </Grid>
 </Window>

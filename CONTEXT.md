@@ -178,6 +178,6 @@ _Avoid_: 遮罩点击穿透
 
 - **底座**：M3 语义 + FluentTheme；`Launcher.*` 十二家族设计 token；AA 契约自动化；动态色管线（ApplyScheme）；黄金截图基线；Debug 门画廊。
 - **组件四型**：`primary-action`→filled、`flat-action`→outlined（语境可 tonal）、`text-link`→text、`danger-action`→error-filled；共享模板 `LauncherBorderButtonTemplate` 保留；诊断/日志例外使用 Fluent 基础模板，仅做 token 兼容。
-- **表面与 Z 序**：单窗口 + 覆盖层 100/200/500/1000（常量在 `LauncherConstants`）；P3 表面顺序为主壳→设置→对话框+Toast→向导→诊断/日志/资源面板。
+- **表面与 Z 序**：单窗口 + 覆盖层 100/200/500/1000，向导退出确认 501 叠在向导之上（常量在 `LauncherConstants`，`ZIndex` 声明在使用点而非样式）；表面顺序为主壳→设置→诊断/日志/资源面板/对话框→设置向导→Toast。
 - **已完成**：设置页（[ADR-013](docs/design/adr/ADR-013-设置页重设计方向.md)）、对话框/Toast/设置向导（ADR-014/017）、关于分区（[ADR-018](docs/design/adr/ADR-018-关于分区重设计方向.md)）、崩溃窗口（ADR-019/020）、资源面板（[ADR-041](docs/design/adr/ADR-041-资源面板MD3结构级重设计.md)）。
 - **仍开放**：底栏形态（Q18；[ADR-001](docs/design/adr/ADR-001-底栏仲裁标准.md) 的仲裁标准保留，原原型素材已清理）；主壳首页重设计（已搁置，无既定蓝图）。

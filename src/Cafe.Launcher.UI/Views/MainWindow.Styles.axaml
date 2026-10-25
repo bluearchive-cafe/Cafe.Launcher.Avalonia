@@ -861,7 +861,6 @@
     </Style>
     <Style Selector="Grid.settings-overlay">
         <Setter Property="Background" Value="{StaticResource Launcher.Color.Overlay.Scrim.Md}"/>
-        <Setter Property="ZIndex" Value="100"/>
         <Setter Property="KeyboardNavigation.TabNavigation" Value="Cycle"/>
         <Setter Property="views:OverlayFocusBehavior.IsEnabled" Value="True"/>
     </Style>
@@ -1007,13 +1006,11 @@
     </Style>
     <Style Selector="Grid.dialog-overlay">
         <Setter Property="Background" Value="{StaticResource Launcher.Color.Overlay.Scrim.Md}"/>
-        <Setter Property="ZIndex" Value="200"/>
         <Setter Property="KeyboardNavigation.TabNavigation" Value="Cycle"/>
         <Setter Property="views:OverlayFocusBehavior.IsEnabled" Value="True"/>
     </Style>
     <Style Selector="Grid.setup-wizard-overlay">
         <Setter Property="Background" Value="{StaticResource Launcher.Color.Overlay.Scrim.Md}"/>
-        <Setter Property="ZIndex" Value="500"/>
         <Setter Property="KeyboardNavigation.TabNavigation" Value="Cycle"/>
         <Setter Property="views:OverlayFocusBehavior.IsEnabled" Value="True"/>
     </Style>

@@ -29,10 +29,15 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void SetupWizardOverlay_IsDedicatedViewIncludedByDialogsOverlay()
     {
-        var dialogsOverlay = File.ReadAllText(TestRepository.FromPresentationRoot("Views/MainWindowDialogsOverlay.axaml"));
+        var dialogsOverlay = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowDialogsOverlay.axaml"));
 
-        Assert.Contains("<views:SetupWizardOverlay/>", dialogsOverlay, StringComparison.Ordinal);
-        Assert.DoesNotContain("Dialogs.SetupWizard.NextCommand", dialogsOverlay, StringComparison.Ordinal);
+        Assert.Single(
+            dialogsOverlay.Descendants(),
+            element => element.Name.LocalName == "SetupWizardOverlay");
+        Assert.DoesNotContain(
+            "Dialogs.SetupWizard.NextCommand",
+            dialogsOverlay.ToString(),
+            StringComparison.Ordinal);
     }
 
     [Fact]
@@ -110,14 +115,19 @@ public sealed partial class UiStyleContractTests
     public void SetupWizardOverlay_UsesSetupWizardLayerBetweenDialogsAndToast()
     {
         var overlay = XDocument.Load(TestRepository.FromPresentationRoot("Views/SetupWizardOverlay.axaml"));
-        var styles = File.ReadAllText(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
+        var host = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowDialogsOverlay.axaml"));
 
         Assert.Contains(
             overlay.Descendants(),
             element => HasClass(element, "setup-wizard-overlay"));
-        Assert.Matches(
-            """(?s)<Style Selector="Grid\.setup-wizard-overlay">.*?<Setter Property="ZIndex" Value="500"/>.*?</Style>""",
-            styles);
+
+        // 层级落在宿主里的兄弟节点（SetupWizardOverlay 元素）上，而非其内部根 Grid。
+        var wizard = host
+            .Descendants()
+            .Single(element => element.Name.LocalName == "SetupWizardOverlay");
+        Assert.Equal(
+            "{x:Static constants:LauncherConstants.ZIndexSetupWizard}",
+            wizard.Attribute("ZIndex")?.Value);
     }
 
     [Fact]

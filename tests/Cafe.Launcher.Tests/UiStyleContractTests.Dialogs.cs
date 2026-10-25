@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.Testing;
 
@@ -63,35 +64,67 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void OverlayOrder_IsBaseThenSettingsThenDialogsThenToast()
     {
-        var mainWindow = File.ReadAllText(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
-        var settingsIndex = mainWindow.IndexOf("<views:MainWindowSettingsOverlay/>", StringComparison.Ordinal);
-        var logViewerIndex = mainWindow.IndexOf("<views:MainWindowLogViewerOverlay/>", StringComparison.Ordinal);
-        var debugIndex = mainWindow.IndexOf("<views:MainWindowDebugOverlay/>", StringComparison.Ordinal);
-        var dialogsIndex = mainWindow.IndexOf("<views:MainWindowDialogsOverlay/>", StringComparison.Ordinal);
-        var toastIndex = mainWindow.IndexOf("<views:MainWindowToastOverlay/>", StringComparison.Ordinal);
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
+        var all = document.Descendants().ToList();
 
-        Assert.True(settingsIndex >= 0);
-        Assert.True(debugIndex > settingsIndex);
-        Assert.True(logViewerIndex > debugIndex);
-        Assert.True(dialogsIndex > logViewerIndex);
-        Assert.True(toastIndex > dialogsIndex);
+        XElement Overlay(string name) =>
+            document.Descendants().Single(element => element.Name.LocalName == name);
+
+        var settings = Overlay("MainWindowSettingsOverlay");
+        var logViewer = Overlay("MainWindowLogViewerOverlay");
+        var debug = Overlay("MainWindowDebugOverlay");
+        var dialogs = Overlay("MainWindowDialogsOverlay");
+        var toast = Overlay("MainWindowToastOverlay");
+
+        Assert.True(all.IndexOf(settings) < all.IndexOf(debug));
+        Assert.True(all.IndexOf(debug) < all.IndexOf(logViewer));
+        Assert.True(all.IndexOf(logViewer) < all.IndexOf(dialogs));
+        Assert.True(all.IndexOf(dialogs) < all.IndexOf(toast));
+
+        // 顶层覆盖层是 ShellRoot 的直接子元素：ZIndex 必须写在它们身上，
+        // 写在 UserControl 内部根 Grid 上不会影响兄弟顺序。
+        Assert.Equal(
+            "{x:Static constants:LauncherConstants.ZIndexSettings}",
+            settings.Attribute("ZIndex")?.Value);
+        Assert.Equal(
+            "{x:Static constants:LauncherConstants.ZIndexDialog}",
+            dialogs.Attribute("ZIndex")?.Value);
+        Assert.Equal(
+            "{x:Static constants:LauncherConstants.ZIndexToast}",
+            toast.Attribute("ZIndex")?.Value);
     }
 
     [Fact]
-    public void DialogOverlays_UseSharedDialogLayerWithoutExplicitZIndex()
+    public void DialogLayer_DeclaresLayerZIndexOnEachSurfaceNotInStyles()
     {
-        foreach (var relativePath in new[]
-                 {
-                     "Views/MainWindowDialogsOverlay.axaml",
-                     "Views/ResourcePanelOverlay.axaml",
-                     "Views/MainWindowLogViewerOverlay.axaml",
-                     "Views/SetupWizardOverlay.axaml"
-                 })
-        {
-            var text = File.ReadAllText(TestRepository.FromPresentationRoot(relativePath));
-            Assert.DoesNotContain("ZIndex=\"500\"", text, StringComparison.Ordinal);
-            Assert.DoesNotContain("ZIndex=\"1001\"", text, StringComparison.Ordinal);
-        }
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowDialogsOverlay.axaml"));
+        const string dialogZIndex = "{x:Static constants:LauncherConstants.ZIndexDialog}";
+        const string wizardZIndex = "{x:Static constants:LauncherConstants.ZIndexSetupWizard}";
+        const string wizardConfirmationZIndex =
+            "{x:Static constants:LauncherConstants.ZIndexSetupWizardConfirmation}";
+
+        var wizard = document.Descendants()
+            .Single(element => element.Name.LocalName == "SetupWizardOverlay");
+        Assert.Equal(wizardZIndex, wizard.Attribute("ZIndex")?.Value);
+
+        var exitConfirmation = document.Descendants()
+            .Single(element =>
+                element.Name.LocalName == "ConfirmDialog"
+                && element.Attribute("IsOpen")?.Value == "{Binding Dialogs.SetupWizardExitConfirm.IsVisible}");
+        Assert.Equal(wizardConfirmationZIndex, exitConfirmation.Attribute("ZIndex")?.Value);
+
+        // 直接 Grid 形式的对话框与 UserControl 形式的对话框同层，
+        // 否则声明顺序会悄悄决定谁盖住谁。
+        var dialogSurfaces = document.Descendants()
+            .Where(element => !ReferenceEquals(element, exitConfirmation))
+            .Where(element =>
+                element.Name.LocalName is "ConfirmDialog" or "UninstallDialog" or "ResourcePanelOverlay"
+                || (element.Name.LocalName == "Grid" && HasClass(element, "dialog-overlay")))
+            .ToArray();
+
+        Assert.NotEmpty(dialogSurfaces);
+        Assert.All(dialogSurfaces, element =>
+            Assert.Equal(dialogZIndex, element.Attribute("ZIndex")?.Value));
     }
 
     [Fact]
@@ -733,19 +766,30 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void OverlayStyles_DefineSettingsDialogAndSetupWizardLayerOrder()
+    public void OverlayStyles_LeaveLayerOrderToUseSites()
     {
-        var styles = File.ReadAllText(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
+        // ZIndex 只排序兄弟节点：写进覆盖层内部根 Grid 的样式里不可能决定顶层叠层的顺序，
+        // 层级必须声明在真正的兄弟节点（MainWindow / MainWindowDialogsOverlay 的子项）上。
+        var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
 
-        Assert.Matches(
-            """(?s)<Style Selector="Grid\.settings-overlay">.*?<Setter Property="ZIndex" Value="100"/>.*?</Style>""",
-            styles);
-        Assert.Matches(
-            """(?s)<Style Selector="Grid\.dialog-overlay">.*?<Setter Property="ZIndex" Value="200"/>.*?</Style>""",
-            styles);
-        Assert.Matches(
-            """(?s)<Style Selector="Grid\.setup-wizard-overlay">.*?<Setter Property="ZIndex" Value="500"/>.*?</Style>""",
-            styles);
+        foreach (var selector in new[]
+                 {
+                     "Grid.settings-overlay",
+                     "Grid.dialog-overlay",
+                     "Grid.setup-wizard-overlay"
+                 })
+        {
+            Assert.False(GetStyleSetters(styles, selector).ContainsKey("ZIndex"));
+        }
+    }
+
+    [Fact]
+    public void OverlayLayerConstants_AreStrictlyOrdered()
+    {
+        Assert.True(LauncherConstants.ZIndexSettings < LauncherConstants.ZIndexDialog);
+        Assert.True(LauncherConstants.ZIndexDialog < LauncherConstants.ZIndexSetupWizard);
+        Assert.True(LauncherConstants.ZIndexSetupWizard < LauncherConstants.ZIndexSetupWizardConfirmation);
+        Assert.True(LauncherConstants.ZIndexSetupWizardConfirmation < LauncherConstants.ZIndexToast);
     }
 
     [Fact]

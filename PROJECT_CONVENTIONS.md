@@ -66,7 +66,7 @@
 - 控件使用语义化 `Classes`，不写内联 Style；大块样式或覆盖层提取到独立 `.axaml`，`MainWindow.axaml` 只留窗口外壳与内容网格。
 - Avalonia 使用编译绑定与显式绑定，没有反射式 view locator。
 - 崩溃窗口独立使用 `Crash.*` 令牌，就近定义在自身资源中；隔离报告进程没有 `App.axaml`，见 [ADR-020](docs/design/adr/ADR-020-崩溃窗口独立Fluent设计系统.md)。
-- 模态栈交互权及对话框例外见 [CONTEXT.md「模态交互权」](CONTEXT.md#设计系统)。叠层次序为内容 → 设置（100）→ 对话框（200）→ 向导（500）→ Toast（1000）；使用 `LauncherConstants` 中的常量（含 `ZIndexToast`）。
+- 模态栈交互权及对话框例外见 [CONTEXT.md「模态交互权」](CONTEXT.md#设计系统)。叠层次序为内容 → 设置（100）→ 对话框（200）→ 向导（500）→ 向导退出确认（501）→ Toast（1000）。`ZIndex` 只排序兄弟节点，必须声明在覆盖层元素的**使用点**（`MainWindow` / `MainWindowDialogsOverlay` 的直接子项）上；写进样式里的覆盖层内部根 Grid 是无效的。常量取 `LauncherConstants`（`ZIndexSettings` / `ZIndexDialog` / `ZIndexSetupWizard` / `ZIndexSetupWizardConfirmation` / `ZIndexToast`）。
 - `BackgroundViewModel` 在构造器中同步解码内置壁纸，以保证首帧；改为异步前先明确首帧壁纸来源。
 
 组件、动态色及动效规格见[设计规范](docs/design/design-system-spec.md)与[动效交接](docs/design/fluent-motion-prototype-handoff.md)。

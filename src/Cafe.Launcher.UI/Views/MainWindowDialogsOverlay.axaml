@@ -4,6 +4,7 @@
              xmlns:converters="using:Cafe.Launcher.UI.Converters"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              xmlns:controls="using:Cafe.Launcher.UI.Controls"
+             xmlns:constants="using:Cafe.Launcher.Core.Constants"
              xmlns:views="using:Cafe.Launcher.UI.Views"
              x:Class="Cafe.Launcher.UI.Views.MainWindowDialogsOverlay"
              x:Name="DialogsRoot"
@@ -11,10 +12,12 @@
     <Grid>
         <!-- 资源面板（主叠层）宿主于此容器并占据 FirstChild：其层序位于对话框
              层之下依赖「首个子元素先渲染」这一顺序，勿移动或插入子项到其前。 -->
-        <views:ResourcePanelOverlay/>
+        <views:ResourcePanelOverlay ZIndex="{x:Static constants:LauncherConstants.ZIndexDialog}"/>
 
         <!-- Notice popup dialog -->
-        <Grid Classes="dialog-overlay motion-overlay"
+        <Grid x:Name="NoticeDialogLayer"
+              Classes="dialog-overlay motion-overlay"
+              ZIndex="{x:Static constants:LauncherConstants.ZIndexDialog}"
               Classes.motion-enabled="{Binding IsMotionEnabled}"
               controls:MotionVisibility.IsOpen="{Binding Dialogs.IsNoticeDialogVisible}"
               controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
@@ -65,6 +68,7 @@
 
         <!-- Repair confirmation dialog -->
         <controls:ConfirmDialog IsOpen="{Binding Dialogs.RepairConfirm.IsVisible}"
+                                ZIndex="{x:Static constants:LauncherConstants.ZIndexDialog}"
                                 Title="{Binding Shell.I18n[repairConfirm]}"
                                 Message="{Binding Dialogs.RepairConfirm.Message}"
                                 CancelText="{Binding Shell.I18n[cancel]}"
@@ -74,6 +78,7 @@
 
         <!-- Resource Panel source confirmation dialog -->
         <controls:ConfirmDialog IsOpen="{Binding Dialogs.ResourcePanelSourceConfirm.IsVisible}"
+                                ZIndex="{x:Static constants:LauncherConstants.ZIndexDialog}"
                                 Title="{Binding Shell.I18n[resourcePanelCafeOnlyTitle]}"
                                 Message="{Binding Dialogs.ResourcePanelSourceConfirm.Message}"
                                 CancelText="{Binding Shell.I18n[cancel]}"
@@ -83,6 +88,7 @@
 
         <!-- Update available dialog -->
         <Grid Classes="dialog-overlay motion-overlay"
+              ZIndex="{x:Static constants:LauncherConstants.ZIndexDialog}"
               Classes.motion-enabled="{Binding IsMotionEnabled}"
               controls:MotionVisibility.IsOpen="{Binding Dialogs.IsUpdateAvailableVisible}"
               controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
@@ -186,6 +192,7 @@
 
         <!-- Stop download confirmation dialog -->
         <controls:ConfirmDialog IsOpen="{Binding Dialogs.StopConfirm.IsVisible}"
+                                ZIndex="{x:Static constants:LauncherConstants.ZIndexDialog}"
                                 Title="{Binding Shell.I18n[stopDownloadTitle]}"
                                 Message="{Binding Dialogs.StopConfirm.Message}"
                                 CancelText="{Binding Shell.I18n[cancel]}"
@@ -196,6 +203,7 @@
 
         <!-- Download running close confirmation dialog -->
         <controls:ConfirmDialog IsOpen="{Binding Dialogs.DownloadRunningCloseConfirm.IsVisible}"
+                                ZIndex="{x:Static constants:LauncherConstants.ZIndexDialog}"
                                 Title="{Binding Shell.I18n[closeDownloadTitle]}"
                                 Message="{Binding Dialogs.DownloadRunningCloseConfirm.Message}"
                                 CancelText="{Binding Shell.I18n[continueDownload]}"
@@ -205,10 +213,11 @@
                                 IsDangerConfirm="True"/>
 
         <!-- Complete uninstall journey, kept open through execution and result. -->
-        <views:UninstallDialog/>
+        <views:UninstallDialog ZIndex="{x:Static constants:LauncherConstants.ZIndexDialog}"/>
 
         <!-- Unsaved changes confirmation dialog -->
         <controls:ConfirmDialog IsOpen="{Binding Settings.IsUnsavedChangesVisible}"
+                                ZIndex="{x:Static constants:LauncherConstants.ZIndexDialog}"
                                 Title="{Binding Shell.I18n[unsavedChanges]}"
                                 Message="{Binding Shell.I18n[unsavedChangesMessage]}"
                                 CancelText="{Binding Shell.I18n[keepEditing]}"
@@ -218,7 +227,9 @@
                                 IsDangerConfirm="True"/>
 
         <!-- Critical error dialog -->
-        <Grid Classes="dialog-overlay motion-overlay"
+        <Grid x:Name="ErrorDialogLayer"
+              Classes="dialog-overlay motion-overlay"
+              ZIndex="{x:Static constants:LauncherConstants.ZIndexDialog}"
               Classes.motion-enabled="{Binding IsMotionEnabled}"
               controls:MotionVisibility.IsOpen="{Binding Dialogs.IsErrorDialogVisible}"
               controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
@@ -279,8 +290,10 @@
             </controls:DialogSurface>
         </Grid>
 
-        <views:SetupWizardOverlay/>
-        <controls:ConfirmDialog IsOpen="{Binding Dialogs.SetupWizardExitConfirm.IsVisible}"
+        <views:SetupWizardOverlay ZIndex="{x:Static constants:LauncherConstants.ZIndexSetupWizard}"/>
+        <controls:ConfirmDialog x:Name="SetupWizardExitConfirmLayer"
+                                IsOpen="{Binding Dialogs.SetupWizardExitConfirm.IsVisible}"
+                                ZIndex="{x:Static constants:LauncherConstants.ZIndexSetupWizardConfirmation}"
                                 Title="{Binding Shell.I18n[setupWizardExitTitle]}"
                                 Message="{Binding Shell.I18n[setupWizardExitMessage]}"
                                 CancelText="{Binding Shell.I18n[cancel]}"
@@ -288,6 +301,7 @@
                                 ConfirmText="{Binding Shell.I18n[setupWizardExitConfirm]}"
                                 ConfirmCommand="{Binding Dialogs.SetupWizardExitConfirm.ConfirmCommand}"/>
         <controls:ConfirmDialog IsOpen="{Binding Dialogs.DebugResetConfirm.IsVisible}"
+                                ZIndex="{x:Static constants:LauncherConstants.ZIndexDialog}"
                                 Title="{Binding Shell.I18n[debugResetSettingsTitle]}"
                                 Message="{Binding Shell.I18n[debugResetSettingsDescription]}"
                                 CancelText="{Binding Shell.I18n[cancel]}"
@@ -296,6 +310,7 @@
                                 ConfirmCommand="{Binding Dialogs.DebugResetConfirm.ConfirmCommand}"
                                 IsDangerConfirm="True"/>
         <controls:ConfirmDialog IsOpen="{Binding Dialogs.SettingsResetConfirm.IsVisible}"
+                                ZIndex="{x:Static constants:LauncherConstants.ZIndexDialog}"
                                 Title="{Binding Shell.I18n[debugResetSettingsTitle]}"
                                 Message="{Binding Shell.I18n[debugResetSettingsDescription]}"
                                 CancelText="{Binding Shell.I18n[cancel]}"
