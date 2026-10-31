@@ -19,7 +19,7 @@ internal partial class MainWindow
     private void InitializeVideoBackground()
     {
         PropertyChanged += OnVideoWindowPropertyChanged;
-        Closed += (_, _) => RemoveVideoBackground();
+        Closed += (_, _) => RemoveVideoBackground(detach: true);
     }
 
     private void OnVideoWindowPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
@@ -72,7 +72,8 @@ internal partial class MainWindow
     private void UpdateVideoPlayback()
     {
         if (videoBackground is null || configuredViewModel is not { } vm) return;
-        videoBackground.PlaybackPaused = !IsVisible || WindowState == WindowState.Minimized || vm.IsMotionReduced;
+        videoBackground.PlaybackPaused = videoBackground.Source is null
+            || !IsVisible || WindowState == WindowState.Minimized || vm.IsMotionReduced;
         videoBackground.Volume = vm.Background.BackgroundVideoVolume;
         videoBackground.Stretch = vm.Background.BackgroundStretch;
         videoBackground.FillColor = vm.Background.BackgroundFillBrush is ISolidColorBrush brush ? brush.Color : Colors.Black;
@@ -96,16 +97,20 @@ internal partial class MainWindow
     private void OnVideoBackgroundFailed(string path, Exception exception) =>
         configuredViewModel?.Background.ReportVideoFailure(path, exception);
 
-    private void RemoveVideoBackground()
+    private void RemoveVideoBackground(bool detach = false)
     {
         if (videoBackground is not null)
         {
-            videoBackground.FirstFrameReady -= OnVideoBackgroundFirstFrame;
-            videoBackground.PlaybackFailed -= OnVideoBackgroundFailed;
-            // Detachment enters OpenGlControlBase's current-context cleanup before
-            // the owner drops its final reference to the player.
-            ShellRoot.Children.Remove(videoBackground);
-            videoBackground = null;
+            videoBackground.PlaybackPaused = true;
+            videoBackground.Source = null;
+            if (detach)
+            {
+                videoBackground.FirstFrameReady -= OnVideoBackgroundFirstFrame;
+                videoBackground.PlaybackFailed -= OnVideoBackgroundFailed;
+                // 窗口关闭才分离承载面；切回图片只释放 libmpv，并停止帧请求。
+                ShellRoot.Children.Remove(videoBackground);
+                videoBackground = null;
+            }
         }
         foreach (var image in ShellRoot.Children.OfType<Image>()) image.IsVisible = true;
         BackgroundCrossFade.IsVisible = true;

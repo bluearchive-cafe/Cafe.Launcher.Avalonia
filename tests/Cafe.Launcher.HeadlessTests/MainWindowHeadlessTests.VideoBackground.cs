@@ -56,9 +56,21 @@ public sealed partial class MainWindowHeadlessTests
         vm.Background.ReportVideoFailure(video, new InvalidOperationException("Stale failure"));
         Assert.Same(original, Current());
         vm.Background.ReportVideoFailure(second, new InvalidOperationException("Invalid media"));
-        Assert.Null(Current());
+        Assert.Same(original, Current());
+        Assert.Null(original.Source);
+        Assert.True(original.PlaybackPaused);
         Assert.All(context.Window.FindControl<Grid>("ShellRoot")!.Children.OfType<Image>(), image => Assert.True(image.IsVisible));
         Assert.Null(context.Window.FindControl<Grid>("MainContentLayer")!.CacheMode);
+
+        settings.CustomBackgroundPath = video;
+        await vm.Background.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
+        Assert.Same(original, Current());
+        Assert.Equal(video, original.Source);
+        await vm.Background.UpdateBackgroundImageAsync(new LauncherSettings(), null, CancellationToken.None);
+        Assert.Same(original, Current());
+        Assert.Null(original.Source);
+        context.Window.Close();
+        Assert.Null(Current());
         Dispatcher.UIThread.RunJobs();
     }
 }

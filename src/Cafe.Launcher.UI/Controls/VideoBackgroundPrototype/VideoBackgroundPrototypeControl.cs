@@ -6,6 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.OpenGL;
@@ -34,6 +35,22 @@ internal sealed class VideoBackgroundPrototypeControl : OpenGlControlBase
     private int redrawPending;
     private bool stopped;
     private bool paused;
+    private readonly string? probeMode = Environment.GetEnvironmentVariable("CAFE_VIDEO_PROTOTYPE_PROBE_MODE");
+    private bool mediaReleased;
+
+    internal bool ReusesSurface => probeMode == "ReuseSurface";
+    internal bool UsesProduction => probeMode == "Production";
+    internal Func<(int Players, int Renderers, int Allocations)>? SampleNativeResources { get; set; }
+    internal Func<long>? SampleFrameCount { get; set; }
+    internal Func<string, string>? SamplePlayerProperty { get; set; }
+
+    /// <summary>对照实验只重建 libmpv，不反复分离 Avalonia 的 GL 承载面。</summary>
+    internal void SetMediaReleased(bool released)
+    {
+        mediaReleased = released;
+        if (released) SetPaused(true);
+        RequestNextFrameRendering();
+    }
     private long frames;
     private long previousFrames;
     private double drawMilliseconds;
@@ -73,10 +90,11 @@ internal sealed class VideoBackgroundPrototypeControl : OpenGlControlBase
     internal string Phase { get; set; } = "startup";
 
     /// <summary>原型测量脚本的白名单命令；只在当前原型的数据目录内收发。</summary>
-    internal event Action<string>? DiagnosticCommand;
+    internal event Func<string, Task>? DiagnosticCommand;
 
     protected override void OnOpenGlInit(GlInterface gl)
     {
+        if (probeMode == "Blank") return;
         try
         {
             native = new MpvPrototypeNative(libraryPath);
@@ -129,6 +147,21 @@ internal sealed class VideoBackgroundPrototypeControl : OpenGlControlBase
 
     protected override void OnOpenGlRender(GlInterface gl, int fb)
     {
+        if (ReusesSurface && mediaReleased)
+        {
+            ReleaseNative();
+            gl.ClearColor(0, 0, 0, 0);
+            gl.Clear(GlConsts.GL_COLOR_BUFFER_BIT);
+            return;
+        }
+        if (ReusesSurface && native is null) OnOpenGlInit(gl);
+        if (probeMode == "Blank")
+        {
+            gl.ClearColor(0, 0, 0, 1);
+            gl.Clear(GlConsts.GL_COLOR_BUFFER_BIT);
+            RequestNextFrameRendering();
+            return;
+        }
         if (renderContext == 0 || native is null) return;
         scale = TopLevel.GetTopLevel(this)?.RenderScaling ?? 1;
         target = GetFramebufferSize(Bounds.Size, scale);
@@ -156,7 +189,7 @@ internal sealed class VideoBackgroundPrototypeControl : OpenGlControlBase
         }
     }
 
-    private void Sample(object? sender, EventArgs e)
+    private async void Sample(object? sender, EventArgs e)
     {
         process.Refresh();
         var seconds = clock.Elapsed.TotalSeconds;
@@ -165,16 +198,19 @@ internal sealed class VideoBackgroundPrototypeControl : OpenGlControlBase
         var gc = GC.GetGCMemoryInfo();
         var allocated = GC.GetTotalAllocatedBytes();
         var updates = Interlocked.Read(ref updateCallbacks);
-        var count = frames - previousFrames;
-        var property = (string name) => native is not null && player != 0 ? native.Read(player, name) : "unavailable";
+        var totalFrames = SampleFrameCount?.Invoke() ?? frames;
+        var count = totalFrames - previousFrames;
+        var resources = SampleNativeResources?.Invoke() ?? (player == 0 ? 0 : 1, renderContext == 0 ? 0 : 1, native?.AllocationCount ?? 0);
+        var property = (string name) => SamplePlayerProperty?.Invoke(name)
+            ?? (native is not null && player != 0 ? native.Read(player, name) : "unavailable");
         samples.WriteLine(FormattableString.Invariant(
-            $"{seconds:F3},{Phase},{count / interval:F2},{(count == 0 ? 0 : drawMilliseconds / count):F3},{maxDrawMilliseconds:F3},{target.Width},{target.Height},{scale:F2},{paused},{property("hwdec-current")},{(cpu - previousCpu).TotalSeconds / interval / Environment.ProcessorCount * 100:F3},{process.PrivateMemorySize64 / 1048576.0:F1},{property("time-pos")},{property("decoder-frame-drop-count")},{failure},{gc.HeapSizeBytes / 1048576.0:F2},{gc.TotalCommittedBytes / 1048576.0:F2},{GC.GetTotalMemory(false) / 1048576.0:F2},{(allocated - previousAllocated) / 1048576.0 / interval:F2},{GC.CollectionCount(0)},{GC.CollectionCount(1)},{GC.CollectionCount(2)},{(updates - previousUpdates) / interval:F2},{(frameRequests - previousRequests) / interval:F2},{(player == 0 ? 0 : 1)},{(renderContext == 0 ? 0 : 1)},{native?.AllocationCount ?? 0},{process.HandleCount}"));
+            $"{seconds:F3},{Phase},{count / interval:F2},{(count == 0 ? 0 : drawMilliseconds / count):F3},{maxDrawMilliseconds:F3},{target.Width},{target.Height},{scale:F2},{paused},{property("hwdec-current")},{(cpu - previousCpu).TotalSeconds / interval / Environment.ProcessorCount * 100:F3},{process.PrivateMemorySize64 / 1048576.0:F1},{property("time-pos")},{property("decoder-frame-drop-count")},{failure},{gc.HeapSizeBytes / 1048576.0:F2},{gc.TotalCommittedBytes / 1048576.0:F2},{GC.GetTotalMemory(false) / 1048576.0:F2},{(allocated - previousAllocated) / 1048576.0 / interval:F2},{GC.CollectionCount(0)},{GC.CollectionCount(1)},{GC.CollectionCount(2)},{(updates - previousUpdates) / interval:F2},{(frameRequests - previousRequests) / interval:F2},{resources.Item1},{resources.Item2},{resources.Item3},{process.HandleCount}"));
         previousAllocated = allocated;
         previousUpdates = updates;
         previousRequests = frameRequests;
         previousSeconds = seconds;
         previousCpu = cpu;
-        previousFrames = frames;
+        previousFrames = totalFrames;
         drawMilliseconds = maxDrawMilliseconds = 0;
         if (File.Exists(commandPath))
         {
@@ -182,13 +218,22 @@ internal sealed class VideoBackgroundPrototypeControl : OpenGlControlBase
             if (command != lastCommand)
             {
                 lastCommand = command;
-                DiagnosticCommand?.Invoke(command.Contains('|', StringComparison.Ordinal) ? command[(command.IndexOf('|', StringComparison.Ordinal) + 1)..] : command);
-                File.WriteAllText(acknowledgementPath, command);
+                if (DiagnosticCommand is { } handle)
+                    await handle(command.Contains('|', StringComparison.Ordinal) ? command[(command.IndexOf('|', StringComparison.Ordinal) + 1)..] : command);
+                if (!stopped) File.WriteAllText(acknowledgementPath, command);
             }
         }
     }
 
-    protected override void OnOpenGlDeinit(GlInterface gl) => ReleaseNative();
+    protected override void OnOpenGlDeinit(GlInterface gl)
+    {
+        ReleaseNative();
+        if (probeMode == "Finish")
+            Marshal.GetDelegateForFunctionPointer<Finish>(gl.GetProcAddress("glFinish"))();
+    }
+
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    private delegate void Finish();
 
     private void ReleaseNative()
     {
