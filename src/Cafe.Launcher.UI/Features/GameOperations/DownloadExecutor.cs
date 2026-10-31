@@ -61,6 +61,14 @@ internal sealed class DownloadExecutor
     }
 
     /// <summary>
+    /// 按下载器的续传规则统计本计划可复用的临时字节；超长临时文件不抵扣空间预算。
+    /// </summary>
+    internal long GetReusableDownloadedBytes(string gamePath, IReadOnlyList<ManifestFile> files) =>
+        files.Sum(file => fileDownloadService.GetExistingDownloadedSize(
+            GetTempName(GamePathValidator.GetSafeFilePath(gamePath, file.Path)),
+            file.SizeBytes));
+
+    /// <summary>
     /// Downloads the given files concurrently (up to <see cref="MaxParallelDownloads"/>
     /// at once), applying the configured speed limit and cooperative pause/cancel.
     /// Returns the per-file CRC64 values verified during this call (files whose

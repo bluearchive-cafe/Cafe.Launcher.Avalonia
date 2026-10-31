@@ -60,6 +60,69 @@ public sealed class FileDownloadServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task DownloadAsync_WhenConnectionTimesOut_RetriesAndResumesPartialFile()
+    {
+        var targetPath = Path.Combine(tempDir, "file.bin.tmp");
+        var bytes = Encoding.UTF8.GetBytes("complete-content");
+        await File.WriteAllBytesAsync(targetPath, bytes[..4]);
+        var expectedHash = await ComputeExpectedHashAsync(bytes);
+        var attempts = 0;
+        using var transport = new StubDownloadTransport((_, _) =>
+        {
+            if (++attempts == 1)
+            {
+                throw new TaskCanceledException("Connect timeout", new TimeoutException());
+            }
+
+            var content = new ByteArrayContent(bytes[4..]);
+            content.Headers.ContentRange = new ContentRangeHeaderValue(4, bytes.Length - 1, bytes.Length);
+            return new HttpResponseMessage(HttpStatusCode.PartialContent) { Content = content };
+        });
+
+        var outcome = await CreateService().DownloadAsync(
+            CreateRequest(targetPath, bytes.Length, expectedHash), CreateControl(transport), CancellationToken.None);
+
+        Assert.Equal(DownloadOutcomeKind.Transferred, outcome.Kind);
+        Assert.Equal(new long?[] { 4, 4 }, transport.RangeStarts);
+        Assert.Equal(bytes, await File.ReadAllBytesAsync(targetPath));
+    }
+
+    [Fact]
+    public async Task DownloadAsync_WhenEveryRequestTimesOut_ExhaustsDomainsAndKeepsPartialFile()
+    {
+        var targetPath = Path.Combine(tempDir, "file.bin.tmp");
+        await File.WriteAllBytesAsync(targetPath, new byte[4]);
+        using var transport = new StubDownloadTransport((_, _) =>
+            throw new TaskCanceledException("Header timeout", new TimeoutException()));
+
+        var exception = await Assert.ThrowsAsync<HttpRequestException>(() => CreateService().DownloadAsync(
+            CreateRequest(targetPath, 16, "0"), CreateControl(transport), CancellationToken.None));
+
+        Assert.IsType<TaskCanceledException>(exception.InnerException);
+        Assert.Equal(ExpectedHostSequence(), transport.RequestedUris.Select(uri => uri.Host).ToArray());
+        Assert.Equal(4, new FileInfo(targetPath).Length);
+    }
+
+    [Fact]
+    public async Task DownloadAsync_WhenCallerCancelsBeforeHeaders_DoesNotRetryOrDeletePartialFile()
+    {
+        var targetPath = Path.Combine(tempDir, "file.bin.tmp");
+        await File.WriteAllBytesAsync(targetPath, new byte[4]);
+        using var cancellation = new CancellationTokenSource();
+        using var transport = new StubDownloadTransport((_, _) =>
+        {
+            cancellation.Cancel();
+            throw new OperationCanceledException(cancellation.Token);
+        });
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => CreateService().DownloadAsync(
+            CreateRequest(targetPath, 16, "0"), CreateControl(transport), cancellation.Token));
+
+        Assert.Single(transport.RequestedUris);
+        Assert.Equal(4, new FileInfo(targetPath).Length);
+    }
+
+    [Fact]
     public async Task DownloadAsync_WhenCancelledMidStream_PropagatesCancellationAndKeepsPartialFile()
     {
         var targetPath = Path.Combine(tempDir, "file.bin.tmp");

@@ -38,8 +38,12 @@ internal sealed class GameDownloadService : IDisposable
     private readonly DownloadSessionContext sessionContext;
     private bool disposed;
 
-    /// <summary>One proxy-aware lease serves a whole download batch; its timeout bounds slow resumptions, not single files.</summary>
-    private static readonly TimeSpan DownloadLeaseTimeout = TimeSpan.FromMinutes(10);
+    /// <summary>
+    /// ResponseHeadersRead makes this a per-request header budget, not a batch or
+    /// file-size limit. Body reads have a separate idle budget in ResponseBodyReader.
+    /// Bound silent header waits after a route change as well as body stalls.
+    /// </summary>
+    private static readonly TimeSpan DownloadLeaseTimeout = TimeSpan.FromSeconds(60);
 
     public GameDownloadService(
         YostarGameProfile gameProfile,
