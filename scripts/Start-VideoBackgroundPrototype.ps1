@@ -2,6 +2,8 @@ param(
     [string]$VideoPath,
     [string]$LibMpvPath,
     [string]$OutputDirectory,
+    [ValidateSet('Video', 'Blank', 'Finish', 'ReuseSurface', 'Production')]
+    [string]$ProbeMode = 'Video',
     [ValidateRange(0, 3600)]
     [int]$GpuSampleSeconds = 0,
     [switch]$MinimalShell,
@@ -35,16 +37,29 @@ $output = Join-Path $repository 'src/Cafe.Launcher/bin/Debug/net10.0'
 $runDirectory = Join-Path $OutputDirectory 'app'
 New-Item -ItemType Directory -Path $runDirectory -Force | Out-Null
 Get-ChildItem -LiteralPath $output | Copy-Item -Destination $runDirectory -Recurse -Force
+if ($ProbeMode -eq 'Production') {
+    $productionLibrary = Join-Path $runDirectory 'libmpv/win-x64/libmpv-2.dll'
+    if ((Get-FileHash -LiteralPath $productionLibrary -Algorithm SHA256).Hash -ne
+        (Get-FileHash -LiteralPath $LibMpvPath -Algorithm SHA256).Hash) {
+        throw 'Production runtime differs from the requested probe runtime.'
+    }
+}
 $prototypeHost = Join-Path $runDirectory 'Cafe.VideoPrototype.exe'
 Copy-Item -LiteralPath (Join-Path $runDirectory 'Cafe.Launcher.exe') -Destination $prototypeHost -Force
 $dataRoot = Join-Path $OutputDirectory 'userdata'
 New-Item -ItemType Directory -Path $dataRoot -Force | Out-Null
 $settings = Join-Path $dataRoot 'settings.json'
 if (-not (Test-Path -LiteralPath $settings)) {
-    '{"language":"zh-Hans","backgroundSource":"bundled"}' | Set-Content -LiteralPath $settings -Encoding utf8
+    $initialSettings = @{ language = 'zh-Hans'; backgroundSource = 'bundled'; motionMode = 'full'; enableStartupUpdateCheck = $false }
+    if ($ProbeMode -eq 'Production') {
+        $initialSettings.backgroundSource = 'custom'
+        $initialSettings.customBackgroundPath = $VideoPath
+    }
+    $initialSettings | ConvertTo-Json | Set-Content -LiteralPath $settings -Encoding utf8
 }
 
 $environment = @{
+    CAFE_VIDEO_PROTOTYPE_PROBE_MODE = $ProbeMode
     CAFE_VIDEO_PROTOTYPE = '1'
     CAFE_VIDEO_PROTOTYPE_MINIMAL = $(if ($MinimalShell) { '1' } else { '0' })
     CAFE_VIDEO_PROTOTYPE_CACHE_SHELL = $(if ($CacheShell) { '1' } else { '0' })
