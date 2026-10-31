@@ -1,0 +1,118 @@
+using System;
+using System.ComponentModel;
+using System.IO;
+using System.Linq;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Media;
+using Cafe.Launcher.UI.Controls.VideoBackground;
+using Cafe.Launcher.UI.ViewModels;
+
+namespace Cafe.Launcher.UI.Views;
+
+internal partial class MainWindow
+{
+    private VideoBackgroundControl? videoBackground;
+    private CacheMode? previousShellCache;
+    private bool shellCachedForVideo;
+
+    private void InitializeVideoBackground()
+    {
+        PropertyChanged += OnVideoWindowPropertyChanged;
+        Closed += (_, _) => RemoveVideoBackground();
+    }
+
+    private void OnVideoWindowPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
+    {
+        if (e.Property == IsVisibleProperty || e.Property == WindowStateProperty) UpdateVideoPlayback();
+    }
+
+    private void OnVideoBackgroundSettingChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(BackgroundViewModel.BackgroundVideoPath)) UpdateVideoBackground();
+        else if (e.PropertyName is nameof(BackgroundViewModel.BackgroundVideoVolume)
+                 or nameof(BackgroundViewModel.BackgroundStretch)
+                 or nameof(BackgroundViewModel.BackgroundFillBrush)) UpdateVideoPlayback();
+    }
+
+    private void UpdateVideoBackground()
+    {
+        var background = configuredViewModel?.Background;
+        var path = background?.BackgroundVideoPath;
+        if (path is null)
+        {
+            RemoveVideoBackground();
+            return;
+        }
+        if (videoBackground is null)
+        {
+            var library = VideoBackgroundRuntime.FindLibraryPath();
+            if (library is null)
+            {
+                background!.ReportVideoFailure(path, new DllNotFoundException("Bundled video background runtime is unavailable."));
+                return;
+            }
+            videoBackground = new VideoBackgroundControl(library);
+            videoBackground.FirstFrameReady += OnVideoBackgroundFirstFrame;
+            videoBackground.PlaybackFailed += OnVideoBackgroundFailed;
+            videoBackground.Source = path;
+            UpdateVideoPlayback();
+            // A zero-opacity OpenGlControlBase is culled before GL initialization.
+            // Keep it drawable behind the opaque fallback until the first frame.
+            ShellRoot.Children.Insert(1, videoBackground);
+        }
+        else
+        {
+            // Preserve the GL context and render surfaces across draft/source changes.
+            videoBackground.Source = path;
+            UpdateVideoPlayback();
+        }
+    }
+
+    private void UpdateVideoPlayback()
+    {
+        if (videoBackground is null || configuredViewModel is not { } vm) return;
+        videoBackground.PlaybackPaused = !IsVisible || WindowState == WindowState.Minimized || vm.IsMotionReduced;
+        videoBackground.Volume = vm.Background.BackgroundVideoVolume;
+        videoBackground.Stretch = vm.Background.BackgroundStretch;
+        videoBackground.FillColor = vm.Background.BackgroundFillBrush is ISolidColorBrush brush ? brush.Color : Colors.Black;
+    }
+
+    private void OnVideoBackgroundFirstFrame()
+    {
+        if (videoBackground is null) return;
+        // The opaque video covers these images completely; avoid drawing/resampling
+        // an invisible full-window wallpaper on every video frame.
+        foreach (var image in ShellRoot.Children.OfType<Image>()) image.IsVisible = false;
+        BackgroundCrossFade.IsVisible = false;
+        if (!shellCachedForVideo)
+        {
+            previousShellCache = MainContentLayer.CacheMode;
+            MainContentLayer.CacheMode = new BitmapCache();
+            shellCachedForVideo = true;
+        }
+    }
+
+    private void OnVideoBackgroundFailed(string path, Exception exception) =>
+        configuredViewModel?.Background.ReportVideoFailure(path, exception);
+
+    private void RemoveVideoBackground()
+    {
+        if (videoBackground is not null)
+        {
+            videoBackground.FirstFrameReady -= OnVideoBackgroundFirstFrame;
+            videoBackground.PlaybackFailed -= OnVideoBackgroundFailed;
+            // Detachment enters OpenGlControlBase's current-context cleanup before
+            // the owner drops its final reference to the player.
+            ShellRoot.Children.Remove(videoBackground);
+            videoBackground = null;
+        }
+        foreach (var image in ShellRoot.Children.OfType<Image>()) image.IsVisible = true;
+        BackgroundCrossFade.IsVisible = true;
+        if (shellCachedForVideo)
+        {
+            MainContentLayer.CacheMode = previousShellCache;
+            shellCachedForVideo = false;
+        }
+    }
+}

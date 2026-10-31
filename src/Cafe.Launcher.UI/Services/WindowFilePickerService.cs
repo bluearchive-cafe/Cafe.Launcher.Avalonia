@@ -63,6 +63,12 @@ internal sealed class WindowFilePickerService : IFilePickerService
     }
 
     public async Task<string?> PickImageFileAsync(string title)
+        => await PickFileAsync(title, "Images", ImagePatterns);
+
+    public async Task<string?> PickVideoFileAsync(string title)
+        => await PickFileAsync(title, "Videos", ["*.mp4", "*.mkv", "*.webm"]);
+
+    private async Task<string?> PickFileAsync(string title, string filterName, string[] patterns)
     {
         var storage = StorageProvider;
         if (storage is null || !storage.CanOpen)
@@ -76,9 +82,9 @@ internal sealed class WindowFilePickerService : IFilePickerService
             AllowMultiple = false,
             FileTypeFilter = new List<FilePickerFileType>
             {
-                new("Images")
+                new(filterName)
                 {
-                    Patterns = ImagePatterns,
+                    Patterns = patterns,
                 }
             }
         });

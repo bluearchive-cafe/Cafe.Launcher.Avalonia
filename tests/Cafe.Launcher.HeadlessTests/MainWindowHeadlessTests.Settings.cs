@@ -21,6 +21,34 @@ namespace Cafe.Launcher.HeadlessTests;
 public sealed partial class MainWindowHeadlessTests
 {
     [AvaloniaFact]
+    public async Task VideoBackgroundSettings_WhenDraftChanges_UpdatesVolumeAndVisibility()
+    {
+        using var context = CreateContext();
+        OpenSettings(context);
+        context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.Appearance;
+        var settings = context.ViewModel.Settings.Editor.Current;
+        // A missing media file keeps this UI test independent of a GPU and decoder.
+        settings.CustomBackgroundPath = "missing-background.MP4";
+        settings.BackgroundSource = BackgroundSources.Custom;
+        Dispatcher.UIThread.RunJobs();
+        var name = context.ViewModel.Shell.I18n[LocalizationKeys.VideoBackgroundVolume];
+        var slider = context.Window.GetVisualDescendants().OfType<Slider>()
+            .Single(control => AutomationProperties.GetName(control) == name);
+        Assert.True(slider.IsEffectivelyVisible);
+        Assert.Equal(0, slider.Value);
+
+        slider.Value = 35;
+        await context.ViewModel.Settings.PendingAppearancePreview.WaitAsync(TimeSpan.FromSeconds(5));
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(35, settings.BackgroundVideoVolume);
+        Assert.Equal(35, context.ViewModel.Background.BackgroundVideoVolume);
+
+        settings.BackgroundSource = BackgroundSources.Bundled;
+        Dispatcher.UIThread.RunJobs();
+        Assert.False(slider.IsEffectivelyVisible);
+    }
+
+    [AvaloniaFact]
     public void Settings_WhenLanguageChanges_RefreshesVisibleCategoryTitle()
     {
         using var context = CreateContext();

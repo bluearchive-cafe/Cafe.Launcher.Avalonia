@@ -186,5 +186,13 @@ foreach ($entry in $entries) {
     $lines.Add("| $($entry.Name) | $($entry.Version) | $license | $($entry.RequiredBy) | $source |")
 }
 
+$lines.Add("")
+$lines.Add("## Windows video background runtime")
+$lines.Add("")
+$lines.Add("Windows x64 builds also redistribute the pinned LGPL libmpv binary from")
+$lines.Add("[zhongfly/mpv-winbuild](https://github.com/zhongfly/mpv-winbuild/releases/tag/2026-10-31-9e2ed65eb0).")
+$lines.Add("This asset is restored separately from NuGet. Its manifest, source links, notices and")
+$lines.Add("LGPL/GPL license texts travel in the ``libmpv`` directory; see ``libmpv/NOTICE.md``.")
+
 [System.IO.File]::WriteAllText($OutputPath, ($lines -join "`n") + "`n", [System.Text.UTF8Encoding]::new($false))
 Write-Host "Wrote $($entries.Count) package entries from $($scannedProjects.Count) production projects to $OutputPath"

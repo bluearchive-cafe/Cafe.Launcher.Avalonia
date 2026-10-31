@@ -419,6 +419,16 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
     }
 
     [RelayCommand]
+    private async Task ChooseBackgroundVideoAsync()
+    {
+        var pickedPath = await filePickerService.PickVideoFileAsync(
+            localizer.T(LocalizationKeys.ChooseBackgroundVideoTitle));
+        if (string.IsNullOrWhiteSpace(pickedPath)) return;
+        editor.Current.CustomBackgroundPath = pickedPath;
+        editor.Current.BackgroundSource = BackgroundSources.Custom;
+    }
+
+    [RelayCommand]
     private async Task ChooseBackgroundFolderAsync()
     {
         var pickedPath = await filePickerService.PickFolderAsync(
@@ -564,7 +574,8 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
             or nameof(LauncherSettings.BackgroundSource)
             or nameof(LauncherSettings.CustomBackgroundPath)
             or nameof(LauncherSettings.BackgroundFit)
-            or nameof(LauncherSettings.BackgroundFillColor);
+            or nameof(LauncherSettings.BackgroundFillColor)
+            or nameof(LauncherSettings.BackgroundVideoVolume);
 
     partial void OnIsSavingChanged(bool value)
     {

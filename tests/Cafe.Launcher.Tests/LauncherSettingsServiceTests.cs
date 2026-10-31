@@ -13,6 +13,19 @@ namespace Cafe.Launcher.Tests;
 
 public sealed class LauncherSettingsServiceTests : IDisposable
 {
+    [Theory]
+    [InlineData(-1, 0)]
+    [InlineData(35, 35)]
+    [InlineData(101, 100)]
+    public async Task BackgroundVideoVolume_RoundTripsWithClampingAndOldJsonDefaultsToMuted(int value, int expected)
+    {
+        var service = new LauncherSettingsService(TestDataRoot.ForFile(settingsPath));
+        await service.SaveAsync(new LauncherSettings { BackgroundVideoVolume = value });
+        Assert.Equal(expected, (await service.ReadAsync()).BackgroundVideoVolume);
+        await File.WriteAllTextAsync(settingsPath, """{"language":"ja"}""");
+        Assert.Equal(0, (await service.ReadAsync()).BackgroundVideoVolume);
+    }
+
     [Fact]
     public void LauncherSettings_Serialize_LeavesExistingPropertyOrderUnchanged()
     {
@@ -411,6 +424,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
             "backgroundSource",
             "backgroundFit",
             "backgroundFillColor",
+            "backgroundVideoVolume",
             "resourcePanelUid",
             "resourcePanelUidSource",
             "gameRuntime",
