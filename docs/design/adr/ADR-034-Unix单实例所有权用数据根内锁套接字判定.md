@@ -42,7 +42,7 @@
    单实例门必须给出明确胜负。仅当套接字路径本身不可用（数据根所在文件系统不支持
    AF_UNIX 等）时才失败放行并记录警告——文件系统问题不应阻止用户启动应用。
 
-4. ** Unix 上不再创建 .NET 命名互斥量**；`TryEnterSingleInstance(mutexName, …)` 的
+4. **Unix 上不再创建 .NET 命名互斥量**；`TryEnterSingleInstance(mutexName, …)` 的
    mutexName 参数只在 Windows 分支消费。
 
 ## 后果

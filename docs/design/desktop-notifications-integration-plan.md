@@ -47,7 +47,7 @@
 ShowLauncher
 ```
 
-未来如果增加其他动作，应先证明其具备稳定的跨进程语义，再扩充 activation contract。
+未来如果增加其他动作，先证明其跨进程语义稳定，再扩充 activation contract。
 
 ---
 
@@ -189,7 +189,7 @@ public sealed record DesktopActivation(
     IReadOnlyDictionary<string, string>? Arguments = null);
 ```
 
-第一阶段实际上只允许：
+第一阶段只允许：
 
 ```text
 ShowLauncher
@@ -857,7 +857,7 @@ M0 时：
 Windows App Runtime installer --quiet
 ```
 
-不要使用可能强制结束其他应用的强制参数。
+不要使用会强制结束其他应用的强制参数。
 
 ---
 
@@ -944,7 +944,7 @@ Windows 启动 Launcher
 notification activation 抵达
 ```
 
-Activation 很可能发生在 MainWindow 完全初始化之前。
+Activation 可能发生在 MainWindow 完全初始化之前。
 
 因此不能在 Windows backend 里直接操作 View。
 
@@ -1013,7 +1013,7 @@ Launcher 正常运行不得依赖提升权限。
 
 系统通知能力只保证普通用户上下文。
 
-Inno 安装器可以 elevation，但安装完成后启动 Launcher 时，应保证运行 Launcher 的 token 是用户普通上下文，而不是把安装器的管理员 token 继承给 Launcher。
+Inno 安装器可以 elevation。安装完成后启动 Launcher 时，应保证运行 Launcher 的 token 是用户普通上下文，而不是把安装器的管理员 token 继承给 Launcher。
 
 M2 必须验证：
 
@@ -1131,9 +1131,9 @@ AppImage / tar.gz 第一阶段不承诺冷启动。
 
 当前 Avalonia 12.1.1 已经通过 `Avalonia.FreeDesktop` 传递引入 `Tmds.DBus.Protocol`。
 
-产品代码将直接使用该库后，应加入 direct PackageReference。
+产品代码直接使用该库后，应加入 direct PackageReference。
 
-建议第一阶段固定与当前 Avalonia dependency graph 对齐的 Protocol 版本，而不是同时升级整个 D-Bus dependency stack。
+建议第一阶段固定与当前 Avalonia dependency graph 对齐的 Protocol 版本。不要同时升级整个 D-Bus dependency stack。
 
 如使用：
 
@@ -1408,7 +1408,7 @@ io.github.bluearchive_cafe.CafeLauncher
 /io/github/bluearchive_cafe/CafeLauncher
 ```
 
-实现至少满足所需的：
+至少实现：
 
 ```text
 org.freedesktop.Application.Activate
@@ -1591,7 +1591,7 @@ LaunchGame
 
 在已有实例运行时，也能在 Linux 上显示首实例。
 
-这同时改善现有单实例行为，与通知功能独立有价值。
+这同时改善现有单实例行为，独立于通知功能也有价值。
 
 ---
 
@@ -1728,7 +1728,7 @@ Tmds.DBus.Generator（如使用）
 
 后必须更新 lock files。
 
-但是计划已知工作树中的 `packages.lock.json` 可能存在用户未提交修改。
+但计划制定时已知：工作树中的 `packages.lock.json` 可能存在用户未提交修改。
 
 实施原则：
 
@@ -1914,7 +1914,7 @@ payload
 lifecycle
 ```
 
-真正 notification shell UI 仍需 VM smoke test。
+真实的 notification shell UI 仍需 VM smoke test。
 
 目标：
 
@@ -2601,7 +2601,7 @@ M0 D-Bus feasibility
 
 # 80. 工期
 
-较稳妥估算：
+稳妥估算：
 
 | 阶段 | 预计 |
 |---|---:|

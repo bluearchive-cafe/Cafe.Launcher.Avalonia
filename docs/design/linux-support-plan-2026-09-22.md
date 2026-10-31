@@ -62,7 +62,7 @@
 4. 正常退出
 5. 再次启动
 
-**失败分支**：若卡在反作弊，则加 Runner 类型、Prefix 元数据、打包格式都不能直接解决——此时应把结论写回 README 与本文，而不是继续扩 Runner 架构。
+**失败分支**：若卡在反作弊，则加 Runner 类型、Prefix 元数据、打包格式都不能直接解决。此时把结论写回 README 与本文，不继续扩 Runner 架构。
 
 ### 2.1 结果（2026-09-22）
 
@@ -139,7 +139,7 @@ cat /proc/<pid>/maps | rg -i 'BlueArchive|xldr|\.exe'
 
 > 判据设计的「前移稿」见 [`linux-process-identification-design-2026-09-22.md`](linux-process-identification-design-2026-09-22.md)：内核 ABI 层与强信号已定稿，2026-09-22 实机样本已收口，标记判据已落地（[ADR-036](adr/ADR-036-Linux游戏进程按启动器所有权标记识别.md)）；本文仍是排序的所有者。
 
-- 判据来源应优先用 `/proc/<pid>/cmdline`（不截断）与 `/proc/<pid>/exe`，而不是仅 `comm`。
+- 判据来源优先用 `/proc/<pid>/cmdline`（不截断）与 `/proc/<pid>/exe`，而不是仅 `comm`。
 - 可用的关联维度：`WINEPREFIX` 环境变量、`cmdline` 中的 Windows 路径、进程树父子关系、会话内已注册的运行器句柄。
 - **失败方向必须保持"宁可放行"**：当前空表即放行（不误报），新实现不得引入误报。无法确定时返回"没在跑"，由调用方的其余检查兜底。
 - 影响面：`GameProcessNames`、`ProcessService`、`GameProcessTracker`、`RunningGameGate.ResolveKnownProcessNames`（闸门判据的唯一出处，见 [ADR-035](../../docs/design/adr/ADR-035-游戏会话状态可见-启动后看护与状态行.md)）。
@@ -194,7 +194,7 @@ cat /proc/<pid>/maps | rg -i 'BlueArchive|xldr|\.exe'
 - **不做 Prefix 自动迁移**（见 P1-E）。
 - 针对特定显卡的固定驱动安装命令与性能比例**不进入项目指导**；DXVK 要求随版本变化，须按选定构建核验。
 
-**保留专用游戏启动器边界**：现阶段投入应落在把已有 UMU/Wine 路径做成可验证、可诊断、不会误操作游戏文件的完整流程；扩展成小型 Lutris 管理器会增加大量维护面，未必提高日服实际可玩性。这也与 `AGENTS.md` 的 feature 隔离、窄抽象一致。
+**保留专用游戏启动器边界**：现阶段的投入方向是把已有 UMU/Wine 路径做成可验证、可诊断、不会误操作游戏文件的完整流程；扩展成小型 Lutris 管理器会增加大量维护面，未必提高日服实际可玩性。这也与 `AGENTS.md` 的 feature 隔离、窄抽象一致。
 
 **P2**：Arch 包、Flatpak、更多运行器——有明确用户需求后再启动。
 

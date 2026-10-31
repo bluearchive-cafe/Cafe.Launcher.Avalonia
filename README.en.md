@@ -58,7 +58,7 @@ Settings, download state, and logs stay on your device. The launcher does not mo
 
 Packages include the .NET Runtime, so no separate installation is needed.
 
-The macOS launcher can install, update, and repair game files but does not provide the compatibility layer needed to launch the Windows game. Linux can launch through Wine, UMU, or Proton; see [Linux support](#linux-support-experimental).
+The macOS launcher can install, update, and repair game files. It does not provide the compatibility layer needed to launch the Windows game. Linux can launch through Wine, UMU, or Proton; see [Linux support](#linux-support-experimental).
 
 Prereleases are testing builds. Choose the latest stable release for everyday use. macOS and Linux have not received the same level of adaptation and testing as Windows; read the release notes for your version.
 
@@ -117,7 +117,7 @@ Use Settings → Game → Compatibility Runtime:
 ### Additional Linux behavior
 
 - **Preflight checks:** detect unwritable prefixes, `noexec` mounts, and filesystems without symbolic links, then explain blocking issues and remedies. Distribution and case sensitivity are recorded without independently blocking launch.
-- **Protection while running:** ownership markers identify game processes started by the launcher, including through UMU/pressure-vessel and after the launcher exits. Processes launched through other entry points that use the installation are also checked.
+- **Protection while running:** ownership markers identify game processes started by the launcher, including through UMU/pressure-vessel and after the launcher exits. Processes launched through other entry points that occupy the installation are also checked.
 - **Automatic UID reading:** the Resource Panel reads the UID from game Cookie data in the configured compatibility prefix.
 - **Diagnostics:** exported information includes runner process snapshots and stdout/stderr, GPU and Vulkan detection, desktop session type, prefix metadata, and locally installed Proton builds.
 - **Single instance and proxy:** another launch activates the existing instance. System proxy mode reads GNOME proxy settings.
