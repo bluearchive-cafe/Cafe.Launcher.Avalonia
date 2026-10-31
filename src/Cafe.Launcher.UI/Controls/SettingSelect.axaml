@@ -9,7 +9,9 @@
                          Title="{Binding Title, ElementName=Root}"
                          Description="{Binding Description, ElementName=Root}"
                          Hint="{Binding Hint, ElementName=Root}"
-                         IsHintVisible="{Binding IsHintVisible, ElementName=Root}">
+                         IsHintVisible="{Binding IsHintVisible, ElementName=Root}"
+                         MinimumCopyWidth="{Binding MinimumCopyWidth, ElementName=Root}"
+                         ContentSpacing="{Binding ContentSpacing, ElementName=Root}">
         <controls:SettingRow.Action>
             <ComboBox Classes="setting-control"
                       AutomationProperties.Name="{Binding AutomationName, ElementName=Root}"
@@ -18,7 +20,7 @@
                       SelectedValueBinding="{Binding Code, DataType={x:Type models:SelectableOption}}">
                 <ComboBox.ItemTemplate>
                     <DataTemplate x:DataType="models:SelectableOption">
-                        <TextBlock Text="{Binding DisplayName}"/>
+                        <TextBlock Text="{Binding DisplayName}" TextWrapping="Wrap"/>
                     </DataTemplate>
                 </ComboBox.ItemTemplate>
             </ComboBox>

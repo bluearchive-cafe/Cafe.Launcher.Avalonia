@@ -315,6 +315,7 @@ public static class LocalizationKeys
     public const string LocalManifestMetadataMissing = "localManifestMetadataMissing";
     public const string LocalManifestMissing = "localManifestMissing";
     public const string LocalManifestUnreadable = "localManifestUnreadable";
+    public const string LogEntries = "logEntries";
     public const string LogExportConfirm = "logExportConfirm";
     public const string LogExportContentGroup = "logExportContentGroup";
     public const string LogExportFailed = "logExportFailed";
@@ -376,6 +377,7 @@ public static class LocalizationKeys
     public const string NeutralColorStrategyDescription = "neutralColorStrategyDescription";
     public const string NeutralColorStrategySeedFollowing = "neutralColorStrategySeedFollowing";
     public const string NeutralColorStrategySeedFollowingHint = "neutralColorStrategySeedFollowingHint";
+    public const string NewsCategories = "newsCategories";
     public const string NextBanner = "nextBanner";
     public const string Notice = "notice";
     public const string NoticeConfirm = "noticeConfirm";
@@ -480,6 +482,7 @@ public static class LocalizationKeys
     public const string SettingsGroupGameRuntime = "settingsGroupGameRuntime";
     public const string SettingsGroupThemeColor = "settingsGroupThemeColor";
     public const string SettingsGroupUpdates = "settingsGroupUpdates";
+    public const string SettingsNavigation = "settingsNavigation";
     public const string SettingsSaved = "settingsSaved";
     public const string SettingsSaveFailed = "settingsSaveFailed";
     public const string SettingsSummaryWithTheme = "settingsSummaryWithTheme";

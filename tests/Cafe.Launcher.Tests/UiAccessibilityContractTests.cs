@@ -1,4 +1,5 @@
-﻿using System.Xml.Linq;
+﻿using System.Xml;
+using System.Xml.Linq;
 using Cafe.Launcher.Testing;
 
 namespace Cafe.Launcher.Tests;
@@ -6,6 +7,77 @@ namespace Cafe.Launcher.Tests;
 public sealed class UiAccessibilityContractTests
 {
     private static readonly XNamespace Avalonia = "https://github.com/avaloniaui";
+
+    private static readonly HashSet<string> InteractiveControlNames = new(StringComparer.Ordinal)
+    {
+        "Button",
+        "TextBox",
+        "ComboBox",
+        "CheckBox",
+        "RadioButton",
+        "ToggleSwitch",
+        "Slider",
+        "ListBox",
+        "ListBoxItem",
+        "TabControl",
+        "TabItem",
+        "MenuItem",
+        "NumericUpDown",
+        "DatePicker",
+        "AutoCompleteBox",
+        "ColorPicker",
+        "ColorView"
+    };
+
+    [Fact]
+    public void EveryInteractiveControl_ExposesANonEmptyAccessibleName()
+    {
+        // 全量扫描取代抽样：新增交互控件时漏名会在契约阶段失败，而不是等到无障碍审计。
+        // 设计系统画廊的状态样本刻意不进入 Tab 序列（IsTabStop="False"），属于展示件。
+        var inspected = 0;
+        var failures = new List<string>();
+        foreach (var file in EnumeratePresentationXaml())
+        {
+            var document = XDocument.Load(file, LoadOptions.SetLineInfo);
+            foreach (var element in document.Descendants())
+            {
+                if (!InteractiveControlNames.Contains(element.Name.LocalName)
+                    || element.Attribute("IsTabStop")?.Value == "False")
+                {
+                    continue;
+                }
+
+                inspected++;
+                if (!string.IsNullOrWhiteSpace(element.Attribute("AutomationProperties.Name")?.Value))
+                {
+                    continue;
+                }
+
+                var line = ((IXmlLineInfo)element).LineNumber;
+                failures.Add($"{Path.GetFileName(file)}:{line} <{element.Name.LocalName}>");
+            }
+        }
+
+        Assert.True(inspected >= 150, $"Expected the sweep to cover the shipped control set, inspected {inspected}.");
+        Assert.True(
+            failures.Count == 0,
+            "Interactive controls without AutomationProperties.Name:\n" + string.Join('\n', failures));
+    }
+
+    private static IEnumerable<string> EnumeratePresentationXaml()
+    {
+        foreach (var directory in new[]
+                 {
+                     TestRepository.FromPresentationRoot("Views"),
+                     TestRepository.FromPresentationRoot("Controls")
+                 })
+        {
+            foreach (var file in Directory.EnumerateFiles(directory, "*.axaml", SearchOption.AllDirectories))
+            {
+                yield return file;
+            }
+        }
+    }
 
     [Fact]
     public void LogViewer_InteractiveControls_ExposeLocalizedAccessibleNames()

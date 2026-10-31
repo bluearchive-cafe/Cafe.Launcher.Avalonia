@@ -4,6 +4,7 @@ using Avalonia.Headless.XUnit;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using Cafe.Launcher.Core.Services.Update;
 using Cafe.Launcher.UI.Models;
 
 namespace Cafe.Launcher.HeadlessTests;
@@ -74,6 +75,45 @@ public sealed partial class MainWindowHeadlessTests
         await context.ViewModel.LogExport.PendingRangeProbeTask.WaitAsync(TimeSpan.FromSeconds(5));
         Dispatcher.UIThread.RunJobs();
         GoldenScreenshot.Compare(context.Window, "log-export");
+    }
+
+    [AvaloniaFact]
+    public void Golden_UpdateDialog_MatchesBaseline()
+    {
+        using var context = CreateContext();
+        PrepareGoldenWindow(context);
+        context.Window.Show();
+        context.ViewModel.Dialogs.ShowUpdateAvailable(
+            "1.2.0",
+            [],
+            LauncherUpdateInAppAvailability.PlatformUnsupported,
+            releaseNotes: "## What's new\n\n- Fixed several issues\n- Improved download stability");
+        Dispatcher.UIThread.RunJobs();
+        GoldenScreenshot.Compare(context.Window, "update-dialog");
+    }
+
+    [AvaloniaFact]
+    public void Golden_ErrorDialog_MatchesBaseline()
+    {
+        using var context = CreateContext();
+        PrepareGoldenWindow(context);
+        context.Window.Show();
+        context.ViewModel.Dialogs.ShowCriticalError(
+            "The launcher could not start the game.",
+            "Exit code 1 while launching BlueArchive.exe.");
+        Dispatcher.UIThread.RunJobs();
+        GoldenScreenshot.Compare(context.Window, "error-dialog");
+    }
+
+    [AvaloniaFact]
+    public void Golden_SetupWizard_MatchesBaseline()
+    {
+        using var context = CreateContext();
+        PrepareGoldenWindow(context);
+        context.Window.Show();
+        context.ViewModel.Dialogs.ShowSetupWizard();
+        Dispatcher.UIThread.RunJobs();
+        GoldenScreenshot.Compare(context.Window, "setup-wizard");
     }
 
     /// <summary>
