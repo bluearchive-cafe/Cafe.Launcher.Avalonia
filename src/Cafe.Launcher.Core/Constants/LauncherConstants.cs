@@ -13,8 +13,20 @@ public static class LauncherConstants
     public const string LogExportFolderName = "log-exports";
     public const string DefaultThemeColor = "#FF2E7DF6";
 
+    /// <summary>设置覆盖层的层级；位于主内容之上、对话框之下。</summary>
+    public const int ZIndexSettings = 100;
+
+    /// <summary>对话框覆盖层的层级；设置之上、向导之下。</summary>
+    public const int ZIndexDialog = 200;
+
+    /// <summary>设置向导覆盖层的层级；对话框之上、Toast 之下。</summary>
+    public const int ZIndexSetupWizard = 500;
+
+    /// <summary>向导自身的退出确认；必须高于向导本体，仍在 Toast 之下。</summary>
+    public const int ZIndexSetupWizardConfirmation = 501;
+
     /// <summary>
-    /// Z-index used by the toast notification overlay (MainWindowToastOverlay.axaml).
+    /// Z-index used by the toast notification overlay (MainWindow.axaml).
     /// Toast renders above all other UI layers: base content, settings, and dialogs.
     /// </summary>
     public const int ZIndexToast = 1000;

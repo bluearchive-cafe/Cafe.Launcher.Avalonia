@@ -41,6 +41,7 @@
                         <ListBox Grid.Row="1" Classes="settings-navigation"
                              x:Name="SettingsNavigation"
                              AutomationProperties.AutomationId="SettingsNavigation"
+                             AutomationProperties.Name="{Binding Shell.I18n[settingsNavigation]}"
                              Focusable="True"
                              FocusAdorner="{x:Null}"
                              ItemsSource="{Binding Settings.Options.SettingsCategories}"
@@ -84,8 +85,6 @@
                                             <TextBlock Classes="category-title"
                                                        Text="{Binding DisplayName}"
                                                        AutomationProperties.Name="{Binding DisplayName}"/>
-                                            <TextBlock Classes="category-subtitle"
-                                                       Text="{Binding Description}"/>
                                         </StackPanel>
                                         <Button Grid.Column="1"
                                                 Classes="dialog-close content-header-action"
@@ -93,7 +92,7 @@
                                                 IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}"
                                                 ToolTip.Tip="{Binding Shell.I18n[close]}"
                                                 AutomationProperties.Name="{Binding Shell.I18n[close]}"
-                                                VerticalAlignment="Top">
+                                                VerticalAlignment="Center">
                                             <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
                                         </Button>
                                     </Grid>

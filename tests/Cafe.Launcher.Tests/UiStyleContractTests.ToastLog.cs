@@ -135,13 +135,19 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void ToastLayer_UsesLauncherConstantsZIndex()
     {
-        var toastOverlay = File.ReadAllText(TestRepository.FromPresentationRoot("Views/MainWindowToastOverlay.axaml"));
+        var mainWindow = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
+        var toast = mainWindow
+            .Descendants()
+            .Single(element => element.Name.LocalName == "MainWindowToastOverlay");
 
-        Assert.Contains(
-            "ZIndex=\"{x:Static constants:LauncherConstants.ZIndexToast}\"",
-            toastOverlay,
-            StringComparison.Ordinal);
-        Assert.DoesNotContain("ZIndex=\"1000\"", toastOverlay, StringComparison.Ordinal);
+        // 层级声明在 MainWindow 的兄弟节点上；写在 Toast 覆盖层自己的根 Grid 里不会生效。
+        Assert.Equal(
+            "{x:Static constants:LauncherConstants.ZIndexToast}",
+            toast.Attribute("ZIndex")?.Value);
+
+        var toastOverlay = File.ReadAllText(TestRepository.FromPresentationRoot("Views/MainWindowToastOverlay.axaml"));
+        Assert.DoesNotContain("ZIndex=", toastOverlay, StringComparison.Ordinal);
+        Assert.DoesNotContain("ZIndex=\"1000\"", mainWindow.Root!.ToString(), StringComparison.Ordinal);
     }
 
     [Fact]

@@ -38,9 +38,10 @@
             <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Display}"/>
             <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
         </Style>
-        <!-- 确认页的段落级分隔：原型用发丝线（1px、Dialog.Section.Divider），
+        <!-- 确认页的段落级分隔：使用装饰发丝线（0.5 DIP、Dialog.Section.Divider），
              不是框架 Separator 的默认厚线。高度沿用向导分隔线的同一枚 token。 -->
         <Style Selector="Border.uninstall-divider">
+            <Setter Property="UseLayoutRounding" Value="False"/>
             <Setter Property="Height" Value="{StaticResource Launcher.Component.Wizard.Divider.Height}"/>
             <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Section.Divider}"/>
             <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
@@ -155,7 +156,7 @@
                             <TextBlock Text="{Binding Operations.Uninstall.ScopeStatementText}"
                                        Classes="section-title" TextWrapping="Wrap"/>
                             <TextBlock Text="{Binding Operations.Uninstall.ScopeDetailText}"
-                                       Classes="category-subtitle"
+                                       Classes="caption" TextWrapping="Wrap"
                                        IsVisible="{Binding Operations.Uninstall.HasScopeDetail}"/>
                         </StackPanel>
                         <Border Classes="uninstall-divider"/>

@@ -69,7 +69,7 @@
                             AutomationProperties.Name="{Binding Shell.I18n[logFilterFatal]}">
                         <TextBlock Text="{Binding Shell.I18n[logFilterFatal]}"/>
                     </Button>
-                    <TextBox Text="{Binding LogViewer.FilterText, Mode=TwoWay}" PlaceholderText="{Binding Shell.I18n[logSearchPlaceholder]}"
+                    <TextBox x:Name="LogSearchBox" Text="{Binding LogViewer.FilterText, Mode=TwoWay}" PlaceholderText="{Binding Shell.I18n[logSearchPlaceholder]}"
                              Classes="field-input log-search"
                              MinWidth="{StaticResource Launcher.Component.LogViewer.Search.MinWidth}"
                              AutomationProperties.Name="{Binding Shell.I18n[logSearchPlaceholder]}"
@@ -88,6 +88,7 @@
                         <TextBlock Text="{Binding Shell.I18n[logLoadEarlier]}"/>
                     </Button>
                     <ListBox Grid.Row="1"
+                             AutomationProperties.Name="{Binding Shell.I18n[logEntries]}"
                              ItemsSource="{Binding LogViewer.FilteredEntries}"
                              Classes="log-entry-list"
                              IsVisible="{Binding LogViewer.HasFilteredEntries}">

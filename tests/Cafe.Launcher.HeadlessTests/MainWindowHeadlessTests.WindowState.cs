@@ -526,6 +526,45 @@ public sealed partial class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
+    public void MainWindow_WhenEscapeIsPressedWithDirtySettings_RoutesCloseThroughUnsavedConfirmation()
+    {
+        using var context = CreateContext();
+        OpenSettings(context);
+        context.ViewModel.Settings.Editor.Current.Language = LauncherLanguages.Japanese;
+        Assert.True(context.ViewModel.Settings.IsSettingsDirty);
+
+        context.Window.KeyPress(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, "");
+        context.Window.KeyRelease(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, "");
+        Dispatcher.UIThread.RunJobs();
+
+        // ESC 不是「一律关闭」：有未保存改动的表面必须把关闭路由到确认，
+        // 设置层保持打开，等用户在确认框里选择。
+        Assert.True(context.ViewModel.WindowChrome.IsSettingsVisible);
+        Assert.True(context.ViewModel.Settings.IsUnsavedChangesVisible);
+    }
+
+    [AvaloniaFact]
+    public void MainWindow_WhenEscapeIsPressedInLogSearchBox_ClosesLogViewer()
+    {
+        using var context = CreateContext();
+        context.Window.Show();
+        ShowLogViewer(context);
+        var searchBox = context.Window.GetVisualDescendants()
+            .OfType<TextBox>()
+            .Single(box => box.Name == "LogSearchBox");
+        searchBox.Focus();
+        Dispatcher.UIThread.RunJobs();
+        Assert.True(searchBox.IsFocused);
+
+        context.Window.KeyPress(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, "");
+        context.Window.KeyRelease(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, "");
+        Dispatcher.UIThread.RunJobs();
+
+        // 可编辑控件不吞 ESC：顶层模态仍收到关闭语义（输入框没有待提交的编辑状态）。
+        Assert.False(context.ViewModel.LogViewer.IsVisible);
+    }
+
+    [AvaloniaFact]
     public void ConfigureViewModel_WhenCalledAgain_UnsubscribesPreviousViewModel()
     {
         using var first = CreateContext();

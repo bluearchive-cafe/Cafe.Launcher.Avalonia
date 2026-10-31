@@ -618,24 +618,20 @@ public sealed partial class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
-    public void SettingsContent_ShowsLocalizedTitleAndSubtitleForCurrentCategory()
+    public void SettingsContent_ShowsLocalizedTitleWithoutRedundantSubtitle()
     {
         using var context = CreateContext();
         OpenSettings(context);
         var title = context.Window.GetVisualDescendants().OfType<TextBlock>()
             .Single(control => control.Classes.Contains("category-title"));
-        var subtitle = context.Window.GetVisualDescendants().OfType<TextBlock>()
-            .Single(control => control.Classes.Contains("category-subtitle"));
+        Assert.DoesNotContain(context.Window.GetVisualDescendants().OfType<TextBlock>(),
+            control => control.Classes.Contains("category-subtitle"));
 
         Assert.Equal(
             context.ViewModel.Settings.Options.SettingsCategories.Single(
                 option => option.Code == SettingsCategoryCodes.General).DisplayName,
             title.Text);
         Assert.Equal(title.Text, AutomationProperties.GetName(title));
-        Assert.Equal(
-            context.ViewModel.Settings.Options.SettingsCategories.Single(
-                option => option.Code == SettingsCategoryCodes.General).Description,
-            subtitle.Text);
 
         context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.Appearance;
         Dispatcher.UIThread.RunJobs();
@@ -645,10 +641,6 @@ public sealed partial class MainWindowHeadlessTests
                 option => option.Code == SettingsCategoryCodes.Appearance).DisplayName,
             title.Text);
         Assert.Equal(title.Text, AutomationProperties.GetName(title));
-        Assert.Equal(
-            context.ViewModel.Settings.Options.SettingsCategories.Single(
-                option => option.Code == SettingsCategoryCodes.Appearance).Description,
-            subtitle.Text);
     }
 
     [AvaloniaFact]

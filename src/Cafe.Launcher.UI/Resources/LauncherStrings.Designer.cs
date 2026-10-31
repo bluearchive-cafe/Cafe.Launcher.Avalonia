@@ -628,6 +628,8 @@ internal static class LauncherStrings
 
     public static string LocalManifestUnreadable => GetRequiredString("localManifestUnreadable");
 
+    public static string LogEntries => GetRequiredString("logEntries");
+
     public static string LogExportConfirm => GetRequiredString("logExportConfirm");
 
     public static string LogExportContentGroup => GetRequiredString("logExportContentGroup");
@@ -749,6 +751,8 @@ internal static class LauncherStrings
     public static string NeutralColorStrategySeedFollowing => GetRequiredString("neutralColorStrategySeedFollowing");
 
     public static string NeutralColorStrategySeedFollowingHint => GetRequiredString("neutralColorStrategySeedFollowingHint");
+
+    public static string NewsCategories => GetRequiredString("newsCategories");
 
     public static string NextBanner => GetRequiredString("nextBanner");
 
@@ -957,6 +961,8 @@ internal static class LauncherStrings
     public static string SettingsGroupThemeColor => GetRequiredString("settingsGroupThemeColor");
 
     public static string SettingsGroupUpdates => GetRequiredString("settingsGroupUpdates");
+
+    public static string SettingsNavigation => GetRequiredString("settingsNavigation");
 
     public static string SettingsSaved => GetRequiredString("settingsSaved");
 
