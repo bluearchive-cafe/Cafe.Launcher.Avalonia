@@ -112,6 +112,7 @@
 - Microsoft DI 按**解析**的逆序释放服务，不是按登记逆序。新增 `IDisposable` 时检查解析顺序；`Program.RunSession` 在会话结束日志之后显式释放共享的预 DI 日志器。
 - 组合根解析 `LauncherDataRoot` 与 `BuildInfo.Identity` 一次，调用 `AddLauncherCore` 后登记宿主，再交给 `AddLauncherPresentationServices` 与 `AddLauncherPresentation()`。先解析 `LauncherPresentationSession`，由它拉入 Core 依赖；提前解析 Core 服务可能颠倒释放顺序，仅保持登记顺序不足以保证安全。
 - 组合完成后，宿主仅通过 `LauncherPresentationSession` 调用 UI 生命周期。pre-DI 崩溃路径为既定例外，可直接构造 crash-store、fatal-crash、bootstrap 和 crash-window，以便容器不可用时仍能报告启动失败。
+- 正常退出在释放窗口、容器与共享日志器前，必须异步等待 `LauncherPresentationSession.PrepareForShutdownAsync`。游戏操作旅程在关闭时拒绝新任务，并等待下载、修复、续传及 Toast 重试的完整收尾；不能用 `IsDownloadRunning=false` 或取消请求已经发出代替终结屏障，也不能同步阻塞 UI 调度线程。
 - 依赖一律构造函数注入，不用属性注入或 Service Locator。测试用构造函数标记 `internal`。
 - 单实例所有权在 Windows 使用命名 mutex，Unix 使用数据根中的锁套接字；.NET 的 `Local\` 命名空间在 Unix 仅覆盖同一 POSIX 会话。套接字保留在数据根而非 `XDG_RUNTIME_DIR` 是已接受的取舍，见 [ADR-034](docs/design/adr/ADR-034-Unix单实例所有权用数据根内锁套接字判定.md) 与[审计台账](CODEBASE_AUDIT.md)。
 
