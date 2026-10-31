@@ -15,6 +15,10 @@ using Cafe.Launcher.UI.Constants;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Views;
 using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Services.Diagnostics;
+using Cafe.Launcher.UI.Services;
+using Cafe.Launcher.UI.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cafe.Launcher.HeadlessTests;
 
@@ -299,21 +303,30 @@ public sealed partial class MainWindowHeadlessTests
         AssertNavigationSelectionVisual(navigation, SettingsCategoryCodes.General);
     }
 
-    [AvaloniaFact]
-    public async Task SaveSettings_FromSettingsPage_ReportsSuccessInsteadOfThreadFailure()
+    [AvaloniaTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SaveSettings_FromSettingsPage_ReportsSuccessInsteadOfThreadFailure(bool expireToastImmediately)
     {
-        using var context = CreateContext();
+        using var context = CreateContext(configure: services => services.AddSingleton(sp => new ToastHostViewModel(
+            sp.GetRequiredService<ToastService>(),
+            sp.GetRequiredService<LocalizationService>(),
+            sp.GetRequiredService<ILauncherDiagnostics>(),
+            async action => await Dispatcher.UIThread.InvokeAsync(action),
+            (_, token) => expireToastImmediately ? Task.CompletedTask : Task.Delay(Timeout.InfiniteTimeSpan, token))));
         OpenSettings(context);
+        var notifications = new List<ToastNotification>();
+        context.Provider.GetRequiredService<ToastService>().ToastRaised += notifications.Add;
 
         context.ViewModel.Settings.Editor.Current.Language = LauncherLanguages.Japanese;
         await context.ViewModel.Settings.SaveSettingsCommand.ExecuteAsync(null);
         Dispatcher.UIThread.RunJobs();
 
-        // 保存失败会被 SettingsViewModel 收成错误提示，而落盘在抛异常之前就已经成功，
-        // 所以「只有一条成功提示」才是这次保存真的走完的凭据：收口在非 UI 线程抛出时，
-        // 成功提示根本发不出来。
-        var toast = Assert.Single(context.ViewModel.Toasts.ActiveToasts);
+        // 断言保存流程发出的结果。命令还会等待 SettingsSaved 后续处理，期间 Toast
+        // 可能已自行退出；显示列表的瞬时存量不能证明是否发出过成功或错误提示。
+        var toast = Assert.Single(notifications);
         Assert.Equal(ToastSeverity.Success, toast.Severity);
+        Assert.Equal(expireToastImmediately, context.ViewModel.Toasts.ActiveToasts.Count == 0);
     }
 
     [AvaloniaFact]
