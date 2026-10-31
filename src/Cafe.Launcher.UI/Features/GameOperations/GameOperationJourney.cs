@@ -38,6 +38,67 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
     private readonly IGameOperationJourneyHost host;
 
     private LauncherStatusSnapshot? lastInstallSnapshot;
+    private readonly object lifetimeLock = new();
+    private int pendingOperationCount;
+    private bool shutdownRequested;
+    private TaskCompletionSource? operationsDrained;
+
+    /// <summary>关闭开始后不再接收新操作，已请求停止的任务仍须完成其 finally 与呈现收尾。</summary>
+    public bool IsShuttingDown => Volatile.Read(ref shutdownRequested);
+
+    /// <summary>封闭入口、按进程退出意图停止下载，并异步等待所有已进入的下载旅程完成。</summary>
+    public Task PrepareForShutdownAsync()
+    {
+        Task pending;
+        lock (lifetimeLock)
+        {
+            if (shutdownRequested)
+            {
+                return operationsDrained?.Task ?? Task.CompletedTask;
+            }
+
+            shutdownRequested = true;
+            pending = pendingOperationCount == 0
+                ? Task.CompletedTask
+                : (operationsDrained = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)).Task;
+        }
+
+        // Cancel 会同步触发回调；不能在生命周期锁内调用，也不能用 IsDownloadRunning
+        // 判断是否需要等待：用户停止会先摘除会话，此时其异常处理与 finally 仍可能在运行。
+        executor.Stop(DownloadStopReason.ApplicationExit);
+        return pending;
+    }
+
+    private PendingOperation? TryBeginOperation()
+    {
+        lock (lifetimeLock)
+        {
+            if (shutdownRequested)
+            {
+                return null;
+            }
+
+            pendingOperationCount++;
+            return new PendingOperation(this);
+        }
+    }
+
+    private void CompleteOperation()
+    {
+        TaskCompletionSource? drained;
+        lock (lifetimeLock)
+        {
+            pendingOperationCount--;
+            drained = pendingOperationCount == 0 ? operationsDrained : null;
+        }
+
+        drained?.TrySetResult();
+    }
+
+    private sealed class PendingOperation(GameOperationJourney owner) : IDisposable
+    {
+        public void Dispose() => owner.CompleteOperation();
+    }
 
     /// <summary>
     /// The toast gets one short beat to be read before the window is taken away by the
@@ -235,6 +296,12 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
     /// <summary>Installs or updates the game and presents the terminal result.</summary>
     public async Task InstallOrUpdateAsync(LauncherStatusSnapshot snapshot)
     {
+        using var operation = TryBeginOperation();
+        if (operation is null)
+        {
+            return;
+        }
+
         lastInstallSnapshot = snapshot;
         var result = await RunInstallOrUpdateAttemptAsync(snapshot);
         if (result is null)
@@ -257,7 +324,7 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
     /// </summary>
     public Task RequestRepairAsync(LauncherStatusSnapshot snapshot)
     {
-        if (RejectRepairIfUnavailable(snapshot))
+        if (IsShuttingDown || RejectRepairIfUnavailable(snapshot))
         {
             return Task.CompletedTask;
         }
@@ -269,6 +336,12 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
     /// <summary>Runs a confirmed repair and refreshes launcher state afterward.</summary>
     public async Task RepairAsync(LauncherStatusSnapshot snapshot)
     {
+        using var operation = TryBeginOperation();
+        if (operation is null)
+        {
+            return;
+        }
+
         // 用户已经在确认框上点过确认：此时状态若又变得不允许，必须给可见反馈（ADR-027）。
         // 这道闸门必须早于 PrepareOperation——后者会把面板 latch 到 Progress，而只有
         // SetIdlePanels 能把它复位。
@@ -433,6 +506,12 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
     /// <summary>Attempts to continue a persisted download while respecting cancellation.</summary>
     public async Task ResumePersistedAsync(LauncherStatusSnapshot snapshot, CancellationToken cancellationToken)
     {
+        using var operation = TryBeginOperation();
+        if (operation is null)
+        {
+            return;
+        }
+
         if (host.IsBusy)
         {
             return;
@@ -548,6 +627,11 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
 
     private void ShowInstallUpdateFailureToast(string message, GameOperationErrorCode errorCode)
     {
+        if (IsShuttingDown)
+        {
+            return;
+        }
+
         var isTerminal = errorCode is
             GameOperationErrorCode.PathMissing or
             GameOperationErrorCode.CdnConfiguration or
@@ -581,6 +665,12 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
 
     private async Task<ToastActionResult> RetryInstallOrUpdateAsync(CancellationToken cancellationToken)
     {
+        using var operation = TryBeginOperation();
+        if (operation is null)
+        {
+            return ToastActionResult.Failure(localizer.T(LocalizationKeys.OperationStopped));
+        }
+
         cancellationToken.ThrowIfCancellationRequested();
         var snapshot = lastInstallSnapshot;
         if (snapshot is null)
@@ -616,6 +706,11 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
 
     private void ShowOperationResult(GameOperationResult result)
     {
+        if (IsShuttingDown)
+        {
+            return;
+        }
+
         if (result.Success)
         {
             toastService.ShowSuccess(result.Message);
@@ -662,7 +757,7 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
     }
 
     private Task<bool> RequestRefresh(GameOperationsRefreshMode mode) =>
-        host.RefreshAsync(mode);
+        IsShuttingDown ? Task.FromResult(false) : host.RefreshAsync(mode);
 
     /// <summary>
     /// 无后置处理的入口共用的骨架：进入忙碌、执行、把异常按 (日志上下文, 失败文案键) 报给用户、
@@ -695,7 +790,7 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
 
     private bool PrepareShellOnly(LauncherStatusSnapshot? snapshot)
     {
-        if (host.IsBusy)
+        if (IsShuttingDown || host.IsBusy)
         {
             return false;
         }

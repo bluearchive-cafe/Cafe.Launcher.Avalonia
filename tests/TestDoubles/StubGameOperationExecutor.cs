@@ -77,6 +77,9 @@ internal sealed class StubGameOperationExecutor : IGameOperationExecutor
 
     public GameOperationResult RepairResult { get; set; } = new();
 
+    /// <summary>修复的可控完成门，用于验证取消请求与实际收尾的区别。</summary>
+    public TaskCompletionSource<GameOperationResult>? RepairCompletion { get; set; }
+
     public GameOperationResult ValidateUninstallResult { get; set; } = new();
 
     public GameOperationResult UninstallResult { get; set; } = new();
@@ -89,6 +92,9 @@ internal sealed class StubGameOperationExecutor : IGameOperationExecutor
 
     /// <summary>Resume 的返回结果；null 表示无可恢复的持久化工作。</summary>
     public GameOperationResult? ResumeResult { get; set; }
+
+    /// <summary>续传的可控完成门。</summary>
+    public TaskCompletionSource<GameOperationResult?>? ResumeCompletion { get; set; }
 
     /// <summary>创建所有操作默认成功（并带典型成功消息）的替身，供直接走成功路径的旅程测试使用。</summary>
     public static StubGameOperationExecutor Succeeding() => new()
@@ -135,7 +141,7 @@ internal sealed class StubGameOperationExecutor : IGameOperationExecutor
         Action<GameOperationProgress> progress)
     {
         RepairCallCount++;
-        return Task.FromResult(RepairResult);
+        return RepairCompletion?.Task ?? Task.FromResult(RepairResult);
     }
 
     /// <inheritdoc />
@@ -145,7 +151,7 @@ internal sealed class StubGameOperationExecutor : IGameOperationExecutor
         CancellationToken cancellationToken)
     {
         ResumeCallCount++;
-        return Task.FromResult(ResumeResult);
+        return ResumeCompletion?.Task ?? Task.FromResult(ResumeResult);
     }
 
     /// <inheritdoc />

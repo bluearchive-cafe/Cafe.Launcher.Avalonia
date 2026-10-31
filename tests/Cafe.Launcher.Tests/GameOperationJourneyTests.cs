@@ -609,6 +609,63 @@ public sealed class GameOperationJourneyTests
         Assert.False(context.Host.IsBusy);
     }
 
+    [Fact]
+    public async Task PrepareForShutdownAsync_DuringToastRetry_WaitsAndRejectsLaterRetries()
+    {
+        var context = CreateContext();
+        var notifications = context.SubscribeToasts();
+        context.Executor.InstallResult = new GameOperationResult { ErrorCode = GameOperationErrorCode.Network, Message = "failed" };
+        await context.Journey.InstallOrUpdateAsync(CreateSnapshot(LauncherRuntimeState.NotInstalled));
+        var retry = Assert.Single(notifications).PrimaryAction!;
+        var completion = new TaskCompletionSource<GameOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        context.Executor.InstallCompletion = completion;
+        var retryTask = retry.ExecuteAsync(CancellationToken.None);
+        try
+        {
+            Assert.Equal(2, context.Executor.InstallCallCount);
+            var shutdown = context.Journey.PrepareForShutdownAsync();
+            Assert.False(shutdown.IsCompleted);
+            Assert.Same(shutdown, context.Journey.PrepareForShutdownAsync());
+            Assert.Equal(1, context.Executor.StopCallCount);
+            completion.TrySetResult(new GameOperationResult { Success = true });
+            await retryTask.WaitAsync(TimeSpan.FromSeconds(5));
+            await shutdown.WaitAsync(TimeSpan.FromSeconds(5));
+            await retry.ExecuteAsync(CancellationToken.None);
+            Assert.Equal(2, context.Executor.InstallCallCount);
+            Assert.Single(notifications);
+        }
+        finally
+        {
+            completion.TrySetResult(new GameOperationResult());
+            await retryTask.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+    }
+
+    [Fact]
+    public async Task PrepareForShutdownAsync_AfterBackendCompletes_WaitsForJourneyFollowThrough()
+    {
+        var context = CreateContext();
+        var notifications = context.SubscribeToasts();
+        var refreshCompletion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        context.Host.RefreshCompletion = refreshCompletion;
+        var operation = context.Journey.InstallOrUpdateAsync(CreateSnapshot(LauncherRuntimeState.NotInstalled));
+        try
+        {
+            Assert.Single(context.Host.RefreshRequests);
+            var shutdown = context.Journey.PrepareForShutdownAsync();
+            Assert.False(shutdown.IsCompleted);
+            refreshCompletion.TrySetResult(true);
+            await operation.WaitAsync(TimeSpan.FromSeconds(5));
+            await shutdown.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.Empty(notifications);
+        }
+        finally
+        {
+            refreshCompletion.TrySetResult(true);
+            await operation.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+    }
+
     private static LauncherStatusSnapshot CreateSnapshot(
         LauncherRuntimeState runtimeState = LauncherRuntimeState.Ready,
         string afterLaunchBehavior = AfterLaunchBehaviors.Minimize,
@@ -683,6 +740,7 @@ public sealed class GameOperationJourneyTests
 
         public List<GameOperationsRefreshMode> RefreshRequests { get; } = [];
         public Exception? RefreshException { get; set; }
+        public TaskCompletionSource<bool>? RefreshCompletion { get; set; }
 
         public bool MinimizeRequested { get; private set; }
 
@@ -715,7 +773,7 @@ public sealed class GameOperationJourneyTests
             {
                 throw RefreshException;
             }
-            return Task.FromResult(true);
+            return RefreshCompletion?.Task ?? Task.FromResult(true);
         }
 
         public Task ShowLogViewerAsync() => Task.CompletedTask;
