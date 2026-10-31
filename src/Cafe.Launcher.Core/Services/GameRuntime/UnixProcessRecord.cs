@@ -29,7 +29,7 @@ public sealed record UnixProcessRecord(
 /// 信号阶梯（那才是要靠样本收口的策略）。平台读取层（读文件、门控 <see cref="OperatingSystem.IsLinux"/>）
 /// 留待接线时补。
 /// </summary>
-public static class UnixProcessRecordParser
+internal static class UnixProcessRecordParser
 {
     /// <summary><c>/proc/&lt;pid&gt;/cmdline</c>：NUL 分隔的 argv，末尾通常多一个 NUL。</summary>
     public static IReadOnlyList<string> ParseArguments(ReadOnlySpan<byte> content) =>

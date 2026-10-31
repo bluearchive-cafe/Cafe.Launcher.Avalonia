@@ -103,7 +103,7 @@ internal partial class MainWindowViewModel : ViewModelBase, IDisposable
         ILauncherDiagnostics diagnostics,
         ShellPresentationFamily family,
         IErrorHandlingService errorHandling,
-        SystemAnimationSettingsProvider systemAnimationSettingsProvider,
+        ISystemAnimationSettingsProvider systemAnimationSettingsProvider,
         IFilePickerService filePickerService,
         LauncherBuildIdentity? buildIdentity = null,
         PresentationOptions? options = null)

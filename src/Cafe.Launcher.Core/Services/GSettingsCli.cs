@@ -10,7 +10,7 @@ namespace Cafe.Launcher.Core.Services;
 /// 没有可读的稳定落盘文件，只能经 gsettings 读取；子进程生成不可在每次调用路径上
 /// 重复，缓存策略由调用方自持（如 SystemAnimationSettingsProvider / SystemProxySettingsProvider）。
 /// </summary>
-public static class GSettingsCli
+internal static class GSettingsCli
 {
     public const int DefaultTimeoutMilliseconds = 750;
 

@@ -34,9 +34,9 @@ internal sealed class LogExportService
     private readonly ILauncherDiagnostics diagnostics;
     private readonly LauncherDataRoot dataRoot;
     private readonly ICrashReportLocator crashReportLocator;
-    private readonly GraphicsInfoProbe? graphicsInfoProbe;
+    private readonly IGraphicsInfoProbe? graphicsInfoProbe;
     private readonly LauncherBuildIdentity? buildIdentity;
-    private readonly ProtonBuildDiscovery? protonBuildDiscovery;
+    private readonly IProtonBuildDiscovery? protonBuildDiscovery;
 
     /// <summary>Default directory offered to the user when exporting logs.</summary>
     public string DefaultExportDirectory => dataRoot.LogExportDirectory;
@@ -54,7 +54,7 @@ internal sealed class LogExportService
         ILauncherDiagnostics diagnostics,
         LauncherDataRoot dataRoot,
         ICrashReportLocator crashReportLocator,
-        GraphicsInfoProbe? graphicsInfoProbe)
+        IGraphicsInfoProbe? graphicsInfoProbe)
         : this(diagnostics, dataRoot, crashReportLocator, graphicsInfoProbe, protonBuildDiscovery: null)
     {
     }
@@ -63,8 +63,8 @@ internal sealed class LogExportService
         ILauncherDiagnostics diagnostics,
         LauncherDataRoot dataRoot,
         ICrashReportLocator crashReportLocator,
-        GraphicsInfoProbe? graphicsInfoProbe,
-        ProtonBuildDiscovery? protonBuildDiscovery,
+        IGraphicsInfoProbe? graphicsInfoProbe,
+        IProtonBuildDiscovery? protonBuildDiscovery,
         LauncherBuildIdentity? buildIdentity = null)
     {
         ArgumentNullException.ThrowIfNull(dataRoot);

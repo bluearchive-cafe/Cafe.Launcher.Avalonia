@@ -109,7 +109,7 @@ public static class LauncherCoreServiceCollectionExtensions
         services.TryAddSingleton<LocalInstallationStateStore>();
         services.TryAddSingleton<ILocalInstallationStateStore>(sp => sp.GetRequiredService<LocalInstallationStateStore>());
         services.TryAddSingleton<AuthorizationHeaderFactory>();
-        services.TryAddSingleton<BestHttpCookieLibraryService>();
+        services.TryAddSingleton<IBestHttpCookieLibraryReader, BestHttpCookieLibraryService>();
         services.TryAddSingleton<PatchUrlGroupService>();
         services.TryAddSingleton<RemoteHttpUrlValidator>();
         services.TryAddSingleton<IRemoteHttpUrlValidator>(sp => sp.GetRequiredService<RemoteHttpUrlValidator>());
@@ -124,8 +124,10 @@ public static class LauncherCoreServiceCollectionExtensions
         // 代理解析属于后端；连接池（HttpClientFactory）与其传输登记在本文件上方的 HTTP 族里，
         // 偏好闭包读草稿所有者的已保存快照（ADR-028 的按使用时机拉取）。
         services.TryAddSingleton<ProxySettingsService>();
-        services.TryAddSingleton<NoticeStateService>();
-        services.TryAddSingleton<SystemAnimationSettingsProvider>();
+        services.TryAddSingleton<INoticeStateStore, NoticeStateService>();
+        services.TryAddSingleton<ISystemAnimationSettingsProvider, SystemAnimationSettingsProvider>();
+        services.TryAddSingleton<IGraphicsInfoProbe, GraphicsInfoProbe>();
+        services.TryAddSingleton<IProtonBuildDiscovery, ProtonBuildDiscovery>();
         services.TryAddSingleton<ILauncherCoreService, LauncherCoreService>();
         services.TryAddSingleton(sp => new ImageCacheService(
             sp.GetRequiredService<IRemoteHttpTransport>(),
@@ -150,6 +152,10 @@ public static class LauncherCoreServiceCollectionExtensions
             sp.GetRequiredService<ILauncherDiagnostics>()));
         services.TryAddSingleton<ILauncherSelfUpdateService>(sp => sp.GetRequiredService<LauncherSelfUpdateService>());
         services.TryAddSingleton<IFileDownloadService, FileDownloadService>();
+        services.TryAddSingleton<IDownloadTransportSource>(sp => new LeaseBackedDownloadTransportSource(
+            sp.GetRequiredService<IRemoteHttpClientLeaseSource>(),
+            sp.GetRequiredService<IRemoteHttpUrlValidator>(),
+            LeaseBackedDownloadTransportSource.DefaultHeaderTimeout));
         // 游戏运行时：进程启动、跟踪、兼容预检、前缀元数据与会话运行器定义。
         services.TryAddSingleton<GameInstallationPath>();
         services.TryAddSingleton<IGameInstallationPath>(sp => sp.GetRequiredService<GameInstallationPath>());

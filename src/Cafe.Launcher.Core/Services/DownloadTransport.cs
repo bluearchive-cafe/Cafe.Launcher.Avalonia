@@ -56,11 +56,14 @@ internal sealed class LeaseBackedDownloadTransport(
 /// Production transport source: leases come from the shared
 /// <see cref="HttpClientFactory"/> with the download batch's long timeout.
 /// </summary>
-public sealed class LeaseBackedDownloadTransportSource(
+internal sealed class LeaseBackedDownloadTransportSource(
     IRemoteHttpClientLeaseSource httpClientFactory,
     IRemoteHttpUrlValidator urlValidator,
     TimeSpan leaseTimeout) : IDownloadTransportSource
 {
+    // ResponseHeadersRead 只以此限制响应头等待；响应体另有无字节超时，持续传输不设总时长限制。
+    internal static readonly TimeSpan DefaultHeaderTimeout = TimeSpan.FromSeconds(60);
+
     public async Task<IDownloadTransport> CreateAsync(
         string proxyMode,
         CancellationToken cancellationToken)

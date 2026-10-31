@@ -21,7 +21,7 @@ namespace Cafe.Launcher.Testing;
 /// <c>LastExit</c>）仍由真实的 <see cref="GameProcessTracker"/> 实现，替身只接管「扫不到就当没跑」
 /// 那条兜底路径。</para>
 /// </remarks>
-public static class TestGameProcessTracker
+internal static class TestGameProcessTracker
 {
     /// <summary>报告「没有游戏在跑」——进程状态与用例断言无关时的默认。</summary>
     public static GameProcessTracker None() =>
