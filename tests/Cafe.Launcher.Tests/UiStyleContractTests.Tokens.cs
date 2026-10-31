@@ -162,7 +162,7 @@ public sealed partial class UiStyleContractTests
             "Button.primary-action",
             "Button.danger-action",
             "Button.confirm-dialog-action",
-            "Button.launcher-control.start",
+            "SplitButton.launcher-control.start",
             "controls|ReleaseNotesMarkdownViewer :is(TextBlock).markdown-h1",
             "controls|ReleaseNotesMarkdownViewer :is(TextBlock).markdown-h2",
             "controls|ReleaseNotesMarkdownViewer :is(TextBlock).markdown-h3",
@@ -230,7 +230,7 @@ public sealed partial class UiStyleContractTests
             "{StaticResource Launcher.Control.Height.Bottom}",
             bottomAction["MinHeight"]);
 
-        var launchAction = GetStyleSetters(document, "Button.launcher-control.start");
+        var launchAction = GetStyleSetters(document, "SplitButton.launcher-control.start");
         Assert.Equal(
             "{StaticResource Launcher.Control.Height.Launch}",
             launchAction["MinHeight"]);

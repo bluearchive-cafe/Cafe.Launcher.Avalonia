@@ -19,6 +19,7 @@
 
 | Q | 决策 | 影响 |
 |---|---|---|
+| 启动-1101 | 2026-11-01 用户确认将就绪态「开始游戏」与游戏管理入口合并为原生 SplitButton：主区直接启动，右侧省略号向上展开管理菜单；统一主色与外轮廓、分区反馈，卸载单独分隔 | 仅调整就绪态操作入口；普通与仅按钮布局共用 `GameLaunchButton`，安装与进度态沿用现有布局；细节见 §5.2 |
 | 优化-1024 | 2026-10-24 用户确认保留 Material 令牌与动态色管线；精简设置页重复说明与分类副标题，空说明不占位；设置行根据实际操作宽度换行，操作组可换行；装饰线 0.5 DIP，交互边框 1 DIP、焦点环 2 DIP；Label.Sm 最小 12；减弱对话框阴影，警示保留图标/文字/背景并移除额外左边线 | 本次修订取代 ADR-005 的 11px 下限、ADR-013 的 1px 装饰线及后续相关历史视觉值；不替换 Material 设计系统，不改变主题设置、命令、持久化与模态行为 |
 | Q1 | 动因 = 系统化 + 视觉现代化 + 一致性 | 体系先行，观感随后 |
 | Q2 | 分阶段：P1 token 体系 → P2 组件 → P3 表面 | 见 §10 |
@@ -156,6 +157,15 @@
 - 对话框 20 DIP 外圆角与共享组件圆角体系保留；双层阴影减为 `0 16 40 #33` / `0 2 6 #14`（完整色值见 token），不为页面添加新阴影。
 - 动态状态色沿用原混合配方；仅在文字对比度低于 4.5:1 时，向远离前景亮度的方向混合，使悬停/按下仍可辨认。此修正不改变 M3 基础角色、取色算法、8 个变体或中性色选项。
 
+### 5.2 就绪态启动分体按钮（2026-11-01）
+
+- `GameLaunchButton` 在普通与仅按钮布局中共用。底座为 Avalonia `SplitButton`，`GameLaunchSplitButtonTheme` 承载视觉模板；主区固定绑定开始游戏命令，菜单选择不会替换主操作。
+- 两区共用 `Primary` / `OnPrimary` 和 `Radius.Md` 外轮廓，不留外部空隙。主区最小宽度 190 DIP，右区宽度与最小高度沿用 58 DIP，常规中文总宽 248 DIP；文字增长时主区和整体高度自然扩展。分隔线 1 DIP、上下内缩 12 DIP，使用 `OnPrimary` 与 `StateLayer.Selected` 透明度。
+- 指针悬停、按下只改变所在区的 `Primary.Hover` / `Primary.Pressed`；菜单打开时右区保持按下色。忙碌时整个控件禁用。键盘焦点以 `OnPrimary` 的 2 DIP 内描边覆盖整体，不改变几何；内部两按钮不单独占用 Tab 停靠点。
+- Enter / Space 执行主操作，Alt+↓ / F4 展开菜单，Escape 收起菜单并恢复焦点。两区保留各自本地化 tooltip 和自动化名称。
+- 管理菜单使用 `TopEdgeAlignedRight`，与分体按钮右缘对齐，向上展开并留 8 DIP 间距；屏幕边缘空间不足时沿用原生弹窗避让。保留检查更新、创建快捷方式、打开游戏文件夹、修复与卸载；卸载前额外分隔。安装、更新与进度态不在本次合并范围。
+- 自动化覆盖两种布局的分区点击、键盘与焦点、忙碌禁用，以及默认/最小窗口下菜单的右缘对齐与上方间距。亮色与深色中文黄金基线分别为 `launch-split-button` / `launch-split-button-dark-zh`，展开菜单基线为 `launch-split-menu`。
+
 ## 6. 主题与壁纸
 
 - `RequestedThemeVariant="Default"` 跟随系统不变；主题模式（System/Light/Dark）持久化机制不变。
@@ -207,7 +217,7 @@
 
 - **每阶段门禁**：`UiStyleContractTests` 全绿（含新契约）+ 新增测试全绿 + 编译零警告 + `scripts/Test-LocalizationContract.ps1`（涉及新字符串时）+ `.\verify.ps1`；PR 附截图（可见 UI 变更）。
 - **契约测试扩展点**：token 存在性/旧键清零、禁裸色值与 `{StaticResource}` 规则、AA 对比度、覆盖层 Z 序（既有）。
-- **headless 黄金截图**：已接线（`UseHeadlessDrawing=false` + `UseSkia()` + `RenderTargetBitmap`），17 个基线（7 类基础表面、5 个卸载状态、2 个缩放设置面，以及更新/错误/设置向导 3 个对话框表面）平铺存储于 `tests/Cafe.Launcher.HeadlessTests/Baselines/`，阈值 diff（每通道容差 8/255、失配 ≤1%）、`CAFE_GOLDEN_UPDATE=1` 重新生成；字体稳定性：常规基线固定英文/降动效/Segoe UI；扩展基线显式固定语言、主题与文字倍率，CI（windows-latest）字体集合风险已在 README 记录，漂移时优先重生成基线。P3 视需要扩大。
+- **headless 黄金截图**：已接线（`UseHeadlessDrawing=false` + `UseSkia()` + `RenderTargetBitmap`），20 个基线（7 类基础表面、5 个卸载状态、2 个缩放设置面、3 个就绪态分体按钮/菜单，以及更新/错误/设置向导 3 个对话框表面）平铺存储于 `tests/Cafe.Launcher.HeadlessTests/Baselines/`，阈值 diff（每通道容差 8/255、失配 ≤1%）、`CAFE_GOLDEN_UPDATE=1` 重新生成；字体稳定性：常规基线固定英文/降动效/Segoe UI；扩展基线显式固定语言、主题与文字倍率，CI（windows-latest）字体集合风险已在 README 记录，漂移时优先重生成基线。P3 视需要扩大。
 - **走查清单**：已落地于 [`design-walkthrough-checklist.md`](./design-walkthrough-checklist.md)（状态矩阵 + §8 豁免区逐项 + P3 表面逐项），P3 每表面完成时人工复核；随本规范共同维护。
 
 ## 11. 有意搁置（Don't-do 清单）

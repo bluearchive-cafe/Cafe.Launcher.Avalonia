@@ -1,11 +1,15 @@
 using System.Threading.Tasks;
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services.Update;
 using Cafe.Launcher.UI.Models;
+using Cafe.Launcher.UI.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cafe.Launcher.HeadlessTests;
 
@@ -18,6 +22,56 @@ public sealed partial class MainWindowHeadlessTests
         PrepareGoldenWindow(context);
         context.Window.Show();
         GoldenScreenshot.Compare(context.Window, "shell-default");
+    }
+
+    [AvaloniaFact]
+    public void Golden_LaunchSplitButton_MatchesBaseline()
+    {
+        using var context = CreateContext();
+        PrepareGoldenWindow(context);
+        ShowLaunchSplitButton(context);
+        GoldenScreenshot.Compare(context.Window, "launch-split-button");
+    }
+
+    [AvaloniaFact]
+    public void Golden_LaunchSplitMenu_MatchesBaseline()
+    {
+        using var context = CreateContext();
+        PrepareGoldenWindow(context);
+        var split = ShowLaunchSplitButton(context);
+        var menu = Assert.IsType<MenuFlyout>(split.Flyout);
+        // 将弹窗放入同一渲染树，截图才能同时捕获按钮、间距与菜单。
+        menu.Popup.ShouldUseOverlayLayer = true;
+        try
+        {
+            context.ViewModel.Shell.ApplyLanguage(LauncherLanguages.SimplifiedChinese, hasSnapshot: false);
+            menu.ShowAt(split);
+            GoldenScreenshot.Compare(context.Window, "launch-split-menu");
+        }
+        finally
+        {
+            menu.Hide();
+            context.ViewModel.Shell.ApplyLanguage(LauncherLanguages.English, hasSnapshot: false);
+        }
+    }
+
+    [AvaloniaFact]
+    public void Golden_LaunchSplitButtonDarkChinese_MatchesBaseline()
+    {
+        using var variant = ThemeVariantSnapshot.Capture(ThemeVariant.Dark);
+        using var context = CreateContext();
+        PrepareGoldenWindow(context, ThemeVariant.Dark);
+        try
+        {
+            context.ViewModel.Shell.ApplyLanguage(LauncherLanguages.SimplifiedChinese, hasSnapshot: false);
+            context.Provider.GetRequiredService<ThemeApplier>().ApplyScheme(Color.Parse("#FF2E7DF6"), isDark: true);
+            ShowLaunchSplitButton(context, hideDetails: true);
+            GoldenScreenshot.Compare(context.Window, "launch-split-button-dark-zh");
+        }
+        finally
+        {
+            context.ViewModel.Shell.ApplyLanguage(LauncherLanguages.English, hasSnapshot: false);
+        }
     }
 
     [AvaloniaFact]
@@ -112,6 +166,8 @@ public sealed partial class MainWindowHeadlessTests
         PrepareGoldenWindow(context);
         context.Window.Show();
         context.ViewModel.Dialogs.ShowSetupWizard();
+        // 向导的「自动」会恢复 DI 创建时捕获的语言，截图仍须钉住英文。
+        context.ViewModel.Shell.ApplyLanguage(LauncherLanguages.English, hasSnapshot: false);
         Dispatcher.UIThread.RunJobs();
         GoldenScreenshot.Compare(context.Window, "setup-wizard");
     }

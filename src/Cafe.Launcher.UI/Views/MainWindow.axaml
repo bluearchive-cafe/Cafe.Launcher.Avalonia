@@ -482,15 +482,7 @@
                     <Grid ColumnDefinitions="*,Auto" RowDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Xxl}"
                           IsVisible="{Binding IsStatusDetailHidden, Converter={x:Static BoolConverters.Not}}">
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Lg}" VerticalAlignment="Center">
-                            <Button Classes="launcher-control start primary-operation" Command="{Binding Operations.StartGameCommand}" ToolTip.Tip="{Binding Shell.I18n[startGame]}"
-                                    IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}"
-                                    AutomationProperties.Name="{Binding Shell.I18n[startGame]}">
-                                <StackPanel Classes="button-content">
-                                    <materialIcons:MaterialIcon Kind="PlayCircle" Width="{StaticResource Launcher.Icon.Xxl}" Height="{StaticResource Launcher.Icon.Xxl}"/>
-                                    <TextBlock Text="{Binding Shell.I18n[startGame]}"/>
-                                </StackPanel>
-                            </Button>
-                            <controls:GameManagementButton/>
+                            <controls:GameLaunchButton/>
                         </StackPanel>
                         <WrapPanel Grid.Row="1" Grid.ColumnSpan="2" HorizontalAlignment="Right" ItemSpacing="{StaticResource Launcher.Spacing.Lg}" LineSpacing="{StaticResource Launcher.Spacing.Xs}">
                             <TextBlock Text="{Binding Operations.GameSessionStateText}" Classes="on-dark-caption"
@@ -508,16 +500,7 @@
                             <TextBlock Text="{Binding Operations.GameSessionStateText}" Classes="on-dark-caption"
                                        IsVisible="{Binding Operations.IsGameSessionVisible}"
                                        VerticalAlignment="Center"/>
-                            <Button Classes="launcher-control start primary-operation" Command="{Binding Operations.StartGameCommand}" ToolTip.Tip="{Binding Shell.I18n[startGame]}"
-
-                                IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}"
-                                AutomationProperties.Name="{Binding Shell.I18n[startGame]}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="PlayCircle" Width="{StaticResource Launcher.Icon.Xxl}" Height="{StaticResource Launcher.Icon.Xxl}"/>
-                                <TextBlock Text="{Binding Shell.I18n[startGame]}"/>
-                            </StackPanel>
-                        </Button>
-                        <controls:GameManagementButton/>
+                            <controls:GameLaunchButton/>
                     </StackPanel>
                     </Panel>
                         </Border>

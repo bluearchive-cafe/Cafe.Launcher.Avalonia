@@ -158,7 +158,6 @@ public sealed partial class UiStyleContractTests
             ["{Binding Operations.InstallOrUpdateCommand}"] = ("{Binding Operations.InstallButtonText}", "primary-operation"),
             ["{Binding Settings.ChangePersistedGamePathCommand}"] = ("{Binding Shell.I18n[changePath]}", "secondary-operation"),
             ["{Binding Settings.SelectInstalledGameCommand}"] = ("{Binding Shell.I18n[selectInstalledGame]}", "secondary-operation"),
-            ["{Binding Operations.StartGameCommand}"] = ("{Binding Shell.I18n[startGame]}", "primary-operation"),
             ["{Binding Operations.PauseResumeCommand}"] = ("{Binding Operations.PauseResumeText}", "secondary-operation"),
             ["{Binding Operations.RequestStopCommand}"] = ("{Binding Shell.I18n[stop]}", "secondary-operation")
         };
@@ -274,12 +273,12 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void MainWindow_GameManageButtons_ReuseOneExtractedControl()
+    public void MainWindow_GameLaunchButtons_ReuseOneExtractedControl()
     {
         var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
         var manageEntries = document
             .Descendants()
-            .Where(element => element.Name.LocalName == "GameManagementButton")
+            .Where(element => element.Name.LocalName == "GameLaunchButton")
             .ToArray();
 
         // 紧凑布局与「仅按钮」布局各一处，共用同一控件；菜单不再在窗口中各自复制一份。
@@ -290,35 +289,21 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void GameManagementButton_ExposesFlyoutMenuWithOperationBindings()
+    public void GameLaunchButton_ExposesFlyoutMenuWithOperationBindings()
     {
-        var document = XDocument.Load(TestRepository.FromPresentationRoot("Controls/GameManagementButton.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Controls/GameLaunchButton.axaml"));
         var button = document.Descendants()
-            .Single(element => element.Name.LocalName == "Button");
+            .Single(element => element.Name.LocalName == "SplitButton");
 
-        Assert.True(HasClass(button, "manage"), "Game management entry must keep the manage class.");
-        Assert.True(HasClass(button, "secondary-operation"), "Manage button must be secondary-operation.");
-        Assert.Equal(
-            "{Binding Shell.I18n[gameManagement]}",
-            button.Attributes().Single(attribute => attribute.Name.LocalName == "AutomationProperties.Name").Value);
-        Assert.NotNull(button.Attributes().SingleOrDefault(attribute => attribute.Name.LocalName == "ToolTip.Tip"));
-        Assert.Equal(
-            "{StaticResource Launcher.Icon.Lg}",
-            button.Descendants()
-                .Single(element => element.Name.LocalName == "MaterialIcon" && element.Parent == button)
-                .Attribute("Width")?.Value);
-        Assert.Equal(
-            "Menu",
-            button.Descendants()
-                .Single(element => element.Name.LocalName == "MaterialIcon" && element.Parent == button)
-                .Attribute("Kind")?.Value);
+        Assert.True(HasClass(button, "primary-operation"));
+        Assert.Equal("{Binding Operations.StartGameCommand}", button.Attribute("Command")?.Value);
+        Assert.Equal("{Binding Shell.I18n[startGame]}", button.Attribute("AutomationProperties.Name")?.Value);
+        Assert.Equal("{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}", button.Attribute("IsEnabled")?.Value);
 
-        var flyout = button
-            .Elements()
-            .Single(element => element.Name.LocalName == "Button.Flyout")
-            .Elements()
-            .Single(element => element.Name.LocalName == "MenuFlyout");
-        Assert.Equal("Top", flyout.Attribute("Placement")?.Value);
+        var flyout = button.Descendants().Single(element => element.Name.LocalName == "MenuFlyout");
+        Assert.Equal("TopEdgeAlignedRight", flyout.Attribute("Placement")?.Value);
+        Assert.Equal("{StaticResource Launcher.Component.LaunchSplit.Menu.VerticalOffset}", flyout.Attribute("VerticalOffset")?.Value);
+        Assert.Equal("Separator", flyout.Elements().Last().PreviousNode is XElement separator ? separator.Name.LocalName : "");
 
         Dictionary<string, string> expectedMenuItems = new(StringComparer.Ordinal)
         {
