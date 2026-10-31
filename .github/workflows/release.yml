@@ -59,7 +59,7 @@ jobs:
         shell: bash
         run: |
           sudo apt-get update
-          sudo apt-get install --no-install-recommends -y appstream desktop-file-utils dpkg rpm xvfb xauth libx11-6 libice6 libsm6 libfontconfig1 libxkbcommon0
+          sudo apt-get install --no-install-recommends -y appstream desktop-file-utils dpkg rpm xvfb xauth libx11-6 libice6 libsm6 libfontconfig1 libxkbcommon0 7zip
           appstreamcli validate --pedantic installer/linux/templates/cafe-launcher.metainfo.xml
 
       - name: Acquire pinned AppImage tools

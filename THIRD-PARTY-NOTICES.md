@@ -67,3 +67,10 @@ The archives carry this file and `LICENSE` next to the binaries.
 | SkiaSharp.NativeAssets.WebAssembly | 3.119.4 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://go.microsoft.com/fwlink/?linkid=868515 |
 | SkiaSharp.NativeAssets.Win32 | 3.119.4 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://go.microsoft.com/fwlink/?linkid=868515 |
 | Tmds.DBus.Protocol | 0.94.1 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | - |
+
+## Windows video background runtime
+
+Windows x64 builds also redistribute the pinned LGPL libmpv binary from
+[zhongfly/mpv-winbuild](https://github.com/zhongfly/mpv-winbuild/releases/tag/2026-10-31-9e2ed65eb0).
+This asset is restored separately from NuGet. Its manifest, source links, notices and
+LGPL/GPL license texts travel in the `libmpv` directory; see `libmpv/NOTICE.md`.

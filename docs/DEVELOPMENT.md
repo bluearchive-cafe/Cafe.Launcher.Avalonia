@@ -1,5 +1,8 @@
 # 开发指南
 
+视频背景已接入普通设置（Debug / Release）：外观 → 背景来源「自定义」→「选择视频」。Windows x64 构建自动调用 `scripts/Restore-VideoBackgroundRuntime.ps1`，需要 PowerShell 7、curl 与 7-Zip（`7z` 或 `7zz`）。脚本仅在构建期恢复固定 LGPL 构建，校验压缩包与 DLL 的 SHA-256，缓存到 `.artifacts/native/libmpv`；首次构建需要访问 GitHub，可先带 `-Proxy` 手动运行恢复脚本。发布输出包含 `libmpv/win-x64/libmpv-2.dll`、清单、来源说明和完整许可证；应用运行期间不下载运行库。升级时同步清单、许可证、来源和原生冒烟测试。其他平台暂时回退到静态背景。
+
+
 本文件维护开发命令、验证和交付流程。编码规则见 [PROJECT_CONVENTIONS.md](../PROJECT_CONVENTIONS.md)，代理入口见 [AGENTS.md](../AGENTS.md)。
 
 ## 环境与启动
@@ -36,7 +39,7 @@ dotnet run --project ./src/Cafe.Launcher/Cafe.Launcher.csproj
 | `pwsh ./scripts/New-WindowsInstaller.ps1` | 从 `artifacts/publish/win-x64` 构建 Windows 安装器 |
 | `pwsh ./scripts/New-AppIconAssets.ps1` | 修改宿主 `Assets/app-icon-source.png` 后再生 macOS/Linux 图标 |
 
-优先通过 `test.ps1` 运行测试，它保留五分钟无活动挂起保护（Golden 再生也使用同一保护）。空筛选返回失败；测试使用原生 Microsoft.Testing.Platform，直接调用时使用 `dotnet test --project <csproj>` 和 `--filter-class`，不用 VSTest 参数。
+优先通过 `test.ps1` 运行测试，它保留五分钟无活动挂起保护（Golden 再生也使用同一保护）。空筛选返回失败。测试使用原生 Microsoft.Testing.Platform；直接调用时使用 `dotnet test --project <csproj>` 和 `--filter-class`，不用 VSTest 参数。
 
 修改后先运行受影响的测试；XAML/样式变更运行 `UiStyleContractTests`，较大 UI 改动运行 `dev.ps1 ui`。有意改变视觉时，用 `-UpdateGolden` 再生并提交 [Baselines](../tests/Cafe.Launcher.HeadlessTests/Baselines/) 下的 PNG。Headless 和黄金截图在 Windows 上验证；Linux CI 只运行 Unit。测试设施与命名规则见[规范 §8](../PROJECT_CONVENTIONS.md#8-测试)。
 

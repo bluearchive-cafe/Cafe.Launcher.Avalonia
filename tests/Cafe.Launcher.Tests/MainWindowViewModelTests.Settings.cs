@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using Avalonia.Media;
 using Cafe.Launcher.UI.Features.Settings;
 using Cafe.Launcher.UI.Features.SetupWizard;
@@ -225,6 +225,55 @@ public partial class MainWindowViewModelTests
         Assert.Equal(ThemeModes.Light, persisted.ThemeMode);
         Assert.Equal(expectedPath, viewModel.Shell.PathText);
         Assert.Equal(expectedPath, viewModel.Settings.Editor.Current.GamePath);
+    }
+
+    [Fact]
+    public async Task ChooseBackgroundVideoAsync_PreviewsDraftAndPersistsOnlyOnSave()
+    {
+        var pickedPath = Path.Combine(tempDir, "background.MP4");
+        await File.WriteAllBytesAsync(pickedPath, []);
+        var savedSettings = new SavedSettingsTestRig(tempDir.Sub(LauncherPaths.LauncherSettingsFileName));
+        await savedSettings.SeedAsync(new LauncherSettings());
+        var filePicker = new StubFilePickerService { VideoPicker = _ => Task.FromResult<string?>(pickedPath) };
+        using var viewModel = await CreateViewModelAsync(new CountingCoreService(CreateSnapshot()), savedSettings,
+            filePickerService: filePicker);
+        await viewModel.InitializeAsync();
+        LauncherSettings? preview = null;
+        viewModel.Settings.PreviewAppearanceAsync = (settings, _, _) =>
+        {
+            preview = settings.DeepClone();
+            return Task.CompletedTask;
+        };
+        bool? videoVisibleAtNotification = null;
+        viewModel.Settings.Appearance.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(SettingsAppearanceViewModel.IsVideoBackgroundSelected))
+                videoVisibleAtNotification = viewModel.Settings.Appearance.IsVideoBackgroundSelected;
+        };
+
+        await viewModel.Settings.ChooseBackgroundVideoCommand.ExecuteAsync(null);
+        viewModel.Settings.Editor.Current.BackgroundVideoVolume = 35;
+        await TestWait.UntilAsync(() => preview?.BackgroundVideoVolume == 35, TimeSpan.FromSeconds(5));
+
+        Assert.True(videoVisibleAtNotification);
+        Assert.True(viewModel.Settings.IsSettingsDirty);
+        Assert.Equal(pickedPath, preview!.CustomBackgroundPath);
+        Assert.Equal("", (await savedSettings.SettingsService.ReadAsync()).CustomBackgroundPath);
+        viewModel.WindowChrome.IsSettingsVisible = true;
+        await viewModel.WindowChrome.DiscardSettingsChangesCommand.ExecuteAsync(null);
+        Assert.Equal("", viewModel.Settings.Editor.Current.CustomBackgroundPath);
+        Assert.Equal(0, viewModel.Settings.Editor.Current.BackgroundVideoVolume);
+        Assert.False(viewModel.Settings.Appearance.IsVideoBackgroundSelected);
+        Assert.Equal("", preview.CustomBackgroundPath);
+
+        await viewModel.Settings.ChooseBackgroundVideoCommand.ExecuteAsync(null);
+        viewModel.Settings.Editor.Current.BackgroundVideoVolume = 35;
+        await SaveSettingsAsync(viewModel);
+        var persisted = await savedSettings.SettingsService.ReadAsync();
+        Assert.Equal(pickedPath, persisted.CustomBackgroundPath);
+        Assert.Equal(35, persisted.BackgroundVideoVolume);
+        Assert.False(viewModel.Settings.IsSettingsDirty);
+
     }
 
     [Fact]

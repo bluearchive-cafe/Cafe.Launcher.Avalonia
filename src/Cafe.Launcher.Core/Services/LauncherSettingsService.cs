@@ -164,6 +164,7 @@ internal sealed class LauncherSettingsService : ILauncherSettingsService, IDispo
         }
 
         settings.BackgroundFillColor = NormalizeColor(settings.BackgroundFillColor);
+        settings.BackgroundVideoVolume = Math.Clamp(settings.BackgroundVideoVolume, 0, 100);
         settings.GamePath ??= "";
         settings.ResourcePanelUid = settings.ResourcePanelUid?.Trim() ?? "";
 

@@ -172,6 +172,14 @@
                                 <TextBlock Text="{Binding Shell.I18n[chooseFolder]}"/>
                             </StackPanel>
                         </Button>
+                        <Button Classes="flat-action"
+                                Command="{Binding Settings.ChooseBackgroundVideoCommand}"
+                                AutomationProperties.Name="{Binding Shell.I18n[chooseVideo]}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="VideoOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                <TextBlock Text="{Binding Shell.I18n[chooseVideo]}"/>
+                            </StackPanel>
+                        </Button>
                         <Button Classes="flat-action" Command="{Binding Settings.ClearBackgroundCommand}"
                                 AutomationProperties.Name="{Binding Shell.I18n[clearBackground]}"
                                 IsVisible="{Binding Settings.Appearance.IsCustomBackground}">
@@ -181,6 +189,20 @@
                             </StackPanel>
                         </Button>
                     </WrapPanel>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+            <controls:SettingRow Title="{Binding Shell.I18n[videoBackgroundVolume]}"
+                                 Description="{Binding Shell.I18n[videoBackgroundVolumeDescription]}"
+                                 IsVisible="{Binding Settings.Appearance.IsVideoBackgroundSelected}">
+                <controls:SettingRow.Action>
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}">
+                        <Slider Classes="setting-control" Width="{StaticResource Launcher.Component.Settings.Control.MinWidth}"
+                                Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True"
+                                Value="{Binding Settings.Editor.Current.BackgroundVideoVolume, Mode=TwoWay}"
+                                AutomationProperties.Name="{Binding Shell.I18n[videoBackgroundVolume]}"/>
+                        <TextBlock Text="{Binding Settings.Editor.Current.BackgroundVideoVolume, StringFormat='{}{0}%'}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
                 </controls:SettingRow.Action>
             </controls:SettingRow>
         </StackPanel>

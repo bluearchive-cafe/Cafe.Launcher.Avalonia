@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Cafe.Launcher.UI.Controls.VideoBackground;
+using Cafe.Launcher.UI.Constants;
 using Avalonia.Platform;
 using Avalonia.Threading;
 using Cafe.Launcher.UI.Features.Settings;
@@ -60,12 +62,22 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
     private bool isMotionReduced;
     private IDisposable? fadingOutWallpaper;
     private CancellationTokenSource? wallpaperFadeCancellation;
+    private readonly ToastService? toastService;
+    private readonly LocalizationService? localizer;
+
+    [ObservableProperty]
+    private string? backgroundVideoPath;
+
+    [ObservableProperty]
+    private int backgroundVideoVolume;
 
     public BackgroundViewModel(
         IImageCacheService imageCacheService,
         ILauncherDiagnostics diagnostics,
         SettingsViewModel settings,
-        IWindowMetricsService? windowMetrics = null)
+        IWindowMetricsService? windowMetrics = null,
+        ToastService? toastService = null,
+        LocalizationService? localizer = null)
         : this(
             imageCacheService,
             diagnostics,
@@ -78,6 +90,8 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
             },
             windowMetrics)
     {
+        this.toastService = toastService;
+        this.localizer = localizer;
     }
 
     internal BackgroundViewModel(
@@ -186,6 +200,26 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
         {
             return;
         }
+
+        var videoPath = settings.BackgroundSource == BackgroundSources.Custom
+                        && VideoBackgroundRuntime.IsVideoFile(settings.CustomBackgroundPath)
+                        && File.Exists(settings.CustomBackgroundPath)
+            ? settings.CustomBackgroundPath
+            : null;
+        if (videoPath is not null)
+        {
+            // A static first frame and decode-failure fallback stay available underneath
+            // the video. Palette extraction uses this image, never a per-frame readback.
+            var fallback = await Task.Run(() => bundledImageLoader());
+            BitmapLifetime.ThrowIfCancellationRequested(fallback, cancellationToken);
+            if (TrySetBackgroundImage(fallback, settings, loadGeneration, null, decodeTarget))
+            {
+                lastBackgroundSourceKey = sourceKey;
+                BackgroundVideoPath = videoPath;
+            }
+            return;
+        }
+        BackgroundVideoPath = null;
 
         switch (settings.BackgroundSource)
         {
@@ -326,10 +360,21 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
 
     public void ApplyBackgroundPresentation(LauncherSettings settings)
     {
+        BackgroundVideoVolume = Math.Clamp(settings.BackgroundVideoVolume, 0, 100);
         BackgroundStretch = ToStretch(settings.BackgroundFit);
         BackgroundFillBrush = settings.BackgroundFit == BackgroundFits.Uniform
             ? new SolidColorBrush(ColorUtils.ParseColorOrDefault(settings.BackgroundFillColor))
             : null;
+    }
+
+    /// <summary>只接受当前文件的失败，保留静态回退；相同文件指纹不会在每次刷新时重复报错。</summary>
+    internal void ReportVideoFailure(string path, Exception exception)
+    {
+        if (BackgroundVideoPath != path) return;
+        BackgroundVideoPath = null;
+        _ = diagnostics.ErrorAsync("Background", $"Video background failed: {path}", exception, CancellationToken.None);
+        if (toastService is not null && localizer is not null)
+            toastService.ShowWarning(localizer.T(LocalizationKeys.VideoBackgroundFailed));
     }
 
     /// <summary>ADR-016: reduced motion cancels any in-flight wallpaper cross-fade immediately.</summary>
@@ -697,6 +742,7 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
         }
 
         disposed = true;
+        BackgroundVideoPath = null;
         Interlocked.Increment(ref backgroundLoadGeneration);
         resizeReloadVersion++;
         windowMetrics?.PhysicalSizeChanged -= OnPhysicalSizeChanged;
