@@ -942,6 +942,106 @@ Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
         Assert.Equal(0, downloader.InvocationCount);
     }
 
+    [Theory]
+    [InlineData(LauncherRuntimeState.NotInstalled, 6, 4, 4, true)]
+    [InlineData(LauncherRuntimeState.UpdateAvailable, 6, 4, 4, true)]
+    [InlineData(LauncherRuntimeState.Ready, 6, 4, 4, true)]
+    [InlineData(LauncherRuntimeState.NotInstalled, 10, 0, 0, true)]
+    [InlineData(LauncherRuntimeState.UpdateAvailable, 10, 0, 0, true)]
+    [InlineData(LauncherRuntimeState.Ready, 10, 0, 0, true)]
+    [InlineData(LauncherRuntimeState.NotInstalled, 6, 3, 4, false)]
+    [InlineData(LauncherRuntimeState.UpdateAvailable, 6, 3, 4, false)]
+    [InlineData(LauncherRuntimeState.Ready, 6, 3, 4, false)]
+    [InlineData(LauncherRuntimeState.NotInstalled, 11, 9, 10, false)]
+    [InlineData(LauncherRuntimeState.UpdateAvailable, 11, 9, 10, false)]
+    [InlineData(LauncherRuntimeState.Ready, 11, 9, 10, false)]
+    public async Task Resume_WhenTempFilesExist_ChecksOnlyRemainingDiskSpace(
+        LauncherRuntimeState runtimeState,
+        int existingBytes,
+        long availableBytes,
+        long requiredBytes,
+        bool expectedSuccess)
+    {
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        var dataPath = Path.Combine(gamePath, "data");
+        Directory.CreateDirectory(dataPath);
+        var settingsService = new LauncherSettingsService(tempDir.DataRoot);
+        await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
+        var content = new byte[10];
+        var pendingFile = await CreateManifestFileAsync(tempDir, "data/pending.bin", content);
+        var completeFile = await CreateManifestFileAsync(tempDir, "data/complete.bin", content);
+        await File.WriteAllBytesAsync(Path.Combine(dataPath, "pending.bin.tmp"), new byte[existingBytes]);
+        await File.WriteAllBytesAsync(Path.Combine(dataPath, "complete.bin.tmp"), content);
+        // 清单外的临时文件不能抵扣本次下载预算。
+        await File.WriteAllBytesAsync(Path.Combine(dataPath, "unrelated.bin.tmp"), new byte[100]);
+        var downloader = CreateWritingFileDownloadService(content);
+        downloader.ExistingSize = new FileDownloadService(new Crc64Service(), new LocalDiagnostics())
+            .GetExistingDownloadedSize;
+        var diskSpaceService = new DiskSpaceService { GetAvailableBytesOverride = _ => availableBytes };
+        using var service = CreateService(
+            CreateManifestApiClient(pendingFile, completeFile), settingsService,
+            Path.Combine(tempDir, "download_state.json"), downloader, diskSpaceService);
+        var snapshot = CreateSnapshot(gamePath);
+        snapshot.RuntimeState = runtimeState;
+        var progress = new CallbackRecorder<GameOperationProgress>();
+
+        var result = runtimeState == LauncherRuntimeState.Ready
+            ? await service.RepairAsync(snapshot, progress.Add)
+            : await service.InstallOrUpdateAsync(snapshot, progress.Add);
+
+        var diskCheck = Assert.Single(progress, item => item.Stage == GameOperationStage.DiskCheck);
+        Assert.Equal(requiredBytes, diskCheck.RequiredDiskBytes);
+        Assert.Equal(availableBytes, diskCheck.AvailableDiskBytes);
+        Assert.Equal(expectedSuccess, result.Success);
+        if (expectedSuccess)
+        {
+            Assert.Equal(content, await File.ReadAllBytesAsync(Path.Combine(dataPath, "pending.bin")));
+            Assert.Equal(content, await File.ReadAllBytesAsync(Path.Combine(dataPath, "complete.bin")));
+        }
+        else
+        {
+            Assert.Equal(GameOperationErrorCode.InsufficientDiskSpace, result.ErrorCode);
+            Assert.Equal(0, downloader.InvocationCount);
+            Assert.Equal(existingBytes, new FileInfo(Path.Combine(dataPath, "pending.bin.tmp")).Length);
+        }
+    }
+
+    [Theory]
+    [InlineData(13L, false)]
+    [InlineData(14L, true)]
+    public async Task Resume_WhenFreshInstallHasDecompressionReserve_DeductsExistingBytesFromPeak(
+        long availableBytes,
+        bool expectedSuccess)
+    {
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        var dataPath = Path.Combine(gamePath, "data");
+        Directory.CreateDirectory(dataPath);
+        var settingsService = new LauncherSettingsService(tempDir.DataRoot);
+        await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
+        var content = new byte[10];
+        var manifestFile = await CreateManifestFileAsync(tempDir, "data/file.bin", content);
+        await File.WriteAllBytesAsync(Path.Combine(dataPath, "file.bin.tmp"), content[..6]);
+        var downloader = CreateWritingFileDownloadService(content);
+        downloader.ExistingSize = new FileDownloadService(new Crc64Service(), new LocalDiagnostics())
+            .GetExistingDownloadedSize;
+        using var service = CreateService(
+            CreateManifestApiClient(manifestFile), settingsService,
+            Path.Combine(tempDir, "download_state.json"), downloader,
+            new DiskSpaceService { GetAvailableBytesOverride = _ => availableBytes });
+        var snapshot = CreateSnapshot(gamePath);
+        snapshot.RuntimeState = LauncherRuntimeState.NotInstalled;
+        snapshot.Remote.GameConfig!.DecompressionSize = "20B";
+        var progress = new CallbackRecorder<GameOperationProgress>();
+
+        var result = await service.InstallOrUpdateAsync(snapshot, progress.Add);
+
+        var diskCheck = Assert.Single(progress, item => item.Stage == GameOperationStage.DiskCheck);
+        // 还需下载 4B，并保留原有 10B 的额外空间预算。
+        Assert.Equal(14L, diskCheck.RequiredDiskBytes);
+        Assert.Equal(expectedSuccess, result.Success);
+        Assert.Equal(expectedSuccess ? 1 : 0, downloader.InvocationCount);
+    }
+
     [Fact]
     public async Task InstallOrUpdateAsync_WhenFreshInstallNeedsDecompressionSpace_BlocksBeforeDownload()
     {
