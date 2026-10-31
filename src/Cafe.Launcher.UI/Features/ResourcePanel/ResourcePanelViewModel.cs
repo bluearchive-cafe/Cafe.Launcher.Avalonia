@@ -28,6 +28,7 @@ internal partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IMod
     private readonly ToastService toastService;
     private readonly IErrorHandlingService errorHandling;
     private readonly CancellationTokenSource lifetimeCts = new();
+    private readonly CancellationToken lifetimeToken;
     private bool disposed;
     private string patchUrlGroup = PatchUrlGroups.Official;
     private bool isLoadingSource;
@@ -53,6 +54,9 @@ internal partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IMod
         this.localizer = localizer;
         this.toastService = toastService;
         this.errorHandling = errorHandling;
+        // 在任何 await 之前取 Token：Dispose 回收源之后，迟到的命令入口仍能
+        // 读到已取消的 Token，而不是抛 ObjectDisposedException。
+        lifetimeToken = lifetimeCts.Token;
         foreach (var item in ResourcePanelItems)
         {
             item.PropertyChanged += OnResourcePanelItemPropertyChanged;
@@ -191,7 +195,7 @@ internal partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IMod
     public async Task OpenPanelDirectlyAsync()
     {
         IsResourcePanelVisible = true;
-        await LoadResourcePanelAsync(lifetimeCts.Token);
+        await LoadResourcePanelAsync(lifetimeToken);
     }
 
     [RelayCommand]
@@ -219,13 +223,13 @@ internal partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IMod
         IsResourcePanelBusy = true;
         try
         {
-            await resourcePanelService.SaveUidSourceAsync(source, lifetimeCts.Token);
+            await resourcePanelService.SaveUidSourceAsync(source, lifetimeToken);
             isSettingUidSource = true;
             SelectedResourcePanelUidSource = source;
             isSettingUidSource = false;
-            await LoadResourcePanelAsync(lifetimeCts.Token);
+            await LoadResourcePanelAsync(lifetimeToken);
         }
-        catch (OperationCanceledException) when (lifetimeCts.IsCancellationRequested)
+        catch (OperationCanceledException) when (lifetimeToken.IsCancellationRequested)
         {
         }
         catch (Exception exception)
@@ -242,7 +246,7 @@ internal partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IMod
     [RelayCommand]
     private async Task RefreshResourcePanelAsync()
     {
-        await LoadResourcePanelAsync(lifetimeCts.Token);
+        await LoadResourcePanelAsync(lifetimeToken);
     }
 
     [RelayCommand]
@@ -264,8 +268,8 @@ internal partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IMod
         IsResourcePanelBusy = true;
         try
         {
-            await resourcePanelService.SaveManualUidAsync(uid, lifetimeCts.Token);
-            await resourcePanelService.SaveUidSourceAsync(ResourcePanelUidSources.Custom, lifetimeCts.Token);
+            await resourcePanelService.SaveManualUidAsync(uid, lifetimeToken);
+            await resourcePanelService.SaveUidSourceAsync(ResourcePanelUidSources.Custom, lifetimeToken);
             isSettingUidSource = true;
             SelectedResourcePanelUidSource = ResourcePanelUidSources.Custom;
             isSettingUidSource = false;
@@ -274,9 +278,9 @@ internal partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IMod
             IsResourcePanelUidMissing = false;
             IsResourcePanelUidEditing = false;
             SetResourcePanelMessage(localizer.T(LocalizationKeys.ResourcePanelUidSaved));
-            await LoadResourcePanelDataAsync(uid, lifetimeCts.Token);
+            await LoadResourcePanelDataAsync(uid, lifetimeToken);
         }
-        catch (OperationCanceledException) when (lifetimeCts.IsCancellationRequested)
+        catch (OperationCanceledException) when (lifetimeToken.IsCancellationRequested)
         {
         }
         catch (Exception exception)
@@ -309,13 +313,13 @@ internal partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IMod
                 ResourcePanelItems[0].IsEnabled,
                 ResourcePanelItems[1].IsEnabled,
                 ResourcePanelItems[2].IsEnabled,
-                lifetimeCts.Token);
+                lifetimeToken);
             SetResourcePanelMessage(localizer.T(LocalizationKeys.ResourcePanelSaved));
             CaptureSavedResourceBaseline();
             RefreshSaveEnabled();
             toastService.ShowSuccess(localizer.T(LocalizationKeys.ResourcePanelSaved));
         }
-        catch (OperationCanceledException) when (lifetimeCts.IsCancellationRequested)
+        catch (OperationCanceledException) when (lifetimeToken.IsCancellationRequested)
         {
         }
         catch (Exception exception)
@@ -512,6 +516,11 @@ internal partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IMod
 
         disposed = true;
         lifetimeCts.Cancel();
+        foreach (var item in ResourcePanelItems)
+        {
+            item.PropertyChanged -= OnResourcePanelItemPropertyChanged;
+        }
+
         lifetimeCts.Dispose();
     }
 }

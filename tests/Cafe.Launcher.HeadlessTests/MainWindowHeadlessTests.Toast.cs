@@ -124,4 +124,32 @@ public sealed partial class MainWindowHeadlessTests
         Assert.False(context.ViewModel.Toasts.IsCountdownSuspended(toastId));
         Assert.Single(context.ViewModel.Toasts.ActiveToasts);
     }
+
+    [AvaloniaFact]
+    public async Task ToastCommands_AfterHostDisposal_DoNotThrow()
+    {
+        using var context = CreateContext();
+        var toastService = context.Provider.GetRequiredService<ToastService>();
+        context.Window.Show();
+        toastService.Show(new ToastOptions
+        {
+            Title = "Install failed",
+            Message = "Offline",
+            Severity = ToastSeverity.Error,
+            PrimaryAction = new ToastAction(
+                "Retry",
+                _ => Task.FromResult(ToastActionResult.Success()))
+        });
+        Dispatcher.UIThread.RunJobs();
+
+        var toasts = context.ViewModel.Toasts;
+        var toastId = toasts.ActiveToasts.Single().Id;
+
+        // 关闭顺序不保证命令都先于宿主结束：已排队的迟到命令不得再读释放后的令牌源。
+        toasts.Dispose();
+
+        await toasts.ExecutePrimaryToastActionCommand.ExecuteAsync(toastId);
+        await toasts.DismissToastCommand.ExecuteAsync(toastId);
+        toasts.Dispose();
+    }
 }

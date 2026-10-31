@@ -538,7 +538,13 @@ internal partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMo
 
     public void Dispose()
     {
+        if (isDisposed)
+        {
+            return;
+        }
+
         isDisposed = true;
-        gamePathStatusCancellationTokenSource?.Dispose();
+        gamePathStatusDebounce.Cancel();
+        CancelPendingGamePathStatusRefresh();
     }
 }
