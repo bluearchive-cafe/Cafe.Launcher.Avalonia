@@ -146,7 +146,7 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
     /// </summary>
     public event Action? ShowRequested;
 
-    bool IGameOperationJourneyHost.IsBusy => shell.IsBusy;
+    bool IGameOperationJourneyHost.IsBusy => journey.IsShuttingDown || shell.IsBusy;
 
     LauncherStatusSnapshot? IGameOperationJourneyHost.CurrentSnapshot => currentSnapshot;
 
@@ -384,6 +384,9 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
     /// </summary>
     public void StopOperation(GameOperationStopIntent intent) => journey.Stop(ToStopReason(intent));
 
+    /// <summary>拒绝新的游戏操作并等待下载、修复、续传和 Toast 重试的完整收尾。</summary>
+    public Task PrepareForShutdownAsync() => journey.PrepareForShutdownAsync();
+
     private static DownloadStopReason ToStopReason(GameOperationStopIntent intent) => intent switch
     {
         GameOperationStopIntent.UserStop => DownloadStopReason.UserRequested,
@@ -426,7 +429,7 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
     [RelayCommand]
     private async Task RequestUninstallAsync()
     {
-        if (currentSnapshot is null || shell.IsBusy || Uninstall.IsVisible)
+        if (journey.IsShuttingDown || currentSnapshot is null || shell.IsBusy || Uninstall.IsVisible)
         {
             return;
         }
@@ -459,6 +462,11 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
 
     public async Task ConfirmUninstallAsync()
     {
+        if (journey.IsShuttingDown)
+        {
+            return;
+        }
+
         var snapshot = Uninstall.Snapshot;
         var scope = Uninstall.IsCompatibilitySelected
             ? UninstallScope.GameDirectoryAndManagedCompatibility : UninstallScope.GameDirectory;
@@ -489,6 +497,11 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
 
     public void ApplyProgress(GameOperationProgress progress)
     {
+        if (disposed || journey.IsShuttingDown)
+        {
+            return;
+        }
+
         if (!Dispatcher.UIThread.CheckAccess())
         {
             if (Application.Current is null)

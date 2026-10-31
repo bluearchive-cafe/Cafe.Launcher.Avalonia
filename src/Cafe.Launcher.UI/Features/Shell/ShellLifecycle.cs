@@ -331,13 +331,13 @@ internal sealed class ShellLifecycle : IDisposable
         return Task.CompletedTask;
     }
 
-    /// <summary>Cancels lifecycle work and waits until every active refresh has finished.</summary>
+    /// <summary>封闭操作入口并取消生命周期工作，等待刷新与游戏操作收尾后才允许宿主释放依赖。</summary>
     public async Task PrepareForShutdownAsync()
     {
         Task pendingRefreshes = refreshCoordinator.BeginShutdown();
+        Task pendingOperations = operations.PrepareForShutdownAsync();
         refreshCoordinator.CancelLifetime();
-        operations.StopOperation(GameOperationStopIntent.ProcessExit);
-        await refreshCoordinator.WaitForShutdownWorkAsync(pendingRefreshes);
+        await Task.WhenAll(pendingOperations, refreshCoordinator.WaitForShutdownWorkAsync(pendingRefreshes));
     }
 
     /// <summary>Applies the follow-through of one saved settings snapshot.</summary>

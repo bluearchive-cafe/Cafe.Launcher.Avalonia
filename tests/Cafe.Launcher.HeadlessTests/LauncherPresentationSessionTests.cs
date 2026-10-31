@@ -1,3 +1,12 @@
+using System.Text.Json;
+using Cafe.Launcher.Core.Constants;
+using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Services;
+using Cafe.Launcher.Core.Services.GameRuntime;
+using Cafe.Launcher.UI.Features.GameOperations;
+using Cafe.Launcher.UI.Models;
+using Cafe.Launcher.UI.ViewModels;
+using Xunit;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -130,6 +139,101 @@ public sealed class LauncherPresentationSessionTests
             () => session.LaunchGameAsync(shutdown.Token));
     }
 
+    [AvaloniaTheory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task PrepareForShutdownAsync_WithRealDownload_WaitsForCancellationCleanupAndPreservesStopIntent(
+        bool paused, bool userStopped)
+    {
+        using var directory = TestDirectory.Create();
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var canceled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseCleanup = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var downloader = new StubFileDownloadService(async (_, control, token) =>
+        {
+            await control.ReportProgressAsync(0, token);
+            started.TrySetResult();
+            try
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, token);
+            }
+            finally
+            {
+                canceled.TrySetResult();
+                await releaseCleanup.Task;
+            }
+        });
+        var transport = new StubRemoteHttpTransport(uri =>
+            uri.AbsolutePath.Contains("/api/launcher/game/config/json", StringComparison.Ordinal)
+                ? "{\"code\":200,\"data\":{\"url\":\"https://manifest.example.invalid/manifest.json\"}}"
+                : JsonSerializer.Serialize(new RemoteManifest
+                {
+                    Source = "source",
+                    File = [new ManifestFile { Path = "data/file.bin", Size = "1", Hash = "0" }]
+                }));
+        using var provider = HeadlessTestHost.CreateServiceProvider(directory, services =>
+        {
+            services.AddSingleton<IRemoteHttpTransport>(transport);
+            services.AddSingleton<IFileDownloadService>(downloader);
+            services.AddSingleton<IGameProcessTracker>(TestGameProcessTracker.None());
+        });
+        var session = provider.GetRequiredService<LauncherPresentationSession>();
+        session.CreateMainWindow();
+        var viewModel = provider.GetRequiredService<MainWindowViewModel>();
+        var gamePath = Path.Combine(directory.Path, "YostarGames", "BlueArchive_JP");
+        var settings = new LauncherSettings { GamePath = gamePath, ProxyMode = ProxyModes.Direct };
+        await provider.GetRequiredService<ISavedSettingsWriter>().ReplaceAsync(settings);
+        viewModel.Operations.ApplySnapshot(new LauncherStatusSnapshot
+        {
+            Settings = settings,
+            LocalGame = new LocalInstallationState { GamePath = gamePath },
+            RuntimeState = LauncherRuntimeState.NotInstalled,
+            Remote = new LauncherRemoteState
+            {
+                GameConfig = new GameConfigResponse
+                {
+                    GameLatestVersion = "1.0.0", GameLatestFilePath = "manifest.json", GameStartExeName = "CafeTestGame"
+                },
+                CdnConfig = new CdnConfigResponse { PrimaryCdn = "https://cdn.example.invalid", BackUpCdn = "https://backup.example.invalid" }
+            }
+        });
+        viewModel.Shell.IsBusy = false;
+        var operation = viewModel.Operations.InstallOrUpdateCommand.ExecuteAsync(null);
+        try
+        {
+            await started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            var downloads = provider.GetRequiredService<GameDownloadService>();
+            if (paused)
+            {
+                downloads.Pause();
+                Assert.True(downloads.IsPaused);
+            }
+
+            if (userStopped)
+            {
+                viewModel.Operations.StopOperation(GameOperationStopIntent.UserStop);
+                Assert.False(downloads.IsRunning);
+            }
+
+            var shutdown = session.PrepareForShutdownAsync();
+            await canceled.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.False(shutdown.IsCompleted);
+            Assert.False(operation.IsCompleted);
+            releaseCleanup.TrySetResult();
+            await shutdown.WaitAsync(TimeSpan.FromSeconds(5));
+            await operation.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.Equal(!userStopped, File.Exists(directory.DataRoot.DownloadStatePath));
+            Assert.False(downloads.IsRunning);
+            Assert.Empty(viewModel.Toasts.ActiveToasts);
+        }
+        finally
+        {
+            releaseCleanup.TrySetResult();
+            viewModel.Operations.StopOperation(GameOperationStopIntent.ProcessExit);
+            await operation.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+    }
     private static CrashReport CreateCrashReport() => new()
     {
         Id = "CR-TEST",

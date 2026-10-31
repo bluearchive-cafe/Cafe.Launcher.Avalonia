@@ -1,4 +1,5 @@
 using Cafe.Launcher.UI.Features.Settings;
+using Cafe.Launcher.UI.Features.GameOperations;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.Testing;
@@ -181,6 +182,56 @@ public partial class MainWindowViewModelTests
         Assert.Equal(2, coreService.LoadCount);
         Assert.False(viewModel.IsBusy);
         Assert.False(viewModel.RemoteContent.IsLoading);
+    }
+
+    [Theory]
+    [InlineData("install")]
+    [InlineData("repair")]
+    [InlineData("resume")]
+    public async Task PrepareForShutdownAsync_WhileGameOperationIsPending_WaitsForItsCleanup(string kind)
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.RuntimeState = kind == "install" ? LauncherRuntimeState.NotInstalled : LauncherRuntimeState.Ready;
+        var backend = new StubGameOperationExecutor();
+        using var viewModel = await CreateViewModelAsync(new CountingCoreService(snapshot), gameOperationsBackend: backend);
+        await viewModel.InitializeAsync();
+        var completion = new TaskCompletionSource<GameOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var resumeCompletion = new TaskCompletionSource<GameOperationResult?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        backend.InstallCompletion = completion;
+        backend.RepairCompletion = completion;
+        backend.ResumeCompletion = resumeCompletion;
+        var initialCalls = backend.InstallCallCount + backend.RepairCallCount + backend.ResumeCallCount;
+        var operation = kind switch
+        {
+            "install" => viewModel.Operations.InstallOrUpdateCommand.ExecuteAsync(null),
+            "repair" => viewModel.Operations.RepairAsync(),
+            _ => viewModel.Operations.ResumePersistedDownloadAsync(CancellationToken.None)
+        };
+        try
+        {
+            Assert.Equal(initialCalls + 1, backend.InstallCallCount + backend.RepairCallCount + backend.ResumeCallCount);
+            Assert.False(operation.IsCompleted);
+            var shutdown = viewModel.PrepareForShutdownAsync();
+            Assert.False(shutdown.IsCompleted);
+            Assert.Equal(DownloadStopReason.ApplicationExit, backend.LastStopReason);
+            completion.TrySetResult(new GameOperationResult { ErrorCode = GameOperationErrorCode.Stopped });
+            resumeCompletion.TrySetResult(null);
+            await operation.WaitAsync(TimeSpan.FromSeconds(5));
+            await shutdown.WaitAsync(TimeSpan.FromSeconds(5));
+
+            var calls = backend.InstallCallCount + backend.RepairCallCount + backend.ResumeCallCount;
+            viewModel.Shell.IsBusy = false;
+            await viewModel.Operations.InstallOrUpdateCommand.ExecuteAsync(null);
+            await viewModel.Operations.RepairAsync();
+            await viewModel.Operations.ResumePersistedDownloadAsync(CancellationToken.None);
+            Assert.Equal(calls, backend.InstallCallCount + backend.RepairCallCount + backend.ResumeCallCount);
+        }
+        finally
+        {
+            completion.TrySetResult(new GameOperationResult());
+            resumeCompletion.TrySetResult(null);
+            await operation.WaitAsync(TimeSpan.FromSeconds(5));
+        }
     }
 
     [Fact]
