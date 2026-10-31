@@ -15,7 +15,7 @@ namespace Cafe.Launcher.Core.Services.GameRuntime;
 /// "file exists" into "runtime responds" and returns structured evidence containing
 /// either the parsed version or precise failure details.
 /// </summary>
-public static class RuntimeVersionProbe
+internal static class RuntimeVersionProbe
 {
     /// <summary>Version commands of healthy runtimes complete well within this budget.</summary>
     public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(10);

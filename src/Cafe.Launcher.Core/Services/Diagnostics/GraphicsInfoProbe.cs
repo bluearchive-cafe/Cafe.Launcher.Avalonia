@@ -22,7 +22,7 @@ public sealed record GraphicsInfo(string? Vulkan, string? OpenGl);
 /// <para>The tool runner is injectable so the line filtering can be tested without the real tools;
 /// tool absence is covered by <see cref="ExecutableLocator"/> returning null.</para>
 /// </remarks>
-public sealed class GraphicsInfoProbe
+internal sealed class GraphicsInfoProbe : IGraphicsInfoProbe
 {
     public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(2);
 

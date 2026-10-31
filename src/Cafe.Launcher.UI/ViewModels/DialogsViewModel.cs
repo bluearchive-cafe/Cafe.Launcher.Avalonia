@@ -25,7 +25,7 @@ internal partial class DialogsViewModel : ViewModelBase, IModalContentViewModel,
 {
     private readonly LauncherProductProfile productProfile;
     private readonly LocalizationService localizer;
-    private readonly NoticeStateService noticeStateService;
+    private readonly INoticeStateStore noticeStateService;
     private readonly Func<Action, Task> invokeOnUiAsync;
     private readonly ILauncherDiagnostics diagnostics;
     private bool closeOnNoticeDismiss;
@@ -232,7 +232,7 @@ internal partial class DialogsViewModel : ViewModelBase, IModalContentViewModel,
     public DialogsViewModel(
         LauncherProductProfile productProfile,
         LocalizationService localizer,
-        NoticeStateService noticeStateService,
+        INoticeStateStore noticeStateService,
         SetupWizardViewModel setupWizard,
         ILauncherDiagnostics diagnostics)
         : this(
@@ -249,7 +249,7 @@ internal partial class DialogsViewModel : ViewModelBase, IModalContentViewModel,
     internal DialogsViewModel(
         LauncherProductProfile productProfile,
         LocalizationService localizer,
-        NoticeStateService noticeStateService,
+        INoticeStateStore noticeStateService,
         SetupWizardViewModel setupWizard,
         ILauncherDiagnostics diagnostics,
         Func<Action, Task> invokeOnUiAsync)

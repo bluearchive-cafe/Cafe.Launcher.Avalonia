@@ -59,8 +59,6 @@ public static class LauncherPresentationServiceRegistrations
             services.AddSingleton(existingLogger);
         else
             services.AddSingleton(_ => new UnifiedLogger(dataRoot.LogDirectory, buildIdentity));
-        services.AddSingleton<GraphicsInfoProbe>();
-        services.AddSingleton<ProtonBuildDiscovery>();
         services.AddSingleton<LogExportService>();
         services.AddSingleton<LogViewerDialogViewModel>();
         services.AddSingleton<LogExportDialogViewModel>();
@@ -93,7 +91,7 @@ public static class LauncherPresentationServiceRegistrations
         services.AddSingleton<ManifestValidationService>();
         services.AddSingleton(sp => new ResourcePanelUidService(
             sp.GetRequiredService<YostarGameProfile>(),
-            sp.GetRequiredService<BestHttpCookieLibraryService>(),
+            sp.GetRequiredService<IBestHttpCookieLibraryReader>(),
             sp.GetRequiredService<ILauncherSettingsService>(),
             sp.GetRequiredService<ISavedSettingsWriter>(),
             sp.GetRequiredService<GameCompatibilityPaths>(),
@@ -138,8 +136,7 @@ public static class LauncherPresentationServiceRegistrations
             sp.GetRequiredService<IFileDownloadService>(),
             sp.GetRequiredService<ILocalInstallationStateStore>(),
             sp.GetRequiredService<ILauncherSettingsService>(),
-            sp.GetRequiredService<IRemoteHttpClientLeaseSource>(),
-            sp.GetRequiredService<IRemoteHttpUrlValidator>(),
+            sp.GetRequiredService<IDownloadTransportSource>(),
             sp.GetRequiredService<ICrc64Service>(),
             sp.GetRequiredService<IDiskSpaceService>(),
             sp.GetRequiredService<ILauncherDiagnostics>(),

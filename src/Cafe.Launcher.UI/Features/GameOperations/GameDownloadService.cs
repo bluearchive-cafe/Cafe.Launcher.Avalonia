@@ -38,13 +38,6 @@ internal sealed class GameDownloadService : IDisposable
     private readonly DownloadSessionContext sessionContext;
     private bool disposed;
 
-    /// <summary>
-    /// ResponseHeadersRead makes this a per-request header budget, not a batch or
-    /// file-size limit. Body reads have a separate idle budget in ResponseBodyReader.
-    /// Bound silent header waits after a route change as well as body stalls.
-    /// </summary>
-    private static readonly TimeSpan DownloadLeaseTimeout = TimeSpan.FromSeconds(60);
-
     public GameDownloadService(
         YostarGameProfile gameProfile,
         ILauncherApiClient apiClient,
@@ -52,8 +45,7 @@ internal sealed class GameDownloadService : IDisposable
         IFileDownloadService fileDownloadService,
         ILocalInstallationStateStore localInstallationStateStore,
         ILauncherSettingsService settingsService,
-        IRemoteHttpClientLeaseSource httpClientFactory,
-        IRemoteHttpUrlValidator urlValidator,
+        IDownloadTransportSource transportSource,
         ICrc64Service crc64Service,
         IDiskSpaceService diskSpaceService,
         ILauncherDiagnostics diagnostics,
@@ -68,10 +60,7 @@ internal sealed class GameDownloadService : IDisposable
         this.fileDownloadService = fileDownloadService;
         this.localInstallationStateStore = localInstallationStateStore;
         this.settingsService = settingsService;
-        this.transportSource = new LeaseBackedDownloadTransportSource(
-            httpClientFactory,
-            urlValidator,
-            DownloadLeaseTimeout);
+        this.transportSource = transportSource;
         this.crc64Service = crc64Service;
         this.diskSpaceService = diskSpaceService;
         this.diagnostics = diagnostics;
@@ -89,8 +78,7 @@ internal sealed class GameDownloadService : IDisposable
         IFileDownloadService fileDownloadService,
         ILocalInstallationStateStore localInstallationStateStore,
         ILauncherSettingsService settingsService,
-        IRemoteHttpClientLeaseSource httpClientFactory,
-        IRemoteHttpUrlValidator urlValidator,
+        IDownloadTransportSource transportSource,
         ICrc64Service crc64Service,
         IDiskSpaceService diskSpaceService,
         ILauncherDiagnostics diagnostics,
@@ -105,8 +93,7 @@ internal sealed class GameDownloadService : IDisposable
             fileDownloadService,
             localInstallationStateStore,
             settingsService,
-            httpClientFactory,
-            urlValidator,
+            transportSource,
             crc64Service,
             diskSpaceService,
             diagnostics,

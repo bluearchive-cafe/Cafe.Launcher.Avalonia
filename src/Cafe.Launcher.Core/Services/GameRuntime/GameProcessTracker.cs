@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace Cafe.Launcher.Core.Services.GameRuntime;
 
 /// <summary>Default <see cref="IGameProcessTracker"/> over live Process handles.</summary>
-public sealed class GameProcessTracker : IGameProcessTracker
+internal sealed class GameProcessTracker : IGameProcessTracker
 {
     private readonly object gate = new();
     private readonly Func<RunningGameQuery, CancellationToken, Task<IReadOnlyList<string>>> exeRunningProbe;

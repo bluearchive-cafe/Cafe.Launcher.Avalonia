@@ -14,8 +14,11 @@ namespace Cafe.Launcher.Core.Helpers;
 /// rather than true/false, which causes <see cref="JsonException"/> when
 /// the model declares the property as <see cref="bool"/>.
 /// </remarks>
-public sealed class FlexibleBoolConverter : JsonConverter<bool>
+internal sealed class FlexibleBoolConverter : JsonConverter<bool>
 {
+    // JsonConverterAttribute 通过公共无参构造器激活；类型本身不需要跨程序集可见。
+    public FlexibleBoolConverter() { }
+
     public override bool Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         return reader.TokenType switch

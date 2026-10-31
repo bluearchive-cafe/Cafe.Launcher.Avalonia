@@ -23,7 +23,7 @@ public static class RemoteHttpRequestService
     /// <see cref="HasFakeIpDnsMarker"/> 读出标记，把笼统的网络归因换成针对性的
     /// Fake-IP 指引。
     /// </summary>
-    public const string FakeIpDnsDataKey = "Cafe.Launcher.FakeIpDns";
+    internal const string FakeIpDnsDataKey = "Cafe.Launcher.FakeIpDns";
 
     /// <summary>Checks the exception chain for the Fake-IP DNS failure marker.</summary>
     public static bool HasFakeIpDnsMarker(Exception exception)
@@ -39,7 +39,7 @@ public static class RemoteHttpRequestService
         return false;
     }
 
-    public static async Task<HttpResponseMessage> SendAsync(
+    internal static async Task<HttpResponseMessage> SendAsync(
         HttpClient client,
         Uri initialUri,
         Func<Uri, HttpRequestMessage> createRequest,

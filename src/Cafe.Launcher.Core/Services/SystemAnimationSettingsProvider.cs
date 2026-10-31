@@ -14,7 +14,7 @@ namespace Cafe.Launcher.Core.Services;
 /// 因此其结果按进程缓存：GNOME 侧修改系统动画需重启启动器后生效；
 /// KDE/GTK 走文件读取，足够便宜，每次调用重读，系统设置变更即时生效。
 /// </summary>
-public sealed class SystemAnimationSettingsProvider
+internal sealed class SystemAnimationSettingsProvider : ISystemAnimationSettingsProvider
 {
     private const uint SpiGetClientAreaAnimation = 0x1042;
     private static readonly object gSettingsGate = new();

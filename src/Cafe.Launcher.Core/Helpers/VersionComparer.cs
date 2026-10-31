@@ -6,7 +6,7 @@ namespace Cafe.Launcher.Core.Helpers;
 /// Semantic-version comparison aware of pre-release suffixes (e.g. <c>1.0.0-beta.1</c> &lt; <c>1.0.0</c>).
 /// Non-numeric segments are treated as 0, matching the behaviour of the original Electron launcher.
 /// </summary>
-public static class VersionComparer
+internal static class VersionComparer
 {
     public static int Compare(string? v1, string? v2)
     {

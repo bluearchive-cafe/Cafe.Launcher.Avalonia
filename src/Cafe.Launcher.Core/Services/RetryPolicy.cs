@@ -10,7 +10,7 @@ namespace Cafe.Launcher.Core.Services;
 /// and backoff schedule. Unifies the retry logic previously duplicated in
 /// <see cref="LauncherApiClient"/> and <see cref="ResourcePanelApiClient"/>.
 /// </summary>
-public static class RetryPolicy
+internal static class RetryPolicy
 {
     /// <summary>
     /// Executes <paramref name="action"/> up to <paramref name="maxAttempts"/> times.
