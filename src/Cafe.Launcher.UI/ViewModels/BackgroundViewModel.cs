@@ -104,7 +104,8 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
             diagnostics,
             wallpaperChanged,
             (path, targetPhysicalSize) => BackgroundImageDecoder.Decode(path, targetPhysicalSize),
-            () => LoadBundledBackground(diagnostics))
+            () => LoadBundledBackground(diagnostics),
+            windowMetrics)
     {
     }
 
