@@ -542,6 +542,28 @@ public sealed class SetupWizardViewModelTests
         Assert.NotEmpty(changed);
     }
 
+    [Fact]
+    public async Task Dispose_WhileGamePathProbeInFlight_CancelsTheProbeToken()
+    {
+        var store = new BlockingInstallationStateStore();
+        var vm = new SetupWizardViewModel(
+            new LocalizationService(),
+            new GameInstallationPath(LauncherProfiles.BlueArchiveJapan),
+            store,
+            new LocalDiagnostics(), new StubFilePickerService())
+        {
+            GamePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"))
+        };
+        vm.NextCommand.Execute(null);
+        await store.ReadStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        vm.Dispose();
+
+        // 统一为「取消 → 退订 → 释放」：先取消在飞探测再回收源；若只 Dispose
+        // 源而不取消，读任务将永远悬着（旧实现的行为）。
+        Assert.True(store.ProbeToken.IsCancellationRequested);
+    }
+
     private static async Task WaitForGamePathStatusAsync(
         SetupWizardViewModel viewModel,
         SetupWizardGamePathStatus expectedStatus)
@@ -606,4 +628,34 @@ public sealed class SetupWizardViewModelTests
         "BlueArchive",
         ["--test"],
         [new LocalInstallationFile("BlueArchive.exe", 4, "1234")]);
+
+    /// <summary>读取被门控挂起的状态仓库替身：用于观察释放时探测令牌是否被取消。</summary>
+    private sealed class BlockingInstallationStateStore : ILocalInstallationStateStore
+    {
+        public TaskCompletionSource ReadStarted { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public CancellationToken ProbeToken { get; private set; }
+
+        public async Task<LocalInstallationState> ReadAsync(
+            string gamePath,
+            CancellationToken cancellationToken = default)
+        {
+            ProbeToken = cancellationToken;
+            ReadStarted.TrySetResult();
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            throw new InvalidOperationException("Probe cancellation was not observed.");
+        }
+
+        public Task<LocalInstallationState> CommitAsync(
+            string gamePath,
+            LocalInstallationStateCommit commit,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<LocalInstallationState> DeleteAsync(
+            string gamePath,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+    }
 }

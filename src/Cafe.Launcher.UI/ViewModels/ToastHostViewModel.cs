@@ -22,6 +22,9 @@ internal partial class ToastHostViewModel : ViewModelBase, IDisposable
     private readonly Func<Action, Task> invokeOnUiAsync;
     private readonly Func<TimeSpan, CancellationToken, Task> delayAsync;
     private readonly CancellationTokenSource lifetimeCts = new();
+    // 令牌在构造时取出：Dispose 之后 fire-and-forget 的管线仍可能读到它，
+    // 而 CancellationTokenSource.Token 在释放后会抛 ObjectDisposedException。
+    private readonly CancellationToken lifetimeToken;
     private readonly Dictionary<string, ToastLifecycle> lifecycles = [];
     private bool reduceMotion = true;
     private bool disposed;
@@ -54,6 +57,7 @@ internal partial class ToastHostViewModel : ViewModelBase, IDisposable
         this.diagnostics = diagnostics;
         this.invokeOnUiAsync = invokeOnUiAsync;
         this.delayAsync = delayAsync;
+        lifetimeToken = lifetimeCts.Token;
         toastService.ToastRaised += OnToastRaised;
     }
 
@@ -116,6 +120,11 @@ internal partial class ToastHostViewModel : ViewModelBase, IDisposable
     [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task DismissToastAsync(string toastId)
     {
+        if (disposed)
+        {
+            return;
+        }
+
         CancelActionToken(toastId);
         var canDismiss = false;
         await invokeOnUiAsync(() =>
@@ -123,9 +132,9 @@ internal partial class ToastHostViewModel : ViewModelBase, IDisposable
             var toast = ActiveToasts.FirstOrDefault(candidate => candidate.Id == toastId);
             canDismiss = toast is not null;
         });
-        if (canDismiss)
+        if (canDismiss && !disposed)
         {
-            await ExitToastAsync(toastId, lifetimeCts.Token);
+            await ExitToastAsync(toastId, lifetimeToken);
         }
     }
 
@@ -139,6 +148,11 @@ internal partial class ToastHostViewModel : ViewModelBase, IDisposable
 
     private void OnToastRaised(ToastNotification notification)
     {
+        if (disposed)
+        {
+            return;
+        }
+
         notification.SeverityLabel = notification.Severity switch
         {
             ToastSeverity.Success => localizer.T(LocalizationKeys.ToastSuccess),
@@ -151,14 +165,14 @@ internal partial class ToastHostViewModel : ViewModelBase, IDisposable
             notification.Title = notification.SeverityLabel;
         }
 
-        _ = ShowToastAsync(notification, lifetimeCts.Token);
+        _ = ShowToastAsync(notification, lifetimeToken);
     }
 
     private async Task ShowToastAsync(ToastNotification notification, CancellationToken cancellationToken)
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(notification.Message))
+            if (disposed || string.IsNullOrWhiteSpace(notification.Message))
             {
                 return;
             }
@@ -316,6 +330,11 @@ internal partial class ToastHostViewModel : ViewModelBase, IDisposable
         string toastId,
         Func<ToastNotification, ToastAction?> selectAction)
     {
+        if (disposed)
+        {
+            return;
+        }
+
         ToastNotification? toast = null;
         ToastAction? action = null;
         ToastLifecycle? lifecycle = null;
@@ -339,7 +358,7 @@ internal partial class ToastHostViewModel : ViewModelBase, IDisposable
             lifecycle = lifecycles.TryGetValue(toastId, out var found) ? found : null;
         });
 
-        if (toast is null || action is null || lifecycle is null)
+        if (toast is null || action is null || lifecycle is null || disposed)
         {
             return;
         }
@@ -347,7 +366,7 @@ internal partial class ToastHostViewModel : ViewModelBase, IDisposable
         CancellationTokenSource? actionTimeoutCts = null;
         try
         {
-            actionTimeoutCts = CancellationTokenSource.CreateLinkedTokenSource(lifetimeCts.Token);
+            actionTimeoutCts = CancellationTokenSource.CreateLinkedTokenSource(lifetimeToken);
             if (action.Timeout is { } timeout)
             {
                 actionTimeoutCts.CancelAfter(timeout);
@@ -357,21 +376,21 @@ internal partial class ToastHostViewModel : ViewModelBase, IDisposable
             var result = await action.ExecuteAsync(actionTimeoutCts.Token);
             if (result.IsSuccess)
             {
-                await ExitToastAsync(toast.Id, lifetimeCts.Token);
+                await ExitToastAsync(toast.Id, lifetimeToken);
                 return;
             }
 
             await ApplyActionFailureAsync(toast, result.Message!, result.Title);
         }
         catch (OperationCanceledException) when (actionTimeoutCts?.IsCancellationRequested == true
-            && !lifetimeCts.IsCancellationRequested)
+            && !lifetimeToken.IsCancellationRequested)
         {
             // Dismiss killed the action — exit quietly.
-            await ExitToastAsync(toast.Id, lifetimeCts.Token);
+            await ExitToastAsync(toast.Id, lifetimeToken);
         }
         catch (OperationCanceledException exception) when (
-            exception.CancellationToken == lifetimeCts.Token
-            && lifetimeCts.IsCancellationRequested)
+            exception.CancellationToken == lifetimeToken
+            && lifetimeToken.IsCancellationRequested)
         {
             // Host lifetime ended while the action was running.
         }
@@ -526,8 +545,9 @@ internal partial class ToastHostViewModel : ViewModelBase, IDisposable
 
         disposed = true;
         toastService.ToastRaised -= OnToastRaised;
+        // 只取消、不释放：已排队的 fire-and-forget 管线仍可能在这个令牌上注册回调，
+        // 释放会把它们的收尾变成 ObjectDisposedException。宿主是应用级单例，进程退出即回收。
         lifetimeCts.Cancel();
-        lifetimeCts.Dispose();
     }
 
     /// <summary>
