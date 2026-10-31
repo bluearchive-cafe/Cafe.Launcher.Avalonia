@@ -63,6 +63,9 @@ internal partial class MainWindow : Window
         Activated += OnActivated;
         Opened += PlayShellEntranceOnce;
         InitializeVideoBackground();
+#if DEBUG
+        InitializeVideoBackgroundPrototype();
+#endif
     }
 
     /// <summary>ADR-016: plays the one-shot whole-content fade-in; interactive from the first frame.</summary>

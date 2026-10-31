@@ -2,6 +2,7 @@
 
 视频背景已接入普通设置（Debug / Release）：外观 → 背景来源「自定义」→「选择视频」。Windows x64 构建自动调用 `scripts/Restore-VideoBackgroundRuntime.ps1`，需要 PowerShell 7、curl 与 7-Zip（`7z` 或 `7zz`）。脚本仅在构建期恢复固定 LGPL 构建，校验压缩包与 DLL 的 SHA-256，缓存到 `.artifacts/native/libmpv`；首次构建需要访问 GitHub，可先带 `-Proxy` 手动运行恢复脚本。发布输出包含 `libmpv/win-x64/libmpv-2.dll`、清单、来源说明和完整许可证；应用运行期间不下载运行库。升级时同步清单、许可证、来源和原生冒烟测试。其他平台暂时回退到静态背景。
 
+独立 Debug 实验入口仍保留：启动、采样、快捷键及历史验证边界见 [libmpv 视频背景原型](research/video-background-prototype.md)。该入口显式启用并使用隔离数据根。
 
 本文件维护开发命令、验证和交付流程。编码规则见 [PROJECT_CONVENTIONS.md](../PROJECT_CONVENTIONS.md)，代理入口见 [AGENTS.md](../AGENTS.md)。
 

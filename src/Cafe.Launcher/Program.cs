@@ -164,8 +164,17 @@ sealed class Program
 
             // The isolated reporter bypasses this handshake above. Normal launches still
             // forward to the first instance instead of starting a duplicate process.
-            using var launchBridge = new CrossProcessLaunchBridge(LaunchGameSignalName, SignalName, LockSignalName, dataRoot);
-            if (!launchBridge.TryEnterSingleInstance(MutexName, args))
+            var instanceSuffix = "";
+#if DEBUG
+            // The opt-in renderer prototype runs alongside the installed launcher.
+            if (Environment.GetEnvironmentVariable("CAFE_VIDEO_PROTOTYPE") == "1")
+            {
+                instanceSuffix = "_VideoPrototype";
+            }
+#endif
+            using var launchBridge = new CrossProcessLaunchBridge(
+                LaunchGameSignalName + instanceSuffix, SignalName + instanceSuffix, LockSignalName + instanceSuffix, dataRoot);
+            if (!launchBridge.TryEnterSingleInstance(MutexName + instanceSuffix, args))
             {
                 return;
             }
@@ -404,9 +413,22 @@ sealed class Program
 
     // Avalonia configuration, don't remove; also used by visual designer.
     public static AppBuilder BuildAvaloniaApp()
-        => AppBuilder.Configure<App>()
+    {
+        var builder = AppBuilder.Configure<App>()
             .UsePlatformDetect()
             .LogToTrace();
+#if DEBUG
+        if (Environment.GetEnvironmentVariable("CAFE_VIDEO_PROTOTYPE") == "1"
+            && Environment.GetEnvironmentVariable("CAFE_VIDEO_PROTOTYPE_COMPOSITION") == "DirectComposition")
+        {
+            builder.With(new Win32PlatformOptions
+            {
+                CompositionMode = [Win32CompositionMode.DirectComposition, Win32CompositionMode.RedirectionSurface],
+            });
+        }
+#endif
+        return builder;
+    }
 
     internal static AppBuilder BuildCrashReportApp()
         => AppBuilder.Configure<CrashReportApp>()
