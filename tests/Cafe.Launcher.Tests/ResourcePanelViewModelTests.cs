@@ -334,6 +334,23 @@ public sealed class ResourcePanelViewModelTests
         Assert.False(context.ViewModel.IsResourcePanelSaveEnabled);
     }
 
+    [Fact]
+    public async Task Commands_AfterDispose_ObserveCancellationInsteadOfDisposedTokenSource()
+    {
+        using var context = await CreateContextAsync(cookieUid: "UIDTESTA");
+        context.ViewModel.ApplySettings(new LauncherSettings
+        {
+            PatchUrlGroup = PatchUrlGroups.Cafe,
+            ProxyMode = ProxyModes.Direct
+        });
+        context.ViewModel.Dispose();
+
+        // 令牌在构造时缓存：释放后的命令入口读到的是已取消令牌，
+        // 而不是 lifetimeCts.Dispose() 之后的 ObjectDisposedException。
+        await context.ViewModel.RefreshResourcePanelCommand.ExecuteAsync(null);
+        await context.ViewModel.OpenResourcePanelCommand.ExecuteAsync(null);
+    }
+
     private static ResourcePanelItem GetItem(ResourcePanelViewModel viewModel, string code) =>
         viewModel.ResourcePanelItems.First(item => item.Code == code);
 
