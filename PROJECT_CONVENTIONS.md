@@ -166,6 +166,7 @@
 | AvaloniaUI.DiagnosticsSupport | 2.2.3 | 调试期 UI 诊断（Debug 专用，Release 不分发） |
 | CommunityToolkit.Mvvm | 8.4.2 | MVVM source generators |
 | Material.Icons.Avalonia | 3.0.2 | Icon library |
+| libmpv（Windows x64 LGPL 构建） | 2026-10-31-9e2ed65eb0 | 视频背景 Render API；版本与双重 SHA-256 见 `native/libmpv/manifest.json`，不属于 NuGet 依赖 |
 | Microsoft.Extensions.DependencyInjection | 10.0.13 | DI 容器 |
 | Shirasagi0012.MaterialColorUtilities | 0.2.0 | Material 色彩工具 |
 | Serilog | 4.4.0 | Logging pipeline |

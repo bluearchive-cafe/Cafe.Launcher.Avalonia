@@ -37,4 +37,21 @@
     <PackageReference Include="Shirasagi0012.MaterialColorUtilities" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
   </ItemGroup>
+
+  <!-- Keep the native player replaceable and ship only the executable's architecture. -->
+  <PropertyGroup>
+    <BackgroundVideoRid>$(RuntimeIdentifier)</BackgroundVideoRid>
+    <BackgroundVideoRid Condition="'$(BackgroundVideoRid)' == ''">$(NETCoreSdkRuntimeIdentifier)</BackgroundVideoRid>
+    <BackgroundVideoRoot>$(MSBuildProjectDirectory)/../../.artifacts/native/libmpv</BackgroundVideoRoot>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(BackgroundVideoRid)' == 'win-x64'">
+    <Content Include="$(BackgroundVideoRoot)/win-x64/libmpv-2.dll"
+             Link="libmpv/win-x64/libmpv-2.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="../../native/libmpv/*" Link="libmpv/%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+  <Target Name="RestoreVideoBackgroundRuntime" BeforeTargets="PrepareForBuild"
+          Condition="'$(BackgroundVideoRid)' == 'win-x64' and '$(DesignTimeBuild)' != 'true'">
+    <Exec Command="pwsh -NoProfile -File &quot;$(MSBuildProjectDirectory)/../../scripts/Restore-VideoBackgroundRuntime.ps1&quot;" />
+  </Target>
 </Project>

@@ -37,6 +37,7 @@ public sealed class LauncherSettings : SettingsModel
     private string backgroundSource = BackgroundSources.Bundled;
     private string backgroundFit = BackgroundFits.UniformToFill;
     private string backgroundFillColor = "#FF000000";
+    private int backgroundVideoVolume;
     private string resourcePanelUid = "";
     private string updateChannel = UpdateChannels.Stable;
     private string logLevel =
@@ -135,6 +136,9 @@ public sealed class LauncherSettings : SettingsModel
     [JsonPropertyName("backgroundFillColor")]
     public string BackgroundFillColor { get => backgroundFillColor; set => SetProperty(ref backgroundFillColor, value); }
 
+    [JsonPropertyName("backgroundVideoVolume")]
+    public int BackgroundVideoVolume { get => backgroundVideoVolume; set => SetProperty(ref backgroundVideoVolume, value); }
+
     [JsonPropertyName("resourcePanelUid")]
     public string ResourcePanelUid { get => resourcePanelUid; set => SetProperty(ref resourcePanelUid, value); }
 
@@ -206,6 +210,7 @@ public sealed class LauncherSettings : SettingsModel
         BackgroundSource = other.BackgroundSource;
         BackgroundFit = other.BackgroundFit;
         BackgroundFillColor = other.BackgroundFillColor;
+        BackgroundVideoVolume = other.BackgroundVideoVolume;
         ResourcePanelUid = other.ResourcePanelUid;
         ResourcePanelUidSource = other.ResourcePanelUidSource;
         StatusDetailMode = other.StatusDetailMode;
@@ -255,6 +260,7 @@ public sealed class LauncherSettings : SettingsModel
         (nameof(BackgroundSource), settings => settings.BackgroundSource),
         (nameof(BackgroundFit), settings => settings.BackgroundFit),
         (nameof(BackgroundFillColor), settings => settings.BackgroundFillColor),
+        (nameof(BackgroundVideoVolume), settings => settings.BackgroundVideoVolume),
         (nameof(ResourcePanelUid), settings => settings.ResourcePanelUid),
         (nameof(ResourcePanelUidSource), settings => settings.ResourcePanelUidSource),
         (nameof(StatusDetailMode), settings => settings.StatusDetailMode),

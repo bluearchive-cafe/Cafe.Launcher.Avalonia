@@ -1,0 +1,9 @@
+{
+  "release": "2026-10-31-9e2ed65eb0",
+  "mpvCommit": "9e2ed65eb0",
+  "ffmpegCommit": "4811625b5",
+  "buildRecipeCommit": "02153edbac08b812b9e8076df43051e1e735cc4c",
+  "url": "https://github.com/zhongfly/mpv-winbuild/releases/download/2026-10-31-9e2ed65eb0/mpv-dev-lgpl-x86_64-20261031-git-9e2ed65eb0.7z",
+  "archiveSha256": "e8f83c25a688a0c6f4e01158ec056c98addae077b63e8098055693764f3e44ba",
+  "librarySha256": "91f6d66c21dbe19189a085055d393f8839048467fd314460908a9642a58ba7cb"
+}

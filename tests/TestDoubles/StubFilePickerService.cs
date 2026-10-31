@@ -13,10 +13,14 @@ public sealed class StubFilePickerService : IFilePickerService
     public Func<string, string?, Task<string?>>? FolderPicker { get; set; }
 
     public Func<string, Task<string?>>? ImagePicker { get; set; }
+    public Func<string, Task<string?>>? VideoPicker { get; set; }
 
     public Task<string?> PickFolderAsync(string title, string? startLocation = null) =>
         FolderPicker?.Invoke(title, startLocation) ?? Task.FromResult<string?>(null);
 
     public Task<string?> PickImageFileAsync(string title) =>
         ImagePicker?.Invoke(title) ?? Task.FromResult<string?>(null);
+
+    public Task<string?> PickVideoFileAsync(string title) =>
+        VideoPicker?.Invoke(title) ?? Task.FromResult<string?>(null);
 }

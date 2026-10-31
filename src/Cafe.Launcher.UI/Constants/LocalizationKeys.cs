@@ -49,9 +49,11 @@ public static class LocalizationKeys
     public const string Choose = "choose";
     public const string ChooseBackgroundFolderTitle = "chooseBackgroundFolderTitle";
     public const string ChooseBackgroundImageTitle = "chooseBackgroundImageTitle";
+    public const string ChooseBackgroundVideoTitle = "chooseBackgroundVideoTitle";
     public const string ChooseFolder = "chooseFolder";
     public const string ChooseImage = "chooseImage";
     public const string ChooseInstallFolder = "chooseInstallFolder";
+    public const string ChooseVideo = "chooseVideo";
     public const string ClearBackground = "clearBackground";
     public const string Close = "close";
     public const string CloseBehavior = "closeBehavior";
@@ -646,5 +648,8 @@ public static class LocalizationKeys
     public const string VersionLatest = "versionLatest";
     public const string VersionLoading = "versionLoading";
     public const string VersionUnavailable = "versionUnavailable";
+    public const string VideoBackgroundFailed = "videoBackgroundFailed";
+    public const string VideoBackgroundVolume = "videoBackgroundVolume";
+    public const string VideoBackgroundVolumeDescription = "videoBackgroundVolumeDescription";
     public const string ViewLog = "viewLog";
     public const string Working = "working";}

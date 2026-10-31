@@ -29,6 +29,42 @@ public sealed class BackgroundViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task VideoBackground_WhenSelected_UsesStaticFallbackAndClearsOnImageSelection()
+    {
+        var path = Path.Combine(tempDir, "background.MP4");
+        await File.WriteAllBytesAsync(path, []);
+        using var cache = CreateCache(_ => PngBytes);
+        using var viewModel = new BackgroundViewModel(cache, new LocalDiagnostics(), _ => { },
+            (_, _) => throw new InvalidOperationException("Video must not enter the bitmap decoder."),
+            () => new TestImage());
+        var settings = new LauncherSettings
+        {
+            BackgroundSource = BackgroundSources.Custom, CustomBackgroundPath = path, BackgroundVideoVolume = 35
+        };
+
+        await viewModel.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
+
+        Assert.Equal(path, viewModel.BackgroundVideoPath);
+        Assert.Equal(35, viewModel.BackgroundVideoVolume);
+        Assert.IsType<TestImage>(viewModel.BackgroundImageSource);
+        viewModel.ReportVideoFailure("superseded.mp4", new InvalidOperationException());
+        Assert.Equal(path, viewModel.BackgroundVideoPath);
+        viewModel.ReportVideoFailure(path, new InvalidOperationException());
+        Assert.Null(viewModel.BackgroundVideoPath);
+        await viewModel.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
+        Assert.Null(viewModel.BackgroundVideoPath); // Same failed fingerprint does not retry on every refresh.
+
+        settings.BackgroundSource = BackgroundSources.Bundled;
+        await viewModel.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
+        settings.BackgroundSource = BackgroundSources.Custom;
+        await viewModel.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
+        Assert.Equal(path, viewModel.BackgroundVideoPath);
+        settings.BackgroundSource = BackgroundSources.Bundled;
+        await viewModel.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
+        Assert.Null(viewModel.BackgroundVideoPath);
+    }
+
+    [Fact]
     public async Task UpdateBackgroundImageAsync_WhenRemoteImageIsValid_LoadsAndCachesImage()
     {
         var hash = await ComputeHashAsync(PngBytes);

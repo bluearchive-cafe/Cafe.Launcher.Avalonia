@@ -15,4 +15,7 @@ internal interface IFilePickerService
 
     /// <summary>Picks a single image file (png/jpg/jpeg/bmp/webp).</summary>
     Task<string?> PickImageFileAsync(string title);
+
+    /// <summary>Picks a single local background video (mp4/mkv/webm).</summary>
+    Task<string?> PickVideoFileAsync(string title);
 }

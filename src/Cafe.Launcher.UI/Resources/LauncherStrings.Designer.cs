@@ -96,11 +96,15 @@ internal static class LauncherStrings
 
     public static string ChooseBackgroundImageTitle => GetRequiredString("chooseBackgroundImageTitle");
 
+    public static string ChooseBackgroundVideoTitle => GetRequiredString("chooseBackgroundVideoTitle");
+
     public static string ChooseFolder => GetRequiredString("chooseFolder");
 
     public static string ChooseImage => GetRequiredString("chooseImage");
 
     public static string ChooseInstallFolder => GetRequiredString("chooseInstallFolder");
+
+    public static string ChooseVideo => GetRequiredString("chooseVideo");
 
     public static string ClearBackground => GetRequiredString("clearBackground");
 
@@ -1289,6 +1293,12 @@ internal static class LauncherStrings
     public static string VersionLoading => GetRequiredString("versionLoading");
 
     public static string VersionUnavailable => GetRequiredString("versionUnavailable");
+
+    public static string VideoBackgroundFailed => GetRequiredString("videoBackgroundFailed");
+
+    public static string VideoBackgroundVolume => GetRequiredString("videoBackgroundVolume");
+
+    public static string VideoBackgroundVolumeDescription => GetRequiredString("videoBackgroundVolumeDescription");
 
     public static string ViewLog => GetRequiredString("viewLog");
 

@@ -62,6 +62,10 @@ internal partial class MainWindow : Window
         KeyDown += OnKeyDown;
         Activated += OnActivated;
         Opened += PlayShellEntranceOnce;
+        InitializeVideoBackground();
+#if DEBUG
+        InitializeVideoBackgroundPrototype();
+#endif
     }
 
     /// <summary>ADR-016: plays the one-shot whole-content fade-in; interactive from the first frame.</summary>
@@ -161,8 +165,10 @@ internal partial class MainWindow : Window
         viewModel.WindowChrome.RestoreRequested += ShowWindow;
         viewModel.Dialogs.ErrorCopyDetailsRequested += CopyErrorDetailsToClipboard;
         viewModel.Background.PreviousWallpaperFadingOut += FadeOutPreviousWallpaper;
+        viewModel.Background.PropertyChanged += OnVideoBackgroundSettingChanged;
         viewModel.Operations.PropertyChanged += OnOperationsPropertyChanged;
         viewModel.PropertyChanged += OnRootMotionPreferenceChanged;
+        UpdateVideoBackground();
     }
 
     /// <summary>
@@ -254,6 +260,8 @@ internal partial class MainWindow : Window
             return;
         }
 
+        UpdateVideoPlayback();
+
         // 运行期关闭动效时立即结算壳层入场：入场动画随选择器失配被移除，必须同步清掉
         // 锚点类并恢复本地透明度，否则壳层停留在 PlayShellEntranceOnce 写入的透明度 0。
         // 摘类同时保证之后重开动效时 motion-shell 选择器不会重新匹配而重放入场。
@@ -281,6 +289,8 @@ internal partial class MainWindow : Window
         }
 
         viewModel.Background.PreviousWallpaperFadingOut -= FadeOutPreviousWallpaper;
+        viewModel.Background.PropertyChanged -= OnVideoBackgroundSettingChanged;
+        RemoveVideoBackground();
         viewModel.Operations.MinimizeRequested -= MinimizeToTray;
         viewModel.Operations.ExitRequested -= ExitAfterLaunch;
         viewModel.Operations.ShowRequested -= ShowWindow;
