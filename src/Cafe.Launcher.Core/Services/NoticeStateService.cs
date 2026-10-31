@@ -9,7 +9,7 @@ using Cafe.Launcher.Core.Helpers;
 
 namespace Cafe.Launcher.Core.Services;
 
-public sealed class NoticeStateService
+internal sealed class NoticeStateService : INoticeStateStore
 {
     private readonly LauncherDataRoot dataRoot;
     private readonly SemaphoreSlim writeLock = new(1, 1);

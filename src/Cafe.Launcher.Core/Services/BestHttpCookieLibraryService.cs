@@ -6,7 +6,7 @@ using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.Core.Services;
 
-public sealed class BestHttpCookieLibraryService
+internal sealed class BestHttpCookieLibraryService : IBestHttpCookieLibraryReader
 {
     public BestHttpCookieLibrary Read(string libraryPath)
     {

@@ -36,7 +36,7 @@ internal sealed partial class ResourcePanelUidService
     }
 
     private readonly YostarGameProfile gameProfile;
-    private readonly BestHttpCookieLibraryService cookieLibraryService;
+    private readonly IBestHttpCookieLibraryReader cookieLibraryService;
     private readonly ILauncherSettingsService settingsService;
     private readonly ISavedSettingsWriter savedSettingsWriter;
     private readonly string? cookieLibraryPathOverride;
@@ -45,7 +45,7 @@ internal sealed partial class ResourcePanelUidService
 
     public ResourcePanelUidService(
         YostarGameProfile gameProfile,
-        BestHttpCookieLibraryService cookieLibraryService,
+        IBestHttpCookieLibraryReader cookieLibraryService,
         ILauncherSettingsService settingsService,
         ISavedSettingsWriter savedSettingsWriter,
         GameCompatibilityPaths compatibilityPaths,
@@ -56,7 +56,7 @@ internal sealed partial class ResourcePanelUidService
 
     internal ResourcePanelUidService(
         YostarGameProfile gameProfile,
-        BestHttpCookieLibraryService cookieLibraryService,
+        IBestHttpCookieLibraryReader cookieLibraryService,
         ILauncherSettingsService settingsService,
         ISavedSettingsWriter savedSettingsWriter,
         string? cookieLibraryPath = null,

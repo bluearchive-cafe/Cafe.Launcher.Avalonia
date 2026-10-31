@@ -16,7 +16,7 @@ public sealed record ProtonBuild(string Name, string Path);
 /// 设置页的候选建议（真正的「体验增强」）尚未接入；当前消费方是诊断导出，把发现的构建记录进
 /// <c>system-info.json</c>，失败原因可对照实际安装。扫描尽力而为：目录不存在或读不到都只当没有。
 /// </remarks>
-public sealed class ProtonBuildDiscovery
+internal sealed class ProtonBuildDiscovery : IProtonBuildDiscovery
 {
     private readonly IReadOnlyList<string> searchDirectories;
 

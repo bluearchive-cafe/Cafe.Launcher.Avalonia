@@ -29,6 +29,7 @@
 - **命名空间指明属主**：同一命名空间不得出现在两个程序集；`InternalsVisibleTo` 仅向以 `Tests` 结尾的测试程序集开放。
 - **显式 using**：每个工程在源文件中显式列出 Core 命名空间，不使用项目级 `<Using>`；Core 源码只使用 `Cafe.Launcher.Core.*`。
 - **公开面受控**：Core 与 UI 的顶层 public 类型都有显式声明集测试；新增实现优先收回 `internal`，确实需要公开时在声明表中登记理由。
+- **Core 后端登记**：Cookie 库读取、公告已读存储、系统动效偏好、图形探测、Proton 发现、文件下载、下载连接来源和进程跟踪由 Core 通过接口登记；UI 消费接口，不构造或登记这些实现。保留的公开辅助入口在声明集逐项解释跨程序集用途。
 - **功能垂直组织**：`Features/` 分为 Shell、GameOperations、Settings、SetupWizard、Diagnostics、ResourcePanel；功能 ViewModel 就近放置，根 `ViewModels/` 只放窗口级、跨功能及模态契约。非 Shell 功能通过共享 `Services/` 的窄接口协作，不引用彼此的具体类型；Shell 作为聚合者是既定例外。
 
 ## 3. 代码风格

@@ -17,7 +17,7 @@ namespace Cafe.Launcher.Core.Services;
 /// <summary>
 /// Production implementation of <see cref="IFileDownloadService"/>.
 /// </summary>
-public sealed class FileDownloadService : IFileDownloadService
+internal sealed class FileDownloadService : IFileDownloadService
 {
     /// <summary>
     /// Retry domain order: 0 = backup CDN, 1 = primary CDN (matching the original Electron launcher).

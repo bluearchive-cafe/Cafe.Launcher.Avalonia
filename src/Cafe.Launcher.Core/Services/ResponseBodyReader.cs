@@ -16,7 +16,7 @@ namespace Cafe.Launcher.Core.Services;
 /// so slow-but-progressing transfers are never aborted, and a timeout converts to
 /// <see cref="HttpRequestException"/> so existing retry/resume paths take over.
 /// </summary>
-public static class ResponseBodyReader
+internal static class ResponseBodyReader
 {
     /// <summary>
     /// Idle budget applied to each body read. Generous enough for saturated links

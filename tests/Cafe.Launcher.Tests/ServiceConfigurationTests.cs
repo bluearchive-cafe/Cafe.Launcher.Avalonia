@@ -206,7 +206,7 @@ public sealed class ServiceConfigurationTests : IDisposable
             GamePath = dataRoot.Root,
             StartedAt = "2026-09-16T00:00:00.0000000+00:00"
         });
-        await provider.GetRequiredService<NoticeStateService>().SaveShownNoticeAsync("notice-hash");
+        await provider.GetRequiredService<INoticeStateStore>().SaveShownNoticeAsync("notice-hash");
 
         Assert.True(File.Exists(dataRoot.DownloadStatePath));
         Assert.True(File.Exists(dataRoot.NoticeStatePath));

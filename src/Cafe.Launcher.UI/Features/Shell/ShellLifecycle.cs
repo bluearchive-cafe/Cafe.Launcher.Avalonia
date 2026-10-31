@@ -48,7 +48,7 @@ internal sealed class ShellLifecycle : IDisposable
     private readonly IWindowsLauncherUpdateApplier launcherUpdateApplier;
     private readonly ILauncherDiagnostics diagnostics;
     private readonly IErrorHandlingService errorHandling;
-    private readonly SystemAnimationSettingsProvider systemAnimationSettingsProvider;
+    private readonly ISystemAnimationSettingsProvider systemAnimationSettingsProvider;
     private readonly LauncherBuildIdentity? buildIdentity;
     private readonly ShellViewModel shell;
     private readonly BackgroundViewModel background;
@@ -104,7 +104,7 @@ internal sealed class ShellLifecycle : IDisposable
         IWindowsLauncherUpdateApplier launcherUpdateApplier,
         ILauncherDiagnostics diagnostics,
         IErrorHandlingService errorHandling,
-        SystemAnimationSettingsProvider systemAnimationSettingsProvider,
+        ISystemAnimationSettingsProvider systemAnimationSettingsProvider,
         ShellPresentationFamily family,
         IFilePickerService filePickerService,
         LauncherBuildIdentity? buildIdentity = null)
@@ -138,7 +138,7 @@ internal sealed class ShellLifecycle : IDisposable
         IWindowsLauncherUpdateApplier launcherUpdateApplier,
         ILauncherDiagnostics diagnostics,
         IErrorHandlingService errorHandling,
-        SystemAnimationSettingsProvider systemAnimationSettingsProvider,
+        ISystemAnimationSettingsProvider systemAnimationSettingsProvider,
         ShellPresentationFamily family,
         IFilePickerService filePickerService,
         bool ownsPresentationCollaborators,

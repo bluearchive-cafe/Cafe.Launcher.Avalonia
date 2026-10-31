@@ -7,7 +7,7 @@ namespace Cafe.Launcher.Core.Services.GameRuntime;
 /// Locates executables such as umu-run, first honoring an explicitly
 /// configured path and otherwise scanning the PATH environment variable.
 /// </summary>
-public static class ExecutableLocator
+internal static class ExecutableLocator
 {
     /// <summary>
     /// Returns the first existing executable path, or null when nothing matches.

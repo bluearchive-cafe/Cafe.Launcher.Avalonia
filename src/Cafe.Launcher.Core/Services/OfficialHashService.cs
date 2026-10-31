@@ -13,7 +13,7 @@ namespace Cafe.Launcher.Core.Services;
 /// can also recompute its Vc, so these hashes guard only against accidental
 /// corruption. This matches the original launcher's check-summing scheme.
 /// </summary>
-public static class OfficialHashService
+internal static class OfficialHashService
 {
     public static string GetManifestInfoHash(string name, string version, string basis)
     {

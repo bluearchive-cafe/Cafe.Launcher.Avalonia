@@ -137,11 +137,27 @@ public sealed class AssemblySplitContractTests
         Assert.NotNull(provider.GetRequiredService<LocalInstallationStateStore>());
         Assert.NotNull(provider.GetRequiredService<AuthorizationHeaderFactory>());
         Assert.NotNull(provider.GetRequiredService<RemoteHttpUrlValidator>());
-        Assert.NotNull(provider.GetRequiredService<BestHttpCookieLibraryService>());
+        Assert.NotNull(provider.GetRequiredService<IBestHttpCookieLibraryReader>());
         Assert.NotNull(provider.GetRequiredService<PatchUrlGroupService>());
         Assert.NotNull(provider.GetRequiredService<LauncherSettingsService>());
         Assert.Single(provider.GetServices<Crc64Service>());
         Assert.Single(provider.GetServices<LauncherSettingsService>());
+
+        Type[] backendContracts =
+        [
+            typeof(IBestHttpCookieLibraryReader), typeof(INoticeStateStore),
+            typeof(ISystemAnimationSettingsProvider), typeof(IFileDownloadService),
+            typeof(IDownloadTransportSource), typeof(Cafe.Launcher.Core.Services.GameRuntime.IProtonBuildDiscovery),
+            typeof(Cafe.Launcher.Core.Services.GameRuntime.IGameProcessTracker),
+            typeof(Cafe.Launcher.Core.Services.Diagnostics.IGraphicsInfoProbe)
+        ];
+        foreach (var contract in backendContracts)
+        {
+            var implementation = provider.GetRequiredService(contract);
+            Assert.Same(implementation, provider.GetRequiredService(contract));
+            Assert.False(implementation.GetType().IsPublic);
+            Assert.Single(services, descriptor => descriptor.ServiceType == contract);
+        }
     }
 
     [Fact]
@@ -193,7 +209,7 @@ public sealed class AssemblySplitContractTests
     }
 
     /// <summary>
-    /// Core 仍是「实现默认 public」，因此这里把「Models/ 之外的顶层 public class」钉成显式声明集：
+    /// Models/ 之外的顶层 public class 只保留注明用途的跨程序集契约与共享辅助入口：
     /// 新增或移除都必须同时改这张表，收窄只会前进，不会因为顺手加一个 public 实现而静默回退。
     /// 判据：<c>src/Cafe.Launcher.Core</c> 下 <c>Models/</c> 之外的顶层 class 声明（文件作用域
     /// 命名空间让顶层类型顶格，按行首匹配因此天然排除嵌套类型）。<c>Models/</c> 是数据模型的豁免域。
@@ -203,52 +219,33 @@ public sealed class AssemblySplitContractTests
     {
         string[] declared =
         [
-            "AtomicJsonFileStore",
-            "BestHttpCookieLibraryService",
-            "CrashOriginExtensions",
+            "AtomicJsonFileStore", // UI-owned checkpoints use the same atomic persistence contract.
+            "CrashOriginExtensions", // UI crash reports serialize the stable Core origin labels.
             "DirectoryDeletionPlan", // Returned by DirectoryTreeDeleter; UI executes it after the game-process gate.
-            "DirectorySizeProbe",
-            "DirectoryTreeDeleter",
-            "DirectoryWriteProbe",
-            "ExecutableLocator",
-            "FileDownloadService",
-            "FileSizeFormatter",
-            "FlexibleBoolConverter",
-            "GSettingsCli",
-            "GameCompatibilityPaths",
-            "GamePathValidator",
-            "GameProcessNames",
-            "GameProcessTracker",
-            "GraphicsInfoProbe",
-            "HttpClientLease",
-            "JsonDefaults",
-            "LauncherConstants",
-            "LauncherCoreServiceCollectionExtensions",
-            "LauncherDataRoot",
-            "LauncherLog",
-            "LauncherPaths",
-            "LauncherProfiles",
-            "LauncherUpdateCheckResult",
-            "LeaseBackedDownloadTransportSource",
-            "LinuxProcessScanner",
-            "LinuxProcessSnapshot",
-            "LogEntryReader",
-            "NoticeStateService",
-            "OfficialHashService",
-            "ProcessService",
-            "ProtonBuildDiscovery",
-            "RemoteBodyReader",
-            "RemoteBodyTooLargeException",
-            "RemoteHttpRequestService",
-            "ResponseBodyReader",
-            "RetryPolicy",
-            "RuntimeVersionProbe",
-            "ShellFolderOpener",
-            "StorageFailure",
-            "SystemAnimationSettingsProvider",
-            "UnifiedLogger",
-            "UnixProcessRecordParser",
-            "VersionComparer"
+            "DirectorySizeProbe", // UI uninstall confirmation measures the same directory scope.
+            "DirectoryTreeDeleter", // UI uninstall executes a guarded deletion plan after process checks.
+            "DirectoryWriteProbe", // UI setup and download planning preflight local write access.
+            "FileSizeFormatter", // UI progress and diagnostic exports share byte formatting.
+            "GameCompatibilityPaths", // Typed path calculations are shared with UI compatibility cleanup.
+            "GamePathValidator", // UI operation workflows must enforce the Core filesystem safety contract.
+            "GameProcessNames", // UI launch and uninstall derive the same executable family.
+            "HttpClientLease", // IRemoteHttpClientLeaseSource returns this explicit resource owner.
+            "JsonDefaults", // UI-owned state files retain the Core serializer policy.
+            "LauncherConstants", // Shared product and window contracts consumed by UI and host.
+            "LauncherCoreServiceCollectionExtensions", // Host composition entry point.
+            "LauncherDataRoot", // Host resolves and injects this typed data-root contract.
+            "LauncherLog", // Static diagnostics fallback used before DI and during crash handling.
+            "LauncherPaths", // Shared persisted and runtime file names.
+            "LauncherProfiles", // Host selects and injects the game and product profiles.
+            "LauncherUpdateCheckResult", // ILauncherUpdateService returns this structured result.
+            "LinuxProcessScanner", // UI session monitoring uses the process-family scan contract.
+            "LinuxProcessSnapshot", // UI diagnostic export includes the platform snapshot.
+            "LogEntryReader", // UI log viewer and export must interpret the same entry boundaries.
+            "ProcessService", // UI process gates and monitoring share the process-family adapter.
+            "RemoteHttpRequestService", // Only the failure-hint reader is public; sending stays internal.
+            "ShellFolderOpener", // UI folder actions use the platform shell adapter.
+            "StorageFailure", // UI-owned persistence shares the recoverable-error classification.
+            "UnifiedLogger" // The host owns the logger before DI exists and after the session ends.
         ];
         const string publicClassPattern =
             "^public\\s+(?:(?:sealed|abstract|static|partial|readonly|unsafe)\\s+)*class\\s+(?<name>\\w+)";
