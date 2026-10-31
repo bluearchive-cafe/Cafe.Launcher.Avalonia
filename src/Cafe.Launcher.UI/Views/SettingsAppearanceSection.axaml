@@ -9,7 +9,7 @@
              x:DataType="vm:MainWindowViewModel">
     <UserControl.Resources>
         <DataTemplate x:Key="SettingOptionTemplate" x:DataType="models:SettingOption">
-            <TextBlock Text="{Binding DisplayName}"/>
+            <TextBlock Text="{Binding DisplayName}" TextWrapping="Wrap"/>
         </DataTemplate>
     </UserControl.Resources>
     <StackPanel>
@@ -18,7 +18,6 @@
 
             <controls:SettingSelect ShowTopDivider="False"
                                     Title="{Binding Shell.I18n[theme]}"
-                                    Description="{Binding Shell.I18n[themeDescription]}"
                                     AutomationName="{Binding Shell.I18n[theme]}"
                                     ItemsSource="{Binding Settings.Options.Theme}"
                                     SelectedValue="{Binding Settings.Editor.Current.ThemeMode, Mode=TwoWay}"/>
@@ -26,7 +25,7 @@
             <controls:SettingRow Title="{Binding Shell.I18n[themeColor]}"
                                  Description="{Binding Shell.I18n[themeColorDescription]}">
                 <controls:SettingRow.Action>
-                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
+                    <WrapPanel ItemSpacing="{StaticResource Launcher.Spacing.Sm}" LineSpacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
                         <Border Classes="color-swatch"
                                 Background="{Binding Settings.Appearance.ThemeColorPreviewBrush}"/>
                         <ComboBox Classes="setting-control"
@@ -35,7 +34,7 @@
                                   SelectedValue="{Binding Settings.Editor.Current.ThemeColorMode, Mode=TwoWay}"
                                   SelectedValueBinding="{Binding Code}"
                                   ItemTemplate="{StaticResource SettingOptionTemplate}"/>
-                    </StackPanel>
+                    </WrapPanel>
                 </controls:SettingRow.Action>
             </controls:SettingRow>
 
@@ -65,7 +64,7 @@
                                  Description="{Binding Shell.I18n[themeColorPaletteDescription]}"
                                  IsVisible="{Binding Settings.Appearance.IsThemeColorPaletteVisible}">
                 <controls:SettingRow.Action>
-                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
+                    <WrapPanel ItemSpacing="{StaticResource Launcher.Spacing.Sm}" LineSpacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
                         <ItemsControl Width="{StaticResource Launcher.Layout.Appearance.Preview.Width}"
                                       ItemsSource="{Binding Settings.Appearance.ThemeColorPaletteItems}">
                             <ItemsControl.ItemsPanel>
@@ -98,7 +97,7 @@
                                 AutomationProperties.Name="{Binding Shell.I18n[refreshThemeColorPalette]}">
                             <materialIcons:MaterialIcon Kind="Refresh" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
                         </Button>
-                    </StackPanel>
+                    </WrapPanel>
                 </controls:SettingRow.Action>
             </controls:SettingRow>
 
@@ -131,7 +130,6 @@
                                     SelectedValue="{Binding Settings.Editor.Current.BackgroundSource, Mode=TwoWay}"/>
 
             <controls:SettingSelect Title="{Binding Shell.I18n[backgroundFit]}"
-                                    Description="{Binding Shell.I18n[backgroundFitDescription]}"
                                     AutomationName="{Binding Shell.I18n[backgroundFit]}"
                                     ItemsSource="{Binding Settings.Options.BackgroundFit}"
                                     SelectedValue="{Binding Settings.Editor.Current.BackgroundFit, Mode=TwoWay}"/>
@@ -157,7 +155,7 @@
                                  Description="{Binding Shell.I18n[customBackgroundDescription]}"
                                  IsVisible="{Binding Settings.Appearance.IsCustomBackgroundSettingsVisible}">
                 <controls:SettingRow.Action>
-                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
+                    <WrapPanel ItemSpacing="{StaticResource Launcher.Spacing.Sm}" LineSpacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
                         <Button Classes="flat-action"
                                 Command="{Binding Settings.ChooseBackgroundImageCommand}"
                                 AutomationProperties.Name="{Binding Shell.I18n[chooseImage]}">
@@ -182,7 +180,7 @@
                                 <TextBlock Text="{Binding Shell.I18n[clearBackground]}"/>
                             </StackPanel>
                         </Button>
-                    </StackPanel>
+                    </WrapPanel>
                 </controls:SettingRow.Action>
             </controls:SettingRow>
         </StackPanel>

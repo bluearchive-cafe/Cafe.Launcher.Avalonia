@@ -274,17 +274,52 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void MainWindow_GameManageButtons_ExposeFlyoutMenuWithOperationBindings()
+    public void MainWindow_GameManageButtons_ReuseOneExtractedControl()
     {
         var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
-        var manageButtons = document
+        var manageEntries = document
             .Descendants()
-            .Where(element =>
-                element.Name.LocalName == "Button"
-                && HasClass(element, "manage"))
+            .Where(element => element.Name.LocalName == "GameManagementButton")
             .ToArray();
 
-        Assert.Equal(2, manageButtons.Length);
+        // 紧凑布局与「仅按钮」布局各一处，共用同一控件；菜单不再在窗口中各自复制一份。
+        Assert.Equal(2, manageEntries.Length);
+        Assert.DoesNotContain(
+            document.Descendants(),
+            element => element.Name.LocalName == "MenuFlyout");
+    }
+
+    [Fact]
+    public void GameManagementButton_ExposesFlyoutMenuWithOperationBindings()
+    {
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Controls/GameManagementButton.axaml"));
+        var button = document.Descendants()
+            .Single(element => element.Name.LocalName == "Button");
+
+        Assert.True(HasClass(button, "manage"), "Game management entry must keep the manage class.");
+        Assert.True(HasClass(button, "secondary-operation"), "Manage button must be secondary-operation.");
+        Assert.Equal(
+            "{Binding Shell.I18n[gameManagement]}",
+            button.Attributes().Single(attribute => attribute.Name.LocalName == "AutomationProperties.Name").Value);
+        Assert.NotNull(button.Attributes().SingleOrDefault(attribute => attribute.Name.LocalName == "ToolTip.Tip"));
+        Assert.Equal(
+            "{StaticResource Launcher.Icon.Lg}",
+            button.Descendants()
+                .Single(element => element.Name.LocalName == "MaterialIcon" && element.Parent == button)
+                .Attribute("Width")?.Value);
+        Assert.Equal(
+            "Menu",
+            button.Descendants()
+                .Single(element => element.Name.LocalName == "MaterialIcon" && element.Parent == button)
+                .Attribute("Kind")?.Value);
+
+        var flyout = button
+            .Elements()
+            .Single(element => element.Name.LocalName == "Button.Flyout")
+            .Elements()
+            .Single(element => element.Name.LocalName == "MenuFlyout");
+        Assert.Equal("Top", flyout.Attribute("Placement")?.Value);
+
         Dictionary<string, string> expectedMenuItems = new(StringComparer.Ordinal)
         {
             ["{Binding Operations.CheckForGameUpdateCommand}"] = "{Binding Shell.I18n[gameCheckUpdate]}",
@@ -294,46 +329,20 @@ public sealed partial class UiStyleContractTests
             ["{Binding Operations.RequestUninstallCommand}"] = "{Binding Shell.I18n[uninstall]}"
         };
 
-        foreach (var button in manageButtons)
+        var menuItems = flyout
+            .Elements()
+            .Where(element => element.Name.LocalName == "MenuItem")
+            .ToArray();
+        Assert.Equal(expectedMenuItems.Count, menuItems.Length);
+        foreach (var (command, header) in expectedMenuItems)
         {
-            Assert.True(HasClass(button, "secondary-operation"), "Manage button must be secondary-operation.");
+            var menuItem = menuItems.Single(element => element.Attribute("Command")?.Value == command);
+            Assert.Equal(header, menuItem.Attribute("Header")?.Value);
             Assert.Equal(
-                "{Binding Shell.I18n[gameManagement]}",
-                button.Attributes().Single(attribute => attribute.Name.LocalName == "AutomationProperties.Name").Value);
-            Assert.NotNull(button.Attributes().SingleOrDefault(attribute => attribute.Name.LocalName == "ToolTip.Tip"));
-            Assert.Equal(
-                "{StaticResource Launcher.Icon.Lg}",
-                button.Descendants()
-                    .Single(element => element.Name.LocalName == "MaterialIcon" && element.Parent == button)
-                    .Attribute("Width")?.Value);
-            Assert.Equal(
-                "Menu",
-                button.Descendants()
-                    .Single(element => element.Name.LocalName == "MaterialIcon" && element.Parent == button)
-                    .Attribute("Kind")?.Value);
-
-            var flyout = button
-                .Elements()
-                .Single(element => element.Name.LocalName == "Button.Flyout")
-                .Elements()
-                .Single(element => element.Name.LocalName == "MenuFlyout");
-            Assert.Equal("Top", flyout.Attribute("Placement")?.Value);
-
-            var menuItems = flyout
-                .Elements()
-                .Where(element => element.Name.LocalName == "MenuItem")
-                .ToArray();
-            Assert.Equal(expectedMenuItems.Count, menuItems.Length);
-            foreach (var (command, header) in expectedMenuItems)
-            {
-                var menuItem = menuItems.Single(element => element.Attribute("Command")?.Value == command);
-                Assert.Equal(header, menuItem.Attribute("Header")?.Value);
-                Assert.Equal(
-                    header,
-                    menuItem.Attributes().Single(attribute => attribute.Name.LocalName == "AutomationProperties.Name").Value);
-                var icon = menuItem.Descendants().Single(element => element.Name.LocalName == "MaterialIcon");
-                Assert.Equal("{StaticResource Launcher.Icon.Md}", icon.Attribute("Width")?.Value);
-            }
+                header,
+                menuItem.Attributes().Single(attribute => attribute.Name.LocalName == "AutomationProperties.Name").Value);
+            var icon = menuItem.Descendants().Single(element => element.Name.LocalName == "MaterialIcon");
+            Assert.Equal("{StaticResource Launcher.Icon.Md}", icon.Attribute("Width")?.Value);
         }
     }
 

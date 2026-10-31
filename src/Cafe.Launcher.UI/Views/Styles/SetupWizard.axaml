@@ -102,6 +102,7 @@
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="Border.wizard-summary-divider">
+            <Setter Property="UseLayoutRounding" Value="False"/>
         <Setter Property="Height" Value="{StaticResource Launcher.Component.Wizard.Divider.Height}"/>
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Section.Divider}"/>
     </Style>

@@ -3,6 +3,7 @@
         xmlns:vm="using:Cafe.Launcher.UI.ViewModels"
         xmlns:models="using:Cafe.Launcher.UI.Models"
         xmlns:services="using:Cafe.Launcher.UI.Services"
+        xmlns:constants="using:Cafe.Launcher.Core.Constants"
         xmlns:views="using:Cafe.Launcher.UI.Views"
         xmlns:controls="using:Cafe.Launcher.UI.Controls"
         xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
@@ -36,7 +37,7 @@
                Stretch="{Binding Background.BackgroundStretch}"
                RenderOptions.BitmapInterpolationMode="HighQuality"/>
 
-        <Grid RowDefinitions="Auto,*"
+        <Grid x:Name="MainContentLayer" RowDefinitions="Auto,*"
               IsEnabled="{Binding ModalHost.IsBaseLayerInteractive}">
             <Grid x:Name="TitleBar"
                   ColumnDefinitions="*,Auto"
@@ -47,10 +48,16 @@
                 <!-- W3: Right-click context menu on title bar -->
                 <Grid.ContextMenu>
                     <ContextMenu>
-                        <MenuItem Header="{Binding Shell.I18n[showLauncher]}" Command="{Binding WindowChrome.ExecuteRestoreWindowCommand}"/>
-                        <MenuItem Header="{Binding Shell.I18n[settings]}" Command="{Binding WindowChrome.ShowSettingsCommand}"/>
+                        <MenuItem Header="{Binding Shell.I18n[showLauncher]}"
+                                  AutomationProperties.Name="{Binding Shell.I18n[showLauncher]}"
+                                  Command="{Binding WindowChrome.ExecuteRestoreWindowCommand}"/>
+                        <MenuItem Header="{Binding Shell.I18n[settings]}"
+                                  AutomationProperties.Name="{Binding Shell.I18n[settings]}"
+                                  Command="{Binding WindowChrome.ShowSettingsCommand}"/>
                         <Separator/>
-                        <MenuItem Header="{Binding Shell.I18n[close]}" Command="{Binding WindowChrome.CloseCommand}"/>
+                        <MenuItem Header="{Binding Shell.I18n[close]}"
+                                  AutomationProperties.Name="{Binding Shell.I18n[close]}"
+                                  Command="{Binding WindowChrome.CloseCommand}"/>
                     </ContextMenu>
                 </Grid.ContextMenu>
                 <StackPanel Classes="titlebar-brand-row">
@@ -200,6 +207,7 @@
                             <Border Classes="remote-content-card news-card"
                                     IsVisible="{Binding RemoteContent.HasNewsItems}">
                                 <TabControl Classes="news-tabs"
+                                            AutomationProperties.Name="{Binding Shell.I18n[newsCategories]}"
                                             ItemsSource="{Binding RemoteContent.NewsCategories}"
                                             SelectedItem="{Binding RemoteContent.SelectedNewsCategory, Mode=TwoWay}"
                                             TabStripPlacement="Top"
@@ -350,12 +358,12 @@
                     <Grid ColumnDefinitions="*,Auto" RowDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Xl}"
                           IsVisible="{Binding IsStatusDetailHidden, Converter={x:Static BoolConverters.Not}}">
                         <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
-                            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Lg}">
+                            <WrapPanel ItemSpacing="{StaticResource Launcher.Spacing.Lg}" LineSpacing="{StaticResource Launcher.Spacing.Xs}">
                                 <TextBlock Classes="caption" Text="{Binding Shell.DiskSpaceText}"/>
                                 <TextBlock Classes="caption" Text="{Binding Shell.NetworkText}"/>
                                 <TextBlock Classes="caption" Text="{Binding Shell.DownloadSourceText}"/>
                                 <TextBlock Classes="caption" Text="{Binding Shell.VersionText}"/>
-                            </StackPanel>
+                            </WrapPanel>
                             <Border Classes="path-field">
                                 <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}">
                                     <TextBlock Text="{Binding Shell.I18n[path]}" Classes="value" VerticalAlignment="Center"/>
@@ -434,16 +442,16 @@
                             <!-- Progress bar -->
                             <ProgressBar Grid.Row="1" Grid.Column="1" Value="{Binding Operations.ProgressValue}" IsIndeterminate="{Binding Operations.IsProgressIndeterminate}" Minimum="0" Maximum="100" Height="{StaticResource Launcher.Component.Progress.Bar.Height}"/>
                             <!-- Stage | Speed | Size | ETA -->
-                            <Grid Grid.Row="2" Grid.Column="1" ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                            <WrapPanel Grid.Row="2" Grid.Column="1" ItemSpacing="{StaticResource Launcher.Spacing.Md}" LineSpacing="{StaticResource Launcher.Spacing.Xs}">
                                 <TextBlock Text="{Binding Operations.ProgressDetail}" Classes="caption"/>
-                                <TextBlock Grid.Column="2" Text="{Binding Operations.ProgressSpeed}" Classes="caption"
+                                <TextBlock Text="{Binding Operations.ProgressSpeed}" Classes="caption"
                                            IsVisible="{Binding Operations.ProgressSpeed, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                                <TextBlock Grid.Column="3" Text="{Binding Operations.ProgressSize}" Classes="caption"
+                                <TextBlock Text="{Binding Operations.ProgressSize}" Classes="caption"
                                            IsVisible="{Binding Operations.ProgressSize, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                                <TextBlock Grid.Column="4" Text="{Binding Operations.ProgressEstimated}" Classes="caption"
+                                <TextBlock Text="{Binding Operations.ProgressEstimated}" Classes="caption"
                                            Foreground="{DynamicResource Launcher.Color.Primary}"
                                            IsVisible="{Binding Operations.ProgressEstimated, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                            </Grid>
+                            </WrapPanel>
                         </Grid>
                         <StackPanel Grid.Column="1" Classes="operation-actions" Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
                             <Button Classes="flat-action bottom-action secondary-operation" Command="{Binding Operations.PauseResumeCommand}" VerticalAlignment="Center"
@@ -482,61 +490,16 @@
                                     <TextBlock Text="{Binding Shell.I18n[startGame]}"/>
                                 </StackPanel>
                             </Button>
-                            <Button Classes="launcher-control manage secondary-operation"
-                                    IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}"
-                                    ToolTip.Tip="{Binding Shell.I18n[gameManagement]}"
-                                    AutomationProperties.Name="{Binding Shell.I18n[gameManagement]}">
-                                <materialIcons:MaterialIcon Kind="Menu" Width="{StaticResource Launcher.Icon.Lg}" Height="{StaticResource Launcher.Icon.Lg}"/>
-                                <Button.Flyout>
-                                    <MenuFlyout Placement="Top">
-                                        <MenuItem Header="{Binding Shell.I18n[gameCheckUpdate]}"
-                                                  Command="{Binding Operations.CheckForGameUpdateCommand}"
-                                                  AutomationProperties.Name="{Binding Shell.I18n[gameCheckUpdate]}">
-                                            <MenuItem.Icon>
-                                                <materialIcons:MaterialIcon Kind="Update" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
-                                            </MenuItem.Icon>
-                                        </MenuItem>
-                                        <MenuItem Header="{Binding Shell.I18n[gameCreateShortcut]}"
-                                                  Command="{Binding Operations.CreateGameShortcutCommand}"
-                                                  AutomationProperties.Name="{Binding Shell.I18n[gameCreateShortcut]}">
-                                            <MenuItem.Icon>
-                                                <materialIcons:MaterialIcon Kind="Monitor" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
-                                            </MenuItem.Icon>
-                                        </MenuItem>
-                                        <Separator/>
-                                        <MenuItem Header="{Binding Shell.I18n[gameOpenFolder]}"
-                                                  Command="{Binding Operations.OpenGameFolderCommand}"
-                                                  AutomationProperties.Name="{Binding Shell.I18n[gameOpenFolder]}">
-                                            <MenuItem.Icon>
-                                                <materialIcons:MaterialIcon Kind="FolderOpenOutline" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
-                                            </MenuItem.Icon>
-                                        </MenuItem>
-                                        <MenuItem Header="{Binding Shell.I18n[repair]}"
-                                                  Command="{Binding Operations.RequestRepairCommand}"
-                                                  AutomationProperties.Name="{Binding Shell.I18n[repair]}">
-                                            <MenuItem.Icon>
-                                                <materialIcons:MaterialIcon Kind="Tools" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
-                                            </MenuItem.Icon>
-                                        </MenuItem>
-                                        <MenuItem Header="{Binding Shell.I18n[uninstall]}"
-                                                  Command="{Binding Operations.RequestUninstallCommand}"
-                                                  AutomationProperties.Name="{Binding Shell.I18n[uninstall]}">
-                                            <MenuItem.Icon>
-                                                <materialIcons:MaterialIcon Kind="DeleteOutline" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
-                                            </MenuItem.Icon>
-                                        </MenuItem>
-                                    </MenuFlyout>
-                                </Button.Flyout>
-                            </Button>
+                            <controls:GameManagementButton/>
                         </StackPanel>
-                        <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="{StaticResource Launcher.Spacing.Lg}">
+                        <WrapPanel Grid.Row="1" Grid.ColumnSpan="2" HorizontalAlignment="Right" ItemSpacing="{StaticResource Launcher.Spacing.Lg}" LineSpacing="{StaticResource Launcher.Spacing.Xs}">
                             <TextBlock Text="{Binding Operations.GameSessionStateText}" Classes="on-dark-caption"
                                        IsVisible="{Binding Operations.IsGameSessionVisible}"/>
                             <TextBlock Text="{Binding Shell.LaunchCheckText}" Classes="on-dark-caption"/>
                             <TextBlock Text="{Binding Shell.NetworkText}" Classes="on-dark-caption"/>
                             <TextBlock Text="{Binding Shell.DownloadSourceText}" Classes="on-dark-caption"/>
                             <TextBlock Text="{Binding Shell.VersionText}" Classes="on-dark-caption"/>
-                        </StackPanel>
+                        </WrapPanel>
                     </Grid>
                     <!-- Hidden layout (buttons only) -->
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="{StaticResource Launcher.Spacing.Lg}"
@@ -554,52 +517,7 @@
                                 <TextBlock Text="{Binding Shell.I18n[startGame]}"/>
                             </StackPanel>
                         </Button>
-                        <Button Classes="launcher-control manage secondary-operation"
-                                IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}"
-                                ToolTip.Tip="{Binding Shell.I18n[gameManagement]}"
-                                AutomationProperties.Name="{Binding Shell.I18n[gameManagement]}">
-                            <materialIcons:MaterialIcon Kind="Menu" Width="{StaticResource Launcher.Icon.Lg}" Height="{StaticResource Launcher.Icon.Lg}"/>
-                            <Button.Flyout>
-                                <MenuFlyout Placement="Top">
-                                    <MenuItem Header="{Binding Shell.I18n[gameCheckUpdate]}"
-                                              Command="{Binding Operations.CheckForGameUpdateCommand}"
-                                              AutomationProperties.Name="{Binding Shell.I18n[gameCheckUpdate]}">
-                                        <MenuItem.Icon>
-                                            <materialIcons:MaterialIcon Kind="Update" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
-                                        </MenuItem.Icon>
-                                    </MenuItem>
-                                    <MenuItem Header="{Binding Shell.I18n[gameCreateShortcut]}"
-                                              Command="{Binding Operations.CreateGameShortcutCommand}"
-                                              AutomationProperties.Name="{Binding Shell.I18n[gameCreateShortcut]}">
-                                        <MenuItem.Icon>
-                                            <materialIcons:MaterialIcon Kind="Monitor" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
-                                        </MenuItem.Icon>
-                                    </MenuItem>
-                                    <Separator/>
-                                    <MenuItem Header="{Binding Shell.I18n[gameOpenFolder]}"
-                                              Command="{Binding Operations.OpenGameFolderCommand}"
-                                              AutomationProperties.Name="{Binding Shell.I18n[gameOpenFolder]}">
-                                        <MenuItem.Icon>
-                                            <materialIcons:MaterialIcon Kind="FolderOpenOutline" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
-                                        </MenuItem.Icon>
-                                    </MenuItem>
-                                    <MenuItem Header="{Binding Shell.I18n[repair]}"
-                                              Command="{Binding Operations.RequestRepairCommand}"
-                                              AutomationProperties.Name="{Binding Shell.I18n[repair]}">
-                                        <MenuItem.Icon>
-                                            <materialIcons:MaterialIcon Kind="Tools" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
-                                        </MenuItem.Icon>
-                                    </MenuItem>
-                                    <MenuItem Header="{Binding Shell.I18n[uninstall]}"
-                                              Command="{Binding Operations.RequestUninstallCommand}"
-                                              AutomationProperties.Name="{Binding Shell.I18n[uninstall]}">
-                                        <MenuItem.Icon>
-                                            <materialIcons:MaterialIcon Kind="DeleteOutline" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
-                                        </MenuItem.Icon>
-                                    </MenuItem>
-                                </MenuFlyout>
-                            </Button.Flyout>
-                        </Button>
+                        <controls:GameManagementButton/>
                     </StackPanel>
                     </Panel>
                         </Border>
@@ -608,12 +526,14 @@
             </Grid>
         </Grid>
 
-        <views:MainWindowSettingsOverlay/>
-        <views:MainWindowDebugOverlay/>
-        <views:DesignGalleryOverlay/>
-        <views:MainWindowLogViewerOverlay/>
-        <views:MainWindowLogExportOverlay/>
-        <views:MainWindowDialogsOverlay/>
-        <views:MainWindowToastOverlay/>
+        <!-- 覆盖层层级在真正的兄弟节点上声明：样式里的 ZIndex 只排序各 UserControl
+             内部的根 Grid，无法决定顶层覆盖层之间的绘制顺序。 -->
+        <views:MainWindowSettingsOverlay ZIndex="{x:Static constants:LauncherConstants.ZIndexSettings}"/>
+        <views:MainWindowDebugOverlay ZIndex="{x:Static constants:LauncherConstants.ZIndexDialog}"/>
+        <views:DesignGalleryOverlay ZIndex="{x:Static constants:LauncherConstants.ZIndexDialog}"/>
+        <views:MainWindowLogViewerOverlay ZIndex="{x:Static constants:LauncherConstants.ZIndexDialog}"/>
+        <views:MainWindowLogExportOverlay ZIndex="{x:Static constants:LauncherConstants.ZIndexDialog}"/>
+        <views:MainWindowDialogsOverlay ZIndex="{x:Static constants:LauncherConstants.ZIndexDialog}"/>
+        <views:MainWindowToastOverlay ZIndex="{x:Static constants:LauncherConstants.ZIndexToast}"/>
     </Grid>
 </Window>

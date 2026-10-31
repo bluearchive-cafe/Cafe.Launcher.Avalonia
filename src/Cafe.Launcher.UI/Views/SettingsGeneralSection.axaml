@@ -12,19 +12,16 @@
 
             <controls:SettingSelect ShowTopDivider="False"
                                     Title="{Binding Shell.I18n[language]}"
-                                    Description="{Binding Shell.I18n[languageDescription]}"
                                     AutomationName="{Binding Shell.I18n[language]}"
                                     ItemsSource="{Binding Settings.Options.Language}"
                                     SelectedValue="{Binding Settings.Editor.Current.Language, Mode=TwoWay}"/>
 
             <controls:SettingSelect Title="{Binding Shell.I18n[closeBehavior]}"
-                                    Description="{Binding Shell.I18n[closeBehaviorDescription]}"
                                     AutomationName="{Binding Shell.I18n[closeBehavior]}"
                                     ItemsSource="{Binding Settings.Options.CloseBehavior}"
                                     SelectedValue="{Binding Settings.Editor.Current.CloseBehavior, Mode=TwoWay}"/>
 
             <controls:SettingSelect Title="{Binding Shell.I18n[launchBehavior]}"
-                                    Description="{Binding Shell.I18n[launchBehaviorDescription]}"
                                     AutomationName="{Binding Shell.I18n[launchBehavior]}"
                                     ItemsSource="{Binding Settings.Options.AfterLaunchBehavior}"
                                     SelectedValue="{Binding Settings.Editor.Current.AfterLaunchBehavior, Mode=TwoWay}"/>
@@ -35,8 +32,7 @@
                                     ItemsSource="{Binding Settings.Options.MotionMode}"
                                     SelectedValue="{Binding Settings.Editor.Current.MotionMode, Mode=TwoWay}"/>
 
-            <controls:SettingRow Title="{Binding Shell.I18n[rememberWindowPositionAndSize]}"
-                                 Description="{Binding Shell.I18n[rememberWindowPositionAndSizeDescription]}">
+            <controls:SettingRow Title="{Binding Shell.I18n[rememberWindowPositionAndSize]}">
                 <controls:SettingRow.Action>
                     <ToggleSwitch Classes="setting-toggle"
                                   AutomationProperties.Name="{Binding Shell.I18n[rememberWindowPositionAndSize]}"

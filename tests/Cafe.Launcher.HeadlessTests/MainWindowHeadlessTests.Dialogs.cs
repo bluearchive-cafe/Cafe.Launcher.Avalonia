@@ -8,9 +8,11 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Cafe.Launcher.UI.Constants;
+using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.UI.Controls;
 using Cafe.Launcher.UI.Helpers;
 using Cafe.Launcher.UI.Models;
+using Cafe.Launcher.UI.Views;
 using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Core.Services.Update;
 using Cafe.Launcher.Core.Models;
@@ -89,9 +91,9 @@ public sealed partial class MainWindowHeadlessTests
                 && ReferenceEquals(button.Command, context.ViewModel.Dialogs.ConfirmUpdateAvailableCommand));
 
         Assert.True(notice.IsEffectivelyVisible);
-        // 左侧 3px 强调边要直上直下：起始两角平角、结束两角 8（Radius.Sm），
-        // 断言运行时几何而不是 XAML 文本——样式没挂上时这里同样会红。
-        Assert.Equal(new CornerRadius(0, 8, 8, 0), notice.CornerRadius);
+        // 提示依靠图标、文字和背景表达；取消额外左边线后使用完整的共享圆角。
+        Assert.Equal(new CornerRadius(8), notice.CornerRadius);
+        Assert.Equal(new Thickness(0), notice.BorderThickness);
         Assert.Equal(
             context.ViewModel.Shell.I18n[LocalizationKeys.LauncherUpdateOpenReleasePage],
             AutomationProperties.GetName(primary));
@@ -462,6 +464,47 @@ public sealed partial class MainWindowHeadlessTests
         context.ViewModel.Dialogs.Gallery.CloseCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
         Assert.False(context.ViewModel.Dialogs.Gallery.IsVisible);
+    }
+
+    [AvaloniaFact]
+    public void OverlayLayers_DeclareZIndexOnSiblingElements()
+    {
+        using var context = CreateContext();
+        context.Window.Show();
+        context.ViewModel.Dialogs.ShowSetupWizard();
+        context.ViewModel.Dialogs.SetupWizardExitConfirm.Show();
+        context.ViewModel.Dialogs.ShowCriticalError("boom", "details");
+        Dispatcher.UIThread.RunJobs();
+
+        // 顶层叠层：设置 < 对话框 < Toast，且必须是同一父容器下的真实兄弟节点。
+        var settings = context.Window.GetVisualDescendants().OfType<MainWindowSettingsOverlay>().Single();
+        var dialogs = context.Window.GetVisualDescendants().OfType<MainWindowDialogsOverlay>().Single();
+        var toast = context.Window.GetVisualDescendants().OfType<MainWindowToastOverlay>().Single();
+        var shellRoot = dialogs.GetVisualParent();
+
+        Assert.NotNull(shellRoot);
+        Assert.Same(shellRoot, settings.GetVisualParent());
+        Assert.Same(shellRoot, toast.GetVisualParent());
+        Assert.Equal(LauncherConstants.ZIndexSettings, settings.ZIndex);
+        Assert.Equal(LauncherConstants.ZIndexDialog, dialogs.ZIndex);
+        Assert.Equal(LauncherConstants.ZIndexToast, toast.ZIndex);
+
+        // 对话框宿主内部：错误层与向导共用父容器，向导的退出确认再叠在向导之上。
+        var wizard = context.Window.GetVisualDescendants().OfType<SetupWizardOverlay>().Single();
+        var errorLayer = context.Window.GetVisualDescendants().OfType<Grid>()
+            .Single(grid => grid.Name == "ErrorDialogLayer");
+        var exitConfirm = context.Window.GetVisualDescendants().OfType<Control>()
+            .Single(control => control.Name == "SetupWizardExitConfirmLayer");
+        var dialogsRoot = wizard.GetVisualParent();
+
+        Assert.NotNull(dialogsRoot);
+        Assert.Same(dialogsRoot, errorLayer.GetVisualParent());
+        Assert.Same(dialogsRoot, exitConfirm.GetVisualParent());
+        Assert.True(wizard.IsEffectivelyVisible);
+        Assert.True(errorLayer.IsEffectivelyVisible);
+        Assert.Equal(LauncherConstants.ZIndexDialog, errorLayer.ZIndex);
+        Assert.Equal(LauncherConstants.ZIndexSetupWizard, wizard.ZIndex);
+        Assert.Equal(LauncherConstants.ZIndexSetupWizardConfirmation, exitConfirm.ZIndex);
     }
 
     private static Button[] ShowResourcePanel(TestContext context)
