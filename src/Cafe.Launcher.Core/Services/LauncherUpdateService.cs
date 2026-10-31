@@ -4,7 +4,6 @@ using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Core.Helpers;
@@ -21,7 +20,7 @@ namespace Cafe.Launcher.Core.Services;
 /// 发行通道与仓库地址来自注入的 <see cref="LauncherProductProfile"/>：
 /// 它们跟随的是「谁在发行这个启动器」，不是哪款游戏。
 /// </remarks>
-internal sealed partial class LauncherUpdateService : ILauncherUpdateService
+internal sealed class LauncherUpdateService : ILauncherUpdateService
 {
     private static readonly JsonSerializerOptions JsonOptions = JsonDefaults.Strict;
     private readonly LauncherProductProfile productProfile;
@@ -77,13 +76,13 @@ internal sealed partial class LauncherUpdateService : ILauncherUpdateService
                 return LauncherUpdateCheckResult.Failed(message: "No release metadata was returned.");
             }
 
-            if (!TryParseSemanticVersion(currentVersion, out _))
+            if (!LauncherVersionParser.TryParse(currentVersion, out _))
             {
                 return LauncherUpdateCheckResult.Failed(message: "The current launcher version is invalid.");
             }
 
             var validReleases = releases
-                .Where(release => TryParseSemanticVersion(release.Version, out _))
+                .Where(release => LauncherVersionParser.TryParse(release.Version, out _))
                 .ToList();
             if (validReleases.Count == 0)
             {
@@ -397,52 +396,14 @@ internal sealed partial class LauncherUpdateService : ILauncherUpdateService
 
     internal static bool IsNewerVersion(string latestVersion, string currentVersion)
     {
-        if (!TryParseSemanticVersion(latestVersion, out var latest)
-            || !TryParseSemanticVersion(currentVersion, out var current))
+        if (!LauncherVersionParser.TryParse(latestVersion, out var latest)
+            || !LauncherVersionParser.TryParse(currentVersion, out var current))
         {
             return false;
         }
 
-        var coreComparison = VersionComparer.Compare(latest.CoreVersion, current.CoreVersion);
-        if (coreComparison != 0)
-        {
-            return coreComparison > 0;
-        }
-
-        // Same core version: check prerelease status.
-        if (latest.IsPrerelease != current.IsPrerelease)
-        {
-            // Stable is newer than prerelease; prerelease is not newer than stable.
-            return !latest.IsPrerelease && current.IsPrerelease;
-        }
-
-        // Both stable — equal.
-        if (!latest.IsPrerelease)
-        {
-            return false;
-        }
-
-        // Both prerelease — compare prerelease labels per SemVer 2.0.0 §11.
-        return VersionComparer.ComparePrerelease(latest.PrereleaseLabel, current.PrereleaseLabel) > 0;
+        return LauncherVersionParser.Compare(latest, current) > 0;
     }
-
-    private static bool TryParseSemanticVersion(string value, out SemanticVersion version)
-    {
-        var match = SemanticVersionRegex().Match(value);
-        if (!match.Success)
-        {
-            version = default;
-            return false;
-        }
-
-        version = new SemanticVersion(
-            $"{match.Groups[1].Value}.{match.Groups[2].Value}.{match.Groups[3].Value}",
-            match.Groups[4].Success,
-            match.Groups[4].Success ? match.Groups[4].Value : "");
-        return true;
-    }
-
-    private readonly record struct SemanticVersion(string CoreVersion, bool IsPrerelease, string PrereleaseLabel);
 
     private sealed class GitHubRelease
     {
@@ -476,11 +437,6 @@ internal sealed partial class LauncherUpdateService : ILauncherUpdateService
         [JsonPropertyName("state")]
         public string State { get; set; } = "";
     }
-
-    [GeneratedRegex(
-        @"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$",
-        RegexOptions.CultureInvariant)]
-    private static partial Regex SemanticVersionRegex();
 }
 
 public sealed class LauncherUpdateCheckResult
