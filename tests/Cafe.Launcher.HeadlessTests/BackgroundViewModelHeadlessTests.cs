@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
@@ -27,6 +28,40 @@ namespace Cafe.Launcher.HeadlessTests;
 /// </summary>
 public sealed class BackgroundViewModelHeadlessTests
 {
+    [AvaloniaFact]
+    public async Task UpdateBackgroundImageAsync_WithProductionComposition_UsesWindowSizeAndReloadsAfterResize()
+    {
+        using var context = HeadlessTestHost.CreateContext();
+        var metrics = context.Provider.GetRequiredService<WindowMetricsService>();
+        var window = new Window { Width = 1300, Height = 700 };
+        var path = Path.Combine(context.Directory.Path, "window-sized-wallpaper.png");
+        HeadlessTestHost.WriteSolidPng(path, Brushes.DarkSlateBlue, 3200, 1800);
+        try
+        {
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            metrics.Attach(window);
+            await context.ViewModel.UpdateBackgroundImageAsync(
+                CreateCustomBackgroundSettings(path), snapshot: null, CancellationToken.None);
+            var initial = Assert.IsType<Bitmap>(context.ViewModel.BackgroundImageSource);
+            Assert.Equal(BackgroundImageDecoder.GetTargetBox(metrics.GetPhysicalClientSize()).Width, initial.PixelSize.Width);
+
+            window.Width = 2400;
+            window.Height = 1300;
+            Dispatcher.UIThread.RunJobs();
+            await HeadlessTestHost.WaitUntilAsync(
+                () => !ReferenceEquals(initial, context.ViewModel.BackgroundImageSource),
+                TimeSpan.FromSeconds(5), "The production background should reload after its window grows.");
+            var resized = Assert.IsType<Bitmap>(context.ViewModel.BackgroundImageSource);
+            Assert.Equal(BackgroundImageDecoder.GetTargetBox(metrics.GetPhysicalClientSize()).Width, resized.PixelSize.Width);
+        }
+        finally
+        {
+            metrics.Detach(window);
+            window.Close();
+        }
+    }
+
     [AvaloniaFact]
     public async Task UpdateBackgroundImageAsync_WhenMetricsProvideSmallerTarget_DecodesToInjectedTarget()
     {

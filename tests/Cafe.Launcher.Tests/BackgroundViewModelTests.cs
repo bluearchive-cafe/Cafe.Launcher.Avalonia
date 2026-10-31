@@ -29,6 +29,28 @@ public sealed class BackgroundViewModelTests : IDisposable
     }
 
     [Fact]
+    public void Constructor_WithWindowMetrics_SubscribesUntilDisposed()
+    {
+        using var cache = CreateCache(_ => PngBytes);
+        var metrics = new SubscriptionWindowMetrics();
+        using var viewModel = new BackgroundViewModel(cache, new LocalDiagnostics(), _ => { }, metrics);
+        Assert.Equal(1, metrics.Subscriptions);
+        viewModel.Dispose();
+        Assert.Equal(0, metrics.Subscriptions);
+    }
+
+    private sealed class SubscriptionWindowMetrics : IWindowMetricsService
+    {
+        public int Subscriptions { get; private set; }
+        public PixelSize GetPhysicalClientSize() => new(1300, 754);
+        public event Action? PhysicalSizeChanged
+        {
+            add => Subscriptions++;
+            remove => Subscriptions--;
+        }
+    }
+
+    [Fact]
     public async Task VideoBackground_WhenSelected_UsesStaticFallbackAndClearsOnImageSelection()
     {
         var path = Path.Combine(tempDir, "background.MP4");
