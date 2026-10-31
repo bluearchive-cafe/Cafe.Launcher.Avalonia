@@ -3,6 +3,8 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Reflection;
+using System.Threading.Tasks;
+using Cafe.Launcher.Core.Models;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -38,6 +40,15 @@ internal partial class MainWindow
 
         prototypeVideo = new VideoBackgroundPrototypeControl(library, video, output);
         prototypeVideo.DiagnosticCommand += HandlePrototypeDiagnosticCommand;
+        if (prototypeVideo.UsesProduction)
+        {
+            prototypeVideo.SampleNativeResources = () => videoBackground?.NativeResourceCounts ?? (0, 0, 0);
+            prototypeVideo.SampleFrameCount = () => videoBackground?.DiagnosticFrames ?? 0;
+            prototypeVideo.SamplePlayerProperty = name => videoBackground?.ReadDiagnosticProperty(name) ?? "unavailable";
+            Closed += PrototypeClosed;
+            _ = ApplyProductionProbeBackgroundAsync(released: false);
+            return;
+        }
         // Above the two wallpaper images, below every real shell surface/overlay.
         ShellRoot.Children.Insert(3, prototypeVideo);
         if (Environment.GetEnvironmentVariable("CAFE_VIDEO_PROTOTYPE_CACHE_SHELL") == "1")
@@ -64,7 +75,7 @@ internal partial class MainWindow
     }
 
     [ExcludeFromCodeCoverage(Justification = "Debug-only GPU performance probe; driven by the opt-in process harness.")]
-    private void HandlePrototypeDiagnosticCommand(string command)
+    private async Task HandlePrototypeDiagnosticCommand(string command)
     {
         if (prototypeVideo is null) return;
         switch (command)
@@ -82,20 +93,44 @@ internal partial class MainWindow
                 GC.WaitForPendingFinalizers();
                 GC.Collect(2, GCCollectionMode.Forced, true, true);
                 break;
+            case "save":
+                if (configuredViewModel is { } saving)
+                    await saving.Settings.SaveSettingsCommand.ExecuteAsync(null);
+                break;
+            case "discard":
+                if (configuredViewModel is { } discarding)
+                    await discarding.Settings.DiscardChangesAsync();
+                break;
             case "release":
                 prototypeVideo.Phase = "released";
                 prototypeVideo.SetPaused(true);
-                ShellRoot.Children.Remove(prototypeVideo);
+                if (prototypeVideo.UsesProduction) await ApplyProductionProbeBackgroundAsync(released: true);
+                else if (prototypeVideo.ReusesSurface) prototypeVideo.SetMediaReleased(true);
+                else ShellRoot.Children.Remove(prototypeVideo);
                 break;
             case "recreate":
                 prototypeVideo.Phase = "recreated";
-                if (!ShellRoot.Children.Contains(prototypeVideo)) ShellRoot.Children.Insert(3, prototypeVideo);
+                if (prototypeVideo.UsesProduction) await ApplyProductionProbeBackgroundAsync(released: false);
+                else if (prototypeVideo.ReusesSurface) prototypeVideo.SetMediaReleased(false);
+                else if (!ShellRoot.Children.Contains(prototypeVideo)) ShellRoot.Children.Insert(3, prototypeVideo);
                 prototypeVideo.SetPaused(false);
                 break;
             case "close":
                 Close();
                 break;
         }
+    }
+
+    [ExcludeFromCodeCoverage(Justification = "Opt-in real-window production video lifecycle probe.")]
+    private async Task ApplyProductionProbeBackgroundAsync(bool released)
+    {
+        if (configuredViewModel is not { } vm) return;
+        vm.IsMotionReduced = false;
+        var settings = vm.Settings.Editor.Current;
+        settings.MotionMode = MotionModes.Full;
+        settings.BackgroundSource = released ? BackgroundSources.Bundled : BackgroundSources.Custom;
+        settings.CustomBackgroundPath = released ? "" : Environment.GetEnvironmentVariable("CAFE_VIDEO_PROTOTYPE_FILE") ?? "";
+        await vm.Settings.PendingAppearancePreview;
     }
 
     [ExcludeFromCodeCoverage(Justification = "Debug-only GPU experiment; absent from Release and exercised by real-window validation.")]

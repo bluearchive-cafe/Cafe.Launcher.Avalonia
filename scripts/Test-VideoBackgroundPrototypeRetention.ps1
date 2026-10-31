@@ -1,18 +1,26 @@
 param(
     [string]$OutputDirectory,
-    [ValidateRange(4, 30)] [int]$Cycles = 8,
+    [string]$LibMpvPath,
+    [ValidateSet('Video', 'Blank', 'Finish', 'ReuseSurface', 'Production')]
+    [string]$ProbeMode = 'Video',
+    [ValidateRange(6, 30)] [int]$Cycles = 8,
     [ValidateRange(0, 1800)] [int]$SteadySeconds = 180,
     [double]$MaxRetainedGrowthMB = 32,
     [double]$MaxRetainedGpuGrowthMB = 32,
     [ValidateSet('Default', 'DirectComposition')]
     [string]$CompositionMode = 'Default',
     [switch]$CacheShell = $true,
+    [switch]$ExerciseSettings,
+    [string]$HeapDumpToolPath,
+    [switch]$ContinueAfterMemoryFailure,
     [switch]$SkipBuild
 )
 
 $ErrorActionPreference = 'Stop'
 $repository = Split-Path $PSScriptRoot -Parent
+if ($ExerciseSettings -and $ProbeMode -ne 'Production') { throw 'ExerciseSettings requires Production mode.' }
 if (-not $OutputDirectory) { $OutputDirectory = Join-Path $repository '.artifacts/video-background/retention' }
+if (-not $LibMpvPath) { $LibMpvPath = Join-Path $repository '.artifacts/native/libmpv/win-x64/libmpv-2.dll' }
 $OutputDirectory = [IO.Path]::GetFullPath($OutputDirectory)
 $sampleFile = Join-Path $OutputDirectory 'samples.csv'
 $commandFile = Join-Path $OutputDirectory 'samples.command'
@@ -30,11 +38,11 @@ function Send-ProbeCommand([string]$Command) {
     $script:sequence++
     $message = "$script:sequence|$Command"
     [IO.File]::WriteAllText($commandFile, $message)
-    $deadline = [DateTime]::UtcNow.AddSeconds(15)
+    $deadline = [DateTime]::UtcNow.AddSeconds(60)
     do {
         if ($prototypeProcess.HasExited) {
             if ($Command -eq 'close' -and $prototypeProcess.ExitCode -eq 0) { return }
-            throw "Prototype exited while executing $Command."
+            throw "Prototype exited while executing $Command (exit code $($prototypeProcess.ExitCode))."
         }
         if ((Test-Path -LiteralPath $ackFile) -and (Get-Content -LiteralPath $ackFile -Raw).Trim() -eq $message) { return }
         Start-Sleep -Milliseconds 200
@@ -57,9 +65,11 @@ function Wait-ProbeSeconds([double]$Seconds) {
 try {
     & "$PSScriptRoot/Start-VideoBackgroundPrototype.ps1" -OutputDirectory $OutputDirectory `
         -VideoPath (Join-Path $repository '.artifacts/video-background/test-1080p30.mp4') `
-        -LibMpvPath (Join-Path $repository '.artifacts/video-background/native/libmpv-2.dll') `
-        -SkipBuild:$SkipBuild -CacheShell:$CacheShell -CompositionMode $CompositionMode
+        -LibMpvPath $LibMpvPath `
+        -SkipBuild:$SkipBuild -CacheShell:$CacheShell -CompositionMode $CompositionMode -ProbeMode $ProbeMode
     $prototypeProcess = Get-Process -Id ([int](Get-Content (Join-Path $OutputDirectory 'process-id.txt')))
+    # 保留进程句柄，确保这个非子进程的 ExitCode 在退出后仍可读取。
+    $null = $prototypeProcess.Handle
     $readyDeadline = [DateTime]::UtcNow.AddSeconds(30)
     while (-not (Test-Path -LiteralPath $sampleFile) -or @(Import-Csv -LiteralPath $sampleFile).Count -lt 2) {
         if ($prototypeProcess.HasExited -or [DateTime]::UtcNow -gt $readyDeadline) { throw 'Prototype did not become ready.' }
@@ -69,8 +79,21 @@ try {
     $released = [Collections.Generic.List[object]]::new()
     for ($cycle = 1; $cycle -le $Cycles; $cycle++) {
         if ($cycle -gt 1) { Send-ProbeCommand 'recreate' }
-        $null = Wait-ProbeSeconds 4
+        $active = Wait-ProbeSeconds 4
+        if ($ProbeMode -ne 'Blank' -and
+            ([int]$active.player_live -ne 1 -or [int]$active.renderer_live -ne 1 -or [double]$active.frames_per_second -le 0)) {
+            throw "Cycle $cycle did not render active video."
+        }
+        if ($ExerciseSettings -and $cycle % 2 -eq 0) { Send-ProbeCommand 'save' }
         Send-ProbeCommand 'release'
+        if ($ExerciseSettings) {
+            if ($cycle % 2 -eq 0) {
+                Send-ProbeCommand 'discard'
+                $null = Wait-ProbeSeconds 4
+                Send-ProbeCommand 'release'
+            }
+            else { Send-ProbeCommand 'save' }
+        }
         $null = Wait-ProbeSeconds 2
         Send-ProbeCommand 'gc'
         $row = Wait-ProbeSeconds 2
@@ -79,6 +102,7 @@ try {
         }
         $gpu = @(Get-CimInstance Win32_PerfFormattedData_GPUPerformanceCounters_GPUProcessMemory |
             Where-Object Name -like "pid_$($prototypeProcess.Id)_*")
+        if ($gpu.Count -eq 0) { throw 'GPU process-memory counters are unavailable; retention is unverified.' }
         $entry = [pscustomobject]@{
             cycle = $cycle
             private_mb = [double]$row.private_mb
@@ -93,6 +117,13 @@ try {
         $released.Add($entry)
         $released | Export-Csv -LiteralPath (Join-Path $OutputDirectory 'released.csv') -NoTypeInformation -Encoding utf8
         Write-Host ($entry | ConvertTo-Json -Compress)
+        if ($HeapDumpToolPath -and ($cycle -eq 2 -or $cycle -eq $Cycles)) {
+            $dumpPath = Join-Path $OutputDirectory "cycle-$cycle.gcdump"
+            & $HeapDumpToolPath collect --process-id $prototypeProcess.Id --output $dumpPath --timeout 30
+            if ($LASTEXITCODE -ne 0) { throw 'GC dump collection failed.' }
+            & $HeapDumpToolPath report $dumpPath | Set-Content -LiteralPath "$dumpPath.txt" -Encoding utf8
+            if ($LASTEXITCODE -ne 0) { throw 'GC dump report failed.' }
+        }
     }
     # Discard two allocator/device warm-up cycles; compare windows, not individual noisy endpoints.
     $stable = @($released | Select-Object -Skip 2)
@@ -101,16 +132,22 @@ try {
     $gpuGrowth = ($stable | Select-Object -Last 2 | Measure-Object gpu_dedicated_mb -Average).Average `
         - ($stable | Select-Object -First 2 | Measure-Object gpu_dedicated_mb -Average).Average
     $result = [ordered]@{
+        ProbeMode = $ProbeMode
+        ExerciseSettings = [bool]$ExerciseSettings
+        RuntimeSha256 = (Get-FileHash -LiteralPath $LibMpvPath -Algorithm SHA256).Hash
         Cycles = $Cycles
         RetainedPrivateGrowthMB = [Math]::Round($growth, 3)
         MaxRetainedGrowthMB = $MaxRetainedGrowthMB
         RetainedGpuGrowthMB = [Math]::Round($gpuGrowth, 3)
         MaxRetainedGpuGrowthMB = $MaxRetainedGpuGrowthMB
         NativeResourcesReleasedEveryCycle = $true
-        Passed = $growth -le $MaxRetainedGrowthMB -and $gpuGrowth -le $MaxRetainedGpuGrowthMB
+        MemoryBoundsPassed = $growth -le $MaxRetainedGrowthMB -and $gpuGrowth -le $MaxRetainedGpuGrowthMB
+        Passed = $false
     }
     $result | ConvertTo-Json | Tee-Object -FilePath (Join-Path $OutputDirectory 'retention-result.json')
-    if (-not $result.Passed) { throw 'Repeated release/recreate retained too much private memory.' }
+    if (-not $result.MemoryBoundsPassed -and -not $ContinueAfterMemoryFailure) {
+        throw 'Repeated release/recreate retained too much private or GPU memory.'
+    }
     if ($SteadySeconds -gt 0) {
         Send-ProbeCommand 'recreate'
         $null = Wait-ProbeSeconds 10
@@ -130,6 +167,10 @@ try {
     Send-ProbeCommand 'close'
     if (-not $prototypeProcess.WaitForExit(15000)) { throw 'Prototype failed to close cleanly.' }
     if ($prototypeProcess.ExitCode -ne 0) { throw "Prototype exited with code $($prototypeProcess.ExitCode)." }
+    $result.ExitCode = $prototypeProcess.ExitCode
+    $result.Passed = $result.MemoryBoundsPassed
+    $result | ConvertTo-Json | Tee-Object -FilePath (Join-Path $OutputDirectory 'retention-result.json')
+    if (-not $result.Passed) { throw 'Memory bounds failed; post-failure observations were recorded without relaxing the gate.' }
 }
 finally {
     if ($prototypeProcess) {

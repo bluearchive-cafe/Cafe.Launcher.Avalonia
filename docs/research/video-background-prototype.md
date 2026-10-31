@@ -1,6 +1,30 @@
 # libmpv 视频背景原型
 
-日期：2026-10-31。本文记录 Windows x64 / Avalonia 12.1.4 / Debug 原型的历史实验。后续已将生产实现接入普通设置与 Release；当前产品行为见 [领域契约](../../CONTEXT.md#设置与操作)，运行库恢复和分发见 [开发指南](../DEVELOPMENT.md)。下面的「不分发运行库」仅指原型阶段；生产控件位于 `Controls/VideoBackground`，不使用原型 CSV 采样器。
+日期：2026-10-31，2026-11-01 补充生命周期对照。本文记录 Windows x64 / Avalonia 12.1.4 / Debug 实验。生产实现已接入普通设置与 Release；当前产品行为见 [领域契约](../../CONTEXT.md#设置与操作)，运行库恢复和分发见 [开发指南](../DEVELOPMENT.md)。下面的「不分发运行库」仅指原型阶段；生产控件位于 `Controls/VideoBackground`，正常启动不创建 CSV 采样器。显式 `Production` 测量模式由独立采样器观察真实生产控件，不另外创建原型 GL 控件。
+
+## 2026-11-01 生命周期对照
+
+使用当前随包 LGPL DLL（SHA-256 `91f6d66c21dbe19189a085055d393f8839048467fd314460908a9642a58ba7cb`）、既有 1080p30 测试片段和 Windows 默认合成。丢弃前两轮热身，以热身后最前两轮和最后两轮的均值比较；下表只表示指定样本窗口的增长，不能推导所有显卡、尺寸或长期上界。
+
+| 模式 | 轮数 | 释放后私有内存增长 | 释放后 GPU 专用内存增长 | 结果 |
+| --- | --- | --- | --- | --- |
+| 旧 GL 分离／重建，Video | 12 | -21.55 MB | 96.879 MB | GPU 门槛失败 |
+| 不创建 libmpv，Blank | 8 | -5.5 MB | 46.5 MB | GPU 门槛失败 |
+| 分离前同步 GPU，Finish | 8 | 17.4 MB | 43.123 MB | GPU 门槛失败 |
+| 生产控件复用承载面，Production | 12 | 30.5 MB | 0.195 MB | 循环门槛通过，随后 60 秒播放并正常退出 |
+| 真实设置保存／放弃，Production + ExerciseSettings | 8 | 64.65 MB | 0.088 MB | 私有内存门槛失败；不能报告整体通过 |
+| 同一路径，附加托管堆快照 | 8 | -7.65 MB | 0.082 MB | 本轮门槛通过；快照干预限制可比性 |
+| 同一路径，无堆快照独立复测 | 12 | 54.0 MB | 1.088 MB | 私有内存门槛再次失败 |
+
+前三个对照说明增长不要求 libmpv 存活，GPU 同步也未消除它；这缩小了调查范围，但不证明 Avalonia 或驱动中的具体根因。生产实现改为每窗口复用一个 GL 承载面，切回静态背景时在当前 GL 上释放 libmpv、清为透明并停止主动帧请求，窗口关闭时才分离承载面。代价是保留窗口级 GL 资源及驱动高水位缓存；生产复测中的释放后 GPU 读数约 184–199 MB（全进程），并非零。
+
+生产循环后的 60 秒播放约 30 fps、解码丢帧 0；托管存活内存从 33.57 MB 到 26.36 MB，私有内存从 612.1 MB 到 644.3 MB。每轮和最终释放后，播放器、mpv render context、参数 arena 均为 0，进程退出码为 0。设置保存／放弃对照通过真实草稿、保存命令和放弃路径运行，仍出现私有内存增长；它与 GPU 斜率改善分开判断，当前调查状态仅维护在 [审计台账](../../CODEBASE_AUDIT.md)。
+
+堆快照复测在第 2／8 轮额外采集 `.gcdump`，报告托管堆为 53,772,427／48,499,101 bytes（51.28／46.25 MB），对象数 388,017／366,120。它没有显示净增长，但快照采集会触发 GC，且 `dotnet-gcdump` 10.0.750501 提示当前 .NET 10 不支持 .NET 11 的无损缓冲，大堆可能丢失事件，不能据此证明所有对象都没有保留。工具仅安装在忽略的 `.artifacts/diagnostic-tools`，没有新增项目依赖。实验内的 MB 按 1024² bytes 换算；工具行为见 [Microsoft dotnet-gcdump 文档](https://learn.microsoft.com/en-us/dotnet/core/diagnostics/dotnet-gcdump)。
+
+重现命令见开发指南。原始数据在本地忽略目录 `.artifacts/video-background/retention-pinned-current`、`retention-pinned-blank`、`retention-pinned-finish`、`retention-production-current`、`retention-production-settings`、`retention-production-settings-heap` 和 `retention-production-settings-repeat`。采样器只在 Debug 显式启用；生产帧计数和资源读取诊断不进入 Release。Production 模式只接入真实控件的帧计数、mpv 属性和拥有资源计数，原型专用的渲染耗时／FBO 尺寸列保持 0，不应拿来比较渲染性能。窗口截图分别返回 `FrameArrived timed out` 和 `window capture timed out`，重绑后仍失败，因此本次没有像素截图验收结论。Headless 验证承载面复用、静态回退可见性和关闭分离，不替代 GPU 像素验证。
+
+相关上游 [OpenGlControlBase 12.0.1 内存报告](https://github.com/AvaloniaUI/Avalonia/issues/21259) 也有无实际绘制的复现，但场景与版本不同，不能据此断言本项目是同一根因。
 
 ## 验证问题
 

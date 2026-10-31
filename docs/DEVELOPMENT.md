@@ -4,6 +4,8 @@
 
 独立 Debug 实验入口仍保留：启动、采样、快捷键及历史验证边界见 [libmpv 视频背景原型](research/video-background-prototype.md)。该入口显式启用并使用隔离数据根。
 
+生产视频生命周期复测可运行 `pwsh ./scripts/Test-VideoBackgroundPrototypeRetention.ps1 -ProbeMode Production -ExerciseSettings -Cycles 8 -SteadySeconds 60`。默认使用随包固定的 LGPL DLL；脚本核对生产副本与指定 DLL 的 SHA-256。`Video`／`Blank`／`Finish`／`ReuseSurface` 为旧分离、无 libmpv、GPU 同步和承载面复用对照；最少六轮以保留两个互不重叠的热身后采样窗口。完整通过要求内存门槛、每轮媒体资源归零和正常退出；缺少 GPU 计数器不能算通过。`-ContinueAfterMemoryFailure` 只保留失败后的观测，最终仍返回失败。可显式传入 `-HeapDumpToolPath`，在第二轮和最后一轮收集本地 GC 堆快照；工具需另行准备，脚本不自动安装。
+
 本文件维护开发命令、验证和交付流程。编码规则见 [PROJECT_CONVENTIONS.md](../PROJECT_CONVENTIONS.md)，代理入口见 [AGENTS.md](../AGENTS.md)。
 
 ## 环境与启动

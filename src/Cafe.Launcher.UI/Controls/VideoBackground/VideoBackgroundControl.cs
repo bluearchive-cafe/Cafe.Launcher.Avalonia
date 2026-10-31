@@ -59,6 +59,14 @@ internal sealed class VideoBackgroundControl : OpenGlControlBase
     internal Stretch Stretch { get => GetValue(StretchProperty); set => SetValue(StretchProperty, value); }
     internal Color FillColor { get => GetValue(FillColorProperty); set => SetValue(FillColorProperty, value); }
 
+#if DEBUG
+    internal (int Players, int Renderers, int Allocations) NativeResourceCounts =>
+        (player == 0 ? 0 : 1, renderer == 0 ? 0 : 1, native?.AllocationCount ?? 0);
+    internal long DiagnosticFrames { get; private set; }
+    internal string ReadDiagnosticProperty(string name) =>
+        native is not null && player != 0 ? native.Read(player, name) : "unavailable";
+#endif
+
     /// <summary>首帧进入合成路径后通知窗口隐藏被完全遮挡的静态壁纸。</summary>
     internal event Action? FirstFrameReady;
     /// <summary>在 UI 调度中报告当前文件的播放失败；调用方切回静态背景。</summary>
@@ -91,7 +99,16 @@ internal sealed class VideoBackgroundControl : OpenGlControlBase
 
     protected override void OnOpenGlRender(GlInterface gl, int fb)
     {
-        if (failed || string.IsNullOrWhiteSpace(Source)) return;
+        if (string.IsNullOrWhiteSpace(Source))
+        {
+            // 保留窗口的 GL 承载面，释放媒体资源并交回透明帧。反复分离承载面会在
+            // 当前 Avalonia/驱动组合中逐轮保留 GPU 内存，纯 GL 对照也能复现。
+            ReleasePlayer();
+            gl.ClearColor(0, 0, 0, 0);
+            gl.Clear(GlConsts.GL_COLOR_BUFFER_BIT);
+            return;
+        }
+        if (failed) return;
         try
         {
             if (native is null) InitializePlayer(gl);
@@ -104,6 +121,9 @@ internal sealed class VideoBackgroundControl : OpenGlControlBase
             var size = GetFramebufferSize(Bounds.Size, TopLevel.GetTopLevel(this)?.RenderScaling ?? 1);
             Marshal.StructureToPtr(new MpvNative.Framebuffer(fb, size.Width, size.Height), framebuffer, false);
             MpvNative.Check(native.Draw(renderer, renderParameters), "render");
+#if DEBUG
+            DiagnosticFrames++;
+#endif
             if (!firstFrame && videoSizeKnown)
             {
                 firstFrame = true;
