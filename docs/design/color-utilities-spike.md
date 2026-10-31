@@ -61,7 +61,7 @@
 
 结论：**60 行断言 56 PASS / 4 FAIL；全部 FAIL 为 light on-container 4 角色，且为参考表选值与上游映射差异，非 HCT 漂移**：
 
-- 当前上游 [color_spec_2021.ts](https://github.com/material-foundation/material-color-utilities/blob/main/typescript/dynamiccolor/color_spec_2021.ts)（main 分支）`onPrimaryContainer` 为 `return s.isDark ? 90 : 30;` —— **当前上游 2021 spec 的 light on-container 就是 tone 30**；tone 10 是 2021 初版发布（m3.material.io 静态文档仍展示）的基线值。本移植忠实于当前上游（tone 30 输出、以及 `primaryContainer` light tone 90 / dark tone 30 @ L382-396 均与上游一致）。
+- 当前上游 [color_spec_2021.ts](https://github.com/material-foundation/material-color-utilities/blob/main/typescript/dynamiccolor/color_spec_2021.ts)（main 分支）`onPrimaryContainer` 为 `return s.isDark ? 90 : 30;` —— **当前上游 2021 spec 的 light on-container 为 tone 30**；tone 10 是 2021 初版发布（m3.material.io 静态文档仍展示）的基线值。本移植忠实于当前上游（tone 30 输出、以及 `primaryContainer` light tone 90 / dark tone 30 @ L382-396 均与上游一致）。
 - 计划强制的 5 角色不受此影响，全部 ≤±0.17 tone。
 - 精度边界：±1 tone 容差内全部通过；非强制角色最大 |Δtone| = 0.72（dark ErrorContainer）。**主色 hex 级偏差**：Primary `65558F` vs 参考 `6750A4`（ΔR−2, ΔG+5, ΔB−21，ΔE76 ≈ 15.6）—— tone 精确 (39.99 vs 40.08) 下的 HCT 色相/彩度浮点精度残余；与 albi005 输出完全一致（两大包 HCT 核心同源同精度）。**hex 不作断言，M3 单测以本表为 fixture 锁定即可自洽**。
 

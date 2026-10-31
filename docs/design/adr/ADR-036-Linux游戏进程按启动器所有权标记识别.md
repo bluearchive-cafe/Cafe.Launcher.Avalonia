@@ -7,7 +7,7 @@
 
 ## 背景
 
-ADR-032 的「已知限制」写明：Unix 上 `Process.GetProcesses()` 的 `ProcessName` 取内核 `comm`（15 字符封顶），`xldr_BlueArchiveOnline_JP_loader_x64` 与 `xldr_BlueArchiveOnline_JP` 截成同一串，等值与「以 `_` 为界续写」两条规则都不成立——发布 linux-x64 后，Wine/UMU 安装实际上没有这道闸门（不误报，但也不拦）。ADR-032 同时留下门：若某个运行环境不保护进程，镜像路径那条路可以重开。
+ADR-032 的「已知限制」写明：Unix 上 `Process.GetProcesses()` 的 `ProcessName` 取内核 `comm`（15 字符封顶），`xldr_BlueArchiveOnline_JP_loader_x64` 与 `xldr_BlueArchiveOnline_JP` 截成同一串，等值与「以 `_` 为界续写」两条规则都不成立——发布 linux-x64 后，Wine/UMU 安装等于没有这道闸门（不误报，但也不拦）。ADR-032 同时留下门：若某个运行环境不保护进程，镜像路径那条路可以重开。
 
 2026-09-22 的实机样本（Arch Linux，UMU 1.4.4 + UMU-Proton-10.0-4，判据设计稿 §6）给出了 Linux 上真正可用的信号：
 

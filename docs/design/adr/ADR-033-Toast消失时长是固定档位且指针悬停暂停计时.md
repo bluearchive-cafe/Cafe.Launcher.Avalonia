@@ -13,7 +13,7 @@
 
 ## 决策
 
-1. **时长是固定档位 `ToastDuration`**（`Models/`）：`Brief` / `Medium` / `Extended` 三档。档位名刻意取位置义而非「标准档」——中间那档若叫 `standard` 会读成默认值，而默认（信息、成功）恰恰是最短档；`short` / `long` 是 C# 原始类型名，`CA1720` 会直接拒绝。
+1. **时长是固定档位 `ToastDuration`**（`Models/`）：`Brief` / `Medium` / `Extended` 三档。档位名明确取位置义而非「标准档」——中间那档若叫 `standard` 会读成默认值，而默认（信息、成功）恰恰是最短档；`short` / `long` 是 C# 原始类型名，`CA1720` 会直接拒绝。
 
 2. **档位到实际时长的阶梯，以及严重级默认档位，同声明在 `ToastDurations`**：`Resolve(ToastDuration)` 给时间跨度（4s / 6s / 8s），`ForSeverity(ToastSeverity)` 给默认档位（信息与成功 → `Brief`，警告 → `Medium`，错误 → `Extended`，即既有 4000 / 6000 / 8000 一字未变）。它是 `Helpers/MotionTokens` 那一类固定时长常量，不是可注入的策略对象：**调用方只能选档位，给不出毫秒数**。这不是用户设置：不持久化、不上界面。
 
