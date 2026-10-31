@@ -353,6 +353,10 @@ internal sealed class DownloadSession : IDisposable
             isFreshInstall,
             plannedDownloadBytes,
             gameConfig.DecompressionSize);
+        // 可续传的 .tmp 已占用磁盘，只为剩余字节申请空间；首次安装的额外预留仍保留。
+        // 与下载进度共用下载器的长度规则，避免把将被丢弃的超长临时文件计作可复用数据。
+        var reusableBytes = downloadExecutor.GetReusableDownloadedBytes(gamePath, downloadPlan.NeedDownload);
+        requiredBytes = Math.Max(0, requiredBytes - reusableBytes);
         var diskCheck = diskSpaceService.Check(gamePath, requiredBytes);
         progress(new GameOperationProgress
         {

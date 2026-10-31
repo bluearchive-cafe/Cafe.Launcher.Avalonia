@@ -191,9 +191,15 @@ public sealed class FileDownloadService : IFileDownloadService
                         $"CRC64 mismatch after all retries: {filePath}.");
                 }
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
             {
-                if (ex is InvalidDataException || ex is not (HttpRequestException or IOException))
+                // HttpClient/ConnectTimeout cancel their own token, not the caller's.
+                // Keep these failures in the network retry/resume path; preserve the
+                // inner exception (including the transport's Fake-IP diagnostic marker).
+                var failure = ex is OperationCanceledException
+                    ? new HttpRequestException($"Download request timed out: {filePath}.", ex)
+                    : ex;
+                if (failure is InvalidDataException || failure is not (HttpRequestException or IOException))
                 {
                     var deleted = false;
                     try
@@ -215,8 +221,18 @@ public sealed class FileDownloadService : IFileDownloadService
                     }
                 }
 
-                lastError = ex;
-                if (retryIndex >= RetryDomainOrder.Length - 1) throw;
+                await diagnostics.WarningAsync(
+                    "FileDownload",
+                    $"Transfer attempt {retryIndex + 1}/{RetryDomainOrder.Length} failed: " +
+                    $"file={filePath}, host={new Uri(downloadUrl).Host}, " +
+                    $"error={failure.GetType().Name}: {failure.Message}",
+                    CancellationToken.None).ConfigureAwait(false);
+                lastError = failure;
+                if (retryIndex >= RetryDomainOrder.Length - 1)
+                {
+                    if (ReferenceEquals(failure, ex)) throw;
+                    throw failure;
+                }
             }
         }
 
