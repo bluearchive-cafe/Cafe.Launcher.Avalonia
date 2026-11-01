@@ -50,6 +50,8 @@ Windows x64 构建自动调用 `scripts/Restore-VideoBackgroundRuntime.ps1`，�
 
 `Build-Distribution.ps1` 按目标 RID 显式传递 `BackgroundVideoRid`，避免引用工程清除 `RuntimeIdentifier` 后按构建机平台选择资源。Windows ZIP 打包及安装器构建前均运行 `scripts/Test-WindowsPublishOutput.ps1 -PublishDir <目录>`，检查主程序、更新 helper、固定播放器及其清单和许可证；缺失或哈希不符即失败。Debug 默认使用已安装的 .NET，Release 自包含发布会额外携带 .NET 运行时 DLL，文件数不能直接与 Debug 目录比较。
 
+`native/libmpv/COPYING*` 固定使用 LF，避免 Linux 发布输出与 Windows 安装器检出的许可证因换行转换而产生不同哈希。
+
 生产生命周期复测：
 
 ```powershell

@@ -13,6 +13,9 @@
 *.md text eol=lf
 *.ps1 text eol=lf
 
+# These files travel from Linux publish output to the Windows installer unchanged.
+native/libmpv/COPYING* text eol=lf
+
 installer/linux/appimage/* text eol=lf
 installer/linux/arch/* text eol=lf
 installer/linux/debian/* text eol=lf
