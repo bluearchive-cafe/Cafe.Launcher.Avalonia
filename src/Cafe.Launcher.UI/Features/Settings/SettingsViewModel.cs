@@ -408,23 +408,14 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
     }
 
     [RelayCommand]
-    private async Task ChooseBackgroundImageAsync()
+    private async Task ChooseBackgroundFileAsync()
     {
-        var pickedPath = await filePickerService.PickImageFileAsync(
-            localizer.T(LocalizationKeys.ChooseBackgroundImageTitle));
+        var pickedPath = await filePickerService.PickBackgroundFileAsync(
+            localizer.T(LocalizationKeys.ChooseBackgroundFileTitle),
+            localizer.T(LocalizationKeys.BackgroundFileTypes));
         if (string.IsNullOrWhiteSpace(pickedPath))
             return;
 
-        editor.Current.CustomBackgroundPath = pickedPath;
-        editor.Current.BackgroundSource = BackgroundSources.Custom;
-    }
-
-    [RelayCommand]
-    private async Task ChooseBackgroundVideoAsync()
-    {
-        var pickedPath = await filePickerService.PickVideoFileAsync(
-            localizer.T(LocalizationKeys.ChooseBackgroundVideoTitle));
-        if (string.IsNullOrWhiteSpace(pickedPath)) return;
         editor.Current.CustomBackgroundPath = pickedPath;
         editor.Current.BackgroundSource = BackgroundSources.Custom;
     }

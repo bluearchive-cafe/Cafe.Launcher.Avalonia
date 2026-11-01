@@ -30,14 +30,22 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
     private readonly Func<string, PixelSize, IImage?> imageLoader;
     private readonly Func<IImage?> bundledImageLoader;
     private readonly IWindowMetricsService? windowMetrics;
+    private readonly Func<string, CancellationToken, Task<IImage?>> videoThumbnailLoader;
+    private readonly LatestRefresh videoThumbnailRefresh = new();
+    private IImage? videoThumbnail;
+    private string? videoThumbnailSourceKey;
+    private int videoThumbnailGeneration;
     private string? currentDecodedImagePath;
     private PixelSize lastDecodeTarget;
     private string? lastBackgroundSourceKey;
+    private string appliedBackgroundSource = BackgroundSources.Bundled;
+    private string? appliedCustomBackgroundPath;
     private int backgroundLoadGeneration;
     private int resizeReloadVersion;
     private bool disposed;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(BackgroundPreviewImage))]
     private IImage? backgroundImageSource;
 
     [ObservableProperty]
@@ -68,6 +76,23 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     private string? backgroundVideoPath;
 
+    /// <summary>The concrete file selected for the custom background; a folder stays in the settings draft.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsVideoBackgroundSelected))]
+    [NotifyPropertyChangedFor(nameof(BackgroundPreviewImage))]
+    private string? currentBackgroundFilePath;
+
+    /// <summary>Audio controls follow the resolved file, including videos selected from a folder.</summary>
+    public bool IsVideoBackgroundSelected => VideoBackgroundRuntime.IsVideoFile(CurrentBackgroundFilePath);
+
+    /// <summary>Video previews prefer cover art, then the first frame; wallpaper pixels and palette keep the static fallback.</summary>
+    public IImage? BackgroundPreviewImage => IsVideoBackgroundSelected
+        ? videoThumbnail ?? BackgroundImageSource
+        : BackgroundImageSource;
+
+    /// <summary>The current thumbnail request, independent of presentation-only settings previews.</summary>
+    internal Task PendingVideoThumbnail => videoThumbnailRefresh.Pending;
+
     [ObservableProperty]
     private int backgroundVideoVolume;
 
@@ -79,9 +104,23 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
         IImageCacheService imageCacheService,
         ILauncherDiagnostics diagnostics,
         SettingsViewModel settings,
+        VideoThumbnailService videoThumbnailService,
         IWindowMetricsService? windowMetrics = null,
         ToastService? toastService = null,
         LocalizationService? localizer = null)
+        : this(imageCacheService, diagnostics, settings, windowMetrics, toastService, localizer,
+            videoThumbnailService.LoadThumbnailAsync)
+    {
+    }
+
+    internal BackgroundViewModel(
+        IImageCacheService imageCacheService,
+        ILauncherDiagnostics diagnostics,
+        SettingsViewModel settings,
+        IWindowMetricsService? windowMetrics = null,
+        ToastService? toastService = null,
+        LocalizationService? localizer = null,
+        Func<string, CancellationToken, Task<IImage?>>? videoThumbnailLoader = null)
         : this(
             imageCacheService,
             diagnostics,
@@ -92,7 +131,8 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
                     markDirty: false,
                     applySchemeAfter: true);
             },
-            windowMetrics)
+            windowMetrics,
+            videoThumbnailLoader)
     {
         this.toastService = toastService;
         this.localizer = localizer;
@@ -102,14 +142,16 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
         IImageCacheService imageCacheService,
         ILauncherDiagnostics diagnostics,
         Action<LauncherSettings> wallpaperChanged,
-        IWindowMetricsService? windowMetrics = null)
+        IWindowMetricsService? windowMetrics = null,
+        Func<string, CancellationToken, Task<IImage?>>? videoThumbnailLoader = null)
         : this(
             imageCacheService,
             diagnostics,
             wallpaperChanged,
             (path, targetPhysicalSize) => BackgroundImageDecoder.Decode(path, targetPhysicalSize),
             () => LoadBundledBackground(diagnostics),
-            windowMetrics)
+            windowMetrics,
+            videoThumbnailLoader)
     {
     }
 
@@ -126,7 +168,8 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
         Action<LauncherSettings> wallpaperChanged,
         Func<string, PixelSize, IImage?> imageLoader,
         Func<IImage?> bundledImageLoader,
-        IWindowMetricsService? windowMetrics = null)
+        IWindowMetricsService? windowMetrics = null,
+        Func<string, CancellationToken, Task<IImage?>>? videoThumbnailLoader = null)
     {
         this.imageCacheService = imageCacheService;
         this.diagnostics = diagnostics;
@@ -134,6 +177,7 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
         this.imageLoader = imageLoader;
         this.bundledImageLoader = bundledImageLoader;
         this.windowMetrics = windowMetrics;
+        this.videoThumbnailLoader = videoThumbnailLoader ?? ((_, _) => Task.FromResult<IImage?>(null));
         if (windowMetrics is not null)
         {
             // 首次解码可能发生在窗口达到最终尺寸（布局/恢复保存状态/最大化）之前；
@@ -172,6 +216,15 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
     private PixelSize GetPhysicalSize() =>
         windowMetrics?.GetPhysicalClientSize() ?? BackgroundImageDecoder.FallbackTarget;
 
+    /// <summary>
+    /// Whether the displayed selection already represents these source settings. A presentation-only
+    /// preview must finish a source change if it cancelled the preview that was still loading it.
+    /// </summary>
+    public bool IsCurrentBackgroundSelection(LauncherSettings settings) =>
+        appliedBackgroundSource == settings.BackgroundSource
+        && (settings.BackgroundSource != BackgroundSources.Custom
+            || appliedCustomBackgroundPath == settings.CustomBackgroundPath);
+
     public async Task UpdateBackgroundImageAsync(
         LauncherSettings settings,
         LauncherStatusSnapshot? snapshot,
@@ -185,11 +238,21 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
 
         ApplyBackgroundPresentation(settings);
 
+        // 文件夹只负责选出一个具体文件；此后的类型识别、指纹、加载和回退与手动选择共用。
+        var customFilePath = settings.BackgroundSource == BackgroundSources.Custom
+            ? await ResolveCustomBackgroundFileAsync(settings.CustomBackgroundPath, cancellationToken)
+            : null;
+        cancellationToken.ThrowIfCancellationRequested();
+        if (disposed || loadGeneration != Volatile.Read(ref backgroundLoadGeneration))
+        {
+            return;
+        }
+
         // 来源与解码目标均未变化时跳过整条「缓存校验 + 解码 + 交叉淡化 + 取色」
         // 管线：此前每次刷新（启动、保存设置、每个游戏操作完成后）都会重解码
-        // 壁纸并重放交叉淡化与主题取色，用户可感知卡顿。仅稳定来源可跳过——
-        // 文件夹壁纸每次随机选图、遥源失败回落均不可跳过（见下）。
-        var sourceKey = ResolveStableBackgroundSourceKey(settings, snapshot);
+        // 壁纸并重放交叉淡化与主题取色，用户可感知卡顿。文件夹先随机选图，
+        // 与手动选择命中同一文件时同样复用；遥源失败回落仍会重试。
+        var sourceKey = ResolveStableBackgroundSourceKey(settings, snapshot, customFilePath);
         // 目标比较只对「按目标解码」的来源有意义。内置图的解码不看目标
         // （`LoadBundledBackground` 原生解码：该图没有更大的一档可解），重解码永远产出同一张
         // 位图，所以对它比较目标只会判出「白解一遍」——构造点早于窗口 Attach，构造期记下的
@@ -207,28 +270,28 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
             // Reuse the pixels while clearing the warning for this successful choice.
             if (settings.BackgroundSource == BackgroundSources.Bundled)
                 HasBackgroundLoadFailure = false;
+            RememberBackgroundSelection(settings);
             return;
         }
 
-        var videoPath = settings.BackgroundSource == BackgroundSources.Custom
-                        && VideoBackgroundRuntime.IsVideoFile(settings.CustomBackgroundPath)
-                        && File.Exists(settings.CustomBackgroundPath)
-            ? settings.CustomBackgroundPath
+        var videoPath = VideoBackgroundRuntime.IsVideoFile(customFilePath)
+                        && File.Exists(customFilePath)
+            ? customFilePath
             : null;
         if (videoPath is not null)
         {
-            // A static first frame and decode-failure fallback stay available underneath
+            // The bundled image stays available underneath
             // the video. Palette extraction uses this image, never a per-frame readback.
             var fallback = await Task.Run(() => bundledImageLoader());
             BitmapLifetime.ThrowIfCancellationRequested(fallback, cancellationToken);
-            if (TrySetBackgroundImage(fallback, settings, loadGeneration, null, decodeTarget))
+            if (TrySetBackgroundImage(fallback, settings, loadGeneration, null, decodeTarget,
+                    currentFilePath: customFilePath))
             {
                 lastBackgroundSourceKey = sourceKey;
-                BackgroundVideoPath = videoPath;
+                RequestVideoThumbnail(videoPath, sourceKey);
             }
             return;
         }
-        BackgroundVideoPath = null;
 
         switch (settings.BackgroundSource)
         {
@@ -272,21 +335,22 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
                 break;
 
             case BackgroundSources.Custom:
-                if (!string.IsNullOrWhiteSpace(settings.CustomBackgroundPath))
+                if (!string.IsNullOrWhiteSpace(customFilePath))
                 {
-                    var customBackground = await LoadCustomBackgroundImageResultAsync(
-                        settings.CustomBackgroundPath,
+                    var customImage = await LoadCustomBackgroundImageAsync(
+                        customFilePath,
                         decodeSize,
                         cancellationToken);
-                    if (customBackground.Image is not null)
+                    if (customImage is not null)
                     {
-                        BitmapLifetime.ThrowIfCancellationRequested(customBackground.Image, cancellationToken);
+                        BitmapLifetime.ThrowIfCancellationRequested(customImage, cancellationToken);
                         if (TrySetBackgroundImage(
-                                customBackground.Image,
+                                customImage,
                                 settings,
                                 loadGeneration,
-                                customBackground.DecodedPath,
-                                decodeTarget))
+                                customFilePath,
+                                decodeTarget,
+                                currentFilePath: customFilePath))
                         {
                             lastBackgroundSourceKey = sourceKey;
                         }
@@ -302,7 +366,7 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
         // 回落都在 UI 线程重解码整图。
         var bundledImage = await Task.Run(() => bundledImageLoader());
         BitmapLifetime.ThrowIfCancellationRequested(bundledImage, cancellationToken);
-        TrySetBackgroundImage(
+        var applied = TrySetBackgroundImage(
             bundledImage,
             settings,
             loadGeneration,
@@ -310,8 +374,9 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
             decodeTarget,
             isFallback: settings.BackgroundSource == BackgroundSources.Remote
                 || (settings.BackgroundSource == BackgroundSources.Custom
-                    && !string.IsNullOrWhiteSpace(settings.CustomBackgroundPath)));
-        if (settings.BackgroundSource == BackgroundSources.Bundled)
+                    && !string.IsNullOrWhiteSpace(settings.CustomBackgroundPath)),
+            currentFilePath: customFilePath);
+        if (applied && settings.BackgroundSource == BackgroundSources.Bundled)
         {
             // 仅当内置图是用户选择的来源（而非遥源/自定义失败回落）时才记录：
             // 回落保持 key 为空，下次刷新仍会重试原来源。
@@ -321,11 +386,12 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
 
     /// <summary>
     /// 稳定来源的可跳过标识：相同标识 + 相同解码目标即可复用现有壁纸。
-    /// 文件夹自定义壁纸每次随机选图、遥源配置缺失时返回 null（永不跳过）。
+    /// 自定义来源使用已解析的具体文件；遥源配置缺失时返回 null（永不跳过）。
     /// </summary>
     private static string? ResolveStableBackgroundSourceKey(
         LauncherSettings settings,
-        LauncherStatusSnapshot? snapshot)
+        LauncherStatusSnapshot? snapshot,
+        string? customFilePath)
     {
         switch (settings.BackgroundSource)
         {
@@ -336,11 +402,10 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
                     ? null
                     : $"{BackgroundSources.Remote}|{bgImg}|{crc64}";
             case BackgroundSources.Custom:
-                // 文件夹来源每次刷新随机选图是有意行为，不参与跳过；文件来源以
-                // 路径 + 内容指纹（长度 + 最后写入时间）为标识——用户在原路径
-                // 覆盖图片文件时路径不变，仅凭路径会误命中跳过守卫、停留旧图。
-                return TryGetCustomFileFingerprint(settings.CustomBackgroundPath, out var fingerprint)
-                    ? $"{BackgroundSources.Custom}|{settings.CustomBackgroundPath}|{fingerprint}"
+                // 两种选择方式均以具体文件的路径 + 内容指纹（长度 + 最后写入时间）
+                // 为标识；用户覆盖原文件时路径不变，仅凭路径会误复用旧图。
+                return TryGetCustomFileFingerprint(customFilePath, out var fingerprint)
+                    ? $"{BackgroundSources.Custom}|{customFilePath}|{fingerprint}"
                     : null;
             default:
                 return BackgroundSources.Bundled;
@@ -377,6 +442,43 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
         BackgroundFillBrush = settings.BackgroundFit == BackgroundFits.Uniform
             ? new SolidColorBrush(ColorUtils.ParseColorOrDefault(settings.BackgroundFillColor))
             : null;
+    }
+
+    private void RequestVideoThumbnail(string path, string? sourceKey)
+    {
+        if (sourceKey is not null && videoThumbnailSourceKey == sourceKey) return;
+        ClearVideoThumbnail();
+        videoThumbnailSourceKey = sourceKey;
+        var generation = videoThumbnailGeneration;
+        videoThumbnailRefresh.Run(null, async cancellationToken =>
+        {
+            try
+            {
+                var image = await videoThumbnailLoader(path, cancellationToken);
+                if (disposed || cancellationToken.IsCancellationRequested || generation != videoThumbnailGeneration
+                    || CurrentBackgroundFilePath != path)
+                {
+                    (image as IDisposable)?.Dispose();
+                    return;
+                }
+                videoThumbnail = image;
+                OnPropertyChanged(nameof(BackgroundPreviewImage));
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+            }
+        });
+    }
+
+    private void ClearVideoThumbnail()
+    {
+        videoThumbnailGeneration++;
+        videoThumbnailRefresh.Cancel();
+        videoThumbnailSourceKey = null;
+        var old = videoThumbnail;
+        videoThumbnail = null;
+        OnPropertyChanged(nameof(BackgroundPreviewImage));
+        BitmapLifetime.ReleaseAfterBindingsSettle(old);
     }
 
     /// <summary>只接受当前文件的失败，保留静态回退；相同文件指纹不会在每次刷新时重复报错。</summary>
@@ -483,135 +585,85 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
         return BackgroundImageSource as Bitmap;
     }
 
-    /// <summary>
-    /// 测试缝：按给定路径解析并解码一张自定义背景。生产代码不走这里——它经由
-    /// <c>Apply</c>/<c>ApplyBackgroundPresentation</c> 落到同一条私有实现上；本方法此前是
-    /// public，而它的唯一调用者是测试（§5.3：仅供测试的接缝标 internal）。
-    /// </summary>
-    internal async Task<Bitmap?> LoadCustomBackgroundAsync(
-        string path,
-        CancellationToken cancellationToken = default) =>
-        (await LoadCustomBackgroundImageResultAsync(
-            path,
-            GetPhysicalSize(),
-            cancellationToken)).Image as Bitmap;
-
-    private async Task<BackgroundLoadResult> LoadCustomBackgroundImageResultAsync(
-        string path,
-        PixelSize decodeSize,
-        CancellationToken cancellationToken = default)
+    private async Task<string?> ResolveCustomBackgroundFileAsync(string path, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        if (File.Exists(path))
+        if (string.IsNullOrWhiteSpace(path))
         {
-            try
-            {
-                // 自定义背景图在 UI 线程外解码，避免大图卡帧。
-                var bitmap = await Task.Run(() => imageLoader(path, decodeSize));
-                if (bitmap is null)
-                {
-                    return default;
-                }
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    (bitmap as IDisposable)?.Dispose();
-                    cancellationToken.ThrowIfCancellationRequested();
-                }
-
-                return new BackgroundLoadResult(bitmap, path);
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                await diagnostics.MessageAsync(
-                    "Background",
-                    $"Custom background image load failed\npath: {path}\nexception: {ex.Message}",
-                    CancellationToken.None);
-                return default;
-            }
+            return null;
         }
 
-        if (Directory.Exists(path))
+        if (!Directory.Exists(path))
         {
-            string? imagePath;
-            try
-            {
-                imagePath = ResolveRandomBackgroundImage(path);
-                cancellationToken.ThrowIfCancellationRequested();
-            }
-            catch (Exception ex) when (StorageFailure.IsRecoverable(ex))
-            {
-                await diagnostics.MessageAsync(
-                    "Background",
-                    $"Custom background folder scan failed\npath: {path}\nexception: {ex.Message}",
-                    CancellationToken.None);
-                return default;
-            }
-
-            if (imagePath is null)
-            {
-                await diagnostics.MessageAsync(
-                    "Background",
-                    $"Custom background folder contains no supported images\npath: {path}",
-                    CancellationToken.None);
-                return default;
-            }
-
-            try
-            {
-                // 随机选中的背景图同样在 UI 线程外解码。
-                var bitmap = await Task.Run(() => imageLoader(imagePath, decodeSize));
-                if (bitmap is null)
-                {
-                    return default;
-                }
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    (bitmap as IDisposable)?.Dispose();
-                    cancellationToken.ThrowIfCancellationRequested();
-                }
-
-                return new BackgroundLoadResult(bitmap, imagePath);
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                await diagnostics.MessageAsync(
-                    "Background",
-                    $"Custom background folder image load failed\nfolder: {path}\npath: {imagePath}\nexception: {ex.Message}",
-                    CancellationToken.None);
-                return default;
-            }
+            return path;
         }
 
-        await diagnostics.MessageAsync(
-            "Background",
-            $"Custom background path does not exist\npath: {path}",
-            CancellationToken.None);
-        return default;
+        try
+        {
+            var filePath = await Task.Run(() => ResolveRandomBackgroundFile(path), cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (filePath is null)
+            {
+                await diagnostics.MessageAsync(
+                    "Background",
+                    $"Custom background folder contains no supported images or videos\npath: {path}",
+                    CancellationToken.None);
+            }
+
+            return filePath;
+        }
+        catch (Exception ex) when (StorageFailure.IsRecoverable(ex))
+        {
+            await diagnostics.MessageAsync("Background",
+                $"Custom background folder scan failed\npath: {path}\nexception: {ex.Message}", CancellationToken.None);
+            return null;
+        }
     }
 
-    private readonly record struct BackgroundLoadResult(IImage? Image, string? DecodedPath);
+    private async Task<IImage?> LoadCustomBackgroundImageAsync(string path, PixelSize decodeSize,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!File.Exists(path))
+        {
+            await diagnostics.MessageAsync("Background", $"Custom background path does not exist\npath: {path}",
+                CancellationToken.None);
+            return null;
+        }
 
-    public static string? ResolveRandomBackgroundImage(string folderPath)
+        try
+        {
+            // 手动文件和随机文件共用一次后台解码及相同的取消释放规则。
+            var image = await Task.Run(() => imageLoader(path, decodeSize));
+            BitmapLifetime.ThrowIfCancellationRequested(image, cancellationToken);
+            return image;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await diagnostics.MessageAsync("Background",
+                $"Custom background image load failed\npath: {path}\nexception: {ex.Message}", CancellationToken.None);
+            return null;
+        }
+    }
+
+    /// <summary>Selects one supported image or video from the folder itself, without scanning subfolders.</summary>
+    public static string? ResolveRandomBackgroundFile(string folderPath)
     {
         if (!Directory.Exists(folderPath))
             return null;
 
-        var imagePaths = Directory
+        var filePaths = Directory
             .EnumerateFiles(folderPath)
-            .Where(IsSupportedBackgroundImage)
+            .Where(path => IsSupportedBackgroundImage(path) || VideoBackgroundRuntime.IsVideoFile(path))
             .ToArray();
 
-        return imagePaths.Length == 0
+        return filePaths.Length == 0
             ? null
-            : imagePaths[Random.Shared.Next(imagePaths.Length)];
+            : filePaths[Random.Shared.Next(filePaths.Length)];
     }
 
     public static bool IsSupportedBackgroundImage(string path)
@@ -651,7 +703,8 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
         int loadGeneration,
         string? decodedPath,
         PixelSize decodeTarget,
-        bool isFallback = false)
+        bool isFallback = false,
+        string? currentFilePath = null)
     {
         if (disposed || loadGeneration != Volatile.Read(ref backgroundLoadGeneration))
         {
@@ -660,12 +713,23 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
         }
 
         currentDecodedImagePath = decodedPath;
+        if (!VideoBackgroundRuntime.IsVideoFile(currentFilePath)) ClearVideoThumbnail();
+        RememberBackgroundSelection(previewSettings);
+        lastBackgroundSourceKey = null;
+        CurrentBackgroundFilePath = currentFilePath;
         // 记录解码实际使用的目标框（与 imageLoader 收到的同一快照），而不是位图尺寸；
         // 竖图按高解码后宽度可能小于目标框，以位图尺寸为基准会造成重复重解码。
         lastDecodeTarget = decodeTarget;
         HasBackgroundLoadFailure = isFallback;
+        BackgroundVideoPath = !isFallback && VideoBackgroundRuntime.IsVideoFile(currentFilePath) ? currentFilePath : null;
         SetBackgroundImage(bitmap, previewSettings);
         return true;
+    }
+
+    private void RememberBackgroundSelection(LauncherSettings settings)
+    {
+        appliedBackgroundSource = settings.BackgroundSource;
+        appliedCustomBackgroundPath = settings.CustomBackgroundPath;
     }
 
     private void ReplaceBackgroundImageAfterResize(IImage? bitmap)
@@ -757,7 +821,9 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
         }
 
         disposed = true;
+        ClearVideoThumbnail();
         BackgroundVideoPath = null;
+        CurrentBackgroundFilePath = null;
         Interlocked.Increment(ref backgroundLoadGeneration);
         resizeReloadVersion++;
         windowMetrics?.PhysicalSizeChanged -= OnPhysicalSizeChanged;

@@ -150,7 +150,7 @@ The launcher falls back to the bundled wallpaper if downloading fails or no imag
 
 ### Custom wallpaper
 
-Choose a local image or a folder from which an image is randomly selected on refresh. Supported formats are `.png`, `.jpg`, `.jpeg`, `.bmp`, and `.webp`. These files stay local; users are responsible for their rights and permissions. The project does not collect, upload, or distribute them.
+Use **Choose Image or Video** to select a local file, or select a folder to choose an image or video at random on refresh without scanning subfolders. Supported image formats are `.png`, `.jpg`, `.jpeg`, `.bmp`, and `.webp`; video formats are `.mp4`, `.mkv`, and `.webm`. **Current Background** shows the selected file's location. Video thumbnails prefer embedded MP4 cover art and fall back to the first frame, with blur and a video icon; the settings retain the chosen folder. These files stay local; users are responsible for their rights and permissions. The project does not collect, upload, or distribute them.
 
 The repository's [key visual](./docs/assets/key-visual.png) and release banners are project-created promotional materials containing launcher screenshots.
 

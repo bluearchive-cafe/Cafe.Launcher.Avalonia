@@ -12,6 +12,7 @@ internal sealed class MpvNative : IDisposable
     private readonly List<nint> allocations = [];
     private static int activeLibraryCount;
     private bool disposed;
+    private nint screenshotArguments;
 
     internal int AllocationCount => allocations.Count;
     internal static int ActiveLibraryCount => Volatile.Read(ref activeLibraryCount);
@@ -25,6 +26,10 @@ internal sealed class MpvNative : IDisposable
         [MarshalAs(UnmanagedType.LPUTF8Str)] string value);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     internal delegate int Command(nint handle, nint arguments);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    internal delegate int CommandResult(nint handle, nint arguments, out Node result);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    internal delegate void ReleaseNode(ref Node node);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     internal delegate nint GetString(nint handle, [MarshalAs(UnmanagedType.LPUTF8Str)] string name);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
@@ -50,6 +55,33 @@ internal sealed class MpvNative : IDisposable
         internal ulong ReplyUserData;
         internal nint Data;
     }
+
+    // mpv_node's union occupies eight bytes on the supported 64-bit runtimes.
+    [StructLayout(LayoutKind.Explicit)]
+    internal struct Node
+    {
+        [FieldOffset(0)] internal nint Pointer;
+        [FieldOffset(0)] internal long Integer;
+        [FieldOffset(8)] internal int Format;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NodeList
+    {
+        internal int Count;
+        internal nint Values;
+        internal nint Keys;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct ByteArray
+    {
+        internal nint Data;
+        internal nuint Size;
+    }
+
+    /// <summary>A copied screenshot with tightly packed BGRX rows; no native allocation escapes its owner.</summary>
+    internal sealed record VideoFrame(int Width, int Height, byte[] Pixels);
 
     [StructLayout(LayoutKind.Sequential)]
     internal struct Parameter(int type, nint data)
@@ -79,6 +111,8 @@ internal sealed class MpvNative : IDisposable
     internal readonly SetString SetOption;
     internal readonly SetString SetProperty;
     internal readonly Command SendCommand;
+    private readonly CommandResult sendCommandResult;
+    private readonly ReleaseNode freeNode;
     internal readonly GetString GetProperty;
     internal readonly Release Free;
     internal readonly Release DestroyPlayer;
@@ -99,6 +133,8 @@ internal sealed class MpvNative : IDisposable
             SetOption = Export<SetString>("mpv_set_option_string");
             SetProperty = Export<SetString>("mpv_set_property_string");
             SendCommand = Export<Command>("mpv_command");
+            sendCommandResult = Export<CommandResult>("mpv_command_ret");
+            freeNode = Export<ReleaseNode>("mpv_free_node_contents");
             GetProperty = Export<GetString>("mpv_get_property_string");
             Free = Export<Release>("mpv_free");
             DestroyPlayer = Export<Release>("mpv_terminate_destroy");
@@ -179,6 +215,52 @@ internal sealed class MpvNative : IDisposable
         if (pointer == 0) return "unavailable";
         try { return Marshal.PtrToStringUTF8(pointer) ?? "unavailable"; }
         finally { Free(pointer); }
+    }
+
+    /// <summary>Copies the paused video's frame via screenshot-raw; unavailable frames return null.</summary>
+    internal VideoFrame? CaptureVideoFrame(nint player)
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        if (screenshotArguments == 0)
+        {
+            screenshotArguments = Marshal.AllocHGlobal(IntPtr.Size * 4);
+            allocations.Add(screenshotArguments);
+            Marshal.WriteIntPtr(screenshotArguments, String("screenshot-raw"));
+            Marshal.WriteIntPtr(screenshotArguments, IntPtr.Size, String("video"));
+            Marshal.WriteIntPtr(screenshotArguments, IntPtr.Size * 2, String("bgr0"));
+            Marshal.WriteIntPtr(screenshotArguments, IntPtr.Size * 3, 0);
+        }
+
+        if (sendCommandResult(player, screenshotArguments, out var result) < 0)
+            return null;
+
+        try
+        {
+            // screenshot-raw returns a node map; its pixels remain valid only until free_node_contents.
+            // https://mpv.io/manual/master/#command-screenshot-raw
+            var list = Marshal.PtrToStructure<NodeList>(result.Pointer);
+            var fields = new Dictionary<string, Node>(StringComparer.Ordinal);
+            for (var index = 0; index < list.Count; index++)
+            {
+                var key = Marshal.PtrToStringUTF8(Marshal.ReadIntPtr(list.Keys, index * IntPtr.Size))!;
+                fields.Add(key, Marshal.PtrToStructure<Node>(list.Values + index * Marshal.SizeOf<Node>()));
+            }
+
+            var width = checked((int)fields["w"].Integer);
+            var height = checked((int)fields["h"].Integer);
+            var stride = checked((int)fields["stride"].Integer);
+            var bytes = Marshal.PtrToStructure<ByteArray>(fields["data"].Pointer);
+            var rowBytes = checked(width * 4);
+            var pixels = new byte[checked(rowBytes * height)];
+            // Native screenshots can have padding or negative stride. Copy rows before releasing the node.
+            for (var row = 0; row < height; row++)
+                Marshal.Copy(bytes.Data + row * stride, pixels, row * rowBytes, rowBytes);
+            return new VideoFrame(width, height, pixels);
+        }
+        finally
+        {
+            freeNode(ref result);
+        }
     }
 
     internal static void Check(int result, string operation)

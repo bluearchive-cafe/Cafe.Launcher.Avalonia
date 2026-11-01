@@ -1,8 +1,10 @@
 # 开发指南
 
-视频背景已接入普通设置（Debug / Release）：外观 → 背景来源「自定义」→「选择视频」。Windows x64 构建自动调用 `scripts/Restore-VideoBackgroundRuntime.ps1`，需要 PowerShell 7、curl 与 7-Zip（`7z` 或 `7zz`）。脚本仅在构建期恢复固定 LGPL 构建，校验压缩包与 DLL 的 SHA-256，缓存到 `.artifacts/native/libmpv`；首次构建需要访问 GitHub，可先带 `-Proxy` 手动运行恢复脚本。发布输出包含 `libmpv/win-x64/libmpv-2.dll`、清单、来源说明和完整许可证；应用运行期间不下载运行库。升级时同步清单、许可证、来源和原生冒烟测试。其他平台暂时回退到静态背景。
+视频背景已接入普通设置（Debug / Release）：外观 → 背景来源「自定义」→「选择图片或视频」，在同一文件选择器中选择图片或 MP4/MKV/WebM 视频，也可选择文件夹随机显示图片或播放视频。Windows x64 构建自动调用 `scripts/Restore-VideoBackgroundRuntime.ps1`，需要 PowerShell 7、curl 与 7-Zip（`7z` 或 `7zz`）。脚本仅在构建期恢复固定 LGPL 构建，校验压缩包与 DLL 的 SHA-256，缓存到 `.artifacts/native/libmpv`；首次构建需要访问 GitHub，可先带 `-Proxy` 手动运行恢复脚本。发布输出包含 `libmpv/win-x64/libmpv-2.dll`、清单、来源说明和完整许可证；应用运行期间不下载运行库。升级时同步清单、许可证、来源和原生冒烟测试。其他平台暂时回退到静态背景。
 
 独立 Debug 实验入口仍保留：启动、采样、快捷键及历史验证边界见 [libmpv 视频背景原型](research/video-background-prototype.md)。该入口显式启用并使用隔离数据根。
+
+视频缩略图优先直接读取 MP4 `covr` 内嵌封面，缺失或不可解码时通过同一随包 libmpv 提取首帧，无需外部 FFmpeg 命令或额外运行库。`Mp4CoverReaderTests` 覆盖容器长度和封面大小边界；`VideoThumbnailServiceTests` 使用仓库内的小型生成媒体验证 PNG/JPEG 封面优先及损坏回退，并使用测试中生成的双帧视频验证首帧颜色、尺寸和解码资源释放。运行测试不需要媒体编码器。
 
 生产视频生命周期复测可运行 `pwsh ./scripts/Test-VideoBackgroundPrototypeRetention.ps1 -ProbeMode Production -ExerciseSettings -Cycles 8 -SteadySeconds 60`。默认使用随包固定的 LGPL DLL；脚本核对生产副本与指定 DLL 的 SHA-256。`Video`／`Blank`／`Finish`／`ReuseSurface` 为旧分离、无 libmpv、GPU 同步和承载面复用对照；最少六轮以保留两个互不重叠的热身后采样窗口。完整通过要求内存门槛、每轮媒体资源归零和正常退出；缺少 GPU 计数器不能算通过。`-ContinueAfterMemoryFailure` 只保留失败后的观测，最终仍返回失败。可显式传入 `-HeapDumpToolPath`，在第二轮和最后一轮收集本地 GC 堆快照；工具需另行准备，脚本不自动安装。
 

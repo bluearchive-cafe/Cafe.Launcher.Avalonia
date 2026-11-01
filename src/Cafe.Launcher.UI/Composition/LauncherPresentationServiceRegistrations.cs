@@ -81,6 +81,7 @@ public static class LauncherPresentationServiceRegistrations
         services.AddSingleton<ResourcePanelService>();
 
         services.AddSingleton<WindowFilePickerService>();
+        services.AddSingleton<VideoThumbnailService>();
         services.AddSingleton<IFilePickerService>(sp =>
             sp.GetRequiredService<WindowFilePickerService>());
         services.AddSingleton<WindowMetricsService>();

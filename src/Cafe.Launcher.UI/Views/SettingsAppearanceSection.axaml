@@ -39,13 +39,24 @@
 
             <Grid Classes="settings-appearance-media" ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
                 <Border Classes="settings-appearance-thumbnail">
-                    <Image Source="{Binding Background.BackgroundImageSource}" Stretch="UniformToFill"/>
+                    <Grid>
+                        <Image Classes="settings-appearance-thumbnail-image"
+                               Classes.video="{Binding Background.IsVideoBackgroundSelected}"
+                               Source="{Binding Background.BackgroundPreviewImage}" Stretch="UniformToFill"/>
+                        <Border Classes="settings-appearance-video-shade"
+                                IsVisible="{Binding Background.IsVideoBackgroundSelected}"/>
+                        <materialIcons:MaterialIcon Kind="VideoOutline" Classes="settings-appearance-video-icon"
+                                                    Width="{StaticResource Launcher.Icon.Lg}" Height="{StaticResource Launcher.Icon.Lg}"
+                                                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                    Foreground="{StaticResource Launcher.Text.OnChrome}"
+                                                    IsVisible="{Binding Background.IsVideoBackgroundSelected}"/>
+                    </Grid>
                 </Border>
                 <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
                     <TextBlock Text="{Binding Shell.I18n[currentBackground]}" Classes="section-title"/>
-                    <TextBlock Text="{Binding Settings.Editor.Current.CustomBackgroundPath}" Classes="caption"
-                               TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Settings.Editor.Current.CustomBackgroundPath}"
-                               IsVisible="{Binding Settings.Appearance.IsCustomBackgroundSelected}"/>
+                    <TextBlock Text="{Binding Background.CurrentBackgroundFilePath}" Classes="caption"
+                               TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Background.CurrentBackgroundFilePath}"
+                               IsVisible="{Binding Background.CurrentBackgroundFilePath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                 </StackPanel>
             </Grid>
             <Grid Classes="settings-appearance-warning" ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}"
@@ -61,11 +72,11 @@
                 <controls:SettingRow.Action>
                     <WrapPanel ItemSpacing="{StaticResource Launcher.Spacing.Sm}" LineSpacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
                         <Button Classes="flat-action"
-                                Command="{Binding Settings.ChooseBackgroundImageCommand}"
-                                AutomationProperties.Name="{Binding Shell.I18n[chooseImage]}">
+                                Command="{Binding Settings.ChooseBackgroundFileCommand}"
+                                AutomationProperties.Name="{Binding Shell.I18n[chooseImageOrVideo]}">
                             <StackPanel Classes="button-content">
                                 <materialIcons:MaterialIcon Kind="ImageOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                                <TextBlock Text="{Binding Shell.I18n[chooseImage]}"/>
+                                <TextBlock Text="{Binding Shell.I18n[chooseImageOrVideo]}"/>
                             </StackPanel>
                         </Button>
                         <Button Classes="flat-action"
@@ -74,14 +85,6 @@
                             <StackPanel Classes="button-content">
                                 <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
                                 <TextBlock Text="{Binding Shell.I18n[chooseFolder]}"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Classes="flat-action"
-                                Command="{Binding Settings.ChooseBackgroundVideoCommand}"
-                                AutomationProperties.Name="{Binding Shell.I18n[chooseVideo]}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="VideoOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                                <TextBlock Text="{Binding Shell.I18n[chooseVideo]}"/>
                             </StackPanel>
                         </Button>
                         <Button Classes="flat-action" Command="{Binding Settings.ClearBackgroundCommand}"
@@ -120,7 +123,7 @@
 
             <controls:SettingRow Title="{Binding Shell.I18n[videoBackgroundVolume]}"
                                  Description="{Binding Shell.I18n[videoBackgroundVolumeDescription]}"
-                                 IsVisible="{Binding Settings.Appearance.IsVideoBackgroundSelected}">
+                                 IsVisible="{Binding Background.IsVideoBackgroundSelected}">
                 <controls:SettingRow.Action>
                     <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}">
                         <Slider Classes="setting-control" Width="{StaticResource Launcher.Component.Settings.Control.MinWidth}"

@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 using Cafe.Launcher.Testing;
 
 namespace Cafe.Launcher.Tests;
@@ -26,7 +26,8 @@ public sealed partial class TestSourceWaitContractTests
         "PendingGameRuntimeStatusRefresh",
         "PendingRangeProbeTask",
         "PendingStartupUpdateCheck",
-        "PendingThemeRefresh"
+        "PendingThemeRefresh",
+        "PendingVideoThumbnail"
     ];
 
     [Fact]

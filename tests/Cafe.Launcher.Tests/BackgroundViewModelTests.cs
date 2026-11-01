@@ -16,6 +16,150 @@ namespace Cafe.Launcher.Tests;
 public sealed class BackgroundViewModelTests : IDisposable
 {
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task VideoThumbnail_WhenFileOrFolderSelectsVideo_UsesFirstFrameWithoutChangingWallpaper(bool fromFolder)
+    {
+        var path = Path.Combine(tempDir, "thumbnail.mp4");
+        await File.WriteAllBytesAsync(path, []);
+        using var cache = CreateCache(_ => PngBytes);
+        var thumbnail = new TestImage();
+        var paletteRefreshes = 0;
+        string? requestedPath = null;
+        using var viewModel = new BackgroundViewModel(cache, new LocalDiagnostics(), _ => paletteRefreshes++,
+            (_, _) => new TestImage(), () => new TestImage(),
+            videoThumbnailLoader: (selectedPath, _) =>
+            {
+                requestedPath = selectedPath;
+                return Task.FromResult<IImage?>(thumbnail);
+            });
+        await viewModel.UpdateBackgroundImageAsync(new LauncherSettings
+        {
+            BackgroundSource = BackgroundSources.Custom,
+            CustomBackgroundPath = fromFolder ? tempDir : path,
+            ThemeColorMode = ThemeColorModes.Wallpaper
+        }, null, CancellationToken.None);
+        await viewModel.PendingVideoThumbnail.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Equal(path, requestedPath);
+        Assert.Same(thumbnail, viewModel.BackgroundPreviewImage);
+        Assert.NotSame(thumbnail, viewModel.BackgroundImageSource);
+        Assert.Equal(1, paletteRefreshes);
+
+        await viewModel.UpdateBackgroundImageAsync(new LauncherSettings(), null, CancellationToken.None);
+        Assert.Same(viewModel.BackgroundImageSource, viewModel.BackgroundPreviewImage);
+    }
+
+    [Fact]
+    public async Task VideoThumbnail_WhenSourceReusedAtNewWindowSize_DoesNotRecaptureFirstFrame()
+    {
+        var path = Path.Combine(tempDir, "cached-thumbnail.mp4");
+        await File.WriteAllBytesAsync(path, []);
+        using var cache = CreateCache(_ => PngBytes);
+        var thumbnail = new TestImage();
+        var requests = 0;
+        var metrics = new SteppedWindowMetrics();
+        using var viewModel = new BackgroundViewModel(cache, new LocalDiagnostics(), _ => { },
+            (_, _) => new TestImage(), () => new TestImage(), metrics,
+            videoThumbnailLoader: (_, _) =>
+            {
+                requests++;
+                return Task.FromResult<IImage?>(thumbnail);
+            });
+        var settings = new LauncherSettings { BackgroundSource = BackgroundSources.Custom, CustomBackgroundPath = path };
+        await viewModel.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
+        await viewModel.PendingVideoThumbnail.WaitAsync(TimeSpan.FromSeconds(5));
+        settings.BackgroundVideoVolume = 35;
+        viewModel.ApplyBackgroundPresentation(settings);
+        metrics.ReportRealWindowSize();
+        await viewModel.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
+        await viewModel.PendingVideoThumbnail.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Equal(1, requests);
+        Assert.Same(thumbnail, viewModel.BackgroundPreviewImage);
+        Assert.Equal(35, viewModel.BackgroundVideoVolume);
+    }
+
+    [Fact]
+    public async Task VideoThumbnail_WhenOlderCaptureFinishesLast_DisposesItAndKeepsNewPreview()
+    {
+        var first = Path.Combine(tempDir, "old.mp4");
+        var second = Path.Combine(tempDir, "new.mp4");
+        await File.WriteAllBytesAsync(first, []);
+        await File.WriteAllBytesAsync(second, []);
+        using var cache = CreateCache(_ => PngBytes);
+        var oldResult = new TaskCompletionSource<IImage?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var oldThumbnail = new TestImage();
+        var newThumbnail = new TestImage();
+        using var viewModel = new BackgroundViewModel(cache, new LocalDiagnostics(), _ => { },
+            (_, _) => new TestImage(), () => new TestImage(),
+            videoThumbnailLoader: (path, _) => path == first ? oldResult.Task : Task.FromResult<IImage?>(newThumbnail));
+        var settings = new LauncherSettings { BackgroundSource = BackgroundSources.Custom, CustomBackgroundPath = first };
+        await viewModel.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
+        var oldCapture = viewModel.PendingVideoThumbnail;
+        settings.CustomBackgroundPath = second;
+        await viewModel.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
+        await viewModel.PendingVideoThumbnail.WaitAsync(TimeSpan.FromSeconds(5));
+        oldResult.SetResult(oldThumbnail);
+        await oldCapture.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.True(oldThumbnail.IsDisposed);
+        Assert.Same(newThumbnail, viewModel.BackgroundPreviewImage);
+        Assert.Equal(second, viewModel.CurrentBackgroundFilePath);
+    }
+
+    [Fact]
+    public async Task VideoThumbnail_WhenSelectionChanges_CancelsPendingCapture()
+    {
+        var path = Path.Combine(tempDir, "cancel-capture.mp4");
+        await File.WriteAllBytesAsync(path, []);
+        using var cache = CreateCache(_ => PngBytes);
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var viewModel = new BackgroundViewModel(cache, new LocalDiagnostics(), _ => { },
+            (_, _) => new TestImage(), () => new TestImage(), videoThumbnailLoader: async (_, cancellationToken) =>
+            {
+                started.SetResult();
+                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+                return null;
+            });
+        await viewModel.UpdateBackgroundImageAsync(new LauncherSettings
+        {
+            BackgroundSource = BackgroundSources.Custom, CustomBackgroundPath = path
+        }, null, CancellationToken.None);
+        await started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var capture = viewModel.PendingVideoThumbnail;
+
+        await viewModel.UpdateBackgroundImageAsync(new LauncherSettings(), null, CancellationToken.None);
+        await capture.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Same(viewModel.BackgroundImageSource, viewModel.BackgroundPreviewImage);
+        Assert.False(viewModel.IsVideoBackgroundSelected);
+    }
+
+    [Fact]
+    public async Task VideoThumbnail_WhenDisposedDuringCapture_ReleasesLateImage()
+    {
+        var path = Path.Combine(tempDir, "closing.mp4");
+        await File.WriteAllBytesAsync(path, []);
+        using var cache = CreateCache(_ => PngBytes);
+        var completion = new TaskCompletionSource<IImage?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var thumbnail = new TestImage();
+        using var viewModel = new BackgroundViewModel(cache, new LocalDiagnostics(), _ => { },
+            (_, _) => new TestImage(), () => new TestImage(), videoThumbnailLoader: (_, _) => completion.Task);
+        await viewModel.UpdateBackgroundImageAsync(new LauncherSettings
+        {
+            BackgroundSource = BackgroundSources.Custom, CustomBackgroundPath = path
+        }, null, CancellationToken.None);
+        var capture = viewModel.PendingVideoThumbnail;
+        viewModel.Dispose();
+        completion.SetResult(thumbnail);
+        await capture.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.True(thumbnail.IsDisposed);
+        Assert.Null(viewModel.BackgroundPreviewImage);
+    }
+
+    [Theory]
     [InlineData(-10, 0)]
     [InlineData(0, 0)]
     [InlineData(35, 35)]
@@ -69,8 +213,10 @@ public sealed class BackgroundViewModelTests : IDisposable
         }
     }
 
-    [Fact]
-    public async Task VideoBackground_WhenSelected_UsesStaticFallbackAndClearsOnImageSelection()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task VideoBackground_WhenSelected_UsesStaticFallbackAndClearsOnImageSelection(bool fromFolder)
     {
         var path = Path.Combine(tempDir, "background.MP4");
         await File.WriteAllBytesAsync(path, []);
@@ -80,13 +226,15 @@ public sealed class BackgroundViewModelTests : IDisposable
             () => new TestImage());
         var settings = new LauncherSettings
         {
-            BackgroundSource = BackgroundSources.Custom, CustomBackgroundPath = path, BackgroundVideoVolume = 35
+            BackgroundSource = BackgroundSources.Custom, CustomBackgroundPath = fromFolder ? tempDir : path, BackgroundVideoVolume = 35
         };
 
         await viewModel.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
 
         Assert.Equal(path, viewModel.BackgroundVideoPath);
         Assert.Equal(35, viewModel.BackgroundVideoVolume);
+        Assert.Equal(path, viewModel.CurrentBackgroundFilePath);
+        Assert.True(viewModel.IsVideoBackgroundSelected);
         Assert.IsType<TestImage>(viewModel.BackgroundImageSource);
         viewModel.ReportVideoFailure("superseded.mp4", new InvalidOperationException());
         Assert.Equal(path, viewModel.BackgroundVideoPath);
@@ -130,6 +278,39 @@ public sealed class BackgroundViewModelTests : IDisposable
         settings.CustomBackgroundPath = string.Empty;
         await viewModel.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
         Assert.False(viewModel.HasBackgroundLoadFailure);
+    }
+
+    [Theory]
+    [InlineData(false, "MP4")]
+    [InlineData(true, "MP4")]
+    [InlineData(false, "mkv")]
+    [InlineData(true, "mkv")]
+    [InlineData(false, "webm")]
+    [InlineData(true, "webm")]
+    public async Task UpdateBackgroundImageAsync_WhenFileOrFolderSelectsVideo_UsesVideoPipeline(bool fromFolder, string extension)
+    {
+        var folder = Path.Combine(tempDir, "videos");
+        Directory.CreateDirectory(folder);
+        var path = Path.Combine(folder, $"background.{extension}");
+        await File.WriteAllBytesAsync(path, []);
+        using var cache = CreateCache(_ => PngBytes);
+        var imageLoads = 0;
+        using var viewModel = new BackgroundViewModel(cache, new LocalDiagnostics(), _ => { },
+            (_, _) => { imageLoads++; return new TestImage(); }, () => new TestImage());
+        var settings = new LauncherSettings
+        {
+            BackgroundSource = BackgroundSources.Custom,
+            CustomBackgroundPath = fromFolder ? folder : path,
+            BackgroundVideoVolume = 35
+        };
+
+        await viewModel.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
+
+        Assert.Equal(path, viewModel.BackgroundVideoPath);
+        Assert.Equal(35, viewModel.BackgroundVideoVolume);
+        Assert.Equal(0, imageLoads);
+        Assert.False(viewModel.HasBackgroundLoadFailure);
+        Assert.Equal(fromFolder ? folder : path, settings.CustomBackgroundPath);
     }
 
     [Fact]
@@ -186,7 +367,7 @@ public sealed class BackgroundViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task LoadCustomBackgroundAsync_WhenFileIsInvalid_ReturnsNull()
+    public async Task UpdateBackgroundImageAsync_WhenCustomFileIsInvalid_UsesFallback()
     {
         var path = Path.Combine(tempDir, "invalid.png");
         await File.WriteAllTextAsync(path, "not-an-image");
@@ -196,13 +377,18 @@ public sealed class BackgroundViewModelTests : IDisposable
             new LocalDiagnostics(),
             _ => { });
 
-        var result = await viewModel.LoadCustomBackgroundAsync(path);
+        await viewModel.UpdateBackgroundImageAsync(new LauncherSettings
+        {
+            BackgroundSource = BackgroundSources.Custom,
+            CustomBackgroundPath = path
+        }, null, CancellationToken.None);
 
-        Assert.Null(result);
+        Assert.True(viewModel.HasBackgroundLoadFailure);
+        Assert.Equal(path, viewModel.CurrentBackgroundFilePath);
     }
 
     [Fact]
-    public async Task LoadCustomBackgroundAsync_WhenPathDoesNotExist_ReturnsNull()
+    public async Task UpdateBackgroundImageAsync_WhenCustomPathDoesNotExist_UsesFallback()
     {
         using var cache = CreateCache(_ => PngBytes);
         using var viewModel = new BackgroundViewModel(
@@ -210,14 +396,17 @@ public sealed class BackgroundViewModelTests : IDisposable
             new LocalDiagnostics(),
             _ => { });
 
-        var result = await viewModel.LoadCustomBackgroundAsync(
-            Path.Combine(tempDir, "missing.png"));
+        await viewModel.UpdateBackgroundImageAsync(new LauncherSettings
+        {
+            BackgroundSource = BackgroundSources.Custom,
+            CustomBackgroundPath = Path.Combine(tempDir, "missing.png")
+        }, null, CancellationToken.None);
 
-        Assert.Null(result);
+        Assert.True(viewModel.HasBackgroundLoadFailure);
     }
 
     [Fact]
-    public async Task LoadCustomBackgroundAsync_WhenFolderHasNoSupportedImages_ReturnsNull()
+    public async Task UpdateBackgroundImageAsync_WhenFolderHasNoSupportedFiles_UsesFallback()
     {
         var folder = Path.Combine(tempDir, "empty");
         Directory.CreateDirectory(folder);
@@ -228,9 +417,15 @@ public sealed class BackgroundViewModelTests : IDisposable
             new LocalDiagnostics(),
             _ => { });
 
-        var result = await viewModel.LoadCustomBackgroundAsync(folder);
+        await viewModel.UpdateBackgroundImageAsync(new LauncherSettings
+        {
+            BackgroundSource = BackgroundSources.Custom,
+            CustomBackgroundPath = folder
+        }, null, CancellationToken.None);
 
-        Assert.Null(result);
+        Assert.True(viewModel.HasBackgroundLoadFailure);
+        Assert.Null(viewModel.CurrentBackgroundFilePath);
+        Assert.False(viewModel.IsVideoBackgroundSelected);
     }
 
     [Fact]
@@ -492,10 +687,20 @@ public sealed class BackgroundViewModelTests : IDisposable
         Assert.Same(bundled, viewModel.BackgroundImageSource);
     }
 
-    [Fact]
-    public async Task UpdateBackgroundImageAsync_WhenCustomImageIsValid_UsesCustomImage()
+    [Theory]
+    [InlineData(false, "png")]
+    [InlineData(true, "png")]
+    [InlineData(false, "JPG")]
+    [InlineData(true, "JPG")]
+    [InlineData(false, "jpeg")]
+    [InlineData(true, "jpeg")]
+    [InlineData(false, "bmp")]
+    [InlineData(true, "bmp")]
+    [InlineData(false, "webp")]
+    [InlineData(true, "webp")]
+    public async Task UpdateBackgroundImageAsync_WhenFileOrFolderSelectsImage_UsesImagePipeline(bool fromFolder, string extension)
     {
-        var path = Path.Combine(tempDir, "custom.png");
+        var path = Path.Combine(tempDir, $"custom.{extension}");
         await File.WriteAllBytesAsync(path, PngBytes);
         using var cache = CreateCache(_ => PngBytes);
         var custom = new TestImage();
@@ -510,16 +715,94 @@ public sealed class BackgroundViewModelTests : IDisposable
             new LauncherSettings
             {
                 BackgroundSource = BackgroundSources.Custom,
-                CustomBackgroundPath = path
+                CustomBackgroundPath = fromFolder ? tempDir : path
             },
             null,
             CancellationToken.None);
 
         Assert.Same(custom, viewModel.BackgroundImageSource);
+        Assert.Equal(path, viewModel.CurrentBackgroundFilePath);
+        Assert.False(viewModel.IsVideoBackgroundSelected);
+        Assert.Null(viewModel.BackgroundVideoPath);
+    }
+
+    [Theory]
+    [InlineData("png")]
+    [InlineData("mp4")]
+    public async Task UpdateBackgroundImageAsync_WhenFolderAndManualSelectionResolveSameFile_ReusesMedia(string extension)
+    {
+        var path = Path.Combine(tempDir, $"same-media.{extension}");
+        await File.WriteAllBytesAsync(path, []);
+        using var cache = CreateCache(_ => PngBytes);
+        using var viewModel = new BackgroundViewModel(cache, new LocalDiagnostics(), _ => { },
+            (_, _) => new TestImage(), () => new TestImage());
+        var settings = new LauncherSettings
+        {
+            BackgroundSource = BackgroundSources.Custom,
+            CustomBackgroundPath = tempDir
+        };
+        await viewModel.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
+        var first = viewModel.BackgroundImageSource;
+
+        settings.CustomBackgroundPath = path;
+        await viewModel.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
+
+        Assert.Same(first, viewModel.BackgroundImageSource);
+        Assert.Equal(path, viewModel.CurrentBackgroundFilePath);
+        Assert.False(viewModel.HasBackgroundLoadFailure);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task UpdateBackgroundImageAsync_WhenFileOrFolderDecodeIsCancelled_ReleasesImageAndPreservesCurrentFile(bool fromFolder)
+    {
+        var path = Path.Combine(tempDir, "cancelled.png");
+        await File.WriteAllBytesAsync(path, []);
+        using var cache = CreateCache(_ => PngBytes);
+        using var cancellation = new CancellationTokenSource();
+        var decoded = new TestImage();
+        using var viewModel = new BackgroundViewModel(cache, new LocalDiagnostics(), _ => { },
+            (_, _) => { cancellation.Cancel(); return decoded; }, () => new TestImage());
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => viewModel.UpdateBackgroundImageAsync(new LauncherSettings
+        {
+            BackgroundSource = BackgroundSources.Custom,
+            CustomBackgroundPath = fromFolder ? tempDir : path
+        }, null, cancellation.Token));
+
+        Assert.True(decoded.IsDisposed);
+        Assert.Null(viewModel.CurrentBackgroundFilePath);
+        Assert.False(viewModel.IsVideoBackgroundSelected);
     }
 
     [Fact]
-    public async Task UpdateBackgroundImageAsync_WhenCustomFileChangesAtSamePath_DoesNotSkipReload()
+    public async Task UpdateBackgroundImageAsync_WhenReturningFromFallback_ReloadsPreviousFile()
+    {
+        var path = Path.Combine(tempDir, "previous.png");
+        await File.WriteAllBytesAsync(path, []);
+        using var cache = CreateCache(_ => PngBytes);
+        var imageLoads = 0;
+        using var viewModel = new BackgroundViewModel(cache, new LocalDiagnostics(), _ => { },
+            (_, _) => { imageLoads++; return new TestImage(); }, () => new TestImage());
+        var settings = new LauncherSettings { BackgroundSource = BackgroundSources.Custom, CustomBackgroundPath = path };
+        await viewModel.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
+        settings.CustomBackgroundPath = Path.Combine(tempDir, "missing.png");
+        await viewModel.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
+        Assert.True(viewModel.HasBackgroundLoadFailure);
+
+        settings.CustomBackgroundPath = path;
+        await viewModel.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
+
+        Assert.Equal(2, imageLoads);
+        Assert.Equal(path, viewModel.CurrentBackgroundFilePath);
+        Assert.False(viewModel.HasBackgroundLoadFailure);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task UpdateBackgroundImageAsync_WhenCustomFileChangesAtSamePath_DoesNotSkipReload(bool fromFolder)
     {
         var path = Path.Combine(tempDir, "custom-reswap.png");
         await File.WriteAllBytesAsync(path, PngBytes);
@@ -535,7 +818,7 @@ public sealed class BackgroundViewModelTests : IDisposable
             new LauncherSettings
             {
                 BackgroundSource = BackgroundSources.Custom,
-                CustomBackgroundPath = path
+                CustomBackgroundPath = fromFolder ? tempDir : path
             },
             null,
             CancellationToken.None);
@@ -548,7 +831,7 @@ public sealed class BackgroundViewModelTests : IDisposable
             new LauncherSettings
             {
                 BackgroundSource = BackgroundSources.Custom,
-                CustomBackgroundPath = path
+                CustomBackgroundPath = fromFolder ? tempDir : path
             },
             null,
             CancellationToken.None);
@@ -628,7 +911,7 @@ public sealed class BackgroundViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task LoadCustomBackgroundAsync_WhenCanceled_PropagatesCancellation()
+    public async Task UpdateBackgroundImageAsync_WhenCustomLoadIsCanceled_PropagatesCancellation()
     {
         using var cache = CreateCache(_ => PngBytes);
         using var viewModel = new BackgroundViewModel(
@@ -639,7 +922,11 @@ public sealed class BackgroundViewModelTests : IDisposable
         cts.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
-            () => viewModel.LoadCustomBackgroundAsync(tempDir, cts.Token));
+            () => viewModel.UpdateBackgroundImageAsync(new LauncherSettings
+            {
+                BackgroundSource = BackgroundSources.Custom,
+                CustomBackgroundPath = tempDir
+            }, null, cts.Token));
     }
 
     [Theory]

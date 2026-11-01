@@ -14,7 +14,8 @@ namespace Cafe.Launcher.UI.Services;
 /// </summary>
 internal sealed class WindowFilePickerService : IFilePickerService
 {
-    private static readonly string[] ImagePatterns = ["*.png", "*.jpg", "*.jpeg", "*.bmp", "*.webp"];
+    private static readonly string[] BackgroundFilePatterns =
+        ["*.png", "*.jpg", "*.jpeg", "*.bmp", "*.webp", "*.mp4", "*.mkv", "*.webm"];
 
     private readonly object attachLock = new();
     private TopLevel? owner;
@@ -62,13 +63,7 @@ internal sealed class WindowFilePickerService : IFilePickerService
         return folders.FirstOrDefault()?.TryGetLocalPath();
     }
 
-    public async Task<string?> PickImageFileAsync(string title)
-        => await PickFileAsync(title, "Images", ImagePatterns);
-
-    public async Task<string?> PickVideoFileAsync(string title)
-        => await PickFileAsync(title, "Videos", ["*.mp4", "*.mkv", "*.webm"]);
-
-    private async Task<string?> PickFileAsync(string title, string filterName, string[] patterns)
+    public async Task<string?> PickBackgroundFileAsync(string title, string fileTypeName)
     {
         var storage = StorageProvider;
         if (storage is null || !storage.CanOpen)
@@ -82,9 +77,9 @@ internal sealed class WindowFilePickerService : IFilePickerService
             AllowMultiple = false,
             FileTypeFilter = new List<FilePickerFileType>
             {
-                new(filterName)
+                new(fileTypeName)
                 {
-                    Patterns = patterns,
+                    Patterns = BackgroundFilePatterns,
                 }
             }
         });

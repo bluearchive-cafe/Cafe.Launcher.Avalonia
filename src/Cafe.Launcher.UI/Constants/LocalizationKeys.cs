@@ -25,6 +25,7 @@ public static class LocalizationKeys
     public const string AboutRowRuntime = "aboutRowRuntime";
     public const string AboutVersionCaption = "aboutVersionCaption";
     public const string AppearancePreviewFailed = "appearancePreviewFailed";
+    public const string BackgroundFileTypes = "backgroundFileTypes";
     public const string BackgroundFillColor = "backgroundFillColor";
     public const string BackgroundFillColorDescription = "backgroundFillColorDescription";
     public const string BackgroundFit = "backgroundFit";
@@ -48,13 +49,11 @@ public static class LocalizationKeys
     public const string ChangePath = "changePath";
     public const string CheckUpdates = "checkUpdates";
     public const string Choose = "choose";
+    public const string ChooseBackgroundFileTitle = "chooseBackgroundFileTitle";
     public const string ChooseBackgroundFolderTitle = "chooseBackgroundFolderTitle";
-    public const string ChooseBackgroundImageTitle = "chooseBackgroundImageTitle";
-    public const string ChooseBackgroundVideoTitle = "chooseBackgroundVideoTitle";
     public const string ChooseFolder = "chooseFolder";
-    public const string ChooseImage = "chooseImage";
+    public const string ChooseImageOrVideo = "chooseImageOrVideo";
     public const string ChooseInstallFolder = "chooseInstallFolder";
-    public const string ChooseVideo = "chooseVideo";
     public const string ClearBackground = "clearBackground";
     public const string Close = "close";
     public const string CloseBehavior = "closeBehavior";

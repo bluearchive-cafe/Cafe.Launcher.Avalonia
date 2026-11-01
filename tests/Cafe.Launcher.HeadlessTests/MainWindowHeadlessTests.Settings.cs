@@ -43,6 +43,7 @@ public sealed partial class MainWindowHeadlessTests
         // A missing media file keeps this UI test independent of a GPU and decoder.
         settings.CustomBackgroundPath = "missing-background.MP4";
         settings.BackgroundSource = BackgroundSources.Custom;
+        await WaitForBackgroundSelectionAsync(context, settings.CustomBackgroundPath);
         Dispatcher.UIThread.RunJobs();
         var name = context.ViewModel.Shell.I18n[LocalizationKeys.VideoBackgroundVolume];
         var slider = context.Window.GetVisualDescendants().OfType<Slider>()
@@ -99,6 +100,7 @@ public sealed partial class MainWindowHeadlessTests
         Assert.Equal(60, context.ViewModel.Background.BackgroundVideoVolume);
 
         settings.BackgroundSource = BackgroundSources.Bundled;
+        await WaitForBackgroundSelectionAsync(context, null);
         Dispatcher.UIThread.RunJobs();
         Assert.False(slider.IsEffectivelyVisible);
         Assert.False(mute.IsEffectivelyVisible);

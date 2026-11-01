@@ -1216,6 +1216,14 @@
         <Setter Property="Margin" Value="{StaticResource Launcher.Component.Settings.Row.Content.Padding}"/>
         <Setter Property="TextElement.Foreground" Value="{DynamicResource Launcher.Color.Warning}"/>
     </Style>
+    <Style Selector="Image.settings-appearance-thumbnail-image.video">
+        <Setter Property="Effect">
+            <BlurEffect Radius="{StaticResource Launcher.Component.Settings.Appearance.Thumbnail.VideoBlurRadius}"/>
+        </Setter>
+    </Style>
+    <Style Selector="Border.settings-appearance-video-shade">
+        <Setter Property="Background" Value="{StaticResource Launcher.Color.Overlay.Scrim.Sm}"/>
+    </Style>
     <Style Selector="Expander.settings-appearance-expander">
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>

@@ -50,7 +50,7 @@ public sealed partial class UiStyleContractTests
                 "Settings.Appearance.ThemeColorPaletteItems",
                 "Settings.Appearance.SelectedCustomThemeColor",
                 "Settings.Appearance.SelectedBackgroundFillColor",
-                "Settings.ChooseBackgroundImageCommand",
+                "Settings.ChooseBackgroundFileCommand",
                 "Settings.ChooseBackgroundFolderCommand",
                 "Settings.ClearBackgroundCommand",
                 "Settings.Appearance.IsThemeColorPaletteVisible",
