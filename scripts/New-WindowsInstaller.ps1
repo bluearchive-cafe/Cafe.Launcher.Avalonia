@@ -30,6 +30,8 @@ if (-not (Test-Path -LiteralPath $PublishDir -PathType Container) -or
     throw "Publish output is required at '$PublishDir'. Run scripts/Build-Distribution.ps1 first."
 }
 
+& (Join-Path $ScriptDir "Test-WindowsPublishOutput.ps1") -PublishDir $PublishDir
+
 function Assert-InnoSafeDefineValue {
     param(
         [Parameter(Mandatory)]

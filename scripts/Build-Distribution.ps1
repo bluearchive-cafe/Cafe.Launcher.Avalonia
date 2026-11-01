@@ -208,7 +208,9 @@ if (-not $SkipPublish) {
     foreach ($rid in $Rids) {
         $publishDir = Join-Path $PublishRoot $rid
         [void][System.IO.Directory]::CreateDirectory($publishDir)
-        Invoke-Checked "dotnet" @("publish", $ProjectPath, "-c", "Release", "-r", $rid, "-o", $publishDir) "dotnet publish failed for RID '$rid'."
+        # The SDK clears RuntimeIdentifier on RID-agnostic project references. Pass the
+        # media asset target separately so UI never falls back to the build host's RID.
+        Invoke-Checked "dotnet" @("publish", $ProjectPath, "-c", "Release", "-r", $rid, "-p:BackgroundVideoRid=$rid", "-o", $publishDir) "dotnet publish failed for RID '$rid'."
 
         # The archives redistribute the .NET runtime and the NuGet dependencies, so the license
         # disclosure has to travel with the binaries rather than only living in the repository:
@@ -230,6 +232,7 @@ if (-not $SkipPublish) {
 $artifacts = @()
 
 if ($Rids -contains "win-x64") {
+    & (Join-Path $ScriptDir "Test-WindowsPublishOutput.ps1") -PublishDir (Join-Path $PublishRoot "win-x64")
     $winZipPath = Join-Path $DistributionDir "Cafe.Launcher_${Tag}_win-x64.zip"
     New-DeterministicZip -SourceDirectory (Join-Path $PublishRoot "win-x64") -Destination $winZipPath
     $artifacts += [pscustomobject]@{ Rid = "win-x64"; Kind = "zip"; Path = $winZipPath }
