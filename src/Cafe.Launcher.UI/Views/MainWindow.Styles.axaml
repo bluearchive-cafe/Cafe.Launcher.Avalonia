@@ -1340,6 +1340,10 @@
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Md}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
     </Style>
+    <Style Selector="controls|ReleaseNotesMarkdownViewer :is(Span).markdown-link">
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Link}"/>
+        <Setter Property="TextDecorations" Value="Underline"/>
+    </Style>
     <Style Selector="controls|ReleaseNotesMarkdownViewer :is(TextBlock).markdown-h1">
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Display}"/>
         <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>

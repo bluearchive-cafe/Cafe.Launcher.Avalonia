@@ -16,11 +16,50 @@ using Cafe.Launcher.UI.Views;
 using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Core.Services.Update;
 using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Services;
+using Cafe.Launcher.Testing;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cafe.Launcher.HeadlessTests;
 
 public sealed partial class MainWindowHeadlessTests
 {
+    [AvaloniaFact]
+    public async Task UpdateDialog_WithBanner_UsesImageCacheAndReleasesImagesWhenClosed()
+    {
+        byte[] bytes = [];
+        var transport = new StubRemoteHttpTransport(_ => bytes);
+        using var context = CreateContext(configure: services => services.AddSingleton<IRemoteHttpTransport>(transport));
+        var bannerPath = context.Directory.Sub("release-banner.png");
+        HeadlessTestHost.WriteSolidPng(bannerPath, Brushes.Blue, 1024, 576);
+        bytes = File.ReadAllBytes(bannerPath);
+        const string markdown = "![Banner](https://example.com/banner.png)\n\n[Details](https://example.com/release)";
+
+        context.ViewModel.Dialogs.ShowUpdateAvailable(
+            "1.4.0", [], LauncherUpdateInAppAvailability.PlatformUnsupported, releaseNotes: markdown);
+        context.Window.Show();
+        var viewer = Assert.Single(context.Window.GetVisualDescendants().OfType<ReleaseNotesMarkdownViewer>());
+        await HeadlessTestHost.WaitUntilAsync(
+            () => viewer.GetVisualDescendants().OfType<Image>().Any(image => image.Source is not null),
+            TimeSpan.FromSeconds(5));
+        Assert.NotNull(viewer.ImageLoader);
+        Assert.True(viewer.IsDocumentActive);
+        var firstImage = Assert.Single(viewer.GetVisualDescendants().OfType<Image>());
+
+        context.ViewModel.Dialogs.CancelUpdateAvailableCommand.Execute(null);
+        await HeadlessTestHost.WaitUntilAsync(() => !viewer.IsDocumentActive, TimeSpan.FromSeconds(5));
+        Assert.Null(viewer.Content);
+        Assert.Null(firstImage.Source);
+
+        context.ViewModel.Dialogs.ShowUpdateAvailable(
+            "1.4.0", [], LauncherUpdateInAppAvailability.PlatformUnsupported, releaseNotes: markdown);
+        await HeadlessTestHost.WaitUntilAsync(
+            () => viewer.GetVisualDescendants().OfType<Image>().Any(image => image.Source is not null),
+            TimeSpan.FromSeconds(5));
+        Assert.Equal(markdown, viewer.Markdown);
+        Assert.Equal(new[] { new Uri("https://example.com/banner.png") }, transport.RequestedUris);
+    }
+
     [AvaloniaFact]
     public void UpdateDialog_WhenClosingWithMotion_KeepsReleaseNotesVisibleDuringExit()
     {

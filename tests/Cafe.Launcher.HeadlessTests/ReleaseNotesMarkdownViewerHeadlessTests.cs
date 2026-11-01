@@ -2,6 +2,11 @@ using System.Text;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
 using Avalonia.Headless.XUnit;
+using Avalonia.Media;
+using Avalonia.Media.Imaging;
+using Avalonia.VisualTree;
+using MarkView.Avalonia;
+using MarkView.Avalonia.Rendering;
 using Cafe.Launcher.UI.Controls;
 using Cafe.Launcher.Testing;
 using Xunit;
@@ -11,7 +16,177 @@ namespace Cafe.Launcher.HeadlessTests;
 public sealed class ReleaseNotesMarkdownViewerHeadlessTests
 {
     [AvaloniaFact]
-    public void Markdown_WhenUsingGfmAndAlerts_RendersNativeStructuresWithoutRemoteImages()
+    public async Task Markdown_WithRemoteBanner_LoadsImageAndFitsTheViewer()
+    {
+        using var directory = TestDirectory.Create();
+        var path = directory.Sub("banner.png");
+        HeadlessTestHost.WriteSolidPng(path, Brushes.Blue, 1024, 576);
+        var bytes = File.ReadAllBytes(path);
+        var requested = new List<string>();
+        var viewer = new ReleaseNotesMarkdownViewer
+        {
+            ImageLoader = (url, _) =>
+            {
+                requested.Add(url);
+                return Task.FromResult(bytes);
+            },
+            Markdown = "![Banner](https://example.com/banner.png)\n\n[Details](https://example.com/release)"
+        };
+        var window = new Window { Content = viewer, Width = 400, Height = 300 };
+        try
+        {
+            window.Show();
+            await HeadlessTestHost.WaitUntilAsync(
+                () => viewer.GetVisualDescendants().OfType<Image>().Any(image => image.Source is not null),
+                TimeSpan.FromSeconds(5));
+            var image = Assert.Single(viewer.GetVisualDescendants().OfType<Image>());
+            Assert.IsType<Bitmap>(image.Source);
+            Assert.Equal(new[] { "https://example.com/banner.png" }, requested);
+            Assert.True(image.Bounds.Width > 0 && image.Bounds.Width <= viewer.Bounds.Width);
+            Assert.Equal(16.0 / 9, image.Bounds.Width / image.Bounds.Height, 2);
+            Assert.Contains("Details", viewer.GetSelectedText() + ReadTextFromViewer(viewer), StringComparison.Ordinal);
+
+            viewer.IsDocumentActive = false;
+            Assert.Null(viewer.Content);
+            Assert.Null(image.Source);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaTheory]
+    [InlineData("https://example.com/release", true)]
+    [InlineData("http://example.com/release", true)]
+    [InlineData("mailto:test@example.com", true)]
+    [InlineData("file:///C:/secret.txt", false)]
+    [InlineData("javascript:alert(1)", false)]
+    [InlineData("../local.txt", false)]
+    public void LinkClicked_OnlyOpensAllowedExternalLinks(string url, bool allowed)
+    {
+        var opened = new List<string?>();
+        var viewer = new ReleaseNotesMarkdownViewer(opened.Add);
+        var args = new LinkClickedEventArgs(url) { RoutedEvent = MarkdownViewer.LinkClickedEvent };
+
+        viewer.RaiseEvent(args);
+
+        Assert.True(args.Handled);
+        Assert.Equal(allowed ? new[] { url } : [], opened);
+    }
+
+    [AvaloniaTheory]
+    [InlineData("file:///C:/secret.png")]
+    [InlineData("avares://Cafe.Launcher.UI/Assets/launcher-background.png")]
+    [InlineData("data:image/png;base64,AAAA")]
+    public void Markdown_WithNonHttpImages_DoesNotInvokeTheImageLoader(string url)
+    {
+        var calls = 0;
+        var viewer = new ReleaseNotesMarkdownViewer
+        {
+            ImageLoader = (_, _) => { calls++; return Task.FromResult(Array.Empty<byte>()); },
+            Markdown = $"![image]({url})"
+        };
+        var window = new Window { Content = viewer };
+        try
+        {
+            window.Show();
+            Assert.Equal(0, calls);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Markdown_WhenReplaced_CancelsPendingImageAndIgnoresLateResult()
+    {
+        var entered = new TaskCompletionSource<CancellationToken>();
+        var result = new TaskCompletionSource<byte[]>();
+        var viewer = new ReleaseNotesMarkdownViewer
+        {
+            ImageLoader = (_, token) => { entered.TrySetResult(token); return result.Task; },
+            Markdown = "![old](https://example.com/old.png)"
+        };
+        var window = new Window { Content = viewer };
+        try
+        {
+            window.Show();
+            var token = await entered.Task;
+            viewer.Markdown = "new content";
+            Assert.True(token.IsCancellationRequested);
+            result.SetResult([]);
+            Assert.Contains("new content", ReadTextFromViewer(viewer), StringComparison.Ordinal);
+            Assert.Empty(viewer.GetVisualDescendants().OfType<Image>());
+        }
+        finally
+        {
+            window.Close();
+            result.TrySetResult([]);
+        }
+    }
+
+    private static string ReadTextFromViewer(ReleaseNotesMarkdownViewer viewer) =>
+        string.Join("\n", viewer.GetVisualDescendants().OfType<TextBlock>().Select(ReadText));
+
+    [AvaloniaTheory]
+    [InlineData(null)]
+    [InlineData("")]
+    public async Task Markdown_WhenCleared_CancelsPendingImages(string? markdown)
+    {
+        var entered = new TaskCompletionSource<CancellationToken>();
+        var completion = new TaskCompletionSource<byte[]>();
+        var viewer = new ReleaseNotesMarkdownViewer
+        {
+            ImageLoader = (_, token) => { entered.TrySetResult(token); return completion.Task; },
+            Markdown = "![Banner](https://example.com/banner.png)"
+        };
+        var window = new Window { Content = viewer };
+        try
+        {
+            window.Show();
+            var token = await entered.Task;
+            viewer.Markdown = markdown;
+            Assert.True(token.IsCancellationRequested);
+            Assert.Null(viewer.Content);
+        }
+        finally
+        {
+            window.Close();
+            completion.TrySetResult([]);
+        }
+    }
+
+    [AvaloniaFact]
+    public void Markdown_WhenImageLoadingFails_StillShowsBodyAndLinks()
+    {
+        var calls = 0;
+        var viewer = new ReleaseNotesMarkdownViewer
+        {
+            ImageLoader = (_, _) =>
+            {
+                calls++;
+                return Task.FromException<byte[]>(new IOException("unavailable"));
+            },
+            Markdown = "![Banner](https://example.com/banner.png)\n\nBody [Details](https://example.com/release)"
+        };
+        var window = new Window { Content = viewer };
+        try
+        {
+            window.Show();
+            Assert.Equal(1, calls);
+            Assert.Contains("Body Details", ReadTextFromViewer(viewer), StringComparison.Ordinal);
+            Assert.Null(Assert.Single(viewer.GetVisualDescendants().OfType<Image>()).Source);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void Markdown_WhenUsingGfmAndAlerts_RendersNativeStructures()
     {
         var viewer = new ReleaseNotesMarkdownViewer
         {
@@ -28,7 +203,7 @@ public sealed class ReleaseNotesMarkdownViewerHeadlessTests
         Assert.Contains(
             descendants.OfType<TextBlock>(),
             text => text.Classes.Contains("markdown-task-list") && text.Text == "\u2611");
-        Assert.Empty(descendants.OfType<Image>());
+        Assert.NotNull(viewer.Content);
 
         window.Close();
     }
