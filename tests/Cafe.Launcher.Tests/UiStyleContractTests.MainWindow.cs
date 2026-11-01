@@ -372,7 +372,7 @@ public sealed partial class UiStyleContractTests
             .Single(element => HasClass(element, "titlebar-brand-row"));
         var titleBar = brandRow.Parent!;
         Assert.Equal(
-            ["{Binding Shell.ProductName}"],
+            ["{Binding Shell.ProductName}", "{Binding Shell.TitleBarVersionText}"],
             brandRow
                 .Descendants()
                 .Where(element => element.Name.LocalName == "TextBlock")

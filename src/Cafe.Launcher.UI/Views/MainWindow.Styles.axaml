@@ -190,6 +190,18 @@
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Title.Md}"/>
         <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
     </Style>
+    <Style Selector="Border.titlebar-version-badge">
+        <Setter Property="Background" Value="{StaticResource Launcher.Color.TitleBar.Version.Background}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.TitleBar.Version.Padding}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Xs}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="TextBlock.titlebar-version">
+        <Setter Property="Foreground" Value="{StaticResource Launcher.Text.OnChrome.Muted}"/>
+        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Label.Sm}"/>
+        <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Normal}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
     <Style Selector="TextBlock.progress-title">
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Lg}"/>
@@ -201,6 +213,7 @@
     </Style>
     <Style Selector="StackPanel.titlebar-brand-row">
         <Setter Property="Orientation" Value="Horizontal"/>
+        <Setter Property="Spacing" Value="{StaticResource Launcher.Spacing.Sm}"/>
         <Setter Property="Margin" Value="{StaticResource Launcher.Component.TitleBar.Brand.Margin}"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>

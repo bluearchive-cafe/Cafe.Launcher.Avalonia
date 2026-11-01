@@ -52,6 +52,7 @@
             <Thickness x:Key="Launcher.Component.Settings.Navigation.Item.Margin">0,2</Thickness>
             <Thickness x:Key="Launcher.Component.Settings.Navigation.Item.Padding">12,0</Thickness>
             <Thickness x:Key="Launcher.Component.TitleBar.Brand.Margin">20,0,0,0</Thickness>
+            <Thickness x:Key="Launcher.Component.TitleBar.Version.Padding">8,2</Thickness>
             <Thickness x:Key="Launcher.Component.TitleBar.Actions.Margin">0,0,8,0</Thickness>
             <Thickness x:Key="Launcher.Component.TitleBar.Settings.Margin">0,0,4,0</Thickness>
             <Thickness x:Key="Launcher.Component.Dialog.Title.Margin">16,0,0,0</Thickness>
@@ -256,6 +257,7 @@
             <SolidColorBrush x:Key="Launcher.Color.OnPrimary" Color="#FFFFFFFF"/>
             <SolidColorBrush x:Key="Launcher.Text.OnChrome" Color="#FFFFFFFF"/>
             <SolidColorBrush x:Key="Launcher.Text.OnChrome.Muted" Color="#CCFFFFFF"/>
+            <SolidColorBrush x:Key="Launcher.Color.TitleBar.Version.Background" Color="#22FFFFFF"/>
             <SolidColorBrush x:Key="Launcher.Text.OnDark" Color="#B3FFFFFF"/>
             <SolidColorBrush x:Key="Launcher.Color.Transparent" Color="#00000000"/>
             <SolidColorBrush x:Key="Launcher.Color.Chrome.Hover" Color="#22FFFFFF"/>

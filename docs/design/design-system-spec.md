@@ -142,6 +142,7 @@
 
 ## 5. 表面与布局（Q12/Q18）
 
+- 主窗口标题栏在产品名右侧以 `v{version}` 显示宿主版本（保留完整预发布后缀，语言切换不改变格式）。版本徽标使用 `Label.Sm` 常规字重、`Text.OnChrome.Muted` 前景、半透明白色背景、`Radius.Xs` 圆角及 8×2 DIP 内缩，与产品名保持 `Spacing.Sm` 间距；徽标区域保留标题栏拖动行为。
 - 单窗口 + 覆盖层：Z 序 = 主内容 → 设置 100 → 对话框 200 → 向导 500 → 向导退出确认 501 → Toast 1000。`ZIndex` 是兄弟节点排序，声明在 `MainWindow` / `MainWindowDialogsOverlay` 的使用点上；覆盖层的样式不设置 `ZIndex`。
 - 功能分区（Shell / GameOperations / Settings / SetupWizard / Diagnostics / ResourcePanel）与"单窗口内选分类"模型不变；表现级布局自由（如设置页留白、卡片形态）。
 - **设置页重设计蓝图（P3 表面执行；** [ADR-013](adr/ADR-013-设置页重设计方向.md) **+ M3 审核定稿）**：标题栏拆分（「设置」并入导航列顶部 header；关闭 ✕ 并入内容区标题行右端）；导航列 = SecondaryContainer 激活填充 + leading icon（Material Symbols）+ 标签，无指示条；内容区 = 变体 B 纯列表 + 组间空档 + 行间 0.5 DIP hairline（以 `Color.Card.Border` 为分隔色）；覆盖层由 `DialogSurface` 统一承载 16 DIP 圆角 + 克制的双层 `Elevation.Shadow.Dialog` + `Dialog.Background`（Q13 表面中性；种子跟随时由 scheme neutral 覆盖，见 §3.4）；控件统一 `Field` 形态。**修正清单（随 P2/P3 落地）**：`Field.Border` 双档对比度（浅 `#8290A5`/深 `#7B89A0`，≥3:1）、hairline inset 规则、抽屉 leading icons。

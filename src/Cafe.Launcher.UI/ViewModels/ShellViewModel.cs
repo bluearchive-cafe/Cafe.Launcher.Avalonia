@@ -31,6 +31,11 @@ internal partial class ShellViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     private string launcherVersionText = "";
 
+    /// <summary>Title-bar label with an invariant v prefix and the host's complete version.</summary>
+    public string TitleBarVersionText => buildIdentity?.LauncherVersion is { Length: > 0 } version
+        ? $"v{version}"
+        : "";
+
     [ObservableProperty]
     private string frameworkVersionText = "";
 
