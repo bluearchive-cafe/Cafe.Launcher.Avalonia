@@ -31,6 +31,7 @@
     <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" PrivateAssets="all" />
     <PackageReference Include="Microsoft.Testing.Extensions.HangDump" PrivateAssets="all" />
     <PackageReference Include="Microsoft.Testing.Extensions.TrxReport" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Testing.Platform.MSBuild" PrivateAssets="all" />
     <PackageReference Include="xunit.v3.mtp-v2" />
   </ItemGroup>
 

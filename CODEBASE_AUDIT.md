@@ -39,7 +39,7 @@
 
 | ID | 当前取舍 | 重开条件 |
 | --- | --- | --- |
-| `AUD-DEP-002` | 单元测试使用 `xunit.v3.mtp-v2` 4.0.2，Headless 经 `VersionOverride` 保留 3.2.2：`Avalonia.Headless.XUnit` 12.1.4 使用 xUnit 3.2.2 的扩展 API，而 xUnit 4 的扩展接口有破坏性变更；其 nuspec 只声明最低 `[3.2.2, )`。两套都经显式 `mtp-v2` 包统一在 MTP 2.5.1。取舍见 `PROJECT_CONVENTIONS.md` §12 与 `docs/research/mtp-migration.md`。 | `Avalonia.Headless.XUnit` 发布支持 xUnit 4 扩展 API 的版本并通过 Headless 套件验证后，升级 Headless 并把并行化声明迁到 `[assembly: Parallelization(...)]`。 |
+| `AUD-DEP-002` | 单元测试使用 `xunit.v3.mtp-v2` 4.0.2，Headless 经 `VersionOverride` 保留 3.2.2：`Avalonia.Headless.XUnit` 12.1.4 使用 xUnit 3.2.2 的扩展 API，而 xUnit 4 的扩展接口有破坏性变更；其 nuspec 只声明最低 `[3.2.2, )`。2026-11-01 实测升级 4.0.2 并迁移程序集并行化声明后可以编译，但测试发现器调用 `TestIntrospectionHelper.GetTestCaseDetails` 时抛出 `MissingMethodException`，16 项 Markdown 定向测试全部失败；已恢复 3.2.2。两套都经显式 `mtp-v2` 包统一在 MTP 2.5.2。取舍见 `PROJECT_CONVENTIONS.md` §12 与 `docs/research/mtp-migration.md`。 | `Avalonia.Headless.XUnit` 发布支持 xUnit 4 扩展 API 的版本并通过 Headless 套件验证后，升级 Headless 并把并行化声明迁到 `[assembly: Parallelization(...)]`。 |
 | `AUD-ARCH-007` | 系统代理指纹变化会释放旧 handler，使在途下载批次最多失败一轮；下一轮新租约可恢复。引用计数方案并发复杂度更高。 | 出现不可恢复下载失败，或重试无法切换到新 handler。 |
 | `AUD-PERF-001` | 实际更新对约 1.09 GiB 客户端做 CRC64 自愈校验：冷读约 5.9 秒、热读约 0.9 秒；只在真实更新发生，保留内容自愈价值更高。 | 受管理客户端接近 10 GiB，按现有系数冷读将接近 54 秒。 |
 | `AUD-PERF-004` | 五张 460×220 横幅每轮重解码约 10 ms 后台 CPU，显著低于同路径网络成本；位图缓存会增加所有权与失效复杂度。 | 横幅数量或尺寸使单轮解码接近 100 ms，或刷新路径其他成本降至同量级。 |

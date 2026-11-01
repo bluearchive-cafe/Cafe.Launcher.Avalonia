@@ -32,6 +32,14 @@ internal sealed class ReleaseNotesMarkdownViewer : MarkdownViewer
 
     private ImageScope? imageScope;
 
+    static ReleaseNotesMarkdownViewer()
+    {
+        // Documents own decoded bitmaps. MarkView's shared cache keys loader types, so reopening
+        // would reuse a bitmap disposed with the previous document. Encoded bytes already use
+        // the launcher's ImageCacheService; keep decoded images within their document scope.
+        MarkdownViewerDefaults.ImageCacheSize = 0;
+    }
+
     /// <summary>构造 XAML 使用的更新说明查看器。</summary>
     public ReleaseNotesMarkdownViewer() : this(ExternalLinkService.Open)
     {

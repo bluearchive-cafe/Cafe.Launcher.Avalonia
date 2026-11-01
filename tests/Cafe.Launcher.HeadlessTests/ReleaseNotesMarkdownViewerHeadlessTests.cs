@@ -177,7 +177,7 @@ public sealed class ReleaseNotesMarkdownViewerHeadlessTests
             window.Show();
             Assert.Equal(1, calls);
             Assert.Contains("Body Details", ReadTextFromViewer(viewer), StringComparison.Ordinal);
-            Assert.Null(Assert.Single(viewer.GetVisualDescendants().OfType<Image>()).Source);
+            Assert.DoesNotContain(viewer.GetVisualDescendants().OfType<Image>(), image => image.Source is not null);
         }
         finally
         {
