@@ -94,7 +94,7 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
     /// <summary>Audio controls follow the resolved file, including videos selected from a folder.</summary>
     public bool IsVideoBackgroundSelected => VideoBackgroundRuntime.IsVideoFile(CurrentBackgroundFilePath);
 
-    /// <summary>Video previews prefer cover art, then the first frame; wallpaper pixels and palette keep the static fallback.</summary>
+    /// <summary>Video previews and palette extraction share cover art or the first frame; the playback fallback stays static.</summary>
     public IImage? BackgroundPreviewImage => IsVideoBackgroundSelected
         ? videoThumbnail ?? BackgroundImageSource
         : BackgroundImageSource;
@@ -269,7 +269,8 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
         var targetDecidesReuse = !string.Equals(
             sourceKey,
             BackgroundSources.Bundled,
-            StringComparison.Ordinal);
+            StringComparison.Ordinal)
+            && !VideoBackgroundRuntime.IsVideoFile(customFilePath);
         if (sourceKey is not null
             && sourceKey == lastBackgroundSourceKey
             && (!targetDecidesReuse || decodeTarget == lastDecodeTarget)
@@ -289,15 +290,17 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
             : null;
         if (videoPath is not null)
         {
-            // The bundled image stays available underneath
-            // the video. Palette extraction uses this image, never a per-frame readback.
+            // Keep the bundled image underneath playback. Start the cover/first-frame request
+            // before notifying palette consumers so they await this selection's image once.
             var fallback = await Task.Run(() => bundledImageLoader());
             BitmapLifetime.ThrowIfCancellationRequested(fallback, cancellationToken);
             if (TrySetBackgroundImage(fallback, settings, loadGeneration, null, decodeTarget,
-                    currentFilePath: customFilePath))
+                    currentFilePath: customFilePath, notifyPalette: false))
             {
                 lastBackgroundSourceKey = sourceKey;
                 RequestVideoThumbnail(videoPath, sourceKey);
+                if (settings.ThemeColorMode == ThemeColorModes.Wallpaper)
+                    wallpaperChanged(settings);
             }
             return;
         }
@@ -590,8 +593,18 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
         ReplaceBackgroundImageAfterResize(reloaded);
     }
 
-    public Bitmap? GetBackgroundBitmap()
+    /// <summary>
+    /// Gets the palette source, awaiting the current video's cover/first frame without cancelling
+    /// the shared thumbnail request when a palette refresh is superseded. The caller borrows the bitmap.
+    /// </summary>
+    public async Task<Bitmap?> GetBackgroundBitmapAsync(CancellationToken cancellationToken)
     {
+        if (IsVideoBackgroundSelected && videoThumbnailSourceKey is not null)
+        {
+            await videoThumbnailRefresh.Pending.WaitAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (videoThumbnail is Bitmap thumbnail) return thumbnail;
+        }
         return BackgroundImageSource as Bitmap;
     }
 
@@ -686,11 +699,11 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
             || extension.Equals(".webp", StringComparison.OrdinalIgnoreCase);
     }
 
-    private void SetBackgroundImage(IImage? bitmap, LauncherSettings previewSettings)
+    private void SetBackgroundImage(IImage? bitmap, LauncherSettings previewSettings, bool notifyPalette)
     {
         var old = BackgroundImageSource;
         BackgroundImageSource = bitmap;
-        if (previewSettings.ThemeColorMode == ThemeColorModes.Wallpaper)
+        if (notifyPalette && previewSettings.ThemeColorMode == ThemeColorModes.Wallpaper)
         {
             // 主题取色在后台执行（不再阻塞 UI 线程），完成后 tokens 落色；
             // 期间沿用旧色板渲染，不会闪到默认色。
@@ -715,7 +728,8 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
         PixelSize decodeTarget,
         bool isFallback = false,
         string? currentFilePath = null,
-        string? currentLocation = null)
+        string? currentLocation = null,
+        bool notifyPalette = true)
     {
         if (disposed || loadGeneration != Volatile.Read(ref backgroundLoadGeneration))
         {
@@ -724,7 +738,7 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
         }
 
         currentDecodedImagePath = decodedPath;
-        if (!VideoBackgroundRuntime.IsVideoFile(currentFilePath)) ClearVideoThumbnail();
+        if (isFallback || !VideoBackgroundRuntime.IsVideoFile(currentFilePath)) ClearVideoThumbnail();
         RememberBackgroundSelection(previewSettings);
         lastBackgroundSourceKey = null;
         CurrentBackgroundFilePath = currentFilePath;
@@ -734,7 +748,7 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
         lastDecodeTarget = decodeTarget;
         HasBackgroundLoadFailure = isFallback;
         BackgroundVideoPath = !isFallback && VideoBackgroundRuntime.IsVideoFile(currentFilePath) ? currentFilePath : null;
-        SetBackgroundImage(bitmap, previewSettings);
+        SetBackgroundImage(bitmap, previewSettings, notifyPalette);
         return true;
     }
 

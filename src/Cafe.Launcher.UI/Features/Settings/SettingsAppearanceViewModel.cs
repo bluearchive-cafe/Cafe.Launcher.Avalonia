@@ -53,7 +53,9 @@ internal partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
     }
 
     public SettingsEditor Editor => editor;
-    public Func<Bitmap?>? GetBackgroundBitmap { get; set; }
+
+    /// <summary>Borrow the current palette source, waiting for video artwork when needed.</summary>
+    public Func<CancellationToken, Task<Bitmap?>>? GetBackgroundBitmapAsync { get; set; }
 
     // These describe the current settings session, never the persisted draft.
     [ObservableProperty]
@@ -206,7 +208,10 @@ internal partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         // 「已过期」的判据从代数换成令牌：刷新槽换新或 Dispose 都会取消在飞的令牌。
         try
         {
-            var bitmap = GetBackgroundBitmap?.Invoke();
+            var bitmap = GetBackgroundBitmapAsync is { } getBitmap
+                ? await getBitmap(cancellationToken)
+                : null;
+            cancellationToken.ThrowIfCancellationRequested();
             if (bitmap is null)
             {
                 await RunOnUiAsync(() =>
@@ -262,6 +267,10 @@ internal partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
                     ApplyResolvedTheme();
                 }
             });
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // A newer source/algorithm or disposal superseded the wait for video artwork.
         }
         catch (ObjectDisposedException)
         {

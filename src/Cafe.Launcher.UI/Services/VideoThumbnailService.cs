@@ -54,10 +54,13 @@ internal sealed class VideoThumbnailService(ILauncherDiagnostics diagnostics)
         var frame = CaptureFirstFrame(library, path, cancellationToken);
         if (frame is null) return null;
         cancellationToken.ThrowIfCancellationRequested();
+        // bgr0 padding is undefined. Normalize it too: palette extraction copies these bytes
+        // into a BGRA buffer, where zero padding would otherwise look fully transparent.
+        for (var offset = 3; offset < frame.Pixels.Length; offset += 4)
+            frame.Pixels[offset] = byte.MaxValue;
         var pinned = GCHandle.Alloc(frame.Pixels, GCHandleType.Pinned);
         try
         {
-            // bgr0's padding byte is undefined, so it must never become an alpha channel.
             return new Bitmap(PixelFormat.Bgra8888, AlphaFormat.Opaque, pinned.AddrOfPinnedObject(),
                 new PixelSize(frame.Width, frame.Height), new Vector(96, 96), frame.Width * 4);
         }

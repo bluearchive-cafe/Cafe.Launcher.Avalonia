@@ -523,8 +523,8 @@ internal sealed class ShellLifecycle : IDisposable
         isWired = true;
 
         Attach(
-            () => settings.Appearance.GetBackgroundBitmap = background.GetBackgroundBitmap,
-            () => settings.Appearance.GetBackgroundBitmap = null);
+            () => settings.Appearance.GetBackgroundBitmapAsync = background.GetBackgroundBitmapAsync,
+            () => settings.Appearance.GetBackgroundBitmapAsync = null);
         Attach(
             () => settings.PreviewAppearanceAsync = PreviewAppearanceAsync,
             () => settings.PreviewAppearanceAsync = null);

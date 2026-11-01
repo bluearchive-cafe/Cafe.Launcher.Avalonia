@@ -37,14 +37,14 @@ public partial class MainWindowViewModelTests
     {
         var viewModel = await CreateViewModelAsync(new CountingCoreService(CreateSnapshot()));
 
-        Assert.NotNull(viewModel.Settings.Appearance.GetBackgroundBitmap);
+        Assert.NotNull(viewModel.Settings.Appearance.GetBackgroundBitmapAsync);
         Assert.NotNull(viewModel.Settings.PreviewAppearanceAsync);
         Assert.NotNull(viewModel.Settings.ApplyLanguageAndTheme);
         Assert.NotNull(viewModel.RemoteContent.OpenExternalUrlRequested);
 
         viewModel.Dispose();
 
-        Assert.Null(viewModel.Settings.Appearance.GetBackgroundBitmap);
+        Assert.Null(viewModel.Settings.Appearance.GetBackgroundBitmapAsync);
         Assert.Null(viewModel.Settings.PreviewAppearanceAsync);
         Assert.Null(viewModel.Settings.ApplyLanguageAndTheme);
         Assert.Null(viewModel.RemoteContent.OpenExternalUrlRequested);
