@@ -1,6 +1,6 @@
 ---
 name: designing-fluent-interfaces
-description: Use when designing, implementing, reviewing, or refactoring interfaces that should follow Microsoft Fluent 2 or Windows 11/WinUI visual, layout, component, motion, accessibility, or content conventions.
+description: Design, implement, or review Fluent 2 and Windows/WinUI interfaces. In this repository, use for the independent Fluent crash window or explicit Fluent guidance; FluentTheme alone does not select the main UI's design system.
 metadata:
   version: "1.0.0"
   last-reviewed: "2026-08-27"
@@ -16,12 +16,15 @@ Use Fluent as a system of relationships, hierarchy, behavior, and platform conve
 
 ## Platform gate
 
+For this repository, read the [design specification](../../../docs/design/design-system-spec.md#1-设计原则) and [XAML conventions](../../../PROJECT_CONVENTIONS.md#4-xaml-与视觉规范) first. The main UI uses M3 semantics on Avalonia FluentTheme; use the [Material workflow](../material-design/SKILL.md) for those semantics. The crash window uses an independent Fluent system with local `Crash.*` resources. Preserve that boundary and the repository's geometry, even when generic WinUI defaults differ.
+
 Before designing or changing UI, classify the target:
 
 | Target | Primary guidance |
 | --- | --- |
 | Web / React / Microsoft 365-style web UI | Fluent 2 foundations + Fluent UI React v9 tokens/components |
-| Windows desktop / WinUI 3 / Windows App SDK | Windows design guidance + WinUI controls/resources; use Fluent 2 only as the conceptual foundation |
+| WinUI 3 / Windows App SDK | Windows design guidance + WinUI controls/resources; use Fluent 2 only as the conceptual foundation |
+| Avalonia / another desktop framework | Framework-native controls and resources; read the non-Microsoft framework section in implementation guidance |
 | iOS / Android / macOS | Fluent 2 cross-platform principles, then preserve native platform typography, input, sizing, and accessibility conventions |
 | Unspecified / visual concept only | Use cross-platform Fluent 2 principles; do not invent Windows- or Web-specific numeric rules |
 
@@ -30,14 +33,9 @@ If the platform is ambiguous and the choice would materially change the result, 
 ## Workflow
 
 1. **Understand the task and information hierarchy.** Identify the primary user goal, primary action, navigation depth, density, and important states before styling.
-2. **Choose the platform profile.** Read [scope and platform distinctions](references/scope-and-platforms.md) when platform behavior matters.
-3. **Lay out the experience.** Use [layout and navigation](references/layout-and-navigation.md) for spacing, grids, responsive behavior, breakpoints, and navigation patterns.
-4. **Apply foundations.** Use [visual foundations](references/foundations.md) for color, typography, shape, iconography, elevation, and materials.
-5. **Select components by semantics.** Use [components and patterns](references/components-and-patterns.md). Prefer standard Fluent/WinUI components before inventing custom controls.
-6. **Add motion only after states and layout work.** Use [motion](references/motion.md). Motion must explain change, preserve spatial continuity, or provide feedback.
-7. **Check accessibility and content.** Use [accessibility and content](references/accessibility-and-content.md) before calling the design complete.
-8. **Implement with platform-native tokens/resources.** Use [implementation guidance](references/implementation.md). Avoid hardcoded visual constants when semantic tokens or theme resources exist.
-9. **Review against anti-patterns.** Verify hierarchy, focus, contrast, input states, reduced motion, high contrast/forced colors, localization, and small-window behavior.
+2. **Choose the platform profile and relevant references** from the table below.
+3. **Establish hierarchy, layout, components, and applicable states.** Add motion after states and layout work; use it to explain change or provide feedback.
+4. **Implement with the target framework's controls and semantic resources.** Check accessibility, localization, theme behavior, and small-window behavior for the affected surface. In this repository, select checks from the [development guide](../../../docs/DEVELOPMENT.md#命令与验证).
 
 ## Non-negotiable design rules
 
@@ -66,12 +64,14 @@ When asked to produce a design, implementation, or review:
 
 Load only the references needed for the task:
 
-- Platform differences: [scope-and-platforms.md](references/scope-and-platforms.md)
-- Color, typography, spacing, shape, elevation, iconography, materials: [foundations.md](references/foundations.md)
-- Responsive layout and navigation: [layout-and-navigation.md](references/layout-and-navigation.md)
-- Animation and transitions: [motion.md](references/motion.md)
-- Component selection and common patterns: [components-and-patterns.md](references/components-and-patterns.md)
-- Accessibility, focus, writing, localization: [accessibility-and-content.md](references/accessibility-and-content.md)
-- React/WinUI implementation notes: [implementation.md](references/implementation.md)
-- Source index and freshness notes: [sources.md](references/sources.md)
-- Behavioral evaluation scenarios: [evaluation-scenarios.md](references/evaluation-scenarios.md)
+| Task | Reference |
+| --- | --- |
+| Platform differences | [Scope and platforms](references/scope-and-platforms.md) |
+| Color, type, shape, elevation, icons, materials | [Foundations](references/foundations.md) |
+| Layout and navigation | [Layout and navigation](references/layout-and-navigation.md) |
+| Animation and transitions | [Motion](references/motion.md) |
+| Component selection | [Components and patterns](references/components-and-patterns.md) |
+| Accessibility, focus, writing, localization | [Accessibility and content](references/accessibility-and-content.md) |
+| React, WinUI, or other framework implementation | [Implementation](references/implementation.md) |
+| Source verification | [Sources](references/sources.md) |
+| Changing or evaluating this skill | [Evaluation scenarios](references/evaluation-scenarios.md) |

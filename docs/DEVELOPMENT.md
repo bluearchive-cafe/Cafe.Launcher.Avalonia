@@ -1,13 +1,5 @@
 # 开发指南
 
-视频背景已接入普通设置（Debug / Release）：外观 → 背景来源「自定义」→「选择图片或视频」，在同一文件选择器中选择图片或 MP4/MKV/WebM 视频，也可选择文件夹随机显示图片或播放视频。Windows x64 构建自动调用 `scripts/Restore-VideoBackgroundRuntime.ps1`，需要 PowerShell 7、curl 与 7-Zip（`7z` 或 `7zz`）。脚本仅在构建期恢复固定 LGPL 构建，校验压缩包与 DLL 的 SHA-256，缓存到 `.artifacts/native/libmpv`；首次构建需要访问 GitHub，可先带 `-Proxy` 手动运行恢复脚本。发布输出包含 `libmpv/win-x64/libmpv-2.dll`、清单、来源说明和完整许可证；应用运行期间不下载运行库。升级时同步清单、许可证、来源和原生冒烟测试。其他平台暂时回退到静态背景。
-
-独立 Debug 实验入口仍保留：启动、采样、快捷键及历史验证边界见 [libmpv 视频背景原型](research/video-background-prototype.md)。该入口显式启用并使用隔离数据根。
-
-视频缩略图优先直接读取 MP4 `covr` 内嵌封面，缺失或不可解码时通过同一随包 libmpv 提取首帧，无需外部 FFmpeg 命令或额外运行库。`Mp4CoverReaderTests` 覆盖容器长度和封面大小边界；`VideoThumbnailServiceTests` 使用仓库内的小型生成媒体验证 PNG/JPEG 封面优先及损坏回退，并使用测试中生成的双帧视频验证首帧颜色、尺寸和解码资源释放。运行测试不需要媒体编码器。
-
-生产视频生命周期复测可运行 `pwsh ./scripts/Test-VideoBackgroundPrototypeRetention.ps1 -ProbeMode Production -ExerciseSettings -Cycles 8 -SteadySeconds 60`。默认使用随包固定的 LGPL DLL；脚本核对生产副本与指定 DLL 的 SHA-256。`Video`／`Blank`／`Finish`／`ReuseSurface` 为旧分离、无 libmpv、GPU 同步和承载面复用对照；最少六轮以保留两个互不重叠的热身后采样窗口。完整通过要求内存门槛、每轮媒体资源归零和正常退出；缺少 GPU 计数器不能算通过。`-ContinueAfterMemoryFailure` 只保留失败后的观测，最终仍返回失败。可显式传入 `-HeapDumpToolPath`，在第二轮和最后一轮收集本地 GC 堆快照；工具需另行准备，脚本不自动安装。
-
 本文件维护开发命令、验证和交付流程。编码规则见 [PROJECT_CONVENTIONS.md](../PROJECT_CONVENTIONS.md)，代理入口见 [AGENTS.md](../AGENTS.md)。
 
 ## 环境与启动
@@ -50,6 +42,20 @@ dotnet run --project ./src/Cafe.Launcher/Cafe.Launcher.csproj
 
 请求评审前运行 `verify.ps1` 并记录结果。运行带 `--no-restore` 的命令前先 restore；成功构建须为零警告。`dotnet format` 不是 CI 门禁，仅按需用于本次触及的文件。
 
+## 视频背景运行库与专项验证
+
+Windows x64 构建自动调用 `scripts/Restore-VideoBackgroundRuntime.ps1`，除 PowerShell 7 外需要 curl 与 7-Zip（`7z` 或 `7zz`）。首次构建访问 GitHub；需要代理时先手动运行恢复脚本并传入 `-Proxy`。固定 LGPL 构建缓存在 `.artifacts/native/libmpv`，压缩包和 DLL 均校验 SHA-256，应用运行时不下载运行库。
+
+发布输出包含 `libmpv/win-x64/libmpv-2.dll`、清单、来源及许可证。升级时同步 `native/libmpv/manifest.json`、许可证、来源说明和原生冒烟验证。产品行为与缩略图规则见[领域契约](../CONTEXT.md#设置与操作)；其他平台使用静态回退。
+
+生产生命周期复测：
+
+```powershell
+pwsh ./scripts/Test-VideoBackgroundPrototypeRetention.ps1 -ProbeMode Production -ExerciseSettings -Cycles 8 -SteadySeconds 60
+```
+
+专项要求和实验入口见[视频背景验证记录](research/video-background-prototype.md#复测要求)。
+
 ## 依赖与 CI
 
 版本集中在 [Directory.Packages.props](../Directory.Packages.props)，csproj 不声明 `Version`；Headless 的 xUnit `VersionOverride` 是已记录的例外。CI 使用 `RestoreLockedMode`，升级依赖（含 Dependabot）时：
@@ -59,7 +65,7 @@ dotnet run --project ./src/Cafe.Launcher/Cafe.Launcher.csproj
 3. restore 后运行 `pwsh ./scripts/New-ThirdPartyNotices.ps1`，再生 [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md)；它汇总 `src/` 下全部生产工程。
 4. `verify.ps1` 和发行打包的 RID restore 会改写锁文件 RID 段；提交前检查差异，仅还原这些副作用，保留真实升级及原有工作区改动。
 
-CI 使用 `actions/cache/restore` 与 `actions/cache/save`，键仅取 `Directory.Packages.props`，保存设 `if: always()`。组织的 Actions 配额为 500 MB 且已超额，因此保持 `actions/setup-dotnet` 的自动缓存关闭。测试/覆盖率报告保留 7 天，发布中转产物保留 1 天。
+CI 使用 `actions/cache/restore` 与 `actions/cache/save`，键仅取 `Directory.Packages.props`，保存设 `if: always()`。`actions/setup-dotnet` 的自动缓存保持关闭，避免重复缓存。测试/覆盖率报告保留 7 天，发布中转产物保留 1 天。
 
 ## 提交与评审
 
@@ -67,7 +73,7 @@ CI 使用 `actions/cache/restore` 与 `actions/cache/save`，键仅取 `Director
 
 保持提交聚焦，在功能分支开发并通过 PR 评审。PR 说明动机、关联 issue 和验证结果，可见 UI 变更附截图。报告问题前搜索已有 [Issues](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/issues)，提供版本、平台和复现步骤。
 
-PR、CI 通过与评审批准是团队约定；仓库记录的 `main` 规则只禁止删除和强制推送（2026-09-11 核对）。合并后手动推送，不把远端规则视为本地验证的替代。
+PR、CI 通过与评审批准是团队约定；远端分支保护配置以仓库当前设置为准。
 
 ## 发布
 

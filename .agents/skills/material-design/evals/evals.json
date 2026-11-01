@@ -70,7 +70,7 @@
     {
       "id": 12,
       "prompt": "I want to build a better design system for our startup. We have 3 products — a mobile app, a web dashboard, and a marketing site. What approach should I take?",
-      "expected_output": "This says 'design system' without specifying Material Design. Should ask which design system they want to follow before applying Material Design rules. Should NOT automatically assume Material Design unless the user mentions it.",
+      "expected_output": "Do not assume Material from the phrase design system. Inspect available project context first; if the choice is still unknown and matters, clarify which system or constraints apply before applying Material rules.",
       "files": []
     },
     {
@@ -180,6 +180,34 @@
       "prompt": "I need a loading pattern. Is a circular indeterminate spinner always correct for network loading, and a linear indicator only for uploads?",
       "expected_output": "Reject fixed semantic pairing by operation type. Choose determinate when real progress is known and indeterminate when completion fraction is unknown; linear vs circular depends on layout/context. Keep indicator near the process when useful, provide failure/retry state, and avoid fake percentages/endless blocking.",
       "files": []
+    },
+    {
+      "id": 31,
+      "prompt": "In this Cafe Launcher repository, refine the settings page to match the existing design system. It uses Avalonia FluentTheme. Which design workflow and resources should guide the change?",
+      "expected_output": "Read the repository design specification and XAML conventions. Recognize M3 semantics on an Avalonia FluentTheme base; use Launcher.* resources and established Avalonia components. Do not infer WinUI geometry from FluentTheme, introduce a Material framework dependency, or ask which design system is already documented. Select checks through DEVELOPMENT.md.",
+      "files": [
+        "PROJECT_CONVENTIONS.md",
+        "docs/design/design-system-spec.md",
+        "docs/DEVELOPMENT.md"
+      ]
+    },
+    {
+      "id": 32,
+      "prompt": "Fix spacing in this repository's isolated crash report window. Can we reuse the normal main-window Material resources?",
+      "expected_output": "Route the target surface to the independent Fluent workflow. Use local Crash.* resources under the crash window; the isolated report process has no App.axaml. Preserve the isolation and documented crash-window geometry rather than importing Launcher.* or rebuilding the main UI theme.",
+      "files": [
+        "PROJECT_CONVENTIONS.md",
+        "docs/design/design-system-spec.md"
+      ]
+    },
+    {
+      "id": 33,
+      "prompt": "Correct one alignment issue in an existing Cafe Launcher settings control. No navigation or persistence behavior changes are requested. What verification fits the scope?",
+      "expected_output": "Use the localized Avalonia patch workflow, inspect the affected control and existing tests, and verify the symptom with focused checks plus UiStyleContractTests for XAML/styles. Follow DEVELOPMENT.md for larger UI checks and final repository verification; use pwsh for repository scripts. Do not redesign the page, require a platform-selection interview, or treat every small patch as a mandatory full UI suite.",
+      "files": [
+        ".agents/skills/avalonia-ui-patch/SKILL.md",
+        "docs/DEVELOPMENT.md"
+      ]
     }
   ]
 }

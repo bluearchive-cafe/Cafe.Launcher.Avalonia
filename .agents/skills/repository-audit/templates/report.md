@@ -2,10 +2,15 @@
 
 This file is the single source of truth for current audit findings, accepted risks, and priorities. Git history retains resolved findings.
 
+Use this shape for a new report. Preserve an existing report's local conventions.
+Organize findings by priority, then domain; keep advisories compact. Include
+verified system facts only when they close a concern or explain current risks.
+
 ## Current Assessment
 
 - Date:
 - Commit:
+- Mode:
 - Scope:
 - Project profile:
 - Health:
@@ -14,9 +19,7 @@ This file is the single source of truth for current audit findings, accepted ris
 
 Current priority order:
 
-1.
-2.
-3.
+List the most important current actions and pending decisions.
 
 ## Open Findings
 
@@ -24,11 +27,18 @@ Current priority order:
 
 - Severity:
 - Confidence:
+- Category:
+- Status:
 - Disposition:
+- Recommendation validation:
 
-Evidence and impact.
+Evidence locations and impact.
 
 Recommended action and completion guard.
+
+For architecture/product decisions, describe the decision, evidence, viable
+options, and tradeoffs. Present an option as mandatory only when repository
+rules or validated constraints require it.
 
 ## Accepted Risks
 
@@ -41,7 +51,9 @@ Include only facts that materially explain the current findings or prevent unnec
 
 ## Verification Limits
 
-List commands actually completed and relevant environments not exercised.
+List commands actually completed, external verification, environments not
+exercised, and areas skipped because of scope. State the actual coverage of
+inspection; do not imply a line-by-line review without having performed one.
 
 ## Maintenance Rules
 
