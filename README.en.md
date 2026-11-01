@@ -22,19 +22,6 @@ A community-maintained, third-party desktop launcher for Blue Archive JP. Built 
 
 ![Cafe Launcher key visual](./docs/assets/key-visual.png)
 
-## Contents
-
-- [Features](#features)
-- [Platform support and packages](#platform-support-and-packages)
-- [Quick start](#quick-start)
-- [Comparison with the official launcher](#comparison-with-the-official-launcher)
-- [Linux support (experimental)](#linux-support-experimental)
-- [Wallpaper sources](#wallpaper-sources)
-- [Help and feedback](#help-and-feedback)
-- [Developer guide](#developer-guide)
-- [Local data and licensing](#local-data-and-licensing)
-- [Acknowledgments](#acknowledgments)
-
 ## Features
 
 Cafe Launcher can take over an existing official installation or download and manage the game from scratch. It offers resumable downloads, multiple sources, configurable launch verification, a multilingual interface, appearance customization, and local diagnostics.
@@ -152,7 +139,7 @@ The launcher falls back to the bundled wallpaper if downloading fails or no imag
 
 Use **Choose Image or Video** to select a local file, or select a folder to choose an image or video at random on refresh without scanning subfolders. Supported image formats are `.png`, `.jpg`, `.jpeg`, `.bmp`, and `.webp`; video formats are `.mp4`, `.mkv`, and `.webm`. **Current Background** shows the selected file's location. Video thumbnails prefer embedded MP4 cover art and fall back to the first frame, with blur and a video icon; the settings retain the chosen folder. These files stay local; users are responsible for their rights and permissions. The project does not collect, upload, or distribute them.
 
-The repository's [key visual](./docs/assets/key-visual.png) and release banners are project-created promotional materials containing launcher screenshots.
+The repository's key visual and release banners are project-created promotional materials.
 
 ## Help and feedback
 

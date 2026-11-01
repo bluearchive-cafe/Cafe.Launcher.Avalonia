@@ -11,12 +11,6 @@ Audit the repository as an engineering system, not as a collection of isolated f
 
 **Core principle:** understand the project first; verify both the problem and the proposed remedy.
 
-## When to Use
-
-Use for whole-repository health reviews, release readiness, refactoring preparation, systemic reliability/security/performance investigation, or follow-up audits.
-
-Do not use as a replacement for compiler diagnostics, static analyzers, CI, dependency scanners, or PR review.
-
 ## Required Loading
 
 Always load:
@@ -24,8 +18,7 @@ Always load:
 - `references/core-policy.md`
 - `references/execution.md`
 - `references/findings.md`
-
-If a previous audit exists, also load `references/lifecycle.md`.
+- `references/lifecycle.md` for the single audit-state file and reconciliation rules
 
 Then load only the domain references relevant to the selected scope:
 
@@ -43,8 +36,8 @@ For mode routing, load `references/modes.md`. For project-specific weighting, lo
 
 ## Execution Contract
 
-1. Select an audit mode and scope before deep inspection.
-2. Load repository rules and build a risk profile.
+1. Inspect the repository's entry points and rules, then select a mode and scope before deep inspection.
+2. Build a risk profile from repository evidence.
 3. Prefer repository-native tools and existing analyzers over heuristic reimplementation.
 4. Generate candidate findings from relevant audit passes.
 5. Verify each reportable finding against source, callers, tests, configuration, and project rules.
@@ -52,18 +45,15 @@ For mode routing, load `references/modes.md`. For project-specific weighting, lo
 7. Reconcile current findings with prior audit state when available.
 8. Generate the current report and suggest automated guards for recurring patterns.
 
-Use `templates/report.md` for the report shape. Keep repository discovery, current findings, accepted risks, and priorities in that one report rather than creating side ledgers.
-
-## Output Rule
-
-`CODEBASE_AUDIT.md` is the repository's only audit state file. Keep it focused on the **current known state**. Remove resolved findings from the current view and rely on Git history; do not create `.repository-audit/`, dated reports, maps, or candidate ledgers.
+Follow `references/lifecycle.md` for `CODEBASE_AUDIT.md` ownership. Use `templates/report.md` for a new report; preserve an existing report's maintenance rules and record only the current known state. Report an assessment without changing the ledger when the user requests a read-only review.
 
 ## Verification
 
-Before considering the skill package complete, run:
+When editing this skill package, run from the repository root:
 
-```bash
-python scripts/validate-skill.py
+```powershell
+python -X utf8 .agents/skills/repository-audit/scripts/validate-skill.py
+python -B -X utf8 -m unittest discover -s .agents/skills/repository-audit/tests -p 'test_*.py'
 ```
 
-Regression scenarios are documented in `tests/scenarios.md`.
+The validator's automated checks are in `tests/test_validate_skill.py`; agent-behavior scenarios are in `tests/scenarios.md`.

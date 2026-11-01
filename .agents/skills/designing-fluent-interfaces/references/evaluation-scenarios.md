@@ -96,3 +96,25 @@ These scenarios are intended to test whether an agent applies the skill rather t
 - Uses minimal/no staggering for very large groups.
 - Keeps motion fast and task-focused.
 - Provides reduced-motion handling.
+
+## Scenario 9 — Avalonia main UI using FluentTheme
+
+**Prompt:** “Improve the Cafe Launcher settings page. Since it uses FluentTheme, should all controls use WinUI geometry?”
+
+**Pass criteria:**
+
+- Reads the repository design specification and identifies M3 semantics on the Avalonia FluentTheme base.
+- Routes Material semantics to the Material workflow while preserving the existing framework and resources.
+- Uses repository geometry and `Launcher.*` tokens rather than substituting generic WinUI values.
+- Chooses verification from the development guide for the affected change.
+
+## Scenario 10 — Independent crash window
+
+**Prompt:** “Refine the Cafe Launcher crash report window used by the isolated process. Make it consistent with its existing design.”
+
+**Pass criteria:**
+
+- Uses the independent Fluent crash-window rules and local `Crash.*` resources.
+- Preserves repository geometry, including intentional differences from generic WinUI defaults.
+- Keeps the isolated report process independent of `App.axaml` and `Launcher.*` resources.
+- Uses Avalonia implementation and automation APIs rather than assuming WinUI APIs exist.

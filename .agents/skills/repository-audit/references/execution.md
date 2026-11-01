@@ -67,4 +67,4 @@ Then validate the recommendation separately.
 
 ## 9. Finalization
 
-Reconcile lifecycle state in `CODEBASE_AUDIT.md`, remove resolved entries from the current view, and propose automated guards where a recurring pattern can be mechanically prevented. Git history preserves prior states.
+Follow [finding lifecycle](lifecycle.md) for reconciliation and guard conversion, then use the [report template](../templates/report.md) for report generation.

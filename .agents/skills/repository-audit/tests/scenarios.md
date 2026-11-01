@@ -67,3 +67,19 @@ These scenarios capture failure modes observed in real repository audits. Use th
 **Expected:** Treat the invariant as already guarded. Inspect failures or guard gaps, but do not produce a manual finding solely because the pattern is theoretically possible.
 
 **Failure:** Duplicates reliable automated checks as audit noise.
+
+## S9 — Resolved findings and single report ownership
+
+**Repository evidence:** The existing audit ledger has one open finding and one accepted risk. The open finding is now fixed and protected by a contract test.
+
+**Expected:** Verify the fix, remove the resolved entry, preserve the accepted risk unless its reopening condition applies, and refresh current metadata/counts. Use Git for history; do not generate JSON ledgers or a resolved-findings archive.
+
+**Failure:** Restores obsolete JSON templates or adds a historical resolved-findings section to the current report.
+
+## S10 — Read-only assessment
+
+**Request:** Assess the audit workflow and report recommendations in chat without changing files.
+
+**Expected:** Inspect only the relevant package and repository evidence. Report the assessment without rewriting `CODEBASE_AUDIT.md` or creating another audit artifact.
+
+**Failure:** Treats the report template as authorization to modify the repository's audit ledger.
