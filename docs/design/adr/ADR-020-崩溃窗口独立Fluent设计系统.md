@@ -15,3 +15,7 @@
   - 视觉回归由 `CrashReportWindowHeadlessTests` 的黄金截图（`Baselines/crash-report-window.png`）与布局断言（折叠/展开高度、宽度不变、按钮内容居中）守护；不进入主窗口的 token 契约测试。
   - 代价：同一应用存在两套视觉语言（主窗口 MD3 / 崩溃窗口 Fluent）。若主窗口未来改走 Fluent，或崩溃窗口需要并入 M3 动态色，本 ADR 必须重新裁决。
 - 原型：`prototypes/crash-window-design.html?variant=a`（与 [ADR-019](ADR-019-不可恢复崩溃两级兜底.md) 共用，保留为视觉决策记录）。
+
+## 2026-11-01 共享组件跟进
+
+跨功能按钮外观、尺寸、焦点预留与表面圆角由 [ADR-050](ADR-050-跨功能共享组件视觉基准.md) 更新；本文保留当时决策与未被替代的业务、交互及生命周期契约。

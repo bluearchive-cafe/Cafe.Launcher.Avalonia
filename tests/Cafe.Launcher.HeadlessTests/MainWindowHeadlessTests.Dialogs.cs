@@ -311,6 +311,8 @@ public sealed partial class MainWindowHeadlessTests
     public void ModalIsolation_WhenConfirmationIsVisible_DisablesBackgroundAndRestoresItAfterClose()
     {
         using var context = CreateContext();
+        context.ViewModel.Operations.PanelMode = GameOperationPanelMode.Control;
+        context.ViewModel.Shell.IsBusy = false;
         context.Window.Show();
         context.ViewModel.Dialogs.ResourcePanelSourceConfirm.Show("switch source");
         Dispatcher.UIThread.RunJobs();
@@ -324,7 +326,7 @@ public sealed partial class MainWindowHeadlessTests
                     context.ViewModel.WindowChrome.ShowSettingsCommand));
         var startButton = context.Window
             .GetVisualDescendants()
-            .OfType<Button>()
+            .OfType<SplitButton>()
             .First(button =>
                 button.Classes.Contains("primary-operation")
                 && ReferenceEquals(
@@ -347,6 +349,7 @@ public sealed partial class MainWindowHeadlessTests
         Dispatcher.UIThread.RunJobs();
 
         Assert.True(settingsButton.IsEffectivelyEnabled);
+        Assert.True(startButton.IsEffectivelyEnabled);
     }
 
     [AvaloniaFact]

@@ -10,20 +10,14 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void SetupWizardStyles_CoverFilledDisabledAndOptionFocusStates()
     {
-        // 2026-08-28 审计修复：wizard filled 型禁用态组合须声明在 primary 之后，
-        // 与主样式 filled 型家族（primary-action.dialog-action:disabled 等）同一预混配方；
-        // 选项行（wizard-option）键盘聚焦时铺 token 焦点环（spec §8）。
-        var wizardStyles = XDocument.Load(TestRepository.FromPresentationRoot("Views/Styles/SetupWizard.axaml"));
-
-        var primaryDisabled = GetStyleSetters(wizardStyles, "Button.wizard-action.primary-action:disabled");
-        Assert.Equal("{DynamicResource Launcher.Color.Content.Row}", primaryDisabled["Background"]);
-        Assert.Equal("{DynamicResource Launcher.Color.Card.Border}", primaryDisabled["BorderBrush"]);
-        Assert.Equal("{StaticResource Launcher.Border.Thickness.Default}", primaryDisabled["BorderThickness"]);
-        Assert.Equal("{DynamicResource Launcher.Text.Secondary}", primaryDisabled["Foreground"]);
-
-        var optionFocus = GetStyleSetters(wizardStyles, "RadioButton.wizard-option:focus-visible");
-        Assert.Equal("{DynamicResource Launcher.Color.FocusRing}", optionFocus["BorderBrush"]);
-        Assert.Equal("{StaticResource Launcher.Border.Thickness.Focus}", optionFocus["BorderThickness"]);
+        var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/Styles/SetupWizard.axaml"));
+        var disabled = GetStyleSetters(styles, "Button.wizard-action:disabled");
+        Assert.Equal("{DynamicResource Launcher.Color.Content.Row}", disabled["Background"]);
+        Assert.Equal("{DynamicResource Launcher.Text.Secondary}", disabled["Foreground"]);
+        Assert.DoesNotContain("BorderThickness", disabled.Keys);
+        var focus = GetStyleSetters(styles, "RadioButton.wizard-option:focus-visible");
+        Assert.Equal("{DynamicResource Launcher.Color.FocusRing}", focus["BorderBrush"]);
+        Assert.Equal("{StaticResource Launcher.Border.Thickness.Focus}", focus["BorderThickness"]);
     }
 
     [Fact]
@@ -650,24 +644,15 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void SetupWizard_ActionButtons_UseTonalAndFilledStyles()
     {
-        // ADR-017：向导动作钮 = 中性 tonal（Content.Row 底色）+ filled 主按钮（primary-action 叠加）。
         var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/Styles/SetupWizard.axaml"));
-        var tonal = GetStyleSetters(styles, "Button.wizard-action");
-        Assert.Equal("{DynamicResource Launcher.Color.Content.Row}", tonal["Background"]);
-        Assert.Equal("{DynamicResource Launcher.Text.Primary}", tonal["Foreground"]);
-        Assert.Equal("{StaticResource Launcher.Radius.Xs}", tonal["CornerRadius"]);
-        Assert.Equal(
-            "{DynamicResource Launcher.Color.Dialog.Close.Hover}",
-            GetStyleSetters(styles, "Button.wizard-action:pointerover")["Background"]);
-        Assert.Equal(
-            "{DynamicResource Launcher.Color.Dialog.Close.Pressed}",
-            GetStyleSetters(styles, "Button.wizard-action:pressed")["Background"]);
-        Assert.Equal(
-            "{DynamicResource Launcher.Color.Primary}",
-            GetStyleSetters(styles, "Button.wizard-action.primary-action")["Background"]);
-        Assert.Equal(
-            "{DynamicResource Launcher.Color.Primary.Hover}",
-            GetStyleSetters(styles, "Button.wizard-action.primary-action:pointerover")["Background"]);
+        var action = GetStyleSetters(styles, "Button.wizard-action");
+        Assert.Equal("{StaticResource Launcher.Component.Button.Theme}", action["Theme"]);
+        Assert.DoesNotContain("Background", action.Keys);
+        Assert.DoesNotContain("CornerRadius", action.Keys);
+        Assert.Equal("{DynamicResource Launcher.Color.Button.Secondary.Hover}",
+            GetStyleSetters(styles, "Button.wizard-action:not(.primary-action):pointerover")["Background"]);
+        Assert.Equal("{DynamicResource Launcher.Color.Button.Secondary.Pressed}",
+            GetStyleSetters(styles, "Button.wizard-action:not(.primary-action):pressed")["Background"]);
     }
 
     [Fact]

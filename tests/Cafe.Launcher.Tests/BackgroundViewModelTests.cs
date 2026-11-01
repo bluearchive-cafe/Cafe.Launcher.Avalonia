@@ -15,6 +15,25 @@ namespace Cafe.Launcher.Tests;
 
 public sealed class BackgroundViewModelTests : IDisposable
 {
+    [Theory]
+    [InlineData(-10, 0)]
+    [InlineData(0, 0)]
+    [InlineData(35, 35)]
+    [InlineData(110, 100)]
+    public void ApplyBackgroundPresentation_WhenMuted_RetainsVolumeAndRestoresItOnUnmute(int volume, int expected)
+    {
+        using var cache = CreateCache(_ => PngBytes);
+        using var viewModel = new BackgroundViewModel(cache, new LocalDiagnostics(), _ => { },
+            (_, _) => new TestImage(), () => new TestImage());
+        var settings = new LauncherSettings { BackgroundVideoVolume = volume, BackgroundVideoMuted = true };
+        viewModel.ApplyBackgroundPresentation(settings);
+        Assert.Equal(0, viewModel.BackgroundVideoVolume);
+        Assert.Equal(volume, settings.BackgroundVideoVolume);
+        settings.BackgroundVideoMuted = false;
+        viewModel.ApplyBackgroundPresentation(settings);
+        Assert.Equal(expected, viewModel.BackgroundVideoVolume);
+    }
+
     private static readonly byte[] PngBytes = Convert.FromBase64String(
         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=");
 
@@ -71,19 +90,46 @@ public sealed class BackgroundViewModelTests : IDisposable
         Assert.IsType<TestImage>(viewModel.BackgroundImageSource);
         viewModel.ReportVideoFailure("superseded.mp4", new InvalidOperationException());
         Assert.Equal(path, viewModel.BackgroundVideoPath);
+        Assert.False(viewModel.HasBackgroundLoadFailure);
         viewModel.ReportVideoFailure(path, new InvalidOperationException());
         Assert.Null(viewModel.BackgroundVideoPath);
+        Assert.True(viewModel.HasBackgroundLoadFailure);
         await viewModel.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
         Assert.Null(viewModel.BackgroundVideoPath); // Same failed fingerprint does not retry on every refresh.
 
         settings.BackgroundSource = BackgroundSources.Bundled;
         await viewModel.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
+        Assert.False(viewModel.HasBackgroundLoadFailure);
         settings.BackgroundSource = BackgroundSources.Custom;
         await viewModel.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
         Assert.Equal(path, viewModel.BackgroundVideoPath);
         settings.BackgroundSource = BackgroundSources.Bundled;
         await viewModel.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
         Assert.Null(viewModel.BackgroundVideoPath);
+    }
+
+    [Fact]
+    public async Task UpdateBackgroundImageAsync_WhenCustomFileMissing_ExposesFallbackUntilSourceRecovers()
+    {
+        using var cache = CreateCache(_ => PngBytes);
+        using var viewModel = new BackgroundViewModel(cache, new LocalDiagnostics(), _ => { },
+            (_, _) => new TestImage(), () => new TestImage());
+        var settings = new LauncherSettings
+        {
+            BackgroundSource = BackgroundSources.Custom,
+            CustomBackgroundPath = Path.Combine(tempDir, "missing.png")
+        };
+        await viewModel.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
+        Assert.True(viewModel.HasBackgroundLoadFailure);
+        Assert.NotNull(viewModel.BackgroundImageSource);
+
+        settings.BackgroundSource = BackgroundSources.Bundled;
+        await viewModel.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
+        Assert.False(viewModel.HasBackgroundLoadFailure);
+        settings.BackgroundSource = BackgroundSources.Custom;
+        settings.CustomBackgroundPath = string.Empty;
+        await viewModel.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
+        Assert.False(viewModel.HasBackgroundLoadFailure);
     }
 
     [Fact]

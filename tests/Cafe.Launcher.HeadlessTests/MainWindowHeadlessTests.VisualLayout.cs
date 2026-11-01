@@ -55,6 +55,10 @@ public sealed partial class MainWindowHeadlessTests
         foreach (var (category, _) in SettingsSections)
         {
             context.ViewModel.Settings.SelectedCategory = category;
+            if (category == SettingsCategoryCodes.Appearance)
+            {
+                context.ViewModel.Settings.Appearance.IsAdvancedColorExpanded = true;
+            }
             Dispatcher.UIThread.RunJobs();
             using var typography = new TypographyScaleSnapshot(context.Window, scale);
             Dispatcher.UIThread.RunJobs();

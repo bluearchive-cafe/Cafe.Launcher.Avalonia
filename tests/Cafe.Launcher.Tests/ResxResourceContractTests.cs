@@ -18,8 +18,8 @@ public sealed class ResxResourceContractTests
     /// 「为什么加一」。
     /// </summary>
     // 完整卸载表面的确认、阶段与结构化结果新增 27 个四语资源。
-    // 无障碍区域名新增 3 个资源，视频背景新增 5 个资源。
-    private const int ExpectedNeutralResourceKeyCount = 640;
+    // 无障碍区域名新增 3 个资源，视频背景新增 5 个资源，外观页细化新增 5 个资源。
+    private const int ExpectedNeutralResourceKeyCount = 646;
 
     private static readonly string ResxDir;
     private static readonly string[] AllLocales = ["en", "zh-Hans", "zh-Hant", "ja"];
@@ -83,6 +83,8 @@ public sealed class ResxResourceContractTests
         // 实测删除大小的单位复用 FormatParts，二者都不再跟着 22px 数字一起放大。）
         // → 635（无障碍契约改为全量扫描后补齐三个区域名：设置分类、新闻分类、日志条目。）
         // → 640（视频选择、文件对话框标题、音量标题与说明、播放失败提示共 5 个资源）。
+        // → 645（外观页分组、折叠详情和背景失败反馈，共 5 个资源；效果预览移除）。
+        // → 646（视频背景新增独立静音选项）。
         Assert.Equal(ExpectedNeutralResourceKeyCount, ResxValues["en"].Count);
     }
 

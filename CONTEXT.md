@@ -75,7 +75,7 @@ _Avoid_: 普通运行日志、错误 Toast 内容
 
 ## 设置与操作
 
-**视频背景**：自定义背景路径可选择图片、图片文件夹或 MP4/MKV/WebM 视频；文件夹继续只随机选择图片。视频沿用 `backgroundSource=custom` 与 `customBackgroundPath`，音量由 `backgroundVideoVolume` 保存（默认静音，范围 0–100）。选择和音量变更沿用设置草稿的即时预览、保存与放弃改动语义。首帧前和播放失败时显示内置静态背景；失败记录本地诊断并提示，相同文件指纹不会随普通刷新反复重试。视频不参与逐帧主题取色，取色使用静态回退图。
+**视频背景**：自定义背景路径可选择图片、图片文件夹或 MP4/MKV/WebM 视频；文件夹继续只随机选择图片。视频沿用 `backgroundSource=custom` 与 `customBackgroundPath`，音量由 `backgroundVideoVolume` 保存（默认 0，范围 0–100）。独立静音选项 `backgroundVideoMuted` 默认为 false，旧配置的非零音量保持原有播放行为；静音时实际音量为 0，草稿中的音量保留且可继续调整，取消静音恢复该音量。选择、音量和静音变更沿用设置草稿的即时预览、保存与放弃改动语义。首帧前和播放失败时显示内置静态背景；失败记录本地诊断并提示，相同文件指纹不会随普通刷新反复重试。视频不参与逐帧主题取色，取色使用静态回退图。
 
 播放器与背景同属 UI 层，使用 libmpv Render API 绘入 Avalonia 合成树，位于设置、对话框等真实覆盖层下方。仅播放本地媒体，不跟随文件中的播放列表、外部媒体引用或网络协议；伪装成视频的远端播放列表按播放失败回退，不能绕过统一网络传输层。切换视频复用播放器；切回图片或清除时暂停播放器，并在下一次 GL 绘制中释放 libmpv 播放器、render context 和参数，提交透明帧后停止主动帧请求。每窗口最多保留一个 GL 承载面到窗口关闭，避免反复分离／重建承载面带来的 GPU 保留；窗口不可见时先暂停，恢复绘制再完成待释放媒体的清理，窗口关闭则由 GL 卸载完成清理并释放承载面。隐藏到托盘、最小化以及减少动态效果时暂停，恢复可见且允许动效时继续。Windows x64 随包提供运行库；暂未提供运行库的平台使用静态回退。
 
@@ -189,7 +189,8 @@ _Avoid_: 遮罩点击穿透
 规格见[设计规范](docs/design/design-system-spec.md)，逐表面验收见[走查清单](docs/design/design-walkthrough-checklist.md)；以下只记录当前范围。
 
 - **底座**：M3 语义 + FluentTheme；`Launcher.*` 十二家族设计 token；AA 契约自动化；动态色管线（ApplyScheme）；黄金截图基线；Debug 门画廊。
-- **组件四型**：`primary-action`→filled、`flat-action`→outlined（语境可 tonal）、`text-link`→text、`danger-action`→error-filled；共享模板 `LauncherBorderButtonTemplate` 保留；诊断/日志例外使用 Fluent 基础模板，仅做 token 兼容。
+- **组件四型**：`primary-action`→filled、`flat-action`→中性 filled/tonal、`text-link`→text、`danger-action`→error-filled；共享模板 `LauncherBorderButtonTemplate` 与 `Launcher.Component.Button.Theme` 统一标准操作，跨功能几何与状态见 [ADR-050](docs/design/adr/ADR-050-跨功能共享组件视觉基准.md)；诊断/日志列表保留 Fluent 基础模板，工具栏和表单控件复用共享视觉。
 - **表面与 Z 序**：单窗口 + 覆盖层 100/200/500/1000，向导退出确认 501 叠在向导之上（常量在 `LauncherConstants`，`ZIndex` 声明在使用点而非样式）；表面顺序为主壳→设置→诊断/日志/资源面板/对话框→设置向导→Toast。
 - **已完成**：设置页（[ADR-013](docs/design/adr/ADR-013-设置页重设计方向.md)）、对话框/Toast/设置向导（ADR-014/017）、关于分区（[ADR-018](docs/design/adr/ADR-018-关于分区重设计方向.md)）、崩溃窗口（ADR-019/020）、资源面板（[ADR-041](docs/design/adr/ADR-041-资源面板MD3结构级重设计.md)）。
+- **外观页细化**：主题与动效、背景、主题配色分组，高级配色默认收起；会话展开状态不参与设置事务，背景缩略图与主窗口即时预览复用当前背景和主题数据。现行解剖与状态要求见[设计规范 §5.4](docs/design/design-system-spec.md#54-外观设置分组与高级配色2026-11-01)。
 - **仍开放**：底栏形态（Q18；[ADR-001](docs/design/adr/ADR-001-底栏仲裁标准.md) 的仲裁标准保留，原原型素材已清理）；主壳首页重设计（已搁置，无既定蓝图）。

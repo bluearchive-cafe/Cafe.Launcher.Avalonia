@@ -19,7 +19,6 @@ public sealed partial class UiStyleContractTests
                 "Settings.Editor.Current.Language",
                 "Settings.Editor.Current.CloseBehavior",
                 "Settings.Editor.Current.AfterLaunchBehavior",
-                "Settings.Editor.Current.MotionMode",
                 "Settings.Editor.Current.StatusDetailMode",
                 "Settings.Editor.Current.ShowRemoteContentCard",
                 "Settings.Editor.Current.UpdateChannel"
@@ -44,6 +43,7 @@ public sealed partial class UiStyleContractTests
             ["SettingsAppearanceSection"] =
             [
                 "Settings.Editor.Current.ThemeMode",
+                "Settings.Editor.Current.MotionMode",
                 "Settings.Editor.Current.ThemeColorMode",
                 "Settings.Editor.Current.BackgroundSource",
                 "Settings.Editor.Current.BackgroundFit",
@@ -475,37 +475,22 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void AppearanceSection_UsesTwoSettingsGroupsForConsistentVerticalRhythm()
+    public void AppearanceSection_GroupsCommonSettingsBeforeOptionalColorDetails()
     {
         var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/SettingsAppearanceSection.axaml"));
-        var groups = document
-            .Descendants()
-            .Where(element =>
-                element.Name.LocalName == "StackPanel"
-                && HasClass(element, "settings-group"))
-            .ToList();
-
-        Assert.Equal(2, groups.Count);
-
+        var groups = document.Descendants()
+            .Where(element => element.Name.LocalName == "StackPanel" && HasClass(element, "settings-group"))
+            .ToArray();
         Assert.Equal(
-            "{Binding Shell.I18n[settingsGroupThemeColor]}",
-            groups[0]
-                .Elements()
-                .First(element => element.Name.LocalName == "TextBlock")
-                .Attribute("Text")?.Value);
-        Assert.Equal(
-            "{Binding Shell.I18n[settingsGroupBackground]}",
-            groups[1]
-                .Elements()
-                .First(element => element.Name.LocalName == "TextBlock")
-                .Attribute("Text")?.Value);
-        var neutralStrategyRow = groups[0].Descendants().Single(element =>
-            element.Name.LocalName == "SettingSelect"
-            && element.Attribute("Title")?.Value
-                == "{Binding Shell.I18n[neutralColorStrategy]}");
-        Assert.Equal(
-            "{Binding Settings.Options.NeutralColorStrategy}",
-            neutralStrategyRow.Attribute("ItemsSource")?.Value);
+            ["{Binding Shell.I18n[settingsGroupThemeMotion]}", "{Binding Shell.I18n[settingsGroupBackground]}",
+                "{Binding Shell.I18n[settingsGroupThemeColor]}"],
+            groups.Select(group => group.Elements().First().Attribute("Text")?.Value));
+        var advanced = groups[2].Descendants().Single(element => element.Name.LocalName == "Expander");
+        Assert.Equal("{Binding Settings.Appearance.IsAdvancedColorExpanded, Mode=TwoWay}",
+            advanced.Attribute("IsExpanded")?.Value);
+        Assert.Equal(3, advanced.Descendants().Count(element => element.Name.LocalName == "SettingSelect"));
+        Assert.Single(document.Descendants(), element => element.Name.LocalName == "Expander");
+        Assert.Single(document.Descendants(), element => element.Name.LocalName == "Image");
     }
 
     [Fact]
@@ -946,12 +931,11 @@ public sealed partial class UiStyleContractTests
     public void SettingsDangerActionStyle_WithDangerOverrides_RestoresFlatActionGeometry()
     {
         var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
-        var settingDanger = GetStyleSetters(styles, "Button.flat-action.danger-action");
-
-        Assert.Equal("{DynamicResource Launcher.Color.Error}", settingDanger["BorderBrush"]);
-        Assert.Equal("{StaticResource Launcher.Border.Thickness.Default}", settingDanger["BorderThickness"]);
-        Assert.Equal("{StaticResource Launcher.Control.Height.Setting}", settingDanger["MinHeight"]);
-        Assert.Equal("{StaticResource Launcher.Component.Action.Outlined.Padding}", settingDanger["Padding"]);
+        Assert.Equal(GetStyleSetters(styles, "Button.flat-action")["Theme"],
+            GetStyleSetters(styles, "Button.danger-action")["Theme"]);
+        Assert.Equal("{DynamicResource Launcher.Color.Error}", GetStyleSetters(styles, "Button.danger-action")["Background"]);
+        Assert.Equal("{StaticResource Launcher.Control.Height.Dialog}", GetActionThemeSetters(styles)["MinHeight"]);
+        Assert.DoesNotContain(styles.Descendants(), element => element.Attribute("Selector")?.Value == "Button.flat-action.danger-action");
     }
 
     [Fact]

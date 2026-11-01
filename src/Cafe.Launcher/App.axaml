@@ -33,7 +33,7 @@
             <Thickness x:Key="Launcher.Component.Tabs.Header.Margin">0,0,0,4</Thickness>
             <Thickness x:Key="Launcher.Component.Tabs.Indicator.Margin">0,4,0,2</Thickness>
             <Thickness x:Key="Launcher.Component.Toast.Content.Padding">12</Thickness>
-            <Thickness x:Key="Launcher.Component.Toast.Action.Padding">12,8</Thickness>
+            <Thickness x:Key="Launcher.Component.Toast.Action.Padding">12,0</Thickness>
             <Thickness x:Key="Launcher.Component.DesignGallery.StateCell.Padding">8,4</Thickness>
             <Thickness x:Key="Launcher.Component.FilterTab.Padding">10,4</Thickness>
             <!-- 关于分区解剖（ADR-018 融合变体）：key-value/链接行密度。 -->
@@ -90,11 +90,11 @@
             <x:Double x:Key="Launcher.Icon.Xl">22</x:Double>
             <x:Double x:Key="Launcher.Icon.Xxl">24</x:Double>
             <x:Double x:Key="Launcher.Control.Height.Setting">36</x:Double>
-            <x:Double x:Key="Launcher.Control.Height.Dialog">42</x:Double>
+            <x:Double x:Key="Launcher.Control.Height.Dialog">40</x:Double>
             <x:Double x:Key="Launcher.Control.Height.Bottom">48</x:Double>
             <x:Double x:Key="Launcher.Control.Height.Launch">58</x:Double>
             <x:Double x:Key="Launcher.Control.MinWidth.None">0</x:Double>
-            <x:Double x:Key="Launcher.Component.Toast.Action.MinHeight">30</x:Double>
+            <x:Double x:Key="Launcher.Component.Toast.Action.MinHeight">36</x:Double>
             <x:Double x:Key="Launcher.Layout.Debug.Width">720</x:Double>
             <x:Double x:Key="Launcher.Layout.Debug.Height">540</x:Double>
             <x:Double x:Key="Launcher.Layout.Window.Width">1300</x:Double>
@@ -111,6 +111,8 @@
             <x:Double x:Key="Launcher.Layout.ResourcePanel.Width">720</x:Double>
             <x:Double x:Key="Launcher.Layout.ResourcePanel.Height">592</x:Double>
             <x:Double x:Key="Launcher.Layout.Appearance.Preview.Width">212</x:Double>
+            <x:Double x:Key="Launcher.Component.Settings.Appearance.Thumbnail.Width">64</x:Double>
+            <x:Double x:Key="Launcher.Component.Settings.Appearance.Thumbnail.Height">44</x:Double>
             <x:Double x:Key="Launcher.Layout.Debug.Log.Path.MaxWidth">300</x:Double>
             <x:Double x:Key="Launcher.Layout.Debug.Log.Level.MinWidth">110</x:Double>
             <x:Double x:Key="Launcher.Layout.Debug.SettingsPreview.MaxHeight">160</x:Double>
@@ -129,7 +131,7 @@
             <!-- 对话框家族 v2 表面档案（ADR-015）：组件圆角 20 + 双层阴影，
                  模态表面比页面常驻面板高一档；-padding 家族按形态区分。 -->
             <x:String x:Key="Launcher.Elevation.Shadow.Dialog">0 16 40 0 #330F1222, 0 2 6 0 #140F1222</x:String>
-            <CornerRadius x:Key="Launcher.Component.Dialog.CornerRadius">20</CornerRadius>
+            <CornerRadius x:Key="Launcher.Component.Dialog.CornerRadius">16</CornerRadius>
             <!-- 警示由语义图标、文字和背景表达；无需额外强调左边框。 -->
             <CornerRadius x:Key="Launcher.Component.Dialog.Alert.CornerRadius">8</CornerRadius>
             <x:Double x:Key="Launcher.Component.Dialog.Badge.Size">32</x:Double>
@@ -165,11 +167,16 @@
             <x:Double x:Key="Launcher.Component.Settings.Row.Content.MinWidth">0</x:Double>
             <x:Double x:Key="Launcher.Component.Settings.Control.MinWidth">220</x:Double>
             <x:Double x:Key="Launcher.Component.Input.MinWidth">160</x:Double>
-            <x:Double x:Key="Launcher.Component.Dialog.Action.MinWidth">108</x:Double>
-            <x:Double x:Key="Launcher.Component.Dialog.BasicAction.MinWidth">64</x:Double>
+            <x:Double x:Key="Launcher.Component.Dialog.Action.MinWidth">80</x:Double>
+            <x:Double x:Key="Launcher.Component.Dialog.BasicAction.MinWidth">80</x:Double>
             <x:Double x:Key="Launcher.Component.PrimaryAction.MinWidth">150</x:Double>
             <x:Double x:Key="Launcher.Component.BottomAction.MinWidth">156</x:Double>
-            <x:Double x:Key="Launcher.Component.LauncherControl.Width">220</x:Double>
+            <x:Double x:Key="Launcher.Component.LauncherControl.Width">190</x:Double>
+            <x:Double x:Key="Launcher.Component.Menu.Separator.Height">1</x:Double>
+            <Thickness x:Key="Launcher.Component.Menu.Separator.Margin">8,4</Thickness>
+            <x:Double x:Key="Launcher.Component.LaunchSplit.Separator.Width">1</x:Double>
+            <Thickness x:Key="Launcher.Component.LaunchSplit.Separator.Margin">0,12</Thickness>
+            <x:Double x:Key="Launcher.Component.LaunchSplit.Menu.VerticalOffset">-8</x:Double>
             <x:Double x:Key="Launcher.Component.RemoteSurface.Width">500</x:Double>
             <x:Double x:Key="Launcher.Component.RemoteSurface.MinHeight">360</x:Double>
             <x:Double x:Key="Launcher.Component.RemoteSurface.MaxHeight">480</x:Double>
@@ -319,8 +326,11 @@
                     <SolidColorBrush x:Key="Launcher.Color.Dialog.Footer" Color="#FFFFFFFF"/>
                     <SolidColorBrush x:Key="Launcher.Color.Dialog.Close.Hover" Color="#FFEDF2F7"/>
                     <SolidColorBrush x:Key="Launcher.Color.Dialog.Close.Pressed" Color="#FFDDE6F0"/>
-                    <SolidColorBrush x:Key="Launcher.Color.Field.Background" Color="#FFF0F6FD"/>
-                    <SolidColorBrush x:Key="Launcher.Color.Field.Border" Color="#FF788EA7"/>
+                    <SolidColorBrush x:Key="Launcher.Color.Field.Background" Color="#FFF9FAFC"/>
+                    <SolidColorBrush x:Key="Launcher.Color.Field.Border" Color="#FF8290A5"/>
+                    <SolidColorBrush x:Key="Launcher.Color.Button.Secondary.Background" Color="#FFEDF0F5"/>
+                    <SolidColorBrush x:Key="Launcher.Color.Button.Secondary.Hover" Color="#FFDDE0E5"/>
+                    <SolidColorBrush x:Key="Launcher.Color.Button.Secondary.Pressed" Color="#FFCDD0D6"/>
                     <SolidColorBrush x:Key="Launcher.Color.Info.Background" Color="#FFDCEFFF"/>
                     <SolidColorBrush x:Key="Launcher.Color.Notice.Background" Color="#FFFFF6D8"/>
                     <SolidColorBrush x:Key="Launcher.Color.Warning.Background" Color="#FFFFF2C2"/>
@@ -331,7 +341,7 @@
                     <SolidColorBrush x:Key="Launcher.Color.Button.Flat.Hover" Color="#FFEEF6FF"/>
                     <SolidColorBrush x:Key="Launcher.Color.Button.Flat.Pressed" Color="#FFDCEFFF"/>
                     <!-- 对话框动作带的标准（次要）动作底色：Fluent 标准按钮有静止填充，不是透明描边。 -->
-                    <SolidColorBrush x:Key="Launcher.Color.Dialog.Action.Background" Color="#FFF4F8FC"/>
+                    <SolidColorBrush x:Key="Launcher.Color.Dialog.Action.Background" Color="#FFEDF0F5"/>
                     <SolidColorBrush x:Key="Launcher.Color.SocialChip.Hover" Color="#FFE2ECF9"/>
                     <SolidColorBrush x:Key="Launcher.Color.SocialChip.Pressed" Color="#FFD2E2F9"/>
                     <SolidColorBrush x:Key="Launcher.Color.SiteButton.Background" Color="#FFFFFFFF"/>
@@ -359,8 +369,11 @@
                     <SolidColorBrush x:Key="Launcher.Color.Dialog.Footer" Color="#FF161C26"/>
                     <SolidColorBrush x:Key="Launcher.Color.Dialog.Close.Hover" Color="#FF2A3547"/>
                     <SolidColorBrush x:Key="Launcher.Color.Dialog.Close.Pressed" Color="#FF344156"/>
-                    <SolidColorBrush x:Key="Launcher.Color.Field.Background" Color="#FF1E2834"/>
-                    <SolidColorBrush x:Key="Launcher.Color.Field.Border" Color="#FF5E7494"/>
+                    <SolidColorBrush x:Key="Launcher.Color.Field.Background" Color="#FF272E3A"/>
+                    <SolidColorBrush x:Key="Launcher.Color.Field.Border" Color="#FF7B89A0"/>
+                    <SolidColorBrush x:Key="Launcher.Color.Button.Secondary.Background" Color="#FF303744"/>
+                    <SolidColorBrush x:Key="Launcher.Color.Button.Secondary.Hover" Color="#FF3F4652"/>
+                    <SolidColorBrush x:Key="Launcher.Color.Button.Secondary.Pressed" Color="#FF4D5460"/>
                     <SolidColorBrush x:Key="Launcher.Color.Info.Background" Color="#FF19324D"/>
                     <SolidColorBrush x:Key="Launcher.Color.Notice.Background" Color="#FF352D17"/>
                     <SolidColorBrush x:Key="Launcher.Color.Warning.Background" Color="#FF463817"/>
@@ -371,7 +384,7 @@
                     <SolidColorBrush x:Key="Launcher.Color.Button.Flat.Hover" Color="#FF243653"/>
                     <SolidColorBrush x:Key="Launcher.Color.Button.Flat.Pressed" Color="#FF1D426C"/>
                     <!-- 对话框动作带的标准（次要）动作底色：Fluent 标准按钮有静止填充，不是透明描边。 -->
-                    <SolidColorBrush x:Key="Launcher.Color.Dialog.Action.Background" Color="#FF222B38"/>
+                    <SolidColorBrush x:Key="Launcher.Color.Dialog.Action.Background" Color="#FF303744"/>
                     <SolidColorBrush x:Key="Launcher.Color.SocialChip.Hover" Color="#FF243653"/>
                     <SolidColorBrush x:Key="Launcher.Color.SocialChip.Pressed" Color="#FF1D426C"/>
                     <SolidColorBrush x:Key="Launcher.Color.SiteButton.Background" Color="#FF192232"/>

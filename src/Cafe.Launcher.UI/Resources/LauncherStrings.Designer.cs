@@ -62,6 +62,8 @@ internal static class LauncherStrings
 
     public static string BackgroundFitUniformToFill => GetRequiredString("backgroundFitUniformToFill");
 
+    public static string BackgroundLoadFallback => GetRequiredString("backgroundLoadFallback");
+
     public static string BackgroundSource => GetRequiredString("backgroundSource");
 
     public static string BackgroundSourceBundled => GetRequiredString("backgroundSourceBundled");
@@ -153,6 +155,8 @@ internal static class LauncherStrings
     public static string CrashWindowTitle => GetRequiredString("crashWindowTitle");
 
     public static string CrashWindowVersion => GetRequiredString("crashWindowVersion");
+
+    public static string CurrentBackground => GetRequiredString("currentBackground");
 
     public static string CustomBackground => GetRequiredString("customBackground");
 
@@ -924,6 +928,10 @@ internal static class LauncherStrings
 
     public static string Settings => GetRequiredString("settings");
 
+    public static string SettingsAdvancedColors => GetRequiredString("settingsAdvancedColors");
+
+    public static string SettingsAdvancedColorsDescription => GetRequiredString("settingsAdvancedColorsDescription");
+
     public static string SettingsCategoryAbout => GetRequiredString("settingsCategoryAbout");
 
     public static string SettingsCategoryAboutDescription => GetRequiredString("settingsCategoryAboutDescription");
@@ -963,6 +971,8 @@ internal static class LauncherStrings
     public static string SettingsGroupGameRuntime => GetRequiredString("settingsGroupGameRuntime");
 
     public static string SettingsGroupThemeColor => GetRequiredString("settingsGroupThemeColor");
+
+    public static string SettingsGroupThemeMotion => GetRequiredString("settingsGroupThemeMotion");
 
     public static string SettingsGroupUpdates => GetRequiredString("settingsGroupUpdates");
 
@@ -1295,6 +1305,8 @@ internal static class LauncherStrings
     public static string VersionUnavailable => GetRequiredString("versionUnavailable");
 
     public static string VideoBackgroundFailed => GetRequiredString("videoBackgroundFailed");
+
+    public static string VideoBackgroundMute => GetRequiredString("videoBackgroundMute");
 
     public static string VideoBackgroundVolume => GetRequiredString("videoBackgroundVolume");
 

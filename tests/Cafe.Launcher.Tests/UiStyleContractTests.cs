@@ -355,6 +355,14 @@ public sealed partial class UiStyleContractTests
     [GeneratedRegex("#[0-9A-Fa-f]{6,8}", RegexOptions.CultureInvariant)]
     private static partial Regex DirectColorRegex();
 
+    private static IReadOnlyDictionary<string, string> GetActionThemeSetters(XDocument document) => document
+        .Descendants()
+        .Single(element => element.Name.LocalName == "ControlTheme"
+            && element.Attribute(XName.Get("Key", "http://schemas.microsoft.com/winfx/2006/xaml"))?.Value == "Launcher.Component.Button.Theme")
+        .Elements()
+        .Where(element => element.Name.LocalName == "Setter")
+        .ToDictionary(element => element.Attribute("Property")!.Value, element => element.Attribute("Value")!.Value, StringComparer.Ordinal);
+
     private static IReadOnlyDictionary<string, string> GetStyleSetters(
         XDocument document,
         string selector)

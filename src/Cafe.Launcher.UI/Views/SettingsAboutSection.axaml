@@ -15,7 +15,7 @@
                     <TextBlock Text="{Binding Shell.I18n[aboutDescription]}" Classes="caption" TextWrapping="Wrap"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}">
-                    <Button Classes="primary-action compact-action"
+                    <Button Classes="primary-action"
                             Command="{Binding Settings.CheckForUpdatesCommand}"
                             AutomationProperties.Name="{Binding Shell.I18n[checkUpdates]}">
                         <StackPanel Classes="button-content">

@@ -38,6 +38,7 @@ public sealed class LauncherSettings : SettingsModel
     private string backgroundFit = BackgroundFits.UniformToFill;
     private string backgroundFillColor = "#FF000000";
     private int backgroundVideoVolume;
+    private bool backgroundVideoMuted;
     private string resourcePanelUid = "";
     private string updateChannel = UpdateChannels.Stable;
     private string logLevel =
@@ -139,6 +140,10 @@ public sealed class LauncherSettings : SettingsModel
     [JsonPropertyName("backgroundVideoVolume")]
     public int BackgroundVideoVolume { get => backgroundVideoVolume; set => SetProperty(ref backgroundVideoVolume, value); }
 
+    /// <summary>Silences video playback while retaining the configured volume.</summary>
+    [JsonPropertyName("backgroundVideoMuted")]
+    public bool BackgroundVideoMuted { get => backgroundVideoMuted; set => SetProperty(ref backgroundVideoMuted, value); }
+
     [JsonPropertyName("resourcePanelUid")]
     public string ResourcePanelUid { get => resourcePanelUid; set => SetProperty(ref resourcePanelUid, value); }
 
@@ -211,6 +216,7 @@ public sealed class LauncherSettings : SettingsModel
         BackgroundFit = other.BackgroundFit;
         BackgroundFillColor = other.BackgroundFillColor;
         BackgroundVideoVolume = other.BackgroundVideoVolume;
+        BackgroundVideoMuted = other.BackgroundVideoMuted;
         ResourcePanelUid = other.ResourcePanelUid;
         ResourcePanelUidSource = other.ResourcePanelUidSource;
         StatusDetailMode = other.StatusDetailMode;
@@ -261,6 +267,7 @@ public sealed class LauncherSettings : SettingsModel
         (nameof(BackgroundFit), settings => settings.BackgroundFit),
         (nameof(BackgroundFillColor), settings => settings.BackgroundFillColor),
         (nameof(BackgroundVideoVolume), settings => settings.BackgroundVideoVolume),
+        (nameof(BackgroundVideoMuted), settings => settings.BackgroundVideoMuted),
         (nameof(ResourcePanelUid), settings => settings.ResourcePanelUid),
         (nameof(ResourcePanelUidSource), settings => settings.ResourcePanelUidSource),
         (nameof(StatusDetailMode), settings => settings.StatusDetailMode),
