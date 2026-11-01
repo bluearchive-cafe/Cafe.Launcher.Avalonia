@@ -54,6 +54,11 @@
                 </Border>
                 <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
                     <TextBlock Text="{Binding Shell.I18n[currentBackground]}" Classes="section-title"/>
+                    <TextBlock Text="{Binding Shell.I18n[backgroundSourceBundled]}" Classes="caption"
+                               IsVisible="{Binding Background.CurrentBackgroundLocation, Converter={x:Static StringConverters.IsNullOrEmpty}}"/>
+                    <TextBlock Text="{Binding Shell.I18n[backgroundSourceRemote]}" Classes="caption"
+                               ToolTip.Tip="{Binding Background.CurrentBackgroundLocation}"
+                               IsVisible="{Binding Background.IsRemoteBackgroundDisplayed}"/>
                     <TextBlock Text="{Binding Background.CurrentBackgroundFilePath}" Classes="caption"
                                TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Background.CurrentBackgroundFilePath}"
                                IsVisible="{Binding Background.CurrentBackgroundFilePath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
