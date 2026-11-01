@@ -62,6 +62,9 @@
                 </Grid.ContextMenu>
                 <StackPanel Classes="titlebar-brand-row">
                     <TextBlock Text="{Binding Shell.ProductName}" Classes="titlebar-brand"/>
+                    <Border Classes="titlebar-version-badge">
+                        <TextBlock Text="{Binding Shell.TitleBarVersionText}" Classes="titlebar-version"/>
+                    </Border>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Classes="titlebar-actions">
                     <Button Classes="chrome" Command="{Binding WindowChrome.OpenDebugPanelCommand}" ToolTip.Tip="{Binding Shell.I18n[debugPanel]}"

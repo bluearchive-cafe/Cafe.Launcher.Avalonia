@@ -4,19 +4,71 @@ using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
+using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using Cafe.Launcher.Core;
 using Cafe.Launcher.UI.Features.GameOperations;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.UI.Views;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Constants;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cafe.Launcher.HeadlessTests;
 
 public sealed partial class MainWindowHeadlessTests
 {
+    [AvaloniaTheory]
+    [InlineData("1.2.3")]
+    [InlineData("1.2.3-beta.4")]
+    public void MainWindow_TitleBar_ShowsHostVersionAcrossLanguages(string launcherVersion)
+    {
+        using var context = CreateContext(configure: services => services.AddSingleton(
+            new LauncherBuildIdentity(launcherVersion, "abc1234", "2026-11-01", "Debug")));
+        context.Window.Width = context.Window.MinWidth;
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var titleBar = context.Window.GetVisualDescendants()
+            .OfType<Grid>()
+            .Single(control => control.Name == "TitleBar");
+        var title = titleBar.GetVisualDescendants()
+            .OfType<TextBlock>()
+            .Single(control => control.Classes.Contains("titlebar-brand"));
+        var version = titleBar.GetVisualDescendants()
+            .OfType<TextBlock>()
+            .Single(control => control.Classes.Contains("titlebar-version"));
+        var badge = Assert.IsType<Border>(version.Parent);
+        var fill = Assert.IsAssignableFrom<ISolidColorBrush>(badge.Background);
+        Assert.True(fill.Color.A is > 0 and < byte.MaxValue);
+        Assert.Equal(context.Window.FindResource("Launcher.Text.OnChrome.Muted"), version.Foreground);
+        Assert.True(version.FontSize < title.FontSize);
+
+        foreach (var language in new[]
+        {
+            LauncherLanguages.English,
+            LauncherLanguages.SimplifiedChinese,
+            LauncherLanguages.TraditionalChinese,
+            LauncherLanguages.Japanese
+        })
+        {
+            context.ViewModel.Shell.ApplyLanguage(language, hasSnapshot: false);
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal($"v{launcherVersion}", version.Text);
+            Assert.True(version.IsEffectivelyVisible);
+            AssertControlInsideWindow(version, context.Window);
+            var titleRight = title.TranslatePoint(new Point(title.Bounds.Width, 0), titleBar)!.Value.X;
+            var versionLeft = version.TranslatePoint(default, titleBar)!.Value.X;
+            Assert.True(versionLeft > titleRight);
+            Assert.True(context.Window.IsWithinTitleBar(version));
+            Assert.False(MainWindow.IsInteractive(version));
+            Assert.False(MainWindow.IsInteractive(badge));
+        }
+    }
+
     [AvaloniaFact]
     public void MainWindow_WhenShown_LoadsRealXamlAndOverlayBindings()
     {

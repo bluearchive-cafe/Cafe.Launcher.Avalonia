@@ -103,6 +103,7 @@ public sealed class DesignTokenContrastTests
         "Launcher.Color.Chrome.Hover",
         "Launcher.Color.Chrome.Pressed",
         "Launcher.Color.TitleBar.Gradient",
+        "Launcher.Color.TitleBar.Version.Background",
         "Launcher.Color.Overlay.Scrim.Sm",
         "Launcher.Color.Overlay.Scrim.Md",
         "Launcher.Color.Overlay.Scrim.Lg",
