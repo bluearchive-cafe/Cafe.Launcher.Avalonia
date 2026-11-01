@@ -578,11 +578,6 @@
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
     </Style>
-    <Style Selector="Button.primary-action.compact-action">
-        <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Setting}"/>
-        <Setter Property="MinWidth" Value="{StaticResource Launcher.Control.MinWidth.None}"/>
-        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Action.Compact.Padding}"/>
-    </Style>
     <Style Selector="Button.flat-action">
         <Setter Property="Theme" Value="{StaticResource Launcher.Component.Button.Theme}"/>
     </Style>
@@ -1458,6 +1453,10 @@
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Hairline}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Lg}"/>
+    </Style>
+    <!-- Keep the card's half-DIP outline, but do not inherit fractional layout into its buttons. -->
+    <Style Selector="Border.about-identity-card > StackPanel">
+        <Setter Property="UseLayoutRounding" Value="True"/>
     </Style>
     <Style Selector="TextBlock.about-product-name">
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Headline.Md}"/>

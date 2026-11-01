@@ -172,6 +172,7 @@
 
 - 依据 [ADR-050](adr/ADR-050-跨功能共享组件视觉基准.md)：`Launcher.Component.Button.Theme` 负责 40 DIP 标准最小高度、80 DIP 动作最小宽度、14 DIP 字号、8 DIP 圆角、居中与 2 DIP 透明焦点预留。主/次/危险类仅选择语义，`dialog-action` 保留兼容尺寸入口，`confirm-dialog-action` 保留调用和自动化标记。
 - 次要操作共用不透明的 `Launcher.Color.Button.Secondary.Background/Hover/Pressed`。BrandBlue 使用固定中性底，SeedFollowing 使用方案的 `SurfaceContainerHighest`；hover/pressed 以当前中性前景预混 8%/16%，三态在每次主题应用时一起重建。`Dialog.Action.Background` 同步为兼容底色。
+- 关于身份卡的检查更新保留 `primary-action` 主按钮强调，官方网站、帮助文档保持 `flat-action` 次要操作；三项共用 40 DIP 最小高度、14 DIP 字号、8 DIP 圆角和内边距，仅移除检查更新的紧凑尺寸例外，见 [ADR-018 修订](adr/ADR-018-关于分区重设计方向.md)。 身份卡可为半 DIP 外描边关闭布局取整，但其内容容器恢复 `UseLayoutRounding=True`，避免按钮继承半像素偏移而产生模糊直边。
 - 设置、资源面板、确认框、向导和 Toast 复用同一角色。Toast 与显式 compact 操作保留 36 DIP 紧凑密度；主界面任务区 48/58 DIP 尺寸和布局保持现状。按钮采用 `MinHeight`，文字放大与长文案自然增高。
 - 字段、下拉选择与取色器触发器使用 40 DIP 标准高度、8 DIP 圆角。确认、表单、通知等 `DialogSurface` 统一为 16 DIP 外圆角，Basic/Panel 结构和模态交互权不变。
 - 键盘焦点只改描边颜色；禁用仍保留 2 DIP 厚度，不因取焦或禁用改变几何。中性焦点在表面、字段与次要操作三态上满足 3:1；实心主操作/危险操作用 `OnPrimary`/`OnError`。跨场景实际渲染与动态方案对比度分别由 `ActionButtonThemeHeadlessTests`、`MaterialSchemeGeneratorTests` 守护。

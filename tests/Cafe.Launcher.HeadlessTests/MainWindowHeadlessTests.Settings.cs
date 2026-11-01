@@ -8,6 +8,8 @@ using Avalonia.Headless.XUnit;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
+using System.Runtime.InteropServices;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -122,6 +124,118 @@ public sealed partial class MainWindowHeadlessTests
             context.ViewModel.Settings.Options.SettingsCategories.First(option =>
                 option.Code == context.ViewModel.Settings.SelectedCategory).DisplayName,
             categoryTitle.Text);
+    }
+
+    [AvaloniaTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SettingsAbout_IdentityActions_ShareGeometryAndPreservePrimaryEmphasis(bool dark)
+    {
+        using var theme = ThemeVariantSnapshot.Capture(dark ? ThemeVariant.Dark : ThemeVariant.Light);
+        using var context = CreateContext();
+        PrepareGoldenWindow(context, dark ? ThemeVariant.Dark : ThemeVariant.Light);
+        OpenSettings(context);
+        context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.About;
+        context.ViewModel.Settings.Editor.Current.ThemeMode = dark ? ThemeModes.Dark : ThemeModes.Light;
+        await context.ViewModel.Settings.PendingAppearancePreview.WaitAsync(TimeSpan.FromSeconds(5));
+        context.Provider.GetRequiredService<ThemeApplier>().ApplyScheme(Color.Parse("#2E7DF6"), isDark: dark);
+        Dispatcher.UIThread.RunJobs();
+        var update = context.Window.GetVisualDescendants().OfType<Button>()
+            .Single(button => ReferenceEquals(button.Command, context.ViewModel.Settings.CheckForUpdatesCommand));
+        var row = Assert.IsType<StackPanel>(update.Parent);
+        var buttons = row.Children.OfType<Button>().ToArray();
+        Assert.Equal(3, buttons.Length);
+        foreach (var button in buttons)
+        {
+            Assert.Equal(40, button.Bounds.Height);
+            Assert.Equal(new CornerRadius(8), button.CornerRadius);
+            Assert.Equal(buttons[1].Padding, button.Padding);
+        }
+
+        Assert.Equal(context.Window.FindResource(context.Window.ActualThemeVariant, "Launcher.Color.Primary"), update.Background);
+        Assert.Equal(context.Window.FindResource(context.Window.ActualThemeVariant, "Launcher.Color.OnPrimary"), update.Foreground);
+        Assert.Equal(context.Window.FindResource(context.Window.ActualThemeVariant, "Launcher.Color.Button.Secondary.Background"), buttons[1].Background);
+        var bounds = buttons.Select(button => button.Bounds).ToArray();
+        var surface = Assert.Single(update.GetVisualChildren().OfType<Border>());
+        var point = update.TranslatePoint(new Point(10, 10), context.Window)!.Value;
+        context.Window.MouseMove(point);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(context.Window.FindResource(context.Window.ActualThemeVariant, "Launcher.Color.Primary.Hover"), surface.Background);
+        context.Window.MouseDown(point, MouseButton.Left);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(context.Window.FindResource(context.Window.ActualThemeVariant, "Launcher.Color.Primary.Pressed"), surface.Background);
+        // 在按钮外释放指针，不触发真实网络检查。
+        context.Window.MouseMove(new Point(20, 20));
+        context.Window.MouseUp(new Point(20, 20), MouseButton.Left);
+        buttons[1].Focus(NavigationMethod.Unspecified);
+        update.Focus(NavigationMethod.Tab);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(context.Window.FindResource(context.Window.ActualThemeVariant, "Launcher.Color.OnPrimary"), surface.BorderBrush);
+        Assert.Equal(bounds, buttons.Select(button => button.Bounds).ToArray());
+        update.IsEnabled = false;
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(context.Window.FindResource(context.Window.ActualThemeVariant, "Launcher.Color.Content.Row"), surface.Background);
+        Assert.Equal(bounds, buttons.Select(button => button.Bounds).ToArray());
+    }
+
+    [AvaloniaTheory]
+    [InlineData(1300, false)]
+    [InlineData(1300, true)]
+    [InlineData(1301, false)]
+    [InlineData(1301, true)]
+    [InlineData(1024, false)]
+    [InlineData(1024, true)]
+    public async Task SettingsAbout_IdentityActions_AlignPaintedEdgesToDevicePixels(double width, bool dark)
+    {
+        var variant = dark ? ThemeVariant.Dark : ThemeVariant.Light;
+        using var theme = ThemeVariantSnapshot.Capture(variant);
+        using var context = CreateContext();
+        PrepareGoldenWindow(context, variant);
+        context.Window.Width = width;
+        OpenSettings(context);
+        context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.About;
+        context.ViewModel.Settings.Editor.Current.ThemeMode = dark ? ThemeModes.Dark : ThemeModes.Light;
+        await context.ViewModel.Settings.PendingAppearancePreview.WaitAsync(TimeSpan.FromSeconds(5));
+        context.Provider.GetRequiredService<ThemeApplier>().ApplyScheme(Color.Parse("#2E7DF6"), isDark: dark);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(variant, context.Window.ActualThemeVariant);
+        var update = context.Window.GetVisualDescendants().OfType<Button>()
+            .Single(button => ReferenceEquals(button.Command, context.ViewModel.Settings.CheckForUpdatesCommand));
+        var row = Assert.IsType<StackPanel>(update.Parent);
+        using var bitmap = new RenderTargetBitmap(new PixelSize((int)context.Window.Bounds.Width, (int)context.Window.Bounds.Height));
+        bitmap.Render(context.Window);
+        foreach (var button in row.Children.OfType<Button>())
+        {
+            var border = Assert.Single(button.GetVisualChildren().OfType<Border>());
+            var origin = border.TranslatePoint(default, context.Window)!.Value;
+            foreach (var edge in new[] { origin.X, origin.Y, origin.X + border.Bounds.Width, origin.Y + border.Bounds.Height })
+            {
+                var physicalEdge = edge * context.Window.RenderScaling;
+                Assert.Equal(Math.Round(physicalEdge), physicalEdge, precision: 6);
+            }
+
+            // 取圆角之外的左侧直边；外侧卡片与内侧填充之间不能出现半覆盖的混色像素。
+            var strip = new byte[8 * 4];
+            var handle = GCHandle.Alloc(strip, GCHandleType.Pinned);
+            try
+            {
+                bitmap.CopyPixels(new PixelRect((int)origin.X - 1, (int)(origin.Y + border.Bounds.Height / 2), 8, 1),
+                    handle.AddrOfPinnedObject(), strip.Length, strip.Length);
+            }
+            finally
+            {
+                handle.Free();
+            }
+
+            var outside = strip.AsSpan(0, 4).ToArray();
+            var inside = strip.AsSpan(strip.Length - 4, 4).ToArray();
+            Assert.False(outside.AsSpan().SequenceEqual(inside));
+            for (var offset = 0; offset < strip.Length; offset += 4)
+            {
+                var pixel = strip.AsSpan(offset, 4);
+                Assert.True(pixel.SequenceEqual(outside) || pixel.SequenceEqual(inside), "Straight button edges must not have partially covered pixels.");
+            }
+        }
     }
 
     [AvaloniaFact]
