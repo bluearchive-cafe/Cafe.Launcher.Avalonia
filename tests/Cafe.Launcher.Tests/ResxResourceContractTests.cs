@@ -19,7 +19,8 @@ public sealed class ResxResourceContractTests
     /// </summary>
     // 完整卸载表面的确认、阶段与结构化结果新增 27 个四语资源。
     // 无障碍区域名新增 3 个资源，视频背景新增 5 个资源，外观页细化新增 5 个资源。
-    private const int ExpectedNeutralResourceKeyCount = 646;
+    // Linux MangoHud 开关新增 2 个资源。
+    private const int ExpectedNeutralResourceKeyCount = 648;
 
     private static readonly string ResxDir;
     private static readonly string[] AllLocales = ["en", "zh-Hans", "zh-Hant", "ja"];
@@ -85,6 +86,7 @@ public sealed class ResxResourceContractTests
         // → 640（视频选择、文件对话框标题、音量标题与说明、播放失败提示共 5 个资源）。
         // → 645（外观页分组、折叠详情和背景失败反馈，共 5 个资源；效果预览移除）。
         // → 646（视频背景新增独立静音选项）。
+        // → 648（Linux MangoHud 开关标题与安装要求说明）。
         Assert.Equal(ExpectedNeutralResourceKeyCount, ResxValues["en"].Count);
     }
 

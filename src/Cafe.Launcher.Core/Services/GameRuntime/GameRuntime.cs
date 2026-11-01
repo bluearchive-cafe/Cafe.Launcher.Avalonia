@@ -404,6 +404,14 @@ internal sealed class GameRuntime : IGameRuntime
                 throw new ArgumentOutOfRangeException(nameof(runner), runner.EnvironmentStyle, null);
         }
 
+        // Vulkan implicit-layer activation works through Wine/DXVK and UMU without a wrapper.
+        if (OperatingSystem.IsLinux()
+            && runner.EnvironmentStyle != GameRuntimeEnvironmentStyle.Native
+            && configuration.EnableMangoHud)
+        {
+            startInfo.Environment["MANGOHUD"] = "1";
+        }
+
         return startInfo;
     }
 

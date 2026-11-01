@@ -1,4 +1,6 @@
 ﻿using System.Threading;
+using System.Xml.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Cafe.Launcher.UI.Features.Settings;
 using Cafe.Launcher.UI.Models;
@@ -18,6 +20,46 @@ public sealed class GameRuntimeSettingsUiTests
     static GameRuntimeSettingsUiTests()
     {
         TestLocalizationHelper.Initialize();
+    }
+
+    [Fact]
+    public void MangoHudSetting_VisibilityUsesLinuxPlatformRatherThanHiddenSettingsOverride()
+    {
+        var document = XDocument.Load(TestRepository.InPresentation("Views", "SettingsGameSection.axaml"));
+        XNamespace xaml = "http://schemas.microsoft.com/winfx/2006/xaml";
+        var row = Assert.Single(document.Descendants(), element =>
+            element.Attribute(xaml + "Name")?.Value == "MangoHudSetting");
+
+        Assert.Equal("{Binding Shell.IsLinuxPlatform}", row.Attribute("IsVisible")?.Value);
+        var toggle = Assert.Single(row.Descendants(), element => element.Name.LocalName == "ToggleSwitch");
+        Assert.Equal(
+            "{Binding Settings.Editor.Current.GameRuntime.EnableMangoHud, Mode=TwoWay}",
+            toggle.Attribute("IsChecked")?.Value);
+    }
+
+    [Fact]
+    public void MangoHudSetting_EditSaveAndDiscard_PreservesStateAndDefaultsOffForOldSettings()
+    {
+        var oldSettings = JsonSerializer.Deserialize<LauncherSettings>("{}")!;
+        Assert.False(oldSettings.GameRuntime.EnableMangoHud);
+        var editor = new SettingsEditor();
+        editor.ApplySnapshot(oldSettings);
+
+        editor.Current.GameRuntime.EnableMangoHud = true;
+        Assert.True(editor.IsDirty);
+        Assert.False(editor.GetSavedSnapshot().GameRuntime.EnableMangoHud);
+        editor.Discard();
+        Assert.False(editor.Current.GameRuntime.EnableMangoHud);
+        Assert.False(editor.IsDirty);
+
+        editor.Current.GameRuntime.EnableMangoHud = true;
+        var json = JsonSerializer.Serialize(editor.GetSnapshot());
+        Assert.Contains("\"enableMangoHud\":true", json, StringComparison.Ordinal);
+        var saved = JsonSerializer.Deserialize<LauncherSettings>(json)!;
+        editor.ApplySnapshot(saved);
+        Assert.True(editor.Current.GameRuntime.EnableMangoHud);
+        Assert.True(editor.GetSavedSnapshot().GameRuntime.EnableMangoHud);
+        Assert.False(editor.IsDirty);
     }
 
     [Fact]
