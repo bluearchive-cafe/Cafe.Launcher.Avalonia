@@ -253,8 +253,11 @@ public partial class MainWindowViewModelTests
 
         await viewModel.Settings.ChooseBackgroundVideoCommand.ExecuteAsync(null);
         viewModel.Settings.Editor.Current.BackgroundVideoVolume = 35;
+        viewModel.Settings.Editor.Current.BackgroundVideoMuted = true;
         await TestWait.UntilAsync(() => preview?.BackgroundVideoVolume == 35, TimeSpan.FromSeconds(5));
 
+        Assert.True(preview!.BackgroundVideoMuted);
+        Assert.False((await savedSettings.SettingsService.ReadAsync()).BackgroundVideoMuted);
         Assert.True(videoVisibleAtNotification);
         Assert.True(viewModel.Settings.IsSettingsDirty);
         Assert.Equal(pickedPath, preview!.CustomBackgroundPath);
@@ -263,15 +266,19 @@ public partial class MainWindowViewModelTests
         await viewModel.WindowChrome.DiscardSettingsChangesCommand.ExecuteAsync(null);
         Assert.Equal("", viewModel.Settings.Editor.Current.CustomBackgroundPath);
         Assert.Equal(0, viewModel.Settings.Editor.Current.BackgroundVideoVolume);
+        Assert.False(viewModel.Settings.Editor.Current.BackgroundVideoMuted);
+        Assert.False(preview!.BackgroundVideoMuted);
         Assert.False(viewModel.Settings.Appearance.IsVideoBackgroundSelected);
         Assert.Equal("", preview.CustomBackgroundPath);
 
         await viewModel.Settings.ChooseBackgroundVideoCommand.ExecuteAsync(null);
         viewModel.Settings.Editor.Current.BackgroundVideoVolume = 35;
+        viewModel.Settings.Editor.Current.BackgroundVideoMuted = true;
         await SaveSettingsAsync(viewModel);
         var persisted = await savedSettings.SettingsService.ReadAsync();
         Assert.Equal(pickedPath, persisted.CustomBackgroundPath);
         Assert.Equal(35, persisted.BackgroundVideoVolume);
+        Assert.True(persisted.BackgroundVideoMuted);
         Assert.False(viewModel.Settings.IsSettingsDirty);
 
     }

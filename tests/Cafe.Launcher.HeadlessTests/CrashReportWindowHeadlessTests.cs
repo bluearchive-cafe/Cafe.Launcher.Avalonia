@@ -56,7 +56,7 @@ public sealed class CrashReportWindowHeadlessTests
     }
 
     [AvaloniaFact]
-    public void CrashReportWindow_WhenShown_DefaultsToFriendlySummaryWithCollapsedDetails()
+    public void Golden_CrashReportWindow_DefaultsToFriendlySummaryWithCollapsedDetails()
     {
         var previousCulture = CultureInfo.CurrentCulture;
         var previousUiCulture = CultureInfo.CurrentUICulture;
@@ -80,6 +80,15 @@ public sealed class CrashReportWindowHeadlessTests
             Assert.NotNull(expander);
             Assert.False(expander!.IsExpanded);
             Assert.NotNull(exitButton);
+            Dispatcher.UIThread.RunJobs();
+            var copyButton = window.FindControl<Button>("CopyDetailsButton");
+            Assert.NotNull(copyButton);
+            Assert.Equal(40, exitButton!.Bounds.Height);
+            Assert.Equal(40, copyButton!.Bounds.Height);
+            Assert.Equal(new CornerRadius(8), copyButton.CornerRadius);
+            Assert.Equal(new Thickness(2), copyButton.BorderThickness);
+            Assert.Equal(0, Assert.IsAssignableFrom<ISolidColorBrush>(copyButton.BorderBrush).Color.A);
+            Assert.Equal(14, copyButton.FontSize);
             Assert.Equal(HorizontalAlignment.Center, exitButton!.HorizontalContentAlignment);
             Assert.Equal(VerticalAlignment.Center, exitButton.VerticalContentAlignment);
             Assert.Equal("CR-TEST", viewModel.ReportId);

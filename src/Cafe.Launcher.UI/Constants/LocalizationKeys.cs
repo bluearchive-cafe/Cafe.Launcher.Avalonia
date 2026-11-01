@@ -32,6 +32,7 @@ public static class LocalizationKeys
     public const string BackgroundFitFill = "backgroundFitFill";
     public const string BackgroundFitUniform = "backgroundFitUniform";
     public const string BackgroundFitUniformToFill = "backgroundFitUniformToFill";
+    public const string BackgroundLoadFallback = "backgroundLoadFallback";
     public const string BackgroundSource = "backgroundSource";
     public const string BackgroundSourceBundled = "backgroundSourceBundled";
     public const string BackgroundSourceCustom = "backgroundSourceCustom";
@@ -78,6 +79,7 @@ public static class LocalizationKeys
     public const string CrashWindowTime = "crashWindowTime";
     public const string CrashWindowTitle = "crashWindowTitle";
     public const string CrashWindowVersion = "crashWindowVersion";
+    public const string CurrentBackground = "currentBackground";
     public const string CustomBackground = "customBackground";
     public const string CustomBackgroundDescription = "customBackgroundDescription";
     public const string DebugActionFailureMessage = "debugActionFailureMessage";
@@ -465,6 +467,8 @@ public static class LocalizationKeys
     public const string SelectInstalledGame = "selectInstalledGame";
     public const string SelectInstalledGameTooltip = "selectInstalledGameTooltip";
     public const string Settings = "settings";
+    public const string SettingsAdvancedColors = "settingsAdvancedColors";
+    public const string SettingsAdvancedColorsDescription = "settingsAdvancedColorsDescription";
     public const string SettingsCategoryAbout = "settingsCategoryAbout";
     public const string SettingsCategoryAboutDescription = "settingsCategoryAboutDescription";
     public const string SettingsCategoryAdvanced = "settingsCategoryAdvanced";
@@ -485,6 +489,7 @@ public static class LocalizationKeys
     public const string SettingsGroupGameFiles = "settingsGroupGameFiles";
     public const string SettingsGroupGameRuntime = "settingsGroupGameRuntime";
     public const string SettingsGroupThemeColor = "settingsGroupThemeColor";
+    public const string SettingsGroupThemeMotion = "settingsGroupThemeMotion";
     public const string SettingsGroupUpdates = "settingsGroupUpdates";
     public const string SettingsNavigation = "settingsNavigation";
     public const string SettingsSaved = "settingsSaved";
@@ -651,6 +656,7 @@ public static class LocalizationKeys
     public const string VersionLoading = "versionLoading";
     public const string VersionUnavailable = "versionUnavailable";
     public const string VideoBackgroundFailed = "videoBackgroundFailed";
+    public const string VideoBackgroundMute = "videoBackgroundMute";
     public const string VideoBackgroundVolume = "videoBackgroundVolume";
     public const string VideoBackgroundVolumeDescription = "videoBackgroundVolumeDescription";
     public const string ViewLog = "viewLog";

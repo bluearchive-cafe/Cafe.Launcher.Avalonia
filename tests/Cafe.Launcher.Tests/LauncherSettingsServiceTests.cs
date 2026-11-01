@@ -13,6 +13,21 @@ namespace Cafe.Launcher.Tests;
 
 public sealed class LauncherSettingsServiceTests : IDisposable
 {
+    [Fact]
+    public async Task BackgroundVideoMuted_RoundTripsWithoutLosingVolumeAndOldJsonRemainsAudible()
+    {
+        var service = new LauncherSettingsService(TestDataRoot.ForFile(settingsPath));
+        await service.SaveAsync(new LauncherSettings { BackgroundVideoVolume = 35, BackgroundVideoMuted = true });
+        var saved = await service.ReadAsync();
+        Assert.True(saved.BackgroundVideoMuted);
+        Assert.Equal(35, saved.BackgroundVideoVolume);
+
+        await File.WriteAllTextAsync(settingsPath, """{"backgroundVideoVolume":35}""");
+        var legacy = await service.ReadAsync();
+        Assert.False(legacy.BackgroundVideoMuted);
+        Assert.Equal(35, legacy.BackgroundVideoVolume);
+    }
+
     [Theory]
     [InlineData(-1, 0)]
     [InlineData(35, 35)]
@@ -425,6 +440,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
             "backgroundFit",
             "backgroundFillColor",
             "backgroundVideoVolume",
+            "backgroundVideoMuted",
             "resourcePanelUid",
             "resourcePanelUidSource",
             "gameRuntime",
