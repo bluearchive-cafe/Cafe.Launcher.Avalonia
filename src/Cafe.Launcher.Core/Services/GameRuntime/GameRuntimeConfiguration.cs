@@ -12,7 +12,8 @@ public sealed record GameRuntimeConfiguration(
     string? PreferredRunnerId = null,
     string? RunnerPath = null,
     string? PrefixPath = null,
-    string? ProtonPath = null)
+    string? ProtonPath = null,
+    bool EnableMangoHud = false)
 {
     /// <summary>Maps persisted runtime settings to the runtime module's single configuration.</summary>
     public static GameRuntimeConfiguration FromSettings(GameRuntimeSettings settings)
@@ -23,6 +24,7 @@ public sealed record GameRuntimeConfiguration(
             PreferredRunnerId: settings.Runner is GameRuntimeRunners.Auto or "" ? null : settings.Runner,
             RunnerPath: settings.RunnerPath,
             PrefixPath: settings.PrefixPath,
-            ProtonPath: settings.ProtonPath);
+            ProtonPath: settings.ProtonPath,
+            EnableMangoHud: settings.EnableMangoHud);
     }
 }

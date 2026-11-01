@@ -460,6 +460,10 @@ internal static class LauncherStrings
 
     public static string GameRuntimeEnvironmentSymlinksUnsupported => GetRequiredString("gameRuntimeEnvironmentSymlinksUnsupported");
 
+    public static string GameRuntimeMangoHud => GetRequiredString("gameRuntimeMangoHud");
+
+    public static string GameRuntimeMangoHudDescription => GetRequiredString("gameRuntimeMangoHudDescription");
+
     public static string GameRuntimeNoRunnerAvailable => GetRequiredString("gameRuntimeNoRunnerAvailable");
 
     public static string GameRuntimePrefixPath => GetRequiredString("gameRuntimePrefixPath");
