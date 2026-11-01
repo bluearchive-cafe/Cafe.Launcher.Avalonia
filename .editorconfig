@@ -44,3 +44,7 @@ insert_final_newline = true
 # Windows PowerShell 5.1 otherwise decodes the script's Chinese diagnostics as ANSI.
 [coverage.ps1]
 charset = utf-8-bom
+
+[native/libmpv/COPYING*]
+charset = utf-8
+end_of_line = lf

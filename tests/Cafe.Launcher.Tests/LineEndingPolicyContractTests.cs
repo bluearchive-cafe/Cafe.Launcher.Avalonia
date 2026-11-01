@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace Cafe.Launcher.Tests;
 
 /// <summary>
@@ -10,6 +12,23 @@ namespace Cafe.Launcher.Tests;
 /// </summary>
 public sealed class LineEndingPolicyContractTests
 {
+    [Theory]
+    [InlineData("COPYING.GPL")]
+    [InlineData("COPYING.GPLv3")]
+    [InlineData("COPYING.LGPL")]
+    [InlineData("COPYING.LGPLv3")]
+    public async Task LibMpvDisclosures_WithWindowsCheckoutRules_MatchRepositoryBytes(string filename)
+    {
+        var path = $"HEAD:native/libmpv/{filename}";
+        var canonical = await ReadGitOutputAsync("show", path);
+        var windowsCheckout = await ReadGitOutputAsync(
+            "-c", "core.autocrlf=true", "-c", "core.eol=crlf", "cat-file", "--filters", path);
+
+        Assert.True(
+            string.Equals(canonical, windowsCheckout, StringComparison.Ordinal),
+            $"{filename} changes bytes on Windows checkout, so Linux publish output fails the installer disclosure hash check.");
+    }
+
     [Fact]
     public void GitAttributes_EnforcesTheLineEndingsEditorConfigDeclares()
     {
@@ -117,4 +136,28 @@ public sealed class LineEndingPolicyContractTests
 
     private static string ReadRepoFile(string relativePath) =>
         File.ReadAllText(Path.Combine(TestLocalizationHelper.FindRepositoryRoot(), relativePath));
+
+    private static async Task<string> ReadGitOutputAsync(params string[] arguments)
+    {
+        var startInfo = new ProcessStartInfo("git")
+        {
+            WorkingDirectory = TestLocalizationHelper.FindRepositoryRoot(),
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+        };
+        foreach (var argument in arguments)
+        {
+            startInfo.ArgumentList.Add(argument);
+        }
+
+        using var process = Process.Start(startInfo);
+        Assert.NotNull(process);
+        var output = process.StandardOutput.ReadToEndAsync();
+        var error = process.StandardError.ReadToEndAsync();
+        await process.WaitForExitAsync();
+        Assert.True(process.ExitCode == 0, await error);
+        return await output;
+    }
 }

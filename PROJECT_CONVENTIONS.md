@@ -152,7 +152,7 @@
 
 ## 11. 文件与文档
 
-- C# 使用 UTF-8/CRLF；`.editorconfig` 声明的 XAML、工程/props/targets、YAML、JSON、Markdown、PowerShell 使用 UTF-8/LF，`coverage.ps1` 保留其 UTF-8 BOM 例外。`.editorconfig` 与 `.gitattributes` 必须一致。
+- C# 使用 UTF-8/CRLF；`.editorconfig` 声明的 XAML、工程/props/targets、YAML、JSON、Markdown、PowerShell 使用 UTF-8/LF，`coverage.ps1` 保留其 UTF-8 BOM 例外。`native/libmpv/COPYING*` 固定使用 LF，以保证跨平台发布校验的文件字节一致。`.editorconfig` 与 `.gitattributes` 必须一致。
 - 文档分工、维护与链接检查见[开发指南「文档职责」](docs/DEVELOPMENT.md#文档职责)。审计发现只维护在 [CODEBASE_AUDIT.md](CODEBASE_AUDIT.md)。
 
 ## 12. 工具链与依赖
