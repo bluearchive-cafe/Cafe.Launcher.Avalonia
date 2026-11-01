@@ -485,10 +485,10 @@ public sealed partial class UiStyleContractTests
 
         var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
         Assert.Equal(
-            "{DynamicResource Launcher.Color.Primary}",
-            GetStyleSetters(styles, "Button.confirm-dialog-action")["Foreground"]);
+            "{DynamicResource Launcher.Text.Primary}",
+            GetActionThemeSetters(styles)["Foreground"]);
 
-        var filledPrimary = GetStyleSetters(styles, "Button.confirm-dialog-action.primary-action");
+        var filledPrimary = GetStyleSetters(styles, "Button.primary-action");
         Assert.Equal(
             "{DynamicResource Launcher.Color.Primary}",
             filledPrimary["Background"]);
@@ -497,12 +497,12 @@ public sealed partial class UiStyleContractTests
             filledPrimary["Foreground"]);
         Assert.Equal(
             "{DynamicResource Launcher.Color.Primary.Hover}",
-            GetStyleSetters(styles, "Button.confirm-dialog-action.primary-action:pointerover")["Background"]);
+            GetStyleSetters(styles, "Button.primary-action:pointerover")["Background"]);
         Assert.Equal(
             "{DynamicResource Launcher.Color.Primary.Pressed}",
-            GetStyleSetters(styles, "Button.confirm-dialog-action.primary-action:pressed")["Background"]);
+            GetStyleSetters(styles, "Button.primary-action:pressed")["Background"]);
 
-        var filledDanger = GetStyleSetters(styles, "Button.confirm-dialog-action.danger-action");
+        var filledDanger = GetStyleSetters(styles, "Button.danger-action");
         Assert.Equal(
             "{DynamicResource Launcher.Color.Error}",
             filledDanger["Background"]);
@@ -511,10 +511,10 @@ public sealed partial class UiStyleContractTests
             filledDanger["Foreground"]);
         Assert.Equal(
             "{DynamicResource Launcher.Color.Error.Hover}",
-            GetStyleSetters(styles, "Button.confirm-dialog-action.danger-action:pointerover")["Background"]);
+            GetStyleSetters(styles, "Button.danger-action:pointerover")["Background"]);
         Assert.Equal(
             "{DynamicResource Launcher.Color.Error.Pressed}",
-            GetStyleSetters(styles, "Button.confirm-dialog-action.danger-action:pressed")["Background"]);
+            GetStyleSetters(styles, "Button.danger-action:pressed")["Background"]);
     }
 
     [Fact]
@@ -957,23 +957,16 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void DialogActionButtons_UseNeutralFillAndNoVisibleBorder()
     {
-        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
-
-        const string neutralFill = "{DynamicResource Launcher.Color.Dialog.Action.Background}";
-        var family = GetStyleSetters(document, "Button.confirm-dialog-action");
-        Assert.Equal(neutralFill, family["Background"]);
-        // 家族规则不再自己声明描边：无边框外观与预留厚度都由动作带那条规则统一给。
-        Assert.DoesNotContain("BorderThickness", family.Keys);
-        Assert.DoesNotContain("BorderBrush", family.Keys);
-
-        var bandStandard = GetStyleSetters(document, "StackPanel.confirm-actions Button.flat-action");
-        Assert.Equal(neutralFill, bandStandard["Background"]);
-
-        // 新 token 必须同时落在两套 ThemeDictionary 里（生成器的中性重置表由
-        // AppDialogSurfaceTokens_MatchGeneratorDeclaredDefaults 成对守护）。
+        var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
+        var common = GetActionThemeSetters(styles);
+        Assert.Equal("{DynamicResource Launcher.Color.Button.Secondary.Background}", common["Background"]);
+        Assert.Equal("{DynamicResource Launcher.Text.Primary}", common["Foreground"]);
+        Assert.Equal("{StaticResource Launcher.Color.Transparent}", common["BorderBrush"]);
+        Assert.Equal("{StaticResource Launcher.Border.Thickness.Focus}", common["BorderThickness"]);
+        Assert.Empty(GetStyleSetters(styles, "Button.confirm-dialog-action"));
         var application = XDocument.Load(TestRepository.FromHostRoot("App.axaml"));
-        Assert.Equal("#FFF4F8FC", ReadThemeBrushColor(application, "Light", "Launcher.Color.Dialog.Action.Background"));
-        Assert.Equal("#FF222B38", ReadThemeBrushColor(application, "Dark", "Launcher.Color.Dialog.Action.Background"));
+        Assert.Equal("#FFEDF0F5", ReadThemeBrushColor(application, "Light", "Launcher.Color.Dialog.Action.Background"));
+        Assert.Equal("#FF303744", ReadThemeBrushColor(application, "Dark", "Launcher.Color.Dialog.Action.Background"));
     }
 
     /// <summary>
@@ -1013,7 +1006,7 @@ public sealed partial class UiStyleContractTests
         var bandReserveIndex = styles.FindIndex(element =>
             element.Attribute("Selector")?.Value == "StackPanel.confirm-actions Button");
         var borderlessIndex = styles.FindIndex(element =>
-            element.Attribute("Selector")?.Value == "StackPanel.confirm-actions Button.flat-action");
+            element.Attribute("Selector")?.Value == "Button.flat-action");
         var bandFocusIndex = styles.FindIndex(element =>
             element.Attribute("Selector")?.Value == "StackPanel.confirm-actions Button:focus-visible");
         Assert.True(
@@ -1040,7 +1033,7 @@ public sealed partial class UiStyleContractTests
             .Single(element => (string?)element.Attribute(xKey) == key)
             .Value;
 
-        Assert.Equal("20", TokenValue("Launcher.Component.Dialog.CornerRadius"));
+        Assert.Equal("16", TokenValue("Launcher.Component.Dialog.CornerRadius"));
         Assert.Equal("8", TokenValue("Launcher.Component.Dialog.Alert.CornerRadius"));
         Assert.Equal(2, TokenValue("Launcher.Elevation.Shadow.Dialog").Split(',').Length);
         Assert.Equal("32", TokenValue("Launcher.Component.Dialog.Badge.Size"));

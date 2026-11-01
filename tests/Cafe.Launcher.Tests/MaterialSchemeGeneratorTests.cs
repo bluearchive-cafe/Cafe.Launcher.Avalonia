@@ -469,6 +469,42 @@ public sealed class MaterialSchemeGeneratorTests
         }
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void BuildRoleBrushes_SharedControlStates_KeepContrastAcrossStrategies(bool isDark)
+    {
+        foreach (var variant in new[]
+                 {
+                     ThemeColorVariants.TonalSpot, ThemeColorVariants.Vibrant,
+                     ThemeColorVariants.Expressive, ThemeColorVariants.Fidelity,
+                     ThemeColorVariants.Content, ThemeColorVariants.Monochrome,
+                     ThemeColorVariants.Neutral, ThemeColorVariants.Rainbow
+                 })
+        {
+            foreach (var seed in new[] { "#2E7DF6", "#FF0000", "#00FF00", "#6750A4", "#000000", "#FFFFFF" })
+            {
+                foreach (var seedFollowing in new[] { false, true })
+                {
+                    var scheme = MaterialSchemeGenerator.CreateScheme(Color.Parse(seed), variant, isDark);
+                    var brushes = MaterialSchemeGenerator.BuildRoleBrushes(scheme, seedFollowing, isDark);
+                    foreach (var suffix in new[] { "Background", "Hover", "Pressed" })
+                    {
+                        var background = brushes[$"Launcher.Color.Button.Secondary.{suffix}"].Color;
+                        Assert.Equal(255, background.A);
+                        Assert.True(ColorUtils.GetContrastRatio(brushes["Launcher.Text.Primary"].Color, background) >= 4.5,
+                            $"{variant}/{seed}/{isDark}/{seedFollowing}/{suffix}: secondary action text contrast");
+                        Assert.True(ColorUtils.GetContrastRatio(brushes["Launcher.Color.FocusRing"].Color, background) >= 3,
+                            $"{variant}/{seed}/{isDark}/{seedFollowing}/{suffix}: keyboard focus contrast");
+                    }
+
+                    Assert.Equal(brushes["Launcher.Color.Button.Secondary.Background"].Color,
+                        brushes["Launcher.Color.Dialog.Action.Background"].Color);
+                }
+            }
+        }
+    }
+
     private static string ToHex(MaterialColorUtilities.Utils.ArgbColor color)
     {
         var avalonia = MaterialColorMapper.ToAvaloniaColor(color);

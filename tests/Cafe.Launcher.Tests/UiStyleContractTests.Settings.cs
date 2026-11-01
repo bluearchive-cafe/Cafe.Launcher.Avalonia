@@ -946,12 +946,11 @@ public sealed partial class UiStyleContractTests
     public void SettingsDangerActionStyle_WithDangerOverrides_RestoresFlatActionGeometry()
     {
         var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
-        var settingDanger = GetStyleSetters(styles, "Button.flat-action.danger-action");
-
-        Assert.Equal("{DynamicResource Launcher.Color.Error}", settingDanger["BorderBrush"]);
-        Assert.Equal("{StaticResource Launcher.Border.Thickness.Default}", settingDanger["BorderThickness"]);
-        Assert.Equal("{StaticResource Launcher.Control.Height.Setting}", settingDanger["MinHeight"]);
-        Assert.Equal("{StaticResource Launcher.Component.Action.Outlined.Padding}", settingDanger["Padding"]);
+        Assert.Equal(GetStyleSetters(styles, "Button.flat-action")["Theme"],
+            GetStyleSetters(styles, "Button.danger-action")["Theme"]);
+        Assert.Equal("{DynamicResource Launcher.Color.Error}", GetStyleSetters(styles, "Button.danger-action")["Background"]);
+        Assert.Equal("{StaticResource Launcher.Control.Height.Dialog}", GetActionThemeSetters(styles)["MinHeight"]);
+        Assert.DoesNotContain(styles.Descendants(), element => element.Attribute("Selector")?.Value == "Button.flat-action.danger-action");
     }
 
     [Fact]

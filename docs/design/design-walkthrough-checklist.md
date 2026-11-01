@@ -50,8 +50,8 @@
 - 两列自顶到底：导航列 header（「设置」标题）+ 内容区标题行右端 ✕（`content-header-action`）；不重复显示分类副标题。
 - 导航选中 = `SecondaryContainer` 填充 + `OnSecondaryContainer` 文字 + leading icon，无指示条；hover/pressed 用 `.Hover/.Pressed` 变体。
 - 内容区 = 纯列表 + 组间空档 + 行间 0.5 DIP hairline（`Color.Card.Border`，左缘对齐 16px 文本缩进）。
-- 覆盖层 = `Dialog.Background`（中性策略=种子跟随时由 scheme neutral 覆盖）+ `DialogSurface` 的 20 DIP 组件圆角 + 克制的双层 `Elevation.Shadow.Dialog`。
-- 控件统一 Field 形态（`Field.Background`/`Field.Border`/`Radius.Md`/2px 聚焦环）；Field.Border 双档 ≥3:1（Light `#788EA7` / Dark `#5E7494`）。
+- 覆盖层 = `Dialog.Background`（中性策略=种子跟随时由 scheme neutral 覆盖）+ `DialogSurface` 的 16 DIP 组件圆角 + 克制的双层 `Elevation.Shadow.Dialog`。
+- 控件统一 Field 形态（`Field.Background`/`Field.Border`/`Radius.Sm`/2px 聚焦环）；Field.Border 双档 ≥3:1（Light `#8290A5` / Dark `#7B89A0`）。
 - 底部操作带（取消 / 保存）语义与焦点默认落在安全操作。
 
 ### 3.3 对话框族（ADR-015 外壳 / ADR-040 动作）
@@ -104,3 +104,11 @@
 - Headless 套件（含黄金截图基线，阈值 diff；视觉漂移按 README 流程重生成基线并复核截图）。
 - `.\scripts\Test-LocalizationContract.ps1`（新增/改键后）。
 - `.\dev.ps1 ui`（XAML/样式改动后）；发布前 `.\verify.ps1`。
+
+## 跨功能组件基准（ADR-050，2026-11-01）
+
+- 对照设置、确认框、向导、资源面板和日志导出：同尺寸操作的字号、圆角、内缩、中性底色与禁用态一致；标准 40 DIP，显式紧凑操作 36 DIP。
+- Tab 依次经过主/次/危险操作时，按钮及右对齐动作组不位移；主/危险填充上的焦点线分别用 OnPrimary/OnError。鼠标操作与程序式初始取焦仍不画键盘环。
+- 浅色/深色与两种中性色策略下，次要操作正常/悬停/按下均为实底；切换策略后不残留上一套颜色。字段和取色器触发器使用同一 8 DIP 圆角。
+- 确认框、表单和覆盖层同为 16 DIP 外圆角；布局按内容语义保留。主界面布局和大型任务按钮的 48/58 DIP 尺寸保持现状。
+- 崩溃窗口在正常和隔离宿主中均以独立 Crash.* 呈现相同几何，按钮焦点和禁用不改变尺寸。
