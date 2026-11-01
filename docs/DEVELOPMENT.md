@@ -75,7 +75,7 @@ PR、CI 通过与评审批准是团队约定；仓库记录的 `main` 规则只�
 
 [CHANGELOG_RELEASE.md](../CHANGELOG_RELEASE.md) 只保留本次版本。发布说明使用已出现在界面上的术语，面向安装使用者描述可见变化；审计、测试、CI 和架构细节放入提交或末尾唯一的 `<details>` 技术附录。保留 `> [!NOTE]` 与 `> [!WARNING]`；附录标签外须有普通说明句，因为应用内查看器忽略原始 HTML 块。
 
-横幅 PNG 必须提交到 `docs/assets/release-banners/`，并有 `docs/promo/specs/` 中的逐版本规格；制作流程见[横幅指南](promo/release-banner-guide.md)。`ReleaseChangelogContractTests` 守护发布说明格式与资产。
+发布横幅以成品 PNG 交付，制作方式不限。文件保存为 `docs/assets/release-banners/<tag>.png`（如 `v1.3.0.png`），使用 16:9 画布，宽度为 1920–2400 像素；历史横幅保留原文件名。在 `CHANGELOG_RELEASE.md` 中引用对应版本标签下的原始图片地址，提交前检查文字、清晰度和裁切。`ReleaseChangelogContractTests` 检查发布说明格式，`ReleaseBannerContractTests` 检查成品文件、尺寸和引用。
 
 ## 文档职责
 

@@ -243,7 +243,7 @@ jobs:
         env:
           Release_Tag: ${{ github.ref_name }}
         run: |
-          $bannerPath = "docs/assets/release-banners/cafe-launcher-$env:Release_Tag-release-banner.png"
+          $bannerPath = "docs/assets/release-banners/$env:Release_Tag.png"
           if (-not (Test-Path $bannerPath -PathType Leaf)) {
             throw "Release banner must be committed to the source repository: $bannerPath"
           }

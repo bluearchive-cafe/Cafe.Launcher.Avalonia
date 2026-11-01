@@ -974,7 +974,7 @@ public sealed class InstallerContractTests
             Assert.Equal(2, CountOccurrences(workflow, artifactName));
         }
 
-        const string releaseBannerName = "cafe-launcher-$env:Release_Tag-release-banner.png";
+        const string releaseBannerName = "$env:Release_Tag.png";
         Assert.Contains(
             $"$bannerPath = \"docs/assets/release-banners/{releaseBannerName}\"",
             workflow,
