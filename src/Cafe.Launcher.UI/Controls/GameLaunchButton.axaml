@@ -48,7 +48,7 @@
                     </MenuItem.Icon>
                 </MenuItem>
                 <Separator/>
-                <MenuItem Header="{Binding Shell.I18n[uninstall]}"
+                <MenuItem Classes="danger-menu-item" Header="{Binding Shell.I18n[uninstall]}"
                           Command="{Binding Operations.RequestUninstallCommand}"
                           AutomationProperties.Name="{Binding Shell.I18n[uninstall]}">
                     <MenuItem.Icon>

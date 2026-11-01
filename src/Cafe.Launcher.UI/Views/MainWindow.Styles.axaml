@@ -6,6 +6,26 @@
         xmlns:controls="using:Cafe.Launcher.UI.Controls"
         xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia">
     <Styles.Resources>
+        <!-- Keep Fluent's arrow slot and state forwarding; render with the shared Material icon set. -->
+        <ControlTemplate x:Key="Launcher.Component.Select.Chevron.Template" TargetType="PathIcon">
+            <materialIcons:MaterialIcon Kind="ChevronDown"
+                                        Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"
+                                        Foreground="{TemplateBinding Foreground}"
+                                        IsHitTestVisible="False" AutomationProperties.AccessibilityView="Raw"/>
+        </ControlTemplate>
+        <ControlTheme x:Key="Launcher.Component.ChoiceItem.Theme" TargetType="ComboBoxItem">
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <ContentPresenter x:Name="PART_ContentPresenter"
+                                      Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
+                                      Background="{TemplateBinding Background}" Foreground="{TemplateBinding Foreground}"
+                                      BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                                      CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}"
+                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                </ControlTemplate>
+            </Setter>
+        </ControlTheme>
         <ControlTemplate x:Key="LauncherBorderButtonTemplate" TargetType="Button">
             <Border Background="{TemplateBinding Background}"
                     BorderBrush="{TemplateBinding BorderBrush}"
@@ -35,6 +55,39 @@
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="HorizontalAlignment" Value="Left"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
+        </ControlTheme>
+        <!-- Expander retains native expansion/keyboard semantics. Own the header
+             template so Fluent's nested hover border and chevron tile cannot leak through. -->
+        <ControlTheme x:Key="Launcher.Component.Settings.ExpanderHeader.Theme" TargetType="ToggleButton"
+                      BasedOn="{StaticResource Launcher.Component.Button.Theme}">
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="MinWidth" Value="{StaticResource Launcher.Control.MinWidth.None}"/>
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border x:Name="SettingsExpanderHeaderBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{TemplateBinding CornerRadius}">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}"
+                              Margin="{TemplateBinding Padding}">
+                            <ContentPresenter x:Name="PART_ContentPresenter"
+                                              Content="{TemplateBinding Content}"
+                                              ContentTemplate="{TemplateBinding ContentTemplate}"
+                                              HorizontalContentAlignment="Stretch"
+                                              VerticalContentAlignment="Center"/>
+                            <materialIcons:MaterialIcon x:Name="SettingsExpanderChevron" Grid.Column="1"
+                                                        Kind="ChevronDown" Foreground="{TemplateBinding Foreground}"
+                                                        Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"
+                                                        VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+            <Style Selector="^:checked /template/ materialIcons|MaterialIcon#SettingsExpanderChevron">
+                <Setter Property="Kind" Value="ChevronUp"/>
+            </Style>
         </ControlTheme>
         <!-- 原生 SplitButton 负责命令、菜单和键盘语义；这里只替换视觉模板。 -->
         <ControlTheme x:Key="GameLaunchSegmentTheme" TargetType="Button">
@@ -190,6 +243,191 @@
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
     </Style>
+    <!-- Shared choice fields and popup surfaces. Retain native selection, access keys and menu logic.
+         Part selectors use a pseudo state so their StyleTrigger priority overrides template literals
+         and Fluent state setters; ordinary Style setters cannot repaint those parts. -->
+    <Style Selector="ComboBox">
+        <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Field}"/>
+        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Md}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Field.Background}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Field.Border}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Select.Padding}"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="ComboBox:pointerover">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Hover}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Text.Secondary}"/>
+    </Style>
+    <Style Selector="ComboBox:pressed, ComboBox:dropdownopen">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Pressed}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Text.Secondary}"/>
+    </Style>
+    <Style Selector="ComboBox:disabled">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
+        <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
+    </Style>
+    <Style Selector="ComboBox:focus-visible /template/ Border#HighlightBackground">
+        <Setter Property="IsVisible" Value="False"/>
+    </Style>
+    <Style Selector="ComboBox:not(:disabled) /template/ ContentControl#ContentPresenter">
+        <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type ComboBox}}"/>
+    </Style>
+    <Style Selector="ComboBox:disabled /template/ ContentControl#ContentPresenter">
+        <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type ComboBox}}"/>
+    </Style>
+    <Style Selector="ComboBox:not(:disabled) /template/ TextBlock#PlaceholderTextBlock">
+        <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type ComboBox}}"/>
+    </Style>
+    <Style Selector="ComboBox:disabled /template/ TextBlock#PlaceholderTextBlock">
+        <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type ComboBox}}"/>
+    </Style>
+    <Style Selector="ComboBox:not(:disabled) /template/ PathIcon#DropDownGlyph">
+        <Setter Property="Template" Value="{StaticResource Launcher.Component.Select.Chevron.Template}"/>
+        <Setter Property="Width" Value="{StaticResource Launcher.Icon.Sm}"/>
+        <Setter Property="Height" Value="{StaticResource Launcher.Icon.Sm}"/>
+        <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type ComboBox}}"/>
+    </Style>
+    <Style Selector="ComboBox:disabled /template/ PathIcon#DropDownGlyph">
+        <Setter Property="Template" Value="{StaticResource Launcher.Component.Select.Chevron.Template}"/>
+        <Setter Property="Width" Value="{StaticResource Launcher.Icon.Sm}"/>
+        <Setter Property="Height" Value="{StaticResource Launcher.Icon.Sm}"/>
+        <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type ComboBox}}"/>
+    </Style>
+    <Style Selector="ComboBox /template/ Border#PopupBorder:not(:disabled)">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Background}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Xs}"/>
+    </Style>
+    <Style Selector="ComboBox /template/ ItemsPresenter#PART_ItemsPresenter:not(:disabled)">
+        <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
+    </Style>
+    <Style Selector="ComboBoxItem">
+        <Setter Property="Theme" Value="{StaticResource Launcher.Component.ChoiceItem.Theme}"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="ComboBoxItem, MenuItem">
+        <Setter Property="FocusAdorner" Value="{x:Null}"/>
+        <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Dialog}"/>
+        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Md}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Input.Padding}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:pointerover, MenuItem:pointerover, MenuItem:selected, MenuItem:open">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Hover}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:pressed, MenuItem:pressed">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Pressed}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:selected">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.SecondaryContainer}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnSecondaryContainer}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:selected:pointerover">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.SecondaryContainer.Hover}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:selected:pressed">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.SecondaryContainer.Pressed}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:focus-visible, MenuItem:focus-visible">
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
+    </Style>
+    <Style Selector="MenuItem.danger-menu-item">
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Error}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:disabled, MenuItem:disabled">
+        <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
+    </Style>
+    <Style Selector="MenuFlyoutPresenter, ContextMenu">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Background}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Xs}"/>
+        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Md}"/>
+    </Style>
+    <Style Selector="MenuFlyoutPresenter /template/ Border#LayoutRoot:not(:disabled)">
+        <Setter Property="Padding" Value="{Binding Padding, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type MenuFlyoutPresenter}}"/>
+    </Style>
+    <Style Selector="MenuFlyoutPresenter /template/ ItemsPresenter:not(:disabled), ContextMenu /template/ ItemsPresenter:not(:disabled)">
+        <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
+    </Style>
+    <!-- Native menu templates contain the item border and the submenu surface; the item is rebound below. -->
+    <Style Selector="MenuItem /template/ Border:not(:disabled)">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Background}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Xs}"/>
+    </Style>
+    <Style Selector="MenuItem /template/ ItemsPresenter:not(:disabled)">
+        <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
+    </Style>
+    <Style Selector="MenuItem:not(:disabled) /template/ ContentPresenter#PART_HeaderPresenter">
+        <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type MenuItem}}"/>
+    </Style>
+    <Style Selector="MenuItem:disabled /template/ ContentPresenter#PART_HeaderPresenter">
+        <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type MenuItem}}"/>
+    </Style>
+    <Style Selector="MenuItem:not(:disabled) /template/ TextBlock#PART_InputGestureText">
+        <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type MenuItem}}"/>
+    </Style>
+    <Style Selector="MenuItem:disabled /template/ TextBlock#PART_InputGestureText">
+        <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type MenuItem}}"/>
+    </Style>
+    <Style Selector="MenuItem:not(:disabled) /template/ Path#PART_ChevronPath">
+        <Setter Property="Fill" Value="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type MenuItem}}"/>
+    </Style>
+    <Style Selector="MenuItem:disabled /template/ Path#PART_ChevronPath">
+        <Setter Property="Fill" Value="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type MenuItem}}"/>
+    </Style>
+    <Style Selector="MenuFlyoutPresenter Separator, ContextMenu Separator, MenuItem Separator">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Card.Border}"/>
+        <Setter Property="Height" Value="{StaticResource Launcher.Component.Menu.Separator.Height}"/>
+        <Setter Property="Margin" Value="{StaticResource Launcher.Component.Menu.Separator.Margin}"/>
+    </Style>
+    <!-- Fluent paints these parts directly in pseudo states. Forward the shared control roles in every state. -->
+    <Style Selector="ComboBox:not(:disabled) /template/ Border#Background">
+        <Setter Property="Background" Value="{Binding Background, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type ComboBox}}"/>
+        <Setter Property="BorderBrush" Value="{Binding BorderBrush, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type ComboBox}}"/>
+        <Setter Property="BorderThickness" Value="{Binding BorderThickness, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type ComboBox}}"/>
+        <Setter Property="CornerRadius" Value="{Binding CornerRadius, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type ComboBox}}"/>
+    </Style>
+    <Style Selector="ComboBox:disabled /template/ Border#Background">
+        <Setter Property="Background" Value="{Binding Background, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type ComboBox}}"/>
+        <Setter Property="BorderBrush" Value="{Binding BorderBrush, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type ComboBox}}"/>
+        <Setter Property="BorderThickness" Value="{Binding BorderThickness, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type ComboBox}}"/>
+        <Setter Property="CornerRadius" Value="{Binding CornerRadius, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type ComboBox}}"/>
+    </Style>
+    <Style Selector="MenuItem:not(:disabled) /template/ Border#PART_LayoutRoot">
+        <Setter Property="Background" Value="{Binding Background, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type MenuItem}}"/>
+        <Setter Property="BorderBrush" Value="{Binding BorderBrush, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type MenuItem}}"/>
+        <Setter Property="BorderThickness" Value="{Binding BorderThickness, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type MenuItem}}"/>
+        <Setter Property="CornerRadius" Value="{Binding CornerRadius, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type MenuItem}}"/>
+        <Setter Property="Padding" Value="{Binding Padding, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type MenuItem}}"/>
+    </Style>
+    <Style Selector="MenuItem:disabled /template/ Border#PART_LayoutRoot">
+        <Setter Property="Background" Value="{Binding Background, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type MenuItem}}"/>
+        <Setter Property="BorderBrush" Value="{Binding BorderBrush, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type MenuItem}}"/>
+        <Setter Property="BorderThickness" Value="{Binding BorderThickness, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type MenuItem}}"/>
+        <Setter Property="CornerRadius" Value="{Binding CornerRadius, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type MenuItem}}"/>
+        <Setter Property="Padding" Value="{Binding Padding, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type MenuItem}}"/>
+    </Style>
     <Style Selector="ComboBox:focus-visible">
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
@@ -208,16 +446,23 @@
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="ComboBox.setting-control:pointerover">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Hover}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Hover}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Hover}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Text.Secondary}"/>
     </Style>
     <Style Selector="ComboBox.setting-control:pressed">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Pressed}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Pressed}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Text.Secondary}"/>
+    </Style>
+    <Style Selector="ComboBox.setting-control:dropdownopen">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Pressed}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Text.Secondary}"/>
     </Style>
     <Style Selector="ComboBox.setting-control:focus-visible">
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
+    </Style>
+    <Style Selector="ComboBox:error, ComboBox.setting-control:error">
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Error}"/>
     </Style>
     <Style Selector="ComboBox.setting-control:disabled">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
@@ -956,6 +1201,63 @@
     <Style Selector="ScrollViewer.settings-content-scroll">
         <Setter Property="Padding" Value="{StaticResource Launcher.Component.Settings.Content.Scroll.Padding}"/>
     </Style>
+    <Style Selector="Grid.settings-appearance-media">
+        <Setter Property="Margin" Value="{StaticResource Launcher.Component.Settings.Row.Content.Padding}"/>
+    </Style>
+    <Style Selector="Grid.settings-volume-value">
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="TextBlock.settings-volume-value">
+        <Setter Property="TextAlignment" Value="Right"/>
+    </Style>
+    <Style Selector="Border.settings-appearance-thumbnail">
+        <Setter Property="Width" Value="{StaticResource Launcher.Component.Settings.Appearance.Thumbnail.Width}"/>
+        <Setter Property="Height" Value="{StaticResource Launcher.Component.Settings.Appearance.Thumbnail.Height}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
+        <Setter Property="ClipToBounds" Value="True"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Field.Background}"/>
+    </Style>
+    <Style Selector="Grid.settings-appearance-warning">
+        <Setter Property="Margin" Value="{StaticResource Launcher.Component.Settings.Row.Content.Padding}"/>
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource Launcher.Color.Warning}"/>
+    </Style>
+    <Style Selector="Expander.settings-appearance-expander">
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Component.Dialog.Footer.BorderThickness}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
+    </Style>
+    <Style Selector="Expander.settings-appearance-expander /template/ Border">
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
+    </Style>
+    <Style Selector="Expander.settings-appearance-expander /template/ ToggleButton">
+        <Setter Property="Theme" Value="{StaticResource Launcher.Component.Settings.ExpanderHeader.Theme}"/>
+        <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Settings.Row.Content.Padding}"/>
+        <Setter Property="MinHeight" Value="{StaticResource Launcher.Component.Settings.Row.MinHeight}"/>
+    </Style>
+    <Style Selector="Expander.settings-appearance-expander /template/ ToggleButton:pointerover">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Hover}"/>
+    </Style>
+    <Style Selector="Expander.settings-appearance-expander /template/ ToggleButton:pressed">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Pressed}"/>
+    </Style>
+    <Style Selector="Expander.settings-appearance-advanced /template/ ToggleButton">
+        <Setter Property="AutomationProperties.Name" Value="{Binding Shell.I18n[settingsAdvancedColors], DataType={x:Type viewModels:MainWindowViewModel}}"/>
+    </Style>
+    <Style Selector="Expander.settings-appearance-expander /template/ ToggleButton:focus-visible">
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
+    </Style>
+    <Style Selector="Expander.settings-appearance-expander /template/ ToggleButton:disabled">
+        <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
+    </Style>
     <Style Selector="Grid.dialog-overlay">
         <Setter Property="Background" Value="{StaticResource Launcher.Color.Overlay.Scrim.Md}"/>
         <Setter Property="KeyboardNavigation.TabNavigation" Value="Cycle"/>
@@ -1094,6 +1396,9 @@
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Md}"/>
         <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
+    </Style>
+    <Style Selector="views|SettingsAppearanceSection TextBlock.section-title">
+        <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Normal}"/>
     </Style>
     <Style Selector="TextBlock.group-title">
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Md}"/>
@@ -1350,12 +1655,12 @@
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
     </Style>
     <Style Selector="ComboBox.gallery-select.state-hover">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Hover}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Hover}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Hover}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Text.Secondary}"/>
     </Style>
     <Style Selector="ComboBox.gallery-select.state-pressed">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Pressed}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Pressed}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Text.Secondary}"/>
     </Style>
     <Style Selector="ComboBox.gallery-select.state-disabled">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>

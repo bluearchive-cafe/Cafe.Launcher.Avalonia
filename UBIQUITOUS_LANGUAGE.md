@@ -41,6 +41,7 @@
 | Launcher | 启动器 | 啟動器 | ランチャー |
 | Video background | 视频背景 | 影片背景 | 動画背景 |
 | Video background volume | 视频背景音量 | 影片背景音量 | 動画背景の音量 |
+| Mute video background | 视频背景静音 | 影片背景靜音 | 動画背景のミュート |
 | Manifest | 文件清单 | 檔案清單 | マニフェスト |
 | Launch verification | 启动校验 | 啟動校驗 | 起動チェック |
 | Download source | 下载源 | 下載來源 | ダウンロードソース |

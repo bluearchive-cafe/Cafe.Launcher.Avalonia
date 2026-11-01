@@ -19,7 +19,6 @@ public sealed partial class UiStyleContractTests
                 "Settings.Editor.Current.Language",
                 "Settings.Editor.Current.CloseBehavior",
                 "Settings.Editor.Current.AfterLaunchBehavior",
-                "Settings.Editor.Current.MotionMode",
                 "Settings.Editor.Current.StatusDetailMode",
                 "Settings.Editor.Current.ShowRemoteContentCard",
                 "Settings.Editor.Current.UpdateChannel"
@@ -44,6 +43,7 @@ public sealed partial class UiStyleContractTests
             ["SettingsAppearanceSection"] =
             [
                 "Settings.Editor.Current.ThemeMode",
+                "Settings.Editor.Current.MotionMode",
                 "Settings.Editor.Current.ThemeColorMode",
                 "Settings.Editor.Current.BackgroundSource",
                 "Settings.Editor.Current.BackgroundFit",
@@ -475,37 +475,22 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void AppearanceSection_UsesTwoSettingsGroupsForConsistentVerticalRhythm()
+    public void AppearanceSection_GroupsCommonSettingsBeforeOptionalColorDetails()
     {
         var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/SettingsAppearanceSection.axaml"));
-        var groups = document
-            .Descendants()
-            .Where(element =>
-                element.Name.LocalName == "StackPanel"
-                && HasClass(element, "settings-group"))
-            .ToList();
-
-        Assert.Equal(2, groups.Count);
-
+        var groups = document.Descendants()
+            .Where(element => element.Name.LocalName == "StackPanel" && HasClass(element, "settings-group"))
+            .ToArray();
         Assert.Equal(
-            "{Binding Shell.I18n[settingsGroupThemeColor]}",
-            groups[0]
-                .Elements()
-                .First(element => element.Name.LocalName == "TextBlock")
-                .Attribute("Text")?.Value);
-        Assert.Equal(
-            "{Binding Shell.I18n[settingsGroupBackground]}",
-            groups[1]
-                .Elements()
-                .First(element => element.Name.LocalName == "TextBlock")
-                .Attribute("Text")?.Value);
-        var neutralStrategyRow = groups[0].Descendants().Single(element =>
-            element.Name.LocalName == "SettingSelect"
-            && element.Attribute("Title")?.Value
-                == "{Binding Shell.I18n[neutralColorStrategy]}");
-        Assert.Equal(
-            "{Binding Settings.Options.NeutralColorStrategy}",
-            neutralStrategyRow.Attribute("ItemsSource")?.Value);
+            ["{Binding Shell.I18n[settingsGroupThemeMotion]}", "{Binding Shell.I18n[settingsGroupBackground]}",
+                "{Binding Shell.I18n[settingsGroupThemeColor]}"],
+            groups.Select(group => group.Elements().First().Attribute("Text")?.Value));
+        var advanced = groups[2].Descendants().Single(element => element.Name.LocalName == "Expander");
+        Assert.Equal("{Binding Settings.Appearance.IsAdvancedColorExpanded, Mode=TwoWay}",
+            advanced.Attribute("IsExpanded")?.Value);
+        Assert.Equal(3, advanced.Descendants().Count(element => element.Name.LocalName == "SettingSelect"));
+        Assert.Single(document.Descendants(), element => element.Name.LocalName == "Expander");
+        Assert.Single(document.Descendants(), element => element.Name.LocalName == "Image");
     }
 
     [Fact]

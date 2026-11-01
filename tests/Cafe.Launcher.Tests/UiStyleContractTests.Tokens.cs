@@ -359,10 +359,10 @@ public sealed partial class UiStyleContractTests
             select["Padding"]);
 
         Assert.Equal(
-            "{DynamicResource Launcher.Color.Primary.Hover}",
+            "{DynamicResource Launcher.Text.Secondary}",
             GetStyleSetters(styles, "ComboBox.setting-control:pointerover")["BorderBrush"]);
         Assert.Equal(
-            "{DynamicResource Launcher.Color.Primary.Pressed}",
+            "{DynamicResource Launcher.Text.Secondary}",
             GetStyleSetters(styles, "ComboBox.setting-control:pressed")["BorderBrush"]);
         Assert.Equal(
             "{DynamicResource Launcher.Color.FocusRing}",
@@ -675,7 +675,10 @@ public sealed partial class UiStyleContractTests
             // 对话框徽章是整圆（16 = 半径），卸载步骤徽章复用同一枚组件 token 画圆，
             // 与 DialogSurface 模板消费的是同一个声明。
             "{StaticResource Launcher.Component.Dialog.Badge.CornerRadius}",
-            "{TemplateBinding CornerRadius}"
+            "{TemplateBinding CornerRadius}",
+            // 原生模板部件转发控件已由 token 决定的圆角，不引入另一套数值。
+            "{Binding CornerRadius, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type ComboBox}}",
+            "{Binding CornerRadius, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type MenuItem}}"
         };
 
         foreach (var relativePath in ViewFiles.Append("Views/MainWindow.Styles.axaml"))

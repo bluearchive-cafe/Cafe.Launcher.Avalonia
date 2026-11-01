@@ -24,11 +24,18 @@ namespace Cafe.Launcher.HeadlessTests;
 
 public sealed partial class MainWindowHeadlessTests
 {
-    [AvaloniaFact]
-    public async Task VideoBackgroundSettings_WhenDraftChanges_UpdatesVolumeAndVisibility()
+    [AvaloniaTheory]
+    [InlineData(LauncherLanguages.English)]
+    [InlineData(LauncherLanguages.SimplifiedChinese)]
+    [InlineData(LauncherLanguages.TraditionalChinese)]
+    [InlineData(LauncherLanguages.Japanese)]
+    public async Task VideoBackgroundSettings_WhenDraftChanges_UpdatesVolumeAndVisibility(string language)
     {
         using var context = CreateContext();
+        context.Window.Width = 1024;
+        context.Window.Height = 640;
         OpenSettings(context);
+        context.ViewModel.Shell.ApplyLanguage(language, hasSnapshot: false);
         context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.Appearance;
         var settings = context.ViewModel.Settings.Editor.Current;
         // A missing media file keeps this UI test independent of a GPU and decoder.
@@ -40,6 +47,35 @@ public sealed partial class MainWindowHeadlessTests
             .Single(control => AutomationProperties.GetName(control) == name);
         Assert.True(slider.IsEffectivelyVisible);
         Assert.Equal(0, slider.Value);
+        var mute = context.Window.GetVisualDescendants().OfType<CheckBox>()
+            .Single(control => AutomationProperties.GetName(control) == context.ViewModel.Shell.I18n[LocalizationKeys.VideoBackgroundMute]);
+        Assert.True(mute.IsEffectivelyVisible);
+        Assert.False(mute.IsChecked);
+        using var typography = new TypographyScaleSnapshot(context.Window, 1.5);
+        Dispatcher.UIThread.RunJobs();
+        var row = slider.GetVisualAncestors().OfType<global::Cafe.Launcher.UI.Controls.SettingRow>().First();
+        var action = row.FindControl<ContentPresenter>("ActionPresenter")!;
+        Assert.True(action.Bounds.Right <= row.Bounds.Width + 1);
+        foreach (var control in new Control[] { slider, mute })
+        {
+            var point = control.TranslatePoint(default, row)!.Value;
+            Assert.True(point.X >= -1 && point.X + control.Bounds.Width <= row.Bounds.Width + 1);
+        }
+
+        var percentage = row.GetVisualDescendants().OfType<TextBlock>()
+            .Single(control => control.Text == "0%");
+        var percentageWidth = percentage.Bounds.Width;
+        var mutePosition = mute.TranslatePoint(default, row)!.Value;
+        var sliderPosition = slider.TranslatePoint(default, row)!.Value;
+        foreach (var volume in new[] { 35, 100, 0 })
+        {
+            slider.Value = volume;
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(percentageWidth, percentage.Bounds.Width);
+            Assert.Equal(mutePosition, mute.TranslatePoint(default, row)!.Value);
+            Assert.Equal(sliderPosition, slider.TranslatePoint(default, row)!.Value);
+            Assert.True(percentage.TextLayout.Width <= percentage.Bounds.Width + 1);
+        }
 
         slider.Value = 35;
         await context.ViewModel.Settings.PendingAppearancePreview.WaitAsync(TimeSpan.FromSeconds(5));
@@ -47,9 +83,23 @@ public sealed partial class MainWindowHeadlessTests
         Assert.Equal(35, settings.BackgroundVideoVolume);
         Assert.Equal(35, context.ViewModel.Background.BackgroundVideoVolume);
 
+        mute.IsChecked = true;
+        await context.ViewModel.Settings.PendingAppearancePreview.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.True(settings.BackgroundVideoMuted);
+        Assert.Equal(35, settings.BackgroundVideoVolume);
+        Assert.Equal(0, context.ViewModel.Background.BackgroundVideoVolume);
+        slider.Value = 60;
+        await context.ViewModel.Settings.PendingAppearancePreview.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(60, settings.BackgroundVideoVolume);
+        Assert.Equal(0, context.ViewModel.Background.BackgroundVideoVolume);
+        mute.IsChecked = false;
+        await context.ViewModel.Settings.PendingAppearancePreview.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(60, context.ViewModel.Background.BackgroundVideoVolume);
+
         settings.BackgroundSource = BackgroundSources.Bundled;
         Dispatcher.UIThread.RunJobs();
         Assert.False(slider.IsEffectivelyVisible);
+        Assert.False(mute.IsEffectivelyVisible);
     }
 
     [AvaloniaFact]

@@ -55,6 +55,16 @@ internal partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
     public SettingsEditor Editor => editor;
     public Func<Bitmap?>? GetBackgroundBitmap { get; set; }
 
+    // These describe the current settings session, never the persisted draft.
+    [ObservableProperty]
+    private bool isAdvancedColorExpanded;
+
+    /// <summary>Start each settings session with optional detail collapsed, without changing the draft.</summary>
+    public void ResetSectionState()
+    {
+        IsAdvancedColorExpanded = false;
+    }
+
     [ObservableProperty]
     private bool isCustomBackground;
 
