@@ -10,6 +10,8 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Services;
+using Cafe.Launcher.Testing;
 using Cafe.Launcher.UI.Constants;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Views;
@@ -175,7 +177,7 @@ public sealed partial class MainWindowHeadlessTests
         var media = section.GetVisualDescendants().OfType<Grid>()
             .Single(control => control.Classes.Contains("settings-appearance-media"));
         var location = media.GetVisualDescendants().OfType<TextBlock>()
-            .Single(control => control.Classes.Contains("caption"));
+            .Single(control => control.Classes.Contains("caption") && control.IsEffectivelyVisible);
 
         Assert.Equal(path, location.Text);
         Assert.Equal(path, ToolTip.GetTip(location));
@@ -193,6 +195,76 @@ public sealed partial class MainWindowHeadlessTests
         Assert.Equal(path, location.Text);
         Assert.Same(background, context.ViewModel.Background.BackgroundImageSource);
         Assert.Equal(35, context.ViewModel.Background.BackgroundVideoVolume);
+    }
+
+    [AvaloniaTheory]
+    [InlineData(BackgroundSources.Bundled)]
+    [InlineData(BackgroundSources.Remote)]
+    public async Task AppearanceBackground_WhenNonCustomSourceSelected_ShowsLocalizedName(string source)
+    {
+        byte[] imageBytes = [];
+        using var context = CreateContext(configure: services =>
+            services.AddSingleton<IRemoteHttpTransport>(new StubRemoteHttpTransport(_ => imageBytes)));
+        var path = context.Directory.Sub("remote-background.png");
+        HeadlessTestHost.WriteSolidPng(path, Brushes.DarkSlateBlue, 160, 90);
+        imageBytes = await File.ReadAllBytesAsync(path);
+        const string RemoteUrl = "https://images.example.invalid/background.png";
+        var snapshot = new LauncherStatusSnapshot
+        {
+            Remote = new LauncherRemoteState
+            {
+                BaseConfig = new BaseConfigResponse
+                {
+                    LauncherBackgroundImg = RemoteUrl,
+                    LauncherBackgroundImgCrc64 = await new Crc64Service().ComputeFileAsync(path)
+                }
+            }
+        };
+        OpenSettings(context);
+        context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.Appearance;
+        context.ViewModel.Settings.Editor.Current.BackgroundSource = source;
+        await context.ViewModel.Settings.PendingAppearancePreview.WaitAsync(TimeSpan.FromSeconds(5));
+        await context.ViewModel.Background.UpdateBackgroundImageAsync(
+            context.ViewModel.Settings.Editor.Current, snapshot, CancellationToken.None);
+        Dispatcher.UIThread.RunJobs();
+        var section = context.Window.GetVisualDescendants().OfType<SettingsAppearanceSection>().Single();
+        var media = section.GetVisualDescendants().OfType<Grid>()
+            .Single(control => control.Classes.Contains("settings-appearance-media"));
+        var expected = source == BackgroundSources.Remote
+            ? context.ViewModel.Shell.I18n[LocalizationKeys.BackgroundSourceRemote]
+            : context.ViewModel.Shell.I18n[LocalizationKeys.BackgroundSourceBundled];
+
+        Assert.False(context.ViewModel.Background.HasBackgroundLoadFailure);
+        Assert.Contains(media.GetVisualDescendants().OfType<TextBlock>(), control =>
+            control.IsEffectivelyVisible && control.Text == expected);
+        Assert.Same(context.ViewModel.Background.BackgroundPreviewImage,
+            media.GetVisualDescendants().OfType<Image>().Single().Source);
+
+        if (source == BackgroundSources.Remote)
+        {
+            var location = media.GetVisualDescendants().OfType<TextBlock>()
+                .Single(control => control.IsEffectivelyVisible && control.Classes.Contains("caption"));
+            Assert.Equal(RemoteUrl, ToolTip.GetTip(location));
+            context.ViewModel.Shell.ApplyLanguage(LauncherLanguages.SimplifiedChinese, hasSnapshot: false);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(context.ViewModel.Shell.I18n[LocalizationKeys.BackgroundSourceRemote], location.Text);
+            await context.ViewModel.Background.UpdateBackgroundImageAsync(
+                context.ViewModel.Settings.Editor.Current, null, CancellationToken.None);
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(context.ViewModel.Background.HasBackgroundLoadFailure);
+            Assert.DoesNotContain(media.GetVisualDescendants().OfType<TextBlock>(), control =>
+                control.IsEffectivelyVisible && control.Text == context.ViewModel.Shell.I18n[LocalizationKeys.BackgroundSourceRemote]);
+        }
+
+        await context.ViewModel.Background.UpdateBackgroundImageAsync(
+            new LauncherSettings { BackgroundSource = BackgroundSources.Bundled }, null, CancellationToken.None);
+        context.ViewModel.Shell.ApplyLanguage(LauncherLanguages.SimplifiedChinese, hasSnapshot: false);
+        Dispatcher.UIThread.RunJobs();
+        var bundled = media.GetVisualDescendants().OfType<TextBlock>()
+            .Single(control => control.IsEffectivelyVisible && control.Classes.Contains("caption"));
+        Assert.Equal(context.ViewModel.Shell.I18n[LocalizationKeys.BackgroundSourceBundled], bundled.Text);
+        Assert.Null(context.ViewModel.Background.CurrentBackgroundFilePath);
+        Assert.False(context.ViewModel.Background.HasBackgroundLoadFailure);
     }
 
     [AvaloniaFact]

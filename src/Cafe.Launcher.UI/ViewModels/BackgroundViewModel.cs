@@ -80,7 +80,16 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsVideoBackgroundSelected))]
     [NotifyPropertyChangedFor(nameof(BackgroundPreviewImage))]
+    [NotifyPropertyChangedFor(nameof(IsRemoteBackgroundDisplayed))]
     private string? currentBackgroundFilePath;
+
+    /// <summary>The displayed remote URL or resolved custom path; null identifies the bundled wallpaper.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsRemoteBackgroundDisplayed))]
+    private string? currentBackgroundLocation;
+
+    /// <summary>Remote wallpaper names are localized separately from their URL tooltip.</summary>
+    public bool IsRemoteBackgroundDisplayed => CurrentBackgroundLocation is not null && CurrentBackgroundFilePath is null;
 
     /// <summary>Audio controls follow the resolved file, including videos selected from a folder.</summary>
     public bool IsVideoBackgroundSelected => VideoBackgroundRuntime.IsVideoFile(CurrentBackgroundFilePath);
@@ -313,7 +322,8 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
                                 settings,
                                 loadGeneration,
                                 cachedPath,
-                                decodeTarget))
+                                decodeTarget,
+                                currentLocation: bgImg))
                         {
                             lastBackgroundSourceKey = sourceKey;
                         }
@@ -704,7 +714,8 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
         string? decodedPath,
         PixelSize decodeTarget,
         bool isFallback = false,
-        string? currentFilePath = null)
+        string? currentFilePath = null,
+        string? currentLocation = null)
     {
         if (disposed || loadGeneration != Volatile.Read(ref backgroundLoadGeneration))
         {
@@ -717,6 +728,7 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
         RememberBackgroundSelection(previewSettings);
         lastBackgroundSourceKey = null;
         CurrentBackgroundFilePath = currentFilePath;
+        CurrentBackgroundLocation = currentLocation ?? currentFilePath;
         // 记录解码实际使用的目标框（与 imageLoader 收到的同一快照），而不是位图尺寸；
         // 竖图按高解码后宽度可能小于目标框，以位图尺寸为基准会造成重复重解码。
         lastDecodeTarget = decodeTarget;
@@ -824,6 +836,7 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
         ClearVideoThumbnail();
         BackgroundVideoPath = null;
         CurrentBackgroundFilePath = null;
+        CurrentBackgroundLocation = null;
         Interlocked.Increment(ref backgroundLoadGeneration);
         resizeReloadVersion++;
         windowMetrics?.PhysicalSizeChanged -= OnPhysicalSizeChanged;
