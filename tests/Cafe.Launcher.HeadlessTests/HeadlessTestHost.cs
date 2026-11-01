@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Threading;
@@ -20,6 +21,23 @@ namespace Cafe.Launcher.HeadlessTests;
 /// </summary>
 internal static class HeadlessTestHost
 {
+    /// <summary>Writes a self-contained video with a red first frame and a blue second frame, without an external encoder.</summary>
+    public static void WriteTwoFrameVideo(string path)
+    {
+        var data = new List<byte>(Encoding.ASCII.GetBytes("YUV4MPEG2 W8 H8 F1:1 Ip A1:1 C420jpeg\n"));
+        AddFrame(81, 90, 240);
+        AddFrame(41, 240, 110);
+        File.WriteAllBytes(path, data.ToArray());
+
+        void AddFrame(byte y, byte u, byte v)
+        {
+            data.AddRange(Encoding.ASCII.GetBytes("FRAME\n"));
+            data.AddRange(Enumerable.Repeat(y, 64));
+            data.AddRange(Enumerable.Repeat(u, 16));
+            data.AddRange(Enumerable.Repeat(v, 16));
+        }
+    }
+
     /// <summary>
     /// 构造共享 DI 容器：真实 AddLauncherServices，数据根与日志都落在
     /// <paramref name="directory"/> 里。configure 在日志注册之前执行，用于追加或覆盖服务

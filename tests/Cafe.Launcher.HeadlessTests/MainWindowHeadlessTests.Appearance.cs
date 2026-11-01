@@ -128,6 +128,129 @@ public sealed partial class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
+    public void AppearanceBackground_OffersSingleFilePickerAlongsideFolderAndClear()
+    {
+        using var context = CreateContext();
+        OpenSettings(context);
+        context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.Appearance;
+        context.ViewModel.Settings.Editor.Current.BackgroundSource = BackgroundSources.Custom;
+        context.ViewModel.Settings.Editor.Current.CustomBackgroundPath = "background.png";
+        Dispatcher.UIThread.RunJobs();
+        var section = context.Window.GetVisualDescendants().OfType<SettingsAppearanceSection>().Single();
+        var row = section.GetVisualDescendants().OfType<global::Cafe.Launcher.UI.Controls.SettingRow>()
+            .Single(control => control.Title == context.ViewModel.Shell.I18n[LocalizationKeys.CustomBackground]);
+        var buttons = row.GetVisualDescendants().OfType<Button>().ToArray();
+
+        Assert.Equal(3, buttons.Length);
+        Assert.All(buttons, button => Assert.True(button.IsEffectivelyVisible));
+        Assert.Same(context.ViewModel.Settings.ChooseBackgroundFileCommand, buttons[0].Command);
+        Assert.Equal(context.ViewModel.Shell.I18n[LocalizationKeys.ChooseImageOrVideo], AutomationProperties.GetName(buttons[0]));
+        Assert.Same(context.ViewModel.Settings.ChooseBackgroundFolderCommand, buttons[1].Command);
+        Assert.Same(context.ViewModel.Settings.ClearBackgroundCommand, buttons[2].Command);
+    }
+
+    [AvaloniaTheory]
+    [InlineData("png", false)]
+    [InlineData("MP4", true)]
+    [InlineData("mkv", true)]
+    [InlineData("webm", true)]
+    public async Task AppearanceBackground_WhenFolderSelected_ShowsSelectedFileLocation(string extension, bool isVideo)
+    {
+        using var context = CreateContext();
+        var folder = context.Directory.Sub("wallpapers");
+        Directory.CreateDirectory(folder);
+        var path = Path.Combine(folder, $"selected-wallpaper.{extension}");
+        if (isVideo)
+            await File.WriteAllBytesAsync(path, []);
+        else
+            HeadlessTestHost.WriteSolidPng(path, Brushes.DarkSlateBlue, 160, 90);
+        OpenSettings(context);
+        var settings = context.ViewModel.Settings;
+        settings.SelectedCategory = SettingsCategoryCodes.Appearance;
+        settings.Editor.Current.BackgroundSource = BackgroundSources.Custom;
+        settings.Editor.Current.CustomBackgroundPath = folder;
+        await WaitForBackgroundSelectionAsync(context, path);
+        Dispatcher.UIThread.RunJobs();
+        var section = context.Window.GetVisualDescendants().OfType<SettingsAppearanceSection>().Single();
+        var media = section.GetVisualDescendants().OfType<Grid>()
+            .Single(control => control.Classes.Contains("settings-appearance-media"));
+        var location = media.GetVisualDescendants().OfType<TextBlock>()
+            .Single(control => control.Classes.Contains("caption"));
+
+        Assert.Equal(path, location.Text);
+        Assert.Equal(path, ToolTip.GetTip(location));
+        Assert.True(location.IsEffectivelyVisible);
+        Assert.Equal(folder, settings.Editor.Current.CustomBackgroundPath);
+        var volume = section.GetVisualDescendants().OfType<global::Cafe.Launcher.UI.Controls.SettingRow>()
+            .Single(control => control.Title == context.ViewModel.Shell.I18n[LocalizationKeys.VideoBackgroundVolume]);
+        Assert.Equal(isVideo, volume.IsEffectivelyVisible);
+
+        var background = context.ViewModel.Background.BackgroundImageSource;
+        // Leave one different candidate so an accidental reroll cannot pass by choosing the same file.
+        File.Move(path, Path.Combine(folder, $"replacement.{extension}"));
+        settings.Editor.Current.BackgroundVideoVolume = 35;
+        await settings.PendingAppearancePreview.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(path, location.Text);
+        Assert.Same(background, context.ViewModel.Background.BackgroundImageSource);
+        Assert.Equal(35, context.ViewModel.Background.BackgroundVideoVolume);
+    }
+
+    [AvaloniaFact]
+    public async Task AppearanceBackground_WhenFolderVideoFrameCaptured_UsesItOnlyInThumbnail()
+    {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "Uses the bundled Windows decoder.");
+        using var context = CreateContext();
+        var folder = context.Directory.Sub("video-thumbnails");
+        Directory.CreateDirectory(folder);
+        var path = Path.Combine(folder, "first-frame.mp4");
+        HeadlessTestHost.WriteTwoFrameVideo(path);
+        OpenSettings(context);
+        var settings = context.ViewModel.Settings;
+        settings.SelectedCategory = SettingsCategoryCodes.Appearance;
+        settings.Editor.Current.BackgroundSource = BackgroundSources.Custom;
+        settings.Editor.Current.CustomBackgroundPath = folder;
+        await WaitForBackgroundSelectionAsync(context, path);
+        await context.ViewModel.Background.PendingVideoThumbnail.WaitAsync(TimeSpan.FromSeconds(5));
+        Dispatcher.UIThread.RunJobs();
+        var section = context.Window.GetVisualDescendants().OfType<SettingsAppearanceSection>().Single();
+        var thumbnail = section.GetVisualDescendants().OfType<Border>()
+            .Single(control => control.Classes.Contains("settings-appearance-thumbnail"));
+        var image = thumbnail.GetVisualDescendants().OfType<Image>().Single();
+
+        Assert.IsType<Avalonia.Media.Imaging.Bitmap>(image.Source);
+        Assert.Same(context.ViewModel.Background.BackgroundPreviewImage, image.Source);
+        Assert.NotSame(context.ViewModel.Background.BackgroundImageSource, image.Source);
+        Assert.Equal(path, context.ViewModel.Background.BackgroundVideoPath);
+        Assert.Equal(folder, settings.Editor.Current.CustomBackgroundPath);
+    }
+
+    [AvaloniaFact]
+    public async Task AppearanceBackground_WhenVideoSelected_BlursThumbnailAndShowsVideoIcon()
+    {
+        using var context = CreateContext();
+        OpenSettings(context);
+        var settings = context.ViewModel.Settings;
+        settings.SelectedCategory = SettingsCategoryCodes.Appearance;
+        settings.Editor.Current.BackgroundSource = BackgroundSources.Custom;
+        settings.Editor.Current.CustomBackgroundPath = "missing-thumbnail.mp4";
+        await WaitForBackgroundSelectionAsync(context, settings.Editor.Current.CustomBackgroundPath);
+        var section = context.Window.GetVisualDescendants().OfType<SettingsAppearanceSection>().Single();
+        var thumbnail = section.GetVisualDescendants().OfType<Border>()
+            .Single(control => control.Classes.Contains("settings-appearance-thumbnail"));
+        var image = thumbnail.GetVisualDescendants().OfType<Image>().Single();
+
+        Assert.IsType<BlurEffect>(image.Effect);
+        var icon = Assert.Single(thumbnail.GetVisualDescendants().OfType<Material.Icons.Avalonia.MaterialIcon>());
+        Assert.True(icon.IsEffectivelyVisible);
+
+        settings.ClearBackgroundCommand.Execute(null);
+        await WaitForBackgroundSelectionAsync(context, null);
+        Assert.Null(image.Effect);
+        Assert.False(icon.IsEffectivelyVisible);
+        Assert.Same(context.ViewModel.Background.BackgroundImageSource, image.Source);
+    }
+
+    [AvaloniaFact]
     public async Task AppearanceBackground_WhenFileFails_ShowsRecoveryOutsideCollapsedDetails()
     {
         using var context = CreateContext();
@@ -143,9 +266,9 @@ public sealed partial class MainWindowHeadlessTests
         var warning = section.GetVisualDescendants().OfType<Grid>()
             .Single(control => control.Classes.Contains("settings-appearance-warning"));
         Assert.True(warning.IsEffectivelyVisible);
-        var selectImage = section.GetVisualDescendants().OfType<Button>().Single(control =>
-            ReferenceEquals(control.Command, context.ViewModel.Settings.ChooseBackgroundImageCommand));
-        Assert.True(selectImage.IsEffectivelyVisible);
+        var selectFile = section.GetVisualDescendants().OfType<Button>().Single(control =>
+            ReferenceEquals(control.Command, context.ViewModel.Settings.ChooseBackgroundFileCommand));
+        Assert.True(selectFile.IsEffectivelyVisible);
         context.ViewModel.Settings.Editor.Current.BackgroundSource = BackgroundSources.Bundled;
         await context.ViewModel.Settings.PendingAppearancePreview.WaitAsync(TimeSpan.FromSeconds(5));
         Dispatcher.UIThread.RunJobs();
@@ -209,7 +332,7 @@ public sealed partial class MainWindowHeadlessTests
             draft.CustomBackgroundPath = "background.mp4";
             draft.BackgroundVideoVolume = 35;
             draft.BackgroundVideoMuted = true;
-            await context.ViewModel.Settings.PendingAppearancePreview.WaitAsync(TimeSpan.FromSeconds(5));
+            await WaitForBackgroundSelectionAsync(context, draft.CustomBackgroundPath);
             Dispatcher.UIThread.RunJobs();
             var slider = context.Window.GetVisualDescendants().OfType<Slider>()
                 .Single(control => AutomationProperties.GetName(control) == context.ViewModel.Shell.I18n[LocalizationKeys.VideoBackgroundVolume]);
@@ -223,4 +346,9 @@ public sealed partial class MainWindowHeadlessTests
         }
     }
 
+    private static Task WaitForBackgroundSelectionAsync(TestContext context, string? path) =>
+        HeadlessTestHost.WaitUntilAsync(
+            () => context.ViewModel.Background.CurrentBackgroundFilePath == path
+                && context.ViewModel.Settings.PendingAppearancePreview.IsCompleted,
+            TimeSpan.FromSeconds(5), "The latest background selection did not settle.");
 }

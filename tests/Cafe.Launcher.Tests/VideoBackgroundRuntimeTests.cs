@@ -12,6 +12,33 @@ namespace Cafe.Launcher.Tests;
 public sealed class VideoBackgroundRuntimeTests
 {
     [Fact]
+    public void CaptureVideoFrame_WhenFrameUnavailable_ReusesCommandArgumentsAndReleasesThem()
+    {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "Uses the bundled Windows decoder.");
+        var library = VideoBackgroundRuntime.FindLibraryPath();
+        Assert.NotNull(library);
+        var native = new MpvNative(library);
+        var player = native.NewPlayer();
+        Assert.NotEqual(0, player);
+        try
+        {
+            MpvNative.Check(native.SetOption(player, "vo", "null"), "vo");
+            MpvNative.Check(native.InitializePlayer(player), "initialize");
+            Assert.Null(native.CaptureVideoFrame(player));
+            var allocations = native.AllocationCount;
+            Assert.Null(native.CaptureVideoFrame(player));
+            Assert.Equal(allocations, native.AllocationCount);
+        }
+        finally
+        {
+            native.DestroyPlayer(player);
+            native.Dispose();
+        }
+        Assert.Equal(0, native.AllocationCount);
+        Assert.Throws<ObjectDisposedException>(() => native.CaptureVideoFrame(0));
+    }
+
+    [Fact]
     public void FormatFillColor_WhenAvaloniaUsesNamedColor_ReturnsNumericMpvSyntax()
     {
         Assert.Equal("#FF000000", VideoBackgroundControl.FormatFillColor(Colors.Black));

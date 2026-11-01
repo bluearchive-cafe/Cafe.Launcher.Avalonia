@@ -493,7 +493,8 @@ internal sealed class ShellLifecycle : IDisposable
         settings.Appearance.ApplyFrom(previewSettings);
         background.ApplyBackgroundPresentation(previewSettings);
 
-        if (propertyName is null
+        if (!background.IsCurrentBackgroundSelection(previewSettings)
+            || propertyName is null
             or nameof(LauncherSettings.BackgroundSource)
             or nameof(LauncherSettings.CustomBackgroundPath))
         {

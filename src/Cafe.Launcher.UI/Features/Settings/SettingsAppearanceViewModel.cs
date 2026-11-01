@@ -120,9 +120,6 @@ internal partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
     public bool IsCustomBackgroundSettingsVisible =>
         showHiddenSettings || IsCustomBackgroundSelected;
 
-    public bool IsVideoBackgroundSelected => IsCustomBackgroundSelected
-        && Controls.VideoBackground.VideoBackgroundRuntime.IsVideoFile(editor.Current.CustomBackgroundPath);
-
     [ObservableProperty]
     private int selectedThemeColorPaletteIndex;
 
@@ -144,7 +141,6 @@ internal partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
             IsBackgroundFitSelected = settings.BackgroundFit == BackgroundFits.Uniform;
             SelectedBackgroundFillColor = ColorUtils.ParseColorOrDefault(settings.BackgroundFillColor);
             IsCustomBackgroundSelected = settings.BackgroundSource == BackgroundSources.Custom;
-            OnPropertyChanged(nameof(IsVideoBackgroundSelected));
             ReplaceThemeColorPalette(
                 settings.ThemeColorPalette,
                 settings.SelectedThemeColorPaletteIndex);
@@ -425,7 +421,6 @@ internal partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         {
             IsCustomBackgroundSelected =
                 editor.Current.BackgroundSource == BackgroundSources.Custom;
-            OnPropertyChanged(nameof(IsVideoBackgroundSelected));
             IsCustomBackground =
                 !string.IsNullOrWhiteSpace(editor.Current.CustomBackgroundPath);
             return;
@@ -433,7 +428,6 @@ internal partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
 
         if (e.PropertyName == nameof(LauncherSettings.CustomBackgroundPath))
         {
-            OnPropertyChanged(nameof(IsVideoBackgroundSelected));
             IsCustomBackground =
                 !string.IsNullOrWhiteSpace(editor.Current.CustomBackgroundPath);
             return;

@@ -228,30 +228,31 @@ public partial class MainWindowViewModelTests
     }
 
     [Fact]
-    public async Task ChooseBackgroundVideoAsync_PreviewsDraftAndPersistsOnlyOnSave()
+    public async Task ChooseBackgroundFileAsync_WhenVideoSelected_PreviewsDraftAndPersistsOnlyOnSave()
     {
         var pickedPath = Path.Combine(tempDir, "background.MP4");
         await File.WriteAllBytesAsync(pickedPath, []);
         var savedSettings = new SavedSettingsTestRig(tempDir.Sub(LauncherPaths.LauncherSettingsFileName));
         await savedSettings.SeedAsync(new LauncherSettings());
-        var filePicker = new StubFilePickerService { VideoPicker = _ => Task.FromResult<string?>(pickedPath) };
+        var filePicker = new StubFilePickerService { BackgroundFilePicker = (_, _) => Task.FromResult<string?>(pickedPath) };
         using var viewModel = await CreateViewModelAsync(new CountingCoreService(CreateSnapshot()), savedSettings,
             filePickerService: filePicker);
         await viewModel.InitializeAsync();
         LauncherSettings? preview = null;
-        viewModel.Settings.PreviewAppearanceAsync = (settings, _, _) =>
+        var previewAppearance = viewModel.Settings.PreviewAppearanceAsync!;
+        viewModel.Settings.PreviewAppearanceAsync = async (settings, propertyName, cancellationToken) =>
         {
+            await previewAppearance(settings, propertyName, cancellationToken);
             preview = settings.DeepClone();
-            return Task.CompletedTask;
         };
         bool? videoVisibleAtNotification = null;
-        viewModel.Settings.Appearance.PropertyChanged += (_, e) =>
+        viewModel.Background.PropertyChanged += (_, e) =>
         {
-            if (e.PropertyName == nameof(SettingsAppearanceViewModel.IsVideoBackgroundSelected))
-                videoVisibleAtNotification = viewModel.Settings.Appearance.IsVideoBackgroundSelected;
+            if (e.PropertyName == nameof(BackgroundViewModel.IsVideoBackgroundSelected))
+                videoVisibleAtNotification = viewModel.Background.IsVideoBackgroundSelected;
         };
 
-        await viewModel.Settings.ChooseBackgroundVideoCommand.ExecuteAsync(null);
+        await viewModel.Settings.ChooseBackgroundFileCommand.ExecuteAsync(null);
         viewModel.Settings.Editor.Current.BackgroundVideoVolume = 35;
         viewModel.Settings.Editor.Current.BackgroundVideoMuted = true;
         await TestWait.UntilAsync(() => preview?.BackgroundVideoVolume == 35, TimeSpan.FromSeconds(5));
@@ -268,10 +269,10 @@ public partial class MainWindowViewModelTests
         Assert.Equal(0, viewModel.Settings.Editor.Current.BackgroundVideoVolume);
         Assert.False(viewModel.Settings.Editor.Current.BackgroundVideoMuted);
         Assert.False(preview!.BackgroundVideoMuted);
-        Assert.False(viewModel.Settings.Appearance.IsVideoBackgroundSelected);
+        Assert.False(viewModel.Background.IsVideoBackgroundSelected);
         Assert.Equal("", preview.CustomBackgroundPath);
 
-        await viewModel.Settings.ChooseBackgroundVideoCommand.ExecuteAsync(null);
+        await viewModel.Settings.ChooseBackgroundFileCommand.ExecuteAsync(null);
         viewModel.Settings.Editor.Current.BackgroundVideoVolume = 35;
         viewModel.Settings.Editor.Current.BackgroundVideoMuted = true;
         await SaveSettingsAsync(viewModel);
@@ -283,28 +284,47 @@ public partial class MainWindowViewModelTests
 
     }
 
-    [Fact]
-    public async Task ChooseBackgroundImageAsync_UpdatesEditorWithoutPersistingUntilSave()
+    [Theory]
+    [InlineData("png", false)]
+    [InlineData("jpg", false)]
+    [InlineData("jpeg", false)]
+    [InlineData("bmp", false)]
+    [InlineData("webp", false)]
+    [InlineData("MP4", true)]
+    [InlineData("mkv", true)]
+    [InlineData("webm", true)]
+    public async Task ChooseBackgroundFileAsync_WhenImageOrVideoSelected_UpdatesDraftUntilSave(string extension, bool isVideo)
     {
-        var pickedPath = Path.Combine(tempDir, "background.png");
+        var pickedPath = Path.Combine(tempDir, $"background.{extension}");
         await File.WriteAllBytesAsync(pickedPath, []);
         var settingsPath = tempDir.Sub(LauncherPaths.LauncherSettingsFileName);
         var savedSettings = new SavedSettingsTestRig(settingsPath);
         await savedSettings.SeedAsync(new LauncherSettings());
         var coreService = new CountingCoreService(CreateSnapshot());
+        string? pickerTitle = null;
+        string? pickerFileTypeName = null;
         var filePicker = new StubFilePickerService
         {
-            ImagePicker = _ => Task.FromResult<string?>(pickedPath)
+            BackgroundFilePicker = (title, fileTypeName) =>
+            {
+                pickerTitle = title;
+                pickerFileTypeName = fileTypeName;
+                return Task.FromResult<string?>(pickedPath);
+            }
         };
         using var viewModel = await CreateViewModelAsync(coreService, savedSettings, filePickerService: filePicker);
         await viewModel.InitializeAsync();
 
-        await viewModel.Settings.ChooseBackgroundImageCommand.ExecuteAsync(null);
+        await viewModel.Settings.ChooseBackgroundFileCommand.ExecuteAsync(null);
+        await viewModel.Settings.PendingAppearancePreview.WaitAsync(TimeSpan.FromSeconds(5));
 
+        Assert.Equal(viewModel.Shell.I18n[LocalizationKeys.ChooseBackgroundFileTitle], pickerTitle);
+        Assert.Equal(viewModel.Shell.I18n[LocalizationKeys.BackgroundFileTypes], pickerFileTypeName);
         var persistedBeforeSave = await savedSettings.SettingsService.ReadAsync();
         Assert.True(viewModel.Settings.IsSettingsDirty);
         Assert.Equal(pickedPath, viewModel.Settings.Editor.Current.CustomBackgroundPath);
         Assert.Equal(BackgroundSources.Custom, viewModel.Settings.Editor.Current.BackgroundSource);
+        Assert.Equal(isVideo, viewModel.Background.IsVideoBackgroundSelected);
         Assert.Equal("", persistedBeforeSave.CustomBackgroundPath);
         Assert.Equal(BackgroundSources.Bundled, persistedBeforeSave.BackgroundSource);
 
@@ -314,6 +334,36 @@ public partial class MainWindowViewModelTests
         Assert.False(viewModel.Settings.IsSettingsDirty);
         Assert.Equal(pickedPath, persistedAfterSave.CustomBackgroundPath);
         Assert.Equal(BackgroundSources.Custom, persistedAfterSave.BackgroundSource);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+    public async Task ChooseBackgroundFileAsync_WhenCancelled_PreservesDraft(string? pickedPath)
+    {
+        var savedPath = Path.Combine(tempDir, "saved-background.mp4");
+        var savedSettings = new SavedSettingsTestRig(tempDir.Sub(LauncherPaths.LauncherSettingsFileName));
+        await savedSettings.SeedAsync(new LauncherSettings
+        {
+            BackgroundSource = BackgroundSources.Custom,
+            CustomBackgroundPath = savedPath
+        });
+        var filePicker = new StubFilePickerService
+        {
+            BackgroundFilePicker = (_, _) => Task.FromResult(pickedPath)
+        };
+        using var viewModel = await CreateViewModelAsync(new CountingCoreService(CreateSnapshot()), savedSettings,
+            filePickerService: filePicker);
+        await viewModel.InitializeAsync();
+        viewModel.Settings.Editor.Current.BackgroundVideoVolume = 35;
+        var draftBefore = viewModel.Settings.Editor.GetSnapshot();
+
+        await viewModel.Settings.ChooseBackgroundFileCommand.ExecuteAsync(null);
+
+        Assert.True(draftBefore.HasSameSettingsState(viewModel.Settings.Editor.Current));
+        Assert.True(viewModel.Settings.IsSettingsDirty);
+        Assert.Equal(savedPath, (await savedSettings.SettingsService.ReadAsync()).CustomBackgroundPath);
     }
 
     [Fact]

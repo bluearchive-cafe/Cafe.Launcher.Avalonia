@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
@@ -369,6 +369,7 @@ public sealed class BackgroundViewModelHeadlessTests
             {
                 var settings = CreateCustomBackgroundSettings(wallpaperFolder);
                 await viewModel.UpdateBackgroundImageAsync(settings, snapshot: null, CancellationToken.None);
+                var selectedPath = viewModel.CurrentBackgroundFilePath;
                 metrics.ResizeTo(new PixelSize(2600, 1500));
                 await WaitUntilAsync(
                     () =>
@@ -387,6 +388,8 @@ public sealed class BackgroundViewModelHeadlessTests
                 }
 
                 Assert.Equal(paths[0], paths[1]);
+                Assert.Equal(selectedPath, viewModel.CurrentBackgroundFilePath);
+                Assert.Equal(wallpaperFolder, settings.CustomBackgroundPath);
             }
             finally
             {
@@ -399,11 +402,15 @@ public sealed class BackgroundViewModelHeadlessTests
         }
     }
 
-    [AvaloniaFact]
-    public async Task UpdateBackgroundImageAsync_WhenOlderDecodeFinishesLast_DoesNotReplaceNewerWallpaper()
+    [AvaloniaTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task UpdateBackgroundImageAsync_WhenOlderDecodeFinishesLast_DoesNotReplaceNewerWallpaper(bool fromFolder)
     {
         using var context = HeadlessTestHost.CreateContext();
-        var firstPath = Path.Combine(context.Directory.Path, "first-wallpaper.png");
+        var firstFolder = context.Directory.Sub("first-wallpapers");
+        Directory.CreateDirectory(firstFolder);
+        var firstPath = Path.Combine(firstFolder, "first-wallpaper.png");
         var secondPath = Path.Combine(context.Directory.Path, "second-wallpaper.png");
         HeadlessTestHost.WriteSolidPng(firstPath, Brushes.DarkSlateBlue, 320, 200);
         HeadlessTestHost.WriteSolidPng(secondPath, Brushes.IndianRed, 320, 200);
@@ -433,7 +440,7 @@ public sealed class BackgroundViewModelHeadlessTests
             () => null);
         try
         {
-            var firstSettings = CreateCustomBackgroundSettings(firstPath);
+            var firstSettings = CreateCustomBackgroundSettings(fromFolder ? firstFolder : firstPath);
             var secondSettings = CreateCustomBackgroundSettings(secondPath);
 
             var firstLoad = viewModel.UpdateBackgroundImageAsync(
@@ -449,6 +456,8 @@ public sealed class BackgroundViewModelHeadlessTests
             await firstLoad;
 
             Assert.Same(secondBitmap, viewModel.BackgroundImageSource);
+            Assert.Equal(secondPath, viewModel.CurrentBackgroundFilePath);
+            Assert.True(viewModel.IsCurrentBackgroundSelection(secondSettings));
         }
         finally
         {

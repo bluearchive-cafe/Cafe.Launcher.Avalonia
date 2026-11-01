@@ -17,8 +17,7 @@ public sealed class WindowFilePickerServiceTests
             Assert.False(window.StorageProvider.CanOpen);
             Assert.False(window.StorageProvider.CanPickFolder);
 
-            Assert.Null(await service.PickVideoFileAsync("Choose video"));
-            Assert.Null(await service.PickImageFileAsync("Choose image"));
+            Assert.Null(await service.PickBackgroundFileAsync("Choose background", "Images and videos"));
             Assert.Null(await service.PickFolderAsync("Choose folder", "missing-folder"));
         }
         finally
@@ -27,6 +26,6 @@ public sealed class WindowFilePickerServiceTests
             window.Close();
         }
 
-        Assert.Null(await service.PickVideoFileAsync("Choose video"));
+        Assert.Null(await service.PickBackgroundFileAsync("Choose background", "Images and videos"));
     }
 }

@@ -13,9 +13,9 @@ internal interface IFilePickerService
     /// <summary>Picks a single folder, optionally starting at <paramref name="startLocation"/>.</summary>
     Task<string?> PickFolderAsync(string title, string? startLocation = null);
 
-    /// <summary>Picks a single image file (png/jpg/jpeg/bmp/webp).</summary>
-    Task<string?> PickImageFileAsync(string title);
-
-    /// <summary>Picks a single local background video (mp4/mkv/webm).</summary>
-    Task<string?> PickVideoFileAsync(string title);
+    /// <summary>
+    /// Picks a single local background image (png/jpg/jpeg/bmp/webp) or video
+    /// (mp4/mkv/webm), using the localized <paramref name="fileTypeName"/> for the combined filter.
+    /// </summary>
+    Task<string?> PickBackgroundFileAsync(string title, string fileTypeName);
 }

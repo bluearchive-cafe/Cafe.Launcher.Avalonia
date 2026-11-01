@@ -4,40 +4,50 @@ namespace Cafe.Launcher.Tests;
 
 public partial class MainWindowViewModelTests
 {
-    [Fact]
-    public async Task ResolveRandomBackgroundImage_WhenFolderHasSupportedImage_ReturnsImageFromFolder()
+    [Theory]
+    [InlineData("PNG")]
+    [InlineData("jpg")]
+    [InlineData("jpeg")]
+    [InlineData("bmp")]
+    [InlineData("webp")]
+    [InlineData("MP4")]
+    [InlineData("mkv")]
+    [InlineData("webm")]
+    public async Task ResolveRandomBackgroundFile_WhenFolderHasSupportedFile_ReturnsFileFromFolder(string extension)
     {
         var folderPath = Path.Combine(tempDir, "wallpapers");
         Directory.CreateDirectory(folderPath);
-        var imagePath = Path.Combine(folderPath, "wallpaper.PNG");
+        var imagePath = Path.Combine(folderPath, $"wallpaper.{extension}");
         await WriteTestPngAsync(imagePath);
 
-        var resolved = BackgroundViewModel.ResolveRandomBackgroundImage(folderPath);
+        var resolved = BackgroundViewModel.ResolveRandomBackgroundFile(folderPath);
 
         Assert.Equal(imagePath, resolved);
     }
 
-    [Fact]
-    public async Task ResolveRandomBackgroundImage_WhenOnlySubfolderHasImage_ReturnsNull()
+    [Theory]
+    [InlineData("png")]
+    [InlineData("mp4")]
+    public async Task ResolveRandomBackgroundFile_WhenOnlySubfolderHasMedia_ReturnsNull(string extension)
     {
         var folderPath = Path.Combine(tempDir, "wallpapers");
         var nestedFolderPath = Path.Combine(folderPath, "nested");
         Directory.CreateDirectory(folderPath);
         Directory.CreateDirectory(nestedFolderPath);
-        await WriteTestPngAsync(Path.Combine(nestedFolderPath, "wallpaper.png"));
+        await WriteTestPngAsync(Path.Combine(nestedFolderPath, $"wallpaper.{extension}"));
 
-        var resolved = BackgroundViewModel.ResolveRandomBackgroundImage(folderPath);
+        var resolved = BackgroundViewModel.ResolveRandomBackgroundFile(folderPath);
 
         Assert.Null(resolved);
     }
 
     [Fact]
-    public void ResolveRandomBackgroundImage_WhenFolderHasNoSupportedImage_ReturnsNull()
+    public void ResolveRandomBackgroundFile_WhenFolderHasNoSupportedImage_ReturnsNull()
     {
         var folderPath = Path.Combine(tempDir, "empty-wallpapers");
         Directory.CreateDirectory(folderPath);
 
-        var resolved = BackgroundViewModel.ResolveRandomBackgroundImage(folderPath);
+        var resolved = BackgroundViewModel.ResolveRandomBackgroundFile(folderPath);
 
         Assert.Null(resolved);
     }

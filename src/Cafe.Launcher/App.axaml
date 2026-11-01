@@ -113,6 +113,7 @@
             <x:Double x:Key="Launcher.Layout.Appearance.Preview.Width">212</x:Double>
             <x:Double x:Key="Launcher.Component.Settings.Appearance.Thumbnail.Width">64</x:Double>
             <x:Double x:Key="Launcher.Component.Settings.Appearance.Thumbnail.Height">44</x:Double>
+            <x:Double x:Key="Launcher.Component.Settings.Appearance.Thumbnail.VideoBlurRadius">3</x:Double>
             <x:Double x:Key="Launcher.Layout.Debug.Log.Path.MaxWidth">300</x:Double>
             <x:Double x:Key="Launcher.Layout.Debug.Log.Level.MinWidth">110</x:Double>
             <x:Double x:Key="Launcher.Layout.Debug.SettingsPreview.MaxHeight">160</x:Double>
