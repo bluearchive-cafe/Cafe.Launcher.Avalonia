@@ -87,7 +87,7 @@
                                 ConfirmCommand="{Binding Dialogs.ResourcePanelSourceConfirm.ConfirmCommand}"/>
 
         <!-- Update available dialog -->
-        <Grid Classes="dialog-overlay motion-overlay"
+        <Grid x:Name="UpdateAvailableOverlay" Classes="dialog-overlay motion-overlay"
               ZIndex="{x:Static constants:LauncherConstants.ZIndexDialog}"
               Classes.motion-enabled="{Binding IsMotionEnabled}"
               controls:MotionVisibility.IsOpen="{Binding Dialogs.IsUpdateAvailableVisible}"
@@ -121,6 +121,8 @@
                         </Border>
                         <controls:ReleaseNotesMarkdownViewer
                             IsVisible="{Binding Dialogs.HasUpdateReleaseNotes}"
+                            ImageLoader="{Binding RemoteContent.ReleaseNotesImageLoader}"
+                            IsDocumentActive="{Binding #UpdateAvailableOverlay.IsVisible}"
                             Markdown="{Binding Dialogs.UpdateReleaseNotes}"
                             MaxHeight="{StaticResource Launcher.Component.Dialog.Update.ReleaseNotes.MaxHeight}"/>
                         <Separator Classes="update-progress-divider"

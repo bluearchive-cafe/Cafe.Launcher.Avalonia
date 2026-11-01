@@ -95,10 +95,10 @@ public sealed class DialogsViewModelTests : IDisposable
             "1.2.0",
             CreateFiles(),
             LauncherUpdateInAppAvailability.Available,
-            releaseNotes: "## Highlights\n\n- Faster updates");
+            releaseNotes: "## Highlights\n\n![Banner](https://example.com/banner.png)\n\n[Details](https://example.com/release)");
 
         Assert.True(viewModel.HasUpdateReleaseNotes);
-        Assert.Equal("## Highlights\n\n- Faster updates", viewModel.UpdateReleaseNotes);
+        Assert.Equal("## Highlights\n\n![Banner](https://example.com/banner.png)\n\n[Details](https://example.com/release)", viewModel.UpdateReleaseNotes);
     }
 
     [Fact]

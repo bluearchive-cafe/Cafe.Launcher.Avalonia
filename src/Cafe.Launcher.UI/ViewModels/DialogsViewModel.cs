@@ -322,7 +322,7 @@ internal partial class DialogsViewModel : ViewModelBase, IModalContentViewModel,
     {
         UpdateAvailableVersion = version;
         UpdateAvailableText = localizer.F(LocalizationKeys.LauncherUpdateAvailableMessage, version);
-        UpdateReleaseNotes = ReleaseNotesMarkdownSanitizer.Sanitize(releaseNotes);
+        UpdateReleaseNotes = string.IsNullOrWhiteSpace(releaseNotes) ? "" : releaseNotes;
         updateFiles = files ?? [];
 
         UpdateSupportsInAppApply = availability == LauncherUpdateInAppAvailability.Available;

@@ -107,6 +107,10 @@ internal partial class RemoteContentViewModel : ViewModelBase, IDisposable, ILan
     /// <summary>Gets the active manual-navigation resume operation for deterministic synchronization in tests.</summary>
     internal Task CarouselResumeTask => carouselResumeTask;
 
+    /// <summary>更新说明中的远程图片共用启动器图片缓存、代理偏好与传输限制。</summary>
+    public Func<string, CancellationToken, Task<byte[]>> ReleaseNotesImageLoader =>
+        imageCacheService.GetCachedOrDownloadImageBytesAsync;
+
     public RemoteContentViewModel(
         LocalizationService localizer,
         IImageCacheService imageCacheService,
