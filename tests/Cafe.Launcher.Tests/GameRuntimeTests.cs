@@ -73,7 +73,8 @@ public sealed class GameRuntimeTests
             Runner = GameRuntimeRunners.Auto,
             RunnerPath = "/opt/umu/bin/umu-run",
             PrefixPath = "/home/user/prefix",
-            ProtonPath = "/home/user/proton"
+            ProtonPath = "/home/user/proton",
+            EnableMangoHud = true
         };
 
         var configuration = GameRuntimeConfiguration.FromSettings(settings);
@@ -82,6 +83,7 @@ public sealed class GameRuntimeTests
         Assert.Equal(settings.RunnerPath, configuration.RunnerPath);
         Assert.Equal(settings.PrefixPath, configuration.PrefixPath);
         Assert.Equal(settings.ProtonPath, configuration.ProtonPath);
+        Assert.True(configuration.EnableMangoHud);
     }
 
     [Fact]
@@ -491,6 +493,35 @@ public sealed class GameRuntimeTests
         var startInfo = Assert.Single(launcher.StartInfos);
         Assert.Equal("blue-archive-jp", startInfo.Environment["GAMEID"]);
         Assert.Equal("/usr/lib/proton", startInfo.Environment["PROTONPATH"]);
+    }
+
+    [Theory]
+    [InlineData(GameRuntimeEnvironmentStyle.Umu, true)]
+    [InlineData(GameRuntimeEnvironmentStyle.Wine, true)]
+    [InlineData(GameRuntimeEnvironmentStyle.Umu, false)]
+    [InlineData(GameRuntimeEnvironmentStyle.Wine, false)]
+    [InlineData(GameRuntimeEnvironmentStyle.Native, true)]
+    public async Task LaunchAsync_MangoHud_OnlyEnablesForLinuxCompatibilityLaunches(
+        GameRuntimeEnvironmentStyle style,
+        bool enabled)
+    {
+        var inheritedValue = Environment.GetEnvironmentVariable("MANGOHUD");
+        var launcher = new RecordingProcessLauncher();
+        var executableName = style == GameRuntimeEnvironmentStyle.Native ? null : "runner";
+        var runtime = CreateRuntime([Definition("test", executableName: executableName, style: style)], launcher);
+
+        var result = await runtime.LaunchAsync(
+            CreateRequest(), new GameRuntimeConfiguration(EnableMangoHud: enabled));
+
+        Assert.True(result.Success);
+        var startInfo = Assert.Single(launcher.StartInfos);
+        startInfo.Environment.TryGetValue("MANGOHUD", out var actual);
+        var expected = OperatingSystem.IsLinux() && style != GameRuntimeEnvironmentStyle.Native && enabled
+            ? "1"
+            : inheritedValue;
+        Assert.Equal(expected, actual);
+        Assert.Equal(inheritedValue, Environment.GetEnvironmentVariable("MANGOHUD"));
+        Assert.Equal(executableName is null ? CreateRequest().ExecutablePath : "/usr/bin/runner", startInfo.FileName);
     }
 
     [Fact]

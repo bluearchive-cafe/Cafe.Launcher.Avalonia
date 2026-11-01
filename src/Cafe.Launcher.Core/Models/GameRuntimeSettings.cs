@@ -9,6 +9,7 @@ public sealed class GameRuntimeSettings : SettingsModel
     private string? runnerPath;
     private string? prefixPath;
     private string? protonPath;
+    private bool enableMangoHud;
 
     [JsonPropertyName("runner")]
     public string Runner { get => runner; set => SetProperty(ref runner, value); }
@@ -22,12 +23,17 @@ public sealed class GameRuntimeSettings : SettingsModel
     [JsonPropertyName("protonPath")]
     public string? ProtonPath { get => protonPath; set => SetProperty(ref protonPath, value); }
 
+    /// <summary>Enables the installed MangoHud Vulkan overlay for Linux compatibility launches.</summary>
+    [JsonPropertyName("enableMangoHud")]
+    public bool EnableMangoHud { get => enableMangoHud; set => SetProperty(ref enableMangoHud, value); }
+
     public GameRuntimeSettings DeepClone() => new()
     {
         Runner = Runner,
         RunnerPath = RunnerPath,
         PrefixPath = PrefixPath,
-        ProtonPath = ProtonPath
+        ProtonPath = ProtonPath,
+        EnableMangoHud = EnableMangoHud
     };
 
     /// <summary>
@@ -41,7 +47,8 @@ public sealed class GameRuntimeSettings : SettingsModel
         (nameof(Runner), settings => settings.Runner),
         (nameof(RunnerPath), settings => settings.RunnerPath),
         (nameof(PrefixPath), settings => settings.PrefixPath),
-        (nameof(ProtonPath), settings => settings.ProtonPath)
+        (nameof(ProtonPath), settings => settings.ProtonPath),
+        (nameof(EnableMangoHud), settings => settings.EnableMangoHud)
     ];
 
     /// <summary>

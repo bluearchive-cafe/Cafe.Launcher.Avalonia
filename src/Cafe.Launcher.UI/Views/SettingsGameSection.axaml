@@ -109,6 +109,19 @@
                 </controls:SettingRow.Action>
             </controls:SettingRow>
 
+            <controls:SettingRow x:Name="MangoHudSetting"
+                                 IsVisible="{Binding Shell.IsLinuxPlatform}"
+                                 Title="{Binding Shell.I18n[gameRuntimeMangoHud]}"
+                                 Description="{Binding Shell.I18n[gameRuntimeMangoHudDescription]}">
+                <controls:SettingRow.Action>
+                    <ToggleSwitch Classes="setting-toggle"
+                                  AutomationProperties.Name="{Binding Shell.I18n[gameRuntimeMangoHud]}"
+                                  IsChecked="{Binding Settings.Editor.Current.GameRuntime.EnableMangoHud, Mode=TwoWay}"
+                                  OnContent="{Binding Shell.I18n[toggleOn]}"
+                                  OffContent="{Binding Shell.I18n[toggleOff]}"/>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+
             <controls:SettingRow Title="{Binding Shell.I18n[gameRuntimeStatusTitle]}"
                                  Description="{Binding Settings.GameRuntimeStatusSummary}"/>
         </StackPanel>

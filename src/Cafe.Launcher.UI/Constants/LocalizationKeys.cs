@@ -229,6 +229,8 @@ public static class LocalizationKeys
     public const string GameRuntimeEnvironmentMountNoExec = "gameRuntimeEnvironmentMountNoExec";
     public const string GameRuntimeEnvironmentPrefixNotWritable = "gameRuntimeEnvironmentPrefixNotWritable";
     public const string GameRuntimeEnvironmentSymlinksUnsupported = "gameRuntimeEnvironmentSymlinksUnsupported";
+    public const string GameRuntimeMangoHud = "gameRuntimeMangoHud";
+    public const string GameRuntimeMangoHudDescription = "gameRuntimeMangoHudDescription";
     public const string GameRuntimeNoRunnerAvailable = "gameRuntimeNoRunnerAvailable";
     public const string GameRuntimePrefixPath = "gameRuntimePrefixPath";
     public const string GameRuntimePrefixPathDescription = "gameRuntimePrefixPathDescription";
