@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Presenters;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -45,6 +46,7 @@ public sealed partial class MainWindowHeadlessTests
         Assert.NotNull(viewer.ImageLoader);
         Assert.True(viewer.IsDocumentActive);
         var firstImage = Assert.Single(viewer.GetVisualDescendants().OfType<Image>());
+        var firstBitmap = Assert.IsType<Bitmap>(firstImage.Source);
 
         context.ViewModel.Dialogs.CancelUpdateAvailableCommand.Execute(null);
         await HeadlessTestHost.WaitUntilAsync(() => !viewer.IsDocumentActive, TimeSpan.FromSeconds(5));
@@ -56,6 +58,10 @@ public sealed partial class MainWindowHeadlessTests
         await HeadlessTestHost.WaitUntilAsync(
             () => viewer.GetVisualDescendants().OfType<Image>().Any(image => image.Source is not null),
             TimeSpan.FromSeconds(5));
+        var reopenedImage = Assert.Single(viewer.GetVisualDescendants().OfType<Image>());
+        var reopenedBitmap = Assert.IsType<Bitmap>(reopenedImage.Source);
+        Assert.NotSame(firstBitmap, reopenedBitmap);
+        Assert.Equal(new Size(1024, 576), reopenedBitmap.Size);
         Assert.Equal(markdown, viewer.Markdown);
         Assert.Equal(new[] { new Uri("https://example.com/banner.png") }, transport.RequestedUris);
     }

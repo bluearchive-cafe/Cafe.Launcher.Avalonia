@@ -159,29 +159,32 @@
 
 | 工具/库 | 版本 | 用途 |
 |---|---|---|
-| .NET SDK | 10.0.302 | Runtime / SDK（`global.json` 钉住，`latestFeature` 滚动） |
+| .NET SDK | 10.0.403 | Runtime / SDK（`global.json` 钉住，`latestFeature` 滚动） |
 | Avalonia / Avalonia.Desktop | 12.1.4 | UI Framework |
 | Avalonia.Controls.ColorPicker | 12.1.4 | 自定义主题色取色器 |
-| MarkView.Avalonia | 12.3.0 | 基于 Markdig 的更新说明 Markdown 预览 |
+| MarkView.Avalonia | 12.4.0 | 基于 Markdig 的更新说明 Markdown 预览 |
 | Avalonia.Themes.Fluent | 12.1.4 | Fluent 主题 |
 | Avalonia.Headless.XUnit | 12.1.4 | Headless UI testing |
 | AvaloniaUI.DiagnosticsSupport | 2.2.3 | 调试期 UI 诊断（Debug 专用，Release 不分发） |
 | CommunityToolkit.Mvvm | 8.4.2 | MVVM source generators |
 | Material.Icons.Avalonia | 3.0.2 | Icon library |
 | libmpv（Windows x64 LGPL 构建） | 2026-10-31-9e2ed65eb0 | 视频背景 Render API；版本与双重 SHA-256 见 `native/libmpv/manifest.json`，不属于 NuGet 依赖 |
-| Microsoft.Extensions.DependencyInjection | 10.0.13 | DI 容器 |
+| Microsoft.Extensions.DependencyInjection | 10.0.14 | DI 容器 |
 | Shirasagi0012.MaterialColorUtilities | 0.2.0 | Material 色彩工具 |
 | Serilog | 4.4.0 | Logging pipeline |
 | Serilog.Sinks.Async | 2.1.0 | 异步日志 sink |
 | Serilog.Sinks.File | 7.0.0 | 文件日志 sink |
 | xunit.v3.mtp-v2 | 4.0.2 | Test framework / MTP 2 runner（Headless 覆盖为 3.2.2） |
-| Microsoft.Testing.Extensions.TrxReport | 2.5.1 | TRX 测试报告 |
-| Microsoft.Testing.Extensions.HangDump | 2.5.1 | 无活动超时保护（不生成 dump） |
+| Microsoft.Testing.Extensions.TrxReport | 2.5.2 | TRX 测试报告 |
+| Microsoft.Testing.Extensions.HangDump | 2.5.2 | 无活动超时保护（不生成 dump） |
+| Microsoft.Testing.Platform.MSBuild | 2.5.2 | 两套测试的 MTP MSBuild 集成，避免旧 xUnit 引入已弃用版本 |
 | Microsoft.Testing.Extensions.CodeCoverage | 18.12.0 | 运行时覆盖率（Cobertura） |
 | Inno Setup | 7.0+ | Windows installer（脚本强制最低 7.0，CI 安装 7.1.0） |
 
 版本以 `Directory.Packages.props` 为准；升级时同步本表（受 `InstallerContractTests` 守护），流程见[开发指南「依赖与 CI」](docs/DEVELOPMENT.md#依赖与-ci)。
 
 测试基于 `global.json` 选择的原生 Microsoft.Testing.Platform 2。两个测试工程使用 `xunit.v3.mtp-v2`、`OutputType=Exe` 和 `UseMicrosoftTestingPlatformRunner=true`，不依赖 VSTest 适配器。Unit 使用中央 xUnit 版本，Headless 通过 `VersionOverride` 保留 3.2.2 扩展 API；升级前验证 Avalonia 扩展兼容性。并行化声明分别为 `[assembly: Parallelization(Mode = ParallelMode.None)]` 与 `[assembly: CollectionBehavior(DisableTestParallelization = true)]`。
+
+两套测试显式引用中央版本的 `Microsoft.Testing.Platform.MSBuild`，使构建集成与报告、挂起保护使用同一 MTP 版本，避免 Headless 的 xUnit 3.2.2 默认解析到已弃用的 2.0.2 构建集成包。
 
 覆盖率使用 Microsoft Code Coverage 的运行时分析器与 Cobertura 输出，保留生产程序集范围、设计器排除、四个程序集实际计数及基线检查。选择该收集器是因为 coverlet.MTP 静态插桩会跳过已被控制器加载的 UI 程序集。CLI 与迁移依据见 [MTP 迁移核对](docs/research/mtp-migration.md)，Headless 兼容性风险见[审计台账](CODEBASE_AUDIT.md)。

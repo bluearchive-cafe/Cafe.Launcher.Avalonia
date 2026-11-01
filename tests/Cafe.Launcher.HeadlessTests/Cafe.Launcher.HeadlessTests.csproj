@@ -27,11 +27,13 @@
     <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" PrivateAssets="all" />
     <PackageReference Include="Microsoft.Testing.Extensions.HangDump" PrivateAssets="all" />
     <PackageReference Include="Microsoft.Testing.Extensions.TrxReport" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Testing.Platform.MSBuild" PrivateAssets="all" />
     <!--
       Avalonia.Headless.XUnit 12.1.4 uses the xUnit 3.2.2 extensibility API.
-      Keep the verified xunit.v3 3.2.2 combination until its compatibility with
-      xUnit 4's breaking extensibility changes is validated; the nuspec's
-      minimum version alone does not establish runtime compatibility.
+      xUnit 4.0.2 was tested on 2026-11-01: after migrating the assembly parallelization
+      attribute, discovery still fails with MissingMethodException for
+      TestIntrospectionHelper.GetTestCaseDetails. Keep 3.2.2 until Avalonia's adapter
+      supports xUnit 4; the nuspec's minimum version does not establish compatibility.
       The explicit mtp-v2 package selects MTP 2 independently of that xUnit
       framework version. See PROJECT_CONVENTIONS.md §12 for the two boundaries.
     -->

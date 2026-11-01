@@ -50,7 +50,7 @@ jobs:
           # Pinned to the SDK named by global.json. `10.0.x` resolved to whatever the runner
           # carried that day, which decides the Microsoft.NETCore.App version published inside
           # every self-contained artifact without leaving a trace in the repository.
-          dotnet-version: 10.0.302
+          dotnet-version: 10.0.403
 
       # NuGet 全局包缓存（~/.nuget/packages）。不使用 setup-dotnet 的 `cache: true`：
       # 它的键是 `dotnet-cache-<os>-<hashFiles(**/*.csproj, **/packages.lock.json, Directory.Packages.props)>`，
@@ -152,7 +152,7 @@ jobs:
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           # Pinned to the SDK named by global.json, same as the Windows build job.
-          dotnet-version: 10.0.302
+          dotnet-version: 10.0.403
 
       - name: Restore NuGet cache
         id: nuget-cache
