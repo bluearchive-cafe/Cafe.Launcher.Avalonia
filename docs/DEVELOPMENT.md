@@ -48,6 +48,8 @@ Windows x64 构建自动调用 `scripts/Restore-VideoBackgroundRuntime.ps1`，�
 
 发布输出包含 `libmpv/win-x64/libmpv-2.dll`、清单、来源及许可证。升级时同步 `native/libmpv/manifest.json`、许可证、来源说明和原生冒烟验证。产品行为与缩略图规则见[领域契约](../CONTEXT.md#设置与操作)；其他平台使用静态回退。
 
+`Build-Distribution.ps1` 按目标 RID 显式传递 `BackgroundVideoRid`，避免引用工程清除 `RuntimeIdentifier` 后按构建机平台选择资源。Windows ZIP 打包及安装器构建前均运行 `scripts/Test-WindowsPublishOutput.ps1 -PublishDir <目录>`，检查主程序、更新 helper、固定播放器及其清单和许可证；缺失或哈希不符即失败。Debug 默认使用已安装的 .NET，Release 自包含发布会额外携带 .NET 运行时 DLL，文件数不能直接与 Debug 目录比较。
+
 生产生命周期复测：
 
 ```powershell
