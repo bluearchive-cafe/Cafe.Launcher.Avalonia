@@ -179,7 +179,7 @@ public sealed partial class MainWindowHeadlessTests
     [AvaloniaTheory]
     [InlineData("install", 4, 1)]
     [InlineData("progress", 2, 0)]
-    [InlineData("control", 2, 1)]
+    [InlineData("control", 1, 1)]
     public void MainWindow_AtMinimumWindowSize_KeepsOperationActionsInsideWindow(
         string panelMode,
         int expectedActionCount,
@@ -202,7 +202,7 @@ public sealed partial class MainWindowHeadlessTests
 
         var actions = context.Window
             .GetVisualDescendants()
-            .OfType<Button>()
+            .OfType<Control>()
             .Where(control =>
                 control.IsEffectivelyVisible
                 && (control.Classes.Contains("primary-operation")

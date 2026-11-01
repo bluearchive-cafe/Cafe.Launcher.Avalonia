@@ -8,6 +8,8 @@ using Avalonia.Headless.XUnit;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
+using System.Runtime.InteropServices;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -24,11 +26,18 @@ namespace Cafe.Launcher.HeadlessTests;
 
 public sealed partial class MainWindowHeadlessTests
 {
-    [AvaloniaFact]
-    public async Task VideoBackgroundSettings_WhenDraftChanges_UpdatesVolumeAndVisibility()
+    [AvaloniaTheory]
+    [InlineData(LauncherLanguages.English)]
+    [InlineData(LauncherLanguages.SimplifiedChinese)]
+    [InlineData(LauncherLanguages.TraditionalChinese)]
+    [InlineData(LauncherLanguages.Japanese)]
+    public async Task VideoBackgroundSettings_WhenDraftChanges_UpdatesVolumeAndVisibility(string language)
     {
         using var context = CreateContext();
+        context.Window.Width = 1024;
+        context.Window.Height = 640;
         OpenSettings(context);
+        context.ViewModel.Shell.ApplyLanguage(language, hasSnapshot: false);
         context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.Appearance;
         var settings = context.ViewModel.Settings.Editor.Current;
         // A missing media file keeps this UI test independent of a GPU and decoder.
@@ -40,6 +49,35 @@ public sealed partial class MainWindowHeadlessTests
             .Single(control => AutomationProperties.GetName(control) == name);
         Assert.True(slider.IsEffectivelyVisible);
         Assert.Equal(0, slider.Value);
+        var mute = context.Window.GetVisualDescendants().OfType<CheckBox>()
+            .Single(control => AutomationProperties.GetName(control) == context.ViewModel.Shell.I18n[LocalizationKeys.VideoBackgroundMute]);
+        Assert.True(mute.IsEffectivelyVisible);
+        Assert.False(mute.IsChecked);
+        using var typography = new TypographyScaleSnapshot(context.Window, 1.5);
+        Dispatcher.UIThread.RunJobs();
+        var row = slider.GetVisualAncestors().OfType<global::Cafe.Launcher.UI.Controls.SettingRow>().First();
+        var action = row.FindControl<ContentPresenter>("ActionPresenter")!;
+        Assert.True(action.Bounds.Right <= row.Bounds.Width + 1);
+        foreach (var control in new Control[] { slider, mute })
+        {
+            var point = control.TranslatePoint(default, row)!.Value;
+            Assert.True(point.X >= -1 && point.X + control.Bounds.Width <= row.Bounds.Width + 1);
+        }
+
+        var percentage = row.GetVisualDescendants().OfType<TextBlock>()
+            .Single(control => control.Text == "0%");
+        var percentageWidth = percentage.Bounds.Width;
+        var mutePosition = mute.TranslatePoint(default, row)!.Value;
+        var sliderPosition = slider.TranslatePoint(default, row)!.Value;
+        foreach (var volume in new[] { 35, 100, 0 })
+        {
+            slider.Value = volume;
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(percentageWidth, percentage.Bounds.Width);
+            Assert.Equal(mutePosition, mute.TranslatePoint(default, row)!.Value);
+            Assert.Equal(sliderPosition, slider.TranslatePoint(default, row)!.Value);
+            Assert.True(percentage.TextLayout.Width <= percentage.Bounds.Width + 1);
+        }
 
         slider.Value = 35;
         await context.ViewModel.Settings.PendingAppearancePreview.WaitAsync(TimeSpan.FromSeconds(5));
@@ -47,9 +85,23 @@ public sealed partial class MainWindowHeadlessTests
         Assert.Equal(35, settings.BackgroundVideoVolume);
         Assert.Equal(35, context.ViewModel.Background.BackgroundVideoVolume);
 
+        mute.IsChecked = true;
+        await context.ViewModel.Settings.PendingAppearancePreview.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.True(settings.BackgroundVideoMuted);
+        Assert.Equal(35, settings.BackgroundVideoVolume);
+        Assert.Equal(0, context.ViewModel.Background.BackgroundVideoVolume);
+        slider.Value = 60;
+        await context.ViewModel.Settings.PendingAppearancePreview.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(60, settings.BackgroundVideoVolume);
+        Assert.Equal(0, context.ViewModel.Background.BackgroundVideoVolume);
+        mute.IsChecked = false;
+        await context.ViewModel.Settings.PendingAppearancePreview.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(60, context.ViewModel.Background.BackgroundVideoVolume);
+
         settings.BackgroundSource = BackgroundSources.Bundled;
         Dispatcher.UIThread.RunJobs();
         Assert.False(slider.IsEffectivelyVisible);
+        Assert.False(mute.IsEffectivelyVisible);
     }
 
     [AvaloniaFact]
@@ -72,6 +124,118 @@ public sealed partial class MainWindowHeadlessTests
             context.ViewModel.Settings.Options.SettingsCategories.First(option =>
                 option.Code == context.ViewModel.Settings.SelectedCategory).DisplayName,
             categoryTitle.Text);
+    }
+
+    [AvaloniaTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SettingsAbout_IdentityActions_ShareGeometryAndPreservePrimaryEmphasis(bool dark)
+    {
+        using var theme = ThemeVariantSnapshot.Capture(dark ? ThemeVariant.Dark : ThemeVariant.Light);
+        using var context = CreateContext();
+        PrepareGoldenWindow(context, dark ? ThemeVariant.Dark : ThemeVariant.Light);
+        OpenSettings(context);
+        context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.About;
+        context.ViewModel.Settings.Editor.Current.ThemeMode = dark ? ThemeModes.Dark : ThemeModes.Light;
+        await context.ViewModel.Settings.PendingAppearancePreview.WaitAsync(TimeSpan.FromSeconds(5));
+        context.Provider.GetRequiredService<ThemeApplier>().ApplyScheme(Color.Parse("#2E7DF6"), isDark: dark);
+        Dispatcher.UIThread.RunJobs();
+        var update = context.Window.GetVisualDescendants().OfType<Button>()
+            .Single(button => ReferenceEquals(button.Command, context.ViewModel.Settings.CheckForUpdatesCommand));
+        var row = Assert.IsType<StackPanel>(update.Parent);
+        var buttons = row.Children.OfType<Button>().ToArray();
+        Assert.Equal(3, buttons.Length);
+        foreach (var button in buttons)
+        {
+            Assert.Equal(40, button.Bounds.Height);
+            Assert.Equal(new CornerRadius(8), button.CornerRadius);
+            Assert.Equal(buttons[1].Padding, button.Padding);
+        }
+
+        Assert.Equal(context.Window.FindResource(context.Window.ActualThemeVariant, "Launcher.Color.Primary"), update.Background);
+        Assert.Equal(context.Window.FindResource(context.Window.ActualThemeVariant, "Launcher.Color.OnPrimary"), update.Foreground);
+        Assert.Equal(context.Window.FindResource(context.Window.ActualThemeVariant, "Launcher.Color.Button.Secondary.Background"), buttons[1].Background);
+        var bounds = buttons.Select(button => button.Bounds).ToArray();
+        var surface = Assert.Single(update.GetVisualChildren().OfType<Border>());
+        var point = update.TranslatePoint(new Point(10, 10), context.Window)!.Value;
+        context.Window.MouseMove(point);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(context.Window.FindResource(context.Window.ActualThemeVariant, "Launcher.Color.Primary.Hover"), surface.Background);
+        context.Window.MouseDown(point, MouseButton.Left);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(context.Window.FindResource(context.Window.ActualThemeVariant, "Launcher.Color.Primary.Pressed"), surface.Background);
+        // 在按钮外释放指针，不触发真实网络检查。
+        context.Window.MouseMove(new Point(20, 20));
+        context.Window.MouseUp(new Point(20, 20), MouseButton.Left);
+        buttons[1].Focus(NavigationMethod.Unspecified);
+        update.Focus(NavigationMethod.Tab);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(context.Window.FindResource(context.Window.ActualThemeVariant, "Launcher.Color.OnPrimary"), surface.BorderBrush);
+        Assert.Equal(bounds, buttons.Select(button => button.Bounds).ToArray());
+        update.IsEnabled = false;
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(context.Window.FindResource(context.Window.ActualThemeVariant, "Launcher.Color.Content.Row"), surface.Background);
+        Assert.Equal(bounds, buttons.Select(button => button.Bounds).ToArray());
+    }
+
+    [AvaloniaTheory]
+    [InlineData(1300, false)]
+    [InlineData(1300, true)]
+    [InlineData(1301, false)]
+    [InlineData(1301, true)]
+    [InlineData(1024, false)]
+    [InlineData(1024, true)]
+    public async Task SettingsAbout_IdentityActions_AlignPaintedEdgesToDevicePixels(double width, bool dark)
+    {
+        var variant = dark ? ThemeVariant.Dark : ThemeVariant.Light;
+        using var theme = ThemeVariantSnapshot.Capture(variant);
+        using var context = CreateContext();
+        PrepareGoldenWindow(context, variant);
+        context.Window.Width = width;
+        OpenSettings(context);
+        context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.About;
+        context.ViewModel.Settings.Editor.Current.ThemeMode = dark ? ThemeModes.Dark : ThemeModes.Light;
+        await context.ViewModel.Settings.PendingAppearancePreview.WaitAsync(TimeSpan.FromSeconds(5));
+        context.Provider.GetRequiredService<ThemeApplier>().ApplyScheme(Color.Parse("#2E7DF6"), isDark: dark);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(variant, context.Window.ActualThemeVariant);
+        var update = context.Window.GetVisualDescendants().OfType<Button>()
+            .Single(button => ReferenceEquals(button.Command, context.ViewModel.Settings.CheckForUpdatesCommand));
+        var row = Assert.IsType<StackPanel>(update.Parent);
+        using var bitmap = new RenderTargetBitmap(new PixelSize((int)context.Window.Bounds.Width, (int)context.Window.Bounds.Height));
+        bitmap.Render(context.Window);
+        foreach (var button in row.Children.OfType<Button>())
+        {
+            var border = Assert.Single(button.GetVisualChildren().OfType<Border>());
+            var origin = border.TranslatePoint(default, context.Window)!.Value;
+            foreach (var edge in new[] { origin.X, origin.Y, origin.X + border.Bounds.Width, origin.Y + border.Bounds.Height })
+            {
+                var physicalEdge = edge * context.Window.RenderScaling;
+                Assert.Equal(Math.Round(physicalEdge), physicalEdge, precision: 6);
+            }
+
+            // 取圆角之外的左侧直边；外侧卡片与内侧填充之间不能出现半覆盖的混色像素。
+            var strip = new byte[8 * 4];
+            var handle = GCHandle.Alloc(strip, GCHandleType.Pinned);
+            try
+            {
+                bitmap.CopyPixels(new PixelRect((int)origin.X - 1, (int)(origin.Y + border.Bounds.Height / 2), 8, 1),
+                    handle.AddrOfPinnedObject(), strip.Length, strip.Length);
+            }
+            finally
+            {
+                handle.Free();
+            }
+
+            var outside = strip.AsSpan(0, 4).ToArray();
+            var inside = strip.AsSpan(strip.Length - 4, 4).ToArray();
+            Assert.False(outside.AsSpan().SequenceEqual(inside));
+            for (var offset = 0; offset < strip.Length; offset += 4)
+            {
+                var pixel = strip.AsSpan(offset, 4);
+                Assert.True(pixel.SequenceEqual(outside) || pixel.SequenceEqual(inside), "Straight button edges must not have partially covered pixels.");
+            }
+        }
     }
 
     [AvaloniaFact]

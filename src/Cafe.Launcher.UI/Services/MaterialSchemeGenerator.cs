@@ -139,6 +139,7 @@ internal static class MaterialSchemeGenerator
             result["Launcher.Text.Body"] = MaterialColorMapper.ToBrush(neutralScheme.OnSurfaceVariant);
             result["Launcher.Color.Field.Background"] = MaterialColorMapper.ToBrush(neutralScheme.SurfaceContainerHighest);
             result["Launcher.Color.Field.Border"] = MaterialColorMapper.ToBrush(neutralScheme.Outline);
+            result["Launcher.Color.Button.Secondary.Background"] = MaterialColorMapper.ToBrush(neutralScheme.SurfaceContainerHighest);
         }
         else
         {
@@ -152,6 +153,34 @@ internal static class MaterialSchemeGenerator
                 result[key] = new SolidColorBrush(Color.Parse(isDark ? dark : light));
             }
         }
+
+        // 标准次要操作在设置、向导和对话框中共用同一不透明表面。状态层使用
+        // 中性前景预混，避免旧的透明 accent wash 在不同宿主上显出不同底色。
+        var secondaryBackground = result["Launcher.Color.Button.Secondary.Background"].Color;
+        var secondaryForeground = result["Launcher.Text.Primary"].Color;
+        result["Launcher.Color.Button.Secondary.Hover"] = new SolidColorBrush(Blend(secondaryBackground, secondaryForeground, 0.08));
+        result["Launcher.Color.Button.Secondary.Pressed"] = new SolidColorBrush(Blend(secondaryBackground, secondaryForeground, 0.16));
+        // 旧 token 保留为兼容面，每次方案应用都同步，不能残留上一次策略的底色。
+        result["Launcher.Color.Dialog.Action.Background"] = new SolidColorBrush(secondaryBackground);
+
+        // 焦点是独立于交互填充的标识。强调色在浅色种子或深色表面上可能不足
+        // 3:1，此时使用同一中性方案的 OnSurface；实心按钮另用 OnPrimary/OnError。
+        var focusColor = primary;
+        foreach (var backgroundKey in new[]
+                 {
+                     "Launcher.Color.Dialog.Background", "Launcher.Color.Field.Background",
+                     "Launcher.Color.Button.Secondary.Background", "Launcher.Color.Button.Secondary.Hover",
+                     "Launcher.Color.Button.Secondary.Pressed"
+                 })
+        {
+            if (CafeColorUtils.GetContrastRatio(focusColor, result[backgroundKey].Color) < 3)
+            {
+                focusColor = MaterialColorMapper.ToAvaloniaColor(neutralScheme.OnSurface);
+                break;
+            }
+        }
+
+        result["Launcher.Color.FocusRing"] = new SolidColorBrush(focusColor);
 
         return result;
     }
@@ -176,10 +205,9 @@ internal static class MaterialSchemeGenerator
         ("Launcher.Text.Primary", "#FF232A31", "#FFE8EEF6"),
         ("Launcher.Text.Secondary", "#FF646D79", "#FFA8B3C2"),
         ("Launcher.Text.Body", "#FF3F4954", "#FFC8D2DF"),
-        ("Launcher.Color.Field.Background", "#FFF0F6FD", "#FF1E2834"),
-        ("Launcher.Color.Field.Border", "#FF788EA7", "#FF5E7494"),
-        // 对话框标准动作底色是中性层色，不跟随种子（ADR-040）。
-        ("Launcher.Color.Dialog.Action.Background", "#FFF4F8FC", "#FF222B38"),
+        ("Launcher.Color.Field.Background", "#FFF9FAFC", "#FF272E3A"),
+        ("Launcher.Color.Field.Border", "#FF8290A5", "#FF7B89A0"),
+        ("Launcher.Color.Button.Secondary.Background", "#FFEDF0F5", "#FF303744"),
     ];
 
     private static Color Blend(Color background, Color foreground, double opacity) =>

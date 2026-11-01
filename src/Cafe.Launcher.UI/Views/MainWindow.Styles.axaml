@@ -1,10 +1,31 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:views="using:Cafe.Launcher.UI.Views"
+        xmlns:viewModels="using:Cafe.Launcher.UI.ViewModels"
         xmlns:helpers="using:Cafe.Launcher.UI.Helpers"
         xmlns:controls="using:Cafe.Launcher.UI.Controls"
         xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia">
     <Styles.Resources>
+        <!-- Keep Fluent's arrow slot and state forwarding; render with the shared Material icon set. -->
+        <ControlTemplate x:Key="Launcher.Component.Select.Chevron.Template" TargetType="PathIcon">
+            <materialIcons:MaterialIcon Kind="ChevronDown"
+                                        Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"
+                                        Foreground="{TemplateBinding Foreground}"
+                                        IsHitTestVisible="False" AutomationProperties.AccessibilityView="Raw"/>
+        </ControlTemplate>
+        <ControlTheme x:Key="Launcher.Component.ChoiceItem.Theme" TargetType="ComboBoxItem">
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <ContentPresenter x:Name="PART_ContentPresenter"
+                                      Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
+                                      Background="{TemplateBinding Background}" Foreground="{TemplateBinding Foreground}"
+                                      BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                                      CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}"
+                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                </ControlTemplate>
+            </Setter>
+        </ControlTheme>
         <ControlTemplate x:Key="LauncherBorderButtonTemplate" TargetType="Button">
             <Border Background="{TemplateBinding Background}"
                     BorderBrush="{TemplateBinding BorderBrush}"
@@ -17,6 +38,134 @@
                                   VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
             </Border>
         </ControlTemplate>
+        <!-- 操作语义与尺寸分开：功能类只选择主/次/危险角色；基础几何与焦点预留由此提供。 -->
+        <ControlTheme x:Key="Launcher.Component.Button.Theme" TargetType="Button">
+            <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
+            <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Dialog}"/>
+            <Setter Property="MinWidth" Value="{StaticResource Launcher.Component.Dialog.Action.MinWidth}"/>
+            <Setter Property="Padding" Value="{StaticResource Launcher.Component.Action.Dialog.Padding}"/>
+            <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
+            <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Md}"/>
+            <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Normal}"/>
+            <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Transparent}"/>
+            <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Background}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </ControlTheme>
+        <!-- Expander retains native expansion/keyboard semantics. Own the header
+             template so Fluent's nested hover border and chevron tile cannot leak through. -->
+        <ControlTheme x:Key="Launcher.Component.Settings.ExpanderHeader.Theme" TargetType="ToggleButton"
+                      BasedOn="{StaticResource Launcher.Component.Button.Theme}">
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="MinWidth" Value="{StaticResource Launcher.Control.MinWidth.None}"/>
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border x:Name="SettingsExpanderHeaderBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{TemplateBinding CornerRadius}">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}"
+                              Margin="{TemplateBinding Padding}">
+                            <ContentPresenter x:Name="PART_ContentPresenter"
+                                              Content="{TemplateBinding Content}"
+                                              ContentTemplate="{TemplateBinding ContentTemplate}"
+                                              HorizontalContentAlignment="Stretch"
+                                              VerticalContentAlignment="Center"/>
+                            <materialIcons:MaterialIcon x:Name="SettingsExpanderChevron" Grid.Column="1"
+                                                        Kind="ChevronDown" Foreground="{TemplateBinding Foreground}"
+                                                        Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"
+                                                        VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+            <Style Selector="^:checked /template/ materialIcons|MaterialIcon#SettingsExpanderChevron">
+                <Setter Property="Kind" Value="ChevronUp"/>
+            </Style>
+        </ControlTheme>
+        <!-- 原生 SplitButton 负责命令、菜单和键盘语义；这里只替换视觉模板。 -->
+        <ControlTheme x:Key="GameLaunchSegmentTheme" TargetType="Button">
+            <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
+            <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
+            <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Style Selector="^:pointerover">
+                <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Hover}"/>
+            </Style>
+            <Style Selector="^:pressed">
+                <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
+            </Style>
+            <Style Selector="^:disabled">
+                <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
+            </Style>
+        </ControlTheme>
+        <ControlTheme x:Key="GameLaunchSplitButtonTheme" TargetType="SplitButton">
+            <Setter Property="Focusable" Value="True"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <ControlTemplate x:DataType="viewModels:MainWindowViewModel">
+                    <Panel>
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="{TemplateBinding CornerRadius}" ClipToBounds="True">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Button x:Name="PART_PrimaryButton"
+                                        Theme="{StaticResource GameLaunchSegmentTheme}"
+                                        MinWidth="{StaticResource Launcher.Component.LauncherControl.Width}"
+                                        Content="{TemplateBinding Content}"
+                                        ContentTemplate="{TemplateBinding ContentTemplate}"
+                                        Foreground="{TemplateBinding Foreground}"
+                                        Padding="{StaticResource Launcher.Component.Action.Launcher.Padding}"
+                                        HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                        Focusable="False" IsTabStop="False"
+                                        ToolTip.Tip="{Binding Shell.I18n[startGame]}"
+                                        AutomationProperties.Name="{Binding Shell.I18n[startGame]}"/>
+                                <Button x:Name="PART_SecondaryButton" Grid.Column="1"
+                                        Theme="{StaticResource GameLaunchSegmentTheme}"
+                                        Width="{StaticResource Launcher.Control.Height.Launch}"
+                                        Foreground="{TemplateBinding Foreground}"
+                                        Padding="{StaticResource Launcher.Spacing.Thickness.None}"
+                                        HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                        Focusable="False" IsTabStop="False"
+                                        ToolTip.Tip="{Binding Shell.I18n[gameManagement]}"
+                                        AutomationProperties.Name="{Binding Shell.I18n[gameManagement]}">
+                                    <materialIcons:MaterialIcon Kind="DotsHorizontal"
+                                                               Width="{StaticResource Launcher.Icon.Lg}"
+                                                               Height="{StaticResource Launcher.Icon.Lg}"/>
+                                </Button>
+                                <Border Grid.Column="1" HorizontalAlignment="Left"
+                                        Width="{StaticResource Launcher.Component.LaunchSplit.Separator.Width}"
+                                        Margin="{StaticResource Launcher.Component.LaunchSplit.Separator.Margin}"
+                                        Background="{TemplateBinding Foreground}"
+                                        Opacity="{StaticResource Launcher.StateLayer.Selected}"
+                                        IsHitTestVisible="False"/>
+                            </Grid>
+                        </Border>
+                        <!-- 单个 Tab 停靠点，焦点环覆盖整个控件且不改变内容尺寸。 -->
+                        <Border x:Name="LaunchFocus" CornerRadius="{TemplateBinding CornerRadius}"
+                                BorderThickness="{StaticResource Launcher.Border.Thickness.Focus}"
+                                BorderBrush="{StaticResource Launcher.Color.Transparent}"
+                                IsHitTestVisible="False"/>
+                    </Panel>
+                </ControlTemplate>
+            </Setter>
+            <Style Selector="^:pressed /template/ Button#PART_PrimaryButton">
+                <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
+            </Style>
+            <Style Selector="^:flyout-open /template/ Button#PART_SecondaryButton">
+                <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
+            </Style>
+            <Style Selector="^:focus-visible /template/ Border#LaunchFocus">
+                <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
+            </Style>
+        </ControlTheme>
     </Styles.Resources>
     <Style Selector="TextBlock.caption">
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Sm}"/>
@@ -94,6 +243,191 @@
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
     </Style>
+    <!-- Shared choice fields and popup surfaces. Retain native selection, access keys and menu logic.
+         Part selectors use a pseudo state so their StyleTrigger priority overrides template literals
+         and Fluent state setters; ordinary Style setters cannot repaint those parts. -->
+    <Style Selector="ComboBox">
+        <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Field}"/>
+        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Md}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Field.Background}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Field.Border}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Select.Padding}"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="ComboBox:pointerover">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Hover}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Text.Secondary}"/>
+    </Style>
+    <Style Selector="ComboBox:pressed, ComboBox:dropdownopen">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Pressed}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Text.Secondary}"/>
+    </Style>
+    <Style Selector="ComboBox:disabled">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
+        <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
+    </Style>
+    <Style Selector="ComboBox:focus-visible /template/ Border#HighlightBackground">
+        <Setter Property="IsVisible" Value="False"/>
+    </Style>
+    <Style Selector="ComboBox:not(:disabled) /template/ ContentControl#ContentPresenter">
+        <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type ComboBox}}"/>
+    </Style>
+    <Style Selector="ComboBox:disabled /template/ ContentControl#ContentPresenter">
+        <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type ComboBox}}"/>
+    </Style>
+    <Style Selector="ComboBox:not(:disabled) /template/ TextBlock#PlaceholderTextBlock">
+        <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type ComboBox}}"/>
+    </Style>
+    <Style Selector="ComboBox:disabled /template/ TextBlock#PlaceholderTextBlock">
+        <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type ComboBox}}"/>
+    </Style>
+    <Style Selector="ComboBox:not(:disabled) /template/ PathIcon#DropDownGlyph">
+        <Setter Property="Template" Value="{StaticResource Launcher.Component.Select.Chevron.Template}"/>
+        <Setter Property="Width" Value="{StaticResource Launcher.Icon.Sm}"/>
+        <Setter Property="Height" Value="{StaticResource Launcher.Icon.Sm}"/>
+        <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type ComboBox}}"/>
+    </Style>
+    <Style Selector="ComboBox:disabled /template/ PathIcon#DropDownGlyph">
+        <Setter Property="Template" Value="{StaticResource Launcher.Component.Select.Chevron.Template}"/>
+        <Setter Property="Width" Value="{StaticResource Launcher.Icon.Sm}"/>
+        <Setter Property="Height" Value="{StaticResource Launcher.Icon.Sm}"/>
+        <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type ComboBox}}"/>
+    </Style>
+    <Style Selector="ComboBox /template/ Border#PopupBorder:not(:disabled)">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Background}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Xs}"/>
+    </Style>
+    <Style Selector="ComboBox /template/ ItemsPresenter#PART_ItemsPresenter:not(:disabled)">
+        <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
+    </Style>
+    <Style Selector="ComboBoxItem">
+        <Setter Property="Theme" Value="{StaticResource Launcher.Component.ChoiceItem.Theme}"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="ComboBoxItem, MenuItem">
+        <Setter Property="FocusAdorner" Value="{x:Null}"/>
+        <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Dialog}"/>
+        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Md}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Input.Padding}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:pointerover, MenuItem:pointerover, MenuItem:selected, MenuItem:open">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Hover}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:pressed, MenuItem:pressed">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Pressed}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:selected">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.SecondaryContainer}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnSecondaryContainer}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:selected:pointerover">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.SecondaryContainer.Hover}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:selected:pressed">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.SecondaryContainer.Pressed}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:focus-visible, MenuItem:focus-visible">
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
+    </Style>
+    <Style Selector="MenuItem.danger-menu-item">
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Error}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:disabled, MenuItem:disabled">
+        <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
+    </Style>
+    <Style Selector="MenuFlyoutPresenter, ContextMenu">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Background}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Xs}"/>
+        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Md}"/>
+    </Style>
+    <Style Selector="MenuFlyoutPresenter /template/ Border#LayoutRoot:not(:disabled)">
+        <Setter Property="Padding" Value="{Binding Padding, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type MenuFlyoutPresenter}}"/>
+    </Style>
+    <Style Selector="MenuFlyoutPresenter /template/ ItemsPresenter:not(:disabled), ContextMenu /template/ ItemsPresenter:not(:disabled)">
+        <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
+    </Style>
+    <!-- Native menu templates contain the item border and the submenu surface; the item is rebound below. -->
+    <Style Selector="MenuItem /template/ Border:not(:disabled)">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Background}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Xs}"/>
+    </Style>
+    <Style Selector="MenuItem /template/ ItemsPresenter:not(:disabled)">
+        <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
+    </Style>
+    <Style Selector="MenuItem:not(:disabled) /template/ ContentPresenter#PART_HeaderPresenter">
+        <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type MenuItem}}"/>
+    </Style>
+    <Style Selector="MenuItem:disabled /template/ ContentPresenter#PART_HeaderPresenter">
+        <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type MenuItem}}"/>
+    </Style>
+    <Style Selector="MenuItem:not(:disabled) /template/ TextBlock#PART_InputGestureText">
+        <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type MenuItem}}"/>
+    </Style>
+    <Style Selector="MenuItem:disabled /template/ TextBlock#PART_InputGestureText">
+        <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type MenuItem}}"/>
+    </Style>
+    <Style Selector="MenuItem:not(:disabled) /template/ Path#PART_ChevronPath">
+        <Setter Property="Fill" Value="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type MenuItem}}"/>
+    </Style>
+    <Style Selector="MenuItem:disabled /template/ Path#PART_ChevronPath">
+        <Setter Property="Fill" Value="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type MenuItem}}"/>
+    </Style>
+    <Style Selector="MenuFlyoutPresenter Separator, ContextMenu Separator, MenuItem Separator">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Card.Border}"/>
+        <Setter Property="Height" Value="{StaticResource Launcher.Component.Menu.Separator.Height}"/>
+        <Setter Property="Margin" Value="{StaticResource Launcher.Component.Menu.Separator.Margin}"/>
+    </Style>
+    <!-- Fluent paints these parts directly in pseudo states. Forward the shared control roles in every state. -->
+    <Style Selector="ComboBox:not(:disabled) /template/ Border#Background">
+        <Setter Property="Background" Value="{Binding Background, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type ComboBox}}"/>
+        <Setter Property="BorderBrush" Value="{Binding BorderBrush, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type ComboBox}}"/>
+        <Setter Property="BorderThickness" Value="{Binding BorderThickness, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type ComboBox}}"/>
+        <Setter Property="CornerRadius" Value="{Binding CornerRadius, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type ComboBox}}"/>
+    </Style>
+    <Style Selector="ComboBox:disabled /template/ Border#Background">
+        <Setter Property="Background" Value="{Binding Background, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type ComboBox}}"/>
+        <Setter Property="BorderBrush" Value="{Binding BorderBrush, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type ComboBox}}"/>
+        <Setter Property="BorderThickness" Value="{Binding BorderThickness, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type ComboBox}}"/>
+        <Setter Property="CornerRadius" Value="{Binding CornerRadius, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type ComboBox}}"/>
+    </Style>
+    <Style Selector="MenuItem:not(:disabled) /template/ Border#PART_LayoutRoot">
+        <Setter Property="Background" Value="{Binding Background, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type MenuItem}}"/>
+        <Setter Property="BorderBrush" Value="{Binding BorderBrush, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type MenuItem}}"/>
+        <Setter Property="BorderThickness" Value="{Binding BorderThickness, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type MenuItem}}"/>
+        <Setter Property="CornerRadius" Value="{Binding CornerRadius, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type MenuItem}}"/>
+        <Setter Property="Padding" Value="{Binding Padding, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type MenuItem}}"/>
+    </Style>
+    <Style Selector="MenuItem:disabled /template/ Border#PART_LayoutRoot">
+        <Setter Property="Background" Value="{Binding Background, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type MenuItem}}"/>
+        <Setter Property="BorderBrush" Value="{Binding BorderBrush, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type MenuItem}}"/>
+        <Setter Property="BorderThickness" Value="{Binding BorderThickness, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type MenuItem}}"/>
+        <Setter Property="CornerRadius" Value="{Binding CornerRadius, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type MenuItem}}"/>
+        <Setter Property="Padding" Value="{Binding Padding, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type MenuItem}}"/>
+    </Style>
     <Style Selector="ComboBox:focus-visible">
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
@@ -103,7 +437,7 @@
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Field.Background}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Field.Border}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
-        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Component.Select.Padding}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Md}"/>
@@ -112,16 +446,23 @@
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="ComboBox.setting-control:pointerover">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Hover}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Hover}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Hover}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Text.Secondary}"/>
     </Style>
     <Style Selector="ComboBox.setting-control:pressed">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Pressed}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Pressed}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Text.Secondary}"/>
+    </Style>
+    <Style Selector="ComboBox.setting-control:dropdownopen">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Pressed}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Text.Secondary}"/>
     </Style>
     <Style Selector="ComboBox.setting-control:focus-visible">
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
+    </Style>
+    <Style Selector="ComboBox:error, ComboBox.setting-control:error">
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Error}"/>
     </Style>
     <Style Selector="ComboBox.setting-control:disabled">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
@@ -220,18 +561,10 @@
         <Setter Property="Background" Value="{StaticResource Launcher.Color.Chrome.Pressed}"/>
     </Style>
     <Style Selector="Button.primary-action">
+        <Setter Property="Theme" Value="{StaticResource Launcher.Component.Button.Theme}"/>
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary}"/>
-        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
-        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Title.Md}"/>
         <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
-        <Setter Property="MinWidth" Value="{StaticResource Launcher.Component.PrimaryAction.MinWidth}"/>
-        <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Bottom}"/>
-        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Action.Primary.Padding}"/>
-        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
-        <Setter Property="HorizontalContentAlignment" Value="Center"/>
-        <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
     </Style>
     <Style Selector="Button.primary-action:pointerover">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Hover}"/>
@@ -242,49 +575,30 @@
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
     </Style>
     <Style Selector="Button.primary-action:disabled">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Border}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
     </Style>
-    <!-- 紧凑 filled 变体（ADR-018 关于分区）：与 flat-action 同密度，供分区内唯一最高强调操作。 -->
-    <Style Selector="Button.primary-action.compact-action">
-        <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Setting}"/>
-        <Setter Property="MinWidth" Value="{StaticResource Launcher.Control.MinWidth.None}"/>
-        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Action.Outlined.Padding}"/>
-        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Sm}"/>
-    </Style>
     <Style Selector="Button.flat-action">
-        <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Button.Border}"/>
-        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
-        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Action.Outlined.Padding}"/>
-        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
-        <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Setting}"/>
-        <Setter Property="HorizontalContentAlignment" Value="Center"/>
-        <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
+        <Setter Property="Theme" Value="{StaticResource Launcher.Component.Button.Theme}"/>
     </Style>
     <Style Selector="Button.flat-action:pointerover">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Hover}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Hover}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Hover}"/>
     </Style>
     <Style Selector="Button.flat-action:pressed">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Pressed}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Pressed}"/>
     </Style>
     <Style Selector="Button.flat-action:disabled">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
     </Style>
     <Style Selector="Button.flat-action.icon-only">
         <Setter Property="Width" Value="{StaticResource Launcher.Control.Height.Setting}"/>
         <Setter Property="Height" Value="{StaticResource Launcher.Control.Height.Setting}"/>
+        <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Setting}"/>
         <Setter Property="MinWidth" Value="{StaticResource Launcher.Control.Height.Setting}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
     </Style>
+    <!-- 首页任务操作的既有尺寸独立保留，避免共享标准密度改变主界面布局。 -->
     <Style Selector="Button.bottom-action">
         <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Bottom}"/>
         <Setter Property="MinWidth" Value="{StaticResource Launcher.Component.BottomAction.MinWidth}"/>
@@ -294,25 +608,13 @@
     <Style Selector="StackPanel.confirm-actions">
         <Setter Property="Orientation" Value="Horizontal"/>
         <Setter Property="HorizontalAlignment" Value="Right"/>
-        <Setter Property="Spacing" Value="{StaticResource Launcher.Spacing.Md}"/>
+        <Setter Property="Spacing" Value="{StaticResource Launcher.Spacing.Sm}"/>
     </Style>
     <Style Selector="Button.danger-action">
+        <Setter Property="Theme" Value="{StaticResource Launcher.Component.Button.Theme}"/>
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Error}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnError}"/>
-        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
         <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
-        <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Dialog}"/>
-        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Action.Primary.Padding}"/>
-        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
-        <Setter Property="HorizontalContentAlignment" Value="Center"/>
-        <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
-    </Style>
-    <Style Selector="Button.flat-action.danger-action">
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Error}"/>
-        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
-        <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Setting}"/>
-        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Action.Outlined.Padding}"/>
     </Style>
     <Style Selector="Button.danger-action:pointerover">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Error.Hover}"/>
@@ -324,8 +626,6 @@
     </Style>
     <Style Selector="Button.danger-action:disabled">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
-        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
     </Style>
     <Style Selector="Button.dialog-action">
@@ -334,39 +634,8 @@
         <Setter Property="Padding" Value="{StaticResource Launcher.Component.Action.Dialog.Padding}"/>
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Md}"/>
     </Style>
-    <Style Selector="Button.confirm-dialog-action">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Action.Background}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary}"/>
-        <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
-        <Setter Property="MinWidth" Value="{StaticResource Launcher.Component.Dialog.BasicAction.MinWidth}"/>
-        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Dialog.BasicAction.Padding}"/>
-        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Xs}"/>
-        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
-    </Style>
-    <!-- ADR-040（修订）：对话框动作按钮不画边框，底色即形状；作用域限定 `StackPanel.confirm-actions`，
-         免得改到设置区/内容区里同样用 flat-action 的按钮。 -->
-    <Style Selector="StackPanel.confirm-actions Button.flat-action">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Action.Background}"/>
-    </Style>
-    <Style Selector="StackPanel.confirm-actions Button.flat-action:pointerover">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Hover}"/>
-    </Style>
-    <Style Selector="StackPanel.confirm-actions Button.flat-action:pressed">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Pressed}"/>
-    </Style>
-    <Style Selector="StackPanel.confirm-actions Button.flat-action:disabled">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
-    </Style>
-    <!-- ==================================================================
-         动作带按钮的焦点环：厚度常驻预留，只有颜色变
-         ==================================================================
-         焦点环用 BorderThickness 画，而按钮宽度是内容驱动的 —— 如果静止 0px、聚焦 2px，
-         聚焦那一刻按钮会变宽 4px，右对齐的动作带还会整体左移（用户报的正是这一条）。
-         这里把 2px 常驻下来、静止时描边透明，于是聚焦只改颜色、几何完全不动。
-
-         同一条规则顺带把动作带里所有按钮的 BorderBrush 收成透明（无边框外观），
-         因此不需要在家族/类规则里各写一遍。厚度必须与下方 :focus-visible 规则一致。
-         ================================================================== -->
+    <!-- 调用点与自动化保留此类；外观只由主/次/危险语义类决定。 -->
+    <Style Selector="Button.confirm-dialog-action"/>
     <Style Selector="StackPanel.confirm-actions Button">
         <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Transparent}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
@@ -374,46 +643,17 @@
     <Style Selector="StackPanel.confirm-actions Button:focus-visible">
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
     </Style>
-    <Style Selector="Button.confirm-dialog-action.primary-action">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
+    <Style Selector="Button.primary-action:focus-visible">
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
     </Style>
-    <Style Selector="Button.confirm-dialog-action.primary-action:pointerover">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Hover}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
+    <Style Selector="Button.danger-action:focus-visible">
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.OnError}"/>
     </Style>
-    <Style Selector="Button.confirm-dialog-action.primary-action:pressed">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
+    <Style Selector="StackPanel.confirm-actions Button.primary-action:focus-visible">
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
     </Style>
-    <Style Selector="Button.confirm-dialog-action.danger-action">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Error}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnError}"/>
-    </Style>
-    <Style Selector="Button.confirm-dialog-action.danger-action:pointerover">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Error.Hover}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnError}"/>
-    </Style>
-    <Style Selector="Button.confirm-dialog-action.danger-action:pressed">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Error.Pressed}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnError}"/>
-    </Style>
-    <Style Selector="Button.confirm-dialog-action:disabled">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
-    </Style>
-    <Style Selector="Button.primary-action.dialog-action:disabled">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
-        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
-    </Style>
-    <Style Selector="Button.confirm-dialog-action.danger-action:disabled">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
-        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
+    <Style Selector="StackPanel.confirm-actions Button.danger-action:focus-visible">
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.OnError}"/>
     </Style>
     <Style Selector="Button.dialog-close">
         <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
@@ -445,66 +685,18 @@
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
     </Style>
-    <Style Selector="Button.launcher-control">
-        <Setter Property="Width" Value="{StaticResource Launcher.Component.LauncherControl.Width}"/>
+    <Style Selector="SplitButton.launcher-control.start">
         <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Launch}"/>
-        <Setter Property="Height" Value="{StaticResource Launcher.Control.Height.Launch}"/>
-        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Action.Launcher.Padding}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Title.Lg}"/>
-        <Setter Property="Opacity" Value="1"/>
-        <Setter Property="HorizontalContentAlignment" Value="Center"/>
-        <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
-    </Style>
-    <Style Selector="Button.launcher-control.start">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary}"/>
-        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
         <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
-        <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Launch}"/>
-        <Setter Property="Opacity" Value="1"/>
-    </Style>
-    <Style Selector="Button.launcher-control.start:pointerover">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Hover}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Hover}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
-        <Setter Property="Opacity" Value="1"/>
     </Style>
-    <Style Selector="Button.launcher-control.start:pressed">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
-        <Setter Property="Opacity" Value="1"/>
-    </Style>
-    <Style Selector="Button.launcher-control.manage">
-        <Setter Property="Width" Value="{StaticResource Launcher.Control.Height.Launch}"/>
-        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.SiteButton.Background}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.SiteButton.Border}"/>
-        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary}"/>
-        <Setter Property="Opacity" Value="1"/>
-    </Style>
-    <Style Selector="Button.launcher-control.manage:pointerover">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.SiteButton.Background}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Hover}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary}"/>
-        <Setter Property="Opacity" Value="1"/>
-    </Style>
-    <Style Selector="Button.launcher-control.manage:pressed">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Info.Background}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary}"/>
-        <Setter Property="Opacity" Value="1"/>
-    </Style>
-    <Style Selector="Button.launcher-control:disabled">
+    <Style Selector="SplitButton.launcher-control:disabled">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
-        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
-        <Setter Property="Opacity" Value="1"/>
+        <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
     </Style>
     <Style Selector="TextBlock.operation-status-title">
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Title.Lg}"/>
@@ -1004,6 +1196,63 @@
     <Style Selector="ScrollViewer.settings-content-scroll">
         <Setter Property="Padding" Value="{StaticResource Launcher.Component.Settings.Content.Scroll.Padding}"/>
     </Style>
+    <Style Selector="Grid.settings-appearance-media">
+        <Setter Property="Margin" Value="{StaticResource Launcher.Component.Settings.Row.Content.Padding}"/>
+    </Style>
+    <Style Selector="Grid.settings-volume-value">
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="TextBlock.settings-volume-value">
+        <Setter Property="TextAlignment" Value="Right"/>
+    </Style>
+    <Style Selector="Border.settings-appearance-thumbnail">
+        <Setter Property="Width" Value="{StaticResource Launcher.Component.Settings.Appearance.Thumbnail.Width}"/>
+        <Setter Property="Height" Value="{StaticResource Launcher.Component.Settings.Appearance.Thumbnail.Height}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
+        <Setter Property="ClipToBounds" Value="True"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Field.Background}"/>
+    </Style>
+    <Style Selector="Grid.settings-appearance-warning">
+        <Setter Property="Margin" Value="{StaticResource Launcher.Component.Settings.Row.Content.Padding}"/>
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource Launcher.Color.Warning}"/>
+    </Style>
+    <Style Selector="Expander.settings-appearance-expander">
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Component.Dialog.Footer.BorderThickness}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
+    </Style>
+    <Style Selector="Expander.settings-appearance-expander /template/ Border">
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
+    </Style>
+    <Style Selector="Expander.settings-appearance-expander /template/ ToggleButton">
+        <Setter Property="Theme" Value="{StaticResource Launcher.Component.Settings.ExpanderHeader.Theme}"/>
+        <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Settings.Row.Content.Padding}"/>
+        <Setter Property="MinHeight" Value="{StaticResource Launcher.Component.Settings.Row.MinHeight}"/>
+    </Style>
+    <Style Selector="Expander.settings-appearance-expander /template/ ToggleButton:pointerover">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Hover}"/>
+    </Style>
+    <Style Selector="Expander.settings-appearance-expander /template/ ToggleButton:pressed">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Pressed}"/>
+    </Style>
+    <Style Selector="Expander.settings-appearance-advanced /template/ ToggleButton">
+        <Setter Property="AutomationProperties.Name" Value="{Binding Shell.I18n[settingsAdvancedColors], DataType={x:Type viewModels:MainWindowViewModel}}"/>
+    </Style>
+    <Style Selector="Expander.settings-appearance-expander /template/ ToggleButton:focus-visible">
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
+    </Style>
+    <Style Selector="Expander.settings-appearance-expander /template/ ToggleButton:disabled">
+        <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
+    </Style>
     <Style Selector="Grid.dialog-overlay">
         <Setter Property="Background" Value="{StaticResource Launcher.Color.Overlay.Scrim.Md}"/>
         <Setter Property="KeyboardNavigation.TabNavigation" Value="Cycle"/>
@@ -1143,6 +1392,9 @@
         <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
     </Style>
+    <Style Selector="views|SettingsAppearanceSection TextBlock.section-title">
+        <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Normal}"/>
+    </Style>
     <Style Selector="TextBlock.group-title">
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Md}"/>
         <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
@@ -1201,6 +1453,10 @@
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Hairline}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Lg}"/>
+    </Style>
+    <!-- Keep the card's half-DIP outline, but do not inherit fractional layout into its buttons. -->
+    <Style Selector="Border.about-identity-card > StackPanel">
+        <Setter Property="UseLayoutRounding" Value="True"/>
     </Style>
     <Style Selector="TextBlock.about-product-name">
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Headline.Md}"/>
@@ -1277,16 +1533,18 @@
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="Button.gallery-button">
-        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
+        <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
         <Setter Property="Width" Value="{StaticResource Launcher.Component.DesignGallery.StateCell.Width}"/>
-        <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Setting}"/>
+        <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Dialog}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Component.DesignGallery.StateCell.Padding}"/>
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary}"/>
-        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Theme" Value="{StaticResource Launcher.Component.Button.Theme}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Transparent}"/>
     </Style>
     <Style Selector="Button.gallery-button.state-hover">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Hover}"/>
@@ -1297,10 +1555,11 @@
     <Style Selector="Button.gallery-button.state-disabled">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
-        <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
     </Style>
     <Style Selector="Button.gallery-button.state-focus">
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
     </Style>
     <Style Selector="Button.gallery-button.state-invalid">
@@ -1311,32 +1570,34 @@
     </Style>
     <!-- Gallery matrix: M3 four-type button variants (ADR-007/ADR-004). -->
     <Style Selector="Button.gallery-button.outlined">
-        <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Button.Border}"/>
-        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
+        <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Normal}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Background}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
     </Style>
     <Style Selector="Button.gallery-button.outlined.state-hover">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Hover}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Hover}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Hover}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
     </Style>
     <Style Selector="Button.gallery-button.outlined.state-pressed">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Pressed}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Pressed}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
     </Style>
     <Style Selector="Button.gallery-button.outlined.state-disabled">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Transparent}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
-        <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
     </Style>
     <Style Selector="Button.gallery-button.outlined.state-focus">
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
     </Style>
     <Style Selector="Button.gallery-button.text">
+        <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Normal}"/>
         <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary}"/>
@@ -1352,7 +1613,8 @@
     <Style Selector="Button.gallery-button.text.state-disabled">
         <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
-        <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
     </Style>
     <Style Selector="Button.gallery-button.text.state-focus">
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
@@ -1373,10 +1635,11 @@
     <Style Selector="Button.gallery-button.error.state-disabled">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
-        <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
     </Style>
     <Style Selector="Button.gallery-button.error.state-focus">
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.OnError}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
     </Style>
     <Style Selector="ComboBox.gallery-select">
@@ -1391,12 +1654,12 @@
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
     </Style>
     <Style Selector="ComboBox.gallery-select.state-hover">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Hover}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Hover}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Hover}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Text.Secondary}"/>
     </Style>
     <Style Selector="ComboBox.gallery-select.state-pressed">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Pressed}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Pressed}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Text.Secondary}"/>
     </Style>
     <Style Selector="ComboBox.gallery-select.state-disabled">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
@@ -1467,7 +1730,32 @@
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
+        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Md}"/>
     </Style>
+    <Style Selector="ColorPicker.setting-control /template/ DropDownButton">
+        <Setter Property="Theme" Value="{StaticResource Launcher.Component.Button.Theme}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Field.Background}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Field.Border}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Select.Padding}"/>
+    </Style>
+    <Style Selector="ColorPicker.setting-control /template/ DropDownButton:pointerover">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Hover}"/>
+    </Style>
+    <Style Selector="ColorPicker.setting-control /template/ DropDownButton:pressed">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Pressed}"/>
+    </Style>
+    <Style Selector="ColorPicker.setting-control /template/ DropDownButton:focus-visible">
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
+    </Style>
+    <Style Selector="ColorPicker.setting-control /template/ DropDownButton:disabled">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
+    </Style>
+
     <!-- 单行字段基类（field-input）：字段外观（底色/描边/圆角/内边距/高度/字号）。
          等宽不再随字段外观捆绑——UID 类字段以 uid-input 叠层启用等宽（ADR-041），
          路径/搜索等普通文本字段保持正文字号与字体。 -->
@@ -1475,7 +1763,7 @@
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Field.Background}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Field.Border}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
-        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Component.Input.Padding}"/>
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Md}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
@@ -1486,7 +1774,7 @@
         <Setter Property="CaretBrush" Value="{DynamicResource Launcher.Color.Primary}"/>
     </Style>
     <Style Selector="TextBox.field-input:focus">
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
     </Style>
     <Style Selector="TextBox.field-input:pointerover">
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Hover}"/>

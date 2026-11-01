@@ -210,6 +210,7 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
     /// <summary>Called by parent when settings panel opens or discards changes.</summary>
     public void LoadFromSnapshot(LauncherSettings settings)
     {
+        Appearance.ResetSectionState();
         var currentWallpaperPalette = settings.ThemeColorMode == ThemeColorModes.Wallpaper
             ? Appearance.GetThemeColorPaletteHexes()
             : [];
@@ -575,7 +576,8 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
             or nameof(LauncherSettings.CustomBackgroundPath)
             or nameof(LauncherSettings.BackgroundFit)
             or nameof(LauncherSettings.BackgroundFillColor)
-            or nameof(LauncherSettings.BackgroundVideoVolume);
+            or nameof(LauncherSettings.BackgroundVideoVolume)
+            or nameof(LauncherSettings.BackgroundVideoMuted);
 
     partial void OnIsSavingChanged(bool value)
     {

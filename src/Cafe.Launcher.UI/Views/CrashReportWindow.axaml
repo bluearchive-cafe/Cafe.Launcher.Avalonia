@@ -23,10 +23,23 @@
             <x:Double x:Key="Crash.Spacing.Sm">8</x:Double>
             <x:Double x:Key="Crash.Spacing.Lg">16</x:Double>
             <x:Double x:Key="Crash.Spacing.Xl">20</x:Double>
-            <CornerRadius x:Key="Crash.Radius.Control">4</CornerRadius>
-            <CornerRadius x:Key="Crash.Radius.Panel">8</CornerRadius>
+            <CornerRadius x:Key="Crash.Radius.Control">8</CornerRadius>
+            <CornerRadius x:Key="Crash.Radius.Panel">16</CornerRadius>
             <CornerRadius x:Key="Crash.Radius.Well">22</CornerRadius>
-            <Thickness x:Key="Crash.Border.Thickness.Default">1</Thickness>
+            <Thickness x:Key="Crash.Border.Thickness.Focus">2</Thickness>
+            <SolidColorBrush x:Key="Crash.Color.Transparent" Color="Transparent"/>
+            <ControlTemplate x:Key="Crash.Action.Template" TargetType="Button">
+                <Border Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="{TemplateBinding CornerRadius}">
+                    <ContentPresenter Content="{TemplateBinding Content}"
+                                      ContentTemplate="{TemplateBinding ContentTemplate}"
+                                      Padding="{TemplateBinding Padding}"
+                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                </Border>
+            </ControlTemplate>
             <!-- 布局与排版：这些值此前散在本文件各处（D16）。令牌族只保留被消费的条目，
                  孤儿令牌由 UiStyleContractTests.CrashReport 的两条扫描挡住。 -->
             <x:Double x:Key="Crash.Layout.Window.Width">700</x:Double>
@@ -40,52 +53,51 @@
             <x:Double x:Key="Crash.Layout.Details.MinHeight">132</x:Double>
             <x:Double x:Key="Crash.Layout.Details.MaxHeight">220</x:Double>
             <Thickness x:Key="Crash.Layout.Details.Padding">12</Thickness>
-            <x:Double x:Key="Crash.Layout.Action.MinWidth">108</x:Double>
+            <x:Double x:Key="Crash.Layout.Action.MinWidth">80</x:Double>
             <x:Double x:Key="Crash.Control.MinWidth.None">0</x:Double>
             <x:Double x:Key="Crash.Layout.Action.MinHeight">40</x:Double>
-            <Thickness x:Key="Crash.Layout.Action.Padding">16,8</Thickness>
+            <Thickness x:Key="Crash.Layout.Action.Padding">16,0</Thickness>
             <Thickness x:Key="Crash.Layout.Footer.Padding">32,16,32,24</Thickness>
             <Thickness x:Key="Crash.Layout.Footer.BorderThickness">0,1,0,0</Thickness>
             <x:Double x:Key="Crash.Typography.Meta.FontSize">12</x:Double>
             <x:Double x:Key="Crash.Typography.Title.FontSize">20</x:Double>
-            <x:Double x:Key="Crash.Typography.Body.FontSize">15</x:Double>
+            <x:Double x:Key="Crash.Typography.Body.FontSize">14</x:Double>
             <x:Double x:Key="Crash.Typography.Body.LineHeight">23</x:Double>
             <FontFamily x:Key="Crash.Typography.Mono.FontFamily">Consolas, Cascadia Mono</FontFamily>
             <FontWeight x:Key="Crash.Typography.Weight.Emphasis">SemiBold</FontWeight>
+            <FontWeight x:Key="Crash.Typography.Weight.Normal">Normal</FontWeight>
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Light">
                     <SolidColorBrush x:Key="Crash.Color.Window.Background" Color="#FFF8FBFF"/>
-                    <SolidColorBrush x:Key="Crash.Color.Surface" Color="#FFFFFFFF"/>
-                    <SolidColorBrush x:Key="Crash.Color.Surface.Subtle" Color="#FFF1F5F9"/>
+                    <SolidColorBrush x:Key="Crash.Color.Surface.Subtle" Color="#FFEDF0F5"/>
                     <SolidColorBrush x:Key="Crash.Color.Surface.Danger" Color="#FFFFEDEE"/>
                     <SolidColorBrush x:Key="Crash.Color.Text.Primary" Color="#FF232A31"/>
                     <SolidColorBrush x:Key="Crash.Color.Text.Body" Color="#FF3F4954"/>
                     <SolidColorBrush x:Key="Crash.Color.Text.Muted" Color="#FF646D79"/>
-                    <SolidColorBrush x:Key="Crash.Color.Outline" Color="#FFC8D2DE"/>
                     <SolidColorBrush x:Key="Crash.Color.Hairline" Color="#FFD6E2EE"/>
                     <SolidColorBrush x:Key="Crash.Color.Danger" Color="#FFC42B35"/>
                     <SolidColorBrush x:Key="Crash.Color.Danger.Hover" Color="#FFA9242D"/>
                     <SolidColorBrush x:Key="Crash.Color.Danger.Pressed" Color="#FF8F1F27"/>
                     <SolidColorBrush x:Key="Crash.Color.OnDanger" Color="#FFFFFFFF"/>
                     <SolidColorBrush x:Key="Crash.Color.Accent" Color="#FF3D6BC6"/>
-                    <SolidColorBrush x:Key="Crash.Color.Surface.Subtle.Pressed" Color="#FFE3EBF4"/>
+                    <SolidColorBrush x:Key="Crash.Color.Surface.Subtle.Hover" Color="#FFDDE0E5"/>
+                    <SolidColorBrush x:Key="Crash.Color.Surface.Subtle.Pressed" Color="#FFCDD0D6"/>
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Dark">
                     <SolidColorBrush x:Key="Crash.Color.Window.Background" Color="#FF161C26"/>
-                    <SolidColorBrush x:Key="Crash.Color.Surface" Color="#FF202833"/>
-                    <SolidColorBrush x:Key="Crash.Color.Surface.Subtle" Color="#FF1E2834"/>
+                    <SolidColorBrush x:Key="Crash.Color.Surface.Subtle" Color="#FF303744"/>
                     <SolidColorBrush x:Key="Crash.Color.Surface.Danger" Color="#FF3A1D22"/>
                     <SolidColorBrush x:Key="Crash.Color.Text.Primary" Color="#FFE8EEF6"/>
                     <SolidColorBrush x:Key="Crash.Color.Text.Body" Color="#FFC8D2DF"/>
                     <SolidColorBrush x:Key="Crash.Color.Text.Muted" Color="#FFA8B3C2"/>
-                    <SolidColorBrush x:Key="Crash.Color.Outline" Color="#FF4A5B73"/>
                     <SolidColorBrush x:Key="Crash.Color.Hairline" Color="#FF344150"/>
                     <SolidColorBrush x:Key="Crash.Color.Danger" Color="#FFD9535C"/>
                     <SolidColorBrush x:Key="Crash.Color.Danger.Hover" Color="#FFE06B73"/>
                     <SolidColorBrush x:Key="Crash.Color.Danger.Pressed" Color="#FFBB414B"/>
                     <SolidColorBrush x:Key="Crash.Color.OnDanger" Color="#FF171012"/>
                     <SolidColorBrush x:Key="Crash.Color.Accent" Color="#FF8CB4F0"/>
-                    <SolidColorBrush x:Key="Crash.Color.Surface.Subtle.Pressed" Color="#FF27313E"/>
+                    <SolidColorBrush x:Key="Crash.Color.Surface.Subtle.Hover" Color="#FF3F4652"/>
+                    <SolidColorBrush x:Key="Crash.Color.Surface.Subtle.Pressed" Color="#FF4D5460"/>
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
         </ResourceDictionary>
@@ -93,45 +105,65 @@
 
     <Window.Styles>
         <Style Selector="Button.crash-action">
+            <Setter Property="Template" Value="{StaticResource Crash.Action.Template}"/>
+            <Setter Property="FocusAdorner" Value="{x:Null}"/>
+            <Setter Property="BorderThickness" Value="{StaticResource Crash.Border.Thickness.Focus}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource Crash.Color.Transparent}"/>
+            <Setter Property="FontSize" Value="{StaticResource Crash.Typography.Body.FontSize}"/>
             <Setter Property="MinWidth" Value="{StaticResource Crash.Layout.Action.MinWidth}"/>
             <Setter Property="MinHeight" Value="{StaticResource Crash.Layout.Action.MinHeight}"/>
             <Setter Property="Padding" Value="{StaticResource Crash.Layout.Action.Padding}"/>
             <Setter Property="CornerRadius" Value="{StaticResource Crash.Radius.Control}"/>
-            <Setter Property="FontWeight" Value="{StaticResource Crash.Typography.Weight.Emphasis}"/>
+            <Setter Property="FontWeight" Value="{StaticResource Crash.Typography.Weight.Normal}"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
         <Style Selector="Button.crash-secondary">
             <Setter Property="Foreground" Value="{DynamicResource Crash.Color.Text.Primary}"/>
-            <Setter Property="Background" Value="{DynamicResource Crash.Color.Surface}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource Crash.Color.Outline}"/>
-            <Setter Property="BorderThickness" Value="{StaticResource Crash.Border.Thickness.Default}"/>
+            <Setter Property="Background" Value="{DynamicResource Crash.Color.Surface.Subtle}"/>
         </Style>
         <Style Selector="Button.crash-danger">
+            <Setter Property="FontWeight" Value="{StaticResource Crash.Typography.Weight.Emphasis}"/>
             <Setter Property="Foreground" Value="{DynamicResource Crash.Color.OnDanger}"/>
             <Setter Property="Background" Value="{DynamicResource Crash.Color.Danger}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource Crash.Color.Danger}"/>
+
         </Style>
         <Style Selector="Button.crash-danger:pointerover">
             <Setter Property="Background" Value="{DynamicResource Crash.Color.Danger.Hover}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource Crash.Color.Danger.Hover}"/>
+
         </Style>
         <Style Selector="Button.crash-danger:pressed">
             <Setter Property="Background" Value="{DynamicResource Crash.Color.Danger.Pressed}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource Crash.Color.Danger.Pressed}"/>
+
         </Style>
         <!-- 三级（subtle）动作：无边框、透明底、accent 文字，用中性填充表达 hover/pressed。 -->
         <Style Selector="Button.crash-subtle">
             <Setter Property="MinWidth" Value="{StaticResource Crash.Control.MinWidth.None}"/>
             <Setter Property="Foreground" Value="{DynamicResource Crash.Color.Accent}"/>
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="{StaticResource Crash.Color.Transparent}"/>
         </Style>
         <Style Selector="Button.crash-subtle:pointerover">
             <Setter Property="Background" Value="{DynamicResource Crash.Color.Surface.Subtle}"/>
         </Style>
         <Style Selector="Button.crash-subtle:pressed">
             <Setter Property="Background" Value="{DynamicResource Crash.Color.Surface.Subtle.Pressed}"/>
+        </Style>
+        <Style Selector="Button.crash-secondary:pointerover">
+            <Setter Property="Background" Value="{DynamicResource Crash.Color.Surface.Subtle.Hover}"/>
+        </Style>
+        <Style Selector="Button.crash-secondary:pressed">
+            <Setter Property="Background" Value="{DynamicResource Crash.Color.Surface.Subtle.Pressed}"/>
+        </Style>
+        <Style Selector="Button.crash-action:focus-visible">
+            <Setter Property="BorderBrush" Value="{DynamicResource Crash.Color.Accent}"/>
+        </Style>
+        <Style Selector="Button.crash-danger:focus-visible">
+            <Setter Property="BorderBrush" Value="{DynamicResource Crash.Color.OnDanger}"/>
+        </Style>
+        <Style Selector="Button.crash-action:disabled">
+            <Setter Property="Background" Value="{DynamicResource Crash.Color.Surface.Subtle}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Crash.Color.Text.Muted}"/>
         </Style>
     </Window.Styles>
 

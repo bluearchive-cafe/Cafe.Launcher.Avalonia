@@ -55,7 +55,7 @@ public sealed partial class UiStyleContractTests
         Assert.Equal("24", resources["Launcher.Icon.Xxl"]);
         Assert.Equal("0", resources["Launcher.Control.Size.None"]);
         Assert.Equal("36", resources["Launcher.Control.Height.Setting"]);
-        Assert.Equal("42", resources["Launcher.Control.Height.Dialog"]);
+        Assert.Equal("40", resources["Launcher.Control.Height.Dialog"]);
         Assert.Equal("48", resources["Launcher.Control.Height.Bottom"]);
         Assert.Equal("58", resources["Launcher.Control.Height.Launch"]);
     }
@@ -161,8 +161,8 @@ public sealed partial class UiStyleContractTests
             "ListBox.settings-navigation > ListBoxItem:selected",
             "Button.primary-action",
             "Button.danger-action",
-            "Button.confirm-dialog-action",
-            "Button.launcher-control.start",
+            "Button.gallery-button",
+            "SplitButton.launcher-control.start",
             "controls|ReleaseNotesMarkdownViewer :is(TextBlock).markdown-h1",
             "controls|ReleaseNotesMarkdownViewer :is(TextBlock).markdown-h2",
             "controls|ReleaseNotesMarkdownViewer :is(TextBlock).markdown-h3",
@@ -230,7 +230,7 @@ public sealed partial class UiStyleContractTests
             "{StaticResource Launcher.Control.Height.Bottom}",
             bottomAction["MinHeight"]);
 
-        var launchAction = GetStyleSetters(document, "Button.launcher-control.start");
+        var launchAction = GetStyleSetters(document, "SplitButton.launcher-control.start");
         Assert.Equal(
             "{StaticResource Launcher.Control.Height.Launch}",
             launchAction["MinHeight"]);
@@ -240,55 +240,31 @@ public sealed partial class UiStyleContractTests
     public void InteractiveControlStyles_UseSharedFocusAndHeightTokens()
     {
         var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
+        var common = GetActionThemeSetters(document);
+        Assert.Equal("{StaticResource LauncherBorderButtonTemplate}", common["Template"]);
+        Assert.Equal("{StaticResource Launcher.Control.Height.Dialog}", common["MinHeight"]);
+        Assert.Equal("{StaticResource Launcher.Radius.Sm}", common["CornerRadius"]);
+        Assert.Equal("Center", common["HorizontalContentAlignment"]);
+        Assert.Equal("Center", common["VerticalContentAlignment"]);
+        foreach (var selector in new[] { "Button.primary-action", "Button.flat-action", "Button.danger-action" })
+        {
+            Assert.Equal("{StaticResource Launcher.Component.Button.Theme}", GetStyleSetters(document, selector)["Theme"]);
+        }
+
+        foreach (var selector in new[] { "Button.icon-button", "Button.banner-link", "Button.dialog-close", "Button.chrome" })
+        {
+            Assert.Equal("{StaticResource LauncherBorderButtonTemplate}", GetStyleSetters(document, selector)["Template"]);
+        }
 
         var iconLink = GetStyleSetters(document, "Button.icon-link");
         Assert.Equal("{StaticResource Launcher.Radius.Sm}", iconLink["CornerRadius"]);
         Assert.Equal("{StaticResource Launcher.Typography.FontSize.Body.Md}", iconLink["FontSize"]);
-        Assert.Equal("Center", iconLink["HorizontalContentAlignment"]);
-        Assert.Equal("Center", iconLink["VerticalContentAlignment"]);
-
-        // ADR-008 batch A: every button family routes through the shared template (ADR-004).
-        foreach (var selector in new[]
-                 {
-                     "Button.icon-button",
-                     "Button.banner-link",
-                     "Button.primary-action",
-                     "Button.flat-action",
-                     "Button.danger-action",
-                     "Button.dialog-close",
-                     "Button.chrome"
-                 })
-        {
-            Assert.Equal(
-                "{StaticResource LauncherBorderButtonTemplate}",
-                GetStyleSetters(document, selector)["Template"]);
-        }
-        var toastStyles = XDocument.Load(TestRepository.FromPresentationRoot("Views/Styles/Toast.axaml"));
-        Assert.Equal(
-            "{StaticResource LauncherBorderButtonTemplate}",
-            GetStyleSetters(toastStyles, "Button.toast-close")["Template"]);
-
-        var flatAction = GetStyleSetters(document, "Button.flat-action");
-        Assert.Equal(
-            "{StaticResource Launcher.Control.Height.Setting}",
-            flatAction["MinHeight"]);
-        Assert.Equal("{StaticResource Launcher.Radius.Sm}", flatAction["CornerRadius"]);
-        Assert.Equal("Center", flatAction["HorizontalContentAlignment"]);
-        Assert.Equal("Center", flatAction["VerticalContentAlignment"]);
-
-        var sharedButtonFocus = GetStyleSetters(document, "Button:focus-visible");
-        Assert.Equal(
-            "{DynamicResource Launcher.Color.FocusRing}",
-            sharedButtonFocus["BorderBrush"]);
-        Assert.Equal("{StaticResource Launcher.Border.Thickness.Focus}", sharedButtonFocus["BorderThickness"]);
-
-        var pathField = GetStyleSetters(document, "Border.path-field");
-        Assert.Equal(
-            "{StaticResource Launcher.Control.Height.Field}",
-            pathField["Height"]);
-        Assert.Equal(
-            "{StaticResource Launcher.Component.PathField.Padding}",
-            pathField["Padding"]);
+        var focus = GetStyleSetters(document, "Button:focus-visible");
+        Assert.Equal("{DynamicResource Launcher.Color.FocusRing}", focus["BorderBrush"]);
+        Assert.Equal("{StaticResource Launcher.Border.Thickness.Focus}", focus["BorderThickness"]);
+        var path = GetStyleSetters(document, "Border.path-field");
+        Assert.Equal("{StaticResource Launcher.Control.Height.Field}", path["Height"]);
+        Assert.Equal("{StaticResource Launcher.Component.PathField.Padding}", path["Padding"]);
     }
 
     [Fact]
@@ -317,10 +293,8 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             "{DynamicResource Launcher.Color.Content.Row}",
             dangerDisabled["Background"]);
-        Assert.Equal(
-            "{DynamicResource Launcher.Color.Card.Border}",
-            dangerDisabled["BorderBrush"]);
-        Assert.Equal("{StaticResource Launcher.Border.Thickness.Default}", dangerDisabled["BorderThickness"]);
+        Assert.DoesNotContain("BorderBrush", dangerDisabled.Keys);
+        Assert.DoesNotContain("BorderThickness", dangerDisabled.Keys);
 
         var closeDisabled = GetStyleSetters(document, "Button.dialog-close:disabled");
         Assert.Equal(
@@ -378,17 +352,17 @@ public sealed partial class UiStyleContractTests
             select["BorderBrush"]);
         Assert.Equal("{StaticResource Launcher.Border.Thickness.Default}", select["BorderThickness"]);
         Assert.Equal(
-            "{StaticResource Launcher.Radius.Md}",
+            "{StaticResource Launcher.Radius.Sm}",
             select["CornerRadius"]);
         Assert.Equal(
             "{StaticResource Launcher.Component.Select.Padding}",
             select["Padding"]);
 
         Assert.Equal(
-            "{DynamicResource Launcher.Color.Primary.Hover}",
+            "{DynamicResource Launcher.Text.Secondary}",
             GetStyleSetters(styles, "ComboBox.setting-control:pointerover")["BorderBrush"]);
         Assert.Equal(
-            "{DynamicResource Launcher.Color.Primary.Pressed}",
+            "{DynamicResource Launcher.Text.Secondary}",
             GetStyleSetters(styles, "ComboBox.setting-control:pressed")["BorderBrush"]);
         Assert.Equal(
             "{DynamicResource Launcher.Color.FocusRing}",
@@ -701,7 +675,10 @@ public sealed partial class UiStyleContractTests
             // 对话框徽章是整圆（16 = 半径），卸载步骤徽章复用同一枚组件 token 画圆，
             // 与 DialogSurface 模板消费的是同一个声明。
             "{StaticResource Launcher.Component.Dialog.Badge.CornerRadius}",
-            "{TemplateBinding CornerRadius}"
+            "{TemplateBinding CornerRadius}",
+            // 原生模板部件转发控件已由 token 决定的圆角，不引入另一套数值。
+            "{Binding CornerRadius, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type ComboBox}}",
+            "{Binding CornerRadius, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type MenuItem}}"
         };
 
         foreach (var relativePath in ViewFiles.Append("Views/MainWindow.Styles.axaml"))
@@ -720,15 +697,19 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void PrimaryActionButtons_NormalStateUsesNoBorderWhileFocusAndDisabledStatesKeepTheirBorders()
+    public void ActionButtons_ReserveFocusGeometryAcrossStates()
     {
-        var mainStyles = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
-        var toastStyles = XDocument.Load(TestRepository.FromPresentationRoot("Views/Styles/Toast.axaml"));
+        var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
+        var common = GetActionThemeSetters(styles);
+        Assert.Equal("{StaticResource Launcher.Color.Transparent}", common["BorderBrush"]);
+        Assert.Equal("{StaticResource Launcher.Border.Thickness.Focus}", common["BorderThickness"]);
+        foreach (var role in new[] { "primary-action", "flat-action", "danger-action" })
+        {
+            Assert.DoesNotContain("BorderThickness", GetStyleSetters(styles, $"Button.{role}:disabled").Keys);
+        }
 
-        Assert.Equal("{StaticResource Launcher.Spacing.Thickness.None}", GetStyleSetters(mainStyles, "Button.primary-action")["BorderThickness"]);
-        Assert.Equal("{StaticResource Launcher.Spacing.Thickness.None}", GetStyleSetters(toastStyles, "Button.toast-primary-action")["BorderThickness"]);
-        Assert.Equal("{StaticResource Launcher.Border.Thickness.Focus}", GetStyleSetters(mainStyles, "Button:focus-visible")["BorderThickness"]);
-        Assert.Equal("{StaticResource Launcher.Border.Thickness.Default}", GetStyleSetters(mainStyles, "Button.primary-action.dialog-action:disabled")["BorderThickness"]);
+        Assert.Equal("{DynamicResource Launcher.Color.OnPrimary}", GetStyleSetters(styles, "Button.primary-action:focus-visible")["BorderBrush"]);
+        Assert.Equal("{DynamicResource Launcher.Color.OnError}", GetStyleSetters(styles, "Button.danger-action:focus-visible")["BorderBrush"]);
     }
 
     [Fact]

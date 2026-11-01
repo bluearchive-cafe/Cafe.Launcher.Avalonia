@@ -71,6 +71,10 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     private int backgroundVideoVolume;
 
+    /// <summary>The selected source failed to load; the shared static fallback is being displayed.</summary>
+    [ObservableProperty]
+    private bool hasBackgroundLoadFailure;
+
     public BackgroundViewModel(
         IImageCacheService imageCacheService,
         ILauncherDiagnostics diagnostics,
@@ -199,6 +203,10 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
             && (!targetDecidesReuse || decodeTarget == lastDecodeTarget)
             && BackgroundImageSource is not null)
         {
+            // A previous fallback may already be the bundled bitmap requested now.
+            // Reuse the pixels while clearing the warning for this successful choice.
+            if (settings.BackgroundSource == BackgroundSources.Bundled)
+                HasBackgroundLoadFailure = false;
             return;
         }
 
@@ -299,7 +307,10 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
             settings,
             loadGeneration,
             decodedPath: null,
-            decodeTarget);
+            decodeTarget,
+            isFallback: settings.BackgroundSource == BackgroundSources.Remote
+                || (settings.BackgroundSource == BackgroundSources.Custom
+                    && !string.IsNullOrWhiteSpace(settings.CustomBackgroundPath)));
         if (settings.BackgroundSource == BackgroundSources.Bundled)
         {
             // 仅当内置图是用户选择的来源（而非遥源/自定义失败回落）时才记录：
@@ -361,7 +372,7 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
 
     public void ApplyBackgroundPresentation(LauncherSettings settings)
     {
-        BackgroundVideoVolume = Math.Clamp(settings.BackgroundVideoVolume, 0, 100);
+        BackgroundVideoVolume = settings.BackgroundVideoMuted ? 0 : Math.Clamp(settings.BackgroundVideoVolume, 0, 100);
         BackgroundStretch = ToStretch(settings.BackgroundFit);
         BackgroundFillBrush = settings.BackgroundFit == BackgroundFits.Uniform
             ? new SolidColorBrush(ColorUtils.ParseColorOrDefault(settings.BackgroundFillColor))
@@ -373,6 +384,7 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
     {
         if (BackgroundVideoPath != path) return;
         BackgroundVideoPath = null;
+        HasBackgroundLoadFailure = true;
         _ = diagnostics.ErrorAsync("Background", $"Video background failed: {path}", exception, CancellationToken.None);
         if (toastService is not null && localizer is not null)
             toastService.ShowWarning(localizer.T(LocalizationKeys.VideoBackgroundFailed));
@@ -638,7 +650,8 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
         LauncherSettings previewSettings,
         int loadGeneration,
         string? decodedPath,
-        PixelSize decodeTarget)
+        PixelSize decodeTarget,
+        bool isFallback = false)
     {
         if (disposed || loadGeneration != Volatile.Read(ref backgroundLoadGeneration))
         {
@@ -650,6 +663,7 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
         // 记录解码实际使用的目标框（与 imageLoader 收到的同一快照），而不是位图尺寸；
         // 竖图按高解码后宽度可能小于目标框，以位图尺寸为基准会造成重复重解码。
         lastDecodeTarget = decodeTarget;
+        HasBackgroundLoadFailure = isFallback;
         SetBackgroundImage(bitmap, previewSettings);
         return true;
     }

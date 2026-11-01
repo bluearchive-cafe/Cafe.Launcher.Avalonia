@@ -14,15 +14,138 @@
     </UserControl.Resources>
     <StackPanel>
         <StackPanel Classes="settings-group">
-            <TextBlock Text="{Binding Shell.I18n[settingsGroupThemeColor]}" Classes="group-title"/>
-
+            <TextBlock Text="{Binding Shell.I18n[settingsGroupThemeMotion]}" Classes="group-title"/>
             <controls:SettingSelect ShowTopDivider="False"
                                     Title="{Binding Shell.I18n[theme]}"
                                     AutomationName="{Binding Shell.I18n[theme]}"
                                     ItemsSource="{Binding Settings.Options.Theme}"
                                     SelectedValue="{Binding Settings.Editor.Current.ThemeMode, Mode=TwoWay}"/>
 
-            <controls:SettingRow Title="{Binding Shell.I18n[themeColor]}"
+            <controls:SettingSelect Title="{Binding Shell.I18n[motionMode]}"
+                                    Description="{Binding Shell.I18n[motionModeDescription]}"
+                                    AutomationName="{Binding Shell.I18n[motionMode]}"
+                                    ItemsSource="{Binding Settings.Options.MotionMode}"
+                                    SelectedValue="{Binding Settings.Editor.Current.MotionMode, Mode=TwoWay}"/>
+        </StackPanel>
+
+        <StackPanel Classes="settings-group">
+            <TextBlock Text="{Binding Shell.I18n[settingsGroupBackground]}" Classes="group-title"/>
+            <controls:SettingSelect ShowTopDivider="False"
+                                    Title="{Binding Shell.I18n[backgroundSource]}"
+                                    Description="{Binding Shell.I18n[backgroundSourceDescription]}"
+                                    AutomationName="{Binding Shell.I18n[backgroundSource]}"
+                                    ItemsSource="{Binding Settings.Options.BackgroundSource}"
+                                    SelectedValue="{Binding Settings.Editor.Current.BackgroundSource, Mode=TwoWay}"/>
+
+            <Grid Classes="settings-appearance-media" ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                <Border Classes="settings-appearance-thumbnail">
+                    <Image Source="{Binding Background.BackgroundImageSource}" Stretch="UniformToFill"/>
+                </Border>
+                <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
+                    <TextBlock Text="{Binding Shell.I18n[currentBackground]}" Classes="section-title"/>
+                    <TextBlock Text="{Binding Settings.Editor.Current.CustomBackgroundPath}" Classes="caption"
+                               TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Settings.Editor.Current.CustomBackgroundPath}"
+                               IsVisible="{Binding Settings.Appearance.IsCustomBackgroundSelected}"/>
+                </StackPanel>
+            </Grid>
+            <Grid Classes="settings-appearance-warning" ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}"
+                        IsVisible="{Binding Background.HasBackgroundLoadFailure}">
+                <materialIcons:MaterialIcon Kind="AlertCircleOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                <TextBlock Grid.Column="1" Text="{Binding Shell.I18n[backgroundLoadFallback]}" Classes="caption" TextWrapping="Wrap"
+                           AutomationProperties.LiveSetting="Polite"/>
+            </Grid>
+
+            <controls:SettingRow Title="{Binding Shell.I18n[customBackground]}"
+                                 Description="{Binding Shell.I18n[customBackgroundDescription]}"
+                                 IsVisible="{Binding Settings.Appearance.IsCustomBackgroundSettingsVisible}">
+                <controls:SettingRow.Action>
+                    <WrapPanel ItemSpacing="{StaticResource Launcher.Spacing.Sm}" LineSpacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
+                        <Button Classes="flat-action"
+                                Command="{Binding Settings.ChooseBackgroundImageCommand}"
+                                AutomationProperties.Name="{Binding Shell.I18n[chooseImage]}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="ImageOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                <TextBlock Text="{Binding Shell.I18n[chooseImage]}"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="flat-action"
+                                Command="{Binding Settings.ChooseBackgroundFolderCommand}"
+                                AutomationProperties.Name="{Binding Shell.I18n[chooseFolder]}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                <TextBlock Text="{Binding Shell.I18n[chooseFolder]}"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="flat-action"
+                                Command="{Binding Settings.ChooseBackgroundVideoCommand}"
+                                AutomationProperties.Name="{Binding Shell.I18n[chooseVideo]}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="VideoOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                <TextBlock Text="{Binding Shell.I18n[chooseVideo]}"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="flat-action" Command="{Binding Settings.ClearBackgroundCommand}"
+                                AutomationProperties.Name="{Binding Shell.I18n[clearBackground]}"
+                                IsVisible="{Binding Settings.Appearance.IsCustomBackground}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="DeleteOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                <TextBlock Text="{Binding Shell.I18n[clearBackground]}"/>
+                            </StackPanel>
+                        </Button>
+                    </WrapPanel>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+
+            <controls:SettingSelect Title="{Binding Shell.I18n[backgroundFit]}"
+                                    AutomationName="{Binding Shell.I18n[backgroundFit]}"
+                                    ItemsSource="{Binding Settings.Options.BackgroundFit}"
+                                    SelectedValue="{Binding Settings.Editor.Current.BackgroundFit, Mode=TwoWay}"/>
+
+            <controls:SettingRow Title="{Binding Shell.I18n[backgroundFillColor]}"
+                                 Description="{Binding Shell.I18n[backgroundFillColorDescription]}"
+                                 IsVisible="{Binding Settings.Appearance.IsBackgroundFillColorVisible}">
+                <controls:SettingRow.Action>
+                    <ColorPicker Classes="setting-control"
+                                 AutomationProperties.Name="{Binding Shell.I18n[backgroundFillColor]}"
+                                 Color="{Binding Settings.Appearance.SelectedBackgroundFillColor, Mode=TwoWay}">
+                        <StackPanel Classes="button-content">
+                            <Border Classes="color-swatch-preview"
+                                    Background="{Binding Settings.Appearance.BackgroundFillColorPreviewBrush}"/>
+                            <materialIcons:MaterialIcon Kind="PaletteOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                            <TextBlock Text="{Binding Shell.I18n[openColorPalette]}"/>
+                        </StackPanel>
+                    </ColorPicker>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+
+            <controls:SettingRow Title="{Binding Shell.I18n[videoBackgroundVolume]}"
+                                 Description="{Binding Shell.I18n[videoBackgroundVolumeDescription]}"
+                                 IsVisible="{Binding Settings.Appearance.IsVideoBackgroundSelected}">
+                <controls:SettingRow.Action>
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}">
+                        <Slider Classes="setting-control" Width="{StaticResource Launcher.Component.Settings.Control.MinWidth}"
+                                Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True"
+                                Value="{Binding Settings.Editor.Current.BackgroundVideoVolume, Mode=TwoWay}"
+                                AutomationProperties.Name="{Binding Shell.I18n[videoBackgroundVolume]}"/>
+                        <Grid Classes="settings-volume-value">
+                            <!-- Reserve the widest percentage at the current font size, including text scaling. -->
+                            <TextBlock Text="100%" Opacity="0" IsHitTestVisible="False"
+                                       AutomationProperties.AccessibilityView="Raw"/>
+                            <TextBlock Classes="settings-volume-value"
+                                       Text="{Binding Settings.Editor.Current.BackgroundVideoVolume, StringFormat='{}{0}%'}"/>
+                        </Grid>
+                        <CheckBox Classes="setting-checkbox" VerticalAlignment="Center"
+                                  Content="{Binding Shell.I18n[videoBackgroundMute]}"
+                                  AutomationProperties.Name="{Binding Shell.I18n[videoBackgroundMute]}"
+                                  IsChecked="{Binding Settings.Editor.Current.BackgroundVideoMuted, Mode=TwoWay}"/>
+                    </StackPanel>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+        </StackPanel>
+
+        <StackPanel Classes="settings-group">
+            <TextBlock Text="{Binding Shell.I18n[settingsGroupThemeColor]}" Classes="group-title"/>
+            <controls:SettingRow ShowTopDivider="False" Title="{Binding Shell.I18n[themeColor]}"
                                  Description="{Binding Shell.I18n[themeColorDescription]}">
                 <controls:SettingRow.Action>
                     <WrapPanel ItemSpacing="{StaticResource Launcher.Spacing.Sm}" LineSpacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
@@ -37,28 +160,6 @@
                     </WrapPanel>
                 </controls:SettingRow.Action>
             </controls:SettingRow>
-
-            <controls:SettingSelect Title="{Binding Shell.I18n[themeColorExtractionAlgorithm]}"
-                                    Description="{Binding Shell.I18n[themeColorExtractionAlgorithmDescription]}"
-                                    AutomationName="{Binding Shell.I18n[themeColorExtractionAlgorithm]}"
-                                    IsVisible="{Binding Settings.Appearance.IsThemeColorExtractionAlgorithmSettingsVisible}"
-                                    ItemsSource="{Binding Settings.Options.ThemeColorExtractionAlgorithm}"
-                                    SelectedValue="{Binding Settings.Editor.Current.ThemeColorExtractionAlgorithm, Mode=TwoWay}"/>
-
-            <controls:SettingSelect Title="{Binding Shell.I18n[themeColorVariant]}"
-                                    Description="{Binding Shell.I18n[themeColorVariantDescription]}"
-                                    AutomationName="{Binding Shell.I18n[themeColorVariant]}"
-                                    ItemsSource="{Binding Settings.Options.ThemeColorVariant}"
-                                    SelectedValue="{Binding Settings.Editor.Current.ThemeColorVariant, Mode=TwoWay}"/>
-
-            <!-- ADR-010: when "follow seed" is selected, explain the subtle dyeing effect. -->
-            <controls:SettingSelect Title="{Binding Shell.I18n[neutralColorStrategy]}"
-                                    Description="{Binding Shell.I18n[neutralColorStrategyDescription]}"
-                                    AutomationName="{Binding Shell.I18n[neutralColorStrategy]}"
-                                    Hint="{Binding Shell.I18n[neutralColorStrategySeedFollowingHint]}"
-                                    IsHintVisible="{Binding Settings.Appearance.IsSeedFollowingNeutralStrategySelected}"
-                                    ItemsSource="{Binding Settings.Options.NeutralColorStrategy}"
-                                    SelectedValue="{Binding Settings.Editor.Current.NeutralColorStrategy, Mode=TwoWay}"/>
 
             <controls:SettingRow Title="{Binding Shell.I18n[themeColorPalette]}"
                                  Description="{Binding Shell.I18n[themeColorPaletteDescription]}"
@@ -117,94 +218,44 @@
                     </ColorPicker>
                 </controls:SettingRow.Action>
             </controls:SettingRow>
-        </StackPanel>
-
-        <StackPanel Classes="settings-group">
-            <TextBlock Text="{Binding Shell.I18n[settingsGroupBackground]}" Classes="group-title"/>
-
-            <controls:SettingSelect ShowTopDivider="False"
-                                    Title="{Binding Shell.I18n[backgroundSource]}"
-                                    Description="{Binding Shell.I18n[backgroundSourceDescription]}"
-                                    AutomationName="{Binding Shell.I18n[backgroundSource]}"
-                                    ItemsSource="{Binding Settings.Options.BackgroundSource}"
-                                    SelectedValue="{Binding Settings.Editor.Current.BackgroundSource, Mode=TwoWay}"/>
-
-            <controls:SettingSelect Title="{Binding Shell.I18n[backgroundFit]}"
-                                    AutomationName="{Binding Shell.I18n[backgroundFit]}"
-                                    ItemsSource="{Binding Settings.Options.BackgroundFit}"
-                                    SelectedValue="{Binding Settings.Editor.Current.BackgroundFit, Mode=TwoWay}"/>
-
-            <controls:SettingRow Title="{Binding Shell.I18n[backgroundFillColor]}"
-                                 Description="{Binding Shell.I18n[backgroundFillColorDescription]}"
-                                 IsVisible="{Binding Settings.Appearance.IsBackgroundFillColorVisible}">
-                <controls:SettingRow.Action>
-                    <ColorPicker Classes="setting-control"
-                                 AutomationProperties.Name="{Binding Shell.I18n[backgroundFillColor]}"
-                                 Color="{Binding Settings.Appearance.SelectedBackgroundFillColor, Mode=TwoWay}">
-                        <StackPanel Classes="button-content">
-                            <Border Classes="color-swatch-preview"
-                                    Background="{Binding Settings.Appearance.BackgroundFillColorPreviewBrush}"/>
-                            <materialIcons:MaterialIcon Kind="PaletteOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                            <TextBlock Text="{Binding Shell.I18n[openColorPalette]}"/>
+            <Expander x:Name="AdvancedColorsExpander" Classes="settings-appearance-expander settings-appearance-advanced"
+                      IsExpanded="{Binding Settings.Appearance.IsAdvancedColorExpanded, Mode=TwoWay}"
+                      AutomationProperties.Name="{Binding Shell.I18n[settingsAdvancedColors]}">
+                <Expander.Header>
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                        <materialIcons:MaterialIcon Kind="PaletteOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}" VerticalAlignment="Center"/>
+                        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
+                            <TextBlock Text="{Binding Shell.I18n[settingsAdvancedColors]}" Classes="section-title"/>
+                            <TextBlock Text="{Binding Shell.I18n[settingsAdvancedColorsDescription]}" Classes="caption" TextWrapping="Wrap"/>
                         </StackPanel>
-                    </ColorPicker>
-                </controls:SettingRow.Action>
-            </controls:SettingRow>
+                    </Grid>
+                </Expander.Header>
+                <StackPanel>
+                    <controls:SettingSelect Title="{Binding Shell.I18n[themeColorExtractionAlgorithm]}"
+                                            Description="{Binding Shell.I18n[themeColorExtractionAlgorithmDescription]}"
+                                            AutomationName="{Binding Shell.I18n[themeColorExtractionAlgorithm]}"
+                                            IsVisible="{Binding Settings.Appearance.IsThemeColorExtractionAlgorithmSettingsVisible}"
+                                            ItemsSource="{Binding Settings.Options.ThemeColorExtractionAlgorithm}"
+                                            SelectedValue="{Binding Settings.Editor.Current.ThemeColorExtractionAlgorithm, Mode=TwoWay}"/>
 
-            <controls:SettingRow Title="{Binding Shell.I18n[customBackground]}"
-                                 Description="{Binding Shell.I18n[customBackgroundDescription]}"
-                                 IsVisible="{Binding Settings.Appearance.IsCustomBackgroundSettingsVisible}">
-                <controls:SettingRow.Action>
-                    <WrapPanel ItemSpacing="{StaticResource Launcher.Spacing.Sm}" LineSpacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
-                        <Button Classes="flat-action"
-                                Command="{Binding Settings.ChooseBackgroundImageCommand}"
-                                AutomationProperties.Name="{Binding Shell.I18n[chooseImage]}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="ImageOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                                <TextBlock Text="{Binding Shell.I18n[chooseImage]}"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Classes="flat-action"
-                                Command="{Binding Settings.ChooseBackgroundFolderCommand}"
-                                AutomationProperties.Name="{Binding Shell.I18n[chooseFolder]}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                                <TextBlock Text="{Binding Shell.I18n[chooseFolder]}"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Classes="flat-action"
-                                Command="{Binding Settings.ChooseBackgroundVideoCommand}"
-                                AutomationProperties.Name="{Binding Shell.I18n[chooseVideo]}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="VideoOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                                <TextBlock Text="{Binding Shell.I18n[chooseVideo]}"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Classes="flat-action" Command="{Binding Settings.ClearBackgroundCommand}"
-                                AutomationProperties.Name="{Binding Shell.I18n[clearBackground]}"
-                                IsVisible="{Binding Settings.Appearance.IsCustomBackground}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="DeleteOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                                <TextBlock Text="{Binding Shell.I18n[clearBackground]}"/>
-                            </StackPanel>
-                        </Button>
-                    </WrapPanel>
-                </controls:SettingRow.Action>
-            </controls:SettingRow>
-            <controls:SettingRow Title="{Binding Shell.I18n[videoBackgroundVolume]}"
-                                 Description="{Binding Shell.I18n[videoBackgroundVolumeDescription]}"
-                                 IsVisible="{Binding Settings.Appearance.IsVideoBackgroundSelected}">
-                <controls:SettingRow.Action>
-                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}">
-                        <Slider Classes="setting-control" Width="{StaticResource Launcher.Component.Settings.Control.MinWidth}"
-                                Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True"
-                                Value="{Binding Settings.Editor.Current.BackgroundVideoVolume, Mode=TwoWay}"
-                                AutomationProperties.Name="{Binding Shell.I18n[videoBackgroundVolume]}"/>
-                        <TextBlock Text="{Binding Settings.Editor.Current.BackgroundVideoVolume, StringFormat='{}{0}%'}"
-                                   VerticalAlignment="Center"/>
-                    </StackPanel>
-                </controls:SettingRow.Action>
-            </controls:SettingRow>
+                    <controls:SettingSelect Title="{Binding Shell.I18n[themeColorVariant]}"
+                                            Description="{Binding Shell.I18n[themeColorVariantDescription]}"
+                                            AutomationName="{Binding Shell.I18n[themeColorVariant]}"
+                                            ItemsSource="{Binding Settings.Options.ThemeColorVariant}"
+                                            SelectedValue="{Binding Settings.Editor.Current.ThemeColorVariant, Mode=TwoWay}"/>
+
+                    <!-- ADR-010: when "follow seed" is selected, explain the subtle dyeing effect. -->
+                    <controls:SettingSelect Title="{Binding Shell.I18n[neutralColorStrategy]}"
+                                            Description="{Binding Shell.I18n[neutralColorStrategyDescription]}"
+                                            AutomationName="{Binding Shell.I18n[neutralColorStrategy]}"
+                                            Hint="{Binding Shell.I18n[neutralColorStrategySeedFollowingHint]}"
+                                            IsHintVisible="{Binding Settings.Appearance.IsSeedFollowingNeutralStrategySelected}"
+                                            ItemsSource="{Binding Settings.Options.NeutralColorStrategy}"
+                                            SelectedValue="{Binding Settings.Editor.Current.NeutralColorStrategy, Mode=TwoWay}"/>
+
+                </StackPanel>
+            </Expander>
         </StackPanel>
+
     </StackPanel>
 </UserControl>

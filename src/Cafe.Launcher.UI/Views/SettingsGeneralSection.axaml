@@ -26,12 +26,6 @@
                                     ItemsSource="{Binding Settings.Options.AfterLaunchBehavior}"
                                     SelectedValue="{Binding Settings.Editor.Current.AfterLaunchBehavior, Mode=TwoWay}"/>
 
-            <controls:SettingSelect Title="{Binding Shell.I18n[motionMode]}"
-                                    Description="{Binding Shell.I18n[motionModeDescription]}"
-                                    AutomationName="{Binding Shell.I18n[motionMode]}"
-                                    ItemsSource="{Binding Settings.Options.MotionMode}"
-                                    SelectedValue="{Binding Settings.Editor.Current.MotionMode, Mode=TwoWay}"/>
-
             <controls:SettingRow Title="{Binding Shell.I18n[rememberWindowPositionAndSize]}">
                 <controls:SettingRow.Action>
                     <ToggleSwitch Classes="setting-toggle"
