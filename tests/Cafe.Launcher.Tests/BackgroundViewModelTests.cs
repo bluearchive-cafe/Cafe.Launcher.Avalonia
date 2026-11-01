@@ -58,15 +58,21 @@ public sealed class BackgroundViewModelTests : IDisposable
         using var cache = CreateCache(_ => PngBytes);
         var thumbnail = new TestImage();
         var requests = 0;
+        var paletteRefreshes = 0;
         var metrics = new SteppedWindowMetrics();
-        using var viewModel = new BackgroundViewModel(cache, new LocalDiagnostics(), _ => { },
+        using var viewModel = new BackgroundViewModel(cache, new LocalDiagnostics(), _ => paletteRefreshes++,
             (_, _) => new TestImage(), () => new TestImage(), metrics,
             videoThumbnailLoader: (_, _) =>
             {
                 requests++;
                 return Task.FromResult<IImage?>(thumbnail);
             });
-        var settings = new LauncherSettings { BackgroundSource = BackgroundSources.Custom, CustomBackgroundPath = path };
+        var settings = new LauncherSettings
+        {
+            BackgroundSource = BackgroundSources.Custom,
+            CustomBackgroundPath = path,
+            ThemeColorMode = ThemeColorModes.Wallpaper
+        };
         await viewModel.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
         await viewModel.PendingVideoThumbnail.WaitAsync(TimeSpan.FromSeconds(5));
         settings.BackgroundVideoVolume = 35;
@@ -76,8 +82,20 @@ public sealed class BackgroundViewModelTests : IDisposable
         await viewModel.PendingVideoThumbnail.WaitAsync(TimeSpan.FromSeconds(5));
 
         Assert.Equal(1, requests);
+        Assert.Equal(1, paletteRefreshes);
         Assert.Same(thumbnail, viewModel.BackgroundPreviewImage);
         Assert.Equal(35, viewModel.BackgroundVideoVolume);
+
+        settings.BackgroundVideoMuted = true;
+        settings.BackgroundFit = BackgroundFits.Uniform;
+        await viewModel.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
+        Assert.Equal(1, requests);
+        Assert.Equal(1, paletteRefreshes);
+
+        await File.WriteAllBytesAsync(path, [1]); // Same path, different content fingerprint.
+        await viewModel.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
+        Assert.Equal(2, requests);
+        Assert.Equal(2, paletteRefreshes);
     }
 
     [Fact]

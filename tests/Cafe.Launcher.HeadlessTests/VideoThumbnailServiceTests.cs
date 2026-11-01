@@ -89,6 +89,7 @@ public sealed class VideoThumbnailServiceTests
         Assert.InRange(image.PixelSize.Height, 1, 176);
         var pixel = ReadCenterPixel(image);
         Assert.True(pixel[2] > 200 && pixel[0] < 60, $"Expected the red first frame, got BGR {pixel[0]},{pixel[1]},{pixel[2]}.");
+        Assert.Equal(byte.MaxValue, pixel[3]); // The shared palette source must also have opaque BGRA bytes.
         Assert.Equal(libraries, MpvNative.ActiveLibraryCount);
     }
 
