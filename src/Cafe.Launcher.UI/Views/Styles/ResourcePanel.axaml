@@ -9,16 +9,23 @@
     <!-- 分段按钮的 Border+Content 模板：RadioButton 语义、普通按钮的几何，
          与 LauncherBorderButtonTemplate 同构（TargetType 须为 RadioButton 分支）。 -->
     <ControlTemplate x:Key="ResourcePanelSegmentOptionTemplate" TargetType="RadioButton">
-      <Border Background="{TemplateBinding Background}"
-              BorderBrush="{TemplateBinding BorderBrush}"
-              BorderThickness="{TemplateBinding BorderThickness}"
-              CornerRadius="{TemplateBinding CornerRadius}">
-        <ContentPresenter Content="{TemplateBinding Content}"
-                          ContentTemplate="{TemplateBinding ContentTemplate}"
-                          Padding="{TemplateBinding Padding}"
-                          HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                          VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
-      </Border>
+      <Panel>
+        <Border Background="{TemplateBinding Background}"
+                BorderBrush="{TemplateBinding BorderBrush}"
+                BorderThickness="{TemplateBinding BorderThickness}"
+                CornerRadius="{TemplateBinding CornerRadius}">
+          <ContentPresenter Content="{TemplateBinding Content}"
+                            ContentTemplate="{TemplateBinding ContentTemplate}"
+                            Padding="{TemplateBinding Padding}"
+                            HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                            VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
+        </Border>
+        <!-- An independent layer preserves the segment's original measurement and join. -->
+        <Border x:Name="SegmentFocus" IsHitTestVisible="False"
+                CornerRadius="{StaticResource Launcher.Radius.Full}"
+                BorderThickness="{StaticResource Launcher.Border.Thickness.Focus}"
+                BorderBrush="{StaticResource Launcher.Color.Transparent}"/>
+      </Panel>
     </ControlTemplate>
   </Styles.Resources>
 
@@ -151,9 +158,8 @@
   <Style Selector="RadioButton.segment-option:disabled">
     <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
   </Style>
-  <Style Selector="RadioButton.segment-option:focus-visible">
+  <Style Selector="RadioButton.segment-option:focus-visible /template/ Border#SegmentFocus">
     <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
-    <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
   </Style>
   <Style Selector="RadioButton.segment-option:checked materialIcons|MaterialIcon.segment-check">
     <Setter Property="IsVisible" Value="True"/>

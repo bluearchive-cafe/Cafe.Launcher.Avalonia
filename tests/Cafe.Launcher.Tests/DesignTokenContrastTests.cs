@@ -90,11 +90,11 @@ public sealed class DesignTokenContrastTests
     // Explicit exemption list (design-system spec §8): over-wallpaper chrome/banner
     // content and runtime-dynamic scheme roles are covered by rule/walkthrough, not
     // static pair assertions. M3 adds runtime on-color luminance for scheme roles.
-    // - FocusRing is accent-derived (SystemAccentColor @ 0.60); focus-indicator
-    //   visibility is reviewed per surface in the walkthrough checklist (§2).
+    // - FocusRing is opaque and falls back to OnSurface on neutral surfaces;
+    //   actual selected-row focus painting is covered by Headless rendering tests.
     // - SecondaryContainer family is written at runtime by ApplyScheme from the M3
-    //   DynamicScheme (container tone 90 / on-container tone 10 pairing); the App.axaml
-    //   values are placeholders only, so static assertions would test placeholders.
+    //   DynamicScheme, with AA-adjusted state foregrounds. MaterialSchemeGeneratorTests
+    //   covers all three state pairs; App.axaml values are placeholders only.
     private static readonly string[] ExemptedKeys =
     [
         "Launcher.Text.OnChrome",
@@ -119,7 +119,9 @@ public sealed class DesignTokenContrastTests
         "Launcher.Color.SecondaryContainer",
         "Launcher.Color.SecondaryContainer.Hover",
         "Launcher.Color.SecondaryContainer.Pressed",
-        "Launcher.Color.OnSecondaryContainer"
+        "Launcher.Color.OnSecondaryContainer",
+        "Launcher.Color.OnSecondaryContainer.Hover",
+        "Launcher.Color.OnSecondaryContainer.Pressed"
     ];
 
     /// <summary>

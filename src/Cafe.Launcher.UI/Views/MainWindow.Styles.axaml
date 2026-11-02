@@ -16,13 +16,22 @@
         <ControlTheme x:Key="Launcher.Component.ChoiceItem.Theme" TargetType="ComboBoxItem">
             <Setter Property="Template">
                 <ControlTemplate>
-                    <ContentPresenter x:Name="PART_ContentPresenter"
-                                      Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
-                                      Background="{TemplateBinding Background}" Foreground="{TemplateBinding Foreground}"
-                                      BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
-                                      CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}"
-                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                    <Panel>
+                        <ContentPresenter x:Name="PART_ContentPresenter"
+                                          Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
+                                          Background="{TemplateBinding Background}" Foreground="{TemplateBinding Foreground}"
+                                          BorderBrush="{StaticResource Launcher.Color.Transparent}" BorderThickness="{TemplateBinding BorderThickness}"
+                                          CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}"
+                                          HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                        <!-- Inset focus only touches the selected fill, so it does not need
+                             one color to contrast with both saturated and neutral surfaces. -->
+                        <Border x:Name="ChoiceFocus" IsHitTestVisible="False"
+                                Margin="{StaticResource Launcher.Border.Thickness.Focus}"
+                                BorderThickness="{StaticResource Launcher.Border.Thickness.Focus}"
+                                CornerRadius="{TemplateBinding CornerRadius}"
+                                BorderBrush="{TemplateBinding BorderBrush}"/>
+                    </Panel>
                 </ControlTemplate>
             </Setter>
         </ControlTheme>
@@ -349,12 +358,24 @@
     </Style>
     <Style Selector="ComboBoxItem:selected:pointerover">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.SecondaryContainer.Hover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnSecondaryContainer.Hover}"/>
     </Style>
     <Style Selector="ComboBoxItem:selected:pressed">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.SecondaryContainer.Pressed}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnSecondaryContainer.Pressed}"/>
     </Style>
     <Style Selector="ComboBoxItem:focus-visible, MenuItem:focus-visible">
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
+    </Style>
+    <!-- The selected surface can be much brighter/darker than its neutral popup. -->
+    <Style Selector="ComboBoxItem:selected:focus-visible">
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.OnSecondaryContainer}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:selected:pointerover:focus-visible">
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.OnSecondaryContainer.Hover}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:selected:pressed:focus-visible">
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.OnSecondaryContainer.Pressed}"/>
     </Style>
     <Style Selector="MenuItem.danger-menu-item">
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Error}"/>
@@ -1132,13 +1153,13 @@
     </Style>
     <Style Selector="ListBox.settings-navigation > ListBoxItem:selected:pointerover">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.SecondaryContainer.Hover}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnSecondaryContainer}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnSecondaryContainer.Hover}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Transparent}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
     </Style>
     <Style Selector="ListBox.settings-navigation > ListBoxItem:selected:pressed">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.SecondaryContainer.Pressed}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnSecondaryContainer}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnSecondaryContainer.Pressed}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Transparent}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
     </Style>
@@ -1165,11 +1186,11 @@
     </Style>
     <Style Selector="ListBox.settings-navigation > ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.SecondaryContainer.Hover}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnSecondaryContainer}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnSecondaryContainer.Hover}"/>
     </Style>
     <Style Selector="ListBox.settings-navigation > ListBoxItem:selected:pressed /template/ ContentPresenter#PART_ContentPresenter">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.SecondaryContainer.Pressed}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnSecondaryContainer}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnSecondaryContainer.Pressed}"/>
     </Style>
     <!-- §8: visible tokenized focus ring for navigation items (FocusAdorner is null on the list). -->
     <Style Selector="ListBox.settings-navigation > ListBoxItem:focus-visible">

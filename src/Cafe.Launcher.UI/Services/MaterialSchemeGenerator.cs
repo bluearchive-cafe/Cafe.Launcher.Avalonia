@@ -99,12 +99,17 @@ internal static class MaterialSchemeGenerator
         // M3 scheme roles.
         var secondaryContainer = MaterialColorMapper.ToAvaloniaColor(scheme.SecondaryContainer);
         var onSecondaryContainer = MaterialColorMapper.ToAvaloniaColor(scheme.OnSecondaryContainer);
+        var secondaryContainerHover = Blend(secondaryContainer, onSecondaryContainer, 0.08);
+        var secondaryContainerPressed = Blend(secondaryContainer, onSecondaryContainer, 0.16);
+        var containerFallback = MaterialColorMapper.ToAvaloniaColor(scheme.OnSurface);
         result["Launcher.Color.Secondary"] = MaterialColorMapper.ToBrush(scheme.Secondary);
         result["Launcher.Color.OnSecondary"] = MaterialColorMapper.ToBrush(scheme.OnSecondary);
         result["Launcher.Color.SecondaryContainer"] = new SolidColorBrush(secondaryContainer);
-        result["Launcher.Color.OnSecondaryContainer"] = new SolidColorBrush(onSecondaryContainer);
-        result["Launcher.Color.SecondaryContainer.Hover"] = new SolidColorBrush(Blend(secondaryContainer, onSecondaryContainer, 0.08));
-        result["Launcher.Color.SecondaryContainer.Pressed"] = new SolidColorBrush(Blend(secondaryContainer, onSecondaryContainer, 0.16));
+        result["Launcher.Color.OnSecondaryContainer"] = new SolidColorBrush(ReadableContainerForeground(onSecondaryContainer, secondaryContainer, containerFallback));
+        result["Launcher.Color.OnSecondaryContainer.Hover"] = new SolidColorBrush(ReadableContainerForeground(onSecondaryContainer, secondaryContainerHover, containerFallback));
+        result["Launcher.Color.OnSecondaryContainer.Pressed"] = new SolidColorBrush(ReadableContainerForeground(onSecondaryContainer, secondaryContainerPressed, containerFallback));
+        result["Launcher.Color.SecondaryContainer.Hover"] = new SolidColorBrush(secondaryContainerHover);
+        result["Launcher.Color.SecondaryContainer.Pressed"] = new SolidColorBrush(secondaryContainerPressed);
         result["Launcher.Color.Tertiary"] = MaterialColorMapper.ToBrush(scheme.Tertiary);
         result["Launcher.Color.OnTertiary"] = MaterialColorMapper.ToBrush(scheme.OnTertiary);
         result["Launcher.Color.TertiaryContainer"] = MaterialColorMapper.ToBrush(scheme.TertiaryContainer);
@@ -209,6 +214,26 @@ internal static class MaterialSchemeGenerator
         ("Launcher.Color.Field.Border", "#FF8290A5", "#FF7B89A0"),
         ("Launcher.Color.Button.Secondary.Background", "#FFEDF0F5", "#FF303744"),
     ];
+
+    // Keep the scheme's on-container hue wherever it meets AA. State layers can
+    // cross the threshold in Fidelity/Content; even OnSurface is insufficient for
+    // some middle-tone fills, so compare black/white as the final readable pair.
+    private static Color ReadableContainerForeground(Color preferred, Color background, Color onSurface)
+    {
+        if (CafeColorUtils.GetContrastRatio(preferred, background) >= 4.5)
+        {
+            return preferred;
+        }
+
+        if (CafeColorUtils.GetContrastRatio(onSurface, background) >= 4.5)
+        {
+            return onSurface;
+        }
+
+        return CafeColorUtils.GetContrastRatio(Colors.Black, background) > CafeColorUtils.GetContrastRatio(Colors.White, background)
+            ? Colors.Black
+            : Colors.White;
+    }
 
     private static Color Blend(Color background, Color foreground, double opacity) =>
         Color.FromRgb(

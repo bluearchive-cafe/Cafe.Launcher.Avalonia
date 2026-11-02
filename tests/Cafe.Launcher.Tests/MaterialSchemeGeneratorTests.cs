@@ -505,6 +505,38 @@ public sealed class MaterialSchemeGeneratorTests
         }
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void BuildRoleBrushes_SelectedContainerStates_PreserveTextContrast(bool isDark)
+    {
+        foreach (var variant in new[]
+                 {
+                     ThemeColorVariants.TonalSpot, ThemeColorVariants.Vibrant,
+                     ThemeColorVariants.Expressive, ThemeColorVariants.Fidelity,
+                     ThemeColorVariants.Content, ThemeColorVariants.Monochrome,
+                     ThemeColorVariants.Neutral, ThemeColorVariants.Rainbow
+                 })
+        {
+            foreach (var seed in new[] { "#2E7DF6", "#FF0000", "#00FF00", "#6750A4", "#000000", "#FFFFFF", "#FFFF00" })
+            {
+                foreach (var seedFollowing in new[] { false, true })
+                {
+                    var scheme = MaterialSchemeGenerator.CreateScheme(Color.Parse(seed), variant, isDark);
+                    var brushes = MaterialSchemeGenerator.BuildRoleBrushes(scheme, seedFollowing, isDark);
+                    foreach (var state in new[] { "", ".Hover", ".Pressed" })
+                    {
+                        var foreground = brushes[$"Launcher.Color.OnSecondaryContainer{state}"].Color;
+                        var background = brushes[$"Launcher.Color.SecondaryContainer{state}"].Color;
+                        Assert.True(ColorUtils.GetContrastRatio(foreground, background) >= 4.5,
+                            $"{variant}/{seed}/{isDark}/{seedFollowing}/{state}: selected text contrast");
+                    }
+
+                }
+            }
+        }
+    }
+
     private static string ToHex(MaterialColorUtilities.Utils.ArgbColor color)
     {
         var avalonia = MaterialColorMapper.ToAvaloniaColor(color);

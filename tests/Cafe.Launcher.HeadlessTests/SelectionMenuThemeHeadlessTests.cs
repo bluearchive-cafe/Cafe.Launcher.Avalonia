@@ -237,6 +237,37 @@ public sealed class SelectionMenuThemeHeadlessTests
         GoldenScreenshot.Compare(host.Window, "choice-popup-dark");
     }
 
+    [AvaloniaFact]
+    public void Golden_SelectedChoiceFidelityFocus_MatchesBaseline()
+    {
+        var combo = CreateChoice();
+        using var host = CreateHost(combo, dark: false, "#FF0000", ThemeColorVariants.Fidelity);
+        FocusSelectedChoice(combo, host.Window, hover: false);
+        GoldenScreenshot.Compare(host.Window, "choice-popup-fidelity-focus");
+    }
+
+    [AvaloniaFact]
+    public void Golden_SelectedChoiceFidelityHover_MatchesBaseline()
+    {
+        var combo = CreateChoice();
+        using var host = CreateHost(combo, dark: false, "#2E7DF6", ThemeColorVariants.Fidelity);
+        FocusSelectedChoice(combo, host.Window, hover: true);
+        GoldenScreenshot.Compare(host.Window, "choice-popup-fidelity-hover");
+    }
+
+    private static void FocusSelectedChoice(ComboBox combo, Window window, bool hover)
+    {
+        OpenChoice(combo);
+        var selected = Assert.IsType<ComboBoxItem>(combo.ContainerFromIndex(0));
+        Assert.IsType<ComboBoxItem>(combo.ContainerFromIndex(2)).Focus(NavigationMethod.Unspecified);
+        window.MouseMove(new Point(440, 300));
+        selected.Focus(NavigationMethod.Tab);
+        if (hover)
+        {
+            window.MouseMove(selected.TranslatePoint(new Point(20, 15), window)!.Value);
+        }
+    }
+
     private static ComboBox CreateChoice() => new()
     {
         Width = 280,
@@ -282,7 +313,7 @@ public sealed class SelectionMenuThemeHeadlessTests
     private static void AssertPaint(Window window, string role, IBrush? actual) =>
         Assert.Equal(window.FindResource(window.ActualThemeVariant, role), actual);
 
-    private static Host CreateHost(Control control, bool dark)
+    private static Host CreateHost(Control control, bool dark, string seed = "#0078D4", string schemeVariant = ThemeColorVariants.TonalSpot)
     {
         var panel = new StackPanel
         {
@@ -301,7 +332,7 @@ public sealed class SelectionMenuThemeHeadlessTests
         // 独立窗口也钉住生产调色盘，截图不依赖其他用例留在 Application 中的动态角色。
         foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
         {
-            var scheme = MaterialSchemeGenerator.CreateScheme(Color.Parse("#0078D4"), ThemeColorVariants.TonalSpot, variant == ThemeVariant.Dark);
+            var scheme = MaterialSchemeGenerator.CreateScheme(Color.Parse(seed), schemeVariant, variant == ThemeVariant.Dark);
             var palette = new ResourceDictionary();
             foreach (var role in MaterialSchemeGenerator.BuildRoleBrushes(scheme, seedFollowingNeutrals: false, isDark: variant == ThemeVariant.Dark))
             {

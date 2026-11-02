@@ -23,6 +23,7 @@
 | 组件-1101 | 2026-11-01 用户确认跨功能统一对话框、按钮、字段与状态：共享主题承载几何；次要操作统一为中性实底；标准 40 DIP、控件圆角 8 DIP、对话框圆角 16 DIP；主界面布局和业务保持现状 | §5.3、[ADR-050](adr/ADR-050-跨功能共享组件视觉基准.md)；替代此前各功能独立的按钮外观和尺寸记录 |
 | 启动-1101 | 2026-11-01 用户确认将就绪态「开始游戏」与游戏管理入口合并为原生 SplitButton：主区直接启动，右侧省略号向上展开管理菜单；统一主色与外轮廓、分区反馈，卸载单独分隔 | 仅调整就绪态操作入口；普通与仅按钮布局共用 `GameLaunchButton`，安装与进度态沿用现有布局；细节见 §5.2 |
 | 优化-1024 | 2026-10-24 用户确认保留 Material 令牌与动态色管线；精简设置页重复说明与分类副标题，空说明不占位；设置行根据实际操作宽度换行，操作组可换行；装饰线 0.5 DIP，交互边框 1 DIP、焦点环 2 DIP；Label.Sm 最小 12；减弱对话框阴影，警示保留图标/文字/背景并移除额外左边线 | 本次修订取代 ADR-005 的 11px 下限、ADR-013 的 1px 装饰线及后续相关历史视觉值；不替换 Material 设计系统，不改变主题设置、命令、持久化与模态行为 |
+| 修复-1102 | 2026-11-02 设计审查修复：选中容器三态分别校正文字前景；下拉项焦点使用对应 on-container 状态色并内缩 2 DIP；资源来源分段控件用独立胶囊焦点层保持测量稳定 | §3.4、§8；维持既有容器底色与 8%／16% 状态层，补齐动态矩阵和实际模板回归 |
 | Q1 | 动因 = 系统化 + 视觉现代化 + 一致性 | 体系先行，观感随后 |
 | Q2 | 分阶段：P1 token 体系 → P2 组件 → P3 表面 | 见 §10 |
 | Q3 | 范围 = 全部表面分批：第一批主壳/设置/对话框/Toast/向导；第二批诊断/日志**仅 token 兼容**；资源面板后由 [ADR-041](adr/ADR-041-资源面板MD3结构级重设计.md) 补做结构级重设计 | 排障界面不做视觉重设计 |
@@ -96,6 +97,7 @@
 
 - **角色集**：primary/secondary/tertiary + 各自 `On*`/`*Container`/`On*Container`（`PrimaryContainer`/`OnPrimaryContainer` 于 2026-08-26 补齐，占位+运行时覆盖）；surface 族（Surface/SurfaceVariant/Container 档）、outline 族、error 族（映射现有 Danger/DangerSoft/危险图标底）；业务色 Success/Warning/Info（Toast 等，不参与动态色）。**落地范围声明**：`SurfaceVariant`/`OutlineVariant` 由业务 token 承担（hairline 用 `Color.Card.Border`，ADR-013 M3 修正 2）；可见实心表面 = 对话框覆盖层的**对话框表面族** `Dialog.Background/Header/Footer/Close.Hover/Close.Pressed`（品牌蓝调时五键恒复位为声明默认值，种子跟随时整套随 scheme 中性表面梯度染色——Background/Header/Footer=`SurfaceContainerHigh`，Close.Hover/Pressed 为 `OnSurface` 的预混状态层；2026-08-28 由仅 `Dialog.Background` 扩展为全族并防残留——Q13/Q23 两决策合流）；`Surface/OnSurface/Outline` 保留为语义角色（`Outline` 由 `dialog-card` 的 0.5 DIP hairline 消费；`Surface/OnSurface` 为未来表面预留）。
 - **on-color 按亮度计算**（P1 必修）：`Launcher.Color.OnPrimary` 不硬编码白；按背景色相对亮度选黑/白（浅种子时用深 on-color），写入 `ColorUtils` 并测试锁定。
+- **选中容器三态前景**：`OnSecondaryContainer`、`.Hover`、`.Pressed` 分别与 `SecondaryContainer` 同状态配对。保留方案原前景；若该状态不足 4.5:1，先回退同方案 `OnSurface`，仍不足时选对比度更高的纯黑／白。背景继续按方案原前景预混 8%／16%，避免修复文字时改变状态层强度；每次主题／策略切换重建全部配对。
 - **实现**：`ApplyAccentBrushes`（`Features/Settings/SettingsAppearanceViewModel.cs`）演进为 `ApplyScheme`（输入 seed/variant/theme/neutralStrategy → 覆盖 brush 组）；`ThemeColorExtractionService`（Octree）与新算法共存；`ColorUtils`（`Helpers/ColorUtils.cs`）承载归一化与 on-color 计算。非壁纸模式（系统/自定义/默认色）产出与现状一致或改善。
 - **M3 落地记录（已实现并测试锁定）**：`ApplyScheme` 已替换 `ApplyAccentBrushes`；转换层 = `Helpers/MaterialColorMapper.cs`（ArgbColor↔Avalonia Color/Brush），scheme 生成 = `Services/MaterialSchemeGenerator.cs`（8 变体 × Spec2021 × Platform.Phone；`BuildRoleBrushes` 保留既有 accent 族覆盖子集并新增 Secondary/Tertiary/容器角色键）。**行为变更**：① `Launcher.Color.Info` 不再跟随 accent（业务色固定，spec §3.4）；② accent 由"归一化种子"变为"scheme Primary（tone 40/80）"——非壁纸模式亦经统一管线，存在 M0 记录的小幅色相/彩度随动（±1 tone，ΔE≈15）；③ 主题模式切换时经 `ApplyTheme` 按实际明暗重放 scheme（`ActualThemeVariant`），System 模式随系统变体；④ 新角色键（Secondary/Tertiary/容器/Surface/Outline）在 App.axaml 中以占位值声明、运行时覆盖（§3.3）。
 - **HCT 管线**：`Shirasagi0012.MaterialColorUtilities`（NuGet 直用）；ArgbColor↔Avalonia `Color` 映射封装；±1 tone 漂移以包内上游单测 + 参考值断言为护栏。
@@ -236,7 +238,7 @@
 
   `Danger.Pressed` 保留 `#C9353A`（白标签 5.18；其填充态消费由标签对覆盖，不做表面图标对）。全部为同色相单阶加深/提亮，未改视觉意图；UI ≥3:1 额外覆盖 Danger×Card/Dialog 与 Toast 严重性四色。
 - **豁免区（显式声明 + 测试用例列出）**：自绘标题栏文字、标题栏按钮（chrome 态）、右侧社交列、底栏渐变/scrim 上的 `on-dark` 文字——豁免前提是叠加 scrim（现有 `LauncherTitleBarGradient` + 新增 `Color.Overlay.Scrim*` token，最小 scrim 语义：保证该区文字与当前壁纸任意色对比度可读，豁免在走查清单中逐项复核）。
-- 键盘：全表面 Tab 序、可见焦点环（`Button:focus-visible` 等既有规则随重命名迁移）、覆盖层焦点陷阱（`OverlayFocusBehavior` 保留）。`wizard-option`（ADR-017）与设置导航/更新文件列表同样接入 token 焦点环（审计-0828 补全）；**动态焦点环单独验证**：`FocusRing` 使用不透明强调色，在对话框/输入表面不足 3:1 时回退到同一 M3 方案的 `OnSurface`；实心主操作/启动按钮的内部焦点描边使用 `OnPrimary`，危险按钮使用 `OnError`，避免描边融入同色填充。选中设置导航使用 `OnSecondaryContainer`，避免 Fidelity 亮容器与中性表面无法共用单一焦点色。`MaterialSchemeGeneratorTests` 覆盖 8 变体、7 种种子、双主题、双中性策略及状态背景；壁纸与实际键盘路径仍须人工走查。**ESC 语义**：ESC 始终作用于模态栈顶层，焦点在搜索框等可编辑控件内也不改变路由；需要保留未提交改动的表面把确认接在关闭命令上（设置页脏态），既不吞 ESC 也不静默丢弃。
+- 键盘：全表面 Tab 序、可见焦点环（`Button:focus-visible` 等既有规则随重命名迁移）、覆盖层焦点陷阱（`OverlayFocusBehavior` 保留）。`wizard-option`（ADR-017）与设置导航/更新文件列表同样接入 token 焦点环（审计-0828 补全）；**动态焦点环单独验证**：`FocusRing` 使用不透明强调色，在对话框/输入表面不足 3:1 时回退到同一 M3 方案的 `OnSurface`；实心主操作/启动按钮的内部焦点描边使用 `OnPrimary`，危险按钮使用 `OnError`，避免描边融入同色填充。选中下拉项使用对应状态的 `OnSecondaryContainer` 前景绘制焦点；独立 2 DIP 描边向内缩 2 DIP，仅邻接容器填充，避免强迫单一颜色同时对比饱和容器与中性弹窗。设置导航保留 Fluent 模板焦点绘制，验收检查实际模板而非只读取控件根画刷。资源面板的来源分段控件以独立胶囊焦点层绘制，不参与内容测量；四语言、亮暗主题及 100%／150%／200% 文字下取焦不改变段宽、相邻位置或选择值。`MaterialSchemeGeneratorTests` 覆盖 8 变体、7 种种子、双主题、双中性策略及状态背景；壁纸与实际键盘路径仍须人工走查。**ESC 语义**：ESC 始终作用于模态栈顶层，焦点在搜索框等可编辑控件内也不改变路由；需要保留未提交改动的表面把确认接在关闭命令上（设置页脏态），既不吞 ESC 也不静默丢弃。
 - 动效：保留 System 默认值、完整动效与降动效语义，以及可中断的向导步骤过渡。
 - 内容自适应：共享设置行按操作实际宽度为说明预留空间，不足时改为上下排列，保持控件实例/焦点/选中值；空说明折叠，提示文本为空或被 `IsHintVisible` 关闭时同样折叠（设置提示无需再显式开启）。对话框文本按钮使用 `MinHeight`，设置操作组、首页安装/控制状态和下载进度元数据可换行。无头测试覆盖四语言、1300×754 / 1024×640、亮暗主题与 100%/125%/150% 文字放大。测试直接放大控件文字，不等价于 OS 文字大小偏好已自动接线，也不覆盖物理 DPI 的全部渲染差异。
 
@@ -251,7 +253,7 @@
 
 - **每阶段门禁**：`UiStyleContractTests` 全绿（含新契约）+ 新增测试全绿 + 编译零警告 + `scripts/Test-LocalizationContract.ps1`（涉及新字符串时）+ `.\verify.ps1`；PR 附截图（可见 UI 变更）。
 - **契约测试扩展点**：token 存在性/旧键清零、禁裸色值与 `{StaticResource}` 规则、AA 对比度、覆盖层 Z 序（既有）。
-- **headless 黄金截图**：已接线（`UseHeadlessDrawing=false` + `UseSkia()` + `RenderTargetBitmap`），25 个基线（7 类基础表面、5 个卸载状态、2 个缩放设置面、3 个就绪态分体按钮/菜单、更新/错误/设置向导 3 个对话框表面、3 个外观设置状态和 2 个下拉列表明暗表面）平铺存储于 `tests/Cafe.Launcher.HeadlessTests/Baselines/`，阈值 diff（每通道容差 8/255、失配 ≤1%）、`CAFE_GOLDEN_UPDATE=1` 重新生成；字体稳定性：常规基线固定英文/降动效/Segoe UI；扩展基线显式固定语言、主题与文字倍率，CI（windows-latest）字体集合风险已在 README 记录，漂移时优先重生成基线。P3 视需要扩大。
+- **headless 黄金截图**：已接线（`UseHeadlessDrawing=false` + `UseSkia()` + `RenderTargetBitmap`），27 个基线（7 类基础表面、5 个卸载状态、2 个缩放设置面、3 个就绪态分体按钮/菜单、更新/错误/设置向导 3 个对话框表面、3 个外观设置状态和 4 个下拉列表表面（亮／暗、Fidelity 焦点与悬停））平铺存储于 `tests/Cafe.Launcher.HeadlessTests/Baselines/`，阈值 diff（每通道容差 8/255、失配 ≤1%）、`CAFE_GOLDEN_UPDATE=1` 重新生成；字体稳定性：常规基线固定英文/降动效/Segoe UI；扩展基线显式固定语言、主题与文字倍率，CI（windows-latest）字体集合风险已在 README 记录，漂移时优先重生成基线。P3 视需要扩大。
 - **走查清单**：已落地于 [`design-walkthrough-checklist.md`](./design-walkthrough-checklist.md)（状态矩阵 + §8 豁免区逐项 + P3 表面逐项），P3 每表面完成时人工复核；随本规范共同维护。
 
 ## 11. 有意搁置（Don't-do 清单）

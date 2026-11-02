@@ -302,6 +302,8 @@
             <SolidColorBrush x:Key="Launcher.Color.OnSecondary" Color="#FFFFFFFF"/>
             <SolidColorBrush x:Key="Launcher.Color.SecondaryContainer" Color="#FFE8DEF8"/>
             <SolidColorBrush x:Key="Launcher.Color.OnSecondaryContainer" Color="#FF1D192B"/>
+            <SolidColorBrush x:Key="Launcher.Color.OnSecondaryContainer.Hover" Color="#FF1D192B"/>
+            <SolidColorBrush x:Key="Launcher.Color.OnSecondaryContainer.Pressed" Color="#FF1D192B"/>
             <SolidColorBrush x:Key="Launcher.Color.SecondaryContainer.Hover" Color="#FFD8CEE8"/>
             <SolidColorBrush x:Key="Launcher.Color.SecondaryContainer.Pressed" Color="#FFC8BED7"/>
             <SolidColorBrush x:Key="Launcher.Color.Tertiary" Color="#FF7D5260"/>
