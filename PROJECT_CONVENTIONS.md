@@ -1,6 +1,14 @@
 # 开发规范
 
-本文件维护实现规则。环境、命令与交付流程见[开发指南](docs/DEVELOPMENT.md)，领域行为见 [CONTEXT.md](CONTEXT.md)，界面译名见 [UBIQUITOUS_LANGUAGE.md](UBIQUITOUS_LANGUAGE.md)，代理入口见 [AGENTS.md](AGENTS.md)。
+本文件定义代码修改必须遵循的实现规则。先按任务阅读相关章节，再核对受影响代码与契约测试。环境、命令与交付流程见[开发指南](docs/DEVELOPMENT.md)，产品行为见[领域契约](CONTEXT.md)，界面译名见[术语表](UBIQUITOUS_LANGUAGE.md)，其他入口见[文档导航](docs/README.md)。
+
+| 修改内容 | 重点章节 |
+| --- | --- |
+| 工程、命名空间、依赖与服务释放 | §2、§7 |
+| XAML、控件、主题与输入行为 | §4 |
+| 日志、用户文案与翻译 | §5、§6 |
+| 测试、设置、路径、网络与异步 | §8–§10 |
+| 文件格式、文档、SDK 与依赖版本 | §11、§12 |
 
 ## 1. 基本原则
 
@@ -153,7 +161,7 @@
 ## 11. 文件与文档
 
 - C# 使用 UTF-8/CRLF；`.editorconfig` 声明的 XAML、工程/props/targets、YAML、JSON、Markdown、PowerShell 使用 UTF-8/LF，`coverage.ps1` 保留其 UTF-8 BOM 例外。`native/libmpv/COPYING*` 固定使用 LF，以保证跨平台发布校验的文件字节一致。`.editorconfig` 与 `.gitattributes` 必须一致。
-- 文档分工、维护与链接检查见[开发指南「文档职责」](docs/DEVELOPMENT.md#文档职责)。审计发现只维护在 [CODEBASE_AUDIT.md](CODEBASE_AUDIT.md)。
+- 文档按[开发指南「文档职责」](docs/DEVELOPMENT.md#文档职责)维护：现行规则更新所属来源，其他入口引用；中英文用户文档同步到配套文档站，保留旧链接与章节锚点。历史计划与研究记录保留事实时间。审计发现只维护在 [CODEBASE_AUDIT.md](CODEBASE_AUDIT.md)。
 
 ## 12. 工具链与依赖
 

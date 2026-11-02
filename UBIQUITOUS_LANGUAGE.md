@@ -1,6 +1,6 @@
-# Ubiquitous Language
+# 界面术语与翻译 / Ubiquitous Language
 
-界面与文案的规范术语、四语言译法和翻译规则。领域概念见 [CONTEXT.md](CONTEXT.md)，工程结构见[开发规范](PROJECT_CONVENTIONS.md)。
+本表用于界面、发布说明与中英文用户文档，统一概念与译名。先确定所指概念，再使用对应语言的规范名称；动态服务器文案保留原文。领域行为与状态约束见 [CONTEXT.md](CONTEXT.md)，资源键与生成命令见[开发规范 §6](PROJECT_CONVENTIONS.md#6-本地化)。
 
 ## Launcher and game files
 
@@ -20,7 +20,9 @@
 | **Official download source** | The download source operated for the official launcher. | Official line |
 | **Cafe download source** | The download source operated by BlueArchive.Cafe. | Cafe line |
 | **Resource Panel** | The launcher interface for managing localized game resources for a UID. | Resource Control Panel |
-| **Localized resources** | Game text, voice, image, and video resources managed through the Resource Panel. | Translation files |
+| **Chinese-localized resources** | Game text, main-story Chinese voice, and image/video resources selected for a UID through the Resource Panel. | Localized resources, translation files |
+| **Localization UID** | The eight-uppercase-letter identifier used for Cafe resource preferences. It is distinct from the numeric in-game account UID. | Account ID, numeric UID |
+| **Resource preferences** | The resource switches stored on the Cafe service for a localization UID. | Local resource edits, local patch settings |
 
 ## Launcher updates
 
@@ -49,7 +51,7 @@
 | Official download source | 官方下载源 | 官方下載來源 | 公式ダウンロードソース |
 | Remote | 远程 | 遠端 | リモート |
 | Resource Panel | 资源面板 | 資源面板 | リソースパネル |
-| Localized resources | 汉化资源 | 中文化資源 | 中国語化リソース |
+| Chinese-localized resources | 汉化资源 | 中文化資源 | 中国語化リソース |
 | Banner | 横幅 | 橫幅 | バナー |
 | Fatal | 致命 | 致命 | 致命的 |
 | Update channel | 更新通道 | 更新頻道 | 更新チャンネル |
@@ -91,7 +93,7 @@
 
 - A **game installation** has one local **manifest**; a **download source** supplies remote manifests and patch files.
 - **Launch verification** checks an installation before launch; **repair** restores it against the selected download source.
-- The **Resource Panel** manages **localized resources** when the **Cafe download source** is selected.
+- The **Resource Panel** manages **Chinese-localized resources** when the **Cafe download source** is selected. UID selection is saved locally; resource preferences are stored by the service and do not directly rewrite game files.
 - An **update channel** decides which launcher releases are offered. A **launcher self-update** installs one only after verifying it against the release checksum manifest; otherwise the state is **in-app update unavailable** and the exit is **Open Release Page**.
 - The stable channel (“稳定版”) and the 正式版 label on download badges name the same release track; keep each label where it ships.
 - The game **session status** line (starting/running/exited) is separate from **launch verification**.

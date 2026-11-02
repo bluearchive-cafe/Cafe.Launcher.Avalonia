@@ -3,11 +3,12 @@
 .NET 10 / Avalonia 12 desktop launcher for Blue Archive (JP). Windows is supported;
 macOS and Linux are experimental.
 
-## Before editing
+## Start here
 
 Read [PROJECT_CONVENTIONS.md](PROJECT_CONVENTIONS.md) for implementation rules and
 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for commands, validation, dependencies and releases.
-These are the authoritative references; this file routes work to them.
+These are the authoritative references; this file routes work to them. Use the
+[documentation index](docs/README.md) to find user guides and historical evidence.
 
 | Task | Read before making changes |
 | --- | --- |
@@ -19,6 +20,7 @@ These are the authoritative references; this file routes work to them.
 | Dependencies, packaging, CI or release | [Development guide](docs/DEVELOPMENT.md) and [toolchain table](PROJECT_CONVENTIONS.md#12-工具链与依赖) |
 | Audit or accepted risks | [CODEBASE_AUDIT.md](CODEBASE_AUDIT.md), the only audit ledger |
 | Changing an established decision | [ADR index](docs/design/adr/README.md) and the relevant decision |
+| Documentation or user instructions | [Documentation ownership](docs/DEVELOPMENT.md#文档职责); inspect current code before describing behavior, and update both languages in the companion user-docs repository |
 
 ## Working loop
 
@@ -27,8 +29,15 @@ These are the authoritative references; this file routes work to them.
    regression tests for behavior changes; use the repository's shared test facilities.
 3. Run the affected checks from the development guide. Run `pwsh ./verify.ps1` before
    requesting review; report what passed and any verification limits.
-4. Update each affected authoritative document in the same change. Update this router
-   when architecture or developer workflow changes its entry points.
+4. Update affected authoritative documents in the same change. For user-visible
+   behavior, also update `docs/cafe-launcher/` and `docs/en/cafe-launcher/` in the
+   companion `cafe-docs` workspace, retaining existing anchors and the legacy
+   `user-guide.md` entry. Validate that repository with `npm ci` and
+   `npm run docs:build`. Update this router when workflow entry points change.
+
+Keep historical ADR and research evidence dated. Generated third-party notices,
+release notes and the audit ledger follow their own maintenance workflows in the
+development guide; a prose rewrite does not establish a new audit conclusion.
 
 Use PowerShell 7 (`pwsh`) for repository scripts, including when invoked from Bash.
 Tests use Microsoft.Testing.Platform; prefer `test.ps1` so its five-minute hang guard stays
