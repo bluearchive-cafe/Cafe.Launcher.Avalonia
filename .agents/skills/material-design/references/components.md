@@ -29,13 +29,13 @@ requires_current_verification: true
 - [Tabs](#tabs)
 - [Menus](#menus)
 - [Tooltips](#tooltips)
-- [Banners](#banners)
+- [Banners](#banners-legacy--implementation-dependent)
 - [Dividers](#dividers)
 - [Badges](#badges)
 - [Carousel](#carousel)
 - [Date & Time Pickers](#date--time-pickers)
 - [Search](#search)
-- [M3 Expressive new components](#m3-expressive-new-components)
+- [M3 Expressive component updates](#m3-expressive-component-updates)
 - [Component state checklist](#component-state-checklist)
 
 ---
@@ -105,10 +105,15 @@ platform defaults; preserve a visible focus indicator on keyboard-capable platfo
 
 | Variant | Description |
 |---------|-------------|
-| **FAB** | Circular, icon only |
-| **Small FAB** | Compact circular |
-| **Large FAB** | Oversized, icon or icon+label |
-| **Extended FAB** | Icon + label, rectangular with full rounding |
+| **FAB** | Icon-only rounded square in baseline M3 |
+| **Small FAB** | Smaller icon-only rounded square in baseline M3 |
+| **Large FAB** | Larger icon-only rounded square in baseline M3 |
+| **Extended FAB** | Text label with optional icon; uses its component shape default |
+
+M2 commonly used circular FABs and pill-shaped Extended FABs. For M3 Expressive,
+check the available size, shape, and Extended FAB variants in the target library.
+A custom circular shape is valid when deliberately chosen; it is not the baseline
+M3 default. See the [official FAB guide](https://developer.android.com/develop/ui/compose/components/fab).
 
 ### FAB usage rules
 

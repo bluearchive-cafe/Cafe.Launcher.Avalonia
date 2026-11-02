@@ -1,7 +1,7 @@
 ---
 last_verified: 2026-08-26
 scope: "Material Design 3 color system, tonal palettes, dark theme, dynamic color"
-requires_current_verification: false
+requires_current_verification: true
 ---
 
 # Material Design 3 — Color System Deep Dive
@@ -12,7 +12,7 @@ requires_current_verification: false
 - [Color role assignment](#color-role-assignment)
 - [Light theme mapping](#light-theme-mapping)
 - [Dark theme mapping](#dark-theme-mapping)
-- [Dynamic color (Material You)](#dynamic-color)
+- [Dynamic color (Material You)](#dynamic-color-material-you)
 - [Contrast requirements](#contrast-requirements)
 - [High-contrast mode](#high-contrast-mode)
 - [Brand color strategy](#brand-color-strategy)
@@ -23,7 +23,8 @@ requires_current_verification: false
 ## Tonal palette generation
 
 M3 generates a tonal palette from a seed color using the HCT (Hue-Chroma-Tone) color
-space. The palette spans 13 tones (0–100) for each key color.
+space. A tonal palette can provide colors at requested tones from 0–100. Traditional
+exports often sample 13 tone stops; that export convention does not limit the palette API.
 
 ### Key colors and their roles
 
@@ -46,10 +47,17 @@ library:
 import { Hct, TonalPalette } from '@material/material-color-utilities';
 
 const seed = Hct.fromInt(0xFF6750A4); // #6750A4
-const primaryPalette = TonalPalette.of(seed.hue, seed.chroma);
-primaryPalette.get(40);  // Primary tone 40
-primaryPalette.get(90);  // Primary tone 90
+const primaryPalette = TonalPalette.fromHueAndChroma(seed.hue, seed.chroma);
+primaryPalette.tone(40);  // Primary tone 40, returned as an ARGB integer
+primaryPalette.tone(90);  // Primary tone 90
 ```
+
+These are JavaScript/TypeScript APIs; other language ports can use different method
+names. Verify the installed package against the [official TypeScript implementation](https://github.com/material-foundation/material-color-utilities/blob/main/typescript/palettes/tonal_palette.ts).
+For a Node script, also smoke-test the package entrypoint in that Node version. A web
+bundler can resolve imports that native Node ESM rejects; an entrypoint-loading failure
+and a missing palette method require different diagnoses. Record the package/runtime
+used when claiming that an example runs.
 
 ### Tone usage pattern
 

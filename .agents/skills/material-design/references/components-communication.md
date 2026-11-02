@@ -110,7 +110,7 @@ Sources:
 - Repeating persistent information that belongs inline in the page.
 
 Sources:
-- https://developer.android.com/reference/kotlin/androidx/compose/material3/Snackbar
+- https://developer.android.com/reference/kotlin/androidx/compose/material3/Snackbar.composable
 - https://m2.material.io/components/snackbars
 
 ---

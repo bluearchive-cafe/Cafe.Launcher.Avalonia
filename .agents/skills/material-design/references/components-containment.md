@@ -48,7 +48,7 @@ also treats patterns such as tooltips and sheets as containment surfaces.
 - Flipping a card to reveal content when expansion/navigation would be clearer.
 
 Sources:
-- https://developer.android.com/reference/kotlin/androidx/compose/material3/Card
+- https://developer.android.com/reference/kotlin/androidx/compose/material3/Card.composable
 - https://m2.material.io/components/cards
 
 ---
@@ -85,7 +85,7 @@ needs focused attention.
 - A dialog containing a long document or complex navigation tree.
 
 Sources:
-- https://developer.android.com/reference/kotlin/androidx/compose/material3/AlertDialog
+- https://developer.android.com/reference/kotlin/androidx/compose/material3/AlertDialog.composable
 - https://m2.material.io/components/dialogs
 
 ---
@@ -124,7 +124,7 @@ The exact API is an implementation detail; preserve the interaction job rather t
 only a class-name replacement.
 
 Sources:
-- https://developer.android.com/reference/kotlin/androidx/compose/material3/ModalBottomSheet
+- https://developer.android.com/reference/kotlin/androidx/compose/material3/ModalBottomSheet.composable
 - https://m2.material.io/components/sheets-bottom
 
 ---
@@ -243,7 +243,7 @@ sets.
 Sources:
 - https://m2.material.io/components/lists
 - https://m2.material.io/components/dividers
-- https://developer.android.com/reference/kotlin/androidx/compose/material3/ListItem
+- https://developer.android.com/reference/kotlin/androidx/compose/material3/ListItem.composable
 
 ---
 
