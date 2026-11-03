@@ -7,7 +7,7 @@ using Cafe.Launcher.Testing;
 namespace Cafe.Launcher.Tests;
 
 /// <summary>
-/// WCAG AA contrast contract for design-token pairs (design-system spec §8, Q9/Q19).
+/// WCAG AA contrast contract for design-token pairs (design-system spec §7, Q9/Q19).
 /// Pairs are driven by a declarative list; the exemption list is explicit and
 /// asserted to stay in sync with the token set. Light/Dark theme values come from
 /// App.axaml ThemeDictionaries; translucent tokens are composited over the nominal
@@ -73,7 +73,7 @@ public sealed class DesignTokenContrastTests
     ];
 
     // Non-text/UI pairs: WCAG AA >= 3:1 (progress, icons, severity indicators, borders).
-    // Danger fills are consumed by the exempt chrome-close (Text.OnChrome, spec §8) and
+    // Danger fills are consumed by the exempt chrome-close (Text.OnChrome, spec §7) and
     // by the error-filled danger-action (OnError/Error label pairs above); the static
     // white-on-danger guard lives in OnPrimaryContrastRule_WhiteOnDangerFillsMeetsAa...
     private static readonly TokenPair[] UiPairs =
@@ -87,7 +87,7 @@ public sealed class DesignTokenContrastTests
         new("field border on light/dark field", "Launcher.Color.Field.Border", "Launcher.Color.Field.Background", 3.0)
     ];
 
-    // Explicit exemption list (design-system spec §8): over-wallpaper chrome/banner
+    // Explicit exemption list (design-system spec §7): over-wallpaper chrome/banner
     // content and runtime-dynamic scheme roles are covered by rule/walkthrough, not
     // static pair assertions. M3 adds runtime on-color luminance for scheme roles.
     // - FocusRing is opaque and falls back to OnSurface on neutral surfaces;

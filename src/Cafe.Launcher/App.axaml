@@ -297,7 +297,7 @@
             </LinearGradientBrush>
             <SolidColorBrush x:Key="Launcher.Color.Media.Placeholder" Color="#FF2A3A5C"/>
             <SolidColorBrush x:Key="Launcher.Text.Media.Placeholder" Color="#99FFFFFF"/>
-            <!-- M3 scheme 角色占位/回退值（运行时由 ApplyScheme 经 DynamicScheme 覆盖；spec §3.3：声明值仅为占位） -->
+            <!-- M3 scheme 角色占位/回退值（运行时由 ApplyScheme 经 DynamicScheme 覆盖；spec §2.3：声明值仅为占位） -->
             <SolidColorBrush x:Key="Launcher.Color.Secondary" Color="#FF625B71"/>
             <SolidColorBrush x:Key="Launcher.Color.OnSecondary" Color="#FFFFFFFF"/>
             <SolidColorBrush x:Key="Launcher.Color.SecondaryContainer" Color="#FFE8DEF8"/>

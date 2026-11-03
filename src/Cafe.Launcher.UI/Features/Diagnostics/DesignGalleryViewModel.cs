@@ -11,7 +11,7 @@ using CommunityToolkit.Mvvm.Input;
 namespace Cafe.Launcher.UI.Features.Diagnostics;
 
 /// <summary>
-/// Debug-only design gallery (spec §9 Q11): enumerates the live
+/// Debug-only design gallery (spec §8 Q11): enumerates the live
 /// <c>/Application.Resources</c> token dictionary and groups it by family using
 /// <see cref="DesignTokenGrouping"/>, so the gallery never drifts from the token
 /// set. Visibility is gated like the debug panel (Debug builds only).

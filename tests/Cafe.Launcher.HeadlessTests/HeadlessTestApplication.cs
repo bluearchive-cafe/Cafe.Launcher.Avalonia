@@ -14,7 +14,7 @@ public static class HeadlessTestAppBuilder
             .UseHeadless(new AvaloniaHeadlessPlatformOptions
             {
                 // M5: golden screenshots need real rendering (Skia) to capture
-                // pixel-accurate baselines (spec §10).
+                // pixel-accurate baselines (spec §9).
                 UseHeadlessDrawing = false
             })
             .UseSkia();

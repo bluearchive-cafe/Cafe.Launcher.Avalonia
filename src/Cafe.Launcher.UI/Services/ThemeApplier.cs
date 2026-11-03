@@ -80,7 +80,7 @@ internal sealed class ThemeApplier : IDisposable
 
     /// <summary>
     /// Applies the M3 dynamic scheme derived from <paramref name="seed"/> onto the
-    /// <c>Launcher.Color.*</c> brush keys (spec §3.4). Replaces the pre-M3
+    /// <c>Launcher.Color.*</c> brush keys (spec §2.4). Replaces the pre-M3
     /// <c>ApplyAccentBrushes</c>; the previous accent-family override remains a
     /// subset of <see cref="Services.MaterialSchemeGenerator.BuildRoleBrushes"/>.
     /// </summary>

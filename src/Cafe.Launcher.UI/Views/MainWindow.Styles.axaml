@@ -587,7 +587,7 @@
         <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
     </Style>
     <!-- carousel 箭头压在壁纸上，状态反馈走 chrome 态（与 banner-link 同配方）；
-         图标前景保持 OnChrome 豁免（spec §8），反馈由背景状态层承担。 -->
+         图标前景保持 OnChrome 豁免（spec §7），反馈由背景状态层承担。 -->
     <Style Selector="Button.icon-button.carousel-navigation:pointerover">
         <Setter Property="Background" Value="{StaticResource Launcher.Color.Chrome.Hover}"/>
     </Style>

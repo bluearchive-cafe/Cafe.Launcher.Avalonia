@@ -9,7 +9,7 @@ using Avalonia.Threading;
 namespace Cafe.Launcher.HeadlessTests;
 
 /// <summary>
-/// Golden-screenshot capture and comparison (design-system spec §10, P1 plan M5).
+/// Golden-screenshot capture and comparison (design-system spec §9, P1 plan M5).
 ///
 /// Font stability: the app state is fixed for capture (English language, motion
 /// reduced, window font forced to Segoe UI), but CI (windows-latest) and local

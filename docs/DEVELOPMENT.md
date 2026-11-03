@@ -1,6 +1,6 @@
 # 开发指南
 
-本指南说明如何准备环境、运行验证并交付 Cafe Launcher。实现约束见 [PROJECT_CONVENTIONS.md](../PROJECT_CONVENTIONS.md)，产品行为见 [CONTEXT.md](../CONTEXT.md)，全部入口见[文档导航](README.md)。
+本指南说明如何准备环境、运行验证并交付 Cafe Launcher。实现约束见 [PROJECT_CONVENTIONS.md](../PROJECT_CONVENTIONS.md)，产品行为见 [CONTEXT.md](../CONTEXT.md)，全部文档入口见[文档导航](README.md)。
 
 ## 环境与启动
 
@@ -21,7 +21,7 @@ dotnet run --project ./src/Cafe.Launcher/Cafe.Launcher.csproj
 dotnet build ./src/Cafe.Launcher.Updater/Cafe.Launcher.Updater.csproj
 ```
 
-Windows x64 首次构建还需要 curl 与 7-Zip，具体见下方视频运行库说明。
+Windows x64 首次构建还需要 curl 与 7-Zip，见下方[视频背景运行库与专项验证](#视频背景运行库与专项验证)。
 
 ## 命令与验证
 
@@ -32,6 +32,21 @@ pwsh ./verify.ps1
 ```
 
 验证顺序为：本地化契约 → Debug 构建 → 两套测试与覆盖率 → 当前平台 RID 还原及 Release 构建 → Release 资源契约。成功构建必须零警告；交付时记录通过项、失败项和未覆盖的平台或场景。
+
+### 按改动类型选择检查
+
+| 改动 | 先运行 |
+| --- | --- |
+| XAML、样式或控件模板 | `UiStyleContractTests`；较大 UI 改动运行 `pwsh ./dev.ps1 ui` |
+| 有意改变视觉 | `pwsh ./test.ps1 -UpdateGolden`，审阅并提交 `tests/Cafe.Launcher.HeadlessTests/Baselines/` 中的 PNG |
+| 资源键、占位符或翻译 | `pwsh ./scripts/Test-LocalizationContract.ps1`，并按[规范 §6](../PROJECT_CONVENTIONS.md#6-本地化)重新生成键 |
+| 依赖版本或锁文件 | 按[依赖与 CI](#依赖与-ci)执行，并运行 `InstallerContractTests` |
+| 独立更新助手 | `dotnet build ./src/Cafe.Launcher.Updater/Cafe.Launcher.Updater.csproj` |
+| 播放器生命周期 | 按[视频背景运行库与专项验证](#视频背景运行库与专项验证)执行生产场景复测 |
+| 其他行为变更 | `pwsh ./test.ps1 -Suite Unit -FilterClass '*<Target>Tests'` 等聚焦检查 |
+| 交付前 | `pwsh ./verify.ps1` |
+
+### 常用命令
 
 | 目的 | 命令 |
 | --- | --- |
@@ -51,7 +66,7 @@ pwsh ./verify.ps1
 
 覆盖率同时守住 line/branch 至少 50% 的底线与 `coverage.ps1` 中的较高基线；具体阈值以脚本为准。测试设施见[规范 §8](../PROJECT_CONVENTIONS.md#8-测试)。
 
-XAML 或样式变更先运行 `UiStyleContractTests`，较大 UI 改动运行 `dev.ps1 ui`。只有有意改变视觉时才使用 `-UpdateGolden`，并审阅、提交 [Baselines](../tests/Cafe.Launcher.HeadlessTests/Baselines/) 中的 PNG；该参数不能与筛选或 `-Suite Unit` 混用。Headless 和黄金截图在 Windows 验证，Linux CI 只运行 Unit。`dotnet format` 按需用于本次触及的文件，不是 CI 门禁。
+XAML 或样式变更先运行 `UiStyleContractTests`，较大 UI 改动运行 `dev.ps1 ui`。只有有意改变视觉时才使用 `-UpdateGolden`；该参数不能与筛选或 `-Suite Unit` 混用。Headless 和黄金截图在 Windows 验证，Linux CI 只运行 Unit。`dotnet format` 按需用于本次触及的文件，不是 CI 门禁。
 
 ## 视频背景运行库与专项验证
 
@@ -118,10 +133,12 @@ fix(settings): 修复切换语言后法律信息不显示
 | [PROJECT_CONVENTIONS.md](../PROJECT_CONVENTIONS.md) | 实现边界与编码、本地化、DI、持久化及测试规范 |
 | [CONTEXT.md](../CONTEXT.md) | 领域概念和必须保持的行为契约 |
 | [UBIQUITOUS_LANGUAGE.md](../UBIQUITOUS_LANGUAGE.md) | 界面术语、四语言译名和翻译规则 |
-| [设计规范](design/design-system-spec.md) | 现行设计规格及后续修订入口 |
+| [设计规范](design/design-system-spec.md) | 现行设计规格、实施现状及决策记录 |
+| [设计资料索引](design/README.md) | 现行规范、待执行计划与归档记录的入口和状态 |
 | [ADR 索引](design/adr/README.md) | 决策与替代关系；正文保留当时背景 |
 | [CODEBASE_AUDIT.md](../CODEBASE_AUDIT.md) | 当前审计发现、已接受风险及其维护规则 |
-| [design/](design/) 与 [research/](research/) 中的计划和研究 | 当时的方案、证据与验证边界，实施前核对后续变更 |
+| [研究记录索引](research/README.md) | 调查、选型与比对记录的主题和结论时点 |
+| [原型索引](../prototypes/README.md) | 保留的视觉与交互实验及对应决策 |
 | [隐私政策](../PRIVACY.md) | 信息处理、网络访问、本地保留和用户选择 |
 
 修改架构或开发流程时，同步权威文档与 `AGENTS.md` 的路由。相对链接须通过 `DocumentationLinkContractTests`；它不检查标题锚点，重命名标题还要检查入链。历史 ADR 与研究记录保留事实时间，路径变化时修复引用。第三方声明由脚本生成，发布说明随发布维护，审计台账随实际审计维护。

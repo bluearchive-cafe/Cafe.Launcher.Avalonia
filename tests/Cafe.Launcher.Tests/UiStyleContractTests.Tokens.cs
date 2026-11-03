@@ -515,7 +515,7 @@ public sealed partial class UiStyleContractTests
     public void StyleControlAndDebugFiles_DoNotDefineRawColorValues()
     {
         // Attribute-scoped scan: raw hex colors may only be defined in App.axaml
-        // (design-system spec §3.1). BoxShadow literals are exempt — they carry no
+        // (design-system spec §2.1). BoxShadow literals are exempt — they carry no
         // TypeConverter in Avalonia 12.1.1 and are locked by token contract instead.
         var colorAttributeNames = new HashSet<string>(StringComparer.Ordinal)
         {

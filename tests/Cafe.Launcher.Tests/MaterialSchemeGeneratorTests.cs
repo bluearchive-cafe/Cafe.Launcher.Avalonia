@@ -10,7 +10,7 @@ using Cafe.Launcher.Core.Models;
 namespace Cafe.Launcher.Tests;
 
 /// <summary>
-/// M3 dynamic-scheme tests (spec §3.4, P1 plan M3): reference values anchored to
+/// M3 dynamic-scheme tests (spec §2.4, P1 plan M3): reference values anchored to
 /// the M0 spike fixture, on-colour luminance rule, dual neutral strategy and
 /// non-wallpaper seed equivalence.
 /// </summary>
@@ -342,13 +342,13 @@ public sealed class MaterialSchemeGeneratorTests
         Assert.True(brushes.ContainsKey("Launcher.Color.SocialChip.Pressed"));
         Assert.Equal((byte)0xFF, brushes["Launcher.Color.SocialChip.Hover"].Color.A);
         Assert.Equal((byte)0xFF, brushes["Launcher.Color.SocialChip.Pressed"].Color.A);
-        // Info.Background is a fixed business surface (spec §3.4): the generator
+        // Info.Background is a fixed business surface (spec §2.4): the generator
         // no longer tints it with the accent, so no key is produced.
         Assert.False(brushes.ContainsKey("Launcher.Color.Info.Background"));
         Assert.True(brushes.ContainsKey("Launcher.Color.SecondaryContainer.Hover"));
         Assert.True(brushes.ContainsKey("Launcher.Color.SecondaryContainer.Pressed"));
 
-        // Business colours are not dynamic-per-spec (spec §3.4).
+        // Business colours are not dynamic-per-spec (spec §2.4).
         Assert.False(brushes.ContainsKey("Launcher.Color.Info"));
         Assert.False(brushes.ContainsKey("Launcher.Color.Success"));
     }

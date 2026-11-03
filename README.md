@@ -70,30 +70,13 @@ Linux 的反作弊兼容性取决于发行版、运行器、Proton 和驱动。�
 
 [官方启动器 v1.7.2 对比研究](docs/research/official-launcher-v1.7.2-comparison.md)记录了特定历史版本的静态分析，供了解协议与功能差异时参考；现行官方版本可能已有变化。
 
-## 壁纸来源
+## 外观与背景
 
 内置默认壁纸为 [めるき（Meruki）](https://www.pixiv.net/users/15737611)的[《初めてのゲーム》](https://www.pixiv.net/artworks/142932674)，版权归原作者，不在本项目 MIT 许可范围内。
 
 远程背景来自官方启动器配置中的图片地址，按需下载到本机缓存，失败时回退到内置背景；版权归相应权利人，项目发行包不包含该图片。自定义图片、视频或文件夹由用户选择，不会上传或随项目分发，使用许可由用户自行确认。
 
 Windows x64 随包提供视频运行库。视频音量默认为 0，独立静音开关保留所选音量；最小化、隐藏到托盘或减少动态效果时暂停。主题色使用视频封面或首帧，不逐帧变化。外观修改即时预览，保存后持久化，放弃时恢复。格式与回退规则见[背景设置](https://docs.bluearchive.cafe/cafe-launcher/settings#背景)；动效位于“外观 → 主题与动效”，取色算法位于默认折叠的“高级配色”。仓库主视觉与发布横幅为项目制作的宣传物料。
-
-## 开发者指南
-
-安装 [global.json](global.json) 指定的 SDK 与 PowerShell 7 后执行：
-
-```powershell
-pwsh ./build.ps1
-dotnet run --project ./src/Cafe.Launcher/Cafe.Launcher.csproj
-```
-
-环境、测试和验证见[开发指南](docs/DEVELOPMENT.md)。`build.ps1` 只构建启动器宿主引用图；独立更新助手需单独构建。
-
-- [文档导航](docs/README.md)：按使用、开发、设计和历史研究查找资料。
-- [开发规范](PROJECT_CONVENTIONS.md)：程序集边界、编码、本地化、DI、测试与持久化规则。
-- [领域契约](CONTEXT.md)与[术语表](UBIQUITOUS_LANGUAGE.md)：行为约束和四语言统一译名。
-- [架构决策](docs/design/adr/README.md)与[审计台账](CODEBASE_AUDIT.md)：决策依据、当前发现及已接受风险。
-- [AGENTS.md](AGENTS.md)：编码代理的任务入口。
 
 ## 数据与许可
 
@@ -108,3 +91,23 @@ dotnet run --project ./src/Cafe.Launcher/Cafe.Launcher.csproj
 Linux 升级会尝试迁移同一数据主目录中的旧 `Cafe Launcher` 目录，保留目标已有内容和未能迁移的旧文件。清理前通过“设置 → 高级 → 打开数据目录”核对位置。
 
 源码采用 [MIT License](LICENSE)，第三方组件许可见 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)。感谢 Avalonia、CommunityToolkit.Mvvm、Material.Icons.Avalonia 等开源项目，以及参与测试、翻译和反馈的贡献者。
+
+## 开发与文档
+
+安装 [global.json](global.json) 指定的 SDK 与 PowerShell 7 后执行：
+
+```powershell
+pwsh ./build.ps1
+dotnet run --project ./src/Cafe.Launcher/Cafe.Launcher.csproj
+```
+
+环境、测试和验证见[开发指南](docs/DEVELOPMENT.md)。`build.ps1` 只构建启动器宿主引用图；独立更新助手需单独构建。
+
+| 需要 | 入口 |
+| --- | --- |
+| 按使用、开发、设计和历史研究查找全部文档 | [文档导航](docs/README.md) |
+| 环境、命令、验证、依赖与发布 | [开发指南](docs/DEVELOPMENT.md) |
+| 程序集边界、编码、本地化、DI、测试与持久化规则 | [开发规范](PROJECT_CONVENTIONS.md) |
+| 行为约束与四语言统一译名 | [领域契约](CONTEXT.md)、[术语表](UBIQUITOUS_LANGUAGE.md) |
+| 决策依据、当前发现及已接受风险 | [架构决策](docs/design/adr/README.md)、[审计台账](CODEBASE_AUDIT.md) |
+| 编码代理的任务入口 | [AGENTS.md](AGENTS.md) |

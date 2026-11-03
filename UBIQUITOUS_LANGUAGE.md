@@ -2,7 +2,15 @@
 
 本表用于界面、发布说明与中英文用户文档，统一概念与译名。先确定所指概念，再使用对应语言的规范名称；动态服务器文案保留原文。领域行为与状态约束见 [CONTEXT.md](CONTEXT.md)，资源键与生成命令见[开发规范 §6](PROJECT_CONVENTIONS.md#6-本地化)。
 
-## Launcher and game files
+使用方法：
+
+1. 在「概念与定义」中确认所指概念，并避开列出的别名。
+2. 在「规范译名」中取对应语言的名称；未列出的内部概念不是用户可见术语。
+3. 改写文案后按「翻译规则」与「保留词」自查。
+
+## 概念与定义
+
+### 启动器与游戏文件
 
 | Term | Definition | Aliases to avoid |
 | --- | --- | --- |
@@ -12,7 +20,7 @@
 | **Launch verification** | The pre-launch integrity check configured by the user. | Launch check, validation |
 | **Repair** | The operation that compares the game installation with a manifest and restores missing or damaged files. | Fix, recovery |
 
-## Downloads and localized resources
+### Downloads and localized resources
 
 | Term | Definition | Aliases to avoid |
 | --- | --- | --- |
@@ -24,7 +32,7 @@
 | **Localization UID** | The eight-uppercase-letter identifier used for Cafe resource preferences. It is distinct from the numeric in-game account UID. | Account ID, numeric UID |
 | **Resource preferences** | The resource switches stored on the Cafe service for a localization UID. | Local resource edits, local patch settings |
 
-## Launcher updates
+### Launcher updates
 
 | Term | Definition | Aliases to avoid |
 | --- | --- | --- |
@@ -33,12 +41,35 @@
 | **Beta** | The update channel that also follows prerelease builds. | Preview, nightly |
 | **Launcher self-update** | The Windows flow that downloads the matching release package, verifies it against the release `SHA256SUMS`, and replaces the installation from an independent helper after the launcher exits. | Auto update, in-app upgrade |
 | **Restart to Update** | The action that hands a verified package to the updater and exits the launcher. | Update now, apply update |
+| **View Update** | The action that opens the update notes. | Show changelog |
 | **Open Release Page** | The fallback action that opens the release page in the browser when no verifiable package is available. | Manual download |
 | **In-app update unavailable** | The state where this host cannot apply an update itself, always with the cause the verdict reported: an unsupported platform, an installation without the Windows update helper, or a release with no verifiable package. The dialog names that cause before download and the primary action is **Open Release Page**. | Not supported, download manually, this device cannot |
 
-## Canonical translations
+### Appearance, status and general terms
 
-| English | Simplified Chinese | Traditional Chinese | Japanese |
+| Term | Definition | Aliases to avoid |
+| --- | --- | --- |
+| **Video background** | A custom video rendered behind launcher surfaces instead of a static wallpaper. | Animated wallpaper |
+| **Video background volume** | The persisted video volume from 0 to 100, defaulting to 0. | Media volume |
+| **Mute video background** | The independent mute switch that keeps the chosen volume for later. | Disable audio |
+| **Remote** | Content loaded over the network, such as a remote wallpaper or notice. | Online |
+| **Banner** | A promotional image or news banner; not an event or activity. | Event, activity |
+| **Fatal** | The log severity for fatal errors; the same translation applies to log filters and log-level settings. | Critical |
+| **Game starting** | The session-status state after launch is requested and before the game is confirmed running. | Launching |
+| **Game running** | The session-status state after the game process family is confirmed present. | Playing |
+| **Game exited** | The session-status state after the game process family is confirmed absent. | Closed |
+
+### Proxy modes
+
+| Mode | Definition | Aliases to avoid |
+| --- | --- | --- |
+| **Automatic system proxy** | The launcher's default network behavior, backed by the runtime's system proxy selection. | 跟随系统 |
+| **Direct connection** | A connection that explicitly bypasses every proxy. | 直连、直接 |
+| **System proxy (configured first)** | The explicitly configured operating-system proxy, falling back to automatic system proxy detection when no explicit proxy exists. | 已配置的系统代理、設定済みシステムプロキシ |
+
+## 规范译名
+
+| English | 简体中文 | 繁體中文 | 日本語 |
 | --- | --- | --- | --- |
 | Launcher | 启动器 | 啟動器 | ランチャー |
 | Video background | 视频背景 | 影片背景 | 動画背景 |
@@ -63,16 +94,11 @@
 | Game starting | 游戏启动中 | 遊戲啟動中 | ゲーム起動中 |
 | Game running | 游戏运行中 | 遊戲執行中 | ゲーム実行中 |
 | Game exited | 游戏已退出 | 遊戲已結束 | ゲームが終了しました |
+| Automatic system proxy | 自动检测系统代理 | 自動偵測系統代理 | システムプロキシを自動検出 |
+| Direct connection | 直连（不使用代理） | 直連（不使用代理） | 直接接続（プロキシなし） |
+| System proxy (configured first) | 系统代理（优先使用显式配置） | 系統代理（優先使用明確設定） | システムプロキシ（明示設定を優先） |
 
-## Proxy modes
-
-| Mode | Definition | Simplified Chinese | Traditional Chinese | Japanese | Aliases to avoid |
-| --- | --- | --- | --- | --- | --- |
-| **Automatic system proxy** | The launcher's default network behavior, backed by the runtime's system proxy selection. | 自动检测系统代理 | 自動偵測系統代理 | システムプロキシを自動検出 | 跟随系统 |
-| **Direct connection** | A connection that explicitly bypasses every proxy. | 直连（不使用代理） | 直連（不使用代理） | 直接接続（プロキシなし） | 直连、直接 |
-| **System proxy (configured first)** | The explicitly configured operating-system proxy, falling back to automatic system proxy detection when no explicit proxy exists. | 系统代理（优先使用显式配置） | 系統代理（優先使用明確設定） | システムプロキシ（明示設定を優先） | 已配置的系统代理、設定済みシステムプロキシ |
-
-## Translation rules
+## 翻译规则
 
 - Prefer the natural localized name; do not append the English source term mechanically.
 - A first explanation or dangerous confirmation may keep `Manifest` in parentheses after “文件清单”/“檔案清單”; short labels use only the localized name. Japanese uses “マニフェスト” without a repeated English term.
@@ -81,15 +107,14 @@
 - Log filters and log-level settings use the same **Fatal** translation within each language.
 - Download-source sentence copy uses the full term: “Cafe 下载源 / Cafe 下載來源 / Cafe ダウンロードソース / Cafe download source” and “官方下载源 / 官方下載來源 / 公式ダウンロードソース / Official download source”. Bare display names (“Cafe”, “官方”, “Official”, “公式”) are only for option labels, buttons, and status-bar values. Do not shorten to “Cafe 源 / Cafe 來源 / Cafe ソース” or call it a “Cafe CDN / CDN サーバー”; the setting selects a provider, not a network route.
 - The localized-resources term must say what the resources are localized to: zh-Hans “汉化资源”, zh-Hant “中文化資源”, ja “中国語化リソース”, en “Chinese-localized resources”. Do not use bare “本地化资源 / 本地化資源 / ローカライズリソース” in user-facing copy.
-
 - Do not use the middle dot (`·`) to separate ordinary interface copy. Use natural punctuation or separate layout fields; preserve proper names and externally supplied data.
 
-## Reserved terms
+## 保留词与外部内容
 
 - Keep `UID`, `CDN`, `API`, `Cafe Launcher`, and file names exactly as supplied; do not translate, recase, or respell them.
 - Keep dynamic server-provided content unchanged. These rules apply only to launcher-owned interface copy.
 
-## Relationships
+## 概念关系
 
 - A **game installation** has one local **manifest**; a **download source** supplies remote manifests and patch files.
 - **Launch verification** checks an installation before launch; **repair** restores it against the selected download source.

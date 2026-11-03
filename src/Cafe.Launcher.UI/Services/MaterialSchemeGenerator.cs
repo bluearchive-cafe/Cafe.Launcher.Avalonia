@@ -15,7 +15,7 @@ using CafeColorUtils = Cafe.Launcher.UI.Helpers.ColorUtils;
 namespace Cafe.Launcher.UI.Services;
 
 /// <summary>
-/// M3 dynamic-scheme generation (Q13/Q17/Q23, spec §3.4). Consumes the
+/// M3 dynamic-scheme generation (Q13/Q17/Q23, spec §2.4). Consumes the
 /// Shirasagi0012.MaterialColorUtilities core package directly (M0 spike: GO,
 /// Spec2021 default, Platform.Phone) and maps scheme roles onto the
 /// <c>Launcher.Color.*</c> brush keys consumed by the UI.
@@ -51,7 +51,7 @@ internal static class MaterialSchemeGenerator
     /// Maps scheme roles onto the <c>Launcher.Color.*</c> brush keys. The key set
     /// preserves the pre-M3 override behaviour (accent family + flat/state/ring
     /// derivatives) as a subset and adds the M3 secondary/tertiary role families;
-    /// "Info" stays a fixed business colour and is never overridden (spec §3.4) —
+    /// "Info" stays a fixed business colour and is never overridden (spec §2.4) —
     /// including Info.Background, which keeps its static Light/Dark values and is
     /// not tinted by the accent. The neutral roles and the whole dialog surface
     /// family (<c>Dialog.Background/Header/Footer/Close.Hover/Close.Pressed</c>)

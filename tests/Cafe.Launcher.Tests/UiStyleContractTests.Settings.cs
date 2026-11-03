@@ -661,7 +661,7 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void SettingsNavigation_TokenizeFocusVisibleRings() // spec §8 visible focus ring
+    public void SettingsNavigation_TokenizeFocusVisibleRings() // spec §7 visible focus ring
     {
         var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
         var selector = "ListBox.settings-navigation > ListBoxItem:focus-visible";

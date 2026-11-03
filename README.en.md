@@ -70,32 +70,13 @@ Both launchers can use the same `manifest.json`, `game-launcher-config.json`, an
 
 The [official launcher v1.7.2 comparison (Chinese)](docs/research/official-launcher-v1.7.2-comparison.md) records static research of one historical version. Current official releases may behave differently.
 
-## Wallpaper sources
+## Appearance and backgrounds
 
 The bundled wallpaper is [初めてのゲーム](https://www.pixiv.net/artworks/142932674) by [めるき (Meruki)](https://www.pixiv.net/users/15737611). Copyright remains with the artist; the project MIT license does not cover this artwork.
 
 Remote backgrounds use the image address supplied by the official launcher configuration. They are downloaded to the local cache and fall back to the bundled wallpaper on failure. Rights remain with their respective holders; these images are not included in project packages. Custom images, videos, and folders are selected locally, never uploaded or distributed by the project. Users are responsible for permission to use them.
 
 Windows x64 packages include the video runtime. Volume defaults to 0, and muting retains your chosen volume. Playback pauses when minimized, hidden to the tray, or using reduced motion. Colors come from cover art or the first frame and remain stable during playback. Appearance changes preview immediately; save to persist them or discard to restore the previous state. See [Background settings](https://docs.bluearchive.cafe/en/cafe-launcher/settings#background). Motion is under **Appearance → Theme and motion**; extraction algorithms are in the collapsed **Advanced colors** section. Repository key visuals and release banners are project-created promotional materials.
-
-## Developer guide
-
-Install the SDK specified in [global.json](global.json) and PowerShell 7, then run:
-
-```powershell
-pwsh ./build.ps1
-dotnet run --project ./src/Cafe.Launcher/Cafe.Launcher.csproj
-```
-
-Follow the [development guide (Chinese)](docs/DEVELOPMENT.md) for prerequisites, tests, and validation. `build.ps1` builds the launcher host graph; build the independent updater separately.
-
-- [Documentation index](docs/README.md): user, engineering, design, and historical references.
-- [Engineering conventions](PROJECT_CONVENTIONS.md): assemblies, coding, localization, DI, tests, and persistence.
-- [Domain contracts](CONTEXT.md) and [terminology](UBIQUITOUS_LANGUAGE.md): behavioral invariants and canonical translations.
-- [Architecture decisions](docs/design/adr/README.md) and [audit ledger](CODEBASE_AUDIT.md): rationale, current findings, and accepted risks.
-- [AGENTS.md](AGENTS.md): task routing for coding agents.
-
-Contributor documentation is primarily in Chinese; both READMEs point to the same maintained rules.
 
 ## Data and licensing
 
@@ -110,3 +91,25 @@ The application, user data, and game directory are separate. Removing the launch
 Linux upgrades attempt to migrate the old `Cafe Launcher` directory within the same data home, preserving existing destination entries and old files that could not be moved. Check **Settings → Advanced → Open Data Directory** before cleaning up.
 
 Source code uses the [MIT License](LICENSE). See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) for component licenses. Thanks to Avalonia, CommunityToolkit.Mvvm, Material.Icons.Avalonia, the other open-source dependencies, and everyone contributing tests, translations, and feedback.
+
+## Development and documentation
+
+Install the SDK specified in [global.json](global.json) and PowerShell 7, then run:
+
+```powershell
+pwsh ./build.ps1
+dotnet run --project ./src/Cafe.Launcher/Cafe.Launcher.csproj
+```
+
+Follow the [development guide (Chinese)](docs/DEVELOPMENT.md) for prerequisites, tests, and validation. `build.ps1` builds the launcher host graph; build the independent updater separately.
+
+| Need | Entry point |
+| --- | --- |
+| Find all documentation by user, engineering, design, and history | [Documentation index](docs/README.md) |
+| Environment, commands, validation, dependencies, and release | [Development guide](docs/DEVELOPMENT.md) |
+| Assemblies, coding, localization, DI, tests, and persistence | [Engineering conventions](PROJECT_CONVENTIONS.md) |
+| Behavioral invariants and canonical translations | [Domain contracts](CONTEXT.md), [terminology](UBIQUITOUS_LANGUAGE.md) |
+| Rationale, current findings, and accepted risks | [Architecture decisions](docs/design/adr/README.md), [audit ledger](CODEBASE_AUDIT.md) |
+| Task routing for coding agents | [AGENTS.md](AGENTS.md) |
+
+Contributor documentation is primarily in Chinese; both READMEs point to the same maintained rules.
