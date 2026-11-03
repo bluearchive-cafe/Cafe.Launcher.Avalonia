@@ -106,6 +106,32 @@ public sealed class RemoteHttpUrlValidatorTests
     }
 
     [Fact]
+    public async Task ValidateAsync_WhenTargetResolvesToPrivateAddress_MarksTheRejectionAsBlockedAddress()
+    {
+        // 表现层靠这个标记把「GitHub 被解析到本机/内网」从笼统网络失败里分出来，
+        // 提示用户检查 hosts 或关闭加速器；异常类型保持不变，标记只走 Exception.Data。
+        var validator = new RemoteHttpUrlValidator(
+            static (_, _) => Task.FromResult<IPAddress[]>([IPAddress.Loopback]));
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => validator.ValidateAsync("https://github.com/file"));
+
+        Assert.True(RemoteHttpRequestService.IsBlockedAddressRejection(exception));
+    }
+
+    [Fact]
+    public async Task ValidateAsync_WhenTheUrlShapeIsInvalid_DoesNotMarkTheRejectionAsBlockedAddress()
+    {
+        // 形状问题（scheme/端口/userinfo）与地址无关，不能触发 hosts 指引。
+        var validator = RemoteHttpUrlValidator.CreateForTesting();
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => validator.ValidateAsync("ftp://example.test/file"));
+
+        Assert.False(RemoteHttpRequestService.IsBlockedAddressRejection(exception));
+    }
+
+    [Fact]
     public async Task ValidateAsync_WhenLiteralAddressIsPublic_ReturnsUri()
     {
         var validator = RemoteHttpUrlValidator.CreateForTesting();
