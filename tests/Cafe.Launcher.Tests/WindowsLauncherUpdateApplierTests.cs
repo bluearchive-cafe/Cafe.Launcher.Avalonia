@@ -13,7 +13,9 @@ public sealed class WindowsLauncherUpdateApplierTests
         var applier = CreateApplier(directory);
 
         Assert.False(applier.TryStartApply(LauncherSelfUpdatePreparation.External()));
-        Assert.False(applier.TryStartApply(LauncherSelfUpdatePreparation.Failed("verification failed")));
+        Assert.False(applier.TryStartApply(LauncherSelfUpdatePreparation.Failed(
+            "verification failed",
+            LauncherSelfUpdateFailureKind.Verification)));
     }
 
     [Fact]

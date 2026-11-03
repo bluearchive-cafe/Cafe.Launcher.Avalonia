@@ -304,6 +304,7 @@ public static class LocalizationKeys
     public const string LauncherUpdateChannelStable = "launcherUpdateChannelStable";
     public const string LauncherUpdateCheckFailed = "launcherUpdateCheckFailed";
     public const string LauncherUpdateDownload = "launcherUpdateDownload";
+    public const string LauncherUpdateDownloadBlocked = "launcherUpdateDownloadBlocked";
     public const string LauncherUpdateDownloadFailed = "launcherUpdateDownloadFailed";
     public const string LauncherUpdateDownloading = "launcherUpdateDownloading";
     public const string LauncherUpdateFileSize = "launcherUpdateFileSize";
