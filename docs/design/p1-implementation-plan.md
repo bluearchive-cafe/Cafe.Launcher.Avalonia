@@ -19,8 +19,8 @@
 
 ## M1 — 一次性全量重命名（2–3 天）
 
-- 输入：`docs/design/token-migration-map.md`（旧键→新键映射表，按 §3.2 十二家族人工分类；含特例：`LauncherSpacingXsThickness`→`Launcher.Spacing.Thickness.Xs`、`LauncherTextBox*`→按家族归位、`LauncherRadiusMd(6)`→`Launcher.Radius.Md` 值暂不变）。
-- 脚本：`scripts/Rename-LauncherTokens.ps1`（读映射表 → 替换 `src/` 全部 .axaml/.cs 中的精确键引用 → 输出改动清单 + 旧键残留巡检，失败即退出非零）。映射表为 LF JSON/CSV。
+- 输入：旧键→新键映射按 §3.2 十二家族人工分类，含特例：`LauncherSpacingXsThickness`→`Launcher.Spacing.Thickness.Xs`、`LauncherTextBox*`→按家族归位、`LauncherRadiusMd(6)`→`Launcher.Radius.Md` 值暂不变。
+- 脚本：一次性重命名脚本读取映射表，替换 `src/` 全部 .axaml/.cs 中的精确键引用并巡检旧键残留。迁移完成后映射表与脚本已移除。
 - 同步：`tests/Cafe.Launcher.Tests/UiStyleContractTests.cs`（键清单、token 值断言）、headless 测试中的资源键、`Features/Settings/SettingsAppearanceViewModel.cs`（动态覆盖的笔刷键）、`Controls/` 与 `Views/` 各样式分片。
 - 顺手修复：`Views\Styles\{Toast,RemoteContent,SetupWizard}.axaml` 33 处静态 token 的 `{DynamicResource}` → `{StaticResource}`。
 - 门禁：编译零警告、全部测试绿、`grep -r "Launcher\([A-Z]\)" src tests` 旧键 = 0 命中。
