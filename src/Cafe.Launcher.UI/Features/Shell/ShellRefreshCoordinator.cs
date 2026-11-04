@@ -1,28 +1,26 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Cafe.Launcher.UI.Helpers;
 
 namespace Cafe.Launcher.UI.Features.Shell;
 
 /// <summary>
-/// Owns shell refresh serialization and lifetime drainage: one refresh at a
-/// time, refresh counting for shutdown, the lifetime cancellation token, and
-/// the drained-completion handshake. Host-state loading and after-load work
-/// are injected callbacks, so the concurrency rules live in one small module
-/// instead of inside the shell coordinator.
+/// Owns shell refresh serialization and the after-load handshake on top of the shared
+/// <see cref="ActivityLifetime"/>: one refresh at a time, lifetime cancellation, and the
+/// drained-completion handshake. Host-state loading and after-load work are injected
+/// callbacks, so the concurrency rules live in one small module instead of inside the shell
+/// coordinator.
 /// </summary>
 internal sealed class ShellRefreshCoordinator : IDisposable
 {
-    private readonly object lifetimeLock = new();
-    private readonly CancellationTokenSource lifetimeCts = new();
+    private readonly ActivityLifetime lifetime = new();
+    private readonly object afterLoadLock = new();
     private readonly SemaphoreSlim refreshGate = new(1, 1);
     private readonly Func<CancellationToken, Task<bool>> loadHostStateAsync;
     private readonly Func<bool, CancellationToken, Task<Task>> afterLoadAsync;
 
-    private TaskCompletionSource? refreshesDrained;
     private Task pendingAfterLoadWork = Task.CompletedTask;
-    private int activeRefreshCount;
-    private bool shutdownRequested;
     private bool disposed;
 
     /// <summary>Initializes the coordinator with the host-state and after-load callbacks.</summary>
@@ -39,7 +37,7 @@ internal sealed class ShellRefreshCoordinator : IDisposable
     {
         get
         {
-            lock (lifetimeLock)
+            lock (afterLoadLock)
             {
                 return pendingAfterLoadWork;
             }
@@ -47,16 +45,7 @@ internal sealed class ShellRefreshCoordinator : IDisposable
     }
 
     /// <summary>Gets the lifetime token shared by all refresh work of this lifecycle.</summary>
-    public CancellationToken LifetimeToken
-    {
-        get
-        {
-            lock (lifetimeLock)
-            {
-                return lifetimeCts.Token;
-            }
-        }
-    }
+    public CancellationToken LifetimeToken => lifetime.LifetimeToken;
 
     /// <summary>
     /// Reloads host state through the gate and, when loaded, runs the after-load
@@ -67,21 +56,15 @@ internal sealed class ShellRefreshCoordinator : IDisposable
         bool resumePersistedDownload,
         CancellationToken cancellationToken = default)
     {
-        CancellationToken lifetimeToken;
-        lock (lifetimeLock)
+        using var lease = lifetime.TryBegin();
+        if (lease is null)
         {
-            if (shutdownRequested || disposed)
-            {
-                return;
-            }
-
-            activeRefreshCount++;
-            lifetimeToken = lifetimeCts.Token;
+            return;
         }
 
         using var refreshCts = CancellationTokenSource.CreateLinkedTokenSource(
             cancellationToken,
-            lifetimeToken);
+            lifetime.LifetimeToken);
         var refreshToken = refreshCts.Token;
         var loaded = false;
         var gateEntered = false;
@@ -107,7 +90,7 @@ internal sealed class ShellRefreshCoordinator : IDisposable
             }
 
             var pending = await afterLoadAsync(resumePersistedDownload, refreshToken);
-            lock (lifetimeLock)
+            lock (afterLoadLock)
             {
                 pendingAfterLoadWork = pending;
             }
@@ -115,34 +98,16 @@ internal sealed class ShellRefreshCoordinator : IDisposable
         catch (OperationCanceledException) when (refreshToken.IsCancellationRequested)
         {
         }
-        finally
-        {
-            CompleteRefresh();
-        }
     }
 
     /// <summary>
     /// Marks the lifecycle as shutting down and returns the task that completes
     /// when every active refresh has finished.
     /// </summary>
-    public Task BeginShutdown()
-    {
-        lock (lifetimeLock)
-        {
-            shutdownRequested = true;
-            if (activeRefreshCount == 0)
-            {
-                return Task.CompletedTask;
-            }
-
-            refreshesDrained ??= new TaskCompletionSource(
-                TaskCreationOptions.RunContinuationsAsynchronously);
-            return refreshesDrained.Task;
-        }
-    }
+    public Task BeginShutdown() => lifetime.BeginShutdown();
 
     /// <summary>Cancels the lifetime token so in-flight refresh work unwinds.</summary>
-    public void CancelLifetime() => lifetimeCts.Cancel();
+    public void CancelLifetime() => lifetime.Cancel();
 
     /// <summary>Waits for refresh work and the outstanding after-load task to settle.</summary>
     public async Task WaitForShutdownWorkAsync(Task pendingRefreshes)
@@ -153,24 +118,7 @@ internal sealed class ShellRefreshCoordinator : IDisposable
 
     public void Dispose()
     {
-        DisposeLifetimeResources();
-    }
-
-    private void CompleteRefresh()
-    {
-        TaskCompletionSource? drained;
-        lock (lifetimeLock)
-        {
-            activeRefreshCount--;
-            drained = activeRefreshCount == 0 ? refreshesDrained : null;
-        }
-
-        drained?.TrySetResult();
-    }
-
-    private void DisposeLifetimeResources()
-    {
-        lock (lifetimeLock)
+        lock (afterLoadLock)
         {
             if (disposed)
             {
@@ -180,7 +128,7 @@ internal sealed class ShellRefreshCoordinator : IDisposable
             disposed = true;
         }
 
-        lifetimeCts.Dispose();
+        lifetime.Dispose();
         refreshGate.Dispose();
     }
 }

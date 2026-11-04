@@ -705,6 +705,7 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
         dialogs.RepairConfirm.Confirmed -= RepairAsync;
         Uninstall.PropertyChanged -= OnUninstallPresentationChanged;
         dialogs.StopConfirm.Confirmed -= PerformStop;
+        journey.Dispose();
     }
 
 }

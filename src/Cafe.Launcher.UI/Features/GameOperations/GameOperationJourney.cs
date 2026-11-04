@@ -11,14 +11,14 @@ using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.UI.Features.GameOperations;
 
-    /// <summary>
-    /// Owns the journey rules for launch, install, repair, and uninstall:
-    /// state validation, confirmations, retry, refresh, and notifications.
-    /// The presentation module (GameOperationsViewModel) stays pure — state
-    /// binding, progress mapping, and thin command delegation — and drives
-    /// refresh / log-viewer / minimize through the host interface.
-    /// </summary>
-    internal sealed class GameOperationJourney
+/// <summary>
+/// Owns the journey rules for launch, install, repair, and uninstall:
+/// state validation, confirmations, retry, refresh, and notifications.
+/// The presentation module (GameOperationsViewModel) stays pure — state
+/// binding, progress mapping, and thin command delegation — and drives
+/// refresh / log-viewer / minimize through the host interface.
+/// </summary>
+internal sealed class GameOperationJourney : IDisposable
 {
     /// <summary>Forwards installation running-state changes to the presentation host.</summary>
     public event Action? IsRunningChanged
@@ -38,67 +38,32 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
     private readonly IGameOperationJourneyHost host;
 
     private LauncherStatusSnapshot? lastInstallSnapshot;
-    private readonly object lifetimeLock = new();
-    private int pendingOperationCount;
-    private bool shutdownRequested;
-    private TaskCompletionSource? operationsDrained;
+    private readonly ActivityLifetime lifetime = new();
+    private int stopRequested;
 
     /// <summary>关闭开始后不再接收新操作，已请求停止的任务仍须完成其 finally 与呈现收尾。</summary>
-    public bool IsShuttingDown => Volatile.Read(ref shutdownRequested);
+    public bool IsShuttingDown => lifetime.IsShuttingDown;
 
     /// <summary>封闭入口、按进程退出意图停止下载，并异步等待所有已进入的下载旅程完成。</summary>
     public Task PrepareForShutdownAsync()
     {
-        Task pending;
-        lock (lifetimeLock)
-        {
-            if (shutdownRequested)
-            {
-                return operationsDrained?.Task ?? Task.CompletedTask;
-            }
+        Task pending = lifetime.BeginShutdown();
 
-            shutdownRequested = true;
-            pending = pendingOperationCount == 0
-                ? Task.CompletedTask
-                : (operationsDrained = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)).Task;
+        // 停止只做一次：重复的停机请求只等同一个排空任务。Cancel 会同步触发回调，
+        // 也不能用 IsDownloadRunning 判断是否需要等待：用户停止会先摘除会话，
+        // 此时其异常处理与 finally 仍可能在运行。
+        if (Interlocked.Exchange(ref stopRequested, 1) == 0)
+        {
+            executor.Stop(DownloadStopReason.ApplicationExit);
         }
 
-        // Cancel 会同步触发回调；不能在生命周期锁内调用，也不能用 IsDownloadRunning
-        // 判断是否需要等待：用户停止会先摘除会话，此时其异常处理与 finally 仍可能在运行。
-        executor.Stop(DownloadStopReason.ApplicationExit);
         return pending;
     }
 
-    private PendingOperation? TryBeginOperation()
-    {
-        lock (lifetimeLock)
-        {
-            if (shutdownRequested)
-            {
-                return null;
-            }
+    /// <summary>释放后取消生命周期令牌；在飞操作的租约仍会正常释放。</summary>
+    public void Dispose() => lifetime.Dispose();
 
-            pendingOperationCount++;
-            return new PendingOperation(this);
-        }
-    }
-
-    private void CompleteOperation()
-    {
-        TaskCompletionSource? drained;
-        lock (lifetimeLock)
-        {
-            pendingOperationCount--;
-            drained = pendingOperationCount == 0 ? operationsDrained : null;
-        }
-
-        drained?.TrySetResult();
-    }
-
-    private sealed class PendingOperation(GameOperationJourney owner) : IDisposable
-    {
-        public void Dispose() => owner.CompleteOperation();
-    }
+    private IDisposable? TryBeginOperation() => lifetime.TryBegin();
 
     /// <summary>
     /// The toast gets one short beat to be read before the window is taken away by the
