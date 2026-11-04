@@ -534,12 +534,16 @@ public partial class MainWindowViewModelTests
             localizer,
             toastService,
             new LauncherUpdateService(LauncherProfiles.Cafe, new StubRemoteHttpTransport()),
-            new LauncherSelfUpdateService(
-                new LauncherUpdateDownloader(new StubRemoteHttpTransport()),
-                new LauncherUpdateHostInfoProvider(),
-                new StubWindowsLauncherUpdateApplier(),
-                TestDataRoot.ForDirectory(Path.Combine(tempDir, "update-root")),
-                new LocalDiagnostics()),
+            new LauncherUpdatePresenter(
+                localizer,
+                toastService,
+                dialogs,
+                new LauncherSelfUpdateService(
+                    new LauncherUpdateDownloader(new StubRemoteHttpTransport()),
+                    new LauncherUpdateHostInfoProvider(),
+                    new StubWindowsLauncherUpdateApplier(),
+                    TestDataRoot.ForDirectory(Path.Combine(tempDir, "update-root")),
+                    new LocalDiagnostics())),
             dialogs,
             testLogger,
             new GameInstallationPath(LauncherProfiles.BlueArchiveJapan),

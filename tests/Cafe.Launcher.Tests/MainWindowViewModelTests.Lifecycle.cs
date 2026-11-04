@@ -284,7 +284,7 @@ public partial class MainWindowViewModelTests
     }
 
     [Fact]
-    public async Task InitializeAsync_WhenStartupUpdateCheckEnabledAndUpdateAvailable_ShowsToast()
+    public async Task InitializeAsync_WhenStartupUpdateCheckEnabledAndUpdateAvailable_ShowsToastThatOpensDialogWithoutRechecking()
     {
         var snapshot = CreateSnapshot();
         snapshot.Settings.EnableStartupUpdateCheck = true;
@@ -309,8 +309,13 @@ public partial class MainWindowViewModelTests
                 }
             ]
             """;
+        var transportCalls = 0;
         var updateSvc = new LauncherUpdateService(LauncherProfiles.Cafe, 
-            new StubRemoteHttpTransport(_ => releaseJson),
+            new StubRemoteHttpTransport(_ =>
+            {
+                transportCalls++;
+                return releaseJson;
+            }),
             currentVersionOverride: "1.0.0");
         using var viewModel = await CreateViewModelAsync(
             coreService,
@@ -321,7 +326,18 @@ public partial class MainWindowViewModelTests
         await viewModel.PendingStartupUpdateCheck.WaitAsync(TimeSpan.FromSeconds(2));
 
         ToastNotification updateToast = Assert.Single(toasts, t => t.Message.Contains("99.0.0"));
-        Assert.Equal("View Update", Assert.IsType<ToastAction>(updateToast.PrimaryAction).Label);
+        var action = Assert.IsType<ToastAction>(updateToast.PrimaryAction);
+        Assert.Equal("View Update", action.Label);
+        var callsAfterStartup = transportCalls;
+
+        var outcome = await action.ExecuteAsync(CancellationToken.None);
+
+        // 动作复用启动检查的结果：开对话框不再发起第二次网络检查，
+        // 否则「有更新」的提示可能被一次失败或「已最新」当场推翻。
+        Assert.True(outcome.IsSuccess);
+        Assert.Equal("99.0.0", viewModel.Dialogs.UpdateAvailableVersion);
+        Assert.True(viewModel.Dialogs.IsUpdateAvailableVisible);
+        Assert.Equal(callsAfterStartup, transportCalls);
     }
 
     [Fact]

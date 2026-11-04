@@ -210,9 +210,11 @@ internal sealed class MainWindowTestContext : IDisposable
         // 这两个日志是上下文持有的资源：设置页与日志查看器在其整个活期内继续写入。
         var settingsLogger = new UnifiedLogger(directory.Sub(Guid.NewGuid().ToString("N")));
         owned.Add(settingsLogger);
+        var updatePresenter = new LauncherUpdatePresenter(
+            localizationService, toastService, dialogsViewModel, launcherSelfUpdateService);
         var settingsViewModel = new SettingsViewModel(
             settingsService, savedSettingsWriter, localizationService, toastService,
-            launcherUpdateSvc, launcherSelfUpdateService, dialogsViewModel,
+            launcherUpdateSvc, updatePresenter, dialogsViewModel,
             settingsLogger,
             new GameInstallationPath(LauncherProfiles.BlueArchiveJapan),
             settingsOptions, settingsAppearance, errorHandling,
@@ -293,6 +295,7 @@ internal sealed class MainWindowTestContext : IDisposable
             localizationService,
             toastService,
             launcherUpdateSvc,
+            updatePresenter,
             launcherSelfUpdateService,
             launcherUpdateApplier,
             diagnostics,

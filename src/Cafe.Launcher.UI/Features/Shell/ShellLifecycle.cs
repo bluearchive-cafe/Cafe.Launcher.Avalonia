@@ -7,7 +7,6 @@ using Cafe.Launcher.UI.Constants;
 using Cafe.Launcher.UI.Features.Diagnostics;
 using Cafe.Launcher.UI.Features.GameOperations;
 using Cafe.Launcher.UI.Helpers;
-using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Features.ResourcePanel;
 using Cafe.Launcher.UI.Features.Settings;
 using Cafe.Launcher.UI.Services;
@@ -44,6 +43,7 @@ internal sealed class ShellLifecycle : IDisposable
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
     private readonly ILauncherUpdateService launcherUpdateService;
+    private readonly ILauncherUpdatePresenter updatePresenter;
     private readonly ILauncherSelfUpdateService launcherSelfUpdateService;
     private readonly IWindowsLauncherUpdateApplier launcherUpdateApplier;
     private readonly ILauncherDiagnostics diagnostics;
@@ -101,6 +101,7 @@ internal sealed class ShellLifecycle : IDisposable
         LocalizationService localizer,
         ToastService toastService,
         ILauncherUpdateService launcherUpdateService,
+        ILauncherUpdatePresenter updatePresenter,
         ILauncherSelfUpdateService launcherSelfUpdateService,
         IWindowsLauncherUpdateApplier launcherUpdateApplier,
         ILauncherDiagnostics diagnostics,
@@ -116,6 +117,7 @@ internal sealed class ShellLifecycle : IDisposable
             localizer,
             toastService,
             launcherUpdateService,
+            updatePresenter,
             launcherSelfUpdateService,
             launcherUpdateApplier,
             diagnostics,
@@ -135,6 +137,7 @@ internal sealed class ShellLifecycle : IDisposable
         LocalizationService localizer,
         ToastService toastService,
         ILauncherUpdateService launcherUpdateService,
+        ILauncherUpdatePresenter updatePresenter,
         ILauncherSelfUpdateService launcherSelfUpdateService,
         IWindowsLauncherUpdateApplier launcherUpdateApplier,
         ILauncherDiagnostics diagnostics,
@@ -159,6 +162,7 @@ internal sealed class ShellLifecycle : IDisposable
         this.localizer = localizer;
         this.toastService = toastService;
         this.launcherUpdateService = launcherUpdateService;
+        this.updatePresenter = updatePresenter;
         this.launcherSelfUpdateService = launcherSelfUpdateService;
         this.launcherUpdateApplier = launcherUpdateApplier;
         this.diagnostics = diagnostics;
@@ -794,23 +798,7 @@ internal sealed class ShellLifecycle : IDisposable
                 savedSettings.UpdateChannel,
                 cancellationToken);
 
-            if (result.IsSuccessful && result.IsUpdateAvailable)
-            {
-                toastService.Show(new ToastOptions
-                {
-                    Message = localizer.F(LocalizationKeys.StartupUpdateAvailable, result.LatestVersion),
-                    Severity = ToastSeverity.Info,
-                    Duration = ToastDuration.Extended,
-                    PrimaryAction = new ToastAction(
-                        localizer.T(LocalizationKeys.LauncherUpdateView),
-                        _ =>
-                        {
-                            settings.CheckForUpdatesCommand.Execute(null);
-                            return Task.FromResult(ToastActionResult.Success());
-                        },
-                        Timeout: null)
-                });
-            }
+            updatePresenter.Present(result, LauncherUpdateTrigger.Startup);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

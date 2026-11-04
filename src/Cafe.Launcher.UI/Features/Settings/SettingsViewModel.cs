@@ -14,10 +14,8 @@ using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Core.Services.GameRuntime;
-using Cafe.Launcher.Core.Services.Update;
 using Cafe.Launcher.UI.ViewModels;
 using Serilog.Events;
-using Cafe.Launcher.Core;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services;
 
@@ -30,13 +28,12 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
     private readonly ILauncherUpdateService launcherUpdateService;
-    private readonly ILauncherSelfUpdateService launcherSelfUpdateService;
+    private readonly ILauncherUpdatePresenter updatePresenter;
     private readonly DialogsViewModel dialogs;
     private readonly SettingsEditor editor;
     private readonly UnifiedLogger unifiedLogger;
     private readonly IGameInstallationPath gameInstallationPath;
     private readonly IErrorHandlingService errorHandling;
-    private readonly LauncherBuildIdentity? buildIdentity;
     private readonly IGameRuntime gameRuntime;
     private readonly IFilePickerService filePickerService;
     private readonly LatestRefresh appearancePreviewRefresh = new();
@@ -71,7 +68,7 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
         LocalizationService localizer,
         ToastService toastService,
         ILauncherUpdateService launcherUpdateService,
-        ILauncherSelfUpdateService launcherSelfUpdateService,
+        ILauncherUpdatePresenter updatePresenter,
         DialogsViewModel dialogs,
         UnifiedLogger unifiedLogger,
         IGameInstallationPath gameInstallationPath,
@@ -79,15 +76,14 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
         SettingsAppearanceViewModel appearance,
         IErrorHandlingService errorHandling,
         IGameRuntime gameRuntime,
-        IFilePickerService filePickerService,
-        LauncherBuildIdentity? buildIdentity = null)
+        IFilePickerService filePickerService)
     {
         this.settingsService = settingsService;
         this.savedSettingsWriter = savedSettingsWriter;
         this.localizer = localizer;
         this.toastService = toastService;
         this.launcherUpdateService = launcherUpdateService;
-        this.launcherSelfUpdateService = launcherSelfUpdateService;
+        this.updatePresenter = updatePresenter;
         this.dialogs = dialogs;
         this.unifiedLogger = unifiedLogger;
         this.gameInstallationPath = gameInstallationPath;
@@ -95,7 +91,6 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
         Options = options;
         Appearance = appearance;
         this.errorHandling = errorHandling;
-        this.buildIdentity = buildIdentity;
         this.gameRuntime = gameRuntime;
         this.filePickerService = filePickerService;
         editor.PropertyChanged += OnEditorPropertyChanged;
@@ -268,33 +263,7 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
         var result = await launcherUpdateService.CheckForUpdateAsync(
             savedSettings.UpdateChannel);
 
-        if (!result.IsSuccessful)
-        {
-            var operationMessage = localizer.T(LocalizationKeys.LauncherUpdateCheckFailed);
-            var message = result.FailureException is not null
-                ? ErrorHandlingService.FormatToastMessage(
-                    operationMessage,
-                    result.FailureException,
-                    localizer.T(LocalizationKeys.ErrorNetworkUnavailable),
-                    localizer.T(LocalizationKeys.ErrorFakeIpDns))
-                : string.IsNullOrWhiteSpace(result.FailureMessage)
-                    ? operationMessage
-                    : $"{operationMessage}：{result.FailureMessage}";
-            toastService.ShowError(message);
-            return;
-        }
-
-        if (!result.IsUpdateAvailable)
-        {
-            toastService.ShowSuccess(localizer.F(LocalizationKeys.LauncherUpdateUpToDate, buildIdentity?.LauncherVersion ?? ""));
-            return;
-        }
-
-        dialogs.ShowUpdateAvailable(
-            result.LatestVersion,
-            result.Files,
-            launcherSelfUpdateService.ResolveInAppAvailability(result.Files),
-            result.ReleaseNotes);
+        updatePresenter.Present(result, LauncherUpdateTrigger.Manual);
     }
 
     /// <summary>Opens the shared launcher-settings reset confirmation (shell performs the reset).</summary>

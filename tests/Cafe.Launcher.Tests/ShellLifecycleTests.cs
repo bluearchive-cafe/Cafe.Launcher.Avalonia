@@ -737,13 +737,15 @@ public sealed class ShellLifecycleTests : IDisposable
             new LocalDiagnostics(),
             uiInvoker);
         using var settingsLogger = new UnifiedLogger(tempDir.Sub("settings-log"));
+        var updatePresenter = new LauncherUpdatePresenter(
+            localizer, toastService, dialogs, launcherSelfUpdateService);
         var settings = new SettingsViewModel(
             settingsService,
             savedSettingsWriter,
             localizer,
             toastService,
             launcherUpdateService,
-            launcherSelfUpdateService,
+            updatePresenter,
             dialogs,
             settingsLogger,
             new GameInstallationPath(LauncherProfiles.BlueArchiveJapan),
@@ -824,6 +826,7 @@ public sealed class ShellLifecycleTests : IDisposable
             localizer,
             toastService,
             launcherUpdateService,
+            updatePresenter,
             launcherSelfUpdateService,
             launcherUpdateApplier,
             diagnostics,

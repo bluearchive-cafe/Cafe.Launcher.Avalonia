@@ -203,28 +203,31 @@ public sealed class SettingsViewModelTests : IDisposable
         LocalizationService localizer,
         StubRemoteHttpTransport transport,
         DialogsViewModel? dialogs = null,
-        SettingsEditor? editor = null) =>
-        new(
+        SettingsEditor? editor = null)
+    {
+        var dialogsViewModel = dialogs ?? CreateDialogsViewModel();
+        var selfUpdateService = new LauncherSelfUpdateService(
+            new LauncherUpdateDownloader(new StubRemoteHttpTransport()),
+            new LauncherUpdateHostInfoProvider(),
+            new StubWindowsLauncherUpdateApplier(),
+            TestDataRoot.ForDirectory(NextDataRoot()),
+            new LocalDiagnostics());
+        return new(
             null!,
             null!,
             localizer,
             toastService,
             new LauncherUpdateService(LauncherProfiles.Cafe, transport, buildIdentity: BuildInfo.Identity),
-            new LauncherSelfUpdateService(
-                new LauncherUpdateDownloader(new StubRemoteHttpTransport()),
-                new LauncherUpdateHostInfoProvider(),
-                new StubWindowsLauncherUpdateApplier(),
-                TestDataRoot.ForDirectory(NextDataRoot()),
-                new LocalDiagnostics()),
-            dialogs ?? CreateDialogsViewModel(),
+            new LauncherUpdatePresenter(localizer, toastService, dialogsViewModel, selfUpdateService, BuildInfo.Identity),
+            dialogsViewModel,
             null!,
             null!,
             new SettingsOptionsViewModel(localizer, new DiskSpaceService()),
             new SettingsAppearanceViewModel(editor ?? new SettingsEditor(), new ThemeApplier()),
             new RecordingErrorHandlingService(),
             new StubGameRuntime(),
-            new StubFilePickerService(),
-            BuildInfo.Identity);
+            new StubFilePickerService());
+    }
 
     private string NextDataRoot() => tempDir.Sub(Guid.NewGuid().ToString("N"));
 

@@ -125,6 +125,8 @@ public static class LauncherPresentationServiceRegistrations
             sp.GetRequiredService<GameUninstallService>()));
 
         services.AddSingleton<IErrorHandlingService, ErrorHandlingService>();
+        // 更新结果的呈现只有这一个实现：手动检查与启动检查都用它，差异只由 trigger 决定。
+        services.AddSingleton<ILauncherUpdatePresenter, LauncherUpdatePresenter>();
 
         // ── IDisposable services ─────────────────────────────────────────
         // The container disposes created services in reverse order. This keeps
