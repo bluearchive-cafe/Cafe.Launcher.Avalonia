@@ -31,4 +31,23 @@ public sealed class WindowClosePolicyTests
 
         Assert.Equal(WindowCloseAction.Shutdown, action);
     }
+
+    /// <summary>
+    /// 系统关闭只问 <see cref="WindowClosePolicy.IsCloseRefused"/>，自绘关闭走 Decide；
+    /// 两个入口对卸载闸门必须给出同一结论，否则会分叉成两道规则。
+    /// </summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void IsCloseRefused_MatchesDecideGateForBothCloseBehaviors(bool isUninstallExecuting)
+    {
+        foreach (var closeBehavior in new[] { CloseBehaviors.Minimize, CloseBehaviors.Exit })
+        {
+            var action = WindowClosePolicy.Decide(closeBehavior, isUninstallExecuting, hasTray: true);
+
+            Assert.Equal(
+                action == WindowCloseAction.Ignore,
+                WindowClosePolicy.IsCloseRefused(isUninstallExecuting));
+        }
+    }
 }

@@ -26,7 +26,7 @@ internal static class WindowClosePolicy
         bool isUninstallExecuting,
         bool hasTray)
     {
-        if (isUninstallExecuting)
+        if (IsCloseRefused(isUninstallExecuting))
         {
             return WindowCloseAction.Ignore;
         }
@@ -35,6 +35,12 @@ internal static class WindowClosePolicy
             ? DecideMinimize(hasTray)
             : WindowCloseAction.Shutdown;
     }
+
+    /// <summary>
+    /// 卸载执行期间任何关闭入口都拒绝。自绘关闭（<see cref="Decide"/>）与操作系统发起的关闭
+    /// 共用这一个闸门；关闭行为本身不解释系统关闭（CONTEXT「关闭行为」）。
+    /// </summary>
+    public static bool IsCloseRefused(bool isUninstallExecuting) => isUninstallExecuting;
 
     /// <summary>「最小化到托盘」类动作的落点：有托盘就隐藏，没有就退到任务栏。</summary>
     public static WindowCloseAction DecideMinimize(bool hasTray) =>

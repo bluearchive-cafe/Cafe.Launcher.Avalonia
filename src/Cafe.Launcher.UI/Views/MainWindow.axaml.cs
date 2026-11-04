@@ -465,7 +465,8 @@ internal partial class MainWindow : Window
 
     protected override void OnClosing(WindowClosingEventArgs e)
     {
-        if (DataContext is MainWindowViewModel vm && vm.Operations.IsUninstallExecuting)
+        if (DataContext is MainWindowViewModel vm
+            && WindowClosePolicy.IsCloseRefused(vm.Operations.IsUninstallExecuting))
         {
             e.Cancel = true;
         }
