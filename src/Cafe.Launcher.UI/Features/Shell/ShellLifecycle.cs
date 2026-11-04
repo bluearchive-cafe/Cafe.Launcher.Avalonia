@@ -75,6 +75,7 @@ internal sealed class ShellLifecycle : IDisposable
     private readonly ShellStartup startup;
     private readonly SavedSettingsFollowThrough savedSettingsFollowThrough;
     private readonly ModalRegistrar modalRegistrar;
+    private readonly IReadOnlyList<ModalRegistration> modalRegistrations;
 
     /// <summary>
     /// 退订记录表：Wire 的每条接线经 <see cref="Attach"/> 配对登记，Unwire 逆序执行
@@ -195,6 +196,7 @@ internal sealed class ShellLifecycle : IDisposable
         this.ownsPresentationCollaborators = ownsPresentationCollaborators;
         ModalHost = family.ModalHost;
         modalRegistrar = new ModalRegistrar(ModalHost);
+        modalRegistrations = ShellModalCatalog.Create(family);
 
         errorHandling.CriticalErrorRequested += OnCriticalError;
         localizer.LocalizationFailure += OnLocalizationFailure;
@@ -597,7 +599,10 @@ internal sealed class ShellLifecycle : IDisposable
             () => settings.Editor.CurrentPropertyChanged += OnSettingPropertyChanged,
             () => settings.Editor.CurrentPropertyChanged -= OnSettingPropertyChanged);
 
-        RegisterModals();
+        foreach (var registration in modalRegistrations)
+        {
+            modalRegistrar.Register(registration);
+        }
     }
 
     /// <summary>Records the teardown half of one wiring so Unwire cannot miss it.</summary>
@@ -605,117 +610,6 @@ internal sealed class ShellLifecycle : IDisposable
     {
         attach();
         detachers.Add(detach);
-    }
-
-    /// <summary>
-    /// 每个模态一条注册记录：种类、可见性旗标来源、栈内容与 ESC 命令收拢在
-    /// 一处（ADR-023）。顺序保持原 Wire 订阅序——多处旗标同时翻转时，栈序
-    /// 依赖注册序。
-    /// </summary>
-    private void RegisterModals()
-    {
-        modalRegistrar.Register(new ModalRegistration(
-            ModalKind.Settings,
-            windowChrome,
-            nameof(WindowChromeViewModel.IsSettingsVisible),
-            () => windowChrome.IsSettingsVisible,
-            settings,
-            windowChrome.ShowSettingsCommand));
-        modalRegistrar.Register(new ModalRegistration(
-            ModalKind.UnsavedSettingsConfirmation,
-            settings,
-            nameof(SettingsViewModel.IsUnsavedChangesVisible),
-            () => settings.IsUnsavedChangesVisible,
-            settings,
-            windowChrome.KeepEditingSettingsCommand));
-        modalRegistrar.Register(new ModalRegistration(
-            ModalKind.ResourcePanel,
-            resourcePanel,
-            nameof(ResourcePanelViewModel.IsResourcePanelVisible),
-            () => resourcePanel.IsResourcePanelVisible,
-            resourcePanel,
-            resourcePanel.CloseResourcePanelCommand));
-        modalRegistrar.Register(new ModalRegistration(
-            ModalKind.LogViewer,
-            logViewer,
-            nameof(LogViewerDialogViewModel.IsVisible),
-            () => logViewer.IsVisible,
-            logViewer,
-            logViewer.CloseCommand));
-        modalRegistrar.Register(new ModalRegistration(
-            ModalKind.LogExport,
-            logExport,
-            nameof(LogExportDialogViewModel.IsVisible),
-            () => logExport.IsVisible,
-            logExport,
-            logExport.CloseCommand));
-        modalRegistrar.Register(new ModalRegistration(
-            ModalKind.Debug,
-            debug,
-            nameof(DebugViewModel.IsVisible),
-            () => debug.IsVisible,
-            debug,
-            debug.CloseCommand));
-        modalRegistrar.Register(new ModalRegistration(
-            ModalKind.DesignGallery,
-            dialogs.Gallery,
-            nameof(DesignGalleryViewModel.IsVisible),
-            () => dialogs.Gallery.IsVisible,
-            dialogs.Gallery,
-            dialogs.Gallery.CloseCommand));
-        modalRegistrar.Register(new ModalRegistration(
-            ModalKind.Notice,
-            dialogs,
-            nameof(DialogsViewModel.IsNoticeDialogVisible),
-            () => dialogs.IsNoticeDialogVisible,
-            dialogs,
-            dialogs.DismissNoticeCommand));
-        modalRegistrar.Register(new ModalRegistration(
-            ModalKind.Update,
-            dialogs,
-            nameof(DialogsViewModel.IsUpdateAvailableVisible),
-            () => dialogs.IsUpdateAvailableVisible,
-            dialogs,
-            dialogs.CancelUpdateAvailableCommand));
-        modalRegistrar.Register(new ModalRegistration(
-            ModalKind.Error,
-            dialogs,
-            nameof(DialogsViewModel.IsErrorDialogVisible),
-            () => dialogs.IsErrorDialogVisible,
-            dialogs,
-            dialogs.ContinueAfterErrorCommand));
-        modalRegistrar.Register(new ModalRegistration(
-            ModalKind.SetupWizard,
-            dialogs,
-            nameof(DialogsViewModel.IsSetupWizardVisible),
-            () => dialogs.IsSetupWizardVisible,
-            dialogs.SetupWizard,
-            dialogs.SetupWizardExitConfirm.ShowCommand));
-        RegisterConfirmation(ModalKind.StopConfirmation, dialogs.StopConfirm);
-        RegisterConfirmation(ModalKind.DownloadRunningCloseConfirmation, dialogs.DownloadRunningCloseConfirm);
-        modalRegistrar.Register(new ModalRegistration(
-            ModalKind.UninstallConfirmation,
-            operations.Uninstall,
-            nameof(UninstallDialogViewModel.IsVisible),
-            () => operations.Uninstall.IsVisible,
-            operations.Uninstall,
-            operations.Uninstall.CloseCommand));
-        RegisterConfirmation(ModalKind.RepairConfirmation, dialogs.RepairConfirm);
-        RegisterConfirmation(ModalKind.ResourcePanelSourceConfirmation, dialogs.ResourcePanelSourceConfirm);
-        RegisterConfirmation(ModalKind.DebugResetConfirmation, dialogs.DebugResetConfirm);
-        RegisterConfirmation(ModalKind.SettingsResetConfirmation, dialogs.SettingsResetConfirm);
-        RegisterConfirmation(ModalKind.SetupWizardExitConfirmation, dialogs.SetupWizardExitConfirm);
-    }
-
-    private void RegisterConfirmation(ModalKind kind, ConfirmationDialogViewModel confirmation)
-    {
-        modalRegistrar.Register(new ModalRegistration(
-            kind,
-            confirmation,
-            nameof(ConfirmationDialogViewModel.IsVisible),
-            () => confirmation.IsVisible,
-            dialogs,
-            confirmation.CancelCommand));
     }
 
     /// <summary>
