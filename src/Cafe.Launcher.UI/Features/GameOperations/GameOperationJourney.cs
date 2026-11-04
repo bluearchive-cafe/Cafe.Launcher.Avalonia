@@ -539,25 +539,27 @@ internal sealed class GameOperationJourney : IDisposable
         var refreshHandled = false;
         try
         {
-            if (snapshot.RuntimeState == LauncherRuntimeState.Corrupted)
+            // 允许集只读策略表；拒绝后「对用户意味着什么」仍按状态就地分流——
+            // 损坏给修复入口，IO/远端失败重读状态，其余状态报不可用（ADR-027）。
+            if (GameOperationPolicy.Decide(
+                    GameOperationPolicy.Operation.InstallOrUpdate,
+                    snapshot.RuntimeState) == GameOperationDecision.RejectedForCurrentState)
             {
-                host.ShowRepairConfirmation(localizer.T(LocalizationKeys.RepairWarning));
-                return null;
-            }
-
-            if (snapshot.RuntimeState is LauncherRuntimeState.IoFailure or LauncherRuntimeState.RemoteUnavailable)
-            {
-                refreshHandled = await RequestRefresh(GameOperationsRefreshMode.Normal);
-                return null;
-            }
-
-            if (snapshot.RuntimeState == LauncherRuntimeState.Ready)
-            {
-                // 快照过期：Ready 下安装按钮所在的面板本不可见，所以这条只在状态刚刚变过来时可达。
-                // 与上面两个分支同口径——拒绝必须报出来（ADR-027/029），静默 return 在用户那里
-                // 就是「点了没反应」。
-                ShowOperationUnavailable();
-                return null;
+                switch (snapshot.RuntimeState)
+                {
+                    case LauncherRuntimeState.Corrupted:
+                        host.ShowRepairConfirmation(localizer.T(LocalizationKeys.RepairWarning));
+                        return null;
+                    case LauncherRuntimeState.IoFailure or LauncherRuntimeState.RemoteUnavailable:
+                        refreshHandled = await RequestRefresh(GameOperationsRefreshMode.Normal);
+                        return null;
+                    default:
+                        // 快照过期：Ready 下安装按钮所在的面板本不可见，所以这条只在状态
+                        // 刚刚变过来时可达。拒绝必须报出来（ADR-027/029），静默 return
+                        // 在用户那里就是「点了没反应」。
+                        ShowOperationUnavailable();
+                        return null;
+                }
             }
 
             // 装之前先说清楚「这次只会下清单里那部分」（2026-09-29 反馈轮）：卸载只删清单

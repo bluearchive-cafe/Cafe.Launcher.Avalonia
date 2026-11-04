@@ -385,6 +385,28 @@ public sealed class GameOperationJourneyTests
     }
 
     [Fact]
+    public async Task InstallOrUpdateAsync_ForEveryRuntimeState_ProceedsOnlyWherePolicyAllowsInstall()
+    {
+        // 旅程的放行集必须与策略表的安装允许集一致；策略表本身由
+        // GameOperationPolicyTests 全表钉住。新增状态时这里会先红，逼两处一起表态。
+        var installable = new HashSet<LauncherRuntimeState>
+        {
+            LauncherRuntimeState.NotInstalled,
+            LauncherRuntimeState.BelowLowestVersion,
+            LauncherRuntimeState.UpdateAvailable
+        };
+
+        foreach (var state in Enum.GetValues<LauncherRuntimeState>())
+        {
+            var context = CreateContext();
+
+            await context.Journey.InstallOrUpdateAsync(CreateSnapshot(state));
+
+            Assert.Equal(installable.Contains(state) ? 1 : 0, context.Executor.InstallCallCount);
+        }
+    }
+
+    [Fact]
     public async Task InstallOrUpdateAsync_WhenTerminalFailure_ShowsErrorToastWithoutRetry()
     {
         var context = CreateContext();
