@@ -1,3 +1,4 @@
+using Cafe.Launcher.UI.Constants;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -18,9 +19,9 @@ namespace Cafe.Launcher.UI.Features.Diagnostics;
 /// </summary>
 internal sealed partial class DesignGalleryViewModel : ViewModelBase, IModalContentViewModel
 {
-    private readonly Func<string, string> localize;
+    private readonly Func<LocalizationKeys, string> localize;
 
-    public DesignGalleryViewModel(Func<string, string> localize)
+    public DesignGalleryViewModel(Func<LocalizationKeys, string> localize)
     {
         this.localize = localize;
     }

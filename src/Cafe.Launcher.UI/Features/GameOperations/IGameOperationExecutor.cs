@@ -25,18 +25,18 @@ internal interface IGameOperationExecutor
 
     /// <summary>Starts the game after applying launcher validation rules.</summary>
     Task<GameLaunchResult> LaunchAsync(
-        LauncherStatusSnapshot snapshot,
+        GameOperationAttempt attempt,
         CancellationToken cancellationToken = default);
 
     /// <summary>Installs or updates the game using the supplied status snapshot.</summary>
     Task<GameOperationResult> InstallOrUpdateAsync(
-        LauncherStatusSnapshot snapshot,
+        GameOperationAttempt attempt,
         Action<GameOperationProgress> progress,
         CancellationToken cancellationToken = default);
 
     /// <summary>Runs a confirmed repair for the supplied status snapshot.</summary>
     Task<GameOperationResult> RepairAsync(
-        LauncherStatusSnapshot snapshot,
+        GameOperationAttempt attempt,
         Action<GameOperationProgress> progress);
 
     /// <summary>Attempts to resume persisted work while respecting cancellation.</summary>
@@ -55,7 +55,7 @@ internal interface IGameOperationExecutor
 
     /// <summary>Runs a confirmed uninstall for the supplied status snapshot.</summary>
     Task<GameOperationResult> UninstallAsync(
-        LauncherStatusSnapshot snapshot,
+        GameOperationAttempt attempt,
         UninstallScope scope,
         Action<GameOperationProgress> progress);
 

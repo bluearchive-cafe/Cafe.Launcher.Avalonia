@@ -78,12 +78,17 @@ internal sealed class GameUninstallService
         Action<GameOperationProgress> progress,
         CancellationToken cancellationToken = default)
     {
-        if (GameOperationPolicy.Decide(GameOperationPolicy.Operation.Uninstall, snapshot.RuntimeState)
-            == GameOperationDecision.RejectedForCurrentState)
-        {
-            return GameOperationRejections.UnavailableResult(localizer);
-        }
+        var admission = GameOperationAttempt.Evaluate(GameOperationPolicy.Operation.Uninstall, snapshot);
+        return admission.Attempt is { } attempt
+            ? await UninstallAsync(attempt, scope, progress, cancellationToken).ConfigureAwait(false)
+            : GameOperationRejections.UnavailableResult(localizer);
+    }
 
+    internal async Task<GameOperationResult> UninstallAsync(
+        GameOperationAttempt attempt, UninstallScope scope, Action<GameOperationProgress> progress,
+        CancellationToken cancellationToken = default)
+    {
+        var snapshot = attempt.SnapshotFor(GameOperationPolicy.Operation.Uninstall);
         var gamePath = installationPath.NormalizeGamePath(snapshot.LocalGame.GamePath ?? "");
         try
         {

@@ -1,5 +1,7 @@
 using System;
 using System.Net;
+using System.Linq;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -31,18 +33,21 @@ namespace Cafe.Launcher.Tests;
 /// <remarks>
 /// <para><b>为什么不再手工拼图。</b>手工 fixture 与 53 条真实注册并行维护，注册一加就会
 /// 悄悄漂移；这里把「表现图怎么拼」交还组合根，测试只声明它要观察或替换的那几个接缝。</para>
-/// <para><b>所有权。</b>容器持有整张图；<see cref="Dispose"/> 释放容器即可。调用方传入的
-/// 替身与工厂同样登记进容器并在此时一并释放——它们都实现了可重复释放，调用方无需再管。</para>
+/// <para><b>所有权。</b>测试图持有全部资源；<see cref="Dispose"/> 先释放容器，再释放显式持有的外部装配。调用方传入的
+/// 替身与工厂在此时一并释放——它们都实现了可重复释放，调用方无需再管。</para>
 /// <para><b>默认替身。</b>下载传输、图片缓存、更新检查与自更新都换成不发真实请求的实现；
 /// 游戏快捷方式与会话看护用无副作用的替身，避免测试在宿主机上创建快捷方式或订阅真实进程。</para>
 /// </remarks>
 internal sealed class LauncherTestGraph : IDisposable
 {
     private readonly ServiceProvider provider;
+    private readonly IDisposable[] externalResources;
+    private bool disposed;
 
-    private LauncherTestGraph(ServiceProvider provider)
+    private LauncherTestGraph(ServiceProvider provider, IDisposable[] externalResources)
     {
         this.provider = provider;
+        this.externalResources = externalResources;
     }
 
     /// <summary>容器为整棵对象图建立的日志器；测试可直接对它写探针。</summary>
@@ -63,7 +68,8 @@ internal sealed class LauncherTestGraph : IDisposable
     /// <summary>按真实注册建立对象图，只替换 <paramref name="options"/> 指定的接缝。</summary>
     public static LauncherTestGraph Create(
         LauncherDataRoot dataRoot,
-        LauncherTestGraphOptions? options = null)
+        LauncherTestGraphOptions? options = null,
+        Action<IServiceCollection>? alterProductionRegistrations = null)
     {
         ArgumentNullException.ThrowIfNull(dataRoot);
         options ??= new LauncherTestGraphOptions();
@@ -72,6 +78,8 @@ internal sealed class LauncherTestGraph : IDisposable
         services.AddLauncherServices(
             existingFatalCrashService: options.FatalCrashService ?? new StubFatalCrashService(),
             launcherDataRoot: dataRoot);
+        // Failure injection verifies that a missing production VM cannot be hidden by this fixture.
+        alterProductionRegistrations?.Invoke(services);
 
         if (options.CoreService is not null)
         {
@@ -82,8 +90,7 @@ internal sealed class LauncherTestGraph : IDisposable
         {
             services.AddSingleton(savedSettings.SettingsService);
             services.AddSingleton(savedSettings.Editor);
-            services.AddSingleton(savedSettings.Writer);
-            services.AddSingleton<ISavedSettingsWriter>(savedSettings.Writer);
+            services.AddSingleton<ISavedSettingsWriter>(_ => savedSettings.Writer);
         }
 
         if (options.HttpClientFactory is not null)
@@ -91,12 +98,11 @@ internal sealed class LauncherTestGraph : IDisposable
             services.AddSingleton(options.HttpClientFactory);
         }
 
-        services.AddSingleton(
-            options.ImageCache
-            ?? new ImageCacheService(
+        var imageCache = options.ImageCache ?? new ImageCacheService(
                 new StubRemoteHttpTransport(),
                 new Crc64Service(),
-                dataRoot));
+                dataRoot);
+        services.AddSingleton(imageCache);
 
         if (options.ResourcePanelUidService is not null)
         {
@@ -141,18 +147,6 @@ internal sealed class LauncherTestGraph : IDisposable
         // 游戏侧替身：真实快捷方式会写宿主机桌面，真实看护会订阅进程跟踪器。
         services.AddSingleton<IGameShortcutService>(new TestGameShortcutService());
         services.AddSingleton<IGameSessionMonitor>(new FakeGameSessionMonitor());
-        services.AddSingleton(sp => new GameOperationsViewModel(
-            sp.GetRequiredService<IGameOperationExecutor>(),
-            sp.GetRequiredService<IGameShortcutService>(),
-            sp.GetRequiredService<IGameSessionMonitor>(),
-            sp.GetRequiredService<LocalizationService>(),
-            sp.GetRequiredService<ToastService>(),
-            sp.GetRequiredService<ILauncherDiagnostics>(),
-            sp.GetRequiredService<ShellViewModel>(),
-            sp.GetRequiredService<DialogsViewModel>(),
-            sp.GetRequiredService<IErrorHandlingService>(),
-            static _ => Task.CompletedTask));
-
         if (options.AnimationSettingsProvider is not null)
         {
             services.AddSingleton(options.AnimationSettingsProvider);
@@ -160,44 +154,28 @@ internal sealed class LauncherTestGraph : IDisposable
 
         services.AddSingleton<IFilePickerService>(options.FilePicker ?? new StubFilePickerService());
 
-        var dispatchToUi = options.DispatchToUi;
-        if (dispatchToUi is not null)
+        var environment = new PresentationEnvironment();
+        services.AddSingleton(environment with
         {
-            services.AddSingleton(sp => new DialogsViewModel(
-                sp.GetRequiredService<LauncherProductProfile>(),
-                sp.GetRequiredService<LocalizationService>(),
-                sp.GetRequiredService<INoticeStateStore>(),
-                sp.GetRequiredService<SetupWizardViewModel>(),
-                sp.GetRequiredService<ILauncherDiagnostics>(),
-                dispatchToUi));
-        }
+            InvokeOnUiAsync = options.DispatchToUi
+                ?? (options.ToastDelayAsync is not null ? DispatchSynchronously : environment.InvokeOnUiAsync),
+            DelayAsync = options.ToastDelayAsync ?? environment.DelayAsync,
+            DelayBeforeWindowActionAsync = static _ => Task.CompletedTask,
+            OpenExternalUrl = options.OpenExternalUrl ?? (_ => { }),
+            OpenDirectory = options.OpenDirectory ?? (_ => { })
+        });
 
-        if (options.OpenExternalUrl is not null || options.OpenDirectory is not null)
+        // Instance registrations are external to Microsoft DI ownership. Keep them even if
+        // no service resolves them; the graph, rather than an alias side effect, owns cleanup.
+        var externalResources = new object?[]
         {
-            services.AddSingleton(sp => new WindowChromeViewModel(
-                sp.GetRequiredService<LauncherProductProfile>(),
-                sp.GetRequiredService<YostarGameProfile>(),
-                sp.GetRequiredService<LauncherDataRoot>(),
-                sp.GetRequiredService<SettingsViewModel>(),
-                sp.GetRequiredService<RemoteContentViewModel>(),
-                sp.GetRequiredService<DialogsViewModel>(),
-                sp.GetRequiredService<IGameOperationActivity>(),
-                sp.GetRequiredService<DebugViewModel>(),
-                options.OpenExternalUrl ?? (_ => { }),
-                options.OpenDirectory ?? (_ => { })));
-        }
-
-        if (options.ToastDelayAsync is { } toastDelayAsync)
-        {
-            services.AddSingleton(sp => new ToastHostViewModel(
-                sp.GetRequiredService<ToastService>(),
-                sp.GetRequiredService<LocalizationService>(),
-                sp.GetRequiredService<ILauncherDiagnostics>(),
-                dispatchToUi ?? DispatchSynchronously,
-                toastDelayAsync));
-        }
-
-        return new LauncherTestGraph(services.BuildServiceProvider());
+            options.CoreService, options.SavedSettings, options.HttpClientFactory, imageCache,
+            options.ResourcePanelUidService, options.ResourcePanelApiClient,
+            options.LauncherUpdateService, options.LauncherSelfUpdateService,
+            options.LauncherUpdateApplier, options.OperationExecutor,
+            options.AnimationSettingsProvider, options.FilePicker, options.FatalCrashService
+        }.OfType<IDisposable>().DistinctBy(value => value, ReferenceEqualityComparer.Instance).ToArray();
+        return new LauncherTestGraph(services.BuildServiceProvider(), externalResources);
     }
 
     private static Task DispatchSynchronously(Action action)
@@ -212,7 +190,16 @@ internal sealed class LauncherTestGraph : IDisposable
             null,
             HttpStatusCode.NotFound));
 
-    public void Dispose() => provider.Dispose();
+    public void Dispose()
+    {
+        if (disposed) return;
+        disposed = true;
+        try { provider.Dispose(); }
+        finally
+        {
+            foreach (var resource in externalResources.Reverse()) resource.Dispose();
+        }
+    }
 }
 
 /// <summary>测试替身接缝；未指定的项沿用真实注册。</summary>

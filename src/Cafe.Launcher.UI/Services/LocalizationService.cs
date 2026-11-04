@@ -26,7 +26,9 @@ public sealed class LocalizedTextCatalog : INotifyPropertyChanged, IDisposable
     }
 
     /// <summary>Gets the localized text associated with a resource key.</summary>
-    public string this[string key] => localizer.T(key);
+    public string this[string key] => localizer.T(Resources.LauncherResourceCatalog.Parse(key));
+
+    public string this[LocalizationKeys key] => localizer.T(key);
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -141,7 +143,10 @@ public sealed class LocalizationService
     }
 
     /// <summary>Looks up a single resource key in the active UI culture.</summary>
-    public string T(string key)
+    public string T(LocalizationKeys key) => Lookup(Resources.LauncherResourceCatalog.Name(key));
+
+    /// <summary>String adapter for injected test tables; production callers use typed keys.</summary>
+    internal string Lookup(string key)
     {
         // Resolve by CurrentLanguage, not the calling thread's culture: SetLanguage may
         // run off the UI thread during startup, and thread-culture fallback would then
@@ -152,9 +157,11 @@ public sealed class LocalizationService
     }
 
     /// <summary>Looks up and formats a resource key using the active culture.</summary>
-    public string F(string key, params object?[] args)
+    public string F(LocalizationKeys key, params object?[] args) => Format(Resources.LauncherResourceCatalog.Name(key), args);
+
+    internal string Format(string key, params object?[] args)
     {
-        var template = T(key);
+        var template = Lookup(key);
         try
         {
             return string.Format(

@@ -13,6 +13,8 @@ internal interface ILocalizationResourceSource
 /// <summary>Reads the embedded LauncherStrings resources through the generated manager.</summary>
 internal sealed class ResourceManagerLocalizationSource : ILocalizationResourceSource
 {
+    public ResourceManagerLocalizationSource() => Resources.LauncherResourceCatalog.EnsureValid();
+
     public string? GetString(string effectiveLanguage, string key) =>
         Resources.LauncherStrings.ResourceManager.GetString(
             key, LauncherCultureResolver.GetCultureFor(effectiveLanguage));

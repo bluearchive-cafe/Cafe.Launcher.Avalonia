@@ -494,7 +494,7 @@ public sealed partial class MainWindowHeadlessTests
         context.Window.SetSystemTray(trayService);
         context.Window.Show();
 
-        ((IGameOperationJourneyHost)context.ViewModel.Operations).RequestMinimize();
+        ((IGameOperationJourneyHost)context.ViewModel.Operations).Present(new GameOperationPresentation.Window(GameOperationWindowAction.Minimize));
         Dispatcher.UIThread.RunJobs();
 
         Assert.False(context.Window.IsVisible);
@@ -508,7 +508,7 @@ public sealed partial class MainWindowHeadlessTests
         using var context = CreateContext();
         context.Window.Show();
 
-        ((IGameOperationJourneyHost)context.ViewModel.Operations).RequestMinimize();
+        ((IGameOperationJourneyHost)context.ViewModel.Operations).Present(new GameOperationPresentation.Window(GameOperationWindowAction.Minimize));
         Dispatcher.UIThread.RunJobs();
 
         Assert.Equal(WindowState.Minimized, context.Window.WindowState);
@@ -537,7 +537,7 @@ public sealed partial class MainWindowHeadlessTests
         var closed = false;
         context.Window.Closed += (_, _) => closed = true;
 
-        ((IGameOperationJourneyHost)context.ViewModel.Operations).RequestExit();
+        ((IGameOperationJourneyHost)context.ViewModel.Operations).Present(new GameOperationPresentation.Window(GameOperationWindowAction.Exit));
         Dispatcher.UIThread.RunJobs();
 
         Assert.True(closed);

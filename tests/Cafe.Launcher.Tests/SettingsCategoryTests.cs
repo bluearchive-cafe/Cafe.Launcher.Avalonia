@@ -1,3 +1,4 @@
+using Cafe.Launcher.UI.Constants;
 using System.ComponentModel;
 using Cafe.Launcher.Composition;
 using Cafe.Launcher.UI.Features.Settings;
@@ -160,16 +161,16 @@ public sealed class SettingsCategoryTests
 
         foreach (var (key, _) in CategoryLocalizedValues)
         {
-            Assert.NotEqual(key, localizer.T(key));
+            Assert.NotEqual(key, localizer.Lookup(key));
         }
 
         foreach (var key in CategoryDescriptionKeys)
         {
-            Assert.NotEqual(key, localizer.T(key));
+            Assert.NotEqual(key, localizer.Lookup(key));
         }
 
         using var strings = new LocalizedTextCatalog(localizer);
-        Assert.Equal(localizer.T("settingsCategoryGeneral"), strings["settingsCategoryGeneral"]);
+        Assert.Equal(localizer.T(LocalizationKeys.SettingsCategoryGeneral), strings["settingsCategoryGeneral"]);
     }
 
     [Theory]
@@ -208,7 +209,7 @@ public sealed class SettingsCategoryTests
 
         foreach (var (key, getValue) in CategoryLocalizedValues)
         {
-            Assert.Equal(localizer.T(key), getValue(strings));
+            Assert.Equal(localizer.Lookup(key), getValue(strings));
         }
     }
 

@@ -18,7 +18,7 @@ internal enum GameOperationDecision
 
 /// <summary>
 /// 安装生命周期语境下「哪种状态允许哪种操作」的唯一策略表。
-/// 表示层预检（跳过哪个提示）、journey 路径闸与服务的执行边界都读这里；
+/// 仅由 GameOperationAttempt 读取；旅程传递已准入的尝试，执行管线不重复询问；
 /// 拒绝时「配哪句话」的文案职责留在各调用层——但「是否被拒绝」只有这一个来源，
 /// 且用户已在确认框上点过确认之后仍被拒绝时，必须给出可见反馈（见 ADR-027）。
 /// 新增 LauncherRuntimeState 或操作种类时，GameOperationPolicyTests 的全表测试

@@ -1,3 +1,4 @@
+using Cafe.Launcher.UI.Constants;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Resources;
@@ -29,7 +30,7 @@ public sealed class LocalizationServiceTests
 
         service.SetLanguage(LauncherLanguages.Japanese);
 
-        Assert.Equal("Localization unavailable.", service.T("onlyEnglish"));
+        Assert.Equal("Localization unavailable.", service.Lookup("onlyEnglish"));
     }
 
     [Fact]
@@ -52,7 +53,7 @@ public sealed class LocalizationServiceTests
             Assert.Equal(
                 Cafe.Launcher.UI.Resources.LauncherStrings.ResourceManager.GetString(
                     "languageAuto", CultureInfo.CurrentUICulture),
-                service.T("languageAuto"));
+                service.T(LocalizationKeys.LanguageAuto));
         }
         finally
         {
@@ -89,8 +90,8 @@ public sealed class LocalizationServiceTests
         var service = new LocalizationService();
         service.SetLanguage(language);
 
-        Assert.Equal(expectedOpenText, service.T("trayOpenLauncher"));
-        Assert.Equal(expectedExitText, service.T("trayExitLauncher"));
+        Assert.Equal(expectedOpenText, service.T(LocalizationKeys.TrayOpenLauncher));
+        Assert.Equal(expectedExitText, service.T(LocalizationKeys.TrayExitLauncher));
     }
 
     [Theory]
@@ -107,9 +108,9 @@ public sealed class LocalizationServiceTests
         var service = new LocalizationService();
         service.SetLanguage(language);
 
-        Assert.Equal(expectedRepositoryText, service.T("gitHubRepository"));
-        Assert.Equal(expectedCheckUpdatesText, service.T("checkUpdates"));
-        Assert.Equal(expectedPrivacyPolicyText, service.T("privacyPolicy"));
+        Assert.Equal(expectedRepositoryText, service.T(LocalizationKeys.GitHubRepository));
+        Assert.Equal(expectedCheckUpdatesText, service.T(LocalizationKeys.CheckUpdates));
+        Assert.Equal(expectedPrivacyPolicyText, service.T(LocalizationKeys.PrivacyPolicy));
     }
 
     [Theory]
@@ -132,7 +133,7 @@ public sealed class LocalizationServiceTests
         var service = new LocalizationService();
         service.SetLanguage(language);
 
-        Assert.Equal(expectedCopyrightText, service.T("aboutCopyrightText"));
+        Assert.Equal(expectedCopyrightText, service.T(LocalizationKeys.AboutCopyrightText));
     }
 
     [Theory]
@@ -160,8 +161,8 @@ public sealed class LocalizationServiceTests
         var service = new LocalizationService();
         service.SetLanguage(language);
 
-        Assert.Equal(expectedArtworkLinkText, service.T("defaultBackgroundArtwork"));
-        Assert.Equal(expectedCopyrightText, service.T("defaultBackgroundCopyrightText"));
+        Assert.Equal(expectedArtworkLinkText, service.T(LocalizationKeys.DefaultBackgroundArtwork));
+        Assert.Equal(expectedCopyrightText, service.T(LocalizationKeys.DefaultBackgroundCopyrightText));
     }
 
     [Theory]
@@ -174,13 +175,13 @@ public sealed class LocalizationServiceTests
         var service = new LocalizationService();
         service.SetLanguage(language);
 
-        Assert.NotEqual("diskSpaceCheck", service.F("diskSpaceCheck", "10B", "20B"));
-        Assert.NotEqual("diskSpaceInsufficientDetail", service.F("diskSpaceInsufficientDetail", "10B", "--"));
-        Assert.NotEqual("verificationRetry", service.F("verificationRetry", 2, 1, 3));
-        Assert.NotEqual("verificationFailed", service.F("verificationFailed", 2));
+        Assert.NotEqual("diskSpaceCheck", service.F(LocalizationKeys.DiskSpaceCheck, "10B", "20B"));
+        Assert.NotEqual("diskSpaceInsufficientDetail", service.F(LocalizationKeys.DiskSpaceInsufficientDetail, "10B", "--"));
+        Assert.NotEqual("verificationRetry", service.F(LocalizationKeys.VerificationRetry, 2, 1, 3));
+        Assert.NotEqual("verificationFailed", service.F(LocalizationKeys.VerificationFailed, 2));
         using var strings = new LocalizedTextCatalog(service);
-        Assert.Equal(service.T("diskSpaceCheck"), strings["diskSpaceCheck"]);
-        Assert.Equal(service.T("verificationFailed"), strings["verificationFailed"]);
+        Assert.Equal(service.T(LocalizationKeys.DiskSpaceCheck), strings["diskSpaceCheck"]);
+        Assert.Equal(service.T(LocalizationKeys.VerificationFailed), strings["verificationFailed"]);
     }
 
     [Theory]
@@ -224,11 +225,11 @@ public sealed class LocalizationServiceTests
         service.SetLanguage(language);
         using var strings = new LocalizedTextCatalog(service);
 
-        Assert.Equal(service.T("setupWizardGamePathAvailable"), strings["setupWizardGamePathAvailable"]);
-        Assert.Equal(service.T("setupWizardGamePathChecking"), strings["setupWizardGamePathChecking"]);
-        Assert.Equal(service.T("setupWizardGamePathCorrupted"), strings["setupWizardGamePathCorrupted"]);
-        Assert.Equal(service.T("setupWizardGamePathInaccessible"), strings["setupWizardGamePathInaccessible"]);
-        Assert.Equal(service.T("setupWizardGamePathInstalled"), strings["setupWizardGamePathInstalled"]);
+        Assert.Equal(service.T(LocalizationKeys.SetupWizardGamePathAvailable), strings["setupWizardGamePathAvailable"]);
+        Assert.Equal(service.T(LocalizationKeys.SetupWizardGamePathChecking), strings["setupWizardGamePathChecking"]);
+        Assert.Equal(service.T(LocalizationKeys.SetupWizardGamePathCorrupted), strings["setupWizardGamePathCorrupted"]);
+        Assert.Equal(service.T(LocalizationKeys.SetupWizardGamePathInaccessible), strings["setupWizardGamePathInaccessible"]);
+        Assert.Equal(service.T(LocalizationKeys.SetupWizardGamePathInstalled), strings["setupWizardGamePathInstalled"]);
     }
 
     [Fact]
@@ -243,11 +244,11 @@ public sealed class LocalizationServiceTests
         service.SetLanguage(LauncherLanguages.SimplifiedChinese);
 
         Assert.True(indexerChanged);
-        Assert.Equal(service.T("setupWizardGamePathAvailable"), strings["setupWizardGamePathAvailable"]);
-        Assert.Equal(service.T("setupWizardGamePathChecking"), strings["setupWizardGamePathChecking"]);
-        Assert.Equal(service.T("setupWizardGamePathCorrupted"), strings["setupWizardGamePathCorrupted"]);
-        Assert.Equal(service.T("setupWizardGamePathInaccessible"), strings["setupWizardGamePathInaccessible"]);
-        Assert.Equal(service.T("setupWizardGamePathInstalled"), strings["setupWizardGamePathInstalled"]);
+        Assert.Equal(service.T(LocalizationKeys.SetupWizardGamePathAvailable), strings["setupWizardGamePathAvailable"]);
+        Assert.Equal(service.T(LocalizationKeys.SetupWizardGamePathChecking), strings["setupWizardGamePathChecking"]);
+        Assert.Equal(service.T(LocalizationKeys.SetupWizardGamePathCorrupted), strings["setupWizardGamePathCorrupted"]);
+        Assert.Equal(service.T(LocalizationKeys.SetupWizardGamePathInaccessible), strings["setupWizardGamePathInaccessible"]);
+        Assert.Equal(service.T(LocalizationKeys.SetupWizardGamePathInstalled), strings["setupWizardGamePathInstalled"]);
     }
 
     [Fact]
@@ -316,9 +317,9 @@ public sealed class LocalizationServiceTests
         var service = new LocalizationService();
         service.SetLanguage(language);
 
-        Assert.Equal(expectedManifest, service.T("launchCheckRemoteManifest"));
-        Assert.Equal(expectedDownloadSource, service.T("downloadSource"));
-        Assert.Equal(expectedResourcePanel, service.T("resourcePanel"));
+        Assert.Equal(expectedManifest, service.T(LocalizationKeys.LaunchCheckRemoteManifest));
+        Assert.Equal(expectedDownloadSource, service.T(LocalizationKeys.DownloadSource));
+        Assert.Equal(expectedResourcePanel, service.T(LocalizationKeys.ResourcePanel));
     }
 
     [Fact]
@@ -342,9 +343,9 @@ public sealed class LocalizationServiceTests
         var values = TestLocalizationHelper.ReadResx(Path.Combine(
             TestLocalizationHelper.FindProjectRoot(), "Resources", "LauncherStrings.zh-Hans.resx"));
 
-        Assert.Equal(values["resourcePanelLocalizedVersion"], service.T("resourcePanelLocalizedVersion"));
-        Assert.Equal(values["resourcePanelMainVoice"], service.T("resourcePanelMainVoice"));
-        Assert.Equal(values["resourcePanelMedia"], service.T("resourcePanelMedia"));
+        Assert.Equal(values["resourcePanelLocalizedVersion"], service.T(LocalizationKeys.ResourcePanelLocalizedVersion));
+        Assert.Equal(values["resourcePanelMainVoice"], service.T(LocalizationKeys.ResourcePanelMainVoice));
+        Assert.Equal(values["resourcePanelMedia"], service.T(LocalizationKeys.ResourcePanelMedia));
     }
 
     [Fact]
@@ -353,7 +354,7 @@ public sealed class LocalizationServiceTests
         var service = new LocalizationService();
         service.SetLanguage(LauncherLanguages.English);
 
-        var value = service.T("nonexistentLocalizationKey");
+        var value = service.Lookup("nonexistentLocalizationKey");
 
         Assert.Equal("Localization unavailable.", value);
     }
@@ -365,7 +366,7 @@ public sealed class LocalizationServiceTests
         LocalizationFailureEventArgs? failure = null;
         service.LocalizationFailure += (_, eventArgs) => failure = eventArgs;
 
-        _ = service.T("nonexistentLocalizationKey");
+        _ = service.Lookup("nonexistentLocalizationKey");
 
         Assert.NotNull(failure);
         Assert.IsType<MissingManifestResourceException>(failure!.Exception);
@@ -452,8 +453,8 @@ public sealed class LocalizationServiceTests
         var service = new LocalizationService();
         service.SetLanguage(language);
 
-        Assert.Equal(expectedRepairText, service.F("repairFilesNeeded", 3, "12 MB"));
-        Assert.Equal(expectedEstimatedText, service.F("estimatedTimeRemaining", "1 minute"));
+        Assert.Equal(expectedRepairText, service.F(LocalizationKeys.RepairFilesNeeded, 3, "12 MB"));
+        Assert.Equal(expectedEstimatedText, service.F(LocalizationKeys.EstimatedTimeRemaining, "1 minute"));
     }
 
     [Fact]
@@ -472,7 +473,7 @@ public sealed class LocalizationServiceTests
             var service = new LocalizationService();
             await Task.Run(() => service.SetLanguage(LauncherLanguages.Japanese));
 
-            Assert.Equal("設定", service.T("settings"));
+            Assert.Equal("設定", service.T(LocalizationKeys.Settings));
         }
         finally
         {

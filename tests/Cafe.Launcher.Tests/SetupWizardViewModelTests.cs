@@ -404,8 +404,8 @@ public sealed class SetupWizardViewModelTests
 
         await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.CorruptedInstallation);
 
-        Assert.Equal(localizer.T("setupWizardGamePathStatusTitle"), vm.GamePathPresentation.Title);
-        Assert.Equal(localizer.T("setupWizardGamePathCorrupted"), vm.GamePathPresentation.Description);
+        Assert.Equal(localizer.T(LocalizationKeys.SetupWizardGamePathStatusTitle), vm.GamePathPresentation.Title);
+        Assert.Equal(localizer.T(LocalizationKeys.SetupWizardGamePathCorrupted), vm.GamePathPresentation.Description);
     }
 
     [Fact]

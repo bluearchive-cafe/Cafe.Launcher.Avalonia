@@ -39,6 +39,8 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
     private LauncherStatusSnapshot? currentSnapshot;
     private long runningStateVersion;
     private bool disposed;
+    private long uninstallRequestId;
+    private long uninstallPresentationVersion;
 
     /// <summary>卸载扫描期间尚无分母，显示不定进度；删除阶段显示实际百分比。</summary>
     [ObservableProperty]
@@ -235,8 +237,7 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
             : GameOperationPanelMode.Install;
     }
 
-    void IGameOperationJourneyHost.SetBusy(bool busy) => shell.IsBusy = busy;
-    void IGameOperationJourneyHost.PrepareOperation()
+    private void PrepareOperation()
     {
         shell.IsBusy = true;
         if (IsUninstallExecuting)
@@ -270,16 +271,30 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
         PauseResumeIcon = IsPaused ? ResumeIcon : PauseIcon;
     }
 
-    void IGameOperationJourneyHost.ApplySnapshot(LauncherStatusSnapshot snapshot)
+    void IGameOperationJourneyHost.Present(GameOperationPresentation update)
     {
-        ApplySnapshot(snapshot);
+        switch (update)
+        {
+            case GameOperationPresentation.Busy busy: shell.IsBusy = busy.Value; break;
+            case GameOperationPresentation.Preparing: PrepareOperation(); break;
+            case GameOperationPresentation.Progress progress: ApplyProgress(progress.Value); break;
+            case GameOperationPresentation.Snapshot snapshot: ApplySnapshot(snapshot.Value); break;
+            case GameOperationPresentation.LaunchCheck check: shell.SetLaunchCheckResult(check.Message); break;
+            case GameOperationPresentation.RepairConfirmation confirmation: dialogs.RepairConfirm.Show(confirmation.Message); break;
+            case GameOperationPresentation.UninstallConfirmation confirmation:
+                uninstallRequestId = confirmation.RequestId;
+                uninstallPresentationVersion = Uninstall.Open(confirmation.Value);
+                break;
+            case GameOperationPresentation.UninstallSize size when size.RequestId == uninstallRequestId:
+                Uninstall.ApplyFootprint(uninstallPresentationVersion, size.Value);
+                break;
+            case GameOperationPresentation.UninstallExecuting: Uninstall.BeginExecution(); break;
+            case GameOperationPresentation.UninstallCompleted completed: Uninstall.Complete(completed.Value); break;
+            case GameOperationPresentation.Window { Action: GameOperationWindowAction.Minimize }: MinimizeRequested?.Invoke(); break;
+            case GameOperationPresentation.Window { Action: GameOperationWindowAction.Exit }: ExitRequested?.Invoke(); break;
+            case GameOperationPresentation.Window { Action: GameOperationWindowAction.Show }: ShowRequested?.Invoke(); break;
+        }
     }
-
-    void IGameOperationJourneyHost.SetLaunchCheckResult(string message) =>
-        shell.SetLaunchCheckResult(message);
-
-    void IGameOperationJourneyHost.ShowRepairConfirmation(string message) =>
-        dialogs.RepairConfirm.Show(message);
 
     Task<bool> IGameOperationJourneyHost.RefreshAsync(GameOperationsRefreshMode mode)
     {
@@ -299,12 +314,6 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
 
     Task IGameOperationJourneyHost.ShowLogViewerAsync() =>
         AsyncEvent.InvokeSequentiallyAsync(OpenLogViewerRequested);
-
-    void IGameOperationJourneyHost.RequestMinimize() => MinimizeRequested?.Invoke();
-
-    void IGameOperationJourneyHost.RequestExit() => ExitRequested?.Invoke();
-
-    void IGameOperationJourneyHost.RequestShow() => ShowRequested?.Invoke();
 
     [RelayCommand]
     private async Task StartGameAsync()
@@ -434,49 +443,16 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
             return;
         }
 
-        var requestedSnapshot = currentSnapshot;
-        if (GameOperationPolicy.Decide(GameOperationPolicy.Operation.Uninstall, requestedSnapshot.RuntimeState)
-            == GameOperationDecision.RejectedForCurrentState)
-        {
-            ShowOperationUnavailable();
-            return;
-        }
-
-        var validation = await journey.ValidateUninstallAsync(requestedSnapshot);
-        if (validation is null)
-        {
-            // 预检失败的原因已由 journey 就地报出（ADR-029）：这里只需不再打开确认框。
-            return;
-        }
-
-        var version = Uninstall.Open(requestedSnapshot);
-        var footprint = await journey.MeasureUninstallFootprintAsync(requestedSnapshot);
-        if (!disposed)
-        {
-            Uninstall.ApplyFootprint(version, footprint);
-        }
+        await journey.RequestUninstallAsync(currentSnapshot);
     }
-
-    private void ShowOperationUnavailable() =>
-        GameOperationRejections.WarnUnavailable(localizer, toastService);
 
     public async Task ConfirmUninstallAsync()
     {
-        if (journey.IsShuttingDown)
-        {
-            return;
-        }
-
-        var snapshot = Uninstall.Snapshot;
+        if (journey.IsShuttingDown || !Uninstall.IsConfirmation || !Uninstall.IsVisible
+            || Uninstall.Snapshot is not { } snapshot) return;
         var scope = Uninstall.IsCompatibilitySelected
             ? UninstallScope.GameDirectoryAndManagedCompatibility : UninstallScope.GameDirectory;
-        if (snapshot is null || !Uninstall.BeginExecution())
-        {
-            return;
-        }
-
-        var result = await journey.ConfirmUninstallAsync(snapshot, scope);
-        Uninstall.Complete(result);
+        await journey.ConfirmUninstallAsync(snapshot, scope);
     }
 
     private void OnUninstallPresentationChanged(object? sender, PropertyChangedEventArgs e)

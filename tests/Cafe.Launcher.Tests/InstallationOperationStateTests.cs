@@ -109,7 +109,7 @@ public sealed class InstallationOperationStateTests : IDisposable
         });
 
         Assert.False(result.Success);
-        Assert.Equal(localizer.T("gameCorruptedInstallationState"), result.Message);
+        Assert.Equal(localizer.T(LocalizationKeys.GameCorruptedInstallationState), result.Message);
         // State failures leave every damage counter at zero, which is what keeps the
         // launch journey from offering a repair prompt for a state problem.
         Assert.False(result.Validation.HasDamagedFiles);
@@ -127,7 +127,7 @@ public sealed class InstallationOperationStateTests : IDisposable
         });
 
         Assert.False(result.Success);
-        Assert.Equal(localizer.T("gameBelowLowestVersion"), result.Message);
+        Assert.Equal(localizer.T(LocalizationKeys.GameBelowLowestVersion), result.Message);
     }
 
     [Fact]
@@ -142,7 +142,7 @@ public sealed class InstallationOperationStateTests : IDisposable
         });
 
         Assert.False(result.Success);
-        Assert.Equal(localizer.T("gameInstallationStateReadFailed"), result.Message);
+        Assert.Equal(localizer.T(LocalizationKeys.GameInstallationStateReadFailed), result.Message);
     }
 
     [Fact]
@@ -157,7 +157,7 @@ public sealed class InstallationOperationStateTests : IDisposable
         });
 
         Assert.False(result.Success);
-        Assert.Equal(localizer.T("gameRemoteStateUnavailable"), result.Message);
+        Assert.Equal(localizer.T(LocalizationKeys.GameRemoteStateUnavailable), result.Message);
     }
 
     [Fact]
@@ -172,7 +172,7 @@ public sealed class InstallationOperationStateTests : IDisposable
         });
 
         Assert.False(result.Success);
-        Assert.Equal(localizer.T("updateAvailable"), result.Message);
+        Assert.Equal(localizer.T(LocalizationKeys.UpdateAvailable), result.Message);
     }
 
     [Fact]
@@ -201,7 +201,7 @@ var result = await service.StartAsync(new LauncherStatusSnapshot
 });
 
 Assert.False(result.Success);
-Assert.Equal(localizer.T("gameExecutableNameInvalid"), result.Message);
+Assert.Equal(localizer.T(LocalizationKeys.GameExecutableNameInvalid), result.Message);
     }
 
     [Fact]
@@ -230,7 +230,7 @@ var result = await service.StartAsync(new LauncherStatusSnapshot
 });
 
 Assert.False(result.Success);
-Assert.Equal(localizer.F("gameExecutableMissing", Path.Combine(gamePath, "BlueArchive.exe")), result.Message);
+Assert.Equal(localizer.F(LocalizationKeys.GameExecutableMissing, Path.Combine(gamePath, "BlueArchive.exe")), result.Message);
     }
 
     [Fact]
@@ -256,10 +256,9 @@ Assert.Equal(localizer.F("gameExecutableMissing", Path.Combine(gamePath, "BlueAr
 
         Assert.False(result.Success);
         Assert.Equal(
-            localizer.F(
-                "gameRuntimeNoRunnerAvailable",
-                localizer.T("gameRuntimeRunnerUmu"),
-                localizer.T("gameRuntimeStatusNotFound")),
+            localizer.F(LocalizationKeys.GameRuntimeNoRunnerAvailable,
+                localizer.T(LocalizationKeys.GameRuntimeRunnerUmu),
+                localizer.T(LocalizationKeys.GameRuntimeStatusNotFound)),
             result.Message);
         Assert.Contains("umu-run was not found on PATH.", result.DiagnosticMessage, StringComparison.Ordinal);
     }
@@ -287,10 +286,9 @@ Assert.Equal(localizer.F("gameExecutableMissing", Path.Combine(gamePath, "BlueAr
 
         Assert.False(result.Success);
         Assert.Equal(
-            localizer.F(
-                "gameRuntimeNoRunnerAvailable",
-                localizer.T("gameRuntimeRunnerNative"),
-                localizer.T("gameRuntimeStatusUnsupported")),
+            localizer.F(LocalizationKeys.GameRuntimeNoRunnerAvailable,
+                localizer.T(LocalizationKeys.GameRuntimeRunnerNative),
+                localizer.T(LocalizationKeys.GameRuntimeStatusUnsupported)),
             result.Message);
         Assert.Contains("Native execution requires Windows.", result.DiagnosticMessage, StringComparison.Ordinal);
     }
@@ -322,10 +320,9 @@ Assert.Equal(localizer.F("gameExecutableMissing", Path.Combine(gamePath, "BlueAr
 
         Assert.False(result.Success);
         Assert.Equal(
-            localizer.F(
-                "gameRuntimeNoRunnerAvailable",
+            localizer.F(LocalizationKeys.GameRuntimeNoRunnerAvailable,
                 "mystery-runner",
-                localizer.T("unknown")),
+                localizer.T(LocalizationKeys.Unknown)),
             result.Message);
     }
 
@@ -353,7 +350,7 @@ Assert.Equal(localizer.F("gameExecutableMissing", Path.Combine(gamePath, "BlueAr
             });
 
         Assert.False(result.Success);
-        Assert.Contains($"{localizer.T("gameRuntimeRunner")}: umu", result.DiagnosticMessage, StringComparison.Ordinal);
+        Assert.Contains($"{localizer.T(LocalizationKeys.GameRuntimeRunner)}: umu", result.DiagnosticMessage, StringComparison.Ordinal);
         Assert.Contains(executablePath, result.DiagnosticMessage, StringComparison.Ordinal);
         Assert.Contains(gamePath, result.DiagnosticMessage, StringComparison.Ordinal);
         Assert.IsType<InvalidOperationException>(result.DiagnosticException);
@@ -505,7 +502,7 @@ Assert.Equal(localizer.F("gameExecutableMissing", Path.Combine(gamePath, "BlueAr
         var result = await service.ValidateAsync(protectedPath);
 
         Assert.False(result.Success);
-        Assert.Equal(localizer.F("gamePathProtected", protectedPath), result.Message);
+        Assert.Equal(localizer.F(LocalizationKeys.GamePathProtected, protectedPath), result.Message);
         Assert.Equal(GameOperationErrorCode.Uninstall, result.ErrorCode);
     }
 
@@ -533,7 +530,7 @@ var service = new GameUninstallService(LauncherProfiles.BlueArchiveJapan,
 var result = await service.ValidateAsync(gamePath);
 
 Assert.False(result.Success);
-Assert.Equal(localizer.F("gameIsRunning", "BlueArchive.exe"), result.Message);
+Assert.Equal(localizer.F(LocalizationKeys.GameIsRunning, "BlueArchive.exe"), result.Message);
 Assert.Equal(GameOperationErrorCode.GameRunning, result.ErrorCode);
     }
 
@@ -554,7 +551,7 @@ Assert.Equal(GameOperationErrorCode.GameRunning, result.ErrorCode);
         var result = await service.ValidateAsync(driveRoot!);
 
         Assert.False(result.Success);
-        Assert.Equal(localizer.F("gamePathProtected", driveRoot!), result.Message);
+        Assert.Equal(localizer.F(LocalizationKeys.GamePathProtected, driveRoot!), result.Message);
         Assert.Equal(GameOperationErrorCode.Uninstall, result.ErrorCode);
     }
 
@@ -574,7 +571,7 @@ Assert.Equal(GameOperationErrorCode.GameRunning, result.ErrorCode);
         var result = await service.ValidateAsync(missingPath);
 
         Assert.False(result.Success);
-        Assert.Equal(localizer.F("gamePathMissing", missingPath), result.Message);
+        Assert.Equal(localizer.F(LocalizationKeys.GamePathMissing, missingPath), result.Message);
         Assert.Equal(GameOperationErrorCode.Uninstall, result.ErrorCode);
     }
 
@@ -596,7 +593,7 @@ var service = new GameUninstallService(LauncherProfiles.BlueArchiveJapan,
 var result = await service.ValidateAsync(invalidGamePath);
 
 Assert.False(result.Success);
-Assert.Equal(localizer.F("gameDirectoryNameInvalid", "BlueArchive_JP"), result.Message);
+Assert.Equal(localizer.F(LocalizationKeys.GameDirectoryNameInvalid, "BlueArchive_JP"), result.Message);
 Assert.Equal(GameOperationErrorCode.Uninstall, result.ErrorCode);
     }
 

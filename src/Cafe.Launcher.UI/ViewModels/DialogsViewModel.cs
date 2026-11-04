@@ -197,10 +197,10 @@ internal partial class DialogsViewModel : ViewModelBase, IModalContentViewModel,
     [ObservableProperty]
     private string updateDownloadSpeedText = "";
 
-    private string updateStatusKey = "";
+    private LocalizationKeys? updateStatusKey;
 
     /// <summary>Localized status line shown while the in-app update flow is active.</summary>
-    public string UpdateStatusText => updateStatusKey.Length == 0 ? "" : localizer.T(updateStatusKey);
+    public string UpdateStatusText => updateStatusKey is { } key ? localizer.T(key) : "";
 
     /// <summary>
     /// Label of the dialog's primary action: restart-to-apply once the package is verified,
@@ -261,7 +261,7 @@ internal partial class DialogsViewModel : ViewModelBase, IModalContentViewModel,
         this.diagnostics = diagnostics;
         LanguageOptions = LocalizationService.GetLanguageOptions(localizer);
         SetupWizard = setupWizard;
-        Gallery = new DesignGalleryViewModel(key => localizer.T(key));
+        Gallery = new DesignGalleryViewModel(localizer.T);
         StopConfirm = new ConfirmationDialogViewModel(diagnostics, "Stop");
         DownloadRunningCloseConfirm = new ConfirmationDialogViewModel(diagnostics, "CloseWhileDownloading");
         RepairConfirm = new ConfirmationDialogViewModel(diagnostics, "Repair");
@@ -381,7 +381,7 @@ internal partial class DialogsViewModel : ViewModelBase, IModalContentViewModel,
         IsUpdateReadyToRestart = false;
         UpdateProgress = 0;
         UpdateDownloadSpeedText = "";
-        updateStatusKey = "";
+        updateStatusKey = null;
         OnPropertyChanged(nameof(UpdateStatusText));
     }
 

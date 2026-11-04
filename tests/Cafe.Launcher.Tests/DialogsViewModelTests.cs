@@ -135,7 +135,7 @@ public sealed class DialogsViewModelTests : IDisposable
         LocalizationKeys.LauncherUpdateInAppUnavailablePackage)]
     public void ShowUpdateAvailable_WhenInAppApplyIsUnavailable_NamesTheCauseTheVerdictReported(
         LauncherUpdateInAppAvailability availability,
-        string expectedKey)
+        LocalizationKeys expectedKey)
     {
         var localizer = new LocalizationService();
         var viewModel = CreateViewModel();

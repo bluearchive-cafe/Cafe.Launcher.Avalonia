@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using Cafe.Launcher.Core.Helpers;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.UI.Constants;
@@ -37,9 +39,9 @@ internal sealed class GameOperationJourney : IDisposable
     private readonly IErrorHandlingService errorHandling;
     private readonly IGameOperationJourneyHost host;
 
-    private LauncherStatusSnapshot? lastInstallSnapshot;
     private readonly ActivityLifetime lifetime = new();
     private int stopRequested;
+    private long uninstallRequestId;
 
     /// <summary>关闭开始后不再接收新操作，已请求停止的任务仍须完成其 finally 与呈现收尾。</summary>
     public bool IsShuttingDown => lifetime.IsShuttingDown;
@@ -110,8 +112,11 @@ internal sealed class GameOperationJourney : IDisposable
 
         await RunBusyAsync("Game launch failed.", LocalizationKeys.GameLaunchFailed, async () =>
         {
-            var launchResult = await executor.LaunchAsync(snapshot);
-            host.SetLaunchCheckResult(launchResult.Validation.Message);
+            var admission = GameOperationAttempt.Evaluate(GameOperationPolicy.Operation.Launch, snapshot);
+            var launchResult = admission.Attempt is { } attempt
+                ? await executor.LaunchAsync(attempt)
+                : GameOperationAttempt.RejectLaunch(snapshot, localizer);
+            host.Present(new GameOperationPresentation.LaunchCheck(launchResult.Validation.Message));
             var launchDiagnostic = BuildLaunchDiagnostic(launchResult);
 
             if (launchResult.Success)
@@ -131,7 +136,7 @@ internal sealed class GameOperationJourney : IDisposable
                 // sizes — a same-size but corrupt file needs hashing to be caught.
                 if (launchResult.Validation.HasDamagedFiles)
                 {
-                    host.ShowRepairConfirmation(localizer.T(LocalizationKeys.LaunchDamageRepairPrompt));
+                    host.Present(new GameOperationPresentation.RepairConfirmation(localizer.T(LocalizationKeys.LaunchDamageRepairPrompt)));
                 }
                 else
                 {
@@ -164,12 +169,12 @@ internal sealed class GameOperationJourney : IDisposable
                 // before the process goes away — the same beat the minimize path gives itself.
                 toastService.ShowSuccess(localizer.T(LocalizationKeys.GameLaunchedExiting));
                 await delayAsync(AfterLaunchToastBeat);
-                host.RequestExit();
+                host.Present(new GameOperationPresentation.Window(GameOperationWindowAction.Exit));
                 break;
             default:
                 toastService.ShowSuccess(localizer.T(LocalizationKeys.GameLaunchedMinimized));
                 await delayAsync(AfterLaunchToastBeat);
-                host.RequestMinimize();
+                host.Present(new GameOperationPresentation.Window(GameOperationWindowAction.Minimize));
                 break;
         }
     }
@@ -181,7 +186,7 @@ internal sealed class GameOperationJourney : IDisposable
     /// </summary>
     public void NotifySessionStartFailed(GameLaunchExitInfo? exit)
     {
-        host.RequestShow();
+        host.Present(new GameOperationPresentation.Window(GameOperationWindowAction.Show));
         toastService.ShowError(localizer.F(LocalizationKeys.GameSessionStartFailed, exit?.ExitCode ?? -1));
         _ = diagnostics.WarningAsync(
             "GameLaunch",
@@ -267,7 +272,6 @@ internal sealed class GameOperationJourney : IDisposable
             return;
         }
 
-        lastInstallSnapshot = snapshot;
         var result = await RunInstallOrUpdateAttemptAsync(snapshot);
         if (result is null)
         {
@@ -280,7 +284,7 @@ internal sealed class GameOperationJourney : IDisposable
             return;
         }
 
-        ShowInstallUpdateFailureToast(result.Message, result.ErrorCode);
+        ShowInstallUpdateFailureToast(result.Message, result.ErrorCode, snapshot);
     }
 
     /// <summary>
@@ -294,7 +298,7 @@ internal sealed class GameOperationJourney : IDisposable
             return Task.CompletedTask;
         }
 
-        host.ShowRepairConfirmation(localizer.T(LocalizationKeys.RepairWarning));
+        host.Present(new GameOperationPresentation.RepairConfirmation(localizer.T(LocalizationKeys.RepairWarning)));
         return Task.CompletedTask;
     }
 
@@ -310,8 +314,10 @@ internal sealed class GameOperationJourney : IDisposable
         // 用户已经在确认框上点过确认：此时状态若又变得不允许，必须给可见反馈（ADR-027）。
         // 这道闸门必须早于 PrepareOperation——后者会把面板 latch 到 Progress，而只有
         // SetIdlePanels 能把它复位。
-        if (RejectRepairIfUnavailable(snapshot))
+        var admission = GameOperationAttempt.Evaluate(GameOperationPolicy.Operation.Repair, snapshot);
+        if (admission.Attempt is not { } attempt)
         {
+            ShowOperationUnavailable();
             return;
         }
 
@@ -323,7 +329,7 @@ internal sealed class GameOperationJourney : IDisposable
         var refreshHandled = false;
         try
         {
-            var result = await executor.RepairAsync(snapshot, host.ApplyProgress);
+            var result = await executor.RepairAsync(attempt, progress => host.Present(new GameOperationPresentation.Progress(progress)));
             ShowOperationResult(result);
             refreshHandled = await RequestRefresh(GameOperationsRefreshMode.Normal);
         }
@@ -334,7 +340,7 @@ internal sealed class GameOperationJourney : IDisposable
         }
         finally
         {
-            host.SetBusy(false);
+            host.Present(new GameOperationPresentation.Busy(false));
             if (!refreshHandled)
             {
                 ApplySnapshotSafe(snapshot);
@@ -349,6 +355,12 @@ internal sealed class GameOperationJourney : IDisposable
     /// </summary>
     public async Task<GameOperationResult?> ValidateUninstallAsync(LauncherStatusSnapshot snapshot)
     {
+        if (GameOperationAttempt.Evaluate(GameOperationPolicy.Operation.Uninstall, snapshot).Decision
+            == GameOperationDecision.RejectedForCurrentState)
+        {
+            ShowOperationUnavailable();
+            return null;
+        }
         var validation = await executor.ValidateUninstallAsync(snapshot.LocalGame.GamePath);
         if (validation.Success)
         {
@@ -375,20 +387,35 @@ internal sealed class GameOperationJourney : IDisposable
     public Task<UninstallFootprint> MeasureUninstallFootprintAsync(LauncherStatusSnapshot snapshot) =>
         executor.MeasureUninstallFootprintAsync(snapshot);
 
+    /// <summary>Owns uninstall admission and preflight; emits confirmation before waiting for size measurement.</summary>
+    public async Task RequestUninstallAsync(LauncherStatusSnapshot snapshot)
+    {
+        if (!PrepareShellOnly(snapshot)) return;
+        var requestId = ++uninstallRequestId;
+        if (await ValidateUninstallAsync(snapshot) is null || IsShuttingDown) return;
+        host.Present(new GameOperationPresentation.UninstallConfirmation(requestId, snapshot));
+        var size = await MeasureUninstallFootprintAsync(snapshot);
+        if (!IsShuttingDown)
+            host.Present(new GameOperationPresentation.UninstallSize(requestId, size));
+    }
+
     /// <summary>Runs a confirmed uninstall and refreshes launcher state afterward.</summary>
     public async Task<GameOperationResult> ConfirmUninstallAsync(LauncherStatusSnapshot snapshot, UninstallScope scope)
     {
-        if (GameOperationPolicy.Decide(GameOperationPolicy.Operation.Uninstall, snapshot.RuntimeState)
-            == GameOperationDecision.RejectedForCurrentState)
+        var admission = GameOperationAttempt.Evaluate(GameOperationPolicy.Operation.Uninstall, snapshot);
+        if (admission.Attempt is not { } attempt)
         {
-            return GameOperationRejections.UnavailableResult(localizer);
+            var rejected = GameOperationRejections.UnavailableResult(localizer);
+            host.Present(new GameOperationPresentation.UninstallCompleted(rejected));
+            return rejected;
         }
 
-        host.SetBusy(true);
+        host.Present(new GameOperationPresentation.UninstallExecuting());
+        host.Present(new GameOperationPresentation.Busy(true));
         try
         {
-            host.PrepareOperation();
-            var result = await executor.UninstallAsync(snapshot, scope, host.ApplyProgress);
+            host.Present(new GameOperationPresentation.Preparing());
+            var result = await executor.UninstallAsync(attempt, scope, progress => host.Present(new GameOperationPresentation.Progress(progress)));
             // 刷新失败不改写已经确定的删除终态；用户始终能在原表面查看实际结果。
             try
             {
@@ -398,18 +425,21 @@ internal sealed class GameOperationJourney : IDisposable
             {
                 await diagnostics.ErrorAsync("GameUninstall", "Refreshing launcher state after uninstall failed.", exception);
             }
+            host.Present(new GameOperationPresentation.UninstallCompleted(result));
             return result;
         }
         catch (Exception exception)
         {
             // 与执行层同一口径：异常原文只进日志，界面只说本地化的原因与下一步。
             await diagnostics.ErrorAsync("GameUninstall", "Game uninstall failed.", exception);
-            return GameOperationOutcomes.Failed(
+            var failed = GameOperationOutcomes.Failed(
                 localizer.T(LocalizationKeys.UninstallFailureGeneric), GameOperationErrorCode.System);
+            host.Present(new GameOperationPresentation.UninstallCompleted(failed));
+            return failed;
         }
         finally
         {
-            host.SetBusy(false);
+            host.Present(new GameOperationPresentation.Busy(false));
         }
     }
 
@@ -444,7 +474,7 @@ internal sealed class GameOperationJourney : IDisposable
     /// </summary>
     private bool RejectRepairIfUnavailable(LauncherStatusSnapshot snapshot)
     {
-        if (GameOperationPolicy.Decide(GameOperationPolicy.Operation.Repair, snapshot.RuntimeState)
+        if (GameOperationAttempt.Evaluate(GameOperationPolicy.Operation.Repair, snapshot).Decision
             != GameOperationDecision.RejectedForCurrentState)
         {
             return false;
@@ -484,10 +514,10 @@ internal sealed class GameOperationJourney : IDisposable
 
         try
         {
-            host.SetBusy(true);
+            host.Present(new GameOperationPresentation.Busy(true));
             var result = await executor.ResumePersistedAsync(
                 snapshot,
-                host.ApplyProgress,
+                progress => host.Present(new GameOperationPresentation.Progress(progress)),
                 cancellationToken);
             if (result is null)
             {
@@ -507,7 +537,7 @@ internal sealed class GameOperationJourney : IDisposable
         }
         finally
         {
-            host.SetBusy(false);
+            host.Present(new GameOperationPresentation.Busy(false));
         }
     }
 
@@ -541,14 +571,13 @@ internal sealed class GameOperationJourney : IDisposable
         {
             // 允许集只读策略表；拒绝后「对用户意味着什么」仍按状态就地分流——
             // 损坏给修复入口，IO/远端失败重读状态，其余状态报不可用（ADR-027）。
-            if (GameOperationPolicy.Decide(
-                    GameOperationPolicy.Operation.InstallOrUpdate,
-                    snapshot.RuntimeState) == GameOperationDecision.RejectedForCurrentState)
+            var admission = GameOperationAttempt.Evaluate(GameOperationPolicy.Operation.InstallOrUpdate, snapshot);
+            if (admission.Attempt is not { } attempt)
             {
                 switch (snapshot.RuntimeState)
                 {
                     case LauncherRuntimeState.Corrupted:
-                        host.ShowRepairConfirmation(localizer.T(LocalizationKeys.RepairWarning));
+                        host.Present(new GameOperationPresentation.RepairConfirmation(localizer.T(LocalizationKeys.RepairWarning)));
                         return null;
                     case LauncherRuntimeState.IoFailure or LauncherRuntimeState.RemoteUnavailable:
                         refreshHandled = await RequestRefresh(GameOperationsRefreshMode.Normal);
@@ -567,7 +596,7 @@ internal sealed class GameOperationJourney : IDisposable
             // 于是用户看到的是「忙活一下就装好了」，因为他以为被删掉的东西其实从没被删过。
             NotifyInstallOverExistingContent(snapshot);
 
-            var result = await executor.InstallOrUpdateAsync(snapshot, host.ApplyProgress, cancellationToken);
+            var result = await executor.InstallOrUpdateAsync(attempt, progress => host.Present(new GameOperationPresentation.Progress(progress)), cancellationToken);
             refreshHandled = await RequestRefresh(GameOperationsRefreshMode.SkipPersistedResume);
             return result;
         }
@@ -584,7 +613,7 @@ internal sealed class GameOperationJourney : IDisposable
         }
         finally
         {
-            host.SetBusy(false);
+            host.Present(new GameOperationPresentation.Busy(false));
             if (!refreshHandled)
             {
                 ApplySnapshotSafe(snapshot);
@@ -592,7 +621,7 @@ internal sealed class GameOperationJourney : IDisposable
         }
     }
 
-    private void ShowInstallUpdateFailureToast(string message, GameOperationErrorCode errorCode)
+    private void ShowInstallUpdateFailureToast(string message, GameOperationErrorCode errorCode, LauncherStatusSnapshot originalSnapshot)
     {
         if (IsShuttingDown)
         {
@@ -625,12 +654,12 @@ internal sealed class GameOperationJourney : IDisposable
             Title = localizer.T(LocalizationKeys.InstallUpdateFailedTitle),
             Message = message,
             Severity = ToastSeverity.Error,
-            PrimaryAction = new ToastAction(localizer.T(LocalizationKeys.Retry), RetryInstallOrUpdateAsync, Timeout: null),
+            PrimaryAction = new ToastAction(localizer.T(LocalizationKeys.Retry), token => RetryInstallOrUpdateAsync(originalSnapshot, token), Timeout: null),
             SecondaryAction = new ToastAction(localizer.T(LocalizationKeys.ViewLog), OpenLogViewerAsync)
         });
     }
 
-    private async Task<ToastActionResult> RetryInstallOrUpdateAsync(CancellationToken cancellationToken)
+    private async Task<ToastActionResult> RetryInstallOrUpdateAsync(LauncherStatusSnapshot originalSnapshot, CancellationToken cancellationToken)
     {
         using var operation = TryBeginOperation();
         if (operation is null)
@@ -639,10 +668,20 @@ internal sealed class GameOperationJourney : IDisposable
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        var snapshot = lastInstallSnapshot;
+        var snapshot = host.CurrentSnapshot;
         if (snapshot is null)
         {
             return ToastActionResult.Failure(localizer.T(LocalizationKeys.LauncherStateNotLoaded), localizer.T(LocalizationKeys.InstallUpdateFailedTitle));
+        }
+
+        // The toast owns its original target, but eligibility and preferences come from
+        // the latest snapshot. An old toast must never redirect work to a different directory.
+        if (!GamePathValidator.PathComparer.Equals(
+                Path.TrimEndingDirectorySeparator(originalSnapshot.LocalGame.GamePath),
+                Path.TrimEndingDirectorySeparator(snapshot.LocalGame.GamePath)))
+        {
+            return ToastActionResult.Failure(localizer.T(LocalizationKeys.OperationUnavailableForCurrentState),
+                localizer.T(LocalizationKeys.InstallUpdateFailedTitle));
         }
 
         var result = await RunInstallOrUpdateAttemptAsync(snapshot, cancellationToken);
@@ -736,9 +775,9 @@ internal sealed class GameOperationJourney : IDisposable
     /// <see cref="ErrorHandlingOptions"/> 的入口（修复、卸载、续传）仍在调用点显式展开——那些是
     /// 入口自己的语义，不是这段骨架的一部分。
     /// </remarks>
-    private async Task RunBusyAsync(string errorContext, string failureMessageKey, Func<Task> body)
+    private async Task RunBusyAsync(string errorContext, LocalizationKeys failureMessageKey, Func<Task> body)
     {
-        host.SetBusy(true);
+        host.Present(new GameOperationPresentation.Busy(true));
 
         try
         {
@@ -751,7 +790,7 @@ internal sealed class GameOperationJourney : IDisposable
         }
         finally
         {
-            host.SetBusy(false);
+            host.Present(new GameOperationPresentation.Busy(false));
         }
     }
 
@@ -777,13 +816,13 @@ internal sealed class GameOperationJourney : IDisposable
             return false;
         }
 
-        host.PrepareOperation();
+        host.Present(new GameOperationPresentation.Preparing());
         return true;
     }
 
     private void ApplySnapshotSafe(LauncherStatusSnapshot snapshot)
     {
-        host.ApplySnapshot(snapshot);
+        host.Present(new GameOperationPresentation.Snapshot(snapshot));
     }
 
     private static string BuildLaunchDiagnostic(GameLaunchResult launchResult)

@@ -31,3 +31,7 @@
 - `ShellLifecycle` 的公开表面不变（`Wire`/`Unwire`/`TryHandleEscape` 保留为委托），现有调用方与测试无需迁移。
 - 现有 `Unwire_AfterWired_StopsCrossFeatureEventFlow` 继续作为退订行为的回归守卫；不需要新的行为基线。
 - 测试对象图与组合根不再并行维护：注册变更直接进入两处 fixture；测试只声明要替换的确定性接缝。
+
+## 2026-11-04 复核落实
+
+测试图不再覆盖 GameOperations、Dialogs、WindowChrome 与 ToastHost 的构造注册；生产注册依赖内部 `PresentationEnvironment`，测试仅替换时间、调度与外部打开。外部实例登记不转移 Microsoft DI 的释放所有权，因此 `LauncherTestGraph` 显式持有并在容器之后释放这些装配，包含从未解析的设置写入方；已解析写入方同时通过工厂登记被容器捕获。释放与未解析资源的回归用例见 `LauncherTestGraphTests`。

@@ -49,7 +49,7 @@ internal static class RunningGameGate
     public static async Task<GameOperationResult?> FindFailureAsync(
         IGameProcessTracker gameProcessTracker,
         LocalizationService localizer,
-        string runningMessageKey,
+        LocalizationKeys runningMessageKey,
         RunningGameQuery query,
         CancellationToken cancellationToken,
         TimeSpan? scanTimeout = null)

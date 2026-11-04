@@ -41,6 +41,9 @@ internal sealed class StubGameOperationExecutor : IGameOperationExecutor
 
     public int LaunchCallCount { get; private set; }
 
+    /// <summary>Most recent admitted installation snapshot.</summary>
+    public LauncherStatusSnapshot? LastInstallSnapshot { get; private set; }
+
     public int InstallCallCount { get; private set; }
 
     public int RepairCallCount { get; private set; }
@@ -108,9 +111,10 @@ internal sealed class StubGameOperationExecutor : IGameOperationExecutor
 
     /// <inheritdoc />
     public Task<GameLaunchResult> LaunchAsync(
-        LauncherStatusSnapshot snapshot,
+        GameOperationAttempt attempt,
         CancellationToken cancellationToken = default)
     {
+        var snapshot = attempt.SnapshotFor(GameOperationPolicy.Operation.Launch);
         LaunchCallCount++;
         if (LaunchException is not null)
         {
@@ -122,10 +126,12 @@ internal sealed class StubGameOperationExecutor : IGameOperationExecutor
 
     /// <inheritdoc />
     public Task<GameOperationResult> InstallOrUpdateAsync(
-        LauncherStatusSnapshot snapshot,
+        GameOperationAttempt attempt,
         Action<GameOperationProgress> progress,
         CancellationToken cancellationToken = default)
     {
+        var snapshot = attempt.SnapshotFor(GameOperationPolicy.Operation.InstallOrUpdate);
+        LastInstallSnapshot = snapshot;
         InstallCallCount++;
         if (InstallException is not null)
         {
@@ -137,9 +143,10 @@ internal sealed class StubGameOperationExecutor : IGameOperationExecutor
 
     /// <inheritdoc />
     public Task<GameOperationResult> RepairAsync(
-        LauncherStatusSnapshot snapshot,
+        GameOperationAttempt attempt,
         Action<GameOperationProgress> progress)
     {
+        var snapshot = attempt.SnapshotFor(GameOperationPolicy.Operation.Repair);
         RepairCallCount++;
         return RepairCompletion?.Task ?? Task.FromResult(RepairResult);
     }
@@ -179,10 +186,11 @@ internal sealed class StubGameOperationExecutor : IGameOperationExecutor
 
     /// <inheritdoc />
     public Task<GameOperationResult> UninstallAsync(
-        LauncherStatusSnapshot snapshot,
+        GameOperationAttempt attempt,
         UninstallScope scope,
         Action<GameOperationProgress> progress)
     {
+        var snapshot = attempt.SnapshotFor(GameOperationPolicy.Operation.Uninstall);
         UninstallCallCount++;
         LastUninstallScope = scope;
         LastUninstallGamePath = snapshot.LocalGame.GamePath;

@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Cafe.Launcher.Testing;
 
@@ -12,7 +12,8 @@ public sealed partial class UiStyleContractTests
     public void LocalizedTextCatalog_DebugBindings_UseResourceKeys()
     {
         var overlay = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowDebugOverlay.axaml"));
-        var source = File.ReadAllText(TestRepository.FromPresentationRoot("Services/LocalizationService.cs"));
+        var localizer = new Cafe.Launcher.UI.Services.LocalizationService();
+        using var catalog = new Cafe.Launcher.UI.Services.LocalizedTextCatalog(localizer);
         var debugProperties = overlay
             .Descendants()
             .SelectMany(element => element.Attributes())
@@ -25,7 +26,7 @@ public sealed partial class UiStyleContractTests
         Assert.NotEmpty(debugProperties);
         foreach (var key in debugProperties)
         {
-            Assert.Contains($"this[string key] => localizer.T(key)", source, StringComparison.Ordinal);
+            Assert.Equal(localizer.T(Cafe.Launcher.UI.Resources.LauncherResourceCatalog.Parse(key)), catalog[key]);
             Assert.StartsWith("debug", key, StringComparison.Ordinal);
         }
     }

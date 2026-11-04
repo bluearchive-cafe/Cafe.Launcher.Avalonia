@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.Testing;
@@ -228,7 +228,7 @@ public sealed class TestSupportFacilityTests
             Path.Combine(TestRepository.ResourcesPath, "LauncherStrings.resx"));
 
         Assert.NotEmpty(resources);
-        Assert.Contains(Cafe.Launcher.UI.Constants.LocalizationKeys.Save, resources.Keys);
+        Assert.Contains("save", resources.Keys);
     }
 
     /// <summary>
@@ -243,7 +243,7 @@ public sealed class TestSupportFacilityTests
             {
                 [LauncherLanguages.English] = new(StringComparer.Ordinal)
                 {
-                    [LocalizationKeys.Save] = "custom-value"
+                    ["save"] = "custom-value"
                 }
             }));
         custom.SetLanguage(LauncherLanguages.English);

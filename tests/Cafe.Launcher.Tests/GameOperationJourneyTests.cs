@@ -437,6 +437,7 @@ public sealed class GameOperationJourneyTests
 
         await context.Journey.InstallOrUpdateAsync(snapshot);
 
+        context.Host.CurrentSnapshot = snapshot;
         var retryToast = notifications.Single(toast => toast.PrimaryAction is not null);
         context.Executor.InstallResult = new GameOperationResult { Success = true, Message = "done" };
 
@@ -444,6 +445,67 @@ public sealed class GameOperationJourneyTests
 
         Assert.True(retryOutcome.IsSuccess);
         Assert.Equal(2, context.Executor.InstallCallCount);
+    }
+
+    [Theory]
+    [InlineData(LauncherRuntimeState.Ready)]
+    [InlineData(LauncherRuntimeState.Corrupted)]
+    public async Task RetryInstallOrUpdateAsync_CurrentStateChanged_UsesCurrentAdmission(LauncherRuntimeState state)
+    {
+        var context = CreateContext();
+        var notifications = context.SubscribeToasts();
+        context.Executor.InstallResult = new GameOperationResult { ErrorCode = GameOperationErrorCode.Network, Message = "failed" };
+        await context.Journey.InstallOrUpdateAsync(CreateSnapshot(LauncherRuntimeState.UpdateAvailable));
+        var retry = Assert.Single(notifications).PrimaryAction!;
+        context.Host.CurrentSnapshot = CreateSnapshot(state);
+        var outcome = await retry.ExecuteAsync(CancellationToken.None);
+        Assert.False(outcome.IsSuccess);
+        Assert.Equal(1, context.Executor.InstallCallCount);
+    }
+
+    [Fact]
+    public async Task RetryInstallOrUpdateAsync_CurrentTargetChanged_RejectsInsteadOfRedirecting()
+    {
+        var context = CreateContext();
+        var notifications = context.SubscribeToasts();
+        context.Executor.InstallResult = new GameOperationResult { ErrorCode = GameOperationErrorCode.Network, Message = "failed" };
+        await context.Journey.InstallOrUpdateAsync(CreateSnapshot(LauncherRuntimeState.UpdateAvailable, gamePath: "original"));
+        var oldRetry = Assert.Single(notifications).PrimaryAction!;
+        context.Host.CurrentSnapshot = CreateSnapshot(LauncherRuntimeState.UpdateAvailable, gamePath: "another");
+        // A later failed attempt must not overwrite the target bound to an earlier toast.
+        await context.Journey.InstallOrUpdateAsync(context.Host.CurrentSnapshot);
+        var outcome = await oldRetry.ExecuteAsync(CancellationToken.None);
+        Assert.False(outcome.IsSuccess);
+        Assert.Equal(2, context.Executor.InstallCallCount);
+    }
+
+    [Fact]
+    public async Task RetryInstallOrUpdateAsync_SameTargetAndFreshSnapshot_ExecutesWithCurrentPreferences()
+    {
+        var context = CreateContext();
+        var notifications = context.SubscribeToasts();
+        context.Executor.InstallResult = new GameOperationResult { ErrorCode = GameOperationErrorCode.Network, Message = "failed" };
+        await context.Journey.InstallOrUpdateAsync(CreateSnapshot(LauncherRuntimeState.UpdateAvailable));
+        var retry = Assert.Single(notifications).PrimaryAction!;
+        var current = CreateSnapshot(LauncherRuntimeState.UpdateAvailable);
+        current.Settings.PatchUrlGroup = PatchUrlGroups.Cafe;
+        context.Host.CurrentSnapshot = current;
+        context.Executor.InstallResult = new GameOperationResult { Success = true };
+        var outcome = await retry.ExecuteAsync(CancellationToken.None);
+        Assert.True(outcome.IsSuccess);
+        Assert.Same(current, context.Executor.LastInstallSnapshot);
+    }
+
+    [Fact]
+    public async Task RetryInstallOrUpdateAsync_CurrentSnapshotMissing_DoesNotReuseTheOldSnapshot()
+    {
+        var context = CreateContext();
+        var notifications = context.SubscribeToasts();
+        context.Executor.InstallResult = new GameOperationResult { ErrorCode = GameOperationErrorCode.Network, Message = "failed" };
+        await context.Journey.InstallOrUpdateAsync(CreateSnapshot(LauncherRuntimeState.UpdateAvailable));
+        var outcome = await Assert.Single(notifications).PrimaryAction!.ExecuteAsync(CancellationToken.None);
+        Assert.False(outcome.IsSuccess);
+        Assert.Equal(1, context.Executor.InstallCallCount);
     }
 
     [Fact]
@@ -632,7 +694,9 @@ public sealed class GameOperationJourneyTests
         var context = CreateContext();
         var notifications = context.SubscribeToasts();
         context.Executor.InstallResult = new GameOperationResult { ErrorCode = GameOperationErrorCode.Network, Message = "failed" };
-        await context.Journey.InstallOrUpdateAsync(CreateSnapshot(LauncherRuntimeState.NotInstalled));
+        var snapshot = CreateSnapshot(LauncherRuntimeState.NotInstalled);
+        context.Host.CurrentSnapshot = snapshot;
+        await context.Journey.InstallOrUpdateAsync(snapshot);
         var retry = Assert.Single(notifications).PrimaryAction!;
         var completion = new TaskCompletionSource<GameOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         context.Executor.InstallCompletion = completion;
@@ -764,6 +828,22 @@ public sealed class GameOperationJourneyTests
         public bool ExitRequested { get; private set; }
 
         public bool ShowRequested { get; private set; }
+
+        public void Present(GameOperationPresentation update)
+        {
+            switch (update)
+            {
+                case GameOperationPresentation.Busy busy: SetBusy(busy.Value); break;
+                case GameOperationPresentation.Preparing: PrepareOperation(); break;
+                case GameOperationPresentation.Progress progress: ApplyProgress(progress.Value); break;
+                case GameOperationPresentation.Snapshot snapshot: ApplySnapshot(snapshot.Value); break;
+                case GameOperationPresentation.LaunchCheck check: SetLaunchCheckResult(check.Message); break;
+                case GameOperationPresentation.RepairConfirmation confirmation: ShowRepairConfirmation(confirmation.Message); break;
+                case GameOperationPresentation.Window { Action: GameOperationWindowAction.Minimize }: RequestMinimize(); break;
+                case GameOperationPresentation.Window { Action: GameOperationWindowAction.Exit }: RequestExit(); break;
+                case GameOperationPresentation.Window { Action: GameOperationWindowAction.Show }: RequestShow(); break;
+            }
+        }
 
         public void PrepareOperation() => PrepareOperationCalled = true;
 

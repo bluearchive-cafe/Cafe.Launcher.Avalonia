@@ -1,3 +1,4 @@
+using Cafe.Launcher.UI.Constants;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Features.Settings;
 using Cafe.Launcher.UI.Features.SetupWizard;
@@ -238,7 +239,7 @@ public sealed class LocalizationTerminologyTests
         }
 
         Assert.True(viewModel.IsLastStep, "向导未在上限步数内推进到末步。");
-        Assert.Equal(localizer.T("languageAuto"), viewModel.LanguageDisplayName);
+        Assert.Equal(localizer.T(LocalizationKeys.LanguageAuto), viewModel.LanguageDisplayName);
         Assert.DoesNotContain("Auto", viewModel.LanguageDisplayName, StringComparison.Ordinal);
     }
 
@@ -264,10 +265,10 @@ public sealed class LocalizationTerminologyTests
         dialogs.RefreshLocalizedText();
 
         Assert.Equal(
-            localizer.T("languageAuto"),
+            localizer.T(LocalizationKeys.LanguageAuto),
             settingsOptions.Language.Single(option => option.Code == LauncherLanguages.Auto).DisplayName);
         Assert.Equal(
-            localizer.T("languageAuto"),
+            localizer.T(LocalizationKeys.LanguageAuto),
             dialogs.LanguageOptions.Single(option => option.Code == LauncherLanguages.Auto).DisplayName);
     }
 
