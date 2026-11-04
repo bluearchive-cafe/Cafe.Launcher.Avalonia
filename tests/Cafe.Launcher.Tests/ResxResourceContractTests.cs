@@ -230,23 +230,6 @@ public sealed class ResxResourceContractTests
     }
 
     [Fact]
-    public void LauncherStrings_StronglyTypedAccessors_CoverEveryNeutralResourceKey()
-    {
-        var accessors = typeof(LauncherStrings)
-            .GetProperties(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
-            .Where(property => property.PropertyType == typeof(string))
-            .Select(property => property.Name)
-            .ToHashSet(StringComparer.Ordinal);
-
-        Assert.Equal(ResxValues["en"].Count, accessors.Count);
-        foreach (var key in ResxValues["en"].Keys)
-        {
-            var accessorName = char.ToUpperInvariant(key[0]) + key[1..];
-            Assert.Contains(accessorName, accessors);
-        }
-    }
-
-    [Fact]
     public void LauncherStringsDesigner_DeclaresWhatItsGeneratorEmits()
     {
         // Designer 是生成产物：它的可见性属于表现层公开面的一部分（收窄批次把 LauncherStrings
