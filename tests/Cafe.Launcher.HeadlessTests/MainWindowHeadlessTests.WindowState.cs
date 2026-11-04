@@ -417,7 +417,9 @@ public sealed partial class MainWindowHeadlessTests
         Assert.Equal(700, context.Window.Height);
 
         var captured = new LauncherSettings { RememberWindowPositionAndSize = true };
-        context.Window.CaptureWindowState(captured);
+        var geometry = context.Window.TryCaptureGeometry();
+        Assert.True(geometry.HasValue);
+        geometry.Value.ApplyTo(captured);
 
         Assert.Equal(120, captured.WindowPositionX);
         Assert.Equal(240, captured.WindowPositionY);
@@ -444,7 +446,9 @@ public sealed partial class MainWindowHeadlessTests
         });
 
         var captured = new LauncherSettings { RememberWindowPositionAndSize = false };
-        context.Window.CaptureWindowState(captured);
+        var geometry = context.Window.TryCaptureGeometry();
+        Assert.True(geometry.HasValue);
+        geometry.Value.ApplyTo(captured);
 
         Assert.Equal(originalPosition, context.Window.Position);
         Assert.Equal(originalWidth, context.Window.Width);

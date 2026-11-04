@@ -12,6 +12,7 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Cafe.Launcher.UI.Features.GameOperations;
+using Cafe.Launcher.UI.Features.Shell;
 using Cafe.Launcher.UI.Helpers;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
@@ -334,16 +335,8 @@ internal partial class MainWindow : Window
     /// The title-bar minimize button keeps <see cref="MinimizeWindow"/> — it asks for a
     /// taskbar minimize, not a tray hide.
     /// </summary>
-    private void MinimizeToTray()
-    {
-        if (systemTray is not null)
-        {
-            systemTray.HideWindow();
-            return;
-        }
-
-        WindowState = WindowState.Minimized;
-    }
+    private void MinimizeToTray() =>
+        PerformWindowAction(WindowClosePolicy.DecideMinimize(systemTray is not null));
 
     /// <summary>
     /// Game-launch exit path, taken when the user picks "exit the launcher" as the post-launch
@@ -371,46 +364,29 @@ internal partial class MainWindow : Window
 
     public void ApplySavedWindowState(LauncherSettings settings)
     {
-        if (!settings.RememberWindowPositionAndSize)
+        var restore = WindowGeometryPolicy.Restore(settings, MinWidth, MinHeight);
+        if (restore.Width is { } width)
         {
-            return;
+            Width = width;
         }
 
-        if (settings.WindowWidth is double width && double.IsFinite(width) && width > 0)
+        if (restore.Height is { } height)
         {
-            Width = Math.Max(MinWidth, width);
+            Height = height;
         }
 
-        if (settings.WindowHeight is double height && double.IsFinite(height) && height > 0)
+        if (restore.Position is { } position)
         {
-            Height = Math.Max(MinHeight, height);
-        }
-
-        if (settings.WindowPositionX is int x && settings.WindowPositionY is int y)
-        {
-            Position = new PixelPoint(x, y);
+            Position = position;
         }
     }
 
-    public void CaptureWindowState(LauncherSettings settings)
-    {
-        if (!settings.RememberWindowPositionAndSize || WindowState != WindowState.Normal)
-        {
-            return;
-        }
-
-        settings.WindowPositionX = Position.X;
-        settings.WindowPositionY = Position.Y;
-        if (double.IsFinite(Width) && Width > 0)
-        {
-            settings.WindowWidth = Width;
-        }
-
-        if (double.IsFinite(Height) && Height > 0)
-        {
-            settings.WindowHeight = Height;
-        }
-    }
+    /// <summary>
+    /// 在 UI 线程采集普通状态下的窗口几何值快照。落盘路径只接受这份快照：
+    /// 设置写入方的改动委托在事务锁竞争时可能在线程池执行，不能让它回头读窗口属性。
+    /// </summary>
+    internal WindowGeometry? TryCaptureGeometry() =>
+        WindowGeometry.TryCapture(WindowState == WindowState.Normal, Position, Width, Height);
 
     /// <summary>
     /// App-drawn title-bar drag. A touch contact reports <c>IsLeftButtonPressed</c> too, and the
@@ -498,28 +474,35 @@ internal partial class MainWindow : Window
 
     private void PerformClose()
     {
-        if (DataContext is MainWindowViewModel active && active.Operations.IsUninstallExecuting)
+        var action = DataContext is MainWindowViewModel viewModel
+            ? WindowClosePolicy.Decide(
+                viewModel.Settings.Editor.GetSavedSnapshot().CloseBehavior,
+                viewModel.Operations.IsUninstallExecuting,
+                systemTray is not null)
+            : WindowCloseAction.Shutdown;
+
+        PerformWindowAction(action);
+    }
+
+    /// <summary>
+    /// 把判定结果落到窗口。没有托盘时不能 <c>Hide()</c>：隐藏后的窗口无法恢复，
+    /// 因此退到任务栏最小化（与关闭、启动后最小化两条路径共用同一规则）。
+    /// </summary>
+    private void PerformWindowAction(WindowCloseAction action)
+    {
+        switch (action)
         {
-            return;
-        }
-        if (DataContext is MainWindowViewModel vm
-            && vm.Settings.Editor.GetSavedSnapshot().CloseBehavior == Cafe.Launcher.Core.Models.CloseBehaviors.Minimize)
-        {
-            if (systemTray is not null)
-            {
+            case WindowCloseAction.HideToTray when systemTray is not null:
                 systemTray.HideWindow();
-            }
-            else
-            {
-                // No tray available — minimize to taskbar instead of calling Hide(),
-                // which would make the window unrecoverable without a tray icon.
+                break;
+            case WindowCloseAction.HideToTray:
+            case WindowCloseAction.MinimizeToTaskbar:
                 WindowState = WindowState.Minimized;
-            }
-
-            return;
+                break;
+            case WindowCloseAction.Shutdown:
+                RequestShutdown();
+                break;
         }
-
-        RequestShutdown();
     }
 
     public void ShowWindow()
