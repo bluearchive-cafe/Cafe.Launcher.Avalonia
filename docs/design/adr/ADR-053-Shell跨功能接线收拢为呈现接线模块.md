@@ -15,17 +15,19 @@
 3. `ShellLifecycle` 保留生命周期动词（刷新、设置落盘、恢复默认、源切换、自更新编排、外观预览）与 `StatusDetailModeChanged` 事件；`Wire`/`Unwire`/`TryHandleEscape` 退化为对接线模块的委托。
 4. **装卸顺序逐字不变**：登记顺序即逆序退订顺序；`Unwire` 先释放模态注册，再逆序执行记录表，最后退订启动模块。模态注册表仍由 `ShellModalCatalog` 按 ADR-023 的栈序产出。
 5. 只移动接线，不改处理器语义：日志查看、外部链接、资源面板确认等纯呈现动作随表移入接线模块；设置落盘与刷新等仍由壳协调者执行。
+6. **测试经真实注册构建表现图**：新增 `tests/Cafe.Launcher.Tests/LauncherTestGraph.cs`，调用宿主的 `AddLauncherServices` 建立与生产同形的对象图，只替换确定性接缝（传输、更新、执行器、选择器、弹窗调度）。`ShellLifecycleTests` 与 `MainWindowTestContext` 不再手工拼协作者。
 
 ## 备选方案
 
 - **保留在 `ShellLifecycle`**：订阅结构继续与生命周期动词混排，新增协作者时仍要在 800 行文件里找插入点。否决。
 - **把处理器实现整体搬进接线模块**：会把设置写入、刷新与自更新编排一并迁走，接线模块变成第二个壳协调者。否决。
 - **接线模块持有 `ShellLifecycle` 引用**：方向反转成双向依赖，接线表无法脱离壳协调者测试。否决。
-- **同时用真实注册重建测试 fixture**：属于测试组合根的独立议题；本次只搬家，避免把行为验证和测试设施改造混在一个改动里。暂缓。
+- **把测试 fixture 继续手工维护**：约 15 个协作者与 53 条真实注册并行漂移，新增注册不会反映到行为用例。否决，改为经 `LauncherTestGraph` 走真实注册。
+- **在生产程序集抽出表现图工厂供 DI 与测试共用**：工厂签名会和手工 fixture 一样宽，且把测试需求写进生产 API。否决。
 
 ## 后果
 
 - 跨功能订阅只有一张表、一个装卸点；新增协作者只改 `ShellPresentationWiring`（及其动作聚合），不再扩散生命周期方法。
 - `ShellLifecycle` 的公开表面不变（`Wire`/`Unwire`/`TryHandleEscape` 保留为委托），现有调用方与测试无需迁移。
 - 现有 `Unwire_AfterWired_StopsCrossFeatureEventFlow` 继续作为退订行为的回归守卫；不需要新的行为基线。
-- 测试 fixture 仍手工搭建约 15 个协作者，与组合根的并行维护问题未在本决策内解决。
+- 测试对象图与组合根不再并行维护：注册变更直接进入两处 fixture；测试只声明要替换的确定性接缝。

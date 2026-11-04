@@ -174,7 +174,7 @@
 ### 8.3 共享设施
 
 - 临时目录用 `TestDirectory`（拥有创建与清理，派生 `LauncherDataRoot`）；释放顺序是先容器/服务、后目录。资源定位用 `TestRepository`，它每次调用都重装资源快照。
-- 主窗口 ViewModel 用 `MainWindowTestContext` 装配；它只释放自己创建的对象，调用方传入的替身与工厂归调用方，日志器必须活到用例结束。
+- 主窗口 ViewModel 用 `MainWindowTestContext` 装配；对象图由 `LauncherTestGraph` 走真实 `AddLauncherServices` 注册构建，测试只替换不确定的接缝（传输、设置装配、进程监视、外部打开、UI 调度）。图归容器所有，调用方传入的实例同样注册进容器并由容器释放，所以这些实现必须容忍重复释放。
 - Headless 每个用例使用独立数据根（`HeadlessTestHost.CreateServiceProvider(dataRoot:)`），避免同程序集上下文互相看见设置、检查点与崩溃快照。
 - 共享设施 `tests/Support/` 的门槛是「两套件都需要、且不含工程专属知识」；场景专属故障模拟留在使用它的测试旁。
 

@@ -148,8 +148,8 @@ public sealed partial class MainWindowViewModelTests : IDisposable
 
     public void Dispose()
     {
-        // 顺序即所有权：用例已经释放过自己的 ViewModel，接着释放上下文自建的资源
-        // （日志、设置装配、下载用工厂），最后才删临时目录。
+        // 顺序即所有权：用例已经释放过自己的 ViewModel，接着释放上下文容器
+        // （日志、表现图与注册进去的工厂），最后才删临时目录。
         foreach (var context in contexts)
         {
             context.Dispose();

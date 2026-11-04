@@ -33,16 +33,13 @@ namespace Cafe.Launcher.Tests;
 public sealed class ShellLifecycleTests : IDisposable
 {
     private readonly TestDirectory tempDir = TestDirectory.Create();
-    private readonly HttpClientFactory httpClientFactory;
     private readonly ToastService toastService = new();
     private readonly List<ToastNotification> raisedToasts = [];
     private readonly List<string?> openedUrls = [];
-    private readonly List<IDisposable> disposables = [];
-    private readonly List<SetupWizardViewModel> wizards = [];
+    private readonly List<LauncherTestGraph> graphs = [];
 
     public ShellLifecycleTests()
     {
-        httpClientFactory = new HttpClientFactory(new ProxySettingsService());
         toastService.ToastRaised += notification => raisedToasts.Add(notification);
     }
 
@@ -601,18 +598,19 @@ public sealed class ShellLifecycleTests : IDisposable
 
     public void Dispose()
     {
-        foreach (var disposable in disposables)
+        foreach (var graph in graphs)
         {
-            disposable.Dispose();
+            graph.Dispose();
         }
 
-        foreach (var wizard in wizards)
-        {
-            wizard.Dispose();
-        }
-
-        httpClientFactory.Dispose();
         tempDir.Dispose();
+    }
+
+    /// <summary>单元测试工程不跑 UI 调度；弹窗路径按调用线程同步执行。</summary>
+    private static Task InvokeOnCallingThread(Action action)
+    {
+        action();
+        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -680,172 +678,41 @@ public sealed class ShellLifecycleTests : IDisposable
         IWindowsLauncherUpdateApplier? launcherUpdateApplier = null)
     {
         settingsService ??= new LauncherSettingsService( tempDir.DataRoot );
-        launcherUpdateService ??= new LauncherUpdateService(LauncherProfiles.Cafe, 
+        launcherUpdateService ??= new LauncherUpdateService(LauncherProfiles.Cafe,
             CreateNotFoundTransport(),
             currentVersionOverride: "0.0.0");
         operationsBackend ??= new StubGameOperationExecutor();
 
-        var localizer = new LocalizationService();
-        var diagnostics = new LocalDiagnostics();
-        // 应用器先定下来，可用性判定与真正应用走的是同一个实例。
-        launcherUpdateApplier ??= new WindowsLauncherUpdateApplier(
-            tempDir.DataRoot, diagnostics, tempDir.Path, tempDir.Path);
-        launcherSelfUpdateService ??= new LauncherSelfUpdateService(
-            new LauncherUpdateDownloader(new StubRemoteHttpTransport()),
-            new LauncherUpdateHostInfoProvider(),
-            launcherUpdateApplier,
+        var graph = LauncherTestGraph.Create(
             tempDir.DataRoot,
-            diagnostics);
-        var filePickerService = new StubFilePickerService();
-        var imageCacheService = new ImageCacheService(
-            new StubRemoteHttpTransport(),
-            new Crc64Service(), tempDir.DataRoot );
-        var settingsEditor = new SettingsEditor();
-        var savedSettingsWriter = new SavedSettingsWriter(settingsService, settingsEditor);
-        disposables.Add(savedSettingsWriter);
-        var settingsAppearance = new SettingsAppearanceViewModel(settingsEditor, new ThemeApplier());
-        var settingsOptions = new SettingsOptionsViewModel(localizer, new DiskSpaceService());
-        var shell = new ShellViewModel(LauncherProfiles.Cafe, localizer);
-        var errorHandling = new ErrorHandlingService(localizer, diagnostics, toastService);
-        var wizard = new SetupWizardViewModel(
-            localizer,
-            new GameInstallationPath(LauncherProfiles.BlueArchiveJapan),
-            new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan),
-            new LocalDiagnostics(),
-            filePickerService);
-        wizards.Add(wizard);
-        if (uiInvoker is null)
-        {
-            // 单元测试工程不引用 Avalonia；fixture 内没有任何既有测试依赖真实
-            // UI 线程，通知弹窗路径按同步直调执行。
-            uiInvoker = action =>
+            new LauncherTestGraphOptions
             {
-                action();
-                return Task.CompletedTask;
-            };
-        }
+                CoreService = coreService,
+                SavedSettings = new SavedSettingsTestRig(settingsService),
+                LauncherUpdateService = launcherUpdateService,
+                OperationExecutor = operationsBackend,
+                LauncherSelfUpdateService = launcherSelfUpdateService,
+                LauncherUpdateApplier = launcherUpdateApplier,
+                ToastService = toastService,
+                OpenExternalUrl = url => openedUrls.Add(url),
+                DispatchToUi = uiInvoker ?? InvokeOnCallingThread
+            });
+        graphs.Add(graph);
 
-        var dialogs = new DialogsViewModel(LauncherProfiles.Cafe, 
-            localizer,
-            new NoticeStateService( tempDir.DataRoot ),
-            wizard,
-            new LocalDiagnostics(),
-            uiInvoker);
-        using var settingsLogger = new UnifiedLogger(tempDir.Sub("settings-log"));
-        var updatePresenter = new LauncherUpdatePresenter(
-            localizer, toastService, dialogs, launcherSelfUpdateService);
-        var settings = new SettingsViewModel(
-            settingsService,
-            savedSettingsWriter,
-            localizer,
-            toastService,
-            launcherUpdateService,
-            updatePresenter,
-            dialogs,
-            settingsLogger,
-            new GameInstallationPath(LauncherProfiles.BlueArchiveJapan),
-            settingsOptions,
-            settingsAppearance,
-            errorHandling,
-            new GameRuntime(
-                [GameRunnerDefinition.Native],
-                new DefaultProcessLauncher(),
-                new GameProcessTracker(),
-                new GameCompatibilityPaths(TestDataRoot.ForCurrentProcess())),
-            filePickerService);
-        var resourcePanelService = new ResourcePanelService(
-            new ResourcePanelUidService(LauncherProfiles.BlueArchiveJapan, 
-                new BestHttpCookieLibraryService(),
-                settingsService,
-                savedSettingsWriter,
-                Path.Combine(tempDir, "missing-resource-panel-cookie")),
-            new ResourcePanelApiClient(LauncherProfiles.Cafe, CreateNotFoundTransport()),
-            diagnostics);
-        var resourcePanel = new ResourcePanelViewModel(resourcePanelService, localizer, toastService, errorHandling);
-        var remoteContent = new RemoteContentViewModel(localizer, imageCacheService, diagnostics);
-        var background = new BackgroundViewModel(imageCacheService, diagnostics, settings);
-        var operations = new GameOperationsViewModel(
-            operationsBackend,
-            new TestGameShortcutService(),
-            new FakeGameSessionMonitor(),
-            localizer,
-            toastService,
-            diagnostics,
-            shell,
-            dialogs,
-            errorHandling,
-            _ => Task.CompletedTask);
-        var toastHost = new ToastHostViewModel(toastService, localizer, diagnostics);
-        var debug = new DebugViewModel( tempDir.DataRoot ,
-            toastService,
-            new UnifiedLogger(tempDir.Sub("debug-log")),
-            errorHandling,
-            new StubFatalCrashService(),
-            settingsService,
-            operations,
-            shell);
-        var windowChrome = new WindowChromeViewModel(LauncherProfiles.Cafe, LauncherProfiles.BlueArchiveJapan,  tempDir.DataRoot ,
-            settings,
-            remoteContent,
-            dialogs,
-            operations,
-            debug,
-            url => openedUrls.Add(url),
-            _ => { });
-        using var testLogger = new UnifiedLogger(tempDir);
-        var logViewer = new LogViewerDialogViewModel(testLogger, new ToastService(), new LocalizationService(), new LocalDiagnostics());
-        var logExport = new LogExportDialogViewModel(
-            new LogExportService(new LocalDiagnostics(testLogger), TestDataRoot.ForCurrentProcess(), new CrashReportStore(TestDataRoot.ForCurrentProcess()) ),
-            filePickerService,
-            toastService,
-            localizer,
-            diagnostics);
-        var family = new ShellPresentationFamily(
-            shell,
-            background,
-            remoteContent,
-            dialogs,
-            operations,
-            toastHost,
-            windowChrome,
-            settings,
-            resourcePanel,
-            logViewer,
-            logExport,
-            debug,
-            new ModalHostViewModel());
-        var lifecycle = new ShellLifecycle(
-            coreService,
-            settingsService,
-            savedSettingsWriter,
-            localizer,
-            toastService,
-            launcherUpdateService,
-            updatePresenter,
-            launcherSelfUpdateService,
-            launcherUpdateApplier,
-            diagnostics,
-            errorHandling,
-            new SystemAnimationSettingsProvider(),
-            family,
-            filePickerService);
-
-        disposables.Add(lifecycle);
-        disposables.Add(imageCacheService);
-        disposables.Add(settingsService);
-
+        // 先解析表现图，再解析生命周期：容器按解析逆序释放，退订因此发生在 VM 释放之前。
+        var family = graph.Family;
         return new ShellFixture(
-            lifecycle,
-            shell,
-            remoteContent,
-            dialogs,
-            settings,
-            resourcePanel,
+            graph.Lifecycle,
+            family.Shell,
+            family.RemoteContent,
+            family.Dialogs,
+            family.Settings,
+            family.ResourcePanel,
             operationsBackend,
-            operations,
-            windowChrome,
-            logViewer,
-            debug);
+            family.Operations,
+            family.WindowChrome,
+            family.LogViewer,
+            family.Debug);
     }
 
     private sealed record ShellFixture(

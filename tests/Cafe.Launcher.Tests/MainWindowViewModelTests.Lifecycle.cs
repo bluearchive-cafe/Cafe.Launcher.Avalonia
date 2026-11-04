@@ -27,6 +27,8 @@ public partial class MainWindowViewModelTests
         };
 
         viewModel.Dispose();
+        // 表现图归容器所有：编辑器订阅随容器释放退订，而不是随窗口 ViewModel 单独释放。
+        contexts[^1].Dispose();
         viewModel.Settings.Editor.Current.Language = LauncherLanguages.Japanese;
 
         Assert.Equal(0, notificationCount);
