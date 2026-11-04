@@ -19,11 +19,6 @@ public sealed class SetupWizardViewModelTests
     /// <summary>向导路径校验（防抖 + 后台写探测）的就绪预算。</summary>
     private static readonly TimeSpan GateSettleBudget = TimeSpan.FromSeconds(5);
 
-    static SetupWizardViewModelTests()
-    {
-        TestLocalizationHelper.Initialize();
-    }
-
     private static SetupWizardViewModel CreateViewModel() => new(
         new LocalizationService(),
         new GameInstallationPath(LauncherProfiles.BlueArchiveJapan),

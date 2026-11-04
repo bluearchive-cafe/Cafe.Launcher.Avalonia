@@ -7,35 +7,29 @@ using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Testing;
 
 namespace Cafe.Launcher.Tests;
 
 [Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class LocalizationServiceTests
 {
-    static LocalizationServiceTests()
-    {
-        TestLocalizationHelper.Initialize();
-    }
-
     [Fact]
     public void T_WhenCurrentLanguageKeyIsMissing_DoesNotFallbackToEnglish()
     {
-        LocalizationService.InitializeForTesting(new Dictionary<string, Dictionary<string, string>>
-        {
-            [LauncherLanguages.English] = new(StringComparer.Ordinal)
+        var service = new LocalizationService(new LocalizationTestSource(
+            new Dictionary<string, Dictionary<string, string>>
             {
-                ["onlyEnglish"] = "English only"
-            },
-            [LauncherLanguages.Japanese] = new(StringComparer.Ordinal)
-        });
+                [LauncherLanguages.English] = new(StringComparer.Ordinal)
+                {
+                    ["onlyEnglish"] = "English only"
+                },
+                [LauncherLanguages.Japanese] = new(StringComparer.Ordinal)
+            }));
 
-        var service = new LocalizationService();
         service.SetLanguage(LauncherLanguages.Japanese);
 
         Assert.Equal("Localization unavailable.", service.T("onlyEnglish"));
-
-        TestLocalizationHelper.Initialize();
     }
 
     [Fact]
@@ -51,7 +45,6 @@ public sealed class LocalizationServiceTests
             CultureInfo.CurrentUICulture = new CultureInfo("zh-HK");
             CultureInfo.DefaultThreadCurrentCulture = CultureInfo.CurrentCulture;
             CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.CurrentUICulture;
-            TestLocalizationHelper.Initialize();
 
             var service = new LocalizationService();
             service.SetLanguage(LauncherLanguages.Auto);
@@ -67,7 +60,6 @@ public sealed class LocalizationServiceTests
             CultureInfo.CurrentUICulture = savedUiCulture;
             CultureInfo.DefaultThreadCurrentCulture = savedDefaultCulture;
             CultureInfo.DefaultThreadCurrentUICulture = savedDefaultUiCulture;
-            TestLocalizationHelper.Initialize();
         }
     }
 
@@ -470,14 +462,10 @@ public sealed class LocalizationServiceTests
         // 生产路径回归：启动序列可能在非 UI 线程调用 SetLanguage。T() 必须按
         // CurrentLanguage 解析，而不是调用线程的 CurrentUICulture（否则 XAML 目录
         // 绑定会按系统文化回退，导致界面语言混杂、法务信息等按错误语言显示）。
-        var testResourcesField = typeof(LocalizationService)
-            .GetField("testResources", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
-        var savedTestResources = testResourcesField.GetValue(null);
         var savedUiCulture = CultureInfo.CurrentUICulture;
         var savedDefaultUiCulture = CultureInfo.DefaultThreadCurrentUICulture;
         try
         {
-            testResourcesField.SetValue(null, null);
             CultureInfo.CurrentUICulture = new CultureInfo("zh-CN");
             CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.CurrentUICulture;
 
@@ -490,7 +478,6 @@ public sealed class LocalizationServiceTests
         {
             CultureInfo.CurrentUICulture = savedUiCulture;
             CultureInfo.DefaultThreadCurrentUICulture = savedDefaultUiCulture;
-            testResourcesField.SetValue(null, savedTestResources);
         }
     }
 

@@ -2,45 +2,18 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Xml.Linq;
-using Cafe.Launcher.UI.Models;
-using Cafe.Launcher.UI.Services;
-using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.Testing;
 
 /// <summary>
-/// 测试对仓库与本地化资源的唯一定位点：路径与 <c>.resx</c> 的解析结果各缓存一次，
-/// 安装到 <see cref="LocalizationService"/> 则每次调用都重新执行。
+/// 测试对仓库与本地化文件的唯一定位点：路径解析结果缓存一次，<c>.resx</c> 始终直接读磁盘。
 /// </summary>
-/// <remarks>
-/// 缓存的是「文件里写了什么」，不是「当前生效的资源集」：<see cref="InitializeLocalizationResources"/>
-/// 的语义是覆盖当前值，因此每次调用都必须重装——缓存住安装动作会让一个先装了自定义资源的
-/// 用例污染其后所有用例（<c>LocalizationService.InitializeForTesting</c> 是最后者胜的进程级状态）。
-/// </remarks>
 public static class TestRepository
 {
-    private static readonly string[] Locales =
-    [
-        LauncherLanguages.English,
-        LauncherLanguages.SimplifiedChinese,
-        LauncherLanguages.TraditionalChinese,
-        LauncherLanguages.Japanese
-    ];
-
-    private static readonly string[] ResxFiles =
-    [
-        "LauncherStrings.resx",
-        "LauncherStrings.zh-Hans.resx",
-        "LauncherStrings.zh-Hant.resx",
-        "LauncherStrings.ja.resx"
-    ];
-
     private static readonly Lazy<string> RepositoryRoot = new(FindRepositoryRoot);
     private static readonly Lazy<string> HostRoot = new(() => FindProjectRoot("Cafe.Launcher"));
     private static readonly Lazy<string> CoreRoot = new(() => FindProjectRoot("Cafe.Launcher.Core"));
     private static readonly Lazy<string> PresentationRoot = new(() => FindProjectRoot("Cafe.Launcher.UI"));
-    private static readonly Lazy<Dictionary<string, Dictionary<string, string>>> Localization =
-        new(ReadAllResx);
 
     private static readonly Lazy<string> ApplicationResourcesRoot =
         new(() => Path.Combine(PresentationRoot.Value, "Resources"));
@@ -81,13 +54,6 @@ public static class TestRepository
 
     public static string FromPresentationRoot(string relativePath) => CombineRelative(PresentationPath, relativePath);
 
-    /// <summary>
-    /// 把仓库里的四种语言资源装进 <see cref="LocalizationService"/> 的测试资源槽位。
-    /// 每次调用都重装，即便此前已有用例装过自定义资源。
-    /// </summary>
-    public static void InitializeLocalizationResources() =>
-        LocalizationService.InitializeForTesting(Localization.Value);
-
     /// <summary>读取一个 <c>.resx</c> 文件为键值对，不经过缓存。</summary>
     public static Dictionary<string, string> ReadResx(string path)
     {
@@ -117,32 +83,6 @@ public static class TestRepository
 
     private static string CombineRelative(string root, string relativePath) =>
         Path.Combine(root, relativePath.Replace('/', Path.DirectorySeparatorChar));
-
-    private static Dictionary<string, Dictionary<string, string>> ReadAllResx()
-    {
-        var resourcesRoot = ResourcesPath;
-        if (!Directory.Exists(resourcesRoot))
-        {
-            throw new DirectoryNotFoundException(
-                $"Required localization resource directory is missing: {resourcesRoot}");
-        }
-
-        var resources = new Dictionary<string, Dictionary<string, string>>(StringComparer.Ordinal);
-        for (var i = 0; i < Locales.Length; i++)
-        {
-            var filePath = Path.Combine(resourcesRoot, ResxFiles[i]);
-            if (!File.Exists(filePath))
-            {
-                throw new FileNotFoundException(
-                    $"Required localization resource is missing: {filePath}",
-                    filePath);
-            }
-
-            resources[Locales[i]] = ReadResx(filePath);
-        }
-
-        return resources;
-    }
 
     /// <summary>
     /// 从测试程序集的输出目录向上寻找工程：容器与 IDE 的运行目录深度不同，

@@ -20,11 +20,6 @@ public sealed class WindowChromeViewModelTests : IDisposable
 {
     private readonly TestDirectory tempDir = TestDirectory.Create();
 
-    static WindowChromeViewModelTests()
-    {
-        TestLocalizationHelper.Initialize();
-    }
-
     [Fact]
     public void LegacyWindowDelegateProperties_AreRemoved()
     {

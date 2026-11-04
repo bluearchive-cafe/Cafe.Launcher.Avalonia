@@ -32,11 +32,6 @@ namespace Cafe.Launcher.Tests;
 [Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class ShellLifecycleTests : IDisposable
 {
-    static ShellLifecycleTests()
-    {
-        TestLocalizationHelper.Initialize();
-    }
-
     private readonly TestDirectory tempDir = TestDirectory.Create();
     private readonly HttpClientFactory httpClientFactory;
     private readonly ToastService toastService = new();

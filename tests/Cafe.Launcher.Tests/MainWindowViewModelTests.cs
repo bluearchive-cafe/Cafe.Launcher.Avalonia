@@ -17,11 +17,6 @@ namespace Cafe.Launcher.Tests;
 [Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed partial class MainWindowViewModelTests : IDisposable
 {
-    static MainWindowViewModelTests()
-    {
-        TestLocalizationHelper.Initialize();
-    }
-
     private readonly TestDirectory tempDir = TestDirectory.Create();
     private readonly List<MainWindowTestContext> contexts = [];
     private readonly ProxySettingsService proxySettings = new();

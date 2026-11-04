@@ -65,14 +65,9 @@ public sealed class LocalizationFailureEventArgs : EventArgs
 /// <summary>Resolves localized UI strings and applies the selected process culture.</summary>
 public sealed class LocalizationService
 {
-    /// <summary>
-    /// Test-only resource override. When non-null, <see cref="T"/> uses only
-    /// the current language dictionary. Populated by <see cref="InitializeForTesting"/>.
-    /// </summary>
-    private static volatile IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>>? testResources;
-
     private readonly SystemCultureSnapshot cultureSnapshot;
     private readonly ILauncherDiagnostics diagnostics;
+    private readonly ILocalizationResourceSource resourceSource;
     private string currentAutoResolvedLanguage = LauncherLanguages.English;
 
     /// <summary>
@@ -81,9 +76,18 @@ public sealed class LocalizationService
     /// genuine startup culture even after a manual language selection.
     /// </summary>
     public LocalizationService(SystemCultureSnapshot cultureSnapshot, ILauncherDiagnostics diagnostics)
+        : this(cultureSnapshot, diagnostics, new ResourceManagerLocalizationSource())
+    {
+    }
+
+    internal LocalizationService(
+        SystemCultureSnapshot cultureSnapshot,
+        ILauncherDiagnostics diagnostics,
+        ILocalizationResourceSource resourceSource)
     {
         this.cultureSnapshot = cultureSnapshot;
         this.diagnostics = diagnostics;
+        this.resourceSource = resourceSource;
         CaptureStartupCulture();
     }
 
@@ -93,16 +97,10 @@ public sealed class LocalizationService
     {
     }
 
-    /// <summary>Pre-populates resources for unit testing.</summary>
-    internal static void InitializeForTesting(Dictionary<string, Dictionary<string, string>> resources)
+    /// <summary>Builds a service over a caller-supplied table for tests.</summary>
+    internal LocalizationService(ILocalizationResourceSource resourceSource)
+        : this(new SystemCultureSnapshot(), LauncherLog.CreateDetached(), resourceSource)
     {
-        var copy = new Dictionary<string, IReadOnlyDictionary<string, string>>(StringComparer.Ordinal);
-        foreach (var (locale, dict) in resources)
-        {
-            copy[locale] = new Dictionary<string, string>(dict, StringComparer.Ordinal);
-        }
-
-        testResources = copy;
     }
 
     public string CurrentLanguage { get; private set; } = LauncherLanguages.English;
@@ -145,24 +143,11 @@ public sealed class LocalizationService
     /// <summary>Looks up a single resource key in the active UI culture.</summary>
     public string T(string key)
     {
-        var resources = testResources;
-        if (resources is not null)
-        {
-            if (resources.TryGetValue(CurrentLanguage, out var dictionary)
-                && dictionary.TryGetValue(key, out var value))
-            {
-                return value;
-            }
-
-            return ReportFailure($"Missing test resource key '{key}' for language '{CurrentLanguage}'.");
-        }
-
         // Resolve by CurrentLanguage, not the calling thread's culture: SetLanguage may
         // run off the UI thread during startup, and thread-culture fallback would then
         // resolve XAML catalog bindings against the OS culture instead of the selected
         // language (mixed-language UI, legal text resolving to the wrong locale).
-        var result = Resources.LauncherStrings.ResourceManager.GetString(
-            key, LauncherCultureResolver.GetCultureFor(CurrentLanguage));
+        var result = resourceSource.GetString(CurrentLanguage, key);
         return result ?? ReportFailure($"Missing key '{key}' for language '{CurrentLanguage}'.");
     }
 

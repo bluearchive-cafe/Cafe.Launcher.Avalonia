@@ -12,11 +12,6 @@ public sealed class ErrorHandlingServiceTests
     private const string NetworkFailureText = "friendly network attribution";
     private const string FakeIpFailureText = "switch to TUN or system proxy";
 
-    static ErrorHandlingServiceTests()
-    {
-        TestLocalizationHelper.Initialize();
-    }
-
     [Fact]
     public async Task HandleErrorAsync_WhenErrorOccurs_ShowsErrorToast()
     {

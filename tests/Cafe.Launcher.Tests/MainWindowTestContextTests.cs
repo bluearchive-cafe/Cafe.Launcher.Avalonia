@@ -14,11 +14,6 @@ namespace Cafe.Launcher.Tests;
 [Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class MainWindowTestContextTests
 {
-    static MainWindowTestContextTests()
-    {
-        TestLocalizationHelper.Initialize();
-    }
-
     /// <summary>
     /// 装配返回之后日志仍可写：设置页与日志查看器持有这两个日志器，先前它们是装配方法的
     /// 局部 <c>using</c>，方法一返回句柄就被关掉，消费者此后的写入静默落进已释放的管道。

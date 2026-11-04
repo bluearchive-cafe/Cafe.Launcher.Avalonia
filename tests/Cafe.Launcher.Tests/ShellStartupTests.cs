@@ -19,11 +19,6 @@ public sealed class ShellStartupTests : IDisposable
 {
     private readonly SetupWizardViewModel wizard;
 
-    static ShellStartupTests()
-    {
-        TestLocalizationHelper.Initialize();
-    }
-
     public ShellStartupTests()
     {
         wizard = new SetupWizardViewModel(

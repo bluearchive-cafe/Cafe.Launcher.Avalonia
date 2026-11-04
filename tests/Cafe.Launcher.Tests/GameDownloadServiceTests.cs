@@ -26,11 +26,6 @@ namespace Cafe.Launcher.Tests;
 [Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class GameDownloadServiceTests : IDisposable
 {
-    static GameDownloadServiceTests()
-    {
-        TestLocalizationHelper.Initialize();
-    }
-
     // xUnit 为每个测试方法创建新实例：实例字段即每测试独立的临时目录，
     // 断言失败时由 Dispose 统一清理，不再泄漏 %TEMP% 垃圾。
     private readonly TestDirectory tempDir = TestDirectory.Create();

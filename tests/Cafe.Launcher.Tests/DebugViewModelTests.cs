@@ -19,11 +19,6 @@ public sealed class DebugViewModelTests : IDisposable
 {
     private readonly TestDirectory tempDir = TestDirectory.Create();
 
-    static DebugViewModelTests()
-    {
-        TestLocalizationHelper.Initialize();
-    }
-
     [Fact]
     public void TogglePauseResume_WhenOperationBecomesPaused_ReportsPaused()
     {

@@ -14,11 +14,6 @@ namespace Cafe.Launcher.Tests;
 [Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class GameOperationJourneyTests
 {
-    static GameOperationJourneyTests()
-    {
-        TestLocalizationHelper.Initialize();
-    }
-
     [Fact]
     public async Task StartGameAsync_WhenHostBusy_SkipsLaunch()
     {

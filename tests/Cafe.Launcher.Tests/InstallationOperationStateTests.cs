@@ -97,11 +97,6 @@ public sealed class InstallationOperationStateTests : IDisposable
             probeVersion: (_, _, _, _) =>
                 Task.FromResult(RuntimeProbeResult.Success("9.0", 0, "", "")));
 
-    static InstallationOperationStateTests()
-    {
-        TestLocalizationHelper.Initialize();
-    }
-
     [Fact]
     public async Task StartAsync_WhenInstallationStateIsCorrupted_BlocksLaunch()
     {

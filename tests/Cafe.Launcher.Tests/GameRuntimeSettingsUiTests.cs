@@ -17,11 +17,6 @@ namespace Cafe.Launcher.Tests;
 [Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class GameRuntimeSettingsUiTests
 {
-    static GameRuntimeSettingsUiTests()
-    {
-        TestLocalizationHelper.Initialize();
-    }
-
     [Fact]
     public void MangoHudSetting_VisibilityUsesLinuxPlatformRatherThanHiddenSettingsOverride()
     {

@@ -25,11 +25,6 @@ public sealed class GameOperationsViewModelTests : IDisposable
 
     public void Dispose() => tempDir.Dispose();
 
-    static GameOperationsViewModelTests()
-    {
-        TestLocalizationHelper.Initialize();
-    }
-
     [Fact]
     public void LegacyDelegateProperties_AreRemoved()
     {

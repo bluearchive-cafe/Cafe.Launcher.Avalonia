@@ -16,11 +16,6 @@ namespace Cafe.Launcher.Tests;
 [Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class SettingsOptionsDiskSpaceTests
 {
-    static SettingsOptionsDiskSpaceTests()
-    {
-        TestLocalizationHelper.Initialize();
-    }
-
     private static SettingsOptionsViewModel CreateOptions(DiskSpaceService diskSpaceService)
     {
         var localizer = new LocalizationService();

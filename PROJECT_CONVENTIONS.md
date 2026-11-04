@@ -133,7 +133,7 @@
 3. C# 中引用 `Constants/LocalizationKeys` 的编译时常量，禁止向 `T()`/`F()`/`I18n[...]` 传裸 key 字面量。
 4. 四种语言都必须有文本（专有名词可回退英文，但不得留空）；译名以 [UBIQUITOUS_LANGUAGE.md](UBIQUITOUS_LANGUAGE.md) 为准。C# 用 `LocalizationService.T()`/`F()` 获取文案。
 5. 新增或重命名 key 后运行 `scripts/Generate-LauncherStringsDesigner.ps1`、`scripts/Generate-LocalizationKeys.ps1`，再运行 `scripts/Test-LocalizationContract.ps1`。
-6. 测试中通过 `TestLocalizationHelper.Initialize()` 或 `LocalizationService.InitializeForTesting(...)` 提供资源；不要写死预期中文。
+6. 测试直接用 `new LocalizationService()` 读内嵌资源；需要自定义资源表时传 `new LocalizationTestSource(...)`；不要写死预期中文。
 
 ## 7. DI 与生命周期
 

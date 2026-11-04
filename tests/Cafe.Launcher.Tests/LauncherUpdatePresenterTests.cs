@@ -25,11 +25,6 @@ public sealed class LauncherUpdatePresenterTests : IDisposable
 {
     private readonly TestDirectory tempDirectory = TestDirectory.Create();
 
-    static LauncherUpdatePresenterTests()
-    {
-        TestLocalizationHelper.Initialize();
-    }
-
     public void Dispose() => tempDirectory.Dispose();
 
     [Fact]

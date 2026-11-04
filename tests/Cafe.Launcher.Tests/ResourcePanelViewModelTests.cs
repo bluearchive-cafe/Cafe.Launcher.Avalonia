@@ -18,11 +18,6 @@ namespace Cafe.Launcher.Tests;
 [Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class ResourcePanelViewModelTests
 {
-    static ResourcePanelViewModelTests()
-    {
-        TestLocalizationHelper.Initialize();
-    }
-
     [Fact]
     public async Task OpenResourcePanel_WhileStatusRequestPending_ShowsLoadingStateThenLoadedItems()
     {

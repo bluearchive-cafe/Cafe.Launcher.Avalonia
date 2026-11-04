@@ -11,11 +11,6 @@ public sealed class LogViewerDialogViewModelTests : IDisposable
     private readonly TestDirectory tempDir = TestDirectory.Create();
     private readonly UnifiedLogger logger;
 
-    static LogViewerDialogViewModelTests()
-    {
-        TestLocalizationHelper.Initialize();
-    }
-
     public LogViewerDialogViewModelTests()
     {
         logger = new UnifiedLogger(tempDir);

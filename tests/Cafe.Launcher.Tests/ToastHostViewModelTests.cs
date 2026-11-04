@@ -18,11 +18,6 @@ public sealed class ToastHostViewModelTests : IDisposable
     private readonly object invokeGate = new();
     private readonly TestDirectory tempDir = TestDirectory.Create();
 
-    static ToastHostViewModelTests()
-    {
-        TestLocalizationHelper.Initialize();
-    }
-
     [Fact]
     public async Task ToastRaised_WithAction_DoesNotStartDisplayDelay()
     {

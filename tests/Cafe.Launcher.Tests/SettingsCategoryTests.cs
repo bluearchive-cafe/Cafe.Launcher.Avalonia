@@ -58,8 +58,6 @@ public sealed class SettingsCategoryTests
         nameof(SettingsViewModel.IsAboutCategorySelected)
     ];
 
-    static SettingsCategoryTests() => TestLocalizationHelper.Initialize();
-
     [Theory]
     [InlineData(null)]
     [InlineData("")]

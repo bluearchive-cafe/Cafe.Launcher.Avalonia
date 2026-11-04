@@ -47,11 +47,6 @@ public sealed class SettingsViewModelTests : IDisposable
     private readonly ToastService toastService = new();
     private readonly List<ToastNotification> raisedToasts = [];
 
-    static SettingsViewModelTests()
-    {
-        TestLocalizationHelper.Initialize();
-    }
-
     public SettingsViewModelTests()
     {
         toastService.ToastRaised += raisedToasts.Add;
