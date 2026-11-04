@@ -51,12 +51,11 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
     private IReadOnlyList<GameRuntimeStatusEntry>? gameRuntimeStatusEntries;
     private bool disposed;
 
-    // Coordination delegates — set by parent after construction.
-    public Func<LauncherSettings, Task>? ApplyLanguageAndTheme { get; set; }
+    // Coordination seams — set by parent after construction.
     public Func<LauncherSettings, string?, CancellationToken, Task>? PreviewAppearanceAsync { get; set; }
 
-    // Events — parent subscribes to these.
-    public event Func<Task>? SettingsSaved;
+    /// <summary>Applies the effects that follow a persisted settings snapshot (shell-owned).</summary>
+    public ISavedSettingsFollowThrough? SavedSettingsFollowThrough { get; set; }
 
     /// <summary>
     /// The settings state editor. XAML binds to <c>Editor.Current.*</c> for
@@ -325,19 +324,16 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
             // 落盘值而非草稿对象：归一化会改写草稿里的表示（大小写、trim、色板去重），
             // 后续的跟随动作与编辑器都必须以真正落盘的那个值为准。
             var settings = await savedSettingsWriter.SaveDraftAsync();
-            ApplyLogLevel(settings.LogLevel);
-
-            if (ApplyLanguageAndTheme is not null)
-                await ApplyLanguageAndTheme(settings);
-            else
-                Appearance.ApplyThemeColor(
-                    settings.ThemeColorMode,
-                    ColorUtils.ParseColorOrDefault(settings.CustomThemeColor));
+            var followThrough = SavedSettingsFollowThrough;
+            var handoff = followThrough?.Apply(settings);
 
             toastService.ShowSuccess(localizer.T(LocalizationKeys.SettingsSaved));
             RefreshGameRuntimeStatus();
 
-            await AsyncEvent.InvokeSequentiallyAsync(SettingsSaved);
+            if (followThrough is not null && handoff is not null)
+            {
+                await followThrough.CompleteAsync(handoff);
+            }
         }
         catch (Exception exception)
         {
@@ -395,10 +391,17 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
 
         try
         {
-            await savedSettingsWriter.UpdateAsync(settings => settings.GamePath = pickedPath);
+            var savedSettings = await savedSettingsWriter.UpdateAsync(
+                settings => settings.GamePath = pickedPath);
+            var followThrough = SavedSettingsFollowThrough;
+            var handoff = followThrough?.Apply(savedSettings);
+
             toastService.ShowSuccess(localizer.T(LocalizationKeys.GamePathUpdated));
 
-            await AsyncEvent.InvokeSequentiallyAsync(SettingsSaved);
+            if (followThrough is not null && handoff is not null)
+            {
+                await followThrough.CompleteAsync(handoff);
+            }
         }
         catch (Exception exception)
         {
@@ -576,7 +579,7 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
         SaveSettingsCommand.NotifyCanExecuteChanged();
     }
 
-    private void ApplyLogLevel(string logLevelCode)
+    internal void ApplyLogLevel(string logLevelCode)
     {
         try
         {

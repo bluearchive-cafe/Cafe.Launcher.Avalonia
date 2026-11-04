@@ -488,7 +488,7 @@ public sealed partial class MainWindowHeadlessTests
         await context.ViewModel.Settings.SaveSettingsCommand.ExecuteAsync(null);
         Dispatcher.UIThread.RunJobs();
 
-        // 断言保存流程发出的结果。命令还会等待 SettingsSaved 后续处理，期间 Toast
+        // 断言保存流程发出的结果。命令还会等待保存后的派生效果收尾（含刷新），期间 Toast
         // 可能已自行退出；显示列表的瞬时存量不能证明是否发出过成功或错误提示。
         var toast = Assert.Single(notifications);
         Assert.Equal(ToastSeverity.Success, toast.Severity);
@@ -516,21 +516,15 @@ public sealed partial class MainWindowHeadlessTests
     {
         using var context = CreateContext();
         OpenSettings(context);
-        var savedCount = 0;
-        context.ViewModel.Settings.SettingsSaved += () =>
-        {
-            savedCount++;
-            return Task.CompletedTask;
-        };
         context.ViewModel.Settings.Editor.Current.Language = LauncherLanguages.Japanese;
         Assert.True(context.ViewModel.Settings.IsSettingsDirty);
 
         context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.Appearance;
         context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.General;
 
+        // 导航不触发保存：草稿保持未保存的语言改动，脏标记仍在。
         Assert.Equal(LauncherLanguages.Japanese, context.ViewModel.Settings.Editor.Current.Language);
         Assert.True(context.ViewModel.Settings.IsSettingsDirty);
-        Assert.Equal(0, savedCount);
     }
 
     [AvaloniaFact]

@@ -73,6 +73,7 @@ internal sealed class ShellLifecycle : IDisposable
     private readonly ShellRefreshCoordinator refreshCoordinator;
     private readonly IFilePickerService filePickerService;
     private readonly ShellStartup startup;
+    private readonly SavedSettingsFollowThrough savedSettingsFollowThrough;
     private readonly ModalRegistrar modalRegistrar;
 
     /// <summary>
@@ -203,11 +204,30 @@ internal sealed class ShellLifecycle : IDisposable
         selfUpdateCoordinator.PreparationStarted += OnSelfUpdatePreparationStarted;
         selfUpdateCoordinator.ProgressReported += OnSelfUpdateProgressReported;
         selfUpdateCoordinator.Finished += OnSelfUpdateFinished;
+        savedSettingsFollowThrough = new SavedSettingsFollowThrough(
+            settings,
+            resourcePanel,
+            remoteContent,
+            dialogs,
+            operations,
+            localizer,
+            ApplyLanguage,
+            ApplyMotionSettings,
+            () => currentSnapshot,
+            persisted =>
+            {
+                if (currentSnapshot is not null)
+                {
+                    currentSnapshot.Settings = persisted;
+                }
+            },
+            cancellationToken => RefreshAsync(cancellationToken));
         startup = new ShellStartup(
             RefreshAsync,
             ApplyMotionSettings,
             ApplyLanguage,
-            settings => savedSettingsWriter.ReplaceAsync(settings),
+            newSettings => savedSettingsWriter.ReplaceAsync(newSettings),
+            savedSettingsFollowThrough,
             () => dialogs.IsSetupWizardVisible = false,
             () => dialogs.IsSetupWizardVisible,
             dialogs.SetupWizard);
@@ -340,31 +360,12 @@ internal sealed class ShellLifecycle : IDisposable
         await Task.WhenAll(pendingOperations, refreshCoordinator.WaitForShutdownWorkAsync(pendingRefreshes));
     }
 
-    /// <summary>Applies the follow-through of one saved settings snapshot.</summary>
-    public async Task HandleSettingsSavedAsync()
+    /// <summary>Applies the follow-through of one persisted settings snapshot.</summary>
+    public Task HandleSettingsSavedAsync(LauncherSettings savedSettings)
     {
-        var savedSettings = settings.Editor.Current;
-        var previousPatchUrlGroup = currentSnapshot?.Settings.PatchUrlGroup;
-        remoteContent.UpdateRemoteContentVisibility(savedSettings.ShowRemoteContentCard);
-        ApplyMotionSettings(savedSettings);
-
-        if (operations.IsDownloadRunning)
-        {
-            if (currentSnapshot is not null)
-            {
-                currentSnapshot.Settings = await settingsService.ReadAsync();
-            }
-
-            return;
-        }
-
-        await RefreshAsync();
-        var runtimeState = currentSnapshot?.RuntimeState;
-        if (runtimeState is LauncherRuntimeState.Ready or LauncherRuntimeState.UpdateAvailable
-            && !string.Equals(previousPatchUrlGroup, savedSettings.PatchUrlGroup, StringComparison.Ordinal))
-        {
-            dialogs.RepairConfirm.Show(localizer.T(LocalizationKeys.DownloadSourceChangedRepairPrompt));
-        }
+        ArgumentNullException.ThrowIfNull(savedSettings);
+        var handoff = savedSettingsFollowThrough.Apply(savedSettings);
+        return savedSettingsFollowThrough.CompleteAsync(handoff);
     }
 
     /// <summary>Saves completed wizard settings, applies their language, and refreshes the shell.</summary>
@@ -382,9 +383,10 @@ internal sealed class ShellLifecycle : IDisposable
     {
         try
         {
-            await savedSettingsWriter.UpdateAsync(settings => settings.PatchUrlGroup = PatchUrlGroups.Cafe);
+            var savedSettings = await savedSettingsWriter.UpdateAsync(
+                settings => settings.PatchUrlGroup = PatchUrlGroups.Cafe);
 
-            await HandleSettingsSavedAsync();
+            await HandleSettingsSavedAsync(savedSettings);
             await resourcePanel.OpenPanelDirectlyAsync();
         }
         catch (Exception exception)
@@ -397,8 +399,8 @@ internal sealed class ShellLifecycle : IDisposable
     /// <summary>Restores default settings from the debug panel.</summary>
     public async Task ResetSettingsToDefaultsAsync()
     {
-        await savedSettingsWriter.ReplaceAsync(LauncherSettings.CreateDefaults(buildIdentity));
-        await RefreshAsync();
+        var savedSettings = await savedSettingsWriter.ReplaceAsync(LauncherSettings.CreateDefaults(buildIdentity));
+        await HandleSettingsSavedAsync(savedSettings);
     }
 
     /// <summary>Restores default settings from the settings page and reports the outcome.</summary>
@@ -509,13 +511,6 @@ internal sealed class ShellLifecycle : IDisposable
         }
     }
 
-    private Task ApplyLanguageAndThemeAsync(LauncherSettings launcherSettings)
-    {
-        ApplyLanguage(launcherSettings.Language);
-        settings.Appearance.ApplyFrom(launcherSettings);
-        return Task.CompletedTask;
-    }
-
     /// <summary>
     /// Subscribes cross-feature events once for the active shell lifecycle.
     /// 每条接线经 <see cref="Attach"/> 配对登记退订，登记顺序即 <see cref="Unwire"/>
@@ -533,11 +528,8 @@ internal sealed class ShellLifecycle : IDisposable
             () => settings.PreviewAppearanceAsync = PreviewAppearanceAsync,
             () => settings.PreviewAppearanceAsync = null);
         Attach(
-            () => settings.ApplyLanguageAndTheme = ApplyLanguageAndThemeAsync,
-            () => settings.ApplyLanguageAndTheme = null);
-        Attach(
-            () => settings.SettingsSaved += HandleSettingsSavedAsync,
-            () => settings.SettingsSaved -= HandleSettingsSavedAsync);
+            () => settings.SavedSettingsFollowThrough = savedSettingsFollowThrough,
+            () => settings.SavedSettingsFollowThrough = null);
 
         Attach(
             () => resourcePanel.ResourcePanelSourceConfirmRequested += ShowResourcePanelSourceConfirmDialog,

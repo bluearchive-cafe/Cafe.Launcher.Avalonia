@@ -170,7 +170,9 @@ public sealed class ShellLifecycleTests : IDisposable
 
         // 设置保存成功后的跟进刷新若失败,必须被生命周期内部消化:
         // await 本身不得抛出(否则会打断设置页保存命令的收尾流程)。
-        await fixture.Lifecycle.HandleSettingsSavedAsync().WaitAsync(TimeSpan.FromSeconds(2));
+        await fixture.Lifecycle
+            .HandleSettingsSavedAsync(LauncherSettings.CreateDefaults())
+            .WaitAsync(TimeSpan.FromSeconds(2));
 
         Assert.Equal(1, core.LoadCount);
         Assert.False(fixture.Lifecycle.IsBusy);
@@ -190,13 +192,41 @@ public sealed class ShellLifecycleTests : IDisposable
         Assert.Equal(1, core.LoadCount);
 
         backend.IsDownloadRunning = true;
-        await fixture.Lifecycle.HandleSettingsSavedAsync().WaitAsync(TimeSpan.FromSeconds(2));
+        await fixture.Lifecycle
+            .HandleSettingsSavedAsync(LauncherSettings.CreateDefaults())
+            .WaitAsync(TimeSpan.FromSeconds(2));
 
         // 下载进行中保存设置:只回读持久化设置,不得全量刷新打断下载。
         Assert.Equal(1, core.LoadCount);
         Assert.Equal(1, backend.ResumeCallCount);
         Assert.True(backend.IsDownloadRunning);
         Assert.DoesNotContain(raisedToasts, t => t.Severity == ToastSeverity.Error);
+    }
+
+    [Fact]
+    public async Task HandleSetupWizardCompletedAsync_OnFirstRun_DoesNotShowRepairPrompt()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.RuntimeState = LauncherRuntimeState.Ready;
+        snapshot.LocalGame = new LocalInstallationState
+        {
+            Kind = LocalInstallationStateKind.Valid,
+            GamePath = snapshot.LocalGame.GamePath,
+            GameConfig = new GameLauncherConfig
+            {
+                Name = "BlueArchive",
+                Version = "1.0.0"
+            }
+        };
+        var fixture = CreateLifecycle(new ScriptedCoreService(snapshot));
+        fixture.Dialogs.IsSetupWizardVisible = true;
+
+        // 首启没有"上一次快照"，向导写入下载源不算变更，不得弹修复提示。
+        await fixture.Lifecycle
+            .HandleSetupWizardCompletedAsync(CreateWizardSettings())
+            .WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.False(fixture.Dialogs.RepairConfirm.IsVisible);
     }
 
     [Fact]

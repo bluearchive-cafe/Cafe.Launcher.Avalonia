@@ -157,14 +157,14 @@ public sealed partial class MainWindowHeadlessTests
 
         Assert.NotNull(viewModel.Settings.Appearance.GetBackgroundBitmapAsync);
         Assert.NotNull(viewModel.Settings.PreviewAppearanceAsync);
-        Assert.NotNull(viewModel.Settings.ApplyLanguageAndTheme);
+        Assert.NotNull(viewModel.Settings.SavedSettingsFollowThrough);
         Assert.NotNull(viewModel.RemoteContent.OpenExternalUrlRequested);
 
         context.Dispose();
 
         Assert.Null(viewModel.Settings.Appearance.GetBackgroundBitmapAsync);
         Assert.Null(viewModel.Settings.PreviewAppearanceAsync);
-        Assert.Null(viewModel.Settings.ApplyLanguageAndTheme);
+        Assert.Null(viewModel.Settings.SavedSettingsFollowThrough);
         Assert.Null(viewModel.RemoteContent.OpenExternalUrlRequested);
     }
 

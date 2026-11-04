@@ -3,13 +3,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.UI.Features.SetupWizard;
 using Cafe.Launcher.UI.Models;
+using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.UI.Features.Shell;
 
 /// <summary>
 /// 启动编排子模块:持有开始动作的规则 —— 一次性初始化、首启动动效偏好、初始语言,
-/// 以及首次向导完成序列(保存 → 应用语言 → 隐藏向导 → 刷新)。向导订阅由本模块
+/// 以及首次向导完成序列(保存 → 应用派生效果 → 隐藏向导 → 跟进完成)。向导订阅由本模块
 /// 自接线(Wire/Unwire),因此「首启发生什么」就近可读,不散落在壳协调者中。
 /// </summary>
 internal sealed class ShellStartup
@@ -17,7 +18,8 @@ internal sealed class ShellStartup
     private readonly Func<CancellationToken, Task> refreshAsync;
     private readonly Action<LauncherSettings> applyMotionSettings;
     private readonly Action<string> applyLanguage;
-    private readonly Func<LauncherSettings, Task> saveSettingsAsync;
+    private readonly Func<LauncherSettings, Task<LauncherSettings>> saveSettingsAsync;
+    private readonly ISavedSettingsFollowThrough followThrough;
     private readonly Action hideSetupWizard;
     private readonly Func<bool> isSetupWizardVisible;
     private readonly SetupWizardViewModel setupWizard;
@@ -27,7 +29,8 @@ internal sealed class ShellStartup
         Func<CancellationToken, Task> refreshAsync,
         Action<LauncherSettings> applyMotionSettings,
         Action<string> applyLanguage,
-        Func<LauncherSettings, Task> saveSettingsAsync,
+        Func<LauncherSettings, Task<LauncherSettings>> saveSettingsAsync,
+        ISavedSettingsFollowThrough followThrough,
         Action hideSetupWizard,
         Func<bool> isSetupWizardVisible,
         SetupWizardViewModel setupWizard)
@@ -36,6 +39,7 @@ internal sealed class ShellStartup
         this.applyMotionSettings = applyMotionSettings;
         this.applyLanguage = applyLanguage;
         this.saveSettingsAsync = saveSettingsAsync;
+        this.followThrough = followThrough;
         this.hideSetupWizard = hideSetupWizard;
         this.isSetupWizardVisible = isSetupWizardVisible;
         this.setupWizard = setupWizard;
@@ -65,13 +69,13 @@ internal sealed class ShellStartup
     /// <summary>Applies the initial automatic language before a launcher snapshot exists.</summary>
     public void ApplyInitialLanguage() => applyLanguage(LauncherLanguages.Auto);
 
-    /// <summary>Saves completed wizard settings, applies their language, and refreshes the shell.</summary>
+    /// <summary>Saves completed wizard settings, applies their effects, hides the wizard, and completes the follow-through.</summary>
     public async Task HandleSetupWizardCompletedAsync(LauncherSettings newSettings)
     {
-        await saveSettingsAsync(newSettings);
-        applyLanguage(newSettings.Language);
+        var savedSettings = await saveSettingsAsync(newSettings);
+        var handoff = followThrough.Apply(savedSettings);
         hideSetupWizard();
-        await refreshAsync(CancellationToken.None);
+        await followThrough.CompleteAsync(handoff);
     }
 
     /// <summary>Subscribes the first-run wizard events this module owns.</summary>
