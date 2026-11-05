@@ -248,6 +248,7 @@ if ($Rids -contains "osx-arm64") {
     [void][System.IO.Directory]::CreateDirectory($resourcesDir)
 
     Copy-Item -Path (Join-Path $PublishRoot "osx-arm64/*") -Destination $macOsDir -Recurse -Force
+    & (Join-Path $ScriptDir 'Restore-UnixVideoRuntime.ps1') -Rid 'osx-arm64' -OutputDirectory $macOsDir
 
     $plistTemplate = Get-Content -Raw -LiteralPath (Join-Path $MacOSAssetsDir "Info.plist")
     $plist = $plistTemplate.Replace("{VERSION}", $version.VersionPrefix).Replace("{FILE_VERSION}", $version.FileVersion)
@@ -290,10 +291,37 @@ if ($Rids -contains "osx-arm64") {
     }
 
     $artifacts += [pscustomobject]@{ Rid = "osx-arm64"; Kind = "app-bundle-zip"; Path = $osxZipPath }
+    $caskPath = Join-Path $DistributionDir 'cafe-launcher.rb'
+    $zipHash = (Get-FileHash -LiteralPath $osxZipPath -Algorithm SHA256).Hash.ToLowerInvariant()
+    $cask = @"
+cask "cafe-launcher" do
+  version "$($version.VersionPrefix)"
+  sha256 "$zipHash"
+  url "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/$Tag/Cafe.Launcher_${Tag}_osx-arm64.zip"
+  name "Cafe Launcher"
+  desc "Launcher for Blue Archive and Stella Sora"
+  homepage "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia"
+  depends_on :macos
+  depends_on arch: :arm64
+  depends_on formula: "mpv"
+  app "Cafe Launcher.app"
+end
+"@
+    [System.IO.File]::WriteAllText($caskPath, $cask + "`n", [System.Text.UTF8Encoding]::new($false))
+    $artifacts += [pscustomobject]@{ Rid = "osx-arm64"; Kind = "homebrew-cask"; Path = $caskPath }
 }
 
 if ($Rids -contains "linux-x64") {
     $linuxPublishDir = Join-Path $PublishRoot "linux-x64"
+    if (Test-Path -LiteralPath (Join-Path $linuxPublishDir 'libmpv/linux-x64')) {
+        throw 'Linux package-managed publish output must not contain a bundled video runtime.'
+    }
+    # Package-managed builds use the distro's libmpv. Portable formats carry
+    # the pinned runtime and its VA fallback in a separate staging tree.
+    $linuxPortableDir = Join-Path $BundleRoot 'linux-x64/portable'
+    [void][System.IO.Directory]::CreateDirectory($linuxPortableDir)
+    Copy-Item -Path (Join-Path $linuxPublishDir '*') -Destination $linuxPortableDir -Recurse -Force
+    & (Join-Path $ScriptDir 'Restore-UnixVideoRuntime.ps1') -Rid 'linux-x64' -OutputDirectory $linuxPortableDir
     $linuxTarName = "Cafe.Launcher_${Tag}_linux-x64.tar.gz"
     $linuxTarPath = Join-Path $DistributionDir $linuxTarName
     if (-not $IsUnixHost) {
@@ -302,7 +330,7 @@ if ($Rids -contains "linux-x64") {
     # Pack with a relative archive name: GNU tar reads "E:\...\x.tar.gz" as a remote host path.
     Push-Location $DistributionDir
     try {
-        & tar --sort=name --mtime="@$sourceDateEpoch" --owner=0 --group=0 --numeric-owner -czf $linuxTarName -C $linuxPublishDir .
+        & tar --sort=name --mtime="@$sourceDateEpoch" --owner=0 --group=0 --numeric-owner -czf $linuxTarName -C $linuxPortableDir .
         if ($LASTEXITCODE -ne 0) {
             throw "tar failed for the Linux package."
         }
@@ -450,7 +478,7 @@ if ($Rids -contains "linux-x64") {
             [void][System.IO.Directory]::CreateDirectory($hicolorDir)
             [void][System.IO.Directory]::CreateDirectory($appMetainfoDir)
 
-            Copy-Item -Path (Join-Path $linuxPublishDir "*") -Destination $appBinDir -Recurse -Force
+            Copy-Item -Path (Join-Path $linuxPortableDir "*") -Destination $appBinDir -Recurse -Force
             Set-UnixExecutableBit -Paths @(
                 (Join-Path $appBinDir "Cafe.Launcher"),
                 (Join-Path $appBinDir "createdump")

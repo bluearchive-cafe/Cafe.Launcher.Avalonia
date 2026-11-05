@@ -221,6 +221,7 @@
 | CommunityToolkit.Mvvm | 8.4.2 | MVVM source generators |
 | Material.Icons.Avalonia | 3.0.2 | Icon library |
 | libmpv（Windows x64 LGPL 构建） | 2026-10-31-9e2ed65eb0 | 视频背景 Render API；版本与双重 SHA-256 见 `native/libmpv/manifest.json`，不属于 NuGet 依赖 |
+| libmpv（Linux x64 / macOS arm64 便携版 LGPL 构建） | mpv 0.41.0，ic-plugin-videocodecs v0.1.1 | 视频背景 Render API；来源和 SHA-256 见 `native/libmpv/unix-manifest.json`，系统安装包使用发行版运行库 |
 | Microsoft.Extensions.DependencyInjection | 10.0.14 | DI 容器 |
 | Shirasagi0012.MaterialColorUtilities | 0.2.0 | Material 色彩工具 |
 | Serilog | 4.4.0 | Logging pipeline |

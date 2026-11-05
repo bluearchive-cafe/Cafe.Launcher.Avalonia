@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 
@@ -9,6 +10,7 @@ namespace Cafe.Launcher.UI.Controls.VideoBackground;
 internal sealed class MpvNative : IDisposable
 {
     private readonly nint library;
+    private readonly List<nint> dependencies = [];
     private readonly List<nint> allocations = [];
     private static int activeLibraryCount;
     private bool disposed;
@@ -124,8 +126,38 @@ internal sealed class MpvNative : IDisposable
 
     internal MpvNative(string path)
     {
-        library = NativeLibrary.Load(path);
-        Interlocked.Increment(ref activeLibraryCount);
+        try
+        {
+            // Prefer fixed system locations. Portable builds carry fallbacks for
+            // missing libraries; bare names would also search untrusted paths.
+            if (OperatingSystem.IsLinux() && Path.IsPathFullyQualified(path) &&
+                File.Exists(Path.Combine(Path.GetDirectoryName(path)!, "libva.so.2")))
+            {
+                var directory = Path.GetDirectoryName(path)!;
+                foreach (var name in new[] { "libasound.so.2", "libva.so.2", "libva-drm.so.2" })
+                {
+                    var loaded = false;
+                    foreach (var candidate in VideoBackgroundRuntime.GetLinuxSystemLibraryPaths(RuntimeInformation.ProcessArchitecture, name))
+                    {
+                        if (!File.Exists(candidate) || !NativeLibrary.TryLoad(candidate, out var dependency)) continue;
+                        dependencies.Add(dependency);
+                        loaded = true;
+                        break;
+                    }
+                    if (loaded) continue;
+                    var fallback = Path.Combine(directory, name);
+                    if (File.Exists(fallback) && NativeLibrary.TryLoad(fallback, out var bundled))
+                        dependencies.Add(bundled);
+                }
+            }
+            library = NativeLibrary.Load(path);
+            Interlocked.Increment(ref activeLibraryCount);
+        }
+        catch
+        {
+            ReleaseDependencies();
+            throw;
+        }
         try
         {
             NewPlayer = Export<Create>("mpv_create");
@@ -148,6 +180,7 @@ internal sealed class MpvNative : IDisposable
         {
             NativeLibrary.Free(library);
             Interlocked.Decrement(ref activeLibraryCount);
+            ReleaseDependencies();
             throw;
         }
     }
@@ -190,9 +223,12 @@ internal sealed class MpvNative : IDisposable
     internal void Load(nint player, string path)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
+        // libmpv interprets URI-looking relative names as protocols before
+        // FFmpeg's nested-protocol restrictions apply. Always pass a file path.
+        var absolutePath = Path.GetFullPath(path);
         var arguments = Marshal.AllocHGlobal(IntPtr.Size * 3);
         var command = Marshal.StringToCoTaskMemUTF8("loadfile");
-        var file = Marshal.StringToCoTaskMemUTF8(path);
+        var file = Marshal.StringToCoTaskMemUTF8(absolutePath);
         try
         {
             Marshal.WriteIntPtr(arguments, command);
@@ -223,12 +259,13 @@ internal sealed class MpvNative : IDisposable
         ObjectDisposedException.ThrowIf(disposed, this);
         if (screenshotArguments == 0)
         {
-            screenshotArguments = Marshal.AllocHGlobal(IntPtr.Size * 4);
+            screenshotArguments = Marshal.AllocHGlobal(IntPtr.Size * 3);
             allocations.Add(screenshotArguments);
             Marshal.WriteIntPtr(screenshotArguments, String("screenshot-raw"));
             Marshal.WriteIntPtr(screenshotArguments, IntPtr.Size, String("video"));
-            Marshal.WriteIntPtr(screenshotArguments, IntPtr.Size * 2, String("bgr0"));
-            Marshal.WriteIntPtr(screenshotArguments, IntPtr.Size * 3, 0);
+            // bgr0 is the default on both older and current mpv; 0.37 does not
+            // accept the optional format argument introduced in later versions.
+            Marshal.WriteIntPtr(screenshotArguments, IntPtr.Size * 2, 0);
         }
 
         if (sendCommandResult(player, screenshotArguments, out var result) < 0)
@@ -276,5 +313,13 @@ internal sealed class MpvNative : IDisposable
         allocations.Clear();
         NativeLibrary.Free(library);
         Interlocked.Decrement(ref activeLibraryCount);
+        ReleaseDependencies();
+    }
+
+    private void ReleaseDependencies()
+    {
+        for (var index = dependencies.Count - 1; index >= 0; index--)
+            NativeLibrary.Free(dependencies[index]);
+        dependencies.Clear();
     }
 }

@@ -43,7 +43,7 @@ Settings, download recovery records, and diagnostic logs stay on your device; lo
 | macOS | Apple Silicon; .app ZIP | Experimental; installs, updates, and repairs game files; cannot launch the game |
 | Linux | x64; DEB, RPM, Arch package, AppImage, tar.gz | Experimental; game launch through separately installed UMU / Proton or Wine |
 
-Packages include the .NET Runtime. Video playback currently requires Windows x64; other platforms use a static fallback. Update the launcher manually from the release page on macOS and Linux. Prereleases are testing builds; choose the latest stable release for everyday use.
+Packages include the .NET Runtime. Video backgrounds are available on Windows x64 and experimental Linux x64 and macOS Apple Silicon builds. Update the launcher manually from the release page on macOS and Linux. Prereleases are testing builds; choose the latest stable release for everyday use.
 
 Linux anti-cheat compatibility depends on the distribution, runner, Proton build, and driver. Historical hardware testing includes Arch Linux + UMU 1.4.4 + UMU-Proton 10.0-4 with game files on NTFS3. This does not establish compatibility with other combinations or later game versions. See [Compatibility runtime](https://docs.bluearchive.cafe/en/cafe-launcher/settings#compatibility-runtime-linux-only), including the optional MangoHud overlay, disabled by default and installed separately.
 
@@ -76,7 +76,7 @@ The bundled wallpaper is [初めてのゲーム](https://www.pixiv.net/artworks/
 
 Remote backgrounds use the image address supplied by the official launcher configuration. They are downloaded to the local cache and fall back to the bundled wallpaper on failure. Rights remain with their respective holders; these images are not included in project packages. Custom images, videos, and folders are selected locally, never uploaded or distributed by the project. Users are responsible for permission to use them.
 
-Windows x64 packages include the video runtime. Volume defaults to 0, and muting retains your chosen volume. Playback pauses when minimized, hidden to the tray, or using reduced motion. Colors come from cover art or the first frame and remain stable during playback. Appearance changes preview immediately; save to persist them or discard to restore the previous state. See [Background settings](https://docs.bluearchive.cafe/en/cafe-launcher/settings#background). Motion is under **Appearance → Theme and motion**; extraction algorithms are in the collapsed **Advanced colors** section. Repository key visuals and release banners are project-created promotional materials.
+Windows x64 and Linux and macOS portable packages include the video runtime; Linux system packages use a package-manager dependency. Volume defaults to 0, and muting retains your chosen volume. Playback pauses when minimized, hidden to the tray, or using reduced motion. Colors come from cover art or the first frame and remain stable during playback. Appearance changes preview immediately; save to persist them or discard to restore the previous state. See [Background settings](https://docs.bluearchive.cafe/en/cafe-launcher/settings#background). Motion is under **Appearance → Theme and motion**; extraction algorithms are in the collapsed **Advanced colors** section. Repository key visuals and release banners are project-created promotional materials.
 
 ## Data and licensing
 

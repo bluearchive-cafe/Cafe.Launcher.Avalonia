@@ -1,0 +1,29 @@
+{
+  "release": "v0.1.1",
+  "source": "https://github.com/ice-commander/ic-plugin-videocodecs/tree/292bb79",
+  "baseUrl": "https://github.com/ice-commander/ic-plugin-videocodecs/releases/download/v0.1.1",
+  "runtimes": {
+    "linux-x64": {
+      "alsaPackage": {
+        "url": "https://deb.debian.org/debian/pool/main/a/alsa-lib/libasound2_1.2.8-1%2bb1_amd64.deb",
+        "upstreamSource": "https://deb.debian.org/debian/pool/main/a/alsa-lib/alsa-lib_1.2.8.orig.tar.bz2",
+        "debianSource": "https://deb.debian.org/debian/pool/main/a/alsa-lib/alsa-lib_1.2.8-1.debian.tar.xz",
+        "sha256": "44c77b076a7b11ae99712439022d822245b1994c435da564ebd320bb676faf4c",
+        "librarySha256": "9dabddc79cc29b4f69058ac7d94ac11e82a4d6d8cc8c9148cb8377705790c7ea",
+        "copyrightSha256": "1e389062b3d44557d569d488e6075b162efd946e4bced56d20cbf62f9f53d7f6"
+      },
+      "files": {
+        "libmpv.so.2": "5d7a3a93ed5b6081bdaefcaa64bb278619bbe40691c2d06557c8984e44f169cc",
+        "libva.so.2": "fb60968d2b5c9bd399628bd277b238217cbbbfab5c7df8a312cee107834a3b1a",
+        "libva-drm.so.2": "bb2917e7a30aa7fd131fdc859963cb6125639f849e3908abd796a868934951c3",
+        "THIRD-PARTY-linux.txt": "e0aa4cb0699597d6882426f1e787310480cbf60d40c36c5dba67b3d6ba721f1a"
+      }
+    },
+    "osx-arm64": {
+      "files": {
+        "libmpv.2.dylib": "b91ac932b5f25017595e20add4afed85d426d4e8edb0ff849ae9b7b3c22f54ef",
+        "THIRD-PARTY-macos.txt": "4ccdc9e6ec1641be45e6728dc98133444c9f76cee3f7cbb3f172a83607ccf836"
+      }
+    }
+  }
+}
