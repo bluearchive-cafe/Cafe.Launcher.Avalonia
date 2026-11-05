@@ -129,19 +129,11 @@ internal sealed class LauncherUpdateService : ILauncherUpdateService
             }
 
             var isUpdateAvailable = IsNewerVersion(targetRelease.Version, currentVersion);
-            var releaseNotes = targetRelease.ReleaseNotes;
-            if (isUpdateAvailable && string.IsNullOrWhiteSpace(releaseNotes))
-            {
-                releaseNotes = await TryFetchGitHubReleaseNotesAsync(
-                    targetRelease.Version,
-                    cancellationToken).ConfigureAwait(false);
-            }
-
             return LauncherUpdateCheckResult.Succeeded(
                 targetRelease.Version,
                 Array.AsReadOnly(targetRelease.Files.ToArray()),
                 isUpdateAvailable,
-                releaseNotes);
+                targetRelease.ReleaseNotes);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -267,9 +259,10 @@ internal sealed class LauncherUpdateService : ILauncherUpdateService
             .ToList();
     }
 
-    private async Task<string> TryFetchGitHubReleaseNotesAsync(
+    /// <inheritdoc/>
+    public async Task<string> LoadReleaseNotesAsync(
         string version,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken = default)
     {
         try
         {

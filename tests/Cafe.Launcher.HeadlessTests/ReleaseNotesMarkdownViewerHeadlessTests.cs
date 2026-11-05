@@ -114,11 +114,15 @@ public sealed class ReleaseNotesMarkdownViewerHeadlessTests
         {
             window.Show();
             var token = await entered.Task;
+            Assert.True(viewer.IsImageLoading);
+            Assert.False(viewer.HasImageLoadFailed);
             viewer.Markdown = "new content";
             Assert.True(token.IsCancellationRequested);
             result.SetResult([]);
             Assert.Contains("new content", ReadTextFromViewer(viewer), StringComparison.Ordinal);
             Assert.Empty(viewer.GetVisualDescendants().OfType<Image>());
+            Assert.False(viewer.IsImageLoading);
+            Assert.False(viewer.HasImageLoadFailed);
         }
         finally
         {
@@ -159,7 +163,7 @@ public sealed class ReleaseNotesMarkdownViewerHeadlessTests
     }
 
     [AvaloniaFact]
-    public void Markdown_WhenImageLoadingFails_StillShowsBodyAndLinks()
+    public async Task Markdown_WhenImageLoadingFails_StillShowsBodyAndLinks()
     {
         var calls = 0;
         var viewer = new ReleaseNotesMarkdownViewer
@@ -175,9 +179,13 @@ public sealed class ReleaseNotesMarkdownViewerHeadlessTests
         try
         {
             window.Show();
+            await HeadlessTestHost.WaitUntilAsync(() => viewer.HasImageLoadFailed, TimeSpan.FromSeconds(5));
             Assert.Equal(1, calls);
+            Assert.False(viewer.IsImageLoading);
             Assert.Contains("Body Details", ReadTextFromViewer(viewer), StringComparison.Ordinal);
             Assert.DoesNotContain(viewer.GetVisualDescendants().OfType<Image>(), image => image.Source is not null);
+            viewer.Markdown = "replacement";
+            Assert.False(viewer.HasImageLoadFailed);
         }
         finally
         {

@@ -305,6 +305,8 @@ public enum LocalizationKeys
     LauncherUpdateLater,
     LauncherUpdateOpenReleasePage,
     LauncherUpdateReadyToRestart,
+    LauncherUpdateReleaseNotesFailed,
+    LauncherUpdateReleaseNotesLoading,
     LauncherUpdateRestart,
     LauncherUpdateUpToDate,
     LauncherUpdateView,

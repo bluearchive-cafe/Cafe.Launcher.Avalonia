@@ -147,6 +147,22 @@ public sealed partial class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
+    public async Task Golden_UpdateDialog_LoadingAndFailure_MatchBaselines()
+    {
+        using var context = CreateContext();
+        PrepareGoldenWindow(context);
+        context.Window.Show();
+        context.ViewModel.Dialogs.ShowUpdateAvailable("1.2.0", [], LauncherUpdateInAppAvailability.Available);
+        var service = new ControlledReleaseNotesService();
+        var loading = context.ViewModel.Dialogs.LoadUpdateReleaseNotesAsync(service);
+        GoldenScreenshot.Compare(context.Window, "update-dialog-loading");
+
+        service.Result.SetResult("");
+        await loading;
+        GoldenScreenshot.Compare(context.Window, "update-dialog-failed");
+    }
+
+    [AvaloniaFact]
     public void Golden_ErrorDialog_MatchesBaseline()
     {
         using var context = CreateContext();

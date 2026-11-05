@@ -263,7 +263,7 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
         var result = await launcherUpdateService.CheckForUpdateAsync(
             savedSettings.UpdateChannel);
 
-        updatePresenter.Present(result, LauncherUpdateTrigger.Manual);
+        await updatePresenter.PresentAsync(result, LauncherUpdateTrigger.Manual);
     }
 
     /// <summary>Opens the shared launcher-settings reset confirmation (shell performs the reset).</summary>

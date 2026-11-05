@@ -129,6 +129,8 @@
             <x:Double x:Key="Launcher.Component.Dialog.Confirm.MinWidth">392</x:Double>
             <x:Double x:Key="Launcher.Component.Dialog.Notice.MaxHeight">110</x:Double>
             <x:Double x:Key="Launcher.Component.Dialog.Update.MaxWidth">620</x:Double>
+            <x:Double x:Key="Launcher.Component.Dialog.Update.MinWidth">480</x:Double>
+            <x:Double x:Key="Launcher.Component.Dialog.Update.MinHeight">320</x:Double>
             <x:Double x:Key="Launcher.Component.Dialog.Update.ReleaseNotes.MaxHeight">240</x:Double>
             <!-- 对话框家族 v2 表面档案（ADR-015）：组件圆角 20 + 双层阴影，
                  模态表面比页面常驻面板高一档；-padding 家族按形态区分。 -->

@@ -22,6 +22,7 @@ internal sealed class LauncherUpdatePresenter : ILauncherUpdatePresenter
     private readonly ToastService toastService;
     private readonly DialogsViewModel dialogs;
     private readonly ILauncherSelfUpdateService selfUpdateService;
+    private readonly ILauncherUpdateService updateService;
     private readonly LauncherBuildIdentity? buildIdentity;
 
     public LauncherUpdatePresenter(
@@ -29,17 +30,19 @@ internal sealed class LauncherUpdatePresenter : ILauncherUpdatePresenter
         ToastService toastService,
         DialogsViewModel dialogs,
         ILauncherSelfUpdateService selfUpdateService,
+        ILauncherUpdateService updateService,
         LauncherBuildIdentity? buildIdentity = null)
     {
         this.localizer = localizer;
         this.toastService = toastService;
         this.dialogs = dialogs;
         this.selfUpdateService = selfUpdateService;
+        this.updateService = updateService;
         this.buildIdentity = buildIdentity;
     }
 
     /// <inheritdoc />
-    public void Present(LauncherUpdateCheckResult result, LauncherUpdateTrigger trigger)
+    public async Task PresentAsync(LauncherUpdateCheckResult result, LauncherUpdateTrigger trigger)
     {
         ArgumentNullException.ThrowIfNull(result);
 
@@ -67,7 +70,7 @@ internal sealed class LauncherUpdatePresenter : ILauncherUpdatePresenter
 
         if (trigger == LauncherUpdateTrigger.Manual)
         {
-            ShowUpdateDialog(result);
+            await ShowUpdateDialogAsync(result);
             return;
         }
 
@@ -78,21 +81,25 @@ internal sealed class LauncherUpdatePresenter : ILauncherUpdatePresenter
             Duration = ToastDuration.Extended,
             PrimaryAction = new ToastAction(
                 localizer.T(LocalizationKeys.LauncherUpdateView),
-                _ =>
+                cancellationToken =>
                 {
-                    ShowUpdateDialog(result);
+                    // 弹窗先出现，说明正文随后加载；toast 不等待网络请求。
+                    _ = ShowUpdateDialogAsync(result);
                     return Task.FromResult(ToastActionResult.Success());
                 },
                 Timeout: null)
         });
     }
 
-    private void ShowUpdateDialog(LauncherUpdateCheckResult result) =>
+    private async Task ShowUpdateDialogAsync(LauncherUpdateCheckResult result)
+    {
         dialogs.ShowUpdateAvailable(
             result.LatestVersion,
             result.Files,
             selfUpdateService.ResolveInAppAvailability(result.Files),
             result.ReleaseNotes);
+        await dialogs.LoadUpdateReleaseNotesAsync(updateService);
+    }
 
     private string BuildFailureMessage(LauncherUpdateCheckResult result)
     {

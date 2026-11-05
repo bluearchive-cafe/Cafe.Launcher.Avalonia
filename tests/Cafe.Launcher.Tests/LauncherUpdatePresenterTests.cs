@@ -28,11 +28,11 @@ public sealed class LauncherUpdatePresenterTests : IDisposable
     public void Dispose() => tempDirectory.Dispose();
 
     [Fact]
-    public void Present_StartupFailure_StaysSilent()
+    public async Task Present_StartupFailure_StaysSilent()
     {
         var context = CreateContext(LauncherUpdateInAppAvailability.Available);
 
-        context.Presenter.Present(
+        await context.Presenter.PresentAsync(
             LauncherUpdateCheckResult.Failed(message: "simulated check failure"),
             LauncherUpdateTrigger.Startup);
 
@@ -40,11 +40,11 @@ public sealed class LauncherUpdatePresenterTests : IDisposable
     }
 
     [Fact]
-    public void Present_StartupUpToDate_StaysSilent()
+    public async Task Present_StartupUpToDate_StaysSilent()
     {
         var context = CreateContext(LauncherUpdateInAppAvailability.Available);
 
-        context.Presenter.Present(
+        await context.Presenter.PresentAsync(
             LauncherUpdateCheckResult.Succeeded("1.0.0", [], isUpdateAvailable: false),
             LauncherUpdateTrigger.Startup);
 
@@ -52,11 +52,11 @@ public sealed class LauncherUpdatePresenterTests : IDisposable
     }
 
     [Fact]
-    public void Present_StartupUpdateAvailable_ShowsExtendedInfoToast()
+    public async Task Present_StartupUpdateAvailable_ShowsExtendedInfoToast()
     {
         var context = CreateContext(LauncherUpdateInAppAvailability.Available);
 
-        context.Presenter.Present(
+        await context.Presenter.PresentAsync(
             LauncherUpdateCheckResult.Succeeded("9.9.9", CreateFiles(), isUpdateAvailable: true),
             LauncherUpdateTrigger.Startup);
 
@@ -73,7 +73,7 @@ public sealed class LauncherUpdatePresenterTests : IDisposable
         // 动作必须复用 toast 对应的结果：再次检查会让「有更新」与随后的失败或「已最新」互相矛盾。
         var context = CreateContext(LauncherUpdateInAppAvailability.PlatformUnsupported);
 
-        context.Presenter.Present(
+        await context.Presenter.PresentAsync(
             LauncherUpdateCheckResult.Succeeded(
                 "9.9.9",
                 CreateFiles(),
@@ -96,11 +96,11 @@ public sealed class LauncherUpdatePresenterTests : IDisposable
     }
 
     [Fact]
-    public void Present_ManualFailure_ShowsErrorToast()
+    public async Task Present_ManualFailure_ShowsErrorToast()
     {
         var context = CreateContext(LauncherUpdateInAppAvailability.Available);
 
-        context.Presenter.Present(
+        await context.Presenter.PresentAsync(
             LauncherUpdateCheckResult.Failed(message: "simulated check failure"),
             LauncherUpdateTrigger.Manual);
 
@@ -136,7 +136,8 @@ public sealed class LauncherUpdatePresenterTests : IDisposable
             localizer,
             toastService,
             dialogs,
-            selfUpdateService);
+            selfUpdateService,
+            new StubLauncherUpdateService());
 
         return new PresenterContext(presenter, toasts, dialogs, selfUpdateService);
     }
@@ -156,6 +157,17 @@ public sealed class LauncherUpdatePresenterTests : IDisposable
         IReadOnlyList<ToastNotification> Toasts,
         DialogsViewModel Dialogs,
         StubSelfUpdateService SelfUpdateService);
+
+    private sealed class StubLauncherUpdateService : ILauncherUpdateService
+    {
+        public Task<LauncherUpdateCheckResult> CheckForUpdateAsync(
+            string updateChannel,
+            CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+        public Task<string> LoadReleaseNotesAsync(
+            string version,
+            CancellationToken cancellationToken = default) => Task.FromResult("");
+    }
 
     private sealed class StubSelfUpdateService(LauncherUpdateInAppAvailability availability)
         : ILauncherSelfUpdateService

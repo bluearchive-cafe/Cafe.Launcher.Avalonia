@@ -100,6 +100,8 @@
                 VerticalAlignment="Center"
                 Margin="{StaticResource Launcher.Spacing.Thickness.Xxl}"
                 MaxWidth="{StaticResource Launcher.Component.Dialog.Update.MaxWidth}"
+                MinWidth="{StaticResource Launcher.Component.Dialog.Update.MinWidth}"
+                MinHeight="{StaticResource Launcher.Component.Dialog.Update.MinHeight}"
                 Title="{Binding Shell.I18n[launcherUpdateAvailableTitle]}"
                 Subtitle="{Binding Dialogs.UpdateAvailableText}"
                 CloseCommand="{Binding Dialogs.CancelUpdateAvailableCommand}"
@@ -119,12 +121,35 @@
                             <TextBlock Text="{Binding Dialogs.UpdateInAppUnavailableNoticeText}"
                                        Classes="dialog-alert-content"/>
                         </Border>
+                        <StackPanel IsVisible="{Binding Dialogs.IsUpdateReleaseNotesLoading}"
+                                    Spacing="{StaticResource Launcher.Spacing.Sm}">
+                            <TextBlock Text="{Binding Shell.I18n[launcherUpdateReleaseNotesLoading]}"
+                                       Classes="dialog-alert-content"/>
+                            <ProgressBar IsIndeterminate="True"
+                                         Height="{StaticResource Launcher.Component.Loading.Bar.Height}"/>
+                        </StackPanel>
+                        <StackPanel IsVisible="{Binding Dialogs.HasUpdateReleaseNotesFailed}"
+                                    Spacing="{StaticResource Launcher.Spacing.Sm}">
+                            <TextBlock Text="{Binding Shell.I18n[launcherUpdateReleaseNotesFailed]}"
+                                       Classes="dialog-alert-content" TextWrapping="Wrap"/>
+                            <Button Classes="flat-action dialog-action" HorizontalAlignment="Left"
+                                    Content="{Binding Shell.I18n[launcherUpdateOpenReleasePage]}"
+                                    AutomationProperties.Name="{Binding Shell.I18n[launcherUpdateOpenReleasePage]}"
+                                    Command="{Binding Dialogs.OpenUpdateReleasePageCommand}"/>
+                        </StackPanel>
                         <controls:ReleaseNotesMarkdownViewer
+                            x:Name="UpdateReleaseNotesViewer"
                             IsVisible="{Binding Dialogs.HasUpdateReleaseNotes}"
                             ImageLoader="{Binding RemoteContent.ReleaseNotesImageLoader}"
                             IsDocumentActive="{Binding #UpdateAvailableOverlay.IsVisible}"
                             Markdown="{Binding Dialogs.UpdateReleaseNotes}"
                             MaxHeight="{StaticResource Launcher.Component.Dialog.Update.ReleaseNotes.MaxHeight}"/>
+                        <TextBlock IsVisible="{Binding #UpdateReleaseNotesViewer.IsImageLoading}"
+                                   Text="{Binding Shell.I18n[bannerLoading]}"
+                                   Classes="dialog-alert-content" TextWrapping="Wrap"/>
+                        <TextBlock IsVisible="{Binding #UpdateReleaseNotesViewer.HasImageLoadFailed}"
+                                   Text="{Binding Shell.I18n[bannerLoadingFailed]}"
+                                   Classes="dialog-alert-content" TextWrapping="Wrap"/>
                         <Separator Classes="update-progress-divider"
                                    IsVisible="{Binding Dialogs.IsUpdateApplying}"
                                    Margin="{StaticResource Launcher.Spacing.Thickness.None}"

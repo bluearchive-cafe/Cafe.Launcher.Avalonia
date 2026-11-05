@@ -557,7 +557,7 @@ internal sealed class ShellLifecycle : IDisposable
                 savedSettings.UpdateChannel,
                 cancellationToken);
 
-            updatePresenter.Present(result, LauncherUpdateTrigger.Startup);
+            await updatePresenter.PresentAsync(result, LauncherUpdateTrigger.Startup);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

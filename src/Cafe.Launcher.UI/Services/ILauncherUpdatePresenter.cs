@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using Cafe.Launcher.Core.Services;
 
 namespace Cafe.Launcher.UI.Services;
@@ -18,6 +19,9 @@ internal enum LauncherUpdateTrigger
 /// </summary>
 internal interface ILauncherUpdatePresenter
 {
-    /// <summary>Presents <paramref name="result"/> according to <paramref name="trigger"/>.</summary>
-    void Present(LauncherUpdateCheckResult result, LauncherUpdateTrigger trigger);
+    /// <summary>
+    /// Presents <paramref name="result"/> according to <paramref name="trigger"/>. When the dialog
+    /// opens without inline notes, the returned task includes the supplementary notes request.
+    /// </summary>
+    Task PresentAsync(LauncherUpdateCheckResult result, LauncherUpdateTrigger trigger);
 }

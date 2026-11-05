@@ -528,12 +528,13 @@ public partial class MainWindowViewModelTests
             new SetupWizardViewModel(localizer, new GameInstallationPath(LauncherProfiles.BlueArchiveJapan), new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan), new LocalDiagnostics(), new StubFilePickerService()),
             new LocalDiagnostics());
         using var testLogger = new UnifiedLogger(tempDir);
+        var updateService = new LauncherUpdateService(LauncherProfiles.Cafe, new StubRemoteHttpTransport());
         using var settings = new SettingsViewModel(
             savedSettings.SettingsService,
             savedSettings.Writer,
             localizer,
             toastService,
-            new LauncherUpdateService(LauncherProfiles.Cafe, new StubRemoteHttpTransport()),
+            updateService,
             new LauncherUpdatePresenter(
                 localizer,
                 toastService,
@@ -543,7 +544,8 @@ public partial class MainWindowViewModelTests
                     new LauncherUpdateHostInfoProvider(),
                     new StubWindowsLauncherUpdateApplier(),
                     TestDataRoot.ForDirectory(Path.Combine(tempDir, "update-root")),
-                    new LocalDiagnostics())),
+                    new LocalDiagnostics()),
+                updateService),
             dialogs,
             testLogger,
             new GameInstallationPath(LauncherProfiles.BlueArchiveJapan),

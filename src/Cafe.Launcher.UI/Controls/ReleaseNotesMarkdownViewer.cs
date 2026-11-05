@@ -32,6 +32,22 @@ internal sealed class ReleaseNotesMarkdownViewer : MarkdownViewer
 
     private ImageScope? imageScope;
 
+    /// <summary>至少一张远程图片仍在加载，正文和更新动作保持可用。</summary>
+    public static readonly DirectProperty<ReleaseNotesMarkdownViewer, bool> IsImageLoadingProperty =
+        AvaloniaProperty.RegisterDirect<ReleaseNotesMarkdownViewer, bool>(nameof(IsImageLoading), owner => owner.IsImageLoading);
+
+    /// <summary>当前文档中至少一张远程图片加载失败。</summary>
+    public static readonly DirectProperty<ReleaseNotesMarkdownViewer, bool> HasImageLoadFailedProperty =
+        AvaloniaProperty.RegisterDirect<ReleaseNotesMarkdownViewer, bool>(nameof(HasImageLoadFailed), owner => owner.HasImageLoadFailed);
+
+    private bool isImageLoading;
+    private bool hasImageLoadFailed;
+
+    /// <summary>当前文档是否仍有远程图片正在加载。</summary>
+    public bool IsImageLoading => isImageLoading;
+    /// <summary>当前文档是否存在加载失败的远程图片。</summary>
+    public bool HasImageLoadFailed => hasImageLoadFailed;
+
     static ReleaseNotesMarkdownViewer()
     {
         // Documents own decoded bitmaps. MarkView's shared cache keys loader types, so reopening
@@ -125,6 +141,13 @@ internal sealed class ReleaseNotesMarkdownViewer : MarkdownViewer
         Content = null;
         imageScope?.Dispose();
         imageScope = null;
+        SetImageState(false, false);
+    }
+
+    private void SetImageState(bool loading, bool failed)
+    {
+        SetAndRaise(IsImageLoadingProperty, ref isImageLoading, loading);
+        SetAndRaise(HasImageLoadFailedProperty, ref hasImageLoadFailed, failed);
     }
 
     private sealed class RemoteImagesExtension(ReleaseNotesMarkdownViewer owner) : IMarkViewExtension
@@ -132,7 +155,7 @@ internal sealed class ReleaseNotesMarkdownViewer : MarkdownViewer
         public void Register(AvaloniaRenderer renderer)
         {
             owner.ReleaseImages();
-            var scope = new ImageScope(owner.IsDocumentActive ? owner.ImageLoader : null);
+            var scope = new ImageScope(owner, owner.IsDocumentActive ? owner.ImageLoader : null);
             owner.imageScope = scope;
             // 替换库内默认 HTTP/data/资源加载器，所有出站请求仅经过启动器网络层。
             renderer.ImageLoaders.Clear();
@@ -140,11 +163,19 @@ internal sealed class ReleaseNotesMarkdownViewer : MarkdownViewer
         }
     }
 
-    private sealed class ImageScope(Func<string, CancellationToken, Task<byte[]>>? loadBytes) : IImageLoader, IDisposable
+    private sealed class ImageScope(ReleaseNotesMarkdownViewer owner, Func<string, CancellationToken, Task<byte[]>>? loadBytes) : IImageLoader, IDisposable
     {
         private readonly CancellationTokenSource lifetime = new();
         private readonly List<Bitmap> bitmaps = [];
         private bool disposed;
+        private int pendingImages;
+        private bool hasFailedImages;
+
+        private void ReportState()
+        {
+            if (!disposed && ReferenceEquals(owner.imageScope, this))
+                owner.SetImageState(pendingImages > 0, hasFailedImages);
+        }
 
         public bool CanLoad(string url) => loadBytes is not null
             && Uri.TryCreate(url, UriKind.Absolute, out var uri)
@@ -158,6 +189,11 @@ internal sealed class ReleaseNotesMarkdownViewer : MarkdownViewer
             Bitmap? bitmap = null;
             try
             {
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    pendingImages++;
+                    ReportState();
+                });
                 var bytes = await loadBytes!(url, linked.Token).ConfigureAwait(false);
                 bitmap = await Task.Run(() => BannerImageDecoder.Decode(bytes), linked.Token).ConfigureAwait(false);
                 var decoded = bitmap;
@@ -182,7 +218,19 @@ internal sealed class ReleaseNotesMarkdownViewer : MarkdownViewer
             {
                 // 图片失败不影响发布说明正文、下载动作或其他图片。
                 bitmap?.Dispose();
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    hasFailedImages = true;
+                });
                 return null;
+            }
+            finally
+            {
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    pendingImages--;
+                    ReportState();
+                });
             }
         }
 

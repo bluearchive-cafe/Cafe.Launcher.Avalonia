@@ -313,6 +313,8 @@ internal static class LauncherResourceCatalog
         "launcherUpdateLater",
         "launcherUpdateOpenReleasePage",
         "launcherUpdateReadyToRestart",
+        "launcherUpdateReleaseNotesFailed",
+        "launcherUpdateReleaseNotesLoading",
         "launcherUpdateRestart",
         "launcherUpdateUpToDate",
         "launcherUpdateView",
