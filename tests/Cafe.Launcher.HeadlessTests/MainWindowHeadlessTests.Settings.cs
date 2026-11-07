@@ -655,7 +655,10 @@ public sealed partial class MainWindowHeadlessTests
     [AvaloniaFact]
     public async Task SettingsGame_InstalledProtonSelectionAndManualPathStaySynchronized()
     {
-        using var context = CreateContext();
+        // Exercise the Linux section on Windows CI without changing production visibility.
+        using var context = CreateContext(configure: services =>
+            services.AddSingleton(new PresentationOptions(ShowHiddenSettings: true)));
+        Assert.True(context.ViewModel.IsPlatformSpecificSettingsVisible);
         OpenSettings(context);
         context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.Game;
         await context.ViewModel.Settings.PendingGameRuntimeStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
@@ -666,6 +669,7 @@ public sealed partial class MainWindowHeadlessTests
         var section = context.Window.GetVisualDescendants().OfType<SettingsGameSection>().Single();
         var combo = Assert.Single(section.GetVisualDescendants().OfType<ComboBox>(),
             control => ReferenceEquals(control.ItemsSource, settings.ProtonBuilds));
+        Assert.True(combo.IsEffectivelyVisible);
         var pathInput = Assert.Single(section.GetVisualDescendants().OfType<TextBox>(),
             control => AutomationProperties.GetName(control) == context.ViewModel.Shell.I18n["gameRuntimeProtonPath"]);
 
