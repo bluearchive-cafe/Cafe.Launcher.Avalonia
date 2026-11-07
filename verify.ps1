@@ -25,10 +25,10 @@ else {
     'linux-x64'
 }
 
-dotnet restore .\src\Cafe.Launcher\Cafe.Launcher.csproj -r $releaseRid
+dotnet restore ./src/Cafe.Launcher/Cafe.Launcher.csproj -r $releaseRid
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-dotnet build .\src\Cafe.Launcher\Cafe.Launcher.csproj -c Release --no-restore
+dotnet build ./src/Cafe.Launcher/Cafe.Launcher.csproj -c Release --no-restore
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-dotnet test --project .\tests\Cafe.Launcher.Tests\Cafe.Launcher.Tests.csproj -c Release --no-restore --filter-class '*ResxResourceContractTests' --hangdump --hangdump-timeout 5m --hangdump-type None
+dotnet test --project ./tests/Cafe.Launcher.Tests/Cafe.Launcher.Tests.csproj -c Release --no-restore --filter-class '*ResxResourceContractTests' --hangdump --hangdump-timeout 5m --hangdump-type None
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

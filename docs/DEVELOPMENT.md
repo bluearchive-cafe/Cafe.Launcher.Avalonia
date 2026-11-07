@@ -62,6 +62,8 @@ pwsh ./verify.ps1
 | 用 Windows 发布目录制作安装器 | `pwsh ./scripts/New-WindowsInstaller.ps1` |
 | 从宿主图标源再生平台图标 | `pwsh ./scripts/New-AppIconAssets.ps1` |
 
+验证脚本传给 `dotnet` 的工程路径使用正斜杠，兼容 Windows、macOS 与 Linux；不要把仅 PowerShell 能归一化的反斜杠路径直接传给原生命令。
+
 `test.ps1` 使用原生 Microsoft.Testing.Platform，保留五分钟无活动挂起保护，空筛选返回失败。类名和方法名筛选支持首尾 `*`。直接调用时使用 `dotnet test --project <csproj>` 与 `--filter-class`，并保留挂起保护参数；不用 VSTest 筛选参数。运行带 `--no-restore` 的命令前先还原依赖。
 
 覆盖率同时守住 line/branch 至少 50% 的底线与 `coverage.ps1` 中的较高基线；具体阈值以脚本为准。测试设施见[规范 §8](../PROJECT_CONVENTIONS.md#8-测试)。

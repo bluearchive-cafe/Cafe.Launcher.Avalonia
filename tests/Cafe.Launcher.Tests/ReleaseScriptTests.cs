@@ -73,6 +73,19 @@ public sealed class ReleaseScriptTests
             StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData("build.ps1")]
+    [InlineData("test.ps1")]
+    [InlineData("coverage.ps1")]
+    [InlineData("verify.ps1")]
+    public void ValidationScripts_ProjectArgumentsUseCrossPlatformSeparators(string fileName)
+    {
+        var script = File.ReadAllText(TestRepository.FromRepositoryRoot(fileName));
+        var projectLines = script.Split('\n').Where(line => line.Contains(".csproj", StringComparison.Ordinal));
+        Assert.NotEmpty(projectLines);
+        Assert.All(projectLines, line => Assert.DoesNotContain('\\', line));
+    }
+
     [Fact]
     public void VerifyScript_RestoresTheReleaseRuntimeForTheCurrentHost()
     {
