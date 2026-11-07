@@ -31,12 +31,12 @@ New-Item -ItemType Directory -Path $resultsRoot | Out-Null
 $projects = @(
     @{
         Name = 'Unit'
-        Project = '.\tests\Cafe.Launcher.Tests\Cafe.Launcher.Tests.csproj'
+        Project = './tests/Cafe.Launcher.Tests/Cafe.Launcher.Tests.csproj'
         ResultsDirectory = Join-Path $resultsRoot 'unit'
     },
     @{
         Name = 'Headless'
-        Project = '.\tests\Cafe.Launcher.HeadlessTests\Cafe.Launcher.HeadlessTests.csproj'
+        Project = './tests/Cafe.Launcher.HeadlessTests/Cafe.Launcher.HeadlessTests.csproj'
         ResultsDirectory = Join-Path $resultsRoot 'headless'
     }
 )

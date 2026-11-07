@@ -90,24 +90,42 @@
             <controls:SettingRow Title="{Binding Shell.I18n[gameRuntimePrefixPath]}"
                                  Description="{Binding Shell.I18n[gameRuntimePrefixPathDescription]}">
                 <controls:SettingRow.Action>
-                    <TextBox Classes="field-input"
-                             Width="{StaticResource Launcher.Component.Settings.Control.MinWidth}"
-                             Text="{Binding Settings.Editor.Current.GameRuntime.PrefixPath, Mode=TwoWay}"
-                             PlaceholderText="{Binding Shell.I18n[gameRuntimePrefixPathPlaceholder]}"
-                             AutomationProperties.Name="{Binding Shell.I18n[gameRuntimePrefixPath]}"/>
+                    <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}">
+                        <TextBox Classes="field-input"
+                                 Width="{StaticResource Launcher.Component.Settings.Control.MinWidth}"
+                                 Text="{Binding Settings.Editor.Current.GameRuntime.PrefixPath, Mode=TwoWay}"
+                                 PlaceholderText="{Binding Shell.I18n[gameRuntimePrefixPathPlaceholder]}"
+                                 AutomationProperties.Name="{Binding Shell.I18n[gameRuntimePrefixPath]}"/>
+                        <Button Classes="flat-action" Command="{Binding Settings.ChoosePrefixPathCommand}"
+                                HorizontalAlignment="Right"
+                                Content="{Binding Shell.I18n[choose]}"
+                                AutomationProperties.Name="{Binding Shell.I18n[gameRuntimePrefixPath]}"/>
+                    </StackPanel>
                 </controls:SettingRow.Action>
             </controls:SettingRow>
 
             <controls:SettingRow Title="{Binding Shell.I18n[gameRuntimeProtonPath]}"
                                  Description="{Binding Shell.I18n[gameRuntimeProtonPathDescription]}">
                 <controls:SettingRow.Action>
-                    <TextBox Classes="field-input"
-                             Width="{StaticResource Launcher.Component.Settings.Control.MinWidth}"
-                             Text="{Binding Settings.Editor.Current.GameRuntime.ProtonPath, Mode=TwoWay}"
-                             PlaceholderText="{Binding Shell.I18n[gameRuntimeProtonPathPlaceholder]}"
-                             AutomationProperties.Name="{Binding Shell.I18n[gameRuntimeProtonPath]}"/>
+                    <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}">
+                        <TextBox Classes="field-input"
+                                 Width="{StaticResource Launcher.Component.Settings.Control.MinWidth}"
+                                 Text="{Binding Settings.Editor.Current.GameRuntime.ProtonPath, Mode=TwoWay}"
+                                 PlaceholderText="{Binding Shell.I18n[gameRuntimeProtonPathPlaceholder]}"
+                                 AutomationProperties.Name="{Binding Shell.I18n[gameRuntimeProtonPath]}"/>
+                        <Button Classes="flat-action" Command="{Binding Settings.ChooseProtonPathCommand}"
+                                HorizontalAlignment="Right"
+                                Content="{Binding Shell.I18n[choose]}"
+                                AutomationProperties.Name="{Binding Shell.I18n[gameRuntimeProtonPath]}"/>
+                    </StackPanel>
                 </controls:SettingRow.Action>
             </controls:SettingRow>
+
+            <controls:SettingSelect IsVisible="{Binding Settings.HasProtonBuilds}"
+                                    Title="{Binding Shell.I18n[gameRuntimeInstalledProton]}"
+                                    AutomationName="{Binding Shell.I18n[gameRuntimeInstalledProton]}"
+                                    ItemsSource="{Binding Settings.ProtonBuilds}"
+                                    SelectedValue="{Binding Settings.SelectedProtonBuild, Mode=TwoWay}"/>
 
             <controls:SettingRow x:Name="MangoHudSetting"
                                  IsVisible="{Binding Shell.IsLinuxPlatform}"
@@ -123,7 +141,13 @@
             </controls:SettingRow>
 
             <controls:SettingRow Title="{Binding Shell.I18n[gameRuntimeStatusTitle]}"
-                                 Description="{Binding Settings.GameRuntimeStatusSummary}"/>
+                                 Description="{Binding Settings.GameRuntimeStatusSummary}">
+                <controls:SettingRow.Action>
+                    <Button Classes="flat-action" Command="{Binding Settings.RefreshGameRuntimeStatusCommand}"
+                            Content="{Binding Shell.I18n[refresh]}"
+                            AutomationProperties.Name="{Binding Shell.I18n[refresh]}"/>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
         </StackPanel>
     </StackPanel>
 </UserControl>
