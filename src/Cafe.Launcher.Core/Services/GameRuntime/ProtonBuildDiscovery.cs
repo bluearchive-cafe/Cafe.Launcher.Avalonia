@@ -13,8 +13,8 @@ public sealed record ProtonBuild(string Name, string Path);
 /// 只认目录内带 <c>proton</c> 可执行脚本的项。GE-Proton 装在这些目录里，用户不必手抄路径。
 /// </summary>
 /// <remarks>
-/// 设置页的候选建议（真正的「体验增强」）尚未接入；当前消费方是诊断导出，把发现的构建记录进
-/// <c>system-info.json</c>，失败原因可对照实际安装。扫描尽力而为：目录不存在或读不到都只当没有。
+/// 设置页提供候选选择，诊断导出把发现的构建记录进 <c>system-info.json</c>。
+/// 扫描尽力而为：目录不存在或读不到都只当没有；不自动选择或安装构建。
 /// </remarks>
 internal sealed class ProtonBuildDiscovery : IProtonBuildDiscovery
 {
