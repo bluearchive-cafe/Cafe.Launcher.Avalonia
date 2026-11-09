@@ -418,6 +418,78 @@ public sealed partial class MainWindowHeadlessTests
         }
     }
 
+    [AvaloniaFact]
+    public void AppearanceSegments_SelectingAValueUpdatesTheDraftAndMarksSettingsDirty()
+    {
+        using var context = CreateContext();
+        OpenSettings(context);
+        var settings = context.ViewModel.Settings;
+        settings.SelectedCategory = SettingsCategoryCodes.Appearance;
+        settings.Editor.Current.ThemeMode = ThemeModes.System;
+        settings.Editor.Current.BackgroundFit = BackgroundFits.UniformToFill;
+        settings.Editor.Current.NeutralColorStrategy = NeutralColorStrategies.BrandBlue;
+        Dispatcher.UIThread.RunJobs();
+        var section = context.Window.GetVisualDescendants().OfType<SettingsAppearanceSection>().Single();
+
+        var themeSegments = SegmentOptions(section, "SettingsThemeMode");
+        Assert.Equal(3, themeSegments.Length);
+        Assert.True(Assert.Single(themeSegments, segment =>
+            AutomationProperties.GetName(segment) == context.ViewModel.Shell.I18n[LocalizationKeys.ThemeSystem]).IsChecked);
+        Assert.False(settings.IsSettingsDirty);
+
+        Assert.Single(themeSegments, segment =>
+            AutomationProperties.GetName(segment) == context.ViewModel.Shell.I18n[LocalizationKeys.ThemeDark]).IsChecked = true;
+        var fitSegments = SegmentOptions(section, "SettingsBackgroundFit");
+        Assert.Equal(3, fitSegments.Length);
+        Assert.True(Assert.Single(fitSegments, segment =>
+            AutomationProperties.GetName(segment) == context.ViewModel.Shell.I18n[LocalizationKeys.BackgroundFitUniformToFill]).IsChecked);
+        Assert.Single(fitSegments, segment =>
+            AutomationProperties.GetName(segment) == context.ViewModel.Shell.I18n[LocalizationKeys.BackgroundFitUniform]).IsChecked = true;
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(ThemeModes.Dark, settings.Editor.Current.ThemeMode);
+        Assert.Equal(BackgroundFits.Uniform, settings.Editor.Current.BackgroundFit);
+        Assert.True(settings.IsSettingsDirty);
+
+        // 高级配色默认折叠，里面的中性色分段随内容一起退出视觉树。
+        Assert.Empty(SegmentOptions(section, "SettingsNeutralColorStrategy"));
+        settings.Appearance.IsAdvancedColorExpanded = true;
+        Dispatcher.UIThread.RunJobs();
+        var neutralSegments = SegmentOptions(section, "SettingsNeutralColorStrategy");
+        Assert.Equal(2, neutralSegments.Length);
+        Assert.Single(neutralSegments, segment =>
+            AutomationProperties.GetName(segment) == context.ViewModel.Shell.I18n[LocalizationKeys.NeutralColorStrategySeedFollowing]).IsChecked = true;
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(NeutralColorStrategies.SeedFollowing, settings.Editor.Current.NeutralColorStrategy);
+        Assert.True(settings.Appearance.IsSeedFollowingNeutralStrategySelected);
+    }
+
+    [AvaloniaFact]
+    public void AppearanceThemeColor_ShowsTheResolvedColorOfEachSource()
+    {
+        using var context = CreateContext();
+        OpenSettings(context);
+        var settings = context.ViewModel.Settings;
+        settings.SelectedCategory = SettingsCategoryCodes.Appearance;
+        Dispatcher.UIThread.RunJobs();
+        var section = context.Window.GetVisualDescendants().OfType<SettingsAppearanceSection>().Single();
+        var combo = section.GetVisualDescendants().OfType<ComboBox>()
+            .Single(control => AutomationProperties.GetName(control) == context.ViewModel.Shell.I18n[LocalizationKeys.ThemeColor]);
+        var options = settings.Options.ThemeColor;
+
+        Assert.Equal(4, options.Count);
+        Assert.All(options, option =>
+            Assert.Equal((byte)255, Assert.IsAssignableFrom<ISolidColorBrush>(option.PreviewBrush).Color.A));
+        var selected = options.Single(option => option.Code == settings.Editor.Current.ThemeColorMode);
+        var triggerDot = Assert.Single(combo.GetVisualDescendants().OfType<Border>(),
+            border => border.Classes.Contains("theme-color-dot"));
+        Assert.Same(selected.PreviewBrush, triggerDot.Background);
+    }
+
+    private static RadioButton[] SegmentOptions(Control root, string groupName) =>
+        root.GetVisualDescendants().OfType<RadioButton>()
+            .Where(button => button.Classes.Contains("segment-option") && button.GroupName == groupName)
+            .ToArray();
+
     private static Task WaitForBackgroundSelectionAsync(TestContext context, string? path) =>
         HeadlessTestHost.WaitUntilAsync(
             () => context.ViewModel.Background.CurrentBackgroundFilePath == path

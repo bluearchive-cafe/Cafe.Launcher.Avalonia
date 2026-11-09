@@ -135,7 +135,8 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
             diagnostics,
             previewSettings =>
             {
-                // 壁纸像素立即切换；主题取色在后台线程执行，完成后主题 tokens 跟进。
+                // Every source previews the current wallpaper; only the selected
+                // wallpaper source may apply its palette to the live scheme.
                 _ = settings.Appearance.RefreshThemeColorPaletteFromCurrentBackgroundAsync(
                     markDirty: false,
                     applySchemeAfter: true);
@@ -299,8 +300,7 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
             {
                 lastBackgroundSourceKey = sourceKey;
                 RequestVideoThumbnail(videoPath, sourceKey);
-                if (settings.ThemeColorMode == ThemeColorModes.Wallpaper)
-                    wallpaperChanged(settings);
+                wallpaperChanged(settings);
             }
             return;
         }
@@ -703,7 +703,7 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
     {
         var old = BackgroundImageSource;
         BackgroundImageSource = bitmap;
-        if (notifyPalette && previewSettings.ThemeColorMode == ThemeColorModes.Wallpaper)
+        if (notifyPalette)
         {
             // 主题取色在后台执行（不再阻塞 UI 线程），完成后 tokens 落色；
             // 期间沿用旧色板渲染，不会闪到默认色。

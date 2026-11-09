@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.UI.Constants;
@@ -103,6 +104,17 @@ internal sealed class GameDownloadService : IDisposable
             new DownloadCheckpointStore(dataRoot))
     {
         sessionContext = BuildSessionContext(checkpointStore);
+    }
+
+    /// <summary>Reads the fresh-install download size without writing settings, files, or checkpoints.</summary>
+    internal async Task<long?> GetInstallDownloadSizeAsync(LauncherStatusSnapshot snapshot, CancellationToken cancellationToken)
+    {
+        var config = snapshot.Remote.GameConfig;
+        if (config is null || string.IsNullOrWhiteSpace(config.GameLatestVersion)
+            || string.IsNullOrWhiteSpace(config.GameLatestFilePath)) return null;
+        var manifest = await remoteManifestService.GetOptionalManifestAsync(config.GameLatestVersion,
+            config.GameLatestFilePath, snapshot.Settings.PatchUrlGroup, cancellationToken).ConfigureAwait(false);
+        return manifest?.File.Sum(file => Math.Max(0, file.SizeBytes));
     }
 
     public async Task<GameOperationResult> InstallOrUpdateAsync(

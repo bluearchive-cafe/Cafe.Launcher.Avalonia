@@ -30,7 +30,7 @@
 | **Resource Panel** | The launcher interface for managing localized game resources for a UID. | Resource Control Panel |
 | **Chinese-localized resources** | Game text, main-story Chinese voice, and image/video resources selected for a UID through the Resource Panel. | Localized resources, translation files |
 | **Localization UID** | The eight-uppercase-letter identifier used for Cafe resource preferences. It is distinct from the numeric in-game account UID. | Account ID, numeric UID |
-| **Resource preferences** | The resource switches stored on the Cafe service for a localization UID. | Local resource edits, local patch settings |
+| **Resource preferences** | The resource selections stored on the Cafe service for a localization UID; checkbox changes remain pending until saved. | Local resource edits, local patch settings |
 
 ### Launcher updates
 
@@ -44,6 +44,15 @@
 | **View Update** | The action that opens the update notes. | Show changelog |
 | **Open Release Page** | The fallback action that opens the release page in the browser when no verifiable package is available. | Manual download |
 | **In-app update unavailable** | The state where this host cannot apply an update itself, always with the cause the verdict reported: an unsupported platform, an installation without the Windows update helper, or a release with no verifiable package. The dialog names that cause before download and the primary action is **Open Release Page**. | Not supported, download manually, this device cannot |
+
+### Game tasks
+
+| Term | Definition | Aliases to avoid |
+| --- | --- | --- |
+| **Operation panel** | The persistent main-window surface showing game state and the next available action. | Install panel, progress panel |
+| **Task dialog** | The modal surface for choosing and submitting installation preparation. | Task center, task history |
+| **Task progress card** | The compact non-modal surface above the primary game action, showing stage progress, transferred/total download size, speed, controls and the retained result without expandable details. | Task center, task history |
+| **Task result** | The completion, stop or failure outcome retained for the current launcher session. | History record |
 
 ### Appearance, status and general terms
 
@@ -72,6 +81,12 @@
 | English | 简体中文 | 繁體中文 | 日本語 |
 | --- | --- | --- | --- |
 | Launcher | 启动器 | 啟動器 | ランチャー |
+| Operation panel | 操作面板 | 操作面板 | 操作パネル |
+| Task dialog | 任务对话框 | 工作對話框 | タスク画面 |
+| Task progress card | 任务悬浮卡片 | 任務懸浮卡片 | タスク進捗カード |
+| Hide | 收起 | 收起 | 閉じて続行 |
+| View progress | 查看进度 | 查看進度 | 進捗を表示 |
+| View result | 查看结果 | 查看結果 | 結果を表示 |
 | Video background | 视频背景 | 影片背景 | 動画背景 |
 | Video background volume | 视频背景音量 | 影片背景音量 | 動画背景の音量 |
 | Mute video background | 视频背景静音 | 影片背景靜音 | 動画背景のミュート |

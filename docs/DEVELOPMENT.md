@@ -72,7 +72,9 @@ XAML 或样式变更先运行 `UiStyleContractTests`，较大 UI 改动运行 `d
 
 Windows x64 构建自动调用 [Restore-VideoBackgroundRuntime.ps1](../scripts/Restore-VideoBackgroundRuntime.ps1)。脚本需要 curl 与 `7z` 或 `7zz`，首次从 GitHub 获取固定 LGPL 构建，缓存在 `.artifacts/native/libmpv`，分别校验压缩包和 DLL 的 SHA-256。需要代理时可先手动调用恢复脚本并传入 `-Proxy`。应用运行时不下载播放器。
 
-升级运行库时，同步 [manifest.json](../native/libmpv/manifest.json)、许可证、来源说明并完成原生冒烟验证。发布输出应包含 `libmpv/win-x64/libmpv-2.dll`、清单、来源和许可证；产品播放与缩略图规则见[领域契约](../CONTEXT.md#设置与操作)，其他平台使用静态回退。
+升级运行库时，同步 [manifest.json](../native/libmpv/manifest.json)、许可证、来源说明并完成原生冒烟验证。发布输出应包含 `libmpv/win-x64/libmpv-2.dll`、清单、来源和许可证；产品播放与缩略图规则见[领域契约](../CONTEXT.md#设置与操作)。Linux 的 deb、rpm 和 Arch 安装包声明系统 libmpv 依赖；Linux tar.gz、AppImage 和 macOS ZIP 通过 [Restore-UnixVideoRuntime.ps1](../scripts/Restore-UnixVideoRuntime.ps1) 获取 [unix-manifest.json](../native/libmpv/unix-manifest.json) 固定的 LGPL 运行库和许可证，逐文件验证 SHA-256。Linux 随包提供 libva 和 Debian ALSA 后备库（清单记录二进制包与对应源代码地址）；仍依赖操作系统的图形、字体、音频服务及 ALSA 配置。还原 Linux 运行库需要 `tar`、`curl`；Unix 上还需 `ar` 与 `xz`，Windows 上需要 7-Zip。macOS ZIP 同时生成包含 ZIP 校验值的 Homebrew Cask。运行时仅检查应用目录和固定系统路径，不搜索用户目录；缺少库、依赖或必要的本地媒体安全选项时回退到静态背景。各平台仍需实际设备验证。
+
+Linux 随包 libmpv 的 ELF 依赖最高需要 glibc 2.35 与 `GLIBCXX_3.4.29`；若无法加载，会尝试系统固定位置的 libmpv。Ubuntu 24.04 的 libmpv 0.37 使用旧的背景色属性和截图命令参数，本地媒体安全限制、首帧与属性兼容由原生测试覆盖。媒体路径在传给 libmpv 前归一化为本地绝对路径，避免顶层 URL 绕过嵌套协议限制；安全选项设置失败时不跳过该限制。
 
 [Build-Distribution.ps1](../scripts/Build-Distribution.ps1) 按目标 RID 显式传递 `BackgroundVideoRid`，避免引用工程清除 `RuntimeIdentifier` 后误选构建机资源。Windows ZIP 和安装器打包前都运行：
 

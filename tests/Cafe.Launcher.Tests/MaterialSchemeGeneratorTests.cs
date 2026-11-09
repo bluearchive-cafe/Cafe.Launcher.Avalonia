@@ -537,6 +537,57 @@ public sealed class MaterialSchemeGeneratorTests
         }
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void BuildRoleBrushes_SettingsSelectionAccentWash_PreservesAllStateContrast(bool isDark)
+    {
+        foreach (var variant in new[] { ThemeColorVariants.TonalSpot, ThemeColorVariants.Vibrant,
+                     ThemeColorVariants.Expressive, ThemeColorVariants.Fidelity, ThemeColorVariants.Content,
+                     ThemeColorVariants.Monochrome, ThemeColorVariants.Neutral, ThemeColorVariants.Rainbow })
+        {
+            foreach (var seed in new[] { "#2E7DF6", "#FF0000", "#00FF00", "#FFFF00", "#000000", "#FFFFFF" })
+            {
+                foreach (var seedFollowing in new[] { false, true })
+                {
+                    var scheme = MaterialSchemeGenerator.CreateScheme(Color.Parse(seed), variant, isDark);
+                    var brushes = MaterialSchemeGenerator.BuildRoleBrushes(scheme, seedFollowing, isDark);
+                    var wash = brushes["Launcher.Color.Primary.Soft"];
+                    Assert.Equal(1, wash.Opacity);
+                    Assert.Equal(0x24, wash.Color.A);
+                    var segmentForeground = brushes["Launcher.Color.Segmented.Selected.Foreground"].Color;
+                    foreach (var background in new[] { brushes["Launcher.Color.Dialog.Background"].Color,
+                                 Color.Parse(isDark ? "#FF202733" : "#FFFAFCFF") })
+                    {
+                        var alpha = wash.Color.A / 255d;
+                        byte Mix(byte foreground, byte underneath) => (byte)System.Math.Round(foreground * alpha + underneath * (1 - alpha));
+                        var painted = Color.FromRgb(Mix(wash.Color.R, background.R), Mix(wash.Color.G, background.G), Mix(wash.Color.B, background.B));
+                        Assert.True(ColorUtils.GetContrastRatio(segmentForeground, painted) >= 4.5,
+                            $"{variant}/{seed}/{isDark}/{seedFollowing}: segmented selection contrast");
+                    }
+                    foreach (var (suffix, backgroundKey) in new[] {
+                                 ("", "Launcher.Color.Dialog.Background"),
+                                 (".Hover", "Launcher.Color.Button.Secondary.Hover"),
+                                 (".Pressed", "Launcher.Color.Button.Secondary.Pressed") })
+                    {
+                        var background = brushes[backgroundKey].Color;
+                        var alpha = wash.Color.A / 255d;
+                        byte Mix(byte foreground, byte underneath) => (byte)System.Math.Round(foreground * alpha + underneath * (1 - alpha));
+                        var painted = Color.FromRgb(Mix(wash.Color.R, background.R), Mix(wash.Color.G, background.G), Mix(wash.Color.B, background.B));
+                        var foreground = brushes[$"Launcher.Color.Settings.Select.Selected.Foreground{suffix}"].Color;
+                        Assert.True(ColorUtils.GetContrastRatio(foreground, painted) >= 4.5,
+                            $"{variant}/{seed}/{isDark}/{seedFollowing}/{suffix}: settings selection text/check/focus contrast");
+                        var primary = brushes["Launcher.Color.Primary"].Color;
+                        if (ColorUtils.GetContrastRatio(primary, painted) >= 4.5)
+                        {
+                            Assert.Equal(primary, foreground);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private static string ToHex(MaterialColorUtilities.Utils.ArgbColor color)
     {
         var avalonia = MaterialColorMapper.ToAvaloniaColor(color);

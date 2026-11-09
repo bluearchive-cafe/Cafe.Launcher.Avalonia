@@ -49,7 +49,7 @@ internal partial class MainWindow
             var library = VideoBackgroundRuntime.FindLibraryPath();
             if (library is null)
             {
-                background!.ReportVideoFailure(path, new DllNotFoundException("Bundled video background runtime is unavailable."));
+                background!.ReportVideoFailure(path, new DllNotFoundException("Video background runtime is unavailable."));
                 return;
             }
             videoBackground = new VideoBackgroundControl(library);
@@ -64,6 +64,7 @@ internal partial class MainWindow
         else
         {
             // Preserve the GL context and render surfaces across draft/source changes.
+            if (videoBackground.Source != path) ShowVideoFallback();
             videoBackground.Source = path;
             UpdateVideoPlayback();
         }
@@ -112,12 +113,17 @@ internal partial class MainWindow
                 videoBackground = null;
             }
         }
-        foreach (var image in ShellRoot.Children.OfType<Image>()) image.IsVisible = true;
-        BackgroundCrossFade.IsVisible = true;
+        ShowVideoFallback();
         if (shellCachedForVideo)
         {
             MainContentLayer.CacheMode = previousShellCache;
             shellCachedForVideo = false;
         }
+    }
+
+    private void ShowVideoFallback()
+    {
+        foreach (var image in ShellRoot.Children.OfType<Image>()) image.IsVisible = true;
+        BackgroundCrossFade.IsVisible = true;
     }
 }

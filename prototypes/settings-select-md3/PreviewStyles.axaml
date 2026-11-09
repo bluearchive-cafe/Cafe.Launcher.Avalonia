@@ -1,0 +1,111 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia">
+  <Styles.Resources>
+    <!-- Keep a fixed check slot, independent of the item's existing content template (including color dots). -->
+    <ControlTheme x:Key="Launcher.Component.SelectPreview.ItemTheme" TargetType="ComboBoxItem">
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Panel>
+            <Border x:Name="PreviewItemSurface"
+                    Background="{StaticResource Launcher.Color.Transparent}"
+                    CornerRadius="{StaticResource Launcher.Radius.Xs}">
+              <Panel>
+                <Border x:Name="PreviewItemState" IsHitTestVisible="False"
+                        CornerRadius="{StaticResource Launcher.Radius.Xs}"
+                        Background="{StaticResource Launcher.Color.Transparent}"/>
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}"
+                      Margin="{StaticResource Launcher.Spacing.Thickness.Sm}">
+                  <materialIcons:MaterialIcon x:Name="PreviewCheck" Kind="Check"
+                                              Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"
+                                              Opacity="0" VerticalAlignment="Center"
+                                              Foreground="{DynamicResource Launcher.Color.Primary}"
+                                              IsHitTestVisible="False" AutomationProperties.AccessibilityView="Raw"/>
+                  <ContentPresenter x:Name="PART_ContentPresenter" Grid.Column="1"
+                                    Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
+                                    Foreground="{DynamicResource Launcher.Text.Primary}"
+                                    HorizontalContentAlignment="Stretch" VerticalContentAlignment="Center"/>
+                </Grid>
+              </Panel>
+            </Border>
+            <Border x:Name="PreviewItemFocus" IsHitTestVisible="False"
+                    Margin="{StaticResource Launcher.Border.Thickness.Focus}"
+                    BorderThickness="{StaticResource Launcher.Border.Thickness.Focus}"
+                    CornerRadius="{StaticResource Launcher.Radius.Xs}"
+                    BorderBrush="{StaticResource Launcher.Color.Transparent}"/>
+          </Panel>
+        </ControlTemplate>
+      </Setter>
+      <Style Selector="^:pointerover /template/ Border#PreviewItemSurface">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Hover}"/>
+      </Style>
+      <Style Selector="^:pressed /template/ Border#PreviewItemSurface">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Pressed}"/>
+      </Style>
+      <Style Selector="^:selected /template/ Border#PreviewItemSurface">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Soft}"/>
+      </Style>
+      <Style Selector="^:selected:pointerover /template/ Border#PreviewItemSurface">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Hover}"/>
+      </Style>
+      <Style Selector="^:selected:pressed /template/ Border#PreviewItemSurface">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Pressed}"/>
+      </Style>
+      <Style Selector="^:selected:pointerover /template/ Border#PreviewItemState, ^:selected:pressed /template/ Border#PreviewItemState">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Soft}"/>
+      </Style>
+      <Style Selector="^:selected /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary}"/>
+      </Style>
+      <Style Selector="^:selected /template/ materialIcons|MaterialIcon#PreviewCheck">
+        <Setter Property="Opacity" Value="1"/>
+      </Style>
+      <Style Selector="^:focus-visible /template/ Border#PreviewItemFocus">
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
+      </Style>
+    </ControlTheme>
+  </Styles.Resources>
+
+  <!-- Leave the Fluent selection box, popup, arrow and input handling intact. -->
+  <Style Selector="ComboBox.setting-control.select-preview">
+    <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Background}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Outline}"/>
+    <Setter Property="ItemContainerTheme" Value="{StaticResource Launcher.Component.SelectPreview.ItemTheme}"/>
+  </Style>
+  <Style Selector="ComboBox.setting-control.select-preview:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Background}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Text.Secondary}"/>
+  </Style>
+  <Style Selector="ComboBox.setting-control.select-preview:pressed, ComboBox.setting-control.select-preview:dropdownopen, ComboBox.setting-control.select-preview:focus-visible">
+    <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Background}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Outline}"/>
+    <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
+  </Style>
+  <!-- Reuse Fluent's separate highlight layer; changing focus never measures the content again. -->
+  <Style Selector="ComboBox.setting-control.select-preview:dropdownopen /template/ Border#HighlightBackground, ComboBox.setting-control.select-preview:focus-visible /template/ Border#HighlightBackground">
+    <Setter Property="IsVisible" Value="True"/>
+    <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
+    <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
+    <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
+  </Style>
+  <Style Selector="ComboBox.setting-control.select-preview /template/ Border#PopupBorder">
+    <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Sm}"/>
+  </Style>
+  <Style Selector="ComboBox.select-preview ComboBoxItem">
+    <Setter Property="Theme" Value="{StaticResource Launcher.Component.SelectPreview.ItemTheme}"/>
+  </Style>
+  <Style Selector="ComboBox.setting-control.select-preview:error">
+    <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Error}"/>
+  </Style>
+  <Style Selector="ComboBox.setting-control.select-preview:error /template/ Border#HighlightBackground">
+    <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Error}"/>
+  </Style>
+  <Style Selector="ComboBox.setting-control.select-preview:disabled">
+    <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
+  </Style>
+  <Style Selector="ComboBox.setting-control.select-preview:disabled /template/ Border#HighlightBackground">
+    <Setter Property="IsVisible" Value="False"/>
+  </Style>
+</Styles>

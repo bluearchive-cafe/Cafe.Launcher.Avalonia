@@ -401,122 +401,30 @@ public sealed class GameOperationJourneyTests
         }
     }
 
-    [Fact]
-    public async Task InstallOrUpdateAsync_WhenTerminalFailure_ShowsErrorToastWithoutRetry()
-    {
-        var context = CreateContext();
-        context.Executor.InstallResult = new GameOperationResult
-        {
-            Success = false,
-            Message = "path missing",
-            ErrorCode = GameOperationErrorCode.PathMissing
-        };
-        var notifications = context.SubscribeToasts();
-
-        await context.Journey.InstallOrUpdateAsync(CreateSnapshot(LauncherRuntimeState.UpdateAvailable));
-
-        Assert.Contains(notifications, toast =>
-            toast.Severity == ToastSeverity.Error
-            && toast.Message == "path missing"
-            && toast.PrimaryAction is null
-            && toast.SecondaryAction is not null);
-    }
-
-    [Fact]
-    public async Task InstallOrUpdateAsync_WhenRetryableFailure_ShowsRetryToastAndRetryRunsInstallAgain()
-    {
-        var context = CreateContext();
-        context.Executor.InstallResult = new GameOperationResult
-        {
-            Success = false,
-            Message = "network hiccup",
-            ErrorCode = GameOperationErrorCode.Network
-        };
-        var notifications = context.SubscribeToasts();
-        var snapshot = CreateSnapshot(LauncherRuntimeState.UpdateAvailable);
-
-        await context.Journey.InstallOrUpdateAsync(snapshot);
-
-        context.Host.CurrentSnapshot = snapshot;
-        var retryToast = notifications.Single(toast => toast.PrimaryAction is not null);
-        context.Executor.InstallResult = new GameOperationResult { Success = true, Message = "done" };
-
-        var retryOutcome = await retryToast.PrimaryAction!.ExecuteAsync(CancellationToken.None);
-
-        Assert.True(retryOutcome.IsSuccess);
-        Assert.Equal(2, context.Executor.InstallCallCount);
-    }
-
     [Theory]
-    [InlineData(LauncherRuntimeState.Ready)]
-    [InlineData(LauncherRuntimeState.Corrupted)]
-    public async Task RetryInstallOrUpdateAsync_CurrentStateChanged_UsesCurrentAdmission(LauncherRuntimeState state)
+    [InlineData((int)GameOperationErrorCode.Network)]
+    [InlineData((int)GameOperationErrorCode.InsufficientDiskSpace)]
+    [InlineData((int)GameOperationErrorCode.Stopped)]
+    public async Task InstallOrUpdateAsync_WhenFinished_EmitsTypedResultWithoutToast(int code)
     {
         var context = CreateContext();
+        context.Executor.InstallResult = new GameOperationResult { Message = "result", ErrorCode = (GameOperationErrorCode)code };
         var notifications = context.SubscribeToasts();
-        context.Executor.InstallResult = new GameOperationResult { ErrorCode = GameOperationErrorCode.Network, Message = "failed" };
-        await context.Journey.InstallOrUpdateAsync(CreateSnapshot(LauncherRuntimeState.UpdateAvailable));
-        var retry = Assert.Single(notifications).PrimaryAction!;
-        context.Host.CurrentSnapshot = CreateSnapshot(state);
-        var outcome = await retry.ExecuteAsync(CancellationToken.None);
-        Assert.False(outcome.IsSuccess);
-        Assert.Equal(1, context.Executor.InstallCallCount);
+        await context.Journey.InstallOrUpdateAsync(CreateSnapshot(LauncherRuntimeState.NotInstalled));
+        Assert.Same(context.Executor.InstallResult, context.Host.CompletedResult);
+        Assert.Empty(notifications);
+        Assert.False(context.Host.IsBusy);
     }
 
     [Fact]
-    public async Task RetryInstallOrUpdateAsync_CurrentTargetChanged_RejectsInsteadOfRedirecting()
-    {
-        var context = CreateContext();
-        var notifications = context.SubscribeToasts();
-        context.Executor.InstallResult = new GameOperationResult { ErrorCode = GameOperationErrorCode.Network, Message = "failed" };
-        await context.Journey.InstallOrUpdateAsync(CreateSnapshot(LauncherRuntimeState.UpdateAvailable, gamePath: "original"));
-        var oldRetry = Assert.Single(notifications).PrimaryAction!;
-        context.Host.CurrentSnapshot = CreateSnapshot(LauncherRuntimeState.UpdateAvailable, gamePath: "another");
-        // A later failed attempt must not overwrite the target bound to an earlier toast.
-        await context.Journey.InstallOrUpdateAsync(context.Host.CurrentSnapshot);
-        var outcome = await oldRetry.ExecuteAsync(CancellationToken.None);
-        Assert.False(outcome.IsSuccess);
-        Assert.Equal(2, context.Executor.InstallCallCount);
-    }
-
-    [Fact]
-    public async Task RetryInstallOrUpdateAsync_SameTargetAndFreshSnapshot_ExecutesWithCurrentPreferences()
-    {
-        var context = CreateContext();
-        var notifications = context.SubscribeToasts();
-        context.Executor.InstallResult = new GameOperationResult { ErrorCode = GameOperationErrorCode.Network, Message = "failed" };
-        await context.Journey.InstallOrUpdateAsync(CreateSnapshot(LauncherRuntimeState.UpdateAvailable));
-        var retry = Assert.Single(notifications).PrimaryAction!;
-        var current = CreateSnapshot(LauncherRuntimeState.UpdateAvailable);
-        current.Settings.PatchUrlGroup = PatchUrlGroups.Cafe;
-        context.Host.CurrentSnapshot = current;
-        context.Executor.InstallResult = new GameOperationResult { Success = true };
-        var outcome = await retry.ExecuteAsync(CancellationToken.None);
-        Assert.True(outcome.IsSuccess);
-        Assert.Same(current, context.Executor.LastInstallSnapshot);
-    }
-
-    [Fact]
-    public async Task RetryInstallOrUpdateAsync_CurrentSnapshotMissing_DoesNotReuseTheOldSnapshot()
-    {
-        var context = CreateContext();
-        var notifications = context.SubscribeToasts();
-        context.Executor.InstallResult = new GameOperationResult { ErrorCode = GameOperationErrorCode.Network, Message = "failed" };
-        await context.Journey.InstallOrUpdateAsync(CreateSnapshot(LauncherRuntimeState.UpdateAvailable));
-        var outcome = await Assert.Single(notifications).PrimaryAction!.ExecuteAsync(CancellationToken.None);
-        Assert.False(outcome.IsSuccess);
-        Assert.Equal(1, context.Executor.InstallCallCount);
-    }
-
-    [Fact]
-    public async Task RepairAsync_WhenRepairSucceeds_RequestsNormalRefreshAndClearsBusy()
+    public async Task RepairAsync_WhenRepairSucceeds_RequestsRefreshWithoutResumeAndClearsBusy()
     {
         var context = CreateContext();
 
         await context.Journey.RepairAsync(CreateSnapshot(LauncherRuntimeState.Corrupted));
 
         Assert.Equal(1, context.Executor.RepairCallCount);
-        Assert.Contains(GameOperationsRefreshMode.Normal, context.Host.RefreshRequests);
+        Assert.Contains(GameOperationsRefreshMode.SkipPersistedResume, context.Host.RefreshRequests);
         Assert.False(context.Host.IsBusy);
     }
 
@@ -665,7 +573,7 @@ public sealed class GameOperationJourneyTests
     }
 
     [Fact]
-    public void PerformStop_StopsExecutorAndShowsWarningToast()
+    public void PerformStop_StopsExecutorWithoutPrematureResult()
     {
         var context = CreateContext();
         var notifications = context.SubscribeToasts();
@@ -674,7 +582,7 @@ public sealed class GameOperationJourneyTests
 
         Assert.Equal(1, context.Executor.StopCallCount);
         Assert.Equal(DownloadStopReason.UserRequested, context.Executor.LastStopReason);
-        Assert.Contains(notifications, toast => toast.Severity == ToastSeverity.Warning);
+        Assert.Empty(notifications);
     }
 
     [Fact]
@@ -689,37 +597,22 @@ public sealed class GameOperationJourneyTests
     }
 
     [Fact]
-    public async Task PrepareForShutdownAsync_DuringToastRetry_WaitsAndRejectsLaterRetries()
+    public async Task PrepareForShutdownAsync_DuringRetry_WaitsAndRejectsLaterAttempts()
     {
         var context = CreateContext();
-        var notifications = context.SubscribeToasts();
-        context.Executor.InstallResult = new GameOperationResult { ErrorCode = GameOperationErrorCode.Network, Message = "failed" };
         var snapshot = CreateSnapshot(LauncherRuntimeState.NotInstalled);
-        context.Host.CurrentSnapshot = snapshot;
         await context.Journey.InstallOrUpdateAsync(snapshot);
-        var retry = Assert.Single(notifications).PrimaryAction!;
         var completion = new TaskCompletionSource<GameOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         context.Executor.InstallCompletion = completion;
-        var retryTask = retry.ExecuteAsync(CancellationToken.None);
-        try
-        {
-            Assert.Equal(2, context.Executor.InstallCallCount);
-            var shutdown = context.Journey.PrepareForShutdownAsync();
-            Assert.False(shutdown.IsCompleted);
-            Assert.Same(shutdown, context.Journey.PrepareForShutdownAsync());
-            Assert.Equal(1, context.Executor.StopCallCount);
-            completion.TrySetResult(new GameOperationResult { Success = true });
-            await retryTask.WaitAsync(TimeSpan.FromSeconds(5));
-            await shutdown.WaitAsync(TimeSpan.FromSeconds(5));
-            await retry.ExecuteAsync(CancellationToken.None);
-            Assert.Equal(2, context.Executor.InstallCallCount);
-            Assert.Single(notifications);
-        }
-        finally
-        {
-            completion.TrySetResult(new GameOperationResult());
-            await retryTask.WaitAsync(TimeSpan.FromSeconds(5));
-        }
+        var retry = context.Journey.InstallOrUpdateAsync(snapshot);
+        var shutdown = context.Journey.PrepareForShutdownAsync();
+        Assert.False(shutdown.IsCompleted);
+        completion.SetResult(new GameOperationResult { Success = true });
+        await retry;
+        await shutdown;
+        await context.Journey.InstallOrUpdateAsync(snapshot);
+        Assert.Equal(2, context.Executor.InstallCallCount);
+        Assert.Equal(1, context.Executor.StopCallCount);
     }
 
     [Fact]
@@ -815,6 +708,8 @@ public sealed class GameOperationJourneyTests
 
         public bool PrepareOperationCalled { get; private set; }
 
+        public GameOperationResult? CompletedResult { get; private set; }
+
         public string? LastLaunchCheckResult { get; private set; }
 
         public string? RepairConfirmationShown { get; private set; }
@@ -833,6 +728,7 @@ public sealed class GameOperationJourneyTests
         {
             switch (update)
             {
+                case GameOperationPresentation.Completed completed: CompletedResult = completed.Value; break;
                 case GameOperationPresentation.Busy busy: SetBusy(busy.Value); break;
                 case GameOperationPresentation.Preparing: PrepareOperation(); break;
                 case GameOperationPresentation.Progress progress: ApplyProgress(progress.Value); break;

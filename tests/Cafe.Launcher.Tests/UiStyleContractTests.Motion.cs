@@ -223,6 +223,7 @@ public sealed partial class UiStyleContractTests
             new[]
             {
                 "Views/DesignGalleryOverlay.axaml",
+                "Views/GameTaskDialog.axaml",
                 "Views/MainWindowDebugOverlay.axaml",
                 "Views/MainWindowDialogsOverlay.axaml",
                 "Views/MainWindowLogExportOverlay.axaml",
@@ -236,7 +237,7 @@ public sealed partial class UiStyleContractTests
                 .Select(overlay => overlay.File)
                 .Distinct(StringComparer.Ordinal)
                 .Order(StringComparer.Ordinal));
-        Assert.Equal(11, overlays.Count);
+        Assert.Equal(12, overlays.Count);
 
         Assert.All(overlays, overlay =>
         {
@@ -308,58 +309,14 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void MainWindow_OperationStates_TransformInsideSingleTaskContainer()
+    public void MainWindow_OperationSurface_ContainsOnePersistentPanel()
     {
         var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
-
-        var surface = document
-            .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "Border"
-                && HasClass(element, "operation-surface"));
-        var host = surface.Elements().Single(element => element.Name.LocalName == "Panel");
-
-        var states = host
-            .Elements()
-            .Where(element => element.Name.LocalName == "Border" && HasClass(element, "operation-state"))
-            .ToList();
-        Assert.Equal(3, states.Count);
-
-        var expectedVisibility = new Dictionary<string, string>(StringComparer.Ordinal)
-        {
-            ["OperationInstallState"] = "{Binding Operations.IsInstallPanelVisible}",
-            ["OperationProgressState"] = "{Binding Operations.IsProgressPanelVisible}",
-            ["OperationControlState"] = "{Binding Operations.IsControlPanelVisible}",
-        };
-        static string? XamlName(XElement element) => element
-            .Attributes()
-            .SingleOrDefault(attribute => attribute.Name.LocalName == "Name"
-                && attribute.Name.NamespaceName.EndsWith("/2006/xaml", StringComparison.Ordinal))
-            ?.Value;
-        foreach (var state in states)
-        {
-            // 状态在任务容器内原地交换：不再作为独立面板直接绑定 motion 入场动画。
-            Assert.Null(state.Attribute("Classes.motion-enter"));
-            Assert.Null(state.Attribute("Classes.motion-enabled"));
-            if (XamlName(state) is { } name)
-            {
-                Assert.Contains(name, expectedVisibility.Keys);
-                Assert.Equal(expectedVisibility[name], state.Attribute("IsVisible")?.Value);
-            }
-        }
-
-        // 三个状态各自具名，逐一锁定可见性绑定。
-        foreach (var stateName in expectedVisibility.Keys)
-        {
-            Assert.Single(states, state => XamlName(state) == stateName);
-        }
-
-        // 底栏外观（内边距与两档最小高度）由各状态自行承载，控制态叠加专属渐变。
-        Assert.All(states, state => Assert.True(HasClass(state, "bottom-panel")));
-        Assert.Single(states, state => HasClass(state, "control-panel"));
-        // 外壳仅承载定位与形变，不带任何外观类，避免高度双重计入。
-        Assert.DoesNotContain(surface.Attributes(), attribute =>
-            attribute.Name.LocalName.StartsWith("Classes", StringComparison.Ordinal)
-            && attribute.Value?.Contains("bottom-panel") == true);
+        var surface = Assert.Single(document.Descendants(), element => HasClass(element, "operation-surface"));
+        var panel = Assert.Single(surface.Descendants(), element => HasClass(element, "bottom-panel"));
+        Assert.True(HasClass(panel, "control-panel"));
+        Assert.Null(panel.Attribute("IsVisible"));
+        Assert.Null(panel.Attribute("Classes.motion-enter"));
+        AssertHasLocalTranslateTransform(surface);
     }
 }

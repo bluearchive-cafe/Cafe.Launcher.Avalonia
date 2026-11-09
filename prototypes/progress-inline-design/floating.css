@@ -1,0 +1,77 @@
+/* Revision 2. Keep the wallpaper and split-button dock; compact task state floats above it.
+   Ranked content: current phase + stage percentage, then speed/ETA. Details are opt-in.
+   Reuses the existing Launcher token sample. Desktop default card: 320 x ~102 DIP. */
+.floating-layout{--dock-right:40px;--card-bottom:calc(114px + 18px * var(--type-scale));--float-width:320px}
+.floating-layout::before{background:linear-gradient(180deg,#0e203542 0%,transparent 30%,transparent 58%,#102031bb 100%)}
+.floating-layout .wallpaper-space{flex:1;min-height:0}
+.floating-layout .game-identity{top:24px}
+.floating-layout .news{bottom:144px}
+.floating-layout .wallpaper-credit{display:none}
+.floating-layout .task-card{position:absolute;right:var(--dock-right);bottom:var(--card-bottom);width:var(--float-width);max-width:calc(100% - 48px);max-height:calc(var(--frame-height) - var(--card-bottom) - 72px);padding:12px 16px 16px;margin:0;border-radius:12px;background:var(--surface);box-shadow:0 4px 20px #12233840;z-index:2;gap:0;overflow:hidden}
+.floating-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-shrink:0;min-height:32px}
+.floating-title{display:flex;align-items:center;gap:8px;min-width:0;flex:1}
+.floating-title h2{font-size:1em;font-weight:600;line-height:1.4;min-width:0;display:flex;align-items:center;gap:6px}
+.floating-title h2>svg{width:16px;height:16px;flex-shrink:0}
+.floating-layout .percent-group{gap:0;flex-shrink:0}
+.floating-layout .percent-group strong{font-size:1em;line-height:1.4}
+.floating-layout .percent-sign{font-size:1em;margin-left:2px;color:var(--muted)}
+.compact-controls{display:flex;align-items:center;gap:0;flex-shrink:0}
+.compact-controls .icon-button{width:32px;min-width:32px;height:32px;padding:7px;background:transparent;color:var(--muted);border-radius:8px;font-size:1em}
+.compact-controls .icon-button:hover{background:var(--soft);color:var(--ink)}
+.compact-controls .icon-button>svg{width:16px;height:16px}
+.compact-controls .icon-button>span{display:none}
+.compact-controls .icon-button[aria-expanded=true] .detail-chevron{transform:rotate(180deg)}
+.floating-layout .progress-track{height:4px;margin:8px 0 12px;border-radius:4px;flex-shrink:0}
+.compact-summary{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:.857em;line-height:1.5;min-height:18px;flex-shrink:0;color:var(--muted);font-variant-numeric:tabular-nums}
+.compact-summary>span:empty{display:none}
+.compact-summary>span:last-child{text-align:right}
+.floating-layout .task-card.is-result .compact-summary{margin-top:4px}
+.floating-layout .task-card.is-failed .floating-title h2{color:var(--danger)}
+.floating-layout .task-card.is-stalled .floating-title h2,.floating-layout .task-card.is-stopped .floating-title h2{color:var(--warn)}
+.floating-layout .task-card.is-success .floating-title h2>svg{color:var(--success)}
+.floating-layout .detail-section{border-top:1px solid var(--subtle-line);margin-top:12px;padding-top:12px;overflow:auto;min-height:0;max-height:260px;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-gutter:stable}
+.detail-context{display:flex;flex-direction:column;align-items:flex-start;gap:4px;margin-bottom:8px;flex-shrink:0}
+.floating-layout .task-context{font-size:.857em;gap:6px;flex-wrap:wrap}
+.floating-layout .task-context>span:last-child{display:none}
+.floating-layout .task-path{font-size:.786em;max-width:100%;width:100%;display:block;margin:0;line-height:1.5}
+.floating-layout #phase-description,.floating-layout .phase-fact{display:none}
+.detail-measurements{font-size:.857em;line-height:1.5;display:flex;gap:4px;flex-direction:column;margin-bottom:12px}
+.floating-layout .detail-measurements .download-facts{display:none}
+.floating-layout .is-checking .detail-measurements,.floating-layout .is-verifying .detail-measurements{display:none}
+.floating-layout .phase-fact{font-size:.917em}
+.file-detail-caption{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:4px}
+.floating-layout .detail-summary,.floating-layout .source-label{font-size:.786em;max-width:none;overflow:visible;white-space:normal}
+.floating-layout .detail-summary{margin-left:0}
+.floating-layout .file-details{max-height:none;overflow:visible;padding-bottom:4px;scrollbar-gutter:auto;flex:none}
+.floating-layout .file-row{grid-template-columns:16px minmax(0,1fr) 68px;gap:8px;font-size:.786em;padding:8px 0}
+.floating-layout .file-row>svg{width:14px;height:14px}
+.floating-layout .file-name small{font-size:.917em}
+.floating-layout .file-meter>span{font-size:1em;white-space:normal}
+.floating-layout .file-meter progress{height:3px}
+.floating-layout .more-files{font-size:.786em;padding:8px 0;line-height:1.5}
+.detail-actions{display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--subtle-line);padding-top:8px;margin-top:8px;flex-shrink:0}
+.detail-actions .text-button{font-size:.857em;font-weight:400;padding:4px;min-height:32px}
+.floating-layout #secondary-action[data-action=stop]{color:var(--muted);background:transparent}
+.floating-layout #secondary-action[data-action=stop]:hover{color:var(--danger);background:var(--danger-soft)}
+.floating-layout .inline-notice{font-size:.857em;line-height:1.5;padding:8px;margin:0 0 12px}
+.floating-layout .operation-dock{position:absolute;left:40px;right:40px;bottom:24px;color:#fff;z-index:1}
+.dock-row{display:flex;align-items:center;justify-content:space-between;gap:24px}
+.dock-game{display:flex;flex-direction:column;gap:6px;font-size:.929em;text-shadow:0 1px 8px #102031}
+.dock-game strong{font-weight:600}
+.dock-game>span{font-size:.929em;color:#d6e8ff}
+.split-wrap{position:relative;flex-shrink:0}
+.launch-split{display:flex;width:248px;min-height:58px;border-radius:8px;overflow:hidden;background:#d6e8ff;color:#24415e;box-shadow:0 2px 8px #10203133}
+.split-main{display:flex;align-items:center;justify-content:center;gap:10px;flex:1;background:transparent;color:inherit;min-width:0;min-height:58px;padding:12px 16px;font-size:1.071em;font-weight:600}
+.split-main>svg{width:22px;height:22px}
+.split-main:hover,.split-toggle:hover{background:#c2ddfa}
+.split-toggle{display:flex;align-items:center;justify-content:center;width:48px;min-width:48px;background:transparent;color:inherit;position:relative}
+.split-toggle::before{content:"";position:absolute;left:0;top:16px;bottom:16px;width:1px;background:#24415e40}
+.split-toggle>svg{width:18px;height:18px}
+.dock-statusline{margin-top:16px;display:flex;justify-content:flex-end;gap:16px;font-size:.857em;line-height:1.5;color:#d6e8ff;text-shadow:0 1px 8px #102031}
+.game-menu{position:absolute;bottom:70px;right:0;width:220px;padding:6px;border-radius:8px;background:var(--surface);color:var(--ink);box-shadow:0 4px 24px #0004;z-index:4}
+.game-menu>button{display:block;width:100%;text-align:left;min-height:36px;background:transparent;padding:8px 12px;border-radius:4px;font-size:.929em}
+.game-menu>button:hover{background:var(--soft)}
+.floating-layout:has(.game-menu:not([hidden])) .task-card{visibility:hidden}
+.floating-layout .toast{bottom:132px}
+@media(max-width:1100px){.floating-layout{--dock-right:24px}.floating-layout .operation-dock{left:24px;right:24px}.floating-layout .news{left:24px}.floating-layout .wallpaper-credit{right:24px}}
+@media(max-width:600px){.floating-layout,.floating-layout[data-size=compact]{height:700px;min-height:700px;--frame-height:700px;--dock-right:16px;--card-bottom:156px;--float-width:320px}.floating-layout .wallpaper-space{height:auto;min-height:0;max-height:none;flex:1}.floating-layout .task-card{max-width:calc(100% - 32px);padding:12px 16px 16px;max-height:calc(var(--frame-height) - var(--card-bottom) - 72px)}.floating-layout .operation-dock{left:16px;right:16px;bottom:20px}.floating-layout .dock-row{justify-content:flex-end}.floating-layout .dock-game{display:none}.floating-layout .launch-split{width:248px}.floating-layout .dock-statusline{flex-wrap:wrap;gap:4px 12px;font-size:10px}.floating-layout .dock-statusline>span:first-child{display:none}.floating-layout .game-identity{top:16px;left:20px}.floating-layout .wallpaper-credit{display:none}.floating-layout .news{display:none}.floating-layout .detail-summary{white-space:normal}.floating-layout .detail-section{max-height:260px}.floating-layout .file-row{grid-template-columns:16px minmax(0,1fr) 68px}.floating-layout .toast{bottom:156px}}

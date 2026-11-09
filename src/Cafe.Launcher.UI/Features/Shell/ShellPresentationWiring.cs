@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.UI.Constants;
 using Cafe.Launcher.UI.Services;
+using Cafe.Launcher.UI.ViewModels;
 
 namespace Cafe.Launcher.UI.Features.Shell;
 
@@ -79,11 +80,20 @@ internal sealed class ShellPresentationWiring : IDisposable
             () => dialogs.ResourcePanelSourceConfirm.Confirmed -= actions.SwitchResourcePanelSourceAsync);
 
         Attach(
+            () => operations.PickInstallPathAsync = settings.PickInstallationDraftAsync,
+            () => operations.PickInstallPathAsync = null);
+        Attach(
+            () => operations.CommitInstallPathAsync = settings.CommitInstallationPathAsync,
+            () => operations.CommitInstallPathAsync = null);
+        Attach(
             () => operations.RefreshRequested += actions.RefreshForOperationsAsync,
             () => operations.RefreshRequested -= actions.RefreshForOperationsAsync);
         Attach(
             () => operations.OpenLogViewerRequested += OpenLogViewerAsync,
             () => operations.OpenLogViewerRequested -= OpenLogViewerAsync);
+        Attach(
+            () => operations.TaskSurfaceRequested += RevealTaskSurface,
+            () => operations.TaskSurfaceRequested -= RevealTaskSurface);
 
         Attach(
             () => dialogs.DownloadRunningCloseConfirm.Confirmed += family.WindowChrome.CloseAfterStoppingDownload,
@@ -176,6 +186,17 @@ internal sealed class ShellPresentationWiring : IDisposable
 
     private void ShowResourcePanelSourceConfirmDialog() =>
         family.Dialogs.ResourcePanelSourceConfirm.Show(localizer.T(LocalizationKeys.ResourcePanelCafeOnlyMessage));
+
+    private void RevealTaskSurface()
+    {
+        // Navigation closes ordinary overlays through their own commands. A draft confirmation,
+        // executing uninstall or other decision remains in place until the user handles it.
+        while (family.ModalHost.Top is { } top && top.Kind is ModalKind.Settings or ModalKind.ResourcePanel
+            or ModalKind.LogViewer or ModalKind.LogExport or ModalKind.Debug or ModalKind.DesignGallery)
+        {
+            if (!modalRegistrar.TryDispatchEscape(top.Kind) || ReferenceEquals(top, family.ModalHost.Top)) break;
+        }
+    }
 
     private Task OpenLogViewerAsync() => family.LogViewer.OpenCommand.ExecuteAsync(null);
 

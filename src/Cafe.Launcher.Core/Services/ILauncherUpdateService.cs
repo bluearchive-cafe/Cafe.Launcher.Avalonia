@@ -10,8 +10,11 @@ namespace Cafe.Launcher.Core.Services;
 /// </summary>
 public interface ILauncherUpdateService
 {
-    /// <summary>检查指定渠道是否有新版本。</summary>
+    /// <summary>检查指定渠道是否有新版本；返回已有说明，缺失的说明由调用方按需补充加载。</summary>
     Task<LauncherUpdateCheckResult> CheckForUpdateAsync(
         string updateChannel,
         CancellationToken cancellationToken = default);
+
+    /// <summary>按已选版本补充获取更新说明；不可用或正文为空时返回空字符串。</summary>
+    Task<string> LoadReleaseNotesAsync(string version, CancellationToken cancellationToken = default);
 }

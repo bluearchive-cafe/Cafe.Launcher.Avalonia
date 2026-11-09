@@ -12,12 +12,48 @@ using Avalonia.VisualTree;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.UI.Helpers;
 using Cafe.Launcher.UI.Services;
+using Cafe.Launcher.UI.Views;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cafe.Launcher.HeadlessTests;
 
 public sealed partial class MainWindowHeadlessTests
 {
+    [AvaloniaTheory]
+    [InlineData(false, "#FF0000")]
+    [InlineData(true, "#00FF00")]
+    public void Segments_SelectedStates_KeepPaintedContrast(bool dark, string seed)
+    {
+        using var theme = ThemeVariantSnapshot.Capture(dark ? ThemeVariant.Dark : ThemeVariant.Light);
+        using var context = CreateContext();
+        PrepareGoldenWindow(context, dark ? ThemeVariant.Dark : ThemeVariant.Light);
+        OpenSettings(context);
+        var applier = context.Provider.GetRequiredService<ThemeApplier>();
+        applier.ApplyThemeMode(dark ? ThemeModes.Dark : ThemeModes.Light);
+        foreach (var variant in new[] { ThemeColorVariants.TonalSpot, ThemeColorVariants.Fidelity, ThemeColorVariants.Content })
+        {
+            applier.ApplyScheme(Color.Parse(seed), variant, dark, NeutralColorStrategies.SeedFollowing);
+            var background = PaintColor((IBrush)context.Window.FindResource(context.Window.ActualThemeVariant, "Launcher.Color.Dialog.Background")!);
+            var segments = context.Window.GetVisualDescendants().OfType<RadioButton>()
+                .Where(button => button.Classes.Contains("segment-option") && button.IsChecked == true && button.IsEffectivelyVisible).ToArray();
+            Assert.NotEmpty(segments);
+            foreach (var segment in segments)
+            {
+                foreach (var state in new[] { ":checked", ":pointerover", ":pressed" })
+                {
+                    ((IPseudoClasses)segment.Classes).Set(state, true);
+                    Dispatcher.UIThread.RunJobs();
+                    var fill = PreviewComposite(segment.Background, background);
+                    var text = Assert.Single(segment.GetVisualDescendants().OfType<TextBlock>());
+                    Assert.True(ColorUtils.GetContrastRatio(PaintColor(text.Foreground), fill) >= 4.5,
+                        $"{variant}/{dark}/{state}: selected segment text contrast");
+                    if (state != ":checked")
+                        ((IPseudoClasses)segment.Classes).Set(state, false);
+                }
+            }
+        }
+    }
+
     [AvaloniaTheory]
     [InlineData(false, "#2E7DF6", ThemeColorVariants.Fidelity)]
     [InlineData(false, "#FF0000", ThemeColorVariants.Content)]
@@ -120,9 +156,11 @@ public sealed partial class MainWindowHeadlessTests
         context.ViewModel.Shell.ApplyLanguage(language, hasSnapshot: false);
         context.Window.Show();
         var actions = ShowResourcePanel(context);
-        var segments = context.Window.GetVisualDescendants().OfType<RadioButton>().Where(item => item.Classes.Contains("segment-option")).ToArray();
+        // 设置页也常驻在窗口里，分段按钮查询必须限定在资源面板子树内。
+        var resourcePanel = Assert.Single(context.Window.GetVisualDescendants().OfType<ResourcePanelOverlay>());
+        var segments = resourcePanel.GetVisualDescendants().OfType<RadioButton>().Where(item => item.Classes.Contains("segment-option")).ToArray();
         Assert.Equal(2, segments.Length);
-        var group = Assert.Single(context.Window.GetVisualDescendants().OfType<Border>(), border => border.Classes.Contains("segmented"));
+        var group = Assert.Single(resourcePanel.GetVisualDescendants().OfType<Border>(), border => border.Classes.Contains("segmented"));
         foreach (var scale in new[] { 1.0, 1.5, 2.0 })
         {
             actions[0].Focus(NavigationMethod.Unspecified);

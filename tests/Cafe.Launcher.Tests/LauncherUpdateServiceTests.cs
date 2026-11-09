@@ -93,6 +93,50 @@ public sealed class LauncherUpdateServiceTests
     }
 
     [Fact]
+    public async Task CheckForUpdateAsync_KeepsOnlyMirrorUrlsUnderTheConfiguredBaseAndVersion()
+    {
+        const string package = "Cafe.Launcher_v1.2.0_setup.exe";
+        var transport = CreateReleasesTransport(
+            $$"""
+            [
+              {
+                "version": "1.2.0",
+                "files": [
+                  {
+                    "name": "{{package}}",
+                    "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v1.2.0/{{package}}",
+                    "mirrorUrl": "https://download.cafe-launcher.saibamidori.com/v1/downloads/v1.2.0/{{package}}",
+                    "size": 100
+                  },
+                  {
+                    "name": "{{package}}",
+                    "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v1.2.0/{{package}}",
+                    "mirrorUrl": "https://evil.example/v1/downloads/v1.2.0/{{package}}",
+                    "size": 100
+                  },
+                  {
+                    "name": "{{package}}",
+                    "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v1.2.0/{{package}}",
+                    "mirrorUrl": "https://download.cafe-launcher.saibamidori.com/v1/downloads/v1.1.9/{{package}}",
+                    "size": 100
+                  }
+                ]
+              }
+            ]
+            """);
+        var service = new LauncherUpdateService(LauncherProfiles.Cafe, transport, currentVersionOverride: "1.0.0");
+
+        var result = await service.CheckForUpdateAsync(UpdateChannels.Stable);
+
+        Assert.True(result.IsSuccessful);
+        Assert.Equal(
+            "https://download.cafe-launcher.saibamidori.com/v1/downloads/v1.2.0/" + package,
+            result.Files[0].MirrorUrl);
+        Assert.Null(result.Files[1].MirrorUrl);
+        Assert.Null(result.Files[2].MirrorUrl);
+    }
+
+    [Fact]
     public async Task CheckForUpdateAsync_WhenReleaseMatchesCurrentVersion_ReturnsNoUpdate()
     {
         var currentVersion = BuildInfo.LauncherVersion;
@@ -157,7 +201,7 @@ public sealed class LauncherUpdateServiceTests
     }
 
     [Fact]
-    public async Task CheckForUpdateAsync_WhenProxyOmitsNotes_LoadsBodyFromGitHubTag()
+    public async Task CheckForUpdateAsync_WhenProxyOmitsNotes_DefersNotesUntilRequested()
     {
         var transport = new StubRemoteHttpTransport(uri =>
             uri == ProxyReleasesUri
@@ -177,10 +221,40 @@ public sealed class LauncherUpdateServiceTests
         var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
 
         Assert.True(result.IsUpdateAvailable);
-        Assert.Equal("## Highlights\n\n- Faster updates", result.ReleaseNotes);
+        Assert.Empty(result.ReleaseNotes);
+        Assert.Single(transport.RequestedUris);
+
+        var notes = await service.LoadReleaseNotesAsync(result.LatestVersion);
+
+        Assert.Equal("## Highlights\n\n- Faster updates", notes);
         Assert.Equal(
             new Uri(LauncherProfiles.Cafe.GitHubReleaseByTagApiUrl + "v1.0.0-beta.8"),
             transport.RequestedUris[1]);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task LoadReleaseNotesAsync_WhenUnavailableOrEmpty_ReturnsEmpty(bool fail)
+    {
+        var transport = new StubRemoteHttpTransport(_ => fail
+            ? new HttpRequestException("unavailable")
+            : "{\"body\":\"\"}");
+        var service = new LauncherUpdateService(LauncherProfiles.Cafe, transport, currentVersionOverride: "1.0.0");
+
+        Assert.Empty(await service.LoadReleaseNotesAsync("1.2.0"));
+    }
+
+    [Fact]
+    public async Task LoadReleaseNotesAsync_WhenCallerCancels_PropagatesCancellation()
+    {
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        var transport = new StubRemoteHttpTransport(_ => new OperationCanceledException(cancellation.Token));
+        var service = new LauncherUpdateService(LauncherProfiles.Cafe, transport, currentVersionOverride: "1.0.0");
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => service.LoadReleaseNotesAsync("1.2.0", cancellation.Token));
     }
 
     [Fact]

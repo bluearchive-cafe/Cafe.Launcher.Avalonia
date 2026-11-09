@@ -175,8 +175,10 @@ public sealed class ModalHostViewModelTests
         ModalKind.RepairConfirmation,
         ModalKind.ResourcePanelSourceConfirmation,
         ModalKind.UninstallConfirmation,
+            ModalKind.GameTask,
         ModalKind.StopConfirmation,
         ModalKind.DownloadRunningCloseConfirmation,
+        ModalKind.ResourcePanelDiscardConfirmation,
     ];
 
     private sealed class TestModalContent : IModalContentViewModel;

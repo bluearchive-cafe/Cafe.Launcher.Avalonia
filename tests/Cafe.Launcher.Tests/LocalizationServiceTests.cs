@@ -185,33 +185,20 @@ public sealed class LocalizationServiceTests
     }
 
     [Theory]
-    [InlineData(
-        LauncherLanguages.English,
-        "Log Files",
-        "View, export, or open the directory containing logs")]
-    [InlineData(
-        LauncherLanguages.SimplifiedChinese,
-        "日志文件",
-        "查看、导出或打开日志所在目录")]
-    [InlineData(
-        LauncherLanguages.TraditionalChinese,
-        "日誌檔案",
-        "查看、匯出或開啟日誌所在目錄")]
-    [InlineData(
-        LauncherLanguages.Japanese,
-        "ログファイル",
-        "ログを表示、エクスポート、または保存先フォルダーを開く")]
-    public void LocalizedTextCatalog_WhenLogFileKeysRequested_MapsLocalizedValues(
-        string language,
-        string expectedTitle,
-        string expectedDescription)
+    [InlineData(LauncherLanguages.English)]
+    [InlineData(LauncherLanguages.SimplifiedChinese)]
+    [InlineData(LauncherLanguages.TraditionalChinese)]
+    [InlineData(LauncherLanguages.Japanese)]
+    public void LocalizedTextCatalog_WhenLogFileKeysRequested_MapsLocalizedValues(string language)
     {
         var service = new LocalizationService();
         service.SetLanguage(language);
         using var strings = new LocalizedTextCatalog(service);
+        var suffix = language == LauncherLanguages.English ? "" : "." + language;
+        var expected = TestRepository.ReadResx(Path.Combine(TestRepository.ResourcesPath, $"LauncherStrings{suffix}.resx"));
 
-        Assert.Equal(expectedTitle, strings["logFiles"]);
-        Assert.Equal(expectedDescription, strings["logFilesDescription"]);
+        foreach (var key in new[] { "logFiles", "logFilesDescription", "settingsDataDirectory", "settingsDataDirectoryDescription", "settingsGroupDataRecovery", "settingsSaving" })
+            Assert.Equal(expected[key], strings[key]);
     }
 
     [Theory]

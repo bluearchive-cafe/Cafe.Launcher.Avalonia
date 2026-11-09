@@ -1,3 +1,4 @@
+using System.Reflection;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Headless.XUnit;
@@ -39,10 +40,16 @@ public sealed partial class MainWindowHeadlessTests
         Assert.Equal(Stretch.Uniform, original.Stretch);
         Assert.Equal(Color.Parse("#FF112233"), original.FillColor);
 
+        // Simulate the native first-frame notification; Headless has no GL renderer.
+        typeof(Cafe.Launcher.UI.Views.MainWindow).GetMethod("OnVideoBackgroundFirstFrame", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(context.Window, null);
+        Assert.All(context.Window.FindControl<Grid>("ShellRoot")!.Children.OfType<Image>(), image => Assert.False(image.IsVisible));
+
         settings.CustomBackgroundPath = second;
         await vm.Background.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
         Assert.Same(original, Current());
         Assert.Equal(second, original.Source);
+        Assert.All(context.Window.FindControl<Grid>("ShellRoot")!.Children.OfType<Image>(), image => Assert.True(image.IsVisible));
         context.Window.Hide();
         Assert.True(original.PlaybackPaused);
         context.Window.Show();

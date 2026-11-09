@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using Cafe.Launcher.UI.Features.Shell;
 using Cafe.Launcher.UI.Features.GameOperations;
 using Cafe.Launcher.UI.Features.Settings;
@@ -85,6 +85,8 @@ public sealed class ServiceConfigurationTests : IDisposable
 
         Assert.False(viewModel.Dialogs.RepairConfirm.IsVisible);
         Assert.Null(viewModel.ModalHost.Top);
+        Assert.True(viewModel.Operations.IsTaskCardVisible);
+        Assert.True(viewModel.Operations.HasTaskResult);
     }
 
     [Fact]

@@ -40,7 +40,7 @@ public sealed partial class UiStyleContractTests
                      ["Launcher.Layout.Settings.MaxWidth"] = "960",
                      ["Launcher.Layout.Settings.MaxHeight"] = "620",
                      ["Launcher.Layout.SetupWizard.Width"] = "920",
-                     ["Launcher.Layout.SetupWizard.Height"] = "560",
+                     ["Launcher.Layout.SetupWizard.Height"] = "480",
                      ["Launcher.Layout.ResourcePanel.Width"] = "720",
                      ["Launcher.Layout.ResourcePanel.Height"] = "592",
                      ["Launcher.Layout.DesignGallery.Width"] = "1000",

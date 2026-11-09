@@ -96,12 +96,18 @@
                                             <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
                                         </Button>
                                     </Grid>
-                                    <ScrollViewer Grid.Row="1"
+                                    <ScrollViewer x:Name="SettingsContentScroll" Grid.Row="1"
                                                   Classes="dialog-scroll settings-content-scroll"
                                                   VerticalScrollBarVisibility="Auto"
                                                   HorizontalScrollBarVisibility="Disabled"
                                                   IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}">
                                     <StackPanel Classes="settings-sections">
+                                        <TextBlock x:Name="SettingsCategoryDescription"
+                                                   DataContext="{Binding SelectedItem, ElementName=SettingsNavigation}"
+                                                   x:DataType="models:SettingOption"
+                                                   Text="{Binding Description}"
+                                                   Classes="caption" TextWrapping="Wrap"/>
+
                                     <views:SettingsGeneralSection IsVisible="{Binding Settings.IsGeneralCategorySelected}"
                                                               Classes="motion-content"
                                                               Classes.motion-enabled="{Binding IsMotionEnabled}"
@@ -137,33 +143,46 @@
                                 </Grid>
                         </Border>
                         <Border Grid.Row="1" Classes="settings-content-actions">
-                            <StackPanel Orientation="Horizontal"
-                                        Spacing="{StaticResource Launcher.Spacing.Sm}"
-                                        HorizontalAlignment="Right"
-                                        VerticalAlignment="Center">
-                                <Button Classes="flat-action dialog-action"
-                                        Command="{Binding WindowChrome.ShowSettingsCommand}"
-                                        IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}"
-                                        ToolTip.Tip="{Binding Shell.I18n[cancel]}"
-                                        AutomationProperties.Name="{Binding Shell.I18n[cancel]}">
-                                    <StackPanel Classes="button-content" HorizontalAlignment="Center">
-                                        <materialIcons:MaterialIcon Kind="CloseCircleOutline"
-                                            Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                                        <TextBlock Text="{Binding Shell.I18n[cancel]}"/>
-                                    </StackPanel>
-                                </Button>
-                                <Button Classes="primary-action dialog-action"
-                                        Command="{Binding Settings.SaveSettingsCommand}"
-                                        IsEnabled="{Binding Settings.CanSaveSettings}"
-                                        ToolTip.Tip="{Binding Shell.I18n[save]}"
-                                        AutomationProperties.Name="{Binding Shell.I18n[save]}">
-                                    <StackPanel Classes="button-content" HorizontalAlignment="Center">
-                                        <materialIcons:MaterialIcon Kind="ContentSave"
-                                            Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                                        <TextBlock Text="{Binding Shell.I18n[save]}"/>
-                                    </StackPanel>
-                                </Button>
-                            </StackPanel>
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                                <StackPanel VerticalAlignment="Center" Spacing="{StaticResource Launcher.Spacing.Xs}">
+                                    <TextBlock x:Name="SettingsSaveStatus"
+                                               Text="{Binding Settings.SaveStatusText}"
+                                               Classes="caption" TextWrapping="Wrap"
+                                               AutomationProperties.LiveSetting="Polite"
+                                               IsVisible="{Binding Settings.SaveStatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                    <ProgressBar Classes="settings-save-progress"
+                                                 IsVisible="{Binding Settings.IsSaving}"
+                                                 IsIndeterminate="{Binding Settings.IsSaving}"
+                                                 AutomationProperties.Name="{Binding Settings.SaveButtonText}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal"
+                                            Spacing="{StaticResource Launcher.Spacing.Sm}"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center">
+                                    <Button Classes="flat-action dialog-action"
+                                            Command="{Binding WindowChrome.ShowSettingsCommand}"
+                                            IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}"
+                                            ToolTip.Tip="{Binding Shell.I18n[cancel]}"
+                                            AutomationProperties.Name="{Binding Shell.I18n[cancel]}">
+                                        <StackPanel Classes="button-content" HorizontalAlignment="Center">
+                                            <materialIcons:MaterialIcon Kind="CloseCircleOutline"
+                                                Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                            <TextBlock Text="{Binding Shell.I18n[cancel]}"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Classes="primary-action dialog-action"
+                                            Command="{Binding Settings.SaveSettingsCommand}"
+                                            IsEnabled="{Binding Settings.CanSaveSettings}"
+                                            ToolTip.Tip="{Binding Settings.SaveButtonText}"
+                                            AutomationProperties.Name="{Binding Settings.SaveButtonText}">
+                                        <StackPanel Classes="button-content" HorizontalAlignment="Center">
+                                            <materialIcons:MaterialIcon Kind="ContentSave"
+                                                Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                            <TextBlock Text="{Binding Settings.SaveButtonText}"/>
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
                         </Border>
                     </Grid>
                 </Grid>

@@ -9,6 +9,8 @@
         <ResourceDictionary>
             <!-- Design Tokens — usage rules live in PROJECT_CONVENTIONS.md §2.3; gallery overlay shows live values -->
             <x:Double x:Key="Launcher.Spacing.None">0</x:Double>
+            <x:Double x:Key="Launcher.Component.GameTask.Width">320</x:Double>
+            <x:Double x:Key="Launcher.Component.GameTask.TitleWidth">116</x:Double>
             <x:Double x:Key="Launcher.Spacing.Xs">4</x:Double>
             <x:Double x:Key="Launcher.Spacing.Sm">8</x:Double>
             <x:Double x:Key="Launcher.Spacing.Md">12</x:Double>
@@ -63,7 +65,9 @@
             <Thickness x:Key="Launcher.Component.Settings.ContentHeading.Margin">0,0,16,4</Thickness>
             <Thickness x:Key="Launcher.Component.Settings.Footer.Padding">24,8,16,20</Thickness>
             <Thickness x:Key="Launcher.Component.RemoteSurface.Margin">40,64,0,0</Thickness>
-            <Thickness x:Key="Launcher.Component.BottomPanel.Padding">40,20,40,20</Thickness>
+            <Thickness x:Key="Launcher.Component.BottomPanel.Padding">40,20,40,24</Thickness>
+            <Thickness x:Key="Launcher.Component.BottomPanel.HiddenStatus.Padding">40,20,40,40</Thickness>
+            <Thickness x:Key="Launcher.Component.BottomPanel.Status.Margin">0,16,0,0</Thickness>
             <Thickness x:Key="Launcher.Component.ContentRow.Margin">0,0,0,4</Thickness>
             <Thickness x:Key="Launcher.Component.Scroll.Pad">0,0,8,0</Thickness>
             <Thickness x:Key="Launcher.Component.Action.Primary.Padding">20,12</Thickness>
@@ -108,7 +112,7 @@
             <x:Double x:Key="Launcher.Layout.Settings.MaxWidth">960</x:Double>
             <x:Double x:Key="Launcher.Layout.Settings.MaxHeight">620</x:Double>
             <x:Double x:Key="Launcher.Layout.SetupWizard.Width">920</x:Double>
-            <x:Double x:Key="Launcher.Layout.SetupWizard.Height">560</x:Double>
+            <x:Double x:Key="Launcher.Layout.SetupWizard.Height">480</x:Double>
             <x:Double x:Key="Launcher.Layout.ResourcePanel.Width">720</x:Double>
             <x:Double x:Key="Launcher.Layout.ResourcePanel.Height">592</x:Double>
             <x:Double x:Key="Launcher.Layout.Appearance.Preview.Width">212</x:Double>
@@ -129,6 +133,8 @@
             <x:Double x:Key="Launcher.Component.Dialog.Confirm.MinWidth">392</x:Double>
             <x:Double x:Key="Launcher.Component.Dialog.Notice.MaxHeight">110</x:Double>
             <x:Double x:Key="Launcher.Component.Dialog.Update.MaxWidth">620</x:Double>
+            <x:Double x:Key="Launcher.Component.Dialog.Update.MinWidth">480</x:Double>
+            <x:Double x:Key="Launcher.Component.Dialog.Update.MinHeight">320</x:Double>
             <x:Double x:Key="Launcher.Component.Dialog.Update.ReleaseNotes.MaxHeight">240</x:Double>
             <!-- 对话框家族 v2 表面档案（ADR-015）：组件圆角 20 + 双层阴影，
                  模态表面比页面常驻面板高一档；-padding 家族按形态区分。 -->
@@ -254,6 +260,10 @@
             <SolidColorBrush x:Key="Launcher.Color.Primary.Pressed" Color="{DynamicResource SystemAccentColorDark1}"/>
             <SolidColorBrush x:Key="Launcher.Color.Primary.Soft" Color="{DynamicResource SystemAccentColor}" Opacity="0.10"/>
             <SolidColorBrush x:Key="Launcher.Color.Primary.Border" Color="{DynamicResource SystemAccentColor}" Opacity="0.40"/>
+            <SolidColorBrush x:Key="Launcher.Color.Settings.Select.Selected.Foreground" Color="{DynamicResource SystemAccentColor}"/>
+            <SolidColorBrush x:Key="Launcher.Color.Segmented.Selected.Foreground" Color="{DynamicResource SystemAccentColor}"/>
+            <SolidColorBrush x:Key="Launcher.Color.Settings.Select.Selected.Foreground.Hover" Color="{DynamicResource SystemAccentColor}"/>
+            <SolidColorBrush x:Key="Launcher.Color.Settings.Select.Selected.Foreground.Pressed" Color="{DynamicResource SystemAccentColor}"/>
             <SolidColorBrush x:Key="Launcher.Color.OnPrimary" Color="#FFFFFFFF"/>
             <SolidColorBrush x:Key="Launcher.Text.OnChrome" Color="#FFFFFFFF"/>
             <SolidColorBrush x:Key="Launcher.Text.OnChrome.Muted" Color="#CCFFFFFF"/>

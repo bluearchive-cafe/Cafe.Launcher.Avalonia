@@ -9,6 +9,24 @@ namespace Cafe.Launcher.Tests;
 // blueprint, appearance/about sections, and transactional footer actions.
 public sealed partial class UiStyleContractTests
 {
+    [Theory]
+    [InlineData("SettingsDownloadNetworkSection", "settingsGroupDownload", "downloadSource", "downloadSpeedLimit", "settingsGroupNetwork", "proxy", "enableHttp2")]
+    [InlineData("SettingsAdvancedSection", "settingsGroupDiagnostics", "logLevel", "logFiles", "settingsGroupDataRecovery", "settingsDataDirectory", "debugResetSettingsConfirm")]
+    public void SettingsGroups_KeepCommonTasksBeforeConnectionAndRecovery(string section, string firstGroup, string firstRow, string secondRow,
+        string lastGroup, string thirdRow, string fourthRow)
+    {
+        var document = XDocument.Load(TestRepository.FromPresentationRoot($"Views/{section}.axaml"));
+        var groups = document.Descendants().Where(element => HasClass(element, "settings-group")).ToArray();
+        Assert.Equal(2, groups.Length);
+        Assert.Equal(new[] { firstGroup, lastGroup }.Select(key => $"{{Binding Shell.I18n[{key}]}}"),
+            groups.Select(group => group.Elements().First().Attribute("Text")?.Value));
+        Assert.Equal(new[] { firstRow, secondRow, thirdRow, fourthRow }.Select(key => $"{{Binding Shell.I18n[{key}]}}"),
+            groups.SelectMany(group => group.Elements().Where(element => element.Name.LocalName is "SettingRow" or "SettingSelect"))
+                .Select(row => row.Attribute("Title")?.Value));
+        foreach (var group in groups)
+            Assert.Equal("False", group.Elements().First(element => element.Name.LocalName is "SettingRow" or "SettingSelect").Attribute("ShowTopDivider")?.Value);
+    }
+
     [Fact]
     public void SettingsSections_OwnEachBindingExactlyOnceAndUseCompiledBindings()
     {
@@ -47,6 +65,7 @@ public sealed partial class UiStyleContractTests
                 "Settings.Editor.Current.ThemeColorMode",
                 "Settings.Editor.Current.BackgroundSource",
                 "Settings.Editor.Current.BackgroundFit",
+                "Settings.Editor.Current.NeutralColorStrategy",
                 "Settings.Appearance.ThemeColorPaletteItems",
                 "Settings.Appearance.SelectedCustomThemeColor",
                 "Settings.Appearance.SelectedBackgroundFillColor",
@@ -83,6 +102,20 @@ public sealed partial class UiStyleContractTests
             Environment.NewLine,
             expectedBindings.Keys.Select(name => File.ReadAllText(TestRepository.FromPresentationRoot($"Views/{name}.axaml"))));
 
+        // 分段按钮让同一个草稿属性在组内每个段上各出现一次；除此之外仍要求
+        // 每个绑定只由一个控件拥有，避免同一设置出现两行。
+        Dictionary<string, int> segmentedBindings = new(StringComparer.Ordinal)
+        {
+            ["Settings.Editor.Current.CloseBehavior"] = 2,
+            ["Settings.Editor.Current.StatusDetailMode"] = 2,
+            ["Settings.Editor.Current.UpdateChannel"] = 2,
+            ["Settings.Editor.Current.PatchUrlGroup"] = 2,
+            ["Settings.Editor.Current.ThemeMode"] = 3,
+            ["Settings.Editor.Current.BackgroundSource"] = 3,
+            ["Settings.Editor.Current.BackgroundFit"] = 3,
+            ["Settings.Editor.Current.NeutralColorStrategy"] = 2
+        };
+
         foreach (var (sectionName, bindings) in expectedBindings)
         {
             var text = File.ReadAllText(TestRepository.FromPresentationRoot($"Views/{sectionName}.axaml"));
@@ -92,7 +125,7 @@ public sealed partial class UiStyleContractTests
             {
                 Assert.Contains(binding, text, StringComparison.Ordinal);
                 Assert.Equal(
-                    1,
+                    segmentedBindings.GetValueOrDefault(binding, 1),
                     Regex.Count(allSectionText, Regex.Escape(binding), RegexOptions.CultureInvariant));
             }
         }
@@ -488,9 +521,99 @@ public sealed partial class UiStyleContractTests
         var advanced = groups[2].Descendants().Single(element => element.Name.LocalName == "Expander");
         Assert.Equal("{Binding Settings.Appearance.IsAdvancedColorExpanded, Mode=TwoWay}",
             advanced.Attribute("IsExpanded")?.Value);
-        Assert.Equal(3, advanced.Descendants().Count(element => element.Name.LocalName == "SettingSelect"));
+        Assert.Equal(2, advanced.Descendants().Count(element => element.Name.LocalName == "SettingSelect"));
+        Assert.Single(advanced.Descendants(), element => element.Name.LocalName == "SettingRow"
+            && element.Attribute("Title")?.Value == "{Binding Shell.I18n[neutralColorStrategy]}");
         Assert.Single(document.Descendants(), element => element.Name.LocalName == "Expander");
         Assert.Single(document.Descendants(), element => element.Name.LocalName == "Image");
+    }
+
+    [Fact]
+    public void AppearanceSection_ShortEnumsUseSharedSegmentedButtons()
+    {
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/SettingsAppearanceSection.axaml"));
+        var segments = document.Descendants()
+            .Where(element => element.Name.LocalName == "RadioButton" && HasClass(element, "segment-option"))
+            .ToArray();
+
+        Assert.Equal(11, segments.Length);
+        Assert.Equal(
+            ["SettingsThemeMode", "SettingsBackgroundSource", "SettingsBackgroundFit", "SettingsNeutralColorStrategy"],
+            segments.Select(segment => segment.Attribute("GroupName")?.Value).Distinct());
+        Assert.All(segments, segment =>
+        {
+            Assert.Contains(
+                "SegmentOptionConverter.Instance",
+                segment.Attribute("IsChecked")?.Value ?? "",
+                StringComparison.Ordinal);
+            Assert.True(HasClass(segment.Elements().Single(), "segment-content"));
+        });
+        Assert.Equal(4, document.Descendants()
+            .Count(element => element.Name.LocalName == "Border" && HasClass(element, "segmented")));
+
+        var themeColorCombo = document.Descendants().Single(element => element.Name.LocalName == "ComboBox");
+        Assert.Contains(
+            themeColorCombo.Descendants(),
+            element => element.Name.LocalName == "Border" && HasClass(element, "theme-color-dot"));
+    }
+
+    [Fact]
+    public void GeneralSection_ShortEnumsUseSharedSegmentedButtons()
+    {
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/SettingsGeneralSection.axaml"));
+        var segments = document.Descendants()
+            .Where(element => element.Name.LocalName == "RadioButton" && HasClass(element, "segment-option"))
+            .ToArray();
+
+        Assert.Equal(6, segments.Length);
+        Assert.Equal(
+            ["SettingsCloseBehavior", "SettingsStatusDetailMode", "SettingsUpdateChannel"],
+            segments.Select(segment => segment.Attribute("GroupName")?.Value).Distinct());
+        Assert.All(segments, segment =>
+        {
+            Assert.Contains(
+                "SegmentOptionConverter.Instance",
+                segment.Attribute("IsChecked")?.Value ?? "",
+                StringComparison.Ordinal);
+            Assert.Contains(
+                "Shell.I18n[",
+                segment.Attribute("AutomationProperties.Name")?.Value ?? "",
+                StringComparison.Ordinal);
+            Assert.True(HasClass(segment.Elements().Single(), "segment-content"));
+        });
+        Assert.Equal(3, document.Descendants()
+            .Count(element => element.Name.LocalName == "Border" && HasClass(element, "segmented")));
+
+        // 三项目标行为仍留在下拉：选项文案长于分段可承载的短标签。
+        Assert.Contains(
+            document.Descendants(),
+            element => element.Name.LocalName == "SettingSelect"
+                && element.Attribute("ItemsSource")?.Value == "{Binding Settings.Options.AfterLaunchBehavior}");
+    }
+
+    [Fact]
+    public void DownloadSection_ShortEnumsUseSharedSegmentedButtons()
+    {
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/SettingsDownloadNetworkSection.axaml"));
+        var segments = document.Descendants()
+            .Where(element => element.Name.LocalName == "RadioButton" && HasClass(element, "segment-option"))
+            .ToArray();
+
+        Assert.Equal(2, segments.Length);
+        Assert.All(segments, segment =>
+        {
+            Assert.Equal("SettingsDownloadSource", segment.Attribute("GroupName")?.Value);
+            Assert.Contains(
+                "SegmentOptionConverter.Instance",
+                segment.Attribute("IsChecked")?.Value ?? "",
+                StringComparison.Ordinal);
+            Assert.True(HasClass(segment.Elements().Single(), "segment-content"));
+        });
+        Assert.Single(document.Descendants(),
+            element => element.Name.LocalName == "Border" && HasClass(element, "segmented"));
+
+        // 代理与限速的选项文案较长或数量多于短枚举门槛，继续用下拉。
+        Assert.Equal(2, document.Descendants().Count(element => element.Name.LocalName == "SettingSelect"));
     }
 
     [Fact]
@@ -766,8 +889,8 @@ public sealed partial class UiStyleContractTests
         // out-of-row margin stacking on the row's min-height padding.
         var neutralRow = document
             .Descendants()
-            .Single(element => element.Name.LocalName == "SettingSelect"
-                && element.Attribute("AutomationName")?.Value
+            .Single(element => element.Name.LocalName == "SettingRow"
+                && element.Attribute("Title")?.Value
                     == "{Binding Shell.I18n[neutralColorStrategy]}");
         Assert.Equal(
             "{Binding Shell.I18n[neutralColorStrategySeedFollowingHint]}",
@@ -1017,6 +1140,7 @@ public sealed partial class UiStyleContractTests
             "Button",
             "ColorPicker",
             "ComboBox",
+            "RadioButton",
             "SettingSelect",
             "TextBox",
             "ToggleSwitch"
@@ -1073,8 +1197,7 @@ public sealed partial class UiStyleContractTests
             .Where(element => element.Name.LocalName is "SettingRow" or "SettingSelect")
             .ToList();
 
-        // 重置设置行加入后共三行；日志行动作按标题定位，避免对行顺序的脆弱依赖。
-        Assert.Equal(3, rows.Count);
+        Assert.Equal(2, rows.Count);
         var logFilesRow = Assert.Single(
             rows,
             row => row.Attribute("Title")?.Value == "{Binding Shell.I18n[logFiles]}");
@@ -1117,8 +1240,7 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             [
                 "{Binding LogViewer.OpenCommand}",
-                "{Binding LogExport.OpenCommand}",
-                "{Binding WindowChrome.OpenDataDirectoryCommand}"
+                "{Binding LogExport.OpenCommand}"
             ],
             commands);
         Assert.DoesNotContain(
@@ -1141,7 +1263,7 @@ public sealed partial class UiStyleContractTests
             "Settings.CheckForUpdatesCommand",
             "WindowChrome.OpenAboutOfficialSiteCommand",
             "WindowChrome.OpenHelpDocsCommand",
-            "Shell.I18n[versionInfo]",
+            "Shell.I18n[aboutBuildInformation]",
             "Shell.CommitShaValue",
             "Shell.BuildConfigValue",
             "Shell.FrameworkVersionText",

@@ -96,6 +96,82 @@ public sealed class DialogsViewModelTests : IDisposable
         Assert.Equal("## Highlights\n\n![Banner](https://example.com/banner.png)\n\n[Details](https://example.com/release)", viewModel.UpdateReleaseNotes);
     }
 
+    [Theory]
+    [InlineData("## Loaded notes", false)]
+    [InlineData("", true)]
+    [InlineData("   ", true)]
+    public async Task LoadUpdateReleaseNotesAsync_WhenCompleted_ReplacesLoadingWithContentOrFailure(string notes, bool failed)
+    {
+        using var viewModel = CreateViewModel();
+        var service = new ControlledUpdateService();
+        viewModel.ShowUpdateAvailable("1.2.0", CreateFiles(), LauncherUpdateInAppAvailability.Available);
+
+        var loading = viewModel.LoadUpdateReleaseNotesAsync(service);
+
+        Assert.True(viewModel.IsUpdateAvailableVisible);
+        Assert.True(viewModel.IsUpdateReleaseNotesLoading);
+        Assert.False(viewModel.HasUpdateReleaseNotesFailed);
+        Assert.True(viewModel.CanConfirmUpdate);
+        service.Result.SetResult(notes);
+        await loading;
+
+        Assert.False(viewModel.IsUpdateReleaseNotesLoading);
+        Assert.Equal(failed, viewModel.HasUpdateReleaseNotesFailed);
+        Assert.Equal(!failed, viewModel.HasUpdateReleaseNotes);
+        Assert.True(viewModel.CanConfirmUpdate);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task LoadUpdateReleaseNotesAsync_WhenClosedOrReplaced_CancelsAndIgnoresLateResult(bool replace)
+    {
+        using var viewModel = CreateViewModel();
+        var service = new ControlledUpdateService();
+        viewModel.ShowUpdateAvailable("1.2.0", [], LauncherUpdateInAppAvailability.Available);
+        var loading = viewModel.LoadUpdateReleaseNotesAsync(service);
+
+        if (replace)
+            viewModel.ShowUpdateAvailable("1.3.0", [], LauncherUpdateInAppAvailability.Available, "new notes");
+        else
+            viewModel.CancelUpdateAvailableCommand.Execute(null);
+        Assert.True(service.Token.IsCancellationRequested);
+        service.Result.SetResult("old notes");
+        await loading;
+
+        Assert.Equal(replace ? "new notes" : "", viewModel.UpdateReleaseNotes);
+        Assert.Equal(replace, viewModel.IsUpdateAvailableVisible);
+    }
+
+    [Fact]
+    public async Task LoadUpdateReleaseNotesAsync_WithInlineNotes_DoesNotRequestAgain()
+    {
+        using var viewModel = CreateViewModel();
+        var service = new ControlledUpdateService();
+        viewModel.ShowUpdateAvailable("1.2.0", [], LauncherUpdateInAppAvailability.Available, "inline notes");
+
+        await viewModel.LoadUpdateReleaseNotesAsync(service);
+
+        Assert.False(service.WasRequested);
+        Assert.False(viewModel.IsUpdateReleaseNotesLoading);
+        Assert.False(viewModel.HasUpdateReleaseNotesFailed);
+    }
+
+    [Fact]
+    public void OpenUpdateReleasePage_WhenNotesFailed_KeepsUpdateActionsAvailable()
+    {
+        using var viewModel = CreateViewModel();
+        string? opened = null;
+        viewModel.ConfirmUpdateAvailableRequested += url => opened = url;
+        viewModel.ShowUpdateAvailable("1.2.0", [], LauncherUpdateInAppAvailability.Available);
+
+        viewModel.OpenUpdateReleasePageCommand.Execute(null);
+
+        Assert.Equal(LauncherProfiles.Cafe.GitHubReleasesPageUrl, opened);
+        Assert.True(viewModel.IsUpdateAvailableVisible);
+        Assert.True(viewModel.CanConfirmUpdate);
+    }
+
     [Fact]
     public void ConfirmUpdateAvailable_WithoutSelfUpdate_OpensReleasePageAndCloses()
     {
@@ -582,6 +658,23 @@ public sealed class DialogsViewModelTests : IDisposable
                 action();
                 return Task.CompletedTask;
             });
+    }
+
+    private sealed class ControlledUpdateService : ILauncherUpdateService
+    {
+        public TaskCompletionSource<string> Result { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public CancellationToken Token { get; private set; }
+        public bool WasRequested { get; private set; }
+
+        public Task<LauncherUpdateCheckResult> CheckForUpdateAsync(string updateChannel, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<string> LoadReleaseNotesAsync(string version, CancellationToken cancellationToken = default)
+        {
+            Token = cancellationToken;
+            WasRequested = true;
+            return Result.Task;
+        }
     }
 
     private static ReleaseFile[] CreateFiles() =>

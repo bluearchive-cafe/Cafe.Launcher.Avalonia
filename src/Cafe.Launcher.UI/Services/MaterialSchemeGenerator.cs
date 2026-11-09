@@ -187,6 +187,35 @@ internal static class MaterialSchemeGenerator
 
         result["Launcher.Color.FocusRing"] = new SolidColorBrush(focusColor);
 
+        // Settings selection retains the accent wash. Saturated Fidelity/Content
+        // schemes may need a neutral foreground on the actually composited fill.
+        var selectedWash = result["Launcher.Color.Primary.Soft"].Color;
+        foreach (var (suffix, backgroundKey) in new[]
+                 {
+                     ("", "Launcher.Color.Dialog.Background"),
+                     (".Hover", "Launcher.Color.Button.Secondary.Hover"),
+                     (".Pressed", "Launcher.Color.Button.Secondary.Pressed")
+                 })
+        {
+            var selectedFill = Blend(result[backgroundKey].Color, primary, selectedWash.A / 255d);
+            result[$"Launcher.Color.Settings.Select.Selected.Foreground{suffix}"] = new SolidColorBrush(
+                ReadableContainerForeground(primary, selectedFill, result["Launcher.Text.Primary"].Color));
+        }
+
+        // Segments appear on both settings dialogs and resource-panel cards.
+        // Keep one foreground readable on the accent wash over either host.
+        var segmentForeground = primary;
+        foreach (var background in new[]
+                 {
+                     result["Launcher.Color.Dialog.Background"].Color,
+                     Color.Parse(isDark ? "#FF202733" : "#FFFAFCFF")
+                 })
+        {
+            segmentForeground = ReadableContainerForeground(segmentForeground,
+                Blend(background, primary, selectedWash.A / 255d), result["Launcher.Text.Primary"].Color);
+        }
+        result["Launcher.Color.Segmented.Selected.Foreground"] = new SolidColorBrush(segmentForeground);
+
         return result;
     }
 

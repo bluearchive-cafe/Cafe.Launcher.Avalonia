@@ -31,6 +31,9 @@ internal sealed class GameOperationExecutor(
         CancellationToken cancellationToken = default) =>
         launchService.StartAsync(attempt, cancellationToken);
 
+    public Task<long?> GetInstallDownloadSizeAsync(LauncherStatusSnapshot snapshot, CancellationToken cancellationToken) =>
+        downloadService.GetInstallDownloadSizeAsync(snapshot, cancellationToken);
+
     public Task<GameOperationResult> InstallOrUpdateAsync(
         GameOperationAttempt attempt,
         Action<GameOperationProgress> progress,

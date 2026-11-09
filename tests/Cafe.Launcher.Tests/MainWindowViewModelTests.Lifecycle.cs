@@ -312,12 +312,14 @@ public partial class MainWindowViewModelTests
             ]
             """;
         var transportCalls = 0;
-        var updateSvc = new LauncherUpdateService(LauncherProfiles.Cafe, 
-            new StubRemoteHttpTransport(_ =>
-            {
-                transportCalls++;
-                return releaseJson;
-            }),
+        var transport = new StubRemoteHttpTransport(_ =>
+        {
+            transportCalls++;
+            return releaseJson;
+        });
+        var updateSvc = new LauncherUpdateService(
+            LauncherProfiles.Cafe,
+            transport,
             currentVersionOverride: "1.0.0");
         using var viewModel = await CreateViewModelAsync(
             coreService,
@@ -334,12 +336,16 @@ public partial class MainWindowViewModelTests
 
         var outcome = await action.ExecuteAsync(CancellationToken.None);
 
-        // 动作复用启动检查的结果：开对话框不再发起第二次网络检查，
+        // 动作复用启动检查的结果：开对话框不再发起第二次版本检查，
         // 否则「有更新」的提示可能被一次失败或「已最新」当场推翻。
+        // 唯一新增的请求是按已选版本补充更新说明。
         Assert.True(outcome.IsSuccess);
         Assert.Equal("99.0.0", viewModel.Dialogs.UpdateAvailableVersion);
         Assert.True(viewModel.Dialogs.IsUpdateAvailableVisible);
-        Assert.Equal(callsAfterStartup, transportCalls);
+        Assert.Equal(callsAfterStartup + 1, transportCalls);
+        Assert.Equal(
+            new Uri(LauncherProfiles.Cafe.GitHubReleaseByTagApiUrl + "v99.0.0"),
+            transport.RequestedUris[^1]);
     }
 
     [Fact]

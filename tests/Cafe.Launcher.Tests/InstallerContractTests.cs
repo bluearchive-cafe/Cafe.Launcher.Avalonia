@@ -6,6 +6,29 @@ namespace Cafe.Launcher.Tests;
 public sealed class InstallerContractTests
 {
     [Fact]
+    public void LinuxPackageManagers_DeclareTheVideoRuntimeDependency()
+    {
+        Assert.Contains("libmpv2 (>= 0.37)", ReadProjectFile("installer/linux/debian/control"), StringComparison.Ordinal);
+        Assert.Contains("Requires:       libmpv.so.2()(64bit)", ReadProjectFile("installer/linux/rpm/cafe-launcher.spec"), StringComparison.Ordinal);
+        Assert.Contains("'mpv'", ReadProjectFile("installer/linux/arch/PKGBUILD"), StringComparison.Ordinal);
+        Assert.Contains("depends = mpv", ReadProjectFile("installer/linux/arch/.SRCINFO"), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PortablePackages_StagePinnedVideoRuntimeAndGenerateHomebrewCask()
+    {
+        var script = ReadProjectFile("scripts/Build-Distribution.ps1");
+        Assert.Contains("Restore-UnixVideoRuntime.ps1') -Rid 'osx-arm64' -OutputDirectory $macOsDir", script, StringComparison.Ordinal);
+        Assert.Contains("Restore-UnixVideoRuntime.ps1') -Rid 'linux-x64' -OutputDirectory $linuxPortableDir", script, StringComparison.Ordinal);
+        Assert.Contains("-C $linuxPortableDir .", script, StringComparison.Ordinal);
+        Assert.Contains("Copy-Item -Path (Join-Path $linuxPortableDir \"*\")", script, StringComparison.Ordinal);
+        Assert.Contains("depends_on formula: \"mpv\"", script, StringComparison.Ordinal);
+        Assert.Contains("depends_on :macos", script, StringComparison.Ordinal);
+        Assert.Contains("Get-FileHash -LiteralPath $osxZipPath -Algorithm SHA256", script, StringComparison.Ordinal);
+        Assert.Contains("Get-FileHash -LiteralPath $temporary -Algorithm SHA256", ReadProjectFile("scripts/Restore-UnixVideoRuntime.ps1"), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void IssInstaller_IsUtf8WithBomForLocalizedStrings()
     {
         // The installer script and every per-language file hold localized text.

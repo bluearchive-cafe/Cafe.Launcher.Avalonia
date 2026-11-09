@@ -6,15 +6,15 @@ using Avalonia.Data.Converters;
 namespace Cafe.Launcher.UI.Converters;
 
 /// <summary>
-/// Two-way bridge between the UID-source segmented buttons and the single
-/// <c>SelectedResourcePanelUidSource</c> property (ADR-041): Convert answers "is this segment
-/// the selected source"; ConvertBack writes the segment's own constant back only when the
-/// segment is checked, letting the partner segment's uncheck pass through untouched so two
-/// RadioButtons can share one binding source without fighting over it.
+/// Two-way bridge between a segmented option and the single code property it selects.
+/// Convert answers "is this segment the selected code"; ConvertBack writes the segment's
+/// own constant back only when checked, letting the partner segment's uncheck pass through
+/// untouched so several RadioButtons can share one binding source without fighting over it.
+/// Used by the resource panel UID source (ADR-041) and the appearance page's small enums.
 /// </summary>
-internal sealed class ResourcePanelSourceSegmentConverter : IValueConverter
+internal sealed class SegmentOptionConverter : IValueConverter
 {
-    public static readonly ResourcePanelSourceSegmentConverter Instance = new();
+    public static readonly SegmentOptionConverter Instance = new();
 
     public object? Convert(
         object? value,

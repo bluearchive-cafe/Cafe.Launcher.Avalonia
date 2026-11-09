@@ -23,7 +23,8 @@ internal interface IGameOperationJourneyHost
 internal abstract record GameOperationPresentation
 {
     public sealed record Busy(bool Value) : GameOperationPresentation;
-    public sealed record Preparing : GameOperationPresentation;
+    public sealed record Preparing(GameOperationKind Kind = GameOperationKind.Download, bool Automatic = false) : GameOperationPresentation;
+    public sealed record Completed(GameOperationResult Value) : GameOperationPresentation;
     public sealed record Progress(GameOperationProgress Value) : GameOperationPresentation;
     public sealed record Snapshot(LauncherStatusSnapshot Value) : GameOperationPresentation;
     public sealed record LaunchCheck(string Message) : GameOperationPresentation;

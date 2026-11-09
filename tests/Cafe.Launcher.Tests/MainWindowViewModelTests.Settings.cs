@@ -270,6 +270,46 @@ public partial class MainWindowViewModelTests
     }
 
     [Fact]
+    public async Task InstallationPreparation_OnlyExplicitIdentificationPersistsPathAndDoesNotResumeDuringCommit()
+    {
+        var originalPath = Path.Combine(tempDir, "original", "YostarGames", "BlueArchive_JP");
+        var selectedRoot = Path.Combine(tempDir, "selected");
+        Directory.CreateDirectory(selectedRoot);
+        var expectedPath = Path.Combine(selectedRoot, "YostarGames", "BlueArchive_JP");
+        var savedSettings = new SavedSettingsTestRig(tempDir.Sub(LauncherPaths.LauncherSettingsFileName));
+        await savedSettings.SeedAsync(new LauncherSettings { GamePath = originalPath });
+        var snapshot = CreateSnapshot();
+        snapshot.RuntimeState = LauncherRuntimeState.NotInstalled;
+        snapshot.Settings.GamePath = originalPath;
+        snapshot.LocalGame = CopyLocalGameWithPath(snapshot.LocalGame, originalPath);
+        var backend = new StubGameOperationExecutor();
+        var pickerCalls = 0;
+        var picker = new StubFilePickerService { FolderPicker = (_, _) =>
+        {
+            pickerCalls++;
+            return Task.FromResult<string?>(selectedRoot);
+        } };
+        using var viewModel = await CreateViewModelAsync(new SettingsBackedCoreService(savedSettings.SettingsService, snapshot),
+            savedSettings, filePickerService: picker, gameOperationsBackend: backend);
+        await viewModel.InitializeAsync();
+        var resumeCalls = backend.ResumeCallCount;
+        await viewModel.Operations.PrimaryActionCommand.ExecuteAsync(null);
+        await viewModel.Operations.ChooseInstallPathCommand.ExecuteAsync(null);
+        Assert.Equal(expectedPath, viewModel.Operations.InstallPathDraft);
+        Assert.Equal(originalPath, (await savedSettings.SettingsService.ReadAsync()).GamePath);
+        viewModel.Operations.CloseTaskCommand.Execute(null);
+        await viewModel.Operations.PrimaryActionCommand.ExecuteAsync(null);
+        Assert.Equal(originalPath, viewModel.Operations.InstallPathDraft);
+        await viewModel.Operations.IdentifyInstalledGameCommand.ExecuteAsync(null);
+        Assert.Equal(2, pickerCalls);
+        Assert.Equal(expectedPath, (await savedSettings.SettingsService.ReadAsync()).GamePath);
+        Assert.Equal(expectedPath, viewModel.Shell.PathText);
+        Assert.Equal(resumeCalls, backend.ResumeCallCount);
+        Assert.Equal(0, backend.InstallCallCount);
+        Assert.False(viewModel.Operations.IsTaskDialogVisible);
+    }
+
+    [Fact]
     public async Task ChooseBackgroundFileAsync_WhenVideoSelected_PreviewsDraftAndPersistsOnlyOnSave()
     {
         var pickedPath = Path.Combine(tempDir, "background.MP4");
@@ -528,12 +568,13 @@ public partial class MainWindowViewModelTests
             new SetupWizardViewModel(localizer, new GameInstallationPath(LauncherProfiles.BlueArchiveJapan), new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan), new LocalDiagnostics(), new StubFilePickerService()),
             new LocalDiagnostics());
         using var testLogger = new UnifiedLogger(tempDir);
+        var updateService = new LauncherUpdateService(LauncherProfiles.Cafe, new StubRemoteHttpTransport());
         using var settings = new SettingsViewModel(
             savedSettings.SettingsService,
             savedSettings.Writer,
             localizer,
             toastService,
-            new LauncherUpdateService(LauncherProfiles.Cafe, new StubRemoteHttpTransport()),
+            updateService,
             new LauncherUpdatePresenter(
                 localizer,
                 toastService,
@@ -543,7 +584,8 @@ public partial class MainWindowViewModelTests
                     new LauncherUpdateHostInfoProvider(),
                     new StubWindowsLauncherUpdateApplier(),
                     TestDataRoot.ForDirectory(Path.Combine(tempDir, "update-root")),
-                    new LocalDiagnostics())),
+                    new LocalDiagnostics()),
+                updateService),
             dialogs,
             testLogger,
             new GameInstallationPath(LauncherProfiles.BlueArchiveJapan),

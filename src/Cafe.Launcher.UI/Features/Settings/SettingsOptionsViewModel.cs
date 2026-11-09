@@ -39,7 +39,7 @@ internal sealed class SettingsOptionsViewModel
         new() { Code = BackgroundFits.UniformToFill }
     ];
 
-    public ObservableCollection<SettingOption> ThemeColor { get; } =
+    public ObservableCollection<ThemeColorOption> ThemeColor { get; } =
     [
         new() { Code = ThemeColorModes.Default },
         new() { Code = ThemeColorModes.System },

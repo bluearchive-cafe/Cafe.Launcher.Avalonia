@@ -47,6 +47,62 @@ public sealed class LauncherUpdateDownloaderTests
     }
 
     [Fact]
+    public async Task DownloadAndVerifyAsync_WhenMirrorUrlIsPresent_PrefersMirror()
+    {
+        using var directory = TestDirectory.Create();
+        var destination = Path.Combine(directory, "pkg.zip");
+        var transport = new StubRemoteHttpTransport(uri =>
+            uri.Host == "download.cafe-launcher.saibamidori.com"
+                ? PackageBytes
+                : throw new HttpRequestException("GitHub should not be used."));
+        var downloader = new LauncherUpdateDownloader(transport);
+
+        var result = await downloader.DownloadAndVerifyAsync(
+            PackageFile(withMirror: true), Sha256(PackageBytes), destination, progress: null, TestContext.Current.CancellationToken);
+
+        Assert.True(result.IsSuccess);
+        Assert.Single(transport.RequestedUris);
+        Assert.Equal("download.cafe-launcher.saibamidori.com", transport.RequestedUris[0].Host);
+    }
+
+    [Fact]
+    public async Task DownloadAndVerifyAsync_WhenMirrorFails_FallsBackToGitHub()
+    {
+        using var directory = TestDirectory.Create();
+        var destination = Path.Combine(directory, "pkg.zip");
+        var transport = new StubRemoteHttpTransport(uri =>
+            uri.Host == "download.cafe-launcher.saibamidori.com"
+                ? new HttpRequestException("mirror unavailable")
+                : PackageBytes);
+        var downloader = new LauncherUpdateDownloader(transport);
+
+        var result = await downloader.DownloadAndVerifyAsync(
+            PackageFile(withMirror: true), Sha256(PackageBytes), destination, progress: null, TestContext.Current.CancellationToken);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(2, transport.RequestedUris.Count);
+        Assert.Equal("github.com", transport.RequestedUris[1].Host);
+    }
+
+    [Fact]
+    public async Task DownloadAndVerifyAsync_WhenMirrorBytesMismatch_FallsBackToGitHub()
+    {
+        using var directory = TestDirectory.Create();
+        var destination = Path.Combine(directory, "pkg.zip");
+        var transport = new StubRemoteHttpTransport(uri =>
+            uri.Host == "download.cafe-launcher.saibamidori.com"
+                ? Encoding.UTF8.GetBytes("corrupted mirror payload")
+                : PackageBytes);
+        var downloader = new LauncherUpdateDownloader(transport);
+
+        var result = await downloader.DownloadAndVerifyAsync(
+            PackageFile(withMirror: true), Sha256(PackageBytes), destination, progress: null, TestContext.Current.CancellationToken);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(2, transport.RequestedUris.Count);
+    }
+
+    [Fact]
     public async Task DownloadAndVerifyAsync_WhenTransportThrowsHttp_ReturnsNetworkFailure()
     {
         using var directory = TestDirectory.Create();
@@ -179,6 +235,22 @@ public sealed class LauncherUpdateDownloaderTests
     }
 
     [Fact]
+    public async Task ReadTextAsync_WhenMirrorFails_FallsBackToGitHub()
+    {
+        var transport = new StubRemoteHttpTransport(uri =>
+            uri.Host == "github.com"
+                ? "hash  name"
+                : new HttpRequestException("mirror unavailable"));
+        var downloader = new LauncherUpdateDownloader(transport);
+
+        var text = await downloader.ReadTextAsync(
+            PackageFile(withMirror: true), TestContext.Current.CancellationToken);
+
+        Assert.Equal("hash  name", text);
+        Assert.Equal(2, transport.RequestedUris.Count);
+    }
+
+    [Fact]
     public async Task ReadTextAsync_WhenBodyExceedsCap_ReturnsNull()
     {
         var oversized = new string('a', LauncherUpdateDownloader.MaxTextAssetBytes + 1);
@@ -200,10 +272,13 @@ public sealed class LauncherUpdateDownloaderTests
         Assert.Equal(atLimit, text);
     }
 
-    private static ReleaseFile PackageFile() => new()
+    private static ReleaseFile PackageFile(bool withMirror = false) => new()
     {
         Name = "Cafe.Launcher_v1.2.3_win-x64.zip",
         Url = "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v1.2.3/Cafe.Launcher_v1.2.3_win-x64.zip",
+        MirrorUrl = withMirror
+            ? "https://download.cafe-launcher.saibamidori.com/v1/downloads/v1.2.3/Cafe.Launcher_v1.2.3_win-x64.zip"
+            : null,
         Size = PackageBytes.Length
     };
 

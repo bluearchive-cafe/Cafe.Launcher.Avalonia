@@ -14,7 +14,7 @@ namespace Cafe.Launcher.HeadlessTests;
 public sealed partial class MainWindowHeadlessTests
 {
     [AvaloniaFact]
-    public async Task MainWindow_WhenPanelModeChanges_TaskSurfaceAnimatesThenSettles()
+    public async Task MainWindow_WhenPanelModeChanges_TaskSurfaceKeepsItsHeight()
     {
         using var context = CreateContext();
         context.ViewModel.Operations.PanelMode = GameOperationPanelMode.Install;
@@ -27,15 +27,12 @@ public sealed partial class MainWindowHeadlessTests
         var installedHeight = surface.Bounds.Height;
 
         context.ViewModel.Operations.PanelMode = GameOperationPanelMode.Control;
-        // 形变完成后回到自动尺寸、恢复全不透明，且控制态自然高度大于安装态（156 对 132），
-        // 证明转换走过了"测新状态自然高度"的管线而非瞬切。
+        // 统一面板不再随安装/控制状态改变几何；仍须恢复自动尺寸与全不透明。
         await HeadlessTestHost.WaitUntilAsync(
             () => double.IsNaN(surface.Height) && surface.Opacity >= 1d,
             TimeSpan.FromSeconds(3),
             "Operation surface did not settle back to auto height and full opacity.");
-        Assert.True(
-            surface.Bounds.Height > installedHeight,
-            $"Control state height {surface.Bounds.Height} did not grow past install state {installedHeight}.");
+        Assert.Equal(installedHeight, surface.Bounds.Height);
     }
 
     [AvaloniaFact]
@@ -160,11 +157,10 @@ public sealed partial class MainWindowHeadlessTests
         var installHeight = surface.Bounds.Height;
         Assert.True(installHeight > 0);
 
-        // 单次切换参考值：控制态自然高度大于安装态，落定后回到自动高度与全不透明。
+        // 状态切换保持同一个面板的自然高度与全不透明。
         context.ViewModel.Operations.PanelMode = GameOperationPanelMode.Control;
         var controlHeight = await WaitUntilOperationSurfaceSettledAsync(surface);
-        Assert.True(controlHeight > installHeight,
-            $"Control state height {controlHeight} did not grow past install state {installHeight}.");
+        Assert.Equal(installHeight, controlHeight);
 
         context.ViewModel.Operations.PanelMode = GameOperationPanelMode.Install;
         var reSettledHeight = await WaitUntilOperationSurfaceSettledAsync(surface);
@@ -305,7 +301,7 @@ public sealed partial class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
-    public async Task MainWindow_BackgroundThreadSwitch_MorphsToLatestStateNaturalHeight()
+    public async Task MainWindow_BackgroundThreadSwitch_KeepsStablePanelHeight()
     {
         using var context = CreateContext();
         context.ViewModel.Operations.PanelMode = GameOperationPanelMode.Install;
@@ -325,9 +321,7 @@ public sealed partial class MainWindowHeadlessTests
             () => double.IsNaN(surface.Height) && surface.Opacity >= 1d,
             TimeSpan.FromSeconds(3),
             "Operation surface did not settle after background switch.");
-        Assert.True(
-            surface.Bounds.Height > installHeight,
-            $"Control state height {surface.Bounds.Height} did not grow past install state {installHeight}.");
+        Assert.Equal(installHeight, surface.Bounds.Height);
     }
 
     [AvaloniaFact]

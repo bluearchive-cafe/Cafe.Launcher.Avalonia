@@ -21,7 +21,7 @@ using Cafe.Launcher.Core.Helpers;
 
 namespace Cafe.Launcher.UI.ViewModels;
 
-internal partial class DialogsViewModel : ViewModelBase, IModalContentViewModel, ILanguageAwarePresentation
+internal partial class DialogsViewModel : ViewModelBase, IModalContentViewModel, ILanguageAwarePresentation, IDisposable
 {
     private readonly LauncherProductProfile productProfile;
     private readonly LocalizationService localizer;
@@ -29,6 +29,7 @@ internal partial class DialogsViewModel : ViewModelBase, IModalContentViewModel,
     private readonly Func<Action, Task> invokeOnUiAsync;
     private readonly ILauncherDiagnostics diagnostics;
     private bool closeOnNoticeDismiss;
+    private readonly LatestRefresh updateReleaseNotesRefresh = new();
 
     /// <summary>
     /// 确认对话框家族：可见性、文案与「隐藏 → 顺序调用订阅者 → 记录失败」的
@@ -139,6 +140,17 @@ internal partial class DialogsViewModel : ViewModelBase, IModalContentViewModel,
     private string updateReleaseNotes = "";
 
     public bool HasUpdateReleaseNotes => !string.IsNullOrWhiteSpace(UpdateReleaseNotes);
+
+    [ObservableProperty]
+    private bool isUpdateReleaseNotesLoading;
+
+    [ObservableProperty]
+    private bool hasUpdateReleaseNotesFailed;
+
+    partial void OnIsUpdateAvailableVisibleChanged(bool value)
+    {
+        if (!value) updateReleaseNotesRefresh.Cancel();
+    }
 
     /// <summary>Release assets of the offered version; consumed by the in-app self-update flow.</summary>
     private IReadOnlyList<ReleaseFile> updateFiles = [];
@@ -320,9 +332,12 @@ internal partial class DialogsViewModel : ViewModelBase, IModalContentViewModel,
         LauncherUpdateInAppAvailability availability,
         string releaseNotes = "")
     {
+        updateReleaseNotesRefresh.Cancel();
         UpdateAvailableVersion = version;
         UpdateAvailableText = localizer.F(LocalizationKeys.LauncherUpdateAvailableMessage, version);
         UpdateReleaseNotes = string.IsNullOrWhiteSpace(releaseNotes) ? "" : releaseNotes;
+        IsUpdateReleaseNotesLoading = false;
+        HasUpdateReleaseNotesFailed = !HasUpdateReleaseNotes;
         updateFiles = files ?? [];
 
         UpdateSupportsInAppApply = availability == LauncherUpdateInAppAvailability.Available;
@@ -331,6 +346,40 @@ internal partial class DialogsViewModel : ViewModelBase, IModalContentViewModel,
         ResetUpdateApply();
         IsUpdateAvailableVisible = true;
     }
+
+    /// <summary>弹窗先呈现版本和动作，再加载缺失的正文；关闭或切换版本使旧结果失效。</summary>
+    public Task LoadUpdateReleaseNotesAsync(ILauncherUpdateService service)
+    {
+        if (HasUpdateReleaseNotes || !IsUpdateAvailableVisible) return Task.CompletedTask;
+
+        var version = UpdateAvailableVersion;
+        IsUpdateReleaseNotesLoading = true;
+        HasUpdateReleaseNotesFailed = false;
+        updateReleaseNotesRefresh.Run(null, async token =>
+        {
+            try
+            {
+                // 调用方在 UI 线程发起；不脱离开 awaiter 上下文，结果直接落在同一线程。
+                var notes = await service.LoadReleaseNotesAsync(version, token);
+                if (token.IsCancellationRequested) return;
+                UpdateReleaseNotes = string.IsNullOrWhiteSpace(notes) ? "" : notes;
+                IsUpdateReleaseNotesLoading = false;
+                HasUpdateReleaseNotesFailed = !HasUpdateReleaseNotes;
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            {
+                // Closing/replacing the dialog is not a load failure.
+            }
+        });
+        return updateReleaseNotesRefresh.Pending;
+    }
+
+    [RelayCommand]
+    private void OpenUpdateReleasePage() =>
+        ConfirmUpdateAvailableRequested?.Invoke(productProfile.GitHubReleasesPageUrl);
+
+    /// <summary>窗口会话结束时取消仍在加载的更新说明。</summary>
+    public void Dispose() => updateReleaseNotesRefresh.Cancel();
 
     /// <summary>Switches the dialog into the in-app download state.</summary>
     public void BeginUpdateApply()

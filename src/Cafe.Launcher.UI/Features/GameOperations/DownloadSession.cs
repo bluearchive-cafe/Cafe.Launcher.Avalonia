@@ -117,6 +117,9 @@ internal sealed class DownloadSession : IDisposable
 
         try
         {
+            // Resume presentation learns the checkpoint's operation kind from progress.
+            // Announce it before preflight I/O so an early failure still retries the same operation.
+            progress(GameOperationProgressFactory.CreateProgress(operationKind, GameOperationStage.Idle, -1));
             var settings = await settingsService.ReadAsync(activeToken).ConfigureAwait(false);
             var gameConfig = snapshot.Remote.GameConfig
                 ?? await apiClient.GetGameConfigAsync(activeToken).ConfigureAwait(false);
@@ -253,7 +256,7 @@ internal sealed class DownloadSession : IDisposable
         progress(GameOperationProgressFactory.CreateProgress(
             operationKind,
             profile.CheckStage,
-            0));
+            -1));
 
         var cdnConfig = snapshot.Remote.CdnConfig
             ?? await apiClient.GetCdnConfigAsync(
@@ -494,8 +497,8 @@ internal sealed class DownloadSession : IDisposable
                 currentDownloadList,
                 verifiedHashes,
                 downloadPlan.PlannedHashes,
-                value => progress(GameOperationProgressFactory.CreateProgress(operationKind, GameOperationStage.FileCheck, value)),
-                activeToken).ConfigureAwait(false);
+                _ => { },
+                activeToken, progress, operationKind).ConfigureAwait(false);
 
             if (failedFiles.Count == 0)
             {

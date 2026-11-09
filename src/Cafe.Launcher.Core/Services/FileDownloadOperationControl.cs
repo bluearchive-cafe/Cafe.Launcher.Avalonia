@@ -21,4 +21,8 @@ public sealed record FileDownloadOperationControl(
     IDownloadTransport Transport,
     Func<Task> WaitWhilePausedAsync,
     Func<long, CancellationToken, Task> ReportProgressAsync,
-    Func<CancellationToken, Task> ReportProgressResetAsync);
+    Func<CancellationToken, Task> ReportProgressResetAsync)
+{
+    /// <summary>Optional content-check progress after transfer; independent of cooperative download pause.</summary>
+    public Action<long, long>? ReportVerificationProgress { get; init; }
+}

@@ -15,6 +15,12 @@ namespace Cafe.Launcher.Testing;
 /// </summary>
 internal sealed class StubGameOperationExecutor : IGameOperationExecutor
 {
+    public long? InstallDownloadBytes { get; set; }
+    public TaskCompletionSource<long?>? InstallSizeCompletion { get; set; }
+
+    public Task<long?> GetInstallDownloadSizeAsync(LauncherStatusSnapshot snapshot, CancellationToken cancellationToken) =>
+        InstallSizeCompletion?.Task ?? Task.FromResult(InstallDownloadBytes);
+
     private bool isDownloadRunning;
 
     /// <inheritdoc />
@@ -96,6 +102,9 @@ internal sealed class StubGameOperationExecutor : IGameOperationExecutor
     /// <summary>Resume 的返回结果；null 表示无可恢复的持久化工作。</summary>
     public GameOperationResult? ResumeResult { get; set; }
 
+    /// <summary>Optional first progress report for testing automatic resume presentation.</summary>
+    public GameOperationProgress? ResumeProgress { get; set; }
+
     /// <summary>续传的可控完成门。</summary>
     public TaskCompletionSource<GameOperationResult?>? ResumeCompletion { get; set; }
 
@@ -158,6 +167,7 @@ internal sealed class StubGameOperationExecutor : IGameOperationExecutor
         CancellationToken cancellationToken)
     {
         ResumeCallCount++;
+        if (ResumeProgress is { } update) progress(update);
         return ResumeCompletion?.Task ?? Task.FromResult(ResumeResult);
     }
 

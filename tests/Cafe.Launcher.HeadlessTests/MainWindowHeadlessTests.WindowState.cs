@@ -229,8 +229,8 @@ public sealed partial class MainWindowHeadlessTests
     }
 
     [AvaloniaTheory]
-    [InlineData("install", 4, 1)]
-    [InlineData("progress", 2, 0)]
+    [InlineData("install", 1, 1)]
+    [InlineData("progress", 1, 1)]
     [InlineData("control", 1, 1)]
     public void MainWindow_AtMinimumWindowSize_KeepsOperationActionsInsideWindow(
         string panelMode,
@@ -282,25 +282,19 @@ public sealed partial class MainWindowHeadlessTests
         using var context = CreateContext();
         context.Window.Width = width;
         context.Window.Height = height;
-        context.ViewModel.Operations.PanelMode = GameOperationPanelMode.Install;
+        context.ViewModel.Shell.IsBusy = false;
+        context.ViewModel.Operations.ApplySnapshot(new LauncherStatusSnapshot
+        { RuntimeState = LauncherRuntimeState.NotInstalled, LocalGame = new LocalInstallationState { GamePath = @"D:\Games\BlueArchive_JP" } });
+        context.ViewModel.Operations.OpenInstallPreparationCommand.Execute(null);
         context.Window.Show();
         Dispatcher.UIThread.RunJobs();
-
-        var pathField = context.Window
-            .GetVisualDescendants()
-            .OfType<Border>()
-            .Single(control => control.Classes.Contains("path-field"));
-        var actions = context.Window
-            .GetVisualDescendants()
-            .OfType<Button>()
-            .Where(control => control.IsEffectivelyVisible
-                && (control.Classes.Contains("primary-operation")
-                    || control.Classes.Contains("secondary-operation")))
-            .ToArray();
-
-        Assert.Equal(4, actions.Length);
-        Assert.True(pathField.Bounds.Width > 0);
-        AssertControlInsideWindow(pathField, context.Window);
+        var surface = context.Window.GetVisualDescendants().OfType<Cafe.Launcher.UI.Controls.DialogSurface>()
+            .Single(control => control.Name == "GameTaskSurface");
+        var path = surface.GetVisualDescendants().OfType<TextBlock>()
+            .Single(control => control.IsEffectivelyVisible && control.Text == context.ViewModel.Operations.TaskPath);
+        AssertControlInsideWindow(path, context.Window);
+        var actions = surface.GetVisualDescendants().OfType<Button>().Where(control => control.IsEffectivelyVisible).ToArray();
+        Assert.NotEmpty(actions);
         Assert.All(actions, action => AssertControlInsideWindow(action, context.Window));
     }
 
@@ -314,27 +308,19 @@ public sealed partial class MainWindowHeadlessTests
         bool expectedEnabled)
     {
         using var context = CreateContext();
-        context.Window.Show();
-        context.ViewModel.Shell.IsInstallBlockedByDiskSpace = isBlockedByDiskSpace;
-        context.ViewModel.Shell.InstallDiskSpaceMessage = isBlockedByDiskSpace
-            ? "磁盘空间不足：需要 10GB，可用 6GB。"
-            : "";
-        context.ViewModel.Shell.IsBusy = isBusy;
+        context.ViewModel.Shell.IsBusy = false;
         context.ViewModel.Operations.ApplySnapshot(new LauncherStatusSnapshot
         {
-            RuntimeState = LauncherRuntimeState.NotInstalled
+            RuntimeState = LauncherRuntimeState.NotInstalled,
+            LocalGame = new LocalInstallationState { GamePath = @"D:\Games\BlueArchive_JP" }
         });
+        context.ViewModel.Operations.OpenInstallPreparationCommand.Execute(null);
+        context.ViewModel.Shell.IsInstallBlockedByDiskSpace = isBlockedByDiskSpace;
+        context.ViewModel.Shell.IsBusy = isBusy;
+        context.Window.Show();
         Dispatcher.UIThread.RunJobs();
-
-        // The compact install button carries the disk-space tooltip.
-        var installButton = context.Window
-            .GetVisualDescendants()
-            .OfType<Button>()
-            .Where(button => ReferenceEquals(
-                button.Command,
-                context.ViewModel.Operations.InstallOrUpdateCommand))
-            .Single(button => button.IsEffectivelyVisible);
-
+        var installButton = context.Window.GetVisualDescendants().OfType<Button>()
+            .Single(button => ReferenceEquals(button.Command, context.ViewModel.Operations.ConfirmInstallCommand));
         Assert.Equal(expectedEnabled, installButton.IsEffectivelyEnabled);
     }
 

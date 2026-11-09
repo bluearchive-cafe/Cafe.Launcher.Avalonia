@@ -102,7 +102,7 @@ internal sealed class ThemeApplier : IDisposable
             isDark: isDark);
         foreach (var (key, brush) in roleBrushes)
         {
-            SetBrush(application, key, brush.Color);
+            SetBrush(application, key, brush);
         }
 
         lastSchemeApplied = true;
@@ -134,7 +134,7 @@ internal sealed class ThemeApplier : IDisposable
         themeApplication.ActualThemeVariantChanged += OnActualThemeVariantChanged;
     }
 
-    private static void SetBrush(Application application, string key, Color color)
+    private static void SetBrush(Application application, string key, SolidColorBrush source)
     {
         // Mutate in place where a brush already exists (root or per-theme
         // dictionaries), so {DynamicResource} consumers observe the change.
@@ -144,7 +144,8 @@ internal sealed class ThemeApplier : IDisposable
             if (application.Resources.TryGetResource(key, variant, out var themed)
                 && themed is SolidColorBrush themedBrush)
             {
-                themedBrush.Color = color;
+                themedBrush.Color = source.Color;
+                themedBrush.Opacity = source.Opacity;
                 mutated = true;
             }
         }
@@ -160,11 +161,14 @@ internal sealed class ThemeApplier : IDisposable
                 out var value)
             && value is SolidColorBrush brush)
         {
-            brush.Color = color;
+            // Generated colors already include alpha; retaining the resource's old
+            // opacity would multiply it again (Primary.Soft was only ~1.4% visible).
+            brush.Color = source.Color;
+            brush.Opacity = source.Opacity;
             return;
         }
 
-        application.Resources[key] = new SolidColorBrush(color);
+        application.Resources[key] = new SolidColorBrush(source.Color, source.Opacity);
     }
 
     private void OnActualThemeVariantChanged(object? sender, EventArgs e)

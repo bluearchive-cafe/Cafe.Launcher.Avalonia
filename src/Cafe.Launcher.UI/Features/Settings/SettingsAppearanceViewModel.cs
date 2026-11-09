@@ -30,6 +30,8 @@ internal partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
     private readonly IPlatformSettings? platformSettings;
     private readonly ILauncherDiagnostics? diagnostics;
     private readonly bool showHiddenSettings;
+    private readonly SettingsOptionsViewModel? options;
+    private PlatformColorValues? latestPlatformColors;
     private bool suppressEditorUpdates;
     private bool disposed;
     private readonly LatestRefresh themePaletteRefresh = new();
@@ -38,12 +40,14 @@ internal partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         SettingsEditor editor,
         ThemeApplier themeApplier,
         ILauncherDiagnostics? diagnostics = null,
-        bool showHiddenSettings = false)
+        bool showHiddenSettings = false,
+        SettingsOptionsViewModel? options = null)
     {
         this.editor = editor;
         this.themeApplier = themeApplier;
         this.diagnostics = diagnostics;
         this.showHiddenSettings = showHiddenSettings;
+        this.options = options;
         editor.CurrentPropertyChanged += OnCurrentSettingChanged;
         platformSettings = Application.Current?.PlatformSettings;
         if (platformSettings is not null)
@@ -222,7 +226,7 @@ internal partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
                     }
 
                     ReplaceThemeColorPalette([], 0);
-                    if (applySchemeAfter)
+                    if (applySchemeAfter && editor.Current.ThemeColorMode == ThemeColorModes.Wallpaper)
                     {
                         ApplyResolvedTheme();
                     }
@@ -261,7 +265,7 @@ internal partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
                     });
                 }
 
-                if (applySchemeAfter)
+                if (applySchemeAfter && editor.Current.ThemeColorMode == ThemeColorModes.Wallpaper)
                 {
                     // 直接落色而非走 ApplyThemeColor：空结果（如纯透明图）不会再次触发提取。
                     ApplyResolvedTheme();
@@ -363,7 +367,6 @@ internal partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         }
     }
 
-    [RelayCommand]
     private void SelectThemeColorPalette(int index)
     {
         if (ThemeColorPaletteItems.Count == 0)
@@ -394,14 +397,11 @@ internal partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
 
         if (e.PropertyName == nameof(LauncherSettings.ThemeColorExtractionAlgorithm))
         {
-            if (editor.Current.ThemeColorMode == ThemeColorModes.Wallpaper)
-            {
-                // ADR-009: 算法变更需要按新算法重新提取；提取完成后自动落色，
-                // 保证选中的色板索引未变时配色仍被刷新。
-                _ = RefreshThemeColorPaletteFromCurrentBackgroundAsync(
-                    markDirty: true,
-                    applySchemeAfter: true);
-            }
+            // The unselected wallpaper source still previews the current algorithm.
+            var isWallpaper = editor.Current.ThemeColorMode == ThemeColorModes.Wallpaper;
+            _ = RefreshThemeColorPaletteFromCurrentBackgroundAsync(
+                markDirty: isWallpaper,
+                applySchemeAfter: true);
 
             UpdateThemeColorPreview();
             return;
@@ -491,16 +491,20 @@ internal partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         suppressEditorUpdates = true;
         try
         {
+            foreach (var item in ThemeColorPaletteItems)
+                item.PropertyChanged -= OnPaletteSelectionChanged;
             ThemeColorPaletteItems.Clear();
             for (var i = 0; i < normalizedColors.Length; i++)
             {
                 var color = ColorUtils.ParseColorOrDefault(normalizedColors[i]);
-                ThemeColorPaletteItems.Add(new ThemeColorPaletteItem
+                var item = new ThemeColorPaletteItem
                 {
                     Index = i,
                     ColorHex = normalizedColors[i],
                     Brush = new SolidColorBrush(GetGeneratedPrimaryColor(color))
-                });
+                };
+                item.PropertyChanged += OnPaletteSelectionChanged;
+                ThemeColorPaletteItems.Add(item);
             }
 
             SelectedThemeColorPaletteIndex = normalizedColors.Length == 0
@@ -514,6 +518,13 @@ internal partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         }
 
         UpdateThemeColorPreview();
+    }
+
+    private void OnPaletteSelectionChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (!suppressEditorUpdates && e.PropertyName == nameof(ThemeColorPaletteItem.IsSelected)
+            && sender is ThemeColorPaletteItem { IsSelected: true } item)
+            SelectThemeColorPalette(item.Index);
     }
 
     private void UpdateThemeColorPaletteSelection()
@@ -545,6 +556,34 @@ internal partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
             editor.Current.ThemeColorMode,
             SelectedCustomThemeColor);
         ThemeColorPreviewBrush = new SolidColorBrush(GetGeneratedPrimaryColor(color));
+        RefreshThemeColorOptionBrushes();
+    }
+
+    /// <summary>
+    /// Keep each source option's dot pointing at the color that source resolves to now,
+    /// so the picker previews every choice instead of only the selected one.
+    /// </summary>
+    private void RefreshThemeColorOptionBrushes(bool? isDark = null)
+    {
+        if (options is null)
+        {
+            return;
+        }
+
+        var dark = isDark ?? ThemeApplier.IsDarkTheme(editor.Current.ThemeMode);
+        foreach (var option in options.ThemeColor)
+        {
+            var seed = option.Code switch
+            {
+                ThemeColorModes.System => latestPlatformColors?.AccentColor1 ?? ThemeApplier.GetSystemAccentColor(),
+                ThemeColorModes.Wallpaper =>
+                    ResolveThemeColorFromPalette()
+                    ?? Color.Parse(LauncherConstants.DefaultThemeColor),
+                ThemeColorModes.Custom => SelectedCustomThemeColor,
+                _ => Color.Parse(LauncherConstants.DefaultThemeColor)
+            };
+            option.PreviewBrush = new SolidColorBrush(GetGeneratedPrimaryColor(seed, dark));
+        }
     }
 
     private Color GetGeneratedPrimaryColor(Color seed)
@@ -568,28 +607,28 @@ internal partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
 
     internal void ApplyPlatformColorValues(PlatformColorValues values)
     {
-        if (editor.Current.ThemeColorMode != ThemeColorModes.System)
-        {
-            return;
-        }
-
+        latestPlatformColors = values;
         var isDark = editor.Current.ThemeMode == ThemeModes.Dark
             || (editor.Current.ThemeMode == ThemeModes.System
                 && values.ThemeVariant == PlatformThemeVariant.Dark);
-        themeApplier.ApplyScheme(
-            values.AccentColor1,
-            editor.Current.ThemeColorVariant,
-            isDark,
-            editor.Current.NeutralColorStrategy);
+        if (editor.Current.ThemeColorMode == ThemeColorModes.System)
+        {
+            themeApplier.ApplyScheme(
+                values.AccentColor1,
+                editor.Current.ThemeColorVariant,
+                isDark,
+                editor.Current.NeutralColorStrategy);
+        }
         RefreshThemeColorPaletteBrushes(isDark);
         ThemeColorPreviewBrush = new SolidColorBrush(
-            GetGeneratedPrimaryColor(values.AccentColor1, isDark));
+            GetGeneratedPrimaryColor(ResolveThemeColor(editor.Current.ThemeColorMode, SelectedCustomThemeColor), isDark));
+        RefreshThemeColorOptionBrushes(isDark);
     }
 
     private Color ResolveThemeColor(string themeColorMode, Color customColor) =>
         themeColorMode switch
         {
-            ThemeColorModes.System => ThemeApplier.GetSystemAccentColor(),
+            ThemeColorModes.System => latestPlatformColors?.AccentColor1 ?? ThemeApplier.GetSystemAccentColor(),
             ThemeColorModes.Custom => customColor,
             ThemeColorModes.Wallpaper =>
                 ResolveThemeColorFromPalette()
@@ -625,6 +664,8 @@ internal partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
 
         disposed = true;
         themePaletteRefresh.Cancel();
+        foreach (var item in ThemeColorPaletteItems)
+            item.PropertyChanged -= OnPaletteSelectionChanged;
         editor.CurrentPropertyChanged -= OnCurrentSettingChanged;
         if (platformSettings is not null)
         {

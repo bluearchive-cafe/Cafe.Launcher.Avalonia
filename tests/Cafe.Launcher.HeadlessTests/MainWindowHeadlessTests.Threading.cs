@@ -132,6 +132,9 @@ public sealed partial class MainWindowHeadlessTests
 
         public void RaiseStaleRunningChanged() => staleIsRunningChanged?.Invoke();
 
+        public Task<long?> GetInstallDownloadSizeAsync(LauncherStatusSnapshot snapshot, CancellationToken cancellationToken) =>
+            Task.FromResult<long?>(null);
+
         public Task<GameLaunchResult> LaunchAsync(
             GameOperationAttempt attempt,
             CancellationToken cancellationToken = default) =>

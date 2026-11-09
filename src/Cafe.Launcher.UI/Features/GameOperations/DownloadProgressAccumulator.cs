@@ -18,6 +18,7 @@ internal sealed class DownloadProgressAccumulator
     private long bytesSinceLastReport;
     private long lastReportTimestamp;
     private bool completionReported;
+    private long lastBytesPerSecond;
 
     internal DownloadProgressAccumulator(
         long totalSize,
@@ -73,7 +74,7 @@ internal sealed class DownloadProgressAccumulator
     {
         lock (sync)
         {
-            return new DownloadProgressSnapshot(downloadedSize, 0);
+            return new DownloadProgressSnapshot(downloadedSize, lastBytesPerSecond);
         }
     }
 
@@ -82,6 +83,7 @@ internal sealed class DownloadProgressAccumulator
         lock (sync)
         {
             bytesSinceLastReport = 0;
+            lastBytesPerSecond = 0;
         }
     }
 
@@ -91,6 +93,7 @@ internal sealed class DownloadProgressAccumulator
         {
             bytesSinceLastReport = 0;
             lastReportTimestamp = timestampProvider();
+            lastBytesPerSecond = 0;
         }
     }
 
@@ -123,6 +126,7 @@ internal sealed class DownloadProgressAccumulator
         var bytesPerSecond = paused || elapsedTicks <= 0
             ? 0
             : (long)(bytesSinceLastReport * (double)timestampFrequency / elapsedTicks);
+        lastBytesPerSecond = bytesPerSecond;
         snapshot = new DownloadProgressSnapshot(downloadedSize, bytesPerSecond);
 
         bytesSinceLastReport = 0;

@@ -77,7 +77,7 @@ internal sealed class SavedSettingsFollowThrough : ISavedSettingsFollowThrough
     public async Task CompleteAsync(SavedSettingsHandoff handoff)
     {
         var savedSettings = handoff.SavedSettings;
-        if (operations.IsDownloadRunning)
+        if (operations.IsTaskExecuting || operations.IsDownloadRunning || operations.IsUninstallExecuting)
         {
             // 整份刷新会打断下载；这条路径只把待用快照换成刚落盘的值。
             updateSnapshotSettings(savedSettings.DeepClone());

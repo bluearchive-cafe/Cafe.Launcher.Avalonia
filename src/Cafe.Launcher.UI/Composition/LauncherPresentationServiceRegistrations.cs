@@ -110,7 +110,8 @@ public static class LauncherPresentationServiceRegistrations
             sp.GetRequiredService<SettingsEditor>(),
             sp.GetRequiredService<ThemeApplier>(),
             sp.GetRequiredService<ILauncherDiagnostics>(),
-            showHiddenSettings));
+            showHiddenSettings,
+            sp.GetRequiredService<SettingsOptionsViewModel>()));
         // 会话看护订阅进程跟踪器的退出事件：登记在跟踪器之后，容器逆序释放时看护先于
         // 跟踪器析构，退订不会落在已释放的订阅源上。
         services.AddSingleton<IGameSessionMonitor, GameSessionMonitor>();

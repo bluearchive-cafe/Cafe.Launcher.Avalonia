@@ -1,0 +1,96 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia">
+  <!-- MD3 分段按钮的共享视觉契约：用于 2–3 个短标签的互斥单选
+       （资源面板 UID 来源；常规页关闭行为/状态面板/更新通道；下载源；外观页主题/背景来源/适配方式/中性色）。
+       长标签或 ≥4 项仍使用暴露式菜单；业务绑定由 SegmentOptionConverter 承担。 -->
+
+  <Styles.Resources>
+    <!-- 分段按钮的 Border+Content 模板：RadioButton 语义、普通按钮的几何，
+         与 LauncherBorderButtonTemplate 同构（TargetType 须为 RadioButton 分支）。 -->
+    <ControlTemplate x:Key="SegmentedOptionTemplate" TargetType="RadioButton">
+      <Panel>
+        <Border Background="{TemplateBinding Background}"
+                BorderBrush="{TemplateBinding BorderBrush}"
+                BorderThickness="{TemplateBinding BorderThickness}"
+                CornerRadius="{TemplateBinding CornerRadius}">
+          <ContentPresenter Content="{TemplateBinding Content}"
+                            ContentTemplate="{TemplateBinding ContentTemplate}"
+                            Padding="{TemplateBinding Padding}"
+                            HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                            VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
+        </Border>
+        <!-- An independent layer preserves the segment's original measurement and join. -->
+        <Border x:Name="SegmentFocus" IsHitTestVisible="False"
+                CornerRadius="{StaticResource Launcher.Radius.Full}"
+                BorderThickness="{StaticResource Launcher.Border.Thickness.Focus}"
+                BorderBrush="{StaticResource Launcher.Color.Transparent}"/>
+      </Panel>
+    </ControlTemplate>
+  </Styles.Resources>
+
+  <!-- 两端整圆、段间发丝竖线、选中段 accent 家族、段内勾选图标仅 :checked 显形
+       （非颜色线索）；禁用整组时降低不透明度。 -->
+  <Style Selector="Border.segmented">
+    <Setter Property="HorizontalAlignment" Value="Left"/>
+    <!-- 分段是行内控件而非行容器：不要让 Grid 操作列把它拉满整行高度。 -->
+    <Setter Property="VerticalAlignment" Value="Center"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Button.Border}"/>
+    <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
+    <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Full}"/>
+    <Setter Property="ClipToBounds" Value="True"/>
+  </Style>
+  <Style Selector="Border.segmented-divider">
+    <Setter Property="Width" Value="{StaticResource Launcher.Component.Segmented.Divider.Width}"/>
+    <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Border}"/>
+  </Style>
+  <Style Selector="RadioButton.segment-option">
+    <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
+    <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Body}"/>
+    <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Sm}"/>
+    <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
+    <Setter Property="MinWidth" Value="{StaticResource Launcher.Component.Segmented.Segment.MinWidth}"/>
+    <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Chip}"/>
+    <Setter Property="Padding" Value="{StaticResource Launcher.Component.Segmented.Segment.Padding}"/>
+    <Setter Property="HorizontalContentAlignment" Value="Center"/>
+    <Setter Property="VerticalContentAlignment" Value="Center"/>
+    <Setter Property="Template" Value="{StaticResource SegmentedOptionTemplate}"/>
+  </Style>
+  <Style Selector="RadioButton.segment-option > StackPanel.segment-content">
+    <Setter Property="Orientation" Value="Horizontal"/>
+    <Setter Property="Spacing" Value="{StaticResource Launcher.Spacing.Xs}"/>
+  </Style>
+  <!-- 勾选图标只在选中段参与布局（IsVisible 而非 Opacity：透明占位会让未选中段
+       左侧出现一截空白）；非颜色线索由「选中段多一枚图标」继续承担。 -->
+  <Style Selector="materialIcons|MaterialIcon.segment-check">
+    <Setter Property="IsVisible" Value="False"/>
+  </Style>
+  <Style Selector="RadioButton.segment-option:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Hover}"/>
+  </Style>
+  <Style Selector="RadioButton.segment-option:pressed">
+    <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Pressed}"/>
+  </Style>
+  <!-- 选中段 = accent wash + 可读前景，低对比度方案由生成器回退。 -->
+  <Style Selector="RadioButton.segment-option:checked">
+    <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Soft}"/>
+    <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Segmented.Selected.Foreground}"/>
+  </Style>
+  <Style Selector="RadioButton.segment-option:checked:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Soft}"/>
+    <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Segmented.Selected.Foreground}"/>
+  </Style>
+  <Style Selector="RadioButton.segment-option:checked:pressed">
+    <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Soft}"/>
+    <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Segmented.Selected.Foreground}"/>
+  </Style>
+  <Style Selector="RadioButton.segment-option:disabled">
+    <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
+  </Style>
+  <Style Selector="RadioButton.segment-option:focus-visible /template/ Border#SegmentFocus">
+    <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
+  </Style>
+  <Style Selector="RadioButton.segment-option:checked materialIcons|MaterialIcon.segment-check">
+    <Setter Property="IsVisible" Value="True"/>
+  </Style>
+</Styles>

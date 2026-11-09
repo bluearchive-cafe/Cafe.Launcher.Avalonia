@@ -218,6 +218,11 @@ internal sealed class GameOperationJourney : IDisposable
             return;
         }
 
+        await CreateDesktopShortcutCoreAsync(snapshot);
+    }
+
+    private async Task CreateDesktopShortcutCoreAsync(LauncherStatusSnapshot snapshot)
+    {
         await RunBusyAsync("Desktop shortcut creation failed.", LocalizationKeys.GameShortcutFailed, async () =>
         {
             var result = await shortcutService.CreateDesktopShortcutAsync(snapshot);
@@ -264,7 +269,7 @@ internal sealed class GameOperationJourney : IDisposable
     }
 
     /// <summary>Installs or updates the game and presents the terminal result.</summary>
-    public async Task InstallOrUpdateAsync(LauncherStatusSnapshot snapshot)
+    public async Task InstallOrUpdateAsync(LauncherStatusSnapshot snapshot, bool createDesktopShortcut = false)
     {
         using var operation = TryBeginOperation();
         if (operation is null)
@@ -278,13 +283,14 @@ internal sealed class GameOperationJourney : IDisposable
             return;
         }
 
-        if (result.Success || result.ErrorCode == GameOperationErrorCode.Stopped)
+        if (result.Success && createDesktopShortcut && !IsShuttingDown)
         {
-            ShowOperationResult(result);
-            return;
+            // Keep this follow-through inside the operation lifetime; shortcut failure cannot fail installation.
+            var installed = host.CurrentSnapshot;
+            if (installed is not null && GamePathValidator.PathComparer.Equals(installed.LocalGame.GamePath, snapshot.LocalGame.GamePath))
+                await CreateDesktopShortcutCoreAsync(installed);
         }
-
-        ShowInstallUpdateFailureToast(result.Message, result.ErrorCode, snapshot);
+        ShowOperationResult(result);
     }
 
     /// <summary>
@@ -312,8 +318,7 @@ internal sealed class GameOperationJourney : IDisposable
         }
 
         // 用户已经在确认框上点过确认：此时状态若又变得不允许，必须给可见反馈（ADR-027）。
-        // 这道闸门必须早于 PrepareOperation——后者会把面板 latch 到 Progress，而只有
-        // SetIdlePanels 能把它复位。
+        // 这道闸门必须早于 PrepareOperation，否则拒绝也会启动任务呈现并覆盖上一项结果。
         var admission = GameOperationAttempt.Evaluate(GameOperationPolicy.Operation.Repair, snapshot);
         if (admission.Attempt is not { } attempt)
         {
@@ -321,22 +326,23 @@ internal sealed class GameOperationJourney : IDisposable
             return;
         }
 
-        if (!PrepareOperation(snapshot))
+        if (!PrepareOperation(snapshot, GameOperationKind.Repair))
         {
             return;
         }
 
         var refreshHandled = false;
+        GameOperationResult? result = null;
         try
         {
-            var result = await executor.RepairAsync(attempt, progress => host.Present(new GameOperationPresentation.Progress(progress)));
-            ShowOperationResult(result);
-            refreshHandled = await RequestRefresh(GameOperationsRefreshMode.Normal);
+            result = await executor.RepairAsync(attempt, progress => host.Present(new GameOperationPresentation.Progress(progress)));
+            refreshHandled = await RefreshAfterTaskAsync();
         }
         catch (Exception exception)
         {
             await errorHandling.HandleErrorAsync("Game repair failed.", exception,
-                new ErrorHandlingOptions { ToastMessage = localizer.F(LocalizationKeys.GameRepairFailed, exception.Message) });
+                new ErrorHandlingOptions { ShowToast = false });
+            result = new GameOperationResult { Message = localizer.F(LocalizationKeys.GameRepairFailed, exception.Message), ErrorCode = GameOperationErrorCode.System };
         }
         finally
         {
@@ -346,6 +352,7 @@ internal sealed class GameOperationJourney : IDisposable
                 ApplySnapshotSafe(snapshot);
             }
         }
+        if (result is not null) ShowOperationResult(result);
     }
 
     /// <summary>
@@ -488,14 +495,6 @@ internal sealed class GameOperationJourney : IDisposable
     public void PerformStop()
     {
         executor.Stop(DownloadStopReason.UserRequested);
-        try { toastService.ShowWarning(localizer.T(LocalizationKeys.StopRequested)); }
-        catch (Exception ex)
-        {
-            // TryLogAsync 永不抛：同步语境下的实例侧日志走 fire-and-forget。
-            _ = diagnostics.WarningAsync(
-                "StopToastFailed",
-                $"Failed to show stop toast: {ex.Message}");
-        }
     }
 
     /// <summary>Attempts to continue a persisted download while respecting cancellation.</summary>
@@ -512,33 +511,46 @@ internal sealed class GameOperationJourney : IDisposable
             return;
         }
 
+        var started = 0;
+        GameOperationResult? completed = null;
         try
         {
             host.Present(new GameOperationPresentation.Busy(true));
             var result = await executor.ResumePersistedAsync(
                 snapshot,
-                progress => host.Present(new GameOperationPresentation.Progress(progress)),
+                progress =>
+                {
+                    if (Interlocked.CompareExchange(ref started, 1, 0) == 0)
+                    {
+                        host.Present(new GameOperationPresentation.Preparing(progress.OperationKind, Automatic: true));
+                    }
+                    host.Present(new GameOperationPresentation.Progress(progress));
+                },
                 cancellationToken);
             if (result is null)
             {
                 return;
             }
 
-            ShowOperationResult(result);
-            await RequestRefresh(GameOperationsRefreshMode.Normal);
+            if (Volatile.Read(ref started) == 0) host.Present(new GameOperationPresentation.Preparing(GameOperationKind.Download, Automatic: true));
+            completed = result;
+            await RefreshAfterTaskAsync();
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
+            if (Volatile.Read(ref started) != 0) completed = new GameOperationResult { Message = localizer.T(LocalizationKeys.OperationStopped), ErrorCode = GameOperationErrorCode.Stopped };
         }
         catch (Exception exception)
         {
             await errorHandling.HandleErrorAsync("Persisted game download resume failed.", exception,
                 new ErrorHandlingOptions { ShowToast = false });
+            if (Volatile.Read(ref started) != 0) completed = new GameOperationResult { Message = localizer.F(LocalizationKeys.GameInstallOrUpdateFailed, exception.Message), ErrorCode = GameOperationErrorCode.System };
         }
         finally
         {
             host.Present(new GameOperationPresentation.Busy(false));
         }
+        if (completed is not null) ShowOperationResult(completed);
     }
 
     /// <summary>Stops the active workflow, optionally clearing its persisted checkpoint.</summary>
@@ -561,12 +573,13 @@ internal sealed class GameOperationJourney : IDisposable
 
     private async Task<GameOperationResult?> RunInstallOrUpdateAttemptAsync(LauncherStatusSnapshot snapshot, CancellationToken cancellationToken = default)
     {
-        if (!PrepareOperation(snapshot))
+        if (!PrepareShellOnly(snapshot))
         {
             return null;
         }
 
         var refreshHandled = false;
+        var taskStarted = false;
         try
         {
             // 允许集只读策略表；拒绝后「对用户意味着什么」仍按状态就地分流——
@@ -583,9 +596,8 @@ internal sealed class GameOperationJourney : IDisposable
                         refreshHandled = await RequestRefresh(GameOperationsRefreshMode.Normal);
                         return null;
                     default:
-                        // 快照过期：Ready 下安装按钮所在的面板本不可见，所以这条只在状态
-                        // 刚刚变过来时可达。拒绝必须报出来（ADR-027/029），静默 return
-                        // 在用户那里就是「点了没反应」。
+                        // 快照过期：旧安装结果仍可见时，当前状态可能已经变为 Ready。
+                        // 拒绝必须报出来（ADR-027/029），同时保留旧结果。
                         ShowOperationUnavailable();
                         return null;
                 }
@@ -594,20 +606,27 @@ internal sealed class GameOperationJourney : IDisposable
             // 装之前先说清楚「这次只会下清单里那部分」（2026-09-29 反馈轮）：卸载只删清单
             // 文件，重启安装时目录里往往还留着游戏自行下载的一大片，而清单里没有它们——
             // 于是用户看到的是「忙活一下就装好了」，因为他以为被删掉的东西其实从没被删过。
+            host.Present(new GameOperationPresentation.Preparing());
+            taskStarted = true;
             NotifyInstallOverExistingContent(snapshot);
 
             var result = await executor.InstallOrUpdateAsync(attempt, progress => host.Present(new GameOperationPresentation.Progress(progress)), cancellationToken);
-            refreshHandled = await RequestRefresh(GameOperationsRefreshMode.SkipPersistedResume);
+            refreshHandled = await RefreshAfterTaskAsync();
             return result;
         }
         catch (Exception exception)
         {
             await errorHandling.HandleErrorAsync("Game install/update failed.", exception,
-                new ErrorHandlingOptions { ToastMessage = localizer.F(LocalizationKeys.GameInstallOrUpdateFailed, exception.Message) });
+                new ErrorHandlingOptions
+                {
+                    ShowToast = !taskStarted,
+                    ToastMessage = localizer.F(LocalizationKeys.GameInstallOrUpdateFailed, exception.Message)
+                });
+            if (!taskStarted) return null;
             return new GameOperationResult
             {
                 Success = false,
-                Message = localizer.T(LocalizationKeys.LauncherStateNotLoaded),
+                Message = localizer.F(LocalizationKeys.GameInstallOrUpdateFailed, exception.Message),
                 ErrorCode = GameOperationErrorCode.System
             };
         }
@@ -621,113 +640,19 @@ internal sealed class GameOperationJourney : IDisposable
         }
     }
 
-    private void ShowInstallUpdateFailureToast(string message, GameOperationErrorCode errorCode, LauncherStatusSnapshot originalSnapshot)
-    {
-        if (IsShuttingDown)
-        {
-            return;
-        }
-
-        var isTerminal = errorCode is
-            GameOperationErrorCode.PathMissing or
-            GameOperationErrorCode.CdnConfiguration or
-            GameOperationErrorCode.RemoteConfiguration or
-            GameOperationErrorCode.GameRunning or
-            GameOperationErrorCode.InsufficientDiskSpace or
-            GameOperationErrorCode.InvalidState;
-
-        if (isTerminal)
-        {
-            // 终态错误不提供重试,但仍要给出查看日志的去处:
-            // 失败不能只存在于一条会自动消失的文案里。
-            toastService.Show(new ToastOptions
-            {
-                Message = message,
-                Severity = ToastSeverity.Error,
-                SecondaryAction = new ToastAction(localizer.T(LocalizationKeys.ViewLog), OpenLogViewerAsync)
-            });
-            return;
-        }
-
-        toastService.Show(new ToastOptions
-        {
-            Title = localizer.T(LocalizationKeys.InstallUpdateFailedTitle),
-            Message = message,
-            Severity = ToastSeverity.Error,
-            PrimaryAction = new ToastAction(localizer.T(LocalizationKeys.Retry), token => RetryInstallOrUpdateAsync(originalSnapshot, token), Timeout: null),
-            SecondaryAction = new ToastAction(localizer.T(LocalizationKeys.ViewLog), OpenLogViewerAsync)
-        });
-    }
-
-    private async Task<ToastActionResult> RetryInstallOrUpdateAsync(LauncherStatusSnapshot originalSnapshot, CancellationToken cancellationToken)
-    {
-        using var operation = TryBeginOperation();
-        if (operation is null)
-        {
-            return ToastActionResult.Failure(localizer.T(LocalizationKeys.OperationStopped));
-        }
-
-        cancellationToken.ThrowIfCancellationRequested();
-        var snapshot = host.CurrentSnapshot;
-        if (snapshot is null)
-        {
-            return ToastActionResult.Failure(localizer.T(LocalizationKeys.LauncherStateNotLoaded), localizer.T(LocalizationKeys.InstallUpdateFailedTitle));
-        }
-
-        // The toast owns its original target, but eligibility and preferences come from
-        // the latest snapshot. An old toast must never redirect work to a different directory.
-        if (!GamePathValidator.PathComparer.Equals(
-                Path.TrimEndingDirectorySeparator(originalSnapshot.LocalGame.GamePath),
-                Path.TrimEndingDirectorySeparator(snapshot.LocalGame.GamePath)))
-        {
-            return ToastActionResult.Failure(localizer.T(LocalizationKeys.OperationUnavailableForCurrentState),
-                localizer.T(LocalizationKeys.InstallUpdateFailedTitle));
-        }
-
-        var result = await RunInstallOrUpdateAttemptAsync(snapshot, cancellationToken);
-        cancellationToken.ThrowIfCancellationRequested();
-        if (result?.Success == true)
-        {
-            ShowOperationResult(result);
-            return ToastActionResult.Success();
-        }
-
-        var message = result?.Message;
-        if (string.IsNullOrWhiteSpace(message))
-        {
-            message = result?.ErrorCode == GameOperationErrorCode.Stopped
-                ? localizer.T(LocalizationKeys.OperationStopped)
-                : localizer.T(LocalizationKeys.OperationUnavailableForCurrentState);
-        }
-
-        return ToastActionResult.Failure(message, localizer.T(LocalizationKeys.InstallUpdateFailedTitle));
-    }
-
-    private async Task<ToastActionResult> OpenLogViewerAsync(CancellationToken cancellationToken)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        await host.ShowLogViewerAsync();
-        return ToastActionResult.Success();
-    }
-
     private void ShowOperationResult(GameOperationResult result)
     {
-        if (IsShuttingDown)
-        {
-            return;
-        }
+        if (!IsShuttingDown) host.Present(new GameOperationPresentation.Completed(result));
+    }
 
-        if (result.Success)
+    private async Task<bool> RefreshAfterTaskAsync()
+    {
+        try { return await RequestRefresh(GameOperationsRefreshMode.SkipPersistedResume); }
+        catch (Exception exception)
         {
-            toastService.ShowSuccess(result.Message);
-        }
-        else if (result.ErrorCode == GameOperationErrorCode.Stopped)
-        {
-            toastService.ShowWarning(result.Message);
-        }
-        else
-        {
-            toastService.ShowError(result.Message);
+            await errorHandling.HandleErrorAsync("Post-operation refresh failed.", exception,
+                new ErrorHandlingOptions { ShowToast = false });
+            return false;
         }
     }
 
@@ -809,14 +734,14 @@ internal sealed class GameOperationJourney : IDisposable
         return true;
     }
 
-    private bool PrepareOperation(LauncherStatusSnapshot snapshot)
+    private bool PrepareOperation(LauncherStatusSnapshot snapshot, GameOperationKind kind = GameOperationKind.Download)
     {
         if (!PrepareShellOnly(snapshot))
         {
             return false;
         }
 
-        host.Present(new GameOperationPresentation.Preparing());
+        host.Present(new GameOperationPresentation.Preparing(kind));
         return true;
     }
 

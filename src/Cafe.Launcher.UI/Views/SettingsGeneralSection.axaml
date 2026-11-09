@@ -1,10 +1,13 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Cafe.Launcher.UI.ViewModels"
+             xmlns:coreModels="using:Cafe.Launcher.Core.Models"
+             xmlns:converters="using:Cafe.Launcher.UI.Converters"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              xmlns:controls="using:Cafe.Launcher.UI.Controls"
              x:Class="Cafe.Launcher.UI.Views.SettingsGeneralSection"
              x:Name="SettingsRoot"
+             Classes="settings-section"
              x:DataType="vm:MainWindowViewModel">
     <StackPanel>
         <StackPanel Classes="settings-group">
@@ -16,10 +19,38 @@
                                     ItemsSource="{Binding Settings.Options.Language}"
                                     SelectedValue="{Binding Settings.Editor.Current.Language, Mode=TwoWay}"/>
 
-            <controls:SettingSelect Title="{Binding Shell.I18n[closeBehavior]}"
-                                    AutomationName="{Binding Shell.I18n[closeBehavior]}"
-                                    ItemsSource="{Binding Settings.Options.CloseBehavior}"
-                                    SelectedValue="{Binding Settings.Editor.Current.CloseBehavior, Mode=TwoWay}"/>
+            <!-- 2–3 个短标签用分段按钮：互斥值常显，单击直达（共享契约见 Styles/Segmented.axaml）。 -->
+            <controls:SettingRow Title="{Binding Shell.I18n[closeBehavior]}">
+                <controls:SettingRow.Action>
+                    <Border Classes="segmented">
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton Classes="segment-option"
+                                         GroupName="SettingsCloseBehavior"
+                                         IsChecked="{Binding Settings.Editor.Current.CloseBehavior, Converter={x:Static converters:SegmentOptionConverter.Instance}, ConverterParameter={x:Static coreModels:CloseBehaviors.Minimize}, Mode=TwoWay}"
+                                         AutomationProperties.Name="{Binding Shell.I18n[closeBehaviorMinimize]}">
+                                <StackPanel Classes="segment-content">
+                                    <materialIcons:MaterialIcon Kind="Check" Classes="segment-check"
+                                                                Width="{StaticResource Launcher.Icon.Sm}"
+                                                                Height="{StaticResource Launcher.Icon.Sm}"/>
+                                    <TextBlock Text="{Binding Shell.I18n[closeBehaviorMinimize]}"/>
+                                </StackPanel>
+                            </RadioButton>
+                            <Border Classes="segmented-divider"/>
+                            <RadioButton Classes="segment-option"
+                                         GroupName="SettingsCloseBehavior"
+                                         IsChecked="{Binding Settings.Editor.Current.CloseBehavior, Converter={x:Static converters:SegmentOptionConverter.Instance}, ConverterParameter={x:Static coreModels:CloseBehaviors.Exit}, Mode=TwoWay}"
+                                         AutomationProperties.Name="{Binding Shell.I18n[closeBehaviorExit]}">
+                                <StackPanel Classes="segment-content">
+                                    <materialIcons:MaterialIcon Kind="Check" Classes="segment-check"
+                                                                Width="{StaticResource Launcher.Icon.Sm}"
+                                                                Height="{StaticResource Launcher.Icon.Sm}"/>
+                                    <TextBlock Text="{Binding Shell.I18n[closeBehaviorExit]}"/>
+                                </StackPanel>
+                            </RadioButton>
+                        </StackPanel>
+                    </Border>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
 
             <controls:SettingSelect Title="{Binding Shell.I18n[launchBehavior]}"
                                     AutomationName="{Binding Shell.I18n[launchBehavior]}"
@@ -28,12 +59,10 @@
 
             <controls:SettingRow Title="{Binding Shell.I18n[rememberWindowPositionAndSize]}">
                 <controls:SettingRow.Action>
-                    <ToggleSwitch Classes="setting-toggle"
-                                  AutomationProperties.Name="{Binding Shell.I18n[rememberWindowPositionAndSize]}"
-                                  IsChecked="{Binding Settings.Editor.Current.RememberWindowPositionAndSize, Mode=TwoWay}"
-                                  OnContent="{Binding Shell.I18n[toggleOn]}"
-                                  OffContent="{Binding Shell.I18n[toggleOff]}"
-                                  VerticalAlignment="Center"/>
+                    <CheckBox Classes="setting-checkbox"
+                              AutomationProperties.Name="{Binding Shell.I18n[rememberWindowPositionAndSize]}"
+                              IsChecked="{Binding Settings.Editor.Current.RememberWindowPositionAndSize, Mode=TwoWay}"
+                              VerticalAlignment="Center"/>
                 </controls:SettingRow.Action>
             </controls:SettingRow>
         </StackPanel>
@@ -41,22 +70,47 @@
         <StackPanel Classes="settings-group">
             <TextBlock Text="{Binding Shell.I18n[settingsGroupDisplay]}" Classes="group-title"/>
 
-            <controls:SettingSelect ShowTopDivider="False"
-                                    Title="{Binding Shell.I18n[statusDetailMode]}"
-                                    Description="{Binding Shell.I18n[statusDetailModeDescription]}"
-                                    AutomationName="{Binding Shell.I18n[statusDetailMode]}"
-                                    ItemsSource="{Binding Settings.Options.StatusDetailMode}"
-                                    SelectedValue="{Binding Settings.Editor.Current.StatusDetailMode, Mode=TwoWay}"/>
+            <controls:SettingRow ShowTopDivider="False"
+                                 Title="{Binding Shell.I18n[statusDetailMode]}"
+                                 Description="{Binding Shell.I18n[statusDetailModeDescription]}">
+                <controls:SettingRow.Action>
+                    <Border Classes="segmented">
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton Classes="segment-option"
+                                         GroupName="SettingsStatusDetailMode"
+                                         IsChecked="{Binding Settings.Editor.Current.StatusDetailMode, Converter={x:Static converters:SegmentOptionConverter.Instance}, ConverterParameter={x:Static coreModels:StatusDetailModes.Hidden}, Mode=TwoWay}"
+                                         AutomationProperties.Name="{Binding Shell.I18n[statusDetailModeHidden]}">
+                                <StackPanel Classes="segment-content">
+                                    <materialIcons:MaterialIcon Kind="Check" Classes="segment-check"
+                                                                Width="{StaticResource Launcher.Icon.Sm}"
+                                                                Height="{StaticResource Launcher.Icon.Sm}"/>
+                                    <TextBlock Text="{Binding Shell.I18n[statusDetailModeHidden]}"/>
+                                </StackPanel>
+                            </RadioButton>
+                            <Border Classes="segmented-divider"/>
+                            <RadioButton Classes="segment-option"
+                                         GroupName="SettingsStatusDetailMode"
+                                         IsChecked="{Binding Settings.Editor.Current.StatusDetailMode, Converter={x:Static converters:SegmentOptionConverter.Instance}, ConverterParameter={x:Static coreModels:StatusDetailModes.Compact}, Mode=TwoWay}"
+                                         AutomationProperties.Name="{Binding Shell.I18n[statusDetailModeCompact]}">
+                                <StackPanel Classes="segment-content">
+                                    <materialIcons:MaterialIcon Kind="Check" Classes="segment-check"
+                                                                Width="{StaticResource Launcher.Icon.Sm}"
+                                                                Height="{StaticResource Launcher.Icon.Sm}"/>
+                                    <TextBlock Text="{Binding Shell.I18n[statusDetailModeCompact]}"/>
+                                </StackPanel>
+                            </RadioButton>
+                        </StackPanel>
+                    </Border>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
 
             <controls:SettingRow Title="{Binding Shell.I18n[remoteContentCard]}"
                                  Description="{Binding Shell.I18n[remoteContentCardDescription]}">
                 <controls:SettingRow.Action>
-                    <ToggleSwitch Classes="setting-toggle"
-                                  AutomationProperties.Name="{Binding Shell.I18n[remoteContentCard]}"
-                                  IsChecked="{Binding Settings.Editor.Current.ShowRemoteContentCard, Mode=TwoWay}"
-                                  OnContent="{Binding Shell.I18n[toggleOn]}"
-                                  OffContent="{Binding Shell.I18n[toggleOff]}"
-                                  VerticalAlignment="Center"/>
+                    <CheckBox Classes="setting-checkbox"
+                              AutomationProperties.Name="{Binding Shell.I18n[remoteContentCard]}"
+                              IsChecked="{Binding Settings.Editor.Current.ShowRemoteContentCard, Mode=TwoWay}"
+                              VerticalAlignment="Center"/>
                 </controls:SettingRow.Action>
             </controls:SettingRow>
         </StackPanel>
@@ -68,20 +122,45 @@
                                  Title="{Binding Shell.I18n[enableStartupUpdateCheck]}"
                                  Description="{Binding Shell.I18n[enableStartupUpdateCheckDescription]}">
                 <controls:SettingRow.Action>
-                    <ToggleSwitch Classes="setting-toggle"
-                                  AutomationProperties.Name="{Binding Shell.I18n[enableStartupUpdateCheck]}"
-                                  IsChecked="{Binding Settings.Editor.Current.EnableStartupUpdateCheck, Mode=TwoWay}"
-                                  OnContent="{Binding Shell.I18n[toggleOn]}"
-                                  OffContent="{Binding Shell.I18n[toggleOff]}"
-                                  VerticalAlignment="Center"/>
+                    <CheckBox Classes="setting-checkbox"
+                              AutomationProperties.Name="{Binding Shell.I18n[enableStartupUpdateCheck]}"
+                              IsChecked="{Binding Settings.Editor.Current.EnableStartupUpdateCheck, Mode=TwoWay}"
+                              VerticalAlignment="Center"/>
                 </controls:SettingRow.Action>
             </controls:SettingRow>
 
-            <controls:SettingSelect Title="{Binding Shell.I18n[launcherUpdateChannel]}"
-                                    Description="{Binding Shell.I18n[launcherUpdateChannelDescription]}"
-                                    AutomationName="{Binding Shell.I18n[launcherUpdateChannel]}"
-                                    ItemsSource="{Binding Settings.Options.UpdateChannel}"
-                                    SelectedValue="{Binding Settings.Editor.Current.UpdateChannel, Mode=TwoWay}"/>
+            <controls:SettingRow Title="{Binding Shell.I18n[launcherUpdateChannel]}"
+                                 Description="{Binding Shell.I18n[launcherUpdateChannelDescription]}">
+                <controls:SettingRow.Action>
+                    <Border Classes="segmented">
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton Classes="segment-option"
+                                         GroupName="SettingsUpdateChannel"
+                                         IsChecked="{Binding Settings.Editor.Current.UpdateChannel, Converter={x:Static converters:SegmentOptionConverter.Instance}, ConverterParameter={x:Static coreModels:UpdateChannels.Stable}, Mode=TwoWay}"
+                                         AutomationProperties.Name="{Binding Shell.I18n[launcherUpdateChannelStable]}">
+                                <StackPanel Classes="segment-content">
+                                    <materialIcons:MaterialIcon Kind="Check" Classes="segment-check"
+                                                                Width="{StaticResource Launcher.Icon.Sm}"
+                                                                Height="{StaticResource Launcher.Icon.Sm}"/>
+                                    <TextBlock Text="{Binding Shell.I18n[launcherUpdateChannelStable]}"/>
+                                </StackPanel>
+                            </RadioButton>
+                            <Border Classes="segmented-divider"/>
+                            <RadioButton Classes="segment-option"
+                                         GroupName="SettingsUpdateChannel"
+                                         IsChecked="{Binding Settings.Editor.Current.UpdateChannel, Converter={x:Static converters:SegmentOptionConverter.Instance}, ConverterParameter={x:Static coreModels:UpdateChannels.Beta}, Mode=TwoWay}"
+                                         AutomationProperties.Name="{Binding Shell.I18n[launcherUpdateChannelBeta]}">
+                                <StackPanel Classes="segment-content">
+                                    <materialIcons:MaterialIcon Kind="Check" Classes="segment-check"
+                                                                Width="{StaticResource Launcher.Icon.Sm}"
+                                                                Height="{StaticResource Launcher.Icon.Sm}"/>
+                                    <TextBlock Text="{Binding Shell.I18n[launcherUpdateChannelBeta]}"/>
+                                </StackPanel>
+                            </RadioButton>
+                        </StackPanel>
+                    </Border>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
         </StackPanel>
     </StackPanel>
 </UserControl>

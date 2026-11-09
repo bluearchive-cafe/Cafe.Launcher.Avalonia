@@ -5,12 +5,12 @@ using Xunit;
 
 namespace Cafe.Launcher.Tests;
 
-// ADR-041：分段来源按钮与 SelectedResourcePanelUidSource 之间的双向接缝。
-public sealed class ResourcePanelSourceSegmentConverterTests
+// 分段选项与单选 code 属性之间的双向接缝（ADR-041 资源来源、ADR-056 外观小枚举）。
+public sealed class SegmentOptionConverterTests
 {
     private static readonly CultureInfo TestCulture = CultureInfo.InvariantCulture;
 
-    private readonly ResourcePanelSourceSegmentConverter converter = new();
+    private readonly SegmentOptionConverter converter = new();
 
     [Fact]
     public void Convert_ReflectsWhetherTheValueMatchesTheSegment()

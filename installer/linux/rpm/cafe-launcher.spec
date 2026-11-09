@@ -46,6 +46,7 @@ Requires:       libICE.so.6()(64bit)
 Requires:       libSM.so.6()(64bit)
 Requires:       libfontconfig.so.1()(64bit)
 Requires:       libxkbcommon.so.0()(64bit)
+Requires:       libmpv.so.2()(64bit)
 # Self-contained .NET still relies on the platform ABI and dynamically loads
 # crypto, globalization, Kerberos, unwind and compression libraries. Soname
 # capabilities keep the package portable across modern RPM distributions.

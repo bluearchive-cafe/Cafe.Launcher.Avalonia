@@ -31,6 +31,7 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
     private const string ResumeIcon = "Play";
 
     private readonly GameOperationJourney journey;
+    private readonly IGameOperationExecutor executor;
     private readonly IGameSessionMonitor sessionMonitor;
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
@@ -112,8 +113,8 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
     public bool IsUninstallExecuting => Uninstall.IsExecuting;
 
     /// <summary>
-    /// 会话状态行的呈现（ADR-035）：启动中/运行中/已退出/未能启动。空闲时整行隐藏，
-    /// 因此布局与金标准基线在无会话时不受影响。
+    /// 底部状态行中的会话项（ADR-035）：启动中/运行中/已退出/未能启动。
+    /// 空闲时只隐藏会话项，不影响同一行的校验、网络、下载源与版本。
     /// </summary>
     [ObservableProperty]
     private string gameSessionStateText = "";
@@ -148,7 +149,7 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
     /// </summary>
     public event Action? ShowRequested;
 
-    bool IGameOperationJourneyHost.IsBusy => journey.IsShuttingDown || shell.IsBusy;
+    bool IGameOperationJourneyHost.IsBusy => journey.IsShuttingDown || shell.IsBusy || IsTaskExecuting || IsInstallPathBusy;
 
     LauncherStatusSnapshot? IGameOperationJourneyHost.CurrentSnapshot => currentSnapshot;
 
@@ -164,11 +165,14 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
         IErrorHandlingService errorHandling,
         Func<TimeSpan, Task>? delayAsync = null)
     {
+        this.executor = executor;
         this.localizer = localizer;
         this.toastService = toastService;
         this.dialogs = dialogs;
         this.shell = shell;
+        shell.PropertyChanged += OnShellTaskStateChanged;
         this.sessionMonitor = sessionMonitor;
+        InstallButtonText = localizer.T(LocalizationKeys.InstallGame);
         journey = new GameOperationJourney(
             executor,
             gameShortcutService,
@@ -191,6 +195,13 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
     public void RefreshLocalizedText()
     {
         ApplyPausePresentation();
+        if (taskProgress is { } current)
+        {
+            ProgressTitle = ResolveProgressPresentation(current.OperationKind).Title;
+            ProgressDetail = IsTaskStopping ? localizer.T(LocalizationKeys.TaskStopping)
+                : IsPaused ? localizer.T(LocalizationKeys.Paused) : FormatProgressDetail(current);
+        }
+        RefreshTaskPresentation();
         Uninstall.RefreshLocalizedText();
         if (sessionMonitor.State is not GameSessionState.Idle)
         {
@@ -205,9 +216,13 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
         }
     }
 
+    /// <summary>Gets the actual installation path used by folder, repair, and uninstall commands.</summary>
+    public string GameManagementPath => currentSnapshot?.LocalGame.GamePath ?? "";
+
     public void ApplySnapshot(LauncherStatusSnapshot snapshot)
     {
         currentSnapshot = snapshot;
+        OnPropertyChanged(nameof(GameManagementPath));
         InstallButtonText = snapshot.RuntimeState switch
         {
             LauncherRuntimeState.NotInstalled => localizer.T(LocalizationKeys.InstallGame),
@@ -227,6 +242,7 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
             : InstallButtonText;
         InstallOrUpdateCommand.NotifyCanExecuteChanged();
         SetIdlePanels(snapshot);
+        RefreshTaskPresentation();
     }
 
     public void SetIdlePanels(LauncherStatusSnapshot? snapshot)
@@ -237,18 +253,21 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
             : GameOperationPanelMode.Install;
     }
 
-    private void PrepareOperation()
+    private void PrepareOperation(GameOperationPresentation.Preparing preparing)
     {
         shell.IsBusy = true;
         if (IsUninstallExecuting)
         {
             return;
         }
+        BeginTask(preparing.Kind, preparing.Automatic);
         PanelMode = GameOperationPanelMode.Progress;
+        displayedProgressStage = GameOperationStage.Idle;
+        displayedProgressFloor = 0;
         ProgressTitle = localizer.T(LocalizationKeys.Preparing);
         ProgressIconKind = ResolveProgressPresentation(GameOperationKind.Idle).IconKind;
         ProgressValue = 0;
-        IsProgressIndeterminate = false;
+        IsProgressIndeterminate = true;
         ProgressDetail = localizer.T(LocalizationKeys.BuildingFileList);
         ProgressSpeed = "";
         ProgressSize = "";
@@ -256,6 +275,7 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
         IsPaused = false;
         CanPauseOperation = false;
         ApplyPausePresentation();
+        RefreshTaskPresentation();
     }
 
     /// <summary>
@@ -273,11 +293,18 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
 
     void IGameOperationJourneyHost.Present(GameOperationPresentation update)
     {
+        if (disposed) return;
+        if (!Dispatcher.UIThread.CheckAccess() && Application.Current is not null)
+        {
+            Dispatcher.UIThread.Post(() => ((IGameOperationJourneyHost)this).Present(update));
+            return;
+        }
         switch (update)
         {
             case GameOperationPresentation.Busy busy: shell.IsBusy = busy.Value; break;
-            case GameOperationPresentation.Preparing: PrepareOperation(); break;
-            case GameOperationPresentation.Progress progress: ApplyProgress(progress.Value); break;
+            case GameOperationPresentation.Preparing preparing: PrepareOperation(preparing); break;
+            case GameOperationPresentation.Completed completed: CompleteTask(completed.Value); break;
+            case GameOperationPresentation.Progress progress when IsTaskExecuting || IsUninstallExecuting: ApplyProgress(progress.Value); break;
             case GameOperationPresentation.Snapshot snapshot: ApplySnapshot(snapshot.Value); break;
             case GameOperationPresentation.LaunchCheck check: shell.SetLaunchCheckResult(check.Message); break;
             case GameOperationPresentation.RepairConfirmation confirmation: dialogs.RepairConfirm.Show(confirmation.Message); break;
@@ -288,7 +315,12 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
             case GameOperationPresentation.UninstallSize size when size.RequestId == uninstallRequestId:
                 Uninstall.ApplyFootprint(uninstallPresentationVersion, size.Value);
                 break;
-            case GameOperationPresentation.UninstallExecuting: Uninstall.BeginExecution(); break;
+            case GameOperationPresentation.UninstallExecuting:
+                taskResult = null;
+                IsTaskDialogVisible = false;
+                RefreshTaskPresentation();
+                Uninstall.BeginExecution();
+                break;
             case GameOperationPresentation.UninstallCompleted completed: Uninstall.Complete(completed.Value); break;
             case GameOperationPresentation.Window { Action: GameOperationWindowAction.Minimize }: MinimizeRequested?.Invoke(); break;
             case GameOperationPresentation.Window { Action: GameOperationWindowAction.Exit }: ExitRequested?.Invoke(); break;
@@ -351,7 +383,10 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
     private async Task InstallOrUpdateAsync()
     {
         if (currentSnapshot is not null)
+        {
+            taskCreateDesktopShortcut = false;
             await journey.InstallOrUpdateAsync(currentSnapshot);
+        }
     }
 
     [RelayCommand]
@@ -378,13 +413,12 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
     [RelayCommand]
     public void RequestStop()
     {
-        if (journey.IsDownloadRunning)
+        if (IsTaskExecuting && !IsTaskStopping)
         {
             dialogs.ShowStopConfirm();
             return;
         }
 
-        journey.PerformStop();
     }
 
     /// <summary>
@@ -405,6 +439,12 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
 
     public Task PerformStop()
     {
+        if (IsTaskExecuting)
+        {
+            IsTaskStopping = true;
+            CanPauseOperation = false;
+            ProgressDetail = localizer.T(LocalizationKeys.TaskStopping);
+        }
         journey.PerformStop();
         return Task.CompletedTask;
     }
@@ -412,13 +452,14 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
     [RelayCommand]
     public void PauseResume()
     {
-        if (!CanPauseOperation)
+        if (!CanPauseOperation || IsTaskStopping)
         {
             return;
         }
 
         if (journey.IsPaused)
         {
+            ResetTaskPauseMeasurement();
             journey.Resume();
             IsPaused = false;
             ApplyPausePresentation();
@@ -427,12 +468,14 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
         else
         {
             journey.Pause();
+            ResetTaskPauseMeasurement();
             IsPaused = true;
             ApplyPausePresentation();
             ProgressDetail = localizer.T(LocalizationKeys.Paused);
             ProgressSpeed = "";
             ProgressEstimated = "";
         }
+        RefreshTaskPresentation();
     }
 
     [RelayCommand]
@@ -460,6 +503,9 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
         if (e.PropertyName == nameof(UninstallDialogViewModel.IsExecuting))
         {
             OnPropertyChanged(nameof(IsUninstallExecuting));
+            // Refresh can clear shell busy before uninstall reaches its terminal state;
+            // that later transition must also invalidate the derived action bindings.
+            RefreshTaskPresentation();
         }
     }
 
@@ -486,7 +532,12 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
                 return;
             }
 
-            Dispatcher.UIThread.Post(() => ApplyProgress(progress));
+            var version = taskVersion;
+            var wasExecuting = IsTaskExecuting;
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (version == taskVersion && (!wasExecuting || IsTaskExecuting || IsUninstallExecuting)) ApplyProgress(progress);
+            });
             return;
         }
 
@@ -500,6 +551,9 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
             Uninstall.ApplyProgress(progress);
             return;
         }
+        if (!IsTaskExecuting && HasTaskResult) return;
+        if (!IsTaskExecuting) BeginTask(progress.OperationKind, automatic: true);
+        if (IsTaskStopping) return;
         PanelMode = GameOperationPanelMode.Progress;
         // 并行校验/下载的进度回调由多个线程池线程经 Dispatcher.Post 汇入，到达次序
         // 不保证递增：递增与回调非原子，百分比可瞬时回退（AUD-PERF-006）。同一阶段
@@ -518,11 +572,38 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
 
         displayedProgressFloor = value;
         ProgressValue = value;
-        IsProgressIndeterminate = progress.Stage == GameOperationStage.UninstallScanning;
+        IsProgressIndeterminate = progress.Progress < 0 || (progress.IsCheckingDownload && !progress.IsPaused)
+            || progress.Stage is GameOperationStage.Idle or GameOperationStage.DiskCheck or GameOperationStage.ApplyingFiles
+                or GameOperationStage.DownloadCompleted or GameOperationStage.RepairCompleted;
         var progressPresentation = ResolveProgressPresentation(progress.OperationKind);
         ProgressTitle = progressPresentation.Title;
         ProgressIconKind = progressPresentation.IconKind;
-        ProgressDetail = progress.Stage switch
+        ProgressDetail = FormatProgressDetail(progress);
+        var clearsDownloadMetrics = progress.Stage is
+            GameOperationStage.RepairConfirmation or GameOperationStage.Paused
+            or GameOperationStage.DiskCheck or GameOperationStage.VerificationRetry
+            or GameOperationStage.VerificationFailed;
+        ProgressSpeed = clearsDownloadMetrics || progress.BytesPerSecond <= 0
+            ? ""
+            : $"{FileSizeFormatter.Format(progress.BytesPerSecond)}/S";
+        ProgressSize = progress.TotalSize > 0 && (!clearsDownloadMetrics || progress.IsPaused || progress.Stage == GameOperationStage.Paused)
+            ? $"{FileSizeFormatter.Format(progress.DownloadedSize)} / {FileSizeFormatter.Format(progress.TotalSize)}"
+            : "";
+        ProgressEstimated = progress.TotalSize > 0
+            && progress.Stage == GameOperationStage.Downloading
+            && progress.EstimatedRemaining.HasValue
+            ? localizer.F(
+                LocalizationKeys.EstimatedTimeRemaining,
+                progress.EstimatedRemaining.Value.ToString(@"hh\:mm\:ss", System.Globalization.CultureInfo.InvariantCulture))
+            : "";
+        IsPaused = progress.IsPaused;
+        CanPauseOperation = progress.CanPause;
+        ApplyPausePresentation();
+        ApplyFileActivity(progress);
+        RefreshTaskProgressPresentation();
+    }
+
+    private string FormatProgressDetail(GameOperationProgress progress) => progress.Stage switch
         {
             GameOperationStage.RepairConfirmation => progress.AffectedFileCount > 0
                 ? localizer.F(
@@ -534,6 +615,7 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
             GameOperationStage.RepairCheck => localizer.T(LocalizationKeys.RepairCheckingFiles),
             GameOperationStage.UpdateCheck => localizer.T(LocalizationKeys.UpdateCheckingFiles),
             GameOperationStage.FileCheck => localizer.T(LocalizationKeys.VerifyingDownloadedFiles),
+            GameOperationStage.ApplyingFiles => localizer.T(LocalizationKeys.TaskFinishing),
             GameOperationStage.DiskCheck => localizer.F(
                 LocalizationKeys.DiskSpaceCheck,
                 FileSizeFormatter.Format(progress.RequiredDiskBytes),
@@ -549,7 +631,8 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
             GameOperationStage.RepairCompleted => localizer.T(LocalizationKeys.RepairCompleted),
             GameOperationStage.DownloadCompleted => localizer.T(LocalizationKeys.InstallUpdateCompleted),
             GameOperationStage.Stopped => localizer.T(LocalizationKeys.OperationStopped),
-            GameOperationStage.Downloading => localizer.T(LocalizationKeys.Downloading),
+            GameOperationStage.Downloading => localizer.T(progress.IsCheckingDownload
+                ? LocalizationKeys.VerifyingDownloadedFiles : LocalizationKeys.Downloading),
             GameOperationStage.UninstallScanning => localizer.T(LocalizationKeys.UninstallScanning),
             GameOperationStage.UninstallCleanup => localizer.T(LocalizationKeys.UninstallCleanupDescription),
             GameOperationStage.Uninstalling => progress.TotalEntryCount > 0
@@ -558,27 +641,6 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
             GameOperationStage.Idle => localizer.T(LocalizationKeys.Working),
             _ => throw new ArgumentOutOfRangeException(nameof(progress), progress.Stage, null)
         };
-        var clearsDownloadMetrics = progress.Stage is
-            GameOperationStage.RepairConfirmation or GameOperationStage.Paused
-            or GameOperationStage.DiskCheck or GameOperationStage.VerificationRetry
-            or GameOperationStage.VerificationFailed;
-        ProgressSpeed = clearsDownloadMetrics || progress.BytesPerSecond <= 0
-            ? ""
-            : $"{FileSizeFormatter.Format(progress.BytesPerSecond)}/S";
-        ProgressSize = progress.TotalSize > 0 && !clearsDownloadMetrics
-            ? $"{FileSizeFormatter.Format(progress.DownloadedSize)} / {FileSizeFormatter.Format(progress.TotalSize)}"
-            : "";
-        ProgressEstimated = progress.TotalSize > 0
-            && progress.Stage == GameOperationStage.Downloading
-            && progress.EstimatedRemaining.HasValue
-            ? localizer.F(
-                LocalizationKeys.EstimatedTimeRemaining,
-                progress.EstimatedRemaining.Value.ToString(@"hh\:mm\:ss", System.Globalization.CultureInfo.InvariantCulture))
-            : "";
-        IsPaused = progress.IsPaused;
-        CanPauseOperation = progress.CanPause;
-        ApplyPausePresentation();
-    }
 
     private (string Title, string IconKind) ResolveProgressPresentation(GameOperationKind operationKind)
     {
@@ -676,6 +738,10 @@ internal partial class GameOperationsViewModel : ViewModelBase, IGameOperationJo
         }
 
         disposed = true;
+        taskActivityTimer?.Stop();
+        if (taskActivityTimer is not null) taskActivityTimer.Tick -= OnTaskActivityTick;
+        installSizeCancellation?.Cancel();
+        shell.PropertyChanged -= OnShellTaskStateChanged;
         journey.IsRunningChanged -= OnInstallationIsRunningChanged;
         sessionMonitor.StateChanged -= OnGameSessionStateChanged;
         dialogs.RepairConfirm.Confirmed -= RepairAsync;

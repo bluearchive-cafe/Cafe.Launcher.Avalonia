@@ -174,6 +174,17 @@ public sealed class ManifestDiffCalculatorTests : IDisposable
         Assert.True(entry.Value.Matches(healthyPath));
     }
 
+    [Fact]
+    public async Task CheckHashAsync_MissingFilesStillAdvanceThroughTheEntireManifest()
+    {
+        var progress = new List<int>();
+        var result = await ManifestDiffCalculator.CheckHashAsync(new Crc64Service(),
+            [CreateManifestFile("missing-a.bin", "1", 1), CreateManifestFile("missing-b.bin", "2", 1)],
+            tempDir, progress.Add, CancellationToken.None);
+        Assert.Equal(2, result.Diff.Count);
+        Assert.Equal([50, 100], progress);
+    }
+
     public void Dispose()
     {
         tempDir.Dispose();

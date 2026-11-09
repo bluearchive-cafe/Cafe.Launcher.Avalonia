@@ -28,6 +28,9 @@ internal interface IGameOperationExecutor
         GameOperationAttempt attempt,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Reads the full installation manifest size; null means the preview is unavailable.</summary>
+    Task<long?> GetInstallDownloadSizeAsync(LauncherStatusSnapshot snapshot, CancellationToken cancellationToken);
+
     /// <summary>Installs or updates the game using the supplied status snapshot.</summary>
     Task<GameOperationResult> InstallOrUpdateAsync(
         GameOperationAttempt attempt,
@@ -39,7 +42,10 @@ internal interface IGameOperationExecutor
         GameOperationAttempt attempt,
         Action<GameOperationProgress> progress);
 
-    /// <summary>Attempts to resume persisted work while respecting cancellation.</summary>
+    /// <summary>
+    /// Attempts to resume persisted work while respecting cancellation. A matching session reports
+    /// its operation kind before preflight I/O, preserving its identity even when preparation fails.
+    /// </summary>
     Task<GameOperationResult?> ResumePersistedAsync(
         LauncherStatusSnapshot snapshot,
         Action<GameOperationProgress> progress,

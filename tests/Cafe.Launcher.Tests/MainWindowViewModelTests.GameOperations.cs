@@ -183,12 +183,12 @@ public partial class MainWindowViewModelTests
         });
         await viewModel.Operations.InstallOrUpdateCommand.ExecuteAsync(null);
 
-        await raised!.SecondaryAction!.ExecuteAsync(CancellationToken.None);
+        await viewModel.Operations.ViewTaskLogCommand.ExecuteAsync(null);
 
         Assert.True(viewModel.LogViewer.IsVisible);
         viewModel.LogViewer.CloseCommand.Execute(null);
         viewModel.Dispose();
-        await raised.SecondaryAction.ExecuteAsync(CancellationToken.None);
+        await viewModel.Operations.ViewTaskLogCommand.ExecuteAsync(null);
         Assert.False(viewModel.LogViewer.IsVisible);
     }
 

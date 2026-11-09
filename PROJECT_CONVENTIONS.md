@@ -89,7 +89,7 @@
 ### 4.2 控件、样式与无障碍
 
 - 每个交互控件都必须有绑定到本地化字符串的 `AutomationProperties.Name`；契约测试全量扫描 `Views/` 与 `Controls/` 下的 XAML（`IsTabStop="False"` 的设计画廊展示件除外）。
-- 控件使用语义化 `Classes`，不写内联 Style。样式归档：窗口级共享样式（标题栏、内容面板、共享按钮/文本类、设置页）留在 `Views/MainWindow.Styles.axaml`；只服务单一覆盖层或功能、且类名已带组件限定的样式放 `Views/Styles/<Feature>.axaml`，由 `MainWindow.Styles.axaml` 末尾按固定顺序 `StyleInclude`（Diagnostics → RemoteContent → SetupWizard → Toast → DialogSurface → ResourcePanel）。同优先级选择器按包含顺序后者胜出，新增文件追加在末尾；`MainWindow.axaml` 只留窗口外壳与内容网格。
+- 控件使用语义化 `Classes`，不写内联 Style。样式归档：窗口级共享样式（标题栏、内容面板、共享按钮/文本类、设置页）留在 `Views/MainWindow.Styles.axaml`；只服务单一覆盖层或功能、且类名已带组件限定的样式放 `Views/Styles/<Feature>.axaml`，由 `MainWindow.Styles.axaml` 末尾按固定顺序 `StyleInclude`（Diagnostics → RemoteContent → SetupWizard → Toast → DialogSurface → Segmented → ResourcePanel → GameTask）。同优先级选择器按包含顺序后者胜出，新增文件追加在末尾；`MainWindow.axaml` 只留窗口外壳与内容网格。
 - Avalonia 使用编译绑定与显式绑定，没有反射式 view locator。
 - 崩溃窗口独立使用 `Crash.*` 令牌，就近定义在自身资源中；隔离报告进程没有 `App.axaml`，见 [ADR-020](docs/design/adr/ADR-020-崩溃窗口独立Fluent设计系统.md)。
 
@@ -221,6 +221,7 @@
 | CommunityToolkit.Mvvm | 8.4.2 | MVVM source generators |
 | Material.Icons.Avalonia | 3.0.2 | Icon library |
 | libmpv（Windows x64 LGPL 构建） | 2026-10-31-9e2ed65eb0 | 视频背景 Render API；版本与双重 SHA-256 见 `native/libmpv/manifest.json`，不属于 NuGet 依赖 |
+| libmpv（Linux x64 / macOS arm64 便携版 LGPL 构建） | mpv 0.41.0，ic-plugin-videocodecs v0.1.1 | 视频背景 Render API；来源和 SHA-256 见 `native/libmpv/unix-manifest.json`，系统安装包使用发行版运行库 |
 | Microsoft.Extensions.DependencyInjection | 10.0.14 | DI 容器 |
 | Shirasagi0012.MaterialColorUtilities | 0.2.0 | Material 色彩工具 |
 | Serilog | 4.4.0 | Logging pipeline |

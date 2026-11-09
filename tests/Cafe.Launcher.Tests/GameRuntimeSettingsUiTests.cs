@@ -27,7 +27,7 @@ public sealed class GameRuntimeSettingsUiTests
             element.Attribute(xaml + "Name")?.Value == "MangoHudSetting");
 
         Assert.Equal("{Binding Shell.IsLinuxPlatform}", row.Attribute("IsVisible")?.Value);
-        var toggle = Assert.Single(row.Descendants(), element => element.Name.LocalName == "ToggleSwitch");
+        var toggle = Assert.Single(row.Descendants(), element => element.Name.LocalName == "CheckBox");
         Assert.Equal(
             "{Binding Settings.Editor.Current.GameRuntime.EnableMangoHud, Mode=TwoWay}",
             toggle.Attribute("IsChecked")?.Value);

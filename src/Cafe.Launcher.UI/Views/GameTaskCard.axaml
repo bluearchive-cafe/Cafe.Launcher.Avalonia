@@ -1,0 +1,50 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cafe.Launcher.UI.ViewModels"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Cafe.Launcher.UI.Views.GameTaskCard" x:DataType="vm:MainWindowViewModel"
+             Width="{StaticResource Launcher.Component.GameTask.Width}">
+    <Border x:Name="FloatingTaskCard" Classes="game-task-card">
+        <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Xs}">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="{StaticResource Launcher.Spacing.Sm}">
+                    <TextBlock Text="{Binding Operations.CompactTaskTitle}" Classes="progress-title" MaxWidth="{StaticResource Launcher.Component.GameTask.TitleWidth}"
+                               TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Operations.CompactTaskTitle}"/>
+                    <TextBlock Text="{Binding Operations.ProgressValue, StringFormat={}{0}%}" Classes="caption"
+                               IsVisible="{Binding Operations.ShowTaskPercent}" VerticalAlignment="Center"/>
+                </StackPanel>
+                <Button Grid.Column="1" Classes="icon-button" IsVisible="{Binding Operations.CanPauseOperation}"
+                        Command="{Binding Operations.PauseResumeCommand}" ToolTip.Tip="{Binding Operations.PauseResumeText}"
+                        AutomationProperties.Name="{Binding Operations.PauseResumeText}">
+                    <materialIcons:MaterialIcon Kind="{Binding Operations.PauseResumeIcon}" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                </Button>
+                <Button Grid.Column="2" Classes="icon-button" IsVisible="{Binding Operations.CanRetryTask}"
+                        Command="{Binding Operations.RetryTaskCommand}" ToolTip.Tip="{Binding Shell.I18n[retry]}" AutomationProperties.Name="{Binding Shell.I18n[retry]}">
+                    <materialIcons:MaterialIcon Kind="Refresh" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                </Button>
+                <Button Grid.Column="2" Classes="icon-button" IsVisible="{Binding Operations.IsTaskExecuting}" IsEnabled="{Binding Operations.CanStopTask}"
+                        Command="{Binding Operations.RequestStopCommand}" ToolTip.Tip="{Binding Shell.I18n[stop]}" AutomationProperties.Name="{Binding Shell.I18n[stop]}">
+                    <materialIcons:MaterialIcon Kind="Stop" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                </Button>
+                <Button Grid.Column="3" Classes="icon-button" Command="{Binding Operations.ViewTaskLogCommand}"
+                        ToolTip.Tip="{Binding Shell.I18n[viewLog]}" AutomationProperties.Name="{Binding Shell.I18n[viewLog]}">
+                    <materialIcons:MaterialIcon Kind="FileDocumentOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                </Button>
+                <Button Grid.Column="4" Classes="icon-button" IsVisible="{Binding Operations.HasTaskResult}"
+                        Command="{Binding Operations.CloseTaskCommand}" ToolTip.Tip="{Binding Shell.I18n[close]}" AutomationProperties.Name="{Binding Shell.I18n[close]}">
+                    <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                </Button>
+            </Grid>
+            <ProgressBar Value="{Binding Operations.ProgressValue}" Minimum="0" Maximum="100"
+                         Height="{StaticResource Launcher.Component.Progress.Bar.Height}" IsVisible="{Binding Operations.ShowTaskProgress}"
+                         IsIndeterminate="{Binding Operations.IsProgressIndeterminate}"
+                         AutomationProperties.Name="{Binding Operations.CompactTaskTitle}"/>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}">
+                <TextBlock x:Name="TaskSizeSummary" Text="{Binding Operations.CompactTaskSummary}" Classes="caption" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis"
+                           ToolTip.Tip="{Binding Operations.CompactTaskSummary}"/>
+                <TextBlock x:Name="TaskDownloadSpeed" Grid.Column="1" Text="{Binding Operations.CompactTaskSpeed}" Classes="caption"
+                           TextAlignment="Right"/>
+            </Grid>
+        </StackPanel>
+    </Border>
+</UserControl>

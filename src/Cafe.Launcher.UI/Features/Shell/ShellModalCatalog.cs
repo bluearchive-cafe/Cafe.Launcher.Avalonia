@@ -98,6 +98,20 @@ internal static class ShellModalCatalog
                 () => dialogs.IsSetupWizardVisible,
                 dialogs.SetupWizard,
                 dialogs.SetupWizardExitConfirm.ShowCommand),
+            new ModalRegistration(
+                ModalKind.ResourcePanelDiscardConfirmation,
+                family.ResourcePanel.DiscardChangesConfirm,
+                nameof(ConfirmationDialogViewModel.IsVisible),
+                () => family.ResourcePanel.DiscardChangesConfirm.IsVisible,
+                family.ResourcePanel,
+                family.ResourcePanel.CancelDiscardChangesCommand),
+            new ModalRegistration(
+                ModalKind.GameTask,
+                operations,
+                nameof(GameOperationsViewModel.IsTaskDialogVisible),
+                () => operations.IsTaskDialogVisible,
+                operations,
+                operations.CloseTaskCommand),
             Confirmation(ModalKind.StopConfirmation, dialogs.StopConfirm, dialogs),
             Confirmation(ModalKind.DownloadRunningCloseConfirmation, dialogs.DownloadRunningCloseConfirm, dialogs),
             new ModalRegistration(

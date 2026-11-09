@@ -79,7 +79,10 @@ public sealed partial class MainWindowHeadlessTests
     {
         using var context = CreateContext();
         PrepareGoldenWindow(context);
-        context.ViewModel.Operations.PanelMode = GameOperationPanelMode.Progress;
+        context.ViewModel.Operations.ApplyProgress(new GameOperationProgress
+        { OperationKind = GameOperationKind.Download, Stage = GameOperationStage.Downloading, Progress = 42,
+          DownloadedSize = 1024 * 1024, TotalSize = 10 * 1024 * 1024, BytesPerSecond = 2048, CanPause = true });
+        context.ViewModel.Operations.ShowTaskCommand.Execute(null);
         context.Window.Show();
         GoldenScreenshot.Compare(context.Window, "progress-panel");
     }
@@ -144,6 +147,22 @@ public sealed partial class MainWindowHeadlessTests
             releaseNotes: "## What's new\n\n- Fixed several issues\n- Improved download stability");
         Dispatcher.UIThread.RunJobs();
         GoldenScreenshot.Compare(context.Window, "update-dialog");
+    }
+
+    [AvaloniaFact]
+    public async Task Golden_UpdateDialog_LoadingAndFailure_MatchBaselines()
+    {
+        using var context = CreateContext();
+        PrepareGoldenWindow(context);
+        context.Window.Show();
+        context.ViewModel.Dialogs.ShowUpdateAvailable("1.2.0", [], LauncherUpdateInAppAvailability.Available);
+        var service = new ControlledReleaseNotesService();
+        var loading = context.ViewModel.Dialogs.LoadUpdateReleaseNotesAsync(service);
+        GoldenScreenshot.Compare(context.Window, "update-dialog-loading");
+
+        service.Result.SetResult("");
+        await loading;
+        GoldenScreenshot.Compare(context.Window, "update-dialog-failed");
     }
 
     [AvaloniaFact]

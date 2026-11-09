@@ -148,6 +148,35 @@ public sealed class SettingsViewModelTests : IDisposable
         Assert.Equal("9.9.9", dialogs.UpdateAvailableVersion);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CheckForUpdatesCommand_WhenNotesNeedLoading_ShowsDialogAndPreservesUpdateOnFailure(bool fail)
+    {
+        var dialogs = CreateDialogsViewModel();
+        var transport = CreateReleasesTransport("9.9.9");
+        var respond = transport.Responder;
+        transport.Responder = uri =>
+        {
+            if (uri == ProxyReleasesUri) return respond(uri);
+            // The dialog and usable update action must exist before the supplementary request starts.
+            Assert.True(dialogs.IsUpdateAvailableVisible);
+            Assert.True(dialogs.IsUpdateReleaseNotesLoading);
+            Assert.True(dialogs.CanConfirmUpdate);
+            return fail ? new HttpRequestException("notes unavailable") : "{\"body\":\"## Loaded notes\"}";
+        };
+        using var settings = CreateSettingsViewModel(new LocalizationService(), transport, dialogs);
+
+        await settings.CheckForUpdatesCommand.ExecuteAsync(null);
+
+        Assert.Empty(raisedToasts);
+        Assert.Equal(fail, dialogs.HasUpdateReleaseNotesFailed);
+        Assert.False(dialogs.IsUpdateReleaseNotesLoading);
+        Assert.Equal(!fail, dialogs.HasUpdateReleaseNotes);
+        Assert.True(dialogs.IsUpdateAvailableVisible);
+        Assert.True(dialogs.CanConfirmUpdate);
+    }
+
     [Fact]
     public void GamePathDisplay_LongDraftPath_IsMiddleEllipsized()
     {
@@ -207,13 +236,16 @@ public sealed class SettingsViewModelTests : IDisposable
             new StubWindowsLauncherUpdateApplier(),
             TestDataRoot.ForDirectory(NextDataRoot()),
             new LocalDiagnostics());
+        var updateService = new LauncherUpdateService(
+            LauncherProfiles.Cafe, transport, buildIdentity: BuildInfo.Identity);
         return new(
             null!,
             null!,
             localizer,
             toastService,
-            new LauncherUpdateService(LauncherProfiles.Cafe, transport, buildIdentity: BuildInfo.Identity),
-            new LauncherUpdatePresenter(localizer, toastService, dialogsViewModel, selfUpdateService, BuildInfo.Identity),
+            updateService,
+            new LauncherUpdatePresenter(
+                localizer, toastService, dialogsViewModel, selfUpdateService, updateService, BuildInfo.Identity),
             dialogsViewModel,
             null!,
             null!,

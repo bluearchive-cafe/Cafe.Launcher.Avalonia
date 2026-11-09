@@ -15,7 +15,7 @@ using Cafe.Launcher.Core.Constants;
 namespace Cafe.Launcher.Tests;
 
 [Collection(nameof(LocalizationServiceTestIsolation))]
-public sealed class GameOperationsViewModelTests : IDisposable
+public sealed partial class GameOperationsViewModelTests : IDisposable
 {
     /// <summary>
     /// 本类各静态装配辅助方法共用的临时父目录：xUnit 为每个测试方法新建实例，故它本身
@@ -598,7 +598,7 @@ public sealed class GameOperationsViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task InstallOrUpdateCommand_WhenBackendFails_RaisesActionableToast()
+    public async Task InstallOrUpdateCommand_WhenBackendFails_RetainsActionableResult()
     {
         var context = CreateContext();
         ToastNotification? raised = null;
@@ -616,12 +616,12 @@ public sealed class GameOperationsViewModelTests : IDisposable
 
         await context.ViewModel.InstallOrUpdateCommand.ExecuteAsync(null);
 
-        Assert.NotNull(raised);
-        Assert.Equal(context.Localizer.T(LocalizationKeys.InstallUpdateFailedTitle), raised!.Title);
-        Assert.Equal(ToastSeverity.Error, raised.Severity);
-        Assert.Contains("offline", raised.Message);
-        Assert.Equal(context.Localizer.T(LocalizationKeys.Retry), raised.PrimaryAction!.Label);
-        Assert.Equal(context.Localizer.T(LocalizationKeys.ViewLog), raised.SecondaryAction!.Label);
+        Assert.Null(raised);
+        Assert.False(context.ViewModel.IsTaskDialogVisible);
+        Assert.True(context.ViewModel.IsTaskCardVisible);
+        Assert.True(context.ViewModel.IsTaskFailed);
+        Assert.True(context.ViewModel.CanRetryTask);
+        Assert.Equal("offline", context.ViewModel.TaskMessage);
     }
 
     [Fact]
@@ -646,11 +646,11 @@ public sealed class GameOperationsViewModelTests : IDisposable
             Message = "second failure"
         };
 
-        var result = await notifications.Single().PrimaryAction!.ExecuteAsync(CancellationToken.None);
+        await context.ViewModel.RetryTaskCommand.ExecuteAsync(null);
 
-        Assert.False(result.IsSuccess);
-        Assert.Equal("second failure", result.Message);
-        Assert.Single(notifications);
+        Assert.True(context.ViewModel.IsTaskFailed);
+        Assert.Equal("second failure", context.ViewModel.TaskMessage);
+        Assert.Empty(notifications);
         Assert.Equal(2, context.Backend.InstallCallCount);
     }
 
@@ -676,9 +676,10 @@ public sealed class GameOperationsViewModelTests : IDisposable
             Message = "installed"
         };
 
-        var result = await raised!.PrimaryAction!.ExecuteAsync(CancellationToken.None);
+        await context.ViewModel.RetryTaskCommand.ExecuteAsync(null);
 
-        Assert.True(result.IsSuccess);
+        Assert.False(context.ViewModel.IsTaskFailed);
+        Assert.Equal("installed", context.ViewModel.TaskMessage);
         Assert.Equal(2, context.Backend.InstallCallCount);
     }
 
@@ -705,9 +706,10 @@ public sealed class GameOperationsViewModelTests : IDisposable
         });
         await context.ViewModel.InstallOrUpdateCommand.ExecuteAsync(null);
 
-        var result = await raised!.SecondaryAction!.ExecuteAsync(CancellationToken.None);
+        await context.ViewModel.ViewTaskLogCommand.ExecuteAsync(null);
 
-        Assert.True(result.IsSuccess);
+        Assert.False(context.ViewModel.IsTaskDialogVisible);
+        Assert.True(context.ViewModel.HasTaskResult);
         Assert.Equal(1, requests);
     }
 
@@ -804,6 +806,7 @@ public sealed class GameOperationsViewModelTests : IDisposable
     {
         var context = CreateContext();
         context.Backend.IsDownloadRunning = true;
+        context.ViewModel.ApplyProgress(new GameOperationProgress { OperationKind = GameOperationKind.Download });
 
         context.ViewModel.RequestStopCommand.Execute(null);
 
@@ -1085,7 +1088,7 @@ public sealed class GameOperationsViewModelTests : IDisposable
         });
 
         Assert.Equal(50, context.ViewModel.ProgressValue);
-        Assert.Equal("1MB/S", context.ViewModel.ProgressSpeed);
+        Assert.Equal("1MB/s", context.ViewModel.ProgressSpeed);
         Assert.NotEmpty(context.ViewModel.ProgressSize);
         Assert.NotEmpty(context.ViewModel.ProgressEstimated);
         Assert.True(context.ViewModel.CanPauseOperation);
@@ -1179,6 +1182,7 @@ public sealed class GameOperationsViewModelTests : IDisposable
             OperationKind = GameOperationKind.Repair,
             Stage = GameOperationStage.RepairCheck
         });
+        ((IGameOperationJourneyHost)context.ViewModel).Present(new GameOperationPresentation.Completed(new GameOperationResult { Success = true }));
         context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
         {
             RuntimeState = LauncherRuntimeState.NotInstalled
@@ -1205,6 +1209,7 @@ public sealed class GameOperationsViewModelTests : IDisposable
             OperationKind = GameOperationKind.Download,
             Stage = GameOperationStage.Downloading
         });
+        ((IGameOperationJourneyHost)context.ViewModel).Present(new GameOperationPresentation.Completed(new GameOperationResult { Success = true }));
         context.ViewModel.ApplySnapshot(ReadySnapshot());
         context.Backend.UninstallCompletion = new TaskCompletionSource<GameOperationResult>(
             TaskCreationOptions.RunContinuationsAsynchronously);
@@ -1431,13 +1436,13 @@ public sealed class GameOperationsViewModelTests : IDisposable
     }
 
     [Fact]
-    public void RequestStopCommand_WhenNoDownloadIsRunning_StopsImmediately()
+    public void RequestStopCommand_WhenNoTaskIsRunning_DoesNothing()
     {
         var context = CreateContext();
 
         context.ViewModel.RequestStopCommand.Execute(null);
 
-        Assert.Equal(1, context.Backend.StopCallCount);
+        Assert.Equal(0, context.Backend.StopCallCount);
         Assert.False(context.Dialogs.StopConfirm.IsVisible);
     }
 
@@ -1539,7 +1544,7 @@ public sealed class GameOperationsViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task BackendExceptions_RaiseActionableFailureToast()
+    public async Task BackendExceptions_RetainActionableFailureResult()
     {
         var context = CreateContext();
         var notifications = new List<ToastNotification>();
@@ -1552,14 +1557,10 @@ public sealed class GameOperationsViewModelTests : IDisposable
 
         await context.ViewModel.InstallOrUpdateCommand.ExecuteAsync(null);
 
-        // The journey handles the backend exception through ErrorHandlingService
-        // (error toast) and then surfaces a retry-able failure toast.
-        Assert.Contains(
-            notifications,
-            toast => toast.Message.Contains("install failed", StringComparison.OrdinalIgnoreCase));
-        Assert.Contains(
-            notifications,
-            toast => toast.Title == context.Localizer.T(LocalizationKeys.InstallUpdateFailedTitle));
+        Assert.Empty(notifications);
+        Assert.True(context.ViewModel.IsTaskFailed);
+        Assert.True(context.ViewModel.CanRetryTask);
+        Assert.Contains("install failed", context.ViewModel.TaskMessage, StringComparison.OrdinalIgnoreCase);
         Assert.False(context.Shell.IsBusy);
     }
 

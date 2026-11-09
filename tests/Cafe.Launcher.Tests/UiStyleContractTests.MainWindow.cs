@@ -16,24 +16,9 @@ public sealed partial class UiStyleContractTests
         var resourcePanelOverlay = XDocument.Load(TestRepository.FromPresentationRoot("Views/ResourcePanelOverlay.axaml"));
         var settingsOverlay = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowSettingsOverlay.axaml"));
 
-        var detectButton = mainWindow
-            .Descendants()
-            .Where(element =>
-                element.Name.LocalName == "Button"
-                && element.Attribute("Command")?.Value == "{Binding Settings.SelectInstalledGameCommand}")
-            .First();
-        Assert.Equal(
-            "FolderSearchOutline",
-            detectButton.Descendants().Single(element => element.Name.LocalName == "MaterialIcon").Attribute("Kind")?.Value);
-
-        var installOrUpdateButton = mainWindow
-            .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "Button"
-                && element.Attribute("Command")?.Value == "{Binding Operations.InstallOrUpdateCommand}");
-        Assert.Equal(
-            "{Binding Operations.InstallButtonIconKind}",
-            installOrUpdateButton.Descendants().Single(element => element.Name.LocalName == "MaterialIcon").Attribute("Kind")?.Value);
+        var actions = XDocument.Load(TestRepository.FromPresentationRoot("Controls/GameLaunchButton.axaml"));
+        Assert.Contains(actions.Descendants(), element => element.Name.LocalName == "MaterialIcon"
+            && element.Attribute("Kind")?.Value == "{Binding Operations.PrimaryActionIcon}");
 
         var resourcePanelButton = mainWindow
             .Descendants()
@@ -61,131 +46,37 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void MainWindow_OperationPanels_UseStableStatusAndActionColumns()
+    public void MainWindow_OperationPanel_HasOneStableLayout()
     {
         var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
-        var operationLayouts = document
-            .Descendants()
-            .Where(element =>
-                element.Name.LocalName == "Grid"
-                && HasClass(element, "operation-layout"))
-            .ToArray();
+        var panel = Assert.Single(document.Descendants(), element => HasClass(element, "bottom-panel"));
+        Assert.Null(panel.Attribute("IsVisible"));
+        var layout = Assert.Single(panel.Elements(), element => element.Name.LocalName == "Grid");
+        Assert.Equal("*,Auto", layout.Attribute("ColumnDefinitions")?.Value);
+        Assert.Single(layout.Elements(), element => element.Name.LocalName == "GameLaunchButton");
+        Assert.DoesNotContain(panel.Descendants(), element => element.Name.LocalName == "ProgressBar");
+    }
 
-        // The detailed bottom-panel layouts were removed; the progress panel is the
-        // sole remaining operation layout with a dedicated status/action structure.
-        var panelLayouts = operationLayouts
-            .Where(l => !HasClass(l.Parent!, "operation-status"))
-            .ToArray();
-        Assert.Single(panelLayouts);
-        Assert.All(panelLayouts, layout =>
+    [Fact]
+    public void GameTaskDialog_PreparationUsesDraftActions()
+    {
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/GameTaskDialog.axaml"));
+        foreach (var command in new[] { "ChooseInstallPath", "ConfirmInstall", "IdentifyInstalledGame" })
+            Assert.Single(document.Descendants(), element => element.Attribute("Command")?.Value == "{Binding Operations." + command + "Command}");
+        Assert.DoesNotContain(document.Descendants().Attributes(), attribute => attribute.Value.Contains("ChangePersistedGamePath", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void GameTaskDialog_ActionsHaveLocalizedAccessibleNames()
+    {
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/GameTaskDialog.axaml"));
+        var buttons = document.Descendants().Where(element => element.Name.LocalName == "Button").ToArray();
+        Assert.NotEmpty(buttons);
+        Assert.All(buttons, button =>
         {
-            Assert.Equal("*,Auto", layout.Attribute("ColumnDefinitions")?.Value);
-            Assert.Equal(
-                "{StaticResource Launcher.Spacing.Xl}",
-                layout.Attribute("ColumnSpacing")?.Value);
-            // ADR-016：状态布局属于单一任务容器，不再直接挂在各自 bottom-panel Border 下。
-            Assert.Contains(
-                layout.Ancestors(),
-                element => HasClass(element, "operation-surface"));
-
-            var status = layout.Elements().Single(element => HasClass(element, "operation-status"));
-            Assert.Equal("Grid", status.Name.LocalName);
-            var statusColumns = status
-                .Elements()
-                .Single(element => element.Name.LocalName == "Grid.ColumnDefinitions")
-                .Elements()
-                .ToArray();
-            Assert.Equal(2, statusColumns.Length);
-            Assert.Equal("Auto", statusColumns[0].Attribute("Width")?.Value);
-            Assert.Equal(
-                "{StaticResource Launcher.Icon.Xxl}",
-                statusColumns[0].Attribute("MinWidth")?.Value);
-            Assert.Equal("*", statusColumns[1].Attribute("Width")?.Value);
-            Assert.Equal(
-                "{StaticResource Launcher.Spacing.Md}",
-                status.Attribute("ColumnSpacing")?.Value);
-            Assert.Contains(
-                status.Descendants(),
-                element => element.Name.LocalName == "TextBlock"
-                    && HasClass(element, "operation-status-title"));
-            var statusIcon = status.Elements().Single(element => element.Name.LocalName == "MaterialIcon");
-            Assert.Null(statusIcon.Attribute("Grid.Column"));
-            Assert.All(
-                status.Elements().Where(element =>
-                    element != statusIcon
-                    && element.Name.LocalName != "Grid.ColumnDefinitions"),
-                element => Assert.Equal("1", element.Attribute("Grid.Column")?.Value));
-
-            var actions = layout.Elements().Single(element => HasClass(element, "operation-actions"));
-            Assert.Equal("1", actions.Attribute("Grid.Column")?.Value);
+            Assert.Equal(button.Attribute("Content")?.Value, button.Attribute("AutomationProperties.Name")?.Value);
+            Assert.True(HasClass(button, "dialog-action"));
         });
-    }
-
-    [Fact]
-    public void MainWindow_InstallPanel_UsesCompactLayoutWithoutDetailedStatus()
-    {
-        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
-        var installLayout = document
-            .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "Grid"
-                && element.Attribute("RowDefinitions")?.Value == "*,Auto"
-                && element.Ancestors().Any(ancestor => HasClass(ancestor, "operation-surface"))
-                && element.Descendants().Any(descendant =>
-                    descendant.Name.LocalName == "Button"
-                    && descendant.Attribute("Command")?.Value == "{Binding Operations.InstallOrUpdateCommand}"));
-        var actionButtons = installLayout
-            .Descendants()
-            .Where(element => element.Name.LocalName == "Button")
-            .ToArray();
-
-        Assert.DoesNotContain(installLayout.Descendants(), element => HasClass(element, "operation-status"));
-        Assert.Contains(installLayout.Descendants(), element => HasClass(element, "path-field"));
-        Assert.Equal(4, actionButtons.Length);
-        Assert.DoesNotContain(
-            installLayout.DescendantsAndSelf().Attributes(),
-            attribute => attribute.Name.LocalName == "Margin"
-                && !attribute.Value.StartsWith("{StaticResource Launcher", StringComparison.Ordinal));
-    }
-
-    [Fact]
-    public void MainWindow_OperationButtons_ExposeLocalizedNamesAndActionPriority()
-    {
-        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
-        Dictionary<string, (string Name, string Priority)> expectedButtons = new(StringComparer.Ordinal)
-        {
-            ["{Binding RefreshCommand}"] = ("{Binding Shell.I18n[refresh]}", "secondary-operation"),
-            ["{Binding Operations.InstallOrUpdateCommand}"] = ("{Binding Operations.InstallButtonText}", "primary-operation"),
-            ["{Binding Settings.ChangePersistedGamePathCommand}"] = ("{Binding Shell.I18n[changePath]}", "secondary-operation"),
-            ["{Binding Settings.SelectInstalledGameCommand}"] = ("{Binding Shell.I18n[selectInstalledGame]}", "secondary-operation"),
-            ["{Binding Operations.PauseResumeCommand}"] = ("{Binding Operations.PauseResumeText}", "secondary-operation"),
-            ["{Binding Operations.RequestStopCommand}"] = ("{Binding Shell.I18n[stop]}", "secondary-operation")
-        };
-
-        var operationSurface = document
-            .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "Border"
-                && HasClass(element, "operation-surface"));
-
-        foreach (var (command, expected) in expectedButtons)
-        {
-            // 契约域是操作面板：动作优先级词汇（primary/secondary-operation）只在
-            // 该表面内约束，其他表面（如远程内容失败卡）复用同一命令时不受此管辖。
-            var button = operationSurface
-                .Descendants()
-                .First(element =>
-                    element.Name.LocalName == "Button"
-                    && element.Attribute("Command")?.Value == command);
-
-            Assert.True(HasClass(button, expected.Priority), $"{command} must be {expected.Priority}.");
-            Assert.Equal(
-                expected.Name,
-                button.Attributes()
-                    .Single(attribute => attribute.Name.LocalName == "AutomationProperties.Name")
-                    .Value);
-            Assert.NotNull(button.Attributes().SingleOrDefault(attribute => attribute.Name.LocalName == "ToolTip.Tip"));
-        }
     }
 
     [Fact]
@@ -206,19 +97,17 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void MainWindow_StatusCaptions_ExposeDownloadSource()
     {
-        // 底部两个状态行（安装面板与控制面板）都必须展示当前下载源；
-        // 控制面板的隐藏布局只保留会话状态与按钮，不在此契约内。
+        // 统一底部状态行展示当前下载源，隐藏详情时整行隐藏。
         var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
         var captionBindings = document
             .Descendants()
             .Where(element =>
                 element.Name.LocalName == "TextBlock"
                 && element.Attribute("Text")?.Value == "{Binding Shell.DownloadSourceText}");
-        Assert.Equal(2, captionBindings.Count());
+        Assert.Single(captionBindings);
     }
 
     [Theory]
-    [InlineData("OperationInstallState", new[] { "Shell.DiskSpaceText", "Shell.NetworkText", "Shell.DownloadSourceText", "Shell.VersionText" })]
     [InlineData("OperationControlState", new[] { "Operations.GameSessionStateText", "Shell.LaunchCheckText", "Shell.NetworkText", "Shell.DownloadSourceText", "Shell.VersionText" })]
     public void MainWindow_StatusCaptions_UseStatusFirstOrder(string panelName, string[] expectedBindings)
     {
@@ -282,7 +171,7 @@ public sealed partial class UiStyleContractTests
             .ToArray();
 
         // 紧凑布局与「仅按钮」布局各一处，共用同一控件；菜单不再在窗口中各自复制一份。
-        Assert.Equal(2, manageEntries.Length);
+        Assert.Single(manageEntries);
         Assert.DoesNotContain(
             document.Descendants(),
             element => element.Name.LocalName == "MenuFlyout");
@@ -296,9 +185,9 @@ public sealed partial class UiStyleContractTests
             .Single(element => element.Name.LocalName == "SplitButton");
 
         Assert.True(HasClass(button, "primary-operation"));
-        Assert.Equal("{Binding Operations.StartGameCommand}", button.Attribute("Command")?.Value);
-        Assert.Equal("{Binding Shell.I18n[startGame]}", button.Attribute("AutomationProperties.Name")?.Value);
-        Assert.Equal("{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}", button.Attribute("IsEnabled")?.Value);
+        Assert.Equal("{Binding Operations.PrimaryActionCommand}", button.Attribute("Command")?.Value);
+        Assert.Equal("{Binding Operations.PrimaryActionText}", button.Attribute("AutomationProperties.Name")?.Value);
+        Assert.Equal("{Binding Operations.CanUsePrimaryAction}", button.Attribute("IsEnabled")?.Value);
 
         var flyout = button.Descendants().Single(element => element.Name.LocalName == "MenuFlyout");
         Assert.Equal("TopEdgeAlignedRight", flyout.Attribute("Placement")?.Value);
@@ -332,25 +221,16 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void MainWindow_ProgressPanel_BindsOperationSpecificIcon()
+    public void GameTaskSurfaces_KeepPreparationModalAndExecutionProgressFloating()
     {
-        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
-        var progressPanel = document
-            .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "Border"
-                && element.Attribute("IsVisible")?.Value
-                    == "{Binding Operations.IsProgressPanelVisible}");
-        var status = progressPanel
-            .Descendants()
-            .Single(element => HasClass(element, "operation-status"));
-        var statusIcon = status
-            .Descendants()
-            .Single(element => element.Name.LocalName == "MaterialIcon");
-
-        Assert.Equal(
-            "{Binding Operations.ProgressIconKind}",
-            statusIcon.Attribute("Kind")?.Value);
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/GameTaskDialog.axaml"));
+        Assert.Single(document.Descendants(), element => element.Attribute("Kind")?.Value == "{Binding Operations.TaskIcon}");
+        Assert.DoesNotContain(document.Descendants(), element => element.Name.LocalName == "ProgressBar");
+        var card = XDocument.Load(TestRepository.FromPresentationRoot("Views/GameTaskCard.axaml"));
+        var progress = Assert.Single(card.Descendants(), element => element.Name.LocalName == "ProgressBar"
+            && element.Attribute("Value")?.Value == "{Binding Operations.ProgressValue}");
+        Assert.Equal("{Binding Operations.ProgressValue}", progress.Attribute("Value")?.Value);
+        Assert.Equal("{Binding Operations.IsProgressIndeterminate}", progress.Attribute("IsIndeterminate")?.Value);
     }
 
     [Fact]
@@ -639,35 +519,6 @@ public sealed partial class UiStyleContractTests
             retryButton.Descendants(),
             icon => icon.Name.LocalName == "MaterialIcon"
                 && icon.Attribute("Kind")?.Value == "Refresh");
-    }
-
-    [Fact]
-    public void MainWindow_MultiRowGridChildren_DeclareTheirFirstRowExplicitly()
-    {
-        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
-        var expectedBindings = new[]
-        {
-            "{Binding Operations.ProgressTitle}"
-        };
-
-        foreach (var binding in expectedBindings)
-        {
-            var directGridChildren = document
-                .Descendants()
-                .Where(element => element.Attributes().Any(attribute => attribute.Value == binding))
-                .Select(element => element
-                    .Ancestors()
-                    .First(ancestor =>
-                        ancestor.Parent?.Name.LocalName == "Grid"
-                        && ancestor.Parent.Attribute("RowDefinitions") is not null))
-                .Distinct()
-                .ToArray();
-
-            Assert.NotEmpty(directGridChildren);
-            Assert.All(
-                directGridChildren,
-                directGridChild => Assert.Equal("0", directGridChild.Attribute("Grid.Row")?.Value));
-        }
     }
 
     [Fact]
@@ -987,22 +838,16 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void MainWindow_GamePathUsesPersistedSnapshotAndImmediateCommand()
+    public void GameTaskDialog_PathDoesNotBindSettingsEditor()
     {
-        var mainWindow = File.ReadAllText(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
-
-        Assert.Contains(
-            "Text=\"{Binding Shell.PathText}\"",
-            mainWindow,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "Command=\"{Binding Settings.ChangePersistedGamePathCommand}\"",
-            mainWindow,
-            StringComparison.Ordinal);
-        Assert.DoesNotContain(
-            "Text=\"{Binding Settings.Editor.Current.GamePath}\"",
-            mainWindow,
-            StringComparison.Ordinal);
+        var view = File.ReadAllText(TestRepository.FromPresentationRoot("Views/GameTaskDialog.axaml"));
+        Assert.Contains("{Binding Operations.InstallPathDraft}", view, StringComparison.Ordinal);
+        var card = File.ReadAllText(TestRepository.FromPresentationRoot("Views/GameTaskCard.axaml"));
+        Assert.Contains("{Binding Operations.CompactTaskSummary}", card, StringComparison.Ordinal);
+        Assert.DoesNotContain("ToggleTaskDetails", card, StringComparison.Ordinal);
+        Assert.DoesNotContain("ScrollViewer", card, StringComparison.Ordinal);
+        Assert.DoesNotContain("Settings.Editor", card, StringComparison.Ordinal);
+        Assert.DoesNotContain("Settings.Editor", view, StringComparison.Ordinal);
     }
 
     [Fact]

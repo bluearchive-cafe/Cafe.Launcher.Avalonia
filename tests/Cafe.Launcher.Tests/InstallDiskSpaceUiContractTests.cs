@@ -1,4 +1,4 @@
-﻿using System.Xml.Linq;
+using System.Xml.Linq;
 using Cafe.Launcher.Testing;
 
 namespace Cafe.Launcher.Tests;
@@ -8,13 +8,13 @@ public sealed class InstallDiskSpaceUiContractTests
     [Fact]
     public void InstallButton_ExposesDiskSpaceBlockReasonWhileDisabled()
     {
-        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/GameTaskDialog.axaml"));
         // The compact-mode install button is the only install command target.
         var installButton = document
             .Descendants()
             .First(element =>
                 element.Name.LocalName == "Button"
-                && element.Attribute("Command")?.Value == "{Binding Operations.InstallOrUpdateCommand}");
+                && element.Attribute("Command")?.Value == "{Binding Operations.ConfirmInstallCommand}");
 
         Assert.Equal(
             "{Binding Operations.InstallButtonToolTip}",

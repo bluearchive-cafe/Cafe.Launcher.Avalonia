@@ -669,6 +669,8 @@ public sealed partial class UiStyleContractTests
             "{StaticResource Launcher.Radius.Sm}",
             "{StaticResource Launcher.Radius.Md}",
             "{StaticResource Launcher.Radius.Lg}",
+            // 整圆端头（分段按钮、状态 chip、pill），ADR-041 起是独立声明的层级。
+            "{StaticResource Launcher.Radius.Full}",
             // 唯一的方向性例外：警示卡起始两角必须平角，其左侧 3px 强调边才不被圆弧切掉。
             // 四档对称 token 无法表达「两角平、两角圆」，因此它由组件 token 声明（见 App.axaml）。
             "{StaticResource Launcher.Component.Dialog.Alert.CornerRadius}",

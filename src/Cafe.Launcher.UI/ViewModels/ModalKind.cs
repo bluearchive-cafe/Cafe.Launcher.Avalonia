@@ -22,4 +22,6 @@ public enum ModalKind
     UninstallConfirmation,
     StopConfirmation,
     DownloadRunningCloseConfirmation,
+    ResourcePanelDiscardConfirmation,
+    GameTask,
 }

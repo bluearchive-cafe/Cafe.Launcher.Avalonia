@@ -23,6 +23,9 @@ public sealed record LauncherProductProfile
     /// <summary>本产品自有服务端基址（发行元数据代理）。</summary>
     public required string LauncherApiBaseUrl { get; init; }
 
+    /// <summary>本产品自有的发行包下载镜像基址；为空时不使用镜像。</summary>
+    public string LauncherDownloadMirrorBaseUrl { get; init; } = "";
+
     /// <summary>本产品服务端的发行元数据路径。</summary>
     public required string LauncherReleasesPath { get; init; }
 

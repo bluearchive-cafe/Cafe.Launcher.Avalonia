@@ -38,8 +38,31 @@ internal sealed class LauncherUpdateDownloader : ILauncherUpdateDownloader
     public async Task<string?> ReadTextAsync(ReleaseFile file, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(file);
+
+        Exception? lastFailure = null;
+        foreach (var uri in CreateCandidateUris(file))
+        {
+            try
+            {
+                return await ReadTextOnceAsync(uri, cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception) when (IsRetryableTransportFailure(exception, cancellationToken))
+            {
+                lastFailure = exception;
+            }
+        }
+
+        throw lastFailure!;
+    }
+
+    private async Task<string?> ReadTextOnceAsync(Uri uri, CancellationToken cancellationToken)
+    {
         var body = await transport
-            .GetStreamAsync(new Uri(file.Url), cancellationToken: cancellationToken)
+            .GetStreamAsync(uri, cancellationToken: cancellationToken)
             .ConfigureAwait(false);
         await using var stream = body.Content;
         using var reader = new StreamReader(stream, Encoding.UTF8);
@@ -66,114 +89,166 @@ internal sealed class LauncherUpdateDownloader : ILauncherUpdateDownloader
         ArgumentException.ThrowIfNullOrWhiteSpace(destinationPath);
 
         var partPath = destinationPath + ".part";
-        try
+        var directory = Path.GetDirectoryName(destinationPath);
+        if (!string.IsNullOrEmpty(directory))
         {
-            var directory = Path.GetDirectoryName(destinationPath);
-            if (!string.IsNullOrEmpty(directory))
+            Directory.CreateDirectory(directory);
+        }
+
+        var uris = CreateCandidateUris(file);
+        Exception? lastFailure = null;
+        for (var index = 0; index < uris.Length; index++)
+        {
+            var isLast = index + 1 == uris.Length;
+            try
             {
-                Directory.CreateDirectory(directory);
-            }
+                var result = await DownloadOnceAsync(
+                    file,
+                    uris[index],
+                    expectedSha256,
+                    destinationPath,
+                    partPath,
+                    progress,
+                    cancellationToken).ConfigureAwait(false);
 
-            DeleteFileIfExists(partPath);
-
-            var body = await transport
-                .GetStreamAsync(new Uri(file.Url), cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
-            await using var source = body.Content;
-            using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-            await using (var destination = new FileStream(
-                partPath,
-                FileMode.Create,
-                FileAccess.Write,
-                FileShare.None,
-                BufferSize,
-                useAsync: true))
-            {
-                var buffer = ArrayPool<byte>.Shared.Rent(BufferSize);
-                try
+                if (result.IsSuccess || isLast)
                 {
-                    long total = 0;
-                    long lastReported = 0;
-                    var startedAt = Stopwatch.GetTimestamp();
-                    int read;
-                    while ((read = await source
-                        .ReadAsync(buffer.AsMemory(0, BufferSize), cancellationToken)
-                        .ConfigureAwait(false)) > 0)
-                    {
-                        await destination
-                            .WriteAsync(buffer.AsMemory(0, read), cancellationToken)
-                            .ConfigureAwait(false);
-                        hash.AppendData(buffer, 0, read);
-                        total += read;
-                        if (total - lastReported >= ProgressReportThresholdBytes)
-                        {
-                            progress?.Report(CreateProgress(total, body.DeclaredContentLength, startedAt));
-                            lastReported = total;
-                        }
-                    }
+                    return result;
+                }
 
-                    progress?.Report(CreateProgress(total, body.DeclaredContentLength, startedAt));
-                }
-                finally
-                {
-                    ArrayPool<byte>.Shared.Return(buffer);
-                }
+                // 镜像包哈希不符时再取一次可信的 GitHub 原包；两次都经过 SHA-256 校验。
+                lastFailure = null;
             }
-
-            var actual = Convert.ToHexString(hash.GetHashAndReset());
-            if (!string.Equals(actual, expectedSha256, StringComparison.OrdinalIgnoreCase))
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
                 DeleteFileIfExists(partPath);
                 return LauncherUpdateDownloadResult.Failed(
-                    LauncherUpdateDownloadStatus.ChecksumMismatch,
-                    $"SHA-256 mismatch for {file.Name}: expected {expectedSha256}, got {actual}.");
+                    LauncherUpdateDownloadStatus.Cancelled,
+                    "The launcher update download was cancelled.");
             }
+            catch (Exception exception) when (IsRetryableTransportFailure(exception, cancellationToken))
+            {
+                DeleteFileIfExists(partPath);
+                lastFailure = exception;
+                if (isLast)
+                {
+                    return MapTransportFailure(exception);
+                }
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                DeleteFileIfExists(partPath);
+                return LauncherUpdateDownloadResult.Failed(
+                    LauncherUpdateDownloadStatus.IoFailure,
+                    exception.Message);
+            }
+        }
 
-            File.Move(partPath, destinationPath, overwrite: true);
-            return LauncherUpdateDownloadResult.Succeeded(destinationPath);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            DeleteFileIfExists(partPath);
-            return LauncherUpdateDownloadResult.Failed(
-                LauncherUpdateDownloadStatus.Cancelled,
-                "The launcher update download was cancelled.");
-        }
-        catch (OperationCanceledException exception)
-        {
-            DeleteFileIfExists(partPath);
-            return LauncherUpdateDownloadResult.Failed(
+        return lastFailure is { } failure
+            ? MapTransportFailure(failure)
+            : LauncherUpdateDownloadResult.Failed(
                 LauncherUpdateDownloadStatus.NetworkFailure,
-                exception.Message);
+                "No download source was available.");
+    }
+
+    private async Task<LauncherUpdateDownloadResult> DownloadOnceAsync(
+        ReleaseFile file,
+        Uri uri,
+        string expectedSha256,
+        string destinationPath,
+        string partPath,
+        IProgress<LauncherUpdateProgress>? progress,
+        CancellationToken cancellationToken)
+    {
+        DeleteFileIfExists(partPath);
+
+        var body = await transport
+            .GetStreamAsync(uri, cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
+        await using var source = body.Content;
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        await using (var destination = new FileStream(
+            partPath,
+            FileMode.Create,
+            FileAccess.Write,
+            FileShare.None,
+            BufferSize,
+            useAsync: true))
+        {
+            var buffer = ArrayPool<byte>.Shared.Rent(BufferSize);
+            try
+            {
+                long total = 0;
+                long lastReported = 0;
+                var startedAt = Stopwatch.GetTimestamp();
+                int read;
+                while ((read = await source
+                    .ReadAsync(buffer.AsMemory(0, BufferSize), cancellationToken)
+                    .ConfigureAwait(false)) > 0)
+                {
+                    await destination
+                        .WriteAsync(buffer.AsMemory(0, read), cancellationToken)
+                        .ConfigureAwait(false);
+                    hash.AppendData(buffer, 0, read);
+                    total += read;
+                    if (total - lastReported >= ProgressReportThresholdBytes)
+                    {
+                        progress?.Report(CreateProgress(total, body.DeclaredContentLength, startedAt));
+                        lastReported = total;
+                    }
+                }
+
+                progress?.Report(CreateProgress(total, body.DeclaredContentLength, startedAt));
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
         }
-        catch (HttpRequestException exception)
+
+        var actual = Convert.ToHexString(hash.GetHashAndReset());
+        if (!string.Equals(actual, expectedSha256, StringComparison.OrdinalIgnoreCase))
         {
             DeleteFileIfExists(partPath);
             return LauncherUpdateDownloadResult.Failed(
-                LauncherUpdateDownloadStatus.NetworkFailure,
-                exception.Message);
+                LauncherUpdateDownloadStatus.ChecksumMismatch,
+                $"SHA-256 mismatch for {file.Name}: expected {expectedSha256}, got {actual}.");
         }
-        catch (InvalidOperationException exception) when (RemoteHttpRequestService.IsBlockedAddressRejection(exception))
+
+        File.Move(partPath, destinationPath, overwrite: true);
+        return LauncherUpdateDownloadResult.Succeeded(destinationPath);
+    }
+
+    /// <summary>镜像优先、GitHub 兜底；顺序由更新服务校验并决定。</summary>
+    private static Uri[] CreateCandidateUris(ReleaseFile file)
+    {
+        if (string.IsNullOrWhiteSpace(file.MirrorUrl))
         {
-            DeleteFileIfExists(partPath);
+            return [new Uri(file.Url)];
+        }
+
+        return [new Uri(file.MirrorUrl), new Uri(file.Url)];
+    }
+
+    private static bool IsRetryableTransportFailure(
+        Exception exception,
+        CancellationToken cancellationToken) =>
+        exception is HttpRequestException or InvalidOperationException
+        || (exception is OperationCanceledException && !cancellationToken.IsCancellationRequested);
+
+    private static LauncherUpdateDownloadResult MapTransportFailure(Exception exception)
+    {
+        if (exception is InvalidOperationException
+            && RemoteHttpRequestService.IsBlockedAddressRejection(exception))
+        {
             return LauncherUpdateDownloadResult.Failed(
                 LauncherUpdateDownloadStatus.UrlRejected,
                 exception.Message);
         }
-        catch (InvalidOperationException exception)
-        {
-            DeleteFileIfExists(partPath);
-            return LauncherUpdateDownloadResult.Failed(
-                LauncherUpdateDownloadStatus.NetworkFailure,
-                exception.Message);
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-        {
-            DeleteFileIfExists(partPath);
-            return LauncherUpdateDownloadResult.Failed(
-                LauncherUpdateDownloadStatus.IoFailure,
-                exception.Message);
-        }
+
+        return LauncherUpdateDownloadResult.Failed(
+            LauncherUpdateDownloadStatus.NetworkFailure,
+            exception.Message);
     }
 
     private static LauncherUpdateProgress CreateProgress(long downloadedBytes, long? totalBytes, long startedAt)

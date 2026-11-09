@@ -1,0 +1,69 @@
+<!doctype html>
+<!-- Throwaway prototype, 2026-11-07. Two structural variants of the desktop shell.
+     Question: wallpaper-first bottom operation surface (A) or persistent side task surface (B)?
+     Priority: game state + one primary action; then operation detail; then news and utilities.
+     Grayscale structure is testable with the 灰阶 control before comparing color.
+     Plain HTML, no Tailwind/library/build. Existing Avalonia M3 roles mapped to CSS.
+     Tokens: spacing 4/8/12/16/24/40; control radius 8; surface radius 16; control height 40.
+     Mock values only. No real network, process, filesystem or settings mutations. -->
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cafe Launcher · 首页重塑原型</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<header class="review-header">
+  <div><span class="eyebrow">CAFE / DESIGN STUDY 01</span><h1>让下一步，一目了然。</h1></div>
+  <nav aria-label="原型资料"><button class="active" data-page="preview">首页原型</button><button data-page="map">界面结构</button><button data-page="states">关键状态</button></nav>
+</header>
+<main>
+<section id="preview" class="review-page">
+  <div class="review-intro"><div><h2 id="variant-title"></h2><p id="variant-description"></p></div><span class="prototype-badge">交互原型 · 全部为演示数据</span></div>
+  <div class="scenario-bar" aria-label="演示控制">
+    <label>游戏状态<select id="scenario"></select></label>
+    <label>公告<select id="news-state"><option value="normal">正常</option><option value="loading">加载中</option><option value="failed">加载失败</option><option value="empty">无内容</option><option value="hidden">用户隐藏</option></select></label>
+    <label>主题<select id="theme"><option value="light">浅色</option><option value="dark">深色</option></select></label>
+    <label>壁纸<select id="wallpaper"><option value="original">现有壁纸</option><option value="bright">纯白压力场景</option><option value="dark">纯黑压力场景</option></select></label>
+    <label>文字<select id="text-size"><option value="100">100%</option><option value="150">150%</option></select></label>
+    <label class="check"><input type="checkbox" id="grayscale">灰阶</label>
+  </div>
+  <div class="app-frame" id="app" data-variant="A" data-theme="light">
+    <header class="app-titlebar"><div class="brand"><img src="../../src/Cafe.Launcher.UI/Assets/app-icon.ico" alt=""><strong>Cafe Launcher</strong><span class="version">设计预览</span></div><div class="window-tools"><button data-panel="resources">资源</button><button data-panel="settings">设置</button><span class="window-glyphs" aria-hidden="true">— &nbsp; □ &nbsp; ×</span></div></header>
+    <div class="shell-layout">
+      <section class="wallpaper-stage" aria-label="游戏背景">
+        <div class="hero-copy"><span class="hero-label">BLUE ARCHIVE / JP</span><h2>下一段日常，<br>从这里开始。</h2><p>欢迎回到基沃托斯。</p></div>
+        <div class="scene-credit">Cafe Launcher <span>ブルーアーカイブ</span></div>
+        <section id="news" class="news-surface" aria-label="公告与动态"></section>
+      </section>
+      <section class="operation-surface" aria-label="游戏操作">
+        <div class="game-heading"><span class="game-mark" aria-hidden="true">BA</span><div><span class="eyebrow">BLUE ARCHIVE</span><h2>蔚蓝档案 <span>日服</span></h2></div></div>
+        <div id="operation" class="operation-body" aria-live="polite"></div>
+        <div class="side-footer"><button class="text-button" data-panel="resources">资源面板 ↗</button><button class="text-button" data-panel="help">帮助与诊断 ↗</button></div>
+      </section>
+    </div>
+  </div>
+  <div class="comparison-note"><strong id="hypothesis"></strong><span>先比较操作区的位置和壁纸遮挡，再检查忙碌、失败和长文案。箭头键切换方案。</span></div>
+</section>
+<section id="map" class="review-page" hidden>
+  <div class="review-intro"><div><h2>一个主壳，三条使用路径</h2><p>这是建议的信息结构；功能归属沿用现有程序集与领域边界。</p></div><span class="prototype-badge">结构提案 · 待选型</span></div>
+  <div class="structure-map" aria-label="建议的界面结构图">
+    <div class="map-root"><span class="eyebrow">首次使用</span><strong>设置向导</strong><span>语言、路径与必要选项 → 进入主界面</span></div>
+    <div class="map-line" aria-hidden="true">↓</div>
+    <div class="map-root main-root"><span class="eyebrow">日常入口</span><strong>主界面</strong><span>壁纸 + 游戏状态 + 唯一主要操作 + 可隐藏的公告</span></div>
+    <div class="map-branches">
+      <article><span class="branch-number">01 / 游戏</span><h3>安装、启动与维护</h3><ul><li>安装 / 更新 / 选择已有目录</li><li>下载、校验与停止确认</li><li>启动中 / 运行中 / 失败恢复</li><li>管理菜单 → 修复 / 卸载等</li></ul><p>操作区随状态切换内容，保持位置连续。</p></article>
+      <article><span class="branch-number">02 / 配置</span><h3>设置与资源</h3><ul><li>设置：常规、游戏、下载与网络</li><li>设置：外观、高级、关于</li><li>资源：UID、资源偏好、批量保存</li><li>关闭有草稿的表面 → 放弃确认</li></ul><p>设置草稿与资源偏好草稿分别管理。</p></article>
+      <article><span class="branch-number">03 / 支持</span><h3>更新与故障处理</h3><ul><li>启动器更新 → 说明、进度与结果</li><li>帮助、日志查看与导出</li><li>诊断面板（现有 Debug 入口）</li><li>独立崩溃窗口 → 日志 / 详情 / 退出</li></ul><p>崩溃窗口保持独立进程与资源边界。</p></article>
+    </div>
+    <div class="overlay-strip"><strong>共同交互层</strong><span>设置 100 → 对话框 200 → 向导 500 → 向导退出确认 501 → 通知 1000</span><small>ESC 作用于模态栈顶；关闭后恢复焦点；风险确认与草稿保护保留。</small></div>
+  </div>
+  <div class="scope-grid"><article><h3>本轮可评估</h3><p>首页布局、信息优先级、状态连续性、公告降级、浅深主题、壁纸遮挡和文字放大。</p></article><article><h3>下一轮需要真实 Avalonia 验证</h3><p>原生菜单与焦点、四语言排版、真实 DPI、视频背景、动效和真实业务状态接线。</p></article></div>
+</section>
+<section id="states" class="review-page" hidden>
+  <div class="review-intro"><div><h2>状态决定界面，而不是追加提示</h2><p>游戏操作、游戏会话和公告分别建模；公告失败不会把游戏改成故障态。</p></div></div>
+  <div class="state-table-wrap"><table><thead><tr><th>场景</th><th>主要信息</th><th>主要操作 / 次要操作</th><th>设计约束</th><th>预览</th></tr></thead><tbody id="state-table"></tbody></table></div>
+  <div class="scope-grid"><article><h3>其他表面的关键状态</h3><p>设置：已保存 / 有草稿 / 保存失败。资源：无 UID / 加载 / 有草稿 / 提交中 / 失败。更新：加载说明 / 说明失败 / 下载 / 重启。向导：各步骤 / 退出确认。卸载：确认 / 扫描 / 删除 / 残留 / 失败。</p></article><article><h3>评判标准</h3><p>沿用 ADR-001：可读性、安装/进度/控制三态一致性、壁纸主体遮挡、键盘可达性。可读性不合格直接淘汰。HTML 原型不能证明 Avalonia 已达标。</p></article></div>
+</section>
+</main>
+<footer class="prototype-switcher" aria-label="方案切换"><button id="previous" aria-label="上一个方案">←</button><button id="variant-a">A <span>沉浸式</span></button><button id="variant-b">B <span>任务式</span></button><button id="next" aria-label="下一个方案">→</button></footer>
+<dialog id="detail-dialog"><div class="dialog-heading"><div><span class="eyebrow">交互范围预览</span><h2 id="dialog-title"></h2></div><button id="close-dialog" aria-label="关闭对话框">×</button></div><div id="dialog-content"></div><div id="dialog-actions"></div></dialog>
+<div class="feedback" id="feedback" role="status" hidden></div>
+<script src="app.js"></script>
+</body></html>

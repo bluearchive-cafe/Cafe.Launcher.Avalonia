@@ -86,6 +86,9 @@ public partial class MainWindowViewModelTests
     {
         switch (kind)
         {
+            case ModalKind.GameTask:
+                viewModel.Operations.IsTaskDialogVisible = true;
+                break;
             case ModalKind.Settings:
                 viewModel.WindowChrome.IsSettingsVisible = true;
                 break;
@@ -145,6 +148,9 @@ public partial class MainWindowViewModelTests
                 break;
             case ModalKind.DownloadRunningCloseConfirmation:
                 viewModel.Dialogs.ShowDownloadRunningCloseConfirm();
+                break;
+            case ModalKind.ResourcePanelDiscardConfirmation:
+                viewModel.ResourcePanel.DiscardChangesConfirm.Show("discard");
                 break;
             default:
                 throw new ArgumentOutOfRangeException(
