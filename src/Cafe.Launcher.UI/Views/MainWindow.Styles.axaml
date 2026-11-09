@@ -1423,8 +1423,8 @@
         <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Transparent}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
-        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Settings.Row.Content.Padding}"/>
-        <Setter Property="MinHeight" Value="{StaticResource Launcher.Component.Settings.Row.MinHeight}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Settings.Expander.Header.Padding}"/>
+        <Setter Property="MinHeight" Value="{StaticResource Launcher.Component.Settings.Expander.Header.MinHeight}"/>
     </Style>
     <Style Selector="Expander.settings-appearance-expander /template/ ToggleButton:pointerover">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Hover}"/>

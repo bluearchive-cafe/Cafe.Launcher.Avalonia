@@ -58,6 +58,14 @@ internal partial class GameOperationsViewModel : IModalContentViewModel
 
     public bool HasTaskResult => taskResult is not null;
     public bool HasTask => IsTaskExecuting || HasTaskResult;
+
+    /// <summary>
+    /// 主按钮交给保留结果标题的条件：失败与中断结果保留任务上下文，直到关闭结果或开始下一项
+    /// 任务；成功结果不再用「修复完成／安装完成」命名主按钮——Ready 时由「开始游戏」表达，
+    /// 安装状态一旦变为需要更新或修复，就由当前状态重新命名，避免过期成功结果挡住新入口。
+    /// 结果卡片本身仍保留，直到用户关闭或下一项任务实际开始。
+    /// </summary>
+    public bool IsTaskResultOnPrimary => HasTaskResult && taskResult is not { Success: true };
     public bool IsTaskResultVisible => HasTaskResult && !IsInstallPreparing;
     public bool IsTaskFailed => taskResult is { Success: false, ErrorCode: not GameOperationErrorCode.Stopped };
     public bool CanStopTask => IsTaskExecuting && !IsTaskStopping;
@@ -66,7 +74,7 @@ internal partial class GameOperationsViewModel : IModalContentViewModel
         && GameOperationAttempt.Evaluate(GameOperationPolicy.Operation.Repair, snapshot).Decision == GameOperationDecision.Allowed;
     public bool CanUninstallGame => CanManageGame && currentSnapshot is { } snapshot
         && GameOperationAttempt.Evaluate(GameOperationPolicy.Operation.Uninstall, snapshot).Decision == GameOperationDecision.Allowed;
-    public bool CanUsePrimaryAction => HasTask || CanManageGame;
+    public bool CanUsePrimaryAction => IsTaskExecuting || IsTaskResultOnPrimary || CanManageGame;
     public bool CanLaunchTaskResult => IsTaskResultVisible && taskResult?.Success == true
         && currentSnapshot?.RuntimeState == LauncherRuntimeState.Ready && CanManageGame;
     public bool CanRetryTask => IsTaskResultVisible && (IsTaskFailed || taskResult?.ErrorCode == GameOperationErrorCode.Stopped) && CanManageGame
@@ -99,16 +107,16 @@ internal partial class GameOperationsViewModel : IModalContentViewModel
         : taskResult?.ErrorCode == GameOperationErrorCode.Stopped ? DialogSurfaceStatus.Warning : DialogSurfaceStatus.None;
     public string PrimaryActionText => IsTaskExecuting ? TaskActionText
         : CanLaunchTaskResult ? localizer.T(LocalizationKeys.StartGame)
-        : HasTaskResult ? TaskTitle
+        : IsTaskResultOnPrimary ? TaskTitle
         : currentSnapshot?.RuntimeState == LauncherRuntimeState.Ready ? localizer.T(LocalizationKeys.StartGame) : InstallButtonText;
     public string PrimaryActionIcon => IsTaskExecuting ? TaskIcon
-        : CanLaunchTaskResult ? "PlayCircle" : HasTaskResult ? TaskIcon
+        : CanLaunchTaskResult ? "PlayCircle" : IsTaskResultOnPrimary ? TaskIcon
         : currentSnapshot?.RuntimeState == LauncherRuntimeState.Ready ? "PlayCircle" : InstallButtonIconKind;
     [RelayCommand]
     private async Task PrimaryActionAsync()
     {
         if (CanLaunchTaskResult) { await LaunchTaskResultAsync(); return; }
-        if (HasTask) { ShowTask(); return; }
+        if (IsTaskExecuting || IsTaskResultOnPrimary) { ShowTask(); return; }
         if (!CanManageGame || currentSnapshot is null) return;
         switch (currentSnapshot.RuntimeState)
         {
@@ -329,7 +337,7 @@ internal partial class GameOperationsViewModel : IModalContentViewModel
     private void RefreshTaskPresentation()
     {
         RefreshFloatingTaskPresentation();
-        foreach (var name in new[] { nameof(HasTask), nameof(HasTaskResult), nameof(IsTaskResultVisible), nameof(IsTaskFailed),
+        foreach (var name in new[] { nameof(HasTask), nameof(HasTaskResult), nameof(IsTaskResultOnPrimary), nameof(IsTaskResultVisible), nameof(IsTaskFailed),
             nameof(CanRepairGame), nameof(CanUninstallGame), nameof(CanStopTask), nameof(CanManageGame), nameof(CanUsePrimaryAction), nameof(CanLaunchTaskResult),
             nameof(CanRetryTask), nameof(CanStartInstall), nameof(CanChooseInstallPath), nameof(CanViewTaskLog), nameof(CanCommitInstall), nameof(TaskTitle), nameof(TaskIcon), nameof(TaskMessage), nameof(TaskPath),
             nameof(InstallDownloadSizeText), nameof(InstallRequiredSizeText), nameof(TaskStatus), nameof(TaskCloseText), nameof(PrimaryActionText), nameof(PrimaryActionIcon) })
