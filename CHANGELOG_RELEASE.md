@@ -1,8 +1,8 @@
-## v1.4.0-beta.1
+## v1.4.0-beta.99
 
-![Cafe Launcher v1.4.0-beta.1 更新概览](https://raw.githubusercontent.com/bluearchive-cafe/Cafe.Launcher.Avalonia/v1.4.0-beta.1/docs/assets/release-banners/v1.4.0-beta.1.png)
+![Cafe Launcher v1.4.0-beta.99 更新概览](https://raw.githubusercontent.com/bluearchive-cafe/Cafe.Launcher.Avalonia/v1.4.0-beta.99/docs/assets/release-banners/v1.4.0-beta.99.png)
 
-`1.4.0-beta.1` 重新整理设置与游戏操作。设置改为保存时统一提交，切换分类不会丢失改动；安装、更新与修复集中到主按钮上方的悬浮卡片，进度、已下载大小和速度一眼可见。启动器更新优先使用镜像并在失败时回退，Linux 与 macOS 便携版也开始随包提供视频运行库。
+`1.4.0-beta.99` 重新整理设置与游戏操作。设置改为保存时统一提交，切换分类不会丢失改动；安装、更新与修复集中到主按钮上方的悬浮卡片，进度、已下载大小和速度一眼可见。启动器更新优先使用镜像并在失败时回退，Linux 与 macOS 便携版也开始随包提供视频运行库。
 
 > [!NOTE]
 > 本文列出自 `1.3.1` 以来的变化。Windows 为正式支持平台；macOS 与 Linux 仍提供实验性构建。macOS 支持安装、更新和修复游戏，暂不支持启动游戏；Linux 可通过兼容运行环境启动游戏，实际效果取决于发行版、显卡驱动、Wine / Proton 版本及反作弊兼容性。
