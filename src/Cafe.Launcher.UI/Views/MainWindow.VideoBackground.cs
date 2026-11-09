@@ -73,8 +73,11 @@ internal partial class MainWindow
     private void UpdateVideoPlayback()
     {
         if (videoBackground is null || configuredViewModel is not { } vm) return;
-        videoBackground.PlaybackPaused = videoBackground.Source is null
-            || !IsVisible || WindowState == WindowState.Minimized || vm.IsMotionReduced;
+        var unavailable = videoBackground.Source is null
+            || !IsVisible || WindowState == WindowState.Minimized;
+        // Reduced motion pauses playback but keeps the chosen video visible as a still frame.
+        videoBackground.PlaybackPaused = unavailable || vm.IsMotionReduced;
+        videoBackground.ShowStillFrame = !unavailable && vm.IsMotionReduced;
         videoBackground.Volume = vm.Background.BackgroundVideoVolume;
         videoBackground.Stretch = vm.Background.BackgroundStretch;
         videoBackground.FillColor = vm.Background.BackgroundFillBrush is ISolidColorBrush brush ? brush.Color : Colors.Black;
@@ -103,6 +106,7 @@ internal partial class MainWindow
         if (videoBackground is not null)
         {
             videoBackground.PlaybackPaused = true;
+            videoBackground.ShowStillFrame = false;
             videoBackground.Source = null;
             if (detach)
             {

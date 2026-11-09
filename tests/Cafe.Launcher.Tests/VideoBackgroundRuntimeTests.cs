@@ -94,13 +94,16 @@ public sealed class VideoBackgroundRuntimeTests
     }
 
     [Theory]
-    [InlineData(false, true, false, true)]
-    [InlineData(false, true, true, false)]
-    [InlineData(false, false, false, false)]
-    [InlineData(true, true, false, false)]
-    public void CanPresentFirstFrame_RequiresAnUnpausedPlayerWithKnownVideoSize(
-        bool alreadyPresented, bool sizeKnown, bool paused, bool expected) =>
-        Assert.Equal(expected, VideoBackgroundControl.CanPresentFirstFrame(alreadyPresented, sizeKnown, paused));
+    [InlineData(false, true, false, false, true)]
+    [InlineData(false, true, true, false, false)]
+    [InlineData(false, true, true, true, true)]
+    [InlineData(false, false, true, true, false)]
+    [InlineData(true, true, false, false, false)]
+    [InlineData(true, true, true, true, false)]
+    public void CanPresentFirstFrame_RequiresKnownSizeAndEitherPlaybackOrStillFrame(
+        bool alreadyPresented, bool sizeKnown, bool paused, bool showStillFrame, bool expected) =>
+        Assert.Equal(expected,
+            VideoBackgroundControl.CanPresentFirstFrame(alreadyPresented, sizeKnown, paused, showStillFrame));
 
     [Theory]
     [InlineData(null, false)]

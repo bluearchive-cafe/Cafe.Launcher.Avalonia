@@ -29,9 +29,11 @@ public sealed partial class MainWindowHeadlessTests
         var original = Assert.IsType<VideoBackgroundControl>(Current());
         Assert.Equal(1, original.Opacity); // Zero opacity suppresses GL initialization.
         Assert.True(original.PlaybackPaused);
+        Assert.False(original.ShowStillFrame);
         vm.IsMotionReduced = false;
         context.Window.Show();
         Assert.False(original.PlaybackPaused);
+        Assert.False(original.ShowStillFrame);
         vm.Background.ApplyBackgroundPresentation(new LauncherSettings
         {
             BackgroundVideoVolume = 35, BackgroundFit = BackgroundFits.Uniform, BackgroundFillColor = "#FF112233"
@@ -52,6 +54,7 @@ public sealed partial class MainWindowHeadlessTests
         Assert.All(context.Window.FindControl<Grid>("ShellRoot")!.Children.OfType<Image>(), image => Assert.True(image.IsVisible));
         context.Window.Hide();
         Assert.True(original.PlaybackPaused);
+        Assert.False(original.ShowStillFrame);
         context.Window.Show();
         Assert.False(original.PlaybackPaused);
         context.Window.WindowState = WindowState.Minimized;
@@ -59,6 +62,7 @@ public sealed partial class MainWindowHeadlessTests
         context.Window.WindowState = WindowState.Normal;
         vm.IsMotionReduced = true;
         Assert.True(original.PlaybackPaused);
+        Assert.True(original.ShowStillFrame);
 
         vm.Background.ReportVideoFailure(video, new InvalidOperationException("Stale failure"));
         Assert.Same(original, Current());

@@ -19,6 +19,9 @@ internal sealed class VideoBackgroundControl : OpenGlControlBase
         AvaloniaProperty.Register<VideoBackgroundControl, string?>(nameof(Source));
     internal static readonly StyledProperty<bool> PlaybackPausedProperty =
         AvaloniaProperty.Register<VideoBackgroundControl, bool>(nameof(PlaybackPaused), true);
+    /// <summary>Presents the paused player's frame so reduced motion can show a still instead of the fallback.</summary>
+    internal static readonly StyledProperty<bool> ShowStillFrameProperty =
+        AvaloniaProperty.Register<VideoBackgroundControl, bool>(nameof(ShowStillFrame));
     internal static readonly StyledProperty<int> VolumeProperty =
         AvaloniaProperty.Register<VideoBackgroundControl, int>(nameof(Volume));
     internal static readonly StyledProperty<Stretch> StretchProperty =
@@ -55,6 +58,7 @@ internal sealed class VideoBackgroundControl : OpenGlControlBase
 
     internal string? Source { get => GetValue(SourceProperty); set => SetValue(SourceProperty, value); }
     internal bool PlaybackPaused { get => GetValue(PlaybackPausedProperty); set => SetValue(PlaybackPausedProperty, value); }
+    internal bool ShowStillFrame { get => GetValue(ShowStillFrameProperty); set => SetValue(ShowStillFrameProperty, value); }
     internal int Volume { get => GetValue(VolumeProperty); set => SetValue(VolumeProperty, value); }
     internal Stretch Stretch { get => GetValue(StretchProperty); set => SetValue(StretchProperty, value); }
     internal Color FillColor { get => GetValue(FillColorProperty); set => SetValue(FillColorProperty, value); }
@@ -89,6 +93,13 @@ internal sealed class VideoBackgroundControl : OpenGlControlBase
             try { ApplyPlaybackProperties(); }
             catch (Exception exception) { ReportFailure(exception); }
             if (change.Property == PlaybackPausedProperty && !PlaybackPaused) RequestNextFrameRendering();
+        }
+        else if (change.Property == ShowStillFrameProperty && ShowStillFrame)
+        {
+            // Entering still mode mid-playback must show the video's first frame, not
+            // whichever frame was current when reduced motion was enabled.
+            if (firstFrame) SeekToStart();
+            if (this.IsAttachedToVisualTree()) RequestNextFrameRendering();
         }
     }
 
@@ -125,7 +136,7 @@ internal sealed class VideoBackgroundControl : OpenGlControlBase
 #if DEBUG
             DiagnosticFrames++;
 #endif
-            if (CanPresentFirstFrame(firstFrame, videoSizeKnown, PlaybackPaused))
+            if (CanPresentFirstFrame(firstFrame, videoSizeKnown, PlaybackPaused, ShowStillFrame))
             {
                 firstFrame = true;
                 var currentGeneration = generation;
@@ -133,7 +144,7 @@ internal sealed class VideoBackgroundControl : OpenGlControlBase
                 {
                     if (currentGeneration != generation || renderer == 0 || failed) return;
                     // A pause can arrive after rendering but before this UI callback.
-                    if (PlaybackPaused) { firstFrame = false; return; }
+                    if (PlaybackPaused && !ShowStillFrame) { firstFrame = false; return; }
                     FirstFrameReady?.Invoke();
                 });
             }
@@ -145,9 +156,12 @@ internal sealed class VideoBackgroundControl : OpenGlControlBase
         }
     }
 
-    /// <summary>Keep the opaque fallback when an initially paused player has not presented a frame.</summary>
-    internal static bool CanPresentFirstFrame(bool alreadyPresented, bool sizeKnown, bool playbackPaused) =>
-        !alreadyPresented && sizeKnown && !playbackPaused;
+    /// <summary>
+    /// Keep the opaque fallback when an initially paused player has not presented a frame,
+    /// except in still mode, where the paused frame itself replaces the fallback.
+    /// </summary>
+    internal static bool CanPresentFirstFrame(bool alreadyPresented, bool sizeKnown, bool playbackPaused, bool showStillFrame) =>
+        !alreadyPresented && sizeKnown && (!playbackPaused || showStillFrame);
 
     private void InitializePlayer(GlInterface gl)
     {
@@ -205,6 +219,14 @@ internal sealed class VideoBackgroundControl : OpenGlControlBase
         var result = native.SetProperty(player, "background-color", value);
         if (result == PropertyNotFound) result = native.SetProperty(player, "background", value);
         MpvNative.Check(result, "background color");
+    }
+
+    /// <summary>Seeks a paused player back to its first frame without starting playback.</summary>
+    private void SeekToStart()
+    {
+        if (native is null || player == 0) return;
+        try { MpvNative.Check(native.SetProperty(player, "time-pos", "0"), "time-pos"); }
+        catch (Exception exception) { ReportFailure(exception); }
     }
 
     private void QueueFrame()
