@@ -12,7 +12,7 @@ $threshold = 0.50
 # 行约 86.3%（18,563–18,571/21,502）、分支 92.29%（3,291/3,566），同一基线仍成立。
 $lineBaseline = 0.8560
 $branchBaseline = 0.9180
-$resultsRoot = Join-Path $PSScriptRoot 'TestResults\Coverage'
+$resultsRoot = (Join-Path (Join-Path $PSScriptRoot 'TestResults') 'Coverage').Replace('\', '/')
 
 $repositoryRoot = [IO.Path]::GetFullPath($PSScriptRoot)
 $repositoryRootPrefix = $repositoryRoot.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
@@ -31,12 +31,12 @@ New-Item -ItemType Directory -Path $resultsRoot | Out-Null
 $projects = @(
     @{
         Name = 'Unit'
-        Project = '.\tests\Cafe.Launcher.Tests\Cafe.Launcher.Tests.csproj'
+        Project = './tests/Cafe.Launcher.Tests/Cafe.Launcher.Tests.csproj'
         ResultsDirectory = Join-Path $resultsRoot 'unit'
     },
     @{
         Name = 'Headless'
-        Project = '.\tests\Cafe.Launcher.HeadlessTests\Cafe.Launcher.HeadlessTests.csproj'
+        Project = './tests/Cafe.Launcher.HeadlessTests/Cafe.Launcher.HeadlessTests.csproj'
         ResultsDirectory = Join-Path $resultsRoot 'headless'
     }
 )
@@ -113,13 +113,13 @@ $branchCoverage = @{}
 # 程序集拆分后每个生产程序集都必须真的出现在报告里。报告里的 <sources> 根一旦退回旧的
 # 单项目形状，被移走的代码会从分子和分母同时消失，比例反而可能上升——静默通过闸口。
 # 这里按项目目录要求它们各自贡献被计数的行，缺一个就直接失败。
-# src\Cafe.Launcher.Updater 不在表内是有意的：没有任何测试工程引用它（它的实现都在
+# src/Cafe.Launcher.Updater 不在表内是有意的：没有任何测试工程引用它（它的实现都在
 # Updater.Core 里，由单元套件覆盖），所以它本来就不该出现在报告里。
 $requiredAssemblyRoots = @(
-    'src\Cafe.Launcher.Core',
-    'src\Cafe.Launcher',
-    'src\Cafe.Launcher.UI',
-    'src\Cafe.Launcher.Updater.Core'
+    'src/Cafe.Launcher.Core',
+    'src/Cafe.Launcher',
+    'src/Cafe.Launcher.UI',
+    'src/Cafe.Launcher.Updater.Core'
 )
 $countedSourceFiles = @{}
 foreach ($requiredRoot in $requiredAssemblyRoots) {

@@ -653,6 +653,45 @@ public sealed partial class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
+    public async Task SettingsGame_InstalledProtonSelectionAndManualPathStaySynchronized()
+    {
+        // Linux-only rows are hidden on Windows CI unless --show-hidden-settings is
+        // passed; inject the same presentation option the startup switch resolves to.
+        using var context = CreateContext(configure: services =>
+            services.AddSingleton(new PresentationOptions(ShowHiddenSettings: true)));
+        Assert.True(context.ViewModel.IsPlatformSpecificSettingsVisible);
+        OpenSettings(context);
+        context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.Game;
+        await context.ViewModel.Settings.PendingGameRuntimeStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
+        var settings = context.ViewModel.Settings;
+        var build = new SettingOption { DisplayName = "GE-Proton", Code = "/tools/GE-Proton" };
+        settings.ProtonBuilds = [build];
+        Dispatcher.UIThread.RunJobs();
+        var section = context.Window.GetVisualDescendants().OfType<SettingsGameSection>().Single();
+        var combo = Assert.Single(section.GetVisualDescendants().OfType<ComboBox>(),
+            control => ReferenceEquals(control.ItemsSource, settings.ProtonBuilds));
+        Assert.True(combo.IsEffectivelyVisible);
+        var pathInput = Assert.Single(section.GetVisualDescendants().OfType<TextBox>(),
+            control => AutomationProperties.GetName(control) == context.ViewModel.Shell.I18n["gameRuntimeProtonPath"]);
+
+        Assert.Null(combo.SelectedItem);
+        combo.SelectedItem = build;
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(build.Code, pathInput.Text);
+        Assert.Equal(build.Code, settings.Editor.Current.GameRuntime.ProtonPath);
+
+        pathInput.Text = "/custom/proton";
+        Dispatcher.UIThread.RunJobs();
+        Assert.Null(combo.SelectedItem);
+        Assert.Equal("/custom/proton", settings.Editor.Current.GameRuntime.ProtonPath);
+
+        pathInput.Text = string.Empty;
+        Dispatcher.UIThread.RunJobs();
+        Assert.Null(combo.SelectedItem);
+        Assert.True(string.IsNullOrEmpty(settings.Editor.Current.GameRuntime.ProtonPath));
+    }
+
+    [AvaloniaFact]
     public void SettingsGame_DangerAction_MatchesSiblingFlatActionHeight()
     {
         using var context = CreateContext();

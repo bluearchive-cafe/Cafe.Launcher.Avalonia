@@ -33,6 +33,31 @@ public sealed class ProtonBuildDiscoveryTests : IDisposable
         Assert.Empty(discovery.Discover());
     }
 
+    [Fact]
+    public void Discover_DeduplicatesTheSameInstallDirectoryListedTwice()
+    {
+        var tools = Path.Combine(tempDir, "compatibilitytools.d");
+        CreateBuild(tools, "GE-Proton9-1");
+        var discovery = new ProtonBuildDiscovery([tools, tools]);
+
+        Assert.Single(discovery.Discover());
+    }
+
+    [Fact]
+    public void Discover_KeepsSameNamedBuildsFromDifferentSteamRoots()
+    {
+        var native = Path.Combine(tempDir, "native", "compatibilitytools.d");
+        var flatpak = Path.Combine(tempDir, "flatpak", "compatibilitytools.d");
+        CreateBuild(native, "GE-Proton9-1");
+        CreateBuild(flatpak, "GE-Proton9-1");
+
+        var builds = new ProtonBuildDiscovery([native, flatpak]).Discover();
+
+        Assert.Equal(2, builds.Count);
+        Assert.Contains(builds, build => build.Path == Path.Combine(native, "GE-Proton9-1"));
+        Assert.Contains(builds, build => build.Path == Path.Combine(flatpak, "GE-Proton9-1"));
+    }
+
     private static void CreateBuild(string toolsDirectory, string name)
     {
         var directory = Path.Combine(toolsDirectory, name);

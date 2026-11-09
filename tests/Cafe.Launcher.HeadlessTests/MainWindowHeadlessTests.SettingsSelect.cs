@@ -71,8 +71,10 @@ public sealed partial class MainWindowHeadlessTests
                         {
                             var check = PreviewPart<MaterialIcon>(item, "SettingsChoiceCheck");
                             Assert.Equal(item.IsSelected ? 1 : 0, check.Opacity);
-                            var text = PreviewPart<ContentPresenter>(item, "PART_ContentPresenter")
-                                .GetVisualDescendants().OfType<TextBlock>().Single();
+                            var text = Assert.Single(
+                                PreviewPart<ContentPresenter>(item, "PART_ContentPresenter")
+                                    .GetVisualDescendants().OfType<TextBlock>(),
+                                candidate => !candidate.Classes.Contains("caption"));
                             Assert.Equal(14 * scale, TextElement.GetFontSize(text));
                             Assert.Equal(TextWrapping.Wrap, text.TextWrapping);
                             Assert.Equal(TextTrimming.None, text.TextTrimming);

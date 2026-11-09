@@ -22,7 +22,7 @@
 
 **关键排序约束**：P0-A 是 P0-B 的前置（其进程树样本来自 P0-A 的实机环境），P0-C 与 P0-A 可并行。把 P0-A 与另两项并列成"可提交的 P0"会让计划一开始就有个无法 assign 的条目。
 
-**当前进度（2026-09-22 更新）**：P0-C 已全部落地——`a5d793f` 诊断导出加入运行器进程快照、`a50f2b1` 运行器 stdout/stderr 有上限捕获、`c1ebdb4` 桌面会话信息、`7f93234` GPU/Vulkan 探测。P0-B 的判据前移稿已完成并附纯函数骨架（见 §3.2），**接线与 ADR 仍等 P0-A 样本**。P0-A 尚未开始（外部 gate）。P1-D 已落地（`4f2dabf` 预检记录、`e628998` 阻断启动＋本地化提示）。P1-E 的前缀元数据记录（`94050cf`）与 Proton 构建发现（`583ea22`，服务＋诊断记录）已落地；设置页的候选建议待有 Windows golden 的环境再做。
+**当前进度（2026-09-22 更新）**：P0-C 已全部落地——`a5d793f` 诊断导出加入运行器进程快照、`a50f2b1` 运行器 stdout/stderr 有上限捕获、`c1ebdb4` 桌面会话信息、`7f93234` GPU/Vulkan 探测。P0-B 的判据前移稿已完成并附纯函数骨架（见 §3.2），**接线与 ADR 仍等 P0-A 样本**。P0-A 尚未开始（外部 gate）。P1-D 已落地（`4f2dabf` 预检记录、`e628998` 阻断启动＋本地化提示）。P1-E 的前缀元数据记录（`94050cf`）与 Proton 构建发现（`583ea22`，服务＋诊断记录）已落地；设置页的候选建议已于 2026-11-09 落地（`7cc26fbb`）。
 
 **P0-A 实机验证通过（2026-09-22）**：实机（Arch Linux，UMU 1.4.4 + UMU-Proton-10.0-4，游戏在 NTFS3）五步全过、XignCode 未拦截；启动器退出后游戏仍在跑，所有权标记在整族进程上。完整记录见 [`linux-p0a-verification-2026-09-22.md`](archive/linux-p0a-verification-2026-09-22.md)。
 
@@ -179,7 +179,8 @@ cat /proc/<pid>/maps | rg -i 'BlueArchive|xldr|\.exe'
   - **已落地（2026-09-22）**：`CompatibilityEnvironmentPrecheck`（`4f2dabf`）在选中 Wine/UMU 运行器后、启动前对有效前缀预检——不可创建/写入、文件系统不支持符号链接、挂载点 `noexec` 记为阻断级发现；发行版与大小写敏感性只记录。报告写入数据根 `compatibility_environment.json` 并由诊断导出携带。`e628998` 把阻断级发现接入启动：命中即 `EnvironmentPrecheckFailed` 拒绝启动，`GameLaunchService` 按类别给出可操作本地化文案（前缀不可写 / 不支持符号链接 / noexec）；预检自身出错仍按「无发现」放行，不因诊断失败误拒。
 - **P1-E Prefix 元数据与 Proton 构建发现**：记录创建信息、最近运行器版本、最近成功组合（诊断价值）。**先记录，不做自动迁移**；版本变化不等于必须迁移，元数据也不保证 Prefix 可回滚，自定义 Prefix 的所有权要写明。发现 GE-Proton 安装目录可作为设置体验增强。
   - **元数据已落地（2026-09-22，`94050cf`）**：`PrefixMetadataStore` 记录最近启动前缀的创建时间、运行器与版本、最近 Proton、最近启动时间与次数，写入数据根 `prefix_metadata.json` 并由诊断导出携带；同前缀保留创建时间并累加、换前缀重置。不做自动迁移，写入失败不影响启动。
-  - **发现已落地（2026-09-22，`583ea22`）**：`ProtonBuildDiscovery` 扫描 Steam / 兼容工具的 `compatibilitytools.d`，认含 `proton` 脚本的构建，结果记入 `system-info.json` 的 `protonBuilds`。**设置页的候选建议（真正的体验增强）仍待做**——它改动 `settings-overlay.png` golden，须在有 Windows 渲染的环境执行 `.\test.ps1 -UpdateGolden` 后再接。
+  - **发现已落地（2026-09-22，`583ea22`）**：`ProtonBuildDiscovery` 扫描 Steam / 兼容工具的 `compatibilitytools.d`，认含 `proton` 脚本的构建，结果记入 `system-info.json` 的 `protonBuilds`。
+  - **设置页候选建议已落地（2026-11-09，`7cc26fbb`）**：Linux 设置页可从发现的构建中选择 Proton，也可继续手动输入；发现失败时显示可重试提示。该分组只在 Linux 显示，Windows 的 `settings-overlay.png` golden 不受影响，因此未触发基线再生。
 - **P1-F Wayland 激活与桌面通知**：按 [`desktop-notifications-integration-plan.md`](desktop-notifications-integration-plan.md) 推进，验证 KDE/GNOME，避免重复设计。
 
 ---

@@ -20,7 +20,11 @@
                       SelectedValueBinding="{Binding Code, DataType={x:Type models:SelectableOption}}">
                 <ComboBox.ItemTemplate>
                     <DataTemplate x:DataType="models:SelectableOption">
-                        <TextBlock Text="{Binding DisplayName}" TextWrapping="Wrap"/>
+                        <StackPanel>
+                            <TextBlock Text="{Binding DisplayName}" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding Description}" Classes="caption" TextWrapping="Wrap"
+                                       IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                        </StackPanel>
                     </DataTemplate>
                 </ComboBox.ItemTemplate>
             </ComboBox>
