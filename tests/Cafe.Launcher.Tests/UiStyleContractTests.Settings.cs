@@ -661,7 +661,7 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void SettingsNavigation_TokenizeFocusVisibleRings() // spec §8 visible focus ring
+    public void SettingsNavigation_TokenizeFocusVisibleRings() // spec §7 visible focus ring
     {
         var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
         var selector = "ListBox.settings-navigation > ListBoxItem:focus-visible";
@@ -746,7 +746,11 @@ public sealed partial class UiStyleContractTests
                         ? "{DynamicResource Launcher.Color.SecondaryContainer}"
                         : "{DynamicResource Launcher.Color.Button.Flat.Pressed}";
             var expectedForeground = selector.Contains(":selected", StringComparison.Ordinal)
-                ? "{DynamicResource Launcher.Color.OnSecondaryContainer}"
+                ? selector.Contains(":pointerover", StringComparison.Ordinal)
+                    ? "{DynamicResource Launcher.Color.OnSecondaryContainer.Hover}"
+                    : selector.Contains(":pressed", StringComparison.Ordinal)
+                        ? "{DynamicResource Launcher.Color.OnSecondaryContainer.Pressed}"
+                        : "{DynamicResource Launcher.Color.OnSecondaryContainer}"
                 : "{DynamicResource Launcher.Text.Primary}";
             Assert.Equal(expectedBackground, setters["Background"]);
             Assert.Equal(expectedForeground, setters["Foreground"]);

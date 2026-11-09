@@ -38,30 +38,19 @@ internal sealed class LauncherUpdateDownloader : ILauncherUpdateDownloader
     public async Task<string?> ReadTextAsync(ReleaseFile file, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(file);
-        try
-        {
-            var body = await transport
-                .GetStreamAsync(new Uri(file.Url), cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
-            await using var stream = body.Content;
-            using var reader = new StreamReader(stream, Encoding.UTF8);
-            var buffer = new char[MaxTextAssetBytes + 1];
-            var read = await reader.ReadBlockAsync(buffer.AsMemory(), cancellationToken).ConfigureAwait(false);
-            if (read > MaxTextAssetBytes)
-            {
-                return null;
-            }
-
-            return new string(buffer, 0, read);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception exception) when (IsRecoverable(exception))
+        var body = await transport
+            .GetStreamAsync(new Uri(file.Url), cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
+        await using var stream = body.Content;
+        using var reader = new StreamReader(stream, Encoding.UTF8);
+        var buffer = new char[MaxTextAssetBytes + 1];
+        var read = await reader.ReadBlockAsync(buffer.AsMemory(), cancellationToken).ConfigureAwait(false);
+        if (read > MaxTextAssetBytes)
         {
             return null;
         }
+
+        return new string(buffer, 0, read);
     }
 
     /// <inheritdoc />
@@ -164,6 +153,13 @@ internal sealed class LauncherUpdateDownloader : ILauncherUpdateDownloader
                 LauncherUpdateDownloadStatus.NetworkFailure,
                 exception.Message);
         }
+        catch (InvalidOperationException exception) when (RemoteHttpRequestService.IsBlockedAddressRejection(exception))
+        {
+            DeleteFileIfExists(partPath);
+            return LauncherUpdateDownloadResult.Failed(
+                LauncherUpdateDownloadStatus.UrlRejected,
+                exception.Message);
+        }
         catch (InvalidOperationException exception)
         {
             DeleteFileIfExists(partPath);
@@ -188,10 +184,6 @@ internal sealed class LauncherUpdateDownloader : ILauncherUpdateDownloader
             : 0;
         return new LauncherUpdateProgress(downloadedBytes, totalBytes, bytesPerSecond);
     }
-
-    private static bool IsRecoverable(Exception exception) =>
-        exception is HttpRequestException or InvalidOperationException or IOException
-        || exception is OperationCanceledException;
 
     private static void DeleteFileIfExists(string path)
     {

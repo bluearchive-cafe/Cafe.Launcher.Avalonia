@@ -2,7 +2,7 @@
 
 > 生成时点：**2026-09-22** · 基准提交：**f4b57fb**（实机运行的 Debug 构建，`Version 1.1.0-beta.10`）
 > 证据来源：`~/.local/share/Cafe Launcher/unified.log`、`prefix_metadata.json`、`compatibility_environment.json`，以及验证时点仍在运行的进程 `/proc` 快照。
-> 模板见 [`linux-support-plan-2026-09-22.md`](linux-support-plan-2026-09-22.md) §2.2。
+> 模板见 [`linux-support-plan-2026-09-22.md`](../linux-support-plan-2026-09-22.md) §2.2。
 
 ```yaml
 verified_at: 2026-09-22T23:45:26+08:00

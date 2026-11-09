@@ -1,4 +1,5 @@
 using System;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Core.Models;
@@ -13,9 +14,11 @@ namespace Cafe.Launcher.Core.Services.Update;
 public interface ILauncherUpdateDownloader
 {
     /// <summary>
-    /// Reads a small text asset. Returns null on any recoverable failure (network,
-    /// rejected URL, oversized body, or a timeout that is not caller cancellation);
-    /// caller cancellation propagates.
+    /// Reads a small text asset. Returns null when the body exceeds the size bound;
+    /// transport failures and timeouts propagate as their usual exceptions
+    /// (<see cref="HttpRequestException"/>, <see cref="InvalidOperationException"/> for a
+    /// rejected URL, <see cref="OperationCanceledException"/> for a timeout) so the caller
+    /// can log and classify them. Caller cancellation propagates.
     /// </summary>
     Task<string?> ReadTextAsync(ReleaseFile file, CancellationToken cancellationToken);
 

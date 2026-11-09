@@ -3,7 +3,7 @@
 - 状态：✅ 已接受（2026-09-22）
 - 日期：2026-09-22
 - 来源：计划 [`linux-support-plan-2026-09-22.md`](../linux-support-plan-2026-09-22.md) §3（P0-B）——「更新/修复/卸载的运行中保护在 Linux 上实际失效」
-- 相关：ADR-032（游戏进程按名字家族识别）、ADR-035（启动后看护）、判据设计稿 [`linux-process-identification-design-2026-09-22.md`](../linux-process-identification-design-2026-09-22.md)
+- 相关：ADR-032（游戏进程按名字家族识别）、ADR-035（启动后看护）、判据设计稿 [`linux-process-identification-design-2026-09-22.md`](../archive/linux-process-identification-design-2026-09-22.md)
 
 ## 背景
 

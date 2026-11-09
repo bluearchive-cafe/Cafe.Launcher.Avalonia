@@ -19,6 +19,13 @@ internal enum ShellSelfUpdateOutcome
     /// <summary>Verification or preparation failed; the release-page fallback applies.</summary>
     DownloadFailed,
 
+    /// <summary>
+    /// The update target resolved to a local or private address (a hosts entry or DNS
+    /// hijack pointing at 127.0.0.1), so the download never started. Reported separately
+    /// because it names a cause the user can fix, unlike a generic network failure.
+    /// </summary>
+    DownloadBlocked,
+
     /// <summary>The user or the shell lifetime cancelled the run; the dialog returns to neutral.</summary>
     Cancelled,
 
@@ -133,7 +140,11 @@ internal sealed class ShellSelfUpdateCoordinator
                 return;
             }
 
-            Finished?.Invoke(ShellSelfUpdateOutcome.DownloadFailed, null);
+            Finished?.Invoke(
+                preparation.FailureKind == LauncherSelfUpdateFailureKind.UrlRejected
+                    ? ShellSelfUpdateOutcome.DownloadBlocked
+                    : ShellSelfUpdateOutcome.DownloadFailed,
+                null);
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {

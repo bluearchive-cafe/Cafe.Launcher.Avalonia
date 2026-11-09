@@ -22,7 +22,8 @@ public sealed record LauncherSelfUpdatePreparation(
     LauncherUpdateTarget Target,
     string? PackagePath,
     string ExpectedSha256,
-    string FailureMessage)
+    string FailureMessage,
+    LauncherSelfUpdateFailureKind FailureKind = LauncherSelfUpdateFailureKind.None)
 {
     public static LauncherSelfUpdatePreparation External() =>
         new(LauncherSelfUpdatePreparationStatus.ExternalDownload, LauncherUpdateTarget.ExternalDownload, null, "", "");
@@ -33,6 +34,14 @@ public sealed record LauncherSelfUpdatePreparation(
         string expectedSha256) =>
         new(LauncherSelfUpdatePreparationStatus.Ready, target, packagePath, expectedSha256, "");
 
-    public static LauncherSelfUpdatePreparation Failed(string failureMessage) =>
-        new(LauncherSelfUpdatePreparationStatus.Failed, LauncherUpdateTarget.ExternalDownload, null, "", failureMessage);
+    public static LauncherSelfUpdatePreparation Failed(
+        string failureMessage,
+        LauncherSelfUpdateFailureKind failureKind) =>
+        new(
+            LauncherSelfUpdatePreparationStatus.Failed,
+            LauncherUpdateTarget.ExternalDownload,
+            null,
+            "",
+            failureMessage,
+            failureKind);
 }

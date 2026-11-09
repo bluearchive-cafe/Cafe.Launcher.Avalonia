@@ -6,7 +6,7 @@ namespace Cafe.Launcher.Core.Services.GameRuntime;
 
 /// <summary>
 /// 一次 <c>/proc/&lt;pid&gt;</c> 快照里用于判定「是不是这个游戏」的原始事实（Linux 进程识别
-/// 判据设计稿，见 <c>docs/design/linux-process-identification-design-2026-09-22.md</c>）。
+/// 判据设计稿，见 <c>docs/design/archive/linux-process-identification-design-2026-09-22.md</c>）。
 /// </summary>
 /// <remarks>
 /// 与 <see cref="GameProcessNames"/> 并列：Windows 上进程对象被反作弊保护、镜像路径读不到，

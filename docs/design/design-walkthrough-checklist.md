@@ -1,10 +1,10 @@
 # 设计走查清单（Design Walkthrough Checklist）
 
 > 状态：**落地**（随 P2 C 批交付；[ADR-008](adr/ADR-008-组件批次映射.md)）。
-> 用途：P3 每表面完成时人工复核的实物载体（spec §10）；与 [design-system-spec.md](./design-system-spec.md) §4 状态矩阵、§8 豁免区共同维护。
+> 用途：P3 每表面完成时人工复核的实物载体（spec §9）；与 [design-system-spec.md](./design-system-spec.md) §3.5 状态矩阵、§7 豁免区共同维护。
 > 复核方式：逐项走查并记录结果（✓ / ✗ / 备注）；新增表面或调整组件后更新本清单。
 
-## 1. 组件状态矩阵（spec §4）
+## 1. 组件状态矩阵（spec §3.5）
 
 矩阵实物 = Debug 构建「设计画廊 → 组件状态矩阵」（3×6 以上：四型按钮 / 卡片含 Toast 卡 / 设置行 × normal / hover / pressed / disabled / focus-visible / invalid）。
 走查时打开画廊逐格与生产样式对照：
@@ -21,10 +21,10 @@
 - 状态层不透明度产品值：hover 8% / focus 12% / pressed 16% / disabled 内容 38%（`Launcher.StateLayer.*`；pressed 16% 为产品值，M3 官方 12%——记录性偏差，见 ADR-004 落地记录）。
 - 状态反馈以「预混色状态变体」实现（`Primary.Hover/.Pressed`、`SecondaryContainer.Hover/.Pressed` 等），未采用叠加状态层机制（ADR-004 落地记录）。
 - 向导组件（ADR-017）随审计-0828 对齐本矩阵：`wizard-action.primary-action` 补齐 filled 禁用态（预混配方），`wizard-option` 键盘聚焦铺 token 焦点环。
-- 焦点环（`FocusRing` 为不透明强调色，对比不足时回退 M3 `OnSurface`；选中导航使用 `OnSecondaryContainer`）逐表面复核：明/暗主题 + 壁纸模式目测 ≥3:1 可辨识（含 banner 箭头、chrome 态区域）；动态实心表面配对由 `MaterialSchemeGeneratorTests` 覆盖；壁纸部分仍需人工复核。
+- 焦点环（`FocusRing` 为不透明强调色，对比不足时回退 M3 `OnSurface`；选中下拉项用对应状态的 `OnSecondaryContainer` 在容器内绘制焦点）逐表面复核：明/暗主题 + 壁纸模式目测 ≥3:1 可辨识（含 banner 箭头、chrome 态区域）；动态实心表面配对由 `MaterialSchemeGeneratorTests` 覆盖；壁纸部分仍需人工复核。
 - **焦点环只应在键盘导航时出现（ADR-040）**：打开对话框/叠层、鼠标点击后都**不得**出现焦点环；按 Tab / 方向键才出现。框体框架默认的焦点矩形（`FocusAdorner`）已全局关闭，应用用各控件的 `:focus-visible` 规则自绘。走查时按一次 Tab 确认焦点可见，再关掉叠层确认没有残留的环。
 
-## 2. 无障碍豁免区（spec §8，逐项人工复核）
+## 2. 无障碍豁免区（spec §7，逐项人工复核）
 
 豁免前提：该区文字叠于 scrim（`Launcher.TitleBar.Gradient` + `Launcher.Color.Overlay.Scrim*`），保证与任意壁纸色可读（最小 scrim 语义）。
 
@@ -40,7 +40,7 @@
 ## 3. 表面级走查（P3 顺序）
 
 ### 3.1 主壳（首页）——整体布局搁置；就绪态按钮局部调整（2026-11-01）
-- 首页整体仍无既定蓝图（2026-08-25 用户撤销首页设计决策，ADR-012 历史记录）；就绪态入口按 spec §5.2 合并为启动分体按钮。
+- 首页整体仍无既定蓝图（2026-08-25 用户撤销首页设计决策，ADR-012 历史记录）；就绪态入口按 spec §4.1 合并为启动分体按钮。
 - 普通与仅按钮布局：主区单击直接启动，右侧省略号仅展开游戏管理菜单；两区共享主色和外轮廓，悬停/按下分别反馈，菜单打开时右区保持反馈。
 - 菜单右缘与按钮右缘对齐，向上展开并间隔 8 DIP；在默认/最小窗口检查位置，在屏幕边缘检查原生避让。展开截图基线为 `launch-split-menu`。
 - Tab 停靠一次，Enter / Space 启动，Alt+↓ / F4 打开菜单，Escape 收起并恢复焦点；忙碌时两区都禁用。卸载单独分隔，既有确认流程保留。
@@ -85,6 +85,7 @@
 
 ### 3.6b 资源面板（ADR-041）
 - 外层骨架 = `DialogSurface` Panel 形态不动（头带 / 滚动正文 / 发丝底带，ADR-015）；正文解剖已 M3 化：UID 单卡三态（展示 / 编辑 / 缺失互斥面板，UID 值等宽 + 字距）、来源 = MD3 分段按钮（`RadioButton.segment-option`，选中段 accent 家族 + 勾选图标）、条目 = 单卡三行（`Border.resource-row` + 发丝分隔线，行 = 标题 + 状态 chip + 版本行 + 无标签 Switch）。
+- 分段控件的独立胶囊焦点层不参与测量；四语言、亮暗主题及 100%／150%／200% 文字下往返取焦，段宽、组边界、相邻位置和选择值保持不变。
 - 状态 chip：Ready=Success/`Success.Soft`、Waiting/Loading=Secondary/`Content.Row`、Failed=Danger/`Danger.Soft`；类映射由 `ResourcePanelItem` 的四个表象布尔驱动。
 
 ### 3.7 崩溃窗口（ADR-019 / ADR-020，独立 Fluent 设计系统）
@@ -125,3 +126,4 @@
 - 鼠标悬停／按下、打开／关闭及 Tab／方向键导航时，检查实际模板表面使用共享状态色，焦点不移动文字；Enter 提交，Escape 放弃，长列表继续滚动。
 - 打开菜单后切换主题／动态配色，不残留旧底色；保留图标、快捷键、勾选状态及子菜单。截图对照 `choice-popup-light/dark` 和 `launch-split-menu`。
 - Headless 以实际模板部件与原生键盘路径检查以上主要状态；真实 OS DPI、原生弹窗多屏避让及屏幕阅读器仍需人工走查。
+- 选中下拉项与设置导航的静止／悬停／按下文字均 ≥4.5:1；下拉项焦点内缩 2 DIP、描边 2 DIP，与实际相邻容器填充 ≥3:1。切换主题和中性色策略时，已打开弹窗同步更新；Fidelity 红色焦点和蓝色悬停截图见 `choice-popup-fidelity-focus`／`choice-popup-fidelity-hover`。

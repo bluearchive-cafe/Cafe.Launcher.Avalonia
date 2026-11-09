@@ -109,7 +109,7 @@ Sources:
 - Using an image/illustration as an icon button without button semantics.
 
 Sources:
-- https://developer.android.com/reference/kotlin/androidx/compose/material3/IconButton
+- https://developer.android.com/reference/kotlin/androidx/compose/material3/IconButton.composable
 - https://developer.android.com/develop/ui/compose/graphics/images/material
 
 ---
@@ -149,7 +149,7 @@ Sources:
 
 Sources:
 - https://m2.material.io/components/buttons-floating-action-button
-- https://developer.android.com/reference/kotlin/androidx/compose/material3/FloatingActionButton
+- https://developer.android.com/reference/kotlin/androidx/compose/material3/FloatingActionButton.composable
 
 ---
 
@@ -179,8 +179,8 @@ Sources:
 - Treating segmented buttons as M3 Expressive-only. They are part of standard M3.
 
 Sources:
-- https://developer.android.com/reference/kotlin/androidx/compose/material3/SingleChoiceSegmentedButtonRow
-- https://developer.android.com/reference/kotlin/androidx/compose/material3/SegmentedButton
+- https://developer.android.com/reference/kotlin/androidx/compose/material3/SingleChoiceSegmentedButtonRow.composable
+- https://developer.android.com/reference/kotlin/androidx/compose/material3/SegmentedButton.composable
 
 ---
 

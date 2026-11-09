@@ -1,6 +1,6 @@
 # P1 实施计划 — Token 体系重构 + 动态色基座
 
-> 状态：**已完成**（时点计划文档；P1 M0–M5 全部落地并提交，进度与结论以 [CONTEXT.md](../../CONTEXT.md) 「设计系统现状」为准）。
+> 状态：**已完成**（时点计划文档；P1 M0–M5 全部落地并提交，进度与结论以[设计规范 §11 实施现状](../design-system-spec.md#11-实施现状)为准）。
 > 范围与目标：P1 = 一次性重命名 token 为点分层命名 + 补齐新族（Elevation/StateLayer/scrim/Thickness）+ AA 对比度契约自动化 + 动态色管线基座（ApplyScheme）+ 画廊 token 表 + 黄金截图基建接线。
 > **非目标（P1 不做）**：任何视觉值改动（除对比度不达标 token 的最小修正）、组件形态变更、三个新设置项的 UI（底层就绪，UI 在 P2）、底栏形态决策、文本缩放。
 
@@ -14,20 +14,20 @@
 - **新旧公式对照验证**（2025-02 决策补入）：独立临时工程再引用 `MaterialColorUtilities`（albi005，0.3.0，同谱系前身；两包同名命名空间，**各自独立工程或 extern alias，不得直接同工程混引**），对同一批 seed（如 `#6750A4`、壁纸暖色 `#E8B8A0`、冷色 `#4A6B93`）在 Light/Dark × TonalSpot 下各算一次，产出**新旧公式差异表**（Primary/OnPrimary/PrimaryContainer/SecondaryContainer/OnSecondaryContainer/Surface/OnSurface/Outline 等角色，标记同值/±tone 差异）。
   - 用途：① 量化"若降级用旧包"的观感损失；② 为 vendor 回退保存交叉参考谱系（albi005 源码与 Shirasagi 同源）。
   - 定位：albi005 **不进入产品依赖**，仅为对照数据点。
-- 产物：`docs/design/color-utilities-spike.md`（结论 + 参考值断言表 + 新旧公式差异表 + 依赖树 + Go/No-Go 判定）。
+- 产物：`docs/design/archive/color-utilities-spike.md`（结论 + 参考值断言表 + 新旧公式差异表 + 依赖树 + Go/No-Go 判定）。
 - **Go/No-Go**：失败 → 启动回退方案（vendor 裁剪核心，研究已备档，~2–4 人日），P1 目标自动扩展。
 
 ## M1 — 一次性全量重命名（2–3 天）
 
-- 输入：`docs/design/token-migration-map.md`（旧键→新键映射表，按 §3.2 十二家族人工分类；含特例：`LauncherSpacingXsThickness`→`Launcher.Spacing.Thickness.Xs`、`LauncherTextBox*`→按家族归位、`LauncherRadiusMd(6)`→`Launcher.Radius.Md` 值暂不变）。
-- 脚本：`scripts/Rename-LauncherTokens.ps1`（读映射表 → 替换 `src/` 全部 .axaml/.cs 中的精确键引用 → 输出改动清单 + 旧键残留巡检，失败即退出非零）。映射表为 LF JSON/CSV。
+- 输入：旧键→新键映射按 §3.2 十二家族人工分类，含特例：`LauncherSpacingXsThickness`→`Launcher.Spacing.Thickness.Xs`、`LauncherTextBox*`→按家族归位、`LauncherRadiusMd(6)`→`Launcher.Radius.Md` 值暂不变。
+- 脚本：一次性重命名脚本读取映射表，替换 `src/` 全部 .axaml/.cs 中的精确键引用并巡检旧键残留。迁移完成后映射表与脚本已移除。
 - 同步：`tests/Cafe.Launcher.Tests/UiStyleContractTests.cs`（键清单、token 值断言）、headless 测试中的资源键、`Features/Settings/SettingsAppearanceViewModel.cs`（动态覆盖的笔刷键）、`Controls/` 与 `Views/` 各样式分片。
 - 顺手修复：`Views\Styles\{Toast,RemoteContent,SetupWizard}.axaml` 33 处静态 token 的 `{DynamicResource}` → `{StaticResource}`。
 - 门禁：编译零警告、全部测试绿、`grep -r "Launcher\([A-Z]\)" src tests` 旧键 = 0 命中。
 
 ## M2 — 新族 token + 对比度契约（2–3 天）
 
-> **状态：✅ 已执行（2026-08-25）**。新族落地（Elevation 4 档/StateLayer 4 档/Overlay.Scrim 三档/Spacing.Thickness 补齐/Typography.LetterSpacing）；2 处硬编码 BoxShadow 迁移为 token 引用；`DesignTokenContrastTests` + 新族/旧键回归/静态族规则契约全绿；最小调色 6 项（before/after 记录于 spec §8）。**M2 门禁通过**。
+> **状态：✅ 已执行（2026-08-25）**。新族落地（Elevation 4 档/StateLayer 4 档/Overlay.Scrim 三档/Spacing.Thickness 补齐/Typography.LetterSpacing）；2 处硬编码 BoxShadow 迁移为 token 引用；`DesignTokenContrastTests` + 新族/旧键回归/静态族规则契约全绿；最小调色 6 项（before/after 记录于 spec §7）。**M2 门禁通过**。
 
 - 新增族（`App.axaml` 按注释分区）：`Launcher.Elevation.*`（0–3 档阴影值：颜色/偏移/模糊；把 `MainWindow.Styles.axaml` 2 处硬编码 BoxShadow 迁为引用）、`Launcher.StateLayer.*`（8%/12%/16%/24%）、`Launcher.Color.Overlay.Scrim*`（3 档，替代/并列现有 overlay 用途）、`Launcher.Spacing.Thickness.*` 补齐全档、`Launcher.Typography.*` 角色键（P1 仅为别名/新增，消费方 P2 迁移）。
 - `UiStyleContractTests` 扩展：新族存在性、旧键清零（回归门）、`{StaticResource}` 规则（静态 token 不得被 DynamicResource 引用）、禁裸值规则覆盖新文件。
@@ -44,7 +44,7 @@
 - **`ApplyScheme`**（替代扩展 `SettingsAppearanceViewModel.ApplyAccentBrushes`，保留原 11 笔刷覆盖行为作为子集）：输入（seed、variant、theme、neutralStrategy）→ 输出 primary/secondary/tertiary + containers + （seed 策略时）surface/outline 覆盖；on-color 按亮度计算（替换硬编码 `Launcher.OnAccent` 使用点）。
 - `ColorUtils` 扩展：on-color 计算、现有一致性保留（饱和度/明度归一化规则不动），全部纯函数化。
 - 单测：参考值断言（seed→roles，含 ±1 tone）、on-color 黑/白选择边界（如亮度 0.5 分界）、neutral 双策略输出、非壁纸模式（系统/默认蓝/自定义）行为等价性。
-- 兼容：旧 `settings.json` 无新字段 → 规范化默认值路径；壁纸模式默认算法切换记录（spec §7）。
+- 兼容：旧 `settings.json` 无新字段 → 规范化默认值路径；壁纸模式默认算法切换记录（spec §6）。
 - 门禁：动态色单测全绿；现有壁纸模式手工冒烟（设置→壁纸色→刷新）行为不回归。
 
 ## M4 — 画廊 token 表（1–2 天）
@@ -83,7 +83,7 @@
 | HCT ±1 tone 漂移 | 参考值断言 + ±1 容差；上游单测随 vendor 迁移 |
 | 映射遗漏（~120 键 × 多消费方） | 脚本双程校验（替换后旧键归零断言）+ 编译零警告兜底 |
 | 测试契约漏同步 | M1 同 PR 更新；旧键清零断言防回归 |
-| 对比度调色引发视觉漂移 | 只做阈值最小修正，before/after 记录进 spec §8 |
+| 对比度调色引发视觉漂移 | 只做阈值最小修正，before/after 记录进 spec §7 |
 | Golden 截图字体/平台差异 flaky | 固定渲染字体 + 阈值 + CI 同环境验证；小集起步 |
 
 ## P2/P3 预告（不在本计划执行）

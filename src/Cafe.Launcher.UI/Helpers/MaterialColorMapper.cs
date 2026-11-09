@@ -5,7 +5,7 @@ namespace Cafe.Launcher.UI.Helpers;
 
 /// <summary>
 /// ArgbColor ↔ Avalonia Color/SolidColorBrush conversion layer.
-/// M0 spike (docs/design/color-utilities-spike.md §5) chose Option B:
+/// M0 spike (docs/design/archive/color-utilities-spike.md §5) chose Option B:
 /// core package only, handwritten wiring instead of the Avalonia integration
 /// package (which would pull the third-party DesignTokens token framework).
 /// </summary>

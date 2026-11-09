@@ -435,6 +435,10 @@ internal sealed class ShellLifecycle : IDisposable
                 dialogs.MarkUpdateFailed();
                 toastService.ShowError(localizer.T(LocalizationKeys.LauncherUpdateDownloadFailed));
                 break;
+            case ShellSelfUpdateOutcome.DownloadBlocked:
+                dialogs.MarkUpdateFailed();
+                toastService.ShowError(localizer.T(LocalizationKeys.LauncherUpdateDownloadBlocked));
+                break;
             case ShellSelfUpdateOutcome.Cancelled:
                 dialogs.ResetUpdateApply();
                 break;

@@ -5,7 +5,7 @@ using Cafe.Launcher.UI.Helpers;
 namespace Cafe.Launcher.Tests;
 
 /// <summary>
-/// Design-gallery classification logic (spec §9 Q11): family derivation from the
+/// Design-gallery classification logic (spec §8 Q11): family derivation from the
 /// token key segments, group ordering and value formatting.
 /// </summary>
 public sealed class DesignTokenGroupingTests

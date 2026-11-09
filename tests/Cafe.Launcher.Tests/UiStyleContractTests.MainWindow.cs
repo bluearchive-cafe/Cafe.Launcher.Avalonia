@@ -853,7 +853,7 @@ public sealed partial class UiStyleContractTests
         Assert.Equal("{StaticResource Launcher.Control.Height.Setting}", navigation["Width"]);
         Assert.Equal("{StaticResource Launcher.Control.Height.Setting}", navigation["Height"]);
         // 箭头压在壁纸上，hover/pressed 反馈走 chrome 态层，
-        // 图标前景保持 OnChrome 豁免（spec §8）。
+        // 图标前景保持 OnChrome 豁免（spec §7）。
         Assert.Equal(
             "{StaticResource Launcher.Color.Chrome.Hover}",
             GetStyleSetters(styles, "Button.icon-button.carousel-navigation:pointerover")["Background"]);

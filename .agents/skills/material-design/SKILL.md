@@ -90,3 +90,9 @@ Load only the references needed for the task:
 | Specification or design-audit deliverables | [Output templates](references/output-templates.md) |
 | Diagnosing common design mistakes | [Anti-patterns](references/anti-patterns.md) |
 | Changing or evaluating this skill | [Evaluation cases](evals/evals.json) |
+
+When changing the color or Angular reference examples, run the
+[example verifier](scripts/verify-reference-examples.mjs) with dependencies supplied
+by an isolated workspace (see the script's invocation comment). It executes the
+documented JavaScript and compiles both M2 Sass examples. Behavioral evaluation cases
+need separate agent runs; parsing their JSON does not establish behavioral success.

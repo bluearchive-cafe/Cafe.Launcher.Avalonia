@@ -6,7 +6,7 @@ namespace Cafe.Launcher.Tests;
 
 // M2 contract additions: new-family token existence, legacy flat-key regression
 // gate, and the "{StaticResource} for static families" resource-reference rule
-// (design-system spec §3.1 / §3.2). See design-system-spec.md §8.
+// (design-system spec §2.1 / §2.2). See design-system-spec.md §7.
 public sealed partial class UiStyleContractTests
 {
     [Fact]

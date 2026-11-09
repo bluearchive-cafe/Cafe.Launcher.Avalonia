@@ -25,6 +25,25 @@ public static class RemoteHttpRequestService
     /// </summary>
     internal const string FakeIpDnsDataKey = "Cafe.Launcher.FakeIpDns";
 
+    /// <summary>
+    /// 检查异常链是否携带「目标解析到本机/内网/保留地址」标记
+    /// （<see cref="RemoteHttpUrlValidator.BlockedAddressDataKey"/>）。这类拒绝通常由
+    /// hosts 文件或 DNS 劫持把域名指向 <c>127.0.0.1</c> 等地址造成，表现层据此给出
+    /// 可行动的指引，而不是笼统的「网络错误」。
+    /// </summary>
+    public static bool IsBlockedAddressRejection(Exception exception)
+    {
+        for (var current = exception; current is not null; current = current.InnerException)
+        {
+            if (current.Data.Contains(RemoteHttpUrlValidator.BlockedAddressDataKey))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /// <summary>Checks the exception chain for the Fake-IP DNS failure marker.</summary>
     public static bool HasFakeIpDnsMarker(Exception exception)
     {

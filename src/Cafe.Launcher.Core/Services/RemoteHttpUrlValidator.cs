@@ -23,6 +23,14 @@ internal sealed class RemoteHttpUrlValidator : IRemoteHttpUrlValidator
     /// </summary>
     internal static readonly TimeSpan DefaultCacheLifetime = TimeSpan.FromSeconds(30);
 
+    /// <summary>
+    /// <see cref="Exception.Data"/> 标记键：拒绝来自「目标解析到本机/内网/保留地址」，
+    /// 而不是 URL 形状非法（scheme、端口、userinfo）。表现层经
+    /// <see cref="RemoteHttpRequestService.IsBlockedAddressRejection"/> 读出标记，
+    /// 把笼统的网络归因换成可行动的 hosts/代理指引。
+    /// </summary>
+    internal const string BlockedAddressDataKey = "Cafe.Launcher.BlockedAddress";
+
     private readonly Func<string, CancellationToken, Task<IPAddress[]>> resolveHostAsync;
     private readonly TimeSpan cacheLifetime;
     private readonly Func<DateTimeOffset> utcNow;
@@ -46,6 +54,13 @@ internal sealed class RemoteHttpUrlValidator : IRemoteHttpUrlValidator
     }
 
     private static DateTimeOffset GetUtcNow() => DateTimeOffset.UtcNow;
+
+    private static InvalidOperationException BlockedAddress(string message)
+    {
+        var exception = new InvalidOperationException(message);
+        exception.Data[BlockedAddressDataKey] = true;
+        return exception;
+    }
 
     public Task<Uri> ValidateAsync(
         string url,
@@ -87,14 +102,14 @@ internal sealed class RemoteHttpUrlValidator : IRemoteHttpUrlValidator
         if (string.Equals(uri.Host, "localhost", StringComparison.OrdinalIgnoreCase)
             || uri.Host.EndsWith(".localhost", StringComparison.OrdinalIgnoreCase))
         {
-            throw new InvalidOperationException("Remote URL resolves to a blocked host.");
+            throw BlockedAddress("Remote URL resolves to a blocked host.");
         }
 
         if (IPAddress.TryParse(uri.Host, out var literalAddress))
         {
             if (!IsPublicAddress(literalAddress))
             {
-                throw new InvalidOperationException("Remote URL resolves to a blocked network address.");
+                throw BlockedAddress("Remote URL resolves to a blocked network address.");
             }
 
             return uri;
@@ -114,7 +129,7 @@ internal sealed class RemoteHttpUrlValidator : IRemoteHttpUrlValidator
         var addresses = await ResolveHostCachedAsync(uri.IdnHost, cancellationToken).ConfigureAwait(false);
         if (addresses.Length == 0)
         {
-            throw new InvalidOperationException(
+            throw BlockedAddress(
                 "Remote URL resolves to a blocked network address. No addresses resolved");
         }
 
@@ -126,7 +141,7 @@ internal sealed class RemoteHttpUrlValidator : IRemoteHttpUrlValidator
         if (addresses.Any(address => !IsPublicAddress(address) && !IsFakeIpRange(address)))
         {
             var blocked = addresses.Where(a => !IsPublicAddress(a) && !IsFakeIpRange(a)).ToArray();
-            throw new InvalidOperationException(
+            throw BlockedAddress(
                 $"Remote URL resolves to a blocked network address. Blocked: {string.Join(", ", blocked.Select(a => a.ToString()))}");
         }
 

@@ -1,7 +1,7 @@
 ---
 last_verified: 2026-08-26
 scope: "Material Design 2 legacy guidance and M2-to-M3 migration reference"
-requires_current_verification: false
+requires_current_verification: true
 ---
 
 # Material Design 2 Reference
@@ -28,7 +28,7 @@ production — especially via MUI, Angular Material, and legacy MDC-Android proj
 | Color system | Primary + PrimaryVariant + Secondary + SecondaryVariant | Tonal palette → color roles (primary, primaryContainer, etc.) |
 | Surface | Single `surface` color + shadow elevation | Surface container hierarchy (5 levels) + tonal elevation |
 | Typography | h1–h6, subtitle1/2, body1/2, button, caption, overline | Display/Headline/Title/Body/Label × Large/Medium/Small |
-| Shape | Simpler, mostly component-level corners | System shape scale; M3 Expressive further expands shape roles and morphing |
+| Shape | Theme-level small/medium/large shape families plus component defaults | System shape scale; M3 Expressive further expands shape roles and morphing |
 | Motion | Duration + easing curves | Standard M3 motion plus physics-based motion schemes in M3 Expressive |
 | Dynamic color | Not available | Material You dynamic color (Android 12+) |
 | Elevation | Shadow-dominant | Shadow + surface tone + borders |
@@ -78,9 +78,13 @@ onError       — text/icons on error
 M2 dark theme uses:
 - `background`: `#121212` (near-black)
 - `surface`: `#121212` with semi-transparent white overlay for elevation levels
-- Elevation expressed through `rgba(255,255,255, N)` overlays (0%–12% based on dp height)
+- Overlay opacity depends on elevation and implementation; it is not capped at 12%.
+  Compose Material's default uses `(4.5 * ln(elevationDp + 1) + 2) / 100` for positive
+  elevation, about 16.5% at 24dp. This supplements rather than replaces shadows.
 
-This is fundamentally different from M3's tonal surface container approach.
+Prefer the target library's overlay behavior instead of reproducing a universal opacity
+table. This differs from M3's semantic surface-container approach. See the official
+[M2 overlay implementation](https://github.com/androidx/androidx/blob/androidx-main/compose/material/material/src/commonMain/kotlin/androidx/compose/material/ElevationOverlay.kt).
 
 ## M2 typography system
 
@@ -113,24 +117,32 @@ overline  — 10sp  Regular   — section headers, small labels (UPPERCASE)
 
 ### Shape
 
-M2 uses a simpler shape system:
-- Small components (chips, buttons): 4dp radius
-- Medium components (cards, dialogs, sheets): 4–8dp radius
-- No system-wide shape tokens by default; shape is mostly component-specific
+M2 supports theme-level small, medium, and large component shape families, plus
+component-specific defaults and overrides. MDC exposes `ShapeAppearance.MaterialComponents`
+styles for those families; Compose Material exposes `MaterialTheme.shapes`.
+This is a different vocabulary from M3's reference/system/component tokens, not an
+absence of theme-level shape configuration. Use each component's default geometry:
+chips and FABs, for example, are not ordinary 4dp-corner rectangles.
+
+Source: [MDC shape styles](https://github.com/material-components/material-components-android/blob/master/lib/java/com/google/android/material/shape/res/values/styles.xml).
 
 ### Elevation (shadow-based)
 
-| Level | dp | Use |
-|-------|----|-----|
-| 0 | 0dp | Flat content |
-| 1 | 1dp | Cards, search bar (resting) |
-| 2 | 3dp | FAB (resting), raised button (resting) |
-| 3 | 4dp | App bar (resting) |
-| 4 | 6dp | App bar (scrolled), menu |
-| 6 | 8dp | FAB (pressed), raised button (pressed) |
-| 8 | 12dp | Bottom navigation |
-| 12 | 16dp | Dialog |
-| 16 | 24dp | Navigation drawer, modal bottom sheet |
+Examples from the official **Compose Material (M2)** defaults:
+
+| Component | Resting | Pressed | Hovered / focused |
+|-----------|---------|---------|-------------------|
+| Contained button | 2dp | 8dp | 4dp |
+| FAB | 6dp | 12dp | 8dp |
+| Modal drawer sheet | 16dp | Not applicable | Not applicable |
+
+These are component/state defaults, not an M3-style numbered elevation-level mapping.
+For other components or implementations, consult their own defaults rather than
+interpolating from this table.
+
+Sources: [M2 Button](https://github.com/androidx/androidx/blob/androidx-main/compose/material/material/src/commonMain/kotlin/androidx/compose/material/Button.kt),
+[M2 FAB](https://github.com/androidx/androidx/blob/androidx-main/compose/material/material/src/commonMain/kotlin/androidx/compose/material/FloatingActionButton.kt),
+[M2 Drawer](https://github.com/androidx/androidx/blob/androidx-main/compose/material/material/src/commonMain/kotlin/androidx/compose/material/Drawer.kt).
 
 M2 elevation is primarily shadow-based. In the baseline dark theme, light elevation overlays are used to make raised surfaces perceptible because dark-on-dark shadows alone provide weak separation.
 
@@ -210,20 +222,29 @@ const m2Theme = createTheme({
 
 ### Angular Material
 
+For Angular Material versions exposing the `m2-` compatibility API, prefix both the
+functions and palette names. Check the installed version before adapting older examples.
+
 ```scss
-$m2-primary: mat.define-palette(mat.$deep-purple-palette);
-$m2-accent: mat.define-palette(mat.$teal-palette);
-$m2-theme: mat.define-light-theme((
+@use '@angular/material' as mat;
+
+$m2-primary: mat.m2-define-palette(mat.$m2-deep-purple-palette);
+$m2-accent: mat.m2-define-palette(mat.$m2-teal-palette);
+$m2-theme: mat.m2-define-light-theme((
   color: (primary: $m2-primary, accent: $m2-accent)
 ));
 @include mat.all-component-themes($m2-theme);
 ```
 
+Sources: [public Sass exports](https://github.com/angular/components/blob/main/src/material/_index.scss),
+[M2 exports](https://github.com/angular/components/blob/main/src/material/core/m2/_index.scss).
+
 ## M2 accessibility checklist
 
 M2 accessibility requirements are similar to M3, but note:
 
-- M2 elevation cannot be perceived in dark theme without additional overrides.
+- In dark theme, use the library's elevation overlays and verify surface separation;
+  standard M2 implementations can supply these without custom overrides.
 - M2 outlined text fields have lower contrast borders — verify they meet ≥ 3:1.
 - M2 button text is UPPERCASE by default, which can reduce readability for some users.
 - M2 does not have built-in dynamic color or high-contrast mode settings.

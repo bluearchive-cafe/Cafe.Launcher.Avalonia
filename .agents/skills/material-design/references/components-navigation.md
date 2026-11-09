@@ -66,7 +66,7 @@ space.
 - Switching navigation taxonomy when moving between bar/rail/drawer layouts.
 
 Sources:
-- https://developer.android.com/reference/kotlin/androidx/compose/material3/NavigationRail
+- https://developer.android.com/reference/kotlin/androidx/compose/material3/NavigationRail.composable
 - https://m2.material.io/components/navigation-rail
 
 ---

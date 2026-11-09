@@ -100,7 +100,71 @@ public sealed class LauncherSelfUpdateServiceTests
     }
 
     [Fact]
-    public async Task PrepareAsync_WhenManifestDigestDoesNotMatchTheDownload_ReturnsFailed()
+    public async Task PrepareAsync_WhenTheManifestTargetResolvesToALocalAddress_ReportsUrlRejectedAndLogsIt()
+    {
+        // #33：hosts/加速器把 GitHub 解析到 127.0.0.1 时，清单抓取在旧代码里被吞成
+        // null，用户只看到笼统的网络失败、日志里什么都没有。现在必须分类并留痕。
+        using var directory = TestDirectory.Create();
+        var diagnostics = new RecordingDiagnostics();
+        var service = CreateService(
+            WindowsPortableHost(),
+            uri => uri.AbsolutePath.EndsWith("SHA256SUMS", StringComparison.Ordinal)
+                ? BlockedAddressRejection()
+                : PackageBytes,
+            directory.DataRoot,
+            diagnostics: diagnostics);
+
+        var preparation = await service.PrepareAsync(
+            ReleaseFiles(), Version, progress: null, TestContext.Current.CancellationToken);
+
+        Assert.Equal(LauncherSelfUpdatePreparationStatus.Failed, preparation.Status);
+        Assert.Equal(LauncherSelfUpdateFailureKind.UrlRejected, preparation.FailureKind);
+        var log = Assert.Single(diagnostics.Messages);
+        Assert.Contains("could not be fetched", log, StringComparison.Ordinal);
+        Assert.Contains("127.0.0.1", log, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task PrepareAsync_WhenTheManifestFetchFailsOnTheNetwork_ReportsNetworkFailureAndLogsIt()
+    {
+        using var directory = TestDirectory.Create();
+        var diagnostics = new RecordingDiagnostics();
+        var service = CreateService(
+            WindowsPortableHost(),
+            uri => uri.AbsolutePath.EndsWith("SHA256SUMS", StringComparison.Ordinal)
+                ? new HttpRequestException("connection refused")
+                : PackageBytes,
+            directory.DataRoot,
+            diagnostics: diagnostics);
+
+        var preparation = await service.PrepareAsync(
+            ReleaseFiles(), Version, progress: null, TestContext.Current.CancellationToken);
+
+        Assert.Equal(LauncherSelfUpdatePreparationStatus.Failed, preparation.Status);
+        Assert.Equal(LauncherSelfUpdateFailureKind.Network, preparation.FailureKind);
+        Assert.Contains("connection refused", Assert.Single(diagnostics.Messages), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task PrepareAsync_WhenThePackageTargetResolvesToALocalAddress_ReportsUrlRejected()
+    {
+        using var directory = TestDirectory.Create();
+        var service = CreateService(
+            WindowsPortableHost(),
+            uri => uri.AbsolutePath.EndsWith("SHA256SUMS", StringComparison.Ordinal)
+                ? $"{PackageSha}  {PackageName}"
+                : BlockedAddressRejection(),
+            directory.DataRoot);
+
+        var preparation = await service.PrepareAsync(
+            ReleaseFiles(), Version, progress: null, TestContext.Current.CancellationToken);
+
+        Assert.Equal(LauncherSelfUpdatePreparationStatus.Failed, preparation.Status);
+        Assert.Equal(LauncherSelfUpdateFailureKind.UrlRejected, preparation.FailureKind);
+    }
+
+    [Fact]
+    public async Task PrepareAsync_WhenTheManifestDigestDoesNotMatchTheDownload_ReportsVerificationFailure()
     {
         using var directory = TestDirectory.Create();
         var service = CreateService(
@@ -112,6 +176,7 @@ public sealed class LauncherSelfUpdateServiceTests
             ReleaseFiles(), Version, progress: null, TestContext.Current.CancellationToken);
 
         Assert.Equal(LauncherSelfUpdatePreparationStatus.Failed, preparation.Status);
+        Assert.Equal(LauncherSelfUpdateFailureKind.Verification, preparation.FailureKind);
     }
 
     [Fact]
@@ -233,13 +298,26 @@ public sealed class LauncherSelfUpdateServiceTests
         LauncherUpdateHostInfo host,
         Func<Uri, object?> responder,
         LauncherDataRoot dataRoot,
-        bool isHelperAvailable = true) =>
+        bool isHelperAvailable = true,
+        ILauncherDiagnostics? diagnostics = null) =>
         new(
             new LauncherUpdateDownloader(new StubRemoteHttpTransport(responder)),
             new LauncherUpdateHostInfoProviderFake(host),
             new StubWindowsLauncherUpdateApplier(isHelperAvailable),
             dataRoot,
-            new LocalDiagnostics());
+            diagnostics ?? new LocalDiagnostics());
+
+    /// <summary>
+    /// 构造与 <see cref="RemoteHttpUrlValidator"/> 私网拒绝完全同形的异常：类型不变，
+    /// 只多带标记键，自更新服务据此把「本机/内网地址」与其他传输失败分开。
+    /// </summary>
+    private static InvalidOperationException BlockedAddressRejection()
+    {
+        var exception = new InvalidOperationException(
+            "Remote URL resolves to a blocked network address. Blocked: 127.0.0.1");
+        exception.Data[RemoteHttpUrlValidator.BlockedAddressDataKey] = true;
+        return exception;
+    }
 
     private static List<ReleaseFile> ReleaseFiles() =>
     [
@@ -251,5 +329,60 @@ public sealed class LauncherSelfUpdateServiceTests
         : ILauncherUpdateHostInfoProvider
     {
         public LauncherUpdateHostInfo GetHostInfo() => info;
+    }
+
+    /// <summary>Records diagnostic lines so the update service's silent-failure regression stays observable.</summary>
+    private sealed class RecordingDiagnostics : ILauncherDiagnostics
+    {
+        public List<string> Messages { get; } = [];
+
+        public Task DebugAsync(
+            string title,
+            string? message = null,
+            CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public Task MessageAsync(string title, string message, CancellationToken cancellationToken = default)
+        {
+            Messages.Add($"{title}: {message}");
+            return Task.CompletedTask;
+        }
+
+        public Task WarningAsync(string title, string message, CancellationToken cancellationToken = default)
+        {
+            Messages.Add($"Warn: {title}: {message}");
+            return Task.CompletedTask;
+        }
+
+        public void LogMessage(LogEntrySeverity severity, string title, string? message = null) =>
+            Messages.Add($"{severity}: {title}: {message}");
+
+        public Task ErrorAsync(
+            string title,
+            string? message,
+            Exception exception,
+            CancellationToken cancellationToken = default)
+        {
+            Messages.Add($"Error: {title}: {message}");
+            return Task.CompletedTask;
+        }
+
+        public Task ErrorAsync(string title, Exception exception, CancellationToken cancellationToken = default) =>
+            ErrorAsync(title, exception.Message, exception, cancellationToken);
+
+        public Task VerboseAsync(
+            string title,
+            string? message = null,
+            CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public Task FatalAsync(string title, Exception exception, CancellationToken cancellationToken = default) =>
+            ErrorAsync(title, exception.Message, exception, cancellationToken);
+
+        public string LogFilePath => string.Empty;
+
+        public LogEntrySeverity MinimumLevel => LogEntrySeverity.Info;
+
+        public void SetMinimumLevel(LogEntrySeverity severity)
+        {
+        }
     }
 }

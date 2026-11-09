@@ -432,6 +432,71 @@ public sealed class ShellLifecycleTests : IDisposable
         Assert.Equal(LauncherProfiles.Cafe.GitHubReleasesPageUrl, Assert.Single(openedUrls));
     }
 
+    [Fact]
+    public async Task SelfUpdate_WhenTheTargetResolvesToALocalAddress_ShowsTheBlockedAddressHint()
+    {
+        // #33：GitHub 被解析到本机/内网（hosts 或加速器）时，失败提示必须点名这个原因，
+        // 而不是沿用笼统的「请检查网络重试」。
+        var packageBytes = System.Text.Encoding.UTF8.GetBytes("launcher package payload");
+        var transport = new StubRemoteHttpTransport(uri =>
+            uri.AbsolutePath.EndsWith("SHA256SUMS", StringComparison.Ordinal)
+                ? BlockedAddressRejection()
+                : packageBytes);
+        var selfUpdate = new LauncherSelfUpdateService(
+            new LauncherUpdateDownloader(transport),
+            new FixedHostInfoProvider(new LauncherUpdateHostInfo(
+                IsWindows: true,
+                IsX64: true,
+                IsInstallerInstall: false)),
+            new StubWindowsLauncherUpdateApplier(),
+            tempDir.DataRoot,
+            new LocalDiagnostics());
+        var fixture = CreateLifecycle(
+            new ScriptedCoreService(CreateSnapshot()),
+            launcherSelfUpdateService: selfUpdate);
+        var files = new[]
+        {
+            new ReleaseFile
+            {
+                Name = "Cafe.Launcher_v9.9.9_win-x64.zip",
+                Url = "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v9.9.9/Cafe.Launcher_v9.9.9_win-x64.zip",
+                Size = packageBytes.Length
+            },
+            new ReleaseFile
+            {
+                Name = "SHA256SUMS",
+                Url = "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v9.9.9/SHA256SUMS",
+                Size = 128
+            }
+        };
+
+        fixture.Dialogs.ShowUpdateAvailable("9.9.9", files, LauncherUpdateInAppAvailability.Available);
+        fixture.Dialogs.ConfirmUpdateAvailableCommand.Execute(null);
+
+        await TestWait.UntilAsync(
+            () => !fixture.Dialogs.IsUpdateDownloading,
+            TimeSpan.FromSeconds(5),
+            "A blocked-address failure should end the download state.");
+
+        var errorToast = Assert.Single(raisedToasts, toast => toast.Severity == ToastSeverity.Error);
+        Assert.Equal(
+            fixture.Shell.I18n[LocalizationKeys.LauncherUpdateDownloadBlocked],
+            errorToast.Message);
+        Assert.False(fixture.Dialogs.UpdateSupportsInAppApply);
+        Assert.False(fixture.Lifecycle.IsBusy);
+    }
+
+    /// <summary>
+    /// 与 <see cref="RemoteHttpUrlValidator"/> 私网拒绝同形：类型不变，只带标记键。
+    /// </summary>
+    private static InvalidOperationException BlockedAddressRejection()
+    {
+        var exception = new InvalidOperationException(
+            "Remote URL resolves to a blocked network address. Blocked: 127.0.0.1");
+        exception.Data[RemoteHttpUrlValidator.BlockedAddressDataKey] = true;
+        return exception;
+    }
+
     /// <summary>
     /// Wire/Unwire 配对守卫（R2-c07）：收敛成 Attach 记录式拆卸后，逆序退订
     /// 必须覆盖全部三个代表性方向——操作页开日志、诊断页刷新、通知弹窗关闭壳——

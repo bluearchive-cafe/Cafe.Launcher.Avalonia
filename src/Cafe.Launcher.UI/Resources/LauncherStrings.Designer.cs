@@ -606,6 +606,8 @@ internal static class LauncherStrings
 
     public static string LauncherUpdateDownload => GetRequiredString("launcherUpdateDownload");
 
+    public static string LauncherUpdateDownloadBlocked => GetRequiredString("launcherUpdateDownloadBlocked");
+
     public static string LauncherUpdateDownloadFailed => GetRequiredString("launcherUpdateDownloadFailed");
 
     public static string LauncherUpdateDownloading => GetRequiredString("launcherUpdateDownloading");
