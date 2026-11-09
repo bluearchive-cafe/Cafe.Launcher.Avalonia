@@ -318,7 +318,7 @@ public sealed partial class UiStyleContractTests
             bindingValues,
             value => value.Contains("ElementName=Root", StringComparison.Ordinal));
         Assert.Equal(
-            6,
+            7,
             bindingValues.Count(value =>
                 value.Contains(
                     "#Root.((vm:MainWindowViewModel)DataContext).",

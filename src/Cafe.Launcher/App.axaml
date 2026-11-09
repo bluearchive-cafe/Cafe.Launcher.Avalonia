@@ -89,6 +89,9 @@
             <CornerRadius x:Key="Launcher.Radius.Full">999</CornerRadius>
             <CornerRadius x:Key="Launcher.Component.Banner.Indicator.CornerRadius">1</CornerRadius>
             <Thickness x:Key="Launcher.Component.Banner.Indicator.Margin">0,0,0,16</Thickness>
+            <!-- 横幅与信息卡无缝拼接：接缝侧平角，外缘保留 Radius.Sm。 -->
+            <CornerRadius x:Key="Launcher.Component.RemoteContent.JoinedUpper.CornerRadius">8,8,0,0</CornerRadius>
+            <CornerRadius x:Key="Launcher.Component.RemoteContent.JoinedLower.CornerRadius">0,0,8,8</CornerRadius>
             <x:Double x:Key="Launcher.Icon.Sm">16</x:Double>
             <x:Double x:Key="Launcher.Icon.Md">18</x:Double>
             <x:Double x:Key="Launcher.Icon.Lg">20</x:Double>

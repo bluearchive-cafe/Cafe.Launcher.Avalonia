@@ -229,6 +229,85 @@ public sealed partial class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
+    public void MainWindow_BannerAndNews_JoinWithoutGapAndSquareTheSeamCorners()
+    {
+        using var context = CreateContext();
+        ApplyRemoteState(context, state =>
+        {
+            state.OperationsResource = new OperationsResourceResponse
+            {
+                OperationsResourceOpen = true,
+                OperationsBannerList =
+                [
+                    new OperationsBannerItem { BannerImg = "", JumpUrl = "https://banner.example.invalid/1" }
+                ],
+                NewsList = new NewsListEnvelope
+                {
+                    Code = 0,
+                    Data = new NewsListData
+                    {
+                        News =
+                        [
+                            new NewsTypeItem
+                            {
+                                TypeLabel = "News",
+                                Rows =
+                                [
+                                    new NewsRowItem
+                                    {
+                                        Title = "News item",
+                                        Link = "https://news.example.invalid/1",
+                                        PublishTime = 1_700_000_000_000
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
+            };
+        });
+
+        var bannerFrame = context.Window.GetVisualDescendants()
+            .OfType<Border>().Single(control => control.Classes.Contains("banner-frame"));
+        var bannerCarousel = context.Window.GetVisualDescendants()
+            .OfType<Carousel>().Single(control => control.Classes.Contains("banner-carousel"));
+        var bannerMedia = context.Window.GetVisualDescendants()
+            .OfType<Border>().Single(control => control.Classes.Contains("banner-media"));
+        var newsCard = context.Window.GetVisualDescendants()
+            .OfType<Border>().Single(control => control.Classes.Contains("news-card"));
+
+        var edgeGradients = context.Window.GetVisualDescendants()
+            .OfType<Border>().Where(control => control.Classes.Contains("banner-edge-gradient")).ToArray();
+
+        var joinedUpper = new CornerRadius(8, 8, 0, 0);
+        Assert.Equal(joinedUpper, bannerFrame.CornerRadius);
+        Assert.Equal(joinedUpper, bannerCarousel.CornerRadius);
+        Assert.Equal(joinedUpper, bannerMedia.CornerRadius);
+        Assert.Equal(2, edgeGradients.Length);
+        Assert.All(edgeGradients, gradient => Assert.Equal(joinedUpper, gradient.CornerRadius));
+        Assert.Equal(new CornerRadius(0, 0, 8, 8), newsCard.CornerRadius);
+
+        var bannerBottom = bannerFrame.TranslatePoint(new Point(0, bannerFrame.Bounds.Height), context.Window);
+        var newsTop = newsCard.TranslatePoint(default, context.Window);
+        Assert.NotNull(bannerBottom);
+        Assert.NotNull(newsTop);
+        Assert.InRange(newsTop!.Value.Y - bannerBottom!.Value.Y, -0.5, 0.5);
+
+        // Without news below it, the banner keeps its rounded bottom corners.
+        ApplyRemoteState(context, state => state.OperationsResource = new OperationsResourceResponse
+        {
+            OperationsResourceOpen = true,
+            OperationsBannerList =
+            [
+                new OperationsBannerItem { BannerImg = "", JumpUrl = "https://banner.example.invalid/1" }
+            ]
+        });
+        bannerFrame = context.Window.GetVisualDescendants()
+            .OfType<Border>().Single(control => control.Classes.Contains("banner-frame"));
+        Assert.Equal(new CornerRadius(8), bannerFrame.CornerRadius);
+    }
+
+    [AvaloniaFact]
     public void MainWindow_SocialActions_AddTopRightVerticalButtonsInSourceOrder()
     {
         using var context = CreateContext();

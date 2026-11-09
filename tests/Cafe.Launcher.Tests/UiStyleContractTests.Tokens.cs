@@ -677,6 +677,10 @@ public sealed partial class UiStyleContractTests
             // 对话框徽章是整圆（16 = 半径），卸载步骤徽章复用同一枚组件 token 画圆，
             // 与 DialogSurface 模板消费的是同一个声明。
             "{StaticResource Launcher.Component.Dialog.Badge.CornerRadius}",
+            // 远端内容的横幅与信息卡无缝拼接：接缝两侧必须平角，外缘各留两角圆角，
+            // 对称四角 token 无法表达，故由组件 token 声明（见 App.axaml）。
+            "{StaticResource Launcher.Component.RemoteContent.JoinedUpper.CornerRadius}",
+            "{StaticResource Launcher.Component.RemoteContent.JoinedLower.CornerRadius}",
             "{TemplateBinding CornerRadius}",
             // 原生模板部件转发控件已由 token 决定的圆角，不引入另一套数值。
             "{Binding CornerRadius, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type ComboBox}}",

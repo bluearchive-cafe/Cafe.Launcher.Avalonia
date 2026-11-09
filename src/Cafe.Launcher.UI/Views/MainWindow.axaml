@@ -110,7 +110,9 @@
                                 </StackPanel>
                             </Border>
 
+                            <StackPanel Spacing="{StaticResource Launcher.Spacing.None}">
                             <Border Classes="banner-frame"
+                                    Classes.joined-below="{Binding RemoteContent.HasNewsItems}"
                                     IsVisible="{Binding RemoteContent.HasBannerItems}">
                                 <Grid x:Name="BannerStage"
                                       Classes="banner-stage"
@@ -122,17 +124,19 @@
                                 <!-- Banner carousel with horizontal page-slide transition -->
                                 <Carousel x:Name="BannerCarousel"
                                           Classes="banner-carousel"
+                                          Classes.joined-below="{Binding RemoteContent.HasNewsItems}"
                                           ItemsSource="{Binding RemoteContent.BannerItems}"
                                           SelectedIndex="{Binding RemoteContent.CarouselSelectedIndex, Mode=TwoWay}"
                                           PageTransition="{Binding RemoteContent.CarouselTransition}"
                                           Height="{StaticResource Launcher.Layout.Banner.Height}"
-                                          CornerRadius="{StaticResource Launcher.Radius.Sm}" ClipToBounds="True">
+                                          ClipToBounds="True">
                                     <Carousel.ItemTemplate>
                                         <DataTemplate x:DataType="models:RemoteContentItem">
                                             <Grid Classes="banner-item"
                                                   Width="{Binding #BannerCarousel.Bounds.Width}"
                                                   Height="{Binding #BannerCarousel.Bounds.Height}">
-                                                <Border Classes="banner-media">
+                                                <Border Classes="banner-media"
+                                                        Classes.joined-below="{Binding #Root.((vm:MainWindowViewModel)DataContext).RemoteContent.HasNewsItems}">
                                                     <Panel>
                                                         <Border Classes="media-placeholder"
                                                                 IsVisible="{Binding IsImageLoadFailed}">
@@ -157,10 +161,12 @@
                                     </Carousel.ItemTemplate>
                                 </Carousel>
                                 <Border Classes="banner-edge-gradient banner-edge-gradient-left"
+                                        Classes.joined-below="{Binding RemoteContent.HasNewsItems}"
                                         IsHitTestVisible="False"
                                         HorizontalAlignment="Left"
                                         VerticalAlignment="Stretch"/>
                                 <Border Classes="banner-edge-gradient banner-edge-gradient-right"
+                                        Classes.joined-below="{Binding RemoteContent.HasNewsItems}"
                                         IsHitTestVisible="False"
                                         HorizontalAlignment="Right"
                                         VerticalAlignment="Stretch"/>
@@ -208,6 +214,7 @@
                             </Border>
 
                             <Border Classes="remote-content-card news-card"
+                                    Classes.joined-above="{Binding RemoteContent.HasBannerItems}"
                                     IsVisible="{Binding RemoteContent.HasNewsItems}">
                                 <TabControl Classes="news-tabs"
                                             AutomationProperties.Name="{Binding Shell.I18n[newsCategories]}"
@@ -267,6 +274,7 @@
                                     </TabControl.ContentTemplate>
                                 </TabControl>
                             </Border>
+                            </StackPanel>
 
                             </StackPanel>
                         </ScrollViewer>
