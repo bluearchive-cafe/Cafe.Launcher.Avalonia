@@ -54,7 +54,9 @@
           Condition="'$(BackgroundVideoRid)' == 'win-x64' and '$(DesignTimeBuild)' != 'true'">
     <Exec Command="pwsh -NoProfile -File &quot;$(MSBuildProjectDirectory)/../../scripts/Restore-VideoBackgroundRuntime.ps1&quot;" />
   </Target>
-  <Target Name="ValidateLocalizationCatalog" BeforeTargets="BeforeCompile" Condition="'$(DesignTimeBuild)' != 'true'">
+  <!-- 包管理器容器（如 Arch）可能没有 pwsh；同一提交在构建任务里已执行该校验。 -->
+  <Target Name="ValidateLocalizationCatalog" BeforeTargets="BeforeCompile"
+          Condition="'$(DesignTimeBuild)' != 'true' and '$(SkipLocalizationCatalogValidation)' != 'true'">
     <Exec Command="pwsh -NoProfile -File &quot;$(MSBuildProjectDirectory)/../../scripts/Generate-LocalizationCatalog.ps1&quot; -Check" />
   </Target>
 </Project>

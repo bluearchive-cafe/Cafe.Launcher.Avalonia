@@ -20,15 +20,15 @@ $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 $env:AVALONIA_TELEMETRY_OPTOUT = '1'
 $env:TESTINGPLATFORM_TELEMETRY_OPTOUT = '1'
 
-$resultsRoot = Join-Path $PSScriptRoot 'TestResults\Tests'
+$resultsRoot = Join-Path (Join-Path $PSScriptRoot 'TestResults') 'Tests'
 $projects = @(
     @{
         Name = 'Unit'
-        Project = '.\tests\Cafe.Launcher.Tests\Cafe.Launcher.Tests.csproj'
+        Project = 'tests/Cafe.Launcher.Tests/Cafe.Launcher.Tests.csproj'
     },
     @{
         Name = 'Headless'
-        Project = '.\tests\Cafe.Launcher.HeadlessTests\Cafe.Launcher.HeadlessTests.csproj'
+        Project = 'tests/Cafe.Launcher.HeadlessTests/Cafe.Launcher.HeadlessTests.csproj'
     }
 )
 

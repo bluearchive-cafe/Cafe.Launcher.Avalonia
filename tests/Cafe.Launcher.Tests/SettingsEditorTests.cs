@@ -265,7 +265,8 @@ public sealed class SettingsEditorTests
     [Fact]
     public void DefaultValues_MatchLauncherSettingsDefaults()
     {
-        var editor = new SettingsEditor();
+        // 生产组合根注入宿主身份；不带身份的编辑器在预发布构建上会退化为稳定通道默认值。
+        var editor = new SettingsEditor(BuildInfo.Identity);
 
         var current = editor.Current;
         Assert.Equal("", current.GamePath);

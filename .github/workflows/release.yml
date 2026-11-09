@@ -108,7 +108,7 @@ jobs:
             DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends libicu74 libssl3t64 libstdc++6 libdrm2 libfribidi0 libharfbuzz0b libfontconfig1 libfreetype6 libegl1
             test ! -e /usr/lib/x86_64-linux-gnu/libasound.so.2
             test ! -e /usr/lib/x86_64-linux-gnu/libva.so.2
-            DOTNET_ROOT=/dotnet TESTINGPLATFORM_TELEMETRY_OPTOUT=1 DOTNET_CLI_TELEMETRY_OPTOUT=1 /dotnet/dotnet /tests/Cafe.Launcher.Tests.dll --filter-class "*VideoBackgroundRuntimeTests" --hangdump --hangdump-timeout 5m --hangdump-type None
+            DOTNET_ROOT=/dotnet TESTINGPLATFORM_TELEMETRY_OPTOUT=1 DOTNET_CLI_TELEMETRY_OPTOUT=1 /dotnet/dotnet /tests/Cafe.Launcher.Tests.dll --results-directory /tmp/TestResults --filter-class "*VideoBackgroundRuntimeTests" --hangdump --hangdump-timeout 5m --hangdump-type None
           '
 
       - name: Verify portable video assets and Homebrew cask

@@ -976,9 +976,12 @@ public sealed partial class MainWindowHeadlessTests
         OpenSettings(context);
         var settings = context.ViewModel.Settings;
         settings.SelectedCategory = SettingsCategoryCodes.General;
-        settings.Editor.Current.CloseBehavior = CloseBehaviors.Minimize;
-        settings.Editor.Current.StatusDetailMode = StatusDetailModes.Compact;
-        settings.Editor.Current.UpdateChannel = UpdateChannels.Stable;
+        // 预发布构建默认使用 Beta 通道；以显式基线开始，避免依赖宿主构建身份。
+        var baseline = settings.Editor.GetSavedSnapshot();
+        baseline.CloseBehavior = CloseBehaviors.Minimize;
+        baseline.StatusDetailMode = StatusDetailModes.Compact;
+        baseline.UpdateChannel = UpdateChannels.Stable;
+        settings.Editor.ApplySnapshot(baseline);
         Dispatcher.UIThread.RunJobs();
         var section = context.Window.GetVisualDescendants().OfType<SettingsGeneralSection>().Single();
 
