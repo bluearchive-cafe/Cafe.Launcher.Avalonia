@@ -61,8 +61,8 @@ internal sealed class CrashReportWindowViewModel
     /// <summary>Directory the "open log folder" action reveals: the launcher log lives there.</summary>
     public string LogDirectory => dataRoot.LogDirectory;
 
-    private static string T(string key) =>
-        LauncherStrings.ResourceManager.GetString(key, CultureInfo.CurrentUICulture)
-        ?? LauncherStrings.ResourceManager.GetString(key, CultureInfo.GetCultureInfo("en"))
-        ?? key;
+    private static string T(LocalizationKeys key) =>
+        LauncherStrings.ResourceManager.GetString(LauncherResourceCatalog.Name(key), CultureInfo.CurrentUICulture)
+        ?? LauncherStrings.ResourceManager.GetString(LauncherResourceCatalog.Name(key), CultureInfo.GetCultureInfo("en"))
+        ?? LauncherResourceCatalog.Name(key);
 }

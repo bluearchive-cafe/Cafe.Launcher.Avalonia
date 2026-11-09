@@ -1,4 +1,4 @@
-﻿using Cafe.Launcher.UI.Features.GameOperations;
+using Cafe.Launcher.UI.Features.GameOperations;
 using Cafe.Launcher.UI.Features.SetupWizard;
 using Cafe.Launcher.UI.Constants;
 using Cafe.Launcher.UI.Features.Diagnostics;
@@ -18,11 +18,6 @@ namespace Cafe.Launcher.Tests;
 public sealed class DebugViewModelTests : IDisposable
 {
     private readonly TestDirectory tempDir = TestDirectory.Create();
-
-    static DebugViewModelTests()
-    {
-        TestLocalizationHelper.Initialize();
-    }
 
     [Fact]
     public void TogglePauseResume_WhenOperationBecomesPaused_ReportsPaused()
@@ -84,7 +79,7 @@ public sealed class DebugViewModelTests : IDisposable
         context.Backend.IsDownloadRunning = false;
 
         Assert.False(context.ViewModel.IsDownloadRunning);
-        Assert.Equal(context.Localizer.T("debugIdle"), context.ViewModel.DownloadStatusText);
+        Assert.Equal(context.Localizer.T(LocalizationKeys.DebugIdle), context.ViewModel.DownloadStatusText);
     }
 
     [Fact]
@@ -97,14 +92,14 @@ public sealed class DebugViewModelTests : IDisposable
         context.ViewModel.TestActionToastCommand.Execute(null);
 
         Assert.NotNull(raised);
-        Assert.Equal(context.Localizer.T("debugActionToastTitle"), raised.Title);
-        Assert.Equal(context.Localizer.T("debugSimulateSuccess"), raised.PrimaryAction!.Label);
-        Assert.Equal(context.Localizer.T("debugSimulateFailure"), raised.SecondaryAction!.Label);
+        Assert.Equal(context.Localizer.T(LocalizationKeys.DebugActionToastTitle), raised.Title);
+        Assert.Equal(context.Localizer.T(LocalizationKeys.DebugSimulateSuccess), raised.PrimaryAction!.Label);
+        Assert.Equal(context.Localizer.T(LocalizationKeys.DebugSimulateFailure), raised.SecondaryAction!.Label);
         Assert.True((await raised.PrimaryAction.ExecuteAsync(CancellationToken.None)).IsSuccess);
         var failure = await raised.SecondaryAction.ExecuteAsync(CancellationToken.None);
         Assert.False(failure.IsSuccess);
-        Assert.Equal(context.Localizer.T("debugActionFailureTitle"), failure.Title);
-        Assert.Equal(context.Localizer.T("debugActionFailureMessage"), failure.Message);
+        Assert.Equal(context.Localizer.T(LocalizationKeys.DebugActionFailureTitle), failure.Title);
+        Assert.Equal(context.Localizer.T(LocalizationKeys.DebugActionFailureMessage), failure.Message);
     }
 
     [Fact]

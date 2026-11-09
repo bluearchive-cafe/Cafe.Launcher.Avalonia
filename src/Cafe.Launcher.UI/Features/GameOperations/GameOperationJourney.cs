@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using Cafe.Launcher.Core.Helpers;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.UI.Constants;
@@ -11,14 +13,14 @@ using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.UI.Features.GameOperations;
 
-    /// <summary>
-    /// Owns the journey rules for launch, install, repair, and uninstall:
-    /// state validation, confirmations, retry, refresh, and notifications.
-    /// The presentation module (GameOperationsViewModel) stays pure — state
-    /// binding, progress mapping, and thin command delegation — and drives
-    /// refresh / log-viewer / minimize through the host interface.
-    /// </summary>
-    internal sealed class GameOperationJourney
+/// <summary>
+/// Owns the journey rules for launch, install, repair, and uninstall:
+/// state validation, confirmations, retry, refresh, and notifications.
+/// The presentation module (GameOperationsViewModel) stays pure — state
+/// binding, progress mapping, and thin command delegation — and drives
+/// refresh / log-viewer / minimize through the host interface.
+/// </summary>
+internal sealed class GameOperationJourney : IDisposable
 {
     /// <summary>Forwards installation running-state changes to the presentation host.</summary>
     public event Action? IsRunningChanged
@@ -37,68 +39,33 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
     private readonly IErrorHandlingService errorHandling;
     private readonly IGameOperationJourneyHost host;
 
-    private LauncherStatusSnapshot? lastInstallSnapshot;
-    private readonly object lifetimeLock = new();
-    private int pendingOperationCount;
-    private bool shutdownRequested;
-    private TaskCompletionSource? operationsDrained;
+    private readonly ActivityLifetime lifetime = new();
+    private int stopRequested;
+    private long uninstallRequestId;
 
     /// <summary>关闭开始后不再接收新操作，已请求停止的任务仍须完成其 finally 与呈现收尾。</summary>
-    public bool IsShuttingDown => Volatile.Read(ref shutdownRequested);
+    public bool IsShuttingDown => lifetime.IsShuttingDown;
 
     /// <summary>封闭入口、按进程退出意图停止下载，并异步等待所有已进入的下载旅程完成。</summary>
     public Task PrepareForShutdownAsync()
     {
-        Task pending;
-        lock (lifetimeLock)
-        {
-            if (shutdownRequested)
-            {
-                return operationsDrained?.Task ?? Task.CompletedTask;
-            }
+        Task pending = lifetime.BeginShutdown();
 
-            shutdownRequested = true;
-            pending = pendingOperationCount == 0
-                ? Task.CompletedTask
-                : (operationsDrained = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)).Task;
+        // 停止只做一次：重复的停机请求只等同一个排空任务。Cancel 会同步触发回调，
+        // 也不能用 IsDownloadRunning 判断是否需要等待：用户停止会先摘除会话，
+        // 此时其异常处理与 finally 仍可能在运行。
+        if (Interlocked.Exchange(ref stopRequested, 1) == 0)
+        {
+            executor.Stop(DownloadStopReason.ApplicationExit);
         }
 
-        // Cancel 会同步触发回调；不能在生命周期锁内调用，也不能用 IsDownloadRunning
-        // 判断是否需要等待：用户停止会先摘除会话，此时其异常处理与 finally 仍可能在运行。
-        executor.Stop(DownloadStopReason.ApplicationExit);
         return pending;
     }
 
-    private PendingOperation? TryBeginOperation()
-    {
-        lock (lifetimeLock)
-        {
-            if (shutdownRequested)
-            {
-                return null;
-            }
+    /// <summary>释放后取消生命周期令牌；在飞操作的租约仍会正常释放。</summary>
+    public void Dispose() => lifetime.Dispose();
 
-            pendingOperationCount++;
-            return new PendingOperation(this);
-        }
-    }
-
-    private void CompleteOperation()
-    {
-        TaskCompletionSource? drained;
-        lock (lifetimeLock)
-        {
-            pendingOperationCount--;
-            drained = pendingOperationCount == 0 ? operationsDrained : null;
-        }
-
-        drained?.TrySetResult();
-    }
-
-    private sealed class PendingOperation(GameOperationJourney owner) : IDisposable
-    {
-        public void Dispose() => owner.CompleteOperation();
-    }
+    private IDisposable? TryBeginOperation() => lifetime.TryBegin();
 
     /// <summary>
     /// The toast gets one short beat to be read before the window is taken away by the
@@ -145,8 +112,11 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
 
         await RunBusyAsync("Game launch failed.", LocalizationKeys.GameLaunchFailed, async () =>
         {
-            var launchResult = await executor.LaunchAsync(snapshot);
-            host.SetLaunchCheckResult(launchResult.Validation.Message);
+            var admission = GameOperationAttempt.Evaluate(GameOperationPolicy.Operation.Launch, snapshot);
+            var launchResult = admission.Attempt is { } attempt
+                ? await executor.LaunchAsync(attempt)
+                : GameOperationAttempt.RejectLaunch(snapshot, localizer);
+            host.Present(new GameOperationPresentation.LaunchCheck(launchResult.Validation.Message));
             var launchDiagnostic = BuildLaunchDiagnostic(launchResult);
 
             if (launchResult.Success)
@@ -166,7 +136,7 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
                 // sizes — a same-size but corrupt file needs hashing to be caught.
                 if (launchResult.Validation.HasDamagedFiles)
                 {
-                    host.ShowRepairConfirmation(localizer.T(LocalizationKeys.LaunchDamageRepairPrompt));
+                    host.Present(new GameOperationPresentation.RepairConfirmation(localizer.T(LocalizationKeys.LaunchDamageRepairPrompt)));
                 }
                 else
                 {
@@ -199,12 +169,12 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
                 // before the process goes away — the same beat the minimize path gives itself.
                 toastService.ShowSuccess(localizer.T(LocalizationKeys.GameLaunchedExiting));
                 await delayAsync(AfterLaunchToastBeat);
-                host.RequestExit();
+                host.Present(new GameOperationPresentation.Window(GameOperationWindowAction.Exit));
                 break;
             default:
                 toastService.ShowSuccess(localizer.T(LocalizationKeys.GameLaunchedMinimized));
                 await delayAsync(AfterLaunchToastBeat);
-                host.RequestMinimize();
+                host.Present(new GameOperationPresentation.Window(GameOperationWindowAction.Minimize));
                 break;
         }
     }
@@ -216,7 +186,7 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
     /// </summary>
     public void NotifySessionStartFailed(GameLaunchExitInfo? exit)
     {
-        host.RequestShow();
+        host.Present(new GameOperationPresentation.Window(GameOperationWindowAction.Show));
         toastService.ShowError(localizer.F(LocalizationKeys.GameSessionStartFailed, exit?.ExitCode ?? -1));
         _ = diagnostics.WarningAsync(
             "GameLaunch",
@@ -302,7 +272,6 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
             return;
         }
 
-        lastInstallSnapshot = snapshot;
         var result = await RunInstallOrUpdateAttemptAsync(snapshot);
         if (result is null)
         {
@@ -315,7 +284,7 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
             return;
         }
 
-        ShowInstallUpdateFailureToast(result.Message, result.ErrorCode);
+        ShowInstallUpdateFailureToast(result.Message, result.ErrorCode, snapshot);
     }
 
     /// <summary>
@@ -329,7 +298,7 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
             return Task.CompletedTask;
         }
 
-        host.ShowRepairConfirmation(localizer.T(LocalizationKeys.RepairWarning));
+        host.Present(new GameOperationPresentation.RepairConfirmation(localizer.T(LocalizationKeys.RepairWarning)));
         return Task.CompletedTask;
     }
 
@@ -345,8 +314,10 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
         // 用户已经在确认框上点过确认：此时状态若又变得不允许，必须给可见反馈（ADR-027）。
         // 这道闸门必须早于 PrepareOperation——后者会把面板 latch 到 Progress，而只有
         // SetIdlePanels 能把它复位。
-        if (RejectRepairIfUnavailable(snapshot))
+        var admission = GameOperationAttempt.Evaluate(GameOperationPolicy.Operation.Repair, snapshot);
+        if (admission.Attempt is not { } attempt)
         {
+            ShowOperationUnavailable();
             return;
         }
 
@@ -358,7 +329,7 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
         var refreshHandled = false;
         try
         {
-            var result = await executor.RepairAsync(snapshot, host.ApplyProgress);
+            var result = await executor.RepairAsync(attempt, progress => host.Present(new GameOperationPresentation.Progress(progress)));
             ShowOperationResult(result);
             refreshHandled = await RequestRefresh(GameOperationsRefreshMode.Normal);
         }
@@ -369,7 +340,7 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
         }
         finally
         {
-            host.SetBusy(false);
+            host.Present(new GameOperationPresentation.Busy(false));
             if (!refreshHandled)
             {
                 ApplySnapshotSafe(snapshot);
@@ -384,6 +355,12 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
     /// </summary>
     public async Task<GameOperationResult?> ValidateUninstallAsync(LauncherStatusSnapshot snapshot)
     {
+        if (GameOperationAttempt.Evaluate(GameOperationPolicy.Operation.Uninstall, snapshot).Decision
+            == GameOperationDecision.RejectedForCurrentState)
+        {
+            ShowOperationUnavailable();
+            return null;
+        }
         var validation = await executor.ValidateUninstallAsync(snapshot.LocalGame.GamePath);
         if (validation.Success)
         {
@@ -410,20 +387,35 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
     public Task<UninstallFootprint> MeasureUninstallFootprintAsync(LauncherStatusSnapshot snapshot) =>
         executor.MeasureUninstallFootprintAsync(snapshot);
 
+    /// <summary>Owns uninstall admission and preflight; emits confirmation before waiting for size measurement.</summary>
+    public async Task RequestUninstallAsync(LauncherStatusSnapshot snapshot)
+    {
+        if (!PrepareShellOnly(snapshot)) return;
+        var requestId = ++uninstallRequestId;
+        if (await ValidateUninstallAsync(snapshot) is null || IsShuttingDown) return;
+        host.Present(new GameOperationPresentation.UninstallConfirmation(requestId, snapshot));
+        var size = await MeasureUninstallFootprintAsync(snapshot);
+        if (!IsShuttingDown)
+            host.Present(new GameOperationPresentation.UninstallSize(requestId, size));
+    }
+
     /// <summary>Runs a confirmed uninstall and refreshes launcher state afterward.</summary>
     public async Task<GameOperationResult> ConfirmUninstallAsync(LauncherStatusSnapshot snapshot, UninstallScope scope)
     {
-        if (GameOperationPolicy.Decide(GameOperationPolicy.Operation.Uninstall, snapshot.RuntimeState)
-            == GameOperationDecision.RejectedForCurrentState)
+        var admission = GameOperationAttempt.Evaluate(GameOperationPolicy.Operation.Uninstall, snapshot);
+        if (admission.Attempt is not { } attempt)
         {
-            return GameOperationRejections.UnavailableResult(localizer);
+            var rejected = GameOperationRejections.UnavailableResult(localizer);
+            host.Present(new GameOperationPresentation.UninstallCompleted(rejected));
+            return rejected;
         }
 
-        host.SetBusy(true);
+        host.Present(new GameOperationPresentation.UninstallExecuting());
+        host.Present(new GameOperationPresentation.Busy(true));
         try
         {
-            host.PrepareOperation();
-            var result = await executor.UninstallAsync(snapshot, scope, host.ApplyProgress);
+            host.Present(new GameOperationPresentation.Preparing());
+            var result = await executor.UninstallAsync(attempt, scope, progress => host.Present(new GameOperationPresentation.Progress(progress)));
             // 刷新失败不改写已经确定的删除终态；用户始终能在原表面查看实际结果。
             try
             {
@@ -433,18 +425,21 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
             {
                 await diagnostics.ErrorAsync("GameUninstall", "Refreshing launcher state after uninstall failed.", exception);
             }
+            host.Present(new GameOperationPresentation.UninstallCompleted(result));
             return result;
         }
         catch (Exception exception)
         {
             // 与执行层同一口径：异常原文只进日志，界面只说本地化的原因与下一步。
             await diagnostics.ErrorAsync("GameUninstall", "Game uninstall failed.", exception);
-            return GameOperationOutcomes.Failed(
+            var failed = GameOperationOutcomes.Failed(
                 localizer.T(LocalizationKeys.UninstallFailureGeneric), GameOperationErrorCode.System);
+            host.Present(new GameOperationPresentation.UninstallCompleted(failed));
+            return failed;
         }
         finally
         {
-            host.SetBusy(false);
+            host.Present(new GameOperationPresentation.Busy(false));
         }
     }
 
@@ -479,7 +474,7 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
     /// </summary>
     private bool RejectRepairIfUnavailable(LauncherStatusSnapshot snapshot)
     {
-        if (GameOperationPolicy.Decide(GameOperationPolicy.Operation.Repair, snapshot.RuntimeState)
+        if (GameOperationAttempt.Evaluate(GameOperationPolicy.Operation.Repair, snapshot).Decision
             != GameOperationDecision.RejectedForCurrentState)
         {
             return false;
@@ -519,10 +514,10 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
 
         try
         {
-            host.SetBusy(true);
+            host.Present(new GameOperationPresentation.Busy(true));
             var result = await executor.ResumePersistedAsync(
                 snapshot,
-                host.ApplyProgress,
+                progress => host.Present(new GameOperationPresentation.Progress(progress)),
                 cancellationToken);
             if (result is null)
             {
@@ -542,7 +537,7 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
         }
         finally
         {
-            host.SetBusy(false);
+            host.Present(new GameOperationPresentation.Busy(false));
         }
     }
 
@@ -574,25 +569,26 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
         var refreshHandled = false;
         try
         {
-            if (snapshot.RuntimeState == LauncherRuntimeState.Corrupted)
+            // 允许集只读策略表；拒绝后「对用户意味着什么」仍按状态就地分流——
+            // 损坏给修复入口，IO/远端失败重读状态，其余状态报不可用（ADR-027）。
+            var admission = GameOperationAttempt.Evaluate(GameOperationPolicy.Operation.InstallOrUpdate, snapshot);
+            if (admission.Attempt is not { } attempt)
             {
-                host.ShowRepairConfirmation(localizer.T(LocalizationKeys.RepairWarning));
-                return null;
-            }
-
-            if (snapshot.RuntimeState is LauncherRuntimeState.IoFailure or LauncherRuntimeState.RemoteUnavailable)
-            {
-                refreshHandled = await RequestRefresh(GameOperationsRefreshMode.Normal);
-                return null;
-            }
-
-            if (snapshot.RuntimeState == LauncherRuntimeState.Ready)
-            {
-                // 快照过期：Ready 下安装按钮所在的面板本不可见，所以这条只在状态刚刚变过来时可达。
-                // 与上面两个分支同口径——拒绝必须报出来（ADR-027/029），静默 return 在用户那里
-                // 就是「点了没反应」。
-                ShowOperationUnavailable();
-                return null;
+                switch (snapshot.RuntimeState)
+                {
+                    case LauncherRuntimeState.Corrupted:
+                        host.Present(new GameOperationPresentation.RepairConfirmation(localizer.T(LocalizationKeys.RepairWarning)));
+                        return null;
+                    case LauncherRuntimeState.IoFailure or LauncherRuntimeState.RemoteUnavailable:
+                        refreshHandled = await RequestRefresh(GameOperationsRefreshMode.Normal);
+                        return null;
+                    default:
+                        // 快照过期：Ready 下安装按钮所在的面板本不可见，所以这条只在状态
+                        // 刚刚变过来时可达。拒绝必须报出来（ADR-027/029），静默 return
+                        // 在用户那里就是「点了没反应」。
+                        ShowOperationUnavailable();
+                        return null;
+                }
             }
 
             // 装之前先说清楚「这次只会下清单里那部分」（2026-09-29 反馈轮）：卸载只删清单
@@ -600,7 +596,7 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
             // 于是用户看到的是「忙活一下就装好了」，因为他以为被删掉的东西其实从没被删过。
             NotifyInstallOverExistingContent(snapshot);
 
-            var result = await executor.InstallOrUpdateAsync(snapshot, host.ApplyProgress, cancellationToken);
+            var result = await executor.InstallOrUpdateAsync(attempt, progress => host.Present(new GameOperationPresentation.Progress(progress)), cancellationToken);
             refreshHandled = await RequestRefresh(GameOperationsRefreshMode.SkipPersistedResume);
             return result;
         }
@@ -617,7 +613,7 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
         }
         finally
         {
-            host.SetBusy(false);
+            host.Present(new GameOperationPresentation.Busy(false));
             if (!refreshHandled)
             {
                 ApplySnapshotSafe(snapshot);
@@ -625,7 +621,7 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
         }
     }
 
-    private void ShowInstallUpdateFailureToast(string message, GameOperationErrorCode errorCode)
+    private void ShowInstallUpdateFailureToast(string message, GameOperationErrorCode errorCode, LauncherStatusSnapshot originalSnapshot)
     {
         if (IsShuttingDown)
         {
@@ -658,12 +654,12 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
             Title = localizer.T(LocalizationKeys.InstallUpdateFailedTitle),
             Message = message,
             Severity = ToastSeverity.Error,
-            PrimaryAction = new ToastAction(localizer.T(LocalizationKeys.Retry), RetryInstallOrUpdateAsync, Timeout: null),
+            PrimaryAction = new ToastAction(localizer.T(LocalizationKeys.Retry), token => RetryInstallOrUpdateAsync(originalSnapshot, token), Timeout: null),
             SecondaryAction = new ToastAction(localizer.T(LocalizationKeys.ViewLog), OpenLogViewerAsync)
         });
     }
 
-    private async Task<ToastActionResult> RetryInstallOrUpdateAsync(CancellationToken cancellationToken)
+    private async Task<ToastActionResult> RetryInstallOrUpdateAsync(LauncherStatusSnapshot originalSnapshot, CancellationToken cancellationToken)
     {
         using var operation = TryBeginOperation();
         if (operation is null)
@@ -672,10 +668,20 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        var snapshot = lastInstallSnapshot;
+        var snapshot = host.CurrentSnapshot;
         if (snapshot is null)
         {
             return ToastActionResult.Failure(localizer.T(LocalizationKeys.LauncherStateNotLoaded), localizer.T(LocalizationKeys.InstallUpdateFailedTitle));
+        }
+
+        // The toast owns its original target, but eligibility and preferences come from
+        // the latest snapshot. An old toast must never redirect work to a different directory.
+        if (!GamePathValidator.PathComparer.Equals(
+                Path.TrimEndingDirectorySeparator(originalSnapshot.LocalGame.GamePath),
+                Path.TrimEndingDirectorySeparator(snapshot.LocalGame.GamePath)))
+        {
+            return ToastActionResult.Failure(localizer.T(LocalizationKeys.OperationUnavailableForCurrentState),
+                localizer.T(LocalizationKeys.InstallUpdateFailedTitle));
         }
 
         var result = await RunInstallOrUpdateAttemptAsync(snapshot, cancellationToken);
@@ -769,9 +775,9 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
     /// <see cref="ErrorHandlingOptions"/> 的入口（修复、卸载、续传）仍在调用点显式展开——那些是
     /// 入口自己的语义，不是这段骨架的一部分。
     /// </remarks>
-    private async Task RunBusyAsync(string errorContext, string failureMessageKey, Func<Task> body)
+    private async Task RunBusyAsync(string errorContext, LocalizationKeys failureMessageKey, Func<Task> body)
     {
-        host.SetBusy(true);
+        host.Present(new GameOperationPresentation.Busy(true));
 
         try
         {
@@ -784,7 +790,7 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
         }
         finally
         {
-            host.SetBusy(false);
+            host.Present(new GameOperationPresentation.Busy(false));
         }
     }
 
@@ -810,13 +816,13 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
             return false;
         }
 
-        host.PrepareOperation();
+        host.Present(new GameOperationPresentation.Preparing());
         return true;
     }
 
     private void ApplySnapshotSafe(LauncherStatusSnapshot snapshot)
     {
-        host.ApplySnapshot(snapshot);
+        host.Present(new GameOperationPresentation.Snapshot(snapshot));
     }
 
     private static string BuildLaunchDiagnostic(GameLaunchResult launchResult)

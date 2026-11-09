@@ -1,3 +1,4 @@
+using Cafe.Launcher.UI.Constants;
 using System.ComponentModel;
 using Cafe.Launcher.Composition;
 using Cafe.Launcher.UI.Features.Settings;
@@ -57,8 +58,6 @@ public sealed class SettingsCategoryTests
         nameof(SettingsViewModel.IsAdvancedCategorySelected),
         nameof(SettingsViewModel.IsAboutCategorySelected)
     ];
-
-    static SettingsCategoryTests() => TestLocalizationHelper.Initialize();
 
     [Theory]
     [InlineData(null)]
@@ -162,16 +161,16 @@ public sealed class SettingsCategoryTests
 
         foreach (var (key, _) in CategoryLocalizedValues)
         {
-            Assert.NotEqual(key, localizer.T(key));
+            Assert.NotEqual(key, localizer.Lookup(key));
         }
 
         foreach (var key in CategoryDescriptionKeys)
         {
-            Assert.NotEqual(key, localizer.T(key));
+            Assert.NotEqual(key, localizer.Lookup(key));
         }
 
         using var strings = new LocalizedTextCatalog(localizer);
-        Assert.Equal(localizer.T("settingsCategoryGeneral"), strings["settingsCategoryGeneral"]);
+        Assert.Equal(localizer.T(LocalizationKeys.SettingsCategoryGeneral), strings["settingsCategoryGeneral"]);
     }
 
     [Theory]
@@ -210,7 +209,7 @@ public sealed class SettingsCategoryTests
 
         foreach (var (key, getValue) in CategoryLocalizedValues)
         {
-            Assert.Equal(localizer.T(key), getValue(strings));
+            Assert.Equal(localizer.Lookup(key), getValue(strings));
         }
     }
 
@@ -333,16 +332,13 @@ public sealed class SettingsCategoryTests
         const string original = "{\"language\":\"en\"}";
         Directory.CreateDirectory(Path.GetDirectoryName(scope.SettingsPath)!);
         await File.WriteAllTextAsync(scope.SettingsPath, original);
-        var savedCount = 0;
-        scope.ViewModel.SettingsSaved += () =>
-        {
-            savedCount++;
-            return Task.CompletedTask;
-        };
+        var followThrough = new RecordingFollowThrough();
+        scope.ViewModel.SavedSettingsFollowThrough = followThrough;
 
         scope.ViewModel.SelectedCategory = SettingsCategoryCodes.About;
 
-        Assert.Equal(0, savedCount);
+        Assert.Equal(0, followThrough.ApplyCount);
+        Assert.Equal(0, followThrough.CompleteCount);
         Assert.Equal(original, await File.ReadAllTextAsync(scope.SettingsPath));
     }
 
@@ -361,33 +357,29 @@ public sealed class SettingsCategoryTests
     }
 
     [Fact]
-    public async Task SaveSettingsCommand_WithMultipleAsyncSubscribers_AwaitsEverySubscriber()
+    public async Task SaveSettingsCommand_AwaitsFollowThroughCompletion()
     {
         using var scope = CreateSettingsViewModel();
-        var firstSubscriberInvoked = new TaskCompletionSource(
+        var completionStarted = new TaskCompletionSource(
             TaskCreationOptions.RunContinuationsAsynchronously);
-        var firstSubscriberRelease = new TaskCompletionSource(
+        var completionRelease = new TaskCompletionSource(
             TaskCreationOptions.RunContinuationsAsynchronously);
-        var secondSubscriberInvoked = new TaskCompletionSource(
-            TaskCreationOptions.RunContinuationsAsynchronously);
-        scope.ViewModel.SettingsSaved += async () =>
+        scope.ViewModel.SavedSettingsFollowThrough = new RecordingFollowThrough
         {
-            firstSubscriberInvoked.SetResult();
-            await firstSubscriberRelease.Task;
-        };
-        scope.ViewModel.SettingsSaved += () =>
-        {
-            secondSubscriberInvoked.SetResult();
-            return Task.CompletedTask;
+            OnComplete = async () =>
+            {
+                completionStarted.SetResult();
+                await completionRelease.Task;
+            }
         };
 
         var saveTask = scope.ViewModel.SaveSettingsCommand.ExecuteAsync(null);
-        await firstSubscriberInvoked.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await completionStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
+        // 保存命令要等后续效果收尾（含刷新）完成才结束，否则调用方会在壳状态
+        // 尚未落定时就继续执行。
         Assert.False(saveTask.IsCompleted);
-        Assert.False(secondSubscriberInvoked.Task.IsCompleted);
-        firstSubscriberRelease.SetResult();
-        await secondSubscriberInvoked.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        completionRelease.SetResult();
         await saveTask.WaitAsync(TimeSpan.FromSeconds(5));
     }
 
@@ -404,6 +396,27 @@ public sealed class SettingsCategoryTests
             provider.GetRequiredService<SettingsViewModel>(),
             settingsPath,
             directory);
+    }
+
+    private sealed class RecordingFollowThrough : ISavedSettingsFollowThrough
+    {
+        public Func<Task>? OnComplete { get; init; }
+
+        public int ApplyCount { get; private set; }
+
+        public int CompleteCount { get; private set; }
+
+        public SavedSettingsHandoff Apply(LauncherSettings savedSettings)
+        {
+            ApplyCount++;
+            return new SavedSettingsHandoff(savedSettings, null);
+        }
+
+        public Task CompleteAsync(SavedSettingsHandoff handoff)
+        {
+            CompleteCount++;
+            return OnComplete?.Invoke() ?? Task.CompletedTask;
+        }
     }
 
     private sealed class SettingsViewModelScope(

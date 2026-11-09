@@ -16,11 +16,6 @@ public sealed class LogExportDialogViewModelTests : IDisposable
     private readonly TestDirectory tempDir = TestDirectory.Create();
     private readonly UnifiedLogger logger;
 
-    static LogExportDialogViewModelTests()
-    {
-        TestLocalizationHelper.Initialize();
-    }
-
     public LogExportDialogViewModelTests()
     {
         var logDirectory = Path.Combine(tempDir, "logs");

@@ -137,7 +137,7 @@ internal partial class ShellViewModel : ViewModelBase, IDisposable
 
     /// <summary>
     /// 语言变化时随 Shell 一并刷新的呈现成员（D10）：由 ShellLifecycle 装配后注入，
-    /// 与 <see cref="SettingsViewModel.ApplyLanguageAndTheme"/> 同一「父装配后接线」惯例。
+    /// 与设置页的预览委托同一「父装配后接线」惯例。
     /// 为 null 时（直构 ShellViewModel 的单元测试）只刷新 Shell 自己。
     /// </summary>
     public IReadOnlyList<ILanguageAwarePresentation>? LanguageAwarePresentations { get; set; }

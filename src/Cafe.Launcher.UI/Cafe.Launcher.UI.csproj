@@ -54,4 +54,7 @@
           Condition="'$(BackgroundVideoRid)' == 'win-x64' and '$(DesignTimeBuild)' != 'true'">
     <Exec Command="pwsh -NoProfile -File &quot;$(MSBuildProjectDirectory)/../../scripts/Restore-VideoBackgroundRuntime.ps1&quot;" />
   </Target>
+  <Target Name="ValidateLocalizationCatalog" BeforeTargets="BeforeCompile" Condition="'$(DesignTimeBuild)' != 'true'">
+    <Exec Command="pwsh -NoProfile -File &quot;$(MSBuildProjectDirectory)/../../scripts/Generate-LocalizationCatalog.ps1&quot; -Check" />
+  </Target>
 </Project>

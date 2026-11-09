@@ -129,11 +129,11 @@
 ## 6. 本地化
 
 1. 在四个资源文件（`src/Cafe.Launcher.UI/Resources/LauncherStrings{,.zh-Hans,.zh-Hant,.ja}.resx`）中按字母序添加 key-value。
-2. XAML 绑定 `{Binding Shell.I18n[newKey]}`；键存在性由 `ResxResourceContractTests.XamlResourceBindings_UseOnlyKeysThatExistInNeutralResources` 守护，`XamlKeyScan_StillCoversTheKeyBearingFiles` 防止扫描域退化。
-3. C# 中引用 `Constants/LocalizationKeys` 的编译时常量，禁止向 `T()`/`F()`/`I18n[...]` 传裸 key 字面量。
+2. XAML 绑定 `{Binding Shell.I18n[newKey]}`；`Generate-LocalizationCatalog.ps1 -Check` 扫描全部生产 `.axaml`，未知键直接使普通构建失败。
+3. C# 使用生成的 `Constants/LocalizationKeys` 枚举，`T()`/`F()` 只接受类型化键；字符串仅用于 XAML 与测试资源源的适配。枚举数值不用于序列化或持久化。
 4. 四种语言都必须有文本（专有名词可回退英文，但不得留空）；译名以 [UBIQUITOUS_LANGUAGE.md](UBIQUITOUS_LANGUAGE.md) 为准。C# 用 `LocalizationService.T()`/`F()` 获取文案。
-5. 新增或重命名 key 后运行 `scripts/Generate-LauncherStringsDesigner.ps1`、`scripts/Generate-LocalizationKeys.ps1`，再运行 `scripts/Test-LocalizationContract.ps1`。
-6. 测试中通过 `TestLocalizationHelper.Initialize()` 或 `LocalizationService.InitializeForTesting(...)` 提供资源；不要写死预期中文。
+5. 新增或重命名 key 后只运行 `pwsh ./scripts/Generate-LocalizationCatalog.ps1`，一次生成枚举、资源目录与 ResourceManager，再运行 `scripts/Test-LocalizationContract.ps1`。旧的两个生成脚本仅保留为转发入口。构建检查生成产物、四语键集、空值、重复键、格式占位符与 XAML 引用；启动时再验证全部内嵌资源集，避免卫星程序集损坏被英文回退掩盖（[ADR-055](docs/design/adr/ADR-055-本地化资源目录统一生成与提前校验.md)）。
+6. 测试直接用 `new LocalizationService()` 读内嵌资源；需要自定义资源表时传 `new LocalizationTestSource(...)`；不要写死预期中文。生成器拒绝错误输入的行为由 `LocalizationCatalogGeneratorTests` 覆盖，`ResxResourceContractTests` 只守嵌入资源的运行时集成。
 
 ## 7. DI 与生命周期
 
@@ -173,8 +173,8 @@
 
 ### 8.3 共享设施
 
-- 临时目录用 `TestDirectory`（拥有创建与清理，派生 `LauncherDataRoot`）；释放顺序是先容器/服务、后目录。资源定位用 `TestRepository`，它每次调用都重装资源快照。
-- 主窗口 ViewModel 用 `MainWindowTestContext` 装配；它只释放自己创建的对象，调用方传入的替身与工厂归调用方，日志器必须活到用例结束。
+- 临时目录用 `TestDirectory`（拥有创建与清理，派生 `LauncherDataRoot`）；释放顺序是先容器/服务、后目录。资源定位用 `TestRepository`，它缓存路径、直接读取 `.resx`，不安装进程级资源快照。
+- 主窗口 ViewModel 用 `MainWindowTestContext` 装配；对象图由 `LauncherTestGraph` 走真实 `AddLauncherServices` 注册构建，测试只替换不确定的接缝（传输、设置装配、进程监视、外部打开、UI 调度）。生产 ViewModel 注册不得在测试图内重新构造；时间、UI 调度与外部打开通过 `PresentationEnvironment` 替换。图先释放容器，再释放显式持有的外部装配，即使装配从未被解析也要释放；可经工厂别名同时被容器捕获的实现必须容忍重复释放。
 - Headless 每个用例使用独立数据根（`HeadlessTestHost.CreateServiceProvider(dataRoot:)`），避免同程序集上下文互相看见设置、检查点与崩溃快照。
 - 共享设施 `tests/Support/` 的门槛是「两套件都需要、且不含工程专属知识」；场景专属故障模拟留在使用它的测试旁。
 

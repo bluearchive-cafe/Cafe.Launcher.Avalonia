@@ -25,11 +25,6 @@ public sealed class GameOperationsViewModelTests : IDisposable
 
     public void Dispose() => tempDir.Dispose();
 
-    static GameOperationsViewModelTests()
-    {
-        TestLocalizationHelper.Initialize();
-    }
-
     [Fact]
     public void LegacyDelegateProperties_AreRemoved()
     {
@@ -385,7 +380,7 @@ public sealed class GameOperationsViewModelTests : IDisposable
 
         Assert.True(context.Dialogs.RepairConfirm.IsVisible);
         Assert.Equal(
-            context.Localizer.T("launchDamageRepairPrompt"),
+            context.Localizer.T(LocalizationKeys.LaunchDamageRepairPrompt),
             context.Dialogs.RepairConfirm.Message);
 
         await context.Dialogs.RepairConfirm.ConfirmCommand.ExecuteAsync(null);
@@ -490,7 +485,7 @@ public sealed class GameOperationsViewModelTests : IDisposable
         Assert.Equal(GameOperationsRefreshMode.SkipPersistedResume, refreshMode);
         Assert.NotNull(raised);
         Assert.Equal(
-            context.Localizer.F("gameCheckUpdateAvailable", "1.73.0"),
+            context.Localizer.F(LocalizationKeys.GameCheckUpdateAvailable, "1.73.0"),
             raised!.Message);
         Assert.False(context.Shell.IsBusy);
     }
@@ -520,7 +515,7 @@ public sealed class GameOperationsViewModelTests : IDisposable
 
         Assert.Contains(
             raised,
-            toast => toast.Message == context.Localizer.F("gameCheckUpdateUpToDate", "1.72.0"));
+            toast => toast.Message == context.Localizer.F(LocalizationKeys.GameCheckUpdateUpToDate, "1.72.0"));
         Assert.False(context.Shell.IsBusy);
     }
 
@@ -536,7 +531,7 @@ public sealed class GameOperationsViewModelTests : IDisposable
 
         Assert.NotNull(context.ShortcutService.LastSnapshot);
         Assert.NotNull(raised);
-        Assert.Equal(context.Localizer.T("gameShortcutCreated"), raised!.Message);
+        Assert.Equal(context.Localizer.T(LocalizationKeys.GameShortcutCreated), raised!.Message);
         Assert.False(context.Shell.IsBusy);
     }
 
@@ -552,7 +547,7 @@ public sealed class GameOperationsViewModelTests : IDisposable
         await context.ViewModel.CreateGameShortcutCommand.ExecuteAsync(null);
 
         Assert.NotNull(raised);
-        Assert.Equal(context.Localizer.T("gameShortcutUnsupported"), raised!.Message);
+        Assert.Equal(context.Localizer.T(LocalizationKeys.GameShortcutUnsupported), raised!.Message);
     }
 
     [Fact]
@@ -567,7 +562,7 @@ public sealed class GameOperationsViewModelTests : IDisposable
         await context.ViewModel.CreateGameShortcutCommand.ExecuteAsync(null);
 
         Assert.NotNull(raised);
-        Assert.Equal(context.Localizer.T("gameShortcutTargetMissing"), raised!.Message);
+        Assert.Equal(context.Localizer.T(LocalizationKeys.GameShortcutTargetMissing), raised!.Message);
     }
 
     [Fact]
@@ -599,7 +594,7 @@ public sealed class GameOperationsViewModelTests : IDisposable
 
         Assert.Equal(snapshot, context.ShortcutService.LastSnapshot);
         Assert.NotNull(raised);
-        Assert.Equal(context.Localizer.T("gameFolderMissing"), raised!.Message);
+        Assert.Equal(context.Localizer.T(LocalizationKeys.GameFolderMissing), raised!.Message);
     }
 
     [Fact]
@@ -622,11 +617,11 @@ public sealed class GameOperationsViewModelTests : IDisposable
         await context.ViewModel.InstallOrUpdateCommand.ExecuteAsync(null);
 
         Assert.NotNull(raised);
-        Assert.Equal(context.Localizer.T("installUpdateFailedTitle"), raised!.Title);
+        Assert.Equal(context.Localizer.T(LocalizationKeys.InstallUpdateFailedTitle), raised!.Title);
         Assert.Equal(ToastSeverity.Error, raised.Severity);
         Assert.Contains("offline", raised.Message);
-        Assert.Equal(context.Localizer.T("retry"), raised.PrimaryAction!.Label);
-        Assert.Equal(context.Localizer.T("viewLog"), raised.SecondaryAction!.Label);
+        Assert.Equal(context.Localizer.T(LocalizationKeys.Retry), raised.PrimaryAction!.Label);
+        Assert.Equal(context.Localizer.T(LocalizationKeys.ViewLog), raised.SecondaryAction!.Label);
     }
 
     [Fact]
@@ -753,7 +748,7 @@ public sealed class GameOperationsViewModelTests : IDisposable
         var notification = Assert.Single(raised);
         Assert.Equal(ToastSeverity.Warning, notification.Severity);
         Assert.Equal(
-            context.Localizer.T("operationUnavailableForCurrentState"),
+            context.Localizer.T(LocalizationKeys.OperationUnavailableForCurrentState),
             notification.Message);
     }
 
@@ -1377,7 +1372,7 @@ public sealed class GameOperationsViewModelTests : IDisposable
         var notification = Assert.Single(notifications);
         Assert.Equal(ToastSeverity.Warning, notification.Severity);
         Assert.Equal(
-            context.Localizer.T("operationUnavailableForCurrentState"),
+            context.Localizer.T(LocalizationKeys.OperationUnavailableForCurrentState),
             notification.Message);
     }
 
@@ -1412,7 +1407,7 @@ public sealed class GameOperationsViewModelTests : IDisposable
 
         var notification = Assert.Single(notifications);
         Assert.Equal(ToastSeverity.Warning, notification.Severity);
-        Assert.Equal(context.Localizer.T("operationUnavailableForCurrentState"), notification.Message);
+        Assert.Equal(context.Localizer.T(LocalizationKeys.OperationUnavailableForCurrentState), notification.Message);
         Assert.False(context.Dialogs.RepairConfirm.IsVisible);
     }
 
@@ -1431,7 +1426,7 @@ public sealed class GameOperationsViewModelTests : IDisposable
 
         var notification = Assert.Single(notifications);
         Assert.Equal(ToastSeverity.Warning, notification.Severity);
-        Assert.Equal(context.Localizer.T("operationUnavailableForCurrentState"), notification.Message);
+        Assert.Equal(context.Localizer.T(LocalizationKeys.OperationUnavailableForCurrentState), notification.Message);
         Assert.False(context.ViewModel.Uninstall.IsVisible);
     }
 
@@ -1520,7 +1515,7 @@ public sealed class GameOperationsViewModelTests : IDisposable
         var notification = Assert.Single(notifications);
         Assert.Equal(ToastSeverity.Warning, notification.Severity);
         Assert.Equal(
-            context.Localizer.T("operationUnavailableForCurrentState"),
+            context.Localizer.T(LocalizationKeys.OperationUnavailableForCurrentState),
             notification.Message);
     }
 
@@ -1564,7 +1559,7 @@ public sealed class GameOperationsViewModelTests : IDisposable
             toast => toast.Message.Contains("install failed", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(
             notifications,
-            toast => toast.Title == context.Localizer.T("installUpdateFailedTitle"));
+            toast => toast.Title == context.Localizer.T(LocalizationKeys.InstallUpdateFailedTitle));
         Assert.False(context.Shell.IsBusy);
     }
 

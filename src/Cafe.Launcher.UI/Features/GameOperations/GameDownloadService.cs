@@ -110,28 +110,34 @@ internal sealed class GameDownloadService : IDisposable
         Action<GameOperationProgress> progress,
         CancellationToken cancellationToken = default)
     {
-        if (GameOperationPolicy.Decide(GameOperationPolicy.Operation.InstallOrUpdate, snapshot.RuntimeState)
-            == GameOperationDecision.RejectedForCurrentState)
-        {
-            return GameOperationRejections.UnavailableResult(localizer);
-        }
-
-        return await RunSessionAsync(snapshot, DownloadOperationProfile.ForDownload(), progress, cancellationToken).ConfigureAwait(false);
+        var admission = GameOperationAttempt.Evaluate(GameOperationPolicy.Operation.InstallOrUpdate, snapshot);
+        return admission.Attempt is { } attempt
+            ? await InstallOrUpdateAsync(attempt, progress, cancellationToken).ConfigureAwait(false)
+            : GameOperationRejections.UnavailableResult(localizer);
     }
+
+    internal Task<GameOperationResult> InstallOrUpdateAsync(
+        GameOperationAttempt attempt, Action<GameOperationProgress> progress, CancellationToken cancellationToken = default) =>
+        RunSessionAsync(attempt.SnapshotFor(GameOperationPolicy.Operation.InstallOrUpdate),
+            DownloadOperationProfile.ForDownload(), progress, cancellationToken);
+
 
     public async Task<GameOperationResult> RepairAsync(
         LauncherStatusSnapshot snapshot,
         Action<GameOperationProgress> progress,
         CancellationToken cancellationToken = default)
     {
-        if (GameOperationPolicy.Decide(GameOperationPolicy.Operation.Repair, snapshot.RuntimeState)
-            == GameOperationDecision.RejectedForCurrentState)
-        {
-            return GameOperationRejections.UnavailableResult(localizer);
-        }
-
-        return await RunSessionAsync(snapshot, DownloadOperationProfile.ForRepair(), progress, cancellationToken).ConfigureAwait(false);
+        var admission = GameOperationAttempt.Evaluate(GameOperationPolicy.Operation.Repair, snapshot);
+        return admission.Attempt is { } attempt
+            ? await RepairAsync(attempt, progress, cancellationToken).ConfigureAwait(false)
+            : GameOperationRejections.UnavailableResult(localizer);
     }
+
+    internal Task<GameOperationResult> RepairAsync(
+        GameOperationAttempt attempt, Action<GameOperationProgress> progress, CancellationToken cancellationToken = default) =>
+        RunSessionAsync(attempt.SnapshotFor(GameOperationPolicy.Operation.Repair),
+            DownloadOperationProfile.ForRepair(), progress, cancellationToken);
+
 
     /// <summary>
     /// 停止当前下载会话。停止原因随取消一次性传入会话：用户停止丢弃持久化

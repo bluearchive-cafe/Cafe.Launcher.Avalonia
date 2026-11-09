@@ -310,8 +310,8 @@ public sealed class LauncherSettings : SettingsModel
     /// because these are stored codes rather than display text. Boxed values go through <c>Equals</c>
     /// because that is the comparison the boxed shape offers, and because it is reflexive where
     /// <c>==</c> is not: with <c>==</c>, two <c>NaN</c> window dimensions would compare different and
-    /// leave the editor permanently dirty. That case is currently unreachable —
-    /// <c>MainWindow.CaptureWindowState</c> filters with <c>double.IsFinite</c> and
+    /// leave the editor permanently dirty. That case is currently unreachable — the presentation
+    /// layer's window geometry capture filters with <c>double.IsFinite</c> and
     /// <c>LauncherSettingsService.NormalizeSettings</c> nulls non-finite dimensions on load — so
     /// identity does not depend on that filtering.
     /// Unrecognised types fall back to <see cref="object.Equals(object?)"/> and never throw: a wrong

@@ -899,15 +899,15 @@ public sealed partial class UiStyleContractTests
             StringComparison.Ordinal);
         // The escape-key resolution for the settings modal is a ModalRegistration
         // (ADR-023): kind, visibility source, content, and escape command colocated
-        // in ShellLifecycle's RegisterModals.
-        var shellLifecycle = File.ReadAllText(TestRepository.FromPresentationRoot("Features/Shell/ShellLifecycle.cs"));
+        // in the modal catalog.
+        var modalCatalog = File.ReadAllText(TestRepository.FromPresentationRoot("Features/Shell/ShellModalCatalog.cs"));
         Assert.Contains(
             "ModalKind.Settings,",
-            shellLifecycle,
+            modalCatalog,
             StringComparison.Ordinal);
         Assert.Contains(
-            "windowChrome.ShowSettingsCommand",
-            shellLifecycle,
+            "WindowChrome.ShowSettingsCommand",
+            modalCatalog,
             StringComparison.Ordinal);
         Assert.DoesNotContain(
             "vm.WindowChrome.IsSettingsVisible",

@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Text;
 using System.Text.Json;
 using Cafe.Launcher.UI.Constants;
@@ -18,11 +18,6 @@ namespace Cafe.Launcher.Tests;
 [Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class ResourcePanelViewModelTests
 {
-    static ResourcePanelViewModelTests()
-    {
-        TestLocalizationHelper.Initialize();
-    }
-
     [Fact]
     public async Task OpenResourcePanel_WhileStatusRequestPending_ShowsLoadingStateThenLoadedItems()
     {
@@ -355,7 +350,7 @@ public sealed class ResourcePanelViewModelTests
         viewModel.ResourcePanelItems.First(item => item.Code == code);
 
     /// <summary>T() 返回含 {0} 的原始模板；取占位符之前的前缀用于 StartsWith 断言。</summary>
-    private static string LocalizedPrefix(LocalizationService localizer, string key)
+    private static string LocalizedPrefix(LocalizationService localizer, LocalizationKeys key)
     {
         var template = localizer.T(key);
         var placeholderIndex = template.IndexOf("{0}", StringComparison.Ordinal);

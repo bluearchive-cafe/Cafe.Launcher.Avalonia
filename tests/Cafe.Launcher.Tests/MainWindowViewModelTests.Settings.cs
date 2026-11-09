@@ -130,6 +130,48 @@ public partial class MainWindowViewModelTests
     }
 
     [Fact]
+    public async Task ResetSettingsFromSettingsPage_WhenPatchUrlGroupChangesForInstalledGame_ShowsRepairPrompt()
+    {
+        var defaultsGroup = LauncherSettings.CreateDefaults().PatchUrlGroup;
+        var seededGroup = string.Equals(defaultsGroup, PatchUrlGroups.Cafe, StringComparison.Ordinal)
+            ? PatchUrlGroups.Official
+            : PatchUrlGroups.Cafe;
+        var snapshot = CreateSnapshot();
+        snapshot.RuntimeState = LauncherRuntimeState.Ready;
+        snapshot.Settings.PatchUrlGroup = seededGroup;
+        snapshot.LocalGame = new LocalInstallationState
+        {
+            Kind = LocalInstallationStateKind.Valid,
+            GamePath = snapshot.LocalGame.GamePath,
+            GameConfig = new GameLauncherConfig
+            {
+                Name = "BlueArchive",
+                Version = "1.0.0"
+            }
+        };
+        var settingsPath = tempDir.Sub(LauncherPaths.LauncherSettingsFileName);
+        var savedSettings = new SavedSettingsTestRig(settingsPath);
+        await savedSettings.SeedAsync(new LauncherSettings
+        {
+            GamePath = snapshot.Settings.GamePath,
+            PatchUrlGroup = seededGroup
+        });
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(snapshot),
+            savedSettings);
+        await viewModel.InitializeAsync();
+
+        viewModel.Dialogs.SettingsResetConfirm.Show();
+        await viewModel.Dialogs.SettingsResetConfirm.ConfirmCommand.ExecuteAsync(null);
+
+        // 恢复默认与保存走同一套派生效果：下载源确实变了且游戏已安装时，必须提示修复。
+        // 刷新会用核心快照回写编辑器，因此落盘值以设置文件为准。
+        Assert.Equal(defaultsGroup, (await savedSettings.SettingsService.ReadAsync()).PatchUrlGroup);
+        Assert.True(viewModel.Dialogs.RepairConfirm.IsVisible);
+        Assert.False(string.IsNullOrWhiteSpace(viewModel.Dialogs.RepairConfirm.Message));
+    }
+
+    [Fact]
     public async Task SaveSettingsAsync_WhenDownloadIsRunning_UpdatesCurrentSnapshotWithoutRefreshing()
     {
         var snapshot = CreateSnapshot();
@@ -492,12 +534,16 @@ public partial class MainWindowViewModelTests
             localizer,
             toastService,
             new LauncherUpdateService(LauncherProfiles.Cafe, new StubRemoteHttpTransport()),
-            new LauncherSelfUpdateService(
-                new LauncherUpdateDownloader(new StubRemoteHttpTransport()),
-                new LauncherUpdateHostInfoProvider(),
-                new StubWindowsLauncherUpdateApplier(),
-                TestDataRoot.ForDirectory(Path.Combine(tempDir, "update-root")),
-                new LocalDiagnostics()),
+            new LauncherUpdatePresenter(
+                localizer,
+                toastService,
+                dialogs,
+                new LauncherSelfUpdateService(
+                    new LauncherUpdateDownloader(new StubRemoteHttpTransport()),
+                    new LauncherUpdateHostInfoProvider(),
+                    new StubWindowsLauncherUpdateApplier(),
+                    TestDataRoot.ForDirectory(Path.Combine(tempDir, "update-root")),
+                    new LocalDiagnostics())),
             dialogs,
             testLogger,
             new GameInstallationPath(LauncherProfiles.BlueArchiveJapan),

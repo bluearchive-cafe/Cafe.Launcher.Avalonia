@@ -157,14 +157,14 @@ public sealed partial class MainWindowHeadlessTests
 
         Assert.NotNull(viewModel.Settings.Appearance.GetBackgroundBitmapAsync);
         Assert.NotNull(viewModel.Settings.PreviewAppearanceAsync);
-        Assert.NotNull(viewModel.Settings.ApplyLanguageAndTheme);
+        Assert.NotNull(viewModel.Settings.SavedSettingsFollowThrough);
         Assert.NotNull(viewModel.RemoteContent.OpenExternalUrlRequested);
 
         context.Dispose();
 
         Assert.Null(viewModel.Settings.Appearance.GetBackgroundBitmapAsync);
         Assert.Null(viewModel.Settings.PreviewAppearanceAsync);
-        Assert.Null(viewModel.Settings.ApplyLanguageAndTheme);
+        Assert.Null(viewModel.Settings.SavedSettingsFollowThrough);
         Assert.Null(viewModel.RemoteContent.OpenExternalUrlRequested);
     }
 
@@ -417,7 +417,9 @@ public sealed partial class MainWindowHeadlessTests
         Assert.Equal(700, context.Window.Height);
 
         var captured = new LauncherSettings { RememberWindowPositionAndSize = true };
-        context.Window.CaptureWindowState(captured);
+        var geometry = context.Window.TryCaptureGeometry();
+        Assert.True(geometry.HasValue);
+        geometry.Value.ApplyTo(captured);
 
         Assert.Equal(120, captured.WindowPositionX);
         Assert.Equal(240, captured.WindowPositionY);
@@ -444,7 +446,9 @@ public sealed partial class MainWindowHeadlessTests
         });
 
         var captured = new LauncherSettings { RememberWindowPositionAndSize = false };
-        context.Window.CaptureWindowState(captured);
+        var geometry = context.Window.TryCaptureGeometry();
+        Assert.True(geometry.HasValue);
+        geometry.Value.ApplyTo(captured);
 
         Assert.Equal(originalPosition, context.Window.Position);
         Assert.Equal(originalWidth, context.Window.Width);
@@ -490,7 +494,7 @@ public sealed partial class MainWindowHeadlessTests
         context.Window.SetSystemTray(trayService);
         context.Window.Show();
 
-        ((IGameOperationJourneyHost)context.ViewModel.Operations).RequestMinimize();
+        ((IGameOperationJourneyHost)context.ViewModel.Operations).Present(new GameOperationPresentation.Window(GameOperationWindowAction.Minimize));
         Dispatcher.UIThread.RunJobs();
 
         Assert.False(context.Window.IsVisible);
@@ -504,7 +508,7 @@ public sealed partial class MainWindowHeadlessTests
         using var context = CreateContext();
         context.Window.Show();
 
-        ((IGameOperationJourneyHost)context.ViewModel.Operations).RequestMinimize();
+        ((IGameOperationJourneyHost)context.ViewModel.Operations).Present(new GameOperationPresentation.Window(GameOperationWindowAction.Minimize));
         Dispatcher.UIThread.RunJobs();
 
         Assert.Equal(WindowState.Minimized, context.Window.WindowState);
@@ -533,7 +537,7 @@ public sealed partial class MainWindowHeadlessTests
         var closed = false;
         context.Window.Closed += (_, _) => closed = true;
 
-        ((IGameOperationJourneyHost)context.ViewModel.Operations).RequestExit();
+        ((IGameOperationJourneyHost)context.ViewModel.Operations).Present(new GameOperationPresentation.Window(GameOperationWindowAction.Exit));
         Dispatcher.UIThread.RunJobs();
 
         Assert.True(closed);

@@ -35,29 +35,15 @@ internal sealed class GameLaunchService
         LauncherStatusSnapshot snapshot,
         CancellationToken cancellationToken = default)
     {
-        if (snapshot.RuntimeState == LauncherRuntimeState.NotInstalled)
-        {
-            return Failed(localizer.T(LocalizationKeys.GameNotInstalled));
-        }
+        var admission = GameOperationAttempt.Evaluate(GameOperationPolicy.Operation.Launch, snapshot);
+        return admission.Attempt is { } attempt
+            ? await StartAsync(attempt, cancellationToken)
+            : GameOperationAttempt.RejectLaunch(snapshot, localizer);
+    }
 
-        if (snapshot.RuntimeState == LauncherRuntimeState.BelowLowestVersion)
-        {
-            return Failed(localizer.T(LocalizationKeys.GameBelowLowestVersion));
-        }
-
-        if (GameOperationPolicy.Decide(GameOperationPolicy.Operation.Launch, snapshot.RuntimeState)
-            == GameOperationDecision.RejectedForCurrentState)
-        {
-            return Failed(snapshot.RuntimeState switch
-            {
-                LauncherRuntimeState.Corrupted => localizer.T(LocalizationKeys.GameCorruptedInstallationState),
-                LauncherRuntimeState.IoFailure => localizer.T(LocalizationKeys.GameInstallationStateReadFailed),
-                LauncherRuntimeState.RemoteUnavailable => localizer.T(LocalizationKeys.GameRemoteStateUnavailable),
-                LauncherRuntimeState.UpdateAvailable => localizer.T(LocalizationKeys.UpdateAvailable),
-                _ => localizer.T(LocalizationKeys.GameNotInstalled)
-            });
-        }
-
+    internal async Task<GameLaunchResult> StartAsync(GameOperationAttempt attempt, CancellationToken cancellationToken = default)
+    {
+        var snapshot = attempt.SnapshotFor(GameOperationPolicy.Operation.Launch);
         var targetResolution = GameLaunchTargetResolution.Resolve(snapshot);
         if (!targetResolution.Resolved)
         {

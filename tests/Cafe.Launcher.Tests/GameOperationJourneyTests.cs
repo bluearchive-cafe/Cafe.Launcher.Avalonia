@@ -14,11 +14,6 @@ namespace Cafe.Launcher.Tests;
 [Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class GameOperationJourneyTests
 {
-    static GameOperationJourneyTests()
-    {
-        TestLocalizationHelper.Initialize();
-    }
-
     [Fact]
     public async Task StartGameAsync_WhenHostBusy_SkipsLaunch()
     {
@@ -385,6 +380,28 @@ public sealed class GameOperationJourneyTests
     }
 
     [Fact]
+    public async Task InstallOrUpdateAsync_ForEveryRuntimeState_ProceedsOnlyWherePolicyAllowsInstall()
+    {
+        // 旅程的放行集必须与策略表的安装允许集一致；策略表本身由
+        // GameOperationPolicyTests 全表钉住。新增状态时这里会先红，逼两处一起表态。
+        var installable = new HashSet<LauncherRuntimeState>
+        {
+            LauncherRuntimeState.NotInstalled,
+            LauncherRuntimeState.BelowLowestVersion,
+            LauncherRuntimeState.UpdateAvailable
+        };
+
+        foreach (var state in Enum.GetValues<LauncherRuntimeState>())
+        {
+            var context = CreateContext();
+
+            await context.Journey.InstallOrUpdateAsync(CreateSnapshot(state));
+
+            Assert.Equal(installable.Contains(state) ? 1 : 0, context.Executor.InstallCallCount);
+        }
+    }
+
+    [Fact]
     public async Task InstallOrUpdateAsync_WhenTerminalFailure_ShowsErrorToastWithoutRetry()
     {
         var context = CreateContext();
@@ -420,6 +437,7 @@ public sealed class GameOperationJourneyTests
 
         await context.Journey.InstallOrUpdateAsync(snapshot);
 
+        context.Host.CurrentSnapshot = snapshot;
         var retryToast = notifications.Single(toast => toast.PrimaryAction is not null);
         context.Executor.InstallResult = new GameOperationResult { Success = true, Message = "done" };
 
@@ -427,6 +445,67 @@ public sealed class GameOperationJourneyTests
 
         Assert.True(retryOutcome.IsSuccess);
         Assert.Equal(2, context.Executor.InstallCallCount);
+    }
+
+    [Theory]
+    [InlineData(LauncherRuntimeState.Ready)]
+    [InlineData(LauncherRuntimeState.Corrupted)]
+    public async Task RetryInstallOrUpdateAsync_CurrentStateChanged_UsesCurrentAdmission(LauncherRuntimeState state)
+    {
+        var context = CreateContext();
+        var notifications = context.SubscribeToasts();
+        context.Executor.InstallResult = new GameOperationResult { ErrorCode = GameOperationErrorCode.Network, Message = "failed" };
+        await context.Journey.InstallOrUpdateAsync(CreateSnapshot(LauncherRuntimeState.UpdateAvailable));
+        var retry = Assert.Single(notifications).PrimaryAction!;
+        context.Host.CurrentSnapshot = CreateSnapshot(state);
+        var outcome = await retry.ExecuteAsync(CancellationToken.None);
+        Assert.False(outcome.IsSuccess);
+        Assert.Equal(1, context.Executor.InstallCallCount);
+    }
+
+    [Fact]
+    public async Task RetryInstallOrUpdateAsync_CurrentTargetChanged_RejectsInsteadOfRedirecting()
+    {
+        var context = CreateContext();
+        var notifications = context.SubscribeToasts();
+        context.Executor.InstallResult = new GameOperationResult { ErrorCode = GameOperationErrorCode.Network, Message = "failed" };
+        await context.Journey.InstallOrUpdateAsync(CreateSnapshot(LauncherRuntimeState.UpdateAvailable, gamePath: "original"));
+        var oldRetry = Assert.Single(notifications).PrimaryAction!;
+        context.Host.CurrentSnapshot = CreateSnapshot(LauncherRuntimeState.UpdateAvailable, gamePath: "another");
+        // A later failed attempt must not overwrite the target bound to an earlier toast.
+        await context.Journey.InstallOrUpdateAsync(context.Host.CurrentSnapshot);
+        var outcome = await oldRetry.ExecuteAsync(CancellationToken.None);
+        Assert.False(outcome.IsSuccess);
+        Assert.Equal(2, context.Executor.InstallCallCount);
+    }
+
+    [Fact]
+    public async Task RetryInstallOrUpdateAsync_SameTargetAndFreshSnapshot_ExecutesWithCurrentPreferences()
+    {
+        var context = CreateContext();
+        var notifications = context.SubscribeToasts();
+        context.Executor.InstallResult = new GameOperationResult { ErrorCode = GameOperationErrorCode.Network, Message = "failed" };
+        await context.Journey.InstallOrUpdateAsync(CreateSnapshot(LauncherRuntimeState.UpdateAvailable));
+        var retry = Assert.Single(notifications).PrimaryAction!;
+        var current = CreateSnapshot(LauncherRuntimeState.UpdateAvailable);
+        current.Settings.PatchUrlGroup = PatchUrlGroups.Cafe;
+        context.Host.CurrentSnapshot = current;
+        context.Executor.InstallResult = new GameOperationResult { Success = true };
+        var outcome = await retry.ExecuteAsync(CancellationToken.None);
+        Assert.True(outcome.IsSuccess);
+        Assert.Same(current, context.Executor.LastInstallSnapshot);
+    }
+
+    [Fact]
+    public async Task RetryInstallOrUpdateAsync_CurrentSnapshotMissing_DoesNotReuseTheOldSnapshot()
+    {
+        var context = CreateContext();
+        var notifications = context.SubscribeToasts();
+        context.Executor.InstallResult = new GameOperationResult { ErrorCode = GameOperationErrorCode.Network, Message = "failed" };
+        await context.Journey.InstallOrUpdateAsync(CreateSnapshot(LauncherRuntimeState.UpdateAvailable));
+        var outcome = await Assert.Single(notifications).PrimaryAction!.ExecuteAsync(CancellationToken.None);
+        Assert.False(outcome.IsSuccess);
+        Assert.Equal(1, context.Executor.InstallCallCount);
     }
 
     [Fact]
@@ -615,7 +694,9 @@ public sealed class GameOperationJourneyTests
         var context = CreateContext();
         var notifications = context.SubscribeToasts();
         context.Executor.InstallResult = new GameOperationResult { ErrorCode = GameOperationErrorCode.Network, Message = "failed" };
-        await context.Journey.InstallOrUpdateAsync(CreateSnapshot(LauncherRuntimeState.NotInstalled));
+        var snapshot = CreateSnapshot(LauncherRuntimeState.NotInstalled);
+        context.Host.CurrentSnapshot = snapshot;
+        await context.Journey.InstallOrUpdateAsync(snapshot);
         var retry = Assert.Single(notifications).PrimaryAction!;
         var completion = new TaskCompletionSource<GameOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         context.Executor.InstallCompletion = completion;
@@ -747,6 +828,22 @@ public sealed class GameOperationJourneyTests
         public bool ExitRequested { get; private set; }
 
         public bool ShowRequested { get; private set; }
+
+        public void Present(GameOperationPresentation update)
+        {
+            switch (update)
+            {
+                case GameOperationPresentation.Busy busy: SetBusy(busy.Value); break;
+                case GameOperationPresentation.Preparing: PrepareOperation(); break;
+                case GameOperationPresentation.Progress progress: ApplyProgress(progress.Value); break;
+                case GameOperationPresentation.Snapshot snapshot: ApplySnapshot(snapshot.Value); break;
+                case GameOperationPresentation.LaunchCheck check: SetLaunchCheckResult(check.Message); break;
+                case GameOperationPresentation.RepairConfirmation confirmation: ShowRepairConfirmation(confirmation.Message); break;
+                case GameOperationPresentation.Window { Action: GameOperationWindowAction.Minimize }: RequestMinimize(); break;
+                case GameOperationPresentation.Window { Action: GameOperationWindowAction.Exit }: RequestExit(); break;
+                case GameOperationPresentation.Window { Action: GameOperationWindowAction.Show }: RequestShow(); break;
+            }
+        }
 
         public void PrepareOperation() => PrepareOperationCalled = true;
 

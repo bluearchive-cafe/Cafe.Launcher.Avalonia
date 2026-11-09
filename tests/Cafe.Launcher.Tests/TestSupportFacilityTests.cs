@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.Testing;
@@ -228,39 +228,30 @@ public sealed class TestSupportFacilityTests
             Path.Combine(TestRepository.ResourcesPath, "LauncherStrings.resx"));
 
         Assert.NotEmpty(resources);
-        Assert.Contains(Cafe.Launcher.UI.Constants.LocalizationKeys.Save, resources.Keys);
+        Assert.Contains("save", resources.Keys);
     }
 
     /// <summary>
-    /// 安装动作必须每次重做：<c>LocalizationService.InitializeForTesting</c> 是「最后者胜」
-    /// 的进程级状态，缓存住安装会让一个先装了自定义资源的用例污染其后所有用例。
+    /// 资源表随实例注入：一个实例装的自定义表不会泄漏到另一个实例（旧实现是
+    /// 「最后者胜」的进程级覆盖，用例先后顺序会改变结果）。
     /// </summary>
     [Fact]
-    public void InitializeLocalizationResources_AfterCustomResources_RestoresTheRepositorySet()
+    public void LocalizationTestSource_DoesNotLeakIntoOtherInstances()
     {
-        try
-        {
-            LocalizationService.InitializeForTesting(new Dictionary<string, Dictionary<string, string>>
+        var custom = new LocalizationService(new LocalizationTestSource(
+            new Dictionary<string, Dictionary<string, string>>
             {
                 [LauncherLanguages.English] = new(StringComparer.Ordinal)
                 {
-                    [Cafe.Launcher.UI.Constants.LocalizationKeys.Save] = "custom-value"
+                    ["save"] = "custom-value"
                 }
-            });
-            var localizer = new LocalizationService();
-            localizer.SetLanguage(LauncherLanguages.English);
-            Assert.Equal("custom-value", localizer.T(Cafe.Launcher.UI.Constants.LocalizationKeys.Save));
+            }));
+        custom.SetLanguage(LauncherLanguages.English);
+        Assert.Equal("custom-value", custom.T(LocalizationKeys.Save));
 
-            TestRepository.InitializeLocalizationResources();
-
-            var restored = new LocalizationService();
-            restored.SetLanguage(LauncherLanguages.English);
-            Assert.NotEqual("custom-value", restored.T(Cafe.Launcher.UI.Constants.LocalizationKeys.Save));
-            Assert.False(string.IsNullOrWhiteSpace(restored.T(Cafe.Launcher.UI.Constants.LocalizationKeys.Save)));
-        }
-        finally
-        {
-            TestRepository.InitializeLocalizationResources();
-        }
+        var repositoryBacked = new LocalizationService();
+        repositoryBacked.SetLanguage(LauncherLanguages.English);
+        Assert.NotEqual("custom-value", repositoryBacked.T(LocalizationKeys.Save));
+        Assert.False(string.IsNullOrWhiteSpace(repositoryBacked.T(LocalizationKeys.Save)));
     }
 }

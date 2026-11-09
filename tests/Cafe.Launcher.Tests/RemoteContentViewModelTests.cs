@@ -14,11 +14,6 @@ public sealed class RemoteContentViewModelTests
 {
     private static readonly TimeSpan GateTimeout = TimeSpan.FromSeconds(5);
 
-    static RemoteContentViewModelTests()
-    {
-        TestLocalizationHelper.Initialize();
-    }
-
     [Fact]
     public void Apply_WhenBannersAreRemoved_StopsExistingCarouselTimer()
     {

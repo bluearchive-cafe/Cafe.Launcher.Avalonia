@@ -14,10 +14,8 @@ using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Core.Services.GameRuntime;
-using Cafe.Launcher.Core.Services.Update;
 using Cafe.Launcher.UI.ViewModels;
 using Serilog.Events;
-using Cafe.Launcher.Core;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services;
 
@@ -30,13 +28,12 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
     private readonly ILauncherUpdateService launcherUpdateService;
-    private readonly ILauncherSelfUpdateService launcherSelfUpdateService;
+    private readonly ILauncherUpdatePresenter updatePresenter;
     private readonly DialogsViewModel dialogs;
     private readonly SettingsEditor editor;
     private readonly UnifiedLogger unifiedLogger;
     private readonly IGameInstallationPath gameInstallationPath;
     private readonly IErrorHandlingService errorHandling;
-    private readonly LauncherBuildIdentity? buildIdentity;
     private readonly IGameRuntime gameRuntime;
     private readonly IFilePickerService filePickerService;
     private readonly LatestRefresh appearancePreviewRefresh = new();
@@ -51,12 +48,11 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
     private IReadOnlyList<GameRuntimeStatusEntry>? gameRuntimeStatusEntries;
     private bool disposed;
 
-    // Coordination delegates — set by parent after construction.
-    public Func<LauncherSettings, Task>? ApplyLanguageAndTheme { get; set; }
+    // Coordination seams — set by parent after construction.
     public Func<LauncherSettings, string?, CancellationToken, Task>? PreviewAppearanceAsync { get; set; }
 
-    // Events — parent subscribes to these.
-    public event Func<Task>? SettingsSaved;
+    /// <summary>Applies the effects that follow a persisted settings snapshot (shell-owned).</summary>
+    public ISavedSettingsFollowThrough? SavedSettingsFollowThrough { get; set; }
 
     /// <summary>
     /// The settings state editor. XAML binds to <c>Editor.Current.*</c> for
@@ -72,7 +68,7 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
         LocalizationService localizer,
         ToastService toastService,
         ILauncherUpdateService launcherUpdateService,
-        ILauncherSelfUpdateService launcherSelfUpdateService,
+        ILauncherUpdatePresenter updatePresenter,
         DialogsViewModel dialogs,
         UnifiedLogger unifiedLogger,
         IGameInstallationPath gameInstallationPath,
@@ -80,15 +76,14 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
         SettingsAppearanceViewModel appearance,
         IErrorHandlingService errorHandling,
         IGameRuntime gameRuntime,
-        IFilePickerService filePickerService,
-        LauncherBuildIdentity? buildIdentity = null)
+        IFilePickerService filePickerService)
     {
         this.settingsService = settingsService;
         this.savedSettingsWriter = savedSettingsWriter;
         this.localizer = localizer;
         this.toastService = toastService;
         this.launcherUpdateService = launcherUpdateService;
-        this.launcherSelfUpdateService = launcherSelfUpdateService;
+        this.updatePresenter = updatePresenter;
         this.dialogs = dialogs;
         this.unifiedLogger = unifiedLogger;
         this.gameInstallationPath = gameInstallationPath;
@@ -96,7 +91,6 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
         Options = options;
         Appearance = appearance;
         this.errorHandling = errorHandling;
-        this.buildIdentity = buildIdentity;
         this.gameRuntime = gameRuntime;
         this.filePickerService = filePickerService;
         editor.PropertyChanged += OnEditorPropertyChanged;
@@ -269,33 +263,7 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
         var result = await launcherUpdateService.CheckForUpdateAsync(
             savedSettings.UpdateChannel);
 
-        if (!result.IsSuccessful)
-        {
-            var operationMessage = localizer.T(LocalizationKeys.LauncherUpdateCheckFailed);
-            var message = result.FailureException is not null
-                ? ErrorHandlingService.FormatToastMessage(
-                    operationMessage,
-                    result.FailureException,
-                    localizer.T(LocalizationKeys.ErrorNetworkUnavailable),
-                    localizer.T(LocalizationKeys.ErrorFakeIpDns))
-                : string.IsNullOrWhiteSpace(result.FailureMessage)
-                    ? operationMessage
-                    : $"{operationMessage}：{result.FailureMessage}";
-            toastService.ShowError(message);
-            return;
-        }
-
-        if (!result.IsUpdateAvailable)
-        {
-            toastService.ShowSuccess(localizer.F(LocalizationKeys.LauncherUpdateUpToDate, buildIdentity?.LauncherVersion ?? ""));
-            return;
-        }
-
-        dialogs.ShowUpdateAvailable(
-            result.LatestVersion,
-            result.Files,
-            launcherSelfUpdateService.ResolveInAppAvailability(result.Files),
-            result.ReleaseNotes);
+        updatePresenter.Present(result, LauncherUpdateTrigger.Manual);
     }
 
     /// <summary>Opens the shared launcher-settings reset confirmation (shell performs the reset).</summary>
@@ -325,19 +293,16 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
             // 落盘值而非草稿对象：归一化会改写草稿里的表示（大小写、trim、色板去重），
             // 后续的跟随动作与编辑器都必须以真正落盘的那个值为准。
             var settings = await savedSettingsWriter.SaveDraftAsync();
-            ApplyLogLevel(settings.LogLevel);
-
-            if (ApplyLanguageAndTheme is not null)
-                await ApplyLanguageAndTheme(settings);
-            else
-                Appearance.ApplyThemeColor(
-                    settings.ThemeColorMode,
-                    ColorUtils.ParseColorOrDefault(settings.CustomThemeColor));
+            var followThrough = SavedSettingsFollowThrough;
+            var handoff = followThrough?.Apply(settings);
 
             toastService.ShowSuccess(localizer.T(LocalizationKeys.SettingsSaved));
             RefreshGameRuntimeStatus();
 
-            await AsyncEvent.InvokeSequentiallyAsync(SettingsSaved);
+            if (followThrough is not null && handoff is not null)
+            {
+                await followThrough.CompleteAsync(handoff);
+            }
         }
         catch (Exception exception)
         {
@@ -395,10 +360,17 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
 
         try
         {
-            await savedSettingsWriter.UpdateAsync(settings => settings.GamePath = pickedPath);
+            var savedSettings = await savedSettingsWriter.UpdateAsync(
+                settings => settings.GamePath = pickedPath);
+            var followThrough = SavedSettingsFollowThrough;
+            var handoff = followThrough?.Apply(savedSettings);
+
             toastService.ShowSuccess(localizer.T(LocalizationKeys.GamePathUpdated));
 
-            await AsyncEvent.InvokeSequentiallyAsync(SettingsSaved);
+            if (followThrough is not null && handoff is not null)
+            {
+                await followThrough.CompleteAsync(handoff);
+            }
         }
         catch (Exception exception)
         {
@@ -576,7 +548,7 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
         SaveSettingsCommand.NotifyCanExecuteChanged();
     }
 
-    private void ApplyLogLevel(string logLevelCode)
+    internal void ApplyLogLevel(string logLevelCode)
     {
         try
         {

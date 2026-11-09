@@ -1,3 +1,5 @@
+using Cafe.Launcher.UI.Resources;
+using Cafe.Launcher.UI.Constants;
 using Avalonia;
 using Avalonia.Media;
 using Cafe.Launcher.UI.Helpers;
@@ -31,7 +33,7 @@ public sealed class DesignTokenGroupingTests
             ("Launcher.Color.Secondary", new SolidColorBrush(Color.Parse("#FF625B71")))
         };
 
-        var groups = DesignTokenGrouping.BuildGroups(pairs, key => $"L:{key}");
+        var groups = DesignTokenGrouping.BuildGroups(pairs, key => $"L:{LauncherResourceCatalog.Name(key)}");
 
         Assert.Equal(2, groups.Count);
         Assert.Equal("Color", groups[0].Family);
@@ -47,11 +49,22 @@ public sealed class DesignTokenGroupingTests
     {
         var groups = DesignTokenGrouping.BuildGroups(
             [("Launcher_Undotted", null)],
-            key => key);
+            LauncherResourceCatalog.Name);
 
         var other = Assert.Single(groups);
         Assert.Equal("Other", other.Family);
         Assert.Equal("Launcher_Undotted", other.Items[0].Key);
+    }
+
+    [Fact]
+    public void BuildGroups_UnknownFamily_UsesTheTypedOtherLabel()
+    {
+        LocalizationKeys? requested = null;
+        var group = Assert.Single(DesignTokenGrouping.BuildGroups(
+            [("Launcher.Future.Value", 1d)], key => { requested = key; return "Other"; }));
+        Assert.Equal(LocalizationKeys.DesignGroupOther, requested);
+        Assert.Equal("designGroupOther", group.ResxKey);
+        Assert.Equal("Other", group.DisplayName);
     }
 
     [Fact]

@@ -39,7 +39,7 @@ pwsh ./verify.ps1
 | --- | --- |
 | XAML、样式或控件模板 | `UiStyleContractTests`；较大 UI 改动运行 `pwsh ./dev.ps1 ui` |
 | 有意改变视觉 | `pwsh ./test.ps1 -UpdateGolden`，审阅并提交 `tests/Cafe.Launcher.HeadlessTests/Baselines/` 中的 PNG |
-| 资源键、占位符或翻译 | `pwsh ./scripts/Test-LocalizationContract.ps1`，并按[规范 §6](../PROJECT_CONVENTIONS.md#6-本地化)重新生成键 |
+| 资源键、占位符或翻译 | `pwsh ./scripts/Test-LocalizationContract.ps1`，并按[规范 §6](../PROJECT_CONVENTIONS.md#6-本地化)运行统一资源目录生成器 |
 | 依赖版本或锁文件 | 按[依赖与 CI](#依赖与-ci)执行，并运行 `InstallerContractTests` |
 | 独立更新助手 | `dotnet build ./src/Cafe.Launcher.Updater/Cafe.Launcher.Updater.csproj` |
 | 播放器生命周期 | 按[视频背景运行库与专项验证](#视频背景运行库与专项验证)执行生产场景复测 |

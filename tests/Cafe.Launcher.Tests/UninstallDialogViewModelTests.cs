@@ -14,7 +14,6 @@ public sealed class UninstallDialogViewModelTests
 {
     private static UninstallDialogViewModel Create(Func<Task>? confirm = null, Func<Task>? logs = null)
     {
-        TestLocalizationHelper.Initialize();
         return new UninstallDialogViewModel(new LocalizationService(), confirm ?? (() => Task.CompletedTask), logs ?? (() => Task.CompletedTask));
     }
 

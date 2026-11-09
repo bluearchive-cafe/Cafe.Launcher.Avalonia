@@ -8,20 +8,16 @@ using Cafe.Launcher.Core.Services;
 namespace Cafe.Launcher.Tests;
 
 /// <summary>
-/// <see cref="MainWindowTestContext"/> 的两条契约：日志活到用例结束（消费者在其整个活期内
-/// 继续写入），以及两个上下文之间不共享任何持久化状态。
+/// <see cref="MainWindowTestContext"/> 的两条契约：容器持有的日志活到用例结束（消费者在其
+/// 整个活期内继续写入），以及两个上下文之间不共享任何持久化状态。
 /// </summary>
 [Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class MainWindowTestContextTests
 {
-    static MainWindowTestContextTests()
-    {
-        TestLocalizationHelper.Initialize();
-    }
-
     /// <summary>
-    /// 装配返回之后日志仍可写：设置页与日志查看器持有这两个日志器，先前它们是装配方法的
-    /// 局部 <c>using</c>，方法一返回句柄就被关掉，消费者此后的写入静默落进已释放的管道。
+    /// 装配返回之后日志仍可写：设置页、调试面板与日志查看器长期持有容器里的日志器，先前它
+    /// 是装配方法的局部 <c>using</c>，方法一返回句柄就被关掉，消费者此后的写入静默落进
+    /// 已释放的管道。
     /// </summary>
     [Fact]
     public async Task Create_AfterAssemblyReturns_KeepsItsLoggersWritable()
@@ -92,8 +88,9 @@ public sealed class MainWindowTestContextTests
     }
 
     /// <summary>
-    /// 一个上下文所需的全部外部夹具：目录、直连工厂、图片缓存。它们由用例创建并释放
-    /// （上下文只释放自己创建的对象，见 <see cref="MainWindowTestContext"/> 的注释）。
+    /// 一个上下文所需的全部外部夹具：目录、直连工厂、图片缓存。实例注册进上下文容器，
+    /// 由容器在释放时一并释放；用例再释放一次是安全的（两者都幂等），见
+    /// <see cref="MainWindowTestContext"/> 的注释。
     /// </summary>
     private sealed class ContextScope : IDisposable
     {

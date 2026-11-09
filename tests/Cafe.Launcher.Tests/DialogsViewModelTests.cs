@@ -26,11 +26,6 @@ public sealed class DialogsViewModelTests : IDisposable
     /// <summary>Upper bound for a wait on an event the test itself gates, so a broken command fails instead of hanging.</summary>
     private static readonly TimeSpan GateTimeout = TimeSpan.FromSeconds(5);
 
-    static DialogsViewModelTests()
-    {
-        TestLocalizationHelper.Initialize();
-    }
-
     [Fact]
     public void DownloadConfirmations_WhenLanguageIsApplied_PreserveDistinctConsequences()
     {
@@ -140,7 +135,7 @@ public sealed class DialogsViewModelTests : IDisposable
         LocalizationKeys.LauncherUpdateInAppUnavailablePackage)]
     public void ShowUpdateAvailable_WhenInAppApplyIsUnavailable_NamesTheCauseTheVerdictReported(
         LauncherUpdateInAppAvailability availability,
-        string expectedKey)
+        LocalizationKeys expectedKey)
     {
         var localizer = new LocalizationService();
         var viewModel = CreateViewModel();
