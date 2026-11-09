@@ -267,6 +267,39 @@ internal sealed class LauncherUpdateService : ILauncherUpdateService
     {
         try
         {
+            var requestUri = new Uri(
+                new Uri(productProfile.LauncherApiBaseUrl),
+                productProfile.GetLauncherReleaseNotesPath(version));
+            var response = await transport.GetJsonAsync<LauncherReleaseNotesResponse>(
+                requestUri,
+                new RemoteRequestOptions
+                {
+                    Timeout = TimeSpan.FromSeconds(15),
+                    Json = JsonOptions
+                },
+                cancellationToken).ConfigureAwait(false);
+            return response?.ReleaseNotes ?? "";
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception) when (exception is HttpRequestException
+            or JsonException
+            or InvalidOperationException
+            or TaskCanceledException)
+        {
+            // 旧服务端无该端点（404）或代理故障时才回退 GitHub 直连；代理应答的空说明是权威结果。
+            return await LoadGitHubReleaseNotesAsync(version, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private async Task<string> LoadGitHubReleaseNotesAsync(
+        string version,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
             var requestUri = new Uri(productProfile.GitHubReleaseByTagApiUrl + "v" + Uri.EscapeDataString(version));
             var release = await transport.GetJsonAsync<GitHubRelease>(
                 requestUri,

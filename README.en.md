@@ -110,6 +110,7 @@ Follow the [development guide (Chinese)](docs/DEVELOPMENT.md) for prerequisites,
 | Assemblies, coding, localization, DI, tests, and persistence | [Engineering conventions](PROJECT_CONVENTIONS.md) |
 | Behavioral invariants and canonical translations | [Domain contracts](CONTEXT.md), [terminology](UBIQUITOUS_LANGUAGE.md) |
 | Rationale, current findings, and accepted risks | [Architecture decisions](docs/design/adr/README.md), [audit ledger](CODEBASE_AUDIT.md) |
+| Release metadata service, notices, and download mirror | [Cafe.Launcher.Backend](https://github.com/bluearchive-cafe/Cafe.Launcher.Backend), [Cafe.Launcher.Downloads](https://github.com/bluearchive-cafe/Cafe.Launcher.Downloads) |
 | Task routing for coding agents | [AGENTS.md](AGENTS.md) |
 
 Contributor documentation is primarily in Chinese; both READMEs point to the same maintained rules.

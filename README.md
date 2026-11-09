@@ -110,4 +110,5 @@ dotnet run --project ./src/Cafe.Launcher/Cafe.Launcher.csproj
 | 程序集边界、编码、本地化、DI、测试与持久化规则 | [开发规范](PROJECT_CONVENTIONS.md) |
 | 行为约束与四语言统一译名 | [领域契约](CONTEXT.md)、[术语表](UBIQUITOUS_LANGUAGE.md) |
 | 决策依据、当前发现及已接受风险 | [架构决策](docs/design/adr/README.md)、[审计台账](CODEBASE_AUDIT.md) |
+| 服务端发行元数据、公告与下载镜像 | [Cafe.Launcher.Backend](https://github.com/bluearchive-cafe/Cafe.Launcher.Backend)、[Cafe.Launcher.Downloads](https://github.com/bluearchive-cafe/Cafe.Launcher.Downloads) |
 | 编码代理的任务入口 | [AGENTS.md](AGENTS.md) |

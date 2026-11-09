@@ -24,6 +24,15 @@ public sealed class LauncherReleaseResponse
 }
 
 /// <summary>
+/// One release's notes returned by the launcher update server proxy.
+/// </summary>
+public sealed class LauncherReleaseNotesResponse
+{
+    [JsonPropertyName("releaseNotes")]
+    public string ReleaseNotes { get; set; } = "";
+}
+
+/// <summary>
 /// A downloadable file entry within a release.
 /// </summary>
 public sealed class ReleaseFile

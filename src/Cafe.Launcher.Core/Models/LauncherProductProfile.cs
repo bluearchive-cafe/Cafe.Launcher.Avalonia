@@ -1,3 +1,5 @@
+using System;
+
 namespace Cafe.Launcher.Core.Models;
 
 /// <summary>
@@ -59,6 +61,10 @@ public sealed record LauncherProductProfile
 
     /// <summary>按标签查询发行版的 API 前缀；由 <see cref="GitHubReleasesApiUrl"/> 派生。</summary>
     public string GitHubReleaseByTagApiUrl => GitHubReleasesApiUrl + "/tags/";
+
+    /// <summary>按版本查询发行说明的代理路径；由 <see cref="LauncherReleasesPath"/> 派生。</summary>
+    public string GetLauncherReleaseNotesPath(string version) =>
+        LauncherReleasesPath + "/" + Uri.EscapeDataString(version) + "/notes";
 
     /// <summary>发行列表页（浏览器接管的落点，列表页永远存在，标签页不一定）。</summary>
     public string GitHubReleasesPageUrl => GitHubReleaseRepositoryUrl + "/releases";

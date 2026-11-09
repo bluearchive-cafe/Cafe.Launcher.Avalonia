@@ -36,3 +36,16 @@
 [设计资料索引](design/README.md)按现行规范、待执行计划与归档记录列出 `design/` 下的全部文档；[研究记录索引](research/README.md)列出调查与选型记录；[原型索引](../prototypes/README.md)列出保留的视觉与交互实验。修改前先按 [ADR 索引](design/adr/README.md)核对后续修订及替代关系。
 
 归档计划、验证记录与研究报告保留当时的目标、证据与验证边界。它们用于追溯背景；实施现行功能时，以当前代码、领域契约、开发规范及仍有效的 ADR 为依据。审计发现统一记录在审计台账。
+
+## 相关仓库
+
+| 仓库 | 职责 |
+| --- | --- |
+| [Cafe.Launcher.Avalonia](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia) | 桌面端源码（本仓库） |
+| [Cafe.Launcher.Backend](https://github.com/bluearchive-cafe/Cafe.Launcher.Backend) | 发行元数据代理、更新说明与公告资源转换 |
+| [Cafe.Launcher.Downloads](https://github.com/bluearchive-cafe/Cafe.Launcher.Downloads) | 发行包下载镜像、同步与下载统计 |
+| [Cafe.Launcher.Avalonia_Release](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release) | 遗留分发仓库，保留兼容旧链接的发行资产 |
+| [bluearchive-cafe/docs](https://github.com/bluearchive-cafe/docs) | 用户文档站源码（本地配套工作区 `cafe-docs`） |
+
+服务端与下载镜像的行为契约以各自仓库的 README 为准；修改端点、资产命名或镜像校验时，需同步核对客户端、发行工作流与对应服务仓。
+

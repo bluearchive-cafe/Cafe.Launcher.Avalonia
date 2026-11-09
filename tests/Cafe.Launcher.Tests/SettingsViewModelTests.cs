@@ -163,7 +163,7 @@ public sealed class SettingsViewModelTests : IDisposable
             Assert.True(dialogs.IsUpdateAvailableVisible);
             Assert.True(dialogs.IsUpdateReleaseNotesLoading);
             Assert.True(dialogs.CanConfirmUpdate);
-            return fail ? new HttpRequestException("notes unavailable") : "{\"body\":\"## Loaded notes\"}";
+            return fail ? new HttpRequestException("notes unavailable") : "{\"releaseNotes\":\"## Loaded notes\"}";
         };
         using var settings = CreateSettingsViewModel(new LocalizationService(), transport, dialogs);
 

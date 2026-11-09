@@ -312,10 +312,14 @@ public partial class MainWindowViewModelTests
             ]
             """;
         var transportCalls = 0;
-        var transport = new StubRemoteHttpTransport(_ =>
+        var transport = new StubRemoteHttpTransport(uri =>
         {
             transportCalls++;
-            return releaseJson;
+            return uri == new Uri(
+                new Uri(LauncherProfiles.Cafe.LauncherApiBaseUrl),
+                LauncherProfiles.Cafe.GetLauncherReleaseNotesPath("99.0.0"))
+                ? """{"releaseNotes":"## 99.0.0 notes"}"""
+                : releaseJson;
         });
         var updateSvc = new LauncherUpdateService(
             LauncherProfiles.Cafe,
@@ -344,7 +348,9 @@ public partial class MainWindowViewModelTests
         Assert.True(viewModel.Dialogs.IsUpdateAvailableVisible);
         Assert.Equal(callsAfterStartup + 1, transportCalls);
         Assert.Equal(
-            new Uri(LauncherProfiles.Cafe.GitHubReleaseByTagApiUrl + "v99.0.0"),
+            new Uri(
+                new Uri(LauncherProfiles.Cafe.LauncherApiBaseUrl),
+                LauncherProfiles.Cafe.GetLauncherReleaseNotesPath("99.0.0")),
             transport.RequestedUris[^1]);
     }
 

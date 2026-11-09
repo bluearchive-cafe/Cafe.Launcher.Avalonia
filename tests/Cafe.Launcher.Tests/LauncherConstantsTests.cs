@@ -59,6 +59,9 @@ public sealed class LauncherConstantsTests
         Assert.Equal("https://api.cafe-launcher.saibamidori.com/", LauncherProfiles.Cafe.LauncherApiBaseUrl);
         Assert.Equal("/api/v2/launcher/releases", LauncherProfiles.Cafe.LauncherReleasesPath);
         Assert.Equal(
+            "/api/v2/launcher/releases/1.2.0-beta.1/notes",
+            LauncherProfiles.Cafe.GetLauncherReleaseNotesPath("1.2.0-beta.1"));
+        Assert.Equal(
             "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases",
             LauncherProfiles.Cafe.GitHubReleasesPageUrl);
         Assert.Equal(

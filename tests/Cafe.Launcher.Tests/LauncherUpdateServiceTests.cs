@@ -20,6 +20,12 @@ public sealed class LauncherUpdateServiceTests
 
     private static readonly Uri GitHubReleasesUri = new(LauncherProfiles.Cafe.GitHubReleasesApiUrl);
 
+    private static Uri ProxyReleaseNotesUri(string version) =>
+        new(new Uri(LauncherProfiles.Cafe.LauncherApiBaseUrl), LauncherProfiles.Cafe.GetLauncherReleaseNotesPath(version));
+
+    private static Uri GitHubReleaseNotesUri(string version) =>
+        new(LauncherProfiles.Cafe.GitHubReleaseByTagApiUrl + "v" + version);
+
     private const string GitHubReleasesJson =
         """
         [
@@ -215,7 +221,9 @@ public sealed class LauncherUpdateServiceTests
                     }]
                   }]
                   """
-                : """{"body":"## Highlights\n\n- Faster updates"}""");
+                : uri == ProxyReleaseNotesUri("1.0.0-beta.8")
+                    ? """{"releaseNotes":"## Highlights\n\n- Faster updates"}"""
+                    : throw new InvalidOperationException($"Unexpected request URI: {uri}"));
         var service = new LauncherUpdateService(LauncherProfiles.Cafe, transport, currentVersionOverride: "1.0.0-beta.7");
 
         var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
@@ -227,9 +235,44 @@ public sealed class LauncherUpdateServiceTests
         var notes = await service.LoadReleaseNotesAsync(result.LatestVersion);
 
         Assert.Equal("## Highlights\n\n- Faster updates", notes);
-        Assert.Equal(
-            new Uri(LauncherProfiles.Cafe.GitHubReleaseByTagApiUrl + "v1.0.0-beta.8"),
-            transport.RequestedUris[1]);
+        Assert.Equal(ProxyReleaseNotesUri("1.0.0-beta.8"), transport.RequestedUris[1]);
+        Assert.Equal(2, transport.RequestedUris.Count);
+    }
+
+    [Fact]
+    public async Task LoadReleaseNotesAsync_WhenProxyHasNotes_DoesNotRequestGitHub()
+    {
+        // 回归：匿名直连 GitHub 会被共享出口 IP 的限流（403）打掉；
+        // 代理有说明时不得再发 GitHub 请求。
+        var transport = new StubRemoteHttpTransport(uri =>
+            uri == ProxyReleaseNotesUri("1.2.0")
+                ? """{"releaseNotes":"## Highlights"}"""
+                : throw new InvalidOperationException($"Unexpected request URI: {uri}"));
+        var service = new LauncherUpdateService(LauncherProfiles.Cafe, transport, currentVersionOverride: "1.0.0");
+
+        var notes = await service.LoadReleaseNotesAsync("1.2.0");
+
+        Assert.Equal("## Highlights", notes);
+        Assert.Equal(ProxyReleaseNotesUri("1.2.0"), Assert.Single(transport.RequestedUris));
+    }
+
+    [Fact]
+    public async Task LoadReleaseNotesAsync_WhenProxyFails_FallsBackToGitHub()
+    {
+        // 旧服务端没有 notes 端点（404）或代理故障时，仍回退 GitHub 直连。
+        var transport = new StubRemoteHttpTransport(uri =>
+            uri == ProxyReleaseNotesUri("1.2.0")
+                ? new HttpRequestException("Not Found", null, HttpStatusCode.NotFound)
+                : uri == GitHubReleaseNotesUri("1.2.0")
+                    ? """{"body":"## GitHub notes"}"""
+                    : throw new InvalidOperationException($"Unexpected request URI: {uri}"));
+        var service = new LauncherUpdateService(LauncherProfiles.Cafe, transport, currentVersionOverride: "1.0.0");
+
+        var notes = await service.LoadReleaseNotesAsync("1.2.0");
+
+        Assert.Equal("## GitHub notes", notes);
+        Assert.Equal(2, transport.RequestedUris.Count);
+        Assert.Equal(GitHubReleaseNotesUri("1.2.0"), transport.RequestedUris[1]);
     }
 
     [Theory]
@@ -237,12 +280,16 @@ public sealed class LauncherUpdateServiceTests
     [InlineData(true)]
     public async Task LoadReleaseNotesAsync_WhenUnavailableOrEmpty_ReturnsEmpty(bool fail)
     {
-        var transport = new StubRemoteHttpTransport(_ => fail
+        var transport = new StubRemoteHttpTransport(uri => fail
             ? new HttpRequestException("unavailable")
-            : "{\"body\":\"\"}");
+            : uri == ProxyReleaseNotesUri("1.2.0")
+                ? """{"releaseNotes":""}"""
+                : throw new InvalidOperationException($"Unexpected request URI: {uri}"));
         var service = new LauncherUpdateService(LauncherProfiles.Cafe, transport, currentVersionOverride: "1.0.0");
 
         Assert.Empty(await service.LoadReleaseNotesAsync("1.2.0"));
+        // 代理应答的空说明是权威结果，不回退；两端都失败才落空。
+        Assert.Equal(fail ? 2 : 1, transport.RequestedUris.Count);
     }
 
     [Fact]
