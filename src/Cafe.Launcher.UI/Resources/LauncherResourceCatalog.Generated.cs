@@ -237,6 +237,7 @@ internal static class LauncherResourceCatalog
         "gameRuntimePrefixPath",
         "gameRuntimePrefixPathDescription",
         "gameRuntimePrefixPathPlaceholder",
+        "gameRuntimeProtonDiscoveryFailed",
         "gameRuntimeProtonPath",
         "gameRuntimeProtonPathDescription",
         "gameRuntimeProtonPathPlaceholder",

@@ -34,6 +34,28 @@ public sealed class GameRuntimeSettingsUiTests
     }
 
     [Fact]
+    public void RuntimePathChooseButtons_UseActionNameAndDiscoveryFailureIsVisible()
+    {
+        var document = XDocument.Load(TestRepository.InPresentation("Views", "SettingsGameSection.axaml"));
+        var chooseButtons = document
+            .Descendants()
+            .Where(element => element.Name.LocalName == "Button")
+            .Where(element =>
+                element.Attribute("Command")?.Value is "{Binding Settings.ChoosePrefixPathCommand}"
+                    or "{Binding Settings.ChooseProtonPathCommand}")
+            .ToArray();
+
+        Assert.Equal(2, chooseButtons.Length);
+        Assert.All(chooseButtons, button => Assert.Equal(
+            "{Binding Shell.I18n[choose]}",
+            button.Attribute("AutomationProperties.Name")?.Value));
+        Assert.Contains(
+            document.Descendants(),
+            element => element.Attribute("Text")?.Value
+                == "{Binding Shell.I18n[gameRuntimeProtonDiscoveryFailed]}");
+    }
+
+    [Fact]
     public void MangoHudSetting_EditSaveAndDiscard_PreservesStateAndDefaultsOffForOldSettings()
     {
         var oldSettings = JsonSerializer.Deserialize<LauncherSettings>("{}")!;
@@ -245,6 +267,80 @@ public sealed class GameRuntimeSettingsUiTests
     }
 
     [Fact]
+    public void SelectedProtonBuild_MatchesPathIgnoringTrailingSeparator()
+    {
+        using var settings = CreateSettingsViewModel(
+            new LocalizationService(),
+            new SettingsOptionsViewModel(new LocalizationService(), new DiskSpaceService()),
+            new StubGameRuntime([]));
+        var build = new SettingOption { DisplayName = "GE-Proton", Code = "/tools/GE-Proton" };
+        settings.ProtonBuilds = [build];
+        settings.Editor.Current.GameRuntime.ProtonPath = build.Code + Path.DirectorySeparatorChar;
+
+        Assert.Equal(build.Code, settings.SelectedProtonBuild);
+    }
+
+    [Fact]
+    public async Task ProtonBuildDiscovery_FailureShowsRetryableMessageAndRefreshRecovers()
+    {
+        var localizer = new LocalizationService();
+        var discovery = new StubProtonBuildDiscovery();
+        discovery.Responses.Enqueue(() => throw new IOException("scan failed"));
+        using var settings = CreateSettingsViewModel(
+            localizer,
+            new SettingsOptionsViewModel(localizer, new DiskSpaceService()),
+            new StubGameRuntime([]), discovery: discovery);
+
+        settings.RefreshGameRuntimeStatusCommand.Execute(null);
+        await settings.PendingGameRuntimeStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.True(settings.ProtonBuildDiscoveryFailed);
+        Assert.False(settings.HasProtonBuilds);
+        Assert.False(settings.IsGameRuntimeStatusRefreshing);
+
+        discovery.Responses.Enqueue(() =>
+            [new ProtonBuild("GE-Proton", "/tools/GE-Proton")]);
+        settings.RefreshGameRuntimeStatusCommand.Execute(null);
+        await settings.PendingGameRuntimeStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.False(settings.ProtonBuildDiscoveryFailed);
+        Assert.Equal("/tools/GE-Proton", Assert.Single(settings.ProtonBuilds).Code);
+    }
+
+    [Fact]
+    public async Task ProtonBuildDiscovery_LateCancelledResultCannotOverwriteLatest()
+    {
+        using var gate = new ManualResetEventSlim();
+        using var firstStarted = new ManualResetEventSlim();
+        var discovery = new StubProtonBuildDiscovery();
+        discovery.Responses.Enqueue(() =>
+        {
+            firstStarted.Set();
+            gate.Wait(TimeSpan.FromSeconds(5));
+            return [new ProtonBuild("stale", "/stale/GE-Proton")];
+        });
+        discovery.Responses.Enqueue(() => [new ProtonBuild("latest", "/latest/GE-Proton")]);
+        using var settings = CreateSettingsViewModel(
+            new LocalizationService(),
+            new SettingsOptionsViewModel(new LocalizationService(), new DiskSpaceService()),
+            new StubGameRuntime([]), discovery: discovery);
+
+        settings.RefreshGameRuntimeStatus();
+        var staleRefresh = settings.PendingGameRuntimeStatusRefresh;
+        Assert.True(firstStarted.Wait(TimeSpan.FromSeconds(5)));
+        Assert.True(settings.IsGameRuntimeStatusRefreshing);
+
+        settings.RefreshGameRuntimeStatus();
+        await settings.PendingGameRuntimeStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.False(settings.IsGameRuntimeStatusRefreshing);
+        Assert.Equal("/latest/GE-Proton", Assert.Single(settings.ProtonBuilds).Code);
+
+        gate.Set();
+        await staleRefresh.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal("/latest/GE-Proton", Assert.Single(settings.ProtonBuilds).Code);
+    }
+
+    [Fact]
     public async Task RuntimeDraftChanges_RefreshesUsingLatestConfiguration()
     {
         var runtime = new StubGameRuntime([]);
@@ -328,6 +424,14 @@ public sealed class GameRuntimeSettingsUiTests
             new RecordingErrorHandlingService(),
             gameRuntime,
             picker ?? new StubFilePickerService(), discovery ?? new ProtonBuildDiscovery([]));
+
+    private sealed class StubProtonBuildDiscovery : IProtonBuildDiscovery
+    {
+        public Queue<Func<IReadOnlyList<ProtonBuild>>> Responses { get; } = new();
+
+        public IReadOnlyList<ProtonBuild> Discover() =>
+            Responses.Count > 0 ? Responses.Dequeue()() : [];
+    }
 
     private sealed class StubGameRuntime(IReadOnlyList<GameRuntimeStatusEntry> entries) : IGameRuntime
     {

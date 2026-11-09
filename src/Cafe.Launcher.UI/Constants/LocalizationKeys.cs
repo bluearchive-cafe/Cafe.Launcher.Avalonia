@@ -229,6 +229,7 @@ public enum LocalizationKeys
     GameRuntimePrefixPath,
     GameRuntimePrefixPathDescription,
     GameRuntimePrefixPathPlaceholder,
+    GameRuntimeProtonDiscoveryFailed,
     GameRuntimeProtonPath,
     GameRuntimeProtonPathDescription,
     GameRuntimeProtonPathPlaceholder,

@@ -105,8 +105,12 @@
                                  AutomationProperties.Name="{Binding Shell.I18n[gameRuntimePrefixPath]}"/>
                         <Button Classes="flat-action" Command="{Binding Settings.ChoosePrefixPathCommand}"
                                 HorizontalAlignment="Right"
-                                Content="{Binding Shell.I18n[choose]}"
-                                AutomationProperties.Name="{Binding Shell.I18n[gameRuntimePrefixPath]}"/>
+                                AutomationProperties.Name="{Binding Shell.I18n[choose]}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="FolderOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                <TextBlock Text="{Binding Shell.I18n[choose]}"/>
+                            </StackPanel>
+                        </Button>
                     </StackPanel>
                 </controls:SettingRow.Action>
             </controls:SettingRow>
@@ -122,8 +126,12 @@
                                  AutomationProperties.Name="{Binding Shell.I18n[gameRuntimeProtonPath]}"/>
                         <Button Classes="flat-action" Command="{Binding Settings.ChooseProtonPathCommand}"
                                 HorizontalAlignment="Right"
-                                Content="{Binding Shell.I18n[choose]}"
-                                AutomationProperties.Name="{Binding Shell.I18n[gameRuntimeProtonPath]}"/>
+                                AutomationProperties.Name="{Binding Shell.I18n[choose]}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="FolderOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                <TextBlock Text="{Binding Shell.I18n[choose]}"/>
+                            </StackPanel>
+                        </Button>
                     </StackPanel>
                 </controls:SettingRow.Action>
             </controls:SettingRow>
@@ -133,6 +141,13 @@
                                     AutomationName="{Binding Shell.I18n[gameRuntimeInstalledProton]}"
                                     ItemsSource="{Binding Settings.ProtonBuilds}"
                                     SelectedValue="{Binding Settings.SelectedProtonBuild, Mode=TwoWay}"/>
+
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}"
+                  IsVisible="{Binding Settings.ProtonBuildDiscoveryFailed}">
+                <materialIcons:MaterialIcon Kind="AlertCircleOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                <TextBlock Grid.Column="1" Text="{Binding Shell.I18n[gameRuntimeProtonDiscoveryFailed]}" Classes="caption" TextWrapping="Wrap"
+                           AutomationProperties.LiveSetting="Polite"/>
+            </Grid>
 
             <controls:SettingRow x:Name="MangoHudSetting"
                                  IsVisible="{Binding Shell.IsLinuxPlatform}"
@@ -150,7 +165,8 @@
                 <controls:SettingRow.Action>
                     <Button Classes="flat-action" Command="{Binding Settings.RefreshGameRuntimeStatusCommand}"
                             Content="{Binding Shell.I18n[refresh]}"
-                            AutomationProperties.Name="{Binding Shell.I18n[refresh]}"/>
+                            AutomationProperties.Name="{Binding Shell.I18n[refresh]}"
+                            IsEnabled="{Binding Settings.IsGameRuntimeStatusRefreshing, Converter={x:Static BoolConverters.Not}}"/>
                 </controls:SettingRow.Action>
             </controls:SettingRow>
         </StackPanel>

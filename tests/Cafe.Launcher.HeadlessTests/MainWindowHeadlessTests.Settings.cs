@@ -655,7 +655,8 @@ public sealed partial class MainWindowHeadlessTests
     [AvaloniaFact]
     public async Task SettingsGame_InstalledProtonSelectionAndManualPathStaySynchronized()
     {
-        // Exercise the Linux section on Windows CI without changing production visibility.
+        // Linux-only rows are hidden on Windows CI unless --show-hidden-settings is
+        // passed; inject the same presentation option the startup switch resolves to.
         using var context = CreateContext(configure: services =>
             services.AddSingleton(new PresentationOptions(ShowHiddenSettings: true)));
         Assert.True(context.ViewModel.IsPlatformSpecificSettingsVisible);

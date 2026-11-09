@@ -34,6 +34,9 @@ internal sealed class ProtonBuildDiscovery : IProtonBuildDiscovery
     /// <summary>扫描并返回去重、按名字排序的构建；没有则为空。</summary>
     public IReadOnlyList<ProtonBuild> Discover()
     {
+        // Keyed by the resolved directory: the same install reached through symlinked
+        // Steam roots appears once, while same-named builds in native and Flatpak
+        // Steam stay separate candidates.
         var builds = new Dictionary<string, ProtonBuild>(StringComparer.Ordinal);
         foreach (var directory in searchDirectories)
         {
@@ -52,10 +55,8 @@ internal sealed class ProtonBuildDiscovery : IProtonBuildDiscovery
                     }
 
                     var name = Path.GetFileName(candidate);
-                    if (!builds.ContainsKey(name))
-                    {
-                        builds[name] = new ProtonBuild(name, candidate);
-                    }
+                    var key = ResolveInstallDirectory(candidate);
+                    builds.TryAdd(key, new ProtonBuild(name, candidate));
                 }
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
@@ -64,7 +65,23 @@ internal sealed class ProtonBuildDiscovery : IProtonBuildDiscovery
             }
         }
 
-        return builds.Values.OrderBy(build => build.Name, StringComparer.Ordinal).ToList();
+        return builds.Values
+            .OrderBy(build => build.Name, StringComparer.Ordinal)
+            .ThenBy(build => build.Path, StringComparer.Ordinal)
+            .ToList();
+    }
+
+    private static string ResolveInstallDirectory(string path)
+    {
+        try
+        {
+            var fullPath = Path.GetFullPath(path);
+            return Directory.ResolveLinkTarget(fullPath, returnFinalTarget: true)?.FullName ?? fullPath;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return path;
+        }
     }
 
     private static bool LooksLikeProtonBuild(string directory) =>

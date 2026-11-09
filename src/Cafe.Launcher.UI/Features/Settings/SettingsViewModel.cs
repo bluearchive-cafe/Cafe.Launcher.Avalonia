@@ -3,6 +3,7 @@ using Cafe.Launcher.UI.Services.GameRuntime;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -45,8 +46,13 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
     /// 超时后按当前状态继续保存。测试可调小。
     /// </summary>
     internal static TimeSpan AppearancePreviewSettleTimeout = TimeSpan.FromMinutes(2);
+
+    /// <summary>运行器/路径连续编辑时合并刷新，避免每次按键都探测版本并扫描磁盘。</summary>
+    private const int GameRuntimeStatusRefreshDebounceMilliseconds = 300;
+
     private readonly LatestRefresh gameRuntimeStatusRefresh = new();
     private IReadOnlyList<GameRuntimeStatusEntry>? gameRuntimeStatusEntries;
+    private int gameRuntimeStatusRefreshGeneration;
     private bool disposed;
 
     // Coordination seams — set by parent after construction.
@@ -129,7 +135,8 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
 
         if (e.PropertyName is nameof(GameRuntimeSettings.Runner) or nameof(GameRuntimeSettings.RunnerPath))
         {
-            gameRuntimeStatusRefresh.Run(TimeSpan.FromMilliseconds(300), RefreshGameRuntimeStatusAsync);
+            QueueGameRuntimeStatusRefresh(
+                TimeSpan.FromMilliseconds(GameRuntimeStatusRefreshDebounceMilliseconds));
         }
 
         if (e.PropertyName == nameof(GameRuntimeSettings.ProtonPath))
@@ -192,6 +199,12 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
     [ObservableProperty]
     private string gameRuntimeStatusSummary = string.Empty;
 
+    [ObservableProperty]
+    private bool isGameRuntimeStatusRefreshing;
+
+    [ObservableProperty]
+    private bool protonBuildDiscoveryFailed;
+
     internal Task PendingGameRuntimeStatusRefresh => gameRuntimeStatusRefresh.Pending;
 
     /// <summary>Installed builds are suggestions only; discovery never changes the draft.</summary>
@@ -205,15 +218,33 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
     /// <summary>Selecting a discovered build edits the same path as manual input.</summary>
     public string? SelectedProtonBuild
     {
-        get => ProtonBuilds.FirstOrDefault(build => build.Code == editor.Current.GameRuntime.ProtonPath)?.Code;
+        get
+        {
+            var currentPath = NormalizeRuntimePath(editor.Current.GameRuntime.ProtonPath);
+            if (currentPath.Length == 0)
+            {
+                return null;
+            }
+
+            return ProtonBuilds.FirstOrDefault(build =>
+                string.Equals(NormalizeRuntimePath(build.Code), currentPath, RuntimePathComparison))?.Code;
+        }
         set
         {
+            // 候选刷新后若手输路径不在列表内，绑定会把 null 写回；此时必须保留
+            // 自定义路径，只有用户选中具体候选才改写草稿。清空请使用路径输入框。
             if (value is not null)
             {
                 editor.Current.GameRuntime.ProtonPath = value;
             }
         }
     }
+
+    private static string NormalizeRuntimePath(string? path) =>
+        string.IsNullOrWhiteSpace(path) ? string.Empty : Path.TrimEndingDirectorySeparator(path.Trim());
+
+    private static StringComparison RuntimePathComparison =>
+        OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
 
     private string selectedCategory = SettingsCategoryCodes.General;
 
@@ -494,24 +525,26 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
     }
 
     [RelayCommand]
-    private async Task ChoosePrefixPathAsync()
-    {
-        var path = await filePickerService.PickFolderAsync(
-            localizer.T(LocalizationKeys.GameRuntimePrefixPath), editor.Current.GameRuntime.PrefixPath);
-        if (!string.IsNullOrWhiteSpace(path))
-        {
-            editor.Current.GameRuntime.PrefixPath = path;
-        }
-    }
+    private Task ChoosePrefixPathAsync() => PickRuntimeFolderAsync(
+        LocalizationKeys.GameRuntimePrefixPath,
+        () => editor.Current.GameRuntime.PrefixPath,
+        path => editor.Current.GameRuntime.PrefixPath = path);
 
     [RelayCommand]
-    private async Task ChooseProtonPathAsync()
+    private Task ChooseProtonPathAsync() => PickRuntimeFolderAsync(
+        LocalizationKeys.GameRuntimeProtonPath,
+        () => editor.Current.GameRuntime.ProtonPath,
+        path => editor.Current.GameRuntime.ProtonPath = path);
+
+    private async Task PickRuntimeFolderAsync(
+        LocalizationKeys titleKey,
+        Func<string?> currentPath,
+        Action<string> applyPath)
     {
-        var path = await filePickerService.PickFolderAsync(
-            localizer.T(LocalizationKeys.GameRuntimeProtonPath), editor.Current.GameRuntime.ProtonPath);
+        var path = await filePickerService.PickFolderAsync(localizer.T(titleKey), currentPath());
         if (!string.IsNullOrWhiteSpace(path))
         {
-            editor.Current.GameRuntime.ProtonPath = path;
+            applyPath(path);
         }
     }
 
@@ -522,59 +555,91 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
     /// Runs the real version probes, so it must stay off the save/open critical path.
     /// </summary>
     [RelayCommand]
-    public void RefreshGameRuntimeStatus()
+    public void RefreshGameRuntimeStatus() => QueueGameRuntimeStatusRefresh(debounce: null);
+
+    /// <summary>
+    /// Starts the latest refresh and marks the row busy. The generation guards the
+    /// busy flag so a cancelled run cannot clear it while a newer run is in flight.
+    /// </summary>
+    private void QueueGameRuntimeStatusRefresh(TimeSpan? debounce)
     {
         if (disposed)
         {
             return;
         }
 
-        gameRuntimeStatusRefresh.Run(null, RefreshGameRuntimeStatusAsync);
+        var generation = ++gameRuntimeStatusRefreshGeneration;
+        IsGameRuntimeStatusRefreshing = true;
+        gameRuntimeStatusRefresh.Run(
+            debounce,
+            cancellationToken => RefreshGameRuntimeStatusAsync(generation, cancellationToken));
     }
 
-    private async Task RefreshGameRuntimeStatusAsync(CancellationToken cancellationToken)
+    private async Task RefreshGameRuntimeStatusAsync(int generation, CancellationToken cancellationToken)
     {
         gameRuntimeStatusEntries = null;
+        ProtonBuildDiscoveryFailed = false;
         GameRuntimeStatusSummary = localizer.T(LocalizationKeys.GameRuntimeStatusChecking);
         try
         {
-            var runtimeConfiguration = GameRuntimeConfiguration.FromSettings(editor.GetSnapshot().GameRuntime);
-            var entries = await gameRuntime
-                .GetStatusesAsync(runtimeConfiguration, cancellationToken)
-                .ConfigureAwait(true);
-            cancellationToken.ThrowIfCancellationRequested();
-            gameRuntimeStatusEntries = entries;
-            GameRuntimeStatusSummary = BuildGameRuntimeStatusSummary(entries);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-        }
-        catch (Exception exception)
-        {
-            // Status is informational; launch diagnostics remain the authoritative
-            // runtime failure report, so a refresh failure only degrades this row.
-            // 豁免：状态行是纯信息性展示，运行时失败另有权威上报通道；
-            // 此处降级不注入诊断，避免为低价值路径扩构造面（见审计 7.2）。
-            if (!cancellationToken.IsCancellationRequested)
+            try
             {
-                GameRuntimeStatusSummary = localizer.T(LocalizationKeys.GameRuntimeStatusFailed);
+                var runtimeConfiguration = GameRuntimeConfiguration.FromSettings(editor.GetSnapshot().GameRuntime);
+                var entries = await gameRuntime
+                    .GetStatusesAsync(runtimeConfiguration, cancellationToken)
+                    .ConfigureAwait(true);
+                cancellationToken.ThrowIfCancellationRequested();
+                gameRuntimeStatusEntries = entries;
+                GameRuntimeStatusSummary = BuildGameRuntimeStatusSummary(entries);
             }
-            Debug.WriteLine($"Settings: game runtime status refresh failed: {exception.Message}");
-        }
-
-        try
-        {
-            var builds = await Task.Run(protonBuildDiscovery.Discover, cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
-            ProtonBuilds = builds.Select(build => new SettingOption
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                Code = build.Path,
-                DisplayName = build.Name,
-                Description = build.Path
-            }).ToArray();
+            }
+            catch (Exception exception)
+            {
+                // Status is informational; launch diagnostics remain the authoritative
+                // runtime failure report, so a refresh failure only degrades this row.
+                // 豁免：状态行是纯信息性展示，运行时失败另有权威上报通道；
+                // 此处降级不注入诊断，避免为低价值路径扩构造面（见审计 7.2）。
+                if (!cancellationToken.IsCancellationRequested)
+                {
+                    GameRuntimeStatusSummary = localizer.T(LocalizationKeys.GameRuntimeStatusFailed);
+                }
+                Debug.WriteLine($"Settings: game runtime status refresh failed: {exception.Message}");
+            }
+
+            try
+            {
+                var builds = await Task.Run(protonBuildDiscovery.Discover, cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
+                ProtonBuilds = builds.Select(build => new SettingOption
+                {
+                    Code = build.Path,
+                    DisplayName = build.Name,
+                    Description = build.Path
+                }).ToArray();
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+            }
+            catch (Exception exception)
+            {
+                // Discovery is best effort, but the row must say it can be retried
+                // instead of leaving a faulted fire-and-forget task behind.
+                if (!cancellationToken.IsCancellationRequested)
+                {
+                    ProtonBuilds = [];
+                    ProtonBuildDiscoveryFailed = true;
+                }
+                Debug.WriteLine($"Settings: Proton build discovery failed: {exception.Message}");
+            }
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        finally
         {
+            if (generation == gameRuntimeStatusRefreshGeneration)
+            {
+                IsGameRuntimeStatusRefreshing = false;
+            }
         }
     }
 
