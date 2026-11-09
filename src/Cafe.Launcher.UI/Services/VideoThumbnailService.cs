@@ -97,7 +97,7 @@ internal sealed class VideoThumbnailService(ILauncherDiagnostics diagnostics)
 
     private static MpvNative.VideoFrame? CaptureFirstFrame(string library, string path, CancellationToken cancellationToken)
     {
-        using var native = new MpvNative(library);
+        using var native = VideoBackgroundRuntime.OpenLibrary(library);
         var player = native.NewPlayer();
         if (player == 0) throw new InvalidOperationException("mpv_create failed.");
         try

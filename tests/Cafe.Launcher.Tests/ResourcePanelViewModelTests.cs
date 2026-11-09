@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Text;
 using System.Text.Json;
 using Cafe.Launcher.UI.Constants;
@@ -18,11 +18,6 @@ namespace Cafe.Launcher.Tests;
 [Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class ResourcePanelViewModelTests
 {
-    static ResourcePanelViewModelTests()
-    {
-        TestLocalizationHelper.Initialize();
-    }
-
     [Fact]
     public async Task OpenResourcePanel_WhileStatusRequestPending_ShowsLoadingStateThenLoadedItems()
     {
@@ -351,11 +346,121 @@ public sealed class ResourcePanelViewModelTests
         await context.ViewModel.OpenResourcePanelCommand.ExecuteAsync(null);
     }
 
+    [Fact]
+    public async Task Close_WhenPreferencesAreDirty_RequiresDiscardAndCancelPreservesDraft()
+    {
+        using var context = await CreateContextAsync(cookieUid: "UIDTESTA");
+        await context.ViewModel.OpenPanelDirectlyAsync();
+        var voice = GetItem(context.ViewModel, ResourcePanelResourceCodes.Voice);
+        voice.IsEnabled = true;
+        await context.ViewModel.CloseResourcePanelCommand.ExecuteAsync(null);
+        Assert.True(context.ViewModel.IsResourcePanelVisible);
+        Assert.True(context.ViewModel.DiscardChangesConfirm.IsVisible);
+        context.ViewModel.CancelDiscardChangesCommand.Execute(null);
+        Assert.True(voice.IsEnabled);
+        Assert.True(context.ViewModel.HasUnsavedChanges);
+        await context.ViewModel.CloseResourcePanelCommand.ExecuteAsync(null);
+        await context.ViewModel.DiscardChangesConfirm.ConfirmCommand.ExecuteAsync(null);
+        Assert.False(context.ViewModel.IsResourcePanelVisible);
+        Assert.False(voice.IsEnabled);
+        Assert.False(context.ViewModel.HasUnsavedChanges);
+        Assert.Equal(0, context.Transport.ConfigSetCount);
+    }
+
+    [Fact]
+    public async Task Refresh_WhenPreferencesAreDirty_DoesNotLoadUntilDiscardIsConfirmed()
+    {
+        using var context = await CreateContextAsync(cookieUid: "UIDTESTA");
+        await context.ViewModel.OpenPanelDirectlyAsync();
+        GetItem(context.ViewModel, ResourcePanelResourceCodes.Voice).IsEnabled = true;
+        await context.ViewModel.RefreshResourcePanelCommand.ExecuteAsync(null);
+        Assert.Equal(1, context.Transport.ConfigGetCount);
+        context.ViewModel.CancelDiscardChangesCommand.Execute(null);
+        Assert.True(context.ViewModel.HasUnsavedChanges);
+        await context.ViewModel.RefreshResourcePanelCommand.ExecuteAsync(null);
+        await context.ViewModel.DiscardChangesConfirm.ConfirmCommand.ExecuteAsync(null);
+        Assert.Equal(2, context.Transport.ConfigGetCount);
+        Assert.False(context.ViewModel.HasUnsavedChanges);
+        Assert.Equal(0, context.Transport.ConfigSetCount);
+    }
+
+    [Fact]
+    public async Task ChangeSource_WhenPreferencesAreDirty_KeepsAppliedSourceUntilConfirmation()
+    {
+        using var context = await CreateContextAsync(cookieUid: "UIDTESTA");
+        await context.ViewModel.OpenPanelDirectlyAsync();
+        GetItem(context.ViewModel, ResourcePanelResourceCodes.Voice).IsEnabled = true;
+        context.ViewModel.SelectedResourcePanelUidSource = ResourcePanelUidSources.Custom;
+        Assert.True(context.ViewModel.DiscardChangesConfirm.IsVisible);
+        Assert.Equal(ResourcePanelUidSources.Auto, context.ViewModel.SelectedResourcePanelUidSource);
+        context.ViewModel.CancelDiscardChangesCommand.Execute(null);
+        Assert.Equal(ResourcePanelUidSources.Auto, (await context.SettingsService.ReadAsync()).ResourcePanelUidSource);
+        Assert.True(context.ViewModel.HasUnsavedChanges);
+        await context.ViewModel.SetUidSourceCommand.ExecuteAsync(ResourcePanelUidSources.Custom);
+        await context.ViewModel.DiscardChangesConfirm.ConfirmCommand.ExecuteAsync(null);
+        Assert.Equal(ResourcePanelUidSources.Custom, context.ViewModel.SelectedResourcePanelUidSource);
+        Assert.Equal(ResourcePanelUidSources.Custom, (await context.SettingsService.ReadAsync()).ResourcePanelUidSource);
+        Assert.Equal(0, context.Transport.ConfigSetCount);
+    }
+
+    [Fact]
+    public async Task Close_WhenMissingUidHasUnsubmittedText_ProtectsTheInput()
+    {
+        using var context = await CreateContextAsync();
+        await context.ViewModel.OpenPanelDirectlyAsync();
+        context.ViewModel.ManualResourcePanelUid = "UIDTESTB";
+        await context.ViewModel.CloseResourcePanelCommand.ExecuteAsync(null);
+        Assert.True(context.ViewModel.DiscardChangesConfirm.IsVisible);
+        context.ViewModel.CancelDiscardChangesCommand.Execute(null);
+        Assert.Equal("UIDTESTB", context.ViewModel.ManualResourcePanelUid);
+    }
+
+    [Fact]
+    public async Task SaveAnotherUid_WhenPreferencesAreDirty_ProtectsOldTargetAndNeverSubmitsItsDraft()
+    {
+        using var context = await CreateContextAsync(cookieUid: "UIDTESTA");
+        await context.ViewModel.OpenPanelDirectlyAsync();
+        GetItem(context.ViewModel, ResourcePanelResourceCodes.Voice).IsEnabled = true;
+        context.ViewModel.BeginEditResourcePanelUidCommand.Execute(null);
+        context.ViewModel.ManualResourcePanelUid = "UIDTESTB";
+        Assert.False(context.ViewModel.IsResourcePanelSaveEnabled);
+        await context.ViewModel.SaveManualResourcePanelUidCommand.ExecuteAsync(null);
+        Assert.True(context.ViewModel.DiscardChangesConfirm.IsVisible);
+        Assert.Equal("UIDTESTA", context.ViewModel.ResourcePanelUid);
+        context.ViewModel.CancelDiscardChangesCommand.Execute(null);
+        Assert.Equal("UIDTESTB", context.ViewModel.ManualResourcePanelUid);
+        Assert.True(GetItem(context.ViewModel, ResourcePanelResourceCodes.Voice).IsEnabled);
+        await context.ViewModel.SaveManualResourcePanelUidCommand.ExecuteAsync(null);
+        await context.ViewModel.DiscardChangesConfirm.ConfirmCommand.ExecuteAsync(null);
+        Assert.Equal("UIDTESTB", context.ViewModel.ResourcePanelUid);
+        Assert.Equal("UIDTESTB", (await context.SettingsService.ReadAsync()).ResourcePanelUid);
+        Assert.Equal(0, context.Transport.ConfigSetCount);
+        Assert.False(context.ViewModel.HasUnsavedChanges);
+    }
+
+    [Fact]
+    public async Task CloseAndRefresh_WhileLoading_AreUnavailableAndDoNotInterruptTheLoad()
+    {
+        using var context = await CreateContextAsync(cookieUid: "UIDTESTA", configure: transport => transport.GateStatus = true);
+        var load = context.ViewModel.OpenPanelDirectlyAsync();
+        await WaitUntilAsync(() => context.Transport.StatusListCount == 1);
+        Assert.False(context.ViewModel.CloseResourcePanelCommand.CanExecute(null));
+        Assert.False(context.ViewModel.RefreshResourcePanelCommand.CanExecute(null));
+        await context.ViewModel.CloseResourcePanelCommand.ExecuteAsync(null);
+        await context.ViewModel.RefreshResourcePanelCommand.ExecuteAsync(null);
+        Assert.True(context.ViewModel.IsResourcePanelVisible);
+        Assert.Equal(1, context.Transport.ConfigGetCount);
+        context.Transport.ReleaseStatus();
+        await load;
+        Assert.True(context.ViewModel.CloseResourcePanelCommand.CanExecute(null));
+        Assert.True(context.ViewModel.RefreshResourcePanelCommand.CanExecute(null));
+    }
+
     private static ResourcePanelItem GetItem(ResourcePanelViewModel viewModel, string code) =>
         viewModel.ResourcePanelItems.First(item => item.Code == code);
 
     /// <summary>T() 返回含 {0} 的原始模板；取占位符之前的前缀用于 StartsWith 断言。</summary>
-    private static string LocalizedPrefix(LocalizationService localizer, string key)
+    private static string LocalizedPrefix(LocalizationService localizer, LocalizationKeys key)
     {
         var template = localizer.T(key);
         var placeholderIndex = template.IndexOf("{0}", StringComparison.Ordinal);
@@ -390,7 +495,7 @@ public sealed class ResourcePanelViewModelTests
         var toastService = new ToastService();
         var errorHandling = new RecordingErrorHandlingService();
         var service = new ResourcePanelService(uidService, apiClient, new LocalDiagnostics());
-        var viewModel = new ResourcePanelViewModel(service, localizer, toastService, errorHandling);
+        var viewModel = new ResourcePanelViewModel(service, localizer, toastService, errorHandling, new LocalDiagnostics());
         return new TestContext(
             viewModel,
             transport,

@@ -114,7 +114,10 @@ public sealed partial class MainWindowHeadlessTests
 
         var categoryTitle = context.Window.GetVisualDescendants().OfType<TextBlock>()
             .Single(control => control.Classes.Contains("category-title"));
+        var description = context.Window.GetVisualDescendants().OfType<TextBlock>()
+            .Single(control => control.Name == "SettingsCategoryDescription");
         var english = categoryTitle.Text;
+        var englishDescription = description.Text;
 
         context.ViewModel.Shell.ApplyLanguage(
             LauncherLanguages.SimplifiedChinese,
@@ -126,6 +129,14 @@ public sealed partial class MainWindowHeadlessTests
             context.ViewModel.Settings.Options.SettingsCategories.First(option =>
                 option.Code == context.ViewModel.Settings.SelectedCategory).DisplayName,
             categoryTitle.Text);
+        Assert.NotEqual(englishDescription, description.Text);
+        foreach (var option in context.ViewModel.Settings.Options.SettingsCategories)
+        {
+            context.ViewModel.Settings.SelectedCategory = option.Code;
+            Dispatcher.UIThread.RunJobs();
+            Assert.False(string.IsNullOrWhiteSpace(description.Text));
+            Assert.Equal(option.Description, description.Text);
+        }
     }
 
     [AvaloniaTheory]
@@ -144,7 +155,7 @@ public sealed partial class MainWindowHeadlessTests
         Dispatcher.UIThread.RunJobs();
         var update = context.Window.GetVisualDescendants().OfType<Button>()
             .Single(button => ReferenceEquals(button.Command, context.ViewModel.Settings.CheckForUpdatesCommand));
-        var row = Assert.IsType<StackPanel>(update.Parent);
+        var row = Assert.IsType<WrapPanel>(update.Parent);
         var buttons = row.Children.OfType<Button>().ToArray();
         Assert.Equal(3, buttons.Length);
         foreach (var button in buttons)
@@ -203,7 +214,7 @@ public sealed partial class MainWindowHeadlessTests
         Assert.Equal(variant, context.Window.ActualThemeVariant);
         var update = context.Window.GetVisualDescendants().OfType<Button>()
             .Single(button => ReferenceEquals(button.Command, context.ViewModel.Settings.CheckForUpdatesCommand));
-        var row = Assert.IsType<StackPanel>(update.Parent);
+        var row = Assert.IsType<WrapPanel>(update.Parent);
         using var bitmap = new RenderTargetBitmap(new PixelSize((int)context.Window.Bounds.Width, (int)context.Window.Bounds.Height));
         bitmap.Render(context.Window);
         foreach (var button in row.Children.OfType<Button>())
@@ -391,6 +402,11 @@ public sealed partial class MainWindowHeadlessTests
             FontWeight.Normal,
             textBlocks.First(control => control.Classes.Contains("caption")).FontWeight);
 
+        Assert.All(textBlocks.Where(control => control.IsEffectivelyVisible
+            && control.Classes.Contains("section-title")
+            && control.GetVisualAncestors().OfType<global::Cafe.Launcher.UI.Controls.SettingRow>().Any()),
+            control => Assert.Equal(FontWeight.Normal, control.FontWeight));
+
         var navigation = GetSettingsNavigation(context.Window);
         var selectedItem = navigation.ContainerFromIndex(navigation.SelectedIndex)
             ?? throw new InvalidOperationException("Selected settings item was not realized.");
@@ -488,7 +504,7 @@ public sealed partial class MainWindowHeadlessTests
         await context.ViewModel.Settings.SaveSettingsCommand.ExecuteAsync(null);
         Dispatcher.UIThread.RunJobs();
 
-        // 断言保存流程发出的结果。命令还会等待 SettingsSaved 后续处理，期间 Toast
+        // 断言保存流程发出的结果。命令还会等待保存后的派生效果收尾（含刷新），期间 Toast
         // 可能已自行退出；显示列表的瞬时存量不能证明是否发出过成功或错误提示。
         var toast = Assert.Single(notifications);
         Assert.Equal(ToastSeverity.Success, toast.Severity);
@@ -516,21 +532,15 @@ public sealed partial class MainWindowHeadlessTests
     {
         using var context = CreateContext();
         OpenSettings(context);
-        var savedCount = 0;
-        context.ViewModel.Settings.SettingsSaved += () =>
-        {
-            savedCount++;
-            return Task.CompletedTask;
-        };
         context.ViewModel.Settings.Editor.Current.Language = LauncherLanguages.Japanese;
         Assert.True(context.ViewModel.Settings.IsSettingsDirty);
 
         context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.Appearance;
         context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.General;
 
+        // 导航不触发保存：草稿保持未保存的语言改动，脏标记仍在。
         Assert.Equal(LauncherLanguages.Japanese, context.ViewModel.Settings.Editor.Current.Language);
         Assert.True(context.ViewModel.Settings.IsSettingsDirty);
-        Assert.Equal(0, savedCount);
     }
 
     [AvaloniaFact]
@@ -599,19 +609,19 @@ public sealed partial class MainWindowHeadlessTests
             .Where(row => row.IsEffectivelyVisible)
             .ToArray();
 
-        // 日志级别 / 日志文件操作 / 重置设置三行。
-        Assert.Equal(3, rows.Length);
+        // 诊断（日志级别/日志操作）与数据恢复（目录/重置）各两行。
+        Assert.Equal(4, rows.Length);
         var levelRow = Assert.Single(
             rows,
             row => row.GetVisualDescendants().OfType<ComboBox>().Any()
                 && row.Title == context.ViewModel.Shell.I18n["logLevel"]);
         var levelControl = levelRow.GetVisualDescendants().OfType<ComboBox>().Single();
-        var logRow = Assert.Single(rows, row => row.GetVisualDescendants().OfType<Button>().Count() == 3);
+        var logRow = Assert.Single(rows, row => row.Title == context.ViewModel.Shell.I18n["logFiles"]);
         var logButtons = logRow
             .GetVisualDescendants()
             .OfType<Button>()
             .ToArray();
-        Assert.Equal(3, logButtons.Length);
+        Assert.Equal(2, logButtons.Length);
         var resetButton = rows
             .SelectMany(row => row.GetVisualDescendants().OfType<Button>())
             .Single(button => button.Classes.Contains("danger-action"));
@@ -662,7 +672,7 @@ public sealed partial class MainWindowHeadlessTests
         var buttons = managementRow.GetVisualDescendants().OfType<Button>().ToArray();
         var repairButton = Assert.Single(
             buttons,
-            button => button.Classes.Contains("flat-action") && !button.Classes.Contains("danger-action"));
+            button => ReferenceEquals(button.Command, context.ViewModel.Operations.RequestRepairCommand));
         var uninstallButton = Assert.Single(buttons, button => button.Classes.Contains("danger-action"));
 
         Assert.Contains("flat-action", uninstallButton.Classes);
@@ -957,6 +967,77 @@ public sealed partial class MainWindowHeadlessTests
         Assert.False(
             context.ViewModel.Settings.IsSettingsDirty,
             string.Join(", ", changedProperties));
+    }
+
+    [AvaloniaFact]
+    public void GeneralSegments_SelectingAValueUpdatesTheDraftAndMarksSettingsDirty()
+    {
+        using var context = CreateContext();
+        OpenSettings(context);
+        var settings = context.ViewModel.Settings;
+        settings.SelectedCategory = SettingsCategoryCodes.General;
+        settings.Editor.Current.CloseBehavior = CloseBehaviors.Minimize;
+        settings.Editor.Current.StatusDetailMode = StatusDetailModes.Compact;
+        settings.Editor.Current.UpdateChannel = UpdateChannels.Stable;
+        Dispatcher.UIThread.RunJobs();
+        var section = context.Window.GetVisualDescendants().OfType<SettingsGeneralSection>().Single();
+
+        var closeSegments = SegmentOptions(section, "SettingsCloseBehavior");
+        Assert.Equal(2, closeSegments.Length);
+        Assert.True(Assert.Single(closeSegments, segment =>
+            AutomationProperties.GetName(segment) == context.ViewModel.Shell.I18n[LocalizationKeys.CloseBehaviorMinimize]).IsChecked);
+        Assert.False(settings.IsSettingsDirty);
+
+        Assert.Single(closeSegments, segment =>
+            AutomationProperties.GetName(segment) == context.ViewModel.Shell.I18n[LocalizationKeys.CloseBehaviorExit]).IsChecked = true;
+        var statusSegments = SegmentOptions(section, "SettingsStatusDetailMode");
+        Assert.Equal(2, statusSegments.Length);
+        Assert.Single(statusSegments, segment =>
+            AutomationProperties.GetName(segment) == context.ViewModel.Shell.I18n[LocalizationKeys.StatusDetailModeHidden]).IsChecked = true;
+        var channelSegments = SegmentOptions(section, "SettingsUpdateChannel");
+        Assert.Equal(2, channelSegments.Length);
+        Assert.Single(channelSegments, segment =>
+            AutomationProperties.GetName(segment) == context.ViewModel.Shell.I18n[LocalizationKeys.LauncherUpdateChannelBeta]).IsChecked = true;
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Equal(CloseBehaviors.Exit, settings.Editor.Current.CloseBehavior);
+        Assert.Equal(StatusDetailModes.Hidden, settings.Editor.Current.StatusDetailMode);
+        Assert.Equal(UpdateChannels.Beta, settings.Editor.Current.UpdateChannel);
+        Assert.True(settings.IsSettingsDirty);
+    }
+
+    [AvaloniaFact]
+    public void DownloadSegments_SelectingAValueUpdatesTheDraftAndMarksSettingsDirty()
+    {
+        using var context = CreateContext();
+        OpenSettings(context);
+        var settings = context.ViewModel.Settings;
+        settings.SelectedCategory = SettingsCategoryCodes.DownloadNetwork;
+        Dispatcher.UIThread.RunJobs();
+        var section = context.Window.GetVisualDescendants().OfType<SettingsDownloadNetworkSection>().Single();
+
+        // 初始下载源由运行配置决定，用例只要求从当前草稿切到另一项。
+        var initial = settings.Editor.Current.PatchUrlGroup;
+        var target = initial == PatchUrlGroups.Cafe ? PatchUrlGroups.Official : PatchUrlGroups.Cafe;
+        var initialName = initial == PatchUrlGroups.Cafe
+            ? LocalizationKeys.DownloadSourceCafe
+            : LocalizationKeys.DownloadSourceOfficial;
+        var targetName = target == PatchUrlGroups.Cafe
+            ? LocalizationKeys.DownloadSourceCafe
+            : LocalizationKeys.DownloadSourceOfficial;
+
+        var segments = SegmentOptions(section, "SettingsDownloadSource");
+        Assert.Equal(2, segments.Length);
+        Assert.True(Assert.Single(segments, segment =>
+            AutomationProperties.GetName(segment) == context.ViewModel.Shell.I18n[initialName]).IsChecked);
+        Assert.False(settings.IsSettingsDirty);
+
+        Assert.Single(segments, segment =>
+            AutomationProperties.GetName(segment) == context.ViewModel.Shell.I18n[targetName]).IsChecked = true;
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Equal(target, settings.Editor.Current.PatchUrlGroup);
+        Assert.True(settings.IsSettingsDirty);
     }
 
     private static ListBox GetSettingsNavigation(MainWindow window) =>

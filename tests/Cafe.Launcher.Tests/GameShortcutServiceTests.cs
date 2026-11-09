@@ -20,11 +20,6 @@ public sealed class GameShortcutServiceTests : IDisposable
 {
     private readonly TestDirectory tempDirectory = TestDirectory.Create();
 
-    static GameShortcutServiceTests()
-    {
-        TestLocalizationHelper.Initialize();
-    }
-
     public void Dispose()
     {
         tempDirectory.Dispose();

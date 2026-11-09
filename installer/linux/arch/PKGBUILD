@@ -33,7 +33,7 @@ license=('MIT AND Apache-2.0 AND BSD-2-Clause')
 depends=(
   'ca-certificates' 'glibc' 'icu' 'krb5' 'libgcc' 'libstdc++' 'libunwind'
   'lttng-ust2.12' 'openssl' 'tzdata' 'zlib' 'hicolor-icon-theme'
-  'libx11' 'libice' 'libsm' 'fontconfig' 'libxkbcommon'
+  'libx11' 'libice' 'libsm' 'fontconfig' 'libxkbcommon' 'mpv'
 )
 makedepends=('dotnet-sdk-10.0' 'git')
 # The payload is an already-published, self-contained .NET application; do not

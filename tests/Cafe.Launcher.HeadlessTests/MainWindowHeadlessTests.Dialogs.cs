@@ -25,6 +25,58 @@ namespace Cafe.Launcher.HeadlessTests;
 
 public sealed partial class MainWindowHeadlessTests
 {
+    [AvaloniaTheory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task UpdateDialog_WhenNotesLoad_ShowsStatusAndKeepsMinimumSize(bool failed, bool minimumWindow)
+    {
+        using var context = CreateContext();
+        if (minimumWindow)
+        {
+            context.Window.Width = context.Window.MinWidth;
+            context.Window.Height = context.Window.MinHeight;
+        }
+        context.Window.Show();
+        var dialogs = context.ViewModel.Dialogs;
+        dialogs.ShowUpdateAvailable("1.2.0", [], LauncherUpdateInAppAvailability.Available);
+        var service = new ControlledReleaseNotesService();
+        var loading = dialogs.LoadUpdateReleaseNotesAsync(service);
+        Dispatcher.UIThread.RunJobs();
+        var viewer = context.Window.GetVisualDescendants().OfType<ReleaseNotesMarkdownViewer>().Single();
+        var surface = viewer.GetVisualAncestors().OfType<DialogSurface>().Single();
+        var loadingText = context.ViewModel.Shell.I18n[LocalizationKeys.LauncherUpdateReleaseNotesLoading];
+        Assert.Contains(surface.GetVisualDescendants().OfType<TextBlock>(), text => text.IsEffectivelyVisible && text.Text == loadingText);
+        Assert.False(viewer.IsEffectivelyVisible);
+        Assert.True(surface.Bounds.Width >= 480);
+        Assert.True(surface.Bounds.Height >= 320);
+        Assert.True(surface.Bounds.Width <= context.Window.Bounds.Width);
+        Assert.True(surface.Bounds.Height <= context.Window.Bounds.Height);
+
+        service.Result.SetResult(failed ? "" : "## Loaded notes");
+        await loading;
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Equal(!failed, viewer.IsEffectivelyVisible);
+        Assert.DoesNotContain(surface.GetVisualDescendants().OfType<TextBlock>(), text => text.IsEffectivelyVisible && text.Text == loadingText);
+        var failureText = context.ViewModel.Shell.I18n[LocalizationKeys.LauncherUpdateReleaseNotesFailed];
+        Assert.Equal(failed, surface.GetVisualDescendants().OfType<TextBlock>().Any(text => text.IsEffectivelyVisible && text.Text == failureText));
+        var primary = surface.GetVisualDescendants().OfType<Button>().Single(button =>
+            button.IsEffectivelyVisible && ReferenceEquals(button.Command, dialogs.ConfirmUpdateAvailableCommand));
+        Assert.True(primary.IsEnabled);
+        Assert.True(surface.Bounds.Height >= 320);
+        Assert.True(primary.TranslatePoint(default, context.Window)!.Value.Y + primary.Bounds.Height <= context.Window.Bounds.Height);
+    }
+
+    private sealed class ControlledReleaseNotesService : ILauncherUpdateService
+    {
+        public TaskCompletionSource<string> Result { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public Task<LauncherUpdateCheckResult> CheckForUpdateAsync(string updateChannel, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+        public Task<string> LoadReleaseNotesAsync(string version, CancellationToken cancellationToken = default) => Result.Task;
+    }
+
     [AvaloniaFact]
     public async Task UpdateDialog_WithBanner_UsesImageCacheAndReleasesImagesWhenClosed()
     {
@@ -200,7 +252,9 @@ public sealed partial class MainWindowHeadlessTests
         Assert.Equal(2, uidInputs.Length);
         Assert.All(uidInputs, input => Assert.False(input.IsEffectivelyVisible));
 
-        var segments = context.Window.GetVisualDescendants().OfType<RadioButton>()
+        // 设置页也常驻在窗口里，分段按钮查询必须限定在资源面板子树内。
+        var resourcePanelView = Assert.Single(context.Window.GetVisualDescendants().OfType<ResourcePanelOverlay>());
+        var segments = resourcePanelView.GetVisualDescendants().OfType<RadioButton>()
             .Where(button => button.Classes.Contains("segment-option"))
             .ToArray();
         Assert.Equal(2, segments.Length);
@@ -211,8 +265,9 @@ public sealed partial class MainWindowHeadlessTests
         Assert.All(segments.Where(segment => segment != autoSegment),
             segment => Assert.False(segment.IsChecked == true));
 
-        // 单卡三行：Switch 跟随条目启用状态，chip 的状态类跟随条目 Status。
-        var switches = context.Window.GetVisualDescendants().OfType<ToggleSwitch>()
+        // Resource preferences are submitted together; each row exposes a checkbox.
+        var switches = context.Window.GetVisualDescendants().OfType<CheckBox>()
+            .Where(box => box.IsEffectivelyVisible && box.DataContext is ResourcePanelItem)
             .ToArray();
         Assert.Equal(3, switches.Length);
         var chips = context.Window.GetVisualDescendants().OfType<Border>()
@@ -376,7 +431,7 @@ public sealed partial class MainWindowHeadlessTests
                 button.Classes.Contains("primary-operation")
                 && ReferenceEquals(
                     button.Command,
-                    context.ViewModel.Operations.StartGameCommand));
+                    context.ViewModel.Operations.PrimaryActionCommand));
         var cancelButton = context.Window
             .GetVisualDescendants()
             .OfType<Button>()

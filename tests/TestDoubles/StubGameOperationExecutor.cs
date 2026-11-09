@@ -15,6 +15,12 @@ namespace Cafe.Launcher.Testing;
 /// </summary>
 internal sealed class StubGameOperationExecutor : IGameOperationExecutor
 {
+    public long? InstallDownloadBytes { get; set; }
+    public TaskCompletionSource<long?>? InstallSizeCompletion { get; set; }
+
+    public Task<long?> GetInstallDownloadSizeAsync(LauncherStatusSnapshot snapshot, CancellationToken cancellationToken) =>
+        InstallSizeCompletion?.Task ?? Task.FromResult(InstallDownloadBytes);
+
     private bool isDownloadRunning;
 
     /// <inheritdoc />
@@ -40,6 +46,9 @@ internal sealed class StubGameOperationExecutor : IGameOperationExecutor
     public bool IsPaused { get; set; }
 
     public int LaunchCallCount { get; private set; }
+
+    /// <summary>Most recent admitted installation snapshot.</summary>
+    public LauncherStatusSnapshot? LastInstallSnapshot { get; private set; }
 
     public int InstallCallCount { get; private set; }
 
@@ -93,6 +102,9 @@ internal sealed class StubGameOperationExecutor : IGameOperationExecutor
     /// <summary>Resume 的返回结果；null 表示无可恢复的持久化工作。</summary>
     public GameOperationResult? ResumeResult { get; set; }
 
+    /// <summary>Optional first progress report for testing automatic resume presentation.</summary>
+    public GameOperationProgress? ResumeProgress { get; set; }
+
     /// <summary>续传的可控完成门。</summary>
     public TaskCompletionSource<GameOperationResult?>? ResumeCompletion { get; set; }
 
@@ -108,9 +120,10 @@ internal sealed class StubGameOperationExecutor : IGameOperationExecutor
 
     /// <inheritdoc />
     public Task<GameLaunchResult> LaunchAsync(
-        LauncherStatusSnapshot snapshot,
+        GameOperationAttempt attempt,
         CancellationToken cancellationToken = default)
     {
+        var snapshot = attempt.SnapshotFor(GameOperationPolicy.Operation.Launch);
         LaunchCallCount++;
         if (LaunchException is not null)
         {
@@ -122,10 +135,12 @@ internal sealed class StubGameOperationExecutor : IGameOperationExecutor
 
     /// <inheritdoc />
     public Task<GameOperationResult> InstallOrUpdateAsync(
-        LauncherStatusSnapshot snapshot,
+        GameOperationAttempt attempt,
         Action<GameOperationProgress> progress,
         CancellationToken cancellationToken = default)
     {
+        var snapshot = attempt.SnapshotFor(GameOperationPolicy.Operation.InstallOrUpdate);
+        LastInstallSnapshot = snapshot;
         InstallCallCount++;
         if (InstallException is not null)
         {
@@ -137,9 +152,10 @@ internal sealed class StubGameOperationExecutor : IGameOperationExecutor
 
     /// <inheritdoc />
     public Task<GameOperationResult> RepairAsync(
-        LauncherStatusSnapshot snapshot,
+        GameOperationAttempt attempt,
         Action<GameOperationProgress> progress)
     {
+        var snapshot = attempt.SnapshotFor(GameOperationPolicy.Operation.Repair);
         RepairCallCount++;
         return RepairCompletion?.Task ?? Task.FromResult(RepairResult);
     }
@@ -151,6 +167,7 @@ internal sealed class StubGameOperationExecutor : IGameOperationExecutor
         CancellationToken cancellationToken)
     {
         ResumeCallCount++;
+        if (ResumeProgress is { } update) progress(update);
         return ResumeCompletion?.Task ?? Task.FromResult(ResumeResult);
     }
 
@@ -179,10 +196,11 @@ internal sealed class StubGameOperationExecutor : IGameOperationExecutor
 
     /// <inheritdoc />
     public Task<GameOperationResult> UninstallAsync(
-        LauncherStatusSnapshot snapshot,
+        GameOperationAttempt attempt,
         UninstallScope scope,
         Action<GameOperationProgress> progress)
     {
+        var snapshot = attempt.SnapshotFor(GameOperationPolicy.Operation.Uninstall);
         UninstallCallCount++;
         LastUninstallScope = scope;
         LastUninstallGamePath = snapshot.LocalGame.GamePath;

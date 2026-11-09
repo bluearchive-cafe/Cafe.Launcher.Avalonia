@@ -190,9 +190,9 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void ResourcePanel_InputsAndResourceSwitchesExposeMeaningfulAutomationNames()
+    public void ResourcePanel_InputsAndResourceChoicesExposeMeaningfulAutomationNames()
     {
-        // ADR-041：来源选择是分段 RadioButton 对，条目开关是 ToggleSwitch——
+        // ADR-056：来源选择是分段 RadioButton 对，资源偏好是提交式 CheckBox。
         // 控件语义换了，自动化名仍是「本地化、可读、逐控件」的。
         var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/ResourcePanelOverlay.axaml"));
         var resourcePanel = FindMotionOverlay(
@@ -213,7 +213,7 @@ public sealed partial class UiStyleContractTests
             .ToList();
         var resourceSwitch = document
             .Descendants()
-            .Single(element => element.Name.LocalName == "ToggleSwitch");
+            .Single(element => element.Name.LocalName == "CheckBox");
 
         Assert.Equal(2, uidInputs.Count);
         Assert.All(uidInputs, input => Assert.Equal(
@@ -399,7 +399,7 @@ public sealed partial class UiStyleContractTests
         Dictionary<string, string> settingsActions = new(StringComparer.Ordinal)
         {
             ["{Binding WindowChrome.ShowSettingsCommand}"] = "{Binding Shell.I18n[cancel]}",
-            ["{Binding Settings.SaveSettingsCommand}"] = "{Binding Shell.I18n[save]}"
+            ["{Binding Settings.SaveSettingsCommand}"] = "{Binding Settings.SaveButtonText}"
         };
 
         foreach (var (command, expectedBinding) in settingsActions)
@@ -540,7 +540,7 @@ public sealed partial class UiStyleContractTests
             .ToArray();
         // 调试重置 / 设置页重置共享同一对话框控件，各自独立实例。
         // 卸载独立表面跨确认、执行、结果三阶段，不再使用 ConfirmDialog。
-        Assert.Equal(8, usages.Length);
+        Assert.Equal(9, usages.Length);
 
         foreach (var usage in usages)
         {
@@ -666,7 +666,7 @@ public sealed partial class UiStyleContractTests
             .Contains(":ResourcePanelUidSources.Custom}", StringComparison.Ordinal) == true);
         Assert.All(segments, segment => Assert.True(
             segment.Attribute("IsChecked")?.Value
-                .Contains("Converter={x:Static converters:ResourcePanelSourceSegmentConverter.Instance}", StringComparison.Ordinal) == true
+                .Contains("Converter={x:Static converters:SegmentOptionConverter.Instance}", StringComparison.Ordinal) == true
             && segment.Attribute("IsChecked")?.Value.EndsWith(", Mode=TwoWay}", StringComparison.Ordinal) == true));
 
         // busy 时整组禁用（分段容器承载 IsEnabled，与旧 ComboBox 一致）。
@@ -679,16 +679,16 @@ public sealed partial class UiStyleContractTests
             "{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}",
             segmented.Attribute("IsEnabled")?.Value);
 
-        // 选中段 = accent 家族（Primary.Soft 底 + Primary 字），不是静态 SecondaryContainer。
+        // Accent wash keeps a readable generated foreground on both host surfaces.
         var checkedStyle = GetStyleSetters(document, "RadioButton.segment-option:checked");
         Assert.Equal("{DynamicResource Launcher.Color.Primary.Soft}", checkedStyle["Background"]);
-        Assert.Equal("{DynamicResource Launcher.Color.Primary}", checkedStyle["Foreground"]);
+        Assert.Equal("{DynamicResource Launcher.Color.Segmented.Selected.Foreground}", checkedStyle["Foreground"]);
     }
 
     [Fact]
-    public void ResourcePanel_ResourceEntries_UseSingleCardRowsWithSwitchAndChip()
+    public void ResourcePanel_ResourceEntries_UseSingleCardRowsWithCheckboxAndChip()
     {
-        // ADR-041：三张条目卡并成一张卡的三行（显式发丝分隔线），开关换 Switch，
+        // ADR-041：三张条目卡并成一张卡的三行（显式发丝分隔线），提交式选择用 CheckBox，
         // 状态装进 chip（底色 + 图标 + 文案，不只靠颜色）。
         var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/ResourcePanelOverlay.axaml"));
         var resourceCard = document
@@ -710,10 +710,10 @@ public sealed partial class UiStyleContractTests
                     && attribute.Value == "ResourcePanelItemRowTemplate"));
         Assert.DoesNotContain(
             template.Descendants(),
-            element => element.Name.LocalName == "CheckBox");
+            element => element.Name.LocalName == "ToggleSwitch");
         var resourceSwitch = template
             .Descendants()
-            .Single(element => element.Name.LocalName == "ToggleSwitch");
+            .Single(element => element.Name.LocalName == "CheckBox");
         Assert.Equal("{Binding IsEnabled, Mode=TwoWay}", resourceSwitch.Attribute("IsChecked")?.Value);
         Assert.Equal("{Binding IsOperable}", resourceSwitch.Attribute("IsEnabled")?.Value);
 

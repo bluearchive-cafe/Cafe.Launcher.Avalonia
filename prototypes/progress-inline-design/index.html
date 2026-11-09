@@ -1,0 +1,119 @@
+<!doctype html>
+<!-- Throwaway UI design study, 2026-11-08. One approved direction, multiple task states.
+     Revision 2: compact progress floats immediately above the existing bottom-right split button.
+     Question: can phase + progress + essential controls stay clear in a much smaller footprint?
+     Plain HTML/CSS/JS; no Tailwind, component library, backend, persistence or external requests.
+     Hierarchy, before color: current phase + completion amount; then download speed/ETA;
+     then expandable active-file detail. One primary action: pause/resume, retry or launch.
+     Launcher token mapping: spacing 4/8/12/16/20/24/40, radius 8/12/16, controls 40,
+     type 12/13/14/16/18/22, light/dark Text/Panel/Card/Success roles from App.axaml.
+     Accent uses existing prototype's fixed brand-blue sample, not runtime HCT extraction.
+     The user's request for one design takes precedence over the UI skill's variant default. -->
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Cafe Launcher — 主界面进度设计稿</title>
+  <link rel="icon" href="../../src/Cafe.Launcher.UI/Assets/app-icon.ico">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="floating.css">
+</head>
+<body>
+  <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="m9 5 10 7-10 7Z"/></symbol>
+    <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H6v18h12V7Zm0 0v5h4M9 12h6m-6 4h6"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/></symbol>
+    <symbol id="i-scan" viewBox="0 0 24 24"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5M6 12h12"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 10a8 8 0 1 0-2 8M20 4v6h-6"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v1"/></symbol>
+    <symbol id="i-warning" viewBox="0 0 24 24"><path d="m12 3 10 18H2Zm0 6v5m0 3v1"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="m9 3-.6 3-2 .9-2.7-1-2 3.4L4 11v2l-2.3 1.7 2 3.4 2.7-1 2 .9L9 21h6l.6-3 2-.9 2.7 1 2-3.4L20 13v-2l2.3-1.7-2-3.4-2.7 1-2-.9L15 3Z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-log" viewBox="0 0 24 24"><path d="M6 4h12v17H6ZM9 4V2h6v2M9 9h6m-6 4h6m-6 4h4"/></symbol>
+    <symbol id="i-box" viewBox="0 0 24 24"><path d="m3 7 9-5 9 5v11l-9 4-9-4Zm0 0 9 5 9-5M12 12v10M7 4l10 5"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M6 12h12"/></symbol>
+    <symbol id="i-window" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="1"/></symbol>
+  </defs></svg>
+
+  <header class="review-header">
+    <div class="review-identity"><span class="study-number">01</span><div><p class="overline">CAFE LAUNCHER / DESIGN STUDY</p><h1>进度，回到主界面。</h1></div></div>
+    <div class="review-caption"><span class="draft-dot"></span><span>第二版：轻量悬浮进度</span><span class="caption-date">2026.11.08</span></div>
+  </header>
+
+  <main class="review-main">
+    <div class="review-toolbar" aria-label="设计稿预览控制">
+      <div class="toolbar-group">
+        <label>任务<select id="task-select"><option value="update">更新游戏</option><option value="install">安装游戏</option><option value="repair">修复游戏</option></select></label>
+        <label>状态<select id="state-select">
+          <option value="preparing">准备</option><option value="checking">检查文件</option><option value="downloading" selected>下载中</option><option value="downloadcheck">下载后检查</option><option value="verifying">校验中</option><option value="finalizing">收尾</option><option value="retrying">自动重试</option><option value="paused">已暂停</option><option value="stalled">30 秒无进展</option><option value="stopping">正在停止</option><option value="success">成功</option><option value="uptodate">无需更改</option><option value="failed">失败</option><option value="stopped">已停止</option><option value="idle">待机</option>
+        </select></label>
+        <button id="demo-button" class="review-button"><svg><use href="#i-play"/></svg><span>播放流程</span></button>
+      </div>
+      <div class="toolbar-group view-controls">
+        <label>主题<select id="theme-select"><option value="light">浅色</option><option value="dark">深色</option></select></label>
+        <label>窗口<select id="size-select"><option value="default">默认尺寸</option><option value="compact">1024 × 640</option></select></label>
+        <label>文字<select id="scale-select"><option value="100">100%</option><option value="150">150%</option></select></label>
+        <button id="clean-button" class="review-button" title="隐藏设计稿工具栏，按 Escape 返回">专注预览</button>
+      </div>
+    </div>
+
+    <div class="canvas-wrap">
+      <section id="launcher" class="launcher floating-layout" data-theme="light" data-size="default" aria-label="Cafe Launcher 交互设计稿">
+        <header class="titlebar">
+          <div class="brand"><img src="../../src/Cafe.Launcher.UI/Assets/app-icon.ico" alt=""><strong>Cafe Launcher</strong><span class="version">v1.3.1</span></div>
+          <div class="title-tools"><button class="chrome-button" data-action="resources" aria-label="资源面板" title="资源面板"><svg><use href="#i-box"/></svg></button><button class="chrome-button" data-action="log" aria-label="查看日志" title="查看日志"><svg><use href="#i-log"/></svg></button><button class="chrome-button" data-action="settings" aria-label="设置" title="设置"><svg><use href="#i-settings"/></svg></button><span class="title-divider"></span><button class="chrome-button" data-action="minimize" aria-label="模拟最小化" title="模拟最小化"><svg><use href="#i-minus"/></svg></button><button class="chrome-button" data-action="resize" aria-label="切换窗口尺寸" title="切换窗口尺寸"><svg><use href="#i-window"/></svg></button><button class="chrome-button" data-action="window-close" aria-label="模拟隐藏到托盘" title="模拟隐藏到托盘"><svg><use href="#i-close"/></svg></button></div>
+        </header>
+
+        <div class="wallpaper-space">
+          <div class="game-identity"><span class="game-edition">BLUE ARCHIVE</span><div>蔚蓝档案<span class="region-tag">日服</span></div><p>欢迎回来，老师。</p></div>
+          <section class="news" aria-label="游戏资讯预览"><div class="news-heading"><span>游戏资讯</span><span class="news-counter">01 / 03</span></div><div class="news-title">基沃托斯的日常，仍在继续。</div><div class="news-footer"><span>官方公告</span><span class="news-dots"><i></i><i></i><i></i></span></div></section>
+          <span class="wallpaper-credit">Blue Archive <span>ブルーアーカイブ</span></span>
+        </div>
+
+        <section id="task-card" class="task-card" aria-label="游戏任务进度">
+          <div class="floating-heading">
+            <div class="floating-title"><h2 id="phase-title" aria-live="polite">正在下载</h2><div id="percent-group" class="percent-group"><span id="percent-label" hidden>下载进度</span><strong><span id="percent">64</span><span class="percent-sign">%</span></strong></div></div>
+            <div class="compact-controls"><button id="primary-action" class="icon-button" data-action="pause" aria-label="暂停下载" title="暂停下载"><svg><use href="#i-pause"/></svg></button><button id="details-button" class="icon-button" aria-label="展开任务详情" title="展开任务详情" aria-expanded="false" aria-controls="detail-section"><svg class="detail-chevron"><use href="#i-down"/></svg></button><button id="dismiss-action" class="icon-button" data-action="dismiss" aria-label="关闭结果" title="关闭结果" hidden><svg><use href="#i-close"/></svg></button></div>
+          </div>
+          <div id="progressbar" class="progress-track" role="progressbar" aria-label="下载进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="64"><div id="progress-fill" class="progress-fill"></div></div>
+          <div class="compact-summary"><span id="summary-left">18.6 MB/s</span><span id="summary-right">下载剩余约 2 分钟</span></div>
+          <div id="detail-section" class="detail-section" hidden>
+            <header class="detail-context"><div class="task-context"><span class="context-icon"><svg id="task-symbol"><use href="#i-refresh"/></svg></span><strong id="task-name">更新游戏</strong><span id="task-context">Blue Archive JP</span></div><span id="task-badge" class="status-badge" hidden>进行中</span><span id="task-path" class="task-path" title="D:\Games\BlueArchive">D:\Games\BlueArchive</span></header>
+            <ol id="stage-nav" class="stage-nav" aria-label="任务阶段" hidden></ol>
+            <p id="phase-description">下载完成后，将自动校验文件。</p>
+            <div class="detail-measurements"><span id="amount" class="completed-amount">已下载 <strong>3.84 GB</strong><span> / 6.00 GB</span></span><div id="download-facts" class="download-facts"><span id="speed">18.6 MB/s</span><span id="eta">约 2 分钟</span></div><span id="phase-fact" class="phase-fact" hidden></span></div>
+            <div id="notice" class="inline-notice" role="status" hidden><svg><use href="#i-info"/></svg><span id="notice-text"></span></div>
+            <div class="file-detail-caption"><span id="detail-summary" class="detail-summary">10 个文件正在处理</span><span id="source-label" class="source-label">Cafe 下载源</span></div>
+            <div id="file-details" class="file-details" hidden><div id="active-files"></div><p id="more-files" class="more-files"></p></div>
+          </div>
+          <footer id="detail-actions" class="detail-actions" hidden><button id="detail-log-action" class="text-button" data-action="log">查看日志</button><button id="secondary-action" class="text-button" data-action="stop">停止任务</button></footer>
+        </section>
+
+        <section id="idle-panel" class="operation-dock" aria-label="游戏操作">
+          <div class="dock-row"><div class="dock-game"><strong>Blue Archive JP</strong><span id="dock-status">正在更新游戏</span></div><div class="split-wrap"><div id="game-menu" class="game-menu" hidden><button data-action="show-task">查看任务详情</button><button data-action="log">查看日志</button><button data-action="game-folder">打开游戏目录</button></div><div class="launch-split" role="group" aria-label="游戏主操作"><button id="split-main" class="split-main" data-action="show-task"><svg id="split-icon"><use href="#i-refresh"/></svg><span id="split-label">正在更新</span></button><button id="split-menu-toggle" class="split-toggle" data-action="game-menu" aria-label="游戏管理" aria-expanded="false" aria-controls="game-menu"><svg><use href="#i-down"/></svg></button></div></div></div>
+          <div class="dock-statusline"><span>启动校验：已开启</span><span>网络：已连接</span><span>Cafe 下载源</span><span>版本：1.71.344227</span></div>
+        </section>
+
+        <div id="background-cover" class="background-cover" hidden><svg><use href="#i-window"/></svg><h2>启动器已隐藏</h2><p>任务继续运行。可以通过上方状态菜单模拟任务完成。</p><button class="button primary" data-action="restore">返回启动器</button></div>
+        <div id="settings-cover" class="settings-cover" hidden><div class="settings-top"><h2>设置</h2><button class="icon-button" data-action="close-settings" aria-label="关闭设置"><svg><use href="#i-close"/></svg></button></div><div class="settings-body"><nav><span class="settings-selected">常规</span><span>游戏</span><span>下载与网络</span><span>外观</span><span>关于</span></nav><div class="settings-content"><h3>常规</h3><div class="setting-row"><div><strong>界面语言</strong><p>选择启动器使用的语言</p></div><span>简体中文</span></div><div class="setting-row"><div><strong>关闭行为</strong><p>点击关闭按钮时执行的操作</p></div><span>最小化到托盘</span></div><div class="setting-row"><div><strong>启动后行为</strong><p>游戏启动后启动器执行的操作</p></div><span>保持窗口</span></div></div></div><div class="settings-bottom"><button class="button quiet" data-action="close-settings">关闭设置</button></div></div>
+        <div id="toast" class="toast" role="status" hidden><span class="toast-icon"><svg><use href="#i-check"/></svg></span><div><strong id="toast-title">更新完成</strong><p id="toast-body">游戏已就绪。</p></div><button class="text-button" data-action="view-result">查看结果</button><button class="icon-button" data-action="close-toast" aria-label="关闭通知"><svg><use href="#i-close"/></svg></button></div>
+      </section>
+    </div>
+
+    <footer class="review-footer"><p><span class="footer-marker"></span><strong id="state-caption">下载中</strong><span id="review-note">当前阶段进度，不代表整个更新任务的完成度。</span></p><span>交互设计稿，全部为演示数据</span></footer>
+    <section class="design-notes" aria-label="设计说明"><article><span>01 / 减少占用</span><h2>进度悬浮在主操作上方。</h2><p>卡片与右下角拆分按钮右对齐，收起时约 320 × 100。壁纸与主界面布局保持完整。</p></article><article><span>02 / 只看必要信息</span><h2>当前阶段、进度、剩余时间。</h2><p>下载速度和时间放在次要行。阶段导航、路径和文件明细不再占用默认视图。</p></article><article><span>03 / 需要时再展开</span><h2>详情向上展开，操作留在原处。</h2><p>暂停直接操作；停止、日志和活动文件放进详情。结果仍在同一张悬浮卡片中呈现。</p></article></section>
+  </main>
+
+  <dialog id="stop-dialog" class="dialog"><form method="dialog"><div class="dialog-title"><span class="dialog-icon"><svg><use href="#i-stop"/></svg></span><h2 id="stop-title">停止更新？</h2></div><p>停止后将结束当前任务。启动器会先完成必要的清理，再恢复其他游戏操作。</p><div class="dialog-actions"><button value="cancel" class="button quiet">继续任务</button><button id="confirm-stop" value="stop" class="button destructive">停止任务</button></div></form></dialog>
+  <dialog id="log-dialog" class="dialog log-dialog"><div class="dialog-title"><h2>任务日志</h2><button class="icon-button" data-action="close-log" aria-label="关闭日志"><svg><use href="#i-close"/></svg></button></div><p>当前任务的处理记录</p><pre id="log-content"></pre><div class="dialog-actions"><button class="button quiet" data-action="close-log">关闭</button></div></dialog>
+  <div id="review-feedback" class="review-feedback" role="status" hidden></div>
+  <button id="exit-clean" class="exit-clean" hidden>返回设计工具栏</button>
+  <script src="app.js"></script>
+</body>
+</html>

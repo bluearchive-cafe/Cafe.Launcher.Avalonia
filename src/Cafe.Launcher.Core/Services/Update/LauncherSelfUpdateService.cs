@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -77,14 +78,49 @@ internal sealed class LauncherSelfUpdateService : ILauncherSelfUpdateService
             return LauncherSelfUpdatePreparation.External();
         }
 
-        var manifestText = await downloader
-            .ReadTextAsync(selection.ChecksumManifest!, cancellationToken)
-            .ConfigureAwait(false);
-        if (!LauncherUpdateChecksumManifest.TryParse(manifestText, out var hashes)
-            || !LauncherUpdateChecksumManifest.TryGetHash(hashes, selection.Package!.Name, out var expectedSha256))
+        string? manifestText;
+        try
         {
-            return LauncherSelfUpdatePreparation.Failed(
-                $"The release checksum manifest does not cover {selection.Package!.Name}.");
+            manifestText = await downloader
+                .ReadTextAsync(selection.ChecksumManifest!, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception) when (IsManifestReadFailure(exception))
+        {
+            // 清单抓取失败以前会静默变成「发布包缺少校验值」，日志里不留任何痕迹。
+            // 现在按传输层异常分流：被拒地址（hosts/DNS 指向本机）与一般网络失败分开，
+            // 两者都落 WARN，表现层才能给出针对性指引。
+            var kind = RemoteHttpRequestService.IsBlockedAddressRejection(exception)
+                ? LauncherSelfUpdateFailureKind.UrlRejected
+                : LauncherSelfUpdateFailureKind.Network;
+            return FailManifest(
+                $"The release checksum manifest could not be fetched: {exception.Message}",
+                kind);
+        }
+
+        if (manifestText is null)
+        {
+            return FailManifest(
+                $"The release checksum manifest is too large to read for {selection.Package!.Name}.",
+                LauncherSelfUpdateFailureKind.Verification);
+        }
+
+        if (!LauncherUpdateChecksumManifest.TryParse(manifestText, out var hashes))
+        {
+            return FailManifest(
+                "The release checksum manifest is not a valid checksum list.",
+                LauncherSelfUpdateFailureKind.Verification);
+        }
+
+        if (!LauncherUpdateChecksumManifest.TryGetHash(hashes, selection.Package!.Name, out var expectedSha256))
+        {
+            return FailManifest(
+                $"The release checksum manifest does not cover {selection.Package!.Name}.",
+                LauncherSelfUpdateFailureKind.Verification);
         }
 
         var destinationPath = Path.Combine(
@@ -100,7 +136,9 @@ internal sealed class LauncherSelfUpdateService : ILauncherSelfUpdateService
                 LogEntrySeverity.Warn,
                 "LauncherUpdateDownload",
                 download.FailureMessage);
-            return LauncherSelfUpdatePreparation.Failed(download.FailureMessage);
+            return LauncherSelfUpdatePreparation.Failed(
+                download.FailureMessage,
+                FailureKindOf(download.Status));
         }
 
         return LauncherSelfUpdatePreparation.Ready(selection.Target, download.FilePath!, expectedSha256);
@@ -124,6 +162,27 @@ internal sealed class LauncherSelfUpdateService : ILauncherSelfUpdateService
     /// </summary>
     private bool CanStartDownload(LauncherUpdateSelection selection) =>
         AvailabilityOf(selection) == LauncherUpdateInAppAvailability.Available;
+
+    private LauncherSelfUpdatePreparation FailManifest(
+        string message,
+        LauncherSelfUpdateFailureKind kind)
+    {
+        diagnostics.LogMessage(LogEntrySeverity.Warn, "LauncherUpdateDownload", message);
+        return LauncherSelfUpdatePreparation.Failed(message, kind);
+    }
+
+    private static bool IsManifestReadFailure(Exception exception) =>
+        exception is HttpRequestException or InvalidOperationException or IOException
+        || exception is OperationCanceledException;
+
+    private static LauncherSelfUpdateFailureKind FailureKindOf(LauncherUpdateDownloadStatus status) =>
+        status switch
+        {
+            LauncherUpdateDownloadStatus.UrlRejected => LauncherSelfUpdateFailureKind.UrlRejected,
+            LauncherUpdateDownloadStatus.ChecksumMismatch => LauncherSelfUpdateFailureKind.Verification,
+            LauncherUpdateDownloadStatus.IoFailure => LauncherSelfUpdateFailureKind.Io,
+            _ => LauncherSelfUpdateFailureKind.Network
+        };
 
     /// <summary>Keeps the version segment inside one directory name on every platform.</summary>
     private static string SanitizeVersionSegment(string version)

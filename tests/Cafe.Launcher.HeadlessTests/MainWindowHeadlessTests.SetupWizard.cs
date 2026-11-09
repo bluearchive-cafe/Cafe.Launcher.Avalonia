@@ -133,7 +133,7 @@ public sealed partial class MainWindowHeadlessTests
         Dispatcher.UIThread.RunJobs();
 
         // 按样式类定位审阅步骤的四个编辑按钮：真实等待（防抖）期间启动期的
-        // ApplyLanguageAndThemeAsync 可能落地，AutomationProperties.Name 的解析
+        // 语言应用可能落地，AutomationProperties.Name 的解析
         // 依赖线程 Culture（T() 按 CurrentUICulture 回退），await 后的测试延续
         // 与 UI 线程语言可能瞬时分叉——类选择与文化无关且语义等价（该类仅这
         // 四个编辑钮使用），同时仍断言名称已本地化为非空。

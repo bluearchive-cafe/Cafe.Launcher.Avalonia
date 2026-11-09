@@ -34,6 +34,12 @@ public sealed class ReleaseFile
     [JsonPropertyName("url")]
     public string Url { get; set; } = "";
 
+    /// <summary>
+    /// 可选的镜像下载地址；仅在通过产品档案的基址与版本路径校验后才会被下载器优先使用。
+    /// </summary>
+    [JsonPropertyName("mirrorUrl")]
+    public string? MirrorUrl { get; set; }
+
     [JsonPropertyName("size")]
     public long Size { get; set; }
 

@@ -39,3 +39,14 @@
 
 1. **UID 提示条移除关闭钮 → 成为常驻说明行**（用户指示「去除横幅关闭按钮」，据此推翻红线中「每会话一次的 UID 提示关闭行为」）：提示条不再是可关闭的一次性横幅，而是与副标题同级的常驻说明——「通过 Cafe 源首次启动游戏后才会生成 UID」在 UID 缺失时依然是关键指引，常驻无害。随行为退场的还有 `ResourcePanelViewModel.IsUidGenerationHintVisible` 与 `DismissUidGenerationHintCommand`（不可达即死代码）、本地化 key `resourcePanelDismissUidHint`（四份 resx + Designer + LocalizationKeys 重生成）、headless 用例 `ResourcePanel_DismissUidHint_HidesBannerUntilNextSession`（替换为 `ResourcePanel_HintStrip_IsAPermanentNoteWithoutDismissAffordance`，钉住「提示条渲染且不含任何按钮」）。
 2. **分段勾选图标改用 `IsVisible` 而非 `Opacity`**（用户指出「自定义」段左侧有一截空白）：图标此前透明但仍占位，未选中段因此多出「图标宽 + 间距」的空缺；改为样式切换 `IsVisible`，未选中段收回该空间。切换来源时的段宽跳变（约 20px）接受——M3 分段按钮本就允许带图标段与纯文字段并存。
+
+## 后续替代（2026-11-07）
+
+[ADR-056](ADR-056-提交式选项与维护目标语义统一.md) 以提交式复选框取代本 ADR 的条目 Switch 选择，并保护资源草稿。UID 三态、分段来源、状态 chip 与共享对话框骨架保留；以上正文保留当时决策。
+
+## 修订（2026-11-07：分段契约抽取）
+
+外观页也需要 2–3 项短标签的互斥选择，故把本面板自有的分段实现抽成共享设施，面板行为不变：
+
+- `Views/Styles/ResourcePanel.axaml` 中的分段模板与样式迁至 `Views/Styles/Segmented.axaml`；资源面板只保留面板专属样式，经 `MainWindow.Styles.axaml` 的 StyleInclude 继续生效。
+- `ResourcePanelSourceSegmentConverter` 改名并泛化为 `SegmentOptionConverter`，双向语义与第 2 条决策一致；本 ADR 正文保留当时的名称。

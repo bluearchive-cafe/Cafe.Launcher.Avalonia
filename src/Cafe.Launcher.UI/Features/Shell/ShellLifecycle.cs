@@ -1,13 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.UI.Constants;
 using Cafe.Launcher.UI.Features.Diagnostics;
 using Cafe.Launcher.UI.Features.GameOperations;
 using Cafe.Launcher.UI.Helpers;
-using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Features.ResourcePanel;
 using Cafe.Launcher.UI.Features.Settings;
 using Cafe.Launcher.UI.Services;
@@ -22,9 +20,10 @@ namespace Cafe.Launcher.UI.Features.Shell;
 
 /// <summary>
 /// Owns shell startup, refresh, settings-save, first-run wizard completion,
-/// resource-panel switching, and every cross-feature subscription, and maps the
-/// in-app self-update state machine (<see cref="ShellSelfUpdateCoordinator"/>) onto
-/// dialogs, toasts, and shutdown.
+/// resource-panel switching, and maps the in-app self-update state machine
+/// (<see cref="ShellSelfUpdateCoordinator"/>) onto dialogs, toasts, and shutdown.
+/// Cross-feature subscriptions are owned by <see cref="ShellPresentationWiring"/>;
+/// this type keeps the lifecycle verbs those subscriptions call into.
 /// The window (MainWindowViewModel) only presents shell state.
 /// </summary>
 internal sealed class ShellLifecycle : IDisposable
@@ -35,15 +34,13 @@ internal sealed class ShellLifecycle : IDisposable
     /// <summary>Raised after a saved status-detail setting changes the shell presentation mode.</summary>
     public event Action? StatusDetailModeChanged;
 
-    /// <summary>Gets the modal host coordinated by this shell lifecycle.</summary>
-    public ModalHostViewModel ModalHost { get; }
-
     private readonly ILauncherCoreService launcherCoreService;
     private readonly ILauncherSettingsService settingsService;
     private readonly ISavedSettingsWriter savedSettingsWriter;
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
     private readonly ILauncherUpdateService launcherUpdateService;
+    private readonly ILauncherUpdatePresenter updatePresenter;
     private readonly ILauncherSelfUpdateService launcherSelfUpdateService;
     private readonly IWindowsLauncherUpdateApplier launcherUpdateApplier;
     private readonly ILauncherDiagnostics diagnostics;
@@ -59,7 +56,6 @@ internal sealed class ShellLifecycle : IDisposable
     private readonly WindowChromeViewModel windowChrome;
     private readonly SettingsViewModel settings;
     private readonly ResourcePanelViewModel resourcePanel;
-    private readonly LogViewerDialogViewModel logViewer;
     private readonly LogExportDialogViewModel logExport;
     private readonly DebugViewModel debug;
 
@@ -73,20 +69,14 @@ internal sealed class ShellLifecycle : IDisposable
     private readonly ShellRefreshCoordinator refreshCoordinator;
     private readonly IFilePickerService filePickerService;
     private readonly ShellStartup startup;
-    private readonly ModalRegistrar modalRegistrar;
-
-    /// <summary>
-    /// 退订记录表：Wire 的每条接线经 <see cref="Attach"/> 配对登记，Unwire 逆序执行
-    /// 后清空——两份手抄订阅清单由此收敛为一份（R2-c07／D15／AUD-ARCH-005）。
-    /// </summary>
-    private readonly List<Action> detachers = [];
+    private readonly SavedSettingsFollowThrough savedSettingsFollowThrough;
+    private readonly ShellPresentationWiring presentationWiring;
     private bool disposed;
     private bool isBusy;
     private bool isMotionReduced = true;
     private bool motionSettingsApplied;
     private bool settingsSnapshotInitialized;
     private LauncherStatusSnapshot? currentSnapshot;
-    private bool isWired;
     private readonly ShellSelfUpdateCoordinator selfUpdateCoordinator;
 
     /// <summary>Gets the active startup update check so tests can coordinate without timing delays.</summary>
@@ -100,6 +90,7 @@ internal sealed class ShellLifecycle : IDisposable
         LocalizationService localizer,
         ToastService toastService,
         ILauncherUpdateService launcherUpdateService,
+        ILauncherUpdatePresenter updatePresenter,
         ILauncherSelfUpdateService launcherSelfUpdateService,
         IWindowsLauncherUpdateApplier launcherUpdateApplier,
         ILauncherDiagnostics diagnostics,
@@ -115,6 +106,7 @@ internal sealed class ShellLifecycle : IDisposable
             localizer,
             toastService,
             launcherUpdateService,
+            updatePresenter,
             launcherSelfUpdateService,
             launcherUpdateApplier,
             diagnostics,
@@ -134,6 +126,7 @@ internal sealed class ShellLifecycle : IDisposable
         LocalizationService localizer,
         ToastService toastService,
         ILauncherUpdateService launcherUpdateService,
+        ILauncherUpdatePresenter updatePresenter,
         ILauncherSelfUpdateService launcherSelfUpdateService,
         IWindowsLauncherUpdateApplier launcherUpdateApplier,
         ILauncherDiagnostics diagnostics,
@@ -158,6 +151,7 @@ internal sealed class ShellLifecycle : IDisposable
         this.localizer = localizer;
         this.toastService = toastService;
         this.launcherUpdateService = launcherUpdateService;
+        this.updatePresenter = updatePresenter;
         this.launcherSelfUpdateService = launcherSelfUpdateService;
         this.launcherUpdateApplier = launcherUpdateApplier;
         this.diagnostics = diagnostics;
@@ -173,7 +167,6 @@ internal sealed class ShellLifecycle : IDisposable
         windowChrome = family.WindowChrome;
         settings = family.Settings;
         resourcePanel = family.ResourcePanel;
-        logViewer = family.LogViewer;
         logExport = family.LogExport;
         debug = family.Debug;
         languageAwarePresentations =
@@ -188,8 +181,6 @@ internal sealed class ShellLifecycle : IDisposable
         ];
         shell.LanguageAwarePresentations = languageAwarePresentations;
         this.ownsPresentationCollaborators = ownsPresentationCollaborators;
-        ModalHost = family.ModalHost;
-        modalRegistrar = new ModalRegistrar(ModalHost);
 
         errorHandling.CriticalErrorRequested += OnCriticalError;
         localizer.LocalizationFailure += OnLocalizationFailure;
@@ -203,16 +194,51 @@ internal sealed class ShellLifecycle : IDisposable
         selfUpdateCoordinator.PreparationStarted += OnSelfUpdatePreparationStarted;
         selfUpdateCoordinator.ProgressReported += OnSelfUpdateProgressReported;
         selfUpdateCoordinator.Finished += OnSelfUpdateFinished;
+        savedSettingsFollowThrough = new SavedSettingsFollowThrough(
+            settings,
+            resourcePanel,
+            remoteContent,
+            dialogs,
+            operations,
+            localizer,
+            ApplyLanguage,
+            ApplyMotionSettings,
+            () => currentSnapshot,
+            persisted =>
+            {
+                if (currentSnapshot is not null)
+                {
+                    currentSnapshot.Settings = persisted;
+                }
+            },
+            cancellationToken => RefreshAsync(cancellationToken));
         startup = new ShellStartup(
             RefreshAsync,
             ApplyMotionSettings,
             ApplyLanguage,
-            settings => savedSettingsWriter.ReplaceAsync(settings),
+            newSettings => savedSettingsWriter.ReplaceAsync(newSettings),
+            savedSettingsFollowThrough,
             () => dialogs.IsSetupWizardVisible = false,
             () => dialogs.IsSetupWizardVisible,
             dialogs.SetupWizard);
+        presentationWiring = new ShellPresentationWiring(
+            family,
+            savedSettingsFollowThrough,
+            startup,
+            localizer,
+            new ShellWiringActions(
+                PreviewAppearanceAsync,
+                HandleOperationsRefreshRequestedAsync,
+                HandleDebugRefreshRequestedAsync,
+                SwitchSourceThenOpenPanelAsync,
+                ResetSettingsToDefaultsAsync,
+                ResetSettingsFromSettingsPageAsync,
+                OnStatusDetailModeChanged,
+                OnSelfUpdateStartRequested,
+                OnApplyUpdateRequested,
+                OnCancelUpdateRequested));
 
-        Wire();
+        presentationWiring.Wire();
         ApplyInitialLanguage();
     }
 
@@ -340,51 +366,27 @@ internal sealed class ShellLifecycle : IDisposable
         await Task.WhenAll(pendingOperations, refreshCoordinator.WaitForShutdownWorkAsync(pendingRefreshes));
     }
 
-    /// <summary>Applies the follow-through of one saved settings snapshot.</summary>
-    public async Task HandleSettingsSavedAsync()
+    /// <summary>Applies the follow-through of one persisted settings snapshot.</summary>
+    public Task HandleSettingsSavedAsync(LauncherSettings savedSettings)
     {
-        var savedSettings = settings.Editor.Current;
-        var previousPatchUrlGroup = currentSnapshot?.Settings.PatchUrlGroup;
-        remoteContent.UpdateRemoteContentVisibility(savedSettings.ShowRemoteContentCard);
-        ApplyMotionSettings(savedSettings);
-
-        if (operations.IsDownloadRunning)
-        {
-            if (currentSnapshot is not null)
-            {
-                currentSnapshot.Settings = await settingsService.ReadAsync();
-            }
-
-            return;
-        }
-
-        await RefreshAsync();
-        var runtimeState = currentSnapshot?.RuntimeState;
-        if (runtimeState is LauncherRuntimeState.Ready or LauncherRuntimeState.UpdateAvailable
-            && !string.Equals(previousPatchUrlGroup, savedSettings.PatchUrlGroup, StringComparison.Ordinal))
-        {
-            dialogs.RepairConfirm.Show(localizer.T(LocalizationKeys.DownloadSourceChangedRepairPrompt));
-        }
+        ArgumentNullException.ThrowIfNull(savedSettings);
+        var handoff = savedSettingsFollowThrough.Apply(savedSettings);
+        return savedSettingsFollowThrough.CompleteAsync(handoff);
     }
 
     /// <summary>Saves completed wizard settings, applies their language, and refreshes the shell.</summary>
     public Task HandleSetupWizardCompletedAsync(LauncherSettings newSettings) =>
         startup.HandleSetupWizardCompletedAsync(newSettings);
 
-    /// <summary>Shows confirmation before switching the resource-panel source.</summary>
-    public void ShowResourcePanelSourceConfirmDialog()
-    {
-        dialogs.ResourcePanelSourceConfirm.Show(localizer.T(LocalizationKeys.ResourcePanelCafeOnlyMessage));
-    }
-
     /// <summary>Switches the confirmed resource-panel source and opens its panel.</summary>
     public async Task SwitchSourceThenOpenPanelAsync()
     {
         try
         {
-            await savedSettingsWriter.UpdateAsync(settings => settings.PatchUrlGroup = PatchUrlGroups.Cafe);
+            var savedSettings = await savedSettingsWriter.UpdateAsync(
+                settings => settings.PatchUrlGroup = PatchUrlGroups.Cafe);
 
-            await HandleSettingsSavedAsync();
+            await HandleSettingsSavedAsync(savedSettings);
             await resourcePanel.OpenPanelDirectlyAsync();
         }
         catch (Exception exception)
@@ -397,8 +399,8 @@ internal sealed class ShellLifecycle : IDisposable
     /// <summary>Restores default settings from the debug panel.</summary>
     public async Task ResetSettingsToDefaultsAsync()
     {
-        await savedSettingsWriter.ReplaceAsync(LauncherSettings.CreateDefaults(buildIdentity));
-        await RefreshAsync();
+        var savedSettings = await savedSettingsWriter.ReplaceAsync(LauncherSettings.CreateDefaults(buildIdentity));
+        await HandleSettingsSavedAsync(savedSettings);
     }
 
     /// <summary>Restores default settings from the settings page and reports the outcome.</summary>
@@ -407,13 +409,6 @@ internal sealed class ShellLifecycle : IDisposable
         await ResetSettingsToDefaultsAsync();
         toastService.ShowSuccess(localizer.T(LocalizationKeys.DebugSettingsReset));
     }
-
-    private Task OnResourcePanelSourceSwitchConfirmed() => SwitchSourceThenOpenPanelAsync();
-
-    // 经 windowChrome 的注入缝而非直接调 ExternalLinkService.Open：
-    // 壳的全部外部链接出口统一走这一条缝，测试可注入记录委托。
-    // 不支持应用内更新的平台上，这里收到的不是文件直链而是版本发布页。
-    private void OnUpdateAvailableConfirmed(string url) => windowChrome.OpenExternalUrl(url);
 
     private void OnSelfUpdateStartRequested(string version, IReadOnlyList<ReleaseFile> files) =>
         selfUpdateCoordinator.Begin(version, files);
@@ -434,6 +429,10 @@ internal sealed class ShellLifecycle : IDisposable
             case ShellSelfUpdateOutcome.DownloadFailed:
                 dialogs.MarkUpdateFailed();
                 toastService.ShowError(localizer.T(LocalizationKeys.LauncherUpdateDownloadFailed));
+                break;
+            case ShellSelfUpdateOutcome.DownloadBlocked:
+                dialogs.MarkUpdateFailed();
+                toastService.ShowError(localizer.T(LocalizationKeys.LauncherUpdateDownloadBlocked));
                 break;
             case ShellSelfUpdateOutcome.Cancelled:
                 dialogs.ResetUpdateApply();
@@ -476,15 +475,6 @@ internal sealed class ShellLifecycle : IDisposable
     /// <summary>Refreshes shell state in response to the debug panel.</summary>
     internal Task HandleDebugRefreshRequestedAsync() => RefreshAsync();
 
-    /// <summary>Opens the log viewer from an operation failure action.</summary>
-    internal Task OpenLogViewerAsync() => logViewer.OpenCommand.ExecuteAsync(null);
-
-    /// <summary>Opens the log viewer from a synchronous dialog action.</summary>
-    internal void OpenLogViewer()
-    {
-        logViewer.OpenCommand.Execute(null);
-    }
-
     private async Task PreviewAppearanceAsync(
         LauncherSettings previewSettings,
         string? propertyName,
@@ -505,245 +495,14 @@ internal sealed class ShellLifecycle : IDisposable
         }
     }
 
-    private Task ApplyLanguageAndThemeAsync(LauncherSettings launcherSettings)
-    {
-        ApplyLanguage(launcherSettings.Language);
-        settings.Appearance.ApplyFrom(launcherSettings);
-        return Task.CompletedTask;
-    }
+    /// <summary>Subscribes cross-feature events once for the active shell lifecycle.</summary>
+    public void Wire() => presentationWiring.Wire();
 
-    /// <summary>
-    /// Subscribes cross-feature events once for the active shell lifecycle.
-    /// 每条接线经 <see cref="Attach"/> 配对登记退订，登记顺序即 <see cref="Unwire"/>
-    /// 的逆序拆卸顺序。
-    /// </summary>
-    public void Wire()
-    {
-        if (isWired) return;
-        isWired = true;
-
-        Attach(
-            () => settings.Appearance.GetBackgroundBitmapAsync = background.GetBackgroundBitmapAsync,
-            () => settings.Appearance.GetBackgroundBitmapAsync = null);
-        Attach(
-            () => settings.PreviewAppearanceAsync = PreviewAppearanceAsync,
-            () => settings.PreviewAppearanceAsync = null);
-        Attach(
-            () => settings.ApplyLanguageAndTheme = ApplyLanguageAndThemeAsync,
-            () => settings.ApplyLanguageAndTheme = null);
-        Attach(
-            () => settings.SettingsSaved += HandleSettingsSavedAsync,
-            () => settings.SettingsSaved -= HandleSettingsSavedAsync);
-
-        Attach(
-            () => resourcePanel.ResourcePanelSourceConfirmRequested += ShowResourcePanelSourceConfirmDialog,
-            () => resourcePanel.ResourcePanelSourceConfirmRequested -= ShowResourcePanelSourceConfirmDialog);
-        Attach(
-            () => dialogs.ResourcePanelSourceConfirm.Confirmed += OnResourcePanelSourceSwitchConfirmed,
-            () => dialogs.ResourcePanelSourceConfirm.Confirmed -= OnResourcePanelSourceSwitchConfirmed);
-
-        Attach(
-            () => operations.RefreshRequested += HandleOperationsRefreshRequestedAsync,
-            () => operations.RefreshRequested -= HandleOperationsRefreshRequestedAsync);
-        Attach(
-            () => operations.OpenLogViewerRequested += OpenLogViewerAsync,
-            () => operations.OpenLogViewerRequested -= OpenLogViewerAsync);
-
-        Attach(
-            () => dialogs.DownloadRunningCloseConfirm.Confirmed += windowChrome.CloseAfterStoppingDownload,
-            () => dialogs.DownloadRunningCloseConfirm.Confirmed -= windowChrome.CloseAfterStoppingDownload);
-        Attach(
-            () => dialogs.CloseRequested += windowChrome.RequestClose,
-            () => dialogs.CloseRequested -= windowChrome.RequestClose);
-        Attach(
-            () => dialogs.ConfirmUpdateAvailableRequested += OnUpdateAvailableConfirmed,
-            () => dialogs.ConfirmUpdateAvailableRequested -= OnUpdateAvailableConfirmed);
-        Attach(
-            () => dialogs.SelfUpdateStartRequested += OnSelfUpdateStartRequested,
-            () => dialogs.SelfUpdateStartRequested -= OnSelfUpdateStartRequested);
-        Attach(
-            () => dialogs.ApplyUpdateRequested += OnApplyUpdateRequested,
-            () => dialogs.ApplyUpdateRequested -= OnApplyUpdateRequested);
-        Attach(
-            () => dialogs.CancelUpdateRequested += OnCancelUpdateRequested,
-            () => dialogs.CancelUpdateRequested -= OnCancelUpdateRequested);
-        Attach(
-            () => dialogs.ErrorViewLogRequested += OpenLogViewer,
-            () => dialogs.ErrorViewLogRequested -= OpenLogViewer);
-
-        Attach(
-            () => debug.RefreshRequested += HandleDebugRefreshRequestedAsync,
-            () => debug.RefreshRequested -= HandleDebugRefreshRequestedAsync);
-        Attach(
-            () => debug.ResetSettingsRequested += ResetSettingsToDefaultsAsync,
-            () => debug.ResetSettingsRequested -= ResetSettingsToDefaultsAsync);
-        Attach(
-            () => debug.ResetSettingsConfirmationRequested += dialogs.DebugResetConfirm.Show,
-            () => debug.ResetSettingsConfirmationRequested -= dialogs.DebugResetConfirm.Show);
-        Attach(
-            () => dialogs.DebugResetConfirm.Confirmed += debug.ConfirmResetSettingsAsync,
-            () => dialogs.DebugResetConfirm.Confirmed -= debug.ConfirmResetSettingsAsync);
-        Attach(
-            () => dialogs.SettingsResetConfirm.Confirmed += ResetSettingsFromSettingsPageAsync,
-            () => dialogs.SettingsResetConfirm.Confirmed -= ResetSettingsFromSettingsPageAsync);
-
-        Attach(
-            () => remoteContent.OpenExternalUrlRequested = windowChrome.OpenExternalUrl,
-            () => remoteContent.OpenExternalUrlRequested = null);
-
-        startup.Wire();
-
-        Attach(
-            () => settings.Editor.CurrentPropertyChanged += OnSettingPropertyChanged,
-            () => settings.Editor.CurrentPropertyChanged -= OnSettingPropertyChanged);
-
-        RegisterModals();
-    }
-
-    /// <summary>Records the teardown half of one wiring so Unwire cannot miss it.</summary>
-    private void Attach(Action attach, Action detach)
-    {
-        attach();
-        detachers.Add(detach);
-    }
-
-    /// <summary>
-    /// 每个模态一条注册记录：种类、可见性旗标来源、栈内容与 ESC 命令收拢在
-    /// 一处（ADR-023）。顺序保持原 Wire 订阅序——多处旗标同时翻转时，栈序
-    /// 依赖注册序。
-    /// </summary>
-    private void RegisterModals()
-    {
-        modalRegistrar.Register(new ModalRegistration(
-            ModalKind.Settings,
-            windowChrome,
-            nameof(WindowChromeViewModel.IsSettingsVisible),
-            () => windowChrome.IsSettingsVisible,
-            settings,
-            windowChrome.ShowSettingsCommand));
-        modalRegistrar.Register(new ModalRegistration(
-            ModalKind.UnsavedSettingsConfirmation,
-            settings,
-            nameof(SettingsViewModel.IsUnsavedChangesVisible),
-            () => settings.IsUnsavedChangesVisible,
-            settings,
-            windowChrome.KeepEditingSettingsCommand));
-        modalRegistrar.Register(new ModalRegistration(
-            ModalKind.ResourcePanel,
-            resourcePanel,
-            nameof(ResourcePanelViewModel.IsResourcePanelVisible),
-            () => resourcePanel.IsResourcePanelVisible,
-            resourcePanel,
-            resourcePanel.CloseResourcePanelCommand));
-        modalRegistrar.Register(new ModalRegistration(
-            ModalKind.LogViewer,
-            logViewer,
-            nameof(LogViewerDialogViewModel.IsVisible),
-            () => logViewer.IsVisible,
-            logViewer,
-            logViewer.CloseCommand));
-        modalRegistrar.Register(new ModalRegistration(
-            ModalKind.LogExport,
-            logExport,
-            nameof(LogExportDialogViewModel.IsVisible),
-            () => logExport.IsVisible,
-            logExport,
-            logExport.CloseCommand));
-        modalRegistrar.Register(new ModalRegistration(
-            ModalKind.Debug,
-            debug,
-            nameof(DebugViewModel.IsVisible),
-            () => debug.IsVisible,
-            debug,
-            debug.CloseCommand));
-        modalRegistrar.Register(new ModalRegistration(
-            ModalKind.DesignGallery,
-            dialogs.Gallery,
-            nameof(DesignGalleryViewModel.IsVisible),
-            () => dialogs.Gallery.IsVisible,
-            dialogs.Gallery,
-            dialogs.Gallery.CloseCommand));
-        modalRegistrar.Register(new ModalRegistration(
-            ModalKind.Notice,
-            dialogs,
-            nameof(DialogsViewModel.IsNoticeDialogVisible),
-            () => dialogs.IsNoticeDialogVisible,
-            dialogs,
-            dialogs.DismissNoticeCommand));
-        modalRegistrar.Register(new ModalRegistration(
-            ModalKind.Update,
-            dialogs,
-            nameof(DialogsViewModel.IsUpdateAvailableVisible),
-            () => dialogs.IsUpdateAvailableVisible,
-            dialogs,
-            dialogs.CancelUpdateAvailableCommand));
-        modalRegistrar.Register(new ModalRegistration(
-            ModalKind.Error,
-            dialogs,
-            nameof(DialogsViewModel.IsErrorDialogVisible),
-            () => dialogs.IsErrorDialogVisible,
-            dialogs,
-            dialogs.ContinueAfterErrorCommand));
-        modalRegistrar.Register(new ModalRegistration(
-            ModalKind.SetupWizard,
-            dialogs,
-            nameof(DialogsViewModel.IsSetupWizardVisible),
-            () => dialogs.IsSetupWizardVisible,
-            dialogs.SetupWizard,
-            dialogs.SetupWizardExitConfirm.ShowCommand));
-        RegisterConfirmation(ModalKind.StopConfirmation, dialogs.StopConfirm);
-        RegisterConfirmation(ModalKind.DownloadRunningCloseConfirmation, dialogs.DownloadRunningCloseConfirm);
-        modalRegistrar.Register(new ModalRegistration(
-            ModalKind.UninstallConfirmation,
-            operations.Uninstall,
-            nameof(UninstallDialogViewModel.IsVisible),
-            () => operations.Uninstall.IsVisible,
-            operations.Uninstall,
-            operations.Uninstall.CloseCommand));
-        RegisterConfirmation(ModalKind.RepairConfirmation, dialogs.RepairConfirm);
-        RegisterConfirmation(ModalKind.ResourcePanelSourceConfirmation, dialogs.ResourcePanelSourceConfirm);
-        RegisterConfirmation(ModalKind.DebugResetConfirmation, dialogs.DebugResetConfirm);
-        RegisterConfirmation(ModalKind.SettingsResetConfirmation, dialogs.SettingsResetConfirm);
-        RegisterConfirmation(ModalKind.SetupWizardExitConfirmation, dialogs.SetupWizardExitConfirm);
-    }
-
-    private void RegisterConfirmation(ModalKind kind, ConfirmationDialogViewModel confirmation)
-    {
-        modalRegistrar.Register(new ModalRegistration(
-            kind,
-            confirmation,
-            nameof(ConfirmationDialogViewModel.IsVisible),
-            () => confirmation.IsVisible,
-            dialogs,
-            confirmation.CancelCommand));
-    }
-
-    /// <summary>
-    /// Removes cross-feature event subscriptions established by <see cref="Wire"/>.
-    /// 按登记的逆序执行退订——这是本次收敛唯一的行为差异；模态注册与
-    /// startup 接线不在记录表里，按同一逆序原则手工排在首尾。
-    /// </summary>
-    public void Unwire()
-    {
-        if (!isWired) return;
-        isWired = false;
-
-        modalRegistrar.Dispose();
-        for (var i = detachers.Count - 1; i >= 0; i--)
-        {
-            detachers[i]();
-        }
-
-        detachers.Clear();
-        startup.Unwire();
-    }
+    /// <summary>Removes the cross-feature subscriptions established by <see cref="Wire"/>.</summary>
+    public void Unwire() => presentationWiring.Unwire();
 
     /// <summary>Handles Escape for the active modal and returns whether a modal consumed it.</summary>
-    public bool TryHandleEscape()
-    {
-        var top = ModalHost.Top;
-        return top is not null && modalRegistrar.TryDispatchEscape(top.Kind);
-    }
+    public bool TryHandleEscape() => presentationWiring.TryDispatchEscape();
 
     /// <summary>Unsubscribes lifecycle callbacks and releases lifecycle-owned resources.</summary>
     public void Dispose()
@@ -798,23 +557,7 @@ internal sealed class ShellLifecycle : IDisposable
                 savedSettings.UpdateChannel,
                 cancellationToken);
 
-            if (result.IsSuccessful && result.IsUpdateAvailable)
-            {
-                toastService.Show(new ToastOptions
-                {
-                    Message = localizer.F(LocalizationKeys.StartupUpdateAvailable, result.LatestVersion),
-                    Severity = ToastSeverity.Info,
-                    Duration = ToastDuration.Extended,
-                    PrimaryAction = new ToastAction(
-                        localizer.T(LocalizationKeys.LauncherUpdateView),
-                        _ =>
-                        {
-                            settings.CheckForUpdatesCommand.Execute(null);
-                            return Task.FromResult(ToastActionResult.Success());
-                        },
-                        Timeout: null)
-                });
-            }
+            await updatePresenter.PresentAsync(result, LauncherUpdateTrigger.Startup);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -913,14 +656,6 @@ internal sealed class ShellLifecycle : IDisposable
     private void OnCriticalError(CriticalErrorInfo info)
     {
         dialogs.ShowCriticalError(info.Message, info.Details);
-    }
-
-    private void OnSettingPropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(LauncherSettings.StatusDetailMode))
-        {
-            OnStatusDetailModeChanged();
-        }
     }
 
 }

@@ -27,20 +27,23 @@ internal sealed class GameOperationExecutor(
     }
 
     public Task<GameLaunchResult> LaunchAsync(
-        LauncherStatusSnapshot snapshot,
+        GameOperationAttempt attempt,
         CancellationToken cancellationToken = default) =>
-        launchService.StartAsync(snapshot, cancellationToken);
+        launchService.StartAsync(attempt, cancellationToken);
+
+    public Task<long?> GetInstallDownloadSizeAsync(LauncherStatusSnapshot snapshot, CancellationToken cancellationToken) =>
+        downloadService.GetInstallDownloadSizeAsync(snapshot, cancellationToken);
 
     public Task<GameOperationResult> InstallOrUpdateAsync(
-        LauncherStatusSnapshot snapshot,
+        GameOperationAttempt attempt,
         Action<GameOperationProgress> progress,
         CancellationToken cancellationToken = default) =>
-        downloadService.InstallOrUpdateAsync(snapshot, progress, cancellationToken);
+        downloadService.InstallOrUpdateAsync(attempt, progress, cancellationToken);
 
     public Task<GameOperationResult> RepairAsync(
-        LauncherStatusSnapshot snapshot,
+        GameOperationAttempt attempt,
         Action<GameOperationProgress> progress) =>
-        downloadService.RepairAsync(snapshot, progress);
+        downloadService.RepairAsync(attempt, progress);
 
     public Task<GameOperationResult?> ResumePersistedAsync(
         LauncherStatusSnapshot snapshot,
@@ -55,10 +58,10 @@ internal sealed class GameOperationExecutor(
         uninstallService.MeasureFootprintAsync(snapshot);
 
     public Task<GameOperationResult> UninstallAsync(
-        LauncherStatusSnapshot snapshot,
+        GameOperationAttempt attempt,
         UninstallScope scope,
         Action<GameOperationProgress> progress) =>
-        uninstallService.UninstallAsync(snapshot, scope, progress);
+        uninstallService.UninstallAsync(attempt, scope, progress);
 
     public void Stop(DownloadStopReason reason) => downloadService.Stop(reason);
 

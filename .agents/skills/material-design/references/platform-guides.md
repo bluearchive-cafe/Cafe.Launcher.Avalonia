@@ -22,14 +22,14 @@ A component library is an **implementation**, not the specification. Always dist
 ## Table of contents
 
 - [Platform selection flow](#platform-selection-flow)
-- [Android — Jetpack Compose](#android---jetpack-compose)
-- [Android — Views (MDC)](#android---views-mdc)
+- [Android — Jetpack Compose](#android--jetpack-compose)
+- [Android — Views (MDC)](#android--views-mdc)
 - [Flutter](#flutter)
-- [Web — CSS Custom Properties](#web---css-custom-properties)
-- [Web — Material Web Components](#web---material-web-components)
-- [React — MUI](#react---mui)
-- [Angular — Angular Material](#angular---angular-material)
-- [Vue — Vuetify](#vue---vuetify)
+- [Web — CSS Custom Properties](#web--css-custom-properties)
+- [Web — Material Web Components](#web--material-web-components)
+- [React — MUI](#react--mui)
+- [Angular — Angular Material](#angular--angular-material)
+- [Vue — Vuetify](#vue--vuetify)
 - [Cross-platform token management](#cross-platform-token-management)
 - [Version compatibility matrix](#version-compatibility-matrix)
 
@@ -266,7 +266,7 @@ const colorScheme = ColorScheme(
   --md-sys-color-surface: #FEF7FF;
   --md-sys-typescale-body-medium-size: 0.875rem;
   --md-sys-shape-corner-medium: 12px;
-  --md-sys-spacing-4: 1rem;
+  --app-spacing-md: 1rem; /* Project-owned spacing; not an official Material token. */
   --md-sys-motion-duration-medium2: 300ms;
 }
 
@@ -505,9 +505,9 @@ existing M2-based Angular project.
 @use '@angular/material' as mat;
 
 // M2 palette definition (M2 only — do not use for new M3 themes)
-$m2-primary: mat.m2-define-palette(mat.$indigo-palette);
-$m2-accent: mat.m2-define-palette(mat.$pink-palette, A200, A100, A400);
-$m2-warn: mat.m2-define-palette(mat.$red-palette);
+$m2-primary: mat.m2-define-palette(mat.$m2-indigo-palette);
+$m2-accent: mat.m2-define-palette(mat.$m2-pink-palette, A200, A100, A400);
+$m2-warn: mat.m2-define-palette(mat.$m2-red-palette);
 
 $m2-theme: mat.m2-define-light-theme((
   color: (
@@ -522,7 +522,9 @@ $m2-theme: mat.m2-define-light-theme((
 
 ### Key CDK features
 
-Angular CDK provides framework-agnostic primitives:
+Angular CDK provides interaction primitives for **Angular**, without imposing Material
+visual styling. It is not a framework-independent library. See the [CDK overview](https://material.angular.dev/cdk/categories).
+
 - **Overlay**: Floating panels, dialogs, tooltips.
 - **A11y**: Focus trap, live announcer, list key manager.
 - **Drag & Drop**: Reorder lists, move items.

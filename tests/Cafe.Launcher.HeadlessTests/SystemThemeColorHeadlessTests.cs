@@ -10,11 +10,51 @@ using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
 using Xunit;
 using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Services;
+using System.Linq;
 
 namespace Cafe.Launcher.HeadlessTests;
 
 public sealed class SystemThemeColorHeadlessTests
 {
+    [AvaloniaTheory]
+    [InlineData(ThemeColorModes.Default, ThemeModes.System, false)]
+    [InlineData(ThemeColorModes.Custom, ThemeModes.System, true)]
+    [InlineData(ThemeColorModes.Default, ThemeModes.Light, true)]
+    public void ApplyPlatformColorValues_UnselectedSystemSource_RefreshesAllDotsWithoutChangingTheDraft(
+        string source, string themeMode, bool platformDark)
+    {
+        using var theme = ThemeVariantSnapshot.Capture(ThemeVariant.Light);
+        var editor = new SettingsEditor();
+        editor.ApplySnapshot(new LauncherSettings
+        {
+            ThemeMode = themeMode, ThemeColorMode = source, CustomThemeColor = "#FF9400D3"
+        });
+        var saved = editor.GetSavedSnapshot();
+        var options = new SettingsOptionsViewModel(new LocalizationService(), new DiskSpaceService());
+        using var applier = new ThemeApplier();
+        using var appearance = new SettingsAppearanceViewModel(editor, applier, options: options);
+        appearance.Load(editor.Current);
+        var accent = Color.Parse("#FF2E9E46");
+        appearance.ApplyPlatformColorValues(new PlatformColorValues
+        {
+            ThemeVariant = platformDark ? PlatformThemeVariant.Dark : PlatformThemeVariant.Light,
+            AccentColor1 = accent
+        });
+
+        var dark = themeMode == ThemeModes.System && platformDark;
+        Color Primary(Color seed) => MaterialColorMapper.ToAvaloniaColor(
+            MaterialSchemeGenerator.CreateScheme(seed, editor.Current.ThemeColorVariant, dark).Primary);
+        Assert.Equal(Primary(accent), Assert.IsType<SolidColorBrush>(
+            options.ThemeColor.Single(option => option.Code == ThemeColorModes.System).PreviewBrush).Color);
+        Assert.Equal(Primary(Color.Parse("#FF9400D3")), Assert.IsType<SolidColorBrush>(
+            options.ThemeColor.Single(option => option.Code == ThemeColorModes.Custom).PreviewBrush).Color);
+        Assert.Equal(Assert.IsType<SolidColorBrush>(options.ThemeColor.Single(option => option.Code == source).PreviewBrush).Color,
+            Assert.IsType<SolidColorBrush>(appearance.ThemeColorPreviewBrush).Color);
+        Assert.False(editor.IsDirty);
+        Assert.True(saved.HasSameSettingsState(editor.GetSnapshot()));
+    }
+
     [AvaloniaFact]
     public void ApplyPlatformColorValues_SystemThemeColor_ReappliesSchemeImmediately()
     {

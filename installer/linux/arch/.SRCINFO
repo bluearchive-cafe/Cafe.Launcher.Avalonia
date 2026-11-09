@@ -24,6 +24,7 @@ pkgbase = cafe-launcher
 	depends = libsm
 	depends = fontconfig
 	depends = libxkbcommon
+	depends = mpv
 	options = !strip
 	options = !debug
 	source = cafe-launcher-source::git+https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia.git#tag=v1.3.1

@@ -123,14 +123,17 @@ internal sealed class DownloadExecutor
             Math.Max(1, (long)(TimeSpan.FromMilliseconds(100).TotalSeconds * timestampFrequency)));
         var pauseMeasurementLock = new object();
         Task? measuredPauseTask = null;
+        FileActivityReporter? fileActivity = null;
+        fileActivity = new FileActivityReporter(operationKind, GameOperationStage.Downloading, fileList.Count,
+            update => ReportProgress(progressAccumulator.GetCurrentSnapshot(), isPaused(), update));
 
-        void ReportProgress(DownloadProgressSnapshot snapshot, bool paused)
+        void ReportProgress(DownloadProgressSnapshot snapshot, bool paused, GameOperationProgress? activity = null)
         {
             var speed = snapshot.BytesPerSecond;
             TimeSpan? estimated = speed > 0
                 ? TimeSpan.FromSeconds(Math.Max(0, (totalSize - snapshot.DownloadedSize) / speed))
                 : null;
-            progress(new GameOperationProgress
+            var update = new GameOperationProgress
             {
                 OperationKind = operationKind,
                 Stage = paused ? GameOperationStage.Paused : GameOperationStage.Downloading,
@@ -145,7 +148,18 @@ internal sealed class DownloadExecutor
                 CanStop = true,
                 CanPause = true,
                 IsPaused = paused
-            });
+            };
+            if (activity is not null)
+            {
+                update.ActiveFiles = activity.ActiveFiles;
+                update.ActivitySequence = activity.ActivitySequence;
+                update.ProcessedFileCount = activity.ProcessedFileCount;
+                update.TotalFileCount = activity.TotalFileCount;
+            }
+            else fileActivity?.Enrich(update);
+            update.IsCheckingDownload = snapshot.DownloadedSize >= totalSize && update.ActiveFiles.Any(file => file.IsVerifying);
+            update.CanPause = paused || !update.IsCheckingDownload;
+            progress(update);
         }
 
         async Task WaitWhilePausedAsync()
@@ -210,6 +224,7 @@ internal sealed class DownloadExecutor
                     downloadedSize);
             }
 
+            fileActivity.Update(downloadFile.File.Path, downloadedSize, downloadFile.File.SizeBytes, verifying: false, emit: false);
             if (progressAccumulator.TryRecord(
                     transferredBytes,
                     downloadedSize - previousSize,
@@ -227,6 +242,7 @@ internal sealed class DownloadExecutor
             await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
+                fileActivity.Update(downloadFile.File.Path, downloadFile.ReportedSize, downloadFile.File.SizeBytes, verifying: false);
                 var outcome = await fileDownloadService.DownloadAsync(
                     new FileDownloadRequest(
                         downloadFile.TargetPath,
@@ -255,12 +271,13 @@ internal sealed class DownloadExecutor
                         {
                             RecordFileProgress(downloadFile, transferredBytes: 0);
                             return Task.CompletedTask;
-                        }),
+                        }) { ReportVerificationProgress = fileActivity.ReadProgress(downloadFile.File.Path) },
                     cancellationToken).ConfigureAwait(false);
                 if (outcome.Kind == DownloadOutcomeKind.Transferred)
                 {
                     verifiedHashes[downloadFile.File.Path] = outcome.Crc64!;
                 }
+                fileActivity.Complete(downloadFile.File.Path);
             }
             finally
             {
@@ -290,9 +307,13 @@ internal sealed class DownloadExecutor
         IReadOnlyDictionary<string, string> verifiedHashes,
         IReadOnlyDictionary<string, PlannedFileHash> plannedHashes,
         Action<int> progress,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Action<GameOperationProgress>? activityProgress = null,
+        GameOperationKind operationKind = GameOperationKind.Download)
     {
         var downloadedPathSet = downloadedFiles.Select(item => item.Path).ToHashSet(StringComparer.Ordinal);
+        var fileActivity = activityProgress is null ? null
+            : new FileActivityReporter(operationKind, GameOperationStage.FileCheck, manifestFiles.Count, activityProgress);
         // 有界并行校验：CRC64 全量重读是安装/更新阶段的主导等待，而各文件的校验彼此独立
         // （ICrc64Service 经共享 ArrayPool 保证并发安全，下载阶段已在并发使用）。结果按清单
         // 下标收集，失败列表与进度仍保持与串行版本相同的清单顺序语义；自愈语义不变——
@@ -314,6 +335,8 @@ internal sealed class DownloadExecutor
                 var checkPath = isDownloaded
                     ? GetTempName(GamePathValidator.GetSafeFilePath(gamePath, file.Path))
                     : GamePathValidator.GetSafeFilePath(gamePath, file.Path);
+                var fileBytes = File.Exists(checkPath) ? new FileInfo(checkPath).Length : file.SizeBytes;
+                fileActivity?.Update(file.Path, 0, fileBytes, verifying: true);
 
                 if (!File.Exists(checkPath))
                 {
@@ -321,7 +344,7 @@ internal sealed class DownloadExecutor
                 }
                 else if (!IsAlreadyVerified(file, checkPath, isDownloaded, verifiedHashes, plannedHashes))
                 {
-                    var crc64 = await crc64Service.ComputeFileAsync(checkPath, null, cancellationToken).ConfigureAwait(false);
+                    var crc64 = await crc64Service.ComputeFileAsync(checkPath, null, fileActivity?.ReadProgress(file.Path), cancellationToken).ConfigureAwait(false);
                     if (crc64 != file.Hash)
                     {
                         await diagnostics.MessageAsync(
@@ -351,6 +374,7 @@ internal sealed class DownloadExecutor
             // （2026-09-15 复核轮：非单调判据下 400 文件去重用例会偶发红）。
             var percent = (int)Math.Round(Interlocked.Increment(ref completedCount) * 100d / manifestFiles.Count);
             progressReporter.Report(percent);
+            fileActivity?.Complete(file.Path);
         }).ToArray();
 
         await Task.WhenAll(tasks).ConfigureAwait(false);
@@ -371,6 +395,7 @@ internal sealed class DownloadExecutor
 
         // Install passed files BEFORE returning failures — prevents retry cascade
         var failedPathSet = failedFiles.Select(f => f.Path).ToHashSet(StringComparer.Ordinal);
+        activityProgress?.Invoke(GameOperationProgressFactory.CreateProgress(operationKind, GameOperationStage.ApplyingFiles, -1));
         foreach (var file in downloadedFiles)
         {
             if (failedPathSet.Contains(file.Path))

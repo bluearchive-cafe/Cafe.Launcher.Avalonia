@@ -157,14 +157,14 @@ public sealed partial class MainWindowHeadlessTests
 
         Assert.NotNull(viewModel.Settings.Appearance.GetBackgroundBitmapAsync);
         Assert.NotNull(viewModel.Settings.PreviewAppearanceAsync);
-        Assert.NotNull(viewModel.Settings.ApplyLanguageAndTheme);
+        Assert.NotNull(viewModel.Settings.SavedSettingsFollowThrough);
         Assert.NotNull(viewModel.RemoteContent.OpenExternalUrlRequested);
 
         context.Dispose();
 
         Assert.Null(viewModel.Settings.Appearance.GetBackgroundBitmapAsync);
         Assert.Null(viewModel.Settings.PreviewAppearanceAsync);
-        Assert.Null(viewModel.Settings.ApplyLanguageAndTheme);
+        Assert.Null(viewModel.Settings.SavedSettingsFollowThrough);
         Assert.Null(viewModel.RemoteContent.OpenExternalUrlRequested);
     }
 
@@ -229,8 +229,8 @@ public sealed partial class MainWindowHeadlessTests
     }
 
     [AvaloniaTheory]
-    [InlineData("install", 4, 1)]
-    [InlineData("progress", 2, 0)]
+    [InlineData("install", 1, 1)]
+    [InlineData("progress", 1, 1)]
     [InlineData("control", 1, 1)]
     public void MainWindow_AtMinimumWindowSize_KeepsOperationActionsInsideWindow(
         string panelMode,
@@ -282,25 +282,19 @@ public sealed partial class MainWindowHeadlessTests
         using var context = CreateContext();
         context.Window.Width = width;
         context.Window.Height = height;
-        context.ViewModel.Operations.PanelMode = GameOperationPanelMode.Install;
+        context.ViewModel.Shell.IsBusy = false;
+        context.ViewModel.Operations.ApplySnapshot(new LauncherStatusSnapshot
+        { RuntimeState = LauncherRuntimeState.NotInstalled, LocalGame = new LocalInstallationState { GamePath = @"D:\Games\BlueArchive_JP" } });
+        context.ViewModel.Operations.OpenInstallPreparationCommand.Execute(null);
         context.Window.Show();
         Dispatcher.UIThread.RunJobs();
-
-        var pathField = context.Window
-            .GetVisualDescendants()
-            .OfType<Border>()
-            .Single(control => control.Classes.Contains("path-field"));
-        var actions = context.Window
-            .GetVisualDescendants()
-            .OfType<Button>()
-            .Where(control => control.IsEffectivelyVisible
-                && (control.Classes.Contains("primary-operation")
-                    || control.Classes.Contains("secondary-operation")))
-            .ToArray();
-
-        Assert.Equal(4, actions.Length);
-        Assert.True(pathField.Bounds.Width > 0);
-        AssertControlInsideWindow(pathField, context.Window);
+        var surface = context.Window.GetVisualDescendants().OfType<Cafe.Launcher.UI.Controls.DialogSurface>()
+            .Single(control => control.Name == "GameTaskSurface");
+        var path = surface.GetVisualDescendants().OfType<TextBlock>()
+            .Single(control => control.IsEffectivelyVisible && control.Text == context.ViewModel.Operations.TaskPath);
+        AssertControlInsideWindow(path, context.Window);
+        var actions = surface.GetVisualDescendants().OfType<Button>().Where(control => control.IsEffectivelyVisible).ToArray();
+        Assert.NotEmpty(actions);
         Assert.All(actions, action => AssertControlInsideWindow(action, context.Window));
     }
 
@@ -314,27 +308,19 @@ public sealed partial class MainWindowHeadlessTests
         bool expectedEnabled)
     {
         using var context = CreateContext();
-        context.Window.Show();
-        context.ViewModel.Shell.IsInstallBlockedByDiskSpace = isBlockedByDiskSpace;
-        context.ViewModel.Shell.InstallDiskSpaceMessage = isBlockedByDiskSpace
-            ? "磁盘空间不足：需要 10GB，可用 6GB。"
-            : "";
-        context.ViewModel.Shell.IsBusy = isBusy;
+        context.ViewModel.Shell.IsBusy = false;
         context.ViewModel.Operations.ApplySnapshot(new LauncherStatusSnapshot
         {
-            RuntimeState = LauncherRuntimeState.NotInstalled
+            RuntimeState = LauncherRuntimeState.NotInstalled,
+            LocalGame = new LocalInstallationState { GamePath = @"D:\Games\BlueArchive_JP" }
         });
+        context.ViewModel.Operations.OpenInstallPreparationCommand.Execute(null);
+        context.ViewModel.Shell.IsInstallBlockedByDiskSpace = isBlockedByDiskSpace;
+        context.ViewModel.Shell.IsBusy = isBusy;
+        context.Window.Show();
         Dispatcher.UIThread.RunJobs();
-
-        // The compact install button carries the disk-space tooltip.
-        var installButton = context.Window
-            .GetVisualDescendants()
-            .OfType<Button>()
-            .Where(button => ReferenceEquals(
-                button.Command,
-                context.ViewModel.Operations.InstallOrUpdateCommand))
-            .Single(button => button.IsEffectivelyVisible);
-
+        var installButton = context.Window.GetVisualDescendants().OfType<Button>()
+            .Single(button => ReferenceEquals(button.Command, context.ViewModel.Operations.ConfirmInstallCommand));
         Assert.Equal(expectedEnabled, installButton.IsEffectivelyEnabled);
     }
 
@@ -417,7 +403,9 @@ public sealed partial class MainWindowHeadlessTests
         Assert.Equal(700, context.Window.Height);
 
         var captured = new LauncherSettings { RememberWindowPositionAndSize = true };
-        context.Window.CaptureWindowState(captured);
+        var geometry = context.Window.TryCaptureGeometry();
+        Assert.True(geometry.HasValue);
+        geometry.Value.ApplyTo(captured);
 
         Assert.Equal(120, captured.WindowPositionX);
         Assert.Equal(240, captured.WindowPositionY);
@@ -444,7 +432,9 @@ public sealed partial class MainWindowHeadlessTests
         });
 
         var captured = new LauncherSettings { RememberWindowPositionAndSize = false };
-        context.Window.CaptureWindowState(captured);
+        var geometry = context.Window.TryCaptureGeometry();
+        Assert.True(geometry.HasValue);
+        geometry.Value.ApplyTo(captured);
 
         Assert.Equal(originalPosition, context.Window.Position);
         Assert.Equal(originalWidth, context.Window.Width);
@@ -490,7 +480,7 @@ public sealed partial class MainWindowHeadlessTests
         context.Window.SetSystemTray(trayService);
         context.Window.Show();
 
-        ((IGameOperationJourneyHost)context.ViewModel.Operations).RequestMinimize();
+        ((IGameOperationJourneyHost)context.ViewModel.Operations).Present(new GameOperationPresentation.Window(GameOperationWindowAction.Minimize));
         Dispatcher.UIThread.RunJobs();
 
         Assert.False(context.Window.IsVisible);
@@ -504,7 +494,7 @@ public sealed partial class MainWindowHeadlessTests
         using var context = CreateContext();
         context.Window.Show();
 
-        ((IGameOperationJourneyHost)context.ViewModel.Operations).RequestMinimize();
+        ((IGameOperationJourneyHost)context.ViewModel.Operations).Present(new GameOperationPresentation.Window(GameOperationWindowAction.Minimize));
         Dispatcher.UIThread.RunJobs();
 
         Assert.Equal(WindowState.Minimized, context.Window.WindowState);
@@ -533,7 +523,7 @@ public sealed partial class MainWindowHeadlessTests
         var closed = false;
         context.Window.Closed += (_, _) => closed = true;
 
-        ((IGameOperationJourneyHost)context.ViewModel.Operations).RequestExit();
+        ((IGameOperationJourneyHost)context.ViewModel.Operations).Present(new GameOperationPresentation.Window(GameOperationWindowAction.Exit));
         Dispatcher.UIThread.RunJobs();
 
         Assert.True(closed);

@@ -132,17 +132,20 @@ public sealed partial class MainWindowHeadlessTests
 
         public void RaiseStaleRunningChanged() => staleIsRunningChanged?.Invoke();
 
+        public Task<long?> GetInstallDownloadSizeAsync(LauncherStatusSnapshot snapshot, CancellationToken cancellationToken) =>
+            Task.FromResult<long?>(null);
+
         public Task<GameLaunchResult> LaunchAsync(
-            LauncherStatusSnapshot snapshot,
+            GameOperationAttempt attempt,
             CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
         public Task<GameOperationResult> InstallOrUpdateAsync(
-            LauncherStatusSnapshot snapshot,
+            GameOperationAttempt attempt,
             Action<GameOperationProgress> progress,
             CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
         public Task<GameOperationResult> RepairAsync(
-            LauncherStatusSnapshot snapshot,
+            GameOperationAttempt attempt,
             Action<GameOperationProgress> progress) =>
             throw new NotSupportedException();
         public Task<GameOperationResult?> ResumePersistedAsync(
@@ -155,7 +158,7 @@ public sealed partial class MainWindowHeadlessTests
         public Task<UninstallFootprint> MeasureUninstallFootprintAsync(LauncherStatusSnapshot snapshot) =>
             throw new NotSupportedException();
         public Task<GameOperationResult> UninstallAsync(
-            LauncherStatusSnapshot snapshot,
+            GameOperationAttempt attempt,
             UninstallScope scope,
             Action<GameOperationProgress> progress) =>
             throw new NotSupportedException();

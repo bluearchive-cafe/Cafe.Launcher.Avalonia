@@ -26,7 +26,9 @@ public sealed class LocalizedTextCatalog : INotifyPropertyChanged, IDisposable
     }
 
     /// <summary>Gets the localized text associated with a resource key.</summary>
-    public string this[string key] => localizer.T(key);
+    public string this[string key] => localizer.T(Resources.LauncherResourceCatalog.Parse(key));
+
+    public string this[LocalizationKeys key] => localizer.T(key);
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -65,14 +67,9 @@ public sealed class LocalizationFailureEventArgs : EventArgs
 /// <summary>Resolves localized UI strings and applies the selected process culture.</summary>
 public sealed class LocalizationService
 {
-    /// <summary>
-    /// Test-only resource override. When non-null, <see cref="T"/> uses only
-    /// the current language dictionary. Populated by <see cref="InitializeForTesting"/>.
-    /// </summary>
-    private static volatile IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>>? testResources;
-
     private readonly SystemCultureSnapshot cultureSnapshot;
     private readonly ILauncherDiagnostics diagnostics;
+    private readonly ILocalizationResourceSource resourceSource;
     private string currentAutoResolvedLanguage = LauncherLanguages.English;
 
     /// <summary>
@@ -81,9 +78,18 @@ public sealed class LocalizationService
     /// genuine startup culture even after a manual language selection.
     /// </summary>
     public LocalizationService(SystemCultureSnapshot cultureSnapshot, ILauncherDiagnostics diagnostics)
+        : this(cultureSnapshot, diagnostics, new ResourceManagerLocalizationSource())
+    {
+    }
+
+    internal LocalizationService(
+        SystemCultureSnapshot cultureSnapshot,
+        ILauncherDiagnostics diagnostics,
+        ILocalizationResourceSource resourceSource)
     {
         this.cultureSnapshot = cultureSnapshot;
         this.diagnostics = diagnostics;
+        this.resourceSource = resourceSource;
         CaptureStartupCulture();
     }
 
@@ -93,16 +99,10 @@ public sealed class LocalizationService
     {
     }
 
-    /// <summary>Pre-populates resources for unit testing.</summary>
-    internal static void InitializeForTesting(Dictionary<string, Dictionary<string, string>> resources)
+    /// <summary>Builds a service over a caller-supplied table for tests.</summary>
+    internal LocalizationService(ILocalizationResourceSource resourceSource)
+        : this(new SystemCultureSnapshot(), LauncherLog.CreateDetached(), resourceSource)
     {
-        var copy = new Dictionary<string, IReadOnlyDictionary<string, string>>(StringComparer.Ordinal);
-        foreach (var (locale, dict) in resources)
-        {
-            copy[locale] = new Dictionary<string, string>(dict, StringComparer.Ordinal);
-        }
-
-        testResources = copy;
     }
 
     public string CurrentLanguage { get; private set; } = LauncherLanguages.English;
@@ -143,33 +143,25 @@ public sealed class LocalizationService
     }
 
     /// <summary>Looks up a single resource key in the active UI culture.</summary>
-    public string T(string key)
+    public string T(LocalizationKeys key) => Lookup(Resources.LauncherResourceCatalog.Name(key));
+
+    /// <summary>String adapter for injected test tables; production callers use typed keys.</summary>
+    internal string Lookup(string key)
     {
-        var resources = testResources;
-        if (resources is not null)
-        {
-            if (resources.TryGetValue(CurrentLanguage, out var dictionary)
-                && dictionary.TryGetValue(key, out var value))
-            {
-                return value;
-            }
-
-            return ReportFailure($"Missing test resource key '{key}' for language '{CurrentLanguage}'.");
-        }
-
         // Resolve by CurrentLanguage, not the calling thread's culture: SetLanguage may
         // run off the UI thread during startup, and thread-culture fallback would then
         // resolve XAML catalog bindings against the OS culture instead of the selected
         // language (mixed-language UI, legal text resolving to the wrong locale).
-        var result = Resources.LauncherStrings.ResourceManager.GetString(
-            key, LauncherCultureResolver.GetCultureFor(CurrentLanguage));
+        var result = resourceSource.GetString(CurrentLanguage, key);
         return result ?? ReportFailure($"Missing key '{key}' for language '{CurrentLanguage}'.");
     }
 
     /// <summary>Looks up and formats a resource key using the active culture.</summary>
-    public string F(string key, params object?[] args)
+    public string F(LocalizationKeys key, params object?[] args) => Format(Resources.LauncherResourceCatalog.Name(key), args);
+
+    internal string Format(string key, params object?[] args)
     {
-        var template = T(key);
+        var template = Lookup(key);
         try
         {
             return string.Format(

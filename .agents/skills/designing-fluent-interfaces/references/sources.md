@@ -2,6 +2,9 @@
 
 Last reviewed: **2026-08-27**.
 
+Targeted accessibility and motion-source update: **2026-11-02**. Other source dates
+remain historical; check current library/platform details when they affect the task.
+
 This skill is a synthesized reference, not a copy of Microsoft documentation. When guidance conflicts with a newer upstream source, prefer the newer official source for the target platform/library.
 
 ## Fluent 2 official foundations
@@ -61,6 +64,17 @@ This skill is a synthesized reference, not a copy of Microsoft documentation. Wh
 - Token types: https://github.com/microsoft/fluentui/blob/master/packages/tokens/src/types.ts
 - Component architecture: https://github.com/microsoft/fluentui/blob/master/docs/architecture/component-patterns.md
 - React motion package: https://www.npmjs.com/package/@fluentui/react-motion
+- React motion official source and usage: https://github.com/microsoft/fluentui/tree/master/packages/react-components/react-motion/library
+
+If a registry page is blocked or unavailable, use the official repository and the
+installed package metadata to check exports and versions. An HTTP 403 is not evidence
+that a package is deprecated or missing.
+
+## Accessibility standards and patterns
+
+- Normative web criteria, contrast/focus explanations, target-size levels and exceptions,
+  and WAI-ARIA patterns: [Accessibility and content — standards](accessibility-and-content.md#standards-and-pattern-references).
+- Fluent touch-target design guidance: https://fluent2.microsoft.design/layout
 
 ## Agent Skill format
 

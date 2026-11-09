@@ -20,10 +20,14 @@ internal sealed class Crc64Service : ICrc64Service
     private const ulong XorOut = 0xFFFFFFFFFFFFFFFF;
     private static readonly ulong[][] Tables = BuildTables();
 
+    public Task<string> ComputeFileAsync(string filePath, Action<int>? progress = null, CancellationToken cancellationToken = default) =>
+        ComputeFileAsync(filePath, progress, null, cancellationToken);
+
     public async Task<string> ComputeFileAsync(
         string filePath,
-        Action<int>? progress = null,
-        CancellationToken cancellationToken = default)
+        Action<int>? progress,
+        Action<long, long>? byteProgress,
+        CancellationToken cancellationToken)
     {
         ulong crc = XorOut;
         // Rented rather than allocated: this method runs once per file across the whole manifest, so
@@ -36,6 +40,7 @@ internal sealed class Crc64Service : ICrc64Service
         try
         {
             await using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            byteProgress?.Invoke(0, stream.Length);
             while (true)
             {
                 var read = await stream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
@@ -43,6 +48,7 @@ internal sealed class Crc64Service : ICrc64Service
 
                 crc = Update(crc, buffer.AsSpan(0, read));
                 readTotal += read;
+                byteProgress?.Invoke(readTotal, stream.Length);
 
                 if (stream.Length > 0)
                     progress?.Invoke((int)Math.Round(readTotal * 100d / stream.Length));

@@ -27,7 +27,7 @@ public sealed partial class MainWindowHeadlessTests
         context.Window.Width = width;
         context.Window.Height = height;
         var split = ShowLaunchSplitButton(context, hideDetails);
-        Assert.Same(context.ViewModel.Operations.StartGameCommand, split.Command);
+        Assert.Same(context.ViewModel.Operations.PrimaryActionCommand, split.Command);
         var launches = 0;
         split.Command = new RelayCommand(() => launches++);
         var primary = split.GetVisualDescendants().OfType<Button>().Single(button => button.Name == "PART_PrimaryButton");
@@ -141,7 +141,7 @@ public sealed partial class MainWindowHeadlessTests
         context.ViewModel.IsMotionReduced = true;
         context.ViewModel.Shell.IsBusy = false;
         context.ViewModel.Settings.Editor.Current.StatusDetailMode = hideDetails ? StatusDetailModes.Hidden : StatusDetailModes.Compact;
-        context.ViewModel.Operations.PanelMode = GameOperationPanelMode.Control;
+        context.ViewModel.Operations.ApplySnapshot(new LauncherStatusSnapshot { RuntimeState = LauncherRuntimeState.Ready });
         context.Window.Show();
         Dispatcher.UIThread.RunJobs();
         return context.Window.GetVisualDescendants().OfType<SplitButton>().Single(button => button.IsEffectivelyVisible);

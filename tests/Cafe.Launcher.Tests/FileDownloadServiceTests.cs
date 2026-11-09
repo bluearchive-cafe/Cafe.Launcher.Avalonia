@@ -266,6 +266,7 @@ public sealed class FileDownloadServiceTests : IDisposable
         var downloader = CreateService();
         var pauseCount = 0;
         var progressTotal = 0L;
+        var verificationProgress = new List<long>();
 
         var outcome = await downloader.DownloadAsync(
             CreateRequest(targetPath, expectedBytes.Length, expectedHash),
@@ -280,7 +281,7 @@ public sealed class FileDownloadServiceTests : IDisposable
                 {
                     progressTotal += bytes;
                     return Task.CompletedTask;
-                }),
+                }) with { ReportVerificationProgress = (bytes, _) => verificationProgress.Add(bytes) },
             CancellationToken.None);
 
         Assert.Equal(DownloadOutcomeKind.Transferred, outcome.Kind);
@@ -289,6 +290,8 @@ public sealed class FileDownloadServiceTests : IDisposable
         // 进度与暂停等待都经由 control：每块读取前先等待暂停，再按写入字节上报。
         Assert.True(pauseCount >= 1);
         Assert.Equal(expectedBytes.Length, progressTotal);
+        Assert.Equal(0, verificationProgress[0]);
+        Assert.Contains((long)expectedBytes.Length, verificationProgress);
     }
 
     [Fact]

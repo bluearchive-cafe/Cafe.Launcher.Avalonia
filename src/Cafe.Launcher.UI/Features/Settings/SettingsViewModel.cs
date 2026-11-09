@@ -14,10 +14,8 @@ using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Core.Services.GameRuntime;
-using Cafe.Launcher.Core.Services.Update;
 using Cafe.Launcher.UI.ViewModels;
 using Serilog.Events;
-using Cafe.Launcher.Core;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services;
 
@@ -30,13 +28,12 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
     private readonly ILauncherUpdateService launcherUpdateService;
-    private readonly ILauncherSelfUpdateService launcherSelfUpdateService;
+    private readonly ILauncherUpdatePresenter updatePresenter;
     private readonly DialogsViewModel dialogs;
     private readonly SettingsEditor editor;
     private readonly UnifiedLogger unifiedLogger;
     private readonly IGameInstallationPath gameInstallationPath;
     private readonly IErrorHandlingService errorHandling;
-    private readonly LauncherBuildIdentity? buildIdentity;
     private readonly IGameRuntime gameRuntime;
     private readonly IFilePickerService filePickerService;
     private readonly LatestRefresh appearancePreviewRefresh = new();
@@ -51,12 +48,11 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
     private IReadOnlyList<GameRuntimeStatusEntry>? gameRuntimeStatusEntries;
     private bool disposed;
 
-    // Coordination delegates — set by parent after construction.
-    public Func<LauncherSettings, Task>? ApplyLanguageAndTheme { get; set; }
+    // Coordination seams — set by parent after construction.
     public Func<LauncherSettings, string?, CancellationToken, Task>? PreviewAppearanceAsync { get; set; }
 
-    // Events — parent subscribes to these.
-    public event Func<Task>? SettingsSaved;
+    /// <summary>Applies the effects that follow a persisted settings snapshot (shell-owned).</summary>
+    public ISavedSettingsFollowThrough? SavedSettingsFollowThrough { get; set; }
 
     /// <summary>
     /// The settings state editor. XAML binds to <c>Editor.Current.*</c> for
@@ -72,7 +68,7 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
         LocalizationService localizer,
         ToastService toastService,
         ILauncherUpdateService launcherUpdateService,
-        ILauncherSelfUpdateService launcherSelfUpdateService,
+        ILauncherUpdatePresenter updatePresenter,
         DialogsViewModel dialogs,
         UnifiedLogger unifiedLogger,
         IGameInstallationPath gameInstallationPath,
@@ -80,15 +76,14 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
         SettingsAppearanceViewModel appearance,
         IErrorHandlingService errorHandling,
         IGameRuntime gameRuntime,
-        IFilePickerService filePickerService,
-        LauncherBuildIdentity? buildIdentity = null)
+        IFilePickerService filePickerService)
     {
         this.settingsService = settingsService;
         this.savedSettingsWriter = savedSettingsWriter;
         this.localizer = localizer;
         this.toastService = toastService;
         this.launcherUpdateService = launcherUpdateService;
-        this.launcherSelfUpdateService = launcherSelfUpdateService;
+        this.updatePresenter = updatePresenter;
         this.dialogs = dialogs;
         this.unifiedLogger = unifiedLogger;
         this.gameInstallationPath = gameInstallationPath;
@@ -96,7 +91,6 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
         Options = options;
         Appearance = appearance;
         this.errorHandling = errorHandling;
-        this.buildIdentity = buildIdentity;
         this.gameRuntime = gameRuntime;
         this.filePickerService = filePickerService;
         editor.PropertyChanged += OnEditorPropertyChanged;
@@ -109,6 +103,7 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
         {
             OnPropertyChanged(nameof(IsSettingsDirty));
             OnPropertyChanged(nameof(CanSaveSettings));
+            OnPropertyChanged(nameof(SaveStatusText));
             SaveSettingsCommand.NotifyCanExecuteChanged();
         }
 
@@ -117,6 +112,7 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
             OnPropertyChanged(nameof(IsGameRuntimeRunnerPathEnabled));
             // Current 实例会被整体替换（保存后草稿换成归一化值），展示值须随之重算。
             OnPropertyChanged(nameof(GamePathDisplay));
+            OnPropertyChanged(nameof(HasGamePathChanges));
         }
     }
 
@@ -130,6 +126,7 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
         if (e.PropertyName == nameof(LauncherSettings.GamePath))
         {
             OnPropertyChanged(nameof(GamePathDisplay));
+            OnPropertyChanged(nameof(HasGamePathChanges));
         }
 
         if (!IsAppearanceSetting(e.PropertyName))
@@ -146,6 +143,14 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
 
     public bool CanSaveSettings => IsSettingsDirty && !IsSaving;
 
+    /// <summary>Localized action label; saving is visible even while the button is disabled.</summary>
+    public string SaveButtonText => localizer.T(IsSaving ? LocalizationKeys.SettingsSaving : LocalizationKeys.Save);
+
+    /// <summary>One status for the shared draft across all categories, with saving taking precedence.</summary>
+    public string SaveStatusText => IsSaving
+        ? localizer.T(LocalizationKeys.SettingsSaving)
+        : IsSettingsDirty ? localizer.T(LocalizationKeys.UnsavedChanges) : string.Empty;
+
     /// <summary>A custom executable path is only applied to an explicitly selected runner.</summary>
     public bool IsGameRuntimeRunnerPathEnabled =>
         editor.Current.GameRuntime.Runner is GameRuntimeRunners.Umu or GameRuntimeRunners.Wine;
@@ -155,6 +160,10 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
     /// 保住盘符与末段目录名；草稿真值仍是 <c>Editor.Current.GamePath</c>。
     /// </summary>
     public string GamePathDisplay => PathMiddleEllipsis.MiddleEllipsize(editor.Current.GamePath);
+
+    /// <summary>Maintenance always targets the applied installation, so it waits for path edits to settle.</summary>
+    public bool HasGamePathChanges => !string.Equals(editor.Current.GamePath,
+        editor.GetSavedSnapshot().GamePath, StringComparison.Ordinal);
 
     [ObservableProperty]
     private bool isUnsavedChangesVisible;
@@ -234,6 +243,11 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
                 _ = Appearance.RefreshThemeColorPaletteFromCurrentBackgroundAsync(markDirty: false);
             }
         }
+        else
+        {
+            // Preview the wallpaper source even before it is selected, without editing the draft.
+            _ = Appearance.RefreshThemeColorPaletteFromCurrentBackgroundAsync(markDirty: false);
+        }
 
         RefreshGameRuntimeStatus();
     }
@@ -245,6 +259,8 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
     public void RefreshOptionDisplayNames()
     {
         Options.RefreshDisplayNames();
+        OnPropertyChanged(nameof(SaveButtonText));
+        OnPropertyChanged(nameof(SaveStatusText));
         if (gameRuntimeStatusEntries is not null)
         {
             GameRuntimeStatusSummary = BuildGameRuntimeStatusSummary(gameRuntimeStatusEntries);
@@ -269,33 +285,7 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
         var result = await launcherUpdateService.CheckForUpdateAsync(
             savedSettings.UpdateChannel);
 
-        if (!result.IsSuccessful)
-        {
-            var operationMessage = localizer.T(LocalizationKeys.LauncherUpdateCheckFailed);
-            var message = result.FailureException is not null
-                ? ErrorHandlingService.FormatToastMessage(
-                    operationMessage,
-                    result.FailureException,
-                    localizer.T(LocalizationKeys.ErrorNetworkUnavailable),
-                    localizer.T(LocalizationKeys.ErrorFakeIpDns))
-                : string.IsNullOrWhiteSpace(result.FailureMessage)
-                    ? operationMessage
-                    : $"{operationMessage}：{result.FailureMessage}";
-            toastService.ShowError(message);
-            return;
-        }
-
-        if (!result.IsUpdateAvailable)
-        {
-            toastService.ShowSuccess(localizer.F(LocalizationKeys.LauncherUpdateUpToDate, buildIdentity?.LauncherVersion ?? ""));
-            return;
-        }
-
-        dialogs.ShowUpdateAvailable(
-            result.LatestVersion,
-            result.Files,
-            launcherSelfUpdateService.ResolveInAppAvailability(result.Files),
-            result.ReleaseNotes);
+        await updatePresenter.PresentAsync(result, LauncherUpdateTrigger.Manual);
     }
 
     /// <summary>Opens the shared launcher-settings reset confirmation (shell performs the reset).</summary>
@@ -325,19 +315,16 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
             // 落盘值而非草稿对象：归一化会改写草稿里的表示（大小写、trim、色板去重），
             // 后续的跟随动作与编辑器都必须以真正落盘的那个值为准。
             var settings = await savedSettingsWriter.SaveDraftAsync();
-            ApplyLogLevel(settings.LogLevel);
-
-            if (ApplyLanguageAndTheme is not null)
-                await ApplyLanguageAndTheme(settings);
-            else
-                Appearance.ApplyThemeColor(
-                    settings.ThemeColorMode,
-                    ColorUtils.ParseColorOrDefault(settings.CustomThemeColor));
+            var followThrough = SavedSettingsFollowThrough;
+            var handoff = followThrough?.Apply(settings);
 
             toastService.ShowSuccess(localizer.T(LocalizationKeys.SettingsSaved));
             RefreshGameRuntimeStatus();
 
-            await AsyncEvent.InvokeSequentiallyAsync(SettingsSaved);
+            if (followThrough is not null && handoff is not null)
+            {
+                await followThrough.CompleteAsync(handoff);
+            }
         }
         catch (Exception exception)
         {
@@ -364,6 +351,31 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
         // Normalise: append YostarGames/BlueArchive_JP subdirectory if missing,
         // matching the original Yostar launcher behaviour.
         editor.Current.GamePath = gameInstallationPath.NormalizeGamePath(pickedPath);
+    }
+
+    /// <summary>Chooses an installation draft without changing saved settings.</summary>
+    public async Task<string?> PickInstallationDraftAsync(string startPath)
+    {
+        var picked = await filePickerService.PickFolderAsync(localizer.T(LocalizationKeys.ChooseInstallFolder), startPath);
+        return string.IsNullOrWhiteSpace(picked) ? null : gameInstallationPath.NormalizeGamePath(picked);
+    }
+
+    /// <summary>Commits an explicit install/identify action through the saved-settings follow-through.</summary>
+    public async Task<bool> CommitInstallationPathAsync(string path)
+    {
+        try
+        {
+            var saved = await savedSettingsWriter.UpdateAsync(settings => settings.GamePath = gameInstallationPath.NormalizeGamePath(path));
+            if (SavedSettingsFollowThrough is { } followThrough)
+                await followThrough.CompleteAsync(followThrough.Apply(saved));
+            return true;
+        }
+        catch (Exception exception)
+        {
+            await errorHandling.HandleErrorAsync("Settings game path update failed.", exception,
+                new ErrorHandlingOptions { ToastMessage = localizer.F(LocalizationKeys.GamePathUpdateFailed, exception.Message) });
+            return false;
+        }
     }
 
     [RelayCommand]
@@ -395,10 +407,17 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
 
         try
         {
-            await savedSettingsWriter.UpdateAsync(settings => settings.GamePath = pickedPath);
+            var savedSettings = await savedSettingsWriter.UpdateAsync(
+                settings => settings.GamePath = pickedPath);
+            var followThrough = SavedSettingsFollowThrough;
+            var handoff = followThrough?.Apply(savedSettings);
+
             toastService.ShowSuccess(localizer.T(LocalizationKeys.GamePathUpdated));
 
-            await AsyncEvent.InvokeSequentiallyAsync(SettingsSaved);
+            if (followThrough is not null && handoff is not null)
+            {
+                await followThrough.CompleteAsync(handoff);
+            }
         }
         catch (Exception exception)
         {
@@ -573,10 +592,12 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
     partial void OnIsSavingChanged(bool value)
     {
         OnPropertyChanged(nameof(CanSaveSettings));
+        OnPropertyChanged(nameof(SaveButtonText));
+        OnPropertyChanged(nameof(SaveStatusText));
         SaveSettingsCommand.NotifyCanExecuteChanged();
     }
 
-    private void ApplyLogLevel(string logLevelCode)
+    internal void ApplyLogLevel(string logLevelCode)
     {
         try
         {

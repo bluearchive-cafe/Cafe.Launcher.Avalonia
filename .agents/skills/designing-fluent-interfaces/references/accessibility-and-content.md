@@ -49,6 +49,12 @@ Do not assume authored color, gradient, shadow, Acrylic, or Mica will survive hi
 
 - Visible icons can be smaller than interactive hit targets.
 - Ensure touch targets remain comfortably usable; Fluent 2 calls out ~44×44 for iOS/Web and 48×48 for Android.
+- Distinguish this Fluent usability target from web conformance thresholds. WCAG 2.2
+  SC 2.5.8 (AA) uses 24×24 CSS px or its spacing/equivalent/inline/user-agent/essential
+  exceptions. SC 2.5.5 (AAA) uses 44×44 CSS px with its own exceptions. A 32×32 CSS px
+  target can satisfy the AA size criterion while still falling short of Fluent's
+  touch-oriented recommendation; neither fact establishes whole-page conformance.
+  Native iOS points and Android dp follow their platform units, not CSS pixels.
 - Hover-only affordances need touch and keyboard equivalents.
 - Do not require precision pointer placement for essential actions.
 
@@ -101,3 +107,15 @@ Avoid generic titles such as “Error” when a more specific statement is possi
 - Body copy adds context; do not restate the title.
 - Buttons respond directly to the title/task.
 - Keep temporary feedback short enough to scan before it disappears.
+
+## Standards and pattern references
+
+Use the normative [WCAG 2.2 standard](https://www.w3.org/TR/WCAG22/) for web
+conformance. Its informative explanations cover [text contrast](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html),
+[non-text contrast](https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html),
+[visible focus](https://www.w3.org/WAI/WCAG22/Understanding/focus-visible.html),
+[AA target size](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html),
+and [AAA target size](https://www.w3.org/WAI/WCAG22/Understanding/target-size-enhanced.html).
+For custom web widgets, consult the informative [WAI-ARIA APG patterns](https://www.w3.org/WAI/ARIA/apg/patterns/),
+including [modal dialog focus behavior](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/).
+Apply native accessibility APIs on native platforms; ARIA is a web implementation mechanism.

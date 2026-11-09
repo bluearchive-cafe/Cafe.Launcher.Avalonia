@@ -163,7 +163,7 @@ internal sealed class FileDownloadService : IFileDownloadService
                     }
 
                     await output.FlushAsync(cancellationToken).ConfigureAwait(false);
-                    crc64 = await crc64Service.ComputeFileAsync(targetTempPath, null, cancellationToken).ConfigureAwait(false);
+                    crc64 = await crc64Service.ComputeFileAsync(targetTempPath, null, control.ReportVerificationProgress, cancellationToken).ConfigureAwait(false);
                 }
                 finally
                 {

@@ -52,6 +52,7 @@ public static class LauncherPresentationServiceRegistrations
         services.AddSingleton<SystemCultureSnapshot>();
         services.AddSingleton<LocalizationService>();
         services.AddSingleton<ToastService>();
+        services.AddSingleton<PresentationEnvironment>();
 
         // Reuse the pre-DI logger when provided so there is a single Serilog
         // pipeline for the entire process (crash handling + application logging).
@@ -109,7 +110,8 @@ public static class LauncherPresentationServiceRegistrations
             sp.GetRequiredService<SettingsEditor>(),
             sp.GetRequiredService<ThemeApplier>(),
             sp.GetRequiredService<ILauncherDiagnostics>(),
-            showHiddenSettings));
+            showHiddenSettings,
+            sp.GetRequiredService<SettingsOptionsViewModel>()));
         // 会话看护订阅进程跟踪器的退出事件：登记在跟踪器之后，容器逆序释放时看护先于
         // 跟踪器析构，退订不会落在已释放的订阅源上。
         services.AddSingleton<IGameSessionMonitor, GameSessionMonitor>();
@@ -125,6 +127,8 @@ public static class LauncherPresentationServiceRegistrations
             sp.GetRequiredService<GameUninstallService>()));
 
         services.AddSingleton<IErrorHandlingService, ErrorHandlingService>();
+        // 更新结果的呈现只有这一个实现：手动检查与启动检查都用它，差异只由 trigger 决定。
+        services.AddSingleton<ILauncherUpdatePresenter, LauncherUpdatePresenter>();
 
         // ── IDisposable services ─────────────────────────────────────────
         // The container disposes created services in reverse order. This keeps
@@ -152,7 +156,13 @@ public static class LauncherPresentationServiceRegistrations
         services.AddSingleton<ShellViewModel>();
         services.AddSingleton<BackgroundViewModel>();
         services.AddSingleton<RemoteContentViewModel>();
-        services.AddSingleton<DialogsViewModel>();
+        services.AddSingleton(sp => new DialogsViewModel(
+            sp.GetRequiredService<LauncherProductProfile>(),
+            sp.GetRequiredService<LocalizationService>(),
+            sp.GetRequiredService<INoticeStateStore>(),
+            sp.GetRequiredService<SetupWizardViewModel>(),
+            sp.GetRequiredService<ILauncherDiagnostics>(),
+            sp.GetRequiredService<PresentationEnvironment>().InvokeOnUiAsync));
         services.AddSingleton(sp => new GameOperationsViewModel(
             sp.GetRequiredService<IGameOperationExecutor>(),
             sp.GetRequiredService<IGameShortcutService>(),
@@ -162,12 +172,28 @@ public static class LauncherPresentationServiceRegistrations
             sp.GetRequiredService<ILauncherDiagnostics>(),
             sp.GetRequiredService<ShellViewModel>(),
             sp.GetRequiredService<DialogsViewModel>(),
-            sp.GetRequiredService<IErrorHandlingService>()));
+            sp.GetRequiredService<IErrorHandlingService>(),
+            sp.GetRequiredService<PresentationEnvironment>().DelayBeforeWindowActionAsync));
         services.AddSingleton<DebugViewModel>();
         services.AddSingleton<IGameOperationActivity>(sp =>
             sp.GetRequiredService<GameOperationsViewModel>());
-        services.AddSingleton<ToastHostViewModel>();
-        services.AddSingleton<WindowChromeViewModel>();
+        services.AddSingleton(sp => new ToastHostViewModel(
+            sp.GetRequiredService<ToastService>(),
+            sp.GetRequiredService<LocalizationService>(),
+            sp.GetRequiredService<ILauncherDiagnostics>(),
+            sp.GetRequiredService<PresentationEnvironment>().InvokeOnUiAsync,
+            sp.GetRequiredService<PresentationEnvironment>().DelayAsync));
+        services.AddSingleton(sp => new WindowChromeViewModel(
+            sp.GetRequiredService<LauncherProductProfile>(),
+            sp.GetRequiredService<YostarGameProfile>(),
+            sp.GetRequiredService<LauncherDataRoot>(),
+            sp.GetRequiredService<SettingsViewModel>(),
+            sp.GetRequiredService<RemoteContentViewModel>(),
+            sp.GetRequiredService<DialogsViewModel>(),
+            sp.GetRequiredService<IGameOperationActivity>(),
+            sp.GetRequiredService<DebugViewModel>(),
+            sp.GetRequiredService<PresentationEnvironment>().OpenExternalUrl,
+            sp.GetRequiredService<PresentationEnvironment>().OpenDirectory));
         services.AddSingleton<ModalHostViewModel>();
         services.AddSingleton<ShellPresentationFamily>();
         services.AddSingleton<ShellLifecycle>();

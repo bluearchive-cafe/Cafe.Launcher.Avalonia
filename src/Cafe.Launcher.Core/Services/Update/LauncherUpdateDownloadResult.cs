@@ -9,8 +9,14 @@ public enum LauncherUpdateDownloadStatus
     /// <summary>The package was transferred but its SHA-256 did not match the manifest.</summary>
     ChecksumMismatch,
 
-    /// <summary>No usable answer was produced (connection failure, timeout, rejected URL).</summary>
+    /// <summary>No usable answer was produced (connection failure, timeout).</summary>
     NetworkFailure,
+
+    /// <summary>
+    /// The target was refused before dialing because the OS resolver answered with a
+    /// local or private address (a hosts entry or DNS hijack pointing at 127.0.0.1).
+    /// </summary>
+    UrlRejected,
 
     /// <summary>The destination could not be written.</summary>
     IoFailure,

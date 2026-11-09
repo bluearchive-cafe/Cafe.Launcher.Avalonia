@@ -1,3 +1,5 @@
+using Cafe.Launcher.UI.Constants;
+using Cafe.Launcher.UI.Resources;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -61,7 +63,7 @@ internal static class DesignTokenGrouping
     /// </summary>
     public static IReadOnlyList<DesignTokenGroup> BuildGroups(
         IEnumerable<(string Key, object? Value)> pairs,
-        Func<string, string> localize)
+        Func<LocalizationKeys, string> localize)
     {
         var grouped = pairs
             .GroupBy(pair => FamilyForKey(pair.Key), StringComparer.Ordinal)
@@ -83,8 +85,8 @@ internal static class DesignTokenGrouping
             .Select(entry => new DesignTokenGroup
             {
                 Family = entry.Key,
-                DisplayName = localize($"designGroup{entry.Key}"),
-                ResxKey = $"designGroup{entry.Key}",
+                DisplayName = localize(FamilyResourceKey(entry.Key)),
+                ResxKey = LauncherResourceCatalog.Name(FamilyResourceKey(entry.Key)),
                 Order = FamilyIndex(entry.Key),
                 Items = entry.Value
             })
@@ -101,6 +103,24 @@ internal static class DesignTokenGrouping
         TimeSpan duration => $"{duration.TotalMilliseconds:0} ms",
         double number => number.ToString(CultureInfo.InvariantCulture),
         _ => value?.ToString() ?? "—"
+    };
+
+    private static LocalizationKeys FamilyResourceKey(string family) => family switch
+    {
+        "Color" => LocalizationKeys.DesignGroupColor,
+        "Text" => LocalizationKeys.DesignGroupText,
+        "Spacing" => LocalizationKeys.DesignGroupSpacing,
+        "Radius" => LocalizationKeys.DesignGroupRadius,
+        "Typography" => LocalizationKeys.DesignGroupTypography,
+        "Icon" => LocalizationKeys.DesignGroupIcon,
+        "Control" => LocalizationKeys.DesignGroupControl,
+        "Layout" => LocalizationKeys.DesignGroupLayout,
+        "Motion" => LocalizationKeys.DesignGroupMotion,
+        "Elevation" => LocalizationKeys.DesignGroupElevation,
+        "StateLayer" => LocalizationKeys.DesignGroupStateLayer,
+        "Component" => LocalizationKeys.DesignGroupComponent,
+        "Border" => LocalizationKeys.DesignGroupBorder,
+        _ => LocalizationKeys.DesignGroupOther
     };
 
     private static int FamilyIndex(string family)

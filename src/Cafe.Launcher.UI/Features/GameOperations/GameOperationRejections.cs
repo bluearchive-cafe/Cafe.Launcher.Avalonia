@@ -1,4 +1,4 @@
-﻿using Cafe.Launcher.UI.Constants;
+using Cafe.Launcher.UI.Constants;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
 
@@ -8,7 +8,7 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
 /// 「当前状态不允许该操作」的呈现。
 /// </summary>
 /// <remarks>
-/// <para>策略判定本身仍在 <see cref="GameOperationPolicy.Decide"/>，每个调用点也仍要自己表态
+/// <para>策略判定本身仍在 <see cref="GameOperationPolicy.Decide"/>，准入模块集中调用策略，旅程按类型化结果表态
 /// （ADR-027：布尔判定被刻意关在公共面之外，因为「被拒绝意味着什么」随调用点而变）。这里只统一
 /// 表态<b>之后怎么写出来</b>——同一条文案与同一个警告级别此前在旅程、展示 VM 与两个服务里各写
 /// 一遍。</para>

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Cafe.Launcher.UI.Models;
@@ -48,8 +49,25 @@ internal sealed class ThemeOption : SelectableOption
 {
 }
 
+/// <summary>Theme-color source option whose dot mirrors the color that source currently resolves to.</summary>
+internal sealed class ThemeColorOption : SelectableOption
+{
+    private IBrush previewBrush = Brushes.Transparent;
+
+    public IBrush PreviewBrush
+    {
+        get => previewBrush;
+        set => SetProperty(ref previewBrush, value);
+    }
+}
+
 internal sealed class GameOperationProgress
 {
+    public int ProcessedFileCount { get; set; }
+    public int TotalFileCount { get; set; }
+    public long ActivitySequence { get; set; }
+    public bool IsCheckingDownload { get; set; }
+    public IReadOnlyList<GameOperationFileProgress> ActiveFiles { get; set; } = [];
     /// <summary>卸载已处理的文件、链接与目录项数；失败条目也计为已处理。</summary>
     public int ProcessedEntryCount { get; set; }
 
@@ -91,6 +109,13 @@ internal sealed class GameOperationProgress
     public bool CanPause { get; set; }
 
     public bool IsPaused { get; set; }
+}
+
+/// <summary>Immutable, relative-path snapshot of one active transfer or content check.</summary>
+internal sealed record GameOperationFileProgress(string Path, long ProcessedBytes, long TotalBytes, bool IsVerifying)
+{
+    public int Percent => TotalBytes > 0 ? (int)Math.Clamp(ProcessedBytes * 100d / TotalBytes, 0, 100) : 0;
+    public string SizeText => $"{Cafe.Launcher.Core.Helpers.FileSizeFormatter.Format(ProcessedBytes)} / {Cafe.Launcher.Core.Helpers.FileSizeFormatter.Format(TotalBytes)}";
 }
 
 internal sealed class GameOperationResult

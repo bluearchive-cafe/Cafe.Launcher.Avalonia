@@ -1,3 +1,4 @@
+using Cafe.Launcher.UI.Constants;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Resources;
@@ -7,35 +8,29 @@ using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Testing;
 
 namespace Cafe.Launcher.Tests;
 
 [Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class LocalizationServiceTests
 {
-    static LocalizationServiceTests()
-    {
-        TestLocalizationHelper.Initialize();
-    }
-
     [Fact]
     public void T_WhenCurrentLanguageKeyIsMissing_DoesNotFallbackToEnglish()
     {
-        LocalizationService.InitializeForTesting(new Dictionary<string, Dictionary<string, string>>
-        {
-            [LauncherLanguages.English] = new(StringComparer.Ordinal)
+        var service = new LocalizationService(new LocalizationTestSource(
+            new Dictionary<string, Dictionary<string, string>>
             {
-                ["onlyEnglish"] = "English only"
-            },
-            [LauncherLanguages.Japanese] = new(StringComparer.Ordinal)
-        });
+                [LauncherLanguages.English] = new(StringComparer.Ordinal)
+                {
+                    ["onlyEnglish"] = "English only"
+                },
+                [LauncherLanguages.Japanese] = new(StringComparer.Ordinal)
+            }));
 
-        var service = new LocalizationService();
         service.SetLanguage(LauncherLanguages.Japanese);
 
-        Assert.Equal("Localization unavailable.", service.T("onlyEnglish"));
-
-        TestLocalizationHelper.Initialize();
+        Assert.Equal("Localization unavailable.", service.Lookup("onlyEnglish"));
     }
 
     [Fact]
@@ -51,7 +46,6 @@ public sealed class LocalizationServiceTests
             CultureInfo.CurrentUICulture = new CultureInfo("zh-HK");
             CultureInfo.DefaultThreadCurrentCulture = CultureInfo.CurrentCulture;
             CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.CurrentUICulture;
-            TestLocalizationHelper.Initialize();
 
             var service = new LocalizationService();
             service.SetLanguage(LauncherLanguages.Auto);
@@ -59,7 +53,7 @@ public sealed class LocalizationServiceTests
             Assert.Equal(
                 Cafe.Launcher.UI.Resources.LauncherStrings.ResourceManager.GetString(
                     "languageAuto", CultureInfo.CurrentUICulture),
-                service.T("languageAuto"));
+                service.T(LocalizationKeys.LanguageAuto));
         }
         finally
         {
@@ -67,7 +61,6 @@ public sealed class LocalizationServiceTests
             CultureInfo.CurrentUICulture = savedUiCulture;
             CultureInfo.DefaultThreadCurrentCulture = savedDefaultCulture;
             CultureInfo.DefaultThreadCurrentUICulture = savedDefaultUiCulture;
-            TestLocalizationHelper.Initialize();
         }
     }
 
@@ -97,8 +90,8 @@ public sealed class LocalizationServiceTests
         var service = new LocalizationService();
         service.SetLanguage(language);
 
-        Assert.Equal(expectedOpenText, service.T("trayOpenLauncher"));
-        Assert.Equal(expectedExitText, service.T("trayExitLauncher"));
+        Assert.Equal(expectedOpenText, service.T(LocalizationKeys.TrayOpenLauncher));
+        Assert.Equal(expectedExitText, service.T(LocalizationKeys.TrayExitLauncher));
     }
 
     [Theory]
@@ -115,9 +108,9 @@ public sealed class LocalizationServiceTests
         var service = new LocalizationService();
         service.SetLanguage(language);
 
-        Assert.Equal(expectedRepositoryText, service.T("gitHubRepository"));
-        Assert.Equal(expectedCheckUpdatesText, service.T("checkUpdates"));
-        Assert.Equal(expectedPrivacyPolicyText, service.T("privacyPolicy"));
+        Assert.Equal(expectedRepositoryText, service.T(LocalizationKeys.GitHubRepository));
+        Assert.Equal(expectedCheckUpdatesText, service.T(LocalizationKeys.CheckUpdates));
+        Assert.Equal(expectedPrivacyPolicyText, service.T(LocalizationKeys.PrivacyPolicy));
     }
 
     [Theory]
@@ -140,7 +133,7 @@ public sealed class LocalizationServiceTests
         var service = new LocalizationService();
         service.SetLanguage(language);
 
-        Assert.Equal(expectedCopyrightText, service.T("aboutCopyrightText"));
+        Assert.Equal(expectedCopyrightText, service.T(LocalizationKeys.AboutCopyrightText));
     }
 
     [Theory]
@@ -168,8 +161,8 @@ public sealed class LocalizationServiceTests
         var service = new LocalizationService();
         service.SetLanguage(language);
 
-        Assert.Equal(expectedArtworkLinkText, service.T("defaultBackgroundArtwork"));
-        Assert.Equal(expectedCopyrightText, service.T("defaultBackgroundCopyrightText"));
+        Assert.Equal(expectedArtworkLinkText, service.T(LocalizationKeys.DefaultBackgroundArtwork));
+        Assert.Equal(expectedCopyrightText, service.T(LocalizationKeys.DefaultBackgroundCopyrightText));
     }
 
     [Theory]
@@ -182,43 +175,30 @@ public sealed class LocalizationServiceTests
         var service = new LocalizationService();
         service.SetLanguage(language);
 
-        Assert.NotEqual("diskSpaceCheck", service.F("diskSpaceCheck", "10B", "20B"));
-        Assert.NotEqual("diskSpaceInsufficientDetail", service.F("diskSpaceInsufficientDetail", "10B", "--"));
-        Assert.NotEqual("verificationRetry", service.F("verificationRetry", 2, 1, 3));
-        Assert.NotEqual("verificationFailed", service.F("verificationFailed", 2));
+        Assert.NotEqual("diskSpaceCheck", service.F(LocalizationKeys.DiskSpaceCheck, "10B", "20B"));
+        Assert.NotEqual("diskSpaceInsufficientDetail", service.F(LocalizationKeys.DiskSpaceInsufficientDetail, "10B", "--"));
+        Assert.NotEqual("verificationRetry", service.F(LocalizationKeys.VerificationRetry, 2, 1, 3));
+        Assert.NotEqual("verificationFailed", service.F(LocalizationKeys.VerificationFailed, 2));
         using var strings = new LocalizedTextCatalog(service);
-        Assert.Equal(service.T("diskSpaceCheck"), strings["diskSpaceCheck"]);
-        Assert.Equal(service.T("verificationFailed"), strings["verificationFailed"]);
+        Assert.Equal(service.T(LocalizationKeys.DiskSpaceCheck), strings["diskSpaceCheck"]);
+        Assert.Equal(service.T(LocalizationKeys.VerificationFailed), strings["verificationFailed"]);
     }
 
     [Theory]
-    [InlineData(
-        LauncherLanguages.English,
-        "Log Files",
-        "View, export, or open the directory containing logs")]
-    [InlineData(
-        LauncherLanguages.SimplifiedChinese,
-        "日志文件",
-        "查看、导出或打开日志所在目录")]
-    [InlineData(
-        LauncherLanguages.TraditionalChinese,
-        "日誌檔案",
-        "查看、匯出或開啟日誌所在目錄")]
-    [InlineData(
-        LauncherLanguages.Japanese,
-        "ログファイル",
-        "ログを表示、エクスポート、または保存先フォルダーを開く")]
-    public void LocalizedTextCatalog_WhenLogFileKeysRequested_MapsLocalizedValues(
-        string language,
-        string expectedTitle,
-        string expectedDescription)
+    [InlineData(LauncherLanguages.English)]
+    [InlineData(LauncherLanguages.SimplifiedChinese)]
+    [InlineData(LauncherLanguages.TraditionalChinese)]
+    [InlineData(LauncherLanguages.Japanese)]
+    public void LocalizedTextCatalog_WhenLogFileKeysRequested_MapsLocalizedValues(string language)
     {
         var service = new LocalizationService();
         service.SetLanguage(language);
         using var strings = new LocalizedTextCatalog(service);
+        var suffix = language == LauncherLanguages.English ? "" : "." + language;
+        var expected = TestRepository.ReadResx(Path.Combine(TestRepository.ResourcesPath, $"LauncherStrings{suffix}.resx"));
 
-        Assert.Equal(expectedTitle, strings["logFiles"]);
-        Assert.Equal(expectedDescription, strings["logFilesDescription"]);
+        foreach (var key in new[] { "logFiles", "logFilesDescription", "settingsDataDirectory", "settingsDataDirectoryDescription", "settingsGroupDataRecovery", "settingsSaving" })
+            Assert.Equal(expected[key], strings[key]);
     }
 
     [Theory]
@@ -232,11 +212,11 @@ public sealed class LocalizationServiceTests
         service.SetLanguage(language);
         using var strings = new LocalizedTextCatalog(service);
 
-        Assert.Equal(service.T("setupWizardGamePathAvailable"), strings["setupWizardGamePathAvailable"]);
-        Assert.Equal(service.T("setupWizardGamePathChecking"), strings["setupWizardGamePathChecking"]);
-        Assert.Equal(service.T("setupWizardGamePathCorrupted"), strings["setupWizardGamePathCorrupted"]);
-        Assert.Equal(service.T("setupWizardGamePathInaccessible"), strings["setupWizardGamePathInaccessible"]);
-        Assert.Equal(service.T("setupWizardGamePathInstalled"), strings["setupWizardGamePathInstalled"]);
+        Assert.Equal(service.T(LocalizationKeys.SetupWizardGamePathAvailable), strings["setupWizardGamePathAvailable"]);
+        Assert.Equal(service.T(LocalizationKeys.SetupWizardGamePathChecking), strings["setupWizardGamePathChecking"]);
+        Assert.Equal(service.T(LocalizationKeys.SetupWizardGamePathCorrupted), strings["setupWizardGamePathCorrupted"]);
+        Assert.Equal(service.T(LocalizationKeys.SetupWizardGamePathInaccessible), strings["setupWizardGamePathInaccessible"]);
+        Assert.Equal(service.T(LocalizationKeys.SetupWizardGamePathInstalled), strings["setupWizardGamePathInstalled"]);
     }
 
     [Fact]
@@ -251,11 +231,11 @@ public sealed class LocalizationServiceTests
         service.SetLanguage(LauncherLanguages.SimplifiedChinese);
 
         Assert.True(indexerChanged);
-        Assert.Equal(service.T("setupWizardGamePathAvailable"), strings["setupWizardGamePathAvailable"]);
-        Assert.Equal(service.T("setupWizardGamePathChecking"), strings["setupWizardGamePathChecking"]);
-        Assert.Equal(service.T("setupWizardGamePathCorrupted"), strings["setupWizardGamePathCorrupted"]);
-        Assert.Equal(service.T("setupWizardGamePathInaccessible"), strings["setupWizardGamePathInaccessible"]);
-        Assert.Equal(service.T("setupWizardGamePathInstalled"), strings["setupWizardGamePathInstalled"]);
+        Assert.Equal(service.T(LocalizationKeys.SetupWizardGamePathAvailable), strings["setupWizardGamePathAvailable"]);
+        Assert.Equal(service.T(LocalizationKeys.SetupWizardGamePathChecking), strings["setupWizardGamePathChecking"]);
+        Assert.Equal(service.T(LocalizationKeys.SetupWizardGamePathCorrupted), strings["setupWizardGamePathCorrupted"]);
+        Assert.Equal(service.T(LocalizationKeys.SetupWizardGamePathInaccessible), strings["setupWizardGamePathInaccessible"]);
+        Assert.Equal(service.T(LocalizationKeys.SetupWizardGamePathInstalled), strings["setupWizardGamePathInstalled"]);
     }
 
     [Fact]
@@ -324,9 +304,9 @@ public sealed class LocalizationServiceTests
         var service = new LocalizationService();
         service.SetLanguage(language);
 
-        Assert.Equal(expectedManifest, service.T("launchCheckRemoteManifest"));
-        Assert.Equal(expectedDownloadSource, service.T("downloadSource"));
-        Assert.Equal(expectedResourcePanel, service.T("resourcePanel"));
+        Assert.Equal(expectedManifest, service.T(LocalizationKeys.LaunchCheckRemoteManifest));
+        Assert.Equal(expectedDownloadSource, service.T(LocalizationKeys.DownloadSource));
+        Assert.Equal(expectedResourcePanel, service.T(LocalizationKeys.ResourcePanel));
     }
 
     [Fact]
@@ -350,9 +330,9 @@ public sealed class LocalizationServiceTests
         var values = TestLocalizationHelper.ReadResx(Path.Combine(
             TestLocalizationHelper.FindProjectRoot(), "Resources", "LauncherStrings.zh-Hans.resx"));
 
-        Assert.Equal(values["resourcePanelLocalizedVersion"], service.T("resourcePanelLocalizedVersion"));
-        Assert.Equal(values["resourcePanelMainVoice"], service.T("resourcePanelMainVoice"));
-        Assert.Equal(values["resourcePanelMedia"], service.T("resourcePanelMedia"));
+        Assert.Equal(values["resourcePanelLocalizedVersion"], service.T(LocalizationKeys.ResourcePanelLocalizedVersion));
+        Assert.Equal(values["resourcePanelMainVoice"], service.T(LocalizationKeys.ResourcePanelMainVoice));
+        Assert.Equal(values["resourcePanelMedia"], service.T(LocalizationKeys.ResourcePanelMedia));
     }
 
     [Fact]
@@ -361,7 +341,7 @@ public sealed class LocalizationServiceTests
         var service = new LocalizationService();
         service.SetLanguage(LauncherLanguages.English);
 
-        var value = service.T("nonexistentLocalizationKey");
+        var value = service.Lookup("nonexistentLocalizationKey");
 
         Assert.Equal("Localization unavailable.", value);
     }
@@ -373,7 +353,7 @@ public sealed class LocalizationServiceTests
         LocalizationFailureEventArgs? failure = null;
         service.LocalizationFailure += (_, eventArgs) => failure = eventArgs;
 
-        _ = service.T("nonexistentLocalizationKey");
+        _ = service.Lookup("nonexistentLocalizationKey");
 
         Assert.NotNull(failure);
         Assert.IsType<MissingManifestResourceException>(failure!.Exception);
@@ -460,8 +440,8 @@ public sealed class LocalizationServiceTests
         var service = new LocalizationService();
         service.SetLanguage(language);
 
-        Assert.Equal(expectedRepairText, service.F("repairFilesNeeded", 3, "12 MB"));
-        Assert.Equal(expectedEstimatedText, service.F("estimatedTimeRemaining", "1 minute"));
+        Assert.Equal(expectedRepairText, service.F(LocalizationKeys.RepairFilesNeeded, 3, "12 MB"));
+        Assert.Equal(expectedEstimatedText, service.F(LocalizationKeys.EstimatedTimeRemaining, "1 minute"));
     }
 
     [Fact]
@@ -470,27 +450,22 @@ public sealed class LocalizationServiceTests
         // 生产路径回归：启动序列可能在非 UI 线程调用 SetLanguage。T() 必须按
         // CurrentLanguage 解析，而不是调用线程的 CurrentUICulture（否则 XAML 目录
         // 绑定会按系统文化回退，导致界面语言混杂、法务信息等按错误语言显示）。
-        var testResourcesField = typeof(LocalizationService)
-            .GetField("testResources", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
-        var savedTestResources = testResourcesField.GetValue(null);
         var savedUiCulture = CultureInfo.CurrentUICulture;
         var savedDefaultUiCulture = CultureInfo.DefaultThreadCurrentUICulture;
         try
         {
-            testResourcesField.SetValue(null, null);
             CultureInfo.CurrentUICulture = new CultureInfo("zh-CN");
             CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.CurrentUICulture;
 
             var service = new LocalizationService();
             await Task.Run(() => service.SetLanguage(LauncherLanguages.Japanese));
 
-            Assert.Equal("設定", service.T("settings"));
+            Assert.Equal("設定", service.T(LocalizationKeys.Settings));
         }
         finally
         {
             CultureInfo.CurrentUICulture = savedUiCulture;
             CultureInfo.DefaultThreadCurrentUICulture = savedDefaultUiCulture;
-            testResourcesField.SetValue(null, savedTestResources);
         }
     }
 

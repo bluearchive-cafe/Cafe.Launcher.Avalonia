@@ -1,0 +1,1343 @@
+<!doctype html>
+<html lang="zh-Hans" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cafe Launcher — 设置·外观 M3 语义样张</title>
+  <style>
+    /* =====================================================================
+       设置·外观页 M3 语义样张（一次性原型，不属于生产架构）
+       目的：验证外观页在高密度内容下的组件语义——
+             小枚举 → 分段按钮；长/大枚举 → 暴露式菜单；
+             背景预览、色板、颜色触发器、高级配色折叠区的行内组织。
+       令牌：Launcher.* 于 App.axaml 的声明值；accent 用代表性 BrandBlue 值，
+             生产运行时由 ApplyScheme 派生（本页取「从壁纸获取」且落回同一蓝）。
+       ===================================================================== */
+    :root {
+      color-scheme: light;
+      --surface: #FEF7FF;                    /* Launcher.Color.Surface（导航列） */
+      --dialog-bg: #FFFFFF;                  /* Launcher.Color.Dialog.Background */
+      --card-bg: #FAFCFF;
+      --card-border: #D6E2EE;                /* Launcher.Color.Card.Border */
+      --hairline: #D6E2EE;
+      --text-primary: #232A31;
+      --text-body: #3F4954;
+      --text-secondary: #646D79;
+      --secondary-container: #E8DEF8;        /* Launcher.Color.SecondaryContainer（占位值） */
+      --on-secondary-container: #1D192B;
+      --primary: #3D6BC6;                    /* 代表性 scheme Primary（tone 40） */
+      --primary-hover: #3159A8;
+      --primary-soft: rgba(61, 107, 198, .10); /* Launcher.Color.Primary.Soft */
+      --on-primary: #FFFFFF;
+      --field-bg: #F9FAFC;
+      --field-border: #8290A5;
+      --button-secondary-bg: #EDF0F5;
+      --button-secondary-hover: #DDE0E5;
+      --button-secondary-pressed: #CDD0D6;
+      --button-border: #C8D2DE;
+      --flat-hover: #EEF6FF;
+      --flat-pressed: #DCEFFF;
+      --focus-ring: rgba(61, 107, 198, .6);
+      --outline: #79747E;
+      --dialog-close-hover: #EDF2F7;
+      --shadow-surface: 0 16px 40px rgba(15, 18, 34, .20), 0 2px 6px rgba(15, 18, 34, .08);
+      --shadow-menu: 0 8px 24px rgba(15, 18, 34, .16);
+      --font-stack: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+      --fs-caption: 13px;
+      --fs-body: 14px;
+      --fs-title: 18px;
+      --fs-label: 12px;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --height-control: 36px;
+      --height-field: 40px;
+      --action-width: 288px;
+      --motion-fast: 167ms cubic-bezier(.2, .8, .2, 1);
+    }
+
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --surface: #1B2029;
+      --dialog-bg: #161C26;
+      --card-bg: #202733;
+      --card-border: #344150;
+      --hairline: #2C3844;
+      --text-primary: #E8EEF6;
+      --text-body: #C8D2DF;
+      --text-secondary: #A8B3C2;
+      --secondary-container: #4A4458;
+      --on-secondary-container: #E8DEF8;
+      --primary: #8CB4F0;
+      --primary-hover: #A7C5F4;
+      --primary-soft: rgba(140, 180, 240, .14);
+      --on-primary: #10182C;
+      --field-bg: #272E3A;
+      --field-border: #7B89A0;
+      --button-secondary-bg: #303744;
+      --button-secondary-hover: #3F4652;
+      --button-secondary-pressed: #4D5460;
+      --button-border: #4A5B73;
+      --flat-hover: #243653;
+      --flat-pressed: #1D426C;
+      --focus-ring: rgba(140, 180, 240, .6);
+      --outline: #938F99;
+      --dialog-close-hover: #2A3547;
+      --shadow-surface: 0 22px 55px rgba(0, 0, 0, .55), 0 12px 32px rgba(0, 0, 0, .35);
+      --shadow-menu: 0 12px 32px rgba(0, 0, 0, .45);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      color: var(--text-primary);
+      background: #171a2d;
+      font: var(--fs-body)/1.45 var(--font-stack);
+    }
+    button { font: inherit; cursor: pointer; }
+    button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+    /* ---- 原型外框（非产品 UI） ---- */
+    .prototype-frame {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 40px;
+      background:
+        linear-gradient(110deg, rgba(17, 20, 39, .86) 0%, rgba(36, 31, 63, .46) 53%, rgba(77, 58, 89, .26) 100%),
+        url("../../src/Cafe.Launcher.UI/Assets/launcher-background.png") center / cover;
+    }
+    .prototype-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      width: min(960px, 100%);
+      margin-bottom: 20px;
+    }
+    .prototype-title {
+      color: #fff;
+      font-size: var(--fs-label);
+      letter-spacing: .5px;
+      opacity: .85;
+    }
+    .theme-toggle { display: flex; gap: 8px; }
+    .theme-toggle button {
+      height: var(--height-control);
+      padding: 0 16px;
+      border: 1px solid rgba(255, 255, 255, .35);
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, .08);
+      color: #fff;
+      transition: background var(--motion-fast);
+    }
+    .theme-toggle button:hover { background: rgba(255, 255, 255, .16); }
+    .theme-toggle button[aria-pressed="true"] {
+      background: rgba(255, 255, 255, .92);
+      border-color: transparent;
+      color: #1a1b22;
+    }
+
+    /* ---- 设置表面（DialogSurface：16 圆角 + 克制阴影 + Dialog.Background） ---- */
+    .settings-surface {
+      position: relative;
+      display: flex;
+      width: min(960px, 100%);
+      height: 860px;                         /* 样张取景：生产表面上限 620 DIP，外观页超出时正文滚动 */
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      background: var(--dialog-bg);
+      box-shadow: var(--shadow-surface);
+      transition: height var(--motion-fast);
+    }
+    .settings-surface.is-tall {
+      height: 1000px;                        /* 仅展开态取景：同屏展示高级配色的三行 */
+    }
+
+    /* ---- 左侧导航：标准抽屉语义（图标 + 标签 + SecondaryContainer 激活） ---- */
+    .settings-nav {
+      width: 216px;                          /* Launcher.Component.Settings.Navigation.Width */
+      flex: none;
+      display: flex;
+      flex-direction: column;
+      background: var(--surface);
+    }
+    .nav-header {
+      min-height: 56px;                      /* Launcher.Component.Dialog.Title.Height */
+      display: flex;
+      align-items: center;
+      padding: 16px 16px 4px;
+      font-size: var(--fs-title);
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .nav-list {
+      list-style: none;
+      margin: 0;
+      padding: 8px 16px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .nav-item {
+      width: 100%;
+      min-height: var(--height-control);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 12px;
+      border: 0;
+      border-radius: var(--radius-md);
+      background: transparent;
+      color: var(--text-body);
+      font-size: var(--fs-body);
+      text-align: left;
+      transition: background var(--motion-fast), color var(--motion-fast);
+    }
+    .nav-item svg { width: 18px; height: 18px; flex: none; }
+    .nav-item:hover { background: var(--flat-hover); color: var(--text-primary); }
+    .nav-item:active { background: var(--flat-pressed); }
+    .nav-item.is-active {
+      background: var(--secondary-container);
+      color: var(--on-secondary-container);
+      font-weight: 600;
+    }
+    .nav-item:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 0; }
+
+    /* ---- 右侧内容：小号 top app bar + 滚动列表 + 固定动作带 ---- */
+    .settings-content {
+      position: relative;
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      background: var(--dialog-bg);
+    }
+    .content-appbar {
+      min-height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 16px 4px;
+    }
+    .content-appbar h1 {
+      margin: 0;
+      font-size: var(--fs-title);
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .icon-button {
+      width: var(--height-control);
+      height: var(--height-control);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 0;
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: var(--text-secondary);
+      transition: background var(--motion-fast), color var(--motion-fast);
+    }
+    .icon-button svg { width: 18px; height: 18px; }
+    .icon-button:hover { background: var(--dialog-close-hover); color: var(--text-primary); }
+    .icon-button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 0; }
+
+    .content-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 16px 16px;
+      scrollbar-gutter: stable;
+    }
+    .content-scroll::-webkit-scrollbar { width: 8px; }
+    .content-scroll::-webkit-scrollbar-thumb {
+      background: var(--button-border);
+      border-radius: 4px;
+    }
+    .save-hint {
+      margin: 0;
+      font-size: var(--fs-caption);
+      color: var(--text-secondary);
+    }
+
+    .settings-group { margin-top: 16px; }
+    .settings-group:first-of-type { margin-top: 12px; }
+    .group-title {
+      margin: 0 0 4px;
+      font-size: var(--fs-body);
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .setting-row {
+      min-height: 52px;                      /* Launcher.Component.Settings.Row.MinHeight */
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .row-copy {
+      min-width: 220px;                      /* Launcher.Component.Settings.Control.MinWidth */
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 8px 0;                        /* Launcher.Component.Settings.Row.Content.Padding */
+    }
+    .row-title {
+      font-size: var(--fs-body);
+      font-weight: 400;                      /* ADR-056：设置行标题普通字重 */
+      color: var(--text-primary);
+    }
+    .row-desc {
+      font-size: var(--fs-caption);
+      color: var(--text-secondary);
+      line-height: 1.45;
+    }
+    .row-hint {
+      font-size: var(--fs-caption);
+      color: var(--text-secondary);
+      line-height: 1.45;
+      display: none;
+    }
+    .row-hint.is-visible { display: block; }
+    .row-action {
+      width: var(--action-width);
+      flex: none;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    .divider {
+      height: 0;
+      border-top: .5px solid var(--hairline); /* 0.5 DIP inset hairline */
+      margin-left: 16px;
+    }
+
+    /* ---- 分段按钮：2–3 个短标签，选中 = Primary.Soft + 勾号 ---- */
+    .segmented {
+      width: var(--action-width);
+      height: var(--height-control);
+      display: flex;
+      border: 1px solid var(--button-border);
+      border-radius: 999px;                   /* Launcher.Radius.Full */
+      overflow: hidden;
+      background: transparent;
+    }
+    .segment {
+      position: relative;
+      flex: 1 1 0;
+      min-width: 0;
+      display: flex;
+    }
+    .segment input {
+      position: absolute;
+      inset: 0;
+      margin: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+    .segment input:focus { outline: none; }
+    .segment-face {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      padding: 0 10px;
+      font-size: var(--fs-caption);
+      font-weight: 600;
+      color: var(--text-body);
+      white-space: nowrap;
+      transition: background var(--motion-fast), color var(--motion-fast);
+    }
+    .segment:hover .segment-face { background: var(--flat-hover); }
+    .segment input:checked + .segment-face {
+      background: var(--primary-soft);
+      color: var(--primary);
+    }
+    .segment input:focus-visible + .segment-face {
+      box-shadow: inset 0 0 0 2px var(--focus-ring);
+    }
+    .segment-divider {
+      width: 1px;
+      flex: none;
+      background: var(--button-border);
+    }
+    .segment-check {
+      width: 14px;
+      height: 14px;
+      flex: none;
+      visibility: hidden;                    /* 预留槽位，选中时不产生位移 */
+    }
+    .segment input:checked + .segment-face .segment-check { visibility: visible; }
+
+    /* ---- 暴露式下拉菜单：长标签或 ≥4 项时使用 ---- */
+    .menu-wrap { position: relative; width: var(--action-width); }
+    .select-trigger {
+      width: 100%;
+      height: var(--height-field);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 0 12px;
+      border: 1px solid var(--field-border);
+      border-radius: var(--radius-sm);
+      background: var(--field-bg);
+      color: var(--text-body);
+      font-size: var(--fs-caption);
+      text-align: left;
+      transition: border-color var(--motion-fast), background var(--motion-fast);
+    }
+    .select-trigger:hover { border-color: var(--text-secondary); }
+    .select-trigger > svg { width: 16px; height: 16px; flex: none; color: var(--text-secondary); }
+    .select-value {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    /* 下方空间不足时向上展开，避免被设置正文的滚动容器裁切。 */
+    .menu {
+      position: absolute;
+      top: calc(100% + 4px);
+      right: 0;
+      z-index: 20;
+      width: 100%;
+      margin: 0;
+      padding: 4px;
+      list-style: none;
+      background: var(--dialog-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-menu);
+      display: none;
+    }
+    .menu.open { display: block; }
+    .menu-up .menu { top: auto; bottom: calc(100% + 4px); }
+    .menu [role="option"] {
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 0 12px;
+      border-radius: var(--radius-sm);
+      color: var(--text-body);
+      font-size: var(--fs-caption);
+      cursor: pointer;
+    }
+    .menu [role="option"]:hover { background: var(--button-secondary-hover); }
+    .menu [role="option"]:focus-visible {
+      outline: 2px solid var(--focus-ring);
+      outline-offset: -2px;
+    }
+    .menu [role="option"].is-selected {
+      background: var(--secondary-container);
+      color: var(--on-secondary-container);
+      font-weight: 600;
+    }
+    .menu-check { width: 16px; height: 16px; visibility: hidden; flex: none; }
+    .menu [role="option"].is-selected .menu-check { visibility: visible; }
+    .option-label { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .menu-dot, .swatch-inline {
+      width: 14px;
+      height: 14px;
+      flex: none;
+      border-radius: 50%;
+      border: 1px solid var(--card-border);
+      background: var(--dot);
+    }
+    .swatch-inline {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+    }
+
+    /* ---- 背景预览（64×44 缩略图 + 来源说明） ---- */
+    .media-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0;                        /* Launcher.Component.Settings.Row.Content.Padding */
+    }
+    .appearance-thumb {
+      width: 64px;                           /* Appearance.Thumbnail.Width */
+      height: 44px;                          /* Appearance.Thumbnail.Height */
+      flex: none;
+      border-radius: var(--radius-sm);
+      border: .5px solid var(--hairline);
+      overflow: hidden;
+      background: var(--field-bg);
+    }
+    .appearance-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .media-copy { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .media-title { font-size: var(--fs-body); font-weight: 600; color: var(--text-primary); }
+    .media-desc { font-size: var(--fs-caption); color: var(--text-secondary); }
+    .media-path {
+      font-size: var(--fs-label);
+      color: var(--text-secondary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* ---- 行内动作（自定义背景：两个文本按钮 + 清除 icon button） ---- */
+    .row-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
+    .flat-action {
+      min-height: 32px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 0 8px;
+      border: 0;
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: var(--primary);
+      font-size: var(--fs-caption);
+      white-space: nowrap;
+      transition: background var(--motion-fast);
+    }
+    .flat-action svg { width: 16px; height: 16px; flex: none; }
+    .flat-action:hover { background: var(--flat-hover); }
+    .flat-action:active { background: var(--flat-pressed); }
+    .flat-action.icon-only { width: 32px; padding: 0; color: var(--text-secondary); }
+    .flat-action.icon-only:hover { color: var(--danger, #B3261E); }
+
+    /* ---- 颜色：色板按钮 / 取色触发器 ---- */
+    .palette { display: flex; align-items: center; gap: 8px; }
+    .swatch-button {
+      width: var(--height-control);          /* 36 DIP 命中区 */
+      height: var(--height-control);
+      display: grid;
+      place-items: center;
+      padding: 0;
+      border: 2px solid transparent;
+      border-radius: var(--radius-sm);
+      background: transparent;
+      transition: border-color var(--motion-fast);
+    }
+    .swatch-button:hover { border-color: var(--primary); }
+    .swatch-button.is-selected { border-color: var(--primary); }
+    .swatch-button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 0; }
+    .swatch {
+      width: 28px;                           /* Launcher.Control.Size.Swatch */
+      height: 28px;
+      display: grid;
+      place-items: center;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--card-border);
+      background: var(--swatch);
+      color: #fff;
+    }
+    .swatch svg { width: 14px; height: 14px; visibility: hidden; }
+    .swatch-button.is-selected .swatch svg { visibility: visible; }
+
+    /* ---- 高级配色折叠区（次要设置降权，不稀释主设置流） ---- */
+    .expander {
+      border-top: .5px solid var(--hairline);
+    }
+    .expander-head {
+      width: 100%;
+      min-height: 52px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0;
+      border: 0;
+      border-radius: var(--radius-sm);
+      background: transparent;
+      text-align: left;
+      transition: background var(--motion-fast);
+    }
+    .expander-head:hover { background: var(--button-secondary-hover); }
+    .expander-head > svg:first-child { width: 18px; height: 18px; flex: none; color: var(--text-secondary); }
+    .expander-copy { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+    .expander-title { font-size: var(--fs-body); font-weight: 600; color: var(--text-primary); }
+    .expander-desc { font-size: var(--fs-caption); color: var(--text-secondary); }
+    .expander-chevron { width: 18px; height: 18px; flex: none; color: var(--text-secondary); transition: transform var(--motion-fast); }
+    .expander.is-open .expander-chevron { transform: rotate(180deg); }
+    .expander-body { display: none; }
+    .expander.is-open .expander-body { display: block; }
+
+    /* ---- 提交式 CheckBox（ADR-056：不用 Switch 暗示已生效） ---- */
+    .checkbox {
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      margin: 0;
+      border: 2px solid var(--outline);
+      border-radius: 2px;
+      background: transparent;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      transition: background var(--motion-fast), border-color var(--motion-fast);
+    }
+    .checkbox:checked {
+      border-color: var(--primary);
+      background: var(--primary);
+    }
+    .checkbox:checked::after {
+      content: "";
+      width: 5px;
+      height: 9px;
+      border: solid var(--on-primary);
+      border-width: 0 2px 2px 0;
+      transform: translateY(-1px) rotate(45deg);
+    }
+    .checkbox:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+    /* ---- 底部动作带（事务式保存保留） ---- */
+    .content-footer {
+      flex: none;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 8px 16px 20px 24px;           /* Launcher.Component.Settings.Footer.Padding */
+      border-top: .5px solid var(--hairline);
+      background: var(--dialog-bg);
+    }
+    .button {
+      min-width: 80px;
+      min-height: 40px;                      /* ADR-050：40 DIP 标准最小高度 */
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 0 20px;
+      border: 0;
+      border-radius: var(--radius-sm);
+      font-size: var(--fs-body);
+      transition: background var(--motion-fast);
+    }
+    .button svg { width: 16px; height: 16px; flex: none; }
+    .button--tonal {
+      background: var(--button-secondary-bg);
+      color: var(--text-primary);
+    }
+    .button--tonal:not(:disabled):hover { background: var(--button-secondary-hover); }
+    .button--tonal:not(:disabled):active { background: var(--button-secondary-pressed); }
+    .button--filled {
+      background: var(--primary);
+      color: var(--on-primary);
+    }
+    .button--filled:not(:disabled):hover { background: var(--primary-hover); }
+    .button:disabled {
+      opacity: .38;                          /* StateLayer.Disabled.Content */
+      cursor: default;
+    }
+
+    /* ---- 保存反馈（样张内近似 Toast） ---- */
+    .toast {
+      position: absolute;
+      right: 16px;
+      bottom: 80px;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      min-height: 40px;
+      padding: 0 14px;
+      border: .5px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      background: var(--dialog-bg);
+      box-shadow: var(--shadow-menu);
+      color: var(--text-primary);
+      font-size: var(--fs-caption);
+    }
+    .toast.show { display: flex; }
+    .toast svg { width: 16px; height: 16px; color: var(--primary); }
+
+    /* ---- 样张说明（非产品 UI） ---- */
+    .prototype-note {
+      width: min(960px, 100%);
+      margin-top: 16px;
+      padding: 16px 20px;
+      border: 1px solid rgba(255, 255, 255, .14);
+      border-radius: var(--radius-md);
+      background: rgba(15, 18, 28, .62);
+      color: #E8EEF6;
+      font-size: var(--fs-caption);
+      line-height: 1.7;
+      backdrop-filter: blur(8px);
+    }
+    .prototype-note strong { color: #fff; font-size: var(--fs-body); }
+    .prototype-note ul { margin: 8px 0 0; padding-left: 18px; }
+    .prototype-note code {
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, .10);
+      font-family: Consolas, "Cascadia Mono", ui-monospace, monospace;
+    }
+
+    /* 桌面样张按最小窗口 1024 DIP 取景；窄视口横向滚动而不压扁设置行。 */
+    body { overflow-x: auto; }
+    .prototype-frame { min-width: 1000px; }
+  </style>
+</head>
+<body>
+  <div class="prototype-frame">
+    <div class="prototype-bar">
+      <span class="prototype-title">Cafe Launcher · 设置 / 外观 · M3 语义样张</span>
+      <div class="theme-toggle">
+        <button type="button" data-theme-btn="light" aria-pressed="true">浅色</button>
+        <button type="button" data-theme-btn="dark" aria-pressed="false">深色</button>
+      </div>
+    </div>
+
+    <div class="settings-surface" role="dialog" aria-modal="true" aria-label="设置">
+      <nav class="settings-nav" aria-label="设置分类">
+        <div class="nav-header">设置</div>
+        <ul class="nav-list">
+          <li>
+            <button type="button" class="nav-item" title="样张仅展示外观页">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 8.95 19.4a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 8.95a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1.03-1.56V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9c.14.6.66 1.03 1.28 1.03H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1.03Z"/></svg>
+              <span>常规</span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="nav-item" title="样张仅展示外观页">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 8h11A4.5 4.5 0 0 1 22 12.5v2A3.5 3.5 0 0 1 18.5 18c-1.2 0-2.3-.6-3-1.6L14.8 15H9.2l-.7 1.4A3.5 3.5 0 0 1 5.5 18 3.5 3.5 0 0 1 2 14.5v-2A4.5 4.5 0 0 1 6.5 8Z"/><path d="M7 11v3M5.5 12.5h3M15.5 12h.01M18 13.5h.01"/></svg>
+              <span>游戏</span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="nav-item" title="样张仅展示外观页">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v11"/><path d="m7 10 5 5 5-5"/><path d="M4 17v3h16v-3"/></svg>
+              <span>下载与网络</span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="nav-item is-active" aria-current="page">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18h1.5a2 2 0 0 0 0-4H13a2 2 0 0 1 0-4h4.5A3.5 3.5 0 0 0 21 9.5 6.5 6.5 0 0 0 14.5 3H12Z"/><circle cx="7.5" cy="10.5" r=".8"/><circle cx="10" cy="7" r=".8"/><circle cx="14" cy="6.5" r=".8"/></svg>
+              <span>外观</span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="nav-item" title="样张仅展示外观页">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h10M18 18h2"/><circle cx="16" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/></svg>
+              <span>高级</span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="nav-item" title="样张仅展示外观页">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/></svg>
+              <span>关于</span>
+            </button>
+          </li>
+        </ul>
+      </nav>
+
+      <section class="settings-content">
+        <header class="content-appbar">
+          <h1>外观</h1>
+          <button type="button" class="icon-button" aria-label="关闭设置" title="关闭">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+          </button>
+        </header>
+
+        <div class="content-scroll">
+          <p class="save-hint">设置选项更改后需保存。</p>
+
+          <section class="settings-group" aria-labelledby="group-theme-motion">
+            <h2 class="group-title" id="group-theme-motion">主题与动效</h2>
+
+            <div class="setting-row">
+              <div class="row-copy">
+                <span class="row-title">外观主题</span>
+              </div>
+              <div class="row-action">
+                <div class="segmented" role="radiogroup" aria-label="外观主题">
+                  <label class="segment">
+                    <input type="radio" name="theme-mode" value="system" checked />
+                    <span class="segment-face">
+                      <svg class="segment-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg>
+                      <span>跟随系统</span>
+                    </span>
+                  </label>
+                  <span class="segment-divider" aria-hidden="true"></span>
+                  <label class="segment">
+                    <input type="radio" name="theme-mode" value="light" />
+                    <span class="segment-face">
+                      <svg class="segment-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg>
+                      <span>浅色</span>
+                    </span>
+                  </label>
+                  <span class="segment-divider" aria-hidden="true"></span>
+                  <label class="segment">
+                    <input type="radio" name="theme-mode" value="dark" />
+                    <span class="segment-face">
+                      <svg class="segment-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg>
+                      <span>深色</span>
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div class="divider" role="separator"></div>
+
+            <div class="setting-row">
+              <div class="row-copy">
+                <span class="row-title">动态效果</span>
+                <span class="row-desc">控制界面动画和轮播图自动播放</span>
+              </div>
+              <div class="row-action">
+                <div class="menu-wrap">
+                  <button type="button" class="select-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="动态效果">
+                    <span class="select-value">跟随系统</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                  </button>
+                  <ul class="menu" role="listbox" aria-label="动态效果">
+                    <li role="option" tabindex="0" data-value="system" class="is-selected" aria-selected="true">跟随系统<svg class="menu-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg></li>
+                    <li role="option" tabindex="0" data-value="full" aria-selected="false">完整动态效果<svg class="menu-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg></li>
+                    <li role="option" tabindex="0" data-value="reduced" aria-selected="false">减少动态效果<svg class="menu-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg></li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="settings-group" aria-labelledby="group-background">
+            <h2 class="group-title" id="group-background">背景</h2>
+
+            <div class="setting-row">
+              <div class="row-copy">
+                <span class="row-title">背景</span>
+                <span class="row-desc">启动器背景来源。</span>
+              </div>
+              <div class="row-action">
+                <div class="segmented" role="radiogroup" aria-label="背景">
+                  <label class="segment">
+                    <input type="radio" name="background-source" value="bundled" />
+                    <span class="segment-face">
+                      <svg class="segment-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg>
+                      <span>内置默认</span>
+                    </span>
+                  </label>
+                  <span class="segment-divider" aria-hidden="true"></span>
+                  <label class="segment">
+                    <input type="radio" name="background-source" value="remote" />
+                    <span class="segment-face">
+                      <svg class="segment-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg>
+                      <span>远程</span>
+                    </span>
+                  </label>
+                  <span class="segment-divider" aria-hidden="true"></span>
+                  <label class="segment">
+                    <input type="radio" name="background-source" value="custom" checked />
+                    <span class="segment-face">
+                      <svg class="segment-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg>
+                      <span>自定义</span>
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div class="divider" role="separator"></div>
+
+            <div class="media-row">
+              <div class="appearance-thumb">
+                <img src="../../src/Cafe.Launcher.UI/Assets/launcher-background.png" alt="当前背景缩略图" />
+              </div>
+              <div class="media-copy">
+                <span class="media-title">当前背景</span>
+                <span class="media-desc">自定义图片 · 1920 × 1080</span>
+                <span class="media-path" title="C:\Users\me\Pictures\launcher-background.png">C:\Users\me\Pictures\launcher-background.png</span>
+              </div>
+            </div>
+
+            <div class="divider" role="separator"></div>
+
+            <div class="setting-row">
+              <div class="row-copy">
+                <span class="row-title">自定义背景</span>
+                <span class="row-desc">选择图片或视频，也可从文件夹随机选择背景。</span>
+              </div>
+              <div class="row-action">
+                <div class="row-actions">
+                  <button type="button" class="flat-action" aria-label="选择图片或视频">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="m21 15-5-5L5 20"/></svg>
+                    <span>选择图片或视频</span>
+                  </button>
+                  <button type="button" class="flat-action" aria-label="选择文件夹">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>
+                    <span>选择文件夹</span>
+                  </button>
+                  <button type="button" class="flat-action icon-only" aria-label="清除背景" title="清除背景">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="divider" role="separator"></div>
+
+            <div class="setting-row">
+              <div class="row-copy">
+                <span class="row-title">壁纸适配方式</span>
+              </div>
+              <div class="row-action">
+                <div class="segmented" role="radiogroup" aria-label="壁纸适配方式">
+                  <label class="segment">
+                    <input type="radio" name="background-fit" value="fill" />
+                    <span class="segment-face">
+                      <svg class="segment-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg>
+                      <span>拉伸填充</span>
+                    </span>
+                  </label>
+                  <span class="segment-divider" aria-hidden="true"></span>
+                  <label class="segment">
+                    <input type="radio" name="background-fit" value="uniform" checked />
+                    <span class="segment-face">
+                      <svg class="segment-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg>
+                      <span>适应</span>
+                    </span>
+                  </label>
+                  <span class="segment-divider" aria-hidden="true"></span>
+                  <label class="segment">
+                    <input type="radio" name="background-fit" value="cover" />
+                    <span class="segment-face">
+                      <svg class="segment-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg>
+                      <span>覆盖</span>
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div class="divider" role="separator"></div>
+
+            <div class="setting-row">
+              <div class="row-copy">
+                <span class="row-title">壁纸背景色</span>
+                <span class="row-desc">使用「适应」模式时，壁纸周围的填充颜色。</span>
+              </div>
+              <div class="row-action">
+                <button type="button" class="select-trigger" aria-label="打开调色板" style="justify-content: center; gap: 8px;">
+                  <span class="swatch-inline" style="--dot: #1C2434; background: #1C2434;"></span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18c1.4 0 2-1 2-2s-.6-2-2-2h-1a2 2 0 0 1 0-4h4.5A3.5 3.5 0 0 0 21 9.5 6.5 6.5 0 0 0 14.5 3H12Z"/><circle cx="8" cy="10" r=".7"/><circle cx="11" cy="7" r=".7"/><circle cx="15" cy="7.5" r=".7"/></svg>
+                  <span class="select-value">打开调色板</span>
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section class="settings-group" aria-labelledby="group-theme-color">
+            <h2 class="group-title" id="group-theme-color">主题配色</h2>
+
+            <div class="setting-row">
+              <div class="row-copy">
+                <span class="row-title">主题色</span>
+                <span class="row-desc">用于按钮、进度、链接和高亮的强调色</span>
+              </div>
+              <div class="row-action">
+                <div class="menu-wrap menu-up">
+                  <button type="button" class="select-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="主题色">
+                    <span class="select-value">
+                      <span class="swatch-inline" style="--dot: #3D6BC6; background: #3D6BC6;"></span>
+                      <span data-selected-label>从壁纸获取</span>
+                    </span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                  </button>
+                  <ul class="menu" role="listbox" aria-label="主题色">
+                    <li role="option" tabindex="0" data-value="default" aria-selected="false">
+                      <span class="option-label"><span class="menu-dot" style="background:#3D6BC6"></span>默认</span>
+                      <svg class="menu-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg>
+                    </li>
+                    <li role="option" tabindex="0" data-value="system" aria-selected="false">
+                      <span class="option-label"><span class="menu-dot" style="background:#0078D4"></span>跟随系统</span>
+                      <svg class="menu-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg>
+                    </li>
+                    <li role="option" tabindex="0" data-value="wallpaper" class="is-selected" aria-selected="true">
+                      <span class="option-label"><span class="menu-dot" style="background:#3D6BC6"></span>从壁纸获取</span>
+                      <svg class="menu-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg>
+                    </li>
+                    <li role="option" tabindex="0" data-value="custom" aria-selected="false">
+                      <span class="option-label"><span class="menu-dot" style="background: conic-gradient(#3D6BC6, #B4557C, #C9862E, #3D6BC6)"></span>自定义</span>
+                      <svg class="menu-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div class="divider" role="separator"></div>
+
+            <div class="setting-row">
+              <div class="row-copy">
+                <span class="row-title">壁纸色板</span>
+                <span class="row-desc">从当前背景图提取主题色并选择使用</span>
+              </div>
+              <div class="row-action">
+                <div class="palette" id="palette" role="radiogroup" aria-label="壁纸色板">
+                  <button type="button" class="swatch-button is-selected" role="radio" aria-checked="true" aria-label="#3D6BC6" title="#3D6BC6">
+                    <span class="swatch" style="background:#3D6BC6">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg>
+                    </span>
+                  </button>
+                  <button type="button" class="swatch-button" role="radio" aria-checked="false" aria-label="#6E5BD8" title="#6E5BD8">
+                    <span class="swatch" style="background:#6E5BD8">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg>
+                    </span>
+                  </button>
+                  <button type="button" class="swatch-button" role="radio" aria-checked="false" aria-label="#B4557C" title="#B4557C">
+                    <span class="swatch" style="background:#B4557C">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg>
+                    </span>
+                  </button>
+                  <button type="button" class="swatch-button" role="radio" aria-checked="false" aria-label="#2E9E8F" title="#2E9E8F">
+                    <span class="swatch" style="background:#2E9E8F">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg>
+                    </span>
+                  </button>
+                  <button type="button" class="swatch-button" role="radio" aria-checked="false" aria-label="#C9862E" title="#C9862E">
+                    <span class="swatch" style="background:#C9862E">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg>
+                    </span>
+                  </button>
+                  <button type="button" class="icon-button" aria-label="刷新壁纸色板" title="刷新壁纸色板" style="width: 32px; height: 32px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2 6"/><path d="M20 4v7h-7"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="expander" id="advanced-colors">
+              <button type="button" class="expander-head" aria-expanded="false" aria-controls="advanced-colors-body">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18c1.4 0 2-1 2-2s-.6-2-2-2h-1a2 2 0 0 1 0-4h4.5A3.5 3.5 0 0 0 21 9.5 6.5 6.5 0 0 0 14.5 3H12Z"/><circle cx="8" cy="10" r=".7"/><circle cx="11" cy="7" r=".7"/><circle cx="15" cy="7.5" r=".7"/></svg>
+                <span class="expander-copy">
+                  <span class="expander-title">高级配色</span>
+                  <span class="expander-desc">取色算法、配色变体与中性色</span>
+                </span>
+                <svg class="expander-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+              </button>
+
+              <div class="expander-body" id="advanced-colors-body">
+                <div class="setting-row">
+                  <div class="row-copy">
+                    <span class="row-title">取色算法</span>
+                    <span class="row-desc">从壁纸提取种子色时使用的算法</span>
+                  </div>
+                  <div class="row-action">
+                    <div class="menu-wrap menu-up">
+                      <button type="button" class="select-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="取色算法">
+                        <span class="select-value">M3 Celebi + Score</span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                      </button>
+                      <ul class="menu" role="listbox" aria-label="取色算法">
+                        <li role="option" tabindex="0" data-value="celebi" class="is-selected" aria-selected="true">M3 Celebi + Score<svg class="menu-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg></li>
+                        <li role="option" tabindex="0" data-value="wu" aria-selected="false">Wu<svg class="menu-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg></li>
+                        <li role="option" tabindex="0" data-value="wsmeans" aria-selected="false">Wsmeans<svg class="menu-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg></li>
+                        <li role="option" tabindex="0" data-value="octree" aria-selected="false">Octree（旧版）<svg class="menu-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg></li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="divider" role="separator"></div>
+
+                <div class="setting-row">
+                  <div class="row-copy">
+                    <span class="row-title">配色变体</span>
+                    <span class="row-desc">生成 M3 配色方案时使用的风格</span>
+                  </div>
+                  <div class="row-action">
+                    <div class="menu-wrap menu-up">
+                      <button type="button" class="select-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="配色变体">
+                        <span class="select-value">TonalSpot</span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                      </button>
+                      <ul class="menu" role="listbox" aria-label="配色变体">
+                        <li role="option" tabindex="0" data-value="tonalspot" class="is-selected" aria-selected="true">TonalSpot<svg class="menu-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg></li>
+                        <li role="option" tabindex="0" data-value="vibrant" aria-selected="false">Vibrant<svg class="menu-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg></li>
+                        <li role="option" tabindex="0" data-value="expressive" aria-selected="false">Expressive<svg class="menu-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg></li>
+                        <li role="option" tabindex="0" data-value="fidelity" aria-selected="false">Fidelity<svg class="menu-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg></li>
+                        <li role="option" tabindex="0" data-value="content" aria-selected="false">Content<svg class="menu-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg></li>
+                        <li role="option" tabindex="0" data-value="monochrome" aria-selected="false">Monochrome<svg class="menu-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg></li>
+                        <li role="option" tabindex="0" data-value="neutral" aria-selected="false">Neutral<svg class="menu-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg></li>
+                        <li role="option" tabindex="0" data-value="rainbow" aria-selected="false">Rainbow<svg class="menu-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg></li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="divider" role="separator"></div>
+
+                <div class="setting-row">
+                  <div class="row-copy">
+                    <span class="row-title">中性色</span>
+                    <span class="row-desc">使用默认中性色，或根据当前主题色生成中性色。</span>
+                    <span class="row-hint" id="neutral-hint">对话框背景、文字和输入框使用主题中性色，颜色和深浅会随主题及配色变体变化。</span>
+                  </div>
+                  <div class="row-action">
+                    <div class="segmented" role="radiogroup" aria-label="中性色">
+                      <label class="segment">
+                        <input type="radio" name="neutral-strategy" value="brand" checked />
+                        <span class="segment-face">
+                          <svg class="segment-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg>
+                          <span>默认</span>
+                        </span>
+                      </label>
+                      <span class="segment-divider" aria-hidden="true"></span>
+                      <label class="segment">
+                        <input type="radio" name="neutral-strategy" value="seed" />
+                        <span class="segment-face">
+                          <svg class="segment-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg>
+                          <span>跟随主题色</span>
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <footer class="content-footer">
+          <button type="button" class="button button--tonal" id="cancel-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6M15 9l-6 6"/></svg>
+            <span>取消</span>
+          </button>
+          <button type="button" class="button button--filled" id="save-btn" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h8V4M8 20v-6h8v6"/></svg>
+            <span>保存</span>
+          </button>
+        </footer>
+
+        <div class="toast" id="toast" role="status" aria-live="polite">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></svg>
+          <span>设置已保存</span>
+        </div>
+      </section>
+    </div>
+
+    <aside class="prototype-note">
+      <strong>样张要点</strong>
+      <ul>
+        <li>小枚举改为<b>分段按钮</b>：外观主题（3）、背景（3）、壁纸适配方式（3）、中性色（2）；选中段用 <code>Primary.Soft</code> 填充并显示勾号。</li>
+        <li>长标签或 ≥4 项的枚举保留<b>暴露式菜单</b>：动态效果（3 个长标签）、主题色（4 项，触发器内嵌色点）、取色算法（4）、配色变体（8）。</li>
+        <li>主题色触发器和选项都带<b>颜色预览</b>，不再是独立的色块 + 下拉框；色板用 28 DIP 色块 + 36 DIP 命中区，选中显示勾号，刷新是 icon button。</li>
+        <li>背景预览保留 <b>64×44 缩略图 + 来源/路径</b>；自定义背景的两个文本动作 + 清除 icon button 在 288 DIP 操作列内换行。</li>
+        <li><b>高级配色</b>默认折叠（点击可展开取色算法 / 配色变体 / 中性色），避免低频项稀释主设置流；中性色选中「跟随主题色」时才显示解释。</li>
+        <li>布尔项仍用<b>提交式 CheckBox</b>；主题色选「自定义」时追加调色板触发器，视频背景时才出现音量滑杆 + 静音（本快照为图片背景，未展示）。所有颜色/色板选择都是草稿，保存后生效。</li>
+        <li>样张取景 960×860（展开态 1000）仅为同屏展示；生产表面上限 620 DIP，外观页超出时正文滚动。菜单在下方空间不足时向上展开。未接入真实设置服务。</li>
+      </ul>
+    </aside>
+  </div>
+
+  <script>
+    const root = document.documentElement;
+
+    const applyTheme = (theme) => {
+      root.dataset.theme = theme;
+      document.querySelectorAll('[data-theme-btn]').forEach((candidate) => {
+        candidate.setAttribute('aria-pressed', String(candidate.dataset.themeBtn === theme));
+      });
+    };
+
+    document.querySelectorAll('[data-theme-btn]').forEach((button) => {
+      button.addEventListener('click', () => applyTheme(button.dataset.themeBtn));
+    });
+
+    const requestedTheme = new URLSearchParams(location.search).get('theme');
+    if (requestedTheme === 'light' || requestedTheme === 'dark') {
+      applyTheme(requestedTheme);
+    }
+
+    const saveButton = document.getElementById('save-btn');
+    const toast = document.getElementById('toast');
+    let dirty = false;
+    let toastTimer;
+
+    const markDirty = () => {
+      if (dirty) return;
+      dirty = true;
+      saveButton.disabled = false;
+    };
+
+    const closeMenus = () => {
+      document.querySelectorAll('.menu.open').forEach((menu) => {
+        menu.classList.remove('open');
+        const trigger = menu.parentElement.querySelector('.select-trigger');
+        if (trigger) trigger.setAttribute('aria-expanded', 'false');
+      });
+    };
+
+    document.querySelectorAll('.menu-wrap').forEach((wrap) => {
+      const trigger = wrap.querySelector('.select-trigger');
+      const menu = wrap.querySelector('.menu');
+
+      trigger.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const willOpen = !menu.classList.contains('open');
+        closeMenus();
+        if (willOpen) {
+          menu.classList.add('open');
+          trigger.setAttribute('aria-expanded', 'true');
+        }
+      });
+
+      const choose = (option) => {
+        wrap.querySelectorAll('[role="option"]').forEach((candidate) => {
+          candidate.classList.remove('is-selected');
+          candidate.setAttribute('aria-selected', 'false');
+        });
+        option.classList.add('is-selected');
+        option.setAttribute('aria-selected', 'true');
+        const label = wrap.querySelector('[data-selected-label]');
+        if (label) {
+          label.textContent = option.querySelector('.option-label')?.textContent.trim() ?? option.textContent.trim();
+        } else {
+          wrap.querySelector('.select-value').textContent = option.textContent.trim();
+        }
+        closeMenus();
+        markDirty();
+      };
+
+      wrap.querySelectorAll('[role="option"]').forEach((option) => {
+        option.addEventListener('click', (event) => {
+          event.stopPropagation();
+          choose(option);
+        });
+        option.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            choose(option);
+          }
+        });
+      });
+
+      const selected = wrap.querySelector('[role="option"].is-selected');
+      wrap.dataset.initialValue = selected?.dataset.value ?? '';
+    });
+
+    document.addEventListener('click', closeMenus);
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape') return;
+      const openMenu = document.querySelector('.menu.open');
+      if (!openMenu) return;
+      const trigger = openMenu.parentElement.querySelector('.select-trigger');
+      closeMenus();
+      trigger?.focus();
+    });
+
+    const palette = document.getElementById('palette');
+    palette.querySelectorAll('.swatch-button').forEach((button) => {
+      button.addEventListener('click', () => {
+        palette.querySelectorAll('.swatch-button').forEach((candidate) => {
+          candidate.classList.remove('is-selected');
+          candidate.setAttribute('aria-checked', 'false');
+        });
+        button.classList.add('is-selected');
+        button.setAttribute('aria-checked', 'true');
+        markDirty();
+      });
+    });
+    let initialPalette = palette.querySelector('.swatch-button.is-selected');
+
+    const neutralStrategy = document.querySelectorAll('input[name="neutral-strategy"]');
+    const neutralHint = document.getElementById('neutral-hint');
+    const updateNeutralHint = () => {
+      const selected = document.querySelector('input[name="neutral-strategy"]:checked');
+      neutralHint.classList.toggle('is-visible', selected?.value === 'seed');
+    };
+    neutralStrategy.forEach((input) => input.addEventListener('change', () => {
+      updateNeutralHint();
+      markDirty();
+    }));
+
+    const expander = document.getElementById('advanced-colors');
+    const expanderHead = expander.querySelector('.expander-head');
+    expanderHead.addEventListener('click', () => {
+      const open = expander.classList.toggle('is-open');
+      expanderHead.setAttribute('aria-expanded', String(open));
+    });
+
+    const requestedState = new URLSearchParams(location.search);
+    if (requestedState.get('advanced') === '1') {
+      expander.classList.add('is-open');
+      expanderHead.setAttribute('aria-expanded', 'true');
+      document.querySelector('.settings-surface').classList.add('is-tall');
+    }
+
+    const openMenuName = requestedState.get('open');
+    if (openMenuName) {
+      const menuNames = {
+        motion: '动态效果',
+        theme: '主题色',
+        algorithm: '取色算法',
+        variant: '配色变体'
+      };
+      const trigger = [...document.querySelectorAll('.select-trigger')]
+        .find((button) => button.getAttribute('aria-label') === menuNames[openMenuName]);
+      trigger?.parentElement.querySelector('.menu')?.classList.add('open');
+      trigger?.setAttribute('aria-expanded', 'true');
+    }
+
+    document.querySelectorAll('.content-scroll input').forEach((input) => {
+      input.addEventListener('change', markDirty);
+    });
+
+    document.getElementById('cancel-btn').addEventListener('click', () => {
+      document.querySelectorAll('.content-scroll input').forEach((input) => {
+        input.checked = input.defaultChecked;
+      });
+      document.querySelectorAll('.menu-wrap').forEach((wrap) => {
+        const initial = wrap.dataset.initialValue;
+        const target = wrap.querySelector(`[role="option"][data-value="${initial}"]`);
+        if (!target) return;
+        wrap.querySelectorAll('[role="option"]').forEach((option) => {
+          option.classList.remove('is-selected');
+          option.setAttribute('aria-selected', 'false');
+        });
+        target.classList.add('is-selected');
+        target.setAttribute('aria-selected', 'true');
+        const label = wrap.querySelector('[data-selected-label]');
+        if (label) {
+          label.textContent = target.querySelector('.option-label')?.textContent.trim() ?? target.textContent.trim();
+        } else {
+          wrap.querySelector('.select-value').textContent = target.textContent.trim();
+        }
+      });
+      palette.querySelectorAll('.swatch-button').forEach((candidate) => {
+        const selected = candidate === initialPalette;
+        candidate.classList.toggle('is-selected', selected);
+        candidate.setAttribute('aria-checked', String(selected));
+      });
+      updateNeutralHint();
+      closeMenus();
+      dirty = false;
+      saveButton.disabled = true;
+    });
+
+    saveButton.addEventListener('click', () => {
+      if (!dirty) return;
+      document.querySelectorAll('.content-scroll input').forEach((input) => {
+        input.defaultChecked = input.checked;
+      });
+      document.querySelectorAll('.menu-wrap').forEach((wrap) => {
+        const selected = wrap.querySelector('[role="option"].is-selected');
+        wrap.dataset.initialValue = selected?.dataset.value ?? '';
+      });
+      initialPalette = palette.querySelector('.swatch-button.is-selected');
+      dirty = false;
+      saveButton.disabled = true;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 2400);
+    });
+  </script>
+</body>
+</html>

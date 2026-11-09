@@ -4,41 +4,36 @@ using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.UI.Features.GameOperations;
 
-/// <summary>
-/// Presentation sink driven by the game operation journey.
-/// Implemented by the view model so the journey stays decoupled from the shell.
-/// </summary>
+/// <summary>Read-only presentation context plus a typed output stream; UI never decides operation eligibility.</summary>
 internal interface IGameOperationJourneyHost
 {
-    /// <summary>Gets whether the host is currently presenting a busy operation.</summary>
+    /// <summary>Gets whether presentation currently blocks starting another operation.</summary>
     bool IsBusy { get; }
-
-    /// <summary>Gets the latest status snapshot applied to the host, if any.</summary>
+    /// <summary>Gets the latest applied snapshot for refresh outcomes.</summary>
     LauncherStatusSnapshot? CurrentSnapshot { get; }
-
-    /// <summary>Resets the host before an operation begins.</summary>
-    void PrepareOperation();
-    /// <summary>Applies a progress update to the presentation state.</summary>
-    void ApplyProgress(GameOperationProgress progress);
-    /// <summary>Applies the latest launcher status snapshot.</summary>
-    void ApplySnapshot(LauncherStatusSnapshot snapshot);
-    /// <summary>Sets whether the host should present a busy state.</summary>
-    void SetBusy(bool busy);
-    /// <summary>Reports the launch-check outcome message on the shell.</summary>
-    void SetLaunchCheckResult(string message);
-    /// <summary>Opens a repair confirmation surface on the host.</summary>
-    void ShowRepairConfirmation(string message);
-    /// <summary>Refreshes shell state after an operation; returns whether a refresh was initiated.</summary>
+    /// <summary>Renders a typed fact; eligibility and workflow ordering belong to the journey.</summary>
+    void Present(GameOperationPresentation update);
+    /// <summary>Requests shell refresh and reports whether it was handled.</summary>
     Task<bool> RefreshAsync(GameOperationsRefreshMode mode);
-    /// <summary>Asks the host to show its log viewer after a failure action.</summary>
+    /// <summary>Opens the shared log surface.</summary>
     Task ShowLogViewerAsync();
-    /// <summary>Asks the host to minimize the window after a successful game launch.</summary>
-    void RequestMinimize();
-    /// <summary>Asks the host to exit the launcher after a successful game launch.</summary>
-    void RequestExit();
-    /// <summary>
-    /// Asks the host to show (restore) the window — the session monitor found a launch that
-    /// never started the game, and the news must reach the user even from the tray.
-    /// </summary>
-    void RequestShow();
 }
+
+/// <summary>Presentation facts emitted by an operation journey; each case has its own required payload.</summary>
+internal abstract record GameOperationPresentation
+{
+    public sealed record Busy(bool Value) : GameOperationPresentation;
+    public sealed record Preparing(GameOperationKind Kind = GameOperationKind.Download, bool Automatic = false) : GameOperationPresentation;
+    public sealed record Completed(GameOperationResult Value) : GameOperationPresentation;
+    public sealed record Progress(GameOperationProgress Value) : GameOperationPresentation;
+    public sealed record Snapshot(LauncherStatusSnapshot Value) : GameOperationPresentation;
+    public sealed record LaunchCheck(string Message) : GameOperationPresentation;
+    public sealed record RepairConfirmation(string Message) : GameOperationPresentation;
+    public sealed record UninstallConfirmation(long RequestId, LauncherStatusSnapshot Value) : GameOperationPresentation;
+    public sealed record UninstallSize(long RequestId, UninstallFootprint Value) : GameOperationPresentation;
+    public sealed record UninstallExecuting : GameOperationPresentation;
+    public sealed record UninstallCompleted(GameOperationResult Value) : GameOperationPresentation;
+    public sealed record Window(GameOperationWindowAction Action) : GameOperationPresentation;
+}
+
+internal enum GameOperationWindowAction { Minimize, Exit, Show }

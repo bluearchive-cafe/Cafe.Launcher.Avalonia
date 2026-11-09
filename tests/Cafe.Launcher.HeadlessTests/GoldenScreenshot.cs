@@ -9,7 +9,7 @@ using Avalonia.Threading;
 namespace Cafe.Launcher.HeadlessTests;
 
 /// <summary>
-/// Golden-screenshot capture and comparison (design-system spec §10, P1 plan M5).
+/// Golden-screenshot capture and comparison (design-system spec §9, P1 plan M5).
 ///
 /// Font stability: the app state is fixed for capture (English language, motion
 /// reduced, window font forced to Segoe UI), but CI (windows-latest) and local
@@ -41,7 +41,7 @@ internal static class GoldenScreenshot
             "Golden baselines are generated on Windows; non-Windows rendering always mismatches.");
 
         Dispatcher.UIThread.RunJobs();
-        var bitmap = Render(window);
+        using var bitmap = Render(window);
         var baselineDirectory = Path.Combine(FindRepositoryRoot(), BaselineRelativeDir);
         var baselinePath = Path.Combine(baselineDirectory, name + ".png");
         var update = Environment.GetEnvironmentVariable("CAFE_GOLDEN_UPDATE") == "1";
@@ -82,8 +82,22 @@ internal static class GoldenScreenshot
 
     private static void WriteBaseline(RenderTargetBitmap bitmap, string path)
     {
-        using var stream = File.Create(path);
-        bitmap.Save(stream, new PngBitmapEncoderOptions());
+        // Previewers may memory-map an existing PNG on Windows. Replace the directory
+        // entry after writing instead of truncating the mapped file in place.
+        var temporaryPath = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            using (var stream = File.Create(temporaryPath))
+                bitmap.Save(stream, new PngBitmapEncoderOptions());
+            if (File.Exists(path))
+                File.Replace(temporaryPath, path, destinationBackupFileName: null);
+            else
+                File.Move(temporaryPath, path);
+        }
+        finally
+        {
+            if (File.Exists(temporaryPath)) File.Delete(temporaryPath);
+        }
     }
 
     private static void AssertMatches(RenderTargetBitmap actual, string baselinePath, string name)

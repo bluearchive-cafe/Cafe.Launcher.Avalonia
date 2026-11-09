@@ -75,7 +75,8 @@ internal sealed class ManifestDiffCalculator
         var statDiff = CheckStat(
             currentFiles,
             gamePath,
-            new StageProgressReporter(GameOperationKind.Download, GameOperationStage.UpdateCheck, progress).Report);
+            progress: null,
+            new FileActivityReporter(GameOperationKind.Download, GameOperationStage.UpdateCheck, currentFiles.Count, progress));
         var expected = GameManifestDiff(currentFiles, latestManifest.File);
         var actual = GameResultMerge(expected, new DownloadPlan { NeedDownload = statDiff });
 
@@ -109,8 +110,9 @@ internal sealed class ManifestDiffCalculator
             crc64Service,
             latestManifest.File,
             gamePath,
-            new StageProgressReporter(GameOperationKind.Repair, GameOperationStage.RepairCheck, progress).Report,
-            cancellationToken).ConfigureAwait(false);
+            progress: null,
+            cancellationToken,
+            new FileActivityReporter(GameOperationKind.Repair, GameOperationStage.RepairCheck, latestManifest.File.Count, progress)).ConfigureAwait(false);
         var needDelete = localGame.Kind == LocalInstallationStateKind.Valid
             ? GameManifestDiff(localGame.Manifest?.Files ?? [], latestManifest.File).NeedDelete
             : [];
@@ -205,7 +207,8 @@ internal sealed class ManifestDiffCalculator
     internal static List<ManifestFile> CheckStat(
         IReadOnlyList<ManifestFile> files,
         string gamePath,
-        Action<int>? progress)
+        Action<int>? progress,
+        FileActivityReporter? activity = null)
     {
         var diff = new List<ManifestFile>();
         for (var i = 0; i < files.Count; i++)
@@ -219,6 +222,7 @@ internal sealed class ManifestDiffCalculator
             }
 
             progress?.Invoke(StageProgressReporter.Percent(i + 1, files.Count));
+            activity?.Complete(file.Path);
         }
 
         return diff;
@@ -234,7 +238,8 @@ internal sealed class ManifestDiffCalculator
         IReadOnlyList<ManifestFile> files,
         string gamePath,
         Action<int>? progress,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        FileActivityReporter? activity = null)
     {
         var diff = new List<ManifestFile>();
         var planned = new Dictionary<string, PlannedFileHash>(StringComparer.Ordinal);
@@ -245,10 +250,14 @@ internal sealed class ManifestDiffCalculator
             if (!File.Exists(filePath))
             {
                 diff.Add(file);
+                progress?.Invoke(StageProgressReporter.Percent(i + 1, files.Count));
+                activity?.Complete(file.Path);
                 continue;
             }
 
-            var crc64 = await crc64Service.ComputeFileAsync(filePath, null, cancellationToken).ConfigureAwait(false);
+            var fileBytes = new FileInfo(filePath).Length;
+            activity?.Update(file.Path, 0, fileBytes, verifying: true);
+            var crc64 = await crc64Service.ComputeFileAsync(filePath, null, activity?.ReadProgress(file.Path), cancellationToken).ConfigureAwait(false);
             if (crc64 != file.Hash)
             {
                 diff.Add(file);
@@ -259,6 +268,7 @@ internal sealed class ManifestDiffCalculator
             }
 
             progress?.Invoke(StageProgressReporter.Percent(i + 1, files.Count));
+            activity?.Complete(file.Path);
         }
 
         return (diff, planned);

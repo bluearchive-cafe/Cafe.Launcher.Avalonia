@@ -10,6 +10,8 @@
              x:Name="DialogsRoot"
              x:DataType="vm:MainWindowViewModel">
     <Grid>
+        <views:GameTaskDialog ZIndex="{x:Static constants:LauncherConstants.ZIndexDialog}"/>
+
         <!-- 资源面板（主叠层）宿主于此容器并占据 FirstChild：其层序位于对话框
              层之下依赖「首个子元素先渲染」这一顺序，勿移动或插入子项到其前。 -->
         <views:ResourcePanelOverlay ZIndex="{x:Static constants:LauncherConstants.ZIndexDialog}"/>
@@ -100,6 +102,8 @@
                 VerticalAlignment="Center"
                 Margin="{StaticResource Launcher.Spacing.Thickness.Xxl}"
                 MaxWidth="{StaticResource Launcher.Component.Dialog.Update.MaxWidth}"
+                MinWidth="{StaticResource Launcher.Component.Dialog.Update.MinWidth}"
+                MinHeight="{StaticResource Launcher.Component.Dialog.Update.MinHeight}"
                 Title="{Binding Shell.I18n[launcherUpdateAvailableTitle]}"
                 Subtitle="{Binding Dialogs.UpdateAvailableText}"
                 CloseCommand="{Binding Dialogs.CancelUpdateAvailableCommand}"
@@ -119,12 +123,35 @@
                             <TextBlock Text="{Binding Dialogs.UpdateInAppUnavailableNoticeText}"
                                        Classes="dialog-alert-content"/>
                         </Border>
+                        <StackPanel IsVisible="{Binding Dialogs.IsUpdateReleaseNotesLoading}"
+                                    Spacing="{StaticResource Launcher.Spacing.Sm}">
+                            <TextBlock Text="{Binding Shell.I18n[launcherUpdateReleaseNotesLoading]}"
+                                       Classes="dialog-alert-content"/>
+                            <ProgressBar IsIndeterminate="True"
+                                         Height="{StaticResource Launcher.Component.Loading.Bar.Height}"/>
+                        </StackPanel>
+                        <StackPanel IsVisible="{Binding Dialogs.HasUpdateReleaseNotesFailed}"
+                                    Spacing="{StaticResource Launcher.Spacing.Sm}">
+                            <TextBlock Text="{Binding Shell.I18n[launcherUpdateReleaseNotesFailed]}"
+                                       Classes="dialog-alert-content" TextWrapping="Wrap"/>
+                            <Button Classes="flat-action dialog-action" HorizontalAlignment="Left"
+                                    Content="{Binding Shell.I18n[launcherUpdateOpenReleasePage]}"
+                                    AutomationProperties.Name="{Binding Shell.I18n[launcherUpdateOpenReleasePage]}"
+                                    Command="{Binding Dialogs.OpenUpdateReleasePageCommand}"/>
+                        </StackPanel>
                         <controls:ReleaseNotesMarkdownViewer
+                            x:Name="UpdateReleaseNotesViewer"
                             IsVisible="{Binding Dialogs.HasUpdateReleaseNotes}"
                             ImageLoader="{Binding RemoteContent.ReleaseNotesImageLoader}"
                             IsDocumentActive="{Binding #UpdateAvailableOverlay.IsVisible}"
                             Markdown="{Binding Dialogs.UpdateReleaseNotes}"
                             MaxHeight="{StaticResource Launcher.Component.Dialog.Update.ReleaseNotes.MaxHeight}"/>
+                        <TextBlock IsVisible="{Binding #UpdateReleaseNotesViewer.IsImageLoading}"
+                                   Text="{Binding Shell.I18n[bannerLoading]}"
+                                   Classes="dialog-alert-content" TextWrapping="Wrap"/>
+                        <TextBlock IsVisible="{Binding #UpdateReleaseNotesViewer.HasImageLoadFailed}"
+                                   Text="{Binding Shell.I18n[bannerLoadingFailed]}"
+                                   Classes="dialog-alert-content" TextWrapping="Wrap"/>
                         <Separator Classes="update-progress-divider"
                                    IsVisible="{Binding Dialogs.IsUpdateApplying}"
                                    Margin="{StaticResource Launcher.Spacing.Thickness.None}"
@@ -226,6 +253,16 @@
                                 CancelCommand="{Binding WindowChrome.KeepEditingSettingsCommand}"
                                 ConfirmText="{Binding Shell.I18n[discardChanges]}"
                                 ConfirmCommand="{Binding WindowChrome.DiscardSettingsChangesCommand}"
+                                IsDangerConfirm="True"/>
+
+        <controls:ConfirmDialog IsOpen="{Binding ResourcePanel.DiscardChangesConfirm.IsVisible}"
+                                ZIndex="{x:Static constants:LauncherConstants.ZIndexDialog}"
+                                Title="{Binding Shell.I18n[unsavedChanges]}"
+                                Message="{Binding ResourcePanel.DiscardChangesConfirm.Message}"
+                                CancelText="{Binding Shell.I18n[keepEditing]}"
+                                CancelCommand="{Binding ResourcePanel.CancelDiscardChangesCommand}"
+                                ConfirmText="{Binding Shell.I18n[discardChanges]}"
+                                ConfirmCommand="{Binding ResourcePanel.DiscardChangesConfirm.ConfirmCommand}"
                                 IsDangerConfirm="True"/>
 
         <!-- Critical error dialog -->

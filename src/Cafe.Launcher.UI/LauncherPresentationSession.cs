@@ -234,11 +234,14 @@ public sealed class LauncherPresentationSession : IDisposable
         {
             await viewModel.PrepareForShutdownAsync();
 
-            if (viewModel.Settings.Editor.GetSavedSnapshot().RememberWindowPositionAndSize)
+            // 几何在 UI 线程取成值快照再交给写入方：写入方的改动委托在事务锁竞争时
+            // 可能在线程池执行，不能让它回头读窗口属性。
+            if (viewModel.Settings.Editor.GetSavedSnapshot().RememberWindowPositionAndSize
+                && window.TryCaptureGeometry() is { } geometry)
             {
                 // 关窗写入显式不传取消令牌：宿主在调用本方法前已经 Cancel 了关闭令牌，
                 // 转发它会让「记住窗口位置」在每次正常退出时静默失效。
-                await settingsWriter.UpdateAsync(window.CaptureWindowState, CancellationToken.None);
+                await settingsWriter.UpdateAsync(geometry.ApplyTo, CancellationToken.None);
             }
         }
         catch (Exception exception)

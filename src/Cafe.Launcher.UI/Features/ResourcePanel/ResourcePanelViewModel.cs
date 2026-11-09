@@ -30,6 +30,7 @@ internal partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IMod
     private readonly CancellationTokenSource lifetimeCts = new();
     private readonly CancellationToken lifetimeToken;
     private bool disposed;
+    private Func<Task>? pendingDiscardAction;
     private string patchUrlGroup = PatchUrlGroups.Official;
     private bool isLoadingSource;
     private bool isSettingUidSource;
@@ -41,6 +42,13 @@ internal partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IMod
     private bool HasUnsavedResourceChanges =>
         !savedResourceBaseline.SequenceEqual(ResourcePanelItems.Select(item => item.IsEnabled));
 
+    /// <summary>Gets whether resource preferences or an edited UID have not been saved.</summary>
+    public bool HasUnsavedChanges => HasUnsavedResourceChanges
+        || ((IsResourcePanelUidEditing || IsResourcePanelUidMissing) && ManualResourcePanelUid.Trim() != ResourcePanelUid);
+
+    /// <summary>Protects pending edits before closing, reloading, or changing the UID.</summary>
+    public ConfirmationDialogViewModel DiscardChangesConfirm { get; }
+
     /// <summary>Fired when the user tries to open the panel from a non-Cafe download source.</summary>
     public event Action? ResourcePanelSourceConfirmRequested;
 
@@ -48,12 +56,15 @@ internal partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IMod
         ResourcePanelService resourcePanelService,
         LocalizationService localizer,
         ToastService toastService,
-        IErrorHandlingService errorHandling)
+        IErrorHandlingService errorHandling,
+        ILauncherDiagnostics diagnostics)
     {
         this.resourcePanelService = resourcePanelService;
         this.localizer = localizer;
         this.toastService = toastService;
         this.errorHandling = errorHandling;
+        DiscardChangesConfirm = new ConfirmationDialogViewModel(diagnostics, "Resource panel discard");
+        DiscardChangesConfirm.Confirmed += ConfirmDiscardChangesAsync;
         // 在任何 await 之前取 Token：Dispose 回收源之后，迟到的命令入口仍能
         // 读到已取消的 Token，而不是抛 ObjectDisposedException。
         lifetimeToken = lifetimeCts.Token;
@@ -70,7 +81,10 @@ internal partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IMod
     private bool isResourcePanelVisible;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CloseResourcePanelCommand), nameof(RefreshResourcePanelCommand), nameof(SetUidSourceCommand), nameof(SaveManualResourcePanelUidCommand))]
     private bool isResourcePanelBusy;
+
+    private bool CanChangeResourcePanel() => !IsResourcePanelBusy;
 
     [ObservableProperty]
     private bool isResourcePanelSaveEnabled;
@@ -198,10 +212,47 @@ internal partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IMod
         await LoadResourcePanelAsync(lifetimeToken);
     }
 
-    [RelayCommand]
-    private void CloseResourcePanel()
+    [RelayCommand(CanExecute = nameof(CanChangeResourcePanel))]
+    private Task CloseResourcePanelAsync() => RunAfterDiscardAsync(() =>
     {
         IsResourcePanelVisible = false;
+        return Task.CompletedTask;
+    });
+
+    [RelayCommand]
+    private void CancelDiscardChanges()
+    {
+        pendingDiscardAction = null;
+        DiscardChangesConfirm.CancelCommand.Execute(null);
+    }
+
+    private Task RunAfterDiscardAsync(Func<Task> action, bool includeUid = true)
+    {
+        if (IsResourcePanelBusy || disposed)
+            return Task.CompletedTask;
+
+        if (HasUnsavedResourceChanges || (includeUid && HasUnsavedChanges))
+        {
+            pendingDiscardAction = action;
+            DiscardChangesConfirm.Show(localizer.T(LocalizationKeys.ResourcePanelUnsavedChangesMessage));
+            return Task.CompletedTask;
+        }
+
+        return action();
+    }
+
+    private async Task ConfirmDiscardChangesAsync()
+    {
+        var action = pendingDiscardAction;
+        pendingDiscardAction = null;
+        if (action is null || disposed || IsResourcePanelBusy)
+            return;
+
+        for (var i = 0; i < ResourcePanelItems.Count; i++)
+            ResourcePanelItems[i].IsEnabled = savedResourceBaseline[i];
+        ManualResourcePanelUid = ResourcePanelUid;
+        IsResourcePanelUidEditing = false;
+        await action();
     }
 
     [RelayCommand]
@@ -217,8 +268,11 @@ internal partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IMod
         IsResourcePanelUidEditing = false;
     }
 
-    [RelayCommand]
-    private async Task SetUidSourceAsync(string source)
+    [RelayCommand(CanExecute = nameof(CanChangeResourcePanel))]
+    private Task SetUidSourceAsync(string source) =>
+        RunAfterDiscardAsync(() => SetUidSourceCoreAsync(source));
+
+    private async Task SetUidSourceCoreAsync(string source)
     {
         IsResourcePanelBusy = true;
         try
@@ -243,28 +297,33 @@ internal partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IMod
         }
     }
 
-    [RelayCommand]
-    private async Task RefreshResourcePanelAsync()
-    {
-        await LoadResourcePanelAsync(lifetimeToken);
-    }
+    [RelayCommand(CanExecute = nameof(CanChangeResourcePanel))]
+    private Task RefreshResourcePanelAsync() =>
+        RunAfterDiscardAsync(() => LoadResourcePanelAsync(lifetimeToken));
 
-    [RelayCommand]
-    private async Task SaveManualResourcePanelUidAsync()
+    [RelayCommand(CanExecute = nameof(CanChangeResourcePanel))]
+    private Task SaveManualResourcePanelUidAsync()
     {
         var uid = ManualResourcePanelUid.Trim();
         if (string.IsNullOrWhiteSpace(uid))
         {
             SetResourcePanelMessage(localizer.T(LocalizationKeys.ResourcePanelUidEmpty), isError: true);
-            return;
+            return Task.CompletedTask;
         }
 
         if (!ResourcePanelUidService.IsValidUid(uid))
         {
             SetResourcePanelMessage(localizer.T(LocalizationKeys.ResourcePanelUidInvalidFormat), isError: true);
-            return;
+            return Task.CompletedTask;
         }
 
+        return RunAfterDiscardAsync(() => SaveManualUidCoreAsync(uid), includeUid: false);
+    }
+
+    private async Task SaveManualUidCoreAsync(string uid)
+    {
+        ManualResourcePanelUid = uid;
+        IsResourcePanelUidEditing = true;
         IsResourcePanelBusy = true;
         try
         {
@@ -337,14 +396,29 @@ internal partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IMod
 
     // ── Computed property notifications ───────────────────────────────────
 
-    partial void OnIsResourcePanelUidMissingChanged(bool value) => UpdateUidPresent();
-    partial void OnIsResourcePanelUidEditingChanged(bool value) => UpdateUidPresent();
-    partial void OnSelectedResourcePanelUidSourceChanged(string value)
+    partial void OnIsResourcePanelBusyChanged(bool value) => RefreshSaveEnabled();
+
+    partial void OnIsResourcePanelUidMissingChanged(bool value)
+    {
+        UpdateUidPresent();
+        RefreshSaveEnabled();
+    }
+    partial void OnIsResourcePanelUidEditingChanged(bool value)
+    {
+        UpdateUidPresent();
+        RefreshSaveEnabled();
+    }
+    partial void OnManualResourcePanelUidChanged(string value) => OnPropertyChanged(nameof(HasUnsavedChanges));
+    partial void OnSelectedResourcePanelUidSourceChanged(string? oldValue, string newValue)
     {
         OnPropertyChanged(nameof(IsResourcePanelUidSourceCustom));
         if (!isLoadingSource && !isSettingUidSource)
         {
-            SetUidSourceCommand.Execute(value);
+            // Keep the applied source selected until discard and persistence succeed.
+            isSettingUidSource = true;
+            SelectedResourcePanelUidSource = oldValue ?? ResourcePanelUidSources.Auto;
+            isSettingUidSource = false;
+            SetUidSourceCommand.Execute(newValue);
         }
     }
 
@@ -412,9 +486,11 @@ internal partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IMod
 
     private void RefreshSaveEnabled()
     {
+        OnPropertyChanged(nameof(HasUnsavedChanges));
         IsResourcePanelSaveEnabled =
             !IsResourcePanelBusy &&
             !IsResourcePanelUidMissing &&
+            !IsResourcePanelUidEditing &&
             HasUnsavedResourceChanges &&
             ResourcePanelItems.Count > 0 &&
             ResourcePanelItems.All(i => i is { Status: ResourcePanelItemStatus.Ready or ResourcePanelItemStatus.Waiting });
@@ -429,8 +505,11 @@ internal partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IMod
     }
 
     /// <summary>Freezes the current switch state as the "nothing to save" baseline.</summary>
-    private void CaptureSavedResourceBaseline() =>
+    private void CaptureSavedResourceBaseline()
+    {
         savedResourceBaseline = ResourcePanelItems.Select(item => item.IsEnabled).ToArray();
+        OnPropertyChanged(nameof(HasUnsavedChanges));
+    }
 
     private async Task LoadResourcePanelDataAsync(string uid, CancellationToken cancellationToken)
     {
@@ -515,6 +594,8 @@ internal partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IMod
         }
 
         disposed = true;
+        pendingDiscardAction = null;
+        DiscardChangesConfirm.Confirmed -= ConfirmDiscardChangesAsync;
         lifetimeCts.Cancel();
         foreach (var item in ResourcePanelItems)
         {

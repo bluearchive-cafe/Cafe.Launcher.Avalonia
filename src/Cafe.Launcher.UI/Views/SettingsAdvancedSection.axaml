@@ -5,6 +5,7 @@
              xmlns:controls="using:Cafe.Launcher.UI.Controls"
              x:Class="Cafe.Launcher.UI.Views.SettingsAdvancedSection"
              x:Name="SettingsRoot"
+             Classes="settings-section"
              x:DataType="vm:MainWindowViewModel">
     <StackPanel>
         <StackPanel Classes="settings-group">
@@ -45,17 +46,28 @@
                                 <TextBlock Text="{Binding Shell.I18n[exportLogs]}"/>
                             </StackPanel>
                         </Button>
-                        <Button Classes="flat-action"
-                                Command="{Binding WindowChrome.OpenDataDirectoryCommand}"
-                                AutomationProperties.Name="{Binding Shell.I18n[openDataDirectory]}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="FolderOpen"
-                                                            Width="{StaticResource Launcher.Icon.Sm}"
-                                                            Height="{StaticResource Launcher.Icon.Sm}"/>
-                                <TextBlock Text="{Binding Shell.I18n[openDataDirectory]}"/>
-                            </StackPanel>
-                        </Button>
                     </WrapPanel>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+        </StackPanel>
+
+        <StackPanel Classes="settings-group">
+            <TextBlock Text="{Binding Shell.I18n[settingsGroupDataRecovery]}" Classes="group-title"/>
+
+            <controls:SettingRow ShowTopDivider="False"
+                                 Title="{Binding Shell.I18n[settingsDataDirectory]}"
+                                 Description="{Binding Shell.I18n[settingsDataDirectoryDescription]}">
+                <controls:SettingRow.Action>
+                    <Button Classes="flat-action"
+                            Command="{Binding WindowChrome.OpenDataDirectoryCommand}"
+                            AutomationProperties.Name="{Binding Shell.I18n[openDataDirectory]}">
+                        <StackPanel Classes="button-content">
+                            <materialIcons:MaterialIcon Kind="FolderOpen"
+                                                        Width="{StaticResource Launcher.Icon.Sm}"
+                                                        Height="{StaticResource Launcher.Icon.Sm}"/>
+                            <TextBlock Text="{Binding Shell.I18n[openDataDirectory]}"/>
+                        </StackPanel>
+                    </Button>
                 </controls:SettingRow.Action>
             </controls:SettingRow>
 

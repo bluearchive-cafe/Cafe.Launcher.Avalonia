@@ -14,11 +14,6 @@ public sealed class ManifestValidationServiceTests : IDisposable
 {
     private readonly TestDirectory tempDir = TestDirectory.Create();
 
-    static ManifestValidationServiceTests()
-    {
-        TestLocalizationHelper.Initialize();
-    }
-
     [Fact]
     public async Task ValidateAsync_WhenCheckModeIsNone_SucceedsWithoutInstallationState()
     {

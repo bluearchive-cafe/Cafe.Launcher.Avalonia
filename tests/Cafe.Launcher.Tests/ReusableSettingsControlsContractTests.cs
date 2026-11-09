@@ -33,13 +33,20 @@ public sealed class ReusableSettingsControlsContractTests
             .Where(element => element.Attribute("Classes")?.Value == "setting-control")
             .ToArray();
 
-        // The appearance page retains one custom row because it has a color swatch
-        // prefix; every plain option row is represented by SettingSelect.
-        Assert.Single(directSettingCombos);
+        // The appearance page keeps one direct ComboBox for the four theme-color sources,
+        // whose items need a resolved-color dot; shorter enumerations use segmented buttons.
+        var themeColorCombo = Assert.Single(directSettingCombos);
+        Assert.Equal(
+            "{Binding Code, DataType={x:Type models:SelectableOption}}",
+            themeColorCombo.Attribute("SelectedValueBinding")?.Value);
         Assert.Contains(
-            directSettingCombos[0].Ancestors(),
-            element => element.Name.LocalName == "StackPanel"
-                && element.Descendants().Any(descendant => descendant.Name.LocalName == "Border"));
+            themeColorCombo.Descendants(),
+            element => element.Name.LocalName == "DataTemplate"
+                && element.Attribute(XName.Get("DataType", "http://schemas.microsoft.com/winfx/2006/xaml"))?.Value == "models:ThemeColorOption");
+        Assert.Contains(
+            documents.SelectMany(document => document.Descendants()),
+            element => element.Name.LocalName == "RadioButton"
+                && element.Attribute("Classes")?.Value == "segment-option");
     }
 
     [Fact]

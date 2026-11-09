@@ -169,7 +169,8 @@ foreach ($reportPath in $reportPaths.Values) {
                 $extension -ne '.cs' -or
                 $pathSegments -contains 'bin' -or
                 $pathSegments -contains 'obj' -or
-                $fullPath -match '[\\/]Resources[\\/]LauncherStrings\.Designer\.cs$'
+                $fullPath -match '[\\/]Resources[\\/]LauncherStrings\.Designer\.cs$' -or
+                $fullPath -match '[\\/]Resources[\\/]LauncherResourceCatalog\.Generated\.cs$'
             ) {
                 continue
             }

@@ -15,7 +15,7 @@ using CafeColorUtils = Cafe.Launcher.UI.Helpers.ColorUtils;
 namespace Cafe.Launcher.UI.Services;
 
 /// <summary>
-/// M3 dynamic-scheme generation (Q13/Q17/Q23, spec §3.4). Consumes the
+/// M3 dynamic-scheme generation (Q13/Q17/Q23, spec §2.4). Consumes the
 /// Shirasagi0012.MaterialColorUtilities core package directly (M0 spike: GO,
 /// Spec2021 default, Platform.Phone) and maps scheme roles onto the
 /// <c>Launcher.Color.*</c> brush keys consumed by the UI.
@@ -51,7 +51,7 @@ internal static class MaterialSchemeGenerator
     /// Maps scheme roles onto the <c>Launcher.Color.*</c> brush keys. The key set
     /// preserves the pre-M3 override behaviour (accent family + flat/state/ring
     /// derivatives) as a subset and adds the M3 secondary/tertiary role families;
-    /// "Info" stays a fixed business colour and is never overridden (spec §3.4) —
+    /// "Info" stays a fixed business colour and is never overridden (spec §2.4) —
     /// including Info.Background, which keeps its static Light/Dark values and is
     /// not tinted by the accent. The neutral roles and the whole dialog surface
     /// family (<c>Dialog.Background/Header/Footer/Close.Hover/Close.Pressed</c>)
@@ -99,12 +99,17 @@ internal static class MaterialSchemeGenerator
         // M3 scheme roles.
         var secondaryContainer = MaterialColorMapper.ToAvaloniaColor(scheme.SecondaryContainer);
         var onSecondaryContainer = MaterialColorMapper.ToAvaloniaColor(scheme.OnSecondaryContainer);
+        var secondaryContainerHover = Blend(secondaryContainer, onSecondaryContainer, 0.08);
+        var secondaryContainerPressed = Blend(secondaryContainer, onSecondaryContainer, 0.16);
+        var containerFallback = MaterialColorMapper.ToAvaloniaColor(scheme.OnSurface);
         result["Launcher.Color.Secondary"] = MaterialColorMapper.ToBrush(scheme.Secondary);
         result["Launcher.Color.OnSecondary"] = MaterialColorMapper.ToBrush(scheme.OnSecondary);
         result["Launcher.Color.SecondaryContainer"] = new SolidColorBrush(secondaryContainer);
-        result["Launcher.Color.OnSecondaryContainer"] = new SolidColorBrush(onSecondaryContainer);
-        result["Launcher.Color.SecondaryContainer.Hover"] = new SolidColorBrush(Blend(secondaryContainer, onSecondaryContainer, 0.08));
-        result["Launcher.Color.SecondaryContainer.Pressed"] = new SolidColorBrush(Blend(secondaryContainer, onSecondaryContainer, 0.16));
+        result["Launcher.Color.OnSecondaryContainer"] = new SolidColorBrush(ReadableContainerForeground(onSecondaryContainer, secondaryContainer, containerFallback));
+        result["Launcher.Color.OnSecondaryContainer.Hover"] = new SolidColorBrush(ReadableContainerForeground(onSecondaryContainer, secondaryContainerHover, containerFallback));
+        result["Launcher.Color.OnSecondaryContainer.Pressed"] = new SolidColorBrush(ReadableContainerForeground(onSecondaryContainer, secondaryContainerPressed, containerFallback));
+        result["Launcher.Color.SecondaryContainer.Hover"] = new SolidColorBrush(secondaryContainerHover);
+        result["Launcher.Color.SecondaryContainer.Pressed"] = new SolidColorBrush(secondaryContainerPressed);
         result["Launcher.Color.Tertiary"] = MaterialColorMapper.ToBrush(scheme.Tertiary);
         result["Launcher.Color.OnTertiary"] = MaterialColorMapper.ToBrush(scheme.OnTertiary);
         result["Launcher.Color.TertiaryContainer"] = MaterialColorMapper.ToBrush(scheme.TertiaryContainer);
@@ -182,6 +187,35 @@ internal static class MaterialSchemeGenerator
 
         result["Launcher.Color.FocusRing"] = new SolidColorBrush(focusColor);
 
+        // Settings selection retains the accent wash. Saturated Fidelity/Content
+        // schemes may need a neutral foreground on the actually composited fill.
+        var selectedWash = result["Launcher.Color.Primary.Soft"].Color;
+        foreach (var (suffix, backgroundKey) in new[]
+                 {
+                     ("", "Launcher.Color.Dialog.Background"),
+                     (".Hover", "Launcher.Color.Button.Secondary.Hover"),
+                     (".Pressed", "Launcher.Color.Button.Secondary.Pressed")
+                 })
+        {
+            var selectedFill = Blend(result[backgroundKey].Color, primary, selectedWash.A / 255d);
+            result[$"Launcher.Color.Settings.Select.Selected.Foreground{suffix}"] = new SolidColorBrush(
+                ReadableContainerForeground(primary, selectedFill, result["Launcher.Text.Primary"].Color));
+        }
+
+        // Segments appear on both settings dialogs and resource-panel cards.
+        // Keep one foreground readable on the accent wash over either host.
+        var segmentForeground = primary;
+        foreach (var background in new[]
+                 {
+                     result["Launcher.Color.Dialog.Background"].Color,
+                     Color.Parse(isDark ? "#FF202733" : "#FFFAFCFF")
+                 })
+        {
+            segmentForeground = ReadableContainerForeground(segmentForeground,
+                Blend(background, primary, selectedWash.A / 255d), result["Launcher.Text.Primary"].Color);
+        }
+        result["Launcher.Color.Segmented.Selected.Foreground"] = new SolidColorBrush(segmentForeground);
+
         return result;
     }
 
@@ -209,6 +243,26 @@ internal static class MaterialSchemeGenerator
         ("Launcher.Color.Field.Border", "#FF8290A5", "#FF7B89A0"),
         ("Launcher.Color.Button.Secondary.Background", "#FFEDF0F5", "#FF303744"),
     ];
+
+    // Keep the scheme's on-container hue wherever it meets AA. State layers can
+    // cross the threshold in Fidelity/Content; even OnSurface is insufficient for
+    // some middle-tone fills, so compare black/white as the final readable pair.
+    private static Color ReadableContainerForeground(Color preferred, Color background, Color onSurface)
+    {
+        if (CafeColorUtils.GetContrastRatio(preferred, background) >= 4.5)
+        {
+            return preferred;
+        }
+
+        if (CafeColorUtils.GetContrastRatio(onSurface, background) >= 4.5)
+        {
+            return onSurface;
+        }
+
+        return CafeColorUtils.GetContrastRatio(Colors.Black, background) > CafeColorUtils.GetContrastRatio(Colors.White, background)
+            ? Colors.Black
+            : Colors.White;
+    }
 
     private static Color Blend(Color background, Color foreground, double opacity) =>
         Color.FromRgb(

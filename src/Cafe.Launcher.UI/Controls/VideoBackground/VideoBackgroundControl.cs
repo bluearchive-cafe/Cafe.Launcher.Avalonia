@@ -88,6 +88,7 @@ internal sealed class VideoBackgroundControl : OpenGlControlBase
         {
             try { ApplyPlaybackProperties(); }
             catch (Exception exception) { ReportFailure(exception); }
+            if (change.Property == PlaybackPausedProperty && !PlaybackPaused) RequestNextFrameRendering();
         }
     }
 
@@ -124,13 +125,16 @@ internal sealed class VideoBackgroundControl : OpenGlControlBase
 #if DEBUG
             DiagnosticFrames++;
 #endif
-            if (!firstFrame && videoSizeKnown)
+            if (CanPresentFirstFrame(firstFrame, videoSizeKnown, PlaybackPaused))
             {
                 firstFrame = true;
                 var currentGeneration = generation;
                 Dispatcher.UIThread.Post(() =>
                 {
-                    if (currentGeneration == generation && renderer != 0 && !failed) FirstFrameReady?.Invoke();
+                    if (currentGeneration != generation || renderer == 0 || failed) return;
+                    // A pause can arrive after rendering but before this UI callback.
+                    if (PlaybackPaused) { firstFrame = false; return; }
+                    FirstFrameReady?.Invoke();
                 });
             }
         }
@@ -141,9 +145,13 @@ internal sealed class VideoBackgroundControl : OpenGlControlBase
         }
     }
 
+    /// <summary>Keep the opaque fallback when an initially paused player has not presented a frame.</summary>
+    internal static bool CanPresentFirstFrame(bool alreadyPresented, bool sizeKnown, bool playbackPaused) =>
+        !alreadyPresented && sizeKnown && !playbackPaused;
+
     private void InitializePlayer(GlInterface gl)
     {
-        native = new MpvNative(libraryPath);
+        native = VideoBackgroundRuntime.OpenLibrary(libraryPath);
         player = native.NewPlayer();
         if (player == 0) throw new InvalidOperationException("mpv_create failed.");
         ConfigurePlayer(native, player, PlaybackPaused);
@@ -186,7 +194,17 @@ internal sealed class VideoBackgroundControl : OpenGlControlBase
         MpvNative.Check(native.SetProperty(player, "volume", Math.Clamp(Volume, 0, 100).ToString(CultureInfo.InvariantCulture)), "volume");
         MpvNative.Check(native.SetProperty(player, "keepaspect", Stretch == Stretch.Fill ? "no" : "yes"), "keepaspect");
         MpvNative.Check(native.SetProperty(player, "panscan", Stretch == Stretch.UniformToFill ? "1" : "0"), "panscan");
-        MpvNative.Check(native.SetProperty(player, "background-color", FormatFillColor(FillColor)), "background-color");
+        SetBackgroundColor(native, player, FillColor);
+    }
+
+    /// <summary>Uses mpv's pre-0.38 property name only when the current name is absent.</summary>
+    internal static void SetBackgroundColor(MpvNative native, nint player, Color color)
+    {
+        const int PropertyNotFound = -8; // MPV_ERROR_PROPERTY_NOT_FOUND
+        var value = FormatFillColor(color);
+        var result = native.SetProperty(player, "background-color", value);
+        if (result == PropertyNotFound) result = native.SetProperty(player, "background", value);
+        MpvNative.Check(result, "background color");
     }
 
     private void QueueFrame()

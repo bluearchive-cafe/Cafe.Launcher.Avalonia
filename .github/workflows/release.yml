@@ -59,7 +59,7 @@ jobs:
         shell: bash
         run: |
           sudo apt-get update
-          sudo apt-get install --no-install-recommends -y appstream desktop-file-utils dpkg rpm xvfb xauth libx11-6 libice6 libsm6 libfontconfig1 libxkbcommon0 7zip
+          sudo apt-get install --no-install-recommends -y appstream desktop-file-utils dpkg rpm xvfb xauth libx11-6 libice6 libsm6 libfontconfig1 libxkbcommon0 libmpv2 7zip
           appstreamcli validate --pedantic installer/linux/templates/cafe-launcher.metainfo.xml
 
       - name: Acquire pinned AppImage tools
@@ -92,6 +92,47 @@ jobs:
           }
           ./scripts/Build-Distribution.ps1 @buildArguments
 
+      - name: Verify Linux system and portable video runtimes
+        shell: bash
+        env:
+          RestoreLockedMode: 'false'
+        run: |
+          test -f /usr/lib/x86_64-linux-gnu/libmpv.so.2
+          dotnet test --project tests/Cafe.Launcher.Tests/Cafe.Launcher.Tests.csproj -c Debug --filter-class '*VideoBackgroundRuntimeTests' --hangdump --hangdump-timeout 5m --hangdump-type None
+          mkdir -p tests/Cafe.Launcher.Tests/bin/Debug/net10.0/libmpv
+          cp -a artifacts/bundle/linux-x64/portable/libmpv/linux-x64 tests/Cafe.Launcher.Tests/bin/Debug/net10.0/libmpv/
+          dotnet test --project tests/Cafe.Launcher.Tests/Cafe.Launcher.Tests.csproj -c Debug --filter-class '*VideoBackgroundRuntimeTests' --hangdump --hangdump-timeout 5m --hangdump-type None
+          # Verify fallbacks in a clean system with neither ALSA nor VA installed.
+          docker run --rm -v "$DOTNET_ROOT:/dotnet:ro" -v "$PWD/tests/Cafe.Launcher.Tests/bin/Debug/net10.0:/tests:ro" ubuntu:24.04 bash -euxo pipefail -c '
+            apt-get update -qq
+            DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends libicu74 libssl3t64 libstdc++6 libdrm2 libfribidi0 libharfbuzz0b libfontconfig1 libfreetype6 libegl1
+            test ! -e /usr/lib/x86_64-linux-gnu/libasound.so.2
+            test ! -e /usr/lib/x86_64-linux-gnu/libva.so.2
+            DOTNET_ROOT=/dotnet TESTINGPLATFORM_TELEMETRY_OPTOUT=1 DOTNET_CLI_TELEMETRY_OPTOUT=1 /dotnet/dotnet /tests/Cafe.Launcher.Tests.dll --filter-class "*VideoBackgroundRuntimeTests" --hangdump --hangdump-timeout 5m --hangdump-type None
+          '
+
+      - name: Verify portable video assets and Homebrew cask
+        shell: bash
+        run: |
+          tar -tzf artifacts/distribution/*_linux-x64.tar.gz | grep -Fx './libmpv/linux-x64/libmpv.so.2'
+          tar -tzf artifacts/distribution/*_linux-x64.tar.gz | grep -Fx './libmpv/linux-x64/libva.so.2'
+          tar -tzf artifacts/distribution/*_linux-x64.tar.gz | grep -Fx './libmpv/linux-x64/libva-drm.so.2'
+          tar -tzf artifacts/distribution/*_linux-x64.tar.gz | grep -Fx './libmpv/linux-x64/libasound.so.2'
+          tar -tzf artifacts/distribution/*_linux-x64.tar.gz | grep -Fx './libmpv/linux-x64/THIRD-PARTY-alsa.txt'
+          tar -tzf artifacts/distribution/*_linux-x64.tar.gz | grep -Fx './libmpv/linux-x64/THIRD-PARTY-linux.txt'
+          unzip -Z1 artifacts/distribution/*_osx-arm64.zip | grep -Fx 'Cafe Launcher.app/Contents/MacOS/libmpv/osx-arm64/libmpv.2.dylib'
+          unzip -Z1 artifacts/distribution/*_osx-arm64.zip | grep -Fx 'Cafe Launcher.app/Contents/MacOS/libmpv/osx-arm64/THIRD-PARTY-macos.txt'
+          grep -F "$(sha256sum artifacts/distribution/*_osx-arm64.zip | cut -d' ' -f1)" artifacts/distribution/cafe-launcher.rb
+          grep -F 'depends_on formula: "mpv"' artifacts/distribution/cafe-launcher.rb
+          grep -F 'depends_on :macos' artifacts/distribution/cafe-launcher.rb
+          scratch=$(mktemp -d)
+          mkdir -p "$scratch/libmpv/linux-x64"
+          touch "$scratch/libmpv/linux-x64/unexpected.so"
+          if pwsh -NoProfile ./scripts/Restore-UnixVideoRuntime.ps1 -Rid linux-x64 -OutputDirectory "$scratch"; then
+            echo 'Unexpected runtime files must be rejected.' >&2
+            exit 1
+          fi
+
       - name: Verify Debian and RPM packages and smoke test AppImage
         shell: bash
         run: |
@@ -102,10 +143,12 @@ jobs:
           fi
           [[ $(dpkg-deb --field "${debs[0]}" Package) == cafe-launcher ]]
           [[ $(dpkg-deb --field "${debs[0]}" Architecture) == amd64 ]]
+          dpkg-deb --field "${debs[0]}" Depends | grep -F 'libmpv2 (>= 0.37)'
           mkdir -p "$RUNNER_TEMP/deb-root"
           dpkg-deb --extract "${debs[0]}" "$RUNNER_TEMP/deb-root"
           test -x "$RUNNER_TEMP/deb-root/usr/bin/cafe-launcher"
           test -x "$RUNNER_TEMP/deb-root/opt/cafe-launcher/Cafe.Launcher"
+          test ! -e "$RUNNER_TEMP/deb-root/opt/cafe-launcher/libmpv/linux-x64"
           test -f "$RUNNER_TEMP/deb-root/usr/share/doc/cafe-launcher/copyright"
           test -f "$RUNNER_TEMP/deb-root/usr/share/doc/cafe-launcher/changelog.Debian.gz"
           test -f "$RUNNER_TEMP/deb-root/usr/share/doc/cafe-launcher/THIRD-PARTY-NOTICES.md"
@@ -122,6 +165,7 @@ jobs:
           fi
           [[ $(rpm -qp --queryformat '%{NAME}' "${rpms[0]}") == cafe-launcher ]]
           [[ $(rpm -qp --queryformat '%{ARCH}' "${rpms[0]}") == x86_64 ]]
+          rpm -qp --requires "${rpms[0]}" | grep -Fx 'libmpv.so.2()(64bit)'
           rpm -qp --queryformat '%{NAME} %{VERSION}-%{RELEASE} %{ARCH}\n' "${rpms[0]}"
           # Install into an alternate root rather than onto the runner: this exercises
           # the payload and its file modes without touching the host, and --nodeps keeps
@@ -130,6 +174,7 @@ jobs:
           rpm --root "$RUNNER_TEMP/rpm-root" -ivh --nodeps --noscripts "${rpms[0]}"
           test -x "$RUNNER_TEMP/rpm-root/usr/bin/cafe-launcher"
           test -x "$RUNNER_TEMP/rpm-root/opt/cafe-launcher/Cafe.Launcher"
+          test ! -e "$RUNNER_TEMP/rpm-root/opt/cafe-launcher/libmpv/linux-x64"
           test -f "$RUNNER_TEMP/rpm-root/usr/share/metainfo/cafe-launcher.metainfo.xml"
           sh -n "$RUNNER_TEMP/rpm-root/usr/bin/cafe-launcher"
           desktop-file-validate "$RUNNER_TEMP/rpm-root/usr/share/applications/cafe-launcher.desktop"
@@ -188,6 +233,7 @@ jobs:
           docker run --rm -v "$arch_dir:/pkg:ro" archlinux:base bash -euo pipefail -c '
             pacman -Syu --noconfirm >/dev/null
             pacman -U --noconfirm /pkg/*.pkg.tar.*
+            pacman -Q mpv
             # /usr/sbin aliases /usr/bin and can appear earlier in PATH.
             test "$(command -v cafe-launcher)" -ef /usr/bin/cafe-launcher
             if command -v dotnet; then
@@ -277,6 +323,24 @@ jobs:
         with:
           path: ~/.nuget/packages
           key: ${{ steps.nuget-cache.outputs.cache-primary-key }}
+
+  video-runtime-macos:
+    name: Verify macOS video runtime
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          dotnet-version: 10.0.403
+      - name: Verify native decode and local-only access
+        shell: pwsh
+        run: |
+          if ([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture -ne [System.Runtime.InteropServices.Architecture]::Arm64) { throw 'The video runtime smoke test requires Apple Silicon.' }
+          ./scripts/Restore-UnixVideoRuntime.ps1 -Rid osx-arm64 -OutputDirectory tests/Cafe.Launcher.Tests/bin/Debug/net10.0
+          if (-not (Test-Path -LiteralPath 'tests/Cafe.Launcher.Tests/bin/Debug/net10.0/libmpv/osx-arm64/libmpv.2.dylib' -PathType Leaf)) { throw 'Bundled macOS runtime is missing.' }
+          ./test.ps1 -Suite Unit -FilterClass '*VideoBackgroundRuntimeTests'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
   installer:
     name: Release tests and Windows installer
@@ -400,7 +464,7 @@ jobs:
   release:
     name: Publish GitHub releases
     runs-on: ubuntu-latest
-    needs: [ build, installer ]
+    needs: [ build, installer, video-runtime-macos ]
     if: github.event_name == 'push'
     timeout-minutes: 10
 
@@ -486,6 +550,9 @@ jobs:
             exit 1
           fi
 
+          test -f cafe-launcher.rb
+          packages+=(cafe-launcher.rb)
+
           sha256sum "${packages[@]}" > SHA256SUMS
           cat SHA256SUMS
 
@@ -507,6 +574,7 @@ jobs:
             artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_win-x64.zip
             artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_setup.exe
             artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_osx-arm64.zip
+            artifacts/distribution/cafe-launcher.rb
             artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_linux-x64.tar.gz
             artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_linux-x64.AppImage
             artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_linux-x64.deb
@@ -529,6 +597,7 @@ jobs:
             artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_win-x64.zip
             artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_setup.exe
             artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_osx-arm64.zip
+            artifacts/distribution/cafe-launcher.rb
             artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_linux-x64.tar.gz
             artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_linux-x64.AppImage
             artifacts/distribution/Cafe.Launcher_${{ github.ref_name }}_linux-x64.deb

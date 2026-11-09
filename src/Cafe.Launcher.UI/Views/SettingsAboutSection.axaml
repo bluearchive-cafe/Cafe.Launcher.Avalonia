@@ -14,7 +14,7 @@
                     <TextBlock Text="{Binding Shell.VersionCaptionText}" Classes="caption"/>
                     <TextBlock Text="{Binding Shell.I18n[aboutDescription]}" Classes="caption" TextWrapping="Wrap"/>
                 </StackPanel>
-                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}">
+                <WrapPanel ItemSpacing="{StaticResource Launcher.Spacing.Sm}" LineSpacing="{StaticResource Launcher.Spacing.Sm}">
                     <Button Classes="primary-action"
                             Command="{Binding Settings.CheckForUpdatesCommand}"
                             AutomationProperties.Name="{Binding Shell.I18n[checkUpdates]}">
@@ -39,38 +39,7 @@
                             <TextBlock Text="{Binding Shell.I18n[helpDocs]}"/>
                         </StackPanel>
                     </Button>
-                </StackPanel>
-            </StackPanel>
-        </Border>
-
-        <!-- 版本详细信息：key-value 行 + inset hairline（值用等宽字体） -->
-        <TextBlock Text="{Binding Shell.I18n[versionInfo]}" Classes="group-title"/>
-        <Border Classes="about-kv-list">
-            <StackPanel>
-                <Grid Classes="about-kv-row" ColumnDefinitions="*,Auto">
-                    <TextBlock Text="{Binding Shell.I18n[aboutRowCommit]}" Classes="caption"/>
-                    <TextBlock Grid.Column="1" Text="{Binding Shell.CommitShaValue}" Classes="about-kv-value" TextWrapping="Wrap"/>
-                </Grid>
-                <Border Classes="settings-row-divider"/>
-                <Grid Classes="about-kv-row" ColumnDefinitions="*,Auto">
-                    <TextBlock Text="{Binding Shell.I18n[aboutRowBuildConfig]}" Classes="caption"/>
-                    <TextBlock Grid.Column="1" Text="{Binding Shell.BuildConfigValue}" Classes="about-kv-value" TextWrapping="Wrap"/>
-                </Grid>
-                <Border Classes="settings-row-divider"/>
-                <Grid Classes="about-kv-row" ColumnDefinitions="*,Auto">
-                    <TextBlock Text="{Binding Shell.I18n[aboutRowRuntime]}" Classes="caption"/>
-                    <TextBlock Grid.Column="1" Text="{Binding Shell.FrameworkVersionText}" Classes="about-kv-value" TextWrapping="Wrap"/>
-                </Grid>
-                <Border Classes="settings-row-divider"/>
-                <Grid Classes="about-kv-row" ColumnDefinitions="*,Auto">
-                    <TextBlock Text="{Binding Shell.I18n[aboutRowAvalonia]}" Classes="caption"/>
-                    <TextBlock Grid.Column="1" Text="{Binding Shell.AvaloniaVersionText}" Classes="about-kv-value" TextWrapping="Wrap"/>
-                </Grid>
-                <Border Classes="settings-row-divider"/>
-                <Grid Classes="about-kv-row" ColumnDefinitions="*,Auto">
-                    <TextBlock Text="{Binding Shell.I18n[aboutRowPlatform]}" Classes="caption"/>
-                    <TextBlock Grid.Column="1" Text="{Binding Shell.PlatformValue}" Classes="about-kv-value" TextWrapping="Wrap"/>
-                </Grid>
+                </WrapPanel>
             </StackPanel>
         </Border>
 
@@ -107,6 +76,39 @@
                 </Grid>
             </Button>
         </ItemsControl>
+
+        <Expander x:Name="AboutBuildExpander" Classes="settings-appearance-expander settings-about-build"
+                  Header="{Binding Shell.I18n[aboutBuildInformation]}"
+                  AutomationProperties.Name="{Binding Shell.I18n[aboutBuildInformation]}">
+            <Border Classes="about-kv-list">
+                <StackPanel>
+                    <Grid Classes="about-kv-row" ColumnDefinitions="*,Auto">
+                        <TextBlock Text="{Binding Shell.I18n[aboutRowCommit]}" Classes="caption"/>
+                        <TextBlock Grid.Column="1" Text="{Binding Shell.CommitShaValue}" Classes="about-kv-value" TextWrapping="Wrap"/>
+                    </Grid>
+                    <Border Classes="settings-row-divider"/>
+                    <Grid Classes="about-kv-row" ColumnDefinitions="*,Auto">
+                        <TextBlock Text="{Binding Shell.I18n[aboutRowBuildConfig]}" Classes="caption"/>
+                        <TextBlock Grid.Column="1" Text="{Binding Shell.BuildConfigValue}" Classes="about-kv-value" TextWrapping="Wrap"/>
+                    </Grid>
+                    <Border Classes="settings-row-divider"/>
+                    <Grid Classes="about-kv-row" ColumnDefinitions="*,Auto">
+                        <TextBlock Text="{Binding Shell.I18n[aboutRowRuntime]}" Classes="caption"/>
+                        <TextBlock Grid.Column="1" Text="{Binding Shell.FrameworkVersionText}" Classes="about-kv-value" TextWrapping="Wrap"/>
+                    </Grid>
+                    <Border Classes="settings-row-divider"/>
+                    <Grid Classes="about-kv-row" ColumnDefinitions="*,Auto">
+                        <TextBlock Text="{Binding Shell.I18n[aboutRowAvalonia]}" Classes="caption"/>
+                        <TextBlock Grid.Column="1" Text="{Binding Shell.AvaloniaVersionText}" Classes="about-kv-value" TextWrapping="Wrap"/>
+                    </Grid>
+                    <Border Classes="settings-row-divider"/>
+                    <Grid Classes="about-kv-row" ColumnDefinitions="*,Auto">
+                        <TextBlock Text="{Binding Shell.I18n[aboutRowPlatform]}" Classes="caption"/>
+                        <TextBlock Grid.Column="1" Text="{Binding Shell.PlatformValue}" Classes="about-kv-value" TextWrapping="Wrap"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Expander>
 
         <!-- 法律信息：文字与链接分列，避免内联控件在页面重新显示后消失。 -->
         <StackPanel Spacing="{StaticResource Launcher.Spacing.Xs}">

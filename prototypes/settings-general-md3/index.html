@@ -1,0 +1,943 @@
+<!doctype html>
+<html lang="zh-Hans" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cafe Launcher — 设置·常规 M3 语义样张</title>
+  <style>
+    /* =====================================================================
+       设置·常规页 M3 语义样张（一次性原型，不属于生产架构）
+       目的：验证「小枚举 → 分段按钮、长枚举 → 暴露式下拉菜单、
+             提交式布尔 → CheckBox」在现有设置行解剖内的观感。
+       令牌：Launcher.* 于 App.axaml 的声明值；accent 用代表性 BrandBlue 值，
+             生产运行时由 ApplyScheme 派生。字体/间距/圆角沿用现有刻度。
+       ===================================================================== */
+    :root {
+      color-scheme: light;
+      --surface: #FEF7FF;                    /* Launcher.Color.Surface（导航列） */
+      --dialog-bg: #FFFFFF;                  /* Launcher.Color.Dialog.Background */
+      --card-bg: #FAFCFF;
+      --card-border: #D6E2EE;                /* Launcher.Color.Card.Border */
+      --hairline: #D6E2EE;
+      --text-primary: #232A31;
+      --text-body: #3F4954;
+      --text-secondary: #646D79;
+      --secondary-container: #E8DEF8;        /* Launcher.Color.SecondaryContainer（占位值） */
+      --on-secondary-container: #1D192B;
+      --primary: #3D6BC6;                    /* 代表性 scheme Primary（tone 40） */
+      --primary-hover: #3159A8;
+      --primary-soft: rgba(61, 107, 198, .10); /* Launcher.Color.Primary.Soft */
+      --on-primary: #FFFFFF;
+      --field-bg: #F9FAFC;
+      --field-border: #8290A5;
+      --button-secondary-bg: #EDF0F5;
+      --button-secondary-hover: #DDE0E5;
+      --button-secondary-pressed: #CDD0D6;
+      --button-border: #C8D2DE;
+      --flat-hover: #EEF6FF;
+      --flat-pressed: #DCEFFF;
+      --focus-ring: rgba(61, 107, 198, .6);
+      --outline: #79747E;
+      --dialog-close-hover: #EDF2F7;
+      --shadow-surface: 0 16px 40px rgba(15, 18, 34, .20), 0 2px 6px rgba(15, 18, 34, .08);
+      --shadow-menu: 0 8px 24px rgba(15, 18, 34, .16);
+      --font-stack: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+      --fs-caption: 13px;
+      --fs-body: 14px;
+      --fs-title: 18px;
+      --fs-label: 12px;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --height-control: 36px;
+      --height-field: 40px;
+      --action-width: 288px;
+      --motion-fast: 167ms cubic-bezier(.2, .8, .2, 1);
+    }
+
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --surface: #1B2029;
+      --dialog-bg: #161C26;
+      --card-bg: #202733;
+      --card-border: #344150;
+      --hairline: #2C3844;
+      --text-primary: #E8EEF6;
+      --text-body: #C8D2DF;
+      --text-secondary: #A8B3C2;
+      --secondary-container: #4A4458;
+      --on-secondary-container: #E8DEF8;
+      --primary: #8CB4F0;
+      --primary-hover: #A7C5F4;
+      --primary-soft: rgba(140, 180, 240, .14);
+      --on-primary: #10182C;
+      --field-bg: #272E3A;
+      --field-border: #7B89A0;
+      --button-secondary-bg: #303744;
+      --button-secondary-hover: #3F4652;
+      --button-secondary-pressed: #4D5460;
+      --button-border: #4A5B73;
+      --flat-hover: #243653;
+      --flat-pressed: #1D426C;
+      --focus-ring: rgba(140, 180, 240, .6);
+      --outline: #938F99;
+      --dialog-close-hover: #2A3547;
+      --shadow-surface: 0 22px 55px rgba(0, 0, 0, .55), 0 12px 32px rgba(0, 0, 0, .35);
+      --shadow-menu: 0 12px 32px rgba(0, 0, 0, .45);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      color: var(--text-primary);
+      background: #171a2d;
+      font: var(--fs-body)/1.45 var(--font-stack);
+    }
+    button { font: inherit; cursor: pointer; }
+    button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+    /* ---- 原型外框（非产品 UI） ---- */
+    .prototype-frame {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 40px;
+      background:
+        linear-gradient(110deg, rgba(17, 20, 39, .86) 0%, rgba(36, 31, 63, .46) 53%, rgba(77, 58, 89, .26) 100%),
+        url("../../src/Cafe.Launcher.UI/Assets/launcher-background.png") center / cover;
+    }
+    .prototype-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      width: min(960px, 100%);
+      margin-bottom: 20px;
+    }
+    .prototype-title {
+      color: #fff;
+      font-size: var(--fs-label);
+      letter-spacing: .5px;
+      opacity: .85;
+    }
+    .theme-toggle { display: flex; gap: 8px; }
+    .theme-toggle button {
+      height: var(--height-control);
+      padding: 0 16px;
+      border: 1px solid rgba(255, 255, 255, .35);
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, .08);
+      color: #fff;
+      transition: background var(--motion-fast);
+    }
+    .theme-toggle button:hover { background: rgba(255, 255, 255, .16); }
+    .theme-toggle button[aria-pressed="true"] {
+      background: rgba(255, 255, 255, .92);
+      border-color: transparent;
+      color: #1a1b22;
+    }
+
+    /* ---- 设置表面（DialogSurface：16 圆角 + 克制阴影 + Dialog.Background） ---- */
+    .settings-surface {
+      position: relative;
+      display: flex;
+      width: min(960px, 100%);
+      height: 720px;                         /* 样张取景：生产表面上限 620 DIP，常规页超出时正文滚动 */
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      background: var(--dialog-bg);
+      box-shadow: var(--shadow-surface);
+    }
+
+    /* ---- 左侧导航：标准抽屉语义（图标 + 标签 + SecondaryContainer 激活） ---- */
+    .settings-nav {
+      width: 216px;                          /* Launcher.Component.Settings.Navigation.Width */
+      flex: none;
+      display: flex;
+      flex-direction: column;
+      background: var(--surface);
+    }
+    .nav-header {
+      min-height: 56px;                      /* Launcher.Component.Dialog.Title.Height */
+      display: flex;
+      align-items: center;
+      padding: 16px 16px 4px;
+      font-size: var(--fs-title);
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .nav-list {
+      list-style: none;
+      margin: 0;
+      padding: 8px 16px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .nav-item {
+      width: 100%;
+      min-height: var(--height-control);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 12px;
+      border: 0;
+      border-radius: var(--radius-md);
+      background: transparent;
+      color: var(--text-body);
+      font-size: var(--fs-body);
+      text-align: left;
+      transition: background var(--motion-fast), color var(--motion-fast);
+    }
+    .nav-item svg { width: 18px; height: 18px; flex: none; }
+    .nav-item:hover { background: var(--flat-hover); color: var(--text-primary); }
+    .nav-item:active { background: var(--flat-pressed); }
+    .nav-item.is-active {
+      background: var(--secondary-container);
+      color: var(--on-secondary-container);
+      font-weight: 600;
+    }
+    .nav-item:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 0; }
+
+    /* ---- 右侧内容：小号 top app bar + 滚动列表 + 固定动作带 ---- */
+    .settings-content {
+      position: relative;
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      background: var(--dialog-bg);
+    }
+    .content-appbar {
+      min-height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 16px 4px;
+    }
+    .content-appbar h1 {
+      margin: 0;
+      font-size: var(--fs-title);
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .icon-button {
+      width: var(--height-control);
+      height: var(--height-control);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 0;
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: var(--text-secondary);
+      transition: background var(--motion-fast), color var(--motion-fast);
+    }
+    .icon-button svg { width: 18px; height: 18px; }
+    .icon-button:hover { background: var(--dialog-close-hover); color: var(--text-primary); }
+    .icon-button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 0; }
+
+    .content-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 16px 16px;
+      scrollbar-gutter: stable;
+    }
+    .content-scroll::-webkit-scrollbar { width: 8px; }
+    .content-scroll::-webkit-scrollbar-thumb {
+      background: var(--button-border);
+      border-radius: 4px;
+    }
+    .save-hint {
+      margin: 0;
+      font-size: var(--fs-caption);
+      color: var(--text-secondary);
+    }
+
+    .settings-group { margin-top: 16px; }
+    .settings-group:first-of-type { margin-top: 12px; }
+    .group-title {
+      margin: 0 0 4px;
+      font-size: var(--fs-body);
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .setting-row {
+      min-height: 52px;                      /* Launcher.Component.Settings.Row.MinHeight */
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .row-copy {
+      min-width: 220px;                      /* Launcher.Component.Settings.Control.MinWidth */
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 8px 0;                        /* Launcher.Component.Settings.Row.Content.Padding */
+    }
+    .row-title {
+      font-size: var(--fs-body);
+      font-weight: 400;                      /* ADR-056：设置行标题普通字重 */
+      color: var(--text-primary);
+    }
+    .row-desc {
+      font-size: var(--fs-caption);
+      color: var(--text-secondary);
+      line-height: 1.45;
+    }
+    .row-action {
+      width: var(--action-width);
+      flex: none;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    .divider {
+      height: 0;
+      border-top: .5px solid var(--hairline); /* 0.5 DIP inset hairline */
+      margin-left: 16px;
+    }
+
+    /* ---- 分段按钮：2–3 个短标签，选中 = Primary.Soft + 勾号 ---- */
+    .segmented {
+      width: var(--action-width);
+      height: var(--height-control);
+      display: flex;
+      border: 1px solid var(--button-border);
+      border-radius: 999px;                   /* Launcher.Radius.Full */
+      overflow: hidden;
+      background: transparent;
+    }
+    .segment {
+      position: relative;
+      flex: 1 1 0;
+      min-width: 0;
+      display: flex;
+    }
+    .segment input {
+      position: absolute;
+      inset: 0;
+      margin: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+    .segment input:focus { outline: none; }
+    .segment-face {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      padding: 0 10px;
+      font-size: var(--fs-caption);
+      font-weight: 600;
+      color: var(--text-body);
+      white-space: nowrap;
+      transition: background var(--motion-fast), color var(--motion-fast);
+    }
+    .segment:hover .segment-face { background: var(--flat-hover); }
+    .segment input:checked + .segment-face {
+      background: var(--primary-soft);
+      color: var(--primary);
+    }
+    .segment input:focus-visible + .segment-face {
+      box-shadow: inset 0 0 0 2px var(--focus-ring);
+    }
+    .segment-divider {
+      width: 1px;
+      flex: none;
+      background: var(--button-border);
+    }
+    .segment-check {
+      width: 14px;
+      height: 14px;
+      flex: none;
+      visibility: hidden;                    /* 预留槽位，选中时不产生位移 */
+    }
+    .segment input:checked + .segment-face .segment-check { visibility: visible; }
+
+    /* ---- 暴露式下拉菜单：≥4 项或标签较长时使用 ---- */
+    .menu-wrap { position: relative; width: var(--action-width); }
+    .select-trigger {
+      width: 100%;
+      height: var(--height-field);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 0 12px;
+      border: 1px solid var(--field-border);
+      border-radius: var(--radius-sm);
+      background: var(--field-bg);
+      color: var(--text-body);
+      font-size: var(--fs-caption);
+      text-align: left;
+      transition: border-color var(--motion-fast), background var(--motion-fast);
+    }
+    .select-trigger:hover { border-color: var(--text-secondary); }
+    .select-trigger svg { width: 16px; height: 16px; flex: none; color: var(--text-secondary); }
+    .select-value {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .menu {
+      position: absolute;
+      top: calc(100% + 4px);
+      right: 0;
+      z-index: 20;
+      width: 100%;
+      margin: 0;
+      padding: 4px;
+      list-style: none;
+      background: var(--dialog-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-menu);
+      display: none;
+    }
+    .menu.open { display: block; }
+    .menu [role="option"] {
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 0 12px;
+      border-radius: var(--radius-sm);
+      color: var(--text-body);
+      font-size: var(--fs-caption);
+      cursor: pointer;
+    }
+    .menu [role="option"]:hover { background: var(--button-secondary-hover); }
+    .menu [role="option"]:focus-visible {
+      outline: 2px solid var(--focus-ring);
+      outline-offset: -2px;
+    }
+    .menu [role="option"].is-selected {
+      background: var(--secondary-container);
+      color: var(--on-secondary-container);
+      font-weight: 600;
+    }
+    .menu-check { width: 16px; height: 16px; visibility: hidden; flex: none; }
+    .menu [role="option"].is-selected .menu-check { visibility: visible; }
+
+    /* ---- 提交式 CheckBox（ADR-056：不用 Switch 暗示已生效） ---- */
+    .checkbox {
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      margin: 0;
+      border: 2px solid var(--outline);
+      border-radius: 2px;
+      background: transparent;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      transition: background var(--motion-fast), border-color var(--motion-fast);
+    }
+    .checkbox:checked {
+      border-color: var(--primary);
+      background: var(--primary);
+    }
+    .checkbox:checked::after {
+      content: "";
+      width: 5px;
+      height: 9px;
+      border: solid var(--on-primary);
+      border-width: 0 2px 2px 0;
+      transform: translateY(-1px) rotate(45deg);
+    }
+    .checkbox:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+    /* ---- 底部动作带（事务式保存保留） ---- */
+    .content-footer {
+      flex: none;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 8px 16px 20px 24px;           /* Launcher.Component.Settings.Footer.Padding */
+      border-top: .5px solid var(--hairline);
+      background: var(--dialog-bg);
+    }
+    .button {
+      min-width: 80px;
+      min-height: 40px;                      /* ADR-050：40 DIP 标准最小高度 */
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 0 20px;
+      border: 0;
+      border-radius: var(--radius-sm);
+      font-size: var(--fs-body);
+      transition: background var(--motion-fast);
+    }
+    .button svg { width: 16px; height: 16px; flex: none; }
+    .button--tonal {
+      background: var(--button-secondary-bg);
+      color: var(--text-primary);
+    }
+    .button--tonal:not(:disabled):hover { background: var(--button-secondary-hover); }
+    .button--tonal:not(:disabled):active { background: var(--button-secondary-pressed); }
+    .button--filled {
+      background: var(--primary);
+      color: var(--on-primary);
+    }
+    .button--filled:not(:disabled):hover { background: var(--primary-hover); }
+    .button:disabled {
+      opacity: .38;                          /* StateLayer.Disabled.Content */
+      cursor: default;
+    }
+
+    /* ---- 保存反馈（样张内近似 Toast） ---- */
+    .toast {
+      position: absolute;
+      right: 16px;
+      bottom: 80px;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      min-height: 40px;
+      padding: 0 14px;
+      border: .5px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      background: var(--dialog-bg);
+      box-shadow: var(--shadow-menu);
+      color: var(--text-primary);
+      font-size: var(--fs-caption);
+    }
+    .toast.show { display: flex; }
+    .toast svg { width: 16px; height: 16px; color: var(--primary); }
+
+    /* ---- 样张说明（非产品 UI） ---- */
+    .prototype-note {
+      width: min(960px, 100%);
+      margin-top: 16px;
+      padding: 16px 20px;
+      border: 1px solid rgba(255, 255, 255, .14);
+      border-radius: var(--radius-md);
+      background: rgba(15, 18, 28, .62);
+      color: #E8EEF6;
+      font-size: var(--fs-caption);
+      line-height: 1.7;
+      backdrop-filter: blur(8px);
+    }
+    .prototype-note strong { color: #fff; font-size: var(--fs-body); }
+    .prototype-note ul { margin: 8px 0 0; padding-left: 18px; }
+    .prototype-note code {
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, .10);
+      font-family: Consolas, "Cascadia Mono", ui-monospace, monospace;
+    }
+
+    /* 桌面样张按最小窗口 1024 DIP 取景；窄视口横向滚动而不压扁设置行。 */
+    body { overflow-x: auto; }
+    .prototype-frame { min-width: 1000px; }
+  </style>
+</head>
+<body>
+  <div class="prototype-frame">
+    <div class="prototype-bar">
+      <span class="prototype-title">Cafe Launcher · 设置 / 常规 · M3 语义样张</span>
+      <div class="theme-toggle">
+        <button type="button" data-theme-btn="light" aria-pressed="true">浅色</button>
+        <button type="button" data-theme-btn="dark" aria-pressed="false">深色</button>
+      </div>
+    </div>
+
+    <div class="settings-surface" role="dialog" aria-modal="true" aria-label="设置">
+      <nav class="settings-nav" aria-label="设置分类">
+        <div class="nav-header">设置</div>
+        <ul class="nav-list">
+          <li>
+            <button type="button" class="nav-item is-active" aria-current="page">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 8.95 19.4a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 8.95a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1.03-1.56V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9c.14.6.66 1.03 1.28 1.03H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1.03Z"/></svg>
+              <span>常规</span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="nav-item" title="样张仅展示常规页">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 8h11A4.5 4.5 0 0 1 22 12.5v2A3.5 3.5 0 0 1 18.5 18c-1.2 0-2.3-.6-3-1.6L14.8 15H9.2l-.7 1.4A3.5 3.5 0 0 1 5.5 18 3.5 3.5 0 0 1 2 14.5v-2A4.5 4.5 0 0 1 6.5 8Z"/><path d="M7 11v3M5.5 12.5h3M15.5 12h.01M18 13.5h.01"/></svg>
+              <span>游戏</span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="nav-item" title="样张仅展示常规页">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v11"/><path d="m7 10 5 5 5-5"/><path d="M4 17v3h16v-3"/></svg>
+              <span>下载与网络</span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="nav-item" title="样张仅展示常规页">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18h1.5a2 2 0 0 0 0-4H13a2 2 0 0 1 0-4h4.5A3.5 3.5 0 0 0 21 9.5 6.5 6.5 0 0 0 14.5 3H12Z"/><circle cx="7.5" cy="10.5" r=".8"/><circle cx="10" cy="7" r=".8"/><circle cx="14" cy="6.5" r=".8"/></svg>
+              <span>外观</span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="nav-item" title="样张仅展示常规页">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h10M18 18h2"/><circle cx="16" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/></svg>
+              <span>高级</span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="nav-item" title="样张仅展示常规页">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/></svg>
+              <span>关于</span>
+            </button>
+          </li>
+        </ul>
+      </nav>
+
+      <section class="settings-content">
+        <header class="content-appbar">
+          <h1>常规</h1>
+          <button type="button" class="icon-button" aria-label="关闭设置" title="关闭">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+          </button>
+        </header>
+
+        <div class="content-scroll">
+          <p class="save-hint">设置选项更改后需保存。</p>
+
+          <section class="settings-group" aria-labelledby="group-app-preferences">
+            <h2 class="group-title" id="group-app-preferences">应用偏好</h2>
+
+            <div class="setting-row">
+              <div class="row-copy">
+                <span class="row-title">语言</span>
+              </div>
+              <div class="row-action">
+                <div class="menu-wrap">
+                  <button type="button" class="select-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="语言">
+                    <span class="select-value">自动（跟随系统语言）</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                  </button>
+                  <ul class="menu" role="listbox" aria-label="语言">
+                    <li role="option" tabindex="0" data-value="auto" class="is-selected" aria-selected="true">自动（跟随系统语言）<svg class="menu-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg></li>
+                    <li role="option" tabindex="0" data-value="en" aria-selected="false">English<svg class="menu-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg></li>
+                    <li role="option" tabindex="0" data-value="zh-hans" aria-selected="false">简体中文<svg class="menu-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg></li>
+                    <li role="option" tabindex="0" data-value="zh-hant" aria-selected="false">繁體中文<svg class="menu-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg></li>
+                    <li role="option" tabindex="0" data-value="ja" aria-selected="false">日本語<svg class="menu-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg></li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div class="divider" role="separator"></div>
+
+            <div class="setting-row">
+              <div class="row-copy">
+                <span class="row-title">关闭行为</span>
+              </div>
+              <div class="row-action">
+                <div class="segmented" role="radiogroup" aria-label="关闭行为">
+                  <label class="segment">
+                    <input type="radio" name="close-behavior" value="minimize" checked />
+                    <span class="segment-face">
+                      <svg class="segment-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg>
+                      <span>最小化到托盘</span>
+                    </span>
+                  </label>
+                  <span class="segment-divider" aria-hidden="true"></span>
+                  <label class="segment">
+                    <input type="radio" name="close-behavior" value="exit" />
+                    <span class="segment-face">
+                      <svg class="segment-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg>
+                      <span>退出</span>
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div class="divider" role="separator"></div>
+
+            <div class="setting-row">
+              <div class="row-copy">
+                <span class="row-title">游戏启动后的行为</span>
+              </div>
+              <div class="row-action">
+                <div class="menu-wrap">
+                  <button type="button" class="select-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="游戏启动后的行为">
+                    <span class="select-value">保持窗口打开</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                  </button>
+                  <ul class="menu" role="listbox" aria-label="游戏启动后的行为">
+                    <li role="option" tabindex="0" data-value="keep-open" class="is-selected" aria-selected="true">保持窗口打开<svg class="menu-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg></li>
+                    <li role="option" tabindex="0" data-value="minimize" aria-selected="false">最小化到托盘<svg class="menu-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg></li>
+                    <li role="option" tabindex="0" data-value="exit" aria-selected="false">退出启动器<svg class="menu-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg></li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div class="divider" role="separator"></div>
+
+            <div class="setting-row">
+              <div class="row-copy">
+                <span class="row-title">记忆窗口位置和大小</span>
+              </div>
+              <div class="row-action">
+                <input type="checkbox" class="checkbox" checked aria-label="记忆窗口位置和大小" />
+              </div>
+            </div>
+          </section>
+
+          <section class="settings-group" aria-labelledby="group-display">
+            <h2 class="group-title" id="group-display">显示</h2>
+
+            <div class="setting-row">
+              <div class="row-copy">
+                <span class="row-title">状态面板</span>
+                <span class="row-desc">控制底部状态区域的显示和详细程度</span>
+              </div>
+              <div class="row-action">
+                <div class="segmented" role="radiogroup" aria-label="状态面板">
+                  <label class="segment">
+                    <input type="radio" name="status-detail" value="hidden" />
+                    <span class="segment-face">
+                      <svg class="segment-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg>
+                      <span>不显示</span>
+                    </span>
+                  </label>
+                  <span class="segment-divider" aria-hidden="true"></span>
+                  <label class="segment">
+                    <input type="radio" name="status-detail" value="compact" checked />
+                    <span class="segment-face">
+                      <svg class="segment-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg>
+                      <span>简略</span>
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div class="divider" role="separator"></div>
+
+            <div class="setting-row">
+              <div class="row-copy">
+                <span class="row-title">远程内容卡片</span>
+                <span class="row-desc">在主界面显示公告与横幅</span>
+              </div>
+              <div class="row-action">
+                <input type="checkbox" class="checkbox" checked aria-label="远程内容卡片" />
+              </div>
+            </div>
+          </section>
+
+          <section class="settings-group" aria-labelledby="group-updates">
+            <h2 class="group-title" id="group-updates">更新</h2>
+
+            <div class="setting-row">
+              <div class="row-copy">
+                <span class="row-title">启动时检查更新</span>
+                <span class="row-desc">启动时自动检查启动器更新</span>
+              </div>
+              <div class="row-action">
+                <input type="checkbox" class="checkbox" checked aria-label="启动时检查更新" />
+              </div>
+            </div>
+
+            <div class="divider" role="separator"></div>
+
+            <div class="setting-row">
+              <div class="row-copy">
+                <span class="row-title">更新通道</span>
+                <span class="row-desc">选择启动器更新通道</span>
+              </div>
+              <div class="row-action">
+                <div class="segmented" role="radiogroup" aria-label="更新通道">
+                  <label class="segment">
+                    <input type="radio" name="update-channel" value="stable" checked />
+                    <span class="segment-face">
+                      <svg class="segment-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg>
+                      <span>稳定版</span>
+                    </span>
+                  </label>
+                  <span class="segment-divider" aria-hidden="true"></span>
+                  <label class="segment">
+                    <input type="radio" name="update-channel" value="beta" />
+                    <span class="segment-face">
+                      <svg class="segment-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4.5 4.5L19 7"/></svg>
+                      <span>测试版</span>
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <footer class="content-footer">
+          <button type="button" class="button button--tonal" id="cancel-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6M15 9l-6 6"/></svg>
+            <span>取消</span>
+          </button>
+          <button type="button" class="button button--filled" id="save-btn" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h8V4M8 20v-6h8v6"/></svg>
+            <span>保存</span>
+          </button>
+        </footer>
+
+        <div class="toast" id="toast" role="status" aria-live="polite">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></svg>
+          <span>设置已保存</span>
+        </div>
+      </section>
+    </div>
+
+    <aside class="prototype-note">
+      <strong>样张要点</strong>
+      <ul>
+        <li>小枚举（2–3 个短标签）改为<b>分段按钮</b>：关闭行为、状态面板、更新通道；选中段用 <code>Primary.Soft</code> 填充并显示勾号，窄窗/文字放大时整行换为上下排布。</li>
+        <li>语言（5 项）与「游戏启动后的行为」（3 个长标签）保留<b>暴露式下拉菜单</b>；3 段中文标签在 288 DIP 操作列内会挤掉勾号，因此不强行分段。</li>
+        <li>布尔项仍是<b>提交式 CheckBox</b>，不改用 Switch：当前保存模型是草稿 + 一次提交（ADR-056），Switch 会暗示已生效。</li>
+        <li>底栏保留「取消 / 保存」；行标题 14 普通字重、说明 13、分类标题 18、0.5 DIP inset hairline。样张取景 960×720 仅为同屏展示；生产表面上限 620 DIP，常规页超出时正文滚动。未接入真实设置服务。</li>
+      </ul>
+    </aside>
+  </div>
+
+  <script>
+    const root = document.documentElement;
+
+    const applyTheme = (theme) => {
+      root.dataset.theme = theme;
+      document.querySelectorAll('[data-theme-btn]').forEach((candidate) => {
+        candidate.setAttribute('aria-pressed', String(candidate.dataset.themeBtn === theme));
+      });
+    };
+
+    document.querySelectorAll('[data-theme-btn]').forEach((button) => {
+      button.addEventListener('click', () => applyTheme(button.dataset.themeBtn));
+    });
+
+    const requestedTheme = new URLSearchParams(location.search).get('theme');
+    if (requestedTheme === 'light' || requestedTheme === 'dark') {
+      applyTheme(requestedTheme);
+    }
+
+    const saveButton = document.getElementById('save-btn');
+    const toast = document.getElementById('toast');
+    let dirty = false;
+    let toastTimer;
+
+    const markDirty = () => {
+      if (dirty) return;
+      dirty = true;
+      saveButton.disabled = false;
+    };
+
+    const closeMenus = () => {
+      document.querySelectorAll('.menu.open').forEach((menu) => {
+        menu.classList.remove('open');
+        const trigger = menu.parentElement.querySelector('.select-trigger');
+        if (trigger) trigger.setAttribute('aria-expanded', 'false');
+      });
+    };
+
+    document.querySelectorAll('.menu-wrap').forEach((wrap) => {
+      const trigger = wrap.querySelector('.select-trigger');
+      const menu = wrap.querySelector('.menu');
+
+      trigger.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const willOpen = !menu.classList.contains('open');
+        closeMenus();
+        if (willOpen) {
+          menu.classList.add('open');
+          trigger.setAttribute('aria-expanded', 'true');
+        }
+      });
+
+      const choose = (option) => {
+        wrap.querySelectorAll('[role="option"]').forEach((candidate) => {
+          candidate.classList.remove('is-selected');
+          candidate.setAttribute('aria-selected', 'false');
+        });
+        option.classList.add('is-selected');
+        option.setAttribute('aria-selected', 'true');
+        wrap.querySelector('.select-value').textContent = option.textContent.trim();
+        closeMenus();
+        markDirty();
+      };
+
+      wrap.querySelectorAll('[role="option"]').forEach((option) => {
+        option.addEventListener('click', (event) => {
+          event.stopPropagation();
+          choose(option);
+        });
+        option.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            choose(option);
+          }
+        });
+      });
+
+      const selected = wrap.querySelector('[role="option"].is-selected');
+      wrap.dataset.initialValue = selected.dataset.value;
+    });
+
+    document.addEventListener('click', closeMenus);
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape') return;
+      const openMenu = document.querySelector('.menu.open');
+      if (!openMenu) return;
+      const trigger = openMenu.parentElement.querySelector('.select-trigger');
+      closeMenus();
+      trigger?.focus();
+    });
+
+    document.querySelectorAll('.content-scroll input').forEach((input) => {
+      input.addEventListener('change', markDirty);
+    });
+
+    document.getElementById('cancel-btn').addEventListener('click', () => {
+      document.querySelectorAll('.content-scroll input').forEach((input) => {
+        input.checked = input.defaultChecked;
+      });
+      document.querySelectorAll('.menu-wrap').forEach((wrap) => {
+        const initial = wrap.dataset.initialValue;
+        const target = wrap.querySelector(`[role="option"][data-value="${initial}"]`);
+        if (!target) return;
+        wrap.querySelectorAll('[role="option"]').forEach((option) => {
+          option.classList.remove('is-selected');
+          option.setAttribute('aria-selected', 'false');
+        });
+        target.classList.add('is-selected');
+        target.setAttribute('aria-selected', 'true');
+        wrap.querySelector('.select-value').textContent = target.textContent.trim();
+      });
+      closeMenus();
+      dirty = false;
+      saveButton.disabled = true;
+    });
+
+    saveButton.addEventListener('click', () => {
+      if (!dirty) return;
+      document.querySelectorAll('.content-scroll input').forEach((input) => {
+        input.defaultChecked = input.checked;
+      });
+      document.querySelectorAll('.menu-wrap').forEach((wrap) => {
+        const selected = wrap.querySelector('[role="option"].is-selected');
+        wrap.dataset.initialValue = selected.dataset.value;
+      });
+      dirty = false;
+      saveButton.disabled = true;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 2400);
+    });
+  </script>
+</body>
+</html>

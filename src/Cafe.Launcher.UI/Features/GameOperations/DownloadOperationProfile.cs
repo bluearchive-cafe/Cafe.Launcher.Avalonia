@@ -21,8 +21,8 @@ internal sealed class DownloadOperationProfile
         GameOperationKind kind,
         GameOperationStage checkStage,
         GameOperationStage completedStage,
-        string noChangesKey,
-        string completedKey,
+        LocalizationKeys noChangesKey,
+        LocalizationKeys completedKey,
         string logCategory)
     {
         Kind = kind;
@@ -42,10 +42,10 @@ internal sealed class DownloadOperationProfile
     public GameOperationStage CompletedStage { get; }
 
     /// <summary>清单差异为零时的成功文案。</summary>
-    public string NoChangesKey { get; }
+    public LocalizationKeys NoChangesKey { get; }
 
     /// <summary>操作完成时的成功文案。</summary>
-    public string CompletedKey { get; }
+    public LocalizationKeys CompletedKey { get; }
 
     /// <summary>完成日志的类别；失败诊断一律记在 GameDownload 下，与本字段无关。</summary>
     public string LogCategory { get; }

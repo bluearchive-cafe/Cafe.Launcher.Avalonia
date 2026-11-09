@@ -28,6 +28,45 @@ namespace Cafe.Launcher.HeadlessTests;
 /// </summary>
 public sealed class BackgroundViewModelHeadlessTests
 {
+    [AvaloniaTheory]
+    [InlineData(ThemeColorModes.Default)]
+    [InlineData(ThemeColorModes.Custom)]
+    public async Task UpdateBackgroundImageAsync_UnselectedWallpaperSource_RefreshesDotWithoutChangingThemeOrDraft(string source)
+    {
+        using var context = HeadlessTestHost.CreateContext();
+        var main = context.Provider.GetRequiredService<MainWindowViewModel>();
+        var settings = new LauncherSettings
+        {
+            BackgroundSource = BackgroundSources.Custom, ThemeColorMode = source,
+            ThemeMode = ThemeModes.Light, CustomThemeColor = "#FF9400D3"
+        };
+        var red = Path.Combine(context.Directory.Path, "red.png");
+        var blue = Path.Combine(context.Directory.Path, "blue.png");
+        HeadlessTestHost.WriteSolidPng(red, Brushes.Red, 64, 64);
+        HeadlessTestHost.WriteSolidPng(blue, Brushes.Blue, 64, 64);
+        Color? previous = null;
+        foreach (var path in new[] { red, blue })
+        {
+            settings.CustomBackgroundPath = path;
+            main.Settings.ApplyLauncherSettings(settings);
+            await context.ViewModel.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
+            var appearance = main.Settings.Appearance;
+            await appearance.PendingThemeRefresh.WaitAsync(TimeSpan.FromSeconds(5));
+            var option = main.Settings.Options.ThemeColor.Single(item => item.Code == ThemeColorModes.Wallpaper);
+            var actual = Assert.IsType<SolidColorBrush>(option.PreviewBrush).Color;
+            var seed = Color.Parse(Assert.Single(appearance.GetThemeColorPaletteHexes()));
+            var expected = MaterialColorMapper.ToAvaloniaColor(MaterialSchemeGenerator.CreateScheme(
+                seed, settings.ThemeColorVariant, isDark: false).Primary);
+            Assert.Equal(expected, actual);
+            if (previous is { } previousColor)
+                Assert.NotEqual(previousColor, actual);
+            previous = actual;
+            Assert.Equal(source, main.Settings.Editor.Current.ThemeColorMode);
+            Assert.False(main.Settings.IsSettingsDirty);
+            Assert.Empty(main.Settings.Editor.Current.ThemeColorPalette);
+        }
+    }
+
     [AvaloniaFact]
     public async Task UpdateBackgroundImageAsync_WithProductionComposition_UsesWindowSizeAndReloadsAfterResize()
     {

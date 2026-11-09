@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.UI.Constants;
@@ -105,33 +106,50 @@ internal sealed class GameDownloadService : IDisposable
         sessionContext = BuildSessionContext(checkpointStore);
     }
 
+    /// <summary>Reads the fresh-install download size without writing settings, files, or checkpoints.</summary>
+    internal async Task<long?> GetInstallDownloadSizeAsync(LauncherStatusSnapshot snapshot, CancellationToken cancellationToken)
+    {
+        var config = snapshot.Remote.GameConfig;
+        if (config is null || string.IsNullOrWhiteSpace(config.GameLatestVersion)
+            || string.IsNullOrWhiteSpace(config.GameLatestFilePath)) return null;
+        var manifest = await remoteManifestService.GetOptionalManifestAsync(config.GameLatestVersion,
+            config.GameLatestFilePath, snapshot.Settings.PatchUrlGroup, cancellationToken).ConfigureAwait(false);
+        return manifest?.File.Sum(file => Math.Max(0, file.SizeBytes));
+    }
+
     public async Task<GameOperationResult> InstallOrUpdateAsync(
         LauncherStatusSnapshot snapshot,
         Action<GameOperationProgress> progress,
         CancellationToken cancellationToken = default)
     {
-        if (GameOperationPolicy.Decide(GameOperationPolicy.Operation.InstallOrUpdate, snapshot.RuntimeState)
-            == GameOperationDecision.RejectedForCurrentState)
-        {
-            return GameOperationRejections.UnavailableResult(localizer);
-        }
-
-        return await RunSessionAsync(snapshot, DownloadOperationProfile.ForDownload(), progress, cancellationToken).ConfigureAwait(false);
+        var admission = GameOperationAttempt.Evaluate(GameOperationPolicy.Operation.InstallOrUpdate, snapshot);
+        return admission.Attempt is { } attempt
+            ? await InstallOrUpdateAsync(attempt, progress, cancellationToken).ConfigureAwait(false)
+            : GameOperationRejections.UnavailableResult(localizer);
     }
+
+    internal Task<GameOperationResult> InstallOrUpdateAsync(
+        GameOperationAttempt attempt, Action<GameOperationProgress> progress, CancellationToken cancellationToken = default) =>
+        RunSessionAsync(attempt.SnapshotFor(GameOperationPolicy.Operation.InstallOrUpdate),
+            DownloadOperationProfile.ForDownload(), progress, cancellationToken);
+
 
     public async Task<GameOperationResult> RepairAsync(
         LauncherStatusSnapshot snapshot,
         Action<GameOperationProgress> progress,
         CancellationToken cancellationToken = default)
     {
-        if (GameOperationPolicy.Decide(GameOperationPolicy.Operation.Repair, snapshot.RuntimeState)
-            == GameOperationDecision.RejectedForCurrentState)
-        {
-            return GameOperationRejections.UnavailableResult(localizer);
-        }
-
-        return await RunSessionAsync(snapshot, DownloadOperationProfile.ForRepair(), progress, cancellationToken).ConfigureAwait(false);
+        var admission = GameOperationAttempt.Evaluate(GameOperationPolicy.Operation.Repair, snapshot);
+        return admission.Attempt is { } attempt
+            ? await RepairAsync(attempt, progress, cancellationToken).ConfigureAwait(false)
+            : GameOperationRejections.UnavailableResult(localizer);
     }
+
+    internal Task<GameOperationResult> RepairAsync(
+        GameOperationAttempt attempt, Action<GameOperationProgress> progress, CancellationToken cancellationToken = default) =>
+        RunSessionAsync(attempt.SnapshotFor(GameOperationPolicy.Operation.Repair),
+            DownloadOperationProfile.ForRepair(), progress, cancellationToken);
+
 
     /// <summary>
     /// 停止当前下载会话。停止原因随取消一次性传入会话：用户停止丢弃持久化

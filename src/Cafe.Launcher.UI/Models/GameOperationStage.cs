@@ -21,4 +21,6 @@ public enum GameOperationStage
     Uninstalling,
     /// <summary>目录树处理结束，正在清理续传记录与快捷方式。</summary>
     UninstallCleanup,
+    /// <summary>Verified temporary files are being applied and installation state is being committed.</summary>
+    ApplyingFiles,
 }

@@ -12,7 +12,7 @@
     <!-- Chinese localization settings（资源面板覆盖层：模态交互门 + 表面档案由 MainWindowDialogsOverlay 同层编排） -->
     <UserControl.Resources>
         <!-- 资源条目行（ADR-041 单卡三行的共享模板）：标题 + 状态 chip + 版本支撑行 +
-             trailing Switch；三行由显式分隔线相连（与向导复核列表同一手法）。 -->
+             trailing CheckBox；三行由显式分隔线相连（与向导复核列表同一手法）。 -->
         <DataTemplate x:Key="ResourcePanelItemRowTemplate" x:DataType="models:ResourcePanelItem">
             <Border Classes="resource-row">
                 <Grid ColumnDefinitions="*,Auto"
@@ -48,16 +48,13 @@
                     <TextBlock Text="{Binding #ResourcePanelRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n[resourcePanelLocalizedVersion]}" Classes="caption" VerticalAlignment="Center"/>
                     <TextBlock Text="{Binding LocalizedVersion}" Classes="value" VerticalAlignment="Center"/>
                 </StackPanel>
-                <!-- 条目开关表达「是否启用」，与设置区开关同一类决策（Switch 而非 CheckBox）。
-                     显式清掉主题默认的 On/Off 文案：紧凑行内开关的状态由自身形状表达（ADR-041）。 -->
-                <ToggleSwitch Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
-                              Classes="setting-toggle"
-                              OnContent="{x:Null}"
-                              OffContent="{x:Null}"
-                              IsChecked="{Binding IsEnabled, Mode=TwoWay}"
-                              IsEnabled="{Binding IsOperable}"
-                              AutomationProperties.Name="{Binding DisplayName}"
-                              VerticalAlignment="Center"/>
+                <!-- 条目选择在保存时统一提交，使用独立多选语义。 -->
+                <CheckBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
+                          Classes="setting-checkbox"
+                          IsChecked="{Binding IsEnabled, Mode=TwoWay}"
+                          IsEnabled="{Binding IsOperable}"
+                          AutomationProperties.Name="{Binding DisplayName}"
+                          VerticalAlignment="Center"/>
                 </Grid>
             </Border>
         </DataTemplate>
@@ -153,7 +150,7 @@
                                         <StackPanel Orientation="Horizontal">
                                             <RadioButton Classes="segment-option"
                                                          GroupName="ResourcePanelUidSource"
-                                                         IsChecked="{Binding ResourcePanel.SelectedResourcePanelUidSource, Converter={x:Static converters:ResourcePanelSourceSegmentConverter.Instance}, ConverterParameter={x:Static coreModels:ResourcePanelUidSources.Auto}, Mode=TwoWay}"
+                                                         IsChecked="{Binding ResourcePanel.SelectedResourcePanelUidSource, Converter={x:Static converters:SegmentOptionConverter.Instance}, ConverterParameter={x:Static coreModels:ResourcePanelUidSources.Auto}, Mode=TwoWay}"
                                                          AutomationProperties.Name="{Binding Shell.I18n[resourcePanelUidSourceAuto]}">
                                                 <StackPanel Classes="segment-content" Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Xs}">
                                                     <materialIcons:MaterialIcon Kind="Check" Classes="segment-check"
@@ -165,7 +162,7 @@
                                             <Border Classes="segmented-divider"/>
                                             <RadioButton Classes="segment-option"
                                                          GroupName="ResourcePanelUidSource"
-                                                         IsChecked="{Binding ResourcePanel.SelectedResourcePanelUidSource, Converter={x:Static converters:ResourcePanelSourceSegmentConverter.Instance}, ConverterParameter={x:Static coreModels:ResourcePanelUidSources.Custom}, Mode=TwoWay}"
+                                                         IsChecked="{Binding ResourcePanel.SelectedResourcePanelUidSource, Converter={x:Static converters:SegmentOptionConverter.Instance}, ConverterParameter={x:Static coreModels:ResourcePanelUidSources.Custom}, Mode=TwoWay}"
                                                          AutomationProperties.Name="{Binding Shell.I18n[resourcePanelUidSourceCustom]}">
                                                 <StackPanel Classes="segment-content" Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Xs}">
                                                     <materialIcons:MaterialIcon Kind="Check" Classes="segment-check"
@@ -235,7 +232,7 @@
                     </Border>
 
                     <!-- ④ 资源单卡三行：条目集合按位对齐恒为三项，行模板共享、分隔线显式。 -->
-                    <Border Classes="dialog-card resource-card">
+                    <Border Classes="dialog-card resource-card" IsEnabled="{Binding !ResourcePanel.IsResourcePanelBusy}">
                         <StackPanel>
                             <ContentControl Content="{Binding ResourcePanel.ResourcePanelItems[0]}"
                                             ContentTemplate="{StaticResource ResourcePanelItemRowTemplate}"/>
@@ -250,14 +247,19 @@
                 </StackPanel>
             </controls:DialogSurface.Content>
             <controls:DialogSurface.FooterLeading>
-                <Button Classes="flat-action dialog-action" Command="{Binding ResourcePanel.RefreshResourcePanelCommand}"
-                        AutomationProperties.Name="{Binding Shell.I18n[resourcePanelRefresh]}"
-                        IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
-                    <StackPanel Classes="button-content">
-                        <materialIcons:MaterialIcon Kind="Refresh" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                        <TextBlock Text="{Binding Shell.I18n[resourcePanelRefresh]}"/>
-                    </StackPanel>
-                </Button>
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Md}">
+                    <Button Classes="flat-action dialog-action" Command="{Binding ResourcePanel.RefreshResourcePanelCommand}"
+                            AutomationProperties.Name="{Binding Shell.I18n[resourcePanelRefresh]}"
+                            IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
+                        <StackPanel Classes="button-content">
+                            <materialIcons:MaterialIcon Kind="Refresh" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                            <TextBlock Text="{Binding Shell.I18n[resourcePanelRefresh]}"/>
+                        </StackPanel>
+                    </Button>
+                    <TextBlock Text="{Binding Shell.I18n[unsavedChanges]}" Classes="caption" VerticalAlignment="Center"
+                               ToolTip.Tip="{Binding Shell.I18n[resourcePanelUnsavedChanges]}"
+                               IsVisible="{Binding ResourcePanel.HasUnsavedChanges}" AutomationProperties.LiveSetting="Polite"/>
+                </StackPanel>
             </controls:DialogSurface.FooterLeading>
             <controls:DialogSurface.Footer>
                 <StackPanel Classes="confirm-actions">

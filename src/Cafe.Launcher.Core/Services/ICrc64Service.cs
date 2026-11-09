@@ -18,4 +18,7 @@ public interface ICrc64Service
         string filePath,
         Action<int>? progress = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>Computes the same checksum while reporting measured read bytes independently of integer percentages.</summary>
+    Task<string> ComputeFileAsync(string filePath, Action<int>? progress, Action<long, long>? byteProgress, CancellationToken cancellationToken);
 }

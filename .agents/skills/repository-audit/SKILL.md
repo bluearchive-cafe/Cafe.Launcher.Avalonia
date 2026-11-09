@@ -26,7 +26,7 @@ Then load only the domain references relevant to the selected scope:
 |---|---|
 | Architecture | `references/architecture.md` |
 | Maintainability | `references/maintainability.md` |
-| Security | `references/security.md` |
+| Security, including Web/API identity, sessions and input when applicable | `references/security.md` |
 | Dependencies / supply chain | `references/dependencies.md` |
 | Testing | `references/testing.md` |
 | Performance | `references/performance.md` |

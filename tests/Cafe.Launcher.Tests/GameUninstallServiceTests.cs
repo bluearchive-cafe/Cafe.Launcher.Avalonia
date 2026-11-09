@@ -109,11 +109,6 @@ public sealed class GameUninstallServiceTests : IDisposable
         Assert.Equal(LocalInstallationStateKind.Valid, (await store.ReadAsync(gamePath)).Kind);
     }
 
-    static GameUninstallServiceTests()
-    {
-        TestLocalizationHelper.Initialize();
-    }
-
     [Fact]
     public async Task UninstallAsync_WhenAManifestFileIsReadOnly_RemovesItInsteadOfFailing()
     {

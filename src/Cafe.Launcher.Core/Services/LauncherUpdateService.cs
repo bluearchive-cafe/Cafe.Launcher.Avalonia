@@ -114,6 +114,7 @@ internal sealed class LauncherUpdateService : ILauncherUpdateService
                 targetRelease.Version,
                 targetRelease.Files,
                 productProfile.GitHubReleaseDownloadPathPrefix,
+                productProfile.LauncherDownloadMirrorBaseUrl,
                 out var validationError))
             {
                 if (diagnostics is not null)
@@ -129,19 +130,11 @@ internal sealed class LauncherUpdateService : ILauncherUpdateService
             }
 
             var isUpdateAvailable = IsNewerVersion(targetRelease.Version, currentVersion);
-            var releaseNotes = targetRelease.ReleaseNotes;
-            if (isUpdateAvailable && string.IsNullOrWhiteSpace(releaseNotes))
-            {
-                releaseNotes = await TryFetchGitHubReleaseNotesAsync(
-                    targetRelease.Version,
-                    cancellationToken).ConfigureAwait(false);
-            }
-
             return LauncherUpdateCheckResult.Succeeded(
                 targetRelease.Version,
                 Array.AsReadOnly(targetRelease.Files.ToArray()),
                 isUpdateAvailable,
-                releaseNotes);
+                targetRelease.ReleaseNotes);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -267,9 +260,10 @@ internal sealed class LauncherUpdateService : ILauncherUpdateService
             .ToList();
     }
 
-    private async Task<string> TryFetchGitHubReleaseNotesAsync(
+    /// <inheritdoc/>
+    public async Task<string> LoadReleaseNotesAsync(
         string version,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken = default)
     {
         try
         {
@@ -330,6 +324,7 @@ internal sealed class LauncherUpdateService : ILauncherUpdateService
         string version,
         IReadOnlyList<ReleaseFile>? files,
         string downloadPathPrefix,
+        string mirrorBaseUrl,
         out string validationError)
     {
         if (files is null || files.Count == 0)
@@ -369,6 +364,14 @@ internal sealed class LauncherUpdateService : ILauncherUpdateService
                 validationError = $"files[{index}].size must be greater than zero";
                 return false;
             }
+
+            // 镜像地址只在基址、版本路径与文件名完全吻合时才保留；不吻合的字段
+            // 直接忽略，下载器退回已校验的 GitHub 地址，不让元数据把下载带到任意主机。
+            if (!string.IsNullOrWhiteSpace(file.MirrorUrl)
+                && !IsMirrorDownloadUri(file.MirrorUrl, version, mirrorBaseUrl, file.Name))
+            {
+                file.MirrorUrl = null;
+            }
         }
 
         validationError = "";
@@ -383,6 +386,45 @@ internal sealed class LauncherUpdateService : ILauncherUpdateService
             && downloadUri.AbsolutePath.StartsWith(
                 downloadPathPrefix,
                 StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// 镜像地址必须落在产品档案声明的基址下，且路径恰好是
+    /// <c>v1/downloads/v{version}/{name}</c>；查询串与片段一律拒绝。
+    /// </summary>
+    private static bool IsMirrorDownloadUri(
+        string url,
+        string version,
+        string mirrorBaseUrl,
+        string fileName)
+    {
+        if (string.IsNullOrWhiteSpace(mirrorBaseUrl) || fileName.Contains('/'))
+        {
+            return false;
+        }
+
+        var baseWithSlash = mirrorBaseUrl.EndsWith('/') ? mirrorBaseUrl : mirrorBaseUrl + "/";
+        if (!Uri.TryCreate(baseWithSlash, UriKind.Absolute, out var mirrorBase)
+            || !Uri.TryCreate(url, UriKind.Absolute, out var mirror))
+        {
+            return false;
+        }
+
+        var expected = new Uri(
+            mirrorBase,
+            "v1/downloads/v" + version + "/" + Uri.EscapeDataString(fileName));
+
+        return mirror.Scheme == Uri.UriSchemeHttps
+            && expected.Scheme == Uri.UriSchemeHttps
+            && string.Equals(mirror.Host, expected.Host, StringComparison.OrdinalIgnoreCase)
+            && mirror.IsDefaultPort
+            && expected.IsDefaultPort
+            && string.Equals(
+                Uri.UnescapeDataString(mirror.AbsolutePath),
+                Uri.UnescapeDataString(expected.AbsolutePath),
+                StringComparison.Ordinal)
+            && string.IsNullOrEmpty(mirror.Query)
+            && string.IsNullOrEmpty(mirror.Fragment);
     }
 
     /// <summary>

@@ -1,4 +1,5 @@
-﻿using Cafe.Launcher.UI.Helpers;
+using Cafe.Launcher.UI.Constants;
+using Cafe.Launcher.UI.Helpers;
 using Cafe.Launcher.UI.Features.Settings;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
@@ -16,11 +17,6 @@ namespace Cafe.Launcher.Tests;
 [Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class SettingsOptionsDiskSpaceTests
 {
-    static SettingsOptionsDiskSpaceTests()
-    {
-        TestLocalizationHelper.Initialize();
-    }
-
     private static SettingsOptionsViewModel CreateOptions(DiskSpaceService diskSpaceService)
     {
         var localizer = new LocalizationService();
@@ -42,8 +38,8 @@ public sealed class SettingsOptionsDiskSpaceTests
         var localized = new LocalizationService();
         localized.SetLanguage(LauncherLanguages.SimplifiedChinese);
         Assert.Equal("所需 -- / 可用 1KB", text);
-        Assert.DoesNotContain(localized.T("diskSpaceOkSuffix"), text, StringComparison.Ordinal);
-        Assert.DoesNotContain(localized.T("diskSpaceShortSuffix").Split('{')[0], text, StringComparison.Ordinal);
+        Assert.DoesNotContain(localized.T(LocalizationKeys.DiskSpaceOkSuffix), text, StringComparison.Ordinal);
+        Assert.DoesNotContain(localized.T(LocalizationKeys.DiskSpaceShortSuffix).Split('{')[0], text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -60,8 +56,8 @@ public sealed class SettingsOptionsDiskSpaceTests
         var localized = new LocalizationService();
         localized.SetLanguage(LauncherLanguages.SimplifiedChinese);
         Assert.Equal("所需 10GB / 可用 --", text);
-        Assert.DoesNotContain(localized.T("diskSpaceOkSuffix"), text, StringComparison.Ordinal);
-        Assert.DoesNotContain(localized.T("diskSpaceShortSuffix").Split('{')[0], text, StringComparison.Ordinal);
+        Assert.DoesNotContain(localized.T(LocalizationKeys.DiskSpaceOkSuffix), text, StringComparison.Ordinal);
+        Assert.DoesNotContain(localized.T(LocalizationKeys.DiskSpaceShortSuffix).Split('{')[0], text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -78,8 +74,8 @@ public sealed class SettingsOptionsDiskSpaceTests
         var localized = new LocalizationService();
         localized.SetLanguage(LauncherLanguages.SimplifiedChinese);
         Assert.Equal("所需 10GB / 可用 20GB （充足）", text);
-        Assert.Contains(localized.T("diskSpaceOkSuffix"), text, StringComparison.Ordinal);
-        Assert.DoesNotContain(localized.T("diskSpaceShortSuffix").Split('{')[0], text, StringComparison.Ordinal);
+        Assert.Contains(localized.T(LocalizationKeys.DiskSpaceOkSuffix), text, StringComparison.Ordinal);
+        Assert.DoesNotContain(localized.T(LocalizationKeys.DiskSpaceShortSuffix).Split('{')[0], text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -98,9 +94,9 @@ public sealed class SettingsOptionsDiskSpaceTests
         Assert.Equal("所需 10GB / 可用 6GB （不足，还差 4GB）", text);
         // The suffix template carries a {0} placeholder; the resolved text should embed the difference
         // (4GB), and contain the suffix's leading literal before the placeholder.
-        Assert.Contains(localized.T("diskSpaceShortSuffix").Split('{')[0], text, StringComparison.Ordinal);
+        Assert.Contains(localized.T(LocalizationKeys.DiskSpaceShortSuffix).Split('{')[0], text, StringComparison.Ordinal);
         Assert.Contains("4GB", text, StringComparison.Ordinal);
-        Assert.DoesNotContain(localized.T("diskSpaceOkSuffix"), text, StringComparison.Ordinal);
+        Assert.DoesNotContain(localized.T(LocalizationKeys.DiskSpaceOkSuffix), text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -210,8 +206,8 @@ public sealed class SettingsOptionsDiskSpaceTests
         var localized = new LocalizationService();
         localized.SetLanguage(LauncherLanguages.SimplifiedChinese);
         Assert.Equal("所需 garbage / 可用 1KB", text);
-        Assert.DoesNotContain(localized.T("diskSpaceOkSuffix"), text, StringComparison.Ordinal);
-        Assert.DoesNotContain(localized.T("diskSpaceShortSuffix").Split('{')[0], text, StringComparison.Ordinal);
+        Assert.DoesNotContain(localized.T(LocalizationKeys.DiskSpaceOkSuffix), text, StringComparison.Ordinal);
+        Assert.DoesNotContain(localized.T(LocalizationKeys.DiskSpaceShortSuffix).Split('{')[0], text, StringComparison.Ordinal);
     }
 
     [Theory]

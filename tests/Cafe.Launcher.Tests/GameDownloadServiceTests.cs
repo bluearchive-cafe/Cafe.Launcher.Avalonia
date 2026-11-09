@@ -26,11 +26,6 @@ namespace Cafe.Launcher.Tests;
 [Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class GameDownloadServiceTests : IDisposable
 {
-    static GameDownloadServiceTests()
-    {
-        TestLocalizationHelper.Initialize();
-    }
-
     // xUnit 为每个测试方法创建新实例：实例字段即每测试独立的临时目录，
     // 断言失败时由 Dispose 统一清理，不再泄漏 %TEMP% 垃圾。
     private readonly TestDirectory tempDir = TestDirectory.Create();
@@ -45,6 +40,21 @@ public sealed class GameDownloadServiceTests : IDisposable
         {
             // 句柄延迟释放导致的删除失败只残留临时目录，不让清理问题掩盖测试结果。
         }
+    }
+
+    [Fact]
+    public async Task GetInstallDownloadSize_ReadsManifestWithoutStartingDownload()
+    {
+        using var service = CreateService(CreateManifestApiClient(
+            new ManifestFile { Path = "a.bin", Size = "1024" },
+            new ManifestFile { Path = "b.bin", Size = "2048" }));
+        var size = await service.GetInstallDownloadSizeAsync(new LauncherStatusSnapshot
+        {
+            Remote = new LauncherRemoteState { GameConfig = new GameConfigResponse
+                { GameLatestVersion = "1.0.0", GameLatestFilePath = "manifest.json" } }
+        }, CancellationToken.None);
+        Assert.Equal(3072, size);
+        Assert.False(service.IsRunning);
     }
 
     [Fact]
@@ -1395,14 +1405,16 @@ Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
         var result = await service.InstallOrUpdateAsync(snapshot, progress.Add);
 
         Assert.True(result.Success);
-        var finalDownloadProgress = Assert.Single(
-            progress,
-            item =>
+        var finalDownloadProgress = progress.Where(item =>
                 item.Stage == GameOperationStage.Downloading
-                && item.Progress == 100);
-        Assert.Equal(fileBytes.Length, finalDownloadProgress.DownloadedSize);
-        Assert.Equal(fileBytes.Length, finalDownloadProgress.TotalSize);
-        Assert.True(finalDownloadProgress.BytesPerSecond > 0);
+                && item.Progress == 100).ToArray();
+        Assert.NotEmpty(finalDownloadProgress);
+        Assert.All(finalDownloadProgress, item =>
+        {
+            Assert.Equal(fileBytes.Length, item.DownloadedSize);
+            Assert.Equal(fileBytes.Length, item.TotalSize);
+        });
+        Assert.Contains(finalDownloadProgress, item => item.BytesPerSecond > 0);
     }
 
     [Fact]
@@ -1697,6 +1709,42 @@ Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
         // 已经下好的暂存文件留在盘上：用户关掉游戏后重试会按已有字节继续（检查点按既有终局
         // 语义在失败出口丢弃，所以这里不断言它——续传材料的断言落在 .tmp 上）。
         Assert.True(File.Exists(Path.Combine(gamePath, "data", "file.bin.tmp")), $"probeCalls={probeCalls}");
+    }
+
+    [Theory]
+    [InlineData(false, GameOperationKind.Download)]
+    [InlineData(true, GameOperationKind.Repair)]
+    public async Task ResumePersistedAsync_WhenDirectoryPreparationFails_ReportsPersistedOperationKind(
+        bool isRepair, GameOperationKind expectedKind)
+    {
+        var gamePath = Path.Combine(tempDir, "BlueArchive_JP");
+        // A file in place of the directory fails before any manifest/file progress on every platform.
+        await File.WriteAllTextAsync(gamePath, "directory collision");
+        var snapshot = CreateSnapshot(gamePath);
+        var settingsService = new LauncherSettingsService(tempDir.DataRoot);
+        await settingsService.SaveAsync(snapshot.Settings);
+        var checkpointStore = new DownloadCheckpointStore(tempDir.DataRoot);
+        await checkpointStore.SaveAsync(new DownloadTaskState
+        {
+            Version = "1.0.0",
+            Basis = "manifest.json",
+            GamePath = gamePath,
+            PatchUrlGroup = snapshot.Settings.PatchUrlGroup,
+            IsRepair = isRepair
+        });
+        using var service = CreateService(CreateManifestApiClient(), settingsService, tempDir.DataRoot.DownloadStatePath);
+        var progress = new CallbackRecorder<GameOperationProgress>();
+
+        var result = await service.ResumePersistedAsync(snapshot, progress.Add);
+
+        Assert.NotNull(result);
+        Assert.False(result.Success);
+        Assert.Equal(GameOperationErrorCode.System, result.ErrorCode);
+        Assert.NotEmpty(progress);
+        Assert.All(progress, update => Assert.Equal(expectedKind, update.OperationKind));
+        Assert.DoesNotContain(progress, update => update.Stage is GameOperationStage.UpdateCheck or GameOperationStage.RepairCheck);
+        Assert.False(service.IsRunning);
+        Assert.False(File.Exists(tempDir.DataRoot.DownloadStatePath));
     }
 
     [Fact]

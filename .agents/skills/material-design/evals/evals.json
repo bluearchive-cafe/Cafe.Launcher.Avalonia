@@ -208,6 +208,54 @@
         ".agents/skills/avalonia-ui-patch/SKILL.md",
         "docs/DEVELOPMENT.md"
       ]
+    },
+    {
+      "id": 34,
+      "prompt": "An M2 reference gives both ordinary raised buttons and FABs resting elevation 3dp and pressed elevation 8dp, and caps dark overlays at 12%. Can we implement those constants in our Compose Material settings screen?",
+      "expected_output": "Consult the M2 reference and official implementation. Distinguish button defaults (resting 2dp, pressed 8dp, hovered/focused 4dp) from FAB defaults (6dp, 12dp, 8dp). Recognize a drawer default of 16dp when relevant. Treat these as Compose Material M2 component defaults, not M3 numbered levels. Use the library overlay; the positive-elevation formula can reach about 16.5% at 24dp and is not capped at 12%.",
+      "files": []
+    },
+    {
+      "id": 35,
+      "prompt": "Using @material/material-color-utilities in JavaScript, generate tones 40, 55 and 90 from #6750A4. Is a tonal palette limited to the 13 exported swatches?",
+      "expected_output": "Use Hct.fromInt, TonalPalette.fromHueAndChroma and palette.tone with ARGB values. Verify the installed JavaScript package rather than copying another language port. Explain that 13 sampled export stops are not an API limit and tone 55 can be requested. If the package cannot load in the target runtime, distinguish the entrypoint failure from the palette API and report the tested package/runtime.",
+      "files": []
+    },
+    {
+      "id": 36,
+      "prompt": "Maintain an Angular Material M2 theme using the installed m2- compatibility API. The current Sass calls mat.m2-define-palette(mat.$red-palette) and mat.m2-define-palette(mat.$indigo-palette). Is adding m2- only to the function enough?",
+      "expected_output": "Inspect the installed Sass exports. Use the m2-prefixed palette exports as well as m2-define-palette and m2-define-light-theme; red without the prefix can be an incompatible M3 palette, and indigo may not be exported without the prefix. Include a valid @use and compile against the actual dependency version when claiming verification. Keep older unprefixed APIs explicitly version-scoped.",
+      "files": []
+    },
+    {
+      "id": 37,
+      "prompt": "Design baseline M3 Small, standard, Large, and Extended FABs. A handoff says they must all be circles, and that adding a label to a Large FAB is the normal Large variant. Is this accurate?",
+      "expected_output": "Distinguish M2 circular defaults from baseline M3 rounded-square icon-only FABs. Identify Extended FAB as the labeled family with optional icon and component-defined shape. Scope Expressive size/shape/extended variants to the library version. A deliberately customized circle is allowed; it is not the baseline M3 default.",
+      "files": []
+    },
+    {
+      "id": 38,
+      "prompt": "The official reference URL ending /material3/IconButton returns 404. Does that mean Compose removed the control? Provide a source for the currently installed API.",
+      "expected_output": "Do not infer removal from a guessed class URL. Look up the top-level composable in the official package directory/current API docs, follow the .composable page or actual function anchor, verify reachability and relevant overload/version, and separate link availability from API support.",
+      "files": []
+    },
+    {
+      "id": 39,
+      "prompt": "Our web team wants --md-sys-spacing-4: 1rem to be documented as an official M3 token. We need a reusable 16px spacing value. What should the token contract say?",
+      "expected_output": "Use a project-owned spacing token such as --app-spacing-md and document its Material layout mapping where useful. Do not infer official md.sys token status from a name or 4-based rhythm; verify canonical token exports before claiming that status.",
+      "files": []
+    },
+    {
+      "id": 40,
+      "prompt": "We want an unstyled overlay for a Vue project. Our Material platform guide says Angular CDK is framework-agnostic, so should we import CDK directly without Angular?",
+      "expected_output": "Explain that Angular CDK is for Angular and independent of Material visual styling, not independent of the framework. Preserve Vue and select an appropriate maintained primitive or implementation after checking the project constraints; do not migrate the framework to use the CDK.",
+      "files": []
+    },
+    {
+      "id": 41,
+      "prompt": "An M2 application has repeated hardcoded corners. A reviewer says M2 has no theme-level shape system and every chip and FAB should use a 4dp radius. How should we maintain it?",
+      "expected_output": "Recognize M2 theme-level small/medium/large families in MDC or MaterialTheme.shapes in Compose. Reuse the target library theme and component defaults; chips and FABs have distinct geometry and are not universally 4dp rectangles. Preserve M2 unless migration is requested, and distinguish M2 shape theming from M3 token architecture.",
+      "files": []
     }
   ]
 }

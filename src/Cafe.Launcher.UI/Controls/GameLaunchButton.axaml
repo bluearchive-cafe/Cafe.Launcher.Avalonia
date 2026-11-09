@@ -4,28 +4,28 @@
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Cafe.Launcher.UI.Controls.GameLaunchButton"
              x:DataType="viewModels:MainWindowViewModel">
-    <!-- 两种布局共用启动与管理入口；菜单操作不会替换主区的启动命令。 -->
+    <!-- 统一面板的上下文主操作与管理入口。 -->
     <SplitButton Classes="launcher-control start primary-operation"
             Theme="{StaticResource GameLaunchSplitButtonTheme}"
-            Command="{Binding Operations.StartGameCommand}"
-            IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}"
-            ToolTip.Tip="{Binding Shell.I18n[startGame]}"
-            AutomationProperties.Name="{Binding Shell.I18n[startGame]}">
+            Command="{Binding Operations.PrimaryActionCommand}"
+            IsEnabled="{Binding Operations.CanUsePrimaryAction}"
+            ToolTip.Tip="{Binding Operations.PrimaryActionText}"
+            AutomationProperties.Name="{Binding Operations.PrimaryActionText}">
         <StackPanel Classes="button-content">
-            <materialIcons:MaterialIcon Kind="PlayCircle" Width="{StaticResource Launcher.Icon.Xxl}" Height="{StaticResource Launcher.Icon.Xxl}"/>
-            <TextBlock Text="{Binding Shell.I18n[startGame]}"/>
+            <materialIcons:MaterialIcon Kind="{Binding Operations.PrimaryActionIcon}" Width="{StaticResource Launcher.Icon.Xxl}" Height="{StaticResource Launcher.Icon.Xxl}"/>
+            <TextBlock Text="{Binding Operations.PrimaryActionText}"/>
         </StackPanel>
         <SplitButton.Flyout>
             <MenuFlyout Placement="TopEdgeAlignedRight"
                         VerticalOffset="{StaticResource Launcher.Component.LaunchSplit.Menu.VerticalOffset}">
-                <MenuItem Header="{Binding Shell.I18n[gameCheckUpdate]}"
+                <MenuItem IsEnabled="{Binding Operations.CanManageGame}" Header="{Binding Shell.I18n[gameCheckUpdate]}"
                           Command="{Binding Operations.CheckForGameUpdateCommand}"
                           AutomationProperties.Name="{Binding Shell.I18n[gameCheckUpdate]}">
                     <MenuItem.Icon>
                         <materialIcons:MaterialIcon Kind="Update" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
                     </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="{Binding Shell.I18n[gameCreateShortcut]}"
+                <MenuItem IsEnabled="{Binding Operations.CanManageGame}" Header="{Binding Shell.I18n[gameCreateShortcut]}"
                           Command="{Binding Operations.CreateGameShortcutCommand}"
                           AutomationProperties.Name="{Binding Shell.I18n[gameCreateShortcut]}">
                     <MenuItem.Icon>
@@ -33,14 +33,14 @@
                     </MenuItem.Icon>
                 </MenuItem>
                 <Separator/>
-                <MenuItem Header="{Binding Shell.I18n[gameOpenFolder]}"
+                <MenuItem IsEnabled="{Binding Operations.CanManageGame}" Header="{Binding Shell.I18n[gameOpenFolder]}"
                           Command="{Binding Operations.OpenGameFolderCommand}"
                           AutomationProperties.Name="{Binding Shell.I18n[gameOpenFolder]}">
                     <MenuItem.Icon>
                         <materialIcons:MaterialIcon Kind="FolderOpenOutline" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
                     </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="{Binding Shell.I18n[repair]}"
+                <MenuItem IsEnabled="{Binding Operations.CanRepairGame}" Header="{Binding Shell.I18n[repair]}"
                           Command="{Binding Operations.RequestRepairCommand}"
                           AutomationProperties.Name="{Binding Shell.I18n[repair]}">
                     <MenuItem.Icon>
@@ -48,7 +48,7 @@
                     </MenuItem.Icon>
                 </MenuItem>
                 <Separator/>
-                <MenuItem Classes="danger-menu-item" Header="{Binding Shell.I18n[uninstall]}"
+                <MenuItem IsEnabled="{Binding Operations.CanUninstallGame}" Classes="danger-menu-item" Header="{Binding Shell.I18n[uninstall]}"
                           Command="{Binding Operations.RequestUninstallCommand}"
                           AutomationProperties.Name="{Binding Shell.I18n[uninstall]}">
                     <MenuItem.Icon>

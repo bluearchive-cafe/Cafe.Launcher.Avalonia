@@ -118,3 +118,28 @@ These scenarios are intended to test whether an agent applies the skill rather t
 - Preserves repository geometry, including intentional differences from generic WinUI defaults.
 - Keeps the isolated report process independent of `App.axaml` and `Launcher.*` resources.
 - Uses Avalonia implementation and automation APIs rather than assuming WinUI APIs exist.
+
+## Scenario 11 — Design target versus WCAG level
+
+**Prompt:** “Our web toolbar buttons have 20px icons inside 32×32 CSS px hit targets. A reviewer says WCAG AA always requires 44×44 and that the icon itself must be enlarged. We also ship an Android touch screen. How should we assess this?”
+
+**Pass criteria:**
+
+- Separates visible icon size from the interactive target.
+- Distinguishes Fluent's iOS/Web 44 and Android 48 usability guidance and platform units
+  from WCAG 2.2 SC 2.5.8 AA (24×24 CSS px or its exceptions).
+- Identifies 44×44 CSS px as SC 2.5.5 AAA, with its own exceptions.
+- Recognizes the 32×32 web target meets the AA size threshold while recommending the
+  larger Fluent touch target where appropriate; does not claim whole-page conformance.
+- Links the relevant W3C criterion and Fluent layout guidance rather than inventing a
+  universal pixel rule for native platforms.
+
+## Scenario 12 — Registry page unavailable
+
+**Prompt:** “The npm page for @fluentui/react-motion returns HTTP 403 in our environment. Does that mean the package is discontinued? We already have it installed and need to verify an export.”
+
+**Pass criteria:**
+
+- Treats 403 as an access limitation rather than a package-lifecycle conclusion.
+- Checks the installed version/exports and official Fluent UI source or component docs.
+- Reports any remaining version uncertainty without forcing a dependency replacement.

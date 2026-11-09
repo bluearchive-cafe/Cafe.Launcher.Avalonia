@@ -1,3 +1,4 @@
+using Cafe.Launcher.UI.Constants;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -11,16 +12,16 @@ using CommunityToolkit.Mvvm.Input;
 namespace Cafe.Launcher.UI.Features.Diagnostics;
 
 /// <summary>
-/// Debug-only design gallery (spec §9 Q11): enumerates the live
+/// Debug-only design gallery (spec §8 Q11): enumerates the live
 /// <c>/Application.Resources</c> token dictionary and groups it by family using
 /// <see cref="DesignTokenGrouping"/>, so the gallery never drifts from the token
 /// set. Visibility is gated like the debug panel (Debug builds only).
 /// </summary>
 internal sealed partial class DesignGalleryViewModel : ViewModelBase, IModalContentViewModel
 {
-    private readonly Func<string, string> localize;
+    private readonly Func<LocalizationKeys, string> localize;
 
-    public DesignGalleryViewModel(Func<string, string> localize)
+    public DesignGalleryViewModel(Func<LocalizationKeys, string> localize)
     {
         this.localize = localize;
     }

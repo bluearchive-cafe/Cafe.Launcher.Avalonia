@@ -16,13 +16,22 @@
         <ControlTheme x:Key="Launcher.Component.ChoiceItem.Theme" TargetType="ComboBoxItem">
             <Setter Property="Template">
                 <ControlTemplate>
-                    <ContentPresenter x:Name="PART_ContentPresenter"
-                                      Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
-                                      Background="{TemplateBinding Background}" Foreground="{TemplateBinding Foreground}"
-                                      BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
-                                      CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}"
-                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                    <Panel>
+                        <ContentPresenter x:Name="PART_ContentPresenter"
+                                          Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
+                                          Background="{TemplateBinding Background}" Foreground="{TemplateBinding Foreground}"
+                                          BorderBrush="{StaticResource Launcher.Color.Transparent}" BorderThickness="{TemplateBinding BorderThickness}"
+                                          CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}"
+                                          HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                        <!-- Inset focus only touches the selected fill, so it does not need
+                             one color to contrast with both saturated and neutral surfaces. -->
+                        <Border x:Name="ChoiceFocus" IsHitTestVisible="False"
+                                Margin="{StaticResource Launcher.Border.Thickness.Focus}"
+                                BorderThickness="{StaticResource Launcher.Border.Thickness.Focus}"
+                                CornerRadius="{TemplateBinding CornerRadius}"
+                                BorderBrush="{TemplateBinding BorderBrush}"/>
+                    </Panel>
                 </ControlTemplate>
             </Setter>
         </ControlTheme>
@@ -35,6 +44,14 @@
                                   ContentTemplate="{TemplateBinding ContentTemplate}"
                                   Padding="{TemplateBinding Padding}"
                                   HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                  VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
+            </Border>
+        </ControlTemplate>
+        <ControlTemplate x:Key="Launcher.Component.ColorSwatch.Template" TargetType="RadioButton">
+            <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{TemplateBinding CornerRadius}">
+                <ContentPresenter Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
+                                  Padding="{TemplateBinding Padding}" HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
                                   VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
             </Border>
         </ControlTemplate>
@@ -125,8 +142,8 @@
                                         Padding="{StaticResource Launcher.Component.Action.Launcher.Padding}"
                                         HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                                         Focusable="False" IsTabStop="False"
-                                        ToolTip.Tip="{Binding Shell.I18n[startGame]}"
-                                        AutomationProperties.Name="{Binding Shell.I18n[startGame]}"/>
+                                        ToolTip.Tip="{Binding Operations.PrimaryActionText}"
+                                        AutomationProperties.Name="{Binding Operations.PrimaryActionText}"/>
                                 <Button x:Name="PART_SecondaryButton" Grid.Column="1"
                                         Theme="{StaticResource GameLaunchSegmentTheme}"
                                         Width="{StaticResource Launcher.Control.Height.Launch}"
@@ -164,6 +181,95 @@
             </Style>
             <Style Selector="^:focus-visible /template/ Border#LaunchFocus">
                 <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
+            </Style>
+        </ControlTheme>
+        <ControlTheme x:Key="Launcher.Component.Settings.Select.ItemTheme" TargetType="ComboBoxItem">
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Panel>
+                        <Border x:Name="SettingsChoiceSurface"
+                                Background="{StaticResource Launcher.Color.Transparent}"
+                                CornerRadius="{StaticResource Launcher.Radius.Xs}">
+                            <Panel>
+                                <Border x:Name="SettingsChoiceState" IsHitTestVisible="False"
+                                        CornerRadius="{StaticResource Launcher.Radius.Xs}"
+                                        Background="{StaticResource Launcher.Color.Transparent}"/>
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}"
+                                      Margin="{StaticResource Launcher.Spacing.Thickness.Sm}">
+                                    <materialIcons:MaterialIcon x:Name="SettingsChoiceCheck" Kind="Check"
+                                                                Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"
+                                                                Opacity="0" VerticalAlignment="Center"
+                                                                Foreground="{DynamicResource Launcher.Color.Primary}"
+                                                                IsHitTestVisible="False" AutomationProperties.AccessibilityView="Raw"/>
+                                    <ContentPresenter x:Name="PART_ContentPresenter" Grid.Column="1"
+                                                      Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                      Foreground="{DynamicResource Launcher.Text.Primary}"
+                                                      HorizontalContentAlignment="Stretch" VerticalContentAlignment="Center"/>
+                                </Grid>
+                            </Panel>
+                        </Border>
+                        <Border x:Name="SettingsChoiceFocus" IsHitTestVisible="False"
+                                Margin="{StaticResource Launcher.Border.Thickness.Focus}"
+                                BorderThickness="{StaticResource Launcher.Border.Thickness.Focus}"
+                                CornerRadius="{StaticResource Launcher.Radius.Xs}"
+                                BorderBrush="{StaticResource Launcher.Color.Transparent}"/>
+                    </Panel>
+                </ControlTemplate>
+            </Setter>
+            <Style Selector="^:pointerover /template/ Border#SettingsChoiceSurface">
+                <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Hover}"/>
+            </Style>
+            <Style Selector="^:pressed /template/ Border#SettingsChoiceSurface">
+                <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Pressed}"/>
+            </Style>
+            <Style Selector="^:selected /template/ Border#SettingsChoiceSurface">
+                <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Soft}"/>
+            </Style>
+            <Style Selector="^:selected:pointerover /template/ Border#SettingsChoiceSurface">
+                <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Hover}"/>
+            </Style>
+            <Style Selector="^:selected:pressed /template/ Border#SettingsChoiceSurface">
+                <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Pressed}"/>
+            </Style>
+            <Style Selector="^:selected:pointerover /template/ Border#SettingsChoiceState, ^:selected:pressed /template/ Border#SettingsChoiceState">
+                <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Soft}"/>
+            </Style>
+            <Style Selector="^:selected /template/ ContentPresenter#PART_ContentPresenter">
+                <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Settings.Select.Selected.Foreground}"/>
+            </Style>
+            <Style Selector="^:selected /template/ materialIcons|MaterialIcon#SettingsChoiceCheck">
+                <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Settings.Select.Selected.Foreground}"/>
+                <Setter Property="Opacity" Value="1"/>
+            </Style>
+            <Style Selector="^:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+                <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Settings.Select.Selected.Foreground.Hover}"/>
+            </Style>
+            <Style Selector="^:selected:pointerover /template/ materialIcons|MaterialIcon#SettingsChoiceCheck">
+                <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Settings.Select.Selected.Foreground.Hover}"/>
+            </Style>
+            <Style Selector="^:selected:pressed /template/ ContentPresenter#PART_ContentPresenter">
+                <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Settings.Select.Selected.Foreground.Pressed}"/>
+            </Style>
+            <Style Selector="^:selected:pressed /template/ materialIcons|MaterialIcon#SettingsChoiceCheck">
+                <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Settings.Select.Selected.Foreground.Pressed}"/>
+            </Style>
+            <Style Selector="^:focus-visible /template/ Border#SettingsChoiceFocus">
+                <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
+            </Style>
+            <Style Selector="^:selected:focus-visible /template/ Border#SettingsChoiceFocus">
+                <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Settings.Select.Selected.Foreground}"/>
+            </Style>
+            <Style Selector="^:selected:pointerover:focus-visible /template/ Border#SettingsChoiceFocus">
+                <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Settings.Select.Selected.Foreground.Hover}"/>
+            </Style>
+            <Style Selector="^:selected:pressed:focus-visible /template/ Border#SettingsChoiceFocus">
+                <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Settings.Select.Selected.Foreground.Pressed}"/>
+            </Style>
+            <Style Selector="^:disabled /template/ ContentPresenter#PART_ContentPresenter">
+                <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
+            </Style>
+            <Style Selector="^:disabled /template/ Border#SettingsChoiceFocus">
+                <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Transparent}"/>
             </Style>
         </ControlTheme>
     </Styles.Resources>
@@ -349,12 +455,24 @@
     </Style>
     <Style Selector="ComboBoxItem:selected:pointerover">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.SecondaryContainer.Hover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnSecondaryContainer.Hover}"/>
     </Style>
     <Style Selector="ComboBoxItem:selected:pressed">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.SecondaryContainer.Pressed}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnSecondaryContainer.Pressed}"/>
     </Style>
     <Style Selector="ComboBoxItem:focus-visible, MenuItem:focus-visible">
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
+    </Style>
+    <!-- The selected surface can be much brighter/darker than its neutral popup. -->
+    <Style Selector="ComboBoxItem:selected:focus-visible">
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.OnSecondaryContainer}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:selected:pointerover:focus-visible">
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.OnSecondaryContainer.Hover}"/>
+    </Style>
+    <Style Selector="ComboBoxItem:selected:pressed:focus-visible">
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.OnSecondaryContainer.Pressed}"/>
     </Style>
     <Style Selector="MenuItem.danger-menu-item">
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Error}"/>
@@ -483,11 +601,54 @@
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
         <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
     </Style>
+    <!-- Settings-only select surface; retain Fluent selection box, popup, arrow and input handling. -->
+    <Style Selector=".settings-section ComboBox.setting-control">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Background}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Outline}"/>
+        <Setter Property="ItemContainerTheme" Value="{StaticResource Launcher.Component.Settings.Select.ItemTheme}"/>
+    </Style>
+    <Style Selector=".settings-section ComboBox.setting-control:pointerover">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Background}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Text.Secondary}"/>
+    </Style>
+    <Style Selector=".settings-section ComboBox.setting-control:pressed, .settings-section ComboBox.setting-control:dropdownopen, .settings-section ComboBox.setting-control:focus-visible">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Background}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Outline}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
+    </Style>
+    <!-- Reuse Fluent's separate highlight layer; changing focus never measures the content again. -->
+    <Style Selector=".settings-section ComboBox.setting-control:dropdownopen /template/ Border#HighlightBackground, .settings-section ComboBox.setting-control:focus-visible /template/ Border#HighlightBackground">
+        <Setter Property="IsVisible" Value="True"/>
+        <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
+    </Style>
+    <Style Selector=".settings-section ComboBox.setting-control /template/ Border#PopupBorder">
+        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Sm}"/>
+    </Style>
+    <Style Selector=".settings-section ComboBox.setting-control ComboBoxItem">
+        <Setter Property="Theme" Value="{StaticResource Launcher.Component.Settings.Select.ItemTheme}"/>
+    </Style>
+    <Style Selector=".settings-section ComboBox.setting-control:error">
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Error}"/>
+    </Style>
+    <Style Selector=".settings-section ComboBox.setting-control:error /template/ Border#HighlightBackground">
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Error}"/>
+    </Style>
+    <Style Selector=".settings-section ComboBox.setting-control:disabled">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
+    </Style>
+    <Style Selector=".settings-section ComboBox.setting-control:disabled /template/ Border#HighlightBackground">
+        <Setter Property="IsVisible" Value="False"/>
+    </Style>
+
     <Style Selector="ToggleSwitch:focus-visible">
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
     </Style>
-    <Style Selector="HyperlinkButton.inline-legal-link">
+    <Style Selector="HyperlinkButton.inline-legal-link, HyperlinkButton.inline-link">
         <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Link}"/>
@@ -498,17 +659,17 @@
         <Setter Property="TextBlock.TextDecorations" Value="Underline"/>
         <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
     </Style>
-    <Style Selector="HyperlinkButton.inline-legal-link:pointerover">
+    <Style Selector="HyperlinkButton.inline-legal-link:pointerover, HyperlinkButton.inline-link:pointerover">
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary}"/>
     </Style>
-    <Style Selector="HyperlinkButton.inline-legal-link:pressed">
+    <Style Selector="HyperlinkButton.inline-legal-link:pressed, HyperlinkButton.inline-link:pressed">
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
     </Style>
-    <Style Selector="HyperlinkButton.inline-legal-link:disabled">
+    <Style Selector="HyperlinkButton.inline-legal-link:disabled, HyperlinkButton.inline-link:disabled">
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
         <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
     </Style>
-    <Style Selector="HyperlinkButton.inline-legal-link:focus-visible">
+    <Style Selector="HyperlinkButton.inline-legal-link:focus-visible, HyperlinkButton.inline-link:focus-visible">
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
     </Style>
@@ -566,7 +727,7 @@
         <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
     </Style>
     <!-- carousel 箭头压在壁纸上，状态反馈走 chrome 态（与 banner-link 同配方）；
-         图标前景保持 OnChrome 豁免（spec §8），反馈由背景状态层承担。 -->
+         图标前景保持 OnChrome 豁免（spec §7），反馈由背景状态层承担。 -->
     <Style Selector="Button.icon-button.carousel-navigation:pointerover">
         <Setter Property="Background" Value="{StaticResource Launcher.Color.Chrome.Hover}"/>
     </Style>
@@ -805,6 +966,9 @@
         <Setter Property="MinHeight" Value="{StaticResource Launcher.Component.BottomPanel.MinHeight}"/>
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Panel.Bottom.Background}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Component.BottomPanel.Padding}"/>
+    </Style>
+    <Style Selector="Border.bottom-panel.status-hidden">
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.BottomPanel.HiddenStatus.Padding}"/>
     </Style>
     <Style Selector="Grid.motion-overlay">
         <Setter Property="IsVisible" Value="False"/>
@@ -1132,13 +1296,13 @@
     </Style>
     <Style Selector="ListBox.settings-navigation > ListBoxItem:selected:pointerover">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.SecondaryContainer.Hover}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnSecondaryContainer}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnSecondaryContainer.Hover}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Transparent}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
     </Style>
     <Style Selector="ListBox.settings-navigation > ListBoxItem:selected:pressed">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.SecondaryContainer.Pressed}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnSecondaryContainer}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnSecondaryContainer.Pressed}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Transparent}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
     </Style>
@@ -1165,11 +1329,11 @@
     </Style>
     <Style Selector="ListBox.settings-navigation > ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.SecondaryContainer.Hover}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnSecondaryContainer}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnSecondaryContainer.Hover}"/>
     </Style>
     <Style Selector="ListBox.settings-navigation > ListBoxItem:selected:pressed /template/ ContentPresenter#PART_ContentPresenter">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.SecondaryContainer.Pressed}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnSecondaryContainer}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnSecondaryContainer.Pressed}"/>
     </Style>
     <!-- §8: visible tokenized focus ring for navigation items (FocusAdorner is null on the list). -->
     <Style Selector="ListBox.settings-navigation > ListBoxItem:focus-visible">
@@ -1186,6 +1350,11 @@
     </Style>
     <Style Selector="Border.settings-content-actions">
         <Setter Property="Padding" Value="{StaticResource Launcher.Component.Settings.Footer.Padding}"/>
+    </Style>
+    <Style Selector="ProgressBar.settings-save-progress">
+        <Setter Property="Height" Value="{StaticResource Launcher.Component.Progress.Bar.Height}"/>
+        <Setter Property="Width" Value="{StaticResource Launcher.Component.Settings.Control.MinWidth}"/>
+        <Setter Property="HorizontalAlignment" Value="Left"/>
     </Style>
     <Style Selector="Button.dialog-close.content-header-action">
         <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
@@ -1265,6 +1434,9 @@
     </Style>
     <Style Selector="Expander.settings-appearance-advanced /template/ ToggleButton">
         <Setter Property="AutomationProperties.Name" Value="{Binding Shell.I18n[settingsAdvancedColors], DataType={x:Type viewModels:MainWindowViewModel}}"/>
+    </Style>
+    <Style Selector="Expander.settings-about-build /template/ ToggleButton">
+        <Setter Property="AutomationProperties.Name" Value="{Binding Shell.I18n[aboutBuildInformation], DataType={x:Type viewModels:MainWindowViewModel}}"/>
     </Style>
     <Style Selector="Expander.settings-appearance-expander /template/ ToggleButton:focus-visible">
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
@@ -1417,13 +1589,13 @@
         <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
     </Style>
-    <Style Selector="views|SettingsAppearanceSection TextBlock.section-title">
+    <Style Selector="controls|SettingRow TextBlock.section-title, views|SettingsAppearanceSection TextBlock.section-title">
         <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Normal}"/>
     </Style>
     <Style Selector="TextBlock.group-title">
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Md}"/>
         <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
     </Style>
     <Style Selector="TextBlock.category-title">
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Headline.Md}"/>
@@ -1811,6 +1983,35 @@
         <Setter Property="FontFamily" Value="{StaticResource Launcher.Typography.FontFamily.Monospace}"/>
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Title.Md}"/>
     </Style>
+    <!-- Keep the native slider input model; map the rendered parts to launcher roles. -->
+    <Style Selector="Slider.setting-control">
+        <Setter Property="FocusAdorner" Value="{x:Null}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Field.Border}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
+    </Style>
+    <Style Selector="Slider.setting-control:focus-visible">
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
+    </Style>
+    <Style Selector="Slider.setting-control /template/ Thumb">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary}"/>
+    </Style>
+    <Style Selector="Slider.setting-control:pointerover /template/ Thumb, Slider.setting-control:pointerover /template/ RepeatButton#PART_DecreaseButton">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Hover}"/>
+    </Style>
+    <Style Selector="Slider.setting-control:pressed /template/ Thumb, Slider.setting-control:pressed /template/ RepeatButton#PART_DecreaseButton">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
+    </Style>
+    <Style Selector="Slider.setting-control:pointerover /template/ RepeatButton#PART_IncreaseButton, Slider.setting-control:pressed /template/ RepeatButton#PART_IncreaseButton">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Field.Border}"/>
+    </Style>
+    <Style Selector="Slider.setting-control:disabled">
+        <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
+    </Style>
+    <Style Selector="Slider.setting-control:disabled /template/ Thumb, Slider.setting-control:disabled /template/ RepeatButton#PART_DecreaseButton">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Text.Secondary}"/>
+    </Style>
     <Style Selector="ToggleSwitch:checked /template/ Border#SwitchKnobBounds">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary}"/>
@@ -1880,10 +2081,12 @@
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
     </Style>
-    <Style Selector="Button.color-swatch-button">
+    <Style Selector="RadioButton.color-swatch-button">
+        <Setter Property="FocusAdorner" Value="{x:Null}"/>
+        <Setter Property="Template" Value="{StaticResource Launcher.Component.ColorSwatch.Template}"/>
         <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Transparent}"/>
-        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
         <Setter Property="Width" Value="{StaticResource Launcher.Control.Height.Setting}"/>
         <Setter Property="Height" Value="{StaticResource Launcher.Control.Height.Setting}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
@@ -1891,14 +2094,17 @@
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
         <Setter Property="VerticalContentAlignment" Value="Stretch"/>
     </Style>
-    <Style Selector="Button.color-swatch-button:pointerover">
+    <Style Selector="RadioButton.color-swatch-button:pointerover">
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary}"/>
     </Style>
-    <Style Selector="Button.color-swatch-button:pressed">
+    <Style Selector="RadioButton.color-swatch-button:pressed">
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
     </Style>
-    <Style Selector="Button.color-swatch-button:disabled">
+    <Style Selector="RadioButton.color-swatch-button:disabled">
         <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
+    </Style>
+    <Style Selector="RadioButton.color-swatch-button:focus-visible">
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
     </Style>
     <!-- Shared utility styles for repeated inline patterns -->
     <Style Selector="ScrollViewer.scroll-pad">
@@ -1910,6 +2116,15 @@
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
+    </Style>
+    <!-- 主题色来源菜单里的圆点：预演「选这一项会得到什么主色」，不是选中标记。 -->
+    <Style Selector="Border.theme-color-dot">
+        <Setter Property="Width" Value="{StaticResource Launcher.Component.ColorSwatch.Preview.Size}"/>
+        <Setter Property="Height" Value="{StaticResource Launcher.Component.ColorSwatch.Preview.Size}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Full}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <!-- Semantic marker classes used by layout and headless UI contracts. -->
     <Style Selector="Button.news-row"/>
@@ -1924,7 +2139,9 @@
     <StyleInclude Source="avares://Cafe.Launcher.UI/Views/Styles/SetupWizard.axaml"/>
     <StyleInclude Source="avares://Cafe.Launcher.UI/Views/Styles/Toast.axaml"/>
     <StyleInclude Source="avares://Cafe.Launcher.UI/Views/Styles/DialogSurface.axaml"/>
+    <StyleInclude Source="avares://Cafe.Launcher.UI/Views/Styles/Segmented.axaml"/>
     <StyleInclude Source="avares://Cafe.Launcher.UI/Views/Styles/ResourcePanel.axaml"/>
+    <StyleInclude Source="avares://Cafe.Launcher.UI/Views/Styles/GameTask.axaml"/>
 
     <!-- ==================================================================
          焦点视觉策略（ADR-040 修订）：默认不显示，键盘导航时显示

@@ -64,7 +64,7 @@ visual hierarchy, density, background, and product style.
 
 Sources:
 - https://developer.android.com/develop/ui/compose/text/user-input
-- https://developer.android.com/reference/kotlin/androidx/compose/material3/TextField
+- https://developer.android.com/reference/kotlin/androidx/compose/material3/TextField.composable
 - https://m2.material.io/components/text-fields
 
 ---
@@ -103,4 +103,4 @@ snippet blindly.
 
 Sources:
 - https://developer.android.com/develop/ui/compose/components/search-bar
-- https://developer.android.com/reference/kotlin/androidx/compose/material3/SearchBar
+- https://developer.android.com/reference/kotlin/androidx/compose/material3/SearchBar.composable

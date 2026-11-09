@@ -1,4 +1,5 @@
-﻿using System.Threading;
+using Cafe.Launcher.UI.Constants;
+using System.Threading;
 using System.Xml.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -17,11 +18,6 @@ namespace Cafe.Launcher.Tests;
 [Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class GameRuntimeSettingsUiTests
 {
-    static GameRuntimeSettingsUiTests()
-    {
-        TestLocalizationHelper.Initialize();
-    }
-
     [Fact]
     public void MangoHudSetting_VisibilityUsesLinuxPlatformRatherThanHiddenSettingsOverride()
     {
@@ -31,7 +27,7 @@ public sealed class GameRuntimeSettingsUiTests
             element.Attribute(xaml + "Name")?.Value == "MangoHudSetting");
 
         Assert.Equal("{Binding Shell.IsLinuxPlatform}", row.Attribute("IsVisible")?.Value);
-        var toggle = Assert.Single(row.Descendants(), element => element.Name.LocalName == "ToggleSwitch");
+        var toggle = Assert.Single(row.Descendants(), element => element.Name.LocalName == "CheckBox");
         Assert.Equal(
             "{Binding Settings.Editor.Current.GameRuntime.EnableMangoHud, Mode=TwoWay}",
             toggle.Attribute("IsChecked")?.Value);
@@ -102,14 +98,14 @@ public sealed class GameRuntimeSettingsUiTests
         await settings.PendingGameRuntimeStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
 
         var summary = settings.GameRuntimeStatusSummary;
-        var expectedDetail = localizer.F("gameRuntimeStatusDetailFormat", "/usr/bin/umu-run", "1.4.4");
-        Assert.Contains(localizer.T("gameRuntimeRunnerUmu"), summary, StringComparison.Ordinal);
-        Assert.Contains(localizer.T("gameRuntimeStatusAvailable"), summary, StringComparison.Ordinal);
+        var expectedDetail = localizer.F(LocalizationKeys.GameRuntimeStatusDetailFormat, "/usr/bin/umu-run", "1.4.4");
+        Assert.Contains(localizer.T(LocalizationKeys.GameRuntimeRunnerUmu), summary, StringComparison.Ordinal);
+        Assert.Contains(localizer.T(LocalizationKeys.GameRuntimeStatusAvailable), summary, StringComparison.Ordinal);
         Assert.Contains(expectedDetail, summary, StringComparison.Ordinal);
-        Assert.Contains(localizer.T("gameRuntimeRunnerWine"), summary, StringComparison.Ordinal);
-        Assert.Contains(localizer.T("gameRuntimeStatusNotFound"), summary, StringComparison.Ordinal);
+        Assert.Contains(localizer.T(LocalizationKeys.GameRuntimeRunnerWine), summary, StringComparison.Ordinal);
+        Assert.Contains(localizer.T(LocalizationKeys.GameRuntimeStatusNotFound), summary, StringComparison.Ordinal);
         // Native is no longer offered in the runner list, so its status is not shown either.
-        Assert.DoesNotContain(localizer.T("gameRuntimeRunnerNative"), summary, StringComparison.Ordinal);
+        Assert.DoesNotContain(localizer.T(LocalizationKeys.GameRuntimeRunnerNative), summary, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -130,7 +126,7 @@ public sealed class GameRuntimeSettingsUiTests
 
         var summary = settings.BuildGameRuntimeStatusSummary(entries);
 
-        var expected = localizer.F("gameRuntimeStatusEntryFormat", localizer.T("gameRuntimeRunnerWine"), localizer.T("gameRuntimeStatusUnsupported"));
+        var expected = localizer.F(LocalizationKeys.GameRuntimeStatusEntryFormat, localizer.T(LocalizationKeys.GameRuntimeRunnerWine), localizer.T(LocalizationKeys.GameRuntimeStatusUnsupported));
         Assert.Equal(expected, summary);
     }
 
@@ -150,7 +146,7 @@ public sealed class GameRuntimeSettingsUiTests
         settings.LoadFromSnapshot(new LauncherSettings());
         await settings.PendingGameRuntimeStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
         Assert.Contains(
-            localizer.T("gameRuntimeStatusNotFound"),
+            localizer.T(LocalizationKeys.GameRuntimeStatusNotFound),
             settings.GameRuntimeStatusSummary,
             StringComparison.Ordinal);
 
@@ -172,7 +168,7 @@ public sealed class GameRuntimeSettingsUiTests
         settings.RefreshOptionDisplayNames();
         Assert.Contains("1.4.4", settings.GameRuntimeStatusSummary, StringComparison.Ordinal);
         Assert.Contains(
-            localizer.T("gameRuntimeStatusAvailable"),
+            localizer.T(LocalizationKeys.GameRuntimeStatusAvailable),
             settings.GameRuntimeStatusSummary,
             StringComparison.Ordinal);
     }

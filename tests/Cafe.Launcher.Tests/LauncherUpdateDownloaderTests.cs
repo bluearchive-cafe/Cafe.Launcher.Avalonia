@@ -47,6 +47,62 @@ public sealed class LauncherUpdateDownloaderTests
     }
 
     [Fact]
+    public async Task DownloadAndVerifyAsync_WhenMirrorUrlIsPresent_PrefersMirror()
+    {
+        using var directory = TestDirectory.Create();
+        var destination = Path.Combine(directory, "pkg.zip");
+        var transport = new StubRemoteHttpTransport(uri =>
+            uri.Host == "download.cafe-launcher.saibamidori.com"
+                ? PackageBytes
+                : throw new HttpRequestException("GitHub should not be used."));
+        var downloader = new LauncherUpdateDownloader(transport);
+
+        var result = await downloader.DownloadAndVerifyAsync(
+            PackageFile(withMirror: true), Sha256(PackageBytes), destination, progress: null, TestContext.Current.CancellationToken);
+
+        Assert.True(result.IsSuccess);
+        Assert.Single(transport.RequestedUris);
+        Assert.Equal("download.cafe-launcher.saibamidori.com", transport.RequestedUris[0].Host);
+    }
+
+    [Fact]
+    public async Task DownloadAndVerifyAsync_WhenMirrorFails_FallsBackToGitHub()
+    {
+        using var directory = TestDirectory.Create();
+        var destination = Path.Combine(directory, "pkg.zip");
+        var transport = new StubRemoteHttpTransport(uri =>
+            uri.Host == "download.cafe-launcher.saibamidori.com"
+                ? new HttpRequestException("mirror unavailable")
+                : PackageBytes);
+        var downloader = new LauncherUpdateDownloader(transport);
+
+        var result = await downloader.DownloadAndVerifyAsync(
+            PackageFile(withMirror: true), Sha256(PackageBytes), destination, progress: null, TestContext.Current.CancellationToken);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(2, transport.RequestedUris.Count);
+        Assert.Equal("github.com", transport.RequestedUris[1].Host);
+    }
+
+    [Fact]
+    public async Task DownloadAndVerifyAsync_WhenMirrorBytesMismatch_FallsBackToGitHub()
+    {
+        using var directory = TestDirectory.Create();
+        var destination = Path.Combine(directory, "pkg.zip");
+        var transport = new StubRemoteHttpTransport(uri =>
+            uri.Host == "download.cafe-launcher.saibamidori.com"
+                ? Encoding.UTF8.GetBytes("corrupted mirror payload")
+                : PackageBytes);
+        var downloader = new LauncherUpdateDownloader(transport);
+
+        var result = await downloader.DownloadAndVerifyAsync(
+            PackageFile(withMirror: true), Sha256(PackageBytes), destination, progress: null, TestContext.Current.CancellationToken);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(2, transport.RequestedUris.Count);
+    }
+
+    [Fact]
     public async Task DownloadAndVerifyAsync_WhenTransportThrowsHttp_ReturnsNetworkFailure()
     {
         using var directory = TestDirectory.Create();
@@ -62,7 +118,7 @@ public sealed class LauncherUpdateDownloaderTests
     }
 
     [Fact]
-    public async Task DownloadAndVerifyAsync_WhenTransportRejectsUrl_ReturnsNetworkFailure()
+    public async Task DownloadAndVerifyAsync_WhenTransportRejectsUrlShape_ReturnsNetworkFailure()
     {
         using var directory = TestDirectory.Create();
         var destination = Path.Combine(directory, "pkg.zip");
@@ -72,7 +128,25 @@ public sealed class LauncherUpdateDownloaderTests
         var result = await downloader.DownloadAndVerifyAsync(
             PackageFile(), new string('0', 64), destination, progress: null, TestContext.Current.CancellationToken);
 
+        // 未标记的拒绝（scheme/端口等形状问题）不属于「解析到本机/内网」，
+        // 不能冒充可行动的 hosts 指引。
         Assert.Equal(LauncherUpdateDownloadStatus.NetworkFailure, result.Status);
+    }
+
+    [Fact]
+    public async Task DownloadAndVerifyAsync_WhenTargetResolvesToBlockedAddress_ReturnsUrlRejected()
+    {
+        using var directory = TestDirectory.Create();
+        var destination = Path.Combine(directory, "pkg.zip");
+        var downloader = new LauncherUpdateDownloader(
+            new StubRemoteHttpTransport(_ => BlockedAddressRejection()));
+
+        var result = await downloader.DownloadAndVerifyAsync(
+            PackageFile(), new string('0', 64), destination, progress: null, TestContext.Current.CancellationToken);
+
+        Assert.Equal(LauncherUpdateDownloadStatus.UrlRejected, result.Status);
+        Assert.False(System.IO.File.Exists(destination));
+        Assert.False(System.IO.File.Exists(destination + ".part"));
     }
 
     [Fact]
@@ -147,14 +221,33 @@ public sealed class LauncherUpdateDownloaderTests
     }
 
     [Fact]
-    public async Task ReadTextAsync_WhenTransportThrowsHttp_ReturnsNull()
+    public async Task ReadTextAsync_WhenTransportThrowsHttp_PropagatesFailure()
     {
+        // 传输失败不得再退化成 null：调用方靠异常区分「抓不到清单」与「清单不覆盖安装包」，
+        // 否则更新失败会被归因成发布侧缺数据，日志也留不下任何痕迹（#33）。
         var downloader = new LauncherUpdateDownloader(
             new StubRemoteHttpTransport(_ => new HttpRequestException("boom")));
 
-        var text = await downloader.ReadTextAsync(PackageFile(), TestContext.Current.CancellationToken);
+        var exception = await Assert.ThrowsAsync<HttpRequestException>(
+            () => downloader.ReadTextAsync(PackageFile(), TestContext.Current.CancellationToken));
 
-        Assert.Null(text);
+        Assert.Equal("boom", exception.Message);
+    }
+
+    [Fact]
+    public async Task ReadTextAsync_WhenMirrorFails_FallsBackToGitHub()
+    {
+        var transport = new StubRemoteHttpTransport(uri =>
+            uri.Host == "github.com"
+                ? "hash  name"
+                : new HttpRequestException("mirror unavailable"));
+        var downloader = new LauncherUpdateDownloader(transport);
+
+        var text = await downloader.ReadTextAsync(
+            PackageFile(withMirror: true), TestContext.Current.CancellationToken);
+
+        Assert.Equal("hash  name", text);
+        Assert.Equal(2, transport.RequestedUris.Count);
     }
 
     [Fact]
@@ -179,14 +272,29 @@ public sealed class LauncherUpdateDownloaderTests
         Assert.Equal(atLimit, text);
     }
 
-    private static ReleaseFile PackageFile() => new()
+    private static ReleaseFile PackageFile(bool withMirror = false) => new()
     {
         Name = "Cafe.Launcher_v1.2.3_win-x64.zip",
         Url = "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v1.2.3/Cafe.Launcher_v1.2.3_win-x64.zip",
+        MirrorUrl = withMirror
+            ? "https://download.cafe-launcher.saibamidori.com/v1/downloads/v1.2.3/Cafe.Launcher_v1.2.3_win-x64.zip"
+            : null,
         Size = PackageBytes.Length
     };
 
     private static string Sha256(byte[] bytes) => Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+
+    /// <summary>
+    /// 构造与 <see cref="RemoteHttpUrlValidator"/> 私网拒绝完全同形的异常：类型不变，
+    /// 只多带标记键，下载器据此把「本机/内网地址」与其他传输失败分开。
+    /// </summary>
+    private static InvalidOperationException BlockedAddressRejection()
+    {
+        var exception = new InvalidOperationException(
+            "Remote URL resolves to a blocked network address. Blocked: 127.0.0.1");
+        exception.Data[RemoteHttpUrlValidator.BlockedAddressDataKey] = true;
+        return exception;
+    }
 
     private sealed class RecordingProgress : IProgress<LauncherUpdateProgress>
     {

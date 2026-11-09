@@ -5,6 +5,7 @@
              xmlns:controls="using:Cafe.Launcher.UI.Controls"
              x:Class="Cafe.Launcher.UI.Views.SettingsGameSection"
              x:Name="SettingsRoot"
+             Classes="settings-section"
              x:DataType="vm:MainWindowViewModel">
     <StackPanel>
         <StackPanel Classes="settings-group">
@@ -23,13 +24,6 @@
                                 <TextBlock Text="{Binding Shell.I18n[choose]}"/>
                             </StackPanel>
                         </Button>
-                        <Button Classes="flat-action" Command="{Binding Operations.OpenGameFolderCommand}"
-                                AutomationProperties.Name="{Binding Shell.I18n[gameOpenFolder]}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                                <TextBlock Text="{Binding Shell.I18n[gameOpenFolder]}"/>
-                            </StackPanel>
-                        </Button>
                     </WrapPanel>
                 </controls:SettingRow.Action>
             </controls:SettingRow>
@@ -39,11 +33,24 @@
                                     AutomationName="{Binding Shell.I18n[launchCheck]}"
                                     ItemsSource="{Binding Settings.Options.LaunchCheckMode}"
                                     SelectedValue="{Binding Settings.Editor.Current.LaunchCheckMode, Mode=TwoWay}"/>
+        </StackPanel>
 
-            <controls:SettingRow Title="{Binding Shell.I18n[gameManagement]}"
-                                 Description="{Binding Shell.I18n[gameManagementDescription]}">
+        <StackPanel Classes="settings-group">
+            <TextBlock Text="{Binding Shell.I18n[settingsCurrentInstallation]}" Classes="group-title"/>
+            <TextBlock Text="{Binding Shell.I18n[gameManagementDescription]}" Classes="caption" TextWrapping="Wrap"/>
+            <controls:SettingRow Title="{Binding Shell.I18n[gameManagement]}" ShowTopDivider="False"
+                                 Description="{Binding Operations.GameManagementPath}"
+                                 Hint="{Binding Shell.I18n[settingsGamePathPending]}"
+                                 IsHintVisible="{Binding Settings.HasGamePathChanges}">
                 <controls:SettingRow.Action>
-                    <WrapPanel ItemSpacing="{StaticResource Launcher.Spacing.Sm}" LineSpacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
+                    <WrapPanel ItemSpacing="{StaticResource Launcher.Spacing.Sm}" LineSpacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center" IsEnabled="{Binding !Settings.HasGamePathChanges}">
+                        <Button Classes="flat-action" Command="{Binding Operations.OpenGameFolderCommand}"
+                                AutomationProperties.Name="{Binding Shell.I18n[gameOpenFolder]}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                <TextBlock Text="{Binding Shell.I18n[gameOpenFolder]}"/>
+                            </StackPanel>
+                        </Button>
                         <Button Classes="flat-action" Command="{Binding Operations.RequestRepairCommand}"
                                 AutomationProperties.Name="{Binding Shell.I18n[repair]}"
                                 IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
@@ -114,11 +121,9 @@
                                  Title="{Binding Shell.I18n[gameRuntimeMangoHud]}"
                                  Description="{Binding Shell.I18n[gameRuntimeMangoHudDescription]}">
                 <controls:SettingRow.Action>
-                    <ToggleSwitch Classes="setting-toggle"
-                                  AutomationProperties.Name="{Binding Shell.I18n[gameRuntimeMangoHud]}"
-                                  IsChecked="{Binding Settings.Editor.Current.GameRuntime.EnableMangoHud, Mode=TwoWay}"
-                                  OnContent="{Binding Shell.I18n[toggleOn]}"
-                                  OffContent="{Binding Shell.I18n[toggleOff]}"/>
+                    <CheckBox Classes="setting-checkbox"
+                              AutomationProperties.Name="{Binding Shell.I18n[gameRuntimeMangoHud]}"
+                              IsChecked="{Binding Settings.Editor.Current.GameRuntime.EnableMangoHud, Mode=TwoWay}"/>
                 </controls:SettingRow.Action>
             </controls:SettingRow>
 

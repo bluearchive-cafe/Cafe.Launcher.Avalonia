@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+using Cafe.Launcher.UI.Constants;
+using System.Collections.Concurrent;
 using Cafe.Launcher.Composition;
 using Cafe.Launcher.UI.Features.Settings;
 using Cafe.Launcher.UI.Helpers;
@@ -17,11 +18,6 @@ public sealed class ToastHostViewModelTests : IDisposable
 {
     private readonly object invokeGate = new();
     private readonly TestDirectory tempDir = TestDirectory.Create();
-
-    static ToastHostViewModelTests()
-    {
-        TestLocalizationHelper.Initialize();
-    }
 
     [Fact]
     public async Task ToastRaised_WithAction_DoesNotStartDisplayDelay()
@@ -195,8 +191,8 @@ public sealed class ToastHostViewModelTests : IDisposable
 
         await viewModel.ExecuteSecondaryToastActionCommand.ExecuteAsync(toast.Id);
 
-        Assert.Equal(localizer.T("toastActionFailedTitle"), toast.Title);
-        Assert.Equal(localizer.T("toastActionFailedMessage"), toast.Message);
+        Assert.Equal(localizer.T(LocalizationKeys.ToastActionFailedTitle), toast.Title);
+        Assert.Equal(localizer.T(LocalizationKeys.ToastActionFailedMessage), toast.Message);
         Assert.DoesNotContain("secret detail", toast.Message, StringComparison.Ordinal);
         Assert.False(toast.IsActionExecuting);
     }
