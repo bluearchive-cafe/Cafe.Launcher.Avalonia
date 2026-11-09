@@ -206,6 +206,9 @@
             <x:Double x:Key="Launcher.Component.Settings.Row.MinHeight">52</x:Double>
             <Thickness x:Key="Launcher.Component.Settings.Row.Content.Padding">0,8</Thickness>
             <x:Double x:Key="Launcher.Component.Settings.Row.Action.MaxWidth">440</x:Double>
+            <!-- 折叠标题是独立可点表面：比设置行略矮，左右内缩让文字与箭头不贴边。 -->
+            <x:Double x:Key="Launcher.Component.Settings.Expander.Header.MinHeight">48</x:Double>
+            <Thickness x:Key="Launcher.Component.Settings.Expander.Header.Padding">12,6</Thickness>
             <x:Double x:Key="Launcher.Component.Loading.Bar.Width">120</x:Double>
             <x:Double x:Key="Launcher.Component.Loading.Bar.Height">4</x:Double>
             <x:Double x:Key="Launcher.Component.Progress.Bar.Height">8</x:Double>
