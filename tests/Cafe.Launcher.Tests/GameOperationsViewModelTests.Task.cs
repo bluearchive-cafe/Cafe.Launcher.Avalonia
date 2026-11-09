@@ -370,4 +370,62 @@ public sealed partial class GameOperationsViewModelTests
         Assert.Equal(0, reveals);
         Assert.Equal("new", context.ViewModel.TaskMessage);
     }
+
+    [Theory]
+    [InlineData(LauncherRuntimeState.Corrupted, LocalizationKeys.Repair, "Tools")]
+    [InlineData(LauncherRuntimeState.UpdateAvailable, LocalizationKeys.UpdateGame, "Update")]
+    public async Task SuccessfulResult_WhenStateLaterRequiresAnotherAction_NamesPrimaryActionByState(
+        LauncherRuntimeState state, LocalizationKeys label, string icon)
+    {
+        // 修复完成后检查更新改判安装已损坏（或出现新版本）：过期成功结果不能继续占住主按钮，
+        // 否则「修复完成」既是错误入口，也挡住了新的修复。
+        var context = CreateContext();
+        context.ViewModel.ApplySnapshot(ReadySnapshot());
+        context.Backend.RepairResult = new GameOperationResult { Success = true, Message = "repaired" };
+        await context.ViewModel.RepairAsync();
+        Assert.Equal(context.Localizer.T(LocalizationKeys.RepairCompleted), context.ViewModel.TaskTitle);
+
+        context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot { RuntimeState = state });
+
+        Assert.Equal(context.Localizer.T(label), context.ViewModel.PrimaryActionText);
+        Assert.Equal(icon, context.ViewModel.PrimaryActionIcon);
+        // 结果卡片本身仍保留到关闭或下一项任务实际开始（CONTEXT.md 游戏任务对话框）。
+        Assert.True(context.ViewModel.HasTaskResult);
+        Assert.Equal(context.Localizer.T(LocalizationKeys.RepairCompleted), context.ViewModel.TaskTitle);
+    }
+
+    [Fact]
+    public async Task SuccessfulResult_WhenStateRequiresRepair_PrimaryActionRequestsRepairInsteadOfReopeningResult()
+    {
+        var context = CreateContext();
+        context.ViewModel.ApplySnapshot(ReadySnapshot());
+        context.Backend.RepairResult = new GameOperationResult { Success = true, Message = "repaired" };
+        await context.ViewModel.RepairAsync();
+        context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot { RuntimeState = LauncherRuntimeState.Corrupted });
+
+        await context.ViewModel.PrimaryActionCommand.ExecuteAsync(null);
+
+        Assert.True(context.Dialogs.RepairConfirm.IsVisible);
+        Assert.Equal(0, context.Backend.InstallCallCount);
+        Assert.False(context.ViewModel.IsTaskDialogVisible);
+    }
+
+    [Fact]
+    public async Task FailedResult_WhenStateLaterChanges_KeepsTaskContextOnPrimaryAction()
+    {
+        // 失败/中断结果保留任务上下文与重试入口，不因后台刷新改了安装状态而让位。
+        var context = CreateContext();
+        context.ViewModel.ApplySnapshot(ReadySnapshot());
+        context.Backend.RepairResult = new GameOperationResult
+        {
+            ErrorCode = GameOperationErrorCode.Network, Message = "offline"
+        };
+        await context.ViewModel.RepairAsync();
+        var failureTitle = context.ViewModel.TaskTitle;
+
+        context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot { RuntimeState = LauncherRuntimeState.Corrupted });
+
+        Assert.Equal(failureTitle, context.ViewModel.PrimaryActionText);
+        Assert.True(context.ViewModel.IsTaskResultOnPrimary);
+    }
 }
