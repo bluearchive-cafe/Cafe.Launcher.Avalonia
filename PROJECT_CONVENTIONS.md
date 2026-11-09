@@ -212,11 +212,11 @@
 | 工具/库 | 版本 | 用途 |
 |---|---|---|
 | .NET SDK | 10.0.403 | Runtime / SDK（`global.json` 钉住，`latestFeature` 滚动） |
-| Avalonia / Avalonia.Desktop | 12.1.4 | UI Framework |
-| Avalonia.Controls.ColorPicker | 12.1.4 | 自定义主题色取色器 |
+| Avalonia / Avalonia.Desktop | 12.1.6 | UI Framework |
+| Avalonia.Controls.ColorPicker | 12.1.6 | 自定义主题色取色器 |
 | MarkView.Avalonia | 12.4.0 | 基于 Markdig 的更新说明 Markdown 预览 |
-| Avalonia.Themes.Fluent | 12.1.4 | Fluent 主题 |
-| Avalonia.Headless.XUnit | 12.1.4 | Headless UI testing |
+| Avalonia.Themes.Fluent | 12.1.6 | Fluent 主题 |
+| Avalonia.Headless.XUnit | 12.1.6 | Headless UI testing |
 | AvaloniaUI.DiagnosticsSupport | 2.2.3 | 调试期 UI 诊断（Debug 专用，Release 不分发） |
 | CommunityToolkit.Mvvm | 8.4.2 | MVVM source generators |
 | Material.Icons.Avalonia | 3.0.2 | Icon library |
@@ -227,7 +227,7 @@
 | Serilog | 4.4.0 | Logging pipeline |
 | Serilog.Sinks.Async | 2.1.0 | 异步日志 sink |
 | Serilog.Sinks.File | 7.0.0 | 文件日志 sink |
-| xunit.v3.mtp-v2 | 4.0.2 | Test framework / MTP 2 runner（Headless 覆盖为 3.2.2） |
+| xunit.v3.mtp-v2 | 4.0.3 | Test framework / MTP 2 runner（Headless 覆盖为 3.2.2） |
 | Microsoft.Testing.Extensions.TrxReport | 2.5.2 | TRX 测试报告 |
 | Microsoft.Testing.Extensions.HangDump | 2.5.2 | 无活动超时保护（不生成 dump） |
 | Microsoft.Testing.Platform.MSBuild | 2.5.2 | 两套测试的 MTP MSBuild 集成，避免旧 xUnit 引入已弃用版本 |

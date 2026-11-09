@@ -73,5 +73,6 @@
 - 随包 libmpv 的 ELF 依赖最高需要 glibc 2.35 与 `GLIBCXX_3.4.29`；加载失败时尝试系统固定位置的库，仍失败则回退静态背景。媒体路径在传给 libmpv 前归一化为本地绝对路径，顶层 URL 不能绕过嵌套协议限制；安全选项设置失败时不降级限制。Ubuntu 24.04 的 libmpv 0.37 使用旧背景色属性与截图命令参数，兼容路径由原生测试覆盖。
 - 发布流程按目标 RID 显式传递 `BackgroundVideoRid`，避免引用工程清除 `RuntimeIdentifier` 后误选构建机资源。Windows ZIP 与安装器打包前运行 `Test-WindowsPublishOutput.ps1`，校验主程序、更新助手、播放器、清单与许可证；Linux 便携包额外校验 libva、ALSA 与许可证文件，并在无 ALSA／VA 的容器中验证回退；macOS 在 Apple Silicon 上执行原生解码冒烟测试。
 - 本地化资源目录统一生成：`Generate-LocalizationCatalog.ps1` 产出键集合与资源目录，构建与启动校验共用同一集合；四语言 resx 作为唯一键源，新增的 44 个键同步生成类型化访问入口。测试对象图改为复用真实组合根注册，覆盖操作准入、资源目录与生命周期收尾。
+- 依赖补丁升级：Avalonia 12.1.4 → 12.1.6、`xunit.v3.mtp-v2` 4.0.2 → 4.0.3。Avalonia 补丁包含 `TableView` 列宽限制、`IsActive` 于 `Activated` 前设置、关闭窗口与布局迁移崩溃、缩放位图解码空 codec 等修复；Headless 继续使用 xUnit 3.2.2 扩展 API。锁文件、第三方声明与规范 §12 版本表同步。
 
 </details>
