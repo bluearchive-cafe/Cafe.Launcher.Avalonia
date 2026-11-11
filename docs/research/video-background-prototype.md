@@ -6,7 +6,9 @@
 
 生产复测命令见[开发指南](../DEVELOPMENT.md#视频背景运行库与专项验证)。默认使用随包固定 LGPL DLL，脚本核对生产副本与指定 DLL 的 SHA-256。最少六轮，以保留两个互不重叠的热身后采样窗口。
 
-完整通过要求内存门槛、每轮媒体资源归零和正常退出；缺少 GPU 计数器不能算通过。`-ContinueAfterMemoryFailure` 仅保留后续观测，最终仍返回失败。`Video`、`Blank`、`Finish`、`ReuseSurface` 分别用于旧分离、无 libmpv、GPU 同步与承载面复用对照。可通过 `-HeapDumpToolPath` 指定另行准备的工具，在第二轮和最后一轮收集 GC 堆快照；脚本不自动安装工具。
+完整通过要求内存门槛、每轮媒体资源归零和正常退出；缺少 GPU 计数器不能算通过。`-ContinueAfterMemoryFailure` 仅保留后续观测，最终仍返回失败。`Video`、`Blank`、`Pattern`、`Finish`、`ReuseSurface` 分别用于旧分离、无 libmpv 空绘制、无 libmpv 变化像素、GPU 同步与承载面复用对照；`-VideoPath` 指定实测片段，`-SteadyPaused` 在持续播放窗口内暂停，`-RecycleSeconds` 在该窗口内周期发送 renderer 重建命令。可通过 `-HeapDumpToolPath` 指定另行准备的工具，在第二轮和最后一轮收集 GC 堆快照；脚本不自动安装工具。
+
+原型控件另有仅用于隔离实验的环境变量，均不进入生产路径：`CAFE_VIDEO_PROTOTYPE_HWDEC` 覆盖硬解方式，`CAFE_VIDEO_PROTOTYPE_MPV_OPTIONS` 追加分号分隔的 mpv 选项，`CAFE_VIDEO_PROTOTYPE_GLFINISH_FRAMES` 按帧间隔调用 `glFinish`，`CAFE_VIDEO_PROTOTYPE_CONTINUOUS_REDRAW` 在暂停时也请求重绘，`CAFE_VIDEO_PROTOTYPE_SKIP_DRAW` 跳过 `mpv_render_context_render`。每次运行还在 `samples.gl.txt` 记录 `glGetString` 的 vendor／renderer／version。手动冒烟可在命令文件写入 `status` 把窗口激活与暂停状态写进 `samples.status.txt`，`activate` 重新激活窗口。
 
 ## 2026-11-01 生命周期对照
 
@@ -31,6 +33,40 @@
 重现命令见开发指南。原始数据在本地忽略目录 `.artifacts/video-background/retention-pinned-current`、`retention-pinned-blank`、`retention-pinned-finish`、`retention-production-current`、`retention-production-settings`、`retention-production-settings-heap` 和 `retention-production-settings-repeat`。采样器只在 Debug 显式启用；生产帧计数和资源读取诊断不进入 Release。Production 模式只接入真实控件的帧计数、mpv 属性和拥有资源计数，原型专用的渲染耗时／FBO 尺寸列保持 0，不应拿来比较渲染性能。窗口截图分别返回 `FrameArrived timed out` 和 `window capture timed out`，重绑后仍失败，因此本次没有像素截图验收结论。Headless 验证承载面复用、静态回退可见性和关闭分离，不替代 GPU 像素验证。
 
 相关上游 [OpenGlControlBase 12.0.1 内存报告](https://github.com/AvaloniaUI/Avalonia/issues/21259) 也有无实际绘制的复现，但场景与版本不同，不能据此断言本项目是同一根因。
+
+## 2026-11-10 逐帧保留定位
+
+用 Steam 创意工坊实测片段（`maid_midori_2560_1600_short.mp4`，H.264、1920×1080、60 fps、约 8 秒循环）复现审计遗留的私有内存增长。Avalonia 12.1.6、窗口 1300×754、100% 缩放；`glGetString` 记录的 GL 实现为 `ANGLE (NVIDIA GeForce GTX 1050 Ti … Direct3D11)`、ANGLE 2.1.1。除表中变量外，其余条件与 2026-11-01 记录一致：同一随包 DLL、`ReuseSurface` 连续播放、丢弃前两轮热身。
+
+先修掉两处应用侧重复分配后，基线仍有稳定斜率，于是把连续播放窗口拆成下列对照（区间取 `steady-result.json` 的起止样本）：
+
+| 实验 | 持续窗口 | 私有内存变化 | 速率 |
+| --- | --- | --- | --- |
+| 基线：连续播放，`d3d11va-copy` | 123.5 s | 630.4 → 737.3 MB（+106.9） | 0.87 MB/s |
+| 每帧 `glFinish` | 124.0 s | 626.0 → 730.5 MB（+104.5） | 0.84 MB/s |
+| `hwdec=no`（软件解码） | 123.6 s | 586.9 → 701.7 MB（+114.8） | 0.93 MB/s |
+| `hwdec=d3d11va`（零拷贝不可用，回落 `no`） | 64.0 s | 581.3 → 654.5 MB（+73.2） | 1.14 MB/s |
+| `opengl-pbo=yes` | 63.9 s | 632.1 → 695.4 MB（+63.3） | 0.99 MB/s |
+| `gpu-dumb-mode=yes` | 63.8 s | 521.1 → 549.9 MB（+28.8） | 0.45 MB/s |
+| 暂停后每帧重绘同一帧（60 fps） | 124.0 s | 636.0 → 666.3 MB（+30.3） | 0.24 MB/s |
+| `Pattern`：无 libmpv，60 fps 变化像素 | 123.9 s | 265.2 → 270.1 MB（+4.9） | 0.04 MB/s |
+| 7 分钟连续播放 | 430.7 s | 520.9 → 874.5 MB（+353.6） | 0.82 MB/s |
+| 640×360、30 fps 片段 | 123.7 s | 419.0 → 495.4 MB（+76.4） | 0.62 MB/s |
+
+结论与边界：
+
+- 增长随 libmpv 实际执行的 GL pass 数变化：暂停后只重绘同一帧约 4 KB/帧，`gpu-dumb-mode` 约 7.5 KB/帧，默认管线约 15–16 KB/帧，640×360 片段按自身 pass 数与 30 fps 折算也在同一量级。这是从速率反推的量级关系，不是对具体 ANGLE／驱动分配点的追踪结论。
+- 增长不要求解码方式、PBO 上传或 GPU 同步参与：软件与硬件解码、`opengl-pbo=yes`、每帧 `glFinish` 都没有改变斜率；因此不是应用侧缓存、不是在途 GPU 工作，也不是 `hwdec` 交互。
+- 无 libmpv 的 `Pattern` 对照在 60 fps 下基本持平，排除 Avalonia 合成器与窗口呈现是主要来源；增长发生在 `mpv_render_context_render` 触发的 pass 执行内。
+- 7 分钟窗口没有平台期（0.82 MB/s 持续线性），释放播放器会归还一部分（例如 730.5 → 597.7 MB），但生产控件 16 轮释放／重建的逐轮释放值仍整体上升（466.0 → 504.0 MB，门槛比较结果为 +34.35 MB），说明逐帧保留跨释放累积，生命周期回收不能构成上界。
+- 尝试在保持播放器的情况下释放并重建 render context：重建后帧率为 0、播放位置不可用，探针未能验证回收效果，不作为可用缓解手段；`CAFE_VIDEO_PROTOTYPE_SKIP_DRAW` 会因停止绘制而降低更新回调频率、无法维持既有帧率，未形成可用对照。
+- 本结论只覆盖这一台机器与驱动（GTX 1050 Ti、32.0.15.8157、ANGLE 2.1.1），没有 ETW／D3D11 分配追踪，也没有第二块显卡或长时间（小时级）证明。7 分钟窗口在 431 s 后采样器停止（桌面进入空闲状态），表中只使用停止前的连续样本。
+
+处置（2026-11-10）：用户裁决接受该上游风险，并启用窗口失焦暂停把逐帧累积限制在实际观看时长（与隐藏／最小化并列）；未启用 `gpu-dumb-mode`。32 MB 门槛保留用于短窗口的释放／重建回归与拥有资源归零，但不再作为长时内存有界的证明；重开条件见[审计台账](../../CODEBASE_AUDIT.md#已接受风险)。
+
+真实窗口冒烟（生产控件，`.artifacts/video-background/focus-pause-smoke2`）：Notepad 取得前台后窗口报告 `IsActive=false`、`PlaybackPaused=true`，帧率为 0、播放位置冻结且播放器保持存活；重新激活后恢复 59–60 fps 并从原位置继续。
+
+原始数据在本地忽略目录 `.artifacts/video-background/`：`retention-reuse-steady*`、`retention-dumbmode`、`retention-reuse-steady-pausedredraw`、`retention-pattern-steady`、`retention-pbo`、`retention-hwdec-zerocopy`、`retention-plateau-600` 与 `retention-production-workshop-16`。
 
 ## 验证问题
 

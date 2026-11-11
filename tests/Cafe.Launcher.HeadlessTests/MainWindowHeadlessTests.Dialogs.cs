@@ -706,10 +706,12 @@ public sealed partial class MainWindowHeadlessTests
     private static Button[] ShowSetupWizard(TestContext context)
     {
         context.ViewModel.Dialogs.ShowSetupWizard();
+        // 未同意协议时跳过钮隐藏（跳过等于绕过门禁）；本用例量的是已可退出形态的动作可达性。
+        context.ViewModel.Dialogs.SetupWizard.IsAgreementAccepted = true;
         Dispatcher.UIThread.RunJobs();
         return context.Window.GetVisualDescendants().OfType<Button>()
             .Where(button =>
-                ReferenceEquals(button.Command, context.ViewModel.Dialogs.SetupWizardExitConfirm.ShowCommand)
+                ReferenceEquals(button.Command, context.ViewModel.Dialogs.ShowSetupWizardExitConfirmCommand)
                 || ReferenceEquals(button.Command, context.ViewModel.Dialogs.SetupWizard.NextCommand))
             .ToArray();
     }

@@ -35,19 +35,23 @@ internal partial class SetupWizardOverlay : UserControl
     /// <summary>收尾缓冲：超出名义时长的额外等待，保证动画最后一拍落完再结算（实验台 WaitAsync）。</summary>
     private static readonly TimeSpan SettleGrace = TimeSpan.FromMilliseconds(20);
 
-    private readonly StackPanel[] stepPanels;
+    private readonly Control[] stepPanels;
+    private readonly Border[] progressSegments;
     private CancellationTokenSource? stepMotionCts;
     private SetupWizardViewModel? wizard;
     private MainWindowViewModel? mainWindow;
     private bool attachedToVisualTree;
+    private int displayedStep;
 
     public SetupWizardOverlay()
     {
         InitializeComponent();
-        stepPanels = [WizardStep0, WizardStep1, WizardStep2, WizardStep3, WizardStep4];
+        stepPanels = [WizardStep0, WizardStep1, WizardStep2, WizardStep3, WizardStep4, WizardStep5];
+        progressSegments = [ProgressSegment0, ProgressSegment1, ProgressSegment2, ProgressSegment3, ProgressSegment4, ProgressSegment5];
         DataContextChanged += OnDataContextChanged;
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
+        AgreementScrollViewer.LayoutUpdated += (_, _) => EvaluateAgreementRead();
     }
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
@@ -112,7 +116,23 @@ internal partial class SetupWizardOverlay : UserControl
 
     private void OnWizardPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName != nameof(SetupWizardViewModel.Step) || wizard is null)
+        if (wizard is null)
+        {
+            return;
+        }
+
+        if (e.PropertyName == nameof(SetupWizardViewModel.StepProgress))
+        {
+            // 语言切换会重建计数文本；步进本身仍由换面中点翻转，显示步落后时跳过。
+            if (wizard.Step == displayedStep)
+            {
+                StepProgressText.Text = wizard.StepProgress;
+            }
+
+            return;
+        }
+
+        if (e.PropertyName != nameof(SetupWizardViewModel.Step))
         {
             return;
         }
@@ -248,6 +268,33 @@ internal partial class SetupWizardOverlay : UserControl
         }
     }
 
+    private void OnAgreementScrollChanged(object? sender, ScrollChangedEventArgs e) =>
+        EvaluateAgreementRead();
+
+    /// <summary>
+    /// 协议复选框只在文档读完（滚到底或内容不足一屏）后启用；Markdown 异步渲染时
+    /// Extent 会随后续布局变化，由 LayoutUpdated 再补一次判定。
+    /// </summary>
+    private void EvaluateAgreementRead()
+    {
+        if (wizard is null || !wizard.IsAgreementStep)
+        {
+            return;
+        }
+
+        var extent = AgreementScrollViewer.Extent.Height;
+        var viewport = AgreementScrollViewer.Viewport.Height;
+        if (extent <= 0 || viewport <= 0)
+        {
+            return;
+        }
+
+        if (AgreementScrollViewer.Offset.Y + viewport >= extent - 8)
+        {
+            wizard.MarkAgreementRead();
+        }
+    }
+
     private void ShowStepInstantly(int stepIndex)
     {
         var target = Math.Clamp(stepIndex, 0, stepPanels.Length - 1);
@@ -289,19 +336,25 @@ internal partial class SetupWizardOverlay : UserControl
             return;
         }
 
+        displayedStep = wizard.Step;
         StepProgressText.Text = wizard.StepProgress;
+        for (var i = 0; i < progressSegments.Length; i++)
+        {
+            progressSegments[i].Classes.Set("reached", i <= wizard.Step);
+        }
+
         PreviousButton.IsVisible = wizard.CanGoPrevious;
         NextButton.IsVisible = !wizard.IsLastStep;
         FinishButton.IsVisible = wizard.IsLastStep;
     }
 
-    private void SettleStep(StackPanel panel)
+    private void SettleStep(Control panel)
     {
         panel.IsVisible = true;
         ResetStepVisual(panel);
     }
 
-    private static void ResetStepVisual(StackPanel panel)
+    private static void ResetStepVisual(Control panel)
     {
         // 先清过渡再写终值（实验台 SetFinalVisual 同序），避免残留的插值拍覆盖终值。
         panel.Transitions = null;

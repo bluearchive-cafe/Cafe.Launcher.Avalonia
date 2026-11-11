@@ -49,7 +49,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
 
         Assert.True(propertyNames.IndexOf("updateChannel") < propertyNames.IndexOf("logLevel"));
         Assert.True(propertyNames.IndexOf("resourcePanelUidSource") < propertyNames.IndexOf("statusDetailMode"));
-        Assert.Equal("statusDetailMode", propertyNames[^1]);
+        Assert.Equal("acceptedAgreementVersion", propertyNames[^1]);
     }
 
     [Fact]
@@ -446,7 +446,8 @@ public sealed class LauncherSettingsServiceTests : IDisposable
             "gameRuntime",
             "statusDetailMode",
             "updateChannel",
-            "logLevel"
+            "logLevel",
+            "acceptedAgreementVersion"
         };
         Assert.True(expectedPropertyNames.SetEquals(propertyNames));
         Assert.False(File.Exists($"{settingsPath}.tmp"));

@@ -23,6 +23,9 @@
     <!-- 运行时资产归表现层：/Assets/app-icon.ico 是窗口与托盘的图标（同时拷到输出目录供磁盘路径读取），
          launcher-background.png 通过 avares 载入。app-icon-source.png（图标流水线输入）留在宿主。 -->
     <AvaloniaResource Include="Assets\**" />
+    <!-- 协议正文以仓库根目录的单一来源嵌入，避免与应用内文本分叉。 -->
+    <AvaloniaResource Include="..\..\TERMS.md" Link="Assets\Legal\TERMS.md" />
+    <AvaloniaResource Include="..\..\PRIVACY.md" Link="Assets\Legal\PRIVACY.md" />
     <None Update="Assets\app-icon.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

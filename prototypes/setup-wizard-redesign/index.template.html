@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>设置向导 · 视觉重设计样张</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --page: #080c14;
+    --page-soft: #0f1622;
+    --page-text: #e8eef6;
+    --page-muted: #8c9bb0;
+    --page-line: rgba(255,255,255,.09);
+    --primary: #aec6ff;
+    --primary-soft: rgba(174,198,255,.14);
+    --primary-border: rgba(174,198,255,.52);
+    --on-primary: #182b4d;
+    --surface: #161c26;
+    --surface-border: #2b3644;
+    --header: #1b2430;
+    --card: #202733;
+    --card-border: #344150;
+    --divider: #2c3844;
+    --text: #e8eef6;
+    --text-2: #a8b3c2;
+    --body-text: #c8d2df;
+    --field: #272e3a;
+    --field-border: #7b89a0;
+    --row: #202833;
+    --row-hover: rgba(255,255,255,.09);
+    --track: #2f3b4a;
+    --secondary-btn: #303744;
+    --secondary-btn-hover: #3f4652;
+    --success: #4ade80;
+    --success-soft: #16302a;
+    --danger: #f06a72;
+    --shadow: 0 30px 90px rgba(0,0,0,.55);
+  }
+  body[data-theme="light"] {
+    color-scheme: light;
+    --page: #eef2f8;
+    --page-soft: #ffffff;
+    --page-text: #1a2430;
+    --page-muted: #647084;
+    --page-line: rgba(16,32,56,.12);
+    --primary: #445ed5;
+    --primary-soft: rgba(68,94,213,.14);
+    --primary-border: rgba(68,94,213,.5);
+    --on-primary: #ffffff;
+    --surface: #ffffff;
+    --surface-border: #dbe3ee;
+    --header: #f4f8fd;
+    --card: #fafcff;
+    --card-border: #d6e2ee;
+    --divider: #e0e3eb;
+    --text: #232a31;
+    --text-2: #646d79;
+    --body-text: #3f4954;
+    --field: #f9fafc;
+    --field-border: #8290a5;
+    --row: #f1f5f9;
+    --row-hover: rgba(16,32,56,.06);
+    --track: #e4e9f1;
+    --secondary-btn: #edf0f5;
+    --secondary-btn-hover: #dde0e5;
+    --success: #15803d;
+    --success-soft: #d9f4e9;
+    --danger: #d93840;
+    --shadow: 0 30px 90px rgba(34,48,74,.28);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", "Microsoft YaHei", "Noto Sans", "Segoe UI Emoji", sans-serif;
+    background:
+      radial-gradient(1100px 600px at 12% -10%, rgba(68,94,213,.18), transparent 60%),
+      radial-gradient(900px 500px at 90% 0%, rgba(120,84,180,.12), transparent 55%),
+      var(--page);
+    color: var(--page-text);
+    -webkit-font-smoothing: antialiased;
+  }
+  .board { max-width: 1440px; margin: 0 auto; padding: 30px 34px 44px; }
+  .board-head {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 24px; flex-wrap: wrap; margin-bottom: 18px;
+  }
+  .board-title { margin: 0; font-size: 21px; font-weight: 650; letter-spacing: .2px; }
+  .board-sub { margin: 6px 0 0; font-size: 13px; color: var(--page-muted); line-height: 1.6; max-width: 760px; }
+  .board-controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .ctl {
+    height: 34px; padding: 0 13px; border-radius: 8px; border: 1px solid var(--page-line);
+    background: var(--page-soft); color: var(--page-text); font: inherit; font-size: 13px;
+    display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
+    transition: background .15s ease, border-color .15s ease, color .15s ease;
+  }
+  .ctl:hover { border-color: var(--primary-border); }
+  .ctl.active { background: var(--primary-soft); border-color: var(--primary-border); color: var(--primary); }
+  .ctl .icon { width: 16px; height: 16px; }
+  .ctl-group { display: inline-flex; gap: 4px; padding: 3px; border-radius: 10px; border: 1px solid var(--page-line); background: var(--page-soft); }
+  .ctl-group .ctl { border: 0; background: transparent; height: 28px; padding: 0 11px; }
+  .ctl-group .ctl.active { background: var(--primary-soft); }
+  body[data-theme="dark"] [data-theme-btn="dark"],
+  body[data-theme="light"] [data-theme-btn="light"] { background: var(--primary-soft); border-color: transparent; color: var(--primary); }
+  .icon { width: 18px; height: 18px; fill: currentColor; flex: none; }
+
+  .device-wrap { padding: 4px 0 10px; }
+  .device-scaler { position: relative; width: 100%; height: 754px; }
+  .device {
+    position: absolute; left: 0; top: 0; transform-origin: top left;
+    width: 1300px; height: 754px; border-radius: 14px;
+    overflow: hidden; background: url("__BG__") center/cover no-repeat;
+    border: 1px solid rgba(255,255,255,.12); box-shadow: var(--shadow);
+  }
+  .device::before {
+    content: ""; position: absolute; inset: 0;
+    background: rgba(8,12,20,.58); backdrop-filter: blur(1.5px);
+  }
+  .titlebar {
+    position: absolute; inset: 0 0 auto 0; height: 48px; display: flex; align-items: center;
+    justify-content: space-between; padding: 0 18px; color: rgba(255,255,255,.9);
+    background: linear-gradient(to bottom, rgba(0,0,0,.32), transparent);
+  }
+  .titlebar-left { display: flex; align-items: center; gap: 9px; font-size: 14px; font-weight: 600; letter-spacing: .2px; }
+  .titlebar-version { font-size: 10px; font-weight: 400; color: rgba(255,255,255,.62); padding: 2px 6px; border-radius: 4px; background: rgba(255,255,255,.1); }
+  .win-controls { display: flex; gap: 18px; color: rgba(255,255,255,.75); }
+  .win-controls .icon { width: 15px; height: 15px; }
+  .shell-bottom {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 128px; pointer-events: none;
+    background: linear-gradient(to top, rgba(0,0,0,.5), transparent);
+    display: flex; align-items: flex-end; justify-content: space-between; padding: 0 24px 18px;
+  }
+  .status-line { display: flex; gap: 18px; font-size: 11.5px; color: rgba(255,255,255,.55); }
+  .launch-pill {
+    width: 190px; height: 48px; border-radius: 10px; display: grid; place-items: center;
+    background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.1);
+    color: rgba(255,255,255,.5); font-size: 13.5px;
+  }
+
+  .wizard {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    width: 920px; height: 480px; border-radius: 16px; overflow: hidden;
+    background: var(--surface); color: var(--text);
+    border: 1px solid var(--surface-border);
+    box-shadow: 0 24px 64px rgba(0,0,0,.42);
+    display: flex; flex-direction: column;
+  }
+  .wz-head { flex: none; padding: 16px 24px 14px; background: var(--header); border-bottom: 1px solid var(--divider); }
+  .wz-head-main { display: flex; align-items: center; gap: 12px; }
+  .brand-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .wz-title { font-size: 16px; font-weight: 600; line-height: 1.3; letter-spacing: .15px; }
+  .wz-meta { font-size: 12px; color: var(--text-2); line-height: 1.3; }
+  .skip-btn {
+    margin-left: auto; height: 32px; padding: 0 11px 0 9px; border-radius: 8px;
+    background: transparent; border: 1px solid transparent; color: var(--text-2);
+    font: inherit; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+    transition: background .15s ease, color .15s ease;
+  }
+  .skip-btn:hover { background: var(--row); color: var(--text); }
+  .skip-btn .icon { width: 16px; height: 16px; }
+  .skip-btn[hidden] { display: none; }
+  .wz-progress { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-top: 13px; }
+  .seg { height: 3px; border-radius: 999px; background: var(--track); transition: background .25s ease; }
+  .seg.reached { background: var(--primary); }
+
+  .wz-body {
+    flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr);
+    align-items: stretch; padding: 20px 24px;
+  }
+  .step { display: none; height: 100%; min-height: 0; }
+  .step.active {
+    display: grid; grid-template-columns: 300px 528px; gap: 32px; width: 860px;
+    justify-self: center; animation: step-in .22s ease both;
+  }
+  @keyframes step-in {
+    from { opacity: 0; transform: translateX(10px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .context {
+    display: flex; flex-direction: column; justify-content: center; gap: 14px;
+    padding: 0 4px 0 6px; min-width: 0;
+  }
+  .context-icon {
+    width: 56px; height: 56px; border-radius: 999px; background: var(--primary-soft);
+    color: var(--primary); display: grid; place-items: center; flex: none;
+  }
+  .context-icon.success { background: var(--success-soft); color: var(--success); }
+  .context-icon .icon { width: 26px; height: 26px; }
+  .context h2 { margin: 0; font-size: 22px; line-height: 1.3; font-weight: 600; letter-spacing: .1px; }
+  .context p { margin: 0; font-size: 13.5px; line-height: 1.75; color: var(--text-2); }
+  .context .context-note {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-2);
+    padding-top: 2px;
+  }
+  .context .context-note .icon { width: 14px; height: 14px; color: var(--primary); }
+
+  .panel {
+    background: var(--card); border: 1px solid var(--card-border); border-radius: 12px;
+    padding: 20px; display: flex; flex-direction: column; justify-content: center; gap: 16px;
+    min-height: 0;
+  }
+  .panel.top { justify-content: center; }
+  .field-label { font-size: 12px; color: var(--text-2); line-height: 1.4; }
+  .select {
+    height: 44px; border-radius: 10px; border: 1px solid var(--field-border);
+    background: var(--field); color: var(--text); font-size: 14px;
+    display: flex; align-items: center; justify-content: space-between; padding: 0 12px 0 14px;
+    cursor: pointer;
+  }
+  .select:hover { border-color: var(--primary-border); }
+  .select .icon { width: 18px; height: 18px; color: var(--text-2); }
+  .hint { margin: 0; font-size: 12.5px; line-height: 1.6; color: var(--text-2); }
+
+  .options { display: flex; flex-direction: column; gap: 6px; padding: 4px; margin: -4px; }
+  .option {
+    display: flex; align-items: flex-start; gap: 12px; padding: 13px 14px; border-radius: 10px;
+    border: 1px solid transparent; cursor: pointer; transition: background .15s ease, border-color .15s ease;
+  }
+  .option:hover { background: var(--row-hover); }
+  .option.checked { background: var(--primary-soft); border-color: var(--primary-border); }
+  .radio {
+    width: 20px; height: 20px; border-radius: 999px; border: 2px solid var(--field-border);
+    flex: none; margin-top: 1px; display: grid; place-items: center; background: transparent;
+    transition: border-color .15s ease;
+  }
+  .option.checked .radio { border-color: var(--primary); }
+  .option.checked .radio::after { content: ""; width: 10px; height: 10px; border-radius: 999px; background: var(--primary); }
+  .option-text { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .option-title { font-size: 14px; font-weight: 600; line-height: 1.4; }
+  .option-desc { font-size: 12.5px; line-height: 1.55; color: var(--text-2); }
+  .option.checked .option-desc { color: var(--body-text); }
+
+  .path-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+  .path-field {
+    height: 44px; border-radius: 10px; border: 1px solid var(--field-border);
+    background: var(--field); display: flex; align-items: center; gap: 10px; padding: 0 12px;
+    min-width: 0;
+  }
+  .path-field .icon { width: 18px; height: 18px; color: var(--text-2); flex: none; }
+  .path-field span { font-size: 13.5px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .browse-btn {
+    height: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid var(--card-border);
+    background: var(--secondary-btn); color: var(--text); font: inherit; font-size: 13.5px;
+    display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
+  }
+  .browse-btn:hover { background: var(--secondary-btn-hover); }
+  .browse-btn .icon { width: 17px; height: 17px; }
+  .status-row { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--success); }
+  .status-row .icon { width: 16px; height: 16px; }
+  .status-row.pending { color: var(--primary); }
+  .status-row.error { color: var(--danger); }
+
+  .review-list { display: flex; flex-direction: column; }
+  .review-row { display: flex; align-items: center; gap: 12px; min-height: 56px; }
+  .review-row + .review-row { border-top: 1px solid var(--divider); }
+  .review-icon {
+    width: 34px; height: 34px; border-radius: 8px; background: var(--field); color: var(--text-2);
+    display: grid; place-items: center; flex: none;
+  }
+  .review-icon .icon { width: 18px; height: 18px; }
+  .review-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; flex: 1; }
+  .review-label { font-size: 11.5px; color: var(--text-2); line-height: 1.3; }
+  .review-value { font-size: 13.5px; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .edit-btn {
+    height: 32px; padding: 0 9px; border-radius: 8px; border: 0; background: transparent;
+    color: var(--text-2); font: inherit; font-size: 12.5px; display: inline-flex; align-items: center; gap: 5px;
+    cursor: pointer; flex: none;
+  }
+  .edit-btn:hover { background: var(--row); color: var(--text); }
+  .edit-btn .icon { width: 15px; height: 15px; }
+
+  .doc-panel { padding: 0; gap: 0; justify-content: flex-start; overflow: hidden; }
+  .doc-wrap { position: relative; flex: 1; min-height: 0; }
+  .doc-wrap::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 24px; pointer-events: none;
+    background: linear-gradient(to top, var(--card), transparent);
+  }
+  .doc-scroll { height: 100%; overflow: auto; padding: 18px 20px 24px; scrollbar-width: thin; scrollbar-color: var(--track) transparent; }
+  .doc-scroll::-webkit-scrollbar { width: 9px; }
+  .doc-scroll::-webkit-scrollbar-thumb { background: var(--track); border-radius: 999px; border: 2px solid var(--card); }
+  .doc-title { margin: 0 0 8px; font-size: 18px; font-weight: 650; line-height: 1.35; }
+  .doc-meta { margin: 0 0 10px; font-size: 11.5px; color: var(--text-2); line-height: 1.6; }
+  .doc-scroll p { margin: 0 0 10px; font-size: 13px; line-height: 1.8; color: var(--body-text); }
+  .doc-scroll h3 { margin: 14px 0 6px; font-size: 15px; font-weight: 600; line-height: 1.4; }
+  .version-pill {
+    align-self: flex-start; padding: 3px 9px; border-radius: 999px; background: var(--row);
+    color: var(--text-2); font-size: 11.5px; line-height: 1.5;
+  }
+  .consent-footer {
+    flex: none; border-top: 1px solid var(--divider); padding: 12px 16px;
+    display: flex; flex-direction: column; gap: 6px; background: var(--surface);
+  }
+  .consent-check { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
+  .consent-check.disabled { opacity: .55; cursor: default; }
+  .checkbox {
+    width: 20px; height: 20px; border-radius: 5px; border: 2px solid var(--field-border);
+    flex: none; margin-top: 1px; display: grid; place-items: center; background: transparent;
+    transition: background .15s ease, border-color .15s ease;
+  }
+  .consent-check.checked .checkbox { background: var(--primary); border-color: var(--primary); }
+  .checkbox .icon { width: 14px; height: 14px; color: var(--on-primary); opacity: 0; }
+  .consent-check.checked .checkbox .icon { opacity: 1; }
+  .consent-label { font-size: 12.5px; line-height: 1.5; }
+
+  .wz-actions {
+    flex: none; height: 64px; border-top: 1px solid var(--divider); padding: 0 24px;
+    display: flex; align-items: center; justify-content: space-between; background: var(--surface);
+  }
+  .btn {
+    height: 40px; padding: 0 16px; border-radius: 8px; border: 1px solid transparent;
+    font: inherit; font-size: 14px; font-weight: 500; display: inline-flex; align-items: center;
+    justify-content: center; gap: 8px; cursor: pointer; min-width: 120px;
+    transition: background .15s ease, color .15s ease, border-color .15s ease;
+  }
+  .btn .icon { width: 17px; height: 17px; }
+  .btn.secondary { background: var(--secondary-btn); color: var(--text); }
+  .btn.secondary:hover { background: var(--secondary-btn-hover); }
+  .btn.primary { background: var(--primary); color: var(--on-primary); }
+  .btn.primary:hover { filter: brightness(1.06); }
+  .btn.primary:disabled { background: var(--row); color: var(--text-2); cursor: not-allowed; filter: none; }
+  .btn.hidden { visibility: hidden; }
+
+  .notes { margin-top: 22px; display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
+  .note {
+    background: var(--page-soft); border: 1px solid var(--page-line); border-radius: 12px;
+    padding: 15px 16px; min-width: 0;
+  }
+  .note h3 { margin: 0 0 6px; font-size: 13px; font-weight: 600; letter-spacing: .2px; }
+  .note p { margin: 0; font-size: 12.5px; line-height: 1.7; color: var(--page-muted); }
+  .note strong { color: var(--page-text); font-weight: 600; }
+  .decision {
+    margin-top: 12px; padding: 14px 16px; border-radius: 12px;
+    border: 1px solid var(--primary-border); background: var(--primary-soft);
+    font-size: 12.5px; line-height: 1.7;
+  }
+  .decision strong { color: var(--primary); }
+  @media (max-width: 1000px) {
+    .notes { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body data-theme="dark">
+<svg style="display:none" aria-hidden="true">
+  <symbol id="i-language" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm6.93 6h-2.95c-.32-1.25-.78-2.45-1.38-3.56 1.84.63 3.37 1.91 4.33 3.56zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2s.06 1.34.14 2H4.26zm.82 2h2.95c.32 1.25.78 2.45 1.38 3.56-1.84-.63-3.37-1.9-4.33-3.56zm2.95-8H5.08c.96-1.66 2.49-2.93 4.33-3.56C8.81 5.55 8.35 6.75 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2s.07-1.35.16-2h4.68c.09.65.16 1.32.16 2s-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95c-.96 1.65-2.49 2.93-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2s-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></symbol>
+  <symbol id="i-security" viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></symbol>
+  <symbol id="i-check-circle" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></symbol>
+  <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></symbol>
+  <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></symbol>
+  <symbol id="i-skip" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6z"/></symbol>
+  <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></symbol>
+  <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></symbol>
+  <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></symbol>
+  <symbol id="i-minus" viewBox="0 0 24 24"><path d="M19 13H5v-2h14z"/></symbol>
+  <symbol id="i-square" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></symbol>
+  <symbol id="i-palette" viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></symbol>
+</svg>
+
+<div class="board">
+  <div class="board-head">
+    <div>
+      <h1 class="board-title">设置向导 · 视觉重设计样张</h1>
+      <p class="board-sub">统一头部（品牌 + 六段进度 + 跳过）、左引导 / 右操作的双栏舞台，以及全幅动作带；六个步骤结构一致，仅右侧面板随步骤变化。切换步骤与主题检查所有状态。</p>
+    </div>
+    <div class="board-controls">
+      <button class="ctl" data-step-btn="0"><svg class="icon"><use href="#i-language"/></svg>语言</button>
+      <button class="ctl" data-step-btn="1"><svg class="icon"><use href="#i-shield"/></svg>协议</button>
+      <button class="ctl" data-step-btn="2"><svg class="icon"><use href="#i-folder"/></svg>路径</button>
+      <button class="ctl" data-step-btn="3"><svg class="icon"><use href="#i-cloud"/></svg>下载源</button>
+      <button class="ctl" data-step-btn="4"><svg class="icon"><use href="#i-security"/></svg>代理</button>
+      <button class="ctl" data-step-btn="5"><svg class="icon"><use href="#i-check"/></svg>确认</button>
+      <span class="ctl-group" aria-label="主题">
+        <button class="ctl active" data-theme-btn="dark">深色</button>
+        <button class="ctl" data-theme-btn="light">浅色</button>
+      </span>
+    </div>
+  </div>
+
+  <div class="device-wrap">
+    <div class="device-scaler">
+    <div class="device">
+      <div class="titlebar">
+        <div class="titlebar-left">Cafe Launcher <span class="titlebar-version">v1.4.0-beta.1</span></div>
+        <div class="win-controls">
+          <svg class="icon"><use href="#i-minus"/></svg>
+          <svg class="icon"><use href="#i-square"/></svg>
+          <svg class="icon"><use href="#i-close"/></svg>
+        </div>
+      </div>
+
+      <div class="shell-bottom">
+        <div class="status-line"><span>启动校验：加载中</span><span>网络：加载中</span><span>下载源：加载中</span><span>版本：加载中</span></div>
+        <div class="launch-pill"><svg class="icon" style="width:15px;height:15px;display:inline-block;vertical-align:-2px;margin-right:7px"><use href="#i-play"/></svg>Install Game</div>
+      </div>
+
+      <div class="wizard">
+        <header class="wz-head">
+          <div class="wz-head-main">
+            <div class="brand-text">
+              <div class="wz-title">设置向导</div>
+              <div class="wz-meta" id="wzMeta">第 1 步，共 6 步</div>
+            </div>
+            <button class="skip-btn" id="skipBtn" hidden><svg class="icon"><use href="#i-skip"/></svg>跳过引导</button>
+          </div>
+          <div class="wz-progress" aria-hidden="true">
+            <span class="seg reached"></span><span class="seg"></span><span class="seg"></span>
+            <span class="seg"></span><span class="seg"></span><span class="seg"></span>
+          </div>
+        </header>
+
+        <main class="wz-body">
+          <!-- 0 Language -->
+          <section class="step" data-step="0">
+            <div class="context">
+              <div class="context-icon"><svg class="icon"><use href="#i-language"/></svg></div>
+              <h2>语言</h2>
+              <p>本引导将帮助您完成 Cafe Launcher 的基本配置，以获得最佳使用体验。您可以随时在设置面板中更改这些配置。</p>
+            </div>
+            <div class="panel">
+              <div>
+                <div class="field-label">界面语言</div>
+                <div class="select" style="margin-top:6px"><span>自动（跟随系统语言）</span><svg class="icon"><use href="#i-chevron-down"/></svg></div>
+              </div>
+              <p class="hint">选择启动器界面的显示语言。</p>
+            </div>
+          </section>
+
+          <!-- 1 Agreement -->
+          <section class="step" data-step="1">
+            <div class="context">
+              <div class="context-icon"><svg class="icon"><use href="#i-shield"/></svg></div>
+              <h2>用户协议与隐私政策</h2>
+              <p>使用 Cafe Launcher 前，请阅读并同意以下用户协议与隐私政策。</p>
+              <span class="version-pill">版本 2026-11-10</span>
+              <div class="context-note"><svg class="icon"><use href="#i-info"/></svg>以下文档以简体中文版为准。</div>
+            </div>
+            <div class="panel doc-panel">
+              <div class="doc-wrap">
+                <div class="doc-scroll">
+                  <h2 class="doc-title">Cafe Launcher 用户协议</h2>
+                  <p class="doc-meta">生效日期：2026 年 11 月 10 日<br>最后更新：2026 年 11 月 10 日</p>
+                  <p>本协议是你与 Cafe Launcher 维护者之间，就下载、安装和使用本应用及其社区服务达成的约定。本应用是蔚蓝咖啡厅社区维护的开源 Blue Archive 日服第三方桌面启动器。下载、安装或使用本应用，即表示你已阅读并接受本协议；如不接受，请停止使用并删除本应用。</p>
+                  <h3>概要</h3>
+                  <p>本应用自身以开源方式提供，不包含游戏本体或游戏内资源。游戏资源的下载与使用受游戏运营方条款约束。请仅在你拥有合法访问权限的前提下使用本应用。</p>
+                  <h3>使用许可</h3>
+                  <p>在遵守本协议的前提下，你可以免费安装并使用本应用。你不得利用本应用从事违反法律法规、侵害他人权益或干扰游戏正常运营的行为。</p>
+                  <h3>隐私</h3>
+                  <p>启动器默认在本机保存必要配置与诊断日志，不会主动上传遥测数据。仅当你启用更新、下载或社区功能时，才会与对应服务交换完成该功能所需的信息。</p>
+                  <h3>免责声明</h3>
+                  <p>本应用按“现状”提供。维护者不对因使用本应用产生的数据丢失、账号风险或服务中断承担责任。请自行备份重要数据。</p>
+                </div>
+              </div>
+              <div class="consent-footer">
+                <div class="consent-check disabled" id="consentCheck">
+                  <span class="checkbox"><svg class="icon"><use href="#i-check"/></svg></span>
+                  <span class="consent-label">我已阅读并同意《用户协议》和《隐私政策》</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 2 Game path -->
+          <section class="step" data-step="2">
+            <div class="context">
+              <div class="context-icon"><svg class="icon"><use href="#i-folder"/></svg></div>
+              <h2>游戏安装路径</h2>
+              <p>游戏将安装在所选文件夹的 YostarGames\BlueArchive_JP 子目录中。</p>
+            </div>
+            <div class="panel">
+              <div>
+                <div class="field-label">安装位置</div>
+                <div class="path-row" style="margin-top:6px">
+                  <div class="path-field"><svg class="icon"><use href="#i-folder"/></svg><span>D:\Games\BlueArchive</span></div>
+                  <button class="browse-btn"><svg class="icon"><use href="#i-folder"/></svg>浏览</button>
+                </div>
+              </div>
+              <div class="status-row"><svg class="icon"><use href="#i-check-circle"/></svg><span>可用于安装</span></div>
+              <p class="hint">更换路径后会重新检查写入权限与现有安装状态。</p>
+            </div>
+          </section>
+
+          <!-- 3 Download source -->
+          <section class="step" data-step="3">
+            <div class="context">
+              <div class="context-icon"><svg class="icon"><use href="#i-cloud"/></svg></div>
+              <h2>下载源</h2>
+              <p>Cafe 下载源提供汉化资源。如果您希望使用原版日文资源，请选择官方下载源。</p>
+            </div>
+            <div class="panel top">
+              <div class="options" data-group="source">
+                <div class="option checked" data-option="source">
+                  <span class="radio"></span>
+                  <span class="option-text">
+                    <span class="option-title">Cafe 下载源</span>
+                    <span class="option-desc">由蔚蓝咖啡厅（bluearchive.cafe）日服汉化组提供，内置汉化资源。</span>
+                  </span>
+                </div>
+                <div class="option" data-option="source">
+                  <span class="radio"></span>
+                  <span class="option-text">
+                    <span class="option-title">官方下载源</span>
+                    <span class="option-desc">适合希望使用官方原始资源的用户。</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 4 Proxy -->
+          <section class="step" data-step="4">
+            <div class="context">
+              <div class="context-icon"><svg class="icon"><use href="#i-security"/></svg></div>
+              <h2>代理</h2>
+              <p>请按网络环境选择：自动模式使用系统提供的代理设置；直连模式不使用代理；系统代理优先使用手动配置。</p>
+            </div>
+            <div class="panel top">
+              <div class="options" data-group="proxy">
+                <div class="option checked" data-option="proxy">
+                  <span class="radio"></span>
+                  <span class="option-text">
+                    <span class="option-title">自动</span>
+                    <span class="option-desc">自动使用系统提供的代理设置。</span>
+                  </span>
+                </div>
+                <div class="option" data-option="proxy">
+                  <span class="radio"></span>
+                  <span class="option-text">
+                    <span class="option-title">直连</span>
+                    <span class="option-desc">不使用代理，直接连接。</span>
+                  </span>
+                </div>
+                <div class="option" data-option="proxy">
+                  <span class="radio"></span>
+                  <span class="option-text">
+                    <span class="option-title">系统代理</span>
+                    <span class="option-desc">优先使用系统中手动配置的代理；未配置时自动检测系统代理。</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 5 Review -->
+          <section class="step" data-step="5">
+            <div class="context">
+              <div class="context-icon success"><svg class="icon"><use href="#i-check"/></svg></div>
+              <h2>确认您的设置</h2>
+              <p>以下设置将被应用。您之后可以在设置面板中修改。</p>
+            </div>
+            <div class="panel top">
+              <div class="review-list">
+                <div class="review-row">
+                  <span class="review-icon"><svg class="icon"><use href="#i-language"/></svg></span>
+                  <span class="review-text"><span class="review-label">语言</span><span class="review-value">简体中文</span></span>
+                  <button class="edit-btn"><svg class="icon"><use href="#i-pencil"/></svg>修改</button>
+                </div>
+                <div class="review-row">
+                  <span class="review-icon"><svg class="icon"><use href="#i-cloud"/></svg></span>
+                  <span class="review-text"><span class="review-label">下载源</span><span class="review-value">Cafe 下载源</span></span>
+                  <button class="edit-btn"><svg class="icon"><use href="#i-pencil"/></svg>修改</button>
+                </div>
+                <div class="review-row">
+                  <span class="review-icon"><svg class="icon"><use href="#i-folder"/></svg></span>
+                  <span class="review-text"><span class="review-label">游戏安装路径</span><span class="review-value">D:\Games\BlueArchive</span></span>
+                  <button class="edit-btn"><svg class="icon"><use href="#i-pencil"/></svg>修改</button>
+                </div>
+                <div class="review-row">
+                  <span class="review-icon"><svg class="icon"><use href="#i-security"/></svg></span>
+                  <span class="review-text"><span class="review-label">代理</span><span class="review-value">自动</span></span>
+                  <button class="edit-btn"><svg class="icon"><use href="#i-pencil"/></svg>修改</button>
+                </div>
+              </div>
+            </div>
+          </section>
+        </main>
+
+        <footer class="wz-actions">
+          <button class="btn secondary hidden" id="backBtn"><svg class="icon"><use href="#i-arrow-left"/></svg>上一步</button>
+          <button class="btn primary" id="nextBtn"><span id="nextLabel">下一步</span><svg class="icon"><use href="#i-arrow-right"/></svg></button>
+        </footer>
+      </div>
+    </div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <div class="note">
+      <h3>结构：统一舞台</h3>
+      <p>全幅头部承载品牌、步骤计数与六段进度轨；正文为 <strong>300 左引导 + 528 右操作</strong> 的双栏舞台，动作带回到全幅底栏。协议步骤同样使用左引导 + 右面板：版本与语言说明在左栏，文档在面板内滚动，同意项固定底栏。</p>
+    </div>
+    <div class="note">
+      <h3>层级：单一强调</h3>
+      <p>只保留一个 Primary 强调：选中行 <strong>Primary.Soft + 主色描边</strong>，完成态用 Success 徽章，错误/禁用沿用语义色。属性图标、字段与卡片均走既有 token。</p>
+    </div>
+    <div class="note">
+      <h3>动效：不变</h3>
+      <p>换页仍是旧内容加速淡出、新内容减速滑入 <strong>±14px</strong>；头部进度与动作按钮在中点翻转。降动效直接定格，不新增声明式动画。</p>
+    </div>
+  </div>
+  <div class="decision">
+    <strong>本轮调整：</strong>六个步骤统一为“左引导 + 右面板”，协议页不再全幅例外；同意项固定在文档面板底栏。结构仍取代 ADR-017 的居中单列，落地时新增 ADR、更新设计规范 §4.4、契约测试与黄金基线。
+  </div>
+</div>
+
+<script>
+  const state = { step: 0, accepted: false };
+  const hashParams = new URLSearchParams(location.hash.slice(1));
+  if (hashParams.has('step')) state.step = Math.max(0, Math.min(5, Number(hashParams.get('step')) || 0));
+  if (hashParams.get('accepted') === '1') state.accepted = true;
+  if (hashParams.has('theme')) document.body.dataset.theme = hashParams.get('theme') === 'light' ? 'light' : 'dark';
+  const steps = Array.from(document.querySelectorAll('.step'));
+  const segs = Array.from(document.querySelectorAll('.seg'));
+  const meta = document.getElementById('wzMeta');
+  const skipBtn = document.getElementById('skipBtn');
+  const backBtn = document.getElementById('backBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const nextLabel = document.getElementById('nextLabel');
+  const consentCheck = document.getElementById('consentCheck');
+
+  function render() {
+    steps.forEach(step => step.classList.toggle('active', Number(step.dataset.step) === state.step));
+    segs.forEach((seg, i) => seg.classList.toggle('reached', i <= state.step));
+    meta.textContent = `第 ${state.step + 1} 步，共 6 步`;
+    skipBtn.hidden = !(state.step >= 2 || (state.step === 1 && state.accepted));
+    backBtn.classList.toggle('hidden', state.step === 0);
+    const isReview = state.step === 5;
+    nextLabel.textContent = isReview ? '完成' : '下一步';
+    nextLabel.nextElementSibling.style.display = '';
+    nextBtn.querySelector('use').setAttribute('href', isReview ? '#i-check' : '#i-arrow-right');
+    nextBtn.disabled = state.step === 1 && !state.accepted;
+    document.querySelectorAll('[data-step-btn]').forEach(btn =>
+      btn.classList.toggle('active', Number(btn.dataset.stepBtn) === state.step));
+    document.querySelectorAll('[data-theme-btn]').forEach(btn =>
+      btn.classList.toggle('active', btn.dataset.themeBtn === document.body.dataset.theme));
+    consentCheck.classList.toggle('checked', state.accepted);
+    consentCheck.classList.toggle('disabled', !state.accepted);
+  }
+
+  document.querySelectorAll('[data-step-btn]').forEach(btn =>
+    btn.addEventListener('click', () => { state.step = Number(btn.dataset.stepBtn); render(); }));
+
+  document.querySelectorAll('[data-theme-btn]').forEach(btn =>
+    btn.addEventListener('click', () => {
+      document.body.dataset.theme = btn.dataset.themeBtn;
+      document.querySelectorAll('[data-theme-btn]').forEach(b => b.classList.toggle('active', b === btn));
+    }));
+
+  document.querySelectorAll('.options').forEach(group =>
+    group.addEventListener('click', event => {
+      const option = event.target.closest('.option');
+      if (!option) return;
+      group.querySelectorAll('.option').forEach(item => item.classList.toggle('checked', item === option));
+    }));
+
+  consentCheck.addEventListener('click', () => {
+    // 样张演示：真实实现由滚动到底解锁，这里允许直接切换以检查勾选态。
+    state.accepted = !state.accepted;
+    render();
+  });
+
+  document.getElementById('nextBtn').addEventListener('click', () => {
+    if (nextBtn.disabled) return;
+    if (state.step < 5) { state.step += 1; render(); }
+  });
+  backBtn.addEventListener('click', () => { if (state.step > 0) { state.step -= 1; render(); } });
+
+  const device = document.querySelector('.device');
+  const scaler = document.querySelector('.device-scaler');
+  function fitDevice() {
+    const width = scaler.clientWidth;
+    const scale = Math.min(1, width / 1300);
+    device.style.transform = `scale(${scale})`;
+    device.style.left = `${(width - 1300 * scale) / 2}px`;
+    scaler.style.height = `${754 * scale}px`;
+  }
+  window.addEventListener('resize', fitDevice);
+  window.addEventListener('hashchange', () => location.reload());
+  fitDevice();
+
+  render();
+</script>
+</body>
+</html>

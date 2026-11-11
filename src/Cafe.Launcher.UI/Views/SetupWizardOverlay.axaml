@@ -12,8 +12,9 @@
           Classes.motion-enabled="{Binding IsMotionEnabled}"
           controls:MotionVisibility.IsOpen="{Binding Dialogs.IsSetupWizardVisible}"
           controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
-            <!-- 纯表面外壳：进度行（标题 + 进度 + 跳过）承载全部头部语义；
-                 内容区为实验台解剖的居中单列，步骤面板由后置代码顺序换页（ADR-017）。
+            <!-- 统一舞台（ADR-059）：全幅头部（标题 + 步骤计数 + 跳过 + 六段进度轨）
+                 与全幅动作带贴表面边缘；正文为 300 左引导 + 32 间距 + 528 右面板的双栏舞台，
+                 六个步骤结构一致，仅右面板随步骤变化。步骤面板由后置代码顺序换页。
                  外壳模式无标题，表面对外语义复用「Setup Wizard」本地化键。 -->
             <controls:DialogSurface
                 Form="Panel"
@@ -28,267 +29,415 @@
                 <TranslateTransform/>
             </controls:DialogSurface.RenderTransform>
             <controls:DialogSurface.Content>
-                <!-- 外壳模式自管留白：wizard-body 消费 Panel 正文内边距（样式表承载），
-                     内部三行为进度行 / 步骤内容 / 动作行（动作带并入内容区，不用 Footer 插槽）。 -->
-                <Border Classes="wizard-body">
-                <Grid RowDefinitions="Auto,*,Auto" RowSpacing="{StaticResource Launcher.Spacing.Lg}">
-                <!-- Progress row -->
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
-                    <StackPanel Spacing="{StaticResource Launcher.Spacing.Xs}">
-                        <TextBlock Text="{Binding Shell.I18n[setupWizardStepTitle]}" Classes="dialog-title"/>
-                        <!-- 步骤进度由后置代码在换面中点翻转（ApplyChromeState），不得绑定 Step。 -->
-                        <TextBlock x:Name="StepProgressText" Classes="caption"/>
-                    </StackPanel>
-                    <Button Grid.Column="1"
-                            Classes="flat-action dialog-action"
-                            VerticalAlignment="Center"
-                            Command="{Binding Dialogs.SetupWizardExitConfirm.ShowCommand}"
-                            ToolTip.Tip="{Binding Shell.I18n[setupWizardSkip]}"
-                            AutomationProperties.Name="{Binding Shell.I18n[setupWizardSkip]}">
-                        <StackPanel Classes="button-content">
-                            <materialIcons:MaterialIcon Kind="SkipNextOutline"
-                                                       Width="{StaticResource Launcher.Icon.Sm}"
-                                                       Height="{StaticResource Launcher.Icon.Sm}"/>
-                            <TextBlock Text="{Binding Shell.I18n[setupWizardSkip]}"/>
-                        </StackPanel>
-                    </Button>
-                </Grid>
+                <!-- 外壳模式自管留白：头部与动作带贴表面边缘，正文舞台自管内边距。 -->
+                <Grid RowDefinitions="Auto,Auto,*,Auto,Auto">
+                <!-- 头带：标题 + 步骤计数 + 跳过；底缘六段进度轨在中点随显示步翻转。 -->
+                <Border Classes="wizard-header">
+                    <Grid RowDefinitions="Auto,Auto" RowSpacing="{StaticResource Launcher.Spacing.Md}">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                            <StackPanel Spacing="{StaticResource Launcher.Spacing.Xs}">
+                                <TextBlock Text="{Binding Shell.I18n[setupWizardStepTitle]}" Classes="dialog-title"/>
+                                <!-- 步骤进度由后置代码在换面中点翻转（ApplyChromeState），不得绑定 Step。 -->
+                                <TextBlock x:Name="StepProgressText" Classes="caption"/>
+                            </StackPanel>
+                            <Button x:Name="SkipButton"
+                                    Grid.Column="1"
+                                    Classes="wizard-skip"
+                                    VerticalAlignment="Center"
+                                    IsVisible="{Binding Dialogs.SetupWizard.CanSkip}"
+                                    Command="{Binding Dialogs.ShowSetupWizardExitConfirmCommand}"
+                                    ToolTip.Tip="{Binding Shell.I18n[setupWizardSkip]}"
+                                    AutomationProperties.Name="{Binding Shell.I18n[setupWizardSkip]}">
+                                <StackPanel Classes="button-content">
+                                    <materialIcons:MaterialIcon Kind="SkipNextOutline"
+                                                               Width="{StaticResource Launcher.Icon.Sm}"
+                                                               Height="{StaticResource Launcher.Icon.Sm}"/>
+                                    <TextBlock Text="{Binding Shell.I18n[setupWizardSkip]}"
+                                               Classes="wizard-skip-label"/>
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                        <!-- 单步的协议更新模式没有「第几步」可表达，进度轨整体折叠。 -->
+                        <Grid Grid.Row="1"
+                              IsVisible="{Binding !Dialogs.SetupWizard.IsConsentUpdateMode}"
+                              ColumnDefinitions="*,*,*,*,*,*"
+                              ColumnSpacing="{StaticResource Launcher.Spacing.Sm}">
+                            <Border x:Name="ProgressSegment0" Classes="wizard-progress-segment"/>
+                            <Border x:Name="ProgressSegment1" Grid.Column="1" Classes="wizard-progress-segment"/>
+                            <Border x:Name="ProgressSegment2" Grid.Column="2" Classes="wizard-progress-segment"/>
+                            <Border x:Name="ProgressSegment3" Grid.Column="3" Classes="wizard-progress-segment"/>
+                            <Border x:Name="ProgressSegment4" Grid.Column="4" Classes="wizard-progress-segment"/>
+                            <Border x:Name="ProgressSegment5" Grid.Column="5" Classes="wizard-progress-segment"/>
+                        </Grid>
+                    </Grid>
+                </Border>
+                <Border Grid.Row="1" Classes="wizard-divider"/>
 
-                <!-- Content row：单格容器 + 居中单列；步骤切换 = 旧内容先淡出、新内容按方向滑入（后置代码编排）。 -->
-                <ScrollViewer Grid.Row="1" x:Name="StepScroll" Classes="scroll-pad">
+                <!-- 正文舞台：单格容器 + 固定宽度双栏；步骤切换 = 旧内容先淡出、新内容按方向滑入（后置代码编排）。 -->
+                <ScrollViewer Grid.Row="2"
+                              x:Name="StepScroll"
+                              Classes="scroll-pad"
+                              HorizontalScrollBarVisibility="Disabled"
+                              VerticalScrollBarVisibility="Auto">
                     <Grid MinHeight="{Binding $parent[ScrollViewer].Viewport.Height}">
 
                         <!-- Step 0: Welcome & Language -->
-                        <StackPanel x:Name="WizardStep0"
-                                    Classes="wizard-step"
-                                    Spacing="{StaticResource Launcher.Spacing.Lg}"
-                                    IsVisible="False"
-                                    HorizontalAlignment="Center"
-                                    VerticalAlignment="Center"
-                                    MaxWidth="{StaticResource Launcher.Component.Wizard.Content.MaxWidth}">
-                            <StackPanel.RenderTransform>
+                        <Grid x:Name="WizardStep0"
+                              Classes="wizard-step"
+                              ColumnDefinitions="Auto,*"
+                              ColumnSpacing="{StaticResource Launcher.Spacing.Xxxl}"
+                              Width="{StaticResource Launcher.Component.Wizard.Stage.Width}"
+                              IsVisible="False"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Stretch">
+                            <Grid.RenderTransform>
                                 <TranslateTransform/>
-                            </StackPanel.RenderTransform>
+                            </Grid.RenderTransform>
                             <!-- 各面板标题静态绑定自身资源键：共享 StepTitle 会在 Step 变化的
-                                 t=0 让五块标题（含淡出中的旧面板）同时跳到新步骤标题。 -->
-                            <TextBlock Text="{Binding Shell.I18n[setupWizardLanguage]}" Classes="wizard-step-title"/>
-                            <TextBlock Text="{Binding Shell.I18n[setupWizardWelcomeText]}"
-                                       Classes="body"
-                                       TextAlignment="Center"/>
-                            <StackPanel Spacing="{StaticResource Launcher.Spacing.Xs}">
-                                <TextBlock Text="{Binding Shell.I18n[setupWizardLanguageHint]}"
-                                           Classes="caption"
-                                           TextAlignment="Center"/>
-                                <ComboBox Classes="setting-control"
-                                          ItemsSource="{Binding Dialogs.LanguageOptions}"
-                                          SelectedValue="{Binding Dialogs.SetupWizard.Language, Mode=TwoWay}"
-                                          SelectedValueBinding="{Binding Code}"
-                                          HorizontalAlignment="Center"
-                                          MinWidth="{StaticResource Launcher.Component.SetupWizard.Select.MinWidth}"
-                                          AutomationProperties.Name="{Binding Shell.I18n[setupWizardLanguage]}">
-                                    <ComboBox.ItemTemplate>
-                                        <DataTemplate x:DataType="models:LanguageOption">
-                                            <TextBlock Text="{Binding DisplayName}"/>
-                                        </DataTemplate>
-                                    </ComboBox.ItemTemplate>
-                                </ComboBox>
+                                 t=0 让六块标题（含淡出中的旧面板）同时跳到新步骤标题。 -->
+                            <StackPanel Classes="wizard-context">
+                                <Border Classes="wizard-context-icon">
+                                    <materialIcons:MaterialIcon Kind="Translate"
+                                                               Width="{StaticResource Launcher.Icon.Xxl}"
+                                                               Height="{StaticResource Launcher.Icon.Xxl}"
+                                                               Foreground="{DynamicResource Launcher.Color.Primary}"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock Text="{Binding Shell.I18n[setupWizardLanguage]}" Classes="wizard-step-title"/>
+                                <TextBlock Text="{Binding Shell.I18n[setupWizardWelcomeText]}" Classes="wizard-step-hint"/>
                             </StackPanel>
-                        </StackPanel>
-
-                        <!-- Step 1: Game Path -->
-                        <StackPanel x:Name="WizardStep1"
-                                    Classes="wizard-step"
-                                    Spacing="{StaticResource Launcher.Spacing.Lg}"
-                                    IsVisible="False"
-                                    HorizontalAlignment="Center"
-                                    VerticalAlignment="Center"
-                                    MaxWidth="{StaticResource Launcher.Component.Wizard.Content.MaxWidth}">
-                            <StackPanel.RenderTransform>
-                                <TranslateTransform/>
-                            </StackPanel.RenderTransform>
-                            <TextBlock Text="{Binding Shell.I18n[setupWizardGamePath]}" Classes="wizard-step-title"/>
-                            <TextBlock Text="{Binding Shell.I18n[setupWizardGamePathHint]}"
-                                       Classes="body"
-                                       TextAlignment="Center"/>
-                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
-                                <TextBox Classes="field-input"
-                                         Text="{Binding Dialogs.SetupWizard.GamePath, Mode=TwoWay}"
-                                         AutomationProperties.Name="{Binding Shell.I18n[setupWizardGamePath]}"/>
-                                <Button Grid.Column="1"
-                                        Classes="flat-action dialog-action"
-                                        Command="{Binding Dialogs.SetupWizard.BrowseGamePathCommand}"
-                                        AutomationProperties.Name="{Binding Shell.I18n[setupWizardBrowse]}">
-                                    <StackPanel Classes="button-content">
-                                        <materialIcons:MaterialIcon Kind="FolderOpen"
-                                                                   Width="{StaticResource Launcher.Icon.Sm}"
-                                                                   Height="{StaticResource Launcher.Icon.Sm}"/>
-                                        <TextBlock Text="{Binding Shell.I18n[setupWizardBrowse]}"/>
+                            <Border Grid.Column="1" Classes="wizard-panel" Margin="{StaticResource Launcher.Component.Wizard.Body.Margin}">
+                                <StackPanel Spacing="{StaticResource Launcher.Spacing.Lg}" VerticalAlignment="Center">
+                                    <StackPanel Spacing="{StaticResource Launcher.Spacing.Xs}">
+                                        <TextBlock Text="{Binding Shell.I18n[setupWizardLanguageField]}" Classes="caption"/>
+                                        <ComboBox Classes="setting-control"
+                                                  ItemsSource="{Binding Dialogs.LanguageOptions}"
+                                                  SelectedValue="{Binding Dialogs.SetupWizard.Language, Mode=TwoWay}"
+                                                  SelectedValueBinding="{Binding Code}"
+                                                  HorizontalAlignment="Stretch"
+                                                  MinWidth="{StaticResource Launcher.Component.SetupWizard.Select.MinWidth}"
+                                                  AutomationProperties.Name="{Binding Shell.I18n[setupWizardLanguageField]}">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate x:DataType="models:LanguageOption">
+                                                    <TextBlock Text="{Binding DisplayName}"/>
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
                                     </StackPanel>
-                                </Button>
-                            </Grid>
-                            <!-- M3 状态行：图标 + 文本共同表达状态，色彩不作唯一信号。 -->
-                            <StackPanel Classes="wizard-status-row"
-                                        Orientation="Horizontal"
-                                        HorizontalAlignment="Center"
-                                        Spacing="{StaticResource Launcher.Spacing.Sm}"
-                                        IsVisible="{Binding Dialogs.SetupWizard.IsGamePathEmpty, Converter={x:Static BoolConverters.Not}}">
-                                <materialIcons:MaterialIcon Kind="Sync"
-                                                           Width="{StaticResource Launcher.Icon.Sm}"
-                                                           Height="{StaticResource Launcher.Icon.Sm}"
-                                                           Foreground="{DynamicResource Launcher.Color.Primary}"
-                                                           IsVisible="{Binding Dialogs.SetupWizard.IsGamePathChecking}"/>
-                                <materialIcons:MaterialIcon Kind="CheckCircle"
-                                                           Width="{StaticResource Launcher.Icon.Sm}"
-                                                           Height="{StaticResource Launcher.Icon.Sm}"
-                                                           Foreground="{DynamicResource Launcher.Color.Success}"
-                                                           IsVisible="{Binding Dialogs.SetupWizard.IsGamePathReady}"/>
-                                <materialIcons:MaterialIcon Kind="AlertCircle"
-                                                           Width="{StaticResource Launcher.Icon.Sm}"
-                                                           Height="{StaticResource Launcher.Icon.Sm}"
-                                                           Foreground="{StaticResource Launcher.Color.Danger}"
-                                                           IsVisible="{Binding Dialogs.SetupWizard.IsGamePathCorruptedInstallation}"/>
-                                <materialIcons:MaterialIcon Kind="AlertCircle"
-                                                           Width="{StaticResource Launcher.Icon.Sm}"
-                                                           Height="{StaticResource Launcher.Icon.Sm}"
-                                                           Foreground="{StaticResource Launcher.Color.Danger}"
-                                                           IsVisible="{Binding Dialogs.SetupWizard.IsGamePathInaccessible}"/>
-                                <materialIcons:MaterialIcon Kind="Lock"
-                                                           Width="{StaticResource Launcher.Icon.Sm}"
-                                                           Height="{StaticResource Launcher.Icon.Sm}"
-                                                           Foreground="{StaticResource Launcher.Color.Danger}"
-                                                           IsVisible="{Binding Dialogs.SetupWizard.IsGamePathNotWritable}"/>
-                                <TextBlock Text="{Binding Dialogs.SetupWizard.GamePathStatusText}"
-                                           AutomationProperties.Name="{Binding Dialogs.SetupWizard.GamePathStatusText}"
-                                           Classes="caption wizard-game-path-status"
-                                           Classes.checking="{Binding Dialogs.SetupWizard.IsGamePathChecking}"
-                                           Classes.ready="{Binding Dialogs.SetupWizard.IsGamePathReady}"
-                                           Classes.corrupted="{Binding Dialogs.SetupWizard.IsGamePathCorruptedInstallation}"
-                                           Classes.inaccessible="{Binding Dialogs.SetupWizard.IsGamePathInaccessible}"
-                                           Classes.notwritable="{Binding Dialogs.SetupWizard.IsGamePathNotWritable}"
-                                           VerticalAlignment="Center"
-                                           TextTrimming="CharacterEllipsis"
-                                           MaxLines="1"/>
-                            </StackPanel>
-                            <TextBlock Text="{Binding Shell.I18n[setupWizardGamePathEmpty]}"
-                                       Classes="caption"
-                                       TextAlignment="Center"
-                                       Foreground="{StaticResource Launcher.Color.Danger}"
-                                       IsVisible="{Binding Dialogs.SetupWizard.IsGamePathEmpty}"/>
-                        </StackPanel>
-
-                        <!-- Step 2: Download Source -->
-                        <StackPanel x:Name="WizardStep2"
-                                    Classes="wizard-step"
-                                    Spacing="{StaticResource Launcher.Spacing.Lg}"
-                                    IsVisible="False"
-                                    HorizontalAlignment="Center"
-                                    VerticalAlignment="Center"
-                                    MaxWidth="{StaticResource Launcher.Component.Wizard.Content.MaxWidth}">
-                            <StackPanel.RenderTransform>
-                                <TranslateTransform/>
-                            </StackPanel.RenderTransform>
-                            <TextBlock Text="{Binding Shell.I18n[setupWizardDownloadSource]}" Classes="wizard-step-title"/>
-                            <TextBlock Text="{Binding Shell.I18n[setupWizardDownloadSourceHint]}"
-                                       Classes="body"
-                                       TextAlignment="Center"/>
-                            <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}">
-                                <RadioButton Classes="wizard-option"
-                                        GroupName="SetupWizardDownloadSource"
-                                        IsChecked="{Binding Dialogs.SetupWizard.IsPatchUrlGroupCafe, Mode=TwoWay}"
-                                        AutomationProperties.Name="{Binding Shell.I18n[downloadSourceCafe]}">
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding Shell.I18n[downloadSourceCafe]}" Classes="value"/>
-                                        <TextBlock Text="{Binding Shell.I18n[setupWizardDownloadSourceCafeDescription]}" Classes="caption"/>
-                                    </StackPanel>
-                                </RadioButton>
-                                <RadioButton Classes="wizard-option"
-                                        GroupName="SetupWizardDownloadSource"
-                                        IsChecked="{Binding Dialogs.SetupWizard.IsPatchUrlGroupOfficial, Mode=TwoWay}"
-                                        AutomationProperties.Name="{Binding Shell.I18n[downloadSourceOfficial]}">
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding Shell.I18n[downloadSourceOfficial]}" Classes="value"/>
-                                        <TextBlock Text="{Binding Shell.I18n[setupWizardDownloadSourceOfficialDescription]}" Classes="caption"/>
-                                    </StackPanel>
-                                </RadioButton>
-                            </StackPanel>
-                        </StackPanel>
-
-                        <!-- Step 3: Proxy -->
-                        <StackPanel x:Name="WizardStep3"
-                                    Classes="wizard-step"
-                                    Spacing="{StaticResource Launcher.Spacing.Lg}"
-                                    IsVisible="False"
-                                    HorizontalAlignment="Center"
-                                    VerticalAlignment="Center"
-                                    MaxWidth="{StaticResource Launcher.Component.Wizard.Content.MaxWidth}">
-                            <StackPanel.RenderTransform>
-                                <TranslateTransform/>
-                            </StackPanel.RenderTransform>
-                            <TextBlock Text="{Binding Shell.I18n[setupWizardProxy]}" Classes="wizard-step-title"/>
-                            <TextBlock Text="{Binding Shell.I18n[setupWizardProxyHint]}"
-                                       Classes="body"
-                                       TextAlignment="Center"/>
-                            <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}">
-                                <RadioButton Classes="wizard-option"
-                                        GroupName="SetupWizardProxy"
-                                        IsChecked="{Binding Dialogs.SetupWizard.IsProxyAuto, Mode=TwoWay}"
-                                        AutomationProperties.Name="{Binding Shell.I18n[proxyAuto]}">
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding Shell.I18n[proxyAuto]}" Classes="value"/>
-                                        <TextBlock Text="{Binding Shell.I18n[setupWizardProxyAutoDescription]}" Classes="caption"/>
-                                    </StackPanel>
-                                </RadioButton>
-                                <RadioButton Classes="wizard-option"
-                                        GroupName="SetupWizardProxy"
-                                        IsChecked="{Binding Dialogs.SetupWizard.IsProxyDirect, Mode=TwoWay}"
-                                        AutomationProperties.Name="{Binding Shell.I18n[proxyDirect]}">
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding Shell.I18n[proxyDirect]}" Classes="value"/>
-                                        <TextBlock Text="{Binding Shell.I18n[setupWizardProxyDirectDescription]}" Classes="caption"/>
-                                    </StackPanel>
-                                </RadioButton>
-                                <RadioButton Classes="wizard-option"
-                                        GroupName="SetupWizardProxy"
-                                        IsChecked="{Binding Dialogs.SetupWizard.IsProxySystem, Mode=TwoWay}"
-                                        AutomationProperties.Name="{Binding Shell.I18n[proxySystem]}">
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding Shell.I18n[proxySystem]}" Classes="value"/>
-                                        <TextBlock Text="{Binding Shell.I18n[setupWizardProxySystemDescription]}" Classes="caption"/>
-                                    </StackPanel>
-                                </RadioButton>
-                            </StackPanel>
-                        </StackPanel>
-
-                        <!-- Step 4: Review（完成确认态：Hero 徽章承载 Success 语义，
-                             标题回归中性；摘要为图标摘要行列表，不用着色卡承载。） -->
-                        <StackPanel x:Name="WizardStep4"
-                                    Classes="wizard-step"
-                                    Spacing="{StaticResource Launcher.Spacing.Lg}"
-                                    IsVisible="False"
-                                    HorizontalAlignment="Center"
-                                    VerticalAlignment="Center"
-                                    MaxWidth="{StaticResource Launcher.Component.Wizard.Content.MaxWidth}">
-                            <StackPanel.RenderTransform>
-                                <TranslateTransform/>
-                            </StackPanel.RenderTransform>
-                            <Border Classes="wizard-hero-badge">
-                                <materialIcons:MaterialIcon Kind="Check"
-                                                            Width="{StaticResource Launcher.Icon.Xxl}"
-                                                            Height="{StaticResource Launcher.Icon.Xxl}"
-                                                            Foreground="{DynamicResource Launcher.Color.Success}"
-                                                            HorizontalAlignment="Center"
-                                                            VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding Shell.I18n[setupWizardLanguageHint]}" Classes="wizard-step-hint"/>
+                                </StackPanel>
                             </Border>
-                            <TextBlock Text="{Binding Shell.I18n[setupWizardReview]}" Classes="wizard-step-title"/>
-                            <TextBlock Text="{Binding Shell.I18n[setupWizardReviewHint]}"
-                                       Classes="body"
-                                       TextAlignment="Center"/>
-                            <!-- 行序即回跳步序：语言(0) → 下载源(2) → 路径(1) → 代理(3)，
-                                 与无头测试的编辑钮步序断言一致。 -->
-                            <StackPanel Spacing="{StaticResource Launcher.Spacing.None}">
+                        </Grid>
+
+                        <!-- Step 1: Agreement & Privacy
+                             与其他步骤同构：左引导承载标题、版次与语言声明；右面板为
+                             文档阅读器（铺满剩余高度）加固定底栏同意项。 -->
+                        <Grid x:Name="WizardStep1"
+                              Classes="wizard-step"
+                              ColumnDefinitions="Auto,*"
+                              ColumnSpacing="{StaticResource Launcher.Spacing.Xxxl}"
+                              Width="{StaticResource Launcher.Component.Wizard.Stage.Width}"
+                              Height="{Binding $parent[ScrollViewer].Viewport.Height}"
+                              IsVisible="False"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Stretch">
+                            <Grid.RenderTransform>
+                                <TranslateTransform/>
+                            </Grid.RenderTransform>
+                            <StackPanel Classes="wizard-context">
+                                <Border Classes="wizard-context-icon">
+                                    <materialIcons:MaterialIcon Kind="ScriptText"
+                                                               Width="{StaticResource Launcher.Icon.Xxl}"
+                                                               Height="{StaticResource Launcher.Icon.Xxl}"
+                                                               Foreground="{DynamicResource Launcher.Color.Primary}"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock Text="{Binding Shell.I18n[agreementTitle]}" Classes="wizard-step-title"/>
+                                <TextBlock Text="{Binding Shell.I18n[agreementIntro]}" Classes="wizard-step-hint"/>
+                                <Border Classes="wizard-agreement-version">
+                                    <TextBlock Text="{Binding Dialogs.SetupWizard.AgreementVersionText}"
+                                               Classes="caption"/>
+                                </Border>
+                                <Grid ColumnDefinitions="Auto,*"
+                                      ColumnSpacing="{StaticResource Launcher.Spacing.Sm}">
+                                    <!-- 顶部对齐首行：说明文字可能换行，图标须随首行而非整块居中；
+                                         不加额外上边距，图标墨迹中心与 13px 说明行重合。 -->
+                                    <materialIcons:MaterialIcon Kind="InformationOutline"
+                                                               Width="{StaticResource Launcher.Icon.Sm}"
+                                                               Height="{StaticResource Launcher.Icon.Sm}"
+                                                               Foreground="{DynamicResource Launcher.Text.Secondary}"
+                                                               VerticalAlignment="Top"/>
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding Shell.I18n[agreementLanguageNote]}"
+                                               Classes="caption"
+                                               TextWrapping="Wrap"/>
+                                </Grid>
+                            </StackPanel>
+                            <Border Grid.Column="1" Classes="wizard-panel wizard-agreement-panel" Margin="{StaticResource Launcher.Component.Wizard.Body.Margin}">
+                                <Grid RowDefinitions="*,Auto">
+                                    <ScrollViewer x:Name="AgreementScrollViewer"
+                                                  VerticalScrollBarVisibility="Auto"
+                                                  ScrollChanged="OnAgreementScrollChanged">
+                                        <controls:ReleaseNotesMarkdownViewer
+                                            Markdown="{Binding Dialogs.SetupWizard.AgreementMarkdown}"
+                                            FontFamily="{StaticResource Launcher.Typography.FontFamily.Document}"
+                                            Margin="{StaticResource Launcher.Spacing.Thickness.Xl}"/>
+                                    </ScrollViewer>
+                                    <!-- 同意项固定在文档面板底栏；阅读门禁由滚动到底驱动，
+                                         提示文案仅作为自动化帮助文本保留。 -->
+                                    <Border Grid.Row="1" Classes="wizard-agreement-footer">
+                                        <Grid RowDefinitions="Auto,Auto">
+                                            <Border Classes="wizard-divider"/>
+                                            <CheckBox Grid.Row="1"
+                                                      Margin="{StaticResource Launcher.Component.Wizard.Agreement.Consent.Padding}"
+                                                      IsChecked="{Binding Dialogs.SetupWizard.IsAgreementAccepted, Mode=TwoWay}"
+                                                      IsEnabled="{Binding Dialogs.SetupWizard.HasReadAgreement}"
+                                                      AutomationProperties.Name="{Binding Shell.I18n[agreementCheckbox]}"
+                                                      AutomationProperties.HelpText="{Binding Shell.I18n[agreementScrollHint]}">
+                                                <TextBlock Text="{Binding Shell.I18n[agreementCheckbox]}"
+                                                           TextWrapping="Wrap"/>
+                                            </CheckBox>
+                                        </Grid>
+                                    </Border>
+                                </Grid>
+                            </Border>
+                        </Grid>
+
+                        <!-- Step 2: Game Path -->
+                        <Grid x:Name="WizardStep2"
+                              Classes="wizard-step"
+                              ColumnDefinitions="Auto,*"
+                              ColumnSpacing="{StaticResource Launcher.Spacing.Xxxl}"
+                              Width="{StaticResource Launcher.Component.Wizard.Stage.Width}"
+                              IsVisible="False"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Stretch">
+                            <Grid.RenderTransform>
+                                <TranslateTransform/>
+                            </Grid.RenderTransform>
+                            <StackPanel Classes="wizard-context">
+                                <Border Classes="wizard-context-icon">
+                                    <materialIcons:MaterialIcon Kind="FolderSearch"
+                                                               Width="{StaticResource Launcher.Icon.Xxl}"
+                                                               Height="{StaticResource Launcher.Icon.Xxl}"
+                                                               Foreground="{DynamicResource Launcher.Color.Primary}"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock Text="{Binding Shell.I18n[setupWizardGamePath]}" Classes="wizard-step-title"/>
+                                <TextBlock Text="{Binding Shell.I18n[setupWizardGamePathHint]}" Classes="wizard-step-hint"/>
+                            </StackPanel>
+                            <Border Grid.Column="1" Classes="wizard-panel" Margin="{StaticResource Launcher.Component.Wizard.Body.Margin}">
+                                <StackPanel Spacing="{StaticResource Launcher.Spacing.Lg}" VerticalAlignment="Center">
+                                    <StackPanel Spacing="{StaticResource Launcher.Spacing.Xs}">
+                                        <TextBlock Text="{Binding Shell.I18n[setupWizardGamePathLocation]}" Classes="caption"/>
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                                            <TextBox Classes="field-input"
+                                                     Text="{Binding Dialogs.SetupWizard.GamePath, Mode=TwoWay}"
+                                                     AutomationProperties.Name="{Binding Shell.I18n[setupWizardGamePath]}"/>
+                                            <Button Grid.Column="1"
+                                                    Classes="flat-action dialog-action"
+                                                    Command="{Binding Dialogs.SetupWizard.BrowseGamePathCommand}"
+                                                    AutomationProperties.Name="{Binding Shell.I18n[setupWizardBrowse]}">
+                                                <StackPanel Classes="button-content">
+                                                    <materialIcons:MaterialIcon Kind="FolderOpen"
+                                                                               Width="{StaticResource Launcher.Icon.Sm}"
+                                                                               Height="{StaticResource Launcher.Icon.Sm}"/>
+                                                    <TextBlock Text="{Binding Shell.I18n[setupWizardBrowse]}"/>
+                                                </StackPanel>
+                                            </Button>
+                                        </Grid>
+                                    </StackPanel>
+                                    <!-- M3 状态行：图标 + 文本共同表达状态，色彩不作唯一信号。 -->
+                                    <StackPanel Classes="wizard-status-row"
+                                                Orientation="Horizontal"
+                                                Spacing="{StaticResource Launcher.Spacing.Sm}"
+                                                IsVisible="{Binding Dialogs.SetupWizard.IsGamePathEmpty, Converter={x:Static BoolConverters.Not}}">
+                                        <materialIcons:MaterialIcon Kind="Sync"
+                                                                   Width="{StaticResource Launcher.Icon.Sm}"
+                                                                   Height="{StaticResource Launcher.Icon.Sm}"
+                                                                   Foreground="{DynamicResource Launcher.Color.Primary}"
+                                                                   IsVisible="{Binding Dialogs.SetupWizard.IsGamePathChecking}"/>
+                                        <materialIcons:MaterialIcon Kind="CheckCircle"
+                                                                   Width="{StaticResource Launcher.Icon.Sm}"
+                                                                   Height="{StaticResource Launcher.Icon.Sm}"
+                                                                   Foreground="{DynamicResource Launcher.Color.Success}"
+                                                                   IsVisible="{Binding Dialogs.SetupWizard.IsGamePathReady}"/>
+                                        <materialIcons:MaterialIcon Kind="AlertCircle"
+                                                                   Width="{StaticResource Launcher.Icon.Sm}"
+                                                                   Height="{StaticResource Launcher.Icon.Sm}"
+                                                                   Foreground="{StaticResource Launcher.Color.Danger}"
+                                                                   IsVisible="{Binding Dialogs.SetupWizard.IsGamePathCorruptedInstallation}"/>
+                                        <materialIcons:MaterialIcon Kind="AlertCircle"
+                                                                   Width="{StaticResource Launcher.Icon.Sm}"
+                                                                   Height="{StaticResource Launcher.Icon.Sm}"
+                                                                   Foreground="{StaticResource Launcher.Color.Danger}"
+                                                                   IsVisible="{Binding Dialogs.SetupWizard.IsGamePathInaccessible}"/>
+                                        <materialIcons:MaterialIcon Kind="Lock"
+                                                                   Width="{StaticResource Launcher.Icon.Sm}"
+                                                                   Height="{StaticResource Launcher.Icon.Sm}"
+                                                                   Foreground="{StaticResource Launcher.Color.Danger}"
+                                                                   IsVisible="{Binding Dialogs.SetupWizard.IsGamePathNotWritable}"/>
+                                        <TextBlock Text="{Binding Dialogs.SetupWizard.GamePathStatusText}"
+                                                   AutomationProperties.Name="{Binding Dialogs.SetupWizard.GamePathStatusText}"
+                                                   Classes="caption wizard-game-path-status"
+                                                   Classes.checking="{Binding Dialogs.SetupWizard.IsGamePathChecking}"
+                                                   Classes.ready="{Binding Dialogs.SetupWizard.IsGamePathReady}"
+                                                   Classes.corrupted="{Binding Dialogs.SetupWizard.IsGamePathCorruptedInstallation}"
+                                                   Classes.inaccessible="{Binding Dialogs.SetupWizard.IsGamePathInaccessible}"
+                                                   Classes.notwritable="{Binding Dialogs.SetupWizard.IsGamePathNotWritable}"
+                                                   VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   MaxLines="1"/>
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding Shell.I18n[setupWizardGamePathEmpty]}"
+                                               Classes="caption"
+                                               Foreground="{StaticResource Launcher.Color.Danger}"
+                                               TextWrapping="Wrap"
+                                               IsVisible="{Binding Dialogs.SetupWizard.IsGamePathEmpty}"/>
+                                    <TextBlock Text="{Binding Shell.I18n[setupWizardGamePathRecheckHint]}"
+                                               Classes="wizard-step-hint"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <!-- Step 3: Download Source -->
+                        <Grid x:Name="WizardStep3"
+                              Classes="wizard-step"
+                              ColumnDefinitions="Auto,*"
+                              ColumnSpacing="{StaticResource Launcher.Spacing.Xxxl}"
+                              Width="{StaticResource Launcher.Component.Wizard.Stage.Width}"
+                              IsVisible="False"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Stretch">
+                            <Grid.RenderTransform>
+                                <TranslateTransform/>
+                            </Grid.RenderTransform>
+                            <StackPanel Classes="wizard-context">
+                                <Border Classes="wizard-context-icon">
+                                    <materialIcons:MaterialIcon Kind="CloudDownload"
+                                                               Width="{StaticResource Launcher.Icon.Xxl}"
+                                                               Height="{StaticResource Launcher.Icon.Xxl}"
+                                                               Foreground="{DynamicResource Launcher.Color.Primary}"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock Text="{Binding Shell.I18n[setupWizardDownloadSource]}" Classes="wizard-step-title"/>
+                                <TextBlock Text="{Binding Shell.I18n[setupWizardDownloadSourceHint]}" Classes="wizard-step-hint"/>
+                            </StackPanel>
+                            <Border Grid.Column="1" Classes="wizard-panel" Margin="{StaticResource Launcher.Component.Wizard.Body.Margin}">
+                                <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
+                                    <RadioButton Classes="wizard-option"
+                                            GroupName="SetupWizardDownloadSource"
+                                            IsChecked="{Binding Dialogs.SetupWizard.IsPatchUrlGroupCafe, Mode=TwoWay}"
+                                            AutomationProperties.Name="{Binding Shell.I18n[downloadSourceCafe]}">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Shell.I18n[downloadSourceCafe]}" Classes="value"/>
+                                            <TextBlock Text="{Binding Shell.I18n[setupWizardDownloadSourceCafeDescription]}" Classes="caption"/>
+                                        </StackPanel>
+                                    </RadioButton>
+                                    <RadioButton Classes="wizard-option"
+                                            GroupName="SetupWizardDownloadSource"
+                                            IsChecked="{Binding Dialogs.SetupWizard.IsPatchUrlGroupOfficial, Mode=TwoWay}"
+                                            AutomationProperties.Name="{Binding Shell.I18n[downloadSourceOfficial]}">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Shell.I18n[downloadSourceOfficial]}" Classes="value"/>
+                                            <TextBlock Text="{Binding Shell.I18n[setupWizardDownloadSourceOfficialDescription]}" Classes="caption"/>
+                                        </StackPanel>
+                                    </RadioButton>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <!-- Step 4: Proxy -->
+                        <Grid x:Name="WizardStep4"
+                              Classes="wizard-step"
+                              ColumnDefinitions="Auto,*"
+                              ColumnSpacing="{StaticResource Launcher.Spacing.Xxxl}"
+                              Width="{StaticResource Launcher.Component.Wizard.Stage.Width}"
+                              IsVisible="False"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Stretch">
+                            <Grid.RenderTransform>
+                                <TranslateTransform/>
+                            </Grid.RenderTransform>
+                            <StackPanel Classes="wizard-context">
+                                <Border Classes="wizard-context-icon">
+                                    <materialIcons:MaterialIcon Kind="SwapHorizontal"
+                                                               Width="{StaticResource Launcher.Icon.Xxl}"
+                                                               Height="{StaticResource Launcher.Icon.Xxl}"
+                                                               Foreground="{DynamicResource Launcher.Color.Primary}"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock Text="{Binding Shell.I18n[setupWizardProxy]}" Classes="wizard-step-title"/>
+                                <TextBlock Text="{Binding Shell.I18n[setupWizardProxyHint]}" Classes="wizard-step-hint"/>
+                            </StackPanel>
+                            <Border Grid.Column="1" Classes="wizard-panel" Margin="{StaticResource Launcher.Component.Wizard.Body.Margin}">
+                                <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
+                                    <RadioButton Classes="wizard-option"
+                                            GroupName="SetupWizardProxy"
+                                            IsChecked="{Binding Dialogs.SetupWizard.IsProxyAuto, Mode=TwoWay}"
+                                            AutomationProperties.Name="{Binding Shell.I18n[proxyAuto]}">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Shell.I18n[proxyAuto]}" Classes="value"/>
+                                            <TextBlock Text="{Binding Shell.I18n[setupWizardProxyAutoDescription]}" Classes="caption"/>
+                                        </StackPanel>
+                                    </RadioButton>
+                                    <RadioButton Classes="wizard-option"
+                                            GroupName="SetupWizardProxy"
+                                            IsChecked="{Binding Dialogs.SetupWizard.IsProxyDirect, Mode=TwoWay}"
+                                            AutomationProperties.Name="{Binding Shell.I18n[proxyDirect]}">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Shell.I18n[proxyDirect]}" Classes="value"/>
+                                            <TextBlock Text="{Binding Shell.I18n[setupWizardProxyDirectDescription]}" Classes="caption"/>
+                                        </StackPanel>
+                                    </RadioButton>
+                                    <RadioButton Classes="wizard-option"
+                                            GroupName="SetupWizardProxy"
+                                            IsChecked="{Binding Dialogs.SetupWizard.IsProxySystem, Mode=TwoWay}"
+                                            AutomationProperties.Name="{Binding Shell.I18n[proxySystem]}">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Shell.I18n[proxySystem]}" Classes="value"/>
+                                            <TextBlock Text="{Binding Shell.I18n[setupWizardProxySystemDescription]}" Classes="caption"/>
+                                        </StackPanel>
+                                    </RadioButton>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <!-- Step 5: Review（完成语义由左栏 Success 徽章承载，标题回归中性；
+                             摘要为图标摘要行列表，不用着色卡承载。） -->
+                        <Grid x:Name="WizardStep5"
+                              Classes="wizard-step"
+                              ColumnDefinitions="Auto,*"
+                              ColumnSpacing="{StaticResource Launcher.Spacing.Xxxl}"
+                              Width="{StaticResource Launcher.Component.Wizard.Stage.Width}"
+                              IsVisible="False"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Stretch">
+                            <Grid.RenderTransform>
+                                <TranslateTransform/>
+                            </Grid.RenderTransform>
+                            <StackPanel Classes="wizard-context">
+                                <Border Classes="wizard-context-icon success">
+                                    <materialIcons:MaterialIcon Kind="ClipboardCheck"
+                                                               Width="{StaticResource Launcher.Icon.Xxl}"
+                                                               Height="{StaticResource Launcher.Icon.Xxl}"
+                                                               Foreground="{DynamicResource Launcher.Color.Success}"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock Text="{Binding Shell.I18n[setupWizardReview]}" Classes="wizard-step-title"/>
+                                <TextBlock Text="{Binding Shell.I18n[setupWizardReviewHint]}" Classes="wizard-step-hint"/>
+                            </StackPanel>
+                            <Border Grid.Column="1" Classes="wizard-panel" Margin="{StaticResource Launcher.Component.Wizard.Body.Margin}">
+                            <StackPanel Spacing="{StaticResource Launcher.Spacing.None}" VerticalAlignment="Center">
                                 <Grid Classes="wizard-summary-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
                                     <Border Classes="wizard-summary-icon">
-                                        <materialIcons:MaterialIcon Kind="Language"
+                                        <materialIcons:MaterialIcon Kind="Translate"
                                                                     Width="{StaticResource Launcher.Icon.Md}"
                                                                     Height="{StaticResource Launcher.Icon.Md}"
                                                                     Foreground="{DynamicResource Launcher.Text.Secondary}"
@@ -309,12 +458,16 @@
                                         <Button.CommandParameter>
                                             <x:Int32>0</x:Int32>
                                         </Button.CommandParameter>
-                                        <materialIcons:MaterialIcon Kind="Pencil"
-                                                                    Width="{StaticResource Launcher.Icon.Md}"
-                                                                    Height="{StaticResource Launcher.Icon.Md}"/>
+                                        <StackPanel Classes="button-content">
+                                            <materialIcons:MaterialIcon Kind="Pencil"
+                                                                        Width="{StaticResource Launcher.Icon.Sm}"
+                                                                        Height="{StaticResource Launcher.Icon.Sm}"/>
+                                            <TextBlock Text="{Binding Shell.I18n[setupWizardEditStep]}"
+                                                       Classes="wizard-summary-edit-label"/>
+                                        </StackPanel>
                                     </Button>
                                 </Grid>
-                                <Border Classes="wizard-summary-divider"/>
+                                <Border Classes="wizard-divider"/>
                                 <Grid Classes="wizard-summary-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
                                     <Border Classes="wizard-summary-icon">
                                         <materialIcons:MaterialIcon Kind="CloudDownload"
@@ -336,17 +489,21 @@
                                             ToolTip.Tip="{Binding Shell.I18n[setupWizardEditStep]}"
                                             AutomationProperties.Name="{Binding Shell.I18n[setupWizardEditStep]}">
                                         <Button.CommandParameter>
-                                            <x:Int32>2</x:Int32>
+                                            <x:Int32>3</x:Int32>
                                         </Button.CommandParameter>
-                                        <materialIcons:MaterialIcon Kind="Pencil"
-                                                                    Width="{StaticResource Launcher.Icon.Md}"
-                                                                    Height="{StaticResource Launcher.Icon.Md}"/>
+                                        <StackPanel Classes="button-content">
+                                            <materialIcons:MaterialIcon Kind="Pencil"
+                                                                        Width="{StaticResource Launcher.Icon.Sm}"
+                                                                        Height="{StaticResource Launcher.Icon.Sm}"/>
+                                            <TextBlock Text="{Binding Shell.I18n[setupWizardEditStep]}"
+                                                       Classes="wizard-summary-edit-label"/>
+                                        </StackPanel>
                                     </Button>
                                 </Grid>
-                                <Border Classes="wizard-summary-divider"/>
+                                <Border Classes="wizard-divider"/>
                                 <Grid Classes="wizard-summary-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
                                     <Border Classes="wizard-summary-icon">
-                                        <materialIcons:MaterialIcon Kind="Folder"
+                                        <materialIcons:MaterialIcon Kind="FolderSearch"
                                                                     Width="{StaticResource Launcher.Icon.Md}"
                                                                     Height="{StaticResource Launcher.Icon.Md}"
                                                                     Foreground="{DynamicResource Launcher.Text.Secondary}"
@@ -367,17 +524,21 @@
                                             ToolTip.Tip="{Binding Shell.I18n[setupWizardEditStep]}"
                                             AutomationProperties.Name="{Binding Shell.I18n[setupWizardEditStep]}">
                                         <Button.CommandParameter>
-                                            <x:Int32>1</x:Int32>
+                                            <x:Int32>2</x:Int32>
                                         </Button.CommandParameter>
-                                        <materialIcons:MaterialIcon Kind="Pencil"
-                                                                    Width="{StaticResource Launcher.Icon.Md}"
-                                                                    Height="{StaticResource Launcher.Icon.Md}"/>
+                                        <StackPanel Classes="button-content">
+                                            <materialIcons:MaterialIcon Kind="Pencil"
+                                                                        Width="{StaticResource Launcher.Icon.Sm}"
+                                                                        Height="{StaticResource Launcher.Icon.Sm}"/>
+                                            <TextBlock Text="{Binding Shell.I18n[setupWizardEditStep]}"
+                                                       Classes="wizard-summary-edit-label"/>
+                                        </StackPanel>
                                     </Button>
                                 </Grid>
-                                <Border Classes="wizard-summary-divider"/>
+                                <Border Classes="wizard-divider"/>
                                 <Grid Classes="wizard-summary-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
                                     <Border Classes="wizard-summary-icon">
-                                        <materialIcons:MaterialIcon Kind="Security"
+                                        <materialIcons:MaterialIcon Kind="SwapHorizontal"
                                                                     Width="{StaticResource Launcher.Icon.Md}"
                                                                     Height="{StaticResource Launcher.Icon.Md}"
                                                                     Foreground="{DynamicResource Launcher.Text.Secondary}"
@@ -396,22 +557,28 @@
                                             ToolTip.Tip="{Binding Shell.I18n[setupWizardEditStep]}"
                                             AutomationProperties.Name="{Binding Shell.I18n[setupWizardEditStep]}">
                                         <Button.CommandParameter>
-                                            <x:Int32>3</x:Int32>
+                                            <x:Int32>4</x:Int32>
                                         </Button.CommandParameter>
-                                        <materialIcons:MaterialIcon Kind="Pencil"
-                                                                    Width="{StaticResource Launcher.Icon.Md}"
-                                                                    Height="{StaticResource Launcher.Icon.Md}"/>
+                                        <StackPanel Classes="button-content">
+                                            <materialIcons:MaterialIcon Kind="Pencil"
+                                                                        Width="{StaticResource Launcher.Icon.Sm}"
+                                                                        Height="{StaticResource Launcher.Icon.Sm}"/>
+                                            <TextBlock Text="{Binding Shell.I18n[setupWizardEditStep]}"
+                                                       Classes="wizard-summary-edit-label"/>
+                                        </StackPanel>
                                     </Button>
                                 </Grid>
                             </StackPanel>
-                        </StackPanel>
+                            </Border>
+                        </Grid>
 
                     </Grid>
                 </ScrollViewer>
 
-                <!-- Actions row：动作带并入内容区（ADR-017）——上一步 tonal 底色，
-                     下一步/完成 filled 主按钮；图标行经 button-content。 -->
-                <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                <Border Grid.Row="3" Classes="wizard-divider"/>
+                <!-- 全幅动作带：上一步 tonal 底色在左，下一步/完成 filled 主按钮在右。 -->
+                <Border Grid.Row="4" Classes="wizard-footer">
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
                     <Button x:Name="PreviousButton"
                             Classes="wizard-action dialog-action"
                             IsVisible="False"
@@ -439,18 +606,19 @@
                     <Button x:Name="FinishButton" Grid.Column="2"
                             Classes="wizard-action primary-action dialog-action"
                             Command="{Binding Dialogs.SetupWizard.CompleteCommand}"
+                            IsEnabled="{Binding Dialogs.SetupWizard.CanGoNext}"
                             IsVisible="False"
                             AutomationProperties.Name="{Binding Shell.I18n[setupWizardFinish]}">
                         <StackPanel Classes="button-content">
+                            <TextBlock Text="{Binding Shell.I18n[setupWizardFinish]}"/>
                             <materialIcons:MaterialIcon Kind="Check"
                                                        Width="{StaticResource Launcher.Icon.Sm}"
                                                        Height="{StaticResource Launcher.Icon.Sm}"/>
-                            <TextBlock Text="{Binding Shell.I18n[setupWizardFinish]}"/>
                         </StackPanel>
                     </Button>
                     </Grid>
-                </Grid>
                 </Border>
+                </Grid>
             </controls:DialogSurface.Content>
             </controls:DialogSurface>
     </Grid>

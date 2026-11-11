@@ -215,7 +215,9 @@ public sealed class LocalizationTerminologyTests
         };
 
         viewModel.GamePath = @"D:\Test\Path";
-        // Step 1 的 CanGoNext 由后台 fire-and-forget 路径校验门控：先以有界
+        viewModel.MarkAgreementRead();
+        viewModel.IsAgreementAccepted = true;
+        // Step 2 的 CanGoNext 由后台 fire-and-forget 路径校验门控：先以有界
         // 轮询等校验落定，再用步数上限推进，消除热自旋竞态（调度异常时快速
         // 失败而非挂死测试进程）。
         await TestWait.UntilAsync(

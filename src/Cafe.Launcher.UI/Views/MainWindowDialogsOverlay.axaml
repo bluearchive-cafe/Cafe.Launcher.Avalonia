@@ -334,7 +334,7 @@
                                 IsOpen="{Binding Dialogs.SetupWizardExitConfirm.IsVisible}"
                                 ZIndex="{x:Static constants:LauncherConstants.ZIndexSetupWizardConfirmation}"
                                 Title="{Binding Shell.I18n[setupWizardExitTitle]}"
-                                Message="{Binding Shell.I18n[setupWizardExitMessage]}"
+                                Message="{Binding Dialogs.SetupWizardExitConfirm.Message}"
                                 CancelText="{Binding Shell.I18n[cancel]}"
                                 CancelCommand="{Binding Dialogs.SetupWizardExitConfirm.CancelCommand}"
                                 ConfirmText="{Binding Shell.I18n[setupWizardExitConfirm]}"

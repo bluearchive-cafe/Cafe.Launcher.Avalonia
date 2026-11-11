@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Threading;
 using Cafe.Launcher.UI.Constants;
+using Cafe.Launcher.UI.Features.SetupWizard;
 using Cafe.Launcher.UI.Helpers;
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.UI.Services.Diagnostics;
@@ -134,7 +135,61 @@ public sealed class LauncherPresentationSession : IDisposable
 
         WindowOpenedOnce.Subscribe(window, (_, _) =>
         {
-            _ = InitializeThenMaybeLaunchAsync(launchGameRequested, shutdownToken);
+            _ = StartNormallyAsync(launchGameRequested, shutdownToken);
+        });
+    }
+
+    /// <summary>
+    /// 常规启动先核对协议同意版本：版本更新时只显示协议步骤，同意后写回原设置并由
+    /// 既有保存后续流程完成初始化；其余情况直接执行完整初始化。
+    /// </summary>
+    private async Task StartNormallyAsync(bool launchGameRequested, CancellationToken shutdownToken)
+    {
+        LauncherSettings savedSettings;
+        try
+        {
+            savedSettings = await settingsService.ReadAsync(shutdownToken);
+        }
+        catch (OperationCanceledException) when (shutdownToken.IsCancellationRequested)
+        {
+            return;
+        }
+        catch
+        {
+            // 读取失败的诊断与兜底由 InitializeAsync 统一处理。
+            await InitializeThenMaybeLaunchAsync(launchGameRequested, shutdownToken);
+            return;
+        }
+
+        if (!SetupWizardViewModel.RequiresConsent(savedSettings))
+        {
+            await InitializeThenMaybeLaunchAsync(launchGameRequested, shutdownToken);
+            return;
+        }
+
+        var window = mainWindow;
+        if (window is null)
+        {
+            return;
+        }
+
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            window.ApplySavedWindowState(savedSettings);
+            // 完整初始化尚未发生；先按已保存的语言与明暗呈现协议步骤，同意后再由统一后续流程应用其余设置。
+            viewModel.Shell.ApplyLanguage(savedSettings.Language, hasSnapshot: false);
+            viewModel.Settings.Appearance.ApplyTheme(savedSettings.ThemeMode);
+            var wizard = viewModel.Dialogs.SetupWizard;
+            wizard.PrepareForAgreementUpdate(savedSettings);
+
+            async Task OnSettingsApplied(LauncherSettings _)
+            {
+                wizard.SettingsApplied -= OnSettingsApplied;
+                await InitializeThenMaybeLaunchAsync(launchGameRequested, shutdownToken);
+            }
+
+            wizard.SettingsApplied += OnSettingsApplied;
+            viewModel.Dialogs.ShowSetupWizard();
         });
     }
 

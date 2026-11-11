@@ -63,11 +63,13 @@ public sealed class LauncherSettingsDefaultsTests
     public void ParameterlessCreateDefaults_HasOnlyTheDeclaredChannelIrrelevantCallSites()
     {
         // 渠道相关的默认值必须拿到注入的 identity；只有「默认值里与渠道无关的字段」才允许
-        // 省略参数（当前只有首启动效偏好）。新调用点要么传 identity，要么在此登记并注明理由。
+        // 省略参数。新调用点要么传 identity，要么在此登记并注明理由。
         var declared = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             // 只取动效偏好，与更新渠道无关
-            Path.Combine(TestRepository.PresentationPath, "Features", "Shell", "ShellStartup.cs")
+            Path.Combine(TestRepository.PresentationPath, "Features", "Shell", "ShellStartup.cs"),
+            // 只取主题默认配色，与更新渠道无关
+            Path.Combine(TestRepository.PresentationPath, "Features", "Settings", "SettingsAppearanceViewModel.cs")
         };
 
         var callSites = ProductionSources()

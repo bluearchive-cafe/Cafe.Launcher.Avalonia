@@ -95,6 +95,8 @@ public sealed class ShellStartupTests : IDisposable
         var startup = CreateStartup(followThrough: followThrough);
 
         startup.Wire();
+        wizard.MarkAgreementRead();
+        wizard.IsAgreementAccepted = true;
         wizard.GamePath = @"D:\Games\Path";
         await wizard.CompleteCommand.ExecuteAsync(null);
 
@@ -110,6 +112,8 @@ public sealed class ShellStartupTests : IDisposable
 
         startup.Wire();
         startup.Unwire();
+        wizard.MarkAgreementRead();
+        wizard.IsAgreementAccepted = true;
         wizard.GamePath = @"D:\Games\Path";
         await wizard.CompleteCommand.ExecuteAsync(null);
 

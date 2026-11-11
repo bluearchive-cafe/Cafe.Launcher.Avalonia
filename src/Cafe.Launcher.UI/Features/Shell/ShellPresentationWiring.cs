@@ -102,6 +102,12 @@ internal sealed class ShellPresentationWiring : IDisposable
             () => dialogs.CloseRequested += family.WindowChrome.RequestClose,
             () => dialogs.CloseRequested -= family.WindowChrome.RequestClose);
         Attach(
+            () => dialogs.SetupWizard.AgreementExitRequested += family.WindowChrome.RequestShutdown,
+            () => dialogs.SetupWizard.AgreementExitRequested -= family.WindowChrome.RequestShutdown);
+        Attach(
+            () => dialogs.SetupWizardOpening += ApplySetupWizardDefaultScheme,
+            () => dialogs.SetupWizardOpening -= ApplySetupWizardDefaultScheme);
+        Attach(
             () => dialogs.ConfirmUpdateAvailableRequested += OnUpdateAvailableConfirmed,
             () => dialogs.ConfirmUpdateAvailableRequested -= OnUpdateAvailableConfirmed);
         Attach(
@@ -186,6 +192,9 @@ internal sealed class ShellPresentationWiring : IDisposable
 
     private void ShowResourcePanelSourceConfirmDialog() =>
         family.Dialogs.ResourcePanelSourceConfirm.Show(localizer.T(LocalizationKeys.ResourcePanelCafeOnlyMessage));
+
+    private void ApplySetupWizardDefaultScheme() =>
+        family.Settings.Appearance.ApplyDefaultScheme();
 
     private void RevealTaskSurface()
     {

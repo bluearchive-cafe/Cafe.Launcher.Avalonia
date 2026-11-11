@@ -18,6 +18,13 @@ public sealed partial class UiStyleContractTests
         var focus = GetStyleSetters(styles, "RadioButton.wizard-option:focus-visible");
         Assert.Equal("{DynamicResource Launcher.Color.FocusRing}", focus["BorderBrush"]);
         Assert.Equal("{StaticResource Launcher.Border.Thickness.Focus}", focus["BorderThickness"]);
+        // 自绘模板不继承 Fluent 的按压/禁用外观：两态必须显式补齐。
+        var pressed = GetStyleSetters(styles, "RadioButton.wizard-option:pressed");
+        Assert.Equal("{DynamicResource Launcher.Color.Button.Secondary.Pressed}", pressed["Background"]);
+        var selectedPressed = GetStyleSetters(styles, "RadioButton.wizard-option:checked:pressed");
+        Assert.Equal("{DynamicResource Launcher.Color.Primary.Soft}", selectedPressed["Background"]);
+        var optionDisabled = GetStyleSetters(styles, "RadioButton.wizard-option:disabled");
+        Assert.Equal("{StaticResource Launcher.StateLayer.Disabled.Content}", optionDisabled["Opacity"]);
     }
 
     [Fact]
@@ -35,11 +42,11 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void SetupWizardOverlay_UsesProgressRowAndContentActions()
+    public void SetupWizardOverlay_UsesFullBleedHeaderStageAndFooter()
     {
         var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/SetupWizardOverlay.axaml"));
 
-        // 实验台解剖（ADR-017）：无侧栏导航；进度行承载向导标题与步骤进度，跳过钮居右。
+        // 统一舞台（ADR-059）：无侧栏导航；全幅头部承载标题、步骤计数、跳过与六段进度轨。
         Assert.DoesNotContain(
             document.Descendants(),
             element => HasClass(element, "settings-navigation-pane"));
@@ -47,10 +54,11 @@ public sealed partial class UiStyleContractTests
             .Descendants()
             .Single(element =>
                 element.Name.LocalName == "Button"
-                && element.Attribute("Command")?.Value == "{Binding Dialogs.SetupWizardExitConfirm.ShowCommand}");
-        var progressRow = skipButton.Parent!;
-        Assert.Equal("Grid", progressRow.Name.LocalName);
-        var heading = progressRow
+                && element.Attribute("Command")?.Value == "{Binding Dialogs.ShowSetupWizardExitConfirmCommand}");
+        var headerBorder = skipButton.Ancestors().Single(element =>
+            element.Name.LocalName == "Border"
+            && HasClass(element, "wizard-header"));
+        var heading = skipButton.Parent!
             .Elements()
             .First(element => element.Name.LocalName == "StackPanel");
         var title = heading
@@ -60,49 +68,96 @@ public sealed partial class UiStyleContractTests
                 && element.Attribute("Text")?.Value == "{Binding Shell.I18n[setupWizardStepTitle]}");
         Assert.True(HasClass(title, "dialog-title"));
         // 步骤进度由后置代码在换面中点翻转（ApplyChromeState），不得绑定 Step 先于内容跳变。
-        var progressXNamespace = document.Root?.GetNamespaceOfPrefix("x");
-        Assert.NotNull(progressXNamespace);
+        var xNamespace = document.Root?.GetNamespaceOfPrefix("x");
+        Assert.NotNull(xNamespace);
         var progressText = Assert.Single(heading.Elements(), element =>
             element.Name.LocalName == "TextBlock"
-            && element.Attribute(progressXNamespace + "Name")?.Value == "StepProgressText");
+            && element.Attribute(xNamespace + "Name")?.Value == "StepProgressText");
         Assert.True(HasClass(progressText, "caption"));
         Assert.Null(progressText.Attribute("Text"));
 
-        // 外壳模式自管留白：wizard-body 消费 Panel 正文内边距（Padding 禁止内联于视图）。
-        var paddingBorder = skipButton.Ancestors().Single(element =>
-            element.Name.LocalName == "Border"
-            && HasClass(element, "wizard-body"));
-        var contentBlock = paddingBorder
-            .Elements()
-            .Single(element => element.Name.LocalName == "Grid");
-        Assert.Equal("Auto,*,Auto", contentBlock.Attribute("RowDefinitions")?.Value);
-        var wizardStyles = XDocument.Load(TestRepository.FromPresentationRoot("Views/Styles/SetupWizard.axaml"));
+        // 六段进度轨：段位到达态由后置代码翻转；单步的协议更新模式整体折叠。
+        var track = Assert.Single(headerBorder.Descendants(), element =>
+            element.Name.LocalName == "Grid"
+            && element.Attribute("ColumnDefinitions")?.Value == "*,*,*,*,*,*");
         Assert.Equal(
-            "{StaticResource Launcher.Component.Dialog.Panel.Body.Padding}",
-            GetStyleSetters(wizardStyles, "Border.wizard-body")["Padding"]);
+            "{Binding !Dialogs.SetupWizard.IsConsentUpdateMode}",
+            track.Attribute("IsVisible")?.Value);
+        Assert.Equal(
+            new[]
+            {
+                "ProgressSegment0", "ProgressSegment1", "ProgressSegment2",
+                "ProgressSegment3", "ProgressSegment4", "ProgressSegment5",
+            },
+            track.Elements().Select(element =>
+                element.Attribute(xNamespace + "Name")?.Value));
+        Assert.All(
+            track.Elements(),
+            segment => Assert.True(HasClass(segment, "wizard-progress-segment")));
 
-        // 动作带并入内容区：不再使用 DialogSurface.Footer（空动作带会残留发丝线）。
+        // 表面五段：头部 / 发丝线 / 滚动舞台 / 发丝线 / 全幅动作带。
+        var contentBlock = headerBorder.Parent!;
+        Assert.Equal("Grid", contentBlock.Name.LocalName);
+        Assert.Equal("Auto,Auto,*,Auto,Auto", contentBlock.Attribute("RowDefinitions")?.Value);
+        var dividers = contentBlock
+            .Elements()
+            .Where(element =>
+                element.Name.LocalName == "Border"
+                && HasClass(element, "wizard-divider"))
+            .ToList();
+        Assert.Equal(2, dividers.Count);
+        Assert.Equal("1", dividers[0].Attribute("Grid.Row")?.Value);
+        Assert.Equal("3", dividers[1].Attribute("Grid.Row")?.Value);
+        var scroll = Assert.Single(contentBlock.Elements(), element =>
+            element.Name.LocalName == "ScrollViewer"
+            && element.Attribute(xNamespace + "Name")?.Value == "StepScroll");
+        Assert.Equal("2", scroll.Attribute("Grid.Row")?.Value);
+
+        // 动作带全幅贴底：不再使用 DialogSurface.Footer（空动作带会残留发丝线）。
         Assert.DoesNotContain(
             document.Descendants(),
             element => element.Name.LocalName == "DialogSurface.Footer");
-        var actionsRow = contentBlock
-            .Elements()
-            .Last(element => element.Name.LocalName == "Grid");
+        var footer = Assert.Single(contentBlock.Elements(), element =>
+            element.Name.LocalName == "Border"
+            && HasClass(element, "wizard-footer"));
+        Assert.Equal("4", footer.Attribute("Grid.Row")?.Value);
+        var actions = Assert.Single(footer.Elements(), element => element.Name.LocalName == "Grid");
+        Assert.Equal("Auto,*,Auto", actions.Attribute("ColumnDefinitions")?.Value);
         Assert.All(
-            actionsRow.Descendants().Where(element => element.Name.LocalName == "Button"),
+            actions.Elements().Where(element => element.Name.LocalName == "Button"),
             button => Assert.True(HasClass(button, "wizard-action")));
-        Assert.Contains(actionsRow.Descendants(), element =>
+        Assert.Contains(actions.Elements(), element =>
             element.Name.LocalName == "Button"
             && !HasClass(element, "primary-action")
             && element.Attribute("Command")?.Value == "{Binding Dialogs.SetupWizard.PreviousCommand}");
-        Assert.Contains(actionsRow.Descendants(), element =>
+        Assert.Contains(actions.Elements(), element =>
             element.Name.LocalName == "Button"
             && HasClass(element, "primary-action")
             && element.Attribute("Command")?.Value == "{Binding Dialogs.SetupWizard.NextCommand}");
-        Assert.Contains(actionsRow.Descendants(), element =>
+        Assert.Contains(actions.Elements(), element =>
             element.Name.LocalName == "Button"
             && HasClass(element, "primary-action")
             && element.Attribute("Command")?.Value == "{Binding Dialogs.SetupWizard.CompleteCommand}");
+
+        // 头部与动作带贴表面边缘：留白全部由样式消费 token（视图禁止内联 Padding）。
+        var wizardStyles = XDocument.Load(TestRepository.FromPresentationRoot("Views/Styles/SetupWizard.axaml"));
+        Assert.Equal(
+            "{StaticResource Launcher.Component.Wizard.Header.Padding}",
+            GetStyleSetters(wizardStyles, "Border.wizard-header")["Padding"]);
+        var footerStyle = GetStyleSetters(wizardStyles, "Border.wizard-footer");
+        Assert.Equal("{StaticResource Launcher.Component.Wizard.Footer.Height}", footerStyle["Height"]);
+        Assert.Equal("{StaticResource Launcher.Component.Wizard.Footer.Padding}", footerStyle["Padding"]);
+        var segmentStyle = GetStyleSetters(wizardStyles, "Border.wizard-progress-segment");
+        Assert.Equal(
+            "{StaticResource Launcher.Component.Wizard.Progress.Height}",
+            segmentStyle["Height"]);
+        // 未到达段取发丝线一级的弱底，才在 Dialog.Header 底色上可辨。
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Dialog.Section.Divider}",
+            segmentStyle["Background"]);
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Primary}",
+            GetStyleSetters(wizardStyles, "Border.wizard-progress-segment.reached")["Background"]);
     }
 
     [Fact]
@@ -125,7 +180,7 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void SetupWizard_UsesConstrainedSingleColumnWorkspace()
+    public void SetupWizard_UsesUnifiedTwoColumnStage()
     {
         var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/SetupWizardOverlay.axaml"));
         var xNamespace = document.Root?.GetNamespaceOfPrefix("x");
@@ -139,10 +194,10 @@ public sealed partial class UiStyleContractTests
         Assert.Equal("{StaticResource Launcher.Layout.SetupWizard.Height}", dialog.Attribute("MaxHeight")?.Value);
         Assert.Equal("Stretch", dialog.Attribute("HorizontalAlignment")?.Value);
         Assert.Equal("Stretch", dialog.Attribute("VerticalAlignment")?.Value);
-        // 无头带折叠：向导自绘进度行，跳过钮保留文字语义。
+        // 无头带折叠：向导自绘头部，跳过钮保留文字语义。
         Assert.Null(dialog.Attribute("Title"));
 
-        // 实验台解剖：居中单列内容，不再有侧栏导航列表。
+        // 统一舞台：居中双栏内容，不再有侧栏导航列表。
         Assert.DoesNotContain(
             document.Descendants(),
             element => element.Name.LocalName == "ListBox");
@@ -160,20 +215,187 @@ public sealed partial class UiStyleContractTests
 
         var steps = container
             .Elements()
-            .Where(element => element.Name.LocalName == "StackPanel" && HasClass(element, "wizard-step"))
+            .Where(element => HasClass(element, "wizard-step"))
             .ToList();
-        Assert.Equal(5, steps.Count);
+        Assert.Equal(6, steps.Count);
         Assert.Equal(
-            new[] { "WizardStep0", "WizardStep1", "WizardStep2", "WizardStep3", "WizardStep4" },
+            new[] { "WizardStep0", "WizardStep1", "WizardStep2", "WizardStep3", "WizardStep4", "WizardStep5" },
             steps.Select(step => step.Attribute(xNamespace + "Name")?.Value));
+        // 左引导徽章一步一义：翻译/文档/路径检索/云端下载/路由切换/清单勾选。
+        // 右面板内的状态图标不计入左引导的单一徽章结构。
+        Assert.Equal(
+            new[] { "Translate", "ScriptText", "FolderSearch", "CloudDownload", "SwapHorizontal", "ClipboardCheck" },
+            steps.Select(step => Assert.Single(
+                    step.Descendants(),
+                    element => element.Name.LocalName == "MaterialIcon"
+                        && element.Ancestors().Any(ancestor => HasClass(ancestor, "wizard-context-icon")))
+                .Attribute("Kind")?.Value));
         Assert.All(steps, step =>
         {
-            Assert.Equal("Center", step.Attribute("HorizontalAlignment")?.Value);
-            Assert.Equal("Center", step.Attribute("VerticalAlignment")?.Value);
+            // 六步同构：固定 860 舞台 = 300 引导 + 32 间距 + 528 右侧面板。
+            Assert.Equal("Grid", step.Name.LocalName);
+            Assert.Equal("Auto,*", step.Attribute("ColumnDefinitions")?.Value);
+            Assert.Equal("{StaticResource Launcher.Spacing.Xxxl}", step.Attribute("ColumnSpacing")?.Value);
             Assert.Equal(
-                "{StaticResource Launcher.Component.Wizard.Content.MaxWidth}",
-                step.Attribute("MaxWidth")?.Value);
+                "{StaticResource Launcher.Component.Wizard.Stage.Width}",
+                step.Attribute("Width")?.Value);
+            Assert.Equal("Center", step.Attribute("HorizontalAlignment")?.Value);
+            Assert.Equal("Stretch", step.Attribute("VerticalAlignment")?.Value);
+
+            // 左引导只承载图标、标题与说明；差异全部落在右侧面板。
+            var context = Assert.Single(step.Elements(), element =>
+                element.Name.LocalName == "StackPanel"
+                && HasClass(element, "wizard-context"));
+            Assert.Single(context.Elements(), element =>
+                element.Name.LocalName == "Border"
+                && HasClass(element, "wizard-context-icon"));
+            Assert.Single(context.Elements(), element =>
+                element.Name.LocalName == "TextBlock"
+                && HasClass(element, "wizard-step-title"));
+            Assert.Single(context.Elements(), element =>
+                element.Name.LocalName == "TextBlock"
+                && HasClass(element, "wizard-step-hint"));
+            var panel = Assert.Single(step.Elements(), element =>
+                element.Name.LocalName == "Border"
+                && HasClass(element, "wizard-panel")
+                && element.Attribute("Grid.Column")?.Value == "1");
+            // 正文留白落在面板上：契约步骤可绑定视口高度而不被外边距撑出外层滚动条。
+            Assert.Equal(
+                "{StaticResource Launcher.Component.Wizard.Body.Margin}",
+                panel.Attribute("Margin")?.Value);
+            Assert.NotEmpty(panel.Elements());
         });
+
+        var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/Styles/SetupWizard.axaml"));
+        var contextStyle = GetStyleSetters(styles, "StackPanel.wizard-context");
+        Assert.Equal(
+            "{StaticResource Launcher.Component.Wizard.Context.Width}",
+            contextStyle["Width"]);
+        Assert.Equal("Center", contextStyle["VerticalAlignment"]);
+        var iconStyle = GetStyleSetters(styles, "Border.wizard-context-icon");
+        Assert.Equal(
+            "{StaticResource Launcher.Component.Wizard.Context.Icon.Size}",
+            iconStyle["Width"]);
+        Assert.Equal(
+            "{StaticResource Launcher.Component.Wizard.Context.Icon.Size}",
+            iconStyle["Height"]);
+        Assert.Equal("{StaticResource Launcher.Radius.Full}", iconStyle["CornerRadius"]);
+        Assert.Equal("{DynamicResource Launcher.Color.Primary.Soft}", iconStyle["Background"]);
+        Assert.Equal("Left", iconStyle["HorizontalAlignment"]);
+        var panelStyle = GetStyleSetters(styles, "Border.wizard-panel");
+        Assert.Equal(
+            "{StaticResource Launcher.Spacing.Thickness.Xl}",
+            panelStyle["Padding"]);
+        Assert.Equal("{DynamicResource Launcher.Color.Card.Background}", panelStyle["Background"]);
+        Assert.Equal("{DynamicResource Launcher.Color.Card.Border}", panelStyle["BorderBrush"]);
+        Assert.Equal("True", panelStyle["ClipToBounds"]);
+    }
+
+    [Fact]
+    public void SetupWizardAgreement_UsesDocumentPanelWithConsentFooter()
+    {
+        // 统一舞台（ADR-059）：与其他步骤同构——左引导承载标题、版次与语言声明，
+        // 右面板为文档阅读器（铺满剩余高度）加固定底栏同意项。
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/SetupWizardOverlay.axaml"));
+        var xNamespace = document.Root?.GetNamespaceOfPrefix("x");
+        Assert.NotNull(xNamespace);
+        var agreementStep = document
+            .Descendants()
+            .Single(element =>
+                element.Attribute(xNamespace + "Name")?.Value == "WizardStep1");
+        Assert.Null(agreementStep.Attribute("RowDefinitions"));
+        // 面板绑定视口高度：文档阅读器获得有界高度，只在自己的滚动区里滚动。
+        Assert.Equal(
+            "{Binding $parent[ScrollViewer].Viewport.Height}",
+            agreementStep.Attribute("Height")?.Value);
+
+        var context = Assert.Single(agreementStep.Elements(), element =>
+            element.Name.LocalName == "StackPanel"
+            && HasClass(element, "wizard-context"));
+        Assert.Single(context.Descendants(), element =>
+            element.Name.LocalName == "Border"
+            && HasClass(element, "wizard-agreement-version")
+            && element.Descendants().Any(child =>
+                child.Attribute("Text")?.Value == "{Binding Dialogs.SetupWizard.AgreementVersionText}"));
+        Assert.Contains(context.Descendants(), element =>
+            element.Name.LocalName == "TextBlock"
+            && element.Attribute("Text")?.Value == "{Binding Shell.I18n[agreementLanguageNote]}");
+        // 语言声明图标顶对齐说明首行：说明换行时不得整块居中；额外上边距会把
+        // 图标墨迹推离 13px 行的视觉中心。
+        var languageNoteIcon = Assert.Single(context.Descendants(), element =>
+            element.Name.LocalName == "MaterialIcon"
+            && element.Attribute("Kind")?.Value == "InformationOutline");
+        Assert.Equal("Top", languageNoteIcon.Attribute("VerticalAlignment")?.Value);
+        Assert.Null(languageNoteIcon.Attribute("Margin"));
+
+        var documentPanel = Assert.Single(agreementStep.Elements(), element =>
+            element.Name.LocalName == "Border"
+            && HasClass(element, "wizard-panel")
+            && HasClass(element, "wizard-agreement-panel"));
+        var panelGrid = Assert.Single(documentPanel.Elements(), element => element.Name.LocalName == "Grid");
+        Assert.Equal("*,Auto", panelGrid.Attribute("RowDefinitions")?.Value);
+
+        var reader = Assert.Single(documentPanel.Descendants(), element =>
+            element.Name.LocalName == "ScrollViewer"
+            && element.Attribute(xNamespace + "Name")?.Value == "AgreementScrollViewer");
+        Assert.Null(reader.Attribute("MaxHeight"));
+        Assert.Single(reader.Descendants(), element =>
+            element.Name.LocalName == "ReleaseNotesMarkdownViewer"
+            && element.Attribute("Markdown")?.Value == "{Binding Dialogs.SetupWizard.AgreementMarkdown}"
+            && element.Attribute("FontFamily")?.Value
+                == "{StaticResource Launcher.Typography.FontFamily.Document}");
+
+        var consentFooter = Assert.Single(documentPanel.Descendants(), element =>
+            element.Name.LocalName == "Border"
+            && HasClass(element, "wizard-agreement-footer"));
+        Assert.Equal("1", consentFooter.Attribute("Grid.Row")?.Value);
+        var checkbox = Assert.Single(consentFooter.Descendants(), element =>
+            element.Name.LocalName == "CheckBox");
+        Assert.Equal(
+            "{StaticResource Launcher.Component.Wizard.Agreement.Consent.Padding}",
+            checkbox.Attribute("Margin")?.Value);
+        Assert.Equal(
+            "{Binding Dialogs.SetupWizard.IsAgreementAccepted, Mode=TwoWay}",
+            checkbox.Attribute("IsChecked")?.Value);
+        Assert.Equal(
+            "{Binding Dialogs.SetupWizard.HasReadAgreement}",
+            checkbox.Attribute("IsEnabled")?.Value);
+        Assert.Equal(
+            "{Binding Shell.I18n[agreementCheckbox]}",
+            checkbox.Attributes()
+                .Single(attribute => attribute.Name.LocalName == "AutomationProperties.Name")
+                .Value);
+        Assert.Single(checkbox.Elements(), element =>
+            element.Name.LocalName == "TextBlock"
+            && element.Attribute("Text")?.Value == "{Binding Shell.I18n[agreementCheckbox]}"
+            && element.Attribute("TextWrapping")?.Value == "Wrap");
+        // 阅读提示不再占据复选框下方的版面，只作为自动化帮助文本保留。
+        Assert.Equal(
+            "{Binding Shell.I18n[agreementScrollHint]}",
+            checkbox.Attributes()
+                .Single(attribute => attribute.Name.LocalName == "AutomationProperties.HelpText")
+                .Value);
+        Assert.DoesNotContain(
+            document.Descendants(),
+            element => element.Name.LocalName == "TextBlock"
+                && element.Attribute("Text")?.Value == "{Binding Shell.I18n[agreementScrollHint]}");
+
+        var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/Styles/SetupWizard.axaml"));
+        Assert.Equal(
+            "{StaticResource Launcher.Spacing.Thickness.None}",
+            GetStyleSetters(styles, "Border.wizard-agreement-panel")["Padding"]);
+        // 底栏必须保持透明：卡片圆角不裁剪子元素，不透明底会盖住卡片描边与圆角。
+        Assert.Equal(
+            "{StaticResource Launcher.Color.Transparent}",
+            GetStyleSetters(styles, "Border.wizard-agreement-footer")["Background"]);
+        Assert.Equal(
+            "{StaticResource Launcher.Component.Wizard.Agreement.Version.Padding}",
+            GetStyleSetters(styles, "Border.wizard-agreement-version")["Padding"]);
+        // 旧的双卡（文档卡 + 同意侧栏）解剖已随统一舞台退场，不得回归。
+        Assert.DoesNotContain(
+            styles.Descendants().Where(element => element.Name.LocalName == "Style"),
+            style => style.Attribute("Selector")?.Value is
+                "Border.wizard-agreement-document" or "Border.wizard-agreement-consent");
     }
 
     [Fact]
@@ -188,11 +410,9 @@ public sealed partial class UiStyleContractTests
         Assert.NotNull(controls);
         var steps = document
             .Descendants()
-            .Where(element =>
-                element.Name.LocalName == "StackPanel"
-                && HasClass(element, "wizard-step"))
+            .Where(element => HasClass(element, "wizard-step"))
             .ToList();
-        Assert.Equal(5, steps.Count);
+        Assert.Equal(6, steps.Count);
 
         foreach (var step in steps)
         {
@@ -234,7 +454,7 @@ public sealed partial class UiStyleContractTests
             .Descendants()
             .Single(element =>
                 element.Name.LocalName == "Button"
-                && element.Attribute("Command")?.Value == "{Binding Dialogs.SetupWizardExitConfirm.ShowCommand}");
+                && element.Attribute("Command")?.Value == "{Binding Dialogs.ShowSetupWizardExitConfirmCommand}");
         var heading = skipButton.Parent!
             .Elements()
             .First(element => element.Name.LocalName == "StackPanel");
@@ -255,16 +475,48 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void SetupWizardCompletion_HeroBadgeCarriesSuccessSemantics()
+    public void SetupWizardHeader_SkipButtonRendersAsQuietTextButton()
     {
-        // 复核页重设计：完成语义由 Hero 徽章（Success.Soft 底 + Success 勾）承载，
-        // 标题回归中性——原 wizard-complete Success 标题色已退场，不得回归。
+        // 跳过引导是头带的次要逃逸口：不再使用共享次级按钮的填充底，
+        // 改为与复核页编辑钮同构的安静文本钮，避免与标题和主/次动作争层级。
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/SetupWizardOverlay.axaml"));
+        var skipButton = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Button"
+                && element.Attribute("Command")?.Value == "{Binding Dialogs.ShowSetupWizardExitConfirmCommand}");
+        Assert.True(HasClass(skipButton, "wizard-skip"));
+        Assert.DoesNotContain(
+            "flat-action",
+            skipButton.Attribute("Classes")?.Value ?? string.Empty,
+            StringComparison.Ordinal);
+        var label = Assert.Single(skipButton.Descendants(), element => element.Name.LocalName == "TextBlock");
+        Assert.True(HasClass(label, "wizard-skip-label"));
+
+        var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/Styles/SetupWizard.axaml"));
+        var skipStyle = GetStyleSetters(styles, "Button.wizard-skip");
+        Assert.Equal("{StaticResource Launcher.Color.Transparent}", skipStyle["Background"]);
+        Assert.Equal("{DynamicResource Launcher.Text.Secondary}", skipStyle["Foreground"]);
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Content.Row.Hover}",
+            GetStyleSetters(styles, "Button.wizard-skip:pointerover")["Background"]);
+        Assert.Equal(
+            "{StaticResource Launcher.Typography.FontSize.Body.Sm}",
+            GetStyleSetters(styles, "TextBlock.wizard-skip-label")["FontSize"]);
+    }
+
+    [Fact]
+    public void SetupWizardCompletion_ContextIconCarriesSuccessSemantics()
+    {
+        // 统一舞台（ADR-059）：完成语义由复核页左引导的上下文徽章（Success.Soft 底 +
+        // Success 勾）承载，步骤标题回归中性——原 wizard-complete 标题色已退场，不得回归。
         // 各面板标题仍静态绑定自身资源键——共享 StepTitle 绑定会在 Step 变化的 t=0 让全部
         // 标题（含淡出中的旧面板）同帧跳到新标题，破坏中点换面的次序语义。
         var overlay = XDocument.Load(TestRepository.FromPresentationRoot("Views/SetupWizardOverlay.axaml"));
         var expectedTitleKeys = new[]
         {
             "setupWizardLanguage",
+            "agreementTitle",
             "setupWizardGamePath",
             "setupWizardDownloadSource",
             "setupWizardProxy",
@@ -284,40 +536,47 @@ public sealed partial class UiStyleContractTests
             element => element.Name.LocalName == "TextBlock"
                 && (element.Attribute("Text")?.Value.Contains("SetupWizard.StepTitle") ?? false));
 
-        // 徽章结构：WizardStep4 内单个整圆徽章，内含 Success 勾。
+        // 徽章结构：WizardStep5 左引导内单个 Success 上下文徽章，内含 Success 清单勾选。
         var xNamespace = overlay.Root?.GetNamespaceOfPrefix("x");
         Assert.NotNull(xNamespace);
         var reviewStep = overlay
             .Descendants()
             .Single(element =>
-                element.Name.LocalName == "StackPanel"
-                && element.Attribute(xNamespace + "Name")?.Value == "WizardStep4");
-        var heroBadge = Assert.Single(reviewStep.Descendants(), element =>
+                element.Attribute(xNamespace + "Name")?.Value == "WizardStep5");
+        var successBadge = Assert.Single(reviewStep.Descendants(), element =>
             element.Name.LocalName == "Border"
-            && HasClass(element, "wizard-hero-badge"));
-        var heroIcon = Assert.Single(heroBadge.Descendants(), element =>
+            && HasClass(element, "wizard-context-icon")
+            && HasClass(element, "success"));
+        var badgeIcon = Assert.Single(successBadge.Descendants(), element =>
             element.Name.LocalName == "MaterialIcon");
-        Assert.Equal("Check", heroIcon.Attribute("Kind")?.Value);
+        Assert.Equal("ClipboardCheck", badgeIcon.Attribute("Kind")?.Value);
         Assert.Equal(
             "{DynamicResource Launcher.Color.Success}",
-            heroIcon.Attribute("Foreground")?.Value);
+            badgeIcon.Attribute("Foreground")?.Value);
 
         var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/Styles/SetupWizard.axaml"));
-        var heroStyle = GetStyleSetters(styles, "Border.wizard-hero-badge");
-        Assert.Equal("{StaticResource Launcher.Component.Wizard.HeroBadge.Size}", heroStyle["Width"]);
-        Assert.Equal("{StaticResource Launcher.Component.Wizard.HeroBadge.Size}", heroStyle["Height"]);
-        Assert.Equal("{StaticResource Launcher.Radius.Full}", heroStyle["CornerRadius"]);
-        Assert.Equal("{DynamicResource Launcher.Color.Success.Soft}", heroStyle["Background"]);
-        Assert.Equal("Center", heroStyle["HorizontalAlignment"]);
+        var badgeStyle = GetStyleSetters(styles, "Border.wizard-context-icon");
+        Assert.Equal(
+            "{StaticResource Launcher.Component.Wizard.Context.Icon.Size}",
+            badgeStyle["Width"]);
+        Assert.Equal(
+            "{StaticResource Launcher.Component.Wizard.Context.Icon.Size}",
+            badgeStyle["Height"]);
+        Assert.Equal("{StaticResource Launcher.Radius.Full}", badgeStyle["CornerRadius"]);
+        Assert.Equal("{DynamicResource Launcher.Color.Primary.Soft}", badgeStyle["Background"]);
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Success.Soft}",
+            GetStyleSetters(styles, "Border.wizard-context-icon.success")["Background"]);
         Assert.DoesNotContain(
             styles.Descendants().Where(element => element.Name.LocalName == "Style"),
-            style => style.Attribute("Selector")?.Value?.Contains("wizard-complete") == true);
+            style => style.Attribute("Selector")?.Value?.Contains("wizard-complete") == true
+                || style.Attribute("Selector")?.Value?.Contains("wizard-hero-badge") == true);
     }
 
     [Fact]
     public void SetupWizard_Review_UsesIconSummaryRows()
     {
-        // 复核页重设计：摘要 = 图标摘要行（图标 chip + 标签/值两行 + 尾部编辑图标钮），
+        // 复核页：摘要 = 图标摘要行（图标 chip + 标签/值两行 + 尾部「修改」文本钮），
         // 行间 Dialog.Section.Divider 发丝线；info-strip 着色卡不再承载摘要。
         var overlay = XDocument.Load(TestRepository.FromPresentationRoot("Views/SetupWizardOverlay.axaml"));
         var xNamespace = overlay.Root?.GetNamespaceOfPrefix("x");
@@ -325,8 +584,7 @@ public sealed partial class UiStyleContractTests
         var reviewStep = overlay
             .Descendants()
             .Single(element =>
-                element.Name.LocalName == "StackPanel"
-                && element.Attribute(xNamespace + "Name")?.Value == "WizardStep4");
+                element.Attribute(xNamespace + "Name")?.Value == "WizardStep5");
         var reviewRows = reviewStep
             .Descendants()
             .Where(element =>
@@ -342,7 +600,7 @@ public sealed partial class UiStyleContractTests
             .Elements()
             .Where(element =>
                 element.Name.LocalName == "Border"
-                && HasClass(element, "wizard-summary-divider"))
+                && HasClass(element, "wizard-divider"))
             .ToList();
 
         Assert.Equal(4, reviewRows.Count);
@@ -352,25 +610,25 @@ public sealed partial class UiStyleContractTests
             element => Assert.True(
                 element.Name.LocalName == "Grid" && HasClass(element, "wizard-summary-row")),
             element => Assert.True(
-                element.Name.LocalName == "Border" && HasClass(element, "wizard-summary-divider")),
+                element.Name.LocalName == "Border" && HasClass(element, "wizard-divider")),
             element => Assert.True(
                 element.Name.LocalName == "Grid" && HasClass(element, "wizard-summary-row")),
             element => Assert.True(
-                element.Name.LocalName == "Border" && HasClass(element, "wizard-summary-divider")),
+                element.Name.LocalName == "Border" && HasClass(element, "wizard-divider")),
             element => Assert.True(
                 element.Name.LocalName == "Grid" && HasClass(element, "wizard-summary-row")),
             element => Assert.True(
-                element.Name.LocalName == "Border" && HasClass(element, "wizard-summary-divider")),
+                element.Name.LocalName == "Border" && HasClass(element, "wizard-divider")),
             element => Assert.True(
                 element.Name.LocalName == "Grid" && HasClass(element, "wizard-summary-row")));
 
-        // 行序即回跳步序：语言(0) → 下载源(2) → 路径(1) → 代理(3)，与无头测试一致。
+        // 行序即回跳步序：语言(0) → 下载源(3) → 路径(2) → 代理(4)，与无头测试一致。
         var expectedRows = new[]
         {
-            (LabelKey: "setupWizardLanguage", ValueBinding: "{Binding Dialogs.SetupWizard.LanguageDisplayName}", TargetStep: "0"),
-            (LabelKey: "setupWizardDownloadSource", ValueBinding: "{Binding Dialogs.SetupWizard.DownloadSourceDisplayName}", TargetStep: "2"),
-            (LabelKey: "setupWizardGamePath", ValueBinding: "{Binding Dialogs.SetupWizard.GamePathDisplay}", TargetStep: "1"),
-            (LabelKey: "setupWizardProxy", ValueBinding: "{Binding Dialogs.SetupWizard.ProxyDisplayName}", TargetStep: "3"),
+            (LabelKey: "setupWizardLanguage", ValueBinding: "{Binding Dialogs.SetupWizard.LanguageDisplayName}", TargetStep: "0", Icon: "Translate"),
+            (LabelKey: "setupWizardDownloadSource", ValueBinding: "{Binding Dialogs.SetupWizard.DownloadSourceDisplayName}", TargetStep: "3", Icon: "CloudDownload"),
+            (LabelKey: "setupWizardGamePath", ValueBinding: "{Binding Dialogs.SetupWizard.GamePathDisplay}", TargetStep: "2", Icon: "FolderSearch"),
+            (LabelKey: "setupWizardProxy", ValueBinding: "{Binding Dialogs.SetupWizard.ProxyDisplayName}", TargetStep: "4", Icon: "SwapHorizontal"),
         };
         Assert.Equal(expectedRows.Length, reviewRows.Count);
         foreach (var (row, expected) in reviewRows.Zip(expectedRows))
@@ -380,7 +638,8 @@ public sealed partial class UiStyleContractTests
                 && HasClass(element, "wizard-summary-icon"));
             var chipIcon = Assert.Single(chip.Descendants(), element =>
                 element.Name.LocalName == "MaterialIcon");
-            Assert.False(string.IsNullOrEmpty(chipIcon.Attribute("Kind")?.Value));
+            // 摘要行图标与对应步骤的左引导徽章同形：复核页不再给代理行借用安全盾。
+            Assert.Equal(expected.Icon, chipIcon.Attribute("Kind")?.Value);
 
             var text = Assert.Single(row.Elements(), element => element.Name.LocalName == "StackPanel");
             var label = Assert.Single(text.Elements(), element =>
@@ -398,6 +657,15 @@ public sealed partial class UiStyleContractTests
             Assert.Equal(
                 "{Binding Dialogs.SetupWizard.GoToStepCommand}",
                 edit.Attribute("Command")?.Value);
+            var editContent = Assert.Single(edit.Elements(), element =>
+                element.Name.LocalName == "StackPanel"
+                && HasClass(element, "button-content"));
+            Assert.Single(editContent.Elements(), element =>
+                element.Name.LocalName == "MaterialIcon"
+                && element.Attribute("Kind")?.Value == "Pencil");
+            Assert.Single(editContent.Elements(), element =>
+                element.Name.LocalName == "TextBlock"
+                && element.Attribute("Text")?.Value == "{Binding Shell.I18n[setupWizardEditStep]}");
             var parameter = Assert.Single(edit.Elements(), element =>
                 element.Name.LocalName == "Button.CommandParameter");
             Assert.Equal(expected.TargetStep, parameter.Value);
@@ -427,36 +695,81 @@ public sealed partial class UiStyleContractTests
         Assert.Equal("{StaticResource Launcher.Component.Wizard.Summary.IconChip.Size}", chipStyle["Height"]);
         Assert.Equal("{StaticResource Launcher.Radius.Sm}", chipStyle["CornerRadius"]);
         Assert.Equal("{DynamicResource Launcher.Color.Field.Background}", chipStyle["Background"]);
-        var dividerStyle = GetStyleSetters(styles, "Border.wizard-summary-divider");
+        var dividerStyle = GetStyleSetters(styles, "Border.wizard-divider");
         Assert.Equal("{StaticResource Launcher.Component.Wizard.Divider.Height}", dividerStyle["Height"]);
         Assert.Equal("{DynamicResource Launcher.Color.Dialog.Section.Divider}", dividerStyle["Background"]);
         var editStyle = GetStyleSetters(styles, "Button.wizard-summary-edit");
-        Assert.Equal("{StaticResource Launcher.Control.Height.Setting}", editStyle["Width"]);
         Assert.Equal("{StaticResource Launcher.Control.Height.Setting}", editStyle["Height"]);
+        Assert.Equal("{StaticResource Launcher.Spacing.Thickness.Sm}", editStyle["Padding"]);
+        Assert.DoesNotContain("Width", editStyle.Keys);
         Assert.Equal("{StaticResource Launcher.Color.Transparent}", editStyle["Background"]);
+        Assert.Equal(
+            "{StaticResource Launcher.Typography.FontSize.Body.Sm}",
+            GetStyleSetters(styles, "TextBlock.wizard-summary-edit-label")["FontSize"]);
         Assert.Equal(
             "{DynamicResource Launcher.Color.Content.Row.Hover}",
             GetStyleSetters(styles, "Button.wizard-summary-edit:pointerover")["Background"]);
     }
 
     [Fact]
+    public void SetupWizard_FieldPanels_LabelInputsAndExplainRecheck()
+    {
+        // 样张字段解剖：控件上方标注本地化字段名，语言选择拉伸铺满面板，路径字段补重新检查提示。
+        var overlay = XDocument.Load(TestRepository.FromPresentationRoot("Views/SetupWizardOverlay.axaml"));
+        var xNamespace = overlay.Root?.GetNamespaceOfPrefix("x");
+        Assert.NotNull(xNamespace);
+
+        var languageStep = overlay
+            .Descendants()
+            .Single(element => element.Attribute(xNamespace + "Name")?.Value == "WizardStep0");
+        var languageSelect = Assert.Single(languageStep.Descendants(), element =>
+            element.Name.LocalName == "ComboBox");
+        Assert.Equal("Stretch", languageSelect.Attribute("HorizontalAlignment")?.Value);
+        Assert.Equal(
+            "{Binding Shell.I18n[setupWizardLanguageField]}",
+            languageSelect.Attributes()
+                .Single(attribute => attribute.Name.LocalName == "AutomationProperties.Name")
+                .Value);
+        Assert.Contains(languageStep.Descendants(), element =>
+            element.Name.LocalName == "TextBlock"
+            && HasClass(element, "caption")
+            && element.Attribute("Text")?.Value == "{Binding Shell.I18n[setupWizardLanguageField]}");
+        Assert.Contains(languageStep.Descendants(), element =>
+            element.Name.LocalName == "TextBlock"
+            && HasClass(element, "wizard-step-hint")
+            && element.Attribute("Text")?.Value == "{Binding Shell.I18n[setupWizardLanguageHint]}");
+
+        var pathStep = overlay
+            .Descendants()
+            .Single(element => element.Attribute(xNamespace + "Name")?.Value == "WizardStep2");
+        Assert.Contains(pathStep.Descendants(), element =>
+            element.Name.LocalName == "TextBlock"
+            && HasClass(element, "caption")
+            && element.Attribute("Text")?.Value == "{Binding Shell.I18n[setupWizardGamePathLocation]}");
+        Assert.Contains(pathStep.Descendants(), element =>
+            element.Name.LocalName == "TextBlock"
+            && HasClass(element, "wizard-step-hint")
+            && element.Attribute("Text")?.Value == "{Binding Shell.I18n[setupWizardGamePathRecheckHint]}");
+    }
+
+    [Fact]
     public void SetupWizardGamePath_ShowsStatusWithSemanticStateStyles()
     {
         var overlay = XDocument.Load(TestRepository.FromPresentationRoot("Views/SetupWizardOverlay.axaml"));
-        var gamePathInput = overlay
+        var gamePathPanel = overlay
             .Descendants()
             .Single(element =>
                 element.Name.LocalName == "TextBox"
                 && element.Attribute("Text")?.Value
                     == "{Binding Dialogs.SetupWizard.GamePath, Mode=TwoWay}")
-            .Parent;
-        Assert.NotNull(gamePathInput);
-        // M3 状态行：图标 + 文本承载同一状态，整行随路径为空一起隐藏。
-        var statusRow = gamePathInput
-            .ElementsAfterSelf()
+            .Ancestors()
             .Single(element =>
-                element.Name.LocalName == "StackPanel"
-                && HasClass(element, "wizard-status-row"));
+                element.Name.LocalName == "Border"
+                && HasClass(element, "wizard-panel"));
+        // M3 状态行：图标 + 文本承载同一状态，整行随路径为空一起隐藏。
+        var statusRow = Assert.Single(gamePathPanel.Descendants(), element =>
+            element.Name.LocalName == "StackPanel"
+            && HasClass(element, "wizard-status-row"));
         Assert.Equal(
             "{Binding Dialogs.SetupWizard.IsGamePathEmpty, Converter={x:Static BoolConverters.Not}}",
             statusRow.Attribute("IsVisible")?.Value);
@@ -578,13 +891,11 @@ public sealed partial class UiStyleContractTests
         var downloadSourceStep = document
             .Descendants()
             .Single(element =>
-                element.Name.LocalName == "StackPanel"
-                && element.Attribute(xNamespace + "Name")?.Value == "WizardStep2");
+                element.Attribute(xNamespace + "Name")?.Value == "WizardStep3");
         var proxyStep = document
             .Descendants()
             .Single(element =>
-                element.Name.LocalName == "StackPanel"
-                && element.Attribute(xNamespace + "Name")?.Value == "WizardStep3");
+                element.Attribute(xNamespace + "Name")?.Value == "WizardStep4");
         var downloadSourceRadioButtons = downloadSourceStep
             .Descendants()
             .Where(element => element.Name.LocalName == "RadioButton")
@@ -647,6 +958,10 @@ public sealed partial class UiStyleContractTests
         var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/Styles/SetupWizard.axaml"));
         var action = GetStyleSetters(styles, "Button.wizard-action");
         Assert.Equal("{StaticResource Launcher.Component.Button.Theme}", action["Theme"]);
+        // 上一步与下一步同宽：动作带两枚动作共用 100 DIP 最小宽度，任意文案下等高宽。
+        Assert.Equal(
+            "{StaticResource Launcher.Component.Wizard.Action.MinWidth}",
+            action["MinWidth"]);
         Assert.DoesNotContain("Background", action.Keys);
         Assert.DoesNotContain("CornerRadius", action.Keys);
         Assert.Equal("{DynamicResource Launcher.Color.Button.Secondary.Hover}",
@@ -680,5 +995,54 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             "{DynamicResource Launcher.Color.Content.Row.Hover}",
             hover["Background"]);
+        // 选中行取 Primary.Soft 底 + 主色描边，作为单一强调（M3 选中态）。
+        var selected = GetStyleSetters(styles, "RadioButton.wizard-option:checked");
+        Assert.Equal("{DynamicResource Launcher.Color.Primary.Soft}", selected["Background"]);
+        Assert.Equal("{DynamicResource Launcher.Color.Primary.Border}", selected["BorderBrush"]);
+        Assert.Equal("{StaticResource Launcher.Border.Thickness.Default}", selected["BorderThickness"]);
+
+        // 单选圈同步样张：20 圆 + 2 描边，选中换主色并显示 10 圆点；
+        // 自绘模板只服务向导选项行，不继承共享 RadioButton 主题。
+        Assert.Equal("{StaticResource WizardOptionTemplate}", option["Template"]);
+        var xNamespace = styles.Root?.GetNamespaceOfPrefix("x");
+        Assert.NotNull(xNamespace);
+        var optionTemplate = styles
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "ControlTemplate"
+                && element.Attribute(xNamespace + "Key")?.Value == "WizardOptionTemplate");
+        Assert.Equal("RadioButton", optionTemplate.Attribute("TargetType")?.Value);
+        var ring = Assert.Single(optionTemplate.Descendants(), element =>
+            element.Name.LocalName == "Border"
+            && element.Attribute(xNamespace + "Name")?.Value == "WizardRadioRing");
+        Assert.Equal(
+            "{StaticResource Launcher.Component.Wizard.Option.Radio.BorderThickness}",
+            ring.Attribute("BorderThickness")?.Value);
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Field.Border}",
+            ring.Attribute("BorderBrush")?.Value);
+        var ringSlot = ring.Parent!;
+        Assert.Equal(
+            "{StaticResource Launcher.Component.Wizard.Option.Radio.Size}",
+            ringSlot.Attribute("Width")?.Value);
+        Assert.Equal(
+            "{StaticResource Launcher.Component.Wizard.Option.Radio.Size}",
+            ringSlot.Attribute("Height")?.Value);
+        var dot = Assert.Single(optionTemplate.Descendants(), element =>
+            element.Name.LocalName == "Border"
+            && element.Attribute(xNamespace + "Name")?.Value == "WizardRadioDot");
+        Assert.Equal(
+            "{StaticResource Launcher.Component.Wizard.Option.Radio.Dot.Size}",
+            dot.Attribute("Width")?.Value);
+        Assert.Equal(
+            "{StaticResource Launcher.Component.Wizard.Option.Radio.Dot.Size}",
+            dot.Attribute("Height")?.Value);
+        Assert.Equal("False", dot.Attribute("IsVisible")?.Value);
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Primary}",
+            GetStyleSetters(styles, "RadioButton.wizard-option:checked /template/ Border#WizardRadioRing")["BorderBrush"]);
+        Assert.Equal(
+            "True",
+            GetStyleSetters(styles, "RadioButton.wizard-option:checked /template/ Border#WizardRadioDot")["IsVisible"]);
     }
 }

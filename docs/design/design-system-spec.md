@@ -30,7 +30,7 @@
 |---|---|---|
 | `Launcher.Color.*` | M3 scheme 角色（primary/secondary/tertiary + containers + surface/outline/error 族）+ 业务语义色（Success/Warning/Info）+ 主题无关特殊色（Chrome/Overlay/scrim/媒体占位） | `Color.Primary`、`Color.OnPrimary`、`Color.PrimaryContainer`、`Color.Surface`、`Color.Outline`、`Color.Danger`、`Color.Success`、`Color.Overlay.Scrim` |
 | `Launcher.Text.*` | 应用文本专用角色（Primary/Secondary/Body/Link/OnChrome/OnDark/Placeholder 等） | `Text.Primary`、`Text.OnChrome` |
-| `Launcher.Spacing.*` | 间距 0/4/8/12/16/20/24/40 全档（Double，`Spacing.None`=0 为零间距显式档）+ Thickness 全档（`Spacing.Thickness.*`） | `Spacing.Md`、`Spacing.Thickness.Lg` |
+| `Launcher.Spacing.*` | 间距 0/4/8/12/16/20/24/32/40 全档（Double，`Spacing.None`=0 为零间距显式档）+ Thickness 全档（`Spacing.Thickness.*`） | `Spacing.Md`、`Spacing.Thickness.Lg` |
 | `Launcher.Radius.*` | 目标字阶 4/8/12/16（`Xs/Sm/Md/Lg`，含全部四档 token）；28（`Xxl` 或 full）无消费面，暂不落地（ADR-002 只重标四档） | `Radius.Xs`、`Radius.Md` |
 | `Launcher.Typography.*` | M3 角色字阶（Display/Headline/Title/Body/Label × 字号/字重/字距）+ 字体族 | `Typography.FontSize.Body.Md`、`Typography.FontWeight.Strong`、`Typography.FontFamily.Monospace` |
 | `Launcher.Icon.*` | 图标尺寸 16/18/20/22/24 | `Icon.Md` |
@@ -205,7 +205,16 @@
 
 ### 4.4 首次设置向导
 
-设置向导表面上限为 920×480 DIP（2026-11-07 收紧高度，滚动和固定动作区不变）。设置向导已由 [ADR-017](adr/ADR-017-设置向导动效落地与M3界面细化.md) 重设计：模态面板内落地实验台居中单列解剖——进度行（向导标题 + 步骤进度 + 跳过）→ `wizard-step` 单列内容（`wizard-option` 选项行、`wizard-status-row` 图标+文本状态行、复核 hairline 列表、完成态以 Success 徽章与勾号表达，标题使用中性色）→ 动作带并入内容区（`wizard-action` tonal/filled 双型；`DialogSurface.Footer` 不再使用，空动作带由 `RefreshChrome` 折叠）；侧栏导航移除；步骤切换 = 后置代码顺序换页（先淡出后方向滑入），换面时滚动复位。
+设置向导表面为 920×480 DIP（2026-11-07 收紧高度）。2026-11-11 起由 [ADR-059](adr/ADR-059-设置向导统一舞台与双栏解剖.md) 统一解剖，替代 [ADR-017](adr/ADR-017-设置向导动效落地与M3界面细化.md) 的居中单列与 [ADR-058](adr/ADR-058-协议同意并入首次向导并按版本重新征询.md) 修订中的双卡协议版式。
+
+- **五段表面**：全幅头部 → 发丝线 → 正文滚动舞台 → 发丝线 → 全幅动作带，头部与动作带贴表面边缘，留白只由 `Wizard.Header.Padding`、`Wizard.Footer.Height/Padding` 消费。
+- **头部**：向导标题 + 本地化步骤计数（`setupWizardStepProgress`，「第 N 步，共 6 步」）+ 跳过钮 + 六段进度轨；计数与到达段在换面中点由 `ApplyChromeState` 翻转（不绑定 `Step`），协议更新模式（单步）折叠整条进度轨并计数为「第 1 步，共 1 步」。跳过钮是头带的次要逃逸口，取 `wizard-skip` 安静文本钮（静止透明底、Secondary 前景、Body.Sm 文案，悬停/按压铺 `Content.Row.Hover` 并转 Primary），不与标题和主/次动作争层级。
+- **正文舞台**：860 固定舞台 = 300 左引导 + 32 舞台间距 + 528 右面板，六步结构一致，差异仅在右面板。左引导为 56 圆形语义图标（六步依次为翻译、文档、路径检索、云端下载、路由切换、清单勾选，复核页徽章取 Success 底）+ 步骤标题 + 说明；右面板为 Card 表面（内边距 20），承载语言选择、协议阅读器、路径输入与状态行、`wizard-option` 选项行或复核 hairline 摘要行。语言与路径字段在控件上方标注本地化字段名，路径字段补充重新检查提示；复核行编辑入口为 Pencil 图标 + 「修改」文本。步骤纵向拉伸铺满视口，正文留白由右面板的 `Wizard.Body.Margin` 承担。
+- **协议步骤**：左引导追加版次胶囊与语言声明（声明图标顶部对齐说明首行，不随换行整块居中）；右面板为 `AgreementScrollViewer`（唯一滚动区）+ 固定底栏同意项。步骤绑定 `ScrollViewer` 视口高度使文档在有界高度内滚动；滚动提示仅保留为复选框的 `AutomationProperties.HelpText`，勾选门禁仍由滚动到底驱动。文档正文以 `Launcher.Typography.FontFamily.Document` 钉住 CJK 字族，不继承随界面语言切换的拉丁字体栈。同意底栏不铺独立底色（透明，与卡片同表面），只以顶缘发丝线分界——卡片 Border 的圆角不裁剪子元素，不透明底会盖住卡片左右/底边描边与圆角。
+- **动作带**：上一步与下一步/完成同为 `wizard-action`、`MinWidth`=100（贴近中文动作自然宽度，短文案不拉出多余空档），现有四语文案下两枚动作同宽；下一步/完成叠加 `primary-action`，上一步在左、主操作在右。宽度是表面级布局例外，按钮的角色外观仍由共享主题决定。
+- **步骤切换**：沿用 ADR-017 的顺序换页（333ms 对半分、中点换内容与滚动复位、Enter/Exit 曲线、起势帧、±14px 方向滑入、壳层中点翻转）与可中断所有权守卫，仅布局与壳层解剖变更。
+- **配色**：向导打开时按设置页「主题色 = 默认」的方案落色（默认种子、TonalSpot、BrandBlue、明暗由当前主题模式决定：首启取系统默认，协议复核取已保存模式，会话在显示前先落该模式）。首启与协议复核都在完整初始化之前显示，不能沿用进程内残留的系统强调色；落色发生在 `ShowSetupWizard` 置可见之前，避免先闪一帧旧色。
+- **令牌**：舞台宽、左引导宽、引导图标尺寸、头/动作带留白、正文边距、进度轨高度与动作最小宽度均为组件令牌；间距一律取 `Launcher.Spacing` 标度（舞台间距取 `Spacing.Xxxl`=32、进度轨间距 8），面板内边距取 `Spacing.Thickness.Xl`，组件令牌不得进入 `Spacing`/`Padding`。截图基线为 `setup-wizard`、`setup-wizard-agreement`、`setup-wizard-agreement-read-dark-zh`。
 
 ### 4.5 资源面板
 

@@ -28,6 +28,7 @@
 | 判断某项决策为何如此 | [ADR 索引](design/adr/README.md) |
 | 查看当前发现与已接受风险 | [审计台账](../CODEBASE_AUDIT.md) |
 | 本地数据与网络处理 | [隐私政策](../PRIVACY.md) |
+| 使用条件、第三方关系与免责 | [用户协议](../TERMS.md) |
 | 当前版本变化 | [本次发布说明](../CHANGELOG_RELEASE.md) |
 | 源码与第三方许可 | [LICENSE](../LICENSE)、[第三方声明](../THIRD-PARTY-NOTICES.md) |
 

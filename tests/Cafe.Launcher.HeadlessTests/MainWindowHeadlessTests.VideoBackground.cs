@@ -32,6 +32,9 @@ public sealed partial class MainWindowHeadlessTests
         Assert.False(original.ShowStillFrame);
         vm.IsMotionReduced = false;
         context.Window.Show();
+        // Headless posts activation asynchronously; unfocused playback stays paused.
+        Dispatcher.UIThread.RunJobs();
+        Assert.True(context.Window.IsActive);
         Assert.False(original.PlaybackPaused);
         Assert.False(original.ShowStillFrame);
         vm.Background.ApplyBackgroundPresentation(new LauncherSettings
@@ -46,6 +49,8 @@ public sealed partial class MainWindowHeadlessTests
         typeof(Cafe.Launcher.UI.Views.MainWindow).GetMethod("OnVideoBackgroundFirstFrame", BindingFlags.Instance | BindingFlags.NonPublic)!
             .Invoke(context.Window, null);
         Assert.All(context.Window.FindControl<Grid>("ShellRoot")!.Children.OfType<Image>(), image => Assert.False(image.IsVisible));
+        var shellCache = context.Window.FindControl<Grid>("MainContentLayer")!.CacheMode;
+        Assert.NotNull(shellCache);
 
         settings.CustomBackgroundPath = second;
         await vm.Background.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
@@ -53,9 +58,12 @@ public sealed partial class MainWindowHeadlessTests
         Assert.Equal(second, original.Source);
         Assert.All(context.Window.FindControl<Grid>("ShellRoot")!.Children.OfType<Image>(), image => Assert.True(image.IsVisible));
         context.Window.Hide();
+        Dispatcher.UIThread.RunJobs();
+        Assert.False(context.Window.IsActive);
         Assert.True(original.PlaybackPaused);
         Assert.False(original.ShowStillFrame);
         context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
         Assert.False(original.PlaybackPaused);
         context.Window.WindowState = WindowState.Minimized;
         Assert.True(original.PlaybackPaused);
@@ -71,7 +79,8 @@ public sealed partial class MainWindowHeadlessTests
         Assert.Null(original.Source);
         Assert.True(original.PlaybackPaused);
         Assert.All(context.Window.FindControl<Grid>("ShellRoot")!.Children.OfType<Image>(), image => Assert.True(image.IsVisible));
-        Assert.Null(context.Window.FindControl<Grid>("MainContentLayer")!.CacheMode);
+        // 缓存随视频控件存活；切回静态背景不重建全窗口位图缓存。
+        Assert.Same(shellCache, context.Window.FindControl<Grid>("MainContentLayer")!.CacheMode);
 
         settings.CustomBackgroundPath = video;
         await vm.Background.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
@@ -82,6 +91,7 @@ public sealed partial class MainWindowHeadlessTests
         Assert.Null(original.Source);
         context.Window.Close();
         Assert.Null(Current());
+        Assert.Null(context.Window.FindControl<Grid>("MainContentLayer")!.CacheMode);
         Dispatcher.UIThread.RunJobs();
     }
 }

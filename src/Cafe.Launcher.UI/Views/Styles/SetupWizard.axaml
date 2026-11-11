@@ -1,12 +1,133 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <!-- 外壳模式自管留白：内容三行块消费 Panel 正文内边距（视图禁止内联 Padding）。 -->
-    <Style Selector="Border.wizard-body">
-        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Dialog.Panel.Body.Padding}"/>
+    <Styles.Resources>
+        <!-- 样张单选圈：20 圆 + 2 描边，选中换主色并显示 10 圆点。
+             自绘模板让指示圆只服务向导选项行，不继承共享 RadioButton 主题。 -->
+        <ControlTemplate x:Key="WizardOptionTemplate" TargetType="RadioButton">
+            <Border Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="{TemplateBinding CornerRadius}"
+                    Padding="{TemplateBinding Padding}">
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                    <Panel Width="{StaticResource Launcher.Component.Wizard.Option.Radio.Size}"
+                           Height="{StaticResource Launcher.Component.Wizard.Option.Radio.Size}"
+                           VerticalAlignment="Top">
+                        <Border x:Name="WizardRadioRing"
+                                CornerRadius="{StaticResource Launcher.Radius.Full}"
+                                BorderBrush="{DynamicResource Launcher.Color.Field.Border}"
+                                BorderThickness="{StaticResource Launcher.Component.Wizard.Option.Radio.BorderThickness}"/>
+                        <Border x:Name="WizardRadioDot"
+                                Width="{StaticResource Launcher.Component.Wizard.Option.Radio.Dot.Size}"
+                                Height="{StaticResource Launcher.Component.Wizard.Option.Radio.Dot.Size}"
+                                CornerRadius="{StaticResource Launcher.Radius.Full}"
+                                Background="{DynamicResource Launcher.Color.Primary}"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                IsVisible="False"/>
+                    </Panel>
+                    <ContentPresenter Grid.Column="1"
+                                      Content="{TemplateBinding Content}"
+                                      ContentTemplate="{TemplateBinding ContentTemplate}"
+                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                </Grid>
+            </Border>
+        </ControlTemplate>
+    </Styles.Resources>
+    <!-- 向导统一舞台（ADR-059）：全幅头部（标题 + 步骤计数 + 跳过 + 六段进度轨）、
+         300 左引导 + 32 间距 + 528 右面板的双栏舞台、全幅动作带。头部/动作带贴表面边缘，
+         视图侧不自带 Padding/几何。 -->
+    <Style Selector="Border.wizard-header">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Header}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Wizard.Header.Padding}"/>
     </Style>
-    <!-- 向导沿用共享按钮主题；主动作通过 primary-action 选择角色，不再覆盖颜色和轮廓。 -->
+    <Style Selector="Border.wizard-footer">
+        <Setter Property="Height" Value="{StaticResource Launcher.Component.Wizard.Footer.Height}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Wizard.Footer.Padding}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Background}"/>
+    </Style>
+    <!-- 头部跳过钮：与复核页编辑钮同构的安静文本钮——静止透明底、Secondary 前景，
+         悬停/按压铺 Content.Row 状态层并转 Primary；不与标题和主/次动作争层级。 -->
+    <Style Selector="Button.wizard-skip">
+        <Setter Property="Height" Value="{StaticResource Launcher.Control.Height.Setting}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Sm}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
+        <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
+    </Style>
+    <Style Selector="TextBlock.wizard-skip-label">
+        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Sm}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Button.wizard-skip:pointerover">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row.Hover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
+    </Style>
+    <Style Selector="Button.wizard-skip:pressed">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row.Hover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
+    </Style>
+    <!-- 发丝分隔（ADR-041）：头带底缘、动作带顶缘、同意底栏顶缘与复核摘要行共用。 -->
+    <Style Selector="Border.wizard-divider">
+        <Setter Property="UseLayoutRounding" Value="False"/>
+        <Setter Property="Height" Value="{StaticResource Launcher.Component.Wizard.Divider.Height}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Section.Divider}"/>
+    </Style>
+    <!-- 六段进度轨：已到达段取主色，其余为弱底；到达状态由后置代码随显示步翻转。 -->
+    <Style Selector="Border.wizard-progress-segment">
+        <Setter Property="Height" Value="{StaticResource Launcher.Component.Wizard.Progress.Height}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Full}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Section.Divider}"/>
+    </Style>
+    <Style Selector="Border.wizard-progress-segment.reached">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary}"/>
+    </Style>
+    <!-- 左引导栏：属性图标 + 步骤标题 + 说明，纵向居中；宽度固定，右面板随之对齐。 -->
+    <Style Selector="StackPanel.wizard-context">
+        <Setter Property="Width" Value="{StaticResource Launcher.Component.Wizard.Context.Width}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Spacing" Value="{StaticResource Launcher.Spacing.Lg}"/>
+    </Style>
+    <Style Selector="Border.wizard-context-icon">
+        <Setter Property="Width" Value="{StaticResource Launcher.Component.Wizard.Context.Icon.Size}"/>
+        <Setter Property="Height" Value="{StaticResource Launcher.Component.Wizard.Context.Icon.Size}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Full}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Soft}"/>
+        <Setter Property="HorizontalAlignment" Value="Left"/>
+    </Style>
+    <!-- 完成态徽章与勾选图标共用 Success 家族；色彩不作唯一信号，清单勾选形本身即状态图形。 -->
+    <Style Selector="Border.wizard-context-icon.success">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Success.Soft}"/>
+    </Style>
+    <Style Selector="Border.wizard-panel">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Card.Background}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Xl}"/>
+        <Setter Property="ClipToBounds" Value="True"/>
+    </Style>
+    <!-- 协议面板自管留白：文档阅读器贴边滚动，同意项固定在面板底栏。 -->
+    <Style Selector="Border.wizard-agreement-panel">
+        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
+    </Style>
+    <!-- 同意底栏不自带不透明底：卡片 Border 的圆角不裁剪子元素（子元素渲染在描边之上），
+         铺 Dialog 底色会盖住卡片左右/底边描边与圆角；底栏与正文同取卡片表面，用上方发丝线分界。 -->
+    <Style Selector="Border.wizard-agreement-footer">
+        <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
+    </Style>
+    <!-- 向导沿用共享按钮主题；主动作通过 primary-action 选择角色，不覆盖颜色和轮廓。
+         动作带只有上一步、下一步两枚，最小宽度取 100 以保证任意文案／语言下二者同宽；
+         该值贴近中文动作的自然宽度（约 98），短文案不再被拉出多余空档
+         （ADR-059 的表面级布局例外；角色外观仍由共享主题决定）。 -->
     <Style Selector="Button.wizard-action">
         <Setter Property="Theme" Value="{StaticResource Launcher.Component.Button.Theme}"/>
+        <Setter Property="MinWidth" Value="{StaticResource Launcher.Component.Wizard.Action.MinWidth}"/>
     </Style>
     <Style Selector="Button.wizard-action:not(.primary-action):pointerover">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Hover}"/>
@@ -18,45 +139,77 @@
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
     </Style>
-    <!-- 实验台向导解剖（ADR-017）：步骤标题居中。完成语义由复核页的 Hero 徽章
-         （Success.Soft 底 + Success 勾）承载，标题回归中性——原 wizard-complete
-         Success 标题色已随复核页重设计退场，不得回归。
+    <!-- 步骤标题左对齐承载于引导栏。完成语义由上下文徽章的 Success 底 + 勾承载，
+         标题回归中性——原 wizard-complete Success 标题色已退场，不得回归。
          步骤面板的顺序换页由后置代码驱动，不使用声明式动画类。 -->
     <Style Selector="TextBlock.wizard-step-title">
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Display}"/>
         <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
-        <Setter Property="TextAlignment" Value="Center"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
     </Style>
-    <!-- M3 选项行：单选组按列表行呈现，整行为命中目标，悬停铺状态层圆角底。
+    <Style Selector="TextBlock.wizard-step-hint">
+        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Md}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+    <!-- 版次是同意记录的稳定标识：小号 pill 与正文分离，不抢勾选动作的注意力。 -->
+    <Style Selector="Border.wizard-agreement-version">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Full}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Wizard.Agreement.Version.Padding}"/>
+        <Setter Property="HorizontalAlignment" Value="Left"/>
+    </Style>
+    <!-- M3 选项行：单选组按列表行呈现，整行为命中目标，悬停铺状态层圆角底；
+         选中行取 Primary.Soft + 主色描边（单一强调）。
          选项语义仍由 RadioButton 承载（ADR-014：不用卡片按钮改写语义）。 -->
     <Style Selector="RadioButton.wizard-option">
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="MinHeight" Value="{StaticResource Launcher.Component.Wizard.Option.MinHeight}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Component.Wizard.Option.Padding}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Transparent}"/>
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Template" Value="{StaticResource WizardOptionTemplate}"/>
     </Style>
     <Style Selector="RadioButton.wizard-option:pointerover">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row.Hover}"/>
+    </Style>
+    <!-- 按压取次级按钮按压底；选中行不随悬停/按压换色，强调始终是 Primary.Soft。 -->
+    <Style Selector="RadioButton.wizard-option:pressed">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Secondary.Pressed}"/>
+    </Style>
+    <Style Selector="RadioButton.wizard-option:checked">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Soft}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Border}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
+    </Style>
+    <Style Selector="RadioButton.wizard-option:checked:pointerover">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Soft}"/>
+    </Style>
+    <Style Selector="RadioButton.wizard-option:checked:pressed">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Soft}"/>
+    </Style>
+    <Style Selector="RadioButton.wizard-option:checked /template/ Border#WizardRadioRing">
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary}"/>
+    </Style>
+    <Style Selector="RadioButton.wizard-option:checked /template/ Border#WizardRadioDot">
+        <Setter Property="IsVisible" Value="True"/>
     </Style>
     <!-- §8: 选项行经键盘聚焦时铺 token 焦点环（根 Border 承载描边，与导航列表行同配方）。 -->
     <Style Selector="RadioButton.wizard-option:focus-visible">
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
     </Style>
-    <!-- 复核页完成 Hero 徽章：整圆（Radius.Full），Success.Soft 底承载完成语义
-         （徽章与勾共用 Success 家族，色彩不作唯一信号——勾形本身即状态图形）。 -->
-    <Style Selector="Border.wizard-hero-badge">
-        <Setter Property="Width" Value="{StaticResource Launcher.Component.Wizard.HeroBadge.Size}"/>
-        <Setter Property="Height" Value="{StaticResource Launcher.Component.Wizard.HeroBadge.Size}"/>
-        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Full}"/>
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Success.Soft}"/>
-        <Setter Property="HorizontalAlignment" Value="Center"/>
+    <!-- 对话框压顶时向导整体失活（根节点绑定 IsSetupWizardInteractive），
+         自绘模板没有 Fluent 的禁用外观，按状态层统一降透明。 -->
+    <Style Selector="RadioButton.wizard-option:disabled">
+        <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
     </Style>
-    <!-- 复核页图标摘要行（2026-09 重设计）：语义图标 chip（Field.Background 底）+
-         标签/值两行 + 尾部编辑图标钮；行间发丝线取 Dialog.Section.Divider
+    <!-- 复核页图标摘要行：语义图标 chip（Field.Background 底）+
+         标签/值两行 + 尾部 Pencil + 「修改」文本钮；行间发丝线取 Dialog.Section.Divider
          （弱于 Card.Border 的一阶，ADR-041），不再用 info-strip 着色卡承载摘要。 -->
     <Style Selector="Grid.wizard-summary-row">
         <Setter Property="MinHeight" Value="{StaticResource Launcher.Component.Wizard.Summary.Row.MinHeight}"/>
@@ -68,17 +221,11 @@
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Field.Background}"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
-    <Style Selector="Border.wizard-summary-divider">
-            <Setter Property="UseLayoutRounding" Value="False"/>
-        <Setter Property="Height" Value="{StaticResource Launcher.Component.Wizard.Divider.Height}"/>
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Section.Divider}"/>
-    </Style>
-    <!-- 尾部编辑钮：安静图标钮——静止透明底、悬停/按压铺 Content.Row 状态层，
-         前景 Secondary 起步、交互转 Primary；几何取 Control.Height.Setting 方形。 -->
+    <!-- 尾部编辑钮：铅笔 + 文案的安静文本钮——静止透明底、悬停/按压铺 Content.Row
+         状态层，前景 Secondary 起步、交互转 Primary。 -->
     <Style Selector="Button.wizard-summary-edit">
-        <Setter Property="Width" Value="{StaticResource Launcher.Control.Height.Setting}"/>
         <Setter Property="Height" Value="{StaticResource Launcher.Control.Height.Setting}"/>
-        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Sm}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
         <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
@@ -86,6 +233,10 @@
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
+    </Style>
+    <Style Selector="TextBlock.wizard-summary-edit-label">
+        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Sm}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="Button.wizard-summary-edit:pointerover">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row.Hover}"/>

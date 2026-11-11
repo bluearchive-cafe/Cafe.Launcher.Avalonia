@@ -2,7 +2,7 @@ param(
     [string]$VideoPath,
     [string]$LibMpvPath,
     [string]$OutputDirectory,
-    [ValidateSet('Video', 'Blank', 'Finish', 'ReuseSurface', 'Production')]
+    [ValidateSet('Video', 'Blank', 'Pattern', 'Finish', 'ReuseSurface', 'Production')]
     [string]$ProbeMode = 'Video',
     [ValidateRange(0, 3600)]
     [int]$GpuSampleSeconds = 0,

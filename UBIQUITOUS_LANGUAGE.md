@@ -67,6 +67,7 @@
 | **Game starting** | The session-status state after launch is requested and before the game is confirmed running. | Launching |
 | **Game running** | The session-status state after the game process family is confirmed present. | Playing |
 | **Game exited** | The session-status state after the game process family is confirmed absent. | Closed |
+| **User Agreement and Privacy Policy** | The legal documents accepted in the setup wizard and re-presented when their version changes; the Chinese versions are authoritative. | Terms of service, EULA, privacy notice |
 
 ### Proxy modes
 
@@ -109,6 +110,7 @@
 | Game starting | 游戏启动中 | 遊戲啟動中 | ゲーム起動中 |
 | Game running | 游戏运行中 | 遊戲執行中 | ゲーム実行中 |
 | Game exited | 游戏已退出 | 遊戲已結束 | ゲームが終了しました |
+| User Agreement and Privacy Policy | 用户协议与隐私政策 | 使用者條款與隱私權政策 | 利用規約とプライバシーポリシー |
 | Automatic system proxy | 自动检测系统代理 | 自動偵測系統代理 | システムプロキシを自動検出 |
 | Direct connection | 直连（不使用代理） | 直連（不使用代理） | 直接接続（プロキシなし） |
 | System proxy (configured first) | 系统代理（优先使用显式配置） | 系統代理（優先使用明確設定） | システムプロキシ（明示設定を優先） |

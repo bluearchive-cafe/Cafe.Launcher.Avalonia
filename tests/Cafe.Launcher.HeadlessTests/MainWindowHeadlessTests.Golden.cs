@@ -185,10 +185,59 @@ public sealed partial class MainWindowHeadlessTests
         PrepareGoldenWindow(context);
         context.Window.Show();
         context.ViewModel.Dialogs.ShowSetupWizard();
+        Dispatcher.UIThread.RunJobs();
         // 向导的「自动」会恢复 DI 创建时捕获的语言，截图仍须钉住英文。
+        // 先让步骤 0 的 ComboBox 完成首次选择绑定，再切语言，避免选择模型初始化回写空值。
         context.ViewModel.Shell.ApplyLanguage(LauncherLanguages.English, hasSnapshot: false);
         Dispatcher.UIThread.RunJobs();
         GoldenScreenshot.Compare(context.Window, "setup-wizard");
+    }
+
+    [AvaloniaFact]
+    public void Golden_SetupWizardAgreement_MatchesBaseline()
+    {
+        using var context = CreateContext();
+        PrepareGoldenWindow(context);
+        context.Window.Show();
+        context.ViewModel.Dialogs.ShowSetupWizard();
+        Dispatcher.UIThread.RunJobs();
+        // 与向导总览同序：先让「自动」完成首次绑定，再钉住英文，最后进入协议页。
+        // 语言必须早于文档首次排版，否则 Markdown 表面的字体族会停在「自动」时的
+        // 系统语言上，截图取决于本机区域设置与重排时机。
+        context.ViewModel.Shell.ApplyLanguage(LauncherLanguages.English, hasSnapshot: false);
+        Dispatcher.UIThread.RunJobs();
+        context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+        GoldenScreenshot.Compare(context.Window, "setup-wizard-agreement");
+    }
+
+    [AvaloniaFact]
+    public void Golden_SetupWizardAgreementReadDarkChinese_MatchesBaseline()
+    {
+        using var variant = ThemeVariantSnapshot.Capture(ThemeVariant.Dark);
+        using var context = CreateContext();
+        PrepareGoldenWindow(context, ThemeVariant.Dark);
+        context.Window.Show();
+        context.ViewModel.Dialogs.ShowSetupWizard();
+        Dispatcher.UIThread.RunJobs();
+        try
+        {
+            // 向导的语言预览是唯一会把界面切到所选语言的路径；直调 Shell.ApplyLanguage
+            // 会在向导语言仍为「自动」时被下一次刷新覆盖回系统语言。先切语言再进入
+            // 协议页，文档按中文排版，不受宿主区域设置影响。
+            context.ViewModel.Dialogs.SetupWizard.Language = LauncherLanguages.SimplifiedChinese;
+            context.Provider.GetRequiredService<ThemeApplier>().ApplyScheme(Color.Parse("#FF2E7DF6"), isDark: true);
+            Dispatcher.UIThread.RunJobs();
+            context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
+            context.ViewModel.Dialogs.SetupWizard.MarkAgreementRead();
+            context.ViewModel.Dialogs.SetupWizard.IsAgreementAccepted = true;
+            Dispatcher.UIThread.RunJobs();
+            GoldenScreenshot.Compare(context.Window, "setup-wizard-agreement-read-dark-zh");
+        }
+        finally
+        {
+            context.ViewModel.Shell.ApplyLanguage(LauncherLanguages.English, hasSnapshot: false);
+        }
     }
 
     /// <summary>

@@ -18,7 +18,7 @@ A community desktop launcher for Blue Archive JP, built with .NET 10 and Avaloni
 [Download](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases) | [User documentation](https://docs.bluearchive.cafe/en/cafe-launcher/) | [FAQ](https://docs.bluearchive.cafe/en/cafe-launcher/faq) | [Report a problem](https://docs.bluearchive.cafe/en/cafe-launcher/feedback)
 
 > [!IMPORTANT]
-> This community project is not affiliated with Nexon, Nexon Games, Yostar, or the official Blue Archive team. Read the [privacy policy (Chinese)](PRIVACY.md) before use.
+> This community project is not affiliated with Nexon, Nexon Games, Yostar, or the official Blue Archive team. Read the [user agreement (Chinese)](TERMS.md) and [privacy policy (Chinese)](PRIVACY.md) before use.
 
 ![Cafe Launcher key visual](docs/assets/key-visual.png)
 

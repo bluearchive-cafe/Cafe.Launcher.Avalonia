@@ -1,4 +1,6 @@
 using System.Text.Json;
+using Avalonia;
+using Avalonia.Styling;
 using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services;
@@ -121,6 +123,43 @@ public sealed class LauncherPresentationSessionTests
 
         session.ShowWindow();
         session.AttachStartupBehavior(firstLaunch: false, launchGameRequested: false, TestContext.Current.CancellationToken);
+    }
+
+    [AvaloniaFact]
+    public async Task Startup_WhenTheSavedAgreementVersionIsStale_ShowsOnlyTheAgreementStep()
+    {
+        using var directory = TestDirectory.Create();
+        using var provider = HeadlessTestHost.CreateServiceProvider(directory);
+        using var theme = ThemeVariantSnapshot.Capture(ThemeVariant.Light);
+        var writer = provider.GetRequiredService<ISavedSettingsWriter>();
+        var saved = LauncherSettings.CreateDefaults();
+        saved.Language = LauncherLanguages.Japanese;
+        saved.ThemeMode = ThemeModes.Dark;
+        saved.AcceptedAgreementVersion = "2020-01-01";
+
+        await writer.ReplaceAsync(saved);
+
+        var session = provider.GetRequiredService<LauncherPresentationSession>();
+        var window = session.CreateMainWindow();
+        session.AttachStartupBehavior(firstLaunch: false, launchGameRequested: false, TestContext.Current.CancellationToken);
+        window.Show();
+
+        var viewModel = provider.GetRequiredService<MainWindowViewModel>();
+        await HeadlessTestHost.WaitUntilAsync(
+            () => viewModel.Dialogs.IsSetupWizardVisible,
+            TimeSpan.FromSeconds(5),
+            "协议版本过期时未在预算内显示重新征询。");
+
+        var wizard = viewModel.Dialogs.SetupWizard;
+        Assert.True(wizard.IsConsentUpdateMode);
+        Assert.Equal(1, wizard.Step);
+        Assert.True(wizard.IsLastStep);
+        Assert.False(wizard.CanSkip);
+        Assert.False(wizard.CanGoPrevious);
+        Assert.Equal("ステップ 1 / 1", wizard.StepProgress);
+        Assert.Equal(LauncherLanguages.Japanese, wizard.Language);
+        // 复核向导沿用已保存明暗，而不是完整初始化前的进程内默认变体。
+        Assert.Equal(ThemeVariant.Dark, Application.Current!.RequestedThemeVariant);
     }
 
     [AvaloniaFact]

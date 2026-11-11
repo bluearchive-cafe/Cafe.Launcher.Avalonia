@@ -86,11 +86,13 @@
 - 关闭按钮命中区 ≥36px（`Launcher.Control.Height.Setting`）；图标 16px。
 - 严重性四色（成功/警告/错误/信息）与系列卡对比度 ≥3:1（契约测试锁定）。
 
-### 3.5 设置向导（ADR-017）
-- 模态 `DialogSurface`（920×480）内实验台居中单列解剖：进度行（向导标题 + `StepProgress` caption + 跳过钮）→ 居中单列内容（`wizard-step` ×5，标题 22px 居中，`Wizard.Content.MaxWidth` 520）→ 动作行并入内容区（三行块消费 `Dialog.Panel.Body.Padding`：上一步 tonal 底色、下一步·完成 filled，均 `wizard-action`）。
-- 下载源/代理选项 = `wizard-option` 单选列表行（最小行高 56、整行等宽拉伸命中、悬停状态层、可见选中态、圆圈左缘跨行对齐）；路径状态 = `wizard-status-row`（图标 + 语义色文本，色彩非唯一信号）；复核 = `wizard-review-row` + hairline 分隔；语言 ComboBox 走 `ComboBox.setting-control` Field 形态（宽 280）。
-- 完成确认态：最后一步（复核）即完成态，中性标题配 Success 徽章和勾号，Footer 切"完成"，无庆祝动画、不缩放。
-- 动效（ADR-016/017）：步骤切换 = 顺序换页——空间档 333ms 对半分：旧内容 166.5ms 加速淡出（禁命中）→ 中点换内容并复位滚动、壳层（步骤进度文本 + 动作钮可见性）同帧随显示步翻转 → 起势帧渲染入场 pose（消化首次布局）→ 新内容 166.5ms 减速淡入 + ±14px 方向滑入（透明度与位移同批 `DoubleTransition`，收尾留缓冲再结算）；快速连点最新状态生效；外壳遮罩 Fast 淡入、表面单次进出场；降动效瞬切换面并定格。
+### 3.5 设置向导（ADR-059）
+- 模态 `DialogSurface`（920×480）内五段表面：全幅头部（标题 + `setupWizardStepProgress` 计数 + `wizard-skip` 跳过 + 六段进度轨）→ 发丝线 → 滚动正文舞台 → 发丝线 → 全幅动作带（`wizard-action`：上一步在左，下一步·完成在右，`MinWidth` 100，主操作叠 `primary-action`）。头部与动作带贴表面边缘，留白只由样式 token 承担。
+- 正文舞台 = 860 固定宽（300 左引导 + 32 间距 + 528 右面板），六步共用同一结构，仅右面板随步骤变化。左引导 = 56 圆形语义图标 + 步骤标题 + 说明；右面板为 `wizard-panel` Card，承载语言选择、协议阅读器、路径输入与状态行、`wizard-option` 选项行或复核摘要行；协议步面板自管留白，读者区独占滚动。
+- 下载源/代理选项 = `wizard-option` 单选列表行（最小行高 64、整行等宽拉伸命中、悬停/按压/禁用/焦点态齐备、选中取 Primary.Soft + 主色描边、自绘 20 圆单选圈左缘跨行对齐）；路径状态 = `wizard-status-row`（图标 + 语义色文本，色彩非唯一信号）；语言与路径字段在控件上方标注字段名；复核 = `wizard-summary-row` + hairline 分隔 + Pencil「修改」，最后一步 Footer 切「完成」。
+- 协议步骤：左引导追加版次胶囊与语言声明；`AgreementScrollViewer` 为唯一滚动区，同意项固定在面板底栏，滚动提示仅保留为 `AutomationProperties.HelpText`，勾选门禁由滚动到底驱动。
+- 完成确认态：最后一步（复核）即完成态，中性标题配 Success 徽章和勾号，无庆祝动画、不缩放。
+- 动效（ADR-016/017/059）：步骤切换 = 顺序换页——空间档 333ms 对半分：旧内容 166.5ms 加速淡出（禁命中）→ 中点换内容并复位滚动、壳层（步骤进度文本、进度轨到达段 + 动作钮可见性）同帧随显示步翻转 → 起势帧渲染入场 pose（消化首次布局）→ 新内容 166.5ms 减速淡入 + ±14px 方向滑入（透明度与位移同批 `DoubleTransition`，收尾留缓冲再结算）；快速连点最新状态生效；外壳遮罩 Fast 淡入、表面单次进出场；降动效瞬切换面并定格。
 
 ### 3.6 诊断/日志（Q3 例外声明）
 - 仅 token 兼容；列表维持 Fluent 基础模板；不做 M3 视觉重设计。

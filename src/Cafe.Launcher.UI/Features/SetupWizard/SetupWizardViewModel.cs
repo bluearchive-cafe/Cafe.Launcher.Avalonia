@@ -9,6 +9,7 @@ using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.UI.ViewModels;
 using Cafe.Launcher.Core;
+using Cafe.Launcher.Core.Constants;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Linq;
@@ -23,7 +24,10 @@ namespace Cafe.Launcher.UI.Features.SetupWizard;
 /// </summary>
 internal partial class SetupWizardViewModel : ViewModelBase, IModalContentViewModel, IDisposable, ILanguageAwarePresentation
 {
-    private const int StepCount = 5;
+    private const int StepCount = 6;
+    private const int AgreementStep = 1;
+    private const int GamePathStep = 2;
+    private const int ReviewStep = 5;
 
     // 路径文本框 TwoWay 绑定下每个字符都会触发刷新；全量状态读取 + 写探测
     // 对 UNC/慢速介质是真实磁盘 IO，按此窗口防抖合并连续击键。
@@ -40,6 +44,8 @@ internal partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMo
     private CancellationTokenSource? gamePathStatusCancellationTokenSource;
     private readonly LatestRefresh gamePathStatusDebounce = new();
     private int gamePathStatusVersion;
+    private LauncherSettings? baselineSettings;
+    private string? agreementMarkdown;
 
     /// <summary>
     /// Creates a setup wizard with defaults aligned to <see cref="LauncherSettings.CreateDefaults"/>.
@@ -80,14 +86,17 @@ internal partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMo
     [NotifyPropertyChangedFor(nameof(CanGoNext))]
     [NotifyPropertyChangedFor(nameof(CanGoPrevious))]
     [NotifyPropertyChangedFor(nameof(StepProgress))]
+    [NotifyPropertyChangedFor(nameof(IsAgreementStep))]
     [NotifyPropertyChangedFor(nameof(IsStep1))]
     [NotifyPropertyChangedFor(nameof(IsStep2))]
     [NotifyPropertyChangedFor(nameof(IsStep3))]
+    [NotifyPropertyChangedFor(nameof(IsStep4))]
+    [NotifyPropertyChangedFor(nameof(IsStep5))]
     private int step;
 
     partial void OnStepChanged(int value)
     {
-        if (value == 1 && !hasInitializedGamePath)
+        if (value == GamePathStep && !hasInitializedGamePath)
         {
             hasInitializedGamePath = true;
             if (string.IsNullOrWhiteSpace(GamePath))
@@ -96,28 +105,74 @@ internal partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMo
             }
         }
 
-        if (value == 1)
+        if (value == GamePathStep)
         {
             RefreshGamePathStatus();
         }
     }
 
     public bool IsFirstStep => Step == 0;
-    public bool IsLastStep => Step == 4;
+    public bool IsLastStep => IsConsentUpdateMode ? Step == AgreementStep : Step == ReviewStep;
+    public bool IsAgreementStep => Step == AgreementStep;
     public bool IsStep1 => Step == 1;
     public bool IsStep2 => Step == 2;
     public bool IsStep3 => Step == 3;
+    public bool IsStep4 => Step == 4;
+    public bool IsStep5 => Step == 5;
+
+    /// <summary>
+    /// 协议更新后重新征询时只保留协议步骤，完成即写回原设置；
+    /// 此时不显示进度、上一步与跳过。
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsLastStep))]
+    [NotifyPropertyChangedFor(nameof(CanGoPrevious))]
+    [NotifyPropertyChangedFor(nameof(CanSkip))]
+    [NotifyPropertyChangedFor(nameof(StepProgress))]
+    private bool isConsentUpdateMode;
 
     /// <summary>Gets the current step position for the wizard header.</summary>
-    public string StepProgress => $"{Step + 1} / {StepCount}";
+    public string StepProgress => IsConsentUpdateMode
+        ? localizer.F(LocalizationKeys.SetupWizardStepProgress, 1, 1)
+        : localizer.F(LocalizationKeys.SetupWizardStepProgress, Step + 1, StepCount);
 
     public bool CanGoNext => Step switch
     {
-        1 => IsGamePathReady,
+        AgreementStep => IsAgreementAccepted,
+        GamePathStep => IsGamePathReady,
         _ => true
     };
 
-    public bool CanGoPrevious => Step > 0;
+    public bool CanGoPrevious => !IsConsentUpdateMode && Step > 0;
+
+    /// <summary>Gets whether the skip command may be used; consent must be accepted first.</summary>
+    public bool CanSkip => IsAgreementAccepted && !IsConsentUpdateMode;
+
+    // ── Agreement ──────────────────────────────────────────────────
+
+    [ObservableProperty]
+    private bool hasReadAgreement;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanGoNext))]
+    [NotifyPropertyChangedFor(nameof(CanSkip))]
+    private bool isAgreementAccepted;
+
+    /// <summary>Gets the embedded agreement and privacy text shown in the wizard.</summary>
+    public string AgreementMarkdown => agreementMarkdown ??= AgreementDocuments.Load();
+
+    /// <summary>Gets the accepted agreement version caption.</summary>
+    public string AgreementVersionText =>
+        localizer.F(LocalizationKeys.AgreementVersion, LauncherAgreement.CurrentVersion);
+
+    /// <summary>Enables the agreement checkbox once the user has reached the end of the documents.</summary>
+    public void MarkAgreementRead()
+    {
+        if (!HasReadAgreement)
+        {
+            HasReadAgreement = true;
+        }
+    }
 
     // ── Settings ──────────────────────────────────────────────────
 
@@ -248,10 +303,13 @@ internal partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMo
 
     // ── Commands ───────────────────────────────────────────────────
 
+    /// <summary>Raised when the user closes the wizard before accepting the agreement; the host must exit.</summary>
+    public event Action? AgreementExitRequested;
+
     [RelayCommand]
     private void Next()
     {
-        if (Step >= 4) return;
+        if (IsConsentUpdateMode || Step >= ReviewStep) return;
         if (!CanGoNext) return;
         Step++;
         if (IsLastStep)
@@ -263,20 +321,26 @@ internal partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMo
     [RelayCommand]
     private void Previous()
     {
-        if (Step <= 0) return;
+        if (IsConsentUpdateMode || Step <= 0) return;
         Step--;
     }
 
     [RelayCommand]
     private async Task CompleteAsync()
     {
+        // 协议是完成向导的前置条件；重新征询模式下协议步骤同时是末步，也必须先勾选。
+        if (!IsAgreementAccepted)
+        {
+            return;
+        }
+
         await AsyncEvent.InvokeSequentiallyAsync(SettingsApplied, BuildSettings());
     }
 
     [RelayCommand]
     private void GoToStep(int targetStep)
     {
-        if (targetStep < 0 || targetStep >= StepCount || targetStep > Step)
+        if (IsConsentUpdateMode || targetStep < 0 || targetStep >= StepCount || targetStep > Step)
         {
             return;
         }
@@ -287,7 +351,16 @@ internal partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMo
     [RelayCommand]
     private async Task SkipAsync()
     {
-        await AsyncEvent.InvokeSequentiallyAsync(SettingsApplied, LauncherSettings.CreateDefaults(buildIdentity));
+        // 未同意协议时跳过等于绕过门禁：直接退出，绝不以默认设置继续。
+        if (!IsAgreementAccepted || IsConsentUpdateMode)
+        {
+            AgreementExitRequested?.Invoke();
+            return;
+        }
+
+        var settings = baselineSettings?.DeepClone() ?? LauncherSettings.CreateDefaults(buildIdentity);
+        settings.AcceptedAgreementVersion = LauncherAgreement.CurrentVersion;
+        await AsyncEvent.InvokeSequentiallyAsync(SettingsApplied, settings);
     }
 
     [RelayCommand]
@@ -450,13 +523,54 @@ internal partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMo
 
     private LauncherSettings BuildSettings()
     {
+        if (IsConsentUpdateMode)
+        {
+            // 重新征询只更新协议版本；其余设置保持落盘原值，不经过任何步骤字段的归一化。
+            var consentSettings = baselineSettings!.DeepClone();
+            consentSettings.AcceptedAgreementVersion = LauncherAgreement.CurrentVersion;
+            return consentSettings;
+        }
+
         var normalizedPath = gameInstallationPath.NormalizeGamePath(GamePath);
-        var settings = LauncherSettings.CreateDefaults(buildIdentity);
+        var settings = baselineSettings?.DeepClone() ?? LauncherSettings.CreateDefaults(buildIdentity);
         settings.Language = Language;
         settings.PatchUrlGroup = PatchUrlGroup;
         settings.GamePath = normalizedPath;
         settings.ProxyMode = ProxyMode;
+        settings.AcceptedAgreementVersion = LauncherAgreement.CurrentVersion;
         return settings;
+    }
+
+    /// <summary>Prefills the wizard from saved settings instead of defaults.</summary>
+    public void LoadFrom(LauncherSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        baselineSettings = settings.DeepClone();
+        Language = settings.Language;
+        PatchUrlGroup = settings.PatchUrlGroup;
+        GamePath = settings.GamePath;
+        ProxyMode = settings.ProxyMode;
+    }
+
+    /// <summary>
+    /// Prepares the wizard for re-accepting an updated agreement: saved settings are kept as the
+    /// baseline, only the agreement step is shown, and completing writes the new version back.
+    /// </summary>
+    public void PrepareForAgreementUpdate(LauncherSettings settings)
+    {
+        LoadFrom(settings);
+        IsAgreementAccepted = false;
+        HasReadAgreement = false;
+        IsConsentUpdateMode = true;
+        Step = AgreementStep;
+        RefreshDownloadSources();
+    }
+
+    /// <summary>Gets whether saved settings require the user to accept the current agreement version.</summary>
+    public static bool RequiresConsent(LauncherSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        return !LauncherAgreement.IsCurrent(settings.AcceptedAgreementVersion);
     }
 
     private void RefreshSummaryDisplayNames()
@@ -506,6 +620,8 @@ internal partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMo
     {
         OnPropertyChanged(nameof(GamePathStatusText));
         OnPropertyChanged(nameof(GamePathPresentation));
+        OnPropertyChanged(nameof(AgreementVersionText));
+        OnPropertyChanged(nameof(StepProgress));
         RefreshDownloadSources();
         if (IsLastStep)
         {

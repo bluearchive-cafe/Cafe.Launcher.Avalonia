@@ -36,7 +36,12 @@ public sealed class ActionButtonThemeHeadlessTests
             foreach (var button in buttons)
             {
                 Assert.Equal(40, button.Bounds.Height);
-                Assert.Equal(80, button.Bounds.Width);
+                // 向导动作带只有两枚动作，按 ADR-059 取 100 DIP 最小宽度使二者同宽
+                // （贴近中文自然宽度，短文案不被拉长）；角色外观（圆角、字号、
+                // 描边、语义色）仍与其余标准动作一致。
+                Assert.Equal(
+                    button.Classes.Contains("wizard-action") ? 100 : 80,
+                    button.Bounds.Width);
                 Assert.Equal(new CornerRadius(8), button.CornerRadius);
                 Assert.Equal(14, button.FontSize);
                 Assert.Equal(new Thickness(2), button.BorderThickness);

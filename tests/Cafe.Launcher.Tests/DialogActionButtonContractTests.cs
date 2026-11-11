@@ -93,11 +93,12 @@ public sealed class DialogActionButtonContractTests
 
         // ADR-017：向导"上一步"改用 wizard-action tonal 族离开本计数；
         // 向导"下一步/完成"仍为 primary-action + dialog-action，继续受本契约约束。
-        // 复核页重设计：四个文字"修改"钮改为向导自家的安静图标钮（wizard-summary-edit），
-        // 同样离开本计数（31 → 27）。
+        // 复核页重设计：四个「修改」钮改用向导自家的安静文本钮（wizard-summary-edit，
+        // Pencil 图标 + 文本），同样离开本计数（31 → 27）。
         // ADR-037：更新对话框在“就绪待重启”时把主按钮换成重启按钮，两个按钮都在本计数内。
         // 更新说明失败时新增独立的「前往发布页」恢复动作。
-        Assert.Equal(28, actionButtons.Length);
+        // 头带「跳过」降为安静文本钮（wizard-skip），离开本计数（28 → 27）。
+        Assert.Equal(27, actionButtons.Length);
         Assert.All(
             actionButtons,
             button =>

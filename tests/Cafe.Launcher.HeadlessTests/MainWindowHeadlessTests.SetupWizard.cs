@@ -7,10 +7,13 @@ using Avalonia.Data;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
 using Avalonia.Media;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Cafe.Launcher.UI.Constants;
+using Cafe.Launcher.UI.Controls;
 using Cafe.Launcher.UI.Features.SetupWizard;
+using Cafe.Launcher.UI.Helpers;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.UI.ViewModels;
@@ -18,11 +21,134 @@ using Cafe.Launcher.UI.Views;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services;
 using Cafe.Launcher.Core.Constants;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cafe.Launcher.HeadlessTests;
 
 public sealed partial class MainWindowHeadlessTests
 {
+    [AvaloniaFact]
+    public void SetupWizard_AgreementStep_ShowsEmbeddedDocumentsAndGatesCheckbox()
+    {
+        using var context = CreateContext();
+        context.Window.Show();
+        context.ViewModel.Dialogs.ShowSetupWizard();
+        context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+
+        var wizard = context.ViewModel.Dialogs.SetupWizard;
+        Assert.True(wizard.IsAgreementStep);
+
+        var viewer = context.Window.GetVisualDescendants()
+            .OfType<ReleaseNotesMarkdownViewer>()
+            .Single(control => control.IsEffectivelyVisible);
+        Assert.False(string.IsNullOrWhiteSpace(viewer.Markdown));
+        Assert.Contains("用户协议", viewer.Markdown, StringComparison.Ordinal);
+        Assert.Contains("隐私政策", viewer.Markdown, StringComparison.Ordinal);
+
+        var checkbox = context.Window.GetVisualDescendants()
+            .OfType<CheckBox>()
+            .Single(control => AutomationProperties.GetName(control)
+                == context.ViewModel.Shell.I18n["agreementCheckbox"]);
+        Assert.False(checkbox.IsEnabled);
+        Assert.False(GetWizardNextButton(context.Window, context.ViewModel).IsEnabled);
+
+        wizard.MarkAgreementRead();
+        Dispatcher.UIThread.RunJobs();
+        Assert.True(checkbox.IsEnabled);
+
+        checkbox.IsChecked = true;
+        Dispatcher.UIThread.RunJobs();
+        Assert.True(wizard.IsAgreementAccepted);
+        Assert.True(GetWizardNextButton(context.Window, context.ViewModel).IsEnabled);
+    }
+
+    [AvaloniaFact]
+    public void SetupWizard_WhenShown_AppliesSettingsDefaultScheme()
+    {
+        using var variant = ThemeVariantSnapshot.Capture(ThemeVariant.Light);
+        using var context = CreateContext();
+        // 先落一套明显不同的方案，证明配色由向导打开时重落，而不是沿用启动前的残留。
+        context.Provider.GetRequiredService<ThemeApplier>().ApplyScheme(Color.Parse("#00FF00"));
+        context.Window.Show();
+
+        context.ViewModel.Dialogs.ShowSetupWizard();
+        Dispatcher.UIThread.RunJobs();
+
+        var expectedPrimary = MaterialColorMapper.ToAvaloniaColor(
+            MaterialSchemeGenerator.CreateScheme(
+                Color.Parse(LauncherConstants.DefaultThemeColor),
+                ThemeColorVariants.TonalSpot,
+                isDark: false).Primary);
+        var primary = Assert.IsAssignableFrom<ISolidColorBrush>(
+            context.Window.FindResource(context.Window.ActualThemeVariant, "Launcher.Color.Primary"));
+        Assert.Equal(expectedPrimary, primary.Color);
+    }
+
+    [AvaloniaFact]
+    public void SetupWizard_SkipButton_RendersAsQuietTextButton()
+    {
+        using var context = CreateContext();
+        context.Window.Show();
+        context.ViewModel.Dialogs.ShowSetupWizard();
+        // 跳过钮只在同意后出现；这里直接放行同意门禁，验证头带的最终外观。
+        context.ViewModel.Dialogs.SetupWizard.IsAgreementAccepted = true;
+        Dispatcher.UIThread.RunJobs();
+
+        var skip = context.Window.GetVisualDescendants().OfType<Button>()
+            .Single(button => button.Name == "SkipButton");
+        Assert.True(skip.IsEffectivelyVisible);
+
+        var expectedBackground = Assert.IsAssignableFrom<ISolidColorBrush>(
+            context.Window.FindResource(context.Window.ActualThemeVariant, "Launcher.Color.Transparent"));
+        Assert.Equal(
+            expectedBackground.Color,
+            Assert.IsAssignableFrom<ISolidColorBrush>(skip.Background).Color);
+        var secondaryText = Assert.IsAssignableFrom<ISolidColorBrush>(
+            context.Window.FindResource(context.Window.ActualThemeVariant, "Launcher.Text.Secondary"));
+        Assert.Equal(
+            secondaryText.Color,
+            Assert.IsAssignableFrom<ISolidColorBrush>(skip.Foreground).Color);
+
+        // 悬停才铺状态层并把前景提到 Primary；静止态不承载填充底。
+        ((IPseudoClasses)skip.Classes).Set(":pointerover", true);
+        Dispatcher.UIThread.RunJobs();
+        var hoverRow = Assert.IsAssignableFrom<ISolidColorBrush>(
+            context.Window.FindResource(context.Window.ActualThemeVariant, "Launcher.Color.Content.Row.Hover"));
+        Assert.Equal(
+            hoverRow.Color,
+            Assert.IsAssignableFrom<ISolidColorBrush>(skip.Background).Color);
+        var primaryText = Assert.IsAssignableFrom<ISolidColorBrush>(
+            context.Window.FindResource(context.Window.ActualThemeVariant, "Launcher.Text.Primary"));
+        Assert.Equal(
+            primaryText.Color,
+            Assert.IsAssignableFrom<ISolidColorBrush>(skip.Foreground).Color);
+    }
+
+    [AvaloniaFact]
+    public void SetupWizard_AgreementScroll_ReachingBottomEnablesCheckbox()
+    {
+        using var context = CreateContext();
+        context.Window.Show();
+        context.ViewModel.Dialogs.ShowSetupWizard();
+        context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+
+        var wizard = context.ViewModel.Dialogs.SetupWizard;
+        Assert.True(wizard.IsAgreementStep);
+        Assert.False(wizard.HasReadAgreement);
+
+        var scroll = context.Window.GetVisualDescendants().OfType<ScrollViewer>()
+            .Single(control => control.Name == "AgreementScrollViewer");
+        Assert.True(scroll.Extent.Height > scroll.Viewport.Height,
+            "协议正文需在视口内溢出，才能验证“滚动到底”门禁。");
+
+        scroll.Offset = new Vector(0, scroll.Extent.Height);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(wizard.HasReadAgreement);
+    }
+
     [AvaloniaFact]
     public void SetupWizard_InJapaneseAtMinimumWindowSize_KeepsScrollableContentAndNavigationReachable()
     {
@@ -64,10 +190,11 @@ public sealed partial class MainWindowHeadlessTests
         var installationBasePath = Path.Combine(context.Directory.Path, "available-installation");
         context.ViewModel.Dialogs.SetupWizard.GamePath = installationBasePath;
 
-        // Step 0 → 1 detects only the preconfigured test path.
+        AcceptAgreement(context.ViewModel.Dialogs.SetupWizard);
+        context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
         context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
-        Assert.Equal(1, context.ViewModel.Dialogs.SetupWizard.Step);
+        Assert.Equal(2, context.ViewModel.Dialogs.SetupWizard.Step);
         Assert.Equal(installationBasePath, context.ViewModel.Dialogs.SetupWizard.GamePath);
         Assert.True(GetWizardGamePathStatus(context.Window).IsEffectivelyVisible);
 
@@ -104,7 +231,7 @@ public sealed partial class MainWindowHeadlessTests
 
         context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
-        Assert.Equal(1, context.ViewModel.Dialogs.SetupWizard.Step);
+        Assert.Equal(2, context.ViewModel.Dialogs.SetupWizard.Step);
     }
 
     [AvaloniaFact]
@@ -116,6 +243,8 @@ public sealed partial class MainWindowHeadlessTests
 
         context.Window.Show();
         context.ViewModel.Dialogs.ShowSetupWizard();
+        AcceptAgreement(wizard);
+        wizard.NextCommand.Execute(null);
         wizard.NextCommand.Execute(null);
         await WaitForGamePathStatusAsync(wizard, SetupWizardGamePathStatus.AvailableForInstallation);
         // 循环体本身无 await：命令一旦被门控卡住即为死循环，预算兜底快速失败。
@@ -146,7 +275,7 @@ public sealed partial class MainWindowHeadlessTests
         Assert.Equal(4, editButtons.Length);
         Assert.All(editButtons, button => Assert.False(string.IsNullOrWhiteSpace(AutomationProperties.GetName(button))));
 
-        foreach (var (editButton, expectedStep) in editButtons.Zip([0, 2, 1, 3]))
+        foreach (var (editButton, expectedStep) in editButtons.Zip([0, 3, 2, 4]))
         {
             new ButtonAutomationPeer(editButton).Invoke();
             Dispatcher.UIThread.RunJobs();
@@ -162,7 +291,7 @@ public sealed partial class MainWindowHeadlessTests
                     Assert.Fail("向导未在 10 秒预算内推进到最后一步。");
                 }
 
-                if (wizard.IsStep1)
+                if (wizard.IsStep2)
                 {
                     await WaitForGamePathStatusAsync(
                         wizard,
@@ -181,7 +310,7 @@ public sealed partial class MainWindowHeadlessTests
         using var context = CreateContext();
         context.Window.Show();
         context.ViewModel.Dialogs.ShowSetupWizard();
-        context.ViewModel.Dialogs.SetupWizard.Step = 2;
+        context.ViewModel.Dialogs.SetupWizard.Step = 3;
         Dispatcher.UIThread.RunJobs();
 
         var cafe = context.Window.GetVisualDescendants().OfType<RadioButton>().Single(control =>
@@ -234,7 +363,7 @@ public sealed partial class MainWindowHeadlessTests
         using var context = CreateContext();
         context.Window.Show();
         context.ViewModel.Dialogs.ShowSetupWizard();
-        context.ViewModel.Dialogs.SetupWizard.Step = 2;
+        context.ViewModel.Dialogs.SetupWizard.Step = 3;
         Dispatcher.UIThread.RunJobs();
 
         var radios = context.Window.GetVisualDescendants().OfType<RadioButton>()
@@ -248,13 +377,29 @@ public sealed partial class MainWindowHeadlessTests
             radios,
             radio => Assert.Equal(radios[0].Bounds.X, radio.Bounds.X));
 
-        var circleOffsets = radios.Select(radio =>
+        var circles = radios.Select(radio => radio.GetVisualDescendants()
+            .OfType<Border>()
+            .First(child => child.Name == "WizardRadioRing")).ToList();
+        var circleOffsets = radios.Select((radio, index) =>
         {
-            var circle = radio.GetVisualDescendants()
-                .First(child => child.Name == "OuterEllipse");
-            return radio.TranslatePoint(circle.Bounds.Position, radio)!.Value.X;
+            return radio.TranslatePoint(circles[index].Bounds.Position, radio)!.Value.X;
         }).ToList();
         Assert.Equal(circleOffsets[0], circleOffsets[1]);
+
+        // 样张单选圈：20 圆 + 2 描边；选中行显示 10 圆点，未选中隐藏。
+        Assert.All(circles, circle =>
+        {
+            Assert.Equal(new Size(20, 20), circle.Bounds.Size);
+            Assert.Equal(new Thickness(2), circle.BorderThickness);
+        });
+        var dots = radios.Select(radio => radio.GetVisualDescendants()
+            .OfType<Border>()
+            .Single(child => child.Name == "WizardRadioDot")).ToList();
+        radios[1].IsChecked = true;
+        Dispatcher.UIThread.RunJobs();
+        Assert.False(dots[0].IsVisible);
+        Assert.True(dots[1].IsVisible);
+        Assert.Equal(circles[1].Bounds.Center, dots[1].Bounds.Center);
     }
 
     [AvaloniaFact]
@@ -271,12 +416,12 @@ public sealed partial class MainWindowHeadlessTests
         var overlay = context.Window.GetVisualDescendants()
             .First(control => control.Classes.Contains("setup-wizard-overlay"));
         var steps = overlay.GetVisualDescendants()
-            .OfType<StackPanel>()
+            .OfType<Panel>()
             .Where(control => control.Classes.Contains("wizard-step"))
             .ToList();
-        Assert.Equal(5, steps.Count);
+        Assert.Equal(6, steps.Count);
 
-        foreach (var stepIndex in new[] { 3, 1, 4 })
+        foreach (var stepIndex in new[] { 3, 1, 4, 5 })
         {
             context.ViewModel.Dialogs.SetupWizard.Step = stepIndex;
             Dispatcher.UIThread.RunJobs();
@@ -303,12 +448,12 @@ public sealed partial class MainWindowHeadlessTests
         var overlay = context.Window.GetVisualDescendants()
             .First(control => control.Classes.Contains("setup-wizard-overlay"));
         var steps = overlay.GetVisualDescendants()
-            .OfType<StackPanel>()
+            .OfType<Panel>()
             .Where(control => control.Classes.Contains("wizard-step"))
             .ToList();
-        Assert.Equal(5, steps.Count);
+        Assert.Equal(6, steps.Count);
 
-        foreach (var stepIndex in new[] { 2, 0, 4 })
+        foreach (var stepIndex in new[] { 2, 0, 4, 5 })
         {
             await AssertEntranceIsAnimatedAsync(context.ViewModel.Dialogs.SetupWizard, steps, stepIndex);
             var visibleStep = Assert.Single(steps, control => control.IsVisible);
@@ -333,7 +478,7 @@ public sealed partial class MainWindowHeadlessTests
     /// </summary>
     private static async Task AssertEntranceIsAnimatedAsync(
         SetupWizardViewModel wizard,
-        List<StackPanel> steps,
+        List<Panel> steps,
         int stepIndex)
     {
         var sawFade = false;
@@ -386,7 +531,7 @@ public sealed partial class MainWindowHeadlessTests
     }
 
     /// <summary>入场序列（退场对半 + 起势帧 + 入场对半 + 收尾缓冲）由真实帧时钟驱动，给硬性预算防挂死。</summary>
-    private static async Task WaitUntilStepSettledAsync(List<StackPanel> steps, int stepIndex, string phase)
+    private static async Task WaitUntilStepSettledAsync(List<Panel> steps, int stepIndex, string phase)
     {
         var settleDeadline = DateTime.UtcNow.AddSeconds(5);
         while (true)
@@ -434,7 +579,7 @@ public sealed partial class MainWindowHeadlessTests
         Dispatcher.UIThread.RunJobs();
         Assert.True(scroll.Offset.Y > 0, "测试前置：内容需在压缩视口内溢出以产生非零滚动偏移。");
 
-        context.ViewModel.Dialogs.SetupWizard.Step = 4;
+        context.ViewModel.Dialogs.SetupWizard.Step = 5;
         Dispatcher.UIThread.RunJobs();
 
         Assert.Equal(0d, scroll.Offset.Y);
@@ -455,6 +600,8 @@ public sealed partial class MainWindowHeadlessTests
         context.ViewModel.Dialogs.ShowSetupWizard();
         context.ViewModel.Dialogs.SetupWizard.Language = language;
         Dispatcher.UIThread.RunJobs();
+        AcceptAgreement(context.ViewModel.Dialogs.SetupWizard);
+        context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
         context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
         await WaitForGamePathStatusAsync(
             context.ViewModel.Dialogs.SetupWizard,
@@ -476,7 +623,39 @@ public sealed partial class MainWindowHeadlessTests
         Assert.Equal(
             context.ViewModel.Shell.I18n["setupWizardGamePath"],
             stepHeadline.Text);
-        Assert.Equal("2 / 5", progress.Text);
+        Assert.Equal(
+            string.Format(
+                System.Globalization.CultureInfo.InvariantCulture,
+                context.ViewModel.Shell.I18n["setupWizardStepProgress"],
+                3,
+                6),
+            progress.Text);
+    }
+
+    [AvaloniaTheory]
+    [InlineData(LauncherLanguages.SimplifiedChinese)]
+    [InlineData(LauncherLanguages.Japanese)]
+    public void SetupWizard_WhenLanguageChangesAtLanguageStep_RefreshesStepCounter(string language)
+    {
+        using var context = CreateContext();
+        context.Window.Show();
+        context.ViewModel.Dialogs.ShowSetupWizard();
+        Dispatcher.UIThread.RunJobs();
+
+        // 语言步不翻页；计数文本仍须随语言切换刷新（此前只在换面中点写入）。
+        context.ViewModel.Dialogs.SetupWizard.Language = language;
+        Dispatcher.UIThread.RunJobs();
+
+        var counter = context.Window.GetVisualDescendants().OfType<TextBlock>()
+            .Single(control => control.Name == "StepProgressText");
+        Assert.Equal(
+            string.Format(
+                System.Globalization.CultureInfo.InvariantCulture,
+                context.ViewModel.Shell.I18n["setupWizardStepProgress"],
+                1,
+                6),
+            counter.Text);
+        Assert.Equal(0, context.ViewModel.Dialogs.SetupWizard.Step);
     }
 
     [AvaloniaFact]
@@ -508,6 +687,7 @@ public sealed partial class MainWindowHeadlessTests
         using var context = CreateContext();
         context.Window.Show();
         context.ViewModel.Dialogs.ShowSetupWizard();
+        AcceptAgreement(context.ViewModel.Dialogs.SetupWizard);
         context.ViewModel.TryHandleEscape();
         Dispatcher.UIThread.RunJobs();
 
@@ -532,6 +712,7 @@ public sealed partial class MainWindowHeadlessTests
         };
         context.Window.Show();
         context.ViewModel.Dialogs.ShowSetupWizard();
+        AcceptAgreement(context.ViewModel.Dialogs.SetupWizard);
         Dispatcher.UIThread.RunJobs();
 
         await context.ViewModel.Dialogs.SetupWizard.SkipCommand.ExecuteAsync(null);
@@ -540,6 +721,7 @@ public sealed partial class MainWindowHeadlessTests
         Assert.False(context.ViewModel.Dialogs.IsSetupWizardVisible);
         Assert.NotNull(applied);
         Assert.Equal("auto", applied!.Language);
+        Assert.Equal(LauncherAgreement.CurrentVersion, applied.AcceptedAgreementVersion);
     }
 
     [AvaloniaFact]
@@ -558,13 +740,15 @@ public sealed partial class MainWindowHeadlessTests
         context.ViewModel.Dialogs.ShowSetupWizard();
         Dispatcher.UIThread.RunJobs();
 
-        // Navigate to step 1 (GamePath) and set a path. 使用保证可写的临时目录：
+        // Navigate to step 2 (GamePath) and set a path. 使用保证可写的临时目录：
         // 写探测会把不可写位置判为不可安装，硬编码系统盘路径会随环境翻转结果。
         var gamePath = Path.Combine(
             Path.GetTempPath(),
             Guid.NewGuid().ToString("N"),
             "YostarGames",
             "BlueArchive_JP");
+        AcceptAgreement(context.ViewModel.Dialogs.SetupWizard);
+        context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
         context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
         context.ViewModel.Dialogs.SetupWizard.GamePath = gamePath;
@@ -587,6 +771,13 @@ public sealed partial class MainWindowHeadlessTests
         Assert.False(context.ViewModel.Dialogs.IsSetupWizardVisible);
         Assert.NotNull(applied);
         Assert.Contains(@"BlueArchive_JP", applied!.GamePath);
+        Assert.Equal(LauncherAgreement.CurrentVersion, applied.AcceptedAgreementVersion);
+    }
+
+    private static void AcceptAgreement(SetupWizardViewModel wizard)
+    {
+        wizard.MarkAgreementRead();
+        wizard.IsAgreementAccepted = true;
     }
 
     private static TextBlock GetWizardGamePathStatus(MainWindow window) =>

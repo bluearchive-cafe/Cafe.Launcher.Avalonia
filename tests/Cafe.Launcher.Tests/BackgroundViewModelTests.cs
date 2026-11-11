@@ -99,6 +99,37 @@ public sealed class BackgroundViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task VideoThumbnail_WhenReturningFromStaticBackground_ReusesCapturedFrame()
+    {
+        var path = Path.Combine(tempDir, "retained-thumbnail.mp4");
+        await File.WriteAllBytesAsync(path, []);
+        var requests = 0;
+        using var cache = CreateCache(_ => PngBytes);
+        using var viewModel = new BackgroundViewModel(cache, new LocalDiagnostics(), _ => { },
+            (_, _) => new TestImage(), () => new TestImage(),
+            videoThumbnailLoader: (_, _) =>
+            {
+                requests++;
+                return Task.FromResult<IImage?>(new TestImage());
+            });
+        var video = new LauncherSettings
+        {
+            BackgroundSource = BackgroundSources.Custom,
+            CustomBackgroundPath = path
+        };
+
+        await viewModel.UpdateBackgroundImageAsync(video, null, CancellationToken.None);
+        await viewModel.PendingVideoThumbnail.WaitAsync(TimeSpan.FromSeconds(5));
+        await viewModel.UpdateBackgroundImageAsync(new LauncherSettings(), null, CancellationToken.None);
+        await viewModel.UpdateBackgroundImageAsync(video, null, CancellationToken.None);
+        await viewModel.PendingVideoThumbnail.WaitAsync(TimeSpan.FromSeconds(5));
+
+        // 同一文件指纹在静态／视频之间往返不重新截帧（每次都要另起临时 libmpv）。
+        Assert.Equal(1, requests);
+        Assert.NotNull(viewModel.BackgroundPreviewImage);
+    }
+
+    [Fact]
     public async Task VideoThumbnail_WhenOlderCaptureFinishesLast_DisposesItAndKeepsNewPreview()
     {
         var first = Path.Combine(tempDir, "old.mp4");
@@ -380,8 +411,84 @@ public sealed class BackgroundViewModelTests : IDisposable
             CreateRemoteSnapshot("1"),
             CancellationToken.None);
 
-        Assert.NotSame(initialImage, viewModel.BackgroundImageSource);
+        // 内置图在同一实例生命周期内只解码一次：回落复用的就是构造期那张，
+        // 既不重解码也不交叉淡化（AUD-PERF-009）。
+        Assert.Same(initialImage, viewModel.BackgroundImageSource);
         Assert.IsType<TestImage>(viewModel.BackgroundImageSource);
+        Assert.True(viewModel.HasBackgroundLoadFailure);
+    }
+
+    [Fact]
+    public async Task UpdateBackgroundImageAsync_WhenTogglingVideoAndBundled_ReusesSingleBundledDecode()
+    {
+        var video = Path.Combine(tempDir, "toggle.mp4");
+        await File.WriteAllBytesAsync(video, []);
+        var bundled = new TestImage();
+        var bundledDecodes = 0;
+        using var cache = CreateCache(_ => PngBytes);
+        using var viewModel = new BackgroundViewModel(
+            cache,
+            new LocalDiagnostics(),
+            _ => { },
+            (path, _) => new TestImage(),
+            () =>
+            {
+                bundledDecodes++;
+                return bundled;
+            },
+            videoThumbnailLoader: (_, _) => Task.FromResult<IImage?>(null));
+        var videoSettings = new LauncherSettings
+        {
+            BackgroundSource = BackgroundSources.Custom,
+            CustomBackgroundPath = video
+        };
+
+        await viewModel.UpdateBackgroundImageAsync(videoSettings, null, CancellationToken.None);
+        Assert.Same(bundled, viewModel.BackgroundImageSource);
+
+        // video → bundled → video：静态回退始终是同一张缓存图，不重解码、
+        // 不淡化，也不得被任何换图路径释放（AUD-PERF-009）。
+        await viewModel.UpdateBackgroundImageAsync(new LauncherSettings(), null, CancellationToken.None);
+        Assert.Same(bundled, viewModel.BackgroundImageSource);
+        Assert.False(bundled.IsDisposed);
+
+        await viewModel.UpdateBackgroundImageAsync(videoSettings, null, CancellationToken.None);
+        Assert.Same(bundled, viewModel.BackgroundImageSource);
+        Assert.False(bundled.IsDisposed);
+        Assert.Equal(1, bundledDecodes);
+    }
+
+    [Fact]
+    public async Task UpdateBackgroundImageAsync_WhenBundledImageFadesOut_KeepsCachedInstanceAlive()
+    {
+        var path = Path.Combine(tempDir, "fade-from-bundled.png");
+        await File.WriteAllBytesAsync(path, PngBytes);
+        var bundled = new TestImage();
+        using var cache = CreateCache(_ => PngBytes);
+        using var viewModel = new BackgroundViewModel(
+            cache,
+            new LocalDiagnostics(),
+            _ => { },
+            (_, _) => new TestImage(),
+            () => bundled);
+        var fadingOut = new List<TestImage>();
+        viewModel.PreviousWallpaperFadingOut += (image, _) => fadingOut.Add((TestImage)image);
+
+        await viewModel.UpdateBackgroundImageAsync(new LauncherSettings
+        {
+            BackgroundSource = BackgroundSources.Custom,
+            CustomBackgroundPath = path
+        }, null, CancellationToken.None);
+
+        // 内置图作为覆盖层淡出时只移交显示权，所有权仍归 ViewModel：
+        // 覆盖层释放引用后不得 Dispose，否则下次显示会读到已释放实现。
+        var fading = Assert.Single(fadingOut);
+        Assert.Same(bundled, fading);
+        viewModel.OnWallpaperOverlayReleased(fading);
+        Assert.False(bundled.IsDisposed);
+
+        await viewModel.UpdateBackgroundImageAsync(new LauncherSettings(), null, CancellationToken.None);
+        Assert.Same(bundled, viewModel.BackgroundImageSource);
     }
 
     [Fact]
@@ -605,6 +712,8 @@ public sealed class BackgroundViewModelTests : IDisposable
     [Fact]
     public async Task UpdateBackgroundImageAsync_WhileOverlayStillHoldsPreviousImage_DefersDisposalUntilOverlayReleases()
     {
+        var path = Path.Combine(tempDir, "fading.png");
+        await File.WriteAllBytesAsync(path, PngBytes);
         using var cache = CreateCache(_ => PngBytes);
         using var viewModel = new BackgroundViewModel(
             cache,
@@ -612,19 +721,20 @@ public sealed class BackgroundViewModelTests : IDisposable
             _ => { },
             (path, _) => new TestImage(),
             () => new TestImage());
+        var settings = new LauncherSettings
+        {
+            BackgroundSource = BackgroundSources.Custom,
+            CustomBackgroundPath = path
+        };
 
-        await viewModel.UpdateBackgroundImageAsync(
-            new LauncherSettings { BackgroundSource = BackgroundSources.Remote },
-            CreateRemoteSnapshot("1"),
-            CancellationToken.None);
+        await viewModel.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
 
         var fadingOut = new List<TestImage>();
         viewModel.PreviousWallpaperFadingOut += (image, _) => fadingOut.Add((TestImage)image);
 
-        await viewModel.UpdateBackgroundImageAsync(
-            new LauncherSettings { BackgroundSource = BackgroundSources.Remote },
-            CreateRemoteSnapshot("1"),
-            CancellationToken.None);
+        // 同路径不同内容指纹：来源稳定标识变化，触发真实的换图与交叉淡化。
+        await File.WriteAllBytesAsync(path, [1]);
+        await viewModel.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
         var fading = Assert.Single(fadingOut);
 
         // 模拟合成器停滞：视图层迟迟不回调 OnWallpaperOverlayReleased。此时释放位图会让

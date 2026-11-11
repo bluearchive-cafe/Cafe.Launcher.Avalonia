@@ -18,7 +18,7 @@
 [下载发行包](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases) | [使用文档](https://docs.bluearchive.cafe/cafe-launcher/) | [常见问题](https://docs.bluearchive.cafe/cafe-launcher/faq) | [反馈问题](https://docs.bluearchive.cafe/cafe-launcher/feedback)
 
 > [!IMPORTANT]
-> 本项目由社区维护，与 Nexon、Nexon Games、Yostar 及 Blue Archive 官方无隶属或合作关系。使用前请阅读[隐私政策](PRIVACY.md)。
+> 本项目由社区维护，与 Nexon、Nexon Games、Yostar 及 Blue Archive 官方无隶属或合作关系。使用前请阅读[用户协议](TERMS.md)与[隐私政策](PRIVACY.md)。
 
 ![Cafe Launcher 主视觉](docs/assets/key-visual.png)
 

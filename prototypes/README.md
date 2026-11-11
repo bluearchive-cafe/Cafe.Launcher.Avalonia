@@ -4,6 +4,7 @@
 
 | 原型 | 内容 | 对应决策 |
 | --- | --- | --- |
+| [setup-wizard-redesign/](setup-wizard-redesign/) | 首次设置向导统一舞台样张：全幅头部（计数 + 跳过 + 六段进度）/ 300 左引导与右面板双栏 / 全幅动作带，六步仅右面板不同 | [ADR-059](../docs/design/adr/ADR-059-设置向导统一舞台与双栏解剖.md)，已落地 |
 | [progress-inline-design/](progress-inline-design/) | 安装、更新、修复进度的历史悬浮卡片原型，位于右下角拆分按钮上方；保留详情与明暗/小窗口预览 | 2026-11-08 已落实并再次精简为无折叠卡片，直接显示下载大小；见 [ADR-057 修订](../docs/design/adr/ADR-057-统一操作面板与任务对话框.md) |
 | [shell-redesign-prototype/](shell-redesign-prototype/) | 全界面结构图、关键状态清单与两套可切换状态的首页原型：A 底部操作区 / B 固定侧栏 | 2026-11-07 结构提案，尚未选型；按 ADR-001 比较 |
 | [settings-select-md3/](settings-select-md3/) | 设置页下拉 A 方案真实 Avalonia 样张：动态效果、带色点的主题色来源，明暗主题及键盘焦点 | 2026-11-07 第二阶段已推广；保留第一阶段样式对照与当前生产截图 |

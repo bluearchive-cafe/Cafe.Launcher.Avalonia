@@ -17,6 +17,7 @@
             <x:Double x:Key="Launcher.Spacing.Lg">16</x:Double>
             <x:Double x:Key="Launcher.Spacing.Xl">20</x:Double>
             <x:Double x:Key="Launcher.Spacing.Xxl">24</x:Double>
+            <x:Double x:Key="Launcher.Spacing.Xxxl">32</x:Double>
             <x:Double x:Key="Launcher.Spacing.Section">40</x:Double>
             <Thickness x:Key="Launcher.Spacing.Thickness.Xs">4</Thickness>
             <Thickness x:Key="Launcher.Spacing.Thickness.Sm">8</Thickness>
@@ -25,6 +26,7 @@
             <Thickness x:Key="Launcher.Spacing.Thickness.Md">12</Thickness>
             <Thickness x:Key="Launcher.Spacing.Thickness.Lg">16</Thickness>
             <Thickness x:Key="Launcher.Spacing.Thickness.Xxl">24</Thickness>
+            <Thickness x:Key="Launcher.Spacing.Thickness.Xxxl">32</Thickness>
             <Thickness x:Key="Launcher.Spacing.Thickness.Section">40</Thickness>
             <Thickness x:Key="Launcher.Component.PathField.Padding">16,0,4,0</Thickness>
             <Thickness x:Key="Launcher.Component.Toast.Message.Margin">0,4,0,0</Thickness>
@@ -196,16 +198,33 @@
             <x:Double x:Key="Launcher.Component.ControlPanel.MinHeight">156</x:Double>
             <x:Double x:Key="Launcher.Component.ColorSwatch.Preview.Size">16</x:Double>
             <x:Double x:Key="Launcher.Component.Toast.Message.MaxWidth">282</x:Double>
-            <!-- 实验台向导解剖（ADR-017）：居中单列内容的最大宽度。 -->
-            <x:Double x:Key="Launcher.Component.Wizard.Content.MaxWidth">520</x:Double>
+            <!-- 设置向导舞台（ADR-059）：全幅头部 + 左引导 / 右面板 + 全幅动作带；
+                 六个步骤共用同一解剖，仅右面板内容随步骤变化。 -->
+            <x:Double x:Key="Launcher.Component.Wizard.Stage.Width">860</x:Double>
+            <x:Double x:Key="Launcher.Component.Wizard.Context.Width">300</x:Double>
+            <x:Double x:Key="Launcher.Component.Wizard.Context.Icon.Size">56</x:Double>
+            <Thickness x:Key="Launcher.Component.Wizard.Header.Padding">24,16,24,14</Thickness>
+            <Thickness x:Key="Launcher.Component.Wizard.Body.Margin">0,20,0,16</Thickness>
+            <Thickness x:Key="Launcher.Component.Wizard.Footer.Padding">24,0</Thickness>
+            <x:Double x:Key="Launcher.Component.Wizard.Footer.Height">64</x:Double>
+            <x:Double x:Key="Launcher.Component.Wizard.Progress.Height">3</x:Double>
+            <!-- 动作带两枚动作的最小宽度：大于共享 80 DIP，使不同文案与语言下
+                 上一步、下一步保持同宽（ADR-059 的表面级例外，角色外观仍走共享主题）。 -->
+            <x:Double x:Key="Launcher.Component.Wizard.Action.MinWidth">100</x:Double>
+            <!-- 协议步骤：版次 pill 在左引导，同意项固定在文档面板底栏。
+                 左右留白与文档阅读器同取 20，保持面板内边距一致。 -->
+            <Thickness x:Key="Launcher.Component.Wizard.Agreement.Version.Padding">8,2</Thickness>
+            <Thickness x:Key="Launcher.Component.Wizard.Agreement.Consent.Padding">20,12</Thickness>
             <x:Double x:Key="Launcher.Component.Wizard.Divider.Height">0.5</x:Double>
-            <!-- 复核页重设计：完成 Hero 徽章与图标摘要行的度量（徽章整圆经 Radius.Full）。 -->
-            <x:Double x:Key="Launcher.Component.Wizard.HeroBadge.Size">56</x:Double>
+            <!-- 复核页图标摘要行的度量。 -->
             <x:Double x:Key="Launcher.Component.Wizard.Summary.Row.MinHeight">56</x:Double>
             <x:Double x:Key="Launcher.Component.Wizard.Summary.IconChip.Size">36</x:Double>
             <!-- M3 选项行：两行内容（标题 + 说明）的最小命中行高与内容内边距。 -->
-            <x:Double x:Key="Launcher.Component.Wizard.Option.MinHeight">56</x:Double>
-            <Thickness x:Key="Launcher.Component.Wizard.Option.Padding">4,0</Thickness>
+            <x:Double x:Key="Launcher.Component.Wizard.Option.MinHeight">64</x:Double>
+            <Thickness x:Key="Launcher.Component.Wizard.Option.Padding">14,13</Thickness>
+            <x:Double x:Key="Launcher.Component.Wizard.Option.Radio.Size">20</x:Double>
+            <x:Double x:Key="Launcher.Component.Wizard.Option.Radio.Dot.Size">10</x:Double>
+            <Thickness x:Key="Launcher.Component.Wizard.Option.Radio.BorderThickness">2</Thickness>
             <x:Double x:Key="Launcher.Component.Settings.Row.MinHeight">52</x:Double>
             <Thickness x:Key="Launcher.Component.Settings.Row.Content.Padding">0,8</Thickness>
             <x:Double x:Key="Launcher.Component.Settings.Row.Action.MaxWidth">440</x:Double>
@@ -256,6 +275,9 @@
             <FontWeight x:Key="Launcher.Typography.FontWeight.Normal">Normal</FontWeight>
             <FontWeight x:Key="Launcher.Typography.FontWeight.Strong">SemiBold</FontWeight>
             <FontFamily x:Key="Launcher.Typography.FontFamily.Monospace">Consolas</FontFamily>
+            <!-- 协议正文固定为简体中文；显式 CJK 族避免按界面语言继承时把中文交给
+                 字体回退链，回退选择随进程内已加载字体变化，截图与实机都可能漂移。 -->
+            <FontFamily x:Key="Launcher.Typography.FontFamily.Document">Microsoft YaHei UI, Microsoft YaHei, Noto Sans CJK SC, PingFang SC, sans-serif</FontFamily>
             <!-- LetterSpacing (字距角色键；P1 仅提供刻度，消费与取值校准随 P2 字阶) -->
             <x:Double x:Key="Launcher.Typography.LetterSpacing.None">0</x:Double>
             <x:Double x:Key="Launcher.Typography.LetterSpacing.Sm">0.5</x:Double>

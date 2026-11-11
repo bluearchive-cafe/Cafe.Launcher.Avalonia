@@ -19,19 +19,33 @@ public sealed class SetupWizardViewModelTests
     /// <summary>向导路径校验（防抖 + 后台写探测）的就绪预算。</summary>
     private static readonly TimeSpan GateSettleBudget = TimeSpan.FromSeconds(5);
 
-    private static SetupWizardViewModel CreateViewModel() => new(
-        new LocalizationService(),
-        new GameInstallationPath(LauncherProfiles.BlueArchiveJapan),
-        new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan),
-        new LocalDiagnostics(),
-        new StubFilePickerService());
+    private static SetupWizardViewModel CreateViewModel()
+    {
+        var localizer = new LocalizationService();
+        localizer.SetLanguage(LauncherLanguages.English);
+        return new(
+            localizer,
+            new GameInstallationPath(LauncherProfiles.BlueArchiveJapan),
+            new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan),
+            new LocalDiagnostics(),
+            new StubFilePickerService());
+    }
+
+    /// <summary>接受协议并推进到游戏路径步骤（步骤 2）。</summary>
+    private static void AdvanceToGamePath(SetupWizardViewModel viewModel)
+    {
+        viewModel.MarkAgreementRead();
+        viewModel.IsAgreementAccepted = true;
+        viewModel.NextCommand.Execute(null);
+        viewModel.NextCommand.Execute(null);
+    }
 
     [Fact]
     public void InitialState_IsStep0_CanGoNext_CannotGoPrevious()
     {
         var vm = CreateViewModel();
         Assert.Equal(0, vm.Step);
-        Assert.Equal("1 / 5", vm.StepProgress);
+        Assert.Equal("Step 1 of 6", vm.StepProgress);
         Assert.True(vm.IsFirstStep);
         Assert.False(vm.IsLastStep);
         Assert.False(vm.CanGoPrevious);
@@ -45,12 +59,48 @@ public sealed class SetupWizardViewModelTests
         vm.NextCommand.Execute(null);
         Assert.Equal(1, vm.Step);
         Assert.True(vm.IsStep1);
+        Assert.True(vm.IsAgreementStep);
         Assert.True(vm.CanGoPrevious);
         Assert.False(vm.IsFirstStep);
     }
 
     [Fact]
-    public void NextCommand_FirstEntryToStep1WithEmptyGamePath_FillsDefaultGamePath()
+    public void NextCommand_AgreementStepWithoutAcceptance_DoesNotAdvance()
+    {
+        var vm = CreateViewModel();
+        vm.NextCommand.Execute(null);
+        vm.NextCommand.Execute(null);
+        Assert.Equal(1, vm.Step);
+        Assert.False(vm.CanGoNext);
+    }
+
+    [Fact]
+    public void MarkAgreementRead_EnablesCheckboxWithoutAccepting()
+    {
+        var vm = CreateViewModel();
+        vm.NextCommand.Execute(null);
+
+        vm.MarkAgreementRead();
+
+        Assert.True(vm.HasReadAgreement);
+        Assert.False(vm.IsAgreementAccepted);
+        Assert.False(vm.CanGoNext);
+    }
+
+    [Fact]
+    public async Task CompleteCommand_WithoutAcceptingAgreement_DoesNotApply()
+    {
+        var vm = CreateViewModel();
+        var applied = false;
+        vm.SettingsApplied += _ => { applied = true; return Task.CompletedTask; };
+
+        await vm.CompleteCommand.ExecuteAsync(null);
+
+        Assert.False(applied);
+    }
+
+    [Fact]
+    public void NextCommand_FirstEntryToStep2WithEmptyGamePath_FillsDefaultGamePath()
     {
         var installationPath = new GameInstallationPath(LauncherProfiles.BlueArchiveJapan);
         var vm = new SetupWizardViewModel(
@@ -59,23 +109,25 @@ public sealed class SetupWizardViewModelTests
             new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan),
             new LocalDiagnostics(), new StubFilePickerService());
 
-        vm.NextCommand.Execute(null);
+        AdvanceToGamePath(vm);
 
+        Assert.Equal(2, vm.Step);
         Assert.Equal(installationPath.GetDefaultGamePath(), vm.GamePath);
     }
 
     [Fact]
-    public void Step1_WhenGamePathWasAlreadySetOrCleared_DoesNotOverwriteItOnReentry()
+    public void Step2_WhenGamePathWasAlreadySetOrCleared_DoesNotOverwriteItOnReentry()
     {
         var vm = CreateViewModel();
         using var existingPath = TestDirectory.Create();
         vm.GamePath = existingPath;
 
-        vm.NextCommand.Execute(null);
+        AdvanceToGamePath(vm);
 
         Assert.Equal(existingPath, vm.GamePath);
         vm.GamePath = "";
         vm.PreviousCommand.Execute(null);
+        Assert.Equal(1, vm.Step);
         vm.NextCommand.Execute(null);
         Assert.Equal("", vm.GamePath);
     }
@@ -100,21 +152,21 @@ public sealed class SetupWizardViewModelTests
     }
 
     [Fact]
-    public async Task NextCommand_AtStep4_DoesNotMove()
+    public async Task NextCommand_AtReviewStep_DoesNotMove()
     {
         var vm = CreateViewModel();
         vm.GamePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        vm.NextCommand.Execute(null);
+        AdvanceToGamePath(vm);
         await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.AvailableForInstallation);
         for (var i = 0; i < 3; i++)
             vm.NextCommand.Execute(null);
-        Assert.Equal(4, vm.Step);
+        Assert.Equal(5, vm.Step);
         Assert.True(vm.IsLastStep);
         Assert.False(vm.IsStep1);
         Assert.False(vm.IsStep2);
         Assert.False(vm.IsStep3);
         vm.NextCommand.Execute(null);
-        Assert.Equal(4, vm.Step);
+        Assert.Equal(5, vm.Step);
     }
 
     [Fact]
@@ -125,49 +177,58 @@ public sealed class SetupWizardViewModelTests
         Assert.False(vm.IsStep1);
         Assert.False(vm.IsStep2);
         Assert.False(vm.IsStep3);
+        Assert.False(vm.IsStep4);
+        Assert.False(vm.IsStep5);
         Assert.False(vm.IsLastStep);
 
+        vm.MarkAgreementRead();
+        vm.IsAgreementAccepted = true;
         vm.NextCommand.Execute(null);
         Assert.True(vm.IsStep1);
+        Assert.True(vm.IsAgreementStep);
+
+        vm.NextCommand.Execute(null);
+        Assert.True(vm.IsStep2);
 
         vm.GamePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.AvailableForInstallation);
         vm.NextCommand.Execute(null);
-        Assert.True(vm.IsStep2);
-
-        vm.NextCommand.Execute(null);
         Assert.True(vm.IsStep3);
 
         vm.NextCommand.Execute(null);
+        Assert.True(vm.IsStep4);
+
+        vm.NextCommand.Execute(null);
+        Assert.True(vm.IsStep5);
         Assert.True(vm.IsLastStep);
     }
 
     [Fact]
-    public async Task CanGoNext_Step1WithEmptyPath_ReturnsFalse()
+    public async Task CanGoNext_GamePathStepWithEmptyPath_ReturnsFalse()
     {
         var vm = CreateViewModel();
-        vm.NextCommand.Execute(null);
+        AdvanceToGamePath(vm);
         vm.GamePath = "";
         await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.NotSelected);
         Assert.False(vm.CanGoNext);
     }
 
     [Fact]
-    public async Task NextCommand_Step1WithEmptyPath_DoesNotAdvance()
+    public async Task NextCommand_GamePathStepWithEmptyPath_DoesNotAdvance()
     {
         var vm = CreateViewModel();
-        vm.NextCommand.Execute(null);
+        AdvanceToGamePath(vm);
         vm.GamePath = "";
         await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.NotSelected);
         vm.NextCommand.Execute(null);
 
-        Assert.Equal(1, vm.Step);
-        Assert.Equal("2 / 5", vm.StepProgress);
+        Assert.Equal(2, vm.Step);
+        Assert.Equal("Step 3 of 6", vm.StepProgress);
         Assert.False(vm.CanGoNext);
     }
 
     [Fact]
-    public async Task CanGoNext_Step1WithNotInstalledPath_ReturnsTrue()
+    public async Task CanGoNext_GamePathStepWithNotInstalledPath_ReturnsTrue()
     {
         using var path = TestDirectory.Create();
         var vm = new SetupWizardViewModel(
@@ -176,13 +237,13 @@ public sealed class SetupWizardViewModelTests
             new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan),
             new LocalDiagnostics(), new StubFilePickerService());
         vm.GamePath = path;
-        vm.NextCommand.Execute(null);
+        AdvanceToGamePath(vm);
         await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.AvailableForInstallation);
         Assert.True(vm.CanGoNext);
     }
 
     [Fact]
-    public async Task CanGoNext_Step1WithNotWritablePath_ReturnsFalse()
+    public async Task CanGoNext_GamePathStepWithNotWritablePath_ReturnsFalse()
     {
         using var root = TestDirectory.Create();
         var blocker = Path.Combine(root, "blocker");
@@ -193,7 +254,7 @@ public sealed class SetupWizardViewModelTests
             new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan),
             new LocalDiagnostics(), new StubFilePickerService());
         vm.GamePath = Path.Combine(blocker, LauncherProfiles.BlueArchiveJapan.RootFolderName, LauncherProfiles.BlueArchiveJapan.GameFolderName);
-        vm.NextCommand.Execute(null);
+        AdvanceToGamePath(vm);
         await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.NotWritable);
         Assert.True(vm.IsGamePathNotWritable);
         Assert.False(vm.IsGamePathReady);
@@ -247,6 +308,8 @@ public sealed class SetupWizardViewModelTests
     public async Task CompleteCommand_RaisesSettingsApplied()
     {
         var vm = CreateViewModel();
+        vm.MarkAgreementRead();
+        vm.IsAgreementAccepted = true;
         LauncherSettings? captured = null;
         vm.SettingsApplied += s => { captured = s; return Task.CompletedTask; };
         var defaults = LauncherSettings.CreateDefaults();
@@ -263,18 +326,96 @@ public sealed class SetupWizardViewModelTests
         Assert.Equal(defaults.UpdateChannel, captured.UpdateChannel);
         Assert.Equal(defaults.LogLevel, captured.LogLevel);
         Assert.Equal(defaults.ShowRemoteContentCard, captured.ShowRemoteContentCard);
+        Assert.Equal(LauncherAgreement.CurrentVersion, captured.AcceptedAgreementVersion);
     }
 
     [Fact]
-    public async Task SkipCommand_RaisesSettingsAppliedWithDefaults()
+    public async Task SkipCommand_AfterAcceptingAgreement_RaisesSettingsAppliedWithDefaults()
     {
         var vm = CreateViewModel();
         LauncherSettings? captured = null;
         vm.SettingsApplied += s => { captured = s; return Task.CompletedTask; };
+        vm.MarkAgreementRead();
+        vm.IsAgreementAccepted = true;
         vm.Language = LauncherLanguages.Japanese;
         await vm.SkipCommand.ExecuteAsync(null);
         Assert.NotNull(captured);
         Assert.Equal(LauncherLanguages.Auto, captured!.Language);
+        Assert.Equal(LauncherAgreement.CurrentVersion, captured.AcceptedAgreementVersion);
+    }
+
+    [Fact]
+    public async Task SkipCommand_WithoutAcceptingAgreement_RequestsExitWithoutApplying()
+    {
+        var vm = CreateViewModel();
+        var applied = false;
+        var exitRequested = false;
+        vm.SettingsApplied += _ => { applied = true; return Task.CompletedTask; };
+        vm.AgreementExitRequested += () => exitRequested = true;
+
+        await vm.SkipCommand.ExecuteAsync(null);
+
+        Assert.True(exitRequested);
+        Assert.False(applied);
+    }
+
+    [Fact]
+    public async Task CompleteCommand_InConsentUpdateMode_KeepsBaselineSettingsAndRecordsVersion()
+    {
+        var vm = CreateViewModel();
+        var baseline = LauncherSettings.CreateDefaults();
+        baseline.Language = LauncherLanguages.Japanese;
+        baseline.GamePath = @"D:\Saved\BlueArchive_JP";
+        baseline.PatchUrlGroup = PatchUrlGroups.Cafe;
+        baseline.ProxyMode = ProxyModes.System;
+        baseline.AcceptedAgreementVersion = "2020-01-01";
+        LauncherSettings? captured = null;
+        vm.SettingsApplied += s => { captured = s; return Task.CompletedTask; };
+
+        vm.PrepareForAgreementUpdate(baseline);
+
+        Assert.True(vm.IsConsentUpdateMode);
+        Assert.True(vm.IsLastStep);
+        Assert.Equal(1, vm.Step);
+        Assert.False(vm.CanGoPrevious);
+        Assert.False(vm.CanSkip);
+        Assert.Equal("Step 1 of 1", vm.StepProgress);
+
+        vm.MarkAgreementRead();
+        vm.IsAgreementAccepted = true;
+        await vm.CompleteCommand.ExecuteAsync(null);
+
+        Assert.NotNull(captured);
+        Assert.Equal(LauncherLanguages.Japanese, captured!.Language);
+        Assert.Equal(@"D:\Saved\BlueArchive_JP", captured.GamePath);
+        Assert.Equal(PatchUrlGroups.Cafe, captured.PatchUrlGroup);
+        Assert.Equal(ProxyModes.System, captured.ProxyMode);
+        Assert.Equal(LauncherAgreement.CurrentVersion, captured.AcceptedAgreementVersion);
+    }
+
+    [Fact]
+    public async Task SkipCommand_InConsentUpdateMode_RequestsExitEvenAfterAcceptance()
+    {
+        var vm = CreateViewModel();
+        var exitRequested = false;
+        vm.AgreementExitRequested += () => exitRequested = true;
+        vm.PrepareForAgreementUpdate(LauncherSettings.CreateDefaults());
+        vm.MarkAgreementRead();
+        vm.IsAgreementAccepted = true;
+
+        await vm.SkipCommand.ExecuteAsync(null);
+
+        Assert.True(exitRequested);
+    }
+
+    [Fact]
+    public void RequiresConsent_OnlyWhenStoredVersionIsNotCurrent()
+    {
+        var settings = LauncherSettings.CreateDefaults();
+        Assert.True(SetupWizardViewModel.RequiresConsent(settings));
+
+        settings.AcceptedAgreementVersion = LauncherAgreement.CurrentVersion;
+        Assert.False(SetupWizardViewModel.RequiresConsent(settings));
     }
 
     [Fact]
@@ -313,12 +454,10 @@ public sealed class SetupWizardViewModelTests
     {
         var vm = CreateViewModel();
         vm.GamePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        AdvanceToGamePath(vm);
         await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.AvailableForInstallation);
         vm.NextCommand.Execute(null);
-        // 进入 Step 1 会触发一次即时刷新把状态重置为 Checking，等待其重新落定。
-        await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.AvailableForInstallation);
-        vm.NextCommand.Execute(null);
-        Assert.Equal(2, vm.Step);
+        Assert.Equal(3, vm.Step);
 
         vm.GoToStepCommand.Execute(0);
 
@@ -341,7 +480,7 @@ public sealed class SetupWizardViewModelTests
     {
         var vm = CreateViewModel();
         vm.GamePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        vm.NextCommand.Execute(null);
+        AdvanceToGamePath(vm);
 
         await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.AvailableForInstallation);
 
@@ -362,7 +501,7 @@ public sealed class SetupWizardViewModelTests
             GamePath = gamePath
         };
 
-        vm.NextCommand.Execute(null);
+        AdvanceToGamePath(vm);
         await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.ValidInstallation);
 
         Assert.True(vm.IsGamePathReady);
@@ -378,7 +517,7 @@ public sealed class SetupWizardViewModelTests
         await File.WriteAllTextAsync(Path.Combine(normalizedGamePath, "manifest.json"), "{}");
         var vm = CreateViewModel();
         vm.GamePath = gamePath;
-        vm.NextCommand.Execute(null);
+        AdvanceToGamePath(vm);
 
         await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.CorruptedInstallation);
 
@@ -400,7 +539,7 @@ public sealed class SetupWizardViewModelTests
             new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan),
             new LocalDiagnostics(), new StubFilePickerService());
         vm.GamePath = gamePath;
-        vm.NextCommand.Execute(null);
+        AdvanceToGamePath(vm);
 
         await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.CorruptedInstallation);
 
@@ -422,7 +561,7 @@ public sealed class SetupWizardViewModelTests
         {
             GamePath = gamePath
         };
-        vm.NextCommand.Execute(null);
+        AdvanceToGamePath(vm);
 
         await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.Inaccessible);
 
@@ -435,7 +574,7 @@ public sealed class SetupWizardViewModelTests
     {
         var vm = CreateViewModel();
         vm.GamePath = "\0";
-        vm.NextCommand.Execute(null);
+        AdvanceToGamePath(vm);
 
         await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.Inaccessible);
 
@@ -463,7 +602,7 @@ public sealed class SetupWizardViewModelTests
             GamePath = gamePath
         };
 
-        vm.NextCommand.Execute(null);
+        AdvanceToGamePath(vm);
         await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.Checking);
         Assert.False(vm.CanGoNext);
 
@@ -493,7 +632,7 @@ public sealed class SetupWizardViewModelTests
         {
             GamePath = oldGamePath
         };
-        vm.NextCommand.Execute(null);
+        AdvanceToGamePath(vm);
         await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.Checking);
 
         vm.GamePath = newGamePath;
@@ -516,7 +655,7 @@ public sealed class SetupWizardViewModelTests
         {
             GamePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"))
         };
-        vm.NextCommand.Execute(null);
+        AdvanceToGamePath(vm);
         await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.AvailableForInstallation);
         var changed = new List<string>();
         vm.PropertyChanged += (_, args) =>
@@ -549,7 +688,7 @@ public sealed class SetupWizardViewModelTests
         {
             GamePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"))
         };
-        vm.NextCommand.Execute(null);
+        AdvanceToGamePath(vm);
         await store.ReadStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
 
         vm.Dispose();
@@ -591,6 +730,10 @@ public sealed class SetupWizardViewModelTests
 
     private static async Task AdvanceToLastStep(SetupWizardViewModel viewModel)
     {
+        // 协议步骤是硬门禁：先按“读完 + 勾选”通过，再让路径校验决定后续步进。
+        viewModel.MarkAgreementRead();
+        viewModel.IsAgreementAccepted = true;
+
         // 路径校验为异步（防抖 + 后台写探测），推进循环在门控未就绪时
         // 有界等待而非热自旋：5 秒预算内未就绪即快速失败（参见 P0 整改
         // 中 Headless 同类修复）。

@@ -24,7 +24,8 @@ internal partial class MainWindow
 
     private void OnVideoWindowPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
     {
-        if (e.Property == IsVisibleProperty || e.Property == WindowStateProperty) UpdateVideoPlayback();
+        if (e.Property == IsVisibleProperty || e.Property == WindowStateProperty || e.Property == IsActiveProperty)
+            UpdateVideoPlayback();
     }
 
     private void OnVideoBackgroundSettingChanged(object? sender, PropertyChangedEventArgs e)
@@ -73,8 +74,7 @@ internal partial class MainWindow
     private void UpdateVideoPlayback()
     {
         if (videoBackground is null || configuredViewModel is not { } vm) return;
-        var unavailable = videoBackground.Source is null
-            || !IsVisible || WindowState == WindowState.Minimized;
+        var unavailable = IsPlaybackUnavailable(videoBackground.Source is not null, IsVisible, WindowState, IsActive);
         // Reduced motion pauses playback but keeps the chosen video visible as a still frame.
         videoBackground.PlaybackPaused = unavailable || vm.IsMotionReduced;
         videoBackground.ShowStillFrame = !unavailable && vm.IsMotionReduced;
@@ -82,6 +82,13 @@ internal partial class MainWindow
         videoBackground.Stretch = vm.Background.BackgroundStretch;
         videoBackground.FillColor = vm.Background.BackgroundFillBrush is ISolidColorBrush brush ? brush.Color : Colors.Black;
     }
+
+    /// <summary>
+    /// Unfocused playback pauses too: the render stack retains memory per drawn frame
+    /// (AUD-PERF-009), so growth is limited to time the user is actually watching.
+    /// </summary>
+    internal static bool IsPlaybackUnavailable(bool hasSource, bool isVisible, WindowState windowState, bool isActive) =>
+        !hasSource || !isVisible || windowState == WindowState.Minimized || !isActive;
 
     private void OnVideoBackgroundFirstFrame()
     {
@@ -118,8 +125,10 @@ internal partial class MainWindow
             }
         }
         ShowVideoFallback();
-        if (shellCachedForVideo)
+        if (detach && shellCachedForVideo)
         {
+            // 缓存随视频控件存活，而不是每次切回静态背景就恢复：每轮新建全窗口
+            // BitmapCache 会留下合成器侧的帧缓冲高水位（AUD-PERF-009）。
             MainContentLayer.CacheMode = previousShellCache;
             shellCachedForVideo = false;
         }

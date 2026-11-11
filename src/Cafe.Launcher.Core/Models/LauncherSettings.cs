@@ -52,6 +52,7 @@ public sealed class LauncherSettings : SettingsModel
     private GameRuntimeSettings gameRuntime = new();
     private string afterLaunchBehavior = AfterLaunchBehaviors.Minimize;
     private string statusDetailMode = StatusDetailModes.Compact;
+    private string acceptedAgreementVersion = "";
 
     [JsonPropertyName("gamePath")]
     public string GamePath { get => gamePath; set => SetProperty(ref gamePath, value); }
@@ -165,6 +166,14 @@ public sealed class LauncherSettings : SettingsModel
     [JsonPropertyName("statusDetailMode")]
     public string StatusDetailMode { get => statusDetailMode; set => SetProperty(ref statusDetailMode, value); }
 
+    /// <summary>用户在设置向导中同意的协议版本；空值表示尚未同意。</summary>
+    [JsonPropertyName("acceptedAgreementVersion")]
+    public string AcceptedAgreementVersion
+    {
+        get => acceptedAgreementVersion;
+        set => SetProperty(ref acceptedAgreementVersion, value);
+    }
+
     /// <summary>
     /// Deep-clones this settings object.
     /// Shared by <c>LauncherSettingsService.NormalizeSettings</c> and <see cref="Services.SettingsEditor"/>.
@@ -220,6 +229,7 @@ public sealed class LauncherSettings : SettingsModel
         ResourcePanelUid = other.ResourcePanelUid;
         ResourcePanelUidSource = other.ResourcePanelUidSource;
         StatusDetailMode = other.StatusDetailMode;
+        AcceptedAgreementVersion = other.AcceptedAgreementVersion;
         UpdateChannel = other.UpdateChannel;
         LogLevel = other.LogLevel;
         // A hand-edited or corrupted settings file can carry "gameRuntime": null;
@@ -271,6 +281,7 @@ public sealed class LauncherSettings : SettingsModel
         (nameof(ResourcePanelUid), settings => settings.ResourcePanelUid),
         (nameof(ResourcePanelUidSource), settings => settings.ResourcePanelUidSource),
         (nameof(StatusDetailMode), settings => settings.StatusDetailMode),
+        (nameof(AcceptedAgreementVersion), settings => settings.AcceptedAgreementVersion),
         (nameof(UpdateChannel), settings => settings.UpdateChannel),
         (nameof(LogLevel), settings => settings.LogLevel),
         (nameof(GameRuntime), settings => settings.GameRuntime)

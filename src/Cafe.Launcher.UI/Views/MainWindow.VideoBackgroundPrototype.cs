@@ -115,6 +115,20 @@ internal partial class MainWindow
                 else if (!ShellRoot.Children.Contains(prototypeVideo)) ShellRoot.Children.Insert(3, prototypeVideo);
                 prototypeVideo.SetPaused(false);
                 break;
+            case "recycle":
+                prototypeVideo.Phase = "recycled";
+                prototypeVideo.RecycleRenderer();
+                break;
+            case "activate":
+                Activate();
+                break;
+            case "status":
+                if (Environment.GetEnvironmentVariable("CAFE_VIDEO_PROTOTYPE_OUTPUT") is { } output)
+                {
+                    File.WriteAllText(Path.ChangeExtension(output, ".status.txt"),
+                        $"active={IsActive};visible={IsVisible};state={WindowState};paused={videoBackground?.PlaybackPaused}");
+                }
+                break;
             case "close":
                 Close();
                 break;

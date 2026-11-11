@@ -97,7 +97,7 @@ internal static class ShellModalCatalog
                 nameof(DialogsViewModel.IsSetupWizardVisible),
                 () => dialogs.IsSetupWizardVisible,
                 dialogs.SetupWizard,
-                dialogs.SetupWizardExitConfirm.ShowCommand),
+                dialogs.ShowSetupWizardExitConfirmCommand),
             new ModalRegistration(
                 ModalKind.ResourcePanelDiscardConfirmation,
                 family.ResourcePanel.DiscardChangesConfirm,

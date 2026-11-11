@@ -44,6 +44,13 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
     private int resizeReloadVersion;
     private bool disposed;
 
+    /// <summary>
+    /// 按原生分辨率解码的内置壁纸，与窗口尺寸无关，实例生命周期内像素恒定。
+    /// 每次回落到内置图都重新解码一份 2560×1388 位图，会让 Skia/原生分配随
+    /// 切换次数留下阶梯式增长（AUD-PERF-009）；这里只解码一次并复用。
+    /// </summary>
+    private IImage? bundledImage;
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(BackgroundPreviewImage))]
     private IImage? backgroundImageSource;
@@ -195,7 +202,7 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
             windowMetrics.PhysicalSizeChanged += OnPhysicalSizeChanged;
         }
 
-        backgroundImageSource = bundledImageLoader();
+        backgroundImageSource = LoadBundledImage();
 
         // 构造期交付的那张内置图，就是首次刷新要的同一张：内置图由 `LoadBundledBackground`
         // 按原生分辨率解码、**忽略目标尺寸**（该图也没有更大的一档可解），因此把来源键与解码
@@ -293,8 +300,8 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
         {
             // Keep the bundled image underneath playback. Start the cover/first-frame request
             // before notifying palette consumers so they await this selection's image once.
-            var fallback = await Task.Run(() => bundledImageLoader());
-            BitmapLifetime.ThrowIfCancellationRequested(fallback, cancellationToken);
+            var fallback = await Task.Run(() => LoadBundledImage());
+            ThrowIfCancellationRequestedUnlessBundled(fallback, cancellationToken);
             if (TrySetBackgroundImage(fallback, settings, loadGeneration, null, decodeTarget,
                     currentFilePath: customFilePath, notifyPalette: false))
             {
@@ -377,10 +384,10 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
         cancellationToken.ThrowIfCancellationRequested();
         // 内置图与远端图同为全屏大图：解码同样放线程池，避免默认壁纸下每次
         // 回落都在 UI 线程重解码整图。
-        var bundledImage = await Task.Run(() => bundledImageLoader());
-        BitmapLifetime.ThrowIfCancellationRequested(bundledImage, cancellationToken);
+        var bundled = await Task.Run(() => LoadBundledImage());
+        ThrowIfCancellationRequestedUnlessBundled(bundled, cancellationToken);
         var applied = TrySetBackgroundImage(
-            bundledImage,
+            bundled,
             settings,
             loadGeneration,
             decodedPath: null,
@@ -459,7 +466,9 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
 
     private void RequestVideoThumbnail(string path, string? sourceKey)
     {
-        if (sourceKey is not null && videoThumbnailSourceKey == sourceKey) return;
+        // 同一文件指纹的缩略图可跨「切回静态再选中」复用：每次重新截帧都要再起一个
+        // 临时 libmpv 解码器，既耗 CPU 又让原生分配随切换次数累积（AUD-PERF-009）。
+        if (sourceKey is not null && videoThumbnailSourceKey == sourceKey && videoThumbnail is not null) return;
         ClearVideoThumbnail();
         videoThumbnailSourceKey = sourceKey;
         var generation = videoThumbnailGeneration;
@@ -468,8 +477,10 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
             try
             {
                 var image = await videoThumbnailLoader(path, cancellationToken);
+                // 只按「指纹 + 代数」判定陈旧：静态背景下完成的首帧仍属于该视频，
+                // 保留下来供下次选中复用；换了来源或文件内容则丢弃。
                 if (disposed || cancellationToken.IsCancellationRequested || generation != videoThumbnailGeneration
-                    || CurrentBackgroundFilePath != path)
+                    || videoThumbnailSourceKey != sourceKey)
                 {
                     (image as IDisposable)?.Dispose();
                     return;
@@ -481,6 +492,13 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
             {
             }
         });
+    }
+
+    /// <summary>取消在途截帧但保留已交付的缩略图，供再次选中同一文件时复用。</summary>
+    private void CancelPendingVideoThumbnail()
+    {
+        videoThumbnailGeneration++;
+        videoThumbnailRefresh.Cancel();
     }
 
     private void ClearVideoThumbnail()
@@ -702,6 +720,14 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
     private void SetBackgroundImage(IImage? bitmap, LauncherSettings previewSettings, bool notifyPalette)
     {
         var old = BackgroundImageSource;
+        if (ReferenceEquals(old, bitmap))
+        {
+            // 重新显示同一张内置图时像素没有变化。不能把仍在使用的缓存位图交给
+            // 淡化或延迟释放路径：那会让下一次显示或渲染帧读到已释放实现。
+            if (notifyPalette) wallpaperChanged(previewSettings);
+            return;
+        }
+
         BackgroundImageSource = bitmap;
         if (notifyPalette)
         {
@@ -716,8 +742,63 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
         }
         else
         {
-            BitmapLifetime.ReleaseAfterBindingsSettle(old);
+            ReleaseAfterBindings(old);
         }
+    }
+
+    /// <summary>
+    /// 首次解码内置壁纸后缓存同一实例；解码与窗口尺寸无关，结果恒定。加载失败不缓存，
+    /// 让后续刷新仍可重试；并发首次解码时保留先到的一份。
+    /// </summary>
+    private IImage? LoadBundledImage()
+    {
+        if (Volatile.Read(ref bundledImage) is { } cached)
+        {
+            return cached;
+        }
+
+        var loaded = bundledImageLoader();
+        if (loaded is null)
+        {
+            return null;
+        }
+
+        var winner = Interlocked.CompareExchange(ref bundledImage, loaded, null);
+        if (winner is null || ReferenceEquals(winner, loaded))
+        {
+            return loaded;
+        }
+
+        // 本次解码结果从未对外发布，直接释放。
+        (loaded as IDisposable)?.Dispose();
+        return winner;
+    }
+
+    /// <summary>缓存的内置图由 ViewModel 持有到 Dispose，任何换图路径都不得释放它。</summary>
+    private bool IsBundledImage(object? image) =>
+        image is not null && ReferenceEquals(image, Volatile.Read(ref bundledImage));
+
+    private void ReleaseAfterBindings(IImage? image)
+    {
+        if (!IsBundledImage(image))
+        {
+            BitmapLifetime.ReleaseAfterBindingsSettle(image);
+        }
+    }
+
+    private void ThrowIfCancellationRequestedUnlessBundled(IImage? image, CancellationToken cancellationToken)
+    {
+        if (!cancellationToken.IsCancellationRequested)
+        {
+            return;
+        }
+
+        if (!IsBundledImage(image))
+        {
+            (image as IDisposable)?.Dispose();
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
     }
 
     private bool TrySetBackgroundImage(
@@ -733,12 +814,18 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
     {
         if (disposed || loadGeneration != Volatile.Read(ref backgroundLoadGeneration))
         {
-            (bitmap as IDisposable)?.Dispose();
+            if (!IsBundledImage(bitmap))
+            {
+                (bitmap as IDisposable)?.Dispose();
+            }
+
             return false;
         }
 
         currentDecodedImagePath = decodedPath;
-        if (isFallback || !VideoBackgroundRuntime.IsVideoFile(currentFilePath)) ClearVideoThumbnail();
+        // 切到静态背景时只取消在途截帧，已交付的缩略图按文件指纹保留：
+        // 预览只在选中视频时使用它，跨切换复用可避免每次重新截帧（AUD-PERF-009）。
+        if (isFallback || !VideoBackgroundRuntime.IsVideoFile(currentFilePath)) CancelPendingVideoThumbnail();
         RememberBackgroundSelection(previewSettings);
         lastBackgroundSourceKey = null;
         CurrentBackgroundFilePath = currentFilePath;
@@ -763,7 +850,7 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
         var old = BackgroundImageSource;
         BackgroundImageSource = bitmap;
         // 分辨率刷新没有改变逻辑壁纸，不重放交叉淡化或主题取色。
-        BitmapLifetime.ReleaseAfterBindingsSettle(old);
+        ReleaseAfterBindings(old);
     }
 
     /// <summary>
@@ -775,7 +862,7 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
     private void StartWallpaperCrossFade(IDisposable oldBitmap)
     {
         var superseded = Interlocked.Exchange(ref fadingOutWallpaper, oldBitmap);
-        if (superseded is not null && !ReferenceEquals(superseded, oldBitmap))
+        if (superseded is not null && !ReferenceEquals(superseded, oldBitmap) && !IsBundledImage(superseded))
         {
             superseded.Dispose();
         }
@@ -798,7 +885,10 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
         }
 
         fadingOutWallpaper = null;
-        fading.Dispose();
+        if (!IsBundledImage(fading))
+        {
+            fading.Dispose();
+        }
     }
 
     private CancellationToken GetFadeToken()
@@ -861,7 +951,9 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
         BackgroundImageSource = null;
         var fading = fadingOutWallpaper;
         fadingOutWallpaper = null;
-        current?.Dispose();
-        fading?.Dispose();
+        var bundled = Interlocked.Exchange(ref bundledImage, null);
+        if (!ReferenceEquals(current, bundled)) current?.Dispose();
+        if (!ReferenceEquals(fading, current) && !ReferenceEquals(fading, bundled)) fading?.Dispose();
+        (bundled as IDisposable)?.Dispose();
     }
 }

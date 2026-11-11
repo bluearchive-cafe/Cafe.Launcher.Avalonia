@@ -322,6 +322,20 @@ internal partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
+    /// 按设置页「主题色 = 默认」的配色落色。首启向导与协议复核向导都在完整初始化之前显示，
+    /// 没有这次落色时会沿用进程内残留的系统强调色，与设置页的默认配色不一致。
+    /// </summary>
+    public void ApplyDefaultScheme()
+    {
+        var defaults = LauncherSettings.CreateDefaults();
+        themeApplier.ApplyScheme(
+            ColorUtils.ParseColorOrDefault(defaults.CustomThemeColor),
+            defaults.ThemeColorVariant,
+            ThemeApplier.IsDarkTheme(editor.Current.ThemeMode),
+            defaults.NeutralColorStrategy);
+    }
+
+    /// <summary>
     /// 应用主题模式。落色与系统变体订阅由 <see cref="Services.ThemeApplier"/> 承担；本方法留在
     /// VM 上是因为壳层把「应用这份快照的外观」当作设置外观的公开入口，
     /// 而 <c>ShellLifecycle.ApplySnapshotAsync</c> 需要在模式与主题色之间插入背景图更新。

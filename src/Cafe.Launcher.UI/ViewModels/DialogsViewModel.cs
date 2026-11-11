@@ -50,6 +50,22 @@ internal partial class DialogsViewModel : ViewModelBase, IModalContentViewModel,
 
     public ConfirmationDialogViewModel SetupWizardExitConfirm { get; }
 
+    public IRelayCommand ShowSetupWizardExitConfirmCommand { get; }
+
+    /// <summary>Presents the wizard exit confirmation with a message matching the consent state.</summary>
+    public void ShowSetupWizardExitConfirm()
+    {
+        SetupWizardExitConfirm.Show(ResolveSetupWizardExitMessage());
+    }
+
+    private string ResolveSetupWizardExitMessage()
+    {
+        var key = SetupWizard.IsAgreementAccepted && !SetupWizard.IsConsentUpdateMode
+            ? LocalizationKeys.SetupWizardExitMessage
+            : LocalizationKeys.SetupWizardConsentExitMessage;
+        return localizer.T(key);
+    }
+
     // ── Setup wizard ─────────────────────────────────────────────────────
 
     public SetupWizardViewModel SetupWizard { get; }
@@ -62,10 +78,14 @@ internal partial class DialogsViewModel : ViewModelBase, IModalContentViewModel,
 
     public IReadOnlyList<LanguageOption> LanguageOptions { get; }
 
+    /// <summary>向导显示前的落色机会；首启与协议复核都不执行完整初始化。</summary>
+    public event Action? SetupWizardOpening;
+
     public void ShowSetupWizard()
     {
         // UI 线程上不能阻塞等待日志写入；TryLogAsync 自吞异常，丢弃 Task 是安全的。
         _ = diagnostics.MessageAsync("SetupWizardShow", "Setup wizard visibility requested.");
+        SetupWizardOpening?.Invoke();
         IsSetupWizardVisible = true;
     }
 
@@ -282,6 +302,7 @@ internal partial class DialogsViewModel : ViewModelBase, IModalContentViewModel,
         SettingsResetConfirm = new ConfirmationDialogViewModel(diagnostics, "SettingsReset");
         SetupWizardExitConfirm = new ConfirmationDialogViewModel(diagnostics, "SetupWizardExit");
         SetupWizardExitConfirm.Confirmed += () => SetupWizard.SkipCommand.ExecuteAsync(null);
+        ShowSetupWizardExitConfirmCommand = new RelayCommand(ShowSetupWizardExitConfirm);
     }
 
     public void RefreshLocalizedText()
@@ -295,6 +316,11 @@ internal partial class DialogsViewModel : ViewModelBase, IModalContentViewModel,
         if (DownloadRunningCloseConfirm.IsVisible)
         {
             DownloadRunningCloseConfirm.Message = localizer.T(LocalizationKeys.CloseDownloadMessage);
+        }
+
+        if (SetupWizardExitConfirm.IsVisible)
+        {
+            SetupWizardExitConfirm.Message = ResolveSetupWizardExitMessage();
         }
 
         if (IsUpdateAvailableVisible)

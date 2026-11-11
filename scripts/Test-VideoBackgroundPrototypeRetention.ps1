@@ -1,7 +1,8 @@
 param(
     [string]$OutputDirectory,
     [string]$LibMpvPath,
-    [ValidateSet('Video', 'Blank', 'Finish', 'ReuseSurface', 'Production')]
+    [string]$VideoPath,
+    [ValidateSet('Video', 'Blank', 'Pattern', 'Finish', 'ReuseSurface', 'Production')]
     [string]$ProbeMode = 'Video',
     [ValidateRange(6, 30)] [int]$Cycles = 8,
     [ValidateRange(0, 1800)] [int]$SteadySeconds = 180,
@@ -11,6 +12,8 @@ param(
     [string]$CompositionMode = 'Default',
     [switch]$CacheShell = $true,
     [switch]$ExerciseSettings,
+    [switch]$SteadyPaused,
+    [ValidateRange(0, 600)] [int]$RecycleSeconds = 0,
     [string]$HeapDumpToolPath,
     [switch]$ContinueAfterMemoryFailure,
     [switch]$SkipBuild
@@ -21,6 +24,8 @@ $repository = Split-Path $PSScriptRoot -Parent
 if ($ExerciseSettings -and $ProbeMode -ne 'Production') { throw 'ExerciseSettings requires Production mode.' }
 if (-not $OutputDirectory) { $OutputDirectory = Join-Path $repository '.artifacts/video-background/retention' }
 if (-not $LibMpvPath) { $LibMpvPath = Join-Path $repository '.artifacts/native/libmpv/win-x64/libmpv-2.dll' }
+if (-not $VideoPath) { $VideoPath = Join-Path $repository '.artifacts/video-background/test-1080p30.mp4' }
+$VideoPath = (Resolve-Path -LiteralPath $VideoPath).Path
 $OutputDirectory = [IO.Path]::GetFullPath($OutputDirectory)
 $sampleFile = Join-Path $OutputDirectory 'samples.csv'
 $commandFile = Join-Path $OutputDirectory 'samples.command'
@@ -64,7 +69,7 @@ function Wait-ProbeSeconds([double]$Seconds) {
 
 try {
     & "$PSScriptRoot/Start-VideoBackgroundPrototype.ps1" -OutputDirectory $OutputDirectory `
-        -VideoPath (Join-Path $repository '.artifacts/video-background/test-1080p30.mp4') `
+        -VideoPath $VideoPath `
         -LibMpvPath $LibMpvPath `
         -SkipBuild:$SkipBuild -CacheShell:$CacheShell -CompositionMode $CompositionMode -ProbeMode $ProbeMode
     $prototypeProcess = Get-Process -Id ([int](Get-Content (Join-Path $OutputDirectory 'process-id.txt')))
@@ -80,7 +85,7 @@ try {
     for ($cycle = 1; $cycle -le $Cycles; $cycle++) {
         if ($cycle -gt 1) { Send-ProbeCommand 'recreate' }
         $active = Wait-ProbeSeconds 4
-        if ($ProbeMode -ne 'Blank' -and
+        if ($ProbeMode -notin @('Blank', 'Pattern') -and
             ([int]$active.player_live -ne 1 -or [int]$active.renderer_live -ne 1 -or [double]$active.frames_per_second -le 0)) {
             throw "Cycle $cycle did not render active video."
         }
@@ -134,6 +139,8 @@ try {
     $result = [ordered]@{
         ProbeMode = $ProbeMode
         ExerciseSettings = [bool]$ExerciseSettings
+        SteadyPaused = [bool]$SteadyPaused
+        RecycleSeconds = $RecycleSeconds
         RuntimeSha256 = (Get-FileHash -LiteralPath $LibMpvPath -Algorithm SHA256).Hash
         Cycles = $Cycles
         RetainedPrivateGrowthMB = [Math]::Round($growth, 3)
@@ -151,9 +158,19 @@ try {
     if ($SteadySeconds -gt 0) {
         Send-ProbeCommand 'recreate'
         $null = Wait-ProbeSeconds 10
+        if ($SteadyPaused) { Send-ProbeCommand 'pause' }
         Send-ProbeCommand 'gc'
         $steadyStart = Wait-ProbeSeconds 2
-        $null = Wait-ProbeSeconds $SteadySeconds
+        if ($RecycleSeconds -gt 0) {
+            $remaining = $SteadySeconds
+            while ($remaining -gt 0) {
+                $span = [Math]::Min($RecycleSeconds, $remaining)
+                $null = Wait-ProbeSeconds $span
+                $remaining -= $span
+                if ($remaining -gt 0) { Send-ProbeCommand 'recycle' }
+            }
+        }
+        else { $null = Wait-ProbeSeconds $SteadySeconds }
         Send-ProbeCommand 'gc'
         $steadyEnd = Wait-ProbeSeconds 2
         [ordered]@{ Start = $steadyStart; End = $steadyEnd } | ConvertTo-Json -Depth 4 |
