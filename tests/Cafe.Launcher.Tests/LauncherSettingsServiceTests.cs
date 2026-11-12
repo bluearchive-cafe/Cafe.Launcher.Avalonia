@@ -186,10 +186,12 @@ public sealed class LauncherSettingsServiceTests : IDisposable
     }
     private readonly TestDirectory tempDir = TestDirectory.Create();
     private readonly string settingsPath;
+    private readonly string backupPath;
 
     public LauncherSettingsServiceTests()
     {
         settingsPath = Path.Combine(tempDir, "settings.json");
+        backupPath = Path.Combine(tempDir, LauncherPaths.LauncherSettingsBackupFileName);
     }
 
     [Fact]
@@ -546,6 +548,18 @@ public sealed class LauncherSettingsServiceTests : IDisposable
     }
 
     [Fact]
+    public void DeepClone_WhenThemeColorPaletteIsNull_ProducesEmptyPalette()
+    {
+        var source = JsonSerializer.Deserialize<LauncherSettings>("""{"themeColorPalette":null}""");
+
+        Assert.Null(source!.ThemeColorPalette);
+
+        var clone = source.DeepClone();
+
+        Assert.Empty(clone.ThemeColorPalette);
+    }
+
+    [Fact]
     public async Task ReadAsync_WhenNativeRunnerOnLinux_NormalizesToAuto()
     {
         await File.WriteAllTextAsync(settingsPath, """{"gameRuntime":{"runner":"native"}}""");
@@ -642,62 +656,120 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         Assert.Equal("Settings", entry.Title);
     }
 
+    [Theory]
+    [InlineData("null")]
+    [InlineData("[]")]
+    [InlineData("42")]
+    public async Task ReadAsync_WhenRootIsNotAnObject_FallsBackToDefaultsAndBacksUpTheFile(string json)
+    {
+        // 根为 null／数组／标量时 TryGetProperty 会抛 InvalidOperationException，异常曾一路
+        // 逃到 ShellLifecycle 的刷新兜底，让设置与游戏状态在修文件前不可用。
+        await File.WriteAllTextAsync(settingsPath, json);
+        var diagnostics = new RecordingDiagnostics();
+        var service = new LauncherSettingsService(TestDataRoot.ForFile(settingsPath), diagnostics);
+
+        var settings = await service.ReadAsync();
+
+        Assert.Equal(LauncherLanguages.Auto, settings.Language);
+        Assert.Equal(LaunchCheckModes.LocalManifest, settings.LaunchCheckMode);
+        Assert.Equal("", settings.GamePath);
+        Assert.Equal(json, await File.ReadAllTextAsync(backupPath));
+        var entry = Assert.Single(diagnostics.Errors);
+        Assert.Equal("Settings", entry.Title);
+        Assert.Contains("root is", entry.Message!);
+    }
+
+    [Fact]
+    public async Task ReadAsync_WhenThemeColorPaletteIsNull_KeepsOtherFieldsAndYieldsEmptyPalette()
+    {
+        // DeepClone 的 [.. other.ThemeColorPalette] 先于 NormalizeSettings 的 ?? [] 执行：
+        // null 必须更早兜底，否则整份读取会以 ArgumentNullException 结束。
+        await File.WriteAllTextAsync(
+            settingsPath,
+            """
+            {
+              "gamePath": "D:\\Games\\BlueArchive_JP",
+              "themeMode": "dark",
+              "resourcePanelUid": "UID123",
+              "themeColorPalette": null
+            }
+            """);
+        var service = new LauncherSettingsService(TestDataRoot.ForFile(settingsPath));
+
+        var settings = await service.ReadAsync();
+
+        Assert.Equal(@"D:\Games\BlueArchive_JP", settings.GamePath);
+        Assert.Equal(ThemeModes.Dark, settings.ThemeMode);
+        Assert.Equal("UID123", settings.ResourcePanelUid);
+        Assert.Empty(settings.ThemeColorPalette);
+        Assert.Equal(0, settings.SelectedThemeColorPaletteIndex);
+    }
+
+    [Fact]
+    public async Task ReadAsync_WhenOneFieldHasTheWrongType_DegradesOnlyThatField()
+    {
+        // 单字段类型错误曾被当成 JsonException 整份回默认，静默丢掉游戏路径、主题与 UID。
+        await File.WriteAllTextAsync(
+            settingsPath,
+            """
+            {
+              "gamePath": "D:\\Games\\BlueArchive_JP",
+              "themeMode": "dark",
+              "resourcePanelUid": "UID123",
+              "enableHttp2": "true"
+            }
+            """);
+        var diagnostics = new RecordingDiagnostics();
+        var service = new LauncherSettingsService(TestDataRoot.ForFile(settingsPath), diagnostics);
+
+        var settings = await service.ReadAsync();
+
+        Assert.True(settings.EnableHttp2);
+        Assert.Equal(@"D:\Games\BlueArchive_JP", settings.GamePath);
+        Assert.Equal(ThemeModes.Dark, settings.ThemeMode);
+        Assert.Equal("UID123", settings.ResourcePanelUid);
+        var entry = Assert.Single(diagnostics.Errors);
+        Assert.Equal("Settings", entry.Title);
+        Assert.Contains("enableHttp2", entry.Message!);
+    }
+
+    [Fact]
+    public async Task ReadAsync_WhenTheFileHadToBeRecovered_BacksUpTheOriginal()
+    {
+        const string original = """{"gamePath":"D:\\Games","enableHttp2":"true"}""";
+        await File.WriteAllTextAsync(settingsPath, original);
+        var service = new LauncherSettingsService(TestDataRoot.ForFile(settingsPath));
+
+        await service.ReadAsync();
+
+        Assert.Equal(original, await File.ReadAllTextAsync(backupPath));
+        Assert.Empty(Directory.EnumerateFiles(tempDir, "*.tmp"));
+    }
+
+    [Fact]
+    public async Task ReadAsync_WhenSettingsFileIsMalformed_BacksUpTheOriginal()
+    {
+        await File.WriteAllTextAsync(settingsPath, "{");
+        var service = new LauncherSettingsService(TestDataRoot.ForFile(settingsPath));
+
+        await service.ReadAsync();
+
+        Assert.Equal("{", await File.ReadAllTextAsync(backupPath));
+    }
+
+    [Fact]
+    public async Task ReadAsync_WhenSettingsAreValid_DoesNotCreateABackup()
+    {
+        var service = new LauncherSettingsService(TestDataRoot.ForFile(settingsPath));
+        await service.SaveAsync(new LauncherSettings { GamePath = @"D:\Games" });
+
+        await service.ReadAsync();
+
+        Assert.False(File.Exists(backupPath));
+    }
+
     public void Dispose()
     {
         tempDir.Dispose();
-    }
-
-    private sealed class RecordingDiagnostics : ILauncherDiagnostics
-    {
-        public List<(string Title, string? Message)> Errors { get; } = [];
-
-        public Task DebugAsync(
-            string title,
-            string? message = null,
-            CancellationToken cancellationToken = default) => Task.CompletedTask;
-
-        public List<string> Messages { get; } = [];
-
-        public Task MessageAsync(string title, string message, CancellationToken cancellationToken = default)
-        {
-            Messages.Add($"{title}: {message}");
-            return Task.CompletedTask;
-        }
-
-        public void LogMessage(LogEntrySeverity severity, string title, string? message = null) =>
-            Messages.Add($"{severity}: {title}: {message}");
-
-        public Task ErrorAsync(
-            string title,
-            string? message,
-            Exception exception,
-            CancellationToken cancellationToken = default)
-        {
-            Errors.Add((title, message));
-            return Task.CompletedTask;
-        }
-        public Task VerboseAsync(
-            string title,
-            string? message = null,
-            CancellationToken cancellationToken = default) => Task.CompletedTask;
-
-        public Task WarningAsync(string title, string message, CancellationToken cancellationToken = default)
-        {
-            Messages.Add($"Warn: {title}: {message}");
-            return Task.CompletedTask;
-        }
-
-        public Task ErrorAsync(string title, Exception exception, CancellationToken cancellationToken = default) =>
-            ErrorAsync(title, exception.Message, exception, cancellationToken);
-
-        public Task FatalAsync(string title, Exception exception, CancellationToken cancellationToken = default) =>
-            ErrorAsync(title, exception.Message, exception, cancellationToken);
-
-        // 日志文件与级别只在真实实现上有意义：假实现记录调用即可。
-        public string LogFilePath => string.Empty;
-
-        public LogEntrySeverity MinimumLevel { get; private set; } = LogEntrySeverity.Info;
-
-        public void SetMinimumLevel(LogEntrySeverity severity) => MinimumLevel = severity;
     }
 }

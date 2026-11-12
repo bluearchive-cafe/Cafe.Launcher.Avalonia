@@ -778,6 +778,15 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
     private bool IsBundledImage(object? image) =>
         image is not null && ReferenceEquals(image, Volatile.Read(ref bundledImage));
 
+    /// <summary>释放调用方交出的位图；内置壁纸的释放权归本类，所有路径统一经此判定。</summary>
+    private void DisposeUnlessBundled(object? image)
+    {
+        if (!IsBundledImage(image))
+        {
+            (image as IDisposable)?.Dispose();
+        }
+    }
+
     private void ReleaseAfterBindings(IImage? image)
     {
         if (!IsBundledImage(image))
@@ -793,11 +802,7 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        if (!IsBundledImage(image))
-        {
-            (image as IDisposable)?.Dispose();
-        }
-
+        DisposeUnlessBundled(image);
         cancellationToken.ThrowIfCancellationRequested();
     }
 
@@ -814,11 +819,7 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
     {
         if (disposed || loadGeneration != Volatile.Read(ref backgroundLoadGeneration))
         {
-            if (!IsBundledImage(bitmap))
-            {
-                (bitmap as IDisposable)?.Dispose();
-            }
-
+            DisposeUnlessBundled(bitmap);
             return false;
         }
 
@@ -862,9 +863,9 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
     private void StartWallpaperCrossFade(IDisposable oldBitmap)
     {
         var superseded = Interlocked.Exchange(ref fadingOutWallpaper, oldBitmap);
-        if (superseded is not null && !ReferenceEquals(superseded, oldBitmap) && !IsBundledImage(superseded))
+        if (superseded is not null && !ReferenceEquals(superseded, oldBitmap))
         {
-            superseded.Dispose();
+            DisposeUnlessBundled(superseded);
         }
 
         PreviousWallpaperFadingOut?.Invoke((IImage)oldBitmap, GetFadeToken());
@@ -885,10 +886,7 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
         }
 
         fadingOutWallpaper = null;
-        if (!IsBundledImage(fading))
-        {
-            fading.Dispose();
-        }
+        DisposeUnlessBundled(fading);
     }
 
     private CancellationToken GetFadeToken()

@@ -201,9 +201,11 @@ internal sealed class LauncherCoreService : ILauncherCoreService
         }
         catch (Exception exception)
         {
+            // title 是 [LogTitle] 标签，必须是稳定的模块名；具体是哪一次远程读取放进消息，
+            // 与同一模块的其它诊断共享一个标签（PROJECT_CONVENTIONS §5.2）。
             await diagnostics.ErrorAsync(
+                "LauncherCore",
                 $"Launcher remote state read failed: {operation}.",
-                exception.Message,
                 exception,
                 CancellationToken.None).ConfigureAwait(false);
             return default;

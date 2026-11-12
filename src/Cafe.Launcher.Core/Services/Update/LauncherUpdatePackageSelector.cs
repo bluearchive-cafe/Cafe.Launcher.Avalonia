@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.Core.Services.Update;
@@ -55,6 +56,37 @@ internal static class LauncherUpdatePackageSelector
             package,
             checksumManifest,
             LauncherUpdateInAppAvailability.Available);
+    }
+
+    /// <summary>
+    /// Whether <paramref name="name"/> can be used verbatim as one staged file name under the
+    /// update directory: a single segment that is neither empty, <c>"."</c>, <c>".."</c>, nor
+    /// carrying a separator or an invalid file-name character.
+    /// </summary>
+    /// <remarks>
+    /// 资产名来自发布元数据（或代理应答），而它最终会成为数据根下的文件名，所以必须在这里
+    /// 就拒绝越界形态，而不是依赖拼接后再看结果。'/' 与 '\' 都显式检查：Windows 把两者都当
+    /// 分隔符，Unix 只把 '/' 当分隔符，只靠 <c>Path.GetFileName</c> 会让
+    /// <c>..\..\x_setup.exe</c> 在 Unix 上原样通过、再由 Windows 消费方重新解释成上跳。
+    /// </remarks>
+    internal static bool IsSingleFileNameSegment(string? name)
+    {
+        if (string.IsNullOrEmpty(name)
+            || name == "."
+            || name == ".."
+            || name.Contains('/')
+            || name.Contains('\\'))
+        {
+            return false;
+        }
+
+        if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        {
+            return false;
+        }
+
+        // 驱动器前缀、尾随分隔符等仍可能让取文件名结果与原串不同；必须原样往返。
+        return string.Equals(Path.GetFileName(name), name, StringComparison.Ordinal);
     }
 
     /// <summary>Finds the single asset whose name ends with <paramref name="suffix"/>, case-insensitively.</summary>

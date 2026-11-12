@@ -212,17 +212,50 @@ public sealed class DiagnosticsServicesTests : IDisposable
     }
 
     [Fact]
-    public void ResolveActiveLogFile_WithBothStemAndRotatedFile_PrefersTheStem()
+    public void ResolveActiveLogFile_WithOnlyTheStem_ReturnsTheStem()
+    {
+        var stem = Path.Combine(tempDir, "unified.log");
+        File.WriteAllText(stem, "current content");
+
+        Assert.Equal(stem, UnifiedLogger.ResolveActiveLogFile(stem));
+    }
+
+    /// <summary>
+    /// 旧断言是「基名一旦存在就胜出」（AUD-LOG-001）。轮转后基名留着第一次轮转前的旧内容，正在写的
+    /// 是序号最大的那份，所以「基名旧 + <c>unified_001.log</c> 新」必须解析到 001；否则日志查看器
+    /// 与导出都会停在已封笔的那一代上。
+    /// </summary>
+    [Fact]
+    public void ResolveActiveLogFile_WhenTheStemIsOlderThanTheRotatedFile_ReturnsTheRotatedFile()
     {
         var stem = Path.Combine(tempDir, "unified.log");
         var rotated = Path.Combine(tempDir, "unified_001.log");
-        File.WriteAllText(stem, "current content");
-        File.WriteAllText(rotated, "rotated content");
-        // 基名最后一次写入早于轮转文件：解析必须按「基名优先」而不是「最新写入」，否则正在写的
-        // 那份会被旧的轮转文件盖过去。
+        File.WriteAllText(stem, "content written before the rotation");
+        File.WriteAllText(rotated, "content written after the rotation");
         File.SetLastWriteTimeUtc(stem, DateTime.UtcNow.AddHours(-2));
+        File.SetLastWriteTimeUtc(rotated, DateTime.UtcNow);
 
-        Assert.Equal(stem, UnifiedLogger.ResolveActiveLogFile(stem));
+        Assert.Equal(rotated, UnifiedLogger.ResolveActiveLogFile(stem));
+    }
+
+    /// <summary>
+    /// 序号是权威信号：Serilog 打开时按「当前检查点里序号最大的文件」续写，所以即使旧文件被拷贝或备份
+    /// 工具摸出了更晚的写入时间，正在写的那份仍是最大序号——按 mtime 选会指到已经封笔的那一代。
+    /// </summary>
+    [Fact]
+    public void ResolveActiveLogFile_WithSeveralRotatedFiles_ReturnsTheHighestSequenceEvenWhenItsTimestampIsOlder()
+    {
+        var stem = Path.Combine(tempDir, "unified.log");
+        var first = Path.Combine(tempDir, "unified_001.log");
+        var third = Path.Combine(tempDir, "unified_003.log");
+        File.WriteAllText(stem, "generation zero");
+        File.WriteAllText(first, "generation one");
+        File.WriteAllText(third, "generation three");
+        File.SetLastWriteTimeUtc(stem, DateTime.UtcNow);
+        File.SetLastWriteTimeUtc(first, DateTime.UtcNow.AddMinutes(-3));
+        File.SetLastWriteTimeUtc(third, DateTime.UtcNow.AddMinutes(-10));
+
+        Assert.Equal(third, UnifiedLogger.ResolveActiveLogFile(stem));
     }
 
     [Fact]

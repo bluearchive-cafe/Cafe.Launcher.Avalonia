@@ -439,21 +439,97 @@ public sealed class ResourcePanelViewModelTests
     }
 
     [Fact]
-    public async Task CloseAndRefresh_WhileLoading_AreUnavailableAndDoNotInterruptTheLoad()
+    public async Task CloseWhileLoading_CancelsTheLoadAndHidesThePanel()
     {
         using var context = await CreateContextAsync(cookieUid: "UIDTESTA", configure: transport => transport.GateStatus = true);
         var load = context.ViewModel.OpenPanelDirectlyAsync();
         await WaitUntilAsync(() => context.Transport.StatusListCount == 1);
-        Assert.False(context.ViewModel.CloseResourcePanelCommand.CanExecute(null));
+
+        // 关闭始终是取消入口：加载中可用，刷新仍被忙碌挡住。
+        Assert.True(context.ViewModel.CloseResourcePanelCommand.CanExecute(null));
         Assert.False(context.ViewModel.RefreshResourcePanelCommand.CanExecute(null));
-        await context.ViewModel.CloseResourcePanelCommand.ExecuteAsync(null);
         await context.ViewModel.RefreshResourcePanelCommand.ExecuteAsync(null);
-        Assert.True(context.ViewModel.IsResourcePanelVisible);
+        Assert.Equal(1, context.Transport.StatusListCount);
+
+        await context.ViewModel.CloseResourcePanelCommand.ExecuteAsync(null);
+
+        // 关闭取消在途请求并等它收尾：面板隐藏、忙碌清除，加载任务正常结束。
+        Assert.False(context.ViewModel.IsResourcePanelVisible);
+        Assert.False(context.ViewModel.IsResourcePanelBusy);
+        Assert.Equal("", context.ViewModel.ResourcePanelMessage);
+        await load.WaitAsync(TimeSpan.FromSeconds(5));
+        // 状态与配置本来就并行发起；关闭后不得再补发任何请求。
         Assert.Equal(1, context.Transport.ConfigGetCount);
+        Assert.Equal(1, context.Transport.StatusListCount);
+
+        // 迟到的扫描回答不得写回已关闭的面板。
         context.Transport.ReleaseStatus();
-        await load;
+        await WaitUntilAsync(() => !context.ViewModel.IsResourcePanelBusy);
+        Assert.False(context.ViewModel.IsResourcePanelVisible);
+        Assert.Equal("", context.ViewModel.ResourcePanelMessage);
+
+        // 关闭后命令恢复，重新打开走一次新加载。
         Assert.True(context.ViewModel.CloseResourcePanelCommand.CanExecute(null));
         Assert.True(context.ViewModel.RefreshResourcePanelCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task CloseWhileSaving_AsksForDiscardConfirmationThenCancelsTheSave()
+    {
+        using var context = await CreateContextAsync(cookieUid: "UIDTESTA", configure: transport => transport.GateConfigSet = true);
+        await context.ViewModel.OpenPanelDirectlyAsync();
+        GetItem(context.ViewModel, ResourcePanelResourceCodes.Voice).IsEnabled = true;
+        var toastCount = 0;
+        context.ToastService.ToastRaised += _ => toastCount++;
+
+        var save = context.ViewModel.SaveResourcePanelCommand.ExecuteAsync(null);
+        await WaitUntilAsync(() => context.Transport.ConfigSetCount == 1);
+
+        await context.ViewModel.CloseResourcePanelCommand.ExecuteAsync(null);
+
+        // 保存中的关闭先走放弃确认：面板仍在、保存在途、输入未被静默丢弃。
+        Assert.True(context.ViewModel.DiscardChangesConfirm.IsVisible);
+        Assert.True(context.ViewModel.IsResourcePanelVisible);
+        Assert.True(context.ViewModel.IsResourcePanelBusy);
+        Assert.True(GetItem(context.ViewModel, ResourcePanelResourceCodes.Voice).IsEnabled);
+
+        await context.ViewModel.DiscardChangesConfirm.ConfirmCommand.ExecuteAsync(null);
+
+        // 确认放弃：取消在途保存、隐藏面板、恢复草稿基线，且不弹成功提示。
+        Assert.False(context.ViewModel.IsResourcePanelVisible);
+        Assert.False(context.ViewModel.IsResourcePanelBusy);
+        Assert.False(GetItem(context.ViewModel, ResourcePanelResourceCodes.Voice).IsEnabled);
+        Assert.False(context.ViewModel.IsResourcePanelSaveEnabled);
+        await save.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(0, toastCount);
+        Assert.False(context.ViewModel.IsResourcePanelMessageError);
+    }
+
+    [Fact]
+    public async Task CloseWhileSaving_WhenDiscardIsCancelled_KeepsSavingAndThenSucceeds()
+    {
+        using var context = await CreateContextAsync(cookieUid: "UIDTESTA", configure: transport => transport.GateConfigSet = true);
+        await context.ViewModel.OpenPanelDirectlyAsync();
+        GetItem(context.ViewModel, ResourcePanelResourceCodes.Voice).IsEnabled = true;
+
+        var save = context.ViewModel.SaveResourcePanelCommand.ExecuteAsync(null);
+        await WaitUntilAsync(() => context.Transport.ConfigSetCount == 1);
+        await context.ViewModel.CloseResourcePanelCommand.ExecuteAsync(null);
+        context.ViewModel.CancelDiscardChangesCommand.Execute(null);
+
+        Assert.False(context.ViewModel.DiscardChangesConfirm.IsVisible);
+        Assert.True(context.ViewModel.IsResourcePanelVisible);
+        Assert.True(context.ViewModel.IsResourcePanelBusy);
+
+        context.Transport.ReleaseConfigSet();
+        await save.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.True(context.ViewModel.IsResourcePanelVisible);
+        Assert.False(context.ViewModel.IsResourcePanelBusy);
+        Assert.Equal(
+            context.Localizer.T(LocalizationKeys.ResourcePanelSaved),
+            context.ViewModel.ResourcePanelMessage);
+        Assert.False(context.ViewModel.IsResourcePanelSaveEnabled);
     }
 
     private static ResourcePanelItem GetItem(ResourcePanelViewModel viewModel, string code) =>
@@ -542,8 +618,11 @@ public sealed class ResourcePanelViewModelTests
     private sealed class GatedResourcePanelTransport : IRemoteHttpTransport
     {
         private readonly TaskCompletionSource statusGate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource configSetGate = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public bool GateStatus { get; set; }
+
+        public bool GateConfigSet { get; set; }
 
         public string StatusJson { get; set; } = "{}";
         public string ConfigJson { get; set; } = "{}";
@@ -579,22 +658,34 @@ public sealed class ResourcePanelViewModelTests
             return JsonSerializer.Deserialize<T>(json, options?.Json ?? JsonDefaults.Strict);
         }
 
-        public Task<RemoteBody> GetStreamAsync(
+        public async Task<RemoteBody> GetStreamAsync(
             Uri uri,
             RemoteRequestOptions? options = null,
             CancellationToken cancellationToken = default)
         {
             RequestedUris.Add(uri);
-            if (uri.AbsolutePath == "/config/set" && ConfigSetStatusCode is { } setCode)
+            if (uri.AbsolutePath == "/config/set")
             {
-                throw new HttpRequestException($"stub transport answered {setCode}", null, setCode);
+                if (ConfigSetStatusCode is { } setCode)
+                {
+                    throw new HttpRequestException($"stub transport answered {setCode}", null, setCode);
+                }
+
+                if (GateConfigSet)
+                {
+                    await configSetGate.Task
+                        .WaitAsync(TimeSpan.FromSeconds(5), cancellationToken)
+                        .ConfigureAwait(false);
+                }
             }
 
             var bytes = "{}"u8.ToArray();
-            return Task.FromResult(new RemoteBody(new MemoryStream(bytes), bytes.LongLength));
+            return new RemoteBody(new MemoryStream(bytes), bytes.LongLength);
         }
 
         public void ReleaseStatus() => statusGate.TrySetResult();
+
+        public void ReleaseConfigSet() => configSetGate.TrySetResult();
 
         private async Task<string> RespondStatusAsync(CancellationToken cancellationToken)
         {

@@ -19,7 +19,8 @@ public sealed class SetupWizardViewModelTests
     /// <summary>向导路径校验（防抖 + 后台写探测）的就绪预算。</summary>
     private static readonly TimeSpan GateSettleBudget = TimeSpan.FromSeconds(5);
 
-    private static SetupWizardViewModel CreateViewModel()
+    private static SetupWizardViewModel CreateViewModel(
+        Func<AgreementDocuments.Content>? agreementLoader = null)
     {
         var localizer = new LocalizationService();
         localizer.SetLanguage(LauncherLanguages.English);
@@ -28,7 +29,8 @@ public sealed class SetupWizardViewModelTests
             new GameInstallationPath(LauncherProfiles.BlueArchiveJapan),
             new LocalInstallationStateStore(LauncherProfiles.BlueArchiveJapan),
             new LocalDiagnostics(),
-            new StubFilePickerService());
+            new StubFilePickerService(),
+            agreementLoader: agreementLoader);
     }
 
     /// <summary>接受协议并推进到游戏路径步骤（步骤 2）。</summary>
@@ -58,7 +60,6 @@ public sealed class SetupWizardViewModelTests
         var vm = CreateViewModel();
         vm.NextCommand.Execute(null);
         Assert.Equal(1, vm.Step);
-        Assert.True(vm.IsStep1);
         Assert.True(vm.IsAgreementStep);
         Assert.True(vm.CanGoPrevious);
         Assert.False(vm.IsFirstStep);
@@ -77,14 +78,49 @@ public sealed class SetupWizardViewModelTests
     [Fact]
     public void MarkAgreementRead_EnablesCheckboxWithoutAccepting()
     {
-        var vm = CreateViewModel();
+        var vm = CreateViewModel(
+            () => new AgreementDocuments.Content("terms", LoadError: null));
         vm.NextCommand.Execute(null);
 
         vm.MarkAgreementRead();
 
         Assert.True(vm.HasReadAgreement);
+        Assert.True(vm.IsAgreementAvailable);
         Assert.False(vm.IsAgreementAccepted);
         Assert.False(vm.CanGoNext);
+    }
+
+    [Fact]
+    public void MarkAgreementRead_WhenDocumentsFailedToLoad_KeepsTheGateLocked()
+    {
+        // 守卫（AUD-UI-005）：加载失败时回退正文只有「标题 + 错误串」，内容不足一屏会
+        // 立刻满足滚动阅读判定；同意门禁必须保持锁定，并把错误留在正文里便于诊断。
+        var vm = CreateViewModel(
+            () => new AgreementDocuments.Content(string.Empty, "missing terms asset"));
+        vm.NextCommand.Execute(null);
+
+        vm.MarkAgreementRead();
+
+        Assert.False(vm.HasReadAgreement);
+        Assert.False(vm.IsAgreementAvailable);
+        Assert.False(vm.CanGoNext);
+        Assert.Contains("missing terms asset", vm.AgreementMarkdown, StringComparison.Ordinal);
+        Assert.Equal(1, vm.Step);
+    }
+
+    [Fact]
+    public void MarkAgreementRead_WhenDocumentsRecoverOnNextLaunch_UnlocksNormally()
+    {
+        // 失败后下一次启动正常加载时，阅读门禁语义不变：读完即可勾选并前进。
+        var vm = CreateViewModel(
+            () => new AgreementDocuments.Content("terms", LoadError: null));
+        vm.NextCommand.Execute(null);
+
+        vm.MarkAgreementRead();
+        vm.IsAgreementAccepted = true;
+
+        Assert.True(vm.HasReadAgreement);
+        Assert.True(vm.CanGoNext);
     }
 
     [Fact]
@@ -162,44 +198,37 @@ public sealed class SetupWizardViewModelTests
             vm.NextCommand.Execute(null);
         Assert.Equal(5, vm.Step);
         Assert.True(vm.IsLastStep);
-        Assert.False(vm.IsStep1);
-        Assert.False(vm.IsStep2);
-        Assert.False(vm.IsStep3);
         vm.NextCommand.Execute(null);
         Assert.Equal(5, vm.Step);
     }
 
     [Fact]
-    public async Task Step_IsStepProperties_AreConsistent()
+    public async Task StepSequence_AdvancesThroughAllSteps()
     {
         var vm = CreateViewModel();
+        Assert.Equal(0, vm.Step);
         Assert.True(vm.IsFirstStep);
-        Assert.False(vm.IsStep1);
-        Assert.False(vm.IsStep2);
-        Assert.False(vm.IsStep3);
-        Assert.False(vm.IsStep4);
-        Assert.False(vm.IsStep5);
         Assert.False(vm.IsLastStep);
 
         vm.MarkAgreementRead();
         vm.IsAgreementAccepted = true;
         vm.NextCommand.Execute(null);
-        Assert.True(vm.IsStep1);
+        Assert.Equal(1, vm.Step);
         Assert.True(vm.IsAgreementStep);
 
         vm.NextCommand.Execute(null);
-        Assert.True(vm.IsStep2);
+        Assert.Equal(2, vm.Step);
 
         vm.GamePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.AvailableForInstallation);
         vm.NextCommand.Execute(null);
-        Assert.True(vm.IsStep3);
+        Assert.Equal(3, vm.Step);
 
         vm.NextCommand.Execute(null);
-        Assert.True(vm.IsStep4);
+        Assert.Equal(4, vm.Step);
 
         vm.NextCommand.Execute(null);
-        Assert.True(vm.IsStep5);
+        Assert.Equal(5, vm.Step);
         Assert.True(vm.IsLastStep);
     }
 
@@ -274,6 +303,26 @@ public sealed class SetupWizardViewModelTests
         Assert.NotNull(vm.LanguageDisplayName);
         Assert.NotNull(vm.DownloadSourceDisplayName);
         Assert.NotNull(vm.ProxyDisplayName);
+
+        var items = vm.SummaryItems;
+        Assert.Equal(4, items.Count);
+        Assert.Equal(new[] { 0, 3, 2, 4 }, items.Select(item => item.EditStep).ToArray());
+        Assert.Equal(
+            new[] { "Translate", "CloudDownload", "FolderSearch", "SwapHorizontal" },
+            items.Select(item => item.Icon.ToString()).ToArray());
+        Assert.Equal(
+            new[] { false, true, true, true },
+            items.Select(item => item.HasDivider).ToArray());
+        Assert.All(items, item =>
+        {
+            Assert.False(string.IsNullOrWhiteSpace(item.Label));
+            Assert.False(string.IsNullOrWhiteSpace(item.EditLabel));
+            Assert.Same(vm.GoToStepCommand, item.EditCommand);
+        });
+        Assert.Equal(vm.LanguageDisplayName, items[0].Value);
+        Assert.Equal(vm.DownloadSourceDisplayName, items[1].Value);
+        Assert.Equal(vm.GamePathDisplay, items[2].Value);
+        Assert.Equal(vm.ProxyDisplayName, items[3].Value);
     }
 
     [Fact]
@@ -409,13 +458,11 @@ public sealed class SetupWizardViewModelTests
     }
 
     [Fact]
-    public void RequiresConsent_OnlyWhenStoredVersionIsNotCurrent()
+    public void LauncherAgreement_IsCurrent_OnlyWhenStoredVersionMatches()
     {
-        var settings = LauncherSettings.CreateDefaults();
-        Assert.True(SetupWizardViewModel.RequiresConsent(settings));
-
-        settings.AcceptedAgreementVersion = LauncherAgreement.CurrentVersion;
-        Assert.False(SetupWizardViewModel.RequiresConsent(settings));
+        Assert.False(LauncherAgreement.IsCurrent(null));
+        Assert.False(LauncherAgreement.IsCurrent("2020-01-01"));
+        Assert.True(LauncherAgreement.IsCurrent(LauncherAgreement.CurrentVersion));
     }
 
     [Fact]

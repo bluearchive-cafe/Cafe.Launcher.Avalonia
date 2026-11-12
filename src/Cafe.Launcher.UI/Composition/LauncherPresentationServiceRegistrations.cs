@@ -113,8 +113,10 @@ public static class LauncherPresentationServiceRegistrations
             showHiddenSettings,
             sp.GetRequiredService<SettingsOptionsViewModel>()));
         // 会话看护订阅进程跟踪器的退出事件：登记在跟踪器之后，容器逆序释放时看护先于
-        // 跟踪器析构，退订不会落在已释放的订阅源上。
-        services.AddSingleton<IGameSessionMonitor, GameSessionMonitor>();
+        // 跟踪器析构，退订不会落在已释放的订阅源上。诊断缝用来记录扫描超时（AUD-PERF-011）。
+        services.AddSingleton<IGameSessionMonitor>(sp => new GameSessionMonitor(
+            sp.GetRequiredService<IGameProcessTracker>(),
+            sp.GetRequiredService<ILauncherDiagnostics>()));
         // 持久化检查点存储全库单例：下载服务写入/清除，卸载服务清除——
         // 同一文件只允许一个所有者实例。
         services.AddSingleton(_ => new DownloadCheckpointStore(dataRoot));

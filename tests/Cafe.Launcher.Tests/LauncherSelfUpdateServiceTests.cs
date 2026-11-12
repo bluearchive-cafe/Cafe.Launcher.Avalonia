@@ -286,6 +286,78 @@ public sealed class LauncherSelfUpdateServiceTests
         Assert.Empty(transport.RequestedUris);
     }
 
+    [Theory]
+    // 反斜杠上跳（Windows 分隔符）。
+    [InlineData("..\\..\\x_win-x64.zip")]
+    [InlineData("..\\x_win-x64.zip")]
+    // 正斜杠上跳（两个平台的分隔符）。
+    [InlineData("../x_win-x64.zip")]
+    // 两种分隔符同现。
+    [InlineData("a\\b/c_win-x64.zip")]
+    // 绝对路径：Path.Combine 会整段替换基路径。
+    [InlineData("C:\\temp\\x_win-x64.zip")]
+    [InlineData("/tmp/x_win-x64.zip")]
+    public async Task PrepareAsync_WhenThePackageNameIsNotASingleFileName_FailsBeforeDownloading(
+        string packageName)
+    {
+        // AUD-UPD-001：包名会成为数据根下的落点文件名，越界形态必须在拼路径之前被拒绝，
+        // 且不得先花掉一次网络请求。
+        using var directory = TestDirectory.Create();
+        var transport = new StubRemoteHttpTransport(
+            _ => throw new InvalidOperationException("No request may be made for an unsafe package name."));
+        var service = new LauncherSelfUpdateService(
+            new LauncherUpdateDownloader(transport),
+            new LauncherUpdateHostInfoProviderFake(WindowsPortableHost()),
+            new StubWindowsLauncherUpdateApplier(isAvailable: true),
+            directory.DataRoot,
+            new LocalDiagnostics());
+        var files = new List<ReleaseFile>
+        {
+            new() { Name = packageName, Url = PackageUrl, Size = PackageBytes.Length },
+            new() { Name = "SHA256SUMS", Url = ManifestUrl, Size = 128 }
+        };
+
+        var preparation = await service.PrepareAsync(
+            files, Version, progress: null, TestContext.Current.CancellationToken);
+
+        Assert.Equal(LauncherSelfUpdatePreparationStatus.Failed, preparation.Status);
+        Assert.Equal(LauncherSelfUpdateFailureKind.Verification, preparation.FailureKind);
+        Assert.Empty(transport.RequestedUris);
+        Assert.False(System.IO.Directory.Exists(directory.DataRoot.UpdateDirectory));
+    }
+
+    [Theory]
+    // "." / ".." 能通过逐字符过滤，却指向目录本身或父目录。
+    [InlineData("..")]
+    [InlineData(".")]
+    [InlineData("../..")]
+    [InlineData("..\\..")]
+    [InlineData("1.2/../..")]
+    public async Task PrepareAsync_WhenTheVersionSegmentWouldEscape_StagesInsideTheUpdateDirectory(
+        string version)
+    {
+        // 版本段来自发布元数据；落点必须始终在 UpdateDirectory 之内（带分隔符的前缀比较）。
+        using var directory = TestDirectory.Create();
+        var service = CreateService(
+            WindowsPortableHost(),
+            Responder($"{PackageSha}  {PackageName}"),
+            directory.DataRoot);
+
+        var preparation = await service.PrepareAsync(
+            ReleaseFiles(), version, progress: null, TestContext.Current.CancellationToken);
+
+        Assert.True(
+            preparation.Status == LauncherSelfUpdatePreparationStatus.Ready,
+            preparation.FailureMessage);
+        Assert.NotNull(preparation.PackagePath);
+        Assert.True(System.IO.File.Exists(preparation.PackagePath));
+        Assert.StartsWith(
+            System.IO.Path.TrimEndingDirectorySeparator(directory.DataRoot.UpdateDirectory)
+                + System.IO.Path.DirectorySeparatorChar,
+            preparation.PackagePath,
+            StringComparison.Ordinal);
+    }
+
     private static LauncherUpdateHostInfo WindowsPortableHost() =>
         new(IsWindows: true, IsX64: true, IsInstallerInstall: false);
 
@@ -329,60 +401,5 @@ public sealed class LauncherSelfUpdateServiceTests
         : ILauncherUpdateHostInfoProvider
     {
         public LauncherUpdateHostInfo GetHostInfo() => info;
-    }
-
-    /// <summary>Records diagnostic lines so the update service's silent-failure regression stays observable.</summary>
-    private sealed class RecordingDiagnostics : ILauncherDiagnostics
-    {
-        public List<string> Messages { get; } = [];
-
-        public Task DebugAsync(
-            string title,
-            string? message = null,
-            CancellationToken cancellationToken = default) => Task.CompletedTask;
-
-        public Task MessageAsync(string title, string message, CancellationToken cancellationToken = default)
-        {
-            Messages.Add($"{title}: {message}");
-            return Task.CompletedTask;
-        }
-
-        public Task WarningAsync(string title, string message, CancellationToken cancellationToken = default)
-        {
-            Messages.Add($"Warn: {title}: {message}");
-            return Task.CompletedTask;
-        }
-
-        public void LogMessage(LogEntrySeverity severity, string title, string? message = null) =>
-            Messages.Add($"{severity}: {title}: {message}");
-
-        public Task ErrorAsync(
-            string title,
-            string? message,
-            Exception exception,
-            CancellationToken cancellationToken = default)
-        {
-            Messages.Add($"Error: {title}: {message}");
-            return Task.CompletedTask;
-        }
-
-        public Task ErrorAsync(string title, Exception exception, CancellationToken cancellationToken = default) =>
-            ErrorAsync(title, exception.Message, exception, cancellationToken);
-
-        public Task VerboseAsync(
-            string title,
-            string? message = null,
-            CancellationToken cancellationToken = default) => Task.CompletedTask;
-
-        public Task FatalAsync(string title, Exception exception, CancellationToken cancellationToken = default) =>
-            ErrorAsync(title, exception.Message, exception, cancellationToken);
-
-        public string LogFilePath => string.Empty;
-
-        public LogEntrySeverity MinimumLevel => LogEntrySeverity.Info;
-
-        public void SetMinimumLevel(LogEntrySeverity severity)
-        {
-        }
     }
 }

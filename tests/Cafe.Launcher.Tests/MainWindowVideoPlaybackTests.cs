@@ -15,6 +15,6 @@ public sealed class MainWindowVideoPlaybackTests
         bool hasSource, bool isVisible, WindowState windowState, bool isActive, bool expected)
     {
         // Headless 无法制造「可见但失焦」的窗口，失焦分支在这里覆盖。
-        Assert.Equal(expected, MainWindow.IsPlaybackUnavailable(hasSource, isVisible, windowState, isActive));
+        Assert.Equal(expected, new VideoPlaybackConditions(hasSource, isVisible, windowState, isActive).IsUnavailable);
     }
 }

@@ -284,7 +284,7 @@ internal sealed class GameRuntime : IGameRuntime
         // buffer fills. Only Wine/UMU launches redirect (see BuildStartInfo).
         if (startInfo.RedirectStandardOutput)
         {
-            runnerOutputCapture?.Begin(process.StandardOutput, process.StandardError);
+            _ = runnerOutputCapture?.Begin(process.StandardOutput, process.StandardError);
         }
 
         return new GameProcess(process, runner.Id);

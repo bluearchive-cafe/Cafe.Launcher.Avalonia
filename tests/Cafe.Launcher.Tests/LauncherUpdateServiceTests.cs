@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
+using System.Text.Json;
 using Cafe.Launcher.Constants;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
@@ -812,6 +813,94 @@ public sealed class LauncherUpdateServiceTests
         Assert.True(result.IsUpdateAvailable);
         Assert.Equal(version, result.LatestVersion);
     }
+
+    // ── 自更新包名必须是单一文件名段（AUD-UPD-001）──────────────────────
+
+    [Theory]
+    // 反斜杠上跳：同时满足 _setup.exe 后缀与 v1.2.0_ 版本串条件的经典形态。
+    [InlineData("v1.2.0_..\\..\\x_setup.exe")]
+    [InlineData("v1.2.0_..\\x_win-x64.zip")]
+    // 正斜杠同样是分隔符，两个平台都必须拒绝。
+    [InlineData("v1.2.0_/tmp/x_setup.exe")]
+    // 两种分隔符同现。
+    [InlineData("v1.2.0_a\\b/c_setup.exe")]
+    // 绝对路径形态。
+    [InlineData("C:\\temp\\v1.2.0_x_setup.exe")]
+    [InlineData("/tmp/v1.2.0_x_win-x64.zip")]
+    public async Task CheckForUpdateAsync_WhenPackageNameIsNotASingleFileName_ReturnsFailure(
+        string packageName)
+    {
+        var transport = CreateReleasesTransport(ReleasesJsonWithPackageName("1.2.0", packageName));
+        var service = new LauncherUpdateService(LauncherProfiles.Cafe, transport, currentVersionOverride: "1.0.0");
+
+        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
+
+        Assert.False(result.IsSuccessful);
+        Assert.False(result.IsUpdateAvailable);
+        Assert.Equal("files[0].name must be a single file name", result.FailureMessage);
+    }
+
+    [Theory]
+    [InlineData("Cafe.Launcher_v1.4.0_win-x64.zip")]
+    [InlineData("Cafe.Launcher_v1.4.0_setup.exe")]
+    public async Task CheckForUpdateAsync_WhenPackageNameIsASingleFileName_AcceptsTheRelease(
+        string packageName)
+    {
+        var transport = CreateReleasesTransport(
+            $$"""
+            [
+              {
+                "version": "1.4.0",
+                "files": [
+                  {
+                    "name": "{{packageName}}",
+                    "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v1.4.0/{{packageName}}",
+                    "size": 100
+                  },
+                  {
+                    "name": "SHA256SUMS",
+                    "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v1.4.0/SHA256SUMS",
+                    "size": 100
+                  }
+                ],
+                "releaseDate": "2026-06-15T00:00:00Z"
+              }
+            ]
+            """);
+        var service = new LauncherUpdateService(LauncherProfiles.Cafe, transport, currentVersionOverride: "1.0.0");
+
+        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
+
+        Assert.True(result.IsSuccessful);
+        Assert.True(result.IsUpdateAvailable);
+        Assert.Equal("1.4.0", result.LatestVersion);
+        Assert.Equal(packageName, result.Files[0].Name);
+    }
+
+    /// <summary>
+    /// 一版发布，其 Windows 包携带 <paramref name="packageName"/>。URL 保持良性，这样拒绝
+    /// 只可能来自包名校验，而不是 URI 规范化（"./.." 段会被 <see cref="Uri"/> 预先折叠）。
+    /// </summary>
+    private static string ReleasesJsonWithPackageName(string version, string packageName) => $$"""
+        [
+          {
+            "version": "{{version}}",
+            "files": [
+              {
+                "name": {{JsonSerializer.Serialize(packageName)}},
+                "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v{{version}}/Cafe.Launcher_v{{version}}_setup.exe",
+                "size": 100
+              },
+              {
+                "name": "SHA256SUMS",
+                "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v{{version}}/SHA256SUMS",
+                "size": 100
+              }
+            ],
+            "releaseDate": "2026-06-15T00:00:00Z"
+          }
+        ]
+        """;
 
     /// <summary>
     /// Builds a transport that answers the server proxy releases endpoint with

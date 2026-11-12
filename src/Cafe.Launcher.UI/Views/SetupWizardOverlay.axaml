@@ -3,6 +3,7 @@
              xmlns:vm="using:Cafe.Launcher.UI.ViewModels"
              xmlns:models="using:Cafe.Launcher.UI.Models"
              xmlns:controls="using:Cafe.Launcher.UI.Controls"
+             xmlns:wizard="using:Cafe.Launcher.UI.Features.SetupWizard"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Cafe.Launcher.UI.Views.SetupWizardOverlay"
              x:Name="WizardRoot"
@@ -435,139 +436,47 @@
                             </StackPanel>
                             <Border Grid.Column="1" Classes="wizard-panel" Margin="{StaticResource Launcher.Component.Wizard.Body.Margin}">
                             <StackPanel Spacing="{StaticResource Launcher.Spacing.None}" VerticalAlignment="Center">
-                                <Grid Classes="wizard-summary-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
-                                    <Border Classes="wizard-summary-icon">
-                                        <materialIcons:MaterialIcon Kind="Translate"
-                                                                    Width="{StaticResource Launcher.Icon.Md}"
-                                                                    Height="{StaticResource Launcher.Icon.Md}"
-                                                                    Foreground="{DynamicResource Launcher.Text.Secondary}"
-                                                                    HorizontalAlignment="Center"
-                                                                    VerticalAlignment="Center"/>
-                                    </Border>
-                                    <StackPanel Grid.Column="1"
-                                                Spacing="{StaticResource Launcher.Spacing.Xs}"
-                                                VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding Shell.I18n[setupWizardLanguage]}" Classes="caption"/>
-                                        <TextBlock Text="{Binding Dialogs.SetupWizard.LanguageDisplayName}" Classes="value"/>
-                                    </StackPanel>
-                                    <Button Grid.Column="2" Classes="wizard-summary-edit"
-                                            Command="{Binding Dialogs.SetupWizard.GoToStepCommand}"
-                                            VerticalAlignment="Center"
-                                            ToolTip.Tip="{Binding Shell.I18n[setupWizardEditStep]}"
-                                            AutomationProperties.Name="{Binding Shell.I18n[setupWizardEditStep]}">
-                                        <Button.CommandParameter>
-                                            <x:Int32>0</x:Int32>
-                                        </Button.CommandParameter>
-                                        <StackPanel Classes="button-content">
-                                            <materialIcons:MaterialIcon Kind="Pencil"
-                                                                        Width="{StaticResource Launcher.Icon.Sm}"
-                                                                        Height="{StaticResource Launcher.Icon.Sm}"/>
-                                            <TextBlock Text="{Binding Shell.I18n[setupWizardEditStep]}"
-                                                       Classes="wizard-summary-edit-label"/>
-                                        </StackPanel>
-                                    </Button>
-                                </Grid>
-                                <Border Classes="wizard-divider"/>
-                                <Grid Classes="wizard-summary-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
-                                    <Border Classes="wizard-summary-icon">
-                                        <materialIcons:MaterialIcon Kind="CloudDownload"
-                                                                    Width="{StaticResource Launcher.Icon.Md}"
-                                                                    Height="{StaticResource Launcher.Icon.Md}"
-                                                                    Foreground="{DynamicResource Launcher.Text.Secondary}"
-                                                                    HorizontalAlignment="Center"
-                                                                    VerticalAlignment="Center"/>
-                                    </Border>
-                                    <StackPanel Grid.Column="1"
-                                                Spacing="{StaticResource Launcher.Spacing.Xs}"
-                                                VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding Shell.I18n[setupWizardDownloadSource]}" Classes="caption"/>
-                                        <TextBlock Text="{Binding Dialogs.SetupWizard.DownloadSourceDisplayName}" Classes="value"/>
-                                    </StackPanel>
-                                    <Button Grid.Column="2" Classes="wizard-summary-edit"
-                                            Command="{Binding Dialogs.SetupWizard.GoToStepCommand}"
-                                            VerticalAlignment="Center"
-                                            ToolTip.Tip="{Binding Shell.I18n[setupWizardEditStep]}"
-                                            AutomationProperties.Name="{Binding Shell.I18n[setupWizardEditStep]}">
-                                        <Button.CommandParameter>
-                                            <x:Int32>3</x:Int32>
-                                        </Button.CommandParameter>
-                                        <StackPanel Classes="button-content">
-                                            <materialIcons:MaterialIcon Kind="Pencil"
-                                                                        Width="{StaticResource Launcher.Icon.Sm}"
-                                                                        Height="{StaticResource Launcher.Icon.Sm}"/>
-                                            <TextBlock Text="{Binding Shell.I18n[setupWizardEditStep]}"
-                                                       Classes="wizard-summary-edit-label"/>
-                                        </StackPanel>
-                                    </Button>
-                                </Grid>
-                                <Border Classes="wizard-divider"/>
-                                <Grid Classes="wizard-summary-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
-                                    <Border Classes="wizard-summary-icon">
-                                        <materialIcons:MaterialIcon Kind="FolderSearch"
-                                                                    Width="{StaticResource Launcher.Icon.Md}"
-                                                                    Height="{StaticResource Launcher.Icon.Md}"
-                                                                    Foreground="{DynamicResource Launcher.Text.Secondary}"
-                                                                    HorizontalAlignment="Center"
-                                                                    VerticalAlignment="Center"/>
-                                    </Border>
-                                    <StackPanel Grid.Column="1"
-                                                Spacing="{StaticResource Launcher.Spacing.Xs}"
-                                                VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding Shell.I18n[setupWizardGamePath]}" Classes="caption"/>
-                                        <TextBlock Text="{Binding Dialogs.SetupWizard.GamePathDisplay}"
-                                                   Classes="value"
-                                                   TextTrimming="CharacterEllipsis"/>
-                                    </StackPanel>
-                                    <Button Grid.Column="2" Classes="wizard-summary-edit"
-                                            Command="{Binding Dialogs.SetupWizard.GoToStepCommand}"
-                                            VerticalAlignment="Center"
-                                            ToolTip.Tip="{Binding Shell.I18n[setupWizardEditStep]}"
-                                            AutomationProperties.Name="{Binding Shell.I18n[setupWizardEditStep]}">
-                                        <Button.CommandParameter>
-                                            <x:Int32>2</x:Int32>
-                                        </Button.CommandParameter>
-                                        <StackPanel Classes="button-content">
-                                            <materialIcons:MaterialIcon Kind="Pencil"
-                                                                        Width="{StaticResource Launcher.Icon.Sm}"
-                                                                        Height="{StaticResource Launcher.Icon.Sm}"/>
-                                            <TextBlock Text="{Binding Shell.I18n[setupWizardEditStep]}"
-                                                       Classes="wizard-summary-edit-label"/>
-                                        </StackPanel>
-                                    </Button>
-                                </Grid>
-                                <Border Classes="wizard-divider"/>
-                                <Grid Classes="wizard-summary-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
-                                    <Border Classes="wizard-summary-icon">
-                                        <materialIcons:MaterialIcon Kind="SwapHorizontal"
-                                                                    Width="{StaticResource Launcher.Icon.Md}"
-                                                                    Height="{StaticResource Launcher.Icon.Md}"
-                                                                    Foreground="{DynamicResource Launcher.Text.Secondary}"
-                                                                    HorizontalAlignment="Center"
-                                                                    VerticalAlignment="Center"/>
-                                    </Border>
-                                    <StackPanel Grid.Column="1"
-                                                Spacing="{StaticResource Launcher.Spacing.Xs}"
-                                                VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding Shell.I18n[setupWizardProxy]}" Classes="caption"/>
-                                        <TextBlock Text="{Binding Dialogs.SetupWizard.ProxyDisplayName}" Classes="value"/>
-                                    </StackPanel>
-                                    <Button Grid.Column="2" Classes="wizard-summary-edit"
-                                            Command="{Binding Dialogs.SetupWizard.GoToStepCommand}"
-                                            VerticalAlignment="Center"
-                                            ToolTip.Tip="{Binding Shell.I18n[setupWizardEditStep]}"
-                                            AutomationProperties.Name="{Binding Shell.I18n[setupWizardEditStep]}">
-                                        <Button.CommandParameter>
-                                            <x:Int32>4</x:Int32>
-                                        </Button.CommandParameter>
-                                        <StackPanel Classes="button-content">
-                                            <materialIcons:MaterialIcon Kind="Pencil"
-                                                                        Width="{StaticResource Launcher.Icon.Sm}"
-                                                                        Height="{StaticResource Launcher.Icon.Sm}"/>
-                                            <TextBlock Text="{Binding Shell.I18n[setupWizardEditStep]}"
-                                                       Classes="wizard-summary-edit-label"/>
-                                        </StackPanel>
-                                    </Button>
-                                </Grid>
+                                <ItemsControl ItemsSource="{Binding Dialogs.SetupWizard.SummaryItems}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="wizard:SetupWizardSummaryItem">
+                                            <StackPanel>
+                                                <Border Classes="wizard-divider" IsVisible="{Binding HasDivider}"/>
+                                                <Grid Classes="wizard-summary-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                                                    <Border Classes="wizard-summary-icon">
+                                                        <materialIcons:MaterialIcon Kind="{Binding Icon}"
+                                                                                    Width="{StaticResource Launcher.Icon.Md}"
+                                                                                    Height="{StaticResource Launcher.Icon.Md}"
+                                                                                    Foreground="{DynamicResource Launcher.Text.Secondary}"
+                                                                                    HorizontalAlignment="Center"
+                                                                                    VerticalAlignment="Center"/>
+                                                    </Border>
+                                                    <StackPanel Grid.Column="1"
+                                                                Spacing="{StaticResource Launcher.Spacing.Xs}"
+                                                                VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding Label}" Classes="caption"/>
+                                                        <TextBlock Text="{Binding Value}"
+                                                                   Classes="value"
+                                                                   TextTrimming="CharacterEllipsis"/>
+                                                    </StackPanel>
+                                                    <Button Grid.Column="2" Classes="wizard-summary-edit"
+                                                            Command="{Binding EditCommand}"
+                                                            CommandParameter="{Binding EditStep}"
+                                                            VerticalAlignment="Center"
+                                                            ToolTip.Tip="{Binding EditLabel}"
+                                                            AutomationProperties.Name="{Binding EditLabel}">
+                                                        <StackPanel Classes="button-content">
+                                                            <materialIcons:MaterialIcon Kind="Pencil"
+                                                                                        Width="{StaticResource Launcher.Icon.Sm}"
+                                                                                        Height="{StaticResource Launcher.Icon.Sm}"/>
+                                                            <TextBlock Text="{Binding EditLabel}"
+                                                                       Classes="wizard-summary-edit-label"/>
+                                                        </StackPanel>
+                                                    </Button>
+                                                </Grid>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
                             </StackPanel>
                             </Border>
                         </Grid>

@@ -214,7 +214,7 @@
 - **动作带**：上一步与下一步/完成同为 `wizard-action`、`MinWidth`=100（贴近中文动作自然宽度，短文案不拉出多余空档），现有四语文案下两枚动作同宽；下一步/完成叠加 `primary-action`，上一步在左、主操作在右。宽度是表面级布局例外，按钮的角色外观仍由共享主题决定。
 - **步骤切换**：沿用 ADR-017 的顺序换页（333ms 对半分、中点换内容与滚动复位、Enter/Exit 曲线、起势帧、±14px 方向滑入、壳层中点翻转）与可中断所有权守卫，仅布局与壳层解剖变更。
 - **配色**：向导打开时按设置页「主题色 = 默认」的方案落色（默认种子、TonalSpot、BrandBlue、明暗由当前主题模式决定：首启取系统默认，协议复核取已保存模式，会话在显示前先落该模式）。首启与协议复核都在完整初始化之前显示，不能沿用进程内残留的系统强调色；落色发生在 `ShowSetupWizard` 置可见之前，避免先闪一帧旧色。
-- **令牌**：舞台宽、左引导宽、引导图标尺寸、头/动作带留白、正文边距、进度轨高度与动作最小宽度均为组件令牌；间距一律取 `Launcher.Spacing` 标度（舞台间距取 `Spacing.Xxxl`=32、进度轨间距 8），面板内边距取 `Spacing.Thickness.Xl`，组件令牌不得进入 `Spacing`/`Padding`。截图基线为 `setup-wizard`、`setup-wizard-agreement`、`setup-wizard-agreement-read-dark-zh`。
+- **令牌**：舞台宽、左引导宽、引导图标尺寸、头/动作带留白、正文边距、进度轨高度与动作最小宽度均为组件令牌；布局间距一律取 `Launcher.Spacing` 标度（舞台间距取 `Spacing.Xxxl`=32、进度轨间距 8），面板内边距取 `Spacing.Thickness.Xl`，组件令牌不得进入 `Spacing`/`Padding`；样张复刻的组件内部内边距（头部 24,16,24,14、选项行 14,13、版次胶囊 8,2）是显式例外，以组件令牌固定。截图基线为 `setup-wizard`、`setup-wizard-agreement`、`setup-wizard-agreement-read-dark-zh`。
 
 ### 4.5 资源面板
 

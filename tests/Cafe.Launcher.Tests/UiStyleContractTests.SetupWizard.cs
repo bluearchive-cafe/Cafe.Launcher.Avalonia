@@ -576,8 +576,8 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void SetupWizard_Review_UsesIconSummaryRows()
     {
-        // 复核页：摘要 = 图标摘要行（图标 chip + 标签/值两行 + 尾部「修改」文本钮），
-        // 行间 Dialog.Section.Divider 发丝线；info-strip 着色卡不再承载摘要。
+        // 复核页：摘要行统一由 ItemsControl 按 SummaryItems 展开（图标 chip + 标签/值两行 +
+        // 尾部「修改」文本钮），行间 Dialog.Section.Divider 发丝线；info-strip 着色卡不再承载摘要。
         var overlay = XDocument.Load(TestRepository.FromPresentationRoot("Views/SetupWizardOverlay.axaml"));
         var xNamespace = overlay.Root?.GetNamespaceOfPrefix("x");
         Assert.NotNull(xNamespace);
@@ -585,105 +585,57 @@ public sealed partial class UiStyleContractTests
             .Descendants()
             .Single(element =>
                 element.Attribute(xNamespace + "Name")?.Value == "WizardStep5");
-        var reviewRows = reviewStep
-            .Descendants()
-            .Where(element =>
-                element.Name.LocalName == "Grid"
-                && HasClass(element, "wizard-summary-row"))
-            .ToList();
-        var rowContainer = Assert.Single(reviewRows
-            .Select(row => row.Parent)
-            .Cast<XElement>()
-            .Distinct());
-        Assert.Equal("StackPanel", rowContainer.Name.LocalName);
-        var dividers = rowContainer
-            .Elements()
-            .Where(element =>
-                element.Name.LocalName == "Border"
-                && HasClass(element, "wizard-divider"))
-            .ToList();
+        var itemsControl = Assert.Single(reviewStep.Descendants(), element =>
+            element.Name.LocalName == "ItemsControl"
+            && element.Attribute("ItemsSource")?.Value == "{Binding Dialogs.SetupWizard.SummaryItems}");
+        var template = Assert.Single(itemsControl.Descendants(), element =>
+            element.Name.LocalName == "DataTemplate");
+        var rowHost = Assert.Single(template.Elements(), element => element.Name.LocalName == "StackPanel");
+        var divider = Assert.Single(rowHost.Elements(), element =>
+            element.Name.LocalName == "Border"
+            && HasClass(element, "wizard-divider"));
+        Assert.Equal("{Binding HasDivider}", divider.Attribute("IsVisible")?.Value);
 
-        Assert.Equal(4, reviewRows.Count);
-        Assert.Equal(3, dividers.Count);
-        Assert.Collection(
-            rowContainer.Elements(),
-            element => Assert.True(
-                element.Name.LocalName == "Grid" && HasClass(element, "wizard-summary-row")),
-            element => Assert.True(
-                element.Name.LocalName == "Border" && HasClass(element, "wizard-divider")),
-            element => Assert.True(
-                element.Name.LocalName == "Grid" && HasClass(element, "wizard-summary-row")),
-            element => Assert.True(
-                element.Name.LocalName == "Border" && HasClass(element, "wizard-divider")),
-            element => Assert.True(
-                element.Name.LocalName == "Grid" && HasClass(element, "wizard-summary-row")),
-            element => Assert.True(
-                element.Name.LocalName == "Border" && HasClass(element, "wizard-divider")),
-            element => Assert.True(
-                element.Name.LocalName == "Grid" && HasClass(element, "wizard-summary-row")));
+        var row = Assert.Single(rowHost.Elements(), element =>
+            element.Name.LocalName == "Grid"
+            && HasClass(element, "wizard-summary-row"));
+        var chip = Assert.Single(row.Elements(), element =>
+            element.Name.LocalName == "Border"
+            && HasClass(element, "wizard-summary-icon"));
+        var chipIcon = Assert.Single(chip.Descendants(), element =>
+            element.Name.LocalName == "MaterialIcon");
+        Assert.Equal("{Binding Icon}", chipIcon.Attribute("Kind")?.Value);
 
-        // 行序即回跳步序：语言(0) → 下载源(3) → 路径(2) → 代理(4)，与无头测试一致。
-        var expectedRows = new[]
-        {
-            (LabelKey: "setupWizardLanguage", ValueBinding: "{Binding Dialogs.SetupWizard.LanguageDisplayName}", TargetStep: "0", Icon: "Translate"),
-            (LabelKey: "setupWizardDownloadSource", ValueBinding: "{Binding Dialogs.SetupWizard.DownloadSourceDisplayName}", TargetStep: "3", Icon: "CloudDownload"),
-            (LabelKey: "setupWizardGamePath", ValueBinding: "{Binding Dialogs.SetupWizard.GamePathDisplay}", TargetStep: "2", Icon: "FolderSearch"),
-            (LabelKey: "setupWizardProxy", ValueBinding: "{Binding Dialogs.SetupWizard.ProxyDisplayName}", TargetStep: "4", Icon: "SwapHorizontal"),
-        };
-        Assert.Equal(expectedRows.Length, reviewRows.Count);
-        foreach (var (row, expected) in reviewRows.Zip(expectedRows))
-        {
-            var chip = Assert.Single(row.Elements(), element =>
-                element.Name.LocalName == "Border"
-                && HasClass(element, "wizard-summary-icon"));
-            var chipIcon = Assert.Single(chip.Descendants(), element =>
-                element.Name.LocalName == "MaterialIcon");
-            // 摘要行图标与对应步骤的左引导徽章同形：复核页不再给代理行借用安全盾。
-            Assert.Equal(expected.Icon, chipIcon.Attribute("Kind")?.Value);
-
-            var text = Assert.Single(row.Elements(), element => element.Name.LocalName == "StackPanel");
-            var label = Assert.Single(text.Elements(), element =>
-                element.Name.LocalName == "TextBlock"
-                && HasClass(element, "caption"));
-            Assert.Equal($"{{Binding Shell.I18n[{expected.LabelKey}]}}", label.Attribute("Text")?.Value);
-            var value = Assert.Single(text.Elements(), element =>
-                element.Name.LocalName == "TextBlock"
-                && HasClass(element, "value"));
-            Assert.Equal(expected.ValueBinding, value.Attribute("Text")?.Value);
-
-            var edit = Assert.Single(row.Elements(), element =>
-                element.Name.LocalName == "Button"
-                && HasClass(element, "wizard-summary-edit"));
-            Assert.Equal(
-                "{Binding Dialogs.SetupWizard.GoToStepCommand}",
-                edit.Attribute("Command")?.Value);
-            var editContent = Assert.Single(edit.Elements(), element =>
-                element.Name.LocalName == "StackPanel"
-                && HasClass(element, "button-content"));
-            Assert.Single(editContent.Elements(), element =>
-                element.Name.LocalName == "MaterialIcon"
-                && element.Attribute("Kind")?.Value == "Pencil");
-            Assert.Single(editContent.Elements(), element =>
-                element.Name.LocalName == "TextBlock"
-                && element.Attribute("Text")?.Value == "{Binding Shell.I18n[setupWizardEditStep]}");
-            var parameter = Assert.Single(edit.Elements(), element =>
-                element.Name.LocalName == "Button.CommandParameter");
-            Assert.Equal(expected.TargetStep, parameter.Value);
-            Assert.Equal(
-                "{Binding Shell.I18n[setupWizardEditStep]}",
-                edit.Attributes()
-                    .Single(attribute => attribute.Name.LocalName == "AutomationProperties.Name")
-                    .Value);
-        }
-
-        // 路径值经 VM 段感知中间省略（GamePathDisplay，保留首段与末两段），
-        // TextTrimming 作极端超长段（宽字形溢出预算）的末尾省略兜底。
-        var pathRow = reviewRows[2];
-        var pathText = Assert.Single(pathRow.Elements(), element => element.Name.LocalName == "StackPanel");
-        var pathValue = Assert.Single(pathText.Elements(), element =>
+        var text = Assert.Single(row.Elements(), element => element.Name.LocalName == "StackPanel");
+        var label = Assert.Single(text.Elements(), element =>
+            element.Name.LocalName == "TextBlock"
+            && HasClass(element, "caption"));
+        Assert.Equal("{Binding Label}", label.Attribute("Text")?.Value);
+        var value = Assert.Single(text.Elements(), element =>
             element.Name.LocalName == "TextBlock"
             && HasClass(element, "value"));
-        Assert.Equal("CharacterEllipsis", pathValue.Attribute("TextTrimming")?.Value);
+        Assert.Equal("{Binding Value}", value.Attribute("Text")?.Value);
+        Assert.Equal("CharacterEllipsis", value.Attribute("TextTrimming")?.Value);
+
+        var edit = Assert.Single(row.Elements(), element =>
+            element.Name.LocalName == "Button"
+            && HasClass(element, "wizard-summary-edit"));
+        Assert.Equal("{Binding EditCommand}", edit.Attribute("Command")?.Value);
+        var editContent = Assert.Single(edit.Elements(), element =>
+            element.Name.LocalName == "StackPanel"
+            && HasClass(element, "button-content"));
+        Assert.Single(editContent.Elements(), element =>
+            element.Name.LocalName == "MaterialIcon"
+            && element.Attribute("Kind")?.Value == "Pencil");
+        Assert.Single(editContent.Elements(), element =>
+            element.Name.LocalName == "TextBlock"
+            && element.Attribute("Text")?.Value == "{Binding EditLabel}");
+        Assert.Equal("{Binding EditStep}", edit.Attribute("CommandParameter")?.Value);
+        Assert.Equal(
+            "{Binding EditLabel}",
+            edit.Attributes()
+                .Single(attribute => attribute.Name.LocalName == "AutomationProperties.Name")
+                .Value);
 
         var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/Styles/SetupWizard.axaml"));
         var rowStyle = GetStyleSetters(styles, "Grid.wizard-summary-row");

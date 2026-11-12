@@ -235,7 +235,7 @@ public sealed class SettingsCategoryTests
     }
 
     [Fact]
-    public void Selection_ForEveryCategoryHasExactlyOneVisibleCategoryAndRaisesAllNotifications()
+    public async Task Selection_ForEveryCategoryHasExactlyOneVisibleCategoryAndRaisesAllNotifications()
     {
         using var scope = CreateSettingsViewModel();
         var viewModel = scope.ViewModel;
@@ -256,6 +256,11 @@ public sealed class SettingsCategoryTests
             viewModel.PropertyChanged += handler;
 
             viewModel.SelectedCategory = code;
+            if (code == SettingsCategoryCodes.Game)
+            {
+                // 选中 Game 会异步刷新状态行；等它完成再收口，避免通知落在下一次迭代里。
+                await viewModel.PendingGameRuntimeStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
+            }
 
             viewModel.PropertyChanged -= handler;
             var changedProperties = changed.ToHashSet(StringComparer.Ordinal);
@@ -358,6 +363,64 @@ public sealed class SettingsCategoryTests
     }
 
     [Fact]
+    public async Task SaveSettingsCommand_EndsSavingStateAtPersistWhileFollowThroughRuns()
+    {
+        using var scope = CreateSettingsViewModel();
+        scope.ViewModel.LoadFromSnapshot(new LauncherSettings { Language = LauncherLanguages.English });
+        var completionStarted = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var completionRelease = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        scope.ViewModel.SavedSettingsFollowThrough = new RecordingFollowThrough
+        {
+            OnComplete = async () =>
+            {
+                completionStarted.SetResult();
+                await completionRelease.Task;
+            }
+        };
+        scope.ViewModel.Editor.Current.Language = LauncherLanguages.Japanese;
+        Assert.True(scope.ViewModel.IsSettingsDirty);
+
+        var saveTask = scope.ViewModel.SaveSettingsCommand.ExecuteAsync(null);
+        await completionStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        // 落盘已完成、跟随刷新仍在进行：保存态必须以落盘为界结束，
+        // 否则页脚、导航、关闭与编辑会被整段壳刷新继续锁住（AUD-SET-003）。
+        Assert.False(scope.ViewModel.IsSaving);
+        Assert.False(scope.ViewModel.IsSettingsDirty);
+        Assert.False(saveTask.IsCompleted);
+        Assert.True(File.Exists(scope.SettingsPath));
+
+        completionRelease.SetResult();
+        await saveTask.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.False(scope.ViewModel.IsSaving);
+    }
+
+    [Fact]
+    public async Task SaveSettingsCommand_WhenFollowThroughFails_DoesNotReportSaveFailure()
+    {
+        using var scope = CreateSettingsViewModel();
+        scope.ViewModel.LoadFromSnapshot(new LauncherSettings { Language = LauncherLanguages.English });
+        var toasts = new List<ToastNotification>();
+        scope.Provider.GetRequiredService<ToastService>().ToastRaised += toasts.Add;
+        scope.ViewModel.SavedSettingsFollowThrough = new RecordingFollowThrough
+        {
+            OnComplete = () => Task.FromException(new InvalidOperationException("follow-through failed"))
+        };
+        scope.ViewModel.Editor.Current.Language = LauncherLanguages.Japanese;
+
+        await scope.ViewModel.SaveSettingsCommand.ExecuteAsync(null);
+
+        // 值已落盘：跟随动作失败不能回退成「保存失败」，也不能重新弄脏草稿。
+        Assert.False(scope.ViewModel.IsSaving);
+        Assert.False(scope.ViewModel.IsSettingsDirty);
+        Assert.True(File.Exists(scope.SettingsPath));
+        var notification = Assert.Single(toasts);
+        Assert.NotEqual(ToastSeverity.Error, notification.Severity);
+    }
+
+    [Fact]
     public async Task SaveSettingsCommand_AwaitsFollowThroughCompletion()
     {
         using var scope = CreateSettingsViewModel();
@@ -426,12 +489,13 @@ public sealed class SettingsCategoryTests
         string settingsPath,
         TestDirectory directory) : IDisposable
     {
+        public ServiceProvider Provider { get; } = provider;
         public SettingsViewModel ViewModel { get; } = viewModel;
         public string SettingsPath { get; } = settingsPath;
 
         public void Dispose()
         {
-            provider.Dispose();
+            Provider.Dispose();
             directory.Dispose();
         }
     }

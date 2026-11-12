@@ -29,6 +29,7 @@ internal static class LauncherResourceCatalog
         "agreementLanguageNote",
         "agreementScrollHint",
         "agreementTitle",
+        "agreementUnavailable",
         "agreementVersion",
         "appearancePreviewFailed",
         "backgroundFileTypes",

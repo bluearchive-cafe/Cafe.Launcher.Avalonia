@@ -16,7 +16,10 @@ public static class GamePathValidator
     // Windows filesystems are typically case-insensitive; Linux/macOS are
     // case-sensitive, so a case-insensitive root check there would let a
     // differently-cased path bypass the escape validation.
-    /// <summary>Platform-aware path comparison shared by safety checks over the game tree.</summary>
+    /// <summary>
+    /// Platform-aware path comparison for filesystem paths: the single definition shared
+    /// by game-tree escape checks, prefix metadata and settings path comparisons.
+    /// </summary>
     public static StringComparison PathComparison =>
         OperatingSystem.IsWindows()
             ? StringComparison.OrdinalIgnoreCase

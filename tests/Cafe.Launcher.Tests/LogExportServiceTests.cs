@@ -297,13 +297,14 @@ public sealed class LogExportServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ExportAsync_WithRotatedLogOutsideTheWindow_OmitsThatFile()
+    public async Task ExportAsync_WhenTheRotatedGenerationIsOutsideTheWindow_KeepsOnlyTheCurrentLog()
     {
+        // 轮转后 Serilog 续写的是序号最大的那份：unified_001.log 才是当前日志，基名只剩上一代内容。
         var now = DateTimeOffset.Now;
         var inWindow = $"{now.AddMinutes(-5):O} [INF] [Test] Recent entry\n";
         var outOfWindow = $"{now.AddHours(-2):O} [INF] [Test] Old entry\n";
-        var logger = WriteDeterministicLog("rotated-source", inWindow);
-        File.WriteAllText(Path.Combine(tempDir, "rotated-source", "unified_001.log"), outOfWindow);
+        var logger = WriteDeterministicLog("rotated-source", outOfWindow);
+        File.WriteAllText(Path.Combine(tempDir, "rotated-source", "unified_001.log"), inWindow);
         var service = new LogExportService(new LocalDiagnostics(logger), TestDataRoot.ForCurrentProcess(), new CrashReportStore(TestDataRoot.ForCurrentProcess()) );
 
         var zipPath = await service.ExportAsync(
@@ -312,10 +313,38 @@ public sealed class LogExportServiceTests : IDisposable
 
         using var zip = ZipFile.OpenRead(zipPath);
         Assert.Contains(zip.Entries, entry => entry.FullName == "unified.log");
-        // Only the current log carries the "always included" promise; a rotated file that would
+        // Only the current log carries the "always included" promise; an older generation that would
         // contribute nothing (and has nothing to say about the window) stays out.
-        Assert.DoesNotContain(zip.Entries, entry => entry.FullName == "unified_001.log");
+        Assert.DoesNotContain(zip.Entries, entry => entry.FullName == "unified_000.log");
         Assert.Contains("Recent entry", ReadEntry(zipPath, "unified.log"), StringComparison.Ordinal);
+        Assert.DoesNotContain("Old entry", ReadEntry(zipPath, "unified.log"), StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// 导出侧的同一条更正（AUD-LOG-001）：包内 <c>unified.log</c> 必须是当前（序号最大的）那份，
+    /// 旧基名不能顶着同一个名字进包——两代内容同名，读包的人分不清哪份是他刚看到的。第 0 代因此改叫
+    /// <c>unified_000.log</c>，与 Serilog 的序号命名接上。
+    /// </summary>
+    [Fact]
+    public async Task ExportAsync_WhenTheStemIsTheOlderGeneration_KeepsItAsGenerationZero()
+    {
+        var logDirectory = Path.Combine(tempDir, "base-then-rotated");
+        Directory.CreateDirectory(logDirectory);
+        using var logger = new UnifiedLogger(logDirectory);
+        logger.Dispose(); // release the sink so both generations can be written verbatim
+        File.WriteAllText(logger.LogFilePath, "Older generation\n");
+        File.WriteAllText(Path.Combine(logDirectory, "unified_001.log"), "Current entry\n");
+
+        var service = new LogExportService(new LocalDiagnostics(logger), TestDataRoot.ForCurrentProcess(), new CrashReportStore(TestDataRoot.ForCurrentProcess()) );
+
+        var zipPath = await service.ExportAsync(
+            Path.Combine(tempDir, "base-then-rotated-selected"),
+            LogExportOptions.Default);
+
+        using var zip = ZipFile.OpenRead(zipPath);
+        Assert.Single(zip.Entries, entry => entry.FullName == "unified.log");
+        Assert.Equal("Current entry\n", ReadEntry(zipPath, "unified.log"));
+        Assert.Equal("Older generation\n", ReadEntry(zipPath, "unified_000.log"));
     }
 
     [Fact]

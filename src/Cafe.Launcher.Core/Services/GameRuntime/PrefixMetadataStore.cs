@@ -94,7 +94,7 @@ internal sealed class PrefixMetadataStore
             using var document = JsonDocument.Parse(File.ReadAllText(FilePath));
             var root = document.RootElement;
             if (!root.TryGetProperty("prefixPath", out var stored)
-                || !string.Equals(stored.GetString(), prefixPath, PathComparison))
+                || !string.Equals(stored.GetString(), prefixPath, GamePathValidator.PathComparison))
             {
                 return (null, 0);
             }
@@ -144,7 +144,4 @@ internal sealed class PrefixMetadataStore
             // 诊断增强：元数据写不进去不影响启动。
         }
     }
-
-    private static StringComparison PathComparison =>
-        OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
 }

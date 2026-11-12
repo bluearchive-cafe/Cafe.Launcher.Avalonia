@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
@@ -35,8 +37,8 @@ public sealed class GameShortcutServiceTests : IDisposable
         {
             LocalGame = new LocalInstallationState { GamePath = gameDirectory }
         };
-        // 名字必须与创建侧同源：本地化显示名 + 平台后缀（ADR-030）。
-        var shortcutName = service.ResolveShortcutFileName(
+        // 名字必须与创建侧同源：稳定的游戏标识 + 平台后缀（ADR-030 / AUD-GAME-002）。
+        var shortcutName = service.ResolveStableShortcutFileName(
             Path.Combine(gameDirectory, LauncherProfiles.BlueArchiveJapan.GameExecutableFileName));
         var extension = OperatingSystem.IsLinux() ? ".desktop" : ".lnk";
         var shortcutPath = Path.Combine(shortcutDirectory, $"{shortcutName}{extension}");
@@ -101,7 +103,7 @@ public sealed class GameShortcutServiceTests : IDisposable
         var result = await service.CreateShortcutInDirectoryAsync(snapshot, shortcutDirectory);
 
         Assert.Equal(GameShortcutStatus.GameNotResolved, result.Status);
-        Assert.False(File.Exists(Path.Combine(shortcutDirectory, "Blue Archive.lnk")));
+        Assert.False(File.Exists(Path.Combine(shortcutDirectory, "BlueArchive_JP.lnk")));
     }
 
     [Fact]
@@ -161,7 +163,7 @@ public sealed class GameShortcutServiceTests : IDisposable
     }
 
     [WindowsFact]
-    public async Task CreateShortcutInDirectoryAsync_WhenGameResolved_WritesShortcutFileNamedAfterGame()
+    public async Task CreateShortcutInDirectoryAsync_WhenGameResolved_WritesStableShortcutFileName()
     {
         var gameDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "game")).FullName;
         var executablePath = Path.Combine(gameDirectory, "CafeTestGame.exe");
@@ -181,7 +183,7 @@ public sealed class GameShortcutServiceTests : IDisposable
         var result = await service.CreateShortcutInDirectoryAsync(snapshot, shortcutDirectory);
 
         Assert.Equal(GameShortcutStatus.Created, result.Status);
-        var expectedShortcutPath = Path.Combine(shortcutDirectory, "Blue Archive.lnk");
+        var expectedShortcutPath = Path.Combine(shortcutDirectory, "BlueArchive_JP.lnk");
         Assert.True(File.Exists(expectedShortcutPath));
         Assert.Equal(expectedShortcutPath, result.Detail);
     }
@@ -233,7 +235,7 @@ public sealed class GameShortcutServiceTests : IDisposable
         var result = await service.CreateShortcutInDirectoryAsync(snapshot, shortcutDirectory);
 
         Assert.Equal(GameShortcutStatus.GameNotResolved, result.Status);
-        Assert.False(File.Exists(Path.Combine(shortcutDirectory, "Blue Archive.lnk")));
+        Assert.False(File.Exists(Path.Combine(shortcutDirectory, "BlueArchive_JP.lnk")));
     }
 
     [WindowsFact]
@@ -319,13 +321,26 @@ public sealed class GameShortcutServiceTests : IDisposable
     }
 
     [Fact]
-    public void ResolveShortcutFileName_UsesLocalizedGameDisplayName()
+    public void ResolveStableShortcutFileName_IgnoresUiLanguageAndExecutableName()
     {
-        var service = new GameShortcutService(LauncherProfiles.BlueArchiveJapan, new LocalizationService());
+        var localizer = new LocalizationService();
+        var service = new GameShortcutService(LauncherProfiles.BlueArchiveJapan, localizer);
+        try
+        {
+            localizer.SetLanguage(LauncherLanguages.Japanese);
+            var japaneseFileName = service.ResolveStableShortcutFileName(@"C:\games\BlueArchive_JP.exe");
 
-        var fileName = service.ResolveShortcutFileName(@"C:\games\BlueArchive_JP.exe");
+            localizer.SetLanguage(LauncherLanguages.SimplifiedChinese);
+            var chineseFileName = service.ResolveStableShortcutFileName(@"C:\games\BlueArchive_JP.exe");
 
-        Assert.Equal("Blue Archive", fileName);
+            // 稳定名来自游戏档案的安装目录名，不随界面语言或宿主可执行文件名变化（AUD-GAME-002）。
+            Assert.Equal("BlueArchive_JP", japaneseFileName);
+            Assert.Equal(japaneseFileName, chineseFileName);
+        }
+        finally
+        {
+            localizer.SetLanguage(LauncherLanguages.English);
+        }
     }
 
     [Fact]
@@ -527,7 +542,7 @@ public sealed class GameShortcutServiceTests : IDisposable
         var result = await service.CreateShortcutInDirectoryAsync(snapshot, shortcutDirectory);
 
         Assert.Equal(GameShortcutStatus.Created, result.Status);
-        var entryPath = Path.Combine(shortcutDirectory, "Blue Archive.desktop");
+        var entryPath = Path.Combine(shortcutDirectory, "BlueArchive_JP.desktop");
         Assert.True(File.Exists(entryPath));
         Assert.Equal(entryPath, result.Detail);
         var content = File.ReadAllText(entryPath);
@@ -624,15 +639,240 @@ public sealed class GameShortcutServiceTests : IDisposable
         Assert.Equal(GameShortcutStatus.UnsupportedPlatform, result.Status);
     }
 
-    private GameShortcutService CreateLinuxService(string launcherPath) =>
+    /// <summary>
+    /// AUD-GAME-002 的核心回归：语言 A 创建（稳定名）+ 四种语言的旧入口，语言 B 卸载后
+    /// 一个都不剩，同目录的无关桌面文件保留。
+    /// </summary>
+    [Fact]
+    public async Task DeleteShortcutInDirectory_AfterLanguageSwitch_RemovesStableAndEveryLocalizedEntry()
+    {
+        var launcherPath = CreateLauncher();
+        var gameDirectory = CreateGameDirectoryWithClient();
+        var desktopDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "desktop")).FullName;
+        var localizer = new LocalizationService();
+        var service = CreateLinuxService(launcherPath, localizer);
+        var snapshot = Snapshot(gameDirectory);
+        try
+        {
+            localizer.SetLanguage(LauncherLanguages.Japanese);
+            var created = await service.CreateShortcutInDirectoryAsync(snapshot, desktopDirectory);
+            var stablePath = Path.Combine(desktopDirectory, "BlueArchive_JP.desktop");
+            Assert.Equal(GameShortcutStatus.Created, created.Status);
+            Assert.Equal(stablePath, created.Detail);
+
+            // 旧版本按任一语言写下的入口；四种语言都必须被认出来。
+            var legacyPaths = WriteLegacyLocalizedShortcuts(localizer, desktopDirectory, ".desktop");
+            Assert.Equal(4, legacyPaths.Count);
+            var unrelatedPath = Path.Combine(desktopDirectory, "Vacation Photo.desktop");
+            File.WriteAllText(unrelatedPath, "unrelated entry");
+
+            localizer.SetLanguage(LauncherLanguages.SimplifiedChinese);
+            var result = service.DeleteShortcutInDirectory(snapshot, desktopDirectory);
+
+            Assert.Equal(GameShortcutStatus.Deleted, result.Status);
+            Assert.False(File.Exists(stablePath));
+            Assert.All(legacyPaths, path => Assert.False(File.Exists(path)));
+            Assert.True(File.Exists(unrelatedPath));
+            Assert.Equal([unrelatedPath], Directory.GetFiles(desktopDirectory));
+        }
+        finally
+        {
+            localizer.SetLanguage(LauncherLanguages.English);
+        }
+    }
+
+    [Fact]
+    public void DeleteShortcutInDirectory_WhenOnlyLocalizedLegacyEntryExists_RemovesIt()
+    {
+        var desktopDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "desktop")).FullName;
+        var gameDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "game")).FullName;
+        var localizer = new LocalizationService();
+        var service = CreateLinuxService(Path.Combine(tempDirectory, "launcher", "Cafe.Launcher"), localizer);
+        var snapshot = new LauncherStatusSnapshot
+        {
+            LocalGame = new LocalInstallationState { GamePath = gameDirectory }
+        };
+        try
+        {
+            var legacyPaths = WriteLegacyLocalizedShortcuts(localizer, desktopDirectory, ".desktop");
+            localizer.SetLanguage(LauncherLanguages.TraditionalChinese);
+
+            var result = service.DeleteShortcutInDirectory(snapshot, desktopDirectory);
+
+            Assert.Equal(GameShortcutStatus.Deleted, result.Status);
+            Assert.All(legacyPaths, path => Assert.False(File.Exists(path)));
+        }
+        finally
+        {
+            localizer.SetLanguage(LauncherLanguages.English);
+        }
+    }
+
+    /// <summary>创建时清理同目录旧语言入口；无关文件不动，最终只剩稳定名与无关文件。</summary>
+    [Fact]
+    public async Task CreateShortcutInDirectoryAsync_AfterLanguageSwitch_RemovesLegacyEntriesAndKeepsSingleStableEntry()
+    {
+        var launcherPath = CreateLauncher();
+        var gameDirectory = CreateGameDirectoryWithClient();
+        var desktopDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "desktop")).FullName;
+        var localizer = new LocalizationService();
+        var service = CreateLinuxService(launcherPath, localizer);
+        var snapshot = Snapshot(gameDirectory);
+        try
+        {
+            var legacyPaths = WriteLegacyLocalizedShortcuts(localizer, desktopDirectory, ".desktop");
+            var unrelatedPath = Path.Combine(desktopDirectory, "Notes.desktop");
+            File.WriteAllText(unrelatedPath, "unrelated entry");
+
+            localizer.SetLanguage(LauncherLanguages.Japanese);
+            var result = await service.CreateShortcutInDirectoryAsync(snapshot, desktopDirectory);
+
+            var stablePath = Path.Combine(desktopDirectory, "BlueArchive_JP.desktop");
+            Assert.Equal(GameShortcutStatus.Created, result.Status);
+            Assert.Equal(stablePath, result.Detail);
+            Assert.True(File.Exists(stablePath));
+            Assert.All(legacyPaths, path => Assert.False(File.Exists(path)));
+            Assert.True(File.Exists(unrelatedPath));
+            Assert.Equal(
+                new[] { stablePath, unrelatedPath }.Order(),
+                Directory.GetFiles(desktopDirectory).Order());
+        }
+        finally
+        {
+            localizer.SetLanguage(LauncherLanguages.English);
+        }
+    }
+
+    [Fact]
+    public async Task CreateShortcutInDirectoryAsync_WhenLanguageChangedBetweenCalls_KeepsOneStableEntry()
+    {
+        var launcherPath = CreateLauncher();
+        var gameDirectory = CreateGameDirectoryWithClient();
+        var desktopDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "desktop")).FullName;
+        var localizer = new LocalizationService();
+        var service = CreateLinuxService(launcherPath, localizer);
+        var snapshot = Snapshot(gameDirectory);
+        try
+        {
+            localizer.SetLanguage(LauncherLanguages.Japanese);
+            var first = await service.CreateShortcutInDirectoryAsync(snapshot, desktopDirectory);
+            localizer.SetLanguage(LauncherLanguages.English);
+            var second = await service.CreateShortcutInDirectoryAsync(snapshot, desktopDirectory);
+
+            var stablePath = Path.Combine(desktopDirectory, "BlueArchive_JP.desktop");
+            Assert.Equal(GameShortcutStatus.Created, first.Status);
+            Assert.Equal(GameShortcutStatus.Created, second.Status);
+            Assert.Equal(first.Detail, second.Detail);
+            Assert.Equal([stablePath], Directory.GetFiles(desktopDirectory));
+        }
+        finally
+        {
+            localizer.SetLanguage(LauncherLanguages.English);
+        }
+    }
+
+    /// <summary>真实 .lnk 的跨语言建删：创建语言 A、清理语言 B 后不残留任何已知名字。</summary>
+    [WindowsFact]
+    public async Task CreateShortcutInDirectoryAsync_WhenLanguageSwitched_ReplacesLocalizedLnkAndDeletesEveryName()
+    {
+        var gameDirectory = CreateGameDirectoryWithClient();
+        CreateStartScript(gameDirectory);
+        var desktopDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "desktop")).FullName;
+        var localizer = new LocalizationService();
+        var service = new GameShortcutService(LauncherProfiles.BlueArchiveJapan, localizer);
+        var snapshot = Snapshot(gameDirectory);
+        try
+        {
+            localizer.SetLanguage(LauncherLanguages.Japanese);
+            var first = await service.CreateShortcutInDirectoryAsync(snapshot, desktopDirectory);
+            var stablePath = Path.Combine(desktopDirectory, "BlueArchive_JP.lnk");
+            Assert.Equal(GameShortcutStatus.Created, first.Status);
+            Assert.Equal(stablePath, first.Detail);
+
+            var legacyPaths = WriteLegacyLocalizedShortcuts(localizer, desktopDirectory, ".lnk");
+            var unrelatedPath = Path.Combine(desktopDirectory, "Groceries.lnk");
+            File.WriteAllText(unrelatedPath, "unrelated entry");
+
+            localizer.SetLanguage(LauncherLanguages.English);
+            var second = await service.CreateShortcutInDirectoryAsync(snapshot, desktopDirectory);
+            Assert.Equal(GameShortcutStatus.Created, second.Status);
+            Assert.All(legacyPaths, path => Assert.False(File.Exists(path)));
+
+            var deletion = service.DeleteShortcutInDirectory(snapshot, desktopDirectory);
+            Assert.Equal(GameShortcutStatus.Deleted, deletion.Status);
+            Assert.False(File.Exists(stablePath));
+            Assert.True(File.Exists(unrelatedPath));
+        }
+        finally
+        {
+            localizer.SetLanguage(LauncherLanguages.English);
+        }
+    }
+
+    private GameShortcutService CreateLinuxService(string launcherPath, LocalizationService? localizer = null) =>
         new(
             LauncherProfiles.BlueArchiveJapan,
-            new LocalizationService(),
+            localizer ?? new LocalizationService(),
             new GameShortcutService.ShortcutEnvironment(
                 OpenDirectory: _ => true,
                 IsWindowsPlatform: () => false,
                 IsLinuxPlatform: () => true,
                 LauncherExecutablePath: () => launcherPath));
+
+    private string CreateLauncher()
+    {
+        var launcherDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "launcher")).FullName;
+        var launcherPath = Path.Combine(launcherDirectory, "Cafe.Launcher");
+        File.WriteAllText(launcherPath, string.Empty);
+        return launcherPath;
+    }
+
+    private string CreateGameDirectoryWithClient()
+    {
+        var gameDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "game")).FullName;
+        File.WriteAllText(Path.Combine(gameDirectory, "CafeTestGame.exe"), string.Empty);
+        return gameDirectory;
+    }
+
+    private static LauncherStatusSnapshot Snapshot(string gameDirectory) => new()
+    {
+        LocalGame = new LocalInstallationState
+        {
+            GamePath = gameDirectory,
+            GameConfig = new GameLauncherConfig { Name = "CafeTestGame" }
+        }
+    };
+
+    /// <summary>
+    /// 按仓库支持的每种界面语言写出旧版本会生成的入口文件名（本地化显示名 + 平台后缀），
+    /// 用生产本地化资源而不是测试内翻译表。
+    /// </summary>
+    private static List<string> WriteLegacyLocalizedShortcuts(
+        LocalizationService localizer,
+        string directory,
+        string extension)
+    {
+        string[] languages =
+        [
+            LauncherLanguages.English,
+            LauncherLanguages.SimplifiedChinese,
+            LauncherLanguages.TraditionalChinese,
+            LauncherLanguages.Japanese
+        ];
+
+        var paths = new List<string>(languages.Length);
+        foreach (var language in languages)
+        {
+            localizer.SetLanguage(language);
+            var displayName = GameShortcutService.SanitizeFileName(
+                localizer.T(LocalizationKeys.GameDisplayName));
+            var path = Path.Combine(directory, $"{displayName}{extension}");
+            File.WriteAllText(path, "legacy entry");
+            paths.Add(path);
+        }
+
+        return paths;
+    }
 
     /// <summary>Creates the run.bat start script every valid game folder ships with.</summary>
     private static string CreateStartScript(string gameDirectory)

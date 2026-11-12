@@ -35,6 +35,9 @@ internal partial class SetupWizardOverlay : UserControl
     /// <summary>收尾缓冲：超出名义时长的额外等待，保证动画最后一拍落完再结算（实验台 WaitAsync）。</summary>
     private static readonly TimeSpan SettleGrace = TimeSpan.FromMilliseconds(20);
 
+    /// <summary>滚动判定容差：亚像素布局取整会让底缘差一像素，留 8px 视为已读到末尾。</summary>
+    private const double AgreementReadBottomTolerance = 8;
+
     private readonly Control[] stepPanels;
     private readonly Border[] progressSegments;
     private CancellationTokenSource? stepMotionCts;
@@ -158,7 +161,11 @@ internal partial class SetupWizardOverlay : UserControl
         var fromIndex = Array.FindIndex(stepPanels, static panel => panel.IsVisible);
         if (fromIndex == toIndex)
         {
+            // 过渡中途步进被改回当前显示步：在跑的换面必须作废，否则它会在中点把内容翻到
+            // 已被撤销的步，而壳层仍按模型步渲染（AUD-UI-003）。取消后按模型状态结算两者。
+            CancelStepMotion();
             SettleStep(stepPanels[toIndex]);
+            ApplyChromeState();
             return;
         }
 
@@ -209,6 +216,13 @@ internal partial class SetupWizardOverlay : UserControl
                 var from = stepPanels[fromIndex];
                 from.IsHitTestVisible = false;
                 await CreateOpacityAnimation(from.Opacity, 0d, half, exitEasing).RunAsync(from, token);
+            }
+
+            // 取消 token 只让退场动画停止，等待本身可能正常完成（旧过渡因此还会往下走）；
+            // 换面前再确认所有权，过期过渡不得再换内容（AUD-UI-003）。
+            if (!ReferenceEquals(stepMotionCts, cancellation))
+            {
+                return;
             }
 
             // 中点瞬时换内容：不可见时翻转可见性，滚动复位到顶部；壳层（进度与动作钮）
@@ -262,9 +276,11 @@ internal partial class SetupWizardOverlay : UserControl
             if (ReferenceEquals(stepMotionCts, cancellation))
             {
                 stepMotionCts = null;
-                cancellation.Dispose();
                 SettleStep(stepPanels[toIndex]);
             }
+
+            // 取消源由本过渡统一释放：CancelStepMotion 只交还所有权，避免在续跑前释放令牌源。
+            cancellation.Dispose();
         }
     }
 
@@ -273,11 +289,12 @@ internal partial class SetupWizardOverlay : UserControl
 
     /// <summary>
     /// 协议复选框只在文档读完（滚到底或内容不足一屏）后启用；Markdown 异步渲染时
-    /// Extent 会随后续布局变化，由 LayoutUpdated 再补一次判定。
+    /// Extent 会随后续布局变化，由 LayoutUpdated 再补一次判定。正文加载失败时
+    /// 直接不解锁：短回退文本会立刻满足几何判定（AUD-UI-005）。
     /// </summary>
     private void EvaluateAgreementRead()
     {
-        if (wizard is null || !wizard.IsAgreementStep)
+        if (wizard is null || !wizard.IsAgreementStep || !wizard.IsAgreementAvailable)
         {
             return;
         }
@@ -289,7 +306,7 @@ internal partial class SetupWizardOverlay : UserControl
             return;
         }
 
-        if (AgreementScrollViewer.Offset.Y + viewport >= extent - 8)
+        if (AgreementScrollViewer.Offset.Y + viewport >= extent - AgreementReadBottomTolerance)
         {
             wizard.MarkAgreementRead();
         }
@@ -369,9 +386,17 @@ internal partial class SetupWizardOverlay : UserControl
 
     private void CancelStepMotion()
     {
-        stepMotionCts?.Cancel();
-        stepMotionCts?.Dispose();
+        var cancellation = stepMotionCts;
+        if (cancellation is null)
+        {
+            return;
+        }
+
+        // 先交还所有权再取消：动画的取消回调可能在 Cancel() 里同步续跑旧过渡，
+        // 若此时 stepMotionCts 仍指向旧值，所有权守卫会误判它仍有效（AUD-UI-003）。
+        // 取消源留给过渡自身的 finally 释放，避免在续跑前就释放令牌源。
         stepMotionCts = null;
+        cancellation.Cancel();
     }
 
     private static Animation CreateOpacityAnimation(double from, double to, TimeSpan duration, Easing easing) => new()

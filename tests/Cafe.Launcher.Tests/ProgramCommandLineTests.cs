@@ -1,9 +1,38 @@
 using System.Globalization;
+using System.IO;
+using Cafe.Launcher.Core.Services;
+using Cafe.Launcher.Testing;
 
 namespace Cafe.Launcher.Tests;
 
 public sealed class ProgramCommandLineTests
 {
+    [Fact]
+    public void ResolveDataRootAndReportStore_WhenRootResolutionFails_DegradesToTempRoot()
+    {
+        // 守卫（AUD-ARCH-020）：根解析失败不得在崩溃处理就位前逸出 Main；
+        // 快照存储退化为临时根，报告路径仍然可用。
+        var (root, store) = Program.ResolveDataRootAndReportStore(
+            () => throw new IOException("data root is unavailable"));
+
+        Assert.Equal(
+            Path.Combine(Path.GetTempPath(), "Cafe.Launcher"),
+            root.Root);
+        Assert.Equal(root.CrashReportsDirectory, store.PrimaryDirectory);
+    }
+
+    [Fact]
+    public void ResolveDataRootAndReportStore_WhenRootResolutionSucceeds_UsesTheResolvedRoot()
+    {
+        using var directory = TestDirectory.Create();
+        var expected = new LauncherDataRoot(directory.Sub("data"));
+
+        var (root, store) = Program.ResolveDataRootAndReportStore(() => expected);
+
+        Assert.Equal(expected.Root, root.Root);
+        Assert.Equal(expected.CrashReportsDirectory, store.PrimaryDirectory);
+    }
+
     [Fact]
     public void TryHandleCommandLine_WhenVersionRequested_WritesVersionAndExits()
     {

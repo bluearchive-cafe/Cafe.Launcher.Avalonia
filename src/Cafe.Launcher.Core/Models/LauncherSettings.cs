@@ -208,7 +208,10 @@ public sealed class LauncherSettings : SettingsModel
         ThemeColorVariant = other.ThemeColorVariant;
         NeutralColorStrategy = other.NeutralColorStrategy;
         CustomThemeColor = other.CustomThemeColor;
-        ThemeColorPalette = [.. other.ThemeColorPalette];
+        // A hand-edited or corrupted settings file can carry "themeColorPalette": null;
+        // NormalizeSettings deep-clones before its own ?? [] guard runs, so the copy
+        // constructor must tolerate null without crashing the load path.
+        ThemeColorPalette = other.ThemeColorPalette is null ? [] : [.. other.ThemeColorPalette];
         SelectedThemeColorPaletteIndex = other.SelectedThemeColorPaletteIndex;
         DownloadSpeedLimit = other.DownloadSpeedLimit;
         EnableHttp2 = other.EnableHttp2;

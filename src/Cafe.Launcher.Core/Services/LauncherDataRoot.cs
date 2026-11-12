@@ -64,6 +64,9 @@ public sealed class LauncherDataRoot
     /// <summary><c>settings.json</c>：设置与开关的唯一持久化落点。</summary>
     public string SettingsPath => Path.Combine(Root, LauncherPaths.LauncherSettingsFileName);
 
+    /// <summary><c>settings.json.bak</c>：最近一次无法按原样读取的设置文件副本，仅供诊断。</summary>
+    public string SettingsBackupPath => Path.Combine(Root, LauncherPaths.LauncherSettingsBackupFileName);
+
     /// <summary><c>download_state.json</c>：可续传下载的检查点。</summary>
     public string DownloadStatePath => Path.Combine(Root, LauncherPaths.DownloadStateFileName);
 

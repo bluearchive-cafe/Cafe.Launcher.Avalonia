@@ -30,6 +30,10 @@ internal partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IMod
     private readonly CancellationTokenSource lifetimeCts = new();
     private readonly CancellationToken lifetimeToken;
     private bool disposed;
+    private CancellationTokenSource? operationCts;
+    private CancellationToken operationToken;
+    private Task operationTask = Task.CompletedTask;
+    private ResourcePanelOperationKind operationKind;
     private Func<Task>? pendingDiscardAction;
     private string patchUrlGroup = PatchUrlGroups.Official;
     private bool isLoadingSource;
@@ -80,8 +84,13 @@ internal partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IMod
     [ObservableProperty]
     private bool isResourcePanelVisible;
 
+    /// <summary>
+    /// Gets whether a load or save is running. Busy blocks the commands that would
+    /// start another operation and freezes the switch card, but never blocks closing
+    /// the panel: close stays the universal cancel entry.
+    /// </summary>
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(CloseResourcePanelCommand), nameof(RefreshResourcePanelCommand), nameof(SetUidSourceCommand), nameof(SaveManualResourcePanelUidCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RefreshResourcePanelCommand), nameof(SetUidSourceCommand), nameof(SaveManualResourcePanelUidCommand))]
     private bool isResourcePanelBusy;
 
     private bool CanChangeResourcePanel() => !IsResourcePanelBusy;
@@ -208,16 +217,56 @@ internal partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IMod
     /// <summary>Open the panel directly without Cafe-source check. Called by parent after switching source.</summary>
     public async Task OpenPanelDirectlyAsync()
     {
+        if (disposed)
+        {
+            return;
+        }
+
         IsResourcePanelVisible = true;
-        await LoadResourcePanelAsync(lifetimeToken);
+        await LoadResourcePanelAsync();
     }
 
-    [RelayCommand(CanExecute = nameof(CanChangeResourcePanel))]
-    private Task CloseResourcePanelAsync() => RunAfterDiscardAsync(() =>
+    /// <summary>
+    /// Closes the panel at any time, including while a load or save is still running:
+    /// the in-flight request is cancelled and awaited, so no leftover continuation
+    /// writes state after the panel is gone. Closing during a save (or with unsaved
+    /// input) keeps the existing discard confirmation — the user never loses typed
+    /// input without saying so.
+    /// </summary>
+    [RelayCommand]
+    private Task CloseResourcePanelAsync()
     {
+        if (disposed)
+        {
+            return Task.CompletedTask;
+        }
+
+        // 保存中的关闭按「放弃保存」处理：先确认再取消，不静默丢弃用户输入。
+        if (operationKind == ResourcePanelOperationKind.Save || HasUnsavedChanges)
+        {
+            pendingDiscardAction = ClosePanelCoreAsync;
+            DiscardChangesConfirm.Show(localizer.T(LocalizationKeys.ResourcePanelUnsavedChangesMessage));
+            return Task.CompletedTask;
+        }
+
+        return ClosePanelCoreAsync();
+    }
+
+    private async Task ClosePanelCoreAsync()
+    {
+        await CancelOperationAsync();
+        if (disposed)
+        {
+            return;
+        }
+
         IsResourcePanelVisible = false;
-        return Task.CompletedTask;
-    });
+        if (operationCts is null)
+        {
+            // 取消后不残留「加载中/保存失败」提示：迟到的完成回调已被取消令牌挡住。
+            SetResourcePanelMessage("");
+        }
+    }
 
     [RelayCommand]
     private void CancelDiscardChanges()
@@ -245,7 +294,8 @@ internal partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IMod
     {
         var action = pendingDiscardAction;
         pendingDiscardAction = null;
-        if (action is null || disposed || IsResourcePanelBusy)
+        // 忙碌不再是拒绝理由：保存中的关闭正是靠这条路径先确认再取消。
+        if (action is null || disposed)
             return;
 
         for (var i = 0; i < ResourcePanelItems.Count; i++)
@@ -270,20 +320,21 @@ internal partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IMod
 
     [RelayCommand(CanExecute = nameof(CanChangeResourcePanel))]
     private Task SetUidSourceAsync(string source) =>
-        RunAfterDiscardAsync(() => SetUidSourceCoreAsync(source));
+        RunAfterDiscardAsync(() => RunOperationAsync(
+            ResourcePanelOperationKind.Load,
+            cancellationToken => SetUidSourceCoreAsync(source, cancellationToken)));
 
-    private async Task SetUidSourceCoreAsync(string source)
+    private async Task SetUidSourceCoreAsync(string source, CancellationToken cancellationToken)
     {
-        IsResourcePanelBusy = true;
         try
         {
-            await resourcePanelService.SaveUidSourceAsync(source, lifetimeToken);
+            await resourcePanelService.SaveUidSourceAsync(source, cancellationToken);
             isSettingUidSource = true;
             SelectedResourcePanelUidSource = source;
             isSettingUidSource = false;
-            await LoadResourcePanelAsync(lifetimeToken);
+            await LoadResourcePanelAsync();
         }
-        catch (OperationCanceledException) when (lifetimeToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
         }
         catch (Exception exception)
@@ -291,15 +342,11 @@ internal partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IMod
             SetResourcePanelMessage(localizer.F(LocalizationKeys.ResourcePanelLoadFailed, exception.Message), isError: true);
             await resourcePanelService.LogErrorAsync("Resource panel source switch failed.", exception);
         }
-        finally
-        {
-            IsResourcePanelBusy = false;
-        }
     }
 
     [RelayCommand(CanExecute = nameof(CanChangeResourcePanel))]
     private Task RefreshResourcePanelAsync() =>
-        RunAfterDiscardAsync(() => LoadResourcePanelAsync(lifetimeToken));
+        RunAfterDiscardAsync(LoadResourcePanelAsync);
 
     [RelayCommand(CanExecute = nameof(CanChangeResourcePanel))]
     private Task SaveManualResourcePanelUidAsync()
@@ -317,18 +364,21 @@ internal partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IMod
             return Task.CompletedTask;
         }
 
-        return RunAfterDiscardAsync(() => SaveManualUidCoreAsync(uid), includeUid: false);
+        return RunAfterDiscardAsync(
+            () => RunOperationAsync(
+                ResourcePanelOperationKind.Save,
+                cancellationToken => SaveManualUidCoreAsync(uid, cancellationToken)),
+            includeUid: false);
     }
 
-    private async Task SaveManualUidCoreAsync(string uid)
+    private async Task SaveManualUidCoreAsync(string uid, CancellationToken cancellationToken)
     {
         ManualResourcePanelUid = uid;
         IsResourcePanelUidEditing = true;
-        IsResourcePanelBusy = true;
         try
         {
-            await resourcePanelService.SaveManualUidAsync(uid, lifetimeToken);
-            await resourcePanelService.SaveUidSourceAsync(ResourcePanelUidSources.Custom, lifetimeToken);
+            await resourcePanelService.SaveManualUidAsync(uid, cancellationToken);
+            await resourcePanelService.SaveUidSourceAsync(ResourcePanelUidSources.Custom, cancellationToken);
             isSettingUidSource = true;
             SelectedResourcePanelUidSource = ResourcePanelUidSources.Custom;
             isSettingUidSource = false;
@@ -337,9 +387,9 @@ internal partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IMod
             IsResourcePanelUidMissing = false;
             IsResourcePanelUidEditing = false;
             SetResourcePanelMessage(localizer.T(LocalizationKeys.ResourcePanelUidSaved));
-            await LoadResourcePanelDataAsync(uid, lifetimeToken);
+            await LoadResourcePanelDataAsync(uid, cancellationToken);
         }
-        catch (OperationCanceledException) when (lifetimeToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
         }
         catch (Exception exception)
@@ -348,23 +398,23 @@ internal partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IMod
             await errorHandling.HandleErrorAsync("Resource panel manual UID save failed.", exception,
                 new ErrorHandlingOptions { ShowToast = false });
         }
-        finally
-        {
-            IsResourcePanelBusy = false;
-        }
     }
 
     [RelayCommand]
-    private async Task SaveResourcePanelAsync()
+    private Task SaveResourcePanelAsync()
     {
         if (string.IsNullOrWhiteSpace(ResourcePanelUid))
         {
             IsResourcePanelUidMissing = true;
             SetResourcePanelMessage(localizer.F(LocalizationKeys.ResourcePanelUidMissing, resourcePanelService.CookieLibraryPath));
-            return;
+            return Task.CompletedTask;
         }
 
-        IsResourcePanelBusy = true;
+        return RunOperationAsync(ResourcePanelOperationKind.Save, SaveConfigCoreAsync);
+    }
+
+    private async Task SaveConfigCoreAsync(CancellationToken cancellationToken)
+    {
         try
         {
             await resourcePanelService.SaveConfigAsync(
@@ -372,14 +422,15 @@ internal partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IMod
                 ResourcePanelItems[0].IsEnabled,
                 ResourcePanelItems[1].IsEnabled,
                 ResourcePanelItems[2].IsEnabled,
-                lifetimeToken);
+                cancellationToken);
             SetResourcePanelMessage(localizer.T(LocalizationKeys.ResourcePanelSaved));
             CaptureSavedResourceBaseline();
             RefreshSaveEnabled();
             toastService.ShowSuccess(localizer.T(LocalizationKeys.ResourcePanelSaved));
         }
-        catch (OperationCanceledException) when (lifetimeToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
+            // 关闭放弃保存：基线保持原值，用户确认放弃后已恢复草稿。
         }
         catch (Exception exception)
         {
@@ -390,7 +441,7 @@ internal partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IMod
         }
         finally
         {
-            IsResourcePanelBusy = false;
+            RefreshSaveEnabled();
         }
     }
 
@@ -429,9 +480,77 @@ internal partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IMod
 
     // ── Internal helpers ──────────────────────────────────────────────────
 
-    private async Task LoadResourcePanelAsync(CancellationToken cancellationToken)
+    /// <summary>
+    /// Runs one user-visible load/save under its own cancellation source so the close
+    /// path can cancel and await it. Nested calls (a source switch or a manual-UID save
+    /// that reloads) join the running operation instead of opening a second scope, so
+    /// one close cancels the whole chain. The source is disposed with the operation:
+    /// repeated open/close cycles never accumulate token sources.
+    /// </summary>
+    private Task RunOperationAsync(ResourcePanelOperationKind kind, Func<CancellationToken, Task> body)
     {
+        if (disposed || lifetimeToken.IsCancellationRequested)
+        {
+            return Task.CompletedTask;
+        }
+
+        var running = operationCts;
+        if (running is { IsCancellationRequested: false })
+        {
+            return body(operationToken);
+        }
+
+        var cts = new CancellationTokenSource();
+        operationCts = cts;
+        operationToken = cts.Token;
+        operationKind = kind;
         IsResourcePanelBusy = true;
+        var task = CompleteOperationAsync(cts, body);
+        operationTask = task;
+        return task;
+    }
+
+    private async Task CompleteOperationAsync(CancellationTokenSource cts, Func<CancellationToken, Task> body)
+    {
+        try
+        {
+            await body(cts.Token);
+        }
+        finally
+        {
+            // 只有仍持有状态的操作才复位：关闭后立即重开时，新操作已接管 Busy。
+            if (ReferenceEquals(operationCts, cts))
+            {
+                operationCts = null;
+                operationToken = default;
+                operationKind = ResourcePanelOperationKind.None;
+                operationTask = Task.CompletedTask;
+                IsResourcePanelBusy = false;
+            }
+
+            cts.Dispose();
+        }
+    }
+
+    /// <summary>Cancels the running operation and waits for its state reset, so no continuation stays pending.</summary>
+    private async Task CancelOperationAsync()
+    {
+        var task = operationTask;
+        operationCts?.Cancel();
+        try
+        {
+            await task;
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private Task LoadResourcePanelAsync() =>
+        RunOperationAsync(ResourcePanelOperationKind.Load, LoadResourcePanelCoreAsync);
+
+    private async Task LoadResourcePanelCoreAsync(CancellationToken cancellationToken)
+    {
         IsResourcePanelUidEditing = false;
         SetResourcePanelMessage(localizer.T(LocalizationKeys.ResourcePanelLoading));
         MarkItemsLoading(preserveVersions: true);
@@ -471,15 +590,12 @@ internal partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IMod
         }
         catch (Exception exception)
         {
-            IsResourcePanelBusy = false;
             SetResourcePanelMessage(localizer.F(LocalizationKeys.ResourcePanelLoadFailed, exception.Message), isError: true);
             MarkItemsFailed();
             await resourcePanelService.LogErrorAsync("Resource panel load failed.", exception);
         }
         finally
         {
-            if (IsResourcePanelBusy)
-                IsResourcePanelBusy = false;
             RefreshSaveEnabled();
         }
     }
@@ -586,6 +702,13 @@ internal partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IMod
         IsResourcePanelMessageError = isError;
     }
 
+    private enum ResourcePanelOperationKind
+    {
+        None,
+        Load,
+        Save
+    }
+
     public void Dispose()
     {
         if (disposed)
@@ -594,6 +717,7 @@ internal partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IMod
         }
 
         disposed = true;
+        operationCts?.Cancel();
         pendingDiscardAction = null;
         DiscardChangesConfirm.Confirmed -= ConfirmDiscardChangesAsync;
         lifetimeCts.Cancel();

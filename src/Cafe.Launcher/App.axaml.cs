@@ -122,6 +122,10 @@ public partial class App : Application
                     return;
                 }
 
+                // 关闭请求阶段先停听：此后不再派发转发信号，退出清理也就不需要等轮询循环
+                // （审计 AUD-PERF-010）；资源释放在 desktop.Exit 里做且不在 UI 线程上等待。
+                showWindowListener?.StopListening();
+                launchGameListener?.StopListening();
                 shutdownCts.Cancel();
                 Task shutdownTask = presentationSession.PrepareForShutdownAsync();
                 if (shutdownTask.IsCompletedSuccessfully)
@@ -161,11 +165,21 @@ public partial class App : Application
                 exited = true;
                 desktop.ShutdownRequested -= HandleShutdownRequested;
                 fatalCrashService.FatalCrashRequested -= HandleFatalCrashRequested;
+                // 监听器释放只取消并把收尾排到线程池，不在 UI 线程上等待轮询/接收循环
+                // （审计 AUD-PERF-010）；正常退出路径已在关闭请求阶段先行停听。
                 showWindowListener?.Dispose();
                 launchGameListener?.Dispose();
                 shutdownCts.Cancel();
+
+                // 启动续体结束后才释放令牌源：它仍可能在 ReadAsync(shutdownToken) 等调用里
+                // 注册令牌，此时释放会把正常收尾变成未观察的 ObjectDisposedException
+                // （审计 AUD-ARCH-019）。未结束时宁可留下一个令牌源（进程正在退出）。
+                var startupFinished = presentationSession.IsStartupFinished;
                 presentationSession.Dispose();
-                shutdownCts.Dispose();
+                if (startupFinished)
+                {
+                    shutdownCts.Dispose();
+                }
             };
 
             // Listen for show-window signal from second instances (cross-platform:
@@ -205,6 +219,12 @@ public partial class App : Application
             this.onSignalRaised = onSignalRaised;
             pollingListener = new CrossProcessPollingListener(waitForSignal, OnSignalConsumed);
         }
+
+        /// <summary>
+        /// 关闭请求阶段的先行停听：不再接受新的转发信号，但不做任何等待，
+        /// 因此可以安全地从 UI 线程调用（审计 AUD-PERF-010）。
+        /// </summary>
+        public void StopListening() => pollingListener.StopListening();
 
         public virtual void Dispose() => pollingListener.Dispose();
 

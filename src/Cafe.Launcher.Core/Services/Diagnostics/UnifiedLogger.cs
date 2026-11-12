@@ -105,10 +105,17 @@ public sealed class UnifiedLogger : IDisposable
     public string LogFilePath => logFilePath;
 
     /// <summary>
-    /// 解析当前<strong>存在</strong>的统一日志文件：优先未经轮转的基名，否则取目录里最新的
-    /// <c>unified_*.log</c> 兄弟文件。日志目录读不到或没有任何候选时返回 <c>null</c>（调用点按
-    /// 「暂无日志」处理，而不是把基名当成一个必然存在的文件）。
+    /// 解析当前<strong>正在写入</strong>的统一日志文件：取轮转代次最高的那一份，基名是第 0 代。
+    /// 日志目录读不到或没有任何候选时返回 <c>null</c>（调用点按「暂无日志」处理，而不是把基名当成
+    /// 一个必然存在的文件）。
     /// </summary>
+    /// <remarks>
+    /// 代次是权威信号，写入时间只做同代次的兜底比较：Serilog 的 <c>RollingFileSink</c> 打开时自己也是
+    /// 按「当前检查点里序号最大的文件」续写（<c>RollingInterval.Infinite</c> 下检查点固定），所以
+    /// <c>unified_001.log</c> 一旦存在，后续内容就写在它（或更大的序号）里，基名只剩第一次轮转前的
+    /// 旧内容。只看写入时间会被两件事骗过：文件被拷贝/备份工具改过时间戳，以及基名在轮转之后仍留着
+    /// 更晚的 mtime——两种情况下按 mtime 选都会指向那份**已经封笔**的文件。
+    /// </remarks>
     /// <param name="expectedPath">
     /// <see cref="LogFilePath"/> 给出的基名路径。词干与扩展名由它推导，因此改 <see cref="LauncherPaths.UnifiedLogFileName"/>
     /// 会带着轮转命名一起走。
@@ -126,16 +133,40 @@ public sealed class UnifiedLogger : IDisposable
             return null;
         }
 
-        if (File.Exists(expectedPath))
-        {
-            return expectedPath;
-        }
-
-        // 基名已经不再写入（轮转后就是这种状态），取写时间最新的那个兄弟文件。
+        // 未轮转时目录里只有基名，代次 0 自然胜出：不必为「基名优先」另写一条捷径。
         return existing
-            .OrderByDescending(path => File.GetLastWriteTimeUtc(path))
+            .OrderByDescending(path => RotationSequence(expectedPath, path))
+            .ThenByDescending(path => File.GetLastWriteTimeUtc(path))
             .ThenByDescending(path => path, StringComparer.Ordinal)
             .First();
+    }
+
+    /// <summary>
+    /// 轮转代次：基名是第 0 代，<c>unified_001.log</c> 是第 1 代。序号段缺失或不是纯数字时按 0
+    /// 处理（<see cref="ExistingLogFiles"/> 已经把非轮转产物滤掉，这里只兜底）。
+    /// </summary>
+    private static int RotationSequence(string expectedPath, string candidatePath)
+    {
+        var stem = Path.GetFileNameWithoutExtension(expectedPath);
+        var extension = Path.GetExtension(expectedPath);
+        var name = Path.GetFileName(candidatePath);
+        var middleLength = name.Length - stem.Length - extension.Length;
+        if (middleLength <= 1
+            || !name.StartsWith(stem, StringComparison.Ordinal)
+            || !name.EndsWith(extension, StringComparison.Ordinal)
+            || name[stem.Length] != '_')
+        {
+            return 0;
+        }
+
+        // Serilog 用 "000" 补零；位数超出 int 的名字不可能是这个 sink 写的，按 0 处理而不是抛异常。
+        return int.TryParse(
+            name.AsSpan(stem.Length + 1, middleLength - 1),
+            NumberStyles.None,
+            CultureInfo.InvariantCulture,
+            out var sequence)
+            ? sequence
+            : 0;
     }
 
     /// <summary>

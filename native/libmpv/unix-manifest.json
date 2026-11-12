@@ -1,5 +1,6 @@
 {
   "release": "v0.1.1",
+  "mpvVersion": "0.41.0",
   "source": "https://github.com/ice-commander/ic-plugin-videocodecs/tree/292bb79",
   "baseUrl": "https://github.com/ice-commander/ic-plugin-videocodecs/releases/download/v0.1.1",
   "runtimes": {

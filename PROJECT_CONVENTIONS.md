@@ -49,6 +49,7 @@
 ### 2.3 功能组织
 
 - **功能垂直组织**：`Features/` 分为 Shell、GameOperations、Settings、SetupWizard、Diagnostics、ResourcePanel；功能 ViewModel 就近放置，根 `ViewModels/` 只放窗口级、跨功能及模态契约。非 Shell 功能通过共享 `Services/` 的窄接口协作，不引用彼此的具体类型；Shell 作为聚合者是既定例外。
+- **窗口级契约例外**（2026-11-11 裁决，原 AUD-ARCH-018）：上一条禁令只约束 `Features/` 之间的平级具体类型。根 `ViewModels/` 的窗口级契约（Shell 的忙碌状态、磁盘空间门禁等，Dialogs 的确认对话框等）本就是跨功能共享表面，功能可以直接消费——GameOperations、Settings、Diagnostics 均如此接线。新增窗口级契约必须放入根 `ViewModels/`，不得把某功能的私有具体类型升格为共享依赖；功能之间的协作仍走 `Services/` 窄接口。
 
 ## 3. 代码风格
 
@@ -234,7 +235,7 @@
 | Microsoft.Testing.Extensions.CodeCoverage | 18.12.0 | 运行时覆盖率（Cobertura） |
 | Inno Setup | 7.0+ | Windows installer（脚本强制最低 7.0，CI 安装 7.1.0） |
 
-版本以 `Directory.Packages.props` 为准；升级时同步本表（受 `InstallerContractTests` 守护），流程见[开发指南「依赖与 CI」](docs/DEVELOPMENT.md#依赖与-ci)。
+版本以 `Directory.Packages.props` 为准，`.NET SDK` 以 `global.json`、libmpv 以 `native/libmpv/*.json` 清单为准；升级时同步本表（受 `InstallerContractTests` 守护），流程见[开发指南「依赖与 CI」](docs/DEVELOPMENT.md#依赖与-ci)。
 
 ### 12.2 测试运行时
 

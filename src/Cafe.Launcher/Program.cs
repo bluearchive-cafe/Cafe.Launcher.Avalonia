@@ -4,13 +4,13 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Constants;
 using Cafe.Launcher.Composition;
 using Cafe.Launcher.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Cafe.Launcher.Core;
 using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Services.Diagnostics;
@@ -122,13 +122,10 @@ sealed class Program
         }
 
         // 进程根在此解析一次：随后所有 pre-DI 落点（崩溃快照、日志器、首启探测、
-        // 单实例信号）与 DI 容器共用同一个实例。
-        var dataRoot = LauncherDataRoot.ForCurrentProcess(LauncherProfiles.Cafe.ProductName);
-
-        var reportStore = new CrashReportStore(
-            dataRoot,
-            CrashReportStore.DefaultFallbackDirectory,
-            BuildInfo.Identity);
+        // 单实例信号）与 DI 容器共用同一个实例。解析与快照存储构造纳入同一兜底，
+        // 失败时退化到临时根，保证 ADR-019 的报告路径仍可启动（AUD-ARCH-020）。
+        var (dataRoot, reportStore) = ResolveDataRootAndReportStore(
+            () => LauncherDataRoot.ForCurrentProcess(LauncherProfiles.Cafe.ProductName));
         UnifiedLogger crashLogger;
         try
         {
@@ -207,6 +204,37 @@ sealed class Program
         }
     }
 
+    /// <summary>
+    /// Resolves the process data root and constructs the crash snapshot store inside a
+    /// single fallback. A failure in either — environment quirks, an unwritable or
+    /// unparsable root — must not escape <see cref="Main"/> before crash handling
+    /// exists, because ADR-019 requires every unrecoverable crash to have a surface.
+    /// The degraded root lives under the temp directory, where the store's own
+    /// fallback directory already points.
+    /// </summary>
+    internal static (LauncherDataRoot Root, CrashReportStore Store) ResolveDataRootAndReportStore(
+        Func<LauncherDataRoot> resolveRoot)
+    {
+        try
+        {
+            var root = resolveRoot();
+            return (root, new CrashReportStore(
+                root,
+                CrashReportStore.DefaultFallbackDirectory,
+                BuildInfo.Identity));
+        }
+        catch (Exception exception)
+        {
+            Debug.WriteLine($"Falling back to the temp data root: {exception}");
+            var fallback = new LauncherDataRoot(
+                Path.Combine(Path.GetTempPath(), "Cafe.Launcher"));
+            return (fallback, new CrashReportStore(
+                fallback,
+                CrashReportStore.DefaultFallbackDirectory,
+                BuildInfo.Identity));
+        }
+    }
+
     internal static bool TryHandleCommandLine(string[] args, TextWriter output)
     {
         if (args.Length != 1 ||
@@ -215,10 +243,8 @@ sealed class Program
             return false;
         }
 
-        var informationalVersion = typeof(Program).Assembly
-            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
-            .InformationalVersion;
-        output.WriteLine(informationalVersion ?? typeof(Program).Assembly.GetName().Version?.ToString());
+        var version = LauncherBuildIdentity.FromAssembly(typeof(Program).Assembly).LauncherVersion;
+        output.WriteLine(version);
         return true;
     }
 

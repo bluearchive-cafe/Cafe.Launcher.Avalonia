@@ -74,7 +74,8 @@ internal partial class MainWindow
     private void UpdateVideoPlayback()
     {
         if (videoBackground is null || configuredViewModel is not { } vm) return;
-        var unavailable = IsPlaybackUnavailable(videoBackground.Source is not null, IsVisible, WindowState, IsActive);
+        var unavailable = new VideoPlaybackConditions(
+            videoBackground.Source is not null, IsVisible, WindowState, IsActive).IsUnavailable;
         // Reduced motion pauses playback but keeps the chosen video visible as a still frame.
         videoBackground.PlaybackPaused = unavailable || vm.IsMotionReduced;
         videoBackground.ShowStillFrame = !unavailable && vm.IsMotionReduced;
@@ -82,13 +83,6 @@ internal partial class MainWindow
         videoBackground.Stretch = vm.Background.BackgroundStretch;
         videoBackground.FillColor = vm.Background.BackgroundFillBrush is ISolidColorBrush brush ? brush.Color : Colors.Black;
     }
-
-    /// <summary>
-    /// Unfocused playback pauses too: the render stack retains memory per drawn frame
-    /// (AUD-PERF-009), so growth is limited to time the user is actually watching.
-    /// </summary>
-    internal static bool IsPlaybackUnavailable(bool hasSource, bool isVisible, WindowState windowState, bool isActive) =>
-        !hasSource || !isVisible || windowState == WindowState.Minimized || !isActive;
 
     private void OnVideoBackgroundFirstFrame()
     {
@@ -139,4 +133,18 @@ internal partial class MainWindow
         foreach (var image in ShellRoot.Children.OfType<Image>()) image.IsVisible = true;
         BackgroundCrossFade.IsVisible = true;
     }
+}
+
+/// <summary>
+/// 视频播放可用性：失焦同样暂停——渲染栈按已绘帧保留内存（AUD-PERF-009），
+/// 只应在用户实际观看时增长。
+/// </summary>
+internal readonly record struct VideoPlaybackConditions(
+    bool HasSource,
+    bool IsVisible,
+    WindowState State,
+    bool IsActive)
+{
+    public bool IsUnavailable =>
+        !HasSource || !IsVisible || State == WindowState.Minimized || !IsActive;
 }

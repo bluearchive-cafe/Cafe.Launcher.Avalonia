@@ -24,7 +24,7 @@ namespace Cafe.Launcher.Core.Services;
 /// <para>Interface contract (everything a caller must know):</para>
 /// <para><b>Error modes.</b> Calls throw <see cref="HttpRequestException"/> for
 /// DNS resolution failures, non-2xx answers, exceeded redirect limits, HTTPS→HTTP downgrade attempts, and
-/// stalled or oversized bodies; <see cref="JsonException"/> for bodies that are
+/// stalled, budget-exceeded or oversized bodies; <see cref="JsonException"/> for bodies that are
 /// not valid JSON (the message carries the request URL, status, content type and
 /// a byte preview, without the query string); <see cref="TaskCanceledException"/>
 /// when the caller cancels or the lease timeout elapses; and
@@ -69,6 +69,9 @@ public interface IRemoteHttpTransport
 /// Which failures a retried call may legitimately hit again. The scopes mirror
 /// the disciplines the launcher's callers actually use; transient-status
 /// classification (408/429/5xx) matches <c>LauncherApiClient.IsRetryableRequestFailure</c>.
+/// Both scopes exclude deterministic no-answer failures — redirect limit, missing
+/// Location, HTTPS→HTTP downgrade and oversized bodies — because retrying the same
+/// target cannot change the outcome.
 /// </summary>
 public enum RemoteRetryScope
 {
@@ -128,6 +131,17 @@ public sealed record RemoteRequestOptions
     /// </summary>
     public TimeSpan? Timeout { get; init; }
 
+    /// <summary>
+    /// Total wall-clock budget for reading the response body, on top of the
+    /// per-read idle budget. For <see cref="IRemoteHttpTransport.GetJsonAsync{T}"/>
+    /// a null value applies <see cref="RemoteHttpTransport.DefaultTotalBodyTimeout"/>
+    /// because buffered JSON is bounded metadata; for
+    /// <see cref="IRemoteHttpTransport.GetStreamAsync"/> a null value means no
+    /// total cap, because the body may be an arbitrarily large download and the
+    /// caller owns pacing it. Image fetches set it explicitly.
+    /// </summary>
+    public TimeSpan? TotalBodyTimeout { get; init; }
+
     /// <summary>JSON serializer options for <see cref="IRemoteHttpTransport.GetJsonAsync{T}"/>; defaults to <see cref="JsonDefaults.Strict"/>.</summary>
     public JsonSerializerOptions? Json { get; init; }
 }
@@ -149,6 +163,16 @@ internal sealed class RemoteHttpTransport : IRemoteHttpTransport
     private readonly Func<string> resolveProxyMode;
     private readonly Func<TimeSpan, CancellationToken, Task>? delayAsync;
     private readonly TimeSpan? idleReadTimeout;
+    private readonly TimeSpan defaultTotalBodyTimeout;
+
+    /// <summary>
+    /// Default total body budget for buffered JSON calls (AUD-NET-002). The idle
+    /// budget alone only bounds a stalled read; a server dripping bytes can keep
+    /// resetting it and stretch a 64 MiB-capped body to hours. Metadata payloads
+    /// arrive in seconds on any usable link, so two minutes is generous while
+    /// still bounding a whole attempt.
+    /// </summary>
+    internal static readonly TimeSpan DefaultTotalBodyTimeout = TimeSpan.FromMinutes(2);
 
     /// <summary>Production constructor — resolves proxy modes from launcher settings and leases from the shared factory.</summary>
     public RemoteHttpTransport(
@@ -161,28 +185,32 @@ internal sealed class RemoteHttpTransport : IRemoteHttpTransport
             urlValidator,
             resolveProxyMode,
             delayAsync: null,
-            idleReadTimeout: null)
+            idleReadTimeout: null,
+            totalBodyTimeout: null)
     {
     }
 
     /// <summary>
     /// Injectable constructor — accepts a lease factory and a fixed proxy mode
     /// for testability; tests hand back pre-configured clients (optionally with
-    /// a connection proxy) instead of dialing real sockets. The backoff wait
-    /// and idle-read budget are injectable so tests never sleep real time.
+    /// a connection proxy) instead of dialing real sockets. The backoff wait,
+    /// idle-read and total-body budgets are injectable so tests never sleep
+    /// real time.
     /// </summary>
     internal RemoteHttpTransport(
         Func<string, TimeSpan?, CancellationToken, Task<HttpClientLease>> createLeaseAsync,
         IRemoteHttpUrlValidator urlValidator,
         string fixedProxyMode,
         Func<TimeSpan, CancellationToken, Task>? delayAsync = null,
-        TimeSpan? idleReadTimeout = null)
+        TimeSpan? idleReadTimeout = null,
+        TimeSpan? totalBodyTimeout = null)
         : this(
             createLeaseAsync,
             urlValidator,
             () => fixedProxyMode,
             delayAsync,
-            idleReadTimeout)
+            idleReadTimeout,
+            totalBodyTimeout)
     {
     }
 
@@ -191,13 +219,15 @@ internal sealed class RemoteHttpTransport : IRemoteHttpTransport
         IRemoteHttpUrlValidator urlValidator,
         Func<string> resolveProxyMode,
         Func<TimeSpan, CancellationToken, Task>? delayAsync,
-        TimeSpan? idleReadTimeout)
+        TimeSpan? idleReadTimeout,
+        TimeSpan? totalBodyTimeout)
     {
         this.createLeaseAsync = createLeaseAsync;
         this.urlValidator = urlValidator;
         this.resolveProxyMode = resolveProxyMode;
         this.delayAsync = delayAsync;
         this.idleReadTimeout = idleReadTimeout;
+        defaultTotalBodyTimeout = totalBodyTimeout ?? DefaultTotalBodyTimeout;
     }
 
     /// <inheritdoc />
@@ -237,7 +267,12 @@ internal sealed class RemoteHttpTransport : IRemoteHttpTransport
             .ReadAsStreamAsync(cancellationToken)
             .ConfigureAwait(false);
         return new RemoteBody(
-            new OwnedRemoteResponseBodyStream(content, response, lease, idleReadTimeout),
+            new OwnedRemoteResponseBodyStream(
+                content,
+                response,
+                lease,
+                idleReadTimeout,
+                policy.TotalBodyTimeout),
             response.Content.Headers.ContentLength);
     }
 
@@ -253,7 +288,10 @@ internal sealed class RemoteHttpTransport : IRemoteHttpTransport
                 response,
                 uri,
                 policy.Json ?? JsonDefaults.Strict,
-                cancellationToken).ConfigureAwait(false);
+                MaxBufferedJsonBytes,
+                cancellationToken,
+                idleReadTimeout,
+                policy.TotalBodyTimeout ?? defaultTotalBodyTimeout).ConfigureAwait(false);
     }
 
     private async Task<(HttpClientLease Lease, HttpResponseMessage Response)> SendStreamAttemptAsync(
@@ -332,16 +370,28 @@ internal sealed class RemoteHttpTransport : IRemoteHttpTransport
         return policy;
     }
 
-    private static bool IsRetryable(RemoteRetryScope scope, Exception exception) => scope switch
+    private static bool IsRetryable(RemoteRetryScope scope, Exception exception)
     {
-        RemoteRetryScope.Network => ProducedNoResponse(exception),
-        RemoteRetryScope.Transient => exception is HttpRequestException { StatusCode: { } statusCode }
-            ? statusCode == HttpStatusCode.RequestTimeout
-                || statusCode == HttpStatusCode.TooManyRequests
-                || (int)statusCode >= 500
-            : exception is HttpRequestException or TaskCanceledException or JsonException,
-        _ => false
-    };
+        // Deterministic failures (redirect limit, missing Location, HTTPS→HTTP downgrade,
+        // oversized body) look like "no response" connection failures by exception type and
+        // status, but asking the same target again cannot change the answer — only
+        // transient failures (timeouts, connection failures, 408/429/5xx) are retried.
+        if (RemoteHttpRequestService.IsDeterministicFailure(exception))
+        {
+            return false;
+        }
+
+        return scope switch
+        {
+            RemoteRetryScope.Network => ProducedNoResponse(exception),
+            RemoteRetryScope.Transient => exception is HttpRequestException { StatusCode: { } statusCode }
+                ? statusCode == HttpStatusCode.RequestTimeout
+                    || statusCode == HttpStatusCode.TooManyRequests
+                    || (int)statusCode >= 500
+                : exception is HttpRequestException or TaskCanceledException or JsonException,
+            _ => false
+        };
+    }
 
     private static bool ProducedNoResponse(Exception exception) =>
         exception is HttpRequestException { StatusCode: null } or TaskCanceledException;
@@ -374,13 +424,54 @@ internal sealed class RemoteHttpTransport : IRemoteHttpTransport
         CancellationToken cancellationToken) =>
         DeserializeJsonAsync<T>(response, requestUri, options, MaxBufferedJsonBytes, cancellationToken);
 
+    /// <summary>
+    /// Buffers and deserializes a JSON body under two budgets: the per-read idle
+    /// budget (<paramref name="idleReadTimeout"/>) and, when set, a total
+    /// wall-clock budget for the body (<paramref name="totalReadTimeout"/>). The
+    /// idle budget alone cannot bound a body that keeps arriving one byte at a
+    /// time; the total budget converts that into a retryable
+    /// <see cref="HttpRequestException"/>, mirroring the stall path (AUD-NET-002).
+    /// </summary>
     internal static async Task<T?> DeserializeJsonAsync<T>(
         HttpResponseMessage response,
         Uri? requestUri,
         JsonSerializerOptions options,
         int maxBytes,
         CancellationToken cancellationToken,
-        TimeSpan? idleReadTimeout = null)
+        TimeSpan? idleReadTimeout = null,
+        TimeSpan? totalReadTimeout = null)
+    {
+        if (totalReadTimeout is not { } total)
+        {
+            return await ReadJsonBodyAsync<T>(
+                    response, requestUri, options, maxBytes, idleReadTimeout, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        using var budget = new CancellationTokenSource(total);
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, budget.Token);
+        try
+        {
+            return await ReadJsonBodyAsync<T>(
+                    response, requestUri, options, maxBytes, idleReadTimeout, linked.Token)
+                .ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            // 总预算触发时调用方令牌仍然有效：报「超过总时长」而不是取消，
+            // 让既有重试/提示路径接手（与逐次停顿预算的归因一致）。
+            throw new HttpRequestException(
+                $"Remote response body exceeded the total read budget of {ResponseBodyReader.FormatTimeout(total)}.");
+        }
+    }
+
+    private static async Task<T?> ReadJsonBodyAsync<T>(
+        HttpResponseMessage response,
+        Uri? requestUri,
+        JsonSerializerOptions options,
+        int maxBytes,
+        TimeSpan? idleReadTimeout,
+        CancellationToken cancellationToken)
     {
         await using var networkStream = await response.Content
             .ReadAsStreamAsync(cancellationToken)
@@ -442,7 +533,9 @@ internal sealed class RemoteHttpTransport : IRemoteHttpTransport
         var declared = declaredBytes.HasValue
             ? declaredBytes.Value.ToString(invariant)
             : "unknown";
-        return new HttpRequestException(
+        // The oversized body is a deterministic answer for this URI: mark it so the retry
+        // predicate does not treat it as a transient connection failure (AUD-NET-001).
+        return RemoteHttpRequestService.CreateDeterministicFailure(
             $"Remote response exceeds the {MaxBufferedJsonBytes.ToString(invariant)}-byte limit "
             + $"(declared: {declared}, buffered: {actualBytes.ToString(invariant)}). "
             + $"url: {DescribeUri(requestUri)} | "
@@ -523,15 +616,40 @@ internal sealed class RemoteHttpTransport : IRemoteHttpTransport
     /// <summary>
     /// A response body stream that routes every read through the idle-read stall
     /// budget and releases the response message and its lease when disposed.
-    /// Synchronous reads are rejected — pooled HTTP content streams disallow them
-    /// anyway, and the budget is only defined for async reads.
+    /// When a total budget is supplied, it runs from hand-off to disposal and
+    /// caps a body that keeps trickling bytes inside the idle budget
+    /// (AUD-NET-002); downloads leave it unset because they are sized by content,
+    /// not by metadata expectations. Synchronous reads are rejected — pooled
+    /// HTTP content streams disallow them anyway, and the budgets are only
+    /// defined for async reads.
     /// </summary>
-    private sealed class OwnedRemoteResponseBodyStream(
-        Stream content,
-        HttpResponseMessage response,
-        HttpClientLease lease,
-        TimeSpan? idleReadTimeout) : Stream
+    private sealed class OwnedRemoteResponseBodyStream : Stream
     {
+        private readonly Stream content;
+        private readonly HttpResponseMessage response;
+        private readonly HttpClientLease lease;
+        private readonly TimeSpan? idleReadTimeout;
+        private readonly TimeSpan? totalBodyTimeout;
+        private readonly CancellationTokenSource? totalBudget;
+
+        public OwnedRemoteResponseBodyStream(
+            Stream content,
+            HttpResponseMessage response,
+            HttpClientLease lease,
+            TimeSpan? idleReadTimeout,
+            TimeSpan? totalBodyTimeout)
+        {
+            this.content = content;
+            this.response = response;
+            this.lease = lease;
+            this.idleReadTimeout = idleReadTimeout;
+            this.totalBodyTimeout = totalBodyTimeout;
+            if (totalBodyTimeout is { } total)
+            {
+                totalBudget = new CancellationTokenSource(total);
+            }
+        }
+
         public override bool CanRead => true;
 
         public override bool CanSeek => false;
@@ -548,10 +666,31 @@ internal sealed class RemoteHttpTransport : IRemoteHttpTransport
 
         public override async ValueTask<int> ReadAsync(
             Memory<byte> buffer,
-            CancellationToken cancellationToken = default) =>
-            await ResponseBodyReader
-                .ReadAsync(content, buffer, cancellationToken, idleReadTimeout)
-                .ConfigureAwait(false);
+            CancellationToken cancellationToken = default)
+        {
+            if (totalBudget is null)
+            {
+                return await ResponseBodyReader
+                    .ReadAsync(content, buffer, cancellationToken, idleReadTimeout)
+                    .ConfigureAwait(false);
+            }
+
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(
+                cancellationToken,
+                totalBudget.Token);
+            try
+            {
+                return await ResponseBodyReader
+                    .ReadAsync(content, buffer, linked.Token, idleReadTimeout)
+                    .ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                throw new HttpRequestException(
+                    "Remote response body exceeded the total read budget of "
+                    + $"{ResponseBodyReader.FormatTimeout(totalBodyTimeout!.Value)}.");
+            }
+        }
 
         public override int Read(byte[] buffer, int offset, int count) =>
             throw new NotSupportedException("Remote response bodies support asynchronous reads only.");
@@ -572,6 +711,7 @@ internal sealed class RemoteHttpTransport : IRemoteHttpTransport
         {
             if (disposing)
             {
+                totalBudget?.Dispose();
                 content.Dispose();
                 response.Dispose();
                 lease.Dispose();
@@ -582,6 +722,7 @@ internal sealed class RemoteHttpTransport : IRemoteHttpTransport
 
         public override async ValueTask DisposeAsync()
         {
+            totalBudget?.Dispose();
             await content.DisposeAsync().ConfigureAwait(false);
             response.Dispose();
             lease.Dispose();

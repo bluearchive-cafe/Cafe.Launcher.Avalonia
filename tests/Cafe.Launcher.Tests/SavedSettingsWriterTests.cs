@@ -225,7 +225,24 @@ public sealed class SavedSettingsWriterTests : IDisposable
     {
         using var rig = CreateRig();
 
-        await Assert.ThrowsAsync<ArgumentNullException>(() => rig.Writer.ReplaceAsync(null!));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => rig.Writer.ReplaceAsync((LauncherSettings)null!));
+    }
+
+    [Fact]
+    public async Task ReplaceAsync_WhenDerivingReplacement_ReadsTheSavedSnapshotAsBase()
+    {
+        using var rig = CreateRig();
+        await rig.SeedAsync(new LauncherSettings { ResourcePanelUid = "ABCDEFGH" });
+
+        var persisted = await rig.Writer.ReplaceAsync(settings =>
+        {
+            var next = LauncherSettings.CreateDefaults();
+            next.ResourcePanelUid = settings.ResourcePanelUid;
+            return next;
+        });
+
+        Assert.Equal("ABCDEFGH", persisted.ResourcePanelUid);
+        Assert.Equal("ABCDEFGH", (await rig.SettingsService.ReadAsync()).ResourcePanelUid);
     }
 
     private SavedSettingsTestRig CreateRig() =>

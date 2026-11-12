@@ -226,19 +226,22 @@ internal sealed class LauncherUpdateService : ILauncherUpdateService
             cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>GitHub API 请求的公共选项：超时、严格 JSON 与带版本的 User-Agent。</summary>
+    private RemoteRequestOptions CreateGitHubRequestOptions() => new()
+    {
+        Timeout = TimeSpan.FromSeconds(15),
+        Json = JsonOptions,
+        ConfigureRequest = request => request.Headers.UserAgent.ParseAdd(
+            LauncherUserAgent.Create(currentVersion))
+    };
+
     private async Task<List<LauncherReleaseResponse>> FetchGitHubReleasesAsync(
         CancellationToken cancellationToken)
     {
         var requestUri = new Uri(productProfile.GitHubReleasesApiUrl);
         var releases = await transport.GetJsonAsync<List<GitHubRelease>>(
             requestUri,
-            new RemoteRequestOptions
-            {
-                Timeout = TimeSpan.FromSeconds(15),
-                Json = JsonOptions,
-                ConfigureRequest = request => request.Headers.UserAgent.ParseAdd(
-                    $"CafeLauncher/{currentVersion}")
-            },
+            CreateGitHubRequestOptions(),
             cancellationToken).ConfigureAwait(false) ?? [];
         return releases
             .Where(release => !release.Draft)
@@ -303,13 +306,7 @@ internal sealed class LauncherUpdateService : ILauncherUpdateService
             var requestUri = new Uri(productProfile.GitHubReleaseByTagApiUrl + "v" + Uri.EscapeDataString(version));
             var release = await transport.GetJsonAsync<GitHubRelease>(
                 requestUri,
-                new RemoteRequestOptions
-                {
-                    Timeout = TimeSpan.FromSeconds(15),
-                    Json = JsonOptions,
-                    ConfigureRequest = request => request.Headers.UserAgent.ParseAdd(
-                        $"CafeLauncher/{currentVersion}")
-                },
+                CreateGitHubRequestOptions(),
                 cancellationToken).ConfigureAwait(false);
             return release?.Body ?? "";
         }
@@ -385,11 +382,21 @@ internal sealed class LauncherUpdateService : ILauncherUpdateService
                 return false;
             }
 
-            if (IsWindowsPackageAsset(file.Name)
-                && !file.Name.Contains("v" + version + "_", StringComparison.Ordinal))
+            if (IsWindowsPackageAsset(file.Name))
             {
-                validationError = $"files[{index}].name must carry the release version v{version}";
-                return false;
+                // 包名会成为数据根下的落点文件名：越界形态（分隔符、"." / ".."、非法字符）
+                // 在这里就拒绝，别让「路径拼接」替元数据做净化。
+                if (!LauncherUpdatePackageSelector.IsSingleFileNameSegment(file.Name))
+                {
+                    validationError = $"files[{index}].name must be a single file name";
+                    return false;
+                }
+
+                if (!file.Name.Contains("v" + version + "_", StringComparison.Ordinal))
+                {
+                    validationError = $"files[{index}].name must carry the release version v{version}";
+                    return false;
+                }
             }
 
             if (file.Size <= 0)

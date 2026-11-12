@@ -34,6 +34,14 @@ public interface ISavedSettingsWriter
     Task<LauncherSettings> ReplaceAsync(
         LauncherSettings settings,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 整份替换已保存设置，替换值由当前已保存快照派生（恢复默认设置时保留个别字段）。
+    /// 基底读取与落盘在同一事务内完成，避免调用方在事务外读出一个即将过期的值。
+    /// </summary>
+    Task<LauncherSettings> ReplaceAsync(
+        Func<LauncherSettings, LauncherSettings> derive,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -101,6 +109,15 @@ internal sealed class SavedSettingsWriter : ISavedSettingsWriter, IDisposable
         ArgumentNullException.ThrowIfNull(settings);
 
         return PersistAsync(() => settings, cancellationToken);
+    }
+
+    public Task<LauncherSettings> ReplaceAsync(
+        Func<LauncherSettings, LauncherSettings> derive,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(derive);
+
+        return PersistAsync(() => derive(draftOwner.GetSavedSnapshot()), cancellationToken);
     }
 
     /// <summary>串行化读取基底、修改、落盘与编辑器同步；磁盘锁不能保护锁外的快照与 UI 调度。</summary>

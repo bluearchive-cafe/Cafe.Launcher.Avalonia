@@ -172,6 +172,32 @@ public partial class MainWindowViewModelTests
     }
 
     [Fact]
+    public async Task ResetSettingsFromSettingsPage_PreservesAcceptedAgreementVersion()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.AcceptedAgreementVersion = LauncherAgreement.CurrentVersion;
+        var settingsPath = tempDir.Sub(LauncherPaths.LauncherSettingsFileName);
+        var savedSettings = new SavedSettingsTestRig(settingsPath);
+        await savedSettings.SeedAsync(new LauncherSettings
+        {
+            GamePath = snapshot.Settings.GamePath,
+            AcceptedAgreementVersion = LauncherAgreement.CurrentVersion
+        });
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(snapshot),
+            savedSettings);
+        await viewModel.InitializeAsync();
+
+        viewModel.Dialogs.SettingsResetConfirm.Show();
+        await viewModel.Dialogs.SettingsResetConfirm.ConfirmCommand.ExecuteAsync(null);
+
+        // 恢复偏好不等于撤销同意：落盘值应保留已同意的版次。
+        Assert.Equal(
+            LauncherAgreement.CurrentVersion,
+            (await savedSettings.SettingsService.ReadAsync()).AcceptedAgreementVersion);
+    }
+
+    [Fact]
     public async Task SaveSettingsAsync_WhenDownloadIsRunning_UpdatesCurrentSnapshotWithoutRefreshing()
     {
         var snapshot = CreateSnapshot();

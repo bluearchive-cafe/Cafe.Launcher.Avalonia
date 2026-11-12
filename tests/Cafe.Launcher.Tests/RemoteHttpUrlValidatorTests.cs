@@ -72,6 +72,9 @@ public sealed class RemoteHttpUrlValidatorTests
     [InlineData("http://[fe80::1]/file")]
     [InlineData("http://[fc00::1]/file")]
     [InlineData("http://[2001:db8::1]/file")]
+    [InlineData("http://[2002:7f00:1::]/file")]
+    [InlineData("http://[2001:0:4136:e378:8000:63bf:3fff:fdd2]/file")]
+    [InlineData("http://[64:ff9b::808:808]/file")]
     [InlineData("http://[::ffff:127.0.0.1]/file")]
     [InlineData("http://localhost/file")]
     public async Task ValidateAsync_WhenTargetIsLocalOrPrivate_Throws(string url)
@@ -80,6 +83,26 @@ public sealed class RemoteHttpUrlValidatorTests
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => validator.ValidateAsync(url));
+    }
+
+    [Theory]
+    [InlineData("2606:4700:4700::1111", true)]
+    [InlineData("2001:db8::1", false)]
+    [InlineData("2002:7f00:1::1", false)]
+    [InlineData("2001:0:4136:e378:8000:63bf:3fff:fdd2", false)]
+    [InlineData("64:ff9b::808:808", false)]
+    [InlineData("fe80::1", false)]
+    [InlineData("fd00::1", false)]
+    [InlineData("::1", false)]
+    [InlineData("::", false)]
+    public void IsPublicAddress_ClassifiesIpv6LiteralsByTheGlobalUnicastRule(
+        string addressText,
+        bool expected)
+    {
+        // 守卫（AUD-SEC-007）：字面量只接受全局单播 2000::/3，并额外排除 6to4
+        // （2002::/16）与 Teredo（2001::/32）——这两类隧道内层可以是任意 IPv4，
+        // 包括私网。
+        Assert.Equal(expected, RemoteHttpUrlValidator.IsPublicAddress(IPAddress.Parse(addressText)));
     }
 
     [Theory]

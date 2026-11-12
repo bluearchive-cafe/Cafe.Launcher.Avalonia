@@ -26,6 +26,27 @@ public static class RemoteHttpRequestService
     internal const string FakeIpDnsDataKey = "Cafe.Launcher.FakeIpDns";
 
     /// <summary>
+    /// <see cref="Exception.Data"/> 标记键：本次失败是目标给出的确定性答复——重定向超限、
+    /// 重定向缺少 Location、HTTPS→HTTP 降级，或在 <see cref="RemoteHttpTransport"/> 中的
+    /// 正文超限。对同一 URI 再发一次不会改变结果，因此 <c>RemoteRetryScope.Network</c> 的
+    /// 「无响应即瞬时失败」判据必须把它们排除在外。异常类型保持不变（传输层的错误模式
+    /// 契约没有第二种异常类型），标记随异常链由重试判据读取。
+    /// </summary>
+    internal const string DeterministicFailureDataKey = "Cafe.Launcher.DeterministicFailure";
+
+    /// <summary>Creates a <see cref="HttpRequestException"/> that retrying cannot fix.</summary>
+    internal static HttpRequestException CreateDeterministicFailure(string message)
+    {
+        var exception = new HttpRequestException(message);
+        exception.Data[DeterministicFailureDataKey] = true;
+        return exception;
+    }
+
+    /// <summary>Checks whether a failure is marked as deterministic (retrying cannot fix it).</summary>
+    internal static bool IsDeterministicFailure(Exception exception) =>
+        exception.Data.Contains(DeterministicFailureDataKey);
+
+    /// <summary>
     /// 检查异常链是否携带「目标解析到本机/内网/保留地址」标记
     /// （<see cref="RemoteHttpUrlValidator.BlockedAddressDataKey"/>）。这类拒绝通常由
     /// hosts 文件或 DNS 劫持把域名指向 <c>127.0.0.1</c> 等地址造成，表现层据此给出
@@ -110,14 +131,14 @@ public static class RemoteHttpRequestService
             if (redirectCount >= MaxRedirects)
             {
                 response.Dispose();
-                throw new HttpRequestException("Remote request exceeded the redirect limit.");
+                throw CreateDeterministicFailure("Remote request exceeded the redirect limit.");
             }
 
             var location = response.Headers.Location;
             response.Dispose();
             if (location is null)
             {
-                throw new HttpRequestException("Remote redirect response has no Location header.");
+                throw CreateDeterministicFailure("Remote redirect response has no Location header.");
             }
 
             var nextUri = location.IsAbsoluteUri
@@ -126,7 +147,7 @@ public static class RemoteHttpRequestService
             if (currentUri.Scheme == Uri.UriSchemeHttps
                 && nextUri.Scheme == Uri.UriSchemeHttp)
             {
-                throw new HttpRequestException("Remote redirect attempted to downgrade HTTPS to HTTP.");
+                throw CreateDeterministicFailure("Remote redirect attempted to downgrade HTTPS to HTTP.");
             }
 
             currentUri = nextUri;

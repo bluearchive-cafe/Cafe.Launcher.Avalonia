@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.UI.Constants;
@@ -59,12 +58,11 @@ internal static class RunningGameGate
             return null;
         }
 
-        var scan = await ScanRunningProcessesAsync(
-            gameProcessTracker,
-            query,
+        var runningNames = await BoundedProcessScan.RunAsync(
+            token => gameProcessTracker.FindRunningGameProcessesAsync(query, token),
             scanTimeout ?? DefaultScanTimeout,
             cancellationToken).ConfigureAwait(false);
-        if (scan.TimedOut)
+        if (runningNames is null)
         {
             // 与「枚举抛异常按没在跑放行」（ADR-032 决策 6）相反：枚举**没有答案**时拒绝。
             // 异常是确定的读取失败、与游戏是否在跑无关；答不出来偏偏与游戏在跑相关——
@@ -75,47 +73,10 @@ internal static class RunningGameGate
                 GameOperationErrorCode.GameRunning);
         }
 
-        return scan.RunningNames.Count == 0
+        return runningNames.Count == 0
             ? null
             : GameOperationOutcomes.Failed(
-                localizer.F(runningMessageKey, GameProcessNames.DescribeForDisplay(scan.RunningNames)),
+                localizer.F(runningMessageKey, GameProcessNames.DescribeForDisplay(runningNames)),
                 GameOperationErrorCode.GameRunning);
     }
-
-    /// <summary>
-    /// 把扫描丢到线程池，与一个带令牌的限时等待赛跑：谁先到算谁的。扫描正文是同步枚举
-    /// （<see cref="ProcessService.FindRunningExeNamesAsync"/>），令牌只在开头看一眼，
-    /// 直接 await 它，反作弊把枚举挂住时取消就永远无人观察。用户停止从限时等待这一侧
-    /// 立即浮出；被落下的扫描任务接一个观察续体，迟到的失败不会变成未观察异常。
-    /// </summary>
-    private static async Task<RunningProcessScan> ScanRunningProcessesAsync(
-        IGameProcessTracker gameProcessTracker,
-        RunningGameQuery query,
-        TimeSpan scanTimeout,
-        CancellationToken cancellationToken)
-    {
-        var scanTask = Task.Run(
-            () => gameProcessTracker.FindRunningGameProcessesAsync(query, cancellationToken),
-            CancellationToken.None);
-        var timeoutTask = Task.Delay(scanTimeout, cancellationToken);
-        if (ReferenceEquals(await Task.WhenAny(scanTask, timeoutTask).ConfigureAwait(false), scanTask))
-        {
-            return new RunningProcessScan(await scanTask.ConfigureAwait(false), TimedOut: false);
-        }
-
-        ObserveAbandonedScan(scanTask);
-        // 取消优先于超时判定：两者都可能让 Delay 先完成，而取消必须按用户停止展开，
-        // 不能被「无法确认」的错误结果吃掉。
-        cancellationToken.ThrowIfCancellationRequested();
-        return new RunningProcessScan([], TimedOut: true);
-    }
-
-    private static void ObserveAbandonedScan(Task<IReadOnlyList<string>> scanTask) =>
-        _ = scanTask.ContinueWith(
-            static abandoned => _ = abandoned.Exception,
-            CancellationToken.None,
-            TaskContinuationOptions.OnlyOnFaulted,
-            TaskScheduler.Default);
-
-    private readonly record struct RunningProcessScan(IReadOnlyList<string> RunningNames, bool TimedOut);
 }

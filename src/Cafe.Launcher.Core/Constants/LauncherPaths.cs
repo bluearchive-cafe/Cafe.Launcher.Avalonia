@@ -24,6 +24,14 @@ public static class LauncherPaths
     public const int InstallationStateFileCount = 2;
 
     public const string LauncherSettingsFileName = "settings.json";
+
+    /// <summary>
+    /// Copy of the most recent <c>settings.json</c> that could not be read as written
+    /// (malformed, wrong root shape, or a field whose type did not match). Kept beside the
+    /// live file for diagnosis; overwritten on the next recovery, never read by the launcher.
+    /// </summary>
+    public const string LauncherSettingsBackupFileName = "settings.json.bak";
+
     public const string DownloadStateFileName = "download_state.json";
     public const string NoticeStateFileName = "shown_notices.json";
 

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Net.Http;
@@ -586,10 +587,35 @@ public sealed class RemoteHttpTransportTests
         Assert.Equal(2, recordedDelays.Count);
     }
 
-    [Fact]
-    public async Task GetJsonAsync_WhenScopeIsTransientAndStatusIsAuthoritative_DoesNotRetry()
+    [Theory]
+    [InlineData(HttpStatusCode.BadRequest)]
+    [InlineData(HttpStatusCode.NotFound)]
+    public async Task GetJsonAsync_WhenScopeIsNetworkAndStatusIsClientError_DoesNotRetry(HttpStatusCode statusCode)
     {
-        var handler = new ScriptedHandler(ScriptedHandler.Status(HttpStatusCode.NotFound));
+        // AUD-NET-001：4xx 是目标给出的确定性答复（异常携带 StatusCode），不能按
+        // 「无响应即瞬时失败」重试；按既有错误映射原样上抛。
+        var handler = new ScriptedHandler(ScriptedHandler.Status(statusCode));
+        var transport = CreateTransport(handler);
+        var options = new RemoteRequestOptions
+        {
+            MaxAttempts = 3,
+            Backoff = _ => TimeSpan.FromMilliseconds(1),
+            RetryScope = RemoteRetryScope.Network
+        };
+
+        var exception = await Assert.ThrowsAsync<HttpRequestException>(
+            () => transport.GetJsonAsync<SamplePayload>(new Uri("https://example.test/data"), options));
+
+        Assert.Equal(statusCode, exception.StatusCode);
+        Assert.Equal(1, handler.RequestCount);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.BadRequest)]
+    [InlineData(HttpStatusCode.NotFound)]
+    public async Task GetJsonAsync_WhenScopeIsTransientAndStatusIsAuthoritative_DoesNotRetry(HttpStatusCode statusCode)
+    {
+        var handler = new ScriptedHandler(ScriptedHandler.Status(statusCode));
         var transport = CreateTransport(handler);
         var options = new RemoteRequestOptions
         {
@@ -602,6 +628,30 @@ public sealed class RemoteHttpTransportTests
             () => transport.GetJsonAsync<SamplePayload>(new Uri("https://example.test/data"), options));
 
         Assert.Equal(1, handler.RequestCount);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.RequestTimeout)]
+    [InlineData(HttpStatusCode.TooManyRequests)]
+    public async Task GetJsonAsync_WhenScopeIsTransientAndStatusIsTransient_RetriesUntilSuccess(HttpStatusCode statusCode)
+    {
+        // 现有划分保持：408/429（以及 5xx）在 Transient 域内重试。
+        var handler = new ScriptedHandler(
+            ScriptedHandler.Status(statusCode),
+            ScriptedHandler.Ok("""{"Name":"hello"}"""));
+        var transport = CreateTransport(handler);
+        var options = new RemoteRequestOptions
+        {
+            MaxAttempts = 2,
+            Backoff = _ => TimeSpan.FromMilliseconds(1),
+            RetryScope = RemoteRetryScope.Transient
+        };
+
+        var payload = await transport.GetJsonAsync<SamplePayload>(
+            new Uri("https://example.test/data"), options);
+
+        Assert.Equal("hello", payload?.Name);
+        Assert.Equal(2, handler.RequestCount);
     }
 
     [Fact]
@@ -728,6 +778,61 @@ public sealed class RemoteHttpTransportTests
         Assert.Equal(2, handler.RequestCount);
     }
 
+    [Fact]
+    public async Task GetStreamAsync_WhenRedirectLimitIsExceededWithRetriesConfigured_DoesNotRetry()
+    {
+        // AUD-NET-001：重定向超限是无状态码的确定性失败——原实现把它当成「连接级
+        // 无响应」重试，整轮重定向（6 次请求）会被重复整个尝试预算。
+        var handler = new EndlessRedirectHandler();
+        var backoffs = new List<TimeSpan>();
+        var transport = CreateTransport(
+            handler,
+            delayAsync: (delay, _) =>
+            {
+                backoffs.Add(delay);
+                return Task.CompletedTask;
+            });
+        var options = new RemoteRequestOptions
+        {
+            MaxAttempts = 3,
+            Backoff = _ => TimeSpan.FromMilliseconds(1),
+            RetryScope = RemoteRetryScope.Network
+        };
+
+        await Assert.ThrowsAsync<HttpRequestException>(
+            () => transport.GetStreamAsync(new Uri("https://example.test/start"), options));
+
+        Assert.Equal(6, handler.RequestCount);
+        Assert.Empty(backoffs);
+    }
+
+    [Fact]
+    public async Task GetJsonAsync_WhenRedirectDowngradesHttpsToHttpWithRetriesConfigured_DoesNotRetry()
+    {
+        // 同类确定性失败：协议降级不随重试改变，只允许一次发送。
+        var handler = new DowngradeRedirectHandler();
+        var backoffs = new List<TimeSpan>();
+        var transport = CreateTransport(
+            handler,
+            delayAsync: (delay, _) =>
+            {
+                backoffs.Add(delay);
+                return Task.CompletedTask;
+            });
+        var options = new RemoteRequestOptions
+        {
+            MaxAttempts = 3,
+            Backoff = _ => TimeSpan.FromMilliseconds(1),
+            RetryScope = RemoteRetryScope.Transient
+        };
+
+        await Assert.ThrowsAsync<HttpRequestException>(
+            () => transport.GetJsonAsync<SamplePayload>(new Uri("https://example.test/start"), options));
+
+        Assert.Equal(1, handler.RequestCount);
+        Assert.Empty(backoffs);
+    }
+
     // ---- Stream contract ----
 
     [Fact]
@@ -758,6 +863,62 @@ public sealed class RemoteHttpTransportTests
 
         await Assert.ThrowsAsync<HttpRequestException>(
             () => body.ReadAsync(new Memory<byte>(new byte[16])).AsTask());
+    }
+
+    [Fact]
+    public async Task GetJsonAsync_WhenBodyDripsPastTheTotalBudget_ThrowsInsteadOfReadingForever()
+    {
+        // 守卫（AUD-NET-002）：头部之后正文每 5ms 只到一个字节，逐次空闲预算被
+        // 每次成功读取不断重置；总时长预算必须在这个「伪活跃」连接上兜底。
+        var transport = CreateTransport(
+            new DrippingBodyHandler(TimeSpan.FromMilliseconds(5)),
+            totalBodyTimeout: TimeSpan.FromMilliseconds(120));
+
+        var started = Stopwatch.StartNew();
+        var exception = await Assert.ThrowsAsync<HttpRequestException>(
+            () => transport.GetJsonAsync<SamplePayload>(new Uri("https://example.test/manifest")));
+
+        Assert.Contains("total read budget", exception.Message, StringComparison.Ordinal);
+        Assert.True(started.Elapsed < TimeSpan.FromSeconds(30), $"Elapsed {started.Elapsed}.");
+    }
+
+    [Fact]
+    public async Task GetJsonAsync_WhenLargeResponseCompletes_IsNotCutByTheTotalBudget()
+    {
+        // 同一预算不得误伤正常的大响应：1 MiB 正文在 5s 预算内读完。
+        var json = "{\"Name\":\"" + new string('a', 1024 * 1024) + "\"}";
+        var transport = CreateTransport(
+            new ScriptedHandler(ScriptedHandler.Ok(json)),
+            totalBodyTimeout: TimeSpan.FromSeconds(5));
+
+        var payload = await transport.GetJsonAsync<SamplePayload>(
+            new Uri("https://example.test/manifest"));
+
+        Assert.Equal(1024 * 1024, payload!.Name.Length);
+    }
+
+    [Fact]
+    public async Task GetStreamAsync_WhenBodyDripsPastThePerCallTotalBudget_ThrowsInsteadOfReadingForever()
+    {
+        // GetStreamAsync 的正文归调用方读取，总预算只能由每次调用的选项显式开启
+        // （下载通道不设上限）。开启后与 JSON 一样在总时限处终止。
+        var transport = CreateTransport(new DrippingBodyHandler(TimeSpan.FromMilliseconds(5)));
+        var options = new RemoteRequestOptions { TotalBodyTimeout = TimeSpan.FromMilliseconds(120) };
+
+        var remote = await transport.GetStreamAsync(
+            new Uri("https://example.test/image.png"),
+            options);
+        using var body = remote.Content;
+
+        var exception = await Assert.ThrowsAsync<HttpRequestException>(async () =>
+        {
+            var buffer = new byte[8];
+            while (await body.ReadAsync(buffer) > 0)
+            {
+            }
+        });
+
+        Assert.Contains("total read budget", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -904,13 +1065,15 @@ public sealed class RemoteHttpTransportTests
         IWebProxy? connectionProxy = null,
         Func<TimeSpan, CancellationToken, Task>? delayAsync = null,
         TimeSpan? idleReadTimeout = null,
+        TimeSpan? totalBodyTimeout = null,
         Action<HttpClient>? configureClient = null) =>
         new(
             new StubLeaseSource(handler, connectionProxy, configureClient).CreateLeaseFactory(),
             validator ?? RemoteHttpUrlValidator.CreateForTesting(),
             ProxyModes.Direct,
             delayAsync,
-            idleReadTimeout);
+            idleReadTimeout,
+            totalBodyTimeout);
 
     private sealed record SamplePayload(string Name);
 
@@ -1091,16 +1254,21 @@ public sealed class RemoteHttpTransportTests
 
     private sealed class DowngradeRedirectHandler : HttpMessageHandler
     {
+        public int RequestCount { get; private set; }
+
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(new HttpResponseMessage(HttpStatusCode.Redirect)
+            CancellationToken cancellationToken)
+        {
+            RequestCount++;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Redirect)
             {
                 Headers =
                 {
                     Location = new Uri("http://example.test/final")
                 }
             });
+        }
     }
 
     private sealed class EndlessRedirectHandler : HttpMessageHandler
@@ -1131,6 +1299,62 @@ public sealed class RemoteHttpTransportTests
             {
                 Content = new StreamContent(ScriptedReadStream.Stalled())
             });
+    }
+
+    /// <summary>头部立即到达、正文每次读取只交付一个字节：伪活跃的慢速滴流连接。</summary>
+    private sealed class DrippingBodyHandler(TimeSpan interval) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StreamContent(new DripStream(interval))
+            });
+    }
+
+    private sealed class DripStream(TimeSpan interval) : Stream
+    {
+        public override bool CanRead => true;
+
+        public override bool CanSeek => false;
+
+        public override bool CanWrite => false;
+
+        public override long Length => throw new NotSupportedException();
+
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        public override async ValueTask<int> ReadAsync(
+            Memory<byte> buffer,
+            CancellationToken cancellationToken = default)
+        {
+            await Task.Delay(interval, cancellationToken);
+            if (buffer.IsEmpty)
+            {
+                return 0;
+            }
+
+            buffer.Span[0] = (byte)'a';
+            return 1;
+        }
+
+        public override int Read(byte[] buffer, int offset, int count) =>
+            throw new NotSupportedException("This double supports asynchronous reads only.");
+
+        public override void Flush()
+        {
+        }
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 
     /// <summary>模拟配置了系统代理且目标未被旁路：所有请求经代理 URI 出网。</summary>

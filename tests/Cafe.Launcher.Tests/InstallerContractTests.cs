@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Cafe.Launcher.Testing;
 
@@ -820,6 +821,51 @@ public sealed class InstallerContractTests
     }
 
     [Fact]
+    public void DotnetSdkPin_IsSingleSourcedFromGlobalJson()
+    {
+        // AUD-CI-003: global.json is the single source of the SDK version, but every
+        // setup-dotnet step copies it by hand. Bumping the SDK in one place without the
+        // other would install a mismatched SDK in CI.
+        var sdkVersion = ReadJsonString("global.json", "sdk", "version");
+        Assert.False(string.IsNullOrWhiteSpace(sdkVersion), "global.json must pin sdk.version.");
+
+        foreach (var workflow in new[]
+        {
+            ".github/workflows/build.yml",
+            ".github/workflows/linux-tests.yml",
+            ".github/workflows/release.yml",
+        })
+        {
+            var text = ReadProjectFile(workflow);
+            var pins = Regex.Matches(text, @"dotnet-version:\s*(?<version>\S+)");
+            Assert.True(pins.Count > 0, $"{workflow} must pin the .NET SDK version.");
+            Assert.Equal(CountOccurrences(text, "uses: actions/setup-dotnet"), pins.Count);
+            foreach (Match pin in pins)
+            {
+                Assert.Equal(sdkVersion, pin.Groups["version"].Value);
+            }
+        }
+
+        Assert.Equal(sdkVersion, ReadToolchainTableRow(".NET SDK")[2]);
+    }
+
+    [Fact]
+    public void ProjectConventionsToolchainTable_MatchesNativeVideoRuntimeManifests()
+    {
+        // AUD-CI-003: the libmpv rows are not NuGet dependencies, so their versions live
+        // in native/libmpv; the §12 table must follow those manifests, not drift from them.
+        var windowsRelease = ReadJsonString("native/libmpv/manifest.json", "release");
+        var unixRelease = ReadJsonString("native/libmpv/unix-manifest.json", "release");
+        var unixMpvVersion = ReadJsonString("native/libmpv/unix-manifest.json", "mpvVersion");
+
+        Assert.Equal(windowsRelease, ReadToolchainTableRow("libmpv（Windows")[2]);
+
+        var unixRowVersion = ReadToolchainTableRow("libmpv（Linux")[2];
+        Assert.Contains($"mpv {unixMpvVersion}", unixRowVersion, StringComparison.Ordinal);
+        Assert.Contains($"ic-plugin-videocodecs {unixRelease}", unixRowVersion, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ProjectConventionsToolchainTable_MatchesDeclaredPackageVersions()
     {
         // The §12 table duplicates versions whose authority is
@@ -1035,6 +1081,54 @@ public sealed class InstallerContractTests
         // 产物集合变化时宁可让发布失败，也不要发出不完整或掺入意外文件的清单。
         Assert.Contains("Expected 8 distribution packages, found", workflow, StringComparison.Ordinal);
         Assert.Contains("if [[ ${#packages[@]} -ne 8 ]]; then", workflow, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PullRequestWorkflow_BuildsUpdaterAndCompilesInstallerScript()
+    {
+        // AUD-CI-001：更新助手与 Inno 脚本此前只在 tag 触发的 release.yml 里编译，断裂要等到
+        // 发版才暴露。闸口必须在每次推送与 PR 上重放这两步，且继续用来源证明校验过的 Inno Setup。
+        var buildWorkflow = ReadProjectFile(".github/workflows/build.yml");
+        var releaseWorkflow = ReadProjectFile(".github/workflows/release.yml");
+
+        Assert.Contains("Updater_Project_Path: src/Cafe.Launcher.Updater/Cafe.Launcher.Updater.csproj", buildWorkflow, StringComparison.Ordinal);
+        Assert.Contains("dotnet publish $env:Updater_Project_Path -c Release -r win-x64", buildWorkflow, StringComparison.Ordinal);
+        Assert.Contains("./scripts/New-WindowsInstaller.ps1 -PublishDir publish", buildWorkflow, StringComparison.Ordinal);
+        Assert.Contains("gh release verify-asset $releaseTag $installerPath --repo jrsoftware/issrc", buildWorkflow, StringComparison.Ordinal);
+        Assert.Contains("$installedVersion -notmatch '^7\\.'", buildWorkflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("choco install innosetup", buildWorkflow, StringComparison.OrdinalIgnoreCase);
+
+        // 两份工作流各自写死 Inno Setup 版本；版本只改了其中一处时这里失败，避免 PR 用旧
+        // 编译器校验、发布用新编译器（AUD-CI-003 记录的同类手工复制问题）。
+        Assert.Equal(PinnedInnoSetupVersion(releaseWorkflow), PinnedInnoSetupVersion(buildWorkflow));
+    }
+
+    private static string PinnedInnoSetupVersion(string workflow)
+    {
+        var match = Regex.Match(workflow, @"INNO_SETUP_VERSION: (?<version>\d+\.\d+\.\d+)");
+        Assert.True(match.Success, "The workflow must pin INNO_SETUP_VERSION.");
+        return match.Groups["version"].Value;
+    }
+
+    private static string ReadJsonString(string relativePath, params string[] path)
+    {
+        using var document = JsonDocument.Parse(ReadProjectFile(relativePath));
+        var element = document.RootElement;
+        foreach (var name in path)
+        {
+            element = element.GetProperty(name);
+        }
+
+        return element.GetString() ?? string.Empty;
+    }
+
+    /// <summary>Returns the split cells of the single §12 toolchain row starting with <paramref name="firstCell"/>.</summary>
+    private static string[] ReadToolchainTableRow(string firstCell)
+    {
+        var row = Assert.Single(
+            ReadProjectFile("PROJECT_CONVENTIONS.md").Split('\n'),
+            line => line.StartsWith("| " + firstCell, StringComparison.Ordinal));
+        return row.Split('|', StringSplitOptions.TrimEntries);
     }
 
     private static bool ContainsCjk(string text)

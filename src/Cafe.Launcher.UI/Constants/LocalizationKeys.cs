@@ -21,6 +21,7 @@ public enum LocalizationKeys
     AgreementLanguageNote,
     AgreementScrollHint,
     AgreementTitle,
+    AgreementUnavailable,
     AgreementVersion,
     AppearancePreviewFailed,
     BackgroundFileTypes,

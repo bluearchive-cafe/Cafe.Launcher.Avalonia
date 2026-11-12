@@ -1,5 +1,6 @@
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.Core.Services;
+using Cafe.Launcher.Testing;
 
 namespace Cafe.Launcher.Tests;
 
@@ -91,5 +92,94 @@ public sealed class DiskSpaceServiceTests
         var result = service.GetAvailableBytes("invalid\0path");
 
         Assert.Null(result);
+    }
+
+    [Fact]
+    public void SelectLongestVolumeRoot_WhenTargetIsBelowNestedMount_ReturnsDeepestMount()
+    {
+        var result = DiskSpaceService.SelectLongestVolumeRoot(
+            "/mnt/data/BlueArchive/game",
+            ["/", "/mnt", "/mnt/data"]);
+
+        Assert.Equal("/mnt/data", result);
+    }
+
+    [Fact]
+    public void SelectLongestVolumeRoot_WhenTargetEqualsMountRoot_ReturnsThatRoot()
+    {
+        var result = DiskSpaceService.SelectLongestVolumeRoot(
+            "/home",
+            ["/", "/home"]);
+
+        Assert.Equal("/home", result);
+    }
+
+    [Fact]
+    public void SelectLongestVolumeRoot_WhenSubdirectoryIsOnSameVolume_ReturnsVolumeRoot()
+    {
+        var result = DiskSpaceService.SelectLongestVolumeRoot(
+            "/home/user/BlueArchive",
+            ["/", "/home"]);
+
+        Assert.Equal("/home", result);
+    }
+
+    [Fact]
+    public void SelectLongestVolumeRoot_WhenSiblingSharesNamePrefix_DoesNotMatchPartialSegment()
+    {
+        var result = DiskSpaceService.SelectLongestVolumeRoot(
+            "/mnt2/BlueArchive",
+            ["/", "/mnt"]);
+
+        Assert.Equal("/", result);
+    }
+
+    [Fact]
+    public void SelectLongestVolumeRoot_WhenCandidateHasTrailingSeparator_ReturnsNormalizedRoot()
+    {
+        var result = DiskSpaceService.SelectLongestVolumeRoot(
+            "/mnt/BlueArchive",
+            ["/", "/mnt/"]);
+
+        Assert.Equal("/mnt", result);
+    }
+
+    [Fact]
+    public void SelectLongestVolumeRoot_WhenNoVolumeContainsPath_ReturnsNull()
+    {
+        var result = DiskSpaceService.SelectLongestVolumeRoot(
+            "/opt/BlueArchive",
+            ["/mnt", "/home"]);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void ResolveVolumeRoot_OnWindows_SubdirectoryMapsToDriveLetterRoot()
+    {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "盘符语义只在 Windows 上成立。");
+        using var directory = TestDirectory.Create();
+        var nested = directory.Sub("BlueArchive");
+        Directory.CreateDirectory(nested);
+
+        var result = DiskSpaceService.ResolveVolumeRoot(nested);
+
+        Assert.Equal(Path.GetPathRoot(nested), result);
+        Assert.Matches(@"^[A-Za-z]:\\$", result);
+    }
+
+    [Fact]
+    public void GetAvailableBytes_WhenTargetDoesNotExist_UsesNearestExistingAncestorVolume()
+    {
+        using var directory = TestDirectory.Create();
+        var missing = Path.Combine(directory.Path, "not-created", "BlueArchive", "bin");
+        var service = new DiskSpaceService();
+
+        var expected = service.GetAvailableBytes(directory.Path);
+        Assert.SkipUnless(expected is not null, "当前环境无法读取临时目录所在卷的可用空间。");
+
+        var result = service.GetAvailableBytes(missing);
+
+        Assert.Equal(expected, result);
     }
 }

@@ -43,7 +43,10 @@ internal sealed class CrossProcessLaunchSignal : IDisposable
     private const int RaiseRetryAttempts = 6;
     private const int RaiseRetryIntervalMilliseconds = 25;
 
-    /// <summary>Dispose 时等待接收循环退出的时间上限（毫秒）。</summary>
+    /// <summary>
+    /// 接收循环退出后释放端点前的等待上限（毫秒）。等待发生在 <see cref="Dispose"/>
+    /// 排到线程池的收尾里，不阻塞调用线程。
+    /// </summary>
     private const int AcceptLoopShutdownWaitMilliseconds = 300;
 
     private static readonly byte SignalByte = 1;
@@ -243,14 +246,25 @@ internal sealed class CrossProcessLaunchSignal : IDisposable
     /// 轮询一次信号：存在未消费的信号时返回 true 并复位（AutoReset 语义），
     /// 否则在时限内等待后返回 false。与 Windows 命名事件行为一致。
     /// </summary>
+    /// <remarks>
+    /// 端点可能已在退出清理中被释放（关闭请求阶段先停听，释放随后异步完成）：
+    /// 此时按「没有更多信号」返回，而不是把释放竞态抛给轮询循环。
+    /// </remarks>
     internal bool WaitOne(TimeSpan timeout)
     {
-        if (windowsEvent is not null)
+        try
         {
-            return windowsEvent.WaitOne(timeout);
-        }
+            if (windowsEvent is not null)
+            {
+                return windowsEvent.WaitOne(timeout);
+            }
 
-        return unixPending?.WaitOne(timeout) ?? false;
+            return unixPending?.WaitOne(timeout) ?? false;
+        }
+        catch (ObjectDisposedException)
+        {
+            return false;
+        }
     }
 
     /// <summary>
@@ -421,6 +435,11 @@ internal sealed class CrossProcessLaunchSignal : IDisposable
         }
     }
 
+    /// <summary>
+    /// 接收循环任务（绑定套接字后才有）；测试经它确认释放前循环确实结束。
+    /// </summary>
+    internal Task? AcceptLoopCompletion => acceptLoop;
+
     public void Dispose()
     {
         if (disposed)
@@ -430,17 +449,37 @@ internal sealed class CrossProcessLaunchSignal : IDisposable
 
         disposed = true;
         shutdownCts.Cancel();
-        // 先关闭监听套接字以中止阻塞的 Accept，再等待接收循环退出。
+        // 先关闭监听套接字以中止阻塞的 Accept，再让接收循环自行退出。
         unixListener?.Dispose();
+
+        var loop = acceptLoop;
+        if (loop is null || loop.IsCompleted)
+        {
+            ReleaseEndpoints();
+            return;
+        }
+
+        // 退出清理不阻塞调用线程（审计 AUD-PERF-010）：套接字已关闭，接收循环通常
+        // 立刻返回；等待放到线程池并带明确上限，循环结束后才释放端点。
+        _ = FinishThenReleaseEndpointsAsync(loop);
+    }
+
+    private async Task FinishThenReleaseEndpointsAsync(Task loop)
+    {
         try
         {
-            acceptLoop?.Wait(TimeSpan.FromMilliseconds(AcceptLoopShutdownWaitMilliseconds));
+            await loop.WaitAsync(TimeSpan.FromMilliseconds(AcceptLoopShutdownWaitMilliseconds)).ConfigureAwait(false);
         }
         catch
         {
-            // 退出清理尽力而为。
+            // 退出清理尽力而为：超时或循环异常都不再影响进程退出。
         }
 
+        ReleaseEndpoints();
+    }
+
+    private void ReleaseEndpoints()
+    {
         unixPending?.Dispose();
         windowsEvent?.Dispose();
         shutdownCts.Dispose();

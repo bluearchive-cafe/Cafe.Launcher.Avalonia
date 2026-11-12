@@ -156,6 +156,14 @@ public sealed class LocalizationService
         return result ?? ReportFailure($"Missing key '{key}' for language '{CurrentLanguage}'.");
     }
 
+    /// <summary>
+    /// Looks up one key in a specific launcher language without switching the active UI
+    /// language. Migration cleanup uses it to recognise text written under a previously
+    /// selected language (desktop shortcut names, AUD-GAME-002).
+    /// </summary>
+    internal string? LookupForLanguage(string effectiveLanguage, LocalizationKeys key) =>
+        resourceSource.GetString(effectiveLanguage, Resources.LauncherResourceCatalog.Name(key));
+
     /// <summary>Looks up and formats a resource key using the active culture.</summary>
     public string F(LocalizationKeys key, params object?[] args) => Format(Resources.LauncherResourceCatalog.Name(key), args);
 

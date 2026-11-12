@@ -46,7 +46,7 @@ internal static class ResponseBodyReader
         }
     }
 
-    private static string FormatTimeout(TimeSpan timeout) =>
+    internal static string FormatTimeout(TimeSpan timeout) =>
         timeout.TotalSeconds >= 1
             ? $"{timeout.TotalSeconds:F0}s"
             : $"{timeout.TotalMilliseconds:F0}ms";

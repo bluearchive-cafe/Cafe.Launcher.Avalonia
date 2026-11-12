@@ -64,6 +64,11 @@ internal sealed class ResourcePanelApiClient
         }
     }
 
+    /// <summary>
+    /// Saves the three mode switches. HTTP 2xx is the success verdict: the dashboard's
+    /// save handler also treats <c>response.ok</c> as success and this endpoint carries
+    /// no business-status envelope, so the body is intentionally not parsed.
+    /// </summary>
     public async Task SaveConfigAsync(
         string uid,
         string text,
@@ -98,6 +103,7 @@ internal sealed class ResourcePanelApiClient
         MaxAttempts = MaxRetries + 1,
         Backoff = i => TimeSpan.FromMilliseconds(RetryDelayMs * (i + 1)),
         RetryScope = RemoteRetryScope.Network,
-        Timeout = RequestTimeout
+        Timeout = RequestTimeout,
+        TotalBodyTimeout = RequestTimeout
     };
 }

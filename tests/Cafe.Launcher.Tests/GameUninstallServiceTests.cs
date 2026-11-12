@@ -909,64 +909,6 @@ public sealed class GameUninstallServiceTests : IDisposable
             new GameCompatibilityPaths(tempDir.DataRoot));
     }
 
-    /// <summary>
-    /// 记录诊断调用的替身：卸载的完成日志是排查这类反馈的唯一书面凭据（2026-09-29 反馈轮），
-    /// 因此它需要有断言的地方，而不是只落到测试进程的临时日志文件里。
-    /// </summary>
-    private sealed class RecordingDiagnostics : ILauncherDiagnostics
-    {
-        public List<string> Messages { get; } = [];
-
-        public Task DebugAsync(
-            string title,
-            string? message = null,
-            CancellationToken cancellationToken = default) => Task.CompletedTask;
-
-        public Task MessageAsync(string title, string message, CancellationToken cancellationToken = default)
-        {
-            Messages.Add($"{title}: {message}");
-            return Task.CompletedTask;
-        }
-
-        public Task WarningAsync(string title, string message, CancellationToken cancellationToken = default)
-        {
-            Messages.Add($"Warn: {title}: {message}");
-            return Task.CompletedTask;
-        }
-
-        public void LogMessage(LogEntrySeverity severity, string title, string? message = null) =>
-            Messages.Add($"{severity}: {title}: {message}");
-
-        public Task ErrorAsync(
-            string title,
-            string? message,
-            Exception exception,
-            CancellationToken cancellationToken = default)
-        {
-            Messages.Add($"Error: {title}: {message}");
-            return Task.CompletedTask;
-        }
-
-        public Task ErrorAsync(string title, Exception exception, CancellationToken cancellationToken = default) =>
-            ErrorAsync(title, exception.Message, exception, cancellationToken);
-
-        public Task VerboseAsync(
-            string title,
-            string? message = null,
-            CancellationToken cancellationToken = default) => Task.CompletedTask;
-
-        public Task FatalAsync(string title, Exception exception, CancellationToken cancellationToken = default) =>
-            ErrorAsync(title, exception.Message, exception, cancellationToken);
-
-        public string LogFilePath => string.Empty;
-
-        public LogEntrySeverity MinimumLevel => LogEntrySeverity.Info;
-
-        public void SetMinimumLevel(LogEntrySeverity severity)
-        {
-        }
-    }
-
     public void Dispose()
     {
         tempDir.Dispose();

@@ -15,6 +15,7 @@ using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Core.Services.GameRuntime;
+using Cafe.Launcher.Core.Helpers;
 using Cafe.Launcher.UI.ViewModels;
 using Serilog.Events;
 using Cafe.Launcher.Core.Models;
@@ -227,7 +228,7 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
             }
 
             return ProtonBuilds.FirstOrDefault(build =>
-                string.Equals(NormalizeRuntimePath(build.Code), currentPath, RuntimePathComparison))?.Code;
+                string.Equals(NormalizeRuntimePath(build.Code), currentPath, GamePathValidator.PathComparison))?.Code;
         }
         set
         {
@@ -242,9 +243,6 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
 
     private static string NormalizeRuntimePath(string? path) =>
         string.IsNullOrWhiteSpace(path) ? string.Empty : Path.TrimEndingDirectorySeparator(path.Trim());
-
-    private static StringComparison RuntimePathComparison =>
-        OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
 
     private string selectedCategory = SettingsCategoryCodes.General;
 
@@ -361,6 +359,7 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
     [RelayCommand(CanExecute = nameof(CanSaveSettings))]
     private async Task SaveSettingsAsync()
     {
+        LauncherSettings settings;
         IsSaving = true;
         try
         {
@@ -380,26 +379,52 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
 
             // 落盘值而非草稿对象：归一化会改写草稿里的表示（大小写、trim、色板去重），
             // 后续的跟随动作与编辑器都必须以真正落盘的那个值为准。
-            var settings = await savedSettingsWriter.SaveDraftAsync();
-            var followThrough = SavedSettingsFollowThrough;
-            var handoff = followThrough?.Apply(settings);
-
-            toastService.ShowSuccess(localizer.T(LocalizationKeys.SettingsSaved));
-            RefreshGameRuntimeStatus();
-
-            if (followThrough is not null && handoff is not null)
-            {
-                await followThrough.CompleteAsync(handoff);
-            }
+            settings = await savedSettingsWriter.SaveDraftAsync();
         }
         catch (Exception exception)
         {
             await errorHandling.HandleErrorAsync("Settings save failed.", exception,
                 new ErrorHandlingOptions { ToastMessage = localizer.F(LocalizationKeys.SettingsSaveFailed, exception.Message) });
+            return;
         }
         finally
         {
+            // 保存态以落盘为界（AUD-SET-003）：之后的派生效果可能包含整段壳刷新，
+            // 不能继续把页脚留在「正在保存」并锁住导航、关闭与编辑。
             IsSaving = false;
+        }
+
+        await ApplySavedSettingsAsync(settings);
+    }
+
+    /// <summary>
+    /// 落盘后的成功反馈与派生效果（ADR-052）。它不属于保存态：值已经写进磁盘，
+    /// 这里的失败不能再报「保存失败」。
+    /// </summary>
+    private async Task ApplySavedSettingsAsync(LauncherSettings settings)
+    {
+        var followThrough = SavedSettingsFollowThrough;
+        var handoff = followThrough?.Apply(settings);
+
+        toastService.ShowSuccess(localizer.T(LocalizationKeys.SettingsSaved));
+        RefreshGameRuntimeStatus();
+
+        if (followThrough is null || handoff is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await followThrough.CompleteAsync(handoff);
+        }
+        catch (Exception exception)
+        {
+            // 只留诊断：值已落盘，再弹「保存失败」会与已显示的成功提示自相矛盾。
+            await errorHandling.HandleErrorAsync(
+                "Settings follow-through failed.",
+                exception,
+                new ErrorHandlingOptions { ShowToast = false });
         }
     }
 

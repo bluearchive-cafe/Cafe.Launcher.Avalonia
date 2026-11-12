@@ -6,26 +6,33 @@
 
 | 项 | 当前值 |
 | --- | --- |
-| 审计日期 | 2026-11-02（设计系统一致性专项及三项修复；工程与视频生命周期证据沿用 2026-11-01 复核） |
-| 审计基线 | `d6339742f3e880920e2e3aa2d479cc0e3483c610` |
-| 本次源码版本 | 审计基线加本次设计修复工作区；首次审查时工作区干净，三项 UI 发现已按用户要求修复并加入正式回归。2026-11-01 工程复核源码为 `7c64dc19`（验证时为 `748c8593` 加同一组工作区修复），此前比较基线为 `f27ce001018984428f8e5ca9ae8c83ba11c861bd`；既有发现与接受风险保留，不视为已重新完成工程专项实验。 |
-| 范围 | 本次核对主界面 M3 语义、共享组件、动态配色、键盘焦点与实际 Headless 渲染，并重跑完整验证；文件结构、架构、可靠性、安全与供应链、依赖、性能和可维护性的专项结论沿用此前证据。 |
+| 审计日期 | 2026-11-12（在 2026-11-11 的 13 个模块只读审查之上完成三批修复、去重收口与完整验证；未新增 Critical／High 发现） |
+| 审计基线 | `884c067bff10c1e228a04ebf70c5e0f507e2d1b1` |
+| 本次源码版本 | 审查基线为 `884c067b`；其后第一批修复与去重收口已提交（至 `43f4a05a`），第二批三项 Medium 与第三批七项 Low（含 1 项测量后接受）在工作区上未提交。2026-11-11 的只读审查覆盖了相对 `9242a55b` 新增的 9 个提交：设置向导 ADR-058／ADR-059 系列、视频窗口失焦暂停与解码缓存收敛、v1.4.0-beta.1 复核收口等。2026-11-02 记录的基线 `d6339742` 在历史重写后已不可解析，历史专项证据仅解释当时状态。 |
+| 范围 | 分模块审查：宿主与进程生命周期、Core 网络／下载／游戏运行时／设置更新、UI Shell／GameOperations／Settings／SetupWizard／Diagnostics／ResourcePanel、设计系统与本地化、测试／CI／安装打包／依赖供应链（每模块至少一个子代理），随后逐条复核并修复 16 项发现、合并重复实现并规范命名，再关闭 3 项 Medium 与 7 项 Low 并运行完整 `verify.ps1`。真实安装、真实网络下载与 Linux／macOS 桌面运行仍未覆盖（修复规划耗时已在真实安装上实测）。 |
 | 项目画像 | .NET 10 / Avalonia 12 桌面游戏启动器，含独立 Windows 自更新 helper；Windows 为支持平台，macOS/Linux 构建为实验性 |
-| 健康度 | 已有明确分层与回归保护；主界面的 token、组件几何、主题与本地化契约通过，Fidelity／Content 的选中态文字与下拉项焦点对比度缺口、资源面板分段控件取焦位移均已修复并有正式回归。视频 GPU 逐轮增长得到缓解，真实设置流程的私有内存波动仍需调查；未验证到 Critical 或 High 问题。 |
-| 当前待处理 | 2 项（1 项 Medium、1 项 Low；1 项 `open`、1 项 `deferred`） |
-| 已接受风险 | 11 项 Low |
-| 当前优先级 | 视频生命周期的内存稳定性（`AUD-PERF-009`）。Core 独立使用的配置来源（`AUD-ARCH-017`）保持此前暂缓状态，扩展辅助宿主前重新裁决。 |
+| 健康度 | 未发现 Critical／High。第一批修复关闭 11 项 Medium、5 项 Low（含 1 项以架构决策关闭），第二批关闭 3 项 Medium，第三批关闭 7 项 Low（其中 1 项测量后登记为接受风险）；剩余 4 项开放（2 项 Medium、2 项 Low 且均维持 `deferred`）。既有分层、关闭契约、下载续传与 CRC 校验、进程闸门、模态与注入防护、供应链钉住总体保持；2026-11-12 的完整验证通过（Unit 2866、Headless 600、Release 资源契约 8，覆盖率高于棘轮）。 |
+| 当前待处理 | 4 项（2 项 Medium、2 项 Low；`AUD-ARCH-017` 与 `AUD-UI-002` 维持原 `deferred`） |
+| 已接受风险 | 13 项（1 项 Medium、12 项 Low） |
+| 当前优先级 | 先处理 Medium：`AUD-SET-002`、`AUD-PKG-002`。`AUD-ARCH-017` 仍在扩展辅助宿主前重新裁决，`AUD-UI-002` 维持维护性观察。视频逐帧内存保留继续按 `AUD-PERF-009` 的接受边界执行；修复规划耗时按 `AUD-PERF-012` 的实测边界接受。 |
 
 ## 开放发现
 
-### AUD-PERF-009 — 视频生命周期的 GPU 增长已缓解，设置流程内存稳定性待确认
+### AUD-SET-002 — 后台刷新覆盖未保存的设置草稿
 
-- 严重度：Medium；置信度：高（测量结果），具体保留根因未定；状态：`open`；处置：Investigate。
-- 复核证据：当前随包 LGPL DLL 上，旧分离／重建路径 12 轮的 GPU 增长为 96.879 MB；不创建 libmpv 的纯 GL 对照 8 轮仍增长 46.5 MB，分离前 `glFinish` 对照仍增长 43.123 MB。不能把该增长归为存活的 mpv 对象，也尚不能定位到 Avalonia 或驱动的具体缺陷。
-- 已落地措施：每窗口只创建一个 GL 承载面，切回静态背景时在当前 GL 上释放播放器、render context、参数 arena 并清为透明，停止主动帧请求；关闭窗口才分离。真实生产控件 12 轮增长降为 GPU 0.195 MB、私有内存 30.5 MB，均通过原有 32 MB 门槛；每轮拥有资源归零，随后 60 秒播放约 30 fps、丢帧 0、正常退出。代价是窗口关闭前保留 GL 承载面及驱动高水位；释放后全进程 GPU 仍约 184–199 MB，并非零。
-- 尚未关闭的边界：真实设置保存／放弃流程 8 轮 GPU 仅增长 0.088 MB，但私有内存增长 64.65 MB；无快照独立复测 12 轮私有内存仍增长 54.0 MB、GPU 1.088 MB，两轮均超过原私有内存门槛。带堆快照复测 8 轮私有内存变化 -7.65 MB、GPU 0.082 MB，托管堆从约 51.28 MB 降为 46.25 MB；快照会触发 GC，且工具提示 .NET 10 大堆采集可能丢失事件，这一反证不足以抵消两次超限。当前确认私有内存增长可复现，尚不能区分缓存高水位与持续泄漏，不能报告完整稳定性通过。
-- 影响：重复预览和保存设置仍可能出现较高私有内存；复用承载面解决了本机复现的 GPU 斜率，但不是所有设备和尺寸的长期上界证明。实验口径和原始目录见 [视频实验记录](docs/research/video-background-prototype.md#2026-11-01-生命周期对照)。
-- 完成条件：在随包运行库、固定窗口与隔离进程中继续真实预览／保存／放弃的无快照重复对照，区分刷新在途分配、缓存高水位和持续保留，证明内存有界或修复具体根因；保留 32 MB 门槛。当前没有 GPU 分配追踪或多显卡长时证明，拥有资源计数与覆盖率不能替代它们。
+- 严重度：Medium；置信度：80；状态：`open`；处置：Architecture Decision。
+- 证据：`src/Cafe.Launcher.UI/Services/SettingsEditor.cs:62-71` 的 `ApplySnapshot` 无条件替换 `current`、同步 `snapshot` 并把 `isDirty` 置 false；`src/Cafe.Launcher.UI/Features/Shell/ShellLifecycle.cs:303-305` 在每次 `LoadHostStateAsync` 中调用；刷新协调器只串行化刷新，不检查设置页可见性或脏态。代码直证，触发路径依赖刷新与设置页同时存在。
+- 影响与边界：下载完成、操作收尾或托盘动作触发的刷新会把打开中的设置页改回磁盘值，且不弹放弃确认；用户下一次保存会覆盖自己的预期。未发现数据损坏。
+- 建议：为编辑器增加「保留草稿」同步模式，或在刷新前检测 `IsSettingsVisible && IsDirty` 并要求确认；同步更新 `CONTEXT.md` 的草稿语义。
+- 建议验证：完成条件为设置页打开且脏时注入刷新，草稿保留或出现确认；设置页关闭时仍能正常应用磁盘快照。
+
+### AUD-PKG-002 — 发布物未签名、macOS 未公证
+
+- 严重度：Medium；置信度：高（缺失证据）；状态：`open`；处置：Product Decision。
+- 证据：`installer/windows/Cafe.Launcher.iss` 无 `SignTool` 配置；`.github/workflows/{build,release}.yml` 无 Authenticode、`codesign` 或 `notarytool` 步骤；仓库文档未声明签名策略。
+- 影响与边界：Windows 每次安装触发 SmartScreen，macOS 未公证应用会被 Gatekeeper 阻断，用户需绕过系统提示；不影响已安装用户的运行。签名需要证书与发布密钥，属于产品与成本决策。
+- 建议：若承诺正式分发，接入 Authenticode 与 Developer ID／公证并在 CI 验证签名；若暂不签名，登记为已接受风险并写入用户文档，说明系统提示的预期行为。
+- 建议验证：完成条件为决策落地：要么 CI 验证签名／公证产物，要么接受风险条款与用户提示同步完成。
 
 ### AUD-ARCH-017 — Core 网络偏好依赖表现层草稿，缺席时静默使用默认设置
 
@@ -36,13 +43,23 @@
 - 建议：明确 Core-only 是否承诺读取已保存偏好。若承诺，提供由 Core 拥有且显式初始化的偏好来源，UI 草稿同步继续履行 ADR-024；若不承诺，让组合 API 明示默认策略或要求来源，避免把缺少依赖等同于用户选择默认值。无需恢复被 ADR-028 否决的逐调用方推送。
 - 建议验证：Needs Architecture Decision；完成条件／守卫：形成明确契约，并覆盖 Core-only、完整宿主、初始化前后与保存后新租约的配置行为。
 
+### AUD-UI-002 — MainWindow.Styles.axaml 共享样式文件体积偏大
+
+- 严重度：Low；置信度：100；状态：`deferred`；处置：维护性观察，暂不行动。
+- 证据：`src/Cafe.Launcher.UI/Views/MainWindow.Styles.axaml` 当前 2186 行；`Views/Styles/` 已按功能拆出 8 个文件并按 §4.2 固定顺序 `StyleInclude`。文件体积本身符合「窗口级共享样式留在该文件」的现行规则，不是违规。
+- 影响与边界：同优先级选择器按包含顺序后者胜出，共享文件越大，样式定位、评审与合并冲突成本越高；若未来拆分，必须保持 §4.2 的归档边界与顺序语义，否则会改变选择器胜出结果。当前无已证实的缺陷。
+- 建议：暂不拆分。若拆分，按组件族归入 `Views/Styles/` 并追加在固定顺序末尾，同步样式契约测试与黄金基线复核。
+- 重开条件：文件持续显著增长、出现实际合并冲突或样式定位困难，或设计规范调整样式归档边界。
+
 ## 已接受风险
 
 | ID | 当前取舍 | 重开条件 |
 | --- | --- | --- |
-| `AUD-DEP-002` | 单元测试使用 `xunit.v3.mtp-v2` 4.0.2，Headless 经 `VersionOverride` 保留 3.2.2：`Avalonia.Headless.XUnit` 12.1.4 使用 xUnit 3.2.2 的扩展 API，而 xUnit 4 的扩展接口有破坏性变更；其 nuspec 只声明最低 `[3.2.2, )`。2026-11-01 实测升级 4.0.2 并迁移程序集并行化声明后可以编译，但测试发现器调用 `TestIntrospectionHelper.GetTestCaseDetails` 时抛出 `MissingMethodException`，16 项 Markdown 定向测试全部失败；已恢复 3.2.2。两套都经显式 `mtp-v2` 包统一在 MTP 2.5.2。取舍见 `PROJECT_CONVENTIONS.md` §12 与 `docs/research/mtp-migration.md`。 | `Avalonia.Headless.XUnit` 发布支持 xUnit 4 扩展 API 的版本并通过 Headless 套件验证后，升级 Headless 并把并行化声明迁到 `[assembly: Parallelization(...)]`。 |
+| `AUD-PERF-009` | 接受为上游渲染栈问题，并用产品行为限制暴露：窗口失焦即暂停视频背景（2026-11-10 实现，与隐藏／最小化并列），未采用 `gpu-dumb-mode`。实测（1080p60 片段，1300×754，GTX 1050 Ti／32.0.15.8157，ANGLE 2.1.1 D3D11）：连续播放私有内存约 0.8 MB/s 线性增长、7 分钟无平台期，增长与 libmpv 执行的 GL pass 数同量级；每帧 `glFinish`、`opengl-pbo=yes`、`hwdec=no` 均不改变斜率，无 libmpv 的变化像素对照基本持平；生产控件 16 轮门槛比较为 +34.35 MB（超 32 MB），释放只归还一部分。失焦暂停只缩短累积时长，不改变斜率；视频控件存活期间保留窗口级 `BitmapCache`（仅在关窗分离控件时恢复），避免每次切回静态背景重建全窗口缓存抬高合成器帧缓冲高水位；32 MB 门槛继续用于短窗口的释放／重建回归与拥有资源归零，但不再解释为长时内存有界；证据见[视频实验记录](docs/research/video-background-prototype.md#2026-11-10-逐帧保留定位)。 | 上游修复（mpv 的 GL pass 执行、ANGLE D3D11 后端或显卡驱动）后复测；收到长时会话内存占用或崩溃报告；需要重新宣称长时内存有界时；或更换渲染集成方案（如软件渲染 API 或原生 D3D11 交换链）。 |
+| `AUD-DEP-002` | 单元测试使用 `xunit.v3.mtp-v2` 4.0.3，Headless 经 `VersionOverride` 保留 3.2.2：`Avalonia.Headless.XUnit` 12.1.6 使用 xUnit 3.2.2 的扩展 API，而 xUnit 4 的扩展接口有破坏性变更；其 nuspec 只声明最低 `[3.2.2, )`。2026-11-01 实测升级 4.0.2 并迁移程序集并行化声明后可以编译，但测试发现器调用 `TestIntrospectionHelper.GetTestCaseDetails` 时抛出 `MissingMethodException`，16 项 Markdown 定向测试全部失败；已恢复 3.2.2。2026-11-10 升级到 12.1.6／4.0.3 后复核签名：4.0.3 的 `GetTestCaseDetails` 仍比 3.2.2 多一个参数，adapter 的调用点不兼容，结论不变。两套都经显式 `mtp-v2` 包统一在 MTP 2.5.2。取舍见 `PROJECT_CONVENTIONS.md` §12 与 `docs/research/mtp-migration.md`。 | `Avalonia.Headless.XUnit` 发布支持 xUnit 4 扩展 API 的版本并通过 Headless 套件验证后，升级 Headless 并把并行化声明迁到 `[assembly: Parallelization(...)]`。 |
 | `AUD-ARCH-007` | 系统代理指纹变化会释放旧 handler，使在途下载批次最多失败一轮；下一轮新租约可恢复。引用计数方案并发复杂度更高。 | 出现不可恢复下载失败，或重试无法切换到新 handler。 |
 | `AUD-PERF-001` | 实际更新对约 1.09 GiB 客户端做 CRC64 自愈校验：冷读约 5.9 秒、热读约 0.9 秒；只在真实更新发生，保留内容自愈价值更高。 | 受管理客户端接近 10 GiB，按现有系数冷读将接近 54 秒。 |
+| `AUD-PERF-012` | 修复规划的串行全清单 CRC 接受为当前规模下的合理成本，不并行化。2026-11-12 在真实安装上实测（i5-10400F、31.8 GB RAM、Windows 10、游戏位于 SanDisk SSD PLUS 1000GB SATA SSD；清单为客户端自带官方清单 157 个文件／1,142,879,023 字节，即 1.09 GiB）：首次扫描 4.32 秒（252 MiB/s，近冷态），紧接的热扫描 3.25 秒（336 MiB/s）；真实 `ManifestDiffCalculator.CheckHashAsync` 匹配路径（含 `PlannedHashes` 见证采集与 `FileActivityReporter`）3.55 秒，diff=0、planned=157。规划阶段已有百分比反馈：100 ms 门控下 36 次回调、22 个不同百分比、最高 100%，“无进度”前提不成立（`AUD-PERF-007`）。并行只对磁盘受限的 SATA SSD 有边际收益，却要保留确定性失败列表与取消语义的额外复杂度；安装阶段仍按 CPU 数并行。 | 受管清单接近 10 GiB（按实测冷读速度约 42 秒），或在机械盘／慢速存储上实测规划超过约 30 秒，或规划阶段失去百分比回调。 |
 | `AUD-PERF-004` | 五张 460×220 横幅每轮重解码约 10 ms 后台 CPU，显著低于同路径网络成本；位图缓存会增加所有权与失效复杂度。 | 横幅数量或尺寸使单轮解码接近 100 ms，或刷新路径其他成本降至同量级。 |
 | `AUD-SEC-001` | URL 校验与实际拨号间仍有 DNS 重绑定窗口；风险受 GET-only、80/443 端口和响应不回传约束。 | 增加非 GET、敏感内网动作，或把响应内容返回给不可信调用方。 |
 | `AUD-SEC-002` | 上游协议要求资源面板 UID 位于 HTTPS 查询串；应用日志会剥离查询串，但代理和服务端访问日志仍可见。 | 上游支持请求体传输，或 UID 的敏感级别提高。 |
@@ -58,6 +75,7 @@
 
 - 游戏操作旅程拥有关闭入口与在途计数；关闭拒绝新工作，等待手动安装、修复、续传及 Toast 重试的完整收尾后，宿主才继续释放依赖。计数不依赖运行态，已经用户停止但仍在收尾的任务也受保护。真实 DI／下载会话测试使用取消后的延迟完成门验证等待和检查点去留，既有卸载关闭门禁保持不变。
 - 壁纸的生产构造链已传递窗口尺寸服务；构造／释放订阅守卫与真实 DI、真实窗口尺寸服务的首次解码及放大重解码回归共同保护接线。内置壁纸的首帧与避免重复解码仍由原有用例保护。
+- 启动续体现在由 `LauncherPresentationSession` 跟踪：关闭请求可等待启动收尾（3 秒预算），启动未完成时关闭令牌源不提前释放；跨进程监听器的停止与释放不再阻塞调用线程。会话看护首轮扫描在后台执行并复用 5 秒限时 race，超时按「未知」保留会话，进程闸门与看护共用同一限时实现。
 
 ### 分层与公开面
 
@@ -65,14 +83,18 @@
 - 2026-10-31 复核：宿主 → UI → Core → Updater.Core 的工程依赖与 ADR-042 一致；Core 生产引用只有 DI 与 Serilog 家族，不引用 Avalonia。宿主经 `LauncherPresentationSession` 进入 UI；独立 updater 只引用 Updater.Core。两套既有测试、程序集声明集和公开面守卫均通过。
 - 后端复用分为两个层次：HTTP／协议、底层文件下载、安装状态、游戏运行器和自更新已经在 Core；完整安装／修复／卸载／启动工作流仍在 UI 的 `Features/GameOperations`，清单协议聚合仍在 UI 的 `Services/RemoteManifestService`。`DownloadSession`、`GameLaunchService`、`GameUninstallService` 直接依赖 `LocalizationService`；`IGameOperationExecutor` 和带 `Message` 的 `GameOperationResult` 也属 UI。这与当前渐进分层决策相容，但仅引用 Core 的新宿主不能直接复用完整工作流。
 - 已保存设置是已知的运行时反向接缝：除 `AUD-ARCH-017` 的网络偏好外，Core 的 `SavedSettingsWriter` 构造器也需要由 UI 实现的 `ISettingsDraftOwner`。类型依赖方向正确不等于独立宿主已具备完整初始化与写入闭包；这属于复用契约需要演进的同一背景，不另登记主程序设置失效问题。
-- 架构以垂直 `Features/` 和共享 `Services/Helpers/Models` 为主；未发现新的非 Shell feature 具体类型越界。
+- 架构以垂直 `Features/` 和共享 `Services/Helpers/Models` 为主；未发现新的非 Shell feature 具体类型越界。该结论针对 `Features/` 之间的互引；功能消费根 `ViewModels/` 窗口级契约（Shell、Dialogs）已于 2026-11-11 裁决为声明例外，见 `PROJECT_CONVENTIONS.md` §2.3（原 `AUD-ARCH-018`）。
 - 2026-10-20 专项未将 Shell 的聚合职责、`IGameOperationExecutor` 的转发接缝、`DownloadSession` 的体积判为应拆分的问题，本次维持这一判断：前者是规范声明的聚合边界，后两者受 ADR-021／ADR-022 的测试接缝与会话封装决策保护。文件安全、更新校验和确认后状态复查位于不同信任／时间边界，不因重复出现就视为过度防御。
+- 2026-11-12 去重收口（两批）：进程扫描的限时 race 由 `BoundedProcessScan` 单点提供；路径相等比较统一使用 `GamePathValidator.PathComparison`；`DirectoryTreeDeleter.IsUnder` 成为自更新暂存路径的唯一包含判断；快捷方式旧入口枚举收敛到 `EnumerateLegacyShortcutPaths`；测试诊断替身统一为共享 `RecordingDiagnostics`；`ImageCacheService` 两段临时文件写入合并为 `WriteCacheFileAsync`；GitHub API 请求选项收敛到 `CreateGitHubRequestOptions`；User-Agent 收敛到 `LauncherUserAgent`（保留 GitHub 与图片缓存既有后缀差异）；临时文件删除统一走 `FileCleanup.TryDelete`；`--version` 复用 `LauncherBuildIdentity`；测试下载源替身移入 `tests/TestDoubles`。同步规范命名：`PollingLoopCompletion`、`StartupTask`、`TryDeleteLegacyShortcutPaths`。其余候选（原子写盘、语言集合、最长前缀、路径包含变体、测试延迟闸门、CI Inno 安装块）语义或参数仍有差异，等出现真实第二使用场景再抽象，不预先合并。
 
 ### 设置、数据与更新
 
 - 设置保存测试用可控 Toast 延迟稳定复现「已发出成功提示，但等待后续刷新完成时显示集合已空」；断言改为观察实际发出的单条成功通知，并分别覆盖立即过期和保持显示。没有增加休眠或放宽通知数量／严重度断言；这修复的是时序相关的观察缺陷，不声称重现了历史运行的全部调度。
 - 2026-10-20 数据根收口：ADR-048 的 Linux 四类 XDG 根在发布前由 ADR-049 撤销，所有平台保留单一数据根；Linux 使用小写 `cafe-launcher`，旧 `Cafe Launcher` 首次启动逐项并入；`LauncherDataRoot` 恢复单一 `Root`，`LauncherDataRootTests` 与 `LauncherDataRootMigrationTests` 已同步。Unix 套接字留在数据根，登记为 `AUD-LNX-001`。
-- Windows updater 已独立成项目，下载包与 helper 应用前均验证 SHA-256；便携换位在新版本启动成功前保留备份、失败可恢复旧版。
+- Windows updater 已独立成项目，下载包与 helper 应用前均验证 SHA-256；便携换位在新版本启动成功前保留备份、失败可恢复旧版。自更新包名先经文件名净化，并断言下载落点位于更新目录内；元数据里的敌意名字被拒绝而不是越界写入。
+- `settings.json` 读取不再因结构非法而逃逸：非对象根、不可归属到单个字段的错误按默认处理，单字段类型错误只重置该字段；坏文件在覆盖前复制到 `settings.json.bak` 并记录诊断。根为 `null`／数组、集合为 `null`、单字段类型错误均有回归用例。
+- 下载失败的重试域按语义划分：连接、传输中断、CRC／Content-Range 非法进入网络重试并保留或清理续传文件；本地磁盘与权限失败直接上抛，不删除可续传的 `.tmp`。服务端忽略 Range 返回 200 时进度归零重算，确定性失败（Fake-IP／DNS／被阻断地址）不再消耗网络重试。
+- 资源面板保存以 HTTP 2xx 为成功判据：服务端保存处理器同样以 `response.ok` 判定，该端点没有业务状态封装，因此不解析响应体（`ResourcePanelApiClient.SaveConfigAsync` 注释与 `CONTEXT.md` 已记录）。面板关闭始终可用，关闭时取消在途请求、等待收尾并丢弃迟到回答。
 - GitHub Actions 第三方 action 使用完整 SHA，默认权限 `contents: read`；NuGet 使用中央版本、锁文件、locked restore 与 `NuGetAuditMode=all`。2026-10-31 的 solution 直接与传递依赖漏洞查询未发现已知漏洞；本次未重新查询弃用状态。
 - 下载、校验和进度回调有并发上限与回归守卫。
 
@@ -110,7 +132,22 @@
 
 ## 验证边界
 
-### 当前验证（2026-11-02）
+### 当前验证（2026-11-12）
+
+- **完整验证（2026-11-12，Windows x64，SDK 10.0.403）**：第三批 Low 修复后运行 `pwsh ./verify.ps1`，退出码 0；本地化契约扫描通过；Debug／Release 构建均零警告、零错误；Unit 2866 项（2850 通过／16 项平台或原生运行库跳过／0 失败），Headless 600 项全部通过，Release 资源契约（`ResxResourceContractTests`）8 项全部通过。手写 C# 行覆盖率 87.59%（21801/24889）、分支覆盖率 92.66%（4180/4511），相对 0.8720／0.9240 棘轮基线的余量分别为 +0.39pp／+0.26pp；未降低阈值。验证引入的 `packages.lock.json` RID 段副作用已还原，仓库当前锁文件干净。
+- **第一批修复范围**：关闭 16 项已登记发现并各带回归用例，未修改阈值或增加休眠——`AUD-UPD-001`（自更新包名净化）、`AUD-SET-001`（settings.json 结构容错与坏文件备份）、`AUD-ARCH-019`（启动续体跟踪与关闭令牌生命周期）、`AUD-PERF-010`（跨进程监听器非阻塞停止）、`AUD-PERF-011`（会话看护异步限时扫描）、`AUD-DL-001`（本地 IO 失败移出网络重试域）、`AUD-DL-002`（`200-after-Range` 进度归零）、`AUD-NET-001`（确定性失败不再重试）、`AUD-LOG-001`（日志轮转后重开）、`AUD-LOG-002`（日志 title 契约覆盖插值字符串）、`AUD-UI-004`（资源面板可取消）、`AUD-GAME-002`（快捷方式稳定名）、`AUD-LNX-002`（Unix 卷选择）、`AUD-CI-001`（CI 构建 installer）、`AUD-CI-002`（覆盖率棘轮对齐）、`AUD-RES-001`（以「2xx 即成功，dashboard 依赖 `response.ok`」的协议契约关闭）。
+- **第二批修复范围（2026-11-12）**：关闭 3 项 Medium 并各带回归用例——`AUD-SET-003`（保存态以落盘成功为界，跟随效果失败只留诊断不误报保存失败）、`AUD-GAME-001`（新捕获等旧捕获释放录制文件再覆盖，超时或打不开时继续排空并记 Warn；取消旧捕获先交还所有权）、`AUD-UI-003`（相等分支取消在跑换面并按模型结算内容与壳层，换面在 `SwapToPanel` 前再次确认所有权）。
+- **第三批修复范围（2026-11-12）**：关闭 6 项 Low 并各带回归用例，另 1 项测量后接受——`AUD-NET-002`（缓冲 JSON 加默认 2 分钟总读取预算、图片与资源面板设 30 秒、下载流保留无总上限；慢速滴流在总时限处转为可重试的 `HttpRequestException`）、`AUD-SEC-007`（IPv6 字面量限定为全局单播并排除 6to4／Teredo／文档段）、`AUD-SET-004`（跨设备复制先写 `.migrating` 半成品再原子改名，中断残片下次迁移清理重试，正常同卷移动不变）、`AUD-UI-005`（协议正文加载失败时同意门禁保持锁定并显示可诊断回退文本，正文恢复后正常解锁）、`AUD-ARCH-020`（数据根解析与崩溃快照存储构造纳入同一兜底，失败退化到临时根）、`AUD-CI-003`（SDK 版本以 `global.json` 为唯一来源并校验各工作流与 §12 表，libmpv 表行与 `native/libmpv/*.json` 清单交叉断言，故意改错任一复制点时契约测试失败）、`AUD-PERF-012`（真实清单实测后接受串行规划，见「已接受风险」）。
+- **证据性质**：剩余 4 项发现来自 2026-11-11 的 13 个范围只读子代理审查与主代理逐条源码复核；性能类条目中，修复规划已在真实安装上实测并按 `AUD-PERF-012` 接受，其余性能结论未实测、按代码路径推断并已在各条目的「影响」中标注。签名／公证、真实网络下载、Linux／macOS 桌面运行与真实安装器升级均未覆盖；NuGet 漏洞／弃用状态与依赖锁校验未在 2026-11-12 重新查询。
+
+### 前次验证（2026-11-10）
+
+- **从头全量审计完整验证（2026-11-10，Windows x64，SDK 10.0.403）**：`pwsh ./verify.ps1` 退出码 0；本地化契约通过；Debug／Release 构建均零警告、零错误；Unit 2747 项（2731 通过／16 项平台或原生运行库跳过），Headless 585 项全部通过，Release 资源契约（`ResxResourceContractTests`）8 项全部通过。手写 C# 行覆盖率 87.45%（20984/23996）、分支覆盖率 92.51%（4040/4367），相对既有 ratchet 基线余量 +1.85pp／+0.71pp；未降低阈值或更换门槛。原始日志位于本地忽略目录 `.artifacts/audit-verify-2026-11-10.log`。
+- **依赖与独立 helper（2026-11-10）**：对 solution 内项目的 `dotnet list package --vulnerable --include-transitive` 与 `--deprecated` 查询均无报告；中央版本清单为 Avalonia 12.1.6、单元 xUnit 4.0.3、Headless xUnit 3.2.2（见 `AUD-DEP-002`）。`verify.ps1` 按设计不构建 updater 可执行文件；单独 `dotnet build src/Cafe.Launcher.Updater -c Release` 零警告、零错误，发布链路由 `Build-Distribution.ps1` 发布并由 `Test-WindowsPublishOutput.ps1` 断言产物存在。
+- **审计范围（2026-11-10）**：重读下载服务（重试域序、206 续传的 Content-Range 严格校验、CRC 失败删除与进度重置）、下载执行器（10 并发、≤8 校验、verified／witness 哈希复用、只读属性清除）、清单删除与续传检查点、运行中进程闸门（5 秒限时、超时拒绝／扫描异常放行）、游戏会话看护、图片缓存与发布说明图片加载、自更新服务与 trusted-downgrade 绑定、跨进程信号套接字、设置视图模型、完整 `release.yml` 及安装器／PKGBUILD。除既有 2 项待处理与 11 项已接受风险外未登记新发现；同时把 Headless 工程中过期的依赖版本说明更新到当前版本。
+- **未覆盖（2026-11-10）**：视频生命周期只做了本机分钟级对照（见 `AUD-PERF-009` 与[视频实验记录](docs/research/video-background-prototype.md#2026-11-10-逐帧保留定位)），没有 ETW／D3D11 分配追踪、第二块显卡或小时级证明；未做真实网络大清单性能基准、真实安装器升级、Linux／macOS 桌面运行或架构迁移原型。Avalonia 构建期的 “Accelerate Community requires telemetry” 提示是无 Accelerate 许可证时的上游构建行为，CI 与运行期不受影响，不登记为缺陷。
+
+### 前次验证（2026-11-02）
 
 - **设计修复后完整验证（2026-11-02，Windows x64，SDK 10.0.403）**：`pwsh ./verify.ps1` 退出码 0；本地化契约通过，Debug／Release 构建均零警告、零错误；Unit 2574 项（2558 通过／16 项平台或原生运行库跳过），Headless 450 项全部通过，Release 资源契约 23 项全部通过。手写 C# 行覆盖率 86.77%（19557/22540）、分支覆盖率 92.02%（3518/3823），高于既有门槛；未降低阈值或更换依赖。
 - **设计修复正式回归（2026-11-02）**：新增 18 个用例（2 个动态配色矩阵、14 个 Headless 行为用例、2 个黄金截图用例）。文字矩阵覆盖 8 变体 × 7 种子 × 双主题 × 双中性策略的静止／悬停／按下配对；实际模板验证下拉项内嵌焦点、设置导航文字、已打开弹窗的主题切换；资源来源控件覆盖四语言、双主题和 100%／150%／200% 文字，往返取焦不移动段、组边界或选择值。正式用例在修复前复现 2 个单元与 14 个行为失败，修复后全部通过；另有 176 项样式契约通过。新增 `choice-popup-fidelity-focus`／`choice-popup-fidelity-hover` 两张基线并目视检查，其余原有基线保留。设计规范和走查清单已同步；本地复现与完整验证日志位于 `.artifacts/design-audit-2026-11-02/`。
@@ -142,7 +179,7 @@
 
 ### 未覆盖范围
 
-本次未做真实网络／大清单性能基准、ETW／GPU 分配分析、长时间压力测试、真实安装升级和多平台桌面运行；未执行架构迁移原型。视频生命周期在本机真实 GPU 上做分钟级对照并采集托管堆，但不是长时或多设备证明。窗口缩放由 Windows Headless 驱动，未做真实多显示器 DPI 切换。接受风险中的历史性能数字未重新测量。以上 2026-10-20 等记录仅解释既有证据，不视为本次复验。
+本次未做真实网络／大清单性能基准、ETW／GPU 分配分析、长时间压力测试、真实安装升级和多平台桌面运行；未执行架构迁移原型。视频生命周期在本机真实 GPU 上做分钟级对照并采集托管堆，但不是长时或多设备证明。窗口缩放由 Windows Headless 驱动，未做真实多显示器 DPI 切换。接受风险中的历史性能数字未重新测量。2026-10-20 至 2026-11-02 的记录仅解释既有证据，不视为本次复验；最近一次完整验证为 2026-11-12（`43f4a05a` 加本轮三项修复的未提交改动），2026-11-11 只做只读审查、未复跑构建与测试。
 
 ## 维护规则
 

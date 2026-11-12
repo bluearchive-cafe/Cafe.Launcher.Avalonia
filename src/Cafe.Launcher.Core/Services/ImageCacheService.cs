@@ -101,7 +101,7 @@ internal sealed class ImageCacheService : IImageCacheService
             return cachePath;
         }
 
-        TryDelete(cachePath);
+        FileCleanup.TryDelete(cachePath);
         return null;
     }
 
@@ -134,25 +134,9 @@ internal sealed class ImageCacheService : IImageCacheService
                 return cachePath;
             }
 
-            var tempPath = $"{cachePath}.{Guid.NewGuid():N}.tmp";
-            try
-            {
-                var bytes = await GetImageBytesAsync(new Uri(url), options, ct).ConfigureAwait(false);
-                await File.WriteAllBytesAsync(tempPath, bytes, ct).ConfigureAwait(false);
-
-                var actual = await crc64Service.ComputeFileAsync(tempPath, null, ct).ConfigureAwait(false);
-                if (!string.Equals(actual, crc64Hash, StringComparison.OrdinalIgnoreCase))
-                {
-                    throw new InvalidDataException($"Image CRC64 mismatch. Expected {crc64Hash}, actual {actual}.");
-                }
-
-                File.Move(tempPath, cachePath, overwrite: true);
-                return cachePath;
-            }
-            finally
-            {
-                TryDelete(tempPath);
-            }
+            var bytes = await GetImageBytesAsync(new Uri(url), options, ct).ConfigureAwait(false);
+            await WriteCacheFileAsync(cachePath, bytes, crc64Hash, ct).ConfigureAwait(false);
+            return cachePath;
         }
         finally
         {
@@ -185,16 +169,14 @@ internal sealed class ImageCacheService : IImageCacheService
                 }
                 catch (Exception exception) when (StorageFailure.IsRecoverable(exception))
                 {
-                    TryDelete(cachePath);
+                    FileCleanup.TryDelete(cachePath);
                 }
             }
 
             var bytes = await GetImageBytesAsync(new Uri(url), ResolvedModeOptions(), ct).ConfigureAwait(false);
-            var tempPath = $"{cachePath}.{Guid.NewGuid():N}.tmp";
             try
             {
-                await File.WriteAllBytesAsync(tempPath, bytes, ct).ConfigureAwait(false);
-                File.Move(tempPath, cachePath, overwrite: true);
+                await WriteCacheFileAsync(cachePath, bytes, null, ct).ConfigureAwait(false);
             }
             catch (Exception exception) when (StorageFailure.IsRecoverable(exception))
             {
@@ -202,10 +184,6 @@ internal sealed class ImageCacheService : IImageCacheService
                 // 豁免：缓存写入是可选优化，失败时调用方仍可直接渲染下载内容。
                 System.Diagnostics.Debug.WriteLine(
                     $"ImageCacheService: failed to cache remote image: {exception.Message}");
-            }
-            finally
-            {
-                TryDelete(tempPath);
             }
 
             return bytes;
@@ -258,6 +236,7 @@ internal sealed class ImageCacheService : IImageCacheService
     private RemoteRequestOptions ResolvedModeOptions() => new()
     {
         Timeout = RequestTimeout,
+        TotalBodyTimeout = RequestTimeout,
         ConfigureRequest = ConfigureImageRequest
     };
 
@@ -265,22 +244,45 @@ internal sealed class ImageCacheService : IImageCacheService
     {
         ProxyMode = ProxyModes.Direct,
         Timeout = RequestTimeout,
+        TotalBodyTimeout = RequestTimeout,
         ConfigureRequest = ConfigureImageRequest
     };
 
     private void ConfigureImageRequest(HttpRequestMessage request) =>
         request.Headers.TryAddWithoutValidation(
             "User-Agent",
-            $"CafeLauncher/{launcherVersion} (.NET)");
+            LauncherUserAgent.CreateWithRuntimeSuffix(launcherVersion));
 
-    private static void TryDelete(string path)
+    /// <summary>
+    /// 通过临时文件写入再替换目标：中途失败不会留下半个缓存文件。给了
+    /// <paramref name="expectedCrc64"/> 时先校验临时文件，避免坏内容顶掉可用缓存。
+    /// 临时文件无论成败都清理。
+    /// </summary>
+    private async Task WriteCacheFileAsync(
+        string cachePath,
+        byte[] bytes,
+        string? expectedCrc64,
+        CancellationToken ct)
     {
+        var tempPath = $"{cachePath}.{Guid.NewGuid():N}.tmp";
         try
         {
-            File.Delete(path);
+            await File.WriteAllBytesAsync(tempPath, bytes, ct).ConfigureAwait(false);
+            if (expectedCrc64 is not null)
+            {
+                var actual = await crc64Service.ComputeFileAsync(tempPath, null, ct).ConfigureAwait(false);
+                if (!string.Equals(actual, expectedCrc64, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidDataException(
+                        $"Image CRC64 mismatch. Expected {expectedCrc64}, actual {actual}.");
+                }
+            }
+
+            File.Move(tempPath, cachePath, overwrite: true);
         }
-        catch (Exception exception) when (StorageFailure.IsRecoverable(exception))
+        finally
         {
+            FileCleanup.TryDelete(tempPath);
         }
     }
 

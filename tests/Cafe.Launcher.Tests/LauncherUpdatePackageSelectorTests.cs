@@ -116,6 +116,48 @@ public sealed class LauncherUpdatePackageSelectorTests
         Assert.Equal(LauncherUpdateInAppAvailability.PackageUnverifiable, selection.Availability);
     }
 
+    [Theory]
+    // 空与目录别名。
+    [InlineData("")]
+    [InlineData(".")]
+    [InlineData("..")]
+    // 反斜杠只对 Windows 是分隔符；单靠 Path.GetFileName 在 Unix 上会放过它。
+    [InlineData("..\\..\\x_setup.exe")]
+    [InlineData("..\\x_win-x64.zip")]
+    [InlineData("../x_win-x64.zip")]
+    [InlineData("a/b\\c_setup.exe")]
+    // 绝对路径。
+    [InlineData("C:\\temp\\Cafe.Launcher_v1.2.3_setup.exe")]
+    [InlineData("/tmp/Cafe.Launcher_v1.2.3_setup.exe")]
+    // 尾随分隔符仍是分隔符。
+    [InlineData("Cafe.Launcher_v1.2.3_setup.exe/")]
+    public void IsSingleFileNameSegment_ForPathLikeOrReservedNames_ReturnsFalse(string name)
+    {
+        Assert.False(LauncherUpdatePackageSelector.IsSingleFileNameSegment(name));
+    }
+
+    [Theory]
+    [InlineData("Cafe.Launcher_v1.2.3_win-x64.zip")]
+    [InlineData("Cafe.Launcher_v1.2.3_setup.exe")]
+    [InlineData("Cafe.Launcher_v1.2.3-beta.1_win-x64.zip")]
+    [InlineData("SHA256SUMS")]
+    public void IsSingleFileNameSegment_ForReleaseAssetNames_ReturnsTrue(string name)
+    {
+        Assert.True(LauncherUpdatePackageSelector.IsSingleFileNameSegment(name));
+    }
+
+    [Fact]
+    public void IsSingleFileNameSegment_WhenNameCarriesAnInvalidFileNameCharacter_ReturnsFalse()
+    {
+        // 非法字符集随平台不同（Windows 含 '"'、'|' 等，Unix 只有 '\0' 与 '/'），
+        // 样本因此从 Path.GetInvalidFileNameChars() 取而不写死。
+        foreach (var invalid in System.IO.Path.GetInvalidFileNameChars())
+        {
+            Assert.False(LauncherUpdatePackageSelector.IsSingleFileNameSegment(
+                $"Cafe.Launcher_v1.2.3_a{invalid}b_win-x64.zip"));
+        }
+    }
+
     private const string Url = "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/download/v1.2.3/Cafe.Launcher_v1.2.3_win-x64.zip";
 
     private static List<ReleaseFile> ReleaseFiles() =>

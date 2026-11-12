@@ -170,8 +170,8 @@ internal sealed class CompatibilityEnvironmentPrecheck
         }
         finally
         {
-            TryDelete(link);
-            TryDelete(target);
+            FileCleanup.TryDelete(link);
+            FileCleanup.TryDelete(target);
         }
     }
 
@@ -194,7 +194,7 @@ internal sealed class CompatibilityEnvironmentPrecheck
         }
         finally
         {
-            TryDelete(path);
+            FileCleanup.TryDelete(path);
         }
     }
 
@@ -297,18 +297,6 @@ internal sealed class CompatibilityEnvironmentPrecheck
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             return null;
-        }
-    }
-
-    private static void TryDelete(string path)
-    {
-        try
-        {
-            File.Delete(path);
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-        {
-            // 探针清理尽力而为。
         }
     }
 

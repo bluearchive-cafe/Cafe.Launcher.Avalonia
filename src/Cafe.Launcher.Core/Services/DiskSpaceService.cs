@@ -27,7 +27,7 @@ internal sealed class DiskSpaceService : IDiskSpaceService
             return null;
         }
 
-        var root = Path.GetPathRoot(existingPath);
+        var root = ResolveVolumeRoot(existingPath);
         if (string.IsNullOrWhiteSpace(root))
         {
             return null;
@@ -138,5 +138,96 @@ internal sealed class DiskSpaceService : IDiskSpaceService
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// 把已存在的目录解析到它所在的卷根，同时作为缓存键：Windows 保持盘符语义；
+    /// Unix 上任意绝对路径的根都是 <c>/</c>，改为在已挂载卷中取最长前缀，
+    /// 取不到时才退回路径根。
+    /// </summary>
+    internal static string? ResolveVolumeRoot(string existingPath)
+    {
+        var pathRoot = Path.GetPathRoot(existingPath);
+        if (string.IsNullOrWhiteSpace(pathRoot) || OperatingSystem.IsWindows())
+        {
+            return pathRoot;
+        }
+
+        return SelectLongestVolumeRoot(existingPath, GetMountedVolumeRoots()) ?? pathRoot;
+    }
+
+    /// <summary>
+    /// 选出包含目标路径的最长卷根。按路径段边界比较，避免 <c>/mnt</c> 误配 <c>/mnt2</c>；
+    /// 候选根末尾的分隔符先裁掉，返回规范化后的根。没有卷包含目标路径时返回 <c>null</c>，
+    /// 由调用方决定回退。
+    /// </summary>
+    internal static string? SelectLongestVolumeRoot(string path, IReadOnlyList<string> volumeRoots)
+    {
+        string? selected = null;
+        var selectedLength = -1;
+
+        foreach (var candidate in volumeRoots)
+        {
+            if (string.IsNullOrWhiteSpace(candidate))
+            {
+                continue;
+            }
+
+            var normalized = Path.TrimEndingDirectorySeparator(candidate);
+            if (normalized.Length <= selectedLength || !IsWithinVolumeRoot(path, normalized))
+            {
+                continue;
+            }
+
+            selected = normalized;
+            selectedLength = normalized.Length;
+        }
+
+        return selected;
+    }
+
+    private static bool IsWithinVolumeRoot(string path, string volumeRoot)
+    {
+        if (volumeRoot.Length == 0 || !path.StartsWith(volumeRoot, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if (path.Length == volumeRoot.Length)
+        {
+            return true;
+        }
+
+        // 以分隔符结尾的根（<c>/</c>）本身就是段边界，任何以它开头的绝对路径都属于该卷。
+        return IsDirectorySeparator(volumeRoot[^1]) || IsDirectorySeparator(path[volumeRoot.Length]);
+    }
+
+    private static bool IsDirectorySeparator(char value) =>
+        value == Path.DirectorySeparatorChar || value == Path.AltDirectorySeparatorChar;
+
+    private static IReadOnlyList<string> GetMountedVolumeRoots()
+    {
+        try
+        {
+            var drives = DriveInfo.GetDrives();
+            var roots = new List<string>(drives.Length);
+            foreach (var drive in drives)
+            {
+                try
+                {
+                    roots.Add(drive.RootDirectory.FullName);
+                }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
+                {
+                    // 单个卷元数据不可读时跳过它，不影响其它卷的匹配。
+                }
+            }
+
+            return roots;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            return Array.Empty<string>();
+        }
     }
 }

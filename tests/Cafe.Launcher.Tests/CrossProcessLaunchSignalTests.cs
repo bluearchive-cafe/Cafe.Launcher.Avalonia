@@ -149,6 +149,22 @@ public sealed class CrossProcessLaunchSignalTests : IDisposable
     }
 
     [Fact]
+    public async Task Dispose_AfterBound_EndsTheAcceptLoopWithoutBlockingTheCaller()
+    {
+        // 退出清理不在 UI 线程上同步等待接收循环（审计 AUD-PERF-010）：释放只关闭监听
+        // 套接字并把收尾排到线程池，循环本身在其后独立结束。
+        var name = UniqueName();
+        var signal = CrossProcessLaunchSignal.ListenAt(name, tempDir);
+        signal.EnsureBound();
+        var acceptLoop = signal.AcceptLoopCompletion
+            ?? throw new InvalidOperationException("bound listener must have started its accept loop");
+
+        signal.Dispose();
+
+        await acceptLoop.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
     public void GetSocketFilePath_WithSameAndDifferentNames_IsStableShortAndDistinct()
     {
         var first = CrossProcessLaunchSignal.GetSocketFilePath(tempDir, "name-a");

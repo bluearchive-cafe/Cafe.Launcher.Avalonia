@@ -12,6 +12,7 @@ using Cafe.Launcher.Core;
 using Cafe.Launcher.Core.Constants;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Material.Icons;
 using System.Linq;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services;
@@ -39,18 +40,21 @@ internal partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMo
     private readonly ILauncherDiagnostics diagnostics;
     private readonly IFilePickerService filePickerService;
     private readonly LauncherBuildIdentity? buildIdentity;
+    private readonly Func<AgreementDocuments.Content> loadAgreement;
     private bool hasInitializedGamePath;
     private bool isDisposed;
     private CancellationTokenSource? gamePathStatusCancellationTokenSource;
     private readonly LatestRefresh gamePathStatusDebounce = new();
     private int gamePathStatusVersion;
     private LauncherSettings? baselineSettings;
-    private string? agreementMarkdown;
+    private AgreementDocuments.Content? agreement;
 
     /// <summary>
     /// Creates a setup wizard with defaults aligned to <see cref="LauncherSettings.CreateDefaults"/>.
     /// <paramref name="buildIdentity"/> carries the host's release channel so a pre-release build
     /// defaults the first-run settings to the beta update channel.
+    /// <paramref name="agreementLoader"/> is injectable so tests can drive a document-load
+    /// failure; production reads the embedded assets.
     /// </summary>
     public SetupWizardViewModel(
         LocalizationService localizer,
@@ -58,7 +62,8 @@ internal partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMo
         ILocalInstallationStateStore localInstallationStateStore,
         ILauncherDiagnostics diagnostics,
         IFilePickerService filePickerService,
-        LauncherBuildIdentity? buildIdentity = null)
+        LauncherBuildIdentity? buildIdentity = null,
+        Func<AgreementDocuments.Content>? agreementLoader = null)
     {
         this.localizer = localizer;
         this.gameInstallationPath = gameInstallationPath;
@@ -66,6 +71,7 @@ internal partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMo
         this.diagnostics = diagnostics;
         this.filePickerService = filePickerService;
         this.buildIdentity = buildIdentity;
+        loadAgreement = agreementLoader ?? AgreementDocuments.Load;
 
         var defaults = LauncherSettings.CreateDefaults(buildIdentity);
         language = defaults.Language;
@@ -87,11 +93,6 @@ internal partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMo
     [NotifyPropertyChangedFor(nameof(CanGoPrevious))]
     [NotifyPropertyChangedFor(nameof(StepProgress))]
     [NotifyPropertyChangedFor(nameof(IsAgreementStep))]
-    [NotifyPropertyChangedFor(nameof(IsStep1))]
-    [NotifyPropertyChangedFor(nameof(IsStep2))]
-    [NotifyPropertyChangedFor(nameof(IsStep3))]
-    [NotifyPropertyChangedFor(nameof(IsStep4))]
-    [NotifyPropertyChangedFor(nameof(IsStep5))]
     private int step;
 
     partial void OnStepChanged(int value)
@@ -114,11 +115,6 @@ internal partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMo
     public bool IsFirstStep => Step == 0;
     public bool IsLastStep => IsConsentUpdateMode ? Step == AgreementStep : Step == ReviewStep;
     public bool IsAgreementStep => Step == AgreementStep;
-    public bool IsStep1 => Step == 1;
-    public bool IsStep2 => Step == 2;
-    public bool IsStep3 => Step == 3;
-    public bool IsStep4 => Step == 4;
-    public bool IsStep5 => Step == 5;
 
     /// <summary>
     /// 协议更新后重新征询时只保留协议步骤，完成即写回原设置；
@@ -158,17 +154,36 @@ internal partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMo
     [NotifyPropertyChangedFor(nameof(CanSkip))]
     private bool isAgreementAccepted;
 
+    /// <summary>Gets whether the embedded agreement text loaded; false keeps the consent gate locked.</summary>
+    public bool IsAgreementAvailable => AgreementDocumentContent.IsAvailable;
+
     /// <summary>Gets the embedded agreement and privacy text shown in the wizard.</summary>
-    public string AgreementMarkdown => agreementMarkdown ??= AgreementDocuments.Load();
+    public string AgreementMarkdown
+    {
+        get
+        {
+            var content = AgreementDocumentContent;
+            return content.IsAvailable
+                ? content.Markdown
+                : $"# {localizer.T(LocalizationKeys.AgreementUnavailable)}\n\n{content.LoadError}";
+        }
+    }
+
+    private AgreementDocuments.Content AgreementDocumentContent =>
+        agreement ??= loadAgreement();
 
     /// <summary>Gets the accepted agreement version caption.</summary>
     public string AgreementVersionText =>
         localizer.F(LocalizationKeys.AgreementVersion, LauncherAgreement.CurrentVersion);
 
-    /// <summary>Enables the agreement checkbox once the user has reached the end of the documents.</summary>
+    /// <summary>
+    /// Enables the agreement checkbox once the user has reached the end of the documents.
+    /// A failed document load keeps the gate locked: the short fallback text would
+    /// otherwise satisfy the read geometry immediately (AUD-UI-005).
+    /// </summary>
     public void MarkAgreementRead()
     {
-        if (!HasReadAgreement)
+        if (IsAgreementAvailable && !HasReadAgreement)
         {
             HasReadAgreement = true;
         }
@@ -293,6 +308,9 @@ internal partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMo
     public string? LanguageDisplayName { get; private set; }
     public string? DownloadSourceDisplayName { get; private set; }
     public string? ProxyDisplayName { get; private set; }
+
+    /// <summary>Gets the review-step summary rows in edit order.</summary>
+    public IReadOnlyList<SetupWizardSummaryItem> SummaryItems { get; private set; } = [];
 
     // ── Events ────────────────────────────────────────────────────
 
@@ -566,13 +584,6 @@ internal partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMo
         RefreshDownloadSources();
     }
 
-    /// <summary>Gets whether saved settings require the user to accept the current agreement version.</summary>
-    public static bool RequiresConsent(LauncherSettings settings)
-    {
-        ArgumentNullException.ThrowIfNull(settings);
-        return !LauncherAgreement.IsCurrent(settings.AcceptedAgreementVersion);
-    }
-
     private void RefreshSummaryDisplayNames()
     {
         LanguageDisplayName = ResolveLanguageDisplayName();
@@ -581,6 +592,20 @@ internal partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMo
         OnPropertyChanged(nameof(LanguageDisplayName));
         OnPropertyChanged(nameof(DownloadSourceDisplayName));
         OnPropertyChanged(nameof(ProxyDisplayName));
+
+        var editLabel = localizer.T(LocalizationKeys.SetupWizardEditStep);
+        SummaryItems =
+        [
+            new(MaterialIconKind.Translate, localizer.T(LocalizationKeys.SetupWizardLanguage),
+                LanguageDisplayName ?? string.Empty, 0, GoToStepCommand, editLabel, HasDivider: false),
+            new(MaterialIconKind.CloudDownload, localizer.T(LocalizationKeys.SetupWizardDownloadSource),
+                DownloadSourceDisplayName ?? string.Empty, 3, GoToStepCommand, editLabel, HasDivider: true),
+            new(MaterialIconKind.FolderSearch, localizer.T(LocalizationKeys.SetupWizardGamePath),
+                GamePathDisplay, 2, GoToStepCommand, editLabel, HasDivider: true),
+            new(MaterialIconKind.SwapHorizontal, localizer.T(LocalizationKeys.SetupWizardProxy),
+                ProxyDisplayName ?? string.Empty, 4, GoToStepCommand, editLabel, HasDivider: true),
+        ];
+        OnPropertyChanged(nameof(SummaryItems));
     }
 
     private void RefreshDownloadSources()

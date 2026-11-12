@@ -13,7 +13,8 @@ namespace Cafe.Launcher.Tests;
 /// <summary>
 /// <see cref="FileDownloadService"/> .tmp 状态机与批级传输接缝的聚焦测试：非 2xx 的
 /// 域名轮换重试、读取中途取消、短于声明长度的截断响应体、超长/部分临时文件的续传
-/// 与清理语义、Content-Range 校验，以及 <see cref="IFileDownloadService.GetExistingDownloadedSize"/>
+/// 与清理语义、Content-Range 校验、服务端忽略 Range 时的重建与进度重置，以及本地
+/// 磁盘 IO 失败不重试、保留 .tmp，还有 <see cref="IFileDownloadService.GetExistingDownloadedSize"/>
 /// 的长度判定。所有请求由共享替身 <see cref="StubDownloadTransport"/> 应答，测试不触网，
 /// 域名一律 .invalid。
 /// </summary>
@@ -395,6 +396,190 @@ public sealed class FileDownloadServiceTests : IDisposable
         Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
     }
 
+    [Fact]
+    public async Task DownloadAsync_WhenServerIgnoresRangeAndReturnsFullBody_RebuildsTempFileAndResetsProgressBeforeWriting()
+    {
+        // AUD-DL-002：续传请求收到 200（服务端忽略 Range）时必须重建 .tmp 并在写入前重置
+        // 进度；否则批级计数会把整份正文叠加在按旧长度播种的计数上，提前报满并侵占其他文件。
+        var targetPath = Path.Combine(tempDir, "file.bin.tmp");
+        var expectedBytes = Encoding.UTF8.GetBytes("complete-content");
+        const int existingBytes = 4;
+        await File.WriteAllBytesAsync(targetPath, expectedBytes[..existingBytes]);
+        var expectedHash = await ComputeExpectedHashAsync(expectedBytes);
+        using var transport = new StubDownloadTransport((_, _) => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent(expectedBytes)
+        });
+        var events = new List<string>();
+        var lengthAtReset = -1L;
+        var reportedBytes = 0L;
+
+        var outcome = await CreateService().DownloadAsync(
+            CreateRequest(targetPath, expectedBytes.Length, expectedHash),
+            CreateControl(
+                transport,
+                progress: (bytes, _) =>
+                {
+                    reportedBytes += bytes;
+                    events.Add("progress");
+                    return Task.CompletedTask;
+                },
+                reset: _ =>
+                {
+                    events.Add("reset");
+                    lengthAtReset = File.Exists(targetPath) ? new FileInfo(targetPath).Length : -1;
+                    return Task.CompletedTask;
+                }),
+            CancellationToken.None);
+
+        Assert.Equal(DownloadOutcomeKind.Transferred, outcome.Kind);
+        Assert.Equal(expectedHash, outcome.Crc64);
+        Assert.Single(transport.RequestedUris);
+        // 仍先按既有长度发起续传请求；是服务端的 200 触发了重建。
+        Assert.Equal(new long?[] { existingBytes }, transport.RangeStarts);
+        // 重置先于任何新字节上报，且此刻 .tmp 已被截断为空文件。
+        Assert.Equal("reset", events[0]);
+        Assert.Equal(0, lengthAtReset);
+        Assert.Equal((long)expectedBytes.Length, reportedBytes);
+        Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
+    }
+
+    [Fact]
+    public async Task DownloadAsync_WhenTempFileIsLockedDuringWrite_PropagatesIOExceptionWithoutRetryOrCleanup()
+    {
+        // AUD-DL-001：写盘阶段的本地 IO 失败（杀软或另一写入方独占文件）不是网络失败：
+        // 只尝试一次、原样抛出 IOException，且不删除可续传的 .tmp、不重置进度。
+        var targetPath = Path.Combine(tempDir, "file.bin.tmp");
+        var expectedBytes = Encoding.UTF8.GetBytes("complete-content");
+        const int existingBytes = 4;
+        await File.WriteAllBytesAsync(targetPath, expectedBytes[..existingBytes]);
+        using var transport = new StubDownloadTransport((_, _) =>
+        {
+            var partialContent = new ByteArrayContent(expectedBytes[existingBytes..]);
+            partialContent.Headers.ContentRange =
+                new ContentRangeHeaderValue(existingBytes, expectedBytes.Length - 1, expectedBytes.Length);
+            return new HttpResponseMessage(HttpStatusCode.PartialContent) { Content = partialContent };
+        });
+        var resetCount = 0;
+
+        using (new FileStream(targetPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+        {
+            await Assert.ThrowsAsync<IOException>(() => CreateService().DownloadAsync(
+                CreateRequest(targetPath, expectedBytes.Length, "0"),
+                CreateControl(transport, reset: _ =>
+                {
+                    resetCount++;
+                    return Task.CompletedTask;
+                }),
+                CancellationToken.None));
+        }
+
+        Assert.Single(transport.RequestedUris);
+        Assert.Equal(new long?[] { existingBytes }, transport.RangeStarts);
+        Assert.Equal(0, resetCount);
+        Assert.Equal(expectedBytes[..existingBytes], await File.ReadAllBytesAsync(targetPath));
+    }
+
+    [Fact]
+    public async Task DownloadAsync_WhenWriteIsDenied_PropagatesUnauthorizedAccessExceptionWithoutRetryOrCleanup()
+    {
+        // AUD-DL-001：落点不可写（以同名目录代表无法作为文件打开的路径）原样上抛
+        // UnauthorizedAccessException，会话层据此给出权限指引，而不是报成网络错误。
+        var targetPath = Path.Combine(tempDir, "file.bin.tmp");
+        Directory.CreateDirectory(targetPath);
+        var expectedBytes = Encoding.UTF8.GetBytes("complete-content");
+        using var transport = new StubDownloadTransport((_, _) => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent(expectedBytes)
+        });
+        var resetCount = 0;
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => CreateService().DownloadAsync(
+            CreateRequest(targetPath, expectedBytes.Length, "0"),
+            CreateControl(transport, reset: _ =>
+            {
+                resetCount++;
+                return Task.CompletedTask;
+            }),
+            CancellationToken.None));
+
+        Assert.Single(transport.RequestedUris);
+        Assert.Equal(0, resetCount);
+        Assert.True(Directory.Exists(targetPath));
+    }
+
+    [Fact]
+    public async Task DownloadAsync_WhenLocalVerificationHitsDiskFull_PropagatesIOExceptionForSessionMapping()
+    {
+        // AUD-DL-001：磁盘满的 IOException（HResult 0x80070070）不再被包成网络错误，
+        // 会话层的「磁盘空间不足」映射因此可达；.tmp 保留。
+        var targetPath = Path.Combine(tempDir, "file.bin.tmp");
+        var expectedBytes = Encoding.UTF8.GetBytes("complete-content");
+        const int diskFullHResult = unchecked((int)0x80070070);
+        var diskFull = new IOException("There is not enough space on the disk.", diskFullHResult);
+        using var transport = new StubDownloadTransport((_, _) => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent(expectedBytes)
+        });
+        var resetCount = 0;
+        var downloader = CreateService(crc64Service: new ThrowingCrc64Service(diskFull));
+
+        var exception = await Assert.ThrowsAsync<IOException>(() => downloader.DownloadAsync(
+            CreateRequest(targetPath, expectedBytes.Length, "0"),
+            CreateControl(transport, reset: _ =>
+            {
+                resetCount++;
+                return Task.CompletedTask;
+            }),
+            CancellationToken.None));
+
+        Assert.Same(diskFull, exception);
+        Assert.Equal(diskFullHResult, exception.HResult);
+        Assert.Single(transport.RequestedUris);
+        Assert.Equal(0, resetCount);
+        Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
+    }
+
+    [Fact]
+    public async Task DownloadAsync_WhenNetworkBodyReadBreaksMidStream_RetriesAndResumes()
+    {
+        // 对端在正文中途断开（IOException）属于网络失败，仍按既有域名次序重试并续传；
+        // AUD-DL-001 的本地 IO 判据不能把这条路径一并排除。
+        var targetPath = Path.Combine(tempDir, "file.bin.tmp");
+        var expectedBytes = Encoding.UTF8.GetBytes("complete-content");
+        var expectedHash = await ComputeExpectedHashAsync(expectedBytes);
+        const int deliveredBytes = 4;
+        var attempt = 0;
+        using var transport = new StubDownloadTransport((_, _) =>
+        {
+            if (++attempt == 1)
+            {
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StreamContent(ScriptedReadStream.ThrowingAfter(
+                        expectedBytes,
+                        deliveredBytes,
+                        new IOException("The response ended prematurely.")))
+                };
+            }
+
+            var partialContent = new ByteArrayContent(expectedBytes[deliveredBytes..]);
+            partialContent.Headers.ContentRange =
+                new ContentRangeHeaderValue(deliveredBytes, expectedBytes.Length - 1, expectedBytes.Length);
+            return new HttpResponseMessage(HttpStatusCode.PartialContent) { Content = partialContent };
+        });
+
+        var outcome = await CreateService().DownloadAsync(
+            CreateRequest(targetPath, expectedBytes.Length, expectedHash),
+            CreateControl(transport),
+            CancellationToken.None);
+
+        Assert.Equal(DownloadOutcomeKind.Transferred, outcome.Kind);
+        Assert.Equal(2, transport.RequestedUris.Count);
+        Assert.Equal(new long?[] { null, deliveredBytes }, transport.RangeStarts);
+        Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
+    }
+
     [Theory]
     [InlineData(4, 16)]
     [InlineData(16, 16)]
@@ -437,10 +622,29 @@ public sealed class FileDownloadServiceTests : IDisposable
         Assert.Equal(0, downloader.GetExistingDownloadedSize(targetPath, 0));
     }
 
-    private FileDownloadService CreateService(TimeSpan? idleReadTimeout = null) => new(
-        new Crc64Service(),
+    private FileDownloadService CreateService(
+        TimeSpan? idleReadTimeout = null,
+        ICrc64Service? crc64Service = null) => new(
+        crc64Service ?? new Crc64Service(),
         new LocalDiagnostics(),
         idleReadTimeout);
+
+    /// <summary>在本地校验阶段抛出指定失败的 CRC64 替身，用于注入磁盘/权限类 IO 异常。</summary>
+    private sealed class ThrowingCrc64Service(Exception failure) : ICrc64Service
+    {
+        public Task<string> ComputeFileAsync(
+            string filePath,
+            Action<int>? progress = null,
+            CancellationToken cancellationToken = default) =>
+            Task.FromException<string>(failure);
+
+        public Task<string> ComputeFileAsync(
+            string filePath,
+            Action<int>? progress,
+            Action<long, long>? byteProgress,
+            CancellationToken cancellationToken) =>
+            Task.FromException<string>(failure);
+    }
 
     private async Task<string> ComputeExpectedHashAsync(byte[] content)
     {

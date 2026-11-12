@@ -50,10 +50,9 @@ internal partial class DialogsViewModel : ViewModelBase, IModalContentViewModel,
 
     public ConfirmationDialogViewModel SetupWizardExitConfirm { get; }
 
-    public IRelayCommand ShowSetupWizardExitConfirmCommand { get; }
-
     /// <summary>Presents the wizard exit confirmation with a message matching the consent state.</summary>
-    public void ShowSetupWizardExitConfirm()
+    [RelayCommand]
+    private void ShowSetupWizardExitConfirm()
     {
         SetupWizardExitConfirm.Show(ResolveSetupWizardExitMessage());
     }
@@ -302,7 +301,6 @@ internal partial class DialogsViewModel : ViewModelBase, IModalContentViewModel,
         SettingsResetConfirm = new ConfirmationDialogViewModel(diagnostics, "SettingsReset");
         SetupWizardExitConfirm = new ConfirmationDialogViewModel(diagnostics, "SetupWizardExit");
         SetupWizardExitConfirm.Confirmed += () => SetupWizard.SkipCommand.ExecuteAsync(null);
-        ShowSetupWizardExitConfirmCommand = new RelayCommand(ShowSetupWizardExitConfirm);
     }
 
     public void RefreshLocalizedText()

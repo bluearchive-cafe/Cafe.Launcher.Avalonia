@@ -253,16 +253,14 @@ internal sealed class RemoteHttpUrlValidator : IRemoteHttpUrlValidator
         }
 
         var ipv6 = address.GetAddressBytes();
-        return !IPAddress.IPv6Loopback.Equals(address)
-            && !IPAddress.IPv6None.Equals(address)
-            && !address.IsIPv6LinkLocal
-            && !address.IsIPv6Multicast
-            && !address.IsIPv6SiteLocal
-            && (ipv6[0] & 0xFE) != 0xFC
-            && !(ipv6[0] == 0x20
-                 && ipv6[1] == 0x01
-                 && ipv6[2] == 0x0D
-                 && ipv6[3] == 0xB8);
+        // 只接受全局单播 2000::/3：回环、未指定、链路本地、组播、站点本地与 ULA
+        // 全部落在其外；6to4（2002::/16）与 Teredo（2001::/32）虽然按分配属于
+        // 全局单播，但内层封装的是任意 IPv4 目标，单看外层地址无法排除私网，
+        // 因此一并拒绝（AUD-SEC-007）。文档段 2001:db8::/32 同样排除。
+        return (ipv6[0] & 0xE0) == 0x20
+            && !(ipv6[0] == 0x20 && ipv6[1] == 0x01 && ipv6[2] == 0x0D && ipv6[3] == 0xB8)
+            && !(ipv6[0] == 0x20 && ipv6[1] == 0x02)
+            && !(ipv6[0] == 0x20 && ipv6[1] == 0x01 && ipv6[2] == 0x00 && ipv6[3] == 0x00);
     }
 
     /// <summary>

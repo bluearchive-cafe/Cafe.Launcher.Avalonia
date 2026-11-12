@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.UI.Models;
+using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Core.Services.GameRuntime;
 using Cafe.Launcher.Core.Models;
 
@@ -24,9 +26,20 @@ internal sealed class GameSessionMonitor : IGameSessionMonitor, IDisposable
     /// 游戏短暂自重启（打补丁），两轮（约十秒）仍不见才认账。</summary>
     internal static readonly int MissedScansBeforeExited = 2;
 
+    /// <summary>
+    /// 单轮扫描的时限，与闸门共用同一个值（5 秒）：正常一次全系统进程枚举远不到一秒；
+    /// 游戏运行时反作弊内核组件在场，快照查询可能长期不返回，而扫描正文是同步枚举、令牌
+    /// 拦不住已经开始的那一次。首轮扫描直接 await 会在 UI 线程上等枚举，挂住时启动后流程
+    /// 停在首个进度之前、状态行停在「启动中」再也不动；宿主退出后的核实扫描同理
+    /// （AUD-PERF-011）。超时按「未知」处理——未知不是「没在跑」的证据。
+    /// </summary>
+    internal static readonly TimeSpan DefaultScanTimeout = RunningGameGate.DefaultScanTimeout;
+
     private readonly IGameProcessTracker gameProcessTracker;
     private readonly Func<IReadOnlyList<string>, CancellationToken, Task<IReadOnlyList<string>>> scanRunningExeNames;
-    private readonly Func<TimeSpan, Task> delayAsync;
+    private readonly Func<TimeSpan, CancellationToken, Task> delayAsync;
+    private readonly ILauncherDiagnostics? diagnostics;
+    private readonly TimeSpan scanTimeout;
     private readonly object gate = new();
 
     private CancellationTokenSource? watchCancellation;
@@ -36,8 +49,8 @@ internal sealed class GameSessionMonitor : IGameSessionMonitor, IDisposable
     private GameLaunchExitInfo? lastSessionExit;
     private IReadOnlyList<string> knownExeNames = [];
 
-    public GameSessionMonitor(IGameProcessTracker gameProcessTracker)
-        : this(gameProcessTracker, ProcessService.FindRunningExeNamesAsync)
+    public GameSessionMonitor(IGameProcessTracker gameProcessTracker, ILauncherDiagnostics? diagnostics = null)
+        : this(gameProcessTracker, ProcessService.FindRunningExeNamesAsync, diagnostics)
     {
     }
 
@@ -45,19 +58,31 @@ internal sealed class GameSessionMonitor : IGameSessionMonitor, IDisposable
     /// transitions can be driven without spawning real processes.</summary>
     internal GameSessionMonitor(
         IGameProcessTracker gameProcessTracker,
-        Func<IReadOnlyList<string>, CancellationToken, Task<IReadOnlyList<string>>> scanRunningExeNames)
-        : this(gameProcessTracker, scanRunningExeNames, static delay => Task.Delay(delay))
+        Func<IReadOnlyList<string>, CancellationToken, Task<IReadOnlyList<string>>> scanRunningExeNames,
+        ILauncherDiagnostics? diagnostics = null)
+        : this(
+            gameProcessTracker,
+            scanRunningExeNames,
+            static (delay, token) => Task.Delay(delay, token),
+            diagnostics)
     {
     }
 
     internal GameSessionMonitor(
         IGameProcessTracker gameProcessTracker,
         Func<IReadOnlyList<string>, CancellationToken, Task<IReadOnlyList<string>>> scanRunningExeNames,
-        Func<TimeSpan, Task> delayAsync)
+        Func<TimeSpan, CancellationToken, Task> delayAsync,
+        ILauncherDiagnostics? diagnostics = null,
+        TimeSpan? scanTimeout = null)
     {
+        ArgumentNullException.ThrowIfNull(gameProcessTracker);
+        ArgumentNullException.ThrowIfNull(scanRunningExeNames);
+        ArgumentNullException.ThrowIfNull(delayAsync);
         this.gameProcessTracker = gameProcessTracker;
         this.scanRunningExeNames = scanRunningExeNames;
         this.delayAsync = delayAsync;
+        this.diagnostics = diagnostics;
+        this.scanTimeout = scanTimeout ?? DefaultScanTimeout;
         // BeginSession 晚于 Register（启动结果先走完旅程的诊断与提示）。Register 与
         // 订阅之间发生的退出由 LastExit 携带——跟踪器在 Register 时把它清零，语义是
         // 「最近一次登记的进程的退出」，所以这里非空即当前会话的宿主已亡。
@@ -138,10 +163,10 @@ internal sealed class GameSessionMonitor : IGameSessionMonitor, IDisposable
         var names = knownExeNames;
         while (true)
         {
-            IReadOnlyList<string> running;
+            IReadOnlyList<string>? running;
             try
             {
-                running = await scanRunningExeNames(names, cancellationToken).ConfigureAwait(false);
+                running = await ScanAsync(names, cancellationToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -149,8 +174,18 @@ internal sealed class GameSessionMonitor : IGameSessionMonitor, IDisposable
             }
             catch (Exception)
             {
-                // 没有成功扫描就不能据此判定家族缺席，即使宿主已在订阅前退出。
-                await delayAsync(PollInterval).ConfigureAwait(false);
+                // 没有成功扫描就没有答案，不能据此判定家族缺席，即使宿主已在订阅前退出。
+                running = null;
+            }
+
+            if (running is null)
+            {
+                // 未知（超时或枚举失败）不是「没在跑」的证据：这一拍不参与任何判定。
+                if (!await DelayNextPollAsync(cancellationToken).ConfigureAwait(false))
+                {
+                    return;
+                }
+
                 continue;
             }
 
@@ -174,7 +209,10 @@ internal sealed class GameSessionMonitor : IGameSessionMonitor, IDisposable
                 return;
             }
 
-            await delayAsync(PollInterval).ConfigureAwait(false);
+            if (!await DelayNextPollAsync(cancellationToken).ConfigureAwait(false))
+            {
+                return;
+            }
         }
     }
 
@@ -191,10 +229,10 @@ internal sealed class GameSessionMonitor : IGameSessionMonitor, IDisposable
         var missedScans = 0;
         while (State == GameSessionState.Running)
         {
-            IReadOnlyList<string> running;
+            IReadOnlyList<string>? running;
             try
             {
-                running = await scanRunningExeNames(names, cancellationToken).ConfigureAwait(false);
+                running = await ScanAsync(names, cancellationToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -203,7 +241,16 @@ internal sealed class GameSessionMonitor : IGameSessionMonitor, IDisposable
             catch (Exception)
             {
                 // 枚举没有答案不是「没在跑」的证据：这一拍不计入缺席。
-                await delayAsync(PollInterval).ConfigureAwait(false);
+                running = null;
+            }
+
+            if (running is null)
+            {
+                if (!await DelayNextPollAsync(cancellationToken).ConfigureAwait(false))
+                {
+                    return;
+                }
+
                 continue;
             }
 
@@ -219,7 +266,10 @@ internal sealed class GameSessionMonitor : IGameSessionMonitor, IDisposable
                 return;
             }
 
-            await delayAsync(PollInterval).ConfigureAwait(false);
+            if (!await DelayNextPollAsync(cancellationToken).ConfigureAwait(false))
+            {
+                return;
+            }
         }
     }
 
@@ -267,7 +317,16 @@ internal sealed class GameSessionMonitor : IGameSessionMonitor, IDisposable
         var scanFailed = false;
         try
         {
-            running = await scanRunningExeNames(knownExeNames, CancellationToken.None).ConfigureAwait(false);
+            var scan = await ScanAsync(knownExeNames, CancellationToken.None).ConfigureAwait(false);
+            if (scan is null)
+            {
+                // 限时到了仍没有答案：与枚举失败同一取舍——不能据此结束会话。
+                scanFailed = true;
+            }
+            else
+            {
+                running = scan;
+            }
         }
         catch (Exception)
         {
@@ -297,6 +356,68 @@ internal sealed class GameSessionMonitor : IGameSessionMonitor, IDisposable
         }
 
         RaiseStateChanged();
+    }
+
+    /// <summary>
+    /// 本轮扫描的限时外壳（与闸门共用 <see cref="BoundedProcessScan"/>）。超时返回 null
+    /// 表示这一拍没有答案（未知），调用方不得据此判定家族缺席；超时另写一条诊断——
+    /// 枚举被挂住没有别的可见症状，日志是唯一能解释「状态为什么不动」的凭据。
+    /// </summary>
+    private async Task<IReadOnlyList<string>?> ScanAsync(
+        IReadOnlyList<string> names,
+        CancellationToken cancellationToken)
+    {
+        var running = await BoundedProcessScan.RunAsync(
+            token => scanRunningExeNames(names, token),
+            scanTimeout,
+            cancellationToken).ConfigureAwait(false);
+        if (running is null)
+        {
+            await LogScanTimeoutAsync().ConfigureAwait(false);
+        }
+
+        return running;
+    }
+
+    /// <summary>
+    /// 等下一拍；取消时返回 false，循环据此收尾。令牌必须传进等待本身——不传时取消只能
+    /// 等满一个 <see cref="PollInterval"/> 才被看见，Dispose 与重开会话都要拖住看护。
+    /// </summary>
+    private async Task<bool> DelayNextPollAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await delayAsync(PollInterval, cancellationToken).ConfigureAwait(false);
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// 超时写一条诊断：枚举被挂住没有别的可见症状，日志是唯一能解释「状态为什么不动」的
+    /// 凭据。诊断写失败不改变看护结论，异常在这里吞掉。
+    /// </summary>
+    private async Task LogScanTimeoutAsync()
+    {
+        if (diagnostics is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await diagnostics.WarningAsync(
+                "GameSession",
+                $"Process enumeration did not answer within {scanTimeout.TotalSeconds.ToString("0.#", CultureInfo.InvariantCulture)} s; "
+                + "this poll is treated as unknown, not as the game being absent.").ConfigureAwait(false);
+        }
+        catch (Exception)
+        {
+            // 诊断不可用不能反噬看护循环。
+        }
     }
 
     /// <summary>家族首次现身（或宿主退出核实后仍在跑）时进入运行期看护。</summary>

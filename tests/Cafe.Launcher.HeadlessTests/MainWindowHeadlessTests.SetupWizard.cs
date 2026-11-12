@@ -42,9 +42,9 @@ public sealed partial class MainWindowHeadlessTests
         var viewer = context.Window.GetVisualDescendants()
             .OfType<ReleaseNotesMarkdownViewer>()
             .Single(control => control.IsEffectivelyVisible);
-        Assert.False(string.IsNullOrWhiteSpace(viewer.Markdown));
-        Assert.Contains("用户协议", viewer.Markdown, StringComparison.Ordinal);
-        Assert.Contains("隐私政策", viewer.Markdown, StringComparison.Ordinal);
+        Assert.True(
+            string.Equals(wizard.AgreementMarkdown, viewer.Markdown, StringComparison.Ordinal),
+            "协议阅读器未绑定内嵌协议正文。");
 
         var checkbox = context.Window.GetVisualDescendants()
             .OfType<CheckBox>()
@@ -275,12 +275,19 @@ public sealed partial class MainWindowHeadlessTests
         Assert.Equal(4, editButtons.Length);
         Assert.All(editButtons, button => Assert.False(string.IsNullOrWhiteSpace(AutomationProperties.GetName(button))));
 
-        foreach (var (editButton, expectedStep) in editButtons.Zip([0, 3, 2, 4]))
+        var expectedSteps = new[] { 0, 3, 2, 4 };
+        for (var index = 0; index < expectedSteps.Length; index++)
         {
+            // 复核页每次进入都会按 SummaryItems 重建行容器，必须取当前实例而非首次抓取的那批。
+            var editButton = context.Window
+                .GetVisualDescendants()
+                .OfType<Button>()
+                .Where(control => control.Classes.Contains("wizard-summary-edit"))
+                .ElementAt(index);
             new ButtonAutomationPeer(editButton).Invoke();
             Dispatcher.UIThread.RunJobs();
 
-            Assert.Equal(expectedStep, wizard.Step);
+            Assert.Equal(expectedSteps[index], wizard.Step);
 
             // 内层 WaitForGamePathStatusAsync 每次自带 2 秒预算，外层给足整体预算。
             var stepAdvanceDeadline = DateTime.UtcNow.AddSeconds(10);
@@ -291,7 +298,7 @@ public sealed partial class MainWindowHeadlessTests
                     Assert.Fail("向导未在 10 秒预算内推进到最后一步。");
                 }
 
-                if (wizard.IsStep2)
+                if (wizard.Step == 2)
                 {
                     await WaitForGamePathStatusAsync(
                         wizard,
@@ -460,6 +467,51 @@ public sealed partial class MainWindowHeadlessTests
             Assert.Equal(stepIndex, steps.IndexOf(visibleStep));
             Assert.Equal(1d, visibleStep.Opacity);
         }
+    }
+
+    [AvaloniaFact]
+    public async Task SetupWizard_StepRevertedMidTransition_SettlesContentAndChromeOnModelStep()
+    {
+        // AUD-UI-003：换面进行到一半时 Step 被改回当前显示步，在跑的过渡必须作废；
+        // 否则旧过渡的中点换面会把内容翻到已被撤销的步，而壳层仍按模型步渲染。
+        using var context = CreateContext();
+        context.ViewModel.IsMotionReduced = false;
+        context.Window.Show();
+        context.ViewModel.Dialogs.ShowSetupWizard();
+        Dispatcher.UIThread.RunJobs();
+
+        var wizard = context.ViewModel.Dialogs.SetupWizard;
+        var overlay = context.Window.GetVisualDescendants().OfType<SetupWizardOverlay>().Single();
+        var steps = overlay.GetVisualDescendants()
+            .OfType<Panel>()
+            .Where(control => control.Classes.Contains("wizard-step"))
+            .ToList();
+        Assert.Equal(6, steps.Count);
+
+        // 同一次 UI 任务里前进再回退：换面还停在退场半程（尚未到中点换面），
+        // 回退因此命中「目标即当前显示步」分支；不依赖帧时钟节拍。
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            wizard.Step = 2;
+            wizard.Step = 0;
+        });
+        await WaitUntilStepSettledAsync(steps, 0, "回退后的步骤 0");
+
+        // 等过旧过渡的整段时长（退场 + 起势 + 入场 + 缓冲）：它若未被作废，会在此间换面。
+        await Task.Delay(700);
+        await Dispatcher.UIThread.InvokeAsync(() => { });
+
+        var visible = Assert.Single(steps, control => control.IsVisible);
+        Assert.Equal(0, steps.IndexOf(visible));
+        Assert.Equal(1d, visible.Opacity);
+        Assert.Equal(0d, Assert.IsType<TranslateTransform>(visible.RenderTransform).X);
+
+        var progress = overlay.GetVisualDescendants().OfType<TextBlock>()
+            .Single(control => control.Name == "StepProgressText");
+        Assert.Equal(wizard.StepProgress, progress.Text);
+        var previous = overlay.GetVisualDescendants().OfType<Button>()
+            .Single(control => control.Name == "PreviousButton");
+        Assert.Equal(wizard.CanGoPrevious, previous.IsVisible);
     }
 
     /// <summary>

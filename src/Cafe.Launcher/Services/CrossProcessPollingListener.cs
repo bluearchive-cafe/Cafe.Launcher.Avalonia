@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Core.Services.Diagnostics;
@@ -14,12 +13,14 @@ namespace Cafe.Launcher.Services;
 /// </summary>
 internal sealed class CrossProcessPollingListener : IDisposable
 {
-    private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(250);
+    /// <summary>轮询间隔；关闭收尾的等待窗口由测试据此推导。</summary>
+    internal static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(250);
 
     private readonly CancellationTokenSource cancellationTokenSource = new();
     private readonly Task listenerTask;
     private readonly Func<TimeSpan, bool> waitForSignal;
     private readonly Action onSignalRaised;
+    private volatile bool stopRequested;
     private bool disposed;
 
     /// <summary>Initializes the listener and starts the background polling loop.</summary>
@@ -31,7 +32,28 @@ internal sealed class CrossProcessPollingListener : IDisposable
     }
 
     /// <summary>Gets whether the listener is being stopped; dispatch should drop late signals.</summary>
-    public bool IsCancellationRequested => cancellationTokenSource.IsCancellationRequested;
+    public bool IsCancellationRequested => stopRequested;
+
+    /// <summary>
+    /// The polling loop itself. <see cref="Dispose"/> releases the token source only after
+    /// this task finishes, so tests can assert the loop really ended before teardown.
+    /// </summary>
+    internal Task PollingLoopCompletion => listenerTask;
+
+    /// <summary>
+    /// 只停止轮询，不等待也不释放资源的关闭请求阶段入口：先让转发信号不再派发，
+    /// 退出时的资源收尾留给 <see cref="Dispose"/>。
+    /// </summary>
+    public void StopListening()
+    {
+        if (stopRequested)
+        {
+            return;
+        }
+
+        stopRequested = true;
+        cancellationTokenSource.Cancel();
+    }
 
     private void Listen()
     {
@@ -59,6 +81,11 @@ internal sealed class CrossProcessPollingListener : IDisposable
         }
     }
 
+    /// <summary>
+    /// 停止并释放。退出清理跑在 UI 线程上，因此这里绝不同步等待轮询循环
+    /// （审计 AUD-PERF-010）：取消后循环至多再走完一个轮询间隔，收尾转到线程池，
+    /// 任务结束后才释放令牌源，迟到的续体因此不会注册到已释放的源。
+    /// </summary>
     public void Dispose()
     {
         if (disposed)
@@ -67,18 +94,40 @@ internal sealed class CrossProcessPollingListener : IDisposable
         }
 
         disposed = true;
-        cancellationTokenSource.Cancel();
+        StopListening();
 
+        if (listenerTask.IsCompleted)
+        {
+            ReleaseCancellationSource();
+            return;
+        }
+
+        _ = FinishThenReleaseAsync();
+    }
+
+    private async Task FinishThenReleaseAsync()
+    {
         try
         {
-            // The loop polls every 250ms; after cancellation it exits within ~250ms.
-            listenerTask.Wait(TimeSpan.FromMilliseconds(300));
+            await listenerTask.ConfigureAwait(false);
         }
         catch
         {
-            // Exit cleanup is best-effort.
+            // 循环体自己吞掉异常；这里只保证释放前任务已经终结。
         }
 
-        cancellationTokenSource.Dispose();
+        ReleaseCancellationSource();
+    }
+
+    private void ReleaseCancellationSource()
+    {
+        try
+        {
+            cancellationTokenSource.Dispose();
+        }
+        catch (ObjectDisposedException)
+        {
+            // 并发释放按幂等处理。
+        }
     }
 }

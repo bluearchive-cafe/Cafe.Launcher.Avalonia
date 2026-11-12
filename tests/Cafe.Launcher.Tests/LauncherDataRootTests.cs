@@ -40,6 +40,7 @@ public sealed class LauncherDataRootTests : IDisposable
         // unified.log 不在其中：它的落点由 UnifiedLogger 实例拥有（构造时给目录、
         // 由 LogFilePath 读出），根上再声明一份就成了同一份布局的第二个出处。
         Assert.Equal(Path.Combine(dataRoot.Root, LauncherPaths.LauncherSettingsFileName), dataRoot.SettingsPath);
+        Assert.Equal(Path.Combine(dataRoot.Root, LauncherPaths.LauncherSettingsBackupFileName), dataRoot.SettingsBackupPath);
         Assert.Equal(Path.Combine(dataRoot.Root, LauncherPaths.DownloadStateFileName), dataRoot.DownloadStatePath);
         Assert.Equal(Path.Combine(dataRoot.Root, LauncherPaths.NoticeStateFileName), dataRoot.NoticeStatePath);
         Assert.Equal(Path.Combine(dataRoot.Root, LauncherPaths.RunnerOutputFileName), dataRoot.RunnerOutputPath);
@@ -54,6 +55,7 @@ public sealed class LauncherDataRootTests : IDisposable
         foreach (var path in new[]
         {
             dataRoot.SettingsPath,
+            dataRoot.SettingsBackupPath,
             dataRoot.DownloadStatePath,
             dataRoot.NoticeStatePath,
             dataRoot.RunnerOutputPath,

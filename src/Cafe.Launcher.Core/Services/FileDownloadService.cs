@@ -25,6 +25,14 @@ internal sealed class FileDownloadService : IFileDownloadService
     /// </summary>
     internal static readonly int[] RetryDomainOrder = [1, 1, 1, 1, 0, 0, 0, 1, 1, 1];
 
+    /// <summary>
+    /// <see cref="Exception.Data"/> 标记键：响应体读取中途以 <see cref="IOException"/> 失败
+    /// （连接被对端关闭，<c>HttpIOException</c>）。只有网络读会打上这个标记；本地磁盘 IO
+    /// 的 <see cref="IOException"/> 不会打，重试判据据此区分「可重试的网络中断」与
+    /// 「必须原样上抛、保留可续传 .tmp 的本地失败」。
+    /// </summary>
+    private const string NetworkReadFailureDataKey = "Cafe.Launcher.FileDownload.NetworkReadFailure";
+
     private readonly ICrc64Service crc64Service;
     private readonly ILauncherDiagnostics diagnostics;
     private readonly TimeSpan? idleReadTimeout;
@@ -124,6 +132,10 @@ internal sealed class FileDownloadService : IFileDownloadService
                 response.EnsureSuccessStatusCode();
 
                 var fileMode = FileMode.Create;
+                // A resume request answered with 200 means the server ignored Range and sent
+                // the whole body: the file must be rebuilt from zero and the batch counters
+                // seeded from the old length must resample before the new bytes are added.
+                var restartProgressFromZero = existingLength > 0;
                 if (existingLength > 0 && response.StatusCode == System.Net.HttpStatusCode.PartialContent)
                 {
                     var contentRange = response.Content.Headers.ContentRange;
@@ -137,6 +149,7 @@ internal sealed class FileDownloadService : IFileDownloadService
                     }
 
                     fileMode = FileMode.Append;
+                    restartProgressFromZero = false;
                 }
 
                 string crc64;
@@ -149,14 +162,20 @@ internal sealed class FileDownloadService : IFileDownloadService
                 {
                     await using var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
                     await using var output = new FileStream(targetTempPath, fileMode, FileAccess.Write, FileShare.Read);
+                    if (restartProgressFromZero)
+                    {
+                        // FileMode.Create already truncated the .tmp when the stream opened, so
+                        // this resample sees zero and the full body counted below lands on a
+                        // cleared slate instead of on top of the old bytes (AUD-DL-002).
+                        await onProgressResetAsync(cancellationToken).ConfigureAwait(false);
+                    }
+
                     while (true)
                     {
                         await pauseAwaiter().ConfigureAwait(false);
                         cancellationToken.ThrowIfCancellationRequested();
 
-                        var read = await ResponseBodyReader
-                            .ReadAsync(responseStream, buffer, cancellationToken, idleReadTimeout)
-                            .ConfigureAwait(false);
+                        var read = await ReadResponseBodyAsync(responseStream, buffer, cancellationToken).ConfigureAwait(false);
                         if (read == 0) break;
                         await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
                         await onProgressAsync(read, cancellationToken).ConfigureAwait(false);
@@ -191,7 +210,7 @@ internal sealed class FileDownloadService : IFileDownloadService
                         $"CRC64 mismatch after all retries: {filePath}.");
                 }
             }
-            catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+            catch (Exception ex) when (IsRetryableTransferFailure(ex, cancellationToken))
             {
                 // HttpClient/ConnectTimeout cancel their own token, not the caller's.
                 // Keep these failures in the network retry/resume path; preserve the
@@ -199,8 +218,12 @@ internal sealed class FileDownloadService : IFileDownloadService
                 var failure = ex is OperationCanceledException
                     ? new HttpRequestException($"Download request timed out: {filePath}.", ex)
                     : ex;
-                if (failure is InvalidDataException || failure is not (HttpRequestException or IOException))
+                if (failure is InvalidDataException)
                 {
+                    // Only content-level failures invalidate the .tmp (CRC64 mismatch or an
+                    // invalid Content-Range): discard it and resample progress. Network
+                    // failures — and network body reads cut short by the peer — keep the
+                    // resumable bytes. Local disk failures never reach this filter.
                     var deleted = false;
                     try
                     {
@@ -237,6 +260,56 @@ internal sealed class FileDownloadService : IFileDownloadService
         }
 
         throw new HttpRequestException($"Download failed: {filePath}", lastError);
+    }
+
+    /// <summary>
+    /// Reads one body chunk, tagging peer-side <see cref="IOException"/> failures as
+    /// network failures so the retry filter keeps them in the resume domain. Local
+    /// disk IO comes from the <see cref="FileStream"/> writes in <see cref="DownloadAsync"/>
+    /// and is never tagged.
+    /// </summary>
+    private async Task<int> ReadResponseBodyAsync(
+        Stream responseStream,
+        byte[] buffer,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await ResponseBodyReader
+                .ReadAsync(responseStream, buffer, cancellationToken, idleReadTimeout)
+                .ConfigureAwait(false);
+        }
+        catch (IOException networkFailure)
+        {
+            networkFailure.Data[NetworkReadFailureDataKey] = true;
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Decides whether a failure stays in the CDN retry/resume domain. Only
+    /// transfer-shaped failures qualify: <see cref="HttpRequestException"/> (the
+    /// transport's error mode, including its timeouts), <see cref="InvalidDataException"/>
+    /// (CRC64 mismatch or an invalid Content-Range, which discard the .tmp), and body
+    /// reads the peer cut short (tagged <see cref="IOException"/>). Local disk failures —
+    /// <see cref="IOException"/>, <see cref="UnauthorizedAccessException"/>,
+    /// <see cref="PathTooLongException"/> and friends — propagate as-is: retrying them
+    /// cannot help, deleting the .tmp would throw away resumable progress, and the
+    /// session layer maps disk-full and permission problems into user-facing messages.
+    /// </summary>
+    private static bool IsRetryableTransferFailure(Exception exception, CancellationToken cancellationToken)
+    {
+        if (exception is OperationCanceledException)
+        {
+            return !cancellationToken.IsCancellationRequested;
+        }
+
+        if (exception is HttpRequestException or InvalidDataException)
+        {
+            return true;
+        }
+
+        return exception is IOException && exception.Data.Contains(NetworkReadFailureDataKey);
     }
 
     /// <summary>

@@ -198,20 +198,31 @@ internal sealed class LogExportService
                 diagnostics.LogFilePath);
         }
 
-        // 包内名固定为 unified.log：读者在导出包里找的是这一份「当前日志」。
+        // 包内名固定为 unified.log：读者在导出包里找的是这一份「当前日志」。解析出的是轮转后正在写
+        // 的那份（序号最大的兄弟文件），因此包里的 unified.log 才是用户刚看到的内容。
         yield return (activePath, LauncherPaths.UnifiedLogFileName, true);
 
         foreach (var logFilePath in ExistingLogFilesNewestFirst())
         {
-            // 正在写的那份已经作为 unified.log 进包；其余轮转文件沿用磁盘上的文件名。
+            // 正在写的那份已经作为 unified.log 进包；其余代次沿用磁盘上的文件名。
             if (string.Equals(logFilePath, activePath, StringComparison.Ordinal))
             {
                 continue;
             }
 
-            yield return (logFilePath, Path.GetFileName(logFilePath), false);
+            yield return (logFilePath, RotatedEntryName(logFilePath), false);
         }
     }
+
+    /// <summary>
+    /// 非当前文件在包内的名字。磁盘上的基名（第 0 代）本身也叫 <c>unified.log</c>，而这个名字已经
+    /// 留给当前日志；两代内容同名进包，读包的人就分不清哪份是「现在的」，所以旧基名按序号改叫
+    /// <c>unified_000.log</c>，与 Serilog 的 <c>unified_001.log</c> 系列接上。
+    /// </summary>
+    private string RotatedEntryName(string logFilePath) =>
+        string.Equals(logFilePath, diagnostics.LogFilePath, StringComparison.Ordinal)
+            ? Path.GetFileNameWithoutExtension(logFilePath) + "_000" + Path.GetExtension(logFilePath)
+            : Path.GetFileName(logFilePath);
 
     /// <summary>
     /// 磁盘上现存的日志文件（基名与轮转兄弟文件），最新写入的排在前面。不抛异常：问「有没有日志」

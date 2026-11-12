@@ -97,6 +97,38 @@ public sealed class LauncherDataRootMigrationTests : IDisposable
     }
 
     [Fact]
+    public void MigrateLegacyRoot_WhenPreviousCopyLeftPartialTargets_RetriesAndCompletes()
+    {
+        // 守卫（AUD-SET-004）：跨设备复制中断留下的半成品只占用 .migrating 名，
+        // 最终名不存在，下一次启动必须清理半成品并重试，而不是把截断内容当作
+        // 「新位置已有内容」永久跳过。
+        var legacy = tempDir.Sub("Cafe Launcher");
+        Directory.CreateDirectory(legacy);
+        File.WriteAllText(Path.Combine(legacy, LauncherPaths.LauncherSettingsFileName), "{}");
+        var imageCache = Path.Combine(legacy, LauncherDataRoot.ImageCacheFolderName);
+        Directory.CreateDirectory(imageCache);
+        File.WriteAllText(Path.Combine(imageCache, "image.png"), "cache");
+
+        var dataRoot = new LauncherDataRoot(tempDir.Sub("cafe-launcher"));
+        Directory.CreateDirectory(dataRoot.Root);
+        var partialSettings = dataRoot.SettingsPath + ".migrating";
+        File.WriteAllText(partialSettings, "{\"trunc");
+        var partialImageCache = dataRoot.ImageCacheDirectory + ".migrating";
+        Directory.CreateDirectory(partialImageCache);
+        File.WriteAllText(Path.Combine(partialImageCache, "image.png"), "tru");
+
+        LauncherDataRootMigration.MigrateLegacyRoot(dataRoot, legacy);
+
+        Assert.Equal("{}", File.ReadAllText(dataRoot.SettingsPath));
+        Assert.Equal(
+            "cache",
+            File.ReadAllText(Path.Combine(dataRoot.ImageCacheDirectory, "image.png")));
+        Assert.False(File.Exists(partialSettings));
+        Assert.False(Directory.Exists(partialImageCache));
+        Assert.False(Directory.Exists(legacy));
+    }
+
+    [Fact]
     public void MigrateLegacyRoot_MovesSettingsTemporaryFile()
     {
         var legacy = tempDir.Sub("Cafe Launcher");

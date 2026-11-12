@@ -250,11 +250,4 @@ public sealed class DownloadSessionTests
             _ => { },
             CancellationToken.None);
     }
-
-    /// <summary>最简传输源替身：生命周期测试只构造会话，不发起真实下载。</summary>
-    private sealed class StubDownloadTransportSource : IDownloadTransportSource
-    {
-        public Task<IDownloadTransport> CreateAsync(string proxyMode, CancellationToken cancellationToken) =>
-            Task.FromResult<IDownloadTransport>(new StubDownloadTransport());
-    }
 }

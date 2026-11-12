@@ -10,8 +10,11 @@ $threshold = 0.50
 # 结构性不可覆盖，基线随实测下移。改基线时请与本次实测值一起更新，并保持
 # 余量在同一量级。2026-10-19 迁移到 Microsoft Code Coverage 后三次全量实测：
 # 行约 86.3%（18,563–18,571/21,502）、分支 92.29%（3,291/3,566），同一基线仍成立。
-$lineBaseline = 0.8560
-$branchBaseline = 0.9180
+# 2026-11-10 全量实测：手写行 87.45%、分支 92.51%，旧基线 0.8560／0.9180 因此留下约
+# 1.85pp／0.71pp 余量，这段回退可以静默通过闸口。现基线按上一条规则上调到 0.8720／
+# 0.9240，余量回到约 0.25pp／0.11pp；排除范围与 50% 底线不变。
+$lineBaseline = 0.8720
+$branchBaseline = 0.9240
 $resultsRoot = (Join-Path (Join-Path $PSScriptRoot 'TestResults') 'Coverage').Replace('\', '/')
 
 $repositoryRoot = [IO.Path]::GetFullPath($PSScriptRoot)

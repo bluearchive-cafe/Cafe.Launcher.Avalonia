@@ -103,6 +103,8 @@ NuGet 版本集中维护在 [Directory.Packages.props](../Directory.Packages.pro
 3. 运行 `pwsh ./scripts/New-ThirdPartyNotices.ps1`，再生全部生产工程的 [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md)。
 4. 完成验证后检查锁文件差异。`verify.ps1` 和各 RID 打包的 restore 会改写 RID 段，只还原确认由本次验证产生的副作用，保留真实升级和原有工作区改动。
 
+`.NET SDK` 以 [global.json](../global.json) 为唯一来源：升级时同步各工作流的 `dotnet-version` 与 §12 表，`InstallerContractTests` 会在任一处漂移时失败。libmpv 版本以 `native/libmpv/*.json` 清单为准，§12 表同样受该契约守护。
+
 CI 使用 `actions/cache/restore` 与 `actions/cache/save`，缓存键取中央包版本文件，保存使用 `if: always()`；关闭 `actions/setup-dotnet` 的重复缓存。测试与覆盖率报告保留 7 天，发布中转产物保留 1 天；实际作业与权限以 [.github/workflows/](../.github/workflows/) 为准。
 
 ## 提交与评审

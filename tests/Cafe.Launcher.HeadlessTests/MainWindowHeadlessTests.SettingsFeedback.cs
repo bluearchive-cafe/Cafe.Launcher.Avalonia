@@ -9,6 +9,7 @@ using Avalonia.VisualTree;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.UI.Constants;
 using Cafe.Launcher.UI.Models;
+using Cafe.Launcher.UI.Services;
 
 namespace Cafe.Launcher.HeadlessTests;
 
@@ -174,5 +175,63 @@ public sealed partial class MainWindowHeadlessTests
         Dispatcher.UIThread.RunJobs();
         Assert.False(status.IsEffectivelyVisible);
         Assert.False(save.IsEffectivelyEnabled);
+    }
+
+    [AvaloniaFact]
+    public async Task SettingsFeedback_WhenFollowThroughStillRunsAfterPersist_RestoresFooterAndNavigation()
+    {
+        using var context = CreateContext();
+        PrepareGoldenWindow(context);
+        OpenSettings(context);
+        var settings = context.ViewModel.Settings;
+        var status = context.Window.GetVisualDescendants().OfType<TextBlock>()
+            .Single(control => control.Name == "SettingsSaveStatus");
+        var save = context.Window.GetVisualDescendants().OfType<Button>()
+            .Single(control => ReferenceEquals(control.Command, settings.SaveSettingsCommand));
+        var navigation = GetSettingsNavigation(context.Window);
+        var original = settings.SavedSettingsFollowThrough;
+        var completionStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var completionRelease = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        settings.SavedSettingsFollowThrough = new GatedFollowThrough(completionStarted, completionRelease);
+        try
+        {
+            settings.Editor.Current.RememberWindowPositionAndSize =
+                !settings.Editor.Current.RememberWindowPositionAndSize;
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(settings.IsSettingsDirty);
+
+            var saving = settings.SaveSettingsCommand.ExecuteAsync(null);
+            await completionStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            Dispatcher.UIThread.RunJobs();
+
+            // 落盘已完成、跟随刷新仍在进行：保存态以落盘为界，页脚与页内交互必须恢复，
+            // 否则整段壳刷新会把「正在保存」和禁用态拖到数十秒之后（AUD-SET-003）。
+            Assert.False(settings.IsSaving);
+            Assert.False(saving.IsCompleted);
+            Assert.False(status.IsEffectivelyVisible);
+            Assert.True(navigation.IsEffectivelyEnabled);
+            Assert.Equal(context.ViewModel.Shell.I18n[LocalizationKeys.Save], AutomationProperties.GetName(save));
+
+            completionRelease.TrySetResult();
+            await saving.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+        finally
+        {
+            completionRelease.TrySetResult();
+            settings.SavedSettingsFollowThrough = original;
+        }
+    }
+
+    private sealed class GatedFollowThrough(
+        TaskCompletionSource started,
+        TaskCompletionSource release) : ISavedSettingsFollowThrough
+    {
+        public SavedSettingsHandoff Apply(LauncherSettings savedSettings) => new(savedSettings, null);
+
+        public async Task CompleteAsync(SavedSettingsHandoff handoff)
+        {
+            started.TrySetResult();
+            await release.Task;
+        }
     }
 }

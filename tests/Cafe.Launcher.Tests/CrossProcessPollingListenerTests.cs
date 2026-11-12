@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Cafe.Launcher.Services;
 using Xunit;
 
@@ -150,5 +151,85 @@ public sealed class CrossProcessPollingListenerTests
 
         listener.Dispose();
         Assert.True(listener.IsCancellationRequested);
+    }
+
+    [Fact]
+    public async Task Dispose_DoesNotWaitForThePollingLoopOnTheCallingThread()
+    {
+        // 退出清理跑在 UI 线程上：Dispose 只取消并把收尾排到线程池，绝不能等轮询循环
+        // （审计 AUD-PERF-010）。这里把循环扣在一次轮询等待里，Dispose 必须在
+        // 远小于该窗口的时间内返回。
+        var enteredWait = new ManualResetEventSlim(false);
+        var releaseWait = new ManualResetEventSlim(false);
+        var listener = new CrossProcessPollingListener(
+            _ =>
+            {
+                enteredWait.Set();
+                releaseWait.Wait(CrossProcessPollingListener.PollInterval * 4);
+                return false;
+            },
+            () => { });
+
+        try
+        {
+            Assert.True(enteredWait.Wait(TimeSpan.FromSeconds(5)), "listener never started polling");
+
+            var stopwatch = Stopwatch.StartNew();
+            listener.Dispose();
+            stopwatch.Stop();
+
+            Assert.True(
+                stopwatch.Elapsed < CrossProcessPollingListener.PollInterval,
+                $"Dispose 在轮询循环上同步等待了 {stopwatch.Elapsed}。");
+            // 收尾还未执行：循环仍被扣在等待里，说明 Dispose 没有等它结束。
+            Assert.False(listener.PollingLoopCompletion.IsCompleted);
+            Assert.True(listener.IsCancellationRequested);
+
+            releaseWait.Set();
+            await listener.PollingLoopCompletion.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+        finally
+        {
+            releaseWait.Set();
+            listener.Dispose();
+        }
+    }
+
+    [Fact]
+    public async Task StopListening_CancelsWithoutWaiting_AndDropsTheLateSignal()
+    {
+        // 关闭请求阶段先停听：不等待循环，迟到信号也不再回调。
+        var enteredWait = new ManualResetEventSlim(false);
+        var releaseWait = new ManualResetEventSlim(false);
+        var callbackCount = 0;
+        var listener = new CrossProcessPollingListener(
+            _ =>
+            {
+                enteredWait.Set();
+                releaseWait.Wait(CrossProcessPollingListener.PollInterval * 4);
+                return true;
+            },
+            () => Interlocked.Increment(ref callbackCount));
+
+        try
+        {
+            Assert.True(enteredWait.Wait(TimeSpan.FromSeconds(5)), "listener never started polling");
+
+            listener.StopListening();
+
+            Assert.True(listener.IsCancellationRequested);
+            Assert.False(listener.PollingLoopCompletion.IsCompleted);
+
+            releaseWait.Set();
+            await listener.PollingLoopCompletion.WaitAsync(TimeSpan.FromSeconds(5));
+
+            // 取消之后才上报的信号必须被丢弃，而不是派发到已停听的监听器。
+            Assert.Equal(0, Volatile.Read(ref callbackCount));
+        }
+        finally
+        {
+            releaseWait.Set();
+            listener.Dispose();
+        }
     }
 }

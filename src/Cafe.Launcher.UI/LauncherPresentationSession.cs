@@ -5,13 +5,13 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Threading;
 using Cafe.Launcher.UI.Constants;
-using Cafe.Launcher.UI.Features.SetupWizard;
 using Cafe.Launcher.UI.Helpers;
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.UI.Services.Diagnostics;
 using Cafe.Launcher.UI.ViewModels;
 using Cafe.Launcher.UI.Views;
 using Cafe.Launcher.Core;
+using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services;
 using Cafe.Launcher.Core.Services.Diagnostics;
@@ -44,6 +44,7 @@ public sealed class LauncherPresentationSession : IDisposable
 
     private MainWindow? mainWindow;
     private SystemTrayService? trayService;
+    private volatile Task? startupTask;
     private bool startupAttached;
     private bool disposed;
 
@@ -75,6 +76,22 @@ public sealed class LauncherPresentationSession : IDisposable
 
     /// <summary>正常退出是否允许；宿主必须在取消生命周期工作之前检查。</summary>
     public bool CanShutdown => !viewModel.Operations.IsUninstallExecuting;
+
+    /// <summary>
+    /// 关闭屏障等待启动初始化结束的上限：取消后正常续体在毫秒级收尾，
+    /// 预算只兜住不响应取消的路径，避免退出无限等待。
+    /// </summary>
+    internal static readonly TimeSpan StartupShutdownWaitBudget = TimeSpan.FromSeconds(3);
+
+    /// <summary>
+    /// 启动初始化是否已经结束（没有挂载启动行为时视为已结束）。宿主持有关闭令牌源，
+    /// 必须据此决定能否安全释放它：续体仍可能在 <c>ReadAsync(shutdownToken)</c>
+    /// 一类调用里注册令牌。
+    /// </summary>
+    public bool IsStartupFinished => startupTask?.IsCompleted ?? true;
+
+    /// <summary>已挂载的启动初始化任务；首启向导路径没有完整初始化，因此可能为 null。</summary>
+    internal Task? StartupTask => startupTask;
 
     /// <summary>创建并配置本会话唯一的桌面窗口（含托盘），重复调用返回同一实例。</summary>
     public Window CreateMainWindow()
@@ -135,8 +152,36 @@ public sealed class LauncherPresentationSession : IDisposable
 
         WindowOpenedOnce.Subscribe(window, (_, _) =>
         {
-            _ = StartNormallyAsync(launchGameRequested, shutdownToken);
+            // 启动续体以显式弃等执行，但必须可被宿主观察：记录任务供关闭屏障等待，
+            // 异常在续体内部收口，避免关闭竞态变成未观察任务异常（审计 AUD-ARCH-019）。
+            startupTask = RunStartupAsync(launchGameRequested, shutdownToken);
         });
+    }
+
+    /// <summary>
+    /// 启动初始化的可观察外壳：捕获包括关闭竞态在内的一切异常，任务因此永不故障，
+    /// 宿主可以在任何时刻等待或释放它依赖的资源。
+    /// </summary>
+    private async Task RunStartupAsync(bool launchGameRequested, CancellationToken shutdownToken)
+    {
+        try
+        {
+            await StartNormallyAsync(launchGameRequested, shutdownToken);
+        }
+        catch (OperationCanceledException) when (shutdownToken.IsCancellationRequested)
+        {
+            // 初始化期间用户已经关窗：关闭竞态是正常收尾。
+        }
+        catch (ObjectDisposedException) when (shutdownToken.IsCancellationRequested)
+        {
+            // 关闭已经释放了协作者；续体看到的是宿主退出，不是缺陷。
+        }
+        catch (Exception exception)
+        {
+            // 启动失败的可见反馈由 InitializeAsync 自己承担，这里只留本地诊断，
+            // 并保证任务不把异常留给终结器。
+            LauncherLog.LogSync(LogEntrySeverity.Error, "App", $"Launcher startup failed: {exception.Message}");
+        }
     }
 
     /// <summary>
@@ -161,7 +206,7 @@ public sealed class LauncherPresentationSession : IDisposable
             return;
         }
 
-        if (!SetupWizardViewModel.RequiresConsent(savedSettings))
+        if (LauncherAgreement.IsCurrent(savedSettings.AcceptedAgreementVersion))
         {
             await InitializeThenMaybeLaunchAsync(launchGameRequested, shutdownToken);
             return;
@@ -185,7 +230,9 @@ public sealed class LauncherPresentationSession : IDisposable
             async Task OnSettingsApplied(LauncherSettings _)
             {
                 wizard.SettingsApplied -= OnSettingsApplied;
-                await InitializeThenMaybeLaunchAsync(launchGameRequested, shutdownToken);
+                // 保存与完整刷新由壳的向导完成序列承担；这里只补命令行启动，
+                // 再跑一遍 InitializeAsync 会重复加载主机状态。
+                await MaybeLaunchGameAsync(launchGameRequested, shutdownToken);
             }
 
             wizard.SettingsApplied += OnSettingsApplied;
@@ -279,11 +326,19 @@ public sealed class LauncherPresentationSession : IDisposable
         return Task.CompletedTask;
     }
 
-    /// <summary>宿主释放容器前的表现层收尾：结束会话并（按设置）记住窗口几何。</summary>
+    /// <summary>
+    /// 宿主释放容器前的表现层收尾：先等启动初始化结束（有界），再结束会话并（按设置）记住窗口几何。
+    /// </summary>
+    /// <remarks>
+    /// 启动初始化必须先于既有屏障收口：它在初始化末尾可能发起命令行启动的游戏操作，
+    /// 只有在它结束后，后面的游戏操作与刷新屏障才能覆盖到那些工作（审计 AUD-ARCH-019）。
+    /// </remarks>
     public async Task PrepareForShutdownAsync(CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();
         var window = mainWindow ?? throw new InvalidOperationException("Presentation window has not been created.");
+
+        await WaitForStartupToFinishAsync();
 
         try
         {
@@ -345,6 +400,45 @@ public sealed class LauncherPresentationSession : IDisposable
     private async Task InitializeThenMaybeLaunchAsync(bool launchGameRequested, CancellationToken shutdownToken)
     {
         await InitializeAsync(shutdownToken);
+        await MaybeLaunchGameAsync(launchGameRequested, shutdownToken);
+    }
+
+    /// <summary>
+    /// 关闭屏障对启动初始化的有界等待：续体已经结束时零开销；否则最多等
+    /// <see cref="StartupShutdownWaitBudget"/>，绝不无限等待。
+    /// </summary>
+    private async Task WaitForStartupToFinishAsync()
+    {
+        var startup = startupTask;
+        if (startup is null || startup.IsCompleted)
+        {
+            return;
+        }
+
+        try
+        {
+            await startup.WaitAsync(StartupShutdownWaitBudget);
+        }
+        catch (TimeoutException)
+        {
+            // 启动续体没有在预算内响应取消：退出继续，宿主据 IsStartupFinished 保留令牌源。
+            LauncherLog.LogSync(LogEntrySeverity.Warn, "Shutdown",
+                $"Startup initialization did not stop within {StartupShutdownWaitBudget.TotalMilliseconds:0} ms; shutdown continues.");
+        }
+        catch (Exception exception)
+        {
+            // 外壳任务本应自行吞掉异常；这里再兜一层，保证关闭屏障不因启动失败而中断。
+            LauncherLog.LogSync(LogEntrySeverity.Error, "Shutdown",
+                $"Startup initialization ended with {exception.GetType().Name}: {exception.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 初始化完成后的命令行启动请求。重新征询路径由向导完成序列先行刷新，
+    /// 因此也能单独调用，不再重复初始化。
+    /// </summary>
+    private async Task MaybeLaunchGameAsync(bool launchGameRequested, CancellationToken shutdownToken)
+    {
         if (!launchGameRequested)
         {
             return;

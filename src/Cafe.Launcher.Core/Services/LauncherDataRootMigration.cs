@@ -15,6 +15,12 @@ namespace Cafe.Launcher.Core.Services;
 /// 内容而不是丢数据。
 /// </para>
 /// <para>
+/// 同卷移动是原子改名；只有跨设备时才退化为复制，而复制先写
+/// <c>&lt;目标名&gt;.migrating</c>、完整后再原子改名为目标名。半成品因此永不占用
+/// 最终名：复制中断只会留下可清理的 <c>.migrating</c> 残片，下一次启动仍会重试该项，
+/// 而不是把截断内容当作「新位置已有内容」永久跳过（AUD-SET-004）。
+/// </para>
+/// <para>
 /// 运行期套接字（<c>cl-signal-*.sock</c>）不迁移：它们绑定的是旧进程的路径，移动一个
 /// 已绑定的套接字文件只会留下无法清理的残骸，还可能让新进程在同一个文件名上绑定失败。
 /// 旧目录若只剩这类文件就保留，下一次启动会在新数据根重新创建。
@@ -22,6 +28,8 @@ namespace Cafe.Launcher.Core.Services;
 /// </remarks>
 internal static class LauncherDataRootMigration
 {
+    /// <summary>跨设备复制的半成品后缀：不占用最终目标名，中断后由下一次迁移清理重试。</summary>
+    private const string PartialSuffix = ".migrating";
     internal static void MigrateLegacyRoot(LauncherDataRoot dataRoot, string legacyRoot)
     {
         string legacyPath;
@@ -80,50 +88,84 @@ internal static class LauncherDataRootMigration
             return;
         }
 
+        var partial = destination + PartialSuffix;
         try
         {
             Directory.CreateDirectory(destinationDirectory);
+            // 上一次复制中断留下的半成品按本次重试的起点处理：删掉再复制。
+            DeletePartial(partial);
             if (Directory.Exists(source))
             {
-                MoveDirectory(source, destination);
+                MoveDirectory(source, destination, partial);
             }
             else
             {
-                MoveFile(source, destination);
+                MoveFile(source, destination, partial);
             }
         }
         catch (IOException)
         {
-            // 目标不可写或跨设备复制中断：保留源文件，下一次启动会再次尝试。
+            // 目标不可写或复制中断：丢弃半成品，保留源文件，下一次启动会再次尝试。
+            DeletePartial(partial);
         }
         catch (UnauthorizedAccessException)
         {
+            DeletePartial(partial);
         }
     }
 
-    private static void MoveDirectory(string source, string destination)
+    private static void MoveDirectory(string source, string destination, string partial)
     {
         try
         {
             Directory.Move(source, destination);
+            return;
         }
         catch (IOException)
         {
-            CopyDirectory(source, destination);
-            Directory.Delete(source, recursive: true);
+            // 跨设备（EXDEV）无法改名，退化为复制。
         }
+
+        CopyDirectory(source, partial);
+        // 只有完整副本才占用最终名；此处改名同样原子。
+        Directory.Move(partial, destination);
+        Directory.Delete(source, recursive: true);
     }
 
-    private static void MoveFile(string source, string destination)
+    private static void MoveFile(string source, string destination, string partial)
     {
         try
         {
             File.Move(source, destination);
+            return;
         }
         catch (IOException)
         {
-            File.Copy(source, destination);
-            File.Delete(source);
+        }
+
+        File.Copy(source, partial);
+        File.Move(partial, destination);
+        File.Delete(source);
+    }
+
+    private static void DeletePartial(string partial)
+    {
+        try
+        {
+            if (Directory.Exists(partial))
+            {
+                Directory.Delete(partial, recursive: true);
+            }
+            else if (File.Exists(partial))
+            {
+                File.Delete(partial);
+            }
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
         }
     }
 
