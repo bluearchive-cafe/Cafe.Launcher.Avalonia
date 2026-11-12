@@ -326,8 +326,10 @@
             </LinearGradientBrush>
             <SolidColorBrush x:Key="Launcher.Color.Warning" Color="#FFB45309"/>
             <SolidColorBrush x:Key="Launcher.Color.Info" Color="#FF2E7DF6"/>
+            <!-- 三段 scrim：加深顶部并延长过渡，保证白字标题栏在任意壁纸上可读。 -->
             <LinearGradientBrush x:Key="Launcher.Color.TitleBar.Gradient" StartPoint="0%,0%" EndPoint="0%,100%">
-                <GradientStop Color="#52000000" Offset="0"/>
+                <GradientStop Color="#8C000000" Offset="0"/>
+                <GradientStop Color="#2E000000" Offset="0.55"/>
                 <GradientStop Color="#00000000" Offset="1"/>
             </LinearGradientBrush>
             <!-- 主题无关暗色渐变（主壳底部控制面板压在壁纸上；与 TitleBar.Gradient 同理不使用 Light/Dark 档）。 -->
@@ -381,6 +383,9 @@
                     <SolidColorBrush x:Key="Launcher.Color.Notice.Background" Color="#FFFFF6D8"/>
                     <SolidColorBrush x:Key="Launcher.Color.Warning.Background" Color="#FFFFF2C2"/>
                     <SolidColorBrush x:Key="Launcher.Color.Danger.Soft" Color="#FFFFECEE"/>
+                    <!-- soft 底色上的状态文字/图标：与 *Soft 成对，保证 4.5:1（ADR-041）。 -->
+                    <SolidColorBrush x:Key="Launcher.Color.Danger.OnSoft" Color="#FFC42B33"/>
+                    <SolidColorBrush x:Key="Launcher.Color.Success.OnSoft" Color="#FF126B33"/>
                     <SolidColorBrush x:Key="Launcher.Color.Content.Row" Color="#FFF1F5F9"/>
                     <SolidColorBrush x:Key="Launcher.Color.Content.Row.Hover" Color="#0A000000"/>
                     <SolidColorBrush x:Key="Launcher.Color.Button.Border" Color="#FFC8D2DE"/>
@@ -424,6 +429,8 @@
                     <SolidColorBrush x:Key="Launcher.Color.Notice.Background" Color="#FF352D17"/>
                     <SolidColorBrush x:Key="Launcher.Color.Warning.Background" Color="#FF463817"/>
                     <SolidColorBrush x:Key="Launcher.Color.Danger.Soft" Color="#FF3A1D22"/>
+                    <SolidColorBrush x:Key="Launcher.Color.Danger.OnSoft" Color="#FFE4676F"/>
+                    <SolidColorBrush x:Key="Launcher.Color.Success.OnSoft" Color="#FF4ADE80"/>
                     <SolidColorBrush x:Key="Launcher.Color.Content.Row" Color="#FF202833"/>
                     <SolidColorBrush x:Key="Launcher.Color.Content.Row.Hover" Color="#18FFFFFF"/>
                     <SolidColorBrush x:Key="Launcher.Color.Button.Border" Color="#FF4A5B73"/>

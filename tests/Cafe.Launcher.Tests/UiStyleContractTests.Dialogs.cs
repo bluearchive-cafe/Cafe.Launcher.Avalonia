@@ -748,6 +748,7 @@ public sealed partial class UiStyleContractTests
     {
         // ADR-041 提案 1：Ready=Success（配新增 Success.Soft 底），Failed=Danger，
         // Loading/Waiting 用中性的 Content.Row 底与 Text.Secondary 前景。
+        // 前景取 *Soft 配对档（OnSoft）：Success/Danger 直接压在 soft 底上只有 4.32/4.03。
         var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/ResourcePanelOverlay.axaml"));
 
         var baseStyle = GetStyleSetters(document, "Border.status-chip");
@@ -757,12 +758,12 @@ public sealed partial class UiStyleContractTests
         var readyBackground = GetStyleSetters(document, "Border.status-chip.ready");
         Assert.Equal("{DynamicResource Launcher.Color.Success.Soft}", readyBackground["Background"]);
         var readyIcon = GetStyleSetters(document, "Border.status-chip.ready materialIcons|MaterialIcon.status-chip-icon");
-        Assert.Equal("{DynamicResource Launcher.Color.Success}", readyIcon["Foreground"]);
+        Assert.Equal("{DynamicResource Launcher.Color.Success.OnSoft}", readyIcon["Foreground"]);
 
         var failedBackground = GetStyleSetters(document, "Border.status-chip.failed");
         Assert.Equal("{DynamicResource Launcher.Color.Danger.Soft}", failedBackground["Background"]);
         var failedText = GetStyleSetters(document, "Border.status-chip.failed TextBlock.status-chip-text");
-        Assert.Equal("{StaticResource Launcher.Color.Danger}", failedText["Foreground"]);
+        Assert.Equal("{DynamicResource Launcher.Color.Danger.OnSoft}", failedText["Foreground"]);
     }
 
     [Fact]

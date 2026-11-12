@@ -26,12 +26,12 @@
 
 ## 2. 无障碍豁免区（spec §7，逐项人工复核）
 
-豁免前提：该区文字叠于 scrim（`Launcher.TitleBar.Gradient` + `Launcher.Color.Overlay.Scrim*`），保证与任意壁纸色可读（最小 scrim 语义）。
+豁免前提：该区文字叠于 scrim（`Launcher.Color.TitleBar.Gradient` + `Launcher.Color.Overlay.Scrim*`），保证与任意壁纸色可读（最小 scrim 语义）。标题栏前景固定为白字档，scrim 为三段黑色渐变，不随壁纸亮度切换；浅色壁纸上同样复核白字可读性。
 
 | # | 豁免区 | 位置 | scrim 依据 | 复核 |
 |---|---|---|---|---|
 | 1 | 自绘标题栏文字 | `MainWindow.axaml` 标题栏 | `Launcher.Color.TitleBar.Gradient` | |
-| 2 | 标题栏按钮（chrome 态） | `Button.chrome` | 同标题栏渐变 | |
+| 2 | 标题栏按钮（chrome 态） | `Button.chrome` | 同标题栏渐变 + `Launcher.Color.Chrome.Hover/Pressed` | |
 | 3 | 右侧社交列 | `ItemsControl.social-actions` | 壁纸区域 scrim（`Overlay.Scrim.Md` 等） | |
 | 4 | 底栏渐变/scrim 上的 on-dark 文字 | `Border.control-panel` / `TextBlock.on-dark-caption` | `Launcher.Color.ControlPanel.Gradient` + `Color.Overlay.Scrim.*` | |
 
@@ -50,6 +50,7 @@
 - 两列自顶到底：导航列 header（「设置」标题）+ 内容区标题行右端 ✕（`content-header-action`）；不重复显示分类副标题。
 - 导航选中 = `SecondaryContainer` 填充 + `OnSecondaryContainer` 文字 + leading icon，无指示条；hover/pressed 用 `.Hover/.Pressed` 变体。
 - 内容区 = 纯列表 + 组间空档 + 行间 0.5 DIP hairline（`Color.Card.Border`，左缘对齐 16px 文本缩进）。
+- 层级字重：分类内的组标题一律 `group-title`（强调字重，含「当前背景」与「高级配色」），设置行标题固定常规字重；同一组内不再重复分类说明。
 - 覆盖层 = `Dialog.Background`（中性策略=种子跟随时由 scheme neutral 覆盖）+ `DialogSurface` 的 16 DIP 组件圆角 + 克制的双层 `Elevation.Shadow.Dialog`。
 - 控件统一 Field 形态（`Field.Background`/`Field.Border`/`Radius.Sm`/2px 聚焦环）；Field.Border 双档 ≥3:1（Light `#8290A5` / Dark `#7B89A0`）。
 - 底部操作带（取消 / 保存）语义与焦点默认落在安全操作。
@@ -87,8 +88,8 @@
 - 严重性四色（成功/警告/错误/信息）与系列卡对比度 ≥3:1（契约测试锁定）。
 
 ### 3.5 设置向导（ADR-059）
-- 模态 `DialogSurface`（920×480）内五段表面：全幅头部（标题 + `setupWizardStepProgress` 计数 + `wizard-skip` 跳过 + 六段进度轨）→ 发丝线 → 滚动正文舞台 → 发丝线 → 全幅动作带（`wizard-action`：上一步在左，下一步·完成在右，`MinWidth` 100，主操作叠 `primary-action`）。头部与动作带贴表面边缘，留白只由样式 token 承担。
-- 正文舞台 = 860 固定宽（300 左引导 + 32 间距 + 528 右面板），六步共用同一结构，仅右面板随步骤变化。左引导 = 56 圆形语义图标 + 步骤标题 + 说明；右面板为 `wizard-panel` Card，承载语言选择、协议阅读器、路径输入与状态行、`wizard-option` 选项行或复核摘要行；协议步面板自管留白，读者区独占滚动。
+- 模态 `DialogSurface`（920×480）内五段表面：全幅头部（标题 + `setupWizardStepProgress` 计数 + `wizard-skip` 跳过 + 七段进度轨）→ 发丝线 → 滚动正文舞台 → 发丝线 → 全幅动作带（`wizard-action`：上一步在左，下一步·完成在右，`MinWidth` 100，主操作叠 `primary-action`）。头部与动作带贴表面边缘，留白只由样式 token 承担。
+- 正文舞台 = 860 固定宽（300 左引导 + 32 间距 + 528 右面板），七步共用同一结构，仅右面板随步骤变化（欢迎 0 → 语言 1 → 协议 2 → 游戏路径 3 → 下载源 4 → 代理 5 → 复核 6，ADR-061）。左引导 = 56 圆形语义图标 + 步骤标题 + 说明；右面板为 `wizard-panel` Card，承载欢迎页只读配置概览、语言选择、协议阅读器、路径输入与状态行、`wizard-option` 选项行或复核摘要行；协议步面板自管留白，读者区独占滚动。欢迎页五行概览只建立预期，不设跳转入口。
 - 下载源/代理选项 = `wizard-option` 单选列表行（最小行高 64、整行等宽拉伸命中、悬停/按压/禁用/焦点态齐备、选中取 Primary.Soft + 主色描边、自绘 20 圆单选圈左缘跨行对齐）；路径状态 = `wizard-status-row`（图标 + 语义色文本，色彩非唯一信号）；语言与路径字段在控件上方标注字段名；复核 = `wizard-summary-row` + hairline 分隔 + Pencil「修改」，最后一步 Footer 切「完成」。
 - 协议步骤：左引导追加版次胶囊与语言声明；`AgreementScrollViewer` 为唯一滚动区，同意项固定在面板底栏，滚动提示仅保留为 `AutomationProperties.HelpText`，勾选门禁由滚动到底驱动。
 - 完成确认态：最后一步（复核）即完成态，中性标题配 Success 徽章和勾号，无庆祝动画、不缩放。

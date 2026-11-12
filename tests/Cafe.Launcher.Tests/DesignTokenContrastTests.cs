@@ -64,6 +64,8 @@ public sealed class DesignTokenContrastTests
         new("info surface primary text", "Launcher.Text.Primary", "Launcher.Color.Info.Background", 4.5),
         new("notice surface primary text", "Launcher.Text.Primary", "Launcher.Color.Notice.Background", 4.5),
         new("danger soft primary text", "Launcher.Text.Primary", "Launcher.Color.Danger.Soft", 4.5),
+        new("success chip text on soft", "Launcher.Color.Success.OnSoft", "Launcher.Color.Success.Soft", 4.5),
+        new("danger chip text on soft", "Launcher.Color.Danger.OnSoft", "Launcher.Color.Danger.Soft", 4.5),
         new("warning surface primary text", "Launcher.Text.Primary", "Launcher.Color.Warning.Background", 4.5),
         new("error action label", "Launcher.Color.OnError", "Launcher.Color.Error", 4.5),
         new("error action label (hover)", "Launcher.Color.OnError", "Launcher.Color.Error.Hover", 4.5),

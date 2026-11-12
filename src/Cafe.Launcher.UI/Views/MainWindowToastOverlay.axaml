@@ -26,6 +26,7 @@
                     <Border Classes="toast-card"
                             Classes.motion-enabled="{Binding #ToastOverlayRoot.((vm:MainWindowViewModel)DataContext).IsMotionEnabled}"
                             Classes.motion-exit="{Binding IsExiting}"
+                            controls:MotionEntrance.IsTriggered="True"
                             IsHitTestVisible="True"
                             PointerEntered="OnToastCardPointerEntered"
                             PointerExited="OnToastCardPointerExited">

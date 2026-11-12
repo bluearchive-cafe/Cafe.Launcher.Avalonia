@@ -64,19 +64,19 @@
     <Setter Property="Background" Value="{DynamicResource Launcher.Color.Success.Soft}"/>
   </Style>
   <Style Selector="Border.status-chip.ready materialIcons|MaterialIcon.status-chip-icon">
-    <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Success}"/>
+    <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Success.OnSoft}"/>
   </Style>
   <Style Selector="Border.status-chip.ready TextBlock.status-chip-text">
-    <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Success}"/>
+    <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Success.OnSoft}"/>
   </Style>
   <Style Selector="Border.status-chip.failed">
     <Setter Property="Background" Value="{DynamicResource Launcher.Color.Danger.Soft}"/>
   </Style>
   <Style Selector="Border.status-chip.failed materialIcons|MaterialIcon.status-chip-icon">
-    <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Danger}"/>
+    <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Danger.OnSoft}"/>
   </Style>
   <Style Selector="Border.status-chip.failed TextBlock.status-chip-text">
-    <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Danger}"/>
+    <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Danger.OnSoft}"/>
   </Style>
 
   <!-- UID 来源分段按钮的共享视觉契约在 Segmented.axaml。 -->

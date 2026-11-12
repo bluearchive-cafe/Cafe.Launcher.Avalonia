@@ -1607,7 +1607,8 @@
         <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
     </Style>
-    <Style Selector="controls|SettingRow TextBlock.section-title, views|SettingsAppearanceSection TextBlock.section-title">
+    <!-- 设置页行标题降为常规字重；分类内的组标题一律用 group-title（Strong）。 -->
+    <Style Selector="controls|SettingRow TextBlock.section-title">
         <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Normal}"/>
     </Style>
     <Style Selector="TextBlock.group-title">

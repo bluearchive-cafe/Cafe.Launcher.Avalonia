@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.VisualTree;
 using Cafe.Launcher.UI.Helpers;
 
 namespace Cafe.Launcher.UI.Controls;
@@ -57,12 +58,20 @@ internal static class MotionVisibility
         Control control,
         AvaloniaPropertyChangedEventArgs args)
     {
-        if (!args.GetNewValue<bool>()
-            && !GetIsOpen(control)
-            && States.TryGetValue(control, out var state))
+        if (args.GetNewValue<bool>() || !States.TryGetValue(control, out var state))
         {
-            state.Close(isMotionEnabled: false);
+            return;
         }
+
+        if (GetIsOpen(control))
+        {
+            // 入场锚点只服务一次打开：关闭动效时摘掉，重开动效不会让已展开的叠层
+            // 重新匹配 motion-enter 选择器而重放入场（§2.7 最新状态为准、不重放）。
+            state.SettleEntrance();
+            return;
+        }
+
+        state.Close(isMotionEnabled: false);
     }
 
     private sealed class MotionState(Control control)
@@ -74,9 +83,28 @@ internal static class MotionVisibility
         public void Open()
         {
             CancelPendingExit();
+            var wasPresented = control.IsAttachedToVisualTree() && control.IsEffectivelyVisible;
             control.IsVisible = true;
             control.Classes.Remove("motion-exit");
+            if (!GetIsMotionEnabled(control))
+            {
+                control.Classes.Remove("motion-enter");
+                return;
+            }
+
+            if (!wasPresented)
+            {
+                // 首次呈现前挂锚点时，样式动画会随首次布局立即落到终态（实测：叠层
+                // scrim 与表面都不动）；先跑一遍布局让表面完成样式化，再挂锚点。
+                control.UpdateLayout();
+            }
+
             control.Classes.Add("motion-enter");
+        }
+
+        public void SettleEntrance()
+        {
+            control.Classes.Remove("motion-enter");
         }
 
         public void Close(bool isMotionEnabled)

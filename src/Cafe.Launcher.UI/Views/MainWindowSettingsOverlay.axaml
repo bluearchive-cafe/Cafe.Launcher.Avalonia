@@ -108,35 +108,37 @@
                                                    Text="{Binding Description}"
                                                    Classes="caption" TextWrapping="Wrap"/>
 
+                                    <!-- 入场锚点由 MotionEntrance 单次触发并在快速档后摘除：
+                                         若把 motion-enter 绑成常驻类，重开动效会让当前分类整体重播淡化（§2.7）。 -->
                                     <views:SettingsGeneralSection IsVisible="{Binding Settings.IsGeneralCategorySelected}"
                                                               Classes="motion-content"
                                                               Classes.motion-enabled="{Binding IsMotionEnabled}"
-                                                              Classes.motion-enter="{Binding Settings.IsGeneralCategorySelected}">
+                                                              controls:MotionEntrance.IsTriggered="{Binding Settings.IsGeneralCategorySelected}">
                                 </views:SettingsGeneralSection>
                                 <views:SettingsGameSection IsVisible="{Binding Settings.IsGameCategorySelected}"
                                                            Classes="motion-content"
                                                            Classes.motion-enabled="{Binding IsMotionEnabled}"
-                                                           Classes.motion-enter="{Binding Settings.IsGameCategorySelected}">
+                                                           controls:MotionEntrance.IsTriggered="{Binding Settings.IsGameCategorySelected}">
                                 </views:SettingsGameSection>
                                 <views:SettingsDownloadNetworkSection IsVisible="{Binding Settings.IsDownloadNetworkCategorySelected}"
                                                                       Classes="motion-content"
                                                                       Classes.motion-enabled="{Binding IsMotionEnabled}"
-                                                                      Classes.motion-enter="{Binding Settings.IsDownloadNetworkCategorySelected}">
+                                                                      controls:MotionEntrance.IsTriggered="{Binding Settings.IsDownloadNetworkCategorySelected}">
                                 </views:SettingsDownloadNetworkSection>
                                 <views:SettingsAppearanceSection IsVisible="{Binding Settings.IsAppearanceCategorySelected}"
                                                                  Classes="motion-content"
                                                                  Classes.motion-enabled="{Binding IsMotionEnabled}"
-                                                                 Classes.motion-enter="{Binding Settings.IsAppearanceCategorySelected}">
+                                                                 controls:MotionEntrance.IsTriggered="{Binding Settings.IsAppearanceCategorySelected}">
                                 </views:SettingsAppearanceSection>
                                 <views:SettingsAdvancedSection IsVisible="{Binding Settings.IsAdvancedCategorySelected}"
                                                                Classes="motion-content"
                                                                Classes.motion-enabled="{Binding IsMotionEnabled}"
-                                                               Classes.motion-enter="{Binding Settings.IsAdvancedCategorySelected}">
+                                                               controls:MotionEntrance.IsTriggered="{Binding Settings.IsAdvancedCategorySelected}">
                                 </views:SettingsAdvancedSection>
                                 <views:SettingsAboutSection IsVisible="{Binding Settings.IsAboutCategorySelected}"
                                                             Classes="motion-content"
                                                             Classes.motion-enabled="{Binding IsMotionEnabled}"
-                                                            Classes.motion-enter="{Binding Settings.IsAboutCategorySelected}">
+                                                            controls:MotionEntrance.IsTriggered="{Binding Settings.IsAboutCategorySelected}">
                                 </views:SettingsAboutSection>
                                     </StackPanel>
                                     </ScrollViewer>

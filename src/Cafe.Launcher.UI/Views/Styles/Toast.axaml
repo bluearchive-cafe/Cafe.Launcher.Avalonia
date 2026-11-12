@@ -13,8 +13,9 @@
         <Setter Property="Opacity" Value="1"/>
         <Setter Property="ClipToBounds" Value="True"/>
     </Style>
-    <!-- ADR-016 Toast 进入：透明度走进入减速曲线，右侧短距滑入走点到点曲线，均为 167ms 快速档。 -->
-    <Style Selector="Border.toast-card.motion-enabled:not(.motion-exit)">
+    <!-- ADR-016 Toast 进入：透明度走进入减速曲线，右侧短距滑入走点到点曲线，均为 167ms 快速档。
+         motion-enter 是 MotionEntrance 的一次性锚点：摘除后重开动效不会重播入场。 -->
+    <Style Selector="Border.toast-card.motion-enabled.motion-enter:not(.motion-exit)">
         <Style.Animations>
             <Animation Duration="{x:Static helpers:MotionTokens.FastDuration}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Enter}">
                 <KeyFrame Cue="0%">

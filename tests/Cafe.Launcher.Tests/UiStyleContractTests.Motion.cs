@@ -16,12 +16,20 @@ public sealed partial class UiStyleContractTests
             overlay,
             StringComparison.Ordinal);
         var overlayDocument = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowToastOverlay.axaml"));
+        var controlsNamespace = overlayDocument.Root?.GetNamespaceOfPrefix("controls");
+        Assert.NotNull(controlsNamespace);
         var toastCard = overlayDocument
             .Descendants()
             .Single(element =>
                 element.Name.LocalName == "Border"
                 && HasClass(element, "toast-card"));
         Assert.Equal("{Binding IsExiting}", toastCard.Attribute("Classes.motion-exit")?.Value);
+        // 入场锚点由 MotionEntrance 单次触发并在快速档后摘除；不得改成常驻类或绑定，
+        // 否则重开动效时已有 Toast 会随选择器重新匹配而重播入场。
+        Assert.Equal(
+            "True",
+            toastCard.Attribute(controlsNamespace + "MotionEntrance.IsTriggered")?.Value);
+        Assert.Null(toastCard.Attribute("Classes.motion-enter"));
 
         var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/Styles/Toast.axaml"));
         var toastStyles = document
@@ -38,7 +46,7 @@ public sealed partial class UiStyleContractTests
         var enterMotionStyle = Assert.Single(
             toastStyles,
             style => style.Attribute("Selector")?.Value
-                == "Border.toast-card.motion-enabled:not(.motion-exit)");
+                == "Border.toast-card.motion-enabled.motion-enter:not(.motion-exit)");
         var exitMotionStyle = Assert.Single(
             toastStyles,
             style => style.Attribute("Selector")?.Value
@@ -261,13 +269,16 @@ public sealed partial class UiStyleContractTests
         });
 
         var settings = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowSettingsOverlay.axaml"));
+        var settingsControlsNamespace = settings.Root?.GetNamespaceOfPrefix("controls");
+        Assert.NotNull(settingsControlsNamespace);
         var contentTargets = settings
             .Descendants()
             .Where(element => HasClass(element, "motion-content"))
             .ToList();
 
         // ADR-017：向导步骤面板改由后置代码顺序换页（wizard-step），不再属于 motion-content
-        // 家族；设置页六个内容分区维持直接绑定驱动的纯淡化（motion-enter 与可见性同源）。
+        // 家族；设置页六个内容分区保留纯淡化，但入场锚点改由 MotionEntrance 单次触发，
+        // 不再与可见性同源常驻——否则重开动效会让当前分类整体重播淡化（§2.7）。
         // 审计-0828：淡化家族不承载位移，仅表面（motion-surface）保留本地 TranslateTransform。
         Assert.Equal(6, contentTargets.Count);
         Assert.All(contentTargets, element =>
@@ -277,7 +288,8 @@ public sealed partial class UiStyleContractTests
                 element.Attribute("Classes.motion-enabled")?.Value);
             Assert.Equal(
                 element.Attribute("IsVisible")?.Value,
-                element.Attribute("Classes.motion-enter")?.Value);
+                element.Attribute(settingsControlsNamespace + "MotionEntrance.IsTriggered")?.Value);
+            Assert.Null(element.Attribute("Classes.motion-enter"));
             Assert.Null(element.Attribute("RenderTransform"));
         });
 

@@ -595,6 +595,12 @@ public sealed partial class UiStyleContractTests
         var skipStyle = GetStyleSetters(styles, "Button.wizard-skip");
         Assert.Equal("{StaticResource Launcher.Color.Transparent}", skipStyle["Background"]);
         Assert.Equal("{DynamicResource Launcher.Text.Secondary}", skipStyle["Foreground"]);
+        // 2 DIP 透明描边预留焦点环：取焦只换色，不改变几何。
+        Assert.Equal("{StaticResource Launcher.Border.Thickness.Focus}", skipStyle["BorderThickness"]);
+        Assert.Equal("{StaticResource Launcher.Color.Transparent}", skipStyle["BorderBrush"]);
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.FocusRing}",
+            GetStyleSetters(styles, "Button.wizard-skip:focus-visible")["BorderBrush"]);
         Assert.Equal(
             "{DynamicResource Launcher.Color.Content.Row.Hover}",
             GetStyleSetters(styles, "Button.wizard-skip:pointerover")["Background"]);
@@ -754,6 +760,12 @@ public sealed partial class UiStyleContractTests
         Assert.Equal("{StaticResource Launcher.Spacing.Thickness.Sm}", editStyle["Padding"]);
         Assert.DoesNotContain("Width", editStyle.Keys);
         Assert.Equal("{StaticResource Launcher.Color.Transparent}", editStyle["Background"]);
+        // 与跳过钮同构：2 DIP 透明描边预留焦点环。
+        Assert.Equal("{StaticResource Launcher.Border.Thickness.Focus}", editStyle["BorderThickness"]);
+        Assert.Equal("{StaticResource Launcher.Color.Transparent}", editStyle["BorderBrush"]);
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.FocusRing}",
+            GetStyleSetters(styles, "Button.wizard-summary-edit:focus-visible")["BorderBrush"]);
         Assert.Equal(
             "{StaticResource Launcher.Typography.FontSize.Body.Sm}",
             GetStyleSetters(styles, "TextBlock.wizard-summary-edit-label")["FontSize"]);

@@ -129,7 +129,7 @@
                     </Grid>
                 </Border>
                 <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-                    <TextBlock Text="{Binding Shell.I18n[currentBackground]}" Classes="section-title"/>
+                    <TextBlock Text="{Binding Shell.I18n[currentBackground]}" Classes="group-title"/>
                     <TextBlock Text="{Binding Shell.I18n[backgroundSourceBundled]}" Classes="caption"
                                IsVisible="{Binding Background.CurrentBackgroundLocation, Converter={x:Static StringConverters.IsNullOrEmpty}}"/>
                     <TextBlock Text="{Binding Shell.I18n[backgroundSourceRemote]}" Classes="caption"
@@ -353,7 +353,7 @@
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
                         <materialIcons:MaterialIcon Kind="PaletteOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}" VerticalAlignment="Center"/>
                         <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-                            <TextBlock Text="{Binding Shell.I18n[settingsAdvancedColors]}" Classes="section-title"/>
+                            <TextBlock Text="{Binding Shell.I18n[settingsAdvancedColors]}" Classes="group-title"/>
                             <TextBlock Text="{Binding Shell.I18n[settingsAdvancedColorsDescription]}" Classes="caption" TextWrapping="Wrap"/>
                         </StackPanel>
                     </Grid>

@@ -1,8 +1,11 @@
+using System.Collections.Specialized;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using Cafe.Launcher.UI.Constants;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -180,6 +183,79 @@ public sealed partial class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
+    public async Task MainWindow_FirstSettingsOpen_ShowsSelectedSectionAtFullOpacity()
+    {
+        using var context = CreateContext();
+        context.ViewModel.IsMotionReduced = false;
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        // 首次打开前设置内容尚未进入可视树。锚点若在此前挂上又摘除，样式动画会停在
+        // 起势帧 Opacity=0 且不回退——整页空白，只有切换分类才重建。
+        await Task.Delay(250);
+        await Dispatcher.UIThread.InvokeAsync(() => { });
+
+        context.ViewModel.WindowChrome.ShowSettingsCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+
+        var section = context.Window.GetVisualDescendants()
+            .OfType<UserControl>()
+            .Single(control => control.Classes.Contains("motion-content") && control.IsVisible);
+        await HeadlessTestHost.WaitUntilAsync(
+            () => section.Opacity >= 1d && !section.Classes.Contains("motion-enter"),
+            TimeSpan.FromSeconds(3),
+            "First settings open left the selected section hidden.");
+    }
+
+    [AvaloniaFact]
+    public async Task MainWindow_FirstSettingsOpen_RealizesSurfaceBeforeAttachingEntranceAnchor()
+    {
+        using var context = CreateContext();
+        context.ViewModel.IsMotionReduced = false;
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var overlay = context.Window.GetVisualDescendants().OfType<Grid>()
+            .Single(control => control.Classes.Contains("settings-overlay"));
+        var surface = overlay.GetVisualDescendants()
+            .OfType<Cafe.Launcher.UI.Controls.DialogSurface>()
+            .Single();
+        var arrangedWhenAnchorAttached = false;
+        var anchorAttached = false;
+        overlay.Classes.CollectionChanged += (_, args) =>
+        {
+            if (anchorAttached
+                || args.Action != NotifyCollectionChangedAction.Add
+                || !Equals(args.NewItems?[0], "motion-enter"))
+            {
+                return;
+            }
+
+            anchorAttached = true;
+            arrangedWhenAnchorAttached = surface.Bounds.Width > 0 && surface.Bounds.Height > 0;
+        };
+
+        // 首次打开前叠层从未呈现。若锚点与「转为可见」同批次生效，样式动画会随首次
+        // 布局直接落到终态——scrim 与表面都纹丝不动，只有第二次打开才播放入场。
+        // 因此锚点必须在表面完成布局之后才挂上（见 MotionVisibility.Open）。
+        await Task.Delay(250);
+        await Dispatcher.UIThread.InvokeAsync(() => { });
+        context.ViewModel.WindowChrome.ShowSettingsCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(anchorAttached, "First settings open did not attach the entrance anchor.");
+        Assert.True(
+            arrangedWhenAnchorAttached,
+            "Entrance anchor was attached before the settings surface was laid out.");
+
+        var translate = Assert.IsType<TranslateTransform>(surface.RenderTransform);
+        await HeadlessTestHost.WaitUntilAsync(
+            () => surface.Opacity >= 1d && translate.Y == 0d,
+            TimeSpan.FromSeconds(3),
+            "Settings surface entrance did not settle at full opacity.");
+    }
+
+    [AvaloniaFact]
     public async Task MainWindow_AfterEntranceWindow_EntranceAnchorsAreRetired()
     {
         using var context = CreateContext();
@@ -225,6 +301,39 @@ public sealed partial class MainWindowHeadlessTests
 
         Assert.DoesNotContain("motion-enter", shellRoot.Classes);
         Assert.Equal(1d, shellRoot.Opacity);
+    }
+
+    [AvaloniaFact]
+    public async Task MainWindow_SettingsSectionEntrance_RetiresAnchor_AndMotionToggleDoesNotReplay()
+    {
+        using var context = CreateContext();
+        context.ViewModel.IsMotionReduced = false;
+        OpenSettings(context);
+
+        context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.Game;
+        Dispatcher.UIThread.RunJobs();
+
+        var section = context.Window.GetVisualDescendants()
+            .OfType<UserControl>()
+            .Single(control => control.Classes.Contains("motion-content") && control.IsVisible);
+        Assert.Contains("motion-enter", section.Classes);
+
+        // 分类淡化的入场锚点必须在快速档后摘除：随后重开动效偏好时，
+        // motion-content.motion-enabled 不得因为锚点仍在而重播（§2.7）。
+        await HeadlessTestHost.WaitUntilAsync(
+            () => !section.Classes.Contains("motion-enter"),
+            TimeSpan.FromSeconds(3),
+            "Settings section entrance anchor did not retire.");
+
+        context.ViewModel.IsMotionReduced = true;
+        Dispatcher.UIThread.RunJobs();
+        context.ViewModel.IsMotionReduced = false;
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.DoesNotContain("motion-enter", section.Classes);
+        var overlay = context.Window.GetVisualDescendants().OfType<Grid>()
+            .Single(control => control.Classes.Contains("settings-overlay"));
+        Assert.DoesNotContain("motion-enter", overlay.Classes);
     }
 
     [AvaloniaFact]

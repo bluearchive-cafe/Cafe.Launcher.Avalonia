@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using Avalonia.Threading;
 using Cafe.Launcher.UI.Controls;
 using Cafe.Launcher.UI.Helpers;
 
@@ -117,14 +118,50 @@ public sealed class MotionVisibilityTests
             queuedExit.Context.RunPostedCallbacks();
             await queuedExit.PendingExit.WaitAsync(TimeSpan.FromSeconds(5));
 
+            // Reduced 档打开不带入场锚点：之后开启动效时选择器无从重新匹配。
             Assert.True(overlay.IsVisible);
-            Assert.Contains("motion-enter", overlay.Classes);
+            Assert.DoesNotContain("motion-enter", overlay.Classes);
             Assert.DoesNotContain("motion-exit", overlay.Classes);
         }
         finally
         {
             AnimationTimings.ExitAnimationDuration = originalDuration;
         }
+    }
+
+    [AvaloniaFact]
+    public void OpenWithMotionDisabled_ThenEnableMotion_DoesNotReplayEntrance()
+    {
+        var overlay = new Grid();
+        MotionVisibility.SetIsMotionEnabled(overlay, false);
+        MotionVisibility.SetIsOpen(overlay, true);
+
+        Assert.True(overlay.IsVisible);
+        Assert.DoesNotContain("motion-enter", overlay.Classes);
+
+        MotionVisibility.SetIsMotionEnabled(overlay, true);
+
+        Assert.True(overlay.IsVisible);
+        Assert.DoesNotContain("motion-enter", overlay.Classes);
+    }
+
+    [AvaloniaFact]
+    public void DisableMotionWhileOpen_StripsEntranceAnchor_AndReenableDoesNotRestoreIt()
+    {
+        var overlay = new Grid();
+        MotionVisibility.SetIsMotionEnabled(overlay, true);
+        MotionVisibility.SetIsOpen(overlay, true);
+        Assert.Contains("motion-enter", overlay.Classes);
+
+        MotionVisibility.SetIsMotionEnabled(overlay, false);
+
+        Assert.True(overlay.IsVisible);
+        Assert.DoesNotContain("motion-enter", overlay.Classes);
+
+        MotionVisibility.SetIsMotionEnabled(overlay, true);
+
+        Assert.True(overlay.IsVisible);
+        Assert.DoesNotContain("motion-enter", overlay.Classes);
     }
 
     private static async Task<QueuedExit> BeginQueuedExitAsync(Grid overlay)
@@ -173,6 +210,102 @@ public sealed class MotionVisibilityTests
             {
                 callback.Callback(callback.State);
             }
+        }
+    }
+}
+
+[Collection(nameof(MotionVisibilityTests))]
+public sealed class MotionEntranceTests
+{
+    [AvaloniaFact]
+    public async Task TriggeredBeforeAttach_AppliesAnchorOncePresentedAndRetiresAfterEntranceWindow()
+    {
+        var overlay = new Grid();
+        MotionEntrance.SetIsTriggered(overlay, true);
+        var window = new Window { Content = overlay };
+        try
+        {
+            // 未呈现前不得挂锚点：动画会停在起势帧（Opacity=0）且摘类不回退。
+            Assert.DoesNotContain("motion-enter", overlay.Classes);
+            window.Show();
+
+            await HeadlessTestHost.WaitUntilAsync(
+                () => overlay.Classes.Contains("motion-enter"),
+                TimeSpan.FromSeconds(3),
+                "Entrance anchor was not applied after the surface was presented.");
+            await HeadlessTestHost.WaitUntilAsync(
+                () => !overlay.Classes.Contains("motion-enter"),
+                TimeSpan.FromSeconds(3),
+                "Entrance anchor did not retire after the entrance window.");
+            Assert.Equal(1d, overlay.Opacity);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task TriggeredWhileHidden_SkipsEntranceAndResumesOnNextTrigger()
+    {
+        var overlay = new Grid();
+        var host = new Border { Child = overlay, IsVisible = false };
+        var window = new Window { Content = host };
+        window.Show();
+        try
+        {
+            // 祖先隐藏时触发（叠层还没打开）不挂锚点：隐藏中挂类，动画既不会在显现时
+            // 重放，还可能落到不可见状态；Avalonia 也不为有效可见性变化发通知。
+            MotionEntrance.SetIsTriggered(overlay, true);
+            Assert.DoesNotContain("motion-enter", overlay.Classes);
+
+            host.IsVisible = true;
+            Dispatcher.UIThread.RunJobs();
+            Assert.DoesNotContain("motion-enter", overlay.Classes);
+            Assert.Equal(1d, overlay.Opacity);
+
+            // 之后的一次真实触发（如切换设置分类）正常入场并在窗期后摘除。
+            MotionEntrance.SetIsTriggered(overlay, false);
+            MotionEntrance.SetIsTriggered(overlay, true);
+            Assert.Contains("motion-enter", overlay.Classes);
+            await HeadlessTestHost.WaitUntilAsync(
+                () => !overlay.Classes.Contains("motion-enter"),
+                TimeSpan.FromSeconds(3),
+                "Entrance anchor did not retire after the entrance window.");
+            Assert.Equal(1d, overlay.Opacity);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Retrigger_AfterRetirement_ReplaysAnchorOnlyOnNewTrigger()
+    {
+        var overlay = new Grid();
+        var window = new Window { Content = overlay };
+        window.Show();
+        try
+        {
+            MotionEntrance.SetIsTriggered(overlay, true);
+            Assert.Contains("motion-enter", overlay.Classes);
+            await HeadlessTestHost.WaitUntilAsync(
+                () => !overlay.Classes.Contains("motion-enter"),
+                TimeSpan.FromSeconds(3),
+                "Entrance anchor did not retire after the entrance window.");
+
+            // 锚点摘除后属性保持 true 不得重新挂类——这正是重开动效偏好的场景。
+            Dispatcher.UIThread.RunJobs();
+            Assert.DoesNotContain("motion-enter", overlay.Classes);
+
+            MotionEntrance.SetIsTriggered(overlay, false);
+            MotionEntrance.SetIsTriggered(overlay, true);
+            Assert.Contains("motion-enter", overlay.Classes);
+        }
+        finally
+        {
+            window.Close();
         }
     }
 }
