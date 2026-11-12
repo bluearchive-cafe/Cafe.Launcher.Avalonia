@@ -8,7 +8,7 @@ namespace Cafe.Launcher.Core.Constants;
 /// </summary>
 public static class LauncherAgreement
 {
-    public const string CurrentVersion = "2026-11-10";
+    public const string CurrentVersion = "2026-11-12";
 
     /// <summary>报告已落盘的同意版本是否为当前版本。</summary>
     public static bool IsCurrent(string? acceptedVersion) =>
