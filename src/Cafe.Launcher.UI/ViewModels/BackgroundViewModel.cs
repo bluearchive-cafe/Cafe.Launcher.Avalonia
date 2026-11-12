@@ -22,19 +22,15 @@ using Cafe.Launcher.Core.Helpers;
 
 namespace Cafe.Launcher.UI.ViewModels;
 
-internal partial class BackgroundViewModel : ViewModelBase, IDisposable
+internal partial class BackgroundViewModel : ObservableObject, IDisposable
 {
-    private readonly IImageCacheService imageCacheService;
+    private readonly IRemoteImageStore remoteImageStore;
     private readonly ILauncherDiagnostics diagnostics;
     private readonly Action<LauncherSettings> wallpaperChanged;
     private readonly Func<string, PixelSize, IImage?> imageLoader;
     private readonly Func<IImage?> bundledImageLoader;
     private readonly IWindowMetricsService? windowMetrics;
-    private readonly Func<string, CancellationToken, Task<IImage?>> videoThumbnailLoader;
-    private readonly LatestRefresh videoThumbnailRefresh = new();
-    private IImage? videoThumbnail;
-    private string? videoThumbnailSourceKey;
-    private int videoThumbnailGeneration;
+    private readonly VideoThumbnailFlow videoThumbnails;
     private string? currentDecodedImagePath;
     private PixelSize lastDecodeTarget;
     private string? lastBackgroundSourceKey;
@@ -103,11 +99,11 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
 
     /// <summary>Video previews and palette extraction share cover art or the first frame; the playback fallback stays static.</summary>
     public IImage? BackgroundPreviewImage => IsVideoBackgroundSelected
-        ? videoThumbnail ?? BackgroundImageSource
+        ? videoThumbnails.Thumbnail ?? BackgroundImageSource
         : BackgroundImageSource;
 
     /// <summary>The current thumbnail request, independent of presentation-only settings previews.</summary>
-    internal Task PendingVideoThumbnail => videoThumbnailRefresh.Pending;
+    internal Task PendingVideoThumbnail => videoThumbnails.Pending;
 
     [ObservableProperty]
     private int backgroundVideoVolume;
@@ -117,20 +113,20 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
     private bool hasBackgroundLoadFailure;
 
     public BackgroundViewModel(
-        IImageCacheService imageCacheService,
+        IRemoteImageStore remoteImageStore,
         ILauncherDiagnostics diagnostics,
         SettingsViewModel settings,
         VideoThumbnailService videoThumbnailService,
         IWindowMetricsService? windowMetrics = null,
         ToastService? toastService = null,
         LocalizationService? localizer = null)
-        : this(imageCacheService, diagnostics, settings, windowMetrics, toastService, localizer,
+        : this(remoteImageStore, diagnostics, settings, windowMetrics, toastService, localizer,
             videoThumbnailService.LoadThumbnailAsync)
     {
     }
 
     internal BackgroundViewModel(
-        IImageCacheService imageCacheService,
+        IRemoteImageStore remoteImageStore,
         ILauncherDiagnostics diagnostics,
         SettingsViewModel settings,
         IWindowMetricsService? windowMetrics = null,
@@ -138,7 +134,7 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
         LocalizationService? localizer = null,
         Func<string, CancellationToken, Task<IImage?>>? videoThumbnailLoader = null)
         : this(
-            imageCacheService,
+            remoteImageStore,
             diagnostics,
             previewSettings =>
             {
@@ -156,13 +152,13 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
     }
 
     internal BackgroundViewModel(
-        IImageCacheService imageCacheService,
+        IRemoteImageStore remoteImageStore,
         ILauncherDiagnostics diagnostics,
         Action<LauncherSettings> wallpaperChanged,
         IWindowMetricsService? windowMetrics = null,
         Func<string, CancellationToken, Task<IImage?>>? videoThumbnailLoader = null)
         : this(
-            imageCacheService,
+            remoteImageStore,
             diagnostics,
             wallpaperChanged,
             (path, targetPhysicalSize) => BackgroundImageDecoder.Decode(path, targetPhysicalSize),
@@ -180,7 +176,7 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
     /// bitmap was actually decoded for.
     /// </param>
     internal BackgroundViewModel(
-        IImageCacheService imageCacheService,
+        IRemoteImageStore remoteImageStore,
         ILauncherDiagnostics diagnostics,
         Action<LauncherSettings> wallpaperChanged,
         Func<string, PixelSize, IImage?> imageLoader,
@@ -188,13 +184,14 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
         IWindowMetricsService? windowMetrics = null,
         Func<string, CancellationToken, Task<IImage?>>? videoThumbnailLoader = null)
     {
-        this.imageCacheService = imageCacheService;
+        this.remoteImageStore = remoteImageStore;
         this.diagnostics = diagnostics;
         this.wallpaperChanged = wallpaperChanged;
         this.imageLoader = imageLoader;
         this.bundledImageLoader = bundledImageLoader;
         this.windowMetrics = windowMetrics;
-        this.videoThumbnailLoader = videoThumbnailLoader ?? ((_, _) => Task.FromResult<IImage?>(null));
+        videoThumbnails = new VideoThumbnailFlow(videoThumbnailLoader);
+        videoThumbnails.ThumbnailChanged += OnVideoThumbnailChanged;
         if (windowMetrics is not null)
         {
             // 首次解码可能发生在窗口达到最终尺寸（布局/恢复保存状态/最大化）之前；
@@ -306,7 +303,7 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
                     currentFilePath: customFilePath, notifyPalette: false))
             {
                 lastBackgroundSourceKey = sourceKey;
-                RequestVideoThumbnail(videoPath, sourceKey);
+                videoThumbnails.Request(videoPath, sourceKey);
                 wallpaperChanged(settings);
             }
             return;
@@ -321,8 +318,8 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
                 {
                     try
                     {
-                        var cachedPath = await imageCacheService.GetCachedPathAsync(crc64, cancellationToken)
-                            ?? await imageCacheService.CacheImageAsync(bgImg, crc64, cancellationToken);
+                        var cachedPath = await remoteImageStore.GetCachedPathAsync(crc64, cancellationToken)
+                            ?? await remoteImageStore.CacheImageAsync(bgImg, crc64, cancellationToken);
                         cancellationToken.ThrowIfCancellationRequested();
                         // 远端背景图可能很大；解码放线程池，避免续体回到 UI 线程后卡帧。
                         var remoteImage = await Task.Run(() => imageLoader(cachedPath, decodeSize));
@@ -464,53 +461,7 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
             : null;
     }
 
-    private void RequestVideoThumbnail(string path, string? sourceKey)
-    {
-        // 同一文件指纹的缩略图可跨「切回静态再选中」复用：每次重新截帧都要再起一个
-        // 临时 libmpv 解码器，既耗 CPU 又让原生分配随切换次数累积（AUD-PERF-009）。
-        if (sourceKey is not null && videoThumbnailSourceKey == sourceKey && videoThumbnail is not null) return;
-        ClearVideoThumbnail();
-        videoThumbnailSourceKey = sourceKey;
-        var generation = videoThumbnailGeneration;
-        videoThumbnailRefresh.Run(null, async cancellationToken =>
-        {
-            try
-            {
-                var image = await videoThumbnailLoader(path, cancellationToken);
-                // 只按「指纹 + 代数」判定陈旧：静态背景下完成的首帧仍属于该视频，
-                // 保留下来供下次选中复用；换了来源或文件内容则丢弃。
-                if (disposed || cancellationToken.IsCancellationRequested || generation != videoThumbnailGeneration
-                    || videoThumbnailSourceKey != sourceKey)
-                {
-                    (image as IDisposable)?.Dispose();
-                    return;
-                }
-                videoThumbnail = image;
-                OnPropertyChanged(nameof(BackgroundPreviewImage));
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-            }
-        });
-    }
-
-    /// <summary>取消在途截帧但保留已交付的缩略图，供再次选中同一文件时复用。</summary>
-    private void CancelPendingVideoThumbnail()
-    {
-        videoThumbnailGeneration++;
-        videoThumbnailRefresh.Cancel();
-    }
-
-    private void ClearVideoThumbnail()
-    {
-        videoThumbnailGeneration++;
-        videoThumbnailRefresh.Cancel();
-        videoThumbnailSourceKey = null;
-        var old = videoThumbnail;
-        videoThumbnail = null;
-        OnPropertyChanged(nameof(BackgroundPreviewImage));
-        BitmapLifetime.ReleaseAfterBindingsSettle(old);
-    }
+    private void OnVideoThumbnailChanged() => OnPropertyChanged(nameof(BackgroundPreviewImage));
 
     /// <summary>只接受当前文件的失败，保留静态回退；相同文件指纹不会在每次刷新时重复报错。</summary>
     internal void ReportVideoFailure(string path, Exception exception)
@@ -617,12 +568,12 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
     /// </summary>
     public async Task<Bitmap?> GetBackgroundBitmapAsync(CancellationToken cancellationToken)
     {
-        if (IsVideoBackgroundSelected && videoThumbnailSourceKey is not null)
+        if (IsVideoBackgroundSelected
+            && await videoThumbnails.GetThumbnailAsync(cancellationToken) is { } thumbnail)
         {
-            await videoThumbnailRefresh.Pending.WaitAsync(cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
-            if (videoThumbnail is Bitmap thumbnail) return thumbnail;
+            return thumbnail;
         }
+
         return BackgroundImageSource as Bitmap;
     }
 
@@ -826,7 +777,7 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
         currentDecodedImagePath = decodedPath;
         // 切到静态背景时只取消在途截帧，已交付的缩略图按文件指纹保留：
         // 预览只在选中视频时使用它，跨切换复用可避免每次重新截帧（AUD-PERF-009）。
-        if (isFallback || !VideoBackgroundRuntime.IsVideoFile(currentFilePath)) CancelPendingVideoThumbnail();
+        if (isFallback || !VideoBackgroundRuntime.IsVideoFile(currentFilePath)) videoThumbnails.CancelPending();
         RememberBackgroundSelection(previewSettings);
         lastBackgroundSourceKey = null;
         CurrentBackgroundFilePath = currentFilePath;
@@ -935,7 +886,7 @@ internal partial class BackgroundViewModel : ViewModelBase, IDisposable
         }
 
         disposed = true;
-        ClearVideoThumbnail();
+        videoThumbnails.Dispose();
         BackgroundVideoPath = null;
         CurrentBackgroundFilePath = null;
         CurrentBackgroundLocation = null;

@@ -41,8 +41,8 @@ public sealed class GameRuntimeSettingsUiTests
             .Descendants()
             .Where(element => element.Name.LocalName == "Button")
             .Where(element =>
-                element.Attribute("Command")?.Value is "{Binding Settings.ChoosePrefixPathCommand}"
-                    or "{Binding Settings.ChooseProtonPathCommand}")
+                element.Attribute("Command")?.Value is "{Binding Settings.GameRuntime.ChoosePrefixPathCommand}"
+                    or "{Binding Settings.GameRuntime.ChooseProtonPathCommand}")
             .ToArray();
 
         Assert.Equal(2, chooseButtons.Length);
@@ -117,9 +117,9 @@ public sealed class GameRuntimeSettingsUiTests
         using var settings = CreateSettingsViewModel(localizer, options, runtime);
 
         settings.LoadFromSnapshot(new LauncherSettings());
-        await settings.PendingGameRuntimeStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
+        await settings.GameRuntime.PendingStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
 
-        var summary = settings.GameRuntimeStatusSummary;
+        var summary = settings.GameRuntime.StatusSummary;
         var expectedDetail = localizer.F(LocalizationKeys.GameRuntimeStatusDetailFormat, "/usr/bin/umu-run", "1.4.4");
         Assert.Contains(localizer.T(LocalizationKeys.GameRuntimeRunnerUmu), summary, StringComparison.Ordinal);
         Assert.Contains(localizer.T(LocalizationKeys.GameRuntimeStatusAvailable), summary, StringComparison.Ordinal);
@@ -131,7 +131,7 @@ public sealed class GameRuntimeSettingsUiTests
     }
 
     [Fact]
-    public void BuildGameRuntimeStatusSummary_UnsupportedRunnerWithoutPath_ShowsNameAndStatusOnly()
+    public void BuildStatusSummary_UnsupportedRunnerWithoutPath_ShowsNameAndStatusOnly()
     {
         var localizer = new LocalizationService();
         var options = new SettingsOptionsViewModel(localizer, new DiskSpaceService());
@@ -146,7 +146,7 @@ public sealed class GameRuntimeSettingsUiTests
                 new GameRunnerAvailability(GameRunnerAvailabilityStatus.Unsupported, Message: "Wine requires Linux."))
         };
 
-        var summary = settings.BuildGameRuntimeStatusSummary(entries);
+        var summary = settings.GameRuntime.BuildStatusSummary(entries);
 
         var expected = localizer.F(LocalizationKeys.GameRuntimeStatusEntryFormat, localizer.T(LocalizationKeys.GameRuntimeRunnerWine), localizer.T(LocalizationKeys.GameRuntimeStatusUnsupported));
         Assert.Equal(expected, summary);
@@ -166,10 +166,10 @@ public sealed class GameRuntimeSettingsUiTests
         using var settings = CreateSettingsViewModel(localizer, options, runtime);
 
         settings.LoadFromSnapshot(new LauncherSettings());
-        await settings.PendingGameRuntimeStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
+        await settings.GameRuntime.PendingStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
         Assert.Contains(
             localizer.T(LocalizationKeys.GameRuntimeStatusNotFound),
-            settings.GameRuntimeStatusSummary,
+            settings.GameRuntime.StatusSummary,
             StringComparison.Ordinal);
 
         runtime.Entries =
@@ -181,17 +181,17 @@ public sealed class GameRuntimeSettingsUiTests
                     Version: "1.4.4",
                     ExecutablePath: "/usr/bin/umu-run"))
         ];
-        settings.RefreshGameRuntimeStatus();
-        await settings.PendingGameRuntimeStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
-        Assert.Contains("1.4.4", settings.GameRuntimeStatusSummary, StringComparison.Ordinal);
+        settings.GameRuntime.RefreshStatus();
+        await settings.GameRuntime.PendingStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Contains("1.4.4", settings.GameRuntime.StatusSummary, StringComparison.Ordinal);
 
         // The display-name rebuild (language switch path) replays the cached
         // entries instead of clearing the summary.
         settings.RefreshOptionDisplayNames();
-        Assert.Contains("1.4.4", settings.GameRuntimeStatusSummary, StringComparison.Ordinal);
+        Assert.Contains("1.4.4", settings.GameRuntime.StatusSummary, StringComparison.Ordinal);
         Assert.Contains(
             localizer.T(LocalizationKeys.GameRuntimeStatusAvailable),
-            settings.GameRuntimeStatusSummary,
+            settings.GameRuntime.StatusSummary,
             StringComparison.Ordinal);
     }
 
@@ -219,14 +219,14 @@ public sealed class GameRuntimeSettingsUiTests
         snapshot.GameRuntime.ProtonPath = "/original";
         settings.LoadFromSnapshot(snapshot);
 
-        await (prefix ? settings.ChoosePrefixPathCommand : settings.ChooseProtonPathCommand).ExecuteAsync(null);
+        await (prefix ? settings.GameRuntime.ChoosePrefixPathCommand : settings.GameRuntime.ChooseProtonPathCommand).ExecuteAsync(null);
 
         var expected = string.IsNullOrWhiteSpace(picked) ? "/original" : picked;
         Assert.Equal(expected, prefix ? settings.Editor.Current.GameRuntime.PrefixPath : settings.Editor.Current.GameRuntime.ProtonPath);
         Assert.Equal("/original", settings.Editor.GetSavedSnapshot().GameRuntime.PrefixPath);
         Assert.Equal("/original", settings.Editor.GetSavedSnapshot().GameRuntime.ProtonPath);
         await settings.DiscardChangesAsync();
-        await settings.PendingGameRuntimeStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
+        await settings.GameRuntime.PendingStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
         Assert.Equal("/original", settings.Editor.Current.GameRuntime.PrefixPath);
         Assert.Equal("/original", settings.Editor.Current.GameRuntime.ProtonPath);
         Assert.False(settings.IsSettingsDirty);
@@ -244,25 +244,25 @@ public sealed class GameRuntimeSettingsUiTests
             new SettingsOptionsViewModel(new LocalizationService(), new DiskSpaceService()),
             new StubGameRuntime([]), discovery: new ProtonBuildDiscovery([directory.Path]));
         settings.LoadFromSnapshot(new LauncherSettings());
-        await settings.PendingGameRuntimeStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
+        await settings.GameRuntime.PendingStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
 
-        var build = Assert.Single(settings.ProtonBuilds);
-        Assert.True(settings.HasProtonBuilds);
-        Assert.Null(settings.SelectedProtonBuild);
+        var build = Assert.Single(settings.GameRuntime.Builds);
+        Assert.True(settings.GameRuntime.HasBuilds);
+        Assert.Null(settings.GameRuntime.SelectedBuild);
         Assert.False(settings.IsSettingsDirty);
-        settings.SelectedProtonBuild = build.Code;
+        settings.GameRuntime.SelectedBuild = build.Code;
         Assert.Equal(buildPath, settings.Editor.Current.GameRuntime.ProtonPath);
         Assert.True(settings.IsSettingsDirty);
-        Assert.Equal(build.Code, settings.SelectedProtonBuild);
+        Assert.Equal(build.Code, settings.GameRuntime.SelectedBuild);
         Assert.True(string.IsNullOrEmpty(settings.Editor.GetSavedSnapshot().GameRuntime.ProtonPath));
 
         settings.Editor.Current.GameRuntime.ProtonPath = "/custom/build";
-        settings.SelectedProtonBuild = null;
+        settings.GameRuntime.SelectedBuild = null;
         Assert.Equal("/custom/build", settings.Editor.Current.GameRuntime.ProtonPath);
-        Assert.Null(settings.SelectedProtonBuild);
+        Assert.Null(settings.GameRuntime.SelectedBuild);
         await settings.DiscardChangesAsync();
-        await settings.PendingGameRuntimeStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
-        Assert.Null(settings.SelectedProtonBuild);
+        await settings.GameRuntime.PendingStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Null(settings.GameRuntime.SelectedBuild);
         Assert.False(settings.IsSettingsDirty);
     }
 
@@ -274,10 +274,10 @@ public sealed class GameRuntimeSettingsUiTests
             new SettingsOptionsViewModel(new LocalizationService(), new DiskSpaceService()),
             new StubGameRuntime([]));
         var build = new SettingOption { DisplayName = "GE-Proton", Code = "/tools/GE-Proton" };
-        settings.ProtonBuilds = [build];
+        settings.GameRuntime.Builds = [build];
         settings.Editor.Current.GameRuntime.ProtonPath = build.Code + Path.DirectorySeparatorChar;
 
-        Assert.Equal(build.Code, settings.SelectedProtonBuild);
+        Assert.Equal(build.Code, settings.GameRuntime.SelectedBuild);
     }
 
     [Fact]
@@ -291,20 +291,20 @@ public sealed class GameRuntimeSettingsUiTests
             new SettingsOptionsViewModel(localizer, new DiskSpaceService()),
             new StubGameRuntime([]), discovery: discovery);
 
-        settings.RefreshGameRuntimeStatusCommand.Execute(null);
-        await settings.PendingGameRuntimeStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
+        settings.GameRuntime.RefreshStatusCommand.Execute(null);
+        await settings.GameRuntime.PendingStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
 
-        Assert.True(settings.ProtonBuildDiscoveryFailed);
-        Assert.False(settings.HasProtonBuilds);
-        Assert.False(settings.IsGameRuntimeStatusRefreshing);
+        Assert.True(settings.GameRuntime.BuildDiscoveryFailed);
+        Assert.False(settings.GameRuntime.HasBuilds);
+        Assert.False(settings.GameRuntime.IsStatusRefreshing);
 
         discovery.Responses.Enqueue(() =>
             [new ProtonBuild("GE-Proton", "/tools/GE-Proton")]);
-        settings.RefreshGameRuntimeStatusCommand.Execute(null);
-        await settings.PendingGameRuntimeStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
+        settings.GameRuntime.RefreshStatusCommand.Execute(null);
+        await settings.GameRuntime.PendingStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
 
-        Assert.False(settings.ProtonBuildDiscoveryFailed);
-        Assert.Equal("/tools/GE-Proton", Assert.Single(settings.ProtonBuilds).Code);
+        Assert.False(settings.GameRuntime.BuildDiscoveryFailed);
+        Assert.Equal("/tools/GE-Proton", Assert.Single(settings.GameRuntime.Builds).Code);
     }
 
     [Fact]
@@ -325,19 +325,19 @@ public sealed class GameRuntimeSettingsUiTests
             new SettingsOptionsViewModel(new LocalizationService(), new DiskSpaceService()),
             new StubGameRuntime([]), discovery: discovery);
 
-        settings.RefreshGameRuntimeStatus();
-        var staleRefresh = settings.PendingGameRuntimeStatusRefresh;
+        settings.GameRuntime.RefreshStatus();
+        var staleRefresh = settings.GameRuntime.PendingStatusRefresh;
         Assert.True(firstStarted.Wait(TimeSpan.FromSeconds(5)));
-        Assert.True(settings.IsGameRuntimeStatusRefreshing);
+        Assert.True(settings.GameRuntime.IsStatusRefreshing);
 
-        settings.RefreshGameRuntimeStatus();
-        await settings.PendingGameRuntimeStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
-        Assert.False(settings.IsGameRuntimeStatusRefreshing);
-        Assert.Equal("/latest/GE-Proton", Assert.Single(settings.ProtonBuilds).Code);
+        settings.GameRuntime.RefreshStatus();
+        await settings.GameRuntime.PendingStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.False(settings.GameRuntime.IsStatusRefreshing);
+        Assert.Equal("/latest/GE-Proton", Assert.Single(settings.GameRuntime.Builds).Code);
 
         gate.Set();
         await staleRefresh.WaitAsync(TimeSpan.FromSeconds(5));
-        Assert.Equal("/latest/GE-Proton", Assert.Single(settings.ProtonBuilds).Code);
+        Assert.Equal("/latest/GE-Proton", Assert.Single(settings.GameRuntime.Builds).Code);
     }
 
     [Fact]
@@ -350,12 +350,12 @@ public sealed class GameRuntimeSettingsUiTests
 
         settings.Editor.Current.GameRuntime.Runner = GameRuntimeRunners.Wine;
         settings.Editor.Current.GameRuntime.RunnerPath = "/custom/wine";
-        await settings.PendingGameRuntimeStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
+        await settings.GameRuntime.PendingStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
 
         Assert.Equal(GameRuntimeRunners.Wine, runtime.LastConfiguration?.PreferredRunnerId);
         Assert.Equal("/custom/wine", runtime.LastConfiguration?.RunnerPath);
-        Assert.Empty(settings.ProtonBuilds);
-        Assert.False(settings.HasProtonBuilds);
+        Assert.Empty(settings.GameRuntime.Builds);
+        Assert.False(settings.GameRuntime.HasBuilds);
     }
 
     [Fact]
@@ -366,19 +366,19 @@ public sealed class GameRuntimeSettingsUiTests
         using var settings = CreateSettingsViewModel(
             new LocalizationService(),
             new SettingsOptionsViewModel(new LocalizationService(), new DiskSpaceService()), runtime);
-        settings.RefreshGameRuntimeStatus();
-        var staleRefresh = settings.PendingGameRuntimeStatusRefresh;
+        settings.GameRuntime.RefreshStatus();
+        var staleRefresh = settings.GameRuntime.PendingStatusRefresh;
         runtime.Respond = null;
-        settings.RefreshGameRuntimeStatus();
-        await settings.PendingGameRuntimeStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
-        var latestSummary = settings.GameRuntimeStatusSummary;
+        settings.GameRuntime.RefreshStatus();
+        await settings.GameRuntime.PendingStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
+        var latestSummary = settings.GameRuntime.StatusSummary;
 
         first.SetResult([new GameRuntimeStatusEntry("umu",
             new GameRunnerAvailability(GameRunnerAvailabilityStatus.Available, ExecutablePath: "/stale/umu"))]);
         await staleRefresh.WaitAsync(TimeSpan.FromSeconds(5));
 
-        Assert.Equal(latestSummary, settings.GameRuntimeStatusSummary);
-        Assert.DoesNotContain("/stale/umu", settings.GameRuntimeStatusSummary, StringComparison.Ordinal);
+        Assert.Equal(latestSummary, settings.GameRuntime.StatusSummary);
+        Assert.DoesNotContain("/stale/umu", settings.GameRuntime.StatusSummary, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -391,16 +391,16 @@ public sealed class GameRuntimeSettingsUiTests
         };
         using var settings = CreateSettingsViewModel(localizer,
             new SettingsOptionsViewModel(localizer, new DiskSpaceService()), runtime);
-        settings.RefreshGameRuntimeStatusCommand.Execute(null);
-        await settings.PendingGameRuntimeStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
-        Assert.Equal(localizer.T(LocalizationKeys.GameRuntimeStatusFailed), settings.GameRuntimeStatusSummary);
+        settings.GameRuntime.RefreshStatusCommand.Execute(null);
+        await settings.GameRuntime.PendingStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(localizer.T(LocalizationKeys.GameRuntimeStatusFailed), settings.GameRuntime.StatusSummary);
         settings.RefreshOptionDisplayNames();
-        Assert.Equal(localizer.T(LocalizationKeys.GameRuntimeStatusFailed), settings.GameRuntimeStatusSummary);
+        Assert.Equal(localizer.T(LocalizationKeys.GameRuntimeStatusFailed), settings.GameRuntime.StatusSummary);
 
         runtime.Respond = null;
-        settings.RefreshGameRuntimeStatusCommand.Execute(null);
-        await settings.PendingGameRuntimeStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
-        Assert.Equal(string.Empty, settings.GameRuntimeStatusSummary);
+        settings.GameRuntime.RefreshStatusCommand.Execute(null);
+        await settings.GameRuntime.PendingStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(string.Empty, settings.GameRuntime.StatusSummary);
     }
 
     private static SettingsViewModel CreateSettingsViewModel(

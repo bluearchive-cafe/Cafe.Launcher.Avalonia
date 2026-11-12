@@ -292,7 +292,7 @@
                                     <ScrollViewer x:Name="AgreementScrollViewer"
                                                   VerticalScrollBarVisibility="Auto"
                                                   ScrollChanged="OnAgreementScrollChanged">
-                                        <controls:ReleaseNotesMarkdownViewer
+                                        <controls:RemoteMarkdownView
                                             Markdown="{Binding Dialogs.SetupWizard.AgreementMarkdown}"
                                             FontFamily="{StaticResource Launcher.Typography.FontFamily.Document}"
                                             Margin="{StaticResource Launcher.Spacing.Thickness.Xl}"/>

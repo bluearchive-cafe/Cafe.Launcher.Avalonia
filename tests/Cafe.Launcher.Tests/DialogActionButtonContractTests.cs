@@ -58,7 +58,7 @@ public sealed class DialogActionButtonContractTests
                 element.Name.LocalName == "Button"
                 && HasAnyClass(element, "flat-action", "primary-action")
                 && (element.Attribute("Command")?.Value
-                    is "{Binding WindowChrome.ShowSettingsCommand}"
+                    is "{Binding WindowChrome.ToggleSettingsCommand}"
                     or "{Binding Settings.SaveSettingsCommand}"))
             .ToArray();
 

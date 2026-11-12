@@ -438,7 +438,7 @@ public sealed partial class UiStyleContractTests
             && element.Attribute(xNamespace + "Name")?.Value == "AgreementScrollViewer");
         Assert.Null(reader.Attribute("MaxHeight"));
         Assert.Single(reader.Descendants(), element =>
-            element.Name.LocalName == "ReleaseNotesMarkdownViewer"
+            element.Name.LocalName == "RemoteMarkdownView"
             && element.Attribute("Markdown")?.Value == "{Binding Dialogs.SetupWizard.AgreementMarkdown}"
             && element.Attribute("FontFamily")?.Value
                 == "{StaticResource Launcher.Typography.FontFamily.Document}");

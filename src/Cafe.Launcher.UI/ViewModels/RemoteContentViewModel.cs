@@ -18,12 +18,12 @@ using Cafe.Launcher.Core.Services;
 
 namespace Cafe.Launcher.UI.ViewModels;
 
-internal partial class RemoteContentViewModel : ViewModelBase, IDisposable, ILanguageAwarePresentation
+internal partial class RemoteContentViewModel : ObservableObject, IDisposable, ILanguageAwarePresentation
 {
     private const int ManualNavResumeDelayMs = 5000;
     private const int MaxConcurrentBannerImageLoads = 4;
     private readonly LocalizationService localizer;
-    private readonly IImageCacheService imageCacheService;
+    private readonly IRemoteImageStore remoteImageStore;
     private readonly ILauncherDiagnostics diagnostics;
     private readonly Func<TimeSpan, CancellationToken, Task> delayAsync;
     private readonly ICarouselTimer carouselTimer;
@@ -107,17 +107,17 @@ internal partial class RemoteContentViewModel : ViewModelBase, IDisposable, ILan
     /// <summary>Gets the active manual-navigation resume operation for deterministic synchronization in tests.</summary>
     internal Task CarouselResumeTask => carouselResumeTask;
 
-    /// <summary>更新说明中的远程图片共用启动器图片缓存、代理偏好与传输限制。</summary>
-    public Func<string, CancellationToken, Task<byte[]>> ReleaseNotesImageLoader =>
-        imageCacheService.GetCachedOrDownloadImageBytesAsync;
+    /// <summary>Markdown 文档中的远程图片共用启动器图片缓存、代理偏好与传输限制。</summary>
+    public Func<string, CancellationToken, Task<byte[]>> MarkdownImageLoader =>
+        remoteImageStore.GetCachedOrDownloadImageBytesAsync;
 
     public RemoteContentViewModel(
         LocalizationService localizer,
-        IImageCacheService imageCacheService,
+        IRemoteImageStore remoteImageStore,
         ILauncherDiagnostics diagnostics)
         : this(
             localizer,
-            imageCacheService,
+            remoteImageStore,
             diagnostics,
             static (delay, cancellationToken) => Task.Delay(delay, cancellationToken),
             new DispatcherCarouselTimer())
@@ -126,13 +126,13 @@ internal partial class RemoteContentViewModel : ViewModelBase, IDisposable, ILan
 
     internal RemoteContentViewModel(
         LocalizationService localizer,
-        IImageCacheService imageCacheService,
+        IRemoteImageStore remoteImageStore,
         ILauncherDiagnostics diagnostics,
         Func<TimeSpan, CancellationToken, Task> delayAsync,
         ICarouselTimer carouselTimer)
     {
         this.localizer = localizer;
-        this.imageCacheService = imageCacheService;
+        this.remoteImageStore = remoteImageStore;
         this.diagnostics = diagnostics;
         this.delayAsync = delayAsync;
         this.carouselTimer = carouselTimer;
@@ -549,7 +549,7 @@ internal partial class RemoteContentViewModel : ViewModelBase, IDisposable, ILan
             await concurrencyGate.WaitAsync(cancellationToken);
             try
             {
-                var bytes = await imageCacheService.GetCachedOrDownloadImageBytesAsync(
+                var bytes = await remoteImageStore.GetCachedOrDownloadImageBytesAsync(
                     item.ImageUrl,
                     cancellationToken);
                 if (bytes is null)

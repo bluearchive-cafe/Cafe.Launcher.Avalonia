@@ -93,12 +93,12 @@ internal sealed class LauncherUpdatePresenter : ILauncherUpdatePresenter
 
     private async Task ShowUpdateDialogAsync(LauncherUpdateCheckResult result)
     {
-        dialogs.ShowUpdateAvailable(
+        dialogs.LauncherUpdate.Show(
             result.LatestVersion,
             result.Files,
             selfUpdateService.ResolveInAppAvailability(result.Files),
             result.ReleaseNotes);
-        await dialogs.LoadUpdateReleaseNotesAsync(updateService);
+        await dialogs.LauncherUpdate.LoadReleaseNotesAsync(updateService);
     }
 
     private string BuildFailureMessage(LauncherUpdateCheckResult result)

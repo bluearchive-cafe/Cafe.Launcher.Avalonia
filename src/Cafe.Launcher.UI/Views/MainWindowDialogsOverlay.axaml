@@ -92,7 +92,7 @@
         <Grid x:Name="UpdateAvailableOverlay" Classes="dialog-overlay motion-overlay"
               ZIndex="{x:Static constants:LauncherConstants.ZIndexDialog}"
               Classes.motion-enabled="{Binding IsMotionEnabled}"
-              controls:MotionVisibility.IsOpen="{Binding Dialogs.IsUpdateAvailableVisible}"
+              controls:MotionVisibility.IsOpen="{Binding Dialogs.LauncherUpdate.IsVisible}"
               controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
             <!-- Panel 形态（中号 620）：版本行进副标题，取消/下载保留在主动作组。 -->
             <controls:DialogSurface
@@ -105,8 +105,8 @@
                 MinWidth="{StaticResource Launcher.Component.Dialog.Update.MinWidth}"
                 MinHeight="{StaticResource Launcher.Component.Dialog.Update.MinHeight}"
                 Title="{Binding Shell.I18n[launcherUpdateAvailableTitle]}"
-                Subtitle="{Binding Dialogs.UpdateAvailableText}"
-                CloseCommand="{Binding Dialogs.CancelUpdateAvailableCommand}"
+                Subtitle="{Binding Dialogs.LauncherUpdate.SummaryText}"
+                CloseCommand="{Binding Dialogs.LauncherUpdate.CancelCommand}"
                 CloseAutomationName="{Binding Shell.I18n[close]}"
                 CloseToolTip="{Binding Shell.I18n[close]}">
                 <controls:DialogSurface.RenderTransform>
@@ -119,32 +119,32 @@
                     <StackPanel Spacing="{StaticResource Launcher.Spacing.Md}">
                         <!-- 本机没有应用内更新路径时，主动作是「前往发布页」；这一行说明出口换了。 -->
                         <Border Classes="dialog-alert"
-                                IsVisible="{Binding Dialogs.IsUpdateInAppUnavailable}">
-                            <TextBlock Text="{Binding Dialogs.UpdateInAppUnavailableNoticeText}"
+                                IsVisible="{Binding Dialogs.LauncherUpdate.IsInAppUnavailable}">
+                            <TextBlock Text="{Binding Dialogs.LauncherUpdate.InAppUnavailableNoticeText}"
                                        Classes="dialog-alert-content"/>
                         </Border>
-                        <StackPanel IsVisible="{Binding Dialogs.IsUpdateReleaseNotesLoading}"
+                        <StackPanel IsVisible="{Binding Dialogs.LauncherUpdate.IsReleaseNotesLoading}"
                                     Spacing="{StaticResource Launcher.Spacing.Sm}">
                             <TextBlock Text="{Binding Shell.I18n[launcherUpdateReleaseNotesLoading]}"
                                        Classes="dialog-alert-content"/>
                             <ProgressBar IsIndeterminate="True"
                                          Height="{StaticResource Launcher.Component.Loading.Bar.Height}"/>
                         </StackPanel>
-                        <StackPanel IsVisible="{Binding Dialogs.HasUpdateReleaseNotesFailed}"
+                        <StackPanel IsVisible="{Binding Dialogs.LauncherUpdate.HasReleaseNotesFailed}"
                                     Spacing="{StaticResource Launcher.Spacing.Sm}">
                             <TextBlock Text="{Binding Shell.I18n[launcherUpdateReleaseNotesFailed]}"
                                        Classes="dialog-alert-content" TextWrapping="Wrap"/>
                             <Button Classes="flat-action dialog-action" HorizontalAlignment="Left"
                                     Content="{Binding Shell.I18n[launcherUpdateOpenReleasePage]}"
                                     AutomationProperties.Name="{Binding Shell.I18n[launcherUpdateOpenReleasePage]}"
-                                    Command="{Binding Dialogs.OpenUpdateReleasePageCommand}"/>
+                                    Command="{Binding Dialogs.LauncherUpdate.OpenReleasePageCommand}"/>
                         </StackPanel>
-                        <controls:ReleaseNotesMarkdownViewer
+                        <controls:RemoteMarkdownView
                             x:Name="UpdateReleaseNotesViewer"
-                            IsVisible="{Binding Dialogs.HasUpdateReleaseNotes}"
-                            ImageLoader="{Binding RemoteContent.ReleaseNotesImageLoader}"
+                            IsVisible="{Binding Dialogs.LauncherUpdate.HasReleaseNotes}"
+                            ImageLoader="{Binding RemoteContent.MarkdownImageLoader}"
                             IsDocumentActive="{Binding #UpdateAvailableOverlay.IsVisible}"
-                            Markdown="{Binding Dialogs.UpdateReleaseNotes}"
+                            Markdown="{Binding Dialogs.LauncherUpdate.ReleaseNotes}"
                             MaxHeight="{StaticResource Launcher.Component.Dialog.Update.ReleaseNotes.MaxHeight}"/>
                         <TextBlock IsVisible="{Binding #UpdateReleaseNotesViewer.IsImageLoading}"
                                    Text="{Binding Shell.I18n[bannerLoading]}"
@@ -153,25 +153,25 @@
                                    Text="{Binding Shell.I18n[bannerLoadingFailed]}"
                                    Classes="dialog-alert-content" TextWrapping="Wrap"/>
                         <Separator Classes="update-progress-divider"
-                                   IsVisible="{Binding Dialogs.IsUpdateApplying}"
+                                   IsVisible="{Binding Dialogs.LauncherUpdate.IsApplying}"
                                    Margin="{StaticResource Launcher.Spacing.Thickness.None}"
                                    Background="{DynamicResource Launcher.Color.Outline}"/>
                         <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}"
-                                    IsVisible="{Binding Dialogs.IsUpdateApplying}">
+                                    IsVisible="{Binding Dialogs.LauncherUpdate.IsApplying}">
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
-                                <TextBlock Text="{Binding Dialogs.UpdateStatusText}"
+                                <TextBlock Text="{Binding Dialogs.LauncherUpdate.StatusText}"
                                            Classes="dialog-alert-content"
                                            TextWrapping="Wrap"/>
                                 <TextBlock Grid.Column="1"
-                                           Text="{Binding Dialogs.UpdateDownloadSpeedText}"
+                                           Text="{Binding Dialogs.LauncherUpdate.DownloadSpeedText}"
                                            Classes="dialog-alert-content"
-                                           IsVisible="{Binding Dialogs.IsUpdateDownloading}"
+                                           IsVisible="{Binding Dialogs.LauncherUpdate.IsDownloading}"
                                            VerticalAlignment="Center"/>
                             </Grid>
                             <ProgressBar Minimum="0"
                                          Maximum="100"
-                                         Value="{Binding Dialogs.UpdateProgress}"
-                                         IsVisible="{Binding Dialogs.IsUpdateDownloading}"
+                                         Value="{Binding Dialogs.LauncherUpdate.Progress}"
+                                         IsVisible="{Binding Dialogs.LauncherUpdate.IsDownloading}"
                                          Height="{StaticResource Launcher.Component.Progress.Bar.Height}"/>
                         </StackPanel>
                     </StackPanel>
@@ -180,34 +180,34 @@
                     <!-- ADR-040：do-it（下载 / 重启）在最左，「稍后」作为安全动作在最右。 -->
                     <StackPanel Classes="confirm-actions">
                         <Button Classes="primary-action dialog-action"
-                                Command="{Binding Dialogs.ConfirmUpdateAvailableCommand}"
-                                IsEnabled="{Binding Dialogs.CanConfirmUpdate}"
-                                IsVisible="{Binding !Dialogs.IsUpdateReadyToRestart}"
-                                AutomationProperties.Name="{Binding Dialogs.UpdatePrimaryActionText}">
+                                Command="{Binding Dialogs.LauncherUpdate.ConfirmCommand}"
+                                IsEnabled="{Binding Dialogs.LauncherUpdate.CanConfirm}"
+                                IsVisible="{Binding !Dialogs.LauncherUpdate.IsReadyToRestart}"
+                                AutomationProperties.Name="{Binding Dialogs.LauncherUpdate.PrimaryActionText}">
                             <!-- 单一 Content 内按是否支持应用内更新切换形态：下载（应用内）/ 前往发布页（浏览器交接）。 -->
                             <StackPanel Classes="button-content">
                                 <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}"
-                                            IsVisible="{Binding Dialogs.UpdateSupportsInAppApply}">
+                                            IsVisible="{Binding Dialogs.LauncherUpdate.SupportsInAppApply}">
                                     <materialIcons:MaterialIcon Kind="Download" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
                                     <TextBlock Text="{Binding Shell.I18n[launcherUpdateDownload]}"/>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}"
-                                            IsVisible="{Binding !Dialogs.UpdateSupportsInAppApply}">
+                                            IsVisible="{Binding !Dialogs.LauncherUpdate.SupportsInAppApply}">
                                     <materialIcons:MaterialIcon Kind="OpenInNew" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
                                     <TextBlock Text="{Binding Shell.I18n[launcherUpdateOpenReleasePage]}"/>
                                 </StackPanel>
                             </StackPanel>
                         </Button>
                         <Button Classes="primary-action dialog-action"
-                                Command="{Binding Dialogs.ConfirmUpdateAvailableCommand}"
-                                IsVisible="{Binding Dialogs.IsUpdateReadyToRestart}"
+                                Command="{Binding Dialogs.LauncherUpdate.ConfirmCommand}"
+                                IsVisible="{Binding Dialogs.LauncherUpdate.IsReadyToRestart}"
                                 AutomationProperties.Name="{Binding Shell.I18n[launcherUpdateRestart]}">
                             <StackPanel Classes="button-content">
                                 <materialIcons:MaterialIcon Kind="Update" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
                                 <TextBlock Text="{Binding Shell.I18n[launcherUpdateRestart]}"/>
                             </StackPanel>
                         </Button>
-                        <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.CancelUpdateAvailableCommand}"
+                        <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.LauncherUpdate.CancelCommand}"
                                 AutomationProperties.Name="{Binding Shell.I18n[launcherUpdateLater]}">
                             <StackPanel Classes="button-content">
                                 <materialIcons:MaterialIcon Kind="ClockOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>

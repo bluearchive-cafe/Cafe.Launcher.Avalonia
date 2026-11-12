@@ -108,17 +108,17 @@ internal sealed class ShellPresentationWiring : IDisposable
             () => dialogs.SetupWizardOpening += ApplySetupWizardDefaultScheme,
             () => dialogs.SetupWizardOpening -= ApplySetupWizardDefaultScheme);
         Attach(
-            () => dialogs.ConfirmUpdateAvailableRequested += OnUpdateAvailableConfirmed,
-            () => dialogs.ConfirmUpdateAvailableRequested -= OnUpdateAvailableConfirmed);
+            () => dialogs.LauncherUpdate.OpenReleasePageRequested += OnUpdateAvailableConfirmed,
+            () => dialogs.LauncherUpdate.OpenReleasePageRequested -= OnUpdateAvailableConfirmed);
         Attach(
-            () => dialogs.SelfUpdateStartRequested += actions.BeginSelfUpdate,
-            () => dialogs.SelfUpdateStartRequested -= actions.BeginSelfUpdate);
+            () => dialogs.LauncherUpdate.SelfUpdateStartRequested += actions.BeginSelfUpdate,
+            () => dialogs.LauncherUpdate.SelfUpdateStartRequested -= actions.BeginSelfUpdate);
         Attach(
-            () => dialogs.ApplyUpdateRequested += actions.ApplyPendingUpdate,
-            () => dialogs.ApplyUpdateRequested -= actions.ApplyPendingUpdate);
+            () => dialogs.LauncherUpdate.ApplyRequested += actions.ApplyPendingUpdate,
+            () => dialogs.LauncherUpdate.ApplyRequested -= actions.ApplyPendingUpdate);
         Attach(
-            () => dialogs.CancelUpdateRequested += actions.CancelUpdatePreparation,
-            () => dialogs.CancelUpdateRequested -= actions.CancelUpdatePreparation);
+            () => dialogs.LauncherUpdate.CancelRequested += actions.CancelUpdatePreparation,
+            () => dialogs.LauncherUpdate.CancelRequested -= actions.CancelUpdatePreparation);
         Attach(
             () => dialogs.ErrorViewLogRequested += OpenLogViewer,
             () => dialogs.ErrorViewLogRequested -= OpenLogViewer);

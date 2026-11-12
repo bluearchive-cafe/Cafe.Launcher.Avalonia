@@ -40,7 +40,7 @@ public sealed class SettingsWriteOwnershipTests
         "src/Cafe.Launcher.UI/LauncherPresentationSession.cs",
         "src/Cafe.Launcher.UI/ViewModels/MainWindowViewModel.cs",
         "src/Cafe.Launcher.Core/Composition/LauncherCoreServiceCollectionExtensions.cs",
-        "src/Cafe.Launcher.Core/Services/LauncherCoreService.cs",
+        "src/Cafe.Launcher.Core/Services/LauncherStatusSnapshotService.cs",
     ];
 
     private const string WriterFile = "src/Cafe.Launcher.Core/Services/SavedSettingsWriter.cs";

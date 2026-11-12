@@ -344,8 +344,8 @@ public partial class MainWindowViewModelTests
         // 否则「有更新」的提示可能被一次失败或「已最新」当场推翻。
         // 唯一新增的请求是按已选版本补充更新说明。
         Assert.True(outcome.IsSuccess);
-        Assert.Equal("99.0.0", viewModel.Dialogs.UpdateAvailableVersion);
-        Assert.True(viewModel.Dialogs.IsUpdateAvailableVisible);
+        Assert.Equal("99.0.0", viewModel.Dialogs.LauncherUpdate.Version);
+        Assert.True(viewModel.Dialogs.LauncherUpdate.IsVisible);
         Assert.Equal(callsAfterStartup + 1, transportCalls);
         Assert.Equal(
             new Uri(
@@ -398,7 +398,7 @@ public partial class MainWindowViewModelTests
     private sealed class SequencedBlockingCoreService(
         LauncherStatusSnapshot initial,
         LauncherStatusSnapshot older,
-        LauncherStatusSnapshot newest) : ILauncherCoreService
+        LauncherStatusSnapshot newest) : ILauncherStatusSnapshotService
     {
         private int loadCount;
         private int currentConcurrency;

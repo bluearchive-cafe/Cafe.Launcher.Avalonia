@@ -140,7 +140,7 @@ public sealed partial class MainWindowHeadlessTests
         using var context = CreateContext();
         PrepareGoldenWindow(context);
         context.Window.Show();
-        context.ViewModel.Dialogs.ShowUpdateAvailable(
+        context.ViewModel.Dialogs.LauncherUpdate.Show(
             "1.2.0",
             [],
             LauncherUpdateInAppAvailability.PlatformUnsupported,
@@ -155,9 +155,9 @@ public sealed partial class MainWindowHeadlessTests
         using var context = CreateContext();
         PrepareGoldenWindow(context);
         context.Window.Show();
-        context.ViewModel.Dialogs.ShowUpdateAvailable("1.2.0", [], LauncherUpdateInAppAvailability.Available);
+        context.ViewModel.Dialogs.LauncherUpdate.Show("1.2.0", [], LauncherUpdateInAppAvailability.Available);
         var service = new ControlledReleaseNotesService();
-        var loading = context.ViewModel.Dialogs.LoadUpdateReleaseNotesAsync(service);
+        var loading = context.ViewModel.Dialogs.LauncherUpdate.LoadReleaseNotesAsync(service);
         GoldenScreenshot.Compare(context.Window, "update-dialog-loading");
 
         service.Result.SetResult("");

@@ -10,7 +10,7 @@ using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Tests;
 
-public sealed class LauncherCoreServiceTests : IDisposable
+public sealed class LauncherStatusSnapshotServiceTests : IDisposable
 {
     private readonly TestDirectory tempDir = TestDirectory.Create();
 
@@ -18,11 +18,11 @@ public sealed class LauncherCoreServiceTests : IDisposable
     [InlineData(LocalInstallationStateKind.NotInstalled, LauncherRuntimeState.NotInstalled)]
     [InlineData(LocalInstallationStateKind.Corrupted, LauncherRuntimeState.Corrupted)]
     [InlineData(LocalInstallationStateKind.IoFailure, LauncherRuntimeState.IoFailure)]
-    public void ResolveRuntimeState_WhenLocalStateIsNotValid_PreservesLocalClassification(
+    public void Resolve_WhenLocalStateIsNotValid_PreservesLocalClassification(
         LocalInstallationStateKind localKind,
         LauncherRuntimeState expected)
     {
-        var state = LauncherCoreService.ResolveRuntimeState(
+        var state = RuntimeStatePolicy.Resolve(
             new LocalInstallationState { Kind = localKind },
             CreateGameConfig());
 
@@ -34,11 +34,11 @@ public sealed class LauncherCoreServiceTests : IDisposable
     [InlineData("0.9.0", LauncherRuntimeState.BelowLowestVersion)]
     [InlineData("1.5.0", LauncherRuntimeState.UpdateAvailable)]
     [InlineData("2.0.0", LauncherRuntimeState.Ready)]
-    public void ResolveRuntimeState_WhenLocalStateIsValid_UsesRemoteVersionPriority(
+    public void Resolve_WhenLocalStateIsValid_UsesRemoteVersionPriority(
         string? localVersion,
         LauncherRuntimeState expected)
     {
-        var state = LauncherCoreService.ResolveRuntimeState(
+        var state = RuntimeStatePolicy.Resolve(
             new LocalInstallationState
             {
                 Kind = LocalInstallationStateKind.Valid,
@@ -127,7 +127,7 @@ public sealed class LauncherCoreServiceTests : IDisposable
         Assert.Equal(expectedPath, snapshot.LocalGame.GamePath);
     }
 
-    private async Task<LauncherCoreService> CreateServiceAsync(
+    private async Task<LauncherStatusSnapshotService> CreateServiceAsync(
         StubRemoteHttpTransport transport,
         bool useEmptySettingsDocument = false,
         TimeSpan? remoteStateBudget = null)
@@ -159,13 +159,13 @@ public sealed class LauncherCoreServiceTests : IDisposable
             transport,
             new AuthorizationHeaderFactory(LauncherProfiles.BlueArchiveJapan),
             new PatchUrlGroupService(LauncherProfiles.BlueArchiveJapan, LauncherProfiles.Cafe));
-        return new LauncherCoreService(
+        return new LauncherStatusSnapshotService(
             apiClient,
             store,
             new GameInstallationPath(LauncherProfiles.BlueArchiveJapan),
             settingsService,
             new LocalDiagnostics(),
-            remoteStateBudget ?? LauncherCoreService.DefaultRemoteStateBudget);
+            remoteStateBudget ?? LauncherStatusSnapshotService.DefaultRemoteStateBudget);
     }
 
     private static GameConfigResponse CreateGameConfig()

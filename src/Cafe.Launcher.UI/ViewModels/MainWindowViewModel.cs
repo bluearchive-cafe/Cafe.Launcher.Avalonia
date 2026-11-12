@@ -18,7 +18,7 @@ using Cafe.Launcher.Core.Services;
 
 namespace Cafe.Launcher.UI.ViewModels;
 
-internal partial class MainWindowViewModel : ViewModelBase, IDisposable
+internal partial class MainWindowViewModel : ObservableObject, IDisposable
 {
     private readonly ShellLifecycle runtime;
     private bool disposed;
@@ -92,7 +92,7 @@ internal partial class MainWindowViewModel : ViewModelBase, IDisposable
     }
 
     internal MainWindowViewModel(
-        ILauncherCoreService launcherCoreService,
+        ILauncherStatusSnapshotService launcherStatusSnapshotService,
         ILauncherSettingsService settingsService,
         ISavedSettingsWriter savedSettingsWriter,
         LocalizationService localizer,
@@ -111,7 +111,7 @@ internal partial class MainWindowViewModel : ViewModelBase, IDisposable
         : this(
             family,
             new ShellLifecycle(
-                launcherCoreService,
+                launcherStatusSnapshotService,
                 settingsService,
                 savedSettingsWriter,
                 localizer,

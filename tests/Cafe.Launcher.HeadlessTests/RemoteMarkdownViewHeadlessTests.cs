@@ -13,7 +13,7 @@ using Xunit;
 
 namespace Cafe.Launcher.HeadlessTests;
 
-public sealed class ReleaseNotesMarkdownViewerHeadlessTests
+public sealed class RemoteMarkdownViewHeadlessTests
 {
     [AvaloniaFact]
     public async Task Markdown_WithRemoteBanner_LoadsImageAndFitsTheViewer()
@@ -23,7 +23,7 @@ public sealed class ReleaseNotesMarkdownViewerHeadlessTests
         HeadlessTestHost.WriteSolidPng(path, Brushes.Blue, 1024, 576);
         var bytes = File.ReadAllBytes(path);
         var requested = new List<string>();
-        var viewer = new ReleaseNotesMarkdownViewer
+        var viewer = new RemoteMarkdownView
         {
             ImageLoader = (url, _) =>
             {
@@ -66,7 +66,7 @@ public sealed class ReleaseNotesMarkdownViewerHeadlessTests
     public void LinkClicked_OnlyOpensAllowedExternalLinks(string url, bool allowed)
     {
         var opened = new List<string?>();
-        var viewer = new ReleaseNotesMarkdownViewer(opened.Add);
+        var viewer = new RemoteMarkdownView(opened.Add);
         var args = new LinkClickedEventArgs(url) { RoutedEvent = MarkdownViewer.LinkClickedEvent };
 
         viewer.RaiseEvent(args);
@@ -82,7 +82,7 @@ public sealed class ReleaseNotesMarkdownViewerHeadlessTests
     public void Markdown_WithNonHttpImages_DoesNotInvokeTheImageLoader(string url)
     {
         var calls = 0;
-        var viewer = new ReleaseNotesMarkdownViewer
+        var viewer = new RemoteMarkdownView
         {
             ImageLoader = (_, _) => { calls++; return Task.FromResult(Array.Empty<byte>()); },
             Markdown = $"![image]({url})"
@@ -104,7 +104,7 @@ public sealed class ReleaseNotesMarkdownViewerHeadlessTests
     {
         var entered = new TaskCompletionSource<CancellationToken>();
         var result = new TaskCompletionSource<byte[]>();
-        var viewer = new ReleaseNotesMarkdownViewer
+        var viewer = new RemoteMarkdownView
         {
             ImageLoader = (_, token) => { entered.TrySetResult(token); return result.Task; },
             Markdown = "![old](https://example.com/old.png)"
@@ -131,7 +131,7 @@ public sealed class ReleaseNotesMarkdownViewerHeadlessTests
         }
     }
 
-    private static string ReadTextFromViewer(ReleaseNotesMarkdownViewer viewer) =>
+    private static string ReadTextFromViewer(RemoteMarkdownView viewer) =>
         string.Join("\n", viewer.GetVisualDescendants().OfType<TextBlock>().Select(ReadText));
 
     [AvaloniaTheory]
@@ -141,7 +141,7 @@ public sealed class ReleaseNotesMarkdownViewerHeadlessTests
     {
         var entered = new TaskCompletionSource<CancellationToken>();
         var completion = new TaskCompletionSource<byte[]>();
-        var viewer = new ReleaseNotesMarkdownViewer
+        var viewer = new RemoteMarkdownView
         {
             ImageLoader = (_, token) => { entered.TrySetResult(token); return completion.Task; },
             Markdown = "![Banner](https://example.com/banner.png)"
@@ -166,7 +166,7 @@ public sealed class ReleaseNotesMarkdownViewerHeadlessTests
     public async Task Markdown_WhenImageLoadingFails_StillShowsBodyAndLinks()
     {
         var calls = 0;
-        var viewer = new ReleaseNotesMarkdownViewer
+        var viewer = new RemoteMarkdownView
         {
             ImageLoader = (_, _) =>
             {
@@ -196,7 +196,7 @@ public sealed class ReleaseNotesMarkdownViewerHeadlessTests
     [AvaloniaFact]
     public void Markdown_WhenUsingGfmAndAlerts_RendersNativeStructures()
     {
-        var viewer = new ReleaseNotesMarkdownViewer
+        var viewer = new RemoteMarkdownView
         {
             Markdown = "> [!WARNING]\n> 正文\n\n- [x] 完成\n\n![远程图片](https://example.com/image.png)"
         };
@@ -234,7 +234,7 @@ public sealed class ReleaseNotesMarkdownViewerHeadlessTests
         var closeIndex = changelog.IndexOf("</details>", openIndex, StringComparison.Ordinal);
         Assert.True(openIndex >= 0 && closeIndex > openIndex, "CHANGELOG_RELEASE.md must carry the folded technical appendix.");
 
-        var viewer = new ReleaseNotesMarkdownViewer
+        var viewer = new RemoteMarkdownView
         {
             Markdown = changelog[openIndex..(closeIndex + "</details>".Length)]
         };

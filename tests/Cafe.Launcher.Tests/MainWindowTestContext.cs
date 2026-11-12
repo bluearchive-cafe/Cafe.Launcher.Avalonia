@@ -53,8 +53,8 @@ internal sealed class MainWindowTestContext : IDisposable
     public static MainWindowTestContext Create(
         TestDirectory directory,
         HttpClientFactory httpClientFactory,
-        ImageCacheService imageCacheService,
-        ILauncherCoreService coreService,
+        RemoteImageStore imageCacheService,
+        ILauncherStatusSnapshotService coreService,
         SavedSettingsTestRig? savedSettings = null,
         ResourcePanelUidService? resourcePanelUidService = null,
         ResourcePanelApiClient? resourcePanelApiClient = null,

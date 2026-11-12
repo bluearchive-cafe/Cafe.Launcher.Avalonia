@@ -18,7 +18,7 @@ namespace Cafe.Launcher.Core.Services.GameRuntime;
 /// 把管道读干（不读会让子进程写满管道而卡住），只是不再写文件。录制文件打不开时同样继续排空
 /// 管道，并以 Warn 记一条诊断——静默丢管道会让兼容层在缓冲写满后卡住游戏且无人知晓
 /// （AUD-GAME-001）。</para>
-/// <para>新一次 <see cref="Begin"/> 会先取消上一次捕获并等待它释放录制文件（有上限）再覆盖
+/// <para>新一次 <see cref="BeginAsync"/> 会先取消上一次捕获并等待它释放录制文件（有上限）再覆盖
 /// 写入；旧捕获若在该预算内没有结束，新捕获退化为只排空不录制，而不是因共享冲突静默失败。</para>
 /// <para>文件路径由 <see cref="LauncherDataRoot"/> 拥有；本类不解析进程级静态。</para>
 /// </remarks>
@@ -54,7 +54,7 @@ internal sealed class RunnerOutputCapture
     /// <see cref="FilePath"/>，返回两个流结束（进程退出）时完成的 <see cref="Task"/>。上一次捕获会被取消，
     /// 新捕获在它释放录制文件后才覆盖写入。
     /// </summary>
-    public Task Begin(TextReader standardOutput, TextReader standardError)
+    public Task BeginAsync(TextReader standardOutput, TextReader standardError)
     {
         ArgumentNullException.ThrowIfNull(standardOutput);
         ArgumentNullException.ThrowIfNull(standardError);
@@ -84,7 +84,7 @@ internal sealed class RunnerOutputCapture
         try
         {
             await WaitForReplacementAsync(previous, cancellationToken).ConfigureAwait(false);
-            // 被更新的一次 Begin 取代时不再碰录制文件，交给新的捕获。
+            // 被更新的一次 BeginAsync 取代时不再碰录制文件，交给新的捕获。
             cancellationToken.ThrowIfCancellationRequested();
 
             writer = TryOpenWriter();

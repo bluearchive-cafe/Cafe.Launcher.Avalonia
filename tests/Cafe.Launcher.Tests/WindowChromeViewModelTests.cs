@@ -54,13 +54,13 @@ public sealed class WindowChromeViewModelTests : IDisposable
     }
 
     [Fact]
-    public void ShowSettingsCommand_OpensSettingsAndLoadsSnapshot()
+    public void ToggleSettingsCommand_OpensSettingsAndLoadsSnapshot()
     {
         using var context = CreateContext();
         context.Settings.ApplyLauncherSettings(
             new LauncherSettings { Language = LauncherLanguages.Japanese });
 
-        context.ViewModel.ShowSettingsCommand.Execute(null);
+        context.ViewModel.ToggleSettingsCommand.Execute(null);
 
         Assert.True(context.ViewModel.IsSettingsVisible);
         Assert.Equal(
@@ -69,14 +69,14 @@ public sealed class WindowChromeViewModelTests : IDisposable
     }
 
     [Fact]
-    public void ShowSettingsCommand_WhenDirty_ShowsUnsavedChangesInsteadOfClosing()
+    public void ToggleSettingsCommand_WhenDirty_ShowsUnsavedChangesInsteadOfClosing()
     {
         using var context = CreateContext();
         context.Settings.ApplyLauncherSettings(new LauncherSettings());
-        context.ViewModel.ShowSettingsCommand.Execute(null);
+        context.ViewModel.ToggleSettingsCommand.Execute(null);
         context.Settings.Editor.Current.Language = LauncherLanguages.Japanese;
 
-        context.ViewModel.ShowSettingsCommand.Execute(null);
+        context.ViewModel.ToggleSettingsCommand.Execute(null);
 
         Assert.True(context.ViewModel.IsSettingsVisible);
         Assert.True(context.Settings.IsUnsavedChangesVisible);
@@ -87,7 +87,7 @@ public sealed class WindowChromeViewModelTests : IDisposable
     {
         using var context = CreateContext();
         context.Settings.ApplyLauncherSettings(new LauncherSettings());
-        context.ViewModel.ShowSettingsCommand.Execute(null);
+        context.ViewModel.ToggleSettingsCommand.Execute(null);
         context.Settings.Editor.Current.Language = LauncherLanguages.Japanese;
 
         await context.ViewModel.DiscardSettingsChangesCommand.ExecuteAsync(null);
@@ -172,12 +172,12 @@ Assert.Equal(DownloadStopReason.UserRequested, context.Backend.LastStopReason);
     }
 
     [Fact]
-    public void ShowSettingsCommand_WhenSettingsAreSaving_DoesNothing()
+    public void ToggleSettingsCommand_WhenSettingsAreSaving_DoesNothing()
     {
         using var context = CreateContext();
         context.Settings.IsSaving = true;
 
-        context.ViewModel.ShowSettingsCommand.Execute(null);
+        context.ViewModel.ToggleSettingsCommand.Execute(null);
 
         Assert.False(context.ViewModel.IsSettingsVisible);
     }

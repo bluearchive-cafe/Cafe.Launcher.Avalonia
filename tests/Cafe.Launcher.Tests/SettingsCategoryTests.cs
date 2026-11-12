@@ -246,6 +246,7 @@ public sealed class SettingsCategoryTests
                 ? SettingsCategoryCodes.About
                 : SettingsCategoryCodes.General;
             var changed = new List<string>();
+            var gameRuntimeChanged = new List<string>();
             PropertyChangedEventHandler handler = (_, args) =>
             {
                 if (args.PropertyName is not null)
@@ -253,27 +254,35 @@ public sealed class SettingsCategoryTests
                     changed.Add(args.PropertyName);
                 }
             };
+            PropertyChangedEventHandler gameRuntimeHandler = (_, args) =>
+            {
+                if (args.PropertyName is not null)
+                {
+                    gameRuntimeChanged.Add(args.PropertyName);
+                }
+            };
             viewModel.PropertyChanged += handler;
+            viewModel.GameRuntime.PropertyChanged += gameRuntimeHandler;
 
             viewModel.SelectedCategory = code;
             if (code == SettingsCategoryCodes.Game)
             {
                 // 选中 Game 会异步刷新状态行；等它完成再收口，避免通知落在下一次迭代里。
-                await viewModel.PendingGameRuntimeStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
+                await viewModel.GameRuntime.PendingStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
             }
 
             viewModel.PropertyChanged -= handler;
+            viewModel.GameRuntime.PropertyChanged -= gameRuntimeHandler;
             var changedProperties = changed.ToHashSet(StringComparer.Ordinal);
-            // Selecting the Game category additionally refreshes the runtime status
-            // row, raising the busy flag and GameRuntimeStatusSummary alongside the
-            // seven selection notifications; other categories raise just the set.
-            var expectedCount = code == SettingsCategoryCodes.Game ? 9 : 7;
-            Assert.Equal(expectedCount, changedProperties.Count);
+            // Selecting the Game category refreshes the runtime status row inside the
+            // child VM; the parent raises only the seven selection notifications.
+            Assert.Equal(7, changedProperties.Count);
             Assert.Contains(nameof(SettingsViewModel.SelectedCategory), changedProperties);
             if (code == SettingsCategoryCodes.Game)
             {
-                Assert.Contains(nameof(SettingsViewModel.GameRuntimeStatusSummary), changedProperties);
-                Assert.Contains(nameof(SettingsViewModel.IsGameRuntimeStatusRefreshing), changedProperties);
+                var runtimeChanged = gameRuntimeChanged.ToHashSet(StringComparer.Ordinal);
+                Assert.Contains(nameof(SettingsGameRuntimeViewModel.StatusSummary), runtimeChanged);
+                Assert.Contains(nameof(SettingsGameRuntimeViewModel.IsStatusRefreshing), runtimeChanged);
             }
             foreach (var propertyName in CategoryPropertyNames)
             {

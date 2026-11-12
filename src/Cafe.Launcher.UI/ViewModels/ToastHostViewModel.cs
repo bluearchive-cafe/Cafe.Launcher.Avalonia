@@ -10,11 +10,12 @@ using Cafe.Launcher.UI.Helpers;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.Core.Services.Diagnostics;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 namespace Cafe.Launcher.UI.ViewModels;
 
-internal partial class ToastHostViewModel : ViewModelBase, IDisposable
+internal partial class ToastHostViewModel : ObservableObject, IDisposable
 {
     private readonly ToastService toastService;
     private readonly LocalizationService localizer;

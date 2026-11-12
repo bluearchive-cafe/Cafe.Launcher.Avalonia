@@ -62,7 +62,7 @@ public sealed partial class MainWindowHeadlessTests
     private static void OpenSettings(TestContext context)
     {
         context.Window.Show();
-        context.ViewModel.WindowChrome.ShowSettingsCommand.Execute(null);
+        context.ViewModel.WindowChrome.ToggleSettingsCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
     }
 

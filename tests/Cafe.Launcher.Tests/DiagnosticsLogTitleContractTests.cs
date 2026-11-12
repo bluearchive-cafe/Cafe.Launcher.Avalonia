@@ -69,7 +69,7 @@ public sealed class DiagnosticsLogTitleContractTests
             + "    exception,\n"
             + "    CancellationToken.None).ConfigureAwait(false);";
 
-        var offenders = FindOffenders([(Name: "LauncherCoreService.cs", Text: historicCall)]);
+        var offenders = FindOffenders([(Name: "LauncherStatusSnapshotService.cs", Text: historicCall)]);
 
         Assert.Single(offenders);
         Assert.Contains("interpolated title", offenders[0], StringComparison.Ordinal);
@@ -82,7 +82,7 @@ public sealed class DiagnosticsLogTitleContractTests
             + "    exception,\n"
             + "    CancellationToken.None).ConfigureAwait(false);";
 
-        Assert.Empty(FindOffenders([(Name: "LauncherCoreService.cs", Text: currentCall)]));
+        Assert.Empty(FindOffenders([(Name: "LauncherStatusSnapshotService.cs", Text: currentCall)]));
     }
 
     [Fact]

@@ -1095,7 +1095,7 @@ public sealed class BackgroundViewModelTests : IDisposable
             }
         };
 
-    private ImageCacheService CreateCache(Func<Uri, object?> responder) =>
+    private RemoteImageStore CreateCache(Func<Uri, object?> responder) =>
         new(new StubRemoteHttpTransport(responder), new Crc64Service(), TestDataRoot.ForDirectory(rootDir));
 
     private async Task<string> ComputeHashAsync(byte[] bytes)

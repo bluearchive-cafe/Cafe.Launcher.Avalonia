@@ -223,7 +223,7 @@ public sealed class ServiceConfigurationTests : IDisposable
             provider.GetRequiredService<UnifiedLogger>().LogFilePath,
             StringComparison.OrdinalIgnoreCase);
         // 图片缓存目录不对外暴露，改看行为：构造即创建的就是注入根下的那一个。
-        provider.GetRequiredService<ImageCacheService>();
+        provider.GetRequiredService<RemoteImageStore>();
         Assert.True(Directory.Exists(dataRoot.ImageCacheDirectory));
 
         await provider.GetRequiredService<DownloadCheckpointStore>().SaveAsync(new DownloadTaskState

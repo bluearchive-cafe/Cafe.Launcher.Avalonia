@@ -4,7 +4,7 @@
 
 ## 已采用方案
 
-更新说明由 [ReleaseNotesMarkdownViewer](../../src/Cafe.Launcher.UI/Controls/ReleaseNotesMarkdownViewer.cs) 封装 MarkView，解析使用其 Markdig 管线。图片加载、链接打开与资源释放由宿主适配，现行行为见[领域契约](../../CONTEXT.md#设置与操作)，发布说明格式见[开发指南](../DEVELOPMENT.md#发布)。
+更新说明由 [RemoteMarkdownView](../../src/Cafe.Launcher.UI/Controls/RemoteMarkdownView.cs) 封装 MarkView，解析使用其 Markdig 管线。图片加载、链接打开与资源释放由宿主适配，现行行为见[领域契约](../../CONTEXT.md#设置与操作)，发布说明格式见[开发指南](../DEVELOPMENT.md#发布)。
 
 原评估针对 `Markdown.Avalonia.Tight 12.0.0-a3`，比较了薄适配、Markdig 驱动控件和完整 fork 三条路线。项目采用了替代控件路线；旧包版本、迁移前步骤和 fork 实施清单不再作为当前待办。原始调查及上游证据保留在本文件的 Git 历史。
 

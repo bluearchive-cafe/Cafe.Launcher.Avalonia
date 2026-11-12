@@ -19,12 +19,12 @@ public sealed partial class UiStyleContractTests
             && element.Attribute("Classes")?.Value == "update-progress-divider");
         var speed = document.Descendants().Single(element =>
             element.Name.LocalName == "TextBlock"
-            && element.Attribute("Text")?.Value == "{Binding Dialogs.UpdateDownloadSpeedText}");
+            && element.Attribute("Text")?.Value == "{Binding Dialogs.LauncherUpdate.DownloadSpeedText}");
 
-        Assert.Equal("{Binding Dialogs.IsUpdateApplying}", divider.Attribute("IsVisible")?.Value);
+        Assert.Equal("{Binding Dialogs.LauncherUpdate.IsApplying}", divider.Attribute("IsVisible")?.Value);
         Assert.Equal("{StaticResource Launcher.Spacing.Thickness.None}", divider.Attribute("Margin")?.Value);
         Assert.Equal("{DynamicResource Launcher.Color.Outline}", divider.Attribute("Background")?.Value);
-        Assert.Equal("{Binding Dialogs.IsUpdateDownloading}", speed.Attribute("IsVisible")?.Value);
+        Assert.Equal("{Binding Dialogs.LauncherUpdate.IsDownloading}", speed.Attribute("IsVisible")?.Value);
     }
 
     [Fact]
@@ -49,10 +49,10 @@ public sealed partial class UiStyleContractTests
         var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowDialogsOverlay.axaml"));
         XNamespace controls = "using:Cafe.Launcher.UI.Controls";
 
-        Assert.Single(document.Descendants(controls + "ReleaseNotesMarkdownViewer"));
+        Assert.Single(document.Descendants(controls + "RemoteMarkdownView"));
 
         var styles = File.ReadAllText(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
-        Assert.Contains("controls|ReleaseNotesMarkdownViewer", styles, StringComparison.Ordinal);
+        Assert.Contains("controls|RemoteMarkdownView", styles, StringComparison.Ordinal);
         Assert.Contains("{DynamicResource Launcher.Text.Primary}", styles, StringComparison.Ordinal);
         Assert.Contains("{DynamicResource Launcher.Color.Content.Row}", styles, StringComparison.Ordinal);
         Assert.Contains("{DynamicResource Launcher.Color.Card.Border}", styles, StringComparison.Ordinal);
@@ -398,7 +398,7 @@ public sealed partial class UiStyleContractTests
         var settingsOverlay = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowSettingsOverlay.axaml"));
         Dictionary<string, string> settingsActions = new(StringComparer.Ordinal)
         {
-            ["{Binding WindowChrome.ShowSettingsCommand}"] = "{Binding Shell.I18n[cancel]}",
+            ["{Binding WindowChrome.ToggleSettingsCommand}"] = "{Binding Shell.I18n[cancel]}",
             ["{Binding Settings.SaveSettingsCommand}"] = "{Binding Settings.SaveButtonText}"
         };
 

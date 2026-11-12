@@ -144,8 +144,8 @@ public sealed class SettingsViewModelTests : IDisposable
 
         // 有更新时不弹 toast，唯一感知通道是更新对话框。
         Assert.Empty(raisedToasts);
-        Assert.True(dialogs.IsUpdateAvailableVisible);
-        Assert.Equal("9.9.9", dialogs.UpdateAvailableVersion);
+        Assert.True(dialogs.LauncherUpdate.IsVisible);
+        Assert.Equal("9.9.9", dialogs.LauncherUpdate.Version);
     }
 
     [Theory]
@@ -160,9 +160,9 @@ public sealed class SettingsViewModelTests : IDisposable
         {
             if (uri == ProxyReleasesUri) return respond(uri);
             // The dialog and usable update action must exist before the supplementary request starts.
-            Assert.True(dialogs.IsUpdateAvailableVisible);
-            Assert.True(dialogs.IsUpdateReleaseNotesLoading);
-            Assert.True(dialogs.CanConfirmUpdate);
+            Assert.True(dialogs.LauncherUpdate.IsVisible);
+            Assert.True(dialogs.LauncherUpdate.IsReleaseNotesLoading);
+            Assert.True(dialogs.LauncherUpdate.CanConfirm);
             return fail ? new HttpRequestException("notes unavailable") : "{\"releaseNotes\":\"## Loaded notes\"}";
         };
         using var settings = CreateSettingsViewModel(new LocalizationService(), transport, dialogs);
@@ -170,11 +170,11 @@ public sealed class SettingsViewModelTests : IDisposable
         await settings.CheckForUpdatesCommand.ExecuteAsync(null);
 
         Assert.Empty(raisedToasts);
-        Assert.Equal(fail, dialogs.HasUpdateReleaseNotesFailed);
-        Assert.False(dialogs.IsUpdateReleaseNotesLoading);
-        Assert.Equal(!fail, dialogs.HasUpdateReleaseNotes);
-        Assert.True(dialogs.IsUpdateAvailableVisible);
-        Assert.True(dialogs.CanConfirmUpdate);
+        Assert.Equal(fail, dialogs.LauncherUpdate.HasReleaseNotesFailed);
+        Assert.False(dialogs.LauncherUpdate.IsReleaseNotesLoading);
+        Assert.Equal(!fail, dialogs.LauncherUpdate.HasReleaseNotes);
+        Assert.True(dialogs.LauncherUpdate.IsVisible);
+        Assert.True(dialogs.LauncherUpdate.CanConfirm);
     }
 
     [Fact]

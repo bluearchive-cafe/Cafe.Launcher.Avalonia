@@ -23,7 +23,7 @@ using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.UI.Features.Settings;
 
-internal partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
+internal partial class SettingsAppearanceViewModel : ObservableObject, IDisposable
 {
     private readonly SettingsEditor editor;
     private readonly ThemeApplier themeApplier;

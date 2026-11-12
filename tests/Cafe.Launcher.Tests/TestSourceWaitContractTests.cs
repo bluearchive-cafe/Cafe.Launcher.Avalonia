@@ -23,7 +23,7 @@ public sealed partial class TestSourceWaitContractTests
         "PendingAppearancePreview",
         "PendingCountdownTask",
         "PendingFilterTask",
-        "PendingGameRuntimeStatusRefresh",
+        "PendingStatusRefresh",
         "PendingRangeProbeTask",
         "PendingStartupUpdateCheck",
         "PendingThemeRefresh",

@@ -13,11 +13,11 @@ public sealed class RunnerOutputCaptureTests : IDisposable
     private readonly TestDirectory tempDir = TestDirectory.Create();
 
     [Fact]
-    public async Task Begin_WritesBothStreamsToTheCaptureFile()
+    public async Task BeginAsync_WritesBothStreamsToTheCaptureFile()
     {
         var capture = new RunnerOutputCapture(tempDir.DataRoot);
 
-        await capture.Begin(new StringReader("ready\nlaunching"), new StringReader("prefix warning"));
+        await capture.BeginAsync(new StringReader("ready\nlaunching"), new StringReader("prefix warning"));
 
         var text = await File.ReadAllTextAsync(capture.FilePath);
         Assert.Contains("[out] ready", text, StringComparison.Ordinal);
@@ -26,11 +26,11 @@ public sealed class RunnerOutputCaptureTests : IDisposable
     }
 
     [Fact]
-    public async Task Begin_WhenOutputExceedsTheLimit_MarksTheCaptureTruncated()
+    public async Task BeginAsync_WhenOutputExceedsTheLimit_MarksTheCaptureTruncated()
     {
         var capture = new RunnerOutputCapture(tempDir.DataRoot);
 
-        await capture.Begin(
+        await capture.BeginAsync(
             new StringReader(new string('x', RunnerOutputCapture.MaxCharacters + 100)),
             new StringReader(""));
 
@@ -40,12 +40,12 @@ public sealed class RunnerOutputCaptureTests : IDisposable
     }
 
     [Fact]
-    public async Task Begin_WhenCalledAgain_OverwritesThePreviousCapture()
+    public async Task BeginAsync_WhenCalledAgain_OverwritesThePreviousCapture()
     {
         var capture = new RunnerOutputCapture(tempDir.DataRoot);
 
-        await capture.Begin(new StringReader("first launch"), new StringReader(""));
-        await capture.Begin(new StringReader("second launch"), new StringReader(""));
+        await capture.BeginAsync(new StringReader("first launch"), new StringReader(""));
+        await capture.BeginAsync(new StringReader("second launch"), new StringReader(""));
 
         var text = await File.ReadAllTextAsync(capture.FilePath);
         Assert.Contains("[out] second launch", text, StringComparison.Ordinal);
@@ -53,14 +53,14 @@ public sealed class RunnerOutputCaptureTests : IDisposable
     }
 
     [Fact]
-    public async Task Begin_WhenPreviousCaptureStillBlockedOnItsPipe_ReplacesItWithoutSharingTheFile()
+    public async Task BeginAsync_WhenPreviousCaptureStillBlockedOnItsPipe_ReplacesItWithoutSharingTheFile()
     {
         var diagnostics = new RecordingDiagnostics();
         var capture = new RunnerOutputCapture(tempDir.DataRoot, diagnostics);
         var blocked = new BlockingReader();
 
-        var first = capture.Begin(blocked, new StringReader(""));
-        var second = capture.Begin(new StringReader("second launch"), new StringReader(""));
+        var first = capture.BeginAsync(blocked, new StringReader(""));
+        var second = capture.BeginAsync(new StringReader("second launch"), new StringReader(""));
 
         await Task.WhenAll(first, second).WaitAsync(TimeSpan.FromSeconds(10));
 
@@ -72,7 +72,7 @@ public sealed class RunnerOutputCaptureTests : IDisposable
     }
 
     [Fact]
-    public async Task Begin_WhenRecordingPathUnavailable_StillDrainsBothPipesAndWarns()
+    public async Task BeginAsync_WhenRecordingPathUnavailable_StillDrainsBothPipesAndWarns()
     {
         var diagnostics = new RecordingDiagnostics();
         var capture = new RunnerOutputCapture(tempDir.DataRoot, diagnostics);
@@ -83,7 +83,7 @@ public sealed class RunnerOutputCaptureTests : IDisposable
             var output = new TrackingReader("out line");
             var error = new TrackingReader("err line");
 
-            await capture.Begin(output, error).WaitAsync(TimeSpan.FromSeconds(10));
+            await capture.BeginAsync(output, error).WaitAsync(TimeSpan.FromSeconds(10));
 
             Assert.True(output.IsDrained);
             Assert.True(error.IsDrained);

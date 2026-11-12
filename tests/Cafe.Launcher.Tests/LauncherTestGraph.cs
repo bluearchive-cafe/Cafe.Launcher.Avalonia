@@ -98,7 +98,7 @@ internal sealed class LauncherTestGraph : IDisposable
             services.AddSingleton(options.HttpClientFactory);
         }
 
-        var imageCache = options.ImageCache ?? new ImageCacheService(
+        var imageCache = options.ImageCache ?? new RemoteImageStore(
                 new StubRemoteHttpTransport(),
                 new Crc64Service(),
                 dataRoot);
@@ -205,13 +205,13 @@ internal sealed class LauncherTestGraph : IDisposable
 /// <summary>测试替身接缝；未指定的项沿用真实注册。</summary>
 internal sealed record LauncherTestGraphOptions
 {
-    public ILauncherCoreService? CoreService { get; init; }
+    public ILauncherStatusSnapshotService? CoreService { get; init; }
 
     public SavedSettingsTestRig? SavedSettings { get; init; }
 
     public HttpClientFactory? HttpClientFactory { get; init; }
 
-    public ImageCacheService? ImageCache { get; init; }
+    public RemoteImageStore? ImageCache { get; init; }
 
     public ResourcePanelUidService? ResourcePanelUidService { get; init; }
 

@@ -46,7 +46,7 @@ Windows 的现实约束：
 
 - 新增 `IWindowsLauncherUpdateApplier.IsAvailable`（helper 就在启动器同目录）。判定集中在 `LauncherSelfUpdateService` 的一处私有判据上，下载闸门与对话框预检共用它，所以没有 helper 的安装根本不会开始下载。
 - 判定返回 `LauncherUpdateInAppAvailability` 原因而不是布尔（ADR-027 的同一条规矩，`LauncherSelfUpdateServiceTests.ResolveInAppAvailability_IsTheOnlyPublicVerdict_NoBareBoolean` 钉住形状）：平台不支持 / 此安装缺 helper / 该版本无可校验包，三种互不相同的事实。裸布尔会把后两种压成「此设备无法在应用内完成更新」——设备与安装都能装；失败原因是发布资产无法校验（启动器主动拒绝无校验执行），或这份副本缺组件。
-- 表现层据此把「能力判定」与「尝试失败」分开：`DialogsViewModel.UpdateUnavailableReason` 由 `ShowUpdateAvailable` 按原因置位，`MarkUpdateFailed()` 明确清空它——一次失败不是能力判定，其缘由由 toast 说明。说明行按原因取三条文案。
+- 表现层据此把「能力判定」与「尝试失败」分开：`LauncherUpdateDialogViewModel.UnavailableReason` 由 `Show` 按原因置位，`MarkFailed()` 明确清空它——一次失败不是能力判定，其缘由由 toast 说明。说明行按原因取三条文案。
 - 打包侧的对应约束：`UpdateHelperCommandTests.HelperExecutableName_MatchesTheUpdaterProjectAndTheWindowsPackagingStep`（helper 只随 win-x64 包发布，安装器整目录收编发布目录）。
 
 ## 修订（2026-09-27）：helper CLI 只作为版本化的内部进程协议

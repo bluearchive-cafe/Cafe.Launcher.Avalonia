@@ -85,13 +85,13 @@ public sealed class LauncherUpdatePresenterTests : IDisposable
         var outcome = await toast.PrimaryAction!.ExecuteAsync(CancellationToken.None);
 
         Assert.True(outcome.IsSuccess);
-        Assert.True(context.Dialogs.IsUpdateAvailableVisible);
-        Assert.Equal("9.9.9", context.Dialogs.UpdateAvailableVersion);
-        Assert.Equal("release notes", context.Dialogs.UpdateReleaseNotes);
-        Assert.False(context.Dialogs.UpdateSupportsInAppApply);
+        Assert.True(context.Dialogs.LauncherUpdate.IsVisible);
+        Assert.Equal("9.9.9", context.Dialogs.LauncherUpdate.Version);
+        Assert.Equal("release notes", context.Dialogs.LauncherUpdate.ReleaseNotes);
+        Assert.False(context.Dialogs.LauncherUpdate.SupportsInAppApply);
         Assert.Equal(
             LauncherUpdateInAppAvailability.PlatformUnsupported,
-            context.Dialogs.UpdateUnavailableReason);
+            context.Dialogs.LauncherUpdate.UnavailableReason);
         Assert.Equal(1, context.SelfUpdateService.ResolveCallCount);
     }
 

@@ -14,10 +14,10 @@ using Cafe.Launcher.Core.Services.Diagnostics;
 namespace Cafe.Launcher.Core.Services;
 
 /// <summary>
-/// Caches downloaded images (e.g., launcher background) by CRC64 hash.
-/// Mirrors the original Electron launcher's IndexedDB image cache.
+/// 远程图片存储：按 CRC64 或 URL 键落盘缓存，并负责下载、新鲜度判定、按键串行与过期清理。
+/// 对齐原 Electron 启动器的 IndexedDB 图片缓存。
 /// </summary>
-internal sealed class ImageCacheService : IImageCacheService
+internal sealed class RemoteImageStore : IRemoteImageStore
 {
     private const int MaxImageBytes = 25 * 1024 * 1024;
     private static readonly TimeSpan RemoteImageCacheLifetime = TimeSpan.FromHours(24);
@@ -41,7 +41,7 @@ internal sealed class ImageCacheService : IImageCacheService
         new(StringComparer.Ordinal);
     private bool disposed;
 
-    public ImageCacheService(
+    public RemoteImageStore(
         IRemoteHttpTransport transport,
         ICrc64Service crc64Service,
         LauncherDataRoot dataRoot,
@@ -183,7 +183,7 @@ internal sealed class ImageCacheService : IImageCacheService
                 // A cache write is optional: callers can still render the downloaded image.
                 // 豁免：缓存写入是可选优化，失败时调用方仍可直接渲染下载内容。
                 System.Diagnostics.Debug.WriteLine(
-                    $"ImageCacheService: failed to cache remote image: {exception.Message}");
+                    $"RemoteImageStore: failed to cache remote image: {exception.Message}");
             }
 
             return bytes;

@@ -176,7 +176,7 @@ internal partial class MainWindow
                 break;
             case Key.S:
                 prototypeVideo.Phase = "settings";
-                configuredViewModel?.WindowChrome.ShowSettingsCommand.Execute(null);
+                configuredViewModel?.WindowChrome.ToggleSettingsCommand.Execute(null);
                 break;
             case Key.C:
                 prototypeVideo.Phase = "dialog";

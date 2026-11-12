@@ -8,7 +8,7 @@ namespace Cafe.Launcher.Core.Services;
 /// 远程图片缓存的窄接口。表现层只问「有没有缓存 / 给我字节」，缓存目录布局、CRC 校验与
 /// 传输细节留在实现里。
 /// </summary>
-public interface IImageCacheService : IDisposable
+public interface IRemoteImageStore : IDisposable
 {
     /// <summary>命中缓存时返回本地路径，否则 <c>null</c>（同步探测，不触发下载）。</summary>
     string? GetCachedPath(string crc64Hash);

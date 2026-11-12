@@ -192,7 +192,7 @@ public sealed class LauncherPresentationSessionTests
         var core = new CountingCoreService();
         using var provider = HeadlessTestHost.CreateServiceProvider(
             directory,
-            services => services.AddSingleton<ILauncherCoreService>(core));
+            services => services.AddSingleton<ILauncherStatusSnapshotService>(core));
         var writer = provider.GetRequiredService<ISavedSettingsWriter>();
         var saved = LauncherSettings.CreateDefaults();
         saved.AcceptedAgreementVersion = "2020-01-01";
@@ -399,7 +399,7 @@ public sealed class LauncherPresentationSessionTests
         }
     }
     /// <summary>记录主机状态加载次数；跨刷新线程递增，读取按原子操作。</summary>
-    private sealed class CountingCoreService : ILauncherCoreService
+    private sealed class CountingCoreService : ILauncherStatusSnapshotService
     {
         private int loadCount;
 

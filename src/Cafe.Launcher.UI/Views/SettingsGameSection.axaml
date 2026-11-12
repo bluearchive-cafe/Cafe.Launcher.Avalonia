@@ -90,7 +90,7 @@
                              Text="{Binding Settings.Editor.Current.GameRuntime.RunnerPath, Mode=TwoWay}"
                              PlaceholderText="{Binding Shell.I18n[gameRuntimeRunnerPathPlaceholder]}"
                              AutomationProperties.Name="{Binding Shell.I18n[gameRuntimeRunnerPath]}"
-                             IsEnabled="{Binding Settings.IsGameRuntimeRunnerPathEnabled}"/>
+                             IsEnabled="{Binding Settings.GameRuntime.IsRunnerPathEnabled}"/>
                 </controls:SettingRow.Action>
             </controls:SettingRow>
 
@@ -103,7 +103,7 @@
                                  Text="{Binding Settings.Editor.Current.GameRuntime.PrefixPath, Mode=TwoWay}"
                                  PlaceholderText="{Binding Shell.I18n[gameRuntimePrefixPathPlaceholder]}"
                                  AutomationProperties.Name="{Binding Shell.I18n[gameRuntimePrefixPath]}"/>
-                        <Button Classes="flat-action" Command="{Binding Settings.ChoosePrefixPathCommand}"
+                        <Button Classes="flat-action" Command="{Binding Settings.GameRuntime.ChoosePrefixPathCommand}"
                                 HorizontalAlignment="Right"
                                 AutomationProperties.Name="{Binding Shell.I18n[choose]}">
                             <StackPanel Classes="button-content">
@@ -124,7 +124,7 @@
                                  Text="{Binding Settings.Editor.Current.GameRuntime.ProtonPath, Mode=TwoWay}"
                                  PlaceholderText="{Binding Shell.I18n[gameRuntimeProtonPathPlaceholder]}"
                                  AutomationProperties.Name="{Binding Shell.I18n[gameRuntimeProtonPath]}"/>
-                        <Button Classes="flat-action" Command="{Binding Settings.ChooseProtonPathCommand}"
+                        <Button Classes="flat-action" Command="{Binding Settings.GameRuntime.ChooseProtonPathCommand}"
                                 HorizontalAlignment="Right"
                                 AutomationProperties.Name="{Binding Shell.I18n[choose]}">
                             <StackPanel Classes="button-content">
@@ -136,14 +136,14 @@
                 </controls:SettingRow.Action>
             </controls:SettingRow>
 
-            <controls:SettingSelect IsVisible="{Binding Settings.HasProtonBuilds}"
+            <controls:SettingSelect IsVisible="{Binding Settings.GameRuntime.HasBuilds}"
                                     Title="{Binding Shell.I18n[gameRuntimeInstalledProton]}"
                                     AutomationName="{Binding Shell.I18n[gameRuntimeInstalledProton]}"
-                                    ItemsSource="{Binding Settings.ProtonBuilds}"
-                                    SelectedValue="{Binding Settings.SelectedProtonBuild, Mode=TwoWay}"/>
+                                    ItemsSource="{Binding Settings.GameRuntime.Builds}"
+                                    SelectedValue="{Binding Settings.GameRuntime.SelectedBuild, Mode=TwoWay}"/>
 
             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}"
-                  IsVisible="{Binding Settings.ProtonBuildDiscoveryFailed}">
+                  IsVisible="{Binding Settings.GameRuntime.BuildDiscoveryFailed}">
                 <materialIcons:MaterialIcon Kind="AlertCircleOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
                 <TextBlock Grid.Column="1" Text="{Binding Shell.I18n[gameRuntimeProtonDiscoveryFailed]}" Classes="caption" TextWrapping="Wrap"
                            AutomationProperties.LiveSetting="Polite"/>
@@ -161,12 +161,12 @@
             </controls:SettingRow>
 
             <controls:SettingRow Title="{Binding Shell.I18n[gameRuntimeStatusTitle]}"
-                                 Description="{Binding Settings.GameRuntimeStatusSummary}">
+                                 Description="{Binding Settings.GameRuntime.StatusSummary}">
                 <controls:SettingRow.Action>
-                    <Button Classes="flat-action" Command="{Binding Settings.RefreshGameRuntimeStatusCommand}"
+                    <Button Classes="flat-action" Command="{Binding Settings.GameRuntime.RefreshStatusCommand}"
                             Content="{Binding Shell.I18n[refresh]}"
                             AutomationProperties.Name="{Binding Shell.I18n[refresh]}"
-                            IsEnabled="{Binding Settings.IsGameRuntimeStatusRefreshing, Converter={x:Static BoolConverters.Not}}"/>
+                            IsEnabled="{Binding Settings.GameRuntime.IsStatusRefreshing, Converter={x:Static BoolConverters.Not}}"/>
                 </controls:SettingRow.Action>
             </controls:SettingRow>
         </StackPanel>

@@ -1,29 +1,23 @@
 using System;
-using Cafe.Launcher.UI.Services.GameRuntime;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
+using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Services;
+using Cafe.Launcher.Core.Services.Diagnostics;
+using Cafe.Launcher.Core.Services.GameRuntime;
 using Cafe.Launcher.UI.Constants;
 using Cafe.Launcher.UI.Helpers;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
-using Cafe.Launcher.Core.Services.Diagnostics;
-using Cafe.Launcher.Core.Services.GameRuntime;
-using Cafe.Launcher.Core.Helpers;
 using Cafe.Launcher.UI.ViewModels;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Serilog.Events;
-using Cafe.Launcher.Core.Models;
-using Cafe.Launcher.Core.Services;
 
 namespace Cafe.Launcher.UI.Features.Settings;
 
-internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalContentViewModel, ILanguageAwarePresentation
+internal partial class SettingsViewModel : ObservableObject, IDisposable, IModalContentViewModel, ILanguageAwarePresentation
 {
     private readonly ILauncherSettingsService settingsService;
     private readonly ISavedSettingsWriter savedSettingsWriter;
@@ -36,10 +30,9 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
     private readonly UnifiedLogger unifiedLogger;
     private readonly IGameInstallationPath gameInstallationPath;
     private readonly IErrorHandlingService errorHandling;
-    private readonly IGameRuntime gameRuntime;
     private readonly IFilePickerService filePickerService;
-    private readonly IProtonBuildDiscovery protonBuildDiscovery;
     private readonly LatestRefresh appearancePreviewRefresh = new();
+    private bool disposed;
 
     /// <summary>
     /// 保存前等待在途外观预览落定的总预算。预览链路含远端图下载（受 HttpClient
@@ -47,14 +40,6 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
     /// 超时后按当前状态继续保存。测试可调小。
     /// </summary>
     internal static TimeSpan AppearancePreviewSettleTimeout = TimeSpan.FromMinutes(2);
-
-    /// <summary>运行器/路径连续编辑时合并刷新，避免每次按键都探测版本并扫描磁盘。</summary>
-    private const int GameRuntimeStatusRefreshDebounceMilliseconds = 300;
-
-    private readonly LatestRefresh gameRuntimeStatusRefresh = new();
-    private IReadOnlyList<GameRuntimeStatusEntry>? gameRuntimeStatusEntries;
-    private int gameRuntimeStatusRefreshGeneration;
-    private bool disposed;
 
     // Coordination seams — set by parent after construction.
     public Func<LauncherSettings, string?, CancellationToken, Task>? PreviewAppearanceAsync { get; set; }
@@ -69,6 +54,9 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
     public SettingsEditor Editor => editor;
     public SettingsOptionsViewModel Options { get; }
     public SettingsAppearanceViewModel Appearance { get; }
+
+    /// <summary>游戏分类的运行时可用性流程；状态探测、构建发现与运行器路径选择都在其内部收口。</summary>
+    public SettingsGameRuntimeViewModel GameRuntime { get; }
 
     public SettingsViewModel(
         ILauncherSettingsService settingsService,
@@ -100,9 +88,14 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
         Options = options;
         Appearance = appearance;
         this.errorHandling = errorHandling;
-        this.gameRuntime = gameRuntime;
         this.filePickerService = filePickerService;
-        this.protonBuildDiscovery = protonBuildDiscovery;
+        GameRuntime = new SettingsGameRuntimeViewModel(
+            editor,
+            options,
+            localizer,
+            gameRuntime,
+            filePickerService,
+            protonBuildDiscovery);
         editor.PropertyChanged += OnEditorPropertyChanged;
         editor.CurrentPropertyChanged += OnCurrentSettingChanged;
     }
@@ -119,8 +112,6 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
 
         if (e.PropertyName == nameof(SettingsEditor.Current))
         {
-            OnPropertyChanged(nameof(IsGameRuntimeRunnerPathEnabled));
-            OnPropertyChanged(nameof(SelectedProtonBuild));
             // Current 实例会被整体替换（保存后草稿换成归一化值），展示值须随之重算。
             OnPropertyChanged(nameof(GamePathDisplay));
             OnPropertyChanged(nameof(HasGamePathChanges));
@@ -129,22 +120,6 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
 
     private void OnCurrentSettingChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(GameRuntimeSettings.Runner))
-        {
-            OnPropertyChanged(nameof(IsGameRuntimeRunnerPathEnabled));
-        }
-
-        if (e.PropertyName is nameof(GameRuntimeSettings.Runner) or nameof(GameRuntimeSettings.RunnerPath))
-        {
-            QueueGameRuntimeStatusRefresh(
-                TimeSpan.FromMilliseconds(GameRuntimeStatusRefreshDebounceMilliseconds));
-        }
-
-        if (e.PropertyName == nameof(GameRuntimeSettings.ProtonPath))
-        {
-            OnPropertyChanged(nameof(SelectedProtonBuild));
-        }
-
         if (e.PropertyName == nameof(LauncherSettings.GamePath))
         {
             OnPropertyChanged(nameof(GamePathDisplay));
@@ -173,10 +148,6 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
         ? localizer.T(LocalizationKeys.SettingsSaving)
         : IsSettingsDirty ? localizer.T(LocalizationKeys.UnsavedChanges) : string.Empty;
 
-    /// <summary>A custom executable path is only applied to an explicitly selected runner.</summary>
-    public bool IsGameRuntimeRunnerPathEnabled =>
-        editor.Current.GameRuntime.Runner is GameRuntimeRunners.Umu or GameRuntimeRunners.Wine;
-
     /// <summary>
     /// 游戏路径行的展示值：长路径做段感知中间省略（见 <see cref="PathMiddleEllipsis"/>），
     /// 保住盘符与末段目录名；草稿真值仍是 <c>Editor.Current.GamePath</c>。
@@ -192,57 +163,6 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
 
     [ObservableProperty]
     private bool isSaving;
-
-    /// <summary>
-    /// Multi-line per-runner availability summary for the Linux runtime section,
-    /// e.g. "UMU / Proton: Available · /usr/bin/umu-run · 1.4.4".
-    /// </summary>
-    [ObservableProperty]
-    private string gameRuntimeStatusSummary = string.Empty;
-
-    [ObservableProperty]
-    private bool isGameRuntimeStatusRefreshing;
-
-    [ObservableProperty]
-    private bool protonBuildDiscoveryFailed;
-
-    internal Task PendingGameRuntimeStatusRefresh => gameRuntimeStatusRefresh.Pending;
-
-    /// <summary>Installed builds are suggestions only; discovery never changes the draft.</summary>
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasProtonBuilds))]
-    [NotifyPropertyChangedFor(nameof(SelectedProtonBuild))]
-    private IReadOnlyList<SettingOption> protonBuilds = [];
-
-    public bool HasProtonBuilds => ProtonBuilds.Count > 0;
-
-    /// <summary>Selecting a discovered build edits the same path as manual input.</summary>
-    public string? SelectedProtonBuild
-    {
-        get
-        {
-            var currentPath = NormalizeRuntimePath(editor.Current.GameRuntime.ProtonPath);
-            if (currentPath.Length == 0)
-            {
-                return null;
-            }
-
-            return ProtonBuilds.FirstOrDefault(build =>
-                string.Equals(NormalizeRuntimePath(build.Code), currentPath, GamePathValidator.PathComparison))?.Code;
-        }
-        set
-        {
-            // 候选刷新后若手输路径不在列表内，绑定会把 null 写回；此时必须保留
-            // 自定义路径，只有用户选中具体候选才改写草稿。清空请使用路径输入框。
-            if (value is not null)
-            {
-                editor.Current.GameRuntime.ProtonPath = value;
-            }
-        }
-    }
-
-    private static string NormalizeRuntimePath(string? path) =>
-        string.IsNullOrWhiteSpace(path) ? string.Empty : Path.TrimEndingDirectorySeparator(path.Trim());
 
     private string selectedCategory = SettingsCategoryCodes.General;
 
@@ -264,7 +184,7 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
             OnPropertyChanged(nameof(IsAboutCategorySelected));
             if (selectedCategory == SettingsCategoryCodes.Game)
             {
-                RefreshGameRuntimeStatus();
+                GameRuntime.RefreshStatus();
             }
         }
     }
@@ -313,7 +233,7 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
             _ = Appearance.RefreshThemeColorPaletteFromCurrentBackgroundAsync(markDirty: false);
         }
 
-        RefreshGameRuntimeStatus();
+        GameRuntime.RefreshStatus();
     }
 
     /// <inheritdoc cref="ILanguageAwarePresentation.RefreshLocalizedText"/>
@@ -325,10 +245,7 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
         Options.RefreshDisplayNames();
         OnPropertyChanged(nameof(SaveButtonText));
         OnPropertyChanged(nameof(SaveStatusText));
-        if (gameRuntimeStatusEntries is not null)
-        {
-            GameRuntimeStatusSummary = BuildGameRuntimeStatusSummary(gameRuntimeStatusEntries);
-        }
+        GameRuntime.RefreshLocalizedText();
     }
 
     /// <summary>Loads a persisted settings snapshot into the active edit session.</summary>
@@ -407,7 +324,7 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
         var handoff = followThrough?.Apply(settings);
 
         toastService.ShowSuccess(localizer.T(LocalizationKeys.SettingsSaved));
-        RefreshGameRuntimeStatus();
+        GameRuntime.RefreshStatus();
 
         if (followThrough is null || handoff is null)
         {
@@ -549,157 +466,12 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
         editor.Current.BackgroundSource = BackgroundSources.Bundled;
     }
 
-    [RelayCommand]
-    private Task ChoosePrefixPathAsync() => PickRuntimeFolderAsync(
-        LocalizationKeys.GameRuntimePrefixPath,
-        () => editor.Current.GameRuntime.PrefixPath,
-        path => editor.Current.GameRuntime.PrefixPath = path);
-
-    [RelayCommand]
-    private Task ChooseProtonPathAsync() => PickRuntimeFolderAsync(
-        LocalizationKeys.GameRuntimeProtonPath,
-        () => editor.Current.GameRuntime.ProtonPath,
-        path => editor.Current.GameRuntime.ProtonPath = path);
-
-    private async Task PickRuntimeFolderAsync(
-        LocalizationKeys titleKey,
-        Func<string?> currentPath,
-        Action<string> applyPath)
-    {
-        var path = await filePickerService.PickFolderAsync(localizer.T(titleKey), currentPath());
-        if (!string.IsNullOrWhiteSpace(path))
-        {
-            applyPath(path);
-        }
-    }
-
-    // ── Game runtime status (Linux section) ───────────────────────────────
-
-    /// <summary>
-    /// Kicks off a fire-and-forget availability refresh for the runtime status row.
-    /// Runs the real version probes, so it must stay off the save/open critical path.
-    /// </summary>
-    [RelayCommand]
-    public void RefreshGameRuntimeStatus() => QueueGameRuntimeStatusRefresh(debounce: null);
-
-    /// <summary>
-    /// Starts the latest refresh and marks the row busy. The generation guards the
-    /// busy flag so a cancelled run cannot clear it while a newer run is in flight.
-    /// </summary>
-    private void QueueGameRuntimeStatusRefresh(TimeSpan? debounce)
-    {
-        if (disposed)
-        {
-            return;
-        }
-
-        var generation = ++gameRuntimeStatusRefreshGeneration;
-        IsGameRuntimeStatusRefreshing = true;
-        gameRuntimeStatusRefresh.Run(
-            debounce,
-            cancellationToken => RefreshGameRuntimeStatusAsync(generation, cancellationToken));
-    }
-
-    private async Task RefreshGameRuntimeStatusAsync(int generation, CancellationToken cancellationToken)
-    {
-        gameRuntimeStatusEntries = null;
-        ProtonBuildDiscoveryFailed = false;
-        GameRuntimeStatusSummary = localizer.T(LocalizationKeys.GameRuntimeStatusChecking);
-        try
-        {
-            try
-            {
-                var runtimeConfiguration = GameRuntimeConfiguration.FromSettings(editor.GetSnapshot().GameRuntime);
-                var entries = await gameRuntime
-                    .GetStatusesAsync(runtimeConfiguration, cancellationToken)
-                    .ConfigureAwait(true);
-                cancellationToken.ThrowIfCancellationRequested();
-                gameRuntimeStatusEntries = entries;
-                GameRuntimeStatusSummary = BuildGameRuntimeStatusSummary(entries);
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-            }
-            catch (Exception exception)
-            {
-                // Status is informational; launch diagnostics remain the authoritative
-                // runtime failure report, so a refresh failure only degrades this row.
-                // 豁免：状态行是纯信息性展示，运行时失败另有权威上报通道；
-                // 此处降级不注入诊断，避免为低价值路径扩构造面（见审计 7.2）。
-                if (!cancellationToken.IsCancellationRequested)
-                {
-                    GameRuntimeStatusSummary = localizer.T(LocalizationKeys.GameRuntimeStatusFailed);
-                }
-                Debug.WriteLine($"Settings: game runtime status refresh failed: {exception.Message}");
-            }
-
-            try
-            {
-                var builds = await Task.Run(protonBuildDiscovery.Discover, cancellationToken);
-                cancellationToken.ThrowIfCancellationRequested();
-                ProtonBuilds = builds.Select(build => new SettingOption
-                {
-                    Code = build.Path,
-                    DisplayName = build.Name,
-                    Description = build.Path
-                }).ToArray();
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-            }
-            catch (Exception exception)
-            {
-                // Discovery is best effort, but the row must say it can be retried
-                // instead of leaving a faulted fire-and-forget task behind.
-                if (!cancellationToken.IsCancellationRequested)
-                {
-                    ProtonBuilds = [];
-                    ProtonBuildDiscoveryFailed = true;
-                }
-                Debug.WriteLine($"Settings: Proton build discovery failed: {exception.Message}");
-            }
-        }
-        finally
-        {
-            if (generation == gameRuntimeStatusRefreshGeneration)
-            {
-                IsGameRuntimeStatusRefreshing = false;
-            }
-        }
-    }
-
-    internal string BuildGameRuntimeStatusSummary(IReadOnlyList<GameRuntimeStatusEntry> entries)
-    {
-        var visibleRunnerIds = Options.GameRuntimeRunner.Select(option => option.Code).ToHashSet();
-        return string.Join(
-            Environment.NewLine,
-            entries.Where(entry => visibleRunnerIds.Contains(entry.RunnerId))
-                .Select(FormatGameRuntimeStatusEntry));
-    }
-
-    private string FormatGameRuntimeStatusEntry(GameRuntimeStatusEntry entry)
-    {
-        var name = GameRuntimeRunnerDisplay.RunnerName(localizer, entry.RunnerId);
-        var status = GameRuntimeRunnerDisplay.Status(localizer, entry.Availability.Status);
-
-        var path = entry.Availability.ExecutablePath;
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            return localizer.F(LocalizationKeys.GameRuntimeStatusEntryFormat, name, status);
-        }
-
-        var detail = string.IsNullOrWhiteSpace(entry.Availability.Version)
-            ? path
-            : localizer.F(LocalizationKeys.GameRuntimeStatusDetailFormat, path, entry.Availability.Version);
-        return localizer.F(LocalizationKeys.GameRuntimeStatusEntryDetailFormat, name, status, detail);
-    }
-
     public async Task DiscardChangesAsync()
     {
         IsUnsavedChangesVisible = false;
         CancelAppearancePreview();
         editor.Discard();
-        RefreshGameRuntimeStatus();
+        GameRuntime.RefreshStatus();
         Appearance.Load(editor.Current);
         appearancePreviewRefresh.Run(null, token => PreviewCurrentAppearanceAsync(null, token));
         await appearancePreviewRefresh.Pending;
@@ -800,7 +572,7 @@ internal partial class SettingsViewModel : ViewModelBase, IDisposable, IModalCon
 
         disposed = true;
         CancelAppearancePreview();
-        gameRuntimeStatusRefresh.Cancel();
+        GameRuntime.Dispose();
         editor.PropertyChanged -= OnEditorPropertyChanged;
         editor.CurrentPropertyChanged -= OnCurrentSettingChanged;
         Appearance.Dispose();

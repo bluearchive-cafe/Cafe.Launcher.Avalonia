@@ -108,7 +108,7 @@ public sealed class BackgroundViewModelHeadlessTests
         var wallpaperPath = Path.Combine(context.Directory.Path, "large-wallpaper.png");
         HeadlessTestHost.WriteSolidPng(wallpaperPath, Brushes.DarkSlateBlue, 3000, 1600);
         var viewModel = new BackgroundViewModel(
-            context.Provider.GetRequiredService<ImageCacheService>(),
+            context.Provider.GetRequiredService<RemoteImageStore>(),
             context.Provider.GetRequiredService<LocalDiagnostics>(),
             _ => { },
             new FixedWindowMetrics(new PixelSize(1300, 754)));
@@ -319,7 +319,7 @@ public sealed class BackgroundViewModelHeadlessTests
         var releaseDecode = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var requestedTargets = new List<PixelSize>();
         var viewModel = new BackgroundViewModel(
-            context.Provider.GetRequiredService<ImageCacheService>(),
+            context.Provider.GetRequiredService<RemoteImageStore>(),
             context.Provider.GetRequiredService<LocalDiagnostics>(),
             _ => { },
             (path, target) =>
@@ -390,7 +390,7 @@ public sealed class BackgroundViewModelHeadlessTests
                 1600);
             var loadedPaths = new List<string>();
             var viewModel = new BackgroundViewModel(
-                context.Provider.GetRequiredService<ImageCacheService>(),
+                context.Provider.GetRequiredService<RemoteImageStore>(),
                 context.Provider.GetRequiredService<LocalDiagnostics>(),
                 _ => { },
                 (path, target) =>
@@ -457,7 +457,7 @@ public sealed class BackgroundViewModelHeadlessTests
         var releaseFirst = new ManualResetEventSlim(initialState: false);
         Bitmap? secondBitmap = null;
         var viewModel = new BackgroundViewModel(
-            context.Provider.GetRequiredService<ImageCacheService>(),
+            context.Provider.GetRequiredService<RemoteImageStore>(),
             context.Provider.GetRequiredService<LocalDiagnostics>(),
             _ => { },
             (path, target) =>
@@ -524,7 +524,7 @@ public sealed class BackgroundViewModelHeadlessTests
         LauncherHeadlessContext context,
         IWindowMetricsService metrics) =>
         new(
-            context.Provider.GetRequiredService<ImageCacheService>(),
+            context.Provider.GetRequiredService<RemoteImageStore>(),
             context.Provider.GetRequiredService<LocalDiagnostics>(),
             _ => { },
             (path, target) => BackgroundImageDecoder.Decode(path, target),

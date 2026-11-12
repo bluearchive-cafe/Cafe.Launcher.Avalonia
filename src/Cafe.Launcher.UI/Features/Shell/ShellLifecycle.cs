@@ -20,10 +20,9 @@ namespace Cafe.Launcher.UI.Features.Shell;
 
 /// <summary>
 /// Owns shell startup, refresh, settings-save, first-run wizard completion,
-/// resource-panel switching, and maps the in-app self-update state machine
-/// (<see cref="ShellSelfUpdateCoordinator"/>) onto dialogs, toasts, and shutdown.
-/// Cross-feature subscriptions are owned by <see cref="ShellPresentationWiring"/>;
-/// this type keeps the lifecycle verbs those subscriptions call into.
+/// resource-panel switching, and the lifecycle verbs behind cross-feature wiring.
+/// The in-app self-update outcome mapping lives in <see cref="ShellSelfUpdateFlow"/>;
+/// cross-feature subscriptions are owned by <see cref="ShellPresentationWiring"/>.
 /// The window (MainWindowViewModel) only presents shell state.
 /// </summary>
 internal sealed class ShellLifecycle : IDisposable
@@ -34,15 +33,13 @@ internal sealed class ShellLifecycle : IDisposable
     /// <summary>Raised after a saved status-detail setting changes the shell presentation mode.</summary>
     public event Action? StatusDetailModeChanged;
 
-    private readonly ILauncherCoreService launcherCoreService;
+    private readonly ILauncherStatusSnapshotService launcherStatusSnapshotService;
     private readonly ILauncherSettingsService settingsService;
     private readonly ISavedSettingsWriter savedSettingsWriter;
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
     private readonly ILauncherUpdateService launcherUpdateService;
     private readonly ILauncherUpdatePresenter updatePresenter;
-    private readonly ILauncherSelfUpdateService launcherSelfUpdateService;
-    private readonly IWindowsLauncherUpdateApplier launcherUpdateApplier;
     private readonly ILauncherDiagnostics diagnostics;
     private readonly IErrorHandlingService errorHandling;
     private readonly ISystemAnimationSettingsProvider systemAnimationSettingsProvider;
@@ -53,7 +50,6 @@ internal sealed class ShellLifecycle : IDisposable
     private readonly DialogsViewModel dialogs;
     private readonly GameOperationsViewModel operations;
     private readonly ToastHostViewModel toasts;
-    private readonly WindowChromeViewModel windowChrome;
     private readonly SettingsViewModel settings;
     private readonly ResourcePanelViewModel resourcePanel;
     private readonly LogExportDialogViewModel logExport;
@@ -77,14 +73,14 @@ internal sealed class ShellLifecycle : IDisposable
     private bool motionSettingsApplied;
     private bool settingsSnapshotInitialized;
     private LauncherStatusSnapshot? currentSnapshot;
-    private readonly ShellSelfUpdateCoordinator selfUpdateCoordinator;
+    private readonly ShellSelfUpdateFlow selfUpdateFlow;
 
     /// <summary>Gets the active startup update check so tests can coordinate without timing delays.</summary>
     public Task PendingStartupUpdateCheck => refreshCoordinator.PendingAfterLoadWork;
 
     /// <summary>Initializes shell lifecycle dependencies and subscribes error handling callbacks.</summary>
     public ShellLifecycle(
-        ILauncherCoreService launcherCoreService,
+        ILauncherStatusSnapshotService launcherStatusSnapshotService,
         ILauncherSettingsService settingsService,
         ISavedSettingsWriter savedSettingsWriter,
         LocalizationService localizer,
@@ -100,7 +96,7 @@ internal sealed class ShellLifecycle : IDisposable
         IFilePickerService filePickerService,
         LauncherBuildIdentity? buildIdentity = null)
         : this(
-            launcherCoreService,
+            launcherStatusSnapshotService,
             settingsService,
             savedSettingsWriter,
             localizer,
@@ -120,7 +116,7 @@ internal sealed class ShellLifecycle : IDisposable
     }
 
     internal ShellLifecycle(
-        ILauncherCoreService launcherCoreService,
+        ILauncherStatusSnapshotService launcherStatusSnapshotService,
         ILauncherSettingsService settingsService,
         ISavedSettingsWriter savedSettingsWriter,
         LocalizationService localizer,
@@ -145,15 +141,13 @@ internal sealed class ShellLifecycle : IDisposable
         //   范围不同；与释放顺序相关的回归在测试中不可复现，收敛该分叉需先让测试路径
         //   显式管理替身生命周期（已裁定当前缝可接受，故仅在此书面记录差异）。
         this.filePickerService = filePickerService;
-        this.launcherCoreService = launcherCoreService;
+        this.launcherStatusSnapshotService = launcherStatusSnapshotService;
         this.settingsService = settingsService;
         this.savedSettingsWriter = savedSettingsWriter;
         this.localizer = localizer;
         this.toastService = toastService;
         this.launcherUpdateService = launcherUpdateService;
         this.updatePresenter = updatePresenter;
-        this.launcherSelfUpdateService = launcherSelfUpdateService;
-        this.launcherUpdateApplier = launcherUpdateApplier;
         this.diagnostics = diagnostics;
         this.errorHandling = errorHandling;
         this.systemAnimationSettingsProvider = systemAnimationSettingsProvider;
@@ -164,7 +158,6 @@ internal sealed class ShellLifecycle : IDisposable
         dialogs = family.Dialogs;
         operations = family.Operations;
         toasts = family.Toasts;
-        windowChrome = family.WindowChrome;
         settings = family.Settings;
         resourcePanel = family.ResourcePanel;
         logExport = family.LogExport;
@@ -187,13 +180,15 @@ internal sealed class ShellLifecycle : IDisposable
         refreshCoordinator = new ShellRefreshCoordinator(
             LoadHostStateAsync,
             AfterLoadAsync);
-        selfUpdateCoordinator = new ShellSelfUpdateCoordinator(
+        selfUpdateFlow = new ShellSelfUpdateFlow(
             launcherSelfUpdateService,
             launcherUpdateApplier,
+            dialogs.LauncherUpdate,
+            toastService,
+            localizer,
+            errorHandling,
+            family.WindowChrome,
             refreshCoordinator.LifetimeToken);
-        selfUpdateCoordinator.PreparationStarted += OnSelfUpdatePreparationStarted;
-        selfUpdateCoordinator.ProgressReported += OnSelfUpdateProgressReported;
-        selfUpdateCoordinator.Finished += OnSelfUpdateFinished;
         savedSettingsFollowThrough = new SavedSettingsFollowThrough(
             settings,
             resourcePanel,
@@ -234,9 +229,9 @@ internal sealed class ShellLifecycle : IDisposable
                 ResetSettingsToDefaultsAsync,
                 ResetSettingsFromSettingsPageAsync,
                 OnStatusDetailModeChanged,
-                OnSelfUpdateStartRequested,
-                OnApplyUpdateRequested,
-                OnCancelUpdateRequested));
+                selfUpdateFlow.Begin,
+                selfUpdateFlow.Apply,
+                selfUpdateFlow.Cancel));
 
         presentationWiring.Wire();
         ApplyInitialLanguage();
@@ -253,7 +248,7 @@ internal sealed class ShellLifecycle : IDisposable
     {
         // 上一次自更新残留在 %TEMP% 的 helper 副本此刻没有属主(helper 只在主
         // 进程退出后短暂存活),启动时清掉;仍在运行的例外靠文件锁幸免。
-        launcherUpdateApplier.CleanupAbandonedHelperDirectories();
+        selfUpdateFlow.CleanupAbandonedHelpers();
         return startup.InitializeAsync(cancellationToken);
     }
 
@@ -311,7 +306,7 @@ internal sealed class ShellLifecycle : IDisposable
             shell.SetLoading();
             remoteContent.BeginLoading(settingsForLanguage.ShowRemoteContentCard);
 
-            var snapshot = await launcherCoreService.LoadAsync(refreshToken);
+            var snapshot = await launcherStatusSnapshotService.LoadAsync(refreshToken);
             refreshToken.ThrowIfCancellationRequested();
             currentSnapshot = snapshot;
             await ApplySnapshotAsync(snapshot);
@@ -416,61 +411,6 @@ internal sealed class ShellLifecycle : IDisposable
         toastService.ShowSuccess(localizer.T(LocalizationKeys.DebugSettingsReset));
     }
 
-    private void OnSelfUpdateStartRequested(string version, IReadOnlyList<ReleaseFile> files) =>
-        selfUpdateCoordinator.Begin(version, files);
-
-    private void OnSelfUpdatePreparationStarted() => dialogs.BeginUpdateApply();
-
-    private void OnSelfUpdateProgressReported(LauncherUpdateProgress progress) =>
-        dialogs.ReportUpdateProgress(progress.Fraction, progress.BytesPerSecond);
-
-    /// <summary>Maps one coordinator outcome onto the update dialog, toast, and error pipeline.</summary>
-    private void OnSelfUpdateFinished(ShellSelfUpdateOutcome outcome, Exception? exception)
-    {
-        switch (outcome)
-        {
-            case ShellSelfUpdateOutcome.Ready:
-                dialogs.MarkUpdateReady();
-                break;
-            case ShellSelfUpdateOutcome.DownloadFailed:
-                dialogs.MarkUpdateFailed();
-                toastService.ShowError(localizer.T(LocalizationKeys.LauncherUpdateDownloadFailed));
-                break;
-            case ShellSelfUpdateOutcome.DownloadBlocked:
-                dialogs.MarkUpdateFailed();
-                toastService.ShowError(localizer.T(LocalizationKeys.LauncherUpdateDownloadBlocked));
-                break;
-            case ShellSelfUpdateOutcome.Cancelled:
-                dialogs.ResetUpdateApply();
-                break;
-            case ShellSelfUpdateOutcome.UnexpectedError:
-                dialogs.MarkUpdateFailed();
-                _ = errorHandling.HandleErrorAsync("Launcher self-update failed.", exception!,
-                    new ErrorHandlingOptions { ToastMessage = localizer.T(LocalizationKeys.LauncherUpdateDownloadFailed) });
-                break;
-        }
-    }
-
-    private void OnApplyUpdateRequested()
-    {
-        // 与下载失败不同：没有就绪包时的“应用”是无人可应的按钮事件，保持沉默；
-        // helper 拒收才是用户可见的失败。
-        switch (selfUpdateCoordinator.TryApplyPending())
-        {
-            case ShellSelfUpdateApplyResult.NotReady:
-                return;
-            case ShellSelfUpdateApplyResult.StartFailed:
-                dialogs.MarkUpdateFailed();
-                toastService.ShowError(localizer.T(LocalizationKeys.LauncherUpdateApplyFailed));
-                return;
-        }
-
-        // 主进程必须退出，helper 才能替换文件；走正常关窗路径保存窗口与设置。
-        windowChrome.RequestShutdown();
-    }
-
-    private void OnCancelUpdateRequested() => selfUpdateCoordinator.CancelPreparation();
-
     /// <summary>Refreshes shell state after a game operation and records resume behavior.</summary>
     public async Task HandleOperationsRefreshRequestedAsync(GameOperationsRefreshMode mode)
     {
@@ -518,7 +458,7 @@ internal sealed class ShellLifecycle : IDisposable
 
         Task pendingRefreshes = refreshCoordinator.BeginShutdown();
         refreshCoordinator.CancelLifetime();
-        selfUpdateCoordinator.Dispose();
+        selfUpdateFlow.Dispose();
         Unwire();
         operations.StopOperation(GameOperationStopIntent.ProcessExit);
         if (ownsPresentationCollaborators)

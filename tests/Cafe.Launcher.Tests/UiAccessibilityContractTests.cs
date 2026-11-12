@@ -1,4 +1,4 @@
-﻿using System.Xml;
+using System.Xml;
 using System.Xml.Linq;
 using Cafe.Launcher.Testing;
 
@@ -108,8 +108,8 @@ public sealed class UiAccessibilityContractTests
         var commands = new[]
         {
             "{Binding Dialogs.DismissNoticeCommand}",
-            "{Binding Dialogs.CancelUpdateAvailableCommand}",
-            "{Binding Dialogs.ConfirmUpdateAvailableCommand}"
+            "{Binding Dialogs.LauncherUpdate.CancelCommand}",
+            "{Binding Dialogs.LauncherUpdate.ConfirmCommand}"
         };
 
         foreach (var command in commands)

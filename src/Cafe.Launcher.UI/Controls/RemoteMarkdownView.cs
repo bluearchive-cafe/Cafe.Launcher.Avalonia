@@ -18,27 +18,27 @@ using MarkView.Avalonia.Rendering;
 namespace Cafe.Launcher.UI.Controls;
 
 /// <summary>
-/// 更新说明 Markdown 表面：远程图片经宿主提供的缓存加载，外部链接经协议校验后打开。
+/// Markdown 表面：远程图片经宿主提供的缓存加载，外部链接经协议校验后打开。
 /// </summary>
-internal sealed class ReleaseNotesMarkdownViewer : MarkdownViewer
+internal sealed class RemoteMarkdownView : MarkdownViewer
 {
     /// <summary>提供启动器统一网络与缓存路径的图片字节加载器。</summary>
     public static readonly StyledProperty<Func<string, CancellationToken, Task<byte[]>>?> ImageLoaderProperty =
-        AvaloniaProperty.Register<ReleaseNotesMarkdownViewer, Func<string, CancellationToken, Task<byte[]>>?>(nameof(ImageLoader));
+        AvaloniaProperty.Register<RemoteMarkdownView, Func<string, CancellationToken, Task<byte[]>>?>(nameof(ImageLoader));
 
     /// <summary>跟随覆盖层实际可见性，在退出动效结束后取消加载并释放图片。</summary>
     public static readonly StyledProperty<bool> IsDocumentActiveProperty =
-        AvaloniaProperty.Register<ReleaseNotesMarkdownViewer, bool>(nameof(IsDocumentActive), true);
+        AvaloniaProperty.Register<RemoteMarkdownView, bool>(nameof(IsDocumentActive), true);
 
     private ImageScope? imageScope;
 
     /// <summary>至少一张远程图片仍在加载，正文和更新动作保持可用。</summary>
-    public static readonly DirectProperty<ReleaseNotesMarkdownViewer, bool> IsImageLoadingProperty =
-        AvaloniaProperty.RegisterDirect<ReleaseNotesMarkdownViewer, bool>(nameof(IsImageLoading), owner => owner.IsImageLoading);
+    public static readonly DirectProperty<RemoteMarkdownView, bool> IsImageLoadingProperty =
+        AvaloniaProperty.RegisterDirect<RemoteMarkdownView, bool>(nameof(IsImageLoading), owner => owner.IsImageLoading);
 
     /// <summary>当前文档中至少一张远程图片加载失败。</summary>
-    public static readonly DirectProperty<ReleaseNotesMarkdownViewer, bool> HasImageLoadFailedProperty =
-        AvaloniaProperty.RegisterDirect<ReleaseNotesMarkdownViewer, bool>(nameof(HasImageLoadFailed), owner => owner.HasImageLoadFailed);
+    public static readonly DirectProperty<RemoteMarkdownView, bool> HasImageLoadFailedProperty =
+        AvaloniaProperty.RegisterDirect<RemoteMarkdownView, bool>(nameof(HasImageLoadFailed), owner => owner.HasImageLoadFailed);
 
     private bool isImageLoading;
     private bool hasImageLoadFailed;
@@ -48,21 +48,21 @@ internal sealed class ReleaseNotesMarkdownViewer : MarkdownViewer
     /// <summary>当前文档是否存在加载失败的远程图片。</summary>
     public bool HasImageLoadFailed => hasImageLoadFailed;
 
-    static ReleaseNotesMarkdownViewer()
+    static RemoteMarkdownView()
     {
         // Documents own decoded bitmaps. MarkView's shared cache keys loader types, so reopening
         // would reuse a bitmap disposed with the previous document. Encoded bytes already use
-        // the launcher's ImageCacheService; keep decoded images within their document scope.
+        // the launcher's RemoteImageStore; keep decoded images within their document scope.
         MarkdownViewerDefaults.ImageCacheSize = 0;
     }
 
-    /// <summary>构造 XAML 使用的更新说明查看器。</summary>
-    public ReleaseNotesMarkdownViewer() : this(ExternalLinkService.Open)
+    /// <summary>构造 XAML 使用的 Markdown 查看器。</summary>
+    public RemoteMarkdownView() : this(ExternalLinkService.Open)
     {
     }
 
     /// <summary>通过导航替身验证链接行为，测试不会启动系统浏览器。</summary>
-    internal ReleaseNotesMarkdownViewer(Action<string?> openLink)
+    internal RemoteMarkdownView(Action<string?> openLink)
     {
         Extensions.Add(new RemoteImagesExtension(this));
         Pipeline = CreatePipeline();
@@ -150,7 +150,7 @@ internal sealed class ReleaseNotesMarkdownViewer : MarkdownViewer
         SetAndRaise(HasImageLoadFailedProperty, ref hasImageLoadFailed, failed);
     }
 
-    private sealed class RemoteImagesExtension(ReleaseNotesMarkdownViewer owner) : IMarkViewExtension
+    private sealed class RemoteImagesExtension(RemoteMarkdownView owner) : IMarkViewExtension
     {
         public void Register(AvaloniaRenderer renderer)
         {
@@ -163,7 +163,7 @@ internal sealed class ReleaseNotesMarkdownViewer : MarkdownViewer
         }
     }
 
-    private sealed class ImageScope(ReleaseNotesMarkdownViewer owner, Func<string, CancellationToken, Task<byte[]>>? loadBytes) : IImageLoader, IDisposable
+    private sealed class ImageScope(RemoteMarkdownView owner, Func<string, CancellationToken, Task<byte[]>>? loadBytes) : IImageLoader, IDisposable
     {
         private readonly CancellationTokenSource lifetime = new();
         private readonly List<Bitmap> bitmaps = [];
@@ -216,7 +216,7 @@ internal sealed class ReleaseNotesMarkdownViewer : MarkdownViewer
             }
             catch (Exception)
             {
-                // 图片失败不影响发布说明正文、下载动作或其他图片。
+                // 图片失败不影响 Markdown 正文、下载动作或其他图片。
                 bitmap?.Dispose();
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {

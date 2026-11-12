@@ -6,12 +6,12 @@ using Cafe.Launcher.Core.Services;
 
 namespace Cafe.Launcher.Tests;
 
-public sealed class ImageCacheServiceTests : IDisposable
+public sealed class RemoteImageStoreTests : IDisposable
 {
     private readonly TestDirectory rootDir = TestDirectory.Create();
     private readonly string tempDir;
 
-    public ImageCacheServiceTests()
+    public RemoteImageStoreTests()
     {
         // 缓存目录由数据根派生（<root>/image-cache）：把测试工作目录取成派生结果，
         // 于是用例仍按"文件就落在 tempDir 下"断言。
@@ -33,7 +33,7 @@ public sealed class ImageCacheServiceTests : IDisposable
         File.WriteAllText(freshCache, "x");
         File.WriteAllText(expiredRemote, "x");
         File.WriteAllText(staleTemp, "x");
-        var expiredTime = (now - ImageCacheService.CacheEntryLifetime - TimeSpan.FromHours(1)).UtcDateTime;
+        var expiredTime = (now - RemoteImageStore.CacheEntryLifetime - TimeSpan.FromHours(1)).UtcDateTime;
         File.SetLastWriteTimeUtc(expiredCache, expiredTime);
         File.SetLastWriteTimeUtc(expiredRemote, expiredTime);
         File.SetLastWriteTimeUtc(staleTemp, expiredTime);
@@ -178,10 +178,10 @@ public sealed class ImageCacheServiceTests : IDisposable
                 cts.Token));
     }
 
-    private ImageCacheService CreateService(Func<Uri, object?>? responder) =>
+    private RemoteImageStore CreateService(Func<Uri, object?>? responder) =>
         new(new StubRemoteHttpTransport(responder), new Crc64Service(), TestDataRoot.ForDirectory(rootDir));
 
-    private ImageCacheService CreateServiceWithTransport(IRemoteHttpTransport transport) =>
+    private RemoteImageStore CreateServiceWithTransport(IRemoteHttpTransport transport) =>
         new(transport, new Crc64Service(), TestDataRoot.ForDirectory(rootDir));
 
     private async Task<string> ComputeHashAsync(byte[] bytes)

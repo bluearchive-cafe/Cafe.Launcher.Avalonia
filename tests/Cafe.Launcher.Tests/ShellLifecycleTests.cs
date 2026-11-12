@@ -327,8 +327,8 @@ public sealed class ShellLifecycleTests : IDisposable
         var fixture = CreateLifecycle(new ScriptedCoreService(CreateSnapshot()));
         var files = Array.Empty<ReleaseFile>();
 
-        fixture.Dialogs.ShowUpdateAvailable("9.9.9", files, LauncherUpdateInAppAvailability.PlatformUnsupported);
-        fixture.Dialogs.ConfirmUpdateAvailableCommand.Execute(null);
+        fixture.Dialogs.LauncherUpdate.Show("9.9.9", files, LauncherUpdateInAppAvailability.PlatformUnsupported);
+        fixture.Dialogs.LauncherUpdate.ConfirmCommand.Execute(null);
 
         // 不支持应用内更新的平台,确认更新恰好打开一次版本发布页,且走的是壳的统一外部链接出口。
         var opened = Assert.Single(openedUrls);
@@ -336,8 +336,8 @@ public sealed class ShellLifecycleTests : IDisposable
 
         // Dispose 后退订:同一事件不得再触发外部打开。
         fixture.Lifecycle.Dispose();
-        fixture.Dialogs.ShowUpdateAvailable("9.9.9", files, LauncherUpdateInAppAvailability.PlatformUnsupported);
-        fixture.Dialogs.ConfirmUpdateAvailableCommand.Execute(null);
+        fixture.Dialogs.LauncherUpdate.Show("9.9.9", files, LauncherUpdateInAppAvailability.PlatformUnsupported);
+        fixture.Dialogs.LauncherUpdate.ConfirmCommand.Execute(null);
 
         Assert.Single(openedUrls);
     }
@@ -381,23 +381,23 @@ public sealed class ShellLifecycleTests : IDisposable
             }
         };
 
-        fixture.Dialogs.ShowUpdateAvailable("9.9.9", files, LauncherUpdateInAppAvailability.Available);
-        fixture.Dialogs.ConfirmUpdateAvailableCommand.Execute(null);
+        fixture.Dialogs.LauncherUpdate.Show("9.9.9", files, LauncherUpdateInAppAvailability.Available);
+        fixture.Dialogs.LauncherUpdate.ConfirmCommand.Execute(null);
 
         await TestWait.UntilAsync(
-            () => fixture.Dialogs.IsUpdateReadyToRestart,
+            () => fixture.Dialogs.LauncherUpdate.IsReadyToRestart,
             TimeSpan.FromSeconds(5),
             "The self-update should reach the ready-to-restart state.");
 
-        Assert.True(fixture.Dialogs.IsUpdateApplying);
-        Assert.False(fixture.Dialogs.IsUpdateDownloading);
-        Assert.Equal(100d, fixture.Dialogs.UpdateProgress);
+        Assert.True(fixture.Dialogs.LauncherUpdate.IsApplying);
+        Assert.False(fixture.Dialogs.LauncherUpdate.IsDownloading);
+        Assert.Equal(100d, fixture.Dialogs.LauncherUpdate.Progress);
 
         var closeCount = 0;
         var shutdownCount = 0;
         fixture.WindowChrome.CloseRequested += () => closeCount++;
         fixture.WindowChrome.ShutdownRequested += () => shutdownCount++;
-        fixture.Dialogs.ConfirmUpdateAvailableCommand.Execute(null);
+        fixture.Dialogs.LauncherUpdate.ConfirmCommand.Execute(null);
 
         Assert.Equal(1, applier.StartCount);
         Assert.Equal(0, closeCount);
@@ -441,15 +441,15 @@ public sealed class ShellLifecycleTests : IDisposable
             }
         };
 
-        fixture.Dialogs.ShowUpdateAvailable("9.9.9", files, LauncherUpdateInAppAvailability.Available);
-        fixture.Dialogs.ConfirmUpdateAvailableCommand.Execute(null);
+        fixture.Dialogs.LauncherUpdate.Show("9.9.9", files, LauncherUpdateInAppAvailability.Available);
+        fixture.Dialogs.LauncherUpdate.ConfirmCommand.Execute(null);
 
         await TestWait.UntilAsync(
-            () => !fixture.Dialogs.UpdateSupportsInAppApply,
+            () => !fixture.Dialogs.LauncherUpdate.SupportsInAppApply,
             TimeSpan.FromSeconds(5),
             "A failed self-update should expose the release-page fallback.");
 
-        fixture.Dialogs.ConfirmUpdateAvailableCommand.Execute(null);
+        fixture.Dialogs.LauncherUpdate.ConfirmCommand.Execute(null);
 
         Assert.Equal(LauncherProfiles.Cafe.GitHubReleasesPageUrl, Assert.Single(openedUrls));
     }
@@ -492,11 +492,11 @@ public sealed class ShellLifecycleTests : IDisposable
             }
         };
 
-        fixture.Dialogs.ShowUpdateAvailable("9.9.9", files, LauncherUpdateInAppAvailability.Available);
-        fixture.Dialogs.ConfirmUpdateAvailableCommand.Execute(null);
+        fixture.Dialogs.LauncherUpdate.Show("9.9.9", files, LauncherUpdateInAppAvailability.Available);
+        fixture.Dialogs.LauncherUpdate.ConfirmCommand.Execute(null);
 
         await TestWait.UntilAsync(
-            () => !fixture.Dialogs.IsUpdateDownloading,
+            () => !fixture.Dialogs.LauncherUpdate.IsDownloading,
             TimeSpan.FromSeconds(5),
             "A blocked-address failure should end the download state.");
 
@@ -504,7 +504,7 @@ public sealed class ShellLifecycleTests : IDisposable
         Assert.Equal(
             fixture.Shell.I18n[LocalizationKeys.LauncherUpdateDownloadBlocked],
             errorToast.Message);
-        Assert.False(fixture.Dialogs.UpdateSupportsInAppApply);
+        Assert.False(fixture.Dialogs.LauncherUpdate.SupportsInAppApply);
         Assert.False(fixture.Lifecycle.IsBusy);
     }
 
@@ -669,7 +669,7 @@ public sealed class ShellLifecycleTests : IDisposable
     }
 
     private ShellFixture CreateLifecycle(
-        ILauncherCoreService coreService,
+        ILauncherStatusSnapshotService coreService,
         LauncherSettingsService? settingsService = null,
         LauncherUpdateService? launcherUpdateService = null,
         StubGameOperationExecutor? operationsBackend = null,
@@ -729,7 +729,7 @@ public sealed class ShellLifecycleTests : IDisposable
         DebugViewModel Debug);
 
     /// <summary>按脚本逐次返回快照或抛异常的核心服务替身;最后一个步骤可重复命中。</summary>
-    private sealed class ScriptedCoreService : ILauncherCoreService
+    private sealed class ScriptedCoreService : ILauncherStatusSnapshotService
     {
         private readonly object[] script;
         private int next;

@@ -335,7 +335,7 @@ public sealed partial class MainWindowHeadlessTests
             .OfType<Button>()
             .Single(control => control.Classes.Contains("settings"));
 
-        Assert.Same(context.ViewModel.WindowChrome.ShowSettingsCommand, button.Command);
+        Assert.Same(context.ViewModel.WindowChrome.ToggleSettingsCommand, button.Command);
         Assert.False(string.IsNullOrWhiteSpace(AutomationProperties.GetName(button)));
 
         button.Command!.Execute(button.CommandParameter);

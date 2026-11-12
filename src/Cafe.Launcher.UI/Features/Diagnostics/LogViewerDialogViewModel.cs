@@ -16,7 +16,7 @@ using Cafe.Launcher.UI.Helpers;
 
 namespace Cafe.Launcher.UI.Features.Diagnostics;
 
-internal sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalContentViewModel
+internal sealed partial class LogViewerDialogViewModel : ObservableObject, IModalContentViewModel
 {
     private const int PageSize = 500;
     private static readonly TimeSpan FilterDebounceDelay = TimeSpan.FromMilliseconds(200);

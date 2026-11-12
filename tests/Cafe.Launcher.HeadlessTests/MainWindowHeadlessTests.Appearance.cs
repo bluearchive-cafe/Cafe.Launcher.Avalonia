@@ -92,8 +92,8 @@ public sealed partial class MainWindowHeadlessTests
             .Where(row => row.IsEffectivelyVisible), row =>
                 Assert.Equal(FontWeight.Normal, row.FindControl<TextBlock>("RowTitle")!.FontWeight));
 
-        context.ViewModel.WindowChrome.ShowSettingsCommand.Execute(null);
-        context.ViewModel.WindowChrome.ShowSettingsCommand.Execute(null);
+        context.ViewModel.WindowChrome.ToggleSettingsCommand.Execute(null);
+        context.ViewModel.WindowChrome.ToggleSettingsCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
         Assert.False(advanced.IsExpanded);
         Assert.False(settings.IsSettingsDirty);

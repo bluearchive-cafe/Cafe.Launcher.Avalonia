@@ -42,7 +42,7 @@ public sealed partial class MainWindowHeadlessTests
         Assert.True(wizard.IsAgreementStep);
 
         var viewer = context.Window.GetVisualDescendants()
-            .OfType<ReleaseNotesMarkdownViewer>()
+            .OfType<RemoteMarkdownView>()
             .Single(control => control.IsEffectivelyVisible);
         Assert.True(
             string.Equals(wizard.AgreementMarkdown, viewer.Markdown, StringComparison.Ordinal),

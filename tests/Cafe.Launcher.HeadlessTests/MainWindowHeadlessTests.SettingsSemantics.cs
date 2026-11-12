@@ -40,7 +40,7 @@ public sealed partial class MainWindowHeadlessTests
         box.IsChecked = !original;
         Assert.True(context.ViewModel.Settings.IsSettingsDirty);
         Assert.True(before.HasSameSettingsState(context.ViewModel.Settings.Editor.GetSavedSnapshot()));
-        context.ViewModel.WindowChrome.ShowSettingsCommand.Execute(null);
+        context.ViewModel.WindowChrome.ToggleSettingsCommand.Execute(null);
         Assert.True(context.ViewModel.Settings.IsUnsavedChangesVisible);
         context.ViewModel.WindowChrome.DiscardSettingsChangesCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();

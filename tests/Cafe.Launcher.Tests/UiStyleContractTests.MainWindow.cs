@@ -16,7 +16,7 @@ public sealed partial class UiStyleContractTests
         var resourcePanelOverlay = XDocument.Load(TestRepository.FromPresentationRoot("Views/ResourcePanelOverlay.axaml"));
         var settingsOverlay = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowSettingsOverlay.axaml"));
 
-        var actions = XDocument.Load(TestRepository.FromPresentationRoot("Controls/GameLaunchButton.axaml"));
+        var actions = XDocument.Load(TestRepository.FromPresentationRoot("Controls/GameOperationsSplitButton.axaml"));
         Assert.Contains(actions.Descendants(), element => element.Name.LocalName == "MaterialIcon"
             && element.Attribute("Kind")?.Value == "{Binding Operations.PrimaryActionIcon}");
 
@@ -53,7 +53,7 @@ public sealed partial class UiStyleContractTests
         Assert.Null(panel.Attribute("IsVisible"));
         var layout = Assert.Single(panel.Elements(), element => element.Name.LocalName == "Grid");
         Assert.Equal("*,Auto", layout.Attribute("ColumnDefinitions")?.Value);
-        Assert.Single(layout.Elements(), element => element.Name.LocalName == "GameLaunchButton");
+        Assert.Single(layout.Elements(), element => element.Name.LocalName == "GameOperationsSplitButton");
         Assert.DoesNotContain(panel.Descendants(), element => element.Name.LocalName == "ProgressBar");
     }
 
@@ -162,12 +162,12 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void MainWindow_GameLaunchButtons_ReuseOneExtractedControl()
+    public void MainWindow_GameOperationsSplitButtons_ReuseOneExtractedControl()
     {
         var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
         var manageEntries = document
             .Descendants()
-            .Where(element => element.Name.LocalName == "GameLaunchButton")
+            .Where(element => element.Name.LocalName == "GameOperationsSplitButton")
             .ToArray();
 
         // 紧凑布局与「仅按钮」布局各一处，共用同一控件；菜单不再在窗口中各自复制一份。
@@ -178,9 +178,9 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void GameLaunchButton_ExposesFlyoutMenuWithOperationBindings()
+    public void GameOperationsSplitButton_ExposesFlyoutMenuWithOperationBindings()
     {
-        var document = XDocument.Load(TestRepository.FromPresentationRoot("Controls/GameLaunchButton.axaml"));
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Controls/GameOperationsSplitButton.axaml"));
         var button = document.Descendants()
             .Single(element => element.Name.LocalName == "SplitButton");
 
@@ -242,7 +242,7 @@ public sealed partial class UiStyleContractTests
         {
             ["{Binding WindowChrome.OpenDebugPanelCommand}"] = "{Binding Shell.I18n[debugPanel]}",
             ["{Binding ResourcePanel.OpenResourcePanelCommand}"] = "{Binding Shell.I18n[resourcePanel]}",
-            ["{Binding WindowChrome.ShowSettingsCommand}"] = "{Binding Shell.I18n[settings]}",
+            ["{Binding WindowChrome.ToggleSettingsCommand}"] = "{Binding Shell.I18n[settings]}",
             ["{Binding WindowChrome.MinimizeCommand}"] = "{Binding Shell.I18n[minimize]}",
             ["{Binding WindowChrome.CloseCommand}"] = "{Binding Shell.I18n[close]}"
         };

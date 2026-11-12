@@ -17,7 +17,7 @@ namespace Cafe.Launcher.UI.Features.Diagnostics;
 /// <see cref="DesignTokenGrouping"/>, so the gallery never drifts from the token
 /// set. Visibility is gated like the debug panel (Debug builds only).
 /// </summary>
-internal sealed partial class DesignGalleryViewModel : ViewModelBase, IModalContentViewModel
+internal sealed partial class DesignGalleryViewModel : ObservableObject, IModalContentViewModel
 {
     private readonly Func<LocalizationKeys, string> localize;
 

@@ -22,7 +22,7 @@ namespace Cafe.Launcher;
 sealed class Program
 {
     private const string MutexName = @"Local\Cafe_Launcher_SI";
-    private const string SignalName = @"Local\Cafe_Launcher_SI_Show";
+    private const string ShowWindowSignalName = @"Local\Cafe_Launcher_SI_Show";
 
     /// <summary>
     /// Unix 单实例锁的名字（只作锁套接字文件名的哈希键）：.NET 的 <c>Local\</c>
@@ -170,7 +170,7 @@ sealed class Program
             }
 #endif
             using var launchBridge = new CrossProcessLaunchBridge(
-                LaunchGameSignalName + instanceSuffix, SignalName + instanceSuffix, LockSignalName + instanceSuffix, dataRoot);
+                LaunchGameSignalName + instanceSuffix, ShowWindowSignalName + instanceSuffix, LockSignalName + instanceSuffix, dataRoot);
             if (!launchBridge.TryEnterSingleInstance(MutexName + instanceSuffix, args))
             {
                 return;

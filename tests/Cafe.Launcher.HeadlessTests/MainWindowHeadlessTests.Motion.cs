@@ -195,7 +195,7 @@ public sealed partial class MainWindowHeadlessTests
         await Task.Delay(250);
         await Dispatcher.UIThread.InvokeAsync(() => { });
 
-        context.ViewModel.WindowChrome.ShowSettingsCommand.Execute(null);
+        context.ViewModel.WindowChrome.ToggleSettingsCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
 
         var section = context.Window.GetVisualDescendants()
@@ -240,7 +240,7 @@ public sealed partial class MainWindowHeadlessTests
         // 因此锚点必须在表面完成布局之后才挂上（见 MotionVisibility.Open）。
         await Task.Delay(250);
         await Dispatcher.UIThread.InvokeAsync(() => { });
-        context.ViewModel.WindowChrome.ShowSettingsCommand.Execute(null);
+        context.ViewModel.WindowChrome.ToggleSettingsCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
 
         Assert.True(anchorAttached, "First settings open did not attach the entrance anchor.");

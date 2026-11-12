@@ -70,7 +70,7 @@ public sealed class ThemeColorExtractionAsyncHeadlessTests
         var previousSeed = Assert.Single(context.Appearance.ThemeColorPaletteItems).ColorHex;
         var completion = new TaskCompletionSource<IImage?>(TaskCreationOptions.RunContinuationsAsynchronously);
         using var background = new BackgroundViewModel(
-            context.Provider.GetRequiredService<ImageCacheService>(), new LocalDiagnostics(),
+            context.Provider.GetRequiredService<RemoteImageStore>(), new LocalDiagnostics(),
             context.Provider.GetRequiredService<SettingsViewModel>(),
             videoThumbnailLoader: (_, _) => completion.Task);
         context.Appearance.GetBackgroundBitmapAsync = background.GetBackgroundBitmapAsync;
@@ -109,7 +109,7 @@ public sealed class ThemeColorExtractionAsyncHeadlessTests
         var first = new TaskCompletionSource<IImage?>(TaskCreationOptions.RunContinuationsAsynchronously);
         var second = HeadlessTestHost.WriteSolidPngBitmap(context.Directory.Path, "blue.png", Brushes.Blue, 64, 64);
         using var background = new BackgroundViewModel(
-            context.Provider.GetRequiredService<ImageCacheService>(), new LocalDiagnostics(),
+            context.Provider.GetRequiredService<RemoteImageStore>(), new LocalDiagnostics(),
             context.Provider.GetRequiredService<SettingsViewModel>(),
             videoThumbnailLoader: (path, _) => path == firstPath ? first.Task : Task.FromResult<IImage?>(second));
         context.Appearance.GetBackgroundBitmapAsync = background.GetBackgroundBitmapAsync;

@@ -21,12 +21,12 @@ public sealed partial class MainWindowViewModelTests : IDisposable
     private readonly List<MainWindowTestContext> contexts = [];
     private readonly ProxySettingsService proxySettings = new();
     private readonly HttpClientFactory httpClientFactory;
-    private readonly ImageCacheService imageCacheService;
+    private readonly RemoteImageStore imageCacheService;
 
     public MainWindowViewModelTests()
     {
         httpClientFactory = new HttpClientFactory(proxySettings);
-        imageCacheService = new ImageCacheService(
+        imageCacheService = new RemoteImageStore(
             new StubRemoteHttpTransport(),
             new Crc64Service(),
             tempDir.DataRoot);
@@ -38,7 +38,7 @@ public sealed partial class MainWindowViewModelTests : IDisposable
     /// 创建上下文、让它活到用例结束，并把 ViewModel 交给用例。
     /// </summary>
     private async Task<MainWindowViewModel> CreateViewModelAsync(
-        ILauncherCoreService coreService,
+        ILauncherStatusSnapshotService coreService,
         SavedSettingsTestRig? savedSettings = null,
         ResourcePanelUidService? resourcePanelUidService = null,
         ResourcePanelApiClient? resourcePanelApiClient = null,
@@ -160,7 +160,7 @@ public sealed partial class MainWindowViewModelTests : IDisposable
         tempDir.Dispose();
     }
 
-    private sealed class CountingCoreService : ILauncherCoreService
+    private sealed class CountingCoreService : ILauncherStatusSnapshotService
     {
         private readonly LauncherStatusSnapshot snapshot;
 
@@ -178,7 +178,7 @@ public sealed partial class MainWindowViewModelTests : IDisposable
         }
     }
 
-    private sealed class ThrowingCoreService : ILauncherCoreService
+    private sealed class ThrowingCoreService : ILauncherStatusSnapshotService
     {
         public Task<LauncherStatusSnapshot> LoadAsync(CancellationToken cancellationToken = default)
         {
@@ -186,7 +186,7 @@ public sealed partial class MainWindowViewModelTests : IDisposable
         }
     }
 
-    private sealed class BlockingSecondLoadCoreService : ILauncherCoreService
+    private sealed class BlockingSecondLoadCoreService : ILauncherStatusSnapshotService
     {
         private readonly LauncherStatusSnapshot snapshot;
         private int loadCount;

@@ -163,11 +163,11 @@ public sealed partial class UiStyleContractTests
             "Button.danger-action",
             "Button.gallery-button",
             "SplitButton.launcher-control.start",
-            "controls|ReleaseNotesMarkdownViewer :is(TextBlock).markdown-h1",
-            "controls|ReleaseNotesMarkdownViewer :is(TextBlock).markdown-h2",
-            "controls|ReleaseNotesMarkdownViewer :is(TextBlock).markdown-h3",
-            "controls|ReleaseNotesMarkdownViewer :is(TextBlock).markdown-h4",
-            "controls|ReleaseNotesMarkdownViewer Border.markdown-table-header TextBlock"
+            "controls|RemoteMarkdownView :is(TextBlock).markdown-h1",
+            "controls|RemoteMarkdownView :is(TextBlock).markdown-h2",
+            "controls|RemoteMarkdownView :is(TextBlock).markdown-h3",
+            "controls|RemoteMarkdownView :is(TextBlock).markdown-h4",
+            "controls|RemoteMarkdownView Border.markdown-table-header TextBlock"
         };
 
         Assert.True(

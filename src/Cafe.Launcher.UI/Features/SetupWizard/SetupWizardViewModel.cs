@@ -23,7 +23,7 @@ namespace Cafe.Launcher.UI.Features.SetupWizard;
 /// <summary>
 /// Coordinates the first-launch setup wizard state, validation, and settings output.
 /// </summary>
-internal partial class SetupWizardViewModel : ViewModelBase, IModalContentViewModel, IDisposable, ILanguageAwarePresentation
+internal partial class SetupWizardViewModel : ObservableObject, IModalContentViewModel, IDisposable, ILanguageAwarePresentation
 {
     private const int StepCount = 7;
     private const int AgreementStep = 2;

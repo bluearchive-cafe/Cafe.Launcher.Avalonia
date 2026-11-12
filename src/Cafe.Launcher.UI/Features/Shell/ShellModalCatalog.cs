@@ -27,7 +27,7 @@ internal static class ShellModalCatalog
                 nameof(WindowChromeViewModel.IsSettingsVisible),
                 () => family.WindowChrome.IsSettingsVisible,
                 family.Settings,
-                family.WindowChrome.ShowSettingsCommand),
+                family.WindowChrome.ToggleSettingsCommand),
             new ModalRegistration(
                 ModalKind.UnsavedSettingsConfirmation,
                 family.Settings,
@@ -79,11 +79,11 @@ internal static class ShellModalCatalog
                 dialogs.DismissNoticeCommand),
             new ModalRegistration(
                 ModalKind.Update,
-                dialogs,
-                nameof(DialogsViewModel.IsUpdateAvailableVisible),
-                () => dialogs.IsUpdateAvailableVisible,
-                dialogs,
-                dialogs.CancelUpdateAvailableCommand),
+                dialogs.LauncherUpdate,
+                nameof(LauncherUpdateDialogViewModel.IsVisible),
+                () => dialogs.LauncherUpdate.IsVisible,
+                dialogs.LauncherUpdate,
+                dialogs.LauncherUpdate.CancelCommand),
             new ModalRegistration(
                 ModalKind.Error,
                 dialogs,

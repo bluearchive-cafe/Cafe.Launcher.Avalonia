@@ -21,7 +21,7 @@ namespace Cafe.Launcher.UI.Features.ResourcePanel;
 /// The resource panel workflow (UID resolution, parallel API reads, mode mapping, save
 /// serialization) is delegated to <see cref="ResourcePanelService"/>.
 /// </summary>
-internal partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModalContentViewModel, ILanguageAwarePresentation
+internal partial class ResourcePanelViewModel : ObservableObject, IDisposable, IModalContentViewModel, ILanguageAwarePresentation
 {
     private readonly ResourcePanelService resourcePanelService;
     private readonly LocalizationService localizer;

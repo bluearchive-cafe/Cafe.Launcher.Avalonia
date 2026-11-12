@@ -17,7 +17,7 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
 /// 由游戏操作拥有的完整卸载表面。一次打开对应一个统计版本，确认后保留同一快照与模态。
 /// 所有方法由 UI 线程调用；进度的线程切换在 GameOperationsViewModel 的入口完成。
 /// </summary>
-internal sealed partial class UninstallDialogViewModel : ViewModelBase, IModalContentViewModel, ILanguageAwarePresentation
+internal sealed partial class UninstallDialogViewModel : ObservableObject, IModalContentViewModel, ILanguageAwarePresentation
 {
     private readonly LocalizationService localizer;
     private long generation;

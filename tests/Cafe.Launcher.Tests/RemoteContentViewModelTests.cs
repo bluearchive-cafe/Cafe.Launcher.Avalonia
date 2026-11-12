@@ -17,7 +17,7 @@ public sealed class RemoteContentViewModelTests
     [Fact]
     public void Apply_WhenBannersAreRemoved_StopsExistingCarouselTimer()
     {
-        using var imageCacheService = new ImageCacheService(
+        using var imageCacheService = new RemoteImageStore(
             new StubRemoteHttpTransport(),
             new Crc64Service(), TestDataRoot.ForCurrentProcess());
         using var viewModel = new RemoteContentViewModel(
@@ -774,7 +774,7 @@ public sealed class RemoteContentViewModelTests
 
     private static TestContext CreateContext(string? language = null)
     {
-        var cache = new ImageCacheService(new StubRemoteHttpTransport(), new Crc64Service(), TestDataRoot.ForCurrentProcess());
+        var cache = new RemoteImageStore(new StubRemoteHttpTransport(), new Crc64Service(), TestDataRoot.ForCurrentProcess());
         var localizer = new LocalizationService();
         if (language is not null)
         {
@@ -788,7 +788,7 @@ public sealed class RemoteContentViewModelTests
 
     private sealed record TestContext(
         RemoteContentViewModel ViewModel,
-        ImageCacheService Cache) : IDisposable
+        RemoteImageStore Cache) : IDisposable
     {
         public void Dispose()
         {
@@ -801,7 +801,7 @@ public sealed class RemoteContentViewModelTests
         RemoteContentViewModel ViewModel,
         ManualCarouselTimer Timer,
         GateDelay Delay,
-        ImageCacheService Cache) : IDisposable
+        RemoteImageStore Cache) : IDisposable
     {
         public void Dispose()
         {
@@ -812,7 +812,7 @@ public sealed class RemoteContentViewModelTests
 
     private static SeamedContext CreateSeamedContext()
     {
-        var cache = new ImageCacheService(new StubRemoteHttpTransport(), new Crc64Service(), TestDataRoot.ForCurrentProcess());
+        var cache = new RemoteImageStore(new StubRemoteHttpTransport(), new Crc64Service(), TestDataRoot.ForCurrentProcess());
         var timer = new ManualCarouselTimer();
         var delay = new GateDelay();
         return new SeamedContext(

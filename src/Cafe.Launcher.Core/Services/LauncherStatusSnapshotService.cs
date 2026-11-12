@@ -7,7 +7,7 @@ using Cafe.Launcher.Core.Services.Diagnostics;
 
 namespace Cafe.Launcher.Core.Services;
 
-public interface ILauncherCoreService
+public interface ILauncherStatusSnapshotService
 {
     /// <summary>
     /// 聚合启动器状态：读取本地设置、安装状态并请求远程 API，产出驱动壳层刷新的
@@ -16,7 +16,7 @@ public interface ILauncherCoreService
     Task<LauncherStatusSnapshot> LoadAsync(CancellationToken cancellationToken = default);
 }
 
-internal sealed class LauncherCoreService : ILauncherCoreService
+internal sealed class LauncherStatusSnapshotService : ILauncherStatusSnapshotService
 {
     /// <summary>
     /// Overall deadline for the six concurrent remote reads that form the startup
@@ -35,7 +35,7 @@ internal sealed class LauncherCoreService : ILauncherCoreService
     private readonly ILauncherDiagnostics diagnostics;
     private readonly TimeSpan remoteStateBudget;
 
-    public LauncherCoreService(
+    public LauncherStatusSnapshotService(
         ILauncherApiClient apiClient,
         ILocalInstallationStateStore localInstallationStateStore,
         IGameInstallationPath installationPath,
@@ -51,7 +51,7 @@ internal sealed class LauncherCoreService : ILauncherCoreService
     {
     }
 
-    internal LauncherCoreService(
+    internal LauncherStatusSnapshotService(
         ILauncherApiClient apiClient,
         ILocalInstallationStateStore localInstallationStateStore,
         IGameInstallationPath installationPath,
@@ -124,7 +124,7 @@ internal sealed class LauncherCoreService : ILauncherCoreService
         var operationsResource = await operationsResourceTask.ConfigureAwait(false);
         var socialMediaResource = await socialMediaResourceTask.ConfigureAwait(false);
         var installationConfig = await installationConfigTask.ConfigureAwait(false);
-        var runtimeState = ResolveRuntimeState(localGame, gameConfig);
+        var runtimeState = RuntimeStatePolicy.Resolve(localGame, gameConfig);
         await diagnostics.DebugAsync(
             "LauncherCore",
             $"API outcomes: gameConfig={gameConfig is not null}, baseConfig={baseConfig is not null}, cdnConfig={cdnConfig is not null}, operations={operationsResource is not null}, socialMedia={socialMediaResource is not null}, installation={installationConfig is not null}", CancellationToken.None).ConfigureAwait(false);
@@ -146,44 +146,6 @@ internal sealed class LauncherCoreService : ILauncherCoreService
             RuntimeState = runtimeState,
             CheckedAt = System.DateTimeOffset.Now
         };
-    }
-
-    internal static LauncherRuntimeState ResolveRuntimeState(
-        LocalInstallationState localGame,
-        GameConfigResponse? gameConfig)
-    {
-        if (localGame.Kind != LocalInstallationStateKind.Valid)
-        {
-            return localGame.Kind switch
-            {
-                LocalInstallationStateKind.NotInstalled => LauncherRuntimeState.NotInstalled,
-                LocalInstallationStateKind.Corrupted => LauncherRuntimeState.Corrupted,
-                LocalInstallationStateKind.IoFailure => LauncherRuntimeState.IoFailure,
-                _ => LauncherRuntimeState.IoFailure
-            };
-        }
-
-        if (gameConfig is null
-            || string.IsNullOrWhiteSpace(gameConfig.GameLatestVersion)
-            || string.IsNullOrWhiteSpace(gameConfig.GameLowestVersion))
-        {
-            return LauncherRuntimeState.RemoteUnavailable;
-        }
-
-        var localVersion = localGame.GameConfig?.Version;
-        if (string.IsNullOrWhiteSpace(localVersion))
-        {
-            return LauncherRuntimeState.Corrupted;
-        }
-
-        if (VersionComparer.Compare(localVersion, gameConfig.GameLowestVersion) == -1)
-        {
-            return LauncherRuntimeState.BelowLowestVersion;
-        }
-
-        return VersionComparer.Compare(localVersion, gameConfig.GameLatestVersion) == -1
-            ? LauncherRuntimeState.UpdateAvailable
-            : LauncherRuntimeState.Ready;
     }
 
     private async Task<T?> ReadRemoteAsync<T>(

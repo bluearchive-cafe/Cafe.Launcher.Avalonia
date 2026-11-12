@@ -131,14 +131,14 @@ public static class LauncherCoreServiceCollectionExtensions
         services.TryAddSingleton<ISystemAnimationSettingsProvider, SystemAnimationSettingsProvider>();
         services.TryAddSingleton<IGraphicsInfoProbe, GraphicsInfoProbe>();
         services.TryAddSingleton<IProtonBuildDiscovery, ProtonBuildDiscovery>();
-        services.TryAddSingleton<ILauncherCoreService, LauncherCoreService>();
-        services.TryAddSingleton(sp => new ImageCacheService(
+        services.TryAddSingleton<ILauncherStatusSnapshotService, LauncherStatusSnapshotService>();
+        services.TryAddSingleton(sp => new RemoteImageStore(
             sp.GetRequiredService<IRemoteHttpTransport>(),
             sp.GetRequiredService<Crc64Service>(),
             sp.GetRequiredService<LauncherDataRoot>(),
             sp.GetRequiredService<ILauncherDiagnostics>(),
             sp.GetRequiredService<LauncherBuildIdentity>()));
-        services.TryAddSingleton<IImageCacheService>(sp => sp.GetRequiredService<ImageCacheService>());
+        services.TryAddSingleton<IRemoteImageStore>(sp => sp.GetRequiredService<RemoteImageStore>());
 
         // 自更新：检查、宿主信息、下载器、应用器与自更新服务。应用器先于自更新服务注册：
         // 可用性判定（本机是否带 helper）由应用器回答。

@@ -15,7 +15,7 @@ using Cafe.Launcher.Core.Helpers;
 
 namespace Cafe.Launcher.UI.ViewModels;
 
-internal partial class ShellViewModel : ViewModelBase, IDisposable
+internal partial class ShellViewModel : ObservableObject, IDisposable
 {
     private readonly LocalizationService localizer;
     private readonly LauncherBuildIdentity? buildIdentity;

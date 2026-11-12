@@ -14,7 +14,7 @@ using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.UI.ViewModels;
 
-internal partial class WindowChromeViewModel : ViewModelBase
+internal partial class WindowChromeViewModel : ObservableObject
 {
     private readonly LauncherProductProfile productProfile;
     private readonly YostarGameProfile gameProfile;
@@ -84,7 +84,7 @@ internal partial class WindowChromeViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void ShowSettings()
+    private void ToggleSettings()
     {
         if (settings.IsSaving)
         {

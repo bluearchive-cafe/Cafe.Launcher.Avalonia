@@ -52,14 +52,14 @@ public sealed partial class UiStyleContractTests
                 "Settings.Editor.Current.GameRuntime.RunnerPath",
                 "Settings.Editor.Current.GameRuntime.PrefixPath",
                 "Settings.Editor.Current.GameRuntime.ProtonPath",
-                "Settings.ChoosePrefixPathCommand",
-                "Settings.ChooseProtonPathCommand",
-                "Settings.HasProtonBuilds",
-                "Settings.ProtonBuilds",
-                "Settings.SelectedProtonBuild",
-                "Settings.ProtonBuildDiscoveryFailed",
-                "Settings.IsGameRuntimeStatusRefreshing",
-                "Settings.RefreshGameRuntimeStatusCommand",
+                "Settings.GameRuntime.ChoosePrefixPathCommand",
+                "Settings.GameRuntime.ChooseProtonPathCommand",
+                "Settings.GameRuntime.HasBuilds",
+                "Settings.GameRuntime.Builds",
+                "Settings.GameRuntime.SelectedBuild",
+                "Settings.GameRuntime.BuildDiscoveryFailed",
+                "Settings.GameRuntime.IsStatusRefreshing",
+                "Settings.GameRuntime.RefreshStatusCommand",
                 "Operations.OpenGameFolderCommand",
                 "Operations.RequestRepairCommand",
                 "Operations.RequestUninstallCommand"
@@ -745,7 +745,7 @@ public sealed partial class UiStyleContractTests
                 element.Name.LocalName == "TextBox"
                 && element.Attribute("Text")?.Value == runtimeBindings[0]);
         Assert.Equal(
-            "{Binding Settings.IsGameRuntimeRunnerPathEnabled}",
+            "{Binding Settings.GameRuntime.IsRunnerPathEnabled}",
             runnerPathInput.Attribute("IsEnabled")?.Value);
 
         var runtimeInputs = gameDocument
@@ -995,7 +995,7 @@ public sealed partial class UiStyleContractTests
             gameSection,
             StringComparison.Ordinal);
         Assert.Contains(
-            "Command=\"{Binding WindowChrome.ShowSettingsCommand}\"",
+            "Command=\"{Binding WindowChrome.ToggleSettingsCommand}\"",
             settingsOverlay,
             StringComparison.Ordinal);
         Assert.Contains(
@@ -1009,7 +1009,7 @@ public sealed partial class UiStyleContractTests
                 element.Name.LocalName == "Button"
                 && HasClass(element, "dialog-action")
                 && element.Attribute("Command")?.Value
-                    is "{Binding WindowChrome.ShowSettingsCommand}"
+                    is "{Binding WindowChrome.ToggleSettingsCommand}"
                     or "{Binding Settings.SaveSettingsCommand}")
             .ToList();
         Assert.Equal(2, settingsFooterButtons.Count);
@@ -1042,7 +1042,7 @@ public sealed partial class UiStyleContractTests
             modalCatalog,
             StringComparison.Ordinal);
         Assert.Contains(
-            "WindowChrome.ShowSettingsCommand",
+            "WindowChrome.ToggleSettingsCommand",
             modalCatalog,
             StringComparison.Ordinal);
         Assert.DoesNotContain(
@@ -1313,12 +1313,12 @@ public sealed partial class UiStyleContractTests
                 element.Name.LocalName == "Button"
                 && HasClass(element, "dialog-action")
                 && element.Attribute("Command")?.Value
-                    is "{Binding WindowChrome.ShowSettingsCommand}"
+                    is "{Binding WindowChrome.ToggleSettingsCommand}"
                     or "{Binding Settings.SaveSettingsCommand}")
             .ToList();
         Assert.Equal(2, footerButtons.Count);
         Assert.Equal(
-            "{Binding WindowChrome.ShowSettingsCommand}",
+            "{Binding WindowChrome.ToggleSettingsCommand}",
             footerButtons[0].Attribute("Command")?.Value);
         Assert.Equal(
             "{Binding Settings.SaveSettingsCommand}",

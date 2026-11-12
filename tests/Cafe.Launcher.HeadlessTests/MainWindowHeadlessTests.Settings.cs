@@ -549,8 +549,8 @@ public sealed partial class MainWindowHeadlessTests
         using var context = CreateContext();
         OpenSettings(context);
         context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.DownloadNetwork;
-        context.ViewModel.WindowChrome.ShowSettingsCommand.Execute(null);
-        context.ViewModel.WindowChrome.ShowSettingsCommand.Execute(null);
+        context.ViewModel.WindowChrome.ToggleSettingsCommand.Execute(null);
+        context.ViewModel.WindowChrome.ToggleSettingsCommand.Execute(null);
 
         Assert.Equal(SettingsCategoryCodes.DownloadNetwork, context.ViewModel.Settings.SelectedCategory);
 
@@ -662,14 +662,14 @@ public sealed partial class MainWindowHeadlessTests
         Assert.True(context.ViewModel.IsPlatformSpecificSettingsVisible);
         OpenSettings(context);
         context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.Game;
-        await context.ViewModel.Settings.PendingGameRuntimeStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
+        await context.ViewModel.Settings.GameRuntime.PendingStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
         var settings = context.ViewModel.Settings;
         var build = new SettingOption { DisplayName = "GE-Proton", Code = "/tools/GE-Proton" };
-        settings.ProtonBuilds = [build];
+        settings.GameRuntime.Builds = [build];
         Dispatcher.UIThread.RunJobs();
         var section = context.Window.GetVisualDescendants().OfType<SettingsGameSection>().Single();
         var combo = Assert.Single(section.GetVisualDescendants().OfType<ComboBox>(),
-            control => ReferenceEquals(control.ItemsSource, settings.ProtonBuilds));
+            control => ReferenceEquals(control.ItemsSource, settings.GameRuntime.Builds));
         Assert.True(combo.IsEffectivelyVisible);
         var pathInput = Assert.Single(section.GetVisualDescendants().OfType<TextBox>(),
             control => AutomationProperties.GetName(control) == context.ViewModel.Shell.I18n["gameRuntimeProtonPath"]);
@@ -974,13 +974,13 @@ public sealed partial class MainWindowHeadlessTests
                         context.ViewModel.Settings.SaveSettingsCommand)
                     || ReferenceEquals(
                         control.Command,
-                        context.ViewModel.WindowChrome.ShowSettingsCommand)))
+                        context.ViewModel.WindowChrome.ToggleSettingsCommand)))
             .ToArray();
         Assert.Equal(2, footerButtons.Length);
         var save = footerButtons.Single(button =>
             ReferenceEquals(button.Command, context.ViewModel.Settings.SaveSettingsCommand));
         var cancel = footerButtons.Single(button =>
-            ReferenceEquals(button.Command, context.ViewModel.WindowChrome.ShowSettingsCommand));
+            ReferenceEquals(button.Command, context.ViewModel.WindowChrome.ToggleSettingsCommand));
 
         Assert.True(save.IsEnabled);
         cancel.Command!.Execute(cancel.CommandParameter);
@@ -999,7 +999,7 @@ public sealed partial class MainWindowHeadlessTests
         context.ViewModel.Settings.Editor.CurrentPropertyChanged += (_, args) =>
             changedProperties.Add(args.PropertyName ?? "<null>");
 
-        context.ViewModel.WindowChrome.ShowSettingsCommand.Execute(null);
+        context.ViewModel.WindowChrome.ToggleSettingsCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
 
         Assert.True(context.ViewModel.WindowChrome.IsSettingsVisible);

@@ -64,7 +64,7 @@ internal sealed class SystemTrayActions : ISystemTrayActions, IDisposable
     {
         if (CanOpenSettings && !viewModel.WindowChrome.IsSettingsVisible)
         {
-            viewModel.WindowChrome.ShowSettingsCommand.Execute(null);
+            viewModel.WindowChrome.ToggleSettingsCommand.Execute(null);
         }
     }
 

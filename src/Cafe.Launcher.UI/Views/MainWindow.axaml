@@ -53,7 +53,7 @@
                                   Command="{Binding WindowChrome.ExecuteRestoreWindowCommand}"/>
                         <MenuItem Header="{Binding Shell.I18n[settings]}"
                                   AutomationProperties.Name="{Binding Shell.I18n[settings]}"
-                                  Command="{Binding WindowChrome.ShowSettingsCommand}"/>
+                                  Command="{Binding WindowChrome.ToggleSettingsCommand}"/>
                         <Separator/>
                         <MenuItem Header="{Binding Shell.I18n[close]}"
                                   AutomationProperties.Name="{Binding Shell.I18n[close]}"
@@ -76,7 +76,7 @@
                             AutomationProperties.Name="{Binding Shell.I18n[resourcePanel]}">
                         <materialIcons:MaterialIcon Kind="ClipboardText" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}" Foreground="{StaticResource Launcher.Text.OnChrome}"/>
                     </Button>
-                    <Button Classes="chrome settings" Command="{Binding WindowChrome.ShowSettingsCommand}" ToolTip.Tip="{Binding Shell.I18n[settings]}"
+                    <Button Classes="chrome settings" Command="{Binding WindowChrome.ToggleSettingsCommand}" ToolTip.Tip="{Binding Shell.I18n[settings]}"
                             AutomationProperties.Name="{Binding Shell.I18n[settings]}">
                         <materialIcons:MaterialIcon Kind="CogOutline" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}" Foreground="{StaticResource Launcher.Text.OnChrome}"/>
                     </Button>
@@ -360,7 +360,7 @@
                               VerticalAlignment="Bottom"
                               ColumnSpacing="{StaticResource Launcher.Spacing.Xl}"
                               RowSpacing="{StaticResource Launcher.Spacing.None}">
-                            <controls:GameLaunchButton Grid.Column="1" VerticalAlignment="Center"/>
+                            <controls:GameOperationsSplitButton Grid.Column="1" VerticalAlignment="Center"/>
                             <Canvas Grid.Column="1" VerticalAlignment="Top" Height="{StaticResource Launcher.Spacing.None}"
                                     IsVisible="{Binding Operations.IsTaskCardVisible}">
                                 <views:GameTaskCard Canvas.Right="{StaticResource Launcher.Spacing.None}"

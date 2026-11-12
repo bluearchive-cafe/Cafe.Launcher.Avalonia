@@ -535,7 +535,7 @@ public partial class MainWindowViewModelTests
             return Task.CompletedTask;
         };
         viewModel.Settings.Editor.Current.ThemeMode = ThemeModes.Dark;
-        viewModel.WindowChrome.ShowSettingsCommand.Execute(null);
+        viewModel.WindowChrome.ToggleSettingsCommand.Execute(null);
 
         Assert.True(viewModel.Settings.IsUnsavedChangesVisible);
 
@@ -549,14 +549,14 @@ public partial class MainWindowViewModelTests
     }
 
     [Fact]
-    public async Task ShowSettingsCommand_WhenNoChanges_ClosesWithoutConfirmation()
+    public async Task ToggleSettingsCommand_WhenNoChanges_ClosesWithoutConfirmation()
     {
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = await CreateViewModelAsync(coreService);
         viewModel.Settings.Editor.ApplySnapshot(new LauncherSettings());
         viewModel.WindowChrome.IsSettingsVisible = true;
 
-        viewModel.WindowChrome.ShowSettingsCommand.Execute(null);
+        viewModel.WindowChrome.ToggleSettingsCommand.Execute(null);
 
         Assert.False(viewModel.WindowChrome.IsSettingsVisible);
         Assert.False(viewModel.Settings.IsUnsavedChangesVisible);
@@ -705,7 +705,7 @@ public partial class MainWindowViewModelTests
     }
 
     [Fact]
-    public async Task ShowSettingsAsync_WhenWallpaperPaletteWasRefreshed_KeepsCurrentPalette()
+    public async Task ToggleSettingsCommand_WhenWallpaperPaletteWasRefreshed_KeepsCurrentPalette()
     {
         var snapshot = CreateSnapshot();
         snapshot.Settings.ThemeColorMode = ThemeColorModes.Wallpaper;
@@ -728,7 +728,7 @@ public partial class MainWindowViewModelTests
             "#FFD82038",
             Assert.Single(viewModel.Settings.Appearance.ThemeColorPaletteItems).ColorHex);
 
-        viewModel.WindowChrome.ShowSettingsCommand.Execute(null);
+        viewModel.WindowChrome.ToggleSettingsCommand.Execute(null);
 
         Assert.True(viewModel.WindowChrome.IsSettingsVisible);
         Assert.Equal(
@@ -753,7 +753,7 @@ public partial class MainWindowViewModelTests
         };
     }
 
-    private sealed class SettingsBackedCoreService : ILauncherCoreService
+    private sealed class SettingsBackedCoreService : ILauncherStatusSnapshotService
     {
         private readonly LauncherSettingsService settingsService;
         private readonly LauncherStatusSnapshot snapshot;

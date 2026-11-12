@@ -95,13 +95,13 @@ public sealed class MainWindowTestContextTests
     private sealed class ContextScope : IDisposable
     {
         private readonly HttpClientFactory httpClientFactory;
-        private readonly ImageCacheService imageCacheService;
+        private readonly RemoteImageStore imageCacheService;
 
         public ContextScope()
         {
             Directory = TestDirectory.Create();
             httpClientFactory = new HttpClientFactory(new ProxySettingsService());
-            imageCacheService = new ImageCacheService(
+            imageCacheService = new RemoteImageStore(
                 new StubRemoteHttpTransport(),
                 new Crc64Service(),
                 Directory.DataRoot);
@@ -123,7 +123,7 @@ public sealed class MainWindowTestContextTests
         }
     }
 
-    private sealed class EmptyCoreService : ILauncherCoreService
+    private sealed class EmptyCoreService : ILauncherStatusSnapshotService
     {
         public Task<LauncherStatusSnapshot> LoadAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(new LauncherStatusSnapshot());

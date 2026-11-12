@@ -40,11 +40,11 @@ public sealed partial class MainWindowHeadlessTests
         }
         context.Window.Show();
         var dialogs = context.ViewModel.Dialogs;
-        dialogs.ShowUpdateAvailable("1.2.0", [], LauncherUpdateInAppAvailability.Available);
+        dialogs.LauncherUpdate.Show("1.2.0", [], LauncherUpdateInAppAvailability.Available);
         var service = new ControlledReleaseNotesService();
-        var loading = dialogs.LoadUpdateReleaseNotesAsync(service);
+        var loading = dialogs.LauncherUpdate.LoadReleaseNotesAsync(service);
         Dispatcher.UIThread.RunJobs();
-        var viewer = context.Window.GetVisualDescendants().OfType<ReleaseNotesMarkdownViewer>().Single();
+        var viewer = context.Window.GetVisualDescendants().OfType<RemoteMarkdownView>().Single();
         var surface = viewer.GetVisualAncestors().OfType<DialogSurface>().Single();
         var loadingText = context.ViewModel.Shell.I18n[LocalizationKeys.LauncherUpdateReleaseNotesLoading];
         Assert.Contains(surface.GetVisualDescendants().OfType<TextBlock>(), text => text.IsEffectivelyVisible && text.Text == loadingText);
@@ -63,7 +63,7 @@ public sealed partial class MainWindowHeadlessTests
         var failureText = context.ViewModel.Shell.I18n[LocalizationKeys.LauncherUpdateReleaseNotesFailed];
         Assert.Equal(failed, surface.GetVisualDescendants().OfType<TextBlock>().Any(text => text.IsEffectivelyVisible && text.Text == failureText));
         var primary = surface.GetVisualDescendants().OfType<Button>().Single(button =>
-            button.IsEffectivelyVisible && ReferenceEquals(button.Command, dialogs.ConfirmUpdateAvailableCommand));
+            button.IsEffectivelyVisible && ReferenceEquals(button.Command, dialogs.LauncherUpdate.ConfirmCommand));
         Assert.True(primary.IsEnabled);
         Assert.True(surface.Bounds.Height >= 320);
         Assert.True(primary.TranslatePoint(default, context.Window)!.Value.Y + primary.Bounds.Height <= context.Window.Bounds.Height);
@@ -88,10 +88,10 @@ public sealed partial class MainWindowHeadlessTests
         bytes = File.ReadAllBytes(bannerPath);
         const string markdown = "![Banner](https://example.com/banner.png)\n\n[Details](https://example.com/release)";
 
-        context.ViewModel.Dialogs.ShowUpdateAvailable(
+        context.ViewModel.Dialogs.LauncherUpdate.Show(
             "1.4.0", [], LauncherUpdateInAppAvailability.PlatformUnsupported, releaseNotes: markdown);
         context.Window.Show();
-        var viewer = Assert.Single(context.Window.GetVisualDescendants().OfType<ReleaseNotesMarkdownViewer>());
+        var viewer = Assert.Single(context.Window.GetVisualDescendants().OfType<RemoteMarkdownView>());
         await HeadlessTestHost.WaitUntilAsync(
             () => viewer.GetVisualDescendants().OfType<Image>().Any(image => image.Source is not null),
             TimeSpan.FromSeconds(5));
@@ -100,12 +100,12 @@ public sealed partial class MainWindowHeadlessTests
         var firstImage = Assert.Single(viewer.GetVisualDescendants().OfType<Image>());
         var firstBitmap = Assert.IsType<Bitmap>(firstImage.Source);
 
-        context.ViewModel.Dialogs.CancelUpdateAvailableCommand.Execute(null);
+        context.ViewModel.Dialogs.LauncherUpdate.CancelCommand.Execute(null);
         await HeadlessTestHost.WaitUntilAsync(() => !viewer.IsDocumentActive, TimeSpan.FromSeconds(5));
         Assert.Null(viewer.Content);
         Assert.Null(firstImage.Source);
 
-        context.ViewModel.Dialogs.ShowUpdateAvailable(
+        context.ViewModel.Dialogs.LauncherUpdate.Show(
             "1.4.0", [], LauncherUpdateInAppAvailability.PlatformUnsupported, releaseNotes: markdown);
         await HeadlessTestHost.WaitUntilAsync(
             () => viewer.GetVisualDescendants().OfType<Image>().Any(image => image.Source is not null),
@@ -128,12 +128,12 @@ public sealed partial class MainWindowHeadlessTests
             using var context = CreateContext();
             context.ViewModel.IsMotionReduced = false;
             context.Window.Show();
-            context.ViewModel.Dialogs.ShowUpdateAvailable(
+            context.ViewModel.Dialogs.LauncherUpdate.Show(
                 "1.2.0", [], LauncherUpdateInAppAvailability.PlatformUnsupported, releaseNotes: "## 更新内容");
             Dispatcher.UIThread.RunJobs();
 
             var viewer = context.Window.GetVisualDescendants()
-                .OfType<ReleaseNotesMarkdownViewer>()
+                .OfType<RemoteMarkdownView>()
                 .Single();
             var overlay = viewer.GetVisualAncestors()
                 .OfType<Grid>()
@@ -143,7 +143,7 @@ public sealed partial class MainWindowHeadlessTests
 
             try
             {
-                context.ViewModel.Dialogs.CancelUpdateAvailableCommand.Execute(null);
+                context.ViewModel.Dialogs.LauncherUpdate.CancelCommand.Execute(null);
                 Dispatcher.UIThread.RunJobs();
 
                 Assert.False(MotionVisibility.GetIsOpen(overlay));
@@ -154,7 +154,7 @@ public sealed partial class MainWindowHeadlessTests
             }
             finally
             {
-                context.ViewModel.Dialogs.ShowUpdateAvailable(
+                context.ViewModel.Dialogs.LauncherUpdate.Show(
                     "1.2.0", [], LauncherUpdateInAppAvailability.PlatformUnsupported, releaseNotes: "## 更新内容");
             }
         }
@@ -170,7 +170,7 @@ public sealed partial class MainWindowHeadlessTests
         using var context = CreateContext();
         context.Window.Show();
         // 这份安装缺更新组件：说明行必须归因到安装，而不是笼统地说「设备无法」。
-        context.ViewModel.Dialogs.ShowUpdateAvailable(
+        context.ViewModel.Dialogs.LauncherUpdate.Show(
             "1.2.0", [], LauncherUpdateInAppAvailability.HelperMissing);
         Dispatcher.UIThread.RunJobs();
 
@@ -185,7 +185,7 @@ public sealed partial class MainWindowHeadlessTests
         var primary = context.Window.GetVisualDescendants().OfType<Button>()
             .Single(button =>
                 button.IsEffectivelyVisible
-                && ReferenceEquals(button.Command, context.ViewModel.Dialogs.ConfirmUpdateAvailableCommand));
+                && ReferenceEquals(button.Command, context.ViewModel.Dialogs.LauncherUpdate.ConfirmCommand));
 
         Assert.True(notice.IsEffectivelyVisible);
         // 提示依靠图标、文字和背景表达；取消额外左边线后使用完整的共享圆角。
@@ -201,7 +201,7 @@ public sealed partial class MainWindowHeadlessTests
     {
         using var context = CreateContext();
         context.Window.Show();
-        context.ViewModel.Dialogs.ShowUpdateAvailable("1.2.0", [], LauncherUpdateInAppAvailability.Available);
+        context.ViewModel.Dialogs.LauncherUpdate.Show("1.2.0", [], LauncherUpdateInAppAvailability.Available);
         Dispatcher.UIThread.RunJobs();
 
         var expectedNotice = context.ViewModel.Shell.I18n[LocalizationKeys.LauncherUpdateInAppUnavailableHelper];
@@ -423,7 +423,7 @@ public sealed partial class MainWindowHeadlessTests
                 button.Classes.Contains("settings")
                 && ReferenceEquals(
                     button.Command,
-                    context.ViewModel.WindowChrome.ShowSettingsCommand));
+                    context.ViewModel.WindowChrome.ToggleSettingsCommand));
         var startButton = context.Window
             .GetVisualDescendants()
             .OfType<SplitButton>()
@@ -467,7 +467,7 @@ public sealed partial class MainWindowHeadlessTests
                 button.Classes.Contains("dialog-action")
                 && ReferenceEquals(
                     button.Command,
-                    context.ViewModel.WindowChrome.ShowSettingsCommand));
+                    context.ViewModel.WindowChrome.ToggleSettingsCommand));
         var confirmDialog = context.Window
             .GetVisualDescendants()
             .OfType<global::Cafe.Launcher.UI.Controls.ConfirmDialog>()
@@ -721,14 +721,14 @@ public sealed partial class MainWindowHeadlessTests
     /// </summary>
     private static Button[] ShowUpdateDialog(TestContext context)
     {
-        context.ViewModel.Dialogs.ShowUpdateAvailable(
+        context.ViewModel.Dialogs.LauncherUpdate.Show(
             "1.2.0", [], LauncherUpdateInAppAvailability.PlatformUnsupported, releaseNotes: "## 更新内容");
         Dispatcher.UIThread.RunJobs();
         return context.Window.GetVisualDescendants().OfType<Button>()
             .Where(button =>
                 button.IsEffectivelyVisible
-                && (ReferenceEquals(button.Command, context.ViewModel.Dialogs.ConfirmUpdateAvailableCommand)
-                    || ReferenceEquals(button.Command, context.ViewModel.Dialogs.CancelUpdateAvailableCommand)))
+                && (ReferenceEquals(button.Command, context.ViewModel.Dialogs.LauncherUpdate.ConfirmCommand)
+                    || ReferenceEquals(button.Command, context.ViewModel.Dialogs.LauncherUpdate.CancelCommand)))
             .ToArray();
     }
 }
