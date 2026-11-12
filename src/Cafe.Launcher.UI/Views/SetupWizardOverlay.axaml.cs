@@ -49,8 +49,8 @@ internal partial class SetupWizardOverlay : UserControl
     public SetupWizardOverlay()
     {
         InitializeComponent();
-        stepPanels = [WizardStep0, WizardStep1, WizardStep2, WizardStep3, WizardStep4, WizardStep5];
-        progressSegments = [ProgressSegment0, ProgressSegment1, ProgressSegment2, ProgressSegment3, ProgressSegment4, ProgressSegment5];
+        stepPanels = [WizardStep0, WizardStep1, WizardStep2, WizardStep3, WizardStep4, WizardStep5, WizardStep6];
+        progressSegments = [ProgressSegment0, ProgressSegment1, ProgressSegment2, ProgressSegment3, ProgressSegment4, ProgressSegment5, ProgressSegment6];
         DataContextChanged += OnDataContextChanged;
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;

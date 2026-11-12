@@ -25,10 +25,10 @@ namespace Cafe.Launcher.UI.Features.SetupWizard;
 /// </summary>
 internal partial class SetupWizardViewModel : ViewModelBase, IModalContentViewModel, IDisposable, ILanguageAwarePresentation
 {
-    private const int StepCount = 6;
-    private const int AgreementStep = 1;
-    private const int GamePathStep = 2;
-    private const int ReviewStep = 5;
+    private const int StepCount = 7;
+    private const int AgreementStep = 2;
+    private const int GamePathStep = 3;
+    private const int ReviewStep = 6;
 
     // 路径文本框 TwoWay 绑定下每个字符都会触发刷新；全量状态读取 + 写探测
     // 对 UNC/慢速介质是真实磁盘 IO，按此窗口防抖合并连续击键。
@@ -597,13 +597,13 @@ internal partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMo
         SummaryItems =
         [
             new(MaterialIconKind.Translate, localizer.T(LocalizationKeys.SetupWizardLanguage),
-                LanguageDisplayName ?? string.Empty, 0, GoToStepCommand, editLabel, HasDivider: false),
+                LanguageDisplayName ?? string.Empty, 1, GoToStepCommand, editLabel, HasDivider: false),
             new(MaterialIconKind.CloudDownload, localizer.T(LocalizationKeys.SetupWizardDownloadSource),
-                DownloadSourceDisplayName ?? string.Empty, 3, GoToStepCommand, editLabel, HasDivider: true),
+                DownloadSourceDisplayName ?? string.Empty, 4, GoToStepCommand, editLabel, HasDivider: true),
             new(MaterialIconKind.FolderSearch, localizer.T(LocalizationKeys.SetupWizardGamePath),
-                GamePathDisplay, 2, GoToStepCommand, editLabel, HasDivider: true),
+                GamePathDisplay, 3, GoToStepCommand, editLabel, HasDivider: true),
             new(MaterialIconKind.SwapHorizontal, localizer.T(LocalizationKeys.SetupWizardProxy),
-                ProxyDisplayName ?? string.Empty, 4, GoToStepCommand, editLabel, HasDivider: true),
+                ProxyDisplayName ?? string.Empty, 5, GoToStepCommand, editLabel, HasDivider: true),
         ];
         OnPropertyChanged(nameof(SummaryItems));
     }

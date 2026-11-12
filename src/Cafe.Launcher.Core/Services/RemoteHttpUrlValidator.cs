@@ -34,23 +34,27 @@ internal sealed class RemoteHttpUrlValidator : IRemoteHttpUrlValidator
     private readonly Func<string, CancellationToken, Task<IPAddress[]>> resolveHostAsync;
     private readonly TimeSpan cacheLifetime;
     private readonly Func<DateTimeOffset> utcNow;
+    private readonly Func<bool>? allowBlockedNetworkAddresses;
     private readonly ConcurrentDictionary<string, CacheEntry> resolutionCache =
         new(StringComparer.Ordinal);
 
-    public RemoteHttpUrlValidator()
-        : this(static (host, cancellationToken) =>
-            Dns.GetHostAddressesAsync(host, cancellationToken))
+    public RemoteHttpUrlValidator(Func<bool>? allowBlockedNetworkAddresses = null)
+        : this(
+            static (host, cancellationToken) => Dns.GetHostAddressesAsync(host, cancellationToken),
+            allowBlockedNetworkAddresses: allowBlockedNetworkAddresses)
     {
     }
 
     internal RemoteHttpUrlValidator(
         Func<string, CancellationToken, Task<IPAddress[]>> resolveHostAsync,
         TimeSpan? cacheLifetime = null,
-        Func<DateTimeOffset>? utcNow = null)
+        Func<DateTimeOffset>? utcNow = null,
+        Func<bool>? allowBlockedNetworkAddresses = null)
     {
         this.resolveHostAsync = resolveHostAsync;
         this.cacheLifetime = cacheLifetime ?? DefaultCacheLifetime;
         this.utcNow = utcNow ?? GetUtcNow;
+        this.allowBlockedNetworkAddresses = allowBlockedNetworkAddresses;
     }
 
     private static DateTimeOffset GetUtcNow() => DateTimeOffset.UtcNow;
@@ -122,6 +126,15 @@ internal sealed class RemoteHttpUrlValidator : IRemoteHttpUrlValidator
         // target host is blocked or poisoned, so this SSRF guard would reject requests the proxy
         // can service. The scheme/port/userinfo/localhost-name/literal-IP checks above still apply.
         if (connectionUsesProxy)
+        {
+            return uri;
+        }
+
+        // 设置-高级的兼容开关：hosts 型 GitHub 加速器把域名改写为回环/内网地址并在本机
+        // 提供服务，本地解析结果正是其工作前提。开关默认关闭，开启后只跳过「解析结果必须
+        // 是公网」这一条——scheme、端口、userinfo、localhost 名字与字面地址的检查都在上面
+        // 完成且不放宽（ADR-060、AUD-SEC-008）。
+        if (allowBlockedNetworkAddresses?.Invoke() == true)
         {
             return uri;
         }

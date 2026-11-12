@@ -246,6 +246,29 @@
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row.Hover}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
     </Style>
+    <!-- 欢迎页配置概览：五行「图标块 + 名称/说明」，行间发丝线同复核页摘要。
+         图标块用 Content.Row 静底而非主色，让右侧清单保持预览语气，不与左栏欢迎徽章争夺焦点。 -->
+    <Style Selector="Grid.wizard-welcome-row">
+        <Setter Property="MinHeight" Value="{StaticResource Launcher.Component.Wizard.Welcome.Row.MinHeight}"/>
+    </Style>
+    <Style Selector="Border.wizard-welcome-icon">
+        <Setter Property="Width" Value="{StaticResource Launcher.Component.Wizard.Welcome.Icon.Size}"/>
+        <Setter Property="Height" Value="{StaticResource Launcher.Component.Wizard.Welcome.Icon.Size}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="TextBlock.wizard-welcome-name">
+        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Md}"/>
+        <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+    <Style Selector="TextBlock.wizard-welcome-desc">
+        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Sm}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
     <Style Selector="TextBlock.wizard-game-path-status.checking">
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary}"/>
     </Style>

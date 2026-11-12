@@ -187,7 +187,7 @@ public sealed partial class MainWindowHeadlessTests
         context.ViewModel.Dialogs.ShowSetupWizard();
         Dispatcher.UIThread.RunJobs();
         // 向导的「自动」会恢复 DI 创建时捕获的语言，截图仍须钉住英文。
-        // 先让步骤 0 的 ComboBox 完成首次选择绑定，再切语言，避免选择模型初始化回写空值。
+        // 欢迎页是首步，截图取欢迎页；语言页的 ComboBox 在后续步骤完成首次绑定。
         context.ViewModel.Shell.ApplyLanguage(LauncherLanguages.English, hasSnapshot: false);
         Dispatcher.UIThread.RunJobs();
         GoldenScreenshot.Compare(context.Window, "setup-wizard");
@@ -206,6 +206,7 @@ public sealed partial class MainWindowHeadlessTests
         // 系统语言上，截图取决于本机区域设置与重排时机。
         context.ViewModel.Shell.ApplyLanguage(LauncherLanguages.English, hasSnapshot: false);
         Dispatcher.UIThread.RunJobs();
+        context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
         context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
         GoldenScreenshot.Compare(context.Window, "setup-wizard-agreement");
@@ -228,6 +229,7 @@ public sealed partial class MainWindowHeadlessTests
             context.ViewModel.Dialogs.SetupWizard.Language = LauncherLanguages.SimplifiedChinese;
             context.Provider.GetRequiredService<ThemeApplier>().ApplyScheme(Color.Parse("#FF2E7DF6"), isDark: true);
             Dispatcher.UIThread.RunJobs();
+            context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
             context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
             context.ViewModel.Dialogs.SetupWizard.MarkAgreementRead();
             context.ViewModel.Dialogs.SetupWizard.IsAgreementAccepted = true;

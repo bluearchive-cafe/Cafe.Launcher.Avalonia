@@ -10,17 +10,21 @@ namespace Cafe.Launcher.Tests;
 public sealed partial class UiStyleContractTests
 {
     [Theory]
-    [InlineData("SettingsDownloadNetworkSection", "settingsGroupDownload", "downloadSource", "downloadSpeedLimit", "settingsGroupNetwork", "proxy", "enableHttp2")]
-    [InlineData("SettingsAdvancedSection", "settingsGroupDiagnostics", "logLevel", "logFiles", "settingsGroupDataRecovery", "settingsDataDirectory", "debugResetSettingsConfirm")]
-    public void SettingsGroups_KeepCommonTasksBeforeConnectionAndRecovery(string section, string firstGroup, string firstRow, string secondRow,
-        string lastGroup, string thirdRow, string fourthRow)
+    [InlineData("SettingsDownloadNetworkSection",
+        "settingsGroupDownload|settingsGroupNetwork",
+        "downloadSource|downloadSpeedLimit|proxy|enableHttp2")]
+    [InlineData("SettingsAdvancedSection",
+        "settingsGroupDiagnostics|settingsGroupNetworkCompatibility|settingsGroupDataRecovery",
+        "logLevel|logFiles|allowBlockedNetworkAddresses|settingsDataDirectory|debugResetSettingsConfirm")]
+    public void SettingsGroups_KeepCommonTasksBeforeConnectionAndRecovery(string section, string groupKeys, string rowKeys)
     {
         var document = XDocument.Load(TestRepository.FromPresentationRoot($"Views/{section}.axaml"));
         var groups = document.Descendants().Where(element => HasClass(element, "settings-group")).ToArray();
-        Assert.Equal(2, groups.Length);
-        Assert.Equal(new[] { firstGroup, lastGroup }.Select(key => $"{{Binding Shell.I18n[{key}]}}"),
+        var expectedGroups = groupKeys.Split('|');
+        Assert.Equal(expectedGroups.Length, groups.Length);
+        Assert.Equal(expectedGroups.Select(key => $"{{Binding Shell.I18n[{key}]}}"),
             groups.Select(group => group.Elements().First().Attribute("Text")?.Value));
-        Assert.Equal(new[] { firstRow, secondRow, thirdRow, fourthRow }.Select(key => $"{{Binding Shell.I18n[{key}]}}"),
+        Assert.Equal(rowKeys.Split('|').Select(key => $"{{Binding Shell.I18n[{key}]}}"),
             groups.SelectMany(group => group.Elements().Where(element => element.Name.LocalName is "SettingRow" or "SettingSelect"))
                 .Select(row => row.Attribute("Title")?.Value));
         foreach (var group in groups)
@@ -89,6 +93,7 @@ public sealed partial class UiStyleContractTests
             ["SettingsAdvancedSection"] =
             [
                 "Settings.Editor.Current.LogLevel",
+                "Settings.Editor.Current.AllowBlockedNetworkAddresses",
                 "LogViewer.OpenCommand",
                 "LogExport.OpenCommand",
                 "WindowChrome.OpenDataDirectoryCommand"

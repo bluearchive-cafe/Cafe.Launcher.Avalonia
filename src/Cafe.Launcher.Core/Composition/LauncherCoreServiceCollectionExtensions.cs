@@ -111,7 +111,10 @@ public static class LauncherCoreServiceCollectionExtensions
         services.TryAddSingleton<AuthorizationHeaderFactory>();
         services.TryAddSingleton<IBestHttpCookieLibraryReader, BestHttpCookieLibraryService>();
         services.TryAddSingleton<PatchUrlGroupService>();
-        services.TryAddSingleton<RemoteHttpUrlValidator>();
+        // 「允许本机/内网地址」同样按使用时机读取已保存快照（ADR-028）；按类型注册会让
+        // 容器回退到可选参数的默认值，开关将永远读不到设置。
+        services.TryAddSingleton(sp => new RemoteHttpUrlValidator(
+            () => SavedSettingsSnapshot(sp).AllowBlockedNetworkAddresses));
         services.TryAddSingleton<IRemoteHttpUrlValidator>(sp => sp.GetRequiredService<RemoteHttpUrlValidator>());
         services.TryAddSingleton(sp => new LauncherSettingsService(
             sp.GetRequiredService<LauncherDataRoot>(),

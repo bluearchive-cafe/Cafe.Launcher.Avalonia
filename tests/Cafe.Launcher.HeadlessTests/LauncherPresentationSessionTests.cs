@@ -155,7 +155,7 @@ public sealed class LauncherPresentationSessionTests
 
         var wizard = viewModel.Dialogs.SetupWizard;
         Assert.True(wizard.IsConsentUpdateMode);
-        Assert.Equal(1, wizard.Step);
+        Assert.Equal(2, wizard.Step);
         Assert.True(wizard.IsLastStep);
         Assert.False(wizard.CanSkip);
         Assert.False(wizard.CanGoPrevious);

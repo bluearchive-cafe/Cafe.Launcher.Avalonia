@@ -61,7 +61,7 @@
                         <!-- 单步的协议更新模式没有「第几步」可表达，进度轨整体折叠。 -->
                         <Grid Grid.Row="1"
                               IsVisible="{Binding !Dialogs.SetupWizard.IsConsentUpdateMode}"
-                              ColumnDefinitions="*,*,*,*,*,*"
+                              ColumnDefinitions="*,*,*,*,*,*,*"
                               ColumnSpacing="{StaticResource Launcher.Spacing.Sm}">
                             <Border x:Name="ProgressSegment0" Classes="wizard-progress-segment"/>
                             <Border x:Name="ProgressSegment1" Grid.Column="1" Classes="wizard-progress-segment"/>
@@ -69,6 +69,7 @@
                             <Border x:Name="ProgressSegment3" Grid.Column="3" Classes="wizard-progress-segment"/>
                             <Border x:Name="ProgressSegment4" Grid.Column="4" Classes="wizard-progress-segment"/>
                             <Border x:Name="ProgressSegment5" Grid.Column="5" Classes="wizard-progress-segment"/>
+                            <Border x:Name="ProgressSegment6" Grid.Column="6" Classes="wizard-progress-segment"/>
                         </Grid>
                     </Grid>
                 </Border>
@@ -82,7 +83,9 @@
                               VerticalScrollBarVisibility="Auto">
                     <Grid MinHeight="{Binding $parent[ScrollViewer].Viewport.Height}">
 
-                        <!-- Step 0: Welcome & Language -->
+                        <!-- Step 0: Welcome
+                             左引导承载欢迎语；右面板按后续顺序预览将要配置的五项，
+                             让用户在进入具体步骤前先建立整体预期。 -->
                         <Grid x:Name="WizardStep0"
                               Classes="wizard-step"
                               ColumnDefinitions="Auto,*"
@@ -94,8 +97,117 @@
                             <Grid.RenderTransform>
                                 <TranslateTransform/>
                             </Grid.RenderTransform>
+                            <StackPanel Classes="wizard-context">
+                                <Border Classes="wizard-context-icon">
+                                    <materialIcons:MaterialIcon Kind="HandWave"
+                                                               Width="{StaticResource Launcher.Icon.Xxl}"
+                                                               Height="{StaticResource Launcher.Icon.Xxl}"
+                                                               Foreground="{DynamicResource Launcher.Color.Primary}"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock Text="{Binding Shell.I18n[setupWizardWelcomeTitle]}" Classes="wizard-step-title"/>
+                                <TextBlock Text="{Binding Shell.I18n[setupWizardWelcomeText]}" Classes="wizard-step-hint"/>
+                            </StackPanel>
+                            <Border Grid.Column="1" Classes="wizard-panel" Margin="{StaticResource Launcher.Component.Wizard.Body.Margin}">
+                                <Grid RowDefinitions="Auto,Auto"
+                                      RowSpacing="{StaticResource Launcher.Spacing.Xs}"
+                                      VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Shell.I18n[setupWizardWelcomePlan]}" Classes="caption"/>
+                                    <StackPanel Grid.Row="1">
+                                        <Grid Classes="wizard-welcome-row" ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                                            <Border Classes="wizard-welcome-icon">
+                                                <materialIcons:MaterialIcon Kind="Translate"
+                                                                           Width="{StaticResource Launcher.Icon.Md}"
+                                                                           Height="{StaticResource Launcher.Icon.Md}"
+                                                                           Foreground="{DynamicResource Launcher.Text.Secondary}"
+                                                                           HorizontalAlignment="Center"
+                                                                           VerticalAlignment="Center"/>
+                                            </Border>
+                                            <StackPanel Grid.Column="1" Spacing="{StaticResource Launcher.Spacing.Xs}" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Shell.I18n[setupWizardLanguage]}" Classes="wizard-welcome-name"/>
+                                                <TextBlock Text="{Binding Shell.I18n[setupWizardLanguageHint]}" Classes="wizard-welcome-desc"/>
+                                            </StackPanel>
+                                        </Grid>
+                                        <Border Classes="wizard-divider"/>
+                                        <Grid Classes="wizard-welcome-row" ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                                            <Border Classes="wizard-welcome-icon">
+                                                <materialIcons:MaterialIcon Kind="ScriptText"
+                                                                           Width="{StaticResource Launcher.Icon.Md}"
+                                                                           Height="{StaticResource Launcher.Icon.Md}"
+                                                                           Foreground="{DynamicResource Launcher.Text.Secondary}"
+                                                                           HorizontalAlignment="Center"
+                                                                           VerticalAlignment="Center"/>
+                                            </Border>
+                                            <StackPanel Grid.Column="1" Spacing="{StaticResource Launcher.Spacing.Xs}" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Shell.I18n[agreementTitle]}" Classes="wizard-welcome-name"/>
+                                                <TextBlock Text="{Binding Shell.I18n[setupWizardWelcomeAgreementDescription]}" Classes="wizard-welcome-desc"/>
+                                            </StackPanel>
+                                        </Grid>
+                                        <Border Classes="wizard-divider"/>
+                                        <Grid Classes="wizard-welcome-row" ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                                            <Border Classes="wizard-welcome-icon">
+                                                <materialIcons:MaterialIcon Kind="FolderSearch"
+                                                                           Width="{StaticResource Launcher.Icon.Md}"
+                                                                           Height="{StaticResource Launcher.Icon.Md}"
+                                                                           Foreground="{DynamicResource Launcher.Text.Secondary}"
+                                                                           HorizontalAlignment="Center"
+                                                                           VerticalAlignment="Center"/>
+                                            </Border>
+                                            <StackPanel Grid.Column="1" Spacing="{StaticResource Launcher.Spacing.Xs}" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Shell.I18n[setupWizardGamePath]}" Classes="wizard-welcome-name"/>
+                                                <TextBlock Text="{Binding Shell.I18n[setupWizardWelcomeGamePathDescription]}" Classes="wizard-welcome-desc"/>
+                                            </StackPanel>
+                                        </Grid>
+                                        <Border Classes="wizard-divider"/>
+                                        <Grid Classes="wizard-welcome-row" ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                                            <Border Classes="wizard-welcome-icon">
+                                                <materialIcons:MaterialIcon Kind="CloudDownload"
+                                                                           Width="{StaticResource Launcher.Icon.Md}"
+                                                                           Height="{StaticResource Launcher.Icon.Md}"
+                                                                           Foreground="{DynamicResource Launcher.Text.Secondary}"
+                                                                           HorizontalAlignment="Center"
+                                                                           VerticalAlignment="Center"/>
+                                            </Border>
+                                            <StackPanel Grid.Column="1" Spacing="{StaticResource Launcher.Spacing.Xs}" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Shell.I18n[setupWizardDownloadSource]}" Classes="wizard-welcome-name"/>
+                                                <TextBlock Text="{Binding Shell.I18n[setupWizardWelcomeDownloadSourceDescription]}" Classes="wizard-welcome-desc"/>
+                                            </StackPanel>
+                                        </Grid>
+                                        <Border Classes="wizard-divider"/>
+                                        <Grid Classes="wizard-welcome-row" ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                                            <Border Classes="wizard-welcome-icon">
+                                                <materialIcons:MaterialIcon Kind="SwapHorizontal"
+                                                                           Width="{StaticResource Launcher.Icon.Md}"
+                                                                           Height="{StaticResource Launcher.Icon.Md}"
+                                                                           Foreground="{DynamicResource Launcher.Text.Secondary}"
+                                                                           HorizontalAlignment="Center"
+                                                                           VerticalAlignment="Center"/>
+                                            </Border>
+                                            <StackPanel Grid.Column="1" Spacing="{StaticResource Launcher.Spacing.Xs}" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Shell.I18n[setupWizardProxy]}" Classes="wizard-welcome-name"/>
+                                                <TextBlock Text="{Binding Shell.I18n[setupWizardWelcomeProxyDescription]}" Classes="wizard-welcome-desc"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </Grid>
+
+                        <!-- Step 1: Language -->
+                        <Grid x:Name="WizardStep1"
+                              Classes="wizard-step"
+                              ColumnDefinitions="Auto,*"
+                              ColumnSpacing="{StaticResource Launcher.Spacing.Xxxl}"
+                              Width="{StaticResource Launcher.Component.Wizard.Stage.Width}"
+                              IsVisible="False"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Stretch">
+                            <Grid.RenderTransform>
+                                <TranslateTransform/>
+                            </Grid.RenderTransform>
                             <!-- 各面板标题静态绑定自身资源键：共享 StepTitle 会在 Step 变化的
-                                 t=0 让六块标题（含淡出中的旧面板）同时跳到新步骤标题。 -->
+                                 t=0 让七块标题（含淡出中的旧面板）同时跳到新步骤标题。 -->
                             <StackPanel Classes="wizard-context">
                                 <Border Classes="wizard-context-icon">
                                     <materialIcons:MaterialIcon Kind="Translate"
@@ -106,7 +218,7 @@
                                                                VerticalAlignment="Center"/>
                                 </Border>
                                 <TextBlock Text="{Binding Shell.I18n[setupWizardLanguage]}" Classes="wizard-step-title"/>
-                                <TextBlock Text="{Binding Shell.I18n[setupWizardWelcomeText]}" Classes="wizard-step-hint"/>
+                                <TextBlock Text="{Binding Shell.I18n[setupWizardLanguageHint]}" Classes="wizard-step-hint"/>
                             </StackPanel>
                             <Border Grid.Column="1" Classes="wizard-panel" Margin="{StaticResource Launcher.Component.Wizard.Body.Margin}">
                                 <StackPanel Spacing="{StaticResource Launcher.Spacing.Lg}" VerticalAlignment="Center">
@@ -126,15 +238,14 @@
                                             </ComboBox.ItemTemplate>
                                         </ComboBox>
                                     </StackPanel>
-                                    <TextBlock Text="{Binding Shell.I18n[setupWizardLanguageHint]}" Classes="wizard-step-hint"/>
                                 </StackPanel>
                             </Border>
                         </Grid>
 
-                        <!-- Step 1: Agreement & Privacy
+                        <!-- Step 2: Agreement & Privacy
                              与其他步骤同构：左引导承载标题、版次与语言声明；右面板为
                              文档阅读器（铺满剩余高度）加固定底栏同意项。 -->
-                        <Grid x:Name="WizardStep1"
+                        <Grid x:Name="WizardStep2"
                               Classes="wizard-step"
                               ColumnDefinitions="Auto,*"
                               ColumnSpacing="{StaticResource Launcher.Spacing.Xxxl}"
@@ -206,8 +317,8 @@
                             </Border>
                         </Grid>
 
-                        <!-- Step 2: Game Path -->
-                        <Grid x:Name="WizardStep2"
+                        <!-- Step 3: Game Path -->
+                        <Grid x:Name="WizardStep3"
                               Classes="wizard-step"
                               ColumnDefinitions="Auto,*"
                               ColumnSpacing="{StaticResource Launcher.Spacing.Xxxl}"
@@ -304,8 +415,8 @@
                             </Border>
                         </Grid>
 
-                        <!-- Step 3: Download Source -->
-                        <Grid x:Name="WizardStep3"
+                        <!-- Step 4: Download Source -->
+                        <Grid x:Name="WizardStep4"
                               Classes="wizard-step"
                               ColumnDefinitions="Auto,*"
                               ColumnSpacing="{StaticResource Launcher.Spacing.Xxxl}"
@@ -352,8 +463,8 @@
                             </Border>
                         </Grid>
 
-                        <!-- Step 4: Proxy -->
-                        <Grid x:Name="WizardStep4"
+                        <!-- Step 5: Proxy -->
+                        <Grid x:Name="WizardStep5"
                               Classes="wizard-step"
                               ColumnDefinitions="Auto,*"
                               ColumnSpacing="{StaticResource Launcher.Spacing.Xxxl}"
@@ -409,9 +520,9 @@
                             </Border>
                         </Grid>
 
-                        <!-- Step 5: Review（完成语义由左栏 Success 徽章承载，标题回归中性；
+                        <!-- Step 6: Review（完成语义由左栏 Success 徽章承载，标题回归中性；
                              摘要为图标摘要行列表，不用着色卡承载。） -->
-                        <Grid x:Name="WizardStep5"
+                        <Grid x:Name="WizardStep6"
                               Classes="wizard-step"
                               ColumnDefinitions="Auto,*"
                               ColumnSpacing="{StaticResource Launcher.Spacing.Xxxl}"

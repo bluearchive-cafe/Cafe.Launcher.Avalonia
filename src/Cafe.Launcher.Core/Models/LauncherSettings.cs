@@ -25,6 +25,7 @@ public sealed class LauncherSettings : SettingsModel
     private int selectedThemeColorPaletteIndex;
     private string downloadSpeedLimit = DownloadSpeedLimits.Unlimited;
     private bool enableHttp2 = true;
+    private bool allowBlockedNetworkAddresses;
     private bool enableStartupUpdateCheck = true;
     private bool showRemoteContentCard = true;
     private bool rememberWindowPositionAndSize;
@@ -101,6 +102,15 @@ public sealed class LauncherSettings : SettingsModel
 
     [JsonPropertyName("enableHttp2")]
     public bool EnableHttp2 { get => enableHttp2; set => SetProperty(ref enableHttp2, value); }
+
+    /// <summary>
+    /// 高级兼容开关：允许远程地址解析到本机或内网。hosts 型 GitHub 加速器（FastGithub、
+    /// Watt Toolkit 等）把域名改写为回环地址并在本机提供服务，该解析结果正是其工作前提。
+    /// 默认关闭；开启后只跳过「解析结果必须是公网」这一条，scheme、端口、userinfo、
+    /// localhost 名字与字面地址的限制不变（ADR-060、AUD-SEC-008）。
+    /// </summary>
+    [JsonPropertyName("allowBlockedNetworkAddresses")]
+    public bool AllowBlockedNetworkAddresses { get => allowBlockedNetworkAddresses; set => SetProperty(ref allowBlockedNetworkAddresses, value); }
 
     [JsonPropertyName("enableStartupUpdateCheck")]
     public bool EnableStartupUpdateCheck { get => enableStartupUpdateCheck; set => SetProperty(ref enableStartupUpdateCheck, value); }
@@ -215,6 +225,7 @@ public sealed class LauncherSettings : SettingsModel
         SelectedThemeColorPaletteIndex = other.SelectedThemeColorPaletteIndex;
         DownloadSpeedLimit = other.DownloadSpeedLimit;
         EnableHttp2 = other.EnableHttp2;
+        AllowBlockedNetworkAddresses = other.AllowBlockedNetworkAddresses;
         EnableStartupUpdateCheck = other.EnableStartupUpdateCheck;
         ShowRemoteContentCard = other.ShowRemoteContentCard;
         RememberWindowPositionAndSize = other.RememberWindowPositionAndSize;
@@ -267,6 +278,7 @@ public sealed class LauncherSettings : SettingsModel
         (nameof(SelectedThemeColorPaletteIndex), settings => settings.SelectedThemeColorPaletteIndex),
         (nameof(DownloadSpeedLimit), settings => settings.DownloadSpeedLimit),
         (nameof(EnableHttp2), settings => settings.EnableHttp2),
+        (nameof(AllowBlockedNetworkAddresses), settings => settings.AllowBlockedNetworkAddresses),
         (nameof(EnableStartupUpdateCheck), settings => settings.EnableStartupUpdateCheck),
         (nameof(ShowRemoteContentCard), settings => settings.ShowRemoteContentCard),
         (nameof(RememberWindowPositionAndSize), settings => settings.RememberWindowPositionAndSize),

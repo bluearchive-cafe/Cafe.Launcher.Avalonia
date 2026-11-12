@@ -155,6 +155,58 @@ public sealed class RemoteHttpUrlValidatorTests
     }
 
     [Fact]
+    public async Task ValidateAsync_WhenBlockedNetworkAddressesAreAllowed_SkipsThePrivateAnswerRejection()
+    {
+        // 设置-高级的兼容开关（ADR-060）：hosts 型加速器把 GitHub 域名指向回环地址，
+        // 用户在加速器开启时显式放行该解析结果。
+        var validator = new RemoteHttpUrlValidator(
+            static (_, _) => Task.FromResult<IPAddress[]>([IPAddress.Loopback]),
+            allowBlockedNetworkAddresses: static () => true);
+
+        var uri = await validator.ValidateAsync("https://github.com/file");
+
+        Assert.Equal("github.com", uri.Host);
+    }
+
+    [Theory]
+    [InlineData("ftp://example.test/file")]
+    [InlineData("https://user:pass@example.test/file")]
+    [InlineData("http://example.test:8080/file")]
+    [InlineData("https://service.localhost/file")]
+    [InlineData("http://127.0.0.1/file")]
+    [InlineData("http://10.0.0.1/file")]
+    public async Task ValidateAsync_WhenBlockedNetworkAddressesAreAllowed_KeepsShapeAndLiteralChecks(string url)
+    {
+        // 兼容开关只放宽 DNS 解析结果：scheme、userinfo、端口、localhost 名字与字面地址
+        // 仍按原规则拒绝（ADR-060）。
+        var validator = new RemoteHttpUrlValidator(
+            static (_, _) => throw new InvalidOperationException("DNS must not be resolved."),
+            allowBlockedNetworkAddresses: static () => true);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => validator.ValidateAsync(url));
+    }
+
+    [Fact]
+    public async Task ValidateAsync_WhenTheCompatibilitySettingChanges_FollowsTheLatestValue()
+    {
+        // 开关按使用时机读取（ADR-028）：保存设置后下一次校验即生效，不需要重启。
+        var allow = false;
+        var validator = new RemoteHttpUrlValidator(
+            static (_, _) => Task.FromResult<IPAddress[]>([IPAddress.Loopback]),
+            allowBlockedNetworkAddresses: () => allow);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => validator.ValidateAsync("https://github.com/file"));
+
+        allow = true;
+
+        var uri = await validator.ValidateAsync("https://github.com/file");
+
+        Assert.Equal("github.com", uri.Host);
+    }
+
+    [Fact]
     public async Task ValidateAsync_WhenLiteralAddressIsPublic_ReturnsUri()
     {
         var validator = RemoteHttpUrlValidator.CreateForTesting();

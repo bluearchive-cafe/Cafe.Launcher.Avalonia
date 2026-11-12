@@ -26,6 +26,7 @@ public sealed partial class MainWindowHeadlessTests
     [AvaloniaTheory]
     [InlineData(SettingsCategoryCodes.General, LocalizationKeys.RememberWindowPositionAndSize)]
     [InlineData(SettingsCategoryCodes.DownloadNetwork, LocalizationKeys.EnableHttp2)]
+    [InlineData(SettingsCategoryCodes.Advanced, LocalizationKeys.AllowBlockedNetworkAddresses)]
     public void DeferredSettings_CheckboxChangesDraftAndDiscardRestoresSavedValue(string category, LocalizationKeys key)
     {
         using var context = CreateContext();

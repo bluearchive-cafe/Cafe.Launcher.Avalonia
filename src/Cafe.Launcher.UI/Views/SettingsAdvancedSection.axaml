@@ -52,6 +52,21 @@
         </StackPanel>
 
         <StackPanel Classes="settings-group">
+            <TextBlock Text="{Binding Shell.I18n[settingsGroupNetworkCompatibility]}" Classes="group-title"/>
+
+            <controls:SettingRow ShowTopDivider="False"
+                                 Title="{Binding Shell.I18n[allowBlockedNetworkAddresses]}"
+                                 Description="{Binding Shell.I18n[allowBlockedNetworkAddressesDescription]}">
+                <controls:SettingRow.Action>
+                    <CheckBox Classes="setting-checkbox"
+                              AutomationProperties.Name="{Binding Shell.I18n[allowBlockedNetworkAddresses]}"
+                              IsChecked="{Binding Settings.Editor.Current.AllowBlockedNetworkAddresses, Mode=TwoWay}"
+                              VerticalAlignment="Center"/>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+        </StackPanel>
+
+        <StackPanel Classes="settings-group">
             <TextBlock Text="{Binding Shell.I18n[settingsGroupDataRecovery]}" Classes="group-title"/>
 
             <controls:SettingRow ShowTopDivider="False"

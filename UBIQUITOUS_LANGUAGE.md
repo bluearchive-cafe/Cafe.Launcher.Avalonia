@@ -31,6 +31,7 @@
 | **Chinese-localized resources** | Game text, main-story Chinese voice, and image/video resources selected for a UID through the Resource Panel. | Localized resources, translation files |
 | **Localization UID** | The eight-uppercase-letter identifier used for Cafe resource preferences. It is distinct from the numeric in-game account UID. | Account ID, numeric UID |
 | **Resource preferences** | The resource selections stored on the Cafe service for a localization UID; checkbox changes remain pending until saved. | Local resource edits, local patch settings |
+| **Local or private network address** | An update or download target that resolves to the user's computer or local network; accepted only while the advanced network-compatibility option is on. | LAN address, loopback address |
 
 ### Launcher updates
 
@@ -114,6 +115,8 @@
 | Automatic system proxy | 自动检测系统代理 | 自動偵測系統代理 | システムプロキシを自動検出 |
 | Direct connection | 直连（不使用代理） | 直連（不使用代理） | 直接接続（プロキシなし） |
 | System proxy (configured first) | 系统代理（优先使用显式配置） | 系統代理（優先使用明確設定） | システムプロキシ（明示設定を優先） |
+| Network compatibility | 网络兼容 | 網路相容性 | ネットワーク互換性 |
+| Allow Local or Private Network Addresses | 允许本机或内网地址 | 允許本機或內網位址 | ローカルまたはプライベートネットワークのアドレスを許可 |
 
 ## 翻译规则
 

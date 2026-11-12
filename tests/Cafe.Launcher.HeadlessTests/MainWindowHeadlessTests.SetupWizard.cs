@@ -33,6 +33,8 @@ public sealed partial class MainWindowHeadlessTests
         using var context = CreateContext();
         context.Window.Show();
         context.ViewModel.Dialogs.ShowSetupWizard();
+        // 欢迎页是首步：连过欢迎与语言两步才到协议。
+        context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
         context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
 
@@ -132,6 +134,7 @@ public sealed partial class MainWindowHeadlessTests
         context.Window.Show();
         context.ViewModel.Dialogs.ShowSetupWizard();
         context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
+        context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
 
         var wizard = context.ViewModel.Dialogs.SetupWizard;
@@ -193,8 +196,9 @@ public sealed partial class MainWindowHeadlessTests
         AcceptAgreement(context.ViewModel.Dialogs.SetupWizard);
         context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
         context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
+        context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
-        Assert.Equal(2, context.ViewModel.Dialogs.SetupWizard.Step);
+        Assert.Equal(3, context.ViewModel.Dialogs.SetupWizard.Step);
         Assert.Equal(installationBasePath, context.ViewModel.Dialogs.SetupWizard.GamePath);
         Assert.True(GetWizardGamePathStatus(context.Window).IsEffectivelyVisible);
 
@@ -231,7 +235,7 @@ public sealed partial class MainWindowHeadlessTests
 
         context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
-        Assert.Equal(2, context.ViewModel.Dialogs.SetupWizard.Step);
+        Assert.Equal(3, context.ViewModel.Dialogs.SetupWizard.Step);
     }
 
     [AvaloniaFact]
@@ -244,6 +248,7 @@ public sealed partial class MainWindowHeadlessTests
         context.Window.Show();
         context.ViewModel.Dialogs.ShowSetupWizard();
         AcceptAgreement(wizard);
+        wizard.NextCommand.Execute(null);
         wizard.NextCommand.Execute(null);
         wizard.NextCommand.Execute(null);
         await WaitForGamePathStatusAsync(wizard, SetupWizardGamePathStatus.AvailableForInstallation);
@@ -275,7 +280,7 @@ public sealed partial class MainWindowHeadlessTests
         Assert.Equal(4, editButtons.Length);
         Assert.All(editButtons, button => Assert.False(string.IsNullOrWhiteSpace(AutomationProperties.GetName(button))));
 
-        var expectedSteps = new[] { 0, 3, 2, 4 };
+        var expectedSteps = new[] { 1, 4, 3, 5 };
         for (var index = 0; index < expectedSteps.Length; index++)
         {
             // 复核页每次进入都会按 SummaryItems 重建行容器，必须取当前实例而非首次抓取的那批。
@@ -298,7 +303,7 @@ public sealed partial class MainWindowHeadlessTests
                     Assert.Fail("向导未在 10 秒预算内推进到最后一步。");
                 }
 
-                if (wizard.Step == 2)
+                if (wizard.Step == 3)
                 {
                     await WaitForGamePathStatusAsync(
                         wizard,
@@ -317,7 +322,7 @@ public sealed partial class MainWindowHeadlessTests
         using var context = CreateContext();
         context.Window.Show();
         context.ViewModel.Dialogs.ShowSetupWizard();
-        context.ViewModel.Dialogs.SetupWizard.Step = 3;
+        context.ViewModel.Dialogs.SetupWizard.Step = 4;
         Dispatcher.UIThread.RunJobs();
 
         var cafe = context.Window.GetVisualDescendants().OfType<RadioButton>().Single(control =>
@@ -370,7 +375,7 @@ public sealed partial class MainWindowHeadlessTests
         using var context = CreateContext();
         context.Window.Show();
         context.ViewModel.Dialogs.ShowSetupWizard();
-        context.ViewModel.Dialogs.SetupWizard.Step = 3;
+        context.ViewModel.Dialogs.SetupWizard.Step = 4;
         Dispatcher.UIThread.RunJobs();
 
         var radios = context.Window.GetVisualDescendants().OfType<RadioButton>()
@@ -426,7 +431,7 @@ public sealed partial class MainWindowHeadlessTests
             .OfType<Panel>()
             .Where(control => control.Classes.Contains("wizard-step"))
             .ToList();
-        Assert.Equal(6, steps.Count);
+        Assert.Equal(7, steps.Count);
 
         foreach (var stepIndex in new[] { 3, 1, 4, 5 })
         {
@@ -458,7 +463,7 @@ public sealed partial class MainWindowHeadlessTests
             .OfType<Panel>()
             .Where(control => control.Classes.Contains("wizard-step"))
             .ToList();
-        Assert.Equal(6, steps.Count);
+        Assert.Equal(7, steps.Count);
 
         foreach (var stepIndex in new[] { 2, 0, 4, 5 })
         {
@@ -486,7 +491,7 @@ public sealed partial class MainWindowHeadlessTests
             .OfType<Panel>()
             .Where(control => control.Classes.Contains("wizard-step"))
             .ToList();
-        Assert.Equal(6, steps.Count);
+        Assert.Equal(7, steps.Count);
 
         // 同一次 UI 任务里前进再回退：换面还停在退场半程（尚未到中点换面），
         // 回退因此命中「目标即当前显示步」分支；不依赖帧时钟节拍。
@@ -655,6 +660,7 @@ public sealed partial class MainWindowHeadlessTests
         AcceptAgreement(context.ViewModel.Dialogs.SetupWizard);
         context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
         context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
+        context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
         await WaitForGamePathStatusAsync(
             context.ViewModel.Dialogs.SetupWizard,
             SetupWizardGamePathStatus.AvailableForInstallation);
@@ -679,8 +685,8 @@ public sealed partial class MainWindowHeadlessTests
             string.Format(
                 System.Globalization.CultureInfo.InvariantCulture,
                 context.ViewModel.Shell.I18n["setupWizardStepProgress"],
-                3,
-                6),
+                4,
+                7),
             progress.Text);
     }
 
@@ -705,7 +711,7 @@ public sealed partial class MainWindowHeadlessTests
                 System.Globalization.CultureInfo.InvariantCulture,
                 context.ViewModel.Shell.I18n["setupWizardStepProgress"],
                 1,
-                6),
+                7),
             counter.Text);
         Assert.Equal(0, context.ViewModel.Dialogs.SetupWizard.Step);
     }
@@ -792,7 +798,7 @@ public sealed partial class MainWindowHeadlessTests
         context.ViewModel.Dialogs.ShowSetupWizard();
         Dispatcher.UIThread.RunJobs();
 
-        // Navigate to step 2 (GamePath) and set a path. 使用保证可写的临时目录：
+        // Navigate to step 3 (GamePath) and set a path. 使用保证可写的临时目录：
         // 写探测会把不可写位置判为不可安装，硬编码系统盘路径会随环境翻转结果。
         var gamePath = Path.Combine(
             Path.GetTempPath(),
@@ -800,6 +806,7 @@ public sealed partial class MainWindowHeadlessTests
             "YostarGames",
             "BlueArchive_JP");
         AcceptAgreement(context.ViewModel.Dialogs.SetupWizard);
+        context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
         context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
         context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();

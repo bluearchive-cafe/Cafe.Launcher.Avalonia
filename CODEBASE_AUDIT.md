@@ -65,6 +65,7 @@
 | `AUD-SEC-002` | 上游协议要求资源面板 UID 位于 HTTPS 查询串；应用日志会剥离查询串，但代理和服务端访问日志仍可见。 | 上游支持请求体传输，或 UID 的敏感级别提高。 |
 | `AUD-SEC-004` | System 代理模式向 WinINet 配置的代理发送当前用户默认凭据；这是同用户信任边界内的兼容性取舍。 | 支持来自更低信任来源的代理配置，或默认凭据不再是产品要求。 |
 | `AUD-SEC-006` | 直接路径容忍 CGNAT/Fake-IP 地址段以兼容 Clash/mihomo 与部分 CDN；请求仍限 GET、80/443，并剥离跨主机重定向凭据。 | 能可靠识别代理接管而不影响双栈/Fake-IP 用户，或请求能力扩大。 |
+| `AUD-SEC-008` | 高级设置「允许本机或内网地址」（默认关闭）可显式放宽「DNS 解析结果必须是公网」这一条，供 FastGithub 等把域名指向本机服务的 hosts 型加速器使用；scheme、userinfo、端口、`localhost` 名字与字面地址仍拒绝，请求仍限 GET 与 80/443（ADR-060）。开启期间可访问本机/内网的 80/443 服务，属用户显式接受的放宽。 | 出现无需用户开启的自动放宽；请求能力扩大；或能可靠识别加速器接管而无需放宽校验。 |
 | `AUD-PKG-001` | Linux 三格式按「随 GitHub Release 分发的上游 vendor 包」定位：RPM 安装在 `/opt`、无 `Source`、关闭 `%__os_install_post`；满足可安装、依赖可解析、元数据可校验，不宣称满足 Fedora/openSUSE/Debian 官方仓库收录规范。 | 计划提交任一官方仓库（含 OBS/COPR/AUR 正式收录）时，按该仓库规范重审。 |
 | `AUD-LNX-001` | Unix 单实例锁套接字仍放在 `$XDG_DATA_HOME/cafe-launcher`，没有迁到规范更对应的 `$XDG_RUNTIME_DIR`（ADR-034、ADR-049）。运行期文件因此留在持久数据根；内核原子锁与跨进程转发语义不变。 | `$XDG_RUNTIME_DIR` 成为运行时信号的硬性要求，或单实例/转发协议本身需要重做。 |
 | `AUD-UI-001` | 不提供 Windows 高对比度（`ThemeVariant.HighContrast`）变体：仓库没有 `HighContrast` 的 `ThemeDictionaries`，主题解析只在 Light/Dark 间切换。常规可读性由 AA token 契约（`DesignTokenContrastTests`）与 §7 豁免区走查承担；高对比度专项对比度不作承诺。见 `docs/design/design-system-spec.md` §5。 | 无障碍要求把系统高对比度列为硬性目标，或收到该模式下的可读性缺陷报告。 |

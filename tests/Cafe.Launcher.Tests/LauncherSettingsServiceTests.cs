@@ -84,6 +84,19 @@ public sealed class LauncherSettingsServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task AllowBlockedNetworkAddresses_RoundTripsAndOldJsonDefaultsToDisabled()
+    {
+        var service = new LauncherSettingsService( TestDataRoot.ForFile(settingsPath) );
+        await service.SaveAsync(new LauncherSettings { AllowBlockedNetworkAddresses = true });
+
+        Assert.True((await service.ReadAsync()).AllowBlockedNetworkAddresses);
+
+        await File.WriteAllTextAsync(settingsPath, """{"language":"ja"}""");
+
+        Assert.False((await service.ReadAsync()).AllowBlockedNetworkAddresses);
+    }
+
+    [Fact]
     public void LauncherSettings_DynamicColorFields_DefaultToSpecValues()
     {
         var settings = new LauncherSettings();
@@ -429,6 +442,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
             "selectedThemeColorPaletteIndex",
             "downloadSpeedLimit",
             "enableHttp2",
+            "allowBlockedNetworkAddresses",
             "enableStartupUpdateCheck",
             "showRemoteContentCard",
             "rememberWindowPositionAndSize",

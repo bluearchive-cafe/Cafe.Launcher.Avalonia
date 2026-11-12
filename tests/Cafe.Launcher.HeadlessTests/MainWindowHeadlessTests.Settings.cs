@@ -609,8 +609,8 @@ public sealed partial class MainWindowHeadlessTests
             .Where(row => row.IsEffectivelyVisible)
             .ToArray();
 
-        // 诊断（日志级别/日志操作）与数据恢复（目录/重置）各两行。
-        Assert.Equal(4, rows.Length);
+        // 诊断（日志级别/日志操作）、网络兼容（本机与内网地址）与数据恢复（目录/重置）。
+        Assert.Equal(5, rows.Length);
         var levelRow = Assert.Single(
             rows,
             row => row.GetVisualDescendants().OfType<ComboBox>().Any()

@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http;
 using Cafe.Launcher.UI.Features.Shell;
 using Cafe.Launcher.UI.Features.GameOperations;
 using Cafe.Launcher.UI.Features.Settings;
@@ -172,6 +173,30 @@ public sealed class ServiceConfigurationTests : IDisposable
             Assert.Equal(expected, lease.Client.DefaultRequestVersion);
             Assert.Equal(HttpVersionPolicy.RequestVersionOrLower, lease.Client.DefaultVersionPolicy);
         }
+    }
+
+    /// <summary>
+    /// 「允许本机/内网地址」与 HTTP/2 偏好走同一条组合根闭包：按使用时机读取已保存
+    /// 快照（ADR-028）。退回按类型注册时容器会回退到可选参数的默认值，开关永远读不到，
+    /// 这条用例即变红。
+    /// </summary>
+    [Fact]
+    public async Task SavedBlockedAddressSetting_IsReadByTheRegisteredValidator_WithoutAnyPush()
+    {
+        await using var provider = CreateServices().BuildServiceProvider();
+        var editor = provider.GetRequiredService<SettingsEditor>();
+        var validator = provider.GetRequiredService<IRemoteHttpUrlValidator>();
+
+        // 关闭时，保留域名（无 DNS 应答）不可能通过校验：解析失败或整体被拒都算失败。
+        editor.ApplySnapshot(new LauncherSettings { AllowBlockedNetworkAddresses = false });
+        await Assert.ThrowsAnyAsync<Exception>(
+            () => validator.ValidateAsync("https://example.invalid/file"));
+
+        // 开启后校验在解析之前返回，因此这个用例不产生真实 DNS 查询。
+        editor.ApplySnapshot(new LauncherSettings { AllowBlockedNetworkAddresses = true });
+        var uri = await validator.ValidateAsync("https://example.invalid/file");
+
+        Assert.Equal("example.invalid", uri.Host);
     }
 
     /// <summary>
