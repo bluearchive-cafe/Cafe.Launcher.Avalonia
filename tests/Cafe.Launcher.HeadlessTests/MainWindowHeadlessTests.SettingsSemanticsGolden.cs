@@ -106,6 +106,11 @@ public sealed partial class MainWindowHeadlessTests
         OpenSettings(context);
         context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.About;
         GoldenScreenshot.Compare(context.Window, "settings-about-zh");
+
+        context.Window.GetVisualDescendants().OfType<TextBlock>()
+            .Single(text => text.Classes.Contains("about-community-thanks"))
+            .BringIntoView();
+        GoldenScreenshot.Compare(context.Window, "settings-about-credits-zh");
     }
 
     [AvaloniaFact]

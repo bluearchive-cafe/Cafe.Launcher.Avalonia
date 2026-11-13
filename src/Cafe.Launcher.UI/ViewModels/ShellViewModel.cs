@@ -12,6 +12,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using Cafe.Launcher.Core;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Helpers;
+using Material.Icons;
 
 namespace Cafe.Launcher.UI.ViewModels;
 
@@ -19,6 +20,7 @@ internal partial class ShellViewModel : ObservableObject, IDisposable
 {
     private readonly LocalizationService localizer;
     private readonly LauncherBuildIdentity? buildIdentity;
+    private readonly string cafeWebsiteUrl;
 
     private static readonly string RuntimeDescription =
         $"{RuntimeInformation.FrameworkDescription} ({RuntimeInformation.RuntimeIdentifier})";
@@ -103,6 +105,12 @@ internal partial class ShellViewModel : ObservableObject, IDisposable
 
     public LocalizedTextCatalog I18n { get; }
 
+    [ObservableProperty]
+    private IReadOnlyList<AboutCredit> contributors = [];
+
+    [ObservableProperty]
+    private IReadOnlyList<AboutCredit> specialThanks = [];
+
     /// <param name="productProfile">
     /// 产品档案：窗口标题、托盘与关于页展示的产品名来自它。
     /// </param>
@@ -116,8 +124,10 @@ internal partial class ShellViewModel : ObservableObject, IDisposable
     {
         this.localizer = localizer;
         this.buildIdentity = buildIdentity;
+        cafeWebsiteUrl = productProfile.CafeWebsiteUrl;
         productName = ResolveProductName(productProfile.ProductName, DateTime.Now, Random.Shared.Next(2));
         I18n = new LocalizedTextCatalog(localizer);
+        RefreshAboutCredits();
     }
 
     internal static string ResolveProductName(string productName, DateTime date, int randomIndex)
@@ -146,7 +156,13 @@ internal partial class ShellViewModel : ObservableObject, IDisposable
         string language,
         bool hasSnapshot)
     {
+        var previousLanguage = localizer.CurrentLanguage;
         var effectiveLanguage = localizer.SetLanguage(language);
+        if (effectiveLanguage != previousLanguage)
+        {
+            RefreshAboutCredits();
+        }
+
         FontFamily = LanguageFontFamilyService.GetForEffectiveLanguage(effectiveLanguage);
         LauncherVersionText = localizer.F(LocalizationKeys.LauncherVersionLabel, buildIdentity?.LauncherVersion ?? "");
         FrameworkVersionText = RuntimeDescription;
@@ -200,6 +216,30 @@ internal partial class ShellViewModel : ObservableObject, IDisposable
         ExecutableText = localizer.T(LocalizationKeys.ExecutableLoading);
         ExecutableNameText = localizer.T(LocalizationKeys.LauncherLoadingValue);
         LaunchCheckValueText = localizer.T(LocalizationKeys.LauncherLoadingValue);
+    }
+
+    private void RefreshAboutCredits()
+    {
+        Contributors =
+        [
+            new("gytxtx", localizer.T(LocalizationKeys.AboutCreditGytxtx),
+                "https://github.com/gytxtx", MaterialIconKind.AccountOutline),
+            new("MF-Dust", localizer.T(LocalizationKeys.AboutCreditMfDust),
+                "https://github.com/MF-Dust", MaterialIconKind.AccountOutline)
+        ];
+        SpecialThanks =
+        [
+            new("Avalonia", localizer.T(LocalizationKeys.AboutCreditAvalonia),
+                "https://github.com/AvaloniaUI/Avalonia", MaterialIconKind.CodeTags),
+            new("CommunityToolkit.Mvvm", localizer.T(LocalizationKeys.AboutCreditCommunityToolkit),
+                "https://github.com/CommunityToolkit/dotnet", MaterialIconKind.CodeTags),
+            new("Material.Icons.Avalonia", localizer.T(LocalizationKeys.AboutCreditMaterialIcons),
+                "https://github.com/AvaloniaUtils/Material.Icons.Avalonia/", MaterialIconKind.CodeTags),
+            new(localizer.T(LocalizationKeys.AboutCreditBlueArchiveCafe), localizer.T(LocalizationKeys.AboutCreditBlueArchiveCafeDescription),
+                cafeWebsiteUrl, MaterialIconKind.CoffeeOutline),
+            new(localizer.T(LocalizationKeys.AboutCreditAppIcon), localizer.T(LocalizationKeys.AboutCreditAppIconDescription),
+                "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/commit/3401794c9b06956a09a6308dfaae21341b3814f5", MaterialIconKind.HeartOutline)
+        ];
     }
 
     public void SetRefreshError(Exception exception, SettingsViewModel settings)

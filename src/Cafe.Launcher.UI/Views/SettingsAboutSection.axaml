@@ -5,7 +5,34 @@
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Cafe.Launcher.UI.Views.SettingsAboutSection"
              x:Name="SettingsRoot"
-             x:DataType="vm:MainWindowViewModel"><StackPanel Classes="settings-group" Spacing="{StaticResource Launcher.Spacing.Md}">
+             x:DataType="vm:MainWindowViewModel">
+    <UserControl.Resources>
+        <DataTemplate x:Key="AboutCreditTemplate" x:DataType="models:AboutCredit">
+            <StackPanel>
+                <Border Classes="settings-row-divider about-credit-divider"/>
+                <Button Classes="about-link-item about-credit-row"
+                        Command="{Binding #SettingsRoot.((vm:MainWindowViewModel)DataContext).WindowChrome.OpenExternalUrlCommand}"
+                        CommandParameter="{Binding Url}"
+                        AutomationProperties.Name="{Binding Name}"
+                        AutomationProperties.HelpText="{Binding Description}">
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                        <Border Classes="about-credit-avatar">
+                            <materialIcons:MaterialIcon Kind="{Binding IconKind}" Width="{StaticResource Launcher.Icon.Lg}" Height="{StaticResource Launcher.Icon.Lg}"
+                                                        Foreground="{DynamicResource Launcher.Color.OnSecondaryContainer}"
+                                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="{StaticResource Launcher.Spacing.Xs}">
+                            <TextBlock Text="{Binding Name}" Classes="group-title" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding Description}" Classes="caption" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <materialIcons:MaterialIcon Grid.Column="2" Kind="ChevronRight" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"
+                                                    Foreground="{DynamicResource Launcher.Text.Secondary}" VerticalAlignment="Center"/>
+                    </Grid>
+                </Button>
+            </StackPanel>
+        </DataTemplate>
+    </UserControl.Resources>
+    <StackPanel Classes="settings-group" Spacing="{StaticResource Launcher.Spacing.Md}">
         <!-- 身份卡：产品名 + 版本 caption + 副标题；操作行内收（ADR-018 融合变体） -->
         <Border Classes="about-identity-card">
             <StackPanel Spacing="{StaticResource Launcher.Spacing.Lg}">
@@ -76,6 +103,19 @@
                 </Grid>
             </Button>
         </ItemsControl>
+
+        <TextBlock Text="{Binding Shell.I18n[aboutContributors]}" Classes="group-title"/>
+        <ItemsControl Classes="about-link-list about-credit-list"
+                      ItemsSource="{Binding Shell.Contributors}"
+                      ItemTemplate="{StaticResource AboutCreditTemplate}"/>
+
+        <TextBlock Text="{Binding Shell.I18n[aboutSpecialThanks]}" Classes="group-title"/>
+        <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}">
+            <ItemsControl Classes="about-link-list about-credit-list"
+                          ItemsSource="{Binding Shell.SpecialThanks}"
+                          ItemTemplate="{StaticResource AboutCreditTemplate}"/>
+            <TextBlock Text="{Binding Shell.I18n[aboutCommunityThanks]}" Classes="caption about-community-thanks" TextWrapping="Wrap"/>
+        </StackPanel>
 
         <Expander x:Name="AboutBuildExpander" Classes="settings-appearance-expander settings-about-build"
                   Header="{Binding Shell.I18n[aboutBuildInformation]}"

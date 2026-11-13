@@ -83,6 +83,9 @@
 | English | 简体中文 | 繁體中文 | 日本語 |
 | --- | --- | --- | --- |
 | Launcher | 启动器 | 啟動器 | ランチャー |
+| Contributors | 贡献者 | 貢獻者 | コントリビューター |
+| Special Thanks | 特别感谢 | 特別感謝 | スペシャルサンクス |
+| BlueArchive.Cafe | 蔚蓝咖啡厅 | 蔚藍咖啡廳 | BlueArchive.Cafe |
 | Operation panel | 操作面板 | 操作面板 | 操作パネル |
 | Task dialog | 任务对话框 | 工作對話框 | タスク画面 |
 | Task progress card | 任务悬浮卡片 | 任務懸浮卡片 | タスク進捗カード |

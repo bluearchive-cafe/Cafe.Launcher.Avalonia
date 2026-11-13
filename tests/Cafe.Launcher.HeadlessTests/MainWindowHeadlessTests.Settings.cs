@@ -251,6 +251,90 @@ public sealed partial class MainWindowHeadlessTests
         }
     }
 
+    [AvaloniaTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void SettingsAbout_WhenLanguageChanges_UpdatesCreditRowsAndKeepsLinksClickable(bool dark)
+    {
+        var variant = dark ? ThemeVariant.Dark : ThemeVariant.Light;
+        using var theme = ThemeVariantSnapshot.Capture(variant);
+        var openedUrls = new List<string?>();
+        using var context = CreateContext(configure: services =>
+            services.AddSingleton(new PresentationEnvironment { OpenExternalUrl = openedUrls.Add }));
+        context.ViewModel.IsMotionReduced = true;
+        context.Provider.GetRequiredService<ThemeApplier>().ApplyScheme(Color.Parse("#2E7DF6"), isDark: dark);
+        OpenSettings(context);
+        context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.About;
+        Dispatcher.UIThread.RunJobs();
+
+        var section = context.Window.GetVisualDescendants().OfType<SettingsAboutSection>().Single();
+        var initialRows = CreditRows();
+        Assert.Equal(7, initialRows.Length);
+        var englishDescriptions = initialRows.Select(AutomationProperties.GetHelpText).ToArray();
+        Assert.All(englishDescriptions, description => Assert.False(string.IsNullOrWhiteSpace(description)));
+
+        context.ViewModel.Shell.ApplyLanguage(LauncherLanguages.SimplifiedChinese, hasSnapshot: false);
+        Dispatcher.UIThread.RunJobs();
+
+        var rows = CreditRows();
+        Assert.Equal(["gytxtx", "MF-Dust", "Avalonia", "CommunityToolkit.Mvvm", "Material.Icons.Avalonia",
+                context.ViewModel.Shell.I18n[LocalizationKeys.AboutCreditBlueArchiveCafe],
+                context.ViewModel.Shell.I18n[LocalizationKeys.AboutCreditAppIcon]],
+            rows.Select(AutomationProperties.GetName));
+        var expectedDescriptions = new[]
+        {
+            LocalizationKeys.AboutCreditGytxtx, LocalizationKeys.AboutCreditMfDust,
+            LocalizationKeys.AboutCreditAvalonia, LocalizationKeys.AboutCreditCommunityToolkit,
+            LocalizationKeys.AboutCreditMaterialIcons, LocalizationKeys.AboutCreditBlueArchiveCafeDescription,
+            LocalizationKeys.AboutCreditAppIconDescription
+        }.Select(key => context.ViewModel.Shell.I18n[key]).ToArray();
+        Assert.Equal(expectedDescriptions, rows.Select(AutomationProperties.GetHelpText));
+        Assert.DoesNotContain(englishDescriptions, description => expectedDescriptions.Contains(description));
+        var avatarBrush = context.Window.FindResource(variant, "Launcher.Color.SecondaryContainer");
+        Assert.All(rows, row =>
+        {
+            var avatar = Assert.Single(row.GetVisualDescendants().OfType<Border>(),
+                border => border.Classes.Contains("about-credit-avatar"));
+            Assert.Equal(avatarBrush, avatar.Background);
+        });
+        Assert.Equal(5, section.GetVisualDescendants().OfType<Border>()
+            .Count(border => border.Classes.Contains("about-credit-divider") && border.IsVisible));
+
+        var firstRow = rows[0];
+        firstRow.BringIntoView();
+        Dispatcher.UIThread.RunJobs();
+        var borderThickness = firstRow.BorderThickness;
+        Assert.True(firstRow.Focus(NavigationMethod.Tab));
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(borderThickness, firstRow.BorderThickness);
+        Assert.Equal(context.Window.FindResource(variant, "Launcher.Color.FocusRing"), firstRow.BorderBrush);
+
+        foreach (var row in rows)
+        {
+            row.BringIntoView();
+            Dispatcher.UIThread.RunJobs();
+            var point = row.TranslatePoint(new Point(row.Bounds.Width * 0.75, row.Bounds.Height / 2), context.Window);
+            Assert.NotNull(point);
+            context.Window.MouseDown(point.Value, MouseButton.Left);
+            context.Window.MouseUp(point.Value, MouseButton.Left);
+        }
+
+        Assert.Equal(
+            [
+                "https://github.com/gytxtx",
+                "https://github.com/MF-Dust",
+                "https://github.com/AvaloniaUI/Avalonia",
+                "https://github.com/CommunityToolkit/dotnet",
+                "https://github.com/AvaloniaUtils/Material.Icons.Avalonia/",
+                "https://bluearchive.cafe/",
+                "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/commit/3401794c9b06956a09a6308dfaae21341b3814f5"
+            ],
+            openedUrls);
+
+        Button[] CreditRows() => section.GetVisualDescendants().OfType<Button>()
+            .Where(button => button.Classes.Contains("about-credit-row")).ToArray();
+    }
+
     [AvaloniaFact]
     public void SettingsAbout_LegalLinks_DoNotExpandCaptionLineHeight()
     {

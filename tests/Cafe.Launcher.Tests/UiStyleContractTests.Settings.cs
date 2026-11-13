@@ -1268,8 +1268,7 @@ public sealed partial class UiStyleContractTests
         var advancedText = File.ReadAllText(TestRepository.FromPresentationRoot("Views/SettingsAdvancedSection.axaml"));
         var overlay = File.ReadAllText(TestRepository.FromPresentationRoot("Views/MainWindowSettingsOverlay.axaml"));
 
-        // ADR-018 融合变体顺序：身份卡（版本 caption + 操作行）→ 版本信息 kv（5 行详情）
-        // → 链接行（仓库/问题反馈）→ 法律信息（版权/署名/免责声明）。
+        // 身份卡 → 链接 → 贡献者 → 特别感谢 → 构建与运行信息 → 法律信息。
         AssertOrdered(
             aboutText,
             "Shell.VersionCaptionText",
@@ -1290,6 +1289,10 @@ public sealed partial class UiStyleContractTests
             "WindowChrome.OpenGitHubRepositoryCommand",
             "WindowChrome.OpenGitHubReleaseRepositoryCommand",
             "WindowChrome.OpenIssueTrackerCommand",
+            "Shell.I18n[aboutContributors]",
+            "Shell.I18n[aboutSpecialThanks]",
+            "Shell.I18n[aboutCommunityThanks]",
+            "Shell.I18n[aboutBuildInformation]",
             "Shell.I18n[aboutCopyrightText]",
             "WindowChrome.OpenPrivacyPolicyCommand",
             "Shell.I18n[defaultBackgroundCopyrightText]",

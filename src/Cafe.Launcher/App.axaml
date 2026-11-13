@@ -43,6 +43,9 @@
             <!-- 关于分区解剖（ADR-018 融合变体）：key-value/链接行密度。 -->
             <x:Double x:Key="Launcher.Component.About.KvRow.MinHeight">40</x:Double>
             <Thickness x:Key="Launcher.Component.About.KvRow.Margin">16,0,16,0</Thickness>
+            <x:Double x:Key="Launcher.Component.About.CreditRow.MinHeight">64</x:Double>
+            <Thickness x:Key="Launcher.Component.About.CreditRow.Padding">16,8</Thickness>
+            <x:Double x:Key="Launcher.Component.About.CreditAvatar.Size">40</x:Double>
             <Thickness x:Key="Launcher.Component.Input.Padding">12,8</Thickness>
             <Thickness x:Key="Launcher.Component.WrapAction.Margin">0,0,8,8</Thickness>
             <!-- 过滤栏下边距承担与日志列表的间距：位于固定工具行，不随内容滚动。 -->

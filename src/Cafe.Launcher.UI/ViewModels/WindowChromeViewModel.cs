@@ -206,6 +206,7 @@ internal partial class WindowChromeViewModel : ObservableObject
         await debug.OpenCommand.ExecuteAsync(null);
     }
 
+    [RelayCommand]
     public void OpenExternalUrl(string? url)
     {
         openExternalUrl(url);
