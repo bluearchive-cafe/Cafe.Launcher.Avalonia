@@ -36,7 +36,7 @@
             </Setter>
         </ControlTheme>
         <ControlTemplate x:Key="LauncherBorderButtonTemplate" TargetType="Button">
-            <Border Background="{TemplateBinding Background}"
+            <Border x:Name="ButtonSurface" Background="{TemplateBinding Background}"
                     BorderBrush="{TemplateBinding BorderBrush}"
                     BorderThickness="{TemplateBinding BorderThickness}"
                     CornerRadius="{TemplateBinding CornerRadius}">
@@ -157,7 +157,7 @@
                                                                Width="{StaticResource Launcher.Icon.Lg}"
                                                                Height="{StaticResource Launcher.Icon.Lg}"/>
                                 </Button>
-                                <Border Grid.Column="1" HorizontalAlignment="Left"
+                                <Border Grid.Column="1" Classes="launch-split-separator" HorizontalAlignment="Left"
                                         Width="{StaticResource Launcher.Component.LaunchSplit.Separator.Width}"
                                         Margin="{StaticResource Launcher.Component.LaunchSplit.Separator.Margin}"
                                         Background="{TemplateBinding Foreground}"
@@ -1428,8 +1428,6 @@
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
         <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
-        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Component.Dialog.Footer.BorderThickness}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
     </Style>
     <Style Selector="Expander.settings-appearance-expander /template/ Border">
@@ -1591,10 +1589,9 @@
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Card.Border}"/>
     </Style>
     <Style Selector="Border.dialog-card">
-        <Setter Property="UseLayoutRounding" Value="False"/>
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Card.Background}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Outline}"/>
-        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Hairline}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Lg}"/>
     </Style>
@@ -1652,7 +1649,6 @@
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="Border.settings-row-divider">
-        <Setter Property="UseLayoutRounding" Value="False"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Component.Dialog.Footer.BorderThickness}"/>
         <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
@@ -1663,16 +1659,11 @@
     </Style>
     <!-- 关于分区（ADR-018 融合变体）：左对齐身份卡 + key-value 详情行 + chevron 链接行。 -->
     <Style Selector="Border.about-identity-card">
-        <Setter Property="UseLayoutRounding" Value="False"/>
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Card.Background}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
-        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Hairline}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Lg}"/>
-    </Style>
-    <!-- Keep the card's half-DIP outline, but do not inherit fractional layout into its buttons. -->
-    <Style Selector="Border.about-identity-card > StackPanel">
-        <Setter Property="UseLayoutRounding" Value="True"/>
     </Style>
     <Style Selector="TextBlock.about-product-name">
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Headline.Md}"/>
@@ -1680,10 +1671,9 @@
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
     </Style>
     <Style Selector="Border.about-kv-list">
-        <Setter Property="UseLayoutRounding" Value="False"/>
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Card.Background}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
-        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Hairline}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
         <Setter Property="ClipToBounds" Value="True"/>
     </Style>
@@ -1731,8 +1721,12 @@
     </Style>
     <Style Selector="Button.about-link-item.about-credit-row">
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Component.About.CreditRow.CornerRadius}"/>
         <Setter Property="MinHeight" Value="{StaticResource Launcher.Component.About.CreditRow.MinHeight}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Component.About.CreditRow.Padding}"/>
+    </Style>
+    <Style Selector="Button.about-credit-row /template/ Border#ButtonSurface">
+        <Setter Property="BackgroundSizing" Value="OuterBorderEdge"/>
     </Style>
     <Style Selector="Button.about-credit-row:focus-visible">
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
@@ -1747,7 +1741,7 @@
     <Style Selector="Border.about-credit-divider">
         <Setter Property="IsVisible" Value="False"/>
     </Style>
-    <Style Selector="ItemsControl.about-credit-list ContentPresenter:nth-child(n+2) > StackPanel > Border.about-credit-divider">
+    <Style Selector="ItemsControl.about-credit-list ContentPresenter:nth-child(n+2) > Grid > Border.about-credit-divider">
         <Setter Property="IsVisible" Value="True"/>
     </Style>
     <Style Selector="TextBlock.about-community-thanks">

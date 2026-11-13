@@ -300,6 +300,26 @@ public sealed partial class MainWindowHeadlessTests
         Assert.Equal(5, section.GetVisualDescendants().OfType<Border>()
             .Count(border => border.Classes.Contains("about-credit-divider") && border.IsVisible));
 
+        var secondRow = rows[1];
+        secondRow.BringIntoView();
+        Dispatcher.UIThread.RunJobs();
+        var divider = Assert.Single(Assert.IsType<Grid>(secondRow.Parent).Children.OfType<Border>());
+        var surface = Assert.Single(secondRow.GetVisualChildren().OfType<Border>());
+        Assert.Equal(surface.TranslatePoint(default, context.Window), divider.TranslatePoint(default, context.Window));
+        Assert.Equal(divider.Bounds.Width, surface.Bounds.Width);
+
+        var hoverPoint = secondRow.TranslatePoint(secondRow.Bounds.Center - secondRow.Bounds.Position, context.Window)!.Value;
+        context.Window.MouseMove(hoverPoint);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(context.Window.FindResource(variant, "Launcher.Color.Button.Flat.Hover"), surface.Background);
+        Assert.Equal(BackgroundSizing.OuterBorderEdge, surface.BackgroundSizing);
+        Assert.Equal(default, surface.CornerRadius);
+        context.Window.MouseDown(hoverPoint, MouseButton.Left);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(context.Window.FindResource(variant, "Launcher.Color.Button.Flat.Pressed"), surface.Background);
+        context.Window.MouseMove(new Point(20, 20));
+        context.Window.MouseUp(new Point(20, 20), MouseButton.Left);
+
         var firstRow = rows[0];
         firstRow.BringIntoView();
         Dispatcher.UIThread.RunJobs();

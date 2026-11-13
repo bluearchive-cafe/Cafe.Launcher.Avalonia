@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Presenters;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
 using Avalonia.Media;
@@ -9,6 +10,7 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.UI.Controls;
+using Cafe.Launcher.UI.Features.SetupWizard;
 using Cafe.Launcher.UI.Helpers;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
@@ -105,6 +107,102 @@ public sealed partial class MainWindowHeadlessTests
             Assert.True(Math.Abs(titlePosition.Value.Y + title.Bounds.Height / 2 - center) <= 1, geometry);
             Assert.True(Math.Abs(actionPosition.Value.Y + action.Bounds.Height / 2 - center) <= 1, geometry);
             Assert.True(actionPosition.Value.Y >= 6 && row.Bounds.Height - actionPosition.Value.Y - action.Bounds.Height >= 6, geometry);
+        }
+    }
+
+    [AvaloniaTheory]
+    [InlineData(1d)]
+    [InlineData(1.25d)]
+    [InlineData(1.5d)]
+    [InlineData(1.75d)]
+    [InlineData(2d)]
+    public async Task Visual_DecorativeBordersAndDividers_SnapToDevicePixels(double scale)
+    {
+        using var context = CreateContext();
+        PrepareGoldenWindow(context);
+        context.Window.Width = 1301;
+        context.Window.SetRenderScaling(scale);
+        Assert.Equal(scale, context.Window.RenderScaling);
+
+        OpenSettings(context);
+        var topEdge = new Thickness(0, 1, 0, 0);
+        foreach (var (category, _) in SettingsSections)
+        {
+            context.ViewModel.Settings.SelectedCategory = category;
+            Dispatcher.UIThread.RunJobs();
+            AssertBorders("settings-row-divider", topEdge);
+        }
+
+        context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.About;
+        Dispatcher.UIThread.RunJobs();
+        AssertBorders("about-identity-card", new Thickness(1));
+        AssertBorders("about-credit-divider", topEdge);
+        context.Window.GetVisualDescendants().OfType<Expander>()
+            .Single(expander => expander.Name == "AboutBuildExpander").IsExpanded = true;
+        Dispatcher.UIThread.RunJobs();
+        AssertBorders("about-kv-list", new Thickness(1));
+        AssertBorders("settings-row-divider", topEdge);
+        context.ViewModel.WindowChrome.ToggleSettingsCommand.Execute(null);
+
+        ShowResourcePanel(context);
+        AssertBorders("dialog-card", new Thickness(1));
+        AssertBorders("uid-section-divider", topEdge);
+        AssertBorders("resource-row-divider", topEdge);
+        AssertBorders("PART_FooterBand", topEdge);
+        context.ViewModel.ResourcePanel.IsResourcePanelVisible = false;
+
+        context.ViewModel.Operations.Uninstall.Open(UninstallSnapshot());
+        Dispatcher.UIThread.RunJobs();
+        AssertBorders("uninstall-divider");
+        AssertBorders("PART_FooterBand", topEdge);
+        context.ViewModel.Operations.Uninstall.CloseCommand.Execute(null);
+
+        context.ViewModel.Dialogs.ShowSetupWizard();
+        var wizard = context.ViewModel.Dialogs.SetupWizard;
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(6, AssertBorders("wizard-divider"));
+        wizard.NextCommand.Execute(null);
+        wizard.NextCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(3, AssertBorders("wizard-divider"));
+        AcceptAgreement(wizard);
+        wizard.NextCommand.Execute(null);
+        wizard.GamePath = System.IO.Path.Combine(context.Directory.Path, "available-installation");
+        await WaitForGamePathStatusAsync(wizard, SetupWizardGamePathStatus.AvailableForInstallation);
+        wizard.NextCommand.Execute(null);
+        wizard.NextCommand.Execute(null);
+        wizard.NextCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+        Assert.True(wizard.IsLastStep);
+        Assert.Equal(2 + wizard.SummaryItems.Count(item => item.HasDivider), AssertBorders("wizard-divider"));
+
+        int AssertBorders(string name, Thickness? thickness = null)
+        {
+            var borders = context.Window.GetVisualDescendants().OfType<Border>()
+                .Where(border => border.IsEffectivelyVisible && (border.Name == name || border.Classes.Contains(name)))
+                .ToArray();
+            Assert.NotEmpty(borders);
+            foreach (var border in borders)
+            {
+                Assert.True(border.UseLayoutRounding, name);
+                if (thickness is { } expected)
+                {
+                    Assert.Equal(expected, border.BorderThickness);
+                }
+                else
+                {
+                    Assert.Equal(1d, border.Height);
+                }
+
+                var origin = border.TranslatePoint(default, context.Window)!.Value;
+                foreach (var edge in new[] { origin.X, origin.Y, origin.X + border.Bounds.Width, origin.Y + border.Bounds.Height })
+                {
+                    var pixel = edge * scale;
+                    Assert.True(Math.Abs(pixel - Math.Round(pixel)) < 1e-6, $"{name}: edge {pixel} px at {scale:P0}");
+                }
+            }
+
+            return borders.Length;
         }
     }
 

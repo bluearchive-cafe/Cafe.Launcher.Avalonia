@@ -79,7 +79,6 @@
     </Style>
     <!-- 发丝分隔（ADR-041）：头带底缘、动作带顶缘、同意底栏顶缘与复核摘要行共用。 -->
     <Style Selector="Border.wizard-divider">
-        <Setter Property="UseLayoutRounding" Value="False"/>
         <Setter Property="Height" Value="{StaticResource Launcher.Component.Wizard.Divider.Height}"/>
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Section.Divider}"/>
     </Style>

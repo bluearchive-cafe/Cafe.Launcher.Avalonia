@@ -8,8 +8,7 @@
              x:DataType="vm:MainWindowViewModel">
     <UserControl.Resources>
         <DataTemplate x:Key="AboutCreditTemplate" x:DataType="models:AboutCredit">
-            <StackPanel>
-                <Border Classes="settings-row-divider about-credit-divider"/>
+            <Grid>
                 <Button Classes="about-link-item about-credit-row"
                         Command="{Binding #SettingsRoot.((vm:MainWindowViewModel)DataContext).WindowChrome.OpenExternalUrlCommand}"
                         CommandParameter="{Binding Url}"
@@ -29,7 +28,8 @@
                                                     Foreground="{DynamicResource Launcher.Text.Secondary}" VerticalAlignment="Center"/>
                     </Grid>
                 </Button>
-            </StackPanel>
+                <Border Classes="settings-row-divider about-credit-divider" IsHitTestVisible="False"/>
+            </Grid>
         </DataTemplate>
     </UserControl.Resources>
     <StackPanel Classes="settings-group" Spacing="{StaticResource Launcher.Spacing.Md}">

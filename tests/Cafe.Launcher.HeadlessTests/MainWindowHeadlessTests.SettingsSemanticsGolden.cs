@@ -1,6 +1,8 @@
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Styling;
@@ -110,6 +112,12 @@ public sealed partial class MainWindowHeadlessTests
         context.Window.GetVisualDescendants().OfType<TextBlock>()
             .Single(text => text.Classes.Contains("about-community-thanks"))
             .BringIntoView();
+        Dispatcher.UIThread.RunJobs();
+        var specialThanks = context.Window.GetVisualDescendants().OfType<ItemsControl>()
+            .Single(list => ReferenceEquals(list.ItemsSource, context.ViewModel.Shell.SpecialThanks));
+        var creditRow = specialThanks.GetVisualDescendants().OfType<Button>()
+            .First(button => button.Classes.Contains("about-credit-row"));
+        context.Window.MouseMove(creditRow.TranslatePoint(creditRow.Bounds.Center - creditRow.Bounds.Position, context.Window)!.Value);
         GoldenScreenshot.Compare(context.Window, "settings-about-credits-zh");
     }
 

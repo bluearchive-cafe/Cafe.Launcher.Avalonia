@@ -61,7 +61,7 @@
                                                                           （tone 档位固定，仅色相随种子→对比度仍安全）
 ```
 
-- **角色集**：primary/secondary/tertiary + 各自 `On*`/`*Container`/`On*Container`（`PrimaryContainer`/`OnPrimaryContainer` 于 2026-08-26 补齐，占位+运行时覆盖）；surface 族（Surface/SurfaceVariant/Container 档）、outline 族、error 族（映射现有 Danger/DangerSoft/危险图标底）；业务色 Success/Warning/Info（Toast 等，不参与动态色）。**落地范围声明**：`SurfaceVariant`/`OutlineVariant` 由业务 token 承担（hairline 用 `Color.Card.Border`，ADR-013 M3 修正 2）；可见实心表面 = 对话框覆盖层的**表面配色族** `Dialog.Background/Header/Footer/Close.Hover/Close.Pressed`（`Header` 仅供首次设置向导自绘头部使用）（品牌蓝调时五键恒复位为声明默认值，种子跟随时整套随 scheme 中性表面梯度染色——Background/Header/Footer=`SurfaceContainerHigh`，Close.Hover/Pressed 为 `OnSurface` 的预混状态层；2026-08-28 由仅 `Dialog.Background` 扩展为全族并防残留——Q13/Q23 两决策合流）；`Surface/OnSurface/Outline` 保留为语义角色（`Outline` 由 `dialog-card` 的 0.5 DIP hairline 消费；`Surface/OnSurface` 为未来表面预留）。
+- **角色集**：primary/secondary/tertiary + 各自 `On*`/`*Container`/`On*Container`（`PrimaryContainer`/`OnPrimaryContainer` 于 2026-08-26 补齐，占位+运行时覆盖）；surface 族（Surface/SurfaceVariant/Container 档）、outline 族、error 族（映射现有 Danger/DangerSoft/危险图标底）；业务色 Success/Warning/Info（Toast 等，不参与动态色）。**落地范围声明**：`SurfaceVariant`/`OutlineVariant` 由业务 token 承担（hairline 用 `Color.Card.Border`，ADR-013 M3 修正 2）；可见实心表面 = 对话框覆盖层的**表面配色族** `Dialog.Background/Header/Footer/Close.Hover/Close.Pressed`（`Header` 仅供首次设置向导自绘头部使用）（品牌蓝调时五键恒复位为声明默认值，种子跟随时整套随 scheme 中性表面梯度染色——Background/Header/Footer=`SurfaceContainerHigh`，Close.Hover/Pressed 为 `OnSurface` 的预混状态层；2026-08-28 由仅 `Dialog.Background` 扩展为全族并防残留——Q13/Q23 两决策合流）；`Surface/OnSurface/Outline` 保留为语义角色（`Outline` 由 `dialog-card` 的 1 DIP 装饰描边使用；`Surface/OnSurface` 为未来表面预留）。
 - **on-color 按亮度计算**（P1 必修）：`Launcher.Color.OnPrimary` 不硬编码白；按背景色相对亮度选黑/白（浅种子时用深 on-color），写入 `ColorUtils` 并测试锁定。
 - **选中容器三态前景**：`OnSecondaryContainer`、`.Hover`、`.Pressed` 分别与 `SecondaryContainer` 同状态配对。保留方案原前景；若该状态不足 4.5:1，先回退同方案 `OnSurface`，仍不足时选对比度更高的纯黑／白。背景继续按方案原前景预混 8%／16%，避免修复文字时改变状态层强度；每次主题／策略切换重建全部配对。
 - **实现**：`ApplyAccentBrushes`（`Features/Settings/SettingsAppearanceViewModel.cs`）演进为 `ApplyScheme`（输入 seed/variant/theme/neutralStrategy → 覆盖 brush 组）；`ThemeColorExtractionService`（Octree）与新算法共存；`ColorUtils`（`Helpers/ColorUtils.cs`）承载归一化与 on-color 计算。非壁纸模式（系统/自定义/默认色）产出与现状一致或改善。
@@ -88,6 +88,13 @@
 - 间距：4/8/12/16/20/24/40；Thickness 补齐全档（现状仅 4/8/20 有 Thickness 变体）。
 - 圆角目标字阶：4（Xs）/ 8（Sm）/ 12（Md）/ 16（Lg）四档齐备（ADR-002 一次性重标；Xs=4 档已按目标值落地）；28（Xxl 或 full）无消费面，暂不落地。
 - 图标 16/18/20/22/24；控件高度 Setting36/Dialog40/Bottom48/Launch58/Field40/Chip32/Swatch28/DialogTitle56（P2 结合 M3 尺寸规范评审是否微调）。
+
+#### 描边、分隔线与像素对齐
+
+- 生产界面的装饰描边和分隔线统一为 **1 DIP**，不得使用 **0.5 DIP**。输入边框为 **1 DIP**，键盘焦点环为 **2 DIP**。本规则适用于线宽、单边边框厚度和用作分隔线的元素宽度或高度。字距按字阶规范，透明度按状态层规范。
+- 主界面完整描边复用 `Launcher.Border.Thickness.Default`，顶边分隔复用 `Launcher.Component.Dialog.Footer.BorderThickness`，向导和卸载的水平分隔线复用 `Launcher.Component.Wizard.Divider.Height`。独立崩溃窗口使用本地 `Crash.*` 令牌。
+- 保留 Avalonia 默认的 `UseLayoutRounding`。DIP 是逻辑单位，1 DIP 在 150% 缩放时取整前对应 1.5 个物理像素。验收时检查静止状态下直边的边界坐标是否落在整数物理像素上，并复核实际截图。无头回归测试 `Visual_DecorativeBordersAndDividers_SnapToDevicePixels` 覆盖 100%、125%、150%、175%、200% 显示缩放。
+- `UiStyleContractTests.ProductionMarkup_DoesNotUseHalfDipStrokesOrDividers` 检查生产 XAML 的描边和分隔线尺寸，包括直接赋值与资源引用。用普通元素绘制分隔线时，以含 `divider` 或 `separator` 的类名标识用途，便于检查其宽度和高度。
 
 ### 2.7 动效
 
@@ -169,12 +176,12 @@
 
 ### 4.2 设置页
 
-- **重设计蓝图（P3 表面执行；[ADR-013](adr/ADR-013-设置页重设计方向.md) + M3 审核定稿）**：标题栏拆分（「设置」并入导航列顶部 header；关闭 ✕ 并入内容区标题行右端）；导航列 = SecondaryContainer 激活填充 + leading icon（Material Symbols）+ 标签，无指示条；内容区 = 变体 B 纯列表 + 组间空档 + 行间 0.5 DIP hairline（以 `Color.Card.Border` 为分隔色）；覆盖层由 `DialogSurface` 统一承载 16 DIP 圆角 + 克制的双层 `Elevation.Shadow.Dialog` + `Dialog.Background`（Q13 表面中性；种子跟随时由 scheme neutral 覆盖，见 §2.4）；控件统一 `Field` 形态。**修正清单（随 P2/P3 落地）**：`Field.Border` 双档对比度（浅 `#8290A5`/深 `#7B89A0`，≥3:1）、hairline inset 规则、抽屉 leading icons。
+- **重设计蓝图（P3 表面执行；[ADR-013](adr/ADR-013-设置页重设计方向.md) + M3 审核定稿）**：标题栏拆分（「设置」并入导航列顶部 header；关闭 ✕ 并入内容区标题行右端）；导航列 = SecondaryContainer 激活填充 + leading icon（Material Symbols）+ 标签，无指示条；内容区 = 变体 B 纯列表 + 组间空档 + 行间 1 DIP 分隔线（以 `Color.Card.Border` 为分隔色）；覆盖层由 `DialogSurface` 统一承载 16 DIP 圆角 + 克制的双层 `Elevation.Shadow.Dialog` + `Dialog.Background`（Q13 表面中性；种子跟随时由 scheme neutral 覆盖，见 §2.4）；控件统一 `Field` 形态。**修正清单（随 P2/P3 落地）**：`Field.Border` 双档对比度（浅 `#8290A5`/深 `#7B89A0`，≥3:1）、hairline inset 规则、抽屉 leading icons。
 - **信息密度与几何（2026-10-24）**：
   - 设置页保留分类标题和有实际分类价值的组标题；移除复述分类内容的副标题，以及语言、关闭行为、启动后行为、记住窗口位置/大小、主题和壁纸适配方式的重复行说明。下载源、启动校验、网络、风险和恢复说明保留；卸载范围细节使用可换行 caption，避免分类副标题样式移除后丢失换行；未删除任何资源键或设置项。
   - 设置页两侧标题区统一采用 16 DIP 顶部内缩，标题槽最小高度复用关闭按钮的 36 DIP 命中区；「设置」、当前分类标题与关闭按钮按同一条水平中心线对齐，文字放大时标题槽自然增高。
   - `SettingRow` 最小行高 52 DIP，说明换行时自然增高；无说明不预留行。横排文案块与操作相对整行垂直居中，剩余高度上下平分，文案块保留上下 8 DIP 内缩。横排说明区目标最小宽度复用 220 DIP 控件宽度令牌，间距 12 DIP；容纳不了当前操作时改为竖排，不重建控件。竖排操作区底部复用 `Launcher.Component.Settings.Row.Content.Padding` 令牌的 8 DIP 内缩，与下一行分隔线保持间距；恢复横排时清除该内缩，保持原有行高与居中。仍由各页滚动区承载长内容。保存/取消按钮共享 40 DIP 最小高度，基类 filled 按钮也使用最小高度，避免继承的固定高度造成底栏按钮不齐。
-  - 装饰边框使用 `Border.Thickness.Hairline`（0.5 DIP）；设置行/对话框底带与向导/卸载分隔线同为 0.5 DIP，细线关闭布局取整。输入边界保持 1 DIP，焦点环保持 2 DIP；不得全局把交互描边减半。
+  - 设置行分隔线和卡片描边遵循 [§2.6 描边、分隔线与像素对齐](#描边分隔线与像素对齐)。
   - 警示以图标、文字与语义背景共同表达，取消装饰左边线，保留全部原因与恢复操作。Markdown 引用的左边线有引用语义，使用独立组件令牌保留。
   - 更新弹窗最小尺寸为 480×320 DIP，最大宽度仍为 620 DIP，长内容沿用共享滚动区。正文加载中显示文字与不定进度条，失败时显示说明及「前往发布页」，操作按钮保持可用。图片独立显示加载与失败提示。
   - 启动器更新说明支持 Markdown 图片与可点击链接：图片按通知可用宽度等比缩小，链接使用 `Launcher.Text.Link` 并保留下划线。图片加载不阻塞正文和更新动作；生命周期与外部地址策略见 [领域契约](../../CONTEXT.md#资源面板与远程内容)。
@@ -227,7 +234,7 @@
 
 ### 4.6 关于分区
 
-依据 [ADR-018](adr/ADR-018-关于分区重设计方向.md) 及 2026-11-01 修订：关于身份卡的检查更新保留 `primary-action` 主按钮强调，官方网站、帮助文档保持 `flat-action` 次要操作；三项共用 40 DIP 最小高度、14 DIP 字号、8 DIP 圆角和内边距，仅移除检查更新的紧凑尺寸例外。身份卡可为半 DIP 外描边关闭布局取整，但其内容容器恢复 `UseLayoutRounding=True`，避免按钮继承半像素偏移而产生模糊直边。关于分区沿用 [ADR-056](adr/ADR-056-提交式选项与维护目标语义统一.md) 的信息层级，当前顺序为文本身份卡（产品名、版本与构建时间 caption、副标题、三个常用动作）→ 仓库/反馈链接 → 贡献者 → 特别感谢 → 默认折叠的「构建与运行信息」（提交、构建、运行时、Avalonia、系统五项，等宽值与 hairline）→ 法律信息。身份卡操作可换行，技术信息折叠复用设置 Expander 表面。贡献者与特别感谢共用双行链接模板，左侧为 40 DIP 圆形图标占位符，右侧依次显示名称与可换行的本地化简介。条目最小高度为 64 DIP，整行打开贡献者主页、项目仓库、蔚蓝咖啡厅官网或应用图标的来源说明。社区致谢作为特别感谢列表下方的普通文本。
+依据 [ADR-018](adr/ADR-018-关于分区重设计方向.md) 及 2026-11-01 修订：关于身份卡的检查更新保留 `primary-action` 主按钮强调，官方网站、帮助文档保持 `flat-action` 次要操作；三项共用 40 DIP 最小高度、14 DIP 字号、8 DIP 圆角和内边距，仅移除检查更新的紧凑尺寸例外。身份卡和构建信息列表使用 1 DIP 外描边，与内容一起按物理像素取整。关于分区沿用 [ADR-056](adr/ADR-056-提交式选项与维护目标语义统一.md) 的信息层级，当前顺序为文本身份卡（产品名、版本与构建时间 caption、副标题、三个常用动作）→ 仓库/反馈链接 → 贡献者 → 特别感谢 → 默认折叠的「构建与运行信息」（提交、构建、运行时、Avalonia、系统五项，等宽值与 1 DIP 分隔线）→ 法律信息。身份卡操作可换行，技术信息折叠复用设置 Expander 表面。贡献者与特别感谢共用双行链接模板，左侧为 40 DIP 圆形图标占位符，右侧依次显示名称与可换行的本地化简介。相邻条目以细线分隔，悬停和按下时的背景铺满整行并贴齐分割线。键盘焦点描边不改变内容布局。条目最小高度为 64 DIP，整行打开贡献者主页、项目仓库、蔚蓝咖啡厅官网或应用图标的来源说明。社区致谢作为特别感谢列表下方的普通文本。
 
 ### 4.7 崩溃窗口
 
@@ -329,6 +336,7 @@ Q1–Q24 表保留最初决策脉络；后续变更以正文修订及 [ADR 索�
 | 启动-1101 | 2026-11-01 用户确认将就绪态「开始游戏」与游戏管理入口合并为原生 SplitButton：主区直接启动，右侧省略号向上展开管理菜单；统一主色与外轮廓、分区反馈，卸载单独分隔 | 仅调整就绪态操作入口；普通与仅按钮布局共用 `GameOperationsSplitButton`，安装与进度态沿用现有布局；细节见 §4.1 |
 | 优化-1024 | 2026-10-24 用户确认保留 Material 令牌与动态色管线；精简设置页重复说明与分类副标题，空说明不占位；设置行根据实际操作宽度换行，操作组可换行；装饰线 0.5 DIP，交互边框 1 DIP、焦点环 2 DIP；Label.Sm 最小 12；减弱对话框阴影，警示保留图标/文字/背景并移除额外左边线 | 本次修订取代 ADR-005 的 11px 下限、ADR-013 的 1px 装饰线及后续相关历史视觉值；不替换 Material 设计系统，不改变主题设置、命令、持久化与模态行为 |
 | 修复-1102 | 2026-11-02 设计审查修复：选中容器三态分别校正文字前景；下拉项焦点使用对应 on-container 状态色并内缩 2 DIP；资源来源分段控件用独立胶囊焦点层保持测量稳定 | §2.4、§7；维持既有容器底色与 8%／16% 状态层，补齐动态矩阵和实际模板回归 |
+| 对齐-1113 | 2026-11-13 装饰描边和分隔线统一为 1 DIP，启用 Avalonia 默认布局取整 | 取代优化-1024 的 0.5 DIP 装饰线；无头测试覆盖 100%、125%、150%、175%、200% 显示缩放 |
 | Q1 | 动因 = 系统化 + 视觉现代化 + 一致性 | 体系先行，观感随后 |
 | Q2 | 分阶段：P1 token 体系 → P2 组件 → P3 表面 | 见 §9 |
 | Q3 | 范围 = 全部表面分批：第一批主壳/设置/对话框/Toast/向导；第二批诊断/日志**仅 token 兼容**；资源面板后由 [ADR-041](adr/ADR-041-资源面板MD3结构级重设计.md) 补做结构级重设计 | 排障界面不做视觉重设计 |

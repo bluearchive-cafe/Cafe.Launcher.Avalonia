@@ -681,6 +681,8 @@ public sealed partial class UiStyleContractTests
             // 对称四角 token 无法表达，故由组件 token 声明（见 App.axaml）。
             "{StaticResource Launcher.Component.RemoteContent.JoinedUpper.CornerRadius}",
             "{StaticResource Launcher.Component.RemoteContent.JoinedLower.CornerRadius}",
+            // 致谢列表行以平角贴齐横贯整行的分割线。
+            "{StaticResource Launcher.Component.About.CreditRow.CornerRadius}",
             "{TemplateBinding CornerRadius}",
             // 原生模板部件转发控件已由 token 决定的圆角，不引入另一套数值。
             "{Binding CornerRadius, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type ComboBox}}",
