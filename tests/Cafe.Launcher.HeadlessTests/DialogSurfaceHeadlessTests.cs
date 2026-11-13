@@ -4,10 +4,12 @@ using Avalonia.Controls;
 using Avalonia.Controls.Presenters;
 using Avalonia.Headless.XUnit;
 using Avalonia.Layout;
+using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Cafe.Launcher.UI.Controls;
+using Material.Icons.Avalonia;
 
 namespace Cafe.Launcher.HeadlessTests;
 
@@ -67,7 +69,6 @@ public sealed class DialogSurfaceHeadlessTests
         {
             Form = DialogSurfaceForm.Panel,
             Title = "Session log",
-            Subtitle = "launcher.log · 214 entries",
             CloseCommand = closeCommand,
             CloseAutomationName = "Close log viewer",
             Content = content
@@ -146,34 +147,34 @@ public sealed class DialogSurfaceHeadlessTests
         window.Close();
     }
 
-    [AvaloniaFact]
-    public void BadgeAndStatus_Modifiers_ToggleVisibilityAndPseudoClasses()
+    [AvaloniaTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void DialogHeader_UsesSurfaceBackgroundAndShowsOnlyTitleAndClose(bool panel)
     {
-        var badgeIcon = new TextBlock { Text = "≡" };
         var surface = new DialogSurface
         {
-            Form = DialogSurfaceForm.Panel,
-            HeaderIcon = badgeIcon
+            Form = panel ? DialogSurfaceForm.Panel : DialogSurfaceForm.Basic,
+            Background = Brushes.Purple,
+            Title = "Dialog title",
+            CloseCommand = new RecorderCommand(),
+            Content = new TextBlock { Text = "Dialog content" }
         };
         var window = new Window { Content = surface };
         window.Show();
         Dispatcher.UIThread.RunJobs();
 
-        var badgePresenter = FindPart<ContentPresenter>(surface, "PART_BadgePresenter");
-        Assert.Same(badgeIcon, badgePresenter.Content);
-        Assert.True(badgePresenter.IsVisible);
-        Assert.DoesNotContain(":danger", surface.Classes);
-
-        surface.Status = DialogSurfaceStatus.Danger;
-        Assert.Contains(":danger", surface.Classes);
-
-        surface.Status = DialogSurfaceStatus.Info;
-        Assert.Contains(":info", surface.Classes);
-        Assert.DoesNotContain(":danger", surface.Classes);
-
-        surface.HeaderIcon = null;
-        Dispatcher.UIThread.RunJobs();
-        Assert.False(badgePresenter.IsVisible);
+        var header = FindPart<Border>(surface, panel ? "PART_PanelHead" : "PART_BasicHead");
+        Assert.True(header.IsEffectivelyVisible);
+        Assert.Same(surface.Background, FindPart<Border>(surface, "PART_SurfaceBorder").Background);
+        Assert.Null(header.Background);
+        var title = Assert.Single(header.GetVisualDescendants().OfType<TextBlock>(),
+            text => text.IsEffectivelyVisible);
+        Assert.Equal(surface.Title, title.Text);
+        var close = FindPart<Button>(surface, "PART_CloseButton");
+        Assert.DoesNotContain(header.GetVisualDescendants().OfType<MaterialIcon>(),
+            icon => icon.IsEffectivelyVisible && !close.IsVisualAncestorOf(icon));
+        Assert.Equal(panel, close.IsEffectivelyVisible);
         window.Close();
     }
 

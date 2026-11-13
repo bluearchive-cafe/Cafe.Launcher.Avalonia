@@ -242,7 +242,7 @@ public sealed partial class UiStyleContractTests
             .Descendants()
             .Single(element =>
                 element.Name.LocalName == "DialogSurface"
-                && element.Attribute("Status")?.Value == "Danger");
+                && element.Attribute("Title")?.Value == "{Binding Shell.I18n[errorDialogTitle]}");
 
         // 头带 ✕ 由模板渲染，命令与本地化名称经表面属性传入。
         Assert.Equal(
@@ -834,7 +834,6 @@ public sealed partial class UiStyleContractTests
                      "PART_DirectContentPresenter",
                      "PART_ScrollContentPresenter",
                      "PART_FooterBand",
-                     "PART_BadgePresenter",
                      "PART_FooterLeadingPresenter"
                  })
         {
@@ -847,7 +846,6 @@ public sealed partial class UiStyleContractTests
             templateText,
             StringComparison.Ordinal);
 
-        // 形态与状态的伪类解剖规则齐备。
         // 形态可见性由 RefreshChrome 以本地值管理；样式仅保留动作带皮肤差异。
         var selectors = document
             .Descendants()
@@ -861,22 +859,11 @@ public sealed partial class UiStyleContractTests
         Assert.Contains("controls|DialogSurface:panel /template/ Border#PART_FooterBand", selectors);
         Assert.Contains("controls|DialogSurface /template/ ScrollViewer#PART_ScrollViewer", selectors);
         Assert.Contains("controls|DialogSurface:panel /template/ ScrollViewer#PART_ScrollViewer", selectors);
-        Assert.Contains("controls|DialogSurface:info /template/ ContentPresenter#PART_BadgePresenter", selectors);
-        Assert.Contains("controls|DialogSurface:warning /template/ ContentPresenter#PART_BadgePresenter", selectors);
-        Assert.Contains("controls|DialogSurface:danger /template/ ContentPresenter#PART_BadgePresenter", selectors);
 
         var surfaceBorder = document
             .Descendants()
             .Single(element => element.Attribute(XName.Get("Name", "http://schemas.microsoft.com/winfx/2006/xaml"))?.Value == "PART_SurfaceBorder");
         Assert.Equal("{TemplateBinding ClipToBounds}", surfaceBorder.Attribute("ClipToBounds")?.Value);
-
-        var badgePresenter = document
-            .Descendants()
-            .Single(element => element.Attribute(XName.Get("Name", "http://schemas.microsoft.com/winfx/2006/xaml"))?.Value == "PART_BadgePresenter");
-        Assert.Equal(
-            "{StaticResource Launcher.Component.Dialog.Badge.Margin}",
-            badgePresenter.Attribute("Margin")?.Value);
-        Assert.Null(badgePresenter.Parent?.Attribute("ColumnSpacing"));
 
         var footerLeadingPresenter = document
             .Descendants()
@@ -1039,7 +1026,6 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(2, TokenValue("Launcher.Elevation.Shadow.Dialog").Split(',').Length);
         Assert.Equal("32", TokenValue("Launcher.Component.Dialog.Badge.Size"));
         Assert.Equal("16", TokenValue("Launcher.Component.Dialog.Badge.CornerRadius"));
-        Assert.Equal("0,0,12,0", TokenValue("Launcher.Component.Dialog.Badge.Margin"));
         Assert.Equal("20,0,10,0", TokenValue("Launcher.Component.Dialog.Panel.Head.Padding"));
         Assert.Equal("24,18,24,18", TokenValue("Launcher.Component.Dialog.Panel.Body.Padding"));
         Assert.Equal("24,14,24,20", TokenValue("Launcher.Component.Dialog.Panel.Footer.Padding"));

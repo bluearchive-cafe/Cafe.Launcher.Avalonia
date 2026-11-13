@@ -4,9 +4,9 @@
         xmlns:helpers="using:Cafe.Launcher.UI.Helpers"
         xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia">
 
-  <!-- 对话框家族 v2 的视觉契约（ADR-015）。表面档案：组件圆角 20 + 双层阴影，
+  <!-- 对话框家族 v2 的视觉契约（ADR-015）。表面档案：组件圆角 16 + 双层阴影，
        模态表面比页面常驻面板高一档。两种形态共享同一模板骨架，解剖差异
-       全部由 :panel 与状态伪类驱动；使用方不得自带几何、色彩或阴影值。 -->
+       全部由 :panel 伪类驱动；使用方不得自带几何、色彩或阴影值。 -->
 
   <!-- 表面对外语义 = 标题文本（§8）；无标题外壳（设置/向导/调试）由使用方显式给名。 -->
   <Style Selector="controls|DialogSurface" x:DataType="controls:DialogSurface">
@@ -27,40 +27,20 @@
                 BoxShadow="{TemplateBinding BoxShadow}">
           <Grid RowDefinitions="Auto,Auto,*,Auto">
 
-            <!-- Panel 头带：徽章 + 标题列（副标题可选）+ ✕ 关闭钮 -->
+            <!-- Panel 标题行：与正文共用外层表面，保留 ✕ 关闭钮。 -->
             <Border x:Name="PART_PanelHead"
-                    Background="{DynamicResource Launcher.Color.Dialog.Header}"
                     MinHeight="{StaticResource Launcher.Component.Dialog.Title.Height}"
                     Padding="{StaticResource Launcher.Component.Dialog.Panel.Head.Padding}">
-              <Grid ColumnDefinitions="Auto,*,Auto">
-                <ContentPresenter x:Name="PART_BadgePresenter"
-                                  Grid.Column="0"
-                                  Width="{StaticResource Launcher.Component.Dialog.Badge.Size}"
-                                  Height="{StaticResource Launcher.Component.Dialog.Badge.Size}"
-                                  Margin="{StaticResource Launcher.Component.Dialog.Badge.Margin}"
-                                  CornerRadius="{StaticResource Launcher.Component.Dialog.Badge.CornerRadius}"
-                                  HorizontalContentAlignment="Center"
-                                  VerticalContentAlignment="Center"
-                                  VerticalAlignment="Center"
-                                  Background="{DynamicResource Launcher.Color.Primary.Soft}"
-                                  Foreground="{DynamicResource Launcher.Color.Primary}"
-                                  Focusable="False"/>
-                <StackPanel Grid.Column="1"
-                            Spacing="{StaticResource Launcher.Spacing.Xs}"
-                            VerticalAlignment="Center">
-                  <TextBlock x:Name="PART_TitleTextBlock"
-                             Text="{TemplateBinding Title}"
-                             FontSize="{StaticResource Launcher.Typography.FontSize.Title.Lg}"
-                             FontWeight="{StaticResource Launcher.Typography.FontWeight.Strong}"
-                             Foreground="{DynamicResource Launcher.Text.Primary}"
-                             TextTrimming="CharacterEllipsis"/>
-                  <TextBlock x:Name="PART_SubtitleTextBlock"
-                             Text="{TemplateBinding Subtitle}"
-                             FontSize="{StaticResource Launcher.Typography.FontSize.Label.Md}"
-                             Foreground="{DynamicResource Launcher.Text.Secondary}"/>
-                </StackPanel>
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock x:Name="PART_TitleTextBlock"
+                           Text="{TemplateBinding Title}"
+                           FontSize="{StaticResource Launcher.Typography.FontSize.Title.Lg}"
+                           FontWeight="{StaticResource Launcher.Typography.FontWeight.Strong}"
+                           Foreground="{DynamicResource Launcher.Text.Primary}"
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"/>
                 <Button x:Name="PART_CloseButton"
-                        Grid.Column="2"
+                        Grid.Column="1"
                         Classes="dialog-close"
                         VerticalAlignment="Center"
                         Command="{TemplateBinding CloseCommand}"
@@ -73,25 +53,15 @@
               </Grid>
             </Border>
 
-            <!-- Basic 流式头部：裸图标（可选）+ 标题 + 支撑文案 -->
+            <!-- Basic 标题随内容自然换行。 -->
             <Border x:Name="PART_BasicHead"
                     Padding="{StaticResource Launcher.Component.Dialog.Basic.Head.Padding}">
-              <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}">
-                <ContentPresenter x:Name="PART_BasicIconPresenter"
-                                  HorizontalAlignment="Left"
-                                  Focusable="False"/>
-                <TextBlock x:Name="PART_BasicTitleTextBlock"
-                           Text="{TemplateBinding Title}"
-                           FontSize="{StaticResource Launcher.Typography.FontSize.Headline.Lg}"
-                           FontWeight="{StaticResource Launcher.Typography.FontWeight.Strong}"
-                           Foreground="{DynamicResource Launcher.Text.Primary}"
-                           TextWrapping="Wrap"/>
-                <TextBlock x:Name="PART_BasicSupportTextBlock"
-                           Text="{TemplateBinding Subtitle}"
-                           FontSize="{StaticResource Launcher.Typography.FontSize.Body.Md}"
-                           Foreground="{DynamicResource Launcher.Text.Secondary}"
-                           TextWrapping="Wrap"/>
-              </StackPanel>
+              <TextBlock x:Name="PART_BasicTitleTextBlock"
+                         Text="{TemplateBinding Title}"
+                         FontSize="{StaticResource Launcher.Typography.FontSize.Headline.Lg}"
+                         FontWeight="{StaticResource Launcher.Typography.FontWeight.Strong}"
+                         Foreground="{DynamicResource Launcher.Text.Primary}"
+                         TextWrapping="Wrap"/>
             </Border>
 
             <!-- 固定工具行（可选）：位于头带与滚动区之间，如日志过滤栏 -->
@@ -128,6 +98,10 @@
     </Setter>
   </Style>
 
+  <Style Selector="controls|DialogSurface.confirmation-surface">
+    <Setter Property="MaxWidth" Value="{StaticResource Launcher.Component.Dialog.Confirm.MaxWidth}"/>
+  </Style>
+
   <!-- 形态切换：解剖可见性由 DialogSurface.RefreshChrome() 管理
        （含头带折叠与自管留白外壳）；正文内边距由形态样式直接消费 token。 -->
   <Style Selector="controls|DialogSurface /template/ ScrollViewer#PART_ScrollViewer">
@@ -136,6 +110,13 @@
 
   <Style Selector="controls|DialogSurface:panel /template/ ScrollViewer#PART_ScrollViewer">
     <Setter Property="Padding" Value="{StaticResource Launcher.Component.Dialog.Panel.Body.Padding}"/>
+  </Style>
+
+  <Style Selector="controls|ConfirmDialog.short-confirmation controls|DialogSurface.confirmation-surface">
+    <Setter Property="MaxWidth" Value="{StaticResource Launcher.Component.Dialog.Confirm.Short.MaxWidth}"/>
+    <Style Selector="^ /template/ ScrollViewer#PART_ScrollViewer">
+      <Setter Property="Padding" Value="{StaticResource Launcher.Component.Dialog.Confirm.Short.Content.Padding}"/>
+    </Style>
   </Style>
 
   <!-- 日志查看器：正文顶端无边距，与过滤栏的间距由固定工具行的下边距承担（不随内容滚动）。 -->
@@ -159,20 +140,6 @@
 
   <Style Selector="controls|DialogSurface.settings-surface:panel /template/ Border#PART_FooterBand">
     <Setter Property="IsVisible" Value="False"/>
-  </Style>
-
-  <!-- 状态修饰：仅重染徽章语调，不改变几何。 -->
-  <Style Selector="controls|DialogSurface:info /template/ ContentPresenter#PART_BadgePresenter">
-    <Setter Property="Background" Value="{DynamicResource Launcher.Color.Info.Background}"/>
-    <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Info}"/>
-  </Style>
-  <Style Selector="controls|DialogSurface:warning /template/ ContentPresenter#PART_BadgePresenter">
-    <Setter Property="Background" Value="{DynamicResource Launcher.Color.Warning.Background}"/>
-    <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Warning}"/>
-  </Style>
-  <Style Selector="controls|DialogSurface:danger /template/ ContentPresenter#PART_BadgePresenter">
-    <Setter Property="Background" Value="{DynamicResource Launcher.Color.Danger.Soft}"/>
-    <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Danger}"/>
   </Style>
 
   <Style Selector="Border.task-install-path">

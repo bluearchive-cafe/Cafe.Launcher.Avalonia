@@ -15,9 +15,8 @@
           controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
         <controls:DialogSurface
             Form="Basic"
-            Classes="motion-surface"
+            Classes="motion-surface confirmation-surface"
             VerticalAlignment="Center"
-            MaxWidth="{StaticResource Launcher.Component.Dialog.Confirm.MaxWidth}"
             MinWidth="{StaticResource Launcher.Component.Dialog.Confirm.MinWidth}"
             MaxHeight="{StaticResource Launcher.Component.Dialog.Confirm.MaxHeight}"
             Title="{Binding Title, ElementName=Root}">

@@ -514,12 +514,6 @@ public sealed partial class MainWindowHeadlessTests
 
         Assert.True(surface.Bounds.Width <= 540);
         Assert.True(surface.Bounds.Height < 480);
-
-        var supportText = surface
-            .GetVisualDescendants()
-            .OfType<TextBlock>()
-            .Single(text => text.Name == "PART_BasicSupportTextBlock");
-        Assert.False(supportText.IsVisible);
     }
 
     [AvaloniaFact]

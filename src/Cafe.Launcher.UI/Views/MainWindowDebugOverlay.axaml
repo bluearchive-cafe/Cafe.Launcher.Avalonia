@@ -27,9 +27,6 @@
             <controls:DialogSurface.RenderTransform>
                 <TranslateTransform/>
             </controls:DialogSurface.RenderTransform>
-            <controls:DialogSurface.HeaderIcon>
-                <materialIcons:MaterialIcon Kind="BugOutline" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
-            </controls:DialogSurface.HeaderIcon>
             <controls:DialogSurface.Content>
                 <StackPanel Spacing="{StaticResource Launcher.Spacing.Md}">
 

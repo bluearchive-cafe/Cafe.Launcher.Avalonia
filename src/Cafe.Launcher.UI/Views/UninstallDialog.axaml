@@ -85,10 +85,6 @@
             <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Success}"/>
             <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Label.Md}"/>
         </Style>
-        <Style Selector="controls|DialogSurface.uninstall-success /template/ ContentPresenter#PART_BadgePresenter">
-            <Setter Property="Background" Value="{DynamicResource Launcher.Color.Success.Soft}"/>
-            <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Success}"/>
-        </Style>
         <!-- 执行中头部 ✕ 只「点了没反应」会像坏掉的控件：置灰并说明原因。
              :disabled 外观由 Button.dialog-close:disabled 提供，原因由 CloseToolTip 承载。 -->
         <Style Selector="controls|DialogSurface /template/ Button#PART_CloseButton">
@@ -106,9 +102,7 @@
           controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
         <controls:DialogSurface x:Name="UninstallSurface"
                                 Form="Panel"
-                                Status="{Binding Operations.Uninstall.Status}"
                                 Classes="motion-surface"
-                                Classes.uninstall-success="{Binding Operations.Uninstall.IsCleanCompletion}"
                                 HorizontalAlignment="Center" VerticalAlignment="Center"
                                 Margin="{StaticResource Launcher.Spacing.Thickness.Xxl}"
                                 Width="{StaticResource Launcher.Component.Dialog.Confirm.MaxWidth}"
@@ -116,20 +110,16 @@
                                 MaxHeight="{StaticResource Launcher.Component.Dialog.Confirm.MaxHeight}"
                                 Focusable="True" IsTabStop="False"
                                 Title="{Binding Operations.Uninstall.Title}"
-                                Subtitle="{Binding Shell.I18n[gameDisplayName]}"
                                 CloseCommand="{Binding Operations.Uninstall.CloseCommand}"
                                 CloseAutomationName="{Binding Shell.I18n[close]}"
                                 CloseToolTip="{Binding Operations.Uninstall.CloseToolTip}"
                                 AutomationProperties.Name="{Binding Operations.Uninstall.Title}">
             <controls:DialogSurface.RenderTransform><TranslateTransform/></controls:DialogSurface.RenderTransform>
-            <controls:DialogSurface.HeaderIcon>
-                <materialIcons:MaterialIcon Kind="{Binding Operations.Uninstall.IconKind}"
-                                            Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
-            </controls:DialogSurface.HeaderIcon>
             <controls:DialogSurface.Content>
                 <StackPanel Spacing="{StaticResource Launcher.Spacing.Lg}">
                     <Border Classes="uninstall-directory" IsVisible="{Binding !Operations.Uninstall.IsResult}">
                         <StackPanel Spacing="{StaticResource Launcher.Spacing.Xs}">
+                            <TextBlock Text="{Binding Shell.I18n[gameDisplayName]}" Classes="section-title" TextWrapping="Wrap"/>
                             <TextBlock Text="{Binding Shell.I18n[gamePath]}" Classes="caption"/>
                             <SelectableTextBlock Text="{Binding Operations.Uninstall.GamePath}" Classes="uninstall-path"
                                                  AutomationProperties.Name="{Binding Shell.I18n[gamePath]}"/>

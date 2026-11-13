@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Cafe.Launcher.Core.Helpers;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.UI.Constants;
-using Cafe.Launcher.UI.Controls;
 using Cafe.Launcher.UI.Helpers;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.ViewModels;
@@ -102,9 +101,6 @@ internal partial class GameOperationsViewModel : IModalContentViewModel
     public string TaskMessage => taskResult?.Message ?? "";
     public string TaskPath => IsInstallPreparing ? InstallPathDraft : taskPath;
     public string TaskCloseText => localizer.T(IsTaskExecuting ? LocalizationKeys.TaskHide : LocalizationKeys.Close);
-    public DialogSurfaceStatus TaskStatus => IsInstallPreparing ? DialogSurfaceStatus.None
-        : IsTaskFailed ? DialogSurfaceStatus.Danger
-        : taskResult?.ErrorCode == GameOperationErrorCode.Stopped ? DialogSurfaceStatus.Warning : DialogSurfaceStatus.None;
     public string PrimaryActionText => IsTaskExecuting ? TaskActionText
         : CanLaunchTaskResult ? localizer.T(LocalizationKeys.StartGame)
         : IsTaskResultOnPrimary ? TaskTitle
@@ -340,7 +336,7 @@ internal partial class GameOperationsViewModel : IModalContentViewModel
         foreach (var name in new[] { nameof(HasTask), nameof(HasTaskResult), nameof(IsTaskResultOnPrimary), nameof(IsTaskResultVisible), nameof(IsTaskFailed),
             nameof(CanRepairGame), nameof(CanUninstallGame), nameof(CanStopTask), nameof(CanManageGame), nameof(CanUsePrimaryAction), nameof(CanLaunchTaskResult),
             nameof(CanRetryTask), nameof(CanStartInstall), nameof(CanChooseInstallPath), nameof(CanViewTaskLog), nameof(CanCommitInstall), nameof(TaskTitle), nameof(TaskIcon), nameof(TaskMessage), nameof(TaskPath),
-            nameof(InstallDownloadSizeText), nameof(InstallRequiredSizeText), nameof(TaskStatus), nameof(TaskCloseText), nameof(PrimaryActionText), nameof(PrimaryActionIcon) })
+            nameof(InstallDownloadSizeText), nameof(InstallRequiredSizeText), nameof(TaskCloseText), nameof(PrimaryActionText), nameof(PrimaryActionIcon) })
             OnPropertyChanged(name);
     }
 }

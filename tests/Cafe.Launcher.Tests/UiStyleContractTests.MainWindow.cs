@@ -13,7 +13,6 @@ public sealed partial class UiStyleContractTests
     {
         var mainWindow = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
         var dialogs = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowDialogsOverlay.axaml"));
-        var resourcePanelOverlay = XDocument.Load(TestRepository.FromPresentationRoot("Views/ResourcePanelOverlay.axaml"));
         var settingsOverlay = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowSettingsOverlay.axaml"));
 
         var actions = XDocument.Load(TestRepository.FromPresentationRoot("Controls/GameOperationsSplitButton.axaml"));
@@ -28,13 +27,6 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             "ClipboardText",
             resourcePanelButton.Descendants().Single(element => element.Name.LocalName == "MaterialIcon").Attribute("Kind")?.Value);
-        // ADR-041：面板正文里出现了模板内的状态图标，头部徽章按解剖槽位定位，不再依赖文档顺序。
-        var resourcePanelHeadingIcon = resourcePanelOverlay
-            .Descendants()
-            .First(element => element.Name.LocalName == "DialogSurface.HeaderIcon")
-            .Descendants()
-            .First(element => element.Name.LocalName == "MaterialIcon");
-        Assert.Equal("Web", resourcePanelHeadingIcon.Attribute("Kind")?.Value);
 
         var settingsFooterIcons = settingsOverlay
             .Descendants()
@@ -224,7 +216,6 @@ public sealed partial class UiStyleContractTests
     public void GameTaskSurfaces_KeepPreparationModalAndExecutionProgressFloating()
     {
         var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/GameTaskDialog.axaml"));
-        Assert.Single(document.Descendants(), element => element.Attribute("Kind")?.Value == "{Binding Operations.TaskIcon}");
         Assert.DoesNotContain(document.Descendants(), element => element.Name.LocalName == "ProgressBar");
         var card = XDocument.Load(TestRepository.FromPresentationRoot("Views/GameTaskCard.axaml"));
         var progress = Assert.Single(card.Descendants(), element => element.Name.LocalName == "ProgressBar"

@@ -61,7 +61,7 @@
                                                                           （tone 档位固定，仅色相随种子→对比度仍安全）
 ```
 
-- **角色集**：primary/secondary/tertiary + 各自 `On*`/`*Container`/`On*Container`（`PrimaryContainer`/`OnPrimaryContainer` 于 2026-08-26 补齐，占位+运行时覆盖）；surface 族（Surface/SurfaceVariant/Container 档）、outline 族、error 族（映射现有 Danger/DangerSoft/危险图标底）；业务色 Success/Warning/Info（Toast 等，不参与动态色）。**落地范围声明**：`SurfaceVariant`/`OutlineVariant` 由业务 token 承担（hairline 用 `Color.Card.Border`，ADR-013 M3 修正 2）；可见实心表面 = 对话框覆盖层的**对话框表面族** `Dialog.Background/Header/Footer/Close.Hover/Close.Pressed`（品牌蓝调时五键恒复位为声明默认值，种子跟随时整套随 scheme 中性表面梯度染色——Background/Header/Footer=`SurfaceContainerHigh`，Close.Hover/Pressed 为 `OnSurface` 的预混状态层；2026-08-28 由仅 `Dialog.Background` 扩展为全族并防残留——Q13/Q23 两决策合流）；`Surface/OnSurface/Outline` 保留为语义角色（`Outline` 由 `dialog-card` 的 0.5 DIP hairline 消费；`Surface/OnSurface` 为未来表面预留）。
+- **角色集**：primary/secondary/tertiary + 各自 `On*`/`*Container`/`On*Container`（`PrimaryContainer`/`OnPrimaryContainer` 于 2026-08-26 补齐，占位+运行时覆盖）；surface 族（Surface/SurfaceVariant/Container 档）、outline 族、error 族（映射现有 Danger/DangerSoft/危险图标底）；业务色 Success/Warning/Info（Toast 等，不参与动态色）。**落地范围声明**：`SurfaceVariant`/`OutlineVariant` 由业务 token 承担（hairline 用 `Color.Card.Border`，ADR-013 M3 修正 2）；可见实心表面 = 对话框覆盖层的**表面配色族** `Dialog.Background/Header/Footer/Close.Hover/Close.Pressed`（`Header` 仅供首次设置向导自绘头部使用）（品牌蓝调时五键恒复位为声明默认值，种子跟随时整套随 scheme 中性表面梯度染色——Background/Header/Footer=`SurfaceContainerHigh`，Close.Hover/Pressed 为 `OnSurface` 的预混状态层；2026-08-28 由仅 `Dialog.Background` 扩展为全族并防残留——Q13/Q23 两决策合流）；`Surface/OnSurface/Outline` 保留为语义角色（`Outline` 由 `dialog-card` 的 0.5 DIP hairline 消费；`Surface/OnSurface` 为未来表面预留）。
 - **on-color 按亮度计算**（P1 必修）：`Launcher.Color.OnPrimary` 不硬编码白；按背景色相对亮度选黑/白（浅种子时用深 on-color），写入 `ColorUtils` 并测试锁定。
 - **选中容器三态前景**：`OnSecondaryContainer`、`.Hover`、`.Pressed` 分别与 `SecondaryContainer` 同状态配对。保留方案原前景；若该状态不足 4.5:1，先回退同方案 `OnSurface`，仍不足时选对比度更高的纯黑／白。背景继续按方案原前景预混 8%／16%，避免修复文字时改变状态层强度；每次主题／策略切换重建全部配对。
 - **实现**：`ApplyAccentBrushes`（`Features/Settings/SettingsAppearanceViewModel.cs`）演进为 `ApplyScheme`（输入 seed/variant/theme/neutralStrategy → 覆盖 brush 组）；`ThemeColorExtractionService`（Octree）与新算法共存；`ColorUtils`（`Helpers/ColorUtils.cs`）承载归一化与 on-color 计算。非壁纸模式（系统/自定义/默认色）产出与现状一致或改善。
@@ -103,7 +103,9 @@
 
 ### 3.1 对话框家族 v2（ADR-015）
 
-唯一载体 = `Controls.DialogSurface` TemplatedControl，视觉契约集中于 `Views/Styles/DialogSurface.axaml`。两合法形态 `Form=Basic|Panel`（`:panel` 伪类切换解剖：Basic 无头带/发丝线、可选裸图标、动作即出口；Panel 56px 头带 + 32 圆形徽章 + 可选副标题 + ✕ + 发丝底带含左辅助槽）；`Status=None|Info|Warning|Danger` 伪类仅重染徽章语调。表面档案为组件级 token（`Launcher.Component.Dialog.CornerRadius`=16、`Launcher.Elevation.Shadow.Dialog` 双层阴影经 `Helpers.BoxShadowsExtension` 消费、Badge 尺寸与两套 padding 家族），模态表面比页面高一档，ADR-002/005 不动。关闭矩阵 / 动效通道 / 自适应尺寸律详见 ADR。
+唯一载体 = `Controls.DialogSurface` TemplatedControl，视觉契约集中于 `Views/Styles/DialogSurface.axaml`。Basic 和 Panel 的标题行共用对话框表面背景，只显示标题；Panel 保留关闭命令对应的 ✕，Basic 通过动作按钮退出。版本、目标和警示等必要信息放在正文。Panel 保留 56 DIP 标题行、滚动正文和含左辅助槽的发丝底带；无标题的 Panel 由内容自管布局（设置和首次设置向导等）。组件共用 16 DIP 外圆角及双层阴影；关闭矩阵、动效与自适应尺寸详见 ADR。
+
+短文案确认框（重置设置、停止下载、放弃更改、退出向导）宽度上限为 440 DIP，正文上下分别留 8 DIP 和 12 DIP。修复、切换下载源和下载中退出的确认框宽度上限为 540 DIP，为较长的说明或操作按钮留出空间。正文随语言与文字大小换行。
 
 ### 3.2 按钮与动作
 

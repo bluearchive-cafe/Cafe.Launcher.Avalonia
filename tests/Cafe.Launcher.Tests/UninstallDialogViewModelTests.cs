@@ -2,7 +2,6 @@ using Cafe.Launcher.Core.Helpers;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Testing;
 using Cafe.Launcher.UI.Constants;
-using Cafe.Launcher.UI.Controls;
 using Cafe.Launcher.UI.Features.GameOperations;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
@@ -104,7 +103,6 @@ public sealed class UninstallDialogViewModelTests
         Assert.True(vm.IsVisible);
         Assert.True(vm.HasMetrics);
         Assert.True(vm.HasLeftovers);
-        Assert.Equal(DialogSurfaceStatus.Warning, vm.Status);
         Assert.Equal(20, vm.Leftovers.Count);
         Assert.True(vm.HasKeptPrefix);
         Assert.Equal("E:\\CustomPrefix", vm.KeptPrefixPath);
@@ -123,7 +121,6 @@ public sealed class UninstallDialogViewModelTests
         Assert.True(vm.IsFailed);
         Assert.False(vm.HasMetrics);
         Assert.Equal("access denied", vm.ResultMessage);
-        Assert.Equal(DialogSurfaceStatus.Danger, vm.Status);
         Assert.True(vm.HasLogAction);
     }
 

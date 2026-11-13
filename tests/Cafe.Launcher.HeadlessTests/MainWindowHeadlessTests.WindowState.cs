@@ -8,6 +8,8 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Cafe.Launcher.Core;
+using Cafe.Launcher.UI.Constants;
+using Cafe.Launcher.UI.Controls;
 using Cafe.Launcher.UI.Features.GameOperations;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
@@ -193,6 +195,98 @@ public sealed partial class MainWindowHeadlessTests
         Dispatcher.UIThread.RunJobs();
 
         Assert.True(context.ViewModel.Dialogs.DebugResetConfirm.IsVisible);
+    }
+
+    [AvaloniaTheory]
+    [InlineData(LauncherLanguages.SimplifiedChinese, 1.0)]
+    [InlineData(LauncherLanguages.English, 1.5)]
+    public void SettingsResetConfirmation_HasRoomForMessageAndActions(string language, double textScale)
+    {
+        using var context = CreateContext();
+        context.Window.Width = 1024;
+        context.Window.Height = 640;
+        context.ViewModel.Shell.ApplyLanguage(language, hasSnapshot: false);
+        OpenSettings(context);
+        context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.Advanced;
+        Dispatcher.UIThread.RunJobs();
+
+        var resetButton = context.Window.GetVisualDescendants().OfType<Button>().Single(
+            button => ReferenceEquals(button.Command, context.ViewModel.Settings.RequestResetSettingsCommand));
+        Assert.True(resetButton.IsEffectivelyVisible);
+        resetButton.Command!.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+
+        var dialog = context.Window.GetVisualDescendants().OfType<ConfirmDialog>().Single(control => control.IsOpen);
+        using var typography = new TypographyScaleSnapshot(dialog, textScale);
+        Dispatcher.UIThread.RunJobs();
+
+        var surface = dialog.GetVisualDescendants().OfType<DialogSurface>().Single();
+        var message = surface.GetVisualDescendants().OfType<TextBlock>().Single(text => text.Classes.Contains("dialog-message"));
+        var cancel = dialog.FindControl<Button>("SafeActionButton")!;
+        var messageBottom = message.TranslatePoint(new Point(0, message.Bounds.Height), surface);
+        var cancelTop = cancel.TranslatePoint(default, surface);
+        Assert.NotNull(messageBottom);
+        Assert.NotNull(cancelTop);
+
+        Assert.Equal(440, surface.Bounds.Width);
+        Assert.True(cancelTop.Value.Y - messageBottom.Value.Y >= 24);
+        Assert.True(message.IsEffectivelyVisible);
+        Assert.True(cancel.IsEffectivelyVisible);
+        Assert.True(cancelTop.Value.Y + cancel.Bounds.Height <= surface.Bounds.Height);
+    }
+
+    [AvaloniaTheory]
+    [InlineData(LauncherLanguages.SimplifiedChinese)]
+    [InlineData(LauncherLanguages.TraditionalChinese)]
+    [InlineData(LauncherLanguages.English)]
+    [InlineData(LauncherLanguages.Japanese)]
+    public void ShortConfirmations_KeepActionsInsideSurfaceWithLargerText(string language)
+    {
+        using var context = CreateContext();
+        context.Window.Width = 1024;
+        context.Window.Height = 640;
+        context.ViewModel.Shell.ApplyLanguage(language, hasSnapshot: false);
+        context.Window.Show();
+
+        var vm = context.ViewModel;
+        var confirmations = new (Action Show, Action Hide, double Width)[]
+        {
+            (vm.Dialogs.ShowStopConfirm, () => vm.Dialogs.StopConfirm.IsVisible = false, 440),
+            (vm.Dialogs.ShowDownloadRunningCloseConfirm, () => vm.Dialogs.DownloadRunningCloseConfirm.IsVisible = false, 540),
+            (() => vm.Settings.IsUnsavedChangesVisible = true, () => vm.Settings.IsUnsavedChangesVisible = false, 440),
+            (() => vm.ResourcePanel.DiscardChangesConfirm.Show(vm.Shell.I18n[LocalizationKeys.ResourcePanelUnsavedChangesMessage]),
+                () => vm.ResourcePanel.DiscardChangesConfirm.IsVisible = false, 440),
+            (() => vm.Dialogs.ShowSetupWizardExitConfirmCommand.Execute(null), () => vm.Dialogs.SetupWizardExitConfirm.IsVisible = false, 440),
+        };
+
+        foreach (var (show, hide, width) in confirmations)
+        {
+            show();
+            Dispatcher.UIThread.RunJobs();
+
+            var dialog = context.Window.GetVisualDescendants().OfType<ConfirmDialog>().Single(control => control.IsOpen);
+            using (var typography = new TypographyScaleSnapshot(dialog, 1.5))
+            {
+                Dispatcher.UIThread.RunJobs();
+
+                var surface = dialog.GetVisualDescendants().OfType<DialogSurface>().Single();
+                var confirm = dialog.FindControl<Button>(dialog.IsDangerConfirm ? "DangerActionButton" : "PrimaryActionButton")!;
+                var cancel = dialog.FindControl<Button>("SafeActionButton")!;
+                var confirmStart = confirm.TranslatePoint(default, surface);
+                var cancelEnd = cancel.TranslatePoint(new Point(cancel.Bounds.Width, cancel.Bounds.Height), surface);
+                Assert.NotNull(confirmStart);
+                Assert.NotNull(cancelEnd);
+                Assert.Equal(width, surface.Bounds.Width);
+                Assert.True(confirm.IsEffectivelyVisible);
+                Assert.True(cancel.IsEffectivelyVisible);
+                Assert.InRange(confirmStart.Value.X, 28, surface.Bounds.Width);
+                Assert.InRange(cancelEnd.Value.X, confirmStart.Value.X, surface.Bounds.Width - 28);
+                Assert.InRange(cancelEnd.Value.Y, 0, surface.Bounds.Height);
+            }
+
+            hide();
+            Dispatcher.UIThread.RunJobs();
+        }
     }
 
     [AvaloniaTheory]

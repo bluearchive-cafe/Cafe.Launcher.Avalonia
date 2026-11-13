@@ -123,14 +123,9 @@ public sealed class DialogActionButtonContractTests
     }
 
     [Fact]
-    public void LogExportDialog_UsesExitToAppIcons()
+    public void LogExportDialog_ExportButtonUsesExitToAppIcon()
     {
         var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowLogExportOverlay.axaml"));
-        var headerIcon = document
-            .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "MaterialIcon"
-                && element.Attribute("Width")?.Value == "{StaticResource Launcher.Icon.Md}");
         var exportButton = document
             .Descendants()
             .Single(element =>
@@ -140,7 +135,6 @@ public sealed class DialogActionButtonContractTests
             .Descendants()
             .Single(element => element.Name.LocalName == "MaterialIcon");
 
-        Assert.Equal("ExitToApp", headerIcon.Attribute("Kind")?.Value);
         Assert.Equal("ExitToApp", buttonIcon.Attribute("Kind")?.Value);
     }
 

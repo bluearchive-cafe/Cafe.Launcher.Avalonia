@@ -13,24 +13,20 @@ namespace Cafe.Launcher.UI.Controls;
 /// 对话框家族 v2 的统一外壳（ADR-015）。两种合法形态：
 /// <see cref="DialogSurfaceForm.Basic"/>（聚焦决策）与
 /// <see cref="DialogSurfaceForm.Panel"/>（特性面板），由 <see cref="Form"/>
-/// 切换并映射到伪类；<see cref="Status"/> 提供状态修饰。
-/// 视觉契约集中在 Views/Styles/DialogSurface.axaml 的 ControlTheme 中，
+/// 切换并映射到伪类。
+/// 视觉契约集中在 Views/Styles/DialogSurface.axaml 中，
 /// 使用方不得自带几何或色彩值。
 /// </summary>
 [TemplatePart("PART_CloseButton", typeof(Button))]
-[PseudoClasses(":panel", ":info", ":warning", ":danger")]
+[PseudoClasses(":panel")]
 internal class DialogSurface : TemplatedControl
 {
     private Button? closeButton;
     private Border? headerBorder;
     private Border? basicHeadBorder;
     private Border? footerBand;
-    private ContentPresenter? badgePresenter;
-    private ContentPresenter? basicIconPresenter;
     private ContentPresenter? scrollContentPresenter;
     private ContentPresenter? footerPresenter;
-    private TextBlock? subtitleTextBlock;
-    private TextBlock? basicSupportTextBlock;
     private ContentPresenter? leadingPresenter;
     private ContentPresenter? toolbarPresenter;
     private ScrollViewer? scrollViewer;
@@ -39,22 +35,8 @@ internal class DialogSurface : TemplatedControl
     public static readonly StyledProperty<DialogSurfaceForm> FormProperty =
         AvaloniaProperty.Register<DialogSurface, DialogSurfaceForm>(nameof(Form));
 
-    public static readonly StyledProperty<DialogSurfaceStatus> StatusProperty =
-        AvaloniaProperty.Register<DialogSurface, DialogSurfaceStatus>(nameof(Status));
-
     public static readonly StyledProperty<string?> TitleProperty =
         AvaloniaProperty.Register<DialogSurface, string?>(nameof(Title));
-
-    public static readonly StyledProperty<string?> SubtitleProperty =
-        AvaloniaProperty.Register<DialogSurface, string?>(nameof(Subtitle));
-
-    /// <summary>Panel 头带徽章内的内容；为空时徽章不渲染。</summary>
-    public static readonly StyledProperty<object?> HeaderIconProperty =
-        AvaloniaProperty.Register<DialogSurface, object?>(nameof(HeaderIcon));
-
-    /// <summary>Basic 形态标题上方的裸图标（无容器）；为空时整行不渲染。</summary>
-    public static readonly StyledProperty<object?> BasicIconProperty =
-        AvaloniaProperty.Register<DialogSurface, object?>(nameof(BasicIcon));
 
     /// <summary>共享滚动内容区承载的主体内容。</summary>
     public static readonly StyledProperty<object?> ContentProperty =
@@ -94,34 +76,10 @@ internal class DialogSurface : TemplatedControl
         set => SetValue(FormProperty, value);
     }
 
-    public DialogSurfaceStatus Status
-    {
-        get => GetValue(StatusProperty);
-        set => SetValue(StatusProperty, value);
-    }
-
     public string? Title
     {
         get => GetValue(TitleProperty);
         set => SetValue(TitleProperty, value);
-    }
-
-    public string? Subtitle
-    {
-        get => GetValue(SubtitleProperty);
-        set => SetValue(SubtitleProperty, value);
-    }
-
-    public object? HeaderIcon
-    {
-        get => GetValue(HeaderIconProperty);
-        set => SetValue(HeaderIconProperty, value);
-    }
-
-    public object? BasicIcon
-    {
-        get => GetValue(BasicIconProperty);
-        set => SetValue(BasicIconProperty, value);
     }
 
     public object? Content
@@ -186,12 +144,8 @@ internal class DialogSurface : TemplatedControl
         headerBorder = e.NameScope.Find<Border>("PART_PanelHead");
         basicHeadBorder = e.NameScope.Find<Border>("PART_BasicHead");
         footerBand = e.NameScope.Find<Border>("PART_FooterBand");
-        badgePresenter = e.NameScope.Find<ContentPresenter>("PART_BadgePresenter");
-        basicIconPresenter = e.NameScope.Find<ContentPresenter>("PART_BasicIconPresenter");
         scrollContentPresenter = e.NameScope.Find<ContentPresenter>("PART_ScrollContentPresenter");
         footerPresenter = e.NameScope.Find<ContentPresenter>("PART_FooterPresenter");
-        subtitleTextBlock = e.NameScope.Find<TextBlock>("PART_SubtitleTextBlock");
-        basicSupportTextBlock = e.NameScope.Find<TextBlock>("PART_BasicSupportTextBlock");
         leadingPresenter = e.NameScope.Find<ContentPresenter>("PART_FooterLeadingPresenter");
         toolbarPresenter = e.NameScope.Find<ContentPresenter>("PART_ToolbarPresenter");
         scrollViewer = e.NameScope.Find<ScrollViewer>("PART_ScrollViewer");
@@ -206,21 +160,13 @@ internal class DialogSurface : TemplatedControl
 
         if (change.Property == FormProperty)
         {
-            ApplyPseudoClasses();
-            RefreshChrome();
-            return;
-        }
-
-        if (change.Property == StatusProperty)
-        {
-            ApplyPseudoClasses();
+            PseudoClasses.Set(":panel", Form == DialogSurfaceForm.Panel);
+            SyncSlotContents();
             return;
         }
 
         if (change.Property == CloseCommandProperty ||
             change.Property == TitleProperty ||
-            change.Property == HeaderIconProperty ||
-            change.Property == BasicIconProperty ||
             change.Property == FooterProperty ||
             change.Property == FooterLeadingProperty ||
             change.Property == ToolbarProperty ||
@@ -228,49 +174,29 @@ internal class DialogSurface : TemplatedControl
             change.Property == ContentTemplateProperty)
         {
             SyncSlotContents();
-            return;
-        }
-
-        if (change.Property == SubtitleProperty)
-        {
-            RefreshChrome();
         }
     }
 
     /// <summary>
-    /// 对象型插槽（图标、正文、动作组）不依赖模板绑定而由代码同步：
+    /// 对象型插槽（正文、工具行、动作组）不依赖模板绑定而由代码同步：
     /// 模板重应用或属性变化时保持一致，规避无类型转换器的绑定路径。
     /// </summary>
     private void SyncSlotContents()
     {
         // 正文按当前模式单路投递：同一可视元素不能同时挂到两个展示器。
-        var syncIsPanel = Form == DialogSurfaceForm.Panel;
-        var syncHasHeaderIdentity =
-            !string.IsNullOrEmpty(Title)
-            || !string.IsNullOrEmpty(Subtitle)
-            || HeaderIcon is not null;
-        var syncIsShellMode = syncIsPanel && !syncHasHeaderIdentity;
+        var isPanel = Form == DialogSurfaceForm.Panel;
+        var hasTitle = !string.IsNullOrEmpty(Title);
+        var isShellMode = isPanel && !hasTitle;
 
-        if (badgePresenter is not null)
+        if (isShellMode)
         {
-            badgePresenter.Content = HeaderIcon;
+            SetContent(scrollContentPresenter, null, null);
+            SetContent(directContentPresenter, Content, ContentTemplate);
         }
-
-        if (basicIconPresenter is not null)
+        else
         {
-            basicIconPresenter.Content = BasicIcon;
-        }
-
-        if (scrollContentPresenter is not null)
-        {
-            scrollContentPresenter.Content = syncIsShellMode ? null : Content;
-            scrollContentPresenter.ContentTemplate = syncIsShellMode ? null : ContentTemplate;
-        }
-
-        if (directContentPresenter is not null)
-        {
-            directContentPresenter.Content = syncIsShellMode ? Content : null;
-            directContentPresenter.ContentTemplate = syncIsShellMode ? ContentTemplate : null;
+            SetContent(directContentPresenter, null, null);
+            SetContent(scrollContentPresenter, Content, ContentTemplate);
         }
 
         if (footerPresenter is not null)
@@ -290,45 +216,38 @@ internal class DialogSurface : TemplatedControl
             toolbarPresenter.IsVisible = Toolbar is not null;
         }
 
-        RefreshChrome();
+        RefreshChrome(isPanel, hasTitle, isShellMode);
     }
 
-    private void ApplyPseudoClasses()
+    private static void SetContent(ContentPresenter? presenter, object? content, IDataTemplate? template)
     {
-        PseudoClasses.Set(":panel", Form == DialogSurfaceForm.Panel);
-        PseudoClasses.Set(":info", Status == DialogSurfaceStatus.Info);
-        PseudoClasses.Set(":warning", Status == DialogSurfaceStatus.Warning);
-        PseudoClasses.Set(":danger", Status == DialogSurfaceStatus.Danger);
+        if (presenter is not null)
+        {
+            presenter.ContentTemplate = template;
+            presenter.Content = content;
+        }
     }
 
-    private void RefreshChrome()
+    private void RefreshChrome(bool isPanel, bool hasTitle, bool isShellMode)
     {
-        var isPanel = Form == DialogSurfaceForm.Panel;
-        var hasHeaderIdentity =
-            !string.IsNullOrEmpty(Title)
-            || !string.IsNullOrEmpty(Subtitle)
-            || HeaderIcon is not null;
-
         if (closeButton is not null)
         {
             // 关闭钮仅属于 Panel 头带，且必须存在合法出口才有意义；
             // Basic 形态的动作即出口，永不渲染 ✕。
-            closeButton.IsVisible = isPanel && CloseCommand is not null && hasHeaderIdentity;
+            closeButton.IsVisible = isPanel && CloseCommand is not null && hasTitle;
         }
 
-        // Panel 头带在没有任何身份内容（标题/副标题/徽章）时整行折叠，
+        // 无标题的 Panel 整行折叠，
         // 正文边距同步归零：供设置/向导这类自带留白体系的外壳场景复用表面档案。
         if (headerBorder is not null)
         {
-            headerBorder.IsVisible = isPanel && hasHeaderIdentity;
+            headerBorder.IsVisible = isPanel && hasTitle;
         }
 
         if (basicHeadBorder is not null)
         {
             basicHeadBorder.IsVisible = !isPanel;
         }
-
-        var isShellMode = isPanel && !hasHeaderIdentity;
 
         if (scrollViewer is not null)
         {
@@ -340,31 +259,6 @@ internal class DialogSurface : TemplatedControl
         if (directContentPresenter is not null)
         {
             directContentPresenter.IsVisible = isShellMode;
-        }
-
-        if (badgePresenter is not null)
-        {
-            badgePresenter.IsVisible = HeaderIcon is not null;
-        }
-
-        if (basicIconPresenter is not null)
-        {
-            basicIconPresenter.IsVisible = !isPanel && BasicIcon is not null;
-        }
-
-        if (subtitleTextBlock is not null)
-        {
-            subtitleTextBlock.IsVisible = !string.IsNullOrEmpty(Subtitle);
-        }
-
-        if (basicSupportTextBlock is not null)
-        {
-            basicSupportTextBlock.IsVisible = !string.IsNullOrEmpty(Subtitle);
-        }
-
-        if (leadingPresenter is not null)
-        {
-            leadingPresenter.IsVisible = FooterLeading is not null;
         }
 
         if (footerBand is not null)

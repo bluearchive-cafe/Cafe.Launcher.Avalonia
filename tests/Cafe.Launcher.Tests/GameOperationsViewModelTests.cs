@@ -1200,7 +1200,7 @@ public sealed partial class GameOperationsViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task ConfirmUninstallAsync_WhenStartingAfterPreviousOperation_UsesUninstallProgressIcon()
+    public async Task ConfirmUninstallAsync_WhenStartingAfterPreviousOperation_KeepsProgressInUninstallDialog()
     {
         var context = CreateContext();
         context.Backend.ValidateUninstallResult = new GameOperationResult { Success = true };
@@ -1218,7 +1218,6 @@ public sealed partial class GameOperationsViewModelTests : IDisposable
         var uninstallTask = context.ViewModel.ConfirmUninstallAsync();
 
         Assert.True(context.ViewModel.Uninstall.IsExecuting);
-        Assert.Equal("DeleteOutline", context.ViewModel.Uninstall.IconKind);
         Assert.False(context.ViewModel.IsProgressPanelVisible);
 
         context.Backend.UninstallCompletion.SetResult(new GameOperationResult());

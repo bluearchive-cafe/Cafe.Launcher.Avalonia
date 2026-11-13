@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Cafe.Launcher.Core.Helpers;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.UI.Constants;
-using Cafe.Launcher.UI.Controls;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.UI.ViewModels;
@@ -95,10 +94,6 @@ internal sealed partial class UninstallDialogViewModel : ObservableObject, IModa
         : HasLeftovers ? LocalizationKeys.UninstallLeftoversTitle
         : IsResult ? LocalizationKeys.UninstallCompletedTitle
         : IsExecuting ? LocalizationKeys.Uninstalling : LocalizationKeys.UninstallGame);
-    public string IconKind => IsFailed ? "AlertCircleOutline" : HasLeftovers ? "AlertOutline"
-        : IsResult ? "Check" : "DeleteOutline";
-    public DialogSurfaceStatus Status => IsFailed || IsConfirmation ? DialogSurfaceStatus.Danger
-        : HasLeftovers ? DialogSurfaceStatus.Warning : DialogSurfaceStatus.None;
     public string ResultMessage => IsFailed ? result?.Message ?? ""
         : localizer.T(HasLeftovers ? LocalizationKeys.UninstallLeftoversDescription : LocalizationKeys.UninstallSuccessDescription);
     public string LeftoversSummary => localizer.F(LocalizationKeys.UninstallLeftoversCount, Leftovers.Count);
@@ -246,7 +241,7 @@ internal sealed partial class UninstallDialogViewModel : ObservableObject, IModa
             nameof(KeptPrefixPath), nameof(HasKeptPrefix), nameof(TotalSizeText), nameof(TotalSizeUnitText),
             nameof(HasTotalSizeUnit), nameof(CompatibilitySizeText),
             nameof(RemovedFilesText), nameof(RemovedFilesUnitText), nameof(RemovedSizeText), nameof(RemovedSizeUnitText),
-            nameof(Title), nameof(IconKind), nameof(Status),
+            nameof(Title),
             nameof(ResultMessage), nameof(LeftoversSummary), nameof(ResultScopeText), nameof(DoneText), nameof(CloseToolTip),
             nameof(ScopeStatementText), nameof(ScopeDetailText), nameof(HasScopeDetail),
             nameof(ProgressTitle), nameof(ProgressDetail),

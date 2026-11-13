@@ -44,7 +44,6 @@ public sealed class LocalizationTerminologyTests
         var locale = ReadLocale(fileName);
         var consumedKeys = new[]
         {
-            "resourcePanelDescription",
             "resourcePanelLocalizedVersion",
             "setupWizardDownloadSourceCafeDescription",
             "setupWizardDownloadSourceCafeRecommendationReason",
@@ -186,7 +185,6 @@ public sealed class LocalizationTerminologyTests
         var resourceKeys = new[]
         {
             "resourcePanelLocalizedVersion",
-            "resourcePanelDescription",
             "resourcePanelVersionAligned",
             "setupWizardDownloadSourceCafeDescription",
             "setupWizardDownloadSourceCafeRecommendationReason"
