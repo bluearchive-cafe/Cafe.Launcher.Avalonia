@@ -499,7 +499,8 @@ public sealed class GameShortcutServiceTests : IDisposable
 
         Assert.Equal(appImage, resolved);
         Assert.True(File.Exists(resolved));
-        Assert.Contains($"Exec=\"{appImage}\" {Program.LaunchGameArgument}",
+        var escapedAppImage = appImage.Replace(@"\", @"\\\\", StringComparison.Ordinal);
+        Assert.Contains($"Exec=\"{escapedAppImage}\" {Program.LaunchGameArgument}",
             GameShortcutService.BuildDesktopEntry("Blue Archive", resolved!, null), StringComparison.Ordinal);
     }
 
@@ -536,6 +537,16 @@ public sealed class GameShortcutServiceTests : IDisposable
                 "Categories=Game;"
             ],
             lines);
+    }
+
+    [Fact]
+    public void BuildDesktopEntry_WhenPathsUseWindowsSeparators_EscapesExecAndIconIndependently()
+    {
+        var content = GameShortcutService.BuildDesktopEntry("Blue Archive",
+            @"C:\Games\Cafe.Launcher", @"C:\Games\Assets\app-icon.ico");
+
+        Assert.Contains("""Exec="C:\\\\Games\\\\Cafe.Launcher" --launch-game""", content, StringComparison.Ordinal);
+        Assert.Contains(@"Icon=C:\\Games\\Assets\\app-icon.ico", content, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -609,7 +620,8 @@ public sealed class GameShortcutServiceTests : IDisposable
         Assert.Contains("[Desktop Entry]", content, StringComparison.Ordinal);
         Assert.Contains("Type=Application", content, StringComparison.Ordinal);
         Assert.Contains("Name=Blue Archive", content, StringComparison.Ordinal);
-        Assert.Contains($"Exec=\"{launcherPath}\" {Program.LaunchGameArgument}", content, StringComparison.Ordinal);
+        var escapedLauncherPath = launcherPath.Replace(@"\", @"\\\\", StringComparison.Ordinal);
+        Assert.Contains($"Exec=\"{escapedLauncherPath}\" {Program.LaunchGameArgument}", content, StringComparison.Ordinal);
         Assert.Contains("Terminal=false", content, StringComparison.Ordinal);
         Assert.Contains("Categories=Game;", content, StringComparison.Ordinal);
         Assert.DoesNotContain(".exe\"", content, StringComparison.Ordinal);
@@ -640,8 +652,9 @@ public sealed class GameShortcutServiceTests : IDisposable
         var result = await service.CreateShortcutInDirectoryAsync(snapshot, shortcutDirectory);
 
         Assert.Equal(GameShortcutStatus.Created, result.Status);
+        var escapedIconPath = iconPath.Replace(@"\", @"\\", StringComparison.Ordinal);
         Assert.Contains(
-            $"Icon={iconPath}",
+            $"Icon={escapedIconPath}",
             File.ReadAllText(result.Detail),
             StringComparison.Ordinal);
     }

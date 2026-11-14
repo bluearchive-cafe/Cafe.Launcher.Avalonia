@@ -172,6 +172,7 @@
 - 不引入 Mocking 框架；用手写 stub/fake/`HttpMessageHandler` 子类，共享替身放 `tests/TestDoubles/` 并 Compile-Link 到两个工程。
 - 运行入口、UI 验证和黄金截图更新见[开发指南「命令与验证」](docs/DEVELOPMENT.md#命令与验证)。
 - 平台门控测试用 `Assert.SkipUnless`/`Assert.SkipWhen` 显式跳过，禁止早期 `return`。
+- 通过接缝模拟其他平台时，序列化断言遵循目标格式而非宿主临时路径原文；路径转义测试保留固定的正斜杠与反斜杠用例，不因宿主平台跳过。
 - 等待异步状态用 `TestWait.UntilAsync`（Headless 用 `HeadlessTestHost.WaitUntilAsync`，额外推进 UI 调度）；能直接 `await` 就直接等待。有界轮询只走这些设施，测试运行使用仓库入口的挂起保护，不另加临时超时。负向断言确需固定延时时，从 internal 生产常量推导。
 - 新服务覆盖成功路径、典型失败路径和关键边界（null、空集合等）。
 
