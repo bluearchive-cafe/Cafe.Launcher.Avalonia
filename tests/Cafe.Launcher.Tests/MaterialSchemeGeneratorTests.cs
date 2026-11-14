@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Xml.Linq;
 using Avalonia.Media;
+using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.UI.Helpers;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
@@ -466,6 +467,29 @@ public sealed class MaterialSchemeGeneratorTests
                     brushes["Launcher.Color.Field.Background"].Color);
                 Assert.True(borderRatio >= 3, $"{variant}/{hex}/{isDark}: field border = {borderRatio:F2}:1");
             }
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void BuildRoleBrushes_ToolTipUsesReadableInverseNeutralRoles(bool isDark)
+    {
+        var seed = Color.Parse("#00FF00");
+        var scheme = MaterialSchemeGenerator.CreateScheme(seed, ThemeColorVariants.Expressive, isDark);
+        var brandScheme = MaterialSchemeGenerator.CreateScheme(
+            Color.Parse(LauncherConstants.DefaultThemeColor), ThemeColorVariants.TonalSpot, isDark);
+
+        foreach (var seedFollowing in new[] { false, true })
+        {
+            var brushes = MaterialSchemeGenerator.BuildRoleBrushes(scheme, seedFollowing, isDark);
+            var expected = seedFollowing ? scheme : brandScheme;
+            var background = brushes["Launcher.Color.InverseSurface"].Color;
+            var foreground = brushes["Launcher.Color.InverseOnSurface"].Color;
+            Assert.Equal(MaterialColorMapper.ToAvaloniaColor(expected.InverseSurface), background);
+            Assert.Equal(MaterialColorMapper.ToAvaloniaColor(expected.InverseOnSurface), foreground);
+            Assert.Equal(255, background.A);
+            Assert.True(ColorUtils.GetContrastRatio(foreground, background) >= 4.5);
         }
     }
 

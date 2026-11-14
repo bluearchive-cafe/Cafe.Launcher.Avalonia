@@ -154,6 +154,11 @@
 - 诊断面板与日志查看器列表控件维持 Fluent 基础模板，仅 token 兼容（Q3/Q21 例外声明）。
 - 崩溃窗口（`Views/CrashReportWindow.axaml`）使用独立 Fluent 设计系统与自带 `Crash.*` 令牌，不复用 `Launcher.*`（[ADR-020](adr/ADR-020-崩溃窗口独立Fluent设计系统.md)）。
 
+### 3.7 工具提示
+
+- 主界面工具提示采用 M3 的 `InverseSurface` 底色和 `InverseOnSurface` 文字，随明暗主题和中性色策略更新。容器使用 4 DIP 圆角、无描边，文字为 12 DIP 常规字重。
+- 内边距为水平 8 DIP、垂直 4 DIP，最小高度为 24 DIP，最大宽度为 320 DIP。长标题、网址和路径在上限内换行并撑高容器。沿用 Avalonia 的原生提示模板和触发逻辑。
+
 ## 4. 表面规范
 
 ### 4.1 主窗口、标题栏与任务表面

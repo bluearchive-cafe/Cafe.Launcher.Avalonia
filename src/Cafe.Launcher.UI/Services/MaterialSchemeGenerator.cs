@@ -125,6 +125,8 @@ internal static class MaterialSchemeGenerator
                 isDark);
         result["Launcher.Color.Surface"] = MaterialColorMapper.ToBrush(neutralScheme.Surface);
         result["Launcher.Color.OnSurface"] = MaterialColorMapper.ToBrush(neutralScheme.OnSurface);
+        result["Launcher.Color.InverseSurface"] = MaterialColorMapper.ToBrush(neutralScheme.InverseSurface);
+        result["Launcher.Color.InverseOnSurface"] = MaterialColorMapper.ToBrush(neutralScheme.InverseOnSurface);
         result["Launcher.Color.Outline"] = MaterialColorMapper.ToBrush(neutralScheme.Outline);
 
         // M3 dialogs share SurfaceContainerHigh across body, header and footer.
