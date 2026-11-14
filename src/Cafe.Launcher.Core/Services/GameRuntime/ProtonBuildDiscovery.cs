@@ -56,7 +56,7 @@ internal sealed class ProtonBuildDiscovery : IProtonBuildDiscovery
 
                     var name = Path.GetFileName(candidate);
                     var key = ResolveInstallDirectory(candidate);
-                    builds.TryAdd(key, new ProtonBuild(name, candidate));
+                    builds.TryAdd(key, new ProtonBuild(name, key));
                 }
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
@@ -75,7 +75,11 @@ internal sealed class ProtonBuildDiscovery : IProtonBuildDiscovery
     {
         try
         {
-            var fullPath = Path.GetFullPath(path);
+            var directory = new DirectoryInfo(Path.GetFullPath(path));
+            // Steam 的别名通常在祖先目录（~/.steam/root），而非构建叶目录。
+            var fullPath = directory.Parent is { } parent
+                ? Path.Combine(ResolveInstallDirectory(parent.FullName), directory.Name)
+                : directory.FullName;
             return Directory.ResolveLinkTarget(fullPath, returnFinalTarget: true)?.FullName ?? fullPath;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
