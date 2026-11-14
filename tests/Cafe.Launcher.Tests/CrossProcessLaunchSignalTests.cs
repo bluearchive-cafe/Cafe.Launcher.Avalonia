@@ -164,6 +164,20 @@ public sealed class CrossProcessLaunchSignalTests : IDisposable
         await acceptLoop.WaitAsync(TimeSpan.FromSeconds(5));
     }
 
+    [Theory]
+    [InlineData('x', 120)]
+    [InlineData('数', 40)]
+    public void TryBindExclusive_WhenSocketPathExceedsByteLimit_AllowsStartupWithoutBinding(char character, int length)
+    {
+        var longDirectory = Path.Combine(tempDir, new string(character, length));
+        using var signal = CrossProcessLaunchSignal.ListenAt(UniqueName(), longDirectory);
+
+        Assert.True(signal.TryBindExclusive());
+        signal.EnsureBound();
+        Assert.Null(signal.AcceptLoopCompletion);
+        Assert.False(signal.WaitOne(TimeSpan.Zero));
+    }
+
     [Fact]
     public void GetSocketFilePath_WithSameAndDifferentNames_IsStableShortAndDistinct()
     {
