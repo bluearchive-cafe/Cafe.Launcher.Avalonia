@@ -155,6 +155,7 @@
 
 ### 7.3 单实例
 
+- Unix 套接字路径不可用（包括 UTF-8 路径超过 AF_UNIX 字节长度限制）时记录警告并允许启动，不因单实例功能不可用而崩溃；此时无法保证单实例或请求转发。
 - 单实例所有权在 Windows 使用命名 mutex，Unix 使用数据根中的锁套接字；.NET 的 `Local\` 命名空间在 Unix 仅覆盖同一 POSIX 会话。套接字保留在数据根而非 `XDG_RUNTIME_DIR` 是已接受的取舍，见 [ADR-034](docs/design/adr/ADR-034-Unix单实例所有权用数据根内锁套接字判定.md) 与[审计台账](CODEBASE_AUDIT.md)。
 
 ## 8. 测试

@@ -140,7 +140,17 @@ internal sealed class CrossProcessLaunchSignal : IDisposable
             return true;
         }
 
-        return TryBindExclusively(GetSocketFilePath(socketDirectory, signalName));
+        try
+        {
+            return TryBindExclusively(GetSocketFilePath(socketDirectory, signalName));
+        }
+        catch (ArgumentException ex)
+        {
+            // AF_UNIX 的字节长度限制不是普通文件路径限制；无效端点同样按路径不可用降级。
+            LauncherLog.LogSync(LogEntrySeverity.Warn, "CrossProcess",
+                $"single-instance lock socket is unusable; starting without single-instance enforcement: {ex.Message}");
+            return true;
+        }
     }
 
     /// <summary>在截止时间前完成绑定争夺；存活监听者坚持到期即判负。</summary>
@@ -385,10 +395,11 @@ internal sealed class CrossProcessLaunchSignal : IDisposable
 
     private Socket? TryBind(string socketPath)
     {
+        var endpoint = new UnixDomainSocketEndPoint(socketPath);
         var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
         try
         {
-            socket.Bind(new UnixDomainSocketEndPoint(socketPath));
+            socket.Bind(endpoint);
             socket.Listen(32);
             return socket;
         }
