@@ -392,17 +392,35 @@ internal sealed class GameShortcutService : IGameShortcutService
         var builder = new System.Text.StringBuilder();
         builder.AppendLine("[Desktop Entry]");
         builder.AppendLine("Type=Application");
-        builder.AppendLine(CultureInfo.InvariantCulture, $"Name={displayName}");
-        builder.AppendLine(CultureInfo.InvariantCulture, $"Exec=\"{launcherPath}\" {LauncherConstants.LaunchGameArgument}");
+        builder.AppendLine(CultureInfo.InvariantCulture, $"Name={EscapeDesktopValue(displayName)}");
+        // GLib 在展开字段码前检查 Exec 的首个程序是否存在；%% 路径需作为 env 的参数展开。
+        var executable = launcherPath.Contains('%')
+            ? "/usr/bin/env -- " + QuoteDesktopExecutable(launcherPath)
+            : QuoteDesktopExecutable(launcherPath);
+        builder.AppendLine(CultureInfo.InvariantCulture, $"Exec={executable} {LauncherConstants.LaunchGameArgument}");
         if (!string.IsNullOrWhiteSpace(iconPath))
         {
-            builder.AppendLine(CultureInfo.InvariantCulture, $"Icon={iconPath}");
+            builder.AppendLine(CultureInfo.InvariantCulture, $"Icon={EscapeDesktopValue(iconPath)}");
         }
 
         builder.AppendLine("Terminal=false");
         builder.Append("Categories=Game;");
         return builder.ToString();
     }
+
+    // Exec 先转义双引号参数与字段码，再转义 desktop 字符串；反斜杠必须经过两层解析。
+    private static string QuoteDesktopExecutable(string path) =>
+        "\"" + EscapeDesktopValue(path.Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("\"", "\\\"", StringComparison.Ordinal)
+            .Replace("`", "\\`", StringComparison.Ordinal)
+            .Replace("$", "\\$", StringComparison.Ordinal)
+            .Replace("%", "%%", StringComparison.Ordinal)) + "\"";
+
+    private static string EscapeDesktopValue(string value) =>
+        value.Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("\n", "\\n", StringComparison.Ordinal)
+            .Replace("\r", "\\r", StringComparison.Ordinal)
+            .Replace("\t", "\\t", StringComparison.Ordinal);
 
     /// <summary>
     /// The launcher icon copied next to the executable (Assets/app-icon.ico). No icon
