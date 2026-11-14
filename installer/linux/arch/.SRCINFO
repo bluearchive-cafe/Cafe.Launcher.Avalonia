@@ -1,6 +1,6 @@
 pkgbase = cafe-launcher
 	pkgdesc = Cross-platform launcher for Blue Archive
-	pkgver = 1.4.0beta.1
+	pkgver = 1.5.0beta.1
 	pkgrel = 1
 	url = https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia
 	arch = x86_64
@@ -27,7 +27,7 @@ pkgbase = cafe-launcher
 	depends = mpv
 	options = !strip
 	options = !debug
-	source = cafe-launcher-source::git+https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia.git#tag=v1.4.0-beta.1
+	source = cafe-launcher-source::git+https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia.git#tag=v1.5.0-beta.1
 	sha256sums = SKIP
 
 pkgname = cafe-launcher
