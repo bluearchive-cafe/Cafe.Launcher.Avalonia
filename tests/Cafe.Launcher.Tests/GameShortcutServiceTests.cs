@@ -538,6 +538,37 @@ public sealed class GameShortcutServiceTests : IDisposable
             lines);
     }
 
+    [Theory]
+    [InlineData("%", "%%")]
+    [InlineData("\"", "\\\\\"")]
+    [InlineData("\\", "\\\\\\\\")]
+    [InlineData("$", "\\\\$")]
+    [InlineData("`", "\\\\`")]
+    [InlineData("\n", "\\n")]
+    [InlineData("\r", "\\r")]
+    [InlineData("\t", "\\t")]
+    public void BuildDesktopEntry_WhenPathHasReservedCharacters_EscapesBothParsingLayers(string character, string escaped)
+    {
+        var content = GameShortcutService.BuildDesktopEntry("Blue Archive",
+            "/games/a" + character + "b/Cafe.Launcher", null);
+
+        var prefix = character == "%" ? "/usr/bin/env -- " : "";
+        Assert.Contains($"Exec={prefix}\"/games/a{escaped}b/Cafe.Launcher\" {Program.LaunchGameArgument}",
+            content, StringComparison.Ordinal);
+        Assert.Equal(6, content.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length);
+    }
+
+    [Fact]
+    public void BuildDesktopEntry_WhenNameOrIconHasControlCharacters_DoesNotInjectKeys()
+    {
+        var content = GameShortcutService.BuildDesktopEntry("Blue\nTerminal=true", "/games/Cafe.Launcher",
+            "/games/icon\\name\nTerminal=true.ico");
+
+        Assert.Contains("Name=Blue\\nTerminal=true", content, StringComparison.Ordinal);
+        Assert.Contains("Icon=/games/icon\\\\name\\nTerminal=true.ico", content, StringComparison.Ordinal);
+        Assert.DoesNotContain("\nTerminal=true", content, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void BuildDesktopEntry_WhenIconMissing_OmitsIconLine()
     {
