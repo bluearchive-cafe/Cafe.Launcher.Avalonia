@@ -234,6 +234,24 @@ Assert.Equal(DownloadStopReason.UserRequested, context.Backend.LastStopReason);
     }
 
     [Fact]
+    public void OpenDataDirectory_WhenShellOpenerIsMissing_DoesNotEscapeCommand()
+    {
+        using var context = CreateContext();
+        var attempted = false;
+        var viewModel = new WindowChromeViewModel(LauncherProfiles.Cafe, LauncherProfiles.BlueArchiveJapan,
+            tempDir.DataRoot, context.Settings, context.RemoteContent, context.Dialogs, context.Operations,
+            context.Debug, _ => { }, path => ShellFolderOpener.OpenInFileManager(path, _ =>
+            {
+                attempted = true;
+                throw new System.ComponentModel.Win32Exception(2);
+            }));
+
+        viewModel.OpenDataDirectoryCommand.Execute(null);
+
+        Assert.True(attempted);
+    }
+
+    [Fact]
     public void ExecuteRestoreWindow_WhenMotionReduced_DoesNotStartCarousel()
     {
         using var context = CreateContext();

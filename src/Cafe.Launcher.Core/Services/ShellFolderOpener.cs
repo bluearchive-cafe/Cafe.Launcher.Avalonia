@@ -1,5 +1,7 @@
 using System;
 using System.Diagnostics;
+using System.ComponentModel;
+using System.IO;
 
 namespace Cafe.Launcher.Core.Services;
 
@@ -16,9 +18,12 @@ public static class ShellFolderOpener
     /// Opens the directory in the OS file manager. Windows pins explorer.exe so the
     /// folder always opens in Explorer regardless of default-handler registration;
     /// other platforms hand the path to the shell. Returns whether the launched
-    /// process reported success; failures of Process.Start propagate to the caller.
+    /// process was created; a missing or unavailable shell opener returns false instead of escaping to the UI dispatcher.
     /// </summary>
-    public static bool OpenInFileManager(string directory)
+    public static bool OpenInFileManager(string directory) => OpenInFileManager(directory, Process.Start);
+
+    /// <summary>Test seam for shell-launch failures without changing PATH or starting a file manager.</summary>
+    internal static bool OpenInFileManager(string directory, Func<ProcessStartInfo, Process?> startProcess)
     {
         var startInfo = OperatingSystem.IsWindows()
             ? new ProcessStartInfo
@@ -33,6 +38,15 @@ public static class ShellFolderOpener
                 UseShellExecute = true
             };
 
-        return Process.Start(startInfo) is not null;
+        try
+        {
+            using var process = startProcess(startInfo);
+            return process is not null;
+        }
+        catch (Exception exception) when (exception is Win32Exception or InvalidOperationException
+            or IOException or UnauthorizedAccessException or NotSupportedException)
+        {
+            return false;
+        }
     }
 }
