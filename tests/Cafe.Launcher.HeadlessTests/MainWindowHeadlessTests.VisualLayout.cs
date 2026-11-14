@@ -14,62 +14,66 @@ using Cafe.Launcher.UI.Features.SetupWizard;
 using Cafe.Launcher.UI.Helpers;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
+using Cafe.Launcher.UI.Views;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cafe.Launcher.HeadlessTests;
 
 public sealed partial class MainWindowHeadlessTests
 {
-    public static TheoryData<string, double> SettingsHeaderCases
-    {
-        get
-        {
-            var cases = new TheoryData<string, double>();
-            foreach (var language in new[] { LauncherLanguages.English, LauncherLanguages.SimplifiedChinese, LauncherLanguages.TraditionalChinese, LauncherLanguages.Japanese })
-            {
-                foreach (var scale in new[] { 1d, 1.5d, 2d })
-                {
-                    cases.Add(language, scale);
-                }
-            }
-
-            return cases;
-        }
-    }
-
     [AvaloniaTheory]
-    [MemberData(nameof(SettingsHeaderCases))]
-    public void Visual_SettingsHeader_TitlesAndCloseButtonShareVerticalCenter(string language, double scale)
+    [InlineData(LauncherLanguages.English)]
+    [InlineData(LauncherLanguages.SimplifiedChinese)]
+    [InlineData(LauncherLanguages.TraditionalChinese)]
+    [InlineData(LauncherLanguages.Japanese)]
+    public void Visual_SettingsHeader_TitlesAndCloseButtonShareVerticalCenter(string language)
     {
         using var context = CreateContext();
-        context.Window.Width = 1024;
-        context.Window.Height = 640;
+        var window = context.Window;
+        window.Width = 1024;
+        window.Height = 640;
         context.ViewModel.Shell.ApplyLanguage(language, hasSnapshot: false);
         OpenSettings(context);
-        var navigationHeader = context.Window.GetVisualDescendants().OfType<Border>()
+        Assert.Equal(new Size(1024, 640), window.ClientSize);
+        var overlay = window.GetVisualDescendants().OfType<MainWindowSettingsOverlay>().Single();
+        var navigation = overlay.FindControl<ListBox>("SettingsNavigation")!;
+        var navigationHeader = overlay.GetVisualDescendants().OfType<Border>()
             .Single(control => control.Classes.Contains("settings-navigation-header"));
         var settingsTitle = navigationHeader.GetVisualDescendants().OfType<TextBlock>()
             .Single(control => control.Classes.Contains("dialog-title"));
-        var categoryTitle = context.Window.GetVisualDescendants().OfType<TextBlock>()
+        var categoryTitle = overlay.GetVisualDescendants().OfType<TextBlock>()
             .Single(control => control.Classes.Contains("category-title"));
-        var close = context.Window.GetVisualDescendants().OfType<Button>()
+        var close = overlay.GetVisualDescendants().OfType<Button>()
             .Single(control => control.Classes.Contains("content-header-action"));
-        foreach (var (category, _) in SettingsSections)
+        var settingsTitleSize = settingsTitle.FontSize;
+        var categoryTitleSize = categoryTitle.FontSize;
+        var settings = context.ViewModel.Settings;
+
+        // Visit every category at 100% first so its templates exist before scaling the window.
+        foreach (var scale in new[] { 1d, 1.5d, 2d })
         {
-            context.ViewModel.Settings.SelectedCategory = category;
-            if (category == SettingsCategoryCodes.Appearance)
+            using var typography = scale == 1d ? null : new TypographyScaleSnapshot(window, scale);
+            foreach (var (category, _) in SettingsSections)
             {
-                context.ViewModel.Settings.Appearance.IsAdvancedColorExpanded = true;
+                settings.SelectedCategory = category;
+                if (category == SettingsCategoryCodes.Appearance)
+                {
+                    settings.Appearance.IsAdvancedColorExpanded = true;
+                }
+                Dispatcher.UIThread.RunJobs();
+                var selectedCategory = Assert.IsType<SettingOption>(navigation.SelectedItem);
+                Assert.Equal(category, selectedCategory.Code);
+                Assert.Equal(selectedCategory.DisplayName, categoryTitle.Text);
+                Assert.Equal(settingsTitleSize * scale, settingsTitle.FontSize);
+                Assert.Equal(categoryTitleSize * scale, categoryTitle.FontSize);
+
+                var settingsCenter = settingsTitle.TranslatePoint(default, window)!.Value.Y + settingsTitle.Bounds.Height / 2;
+                var categoryCenter = categoryTitle.TranslatePoint(default, window)!.Value.Y + categoryTitle.Bounds.Height / 2;
+                var closeCenter = close.TranslatePoint(default, window)!.Value.Y + close.Bounds.Height / 2;
+                var geometry = $"{language}, {scale}, {category}: settings={settingsCenter}, category={categoryCenter}, close={closeCenter}";
+                Assert.True(Math.Abs(settingsCenter - categoryCenter) <= 1, geometry);
+                Assert.True(Math.Abs(categoryCenter - closeCenter) <= 1, geometry);
             }
-            Dispatcher.UIThread.RunJobs();
-            using var typography = new TypographyScaleSnapshot(context.Window, scale);
-            Dispatcher.UIThread.RunJobs();
-            var settingsCenter = settingsTitle.TranslatePoint(default, context.Window)!.Value.Y + settingsTitle.Bounds.Height / 2;
-            var categoryCenter = categoryTitle.TranslatePoint(default, context.Window)!.Value.Y + categoryTitle.Bounds.Height / 2;
-            var closeCenter = close.TranslatePoint(default, context.Window)!.Value.Y + close.Bounds.Height / 2;
-            var geometry = $"{language}, {scale}, {category}: settings={settingsCenter}, category={categoryCenter}, close={closeCenter}";
-            Assert.True(Math.Abs(settingsCenter - categoryCenter) <= 1, geometry);
-            Assert.True(Math.Abs(categoryCenter - closeCenter) <= 1, geometry);
         }
     }
 
@@ -110,61 +114,62 @@ public sealed partial class MainWindowHeadlessTests
         }
     }
 
-    [AvaloniaTheory]
-    [InlineData(1d)]
-    [InlineData(1.25d)]
-    [InlineData(1.5d)]
-    [InlineData(1.75d)]
-    [InlineData(2d)]
-    public async Task Visual_DecorativeBordersAndDividers_SnapToDevicePixels(double scale)
+    [AvaloniaFact]
+    public async Task Visual_DecorativeBordersAndDividers_SnapToDevicePixels()
     {
         using var context = CreateContext();
         PrepareGoldenWindow(context);
-        context.Window.Width = 1301;
-        context.Window.SetRenderScaling(scale);
-        Assert.Equal(scale, context.Window.RenderScaling);
+        var window = context.Window;
+        window.Width = 1301;
+        double[] scales = [1, 1.25, 1.5, 1.75, 2];
 
         OpenSettings(context);
         var topEdge = new Thickness(0, 1, 0, 0);
         foreach (var (category, _) in SettingsSections)
         {
             context.ViewModel.Settings.SelectedCategory = category;
-            Dispatcher.UIThread.RunJobs();
-            AssertBorders("settings-row-divider", topEdge);
+            AssertAtEachScale(scale => AssertBorders(scale, "settings-row-divider", topEdge));
         }
 
         context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.About;
-        Dispatcher.UIThread.RunJobs();
-        AssertBorders("about-identity-card", new Thickness(1));
-        AssertBorders("about-credit-divider", topEdge);
-        context.Window.GetVisualDescendants().OfType<Expander>()
+        AssertAtEachScale(scale =>
+        {
+            AssertBorders(scale, "about-identity-card", new Thickness(1));
+            AssertBorders(scale, "about-credit-divider", topEdge);
+        });
+        window.GetVisualDescendants().OfType<Expander>()
             .Single(expander => expander.Name == "AboutBuildExpander").IsExpanded = true;
-        Dispatcher.UIThread.RunJobs();
-        AssertBorders("about-kv-list", new Thickness(1));
-        AssertBorders("settings-row-divider", topEdge);
+        AssertAtEachScale(scale =>
+        {
+            AssertBorders(scale, "about-kv-list", new Thickness(1));
+            AssertBorders(scale, "settings-row-divider", topEdge);
+        });
         context.ViewModel.WindowChrome.ToggleSettingsCommand.Execute(null);
 
-        ShowResourcePanel(context);
-        AssertBorders("dialog-card", new Thickness(1));
-        AssertBorders("uid-section-divider", topEdge);
-        AssertBorders("resource-row-divider", topEdge);
-        AssertBorders("PART_FooterBand", topEdge);
+        context.ViewModel.ResourcePanel.IsResourcePanelVisible = true;
+        AssertAtEachScale(scale =>
+        {
+            AssertBorders(scale, "dialog-card", new Thickness(1));
+            AssertBorders(scale, "uid-section-divider", topEdge);
+            AssertBorders(scale, "resource-row-divider", topEdge);
+            AssertBorders(scale, "PART_FooterBand", topEdge);
+        });
         context.ViewModel.ResourcePanel.IsResourcePanelVisible = false;
 
         context.ViewModel.Operations.Uninstall.Open(UninstallSnapshot());
-        Dispatcher.UIThread.RunJobs();
-        AssertBorders("uninstall-divider");
-        AssertBorders("PART_FooterBand", topEdge);
+        AssertAtEachScale(scale =>
+        {
+            AssertBorders(scale, "uninstall-divider");
+            AssertBorders(scale, "PART_FooterBand", topEdge);
+        });
         context.ViewModel.Operations.Uninstall.CloseCommand.Execute(null);
 
         context.ViewModel.Dialogs.ShowSetupWizard();
         var wizard = context.ViewModel.Dialogs.SetupWizard;
-        Dispatcher.UIThread.RunJobs();
-        Assert.Equal(6, AssertBorders("wizard-divider"));
+        AssertAtEachScale(scale => Assert.Equal(6, AssertBorders(scale, "wizard-divider")));
         wizard.NextCommand.Execute(null);
         wizard.NextCommand.Execute(null);
-        Dispatcher.UIThread.RunJobs();
-        Assert.Equal(3, AssertBorders("wizard-divider"));
+        AssertAtEachScale(scale => Assert.Equal(3, AssertBorders(scale, "wizard-divider")));
         AcceptAgreement(wizard);
         wizard.NextCommand.Execute(null);
         wizard.GamePath = System.IO.Path.Combine(context.Directory.Path, "available-installation");
@@ -172,13 +177,39 @@ public sealed partial class MainWindowHeadlessTests
         wizard.NextCommand.Execute(null);
         wizard.NextCommand.Execute(null);
         wizard.NextCommand.Execute(null);
-        Dispatcher.UIThread.RunJobs();
         Assert.True(wizard.IsLastStep);
-        Assert.Equal(2 + wizard.SummaryItems.Count(item => item.HasDivider), AssertBorders("wizard-divider"));
+        var summaryDividerCount = 2 + wizard.SummaryItems.Count(item => item.HasDivider);
+        AssertAtEachScale(scale => Assert.Equal(summaryDividerCount, AssertBorders(scale, "wizard-divider")));
 
-        int AssertBorders(string name, Thickness? thickness = null)
+        void AssertAtEachScale(Action<double> assertLayout)
         {
-            var borders = context.Window.GetVisualDescendants().OfType<Border>()
+            foreach (var scale in scales)
+            {
+                if (window.RenderScaling != scale)
+                {
+                    // A shown headless window drains layout and renders Skia frames
+                    // on every scaling change (~200 ms per switch here). Hiding
+                    // skips the renders; Show still runs the scaling-changed
+                    // layout pass, like a freshly shown surface.
+                    window.Hide();
+                    window.SetRenderScaling(scale);
+                    window.Show();
+                }
+                else
+                {
+                    Dispatcher.UIThread.RunJobs();
+                }
+                Assert.Equal(scale, window.RenderScaling);
+                assertLayout(scale);
+            }
+
+            // Continue from the current DPI when the next surface becomes visible.
+            Array.Reverse(scales);
+        }
+
+        int AssertBorders(double scale, string name, Thickness? thickness = null)
+        {
+            var borders = window.GetVisualDescendants().OfType<Border>()
                 .Where(border => border.IsEffectivelyVisible && (border.Name == name || border.Classes.Contains(name)))
                 .ToArray();
             Assert.NotEmpty(borders);
@@ -194,7 +225,7 @@ public sealed partial class MainWindowHeadlessTests
                     Assert.Equal(1d, border.Height);
                 }
 
-                var origin = border.TranslatePoint(default, context.Window)!.Value;
+                var origin = border.TranslatePoint(default, window)!.Value;
                 foreach (var edge in new[] { origin.X, origin.Y, origin.X + border.Bounds.Width, origin.Y + border.Bounds.Height })
                 {
                     var pixel = edge * scale;
@@ -369,21 +400,15 @@ public sealed partial class MainWindowHeadlessTests
         }
     }
 
-    public static TheoryData<string, int, int, double, bool> VisualSettingsCases
+    public static TheoryData<string, bool> VisualSettingsCases
     {
         get
         {
-            var cases = new TheoryData<string, int, int, double, bool>();
+            var cases = new TheoryData<string, bool>();
             foreach (var language in new[] { LauncherLanguages.English, LauncherLanguages.SimplifiedChinese, LauncherLanguages.TraditionalChinese, LauncherLanguages.Japanese })
             {
-                foreach (var (width, height) in new[] { (1300, 754), (1024, 640) })
-                {
-                    foreach (var scale in new[] { 1d, 1.25, 1.5 })
-                    {
-                        cases.Add(language, width, height, scale, false);
-                        cases.Add(language, width, height, scale, true);
-                    }
-                }
+                cases.Add(language, false);
+                cases.Add(language, true);
             }
 
             return cases;
@@ -392,49 +417,76 @@ public sealed partial class MainWindowHeadlessTests
 
     [AvaloniaTheory]
     [MemberData(nameof(VisualSettingsCases))]
-    public void Visual_Settings_AllCategoriesKeepCopyAndActionsSeparate(string language, int width, int height, double scale, bool isDark)
+    public void Visual_Settings_AllCategoriesKeepCopyAndActionsSeparate(string language, bool isDark)
     {
-        using var variant = ThemeVariantSnapshot.Capture(isDark ? ThemeVariant.Dark : ThemeVariant.Light);
+        var theme = isDark ? ThemeVariant.Dark : ThemeVariant.Light;
+        using var variant = ThemeVariantSnapshot.Capture(theme);
         using var context = CreateContext();
-        context.Window.Width = width;
-        context.Window.Height = height;
+        var window = context.Window;
+        var sizes = new[] { (Width: 1300, Height: 754), (Width: 1024, Height: 640) };
+        window.Width = sizes[0].Width;
+        window.Height = sizes[0].Height;
         context.ViewModel.Shell.ApplyLanguage(language, hasSnapshot: false);
         context.Provider.GetRequiredService<ThemeApplier>().ApplyScheme(Color.Parse("#2E7DF6"), isDark: isDark);
         OpenSettings(context);
-        foreach (var (category, _) in SettingsSections)
+        Assert.Equal(theme, window.ActualThemeVariant);
+        var overlay = window.GetVisualDescendants().OfType<MainWindowSettingsOverlay>().Single();
+        foreach (var (category, sectionType) in SettingsSections)
         {
             context.ViewModel.Settings.SelectedCategory = category;
             Dispatcher.UIThread.RunJobs();
-            using var typography = new TypographyScaleSnapshot(context.Window, scale);
-            Dispatcher.UIThread.RunJobs();
-            var footerActions = context.Window.GetVisualDescendants().OfType<Button>()
-                .Where(button => button.IsEffectivelyVisible && button.Classes.Contains("dialog-action"))
-                .ToArray();
-            Assert.Equal(2, footerActions.Length);
-            Assert.Equal(footerActions[0].Bounds.Height, footerActions[1].Bounds.Height);
-            foreach (var row in context.Window.GetVisualDescendants().OfType<SettingRow>().Where(row => row.IsEffectivelyVisible))
+            var section = Assert.Single(overlay.GetVisualDescendants().OfType<UserControl>(),
+                control => control.GetType() == sectionType && control.IsEffectivelyVisible);
+
+            // Keep the section realized while exercising every font size and window size.
+            foreach (var scale in new[] { 1d, 1.25, 1.5 })
             {
-                var title = row.FindControl<TextBlock>("RowTitle")!;
-                var action = row.FindControl<ContentPresenter>("ActionPresenter")!;
-                Assert.Equal(14 * scale, title.FontSize);
-                var copy = title.GetVisualAncestors().OfType<StackPanel>().First();
-                Assert.True(copy.Bounds.Width > 0, $"{category}: {row.Title}");
-                Assert.True(action.Bounds.Right <= row.Bounds.Width + 1, $"{category}: {row.Title} action overflows");
-                foreach (var control in action.GetVisualDescendants().OfType<Control>().Where(control =>
-                             control.IsEffectivelyVisible && control is Button or ComboBox or TextBox or ToggleSwitch))
+                using var typography = new TypographyScaleSnapshot(window, scale);
+                foreach (var (width, height) in sizes)
                 {
-                    var point = control.TranslatePoint(default, row);
-                    Assert.NotNull(point);
-                    Assert.True(point.Value.X >= -1 && point.Value.X + control.Bounds.Width <= row.Bounds.Width + 1,
-                        $"{category}: {row.Title} {control.GetType().Name} overflows");
+                    window.Width = width;
+                    window.Height = height;
+                    Dispatcher.UIThread.RunJobs();
+                    Assert.Equal(new Size(width, height), window.ClientSize);
+                    AssertSettingsLayout(overlay, section, scale,
+                        $"{category}, {width}×{height}, scale {scale}");
                 }
-                Assert.True(
-                    Grid.GetRow(action) == 1 ? action.Bounds.Top >= copy.Bounds.Bottom : action.Bounds.Left >= copy.Bounds.Right,
-                    $"{category}: {row.Title} overlaps");
-                foreach (var text in copy.Children.OfType<TextBlock>().Where(text => text.IsVisible))
-                {
-                    Assert.True(text.TextLayout.Height <= text.Bounds.Height + 1, $"{category}: {text.Text} is clipped");
-                }
+
+                // Start the next scale at the current size so applying it needs no extra resize.
+                Array.Reverse(sizes);
+            }
+        }
+    }
+
+    private static void AssertSettingsLayout(MainWindowSettingsOverlay overlay, UserControl section, double scale, string scenario)
+    {
+        var footerActions = overlay.GetVisualDescendants().OfType<Button>()
+            .Where(button => button.IsEffectivelyVisible && button.Classes.Contains("dialog-action"))
+            .ToArray();
+        Assert.Equal(2, footerActions.Length);
+        Assert.Equal(footerActions[0].Bounds.Height, footerActions[1].Bounds.Height);
+        foreach (var row in section.GetVisualDescendants().OfType<SettingRow>().Where(row => row.IsEffectivelyVisible))
+        {
+            var title = row.FindControl<TextBlock>("RowTitle")!;
+            var action = row.FindControl<ContentPresenter>("ActionPresenter")!;
+            Assert.Equal(14 * scale, title.FontSize);
+            var copy = title.GetVisualAncestors().OfType<StackPanel>().First();
+            Assert.True(copy.Bounds.Width > 0, $"{scenario}: {row.Title}");
+            Assert.True(action.Bounds.Right <= row.Bounds.Width + 1, $"{scenario}: {row.Title} action overflows");
+            foreach (var control in action.GetVisualDescendants().OfType<Control>().Where(control =>
+                         control.IsEffectivelyVisible && control is Button or ComboBox or TextBox or ToggleSwitch))
+            {
+                var point = control.TranslatePoint(default, row);
+                Assert.NotNull(point);
+                Assert.True(point.Value.X >= -1 && point.Value.X + control.Bounds.Width <= row.Bounds.Width + 1,
+                    $"{scenario}: {row.Title} {control.GetType().Name} overflows");
+            }
+            Assert.True(
+                Grid.GetRow(action) == 1 ? action.Bounds.Top >= copy.Bounds.Bottom : action.Bounds.Left >= copy.Bounds.Right,
+                $"{scenario}: {row.Title} overlaps");
+            foreach (var text in copy.Children.OfType<TextBlock>().Where(text => text.IsVisible))
+            {
+                Assert.True(text.TextLayout.Height <= text.Bounds.Height + 1, $"{scenario}: {text.Text} is clipped");
             }
         }
     }

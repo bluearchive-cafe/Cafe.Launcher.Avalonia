@@ -2,6 +2,7 @@
 $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 $env:AVALONIA_TELEMETRY_OPTOUT = '1'
 $env:TESTINGPLATFORM_TELEMETRY_OPTOUT = '1'
+. "$PSScriptRoot/scripts/CoverageBranchCounts.ps1"
 $threshold = 0.50
 # 棘轮基线 = 最近一次全量 verify 实测值再留约 0.1–0.25pp 余量，不是「历史地板」。
 # 2026-09-23 全量重审实测：手写行 85.71%、分支 92.06%。三个 Linux 专属测试
@@ -12,9 +13,9 @@ $threshold = 0.50
 # 行约 86.3%（18,563–18,571/21,502）、分支 92.29%（3,291/3,566），同一基线仍成立。
 # 2026-11-10 全量实测：手写行 87.45%、分支 92.51%，旧基线 0.8560／0.9180 因此留下约
 # 1.85pp／0.71pp 余量，这段回退可以静默通过闸口。现基线按上一条规则上调到 0.8720／
-# 0.9240，余量回到约 0.25pp／0.11pp；排除范围与 50% 底线不变。
+# 0.9240，余量回到约 0.25pp／0.11pp。旧分支基线按条件是否命中统计，现改用分支下限。
 $lineBaseline = 0.8720
-$branchBaseline = 0.9240
+$branchBaseline = 0.7975
 $resultsRoot = (Join-Path (Join-Path $PSScriptRoot 'TestResults') 'Coverage').Replace('\', '/')
 
 $repositoryRoot = [IO.Path]::GetFullPath($PSScriptRoot)
@@ -99,12 +100,7 @@ foreach ($projectInfo in $projects) {
 
     $reportPath = Invoke-CoverageRun $projectInfo
     if (-not (Test-ReportHasData $reportPath)) {
-        # 收集器偶发在测试进程退出时来不及写完报告；等待后重试一次，
-        # 把一次性抖动从验证失败降级为多一次运行。
-        Write-Output "Coverage report for $($projectInfo.Name) has no data; retrying once."
-        Start-Sleep -Seconds 2
-        Remove-Item -LiteralPath $reportPath -ErrorAction SilentlyContinue
-        $reportPath = Invoke-CoverageRun $projectInfo
+        throw "Coverage report for $($projectInfo.Name) contains too few line records: '$reportPath'."
     }
 
     $reportPaths[$projectInfo.Name] = $reportPath
@@ -203,19 +199,10 @@ foreach ($reportPath in $reportPaths.Values) {
                     continue
                 }
 
-                foreach ($condition in @($line.conditions.condition)) {
-                    $branchKey = "$fullPath|$lineNumber|$($condition.number)|$($condition.type)"
-                    $coveragePercentText = [string]$condition.coverage
-                    $coveragePercent = [int]($coveragePercentText.TrimEnd('%'))
-                    $branchHit = $coveragePercent -gt 0
-
-                    if (-not $branchCoverage.ContainsKey($branchKey)) {
-                        $branchCoverage[$branchKey] = $branchHit
-                    }
-                    elseif ($branchHit) {
-                        $branchCoverage[$branchKey] = $true
-                    }
-                }
+                $branchKey = "$($package.name)|$($class.name)|$lineKey"
+                Add-CoverageBranchCount -Counts $branchCoverage -Key $branchKey `
+                    -ConditionCoverage $line.GetAttribute('condition-coverage') `
+                    -Location "${fullPath}:$lineNumber in '$reportPath'"
             }
         }
     }
@@ -238,16 +225,20 @@ foreach ($requiredRoot in $requiredAssemblyRoots) {
 $coveredLineCount = @($lineCoverage.Values | Where-Object { $_ }).Count
 $lineRatio = $coveredLineCount / $validLineCount
 
-$validBranchCount = $branchCoverage.Count
+$validBranchCount = 0
+$coveredBranchCount = 0
+foreach ($counter in $branchCoverage.Values) {
+    $validBranchCount += $counter.Total
+    $coveredBranchCount += $counter.Covered
+}
 if ($validBranchCount -eq 0) {
     throw 'Expected at least one handwritten C# branch in coverage reports.'
 }
 
-$coveredBranchCount = @($branchCoverage.Values | Where-Object { $_ }).Count
 $branchRatio = $coveredBranchCount / $validBranchCount
 
 Write-Output ("Handwritten C# line coverage: {0:N2}% ({1}/{2})" -f ($lineRatio * 100), $coveredLineCount, $validLineCount)
-Write-Output ("Handwritten C# branch coverage: {0:N2}% ({1}/{2})" -f ($branchRatio * 100), $coveredBranchCount, $validBranchCount)
+Write-Output ("Handwritten C# branch coverage lower bound: {0:N2}% ({1}/{2})" -f ($branchRatio * 100), $coveredBranchCount, $validBranchCount)
 # Printed every run so a baseline that has drifted below the measured floor is visible in the CI
 # log instead of only surfacing when a later change quietly spends the slack.
 Write-Output ("Baseline slack: lines {0:+0.00;-0.00;0.00}pp, branches {1:+0.00;-0.00;0.00}pp" -f (($lineRatio - $lineBaseline) * 100), (($branchRatio - $branchBaseline) * 100))

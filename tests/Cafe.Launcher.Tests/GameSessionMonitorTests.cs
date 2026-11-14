@@ -220,21 +220,32 @@ public sealed class GameSessionMonitorTests
     public async Task WatchStarting_WhenFamilyAppears_ClassifiesRunning()
     {
         var tracker = new FakeTracker();
-        var states = new List<GameSessionState>();
-        using var monitor = CreateMonitor(tracker, Scripted([], FamilyRuns()), CountingDelay(1));
-        monitor.StateChanged += () => states.Add(monitor.State);
+        var states = new CallbackRecorder<GameSessionState>();
+        var resumeScan = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var reachedRunning = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var delayCount = 0;
+        using var monitor = CreateMonitor(tracker, Scripted([], FamilyRuns()),
+            (_, token) => Interlocked.Increment(ref delayCount) == 1
+                ? resumeScan.Task.WaitAsync(token)
+                : Task.Delay(Timeout.InfiniteTimeSpan, token));
+        monitor.StateChanged += () =>
+        {
+            var state = monitor.State;
+            states.Add(state);
+            if (state == GameSessionState.Running)
+            {
+                reachedRunning.TrySetResult();
+            }
+        };
 
         monitor.BeginSession(GameRuntimeRunners.Wine, Family);
 
-        // 扫描移出调用线程后，Starting 与 Running 谁先被通知取决于看护线程与
-        // BeginSession 收尾的先后；终态通知必须是 Running，且不重复。
-        await WaitForStateAsync(monitor, GameSessionState.Running, "家族出现后应判定运行中");
-        await TestWait.UntilAsync(
-            () => states.Count > 0 && states[^1] == GameSessionState.Running,
-            TimeSpan.FromSeconds(5),
-            "进入运行中后应通知订阅者");
-        Assert.DoesNotContain(GameSessionState.Exited, states);
-        Assert.DoesNotContain(GameSessionState.StartFailed, states);
+        Assert.Equal(GameSessionState.Starting, Assert.Single(states));
+        resumeScan.SetResult();
+        await reachedRunning.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Equal(GameSessionState.Running, monitor.State);
+        Assert.Equal([GameSessionState.Starting, GameSessionState.Running], states);
     }
 
     [Fact]

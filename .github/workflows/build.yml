@@ -66,10 +66,7 @@ jobs:
           key: nuget-global-packages-${{ runner.os }}-${{ hashFiles('Directory.Packages.props') }}
           restore-keys: nuget-global-packages-${{ runner.os }}-
 
-      - name: Test
-        run: .\test.ps1 -Configuration Debug
-
-      - name: Coverage
+      - name: Test with coverage (Debug)
         run: .\coverage.ps1
 
       - name: Upload test and coverage reports
@@ -93,7 +90,7 @@ jobs:
       # Release 运行：它正是这类分歧的宿主，成本约 30 秒。无头套件的 Release 运行仍留在 release.yml
       # 的 installer 作业（它的分歧面窄、且整套跑一遍要一分钟以上）。
       #
-      # 这一步必须留在本作业所有 locked mode 还原（Debug 测试、coverage）之后：其还原把
+      # 这一步必须留在本作业带覆盖率的 Debug 测试之后：其还原把
       # packages.lock.json 的 RID 段改写为 win-x64，再跑任何 locked mode 的无 RID 还原都会
       # NU1004（2026-09-22 CI 复查：它原先排在 Coverage 之前，coverage.ps1 的还原因此失败）。
       - name: Test (Release)

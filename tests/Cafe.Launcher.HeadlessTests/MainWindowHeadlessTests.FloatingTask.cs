@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Cafe.Launcher.Core.Models;
@@ -15,11 +16,10 @@ namespace Cafe.Launcher.HeadlessTests;
 public sealed partial class MainWindowHeadlessTests
 {
     public static IEnumerable<object[]> FloatingTaskCases =>
-        from language in new[] { "en", "zh-Hans", "zh-Hant", "ja" }
+        from language in new[] { LauncherLanguages.English, LauncherLanguages.SimplifiedChinese,
+            LauncherLanguages.TraditionalChinese, LauncherLanguages.Japanese }
         from dark in new[] { false, true }
-        from scale in new[] { 1d, 1.25, 1.5 }
-        from minimum in new[] { false, true }
-        select new object[] { language, dark, scale, minimum };
+        select new object[] { language, dark };
 
     [AvaloniaTheory]
     [InlineData(false)]
@@ -60,14 +60,17 @@ public sealed partial class MainWindowHeadlessTests
 
     [AvaloniaTheory]
     [MemberData(nameof(FloatingTaskCases))]
-    public void GameTask_FloatsAboveSplitButtonWithoutMovingIt(string language, bool dark, double scale, bool minimum)
+    public void GameTask_FloatsAboveSplitButtonWithoutMovingIt(string language, bool dark)
     {
-        using var theme = ThemeVariantSnapshot.Capture(dark ? Avalonia.Styling.ThemeVariant.Dark : Avalonia.Styling.ThemeVariant.Light);
+        var themeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light;
+        using var theme = ThemeVariantSnapshot.Capture(themeVariant);
         using var context = CreateContext();
-        PrepareGoldenWindow(context, dark ? Avalonia.Styling.ThemeVariant.Dark : Avalonia.Styling.ThemeVariant.Light);
+        PrepareGoldenWindow(context, themeVariant);
         context.Provider.GetRequiredService<ThemeApplier>().ApplyThemeMode(dark ? ThemeModes.Dark : ThemeModes.Light);
-        context.Window.Width = minimum ? 1024 : 1300;
-        context.Window.Height = minimum ? 640 : 754;
+        var window = context.Window;
+        var sizes = new[] { (Width: 1300, Height: 754), (Width: 1024, Height: 640) };
+        window.Width = sizes[0].Width;
+        window.Height = sizes[0].Height;
         context.ViewModel.Shell.ApplyLanguage(language, hasSnapshot: false);
         context.ViewModel.Shell.IsBusy = false;
         context.ViewModel.Operations.ApplySnapshot(new LauncherStatusSnapshot { RuntimeState = LauncherRuntimeState.UpdateAvailable });
@@ -78,39 +81,64 @@ public sealed partial class MainWindowHeadlessTests
             BytesPerSecond = 18 * 1024 * 1024, CanPause = true,
             ActiveFiles = [new("GameData/Audio/JP/CharacterVoice.bundle", 12, 100, true)]
         });
-        context.Window.Show();
-        using var typography = new TypographyScaleSnapshot(context.Window, scale);
+        window.Show();
         Dispatcher.UIThread.RunJobs();
-        var card = context.Window.GetVisualDescendants().OfType<GameTaskCard>().Single();
-        var split = context.Window.GetVisualDescendants().OfType<SplitButton>().Single();
-        var initialButton = split.TranslatePoint(default, context.Window)!.Value;
-        Assert.True(card.IsEffectivelyVisible);
-        var background = PaintColor(card.FindControl<Border>("FloatingTaskCard")!.Background);
+        Assert.Equal(themeVariant, window.ActualThemeVariant);
+        var card = window.GetVisualDescendants().OfType<GameTaskCard>().Single();
+        var split = window.GetVisualDescendants().OfType<SplitButton>().Single();
         var title = card.GetVisualDescendants().OfType<TextBlock>().Single(text => text.Classes.Contains("progress-title"));
-        Assert.True(ColorUtils.GetContrastRatio(PaintColor(title.Foreground), background) >= 4.5);
-        Assert.Equal(dark, background.R < 128 && background.G < 128 && background.B < 128);
-        Assert.Null(context.ViewModel.ModalHost.Top);
-        AssertFloatingPlacement();
-        var size = card.FindControl<TextBlock>("TaskSizeSummary")!;
-        Assert.True(size.IsEffectivelyVisible);
-        Assert.Equal("3GB / 6GB", size.Text);
-        var speed = card.FindControl<TextBlock>("TaskDownloadSpeed")!;
-        Assert.Equal("18MB/s", speed.Text);
-        Assert.DoesNotContain(card.GetVisualDescendants(), control => control is ScrollViewer or ItemsControl);
-        context.ViewModel.Operations.PrimaryActionCommand.Execute(null);
-        Dispatcher.UIThread.RunJobs();
-        Assert.Equal(initialButton, split.TranslatePoint(default, context.Window)!.Value);
-        AssertFloatingPlacement();
-        foreach (var button in card.GetVisualDescendants().OfType<Button>().Where(button => button.IsEffectivelyVisible))
-            AssertControlInsideWindow(button, context.Window);
-
-        void AssertFloatingPlacement()
+        var titleFontSize = title.FontSize;
+        foreach (var scale in new[] { 1d, 1.25, 1.5 })
         {
-            AssertControlInsideWindow(card, context.Window);
-            var position = card.TranslatePoint(default, context.Window)!.Value;
-            var button = split.TranslatePoint(default, context.Window)!.Value;
-            Assert.InRange(Math.Abs(position.X + card.Bounds.Width - button.X - split.Bounds.Width), 0, 1);
-            Assert.InRange(button.Y - position.Y - card.Bounds.Height, 15, 17);
+            using var typography = scale == 1d ? null : new TypographyScaleSnapshot(window, scale);
+            foreach (var (width, height) in sizes)
+            {
+                window.Width = width;
+                window.Height = height;
+                Dispatcher.UIThread.RunJobs();
+                Assert.Equal(new Size(width, height), window.ClientSize);
+                Assert.Equal(titleFontSize * scale, title.FontSize);
+                AssertScenario($"{language}, {themeVariant}, {width}×{height}, scale {scale}");
+            }
+
+            // Start the next scale at the current size.
+            Array.Reverse(sizes);
+        }
+
+        void AssertScenario(string scenario)
+        {
+            var initialButton = split.TranslatePoint(default, window)!.Value;
+            Assert.True(card.IsEffectivelyVisible);
+            var background = PaintColor(card.FindControl<Border>("FloatingTaskCard")!.Background);
+            Assert.True(ColorUtils.GetContrastRatio(PaintColor(title.Foreground), background) >= 4.5);
+            Assert.Equal(dark, background.R < 128 && background.G < 128 && background.B < 128);
+            Assert.Null(context.ViewModel.ModalHost.Top);
+            AssertFloatingPlacement(scenario);
+            var size = card.FindControl<TextBlock>("TaskSizeSummary")!;
+            Assert.True(size.IsEffectivelyVisible);
+            Assert.Equal("3GB / 6GB", size.Text);
+            var speed = card.FindControl<TextBlock>("TaskDownloadSpeed")!;
+            Assert.Equal("18MB/s", speed.Text);
+            Assert.DoesNotContain(card.GetVisualDescendants(), control => control is ScrollViewer or ItemsControl);
+
+            context.ViewModel.Operations.PrimaryActionCommand.Execute(null);
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(initialButton == split.TranslatePoint(default, window)!.Value,
+                $"{scenario}: the primary action moved the split button from {initialButton}.");
+            AssertFloatingPlacement(scenario);
+            foreach (var button in card.GetVisualDescendants().OfType<Button>().Where(button => button.IsEffectivelyVisible))
+                AssertControlInsideWindow(button, window);
+        }
+
+        void AssertFloatingPlacement(string scenario)
+        {
+            AssertControlInsideWindow(card, window);
+            var position = card.TranslatePoint(default, window)!.Value;
+            var button = split.TranslatePoint(default, window)!.Value;
+            var rightEdgeDifference = Math.Abs(position.X + card.Bounds.Width - button.X - split.Bounds.Width);
+            var verticalGap = button.Y - position.Y - card.Bounds.Height;
+            Assert.True(rightEdgeDifference <= 1 && verticalGap is >= 15 and <= 17,
+                $"{scenario}: right-edge difference {rightEdgeDifference}, vertical gap {verticalGap}.");
         }
     }
 }

@@ -248,3 +248,5 @@
 ### 12.3 覆盖率
 
 覆盖率使用 Microsoft Code Coverage 的运行时分析器与 Cobertura 输出，保留生产程序集范围、设计器排除、四个程序集实际计数及基线检查。选择该收集器是因为 coverlet.MTP 静态插桩会跳过已被控制器加载的 UI 程序集。CLI 与迁移依据见 [MTP 迁移核对](docs/research/mtp-migration.md)，Headless 兼容性风险见[审计台账](CODEBASE_AUDIT.md)。
+
+行覆盖率按文件和行合并命中。分支覆盖率使用类级源码行的 `condition-coverage` 分子与分母。同一程序集、类、文件、行在两套报告中的分母必须一致，取较大的已覆盖数作为合并下限。Cobertura 只提供命中数量，互补分支可能提高实际覆盖率。行覆盖率与分支覆盖率下限均须达到 50% 底线和 `coverage.ps1` 中各自的棘轮基线。

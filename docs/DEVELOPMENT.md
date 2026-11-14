@@ -66,9 +66,19 @@ pwsh ./verify.ps1
 
 `test.ps1` 使用原生 Microsoft.Testing.Platform，保留五分钟无活动挂起保护，空筛选返回失败。类名和方法名筛选支持首尾 `*`。直接调用时使用 `dotnet test --project <csproj>` 与 `--filter-class`，并保留挂起保护参数；不用 VSTest 筛选参数。运行带 `--no-restore` 的命令前先还原依赖。
 
-覆盖率同时守住 line/branch 至少 50% 的底线与 `coverage.ps1` 中的较高基线；具体阈值以脚本为准。测试设施见[规范 §8](../PROJECT_CONVENTIONS.md#8-测试)。
+Windows CI 的 Debug 阶段通过 `coverage.ps1` 各运行一次 Unit 与 Headless，同时生成 TRX 与 Cobertura 报告。收集失败时直接报错并保留已生成的结果。覆盖率校验的范围、统计口径及门槛见[规范 §12.3](../PROJECT_CONVENTIONS.md#123-覆盖率)，测试设施见[规范 §8](../PROJECT_CONVENTIONS.md#8-测试)。
 
 XAML 或样式变更先运行 `UiStyleContractTests`，较大 UI 改动运行 `dev.ps1 ui`。只有有意改变视觉时才使用 `-UpdateGolden`；该参数不能与筛选或 `-Suite Unit` 混用。Headless 和黄金截图在 Windows 验证，Linux CI 只运行 Unit。`dotnet format` 按需用于本次触及的文件，不是 CI 门禁。
+
+设置页布局矩阵可用 `pwsh ./test.ps1 -Suite Headless -FilterMethod '*Visual_Settings_AllCategoriesKeepCopyAndActionsSeparate'` 单独运行。每个语言和主题组合使用独立窗口，在窗口内遍历两档尺寸、三档文字缩放和六个设置分类。
+
+设置下拉菜单矩阵可用 `pwsh ./test.ps1 -Suite Headless -FilterMethod '*SettingsSelect_AllCategoriesLanguagesAndTextScales_KeepChecksAndReadableRows'` 单独运行。每种语言使用一个窗口验证亮暗主题，每个分类依次验证 100%、150%、200% 字号下的真实下拉菜单。
+
+设置页标题对齐矩阵可用 `pwsh ./test.ps1 -Suite Headless -FilterMethod '*Visual_SettingsHeader_TitlesAndCloseButtonShareVerticalCenter'` 单独运行。每种语言复用一个 1024×640 窗口，在 100%、150%、200% 字号下遍历全部六个设置分类。
+
+任务悬浮卡片布局矩阵可用 `pwsh ./test.ps1 -Suite Headless -FilterMethod '*GameTask_FloatsAboveSplitButtonWithoutMovingIt'` 单独运行。每个语言和主题组合复用一个窗口，在两档尺寸和 100%、125%、150% 字号下检查主操作执行前后的卡片与拆分按钮位置。
+
+描边和分隔线的像素对齐可用 `pwsh ./test.ps1 -Suite Headless -FilterMethod '*Visual_DecorativeBordersAndDividers_SnapToDevicePixels'` 单独检查。测试复用一个窗口，每个界面状态依次检查 100%、125%、150%、175%、200% 显示缩放下的边界坐标；切换缩放时先隐藏窗口，跳过显示状态下的 Skia 整帧渲染，重新显示仍会按新 DPI 触发布局。
 
 ## 视频背景运行库与专项验证
 

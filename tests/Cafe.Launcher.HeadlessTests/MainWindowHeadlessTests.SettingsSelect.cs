@@ -22,37 +22,52 @@ namespace Cafe.Launcher.HeadlessTests;
 public sealed partial class MainWindowHeadlessTests
 {
     [AvaloniaTheory]
-    [InlineData(LauncherLanguages.English, false)]
-    [InlineData(LauncherLanguages.English, true)]
-    [InlineData(LauncherLanguages.SimplifiedChinese, false)]
-    [InlineData(LauncherLanguages.SimplifiedChinese, true)]
-    [InlineData(LauncherLanguages.TraditionalChinese, false)]
-    [InlineData(LauncherLanguages.TraditionalChinese, true)]
-    [InlineData(LauncherLanguages.Japanese, false)]
-    [InlineData(LauncherLanguages.Japanese, true)]
-    public void SettingsSelect_AllCategoriesLanguagesAndTextScales_KeepChecksAndReadableRows(string language, bool dark)
+    [InlineData(LauncherLanguages.English)]
+    [InlineData(LauncherLanguages.SimplifiedChinese)]
+    [InlineData(LauncherLanguages.TraditionalChinese)]
+    [InlineData(LauncherLanguages.Japanese)]
+    public async Task SettingsSelect_AllCategoriesLanguagesAndTextScales_KeepChecksAndReadableRows(string language)
     {
-        using var variant = ThemeVariantSnapshot.Capture(dark ? ThemeVariant.Dark : ThemeVariant.Light);
+        using var variant = ThemeVariantSnapshot.Capture(ThemeVariant.Light);
         using var context = CreateContext();
-        PrepareGoldenWindow(context, dark ? ThemeVariant.Dark : ThemeVariant.Light);
+        PrepareGoldenWindow(context);
         context.ViewModel.Shell.ApplyLanguage(language, hasSnapshot: false);
         OpenSettings(context);
-        context.ViewModel.Settings.Editor.Current.ThemeMode = dark ? ThemeModes.Dark : ThemeModes.Light;
-        context.ViewModel.Settings.Editor.Current.ThemeColorMode = ThemeColorModes.Wallpaper;
-        context.ViewModel.Settings.Appearance.IsAdvancedColorExpanded = true;
-        foreach (var scale in new[] { 1d, 1.5, 2d })
+        var settings = context.ViewModel.Settings;
+        var overlay = context.Window.GetVisualDescendants().OfType<MainWindowSettingsOverlay>().Single();
+        settings.Editor.Current.ThemeMode = ThemeModes.Light;
+        settings.Editor.Current.ThemeColorMode = ThemeColorModes.Wallpaper;
+        settings.Appearance.IsAdvancedColorExpanded = true;
+        await settings.Appearance.PendingThemeRefresh.WaitAsync(TimeSpan.FromSeconds(5));
+
+        foreach (var (mode, theme) in new[] { (ThemeModes.Light, ThemeVariant.Light), (ThemeModes.Dark, ThemeVariant.Dark) })
         {
-            var visited = 0;
-            foreach (var (category, sectionType) in SettingsSections)
+            settings.Editor.Current.ThemeMode = mode;
+            context.Provider.GetRequiredService<ThemeApplier>().ApplyThemeMode(mode);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(theme, context.Window.ActualThemeVariant);
+            AssertSettingsSelectRows(context, overlay, theme);
+        }
+    }
+
+    private static void AssertSettingsSelectRows(TestContext context, MainWindowSettingsOverlay overlay, ThemeVariant theme)
+    {
+        double[] scales = [1, 1.5, 2];
+        var visitsByScale = new int[scales.Length];
+        foreach (var (category, sectionType) in SettingsSections)
+        {
+            context.ViewModel.Settings.SelectedCategory = category;
+            Dispatcher.UIThread.RunJobs();
+            var section = Assert.Single(overlay.GetVisualDescendants().OfType<UserControl>(),
+                control => control.GetType() == sectionType && control.IsEffectivelyVisible);
+            // Keep the selected section and its templates realized for all font sizes.
+            for (var scaleIndex = 0; scaleIndex < scales.Length; scaleIndex++)
             {
-                context.ViewModel.Settings.SelectedCategory = category;
-                Dispatcher.UIThread.RunJobs();
-                var section = context.Window.GetVisualDescendants().OfType<UserControl>()
-                    .Single(control => control.GetType() == sectionType);
-                using var typography = new TypographyScaleSnapshot(section, scale);
+                var scale = scales[scaleIndex];
+                using var typography = scale == 1d ? null : new TypographyScaleSnapshot(section, scale);
                 foreach (var combo in section.GetVisualDescendants().OfType<ComboBox>().Where(control => control.IsEffectivelyVisible))
                 {
-                    visited++;
+                    visitsByScale[scaleIndex]++;
                     combo.BringIntoView();
                     Dispatcher.UIThread.RunJobs();
                     var bounds = combo.Bounds;
@@ -62,9 +77,12 @@ public sealed partial class MainWindowHeadlessTests
                     popup.ShouldUseOverlayLayer = true;
                     combo.IsDropDownOpen = true;
                     Dispatcher.UIThread.RunJobs();
-                    using (var popupTypography = new TypographyScaleSnapshot(popup.Child!, scale))
+                    using (var popupTypography = scale == 1d ? null : new TypographyScaleSnapshot(popup.Child!, scale))
                     {
-                        Dispatcher.UIThread.RunJobs();
+                        if (popupTypography is not null)
+                        {
+                            Dispatcher.UIThread.RunJobs();
+                        }
                         var items = popup.Child!.GetVisualDescendants().OfType<ComboBoxItem>().ToArray();
                         Assert.NotEmpty(items);
                         foreach (var item in items)
@@ -78,7 +96,8 @@ public sealed partial class MainWindowHeadlessTests
                             Assert.Equal(14 * scale, TextElement.GetFontSize(text));
                             Assert.Equal(TextWrapping.Wrap, text.TextWrapping);
                             Assert.Equal(TextTrimming.None, text.TextTrimming);
-                            Assert.True(item.Bounds.Height >= text.DesiredSize.Height + 16 - 1);
+                            Assert.True(item.Bounds.Height >= text.DesiredSize.Height + 16 - 1,
+                                $"{theme}, {category}, scale {scale}: '{text.Text}' is clipped.");
                         }
 
                         var scroller = Assert.Single(popup.Child!.GetVisualDescendants().OfType<ScrollViewer>());
@@ -92,9 +111,15 @@ public sealed partial class MainWindowHeadlessTests
                     Assert.Equal(bounds, combo.Bounds);
                 }
             }
+        }
 
-            // The Linux-only runtime selector is hidden on Windows; all other ten choices are exercised.
-            Assert.Equal(OperatingSystem.IsLinux() ? 11 : 10, visited);
+        Assert.Equal(theme, context.Window.ActualThemeVariant);
+        // The Linux-only runtime selector is hidden on Windows; all other ten choices are exercised.
+        var expected = OperatingSystem.IsLinux() ? 11 : 10;
+        for (var index = 0; index < scales.Length; index++)
+        {
+            Assert.True(visitsByScale[index] == expected,
+                $"{theme}, scale {scales[index]}: visited {visitsByScale[index]} selectors, expected {expected}.");
         }
     }
 
