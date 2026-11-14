@@ -52,7 +52,7 @@ Linux 的反作弊兼容性取决于发行版、运行器、Proton 和驱动。�
 1. 从 [Releases](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases) 下载对应平台的完整发行包。Windows 通常选择 `Cafe.Launcher_v<版本>_setup.exe`；便携版完整解压后运行 `Cafe.Launcher.exe`。
 2. 完成首次向导：语言、下载源、游戏安装路径、代理、确认。中文系统默认选择 Cafe 下载源，其他语言环境默认选择官方下载源。
 3. 已有游戏时选择现有 `BlueArchive_JP` 目录；尚未安装时选择基础目录，确认最终路径为 `YostarGames/BlueArchive_JP` 后安装。
-4. 游戏就绪后点击“开始游戏”。右侧下拉入口提供检查更新、打开目录、修复、卸载等操作；游戏桌面快捷方式仅支持 Windows。
+4. 游戏就绪后点击“开始游戏”。右侧下拉入口提供检查更新、打开目录、修复、卸载等操作；游戏桌面快捷方式支持 Windows 和 Linux（AppImage 需保留镜像文件）。
 
 完整步骤见[安装与首次使用](https://docs.bluearchive.cafe/cafe-launcher/installation)。切换下载源后按提示修复，使文件与所选清单一致。两个启动器使用同一游戏目录时，避免同时操作文件。
 

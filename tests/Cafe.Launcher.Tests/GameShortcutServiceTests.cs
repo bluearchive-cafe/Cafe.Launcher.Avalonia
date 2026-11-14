@@ -488,6 +488,35 @@ public sealed class GameShortcutServiceTests : IDisposable
     }
 
     [Fact]
+    public void ResolveLauncherExecutablePath_WhenAppImageExists_UsesPersistentImageAfterUnmount()
+    {
+        var mountedExecutable = CreateLauncher();
+        var appImage = Path.Combine(tempDirectory, "Cafe.Launcher.AppImage");
+        File.WriteAllText(appImage, "image");
+
+        var resolved = GameShortcutService.ResolveLauncherExecutablePath(mountedExecutable, appImage);
+        File.Delete(mountedExecutable);
+
+        Assert.Equal(appImage, resolved);
+        Assert.True(File.Exists(resolved));
+        Assert.Contains($"Exec=\"{appImage}\" {Program.LaunchGameArgument}",
+            GameShortcutService.BuildDesktopEntry("Blue Archive", resolved!, null), StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("missing.AppImage")]
+    public void ResolveLauncherExecutablePath_WhenAppImageIsUnavailable_KeepsExecutable(string? appImage)
+    {
+        var executable = CreateLauncher();
+
+        Assert.Equal(executable, GameShortcutService.ResolveLauncherExecutablePath(executable, appImage));
+        Assert.Equal(executable, GameShortcutService.ResolveLauncherExecutablePath(
+            executable, Path.Combine(tempDirectory, "missing.AppImage")));
+    }
+
+    [Fact]
     public void BuildDesktopEntry_WithLauncherPath_IncludesLaunchGameArgument()
     {
         var content = GameShortcutService.BuildDesktopEntry(
