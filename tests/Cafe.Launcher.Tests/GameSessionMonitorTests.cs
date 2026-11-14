@@ -217,6 +217,29 @@ public sealed class GameSessionMonitorTests
     }
 
     [Fact]
+    public async Task WatchStarting_WhenOnlyMarkedRunnerIsPresent_ReportsFailedHostExit()
+    {
+        var runner = new UnixProcessRecord(1, 0, "umu-run",
+            ["/usr/bin/umu-run", "/games/xldr_BlueArchiveOnline_JP_loader_x64.exe", "BlueArchive.exe"],
+            [], new Dictionary<string, string> { [UnixGameProcessMatcher.OwnershipMarkerKey] = "blue-archive-jp" });
+        var tracker = new FakeTracker();
+        var scanned = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var monitor = CreateMonitor(tracker, (names, _) =>
+        {
+            var running = LinuxProcessScanner.SelectRunning([runner], new RunningGameQuery(names));
+            scanned.TrySetResult();
+            return Task.FromResult(running);
+        }, (_, token) => Task.Delay(Timeout.InfiniteTimeSpan, token));
+
+        monitor.BeginSession(GameRuntimeRunners.Umu, Family);
+        await scanned.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(GameSessionState.Starting, monitor.State);
+
+        tracker.RaiseExited();
+        await WaitForStateAsync(monitor, GameSessionState.StartFailed, "运行器未启动游戏就退出应报告启动失败");
+    }
+
+    [Fact]
     public async Task WatchStarting_WhenFamilyAppears_ClassifiesRunning()
     {
         var tracker = new FakeTracker();

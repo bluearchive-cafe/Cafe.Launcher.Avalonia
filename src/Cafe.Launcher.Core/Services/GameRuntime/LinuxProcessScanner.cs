@@ -68,7 +68,7 @@ public static class LinuxProcessScanner
 
             // 决定「在不在跑」的是 matcher（标记/前缀/maps/comm）；这里只是分类展示名：
             // 名字能对上家族的进程按家族名报，对不上的（运行器辅助进程）只在没有家族名时兜底。
-            if (IsFamilyNamed(record, knownNames))
+            if (UnixGameProcessMatcher.GetFamilyName(record, knownNames) is not null)
             {
                 if (seenFamily.Add(match.DisplayName))
                 {
@@ -85,10 +85,6 @@ public static class LinuxProcessScanner
         // 但闸门宁可报得糙也不能漏拦，报法本身由调用方统一（DescribeForDisplay）。
         return familyNames.Count > 0 ? familyNames : strongNames;
     }
-
-    private static bool IsFamilyNamed(UnixProcessRecord record, IReadOnlyList<string> knownNames) =>
-        GameProcessNames.BelongsToFamily(record.Comm, knownNames)
-        || record.Arguments.Any(argument => GameProcessNames.BelongsToFamily(argument, knownNames));
 
     /// <summary>
     /// 读「正在跑的游戏实际用了哪个 Proton 构建」：扫带 PE 参数的进程，认启动器标记，取环境里的

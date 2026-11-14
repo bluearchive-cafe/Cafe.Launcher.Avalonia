@@ -102,18 +102,15 @@ internal static class UnixGameProcessMatcher
         && record.MappedFiles.Any(file => IsUnder(file, query.InstallDirectory));
 
     /// <summary>
-    /// 给用户看进程名时优先用不截断的来源：argv 里的游戏可执行文件名 → maps 里安装目录下的文件名
+    /// 给用户看进程名时优先用游戏进程自身的名字 → maps 里安装目录下的文件名
     /// → comm。返回值仍是不含扩展名的进程名，最终由 <see cref="GameProcessNames.DescribeForDisplay"/>
     /// 补 <c>.exe</c>。
     /// </summary>
     private static string DisplayName(UnixProcessRecord record, UnixGameProcessQuery query)
     {
-        foreach (var argument in record.Arguments)
+        if (GetFamilyName(record, query.KnownNames) is { } familyName)
         {
-            if (GameProcessNames.BelongsToFamily(argument, query.KnownNames))
-            {
-                return GameProcessNames.WithoutExtension(argument);
-            }
+            return familyName;
         }
 
         if (!string.IsNullOrWhiteSpace(query.InstallDirectory))
@@ -126,6 +123,31 @@ internal static class UnixGameProcessMatcher
         }
 
         return GameProcessNames.WithoutExtension(record.Comm);
+    }
+
+    /// <summary>只认进程自身的名字；运行器转发的游戏参数不能证明游戏已启动。</summary>
+    internal static string? GetFamilyName(UnixProcessRecord record, IReadOnlyList<string> knownNames)
+    {
+        if (GameProcessNames.BelongsToFamily(record.Comm, knownNames))
+        {
+            return GameProcessNames.WithoutExtension(record.Comm);
+        }
+
+        if (record.Arguments.Count == 0)
+        {
+            return null;
+        }
+
+        var executable = record.Arguments[0];
+        if (GameProcessNames.WithoutExtension(executable) is "wine-preloader" or "wine64-preloader"
+            && record.Arguments.Count > 1)
+        {
+            executable = record.Arguments[1];
+        }
+
+        return GameProcessNames.BelongsToFamily(executable, knownNames)
+            ? GameProcessNames.WithoutExtension(executable)
+            : null;
     }
 
     /// <summary>
