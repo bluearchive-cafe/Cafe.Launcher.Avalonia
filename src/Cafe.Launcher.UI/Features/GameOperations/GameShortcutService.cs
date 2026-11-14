@@ -89,7 +89,7 @@ internal sealed class GameShortcutService : IGameShortcutService
             ShellFolderOpener.OpenInFileManager,
             OperatingSystem.IsWindows,
             OperatingSystem.IsLinux,
-            () => Environment.ProcessPath);
+            ResolveCurrentLauncherExecutablePath);
     }
 
     public GameShortcutService(YostarGameProfile gameProfile, LocalizationService localizer)
@@ -105,7 +105,7 @@ internal sealed class GameShortcutService : IGameShortcutService
             openDirectory,
             OperatingSystem.IsWindows,
             OperatingSystem.IsLinux,
-            () => Environment.ProcessPath))
+            ResolveCurrentLauncherExecutablePath))
     {
     }
 
@@ -121,6 +121,18 @@ internal sealed class GameShortcutService : IGameShortcutService
         isLinuxPlatform = environment.IsLinuxPlatform;
         launcherExecutablePath = environment.LauncherExecutablePath;
     }
+
+    private static string? ResolveCurrentLauncherExecutablePath() =>
+        ResolveLauncherExecutablePath(Environment.ProcessPath,
+            OperatingSystem.IsLinux() ? Environment.GetEnvironmentVariable("APPIMAGE") : null);
+
+    /// <summary>AppImage 快捷方式必须指向镜像文件，而非退出即消失的挂载目录。</summary>
+    internal static string? ResolveLauncherExecutablePath(string? processPath, string? appImagePath) =>
+        !string.IsNullOrWhiteSpace(appImagePath)
+        && Path.IsPathFullyQualified(appImagePath)
+        && File.Exists(appImagePath)
+            ? appImagePath
+            : processPath;
 
     public Task<GameShortcutResult> CreateDesktopShortcutAsync(LauncherStatusSnapshot snapshot) =>
         CreateShortcutInDirectoryAsync(snapshot, ResolveDesktopDirectory());

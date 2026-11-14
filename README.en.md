@@ -52,7 +52,7 @@ Linux anti-cheat compatibility depends on the distribution, runner, Proton build
 1. Download the complete package for your platform from [Releases](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases). Most Windows users can use `Cafe.Launcher_v<version>_setup.exe`; extract the entire portable ZIP before running `Cafe.Launcher.exe`.
 2. Complete the setup wizard: language, download source, game installation path, proxy, and confirmation. Chinese system languages default to Cafe; other languages default to Official.
 3. Select an existing `BlueArchive_JP` directory, or choose a base directory and confirm the final `YostarGames/BlueArchive_JP` path before installing.
-4. When ready, select **Start Game**. The adjacent dropdown provides update checks, the game directory, repair, uninstall, and other actions. Game desktop shortcuts currently require Windows.
+4. When ready, select **Start Game**. The adjacent dropdown provides update checks, the game directory, repair, uninstall, and other actions. Game desktop shortcuts support Windows and Linux (keep the AppImage file in place).
 
 See [Installation and First Run](https://docs.bluearchive.cafe/en/cafe-launcher/installation). After switching download sources, repair when prompted so files match the selected manifest. Avoid simultaneous file operations when sharing a directory with the official launcher.
 
