@@ -8,8 +8,8 @@ using System.Threading;
 namespace Cafe.Launcher.Core.Services.GameRuntime;
 
 /// <summary>
-/// Linux 上「游戏家族在不在跑」的扫描（P0-B）：枚举 <c>/proc</c>，先按 <c>comm</c>/<c>cmdline</c>
-/// 找候选，再读候选的 <c>environ</c> 认启动器写入的所有权标记。标记随 UMU/Proton 传给整族进程
+/// Linux 上「游戏家族在不在跑」的扫描（P0-B）：枚举 <c>/proc</c>，读取可访问进程的
+/// <c>environ</c> 认启动器写入的所有权标记，不按可执行文件后缀预过滤。标记随 UMU/Proton 传给整族进程
 /// （实测，见判据设计稿 §6），因此不依赖内核 15 字符截断的 <c>comm</c>，也能跨「启动器重启」
 /// 「宿主退出」认出上一次启动的游戏。
 /// </summary>
@@ -159,7 +159,6 @@ public static class LinuxProcessScanner
         string procRoot,
         CancellationToken cancellationToken)
     {
-        var knownNames = query.KnownExeNames;
         var readMaps = !string.IsNullOrWhiteSpace(query.InstallDirectory);
         foreach (var directory in Directory.EnumerateDirectories(procRoot))
         {
@@ -176,14 +175,9 @@ public static class LinuxProcessScanner
                 continue;
             }
 
-            // environ/maps 只对候选读：标记与安装目录归属只会出现在游戏家族进程上，而家族进程
-            // 必然带家族名或 PE 参数。maps 仅在需要安装目录归属时才读（它比其余字段大得多）。
-            var candidate = GameProcessNames.BelongsToFamily(comm, knownNames)
-                || arguments.Any(GameProcessNames.LooksLikeExecutable);
-            var environment = candidate
-                ? UnixProcessRecordParser.ParseEnvironment(ReadBytes(Path.Combine(directory, "environ")))
-                : EmptyEnvironment;
-            IReadOnlyList<string> mappedFiles = candidate && readMaps
+            // XignCode 的 .xem 和无 PE 参数的 Wine 辅助进程也可能占用游戏目录，不能按名字预过滤。
+            var environment = UnixProcessRecordParser.ParseEnvironment(ReadBytes(Path.Combine(directory, "environ")));
+            IReadOnlyList<string> mappedFiles = readMaps
                 ? UnixProcessRecordParser.ParseMappedFiles(ReadBytes(Path.Combine(directory, "maps")))
                 : [];
 
@@ -209,6 +203,4 @@ public static class LinuxProcessScanner
         }
     }
 
-    private static readonly IReadOnlyDictionary<string, string> EmptyEnvironment =
-        new Dictionary<string, string>(StringComparer.Ordinal);
 }

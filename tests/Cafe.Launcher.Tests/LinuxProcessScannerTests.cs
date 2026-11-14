@@ -35,6 +35,38 @@ public sealed class LinuxProcessScannerTests
         Assert.Equal(["BlueArchive"], LinuxProcessScanner.Scan(Query, directory.Path, CancellationToken.None));
     }
 
+    [Theory]
+    [InlineData("xxd-0.xem", true, false, "xxd-0.xem")]
+    [InlineData("wine64-preloader", false, true, "BlueArchive")]
+    [InlineData("unrelated", false, false, null)]
+    public void Scan_WhenProcessHasNoExeArgument_UsesOwnershipAndMappings(
+        string comm, bool marked, bool mapped, string? expected)
+    {
+        using var directory = TestDirectory.Create();
+        var process = directory.Sub("123");
+        Directory.CreateDirectory(process);
+        File.WriteAllText(Path.Combine(process, "comm"), comm);
+        File.WriteAllText(Path.Combine(process, "cmdline"), comm + "\0");
+        File.WriteAllText(Path.Combine(process, "environ"), marked
+            ? UnixGameProcessMatcher.OwnershipMarkerKey + "=blue-archive-jp\0"
+            : "");
+        File.WriteAllText(Path.Combine(process, "maps"), mapped
+            ? "1000-2000 r-xp 00000000 00:00 123 /games/BlueArchive/BlueArchive.exe\n"
+            : "");
+
+        var running = LinuxProcessScanner.Scan(
+            new RunningGameQuery(Family, "/games/BlueArchive"), directory.Path, CancellationToken.None);
+
+        if (expected is null)
+        {
+            Assert.Empty(running);
+        }
+        else
+        {
+            Assert.Equal([expected], running);
+        }
+    }
+
     [Fact]
     public void SelectRunning_PrefersFamilyNamesWhenBothMarkerAndFamilyMatch()
     {
