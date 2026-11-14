@@ -44,6 +44,39 @@ public sealed class ProtonBuildDiscoveryTests : IDisposable
     }
 
     [Fact]
+    public void Discover_WhenSteamRootsAreSymlinkAliases_ReturnsOneCanonicalBuild()
+    {
+        var steam = Path.Combine(tempDir, "Steam");
+        var tools = Path.Combine(steam, "compatibilitytools.d");
+        CreateBuild(tools, "GE-Proton9-1");
+        var rootAlias = Path.Combine(tempDir, "root");
+        var steamAlias = Path.Combine(tempDir, "steam-alias");
+        TestSymlinks.CreateDirectorySymbolicLinkOrSkip(rootAlias, steam);
+        TestSymlinks.CreateDirectorySymbolicLinkOrSkip(steamAlias, rootAlias);
+
+        var builds = new ProtonBuildDiscovery([
+            Path.Combine(rootAlias, "compatibilitytools.d"),
+            Path.Combine(steamAlias, "compatibilitytools.d"), tools]).Discover();
+
+        var build = Assert.Single(builds);
+        Assert.Equal("GE-Proton9-1", build.Name);
+        Assert.Equal(Path.Combine(tools, "GE-Proton9-1"), build.Path);
+    }
+
+    [Fact]
+    public void Discover_WhenBuildDirectoryIsASymlink_DeduplicatesItsTarget()
+    {
+        var tools = Path.Combine(tempDir, "compatibilitytools.d");
+        CreateBuild(tools, "GE-Proton9-1");
+        TestSymlinks.CreateDirectorySymbolicLinkOrSkip(
+            Path.Combine(tools, "alias"), Path.Combine(tools, "GE-Proton9-1"));
+
+        var build = Assert.Single(new ProtonBuildDiscovery([tools]).Discover());
+
+        Assert.Equal(Path.Combine(tools, "GE-Proton9-1"), build.Path);
+    }
+
+    [Fact]
     public void Discover_KeepsSameNamedBuildsFromDifferentSteamRoots()
     {
         var native = Path.Combine(tempDir, "native", "compatibilitytools.d");
