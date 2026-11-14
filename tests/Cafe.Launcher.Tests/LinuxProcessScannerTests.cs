@@ -83,6 +83,32 @@ public sealed class LinuxProcessScannerTests
         Assert.Equal(["BlueArchive"], running);
     }
 
+    [Theory]
+    [InlineData("umu-run")]
+    [InlineData("wine")]
+    [InlineData("wine64")]
+    [InlineData("python3")]
+    [InlineData("srt-bwrap")]
+    public void SelectRunning_WhenMarkedRunnerOnlyMentionsGameArguments_ReportsRunnerName(string runner)
+    {
+        var process = Record(runner,
+            ["/usr/bin/" + runner, "/games/xldr_BlueArchiveOnline_JP_loader_x64.exe", "BlueArchive.exe"],
+            environment: [(UnixGameProcessMatcher.OwnershipMarkerKey, "blue-archive-jp")]);
+
+        Assert.Equal([runner], LinuxProcessScanner.SelectRunning([process], Query));
+    }
+
+    [Theory]
+    [InlineData("wine-preloader")]
+    [InlineData("wine64-preloader")]
+    public void SelectRunning_WhenPreloaderExecutesGame_ReportsGameName(string preloader)
+    {
+        var process = Record(preloader, ["/usr/bin/" + preloader, "/games/BlueArchive.exe"],
+            environment: [(UnixGameProcessMatcher.OwnershipMarkerKey, "blue-archive-jp")]);
+
+        Assert.Equal(["BlueArchive"], LinuxProcessScanner.SelectRunning([process], Query));
+    }
+
     [Fact]
     public void SelectRunning_WhenOnlyTheOwnershipMarkerIsPresent_ReportsThatProcess()
     {
