@@ -26,31 +26,31 @@
       },
       "Microsoft.Testing.Extensions.HangDump": {
         "type": "Direct",
-        "requested": "[2.5.2, )",
-        "resolved": "2.5.2",
-        "contentHash": "fmflA6u6WozP6Eh1H8pwrGozgCzrFaYl3/twXjfPgVwS7zKak/khE13/KGXWMwkupQLxP/W4/U/o6OsyhG4b6w==",
+        "requested": "[2.5.3, )",
+        "resolved": "2.5.3",
+        "contentHash": "GoEUNX+/qTKD394NvLTHo+Vp/CNYc8Fi3VdM8UwTzkRXMWGL2dPzh5ha4Fc42aBsIeVjw4Z+IoSJ5/n82bGSOg==",
         "dependencies": {
           "Microsoft.Diagnostics.NETCore.Client": "0.2.607501",
-          "Microsoft.Testing.Platform": "[2.5.2, 3.0.0)"
+          "Microsoft.Testing.Platform": "[2.5.3, 3.0.0)"
         }
       },
       "Microsoft.Testing.Extensions.TrxReport": {
         "type": "Direct",
-        "requested": "[2.5.2, )",
-        "resolved": "2.5.2",
-        "contentHash": "Rk0LrXgGiS9yIOxmT+suGu4+R4F4qsvPhgEjQ+LEbUienq51AnLtLICfcpY0hjt5uon2RRbMPuJiHc6owW0lTA==",
+        "requested": "[2.5.3, )",
+        "resolved": "2.5.3",
+        "contentHash": "g+iSRKedpiZ9Kpkum1wJ3jWTeZhL+V/kmFHFT9IRhWDDZDSNPIlQCwS0kvn4f6NYtLHNUHdZLLqJ8lzi/ZEktg==",
         "dependencies": {
-          "Microsoft.Testing.Extensions.TrxReport.Abstractions": "2.5.2",
-          "Microsoft.Testing.Platform": "[2.5.2, 3.0.0)"
+          "Microsoft.Testing.Extensions.TrxReport.Abstractions": "2.5.3",
+          "Microsoft.Testing.Platform": "[2.5.3, 3.0.0)"
         }
       },
       "Microsoft.Testing.Platform.MSBuild": {
         "type": "Direct",
-        "requested": "[2.5.2, )",
-        "resolved": "2.5.2",
-        "contentHash": "Jey2v0hd7WHHa7pr6MRNKtA07FvxcOMTCtIhTI7uBZ/qR5m1mgCVCo5L1rtVAtqgMhGA205bUwq9+is4LiCzpw==",
+        "requested": "[2.5.3, )",
+        "resolved": "2.5.3",
+        "contentHash": "HmA8NReM+qPtk+CaYVT1WF24r0r0Xs1AXYItMZnjHysmv/5wtWvDamrIE8DCr/gCr4ZjptsmuV0ELoWHwY4l9w==",
         "dependencies": {
-          "Microsoft.Testing.Platform": "[2.5.2, 3.0.0)"
+          "Microsoft.Testing.Platform": "[2.5.3, 3.0.0)"
         }
       },
       "xunit.v3.mtp-v2": {
@@ -236,8 +236,8 @@
       },
       "Microsoft.Extensions.DependencyInjection.Abstractions": {
         "type": "Transitive",
-        "resolved": "10.0.14",
-        "contentHash": "QtpQzuSZVyTPCuHW058yCs9Nj0394uUkNyFHS813nOmK9UgUdBdaprJ5PPsBgsQIpxADTsTkbaMMonykem6qdw=="
+        "resolved": "10.0.15",
+        "contentHash": "KczR2nV7ooeimtZxAawPht/FJUHnX+uoWy7y4pba+iaRQBwUM2NwtiqZg+/FpZDHUf2RkkzveGkhMTWDNzmDUA=="
       },
       "Microsoft.Extensions.DependencyModel": {
         "type": "Transitive",
@@ -268,16 +268,16 @@
       },
       "Microsoft.Testing.Extensions.TrxReport.Abstractions": {
         "type": "Transitive",
-        "resolved": "2.5.2",
-        "contentHash": "+xTIaIU9H44GxOyjrfieMSZnxltGvleA3jCRtdEAzlXKb85pMmVYMLUv2JS8KwD+U2wQHUgvy5YfQfWoPEfVdQ==",
+        "resolved": "2.5.3",
+        "contentHash": "Z/7g5CX3v4lk60s+QT52PS8SRiu9zNJ7KkICSAOea6UqIzDeGg6blXZO35LF1HKLwa8nITNKKRwHjEFBDBUD4g==",
         "dependencies": {
-          "Microsoft.Testing.Platform": "[2.5.2, 3.0.0)"
+          "Microsoft.Testing.Platform": "[2.5.3, 3.0.0)"
         }
       },
       "Microsoft.Testing.Platform": {
         "type": "Transitive",
-        "resolved": "2.5.2",
-        "contentHash": "ocX0rgGY78dKfmZlZe4hB0/dvlh7wJgUAWS+KfwrqxB9DpNsjshnne9dppCKnFNEOkX4QYsrdUU++NInFPiCBw=="
+        "resolved": "2.5.3",
+        "contentHash": "JG78yapjF3r3GUj5UWv3m6r4L5hhdusumlhSoO+bkUakMW4kAInn4q3ulnNy1tqNLiwfumFoukdd+NVGbC3A7g=="
       },
       "Microsoft.Win32.Registry": {
         "type": "Transitive",
@@ -392,9 +392,9 @@
           "Cafe.Launcher.UI": "[1.0.0, )",
           "Cafe.Launcher.Updater.Core": "[1.0.0, )",
           "CommunityToolkit.Mvvm": "[8.4.2, )",
-          "MarkView.Avalonia": "[12.4.0, )",
+          "MarkView.Avalonia": "[12.4.1, )",
           "Material.Icons.Avalonia": "[3.0.2, )",
-          "Microsoft.Extensions.DependencyInjection": "[10.0.14, )",
+          "Microsoft.Extensions.DependencyInjection": "[10.0.15, )",
           "Serilog": "[4.4.0, )",
           "Serilog.Sinks.Async": "[2.1.0, )",
           "Serilog.Sinks.File": "[7.0.0, )",
@@ -405,7 +405,7 @@
         "type": "Project",
         "dependencies": {
           "Cafe.Launcher.Updater.Core": "[1.0.0, )",
-          "Microsoft.Extensions.DependencyInjection": "[10.0.14, )",
+          "Microsoft.Extensions.DependencyInjection": "[10.0.15, )",
           "Serilog": "[4.4.0, )",
           "Serilog.Sinks.Async": "[2.1.0, )",
           "Serilog.Sinks.File": "[7.0.0, )"
@@ -418,9 +418,9 @@
           "Avalonia.Controls.ColorPicker": "[12.1.6, )",
           "Cafe.Launcher.Core": "[1.0.0, )",
           "CommunityToolkit.Mvvm": "[8.4.2, )",
-          "MarkView.Avalonia": "[12.4.0, )",
+          "MarkView.Avalonia": "[12.4.1, )",
           "Material.Icons.Avalonia": "[3.0.2, )",
-          "Microsoft.Extensions.DependencyInjection": "[10.0.14, )",
+          "Microsoft.Extensions.DependencyInjection": "[10.0.15, )",
           "Shirasagi0012.MaterialColorUtilities": "[0.2.0, )"
         }
       },
@@ -489,9 +489,9 @@
       },
       "MarkView.Avalonia": {
         "type": "CentralTransitive",
-        "requested": "[12.4.0, )",
-        "resolved": "12.4.0",
-        "contentHash": "N8nwPEAqnEUNFfE7u3btmUN17bv9xxnkgaNnyTWQBPb0Lp8xTRSRKM6Pu2o59nGEvIKasnFbn6xiVq6uH+qnBg==",
+        "requested": "[12.4.1, )",
+        "resolved": "12.4.1",
+        "contentHash": "Gk48CFrq3iEtTmGynEk8ASSZXGA6RhUvUKPbsNoIKx6Vq8y8Qmlsd5yoMxRJgeqjOguboEnzytAy1u30zw0V5g==",
         "dependencies": {
           "Avalonia": "12.1.4",
           "Markdig": "1.4.1"
@@ -509,11 +509,11 @@
       },
       "Microsoft.Extensions.DependencyInjection": {
         "type": "CentralTransitive",
-        "requested": "[10.0.14, )",
-        "resolved": "10.0.14",
-        "contentHash": "2LzcuVjemeXR+WdY9wGIr8iGb7fYsDAit+IScxXX2XJnX0b++mWcE/WO6fEGIqhdMfSQM2ZS5JGMHYZix7YXZg==",
+        "requested": "[10.0.15, )",
+        "resolved": "10.0.15",
+        "contentHash": "7DUIgHeJpBs1RG0hYwWDOImXP03+uPrV5KtyUPxrZsiWadlg95aYijNKCZ2j2UmufQAmN6XEQfx4B/J6TuE7lg==",
         "dependencies": {
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.14"
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.15"
         }
       },
       "Serilog": {
