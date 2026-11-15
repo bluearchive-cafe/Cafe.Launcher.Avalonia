@@ -6,6 +6,7 @@ using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using Cafe.Launcher.UI.Constants;
 using Cafe.Launcher.UI.Features.GameOperations;
 using Cafe.Launcher.UI.Helpers;
@@ -2250,12 +2251,13 @@ Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
 
         public async Task<T?> GetJsonAsync<T>(
             Uri uri,
+            JsonTypeInfo<T> jsonTypeInfo,
             RemoteRequestOptions? options = null,
             CancellationToken cancellationToken = default)
         {
             RequestStarted.TrySetResult();
             await Release.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
-            return await inner.GetJsonAsync<T>(uri, options, cancellationToken).ConfigureAwait(false);
+            return await inner.GetJsonAsync(uri, jsonTypeInfo, options, cancellationToken).ConfigureAwait(false);
         }
 
         public Task<RemoteBody> GetStreamAsync(

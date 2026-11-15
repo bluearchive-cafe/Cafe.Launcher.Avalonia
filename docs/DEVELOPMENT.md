@@ -89,13 +89,15 @@ Windows x64 构建自动调用 [Restore-VideoBackgroundRuntime.ps1](../scripts/R
 
 Linux 随包 libmpv 的 ELF 依赖最高需要 glibc 2.35 与 `GLIBCXX_3.4.29`；若无法加载，会尝试系统固定位置的 libmpv。Ubuntu 24.04 的 libmpv 0.37 使用旧的背景色属性和截图命令参数，本地媒体安全限制、首帧与属性兼容由原生测试覆盖。媒体路径在传给 libmpv 前归一化为本地绝对路径，避免顶层 URL 绕过嵌套协议限制；安全选项设置失败时不跳过该限制。
 
-[Build-Distribution.ps1](../scripts/Build-Distribution.ps1) 按目标 RID 显式传递 `BackgroundVideoRid`，避免引用工程清除 `RuntimeIdentifier` 后误选构建机资源。Windows x64 更新助手在 Windows 主机上以 Native AOT 发布，需要 Visual Studio 的「使用 C++ 的桌面开发」工作负载及 Windows SDK。发布 CI 在 Windows 作业中生成便携 ZIP 和 Inno 安装包，两者从同一发布目录收录 `Cafe.Launcher.Updater.exe`。Windows ZIP 和安装器打包前都运行：
+[Build-Distribution.ps1](../scripts/Build-Distribution.ps1) 按目标 RID 显式传递 `BackgroundVideoRid`，避免引用工程清除 `RuntimeIdentifier` 后误选构建机资源。Windows x64 主程序和更新助手在 Windows 主机上以 Native AOT 发布，需要 Visual Studio 的「使用 C++ 的桌面开发」工作负载及 Windows SDK。发布 CI 在 Windows 作业中生成便携 ZIP 和 Inno 安装包，两者从同一发布目录收录 `Cafe.Launcher.exe` 和 `Cafe.Launcher.Updater.exe`。Windows ZIP 和安装器打包前都运行：
 
 ```powershell
 pwsh ./scripts/Test-WindowsPublishOutput.ps1 -PublishDir <发布目录>
 ```
 
-它检查主程序、更新助手、播放器、清单和许可证，缺失或哈希不符即失败。`native/libmpv/COPYING*` 固定使用 LF，保证跨平台校验同一字节序列。Debug 通常使用机器上已安装的 .NET，Release 自包含输出还带有运行时 DLL，不能用目录文件数量直接比较两者。
+Windows 游戏快捷方式通过原生 Shell Link COM 接口写入 `.lnk`。验证主程序的 Native AOT 发布产物时，应实际创建快捷方式并核对 `run.bat` 目标、游戏工作目录与图标。
+
+校验脚本检查主程序、更新助手、播放器、清单和许可证，也会拒绝包含旧托管产物的目录。使用 `-SkipPublish` 或单独调用安装器脚本时，需传入干净的 Native AOT 发布目录。`native/libmpv/COPYING*` 固定使用 LF，保证跨平台校验同一字节序列。Debug 通常使用本机安装的 .NET。macOS 和 Linux 的 Release 发布继续使用自包含 .NET。
 
 涉及播放器生命周期时执行生产场景复测：
 

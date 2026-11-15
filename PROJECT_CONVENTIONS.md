@@ -191,6 +191,7 @@
 
 ### 9.2 settings.json 兼容
 
+- 启动器的 JSON 序列化与反序列化使用各程序集拥有的源生成上下文。调用方将 `JsonTypeInfo<T>` 传给共享 HTTP 传输或原子文件存储，保留原有字段名、格式与兼容读取规则。
 - `settings.json` 字段名向后兼容：新增字段在 `LauncherSettings` 提供默认值；重命名/删除前明确旧 JSON 的读取策略；`LauncherSettingsService.NormalizeSettings()` 把未知或非法值兜底为有效默认值。
 - `LauncherSettings` 新增字段必须同步 `DeepClone()` 与 `ComparedProperties`。漏前者会浅拷贝，漏后者会让保存按钮不再跟踪该字段；`LauncherSettingsTests` 用反射守护两张清单。
 

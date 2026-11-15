@@ -56,6 +56,15 @@ public sealed class LocalInstallationStateStoreTests : IDisposable
         Assert.Equal("BlueArchive.exe", file.Path);
         Assert.Equal("4", file.Size);
         Assert.Equal("1234", file.Hash);
+
+        // The official launcher hashes these values in wire order.
+        using var manifestJson = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(gamePath, "manifest.json")));
+        var manifestRoot = manifestJson.RootElement;
+        Assert.Equal(["name", "version", "basis", "vc", "files"], manifestRoot.EnumerateObject().Select(p => p.Name));
+        Assert.Equal(["path", "hash", "size", "vc"], manifestRoot.GetProperty("files")[0].EnumerateObject().Select(p => p.Name));
+
+        using var configJson = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(gamePath, "game-launcher-config.json")));
+        Assert.Equal(["tag", "name", "params", "version", "vc"], configJson.RootElement.EnumerateObject().Select(p => p.Name));
     }
 
     [Fact]

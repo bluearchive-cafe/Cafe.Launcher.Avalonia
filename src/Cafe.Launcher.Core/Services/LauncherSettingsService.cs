@@ -29,7 +29,6 @@ internal sealed class LauncherSettingsService : ILauncherSettingsService, IDispo
     private readonly ILauncherDiagnostics? diagnostics;
     private readonly LauncherBuildIdentity? buildIdentity;
     private readonly Func<bool> isLinuxPlatform;
-    private static readonly JsonSerializerOptions jsonOptions = JsonDefaults.Indented;
 
     /// <summary>
     /// <paramref name="isLinuxPlatform"/> 仅供测试注入平台判定；生产用运行时平台。
@@ -120,7 +119,7 @@ internal sealed class LauncherSettingsService : ILauncherSettingsService, IDispo
             LauncherSettings? parsed = null;
             try
             {
-                parsed = JsonSerializer.Deserialize<LauncherSettings>(root, jsonOptions);
+                parsed = JsonSerializer.Deserialize(root, CoreStorageJsonContext.Default.LauncherSettings);
             }
             catch (JsonException exception)
             {
@@ -272,7 +271,7 @@ internal sealed class LauncherSettingsService : ILauncherSettingsService, IDispo
             await AtomicJsonFileStore.WriteAsync(
                 path,
                 normalized,
-                jsonOptions,
+                CoreStorageJsonContext.Default.LauncherSettings,
                 cancellationToken).ConfigureAwait(false);
             return normalized;
         }

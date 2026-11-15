@@ -230,7 +230,6 @@ public sealed class AssemblySplitContractTests
             "GamePathValidator", // UI operation workflows must enforce the Core filesystem safety contract.
             "GameProcessNames", // UI launch and uninstall derive the same executable family.
             "HttpClientLease", // IRemoteHttpClientLeaseSource returns this explicit resource owner.
-            "JsonDefaults", // UI-owned state files retain the Core serializer policy.
             "LauncherAgreement", // UI setup wizard reads and records the agreed document version.
             "LauncherConstants", // Shared product and window contracts consumed by UI and host.
             "LauncherCoreServiceCollectionExtensions", // Host composition entry point.

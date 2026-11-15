@@ -310,24 +310,29 @@ internal sealed class CompatibilityEnvironmentPrecheck
                 Directory.CreateDirectory(directory);
             }
 
-            var payload = new
-            {
-                prefixPath = report.PrefixPath,
-                checkedAt = report.CheckedAt.ToString("O", CultureInfo.InvariantCulture),
-                distribution = report.Distribution,
-                caseSensitive = report.CaseSensitive,
-                findings = report.Findings.Select(finding => new
-                {
-                    code = finding.Code.ToString(),
-                    severity = finding.Severity.ToString(),
-                    detail = finding.Detail
-                })
-            };
-            File.WriteAllText(ReportPath, JsonSerializer.Serialize(payload, JsonDefaults.Indented));
+            var payload = new CompatibilityReportDocument(
+                report.PrefixPath,
+                report.CheckedAt.ToString("O", CultureInfo.InvariantCulture),
+                report.Distribution,
+                report.CaseSensitive,
+                report.Findings.Select(finding => new FindingDocument(
+                    finding.Code.ToString(),
+                    finding.Severity.ToString(),
+                    finding.Detail)));
+            File.WriteAllText(ReportPath, JsonSerializer.Serialize(payload, GameRuntimeJsonContext.Default.CompatibilityReportDocument));
         }
         catch (Exception exception) when (StorageFailure.IsRecoverable(exception))
         {
             // 报告是诊断增强，写不进去不影响启动。
         }
     }
+
+    internal sealed record CompatibilityReportDocument(
+        string PrefixPath,
+        string CheckedAt,
+        string? Distribution,
+        bool? CaseSensitive,
+        IEnumerable<FindingDocument> Findings);
+
+    internal sealed record FindingDocument(string Code, string Severity, string Detail);
 }

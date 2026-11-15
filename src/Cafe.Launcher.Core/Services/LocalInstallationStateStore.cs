@@ -20,7 +20,6 @@ namespace Cafe.Launcher.Core.Services;
 /// </summary>
 internal sealed class LocalInstallationStateStore : ILocalInstallationStateStore
 {
-    private static readonly JsonSerializerOptions JsonOptions = JsonDefaults.Indented;
 
     private readonly ConcurrentDictionary<string, PathLockEntry> pathLocks =
         new(StringComparer.OrdinalIgnoreCase);
@@ -120,11 +119,11 @@ internal sealed class LocalInstallationStateStore : ILocalInstallationStateStore
 
             await File.WriteAllTextAsync(
                 tempManifestPath,
-                JsonSerializer.Serialize(manifest, JsonOptions),
+                JsonSerializer.Serialize(manifest, CoreStorageJsonContext.Default.LocalManifest),
                 cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(
                 tempConfigPath,
-                JsonSerializer.Serialize(config, JsonOptions),
+                JsonSerializer.Serialize(config, CoreStorageJsonContext.Default.GameLauncherConfig),
                 cancellationToken).ConfigureAwait(false);
 
             if (beforeTempValidation is not null)
@@ -270,7 +269,7 @@ internal sealed class LocalInstallationStateStore : ILocalInstallationStateStore
             throw new InvalidDataException("Invalid params.");
         }
 
-        var config = document.RootElement.Deserialize<GameLauncherConfig>(JsonOptions)
+        var config = document.RootElement.Deserialize(CoreStorageJsonContext.Default.GameLauncherConfig)
             ?? throw new InvalidDataException("Invalid game launcher config.");
         if (!OfficialHashService.IsGameConfigHashValid(config))
         {
@@ -322,7 +321,7 @@ internal sealed class LocalInstallationStateStore : ILocalInstallationStateStore
             }
         }
 
-        var manifest = document.RootElement.Deserialize<LocalManifest>(JsonOptions)
+        var manifest = document.RootElement.Deserialize(CoreStorageJsonContext.Default.LocalManifest)
             ?? throw new InvalidDataException("Invalid manifest.");
         if (!OfficialHashService.IsManifestInfoHashValid(manifest)
             || manifest.Files.Any(file => !OfficialHashService.IsManifestFileHashValid(file)))

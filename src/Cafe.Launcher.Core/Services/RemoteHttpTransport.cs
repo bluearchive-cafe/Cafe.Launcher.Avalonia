@@ -4,6 +4,7 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Core.Helpers;
@@ -56,6 +57,7 @@ public interface IRemoteHttpTransport
 {
     Task<T?> GetJsonAsync<T>(
         Uri uri,
+        JsonTypeInfo<T> jsonTypeInfo,
         RemoteRequestOptions? options = null,
         CancellationToken cancellationToken = default);
 
@@ -141,9 +143,6 @@ public sealed record RemoteRequestOptions
     /// caller owns pacing it. Image fetches set it explicitly.
     /// </summary>
     public TimeSpan? TotalBodyTimeout { get; init; }
-
-    /// <summary>JSON serializer options for <see cref="IRemoteHttpTransport.GetJsonAsync{T}"/>; defaults to <see cref="JsonDefaults.Strict"/>.</summary>
-    public JsonSerializerOptions? Json { get; init; }
 }
 
 /// <summary>
@@ -233,12 +232,13 @@ internal sealed class RemoteHttpTransport : IRemoteHttpTransport
     /// <inheritdoc />
     public async Task<T?> GetJsonAsync<T>(
         Uri uri,
+        JsonTypeInfo<T> jsonTypeInfo,
         RemoteRequestOptions? options = null,
         CancellationToken cancellationToken = default)
     {
         var policy = Normalize(uri, options);
         return await RetryPolicy.ExecuteWithRetryAsync(
-            async ct => await SendJsonOnceAsync<T>(uri, policy, ct).ConfigureAwait(false),
+            async ct => await SendJsonOnceAsync(uri, jsonTypeInfo, policy, ct).ConfigureAwait(false),
             policy.MaxAttempts,
             i => policy.Backoff!(i),
             cancellationToken,
@@ -278,6 +278,7 @@ internal sealed class RemoteHttpTransport : IRemoteHttpTransport
 
     private async Task<T?> SendJsonOnceAsync<T>(
         Uri uri,
+        JsonTypeInfo<T> jsonTypeInfo,
         RemoteRequestOptions policy,
         CancellationToken cancellationToken)
     {
@@ -287,7 +288,7 @@ internal sealed class RemoteHttpTransport : IRemoteHttpTransport
         return await DeserializeJsonAsync<T>(
                 response,
                 uri,
-                policy.Json ?? JsonDefaults.Strict,
+                jsonTypeInfo,
                 MaxBufferedJsonBytes,
                 cancellationToken,
                 idleReadTimeout,
@@ -420,9 +421,9 @@ internal sealed class RemoteHttpTransport : IRemoteHttpTransport
     internal static Task<T?> DeserializeJsonAsync<T>(
         HttpResponseMessage response,
         Uri? requestUri,
-        JsonSerializerOptions options,
+        JsonTypeInfo<T> jsonTypeInfo,
         CancellationToken cancellationToken) =>
-        DeserializeJsonAsync<T>(response, requestUri, options, MaxBufferedJsonBytes, cancellationToken);
+        DeserializeJsonAsync<T>(response, requestUri, jsonTypeInfo, MaxBufferedJsonBytes, cancellationToken);
 
     /// <summary>
     /// Buffers and deserializes a JSON body under two budgets: the per-read idle
@@ -435,7 +436,7 @@ internal sealed class RemoteHttpTransport : IRemoteHttpTransport
     internal static async Task<T?> DeserializeJsonAsync<T>(
         HttpResponseMessage response,
         Uri? requestUri,
-        JsonSerializerOptions options,
+        JsonTypeInfo<T> jsonTypeInfo,
         int maxBytes,
         CancellationToken cancellationToken,
         TimeSpan? idleReadTimeout = null,
@@ -444,7 +445,7 @@ internal sealed class RemoteHttpTransport : IRemoteHttpTransport
         if (totalReadTimeout is not { } total)
         {
             return await ReadJsonBodyAsync<T>(
-                    response, requestUri, options, maxBytes, idleReadTimeout, cancellationToken)
+                    response, requestUri, jsonTypeInfo, maxBytes, idleReadTimeout, cancellationToken)
                 .ConfigureAwait(false);
         }
 
@@ -453,7 +454,7 @@ internal sealed class RemoteHttpTransport : IRemoteHttpTransport
         try
         {
             return await ReadJsonBodyAsync<T>(
-                    response, requestUri, options, maxBytes, idleReadTimeout, linked.Token)
+                    response, requestUri, jsonTypeInfo, maxBytes, idleReadTimeout, linked.Token)
                 .ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
@@ -468,7 +469,7 @@ internal sealed class RemoteHttpTransport : IRemoteHttpTransport
     private static async Task<T?> ReadJsonBodyAsync<T>(
         HttpResponseMessage response,
         Uri? requestUri,
-        JsonSerializerOptions options,
+        JsonTypeInfo<T> jsonTypeInfo,
         int maxBytes,
         TimeSpan? idleReadTimeout,
         CancellationToken cancellationToken)
@@ -504,7 +505,7 @@ internal sealed class RemoteHttpTransport : IRemoteHttpTransport
             try
             {
                 return await JsonSerializer
-                    .DeserializeAsync<T>(buffer, options, cancellationToken)
+                    .DeserializeAsync<T>(buffer, jsonTypeInfo, cancellationToken)
                     .ConfigureAwait(false);
             }
             catch (JsonException ex)

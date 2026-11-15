@@ -137,7 +137,7 @@ public sealed class LauncherApiClientTests
             RemoteHttpTransport.DeserializeJsonAsync<LauncherApiEnvelope<BaseConfigResponse>>(
                 response,
                 new Uri("https://example.test/api"),
-                JsonDefaults.Strict,
+                CoreJsonContext.Default.BaseConfigEnvelope,
                 maxBytes: 1024,
                 CancellationToken.None));
 
@@ -159,7 +159,7 @@ public sealed class LauncherApiClientTests
             RemoteHttpTransport.DeserializeJsonAsync<LauncherApiEnvelope<BaseConfigResponse>>(
                 response,
                 new Uri("https://example.test/config/get?uid=UID-SECRET-VALUE"),
-                JsonDefaults.Strict,
+                CoreJsonContext.Default.BaseConfigEnvelope,
                 maxBytes: 1024 * 1024,
                 CancellationToken.None));
 
@@ -182,7 +182,7 @@ public sealed class LauncherApiClientTests
             RemoteHttpTransport.DeserializeJsonAsync<LauncherApiEnvelope<BaseConfigResponse>>(
                 response,
                 new Uri("https://example.test/config/get?uid=UID-SECRET-VALUE"),
-                JsonDefaults.Strict,
+                CoreJsonContext.Default.BaseConfigEnvelope,
                 maxBytes: 1024,
                 CancellationToken.None));
 

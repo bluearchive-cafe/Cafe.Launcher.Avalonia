@@ -15,6 +15,13 @@ foreach ($file in @('Cafe.Launcher.exe', 'Cafe.Launcher.Updater.exe', 'libmpv/wi
     }
 }
 
+# A stale JIT publish directory can retain managed files after an AOT publish.
+foreach ($file in @('Cafe.Launcher.dll', 'Cafe.Launcher.runtimeconfig.json', 'coreclr.dll')) {
+    if (Test-Path -LiteralPath (Join-Path $PublishDir $file)) {
+        throw "Windows Native AOT publish output contains '$file'. Republish into an empty directory."
+    }
+}
+
 $library = Join-Path $PublishDir 'libmpv/win-x64/libmpv-2.dll'
 if ((Get-FileHash -LiteralPath $library -Algorithm SHA256).Hash -ne $manifest.librarySha256) {
     throw 'Windows publish output contains an unexpected libmpv DLL (SHA-256 mismatch).'

@@ -34,7 +34,7 @@ internal sealed class NoticeStateService : INoticeStateStore
 
             return await AtomicJsonFileStore.ReadAsync<HashSet<string>>(
                 path,
-                JsonDefaults.Strict,
+                CoreJsonContext.Default.HashSetString,
                 cancellationToken).ConfigureAwait(false) ?? [];
         }
         catch (Exception exception) when (StorageFailure.IsRecoverableOrInvalidJson(exception))
@@ -55,7 +55,7 @@ internal sealed class NoticeStateService : INoticeStateStore
             await AtomicJsonFileStore.WriteAsync(
                 path,
                 shown,
-                JsonDefaults.Strict,
+                CoreJsonContext.Default.HashSetString,
                 cancellationToken).ConfigureAwait(false);
         }
         catch (Exception exception) when (StorageFailure.IsRecoverableOrInvalidJson(exception))

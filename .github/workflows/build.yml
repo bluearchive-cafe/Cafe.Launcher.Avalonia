@@ -102,18 +102,11 @@ jobs:
           RestoreLockedMode: 'false'
         run: .\test.ps1 -Configuration Release -Suite Unit
 
-      - name: Restore (win-x64)
-        env:
-          # NuGet lock 文件只能固定一个 RID 上下文（每个 -r restore 会重写
-          # runtimeIdentifier 字段），因此提交的 lock 固定的是无 RID 的
-          # net10.0 依赖图；RID 专属发布还原无法使用 locked mode，显式豁免。
-          RestoreLockedMode: 'false'
-        run: dotnet restore $env:Project_Path -r win-x64
-
       - name: Publish (Release, win-x64)
         env:
+          # RID-specific publish restores a different graph from the committed RID-less lock.
           RestoreLockedMode: 'false'
-        run: dotnet publish $env:Project_Path -c Release -r win-x64 -o publish --no-restore
+        run: dotnet publish $env:Project_Path -c Release -r win-x64 -p:BackgroundVideoRid=win-x64 -o publish
 
       # 键已存在时 save 是空操作，测试失败也必须走到这里，否则缓存只在绿灯时更新。
       - name: Save NuGet cache
@@ -175,35 +168,17 @@ jobs:
           key: nuget-global-packages-${{ runner.os }}-${{ hashFiles('Directory.Packages.props') }}
           restore-keys: nuget-global-packages-${{ runner.os }}-
 
-      # 两个工程都按 win-x64 还原：RID 专属的还原会重写 packages.lock.json 的 RID 段，
-      # 与提交的无 RID 段无法在 locked mode 下匹配，与 build 作业的发布还原同理豁免。
-      # 每条命令各自检查 $LASTEXITCODE：pwsh 只在步骤最后一条命令失败时判红，前一条的
-      # restore 失败不能靠后一条掩盖。
-      - name: Restore (win-x64)
-        env:
-          RestoreLockedMode: 'false'
-        run: |
-          dotnet restore $env:Project_Path -r win-x64
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          # Pass the RID as an MSBuild property so the updater evaluates PublishAot during restore.
-          dotnet restore $env:Updater_Project_Path -p:RuntimeIdentifier=win-x64 -p:Configuration=Release
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-      # 顺序与 Build-Distribution.ps1 一致（先主程序、再助手）：两者写同一个发布目录，
-      # 助手的发布建立在使用同一目录的主程序发布之后。
+      # Match Build-Distribution.ps1: publish each executable with its own restore,
+      # then place both in the same publish directory used by Inno Setup.
       - name: Publish (Release, win-x64)
         env:
           RestoreLockedMode: 'false'
-        run: dotnet publish $env:Project_Path -c Release -r win-x64 -o publish --no-restore
+        run: dotnet publish $env:Project_Path -c Release -r win-x64 -p:BackgroundVideoRid=win-x64 -o publish
 
-      # 更新助手的独立构建：就是文档里的单独构建命令，只是改用发布配置（Debug 不声明
-      # SelfContained／PublishSingleFile／PublishTrimmed，构建不到发布真正走的路径）。
-      # Build-Distribution.ps1 用同一条命令把单文件助手放进发布目录，所以这里的红就是
-      # 发布时会遇到的红；产物也正好补上安装器发布目录里必需的 Cafe.Launcher.Updater.exe。
       - name: Build and publish updater (Release, win-x64)
         env:
           RestoreLockedMode: 'false'
-        run: dotnet publish $env:Updater_Project_Path -c Release -r win-x64 -o publish --no-restore
+        run: dotnet publish $env:Updater_Project_Path -c Release -r win-x64 -o publish
 
       - name: Smoke-test Native AOT updater
         run: ./publish/Cafe.Launcher.Updater.exe --help

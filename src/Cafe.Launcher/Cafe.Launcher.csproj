@@ -29,6 +29,7 @@
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
 
     <SelfContained>true</SelfContained>
+    <PublishAot Condition="'$(RuntimeIdentifier)' == 'win-x64'">true</PublishAot>
     <UseSystemResourceKeys>true</UseSystemResourceKeys>
     <DebuggerSupport>false</DebuggerSupport>
     <EventSourceSupport>false</EventSourceSupport>

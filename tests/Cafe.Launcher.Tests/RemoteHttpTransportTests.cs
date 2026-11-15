@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using Cafe.Launcher.UI.Helpers;
 using Cafe.Launcher.UI.Models;
@@ -15,7 +16,7 @@ using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.Tests;
 
-public sealed class RemoteHttpTransportTests
+public sealed partial class RemoteHttpTransportTests
 {
     // ---- Redirect / send semantics (migrated from RemoteHttpUrlValidatorTests) ----
 
@@ -293,7 +294,7 @@ public sealed class RemoteHttpTransportTests
         var transport = CreateTransport(
             new ScriptedHandler(ScriptedHandler.Ok("""{"Name":"hello"}""")));
 
-        var payload = await transport.GetJsonAsync<SamplePayload>(new Uri("https://example.test/data"));
+        var payload = await transport.GetJsonAsync(new Uri("https://example.test/data"), SampleJsonContext.Default.SamplePayload);
 
         Assert.Equal("hello", payload?.Name);
     }
@@ -305,7 +306,7 @@ public sealed class RemoteHttpTransportTests
         var transport = CreateTransport(
             new ScriptedHandler(ScriptedHandler.Ok("null")));
 
-        var payload = await transport.GetJsonAsync<SamplePayload>(new Uri("https://example.test/data"));
+        var payload = await transport.GetJsonAsync(new Uri("https://example.test/data"), SampleJsonContext.Default.SamplePayload);
 
         Assert.Null(payload);
     }
@@ -317,7 +318,7 @@ public sealed class RemoteHttpTransportTests
             new ScriptedHandler(ScriptedHandler.Ok("")));
 
         await Assert.ThrowsAsync<JsonException>(
-            () => transport.GetJsonAsync<SamplePayload>(new Uri("https://example.test/data")));
+            () => transport.GetJsonAsync(new Uri("https://example.test/data"), SampleJsonContext.Default.SamplePayload));
     }
 
     [Fact]
@@ -327,7 +328,7 @@ public sealed class RemoteHttpTransportTests
             new ScriptedHandler(ScriptedHandler.Ok("<html>not json</html>")));
 
         await Assert.ThrowsAsync<JsonException>(
-            () => transport.GetJsonAsync<SamplePayload>(new Uri("https://example.test/data")));
+            () => transport.GetJsonAsync(new Uri("https://example.test/data"), SampleJsonContext.Default.SamplePayload));
     }
 
     [Fact]
@@ -383,8 +384,9 @@ public sealed class RemoteHttpTransportTests
             () => ProxyModes.System);
 
         var payload = await transport
-            .GetJsonAsync<SamplePayload>(
+            .GetJsonAsync(
                 new Uri("http://api.bluearchive.cafe/status/list"),
+                SampleJsonContext.Default.SamplePayload,
                 new RemoteRequestOptions { Timeout = TimeSpan.FromSeconds(5) })
             .WaitAsync(TimeSpan.FromSeconds(10));
 
@@ -415,8 +417,9 @@ public sealed class RemoteHttpTransportTests
                 Interlocked.Increment(ref attempt).ToString(System.Globalization.CultureInfo.InvariantCulture))
         };
 
-        var payload = await transport.GetJsonAsync<SamplePayload>(
-            new Uri("https://example.test/data"), options);
+        var payload = await transport.GetJsonAsync(
+            new Uri("https://example.test/data"),
+            SampleJsonContext.Default.SamplePayload, options);
 
         Assert.Equal("hello", payload?.Name);
         Assert.Equal(["1", "2"], handler.TestHeaderValues);
@@ -479,7 +482,7 @@ public sealed class RemoteHttpTransportTests
         var options = new RemoteRequestOptions { MaxAttempts = 2 };
 
         await Assert.ThrowsAsync<ArgumentException>(
-            () => transport.GetJsonAsync<SamplePayload>(new Uri("https://example.test/data"), options));
+            () => transport.GetJsonAsync(new Uri("https://example.test/data"), SampleJsonContext.Default.SamplePayload, options));
     }
 
     [Fact]
@@ -494,7 +497,7 @@ public sealed class RemoteHttpTransportTests
         };
 
         await Assert.ThrowsAsync<ArgumentException>(
-            () => transport.GetJsonAsync<SamplePayload>(new Uri("https://example.test/data"), options));
+            () => transport.GetJsonAsync(new Uri("https://example.test/data"), SampleJsonContext.Default.SamplePayload, options));
     }
 
     [Fact]
@@ -504,7 +507,7 @@ public sealed class RemoteHttpTransportTests
         var options = new RemoteRequestOptions { MaxAttempts = 0 };
 
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
-            () => transport.GetJsonAsync<SamplePayload>(new Uri("https://example.test/data"), options));
+            () => transport.GetJsonAsync(new Uri("https://example.test/data"), SampleJsonContext.Default.SamplePayload, options));
     }
 
     [Fact]
@@ -530,8 +533,9 @@ public sealed class RemoteHttpTransportTests
             RetryScope = RemoteRetryScope.Network
         };
 
-        var payload = await transport.GetJsonAsync<SamplePayload>(
-            new Uri("https://example.test/data"), options);
+        var payload = await transport.GetJsonAsync(
+            new Uri("https://example.test/data"),
+            SampleJsonContext.Default.SamplePayload, options);
 
         Assert.Equal("hello", payload?.Name);
         Assert.Equal([TimeSpan.FromMilliseconds(50)], recordedDelays);
@@ -552,7 +556,7 @@ public sealed class RemoteHttpTransportTests
         };
 
         await Assert.ThrowsAsync<HttpRequestException>(
-            () => transport.GetJsonAsync<SamplePayload>(new Uri("https://example.test/data"), options));
+            () => transport.GetJsonAsync(new Uri("https://example.test/data"), SampleJsonContext.Default.SamplePayload, options));
 
         Assert.Equal(1, handler.RequestCount);
     }
@@ -579,8 +583,9 @@ public sealed class RemoteHttpTransportTests
             RetryScope = RemoteRetryScope.Transient
         };
 
-        var payload = await transport.GetJsonAsync<SamplePayload>(
-            new Uri("https://example.test/data"), options);
+        var payload = await transport.GetJsonAsync(
+            new Uri("https://example.test/data"),
+            SampleJsonContext.Default.SamplePayload, options);
 
         Assert.Equal("hello", payload?.Name);
         Assert.Equal(3, handler.RequestCount);
@@ -604,7 +609,7 @@ public sealed class RemoteHttpTransportTests
         };
 
         var exception = await Assert.ThrowsAsync<HttpRequestException>(
-            () => transport.GetJsonAsync<SamplePayload>(new Uri("https://example.test/data"), options));
+            () => transport.GetJsonAsync(new Uri("https://example.test/data"), SampleJsonContext.Default.SamplePayload, options));
 
         Assert.Equal(statusCode, exception.StatusCode);
         Assert.Equal(1, handler.RequestCount);
@@ -625,7 +630,7 @@ public sealed class RemoteHttpTransportTests
         };
 
         await Assert.ThrowsAsync<HttpRequestException>(
-            () => transport.GetJsonAsync<SamplePayload>(new Uri("https://example.test/data"), options));
+            () => transport.GetJsonAsync(new Uri("https://example.test/data"), SampleJsonContext.Default.SamplePayload, options));
 
         Assert.Equal(1, handler.RequestCount);
     }
@@ -647,8 +652,9 @@ public sealed class RemoteHttpTransportTests
             RetryScope = RemoteRetryScope.Transient
         };
 
-        var payload = await transport.GetJsonAsync<SamplePayload>(
-            new Uri("https://example.test/data"), options);
+        var payload = await transport.GetJsonAsync(
+            new Uri("https://example.test/data"),
+            SampleJsonContext.Default.SamplePayload, options);
 
         Assert.Equal("hello", payload?.Name);
         Assert.Equal(2, handler.RequestCount);
@@ -667,7 +673,7 @@ public sealed class RemoteHttpTransportTests
         };
 
         await Assert.ThrowsAsync<JsonException>(
-            () => transport.GetJsonAsync<SamplePayload>(new Uri("https://example.test/data"), options));
+            () => transport.GetJsonAsync(new Uri("https://example.test/data"), SampleJsonContext.Default.SamplePayload, options));
 
         Assert.Equal(1, handler.RequestCount);
     }
@@ -686,8 +692,9 @@ public sealed class RemoteHttpTransportTests
             RetryScope = RemoteRetryScope.Transient
         };
 
-        var payload = await transport.GetJsonAsync<SamplePayload>(
-            new Uri("https://example.test/data"), options);
+        var payload = await transport.GetJsonAsync(
+            new Uri("https://example.test/data"),
+            SampleJsonContext.Default.SamplePayload, options);
 
         Assert.Equal("hello", payload?.Name);
         Assert.Equal(2, handler.RequestCount);
@@ -707,8 +714,9 @@ public sealed class RemoteHttpTransportTests
             RetryScope = RemoteRetryScope.Network
         };
 
-        var payload = await transport.GetJsonAsync<SamplePayload>(
-            new Uri("https://example.test/data"), options);
+        var payload = await transport.GetJsonAsync(
+            new Uri("https://example.test/data"),
+            SampleJsonContext.Default.SamplePayload, options);
 
         Assert.Equal("hello", payload?.Name);
         Assert.Equal(2, handler.RequestCount);
@@ -727,8 +735,9 @@ public sealed class RemoteHttpTransportTests
         var handler = new ScriptedHandler(ScriptedHandler.Ok("""{"Name":"hello"}"""));
         var transport = CreateTransport(handler, validator: validator);
 
-        var payload = await transport.GetJsonAsync<SamplePayload>(
+        var payload = await transport.GetJsonAsync(
             new Uri("https://example.test/data"),
+            SampleJsonContext.Default.SamplePayload,
             new RemoteRequestOptions
             {
                 MaxAttempts = 2,
@@ -750,8 +759,9 @@ public sealed class RemoteHttpTransportTests
         await cancellationTokenSource.CancelAsync();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
-            () => transport.GetJsonAsync<SamplePayload>(
+            () => transport.GetJsonAsync(
                 new Uri("https://example.test/data"),
+                SampleJsonContext.Default.SamplePayload,
                 cancellationToken: cancellationTokenSource.Token));
 
         Assert.Equal(0, handler.RequestCount);
@@ -827,7 +837,7 @@ public sealed class RemoteHttpTransportTests
         };
 
         await Assert.ThrowsAsync<HttpRequestException>(
-            () => transport.GetJsonAsync<SamplePayload>(new Uri("https://example.test/start"), options));
+            () => transport.GetJsonAsync(new Uri("https://example.test/start"), SampleJsonContext.Default.SamplePayload, options));
 
         Assert.Equal(1, handler.RequestCount);
         Assert.Empty(backoffs);
@@ -876,7 +886,7 @@ public sealed class RemoteHttpTransportTests
 
         var started = Stopwatch.StartNew();
         var exception = await Assert.ThrowsAsync<HttpRequestException>(
-            () => transport.GetJsonAsync<SamplePayload>(new Uri("https://example.test/manifest")));
+            () => transport.GetJsonAsync(new Uri("https://example.test/manifest"), SampleJsonContext.Default.SamplePayload));
 
         Assert.Contains("total read budget", exception.Message, StringComparison.Ordinal);
         Assert.True(started.Elapsed < TimeSpan.FromSeconds(30), $"Elapsed {started.Elapsed}.");
@@ -891,8 +901,9 @@ public sealed class RemoteHttpTransportTests
             new ScriptedHandler(ScriptedHandler.Ok(json)),
             totalBodyTimeout: TimeSpan.FromSeconds(5));
 
-        var payload = await transport.GetJsonAsync<SamplePayload>(
-            new Uri("https://example.test/manifest"));
+        var payload = await transport.GetJsonAsync(
+            new Uri("https://example.test/manifest"),
+            SampleJsonContext.Default.SamplePayload);
 
         Assert.Equal(1024 * 1024, payload!.Name.Length);
     }
@@ -1076,6 +1087,9 @@ public sealed class RemoteHttpTransportTests
             totalBodyTimeout);
 
     private sealed record SamplePayload(string Name);
+
+    [JsonSerializable(typeof(SamplePayload))]
+    private sealed partial class SampleJsonContext : JsonSerializerContext;
 
     /// <summary>按调用方请求模式记账的租约工厂：连接代理可选，客户端可再配置。</summary>
     private sealed class StubLeaseSource(

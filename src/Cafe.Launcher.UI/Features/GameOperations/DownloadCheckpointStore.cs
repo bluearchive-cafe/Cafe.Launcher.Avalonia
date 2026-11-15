@@ -15,7 +15,6 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
 /// <summary>Persists and clears resumable game download state atomically.</summary>
 internal sealed class DownloadCheckpointStore
 {
-    private static readonly JsonSerializerOptions JsonOptions = JsonDefaults.Indented;
     private readonly string filePath;
     private readonly string temporaryFilePath;
 
@@ -38,7 +37,7 @@ internal sealed class DownloadCheckpointStore
         {
             return await AtomicJsonFileStore.ReadAsync<DownloadTaskState>(
                 filePath,
-                JsonOptions,
+                UiStorageJsonContext.Default.DownloadTaskState,
                 cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
@@ -57,7 +56,7 @@ internal sealed class DownloadCheckpointStore
         await AtomicJsonFileStore.WriteAsync(
             filePath,
             state,
-            JsonOptions,
+            UiStorageJsonContext.Default.DownloadTaskState,
             cancellationToken).ConfigureAwait(false);
     }
 

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using Cafe.Launcher.UI.Constants;
 using Cafe.Launcher.UI.Features.ResourcePanel;
 using Cafe.Launcher.UI.Helpers;
@@ -643,6 +644,7 @@ public sealed class ResourcePanelViewModelTests
 
         public async Task<T?> GetJsonAsync<T>(
             Uri uri,
+            JsonTypeInfo<T> jsonTypeInfo,
             RemoteRequestOptions? options = null,
             CancellationToken cancellationToken = default)
         {
@@ -655,7 +657,7 @@ public sealed class ResourcePanelViewModelTests
                 "/config/get" => ConfigJson,
                 _ => throw new HttpRequestException("stub transport answered NotFound", null, HttpStatusCode.NotFound)
             };
-            return JsonSerializer.Deserialize<T>(json, options?.Json ?? JsonDefaults.Strict);
+            return JsonSerializer.Deserialize(json, jsonTypeInfo);
         }
 
         public async Task<RemoteBody> GetStreamAsync(

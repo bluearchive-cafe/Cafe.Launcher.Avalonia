@@ -191,10 +191,10 @@ public sealed class GameShortcutServiceTests : IDisposable
     [WindowsFact]
     public async Task CreateShortcutInDirectoryAsync_OnWindows_TargetsRunBatWithGameFolderWorkingDirectory()
     {
-        var gameDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "game")).FullName;
+        var gameDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "游戏 folder")).FullName;
         File.WriteAllText(Path.Combine(gameDirectory, "CafeTestGame.exe"), string.Empty);
         var startScriptPath = CreateStartScript(gameDirectory);
-        var shortcutDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "desktop")).FullName;
+        var shortcutDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "桌面 folder")).FullName;
         var service = new GameShortcutService(LauncherProfiles.BlueArchiveJapan, new LocalizationService());
         var snapshot = new LauncherStatusSnapshot
         {
