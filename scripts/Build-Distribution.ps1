@@ -48,6 +48,10 @@ if ($unknownRids.Count -gt 0) {
 $Rids = @($Rids | Select-Object -Unique)
 $IsUnixHost = $IsLinux -or $IsMacOS
 
+if (-not $SkipPublish -and $Rids -contains "win-x64" -and -not $IsWindows) {
+    throw "Publishing the win-x64 Native AOT updater requires a Windows host. Use -SkipPublish with Windows-built publish output for packaging only."
+}
+
 if ($SkipPublish) {
     foreach ($rid in $Rids) {
         $existingPublishDir = Join-Path $PublishRoot $rid

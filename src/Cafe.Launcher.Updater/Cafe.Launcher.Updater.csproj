@@ -16,7 +16,8 @@
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <!-- 独立 helper：自包含单文件可裁剪，投放到 %TEMP% 后不依赖被替换目录里的任何文件。 -->
     <SelfContained>true</SelfContained>
-    <PublishSingleFile>true</PublishSingleFile>
+    <PublishSingleFile Condition="'$(RuntimeIdentifier)' != 'win-x64'">true</PublishSingleFile>
+    <PublishAot Condition="'$(RuntimeIdentifier)' == 'win-x64'">true</PublishAot>
     <PublishTrimmed>true</PublishTrimmed>
     <DebugType>none</DebugType>
   </PropertyGroup>

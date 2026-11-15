@@ -185,7 +185,8 @@ jobs:
         run: |
           dotnet restore $env:Project_Path -r win-x64
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          dotnet restore $env:Updater_Project_Path -r win-x64
+          # Pass the RID as an MSBuild property so the updater evaluates PublishAot during restore.
+          dotnet restore $env:Updater_Project_Path -p:RuntimeIdentifier=win-x64 -p:Configuration=Release
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       # 顺序与 Build-Distribution.ps1 一致（先主程序、再助手）：两者写同一个发布目录，
@@ -203,6 +204,9 @@ jobs:
         env:
           RestoreLockedMode: 'false'
         run: dotnet publish $env:Updater_Project_Path -c Release -r win-x64 -o publish --no-restore
+
+      - name: Smoke-test Native AOT updater
+        run: ./publish/Cafe.Launcher.Updater.exe --help
 
       # 与 release.yml 的 installer 作业完全相同的安装方式：从 jrsoftware/issrc 下载固定
       # 版本的安装包、校验 GitHub release attestation 后再静默安装，最后确认 ISCC 是 7.x。
