@@ -22,7 +22,6 @@ namespace Cafe.Launcher.Core.Services;
 /// </remarks>
 internal sealed class LauncherUpdateService : ILauncherUpdateService
 {
-    private static readonly JsonSerializerOptions JsonOptions = JsonDefaults.Strict;
     private readonly LauncherProductProfile productProfile;
     private readonly IRemoteHttpTransport transport;
     private readonly string currentVersion;
@@ -216,21 +215,20 @@ internal sealed class LauncherUpdateService : ILauncherUpdateService
         // replaces the base path instead. No transport-level retries: the endpoint's
         // failures degrade to the GitHub fallback instead of being replayed.
         var requestUri = new Uri(new Uri(productProfile.LauncherApiBaseUrl), productProfile.LauncherReleasesPath);
-        return await transport.GetJsonAsync<List<LauncherReleaseResponse>>(
+        return await transport.GetJsonAsync(
             requestUri,
+            CoreJsonContext.Default.ListLauncherReleaseResponse,
             new RemoteRequestOptions
             {
-                Timeout = TimeSpan.FromSeconds(15),
-                Json = JsonOptions
+                Timeout = TimeSpan.FromSeconds(15)
             },
             cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>GitHub API 请求的公共选项：超时、严格 JSON 与带版本的 User-Agent。</summary>
+    /// <summary>GitHub API 请求的公共选项：超时与带版本的 User-Agent。</summary>
     private RemoteRequestOptions CreateGitHubRequestOptions() => new()
     {
         Timeout = TimeSpan.FromSeconds(15),
-        Json = JsonOptions,
         ConfigureRequest = request => request.Headers.UserAgent.ParseAdd(
             LauncherUserAgent.Create(currentVersion))
     };
@@ -239,8 +237,9 @@ internal sealed class LauncherUpdateService : ILauncherUpdateService
         CancellationToken cancellationToken)
     {
         var requestUri = new Uri(productProfile.GitHubReleasesApiUrl);
-        var releases = await transport.GetJsonAsync<List<GitHubRelease>>(
+        var releases = await transport.GetJsonAsync(
             requestUri,
+            CoreJsonContext.Default.ListGitHubRelease,
             CreateGitHubRequestOptions(),
             cancellationToken).ConfigureAwait(false) ?? [];
         return releases
@@ -273,12 +272,12 @@ internal sealed class LauncherUpdateService : ILauncherUpdateService
             var requestUri = new Uri(
                 new Uri(productProfile.LauncherApiBaseUrl),
                 productProfile.GetLauncherReleaseNotesPath(version));
-            var response = await transport.GetJsonAsync<LauncherReleaseNotesResponse>(
+            var response = await transport.GetJsonAsync(
                 requestUri,
+                CoreJsonContext.Default.LauncherReleaseNotesResponse,
                 new RemoteRequestOptions
                 {
-                    Timeout = TimeSpan.FromSeconds(15),
-                    Json = JsonOptions
+                    Timeout = TimeSpan.FromSeconds(15)
                 },
                 cancellationToken).ConfigureAwait(false);
             return response?.ReleaseNotes ?? "";
@@ -304,8 +303,9 @@ internal sealed class LauncherUpdateService : ILauncherUpdateService
         try
         {
             var requestUri = new Uri(productProfile.GitHubReleaseByTagApiUrl + "v" + Uri.EscapeDataString(version));
-            var release = await transport.GetJsonAsync<GitHubRelease>(
+            var release = await transport.GetJsonAsync(
                 requestUri,
+                CoreJsonContext.Default.GitHubRelease,
                 CreateGitHubRequestOptions(),
                 cancellationToken).ConfigureAwait(false);
             return release?.Body ?? "";
@@ -354,7 +354,7 @@ internal sealed class LauncherUpdateService : ILauncherUpdateService
         return LauncherVersionParser.Compare(latest, current) > 0;
     }
 
-    private sealed class GitHubRelease
+    internal sealed class GitHubRelease
     {
         [JsonPropertyName("tag_name")]
         public string TagName { get; set; } = "";
@@ -372,7 +372,7 @@ internal sealed class LauncherUpdateService : ILauncherUpdateService
         public List<GitHubReleaseAsset> Assets { get; set; } = [];
     }
 
-    private sealed class GitHubReleaseAsset
+    internal sealed class GitHubReleaseAsset
     {
         [JsonPropertyName("name")]
         public string Name { get; set; } = "";

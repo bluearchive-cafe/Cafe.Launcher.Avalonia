@@ -77,13 +77,13 @@ jobs:
         env:
           # NuGet lock 文件只能固定一个 RID 上下文（每个 -r restore 会重写
           # runtimeIdentifier 字段），因此提交的 lock 固定的是无 RID 的
-          # net10.0 依赖图；三个 RID 的发布还原无法使用 locked mode，显式豁免。
+          # net10.0 依赖图；两个 RID 的发布还原无法使用 locked mode，显式豁免。
           RestoreLockedMode: 'false'
           # tag 名经 env 传递而非文本插值，消除 run 脚本的注入面。
           Release_Tag: ${{ github.ref_name }}
         run: |
           $buildArguments = @{
-              Rids = 'win-x64', 'osx-arm64', 'linux-x64'
+              Rids = 'osx-arm64', 'linux-x64'
               AppImageToolPath = './appimagetool-x86_64.AppImage'
               AppImageRuntimePath = './runtime-x86_64'
           }
@@ -302,13 +302,6 @@ jobs:
           path: artifacts/distribution/*
           retention-days: 1
 
-      - name: Upload win-x64 publish output
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: publish-win-x64
-          path: artifacts/publish/win-x64/
-          retention-days: 1
-
       - name: Upload changelog
         if: github.event_name == 'push'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -343,10 +336,9 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
   installer:
-    name: Release tests and Windows installer
+    name: Release tests and Windows packages
     runs-on: windows-latest
-    needs: build
-    timeout-minutes: 25
+    timeout-minutes: 35
 
     defaults:
       run:
@@ -431,27 +423,30 @@ jobs:
           RestoreLockedMode: 'false'
         run: .\test.ps1 -Configuration Release
 
-      - name: Download win-x64 publish output
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        with:
-          name: publish-win-x64
-          path: artifacts/publish/win-x64
-
-      - name: Build Windows installer
+      - name: Build Windows packages
         env:
+          RestoreLockedMode: 'false'
           Release_Tag: ${{ github.ref_name }}
         run: |
           $tagArguments = @{}
           if ($env:GITHUB_EVENT_NAME -eq 'push') {
               $tagArguments.Tag = $env:Release_Tag
           }
+          ./scripts/Build-Distribution.ps1 -Rids win-x64 @tagArguments
+          ./artifacts/publish/win-x64/Cafe.Launcher.Updater.exe --help
+          if ($LASTEXITCODE -ne 0) {
+              throw "Native AOT updater smoke test failed with exit code $LASTEXITCODE."
+          }
           ./scripts/New-WindowsInstaller.ps1 @tagArguments
 
-      - name: Upload Windows installer
+      - name: Upload Windows packages
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: installer-package
-          path: artifacts/distribution/Cafe.Launcher_*_setup.exe
+          name: windows-packages
+          path: |
+            artifacts/distribution/Cafe.Launcher_*_win-x64.zip
+            artifacts/distribution/Cafe.Launcher_*_setup.exe
+          if-no-files-found: error
           retention-days: 1
 
       - name: Save NuGet cache
@@ -482,10 +477,10 @@ jobs:
           name: distribution-packages
           path: artifacts/distribution
 
-      - name: Download Windows installer
+      - name: Download Windows packages
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
-          name: installer-package
+          name: windows-packages
           path: artifacts/distribution
 
       - name: Download changelog

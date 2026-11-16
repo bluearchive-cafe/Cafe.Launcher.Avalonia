@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Cafe.Launcher.Core.Helpers;
 using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.Core.Services.Auth;
@@ -46,7 +47,7 @@ internal sealed class AuthorizationHeaderFactory
             Version = version
         };
 
-        var headJson = JsonSerializer.Serialize(head);
+        var headJson = JsonSerializer.Serialize(head, CoreJsonContext.Default.AuthorizationHead);
         var signSource = $"{headJson}{data ?? ""}{gameProfile.AuthorizationSalt}";
         var sign = Convert.ToHexString(MD5.HashData(Encoding.UTF8.GetBytes(signSource))).ToLowerInvariant();
 
@@ -54,10 +55,10 @@ internal sealed class AuthorizationHeaderFactory
         {
             Head = head,
             Sign = sign
-        });
+        }, CoreJsonContext.Default.AuthorizationHeader);
     }
 
-    private sealed class AuthorizationHeader
+    internal sealed class AuthorizationHeader
     {
         [JsonPropertyName("head")]
         public AuthorizationHead Head { get; set; } = new();
@@ -66,7 +67,7 @@ internal sealed class AuthorizationHeaderFactory
         public string Sign { get; set; } = "";
     }
 
-    private sealed class AuthorizationHead
+    internal sealed class AuthorizationHead
     {
         [JsonPropertyName("game_tag")]
         public string GameTag { get; set; } = "";

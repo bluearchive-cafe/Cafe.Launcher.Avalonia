@@ -1,11 +1,11 @@
-using System.Text.Json;
+using System.Text.Json.Serialization;
 using Cafe.Launcher.UI.Helpers;
 using Cafe.Launcher.Testing;
 using Cafe.Launcher.Core.Helpers;
 
 namespace Cafe.Launcher.Tests;
 
-public sealed class AtomicJsonFileStoreTests
+public sealed partial class AtomicJsonFileStoreTests
 {
     [Fact]
     public async Task WriteAsync_ThenReadAsync_RoundTripsAndLeavesNoTemporaryFiles()
@@ -16,11 +16,11 @@ public sealed class AtomicJsonFileStoreTests
 
         try
         {
-            await AtomicJsonFileStore.WriteAsync(path, value, JsonDefaults.Strict);
+            await AtomicJsonFileStore.WriteAsync(path, value, TestJsonContext.Default.TestState);
 
             var actual = await AtomicJsonFileStore.ReadAsync<TestState>(
                 path,
-                JsonDefaults.Strict);
+                TestJsonContext.Default.TestState);
 
             Assert.Equal(value, actual);
             Assert.Empty(Directory.EnumerateFiles(directory, "*.tmp"));
@@ -32,4 +32,7 @@ public sealed class AtomicJsonFileStoreTests
     }
 
     private sealed record TestState(string Status, int Attempt);
+
+    [JsonSerializable(typeof(TestState))]
+    private sealed partial class TestJsonContext : JsonSerializerContext;
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.UI.Helpers;
@@ -15,7 +16,7 @@ namespace Cafe.Launcher.Testing;
 /// <summary>
 /// Scriptable <see cref="IRemoteHttpTransport"/> test double. Outcomes are
 /// resolved per URI through <see cref="Responder"/>; a returned JSON string is
-/// deserialized with the caller's serializer options so wire-contract fidelity
+/// deserialized with the caller's generated metadata so wire-contract fidelity
 /// (casing, structure) keeps being exercised, a ready <typeparamref name="T"/>
 /// is passed through, an <see cref="Exception"/> is thrown, and a
 /// <c>byte[]</c>/<c>string</c> becomes a <see cref="RemoteBody"/> body.
@@ -34,11 +35,12 @@ public sealed class StubRemoteHttpTransport : IRemoteHttpTransport
 
     public Task<T?> GetJsonAsync<T>(
         Uri uri,
+        JsonTypeInfo<T> jsonTypeInfo,
         RemoteRequestOptions? options = null,
         CancellationToken cancellationToken = default)
     {
         RequestedUris.Add(uri);
-        return Task.FromResult(Resolve<T>(Responder(uri), options?.Json));
+        return Task.FromResult(Resolve(Responder(uri), jsonTypeInfo));
     }
 
     public Task<RemoteBody> GetStreamAsync(
@@ -62,12 +64,12 @@ public sealed class StubRemoteHttpTransport : IRemoteHttpTransport
     private static RemoteBody CreateStream(byte[] bytes) =>
         new(new MemoryStream(bytes), bytes.LongLength);
 
-    private static T? Resolve<T>(object? outcome, JsonSerializerOptions? options) => outcome switch
+    private static T? Resolve<T>(object? outcome, JsonTypeInfo<T> jsonTypeInfo) => outcome switch
     {
         null => default,
         Exception reason => throw reason,
         T typed => typed,
-        string json => JsonSerializer.Deserialize<T>(json, options ?? JsonDefaults.Strict),
+        string json => JsonSerializer.Deserialize(json, jsonTypeInfo),
         _ => throw new InvalidOperationException(
             $"Stub transport outcome type {outcome.GetType().Name} cannot produce {typeof(T).Name}.")
     };

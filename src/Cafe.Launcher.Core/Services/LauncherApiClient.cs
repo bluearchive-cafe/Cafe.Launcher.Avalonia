@@ -1,6 +1,6 @@
 using System;
 using System.Diagnostics;
-using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Core.Helpers;
@@ -26,7 +26,6 @@ internal sealed class LauncherApiClient : ILauncherApiClient
     private readonly AuthorizationHeaderFactory authorizationHeaderFactory;
     private readonly PatchUrlGroupService patchUrlGroupService;
     private readonly ILauncherDiagnostics? diagnostics;
-    private readonly JsonSerializerOptions jsonOptions = JsonDefaults.Strict;
 
     /// <summary>
     /// Maximum number of attempts for transient manifest/envelope fetch failures
@@ -62,16 +61,18 @@ internal sealed class LauncherApiClient : ILauncherApiClient
     public Task<GameConfigResponse> GetGameConfigAsync(
         CancellationToken cancellationToken = default)
     {
-        return GetEnvelopeDataAsync<GameConfigResponse>(
+        return GetEnvelopeDataAsync(
             "/api/launcher/game/config",
+            CoreJsonContext.Default.GameConfigEnvelope,
             cancellationToken);
     }
 
     public async Task<BaseConfigResponse> GetBaseConfigAsync(
         CancellationToken cancellationToken = default)
     {
-        var response = await GetEnvelopeDataAsync<BaseConfigResponse>(
+        var response = await GetEnvelopeDataAsync(
             "/api/launcher/base/config",
+            CoreJsonContext.Default.BaseConfigEnvelope,
             cancellationToken).ConfigureAwait(false);
         response.LauncherBackgroundImg = ResolveLauncherBackgroundUrl(
             response.LauncherBackgroundImg);
@@ -88,8 +89,9 @@ internal sealed class LauncherApiClient : ILauncherApiClient
     private Task<CdnConfigResponse> GetCdnConfigAsync(
         CancellationToken cancellationToken)
     {
-        return GetEnvelopeDataAsync<CdnConfigResponse>(
+        return GetEnvelopeDataAsync(
             "/api/launcher/advanced/game/download/cdn",
+            CoreJsonContext.Default.CdnConfigEnvelope,
             cancellationToken);
     }
 
@@ -104,24 +106,27 @@ internal sealed class LauncherApiClient : ILauncherApiClient
     public Task<OperationsResourceResponse> GetOperationsResourceAsync(
         CancellationToken cancellationToken = default)
     {
-        return GetEnvelopeDataAsync<OperationsResourceResponse>(
+        return GetEnvelopeDataAsync(
             "/api/launcher/operations/resource",
+            CoreJsonContext.Default.OperationsResourceEnvelope,
             cancellationToken);
     }
 
     public Task<SocialMediaResourceResponse> GetSocialMediaResourceAsync(
         CancellationToken cancellationToken = default)
     {
-        return GetEnvelopeDataAsync<SocialMediaResourceResponse>(
+        return GetEnvelopeDataAsync(
             "/api/launcher/social/media/resource",
+            CoreJsonContext.Default.SocialMediaResourceEnvelope,
             cancellationToken);
     }
 
     public Task<InstallationConfigResponse> GetInstallationConfigAsync(
         CancellationToken cancellationToken = default)
     {
-        return GetEnvelopeDataAsync<InstallationConfigResponse>(
+        return GetEnvelopeDataAsync(
             "/api/launcher/installation/config",
+            CoreJsonContext.Default.InstallationConfigEnvelope,
             cancellationToken);
     }
 
@@ -131,8 +136,9 @@ internal sealed class LauncherApiClient : ILauncherApiClient
         CancellationToken cancellationToken)
     {
         var requestPath = $"/api/launcher/game/config/json?version={Uri.EscapeDataString(version)}&file_path={Uri.EscapeDataString(filePath)}";
-        return GetEnvelopeDataAsync<ManifestUrlResponse>(
+        return GetEnvelopeDataAsync(
             requestPath,
+            CoreJsonContext.Default.ManifestUrlEnvelope,
             cancellationToken);
     }
 
@@ -169,8 +175,9 @@ internal sealed class LauncherApiClient : ILauncherApiClient
         CancellationToken cancellationToken = default)
     {
         var requestUri = new Uri(url);
-        var manifest = await transport.GetJsonAsync<RemoteManifest>(
+        var manifest = await transport.GetJsonAsync(
             requestUri,
+            CoreJsonContext.Default.RemoteManifest,
             new RemoteRequestOptions
             {
                 MaxAttempts = MaxFetchAttempts,
@@ -184,14 +191,16 @@ internal sealed class LauncherApiClient : ILauncherApiClient
 
     private async Task<T> GetEnvelopeDataAsync<T>(
         string path,
+        JsonTypeInfo<LauncherApiEnvelope<T>> jsonTypeInfo,
         CancellationToken cancellationToken)
     {
         // gameProfile.ApiBaseUrl ends with '/' and the path starts with '/', so
         // Uri-relative resolution replaces the base path instead of concatenating.
         var requestUri = new Uri(new Uri(gameProfile.ApiBaseUrl), path);
         var stopwatch = Stopwatch.StartNew();
-        var envelope = await transport.GetJsonAsync<LauncherApiEnvelope<T>>(
+        var envelope = await transport.GetJsonAsync(
             requestUri,
+            jsonTypeInfo,
             new RemoteRequestOptions
             {
                 MaxAttempts = MaxFetchAttempts,
@@ -200,8 +209,7 @@ internal sealed class LauncherApiClient : ILauncherApiClient
                 Timeout = RequestTimeout,
                 ConfigureRequest = request => request.Headers.TryAddWithoutValidation(
                     "Authorization",
-                    authorizationHeaderFactory.Create("", gameProfile.AuthorizationVersion)),
-                Json = jsonOptions
+                    authorizationHeaderFactory.Create("", gameProfile.AuthorizationVersion))
             },
             cancellationToken).ConfigureAwait(false);
         _ = diagnostics?.DebugAsync(

@@ -23,12 +23,6 @@ public sealed class CrashReportStore : ICrashReportLocator
     internal const int RetainedReportCount = 10;
     internal static readonly TimeSpan RetentionAge = TimeSpan.FromDays(30);
 
-    private static readonly JsonSerializerOptions SerializerOptions = new()
-    {
-        WriteIndented = true,
-        Converters = { new JsonStringEnumConverter() }
-    };
-
     private readonly string primaryDirectory;
     private readonly string fallbackDirectory;
     private readonly LauncherBuildIdentity? buildIdentity;
@@ -135,7 +129,7 @@ public sealed class CrashReportStore : ICrashReportLocator
         {
             var fullPath = Path.GetFullPath(path);
             var json = File.ReadAllText(fullPath, Encoding.UTF8);
-            var report = JsonSerializer.Deserialize<CrashReport>(json, SerializerOptions);
+            var report = JsonSerializer.Deserialize(json, UiStorageJsonContext.Default.CrashReport);
             return report is null ? null : report with { SnapshotPath = fullPath };
         }
         catch (Exception exception) when (exception is IOException
@@ -246,7 +240,7 @@ public sealed class CrashReportStore : ICrashReportLocator
         Directory.CreateDirectory(directory);
         var path = Path.Combine(directory, $"{report.Id}.json");
         var persisted = report with { SnapshotPath = path };
-        var json = JsonSerializer.Serialize(persisted, SerializerOptions);
+        var json = JsonSerializer.Serialize(persisted, UiStorageJsonContext.Default.CrashReport);
         File.WriteAllText(path, json, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
         return persisted;
     }

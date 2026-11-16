@@ -509,36 +509,28 @@ internal sealed class LogExportService
         IReadOnlyList<ProtonBuild>? protonBuilds,
         string? runningProtonBuild)
     {
-        var systemInfo = new
-        {
-            timestamp = DateTimeOffset.Now.ToString("O"),
-            version = buildIdentity?.LauncherVersion ?? "",
-            commitSha = buildIdentity?.CommitSha ?? "",
-            os = Environment.OSVersion.ToString(),
-            framework = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription,
-            buildConfig = buildIdentity?.BuildConfiguration ?? "",
-            session = ReadDesktopSession(),
-            graphics = graphics is null ? null : new { vulkan = graphics.Vulkan, opengl = graphics.OpenGl },
-            protonBuilds = protonBuilds is { Count: > 0 }
-                ? protonBuilds.Select(build => new { name = build.Name, path = build.Path }).ToArray()
-                : null,
+        var systemInfo = new SystemInfoDocument(
+            DateTimeOffset.Now.ToString("O"),
+            buildIdentity?.LauncherVersion ?? "",
+            buildIdentity?.CommitSha ?? "",
+            Environment.OSVersion.ToString(),
+            System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription,
+            buildIdentity?.BuildConfiguration ?? "",
+            ReadDesktopSession(),
+            graphics is null ? null : new GraphicsDocument(graphics.Vulkan, graphics.OpenGl),
+            protonBuilds is { Count: > 0 } ? protonBuilds : null,
             runningProtonBuild,
-            export = new
-            {
-                range = options.Range.ToString(),
-                from = manifest.Window.From?.ToString("O"),
-                to = manifest.Window.To?.ToString("O"),
-                includeCrashReports = options.IncludeCrashReports,
-                includeUserData = options.IncludeUserData,
-                entries = manifest.Entries,
-                skipped = manifest.Skipped.Select(skip => new
-                {
-                    entry = skip.EntryName,
-                    reason = skip.Failure.GetType().Name
-                })
-            }
-        };
-        var json = JsonSerializer.Serialize(systemInfo, JsonDefaults.Indented);
+            new ExportDocument(
+                options.Range.ToString(),
+                manifest.Window.From?.ToString("O"),
+                manifest.Window.To?.ToString("O"),
+                options.IncludeCrashReports,
+                options.IncludeUserData,
+                manifest.Entries,
+                manifest.Skipped.Select(skip => new SkippedDocument(
+                    skip.EntryName,
+                    skip.Failure.GetType().Name))));
+        var json = JsonSerializer.Serialize(systemInfo, LogExportJsonContext.Default.SystemInfoDocument);
         var entry = zip.CreateEntry("system-info.json");
         using var stream = entry.Open();
         using var writer = new StreamWriter(stream, Encoding.UTF8);
@@ -550,7 +542,7 @@ internal sealed class LogExportService
     /// differs by Wayland/X11 and desktop, and the P0-A verification record asks for it, so it is
     /// recorded rather than inferred.
     /// </summary>
-    private static object? ReadDesktopSession()
+    private static DesktopSessionDocument? ReadDesktopSession()
     {
         var sessionType = Environment.GetEnvironmentVariable("XDG_SESSION_TYPE");
         var desktop = Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP");
@@ -564,13 +556,11 @@ internal sealed class LogExportService
             return null;
         }
 
-        return new
-        {
-            type = sessionType,
+        return new DesktopSessionDocument(
+            sessionType,
             desktop,
-            waylandDisplay = !string.IsNullOrWhiteSpace(waylandDisplay),
-            x11Display = !string.IsNullOrWhiteSpace(x11Display)
-        };
+            !string.IsNullOrWhiteSpace(waylandDisplay),
+            !string.IsNullOrWhiteSpace(x11Display));
     }
 
     /// <summary>
@@ -651,4 +641,34 @@ internal sealed class LogExportService
 
     /// <summary>One requested artifact absent from the archive and the failure that kept it out.</summary>
     private sealed record SkippedItem(string EntryName, Exception Failure);
+
+    internal sealed record SystemInfoDocument(
+        string Timestamp,
+        string Version,
+        string CommitSha,
+        string Os,
+        string Framework,
+        string BuildConfig,
+        DesktopSessionDocument? Session,
+        GraphicsDocument? Graphics,
+        IReadOnlyList<ProtonBuild>? ProtonBuilds,
+        string? RunningProtonBuild,
+        ExportDocument Export);
+
+    internal sealed record DesktopSessionDocument(string? Type, string? Desktop, bool WaylandDisplay, bool X11Display);
+
+    internal sealed record GraphicsDocument(
+        string? Vulkan,
+        [property: System.Text.Json.Serialization.JsonPropertyName("opengl")] string? OpenGl);
+
+    internal sealed record ExportDocument(
+        string Range,
+        string? From,
+        string? To,
+        bool IncludeCrashReports,
+        bool IncludeUserData,
+        IReadOnlyList<string> Entries,
+        IEnumerable<SkippedDocument> Skipped);
+
+    internal sealed record SkippedDocument(string Entry, string Reason);
 }

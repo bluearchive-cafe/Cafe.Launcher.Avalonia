@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization.Metadata;
 ﻿using System.Net;
 using System.Net.Http;
 using Cafe.Launcher.UI.Services;
@@ -201,6 +202,7 @@ public sealed class RemoteImageStoreTests : IDisposable
     {
         public Task<T?> GetJsonAsync<T>(
             Uri uri,
+            JsonTypeInfo<T> jsonTypeInfo,
             RemoteRequestOptions? options = null,
             CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();

@@ -2,9 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Runtime.InteropServices;
-using System.Runtime.InteropServices.ComTypes;
-using System.Runtime.Versioning;
 using System.Threading.Tasks;
 using Cafe.Launcher.UI.Constants;
 using Cafe.Launcher.UI.Models;
@@ -314,7 +311,7 @@ internal sealed class GameShortcutService : IGameShortcutService
             gameProfile.GameExecutableFileName);
         try
         {
-            CreateShortcut(startScriptPath, target.WorkingDirectory, iconPath, shortcutPath);
+            WindowsShellLink.Save(startScriptPath, target.WorkingDirectory, iconPath, shortcutPath);
 
             // 新入口落盘后再清旧语言名：写入失败时旧入口仍在，不会两头落空。
             TryDeleteLegacyShortcutPaths(targetDirectory, target.ExecutablePath);
@@ -509,89 +506,5 @@ internal sealed class GameShortcutService : IGameShortcutService
         }
 
         return builder.ToString().Trim();
-    }
-
-    [SupportedOSPlatform("windows")]
-    private static void CreateShortcut(
-        string executablePath,
-        string workingDirectory,
-        string iconPath,
-        string shortcutPath)
-    {
-        var shellLink = (IShellLinkW)new ShellLink();
-        try
-        {
-            shellLink.SetPath(executablePath);
-            shellLink.SetWorkingDirectory(workingDirectory);
-
-            // Pin the icon to the game's main executable, not the loader wrapper.
-            shellLink.SetIconLocation(iconPath, 0);
-            ((IPersistFile)shellLink).Save(shortcutPath, fRemember: true);
-        }
-        finally
-        {
-            _ = Marshal.ReleaseComObject(shellLink);
-        }
-    }
-
-    [ComImport]
-    [Guid("00021401-0000-0000-C000-000000000046")]
-    private class ShellLink
-    {
-    }
-
-    [ComImport]
-    [Guid("000214F9-0000-0000-C000-000000000046")]
-    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    private interface IShellLinkW
-    {
-        void GetPath(
-            [Out][MarshalAs(UnmanagedType.LPWStr)] System.Text.StringBuilder pszFile,
-            int cchMax,
-            IntPtr findData,
-            uint flags);
-
-        void GetIDList(out IntPtr pointerIdList);
-
-        void SetIDList(IntPtr pointerIdList);
-
-        void GetDescription(
-            [Out][MarshalAs(UnmanagedType.LPWStr)] System.Text.StringBuilder pszFile,
-            int cchMax);
-
-        void SetDescription([MarshalAs(UnmanagedType.LPWStr)] string pszFile);
-
-        void GetWorkingDirectory(
-            [Out][MarshalAs(UnmanagedType.LPWStr)] System.Text.StringBuilder pszFile,
-            int cchMax);
-
-        void SetWorkingDirectory([MarshalAs(UnmanagedType.LPWStr)] string pszFile);
-
-        void GetArguments(
-            [Out][MarshalAs(UnmanagedType.LPWStr)] System.Text.StringBuilder pszFile,
-            int cchMax);
-
-        void SetArguments([MarshalAs(UnmanagedType.LPWStr)] string pszFile);
-
-        void GetHotkey(out short hotkey);
-
-        void SetHotkey(short hotkey);
-
-        void GetShowCmd(out int showCmd);
-
-        void SetShowCmd(int showCmd);
-
-        void GetIconLocation(
-            [Out][MarshalAs(UnmanagedType.LPWStr)] System.Text.StringBuilder pszIconPath,
-            int cchMax,
-            out int iconIndex);
-
-        void SetIconLocation([MarshalAs(UnmanagedType.LPWStr)] string pszIconPath, int iconIndex);
-
-        void SetRelativePath([MarshalAs(UnmanagedType.LPWStr)] string pszPathRelative, uint reserved);
-
-        void Resolve(IntPtr hwnd, uint flags);
-
-        void SetPath([MarshalAs(UnmanagedType.LPWStr)] string pszFile);
     }
 }

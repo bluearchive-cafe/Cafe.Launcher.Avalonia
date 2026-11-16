@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -14,20 +15,20 @@ public static class AtomicJsonFileStore
 {
     public static async Task<T?> ReadAsync<T>(
         string path,
-        JsonSerializerOptions options,
+        JsonTypeInfo<T> jsonTypeInfo,
         CancellationToken cancellationToken = default)
     {
         await using var stream = File.OpenRead(path);
         return await JsonSerializer.DeserializeAsync<T>(
             stream,
-            options,
+            jsonTypeInfo,
             cancellationToken).ConfigureAwait(false);
     }
 
     public static async Task WriteAsync<T>(
         string path,
         T value,
-        JsonSerializerOptions options,
+        JsonTypeInfo<T> jsonTypeInfo,
         CancellationToken cancellationToken = default)
     {
         var directory = Path.GetDirectoryName(path);
@@ -44,7 +45,7 @@ public static class AtomicJsonFileStore
                 await JsonSerializer.SerializeAsync(
                     stream,
                     value,
-                    options,
+                    jsonTypeInfo,
                     cancellationToken).ConfigureAwait(false);
                 await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
             }

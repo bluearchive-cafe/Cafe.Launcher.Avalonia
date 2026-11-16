@@ -405,18 +405,18 @@ internal sealed partial class DebugViewModel : ObservableObject, IModalContentVi
 
     // ── Settings ─────────────────────────────────────────────────────────
 
-    private static readonly JsonSerializerOptions SettingsJsonOptions = new()
+    private static readonly UiStorageJsonContext SettingsJsonContext = new(new JsonSerializerOptions
     {
         WriteIndented = true,
         Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-    };
+    });
 
     private async Task RefreshSettingsDisplayAsync()
     {
         try
         {
             var settings = await settingsService.ReadAsync();
-            SettingsJsonDisplay = JsonSerializer.Serialize(settings, SettingsJsonOptions);
+            SettingsJsonDisplay = JsonSerializer.Serialize(settings, SettingsJsonContext.LauncherSettings);
         }
         catch (Exception ex)
         {

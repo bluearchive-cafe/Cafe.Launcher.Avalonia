@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization.Metadata;
 using System;
 using System.Net;
 using System.Net.Http;
@@ -5,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.UI.Constants;
 using Cafe.Launcher.UI.Models;
+using Cafe.Launcher.UI.Helpers;
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.Core.Services;
 using Cafe.Launcher.Core.Models;
@@ -39,8 +41,9 @@ internal sealed class ResourcePanelApiClient
     public async Task<ResourcePanelStatusResponse> GetStatusAsync(
         CancellationToken cancellationToken = default)
     {
-        return await FetchJsonAsync<ResourcePanelStatusResponse>(
+        return await FetchJsonAsync(
             "/status/list",
+            ResourcePanelJsonContext.Default.ResourcePanelStatusResponse,
             cancellationToken).ConfigureAwait(false)
             ?? new ResourcePanelStatusResponse();
     }
@@ -52,8 +55,9 @@ internal sealed class ResourcePanelApiClient
         var path = $"/config/get?uid={Uri.EscapeDataString(uid)}";
         try
         {
-            return await FetchJsonAsync<ResourcePanelConfigResponse>(
+            return await FetchJsonAsync(
                 path,
+                ResourcePanelJsonContext.Default.ResourcePanelConfigResponse,
                 cancellationToken).ConfigureAwait(false)
                 ?? new ResourcePanelConfigResponse();
         }
@@ -90,10 +94,12 @@ internal sealed class ResourcePanelApiClient
 
     private async Task<T?> FetchJsonAsync<T>(
         string path,
+        JsonTypeInfo<T> jsonTypeInfo,
         CancellationToken cancellationToken)
     {
-        return await transport.GetJsonAsync<T>(
+        return await transport.GetJsonAsync(
             new Uri(apiBaseUrl + path),
+            jsonTypeInfo,
             CreateOptions(),
             cancellationToken).ConfigureAwait(false);
     }

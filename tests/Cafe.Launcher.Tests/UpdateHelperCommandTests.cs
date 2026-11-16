@@ -48,6 +48,31 @@ public sealed class UpdateHelperCommandTests
             StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void WindowsRelease_PublishesNativeAotExecutablesBeforePackagingBothWindowsArtifacts()
+    {
+        foreach (var projectPath in new[]
+        {
+            "src/Cafe.Launcher/Cafe.Launcher.csproj",
+            "src/Cafe.Launcher.Updater/Cafe.Launcher.Updater.csproj"
+        })
+        {
+            var project = XDocument.Load(TestRepository.FromRepositoryRoot(projectPath));
+            var release = Assert.Single(project.Root!.Elements("PropertyGroup"),
+                group => (string?)group.Attribute("Condition") == "'$(Configuration)' == 'Release'");
+            var publishAot = Assert.Single(release.Elements("PublishAot"));
+            Assert.Equal("true", publishAot.Value);
+            Assert.Equal("'$(RuntimeIdentifier)' == 'win-x64'", (string?)publishAot.Attribute("Condition"));
+        }
+
+        var workflow = File.ReadAllText(TestRepository.FromRepositoryRoot(".github/workflows/release.yml"));
+        var windowsPackages = workflow.Split("      - name: Build Windows packages", StringSplitOptions.None)[1]
+            .Split("      - name: Upload Windows packages", StringSplitOptions.None)[0];
+        Assert.Matches(
+            @"(?s)Build-Distribution\.ps1 -Rids win-x64.*New-WindowsInstaller\.ps1",
+            windowsPackages);
+    }
+
     private static string AssemblyNameOf(string projectFile)
     {
         var match = UpdaterAssemblyName.Match(projectFile);

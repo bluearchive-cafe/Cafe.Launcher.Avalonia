@@ -125,23 +125,32 @@ internal sealed class PrefixMetadataStore
                 Directory.CreateDirectory(directory);
             }
 
-            var payload = new
-            {
-                prefixPath = metadata.PrefixPath,
-                gameId = metadata.GameId,
-                runnerId = metadata.RunnerId,
-                runnerVersion = metadata.RunnerVersion,
-                protonPath = metadata.ProtonPath,
-                launcherVersion = buildIdentity?.LauncherVersion ?? "",
-                createdAt = metadata.CreatedAt.ToString("O", CultureInfo.InvariantCulture),
-                lastLaunchedAt = metadata.LastLaunchedAt.ToString("O", CultureInfo.InvariantCulture),
-                launchCount = metadata.LaunchCount
-            };
-            File.WriteAllText(FilePath, JsonSerializer.Serialize(payload, JsonDefaults.Indented));
+            var payload = new PrefixMetadataDocument(
+                metadata.PrefixPath,
+                metadata.GameId,
+                metadata.RunnerId,
+                metadata.RunnerVersion,
+                metadata.ProtonPath,
+                buildIdentity?.LauncherVersion ?? "",
+                metadata.CreatedAt.ToString("O", CultureInfo.InvariantCulture),
+                metadata.LastLaunchedAt.ToString("O", CultureInfo.InvariantCulture),
+                metadata.LaunchCount);
+            File.WriteAllText(FilePath, JsonSerializer.Serialize(payload, GameRuntimeJsonContext.Default.PrefixMetadataDocument));
         }
         catch (Exception exception) when (StorageFailure.IsRecoverable(exception))
         {
             // 诊断增强：元数据写不进去不影响启动。
         }
     }
+
+    internal sealed record PrefixMetadataDocument(
+        string PrefixPath,
+        string GameId,
+        string RunnerId,
+        string? RunnerVersion,
+        string? ProtonPath,
+        string LauncherVersion,
+        string CreatedAt,
+        string LastLaunchedAt,
+        int LaunchCount);
 }
