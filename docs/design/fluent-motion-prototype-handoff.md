@@ -1,6 +1,6 @@
 # Fluent 动效实验台交接
 
-> 状态：**已交接**（时点文档；实验台位于 [prototypes/FluentMotionLab](../../prototypes/FluentMotionLab)，承接 [ADR-016](adr/ADR-016-Fluent动效层.md) 的动效验证）。
+> 状态：**已交接**（时点文档；实验台原位于 `prototypes/FluentMotionLab/`，承接 [ADR-016](adr/ADR-016-Fluent动效层.md) 的动效验证）。
 
 ## 目标
 

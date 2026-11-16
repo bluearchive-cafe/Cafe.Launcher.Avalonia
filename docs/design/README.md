@@ -1,6 +1,6 @@
 # 设计资料索引
 
-本目录保存现行设计规范、尚未完成的实施计划与已归档的一次性记录。现行视觉与交互规则以[设计系统规范](design-system-spec.md)为准，实现进度见其[§11 实施现状](design-system-spec.md#11-实施现状)，行为契约见 [CONTEXT.md「设计系统」](../../CONTEXT.md#设计系统)；决策取舍以 [ADR 索引](adr/README.md) 为准；保留的原型见 [原型索引](../../prototypes/README.md)。
+本目录保存现行设计规范、尚未完成的实施计划与已归档的一次性记录。现行视觉与交互规则以[设计系统规范](design-system-spec.md)为准，实现进度见其[§11 实施现状](design-system-spec.md#11-实施现状)，行为契约见 [CONTEXT.md「设计系统」](../../CONTEXT.md#设计系统)；决策取舍以 [ADR 索引](adr/README.md) 为准。一次性视觉与交互原型已于 2026-11-16 移除，可在 Git 提交 `2665666b` 的 `prototypes/` 中查阅原稿。
 
 ## 现行规范
 

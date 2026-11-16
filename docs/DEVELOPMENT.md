@@ -157,7 +157,6 @@ fix(settings): 修复切换语言后法律信息不显示
 | [ADR 索引](design/adr/README.md) | 决策与替代关系；正文保留当时背景 |
 | [CODEBASE_AUDIT.md](../CODEBASE_AUDIT.md) | 当前审计发现、已接受风险及其维护规则 |
 | [研究记录索引](research/README.md) | 调查、选型与比对记录的主题和结论时点 |
-| [原型索引](../prototypes/README.md) | 保留的视觉与交互实验及对应决策 |
 | [隐私政策](../PRIVACY.md) | 信息处理、网络访问、本地保留和用户选择 |
 | [用户协议](../TERMS.md) | 使用条件、许可与分发、账号风险、免责与责任限制 |
 
