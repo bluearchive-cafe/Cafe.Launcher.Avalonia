@@ -49,12 +49,12 @@ The archives carry this file and `LICENSE` next to the binaries.
 | HarfBuzzSharp.NativeAssets.WebAssembly | 8.3.1.3 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://go.microsoft.com/fwlink/?linkid=868515 |
 | HarfBuzzSharp.NativeAssets.Win32 | 8.3.1.3 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://go.microsoft.com/fwlink/?linkid=868515 |
 | Markdig | 1.4.1 | BSD-2-Clause ([text](https://licenses.nuget.org/BSD-2-Clause)) | UI, Cafe.Launcher | https://xoofx.github.io/markdig |
-| MarkView.Avalonia | 12.4.0 | MIT ([text](https://licenses.nuget.org/MIT)) | UI, Cafe.Launcher | https://kryptos-fr.github.io/MarkView.Avalonia/ |
+| MarkView.Avalonia | 12.4.1 | MIT ([text](https://licenses.nuget.org/MIT)) | UI, Cafe.Launcher | https://kryptos-fr.github.io/MarkView.Avalonia/ |
 | Material.Icons | 3.0.2 | MIT ([text](https://licenses.nuget.org/MIT)) | UI, Cafe.Launcher | https://github.com/SKProCH/Material.Icons/ |
 | Material.Icons.Avalonia | 3.0.2 | MIT ([text](https://licenses.nuget.org/MIT)) | UI, Cafe.Launcher | https://github.com/AvaloniaUtils/Material.Icons.Avalonia/ |
 | MicroCom.Runtime | 0.11.6 | MIT ([text](https://licenses.nuget.org/MIT)) | UI, Cafe.Launcher | - |
-| Microsoft.Extensions.DependencyInjection | 10.0.14 | MIT ([text](https://licenses.nuget.org/MIT)) | Core, UI, Cafe.Launcher | https://dot.net/ |
-| Microsoft.Extensions.DependencyInjection.Abstractions | 10.0.14 | MIT ([text](https://licenses.nuget.org/MIT)) | Core, UI, Cafe.Launcher | https://dot.net/ |
+| Microsoft.Extensions.DependencyInjection | 10.0.15 | MIT ([text](https://licenses.nuget.org/MIT)) | Core, UI, Cafe.Launcher | https://dot.net/ |
+| Microsoft.Extensions.DependencyInjection.Abstractions | 10.0.15 | MIT ([text](https://licenses.nuget.org/MIT)) | Core, UI, Cafe.Launcher | https://dot.net/ |
 | Microsoft.Extensions.Logging.Abstractions | 8.0.0 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://dot.net/ |
 | Microsoft.IO.RecyclableMemoryStream | 3.0.1 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://github.com/Microsoft/Microsoft.IO.RecyclableMemoryStream |
 | Serilog | 4.4.0 | Apache-2.0 ([text](https://licenses.nuget.org/Apache-2.0)) | Core, UI, Cafe.Launcher | https://serilog.net/ |

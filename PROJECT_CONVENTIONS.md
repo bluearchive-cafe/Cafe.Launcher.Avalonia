@@ -220,7 +220,7 @@
 | .NET SDK | 10.0.403 | Runtime / SDK（`global.json` 钉住，`latestFeature` 滚动） |
 | Avalonia / Avalonia.Desktop | 12.1.6 | UI Framework |
 | Avalonia.Controls.ColorPicker | 12.1.6 | 自定义主题色取色器 |
-| MarkView.Avalonia | 12.4.0 | 基于 Markdig 的更新说明 Markdown 预览 |
+| MarkView.Avalonia | 12.4.1 | 基于 Markdig 的更新说明 Markdown 预览 |
 | Avalonia.Themes.Fluent | 12.1.6 | Fluent 主题 |
 | Avalonia.Headless.XUnit | 12.1.6 | Headless UI testing |
 | AvaloniaUI.DiagnosticsSupport | 2.2.3 | 调试期 UI 诊断（Debug 专用，Release 不分发） |
@@ -228,15 +228,15 @@
 | Material.Icons.Avalonia | 3.0.2 | Icon library |
 | libmpv（Windows x64 LGPL 构建） | 2026-10-31-9e2ed65eb0 | 视频背景 Render API；版本与双重 SHA-256 见 `native/libmpv/manifest.json`，不属于 NuGet 依赖 |
 | libmpv（Linux x64 / macOS arm64 便携版 LGPL 构建） | mpv 0.41.0，ic-plugin-videocodecs v0.1.1 | 视频背景 Render API；来源和 SHA-256 见 `native/libmpv/unix-manifest.json`，系统安装包使用发行版运行库 |
-| Microsoft.Extensions.DependencyInjection | 10.0.14 | DI 容器 |
+| Microsoft.Extensions.DependencyInjection | 10.0.15 | DI 容器 |
 | Shirasagi0012.MaterialColorUtilities | 0.2.0 | Material 色彩工具 |
 | Serilog | 4.4.0 | Logging pipeline |
 | Serilog.Sinks.Async | 2.1.0 | 异步日志 sink |
 | Serilog.Sinks.File | 7.0.0 | 文件日志 sink |
 | xunit.v3.mtp-v2 | 4.0.3 | Test framework / MTP 2 runner（Headless 覆盖为 3.2.2） |
-| Microsoft.Testing.Extensions.TrxReport | 2.5.2 | TRX 测试报告 |
-| Microsoft.Testing.Extensions.HangDump | 2.5.2 | 无活动超时保护（不生成 dump） |
-| Microsoft.Testing.Platform.MSBuild | 2.5.2 | 两套测试的 MTP MSBuild 集成，避免旧 xUnit 引入已弃用版本 |
+| Microsoft.Testing.Extensions.TrxReport | 2.5.3 | TRX 测试报告 |
+| Microsoft.Testing.Extensions.HangDump | 2.5.3 | 无活动超时保护（不生成 dump） |
+| Microsoft.Testing.Platform.MSBuild | 2.5.3 | 两套测试的 MTP MSBuild 集成，避免旧 xUnit 引入已弃用版本 |
 | Microsoft.Testing.Extensions.CodeCoverage | 18.12.0 | 运行时覆盖率（Cobertura） |
 | Inno Setup | 7.0+ | Windows installer（脚本强制最低 7.0，CI 安装 7.1.0） |
 
