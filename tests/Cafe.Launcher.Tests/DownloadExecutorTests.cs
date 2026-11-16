@@ -15,6 +15,35 @@ public sealed class DownloadExecutorTests : IDisposable
     private readonly TestDirectory tempDir = TestDirectory.Create();
 
     [Fact]
+    public async Task InstallDownloadedFilesAsync_WhenCanceledDuringVerification_DoesNotApplyFiles()
+    {
+        var targetPath = Path.Combine(tempDir, "data.bin");
+        var tempPath = DownloadExecutor.GetTempName(targetPath);
+        await File.WriteAllTextAsync(targetPath, "original");
+        await File.WriteAllTextAsync(tempPath, "replacement");
+        var file = new ManifestFile
+        {
+            Path = "data.bin",
+            Size = "11",
+            Hash = await new Crc64Service().ComputeFileAsync(tempPath)
+        };
+        using var cancellation = new CancellationTokenSource();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            CreateExecutor().InstallDownloadedFilesAsync(
+                tempDir,
+                [file],
+                [file],
+                new Dictionary<string, string> { [file.Path] = file.Hash },
+                new Dictionary<string, PlannedFileHash>(),
+                _ => cancellation.Cancel(),
+                cancellation.Token));
+
+        Assert.Equal("original", await File.ReadAllTextAsync(targetPath));
+        Assert.Equal("replacement", await File.ReadAllTextAsync(tempPath));
+    }
+
+    [Fact]
     public async Task InstallDownloadedFilesAsync_WhenTargetFileIsReadOnly_ReplacesInstalledFile()
     {
         var targetPath = Path.Combine(tempDir, "data.bin");

@@ -324,27 +324,31 @@ internal sealed class DownloadExecutor
         // AUD-PERF-007：校验阶段逐文件回调经百分比门控去重后抵达 UI 线程。
         var progressReporter = new StageProgressReporter(progress, monotonic: true);
 
-        using var semaphore = new SemaphoreSlim(VerificationParallelism, VerificationParallelism);
-        var tasks = manifestFiles.Select(async (file, index) =>
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
-            try
+        await Parallel.ForEachAsync(
+            Enumerable.Range(0, manifestFiles.Count),
+            new ParallelOptions
             {
+                MaxDegreeOfParallelism = VerificationParallelism,
+                CancellationToken = cancellationToken
+            },
+            async (index, workerToken) =>
+            {
+                var file = manifestFiles[index];
                 var isDownloaded = downloadedPathSet.Contains(file.Path);
                 var checkPath = isDownloaded
                     ? GetTempName(GamePathValidator.GetSafeFilePath(gamePath, file.Path))
                     : GamePathValidator.GetSafeFilePath(gamePath, file.Path);
-                var fileBytes = File.Exists(checkPath) ? new FileInfo(checkPath).Length : file.SizeBytes;
-                fileActivity?.Update(file.Path, 0, fileBytes, verifying: true);
+                var fileInfo = new FileInfo(checkPath);
+                var exists = fileInfo.Exists;
+                fileActivity?.Update(file.Path, 0, exists ? fileInfo.Length : file.SizeBytes, verifying: true);
 
-                if (!File.Exists(checkPath))
+                if (!exists)
                 {
                     failedFlags[index] = true;
                 }
                 else if (!IsAlreadyVerified(file, checkPath, isDownloaded, verifiedHashes, plannedHashes))
                 {
-                    var crc64 = await crc64Service.ComputeFileAsync(checkPath, null, fileActivity?.ReadProgress(file.Path), cancellationToken).ConfigureAwait(false);
+                    var crc64 = await crc64Service.ComputeFileAsync(checkPath, null, fileActivity?.ReadProgress(file.Path), workerToken).ConfigureAwait(false);
                     if (crc64 != file.Hash)
                     {
                         await diagnostics.MessageAsync(
@@ -363,21 +367,14 @@ internal sealed class DownloadExecutor
                 {
                     Interlocked.Increment(ref skippedCount);
                 }
-            }
-            finally
-            {
-                semaphore.Release();
-            }
 
-            // 校验是并行的（≤8 个 worker）：回调的到达顺序不保证单调，落后的那一次会把走过的
-            // 桶再报一遍，所以这里用单调判据——进度只增不减，每个桶也只报一次
-            // （2026-09-15 复核轮：非单调判据下 400 文件去重用例会偶发红）。
-            var percent = (int)Math.Round(Interlocked.Increment(ref completedCount) * 100d / manifestFiles.Count);
-            progressReporter.Report(percent);
-            fileActivity?.Complete(file.Path);
-        }).ToArray();
-
-        await Task.WhenAll(tasks).ConfigureAwait(false);
+                // 校验是并行的（≤8 个 worker）：回调的到达顺序不保证单调，落后的那一次会把走过的
+                // 桶再报一遍，所以这里用单调判据——进度只增不减，每个桶也只报一次
+                // （2026-09-15 复核轮：非单调判据下 400 文件去重用例会偶发红）。
+                var percent = (int)Math.Round(Interlocked.Increment(ref completedCount) * 100d / manifestFiles.Count);
+                progressReporter.Report(percent);
+                fileActivity?.Complete(file.Path);
+            }).ConfigureAwait(false);
         var failedFiles = new List<ManifestFile>();
         for (var index = 0; index < manifestFiles.Count; index++)
         {
