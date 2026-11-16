@@ -27,9 +27,9 @@
 #define LEGACY_NSIS_UNINSTALL_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\Cafe.Launcher"
 
 [Setup]
-; Stable product identity. NEVER change AppId: it locates the installed product
-; for upgrades (same AppId = prior version is silently uninstalled first) and
-; names the Windows uninstall entry (HKLM\...\Uninstall\{AppId}_is1).
+; Stable product identity. Keep AppId across versions so Inno can reuse the
+; previous install directory and append to its uninstall log during upgrades.
+; It also names the Windows uninstall entry (HKLM\...\Uninstall\{AppId}_is1).
 AppId={{803fa671-62db-49fd-b99b-85635f5118ba}
 AppName=Cafe Launcher
 AppVersion={#APP_VERSION}
@@ -130,7 +130,31 @@ Type: filesandordirs; Name: "{localappdata}\Cafe Launcher"; Check: ShouldDeleteU
 [Code]
 var
   DeleteApplicationData: Boolean;
+  CleanLegacyJit: Boolean;
   InitialInstallDir: String;
+
+function GetFileAttributes(Path: String): DWORD;
+  external 'GetFileAttributesW@kernel32.dll stdcall';
+
+function IsPlainDirectory(Path: String): Boolean;
+begin
+  { Require a directory and reject reparse points and INVALID_FILE_ATTRIBUTES. }
+  Result := (GetFileAttributes(Path) and $410) = $10;
+end;
+
+procedure RemoveLegacyJitFile(AppDir, RelativePath: String);
+var
+  Path: String;
+begin
+  Path := AddBackslash(AppDir) + RelativePath;
+  if IsPlainDirectory(ExtractFileDir(Path)) and FileExists(Path) then
+  begin
+    if DeleteFile(Path) then
+      Log('Removed legacy JIT file: ' + Path)
+    else
+      Log('Could not remove legacy JIT file: ' + Path);
+  end;
+end;
 
 { Reads InstallLocation from an uninstall registry key when present and non-empty. }
 function TryReadInstallLocation(const Root: Integer; const Key: String): Boolean;
@@ -307,20 +331,42 @@ begin
 end;
 
 function PrepareToInstall(var NeedsRestart: Boolean): String;
+var
+  AppDir: String;
 begin
   Result := '';
   if not RemoveLegacyInstallation() then
+  begin
     Result := ExpandConstant('{cm:PreviousUninstallFailed}');
+    Exit;
+  end;
+
+  { Detect the existing installed layout before [Files] overwrites the host. }
+  AppDir := ExpandConstant('{app}');
+  CleanLegacyJit := IsPlainDirectory(AppDir) and
+    FileExists(AddBackslash(AppDir) + '.cafe-launcher-install') and
+    FileExists(AddBackslash(AppDir) + 'Cafe.Launcher.dll') and
+    FileExists(AddBackslash(AppDir) + 'Cafe.Launcher.runtimeconfig.json');
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
+var
+  AppDir: String;
 begin
   { Ownership marker consumed by the uninstaller to validate the install location. }
   if CurStep = ssPostInstall then
+  begin
+    AppDir := ExpandConstant('{app}');
+    { Keep the old runtime available until the new payload has been installed. }
+    if CleanLegacyJit and IsPlainDirectory(AppDir) then
+    begin
+      #include "LegacyJitFiles.iss"
+    end;
     SaveStringToFile(
       ExpandConstant('{app}\.cafe-launcher-install'),
       ExpandConstant('{#EXECUTABLE_NAME}') + #13#10,
       False);
+  end;
 end;
 
 function InitializeUninstall: Boolean;

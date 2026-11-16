@@ -125,8 +125,7 @@ public sealed class InstallerContractTests
     {
         var script = ReadProjectFile("installer/windows/Cafe.Launcher.iss");
 
-        Assert.Matches(@"AppId=\{\{[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\}", script);
-        Assert.Contains("NEVER change AppId", script, StringComparison.Ordinal);
+        Assert.Contains("AppId={{803fa671-62db-49fd-b99b-85635f5118ba}", script, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -167,6 +166,34 @@ public sealed class InstallerContractTests
             script,
             StringComparison.Ordinal);
         Assert.Equal(1, CountOccurrences(script, "Cafe.Launcher.Avalonia.exe"));
+    }
+
+    [Fact]
+    public void IssInstaller_CleansOnlyKnownJitFilesAfterInstallingTheNewPayload()
+    {
+        var script = ReadProjectFile("installer/windows/Cafe.Launcher.iss");
+        var cleanup = ReadProjectFile("installer/windows/LegacyJitFiles.iss");
+
+        Assert.Contains("CleanLegacyJit := IsPlainDirectory(AppDir) and", script, StringComparison.Ordinal);
+        Assert.Contains("FileExists(AddBackslash(AppDir) + '.cafe-launcher-install') and", script, StringComparison.Ordinal);
+        Assert.Contains("FileExists(AddBackslash(AppDir) + 'Cafe.Launcher.runtimeconfig.json')", script, StringComparison.Ordinal);
+        Assert.Contains("if CleanLegacyJit and IsPlainDirectory(AppDir) then", script, StringComparison.Ordinal);
+        Assert.Matches(@"if CurStep = ssPostInstall then\s+begin[\s\S]*?#include ""LegacyJitFiles\.iss""", script);
+        Assert.Contains("IsPlainDirectory(ExtractFileDir(Path)) and FileExists(Path)", script, StringComparison.Ordinal);
+
+        var entries = cleanup.Split('\n').Select(line => line.Trim())
+            .Where(line => line.StartsWith("RemoveLegacyJitFile", StringComparison.Ordinal)).ToArray();
+        Assert.All(entries, entry => Assert.Matches(
+            @"^RemoveLegacyJitFile\(AppDir, '(?:(?:ja|zh-Hans|zh-Hant)\\)?[\w.-]+\.(?:dll|json|exe)'\);$",
+            entry));
+        Assert.Equal(entries.Length, entries.Distinct(StringComparer.OrdinalIgnoreCase).Count());
+        Assert.Contains("RemoveLegacyJitFile(AppDir, 'Cafe.Launcher.dll');", entries);
+        Assert.Contains("RemoveLegacyJitFile(AppDir, 'coreclr.dll');", entries);
+        Assert.Contains("RemoveLegacyJitFile(AppDir, 'zh-Hans\\Cafe.Launcher.UI.resources.dll');", entries);
+        foreach (var retained in new[] { "Cafe.Launcher.exe", "Cafe.Launcher.Updater.exe", "libSkiaSharp.dll", "settings.json" })
+        {
+            Assert.DoesNotContain(entries, entry => entry.EndsWith($"'{retained}');", StringComparison.OrdinalIgnoreCase));
+        }
     }
 
     [Fact]

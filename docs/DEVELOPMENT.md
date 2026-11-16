@@ -97,6 +97,8 @@ pwsh ./scripts/Test-WindowsPublishOutput.ps1 -PublishDir <发布目录>
 
 Windows 游戏快捷方式通过原生 Shell Link COM 接口写入 `.lnk`。验证主程序的 Native AOT 发布产物时，应实际创建快捷方式并核对 `run.bat` 目标、游戏工作目录与图标。
 
+验证 Inno 从托管版覆盖升级到 Native AOT 时，使用独立的安装目录、用户数据目录和游戏目录。确认新版能启动，[旧文件清单](../installer/windows/LegacyJitFiles.iss)中的文件已清除，且用户数据和游戏文件未变。安装器仅在识别到旧安装标记及托管入口文件后执行清理。
+
 校验脚本检查主程序、更新助手、播放器、清单和许可证，也会拒绝包含旧托管产物的目录。使用 `-SkipPublish` 或单独调用安装器脚本时，需传入干净的 Native AOT 发布目录。`native/libmpv/COPYING*` 固定使用 LF，保证跨平台校验同一字节序列。Debug 通常使用本机安装的 .NET。macOS 和 Linux 的 Release 发布继续使用自包含 .NET。
 
 涉及播放器生命周期时执行生产场景复测：
