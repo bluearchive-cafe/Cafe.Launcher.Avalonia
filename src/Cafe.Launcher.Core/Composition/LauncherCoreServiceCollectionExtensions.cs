@@ -110,6 +110,7 @@ public static class LauncherCoreServiceCollectionExtensions
         services.TryAddSingleton<ILocalInstallationStateStore>(sp => sp.GetRequiredService<LocalInstallationStateStore>());
         services.TryAddSingleton<AuthorizationHeaderFactory>();
         services.TryAddSingleton<IBestHttpCookieLibraryReader, BestHttpCookieLibraryService>();
+        services.TryAddSingleton<IGameDeviceOptionReader, GameDeviceOptionReader>();
         services.TryAddSingleton<PatchUrlGroupService>();
         // 「允许本机/内网地址」同样按使用时机读取已保存快照（ADR-028）；按类型注册会让
         // 容器回退到可选参数的默认值，开关将永远读不到设置。

@@ -34,3 +34,6 @@ internal sealed partial class CoreStorageJsonContext : JsonSerializerContext;
 [JsonSerializable(typeof(PrefixMetadataStore.PrefixMetadataDocument))]
 [JsonSerializable(typeof(CompatibilityEnvironmentPrecheck.CompatibilityReportDocument))]
 internal sealed partial class GameRuntimeJsonContext : JsonSerializerContext;
+
+[JsonSerializable(typeof(GameDeviceOptionDocument))]
+internal sealed partial class GameDeviceOptionJsonContext : JsonSerializerContext;

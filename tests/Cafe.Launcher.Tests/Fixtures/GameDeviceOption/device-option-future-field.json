@@ -1,0 +1,47 @@
+{
+  "BGM": {
+    "Mute": 1,
+    "Volume": 0.5795
+  },
+  "FXS": {
+    "Mute": 1,
+    "Volume": 0.7636
+  },
+  "Voice": {
+    "Mute": 1,
+    "Volume": 1.0
+  },
+  "Master": {
+    "Mute": 1,
+    "Volume": 1.0
+  },
+  "AudioVolumeVersion": 1,
+  "Resolution": 0,
+  "FPS": 0,
+  "DrawcallMode": 0,
+  "AllowPostProcess": 0,
+  "AntiAliasing": 1,
+  "LetterBoxInBattle": 1,
+  "NotificationAfterDownloadAlarm": 0,
+  "ScreenRatioType": 1,
+  "ScreenModeType": 0,
+  "BackgroundSound": 0,
+  "ControlDisplay": 0,
+  "VSync": 0,
+  "MXMouseCursor": 0,
+  "windowRect": {
+    "m_XMin": 320,
+    "m_YMin": 167,
+    "m_Width": 1280,
+    "m_Height": 720
+  },
+  "renderScale": {
+    "scale": 0
+  },
+  "Vibration": 0,
+  "ControllerCursorSpeed": 0,
+  "CursorAutoFocus": 0,
+  "TitleVideoAudioId": 14,
+  "IsInitialized": true,
+  "FutureOption": 1
+}

@@ -30,4 +30,13 @@ public sealed class LauncherProfilesTests
         Assert.Null(profile);
         Assert.Throws<ArgumentException>(() => LauncherProfiles.GetSupportedGame(gameId));
     }
+
+    [Fact]
+    public void DeviceOptionSegments_BlueArchivePointsAtTheGameProfile()
+    {
+        Assert.Equal(
+            new[] { "AppData", "LocalLow", "YostarJP", "BlueArchive", "DeviceOption" },
+            LauncherProfiles.BlueArchiveJapan.DeviceOptionRelativeSegments);
+        Assert.Empty(LauncherProfiles.StellaSoraChina.DeviceOptionRelativeSegments);
+    }
 }
