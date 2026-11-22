@@ -3,7 +3,7 @@
              xmlns:vm="using:Cafe.Launcher.UI.ViewModels"
         xmlns:feat="using:Cafe.Launcher.UI.Features.Diagnostics"
              xmlns:controls="using:Cafe.Launcher.UI.Controls"
-             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:glyphs="using:Cafe.Launcher.UI.Constants"
              x:Class="Cafe.Launcher.UI.Views.MainWindowLogViewerOverlay"
              x:Name="LogViewerRoot"
              x:DataType="vm:MainWindowViewModel">
@@ -120,21 +120,21 @@
                 <Button Classes="flat-action dialog-action" Command="{Binding LogExport.OpenCommand}"
                         AutomationProperties.Name="{Binding Shell.I18n[exportLogs]}">
                     <StackPanel Classes="button-content">
-                        <materialIcons:MaterialIcon Kind="ExitToApp" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                        <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.OpenExternal}" FontSize="{StaticResource Launcher.Icon.Sm}"/>
                         <TextBlock Text="{Binding Shell.I18n[exportLogs]}"/>
                     </StackPanel>
                 </Button>
             </controls:DialogSurface.FooterLeading>
             <controls:DialogSurface.Footer>
-                <StackPanel Classes="confirm-actions">
+                <WrapPanel Classes="dialog-actions">
                     <Button Classes="flat-action dialog-action" Command="{Binding LogViewer.CloseCommand}"
                             AutomationProperties.Name="{Binding Shell.I18n[close]}">
                         <StackPanel Classes="button-content">
-                            <materialIcons:MaterialIcon Kind="CloseCircleOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                            <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Cancel}" FontSize="{StaticResource Launcher.Icon.Sm}"/>
                             <TextBlock Text="{Binding Shell.I18n[close]}"/>
                         </StackPanel>
                     </Button>
-                </StackPanel>
+                </WrapPanel>
             </controls:DialogSurface.Footer>
         </controls:DialogSurface>
     </Grid>

@@ -4,354 +4,147 @@
              xmlns:models="using:Cafe.Launcher.UI.Models"
              xmlns:coreModels="using:Cafe.Launcher.Core.Models"
              xmlns:converters="using:Cafe.Launcher.UI.Converters"
-             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:glyphs="using:Cafe.Launcher.UI.Constants"
              xmlns:controls="using:Cafe.Launcher.UI.Controls"
+             xmlns:views="using:Cafe.Launcher.UI.Views"
              x:Class="Cafe.Launcher.UI.Views.SettingsAppearanceSection"
              x:Name="SettingsRoot"
              Classes="settings-section"
              x:DataType="vm:MainWindowViewModel">
     <StackPanel>
-        <StackPanel Classes="settings-group">
+        <StackPanel Classes="settings-group" IsVisible="{Binding Settings.IsAppearanceCategorySelected}">
             <TextBlock Text="{Binding Shell.I18n[settingsGroupThemeMotion]}" Classes="group-title"/>
-            <!-- 2–3 个短标签用分段按钮：互斥值常显，单击直达（共享契约见 Styles/Segmented.axaml）。 -->
-            <controls:SettingRow ShowTopDivider="False" Title="{Binding Shell.I18n[theme]}">
-                <controls:SettingRow.Action>
-                    <Border Classes="segmented">
-                        <StackPanel Orientation="Horizontal">
-                            <RadioButton Classes="segment-option"
-                                         GroupName="SettingsThemeMode"
-                                         IsChecked="{Binding Settings.Editor.Current.ThemeMode, Converter={x:Static converters:SegmentOptionConverter.Instance}, ConverterParameter={x:Static coreModels:ThemeModes.System}, Mode=TwoWay}"
-                                         AutomationProperties.Name="{Binding Shell.I18n[themeSystem]}">
-                                <StackPanel Classes="segment-content">
-                                    <materialIcons:MaterialIcon Kind="Check" Classes="segment-check"
-                                                                Width="{StaticResource Launcher.Icon.Sm}"
-                                                                Height="{StaticResource Launcher.Icon.Sm}"/>
-                                    <TextBlock Text="{Binding Shell.I18n[themeSystem]}"/>
-                                </StackPanel>
-                            </RadioButton>
-                            <Border Classes="segmented-divider"/>
-                            <RadioButton Classes="segment-option"
-                                         GroupName="SettingsThemeMode"
-                                         IsChecked="{Binding Settings.Editor.Current.ThemeMode, Converter={x:Static converters:SegmentOptionConverter.Instance}, ConverterParameter={x:Static coreModels:ThemeModes.Light}, Mode=TwoWay}"
-                                         AutomationProperties.Name="{Binding Shell.I18n[themeLight]}">
-                                <StackPanel Classes="segment-content">
-                                    <materialIcons:MaterialIcon Kind="Check" Classes="segment-check"
-                                                                Width="{StaticResource Launcher.Icon.Sm}"
-                                                                Height="{StaticResource Launcher.Icon.Sm}"/>
-                                    <TextBlock Text="{Binding Shell.I18n[themeLight]}"/>
-                                </StackPanel>
-                            </RadioButton>
-                            <Border Classes="segmented-divider"/>
-                            <RadioButton Classes="segment-option"
-                                         GroupName="SettingsThemeMode"
-                                         IsChecked="{Binding Settings.Editor.Current.ThemeMode, Converter={x:Static converters:SegmentOptionConverter.Instance}, ConverterParameter={x:Static coreModels:ThemeModes.Dark}, Mode=TwoWay}"
-                                         AutomationProperties.Name="{Binding Shell.I18n[themeDark]}">
-                                <StackPanel Classes="segment-content">
-                                    <materialIcons:MaterialIcon Kind="Check" Classes="segment-check"
-                                                                Width="{StaticResource Launcher.Icon.Sm}"
-                                                                Height="{StaticResource Launcher.Icon.Sm}"/>
-                                    <TextBlock Text="{Binding Shell.I18n[themeDark]}"/>
-                                </StackPanel>
-                            </RadioButton>
-                        </StackPanel>
-                    </Border>
-                </controls:SettingRow.Action>
-            </controls:SettingRow>
+            <Border Classes="settings-group-card">
+                <StackPanel>
+                    <!-- 短标签互斥值用原生单选组常显（ADR-070 第二批，接缝仍为 SegmentOptionConverter）。 -->
+                    <controls:SettingRow Title="{Binding Shell.I18n[theme]}">
+                        <controls:SettingRow.Action>
+                            <WrapPanel Classes="setting-radio-group">
+                                <RadioButton Classes="setting-radio"
+                                             GroupName="SettingsThemeMode"
+                                             IsChecked="{Binding Settings.Editor.Current.ThemeMode, Converter={x:Static converters:SegmentOptionConverter.Instance}, ConverterParameter={x:Static coreModels:ThemeModes.System}, Mode=TwoWay}"
+                                             AutomationProperties.Name="{Binding Shell.I18n[themeSystem]}">
+                                    <TextBlock Text="{Binding Shell.I18n[themeSystem]}" TextWrapping="Wrap"/>
+                                </RadioButton>
+                                <RadioButton Classes="setting-radio"
+                                             GroupName="SettingsThemeMode"
+                                             IsChecked="{Binding Settings.Editor.Current.ThemeMode, Converter={x:Static converters:SegmentOptionConverter.Instance}, ConverterParameter={x:Static coreModels:ThemeModes.Light}, Mode=TwoWay}"
+                                             AutomationProperties.Name="{Binding Shell.I18n[themeLight]}">
+                                    <TextBlock Text="{Binding Shell.I18n[themeLight]}" TextWrapping="Wrap"/>
+                                </RadioButton>
+                                <RadioButton Classes="setting-radio"
+                                             GroupName="SettingsThemeMode"
+                                             IsChecked="{Binding Settings.Editor.Current.ThemeMode, Converter={x:Static converters:SegmentOptionConverter.Instance}, ConverterParameter={x:Static coreModels:ThemeModes.Dark}, Mode=TwoWay}"
+                                             AutomationProperties.Name="{Binding Shell.I18n[themeDark]}">
+                                    <TextBlock Text="{Binding Shell.I18n[themeDark]}" TextWrapping="Wrap"/>
+                                </RadioButton>
+                            </WrapPanel>
+                        </controls:SettingRow.Action>
+                    </controls:SettingRow>
 
-            <controls:SettingSelect Title="{Binding Shell.I18n[motionMode]}"
-                                    Description="{Binding Shell.I18n[motionModeDescription]}"
-                                    AutomationName="{Binding Shell.I18n[motionMode]}"
-                                    ItemsSource="{Binding Settings.Options.MotionMode}"
-                                    SelectedValue="{Binding Settings.Editor.Current.MotionMode, Mode=TwoWay}"/>
-        </StackPanel>
-
-        <StackPanel Classes="settings-group">
-            <TextBlock Text="{Binding Shell.I18n[settingsGroupBackground]}" Classes="group-title"/>
-            <controls:SettingRow ShowTopDivider="False"
-                                 Title="{Binding Shell.I18n[backgroundSource]}"
-                                 Description="{Binding Shell.I18n[backgroundSourceDescription]}">
-                <controls:SettingRow.Action>
-                    <Border Classes="segmented">
-                        <StackPanel Orientation="Horizontal">
-                            <RadioButton Classes="segment-option"
-                                         GroupName="SettingsBackgroundSource"
-                                         IsChecked="{Binding Settings.Editor.Current.BackgroundSource, Converter={x:Static converters:SegmentOptionConverter.Instance}, ConverterParameter={x:Static coreModels:BackgroundSources.Bundled}, Mode=TwoWay}"
-                                         AutomationProperties.Name="{Binding Shell.I18n[backgroundSourceBundled]}">
-                                <StackPanel Classes="segment-content">
-                                    <materialIcons:MaterialIcon Kind="Check" Classes="segment-check"
-                                                                Width="{StaticResource Launcher.Icon.Sm}"
-                                                                Height="{StaticResource Launcher.Icon.Sm}"/>
-                                    <TextBlock Text="{Binding Shell.I18n[backgroundSourceBundled]}"/>
-                                </StackPanel>
-                            </RadioButton>
-                            <Border Classes="segmented-divider"/>
-                            <RadioButton Classes="segment-option"
-                                         GroupName="SettingsBackgroundSource"
-                                         IsChecked="{Binding Settings.Editor.Current.BackgroundSource, Converter={x:Static converters:SegmentOptionConverter.Instance}, ConverterParameter={x:Static coreModels:BackgroundSources.Remote}, Mode=TwoWay}"
-                                         AutomationProperties.Name="{Binding Shell.I18n[backgroundSourceRemote]}">
-                                <StackPanel Classes="segment-content">
-                                    <materialIcons:MaterialIcon Kind="Check" Classes="segment-check"
-                                                                Width="{StaticResource Launcher.Icon.Sm}"
-                                                                Height="{StaticResource Launcher.Icon.Sm}"/>
-                                    <TextBlock Text="{Binding Shell.I18n[backgroundSourceRemote]}"/>
-                                </StackPanel>
-                            </RadioButton>
-                            <Border Classes="segmented-divider"/>
-                            <RadioButton Classes="segment-option"
-                                         GroupName="SettingsBackgroundSource"
-                                         IsChecked="{Binding Settings.Editor.Current.BackgroundSource, Converter={x:Static converters:SegmentOptionConverter.Instance}, ConverterParameter={x:Static coreModels:BackgroundSources.Custom}, Mode=TwoWay}"
-                                         AutomationProperties.Name="{Binding Shell.I18n[backgroundSourceCustom]}">
-                                <StackPanel Classes="segment-content">
-                                    <materialIcons:MaterialIcon Kind="Check" Classes="segment-check"
-                                                                Width="{StaticResource Launcher.Icon.Sm}"
-                                                                Height="{StaticResource Launcher.Icon.Sm}"/>
-                                    <TextBlock Text="{Binding Shell.I18n[backgroundSourceCustom]}"/>
-                                </StackPanel>
-                            </RadioButton>
-                        </StackPanel>
-                    </Border>
-                </controls:SettingRow.Action>
-            </controls:SettingRow>
-
-            <Grid Classes="settings-appearance-media" ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
-                <Border Classes="settings-appearance-thumbnail">
-                    <Grid>
-                        <Image Classes="settings-appearance-thumbnail-image"
-                               Classes.video="{Binding Background.IsVideoBackgroundSelected}"
-                               Source="{Binding Background.BackgroundPreviewImage}" Stretch="UniformToFill"/>
-                        <Border Classes="settings-appearance-video-shade"
-                                IsVisible="{Binding Background.IsVideoBackgroundSelected}"/>
-                        <materialIcons:MaterialIcon Kind="VideoOutline" Classes="settings-appearance-video-icon"
-                                                    Width="{StaticResource Launcher.Icon.Lg}" Height="{StaticResource Launcher.Icon.Lg}"
-                                                    HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                    Foreground="{StaticResource Launcher.Text.OnChrome}"
-                                                    IsVisible="{Binding Background.IsVideoBackgroundSelected}"/>
-                    </Grid>
-                </Border>
-                <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-                    <TextBlock Text="{Binding Shell.I18n[currentBackground]}" Classes="group-title"/>
-                    <TextBlock Text="{Binding Shell.I18n[backgroundSourceBundled]}" Classes="caption"
-                               IsVisible="{Binding Background.CurrentBackgroundLocation, Converter={x:Static StringConverters.IsNullOrEmpty}}"/>
-                    <TextBlock Text="{Binding Shell.I18n[backgroundSourceRemote]}" Classes="caption"
-                               ToolTip.Tip="{Binding Background.CurrentBackgroundLocation}"
-                               IsVisible="{Binding Background.IsRemoteBackgroundDisplayed}"/>
-                    <TextBlock Text="{Binding Background.CurrentBackgroundFilePath}" Classes="caption"
-                               TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Background.CurrentBackgroundFilePath}"
-                               IsVisible="{Binding Background.CurrentBackgroundFilePath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    <Border Classes="settings-row-divider"/>
+                    <controls:SettingSelect Title="{Binding Shell.I18n[motionMode]}"
+                                            Description="{Binding Shell.I18n[motionModeDescription]}"
+                                            AutomationName="{Binding Shell.I18n[motionMode]}"
+                                            ItemsSource="{Binding Settings.Options.MotionMode}"
+                                            SelectedValue="{Binding Settings.Editor.Current.MotionMode, Mode=TwoWay}"/>
                 </StackPanel>
-            </Grid>
-            <Grid Classes="settings-appearance-warning" ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}"
-                        IsVisible="{Binding Background.HasBackgroundLoadFailure}">
-                <materialIcons:MaterialIcon Kind="AlertCircleOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                <TextBlock Grid.Column="1" Text="{Binding Shell.I18n[backgroundLoadFallback]}" Classes="caption" TextWrapping="Wrap"
-                           AutomationProperties.LiveSetting="Polite"/>
-            </Grid>
-
-            <controls:SettingRow Title="{Binding Shell.I18n[customBackground]}"
-                                 Description="{Binding Shell.I18n[customBackgroundDescription]}"
-                                 IsVisible="{Binding Settings.Appearance.IsCustomBackgroundSettingsVisible}">
-                <controls:SettingRow.Action>
-                    <WrapPanel ItemSpacing="{StaticResource Launcher.Spacing.Sm}" LineSpacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
-                        <Button Classes="flat-action"
-                                Command="{Binding Settings.ChooseBackgroundFileCommand}"
-                                AutomationProperties.Name="{Binding Shell.I18n[chooseImageOrVideo]}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="ImageOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                                <TextBlock Text="{Binding Shell.I18n[chooseImageOrVideo]}"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Classes="flat-action"
-                                Command="{Binding Settings.ChooseBackgroundFolderCommand}"
-                                AutomationProperties.Name="{Binding Shell.I18n[chooseFolder]}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                                <TextBlock Text="{Binding Shell.I18n[chooseFolder]}"/>
-                            </StackPanel>
-                        </Button>
-                        <!-- 清除只影响当前选择，收成图标按钮，避免与两个选择动作争夺视觉重量。 -->
-                        <Button Classes="flat-action icon-only"
-                                Command="{Binding Settings.ClearBackgroundCommand}"
-                                ToolTip.Tip="{Binding Shell.I18n[clearBackground]}"
-                                AutomationProperties.Name="{Binding Shell.I18n[clearBackground]}"
-                                IsVisible="{Binding Settings.Appearance.IsCustomBackground}">
-                            <materialIcons:MaterialIcon Kind="DeleteOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                        </Button>
-                    </WrapPanel>
-                </controls:SettingRow.Action>
-            </controls:SettingRow>
-
-            <controls:SettingRow Title="{Binding Shell.I18n[backgroundFit]}">
-                <controls:SettingRow.Action>
-                    <Border Classes="segmented">
-                        <StackPanel Orientation="Horizontal">
-                            <RadioButton Classes="segment-option"
-                                         GroupName="SettingsBackgroundFit"
-                                         IsChecked="{Binding Settings.Editor.Current.BackgroundFit, Converter={x:Static converters:SegmentOptionConverter.Instance}, ConverterParameter={x:Static coreModels:BackgroundFits.Fill}, Mode=TwoWay}"
-                                         AutomationProperties.Name="{Binding Shell.I18n[backgroundFitFill]}">
-                                <StackPanel Classes="segment-content">
-                                    <materialIcons:MaterialIcon Kind="Check" Classes="segment-check"
-                                                                Width="{StaticResource Launcher.Icon.Sm}"
-                                                                Height="{StaticResource Launcher.Icon.Sm}"/>
-                                    <TextBlock Text="{Binding Shell.I18n[backgroundFitFill]}"/>
-                                </StackPanel>
-                            </RadioButton>
-                            <Border Classes="segmented-divider"/>
-                            <RadioButton Classes="segment-option"
-                                         GroupName="SettingsBackgroundFit"
-                                         IsChecked="{Binding Settings.Editor.Current.BackgroundFit, Converter={x:Static converters:SegmentOptionConverter.Instance}, ConverterParameter={x:Static coreModels:BackgroundFits.Uniform}, Mode=TwoWay}"
-                                         AutomationProperties.Name="{Binding Shell.I18n[backgroundFitUniform]}">
-                                <StackPanel Classes="segment-content">
-                                    <materialIcons:MaterialIcon Kind="Check" Classes="segment-check"
-                                                                Width="{StaticResource Launcher.Icon.Sm}"
-                                                                Height="{StaticResource Launcher.Icon.Sm}"/>
-                                    <TextBlock Text="{Binding Shell.I18n[backgroundFitUniform]}"/>
-                                </StackPanel>
-                            </RadioButton>
-                            <Border Classes="segmented-divider"/>
-                            <RadioButton Classes="segment-option"
-                                         GroupName="SettingsBackgroundFit"
-                                         IsChecked="{Binding Settings.Editor.Current.BackgroundFit, Converter={x:Static converters:SegmentOptionConverter.Instance}, ConverterParameter={x:Static coreModels:BackgroundFits.UniformToFill}, Mode=TwoWay}"
-                                         AutomationProperties.Name="{Binding Shell.I18n[backgroundFitUniformToFill]}">
-                                <StackPanel Classes="segment-content">
-                                    <materialIcons:MaterialIcon Kind="Check" Classes="segment-check"
-                                                                Width="{StaticResource Launcher.Icon.Sm}"
-                                                                Height="{StaticResource Launcher.Icon.Sm}"/>
-                                    <TextBlock Text="{Binding Shell.I18n[backgroundFitUniformToFill]}"/>
-                                </StackPanel>
-                            </RadioButton>
-                        </StackPanel>
-                    </Border>
-                </controls:SettingRow.Action>
-            </controls:SettingRow>
-
-            <controls:SettingRow Title="{Binding Shell.I18n[backgroundFillColor]}"
-                                 Description="{Binding Shell.I18n[backgroundFillColorDescription]}"
-                                 IsVisible="{Binding Settings.Appearance.IsBackgroundFillColorVisible}">
-                <controls:SettingRow.Action>
-                    <ColorPicker Classes="setting-control"
-                                 AutomationProperties.Name="{Binding Shell.I18n[backgroundFillColor]}"
-                                 Color="{Binding Settings.Appearance.SelectedBackgroundFillColor, Mode=TwoWay}">
-                        <StackPanel Classes="button-content">
-                            <Border Classes="color-swatch-preview"
-                                    Background="{Binding Settings.Appearance.BackgroundFillColorPreviewBrush}"/>
-                            <materialIcons:MaterialIcon Kind="PaletteOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                            <TextBlock Text="{Binding Shell.I18n[openColorPalette]}"/>
-                        </StackPanel>
-                    </ColorPicker>
-                </controls:SettingRow.Action>
-            </controls:SettingRow>
-
-            <controls:SettingRow Title="{Binding Shell.I18n[videoBackgroundVolume]}"
-                                 Description="{Binding Shell.I18n[videoBackgroundVolumeDescription]}"
-                                 IsVisible="{Binding Background.IsVideoBackgroundSelected}">
-                <controls:SettingRow.Action>
-                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}">
-                        <Slider Classes="setting-control" Width="{StaticResource Launcher.Component.Settings.Control.MinWidth}"
-                                Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True"
-                                Value="{Binding Settings.Editor.Current.BackgroundVideoVolume, Mode=TwoWay}"
-                                AutomationProperties.Name="{Binding Shell.I18n[videoBackgroundVolume]}"/>
-                        <Grid Classes="settings-volume-value">
-                            <!-- Reserve the widest percentage at the current font size, including text scaling. -->
-                            <TextBlock Text="100%" Opacity="0" IsHitTestVisible="False"
-                                       AutomationProperties.AccessibilityView="Raw"/>
-                            <TextBlock Classes="settings-volume-value"
-                                       Text="{Binding Settings.Editor.Current.BackgroundVideoVolume, StringFormat='{}{0}%'}"/>
-                        </Grid>
-                        <CheckBox Classes="setting-checkbox" VerticalAlignment="Center"
-                                  Content="{Binding Shell.I18n[videoBackgroundMute]}"
-                                  AutomationProperties.Name="{Binding Shell.I18n[videoBackgroundMute]}"
-                                  IsChecked="{Binding Settings.Editor.Current.BackgroundVideoMuted, Mode=TwoWay}"/>
-                    </StackPanel>
-                </controls:SettingRow.Action>
-            </controls:SettingRow>
+            </Border>
         </StackPanel>
 
-        <StackPanel Classes="settings-group">
+        <views:SettingsBackgroundSection IsVisible="{Binding !Settings.IsAppearanceCategorySelected}"/>
+
+        <StackPanel Classes="settings-group" IsVisible="{Binding Settings.IsAppearanceCategorySelected}">
             <TextBlock Text="{Binding Shell.I18n[settingsGroupThemeColor]}" Classes="group-title"/>
-            <!-- 每个来源前面带一枚「该来源当前解析出的主色」圆点，菜单与触发器共用同一模板。 -->
-            <controls:SettingRow ShowTopDivider="False" Title="{Binding Shell.I18n[themeColor]}"
-                                 Description="{Binding Shell.I18n[themeColorDescription]}">
-                <controls:SettingRow.Action>
-                    <ComboBox Classes="setting-control"
-                              AutomationProperties.Name="{Binding Shell.I18n[themeColor]}"
-                              ItemsSource="{Binding Settings.Options.ThemeColor}"
-                              SelectedValue="{Binding Settings.Editor.Current.ThemeColorMode, Mode=TwoWay}"
-                              SelectedValueBinding="{Binding Code, DataType={x:Type models:SelectableOption}}">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate x:DataType="models:ThemeColorOption">
-                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
-                                    <Border Classes="theme-color-dot" Background="{Binding PreviewBrush}"/>
-                                    <TextBlock Grid.Column="1" Text="{Binding DisplayName}" VerticalAlignment="Center" TextWrapping="Wrap"/>
-                                </Grid>
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-                </controls:SettingRow.Action>
-            </controls:SettingRow>
+            <Border Classes="settings-group-card">
+                <StackPanel>
+                    <!-- 每个来源前面带一枚「该来源当前解析出的主色」圆点，菜单与触发器共用同一模板。 -->
+                    <controls:SettingRow Title="{Binding Shell.I18n[themeColor]}"
+                                         Description="{Binding Shell.I18n[themeColorDescription]}">
+                        <controls:SettingRow.Action>
+                            <ComboBox Classes="setting-control"
+                                      AutomationProperties.Name="{Binding Shell.I18n[themeColor]}"
+                                      ItemsSource="{Binding Settings.Options.ThemeColor}"
+                                      SelectedValue="{Binding Settings.Editor.Current.ThemeColorMode, Mode=TwoWay}"
+                                      SelectedValueBinding="{Binding Code, DataType={x:Type models:SelectableOption}}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:ThemeColorOption">
+                                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
+                                            <Border Classes="theme-color-dot" Background="{Binding PreviewBrush}"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding DisplayName}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </controls:SettingRow.Action>
+                    </controls:SettingRow>
 
-            <controls:SettingRow Title="{Binding Shell.I18n[themeColorPalette]}"
-                                 Description="{Binding Shell.I18n[themeColorPaletteDescription]}"
-                                 IsVisible="{Binding Settings.Appearance.IsThemeColorPaletteVisible}">
-                <controls:SettingRow.Action>
-                    <WrapPanel ItemSpacing="{StaticResource Launcher.Spacing.Sm}" LineSpacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
-                        <ItemsControl x:Name="PaletteChoices" KeyDown="OnPaletteKeyDown" AutomationProperties.Name="{Binding Shell.I18n[themeColorPalette]}" Width="{StaticResource Launcher.Layout.Appearance.Preview.Width}"
-                                      ItemsSource="{Binding Settings.Appearance.ThemeColorPaletteItems}">
-                            <ItemsControl.ItemsPanel>
-                                <StaticResource ResourceKey="Launcher.Component.RowPanel.Sm"/>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="models:ThemeColorPaletteItem">
-                                    <RadioButton Classes="color-swatch-button"
-                                                 GroupName="ThemeColorPalette"
-                                                 IsChecked="{Binding IsSelected, Mode=TwoWay}"
-                                                 AutomationProperties.Name="{Binding ColorHex}"
-                                                 ToolTip.Tip="{Binding ColorHex}">
-                                        <Border Classes="color-swatch"
-                                                Background="{Binding Brush}">
-                                            <materialIcons:MaterialIcon Kind="Check"
-                                                                        Width="{StaticResource Launcher.Icon.Sm}"
-                                                                        Height="{StaticResource Launcher.Icon.Sm}"
-                                                                        HorizontalAlignment="Center"
-                                                                        VerticalAlignment="Center"
-                                                                        Foreground="{DynamicResource Launcher.Color.OnPrimary}"
-                                                                        IsVisible="{Binding IsSelected}"/>
-                                        </Border>
-                                    </RadioButton>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                        <Button Classes="flat-action icon-only"
-                                Command="{Binding Settings.Appearance.RefreshThemeColorPaletteCommand}"
-                                ToolTip.Tip="{Binding Shell.I18n[refreshThemeColorPalette]}"
-                                AutomationProperties.Name="{Binding Shell.I18n[refreshThemeColorPalette]}">
-                            <materialIcons:MaterialIcon Kind="Refresh" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                        </Button>
-                    </WrapPanel>
-                </controls:SettingRow.Action>
-            </controls:SettingRow>
+                    <Border Classes="settings-row-divider" IsVisible="{Binding Settings.Appearance.IsThemeColorPaletteVisible}"/>
+                    <controls:SettingRow Title="{Binding Shell.I18n[themeColorPalette]}"
+                                         Description="{Binding Shell.I18n[themeColorPaletteDescription]}"
+                                         IsVisible="{Binding Settings.Appearance.IsThemeColorPaletteVisible}">
+                        <controls:SettingRow.Action>
+                            <WrapPanel ItemSpacing="{StaticResource Launcher.Spacing.Sm}" LineSpacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
+                                <ItemsControl x:Name="PaletteChoices" KeyDown="OnPaletteKeyDown" AutomationProperties.Name="{Binding Shell.I18n[themeColorPalette]}" Width="{StaticResource Launcher.Layout.Appearance.Preview.Width}"
+                                              ItemsSource="{Binding Settings.Appearance.ThemeColorPaletteItems}">
+                                    <ItemsControl.ItemsPanel>
+                                        <StaticResource ResourceKey="Launcher.Component.RowPanel.Sm"/>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="models:ThemeColorPaletteItem">
+                                            <RadioButton Classes="color-swatch-button"
+                                                         GroupName="ThemeColorPalette"
+                                                         IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                         AutomationProperties.Name="{Binding ColorHex}"
+                                                         ToolTip.Tip="{Binding ColorHex}">
+                                                <Border Classes="color-swatch"
+                                                        Background="{Binding Brush}">
+                                                    <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Check}"
+                                                                                FontSize="{StaticResource Launcher.Icon.Sm}"
+                                                                                HorizontalAlignment="Center"
+                                                                                VerticalAlignment="Center"
+                                                                                Foreground="{DynamicResource Launcher.Color.OnPrimary}"
+                                                                                IsVisible="{Binding IsSelected}"/>
+                                                </Border>
+                                            </RadioButton>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <Button Classes="flat-action icon-only"
+                                        Command="{Binding Settings.Appearance.RefreshThemeColorPaletteCommand}"
+                                        ToolTip.Tip="{Binding Shell.I18n[refreshThemeColorPalette]}"
+                                        AutomationProperties.Name="{Binding Shell.I18n[refreshThemeColorPalette]}">
+                                    <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Refresh}" FontSize="{StaticResource Launcher.Icon.Sm}"/>
+                                </Button>
+                            </WrapPanel>
+                        </controls:SettingRow.Action>
+                    </controls:SettingRow>
 
-            <controls:SettingRow Title="{Binding Shell.I18n[themeColorCustom]}"
-                                 Description="{Binding Shell.I18n[themeColorDescription]}"
-                                 IsVisible="{Binding Settings.Appearance.IsCustomThemeColorPickerVisible}">
-                <controls:SettingRow.Action>
-                    <ColorPicker Classes="setting-control"
-                                 AutomationProperties.Name="{Binding Shell.I18n[themeColorCustom]}"
-                                 Color="{Binding Settings.Appearance.SelectedCustomThemeColor, Mode=TwoWay}">
-                        <StackPanel Classes="button-content">
-                            <Border Classes="color-swatch-preview"
-                                    Background="{Binding Settings.Appearance.ThemeColorPreviewBrush}"/>
-                            <materialIcons:MaterialIcon Kind="PaletteOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                            <TextBlock Text="{Binding Shell.I18n[openColorPalette]}"/>
-                        </StackPanel>
-                    </ColorPicker>
-                </controls:SettingRow.Action>
-            </controls:SettingRow>
+                    <Border Classes="settings-row-divider" IsVisible="{Binding Settings.Appearance.IsCustomThemeColorPickerVisible}"/>
+                    <controls:SettingRow Title="{Binding Shell.I18n[themeColorCustom]}"
+                                         Description="{Binding Shell.I18n[themeColorDescription]}"
+                                         IsVisible="{Binding Settings.Appearance.IsCustomThemeColorPickerVisible}">
+                        <controls:SettingRow.Action>
+                            <ColorPicker Classes="setting-control"
+                                         AutomationProperties.Name="{Binding Shell.I18n[themeColorCustom]}"
+                                         Color="{Binding Settings.Appearance.SelectedCustomThemeColor, Mode=TwoWay}">
+                                <StackPanel Classes="button-content">
+                                    <Border Classes="color-swatch-preview"
+                                            Background="{Binding Settings.Appearance.ThemeColorPreviewBrush}"/>
+                                    <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.ColorPalette}" FontSize="{StaticResource Launcher.Icon.Sm}"/>
+                                    <TextBlock Text="{Binding Shell.I18n[openColorPalette]}"/>
+                                </StackPanel>
+                            </ColorPicker>
+                        </controls:SettingRow.Action>
+                    </controls:SettingRow>
+                </StackPanel>
+            </Border>
             <Expander x:Name="AdvancedColorsExpander" Classes="settings-appearance-expander settings-appearance-advanced"
                       IsExpanded="{Binding Settings.Appearance.IsAdvancedColorExpanded, Mode=TwoWay}"
                       AutomationProperties.Name="{Binding Shell.I18n[settingsAdvancedColors]}">
                 <Expander.Header>
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
-                        <materialIcons:MaterialIcon Kind="PaletteOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}" VerticalAlignment="Center"/>
+                        <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.ColorPalette}" FontSize="{StaticResource Launcher.Icon.Sm}" VerticalAlignment="Center"/>
                         <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
                             <TextBlock Text="{Binding Shell.I18n[settingsAdvancedColors]}" Classes="group-title"/>
                             <TextBlock Text="{Binding Shell.I18n[settingsAdvancedColorsDescription]}" Classes="caption" TextWrapping="Wrap"/>
@@ -366,45 +159,34 @@
                                             ItemsSource="{Binding Settings.Options.ThemeColorExtractionAlgorithm}"
                                             SelectedValue="{Binding Settings.Editor.Current.ThemeColorExtractionAlgorithm, Mode=TwoWay}"/>
 
+                    <Border Classes="settings-row-divider"/>
                     <controls:SettingSelect Title="{Binding Shell.I18n[themeColorVariant]}"
                                             Description="{Binding Shell.I18n[themeColorVariantDescription]}"
                                             AutomationName="{Binding Shell.I18n[themeColorVariant]}"
                                             ItemsSource="{Binding Settings.Options.ThemeColorVariant}"
                                             SelectedValue="{Binding Settings.Editor.Current.ThemeColorVariant, Mode=TwoWay}"/>
 
+                    <Border Classes="settings-row-divider"/>
                     <!-- ADR-010: when "follow seed" is selected, explain the subtle dyeing effect. -->
                     <controls:SettingRow Title="{Binding Shell.I18n[neutralColorStrategy]}"
                                          Description="{Binding Shell.I18n[neutralColorStrategyDescription]}"
                                          Hint="{Binding Shell.I18n[neutralColorStrategySeedFollowingHint]}"
                                          IsHintVisible="{Binding Settings.Appearance.IsSeedFollowingNeutralStrategySelected}">
                         <controls:SettingRow.Action>
-                            <Border Classes="segmented">
-                                <StackPanel Orientation="Horizontal">
-                                    <RadioButton Classes="segment-option"
-                                                 GroupName="SettingsNeutralColorStrategy"
-                                                 IsChecked="{Binding Settings.Editor.Current.NeutralColorStrategy, Converter={x:Static converters:SegmentOptionConverter.Instance}, ConverterParameter={x:Static coreModels:NeutralColorStrategies.BrandBlue}, Mode=TwoWay}"
-                                                 AutomationProperties.Name="{Binding Shell.I18n[neutralColorStrategyBrandBlue]}">
-                                        <StackPanel Classes="segment-content">
-                                            <materialIcons:MaterialIcon Kind="Check" Classes="segment-check"
-                                                                        Width="{StaticResource Launcher.Icon.Sm}"
-                                                                        Height="{StaticResource Launcher.Icon.Sm}"/>
-                                            <TextBlock Text="{Binding Shell.I18n[neutralColorStrategyBrandBlue]}"/>
-                                        </StackPanel>
-                                    </RadioButton>
-                                    <Border Classes="segmented-divider"/>
-                                    <RadioButton Classes="segment-option"
-                                                 GroupName="SettingsNeutralColorStrategy"
-                                                 IsChecked="{Binding Settings.Editor.Current.NeutralColorStrategy, Converter={x:Static converters:SegmentOptionConverter.Instance}, ConverterParameter={x:Static coreModels:NeutralColorStrategies.SeedFollowing}, Mode=TwoWay}"
-                                                 AutomationProperties.Name="{Binding Shell.I18n[neutralColorStrategySeedFollowing]}">
-                                        <StackPanel Classes="segment-content">
-                                            <materialIcons:MaterialIcon Kind="Check" Classes="segment-check"
-                                                                        Width="{StaticResource Launcher.Icon.Sm}"
-                                                                        Height="{StaticResource Launcher.Icon.Sm}"/>
-                                            <TextBlock Text="{Binding Shell.I18n[neutralColorStrategySeedFollowing]}"/>
-                                        </StackPanel>
-                                    </RadioButton>
-                                </StackPanel>
-                            </Border>
+                            <WrapPanel Classes="setting-radio-group">
+                                <RadioButton Classes="setting-radio"
+                                             GroupName="SettingsNeutralColorStrategy"
+                                             IsChecked="{Binding Settings.Editor.Current.NeutralColorStrategy, Converter={x:Static converters:SegmentOptionConverter.Instance}, ConverterParameter={x:Static coreModels:NeutralColorStrategies.BrandBlue}, Mode=TwoWay}"
+                                             AutomationProperties.Name="{Binding Shell.I18n[neutralColorStrategyBrandBlue]}">
+                                    <TextBlock Text="{Binding Shell.I18n[neutralColorStrategyBrandBlue]}" TextWrapping="Wrap"/>
+                                </RadioButton>
+                                <RadioButton Classes="setting-radio"
+                                             GroupName="SettingsNeutralColorStrategy"
+                                             IsChecked="{Binding Settings.Editor.Current.NeutralColorStrategy, Converter={x:Static converters:SegmentOptionConverter.Instance}, ConverterParameter={x:Static coreModels:NeutralColorStrategies.SeedFollowing}, Mode=TwoWay}"
+                                             AutomationProperties.Name="{Binding Shell.I18n[neutralColorStrategySeedFollowing]}">
+                                    <TextBlock Text="{Binding Shell.I18n[neutralColorStrategySeedFollowing]}" TextWrapping="Wrap"/>
+                                </RadioButton>
+                            </WrapPanel>
                         </controls:SettingRow.Action>
                     </controls:SettingRow>
 

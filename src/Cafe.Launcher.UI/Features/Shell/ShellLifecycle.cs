@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.UI.Constants;
+using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.UI.Features.Diagnostics;
+using Cafe.Launcher.UI.Features.Games;
 using Cafe.Launcher.UI.Features.GameOperations;
 using Cafe.Launcher.UI.Helpers;
 using Cafe.Launcher.UI.Features.ResourcePanel;
@@ -37,19 +40,27 @@ internal sealed class ShellLifecycle : IDisposable
     private readonly ILauncherSettingsService settingsService;
     private readonly ISavedSettingsWriter savedSettingsWriter;
     private readonly LocalizationService localizer;
-    private readonly ToastService toastService;
+    private readonly INotificationService toastService;
     private readonly ILauncherUpdateService launcherUpdateService;
     private readonly ILauncherUpdatePresenter updatePresenter;
     private readonly ILauncherDiagnostics diagnostics;
     private readonly IErrorHandlingService errorHandling;
     private readonly ISystemAnimationSettingsProvider systemAnimationSettingsProvider;
     private readonly LauncherBuildIdentity? buildIdentity;
-    private readonly ShellViewModel shell;
+    private readonly ShellViewModel defaultShell;
+    private ShellViewModel shell => games?.Active.Shell ?? defaultShell;
     private readonly BackgroundViewModel background;
-    private readonly RemoteContentViewModel remoteContent;
+    private readonly RemoteContentViewModel defaultRemoteContent;
+    private RemoteContentViewModel remoteContent => games?.Active.RemoteContent ?? defaultRemoteContent;
     private readonly DialogsViewModel dialogs;
-    private readonly GameOperationsViewModel operations;
+    private readonly GameOperationsViewModel defaultOperations;
+    private GameOperationsViewModel operations => games?.Active.Operations ?? defaultOperations;
+    private readonly GameLibraryViewModel? games;
+    private readonly IGameFileOperationCoordinator? fileOperations;
     private readonly ToastHostViewModel toasts;
+    private readonly WindowChromeViewModel windowChrome;
+    private readonly ModalHostViewModel modalHost;
+    private readonly LogViewerDialogViewModel logViewer;
     private readonly SettingsViewModel settings;
     private readonly ResourcePanelViewModel resourcePanel;
     private readonly LogExportDialogViewModel logExport;
@@ -72,7 +83,24 @@ internal sealed class ShellLifecycle : IDisposable
     private bool isMotionReduced = true;
     private bool motionSettingsApplied;
     private bool settingsSnapshotInitialized;
-    private LauncherStatusSnapshot? currentSnapshot;
+    private bool startupUpdateCheckStarted;
+    private LauncherStatusSnapshot? defaultSnapshot;
+    private LauncherStatusSnapshot? currentSnapshot
+    {
+        get => games is not null ? games.Active.Snapshot : defaultSnapshot;
+        set
+        {
+            if (games is null)
+            {
+                defaultSnapshot = value;
+            }
+            else if (value is not null)
+            {
+                games.Get(value.GameId).Snapshot = value;
+            }
+        }
+    }
+
     private readonly ShellSelfUpdateFlow selfUpdateFlow;
 
     /// <summary>Gets the active startup update check so tests can coordinate without timing delays.</summary>
@@ -84,7 +112,7 @@ internal sealed class ShellLifecycle : IDisposable
         ILauncherSettingsService settingsService,
         ISavedSettingsWriter savedSettingsWriter,
         LocalizationService localizer,
-        ToastService toastService,
+        INotificationService toastService,
         ILauncherUpdateService launcherUpdateService,
         ILauncherUpdatePresenter updatePresenter,
         ILauncherSelfUpdateService launcherSelfUpdateService,
@@ -94,7 +122,9 @@ internal sealed class ShellLifecycle : IDisposable
         ISystemAnimationSettingsProvider systemAnimationSettingsProvider,
         ShellPresentationFamily family,
         IFilePickerService filePickerService,
-        LauncherBuildIdentity? buildIdentity = null)
+        LauncherBuildIdentity? buildIdentity = null,
+        GameLibraryViewModel? games = null,
+        IGameFileOperationCoordinator? fileOperations = null)
         : this(
             launcherStatusSnapshotService,
             settingsService,
@@ -111,7 +141,9 @@ internal sealed class ShellLifecycle : IDisposable
             family,
             filePickerService,
             ownsPresentationCollaborators: false,
-            buildIdentity: buildIdentity)
+            buildIdentity: buildIdentity,
+            games: games,
+            fileOperations: fileOperations)
     {
     }
 
@@ -120,7 +152,7 @@ internal sealed class ShellLifecycle : IDisposable
         ILauncherSettingsService settingsService,
         ISavedSettingsWriter savedSettingsWriter,
         LocalizationService localizer,
-        ToastService toastService,
+        INotificationService toastService,
         ILauncherUpdateService launcherUpdateService,
         ILauncherUpdatePresenter updatePresenter,
         ILauncherSelfUpdateService launcherSelfUpdateService,
@@ -131,7 +163,9 @@ internal sealed class ShellLifecycle : IDisposable
         ShellPresentationFamily family,
         IFilePickerService filePickerService,
         bool ownsPresentationCollaborators,
-        LauncherBuildIdentity? buildIdentity = null)
+        LauncherBuildIdentity? buildIdentity = null,
+        GameLibraryViewModel? games = null,
+        IGameFileOperationCoordinator? fileOperations = null)
     {
         // 所有权制度按构造路径分叉（受控测试缝，见 AUD-ARCH-003）：
         // - 生产 DI 路径走公开构造，ownsPresentationCollaborators: false——展示 VM 家族由
@@ -152,12 +186,17 @@ internal sealed class ShellLifecycle : IDisposable
         this.errorHandling = errorHandling;
         this.systemAnimationSettingsProvider = systemAnimationSettingsProvider;
         this.buildIdentity = buildIdentity;
-        shell = family.Shell;
+        this.games = games;
+        this.fileOperations = fileOperations;
+        defaultShell = family.Shell;
         background = family.Background;
-        remoteContent = family.RemoteContent;
+        defaultRemoteContent = family.RemoteContent;
         dialogs = family.Dialogs;
-        operations = family.Operations;
+        defaultOperations = family.Operations;
         toasts = family.Toasts;
+        windowChrome = family.WindowChrome;
+        modalHost = family.ModalHost;
+        logViewer = family.LogViewer;
         settings = family.Settings;
         resourcePanel = family.ResourcePanel;
         logExport = family.LogExport;
@@ -206,7 +245,9 @@ internal sealed class ShellLifecycle : IDisposable
                     currentSnapshot.Settings = persisted;
                 }
             },
-            cancellationToken => RefreshAsync(cancellationToken));
+            cancellationToken => RefreshAsync(cancellationToken),
+            games,
+            UpdateActiveBackgroundAsync);
         startup = new ShellStartup(
             RefreshAsync,
             ApplyMotionSettings,
@@ -231,7 +272,29 @@ internal sealed class ShellLifecycle : IDisposable
                 OnStatusDetailModeChanged,
                 selfUpdateFlow.Begin,
                 selfUpdateFlow.Apply,
-                selfUpdateFlow.Cancel));
+                selfUpdateFlow.Cancel),
+            () => family with { Shell = shell, RemoteContent = remoteContent, Operations = operations },
+            operationsWiredByLibrary: games is not null);
+
+        if (games is not null)
+        {
+            games.CanSwitch = () => !modalHost.HasEntries && !settings.Editor.IsDirty && !settings.IsSaving
+                && fileOperations?.IsShuttingDown != true;
+            settings.IsSettingsOverlayVisible = () => windowChrome.IsSettingsVisible;
+            games.SetSettingsTarget = context =>
+            {
+                settings.SetGameTarget(context);
+                resourcePanel.SetGameTarget(context);
+                dialogs.SetNoticeTarget(context);
+            };
+            games.SetSettingsTarget(games.Active.Core);
+            games.RefreshRequested = RefreshGameAsync;
+            games.OpenLogViewerAsync = () => logViewer.OpenCommand.ExecuteAsync(null);
+            games.TaskSurfaceRequested = presentationWiring.RevealTaskSurface;
+            games.PickInstallPathAsync = (context, start) => settings.PickInstallationDraftAsync(context.Core, start);
+            games.CommitInstallPathAsync = (context, path) => settings.CommitInstallationPathAsync(context.Core, path);
+            games.ActiveChanged += OnActiveGameChanged;
+        }
 
         presentationWiring.Wire();
         ApplyInitialLanguage();
@@ -250,6 +313,53 @@ internal sealed class ShellLifecycle : IDisposable
         // 进程退出后短暂存活),启动时清掉;仍在运行的例外靠文件锁幸免。
         selfUpdateFlow.CleanupAbandonedHelpers();
         return startup.InitializeAsync(cancellationToken);
+    }
+
+    /// <summary>启动外部请求明确指定的条目；受阻时即时反馈，不跟随当前页面或排队补做。</summary>
+    public async Task RequestGameLaunchAsync(string gameId)
+    {
+        if (!LauncherProfiles.TryGetSupportedGame(gameId, out _)
+            || modalHost.HasEntries || settings.Editor.IsDirty || fileOperations?.IsShuttingDown == true
+            || string.Equals(fileOperations?.ActiveOperation?.GameId, gameId, StringComparison.Ordinal))
+        {
+            toastService.ShowWarning(localizer.T(LocalizationKeys.OperationUnavailableForCurrentState));
+            return;
+        }
+
+        if (games is null)
+        {
+            if (string.Equals(operations.FixedGameId, gameId, StringComparison.Ordinal)
+                && operations.StartGameCommand.CanExecute(null))
+            {
+                await operations.StartGameCommand.ExecuteAsync(null);
+            }
+            else
+            {
+                toastService.ShowWarning(localizer.T(LocalizationKeys.OperationUnavailableForCurrentState));
+            }
+
+            return;
+        }
+
+        var target = games.Get(gameId);
+        if (!await games.TrySelectGameAsync(gameId))
+        {
+            return;
+        }
+
+        if (target.Snapshot is null)
+        {
+            await RefreshGameAsync(target, GameOperationsRefreshMode.SkipPersistedResume);
+        }
+
+        if (modalHost.HasEntries || settings.Editor.IsDirty || fileOperations?.IsShuttingDown == true
+            || !target.Operations.StartGameCommand.CanExecute(null))
+        {
+            toastService.ShowWarning(localizer.T(LocalizationKeys.OperationUnavailableForCurrentState));
+            return;
+        }
+
+        await target.Operations.StartGameCommand.ExecuteAsync(null);
     }
 
     /// <summary>Reapplies the system motion preference when the user chose the system option.</summary>
@@ -291,6 +401,11 @@ internal sealed class ShellLifecycle : IDisposable
     /// </summary>
     private async Task<bool> LoadHostStateAsync(CancellationToken refreshToken)
     {
+        if (games is not null)
+        {
+            return await LoadLibraryStateAsync(refreshToken);
+        }
+
         SetPresentationState(ref isBusy, true);
         shell.IsBusy = true;
         try
@@ -341,11 +456,19 @@ internal sealed class ShellLifecycle : IDisposable
     {
         if (resumePersistedDownload)
         {
-            await operations.ResumePersistedDownloadAsync(refreshToken);
+            if (games is not null)
+            {
+                await ResumeContextAsync(games.Active, refreshToken);
+            }
+            else
+            {
+                await operations.ResumePersistedDownloadAsync(refreshToken);
+            }
         }
 
-        if (settings.Editor.GetSavedSnapshot().EnableStartupUpdateCheck)
+        if (!startupUpdateCheckStarted && settings.Editor.GetSavedSnapshot().EnableStartupUpdateCheck)
         {
+            startupUpdateCheckStarted = true;
             return CheckForStartupUpdateAsync(refreshCoordinator.LifetimeToken);
         }
 
@@ -355,10 +478,27 @@ internal sealed class ShellLifecycle : IDisposable
     /// <summary>封闭操作入口并取消生命周期工作，等待刷新与游戏操作收尾后才允许宿主释放依赖。</summary>
     public async Task PrepareForShutdownAsync()
     {
+        if (fileOperations is not null && !fileOperations.TryBeginShutdown(out _))
+        {
+            return;
+        }
+
         Task pendingRefreshes = refreshCoordinator.BeginShutdown();
-        Task pendingOperations = operations.PrepareForShutdownAsync();
+        Task pendingOperations = games?.PrepareForShutdownAsync() ?? operations.PrepareForShutdownAsync();
+        if (games is not null)
+        {
+            foreach (var entry in games.Entries)
+            {
+                entry.Context.Lifetime.Cancel();
+            }
+        }
+
         refreshCoordinator.CancelLifetime();
         await Task.WhenAll(pendingOperations, refreshCoordinator.WaitForShutdownWorkAsync(pendingRefreshes));
+        if (games is not null)
+        {
+            await Task.WhenAll(games.Entries.Select(entry => entry.Context.PendingRefresh));
+        }
     }
 
     /// <summary>Applies the follow-through of one persisted settings snapshot.</summary>
@@ -378,8 +518,11 @@ internal sealed class ShellLifecycle : IDisposable
     {
         try
         {
-            var savedSettings = await savedSettingsWriter.UpdateAsync(
-                settings => settings.PatchUrlGroup = PatchUrlGroups.Cafe);
+            var savedSettings = games is null
+                ? await savedSettingsWriter.UpdateAsync(
+                    settings => settings.PatchUrlGroup = PatchUrlGroups.Cafe)
+                : await savedSettingsWriter.UpdateGameAsync(
+                    operations.FixedGameId, settings => settings.PatchUrlGroup = PatchUrlGroups.Cafe);
 
             await HandleSettingsSavedAsync(savedSettings);
             await resourcePanel.OpenPanelDirectlyAsync();
@@ -427,25 +570,48 @@ internal sealed class ShellLifecycle : IDisposable
         CancellationToken cancellationToken)
     {
         settings.Appearance.ApplyFrom(previewSettings);
-        background.ApplyBackgroundPresentation(previewSettings);
+        ApplyMotionSettings(previewSettings);
+        var rendered = GameBackgroundPresentation.Resolve(
+            previewSettings,
+            settings.EditingGameId,
+            settings.IsGlobalBackgroundPreview);
+        background.ApplyBackgroundPresentation(rendered);
 
-        if (!background.IsCurrentBackgroundSelection(previewSettings)
+        if (!background.IsCurrentBackgroundSelection(rendered)
             || propertyName is null
             or nameof(LauncherSettings.BackgroundSource)
             or nameof(LauncherSettings.CustomBackgroundPath))
         {
             await background.UpdateBackgroundImageAsync(
-                previewSettings,
+                rendered,
                 currentSnapshot,
                 cancellationToken);
         }
     }
 
     /// <summary>Subscribes cross-feature events once for the active shell lifecycle.</summary>
-    public void Wire() => presentationWiring.Wire();
+    public void Wire()
+    {
+        if (games is not null)
+        {
+            games.OpenLogViewerAsync = () => logViewer.OpenCommand.ExecuteAsync(null);
+            games.TaskSurfaceRequested = presentationWiring.RevealTaskSurface;
+        }
+
+        presentationWiring.Wire();
+    }
 
     /// <summary>Removes the cross-feature subscriptions established by <see cref="Wire"/>.</summary>
-    public void Unwire() => presentationWiring.Unwire();
+    public void Unwire()
+    {
+        if (games is not null)
+        {
+            games.OpenLogViewerAsync = null;
+            games.TaskSurfaceRequested = null;
+        }
+
+        presentationWiring.Unwire();
+    }
 
     /// <summary>Handles Escape for the active modal and returns whether a modal consumed it.</summary>
     public bool TryHandleEscape() => presentationWiring.TryDispatchEscape();
@@ -460,7 +626,22 @@ internal sealed class ShellLifecycle : IDisposable
         refreshCoordinator.CancelLifetime();
         selfUpdateFlow.Dispose();
         Unwire();
-        operations.StopOperation(GameOperationStopIntent.ProcessExit);
+        if (games is not null)
+        {
+            games.ActiveChanged -= OnActiveGameChanged;
+            games.OpenLogViewerAsync = null;
+            games.TaskSurfaceRequested = null;
+            games.RefreshRequested = null;
+            games.PickInstallPathAsync = null;
+            games.CommitInstallPathAsync = null;
+            games.SetSettingsTarget = null;
+            games.CanSwitch = null;
+            games.StopOperation(GameOperationStopIntent.ProcessExit);
+        }
+        else
+        {
+            operations.StopOperation(GameOperationStopIntent.ProcessExit);
+        }
         if (ownsPresentationCollaborators)
         {
             operations.Dispose();
@@ -517,18 +698,209 @@ internal sealed class ShellLifecycle : IDisposable
         }
     }
 
+    private void OnActiveGameChanged()
+    {
+        Unwire();
+        shell.LanguageAwarePresentations = languageAwarePresentations;
+        Wire();
+        var saved = settings.Editor.GetSavedSnapshot();
+        ApplyLanguage(saved.Language);
+        // Cached game content outlives the settings session that changed this
+        // global preference; selection must reconcile it without refetching news.
+        remoteContent.UpdateRemoteContentVisibility(saved.ShowRemoteContentCard);
+        remoteContent.ApplyMotionPreference(isMotionReduced);
+        if (games?.Active.Snapshot is not null)
+        {
+            remoteContent.StartCarouselTimer();
+        }
+
+        _ = UpdateActiveBackgroundAsync(saved, games?.Active.Snapshot);
+        PresentationChanged?.Invoke();
+    }
+
+    private async Task UpdateActiveBackgroundAsync(LauncherSettings saved, LauncherStatusSnapshot? snapshot)
+    {
+        try
+        {
+            await background.UpdateBackgroundImageAsync(
+                ResolveBackgroundSettings(saved, snapshot),
+                snapshot,
+                refreshCoordinator.LifetimeToken);
+        }
+        catch (OperationCanceledException) when (refreshCoordinator.LifetimeToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            await diagnostics.DebugAsync(
+                "Background",
+                $"Selected game background refresh failed: {exception.Message}",
+                CancellationToken.None);
+        }
+    }
+
+    private async Task<bool> LoadLibraryStateAsync(CancellationToken refreshToken)
+    {
+        SetPresentationState(ref isBusy, true);
+        try
+        {
+            var library = games!;
+            var selectionRevision = library.SelectionRevision;
+            var switchingAtReadStart = library.IsSwitching;
+            var saved = await settingsService.ReadAsync(refreshToken);
+            var selectionChangedDuringRead = switchingAtReadStart || library.IsSwitching
+                || selectionRevision != library.SelectionRevision;
+            if (selectionChangedDuringRead)
+            {
+                // The selection writer may already have published a newer value to the editor.
+                saved.LastViewedGameId = settings.Editor.GetSavedSnapshot().LastViewedGameId;
+            }
+
+            if (windowChrome.IsSettingsVisible)
+            {
+                settings.Editor.ApplySavedUpdate(saved);
+            }
+            else
+            {
+                settings.Editor.ApplySnapshot(saved);
+            }
+
+            settingsSnapshotInitialized = true;
+            if (!windowChrome.IsSettingsVisible && !selectionChangedDuringRead)
+            {
+                library.RestoreSelection(saved);
+            }
+
+            ApplySettingsSnapshot(saved);
+            ApplyLanguage(saved.Language);
+            settings.Appearance.Load(windowChrome.IsSettingsVisible ? settings.Editor.GetSnapshot() : saved);
+            settings.Appearance.ApplyFrom(windowChrome.IsSettingsVisible ? settings.Editor.GetSnapshot() : saved);
+            await RefreshGameAsync(library.Active, GameOperationsRefreshMode.SkipPersistedResume);
+            refreshToken.ThrowIfCancellationRequested();
+            return library.Active.Snapshot is not null;
+        }
+        catch (OperationCanceledException) when (refreshToken.IsCancellationRequested)
+        {
+            return false;
+        }
+        catch (Exception exception)
+        {
+            shell.SetRefreshError(exception, settings, games!.Active.GameId);
+            if (!operations.HasPendingOperation)
+            {
+                operations.SetIdlePanels(currentSnapshot);
+                shell.IsBusy = false;
+            }
+
+            await errorHandling.HandleErrorAsync("Launcher core refresh failed.", exception,
+                new ErrorHandlingOptions { ToastMessage = localizer.F(LocalizationKeys.LauncherCoreRefreshFailed, exception.Message) });
+            return false;
+        }
+        finally
+        {
+            SetPresentationState(ref isBusy, false);
+        }
+    }
+
+    private async Task ResumeContextAsync(GamePresentationContext target, CancellationToken token)
+    {
+        if (target.Snapshot is null)
+        {
+            return;
+        }
+
+        if (string.Equals(target.GameId, Cafe.Launcher.Core.Constants.LauncherProfiles.BlueArchiveJapan.RuntimeId, StringComparison.Ordinal))
+        {
+            var result = await target.Checkpoint.TryMigrateLegacyBlueArchiveAsync(
+                target.Core.Paths.DataRoot,
+                target.Snapshot,
+                target.Core.LocalInstallationStateStore,
+                target.Core.InstallationPath,
+                token);
+            if (result is LegacyCheckpointMigrationResult.IdentityUnverified
+                or LegacyCheckpointMigrationResult.IncompatibleCheckpoint
+                or LegacyCheckpointMigrationResult.InvalidCheckpoint
+                or LegacyCheckpointMigrationResult.InvalidMigrationMarker
+                or LegacyCheckpointMigrationResult.IoFailure)
+            {
+                toastService.ShowWarning(localizer.T(LocalizationKeys.LegacyDownloadResumeUnavailable));
+                return;
+            }
+        }
+
+        await target.Operations.ResumePersistedDownloadAsync(token);
+    }
+
+    private Task RefreshGameAsync(GamePresentationContext target, GameOperationsRefreshMode mode)
+    {
+        // Per-game operation refreshes only reload that context. Recovery is a separate startup
+        // or explicit command, so completing A or viewing B cannot implicitly queue a resume.
+        return target.RunRefreshAsync(() => LoadGameAsync(target));
+    }
+
+    private async Task LoadGameAsync(GamePresentationContext target)
+    {
+        var token = target.Lifetime.Token;
+        await target.RefreshGate.WaitAsync(token);
+        target.Shell.IsBusy = true;
+        try
+        {
+            target.Shell.SetLoading();
+            target.RemoteContent.BeginLoading(settings.Editor.GetSavedSnapshot().ShowRemoteContentCard);
+            var snapshot = await target.Core.CoreService.LoadAsync(token);
+            token.ThrowIfCancellationRequested();
+            target.Snapshot = snapshot;
+            if (ReferenceEquals(games!.Active, target))
+            {
+                // Active-game refresh owns the whole visible surface, including global settings
+                // and appearance derived from the same snapshot.
+                await ApplySnapshotAsync(snapshot);
+            }
+            else
+            {
+                target.Shell.ApplySnapshot(snapshot, settings);
+                target.Operations.ApplySnapshot(snapshot);
+                // The network load can finish after a global preference was saved.
+                target.RemoteContent.Apply(snapshot.Remote, settings.Editor.GetSavedSnapshot(), token);
+                target.RemoteContent.SetLoadError(snapshot.RuntimeState == LauncherRuntimeState.RemoteUnavailable);
+                target.RemoteContent.StopCarouselTimer();
+            }
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            target.Shell.SetRefreshError(exception, settings, target.GameId);
+            await errorHandling.HandleErrorAsync("Game state refresh failed.", exception,
+                new ErrorHandlingOptions
+                {
+                    ToastMessage = localizer.F(
+                        LocalizationKeys.GameOperationMessage,
+                        GameDisplayName.Resolve(target.GameId, localizer),
+                        localizer.F(LocalizationKeys.LauncherCoreRefreshFailed, exception.Message))
+                });
+        }
+        finally
+        {
+            target.RemoteContent.EndLoading();
+            target.Shell.IsBusy = false;
+            target.RefreshGate.Release();
+        }
+    }
+
     private async Task ApplySnapshotAsync(LauncherStatusSnapshot snapshot)
     {
         ApplySettingsSnapshot(snapshot.Settings);
         ApplyLanguage(snapshot.Settings.Language);
-        settings.Appearance.ApplyTheme(snapshot.Settings.ThemeMode);
+        settings.Appearance.ApplyTheme(
+            windowChrome.IsSettingsVisible ? settings.Editor.Current.ThemeMode : snapshot.Settings.ThemeMode);
         await background.UpdateBackgroundImageAsync(
-            snapshot.Settings,
+            ResolveBackgroundSettings(snapshot.Settings, snapshot),
             snapshot,
             refreshCoordinator.LifetimeToken);
         settings.Appearance.ApplyThemeColor(
-            snapshot.Settings.ThemeColorMode,
-            ColorUtils.ParseColorOrDefault(snapshot.Settings.CustomThemeColor));
+            windowChrome.IsSettingsVisible ? settings.Editor.Current : snapshot.Settings);
 
         shell.ApplySnapshot(snapshot, settings);
         operations.ApplySnapshot(snapshot);
@@ -539,9 +911,26 @@ internal sealed class ShellLifecycle : IDisposable
 
     private void ApplySettingsSnapshot(LauncherSettings savedSettings)
     {
-        settings.ApplyLauncherSettings(savedSettings);
+        if (windowChrome.IsSettingsVisible)
+        {
+            settings.Editor.ApplySavedUpdate(savedSettings);
+        }
+        else
+        {
+            settings.ApplyLauncherSettings(savedSettings);
+        }
+
         resourcePanel.ApplySettings(savedSettings);
-        ApplyMotionSettings(savedSettings);
+        ApplyMotionSettings(windowChrome.IsSettingsVisible ? settings.Editor.Current : savedSettings);
+    }
+
+    private LauncherSettings ResolveBackgroundSettings(LauncherSettings saved, LauncherStatusSnapshot? snapshot)
+    {
+        var gameId = snapshot?.GameId ?? games?.Active.GameId ?? settings.EditingGameId;
+        return GameBackgroundPresentation.Resolve(
+            windowChrome.IsSettingsVisible ? settings.Editor.GetSnapshot() : saved,
+            gameId,
+            windowChrome.IsSettingsVisible && settings.IsGlobalBackgroundPreview);
     }
 
     private void ApplyMotionSettings(LauncherSettings savedSettings)
@@ -569,6 +958,23 @@ internal sealed class ShellLifecycle : IDisposable
         // 扇出名单已注入 shell（LanguageAwarePresentations）：任何入口（生命周期、
         // 设置保存、直调 Shell.ApplyLanguage 的测试）都能得到同一份完整刷新。
         shell.ApplyLanguage(language, currentSnapshot is not null);
+        games?.RefreshLocalizedText();
+        if (games is not null)
+        {
+            foreach (var entry in games.Entries)
+            {
+                if (ReferenceEquals(entry.Context, games.Active))
+                {
+                    continue;
+                }
+
+                entry.Context.Shell.ApplyLanguage(language, entry.Context.Snapshot is not null);
+                if (entry.Context.Snapshot is { } snapshot)
+                {
+                    entry.Context.Shell.ApplySnapshot(snapshot, settings);
+                }
+            }
+        }
     }
 
     private void OnLocalizationFailure(object? sender, LocalizationFailureEventArgs eventArgs)

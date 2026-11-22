@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading.Tasks;
 using Avalonia.Media;
 using Cafe.Launcher.UI.Constants;
 using Cafe.Launcher.UI.Helpers;
@@ -9,10 +11,11 @@ using Cafe.Launcher.UI.Features.ResourcePanel;
 using Cafe.Launcher.UI.Features.Settings;
 using Cafe.Launcher.UI.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Cafe.Launcher.Core;
+using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Helpers;
-using Material.Icons;
 
 namespace Cafe.Launcher.UI.ViewModels;
 
@@ -21,6 +24,8 @@ internal partial class ShellViewModel : ObservableObject, IDisposable
     private readonly LocalizationService localizer;
     private readonly LauncherBuildIdentity? buildIdentity;
     private readonly string cafeWebsiteUrl;
+    private readonly Func<string, Task<bool>> copyText;
+    private readonly INotificationService? notifications;
 
     private static readonly string RuntimeDescription =
         $"{RuntimeInformation.FrameworkDescription} ({RuntimeInformation.RuntimeIdentifier})";
@@ -37,6 +42,13 @@ internal partial class ShellViewModel : ObservableObject, IDisposable
     public string TitleBarVersionText => buildIdentity?.LauncherVersion is { Length: > 0 } version
         ? $"v{version}"
         : "";
+
+    /// <summary>OS-drawn window caption: product name plus the host version when known.</summary>
+    public string WindowTitle => TitleBarVersionText.Length > 0
+        ? $"{ProductName} {TitleBarVersionText}"
+        : ProductName;
+
+    partial void OnProductNameChanged(string value) => OnPropertyChanged(nameof(WindowTitle));
 
     [ObservableProperty]
     private string frameworkVersionText = "";
@@ -120,10 +132,15 @@ internal partial class ShellViewModel : ObservableObject, IDisposable
     public ShellViewModel(
         LauncherProductProfile productProfile,
         LocalizationService localizer,
-        LauncherBuildIdentity? buildIdentity = null)
+        LauncherBuildIdentity? buildIdentity = null,
+        PresentationEnvironment? environment = null,
+        INotificationService? notifications = null)
     {
         this.localizer = localizer;
         this.buildIdentity = buildIdentity;
+        this.notifications = notifications;
+        copyText = environment?.CopyTextAsync
+            ?? new Func<string, Task<bool>>(static _ => Task.FromResult(false));
         cafeWebsiteUrl = productProfile.CafeWebsiteUrl;
         productName = ResolveProductName(productProfile.ProductName, DateTime.Now, Random.Shared.Next(2));
         I18n = new LocalizedTextCatalog(localizer);
@@ -223,26 +240,82 @@ internal partial class ShellViewModel : ObservableObject, IDisposable
         Contributors =
         [
             new("gytxtx", localizer.T(LocalizationKeys.AboutCreditGytxtx),
-                "https://github.com/gytxtx", MaterialIconKind.AccountOutline),
+                "https://github.com/gytxtx", FluentGlyphs.Account),
             new("MF-Dust", localizer.T(LocalizationKeys.AboutCreditMfDust),
-                "https://github.com/MF-Dust", MaterialIconKind.AccountOutline)
+                "https://github.com/MF-Dust", FluentGlyphs.Account)
         ];
         SpecialThanks =
         [
             new("Avalonia", localizer.T(LocalizationKeys.AboutCreditAvalonia),
-                "https://github.com/AvaloniaUI/Avalonia", MaterialIconKind.CodeTags),
+                "https://github.com/AvaloniaUI/Avalonia", FluentGlyphs.Code),
             new("CommunityToolkit.Mvvm", localizer.T(LocalizationKeys.AboutCreditCommunityToolkit),
-                "https://github.com/CommunityToolkit/dotnet", MaterialIconKind.CodeTags),
-            new("Material.Icons.Avalonia", localizer.T(LocalizationKeys.AboutCreditMaterialIcons),
-                "https://github.com/AvaloniaUtils/Material.Icons.Avalonia/", MaterialIconKind.CodeTags),
+                "https://github.com/CommunityToolkit/dotnet", FluentGlyphs.Code),
             new(localizer.T(LocalizationKeys.AboutCreditBlueArchiveCafe), localizer.T(LocalizationKeys.AboutCreditBlueArchiveCafeDescription),
-                cafeWebsiteUrl, MaterialIconKind.CoffeeOutline),
+                cafeWebsiteUrl, FluentGlyphs.Globe),
             new(localizer.T(LocalizationKeys.AboutCreditAppIcon), localizer.T(LocalizationKeys.AboutCreditAppIconDescription),
-                "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/commit/3401794c9b06956a09a6308dfaae21341b3814f5", MaterialIconKind.HeartOutline)
+                "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/commit/3401794c9b06956a09a6308dfaae21341b3814f5", FluentGlyphs.Heart)
         ];
     }
 
-    public void SetRefreshError(Exception exception, SettingsViewModel settings)
+    /// <summary>
+    /// 构建信息单行复制：值为空时不写剪贴板，避免复制出一个空串。
+    /// </summary>
+    [RelayCommand]
+    private async Task CopyBuildInfoValueAsync(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return;
+        }
+
+        await CopyToClipboardAsync(value);
+    }
+
+    /// <summary>
+    /// 「复制全部」拼装：首行是产品名与版本 caption，其后是本地化的键值行；
+    /// 值缺失的行跳过，方便用户把整段贴进 issue。
+    /// </summary>
+    [RelayCommand]
+    private Task CopyAllBuildInfoAsync()
+    {
+        var rows = new (string Label, string Value)[]
+        {
+            (localizer.T(LocalizationKeys.AboutRowCommit), CommitShaValue),
+            (localizer.T(LocalizationKeys.AboutRowBuildConfig), BuildConfigValue),
+            (localizer.T(LocalizationKeys.AboutRowRuntime), FrameworkVersionText),
+            (localizer.T(LocalizationKeys.AboutRowAvalonia), AvaloniaVersionText),
+            (localizer.T(LocalizationKeys.AboutRowPlatform), PlatformValue),
+        };
+
+        var text = new StringBuilder()
+            .Append(ProductName)
+            .Append(' ')
+            .AppendLine(VersionCaptionText);
+        foreach (var (label, value) in rows)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                continue;
+            }
+
+            text.Append(label).Append(": ").AppendLine(value);
+        }
+
+        return CopyToClipboardAsync(text.ToString().TrimEnd());
+    }
+
+    private async Task CopyToClipboardAsync(string text)
+    {
+        if (await copyText(text))
+        {
+            notifications?.ShowSuccess(localizer.T(LocalizationKeys.AboutCopied));
+            return;
+        }
+
+        notifications?.ShowError(localizer.T(LocalizationKeys.AboutCopyFailed));
+    }
+
+    public void SetRefreshError(Exception exception, SettingsViewModel settings, string? gameId = null)
     {
         // 刷新失败在状态栏只报中性可行动的状态（与快照的远端不可用同措辞）；
         // 异常原文已进诊断日志，不放进行内小空间。
@@ -251,7 +324,8 @@ internal partial class ShellViewModel : ObservableObject, IDisposable
         // 下载源是本地配置而非远端状态，远端不可用时也照常展示已保存的选择。
         DownloadSourceText = localizer.F(
             LocalizationKeys.DownloadSourceValue,
-            settings.Options.ResolveDownloadSourceDisplayName(settings.Editor.GetSavedSnapshot().PatchUrlGroup));
+            settings.Options.ResolveDownloadSourceDisplayName(
+                settings.Editor.GetSavedSnapshot().GetGameSettings(gameId ?? LauncherProfiles.BlueArchiveJapan.RuntimeId).PatchUrlGroup));
         SetLoadingPlaceholders();
     }
 
@@ -261,7 +335,7 @@ internal partial class ShellViewModel : ObservableObject, IDisposable
         var localGame = snapshot.LocalGame;
         var localConfig = localGame.GameConfig;
 
-        PathText = snapshot.Settings.GamePath;
+        PathText = snapshot.GameSettings.GamePath;
         VersionText = snapshot.RuntimeState != LauncherRuntimeState.NotInstalled
             ? localizer.F(LocalizationKeys.VersionInstalled, localConfig?.Version, gameConfig?.GameLatestVersion ?? localizer.T(LocalizationKeys.Unknown))
             : localizer.F(LocalizationKeys.VersionLatest, gameConfig?.GameLatestVersion ?? localizer.T(LocalizationKeys.Unknown));
@@ -271,8 +345,8 @@ internal partial class ShellViewModel : ObservableObject, IDisposable
         NetworkText = networkStatus;
         DownloadSourceText = localizer.F(
             LocalizationKeys.DownloadSourceValue,
-            settings.Options.ResolveDownloadSourceDisplayName(snapshot.Settings.PatchUrlGroup));
-        var launchCheckValue = settings.Options.ResolveLaunchCheckDisplayName(snapshot.Settings.LaunchCheckMode);
+            settings.Options.ResolveDownloadSourceDisplayName(snapshot.GameSettings.PatchUrlGroup));
+        var launchCheckValue = settings.Options.ResolveLaunchCheckDisplayName(snapshot.GameSettings.LaunchCheckMode);
         SetLaunchCheckResult(launchCheckValue);
         var executableName = string.IsNullOrWhiteSpace(localConfig?.Name)
             ? gameConfig?.GameStartExeName ?? localizer.T(LocalizationKeys.Unknown)

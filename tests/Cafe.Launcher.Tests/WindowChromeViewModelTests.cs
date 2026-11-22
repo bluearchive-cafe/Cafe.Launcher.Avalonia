@@ -285,6 +285,8 @@ Assert.Equal(DownloadStopReason.UserRequested, context.Backend.LastStopReason);
         var dialogs = provider.GetRequiredService<DialogsViewModel>();
         var backend = new StubGameOperationExecutor();
         var operations = new GameOperationsViewModel(
+            LauncherProfiles.BlueArchiveJapan.RuntimeId,
+            provider.GetRequiredService<IGameFileOperationCoordinator>(),
             backend,
             new TestGameShortcutService(),
             new FakeGameSessionMonitor(),

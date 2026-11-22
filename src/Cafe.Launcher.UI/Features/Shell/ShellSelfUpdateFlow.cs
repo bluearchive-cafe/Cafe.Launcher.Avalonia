@@ -20,7 +20,7 @@ internal sealed class ShellSelfUpdateFlow : IDisposable
     private readonly ShellSelfUpdateCoordinator coordinator;
     private readonly IWindowsLauncherUpdateApplier updateApplier;
     private readonly LauncherUpdateDialogViewModel updateDialog;
-    private readonly ToastService toastService;
+    private readonly INotificationService toastService;
     private readonly LocalizationService localizer;
     private readonly IErrorHandlingService errorHandling;
     private readonly WindowChromeViewModel windowChrome;
@@ -29,7 +29,7 @@ internal sealed class ShellSelfUpdateFlow : IDisposable
         ILauncherSelfUpdateService selfUpdateService,
         IWindowsLauncherUpdateApplier updateApplier,
         LauncherUpdateDialogViewModel updateDialog,
-        ToastService toastService,
+        INotificationService toastService,
         LocalizationService localizer,
         IErrorHandlingService errorHandling,
         WindowChromeViewModel windowChrome,

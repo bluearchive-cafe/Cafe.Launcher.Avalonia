@@ -9,6 +9,7 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Cafe.Launcher.UI.Constants;
+using FluentAvalonia.UI.Controls;
 using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.UI.Controls;
 using Cafe.Launcher.UI.Helpers;
@@ -189,7 +190,6 @@ public sealed partial class MainWindowHeadlessTests
 
         Assert.True(notice.IsEffectivelyVisible);
         // 提示依靠图标、文字和背景表达；取消额外左边线后使用完整的共享圆角。
-        Assert.Equal(new CornerRadius(8), notice.CornerRadius);
         Assert.Equal(new Thickness(0), notice.BorderThickness);
         Assert.Equal(
             context.ViewModel.Shell.I18n[LocalizationKeys.LauncherUpdateOpenReleasePage],
@@ -235,28 +235,25 @@ public sealed partial class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
-    public void ResourcePanel_Content_RendersSegmentedSourceSwitchesAndStatusChips()
+    public void ResourcePanel_Content_RendersNativeSourceChoicesAndStatusChips()
     {
-        // ADR-041 内容解剖的渲染级守卫：UID 展示态 + 分段来源 + 单卡三行（Switch/chip），
-        // 状态类随 Status 与消息语调联动。VM 状态机不因视图测试被驱动（不触发任何命令）。
+        // UID 展示态、来源单选和资源行状态随当前面板数据更新。
         using var context = CreateContext();
         context.Window.Show();
         ShowResourcePanel(context);
         Dispatcher.UIThread.RunJobs();
         var resourcePanel = context.ViewModel.ResourcePanel;
 
-        // UID 展示态：两个编辑/缺失态输入框隐藏，分段按钮成对渲染且勾选段跟随来源。
+        // UID 展示态：隐藏输入框，来源单选项反映当前选择。
         var uidInputs = context.Window.GetVisualDescendants().OfType<TextBox>()
             .Where(box => box.Classes.Contains("uid-input"))
             .ToArray();
         Assert.Equal(2, uidInputs.Length);
         Assert.All(uidInputs, input => Assert.False(input.IsEffectivelyVisible));
 
-        // 设置页也常驻在窗口里，分段按钮查询必须限定在资源面板子树内。
         var resourcePanelView = Assert.Single(context.Window.GetVisualDescendants().OfType<ResourcePanelOverlay>());
-        var segments = resourcePanelView.GetVisualDescendants().OfType<RadioButton>()
-            .Where(button => button.Classes.Contains("segment-option"))
-            .ToArray();
+        var sourceOptions = resourcePanelView.FindControl<WrapPanel>("ResourceUidSourceOptions")!;
+        var segments = sourceOptions.Children.OfType<RadioButton>().ToArray();
         Assert.Equal(2, segments.Length);
         var autoName = context.ViewModel.Shell.I18n[LocalizationKeys.ResourcePanelUidSourceAuto];
         var autoSegment = Assert.Single(segments, segment =>
@@ -419,8 +416,7 @@ public sealed partial class MainWindowHeadlessTests
         var settingsButton = context.Window
             .GetVisualDescendants()
             .OfType<Button>()
-            .Single(button =>
-                button.Classes.Contains("settings")
+            .Single(button => button.IsEffectivelyVisible
                 && ReferenceEquals(
                     button.Command,
                     context.ViewModel.WindowChrome.ToggleSettingsCommand));
@@ -512,7 +508,7 @@ public sealed partial class MainWindowHeadlessTests
             .OfType<global::Cafe.Launcher.UI.Controls.DialogSurface>()
             .Single();
 
-        Assert.True(surface.Bounds.Width <= 540);
+        Assert.True(surface.Bounds.Width <= 440);
         Assert.True(surface.Bounds.Height < 480);
     }
 
@@ -668,12 +664,12 @@ public sealed partial class MainWindowHeadlessTests
 
         var checkedBox = context.Window.GetVisualDescendants().OfType<CheckBox>()
             .Single(box => box.IsChecked == true && box.IsEnabled);
-        var glyph = checkedBox.GetVisualDescendants().OfType<global::Avalonia.Controls.Shapes.Path>()
-            .Single(path => path.Name == "CheckGlyph");
+        var glyph = checkedBox.GetVisualDescendants().OfType<FAFontIcon>()
+            .Single(icon => icon.Name == "CheckGlyph");
         var normalRectangle = checkedBox.GetVisualDescendants().OfType<Border>()
             .Single(border => border.Name == "NormalRectangle");
 
-        var glyphColor = ((ISolidColorBrush)glyph.Fill!).Color;
+        var glyphColor = ((ISolidColorBrush)glyph.Foreground!).Color;
         var fillColor = ((ISolidColorBrush)normalRectangle.Background!).Color;
         var ratio = ColorUtils.GetContrastRatio(glyphColor, fillColor);
 

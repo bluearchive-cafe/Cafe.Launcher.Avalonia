@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Cafe.Launcher.UI.ViewModels"
              xmlns:controls="using:Cafe.Launcher.UI.Controls"
+             xmlns:glyphs="using:Cafe.Launcher.UI.Constants"
              x:Class="Cafe.Launcher.UI.Views.GameTaskDialog"
              x:DataType="vm:MainWindowViewModel">
     <Grid x:Name="GameTaskLayer" Classes="dialog-overlay motion-overlay"
@@ -11,8 +12,8 @@
         <controls:DialogSurface x:Name="GameTaskSurface" Form="Panel" Classes="motion-surface"
                                 HorizontalAlignment="Center" VerticalAlignment="Center"
                                 Margin="{StaticResource Launcher.Spacing.Thickness.Xxl}"
-                                Width="{StaticResource Launcher.Component.Dialog.Confirm.MaxWidth}"
-                                MaxWidth="{StaticResource Launcher.Component.Dialog.Confirm.MaxWidth}"
+                                Width="{StaticResource Launcher.Component.Dialog.Content.MaxWidth}"
+                                MaxWidth="{StaticResource Launcher.Component.Dialog.Content.MaxWidth}"
                                 Title="{Binding Operations.TaskTitle}"
                                 CloseCommand="{Binding Operations.CloseTaskCommand}"
                                 CloseAutomationName="{Binding Operations.TaskCloseText}"
@@ -25,7 +26,7 @@
                         <Border Classes="task-install-path">
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}">
                                 <TextBlock x:Name="InstallPathLabel" Text="{Binding Operations.InstallPathDraft}"
-                                           Classes="dialog-alert-content" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                           Classes="dialog-alert-content" VerticalAlignment="Center" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
                                            ToolTip.Tip="{Binding Operations.InstallPathDraft}"/>
                                 <HyperlinkButton Grid.Column="1" Classes="inline-link" VerticalAlignment="Center"
                                         IsEnabled="{Binding Operations.CanChooseInstallPath}"
@@ -33,11 +34,22 @@
                                         Command="{Binding Operations.ChooseInstallPathCommand}"/>
                             </Grid>
                         </Border>
-                        <WrapPanel ItemSpacing="{StaticResource Launcher.Spacing.Sm}" LineSpacing="{StaticResource Launcher.Spacing.Xs}">
+                        <WrapPanel ItemSpacing="{StaticResource Launcher.Spacing.Md}" LineSpacing="{StaticResource Launcher.Spacing.Xs}">
                             <TextBlock Text="{Binding Operations.InstallDownloadSizeText}" Classes="caption"/>
-                            <TextBlock Text="|" Classes="caption"/>
                             <TextBlock Text="{Binding Operations.InstallRequiredSizeText}" Classes="caption"/>
                         </WrapPanel>
+                        <Border Classes="dialog-alert warning"
+                                IsVisible="{Binding Operations.InstallPreparationDiskSpaceMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}">
+                                <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Warning}"
+                                                   FontSize="{StaticResource Launcher.Icon.Sm}"
+                                                   Foreground="{DynamicResource Launcher.Color.Warning}"
+                                                   VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" x:Name="InstallDiskSpaceWarning"
+                                           Text="{Binding Operations.InstallPreparationDiskSpaceMessage}"
+                                           Classes="dialog-alert-content" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"/>
+                            </Grid>
+                        </Border>
                         <CheckBox x:Name="InstallShortcutCheckBox" Classes="setting-checkbox"
                                   IsChecked="{Binding Operations.CreateInstallDesktopShortcut}"
                                   IsEnabled="{Binding Operations.CanChooseInstallPath}"
@@ -48,18 +60,18 @@
                 </StackPanel>
             </controls:DialogSurface.Content>
             <controls:DialogSurface.Footer>
-                <StackPanel Classes="confirm-actions">
+                <WrapPanel Classes="dialog-actions">
                     <Button Classes="flat-action dialog-action" IsVisible="{Binding Operations.IsInstallPreparing}"
                             IsEnabled="{Binding Operations.CanChooseInstallPath}"
                             Content="{Binding Shell.I18n[taskIdentifyInstallation]}" AutomationProperties.Name="{Binding Shell.I18n[taskIdentifyInstallation]}"
                             Command="{Binding Operations.IdentifyInstalledGameCommand}"/>
-                    <Button Classes="primary-action dialog-action" IsVisible="{Binding Operations.IsInstallPreparing}"
+                    <Button Classes="primary-action dialog-action accent" IsVisible="{Binding Operations.IsInstallPreparing}"
                             IsEnabled="{Binding Operations.CanStartInstall}"
                             Content="{Binding Shell.I18n[taskStartInstall]}" AutomationProperties.Name="{Binding Shell.I18n[taskStartInstall]}"
                             Command="{Binding Operations.ConfirmInstallCommand}"
-                            ToolTip.Tip="{Binding Operations.InstallButtonToolTip}" ToolTip.ShowOnDisabled="True"
-                            AutomationProperties.HelpText="{Binding Operations.InstallButtonToolTip}"/>
-                </StackPanel>
+                            ToolTip.Tip="{Binding Operations.InstallPreparationDiskSpaceMessage}" ToolTip.ShowOnDisabled="True"
+                            AutomationProperties.HelpText="{Binding Operations.InstallPreparationDiskSpaceMessage}"/>
+                </WrapPanel>
             </controls:DialogSurface.Footer>
         </controls:DialogSurface>
     </Grid>

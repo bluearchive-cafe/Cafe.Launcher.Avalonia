@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- 原型项目偏离仓库中央包版本管理，显式关闭 CPM（版本在此文件内自持）。
+         lock 文件生成同样关闭：仓库级 props 对 src/tests 的 lock 提交约定
+         不适用于原型，避免本地 run 产生未跟踪的 packages.lock.json。
+         Avalonia 刻意与生产版本对齐（12.1.6，见 Directory.Packages.props），
+         保证 spike 结论对生产直接有效。 -->
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+    <RestorePackagesWithLockFile>false</RestorePackagesWithLockFile>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.6" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.6" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.6" />
+    <!-- 候选 1：Fluid.Avalonia.Acrylic（Skia 窗口内采样，Avalonia 12+） -->
+    <PackageReference Include="Fluid.Avalonia.Acrylic" Version="1.4.0" />
+    <!-- 候选 2：JuffMa.Controls.Acrylic（手动快照方案，已移植 Avalonia 12） -->
+    <PackageReference Include="JuffMa.Controls.Acrylic" Version="2.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 视频壁纸模拟用的静态图：与生产同一张启动器壁纸。 -->
+    <AvaloniaResource Include="..\..\src\Cafe.Launcher.UI\Assets\launcher-background.png"
+                      Link="Assets\launcher-background.png" />
+  </ItemGroup>
+</Project>

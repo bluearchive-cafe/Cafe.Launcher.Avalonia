@@ -14,7 +14,7 @@ using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.UI.Views;
-using Material.Icons.Avalonia;
+using FluentAvalonia.UI.Controls;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cafe.Launcher.HeadlessTests;
@@ -77,27 +77,24 @@ public sealed partial class MainWindowHeadlessTests
                     popup.ShouldUseOverlayLayer = true;
                     combo.IsDropDownOpen = true;
                     Dispatcher.UIThread.RunJobs();
-                    using (var popupTypography = scale == 1d ? null : new TypographyScaleSnapshot(popup.Child!, scale))
                     {
-                        if (popupTypography is not null)
-                        {
-                            Dispatcher.UIThread.RunJobs();
-                        }
                         var items = popup.Child!.GetVisualDescendants().OfType<ComboBoxItem>().ToArray();
                         Assert.NotEmpty(items);
                         foreach (var item in items)
                         {
-                            var check = PreviewPart<MaterialIcon>(item, "SettingsChoiceCheck");
+                            var check = PreviewPart<Avalonia.Controls.Shapes.Rectangle>(item, "Pill");
                             Assert.Equal(item.IsSelected ? 1 : 0, check.Opacity);
                             var text = Assert.Single(
-                                PreviewPart<ContentPresenter>(item, "PART_ContentPresenter")
+                                PreviewPart<ContentPresenter>(item, "ContentPresenter")
                                     .GetVisualDescendants().OfType<TextBlock>(),
                                 candidate => !candidate.Classes.Contains("caption"));
-                            Assert.Equal(14 * scale, TextElement.GetFontSize(text));
+                            Assert.Equal(combo.FontSize, TextElement.GetFontSize(text));
                             Assert.Equal(TextWrapping.Wrap, text.TextWrapping);
                             Assert.Equal(TextTrimming.None, text.TextTrimming);
-                            Assert.True(item.Bounds.Height >= text.DesiredSize.Height + 16 - 1,
+                            Assert.True(item.Bounds.Height >= text.DesiredSize.Height,
                                 $"{theme}, {category}, scale {scale}: '{text.Text}' is clipped.");
+                            Assert.True(item.Bounds.Height >= 32,
+                                $"{theme}, {category}, scale {scale}: row dropped below the Fluent 2 menu height.");
                         }
 
                         var scroller = Assert.Single(popup.Child!.GetVisualDescendants().OfType<ScrollViewer>());
@@ -114,8 +111,8 @@ public sealed partial class MainWindowHeadlessTests
         }
 
         Assert.Equal(theme, context.Window.ActualThemeVariant);
-        // The Linux-only runtime selector is hidden on Windows; all other ten choices are exercised.
-        var expected = OperatingSystem.IsLinux() ? 11 : 10;
+        // 游戏运行器选择器已移到独立的游戏启动分类；全局六页在 Windows 上共九个选择器，Linux 多一个。
+        var expected = OperatingSystem.IsLinux() ? 10 : 9;
         for (var index = 0; index < scales.Length; index++)
         {
             Assert.True(visitsByScale[index] == expected,
@@ -203,11 +200,10 @@ public sealed partial class MainWindowHeadlessTests
     {
         Dispatcher.UIThread.RunJobs();
         var background = PreviewColor(Assert.IsAssignableFrom<IBrush>(window.Background));
-        var fill = PreviewComposite(PreviewPart<Border>(item, "SettingsChoiceSurface").Background, background);
-        fill = PreviewComposite(PreviewPart<Border>(item, "SettingsChoiceState").Background, fill);
-        Assert.True(ColorUtilsForSelect(PreviewPart<ContentPresenter>(item, "PART_ContentPresenter").Foreground, fill) >= 4.5);
-        Assert.True(ColorUtilsForSelect(PreviewPart<MaterialIcon>(item, "SettingsChoiceCheck").Foreground, fill) >= 3);
-        Assert.True(ColorUtilsForSelect(PreviewPart<Border>(item, "SettingsChoiceFocus").BorderBrush, fill) >= 3);
+        var fill = PreviewComposite(PreviewPart<Border>(item, "LayoutRoot").Background, background);
+        Assert.True(ColorUtilsForSelect(PreviewPart<ContentPresenter>(item, "ContentPresenter").Foreground, fill) >= 4.5);
+        Assert.True(item.IsSelected);
+        Assert.Equal(1, PreviewPart<Avalonia.Controls.Shapes.Rectangle>(item, "Pill").Opacity);
     }
 
     private static double ColorUtilsForSelect(IBrush? foreground, Color background) =>

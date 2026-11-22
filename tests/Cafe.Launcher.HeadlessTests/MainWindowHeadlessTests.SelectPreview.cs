@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Presenters;
 using Avalonia.Controls.Primitives;
+using Avalonia.Controls.Shapes;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
@@ -17,14 +18,16 @@ using Cafe.Launcher.UI.Helpers;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.UI.Views;
-using Material.Icons.Avalonia;
+using FluentAvalonia.UI.Controls;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cafe.Launcher.HeadlessTests;
 
 public sealed partial class MainWindowHeadlessTests
 {
-    /// <summary>使用生产设置样式验证真实设置行；可单独导出供视觉复核。</summary>
+    /// <summary>使用生产设置样式验证真实设置行；可单独导出供视觉复核。
+    /// ADR-070 第二批起下拉回归 FA 原生模板：部件名与状态断言按原生模板收口
+    /// （Background/Pill/LayoutRoot/DescriptionText），实心档经资源键覆盖提供。</summary>
     [AvaloniaTheory]
     [InlineData(false)]
     [InlineData(true)]
@@ -93,34 +96,35 @@ public sealed partial class MainWindowHeadlessTests
             foreach (var (combo, name) in new[] { (motion, "motion"), (source, "source") })
             {
                 var bounds = combo.Bounds;
-                var selection = PreviewPart<ContentControl>(combo, "ContentPresenter");
+                var selection = PreviewPart<ContentPresenter>(combo, "ContentPresenter");
                 var textBounds = selection.Bounds;
                 var background = PreviewPart<Border>(combo, "Background");
                 var restingFill = background.Background;
                 Assert.True(ColorUtils.GetContrastRatio(PreviewColor(combo.BorderBrush), PreviewColor(restingFill)) >= 3);
                 window.MouseMove(combo.TranslatePoint(new Point(10, 10), window)!.Value);
                 Dispatcher.UIThread.RunJobs();
-                Assert.Equal(restingFill, background.Background);
+                // 悬停不换底：状态由描边与箭头表达（ADR-070 资源键覆盖）；同色不同实例不算换底。
+                Assert.Equal(PreviewColor(restingFill), PreviewColor(background.Background));
                 Assert.Equal(textBounds, selection.Bounds);
                 combo.Focus(NavigationMethod.Tab);
                 Dispatcher.UIThread.RunJobs();
-                Assert.True(PreviewPart<Border>(combo, "HighlightBackground").IsVisible);
+                Assert.Equal(1, PreviewPart<Border>(combo, "Pill").Opacity);
                 Assert.Equal(textBounds, selection.Bounds);
                 var popup = PreviewPart<Popup>(combo, "PART_Popup");
                 popup.ShouldUseOverlayLayer = true;
                 combo.IsDropDownOpen = true;
                 Dispatcher.UIThread.RunJobs();
-                Assert.Equal(restingFill, background.Background);
+                Assert.Equal(PreviewColor(restingFill), PreviewColor(background.Background));
                 Assert.Equal(bounds, combo.Bounds);
                 Assert.Equal(textBounds, selection.Bounds);
-                Assert.True(PreviewPart<Border>(combo, "HighlightBackground").IsVisible);
+                // 焦点此刻合法地移入弹出列表：组合框本体指示让位给选中项的 Pill（下断言覆盖）。
                 var items = popup.Child!.GetVisualDescendants().OfType<ComboBoxItem>().ToArray();
                 Assert.Equal(combo.ItemCount, items.Length);
                 foreach (var item in items)
                 {
-                    var check = PreviewPart<MaterialIcon>(item, "SettingsChoiceCheck");
-                    Assert.Equal(item.IsSelected ? 1 : 0, check.Opacity);
-                    Assert.Equal(40, item.Bounds.Height);
+                    // 选中指示由原生 Pill 承担：非颜色线索保留。
+                    Assert.Equal(item.IsSelected ? 1 : 0, PreviewPart<Rectangle>(item, "Pill").Opacity);
+                    Assert.True(item.Bounds.Height >= 32, $"item hit height {item.Bounds.Height}");
                 }
 
                 if (ReferenceEquals(combo, source))
@@ -133,22 +137,22 @@ public sealed partial class MainWindowHeadlessTests
                 ExportSelectPreview(window, dark, name);
                 var selected = Assert.IsType<ComboBoxItem>(combo.ContainerFromIndex(combo.SelectedIndex));
                 var selectedFill = PreviewComposite(
-                    PreviewPart<Border>(selected, "SettingsChoiceSurface").Background,
+                    PreviewPart<Border>(selected, "LayoutRoot").Background,
                     PreviewColor(restingFill));
                 Assert.True(ColorUtils.GetContrastRatio(
-                    PreviewColor(PreviewPart<ContentPresenter>(selected, "PART_ContentPresenter").Foreground), selectedFill) >= 4.5);
+                    PreviewColor(PreviewPart<ContentPresenter>(selected, "ContentPresenter").Foreground), selectedFill) >= 4.5);
                 items[(combo.SelectedIndex + 1) % items.Length].Focus(NavigationMethod.Unspecified);
                 selected.Focus(NavigationMethod.Tab);
                 Dispatcher.UIThread.RunJobs();
-                Assert.True(ColorUtils.GetContrastRatio(
-                    PreviewColor(PreviewPart<Border>(selected, "SettingsChoiceFocus").BorderBrush), selectedFill) >= 3);
+                Assert.True(selected.IsKeyboardFocusWithin);
+                Assert.Equal(1, PreviewPart<Rectangle>(selected, "Pill").Opacity);
                 ExportSelectPreview(window, dark, name + "-focus");
                 window.MouseMove(selected.TranslatePoint(new Point(20, 20), window)!.Value);
                 Dispatcher.UIThread.RunJobs();
-                var hoveredFill = PreviewComposite(PreviewPart<Border>(selected, "SettingsChoiceState").Background,
-                    PreviewColor(PreviewPart<Border>(selected, "SettingsChoiceSurface").Background));
+                var hoveredFill = PreviewComposite(PreviewPart<Border>(selected, "LayoutRoot").Background,
+                    PreviewColor(restingFill));
                 Assert.True(ColorUtils.GetContrastRatio(
-                    PreviewColor(PreviewPart<ContentPresenter>(selected, "PART_ContentPresenter").Foreground), hoveredFill) >= 4.5);
+                    PreviewColor(PreviewPart<ContentPresenter>(selected, "ContentPresenter").Foreground), hoveredFill) >= 4.5);
                 Assert.Equal(bounds, combo.Bounds);
                 ExportSelectPreview(window, dark, name + "-hover");
                 window.MouseMove(new Point(16, 450));
@@ -178,13 +182,14 @@ public sealed partial class MainWindowHeadlessTests
                 combo.IsEnabled = false;
                 Dispatcher.UIThread.RunJobs();
                 Assert.Equal(bounds, combo.Bounds);
-                Assert.False(PreviewPart<Border>(combo, "HighlightBackground").IsVisible);
+                Assert.Equal(0, PreviewPart<Border>(combo, "Pill").Opacity);
                 combo.IsEnabled = true;
                 Dispatcher.UIThread.RunJobs();
                 ((IPseudoClasses)combo.Classes).Set(":error", true);
                 Dispatcher.UIThread.RunJobs();
-                Assert.Equal(window.FindResource(window.ActualThemeVariant, "Launcher.Color.Error"), background.BorderBrush);
-                Assert.Equal(window.FindResource(window.ActualThemeVariant, "Launcher.Color.Error"), PreviewPart<Border>(combo, "HighlightBackground").BorderBrush);
+                Assert.Equal(
+                    Assert.IsAssignableFrom<ISolidColorBrush>(window.FindResource(window.ActualThemeVariant, "Launcher.Color.Error")).Color,
+                    Assert.IsAssignableFrom<ISolidColorBrush>(background.BorderBrush).Color);
                 Assert.Equal(bounds, combo.Bounds);
                 ((IPseudoClasses)combo.Classes).Set(":error", false);
             }
@@ -218,11 +223,11 @@ public sealed partial class MainWindowHeadlessTests
         }
 
         Dispatcher.UIThread.RunJobs();
-        var directory = Path.Combine(GoldenScreenshot.FindRepositoryRoot(), ".artifacts", "settings-select-md3");
+        var directory = System.IO.Path.Combine(GoldenScreenshot.FindRepositoryRoot(), ".artifacts", "settings-select-md3");
         Directory.CreateDirectory(directory);
         using var bitmap = new RenderTargetBitmap(new PixelSize((int)window.Bounds.Width, (int)window.Bounds.Height));
         bitmap.Render(window);
-        using var stream = File.Create(Path.Combine(directory, $"{(dark ? "dark" : "light")}-{state}.png"));
+        using var stream = File.Create(System.IO.Path.Combine(directory, $"{(dark ? "dark" : "light")}-{state}.png"));
         bitmap.Save(stream, new PngBitmapEncoderOptions());
     }
 }

@@ -37,8 +37,7 @@ internal static class WindowClosePolicy
     }
 
     /// <summary>
-    /// 卸载执行期间任何关闭入口都拒绝。自绘关闭（<see cref="Decide"/>）与操作系统发起的关闭
-    /// 共用这一个闸门；关闭行为本身不解释系统关闭（CONTEXT「关闭行为」）。
+    /// 卸载执行期间拒绝关闭窗口，包括用户关闭与应用主动退出。
     /// </summary>
     public static bool IsCloseRefused(bool isUninstallExecuting) => isUninstallExecuting;
 

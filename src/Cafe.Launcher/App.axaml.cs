@@ -194,7 +194,7 @@ public partial class App : Application
             // 启动行为由表现层挂载：首启走向导，否则完整初始化（两者都只跑一次）。
             presentationSession.AttachStartupBehavior(
                 Program.FirstLaunch,
-                Program.LaunchGameRequested,
+                Program.LaunchGameId,
                 shutdownCts.Token);
 
             desktop.MainWindow = mainWindow;
@@ -273,19 +273,25 @@ public partial class App : Application
     /// <summary>
     /// Receives the --launch-game forward from a second process and starts the game
     /// through the regular UI command, so busy-state, validation, and toasts all apply.
-    /// On Windows the transport is a named EventWaitHandle; on Unix it is a local
-    /// socket (CrossProcessLaunchSignal), because .NET has no named events there.
+    /// A same-user pipe carries the bounded explicit game identity; Unix uses a
+    /// socket path under the existing data root and Windows a product-scoped pipe name.
     /// The polling loop and UI marshaling are delegated to
     /// <see cref="CrossProcessSignalListener"/>.
     /// </summary>
     private sealed class LaunchGameSignalListener : CrossProcessSignalListener
     {
-        public LaunchGameSignalListener(LauncherPresentationSession presentationSession, CrossProcessLaunchSignal signal)
+        public LaunchGameSignalListener(LauncherPresentationSession presentationSession, CrossProcessGameLaunchChannel signal)
             : base(signal.WaitOne, () =>
             {
                 try
                 {
-                _ = presentationSession.LaunchGameAsync();
+                    while (signal.TryTake(out var request))
+                    {
+                        if (request is not null)
+                        {
+                            _ = DispatchGameLaunchAsync(presentationSession, request.GameId);
+                        }
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -294,6 +300,18 @@ public partial class App : Application
                 }
             })
         {
+        }
+
+        private static async Task DispatchGameLaunchAsync(LauncherPresentationSession presentationSession, string gameId)
+        {
+            try
+            {
+                await presentationSession.LaunchGameAsync(gameId);
+            }
+            catch (Exception exception)
+            {
+                LauncherLog.LogSync(LogEntrySeverity.Warn, "App", $"Launch-game request failed: {exception.Message}");
+            }
         }
     }
 }

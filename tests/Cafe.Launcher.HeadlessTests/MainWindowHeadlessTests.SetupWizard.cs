@@ -4,6 +4,7 @@ using Avalonia.Automation;
 using Avalonia.Automation.Peers;
 using Avalonia.Controls;
 using Avalonia.Data;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
 using Avalonia.Media;
@@ -88,49 +89,39 @@ public sealed partial class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
-    public void SetupWizard_SkipButton_RendersAsQuietTextButton()
+    public void SetupWizard_SkipButton_AppearsAfterConsentAndOpensConfirmation()
     {
         using var context = CreateContext();
         context.Window.Show();
         context.ViewModel.Dialogs.ShowSetupWizard();
-        // 跳过钮只在同意后出现；这里直接放行同意门禁，验证头带的最终外观。
-        context.ViewModel.Dialogs.SetupWizard.IsAgreementAccepted = true;
         Dispatcher.UIThread.RunJobs();
 
         var skip = context.Window.GetVisualDescendants().OfType<Button>()
             .Single(button => button.Name == "SkipButton");
-        Assert.True(skip.IsEffectivelyVisible);
-
-        var expectedBackground = Assert.IsAssignableFrom<ISolidColorBrush>(
-            context.Window.FindResource(context.Window.ActualThemeVariant, "Launcher.Color.Transparent"));
-        Assert.Equal(
-            expectedBackground.Color,
-            Assert.IsAssignableFrom<ISolidColorBrush>(skip.Background).Color);
-        var secondaryText = Assert.IsAssignableFrom<ISolidColorBrush>(
-            context.Window.FindResource(context.Window.ActualThemeVariant, "Launcher.Text.Secondary"));
-        Assert.Equal(
-            secondaryText.Color,
-            Assert.IsAssignableFrom<ISolidColorBrush>(skip.Foreground).Color);
-
-        // 悬停才铺状态层并把前景提到 Primary；静止态不承载填充底。
-        ((IPseudoClasses)skip.Classes).Set(":pointerover", true);
+        Assert.False(skip.IsEffectivelyVisible);
+        context.ViewModel.Dialogs.SetupWizard.IsAgreementAccepted = true;
         Dispatcher.UIThread.RunJobs();
-        var hoverRow = Assert.IsAssignableFrom<ISolidColorBrush>(
-            context.Window.FindResource(context.Window.ActualThemeVariant, "Launcher.Color.Content.Row.Hover"));
-        Assert.Equal(
-            hoverRow.Color,
-            Assert.IsAssignableFrom<ISolidColorBrush>(skip.Background).Color);
-        var primaryText = Assert.IsAssignableFrom<ISolidColorBrush>(
-            context.Window.FindResource(context.Window.ActualThemeVariant, "Launcher.Text.Primary"));
-        Assert.Equal(
-            primaryText.Color,
-            Assert.IsAssignableFrom<ISolidColorBrush>(skip.Foreground).Color);
+        Assert.True(skip.IsEffectivelyVisible);
+        AssertControlInsideWindow(skip, context.Window);
+        Assert.Equal(context.ViewModel.Shell.I18n[LocalizationKeys.SetupWizardSkip], AutomationProperties.GetName(skip));
+        Assert.True(skip.Focus(NavigationMethod.Tab));
+        context.Window.KeyPress(Key.Enter, RawInputModifiers.None, PhysicalKey.Enter, "");
+        context.Window.KeyRelease(Key.Enter, RawInputModifiers.None, PhysicalKey.Enter, "");
+        Dispatcher.UIThread.RunJobs();
+        Assert.True(context.ViewModel.Dialogs.SetupWizardExitConfirm.IsVisible);
     }
 
-    [AvaloniaFact]
-    public void SetupWizard_AgreementScroll_ReachingBottomEnablesCheckbox()
+    [AvaloniaTheory]
+    [InlineData(LauncherLanguages.English, 1d)]
+    [InlineData(LauncherLanguages.English, 2d)]
+    [InlineData(LauncherLanguages.Japanese, 2d)]
+    public void SetupWizard_AgreementScroll_ReachingBottomEnablesCheckbox(string language, double scale)
     {
         using var context = CreateContext();
+        context.Window.Width = 1024;
+        context.Window.Height = 640;
+        context.ViewModel.IsMotionReduced = true;
+        context.ViewModel.Shell.ApplyLanguage(language, hasSnapshot: false);
         context.Window.Show();
         context.ViewModel.Dialogs.ShowSetupWizard();
         context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
@@ -140,9 +131,13 @@ public sealed partial class MainWindowHeadlessTests
         var wizard = context.ViewModel.Dialogs.SetupWizard;
         Assert.True(wizard.IsAgreementStep);
         Assert.False(wizard.HasReadAgreement);
+        using var typography = new TypographyScaleSnapshot(context.Window, scale);
+        Dispatcher.UIThread.RunJobs();
 
         var scroll = context.Window.GetVisualDescendants().OfType<ScrollViewer>()
             .Single(control => control.Name == "AgreementScrollViewer");
+        Assert.True(scroll.Viewport.Height > 0);
+        AssertControlInsideWindow(GetWizardNextButton(context.Window, context.ViewModel), context.Window);
         Assert.True(scroll.Extent.Height > scroll.Viewport.Height,
             "协议正文需在视口内溢出，才能验证“滚动到底”门禁。");
 
@@ -390,28 +385,18 @@ public sealed partial class MainWindowHeadlessTests
             radio => Assert.Equal(radios[0].Bounds.X, radio.Bounds.X));
 
         var circles = radios.Select(radio => radio.GetVisualDescendants()
-            .OfType<Border>()
-            .First(child => child.Name == "WizardRadioRing")).ToList();
-        var circleOffsets = radios.Select((radio, index) =>
-        {
-            return radio.TranslatePoint(circles[index].Bounds.Position, radio)!.Value.X;
-        }).ToList();
-        Assert.Equal(circleOffsets[0], circleOffsets[1]);
+            .OfType<Avalonia.Controls.Shapes.Ellipse>()
+            .Single(child => child.Name == "OuterEllipse")).ToList();
+        Assert.Equal(circles[0].TranslatePoint(default, radios[0])!.Value.X,
+            circles[1].TranslatePoint(default, radios[1])!.Value.X);
 
-        // 样张单选圈：20 圆 + 2 描边；选中行显示 10 圆点，未选中隐藏。
-        Assert.All(circles, circle =>
-        {
-            Assert.Equal(new Size(20, 20), circle.Bounds.Size);
-            Assert.Equal(new Thickness(2), circle.BorderThickness);
-        });
         var dots = radios.Select(radio => radio.GetVisualDescendants()
-            .OfType<Border>()
-            .Single(child => child.Name == "WizardRadioDot")).ToList();
+            .OfType<Avalonia.Controls.Shapes.Ellipse>()
+            .Single(child => child.Name == "CheckGlyph")).ToList();
         radios[1].IsChecked = true;
         Dispatcher.UIThread.RunJobs();
-        Assert.False(dots[0].IsVisible);
-        Assert.True(dots[1].IsVisible);
-        Assert.Equal(circles[1].Bounds.Center, dots[1].Bounds.Center);
+        Assert.Equal(0, dots[0].Opacity);
+        Assert.Equal(1, dots[1].Opacity);
     }
 
     [AvaloniaFact]

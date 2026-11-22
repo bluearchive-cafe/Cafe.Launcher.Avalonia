@@ -15,10 +15,22 @@
 | Term | Definition | Aliases to avoid |
 | --- | --- | --- |
 | **Launcher** | The Cafe Launcher desktop application. | Client |
-| **Game installation** | The installed Blue Archive game and its tracked local state. | Game files |
+| **Game installation** | One game entry’s installed files and tracked local state. | Game files |
 | **Manifest** | The file list and metadata used to validate, repair, update, or uninstall a game installation. | List, config |
 | **Launch verification** | The pre-launch integrity check configured by the user. | Launch check, validation |
 | **Repair** | The operation that compares the game installation with a manifest and restores missing or damaged files. | Fix, recovery |
+
+### Multi-game management
+
+| Term | Definition | Aliases to avoid |
+| --- | --- | --- |
+| **Game entry** | A supported combination of game and region. | Account, installation copy |
+| **Game library** | The collection of supported game entries on the home screen from which the user selects the current game. | — |
+| **Current game** | The entry shown on the home screen; other entries can still have tasks. | Running game, active download |
+| **Launcher settings** | Preferences shared across all game entries. | Current game settings |
+| **Game settings** | Preferences belonging to the named game entry. | Account settings |
+| **Default background** | Rules inherited by games without an enabled override. Each game still uses its own built-in or remote image. | Shared wallpaper |
+| **Preview Main Window** | Temporarily shows the home screen while preserving the settings draft and scope. | Save, apply |
 
 ### Downloads and localized resources
 
@@ -83,6 +95,7 @@
 | English | 简体中文 | 繁體中文 | 日本語 |
 | --- | --- | --- | --- |
 | Launcher | 启动器 | 啟動器 | ランチャー |
+| Game library | 游戏库 | 遊戲庫 | ゲームライブラリ |
 | Contributors | 贡献者 | 貢獻者 | コントリビューター |
 | Special Thanks | 特别感谢 | 特別感謝 | スペシャルサンクス |
 | BlueArchive.Cafe | 蔚蓝咖啡厅 | 蔚藍咖啡廳 | BlueArchive.Cafe |

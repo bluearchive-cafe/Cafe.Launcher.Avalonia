@@ -5,6 +5,7 @@ using Cafe.Launcher.UI.Constants;
 using Cafe.Launcher.UI.Helpers;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
+using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Services;
 using Cafe.Launcher.Core.Helpers;
 using Cafe.Launcher.Core.Models;
@@ -23,6 +24,7 @@ internal sealed class SettingsOptionsViewModel
         this.localizer = localizer;
         this.diskSpaceService = diskSpaceService;
         Language = LocalizationService.GetLanguageOptions(localizer);
+        EnsureSettingCategories();
     }
 
     public ObservableCollection<SettingOption> BackgroundSource { get; } =
@@ -102,6 +104,41 @@ internal sealed class SettingsOptionsViewModel
         new() { Code = PatchUrlGroups.Cafe }
     ];
 
+    /// <summary>下载来源选项随明确的设置目标变化；不借用其他游戏的 Cafe 能力。</summary>
+    public void SetGameTarget(YostarGameProfile profile)
+    {
+        var supportsCafe = LauncherProfiles.GetGameDefinition(profile.RuntimeId).SupportsCafeDownloadSource;
+        if (!PatchUrlGroup.Any(option => option.Code == PatchUrlGroups.Official))
+        {
+            PatchUrlGroup.Insert(0, new SettingOption
+            {
+                Code = PatchUrlGroups.Official,
+                DisplayName = localizer.T(LocalizationKeys.DownloadSourceOfficial)
+            });
+        }
+
+        if (supportsCafe && !PatchUrlGroup.Any(option => option.Code == PatchUrlGroups.Cafe))
+        {
+            PatchUrlGroup.Add(new SettingOption
+            {
+                Code = PatchUrlGroups.Cafe,
+                DisplayName = localizer.T(LocalizationKeys.DownloadSourceCafe)
+            });
+        }
+        else if (!supportsCafe)
+        {
+            var cafe = PatchUrlGroup.FirstOrDefault(option => option.Code == PatchUrlGroups.Cafe);
+            if (cafe is not null)
+            {
+                PatchUrlGroup.Remove(cafe);
+            }
+        }
+
+        RefreshOptions(PatchUrlGroup, code => localizer.T(code == PatchUrlGroups.Cafe
+            ? LocalizationKeys.DownloadSourceCafe
+            : LocalizationKeys.DownloadSourceOfficial));
+    }
+
     public ObservableCollection<SettingOption> DownloadSpeedLimit { get; } =
     [
         new() { Code = DownloadSpeedLimits.Unlimited },
@@ -165,16 +202,23 @@ internal sealed class SettingsOptionsViewModel
 
     public ObservableCollection<SettingOption> SettingsCategories { get; } = [];
 
+    /// <summary>Per-game settings categories; the list is fixed while a game session edits it.</summary>
+    public ObservableCollection<SettingOption> GameSettingsCategories { get; } = [];
+
     public void RefreshDisplayNames()
     {
         Language.First(option => option.Code == LauncherLanguages.Auto).DisplayName = localizer.T(LocalizationKeys.LanguageAuto);
         EnsureSettingCategories();
         UpdateSettingCategory(SettingsCategoryCodes.General, localizer.T(LocalizationKeys.SettingsCategoryGeneral), localizer.T(LocalizationKeys.SettingsCategoryGeneralDescription));
-        UpdateSettingCategory(SettingsCategoryCodes.Game, localizer.T(LocalizationKeys.SettingsCategoryGame), localizer.T(LocalizationKeys.SettingsCategoryGameDescription));
-        UpdateSettingCategory(SettingsCategoryCodes.DownloadNetwork, localizer.T(LocalizationKeys.SettingsCategoryDownloadNetwork), localizer.T(LocalizationKeys.SettingsCategoryDownloadNetworkDescription));
         UpdateSettingCategory(SettingsCategoryCodes.Appearance, localizer.T(LocalizationKeys.SettingsCategoryAppearance), localizer.T(LocalizationKeys.SettingsCategoryAppearanceDescription));
+        UpdateSettingCategory(SettingsCategoryCodes.DefaultBackground, localizer.T(LocalizationKeys.SettingsDefaultBackground), string.Empty);
+        UpdateSettingCategory(SettingsCategoryCodes.DownloadNetwork, localizer.T(LocalizationKeys.SettingsCategoryDownloadNetwork), localizer.T(LocalizationKeys.SettingsCategoryDownloadNetworkDescription));
         UpdateSettingCategory(SettingsCategoryCodes.Advanced, localizer.T(LocalizationKeys.SettingsCategoryAdvanced), localizer.T(LocalizationKeys.SettingsCategoryAdvancedDescription));
         UpdateSettingCategory(SettingsCategoryCodes.About, localizer.T(LocalizationKeys.SettingsCategoryAbout), localizer.T(LocalizationKeys.SettingsCategoryAboutDescription));
+        UpdateSettingCategory(SettingsCategoryCodes.Game, localizer.T(LocalizationKeys.SettingsGameInstallation), string.Empty);
+        UpdateSettingCategory(SettingsCategoryCodes.GameLaunch, localizer.T(LocalizationKeys.SettingsGameLaunch), string.Empty);
+        UpdateSettingCategory(SettingsCategoryCodes.GameDownload, localizer.T(LocalizationKeys.SettingsGameDownload), string.Empty);
+        UpdateSettingCategory(SettingsCategoryCodes.GameBackground, localizer.T(LocalizationKeys.SettingsGameBackground), string.Empty);
 
         RefreshOptions(Theme, code => code switch
         {
@@ -337,17 +381,21 @@ internal sealed class SettingsOptionsViewModel
             return;
         }
 
-        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.General, IconKind = "CogOutline", SelectedIconKind = "Cog" });
-        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.Game, IconKind = "GamepadSquareOutline", SelectedIconKind = "GamepadSquare" });
-        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.DownloadNetwork, IconKind = "DownloadOutline", SelectedIconKind = "Download" });
-        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.Appearance, IconKind = "PaletteOutline", SelectedIconKind = "Palette" });
-        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.Advanced, IconKind = "Tune", SelectedIconKind = "Tune" });
-        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.About, IconKind = "InformationOutline", SelectedIconKind = "Information" });
+        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.General, CategoryGlyph = Constants.FluentGlyphs.Setting });
+        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.Appearance, CategoryGlyph = Constants.FluentGlyphs.ColorPalette });
+        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.DefaultBackground, CategoryGlyph = Constants.FluentGlyphs.Image });
+        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.DownloadNetwork, CategoryGlyph = Constants.FluentGlyphs.Download });
+        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.Advanced, CategoryGlyph = Constants.FluentGlyphs.Equalizer });
+        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.About, CategoryGlyph = Constants.FluentGlyphs.Info });
+        GameSettingsCategories.Add(new() { Code = SettingsCategoryCodes.Game, CategoryGlyph = Constants.FluentGlyphs.Folder });
+        GameSettingsCategories.Add(new() { Code = SettingsCategoryCodes.GameLaunch, CategoryGlyph = Constants.FluentGlyphs.Play });
+        GameSettingsCategories.Add(new() { Code = SettingsCategoryCodes.GameDownload, CategoryGlyph = Constants.FluentGlyphs.Download });
+        GameSettingsCategories.Add(new() { Code = SettingsCategoryCodes.GameBackground, CategoryGlyph = Constants.FluentGlyphs.Image });
     }
 
     private void UpdateSettingCategory(string code, string displayName, string description)
     {
-        var option = SettingsCategories.First(option => option.Code == code);
+        var option = SettingsCategories.Concat(GameSettingsCategories).First(option => option.Code == code);
         option.DisplayName = displayName;
         option.Description = description;
     }

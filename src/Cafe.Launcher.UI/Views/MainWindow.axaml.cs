@@ -5,13 +5,12 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
-using Avalonia.Layout;
+using Avalonia.Interactivity;
 using Avalonia.Media;
-using Avalonia.Platform.Storage;
 using Avalonia.Styling;
 using Avalonia.Threading;
-using Avalonia.VisualTree;
 using Cafe.Launcher.UI.Features.GameOperations;
+using Cafe.Launcher.UI.Features.Games;
 using Cafe.Launcher.UI.Features.Shell;
 using Cafe.Launcher.UI.Helpers;
 using Cafe.Launcher.UI.Models;
@@ -26,10 +25,11 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Core.Models;
+using FluentAvalonia.UI.Windowing;
 
 namespace Cafe.Launcher.UI.Views;
 
-internal partial class MainWindow : Window
+internal partial class MainWindow : FAAppWindow
 {
     private SystemTrayService? systemTray;
     private MainWindowViewModel? configuredViewModel;
@@ -37,6 +37,8 @@ internal partial class MainWindow : Window
     private readonly WindowFilePickerService? filePickerService;
     private readonly WindowMetricsService? windowMetrics;
     private readonly Cafe.Launcher.Core.Services.Diagnostics.ILauncherDiagnostics? diagnostics;
+    private NavigationMethod gameRailNavigationMethod;
+    private bool isClosingForShutdown;
 
     /// <summary>
     /// 无参公共构造：Avalonia 运行时 XAML 加载器可达性要求（AVLN3001，缺失即构建错误），
@@ -53,13 +55,26 @@ internal partial class MainWindow : Window
         Cafe.Launcher.Core.Services.Diagnostics.ILauncherDiagnostics? diagnostics = null)
     {
         InitializeComponent();
+        // 首页无标题栏底色：标题栏高度与页头一致，原生窗口按钮覆盖在页头右端，
+        // 页头为其保留 138 DIP；页头容器以 TitleBar 角色承担空白拖拽，页头内按钮
+        // 以 User 角色保留点击与焦点。
+        TitleBar.ExtendsContentIntoTitleBar = true;
+        TitleBar.Height = 48;
+        TitleBar.BackgroundColor = Colors.Transparent;
+        TitleBar.InactiveBackgroundColor = Colors.Transparent;
+        TitleBar.ButtonBackgroundColor = Colors.Transparent;
+        TitleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
+        // ListBox moves focus without a navigation method when handling the arrow keys.
+        GameRail.AddHandler(KeyDownEvent, (_, _) => gameRailNavigationMethod = NavigationMethod.Directional,
+            RoutingStrategies.Tunnel);
+        GameRail.AddHandler(PointerPressedEvent, (_, _) => gameRailNavigationMethod = NavigationMethod.Pointer,
+            RoutingStrategies.Tunnel);
         this.filePickerService = filePickerService;
         this.windowMetrics = windowMetrics;
         this.diagnostics = diagnostics;
         operationSurfaceAnimator = new OperationSurfaceAnimator(diagnostics);
         filePickerService?.Attach(this);
         windowMetrics?.Attach(this);
-        PointerPressed += OnPointerPressed;
         KeyDown += OnKeyDown;
         Activated += OnActivated;
         Opened += PlayShellEntranceOnce;
@@ -67,6 +82,39 @@ internal partial class MainWindow : Window
 #if DEBUG
         InitializeVideoBackgroundPrototype();
 #endif
+    }
+
+    private async void OnGameRailSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (sender is not ListBox rail || e.Source != rail
+            || e.AddedItems.Count != 1 || e.AddedItems[0] is not GameNavigationItem entry
+            || DataContext is not MainWindowViewModel { Games: { } games } viewModel)
+        {
+            return;
+        }
+
+        var focusMethod = gameRailNavigationMethod;
+        // Let the native list finish updating selection before a switch can disable it or roll it back.
+        await Dispatcher.Yield(DispatcherPriority.Input);
+        if (!rail.IsLoaded || DataContext != viewModel || rail.SelectedItem != entry || games.ActiveEntry == entry)
+        {
+            return;
+        }
+
+        var hadFocus = rail.IsKeyboardFocusWithin;
+        await games.SelectGameCommand.ExecuteAsync(entry);
+        if (!rail.IsLoaded || DataContext != viewModel)
+        {
+            return;
+        }
+
+        // A blocked or failed switch leaves the displayed game as the selected entry.
+        rail.SelectedItem = games.ActiveEntry;
+        if (hadFocus && rail.IsEffectivelyEnabled
+            && (rail.IsKeyboardFocusWithin || FocusManager?.GetFocusedElement() is null))
+        {
+            rail.ContainerFromItem(games.ActiveEntry)?.Focus(focusMethod);
+        }
     }
 
     /// <summary>ADR-016: plays the one-shot whole-content fade-in; interactive from the first frame.</summary>
@@ -169,6 +217,8 @@ internal partial class MainWindow : Window
         viewModel.Background.PropertyChanged += OnVideoBackgroundSettingChanged;
         viewModel.Operations.PropertyChanged += OnOperationsPropertyChanged;
         viewModel.PropertyChanged += OnRootMotionPreferenceChanged;
+        viewModel.Settings.PropertyChanging += OnSettingsPreviewChanging;
+        viewModel.Settings.PropertyChanged += OnSettingsPreviewChanged;
         UpdateVideoBackground();
     }
 
@@ -302,6 +352,8 @@ internal partial class MainWindow : Window
         viewModel.Dialogs.ErrorCopyDetailsRequested -= CopyErrorDetailsToClipboard;
         viewModel.Operations.PropertyChanged -= OnOperationsPropertyChanged;
         viewModel.PropertyChanged -= OnRootMotionPreferenceChanged;
+        viewModel.Settings.PropertyChanging -= OnSettingsPreviewChanging;
+        viewModel.Settings.PropertyChanged -= OnSettingsPreviewChanged;
         operationSurfaceAnimator.Settle(OperationSurface);
         viewModel.RemoteContent.SetBannerPointerOver(false);
         viewModel.RemoteContent.SetBannerFocusWithin(false);
@@ -354,7 +406,20 @@ internal partial class MainWindow : Window
             return;
         }
 
-        Close();
+        CloseForShutdown();
+    }
+
+    internal void CloseForShutdown()
+    {
+        isClosingForShutdown = true;
+        try
+        {
+            Close();
+        }
+        finally
+        {
+            isClosingForShutdown = false;
+        }
     }
 
     public void SetSystemTray(SystemTrayService trayService)
@@ -389,43 +454,53 @@ internal partial class MainWindow : Window
         WindowGeometry.TryCapture(WindowState == WindowState.Normal, Position, Width, Height);
 
     /// <summary>
-    /// App-drawn title-bar drag. A touch contact reports <c>IsLeftButtonPressed</c> too, and the
-    /// window hands out only one primary pointer per concurrent contact — Win32's
-    /// <c>BeginMoveDrag</c> throws synchronously for a non-primary one (Avalonia 12.1.3 moved that
-    /// throw out of its posted callback), which the dispatcher policy escalates to a fatal crash.
-    /// So the second finger resting on the title bar would otherwise replace the window with the
-    /// crash report. Gate on <see cref="IPointer.IsPrimary"/> and never call it for touch extras.
+    /// Avalonia's drawn caption button calls Close(), while native close requests come
+    /// through the platform. Both follow the user's close preference. App shutdown
+    /// has its own close reason or calls CloseForShutdown when there is no lifetime.
     /// </summary>
-    private void OnPointerPressed(object? sender, PointerPressedEventArgs e)
+    protected override void OnClosing(WindowClosingEventArgs e)
     {
-        if (!IsWithinTitleBar(e.Source as Control)
-            || IsInteractive(e.Source as Control))
+        if (DataContext is not MainWindowViewModel viewModel)
+        {
+            base.OnClosing(e);
+            return;
+        }
+
+        // Uninstall owns the filesystem: every close path (including programmatic Close)
+        // stays refused until it completes.
+        if (WindowClosePolicy.IsCloseRefused(viewModel.Operations.IsUninstallExecuting))
+        {
+            e.Cancel = true;
+        }
+        else if (!isClosingForShutdown && e.CloseReason == WindowCloseReason.WindowClosing)
+        {
+            e.Cancel = true;
+            viewModel.WindowChrome.CloseCommand.Execute(null);
+        }
+
+        base.OnClosing(e);
+    }
+
+    /// <summary>
+    /// Native minimize/restore no longer passes through a caption command, so pause and resume
+    /// the banner carousel from the actual window state instead.
+    /// </summary>
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property != WindowStateProperty || configuredViewModel is not { } viewModel)
         {
             return;
         }
 
-        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed && e.Pointer.IsPrimary)
+        if (WindowState == WindowState.Minimized)
         {
-            BeginMoveDrag(e);
+            viewModel.WindowChrome.NotifyWindowMinimized();
         }
-    }
-
-    /// <summary>
-    /// Determines whether a pointer source belongs to the custom title bar.
-    /// </summary>
-    internal bool IsWithinTitleBar(Control? control)
-    {
-        while (control is not null)
+        else if (WindowState == WindowState.Normal)
         {
-            if (ReferenceEquals(control, TitleBar))
-            {
-                return true;
-            }
-
-            control = control.Parent as Control;
+            viewModel.WindowChrome.NotifyWindowRestored();
         }
-
-        return false;
     }
 
     private void OnKeyDown(object? sender, KeyEventArgs e)
@@ -439,38 +514,6 @@ internal partial class MainWindow : Window
         {
             e.Handled = true;
         }
-    }
-
-    /// <summary>
-    /// Determines whether a pointer source belongs to a focusable or scrolling control.
-    /// </summary>
-    internal static bool IsInteractive(Control? control)
-    {
-        while (control is not null)
-        {
-            // Controls that can receive keyboard focus are interactive even when
-            // their concrete type is a composite control (for example ColorPicker
-            // or ToggleSwitch). Keep ScrollViewer as an explicit exception because
-            // it is a pointer-interactive surface but is not normally focusable.
-            if (control.Focusable || control is ScrollViewer)
-            {
-                return true;
-            }
-
-            control = control.Parent as Control;
-        }
-
-        return false;
-    }
-
-    protected override void OnClosing(WindowClosingEventArgs e)
-    {
-        if (DataContext is MainWindowViewModel vm
-            && WindowClosePolicy.IsCloseRefused(vm.Operations.IsUninstallExecuting))
-        {
-            e.Cancel = true;
-        }
-        base.OnClosing(e);
     }
 
     private void PerformClose()

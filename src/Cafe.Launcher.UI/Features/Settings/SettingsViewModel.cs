@@ -1,7 +1,13 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Threading;
+using Cafe.Launcher.Core.Constants;
+using Cafe.Launcher.Core.Helpers;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services;
 using Cafe.Launcher.Core.Services.Diagnostics;
@@ -22,16 +28,22 @@ internal partial class SettingsViewModel : ObservableObject, IDisposable, IModal
     private readonly ILauncherSettingsService settingsService;
     private readonly ISavedSettingsWriter savedSettingsWriter;
     private readonly LocalizationService localizer;
-    private readonly ToastService toastService;
+    private readonly INotificationService toastService;
     private readonly ILauncherUpdateService launcherUpdateService;
     private readonly ILauncherUpdatePresenter updatePresenter;
     private readonly DialogsViewModel dialogs;
     private readonly SettingsEditor editor;
     private readonly UnifiedLogger unifiedLogger;
-    private readonly IGameInstallationPath gameInstallationPath;
+    private IGameInstallationPath gameInstallationPath;
     private readonly IErrorHandlingService errorHandling;
     private readonly IFilePickerService filePickerService;
+    private readonly IGameFileOperationCoordinator? fileOperations;
     private readonly LatestRefresh appearancePreviewRefresh = new();
+    private LauncherGameContext? gameContext;
+    private string editingGameId = LauncherProfiles.BlueArchiveJapan.RuntimeId;
+    private int gameTargetRevision;
+    private string globalCategory = SettingsCategoryCodes.General;
+    private string gameCategory = SettingsCategoryCodes.Game;
     private bool disposed;
 
     /// <summary>
@@ -58,11 +70,78 @@ internal partial class SettingsViewModel : ObservableObject, IDisposable, IModal
     /// <summary>游戏分类的运行时可用性流程；状态探测、构建发现与运行器路径选择都在其内部收口。</summary>
     public SettingsGameRuntimeViewModel GameRuntime { get; }
 
+    /// <summary>设置覆盖层打开期间固定的游戏目标；全局偏好仍来自共享 Editor。</summary>
+    public string EditingGameId => editingGameId;
+
+    /// <summary>当前编辑目标的草稿分区，绝不经 BA 兼容投影读写其他游戏。</summary>
+    public GameSettings Game => editor.Current.GetGameSettings(editingGameId);
+
+    /// <summary>固定编辑目标的本地化名称，覆盖层不会跟随后台任务改变归属。</summary>
+    public string EditingGameDisplayName => GameDisplayName.Resolve(editingGameId, localizer);
+
+    /// <summary>设置覆盖层的标题；游戏范围时带上固定目标名称。</summary>
+    public string DialogTitle => IsGameSettingsEditing
+        ? localizer.F(LocalizationKeys.GameSettingsTitle, EditingGameDisplayName)
+        : localizer.T(LocalizationKeys.LauncherSettingsTitle);
+
+    public string DialogHeading => localizer.T(IsGameSettingsEditing ? LocalizationKeys.GameSettingsOpen : LocalizationKeys.Settings);
+
+    public string DialogScopeName => IsGameSettingsEditing ? EditingGameDisplayName : localizer.T(LocalizationKeys.LauncherSettingsTitle);
+
+    /// <summary>固定编辑目标是否支持资源面板；工具栏据此显示入口。</summary>
+    public bool IsResourcePanelAvailable => LauncherProfiles.GetGameDefinition(editingGameId).SupportsResourcePanel;
+
+    /// <summary>固定编辑目标是否提供 Cafe 下载源；不支持时只呈现官方段。</summary>
+    public bool SupportsCafeDownloadSource =>
+        LauncherProfiles.GetGameDefinition(editingGameId).SupportsCafeDownloadSource;
+
+    /// <summary>活动或暂停任务的所属游戏配置保持固定；其他条目和全局偏好仍可编辑。</summary>
+    public bool IsGameConfigurationEnabled => !string.Equals(fileOperations?.ActiveOperation?.GameId,
+        editingGameId, StringComparison.Ordinal);
+
+    /// <summary>由壳层提供真实覆盖层状态，防止打开期间更换编辑目标。</summary>
+    public Func<bool>? IsSettingsOverlayVisible { get; set; }
+
+    /// <summary>背景字段的当前绑定面（全局或固定游戏覆盖）。</summary>
+    public BackgroundSettingsEditor BackgroundEditor => Appearance.BackgroundEditor;
+
+    /// <summary>设置导航当前显示的固定分类集合；切换范围不重建集合。</summary>
+    public IReadOnlyList<SettingOption> ActiveCategories => IsGameSettingsEditing
+        ? Options.GameSettingsCategories : Options.SettingsCategories;
+
+    public SettingOption? SelectedCategoryOption
+    {
+        get => ActiveCategories.FirstOrDefault(category => category.Code == SelectedCategory);
+        set
+        {
+            // Replacing ItemsSource can clear the old selection before the new scope is selected.
+            if (value is not null && ActiveCategories.Contains(value))
+            {
+                SelectedCategory = value.Code;
+            }
+        }
+    }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ActiveCategories))]
+    [NotifyPropertyChangedFor(nameof(DialogTitle))]
+    [NotifyPropertyChangedFor(nameof(DialogHeading))]
+    [NotifyPropertyChangedFor(nameof(DialogScopeName))]
+    [NotifyPropertyChangedFor(nameof(IsResourcePanelAvailable))]
+    private bool isGameSettingsEditing;
+
+    [ObservableProperty]
+    private bool isPreviewing;
+
+    /// <summary>默认背景页预览的是全局背景；游戏背景页预览固定游戏的覆盖结果。</summary>
+    [ObservableProperty]
+    private bool isGlobalBackgroundPreview;
+
     public SettingsViewModel(
         ILauncherSettingsService settingsService,
         ISavedSettingsWriter savedSettingsWriter,
         LocalizationService localizer,
-        ToastService toastService,
+        INotificationService toastService,
         ILauncherUpdateService launcherUpdateService,
         ILauncherUpdatePresenter updatePresenter,
         DialogsViewModel dialogs,
@@ -73,7 +152,8 @@ internal partial class SettingsViewModel : ObservableObject, IDisposable, IModal
         IErrorHandlingService errorHandling,
         IGameRuntime gameRuntime,
         IFilePickerService filePickerService,
-        IProtonBuildDiscovery protonBuildDiscovery)
+        IProtonBuildDiscovery protonBuildDiscovery,
+        IGameFileOperationCoordinator? fileOperations = null)
     {
         this.settingsService = settingsService;
         this.savedSettingsWriter = savedSettingsWriter;
@@ -89,6 +169,11 @@ internal partial class SettingsViewModel : ObservableObject, IDisposable, IModal
         Appearance = appearance;
         this.errorHandling = errorHandling;
         this.filePickerService = filePickerService;
+        this.fileOperations = fileOperations;
+        if (fileOperations is not null)
+        {
+            fileOperations.ActiveOperationChanged += OnActiveOperationChanged;
+        }
         GameRuntime = new SettingsGameRuntimeViewModel(
             editor,
             options,
@@ -107,12 +192,15 @@ internal partial class SettingsViewModel : ObservableObject, IDisposable, IModal
             OnPropertyChanged(nameof(IsSettingsDirty));
             OnPropertyChanged(nameof(CanSaveSettings));
             OnPropertyChanged(nameof(SaveStatusText));
+            OnPropertyChanged(nameof(DraftStatusText));
             SaveSettingsCommand.NotifyCanExecuteChanged();
         }
 
         if (e.PropertyName == nameof(SettingsEditor.Current))
         {
             // Current 实例会被整体替换（保存后草稿换成归一化值），展示值须随之重算。
+            // IsDirty 的独立通知由编辑器在同一次替换中给出，这里不重复。
+            OnPropertyChanged(nameof(Game));
             OnPropertyChanged(nameof(GamePathDisplay));
             OnPropertyChanged(nameof(HasGamePathChanges));
         }
@@ -134,9 +222,34 @@ internal partial class SettingsViewModel : ObservableObject, IDisposable, IModal
         RequestAppearancePreview(e.PropertyName);
     }
 
+    private void OnActiveOperationChanged(object? sender, EventArgs args)
+    {
+        void Refresh()
+        {
+            if (disposed)
+            {
+                return;
+            }
+
+            OnPropertyChanged(nameof(IsGameConfigurationEnabled));
+            ChooseGamePathCommand.NotifyCanExecuteChanged();
+            ChangePersistedGamePathCommand.NotifyCanExecuteChanged();
+            SelectInstalledGameCommand.NotifyCanExecuteChanged();
+        }
+
+        if (Application.Current is null || Dispatcher.UIThread.CheckAccess())
+        {
+            Refresh();
+        }
+        else
+        {
+            Dispatcher.UIThread.Post(Refresh);
+        }
+    }
+
     // ── Settings UI state ────────────────────────────────────────────────
 
-    public bool IsSettingsDirty => editor.IsDirty;
+    public bool IsSettingsDirty => editor.IsScopeDirty(IsGameSettingsEditing ? editingGameId : null);
 
     public bool CanSaveSettings => IsSettingsDirty && !IsSaving;
 
@@ -148,15 +261,114 @@ internal partial class SettingsViewModel : ObservableObject, IDisposable, IModal
         ? localizer.T(LocalizationKeys.SettingsSaving)
         : IsSettingsDirty ? localizer.T(LocalizationKeys.UnsavedChanges) : string.Empty;
 
+    /// <summary>Settings footer status; a clean draft names the saved state instead of vanishing.</summary>
+    public string DraftStatusText => localizer.T(IsSettingsDirty
+        ? LocalizationKeys.UnsavedChanges
+        : LocalizationKeys.SettingsSavedState);
+
     /// <summary>
     /// 游戏路径行的展示值：长路径做段感知中间省略（见 <see cref="PathMiddleEllipsis"/>），
-    /// 保住盘符与末段目录名；草稿真值仍是 <c>Editor.Current.GamePath</c>。
+    /// 保住盘符与末段目录名；草稿真值仍是 <c>Game.GamePath</c>。
     /// </summary>
-    public string GamePathDisplay => PathMiddleEllipsis.MiddleEllipsize(editor.Current.GamePath);
+    public string GamePathDisplay => PathMiddleEllipsis.MiddleEllipsize(Game.GamePath);
 
     /// <summary>Maintenance always targets the applied installation, so it waits for path edits to settle.</summary>
-    public bool HasGamePathChanges => !string.Equals(editor.Current.GamePath,
-        editor.GetSavedSnapshot().GamePath, StringComparison.Ordinal);
+    public bool HasGamePathChanges => !string.Equals(Game.GamePath,
+        editor.GetSavedSnapshot().GetGameSettings(editingGameId).GamePath, StringComparison.Ordinal);
+
+    /// <summary>
+    /// 设置覆盖层打开前固定目标；已有异步结果随目标代次失效，未提交草稿期间拒绝换目标。
+    /// </summary>
+    public void SetGameTarget(LauncherGameContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        var changingGame = !string.Equals(editingGameId, context.GameId, StringComparison.Ordinal);
+        if (changingGame && (IsSettingsDirty || IsSaving || IsSettingsOverlayVisible?.Invoke() == true))
+        {
+            throw new InvalidOperationException("The settings target is fixed until the edit session closes.");
+        }
+
+        if (ReferenceEquals(gameContext, context))
+        {
+            return;
+        }
+
+        gameTargetRevision++;
+        gameContext = context;
+        editingGameId = context.GameId;
+        gameInstallationPath = context.InstallationPath;
+        GameRuntime.SetGameTarget(context.GameId, context.Runtime);
+        Options.SetGameTarget(context.Profile);
+        Appearance.SetBackgroundScope(IsGameSettingsEditing ? editingGameId : null);
+        OnPropertyChanged(nameof(EditingGameId));
+        OnPropertyChanged(nameof(EditingGameDisplayName));
+        OnPropertyChanged(nameof(DialogTitle));
+        OnPropertyChanged(nameof(DialogScopeName));
+        OnPropertyChanged(nameof(IsResourcePanelAvailable));
+        OnPropertyChanged(nameof(SupportsCafeDownloadSource));
+        OnPropertyChanged(nameof(Game));
+        OnPropertyChanged(nameof(IsGameConfigurationEnabled));
+        OnPropertyChanged(nameof(GamePathDisplay));
+        OnPropertyChanged(nameof(HasGamePathChanges));
+        if (IsGameCategorySelected)
+        {
+            GameRuntime.RefreshStatus();
+        }
+    }
+
+    private bool IsCurrentGameTarget(string gameId, int revision) =>
+        !disposed && revision == gameTargetRevision
+        && string.Equals(gameId, editingGameId, StringComparison.Ordinal);
+
+    /// <summary>Starts a modal session with a fixed settings scope and matching background surface.</summary>
+    public void BeginEdit(bool gameSpecific)
+    {
+        if (ActiveCategories.Any(category => category.Code == SelectedCategory))
+        {
+            if (IsGameSettingsEditing)
+            {
+                gameCategory = SelectedCategory;
+            }
+            else
+            {
+                globalCategory = SelectedCategory;
+            }
+        }
+
+        IsGameSettingsEditing = gameSpecific;
+        Appearance.SetBackgroundScope(gameSpecific ? editingGameId : null);
+        IsGlobalBackgroundPreview = false;
+        IsPreviewing = false;
+        SelectedCategory = gameSpecific ? gameCategory : globalCategory;
+        if (IsDefaultBackgroundCategorySelected && !IsGlobalBackgroundPreview)
+        {
+            IsGlobalBackgroundPreview = true;
+            RequestAppearancePreview(null);
+        }
+        OnPropertyChanged(nameof(IsSettingsDirty));
+        OnPropertyChanged(nameof(CanSaveSettings));
+        OnPropertyChanged(nameof(SaveStatusText));
+        OnPropertyChanged(nameof(DraftStatusText));
+        SaveSettingsCommand.NotifyCanExecuteChanged();
+    }
+
+    /// <summary>Leaves settings for the main-window preview; default background uses the global surface.</summary>
+    [RelayCommand]
+    private void PreviewMainWindow()
+    {
+        if (!CanPreviewAppearance || IsSaving) return;
+
+        if (IsDefaultBackgroundCategorySelected)
+        {
+            IsGlobalBackgroundPreview = true;
+        }
+
+        IsPreviewing = true;
+        RequestAppearancePreview(null);
+    }
+
+    [RelayCommand]
+    public void ReturnToSettings() => IsPreviewing = false;
 
     [ObservableProperty]
     private bool isUnsavedChangesVisible;
@@ -176,12 +388,24 @@ internal partial class SettingsViewModel : ObservableObject, IDisposable, IModal
                 return;
             }
 
+            OnPropertyChanged(nameof(SelectedCategoryOption));
             OnPropertyChanged(nameof(IsGeneralCategorySelected));
             OnPropertyChanged(nameof(IsGameCategorySelected));
+            OnPropertyChanged(nameof(IsGameLaunchCategorySelected));
+            OnPropertyChanged(nameof(IsGameDownloadCategorySelected));
+            OnPropertyChanged(nameof(IsGameBackgroundCategorySelected));
             OnPropertyChanged(nameof(IsDownloadNetworkCategorySelected));
+            OnPropertyChanged(nameof(IsDefaultBackgroundCategorySelected));
+            OnPropertyChanged(nameof(IsBackgroundEditorCategorySelected));
+            OnPropertyChanged(nameof(CanPreviewAppearance));
             OnPropertyChanged(nameof(IsAppearanceCategorySelected));
             OnPropertyChanged(nameof(IsAdvancedCategorySelected));
             OnPropertyChanged(nameof(IsAboutCategorySelected));
+            if (IsDefaultBackgroundCategorySelected || IsGlobalBackgroundPreview)
+            {
+                IsGlobalBackgroundPreview = IsDefaultBackgroundCategorySelected;
+                RequestAppearancePreview(null);
+            }
             if (selectedCategory == SettingsCategoryCodes.Game)
             {
                 GameRuntime.RefreshStatus();
@@ -191,7 +415,13 @@ internal partial class SettingsViewModel : ObservableObject, IDisposable, IModal
 
     public bool IsGeneralCategorySelected => SelectedCategory == SettingsCategoryCodes.General;
     public bool IsGameCategorySelected => SelectedCategory == SettingsCategoryCodes.Game;
+    public bool IsGameLaunchCategorySelected => SelectedCategory == SettingsCategoryCodes.GameLaunch;
+    public bool IsGameDownloadCategorySelected => SelectedCategory == SettingsCategoryCodes.GameDownload;
+    public bool IsGameBackgroundCategorySelected => SelectedCategory == SettingsCategoryCodes.GameBackground;
     public bool IsDownloadNetworkCategorySelected => SelectedCategory == SettingsCategoryCodes.DownloadNetwork;
+    public bool IsDefaultBackgroundCategorySelected => SelectedCategory == SettingsCategoryCodes.DefaultBackground;
+    public bool IsBackgroundEditorCategorySelected => IsAppearanceCategorySelected || IsDefaultBackgroundCategorySelected || IsGameBackgroundCategorySelected;
+    public bool CanPreviewAppearance => IsBackgroundEditorCategorySelected;
     public bool IsAppearanceCategorySelected => SelectedCategory == SettingsCategoryCodes.Appearance;
     public bool IsAdvancedCategorySelected => SelectedCategory == SettingsCategoryCodes.Advanced;
     public bool IsAboutCategorySelected => SelectedCategory == SettingsCategoryCodes.About;
@@ -210,6 +440,7 @@ internal partial class SettingsViewModel : ObservableObject, IDisposable, IModal
         var currentWallpaperPaletteIndex = Appearance.SelectedThemeColorPaletteIndex;
 
         editor.ApplySnapshot(settings);
+        Appearance.SetBackgroundScope(IsGameSettingsEditing ? editingGameId : null);
         Appearance.Load(settings);
 
         if (editor.Current.ThemeColorMode == ThemeColorModes.Wallpaper)
@@ -242,9 +473,13 @@ internal partial class SettingsViewModel : ObservableObject, IDisposable, IModal
     /// <summary>Called by parent ApplyLanguage to refresh display names.</summary>
     public void RefreshOptionDisplayNames()
     {
+        OnPropertyChanged(nameof(EditingGameDisplayName));
+        OnPropertyChanged(nameof(DialogTitle));
+        OnPropertyChanged(nameof(DialogScopeName));
         Options.RefreshDisplayNames();
         OnPropertyChanged(nameof(SaveButtonText));
         OnPropertyChanged(nameof(SaveStatusText));
+        OnPropertyChanged(nameof(DraftStatusText));
         GameRuntime.RefreshLocalizedText();
     }
 
@@ -296,7 +531,10 @@ internal partial class SettingsViewModel : ObservableObject, IDisposable, IModal
 
             // 落盘值而非草稿对象：归一化会改写草稿里的表示（大小写、trim、色板去重），
             // 后续的跟随动作与编辑器都必须以真正落盘的那个值为准。
-            settings = await savedSettingsWriter.SaveDraftAsync();
+            settings = await savedSettingsWriter.SaveScopedDraftAsync(
+                editor.GetSnapshot(),
+                editor.GetSavedSnapshot(),
+                IsGameSettingsEditing ? editingGameId : null);
         }
         catch (Exception exception)
         {
@@ -311,6 +549,7 @@ internal partial class SettingsViewModel : ObservableObject, IDisposable, IModal
             IsSaving = false;
         }
 
+        IsGlobalBackgroundPreview = false;
         await ApplySavedSettingsAsync(settings);
     }
 
@@ -345,20 +584,47 @@ internal partial class SettingsViewModel : ObservableObject, IDisposable, IModal
         }
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(IsGameConfigurationEnabled))]
     private async Task ChooseGamePathAsync()
     {
-        var pickedPath = await filePickerService.PickFolderAsync(
-            localizer.T(LocalizationKeys.ChooseInstallFolder),
-            editor.Current.GamePath);
-        if (string.IsNullOrWhiteSpace(pickedPath))
+        if (!IsGameConfigurationEnabled)
         {
             return;
         }
 
-        // Normalise: append YostarGames/BlueArchive_JP subdirectory if missing,
-        // matching the original Yostar launcher behaviour.
-        editor.Current.GamePath = gameInstallationPath.NormalizeGamePath(pickedPath);
+        var gameId = editingGameId;
+        var revision = gameTargetRevision;
+        var installationPath = gameInstallationPath;
+        var pickedPath = await filePickerService.PickFolderAsync(
+            localizer.T(LocalizationKeys.ChooseInstallFolder),
+            Game.GamePath);
+        if (string.IsNullOrWhiteSpace(pickedPath) || !IsCurrentGameTarget(gameId, revision))
+        {
+            return;
+        }
+
+        try
+        {
+            var path = installationPath.NormalizeGamePath(pickedPath);
+            if (GameInstallationPathSafety.FindConflict(gameId, path, editor.GetSnapshot()) is not null)
+            {
+                toastService.ShowError(localizer.T(LocalizationKeys.GamePathConflictsWithAnotherGame));
+                return;
+            }
+
+            if (IsCurrentGameTarget(gameId, revision) && IsGameConfigurationEnabled)
+            {
+                editor.Current.GetGameSettings(gameId).GamePath = path;
+            }
+        }
+        catch (Exception exception)
+        {
+            if (IsCurrentGameTarget(gameId, revision))
+            {
+                await errorHandling.HandleErrorAsync("Settings game path selection failed.", exception,
+                    new ErrorHandlingOptions { ToastMessage = localizer.F(LocalizationKeys.GamePathUpdateFailed, exception.Message) });
+            }
+        }
     }
 
     /// <summary>Chooses an installation draft without changing saved settings.</summary>
@@ -368,12 +634,22 @@ internal partial class SettingsViewModel : ObservableObject, IDisposable, IModal
         return string.IsNullOrWhiteSpace(picked) ? null : gameInstallationPath.NormalizeGamePath(picked);
     }
 
-    /// <summary>Commits an explicit install/identify action through the saved-settings follow-through.</summary>
-    public async Task<bool> CommitInstallationPathAsync(string path)
+    /// <summary>Chooses an installation draft for a fixed game context without changing saved settings.</summary>
+    public async Task<string?> PickInstallationDraftAsync(LauncherGameContext context, string startPath)
     {
+        ArgumentNullException.ThrowIfNull(context);
+        var picked = await filePickerService.PickFolderAsync(localizer.T(LocalizationKeys.ChooseInstallFolder), startPath);
+        return string.IsNullOrWhiteSpace(picked) ? null : context.InstallationPath.NormalizeGamePath(picked);
+    }
+
+    /// <summary>Commits an explicit install action for the fixed game context.</summary>
+    public async Task<bool> CommitInstallationPathAsync(LauncherGameContext context, string path)
+    {
+        ArgumentNullException.ThrowIfNull(context);
         try
         {
-            var saved = await savedSettingsWriter.UpdateAsync(settings => settings.GamePath = gameInstallationPath.NormalizeGamePath(path));
+            var saved = await savedSettingsWriter.UpdateGameAsync(context.GameId,
+                game => game.GamePath = context.InstallationPath.NormalizeGamePath(path));
             if (SavedSettingsFollowThrough is { } followThrough)
                 await followThrough.CompleteAsync(followThrough.Apply(saved));
             return true;
@@ -386,37 +662,84 @@ internal partial class SettingsViewModel : ObservableObject, IDisposable, IModal
         }
     }
 
-    [RelayCommand]
-    private async Task ChangePersistedGamePathAsync()
+    /// <summary>Commits an explicit install/identify action through the saved-settings follow-through.</summary>
+    public async Task<bool> CommitInstallationPathAsync(string path)
     {
-        var settings = await settingsService.ReadAsync();
-        await PickAndPersistGamePathAsync(settings.GamePath);
+        try
+        {
+            var gameId = editingGameId;
+            var saved = await savedSettingsWriter.UpdateGameAsync(gameId,
+                game => game.GamePath = gameInstallationPath.NormalizeGamePath(path));
+            if (SavedSettingsFollowThrough is { } followThrough)
+                await followThrough.CompleteAsync(followThrough.Apply(saved));
+            return true;
+        }
+        catch (Exception exception)
+        {
+            await errorHandling.HandleErrorAsync("Settings game path update failed.", exception,
+                new ErrorHandlingOptions { ToastMessage = localizer.F(LocalizationKeys.GamePathUpdateFailed, exception.Message) });
+            return false;
+        }
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(IsGameConfigurationEnabled))]
+    private async Task ChangePersistedGamePathAsync()
+    {
+        if (!IsGameConfigurationEnabled)
+        {
+            return;
+        }
+
+        var gameId = editingGameId;
+        var revision = gameTargetRevision;
+        var settings = await settingsService.ReadAsync();
+        if (IsCurrentGameTarget(gameId, revision))
+        {
+            await PickAndPersistGamePathAsync(settings.GetGameSettings(gameId).GamePath);
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(IsGameConfigurationEnabled))]
     private async Task SelectInstalledGameAsync()
     {
+        if (!IsGameConfigurationEnabled)
+        {
+            return;
+        }
+
         var startPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         await PickAndPersistGamePathAsync(startPath);
     }
 
     private async Task PickAndPersistGamePathAsync(string startPath)
     {
-        var pickedPath = await filePickerService.PickFolderAsync(
-            localizer.T(LocalizationKeys.ChooseInstallFolder),
-            startPath);
-        if (string.IsNullOrWhiteSpace(pickedPath))
+        if (!IsGameConfigurationEnabled)
         {
             return;
         }
 
-        // Normalise: append YostarGames/BlueArchive_JP if missing.
-        pickedPath = gameInstallationPath.NormalizeGamePath(pickedPath);
+        var gameId = editingGameId;
+        var revision = gameTargetRevision;
+        var installationPath = gameInstallationPath;
+        var pickedPath = await filePickerService.PickFolderAsync(
+            localizer.T(LocalizationKeys.ChooseInstallFolder),
+            startPath);
+        if (string.IsNullOrWhiteSpace(pickedPath) || !IsCurrentGameTarget(gameId, revision))
+        {
+            return;
+        }
+
+        pickedPath = installationPath.NormalizeGamePath(pickedPath);
 
         try
         {
-            var savedSettings = await savedSettingsWriter.UpdateAsync(
-                settings => settings.GamePath = pickedPath);
+            var savedSettings = await savedSettingsWriter.UpdateGameAsync(gameId,
+                game => game.GamePath = pickedPath);
+            if (!IsCurrentGameTarget(gameId, revision))
+            {
+                return;
+            }
+
             var followThrough = SavedSettingsFollowThrough;
             var handoff = followThrough?.Apply(savedSettings);
 
@@ -429,6 +752,11 @@ internal partial class SettingsViewModel : ObservableObject, IDisposable, IModal
         }
         catch (Exception exception)
         {
+            if (!IsCurrentGameTarget(gameId, revision))
+            {
+                return;
+            }
+
             await errorHandling.HandleErrorAsync("Settings game path update failed.", exception,
                 new ErrorHandlingOptions { ToastMessage = localizer.F(LocalizationKeys.GamePathUpdateFailed, exception.Message) });
         }
@@ -437,39 +765,74 @@ internal partial class SettingsViewModel : ObservableObject, IDisposable, IModal
     [RelayCommand]
     private async Task ChooseBackgroundFileAsync()
     {
+        if (IsGameSettingsEditing && !BackgroundEditor.UseBackgroundOverride)
+        {
+            return;
+        }
+
+        var gameId = editingGameId;
+        var revision = gameTargetRevision;
         var pickedPath = await filePickerService.PickBackgroundFileAsync(
             localizer.T(LocalizationKeys.ChooseBackgroundFileTitle),
             localizer.T(LocalizationKeys.BackgroundFileTypes));
-        if (string.IsNullOrWhiteSpace(pickedPath))
+        if (string.IsNullOrWhiteSpace(pickedPath) || !IsCurrentGameTarget(gameId, revision))
+        {
             return;
+        }
 
-        editor.Current.CustomBackgroundPath = pickedPath;
-        editor.Current.BackgroundSource = BackgroundSources.Custom;
+        if (IsGameSettingsEditing && !BackgroundEditor.UseBackgroundOverride)
+        {
+            return;
+        }
+
+        BackgroundEditor.CustomBackgroundPath = pickedPath;
+        BackgroundEditor.BackgroundSource = BackgroundSources.Custom;
     }
 
     [RelayCommand]
     private async Task ChooseBackgroundFolderAsync()
     {
+        if (IsGameSettingsEditing && !BackgroundEditor.UseBackgroundOverride)
+        {
+            return;
+        }
+
+        var gameId = editingGameId;
+        var revision = gameTargetRevision;
         var pickedPath = await filePickerService.PickFolderAsync(
             localizer.T(LocalizationKeys.ChooseBackgroundFolderTitle));
-        if (string.IsNullOrWhiteSpace(pickedPath))
+        if (string.IsNullOrWhiteSpace(pickedPath) || !IsCurrentGameTarget(gameId, revision))
+        {
             return;
+        }
 
-        editor.Current.CustomBackgroundPath = pickedPath;
-        editor.Current.BackgroundSource = BackgroundSources.Custom;
+        if (IsGameSettingsEditing && !BackgroundEditor.UseBackgroundOverride)
+        {
+            return;
+        }
+
+        BackgroundEditor.CustomBackgroundPath = pickedPath;
+        BackgroundEditor.BackgroundSource = BackgroundSources.Custom;
     }
 
     [RelayCommand]
     private void ClearBackground()
     {
-        editor.Current.CustomBackgroundPath = "";
-        editor.Current.BackgroundSource = BackgroundSources.Bundled;
+        if (IsGameSettingsEditing && !BackgroundEditor.UseBackgroundOverride)
+        {
+            return;
+        }
+
+        BackgroundEditor.CustomBackgroundPath = "";
+        BackgroundEditor.BackgroundSource = BackgroundSources.Bundled;
     }
 
     public async Task DiscardChangesAsync()
     {
         IsUnsavedChangesVisible = false;
         CancelAppearancePreview();
+        IsGlobalBackgroundPreview = false;
+        IsPreviewing = false;
         editor.Discard();
         GameRuntime.RefreshStatus();
         Appearance.Load(editor.Current);
@@ -484,6 +847,13 @@ internal partial class SettingsViewModel : ObservableObject, IDisposable, IModal
 
     private void RequestAppearancePreview(string? propertyName)
     {
+        if (!IsGameSettingsEditing && IsDefaultBackgroundCategorySelected
+            && propertyName is nameof(LauncherSettings.BackgroundSource)
+                or nameof(LauncherSettings.BackgroundFit) or nameof(LauncherSettings.BackgroundFillColor))
+        {
+            IsGlobalBackgroundPreview = true;
+        }
+
         appearancePreviewRefresh.Run(null, token => PreviewCurrentAppearanceAsync(propertyName, token));
     }
 
@@ -517,6 +887,8 @@ internal partial class SettingsViewModel : ObservableObject, IDisposable, IModal
 
     private static bool IsAppearanceSetting(string? propertyName) =>
         propertyName is nameof(LauncherSettings.ThemeMode)
+            or nameof(LauncherSettings.MotionMode)
+            or nameof(GameSettings.UseBackgroundOverride)
             or nameof(LauncherSettings.ThemeColorMode)
             or nameof(LauncherSettings.ThemeColorExtractionAlgorithm)
             or nameof(LauncherSettings.ThemeColorVariant)
@@ -536,6 +908,7 @@ internal partial class SettingsViewModel : ObservableObject, IDisposable, IModal
         OnPropertyChanged(nameof(CanSaveSettings));
         OnPropertyChanged(nameof(SaveButtonText));
         OnPropertyChanged(nameof(SaveStatusText));
+        OnPropertyChanged(nameof(DraftStatusText));
         SaveSettingsCommand.NotifyCanExecuteChanged();
     }
 
@@ -575,6 +948,10 @@ internal partial class SettingsViewModel : ObservableObject, IDisposable, IModal
         GameRuntime.Dispose();
         editor.PropertyChanged -= OnEditorPropertyChanged;
         editor.CurrentPropertyChanged -= OnCurrentSettingChanged;
+        if (fileOperations is not null)
+        {
+            fileOperations.ActiveOperationChanged -= OnActiveOperationChanged;
+        }
         Appearance.Dispose();
     }
 }

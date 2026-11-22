@@ -110,7 +110,7 @@ internal partial class GameOperationsViewModel
         }
         RefreshFloatingTaskPresentation();
         OnPropertyChanged(nameof(PrimaryActionText));
-        OnPropertyChanged(nameof(PrimaryActionIcon));
+        OnPropertyChanged(nameof(PrimaryActionGlyph));
     }
 
     private void ApplyFileActivity(GameOperationProgress progress)

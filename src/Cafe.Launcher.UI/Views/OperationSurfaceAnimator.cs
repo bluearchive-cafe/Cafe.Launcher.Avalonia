@@ -65,7 +65,6 @@ internal sealed class OperationSurfaceAnimator
         retireEntranceAnchor?.Invoke();
 
         // 冻结旧视觉尺寸后让可见性绑定推过一轮布局，测得新状态的自然容器高度。
-        // 三个状态各自携带 bottom-panel 的 MinHeight（≥132），布局后目标高度必有下界。
         surface.Height = double.NaN;
         surface.UpdateLayout();
         var targetHeight = surface.Bounds.Height;

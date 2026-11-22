@@ -4,6 +4,7 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Testing;
+using Cafe.Launcher.UI.Constants;
 using Cafe.Launcher.UI.Controls;
 using Cafe.Launcher.UI.Features.GameOperations;
 using Cafe.Launcher.UI.Models;
@@ -16,6 +17,46 @@ namespace Cafe.Launcher.HeadlessTests;
 
 public sealed partial class MainWindowHeadlessTests
 {
+    [AvaloniaFact]
+    public void InstallPreparation_ShowsDiskSpaceWarningOnlyForTheBlockedPath()
+    {
+        using var context = CreateContext();
+        PrepareGoldenWindow(context);
+        var shell = context.ViewModel.Shell;
+        var operations = context.ViewModel.Operations;
+        shell.IsBusy = false;
+        operations.ApplySnapshot(new LauncherStatusSnapshot
+        {
+            RuntimeState = LauncherRuntimeState.NotInstalled,
+            LocalGame = new LocalInstallationState { GamePath = @"D:\Games\BlueArchive_JP" }
+        });
+        operations.OpenInstallPreparationCommand.Execute(null);
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+        var surface = context.Window.GetVisualDescendants().OfType<DialogSurface>()
+            .Single(item => item.Name == "GameTaskSurface");
+        var warning = surface.GetVisualDescendants().OfType<TextBlock>()
+            .Single(item => item.Name == "InstallDiskSpaceWarning");
+        var start = surface.GetVisualDescendants().OfType<Button>()
+            .Single(item => item.Command == operations.ConfirmInstallCommand);
+        var message = context.Provider.GetRequiredService<LocalizationService>().F(
+            LocalizationKeys.DiskSpaceInsufficientDetail, "18 GB", "11 GB");
+
+        shell.IsInstallBlockedByDiskSpace = true;
+        shell.InstallDiskSpaceMessage = message;
+        Dispatcher.UIThread.RunJobs();
+        Assert.False(start.IsEffectivelyEnabled);
+        Assert.True(warning.IsEffectivelyVisible);
+        Assert.Equal(message, warning.Text);
+        AssertControlInsideWindow(warning, context.Window);
+
+        operations.InstallPathDraft = @"E:\Games\BlueArchive_JP";
+        Dispatcher.UIThread.RunJobs();
+        Assert.True(start.IsEffectivelyEnabled);
+        Assert.False(warning.IsEffectivelyVisible);
+        Assert.Null(ToolTip.GetTip(start));
+    }
+
     [AvaloniaFact]
     public void Golden_InstallPreparationChineseDark_MatchesBaseline()
     {
@@ -50,7 +91,7 @@ public sealed partial class MainWindowHeadlessTests
         Assert.Same(path.Parent, change.Parent);
         Assert.IsType<HyperlinkButton>(change);
         var field = surface.GetVisualDescendants().OfType<Border>().Single(item => item.Classes.Contains("task-install-path"));
-        Assert.InRange(field.Bounds.Height, 40, 42);
+        Assert.True(field.Bounds.Height >= field.DesiredSize.Height);
         var checkbox = surface.GetVisualDescendants().OfType<CheckBox>().Single(item => item.Name == "InstallShortcutCheckBox");
         Assert.True(checkbox.IsChecked);
         var shortcutLabel = Assert.IsType<TextBlock>(checkbox.Content);
@@ -62,7 +103,7 @@ public sealed partial class MainWindowHeadlessTests
         Assert.Single(visibleActions, item => item.Command == context.ViewModel.Operations.CloseTaskCommand);
         var locate = Assert.Single(visibleActions, item => item.Command == context.ViewModel.Operations.IdentifyInstalledGameCommand);
         var install = Assert.Single(visibleActions, item => item.Command == context.ViewModel.Operations.ConfirmInstallCommand);
-        var actions = Assert.IsType<StackPanel>(locate.Parent);
+        var actions = Assert.IsType<WrapPanel>(locate.Parent);
         Assert.Same(actions, install.Parent);
         Assert.Equal(Avalonia.Layout.HorizontalAlignment.Right, actions.HorizontalAlignment);
         context.ViewModel.Operations.InstallPathDraft = "";

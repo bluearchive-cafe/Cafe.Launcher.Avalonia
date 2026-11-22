@@ -1,7 +1,9 @@
 using System;
+using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.UI.Features.Diagnostics;
+using Cafe.Launcher.UI.Features.Games;
 using Cafe.Launcher.UI.Features.GameOperations;
 using Cafe.Launcher.UI.Features.ResourcePanel;
 using Cafe.Launcher.UI.Features.Settings;
@@ -35,11 +37,15 @@ internal partial class MainWindowViewModel : ObservableObject, IDisposable
     public bool IsPlatformSpecificSettingsVisible =>
         Shell.IsLinuxPlatform || showHiddenSettings;
 
-    public ShellViewModel Shell { get; }
+    public ShellViewModel Shell => Games?.Active.Shell ?? defaultShell;
     public BackgroundViewModel Background { get; }
-    public RemoteContentViewModel RemoteContent { get; }
+    public RemoteContentViewModel RemoteContent => Games?.Active.RemoteContent ?? defaultRemoteContent;
     public DialogsViewModel Dialogs { get; }
-    public GameOperationsViewModel Operations { get; }
+    public GameOperationsViewModel Operations => Games?.Active.Operations ?? defaultOperations;
+    public GameLibraryViewModel? Games { get; }
+    public bool HasGameLibrary => Games is not null;
+    public bool IsBaseLayerInteractive => ModalHost.IsBaseLayerInteractive && Games?.IsSwitching != true;
+    public bool IsAnyUninstallExecuting => Games?.IsUninstallExecuting ?? Operations.IsUninstallExecuting;
     public ToastHostViewModel Toasts { get; }
     public WindowChromeViewModel WindowChrome { get; }
     public SettingsViewModel Settings { get; }
@@ -64,19 +70,24 @@ internal partial class MainWindowViewModel : ObservableObject, IDisposable
     internal Task PendingStartupUpdateCheck => runtime.PendingStartupUpdateCheck;
 
     private readonly bool showHiddenSettings;
+    private readonly ShellViewModel defaultShell;
+    private readonly RemoteContentViewModel defaultRemoteContent;
+    private readonly GameOperationsViewModel defaultOperations;
 
     public MainWindowViewModel(
         ShellPresentationFamily family,
         ShellLifecycle runtime,
-        PresentationOptions? options = null)
+        PresentationOptions? options = null,
+        GameLibraryViewModel? games = null)
     {
         this.runtime = runtime;
         showHiddenSettings = options?.ShowHiddenSettings ?? false;
-        Shell = family.Shell;
+        Games = games;
+        defaultShell = family.Shell;
         Background = family.Background;
-        RemoteContent = family.RemoteContent;
+        defaultRemoteContent = family.RemoteContent;
         Dialogs = family.Dialogs;
-        Operations = family.Operations;
+        defaultOperations = family.Operations;
         Toasts = family.Toasts;
         WindowChrome = family.WindowChrome;
         Settings = family.Settings;
@@ -86,6 +97,12 @@ internal partial class MainWindowViewModel : ObservableObject, IDisposable
         Debug = family.Debug;
         ModalHost = family.ModalHost;
 
+        if (Games is not null)
+        {
+            Games.ActiveChanged += OnActiveGameChanged;
+            Games.PropertyChanged += OnGameLibraryPropertyChanged;
+        }
+        ModalHost.PropertyChanged += OnModalHostPropertyChanged;
         runtime.PresentationChanged += OnRuntimePresentationChanged;
         runtime.StatusDetailModeChanged += OnStatusDetailModeChanged;
         OnRuntimePresentationChanged();
@@ -96,7 +113,7 @@ internal partial class MainWindowViewModel : ObservableObject, IDisposable
         ILauncherSettingsService settingsService,
         ISavedSettingsWriter savedSettingsWriter,
         LocalizationService localizer,
-        ToastService toastService,
+        INotificationService toastService,
         ILauncherUpdateService launcherUpdateService,
         ILauncherUpdatePresenter updatePresenter,
         ILauncherSelfUpdateService launcherSelfUpdateService,
@@ -107,7 +124,8 @@ internal partial class MainWindowViewModel : ObservableObject, IDisposable
         ISystemAnimationSettingsProvider systemAnimationSettingsProvider,
         IFilePickerService filePickerService,
         LauncherBuildIdentity? buildIdentity = null,
-        PresentationOptions? options = null)
+        PresentationOptions? options = null,
+        GameLibraryViewModel? games = null)
         : this(
             family,
             new ShellLifecycle(
@@ -126,8 +144,10 @@ internal partial class MainWindowViewModel : ObservableObject, IDisposable
                 family,
                 filePickerService,
                 ownsPresentationCollaborators: true,
-                buildIdentity: buildIdentity),
-            options)
+                buildIdentity: buildIdentity,
+                games: games),
+            options,
+            games)
     {
     }
 
@@ -143,11 +163,38 @@ internal partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public Task PrepareForShutdownAsync() => runtime.PrepareForShutdownAsync();
 
+    /// <summary>执行固定游戏身份的外部启动请求；不回退当前显示条目。</summary>
+    public Task RequestGameLaunchAsync(string gameId) => runtime.RequestGameLaunchAsync(gameId);
+
     public void RefreshSystemMotionPreference() => runtime.RefreshSystemMotionPreference();
 
     [RelayCommand]
     private Task RefreshAsync(CancellationToken cancellationToken = default) =>
         runtime.RefreshAsync(cancellationToken);
+
+    [RelayCommand]
+    private async Task ManageGameFromSettingsAsync(string action)
+    {
+        if (Settings.IsSaving)
+        {
+            return;
+        }
+
+        var target = Games?.Get(Settings.EditingGameId).Operations ?? Operations;
+        await WindowChrome.RunAfterSettingsAsync(async () =>
+        {
+            switch (action)
+            {
+                case "identify": await Settings.SelectInstalledGameCommand.ExecuteAsync(null); break;
+                case "update": await target.CheckForGameUpdateCommand.ExecuteAsync(null); break;
+                case "shortcut": await target.CreateGameShortcutCommand.ExecuteAsync(null); break;
+                case "repair": await target.RequestRepairCommand.ExecuteAsync(null); break;
+                case "uninstall": await target.RequestUninstallCommand.ExecuteAsync(null); break;
+                case "folder": target.OpenGameFolderCommand.Execute(null); break;
+                case "resources": await ResourcePanel.OpenResourcePanelCommand.ExecuteAsync(null); break;
+            }
+        });
+    }
 
     public bool TryHandleEscape() => runtime.TryHandleEscape();
 
@@ -164,7 +211,36 @@ internal partial class MainWindowViewModel : ObservableObject, IDisposable
         disposed = true;
         runtime.PresentationChanged -= OnRuntimePresentationChanged;
         runtime.StatusDetailModeChanged -= OnStatusDetailModeChanged;
+        if (Games is not null)
+        {
+            Games.ActiveChanged -= OnActiveGameChanged;
+            Games.PropertyChanged -= OnGameLibraryPropertyChanged;
+        }
+        ModalHost.PropertyChanged -= OnModalHostPropertyChanged;
         runtime.Dispose();
+    }
+
+    private void OnGameLibraryPropertyChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName == nameof(GameLibraryViewModel.IsSwitching))
+        {
+            OnPropertyChanged(nameof(IsBaseLayerInteractive));
+        }
+    }
+
+    private void OnModalHostPropertyChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName == nameof(ModalHostViewModel.IsBaseLayerInteractive))
+        {
+            OnPropertyChanged(nameof(IsBaseLayerInteractive));
+        }
+    }
+
+    private void OnActiveGameChanged()
+    {
+        OnPropertyChanged(nameof(Shell));
+        OnPropertyChanged(nameof(RemoteContent));
+        OnPropertyChanged(nameof(Operations));
     }
 
     private void OnRuntimePresentationChanged()

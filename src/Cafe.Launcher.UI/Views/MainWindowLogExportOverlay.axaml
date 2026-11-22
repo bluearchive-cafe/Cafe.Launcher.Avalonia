@@ -2,7 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Cafe.Launcher.UI.ViewModels"
              xmlns:controls="using:Cafe.Launcher.UI.Controls"
-             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:glyphs="using:Cafe.Launcher.UI.Constants"
              x:Class="Cafe.Launcher.UI.Views.MainWindowLogExportOverlay"
              x:Name="LogExportRoot"
              x:DataType="vm:MainWindowViewModel">
@@ -32,7 +32,7 @@
                     <StackPanel Classes="settings-group">
                         <TextBlock Text="{Binding Shell.I18n[logExportRangeGroup]}" Classes="group-title"/>
 
-                        <controls:SettingSelect ShowTopDivider="False"
+                        <controls:SettingSelect
                                                 Title="{Binding Shell.I18n[logExportRange]}"
                                                 Description="{Binding Shell.I18n[logExportRangeDescription]}"
                                                 AutomationName="{Binding Shell.I18n[logExportRange]}"
@@ -41,14 +41,13 @@
                     </StackPanel>
 
                     <!-- 范围提示紧随范围组：它说的是所选范围里有没有日志，而不是内容清单。 -->
-                    <Border Classes="dialog-card log-export-warning"
+                    <Border Classes="dialog-alert warning log-export-warning"
                             IsVisible="{Binding LogExport.IsEmptyRangeWarningVisible}">
                         <Grid ColumnDefinitions="Auto,*"
                               ColumnSpacing="{StaticResource Launcher.Spacing.Sm}">
-                            <materialIcons:MaterialIcon Kind="AlertOutline"
+                            <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Warning}"
                                                         Grid.Column="0"
-                                                        Width="{StaticResource Launcher.Icon.Sm}"
-                                                        Height="{StaticResource Launcher.Icon.Sm}"
+                                                        FontSize="{StaticResource Launcher.Icon.Sm}"
                                                         Foreground="{DynamicResource Launcher.Color.Warning}"
                                                         VerticalAlignment="Center"/>
                             <TextBlock Text="{Binding Shell.I18n[logExportRangeEmpty]}"
@@ -62,7 +61,7 @@
                     <StackPanel Classes="settings-group">
                         <TextBlock Text="{Binding Shell.I18n[logExportContentGroup]}" Classes="group-title"/>
 
-                        <controls:SettingRow ShowTopDivider="False"
+                        <controls:SettingRow
                                              Title="{Binding Shell.I18n[logExportIncludeLogs]}"
                                              Description="{Binding Shell.I18n[logExportIncludeLogsDescription]}">
                             <controls:SettingRow.Action>
@@ -106,14 +105,13 @@
                         </controls:SettingRow>
                     </StackPanel>
 
-                    <Border Classes="dialog-card log-export-warning"
+                    <Border Classes="dialog-alert warning log-export-warning"
                             IsVisible="{Binding LogExport.IsUserDataWarningVisible}">
                         <Grid ColumnDefinitions="Auto,*"
                               ColumnSpacing="{StaticResource Launcher.Spacing.Sm}">
-                            <materialIcons:MaterialIcon Kind="AlertOutline"
+                            <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Warning}"
                                                         Grid.Column="0"
-                                                        Width="{StaticResource Launcher.Icon.Sm}"
-                                                        Height="{StaticResource Launcher.Icon.Sm}"
+                                                        FontSize="{StaticResource Launcher.Icon.Sm}"
                                                         Foreground="{DynamicResource Launcher.Color.Warning}"
                                                         VerticalAlignment="Center"/>
                             <TextBlock Text="{Binding Shell.I18n[logExportUserDataWarning]}"
@@ -127,12 +125,12 @@
             </controls:DialogSurface.Content>
             <controls:DialogSurface.Footer>
                 <!-- ADR-040：do-it（导出）在最左，安全动作（取消）在最右。 -->
-                <StackPanel Classes="confirm-actions">
-                    <Button Classes="primary-action dialog-action"
+                <WrapPanel Classes="dialog-actions">
+                    <Button Classes="primary-action dialog-action accent"
                             Command="{Binding LogExport.ExportCommand}"
                             AutomationProperties.Name="{Binding Shell.I18n[logExportConfirm]}">
                         <StackPanel Classes="button-content">
-                            <materialIcons:MaterialIcon Kind="ExitToApp" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                            <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.OpenExternal}" FontSize="{StaticResource Launcher.Icon.Sm}"/>
                             <TextBlock Text="{Binding Shell.I18n[logExportConfirm]}"/>
                         </StackPanel>
                     </Button>
@@ -140,11 +138,11 @@
                             Command="{Binding LogExport.CloseCommand}"
                             AutomationProperties.Name="{Binding Shell.I18n[cancel]}">
                         <StackPanel Classes="button-content">
-                            <materialIcons:MaterialIcon Kind="CloseCircleOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                            <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Cancel}" FontSize="{StaticResource Launcher.Icon.Sm}"/>
                             <TextBlock Text="{Binding Shell.I18n[cancel]}"/>
                         </StackPanel>
                     </Button>
-                </StackPanel>
+                </WrapPanel>
             </controls:DialogSurface.Footer>
         </controls:DialogSurface>
     </Grid>

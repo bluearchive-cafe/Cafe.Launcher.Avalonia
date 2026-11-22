@@ -280,8 +280,9 @@ public sealed class CrashReportTests : IDisposable
         // The isolated reporter builds its own minimal Application, so every control
         // theme the crash window relies on must be registered there and not only in
         // the main App — otherwise the window silently loses that control.
-        Assert.Contains("materialIcons:MaterialIcon", windowXaml, StringComparison.Ordinal);
-        Assert.Contains("materialIcons:MaterialIconStyles", appXaml, StringComparison.Ordinal);
+        Assert.Contains("controls:FluentIcon", windowXaml, StringComparison.Ordinal);
+        Assert.Contains("SymbolThemeFontFamily", appXaml, StringComparison.Ordinal);
+        Assert.Contains("controls|FluentIcon", appXaml, StringComparison.Ordinal);
     }
 
     /// <summary>

@@ -1,0 +1,50 @@
+[
+  {
+    "game": "blue-archive-jp",
+    "official_launcher_version": "1.7.2",
+    "source_relative_path": "BlueArchive_JP_Launcher/app-32_v1.7.2/resources/app.asar",
+    "asar_sha256": "fd243a514fdcd5ea9cf91c2a4557c560f9023b59d8dd877312410b0c665ca4f7",
+    "members": [
+      {
+        "path": "package.json",
+        "sha256": "877147498c581cd06ffdbe29e541f013960548e4de7d3273f34da0b30ecbc684"
+      },
+      {
+        "path": "out/main/index.js",
+        "sha256": "22cb4202ff8af22edc6620ece9e512e59dc60395eb543ca7470c3cb0c3576816"
+      },
+      {
+        "path": "out/main/index-cf0fb39f.js",
+        "sha256": "10684659f60f6dfdd33de67a559e4d61a1ef12b9f8d8b7b794028223f3798f1d"
+      },
+      {
+        "path": "out/main/index-f057dd97.js",
+        "sha256": "956f5e794a72a77cc4ebe052252714daf2be45b4ce3214958c406aa5e83262dc"
+      }
+    ]
+  },
+  {
+    "game": "stella-sora-cn",
+    "official_launcher_version": "1.3.0",
+    "source_relative_path": "_StellaSora_Gamelauncher/cn_app-32/resources/app.asar",
+    "asar_sha256": "9cec6320523265dafa65b31b65221c28196f7378852fcb8fa8a741968cd71e65",
+    "members": [
+      {
+        "path": "package.json",
+        "sha256": "ee36dbb5999d44dacb6c25e1394fa5bd93c89ea4cc6e39d6be2cf4b0416f7abe"
+      },
+      {
+        "path": "out/main/index.js",
+        "sha256": "d96b0824409d7ccc78ad59b7facf99beab07e95740605e4eae6f470ecd2a9a38"
+      },
+      {
+        "path": "out/main/index-52e4c114.js",
+        "sha256": "d40eb4aa7deb0b8f16d1f3cf492fe9b6fb6cf40c675d4867c1da66511b784eb0"
+      },
+      {
+        "path": "out/main/index-cf0fb39f.js",
+        "sha256": "10684659f60f6dfdd33de67a559e4d61a1ef12b9f8d8b7b794028223f3798f1d"
+      }
+    ]
+  }
+]

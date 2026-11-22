@@ -48,7 +48,9 @@ public sealed partial class MainWindowHeadlessTests
         // Simulate the native first-frame notification; Headless has no GL renderer.
         typeof(Cafe.Launcher.UI.Views.MainWindow).GetMethod("OnVideoBackgroundFirstFrame", BindingFlags.Instance | BindingFlags.NonPublic)!
             .Invoke(context.Window, null);
-        Assert.All(context.Window.FindControl<Grid>("ShellRoot")!.Children.OfType<Image>(), image => Assert.False(image.IsVisible));
+        var shellRoot = context.Window.FindControl<Grid>("ShellRoot")!;
+        // 静态壁纸与交叉淡化由不透明的视频表面完全遮挡，首帧后隐藏。
+        Assert.All(shellRoot.Children.OfType<Image>(), image => Assert.False(image.IsVisible));
         var shellCache = context.Window.FindControl<Grid>("MainContentLayer")!.CacheMode;
         Assert.NotNull(shellCache);
 
@@ -56,7 +58,7 @@ public sealed partial class MainWindowHeadlessTests
         await vm.Background.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
         Assert.Same(original, Current());
         Assert.Equal(second, original.Source);
-        Assert.All(context.Window.FindControl<Grid>("ShellRoot")!.Children.OfType<Image>(), image => Assert.True(image.IsVisible));
+        Assert.All(shellRoot.Children.OfType<Image>(), image => Assert.True(image.IsVisible));
         context.Window.Hide();
         Dispatcher.UIThread.RunJobs();
         Assert.False(context.Window.IsActive);
@@ -78,7 +80,8 @@ public sealed partial class MainWindowHeadlessTests
         Assert.Same(original, Current());
         Assert.Null(original.Source);
         Assert.True(original.PlaybackPaused);
-        Assert.All(context.Window.FindControl<Grid>("ShellRoot")!.Children.OfType<Image>(), image => Assert.True(image.IsVisible));
+        // 播放失败只是回退到静态兜底图。
+        Assert.All(shellRoot.Children.OfType<Image>(), image => Assert.True(image.IsVisible));
         // 缓存随视频控件存活；切回静态背景不重建全窗口位图缓存。
         Assert.Same(shellCache, context.Window.FindControl<Grid>("MainContentLayer")!.CacheMode);
 
@@ -89,7 +92,11 @@ public sealed partial class MainWindowHeadlessTests
         await vm.Background.UpdateBackgroundImageAsync(new LauncherSettings(), null, CancellationToken.None);
         Assert.Same(original, Current());
         Assert.Null(original.Source);
-        context.Window.Close();
+        // 切回图片壁纸：静态壁纸与交叉淡化重新可见。
+        Dispatcher.UIThread.RunJobs();
+        Assert.All(context.Window.FindControl<Grid>("ShellRoot")!.Children.OfType<Image>(),
+            image => Assert.True(image.IsVisible));
+        context.Window.CloseForShutdown();
         Assert.Null(Current());
         Assert.Null(context.Window.FindControl<Grid>("MainContentLayer")!.CacheMode);
         Dispatcher.UIThread.RunJobs();

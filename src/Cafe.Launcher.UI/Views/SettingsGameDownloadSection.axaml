@@ -1,0 +1,54 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cafe.Launcher.UI.ViewModels"
+             xmlns:coreModels="using:Cafe.Launcher.Core.Models"
+             xmlns:converters="using:Cafe.Launcher.UI.Converters"
+             xmlns:glyphs="using:Cafe.Launcher.UI.Constants"
+             xmlns:controls="using:Cafe.Launcher.UI.Controls"
+             x:Class="Cafe.Launcher.UI.Views.SettingsGameDownloadSection"
+             x:Name="SettingsRoot"
+             Classes="settings-section"
+             x:DataType="vm:MainWindowViewModel">
+    <StackPanel Classes="settings-group" IsEnabled="{Binding Settings.IsGameConfigurationEnabled}">
+        <TextBlock Text="{Binding Shell.I18n[settingsGroupDownload]}" Classes="group-title"/>
+
+        <Border Classes="settings-group-card">
+            <StackPanel>
+                <!-- 每个游戏独立记录下载源；全局偏好与传输参数仍在全局的下载与网络分类。 -->
+                <controls:SettingRow Title="{Binding Shell.I18n[downloadSource]}"
+                                     Description="{Binding Shell.I18n[downloadSourceDescription]}">
+                    <controls:SettingRow.Action>
+                        <WrapPanel Classes="setting-radio-group">
+                            <RadioButton Classes="setting-radio"
+                                         GroupName="SettingsGameDownloadSource"
+                                         IsChecked="{Binding Settings.Game.PatchUrlGroup, Converter={x:Static converters:SegmentOptionConverter.Instance}, ConverterParameter={x:Static coreModels:PatchUrlGroups.Official}, Mode=TwoWay}"
+                                         AutomationProperties.Name="{Binding Shell.I18n[downloadSourceOfficial]}">
+                                <TextBlock Text="{Binding Shell.I18n[downloadSourceOfficial]}" TextWrapping="Wrap"/>
+                            </RadioButton>
+
+                            <RadioButton Classes="setting-radio"
+                                         GroupName="SettingsGameDownloadSource"
+                                         IsVisible="{Binding Settings.SupportsCafeDownloadSource}"
+                                         IsChecked="{Binding Settings.Game.PatchUrlGroup, Converter={x:Static converters:SegmentOptionConverter.Instance}, ConverterParameter={x:Static coreModels:PatchUrlGroups.Cafe}, Mode=TwoWay}"
+                                         AutomationProperties.Name="{Binding Shell.I18n[downloadSourceCafe]}">
+                                <TextBlock Text="{Binding Shell.I18n[downloadSourceCafe]}" TextWrapping="Wrap"/>
+                            </RadioButton>
+                        </WrapPanel>
+                    </controls:SettingRow.Action>
+                </controls:SettingRow>
+
+                <Border Classes="settings-row-divider" IsVisible="{Binding Settings.IsResourcePanelAvailable}"/>
+                <controls:SettingRow Title="{Binding Shell.I18n[resourcePanel]}"
+                                     IsVisible="{Binding Settings.IsResourcePanelAvailable}">
+                    <controls:SettingRow.Action>
+                        <Button Classes="flat-action"
+                                Command="{Binding ManageGameFromSettingsCommand}"
+                                CommandParameter="resources"
+                                Content="{Binding Shell.I18n[resourcePanel]}"
+                                AutomationProperties.Name="{Binding Shell.I18n[resourcePanel]}"/>
+                    </controls:SettingRow.Action>
+                </controls:SettingRow>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

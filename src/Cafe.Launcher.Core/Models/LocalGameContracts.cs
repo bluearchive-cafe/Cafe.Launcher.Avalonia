@@ -69,9 +69,10 @@ public sealed class GameLauncherConfig
     [JsonPropertyName("name")]
     public string? Name { get; set; }
 
+    /// <summary>缺字段用 <c>null</c> 保留；空数组仍作为一个字段参与 <c>vc</c> 计算。</summary>
     [JsonPropertyName("params")]
-    public string[] Params { get => parameters ??= []; set => parameters = value ?? []; }
-    private string[] parameters = [];
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string[]? Params { get; set; }
 
     [JsonPropertyName("version")]
     public string? Version { get; set; }

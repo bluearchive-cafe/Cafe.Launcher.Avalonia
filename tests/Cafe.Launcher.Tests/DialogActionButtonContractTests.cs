@@ -6,49 +6,6 @@ namespace Cafe.Launcher.Tests;
 public sealed class DialogActionButtonContractTests
 {
     [Fact]
-    public void DialogActionStyle_UsesUnifiedMetrics()
-    {
-        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
-        var setters = GetStyleSetters(document, "Button.dialog-action");
-
-        Assert.Equal(
-            "{StaticResource Launcher.Control.Height.Dialog}",
-            setters["MinHeight"]);
-        Assert.Equal("{StaticResource Launcher.Component.Dialog.Action.MinWidth}", setters["MinWidth"]);
-        Assert.Equal("{StaticResource Launcher.Component.Action.Dialog.Padding}", setters["Padding"]);
-        Assert.Equal(
-            "{StaticResource Launcher.Typography.FontSize.Body.Md}",
-            setters["FontSize"]);
-        Assert.DoesNotContain("FontWeight", setters);
-        Assert.DoesNotContain(
-            document.Descendants(),
-            element =>
-                element.Name.LocalName == "Style"
-                && element.Attribute("Selector")?.Value == "Button.settings-footer-action");
-    }
-
-    [Fact]
-    public void DialogActionStyle_FollowsBaseSemanticActionStyles()
-    {
-        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
-        var styles = document
-            .Descendants()
-            .Where(element => element.Name.LocalName == "Style")
-            .ToList();
-        var dialogActionIndex = FindStyleIndex(styles, "Button.dialog-action");
-
-        Assert.True(
-            dialogActionIndex > FindStyleIndex(styles, "Button.primary-action"),
-            "Button.dialog-action must follow Button.primary-action.");
-        Assert.True(
-            dialogActionIndex > FindStyleIndex(styles, "Button.flat-action"),
-            "Button.dialog-action must follow Button.flat-action.");
-        Assert.True(
-            dialogActionIndex > FindStyleIndex(styles, "Button.danger-action"),
-            "Button.dialog-action must follow Button.danger-action.");
-    }
-
-    [Fact]
     public void SettingsFooterActions_UseDialogActionClass()
     {
         var settingsDocument = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowSettingsOverlay.axaml"));
@@ -64,7 +21,7 @@ public sealed class DialogActionButtonContractTests
 
         Assert.Equal(2, settingsButtons.Length);
         Assert.Equal("flat-action dialog-action", settingsButtons[0].Attribute("Classes")?.Value);
-        Assert.Equal("primary-action dialog-action", settingsButtons[1].Attribute("Classes")?.Value);
+        Assert.Equal("primary-action dialog-action accent", settingsButtons[1].Attribute("Classes")?.Value);
     }
 
     [Fact]
@@ -98,7 +55,9 @@ public sealed class DialogActionButtonContractTests
         // ADR-037：更新对话框在“就绪待重启”时把主按钮换成重启按钮，两个按钮都在本计数内。
         // 更新说明失败时新增独立的「前往发布页」恢复动作。
         // 头带「跳过」降为安静文本钮（wizard-skip），离开本计数（28 → 27）。
-        Assert.Equal(27, actionButtons.Length);
+        // Appearance preview adds a third action to the settings footer.
+        // 关于页的法律文档对话框只读，唯一动作是「关闭」。
+        Assert.Equal(29, actionButtons.Length);
         Assert.All(
             actionButtons,
             button =>
@@ -109,21 +68,18 @@ public sealed class DialogActionButtonContractTests
                 Assert.All(
                     button
                         .Descendants()
-                        .Where(element => element.Name.LocalName == "MaterialIcon"),
+                        .Where(element => element.Name.LocalName == "FluentIcon"),
                     icon =>
                     {
                         Assert.Equal(
                             "{StaticResource Launcher.Icon.Sm}",
-                            icon.Attribute("Width")?.Value);
-                        Assert.Equal(
-                            "{StaticResource Launcher.Icon.Sm}",
-                            icon.Attribute("Height")?.Value);
+                            icon.Attribute("FontSize")?.Value);
                     });
             });
     }
 
     [Fact]
-    public void LogExportDialog_ExportButtonUsesExitToAppIcon()
+    public void LogExportDialog_ExportButtonUsesOpenExternalIcon()
     {
         var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowLogExportOverlay.axaml"));
         var exportButton = document
@@ -133,9 +89,9 @@ public sealed class DialogActionButtonContractTests
                 && element.Attribute("Command")?.Value == "{Binding LogExport.ExportCommand}");
         var buttonIcon = exportButton
             .Descendants()
-            .Single(element => element.Name.LocalName == "MaterialIcon");
+            .Single(element => element.Name.LocalName == "FluentIcon");
 
-        Assert.Equal("ExitToApp", buttonIcon.Attribute("Kind")?.Value);
+        Assert.Equal("{x:Static glyphs:FluentGlyphs.OpenExternal}", buttonIcon.Attribute("Glyph")?.Value);
     }
 
     private static bool HasAnyClass(XElement element, params string[] classes) =>

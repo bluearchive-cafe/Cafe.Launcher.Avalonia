@@ -1,6 +1,6 @@
 ---
 name: designing-fluent-interfaces
-description: Design, implement, or review Fluent 2 and Windows/WinUI interfaces. In this repository, use for the independent Fluent crash window or explicit Fluent guidance; FluentTheme alone does not select the main UI's design system.
+description: Design, implement, or review Fluent 2 and Windows/WinUI interfaces. In this repository, use for the main UI's Fluent 2 shell (FluentAvaloniaTheme) and the independent Fluent crash window.
 metadata:
   version: "1.0.0"
   last-reviewed: "2026-08-27"
@@ -16,7 +16,7 @@ Use Fluent as a system of relationships, hierarchy, behavior, and platform conve
 
 ## Platform gate
 
-For this repository, read the [design specification](../../../docs/design/design-system-spec.md#1-设计原则) and [XAML conventions](../../../PROJECT_CONVENTIONS.md#4-xaml-与视觉规范) first. The main UI uses M3 semantics on Avalonia FluentTheme; use the [Material workflow](../material-design/SKILL.md) for those semantics. The crash window uses an independent Fluent system with local `Crash.*` resources. Preserve that boundary and the repository's geometry, even when generic WinUI defaults differ.
+For this repository, read the [design specification](../../../docs/design/design-system-spec.md#1-设计原则) and [XAML conventions](../../../PROJECT_CONVENTIONS.md#4-xaml-与视觉规范) first. The main UI uses Fluent 2 templates (FluentAvaloniaTheme) with M3 dynamic colors carried by `Launcher.*` tokens; see [ADR-063](../../../docs/design/adr/ADR-063-全应用统一Fluent2视觉.md). The crash window uses an independent Fluent system with local `Crash.*` resources. Preserve those boundaries and the repository's geometry, even when generic WinUI defaults differ.
 
 Before designing or changing UI, classify the target:
 

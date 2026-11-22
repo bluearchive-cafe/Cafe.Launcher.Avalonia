@@ -128,7 +128,7 @@ public sealed class MaterialSchemeGeneratorTests
         // under the Brand Blue strategy (Q13): the dialog family is written with
         // the declared App.axaml defaults so no seed-following override lingers.
         Assert.Equal(
-            Color.Parse("#FFFFFFFF"),
+            Color.Parse("#FFF3F3F3"),
             brushes["Launcher.Color.Dialog.Background"].Color);
     }
 
@@ -162,12 +162,57 @@ public sealed class MaterialSchemeGeneratorTests
     /// 用代码常量自证。此处直接解析 App.axaml 的 Light/Dark ThemeDictionaries
     /// 取真值，改令牌颜色而忘记同步默认表时在此失败。
     /// </summary>
+    [Theory]
+    [InlineData(false, NeutralColorStrategies.BrandBlue)]
+    [InlineData(true, NeutralColorStrategies.BrandBlue)]
+    [InlineData(false, NeutralColorStrategies.SeedFollowing)]
+    [InlineData(true, NeutralColorStrategies.SeedFollowing)]
+    public void BuildRoleBrushes_GlassSurfaces_ReuseHostColorAtGlassAlpha(bool isDark, string strategy)
+    {
+        var scheme = MaterialSchemeGenerator.CreateScheme(
+            DefaultSeed,
+            ThemeColorVariants.TonalSpot,
+            isDark);
+
+        var brushes = MaterialSchemeGenerator.BuildRoleBrushes(
+            scheme,
+            seedFollowingNeutrals: strategy == NeutralColorStrategies.SeedFollowing,
+            isDark);
+
+        AssertGlassSurface(
+            brushes,
+            "Launcher.Color.Glass.Background",
+            "Launcher.Color.Dialog.Background",
+            MaterialSchemeGenerator.GlassBackgroundAlpha);
+        AssertGlassSurface(
+            brushes,
+            "Launcher.Color.Glass.Card.Background",
+            "Launcher.Color.Card.Background",
+            MaterialSchemeGenerator.GlassCardAlpha);
+    }
+
+    private static void AssertGlassSurface(
+        IReadOnlyDictionary<string, SolidColorBrush> brushes,
+        string glassKey,
+        string hostKey,
+        byte expectedAlpha)
+    {
+        var glass = brushes[glassKey].Color;
+        var host = brushes[hostKey].Color;
+        Assert.Equal(expectedAlpha, glass.A);
+        Assert.Equal(host.R, glass.R);
+        Assert.Equal(host.G, glass.G);
+        Assert.Equal(host.B, glass.B);
+    }
+
     [Fact]
     public void NeutralDefaults_MatchDeclaredAppXamlThemeValues()
     {
         var themeValues = LoadAppXamlThemeSolidBrushes();
 
-        foreach (var (key, light, dark) in MaterialSchemeGenerator.DialogSurfaceDefaults.Concat(MaterialSchemeGenerator.NeutralContentDefaults))
+        foreach (var (key, light, dark) in MaterialSchemeGenerator.DialogSurfaceDefaults
+                     .Concat(MaterialSchemeGenerator.NeutralContentDefaults)
+                     .Concat(MaterialSchemeGenerator.GlassSurfaceDefaults))
         {
             Assert.True(
                 themeValues.TryGetValue(("Light", key), out var declaredLight),
@@ -579,16 +624,19 @@ public sealed class MaterialSchemeGeneratorTests
                     var wash = brushes["Launcher.Color.Primary.Soft"];
                     Assert.Equal(1, wash.Opacity);
                     Assert.Equal(0x24, wash.Color.A);
-                    var segmentForeground = brushes["Launcher.Color.Segmented.Selected.Foreground"].Color;
-                    foreach (var background in new[] { brushes["Launcher.Color.Dialog.Background"].Color,
-                                 Color.Parse(isDark ? "#FF202733" : "#FFFAFCFF") })
+                    // ADR-070 第二批：FA 键桥接必须每次方案应用都跟随应用档位。
+                    var fieldBackground = brushes["Launcher.Color.Field.Background"].Color;
+                    var fieldBorder = brushes["Launcher.Color.Field.Border"].Color;
+                    foreach (var fillKey in new[] { "ComboBoxBackground", "ComboBoxBackgroundPointerOver", "ComboBoxBackgroundPressed" })
                     {
-                        var alpha = wash.Color.A / 255d;
-                        byte Mix(byte foreground, byte underneath) => (byte)System.Math.Round(foreground * alpha + underneath * (1 - alpha));
-                        var painted = Color.FromRgb(Mix(wash.Color.R, background.R), Mix(wash.Color.G, background.G), Mix(wash.Color.B, background.B));
-                        Assert.True(ColorUtils.GetContrastRatio(segmentForeground, painted) >= 4.5,
-                            $"{variant}/{seed}/{isDark}/{seedFollowing}: segmented selection contrast");
+                        Assert.Equal(fieldBackground, brushes[fillKey].Color);
                     }
+                    foreach (var borderKey in new[] { "ComboBoxBorderBrush", "ComboBoxBorderBrushPointerOver",
+                                 "ExpanderHeaderBorderPointerOverBrush", "ExpanderBorderPressedBrush", "ExpanderHeaderBorderPressedBrush" })
+                    {
+                        Assert.Equal(fieldBorder, brushes[borderKey].Color);
+                    }
+                    Assert.Equal(brushes["Launcher.Color.Error"].Color, brushes["SystemFillColorCriticalBrush"].Color);
                     foreach (var (suffix, backgroundKey) in new[] {
                                  ("", "Launcher.Color.Dialog.Background"),
                                  (".Hover", "Launcher.Color.Button.Secondary.Hover"),

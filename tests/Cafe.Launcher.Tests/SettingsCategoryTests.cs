@@ -22,38 +22,54 @@ public sealed class SettingsCategoryTests
     private static readonly string[] CategoryCodes =
     [
         SettingsCategoryCodes.General,
-        SettingsCategoryCodes.Game,
-        SettingsCategoryCodes.DownloadNetwork,
         SettingsCategoryCodes.Appearance,
+        SettingsCategoryCodes.DefaultBackground,
+        SettingsCategoryCodes.DownloadNetwork,
         SettingsCategoryCodes.Advanced,
         SettingsCategoryCodes.About
+    ];
+
+    private static readonly string[] GameCategoryCodes =
+    [
+        SettingsCategoryCodes.Game,
+        SettingsCategoryCodes.GameLaunch,
+        SettingsCategoryCodes.GameDownload,
+        SettingsCategoryCodes.GameBackground
     ];
 
     private static readonly (string Key, Func<LocalizedTextCatalog, string> GetValue)[] CategoryLocalizedValues =
     [
         ("settingsCategoryGeneral", strings => strings["settingsCategoryGeneral"]),
-        ("settingsCategoryGame", strings => strings["settingsCategoryGame"]),
-        ("settingsCategoryDownloadNetwork", strings => strings["settingsCategoryDownloadNetwork"]),
         ("settingsCategoryAppearance", strings => strings["settingsCategoryAppearance"]),
+        ("settingsDefaultBackground", strings => strings["settingsDefaultBackground"]),
+        ("settingsCategoryDownloadNetwork", strings => strings["settingsCategoryDownloadNetwork"]),
         ("settingsCategoryAdvanced", strings => strings["settingsCategoryAdvanced"]),
-        ("settingsCategoryAbout", strings => strings["settingsCategoryAbout"])
+        ("settingsCategoryAbout", strings => strings["settingsCategoryAbout"]),
+        ("settingsGameInstallation", strings => strings["settingsGameInstallation"]),
+        ("settingsGameLaunch", strings => strings["settingsGameLaunch"]),
+        ("settingsGameDownload", strings => strings["settingsGameDownload"]),
+        ("settingsGameBackground", strings => strings["settingsGameBackground"])
     ];
 
     private static readonly string[] CategoryDescriptionKeys =
     [
         "settingsCategoryGeneralDescription",
-        "settingsCategoryGameDescription",
-        "settingsCategoryDownloadNetworkDescription",
         "settingsCategoryAppearanceDescription",
+        "settingsCategoryDownloadNetworkDescription",
         "settingsCategoryAdvancedDescription",
         "settingsCategoryAboutDescription"
     ];
 
     private static readonly string[] CategoryPropertyNames =
     [
+        nameof(SettingsViewModel.SelectedCategoryOption),
         nameof(SettingsViewModel.IsGeneralCategorySelected),
         nameof(SettingsViewModel.IsGameCategorySelected),
+        nameof(SettingsViewModel.IsGameLaunchCategorySelected),
+        nameof(SettingsViewModel.IsGameDownloadCategorySelected),
+        nameof(SettingsViewModel.IsGameBackgroundCategorySelected),
         nameof(SettingsViewModel.IsDownloadNetworkCategorySelected),
+        nameof(SettingsViewModel.IsDefaultBackgroundCategorySelected),
         nameof(SettingsViewModel.IsAppearanceCategorySelected),
         nameof(SettingsViewModel.IsAdvancedCategorySelected),
         nameof(SettingsViewModel.IsAboutCategorySelected)
@@ -72,7 +88,11 @@ public sealed class SettingsCategoryTests
     [Theory]
     [InlineData("general")]
     [InlineData("game")]
+    [InlineData("game-launch")]
+    [InlineData("game-download")]
+    [InlineData("game-background")]
     [InlineData("download-network")]
+    [InlineData("default-background")]
     [InlineData("appearance")]
     [InlineData("advanced")]
     [InlineData("about")]
@@ -123,12 +143,14 @@ public sealed class SettingsCategoryTests
         options.RefreshDisplayNames();
 
         Assert.Equal(
-            [SettingsCategoryCodes.General, SettingsCategoryCodes.Game,
-             SettingsCategoryCodes.DownloadNetwork, SettingsCategoryCodes.Appearance,
+            [SettingsCategoryCodes.General, SettingsCategoryCodes.Appearance,
+             SettingsCategoryCodes.DefaultBackground, SettingsCategoryCodes.DownloadNetwork,
              SettingsCategoryCodes.Advanced,
              SettingsCategoryCodes.About],
             options.SettingsCategories.Select(option => option.Code));
         Assert.All(options.SettingsCategories, option => Assert.False(string.IsNullOrWhiteSpace(option.DisplayName)));
+        Assert.Equal(GameCategoryCodes, options.GameSettingsCategories.Select(option => option.Code));
+        Assert.All(options.GameSettingsCategories, option => Assert.False(string.IsNullOrWhiteSpace(option.DisplayName)));
     }
 
     [Fact]
@@ -139,14 +161,22 @@ public sealed class SettingsCategoryTests
 
         Assert.Equal(
             [
-                ("CogOutline", "Cog"),
-                ("GamepadSquareOutline", "GamepadSquare"),
-                ("DownloadOutline", "Download"),
-                ("PaletteOutline", "Palette"),
-                ("Tune", "Tune"),
-                ("InformationOutline", "Information")
+                FluentGlyphs.Setting,
+                FluentGlyphs.ColorPalette,
+                FluentGlyphs.Image,
+                FluentGlyphs.Download,
+                FluentGlyphs.Equalizer,
+                FluentGlyphs.Info
             ],
-            options.SettingsCategories.Select(option => (option.IconKind, option.SelectedIconKind)));
+            options.SettingsCategories.Select(option => option.CategoryGlyph));
+        Assert.Equal(
+            [
+                FluentGlyphs.Folder,
+                FluentGlyphs.Play,
+                FluentGlyphs.Download,
+                FluentGlyphs.Image
+            ],
+            options.GameSettingsCategories.Select(option => option.CategoryGlyph));
     }
 
     [Theory]
@@ -201,7 +231,7 @@ public sealed class SettingsCategoryTests
     [InlineData(LauncherLanguages.SimplifiedChinese)]
     [InlineData(LauncherLanguages.TraditionalChinese)]
     [InlineData(LauncherLanguages.Japanese)]
-    public void LocalizedTextCatalog_MapsAllSixCategoryKeys(string language)
+    public void LocalizedTextCatalog_MapsAllCategoryKeys(string language)
     {
         var localizer = new LocalizationService();
         localizer.SetLanguage(language);
@@ -240,11 +270,60 @@ public sealed class SettingsCategoryTests
         using var scope = CreateSettingsViewModel();
         var viewModel = scope.ViewModel;
 
-        foreach (var code in CategoryCodes)
+        await AssertSelectionNotificationsAsync(viewModel, CategoryCodes);
+
+        viewModel.BeginEdit(gameSpecific: true);
+        await AssertSelectionNotificationsAsync(viewModel, GameCategoryCodes);
+    }
+
+    [Fact]
+    public void BeginEdit_SwitchesActiveCategoriesAndRestoresEachScopeSelection()
+    {
+        using var scope = CreateSettingsViewModel();
+        var viewModel = scope.ViewModel;
+
+        Assert.Same(viewModel.Options.SettingsCategories, viewModel.ActiveCategories);
+        viewModel.SelectedCategory = SettingsCategoryCodes.Appearance;
+
+        viewModel.BeginEdit(gameSpecific: true);
+        Assert.Same(viewModel.Options.GameSettingsCategories, viewModel.ActiveCategories);
+        Assert.Equal(SettingsCategoryCodes.Game, viewModel.SelectedCategory);
+        Assert.True(viewModel.Game?.GamePath is not null);
+
+        viewModel.SelectedCategory = SettingsCategoryCodes.GameLaunch;
+        viewModel.BeginEdit(gameSpecific: false);
+        Assert.Equal(SettingsCategoryCodes.Appearance, viewModel.SelectedCategory);
+
+        viewModel.BeginEdit(gameSpecific: true);
+        Assert.Equal(SettingsCategoryCodes.GameLaunch, viewModel.SelectedCategory);
+    }
+
+    [Fact]
+    public void IsSettingsDirty_TracksOnlyTheActiveScope()
+    {
+        using var scope = CreateSettingsViewModel();
+        var viewModel = scope.ViewModel;
+
+        viewModel.BeginEdit(gameSpecific: false);
+        viewModel.Editor.Current.GetGameSettings(
+            Cafe.Launcher.Core.Constants.LauncherProfiles.BlueArchiveJapan.RuntimeId).GamePath = @"C:\Games\BlueArchive_JP";
+        Assert.False(viewModel.IsSettingsDirty);
+
+        viewModel.BeginEdit(gameSpecific: true);
+        Assert.True(viewModel.IsSettingsDirty);
+
+        viewModel.BeginEdit(gameSpecific: false);
+        viewModel.Editor.Current.Language = LauncherLanguages.Japanese;
+        Assert.True(viewModel.IsSettingsDirty);
+    }
+
+    private static async Task AssertSelectionNotificationsAsync(
+        SettingsViewModel viewModel,
+        IReadOnlyList<string> codes)
+    {
+        foreach (var code in codes)
         {
-            viewModel.SelectedCategory = code == SettingsCategoryCodes.General
-                ? SettingsCategoryCodes.About
-                : SettingsCategoryCodes.General;
+            viewModel.SelectedCategory = codes.First(candidate => candidate != code);
             var changed = new List<string>();
             var gameRuntimeChanged = new List<string>();
             PropertyChangedEventHandler handler = (_, args) =>
@@ -275,9 +354,14 @@ public sealed class SettingsCategoryTests
             viewModel.GameRuntime.PropertyChanged -= gameRuntimeHandler;
             var changedProperties = changed.ToHashSet(StringComparer.Ordinal);
             // Selecting the Game category refreshes the runtime status row inside the
-            // child VM; the parent raises only the seven selection notifications.
-            Assert.Equal(7, changedProperties.Count);
+            // child VM; the parent raises the selection notification and all scope flags,
+            // including the two derived background-editor flags. The default-background
+            // category additionally raises the preview flag while starting its preview.
+            var expectedCount = code == SettingsCategoryCodes.DefaultBackground ? 15 : 14;
+            Assert.Equal(expectedCount, changedProperties.Count);
             Assert.Contains(nameof(SettingsViewModel.SelectedCategory), changedProperties);
+            Assert.Contains(nameof(SettingsViewModel.IsBackgroundEditorCategorySelected), changedProperties);
+            Assert.Contains(nameof(SettingsViewModel.CanPreviewAppearance), changedProperties);
             if (code == SettingsCategoryCodes.Game)
             {
                 var runtimeChanged = gameRuntimeChanged.ToHashSet(StringComparer.Ordinal);
@@ -293,7 +377,11 @@ public sealed class SettingsCategoryTests
                 {
                     viewModel.IsGeneralCategorySelected,
                     viewModel.IsGameCategorySelected,
+                    viewModel.IsGameLaunchCategorySelected,
+                    viewModel.IsGameDownloadCategorySelected,
+                    viewModel.IsGameBackgroundCategorySelected,
                     viewModel.IsDownloadNetworkCategorySelected,
+                    viewModel.IsDefaultBackgroundCategorySelected,
                     viewModel.IsAppearanceCategorySelected,
                     viewModel.IsAdvancedCategorySelected,
                     viewModel.IsAboutCategorySelected
@@ -454,6 +542,48 @@ public sealed class SettingsCategoryTests
         Assert.False(saveTask.IsCompleted);
         completionRelease.SetResult();
         await saveTask.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task SaveSettingsCommand_GameScope_WritesOnlyTheGamePartition()
+    {
+        using var scope = CreateSettingsViewModel();
+        var viewModel = scope.ViewModel;
+        var service = scope.Provider.GetRequiredService<ILauncherSettingsService>();
+        var gameId = Cafe.Launcher.Core.Constants.LauncherProfiles.BlueArchiveJapan.RuntimeId;
+        viewModel.LoadFromSnapshot(new LauncherSettings { Language = LauncherLanguages.English });
+        viewModel.BeginEdit(gameSpecific: true);
+
+        viewModel.Game.GamePath = @"C:\Games\BlueArchive_JP";
+        viewModel.Game.GameRuntime.EnableMangoHud = true;
+        viewModel.Editor.Current.Language = LauncherLanguages.Japanese;
+
+        await viewModel.SaveSettingsCommand.ExecuteAsync(null);
+
+        var saved = await service.ReadAsync();
+        Assert.Equal(LauncherLanguages.English, saved.Language);
+        Assert.Equal(@"C:\Games\BlueArchive_JP", saved.GetGameSettings(gameId).GamePath);
+        Assert.True(saved.GetGameSettings(gameId).GameRuntime.EnableMangoHud);
+        Assert.False(viewModel.IsSettingsDirty);
+    }
+
+    [Fact]
+    public async Task SaveSettingsCommand_GlobalScope_DoesNotWriteGamePartitionChanges()
+    {
+        using var scope = CreateSettingsViewModel();
+        var viewModel = scope.ViewModel;
+        var service = scope.Provider.GetRequiredService<ILauncherSettingsService>();
+        var gameId = Cafe.Launcher.Core.Constants.LauncherProfiles.BlueArchiveJapan.RuntimeId;
+        viewModel.LoadFromSnapshot(new LauncherSettings { Language = LauncherLanguages.English });
+        viewModel.Game.GamePath = @"C:\Games\BlueArchive_JP";
+
+        viewModel.BeginEdit(gameSpecific: false);
+        viewModel.Editor.Current.Language = LauncherLanguages.Japanese;
+        await viewModel.SaveSettingsCommand.ExecuteAsync(null);
+
+        var saved = await service.ReadAsync();
+        Assert.Equal(LauncherLanguages.Japanese, saved.Language);
+        Assert.Empty(saved.GetGameSettings(gameId).GamePath);
     }
 
     private static SettingsViewModelScope CreateSettingsViewModel()

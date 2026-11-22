@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Cafe.Launcher.UI.Constants;
 using Cafe.Launcher.UI.Features.Diagnostics;
+using Cafe.Launcher.UI.Features.Games;
 using Cafe.Launcher.UI.Features.Settings;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
@@ -20,7 +21,16 @@ internal partial class WindowChromeViewModel : ObservableObject
     private readonly YostarGameProfile gameProfile;
     private readonly LauncherDataRoot dataRoot;
     private readonly SettingsViewModel settings;
-    private readonly RemoteContentViewModel remoteContent;
+    private readonly RemoteContentViewModel defaultRemoteContent;
+    private RemoteContentViewModel remoteContent => games?.Active.RemoteContent ?? defaultRemoteContent;
+    private readonly GameLibraryViewModel? games;
+    private readonly IGameFileOperationCoordinator? fileOperations;
+    private bool shutdownConfirmed;
+    public bool IsShutdownPrepared => fileOperations?.IsShuttingDown ?? false;
+    private bool HasUninstall => operations.IsUninstallExecuting
+        || fileOperations?.ActiveOperation?.Kind == GameFileOperationKind.Uninstall;
+    private bool HasDownloadJourney => operations.IsDownloadRunning
+        || fileOperations?.ActiveOperation?.Kind is GameFileOperationKind.Download or GameFileOperationKind.Repair;
     private readonly DialogsViewModel dialogs;
     private readonly IGameOperationActivity operations;
     private readonly DebugViewModel debug;
@@ -43,7 +53,9 @@ internal partial class WindowChromeViewModel : ObservableObject
         RemoteContentViewModel remoteContent,
         DialogsViewModel dialogs,
         IGameOperationActivity operations,
-        DebugViewModel debug)
+        DebugViewModel debug,
+        GameLibraryViewModel? games = null,
+        IGameFileOperationCoordinator? fileOperations = null)
         : this(
             productProfile,
             gameProfile,
@@ -54,7 +66,9 @@ internal partial class WindowChromeViewModel : ObservableObject
             operations,
             debug,
             ExternalLinkService.Open,
-            static path => ShellFolderOpener.OpenInFileManager(path))
+            static path => ShellFolderOpener.OpenInFileManager(path),
+            games,
+            fileOperations)
     {
     }
 
@@ -68,14 +82,18 @@ internal partial class WindowChromeViewModel : ObservableObject
         IGameOperationActivity operations,
         DebugViewModel debug,
         Action<string?> openExternalUrl,
-        Action<string> openDirectory)
+        Action<string> openDirectory,
+        GameLibraryViewModel? games = null,
+        IGameFileOperationCoordinator? fileOperations = null)
     {
         ArgumentNullException.ThrowIfNull(dataRoot);
         this.productProfile = productProfile;
         this.gameProfile = gameProfile;
         this.dataRoot = dataRoot;
         this.settings = settings;
-        this.remoteContent = remoteContent;
+        defaultRemoteContent = remoteContent;
+        this.games = games;
+        this.fileOperations = fileOperations;
         this.dialogs = dialogs;
         this.operations = operations;
         this.debug = debug;
@@ -84,10 +102,16 @@ internal partial class WindowChromeViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void ToggleSettings()
+    private async Task ToggleSettings()
     {
-        if (settings.IsSaving)
+        if (settings.IsSaving || games?.IsSwitching == true)
         {
+            return;
+        }
+
+        if (IsSettingsVisible && settings.IsPreviewing)
+        {
+            settings.ReturnToSettings();
             return;
         }
 
@@ -97,41 +121,100 @@ internal partial class WindowChromeViewModel : ObservableObject
             return;
         }
 
-        IsSettingsVisible = !IsSettingsVisible;
         if (IsSettingsVisible)
         {
-            settings.LoadFromSnapshot(settings.Editor.GetSavedSnapshot());
+            // Returning every field to its saved value clears dirty state, but
+            // the global background preview still needs its end-of-session reset.
+            if (settings.IsGlobalBackgroundPreview)
+            {
+                await settings.DiscardChangesAsync();
+            }
+            IsSettingsVisible = false;
         }
+        else
+        {
+            settings.BeginEdit(gameSpecific: false);
+            settings.LoadFromSnapshot(settings.Editor.GetSavedSnapshot());
+            IsSettingsVisible = true;
+        }
+    }
+
+    /// <summary>Opens the fixed settings target for the game currently shown on the home page.</summary>
+    [RelayCommand]
+    private void ShowGameSettings()
+    {
+        if (IsSettingsVisible || settings.IsSaving || games?.IsSwitching == true)
+        {
+            return;
+        }
+
+        settings.BeginEdit(gameSpecific: true);
+        settings.LoadFromSnapshot(settings.Editor.GetSavedSnapshot());
+        IsSettingsVisible = true;
+    }
+
+    private Func<Task>? actionAfterDiscard;
+
+    /// <summary>Resolves the current draft before entering a separate fixed-target workflow.</summary>
+    public async Task RunAfterSettingsAsync(Func<Task> action)
+    {
+        if (settings.IsSaving)
+        {
+            return;
+        }
+
+        if (settings.IsSettingsDirty)
+        {
+            actionAfterDiscard = action;
+            settings.IsUnsavedChangesVisible = true;
+            return;
+        }
+
+        await settings.DiscardChangesAsync();
+        IsSettingsVisible = false;
+        await action();
     }
 
     [RelayCommand]
     private async Task DiscardSettingsChangesAsync()
     {
+        var action = actionAfterDiscard;
+        actionAfterDiscard = null;
         await settings.DiscardChangesAsync();
         IsSettingsVisible = false;
+        if (action is not null) await action();
     }
 
     [RelayCommand]
     private void KeepEditingSettings()
     {
+        actionAfterDiscard = null;
         settings.KeepEditing();
     }
 
     [RelayCommand]
     private void Minimize()
     {
-        remoteContent.StopCarouselTimer();
+        NotifyWindowMinimized();
         MinimizeRequested?.Invoke();
     }
 
-    [RelayCommand]
-    private void ExecuteRestoreWindow()
+    /// <summary>Pauses the banner carousel; the window reports native minimize state.</summary>
+    public void NotifyWindowMinimized() => remoteContent.StopCarouselTimer();
+
+    /// <summary>Resumes the banner carousel when the window returns to its normal state.</summary>
+    public void NotifyWindowRestored()
     {
         if (remoteContent.HasBannerItems)
         {
             remoteContent.StartCarouselTimer();
         }
+    }
 
+    [RelayCommand]
+    private void ExecuteRestoreWindow()
+    {
+        NotifyWindowRestored();
         RestoreRequested?.Invoke();
     }
 
@@ -139,9 +222,9 @@ internal partial class WindowChromeViewModel : ObservableObject
     private void OpenOfficialSite()
     {
         openExternalUrl(ResolveOfficialSiteUrl(
-            settings.Editor.GetSavedSnapshot().PatchUrlGroup,
+            settings.Editor.GetSavedSnapshot().GetGameSettings(games?.Active.GameId ?? gameProfile.RuntimeId).PatchUrlGroup,
             productProfile.CafeWebsiteUrl,
-            gameProfile.OfficialWebsiteUrl));
+            (games?.Active.Core.Profile ?? gameProfile).OfficialWebsiteUrl));
     }
 
     internal static string ResolveOfficialSiteUrl(
@@ -215,11 +298,11 @@ internal partial class WindowChromeViewModel : ObservableObject
     [RelayCommand]
     private void Close()
     {
-        if (operations.IsUninstallExecuting)
+        if (HasUninstall)
         {
             return;
         }
-        if (operations.IsDownloadRunning)
+        if (HasDownloadJourney)
         {
             dialogs.ShowDownloadRunningCloseConfirm();
             return;
@@ -230,6 +313,7 @@ internal partial class WindowChromeViewModel : ObservableObject
 
     public Task CloseAfterStoppingDownload()
     {
+        shutdownConfirmed = true;
         operations.StopOperation(GameOperationStopIntent.UserStop);
         CloseRequested?.Invoke();
         return Task.CompletedTask;
@@ -237,7 +321,7 @@ internal partial class WindowChromeViewModel : ObservableObject
 
     public void RequestClose()
     {
-        if (!operations.IsUninstallExecuting)
+        if (!HasUninstall)
         {
             CloseRequested?.Invoke();
         }
@@ -245,9 +329,19 @@ internal partial class WindowChromeViewModel : ObservableObject
 
     public void RequestShutdown()
     {
-        if (!operations.IsUninstallExecuting)
+        if (HasUninstall)
         {
-            ShutdownRequested?.Invoke();
+            return;
         }
+        if (HasDownloadJourney && !shutdownConfirmed)
+        {
+            dialogs.ShowDownloadRunningCloseConfirm();
+            return;
+        }
+        if (fileOperations is not null && !fileOperations.TryBeginShutdown(out _))
+        {
+            return;
+        }
+        ShutdownRequested?.Invoke();
     }
 }

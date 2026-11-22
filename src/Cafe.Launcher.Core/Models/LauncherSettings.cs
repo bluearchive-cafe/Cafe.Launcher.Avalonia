@@ -7,10 +7,12 @@ using Cafe.Launcher.Core;
 
 namespace Cafe.Launcher.Core.Models;
 
+/// <summary>单一版本化设置根；全局偏好与按稳定游戏身份索引的独立设置共同落盘。</summary>
 public sealed class LauncherSettings : SettingsModel
 {
-    private string gamePath = "";
-    private string launchCheckMode = LaunchCheckModes.LocalManifest;
+    private int formatVersion = SettingsFormatVersions.Current;
+    private string lastViewedGameId = LauncherProfiles.BlueArchiveJapan.RuntimeId;
+    private Dictionary<string, GameSettings> games = CreateDefaultGames();
     private string proxyMode = ProxyModes.Auto;
     private string closeBehavior = CloseBehaviors.Minimize;
     private string language = LauncherLanguages.Auto;
@@ -33,14 +35,12 @@ public sealed class LauncherSettings : SettingsModel
     private int? windowPositionY;
     private double? windowWidth;
     private double? windowHeight;
-    private string patchUrlGroup = PatchUrlGroups.Official;
     private string customBackgroundPath = "";
     private string backgroundSource = BackgroundSources.Bundled;
     private string backgroundFit = BackgroundFits.UniformToFill;
     private string backgroundFillColor = "#FF000000";
     private int backgroundVideoVolume;
     private bool backgroundVideoMuted;
-    private string resourcePanelUid = "";
     private string updateChannel = UpdateChannels.Stable;
     private string logLevel =
 #if DEBUG
@@ -49,23 +49,111 @@ public sealed class LauncherSettings : SettingsModel
         LogLevels.Information
 #endif
     ;
-    private string resourcePanelUidSource = ResourcePanelUidSources.Auto;
-    private GameRuntimeSettings gameRuntime = new();
-    private string afterLaunchBehavior = AfterLaunchBehaviors.Minimize;
     private string statusDetailMode = StatusDetailModes.Compact;
     private string acceptedAgreementVersion = "";
 
-    [JsonPropertyName("gamePath")]
-    public string GamePath { get => gamePath; set => SetProperty(ref gamePath, value); }
+    /// <summary>持久化格式版本；未知版本由设置读取入口拒绝，不归一化为当前版本。</summary>
+    [JsonPropertyName("formatVersion")]
+    public int FormatVersion { get => formatVersion; set => SetProperty(ref formatVersion, value); }
 
-    [JsonPropertyName("launchCheckMode")]
-    public string LaunchCheckMode { get => launchCheckMode; set => SetProperty(ref launchCheckMode, value); }
+    /// <summary>上次查看的稳定游戏身份；只影响显示，不决定任何游戏设置的写入目标。</summary>
+    [JsonPropertyName("lastViewedGameId")]
+    public string LastViewedGameId { get => lastViewedGameId; set => SetProperty(ref lastViewedGameId, value); }
+
+    /// <summary>按稳定且区分大小写的游戏身份索引；保留空字典、空条目及缺项，交由格式读取入口判定。</summary>
+    [JsonPropertyName("games")]
+    public Dictionary<string, GameSettings> Games
+    {
+        get => games;
+        set => SetProperty(ref games, value is null ? null! : new Dictionary<string, GameSettings>(value, StringComparer.Ordinal));
+    }
+
+    /// <summary>读取明确游戏的设置；未知身份或缺失条目直接报错，不回退当前条目或蔚蓝档案。</summary>
+    public GameSettings GetGameSettings(string gameId)
+    {
+        if (!LauncherProfiles.TryGetSupportedGame(gameId, out _))
+        {
+            throw new ArgumentException("Unsupported game identity.", nameof(gameId));
+        }
+
+        if (Games is null || !Games.TryGetValue(gameId, out var settings) || settings is null)
+        {
+            throw new InvalidOperationException($"Missing settings for game: {gameId}");
+        }
+
+        return settings;
+    }
+
+    private GameSettings? FindBlueArchiveSettings() =>
+        Games is not null && Games.TryGetValue(LauncherProfiles.BlueArchiveJapan.RuntimeId, out var settings)
+            ? settings
+            : null;
+
+    private static Dictionary<string, GameSettings> CreateDefaultGames() => new(StringComparer.Ordinal)
+    {
+        [LauncherProfiles.BlueArchiveJapan.RuntimeId] = new(),
+        [LauncherProfiles.StellaSoraChina.RuntimeId] = new()
+    };
+
+    /// <summary>固定投影蔚蓝档案设置的兼容入口；不跟随当前查看条目，也不单独写入 JSON。</summary>
+    [JsonIgnore]
+    public string GamePath
+    {
+        get => GetGameSettings(LauncherProfiles.BlueArchiveJapan.RuntimeId).GamePath;
+        set
+        {
+            var game = GetGameSettings(LauncherProfiles.BlueArchiveJapan.RuntimeId);
+            if (EqualityComparer<string>.Default.Equals(game.GamePath, value))
+            {
+                return;
+            }
+
+            game.GamePath = value;
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>固定投影蔚蓝档案设置的兼容入口；不跟随当前查看条目，也不单独写入 JSON。</summary>
+    [JsonIgnore]
+    public string LaunchCheckMode
+    {
+        get => GetGameSettings(LauncherProfiles.BlueArchiveJapan.RuntimeId).LaunchCheckMode;
+        set
+        {
+            var game = GetGameSettings(LauncherProfiles.BlueArchiveJapan.RuntimeId);
+            if (EqualityComparer<string>.Default.Equals(game.LaunchCheckMode, value))
+            {
+                return;
+            }
+
+            game.LaunchCheckMode = value;
+            OnPropertyChanged();
+        }
+    }
 
     [JsonPropertyName("proxyMode")]
     public string ProxyMode { get => proxyMode; set => SetProperty(ref proxyMode, value); }
 
     [JsonPropertyName("closeBehavior")]
     public string CloseBehavior { get => closeBehavior; set => SetProperty(ref closeBehavior, value); }
+
+    /// <summary>固定投影蔚蓝档案设置的兼容入口；不跟随当前查看条目，也不单独写入 JSON。</summary>
+    [JsonIgnore]
+    public string AfterLaunchBehavior
+    {
+        get => GetGameSettings(LauncherProfiles.BlueArchiveJapan.RuntimeId).AfterLaunchBehavior;
+        set
+        {
+            var game = GetGameSettings(LauncherProfiles.BlueArchiveJapan.RuntimeId);
+            if (EqualityComparer<string>.Default.Equals(game.AfterLaunchBehavior, value))
+            {
+                return;
+            }
+
+            game.AfterLaunchBehavior = value;
+            OnPropertyChanged();
+        }
+    }
 
     [JsonPropertyName("language")]
     public string Language { get => language; set => SetProperty(ref language, value); }
@@ -133,8 +221,23 @@ public sealed class LauncherSettings : SettingsModel
     [JsonPropertyName("windowHeight")]
     public double? WindowHeight { get => windowHeight; set => SetProperty(ref windowHeight, value); }
 
-    [JsonPropertyName("patchUrlGroup")]
-    public string PatchUrlGroup { get => patchUrlGroup; set => SetProperty(ref patchUrlGroup, value); }
+    /// <summary>固定投影蔚蓝档案设置的兼容入口；不跟随当前查看条目，也不单独写入 JSON。</summary>
+    [JsonIgnore]
+    public string PatchUrlGroup
+    {
+        get => GetGameSettings(LauncherProfiles.BlueArchiveJapan.RuntimeId).PatchUrlGroup;
+        set
+        {
+            var game = GetGameSettings(LauncherProfiles.BlueArchiveJapan.RuntimeId);
+            if (EqualityComparer<string>.Default.Equals(game.PatchUrlGroup, value))
+            {
+                return;
+            }
+
+            game.PatchUrlGroup = value;
+            OnPropertyChanged();
+        }
+    }
 
     [JsonPropertyName("customBackgroundPath")]
     public string CustomBackgroundPath { get => customBackgroundPath; set => SetProperty(ref customBackgroundPath, value); }
@@ -155,8 +258,23 @@ public sealed class LauncherSettings : SettingsModel
     [JsonPropertyName("backgroundVideoMuted")]
     public bool BackgroundVideoMuted { get => backgroundVideoMuted; set => SetProperty(ref backgroundVideoMuted, value); }
 
-    [JsonPropertyName("resourcePanelUid")]
-    public string ResourcePanelUid { get => resourcePanelUid; set => SetProperty(ref resourcePanelUid, value); }
+    /// <summary>固定投影蔚蓝档案设置的兼容入口；不跟随当前查看条目，也不单独写入 JSON。</summary>
+    [JsonIgnore]
+    public string ResourcePanelUid
+    {
+        get => GetGameSettings(LauncherProfiles.BlueArchiveJapan.RuntimeId).ResourcePanelUid;
+        set
+        {
+            var game = GetGameSettings(LauncherProfiles.BlueArchiveJapan.RuntimeId);
+            if (EqualityComparer<string>.Default.Equals(game.ResourcePanelUid, value))
+            {
+                return;
+            }
+
+            game.ResourcePanelUid = value;
+            OnPropertyChanged();
+        }
+    }
 
     [JsonPropertyName("updateChannel")]
     public string UpdateChannel { get => updateChannel; set => SetProperty(ref updateChannel, value); }
@@ -164,14 +282,41 @@ public sealed class LauncherSettings : SettingsModel
     [JsonPropertyName("logLevel")]
     public string LogLevel { get => logLevel; set => SetProperty(ref logLevel, value); }
 
-    [JsonPropertyName("resourcePanelUidSource")]
-    public string ResourcePanelUidSource { get => resourcePanelUidSource; set => SetProperty(ref resourcePanelUidSource, value); }
+    /// <summary>固定投影蔚蓝档案设置的兼容入口；不跟随当前查看条目，也不单独写入 JSON。</summary>
+    [JsonIgnore]
+    public string ResourcePanelUidSource
+    {
+        get => GetGameSettings(LauncherProfiles.BlueArchiveJapan.RuntimeId).ResourcePanelUidSource;
+        set
+        {
+            var game = GetGameSettings(LauncherProfiles.BlueArchiveJapan.RuntimeId);
+            if (EqualityComparer<string>.Default.Equals(game.ResourcePanelUidSource, value))
+            {
+                return;
+            }
 
-    [JsonPropertyName("gameRuntime")]
-    public GameRuntimeSettings GameRuntime { get => gameRuntime; set => SetProperty(ref gameRuntime, value); }
+            game.ResourcePanelUidSource = value;
+            OnPropertyChanged();
+        }
+    }
 
-    [JsonPropertyName("afterLaunchBehavior")]
-    public string AfterLaunchBehavior { get => afterLaunchBehavior; set => SetProperty(ref afterLaunchBehavior, value); }
+    /// <summary>固定投影蔚蓝档案设置的兼容入口；不跟随当前查看条目，也不单独写入 JSON。</summary>
+    [JsonIgnore]
+    public GameRuntimeSettings GameRuntime
+    {
+        get => GetGameSettings(LauncherProfiles.BlueArchiveJapan.RuntimeId).GameRuntime;
+        set
+        {
+            var game = GetGameSettings(LauncherProfiles.BlueArchiveJapan.RuntimeId);
+            if (EqualityComparer<GameRuntimeSettings>.Default.Equals(game.GameRuntime, value))
+            {
+                return;
+            }
+
+            game.GameRuntime = value;
+            OnPropertyChanged();
+        }
+    }
 
     [JsonPropertyName("statusDetailMode")]
     public string StatusDetailMode { get => statusDetailMode; set => SetProperty(ref statusDetailMode, value); }
@@ -185,7 +330,8 @@ public sealed class LauncherSettings : SettingsModel
     }
 
     /// <summary>
-    /// Deep-clones this settings object.
+    /// Deep-clones this settings object, preserving missing or explicitly null game entries
+    /// for the document reader to validate instead of silently creating default game settings.
     /// Shared by <c>LauncherSettingsService.NormalizeSettings</c> and <see cref="Services.SettingsEditor"/>.
     /// </summary>
     public LauncherSettings DeepClone()
@@ -195,7 +341,7 @@ public sealed class LauncherSettings : SettingsModel
 
     /// <summary>
     /// Copy constructor for deep cloning. Copies all settings properties,
-    /// including a shallow copy of <see cref="ThemeColorPalette"/> (strings are immutable).
+    /// including detached game entries and a shallow copy of <see cref="ThemeColorPalette"/> (strings are immutable).
     /// ⚠️ When adding a new setting property to this class,
     /// you MUST add a corresponding line to this constructor.
     /// Failure to do so results in silent shallow copy of the new property.
@@ -205,11 +351,25 @@ public sealed class LauncherSettings : SettingsModel
     /// </summary>
     public LauncherSettings(LauncherSettings other)
     {
-        GamePath = other.GamePath;
-        LaunchCheckMode = other.LaunchCheckMode;
+        FormatVersion = other.FormatVersion;
+        LastViewedGameId = other.LastViewedGameId;
+        if (other.Games is null)
+        {
+            Games = null!;
+        }
+        else
+        {
+            var copiedGames = new Dictionary<string, GameSettings>(StringComparer.Ordinal);
+            foreach (var (gameId, settings) in other.Games)
+            {
+                copiedGames.Add(gameId, settings?.DeepClone()!);
+            }
+
+            Games = copiedGames;
+        }
+
         ProxyMode = other.ProxyMode;
         CloseBehavior = other.CloseBehavior;
-        AfterLaunchBehavior = other.AfterLaunchBehavior;
         Language = other.Language;
         ThemeMode = other.ThemeMode;
         MotionMode = other.MotionMode;
@@ -233,23 +393,66 @@ public sealed class LauncherSettings : SettingsModel
         WindowPositionY = other.WindowPositionY;
         WindowWidth = other.WindowWidth;
         WindowHeight = other.WindowHeight;
-        PatchUrlGroup = other.PatchUrlGroup;
         CustomBackgroundPath = other.CustomBackgroundPath;
         BackgroundSource = other.BackgroundSource;
         BackgroundFit = other.BackgroundFit;
         BackgroundFillColor = other.BackgroundFillColor;
         BackgroundVideoVolume = other.BackgroundVideoVolume;
         BackgroundVideoMuted = other.BackgroundVideoMuted;
-        ResourcePanelUid = other.ResourcePanelUid;
-        ResourcePanelUidSource = other.ResourcePanelUidSource;
         StatusDetailMode = other.StatusDetailMode;
         AcceptedAgreementVersion = other.AcceptedAgreementVersion;
         UpdateChannel = other.UpdateChannel;
         LogLevel = other.LogLevel;
-        // A hand-edited or corrupted settings file can carry "gameRuntime": null;
-        // NormalizeSettings deep-clones before its own ??= guard runs, so the copy
-        // constructor must tolerate null without crashing the load path.
-        GameRuntime = other.GameRuntime?.DeepClone() ?? new GameRuntimeSettings();
+    }
+
+    /// <summary>
+    /// Applies only edits made since a session baseline to the specified scope.
+    /// A null game identity denotes launcher preferences; navigation and window geometry
+    /// are owned by the shell and are never restored from an old settings draft.
+    /// </summary>
+    public void ApplyDraftChanges(LauncherSettings draft, LauncherSettings baseline, string? gameId)
+    {
+        ArgumentNullException.ThrowIfNull(draft);
+        ArgumentNullException.ThrowIfNull(baseline);
+        if (gameId is not null)
+        {
+            GetGameSettings(gameId).ApplyDraftChanges(
+                draft.GetGameSettings(gameId),
+                baseline.GetGameSettings(gameId));
+            return;
+        }
+
+        if (!ValuesEqual(draft.ProxyMode, baseline.ProxyMode)) ProxyMode = draft.ProxyMode;
+        if (!ValuesEqual(draft.CloseBehavior, baseline.CloseBehavior)) CloseBehavior = draft.CloseBehavior;
+        if (!ValuesEqual(draft.Language, baseline.Language)) Language = draft.Language;
+        if (!ValuesEqual(draft.ThemeMode, baseline.ThemeMode)) ThemeMode = draft.ThemeMode;
+        if (!ValuesEqual(draft.MotionMode, baseline.MotionMode)) MotionMode = draft.MotionMode;
+        if (!ValuesEqual(draft.ThemeColorMode, baseline.ThemeColorMode)) ThemeColorMode = draft.ThemeColorMode;
+        if (!ValuesEqual(draft.ThemeColorExtractionAlgorithm, baseline.ThemeColorExtractionAlgorithm)) ThemeColorExtractionAlgorithm = draft.ThemeColorExtractionAlgorithm;
+        if (!ValuesEqual(draft.ThemeColorVariant, baseline.ThemeColorVariant)) ThemeColorVariant = draft.ThemeColorVariant;
+        if (!ValuesEqual(draft.NeutralColorStrategy, baseline.NeutralColorStrategy)) NeutralColorStrategy = draft.NeutralColorStrategy;
+        if (!ValuesEqual(draft.CustomThemeColor, baseline.CustomThemeColor)) CustomThemeColor = draft.CustomThemeColor;
+        if (!ValuesEqual(draft.SelectedThemeColorPaletteIndex, baseline.SelectedThemeColorPaletteIndex)) SelectedThemeColorPaletteIndex = draft.SelectedThemeColorPaletteIndex;
+        if (!ValuesEqual(draft.DownloadSpeedLimit, baseline.DownloadSpeedLimit)) DownloadSpeedLimit = draft.DownloadSpeedLimit;
+        if (!ValuesEqual(draft.EnableHttp2, baseline.EnableHttp2)) EnableHttp2 = draft.EnableHttp2;
+        if (!ValuesEqual(draft.AllowBlockedNetworkAddresses, baseline.AllowBlockedNetworkAddresses)) AllowBlockedNetworkAddresses = draft.AllowBlockedNetworkAddresses;
+        if (!ValuesEqual(draft.EnableStartupUpdateCheck, baseline.EnableStartupUpdateCheck)) EnableStartupUpdateCheck = draft.EnableStartupUpdateCheck;
+        if (!ValuesEqual(draft.ShowRemoteContentCard, baseline.ShowRemoteContentCard)) ShowRemoteContentCard = draft.ShowRemoteContentCard;
+        if (!ValuesEqual(draft.RememberWindowPositionAndSize, baseline.RememberWindowPositionAndSize)) RememberWindowPositionAndSize = draft.RememberWindowPositionAndSize;
+        if (!ValuesEqual(draft.CustomBackgroundPath, baseline.CustomBackgroundPath)) CustomBackgroundPath = draft.CustomBackgroundPath;
+        if (!ValuesEqual(draft.BackgroundSource, baseline.BackgroundSource)) BackgroundSource = draft.BackgroundSource;
+        if (!ValuesEqual(draft.BackgroundFit, baseline.BackgroundFit)) BackgroundFit = draft.BackgroundFit;
+        if (!ValuesEqual(draft.BackgroundFillColor, baseline.BackgroundFillColor)) BackgroundFillColor = draft.BackgroundFillColor;
+        if (!ValuesEqual(draft.BackgroundVideoVolume, baseline.BackgroundVideoVolume)) BackgroundVideoVolume = draft.BackgroundVideoVolume;
+        if (!ValuesEqual(draft.BackgroundVideoMuted, baseline.BackgroundVideoMuted)) BackgroundVideoMuted = draft.BackgroundVideoMuted;
+        if (!ValuesEqual(draft.StatusDetailMode, baseline.StatusDetailMode)) StatusDetailMode = draft.StatusDetailMode;
+        if (!ValuesEqual(draft.AcceptedAgreementVersion, baseline.AcceptedAgreementVersion)) AcceptedAgreementVersion = draft.AcceptedAgreementVersion;
+        if (!ValuesEqual(draft.UpdateChannel, baseline.UpdateChannel)) UpdateChannel = draft.UpdateChannel;
+        if (!ValuesEqual(draft.LogLevel, baseline.LogLevel)) LogLevel = draft.LogLevel;
+        if (!ValuesEqual(draft.ThemeColorPalette, baseline.ThemeColorPalette))
+        {
+            ThemeColorPalette = draft.ThemeColorPalette is null ? null! : [.. draft.ThemeColorPalette];
+        }
     }
 
     /// <summary>
@@ -261,11 +464,14 @@ public sealed class LauncherSettings : SettingsModel
     /// </summary>
     private static readonly (string Name, Func<LauncherSettings, object?> Read)[] ComparedProperties =
     [
-        (nameof(GamePath), settings => settings.GamePath),
-        (nameof(LaunchCheckMode), settings => settings.LaunchCheckMode),
+        (nameof(FormatVersion), settings => settings.FormatVersion),
+        (nameof(LastViewedGameId), settings => settings.LastViewedGameId),
+        (nameof(Games), settings => settings.Games),
+        (nameof(GamePath), settings => settings.FindBlueArchiveSettings()?.GamePath),
+        (nameof(LaunchCheckMode), settings => settings.FindBlueArchiveSettings()?.LaunchCheckMode),
         (nameof(ProxyMode), settings => settings.ProxyMode),
         (nameof(CloseBehavior), settings => settings.CloseBehavior),
-        (nameof(AfterLaunchBehavior), settings => settings.AfterLaunchBehavior),
+        (nameof(AfterLaunchBehavior), settings => settings.FindBlueArchiveSettings()?.AfterLaunchBehavior),
         (nameof(Language), settings => settings.Language),
         (nameof(ThemeMode), settings => settings.ThemeMode),
         (nameof(MotionMode), settings => settings.MotionMode),
@@ -286,30 +492,29 @@ public sealed class LauncherSettings : SettingsModel
         (nameof(WindowPositionY), settings => settings.WindowPositionY),
         (nameof(WindowWidth), settings => settings.WindowWidth),
         (nameof(WindowHeight), settings => settings.WindowHeight),
-        (nameof(PatchUrlGroup), settings => settings.PatchUrlGroup),
+        (nameof(PatchUrlGroup), settings => settings.FindBlueArchiveSettings()?.PatchUrlGroup),
         (nameof(CustomBackgroundPath), settings => settings.CustomBackgroundPath),
         (nameof(BackgroundSource), settings => settings.BackgroundSource),
         (nameof(BackgroundFit), settings => settings.BackgroundFit),
         (nameof(BackgroundFillColor), settings => settings.BackgroundFillColor),
         (nameof(BackgroundVideoVolume), settings => settings.BackgroundVideoVolume),
         (nameof(BackgroundVideoMuted), settings => settings.BackgroundVideoMuted),
-        (nameof(ResourcePanelUid), settings => settings.ResourcePanelUid),
-        (nameof(ResourcePanelUidSource), settings => settings.ResourcePanelUidSource),
+        (nameof(ResourcePanelUid), settings => settings.FindBlueArchiveSettings()?.ResourcePanelUid),
+        (nameof(ResourcePanelUidSource), settings => settings.FindBlueArchiveSettings()?.ResourcePanelUidSource),
         (nameof(StatusDetailMode), settings => settings.StatusDetailMode),
         (nameof(AcceptedAgreementVersion), settings => settings.AcceptedAgreementVersion),
         (nameof(UpdateChannel), settings => settings.UpdateChannel),
         (nameof(LogLevel), settings => settings.LogLevel),
-        (nameof(GameRuntime), settings => settings.GameRuntime)
+        (nameof(GameRuntime), settings => settings.FindBlueArchiveSettings()?.GameRuntime)
     ];
 
     /// <summary>
     /// Reports whether <paramref name="other"/> holds the same settings state — the identity the
     /// settings page's dirty flag and save button are derived from, and the counterpart of
     /// <see cref="DeepClone"/>: clone, then compare, must answer "same".
-    /// Every entry goes through <see cref="ValuesEqual"/>, which handles the two shapes that carry
-    /// no value equality of their own: <see cref="ThemeColorPalette"/> element by element (order is
-    /// significant — the extractor decides the canonical order, so any dedup or normalization
-    /// shifts indices) and <see cref="GameRuntime"/> by recursing into its own state identity.
+    /// Every entry goes through <see cref="ValuesEqual"/>: palettes compare in order, while games
+    /// compare by Ordinal key and each game/runtime recursively compares its own settings state.
+    /// The fixed BA aliases remain declared here so property guards cover the compatibility API.
     /// </summary>
     public bool HasSameSettingsState(LauncherSettings? other)
     {
@@ -359,6 +564,35 @@ public sealed class LauncherSettings : SettingsModel
         if (left is GameRuntimeSettings leftRuntime && right is GameRuntimeSettings rightRuntime)
         {
             return leftRuntime.HasSameSettingsState(rightRuntime);
+        }
+
+        if (left is GameSettings leftGame && right is GameSettings rightGame)
+        {
+            return leftGame.HasSameSettingsState(rightGame);
+        }
+
+        if (left is Dictionary<string, GameSettings> leftGames
+            && right is Dictionary<string, GameSettings> rightGames)
+        {
+            if (leftGames.Count != rightGames.Count)
+            {
+                return false;
+            }
+
+            // Dictionary insertion order is not settings state; game identities use Ordinal keys.
+            var ordinalRight = rightGames.Comparer.Equals(StringComparer.Ordinal)
+                ? rightGames
+                : new Dictionary<string, GameSettings>(rightGames, StringComparer.Ordinal);
+            foreach (var (gameId, settings) in leftGames)
+            {
+                if (!ordinalRight.TryGetValue(gameId, out var otherSettings)
+                    || !ValuesEqual(settings, otherSettings))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         // Strings are IEnumerable<char>, so they must be handled before the sequence branch.
@@ -440,7 +674,8 @@ public sealed class LauncherSettings : SettingsModel
         // default to Cafe source so they get Chinese text without manual setup.
         if (IsChineseUICulture())
         {
-            settings.PatchUrlGroup = PatchUrlGroups.Cafe;
+            settings.GetGameSettings(LauncherProfiles.BlueArchiveJapan.RuntimeId).PatchUrlGroup =
+                PatchUrlGroups.Cafe;
         }
 
         return settings;

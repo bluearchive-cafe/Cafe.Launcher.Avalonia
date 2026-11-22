@@ -217,6 +217,33 @@ public sealed class GameShortcutServiceTests : IDisposable
     }
 
     [WindowsFact]
+    public async Task CreateShortcutInDirectoryAsync_WhenProfileDeclaresNoStartScript_TargetsGameExecutable()
+    {
+        var gameDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "stella")).FullName;
+        var executablePath = Path.Combine(gameDirectory, LauncherProfiles.StellaSoraChina.GameExecutableFileName);
+        File.WriteAllText(executablePath, string.Empty);
+        var shortcutDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "desktop stella")).FullName;
+        var service = new GameShortcutService(LauncherProfiles.StellaSoraChina, new LocalizationService());
+        var snapshot = new LauncherStatusSnapshot
+        {
+            LocalGame = new LocalInstallationState
+            {
+                GamePath = gameDirectory,
+                GameConfig = new GameLauncherConfig { Name = "xtlr" }
+            }
+        };
+
+        var result = await service.CreateShortcutInDirectoryAsync(snapshot, shortcutDirectory);
+
+        Assert.Equal(GameShortcutStatus.Created, result.Status);
+        var (targetPath, workingDirectory, arguments) = ReadShortcutTarget(result.Detail);
+        // 没有 run.bat 的档案直接指向游戏可执行文件，不依赖游戏目录中的启动脚本。
+        Assert.Equal(executablePath, targetPath, ignoreCase: true);
+        Assert.Equal(gameDirectory, workingDirectory, ignoreCase: true);
+        Assert.Equal(string.Empty, arguments);
+    }
+
+    [WindowsFact]
     public async Task CreateShortcutInDirectoryAsync_WhenStartScriptMissing_ReturnsGameNotResolved()
     {
         var gameDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "game")).FullName;
@@ -531,12 +558,29 @@ public sealed class GameShortcutServiceTests : IDisposable
                 "[Desktop Entry]",
                 "Type=Application",
                 "Name=Blue Archive",
-                $"Exec=\"/opt/cafe-launcher/Cafe.Launcher\" {Program.LaunchGameArgument}",
+                $"Exec=\"/opt/cafe-launcher/Cafe.Launcher\" {Program.LaunchGameArgument} --game-id blue-archive-jp",
                 "Icon=/opt/cafe-launcher/Assets/app-icon.ico",
                 "Terminal=false",
                 "Categories=Game;"
             ],
             lines);
+    }
+
+    [Theory]
+    [InlineData("blue-archive-jp")]
+    [InlineData("stella-sora-cn")]
+    public void BuildDesktopEntry_WithExplicitGameId_PinsTheSameIdentity(string gameId)
+    {
+        var content = GameShortcutService.BuildDesktopEntry(
+            "Game",
+            @"/opt/cafe-launcher/Cafe.Launcher",
+            iconPath: null,
+            gameId);
+
+        Assert.Contains(
+            $"Exec=\"/opt/cafe-launcher/Cafe.Launcher\" {Program.LaunchGameArgument} --game-id {gameId}",
+            content,
+            StringComparison.Ordinal);
     }
 
     [Fact]
@@ -621,7 +665,10 @@ public sealed class GameShortcutServiceTests : IDisposable
         Assert.Contains("Type=Application", content, StringComparison.Ordinal);
         Assert.Contains("Name=Blue Archive", content, StringComparison.Ordinal);
         var escapedLauncherPath = launcherPath.Replace(@"\", @"\\\\", StringComparison.Ordinal);
-        Assert.Contains($"Exec=\"{escapedLauncherPath}\" {Program.LaunchGameArgument}", content, StringComparison.Ordinal);
+        Assert.Contains(
+            $"Exec=\"{escapedLauncherPath}\" {Program.LaunchGameArgument} --game-id blue-archive-jp",
+            content,
+            StringComparison.Ordinal);
         Assert.Contains("Terminal=false", content, StringComparison.Ordinal);
         Assert.Contains("Categories=Game;", content, StringComparison.Ordinal);
         Assert.DoesNotContain(".exe\"", content, StringComparison.Ordinal);

@@ -1,9 +1,10 @@
-using Avalonia;
+﻿using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Testing;
 using Cafe.Launcher.UI.Constants;
@@ -20,7 +21,7 @@ public sealed partial class MainWindowHeadlessTests
     {
         var monitor = new FakeGameSessionMonitor();
         using var context = CreateContext(configure: services =>
-            services.AddSingleton<IGameSessionMonitor>(monitor));
+            AddBlueArchiveSessionMonitor(services, monitor));
         PrepareGoldenWindow(context);
         ShowLaunchSplitButton(context);
         context.ViewModel.Shell.ApplyLanguage(LauncherLanguages.SimplifiedChinese, hasSnapshot: false);
@@ -37,15 +38,15 @@ public sealed partial class MainWindowHeadlessTests
     {
         var monitor = new FakeGameSessionMonitor();
         using var context = CreateContext(configure: services =>
-            services.AddSingleton<IGameSessionMonitor>(monitor));
+            AddBlueArchiveSessionMonitor(services, monitor));
+        Assert.Same(monitor, context.ViewModel.Games!.Active.SessionMonitor);
         context.Window.Width = 1024;
         context.Window.Height = 640;
         context.ViewModel.Settings.Editor.Current.StatusDetailMode = StatusDetailModes.Compact;
         context.Window.Show();
         Dispatcher.UIThread.RunJobs();
 
-        var panel = context.Window.FindControl<Border>("OperationControlState")!;
-        var row = Assert.Single(panel.GetVisualDescendants().OfType<WrapPanel>());
+        var row = context.Window.FindControl<WrapPanel>("GameStatusDetails")!;
         var caption = context.Window.FindControl<TextBlock>("GameSessionStatusText");
         Assert.NotNull(caption);
         Assert.Same(row, caption.Parent);
@@ -81,7 +82,7 @@ public sealed partial class MainWindowHeadlessTests
     [InlineData(true, 1300, 754, 1d)]
     [InlineData(false, 1024, 640, 1.5d)]
     [InlineData(true, 1024, 640, 1.5d)]
-    public void MainWindow_OperationPanel_UsesStatusDependentBottomInset(bool hideDetails, double width, double height, double scale)
+    public void MainWindow_StatusAndPrimaryAction_KeepSeparateRegions(bool hideDetails, double width, double height, double scale)
     {
         using var context = CreateContext();
         PrepareGoldenWindow(context);
@@ -90,19 +91,24 @@ public sealed partial class MainWindowHeadlessTests
         var action = ShowLaunchSplitButton(context, hideDetails);
         using var typography = new TypographyScaleSnapshot(context.Window, scale);
         Dispatcher.UIThread.RunJobs();
-        var panel = context.Window.FindControl<Border>("OperationControlState")!;
-        var status = Assert.Single(panel.GetVisualDescendants().OfType<WrapPanel>());
-        var actionBottomRight = action.TranslatePoint(new Point(action.Bounds.Width, action.Bounds.Height), context.Window)!.Value;
-        var lastContent = hideDetails ? (Control)action : status;
-        var contentBottomRight = lastContent.TranslatePoint(new Point(lastContent.Bounds.Width, lastContent.Bounds.Height), context.Window)!.Value;
-        Assert.InRange(context.Window.Bounds.Width - actionBottomRight.X, 39, 41);
-        var expectedBottomInset = hideDetails ? 40 : 24;
-        Assert.InRange(context.Window.Bounds.Height - contentBottomRight.Y, expectedBottomInset - 1, expectedBottomInset + 1);
+        var status = context.Window.FindControl<WrapPanel>("GameStatusDetails")!;
+        var actionOrigin = action.TranslatePoint(default, context.Window)!.Value;
+        AssertControlInsideWindow(action, context.Window);
+        Assert.Equal(12, context.Window.ClientSize.Width - actionOrigin.X - action.Bounds.Width);
+        Assert.Equal(12, context.Window.ClientSize.Height - actionOrigin.Y - action.Bounds.Height);
         if (!hideDetails)
         {
-            Assert.InRange(Math.Abs(contentBottomRight.X - actionBottomRight.X), 0, 1);
-            var statusTop = status.TranslatePoint(default, context.Window)!.Value.Y;
-            Assert.InRange(statusTop - actionBottomRight.Y, 15, 17);
+            var statusOrigin = status.TranslatePoint(default, context.Window)!.Value;
+            Assert.True(status.IsEffectivelyVisible);
+            Assert.True(statusOrigin.X < actionOrigin.X);
+            Assert.True(statusOrigin.X + status.Bounds.Width <= actionOrigin.X ||
+                        statusOrigin.Y + status.Bounds.Height <= actionOrigin.Y);
+            Assert.All(status.Children.OfType<TextBlock>().Where(caption => caption.IsEffectivelyVisible),
+                caption => AssertControlInsideWindow(caption, context.Window));
+        }
+        else
+        {
+            Assert.False(status.IsEffectivelyVisible);
         }
     }
 
@@ -132,7 +138,7 @@ public sealed partial class MainWindowHeadlessTests
         Assert.Null(context.Window.FindControl<Border>("OperationInstallState"));
         Assert.Null(context.Window.FindControl<Border>("OperationProgressState"));
 
-        var statusSummary = Assert.Single(installState.GetVisualDescendants().OfType<WrapPanel>());
+        var statusSummary = context.Window.FindControl<WrapPanel>("GameStatusDetails")!;
         Assert.False(statusSummary.IsEffectivelyVisible);
 
         context.ViewModel.Settings.Editor.Current.StatusDetailMode = StatusDetailModes.Compact;
@@ -144,5 +150,11 @@ public sealed partial class MainWindowHeadlessTests
         Dispatcher.UIThread.RunJobs();
         Assert.False(statusSummary.IsEffectivelyVisible);
         Assert.True(action.IsEffectivelyVisible);
+    }
+
+    private static void AddBlueArchiveSessionMonitor(IServiceCollection services, FakeGameSessionMonitor monitor)
+    {
+        services.AddSingleton<Func<LauncherGameContext, IGameSessionMonitor>>(
+            (IServiceProvider _) => context => monitor);
     }
 }

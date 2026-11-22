@@ -65,13 +65,13 @@ internal sealed class ErrorHandlingService : IErrorHandlingService
 {
     private readonly LocalizationService localizer;
     private readonly ILauncherDiagnostics diagnostics;
-    private readonly ToastService toastService;
+    private readonly INotificationService toastService;
 
     /// <summary>Initializes the service with its localization, diagnostics, and toast collaborators.</summary>
     public ErrorHandlingService(
         LocalizationService localizer,
         ILauncherDiagnostics diagnostics,
-        ToastService toastService)
+        INotificationService toastService)
     {
         this.localizer = localizer;
         this.diagnostics = diagnostics;

@@ -23,7 +23,7 @@
 
 ## 2. 程序集与命名边界
 
-`Cafe.Launcher.Core` 是无表现依赖的后端边界：不得引用 Avalonia、MarkView、Material Icons 或 UI 资源；用户可见文案以稳定 code 或领域结果传给 UI，由 UI 本地化。Core 不解析进程数据根，也不反射入口程序集取版本。数据根由组合根解析一次后经 `AddLauncherCore` 的必填参数注入（[ADR-025](docs/design/adr/ADR-025-数据根由组合根解析并注入.md)）；版本来自注入的 `LauncherBuildIdentity`。
+`Cafe.Launcher.Core` 是无表现依赖的后端边界：不得引用 Avalonia、MarkView、图标库或 UI 资源；用户可见文案以稳定 code 或领域结果传给 UI，由 UI 本地化。Core 不解析进程数据根，也不反射入口程序集取版本。数据根由组合根解析一次后经 `AddLauncherCore` 的必填参数注入（[ADR-025](docs/design/adr/ADR-025-数据根由组合根解析并注入.md)）；版本来自注入的 `LauncherBuildIdentity`。
 
 `Cafe.Launcher.UI` 承载全部 Avalonia 控件、ViewModel、主题、资源与运行时资产（`Views/`、`ViewModels/`、`Features/`、`Controls/`、`Converters/`、`Models/`、`Helpers/`、表现层 `Services/`、`Resources/`、`Assets/`）。宿主只保留进程生命周期与入口文件。分层见 [ADR-042](docs/design/adr/ADR-042-Avalonia启动器按Core与UI程序集分层.md)，命名见 [ADR-043](docs/design/adr/ADR-043-程序集与命名空间同名.md)。
 
@@ -81,20 +81,17 @@
 
 视觉规格（token 数值、组件规范、表面解剖、无障碍阈值）归[设计规范](docs/design/design-system-spec.md)；行为语义（模态交互权、ESC、动效模式）归 [CONTEXT.md「设计系统」](CONTEXT.md#设计系统)。本节只规定 XAML 与样式必须怎么写。
 
-### 4.1 Token 与视觉值
+### 4.1 FluentAvalonia 主题
 
-描边与分隔线的厚度及验收口径见[设计规范 §2.6](docs/design/design-system-spec.md#描边分隔线与像素对齐)。
+- 主应用和隔离崩溃报告进程各自加载 `FluentAvaloniaTheme`。使用控件自带的模板、焦点、交互状态与尺寸；使用现成的 `accent`、`TransparentButton` 和 Fluent 字阶资源。
+- 页面用 Avalonia 标准面板组合内容。业务容器可以声明布局、数据绑定和动效，并直接引用 Fluent 的语义画刷；不为现有控件编写 `ControlTemplate`、`ControlTheme` 或覆盖模板部件的外观。
+- 壁纸、品牌资产、应用动效和持久化外观设置属于启动器业务。通过 `FluentAvaloniaTheme.CustomAccentColor` 传递主题强调色，Fluent 控件负责绘制状态。
 
-- 所有可视值使用 `StaticResource`/`DynamicResource` 设计 token（`App.axaml` 的 `Launcher.*` 家族）。禁止裸色号、`Transparent`、裸图标尺寸、裸 `4`/`6`/`8` 圆角半径；`Spacing`/`ColumnSpacing`/`RowSpacing` 也引用 `Launcher.Spacing.*`（含 `Spacing.None`）。
-- 透明度只允许结构性 `0`/`1`（可见性、动画关键帧）或 `Launcher.StateLayer.*`；分数透明度以 `Launcher.StateLayer.*` 五档为唯一来源。
-- 主题无关的渐变和阴影只允许定义在 `App.axaml` 或 `MainWindow.Styles.axaml`。
+### 4.2 控件与无障碍
 
-### 4.2 控件、样式与无障碍
-
-- 每个交互控件都必须有绑定到本地化字符串的 `AutomationProperties.Name`；契约测试全量扫描 `Views/` 与 `Controls/` 下的 XAML（`IsTabStop="False"` 的设计画廊展示件除外）。
-- 控件使用语义化 `Classes`，不写内联 Style。样式归档：窗口级共享样式（标题栏、内容面板、共享按钮/文本类、设置页）留在 `Views/MainWindow.Styles.axaml`；只服务单一覆盖层或功能、且类名已带组件限定的样式放 `Views/Styles/<Feature>.axaml`，由 `MainWindow.Styles.axaml` 末尾按固定顺序 `StyleInclude`（Diagnostics → RemoteContent → SetupWizard → Toast → DialogSurface → Segmented → ResourcePanel → GameTask）。同优先级选择器按包含顺序后者胜出，新增文件追加在末尾；`MainWindow.axaml` 只留窗口外壳与内容网格。
-- Avalonia 使用编译绑定与显式绑定，没有反射式 view locator。
-- 崩溃窗口独立使用 `Crash.*` 令牌，就近定义在自身资源中；隔离报告进程没有 `App.axaml`，见 [ADR-020](docs/design/adr/ADR-020-崩溃窗口独立Fluent设计系统.md)。
+- 设置行的内容和操作槽交由 `FASettingsExpanderItem` 排列，互斥选项用原生单选按钮，通知用 `FAInfoBar`。
+- 可操作项保留本地化自动化名称。上游模板没有转发子按钮的名称时，可添加只设置自动化属性的选择器。
+- 模态栈仍负责 ESC、焦点限制与恢复。任务、设置和向导由标准布局组件承载其业务内容。
 
 ### 4.3 覆盖层与模态实现
 
@@ -221,11 +218,10 @@
 | Avalonia / Avalonia.Desktop | 12.1.6 | UI Framework |
 | Avalonia.Controls.ColorPicker | 12.1.6 | 自定义主题色取色器 |
 | MarkView.Avalonia | 12.4.1 | 基于 Markdig 的更新说明 Markdown 预览 |
-| Avalonia.Themes.Fluent | 12.1.6 | Fluent 主题 |
+| FluentAvaloniaUI | 3.1.0 | 主应用与独立崩溃报告的 Fluent 2 主题与控件模板 |
 | Avalonia.Headless.XUnit | 12.1.6 | Headless UI testing |
 | AvaloniaUI.DiagnosticsSupport | 2.2.3 | 调试期 UI 诊断（Debug 专用，Release 不分发） |
 | CommunityToolkit.Mvvm | 8.4.2 | MVVM source generators |
-| Material.Icons.Avalonia | 3.0.2 | Icon library |
 | libmpv（Windows x64 LGPL 构建） | 2026-10-31-9e2ed65eb0 | 视频背景 Render API；版本与双重 SHA-256 见 `native/libmpv/manifest.json`，不属于 NuGet 依赖 |
 | libmpv（Linux x64 / macOS arm64 便携版 LGPL 构建） | mpv 0.41.0，ic-plugin-videocodecs v0.1.1 | 视频背景 Render API；来源和 SHA-256 见 `native/libmpv/unix-manifest.json`，系统安装包使用发行版运行库 |
 | Microsoft.Extensions.DependencyInjection | 10.0.15 | DI 容器 |

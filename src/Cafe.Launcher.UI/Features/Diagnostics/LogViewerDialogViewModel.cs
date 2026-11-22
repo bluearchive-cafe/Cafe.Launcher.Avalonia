@@ -21,7 +21,7 @@ internal sealed partial class LogViewerDialogViewModel : ObservableObject, IModa
     private const int PageSize = 500;
     private static readonly TimeSpan FilterDebounceDelay = TimeSpan.FromMilliseconds(200);
     private readonly UnifiedLogger logger;
-    private readonly ToastService toastService;
+    private readonly INotificationService toastService;
     private readonly LocalizationService localizer;
     private readonly ILauncherDiagnostics diagnostics;
     private readonly Func<CancellationToken, Task<IReadOnlyList<LogEntryDisplay>>> entryLoader;
@@ -69,7 +69,7 @@ internal sealed partial class LogViewerDialogViewModel : ObservableObject, IModa
 
     public LogViewerDialogViewModel(
         UnifiedLogger logger,
-        ToastService toastService,
+        INotificationService toastService,
         LocalizationService localizer,
         ILauncherDiagnostics diagnostics)
         : this(logger, toastService, localizer, diagnostics, null)
@@ -78,7 +78,7 @@ internal sealed partial class LogViewerDialogViewModel : ObservableObject, IModa
 
     internal LogViewerDialogViewModel(
         UnifiedLogger logger,
-        ToastService toastService,
+        INotificationService toastService,
         LocalizationService localizer,
         ILauncherDiagnostics diagnostics,
         Func<CancellationToken, Task<IReadOnlyList<LogEntryDisplay>>>? entryLoader = null)

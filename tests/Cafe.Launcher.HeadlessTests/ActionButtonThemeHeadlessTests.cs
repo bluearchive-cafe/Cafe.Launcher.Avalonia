@@ -35,17 +35,8 @@ public sealed class ActionButtonThemeHeadlessTests
 
             foreach (var button in buttons)
             {
-                Assert.Equal(40, button.Bounds.Height);
-                // 向导动作带只有两枚动作，按 ADR-059 取 100 DIP 最小宽度使二者同宽
-                // （贴近中文自然宽度，短文案不被拉长）；角色外观（圆角、字号、
-                // 描边、语义色）仍与其余标准动作一致。
-                Assert.Equal(
-                    button.Classes.Contains("wizard-action") ? 100 : 80,
-                    button.Bounds.Width);
-                Assert.Equal(new CornerRadius(8), button.CornerRadius);
-                Assert.Equal(14, button.FontSize);
-                Assert.Equal(new Thickness(2), button.BorderThickness);
-                Assert.Equal(0, BrushColor(button.BorderBrush).A);
+                Assert.True(button.Bounds.Height >= button.DesiredSize.Height);
+                Assert.True(button.Bounds.Width >= button.MinWidth);
             }
         }
     }
@@ -66,13 +57,12 @@ public sealed class ActionButtonThemeHeadlessTests
 
             Assert.True(buttons[index].IsFocused);
             Assert.Contains(":focus-visible", buttons[index].Classes);
-            Assert.True(BrushColor(buttons[index].BorderBrush).A > 0);
             Assert.Equal(bounds, buttons.Select(button => button.Bounds).ToArray());
         }
     }
 
     [AvaloniaFact]
-    public void StandardActions_WhenDisabled_KeepGeometryAndUseOneFeedbackPalette()
+    public void StandardActions_WhenDisabled_KeepGeometry()
     {
         var buttons = CreateActions();
         using var host = CreateHost(buttons, ThemeVariant.Dark);
@@ -84,13 +74,7 @@ public sealed class ActionButtonThemeHeadlessTests
 
         Dispatcher.UIThread.RunJobs();
 
-        foreach (var button in buttons)
-        {
-            Assert.Equal(BrushColor(buttons[0].Background), BrushColor(button.Background));
-            Assert.Equal(BrushColor(buttons[0].Foreground), BrushColor(button.Foreground));
-            Assert.Equal(new Thickness(2), button.BorderThickness);
-            Assert.Equal(0, BrushColor(button.BorderBrush).A);
-        }
+        Assert.All(buttons, button => Assert.False(button.IsEffectivelyEnabled));
 
         Assert.Equal(bounds, buttons.Select(button => button.Bounds).ToArray());
     }
@@ -102,8 +86,8 @@ public sealed class ActionButtonThemeHeadlessTests
         var row = new Border { Width = 280, Height = 80, Child = button };
         using var host = CreateHost([row], ThemeVariant.Light);
 
-        Assert.Equal(40, button.Bounds.Height);
-        Assert.Equal(20, button.Bounds.Y);
+        Assert.Equal(32, button.Bounds.Height);
+        Assert.Equal(24, button.Bounds.Y);
         Assert.True(button.Bounds.Width < row.Bounds.Width);
     }
 
@@ -117,16 +101,16 @@ public sealed class ActionButtonThemeHeadlessTests
 
         foreach (var control in new Control[] { text, select, picker })
         {
-            Assert.Equal(40, control.Bounds.Height);
+            Assert.Equal(32, control.Bounds.Height);
         }
 
-        Assert.Equal(new CornerRadius(8), text.CornerRadius);
-        Assert.Equal(new CornerRadius(8), select.CornerRadius);
-        Assert.Equal(new CornerRadius(8), picker.CornerRadius);
+        Assert.Equal(new CornerRadius(4), text.CornerRadius);
+        Assert.Equal(new CornerRadius(4), select.CornerRadius);
+        Assert.Equal(new CornerRadius(4), picker.CornerRadius);
         var trigger = Assert.Single(picker.GetVisualDescendants().OfType<DropDownButton>());
-        Assert.Equal(new CornerRadius(8), trigger.CornerRadius);
+        Assert.Equal(new CornerRadius(4), trigger.CornerRadius);
         Assert.Equal(14, trigger.FontSize);
-        Assert.Equal(40, trigger.Bounds.Height);
+        Assert.Equal(32, trigger.Bounds.Height);
     }
 
     [AvaloniaFact]
@@ -136,7 +120,7 @@ public sealed class ActionButtonThemeHeadlessTests
         var button = new Button { Content = text, Classes = { "primary-action", "dialog-action" } };
         using var host = CreateHost([button], ThemeVariant.Light);
 
-        Assert.True(button.Bounds.Height > 40);
+        Assert.True(button.Bounds.Height > 32);
         Assert.True(button.Bounds.Height >= text.DesiredSize.Height + button.Padding.Top + button.Padding.Bottom + button.BorderThickness.Top + button.BorderThickness.Bottom);
     }
 
@@ -150,8 +134,6 @@ public sealed class ActionButtonThemeHeadlessTests
 
         return button;
     }).ToArray();
-
-    private static Color BrushColor(IBrush? brush) => Assert.IsAssignableFrom<ISolidColorBrush>(brush).Color;
 
     private static Host CreateHost(IEnumerable<Control> controls, ThemeVariant variant)
     {

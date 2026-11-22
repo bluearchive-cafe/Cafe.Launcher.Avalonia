@@ -1,0 +1,8 @@
+{
+  "code": 200,
+  "data": {
+    "back_up_cdn": "https://launcher-pkg-ba-jp-bk.yo-star.com",
+    "primary_cdn": "https://launcher-pkg-ba-jp.yo-star.com"
+  },
+  "msg": "OK"
+}

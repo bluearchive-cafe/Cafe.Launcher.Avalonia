@@ -61,8 +61,8 @@ internal sealed class GameLaunchService
         var validation = await manifestValidationService.ValidateAsync(
             target.WorkingDirectory,
             snapshot.LocalGame,
-            snapshot.Settings.LaunchCheckMode,
-            snapshot.Settings.PatchUrlGroup,
+            snapshot.GameSettings.LaunchCheckMode,
+            snapshot.GameSettings.PatchUrlGroup,
             cancellationToken).ConfigureAwait(false);
 
         if (!validation.Success)
@@ -75,7 +75,7 @@ internal sealed class GameLaunchService
             };
         }
 
-        var runtimeConfiguration = GameRuntimeConfiguration.FromSettings(snapshot.Settings.GameRuntime);
+        var runtimeConfiguration = GameRuntimeConfiguration.FromSettings(snapshot.GameSettings.GameRuntime);
 
         // A stable runtime id decouples compatibility state (prefix layout, UMU
         // GAMEID) from the game executable name, so renaming the EXE cannot orphan

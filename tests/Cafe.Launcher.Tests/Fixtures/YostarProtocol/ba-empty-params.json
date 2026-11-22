@@ -1,0 +1,102 @@
+{
+  "synthetic": true,
+  "protocolVersion": "1.7.2",
+  "apiBaseUrl": "https://api-launcher-jp.yo-star.com",
+  "salt": "DE7108E9B2842FD460F4777702727869",
+  "includesParameters": true,
+  "unixTimeSeconds": 1757600000,
+  "authorization": [
+    {
+      "body": "",
+      "expected": "{\"head\":{\"game_tag\":\"BlueArchive_JP\",\"time\":1757600000,\"version\":\"1.7.2\"},\"sign\":\"8a7d2fffaeb1799e29cc3401a6b7c9f0\"}"
+    },
+    {
+      "body": "{\"game_tag\":\"BlueArchive_JP\"}",
+      "expected": "{\"head\":{\"game_tag\":\"BlueArchive_JP\",\"time\":1757600000,\"version\":\"1.7.2\"},\"sign\":\"f01780eb5b92c010599d7e0ab8c3aed2\"}"
+    }
+  ],
+  "config": {
+    "tag": "BlueArchive_JP",
+    "name": "fixture-host",
+    "params": [],
+    "version": "fixture-version",
+    "vc": "tCgdm1DUZim31uqDpwHaYw=="
+  },
+  "reorderedConfig": {
+    "version": "fixture-version",
+    "tag": "BlueArchive_JP",
+    "name": "fixture-host",
+    "params": [],
+    "vc": "mK1r8ENtqMwm/dSCBMWv6A=="
+  },
+  "manifest": {
+    "name": "BlueArchive_JP",
+    "version": "fixture-version",
+    "basis": "fixture-basis",
+    "vc": "9EIyPnL8e3UgjVCqIXt/ug==",
+    "files": [
+      {
+        "path": "/data/fixture.bin",
+        "hash": "1234",
+        "size": "4",
+        "vc": "ET47iBWKW2uue26ggvBMpg=="
+      }
+    ]
+  },
+  "invalidManifestFiles": {
+    "size-negative": {
+      "path": "/data/fixture.bin",
+      "hash": "1234",
+      "size": "-1",
+      "vc": "SqbqFfCMGU4/zlXeogrj9g=="
+    },
+    "size-signed": {
+      "path": "/data/fixture.bin",
+      "hash": "1234",
+      "size": "+4",
+      "vc": "k4VeyvuL5Kuqj3nU+Sx0Lg=="
+    },
+    "size-fraction": {
+      "path": "/data/fixture.bin",
+      "hash": "1234",
+      "size": "4.0",
+      "vc": "TeqbAkDL2X4rosKfksoxAA=="
+    },
+    "size-whitespace": {
+      "path": "/data/fixture.bin",
+      "hash": "1234",
+      "size": " 4",
+      "vc": "4kE4BDCbOEgyHw7IMzuWAg=="
+    },
+    "size-overflow": {
+      "path": "/data/fixture.bin",
+      "hash": "1234",
+      "size": "9223372036854775808",
+      "vc": "2+qxm+iodu07KxbM41mnYA=="
+    },
+    "hash-negative": {
+      "path": "/data/fixture.bin",
+      "hash": "-1",
+      "size": "4",
+      "vc": "Pq1xyxiUxS7FlxaY22rG5w=="
+    },
+    "hash-signed": {
+      "path": "/data/fixture.bin",
+      "hash": "+1234",
+      "size": "4",
+      "vc": "GZW1ihqA2pPKBcf9ecqQtg=="
+    },
+    "hash-whitespace": {
+      "path": "/data/fixture.bin",
+      "hash": "1234 ",
+      "size": "4",
+      "vc": "PnRL+RRycFTnNFQCScDzMA=="
+    },
+    "hash-overflow": {
+      "path": "/data/fixture.bin",
+      "hash": "18446744073709551616",
+      "size": "4",
+      "vc": "G6QaFxTLGoVLQk/NVhoUGw=="
+    }
+  }
+}

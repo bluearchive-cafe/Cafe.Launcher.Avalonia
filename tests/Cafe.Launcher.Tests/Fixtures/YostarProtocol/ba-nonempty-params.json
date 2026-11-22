@@ -1,0 +1,52 @@
+{
+  "synthetic": true,
+  "protocolVersion": "1.7.2",
+  "apiBaseUrl": "https://api-launcher-jp.yo-star.com",
+  "salt": "DE7108E9B2842FD460F4777702727869",
+  "includesParameters": true,
+  "unixTimeSeconds": 1757600000,
+  "authorization": [
+    {
+      "body": "",
+      "expected": "{\"head\":{\"game_tag\":\"BlueArchive_JP\",\"time\":1757600000,\"version\":\"1.7.2\"},\"sign\":\"8a7d2fffaeb1799e29cc3401a6b7c9f0\"}"
+    },
+    {
+      "body": "{\"game_tag\":\"BlueArchive_JP\"}",
+      "expected": "{\"head\":{\"game_tag\":\"BlueArchive_JP\",\"time\":1757600000,\"version\":\"1.7.2\"},\"sign\":\"f01780eb5b92c010599d7e0ab8c3aed2\"}"
+    }
+  ],
+  "config": {
+    "tag": "BlueArchive_JP",
+    "name": "fixture-host",
+    "params": [
+      "fixture-client.exe",
+      "--fixture"
+    ],
+    "version": "fixture-version",
+    "vc": "04JZFMAEp+vlzTdiBxQpaQ=="
+  },
+  "reorderedConfig": {
+    "version": "fixture-version",
+    "tag": "BlueArchive_JP",
+    "name": "fixture-host",
+    "params": [
+      "fixture-client.exe",
+      "--fixture"
+    ],
+    "vc": "3Gc6QuvmBVXNCPozbIBvyQ=="
+  },
+  "manifest": {
+    "name": "BlueArchive_JP",
+    "version": "fixture-version",
+    "basis": "fixture-basis",
+    "vc": "9EIyPnL8e3UgjVCqIXt/ug==",
+    "files": [
+      {
+        "path": "/data/fixture.bin",
+        "hash": "1234",
+        "size": "4",
+        "vc": "ET47iBWKW2uue26ggvBMpg=="
+      }
+    ]
+  }
+}

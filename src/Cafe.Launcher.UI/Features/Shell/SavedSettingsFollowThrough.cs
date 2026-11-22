@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.UI.Constants;
 using Cafe.Launcher.UI.Features.GameOperations;
+using Cafe.Launcher.UI.Features.Games;
 using Cafe.Launcher.UI.Features.ResourcePanel;
 using Cafe.Launcher.UI.Features.Settings;
 using Cafe.Launcher.UI.Services;
@@ -21,15 +22,19 @@ internal sealed class SavedSettingsFollowThrough : ISavedSettingsFollowThrough
 {
     private readonly SettingsViewModel settings;
     private readonly ResourcePanelViewModel resourcePanel;
-    private readonly RemoteContentViewModel remoteContent;
+    private readonly RemoteContentViewModel defaultRemoteContent;
     private readonly DialogsViewModel dialogs;
-    private readonly GameOperationsViewModel operations;
+    private readonly GameOperationsViewModel defaultOperations;
     private readonly LocalizationService localizer;
     private readonly Action<string> applyLanguage;
     private readonly Action<LauncherSettings> applyMotionSettings;
     private readonly Func<LauncherStatusSnapshot?> getCurrentSnapshot;
     private readonly Action<LauncherSettings> updateSnapshotSettings;
     private readonly Func<CancellationToken, Task> refreshAsync;
+    private readonly GameLibraryViewModel? games;
+    private readonly Func<LauncherSettings, LauncherStatusSnapshot?, Task>? updateBackground;
+
+    private GameOperationsViewModel operations => games?.Active.Operations ?? defaultOperations;
 
     public SavedSettingsFollowThrough(
         SettingsViewModel settings,
@@ -42,19 +47,23 @@ internal sealed class SavedSettingsFollowThrough : ISavedSettingsFollowThrough
         Action<LauncherSettings> applyMotionSettings,
         Func<LauncherStatusSnapshot?> getCurrentSnapshot,
         Action<LauncherSettings> updateSnapshotSettings,
-        Func<CancellationToken, Task> refreshAsync)
+        Func<CancellationToken, Task> refreshAsync,
+        GameLibraryViewModel? games = null,
+        Func<LauncherSettings, LauncherStatusSnapshot?, Task>? updateBackground = null)
     {
         this.settings = settings;
         this.resourcePanel = resourcePanel;
-        this.remoteContent = remoteContent;
+        defaultRemoteContent = remoteContent;
         this.dialogs = dialogs;
-        this.operations = operations;
+        defaultOperations = operations;
         this.localizer = localizer;
         this.applyLanguage = applyLanguage;
         this.applyMotionSettings = applyMotionSettings;
         this.getCurrentSnapshot = getCurrentSnapshot;
         this.updateSnapshotSettings = updateSnapshotSettings;
         this.refreshAsync = refreshAsync;
+        this.games = games;
+        this.updateBackground = updateBackground;
     }
 
     public SavedSettingsHandoff Apply(LauncherSettings savedSettings)
@@ -62,13 +71,23 @@ internal sealed class SavedSettingsFollowThrough : ISavedSettingsFollowThrough
         ArgumentNullException.ThrowIfNull(savedSettings);
 
         // 下载源的旧值必须在刷新替换快照之前取到，否则修复提示永远不成立。
-        var previousPatchUrlGroup = getCurrentSnapshot()?.Settings.PatchUrlGroup;
+        var previousPatchUrlGroup = getCurrentSnapshot()?.GameSettings.PatchUrlGroup;
 
         settings.ApplyLogLevel(savedSettings.LogLevel);
         applyLanguage(savedSettings.Language);
         settings.Appearance.ApplyFrom(savedSettings);
         resourcePanel.ApplySettings(savedSettings);
-        remoteContent.UpdateRemoteContentVisibility(savedSettings.ShowRemoteContentCard);
+        if (games is null)
+        {
+            defaultRemoteContent.UpdateRemoteContentVisibility(savedSettings.ShowRemoteContentCard);
+        }
+        else
+        {
+            foreach (var entry in games.Entries)
+            {
+                entry.Context.RemoteContent.UpdateRemoteContentVisibility(savedSettings.ShowRemoteContentCard);
+            }
+        }
         applyMotionSettings(savedSettings);
 
         return new SavedSettingsHandoff(savedSettings, previousPatchUrlGroup);
@@ -77,10 +96,27 @@ internal sealed class SavedSettingsFollowThrough : ISavedSettingsFollowThrough
     public async Task CompleteAsync(SavedSettingsHandoff handoff)
     {
         var savedSettings = handoff.SavedSettings;
-        if (operations.IsTaskExecuting || operations.IsDownloadRunning || operations.IsUninstallExecuting)
+        var activeOperations = operations;
+        var snapshot = getCurrentSnapshot();
+        if (updateBackground is not null)
+        {
+            await updateBackground(savedSettings, snapshot);
+        }
+
+        if (activeOperations.IsTaskExecuting || activeOperations.IsDownloadRunning || activeOperations.IsUninstallExecuting)
         {
             // 整份刷新会打断下载；这条路径只把待用快照换成刚落盘的值。
             updateSnapshotSettings(savedSettings.DeepClone());
+            return;
+        }
+
+        if (settings.IsGameSettingsEditing && snapshot is not null
+            && snapshot.GameSettings.HasSameOperationSettingsState(
+                savedSettings.GetGameSettings(activeOperations.FixedGameId)))
+        {
+            // 只改了与宿主状态无关的字段：就地替换快照，免去整份刷新。
+            snapshot.Settings = savedSettings.DeepClone();
+            snapshot.GameSettings = savedSettings.GetGameSettings(activeOperations.FixedGameId).DeepClone();
             return;
         }
 
@@ -89,7 +125,9 @@ internal sealed class SavedSettingsFollowThrough : ISavedSettingsFollowThrough
         var runtimeState = getCurrentSnapshot()?.RuntimeState;
         if (handoff.PreviousPatchUrlGroup is { } previousPatchUrlGroup
             && runtimeState is LauncherRuntimeState.Ready or LauncherRuntimeState.UpdateAvailable
-            && !string.Equals(previousPatchUrlGroup, savedSettings.PatchUrlGroup, StringComparison.Ordinal))
+            && !string.Equals(previousPatchUrlGroup,
+                savedSettings.GetGameSettings(activeOperations.FixedGameId).PatchUrlGroup,
+                StringComparison.Ordinal))
         {
             dialogs.RepairConfirm.Show(localizer.T(LocalizationKeys.DownloadSourceChangedRepairPrompt));
         }

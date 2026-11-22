@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel;
 using Cafe.Launcher.UI.Features.GameOperations;
+using Cafe.Launcher.UI.Features.Games;
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.UI.ViewModels;
 
@@ -10,20 +11,27 @@ namespace Cafe.Launcher.UI.Features.Shell;
 internal sealed class SystemTrayActions : ISystemTrayActions, IDisposable
 {
     private readonly MainWindowViewModel viewModel;
-    private readonly IGameSessionMonitor sessionMonitor;
+    private readonly GameLibraryViewModel games;
+    private ShellViewModel shell;
+    private GameOperationsViewModel operations;
+    private IGameSessionMonitor sessionMonitor;
     private bool disposed;
 
-    /// <summary>Observes the same state and commands as the main window.</summary>
-    public SystemTrayActions(MainWindowViewModel viewModel, IGameSessionMonitor sessionMonitor)
+    /// <summary>Observes the active game's state and commands as the main window presents them.</summary>
+    public SystemTrayActions(MainWindowViewModel viewModel, GameLibraryViewModel games)
     {
         this.viewModel = viewModel;
-        this.sessionMonitor = sessionMonitor;
-        viewModel.Shell.PropertyChanged += OnPresentationChanged;
-        viewModel.Operations.PropertyChanged += OnPresentationChanged;
+        this.games = games;
+        shell = viewModel.Shell;
+        operations = viewModel.Operations;
+        sessionMonitor = games.Active.SessionMonitor;
+        shell.PropertyChanged += OnPresentationChanged;
+        operations.PropertyChanged += OnPresentationChanged;
         viewModel.ModalHost.PropertyChanged += OnPresentationChanged;
         viewModel.Settings.PropertyChanged += OnPresentationChanged;
-        viewModel.Operations.StartGameCommand.CanExecuteChanged += OnCommandChanged;
+        operations.StartGameCommand.CanExecuteChanged += OnCommandChanged;
         sessionMonitor.StateChanged += OnSessionChanged;
+        games.ActiveChanged += OnActiveGameChanged;
     }
 
     /// <inheritdoc/>
@@ -37,12 +45,12 @@ internal sealed class SystemTrayActions : ISystemTrayActions, IDisposable
 
     /// <inheritdoc/>
     public bool CanStartGame => !disposed
-        && viewModel.Operations.IsControlPanelVisible
-        && !viewModel.Shell.IsBusy
-        && !viewModel.Operations.IsDownloadRunning
+        && operations.IsControlPanelVisible
+        && !shell.IsBusy
+        && !operations.IsDownloadRunning
         && !IsGameStarting && !IsGameRunning
         && viewModel.ModalHost.IsBaseLayerInteractive
-        && viewModel.Operations.StartGameCommand.CanExecute(null);
+        && operations.StartGameCommand.CanExecute(null);
 
     /// <inheritdoc/>
     public bool CanExit => !disposed && !viewModel.Operations.IsUninstallExecuting;
@@ -55,7 +63,7 @@ internal sealed class SystemTrayActions : ISystemTrayActions, IDisposable
     {
         if (CanStartGame)
         {
-            viewModel.Operations.StartGameCommand.Execute(null);
+            operations.StartGameCommand.Execute(null);
         }
     }
 
@@ -86,6 +94,34 @@ internal sealed class SystemTrayActions : ISystemTrayActions, IDisposable
     private void OnCommandChanged(object? sender, EventArgs e) => Changed?.Invoke();
     private void OnSessionChanged() => Changed?.Invoke();
 
+    /// <summary>
+    /// Re-binds the tray to the newly displayed game. The window swaps its shell,
+    /// operations and session monitor instances on selection; keeping the initial
+    /// Blue Archive references would report the wrong game's running state.
+    /// </summary>
+    private void OnActiveGameChanged()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        shell.PropertyChanged -= OnPresentationChanged;
+        operations.PropertyChanged -= OnPresentationChanged;
+        operations.StartGameCommand.CanExecuteChanged -= OnCommandChanged;
+        sessionMonitor.StateChanged -= OnSessionChanged;
+
+        shell = viewModel.Shell;
+        operations = viewModel.Operations;
+        sessionMonitor = games.Active.SessionMonitor;
+
+        shell.PropertyChanged += OnPresentationChanged;
+        operations.PropertyChanged += OnPresentationChanged;
+        operations.StartGameCommand.CanExecuteChanged += OnCommandChanged;
+        sessionMonitor.StateChanged += OnSessionChanged;
+        Changed?.Invoke();
+    }
+
     /// <summary>Detaches all subscriptions before the presentation family is disposed by DI.</summary>
     public void Dispose()
     {
@@ -95,11 +131,12 @@ internal sealed class SystemTrayActions : ISystemTrayActions, IDisposable
         }
 
         disposed = true;
-        viewModel.Shell.PropertyChanged -= OnPresentationChanged;
-        viewModel.Operations.PropertyChanged -= OnPresentationChanged;
+        games.ActiveChanged -= OnActiveGameChanged;
+        shell.PropertyChanged -= OnPresentationChanged;
+        operations.PropertyChanged -= OnPresentationChanged;
         viewModel.ModalHost.PropertyChanged -= OnPresentationChanged;
         viewModel.Settings.PropertyChanged -= OnPresentationChanged;
-        viewModel.Operations.StartGameCommand.CanExecuteChanged -= OnCommandChanged;
+        operations.StartGameCommand.CanExecuteChanged -= OnCommandChanged;
         sessionMonitor.StateChanged -= OnSessionChanged;
     }
 }

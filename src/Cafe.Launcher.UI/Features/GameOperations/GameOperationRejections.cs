@@ -18,7 +18,7 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
 internal static class GameOperationRejections
 {
     /// <summary>就地把拒绝报给用户。</summary>
-    public static void WarnUnavailable(LocalizationService localizer, ToastService toastService) =>
+    public static void WarnUnavailable(LocalizationService localizer, INotificationService toastService) =>
         toastService.ShowWarning(localizer.T(LocalizationKeys.OperationUnavailableForCurrentState));
 
     /// <summary>把拒绝表达成操作失败结果，供无界面的调用路径向上返回。</summary>

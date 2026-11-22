@@ -12,8 +12,9 @@ description: >-
 
 For this repository, start with the [design specification](../../../docs/design/design-system-spec.md#1-设计原则)
 and [XAML conventions](../../../PROJECT_CONVENTIONS.md#4-xaml-与视觉规范).
-The main UI uses **M3 semantics on Avalonia FluentTheme**. FluentTheme is the
-implementation base, not a reason to replace the product's Material design rules.
+The main UI uses **Fluent 2 templates** with M3 dynamic-color semantics carried by
+`Launcher.*` tokens (see [ADR-063](../../../docs/design/adr/ADR-063-全应用统一Fluent2视觉.md)).
+Material rules govern the dynamic color pipeline, not a competing component language.
 Use existing `Launcher.*` resources and components. The independent crash window
 belongs to the [Fluent workflow](../designing-fluent-interfaces/SKILL.md) and keeps its local `Crash.*` resources.
 Project geometry, density, and documented exceptions take precedence over generic

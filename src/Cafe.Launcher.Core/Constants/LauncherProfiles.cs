@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.Core.Constants;
@@ -62,4 +65,76 @@ public static class LauncherProfiles
         CookieLibraryRelativeSegments =
             ["AppData", "LocalLow", "YostarJP", "BlueArchive", "Cookies", "Library"]
     };
+
+    /// <summary>StellaSora 国服的已核对官方协议与入口；真实进程家族仍需实机验收。</summary>
+    public static YostarGameProfile StellaSoraChina { get; } = new()
+    {
+        Tag = "StellaSora_CN",
+        RootFolderName = "YostarGames",
+        GameFolderName = "StellaSora_CN",
+        GameExecutableFileName = "xtlr.exe",
+        GameLauncherExecutableFileName = "xtlr.exe",
+        GameStartScriptFileName = "",
+        ApiBaseUrl = "https://launcher-api.yostar.net",
+        AuthorizationSalt = "872550AD59A235662C5B7D5F88CEBE4B",
+        AuthorizationVersion = "1.3.0",
+        GameConfigIncludesParameters = false,
+        OfficialPackageHost = "game-launcher-ss-cn.yostar.net",
+        PackageAssetPrefix = "",
+        RuntimeId = "stella-sora-cn",
+        OfficialWebsiteUrl = "https://stellasora.yostar.cn/",
+        CookieLibraryRelativeSegments = []
+    };
+
+    /// <summary>随程序发布的游戏和能力清单；页面选择不能修改声明或扩展支持范围。</summary>
+    public static IReadOnlyList<LauncherGameDefinition> GameDefinitions { get; } = Array.AsReadOnly(
+        new[]
+        {
+            new LauncherGameDefinition(BlueArchiveJapan, SupportsCafeDownloadSource: true, SupportsResourcePanel: true),
+            new LauncherGameDefinition(StellaSoraChina, SupportsCafeDownloadSource: false, SupportsResourcePanel: false)
+        });
+
+    /// <summary>所有支持的官方档案；身份查找始终使用稳定 RuntimeId。</summary>
+    public static IReadOnlyList<YostarGameProfile> SupportedGames { get; } = Array.AsReadOnly(
+        new[] { BlueArchiveJapan, StellaSoraChina });
+
+    /// <summary>查找明确游戏；未知、区服 tag 或显示名称都不回退为默认游戏。</summary>
+    public static YostarGameProfile GetSupportedGame(string gameId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(gameId);
+        return TryGetSupportedGame(gameId, out var profile)
+            ? profile
+            : throw new ArgumentException("Unsupported game identity.", nameof(gameId));
+    }
+
+    /// <summary>按区分大小写的稳定身份查找内置档案；不修改任何选择状态。</summary>
+    public static bool TryGetSupportedGame(string? gameId, [NotNullWhen(true)] out YostarGameProfile? profile)
+    {
+        foreach (var candidate in SupportedGames)
+        {
+            if (string.Equals(candidate.RuntimeId, gameId, StringComparison.Ordinal))
+            {
+                profile = candidate;
+                return true;
+            }
+        }
+
+        profile = null;
+        return false;
+    }
+
+    /// <summary>读取已登记游戏的能力；产品服务存在不表示所有条目均支持该服务。</summary>
+    public static LauncherGameDefinition GetGameDefinition(string gameId)
+    {
+        var profile = GetSupportedGame(gameId);
+        foreach (var definition in GameDefinitions)
+        {
+            if (ReferenceEquals(definition.Profile, profile))
+            {
+                return definition;
+            }
+        }
+
+        throw new InvalidOperationException("Supported game has no capability declaration.");
+    }
 }

@@ -17,11 +17,11 @@ public sealed class InstallDiskSpaceUiContractTests
                 && element.Attribute("Command")?.Value == "{Binding Operations.ConfirmInstallCommand}");
 
         Assert.Equal(
-            "{Binding Operations.InstallButtonToolTip}",
+            "{Binding Operations.InstallPreparationDiskSpaceMessage}",
             installButton.Attribute("ToolTip.Tip")?.Value);
         Assert.Equal("True", installButton.Attribute("ToolTip.ShowOnDisabled")?.Value);
         Assert.Equal(
-            "{Binding Operations.InstallButtonToolTip}",
+            "{Binding Operations.InstallPreparationDiskSpaceMessage}",
             installButton.Attribute("AutomationProperties.HelpText")?.Value);
     }
 

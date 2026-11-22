@@ -41,6 +41,12 @@ internal sealed class ActivityLifetime : IDisposable
         }
     }
 
+    /// <summary>Gets whether any lease remains active.</summary>
+    public bool HasActivity { get { lock (gate) { return activeCount != 0; } } }
+
+    /// <summary>Waits for currently active leases without closing admission.</summary>
+    public Task WhenIdle { get { lock (gate) { return activeCount == 0 ? Task.CompletedTask : drained!.Task; } } }
+
     /// <summary>Gets the token cancelled by <see cref="Cancel"/> and <see cref="Dispose"/>.</summary>
     public CancellationToken LifetimeToken => token;
 
@@ -58,6 +64,9 @@ internal sealed class ActivityLifetime : IDisposable
             }
 
             activeCount++;
+            // WhenIdle must describe the current batch of leases without requiring shutdown
+            // first; a completed drain from an earlier batch would make it lie.
+            drained ??= new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             return new Lease(this);
         }
     }
@@ -143,6 +152,10 @@ internal sealed class ActivityLifetime : IDisposable
         {
             activeCount--;
             completed = activeCount == 0 ? drained : null;
+            if (activeCount == 0)
+            {
+                drained = null;
+            }
         }
 
         completed?.TrySetResult();

@@ -1,4 +1,4 @@
-﻿using Cafe.Launcher.UI.Features.ResourcePanel;
+using Cafe.Launcher.UI.Features.ResourcePanel;
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.Testing;
@@ -11,6 +11,38 @@ namespace Cafe.Launcher.Tests;
 public sealed class ResourcePanelUidServiceTests : IDisposable
 {
     private readonly TestDirectory tempDir = TestDirectory.Create();
+
+    [Fact]
+    public async Task StellaUidService_HasNoCookiePathAndRefusesReadsAndWrites()
+    {
+        using var savedSettings = new SavedSettingsTestRig(tempDir.DataRoot);
+        await savedSettings.SeedAsync(new LauncherSettings { ResourcePanelUid = "SETTINGA" });
+        var service = new ResourcePanelUidService(LauncherProfiles.StellaSoraChina,
+            new BestHttpCookieLibraryService(), savedSettings.SettingsService, savedSettings.Writer, tempDir.Sub("must-not-read"));
+        Assert.False(service.IsAvailable);
+        Assert.Empty(service.CookieLibraryPath);
+        await Assert.ThrowsAsync<NotSupportedException>(() => service.ResolveUidAsync());
+        await Assert.ThrowsAsync<NotSupportedException>(() => service.SaveManualUidAsync("UIDTESTA"));
+        await Assert.ThrowsAsync<NotSupportedException>(() => service.SaveUidSourceAsync(ResourcePanelUidSources.Custom));
+        var saved = await savedSettings.SettingsService.ReadAsync();
+        Assert.Equal("SETTINGA", saved.GetGameSettings(LauncherProfiles.BlueArchiveJapan.RuntimeId).ResourcePanelUid);
+        Assert.Empty(saved.GetGameSettings(LauncherProfiles.StellaSoraChina.RuntimeId).ResourcePanelUid);
+    }
+
+    [Fact]
+    public async Task ManualUidWrite_WithStellaLastViewed_StillTargetsOnlyTheFixedBlueArchivePartition()
+    {
+        using var savedSettings = new SavedSettingsTestRig(tempDir.DataRoot);
+        await savedSettings.SeedAsync(new LauncherSettings { LastViewedGameId = LauncherProfiles.StellaSoraChina.RuntimeId });
+        var service = new ResourcePanelUidService(LauncherProfiles.BlueArchiveJapan, new BestHttpCookieLibraryService(),
+            savedSettings.SettingsService, savedSettings.Writer, tempDir.Sub("missing"));
+        await service.SaveManualUidAsync("UIDTESTA");
+        await service.SaveUidSourceAsync(ResourcePanelUidSources.Custom);
+        var saved = await savedSettings.SettingsService.ReadAsync();
+        Assert.Equal("UIDTESTA", saved.GetGameSettings(LauncherProfiles.BlueArchiveJapan.RuntimeId).ResourcePanelUid);
+        Assert.Equal(ResourcePanelUidSources.Custom, saved.GetGameSettings(LauncherProfiles.BlueArchiveJapan.RuntimeId).ResourcePanelUidSource);
+        Assert.Empty(saved.GetGameSettings(LauncherProfiles.StellaSoraChina.RuntimeId).ResourcePanelUid);
+    }
 
     [Fact]
     public async Task ResolveUidAsync_WhenCookieContainsUid_ReturnsCookieUid()

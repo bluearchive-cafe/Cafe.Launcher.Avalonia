@@ -25,6 +25,7 @@ internal sealed partial class CoreJsonContext : JsonSerializerContext;
 
 [JsonSourceGenerationOptions(WriteIndented = true)]
 [JsonSerializable(typeof(LauncherSettings))]
+[JsonSerializable(typeof(GameSettings))]
 [JsonSerializable(typeof(LocalManifest))]
 [JsonSerializable(typeof(GameLauncherConfig))]
 internal sealed partial class CoreStorageJsonContext : JsonSerializerContext;

@@ -226,17 +226,24 @@ public sealed class ServiceConfigurationTests : IDisposable
         provider.GetRequiredService<RemoteImageStore>();
         Assert.True(Directory.Exists(dataRoot.ImageCacheDirectory));
 
+        var ba = provider.GetRequiredService<IGameContextRegistry>()
+            .GetOrCreate(LauncherProfiles.BlueArchiveJapan.RuntimeId);
         await provider.GetRequiredService<DownloadCheckpointStore>().SaveAsync(new DownloadTaskState
         {
+            FormatVersion = DownloadCheckpointStore.CurrentFormatVersion,
+            GameId = ba.GameId,
             Version = "1.0.0",
             Basis = "manifest.json",
             GamePath = dataRoot.Root,
             StartedAt = "2026-09-16T00:00:00.0000000+00:00"
         });
-        await provider.GetRequiredService<INoticeStateStore>().SaveShownNoticeAsync("notice-hash");
+        await ba.NoticeStateStore.SaveShownNoticeAsync("notice-hash");
 
-        Assert.True(File.Exists(dataRoot.DownloadStatePath));
-        Assert.True(File.Exists(dataRoot.NoticeStatePath));
+        var baPaths = new GameDataPaths(dataRoot, ba.GameId);
+        Assert.True(File.Exists(baPaths.DownloadStatePath));
+        Assert.True(File.Exists(baPaths.NoticeStatePath));
+        Assert.False(File.Exists(dataRoot.DownloadStatePath));
+        Assert.False(File.Exists(dataRoot.NoticeStatePath));
     }
 
     /// <summary>

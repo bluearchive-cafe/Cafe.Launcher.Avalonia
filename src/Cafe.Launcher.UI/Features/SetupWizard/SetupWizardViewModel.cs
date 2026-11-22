@@ -12,7 +12,6 @@ using Cafe.Launcher.Core;
 using Cafe.Launcher.Core.Constants;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Material.Icons;
 using System.Linq;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services;
@@ -25,7 +24,7 @@ namespace Cafe.Launcher.UI.Features.SetupWizard;
 /// </summary>
 internal partial class SetupWizardViewModel : ObservableObject, IModalContentViewModel, IDisposable, ILanguageAwarePresentation
 {
-    private const int StepCount = 7;
+    internal const int StepCount = 7;
     private const int AgreementStep = 2;
     private const int GamePathStep = 3;
     private const int ReviewStep = 6;
@@ -596,13 +595,13 @@ internal partial class SetupWizardViewModel : ObservableObject, IModalContentVie
         var editLabel = localizer.T(LocalizationKeys.SetupWizardEditStep);
         SummaryItems =
         [
-            new(MaterialIconKind.Translate, localizer.T(LocalizationKeys.SetupWizardLanguage),
+            new(FluentGlyphs.Globe, localizer.T(LocalizationKeys.SetupWizardLanguage),
                 LanguageDisplayName ?? string.Empty, 1, GoToStepCommand, editLabel, HasDivider: false),
-            new(MaterialIconKind.CloudDownload, localizer.T(LocalizationKeys.SetupWizardDownloadSource),
+            new(FluentGlyphs.CloudDownload, localizer.T(LocalizationKeys.SetupWizardDownloadSource),
                 DownloadSourceDisplayName ?? string.Empty, 4, GoToStepCommand, editLabel, HasDivider: true),
-            new(MaterialIconKind.FolderSearch, localizer.T(LocalizationKeys.SetupWizardGamePath),
+            new(FluentGlyphs.FolderOpen, localizer.T(LocalizationKeys.SetupWizardGamePath),
                 GamePathDisplay, 3, GoToStepCommand, editLabel, HasDivider: true),
-            new(MaterialIconKind.SwapHorizontal, localizer.T(LocalizationKeys.SetupWizardProxy),
+            new(FluentGlyphs.Switch, localizer.T(LocalizationKeys.SetupWizardProxy),
                 ProxyDisplayName ?? string.Empty, 5, GoToStepCommand, editLabel, HasDivider: true),
         ];
         OnPropertyChanged(nameof(SummaryItems));

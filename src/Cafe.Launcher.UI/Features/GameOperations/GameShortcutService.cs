@@ -293,12 +293,14 @@ internal sealed class GameShortcutService : IGameShortcutService
 
         // The shortcut deliberately bypasses the launcher (unlike the Linux .desktop,
         // which routes through --launch-game): double-clicking must behave like a
-        // direct game start. Running the game executable alone does not start the
-        // game, so the target is the distribution's own run.bat start script.
-        var startScriptPath = Path.Combine(
-            target.WorkingDirectory,
-            gameProfile.GameStartScriptFileName);
-        if (!File.Exists(startScriptPath))
+        // direct game start. Blue Archive needs its own run.bat start script; games
+        // whose profile declares no start script (for example Stella Sora) start from
+        // the resolved game executable itself, so the shortcut must not depend on a
+        // run.bat that does not exist in their install tree.
+        var shortcutTargetPath = string.IsNullOrWhiteSpace(gameProfile.GameStartScriptFileName)
+            ? target.ExecutablePath
+            : Path.Combine(target.WorkingDirectory, gameProfile.GameStartScriptFileName);
+        if (!File.Exists(shortcutTargetPath))
         {
             return new GameShortcutResult(GameShortcutStatus.GameNotResolved);
         }
@@ -311,7 +313,7 @@ internal sealed class GameShortcutService : IGameShortcutService
             gameProfile.GameExecutableFileName);
         try
         {
-            WindowsShellLink.Save(startScriptPath, target.WorkingDirectory, iconPath, shortcutPath);
+            WindowsShellLink.Save(shortcutTargetPath, target.WorkingDirectory, iconPath, shortcutPath);
 
             // 新入口落盘后再清旧语言名：写入失败时旧入口仍在，不会两头落空。
             TryDeleteLegacyShortcutPaths(targetDirectory, target.ExecutablePath);
@@ -384,7 +386,10 @@ internal sealed class GameShortcutService : IGameShortcutService
     /// diagnostics all apply, per the cross-platform runtime design §13/§14.
     /// Exposed for tests: asserts the documented entry shape byte-for-byte.
     /// </summary>
-    internal static string BuildDesktopEntry(string displayName, string launcherPath, string? iconPath)
+    internal static string BuildDesktopEntry(string displayName, string launcherPath, string? iconPath) =>
+        BuildDesktopEntry(displayName, launcherPath, iconPath, LauncherProfiles.BlueArchiveJapan.RuntimeId);
+
+    internal static string BuildDesktopEntry(string displayName, string launcherPath, string? iconPath, string gameId)
     {
         var builder = new System.Text.StringBuilder();
         builder.AppendLine("[Desktop Entry]");
@@ -394,7 +399,7 @@ internal sealed class GameShortcutService : IGameShortcutService
         var executable = launcherPath.Contains('%')
             ? "/usr/bin/env -- " + QuoteDesktopExecutable(launcherPath)
             : QuoteDesktopExecutable(launcherPath);
-        builder.AppendLine(CultureInfo.InvariantCulture, $"Exec={executable} {LauncherConstants.LaunchGameArgument}");
+        builder.AppendLine(CultureInfo.InvariantCulture, $"Exec={executable} {BuildLaunchArguments(gameId)}");
         if (!string.IsNullOrWhiteSpace(iconPath))
         {
             builder.AppendLine(CultureInfo.InvariantCulture, $"Icon={EscapeDesktopValue(iconPath)}");
@@ -403,6 +408,13 @@ internal sealed class GameShortcutService : IGameShortcutService
         builder.AppendLine("Terminal=false");
         builder.Append("Categories=Game;");
         return builder.ToString();
+    }
+
+    /// <summary>新快捷方式总携带固定游戏身份；旧 bare 参数仍由启动参数读取器兼容。</summary>
+    internal static string BuildLaunchArguments(string gameId)
+    {
+        var profile = LauncherProfiles.GetSupportedGame(gameId);
+        return $"{LauncherConstants.LaunchGameArgument} {LauncherConstants.GameIdArgument} {profile.RuntimeId}";
     }
 
     // Exec 先转义双引号参数与字段码，再转义 desktop 字符串；反斜杠必须经过两层解析。
@@ -430,7 +442,7 @@ internal sealed class GameShortcutService : IGameShortcutService
     }
 
     private void WriteDesktopEntry(string entryPath, string displayName, string launcherPath, string? iconPath) =>
-        File.WriteAllText(entryPath, BuildDesktopEntry(displayName, launcherPath, iconPath), new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        File.WriteAllText(entryPath, BuildDesktopEntry(displayName, launcherPath, iconPath, gameProfile.RuntimeId), new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
 
     public bool TryOpenGameFolder(LauncherStatusSnapshot snapshot)
     {

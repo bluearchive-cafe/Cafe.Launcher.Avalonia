@@ -97,7 +97,6 @@ internal static class DesignTokenGrouping
     public static string FormatValue(object? value) => value switch
     {
         SolidColorBrush brush => brush.Color.ToString(),
-        LinearGradientBrush => "gradient",
         Thickness thickness => thickness.ToString(),
         CornerRadius cornerRadius => cornerRadius.ToString(),
         TimeSpan duration => $"{duration.TotalMilliseconds:0} ms",

@@ -66,25 +66,11 @@ public sealed partial class MainWindowHeadlessTests
         context.Window.Show();
         Dispatcher.UIThread.RunJobs();
 
+        var controlState = context.Window.FindControl<Border>("OperationControlState")!;
         // 后台线程（真实应用中进度回调的常见来源）触发面板切换，须经 Dispatcher 汇入 UI 线程。
         await Task.Run(() => context.ViewModel.Operations.PanelMode = GameOperationPanelMode.Control);
-        var controlState = default(Border);
-        var deadline = DateTime.UtcNow.AddSeconds(3);
-        while (DateTime.UtcNow < deadline)
-        {
-            await Dispatcher.UIThread.InvokeAsync(() => { });
-            controlState = context.Window.GetVisualDescendants().OfType<Border>()
-                .FirstOrDefault(control => control.Classes.Contains("operation-state")
-                    && control.Classes.Contains("control-panel"));
-            if (controlState?.IsVisible == true)
-            {
-                break;
-            }
-
-            await Task.Delay(10);
-        }
-
-        Assert.True(controlState?.IsVisible == true, "Control state did not surface after background switch.");
+        Dispatcher.UIThread.RunJobs();
+        Assert.True(controlState.IsEffectivelyVisible);
 
         // 运行期关闭动效：形变立即落定（自动高度、全不透明），状态本身不受影响。
         context.ViewModel.IsMotionReduced = true;
@@ -97,7 +83,7 @@ public sealed partial class MainWindowHeadlessTests
         Assert.True(controlState.IsVisible);
 
         // 关闭窗口触发退订与表面落定，保证无泄漏的取消源残留。
-        context.Window.Close();
+        context.Window.CloseForShutdown();
         Dispatcher.UIThread.RunJobs();
     }
 
@@ -217,9 +203,9 @@ public sealed partial class MainWindowHeadlessTests
 
         var overlay = context.Window.GetVisualDescendants().OfType<Grid>()
             .Single(control => control.Classes.Contains("settings-overlay"));
-        var surface = overlay.GetVisualDescendants()
-            .OfType<Cafe.Launcher.UI.Controls.DialogSurface>()
-            .Single();
+        // ADR-070 第二批：整窗页表面是 Border.settings-page（不再包 DialogSurface）。
+        var surface = overlay.GetVisualDescendants().OfType<Border>()
+            .Single(border => border.Classes.Contains("settings-page"));
         var arrangedWhenAnchorAttached = false;
         var anchorAttached = false;
         overlay.Classes.CollectionChanged += (_, args) =>
@@ -248,9 +234,9 @@ public sealed partial class MainWindowHeadlessTests
             arrangedWhenAnchorAttached,
             "Entrance anchor was attached before the settings surface was laid out.");
 
-        var translate = Assert.IsType<TranslateTransform>(surface.RenderTransform);
+        // 整窗页的入场是根网格上的淡化（ADR-070）：无遮罩页面不保留位移。
         await HeadlessTestHost.WaitUntilAsync(
-            () => surface.Opacity >= 1d && translate.Y == 0d,
+            () => overlay.Opacity >= 1d,
             TimeSpan.FromSeconds(3),
             "Settings surface entrance did not settle at full opacity.");
     }

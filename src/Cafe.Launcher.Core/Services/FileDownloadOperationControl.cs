@@ -25,4 +25,7 @@ public sealed record FileDownloadOperationControl(
 {
     /// <summary>Optional content-check progress after transfer; independent of cooperative download pause.</summary>
     public Action<long, long>? ReportVerificationProgress { get; init; }
+
+    /// <summary>Optional ownership check before opening, replacing or deleting a temporary file; never called per network chunk.</summary>
+    public Func<CancellationToken, Task>? BeforeFileWriteAsync { get; init; }
 }

@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Cafe.Launcher.Testing;
 
@@ -33,14 +33,14 @@ public sealed partial class UiStyleContractTests
                      ["Launcher.Elevation.Shadow.Md"] = "0 12 32 0 #33000000",
                      ["Launcher.Elevation.Shadow.Lg"] = "0 22 55 0 #66000000",
                      ["Launcher.Layout.Banner.Height"] = "220",
-                     ["Launcher.Layout.Banner.EdgeGradient.Width"] = "180",
                      ["Launcher.Component.Banner.Indicator.CornerRadius"] = "1",
                      ["Launcher.Layout.Window.Width"] = "1300",
                      ["Launcher.Layout.Window.Height"] = "754",
-                     ["Launcher.Layout.Settings.MaxWidth"] = "960",
-                     ["Launcher.Layout.Settings.MaxHeight"] = "620",
+                     ["Launcher.Component.Settings.Page.Offset"] = "64,48,0,0",
+                     ["Launcher.Component.Settings.Head.MinHeight"] = "56",
+                     ["Launcher.Component.Settings.Footer.MinHeight"] = "64",
                      ["Launcher.Layout.SetupWizard.Width"] = "920",
-                     ["Launcher.Layout.SetupWizard.Height"] = "480",
+                     ["Launcher.Layout.SetupWizard.Height"] = "560",
                      ["Launcher.Layout.ResourcePanel.Width"] = "720",
                      ["Launcher.Layout.ResourcePanel.Height"] = "592",
                      ["Launcher.Layout.DesignGallery.Width"] = "1000",
@@ -59,10 +59,9 @@ public sealed partial class UiStyleContractTests
                      ["Launcher.Spacing.Thickness.Xxl"] = "24",
                      ["Launcher.Spacing.Thickness.Xxxl"] = "32",
                      ["Launcher.Spacing.Thickness.Section"] = "40",
-                     ["Launcher.Component.Wizard.Option.Radio.Size"] = "20",
-                     ["Launcher.Component.Wizard.Option.Radio.Dot.Size"] = "10",
-                     ["Launcher.Component.Wizard.Option.Radio.BorderThickness"] = "2",
+                     ["Launcher.Component.Wizard.Option.Label.Margin"] = "12,0,0,0",
                      ["Launcher.Component.Banner.Indicator.Margin"] = "0,0,0,16",
+                     ["Launcher.Component.Tabs.Indicator.Height"] = "2",
                      ["Launcher.Typography.LetterSpacing.None"] = "0",
                      ["Launcher.Typography.LetterSpacing.Sm"] = "0.5",
                      ["Launcher.Typography.LetterSpacing.Md"] = "1",
@@ -96,6 +95,58 @@ public sealed partial class UiStyleContractTests
                 dynamicStaticReference.IsMatch(text),
                 $"Static-family tokens must use {{StaticResource}}, not {{DynamicResource}}: {relativePath}");
         }
+    }
+
+    [Fact]
+    public void TranslucentSurfaces_UseSharedTokenFamily()
+    {
+        var mainWindowStyles = XDocument.Load(
+            TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
+        // 壁纸上的半透明表面直接由 Border 底色承载，不再叠加窗口内采样层。
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Glass.Rail.Background}",
+            ReadStyleSetterValue(mainWindowStyles, "Border.game-sidebar", "Background"));
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Glass.Edge}",
+            ReadStyleSetterValue(mainWindowStyles, "Border.game-sidebar", "BorderBrush"));
+        Assert.Equal(
+            "{StaticResource Launcher.Color.Transparent}",
+            ReadStyleSetterValue(mainWindowStyles, "Border.game-header", "Background"));
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Glass.Strong.Background}",
+            ReadStyleSetterValue(mainWindowStyles, "Border.remote-surface", "Background"));
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Glass.Edge}",
+            ReadStyleSetterValue(mainWindowStyles, "Border.remote-surface", "BorderBrush"));
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Glass.Strong.Background}",
+            ReadStyleSetterValue(mainWindowStyles, "Border.remote-content-card", "Background"));
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Glass.Background}",
+            ReadStyleSetterValue(mainWindowStyles, "Border.appearance-preview-toolbar", "Background"));
+
+        // Toast 卡片不在半透明表面家族里：实心语义底色由 FAInfoBar 承担，
+        // 由 ToastCards_UseSolidInfoBarSemanticSurface 单独锁定。
+
+        var gameTaskStyles = XDocument.Load(
+            TestRepository.FromPresentationRoot("Views/Styles/GameTask.axaml"));
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Glass.Strong.Background}",
+            ReadStyleSetterValue(gameTaskStyles, "Border.game-task-card", "Background"));
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Glass.Edge}",
+            ReadStyleSetterValue(gameTaskStyles, "Border.game-task-card", "BorderBrush"));
+    }
+
+    private static string ReadStyleSetterValue(XDocument document, string selector, string property)
+    {
+        var style = Assert.Single(document.Descendants(), element =>
+            element.Name.LocalName == "Style"
+            && element.Attribute("Selector")?.Value == selector);
+        var setter = Assert.Single(style.Elements(), element =>
+            element.Name.LocalName == "Setter"
+            && element.Attribute("Property")?.Value == property);
+        return setter.Attribute("Value")?.Value ?? string.Empty;
     }
 
     [Fact]

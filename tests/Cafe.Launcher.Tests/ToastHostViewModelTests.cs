@@ -1,5 +1,6 @@
 using Cafe.Launcher.UI.Constants;
 using System.Collections.Concurrent;
+using System.Globalization;
 using Cafe.Launcher.Composition;
 using Cafe.Launcher.UI.Features.Settings;
 using Cafe.Launcher.UI.Helpers;
@@ -490,6 +491,228 @@ public sealed class ToastHostViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task ToastRaised_WithSameMergeKey_MergesIntoTheExistingCard()
+    {
+        await using var provider = CreateProvider();
+        var localizer = provider.GetRequiredService<LocalizationService>();
+        var toastService = provider.GetRequiredService<ToastService>();
+        var delays = new ControlledDelay();
+        using var viewModel = new ToastHostViewModel(
+            toastService,
+            localizer,
+            new LocalDiagnostics(),
+            InvokeSerially,
+            delays.WaitAsync);
+
+        toastService.Show(new ToastOptions
+        {
+            Message = "first failure",
+            Key = "verify-failed",
+            Duration = ToastDuration.Brief
+        });
+        await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 1);
+        await WaitUntilAsync(() => delays.RequestCount == 1);
+        var first = viewModel.ActiveToasts.Single();
+
+        toastService.Show(new ToastOptions
+        {
+            Message = "second failure",
+            Key = "verify-failed",
+            Duration = ToastDuration.Brief
+        });
+        await WaitUntilAsync(() => first.MergeCount == 2);
+
+        var merged = Assert.Single(viewModel.ActiveToasts);
+        Assert.Same(first, merged);
+        Assert.Equal("second failure", merged.Message);
+        Assert.Equal(
+            localizer.T(LocalizationKeys.ToastInfo)
+                + string.Format(CultureInfo.CurrentCulture, localizer.T(LocalizationKeys.ToastMergeCountSuffix), 2),
+            merged.Title);
+
+        // 合并重置倒计时：在途等待被打断，随后按完整档位重开一轮。
+        await WaitUntilAsync(() => delays.RequestCount == 2);
+        Assert.Equal(1, delays.CancellationCount);
+        Assert.Equal(ToastDurations.Resolve(ToastDuration.Brief), delays.RequestedDurations[1]);
+
+        delays.ReleaseAll();
+        await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 0);
+    }
+
+    [Fact]
+    public async Task ToastRaised_WithDistinctMergeKeys_AddsSeparateCards()
+    {
+        await using var provider = CreateProvider();
+        var toastService = provider.GetRequiredService<ToastService>();
+        var delays = new ControlledDelay();
+        using var viewModel = new ToastHostViewModel(
+            toastService,
+            provider.GetRequiredService<LocalizationService>(),
+            new LocalDiagnostics(),
+            InvokeSerially,
+            delays.WaitAsync);
+
+        toastService.Show(new ToastOptions { Message = "alpha", Key = "key-a", Duration = ToastDuration.Brief });
+        toastService.Show(new ToastOptions { Message = "beta", Key = "key-b", Duration = ToastDuration.Brief });
+        await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 2);
+
+        Assert.All(viewModel.ActiveToasts, toast => Assert.Equal(1, toast.MergeCount));
+        Assert.Equal(
+            new[] { "beta", "alpha" },
+            viewModel.ActiveToasts.Select(toast => toast.Message));
+
+        delays.ReleaseAll();
+        await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 0);
+    }
+
+    [Fact]
+    public async Task ToastRaised_WithSameMergeKey_OnCardWithActions_MergesWithoutAddingACardOrCountdown()
+    {
+        await using var provider = CreateProvider();
+        var toastService = provider.GetRequiredService<ToastService>();
+        var delayCalls = 0;
+        using var viewModel = new ToastHostViewModel(
+            toastService,
+            provider.GetRequiredService<LocalizationService>(),
+            new LocalDiagnostics(),
+            InvokeSerially,
+            (_, _) =>
+            {
+                delayCalls++;
+                return Task.CompletedTask;
+            });
+
+        toastService.Show(new ToastOptions
+        {
+            Message = "first failure",
+            Key = "task-failed",
+            PrimaryAction = new ToastAction(
+                "Retry",
+                _ => Task.FromResult(ToastActionResult.Success()))
+        });
+        await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 1);
+        var first = viewModel.ActiveToasts.Single();
+
+        toastService.Show(new ToastOptions { Message = "second failure", Key = "task-failed" });
+        await WaitUntilAsync(() => first.MergeCount == 2);
+
+        var merged = Assert.Single(viewModel.ActiveToasts);
+        Assert.Same(first, merged);
+        Assert.Equal("second failure", merged.Message);
+        Assert.Equal(0, delayCalls);
+    }
+
+    [Fact]
+    public async Task ToastStack_BeyondFourActiveToasts_EvictsTheEarliestWithoutActions()
+    {
+        await using var provider = CreateProvider();
+        var toastService = provider.GetRequiredService<ToastService>();
+        var delays = new ControlledDelay();
+        using var viewModel = new ToastHostViewModel(
+            toastService,
+            provider.GetRequiredService<LocalizationService>(),
+            new LocalDiagnostics(),
+            InvokeSerially,
+            delays.WaitAsync);
+
+        for (var index = 1; index <= 5; index++)
+        {
+            toastService.Show(new ToastOptions { Message = $"m{index}", Duration = ToastDuration.Brief });
+        }
+
+        await WaitUntilAsync(() =>
+            viewModel.ActiveToasts.Count == 4
+            && viewModel.ActiveToasts.Any(toast => toast.Message == "m5"));
+
+        Assert.DoesNotContain(viewModel.ActiveToasts, toast => toast.Message == "m1");
+        Assert.Equal(
+            new[] { "m5", "m4", "m3", "m2" },
+            viewModel.ActiveToasts.Select(toast => toast.Message));
+    }
+
+    [Fact]
+    public async Task ToastStack_WhenAllActiveToastsHaveActions_ExceedsTheCapWithoutEviction()
+    {
+        await using var provider = CreateProvider();
+        var toastService = provider.GetRequiredService<ToastService>();
+        var delayCalls = 0;
+        using var viewModel = new ToastHostViewModel(
+            toastService,
+            provider.GetRequiredService<LocalizationService>(),
+            new LocalDiagnostics(),
+            InvokeSerially,
+            (_, _) =>
+            {
+                delayCalls++;
+                return Task.CompletedTask;
+            });
+
+        for (var index = 1; index <= 5; index++)
+        {
+            toastService.Show(new ToastOptions
+            {
+                Message = $"m{index}",
+                PrimaryAction = new ToastAction(
+                    "Retry",
+                    _ => Task.FromResult(ToastActionResult.Success()))
+            });
+        }
+
+        await WaitUntilAsync(() =>
+            viewModel.ActiveToasts.Count == 5
+            && viewModel.ActiveToasts.Any(toast => toast.Message == "m5"));
+
+        // 带动作的通知不自动淘汰（ADR-070）：入口不能因为栈满而消失。
+        Assert.Equal(5, viewModel.ActiveToasts.Count);
+        Assert.All(viewModel.ActiveToasts, toast => Assert.True(toast.HasActions));
+        Assert.Equal(0, delayCalls);
+    }
+
+    [Fact]
+    public async Task ToastStack_BeyondTheCap_EvictsTheEarliestWithoutActions_SkippingActionToasts()
+    {
+        await using var provider = CreateProvider();
+        var toastService = provider.GetRequiredService<ToastService>();
+        var delays = new ControlledDelay();
+        using var viewModel = new ToastHostViewModel(
+            toastService,
+            provider.GetRequiredService<LocalizationService>(),
+            new LocalDiagnostics(),
+            InvokeSerially,
+            delays.WaitAsync);
+
+        toastService.Show(new ToastOptions { Message = "a1", Duration = ToastDuration.Brief });
+        toastService.Show(new ToastOptions
+        {
+            Message = "b1",
+            PrimaryAction = new ToastAction(
+                "Retry",
+                _ => Task.FromResult(ToastActionResult.Success()))
+        });
+        toastService.Show(new ToastOptions { Message = "a2", Duration = ToastDuration.Brief });
+        toastService.Show(new ToastOptions
+        {
+            Message = "b2",
+            PrimaryAction = new ToastAction(
+                "Retry",
+                _ => Task.FromResult(ToastActionResult.Success()))
+        });
+        await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 4);
+        toastService.Show(new ToastOptions { Message = "fresh", Duration = ToastDuration.Brief });
+
+        await WaitUntilAsync(() =>
+            viewModel.ActiveToasts.Count == 4
+            && viewModel.ActiveToasts.Any(toast => toast.Message == "fresh"));
+
+        var messages = viewModel.ActiveToasts.Select(toast => toast.Message).ToArray();
+        Assert.DoesNotContain("a1", messages);
+        Assert.Contains("b1", messages);
+        Assert.Contains("a2", messages);
+        Assert.Contains("b2", messages);
+        Assert.Equal(new[] { "fresh", "b2", "a2", "b1" }, messages);
+    }
+
+    [Fact]
     public async Task Dispose_WhileExitDelayIsPending_CancelsObservedCommandTask()
     {
         await using var provider = CreateProvider();
@@ -642,14 +865,14 @@ public sealed class ToastHostViewModelTests : IDisposable
         await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 1);
         var toast = viewModel.ActiveToasts.Single();
 
-        viewModel.SetToastPointerOver(toast.Id, isPointerOver: true);
+        viewModel.SetToastInteractionActive(toast.Id, isActive: true);
         await WaitUntilAsync(() => delays.CancellationCount == 1);
 
         Assert.True(viewModel.IsCountdownSuspended(toast.Id));
         Assert.Equal(1, delays.RequestCount);
         Assert.Contains(toast, viewModel.ActiveToasts);
 
-        viewModel.SetToastPointerOver(toast.Id, isPointerOver: false);
+        viewModel.SetToastInteractionActive(toast.Id, isActive: false);
         await WaitUntilAsync(() => delays.RequestCount == 2);
 
         Assert.False(viewModel.IsCountdownSuspended(toast.Id));
@@ -679,9 +902,9 @@ public sealed class ToastHostViewModelTests : IDisposable
 
         for (var visit = 0; visit < 2; visit++)
         {
-            viewModel.SetToastPointerOver(toast.Id, isPointerOver: true);
+            viewModel.SetToastInteractionActive(toast.Id, isActive: true);
             await WaitUntilAsync(() => delays.CancellationCount == visit + 1);
-            viewModel.SetToastPointerOver(toast.Id, isPointerOver: false);
+            viewModel.SetToastInteractionActive(toast.Id, isActive: false);
             await WaitUntilAsync(() => delays.RequestCount == visit + 2);
         }
 
@@ -714,7 +937,7 @@ public sealed class ToastHostViewModelTests : IDisposable
         toastService.Show(new ToastOptions { Message = "saved", Duration = ToastDuration.Brief });
         await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 1);
         var toast = viewModel.ActiveToasts.Single();
-        viewModel.SetToastPointerOver(toast.Id, isPointerOver: true);
+        viewModel.SetToastInteractionActive(toast.Id, isActive: true);
         await WaitUntilAsync(() => delays.CancellationCount == 1);
 
         await viewModel.DismissToastCommand.ExecuteAsync(toast.Id);
@@ -723,7 +946,7 @@ public sealed class ToastHostViewModelTests : IDisposable
         Assert.False(viewModel.IsCountdownSuspended(toast.Id));
 
         // 负向断言给出可观察窗口：消失的 Toast 的计数不会因指针移开而被重新计一次。
-        viewModel.SetToastPointerOver(toast.Id, isPointerOver: false);
+        viewModel.SetToastInteractionActive(toast.Id, isActive: false);
         await TestWait.HoldsForAsync(
             TimeSpan.FromMilliseconds(250),
             () => delays.RequestCount == 1,
@@ -746,7 +969,7 @@ public sealed class ToastHostViewModelTests : IDisposable
         toastService.Show(new ToastOptions { Message = "saved", Duration = ToastDuration.Brief });
         await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 1);
         var toast = viewModel.ActiveToasts.Single();
-        viewModel.SetToastPointerOver(toast.Id, isPointerOver: true);
+        viewModel.SetToastInteractionActive(toast.Id, isActive: true);
         // 先确认倒计时已经真的停在「等指针移开」上，再拆除：否则拆除落在重新评估之前，
         // 唤醒与「记录已移除」两条路都到得了终点，守卫咬不住缺失的唤醒。
         await WaitUntilAsync(() => viewModel.IsCountdownAwaitingResume(toast.Id));
@@ -808,8 +1031,8 @@ public sealed class ToastHostViewModelTests : IDisposable
         await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 1);
         var toast = viewModel.ActiveToasts.Single();
 
-        viewModel.SetToastPointerOver(toast.Id, isPointerOver: true);
-        viewModel.SetToastPointerOver("missing-toast", isPointerOver: true);
+        viewModel.SetToastInteractionActive(toast.Id, isActive: true);
+        viewModel.SetToastInteractionActive("missing-toast", isActive: true);
 
         Assert.False(viewModel.IsCountdownSuspended(toast.Id));
         Assert.Equal(0, delayCalls);
@@ -841,6 +1064,16 @@ public sealed class ToastHostViewModelTests : IDisposable
 
         Assert.Empty(viewModel.ActiveToasts);
         Assert.Equal(0, delays.RequestCount);
+    }
+
+    [Fact]
+    public async Task Notifications_ResolveThroughTheNarrowInterfaceToTheSameInstance()
+    {
+        await using var provider = CreateProvider();
+
+        var narrow = provider.GetRequiredService<INotificationService>();
+
+        Assert.Same(provider.GetRequiredService<ToastService>(), narrow);
     }
 
     private ServiceProvider CreateProvider()

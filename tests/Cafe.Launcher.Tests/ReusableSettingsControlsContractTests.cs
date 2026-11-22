@@ -8,7 +8,7 @@ public sealed class ReusableSettingsControlsContractTests
     private static readonly string[] SettingsSections =
     [
         "SettingsGeneralSection.axaml",
-        "SettingsGameSection.axaml",
+        "SettingsGameLaunchSection.axaml",
         "SettingsDownloadNetworkSection.axaml",
         "SettingsAppearanceSection.axaml",
         "SettingsAdvancedSection.axaml"
@@ -34,7 +34,7 @@ public sealed class ReusableSettingsControlsContractTests
             .ToArray();
 
         // The appearance page keeps one direct ComboBox for the four theme-color sources,
-        // whose items need a resolved-color dot; shorter enumerations use segmented buttons.
+        // whose items need a resolved-color dot; shorter enumerations use native radio groups.
         var themeColorCombo = Assert.Single(directSettingCombos);
         Assert.Equal(
             "{Binding Code, DataType={x:Type models:SelectableOption}}",
@@ -46,7 +46,7 @@ public sealed class ReusableSettingsControlsContractTests
         Assert.Contains(
             documents.SelectMany(document => document.Descendants()),
             element => element.Name.LocalName == "RadioButton"
-                && element.Attribute("Classes")?.Value == "segment-option");
+                && element.Attribute("Classes")?.Value == "setting-radio");
     }
 
     [Fact]

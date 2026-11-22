@@ -12,7 +12,7 @@ public sealed partial class UiStyleContractTests
     [Theory]
     [InlineData("SettingsDownloadNetworkSection",
         "settingsGroupDownload|settingsGroupNetwork",
-        "downloadSource|downloadSpeedLimit|proxy|enableHttp2")]
+        "downloadSpeedLimit|proxy|enableHttp2")]
     [InlineData("SettingsAdvancedSection",
         "settingsGroupDiagnostics|settingsGroupNetworkCompatibility|settingsGroupDataRecovery",
         "logLevel|logFiles|allowBlockedNetworkAddresses|settingsDataDirectory|debugResetSettingsConfirm")]
@@ -24,11 +24,10 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(expectedGroups.Length, groups.Length);
         Assert.Equal(expectedGroups.Select(key => $"{{Binding Shell.I18n[{key}]}}"),
             groups.Select(group => group.Elements().First().Attribute("Text")?.Value));
+        // ADR-070 第二批：行收纳进分组卡片，行序仍按文档序锁定。
         Assert.Equal(rowKeys.Split('|').Select(key => $"{{Binding Shell.I18n[{key}]}}"),
-            groups.SelectMany(group => group.Elements().Where(element => element.Name.LocalName is "SettingRow" or "SettingSelect"))
+            groups.SelectMany(group => group.Descendants().Where(element => element.Name.LocalName is "SettingRow" or "SettingSelect"))
                 .Select(row => row.Attribute("Title")?.Value));
-        foreach (var group in groups)
-            Assert.Equal("False", group.Elements().First(element => element.Name.LocalName is "SettingRow" or "SettingSelect").Attribute("ShowTopDivider")?.Value);
     }
 
     [Fact]
@@ -43,15 +42,26 @@ public sealed partial class UiStyleContractTests
                 "Settings.Editor.Current.AfterLaunchBehavior",
                 "Settings.Editor.Current.StatusDetailMode",
                 "Settings.Editor.Current.ShowRemoteContentCard",
-                "Settings.Editor.Current.UpdateChannel"
+                "Settings.Editor.Current.UpdateChannel",
+                "Settings.Editor.Current.EnableStartupUpdateCheck",
+                "Settings.Editor.Current.RememberWindowPositionAndSize"
             ],
             ["SettingsGameSection"] =
             [
                 "Settings.GamePathDisplay",
-                "Settings.Editor.Current.LaunchCheckMode",
-                "Settings.Editor.Current.GameRuntime.RunnerPath",
-                "Settings.Editor.Current.GameRuntime.PrefixPath",
-                "Settings.Editor.Current.GameRuntime.ProtonPath",
+                "Settings.ChooseGamePathCommand",
+                "Operations.GameManagementPath",
+                "ManageGameFromSettingsCommand"
+            ],
+            ["SettingsGameLaunchSection"] =
+            [
+                "Settings.Game.LaunchCheckMode",
+                "Settings.Game.AfterLaunchBehavior",
+                "Settings.Game.GameRuntime.Runner",
+                "Settings.Game.GameRuntime.RunnerPath",
+                "Settings.Game.GameRuntime.PrefixPath",
+                "Settings.Game.GameRuntime.ProtonPath",
+                "Settings.Game.GameRuntime.EnableMangoHud",
                 "Settings.GameRuntime.ChoosePrefixPathCommand",
                 "Settings.GameRuntime.ChooseProtonPathCommand",
                 "Settings.GameRuntime.HasBuilds",
@@ -60,35 +70,51 @@ public sealed partial class UiStyleContractTests
                 "Settings.GameRuntime.BuildDiscoveryFailed",
                 "Settings.GameRuntime.IsStatusRefreshing",
                 "Settings.GameRuntime.RefreshStatusCommand",
-                "Operations.OpenGameFolderCommand",
-                "Operations.RequestRepairCommand",
-                "Operations.RequestUninstallCommand"
+                "Settings.GameRuntime.IsRunnerPathEnabled",
+                "Settings.GameRuntime.StatusSummary"
+            ],
+            ["SettingsGameDownloadSection"] =
+            [
+                "Settings.Game.PatchUrlGroup"
             ],
             ["SettingsDownloadNetworkSection"] =
             [
                 "Settings.Editor.Current.ProxyMode",
-                "Settings.Editor.Current.PatchUrlGroup",
-                "Settings.Editor.Current.DownloadSpeedLimit"
+                "Settings.Editor.Current.DownloadSpeedLimit",
+                "Settings.Editor.Current.EnableHttp2"
             ],
             ["SettingsAppearanceSection"] =
             [
                 "Settings.Editor.Current.ThemeMode",
                 "Settings.Editor.Current.MotionMode",
                 "Settings.Editor.Current.ThemeColorMode",
-                "Settings.Editor.Current.BackgroundSource",
-                "Settings.Editor.Current.BackgroundFit",
+                "Settings.Editor.Current.ThemeColorExtractionAlgorithm",
+                "Settings.Editor.Current.ThemeColorVariant",
                 "Settings.Editor.Current.NeutralColorStrategy",
                 "Settings.Appearance.ThemeColorPaletteItems",
                 "Settings.Appearance.SelectedCustomThemeColor",
-                "Settings.Appearance.SelectedBackgroundFillColor",
-                "Settings.ChooseBackgroundFileCommand",
-                "Settings.ChooseBackgroundFolderCommand",
-                "Settings.ClearBackgroundCommand",
                 "Settings.Appearance.IsThemeColorPaletteVisible",
                 "Settings.Appearance.IsThemeColorExtractionAlgorithmSettingsVisible",
                 "Settings.Appearance.IsCustomThemeColorPickerVisible",
+                "Settings.Appearance.IsSeedFollowingNeutralStrategySelected",
+                "Settings.Appearance.RefreshThemeColorPaletteCommand",
+                "Settings.Appearance.ThemeColorPreviewBrush"
+            ],
+            ["SettingsBackgroundSection"] =
+            [
+                "Settings.BackgroundEditor.BackgroundSource",
+                "Settings.BackgroundEditor.BackgroundFit",
+                "Settings.BackgroundEditor.BackgroundVideoMuted",
+                "Settings.BackgroundEditor.BackgroundVideoVolume",
+                "Settings.BackgroundEditor.CanEdit",
+                "Settings.BackgroundEditor.UseBackgroundOverride",
+                "Settings.Appearance.SelectedBackgroundFillColor",
+                "Settings.Appearance.BackgroundFillColorPreviewBrush",
                 "Settings.Appearance.IsBackgroundFillColorVisible",
-                "Settings.Appearance.IsCustomBackgroundSettingsVisible"
+                "Settings.Appearance.IsCustomBackgroundSettingsVisible",
+                "Settings.ChooseBackgroundFileCommand",
+                "Settings.ChooseBackgroundFolderCommand",
+                "Settings.ClearBackgroundCommand"
             ],
             ["SettingsAdvancedSection"] =
             [
@@ -96,7 +122,8 @@ public sealed partial class UiStyleContractTests
                 "Settings.Editor.Current.AllowBlockedNetworkAddresses",
                 "LogViewer.OpenCommand",
                 "LogExport.OpenCommand",
-                "WindowChrome.OpenDataDirectoryCommand"
+                "WindowChrome.OpenDataDirectoryCommand",
+                "Settings.RequestResetSettingsCommand"
             ],
             ["SettingsAboutSection"] =
             [
@@ -115,18 +142,30 @@ public sealed partial class UiStyleContractTests
             Environment.NewLine,
             expectedBindings.Keys.Select(name => File.ReadAllText(TestRepository.FromPresentationRoot($"Views/{name}.axaml"))));
 
-        // 分段按钮让同一个草稿属性在组内每个段上各出现一次；除此之外仍要求
-        // 每个绑定只由一个控件拥有，避免同一设置出现两行。
+        // 分段按钮让同一个草稿属性在组内每个段上各出现一次；分组卡片（ADR-070 第二批）
+        // 的条件分隔线与行共用同一可见性绑定，也各计一次；除此之外仍要求每个绑定
+        // 只由一个控件拥有，避免同一设置出现两行。
         Dictionary<string, int> segmentedBindings = new(StringComparer.Ordinal)
         {
             ["Settings.Editor.Current.CloseBehavior"] = 2,
             ["Settings.Editor.Current.StatusDetailMode"] = 2,
             ["Settings.Editor.Current.UpdateChannel"] = 2,
-            ["Settings.Editor.Current.PatchUrlGroup"] = 2,
             ["Settings.Editor.Current.ThemeMode"] = 3,
-            ["Settings.Editor.Current.BackgroundSource"] = 3,
-            ["Settings.Editor.Current.BackgroundFit"] = 3,
-            ["Settings.Editor.Current.NeutralColorStrategy"] = 2
+            // Runner 是 RunnerPath 的前缀，运行器选择与路径输入各命中一次。
+            ["Settings.Game.GameRuntime.Runner"] = 2,
+            ["Settings.Game.PatchUrlGroup"] = 2,
+            ["Settings.BackgroundEditor.BackgroundSource"] = 3,
+            ["Settings.BackgroundEditor.BackgroundFit"] = 3,
+            // 音量滑杆与百分比读数是同一设置的两个呈现，仍归一行。
+            ["Settings.BackgroundEditor.BackgroundVideoVolume"] = 2,
+            ["Settings.Editor.Current.NeutralColorStrategy"] = 2,
+            // 外观/背景/运行环境里条件行与它前方的条件分隔线成对出现。
+            ["Settings.Appearance.IsThemeColorPaletteVisible"] = 2,
+            ["Settings.Appearance.IsCustomThemeColorPickerVisible"] = 2,
+            ["Settings.Appearance.IsCustomBackgroundSettingsVisible"] = 2,
+            ["Settings.GameRuntime.HasBuilds"] = 2,
+            // 游戏分区拆分后，管理命令同时出现在「游戏文件」与「游戏下载」两页。
+            ["ManageGameFromSettingsCommand"] = 7
         };
 
         foreach (var (sectionName, bindings) in expectedBindings)
@@ -145,7 +184,7 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void SettingsOverlay_ReferencesSixCategorySectionsWithoutOwningSettingsRows()
+    public void SettingsOverlay_ReferencesCategorySectionsWithoutOwningSettingsRows()
     {
         var overlay = File.ReadAllText(TestRepository.FromPresentationRoot("Views/MainWindowSettingsOverlay.axaml"));
         var document = XDocument.Parse(overlay);
@@ -153,8 +192,11 @@ public sealed partial class UiStyleContractTests
         {
             ["SettingsGeneralSection"] = "Settings.IsGeneralCategorySelected",
             ["SettingsGameSection"] = "Settings.IsGameCategorySelected",
+            ["SettingsGameLaunchSection"] = "Settings.IsGameLaunchCategorySelected",
+            ["SettingsGameDownloadSection"] = "Settings.IsGameDownloadCategorySelected",
             ["SettingsDownloadNetworkSection"] = "Settings.IsDownloadNetworkCategorySelected",
-            ["SettingsAppearanceSection"] = "Settings.IsAppearanceCategorySelected",
+            // 外观页同时承载默认背景与游戏背景两个分类，三者共用同一整页视图。
+            ["SettingsAppearanceSection"] = "Settings.IsBackgroundEditorCategorySelected",
             ["SettingsAdvancedSection"] = "Settings.IsAdvancedCategorySelected",
             ["SettingsAboutSection"] = "Settings.IsAboutCategorySelected"
         };
@@ -176,18 +218,24 @@ public sealed partial class UiStyleContractTests
     public void SettingsOverlay_UsesResponsiveTwoColumnCategoryWorkspace()
     {
         var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowSettingsOverlay.axaml"));
-        // ADR-015：外壳为无头带 DialogSurface（身份区折叠），token 仅作 Max 封顶。
-        var surface = document
+        // ADR-070 第二批：外壳是标题栏以下、图标栏右侧的整窗页面，不再是 DialogSurface 浮层。
+        var pageRoot = document
             .Descendants()
-            .Single(element => element.Name.LocalName == "DialogSurface");
-        Assert.Equal("Panel", surface.Attribute("Form")?.Value);
-        Assert.True(HasClass(surface, "settings-surface"));
-        Assert.Null(surface.Attribute("Width"));
-        Assert.Null(surface.Attribute("Height"));
-        Assert.Null(surface.Attribute("Title"));
-        Assert.Null(surface.Attribute("HeaderIcon"));
-        Assert.Equal("{StaticResource Launcher.Layout.Settings.MaxWidth}", surface.Attribute("MaxWidth")?.Value);
-        Assert.Equal("{StaticResource Launcher.Layout.Settings.MaxHeight}", surface.Attribute("MaxHeight")?.Value);
+            .Single(element =>
+                element.Name.LocalName == "Grid"
+                && HasClass(element, "settings-overlay"));
+        Assert.Equal(
+            "{StaticResource Launcher.Component.Settings.Page.Offset}",
+            pageRoot.Attribute("Margin")?.Value);
+        Assert.Equal(
+            "{Binding ModalHost.IsSettingsInteractive}",
+            pageRoot.Attribute("IsEnabled")?.Value);
+        Assert.Equal(
+            "{Binding WindowChrome.IsSettingsVisible}",
+            pageRoot.Attributes().Single(attribute => attribute.Name.LocalName == "MotionVisibility.IsOpen").Value);
+        Assert.DoesNotContain(
+            document.Descendants(),
+            element => element.Name.LocalName == "DialogSurface");
 
         var workspace = document
             .Descendants()
@@ -199,7 +247,7 @@ public sealed partial class UiStyleContractTests
         var navigationPane = workspace
             .Descendants()
             .Single(element =>
-                element.Name.LocalName == "Grid"
+                element.Name.LocalName == "Border"
                 && HasClass(element, "settings-navigation-pane"));
         Assert.Equal(
             "{StaticResource Launcher.Component.Settings.Navigation.Width}",
@@ -211,17 +259,14 @@ public sealed partial class UiStyleContractTests
                 element.Name.LocalName == "ListBox"
                 && HasClass(element, "settings-navigation"));
         Assert.Equal(
-            "{Binding Settings.Options.SettingsCategories}",
+            "{Binding Settings.ActiveCategories}",
             navigation.Attribute("ItemsSource")?.Value);
         Assert.Equal(
-            "{Binding Settings.SelectedCategory, Mode=TwoWay}",
-            navigation.Attribute("SelectedValue")?.Value);
-        Assert.Equal("{x:Null}", navigation.Attribute("FocusAdorner")?.Value);
+            "{Binding Settings.SelectedCategoryOption, Mode=TwoWay}",
+            navigation.Attribute("SelectedItem")?.Value);
+        Assert.Null(navigation.Attribute("FocusAdorner"));
         Assert.Equal(
-            "{Binding Code}",
-            navigation.Attribute("SelectedValueBinding")?.Value);
-        Assert.Equal(
-            "Hidden",
+            "Auto",
             navigation.Attribute("ScrollViewer.VerticalScrollBarVisibility")?.Value);
         Assert.Equal(
             "Disabled",
@@ -257,7 +302,7 @@ public sealed partial class UiStyleContractTests
             .Descendants()
             .Single(element => HasClass(element, "settings-content-heading-copy"));
         Assert.Equal(
-            "{Binding SelectedItem, ElementName=SettingsNavigation}",
+            "{Binding Settings.SelectedCategoryOption}",
             categoryHeadingCopy.Attribute("DataContext")?.Value);
         Assert.Equal(
             "models:SettingOption",
@@ -284,215 +329,36 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void SettingsOverlay_UsesFinalM3SurfaceBlueprint()
+    public void SettingsOverlay_KeepsScopeHeaderAboveCategoryNavigation()
     {
         var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowSettingsOverlay.axaml"));
-        // ADR-015：外壳表面自带滑移动效类；内容层不再拆分。
-        var surface = document.Descendants().Single(element =>
-            element.Name.LocalName == "DialogSurface");
-        Assert.True(HasClass(surface, "motion-surface"));
-        Assert.Single(document.Descendants(), element => HasClass(element, "settings-navigation-header"));
-
-        var unselectedNavigationIcon = document
-            .Descendants()
-            .Single(element => element.Name.LocalName == "MaterialIcon" && element.Attribute("Kind")?.Value == "{Binding IconKind}");
-        Assert.Equal("{StaticResource Launcher.Icon.Md}", unselectedNavigationIcon.Attribute("Width")?.Value);
-        Assert.Equal("{StaticResource Launcher.Icon.Md}", unselectedNavigationIcon.Attribute("Height")?.Value);
+        // ADR-070 第二批：整窗页由根网格承担显隐与入场动效；表面不再引用 DialogSurface。
+        var pageRoot = document.Descendants().Single(element =>
+            element.Name.LocalName == "Grid" && HasClass(element, "settings-overlay"));
         Assert.Equal(
-            "settings-navigation-icon-outline",
-            unselectedNavigationIcon.Attribute("Classes")?.Value);
-
-        var selectedNavigationIcon = document
-            .Descendants()
-            .Single(element => element.Name.LocalName == "MaterialIcon" && element.Attribute("Kind")?.Value == "{Binding SelectedIconKind}");
-        Assert.Equal("{StaticResource Launcher.Icon.Md}", selectedNavigationIcon.Attribute("Width")?.Value);
-        Assert.Equal("{StaticResource Launcher.Icon.Md}", selectedNavigationIcon.Attribute("Height")?.Value);
+            "{Binding IsMotionEnabled}",
+            pageRoot.Attribute("Classes.motion-enabled")?.Value);
         Assert.Equal(
-            "settings-navigation-icon-filled",
-            selectedNavigationIcon.Attribute("Classes")?.Value);
+            "{Binding WindowChrome.IsSettingsVisible}",
+            pageRoot.Attributes().Single(attribute => attribute.Name.LocalName == "MotionVisibility.IsOpen").Value);
+        Assert.Equal(
+            "{Binding IsMotionEnabled}",
+            pageRoot.Attributes().Single(attribute => attribute.Name.LocalName == "MotionVisibility.IsMotionEnabled").Value);
 
-        var navigationHeader = document.Descendants().Single(element => HasClass(element, "settings-navigation-header"));
-        Assert.DoesNotContain(
-            navigationHeader.Descendants(),
-            element => element.Name.LocalName == "MaterialIcon");
+        // 导航只有一枚字形：选中态靠行底色与加粗文字表达，不像 Material 那样切换描边/填充两枚图标。
+        var navigationIcon = document
+            .Descendants()
+            .Single(element => element.Name.LocalName == "FluentIcon" && element.Attribute("Glyph")?.Value == "{Binding CategoryGlyph}");
+        Assert.Equal("{StaticResource Launcher.Icon.Md}", navigationIcon.Attribute("FontSize")?.Value);
 
-        var contentHeading = document.Descendants().Single(element => HasClass(element, "settings-content-heading"));
-        Assert.Single(contentHeading.Descendants(), element =>
+        var header = document.Descendants().Single(element => HasClass(element, "settings-header"));
+        Assert.Equal("2", header.Attribute("Grid.ColumnSpan")?.Value);
+        Assert.Single(header.Descendants(), element =>
+            element.Attribute("Text")?.Value == "{Binding Settings.DialogTitle}");
+        Assert.Single(header.Descendants(), element =>
             element.Name.LocalName == "Button" && HasClass(element, "content-header-action"));
         Assert.DoesNotContain(document.Descendants(), element => HasClass(element, "settings-content-header"));
         Assert.DoesNotContain(document.Descendants(), element => HasClass(element, "dialog-header"));
-    }
-
-    [Fact]
-    public void SettingsWorkspaceStyles_UseSemanticBrushesAndDesignTokens()
-    {
-        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
-        var dialogSurfaceStyles = XDocument.Load(TestRepository.FromPresentationRoot("Views/Styles/DialogSurface.axaml"));
-
-        Assert.Equal(
-            "{StaticResource Launcher.Spacing.None}",
-            GetStyleSetters(document, "Grid.settings-workspace")["ColumnSpacing"]);
-        Assert.Equal(
-            "{StaticResource Launcher.Spacing.Thickness.None}",
-            GetStyleSetters(document, "Grid.settings-workspace")["Margin"]);
-        Assert.Equal(
-            "{DynamicResource Launcher.Color.Surface}",
-            GetStyleSetters(document, "ListBox.settings-navigation")["Background"]);
-        Assert.Equal(
-            "{DynamicResource Launcher.Color.Surface}",
-            GetStyleSetters(document, "Grid.settings-navigation-pane")["Background"]);
-        Assert.Equal(
-            "{DynamicResource Launcher.Color.Surface}",
-            GetStyleSetters(document, "Border.settings-navigation-header")["Background"]);
-        Assert.Equal(
-            "{StaticResource Launcher.Color.Transparent}",
-            GetStyleSetters(document, "ListBox.settings-navigation")["BorderBrush"]);
-        Assert.Equal(
-            "{StaticResource Launcher.Spacing.Thickness.None}",
-            GetStyleSetters(document, "ListBox.settings-navigation")["BorderThickness"]);
-        Assert.Equal(
-            "{StaticResource Launcher.Component.Settings.Navigation.List.Padding}",
-            GetStyleSetters(document, "ListBox.settings-navigation")["Padding"]);
-        Assert.Equal(
-            "{StaticResource Launcher.Component.Settings.Navigation.Header.Padding}",
-            GetStyleSetters(document, "Border.settings-navigation-header")["Padding"]);
-        Assert.Equal(
-            "{StaticResource Launcher.Component.Settings.Content.Padding}",
-            GetStyleSetters(document, "Border.settings-content-padding")["Padding"]);
-        Assert.Equal(
-            "{StaticResource Launcher.Component.Settings.Footer.Padding}",
-            GetStyleSetters(document, "Border.settings-content-actions")["Padding"]);
-        Assert.Equal(
-            "False",
-            GetStyleSetters(
-                dialogSurfaceStyles,
-                "controls|DialogSurface.settings-surface:panel /template/ Border#PART_FooterBand")["IsVisible"]);
-        Assert.Equal(
-            "{StaticResource Launcher.Spacing.Thickness.None}",
-            GetStyleSetters(document, "Button.dialog-close.content-header-action")["Margin"]);
-        Assert.Equal(
-            "{StaticResource Launcher.Spacing.Thickness.None}",
-            GetStyleSetters(document, "Border.settings-navigation-header > StackPanel.dialog-title-row")["Margin"]);
-        Assert.Equal(
-            "{StaticResource Launcher.Spacing.Thickness.None}",
-            GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem")["BorderThickness"]);
-        Assert.Equal(
-            "{StaticResource Launcher.Color.Transparent}",
-            GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem")["BorderBrush"]);
-        Assert.Equal(
-            "{StaticResource Launcher.Radius.Md}",
-            GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem")["CornerRadius"]);
-        Assert.Equal(
-            "{StaticResource Launcher.Component.Settings.Navigation.Item.Margin}",
-            GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem")["Margin"]);
-        Assert.Equal(
-            "{StaticResource Launcher.Control.Height.Setting}",
-            GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem")["MinHeight"]);
-        Assert.Equal(
-            "{StaticResource Launcher.Component.Settings.Navigation.Item.Padding}",
-            GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem")["Padding"]);
-        Assert.Equal(
-            "False",
-            GetStyleSetters(
-                document,
-                "ListBox.settings-navigation > ListBoxItem materialIcons|MaterialIcon.settings-navigation-icon-filled")["IsVisible"]);
-        Assert.Equal(
-            "False",
-            GetStyleSetters(
-                document,
-                "ListBox.settings-navigation > ListBoxItem:selected materialIcons|MaterialIcon.settings-navigation-icon-outline")["IsVisible"]);
-        Assert.Equal(
-            "True",
-            GetStyleSetters(
-                document,
-                "ListBox.settings-navigation > ListBoxItem:selected materialIcons|MaterialIcon.settings-navigation-icon-filled")["IsVisible"]);
-        Assert.Equal(
-            "{StaticResource Launcher.Spacing.Thickness.None}",
-            GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem:selected")["BorderThickness"]);
-        Assert.Equal(
-            "{StaticResource Launcher.Color.Transparent}",
-            GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem:selected")["BorderBrush"]);
-        Assert.Equal(
-            "{DynamicResource Launcher.Color.SecondaryContainer}",
-            GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem:selected:not(:focus)")["Background"]);
-        Assert.Equal(
-            "{DynamicResource Launcher.Color.OnSecondaryContainer}",
-            GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem:selected:not(:focus)")["Foreground"]);
-        Assert.Equal(
-            "{StaticResource Launcher.Color.Transparent}",
-            GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem:selected:not(:focus)")["BorderBrush"]);
-        Assert.Equal(
-            "{StaticResource Launcher.Spacing.Thickness.None}",
-            GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem:selected:not(:focus)")["BorderThickness"]);
-        Assert.False(GetStyleSetters(document, "Grid.settings-content").ContainsKey("RowSpacing"));
-        Assert.Equal(
-            "{DynamicResource Launcher.Color.Dialog.Background}",
-            GetStyleSetters(document, "Grid.settings-content")["Background"]);
-        Assert.Equal(
-            "{StaticResource Launcher.Color.ControlPanel.Gradient}",
-            GetStyleSetters(document, "Border.control-panel")["Background"]);
-        Assert.Equal(
-            "{StaticResource Launcher.Spacing.Xs}",
-            GetStyleSetters(document, "StackPanel.settings-content-heading-copy")["Spacing"]);
-        Assert.DoesNotContain(
-            document.Descendants(),
-            element => HasClass(element, "settings-content-divider"));
-        Assert.Equal(
-            "{StaticResource Launcher.Spacing.None}",
-            GetStyleSetters(document, "StackPanel.settings-sections")["Spacing"]);
-        Assert.Equal(
-            "{StaticResource Launcher.Typography.FontSize.Body.Md}",
-            GetStyleSetters(document, "TextBlock.group-title")["FontSize"]);
-        Assert.Equal(
-            "{StaticResource Launcher.Spacing.Thickness.None}",
-            GetStyleSetters(document, "Grid.settings-row")["Margin"]);
-        Assert.Equal(
-            "{StaticResource Launcher.Component.Settings.Row.MinHeight}",
-            GetStyleSetters(document, "Grid.settings-row")["MinHeight"]);
-        Assert.Equal(
-            "{DynamicResource Launcher.Color.Card.Border}",
-            GetStyleSetters(document, "Border.settings-row-divider")["BorderBrush"]);
-        Assert.Equal(
-            "{StaticResource Launcher.Spacing.Thickness.None}",
-            GetStyleSetters(document, "Border.settings-row-divider")["Margin"]);
-
-        var application = XDocument.Load(TestRepository.FromHostRoot("App.axaml"));
-        var navigationHeaderPadding = application
-            .Descendants()
-            .Single(element =>
-                element.Attributes().Any(attribute =>
-                    attribute.Name.LocalName == "Key"
-                    && attribute.Value == "Launcher.Component.Settings.Navigation.Header.Padding"));
-        Assert.Equal("16,16,16,4", navigationHeaderPadding.Value);
-        var contentPadding = application
-            .Descendants()
-            .Single(element =>
-                element.Attributes().Any(attribute =>
-                    attribute.Name.LocalName == "Key"
-                    && attribute.Value == "Launcher.Component.Settings.Content.Padding"));
-        Assert.Equal("16,16,0,16", contentPadding.Value);
-        var contentScrollPadding = application
-            .Descendants()
-            .Single(element =>
-                element.Attributes().Any(attribute =>
-                    attribute.Name.LocalName == "Key"
-                    && attribute.Value == "Launcher.Component.Settings.Content.Scroll.Padding"));
-        Assert.Equal("0,0,16,0", contentScrollPadding.Value);
-        var contentActionsPadding = application
-            .Descendants()
-            .Single(element =>
-                element.Attributes().Any(attribute =>
-                    attribute.Name.LocalName == "Key"
-                    && attribute.Value == "Launcher.Component.Settings.Footer.Padding"));
-        Assert.Equal("24,8,16,20", contentActionsPadding.Value);
-
-        var overlayDocument = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowSettingsOverlay.axaml"));
-        var scrollViewer = overlayDocument
-            .Descendants()
-            .Single(element => element.Name.LocalName == "ScrollViewer");
-        Assert.True(HasClass(scrollViewer, "settings-content-scroll"));
-        Assert.Equal("Auto", scrollViewer.Attribute("VerticalScrollBarVisibility")?.Value);
-        Assert.Equal("Disabled", scrollViewer.Attribute("HorizontalScrollBarVisibility")?.Value);
     }
 
     [Fact]
@@ -524,45 +390,56 @@ public sealed partial class UiStyleContractTests
     public void AppearanceSection_GroupsCommonSettingsBeforeOptionalColorDetails()
     {
         var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/SettingsAppearanceSection.axaml"));
+        var background = XDocument.Load(TestRepository.FromPresentationRoot("Views/SettingsBackgroundSection.axaml"));
         var groups = document.Descendants()
             .Where(element => element.Name.LocalName == "StackPanel" && HasClass(element, "settings-group"))
             .ToArray();
         Assert.Equal(
-            ["{Binding Shell.I18n[settingsGroupThemeMotion]}", "{Binding Shell.I18n[settingsGroupBackground]}",
-                "{Binding Shell.I18n[settingsGroupThemeColor]}"],
+            ["{Binding Shell.I18n[settingsGroupThemeMotion]}", "{Binding Shell.I18n[settingsGroupThemeColor]}"],
             groups.Select(group => group.Elements().First().Attribute("Text")?.Value));
-        var advanced = groups[2].Descendants().Single(element => element.Name.LocalName == "Expander");
+        // 背景组随多游戏拆分出独立视图，仍排在主题与颜色之后（游戏背景页复用同一视图）。
+        Assert.Contains(
+            background.Descendants(),
+            element => element.Name.LocalName == "TextBlock"
+                && element.Attribute("Text")?.Value == "{Binding Shell.I18n[settingsGroupBackground]}");
+        var advanced = groups[1].Descendants().Single(element => element.Name.LocalName == "Expander");
         Assert.Equal("{Binding Settings.Appearance.IsAdvancedColorExpanded, Mode=TwoWay}",
             advanced.Attribute("IsExpanded")?.Value);
         Assert.Equal(2, advanced.Descendants().Count(element => element.Name.LocalName == "SettingSelect"));
         Assert.Single(advanced.Descendants(), element => element.Name.LocalName == "SettingRow"
             && element.Attribute("Title")?.Value == "{Binding Shell.I18n[neutralColorStrategy]}");
         Assert.Single(document.Descendants(), element => element.Name.LocalName == "Expander");
-        Assert.Single(document.Descendants(), element => element.Name.LocalName == "Image");
+        Assert.Single(background.Descendants(), element => element.Name.LocalName == "Image");
     }
 
     [Fact]
-    public void AppearanceSection_ShortEnumsUseSharedSegmentedButtons()
+    public void AppearanceSection_ShortEnumsUseNativeRadioGroups()
     {
         var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/SettingsAppearanceSection.axaml"));
-        var segments = document.Descendants()
-            .Where(element => element.Name.LocalName == "RadioButton" && HasClass(element, "segment-option"))
+        var radios = document.Descendants()
+            .Where(element => element.Name.LocalName == "RadioButton" && HasClass(element, "setting-radio"))
             .ToArray();
 
-        Assert.Equal(11, segments.Length);
+        // 背景来源/填充方式的单选组随背景视图拆出，外观页只剩主题与中性色两组。
+        Assert.Equal(5, radios.Length);
         Assert.Equal(
-            ["SettingsThemeMode", "SettingsBackgroundSource", "SettingsBackgroundFit", "SettingsNeutralColorStrategy"],
-            segments.Select(segment => segment.Attribute("GroupName")?.Value).Distinct());
-        Assert.All(segments, segment =>
+            ["SettingsThemeMode", "SettingsNeutralColorStrategy"],
+            radios.Select(radio => radio.Attribute("GroupName")?.Value).Distinct());
+        Assert.All(radios, radio =>
         {
             Assert.Contains(
                 "SegmentOptionConverter.Instance",
-                segment.Attribute("IsChecked")?.Value ?? "",
+                radio.Attribute("IsChecked")?.Value ?? "",
                 StringComparison.Ordinal);
-            Assert.True(HasClass(segment.Elements().Single(), "segment-content"));
+            Assert.Contains(
+                "Shell.I18n[",
+                radio.Attribute("AutomationProperties.Name")?.Value ?? "",
+                StringComparison.Ordinal);
         });
-        Assert.Equal(4, document.Descendants()
-            .Count(element => element.Name.LocalName == "Border" && HasClass(element, "segmented")));
+        Assert.Equal(2, document.Descendants()
+            .Count(element => element.Name.LocalName == "WrapPanel" && HasClass(element, "setting-radio-group")));
+        // 分段按钮样式与类名已随 ADR-070 退场，不再回来自绘段。
+        Assert.DoesNotContain(document.Descendants(), element => HasClass(element, "segment-option") || HasClass(element, "segmented"));
 
         var themeColorCombo = document.Descendants().Single(element => element.Name.LocalName == "ComboBox");
         Assert.Contains(
@@ -571,33 +448,32 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void GeneralSection_ShortEnumsUseSharedSegmentedButtons()
+    public void GeneralSection_ShortEnumsUseNativeRadioGroups()
     {
         var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/SettingsGeneralSection.axaml"));
-        var segments = document.Descendants()
-            .Where(element => element.Name.LocalName == "RadioButton" && HasClass(element, "segment-option"))
+        var radios = document.Descendants()
+            .Where(element => element.Name.LocalName == "RadioButton" && HasClass(element, "setting-radio"))
             .ToArray();
 
-        Assert.Equal(6, segments.Length);
+        Assert.Equal(6, radios.Length);
         Assert.Equal(
             ["SettingsCloseBehavior", "SettingsStatusDetailMode", "SettingsUpdateChannel"],
-            segments.Select(segment => segment.Attribute("GroupName")?.Value).Distinct());
-        Assert.All(segments, segment =>
+            radios.Select(radio => radio.Attribute("GroupName")?.Value).Distinct());
+        Assert.All(radios, radio =>
         {
             Assert.Contains(
                 "SegmentOptionConverter.Instance",
-                segment.Attribute("IsChecked")?.Value ?? "",
+                radio.Attribute("IsChecked")?.Value ?? "",
                 StringComparison.Ordinal);
             Assert.Contains(
                 "Shell.I18n[",
-                segment.Attribute("AutomationProperties.Name")?.Value ?? "",
+                radio.Attribute("AutomationProperties.Name")?.Value ?? "",
                 StringComparison.Ordinal);
-            Assert.True(HasClass(segment.Elements().Single(), "segment-content"));
         });
         Assert.Equal(3, document.Descendants()
-            .Count(element => element.Name.LocalName == "Border" && HasClass(element, "segmented")));
+            .Count(element => element.Name.LocalName == "WrapPanel" && HasClass(element, "setting-radio-group")));
 
-        // 三项目标行为仍留在下拉：选项文案长于分段可承载的短标签。
+        // 三项目标行为仍留在下拉：选项文案长于单选组可承载的短标签。
         Assert.Contains(
             document.Descendants(),
             element => element.Name.LocalName == "SettingSelect"
@@ -605,28 +481,31 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void DownloadSection_ShortEnumsUseSharedSegmentedButtons()
+    public void DownloadSection_ShortEnumsUseNativeRadioGroups()
     {
-        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/SettingsDownloadNetworkSection.axaml"));
-        var segments = document.Descendants()
-            .Where(element => element.Name.LocalName == "RadioButton" && HasClass(element, "segment-option"))
+        // 下载源是每游戏设置，留在 GameDownload 分类；全局分类只保留下载速度与网络参数。
+        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/SettingsGameDownloadSection.axaml"));
+        var radios = document.Descendants()
+            .Where(element => element.Name.LocalName == "RadioButton" && HasClass(element, "setting-radio"))
             .ToArray();
 
-        Assert.Equal(2, segments.Length);
-        Assert.All(segments, segment =>
+        Assert.Equal(2, radios.Length);
+        Assert.All(radios, radio =>
         {
-            Assert.Equal("SettingsDownloadSource", segment.Attribute("GroupName")?.Value);
+            Assert.Equal("SettingsGameDownloadSource", radio.Attribute("GroupName")?.Value);
             Assert.Contains(
                 "SegmentOptionConverter.Instance",
-                segment.Attribute("IsChecked")?.Value ?? "",
+                radio.Attribute("IsChecked")?.Value ?? "",
                 StringComparison.Ordinal);
-            Assert.True(HasClass(segment.Elements().Single(), "segment-content"));
         });
         Assert.Single(document.Descendants(),
-            element => element.Name.LocalName == "Border" && HasClass(element, "segmented"));
+            element => element.Name.LocalName == "WrapPanel" && HasClass(element, "setting-radio-group"));
 
         // 代理与限速的选项文案较长或数量多于短枚举门槛，继续用下拉。
-        Assert.Equal(2, document.Descendants().Count(element => element.Name.LocalName == "SettingSelect"));
+        var network = XDocument.Load(TestRepository.FromPresentationRoot("Views/SettingsDownloadNetworkSection.axaml"));
+        Assert.DoesNotContain(network.Descendants(),
+            element => element.Name.LocalName == "RadioButton" && HasClass(element, "setting-radio"));
+        Assert.Equal(2, network.Descendants().Count(element => element.Name.LocalName == "SettingSelect"));
     }
 
     [Fact]
@@ -687,11 +566,12 @@ public sealed partial class UiStyleContractTests
     {
         var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/SettingsAboutSection.axaml"));
 
-        // ADR-018 融合变体：身份卡 = 产品名 + 版本 caption + 副标题，操作行内收。
+        // ADR-018 融合变体：身份卡 = 应用图标 + 产品名 + 版本 caption + 副标题，只留一个主操作。
         Assert.Single(document.Descendants(), element =>
             element.Name.LocalName == "Border" && HasClass(element, "about-identity-card"));
-        Assert.DoesNotContain(document.Descendants(), element =>
-            element.Name.LocalName == "Image" || HasClass(element, "about-app-icon"));
+        var appIcon = Assert.Single(document.Descendants(), element =>
+            element.Name.LocalName == "Image" && HasClass(element, "about-app-icon"));
+        Assert.Equal("/Assets/app-icon.png", appIcon.Attribute("Source")?.Value);
         Assert.Single(document.Descendants(), element =>
             element.Name.LocalName == "TextBlock" && HasClass(element, "about-product-name"));
 
@@ -720,13 +600,13 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void SettingsRuntimePaths_OnLinux_LiveOnlyInGameSection()
     {
-        var gameDocument = XDocument.Load(TestRepository.FromPresentationRoot("Views/SettingsGameSection.axaml"));
+        var gameDocument = XDocument.Load(TestRepository.FromPresentationRoot("Views/SettingsGameLaunchSection.axaml"));
         var advancedDocument = XDocument.Load(TestRepository.FromPresentationRoot("Views/SettingsAdvancedSection.axaml"));
         var runtimeBindings = new[]
         {
-            "{Binding Settings.Editor.Current.GameRuntime.RunnerPath, Mode=TwoWay}",
-            "{Binding Settings.Editor.Current.GameRuntime.PrefixPath, Mode=TwoWay}",
-            "{Binding Settings.Editor.Current.GameRuntime.ProtonPath, Mode=TwoWay}"
+            "{Binding Settings.Game.GameRuntime.RunnerPath, Mode=TwoWay}",
+            "{Binding Settings.Game.GameRuntime.PrefixPath, Mode=TwoWay}",
+            "{Binding Settings.Game.GameRuntime.ProtonPath, Mode=TwoWay}"
         };
 
         foreach (var binding in runtimeBindings)
@@ -784,113 +664,8 @@ public sealed partial class UiStyleContractTests
         var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
         var fieldInputStyle = GetStyleSetters(styles, "TextBox.field-input");
         Assert.Equal(
-            "{StaticResource Launcher.Control.Height.Field}",
-            fieldInputStyle["MinHeight"]);
-        Assert.Equal("Center", fieldInputStyle["VerticalAlignment"]);
-        var uidInputStyle = GetStyleSetters(styles, "TextBox.uid-input");
-        Assert.Equal(
-            "{StaticResource Launcher.Typography.FontFamily.Monospace}",
-            uidInputStyle["FontFamily"]);
-        Assert.Equal(
-            "{StaticResource Launcher.Typography.FontSize.Title.Md}",
-            uidInputStyle["FontSize"]);
-    }
-
-    [Fact]
-    public void SettingsNavigation_TokenizeFocusVisibleRings() // spec §7 visible focus ring
-    {
-        var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
-        var selector = "ListBox.settings-navigation > ListBoxItem:focus-visible";
-        Assert.Equal(
-            "{DynamicResource Launcher.Color.FocusRing}",
-            GetStyleSetters(styles, selector)["BorderBrush"]);
-        Assert.Equal(
-            "{StaticResource Launcher.Border.Thickness.Focus}",
-            GetStyleSetters(styles, selector)["BorderThickness"]);
-    }
-
-    [Fact]
-    public void SettingsNavigation_HoverAndSelectionOverrideFluentDefaultColors()
-    {
-        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
-        var styles = document
-            .Descendants()
-            .Where(element => element.Name.LocalName == "Style")
-            .ToDictionary(
-                element => element.Attribute("Selector")?.Value ?? "",
-                element => element,
-                StringComparer.Ordinal);
-
-        foreach (var selector in new[]
-                 {
-                     "ListBox.settings-navigation > ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter",
-                     "ListBox.settings-navigation > ListBoxItem:pressed /template/ ContentPresenter#PART_ContentPresenter",
-                     "ListBox.settings-navigation > ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter",
-                     "ListBox.settings-navigation > ListBoxItem:selected:not(:focus) /template/ ContentPresenter#PART_ContentPresenter",
-                     "ListBox.settings-navigation > ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter",
-                     "ListBox.settings-navigation > ListBoxItem:selected:pressed /template/ ContentPresenter#PART_ContentPresenter"
-                 })
-        {
-            var setters = styles[selector]
-                .Elements()
-                .Where(element => element.Name.LocalName == "Setter")
-                .ToDictionary(
-                    element => element.Attribute("Property")?.Value ?? "",
-                    element => element.Attribute("Value")?.Value ?? "",
-                    StringComparer.Ordinal);
-
-            Assert.Contains("Background", setters.Keys);
-            Assert.Contains("Foreground", setters.Keys);
-        }
-
-        var hoverSetters = styles["ListBox.settings-navigation > ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter"]
-            .Elements()
-            .Where(element => element.Name.LocalName == "Setter")
-            .ToDictionary(
-                element => element.Attribute("Property")?.Value ?? "",
-                element => element.Attribute("Value")?.Value ?? "",
-                StringComparer.Ordinal);
-        Assert.Equal(
-            "{DynamicResource Launcher.Color.Button.Flat.Hover}",
-            hoverSetters["Background"]);
-        Assert.Equal(
-            "{DynamicResource Launcher.Text.Primary}",
-            hoverSetters["Foreground"]);
-
-        foreach (var selector in new[]
-                 {
-                     "ListBox.settings-navigation > ListBoxItem:pressed /template/ ContentPresenter#PART_ContentPresenter",
-                     "ListBox.settings-navigation > ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter",
-                     "ListBox.settings-navigation > ListBoxItem:selected:not(:focus) /template/ ContentPresenter#PART_ContentPresenter",
-                     "ListBox.settings-navigation > ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter",
-                     "ListBox.settings-navigation > ListBoxItem:selected:pressed /template/ ContentPresenter#PART_ContentPresenter"
-                 })
-        {
-            var setters = styles[selector]
-                .Elements()
-                .Where(element => element.Name.LocalName == "Setter")
-                .ToDictionary(
-                    element => element.Attribute("Property")?.Value ?? "",
-                    element => element.Attribute("Value")?.Value ?? "",
-                    StringComparer.Ordinal);
-
-            var expectedBackground = selector.Contains(":selected:pointerover", StringComparison.Ordinal)
-                ? "{DynamicResource Launcher.Color.SecondaryContainer.Hover}"
-                : selector.Contains(":selected:pressed", StringComparison.Ordinal)
-                    ? "{DynamicResource Launcher.Color.SecondaryContainer.Pressed}"
-                    : selector.Contains(":selected", StringComparison.Ordinal)
-                        ? "{DynamicResource Launcher.Color.SecondaryContainer}"
-                        : "{DynamicResource Launcher.Color.Button.Flat.Pressed}";
-            var expectedForeground = selector.Contains(":selected", StringComparison.Ordinal)
-                ? selector.Contains(":pointerover", StringComparison.Ordinal)
-                    ? "{DynamicResource Launcher.Color.OnSecondaryContainer.Hover}"
-                    : selector.Contains(":pressed", StringComparison.Ordinal)
-                        ? "{DynamicResource Launcher.Color.OnSecondaryContainer.Pressed}"
-                        : "{DynamicResource Launcher.Color.OnSecondaryContainer}"
-                : "{DynamicResource Launcher.Text.Primary}";
-            Assert.Equal(expectedBackground, setters["Background"]);
-            Assert.Equal(expectedForeground, setters["Foreground"]);
-        }
+            "Center",
+            fieldInputStyle["VerticalAlignment"]);
     }
 
     [Fact]
@@ -915,75 +690,6 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void SettingRow_LongCopyWrapsInFlexibleContentColumn()
-    {
-        var document = XDocument.Load(TestRepository.FromPresentationRoot("Controls/SettingRow.axaml"));
-        var layout = document
-            .Descendants()
-            .Single(element => element.Name.LocalName == "Grid" && HasClass(element, "settings-row"));
-        var copy = layout
-            .Elements()
-            .Single(element => element.Name.LocalName == "StackPanel");
-        var textBlocks = copy
-            .Elements()
-            .Where(element => element.Name.LocalName == "TextBlock")
-            .ToList();
-        var action = layout
-            .Elements()
-            .Single(element => element.Attributes().Any(attribute =>
-                attribute.Name.LocalName == "Name"
-                && attribute.Value == "ActionPresenter"));
-        var application = XDocument.Load(TestRepository.FromHostRoot("App.axaml"));
-        var minWidthToken = application
-            .Descendants()
-            .Single(element => element.Attributes().Any(attribute =>
-                attribute.Name.LocalName == "Key"
-                && attribute.Value == "Launcher.Component.Settings.Row.Content.MinWidth"));
-
-        Assert.Equal("*,Auto", layout.Attribute("ColumnDefinitions")?.Value);
-        Assert.Null(copy.Attribute("Grid.Column"));
-        Assert.Equal(0, double.Parse(minWidthToken.Value, CultureInfo.InvariantCulture));
-        Assert.Equal(
-            "{StaticResource Launcher.Component.Settings.Row.Content.MinWidth}",
-            copy.Attribute("MinWidth")?.Value);
-        Assert.Equal("Stretch", copy.Attribute("HorizontalAlignment")?.Value);
-        // 行内容垂直内边距保证多行文案（如 ADR-010 提示）不贴住上下分隔线。
-        Assert.Equal(
-            "{StaticResource Launcher.Component.Settings.Row.Content.Padding}",
-            copy.Attribute("Margin")?.Value);
-        Assert.Equal(3, textBlocks.Count);
-        Assert.All(textBlocks, text => Assert.Equal("Wrap", text.Attribute("TextWrapping")?.Value));
-        Assert.Equal("1", action.Attribute("Grid.Column")?.Value);
-        Assert.DoesNotContain(
-            layout.Descendants(),
-            element => element.Name.LocalName == "MaterialIcon");
-    }
-
-    [Fact]
-    public void SettingSelect_ForwardsAdaptiveRowMetricsWithMatchingDefaults()
-    {
-        var document = XDocument.Load(TestRepository.FromPresentationRoot("Controls/SettingSelect.axaml"));
-        var row = document
-            .Descendants()
-            .Single(element => element.Name.LocalName == "SettingRow");
-        Assert.Equal(
-            "{Binding MinimumCopyWidth, ElementName=Root}",
-            row.Attribute("MinimumCopyWidth")?.Value);
-        Assert.Equal(
-            "{Binding ContentSpacing, ElementName=Root}",
-            row.Attribute("ContentSpacing")?.Value);
-
-        // 包裹行的默认度量必须与 SettingRow 同刻度，否则转发绑定会把 0 压过内部行的样式默认值。
-        var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
-        Assert.Equal(
-            GetStyleSetters(styles, "controls|SettingRow")["MinimumCopyWidth"],
-            GetStyleSetters(styles, "controls|SettingSelect")["MinimumCopyWidth"]);
-        Assert.Equal(
-            GetStyleSetters(styles, "controls|SettingRow")["ContentSpacing"],
-            GetStyleSetters(styles, "controls|SettingSelect")["ContentSpacing"]);
-    }
-
-    [Fact]
     public void SettingsPanel_UsesTransactionalSaveAndCancelActions()
     {
         var settingsOverlay = File.ReadAllText(TestRepository.FromPresentationRoot("Views/MainWindowSettingsOverlay.axaml"));
@@ -1000,6 +706,15 @@ public sealed partial class UiStyleContractTests
             StringComparison.Ordinal);
         Assert.Contains(
             "IsEnabled=\"{Binding Settings.CanSaveSettings}\"",
+            settingsOverlay,
+            StringComparison.Ordinal);
+        // ADR-070 第二批：底栏「取消」改称「放弃更改」，旧取消文案不再回到设置页脚。
+        Assert.Contains(
+            "{Binding Shell.I18n[settingsDiscardChanges]}",
+            settingsOverlay,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "{Binding Shell.I18n[cancel]}",
             settingsOverlay,
             StringComparison.Ordinal);
         var settingsDocument = XDocument.Parse(settingsOverlay);
@@ -1019,18 +734,24 @@ public sealed partial class UiStyleContractTests
         var settingsContentActions = settingsDocument
             .Descendants()
             .Single(element => element.Name.LocalName == "Border" && HasClass(element, "settings-content-actions"));
-        Assert.Equal("1", settingsContentActions.Attribute("Grid.Row")?.Value);
+        Assert.Equal("2", settingsContentActions.Attribute("Grid.Row")?.Value);
+        Assert.Equal("2", settingsContentActions.Attribute("Grid.ColumnSpan")?.Value);
         Assert.DoesNotContain(
             settingsContentActions.Ancestors(),
             element => HasClass(element, "settings-content-padding"));
         Assert.Equal(
-            2,
+            new[]
+            {
+                "{Binding Settings.PreviewMainWindowCommand}",
+                "{Binding WindowChrome.ToggleSettingsCommand}",
+                "{Binding Settings.SaveSettingsCommand}"
+            },
             settingsContentActions.Descendants()
-                .Count(element =>
-                    element.Name.LocalName == "Button"
-                    && HasClass(element, "dialog-action")));
-        Assert.DoesNotContain(
-            "Kind=\"ContentSave\" Width=\"{StaticResource Launcher.Icon.Md}\" Height=\"{StaticResource Launcher.Icon.Md}\" Foreground=",
+                .Where(element => element.Name.LocalName == "Button" && HasClass(element, "dialog-action"))
+                .Select(element => element.Attribute("Command")?.Value));
+        Assert.Contains(settingsContentActions.Descendants(), element => element.Name.LocalName == "WrapPanel");
+        Assert.Contains(
+            "Glyph=\"{x:Static glyphs:FluentGlyphs.Save}\"",
             settingsOverlay,
             StringComparison.Ordinal);
         // The escape-key resolution for the settings modal is a ModalRegistration
@@ -1052,30 +773,23 @@ public sealed partial class UiStyleContractTests
     }
 
     [Theory]
-    [InlineData("Views/SettingsGameSection.axaml", "{Binding Operations.RequestUninstallCommand}")]
-    [InlineData("Views/SettingsAdvancedSection.axaml", "{Binding Settings.RequestResetSettingsCommand}")]
-    public void SettingsDangerActions_WithDestructiveCommands_UseDangerActionStyle(string sectionPath, string command)
+    [InlineData("Views/SettingsGameSection.axaml", "{Binding ManageGameFromSettingsCommand}", "uninstall")]
+    [InlineData("Views/SettingsAdvancedSection.axaml", "{Binding Settings.RequestResetSettingsCommand}", null)]
+    public void SettingsDangerActions_WithDestructiveCommands_UseDangerActionStyle(
+        string sectionPath,
+        string command,
+        string? commandParameter)
     {
         var document = XDocument.Load(TestRepository.FromPresentationRoot(sectionPath));
         var button = document
             .Descendants()
             .Single(element =>
                 element.Name.LocalName == "Button"
-                && element.Attribute("Command")?.Value == command);
+                && element.Attribute("Command")?.Value == command
+                && element.Attribute("CommandParameter")?.Value == commandParameter);
 
         Assert.True(HasClass(button, "flat-action"), $"{command} must inherit flat-action geometry.");
         Assert.True(HasClass(button, "danger-action"), $"{command} must use danger-action.");
-    }
-
-    [Fact]
-    public void SettingsDangerActionStyle_WithDangerOverrides_RestoresFlatActionGeometry()
-    {
-        var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
-        Assert.Equal(GetStyleSetters(styles, "Button.flat-action")["Theme"],
-            GetStyleSetters(styles, "Button.danger-action")["Theme"]);
-        Assert.Equal("{DynamicResource Launcher.Color.Error}", GetStyleSetters(styles, "Button.danger-action")["Background"]);
-        Assert.Equal("{StaticResource Launcher.Control.Height.Dialog}", GetActionThemeSetters(styles)["MinHeight"]);
-        Assert.DoesNotContain(styles.Descendants(), element => element.Attribute("Selector")?.Value == "Button.flat-action.danger-action");
     }
 
     [Fact]
@@ -1088,10 +802,10 @@ public sealed partial class UiStyleContractTests
                 element.Name.LocalName == "Grid"
                 && HasClass(element, "settings-content"));
 
-        Assert.Equal("*,Auto", settingsContent.Attribute("RowDefinitions")?.Value);
+        Assert.Equal("Auto,*", settingsContent.Attribute("RowDefinitions")?.Value);
         var contentHeading = settingsContent.Descendants().Single(element =>
             HasClass(element, "settings-content-heading"));
-        // 标题行含关闭按钮，必须固定在滚动区之外，滚动到末尾也不消失。
+        // 分类标题固定在滚动区上方。
         Assert.Equal(
             "Auto,*",
             contentHeading.Parent!.Attribute("RowDefinitions")?.Value);
@@ -1108,22 +822,6 @@ public sealed partial class UiStyleContractTests
         Assert.DoesNotContain(
             document.Descendants(),
             element => HasClass(element, "settings-status-summary"));
-    }
-
-    [Fact]
-    public void SettingsNavigation_SelectedItemUsesSemiboldText()
-    {
-        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
-        var selected = GetStyleSetters(
-            document,
-            "ListBox.settings-navigation > ListBoxItem:selected");
-
-        Assert.Equal(
-            "{StaticResource Launcher.Typography.FontWeight.Strong}",
-            selected["FontWeight"]);
-        Assert.Equal(
-            "{DynamicResource Launcher.Color.SecondaryContainer}",
-            selected["Background"]);
     }
 
     [Fact]
@@ -1206,7 +904,7 @@ public sealed partial class UiStyleContractTests
                     child.Name.LocalName == "TextBlock"
                     && child.Attribute("Text")?.Value == "{Binding Shell.I18n[settingsGroupDiagnostics]}"));
         var rows = group
-            .Elements()
+            .Descendants()
             .Where(element => element.Name.LocalName is "SettingRow" or "SettingSelect")
             .ToList();
 

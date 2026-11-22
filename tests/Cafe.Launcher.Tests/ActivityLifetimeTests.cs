@@ -126,6 +126,36 @@ public sealed class ActivityLifetimeTests
     }
 
     [Fact]
+    public async Task WhenIdle_WithoutShutdown_TracksTheCurrentLeases()
+    {
+        using var lifetime = new ActivityLifetime();
+        Assert.True(lifetime.WhenIdle.IsCompleted);
+
+        var lease = lifetime.TryBegin()!;
+        var idle = lifetime.WhenIdle;
+        Assert.False(idle.IsCompleted);
+
+        lease.Dispose();
+        await idle.WaitAsync(WaitTimeout);
+        Assert.True(lifetime.WhenIdle.IsCompleted);
+        Assert.False(lifetime.IsShuttingDown);
+    }
+
+    [Fact]
+    public async Task WhenIdle_AfterABatchDrained_DoesNotDescribeTheNextBatch()
+    {
+        using var lifetime = new ActivityLifetime();
+        lifetime.TryBegin()!.Dispose();
+        Assert.True(lifetime.WhenIdle.IsCompleted);
+
+        var lease = lifetime.TryBegin()!;
+        Assert.False(lifetime.WhenIdle.IsCompleted);
+
+        lease.Dispose();
+        await lifetime.WhenIdle.WaitAsync(WaitTimeout);
+    }
+
+    [Fact]
     public void Lease_DisposeTwice_ReleasesOnce()
     {
         using var lifetime = new ActivityLifetime();

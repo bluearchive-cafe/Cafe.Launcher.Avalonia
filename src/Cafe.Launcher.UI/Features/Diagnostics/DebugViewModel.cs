@@ -25,7 +25,7 @@ namespace Cafe.Launcher.UI.Features.Diagnostics;
 internal sealed partial class DebugViewModel : ObservableObject, IModalContentViewModel, IDisposable, ILanguageAwarePresentation
 {
     private readonly LauncherDataRoot dataRoot;
-    private readonly ToastService toastService;
+    private readonly INotificationService toastService;
     private readonly UnifiedLogger unifiedLogger;
     private readonly IErrorHandlingService errorHandling;
     private readonly IFatalCrashService fatalCrashService;
@@ -80,7 +80,7 @@ internal sealed partial class DebugViewModel : ObservableObject, IModalContentVi
     /// <summary>Initializes the debug overlay and observes game-operation state.</summary>
     public DebugViewModel(
         LauncherDataRoot dataRoot,
-        ToastService toastService,
+        INotificationService toastService,
         UnifiedLogger unifiedLogger,
         IErrorHandlingService errorHandling,
         IFatalCrashService fatalCrashService,

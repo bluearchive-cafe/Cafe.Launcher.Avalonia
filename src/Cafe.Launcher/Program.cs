@@ -57,6 +57,9 @@ sealed class Program
     /// </summary>
     internal static bool LaunchGameRequested { get; private set; }
 
+    /// <summary>本进程获胜后请求启动的明确游戏身份；空值表示仅打开启动器。</summary>
+    internal static string? LaunchGameId { get; private set; }
+
     /// <summary>
     /// True when the launcher was started with <see cref="ShowHiddenSettingsArgument"/>.
     /// </summary>
@@ -67,7 +70,7 @@ sealed class Program
     /// Set by <see cref="Main"/> after the single-instance mutex is won and bound,
     /// then polled by the <see cref="App"/> launch-game listener. Disposed with <see cref="Main"/>.
     /// </summary>
-    internal static CrossProcessLaunchSignal? LaunchGameSignal { get; private set; }
+    internal static CrossProcessGameLaunchChannel? LaunchGameSignal { get; private set; }
 
     /// <summary>
     /// The cross-process show-window signal endpoint owned by the first instance.
@@ -118,6 +121,18 @@ sealed class Program
 
         if (TryHandleCommandLine(args, Console.Out))
         {
+            return;
+        }
+
+        CrossProcessGameLaunchRequest? launchRequest;
+        try
+        {
+            launchRequest = GameLaunchArguments.Parse(args);
+        }
+        catch (ArgumentException exception)
+        {
+            Console.Error.WriteLine(exception.Message);
+            Environment.ExitCode = 2;
             return;
         }
 
@@ -178,7 +193,8 @@ sealed class Program
 
             LaunchGameSignal = launchBridge.Signal;
             ShowWindowSignal = launchBridge.ShowSignal;
-            LaunchGameRequested = HasLaunchGameArgument(args);
+            LaunchGameRequested = launchRequest is not null;
+            LaunchGameId = launchRequest?.GameId;
             ShowHiddenSettings = HasShowHiddenSettingsArgument(args);
             FirstLaunch = DetectFirstLaunch(dataRoot);
 

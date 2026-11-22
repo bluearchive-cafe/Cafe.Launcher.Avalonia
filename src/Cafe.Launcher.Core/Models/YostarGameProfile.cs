@@ -17,6 +17,9 @@ public sealed record YostarGameProfile
     /// <summary>官方 API 与状态文件里的游戏标识（官方 <c>game_tag</c> / <c>GAME_DIR_NAME</c>）。</summary>
     public required string Tag { get; init; }
 
+    /// <summary>写入官方启动配置时是否包含 <c>params</c>；默认保留蔚蓝档案格式。</summary>
+    public bool GameConfigIncludesParameters { get; init; } = true;
+
     /// <summary>官方安装根的目录名。两款已知官方启动器都用 <c>YostarGames</c>。</summary>
     public required string RootFolderName { get; init; }
 

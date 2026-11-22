@@ -16,6 +16,7 @@ using Cafe.Launcher.Core.Services;
 using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Helpers;
+using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.UI.Services.Diagnostics;
 
@@ -274,6 +275,18 @@ internal sealed class LogExportService
             manifest,
             cancellationToken);
 
+        // Keep game identity in the archive path; two recent launches must not overwrite each other.
+        foreach (var profile in LauncherProfiles.SupportedGames)
+        {
+            var paths = new GameDataPaths(dataRoot, profile.RuntimeId);
+            foreach (var filePath in new[]
+                     { paths.RunnerOutputPath, paths.CompatibilityEnvironmentPath, paths.PrefixMetadataPath })
+            {
+                TryCopyOptionalFileToZip(zip, filePath,
+                    $"games/{paths.GameId}/{Path.GetFileName(filePath)}", manifest, cancellationToken);
+            }
+        }
+
         if (options.IncludeCrashReports)
             AddCrashReports(zip, CrashReportDirectories(), manifest, cancellationToken);
 
@@ -486,6 +499,7 @@ internal sealed class LogExportService
         string[] userDataPaths =
         [
             dataRoot.SettingsPath,
+            dataRoot.SettingsMigrationBackupPath,
             dataRoot.DownloadStatePath,
             dataRoot.NoticeStatePath
         ];
@@ -498,6 +512,17 @@ internal sealed class LogExportService
                 $"user-data/{Path.GetFileName(filePath)}",
                 manifest,
                 cancellationToken);
+        }
+
+        foreach (var profile in LauncherProfiles.SupportedGames)
+        {
+            var paths = new GameDataPaths(dataRoot, profile.RuntimeId);
+            foreach (var filePath in new[]
+                     { paths.DownloadStatePath, paths.NoticeStatePath, paths.DownloadMigrationMarkerPath })
+            {
+                TryCopyOptionalFileToZip(zip, filePath,
+                    $"user-data/games/{paths.GameId}/{Path.GetFileName(filePath)}", manifest, cancellationToken);
+            }
         }
     }
 

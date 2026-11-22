@@ -27,6 +27,16 @@ public sealed class GameRuntimeSettings : SettingsModel
     [JsonPropertyName("enableMangoHud")]
     public bool EnableMangoHud { get => enableMangoHud; set => SetProperty(ref enableMangoHud, value); }
 
+    /// <summary>合并显式编辑的运行字段，保留同一游戏其他字段的较新更新。</summary>
+    internal void ApplyDraftChanges(GameRuntimeSettings draft, GameRuntimeSettings baseline)
+    {
+        if (!LauncherSettings.ValuesEqual(draft.Runner, baseline.Runner)) Runner = draft.Runner;
+        if (!LauncherSettings.ValuesEqual(draft.RunnerPath, baseline.RunnerPath)) RunnerPath = draft.RunnerPath;
+        if (!LauncherSettings.ValuesEqual(draft.PrefixPath, baseline.PrefixPath)) PrefixPath = draft.PrefixPath;
+        if (!LauncherSettings.ValuesEqual(draft.ProtonPath, baseline.ProtonPath)) ProtonPath = draft.ProtonPath;
+        if (!LauncherSettings.ValuesEqual(draft.EnableMangoHud, baseline.EnableMangoHud)) EnableMangoHud = draft.EnableMangoHud;
+    }
+
     public GameRuntimeSettings DeepClone() => new()
     {
         Runner = Runner,

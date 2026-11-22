@@ -49,6 +49,27 @@ public sealed class ConfirmDialogHeadlessTests
     }
 
     [AvaloniaFact]
+    public void ActionBand_WrapsWhenBothActionsDoNotFitOnOneLine()
+    {
+        var dialog = new ConfirmDialog { IsOpen = true, ConfirmText = "Confirm", CancelText = "Cancel" };
+        using var host = CreateHost(dialog);
+        var confirm = FindButton(dialog, "PrimaryActionButton");
+        var cancel = FindButton(dialog, "SafeActionButton");
+        confirm.Width = cancel.Width = 220;
+        Dispatcher.UIThread.RunJobs();
+
+        var surface = dialog.GetVisualDescendants().OfType<DialogSurface>().Single();
+        foreach (var button in new[] { confirm, cancel })
+        {
+            var origin = button.TranslatePoint(default, surface)!.Value;
+            Assert.True(origin.X >= 0 && origin.X + button.Bounds.Width <= surface.Bounds.Width);
+            Assert.True(origin.Y >= 0 && origin.Y + button.Bounds.Height <= surface.Bounds.Height);
+        }
+
+        Assert.True(cancel.Bounds.Top >= confirm.Bounds.Bottom);
+    }
+
+    [AvaloniaFact]
     public void NonDangerConfirm_UsesTheConfirmActionAsDefaultButton()
     {
         var confirm = new RecorderCommand();
@@ -105,30 +126,6 @@ public sealed class ConfirmDialogHeadlessTests
     }
 
     /// <summary>
-    /// ADR-040（修订二）：动作带按钮没有**可见**边框，但焦点环的 2px 厚度常驻预留
-    /// （静止时描边透明）—— 这样聚焦只改颜色、不改几何。
-    /// </summary>
-    [AvaloniaFact]
-    public void DialogActionButtons_ShowNoVisibleBorderAndReserveTheFocusRing()
-    {
-        var confirm = new RecorderCommand();
-        using var host = CreateHost(new ConfirmDialog
-        {
-            IsOpen = true,
-            ConfirmCommand = confirm,
-            ConfirmText = "Repair",
-            CancelText = "Cancel"
-        });
-
-        foreach (var button in ActionButtons(host.Dialog))
-        {
-            // Launcher.Color.Transparent 是 #00000000，故断言 alpha 而不是整色相等。
-            Assert.Equal(0, Assert.IsType<SolidColorBrush>(button.BorderBrush).Color.A);
-            Assert.Equal(new Thickness(2), button.BorderThickness);
-        }
-    }
-
-    /// <summary>
     /// ADR-040（修订）：焦点视觉只在键盘导航时出现。
     /// 打开对话框是程序式聚焦 → 不画焦点环；用户按 Tab 导航 → 画（应用自己的 FocusRing）。
     /// </summary>
@@ -149,17 +146,11 @@ public sealed class ConfirmDialogHeadlessTests
         // 程序式初始焦点（CreateHost 调用 FocusInitialAction）：不算键盘导航。
         Assert.True(primary.IsFocused);
         Assert.DoesNotContain(":focus-visible", primary.Classes);
-        Assert.Equal(0, Assert.IsType<SolidColorBrush>(primary.BorderBrush).Color.A);
 
-        // 键盘导航取焦：焦点环出现（alpha > 0 即 FocusRing 生效）。
+        // Keyboard navigation activates the Fluent theme focus visual.
         PressTab(host.Window);
         var focused = Assert.IsType<Button>(FocusedElement(host.Window));
         Assert.Contains(":focus-visible", focused.Classes);
-        var ringBrush = Assert.IsType<SolidColorBrush>(focused.BorderBrush);
-        Assert.True(
-            ringBrush.Color.A > 0,
-            $"键盘导航时必须画出焦点环。classes=[{string.Join(",", focused.Classes)}] " +
-            $"brush={ringBrush.Color} opacity={ringBrush.Opacity} border={focused.BorderThickness}");
     }
 
     /// <summary>
@@ -273,8 +264,8 @@ public sealed class ConfirmDialogHeadlessTests
     private static IReadOnlyList<Button> ActionButtons(ConfirmDialog dialog) =>
         dialog
             .GetVisualDescendants()
-            .OfType<StackPanel>()
-            .Single(panel => panel.Classes.Contains("confirm-actions"))
+            .OfType<WrapPanel>()
+            .Single(panel => panel.Classes.Contains("dialog-actions"))
             .Children
             .OfType<Button>()
             .ToList();

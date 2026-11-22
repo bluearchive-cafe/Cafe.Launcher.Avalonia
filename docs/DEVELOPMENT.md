@@ -75,7 +75,7 @@ XAML 或样式变更先运行 `UiStyleContractTests`，较大 UI 改动运行 `d
 
 设置下拉菜单矩阵可用 `pwsh ./test.ps1 -Suite Headless -FilterMethod '*SettingsSelect_AllCategoriesLanguagesAndTextScales_KeepChecksAndReadableRows'` 单独运行。每种语言使用一个窗口验证亮暗主题，每个分类依次验证 100%、150%、200% 字号下的真实下拉菜单。
 
-设置页标题对齐矩阵可用 `pwsh ./test.ps1 -Suite Headless -FilterMethod '*Visual_SettingsHeader_TitlesAndCloseButtonShareVerticalCenter'` 单独运行。每种语言复用一个 1024×640 窗口，在 100%、150%、200% 字号下遍历全部六个设置分类。
+设置页范围标题与分类布局矩阵可用 `pwsh ./test.ps1 -Suite Headless -FilterMethod '*Visual_SettingsScopeAndCategoryHeadings_KeepSeparateRows'` 单独运行。每种语言复用一个 1024×640 窗口，在 100%、150%、200% 字号下遍历全部六个设置分类。
 
 任务悬浮卡片布局矩阵可用 `pwsh ./test.ps1 -Suite Headless -FilterMethod '*GameTask_FloatsAboveSplitButtonWithoutMovingIt'` 单独运行。每个语言和主题组合复用一个窗口，在两档尺寸和 100%、125%、150% 字号下检查主操作执行前后的卡片与拆分按钮位置。
 

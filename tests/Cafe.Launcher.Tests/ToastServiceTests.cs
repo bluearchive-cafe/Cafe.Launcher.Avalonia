@@ -105,6 +105,39 @@ public sealed class ToastServiceTests
         Assert.Equal(ToastDuration.Brief, raised.Duration);
     }
 
+    [Fact]
+    public void Show_WithOptions_CarriesMergeKeyAndPolicy()
+    {
+        var service = new ToastService();
+        ToastNotification? raised = null;
+        service.ToastRaised += notification => raised = notification;
+
+        service.Show(new ToastOptions
+        {
+            Message = "Verification failed",
+            Key = "verify-failed",
+            Policy = ToastPolicy.InApp
+        });
+
+        Assert.NotNull(raised);
+        Assert.Equal("verify-failed", raised!.Key);
+        Assert.Equal(ToastPolicy.InApp, raised.Policy);
+    }
+
+    [Fact]
+    public void Show_WithoutMergeKey_LeavesKeyNull()
+    {
+        var service = new ToastService();
+        ToastNotification? raised = null;
+        service.ToastRaised += notification => raised = notification;
+
+        service.Show("plain");
+
+        Assert.NotNull(raised);
+        Assert.Null(raised!.Key);
+        Assert.Equal(ToastPolicy.InApp, raised.Policy);
+    }
+
     [Theory]
     [InlineData(ToastDuration.Brief, 4)]
     [InlineData(ToastDuration.Medium, 6)]
@@ -120,17 +153,5 @@ public sealed class ToastServiceTests
         var property = typeof(ToastNotification).GetProperty("IconBrush");
 
         Assert.Null(property);
-    }
-
-    [Theory]
-    [InlineData(ToastSeverity.Info, "InformationOutline")]
-    [InlineData(ToastSeverity.Success, "CheckCircle")]
-    [InlineData(ToastSeverity.Warning, "AlertOutline")]
-    [InlineData(ToastSeverity.Error, "AlertCircle")]
-    public void IconKind_MapsSeverity(ToastSeverity severity, string expected)
-    {
-        var notification = new ToastNotification { Severity = severity };
-
-        Assert.Equal(expected, notification.IconKind);
     }
 }

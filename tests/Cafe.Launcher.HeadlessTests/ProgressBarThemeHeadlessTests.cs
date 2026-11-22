@@ -7,6 +7,7 @@ using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using FluentAvalonia.Styling;
 using Xunit;
 
 namespace Cafe.Launcher.HeadlessTests;
@@ -14,17 +15,12 @@ namespace Cafe.Launcher.HeadlessTests;
 public sealed class ProgressBarThemeHeadlessTests
 {
     [AvaloniaFact]
-    public void ProgressBar_ApplicationThemeColorChanges_UsesLauncherPrimary()
+    public void ProgressBar_UsesTheFluentThemeAccent()
     {
         var application = Application.Current
             ?? throw new InvalidOperationException("Headless application is not initialised.");
-        Assert.True(
-            application.Resources.TryGetResource(
-                "Launcher.Color.Primary",
-                application.ActualThemeVariant,
-                out var resource));
-        var primaryBrush = Assert.IsType<SolidColorBrush>(resource);
-        var originalColor = primaryBrush.Color;
+        var theme = Assert.Single(application.Styles.OfType<FluentAvaloniaTheme>());
+        var originalColor = theme.CustomAccentColor;
         var progressBar = new ProgressBar { Value = 50 };
         var window = new Window { Content = progressBar };
 
@@ -33,18 +29,18 @@ public sealed class ProgressBarThemeHeadlessTests
             window.Show();
             Dispatcher.UIThread.RunJobs();
 
-            primaryBrush.Color = Color.Parse("#FF2E9E46");
+            theme.CustomAccentColor = Color.Parse("#FF2E9E46");
             Dispatcher.UIThread.RunJobs();
 
-            Assert.Equal(primaryBrush.Color, Assert.IsType<SolidColorBrush>(progressBar.Foreground).Color);
+
             var indicator = progressBar.GetVisualDescendants()
                 .OfType<Border>()
                 .Single(control => control.Name == "PART_Indicator");
-            Assert.Equal(primaryBrush.Color, Assert.IsType<SolidColorBrush>(indicator.Background).Color);
+            Assert.Equal(progressBar.FindResource("ProgressBarForeground"), indicator.Background);
         }
         finally
         {
-            primaryBrush.Color = originalColor;
+            theme.CustomAccentColor = originalColor;
             window.Close();
         }
     }

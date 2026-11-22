@@ -8,7 +8,7 @@ namespace Cafe.Launcher.UI.Services;
 /// Centralized service for showing transient toast notifications.
 /// Subscribers (e.g., the main ViewModel) listen for ToastRaised events to display toasts in the UI.
 /// </summary>
-internal sealed class ToastService
+internal sealed class ToastService : INotificationService
 {
     /// <summary>
     /// Raised whenever a toast notification should be displayed.
@@ -41,6 +41,8 @@ internal sealed class ToastService
             Title = options.Title,
             Message = options.Message,
             Severity = options.Severity,
+            Key = options.Key,
+            Policy = options.Policy,
             Duration = options.Duration ?? ToastDurations.ForSeverity(options.Severity),
             CreatedAt = DateTimeOffset.Now,
             PrimaryAction = options.PrimaryAction,

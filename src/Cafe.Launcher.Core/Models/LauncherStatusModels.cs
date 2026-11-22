@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Core.Models;
 
@@ -87,6 +88,22 @@ public enum LauncherRuntimeState
 /// </summary>
 public sealed class LauncherStatusSnapshot
 {
+    private GameSettings? gameSettings;
+
+    /// <summary>此快照固定绑定的游戏身份；旧调用方默认使用蔚蓝档案条目。</summary>
+    public string GameId { get; init; } = LauncherProfiles.BlueArchiveJapan.RuntimeId;
+
+    /// <summary>
+    /// 此游戏的独立设置副本。旧手工快照首次读取时从明确的 GameId 取副本，
+    /// 不把其他游戏目标回退到蔚蓝档案兼容投影。
+    /// </summary>
+    public GameSettings GameSettings
+    {
+        get => gameSettings ??= Settings.GetGameSettings(GameId).DeepClone();
+        set => gameSettings = value;
+    }
+
+    /// <summary>同次读取的根设置快照，供全局偏好读取。</summary>
     public LauncherSettings Settings { get; set; } = new();
 
     public LocalInstallationState LocalGame { get; set; } = new();

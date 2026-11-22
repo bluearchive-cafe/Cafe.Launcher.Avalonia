@@ -19,6 +19,9 @@ internal sealed record PresentationEnvironment
 
     public Func<TimeSpan, Task> DelayBeforeWindowActionAsync { get; init; } = delay => Task.Delay(delay);
 
+    /// <summary>写入剪贴板，返回是否成功；无桌面宿主时为 false。</summary>
+    public Func<string, Task<bool>> CopyTextAsync { get; init; } = ClipboardTextWriter.TryWriteAsync;
+
     public Action<string?> OpenExternalUrl { get; init; } = ExternalLinkService.Open;
 
     public Action<string> OpenDirectory { get; init; } =

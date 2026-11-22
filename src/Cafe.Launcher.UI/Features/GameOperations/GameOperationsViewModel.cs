@@ -22,19 +22,11 @@ namespace Cafe.Launcher.UI.Features.GameOperations;
 
 internal partial class GameOperationsViewModel : ObservableObject, IGameOperationJourneyHost, IGameOperationActivity, IDisposable, ILanguageAwarePresentation
 {
-    /// <summary>
-    /// 暂停/恢复按钮的两个图标名。按「按钮此刻提供什么」命名而不是按状态命名：暂停态下按钮
-    /// 提供的是恢复，因此显示播放图标——按状态命名会让这个极性在读代码时看不出来。
-    /// </summary>
-    private const string PauseIcon = "Pause";
-
-    private const string ResumeIcon = "Play";
-
     private readonly GameOperationJourney journey;
     private readonly IGameOperationExecutor executor;
     private readonly IGameSessionMonitor sessionMonitor;
     private readonly LocalizationService localizer;
-    private readonly ToastService toastService;
+    private readonly INotificationService toastService;
     private readonly DialogsViewModel dialogs;
     private readonly ShellViewModel shell;
     private LauncherStatusSnapshot? currentSnapshot;
@@ -73,7 +65,7 @@ internal partial class GameOperationsViewModel : ObservableObject, IGameOperatio
     private string installButtonText = "";
 
     [ObservableProperty]
-    private string installButtonIconKind = "Download";
+    private string installButtonGlyph = FluentGlyphs.Download;
 
     [ObservableProperty]
     private string installButtonToolTip = "";
@@ -82,7 +74,7 @@ internal partial class GameOperationsViewModel : ObservableObject, IGameOperatio
     private string progressTitle = "";
 
     [ObservableProperty]
-    private string progressIconKind = "Sync";
+    private string progressGlyph = FluentGlyphs.Sync;
 
     [ObservableProperty]
     private int progressValue;
@@ -129,7 +121,7 @@ internal partial class GameOperationsViewModel : ObservableObject, IGameOperatio
     private string pauseResumeText = "";
 
     [ObservableProperty]
-    private string pauseResumeIcon = PauseIcon;
+    private string pauseResumeGlyph = FluentGlyphs.Pause;
 
     /// <summary>Raised when shell state must be refreshed after an operation (driven by the journey host).</summary>
     public event Func<GameOperationsRefreshMode, Task>? RefreshRequested;
@@ -154,11 +146,13 @@ internal partial class GameOperationsViewModel : ObservableObject, IGameOperatio
     LauncherStatusSnapshot? IGameOperationJourneyHost.CurrentSnapshot => currentSnapshot;
 
     internal GameOperationsViewModel(
+        string gameId,
+        IGameFileOperationCoordinator fileOperations,
         IGameOperationExecutor executor,
         IGameShortcutService gameShortcutService,
         IGameSessionMonitor sessionMonitor,
         LocalizationService localizer,
-        ToastService toastService,
+        INotificationService toastService,
         ILauncherDiagnostics diagnostics,
         ShellViewModel shell,
         DialogsViewModel dialogs,
@@ -174,6 +168,8 @@ internal partial class GameOperationsViewModel : ObservableObject, IGameOperatio
         this.sessionMonitor = sessionMonitor;
         InstallButtonText = localizer.T(LocalizationKeys.InstallGame);
         journey = new GameOperationJourney(
+            gameId,
+            fileOperations,
             executor,
             gameShortcutService,
             sessionMonitor,
@@ -184,13 +180,30 @@ internal partial class GameOperationsViewModel : ObservableObject, IGameOperatio
             delayAsync ?? Task.Delay,
             this);
         journey.IsRunningChanged += OnInstallationIsRunningChanged;
+        journey.PendingOperationChanged += OnPendingOperationChanged;
         sessionMonitor.StateChanged += OnGameSessionStateChanged;
-        dialogs.RepairConfirm.Confirmed += RepairAsync;
+        dialogs.RepairConfirm.Confirmed += OnRepairConfirmedAsync;
         Uninstall = new UninstallDialogViewModel(localizer, ConfirmUninstallAsync,
             () => AsyncEvent.InvokeSequentiallyAsync(OpenLogViewerRequested));
         Uninstall.PropertyChanged += OnUninstallPresentationChanged;
-        dialogs.StopConfirm.Confirmed += PerformStop;
+        dialogs.StopConfirm.Confirmed += OnStopConfirmedAsync;
     }
+
+    /// <summary>是否拥有共享确认表面的交互权；切走条目不停止此模块已有任务。</summary>
+    public bool IsPresentationActive
+    {
+        get => journey.IsPresentationActive;
+        set => journey.IsPresentationActive = value;
+    }
+
+    /// <summary>此操作模块固定绑定的游戏身份。</summary>
+    public string FixedGameId => journey.FixedGameId;
+
+    /// <summary>执行和全部收尾是否仍在进行；停止请求不等于任务结束。</summary>
+    public bool HasPendingOperation => journey.HasPendingOperation;
+
+    /// <summary>等待本模块所有已进入的文件操作旅程完成。</summary>
+    public Task WhenIdle => journey.WhenIdle;
 
     public void RefreshLocalizedText()
     {
@@ -221,6 +234,12 @@ internal partial class GameOperationsViewModel : ObservableObject, IGameOperatio
 
     public void ApplySnapshot(LauncherStatusSnapshot snapshot)
     {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        if (!string.Equals(snapshot.GameId, FixedGameId, StringComparison.Ordinal))
+        {
+            throw new ArgumentException("The snapshot belongs to another game's view model.", nameof(snapshot));
+        }
+
         currentSnapshot = snapshot;
         OnPropertyChanged(nameof(GameManagementPath));
         InstallButtonText = snapshot.RuntimeState switch
@@ -230,12 +249,12 @@ internal partial class GameOperationsViewModel : ObservableObject, IGameOperatio
             LauncherRuntimeState.IoFailure or LauncherRuntimeState.RemoteUnavailable => localizer.T(LocalizationKeys.Refresh),
             _ => localizer.T(LocalizationKeys.UpdateGame)
         };
-        InstallButtonIconKind = snapshot.RuntimeState switch
+        InstallButtonGlyph = snapshot.RuntimeState switch
         {
-            LauncherRuntimeState.NotInstalled => "Download",
-            LauncherRuntimeState.Corrupted => "Tools",
-            LauncherRuntimeState.IoFailure or LauncherRuntimeState.RemoteUnavailable => "Refresh",
-            _ => "Update"
+            LauncherRuntimeState.NotInstalled => FluentGlyphs.Download,
+            LauncherRuntimeState.Corrupted => FluentGlyphs.Tools,
+            LauncherRuntimeState.IoFailure or LauncherRuntimeState.RemoteUnavailable => FluentGlyphs.Refresh,
+            _ => FluentGlyphs.Update
         };
         InstallButtonToolTip = shell.IsInstallBlockedByDiskSpace
             ? shell.InstallDiskSpaceMessage
@@ -265,7 +284,7 @@ internal partial class GameOperationsViewModel : ObservableObject, IGameOperatio
         displayedProgressStage = GameOperationStage.Idle;
         displayedProgressFloor = 0;
         ProgressTitle = localizer.T(LocalizationKeys.Preparing);
-        ProgressIconKind = ResolveProgressPresentation(GameOperationKind.Idle).IconKind;
+        ProgressGlyph = ResolveProgressPresentation(GameOperationKind.Idle).Glyph;
         ProgressValue = 0;
         IsProgressIndeterminate = true;
         ProgressDetail = localizer.T(LocalizationKeys.BuildingFileList);
@@ -288,7 +307,7 @@ internal partial class GameOperationsViewModel : ObservableObject, IGameOperatio
     private void ApplyPausePresentation()
     {
         PauseResumeText = IsPaused ? localizer.T(LocalizationKeys.Resume) : localizer.T(LocalizationKeys.Pause);
-        PauseResumeIcon = IsPaused ? ResumeIcon : PauseIcon;
+        PauseResumeGlyph = IsPaused ? FluentGlyphs.Play : FluentGlyphs.Pause;
     }
 
     void IGameOperationJourneyHost.Present(GameOperationPresentation update)
@@ -307,7 +326,10 @@ internal partial class GameOperationsViewModel : ObservableObject, IGameOperatio
             case GameOperationPresentation.Progress progress when IsTaskExecuting || IsUninstallExecuting: ApplyProgress(progress.Value); break;
             case GameOperationPresentation.Snapshot snapshot: ApplySnapshot(snapshot.Value); break;
             case GameOperationPresentation.LaunchCheck check: shell.SetLaunchCheckResult(check.Message); break;
-            case GameOperationPresentation.RepairConfirmation confirmation: dialogs.RepairConfirm.Show(confirmation.Message); break;
+            case GameOperationPresentation.RepairConfirmation confirmation:
+                var message = OperationMessage(confirmation.Message);
+                if (IsPresentationActive) dialogs.RepairConfirm.Show(message); else toastService.ShowWarning(message);
+                break;
             case GameOperationPresentation.UninstallConfirmation confirmation:
                 uninstallRequestId = confirmation.RequestId;
                 uninstallPresentationVersion = Uninstall.Open(confirmation.Value);
@@ -327,6 +349,13 @@ internal partial class GameOperationsViewModel : ObservableObject, IGameOperatio
             case GameOperationPresentation.Window { Action: GameOperationWindowAction.Show }: ShowRequested?.Invoke(); break;
         }
     }
+
+    private Task OnRepairConfirmedAsync() => IsPresentationActive ? RepairAsync() : Task.CompletedTask;
+
+    private Task OnStopConfirmedAsync() => IsPresentationActive ? PerformStop() : Task.CompletedTask;
+
+    private string OperationMessage(string message) => localizer.F(
+        LocalizationKeys.GameOperationMessage, GameDisplayName.Resolve(FixedGameId, localizer), message);
 
     Task<bool> IGameOperationJourneyHost.RefreshAsync(GameOperationsRefreshMode mode)
     {
@@ -464,6 +493,7 @@ internal partial class GameOperationsViewModel : ObservableObject, IGameOperatio
             IsPaused = false;
             ApplyPausePresentation();
             ProgressDetail = localizer.T(LocalizationKeys.Downloading);
+            ProgressTitle = ProgressDetail;
         }
         else
         {
@@ -472,6 +502,7 @@ internal partial class GameOperationsViewModel : ObservableObject, IGameOperatio
             IsPaused = true;
             ApplyPausePresentation();
             ProgressDetail = localizer.T(LocalizationKeys.Paused);
+            ProgressTitle = ProgressDetail;
             ProgressSpeed = "";
             ProgressEstimated = "";
         }
@@ -577,8 +608,13 @@ internal partial class GameOperationsViewModel : ObservableObject, IGameOperatio
                 or GameOperationStage.DownloadCompleted or GameOperationStage.RepairCompleted;
         var progressPresentation = ResolveProgressPresentation(progress.OperationKind);
         ProgressTitle = progressPresentation.Title;
-        ProgressIconKind = progressPresentation.IconKind;
+        ProgressGlyph = progressPresentation.Glyph;
         ProgressDetail = FormatProgressDetail(progress);
+        if (progress.Stage is GameOperationStage.Paused or GameOperationStage.RepairCheck
+            or GameOperationStage.UpdateCheck or GameOperationStage.FileCheck)
+        {
+            ProgressTitle = ProgressDetail;
+        }
         var clearsDownloadMetrics = progress.Stage is
             GameOperationStage.RepairConfirmation or GameOperationStage.Paused
             or GameOperationStage.DiskCheck or GameOperationStage.VerificationRetry
@@ -642,14 +678,14 @@ internal partial class GameOperationsViewModel : ObservableObject, IGameOperatio
             _ => throw new ArgumentOutOfRangeException(nameof(progress), progress.Stage, null)
         };
 
-    private (string Title, string IconKind) ResolveProgressPresentation(GameOperationKind operationKind)
+    private (string Title, string Glyph) ResolveProgressPresentation(GameOperationKind operationKind)
     {
         return operationKind switch
         {
-            GameOperationKind.Repair => (localizer.T(LocalizationKeys.Repairing), "Tools"),
-            GameOperationKind.Uninstall => (localizer.T(LocalizationKeys.Uninstalling), "DeleteOutline"),
-            GameOperationKind.Download => (localizer.T(LocalizationKeys.Downloading), "Download"),
-            GameOperationKind.Idle => (localizer.T(LocalizationKeys.Working), "Sync"),
+            GameOperationKind.Repair => (localizer.T(LocalizationKeys.Repairing), FluentGlyphs.Tools),
+            GameOperationKind.Uninstall => (localizer.T(LocalizationKeys.Uninstalling), FluentGlyphs.Delete),
+            GameOperationKind.Download => (localizer.T(LocalizationKeys.Downloading), FluentGlyphs.Download),
+            GameOperationKind.Idle => (localizer.T(LocalizationKeys.Working), FluentGlyphs.Sync),
             _ => throw new ArgumentOutOfRangeException(nameof(operationKind), operationKind, null)
         };
     }
@@ -706,6 +742,23 @@ internal partial class GameOperationsViewModel : ObservableObject, IGameOperatio
     /// 状态行只描述，不表态：<see cref="GameSessionState.StartFailed"/> 的恢复窗口与
     /// 错误 Toast 是状态变化时刻的一次性动作，语言切换重排文案时不得重放。
     /// </summary>
+    private void OnPendingOperationChanged()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        if (!Dispatcher.UIThread.CheckAccess() && Application.Current is not null)
+        {
+            Dispatcher.UIThread.Post(OnPendingOperationChanged);
+            return;
+        }
+
+        OnPropertyChanged(nameof(HasPendingOperation));
+        OnPropertyChanged(nameof(WhenIdle));
+    }
+
     private void ApplySessionStatePresentation()
     {
         var exit = sessionMonitor.LastSessionExit;
@@ -743,10 +796,11 @@ internal partial class GameOperationsViewModel : ObservableObject, IGameOperatio
         installSizeCancellation?.Cancel();
         shell.PropertyChanged -= OnShellTaskStateChanged;
         journey.IsRunningChanged -= OnInstallationIsRunningChanged;
+        journey.PendingOperationChanged -= OnPendingOperationChanged;
         sessionMonitor.StateChanged -= OnGameSessionStateChanged;
-        dialogs.RepairConfirm.Confirmed -= RepairAsync;
+        dialogs.RepairConfirm.Confirmed -= OnRepairConfirmedAsync;
         Uninstall.PropertyChanged -= OnUninstallPresentationChanged;
-        dialogs.StopConfirm.Confirmed -= PerformStop;
+        dialogs.StopConfirm.Confirmed -= OnStopConfirmedAsync;
         journey.Dispose();
     }
 

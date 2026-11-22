@@ -1,5 +1,6 @@
 using System;
 using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.Core.Services;
 
@@ -22,7 +23,10 @@ internal sealed class PatchUrlGroupService
 
     public PatchUrlGroupDefinition Resolve(string? group)
     {
-        return group == PatchUrlGroups.Cafe
+        var supportsMirror = LauncherProfiles.TryGetSupportedGame(gameProfile.RuntimeId, out _)
+            && LauncherProfiles.GetGameDefinition(gameProfile.RuntimeId).SupportsCafeDownloadSource
+            && !string.IsNullOrWhiteSpace(productProfile.CafePackageHost);
+        return group == PatchUrlGroups.Cafe && supportsMirror
             ? new PatchUrlGroupDefinition
             {
                 Code = PatchUrlGroups.Cafe,
@@ -54,6 +58,11 @@ internal sealed class PatchUrlGroupService
     /// </summary>
     public string RestoreOfficialPackageUrl(string? value)
     {
+        if (Resolve(PatchUrlGroups.Cafe).Code != PatchUrlGroups.Cafe)
+        {
+            return value ?? "";
+        }
+
         return RewritePackageHost(
             value ?? "",
             productProfile.CafePackageHost,
@@ -70,7 +79,7 @@ internal sealed class PatchUrlGroupService
     {
         response.PrimaryCdn = RewritePackageUrl(response.PrimaryCdn, group);
         response.BackUpCdn = RewritePackageUrl(response.BackUpCdn, group);
-        if (group == PatchUrlGroups.Cafe)
+        if (Resolve(group).Code == PatchUrlGroups.Cafe)
         {
             // The Cafe mirror is a single host; the official backup path does not
             // exist there, so primary and backup share the same URL.

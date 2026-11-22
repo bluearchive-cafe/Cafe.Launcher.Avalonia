@@ -26,7 +26,7 @@ internal sealed partial class LogExportDialogViewModel : ObservableObject, IModa
 
     private readonly LogExportService exportService;
     private readonly IFilePickerService filePickerService;
-    private readonly ToastService toastService;
+    private readonly INotificationService toastService;
     private readonly LocalizationService localizer;
     private readonly ILauncherDiagnostics diagnostics;
     private readonly Action<string> openDirectory;
@@ -58,7 +58,7 @@ internal sealed partial class LogExportDialogViewModel : ObservableObject, IModa
     public LogExportDialogViewModel(
         LogExportService exportService,
         IFilePickerService filePickerService,
-        ToastService toastService,
+        INotificationService toastService,
         LocalizationService localizer,
         ILauncherDiagnostics diagnostics)
         : this(
@@ -74,7 +74,7 @@ internal sealed partial class LogExportDialogViewModel : ObservableObject, IModa
     internal LogExportDialogViewModel(
         LogExportService exportService,
         IFilePickerService filePickerService,
-        ToastService toastService,
+        INotificationService toastService,
         LocalizationService localizer,
         ILauncherDiagnostics diagnostics,
         Action<string> openDirectory)

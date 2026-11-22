@@ -121,10 +121,20 @@ public sealed class LauncherPresentationSession : IDisposable
     /// 并在命令行要求时用与转发请求相同的入口自动启动游戏。
     /// </summary>
     /// <param name="firstLaunch">本次是否为首次启动。</param>
-    /// <param name="launchGameRequested">本进程是否带 <c>--launch-game</c> 启动。</param>
+    /// <param name="launchGameRequested">本进程是否带 <c>--launch-game</c> 启动（旧式 bare 请求固定指向蔚蓝档案）。</param>
     /// <param name="shutdownToken">宿主关闭时取消初始化/启动流程的令牌。</param>
     public void AttachStartupBehavior(bool firstLaunch, bool launchGameRequested, CancellationToken shutdownToken)
+        => AttachStartupBehavior(firstLaunch,
+            launchGameRequested ? LauncherProfiles.BlueArchiveJapan.RuntimeId : null, shutdownToken);
+
+    /// <summary>为明确游戏目标挂载启动行为；首启向导优先，不缓存或延后执行启动请求。</summary>
+    public void AttachStartupBehavior(bool firstLaunch, string? gameId, CancellationToken shutdownToken)
     {
+        if (gameId is not null)
+        {
+            _ = LauncherProfiles.GetSupportedGame(gameId);
+        }
+
         ThrowIfDisposed();
         var window = mainWindow ?? throw new InvalidOperationException("Presentation window has not been created.");
         if (startupAttached)
@@ -154,7 +164,7 @@ public sealed class LauncherPresentationSession : IDisposable
         {
             // 启动续体以显式弃等执行，但必须可被宿主观察：记录任务供关闭屏障等待，
             // 异常在续体内部收口，避免关闭竞态变成未观察任务异常（审计 AUD-ARCH-019）。
-            startupTask = RunStartupAsync(launchGameRequested, shutdownToken);
+            startupTask = RunStartupAsync(gameId, shutdownToken);
         });
     }
 
@@ -162,11 +172,11 @@ public sealed class LauncherPresentationSession : IDisposable
     /// 启动初始化的可观察外壳：捕获包括关闭竞态在内的一切异常，任务因此永不故障，
     /// 宿主可以在任何时刻等待或释放它依赖的资源。
     /// </summary>
-    private async Task RunStartupAsync(bool launchGameRequested, CancellationToken shutdownToken)
+    private async Task RunStartupAsync(string? gameId, CancellationToken shutdownToken)
     {
         try
         {
-            await StartNormallyAsync(launchGameRequested, shutdownToken);
+            await StartNormallyAsync(gameId, shutdownToken);
         }
         catch (OperationCanceledException) when (shutdownToken.IsCancellationRequested)
         {
@@ -188,7 +198,7 @@ public sealed class LauncherPresentationSession : IDisposable
     /// 常规启动先核对协议同意版本：版本更新时只显示协议步骤，同意后写回原设置并由
     /// 既有保存后续流程完成初始化；其余情况直接执行完整初始化。
     /// </summary>
-    private async Task StartNormallyAsync(bool launchGameRequested, CancellationToken shutdownToken)
+    private async Task StartNormallyAsync(string? gameId, CancellationToken shutdownToken)
     {
         LauncherSettings savedSettings;
         try
@@ -202,13 +212,13 @@ public sealed class LauncherPresentationSession : IDisposable
         catch
         {
             // 读取失败的诊断与兜底由 InitializeAsync 统一处理。
-            await InitializeThenMaybeLaunchAsync(launchGameRequested, shutdownToken);
+            await InitializeThenMaybeLaunchAsync(gameId, shutdownToken);
             return;
         }
 
         if (LauncherAgreement.IsCurrent(savedSettings.AcceptedAgreementVersion))
         {
-            await InitializeThenMaybeLaunchAsync(launchGameRequested, shutdownToken);
+            await InitializeThenMaybeLaunchAsync(gameId, shutdownToken);
             return;
         }
 
@@ -232,7 +242,7 @@ public sealed class LauncherPresentationSession : IDisposable
                 wizard.SettingsApplied -= OnSettingsApplied;
                 // 保存与完整刷新由壳的向导完成序列承担；这里只补命令行启动，
                 // 再跑一遍 InitializeAsync 会重复加载主机状态。
-                await MaybeLaunchGameAsync(launchGameRequested, shutdownToken);
+                await MaybeLaunchGameAsync(gameId, shutdownToken);
             }
 
             wizard.SettingsApplied += OnSettingsApplied;
@@ -308,12 +318,16 @@ public sealed class LauncherPresentationSession : IDisposable
         }
     }
 
-    /// <summary>把转发来的启动游戏请求送进常规 UI 旅程。</summary>
+    /// <summary>把转发来的启动游戏请求送进常规 UI 旅程（旧式 bare 请求固定指向蔚蓝档案）。</summary>
     /// <remarks>
     /// 令牌是宿主的关闭令牌：关闭已经开始时不再发起新的游戏启动，因此这里先做一次
     /// 前置检查——命令本身不接受取消（旅程自己的失败由它自己报告）。
     /// </remarks>
     public Task LaunchGameAsync(CancellationToken cancellationToken = default)
+        => LaunchGameAsync(LauncherProfiles.BlueArchiveJapan.RuntimeId, cancellationToken);
+
+    /// <summary>把启动参数或跨进程请求绑定的游戏身份交给统一 UI 入口；不读取当前条目作替代。</summary>
+    public Task LaunchGameAsync(string gameId, CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();
         cancellationToken.ThrowIfCancellationRequested();
@@ -322,8 +336,7 @@ public sealed class LauncherPresentationSession : IDisposable
             throw new InvalidOperationException("Presentation window has not been created.");
         }
 
-        viewModel.Operations.StartGameCommand.Execute(null);
-        return Task.CompletedTask;
+        return viewModel.RequestGameLaunchAsync(gameId);
     }
 
     /// <summary>
@@ -397,10 +410,10 @@ public sealed class LauncherPresentationSession : IDisposable
         mainWindow = null;
     }
 
-    private async Task InitializeThenMaybeLaunchAsync(bool launchGameRequested, CancellationToken shutdownToken)
+    private async Task InitializeThenMaybeLaunchAsync(string? gameId, CancellationToken shutdownToken)
     {
         await InitializeAsync(shutdownToken);
-        await MaybeLaunchGameAsync(launchGameRequested, shutdownToken);
+        await MaybeLaunchGameAsync(gameId, shutdownToken);
     }
 
     /// <summary>
@@ -437,9 +450,9 @@ public sealed class LauncherPresentationSession : IDisposable
     /// 初始化完成后的命令行启动请求。重新征询路径由向导完成序列先行刷新，
     /// 因此也能单独调用，不再重复初始化。
     /// </summary>
-    private async Task MaybeLaunchGameAsync(bool launchGameRequested, CancellationToken shutdownToken)
+    private async Task MaybeLaunchGameAsync(string? gameId, CancellationToken shutdownToken)
     {
-        if (!launchGameRequested)
+        if (gameId is null)
         {
             return;
         }
@@ -447,7 +460,7 @@ public sealed class LauncherPresentationSession : IDisposable
         try
         {
             // 初始刷新已结束，自动启动与转发的 --launch-game 请求走同一入口。
-            await Dispatcher.UIThread.InvokeAsync(() => LaunchGameAsync(shutdownToken));
+            await Dispatcher.UIThread.InvokeAsync(() => LaunchGameAsync(gameId, shutdownToken));
         }
         catch (OperationCanceledException) when (shutdownToken.IsCancellationRequested)
         {

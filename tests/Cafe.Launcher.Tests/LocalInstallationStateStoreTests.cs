@@ -48,10 +48,11 @@ public sealed class LocalInstallationStateStoreTests : IDisposable
         Assert.Equal(LocalInstallationStateKind.Valid, state.Kind);
         var config = Assert.IsType<GameLauncherConfig>(state.GameConfig);
         var manifest = Assert.IsType<LocalManifest>(state.Manifest);
+        Assert.False(state.HasDifferentGameIdentity);
         Assert.Equal("1.2.3", config.Version);
         Assert.Equal("1.2.3", manifest.Version);
         Assert.Equal("BlueArchive", config.Name);
-        Assert.Equal(["--test"], config.Params);
+        Assert.Equal(["--test"], config.Params ?? []);
         var file = Assert.Single(manifest.Files);
         Assert.Equal("BlueArchive.exe", file.Path);
         Assert.Equal("4", file.Size);
@@ -65,6 +66,63 @@ public sealed class LocalInstallationStateStoreTests : IDisposable
 
         using var configJson = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(gamePath, "game-launcher-config.json")));
         Assert.Equal(["tag", "name", "params", "version", "vc"], configJson.RootElement.EnumerateObject().Select(p => p.Name));
+    }
+
+    [Fact]
+    public async Task CommitAsync_WhenStellaProfileStoresNoLaunchParameters_OmitsParamsFromTheConfig()
+    {
+        // Stella 的 config 没有 params 字段，vc 也按三种字段计算；写出一个空数组
+        // 会让校验（以及服务端的身份判断）与服务端格式不一致。
+        Directory.CreateDirectory(gamePath);
+        var stellaStore = new LocalInstallationStateStore(LauncherProfiles.StellaSoraChina);
+        var commit = new LocalInstallationStateCommit(
+            "1.2.3",
+            "manifest.json",
+            "StellaSora",
+            [],
+            [new LocalInstallationFile("StellaSora.exe", 4, "1234")]);
+
+        var state = await stellaStore.CommitAsync(gamePath, commit);
+
+        Assert.Equal(LocalInstallationStateKind.Valid, state.Kind);
+        Assert.Null(Assert.IsType<GameLauncherConfig>(state.GameConfig).Params);
+        var json = await File.ReadAllTextAsync(Path.Combine(gamePath, LauncherPaths.GameConfigFileName));
+        Assert.DoesNotContain("\"params\"", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CommitAsync_WhenStellaProfileReceivesLaunchParameters_ThrowsWithoutWritingState()
+    {
+        Directory.CreateDirectory(gamePath);
+        var stellaStore = new LocalInstallationStateStore(LauncherProfiles.StellaSoraChina);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => stellaStore.CommitAsync(gamePath, CreateCommit("1.2.3")));
+
+        Assert.False(File.Exists(Path.Combine(gamePath, LauncherPaths.ManifestFileName)));
+        Assert.False(File.Exists(Path.Combine(gamePath, LauncherPaths.GameConfigFileName)));
+    }
+
+    [Fact]
+    public async Task ReadAsync_WhenStateBelongsToAnotherGame_ReportsTheIdentityMismatch()
+    {
+        // 用户可能把 BA 的路径指向 Stella 的安装目录（或反之）：两份文档各自自洽，
+        // 但身份不符。表现层要能据此解释，而不是笼统地报「安装损坏」。
+        Directory.CreateDirectory(gamePath);
+        var stellaStore = new LocalInstallationStateStore(LauncherProfiles.StellaSoraChina);
+        var commit = new LocalInstallationStateCommit(
+            "1.2.3",
+            "manifest.json",
+            "StellaSora",
+            [],
+            [new LocalInstallationFile("StellaSora.exe", 4, "1234")]);
+        Assert.Equal(LocalInstallationStateKind.Valid, (await stellaStore.CommitAsync(gamePath, commit)).Kind);
+
+        var state = await store.ReadAsync(gamePath);
+
+        Assert.Equal(LocalInstallationStateKind.Corrupted, state.Kind);
+        Assert.True(state.HasDifferentGameIdentity);
+        Assert.Null(state.GameConfig);
+        Assert.Null(state.Manifest);
     }
 
     [Fact]

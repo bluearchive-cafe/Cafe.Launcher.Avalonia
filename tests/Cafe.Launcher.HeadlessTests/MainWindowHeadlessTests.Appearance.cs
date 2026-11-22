@@ -13,6 +13,7 @@ using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services;
 using Cafe.Launcher.Testing;
 using Cafe.Launcher.UI.Constants;
+using Cafe.Launcher.UI.Helpers;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Views;
 using Cafe.Launcher.UI.Services;
@@ -22,6 +23,109 @@ namespace Cafe.Launcher.HeadlessTests;
 
 public sealed partial class MainWindowHeadlessTests
 {
+    [AvaloniaTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AppearanceThemeColor_WhenPickerChanges_RepaintsTheHomeActionAndRestoresItOnDiscard(bool dark)
+    {
+        using var variant = ThemeVariantSnapshot.Capture(dark ? ThemeVariant.Dark : ThemeVariant.Light);
+        using var context = CreateContext();
+        OpenSettings(context);
+        var settings = context.ViewModel.Settings;
+        settings.SelectedCategory = SettingsCategoryCodes.Appearance;
+        var split = context.Window.GetVisualDescendants().OfType<SplitButton>()
+            .Single(control => control.Classes.Contains("primary-operation"));
+        Color ActionColor() => Assert.IsAssignableFrom<ISolidColorBrush>(split.Background).Color;
+        settings.Editor.Current.ThemeMode = dark ? ThemeModes.Dark : ThemeModes.Light;
+        settings.Editor.Current.ThemeColorMode = ThemeColorModes.Custom;
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(dark ? ThemeVariant.Dark : ThemeVariant.Light, context.Window.ActualThemeVariant);
+        var picker = context.Window.GetVisualDescendants().OfType<ColorPicker>()
+            .Single(control => control.IsEffectivelyVisible);
+        var defaultBackground = ActionColor();
+
+        picker.Color = Colors.OrangeRed;
+        await settings.PendingAppearancePreview.WaitAsync(TimeSpan.FromSeconds(5));
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.NotEqual(defaultBackground, ActionColor());
+        var custom = MaterialSchemeGenerator.CreateScheme(Colors.OrangeRed,
+            settings.Editor.Current.ThemeColorVariant, dark);
+        Assert.Equal(MaterialColorMapper.ToAvaloniaColor(custom.Primary), ActionColor());
+        Assert.Same(context.Window.FindResource(context.Window.ActualThemeVariant, "AccentButtonBackground"), split.Background);
+        Assert.Same(context.Window.FindResource(context.Window.ActualThemeVariant, "AccentButtonForeground"), split.Foreground);
+        Assert.True(settings.IsSettingsDirty);
+
+        settings.Editor.Current.ThemeMode = dark ? ThemeModes.Light : ThemeModes.Dark;
+        await settings.PendingAppearancePreview.WaitAsync(TimeSpan.FromSeconds(5));
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(dark ? ThemeVariant.Light : ThemeVariant.Dark, context.Window.ActualThemeVariant);
+        Assert.Same(context.Window.FindResource(context.Window.ActualThemeVariant, "AccentButtonBackground"), split.Background);
+        Assert.Same(context.Window.FindResource(context.Window.ActualThemeVariant, "AccentButtonForeground"), split.Foreground);
+
+        await settings.DiscardChangesAsync();
+        await settings.PendingAppearancePreview.WaitAsync(TimeSpan.FromSeconds(5));
+        Dispatcher.UIThread.RunJobs();
+
+        var defaults = LauncherSettings.CreateDefaults();
+        var savedScheme = MaterialSchemeGenerator.CreateScheme(Color.Parse(defaults.CustomThemeColor),
+            defaults.ThemeColorVariant, context.Window.ActualThemeVariant == ThemeVariant.Dark);
+        Assert.Equal(MaterialColorMapper.ToAvaloniaColor(savedScheme.Primary), ActionColor());
+        Assert.False(settings.IsSettingsDirty);
+    }
+
+    [AvaloniaTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AppearanceNeutralColors_WhenStrategyChanges_UpdatesSharedSurfaces(bool dark)
+    {
+        using var variant = ThemeVariantSnapshot.Capture(dark ? ThemeVariant.Dark : ThemeVariant.Light);
+        using var context = CreateContext();
+        OpenSettings(context);
+        var settings = context.ViewModel.Settings;
+        settings.SelectedCategory = SettingsCategoryCodes.About;
+        var draft = settings.Editor.Current;
+        draft.ThemeMode = dark ? ThemeModes.Dark : ThemeModes.Light;
+        draft.ThemeColorMode = ThemeColorModes.Custom;
+        settings.Appearance.SelectedCustomThemeColor = Colors.OrangeRed;
+        Dispatcher.UIThread.RunJobs();
+        var borders = context.Window.GetVisualDescendants().OfType<Border>().ToArray();
+        // 去标题栏后，首页最外层表面是左侧图标栏（半透明 Rail token）；
+        // 设置页是实心对话框表面（ADR-070）。
+        var home = context.Window.FindControl<Border>("GameSidebar")!;
+        var dialog = borders.Single(border => border.Classes.Contains("settings-page"));
+        var card = borders.Single(border => border.Classes.Contains("about-identity-card"));
+        var defaultSurface = Assert.IsAssignableFrom<ISolidColorBrush>(home.Background).Color;
+        var defaultDialog = Assert.IsAssignableFrom<ISolidColorBrush>(dialog.Background).Color;
+        var defaultCard = Assert.IsAssignableFrom<ISolidColorBrush>(card.Background).Color;
+
+        draft.NeutralColorStrategy = NeutralColorStrategies.SeedFollowing;
+        await settings.PendingAppearancePreview.WaitAsync(TimeSpan.FromSeconds(5));
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Same(
+            context.Window.FindResource(context.Window.ActualThemeVariant, "Launcher.Color.Glass.Rail.Background"),
+            home.Background);
+        Assert.Same(
+            context.Window.FindResource(context.Window.ActualThemeVariant, "Launcher.Color.Dialog.Background"),
+            dialog.Background);
+        var scheme = MaterialSchemeGenerator.CreateScheme(Colors.OrangeRed, draft.ThemeColorVariant, dark);
+        Assert.Equal(
+            WithAlpha(MaterialColorMapper.ToAvaloniaColor(scheme.SurfaceContainerHigh), MaterialSchemeGenerator.GlassRailAlpha),
+            Assert.IsAssignableFrom<ISolidColorBrush>(home.Background).Color);
+        Assert.Equal(
+            MaterialColorMapper.ToAvaloniaColor(scheme.SurfaceContainerHigh),
+            Assert.IsAssignableFrom<ISolidColorBrush>(dialog.Background).Color);
+        Assert.Equal(MaterialColorMapper.ToAvaloniaColor(scheme.SurfaceContainerHighest),
+            Assert.IsAssignableFrom<ISolidColorBrush>(card.Background).Color);
+
+        draft.NeutralColorStrategy = NeutralColorStrategies.BrandBlue;
+        await settings.PendingAppearancePreview.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(defaultSurface, Assert.IsAssignableFrom<ISolidColorBrush>(home.Background).Color);
+        Assert.Equal(defaultDialog, Assert.IsAssignableFrom<ISolidColorBrush>(dialog.Background).Color);
+        Assert.Equal(defaultCard, Assert.IsAssignableFrom<ISolidColorBrush>(card.Background).Color);
+    }
+
     [AvaloniaTheory]
     [InlineData(false)]
     [InlineData(true)]
@@ -45,14 +149,17 @@ public sealed partial class MainWindowHeadlessTests
             var point = header.TranslatePoint(new Point(header.Bounds.Width / 2, header.Bounds.Height / 2), context.Window)!.Value;
             context.Window.MouseMove(point);
             Dispatcher.UIThread.RunJobs();
+            // FA 原生 Expander 头的指针态走描边（ADR-070 资源键覆盖）：静止面保持透明安静面。
             Assert.Contains(":pointerover", header.Classes);
-            Assert.Equal(context.Window.FindResource(context.Window.ActualThemeVariant, "Launcher.Color.Button.Secondary.Hover"), surface.Background);
-            Assert.Equal((byte)0, Assert.IsAssignableFrom<ISolidColorBrush>(surface.BorderBrush).Color.A);
+            var fieldBorder = Assert.IsAssignableFrom<ISolidColorBrush>(
+                context.Window.FindResource(context.Window.ActualThemeVariant, "Launcher.Color.Field.Border")).Color;
+            Assert.Equal(fieldBorder, Assert.IsAssignableFrom<ISolidColorBrush>(surface.BorderBrush).Color);
+            Assert.Equal((byte)0, Assert.IsAssignableFrom<ISolidColorBrush>(surface.Background).Color.A);
             Assert.All(header.GetVisualDescendants().OfType<Border>().Where(border => !ReferenceEquals(border, surface)),
                 border => Assert.True(border.Background is null or ISolidColorBrush { Color.A: 0 }));
             context.Window.MouseDown(point, MouseButton.Left);
             Dispatcher.UIThread.RunJobs();
-            Assert.Equal(context.Window.FindResource(context.Window.ActualThemeVariant, "Launcher.Color.Button.Secondary.Pressed"), surface.Background);
+            Assert.Equal(fieldBorder, Assert.IsAssignableFrom<ISolidColorBrush>(surface.BorderBrush).Color);
             Assert.Equal(bounds, header.Bounds);
             context.Window.MouseUp(point, MouseButton.Left);
             Dispatcher.UIThread.RunJobs();
@@ -60,7 +167,7 @@ public sealed partial class MainWindowHeadlessTests
             Assert.Equal(bounds, header.Bounds);
             header.IsEnabled = false;
             Dispatcher.UIThread.RunJobs();
-            Assert.Equal((byte)0, Assert.IsAssignableFrom<ISolidColorBrush>(surface.Background).Color.A);
+            Assert.Equal((byte)0, Assert.IsAssignableFrom<ISolidColorBrush>(surface.BorderBrush).Color.A);
             Assert.Equal(bounds, header.Bounds);
             Assert.All(header.GetVisualDescendants().OfType<Border>().Where(border => !ReferenceEquals(border, surface)),
                 border => Assert.True(border.Background is null or ISolidColorBrush { Color.A: 0 }));
@@ -120,10 +227,7 @@ public sealed partial class MainWindowHeadlessTests
         var header = advanced.GetVisualDescendants().OfType<ToggleButton>().First();
         Assert.True(header.IsFocused);
         Assert.Equal(context.ViewModel.Shell.I18n[LocalizationKeys.SettingsAdvancedColors], AutomationProperties.GetName(header));
-        Assert.Equal(new Thickness(2), header.BorderThickness);
-        Assert.Equal(context.Window.FindResource("Launcher.Color.FocusRing"), header.BorderBrush);
-        Assert.Contains(header.GetVisualDescendants().OfType<Border>(), border =>
-            Equals(header.BorderBrush, border.BorderBrush) && border.BorderThickness == header.BorderThickness);
+        Assert.Contains(":focus-visible", header.Classes);
         advanced.IsExpanded = true;
         Dispatcher.UIThread.RunJobs();
         Assert.Equal(NeutralColorStrategies.SeedFollowing, settings.Editor.Current.NeutralColorStrategy);
@@ -134,7 +238,7 @@ public sealed partial class MainWindowHeadlessTests
     {
         using var context = CreateContext();
         OpenSettings(context);
-        context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.Appearance;
+        context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.DefaultBackground;
         context.ViewModel.Settings.Editor.Current.BackgroundSource = BackgroundSources.Custom;
         context.ViewModel.Settings.Editor.Current.CustomBackgroundPath = "background.png";
         Dispatcher.UIThread.RunJobs();
@@ -168,7 +272,7 @@ public sealed partial class MainWindowHeadlessTests
             HeadlessTestHost.WriteSolidPng(path, Brushes.DarkSlateBlue, 160, 90);
         OpenSettings(context);
         var settings = context.ViewModel.Settings;
-        settings.SelectedCategory = SettingsCategoryCodes.Appearance;
+        settings.SelectedCategory = SettingsCategoryCodes.DefaultBackground;
         settings.Editor.Current.BackgroundSource = BackgroundSources.Custom;
         settings.Editor.Current.CustomBackgroundPath = folder;
         await WaitForBackgroundSelectionAsync(context, path);
@@ -221,7 +325,7 @@ public sealed partial class MainWindowHeadlessTests
             }
         };
         OpenSettings(context);
-        context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.Appearance;
+        context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.DefaultBackground;
         context.ViewModel.Settings.Editor.Current.BackgroundSource = source;
         await context.ViewModel.Settings.PendingAppearancePreview.WaitAsync(TimeSpan.FromSeconds(5));
         await context.ViewModel.Background.UpdateBackgroundImageAsync(
@@ -278,7 +382,7 @@ public sealed partial class MainWindowHeadlessTests
         HeadlessTestHost.WriteTwoFrameVideo(path);
         OpenSettings(context);
         var settings = context.ViewModel.Settings;
-        settings.SelectedCategory = SettingsCategoryCodes.Appearance;
+        settings.SelectedCategory = SettingsCategoryCodes.DefaultBackground;
         settings.Editor.Current.BackgroundSource = BackgroundSources.Custom;
         settings.Editor.Current.CustomBackgroundPath = folder;
         await WaitForBackgroundSelectionAsync(context, path);
@@ -302,7 +406,7 @@ public sealed partial class MainWindowHeadlessTests
         using var context = CreateContext();
         OpenSettings(context);
         var settings = context.ViewModel.Settings;
-        settings.SelectedCategory = SettingsCategoryCodes.Appearance;
+        settings.SelectedCategory = SettingsCategoryCodes.DefaultBackground;
         settings.Editor.Current.BackgroundSource = BackgroundSources.Custom;
         settings.Editor.Current.CustomBackgroundPath = "missing-thumbnail.mp4";
         await WaitForBackgroundSelectionAsync(context, settings.Editor.Current.CustomBackgroundPath);
@@ -312,7 +416,7 @@ public sealed partial class MainWindowHeadlessTests
         var image = thumbnail.GetVisualDescendants().OfType<Image>().Single();
 
         Assert.IsType<BlurEffect>(image.Effect);
-        var icon = Assert.Single(thumbnail.GetVisualDescendants().OfType<Material.Icons.Avalonia.MaterialIcon>());
+        var icon = Assert.Single(thumbnail.GetVisualDescendants().OfType<Cafe.Launcher.UI.Controls.FluentIcon>());
         Assert.True(icon.IsEffectivelyVisible);
 
         settings.ClearBackgroundCommand.Execute(null);
@@ -327,7 +431,7 @@ public sealed partial class MainWindowHeadlessTests
     {
         using var context = CreateContext();
         OpenSettings(context);
-        context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.Appearance;
+        context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.DefaultBackground;
         Dispatcher.UIThread.RunJobs();
         context.ViewModel.Settings.Editor.Current.BackgroundSource = BackgroundSources.Custom;
         context.ViewModel.Settings.Editor.Current.CustomBackgroundPath = "missing-appearance-background.png";
@@ -397,7 +501,7 @@ public sealed partial class MainWindowHeadlessTests
         try
         {
             context.ViewModel.Shell.ApplyLanguage(LauncherLanguages.SimplifiedChinese, hasSnapshot: false);
-            context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.Appearance;
+            context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.DefaultBackground;
             Dispatcher.UIThread.RunJobs();
             var draft = context.ViewModel.Settings.Editor.Current;
             draft.BackgroundSource = BackgroundSources.Custom;
@@ -419,7 +523,7 @@ public sealed partial class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
-    public void AppearanceSegments_SelectingAValueUpdatesTheDraftAndMarksSettingsDirty()
+    public void AppearanceAndBackgroundSegments_SelectingAValueUpdatesTheDraftAndMarksSettingsDirty()
     {
         using var context = CreateContext();
         OpenSettings(context);
@@ -439,15 +543,8 @@ public sealed partial class MainWindowHeadlessTests
 
         Assert.Single(themeSegments, segment =>
             AutomationProperties.GetName(segment) == context.ViewModel.Shell.I18n[LocalizationKeys.ThemeDark]).IsChecked = true;
-        var fitSegments = SegmentOptions(section, "SettingsBackgroundFit");
-        Assert.Equal(3, fitSegments.Length);
-        Assert.True(Assert.Single(fitSegments, segment =>
-            AutomationProperties.GetName(segment) == context.ViewModel.Shell.I18n[LocalizationKeys.BackgroundFitUniformToFill]).IsChecked);
-        Assert.Single(fitSegments, segment =>
-            AutomationProperties.GetName(segment) == context.ViewModel.Shell.I18n[LocalizationKeys.BackgroundFitUniform]).IsChecked = true;
         Dispatcher.UIThread.RunJobs();
         Assert.Equal(ThemeModes.Dark, settings.Editor.Current.ThemeMode);
-        Assert.Equal(BackgroundFits.Uniform, settings.Editor.Current.BackgroundFit);
         Assert.True(settings.IsSettingsDirty);
 
         // 高级配色默认折叠，里面的中性色分段随内容一起退出视觉树。
@@ -461,6 +558,20 @@ public sealed partial class MainWindowHeadlessTests
         Dispatcher.UIThread.RunJobs();
         Assert.Equal(NeutralColorStrategies.SeedFollowing, settings.Editor.Current.NeutralColorStrategy);
         Assert.True(settings.Appearance.IsSeedFollowingNeutralStrategySelected);
+
+        // 默认背景是独立分类；切换分类只移动背景编辑面，不改变主题草稿。
+        settings.SelectedCategory = SettingsCategoryCodes.DefaultBackground;
+        Dispatcher.UIThread.RunJobs();
+        var fitSegments = SegmentOptions(section, "SettingsBackgroundFit");
+        Assert.Equal(3, fitSegments.Length);
+        Assert.True(Assert.Single(fitSegments, segment =>
+            AutomationProperties.GetName(segment) == context.ViewModel.Shell.I18n[LocalizationKeys.BackgroundFitUniformToFill]).IsChecked);
+        Assert.Single(fitSegments, segment =>
+            AutomationProperties.GetName(segment) == context.ViewModel.Shell.I18n[LocalizationKeys.BackgroundFitUniform]).IsChecked = true;
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(BackgroundFits.Uniform, settings.Editor.Current.BackgroundFit);
+        Assert.Equal(ThemeModes.Dark, settings.Editor.Current.ThemeMode);
+        Assert.True(settings.IsSettingsDirty);
     }
 
     [AvaloniaFact]
@@ -485,9 +596,12 @@ public sealed partial class MainWindowHeadlessTests
         Assert.Same(selected.PreviewBrush, triggerDot.Background);
     }
 
+    private static Color WithAlpha(Color color, byte alpha) =>
+        Color.FromArgb(alpha, color.R, color.G, color.B);
+
     private static RadioButton[] SegmentOptions(Control root, string groupName) =>
         root.GetVisualDescendants().OfType<RadioButton>()
-            .Where(button => button.Classes.Contains("segment-option") && button.GroupName == groupName)
+            .Where(button => button.Classes.Contains("setting-radio") && button.GroupName == groupName)
             .ToArray();
 
     private static Task WaitForBackgroundSelectionAsync(TestContext context, string? path) =>

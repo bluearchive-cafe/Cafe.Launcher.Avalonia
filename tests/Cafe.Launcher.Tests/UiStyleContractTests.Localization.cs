@@ -82,4 +82,47 @@ public sealed partial class UiStyleContractTests
 
         Assert.Empty(FindFixedEnglishLiterals(document, "fixture.axaml"));
     }
+
+    [Fact]
+    public void ProductionMarkup_DoesNotUseGlyphSeparators()
+    {
+        var violations = ProjectMarkupFiles()
+            .SelectMany(relativePath => FindGlyphSeparators(
+                XDocument.Load(TestRepository.FromPresentationRoot(relativePath), LoadOptions.SetLineInfo),
+                relativePath))
+            .Order(StringComparer.Ordinal)
+            .ToList();
+
+        Assert.Empty(violations);
+    }
+
+    [Theory]
+    [InlineData("|")]
+    [InlineData("·")]
+    [InlineData("•")]
+    [InlineData("・")]
+    public void GlyphSeparatorScanner_StandaloneSeparatorText_IsReported(string glyph)
+    {
+        var document = XDocument.Parse(
+            $"<TextBlock xmlns=\"https://github.com/avaloniaui\" Text=\"{glyph}\" />",
+            LoadOptions.SetLineInfo);
+
+        Assert.Single(FindGlyphSeparators(document, "fixture.axaml"));
+    }
+
+    [Fact]
+    public void GlyphSeparatorScanner_BoundAndProseText_AreIgnored()
+    {
+        var document = XDocument.Parse(
+            """
+            <Panel xmlns="https://github.com/avaloniaui">
+                <TextBlock Text="{Binding InstallDownloadSizeText}" />
+                <TextBlock Text="Download 3.50 GB" />
+                <TextBlock>Required 18.50 GB</TextBlock>
+            </Panel>
+            """,
+            LoadOptions.SetLineInfo);
+
+        Assert.Empty(FindGlyphSeparators(document, "fixture.axaml"));
+    }
 }

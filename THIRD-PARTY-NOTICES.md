@@ -31,27 +31,26 @@ The archives carry this file and `LICENSE` next to the binaries.
 | Avalonia.Angle.Windows.Natives | 2.1.27548.20260419 | LICENSE ([text](https://aka.ms/deprecateLicenseUrl)) | Cafe.Launcher | https://avaloniaui.net/ |
 | Avalonia.BuildServices | 11.3.2 | MIT ([text](https://licenses.nuget.org/MIT)) | UI, Cafe.Launcher | https://avaloniaui.net/ |
 | Avalonia.Controls.ColorPicker | 12.1.6 | MIT ([text](https://licenses.nuget.org/MIT)) | UI, Cafe.Launcher | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
+| Avalonia.Controls.DataGrid | 12.1.0 | MIT ([text](https://licenses.nuget.org/MIT)) | UI, Cafe.Launcher | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
 | Avalonia.Desktop | 12.1.6 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
 | Avalonia.FreeDesktop | 12.1.6 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
 | Avalonia.FreeDesktop.AtSpi | 12.1.6 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
 | Avalonia.HarfBuzz | 12.1.6 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
 | Avalonia.Native | 12.1.6 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
 | Avalonia.Remote.Protocol | 12.1.6 | MIT ([text](https://licenses.nuget.org/MIT)) | UI, Cafe.Launcher | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
-| Avalonia.Skia | 12.1.6 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
-| Avalonia.Themes.Fluent | 12.1.6 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
+| Avalonia.Skia | 12.1.6 | MIT ([text](https://licenses.nuget.org/MIT)) | UI, Cafe.Launcher | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
 | Avalonia.Win32 | 12.1.6 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
 | Avalonia.X11 | 12.1.6 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
 | AvaloniaUI.DiagnosticsSupport | 2.2.3 | see package | Cafe.Launcher | https://avaloniaui.net/ |
 | CommunityToolkit.Mvvm | 8.4.2 | MIT ([text](https://licenses.nuget.org/MIT)) | UI, Cafe.Launcher | https://github.com/CommunityToolkit/dotnet |
-| HarfBuzzSharp | 8.3.1.3 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://go.microsoft.com/fwlink/?linkid=868515 |
-| HarfBuzzSharp.NativeAssets.Linux | 8.3.1.3 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://go.microsoft.com/fwlink/?linkid=868515 |
-| HarfBuzzSharp.NativeAssets.macOS | 8.3.1.3 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://go.microsoft.com/fwlink/?linkid=868515 |
-| HarfBuzzSharp.NativeAssets.WebAssembly | 8.3.1.3 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://go.microsoft.com/fwlink/?linkid=868515 |
-| HarfBuzzSharp.NativeAssets.Win32 | 8.3.1.3 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://go.microsoft.com/fwlink/?linkid=868515 |
+| FluentAvaloniaUI | 3.1.0 | MIT ([text](https://licenses.nuget.org/MIT)) | UI, Cafe.Launcher | - |
+| HarfBuzzSharp | 8.3.1.3 | MIT ([text](https://licenses.nuget.org/MIT)) | UI, Cafe.Launcher | https://go.microsoft.com/fwlink/?linkid=868515 |
+| HarfBuzzSharp.NativeAssets.Linux | 8.3.1.3 | MIT ([text](https://licenses.nuget.org/MIT)) | UI, Cafe.Launcher | https://go.microsoft.com/fwlink/?linkid=868515 |
+| HarfBuzzSharp.NativeAssets.macOS | 8.3.1.3 | MIT ([text](https://licenses.nuget.org/MIT)) | UI, Cafe.Launcher | https://go.microsoft.com/fwlink/?linkid=868515 |
+| HarfBuzzSharp.NativeAssets.WebAssembly | 8.3.1.3 | MIT ([text](https://licenses.nuget.org/MIT)) | UI, Cafe.Launcher | https://go.microsoft.com/fwlink/?linkid=868515 |
+| HarfBuzzSharp.NativeAssets.Win32 | 8.3.1.3 | MIT ([text](https://licenses.nuget.org/MIT)) | UI, Cafe.Launcher | https://go.microsoft.com/fwlink/?linkid=868515 |
 | Markdig | 1.4.1 | BSD-2-Clause ([text](https://licenses.nuget.org/BSD-2-Clause)) | UI, Cafe.Launcher | https://xoofx.github.io/markdig |
 | MarkView.Avalonia | 12.4.1 | MIT ([text](https://licenses.nuget.org/MIT)) | UI, Cafe.Launcher | https://kryptos-fr.github.io/MarkView.Avalonia/ |
-| Material.Icons | 3.0.2 | MIT ([text](https://licenses.nuget.org/MIT)) | UI, Cafe.Launcher | https://github.com/SKProCH/Material.Icons/ |
-| Material.Icons.Avalonia | 3.0.2 | MIT ([text](https://licenses.nuget.org/MIT)) | UI, Cafe.Launcher | https://github.com/AvaloniaUtils/Material.Icons.Avalonia/ |
 | MicroCom.Runtime | 0.11.6 | MIT ([text](https://licenses.nuget.org/MIT)) | UI, Cafe.Launcher | - |
 | Microsoft.Extensions.DependencyInjection | 10.0.15 | MIT ([text](https://licenses.nuget.org/MIT)) | Core, UI, Cafe.Launcher | https://dot.net/ |
 | Microsoft.Extensions.DependencyInjection.Abstractions | 10.0.15 | MIT ([text](https://licenses.nuget.org/MIT)) | Core, UI, Cafe.Launcher | https://dot.net/ |
@@ -61,11 +60,11 @@ The archives carry this file and `LICENSE` next to the binaries.
 | Serilog.Sinks.Async | 2.1.0 | Apache-2.0 ([text](https://licenses.nuget.org/Apache-2.0)) | Core, UI, Cafe.Launcher | https://serilog.net/ |
 | Serilog.Sinks.File | 7.0.0 | Apache-2.0 ([text](https://licenses.nuget.org/Apache-2.0)) | Core, UI, Cafe.Launcher | https://github.com/serilog/serilog-sinks-file |
 | Shirasagi0012.MaterialColorUtilities | 0.2.0 | Apache-2.0 ([text](https://licenses.nuget.org/Apache-2.0)) | UI, Cafe.Launcher | https://github.com/Shirasagi0012/MaterialColorUtilities |
-| SkiaSharp | 3.119.4 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://go.microsoft.com/fwlink/?linkid=868515 |
-| SkiaSharp.NativeAssets.Linux | 3.119.4 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://go.microsoft.com/fwlink/?linkid=868515 |
-| SkiaSharp.NativeAssets.macOS | 3.119.4 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://go.microsoft.com/fwlink/?linkid=868515 |
-| SkiaSharp.NativeAssets.WebAssembly | 3.119.4 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://go.microsoft.com/fwlink/?linkid=868515 |
-| SkiaSharp.NativeAssets.Win32 | 3.119.4 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | https://go.microsoft.com/fwlink/?linkid=868515 |
+| SkiaSharp | 3.119.4 | MIT ([text](https://licenses.nuget.org/MIT)) | UI, Cafe.Launcher | https://go.microsoft.com/fwlink/?linkid=868515 |
+| SkiaSharp.NativeAssets.Linux | 3.119.4 | MIT ([text](https://licenses.nuget.org/MIT)) | UI, Cafe.Launcher | https://go.microsoft.com/fwlink/?linkid=868515 |
+| SkiaSharp.NativeAssets.macOS | 3.119.4 | MIT ([text](https://licenses.nuget.org/MIT)) | UI, Cafe.Launcher | https://go.microsoft.com/fwlink/?linkid=868515 |
+| SkiaSharp.NativeAssets.WebAssembly | 3.119.4 | MIT ([text](https://licenses.nuget.org/MIT)) | UI, Cafe.Launcher | https://go.microsoft.com/fwlink/?linkid=868515 |
+| SkiaSharp.NativeAssets.Win32 | 3.119.4 | MIT ([text](https://licenses.nuget.org/MIT)) | UI, Cafe.Launcher | https://go.microsoft.com/fwlink/?linkid=868515 |
 | Tmds.DBus.Protocol | 0.94.1 | MIT ([text](https://licenses.nuget.org/MIT)) | Cafe.Launcher | - |
 
 ## Windows video background runtime

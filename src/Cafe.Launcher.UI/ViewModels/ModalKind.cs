@@ -11,6 +11,7 @@ public enum ModalKind
     DesignGallery,
     DebugResetConfirmation,
     Notice,
+    LegalDocument,
     Update,
     Error,
     SetupWizard,

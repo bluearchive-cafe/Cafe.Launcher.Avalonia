@@ -116,7 +116,7 @@ internal sealed partial class ResourcePanelItem : ObservableObject
     }
 
     [ObservableProperty]
-    private string statusIconKind = "";
+    private string statusGlyph = "";
 
     /// <summary>
     /// Gets whether official and localized versions carry the same meaningful value,

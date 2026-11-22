@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using Cafe.Launcher.Core.Services;
+using Cafe.Launcher.Core.Services.Diagnostics;
 
 namespace Cafe.Launcher.Services;
 
@@ -11,16 +12,15 @@ namespace Cafe.Launcher.Services;
 /// 所有权判定分平台:Windows 用命名互斥量;Unix 上 .NET 的 <c>Local\</c>
 /// 命名空间按 POSIX 会话隔离(见 ADR-034),改用数据根内锁套接字的内核原子
 /// 绑定(<see cref="CrossProcessLaunchSignal.TryBindExclusive"/>)。
-/// 传输层为双适配器:Windows 命名事件 / Unix 本地套接字
-/// (<see cref="CrossProcessLaunchSignal"/>);launch-game 与 show-window
-/// 两个信号共用同一传输,仅名字不同。
+/// show-window 保留 Windows 命名事件 / Unix 本地套接字；明确游戏请求由
+/// <see cref="CrossProcessGameLaunchChannel"/> 传输有界身份载荷。
 /// </summary>
 internal sealed class CrossProcessLaunchBridge : IDisposable
 {
     private readonly string launchSignalName;
     private readonly string showSignalName;
     private readonly LauncherDataRoot dataRoot;
-    private readonly CrossProcessLaunchSignal signal;
+    private readonly CrossProcessGameLaunchChannel signal;
     private readonly CrossProcessLaunchSignal showSignal;
     private readonly CrossProcessLaunchSignal? lockSignal;
     private Mutex? mutex;
@@ -40,7 +40,7 @@ internal sealed class CrossProcessLaunchBridge : IDisposable
         this.launchSignalName = launchSignalName;
         this.showSignalName = showSignalName;
         this.dataRoot = dataRoot;
-        signal = CrossProcessLaunchSignal.Listen(launchSignalName, dataRoot);
+        signal = new CrossProcessGameLaunchChannel(launchSignalName, dataRoot);
         showSignal = CrossProcessLaunchSignal.Listen(showSignalName, dataRoot);
         lockSignal = OperatingSystem.IsWindows()
             ? null
@@ -48,7 +48,7 @@ internal sealed class CrossProcessLaunchBridge : IDisposable
     }
 
     /// <summary>Gets the launch-game endpoint owned by this process (valid only after winning).</summary>
-    internal CrossProcessLaunchSignal Signal => signal;
+    internal CrossProcessGameLaunchChannel Signal => signal;
 
     /// <summary>Gets the show-window endpoint owned by this process (valid only after winning).</summary>
     internal CrossProcessLaunchSignal ShowSignal => showSignal;
@@ -62,11 +62,15 @@ internal sealed class CrossProcessLaunchBridge : IDisposable
     /// </summary>
     internal bool TryEnterSingleInstance(string mutexName, string[] args)
     {
+        var launchRequest = GameLaunchArguments.Parse(args);
         if (!AcquireOwnership(mutexName))
         {
-            if (Program.HasLaunchGameArgument(args))
+            if (launchRequest is not null)
             {
-                CrossProcessLaunchSignal.Raise(launchSignalName, dataRoot);
+                if (!CrossProcessGameLaunchChannel.Send(launchSignalName, dataRoot, launchRequest))
+                {
+                    LauncherLog.LogSync(LogEntrySeverity.Warn, "CrossProcess", "The explicit game launch request could not be forwarded.");
+                }
             }
 
             CrossProcessLaunchSignal.Raise(showSignalName, dataRoot);

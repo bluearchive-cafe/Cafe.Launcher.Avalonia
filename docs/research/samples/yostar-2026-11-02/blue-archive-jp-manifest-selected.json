@@ -1,0 +1,54 @@
+{
+  "sample_kind": "Selected original entries; not a complete installable manifest",
+  "source_url": "https://launcher-pkg-ba-jp.yo-star.com/zip_online_config_json/1.74.0YhGZXduw.json",
+  "original_body_sha256": "7b6426b92a6ed82b2f697b7c93657a1406304049c9df59857afce8e4ce35972c",
+  "original_body_bytes": 18378,
+  "original_root_fields": [
+    "source",
+    "file"
+  ],
+  "source": "/BlueArchive_JP-1.74.471552-game",
+  "original_file_count": 157,
+  "original_total_file_bytes": 1142879023,
+  "executable_entries": [
+    {
+      "path": "/BlueArchive.exe",
+      "hash": "3728022668935248752",
+      "size": "653824"
+    },
+    {
+      "path": "/UnityCrashHandler64.exe",
+      "hash": "566263709500486277",
+      "size": "1203112"
+    },
+    {
+      "path": "/xldr_BlueArchiveOnline_JP_loader_x64.exe",
+      "hash": "14858856991385480709",
+      "size": "12074792"
+    }
+  ],
+  "script_entries": [
+    {
+      "path": "/run.bat",
+      "hash": "6746493963346709231",
+      "size": "269"
+    }
+  ],
+  "file": [
+    {
+      "path": "/BlueArchive.exe",
+      "hash": "3728022668935248752",
+      "size": "653824"
+    },
+    {
+      "path": "/BlueArchive_Data/Plugins/x86_64/API-MS-Win-core-file-l2-1-0.dll",
+      "hash": "5943362273480959350",
+      "size": "11792"
+    },
+    {
+      "path": "/BlueArchive_Data/Plugins/x86_64/DiskUtilsWinAPI.dll",
+      "hash": "18010741225543659094",
+      "size": "14336"
+    }
+  ]
+}

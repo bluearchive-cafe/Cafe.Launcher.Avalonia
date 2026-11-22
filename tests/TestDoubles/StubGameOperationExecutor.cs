@@ -91,6 +91,9 @@ internal sealed class StubGameOperationExecutor : IGameOperationExecutor
 
     public GameOperationResult ValidateUninstallResult { get; set; } = new();
 
+    /// <summary>设置后预检返回其 Task，用于把请求挂起在确认框出现之前。</summary>
+    public TaskCompletionSource<GameOperationResult>? ValidateUninstallCompletion { get; set; }
+
     public GameOperationResult UninstallResult { get; set; } = new();
 
     /// <summary>设置后 Uninstall 同步抛出该异常，用于验证旅程的抛出路径。</summary>
@@ -175,7 +178,7 @@ internal sealed class StubGameOperationExecutor : IGameOperationExecutor
     public Task<GameOperationResult> ValidateUninstallAsync(string gamePath)
     {
         ValidateUninstallCallCount++;
-        return Task.FromResult(ValidateUninstallResult);
+        return ValidateUninstallCompletion?.Task ?? Task.FromResult(ValidateUninstallResult);
     }
 
     /// <summary>彻底清除会删除的两个目录的返回尺寸；默认全 0。</summary>

@@ -11,12 +11,33 @@ using Cafe.Launcher.UI.Services;
 using Xunit;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services;
+using FluentAvalonia.Styling;
 using System.Linq;
 
 namespace Cafe.Launcher.HeadlessTests;
 
 public sealed class SystemThemeColorHeadlessTests
 {
+    [AvaloniaFact]
+    public void GetSystemAccentColor_AfterApplyingCustomScheme_StillReadsThePlatformAccent()
+    {
+        var application = Application.Current!;
+        var platformAccent = application.PlatformSettings!.GetColorValues().AccentColor1;
+        var theme = Assert.Single(application.Styles.OfType<FluentAvaloniaTheme>());
+        var previousAccent = theme.CustomAccentColor;
+        try
+        {
+            theme.CustomAccentColor = platformAccent == Colors.OrangeRed ? Colors.Green : Colors.OrangeRed;
+            Assert.True(application.TryGetResource("SystemAccentColor", application.ActualThemeVariant, out var accent));
+            Assert.Equal(theme.CustomAccentColor, Assert.IsType<Color>(accent));
+            Assert.Equal(platformAccent, ThemeApplier.GetSystemAccentColor());
+        }
+        finally
+        {
+            theme.CustomAccentColor = previousAccent;
+        }
+    }
+
     [AvaloniaTheory]
     [InlineData(ThemeColorModes.Default, ThemeModes.System, false)]
     [InlineData(ThemeColorModes.Custom, ThemeModes.System, true)]

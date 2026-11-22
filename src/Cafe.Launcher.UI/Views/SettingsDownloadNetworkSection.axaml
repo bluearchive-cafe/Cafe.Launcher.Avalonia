@@ -1,9 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Cafe.Launcher.UI.ViewModels"
-             xmlns:coreModels="using:Cafe.Launcher.Core.Models"
-             xmlns:converters="using:Cafe.Launcher.UI.Converters"
-             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              xmlns:controls="using:Cafe.Launcher.UI.Controls"
              x:Class="Cafe.Launcher.UI.Views.SettingsDownloadNetworkSection"
              x:Name="SettingsRoot"
@@ -13,66 +10,40 @@
         <StackPanel Classes="settings-group">
             <TextBlock Text="{Binding Shell.I18n[settingsGroupDownload]}" Classes="group-title"/>
 
-            <!-- 2–3 个短标签用分段按钮：互斥值常显，单击直达（共享契约见 Styles/Segmented.axaml）。 -->
-            <controls:SettingRow ShowTopDivider="False" Title="{Binding Shell.I18n[downloadSource]}"
-                                 Description="{Binding Shell.I18n[downloadSourceDescription]}">
-                <controls:SettingRow.Action>
-                    <Border Classes="segmented">
-                        <StackPanel Orientation="Horizontal">
-                            <RadioButton Classes="segment-option"
-                                         GroupName="SettingsDownloadSource"
-                                         IsChecked="{Binding Settings.Editor.Current.PatchUrlGroup, Converter={x:Static converters:SegmentOptionConverter.Instance}, ConverterParameter={x:Static coreModels:PatchUrlGroups.Official}, Mode=TwoWay}"
-                                         AutomationProperties.Name="{Binding Shell.I18n[downloadSourceOfficial]}">
-                                <StackPanel Classes="segment-content">
-                                    <materialIcons:MaterialIcon Kind="Check" Classes="segment-check"
-                                                                Width="{StaticResource Launcher.Icon.Sm}"
-                                                                Height="{StaticResource Launcher.Icon.Sm}"/>
-                                    <TextBlock Text="{Binding Shell.I18n[downloadSourceOfficial]}"/>
-                                </StackPanel>
-                            </RadioButton>
-                            <Border Classes="segmented-divider"/>
-                            <RadioButton Classes="segment-option"
-                                         GroupName="SettingsDownloadSource"
-                                         IsChecked="{Binding Settings.Editor.Current.PatchUrlGroup, Converter={x:Static converters:SegmentOptionConverter.Instance}, ConverterParameter={x:Static coreModels:PatchUrlGroups.Cafe}, Mode=TwoWay}"
-                                         AutomationProperties.Name="{Binding Shell.I18n[downloadSourceCafe]}">
-                                <StackPanel Classes="segment-content">
-                                    <materialIcons:MaterialIcon Kind="Check" Classes="segment-check"
-                                                                Width="{StaticResource Launcher.Icon.Sm}"
-                                                                Height="{StaticResource Launcher.Icon.Sm}"/>
-                                    <TextBlock Text="{Binding Shell.I18n[downloadSourceCafe]}"/>
-                                </StackPanel>
-                            </RadioButton>
-                        </StackPanel>
-                    </Border>
-                </controls:SettingRow.Action>
-            </controls:SettingRow>
-
-            <controls:SettingSelect Title="{Binding Shell.I18n[downloadSpeedLimit]}"
-                                    Description="{Binding Shell.I18n[downloadSpeedLimitDescription]}"
-                                    AutomationName="{Binding Shell.I18n[downloadSpeedLimit]}"
-                                    ItemsSource="{Binding Settings.Options.DownloadSpeedLimit}"
-                                    SelectedValue="{Binding Settings.Editor.Current.DownloadSpeedLimit, Mode=TwoWay}"/>
+            <Border Classes="settings-group-card">
+                <controls:SettingSelect
+                                        Title="{Binding Shell.I18n[downloadSpeedLimit]}"
+                                        Description="{Binding Shell.I18n[downloadSpeedLimitDescription]}"
+                                        AutomationName="{Binding Shell.I18n[downloadSpeedLimit]}"
+                                        ItemsSource="{Binding Settings.Options.DownloadSpeedLimit}"
+                                        SelectedValue="{Binding Settings.Editor.Current.DownloadSpeedLimit, Mode=TwoWay}"/>
+            </Border>
         </StackPanel>
 
         <StackPanel Classes="settings-group">
             <TextBlock Text="{Binding Shell.I18n[settingsGroupNetwork]}" Classes="group-title"/>
 
-            <controls:SettingSelect ShowTopDivider="False"
-                                    Title="{Binding Shell.I18n[proxy]}"
-                                    Description="{Binding Shell.I18n[proxyDescription]}"
-                                    AutomationName="{Binding Shell.I18n[proxy]}"
-                                    ItemsSource="{Binding Settings.Options.ProxyMode}"
-                                    SelectedValue="{Binding Settings.Editor.Current.ProxyMode, Mode=TwoWay}"/>
+            <Border Classes="settings-group-card">
+                <StackPanel>
+                    <controls:SettingSelect
+                                            Title="{Binding Shell.I18n[proxy]}"
+                                            Description="{Binding Shell.I18n[proxyDescription]}"
+                                            AutomationName="{Binding Shell.I18n[proxy]}"
+                                            ItemsSource="{Binding Settings.Options.ProxyMode}"
+                                            SelectedValue="{Binding Settings.Editor.Current.ProxyMode, Mode=TwoWay}"/>
 
-            <controls:SettingRow Title="{Binding Shell.I18n[enableHttp2]}"
-                                 Description="{Binding Shell.I18n[enableHttp2Description]}">
-                <controls:SettingRow.Action>
-                    <CheckBox Classes="setting-checkbox"
-                              AutomationProperties.Name="{Binding Shell.I18n[enableHttp2]}"
-                              IsChecked="{Binding Settings.Editor.Current.EnableHttp2, Mode=TwoWay}"
-                              VerticalAlignment="Center"/>
-                </controls:SettingRow.Action>
-            </controls:SettingRow>
+                    <Border Classes="settings-row-divider"/>
+                    <controls:SettingRow Title="{Binding Shell.I18n[enableHttp2]}"
+                                         Description="{Binding Shell.I18n[enableHttp2Description]}">
+                        <controls:SettingRow.Action>
+                            <CheckBox Classes="setting-checkbox"
+                                      AutomationProperties.Name="{Binding Shell.I18n[enableHttp2]}"
+                                      IsChecked="{Binding Settings.Editor.Current.EnableHttp2, Mode=TwoWay}"
+                                      VerticalAlignment="Center"/>
+                        </controls:SettingRow.Action>
+                    </controls:SettingRow>
+                </StackPanel>
+            </Border>
         </StackPanel>
 
     </StackPanel>

@@ -14,6 +14,7 @@ using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Core.Services.Update;
 using Cafe.Launcher.Testing;
 using Cafe.Launcher.UI.Features.Diagnostics;
+using Cafe.Launcher.UI.Features.Games;
 using Cafe.Launcher.UI.Features.GameOperations;
 using Cafe.Launcher.UI.Features.ResourcePanel;
 using Cafe.Launcher.UI.Features.Settings;
@@ -164,6 +165,36 @@ internal sealed class LauncherTestGraph : IDisposable
             OpenExternalUrl = options.OpenExternalUrl ?? (_ => { }),
             OpenDirectory = options.OpenDirectory ?? (_ => { })
         });
+
+        // A game context owns its own core and executor; replacing only the legacy
+        // single-game aliases would leave the library using production services.
+        if (options.CoreService is not null)
+        {
+            var original = services.Last(d => d.ServiceType == typeof(Func<YostarGameProfile, GameDataPaths, LauncherGameContext>));
+            services.AddSingleton<Func<YostarGameProfile, GameDataPaths, LauncherGameContext>>(sp =>
+            {
+                var make = (Func<YostarGameProfile, GameDataPaths, LauncherGameContext>)original.ImplementationFactory!(sp);
+                return (profile, paths) =>
+                {
+                    var core = make(profile, paths);
+                    if (profile.RuntimeId != LauncherProfiles.BlueArchiveJapan.RuntimeId)
+                    {
+                        return core;
+                    }
+
+                    return new LauncherGameContext(profile, paths, core.ApiClient,
+                        core.LocalInstallationStateStore, core.InstallationPath, options.CoreService,
+                        core.ProcessTracker, [core], runtime: core.Runtime,
+                        noticeStateStore: core.NoticeStateStore);
+                };
+            });
+        }
+
+        services.AddSingleton(sp => new GamePresentationFactory(
+            sp.GetRequiredService<IGameContextRegistry>(),
+            sp.GetRequiredService<GamePresentationDependencies>(),
+            _ => options.OperationExecutor ?? new StubGameOperationExecutor(),
+            _ => new FakeGameSessionMonitor()));
 
         // Instance registrations are external to Microsoft DI ownership. Keep them even if
         // no service resolves them; the graph, rather than an alias side effect, owns cleanup.

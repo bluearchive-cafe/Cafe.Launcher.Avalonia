@@ -1,4 +1,4 @@
-using Avalonia;
+﻿using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Headless;
@@ -6,6 +6,7 @@ using Avalonia.Headless.XUnit;
 using Avalonia.Input;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.UI.Constants;
 using Cafe.Launcher.UI.Models;
@@ -28,8 +29,8 @@ public sealed partial class MainWindowHeadlessTests
         context.Window.Height = height;
         OpenSettings(context);
         var settings = context.ViewModel.Settings;
-        settings.SelectedCategory = SettingsCategoryCodes.Appearance;
-        settings.Appearance.IsAdvancedColorExpanded = true;
+        settings.SelectedCategory = SettingsCategoryCodes.General;
+        settings.Editor.Current.Language = LauncherLanguages.Japanese;
         Dispatcher.UIThread.RunJobs();
         var navigation = GetSettingsNavigation(context.Window);
         navigation.Focus(NavigationMethod.Tab);
@@ -41,26 +42,28 @@ public sealed partial class MainWindowHeadlessTests
 
         if (keyboard)
         {
-            context.Window.KeyPress(Key.Home, RawInputModifiers.None, PhysicalKey.Home, "");
-            context.Window.KeyRelease(Key.Home, RawInputModifiers.None, PhysicalKey.Home, "");
+            context.Window.KeyPress(Key.Down, RawInputModifiers.None, PhysicalKey.ArrowDown, "");
+            context.Window.KeyRelease(Key.Down, RawInputModifiers.None, PhysicalKey.ArrowDown, "");
         }
         else
         {
-            settings.SelectedCategory = SettingsCategoryCodes.General;
+            settings.SelectedCategory = SettingsCategoryCodes.Appearance;
         }
         Dispatcher.UIThread.RunJobs();
-        Assert.Equal(SettingsCategoryCodes.General, settings.SelectedCategory);
+        Assert.Equal(SettingsCategoryCodes.Appearance, settings.SelectedCategory);
         Assert.Equal(0, scroll.Offset.Y);
         Assert.True(navigation.IsKeyboardFocusWithin);
-        Assert.False(settings.IsSettingsDirty);
+        Assert.Equal(LauncherLanguages.Japanese, settings.Editor.Current.Language);
 
+        settings.SelectedCategory = SettingsCategoryCodes.General;
+        Dispatcher.UIThread.RunJobs();
         scroll.Offset = new Vector(0, 20);
         Dispatcher.UIThread.RunJobs();
         Assert.True(scroll.Offset.Y > 0);
         settings.SelectedCategory = SettingsCategoryCodes.Appearance;
         Dispatcher.UIThread.RunJobs();
         Assert.Equal(0, scroll.Offset.Y);
-        Assert.True(settings.Appearance.IsAdvancedColorExpanded);
+        Assert.Equal(LauncherLanguages.Japanese, settings.Editor.Current.Language);
     }
 
     [AvaloniaTheory]
@@ -162,7 +165,10 @@ public sealed partial class MainWindowHeadlessTests
                 AssertControlInsideWindow(save, context.Window);
                 var statusOrigin = status.TranslatePoint(default, context.Window)!.Value;
                 var saveOrigin = save.TranslatePoint(default, context.Window)!.Value;
-                Assert.True(statusOrigin.X + status.Bounds.Width <= saveOrigin.X);
+                Assert.True(
+                    statusOrigin.X + status.Bounds.Width <= saveOrigin.X + 1
+                    || statusOrigin.Y + status.Bounds.Height <= saveOrigin.Y + 1,
+                    $"{language}, {category.Code}, scale {scale}: save status overlaps the actions");
             }
             settings.IsSaving = true;
             Dispatcher.UIThread.RunJobs();

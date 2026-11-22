@@ -1,4 +1,5 @@
-﻿using Cafe.Launcher.UI.Helpers;
+using Cafe.Launcher.UI.Constants;
+using Cafe.Launcher.UI.Helpers;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.Core.Services.Diagnostics;
@@ -137,7 +138,7 @@ public sealed class RemoteContentViewModelTests
         Assert.Equal(2, context.ViewModel.NewsCategories.Sum(category => category.Items.Count));
         Assert.Same(context.ViewModel.NewsCategories[0], context.ViewModel.SelectedNewsCategory);
         Assert.Equal(2, context.ViewModel.SocialMediaItems.Count);
-        Assert.Equal("Youtube", context.ViewModel.SocialMediaItems[0].SocialIconKind);
+        Assert.Equal(FluentGlyphs.Video, context.ViewModel.SocialMediaItems[0].SocialGlyph);
         Assert.Equal("mailto:support@example.invalid", context.ViewModel.SocialMediaItems[1].Url);
         Assert.True(context.ViewModel.HasRemoteContent);
         Assert.True(context.ViewModel.IsPanelVisible);
@@ -618,15 +619,15 @@ public sealed class RemoteContentViewModelTests
     }
 
     [Theory]
-    [InlineData("Twitter", "Twitter")]
-    [InlineData("x", "Twitter")]
-    [InlineData("pixiv", "Palette")]
-    [InlineData("Discord", "Discord")]
-    [InlineData("unknown", "Link")]
-    [InlineData(null, "Link")]
-    public void ResolveSocialIconKind_MapsKnownChannels(string? channel, string expected)
+    [InlineData("Twitter", FluentGlyphs.Message)]
+    [InlineData("x", FluentGlyphs.Message)]
+    [InlineData("pixiv", FluentGlyphs.Image)]
+    [InlineData("Discord", FluentGlyphs.Message)]
+    [InlineData("unknown", FluentGlyphs.Link)]
+    [InlineData(null, FluentGlyphs.Link)]
+    public void ResolveSocialGlyph_MapsKnownChannels(string? channel, string expected)
     {
-        Assert.Equal(expected, RemoteContentViewModel.ResolveSocialIconKind(channel));
+        Assert.Equal(expected, RemoteContentViewModel.ResolveSocialGlyph(channel));
     }
 
     [Theory]

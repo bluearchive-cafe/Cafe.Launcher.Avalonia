@@ -21,7 +21,7 @@ public sealed class GameRuntimeSettingsUiTests
     [Fact]
     public void MangoHudSetting_VisibilityUsesLinuxPlatformRatherThanHiddenSettingsOverride()
     {
-        var document = XDocument.Load(TestRepository.InPresentation("Views", "SettingsGameSection.axaml"));
+        var document = XDocument.Load(TestRepository.InPresentation("Views", "SettingsGameLaunchSection.axaml"));
         XNamespace xaml = "http://schemas.microsoft.com/winfx/2006/xaml";
         var row = Assert.Single(document.Descendants(), element =>
             element.Attribute(xaml + "Name")?.Value == "MangoHudSetting");
@@ -29,14 +29,14 @@ public sealed class GameRuntimeSettingsUiTests
         Assert.Equal("{Binding Shell.IsLinuxPlatform}", row.Attribute("IsVisible")?.Value);
         var toggle = Assert.Single(row.Descendants(), element => element.Name.LocalName == "CheckBox");
         Assert.Equal(
-            "{Binding Settings.Editor.Current.GameRuntime.EnableMangoHud, Mode=TwoWay}",
+            "{Binding Settings.Game.GameRuntime.EnableMangoHud, Mode=TwoWay}",
             toggle.Attribute("IsChecked")?.Value);
     }
 
     [Fact]
     public void RuntimePathChooseButtons_UseActionNameAndDiscoveryFailureIsVisible()
     {
-        var document = XDocument.Load(TestRepository.InPresentation("Views", "SettingsGameSection.axaml"));
+        var document = XDocument.Load(TestRepository.InPresentation("Views", "SettingsGameLaunchSection.axaml"));
         var chooseButtons = document
             .Descendants()
             .Where(element => element.Name.LocalName == "Button")
@@ -218,6 +218,7 @@ public sealed class GameRuntimeSettingsUiTests
         snapshot.GameRuntime.PrefixPath = "/original";
         snapshot.GameRuntime.ProtonPath = "/original";
         settings.LoadFromSnapshot(snapshot);
+        settings.BeginEdit(gameSpecific: true);
 
         await (prefix ? settings.GameRuntime.ChoosePrefixPathCommand : settings.GameRuntime.ChooseProtonPathCommand).ExecuteAsync(null);
 
@@ -244,6 +245,7 @@ public sealed class GameRuntimeSettingsUiTests
             new SettingsOptionsViewModel(new LocalizationService(), new DiskSpaceService()),
             new StubGameRuntime([]), discovery: new ProtonBuildDiscovery([directory.Path]));
         settings.LoadFromSnapshot(new LauncherSettings());
+        settings.BeginEdit(gameSpecific: true);
         await settings.GameRuntime.PendingStatusRefresh.WaitAsync(TimeSpan.FromSeconds(5));
 
         var build = Assert.Single(settings.GameRuntime.Builds);

@@ -173,7 +173,7 @@ public sealed class LauncherDataRootTests : IDisposable
     public void Constructor_WhenDataRootIsNull_Throws()
     {
         // 消费方的守卫：数据根是必需依赖，缺了要在构造点炸而不是运行期拿默认路径。
-        Assert.Throws<ArgumentNullException>(() => new NoticeStateService(null!));
+        Assert.Throws<ArgumentNullException>(() => new NoticeStateService((LauncherDataRoot)null!));
         Assert.Throws<ArgumentNullException>(() => new CrashReportStore(null!));
     }
 

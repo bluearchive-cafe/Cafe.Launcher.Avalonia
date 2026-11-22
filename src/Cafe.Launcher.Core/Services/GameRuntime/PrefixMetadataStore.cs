@@ -5,6 +5,7 @@ using System.IO;
 using System.Text.Json;
 using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Helpers;
+using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.Core.Services.GameRuntime;
 
@@ -30,7 +31,6 @@ internal sealed record PrefixMetadata(
 /// </summary>
 internal sealed class PrefixMetadataStore
 {
-    private readonly LauncherDataRoot dataRoot;
     private readonly LauncherBuildIdentity? buildIdentity;
 
     /// <param name="buildIdentity">
@@ -38,13 +38,23 @@ internal sealed class PrefixMetadataStore
     /// （与默认更新渠道同一来源）。
     /// </param>
     public PrefixMetadataStore(LauncherDataRoot dataRoot, LauncherBuildIdentity? buildIdentity = null)
+        : this((dataRoot ?? throw new ArgumentNullException(nameof(dataRoot))).PrefixMetadataPath, buildIdentity)
     {
-        ArgumentNullException.ThrowIfNull(dataRoot);
-        this.dataRoot = dataRoot;
+    }
+
+    /// <summary>把前缀元数据保存在指定游戏的私有状态目录中；前缀本身保持原位。</summary>
+    public PrefixMetadataStore(GameDataPaths paths, LauncherBuildIdentity? buildIdentity = null)
+        : this((paths ?? throw new ArgumentNullException(nameof(paths))).PrefixMetadataPath, buildIdentity)
+    {
+    }
+
+    private PrefixMetadataStore(string filePath, LauncherBuildIdentity? buildIdentity)
+    {
+        FilePath = filePath;
         this.buildIdentity = buildIdentity;
     }
 
-    internal string FilePath => dataRoot.PrefixMetadataPath;
+    internal string FilePath { get; }
 
     /// <summary>
     /// 记录一次启动使用的组合并返回元数据。与前一条记录同前缀时保留创建时间并累加次数，否则

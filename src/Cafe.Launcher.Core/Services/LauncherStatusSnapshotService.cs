@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Helpers;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services.Diagnostics;
@@ -34,6 +35,7 @@ internal sealed class LauncherStatusSnapshotService : ILauncherStatusSnapshotSer
     private readonly ILauncherSettingsService settingsService;
     private readonly ILauncherDiagnostics diagnostics;
     private readonly TimeSpan remoteStateBudget;
+    private readonly string gameId;
 
     public LauncherStatusSnapshotService(
         ILauncherApiClient apiClient,
@@ -58,18 +60,40 @@ internal sealed class LauncherStatusSnapshotService : ILauncherStatusSnapshotSer
         ILauncherSettingsService settingsService,
         ILauncherDiagnostics diagnostics,
         TimeSpan remoteStateBudget)
+        : this(
+            LauncherProfiles.BlueArchiveJapan.RuntimeId,
+            apiClient,
+            localInstallationStateStore,
+            installationPath,
+            settingsService,
+            diagnostics,
+            remoteStateBudget)
     {
+    }
+
+    /// <summary>绑定明确游戏身份；设置路径与下载源只从该条目读取，不使用蔚蓝档案兼容投影。</summary>
+    internal LauncherStatusSnapshotService(
+        string gameId,
+        ILauncherApiClient apiClient,
+        ILocalInstallationStateStore localInstallationStateStore,
+        IGameInstallationPath installationPath,
+        ILauncherSettingsService settingsService,
+        ILauncherDiagnostics diagnostics,
+        TimeSpan? remoteStateBudget = null)
+    {
+        this.gameId = LauncherProfiles.GetSupportedGame(gameId).RuntimeId;
         this.apiClient = apiClient;
         this.localInstallationStateStore = localInstallationStateStore;
         this.installationPath = installationPath;
         this.settingsService = settingsService;
         this.diagnostics = diagnostics;
-        this.remoteStateBudget = remoteStateBudget;
+        this.remoteStateBudget = remoteStateBudget ?? DefaultRemoteStateBudget;
     }
 
     public async Task<LauncherStatusSnapshot> LoadAsync(CancellationToken cancellationToken = default)
     {
         var settings = await settingsService.ReadAsync(cancellationToken).ConfigureAwait(false);
+        var gameSettings = settings.GetGameSettings(gameId).DeepClone();
         using var remoteBudget = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         remoteBudget.CancelAfter(remoteStateBudget);
         await diagnostics.DebugAsync("LauncherCore", "LoadAsync started", CancellationToken.None).ConfigureAwait(false);
@@ -84,7 +108,7 @@ internal sealed class LauncherStatusSnapshotService : ILauncherStatusSnapshotSer
         var cdnConfigTask = ReadRemoteAsync(
             "cdn-config",
             () => apiClient.GetCdnConfigAsync(
-                settings.PatchUrlGroup,
+                gameSettings.PatchUrlGroup,
                 remoteBudget.Token),
             cancellationToken);
         var operationsResourceTask = ReadRemoteAsync(
@@ -99,13 +123,14 @@ internal sealed class LauncherStatusSnapshotService : ILauncherStatusSnapshotSer
             "installation-config",
             () => apiClient.GetInstallationConfigAsync(remoteBudget.Token),
             cancellationToken);
-        if (string.IsNullOrWhiteSpace(settings.GamePath))
+        if (string.IsNullOrWhiteSpace(gameSettings.GamePath))
         {
-            settings.GamePath = installationPath.GetDefaultGamePath();
+            gameSettings.GamePath = installationPath.GetDefaultGamePath();
+            settings.GetGameSettings(gameId).GamePath = gameSettings.GamePath;
         }
 
         var localGameTask = localInstallationStateStore.ReadAsync(
-            installationPath.NormalizeGamePath(settings.GamePath),
+            installationPath.NormalizeGamePath(gameSettings.GamePath),
             cancellationToken);
 
         await Task.WhenAll(
@@ -132,6 +157,8 @@ internal sealed class LauncherStatusSnapshotService : ILauncherStatusSnapshotSer
 
         return new LauncherStatusSnapshot
         {
+            GameId = gameId,
+            GameSettings = gameSettings,
             Settings = settings,
             LocalGame = localGame,
             Remote = new LauncherRemoteState

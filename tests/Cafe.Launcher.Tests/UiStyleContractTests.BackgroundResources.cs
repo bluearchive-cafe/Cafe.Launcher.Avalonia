@@ -110,12 +110,19 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void BundledBackground_UsesNormalizedResourceName()
     {
-        const string resourceName = "Assets/launcher-background.png";
+        // 多游戏背景由稳定游戏身份映射到规范化资源名；视图模型只消费映射，不再硬编码文件名。
+        const string blueArchiveBackground = "Assets/launcher-background.png";
+        const string stellaBackground = "Assets/launcher-background-stella-sora.png";
+        var assets =
+            File.ReadAllText(TestRepository.FromPresentationRoot("Features/Games/GameVisualAssets.cs"));
         var backgroundViewModel =
             File.ReadAllText(TestRepository.FromPresentationRoot("ViewModels/BackgroundViewModel.cs"));
 
-        Assert.True(File.Exists(TestRepository.FromPresentationRoot(resourceName)));
-        Assert.Contains(resourceName, backgroundViewModel, StringComparison.Ordinal);
+        Assert.True(File.Exists(TestRepository.FromPresentationRoot(blueArchiveBackground)));
+        Assert.True(File.Exists(TestRepository.FromPresentationRoot(stellaBackground)));
+        Assert.Contains(blueArchiveBackground, assets, StringComparison.Ordinal);
+        Assert.Contains(stellaBackground, assets, StringComparison.Ordinal);
+        Assert.Contains("GameVisualAssets.Background", backgroundViewModel, StringComparison.Ordinal);
         Assert.False(File.Exists(TestRepository.FromPresentationRoot("Assets/bg-7b36e4e0.png")));
     }
 }

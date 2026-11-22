@@ -1,96 +1,46 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia">
-  <!-- 资源面板 MD3 结构级重设计的视觉契约（ADR-041）。
-       骨架仍由 DialogSurface（ADR-015）承担；本文件只描述面板正文内的解剖：
-       UID 单卡三态、资源单卡三行、状态 chip 与条带前导图标。
-       分段来源按钮的共享视觉契约在 Segmented.axaml。 -->
-
-  <!-- 卡片圆角升档只作用于资源面板自己的卡（提案 6 收窄）：共享 dialog-card 不动。 -->
-  <Style Selector="Border.uid-card">
-    <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
-  </Style>
+        xmlns:controls="using:Cafe.Launcher.UI.Controls">
   <Style Selector="Border.resource-card">
-    <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
     <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
     <Setter Property="ClipToBounds" Value="True"/>
+    <Setter Property="Background" Value="{DynamicResource Launcher.Color.Card.Background}"/>
+    <Setter Property="CornerRadius" Value="{DynamicResource OverlayCornerRadius}"/>
   </Style>
-
-  <!-- UID 展示值：等宽 + 字距，八位大写字形便于 O/0、I/1 核对（提案 2 采纳）。 -->
-  <Style Selector="TextBlock.uid-value">
-    <Setter Property="FontFamily" Value="{StaticResource Launcher.Typography.FontFamily.Monospace}"/>
-    <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Headline.Lg}"/>
-    <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
-    <Setter Property="LetterSpacing" Value="{StaticResource Launcher.Typography.LetterSpacing.Lg}"/>
-    <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
-    <Setter Property="VerticalAlignment" Value="Center"/>
-  </Style>
-
-  <!-- 卡内发丝分隔线（正文内一阶，弱于 Card.Border）：uid 来源行与资源条目行共用。 -->
+  <!-- 发丝分隔线（ADR-070 第二批像素对齐契约）：仅上缘描边，配合 UseLayoutRounding。 -->
   <Style Selector="Border.uid-section-divider">
-    <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Dialog.Section.Divider}"/>
-    <Setter Property="BorderThickness" Value="{StaticResource Launcher.Component.Dialog.Footer.BorderThickness}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource DividerStrokeColorDefaultBrush}"/>
+    <Setter Property="BorderThickness" Value="{StaticResource Launcher.Component.Divider.Top}"/>
+    <Setter Property="UseLayoutRounding" Value="True"/>
   </Style>
   <Style Selector="Border.resource-row-divider">
-    <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Dialog.Section.Divider}"/>
-    <Setter Property="BorderThickness" Value="{StaticResource Launcher.Component.Dialog.Footer.BorderThickness}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource DividerStrokeColorDefaultBrush}"/>
+    <Setter Property="BorderThickness" Value="{StaticResource Launcher.Component.Divider.Top}"/>
+    <Setter Property="UseLayoutRounding" Value="True"/>
   </Style>
-
-  <!-- 资源条目行：标题 + 状态 chip + 版本支撑行 + trailing CheckBox；行密度走专属 token。 -->
+  <Style Selector="TextBlock.uid-value">
+    <Setter Property="VerticalAlignment" Value="Center"/>
+  </Style>
   <Style Selector="Border.resource-row">
     <Setter Property="Padding" Value="{StaticResource Launcher.Component.ResourcePanel.Row.Padding}"/>
   </Style>
-
-  <!-- 状态 chip（pill：底色 + 图标 + 文案，不只靠颜色）。Ready=Success、
-       Waiting/Loading=Secondary、Failed=Danger；映射由条目上的四个表象布尔驱动。 -->
   <Style Selector="Border.status-chip">
-    <Setter Property="Height" Value="{StaticResource Launcher.Component.ResourcePanel.StatusChip.Height}"/>
+    <Setter Property="MinHeight" Value="{StaticResource Launcher.Component.ResourcePanel.StatusChip.Height}"/>
     <Setter Property="Padding" Value="{StaticResource Launcher.Component.ResourcePanel.StatusChip.Padding}"/>
-    <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Full}"/>
-    <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
     <Setter Property="HorizontalAlignment" Value="Left"/>
-  </Style>
-  <Style Selector="materialIcons|MaterialIcon.status-chip-icon">
-    <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
+  <Setter Property="Background" Value="{DynamicResource SystemFillColorNeutralBackgroundBrush}"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource ControlCornerRadius}"/>
+        </Style>
+  <Style Selector="controls|FluentIcon.status-chip-icon">
     <Setter Property="VerticalAlignment" Value="Center"/>
   </Style>
   <Style Selector="TextBlock.status-chip-text">
-    <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Label.Md}"/>
-    <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
-    <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
     <Setter Property="VerticalAlignment" Value="Center"/>
   </Style>
-  <Style Selector="Border.status-chip.ready">
-    <Setter Property="Background" Value="{DynamicResource Launcher.Color.Success.Soft}"/>
-  </Style>
-  <Style Selector="Border.status-chip.ready materialIcons|MaterialIcon.status-chip-icon">
-    <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Success.OnSoft}"/>
-  </Style>
-  <Style Selector="Border.status-chip.ready TextBlock.status-chip-text">
-    <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Success.OnSoft}"/>
-  </Style>
-  <Style Selector="Border.status-chip.failed">
-    <Setter Property="Background" Value="{DynamicResource Launcher.Color.Danger.Soft}"/>
-  </Style>
-  <Style Selector="Border.status-chip.failed materialIcons|MaterialIcon.status-chip-icon">
-    <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Danger.OnSoft}"/>
-  </Style>
-  <Style Selector="Border.status-chip.failed TextBlock.status-chip-text">
-    <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Danger.OnSoft}"/>
-  </Style>
-
-  <!-- UID 来源分段按钮的共享视觉契约在 Segmented.axaml。 -->
-
-  <!-- 条带前导图标（提案 5）：提示条 info 调，消息条中性/危险两种语调各一枚。 -->
-  <Style Selector="materialIcons|MaterialIcon.info-strip-icon">
-    <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Info}"/>
+  <Style Selector="controls|FluentIcon.info-strip-icon">
     <Setter Property="VerticalAlignment" Value="Center"/>
   </Style>
-  <Style Selector="materialIcons|MaterialIcon.status-strip-icon">
-    <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Body}"/>
+  <Style Selector="controls|FluentIcon.status-strip-icon">
     <Setter Property="VerticalAlignment" Value="Center"/>
-  </Style>
-  <Style Selector="materialIcons|MaterialIcon.status-strip-icon.danger">
-    <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Danger}"/>
   </Style>
 </Styles>

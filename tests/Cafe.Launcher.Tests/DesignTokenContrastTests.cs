@@ -37,23 +37,19 @@ public sealed class DesignTokenContrastTests
         new("card primary text", "Launcher.Text.Primary", "Launcher.Color.Card.Background", 4.5),
         new("content row primary text", "Launcher.Text.Primary", "Launcher.Color.Content.Row", 4.5),
         new("dialog primary text", "Launcher.Text.Primary", "Launcher.Color.Dialog.Background", 4.5),
-        new("toast primary text", "Launcher.Text.Primary", "Launcher.Color.Toast.Background", 4.5),
         new("site button primary text", "Launcher.Text.Primary", "Launcher.Color.SiteButton.Background", 4.5),
         new("card secondary text", "Launcher.Text.Secondary", "Launcher.Color.Card.Background", 4.5),
         new("panel secondary text", "Launcher.Text.Secondary", "Launcher.Color.Panel.Background", 4.5),
         new("content row secondary text", "Launcher.Text.Secondary", "Launcher.Color.Content.Row", 4.5),
         new("dialog secondary text", "Launcher.Text.Secondary", "Launcher.Color.Dialog.Background", 4.5),
         new("field secondary text", "Launcher.Text.Secondary", "Launcher.Color.Field.Background", 4.5),
-        new("toast secondary text", "Launcher.Text.Secondary", "Launcher.Color.Toast.Background", 4.5),
         new("warning surface secondary text", "Launcher.Text.Secondary", "Launcher.Color.Warning.Background", 4.5),
         new("notice surface secondary text", "Launcher.Text.Secondary", "Launcher.Color.Notice.Background", 4.5),
         new("dialog body text", "Launcher.Text.Body", "Launcher.Color.Dialog.Background", 4.5),
-        new("toast body text", "Launcher.Text.Body", "Launcher.Color.Toast.Background", 4.5),
         new("notice body text", "Launcher.Text.Body", "Launcher.Color.Notice.Background", 4.5),
         new("card link text", "Launcher.Text.Link", "Launcher.Color.Card.Background", 4.5),
         new("panel link text", "Launcher.Text.Link", "Launcher.Color.Panel.Background", 4.5),
         new("dialog link text", "Launcher.Text.Link", "Launcher.Color.Dialog.Background", 4.5),
-        new("toast link text", "Launcher.Text.Link", "Launcher.Color.Toast.Background", 4.5),
         new("dialog header primary text", "Launcher.Text.Primary", "Launcher.Color.Dialog.Header", 4.5),
         new("dialog header secondary text", "Launcher.Text.Secondary", "Launcher.Color.Dialog.Header", 4.5),
         new("dialog footer primary text", "Launcher.Text.Primary", "Launcher.Color.Dialog.Footer", 4.5),
@@ -82,11 +78,33 @@ public sealed class DesignTokenContrastTests
     [
         new("danger icon on card", "Launcher.Color.Danger", "Launcher.Color.Card.Background", 3.0),
         new("danger icon on dialog", "Launcher.Color.Danger", "Launcher.Color.Dialog.Background", 3.0),
-        new("toast success severity", "Launcher.Color.Success", "Launcher.Color.Toast.Background", 3.0),
-        new("toast warning severity", "Launcher.Color.Warning", "Launcher.Color.Toast.Background", 3.0),
-        new("toast error severity", "Launcher.Color.Danger", "Launcher.Color.Toast.Background", 3.0),
-        new("toast info severity", "Launcher.Color.Info", "Launcher.Color.Toast.Background", 3.0),
         new("field border on light/dark field", "Launcher.Color.Field.Border", "Launcher.Color.Field.Background", 3.0)
+    ];
+
+    // Translucent glass surfaces sit over an arbitrary wallpaper, so both light
+    // and dark backdrops are legal. These pairs are asserted against both
+    // extremes instead of the nominal per-theme backdrop used above.
+    private static readonly TokenPair[] GlassTextPairs =
+    [
+        new("glass primary text", "Launcher.Text.Primary", "Launcher.Color.Glass.Background", 4.5),
+        new("glass secondary text", "Launcher.Text.Secondary", "Launcher.Color.Glass.Background", 4.5),
+        new("glass body text", "Launcher.Text.Body", "Launcher.Color.Glass.Background", 4.5),
+        new("glass link text", "Launcher.Text.Link", "Launcher.Color.Glass.Background", 4.5),
+        new("glass danger text", "Launcher.Color.Danger.OnGlass", "Launcher.Color.Glass.Background", 4.5),
+        new("glass card primary text", "Launcher.Text.Primary", "Launcher.Color.Glass.Card.Background", 4.5),
+        new("glass card secondary text", "Launcher.Text.Secondary", "Launcher.Color.Glass.Card.Background", 4.5),
+        new("glass card body text", "Launcher.Text.Body", "Launcher.Color.Glass.Card.Background", 4.5),
+        new("glass card link text", "Launcher.Text.Link", "Launcher.Color.Glass.Card.Background", 4.5),
+        new("glass card danger text", "Launcher.Color.Danger.OnGlass", "Launcher.Color.Glass.Card.Background", 4.5)
+    ];
+
+    private static readonly TokenPair[] GlassUiPairs =
+    [
+        new("success icon on glass", "Launcher.Color.Success", "Launcher.Color.Glass.Background", 3.0),
+        new("warning icon on glass", "Launcher.Color.Warning", "Launcher.Color.Glass.Background", 3.0),
+        new("info icon on glass", "Launcher.Color.Info.OnGlass", "Launcher.Color.Glass.Background", 3.0),
+        new("danger icon on glass", "Launcher.Color.Danger.OnGlass", "Launcher.Color.Glass.Background", 3.0),
+        new("danger icon on glass card", "Launcher.Color.Danger.OnGlass", "Launcher.Color.Glass.Card.Background", 3.0)
     ];
 
     // Explicit exemption list (design-system spec §7): over-wallpaper chrome/banner
@@ -100,12 +118,9 @@ public sealed class DesignTokenContrastTests
     private static readonly string[] ExemptedKeys =
     [
         "Launcher.Text.OnChrome",
-        "Launcher.Text.OnChrome.Muted",
         "Launcher.Text.OnDark",
         "Launcher.Color.Chrome.Hover",
         "Launcher.Color.Chrome.Pressed",
-        "Launcher.Color.TitleBar.Gradient",
-        "Launcher.Color.TitleBar.Version.Background",
         "Launcher.Color.Overlay.Scrim.Sm",
         "Launcher.Color.Overlay.Scrim.Md",
         "Launcher.Color.Overlay.Scrim.Lg",
@@ -133,8 +148,12 @@ public sealed class DesignTokenContrastTests
     [Fact]
     public void ContrastPairs_KeepTheirLandedCoverage()
     {
-        const int landedTextPairs = 37;
-        const int landedUiPairs = 7;
+        // 2026-11-20（ADR-070 通知批）基线下调：Toast 的 4 个文本对与 4 个严重性图标对随
+        // Launcher.Color.Toast.Background 一并退场——通知卡整面改用 FAInfoBar 的语义底色与
+        // 前景（FluentAvalonia 的 WinUI 派生资源，对比度由控件库契约保证，应用不覆盖），
+        // 应用 token 空间不再有「Toast 上画的任何东西」可配对。这不是为消红删对。
+        const int landedTextPairs = 35;
+        const int landedUiPairs = 3;
 
         Assert.True(
             TextPairs.Length >= landedTextPairs,
@@ -170,6 +189,20 @@ public sealed class DesignTokenContrastTests
             foreach (var pair in UiPairs)
             {
                 AssertPair(app, theme, pair);
+            }
+        }
+    }
+
+    [Fact]
+    public void GlassTokenPairs_MeetWcagAa_OverBothWallpaperExtremes()
+    {
+        var app = LoadTokenBrushes();
+
+        foreach (var theme in new[] { "Light", "Dark" })
+        {
+            foreach (var pair in GlassTextPairs.Concat(GlassUiPairs))
+            {
+                AssertPairOverBackdrops(app, theme, pair);
             }
         }
     }
@@ -251,6 +284,24 @@ public sealed class DesignTokenContrastTests
         Assert.True(
             ratio >= pair.Minimum,
             $"[{theme}] {pair.Name}: {pair.Foreground} on {pair.Background} is {ratio:F2}:1, expected >= {pair.Minimum}:1.");
+    }
+
+    private static void AssertPairOverBackdrops(TokenBrushes app, string theme, TokenPair pair)
+    {
+        var foreground = Resolve(app, theme, pair.Foreground);
+        var background = Resolve(app, theme, pair.Background);
+
+        foreach (var backdropIsWhite in new[] { true, false })
+        {
+            var foregroundColor = CompositeOverBackdrop(foreground.Alpha, foreground.Argb, backdropIsWhite);
+            var backgroundColor = CompositeOverBackdrop(background.Alpha, background.Argb, backdropIsWhite);
+            var ratio = ColorUtils.GetContrastRatio(foregroundColor, backgroundColor);
+
+            Assert.True(
+                ratio >= pair.Minimum,
+                $"[{theme}/{(backdropIsWhite ? "light" : "dark")} wallpaper] {pair.Name}: "
+                + $"{pair.Foreground} on {pair.Background} is {ratio:F2}:1, expected >= {pair.Minimum}:1.");
+        }
     }
 
     private static TokenColor Resolve(TokenBrushes app, string theme, string key)

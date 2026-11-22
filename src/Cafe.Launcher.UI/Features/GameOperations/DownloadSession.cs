@@ -75,6 +75,12 @@ internal sealed class DownloadSession : IDisposable
         Action<GameOperationProgress> progress,
         CancellationToken cancellationToken)
     {
+        if (!string.Equals(snapshot.GameId, context.GameProfile.RuntimeId, StringComparison.Ordinal)
+            || !string.Equals(context.CheckpointStore.GameId, context.GameProfile.RuntimeId, StringComparison.Ordinal))
+        {
+            throw new ArgumentException("Download context, snapshot and checkpoint store must target the same game.", nameof(snapshot));
+        }
+
         apiClient = context.ApiClient;
         gameProfile = context.GameProfile;
         localInstallationStateStore = context.ILocalInstallationStateStore;
@@ -99,7 +105,8 @@ internal sealed class DownloadSession : IDisposable
             context.TransportSource,
             context.Diagnostics,
             GetPauseTaskSnapshot,
-            () => IsPaused);
+            () => IsPaused,
+            beforeFileWrite: EnsureNoPathConflictAsync);
     }
 
     /// <summary>Runs the configured install, update, or repair workflow to a terminal result.</summary>
@@ -121,10 +128,12 @@ internal sealed class DownloadSession : IDisposable
             // Announce it before preflight I/O so an early failure still retries the same operation.
             progress(GameOperationProgressFactory.CreateProgress(operationKind, GameOperationStage.Idle, -1));
             var settings = await settingsService.ReadAsync(activeToken).ConfigureAwait(false);
+            var gameSettings = settings.GetGameSettings(gameProfile.RuntimeId).DeepClone();
             var gameConfig = snapshot.Remote.GameConfig
                 ?? await apiClient.GetGameConfigAsync(activeToken).ConfigureAwait(false);
             var preparation = await PrepareDownloadPlanAsync(
                 settings,
+                gameSettings,
                 gameConfig,
                 operationKind,
                 value => gamePath = value,
@@ -144,6 +153,11 @@ internal sealed class DownloadSession : IDisposable
                 settings.ProxyMode,
                 operationKind,
                 activeToken).ConfigureAwait(false);
+        }
+        catch (GameInstallationPathConflictException)
+        {
+            return GameOperationOutcomes.Failed(localizer.T(LocalizationKeys.GamePathConflictsWithAnotherGame),
+                GameOperationErrorCode.InvalidState);
         }
         catch (OperationCanceledException) when (activeToken.IsCancellationRequested)
         {
@@ -208,6 +222,7 @@ internal sealed class DownloadSession : IDisposable
     /// </summary>
     private async Task<DownloadPlanPreparation> PrepareDownloadPlanAsync(
         LauncherSettings settings,
+        GameSettings gameSettings,
         GameConfigResponse gameConfig,
         GameOperationKind operationKind,
         Action<string> reportGamePath,
@@ -223,19 +238,27 @@ internal sealed class DownloadSession : IDisposable
         }
 
         var speedLimitBytesPerSec = DownloadSpeedLimits.ToBytesPerSecond(settings.DownloadSpeedLimit);
-        if (string.IsNullOrWhiteSpace(settings.GamePath))
+        if (string.IsNullOrWhiteSpace(gameSettings.GamePath))
         {
             return DownloadPlanPreparation.Stop(GameOperationOutcomes.Failed(
                 localizer.T(LocalizationKeys.GameInstallPathNotConfigured),
                 GameOperationErrorCode.PathMissing));
         }
 
-        var gamePath = installationPath.NormalizeGamePath(settings.GamePath);
+        var gamePath = installationPath.NormalizeGamePath(gameSettings.GamePath);
         reportGamePath(gamePath);
         GamePathValidator.EnsureGameDirectoryName(gamePath, gameProfile.GameFolderName);
+        ThrowIfPathConflict(gamePath, settings);
+        await EnsureNoPathConflictAsync(gamePath, activeToken).ConfigureAwait(false);
         Directory.CreateDirectory(gamePath);
 
         var localGame = await localInstallationStateStore.ReadAsync(gamePath, activeToken).ConfigureAwait(false);
+        if (localGame.HasDifferentGameIdentity)
+        {
+            return DownloadPlanPreparation.Stop(GameOperationOutcomes.Failed(
+                localizer.T(LocalizationKeys.GamePathWrongGameIdentity), GameOperationErrorCode.InvalidState));
+        }
+
         var runningQuery = RunningGameGate.ResolveQuery(localGame.GameConfig, gameConfig, gamePath);
         var gameRunning = await FindRunningGameFailureAsync(runningQuery, activeToken).ConfigureAwait(false);
         if (gameRunning is not null)
@@ -245,11 +268,13 @@ internal sealed class DownloadSession : IDisposable
 
         await checkpointStore.SaveAsync(new DownloadTaskState
         {
+            FormatVersion = DownloadCheckpointStore.CurrentFormatVersion,
+            GameId = gameProfile.RuntimeId,
             Version = gameConfig.GameLatestVersion,
             Basis = gameConfig.GameLatestFilePath,
             GamePath = gamePath,
             IsRepair = profile.IsRepair,
-            PatchUrlGroup = settings.PatchUrlGroup,
+            PatchUrlGroup = gameSettings.PatchUrlGroup,
             StartedAt = DateTimeOffset.Now.ToString("O")
         }, activeToken);
 
@@ -258,9 +283,12 @@ internal sealed class DownloadSession : IDisposable
             profile.CheckStage,
             -1));
 
-        var cdnConfig = snapshot.Remote.CdnConfig
+        // A retry can read newly saved settings, so only reuse CDN URLs resolved for
+        // the same download source.
+        var cdnConfig = (string.Equals(snapshot.GameSettings.PatchUrlGroup, gameSettings.PatchUrlGroup, StringComparison.Ordinal)
+            ? snapshot.Remote.CdnConfig : null)
             ?? await apiClient.GetCdnConfigAsync(
-                settings.PatchUrlGroup,
+                gameSettings.PatchUrlGroup,
                 activeToken).ConfigureAwait(false);
         if (string.IsNullOrWhiteSpace(cdnConfig.PrimaryCdn) || string.IsNullOrWhiteSpace(cdnConfig.BackUpCdn))
         {
@@ -269,12 +297,13 @@ internal sealed class DownloadSession : IDisposable
                 GameOperationErrorCode.CdnConfiguration));
         }
 
+        await EnsureNoPathConflictAsync(gamePath, activeToken).ConfigureAwait(false);
         var downloadPlan = await profile.BuildPlanAsync(
             diffCalculator,
             gamePath,
             localGame,
             gameConfig,
-            settings.PatchUrlGroup,
+            gameSettings.PatchUrlGroup,
             progress,
             activeToken).ConfigureAwait(false);
 
@@ -309,6 +338,7 @@ internal sealed class DownloadSession : IDisposable
 
             // 确需提交时探测目录可写性，与下载路径的闸口保持一致，
             // 给出本地化的权限指引而非裸 I/O 异常。
+            await EnsureNoPathConflictAsync(gamePath, activeToken).ConfigureAwait(false);
             if (!DirectoryWriteProbe.CanWrite(gamePath))
             {
                 return await StopForWriteDeniedAsync(gamePath, affectedCount: null, activeToken).ConfigureAwait(false);
@@ -387,6 +417,7 @@ internal sealed class DownloadSession : IDisposable
 
         // 下载前探测目录可写性：权限不足时立即失败并给出明确指引，
         // 避免大流量下载完成后才在落盘阶段报 UnauthorizedAccessException。
+        await EnsureNoPathConflictAsync(gamePath, activeToken).ConfigureAwait(false);
         if (!DirectoryWriteProbe.CanWrite(gamePath))
         {
             return await StopForWriteDeniedAsync(gamePath, affectedCount, activeToken).ConfigureAwait(false);
@@ -402,12 +433,26 @@ internal sealed class DownloadSession : IDisposable
             CompletedResult: null);
     }
 
+    /// <summary>每次写入前重新读取已保存设置，拒绝写入另一个游戏的安装树。</summary>
+    private async Task EnsureNoPathConflictAsync(string gamePath, CancellationToken cancellationToken)
+    {
+        var current = await settingsService.ReadAsync(cancellationToken).ConfigureAwait(false);
+        ThrowIfPathConflict(gamePath, current);
+    }
+
+    private void ThrowIfPathConflict(string gamePath, LauncherSettings settings)
+    {
+        if (GameInstallationPathSafety.FindConflict(gameProfile.RuntimeId, gamePath, settings) is { } conflict)
+        {
+            throw new GameInstallationPathConflictException(conflict);
+        }
+    }
+
     /// <summary>
     /// 「游戏是不是在跑」这道闸门（ADR-032）在本会话的入口：计划阶段与写入边界复查共用它，
     /// 正文在 <see cref="RunningGameGate"/>，与卸载侧的判据、报法不会分叉。返回 null 表示放行。
     /// </summary>
-    private Task<GameOperationResult?> FindRunningGameFailureAsync(
-        RunningGameQuery query,
+    private Task<GameOperationResult?> FindRunningGameFailureAsync(        RunningGameQuery query,
         CancellationToken activeToken) =>
         RunningGameGate.FindFailureAsync(
             gameProcessTracker,
@@ -677,7 +722,7 @@ internal sealed class DownloadSession : IDisposable
             return false;
         }
 
-        if (!config.Params.SequenceEqual(gameConfig.GameStartParams ?? [], StringComparer.Ordinal))
+        if (!(config.Params ?? []).SequenceEqual(gameConfig.GameStartParams ?? [], StringComparer.Ordinal))
         {
             return false;
         }

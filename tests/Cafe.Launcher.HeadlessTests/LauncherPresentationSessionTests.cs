@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Linq;
 using System.Text.Json;
 using Avalonia;
 using Avalonia.Styling;
@@ -192,7 +193,31 @@ public sealed class LauncherPresentationSessionTests
         var core = new CountingCoreService();
         using var provider = HeadlessTestHost.CreateServiceProvider(
             directory,
-            services => services.AddSingleton<ILauncherStatusSnapshotService>(core));
+            services =>
+            {
+                services.AddSingleton<ILauncherStatusSnapshotService>(core);
+                // 多游戏库的每个条目都持有自己的 Core context；只替换单游戏别名不会改变
+                // 库刷新实际调用的服务，因此这里把蔚蓝档案的 context 接到同一计数替身上。
+                var originalFactory = services.Last(
+                    descriptor => descriptor.ServiceType == typeof(Func<YostarGameProfile, GameDataPaths, LauncherGameContext>));
+                services.AddSingleton<Func<YostarGameProfile, GameDataPaths, LauncherGameContext>>(provider =>
+                {
+                    var create = (Func<YostarGameProfile, GameDataPaths, LauncherGameContext>)originalFactory.ImplementationFactory!(provider);
+                    return (profile, paths) =>
+                    {
+                        var real = create(profile, paths);
+                        if (profile.RuntimeId != LauncherProfiles.BlueArchiveJapan.RuntimeId)
+                        {
+                            return real;
+                        }
+
+                        return new LauncherGameContext(profile, paths, real.ApiClient,
+                            real.LocalInstallationStateStore, real.InstallationPath, core,
+                            real.ProcessTracker, [real], runtime: real.Runtime,
+                            noticeStateStore: real.NoticeStateStore);
+                    };
+                });
+            });
         var writer = provider.GetRequiredService<ISavedSettingsWriter>();
         var saved = LauncherSettings.CreateDefaults();
         saved.AcceptedAgreementVersion = "2020-01-01";
@@ -304,11 +329,14 @@ public sealed class LauncherPresentationSessionTests
     }
 
     [AvaloniaTheory]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
+    [InlineData("blue-archive-jp", false, false)]
+    [InlineData("blue-archive-jp", true, false)]
+    [InlineData("blue-archive-jp", false, true)]
+    [InlineData("stella-sora-cn", false, false)]
+    [InlineData("stella-sora-cn", true, false)]
+    [InlineData("stella-sora-cn", false, true)]
     public async Task PrepareForShutdownAsync_WithRealDownload_WaitsForCancellationCleanupAndPreservesStopIntent(
-        bool paused, bool userStopped)
+        string gameId, bool paused, bool userStopped)
     {
         using var directory = TestDirectory.Create();
         var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -345,11 +373,15 @@ public sealed class LauncherPresentationSessionTests
         var session = provider.GetRequiredService<LauncherPresentationSession>();
         session.CreateMainWindow();
         var viewModel = provider.GetRequiredService<MainWindowViewModel>();
-        var gamePath = Path.Combine(directory.Path, "YostarGames", "BlueArchive_JP");
-        var settings = new LauncherSettings { GamePath = gamePath, ProxyMode = ProxyModes.Direct };
+        var profile = LauncherProfiles.GetSupportedGame(gameId);
+        var gamePath = Path.Combine(directory.Path, profile.RootFolderName, profile.GameFolderName);
+        var settings = new LauncherSettings { ProxyMode = ProxyModes.Direct };
+        settings.GetGameSettings(gameId).GamePath = gamePath;
         await provider.GetRequiredService<ISavedSettingsWriter>().ReplaceAsync(settings);
+        Assert.True(await viewModel.Games!.TrySelectGameAsync(gameId));
         viewModel.Operations.ApplySnapshot(new LauncherStatusSnapshot
         {
+            GameId = gameId,
             Settings = settings,
             LocalGame = new LocalInstallationState { GamePath = gamePath },
             RuntimeState = LauncherRuntimeState.NotInstalled,
@@ -367,7 +399,7 @@ public sealed class LauncherPresentationSessionTests
         try
         {
             await started.Task.WaitAsync(TimeSpan.FromSeconds(5));
-            var downloads = provider.GetRequiredService<GameDownloadService>();
+            var downloads = viewModel.Games.Get(gameId).Download;
             if (paused)
             {
                 downloads.Pause();
@@ -387,7 +419,9 @@ public sealed class LauncherPresentationSessionTests
             releaseCleanup.TrySetResult();
             await shutdown.WaitAsync(TimeSpan.FromSeconds(5));
             await operation.WaitAsync(TimeSpan.FromSeconds(5));
-            Assert.Equal(!userStopped, File.Exists(directory.DataRoot.DownloadStatePath));
+            var paths = new GameDataPaths(directory.DataRoot, gameId);
+            Assert.Equal(!userStopped, File.Exists(paths.DownloadStatePath));
+            Assert.False(File.Exists(directory.DataRoot.DownloadStatePath));
             Assert.False(downloads.IsRunning);
             Assert.Empty(viewModel.Toasts.ActiveToasts);
         }

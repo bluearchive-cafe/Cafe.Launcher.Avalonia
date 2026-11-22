@@ -1,0 +1,44 @@
+{
+  "synthetic": true,
+  "protocolVersion": "1.3.0",
+  "apiBaseUrl": "https://launcher-api.yostar.net",
+  "salt": "872550AD59A235662C5B7D5F88CEBE4B",
+  "includesParameters": false,
+  "unixTimeSeconds": 1757600000,
+  "authorization": [
+    {
+      "body": "",
+      "expected": "{\"head\":{\"game_tag\":\"StellaSora_CN\",\"time\":1757600000,\"version\":\"1.3.0\"},\"sign\":\"360873516dad72b57a40000e54adab74\"}"
+    },
+    {
+      "body": "{\"game_tag\":\"StellaSora_CN\"}",
+      "expected": "{\"head\":{\"game_tag\":\"StellaSora_CN\",\"time\":1757600000,\"version\":\"1.3.0\"},\"sign\":\"18fdf52a5f2ce9118456e4026d81baf2\"}"
+    }
+  ],
+  "config": {
+    "tag": "StellaSora_CN",
+    "name": "fixture-host",
+    "version": "fixture-version",
+    "vc": "wnjTN3vGBxLXyBz5cVB+aw=="
+  },
+  "reorderedConfig": {
+    "version": "fixture-version",
+    "tag": "StellaSora_CN",
+    "name": "fixture-host",
+    "vc": "mQ7NsghdLn7gr2fSO9uEqA=="
+  },
+  "manifest": {
+    "name": "StellaSora_CN",
+    "version": "fixture-version",
+    "basis": "fixture-basis",
+    "vc": "H3TqubR5tnheTkbWry6qUQ==",
+    "files": [
+      {
+        "path": "/data/fixture.bin",
+        "hash": "1234",
+        "size": "4",
+        "vc": "ET47iBWKW2uue26ggvBMpg=="
+      }
+    ]
+  }
+}

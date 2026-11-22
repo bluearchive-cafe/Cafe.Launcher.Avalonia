@@ -39,6 +39,7 @@ internal sealed class DownloadExecutor
     private readonly Func<bool> isPaused;
     private readonly Func<long> timestampProvider;
     private readonly long timestampFrequency;
+    private readonly Func<string, CancellationToken, Task>? beforeFileWrite;
 
     internal DownloadExecutor(
         IFileDownloadService fileDownloadService,
@@ -48,7 +49,8 @@ internal sealed class DownloadExecutor
         Func<Task> getPauseTask,
         Func<bool> isPaused,
         Func<long>? timestampProvider = null,
-        long? timestampFrequency = null)
+        long? timestampFrequency = null,
+        Func<string, CancellationToken, Task>? beforeFileWrite = null)
     {
         this.fileDownloadService = fileDownloadService;
         this.crc64Service = crc64Service;
@@ -58,6 +60,7 @@ internal sealed class DownloadExecutor
         this.isPaused = isPaused;
         this.timestampProvider = timestampProvider ?? Stopwatch.GetTimestamp;
         this.timestampFrequency = timestampFrequency ?? Stopwatch.Frequency;
+        this.beforeFileWrite = beforeFileWrite;
     }
 
     /// <summary>
@@ -183,6 +186,10 @@ internal sealed class DownloadExecutor
             try
             {
                 await pauseTask.ConfigureAwait(false);
+                if (beforeFileWrite is not null)
+                {
+                    await beforeFileWrite(gamePath, cancellationToken).ConfigureAwait(false);
+                }
             }
             finally
             {
@@ -243,6 +250,10 @@ internal sealed class DownloadExecutor
             try
             {
                 fileActivity.Update(downloadFile.File.Path, downloadFile.ReportedSize, downloadFile.File.SizeBytes, verifying: false);
+                if (beforeFileWrite is not null)
+                {
+                    await beforeFileWrite(gamePath, cancellationToken).ConfigureAwait(false);
+                }
                 var outcome = await fileDownloadService.DownloadAsync(
                     new FileDownloadRequest(
                         downloadFile.TargetPath,
@@ -271,7 +282,11 @@ internal sealed class DownloadExecutor
                         {
                             RecordFileProgress(downloadFile, transferredBytes: 0);
                             return Task.CompletedTask;
-                        }) { ReportVerificationProgress = fileActivity.ReadProgress(downloadFile.File.Path) },
+                        })
+                    {
+                        ReportVerificationProgress = fileActivity.ReadProgress(downloadFile.File.Path),
+                        BeforeFileWriteAsync = beforeFileWrite is null ? null : ct => beforeFileWrite(gamePath, ct)
+                    },
                     cancellationToken).ConfigureAwait(false);
                 if (outcome.Kind == DownloadOutcomeKind.Transferred)
                 {
@@ -360,6 +375,10 @@ internal sealed class DownloadExecutor
                             CancellationToken.None);
 
                         failedFlags[index] = true;
+                        if (beforeFileWrite is not null)
+                        {
+                            await beforeFileWrite(gamePath, cancellationToken).ConfigureAwait(false);
+                        }
                         ManifestFileRemover.DeleteFileIfPresent(checkPath);
                     }
                 }
@@ -402,6 +421,10 @@ internal sealed class DownloadExecutor
             var targetPath = GetOriginName(tempPath);
             if (File.Exists(tempPath))
             {
+                if (beforeFileWrite is not null)
+                {
+                    await beforeFileWrite(gamePath, cancellationToken).ConfigureAwait(false);
+                }
                 var dir = Path.GetDirectoryName(targetPath);
                 if (!string.IsNullOrWhiteSpace(dir))
                     Directory.CreateDirectory(dir);

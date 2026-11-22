@@ -1,6 +1,7 @@
 using System;
 using Microsoft.Extensions.DependencyInjection;
 using Cafe.Launcher.UI.Features.Diagnostics;
+using Cafe.Launcher.UI.Features.Games;
 using Cafe.Launcher.UI.Features.GameOperations;
 using Cafe.Launcher.UI.Features.ResourcePanel;
 using Cafe.Launcher.UI.Features.Settings;
@@ -52,6 +53,8 @@ public static class LauncherPresentationServiceRegistrations
         services.AddSingleton<SystemCultureSnapshot>();
         services.AddSingleton<LocalizationService>();
         services.AddSingleton<ToastService>();
+        // 调用方一律依赖窄接缝；具体类只留给应用内呈现端订阅事件（ADR-070）。
+        services.AddSingleton<INotificationService>(sp => sp.GetRequiredService<ToastService>());
         services.AddSingleton<PresentationEnvironment>();
 
         // Reuse the pre-DI logger when provided so there is a single Serilog
@@ -78,7 +81,7 @@ public static class LauncherPresentationServiceRegistrations
             services.AddSingleton<IFatalCrashService, FatalCrashService>();
         }
         services.AddSingleton<SetupWizardViewModel>();
-        services.AddSingleton<RemoteManifestService>();
+        services.AddSingleton(sp => sp.GetRequiredService<GameLibraryViewModel>().Entries[0].Context.Manifests);
         services.AddSingleton<ResourcePanelService>();
 
         services.AddSingleton<WindowFilePickerService>();
@@ -90,7 +93,7 @@ public static class LauncherPresentationServiceRegistrations
             sp.GetRequiredService<WindowMetricsService>());
 
         // ── Services with dependencies ────────────────────────────────────
-        services.AddSingleton<ManifestValidationService>();
+        services.AddSingleton(sp => sp.GetRequiredService<GameLibraryViewModel>().Entries[0].Context.Validation);
         services.AddSingleton(sp => new ResourcePanelUidService(
             sp.GetRequiredService<YostarGameProfile>(),
             sp.GetRequiredService<IBestHttpCookieLibraryReader>(),
@@ -114,19 +117,14 @@ public static class LauncherPresentationServiceRegistrations
             sp.GetRequiredService<SettingsOptionsViewModel>()));
         // 会话看护订阅进程跟踪器的退出事件：登记在跟踪器之后，容器逆序释放时看护先于
         // 跟踪器析构，退订不会落在已释放的订阅源上。诊断缝用来记录扫描超时（AUD-PERF-011）。
-        services.AddSingleton<IGameSessionMonitor>(sp => new GameSessionMonitor(
-            sp.GetRequiredService<IGameProcessTracker>(),
-            sp.GetRequiredService<ILauncherDiagnostics>()));
+        services.AddSingleton<IGameSessionMonitor>(sp => sp.GetRequiredService<GameLibraryViewModel>().Entries[0].Context.SessionMonitor);
         // 持久化检查点存储全库单例：下载服务写入/清除，卸载服务清除——
         // 同一文件只允许一个所有者实例。
-        services.AddSingleton(_ => new DownloadCheckpointStore(dataRoot));
-        services.AddSingleton<GameLaunchService>();
-        services.AddSingleton<GameUninstallService>();
-        services.AddSingleton<IGameShortcutService, GameShortcutService>();
-        services.AddSingleton<IGameOperationExecutor>(sp => new GameOperationExecutor(
-            sp.GetRequiredService<GameLaunchService>(),
-            sp.GetRequiredService<GameDownloadService>(),
-            sp.GetRequiredService<GameUninstallService>()));
+        services.AddSingleton(sp => sp.GetRequiredService<GameLibraryViewModel>().Entries[0].Context.Checkpoint);
+        services.AddSingleton(sp => sp.GetRequiredService<GameLibraryViewModel>().Entries[0].Context.Launch);
+        services.AddSingleton(sp => sp.GetRequiredService<GameLibraryViewModel>().Entries[0].Context.Uninstall);
+        services.AddSingleton<IGameShortcutService>(sp => sp.GetRequiredService<GameLibraryViewModel>().Entries[0].Context.Shortcut);
+        services.AddSingleton<IGameOperationExecutor>(sp => sp.GetRequiredService<GameLibraryViewModel>().Entries[0].Context.Executor);
 
         services.AddSingleton<IErrorHandlingService, ErrorHandlingService>();
         // 更新结果的呈现只有这一个实现：手动检查与启动检查都用它，差异只由 trigger 决定。
@@ -136,28 +134,14 @@ public static class LauncherPresentationServiceRegistrations
         // The container disposes created services in reverse order. This keeps
         // HttpClientFactory alive until all clients and download services are gone.
         services.AddSingleton<ResourcePanelApiClient>();
-        services.AddSingleton(sp => new GameDownloadService(
-            sp.GetRequiredService<YostarGameProfile>(),
-            sp.GetRequiredService<ILauncherApiClient>(),
-            sp.GetRequiredService<RemoteManifestService>(),
-            sp.GetRequiredService<IFileDownloadService>(),
-            sp.GetRequiredService<ILocalInstallationStateStore>(),
-            sp.GetRequiredService<ILauncherSettingsService>(),
-            sp.GetRequiredService<IDownloadTransportSource>(),
-            sp.GetRequiredService<ICrc64Service>(),
-            sp.GetRequiredService<IDiskSpaceService>(),
-            sp.GetRequiredService<ILauncherDiagnostics>(),
-            sp.GetRequiredService<LocalizationService>(),
-            sp.GetRequiredService<IGameInstallationPath>(),
-            sp.GetRequiredService<IGameProcessTracker>(),
-            sp.GetRequiredService<DownloadCheckpointStore>()));
+        services.AddSingleton(sp => sp.GetRequiredService<GameLibraryViewModel>().Entries[0].Context.Download);
 
         // ── ViewModels (all singleton — single-window desktop app) ─────────
         services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<ResourcePanelViewModel>();
-        services.AddSingleton<ShellViewModel>();
+        services.AddSingleton(sp => sp.GetRequiredService<GameLibraryViewModel>().Entries[0].Context.Shell);
         services.AddSingleton<BackgroundViewModel>();
-        services.AddSingleton<RemoteContentViewModel>();
+        services.AddSingleton(sp => sp.GetRequiredService<GameLibraryViewModel>().Entries[0].Context.RemoteContent);
         services.AddSingleton(sp => new DialogsViewModel(
             sp.GetRequiredService<LauncherProductProfile>(),
             sp.GetRequiredService<LocalizationService>(),
@@ -165,20 +149,29 @@ public static class LauncherPresentationServiceRegistrations
             sp.GetRequiredService<SetupWizardViewModel>(),
             sp.GetRequiredService<ILauncherDiagnostics>(),
             sp.GetRequiredService<PresentationEnvironment>().InvokeOnUiAsync));
-        services.AddSingleton(sp => new GameOperationsViewModel(
-            sp.GetRequiredService<IGameOperationExecutor>(),
-            sp.GetRequiredService<IGameShortcutService>(),
-            sp.GetRequiredService<IGameSessionMonitor>(),
+        services.AddSingleton(sp => sp.GetRequiredService<GameLibraryViewModel>().Entries[0].Context.Operations);
+        services.AddSingleton(sp => new GamePresentationDependencies(
+            sp.GetRequiredService<LauncherProductProfile>(),
+            sp.GetRequiredService<LauncherBuildIdentity>(),
             sp.GetRequiredService<LocalizationService>(),
-            sp.GetRequiredService<ToastService>(),
+            sp.GetRequiredService<INotificationService>(),
             sp.GetRequiredService<ILauncherDiagnostics>(),
-            sp.GetRequiredService<ShellViewModel>(),
-            sp.GetRequiredService<DialogsViewModel>(),
             sp.GetRequiredService<IErrorHandlingService>(),
-            sp.GetRequiredService<PresentationEnvironment>().DelayBeforeWindowActionAsync));
+            sp.GetRequiredService<ILauncherSettingsService>(),
+            sp.GetRequiredService<IGameFileOperationCoordinator>(),
+            sp.GetRequiredService<IFileDownloadService>(),
+            sp.GetRequiredService<IDownloadTransportSource>(),
+            sp.GetRequiredService<ICrc64Service>(),
+            sp.GetRequiredService<IDiskSpaceService>(),
+            sp.GetRequiredService<GameCompatibilityPaths>(),
+            sp.GetRequiredService<IRemoteImageStore>(),
+            sp.GetRequiredService<DialogsViewModel>(),
+            sp.GetRequiredService<PresentationEnvironment>()));
+        services.AddSingleton<GamePresentationFactory>();
+        services.AddSingleton<GameLibraryViewModel>();
         services.AddSingleton<DebugViewModel>();
         services.AddSingleton<IGameOperationActivity>(sp =>
-            sp.GetRequiredService<GameOperationsViewModel>());
+            sp.GetRequiredService<GameLibraryViewModel>());
         services.AddSingleton(sp => new ToastHostViewModel(
             sp.GetRequiredService<ToastService>(),
             sp.GetRequiredService<LocalizationService>(),
@@ -195,7 +188,9 @@ public static class LauncherPresentationServiceRegistrations
             sp.GetRequiredService<IGameOperationActivity>(),
             sp.GetRequiredService<DebugViewModel>(),
             sp.GetRequiredService<PresentationEnvironment>().OpenExternalUrl,
-            sp.GetRequiredService<PresentationEnvironment>().OpenDirectory));
+            sp.GetRequiredService<PresentationEnvironment>().OpenDirectory,
+            sp.GetRequiredService<GameLibraryViewModel>(),
+            sp.GetRequiredService<IGameFileOperationCoordinator>()));
         services.AddSingleton<ModalHostViewModel>();
         services.AddSingleton<ShellPresentationFamily>();
         services.AddSingleton<ShellLifecycle>();
