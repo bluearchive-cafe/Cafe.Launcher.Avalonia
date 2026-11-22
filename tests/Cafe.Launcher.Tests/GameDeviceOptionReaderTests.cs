@@ -31,21 +31,21 @@ public sealed class GameDeviceOptionReaderTests
         Assert.Equal(GameDeviceFrameRateMode.Sixty, options.FrameRate);
         Assert.Equal(GameDeviceDrawcallMode.SrpBatcher, options.DrawcallMode);
         Assert.True(options.AllowPostProcessing);
-        Assert.Equal(GameDeviceAntiAliasing.Low, options.AntiAliasing);
+        Assert.Equal(GameDeviceAntiAliasing.On, options.AntiAliasing);
         Assert.False(options.LetterBoxInBattle);
 
         Assert.Equal(1, options.AudioVolumeVersion);
         Assert.Equal(GameDeviceScreenRatio.SixteenByNine, options.ScreenRatio);
         Assert.Equal(GameDeviceScreenMode.FullScreen, options.ScreenMode);
-        Assert.Equal(0, options.VSync);
-        Assert.Equal(0, options.BackgroundSound);
-        Assert.Equal(0, options.ControlDisplay);
-        Assert.Equal(0, options.MouseCursor);
-        Assert.Equal(0, options.Vibration);
-        Assert.Equal(0, options.ControllerCursorSpeed);
-        Assert.Equal(0, options.CursorAutoFocus);
-        Assert.Equal(0, options.NotificationAfterDownloadAlarm);
-        Assert.Equal(0d, options.RenderScale);
+        Assert.True(options.VSync);
+        Assert.True(options.BackgroundSound);
+        Assert.True(options.ControlDisplay);
+        Assert.True(options.MouseCursor);
+        Assert.True(options.Vibration);
+        Assert.Equal(GameDeviceControllerCursorSpeed.Normal, options.ControllerCursorSpeed);
+        Assert.True(options.CursorAutoFocus);
+        Assert.True(options.NotificationAfterDownloadAlarm);
+        Assert.Equal(GameDeviceRenderScale.Percent100, options.RenderScale);
         Assert.Equal(14, options.TitleVideoAudioId);
         Assert.True(options.IsInitialized);
 
@@ -70,7 +70,15 @@ public sealed class GameDeviceOptionReaderTests
         Assert.Equal(GameDeviceAntiAliasing.Off, options.AntiAliasing);
         Assert.False(options.AllowPostProcessing);
         Assert.True(options.LetterBoxInBattle);
-        Assert.Equal(5d, options.RenderScale);
+        Assert.Equal(GameDeviceRenderScale.Percent200, options.RenderScale);
+        Assert.True(options.VSync);
+        Assert.False(options.BackgroundSound);
+        Assert.False(options.ControlDisplay);
+        Assert.False(options.MouseCursor);
+        Assert.True(options.Vibration);
+        Assert.Equal(GameDeviceControllerCursorSpeed.Normal, options.ControllerCursorSpeed);
+        Assert.True(options.CursorAutoFocus);
+        Assert.True(options.NotificationAfterDownloadAlarm);
         Assert.Equal(9, options.TitleVideoAudioId);
 
         var window = Assert.IsType<GameDeviceWindowRect>(options.WindowRect);
@@ -98,7 +106,7 @@ public sealed class GameDeviceOptionReaderTests
         Assert.Equal(GameDeviceFrameRateMode.Thirty, options.FrameRate);
         Assert.Equal(GameDeviceDrawcallMode.DynamicBatching, options.DrawcallMode);
         Assert.False(options.AllowPostProcessing);
-        Assert.Equal(GameDeviceAntiAliasing.High, options.AntiAliasing);
+        Assert.Equal(GameDeviceAntiAliasing.On, options.AntiAliasing);
     }
 
     [Fact]
@@ -262,11 +270,19 @@ public sealed class GameDeviceOptionReaderTests
     [InlineData("Resolution", 9)]
     [InlineData("FPS", 9)]
     [InlineData("DrawcallMode", 9)]
-    [InlineData("AntiAliasing", 9)]
+    [InlineData("AntiAliasing", 2)]
     [InlineData("ScreenModeType", 9)]
     [InlineData("ScreenRatioType", 9)]
     [InlineData("AllowPostProcess", 2)]
     [InlineData("LetterBoxInBattle", 2)]
+    [InlineData("VSync", 2)]
+    [InlineData("BackgroundSound", 2)]
+    [InlineData("ControlDisplay", 2)]
+    [InlineData("MXMouseCursor", 2)]
+    [InlineData("Vibration", 2)]
+    [InlineData("CursorAutoFocus", 2)]
+    [InlineData("NotificationAfterDownloadAlarm", 2)]
+    [InlineData("ControllerCursorSpeed", 3)]
     public void Read_WhenKnownEnumIsOutOfRange_ReturnsStableFailure(
         string property,
         int value)
@@ -276,7 +292,15 @@ public sealed class GameDeviceOptionReaderTests
 
         var result = reader.Read(path);
 
-        var expectedStatus = property is "AllowPostProcess" or "LetterBoxInBattle"
+        var expectedStatus = property is "AllowPostProcess"
+            or "LetterBoxInBattle"
+            or "VSync"
+            or "BackgroundSound"
+            or "ControlDisplay"
+            or "MXMouseCursor"
+            or "Vibration"
+            or "CursorAutoFocus"
+            or "NotificationAfterDownloadAlarm"
             ? GameDeviceOptionReadStatus.InvalidValues
             : GameDeviceOptionReadStatus.UnsupportedSchema;
         Assert.Equal(expectedStatus, result.Status);
@@ -321,6 +345,20 @@ public sealed class GameDeviceOptionReaderTests
         var path = WriteVariant(
             directory,
             root => root["renderScale"]!.AsObject().Remove("scale"));
+
+        var result = reader.Read(path);
+
+        Assert.Equal(GameDeviceOptionReadStatus.InvalidValues, result.Status);
+        Assert.Equal("renderScale", result.InvalidField);
+    }
+
+    [Fact]
+    public void Read_WhenRenderScaleIsOutOfRange_ReturnsInvalidValues()
+    {
+        using var directory = TestDirectory.Create();
+        var path = WriteVariant(
+            directory,
+            root => root["renderScale"]!.AsObject()["scale"] = 6);
 
         var result = reader.Read(path);
 

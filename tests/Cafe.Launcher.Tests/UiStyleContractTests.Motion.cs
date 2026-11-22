@@ -280,7 +280,7 @@ public sealed partial class UiStyleContractTests
         // 家族；设置页八个内容分区（多游戏拆出游戏启动/游戏下载）保留纯淡化，入场锚点改由
         // MotionEntrance 单次触发，不再与可见性同源常驻——否则重开动效会让当前分类整体重播淡化（§2.7）。
         // 审计-0828：淡化家族不承载位移，仅表面（motion-surface）保留本地 TranslateTransform。
-        Assert.Equal(8, contentTargets.Count);
+        Assert.Equal(9, contentTargets.Count);
         Assert.All(contentTargets, element =>
         {
             Assert.Equal(

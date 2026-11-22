@@ -217,6 +217,7 @@ internal sealed class SettingsOptionsViewModel
         UpdateSettingCategory(SettingsCategoryCodes.About, localizer.T(LocalizationKeys.SettingsCategoryAbout), localizer.T(LocalizationKeys.SettingsCategoryAboutDescription));
         UpdateSettingCategory(SettingsCategoryCodes.Game, localizer.T(LocalizationKeys.SettingsGameInstallation), string.Empty);
         UpdateSettingCategory(SettingsCategoryCodes.GameLaunch, localizer.T(LocalizationKeys.SettingsGameLaunch), string.Empty);
+        UpdateSettingCategory(SettingsCategoryCodes.GameOptions, localizer.T(LocalizationKeys.SettingsGameOptions), localizer.T(LocalizationKeys.SettingsGameOptionsDescription));
         UpdateSettingCategory(SettingsCategoryCodes.GameDownload, localizer.T(LocalizationKeys.SettingsGameDownload), string.Empty);
         UpdateSettingCategory(SettingsCategoryCodes.GameBackground, localizer.T(LocalizationKeys.SettingsGameBackground), string.Empty);
 
@@ -389,6 +390,7 @@ internal sealed class SettingsOptionsViewModel
         SettingsCategories.Add(new() { Code = SettingsCategoryCodes.About, CategoryGlyph = Constants.FluentGlyphs.Info });
         GameSettingsCategories.Add(new() { Code = SettingsCategoryCodes.Game, CategoryGlyph = Constants.FluentGlyphs.Folder });
         GameSettingsCategories.Add(new() { Code = SettingsCategoryCodes.GameLaunch, CategoryGlyph = Constants.FluentGlyphs.Play });
+        GameSettingsCategories.Add(new() { Code = SettingsCategoryCodes.GameOptions, CategoryGlyph = Constants.FluentGlyphs.Setting });
         GameSettingsCategories.Add(new() { Code = SettingsCategoryCodes.GameDownload, CategoryGlyph = Constants.FluentGlyphs.Download });
         GameSettingsCategories.Add(new() { Code = SettingsCategoryCodes.GameBackground, CategoryGlyph = Constants.FluentGlyphs.Image });
     }

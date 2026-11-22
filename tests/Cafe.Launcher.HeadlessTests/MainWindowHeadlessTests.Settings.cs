@@ -513,7 +513,7 @@ public sealed partial class MainWindowHeadlessTests
         using var context = CreateContext();
         OpenGameSettings(context);
         var navigation = GetSettingsNavigation(context.Window);
-        navigation.SelectedIndex = 3;
+        navigation.SelectedIndex = 4;
         Assert.Equal(SettingsCategoryCodes.GameBackground, context.ViewModel.Settings.SelectedCategory);
         Assert.True(context.ViewModel.TryHandleEscape());
         Dispatcher.UIThread.RunJobs();
@@ -537,6 +537,18 @@ public sealed partial class MainWindowHeadlessTests
         Dispatcher.UIThread.RunJobs();
         OpenGameSettings(context);
         AssertNavigationSelectionVisual(navigation, SettingsCategoryCodes.GameBackground);
+    }
+
+    [AvaloniaFact]
+    public void GameOptionsCategory_ShowsReadOnlySection()
+    {
+        using var context = CreateContext();
+        OpenGameSettings(context);
+        context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.GameOptions;
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Equal(SettingsCategoryCodes.GameOptions, context.ViewModel.Settings.SelectedCategory);
+        AssertVisibleSettingsSection(context.Window, typeof(SettingsGameOptionsSection));
     }
 
     [AvaloniaTheory]
@@ -1220,7 +1232,10 @@ public sealed partial class MainWindowHeadlessTests
     private static void AssertVisibleSettingsSection(MainWindow window, Type expectedType)
     {
         // 外观与默认背景共用一个分区控件；分区数量按控件类型去重。
-        var expectedTypes = SettingsSections.Select(section => section.SectionType).Distinct().ToArray();
+        var expectedTypes = SettingsSections.Concat(GameSettingsSections)
+            .Select(section => section.SectionType)
+            .Distinct()
+            .ToArray();
         var sections = window.GetVisualDescendants()
             .Where(control => expectedTypes.Contains(control.GetType()))
             .ToArray();

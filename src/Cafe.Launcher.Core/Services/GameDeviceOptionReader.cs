@@ -174,6 +174,52 @@ internal sealed class GameDeviceOptionReader : IGameDeviceOptionReader
             return Failure(GameDeviceOptionReadStatus.InvalidValues, "LetterBoxInBattle");
         }
 
+        if (!TryReadOptionalToggle(document.NotificationAfterDownloadAlarm, out var notificationAfterDownloadAlarm))
+        {
+            return Failure(GameDeviceOptionReadStatus.InvalidValues, "NotificationAfterDownloadAlarm");
+        }
+
+        if (!TryReadOptionalToggle(document.BackgroundSound, out var backgroundSound))
+        {
+            return Failure(GameDeviceOptionReadStatus.InvalidValues, "BackgroundSound");
+        }
+
+        if (!TryReadOptionalToggle(document.ControlDisplay, out var controlDisplay))
+        {
+            return Failure(GameDeviceOptionReadStatus.InvalidValues, "ControlDisplay");
+        }
+
+        if (!TryReadOptionalToggle(document.VSync, out var vSync))
+        {
+            return Failure(GameDeviceOptionReadStatus.InvalidValues, "VSync");
+        }
+
+        if (!TryReadOptionalToggle(document.MouseCursor, out var mouseCursor))
+        {
+            return Failure(GameDeviceOptionReadStatus.InvalidValues, "MXMouseCursor");
+        }
+
+        if (!TryReadOptionalToggle(document.Vibration, out var vibration))
+        {
+            return Failure(GameDeviceOptionReadStatus.InvalidValues, "Vibration");
+        }
+
+        if (!TryReadOptionalToggle(document.CursorAutoFocus, out var cursorAutoFocus))
+        {
+            return Failure(GameDeviceOptionReadStatus.InvalidValues, "CursorAutoFocus");
+        }
+
+        GameDeviceControllerCursorSpeed? controllerCursorSpeed = null;
+        if (document.ControllerCursorSpeed is int controllerCursorSpeedRaw)
+        {
+            if (ReadControllerCursorSpeed(controllerCursorSpeedRaw) is not { } parsedControllerCursorSpeed)
+            {
+                return Failure(GameDeviceOptionReadStatus.UnsupportedSchema, "ControllerCursorSpeed");
+            }
+
+            controllerCursorSpeed = parsedControllerCursorSpeed;
+        }
+
         GameDeviceWindowRect? windowRect = null;
         if (document.WindowRect is { } rect)
         {
@@ -188,15 +234,20 @@ internal sealed class GameDeviceOptionReader : IGameDeviceOptionReader
             windowRect = new GameDeviceWindowRect(x, y, width, height);
         }
 
-        double? renderScale = null;
+        GameDeviceRenderScale? renderScale = null;
         if (document.RenderScale is { } scale)
         {
-            if (scale.Scale is not double scaleValue)
+            if (scale.Scale is not int scaleRaw)
             {
                 return Failure(GameDeviceOptionReadStatus.InvalidValues, "renderScale");
             }
 
-            renderScale = scaleValue;
+            if (ReadRenderScale(scaleRaw) is not { } parsedRenderScale)
+            {
+                return Failure(GameDeviceOptionReadStatus.InvalidValues, "renderScale");
+            }
+
+            renderScale = parsedRenderScale;
         }
 
         GameDeviceScreenMode? screenMode = null;
@@ -237,14 +288,14 @@ internal sealed class GameDeviceOptionReader : IGameDeviceOptionReader
             AudioVolumeVersion = document.AudioVolumeVersion,
             ScreenMode = screenMode,
             ScreenRatio = screenRatio,
-            VSync = document.VSync,
-            BackgroundSound = document.BackgroundSound,
-            ControlDisplay = document.ControlDisplay,
-            MouseCursor = document.MouseCursor,
-            Vibration = document.Vibration,
-            ControllerCursorSpeed = document.ControllerCursorSpeed,
-            CursorAutoFocus = document.CursorAutoFocus,
-            NotificationAfterDownloadAlarm = document.NotificationAfterDownloadAlarm,
+            VSync = vSync,
+            BackgroundSound = backgroundSound,
+            ControlDisplay = controlDisplay,
+            MouseCursor = mouseCursor,
+            Vibration = vibration,
+            ControllerCursorSpeed = controllerCursorSpeed,
+            CursorAutoFocus = cursorAutoFocus,
+            NotificationAfterDownloadAlarm = notificationAfterDownloadAlarm,
             WindowRect = windowRect,
             RenderScale = renderScale,
             TitleVideoAudioId = document.TitleVideoAudioId,
@@ -260,6 +311,18 @@ internal sealed class GameDeviceOptionReader : IGameDeviceOptionReader
 
     private static bool HasAudioValues(GameDeviceAudioDocument document) =>
         document.Mute is not null && document.Volume is not null;
+
+    private static bool TryReadOptionalToggle(int? raw, out bool? value)
+    {
+        if (raw is not int rawValue)
+        {
+            value = null;
+            return true;
+        }
+
+        value = rawValue == 0;
+        return rawValue is 0 or 1;
+    }
 
     private static bool TryReadAudio(
         GameDeviceAudioDocument document,
@@ -322,8 +385,26 @@ internal sealed class GameDeviceOptionReader : IGameDeviceOptionReader
     private static GameDeviceAntiAliasing? ReadAntiAliasing(int raw) => raw switch
     {
         0 => GameDeviceAntiAliasing.Off,
-        1 => GameDeviceAntiAliasing.Low,
-        2 => GameDeviceAntiAliasing.High,
+        1 => GameDeviceAntiAliasing.On,
+        _ => null
+    };
+
+    private static GameDeviceRenderScale? ReadRenderScale(int raw) => raw switch
+    {
+        0 => GameDeviceRenderScale.Percent100,
+        1 => GameDeviceRenderScale.Percent120,
+        2 => GameDeviceRenderScale.Percent140,
+        3 => GameDeviceRenderScale.Percent160,
+        4 => GameDeviceRenderScale.Percent180,
+        5 => GameDeviceRenderScale.Percent200,
+        _ => null
+    };
+
+    private static GameDeviceControllerCursorSpeed? ReadControllerCursorSpeed(int raw) => raw switch
+    {
+        0 => GameDeviceControllerCursorSpeed.Normal,
+        1 => GameDeviceControllerCursorSpeed.Fast,
+        2 => GameDeviceControllerCursorSpeed.Slow,
         _ => null
     };
 
@@ -441,5 +522,5 @@ internal sealed class GameDeviceWindowRectDocument
 internal sealed class GameDeviceRenderScaleDocument
 {
     [JsonPropertyName("scale")]
-    public double? Scale { get; set; }
+    public int? Scale { get; set; }
 }

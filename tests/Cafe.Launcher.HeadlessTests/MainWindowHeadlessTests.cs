@@ -31,6 +31,15 @@ public sealed partial class MainWindowHeadlessTests
         (SettingsCategoryCodes.About, typeof(SettingsAboutSection))
     ];
 
+    private static readonly (string Code, Type SectionType)[] GameSettingsSections =
+    [
+        (SettingsCategoryCodes.Game, typeof(SettingsGameSection)),
+        (SettingsCategoryCodes.GameLaunch, typeof(SettingsGameLaunchSection)),
+        (SettingsCategoryCodes.GameOptions, typeof(SettingsGameOptionsSection)),
+        (SettingsCategoryCodes.GameDownload, typeof(SettingsGameDownloadSection)),
+        (SettingsCategoryCodes.GameBackground, typeof(SettingsAppearanceSection))
+    ];
+
     private static TestContext CreateContext(
         IGameOperationExecutor? executor = null,
         Action<IServiceCollection>? configure = null)

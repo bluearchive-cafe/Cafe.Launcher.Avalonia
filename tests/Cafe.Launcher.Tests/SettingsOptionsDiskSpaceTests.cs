@@ -164,7 +164,11 @@ public sealed class SettingsOptionsDiskSpaceTests
                 [],
                 new DefaultProcessLauncher(),
                 new GameProcessTracker(),
-                new GameCompatibilityPaths(TestDataRoot.ForCurrentProcess())), new StubFilePickerService(), new ProtonBuildDiscovery([]));
+                new GameCompatibilityPaths(TestDataRoot.ForCurrentProcess())), new StubFilePickerService(), new ProtonBuildDiscovery([]),
+            new GameDeviceOptionReader(),
+            new TitleVideoAudioReader(),
+            LauncherProfiles.BlueArchiveJapan,
+            new GameCompatibilityPaths(TestDataRoot.ForCurrentProcess()));
         var snapshot = new LauncherStatusSnapshot
         {
             RuntimeState = LauncherRuntimeState.NotInstalled,

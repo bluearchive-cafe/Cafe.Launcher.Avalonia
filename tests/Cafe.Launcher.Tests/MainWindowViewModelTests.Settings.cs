@@ -626,7 +626,11 @@ public partial class MainWindowViewModelTests
                 [],
                 new DefaultProcessLauncher(),
                 new GameProcessTracker(),
-                new GameCompatibilityPaths(TestDataRoot.ForCurrentProcess())), new StubFilePickerService(), new ProtonBuildDiscovery([]));
+                new GameCompatibilityPaths(TestDataRoot.ForCurrentProcess())), new StubFilePickerService(), new ProtonBuildDiscovery([]),
+            new GameDeviceOptionReader(),
+            new TitleVideoAudioReader(),
+            LauncherProfiles.BlueArchiveJapan,
+            new GameCompatibilityPaths(TestDataRoot.ForCurrentProcess()));
         ToastNotification? errorToast = null;
         toastService.ToastRaised += notification =>
         {

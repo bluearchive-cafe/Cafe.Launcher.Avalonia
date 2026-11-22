@@ -70,6 +70,9 @@ internal partial class SettingsViewModel : ObservableObject, IDisposable, IModal
     /// <summary>游戏分类的运行时可用性流程；状态探测、构建发现与运行器路径选择都在其内部收口。</summary>
     public SettingsGameRuntimeViewModel GameRuntime { get; }
 
+    /// <summary>游戏内设备选项的只读投影；永不写回游戏文件。</summary>
+    public SettingsGameOptionsViewModel GameOptions { get; }
+
     /// <summary>设置覆盖层打开期间固定的游戏目标；全局偏好仍来自共享 Editor。</summary>
     public string EditingGameId => editingGameId;
 
@@ -153,6 +156,10 @@ internal partial class SettingsViewModel : ObservableObject, IDisposable, IModal
         IGameRuntime gameRuntime,
         IFilePickerService filePickerService,
         IProtonBuildDiscovery protonBuildDiscovery,
+        IGameDeviceOptionReader deviceOptionReader,
+        IGameTitleVideoAudioReader titleVideoAudioReader,
+        YostarGameProfile gameProfile,
+        GameCompatibilityPaths compatibilityPaths,
         IGameFileOperationCoordinator? fileOperations = null)
     {
         this.settingsService = settingsService;
@@ -181,6 +188,13 @@ internal partial class SettingsViewModel : ObservableObject, IDisposable, IModal
             gameRuntime,
             filePickerService,
             protonBuildDiscovery);
+        GameOptions = new SettingsGameOptionsViewModel(
+            editor,
+            deviceOptionReader,
+            titleVideoAudioReader,
+            localizer,
+            gameProfile,
+            compatibilityPaths);
         editor.PropertyChanged += OnEditorPropertyChanged;
         editor.CurrentPropertyChanged += OnCurrentSettingChanged;
     }
@@ -298,6 +312,7 @@ internal partial class SettingsViewModel : ObservableObject, IDisposable, IModal
         editingGameId = context.GameId;
         gameInstallationPath = context.InstallationPath;
         GameRuntime.SetGameTarget(context.GameId, context.Runtime);
+        GameOptions.SetGameTarget(context.GameId, context.Profile);
         Options.SetGameTarget(context.Profile);
         Appearance.SetBackgroundScope(IsGameSettingsEditing ? editingGameId : null);
         OnPropertyChanged(nameof(EditingGameId));
@@ -340,6 +355,10 @@ internal partial class SettingsViewModel : ObservableObject, IDisposable, IModal
         IsGlobalBackgroundPreview = false;
         IsPreviewing = false;
         SelectedCategory = gameSpecific ? gameCategory : globalCategory;
+        if (IsGameOptionsCategorySelected)
+        {
+            GameOptions.Refresh();
+        }
         if (IsDefaultBackgroundCategorySelected && !IsGlobalBackgroundPreview)
         {
             IsGlobalBackgroundPreview = true;
@@ -392,6 +411,7 @@ internal partial class SettingsViewModel : ObservableObject, IDisposable, IModal
             OnPropertyChanged(nameof(IsGeneralCategorySelected));
             OnPropertyChanged(nameof(IsGameCategorySelected));
             OnPropertyChanged(nameof(IsGameLaunchCategorySelected));
+            OnPropertyChanged(nameof(IsGameOptionsCategorySelected));
             OnPropertyChanged(nameof(IsGameDownloadCategorySelected));
             OnPropertyChanged(nameof(IsGameBackgroundCategorySelected));
             OnPropertyChanged(nameof(IsDownloadNetworkCategorySelected));
@@ -410,12 +430,17 @@ internal partial class SettingsViewModel : ObservableObject, IDisposable, IModal
             {
                 GameRuntime.RefreshStatus();
             }
+            if (selectedCategory == SettingsCategoryCodes.GameOptions)
+            {
+                GameOptions.Refresh();
+            }
         }
     }
 
     public bool IsGeneralCategorySelected => SelectedCategory == SettingsCategoryCodes.General;
     public bool IsGameCategorySelected => SelectedCategory == SettingsCategoryCodes.Game;
     public bool IsGameLaunchCategorySelected => SelectedCategory == SettingsCategoryCodes.GameLaunch;
+    public bool IsGameOptionsCategorySelected => SelectedCategory == SettingsCategoryCodes.GameOptions;
     public bool IsGameDownloadCategorySelected => SelectedCategory == SettingsCategoryCodes.GameDownload;
     public bool IsGameBackgroundCategorySelected => SelectedCategory == SettingsCategoryCodes.GameBackground;
     public bool IsDownloadNetworkCategorySelected => SelectedCategory == SettingsCategoryCodes.DownloadNetwork;
@@ -481,6 +506,7 @@ internal partial class SettingsViewModel : ObservableObject, IDisposable, IModal
         OnPropertyChanged(nameof(SaveStatusText));
         OnPropertyChanged(nameof(DraftStatusText));
         GameRuntime.RefreshLocalizedText();
+        GameOptions.Refresh();
     }
 
     /// <summary>Loads a persisted settings snapshot into the active edit session.</summary>

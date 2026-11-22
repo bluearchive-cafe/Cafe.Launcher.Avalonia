@@ -215,56 +215,13 @@ internal sealed partial class ResourcePanelUidService
         GameRuntimeSettings settings,
         string userName,
         Func<string, string> defaultPrefix,
-        IReadOnlyList<string> cookieLibraryRelativeSegments)
-    {
-        if (cookieLibraryRelativeSegments.Count == 0)
-        {
-            throw new NotSupportedException("No cookie library is defined for this game.");
-        }
+        IReadOnlyList<string> cookieLibraryRelativeSegments) =>
+        GameUserDataPathResolver.ResolveLinux(
+            settings,
+            userName,
+            defaultPrefix,
+            cookieLibraryRelativeSegments);
 
-        string[] runners = settings.Runner == GameRuntimeRunners.Wine
-            ? [GameRuntimeRunners.Wine]
-            : settings.Runner == GameRuntimeRunners.Umu
-                ? [GameRuntimeRunners.Umu]
-                : [GameRuntimeRunners.Umu, GameRuntimeRunners.Wine];
-        string[] prefixes = !string.IsNullOrWhiteSpace(settings.PrefixPath)
-            ? [settings.PrefixPath]
-            : runners.Select(defaultPrefix).ToArray();
-        var fallback = CookiePath(Path.Combine(prefixes[0], "drive_c", "users", userName), cookieLibraryRelativeSegments);
-        foreach (var prefix in prefixes)
-        {
-            var users = Path.Combine(prefix, "drive_c", "users");
-            var currentUserPath = CookiePath(Path.Combine(users, userName), cookieLibraryRelativeSegments);
-            if (File.Exists(currentUserPath))
-            {
-                return currentUserPath;
-            }
-
-            if (!Directory.Exists(users))
-            {
-                continue;
-            }
-
-            foreach (var profile in Directory.EnumerateDirectories(users).Order(StringComparer.Ordinal))
-            {
-                var path = CookiePath(profile, cookieLibraryRelativeSegments);
-                if (File.Exists(path))
-                {
-                    return path;
-                }
-            }
-        }
-
-        return fallback;
-    }
-
-    private static string CookiePath(string profile, IReadOnlyList<string> relativeSegments) =>
-        Path.Combine([profile, .. relativeSegments]);
-
-    private string GetDefaultCookieLibraryPath()
-    {
-        return CookiePath(
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            gameProfile.CookieLibraryRelativeSegments);
-    }
+    private string GetDefaultCookieLibraryPath() =>
+        GameUserDataPathResolver.ResolveWindows(gameProfile.CookieLibraryRelativeSegments);
 }

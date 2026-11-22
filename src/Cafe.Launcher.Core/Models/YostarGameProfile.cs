@@ -73,6 +73,12 @@ public sealed record YostarGameProfile
     /// </summary>
     public required string[] DeviceOptionRelativeSegments { get; init; }
 
+    /// <summary>
+    /// 游戏客户端 <c>TitleVideoAudioSaveData</c> 文件在用户配置目录下的相对路径；
+    /// 未知游戏为空，表示没有已校准的标题画面 PV 读取入口。
+    /// </summary>
+    public required string[] TitleVideoAudioRelativeSegments { get; init; }
+
     /// <summary>官方包基址；由 <see cref="OfficialPackageHost"/> 派生，不单独登记。</summary>
     public string OfficialPackageBaseUrl => "https://" + OfficialPackageHost;
 }

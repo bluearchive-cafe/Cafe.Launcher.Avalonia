@@ -1,0 +1,42 @@
+{
+  "saved": [
+    {
+      "Id": 1,
+      "VideoPath": "Video/title",
+      "BgmId": 1,
+      "BgmPath": "Audio/BGM/Theme_01"
+    },
+    {
+      "Id": 8,
+      "VideoPath": "Video/title_2nd_1",
+      "BgmId": 90003,
+      "BgmPath": "Audio/BGM/Theme_42_Title"
+    },
+    {
+      "Id": 9,
+      "VideoPath": "Video/title_3rd_1",
+      "BgmId": 90004,
+      "BgmPath": "Audio/BGM/Theme_271_Title"
+    },
+    {
+      "Id": 2,
+      "VideoPath": "Video/title_4nd_2",
+      "BgmId": 90000,
+      "BgmPath": "Audio/BGM/Theme_59_Title"
+    },
+    {
+      "Id": 4,
+      "VideoPath": "Video/title_4nd_Ep",
+      "BgmId": 90001,
+      "BgmPath": "Audio/BGM/Theme_154_Title"
+    },
+    {
+      "Id": 14,
+      "VideoPath": "Video/title_7th_1",
+      "BgmId": 90006,
+      "BgmPath": "Audio/BGM/Theme_269_Title"
+    }
+  ],
+  "LastOpenedId": 14,
+  "Version": 3
+}

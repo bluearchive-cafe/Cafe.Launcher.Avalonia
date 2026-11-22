@@ -9,6 +9,7 @@ using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.UI.Services.GameRuntime;
 using Cafe.Launcher.UI.ViewModels;
 using Cafe.Launcher.Testing;
+using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Services.GameRuntime;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services;
@@ -425,7 +426,11 @@ public sealed class GameRuntimeSettingsUiTests
             new SettingsAppearanceViewModel(new SettingsEditor(), new ThemeApplier()),
             new RecordingErrorHandlingService(),
             gameRuntime,
-            picker ?? new StubFilePickerService(), discovery ?? new ProtonBuildDiscovery([]));
+            picker ?? new StubFilePickerService(), discovery ?? new ProtonBuildDiscovery([]),
+            new GameDeviceOptionReader(),
+            new TitleVideoAudioReader(),
+            LauncherProfiles.BlueArchiveJapan,
+            new GameCompatibilityPaths(TestDataRoot.ForCurrentProcess()));
 
     private sealed class StubProtonBuildDiscovery : IProtonBuildDiscovery
     {

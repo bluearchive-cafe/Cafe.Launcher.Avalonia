@@ -29,6 +29,7 @@
 | **Current game** | The entry shown on the home screen; other entries can still have tasks. | Running game, active download |
 | **Launcher settings** | Preferences shared across all game entries. | Current game settings |
 | **Game settings** | Preferences belonging to the named game entry. | Account settings |
+| **In-game options** | A read-only view of the game client's own device settings; changes must be made in the game. | Game settings (for launcher preferences) |
 | **Default background** | Rules inherited by games without an enabled override. Each game still uses its own built-in or remote image. | Shared wallpaper |
 | **Preview Main Window** | Temporarily shows the home screen while preserving the settings draft and scope. | Save, apply |
 
@@ -96,6 +97,7 @@
 | --- | --- | --- | --- |
 | Launcher | 启动器 | 啟動器 | ランチャー |
 | Game library | 游戏库 | 遊戲庫 | ゲームライブラリ |
+| In-game options | 游戏内选项 | 遊戲內選項 | ゲーム内オプション |
 | Contributors | 贡献者 | 貢獻者 | コントリビューター |
 | Special Thanks | 特别感谢 | 特別感謝 | スペシャルサンクス |
 | BlueArchive.Cafe | 蔚蓝咖啡厅 | 蔚藍咖啡廳 | BlueArchive.Cafe |

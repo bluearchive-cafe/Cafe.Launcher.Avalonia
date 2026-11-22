@@ -65,7 +65,9 @@ public static class LauncherProfiles
         CookieLibraryRelativeSegments =
             ["AppData", "LocalLow", "YostarJP", "BlueArchive", "Cookies", "Library"],
         DeviceOptionRelativeSegments =
-            ["AppData", "LocalLow", "YostarJP", "BlueArchive", "DeviceOption"]
+            ["AppData", "LocalLow", "YostarJP", "BlueArchive", "DeviceOption"],
+        TitleVideoAudioRelativeSegments =
+            ["AppData", "LocalLow", "YostarJP", "BlueArchive", "TitleVideoAudioSaveData"]
     };
 
     /// <summary>StellaSora 国服的已核对官方协议与入口；真实进程家族仍需实机验收。</summary>
@@ -86,7 +88,8 @@ public static class LauncherProfiles
         RuntimeId = "stella-sora-cn",
         OfficialWebsiteUrl = "https://stellasora.yostar.cn/",
         CookieLibraryRelativeSegments = [],
-        DeviceOptionRelativeSegments = []
+        DeviceOptionRelativeSegments = [],
+        TitleVideoAudioRelativeSegments = []
     };
 
     /// <summary>随程序发布的游戏和能力清单；页面选择不能修改声明或扩展支持范围。</summary>

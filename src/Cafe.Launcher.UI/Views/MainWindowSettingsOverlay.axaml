@@ -95,6 +95,11 @@
                                 Classes.motion-enabled="{Binding IsMotionEnabled}"
                                 controls:MotionEntrance.IsTriggered="{Binding Settings.IsGameLaunchCategorySelected}"/>
 
+                            <views:SettingsGameOptionsSection IsVisible="{Binding Settings.IsGameOptionsCategorySelected}"
+                                Classes="motion-content"
+                                Classes.motion-enabled="{Binding IsMotionEnabled}"
+                                controls:MotionEntrance.IsTriggered="{Binding Settings.IsGameOptionsCategorySelected}"/>
+
                             <views:SettingsGameDownloadSection IsVisible="{Binding Settings.IsGameDownloadCategorySelected}"
                                 Classes="motion-content"
                                 Classes.motion-enabled="{Binding IsMotionEnabled}"

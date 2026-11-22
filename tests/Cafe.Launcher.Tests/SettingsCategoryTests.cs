@@ -33,6 +33,7 @@ public sealed class SettingsCategoryTests
     [
         SettingsCategoryCodes.Game,
         SettingsCategoryCodes.GameLaunch,
+        SettingsCategoryCodes.GameOptions,
         SettingsCategoryCodes.GameDownload,
         SettingsCategoryCodes.GameBackground
     ];
@@ -47,6 +48,7 @@ public sealed class SettingsCategoryTests
         ("settingsCategoryAbout", strings => strings["settingsCategoryAbout"]),
         ("settingsGameInstallation", strings => strings["settingsGameInstallation"]),
         ("settingsGameLaunch", strings => strings["settingsGameLaunch"]),
+        ("settingsGameOptions", strings => strings["settingsGameOptions"]),
         ("settingsGameDownload", strings => strings["settingsGameDownload"]),
         ("settingsGameBackground", strings => strings["settingsGameBackground"])
     ];
@@ -57,7 +59,8 @@ public sealed class SettingsCategoryTests
         "settingsCategoryAppearanceDescription",
         "settingsCategoryDownloadNetworkDescription",
         "settingsCategoryAdvancedDescription",
-        "settingsCategoryAboutDescription"
+        "settingsCategoryAboutDescription",
+        "settingsGameOptionsDescription"
     ];
 
     private static readonly string[] CategoryPropertyNames =
@@ -66,6 +69,7 @@ public sealed class SettingsCategoryTests
         nameof(SettingsViewModel.IsGeneralCategorySelected),
         nameof(SettingsViewModel.IsGameCategorySelected),
         nameof(SettingsViewModel.IsGameLaunchCategorySelected),
+        nameof(SettingsViewModel.IsGameOptionsCategorySelected),
         nameof(SettingsViewModel.IsGameDownloadCategorySelected),
         nameof(SettingsViewModel.IsGameBackgroundCategorySelected),
         nameof(SettingsViewModel.IsDownloadNetworkCategorySelected),
@@ -89,6 +93,7 @@ public sealed class SettingsCategoryTests
     [InlineData("general")]
     [InlineData("game")]
     [InlineData("game-launch")]
+    [InlineData("game-options")]
     [InlineData("game-download")]
     [InlineData("game-background")]
     [InlineData("download-network")]
@@ -173,6 +178,7 @@ public sealed class SettingsCategoryTests
             [
                 FluentGlyphs.Folder,
                 FluentGlyphs.Play,
+                FluentGlyphs.Setting,
                 FluentGlyphs.Download,
                 FluentGlyphs.Image
             ],
@@ -357,7 +363,7 @@ public sealed class SettingsCategoryTests
             // child VM; the parent raises the selection notification and all scope flags,
             // including the two derived background-editor flags. The default-background
             // category additionally raises the preview flag while starting its preview.
-            var expectedCount = code == SettingsCategoryCodes.DefaultBackground ? 15 : 14;
+            var expectedCount = code == SettingsCategoryCodes.DefaultBackground ? 16 : 15;
             Assert.Equal(expectedCount, changedProperties.Count);
             Assert.Contains(nameof(SettingsViewModel.SelectedCategory), changedProperties);
             Assert.Contains(nameof(SettingsViewModel.IsBackgroundEditorCategorySelected), changedProperties);
@@ -378,6 +384,7 @@ public sealed class SettingsCategoryTests
                     viewModel.IsGeneralCategorySelected,
                     viewModel.IsGameCategorySelected,
                     viewModel.IsGameLaunchCategorySelected,
+                    viewModel.IsGameOptionsCategorySelected,
                     viewModel.IsGameDownloadCategorySelected,
                     viewModel.IsGameBackgroundCategorySelected,
                     viewModel.IsDownloadNetworkCategorySelected,

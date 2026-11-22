@@ -4,9 +4,9 @@ namespace Cafe.Launcher.Core.Models;
 /// Blue Archive 客户端 <c>DeviceOption</c> 文件中的设备级选项快照。
 /// </summary>
 /// <remarks>
-/// 只读模型。稳定字段的语义来自 2026-07 的游戏程序集 dump 与 1.74 实机文件；
-/// <c>ScreenModeType</c>、<c>ScreenRatioType</c> 等 PC 窗口字段尚未校准，保留原始整数，
-/// Core 不猜测其含义。读取方在必需字段缺失或已知枚举越界时应拒绝整份文件，不能部分套用。
+/// 只读模型。字段语义来自 1.74 PC 客户端程序集（<c>MX.SaveData.DeviceOption</c>）与实机文件；
+/// <c>ScreenModeType</c>、<c>ScreenRatioType</c>、<c>renderScale</c> 等 PC 字段已校准。
+/// 读取方在必需字段缺失或已知枚举越界时应拒绝整份文件，不能部分套用。
 /// </remarks>
 public sealed record GameDeviceOptions
 {
@@ -25,7 +25,7 @@ public sealed record GameDeviceOptions
     /// <summary>后处理开关；文件中的 <c>ToggleValue</c> 以 0 表示 On。</summary>
     public required bool AllowPostProcessing { get; init; }
 
-    /// <summary>抗锯齿档位。</summary>
+    /// <summary>抗锯齿开关；1.74 PC 客户端的 <c>AntiAliasing</c> 枚举只有 Off/On。</summary>
     public required GameDeviceAntiAliasing AntiAliasing { get; init; }
 
     /// <summary>战斗黑边开关；文件字段默认值为 1，表示关闭。</summary>
@@ -34,41 +34,41 @@ public sealed record GameDeviceOptions
     /// <summary>音频数据版本，用于游戏迁移；读取方不得改写。</summary>
     public int? AudioVolumeVersion { get; init; }
 
-    /// <summary>屏幕模式；1.74 实机确认 1 为窗口。</summary>
+    /// <summary>屏幕模式；0 为全屏、1 为窗口。</summary>
     public GameDeviceScreenMode? ScreenMode { get; init; }
 
-    /// <summary>屏幕比例；1.74 实机确认 0 为 4:3、1 为 16:9。</summary>
+    /// <summary>屏幕比例；0 为 4:3、1 为 16:9。</summary>
     public GameDeviceScreenRatio? ScreenRatio { get; init; }
 
-    /// <summary>垂直同步原始值；尚不能确定它使用 ToggleValue 还是布尔语义。</summary>
-    public int? VSync { get; init; }
+    /// <summary>垂直同步开关。</summary>
+    public bool? VSync { get; init; }
 
-    /// <summary>后台声音开关的原始值。</summary>
-    public int? BackgroundSound { get; init; }
+    /// <summary>后台声音开关。</summary>
+    public bool? BackgroundSound { get; init; }
 
-    /// <summary>控制器提示显示的原始值。</summary>
-    public int? ControlDisplay { get; init; }
+    /// <summary>控制器提示开关。</summary>
+    public bool? ControlDisplay { get; init; }
 
-    /// <summary>鼠标光标相关原始值。</summary>
-    public int? MouseCursor { get; init; }
+    /// <summary>鼠标光标开关。</summary>
+    public bool? MouseCursor { get; init; }
 
-    /// <summary>振动开关的原始值。</summary>
-    public int? Vibration { get; init; }
+    /// <summary>振动开关。</summary>
+    public bool? Vibration { get; init; }
 
-    /// <summary>控制器光标速度的原始值。</summary>
-    public int? ControllerCursorSpeed { get; init; }
+    /// <summary>控制器光标速度。</summary>
+    public GameDeviceControllerCursorSpeed? ControllerCursorSpeed { get; init; }
 
-    /// <summary>光标自动聚焦的原始值。</summary>
-    public int? CursorAutoFocus { get; init; }
+    /// <summary>光标自动聚焦开关。</summary>
+    public bool? CursorAutoFocus { get; init; }
 
-    /// <summary>下载完成提醒的原始值。</summary>
-    public int? NotificationAfterDownloadAlarm { get; init; }
+    /// <summary>下载完成提醒开关。</summary>
+    public bool? NotificationAfterDownloadAlarm { get; init; }
 
     /// <summary>窗口位置与大小；旧版本文件没有该字段。</summary>
     public GameDeviceWindowRect? WindowRect { get; init; }
 
-    /// <summary>渲染缩放原始值；0 可能是“默认”哨兵，5 是实机改动后的值，映射尚未校准。</summary>
-    public double? RenderScale { get; init; }
+    /// <summary>渲染缩放档位；0 为 100%，5 为 200%。</summary>
+    public GameDeviceRenderScale? RenderScale { get; init; }
 
     /// <summary>标题画面音轨编号；用户可在标题界面手动修改，不是内部状态。</summary>
     public long? TitleVideoAudioId { get; init; }
@@ -141,15 +141,44 @@ public enum GameDeviceDrawcallMode
     Off = 2
 }
 
-/// <summary>抗锯齿档位；对应游戏程序集里的 <c>AntiAliasing</c> 枚举。</summary>
+/// <summary>抗锯齿开关；对应 1.74 PC 客户端 <c>AntiAliasing</c> 枚举的 Off/On。</summary>
 public enum GameDeviceAntiAliasing
 {
     /// <summary>关闭。</summary>
     Off = 0,
-    /// <summary>低档。</summary>
-    Low = 1,
-    /// <summary>高档。</summary>
-    High = 2
+    /// <summary>开启。</summary>
+    On = 1
+}
+
+/// <summary>
+/// 渲染缩放档位；对应游戏程序集里的 <c>RenderScaleMultiplier</c>，
+/// 0 为 100%，之后每档增加 20%。
+/// </summary>
+public enum GameDeviceRenderScale
+{
+    /// <summary>100%。</summary>
+    Percent100 = 0,
+    /// <summary>120%。</summary>
+    Percent120 = 1,
+    /// <summary>140%。</summary>
+    Percent140 = 2,
+    /// <summary>160%。</summary>
+    Percent160 = 3,
+    /// <summary>180%。</summary>
+    Percent180 = 4,
+    /// <summary>200%。</summary>
+    Percent200 = 5
+}
+
+/// <summary>控制器光标速度；对应游戏程序集里的 <c>ControllerCursorSpeed</c> 枚举。</summary>
+public enum GameDeviceControllerCursorSpeed
+{
+    /// <summary>标准。</summary>
+    Normal = 0,
+    /// <summary>快。</summary>
+    Fast = 1,
+    /// <summary>慢。</summary>
+    Slow = 2
 }
 
 /// <summary>窗口位置与大小；对应 <c>windowRect</c> 的 <c>m_XMin</c>、<c>m_YMin</c>、<c>m_Width</c>、<c>m_Height</c>。</summary>
