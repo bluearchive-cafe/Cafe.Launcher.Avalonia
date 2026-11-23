@@ -7,14 +7,14 @@ macOS and Linux are experimental.
 
 | Need | Source of truth |
 | --- | --- |
-| Where any rule lives | [Documentation map](docs/README.md) |
+| Where a rule lives | [Documentation map](docs/README.md) |
 | Implementation rules | [PROJECT_CONVENTIONS.md](PROJECT_CONVENTIONS.md) |
 | Commands, validation, dependencies, release | [Development guide](docs/DEVELOPMENT.md) |
 | Behavior that must not regress | [Domain contracts](CONTEXT.md) |
 | UI wording and translations | [Canonical terminology](UBIQUITOUS_LANGUAGE.md) |
 
-This file routes work; it does not own detailed rules. When a rule changes, update its
-owning document and keep this router pointing at it.
+This file routes work; it owns no detailed rules. Change a rule in its owning document and
+keep this router pointing at it.
 
 ## Task router
 
@@ -26,7 +26,7 @@ owning document and keep this router pointing at it.
 | User-facing text or translations | [Conventions §6](PROJECT_CONVENTIONS.md#6-本地化), [canonical terminology](UBIQUITOUS_LANGUAGE.md) |
 | Tests or shared test facilities | [Conventions §8](PROJECT_CONVENTIONS.md#8-测试) |
 | Dependencies, packaging, CI, release | [Development guide](docs/DEVELOPMENT.md), [toolchain table](PROJECT_CONVENTIONS.md#12-工具链与依赖) |
-| Audit or accepted risks | [CODEBASE_AUDIT.md](CODEBASE_AUDIT.md), the only audit ledger |
+| Audit findings or accepted risks | [CODEBASE_AUDIT.md](CODEBASE_AUDIT.md), the only audit ledger |
 | Changing an established decision | [ADR index](docs/design/adr/README.md) and the relevant decision |
 | Documentation or user instructions | [Documentation ownership](docs/DEVELOPMENT.md#文档职责); inspect current code before describing behavior, and update both languages in the companion `cafe-docs` workspace |
 
@@ -34,11 +34,11 @@ owning document and keep this router pointing at it.
 
 - Keep changes inside the existing assembly and feature boundaries.
 - Add focused regression tests for behavior changes; use the shared test facilities.
-- Run `pwsh ./verify.ps1` before requesting review; report what passed and what was not verified.
+- Run `pwsh ./verify.ps1` before requesting review and report what passed and what was not verified.
 - Builds treat warnings as errors. Build the updater separately; `build.ps1` builds only the launcher host graph.
 - Use PowerShell 7 (`pwsh`) for repository scripts, including from Bash. Prefer `test.ps1` so the five-minute hang guard stays enabled.
 - Do not add remote telemetry. Diagnostic logs stay local.
-- Update the owning document in the same change. For user-visible behavior, also update `docs/cafe-launcher/` and `docs/en/cafe-launcher/` in `cafe-docs`, retaining existing anchors and the legacy `user-guide.md` entry; validate that repository with `npm ci` and `npm run docs:build`.
+- Update the owning document in the same change. For user-visible behavior, also update `docs/cafe-launcher/` and `docs/en/cafe-launcher/` in `cafe-docs`, keep existing anchors and the legacy `user-guide.md` entry, and validate that repository with `npm ci` and `npm run docs:build`.
 - Commit with Conventional Commits; the description and body may be Chinese. `release.ps1` commits, tags, and pushes; run it only for an intended release.
 
 ## Working loop

@@ -2,7 +2,7 @@
 
 本文件定义代码修改必须遵循的实现规则。先按改动类型阅读相关章节，再核对受影响代码与契约测试。环境、命令与交付流程见[开发指南](docs/DEVELOPMENT.md)，产品行为见[领域契约](CONTEXT.md)，界面译名见[术语表](UBIQUITOUS_LANGUAGE.md)，文档入口见[文档导航](docs/README.md)。
 
-每条规则只在本文件维护；行为契约、视觉规格和命令流程分别归 [CONTEXT.md](CONTEXT.md)、[设计规范](docs/design/design-system-spec.md) 与[开发指南](docs/DEVELOPMENT.md)。其他文档引用本文件时，使用下方章节号。
+每条规则只在本文件维护。行为契约归 [CONTEXT.md](CONTEXT.md)，视觉规格归[设计规范](docs/design/design-system-spec.md)，命令流程归[开发指南](docs/DEVELOPMENT.md)；其他文档引用本文件时使用下方章节号。
 
 | 修改内容 | 重点章节 |
 | --- | --- |
@@ -16,7 +16,7 @@
 ## 1. 基本原则
 
 1. **行为有测试保护** — 新功能和行为变更附聚焦测试；先固定缺陷或风险边界，再改实现。
-2. **验证先于完成** — 运行受影响的检查并报告结果，完整交付流程见开发指南。
+2. **验证先于完成** — 运行受影响的检查并报告结果；完整交付流程见开发指南。
 3. **向后兼容** — `settings.json` 的新旧格式都要能读；公共 API 签名变更同步调用点。
 4. **零警告** — `TreatWarningsAsErrors` 与 `EnforceCodeStyleInBuild` 已启用，warning 即 error。
 5. **无远程遥测** — 诊断日志只留本地，不向第三方发送日志或遥测。
@@ -135,7 +135,7 @@
 2. XAML 绑定 `{Binding Shell.I18n[newKey]}`；`Generate-LocalizationCatalog.ps1 -Check` 扫描全部生产 `.axaml`，未知键直接使普通构建失败。
 3. C# 使用生成的 `Constants/LocalizationKeys` 枚举，`T()`/`F()` 只接受类型化键；字符串仅用于 XAML 与测试资源源的适配。枚举数值不用于序列化或持久化。
 4. 四种语言都必须有文本（专有名词可回退英文，但不得留空）；译名以 [UBIQUITOUS_LANGUAGE.md](UBIQUITOUS_LANGUAGE.md) 为准。C# 用 `LocalizationService.T()`/`F()` 获取文案。
-5. 新增或重命名 key 后只运行 `pwsh ./scripts/Generate-LocalizationCatalog.ps1`，一次生成枚举、资源目录与 ResourceManager，再运行 `scripts/Test-LocalizationContract.ps1`。旧的两个生成脚本仅保留为转发入口。构建检查生成产物、四语键集、空值、重复键、格式占位符与 XAML 引用；启动时再验证全部内嵌资源集，避免卫星程序集损坏被英文回退掩盖（[ADR-055](docs/design/adr/ADR-055-本地化资源目录统一生成与提前校验.md)）。
+5. 新增或重命名 key 后运行 `pwsh ./scripts/Generate-LocalizationCatalog.ps1`，一次生成枚举、资源目录与 ResourceManager，再运行 `scripts/Test-LocalizationContract.ps1`。旧的两个生成脚本仅保留为转发入口。构建检查生成产物、四语键集、空值、重复键、格式占位符与 XAML 引用；启动时再验证全部内嵌资源集，避免卫星程序集损坏被英文回退掩盖（[ADR-055](docs/design/adr/ADR-055-本地化资源目录统一生成与提前校验.md)）。
 6. 测试直接用 `new LocalizationService()` 读内嵌资源；需要自定义资源表时传 `new LocalizationTestSource(...)`；不要写死预期中文。生成器拒绝错误输入的行为由 `LocalizationCatalogGeneratorTests` 覆盖，`ResxResourceContractTests` 只守嵌入资源的运行时集成。
 
 ## 7. DI 与生命周期

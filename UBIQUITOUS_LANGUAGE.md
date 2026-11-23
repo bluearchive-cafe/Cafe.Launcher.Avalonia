@@ -1,6 +1,6 @@
 # 界面术语与翻译 / Ubiquitous Language
 
-本表用于界面、发布说明与中英文用户文档，统一概念与译名。先确定所指概念，再使用对应语言的规范名称；动态服务器文案保留原文。领域行为与状态约束见 [CONTEXT.md](CONTEXT.md)，资源键与生成命令见[开发规范 §6](PROJECT_CONVENTIONS.md#6-本地化)。
+本表统一界面、发布说明和中英文用户文档中的概念与译名。先确定所指概念，再使用对应语言的规范名称；动态服务器文案保留原文。领域行为与状态约束见 [CONTEXT.md](CONTEXT.md)，资源键与生成命令见[开发规范 §6](PROJECT_CONVENTIONS.md#6-本地化)。
 
 使用方法：
 
@@ -59,6 +59,10 @@
 
 | Term | Definition | Aliases to avoid |
 | --- | --- | --- |
+| **Status panel** | The optional bottom status area showing game session, launch verification, network, download source and version. Its choices are Hidden and Compact. | Status bar, status row |
+| **Motion** | The launcher's animation behavior: Follow system, Full motion, or Reduced motion. It governs interface animation, automatic banner rotation and video background playback. | Animation setting, effects |
+| **Close behavior** | What the launcher's close button does: minimize to tray or exit. It does not define what the operating system's own close gesture does. | Window close setting, exit setting |
+| **After game launch** | What the launcher does once the game starts: keep the window open, minimize to tray, or exit the launcher. | Launch completed action, post-launch behavior |
 | **Video background** | A custom video rendered behind launcher surfaces instead of a static wallpaper. | Animated wallpaper |
 | **Video background volume** | The persisted video volume from 0 to 100, defaulting to 0. | Media volume |
 | **Mute video background** | The independent mute switch that keeps the chosen volume for later. | Disable audio |
@@ -76,7 +80,7 @@
 | --- | --- | --- |
 | **Automatic system proxy** | The launcher's default network behavior, backed by the runtime's system proxy selection. | 跟随系统 |
 | **Direct connection** | A connection that explicitly bypasses every proxy. | 直连、直接 |
-| **System proxy (configured first)** | The explicitly configured operating-system proxy, falling back to automatic system proxy detection when no explicit proxy exists. | 已配置的系统代理、設定済みシステムプロキシ |
+| **System proxy (prefer manual settings)** | The explicitly configured operating-system proxy, falling back to automatic system proxy detection when no explicit proxy exists. | 已配置的系统代理、設定済みシステムプロキシ |
 
 ## 规范译名
 
@@ -97,12 +101,23 @@
 | Mute video background | 视频背景静音 | 影片背景靜音 | 動画背景のミュート |
 | Manifest | 文件清单 | 檔案清單 | マニフェスト |
 | Launch verification | 启动校验 | 啟動校驗 | 起動チェック |
+| Local manifest | 本地文件清单 | 本地檔案清單 | ローカルマニフェスト |
+| Remote manifest | 远程文件清单 | 遠端檔案清單 | リモートマニフェスト |
+| None | 无 | 無 | なし |
 | Download source | 下载源 | 下載來源 | ダウンロードソース |
 | Cafe download source | Cafe 下载源 | Cafe 下載來源 | Cafe ダウンロードソース |
 | Official download source | 官方下载源 | 官方下載來源 | 公式ダウンロードソース |
+| Official (option label) | 官方 | 官方 | 公式 |
+| Cafe (option label) | Cafe | Cafe | Cafe |
 | Remote | 远程 | 遠端 | リモート |
 | Resource Panel | 资源面板 | 資源面板 | リソースパネル |
+| Localization UID | 汉化 UID | 漢化 UID | 中国語化 UID |
 | Chinese-localized resources | 汉化资源 | 中文化資源 | 中国語化リソース |
+| Game text | 游戏文本 | 遊戲文字 | ゲームテキスト |
+| Main story Chinese voice | 主线中配 | 主線中配 | メインストーリー中国語音声 |
+| Images and videos | 图像视频 | 圖像影片 | 画像・動画 |
+| Ready | 可用 | 可用 | 利用可能 |
+| Maintenance pending | 待维护 | 待維護 | メンテナンス待ち |
 | Banner | 横幅 | 橫幅 | バナー |
 | Fatal | 致命 | 致命 | 致命的 |
 | Update channel | 更新通道 | 更新頻道 | 更新チャンネル |
@@ -115,9 +130,20 @@
 | Game running | 游戏运行中 | 遊戲執行中 | ゲーム実行中 |
 | Game exited | 游戏已退出 | 遊戲已結束 | ゲームが終了しました |
 | User Agreement and Privacy Policy | 用户协议与隐私政策 | 使用者條款與隱私權政策 | 利用規約とプライバシーポリシー |
+| Status panel | 状态面板 | 狀態面板 | ステータスパネル |
+| Compact | 简略 | 簡略 | コンパクト |
+| Motion | 动态效果 | 動態效果 | モーション |
+| Follow system | 跟随系统 | 跟隨系統 | システム設定に従う |
+| Full motion | 完整动态效果 | 完整動態效果 | フルモーション |
+| Reduced motion | 减少动态效果 | 減少動態效果 | モーションを減らす |
+| Close behavior | 关闭行为 | 關閉行為 | 閉じる動作 |
+| After game launch | 游戏启动后的行为 | 遊戲啟動後的行為 | ゲーム起動後の動作 |
+| Keep window open | 保持窗口打开 | 保持視窗開啟 | ウィンドウを開いたままにする |
+| Minimize to tray | 最小化到托盘 | 最小化到系統匣 | トレイに最小化 |
+| Exit | 退出 | 結束 | 終了 |
 | Automatic system proxy | 自动检测系统代理 | 自動偵測系統代理 | システムプロキシを自動検出 |
 | Direct connection | 直连（不使用代理） | 直連（不使用代理） | 直接接続（プロキシなし） |
-| System proxy (configured first) | 系统代理（优先使用显式配置） | 系統代理（優先使用明確設定） | システムプロキシ（明示設定を優先） |
+| System proxy (prefer manual settings) | 系统代理（优先使用手动配置） | 系統代理（優先使用手動設定） | システムプロキシ（手動設定を優先） |
 | Network compatibility | 网络兼容 | 網路相容性 | ネットワーク互換性 |
 | Allow Local or Private Network Addresses | 允许本机或内网地址 | 允許本機或內網位址 | ローカルまたはプライベートネットワークのアドレスを許可 |
 
@@ -130,6 +156,9 @@
 - Log filters and log-level settings use the same **Fatal** translation within each language.
 - Download-source sentence copy uses the full term: “Cafe 下载源 / Cafe 下載來源 / Cafe ダウンロードソース / Cafe download source” and “官方下载源 / 官方下載來源 / 公式ダウンロードソース / Official download source”. Bare display names (“Cafe”, “官方”, “Official”, “公式”) are only for option labels, buttons, and status-bar values. Do not shorten to “Cafe 源 / Cafe 來源 / Cafe ソース” or call it a “Cafe CDN / CDN サーバー”; the setting selects a provider, not a network route.
 - The localized-resources term must say what the resources are localized to: zh-Hans “汉化资源”, zh-Hant “中文化資源”, ja “中国語化リソース”, en “Chinese-localized resources”. Do not use bare “本地化资源 / 本地化資源 / ローカライズリソース” in user-facing copy.
+- **Status panel** refers to the whole optional bottom area. Do not call it “状态栏”/“狀態列”/“ステータスバー”, and do not use those names for the session-status row inside it.
+- **Motion** is the setting; “动效”/“動效”/“モーション効果” are internal design terms (Fluent motion layer), not the user-facing setting name. “Reduce motion” copy follows the shipped “减少动态效果”/“減少動態效果”/“モーションを減らす”, not “无动画”.
+- Keep **Close behavior** and **After game launch** separate in every language. “Exit” in close behavior means exiting the launcher; “Exit launcher” after a game launch must name the launcher explicitly.
 - Do not use the middle dot (`·`) to separate ordinary interface copy. Use natural punctuation or separate layout fields; preserve proper names and externally supplied data.
 
 ## 保留词与外部内容
@@ -144,4 +173,4 @@
 - The **Resource Panel** manages **Chinese-localized resources** when the **Cafe download source** is selected. UID selection is saved locally; resource preferences are stored by the service and do not directly rewrite game files.
 - An **update channel** decides which launcher releases are offered. A **launcher self-update** installs one only after verifying it against the release checksum manifest; otherwise the state is **in-app update unavailable** and the exit is **Open Release Page**.
 - The stable channel (“稳定版”) and the 正式版 label on download badges name the same release track; keep each label where it ships.
-- The game **session status** line (starting/running/exited) is separate from **launch verification**.
+- The **status panel** shows game session status, launch verification, network, download source and version. The game **session status** (starting/running/exited) is separate from **launch verification**.

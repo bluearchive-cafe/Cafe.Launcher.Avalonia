@@ -4,7 +4,7 @@
 
 ## 环境与启动
 
-Windows 是支持平台，macOS 和 Linux 构建为实验性。先安装 [global.json](../global.json) 指定的 .NET SDK 和 PowerShell 7；SDK 的 `latestFeature` 策略允许在同一 major/minor 内使用较新的 feature band。工具链版本见[规范 §12](../PROJECT_CONVENTIONS.md#12-工具链与依赖)。
+Windows 是支持平台，macOS 与 Linux 构建为实验性。先安装 [global.json](../global.json) 指定的 .NET SDK 和 PowerShell 7；SDK 的 `latestFeature` 策略允许在同一 major/minor 内使用较新的 feature band。工具链版本见[规范 §12](../PROJECT_CONVENTIONS.md#12-工具链与依赖)。
 
 所有仓库脚本都使用 `pwsh`，从 Bash 调用时也一样。Windows PowerShell 5.1 无法解析脚本中的 `??`，也可能错误解码中文输出。脚本关闭 .NET、MTP 与 Avalonia 遥测；构建启用可空引用、编译绑定和警告视为错误。
 
@@ -65,11 +65,11 @@ pwsh ./verify.ps1
 
 验证脚本传给 `dotnet` 的工程路径使用正斜杠，兼容 Windows、macOS 与 Linux；不要把仅 PowerShell 能归一化的反斜杠路径直接传给原生命令。
 
-`test.ps1` 使用原生 Microsoft.Testing.Platform，保留五分钟无活动挂起保护，空筛选返回失败。类名和方法名筛选支持首尾 `*`。直接调用时使用 `dotnet test --project <csproj>` 与 `--filter-class`，并保留挂起保护参数；不用 VSTest 筛选参数。运行带 `--no-restore` 的命令前先还原依赖。
+`test.ps1` 使用原生 Microsoft.Testing.Platform，保留五分钟无活动挂起保护，空筛选返回失败。类名和方法名筛选支持首尾 `*`。直接调用时使用 `dotnet test --project <csproj>` 与 `--filter-class`，并保留挂起保护参数；不要使用 VSTest 筛选参数。运行带 `--no-restore` 的命令前先还原依赖。
 
 Windows CI 的 Debug 阶段通过 `coverage.ps1` 各运行一次 Unit 与 Headless，同时生成 TRX 与 Cobertura 报告。收集失败时直接报错并保留已生成的结果。覆盖率校验的范围、统计口径及门槛见[规范 §12.3](../PROJECT_CONVENTIONS.md#123-覆盖率)，测试设施见[规范 §8](../PROJECT_CONVENTIONS.md#8-测试)。
 
-XAML 或样式变更先运行 `UiStyleContractTests`，较大 UI 改动运行 `dev.ps1 ui`。只有有意改变视觉时才使用 `-UpdateGolden`；该参数不能与筛选或 `-Suite Unit` 混用。Headless 和黄金截图在 Windows 验证，Linux CI 只运行 Unit。`dotnet format` 按需用于本次触及的文件，不是 CI 门禁。
+XAML 或样式变更先运行 `UiStyleContractTests`，较大 UI 改动运行 `dev.ps1 ui`。只有有意改变视觉时才使用 `-UpdateGolden`；该参数不能与筛选或 `-Suite Unit` 混用。Headless 与黄金截图在 Windows 验证，Linux CI 只运行 Unit。`dotnet format` 按需用于本次触及的文件，不是 CI 门禁。
 
 设置页布局矩阵可用 `pwsh ./test.ps1 -Suite Headless -FilterMethod '*Visual_Settings_AllCategoriesKeepCopyAndActionsSeparate'` 单独运行。每个语言和主题组合使用独立窗口，在窗口内遍历两档尺寸、三档文字缩放和六个设置分类。
 
@@ -85,7 +85,7 @@ XAML 或样式变更先运行 `UiStyleContractTests`，较大 UI 改动运行 `d
 
 Windows x64 构建自动调用 [Restore-VideoBackgroundRuntime.ps1](../scripts/Restore-VideoBackgroundRuntime.ps1)。脚本需要 curl 与 `7z` 或 `7zz`，首次从 GitHub 获取固定 LGPL 构建，缓存在 `.artifacts/native/libmpv`，分别校验压缩包和 DLL 的 SHA-256。需要代理时可先手动调用恢复脚本并传入 `-Proxy`。应用运行时不下载播放器。
 
-升级运行库时，同步 [manifest.json](../native/libmpv/manifest.json)、许可证、来源说明并完成原生冒烟验证。发布输出应包含 `libmpv/win-x64/libmpv-2.dll`、清单、来源和许可证；产品播放与缩略图规则见[领域契约](../CONTEXT.md#设置与操作)。Linux 的 deb、rpm 和 Arch 安装包声明系统 libmpv 依赖；Linux tar.gz、AppImage 和 macOS ZIP 通过 [Restore-UnixVideoRuntime.ps1](../scripts/Restore-UnixVideoRuntime.ps1) 获取 [unix-manifest.json](../native/libmpv/unix-manifest.json) 固定的 LGPL 运行库和许可证，逐文件验证 SHA-256。Linux 随包提供 libva 和 Debian ALSA 后备库（清单记录二进制包与对应源代码地址）；仍依赖操作系统的图形、字体、音频服务及 ALSA 配置。还原 Linux 运行库需要 `tar`、`curl`；Unix 上还需 `ar` 与 `xz`，Windows 上需要 7-Zip。macOS ZIP 同时生成包含 ZIP 校验值的 Homebrew Cask。运行时仅检查应用目录和固定系统路径，不搜索用户目录；缺少库、依赖或必要的本地媒体安全选项时回退到静态背景。各平台仍需实际设备验证。
+升级运行库时，同步 [manifest.json](../native/libmpv/manifest.json)、许可证和来源说明，并完成原生冒烟验证。发布输出应包含 `libmpv/win-x64/libmpv-2.dll`、清单、来源和许可证；产品播放与缩略图规则见[领域契约](../CONTEXT.md#设置与操作)。Linux 的 deb、rpm 和 Arch 安装包声明系统 libmpv 依赖；Linux tar.gz、AppImage 和 macOS ZIP 通过 [Restore-UnixVideoRuntime.ps1](../scripts/Restore-UnixVideoRuntime.ps1) 获取 [unix-manifest.json](../native/libmpv/unix-manifest.json) 固定的 LGPL 运行库和许可证，逐文件验证 SHA-256。Linux 随包提供 libva 和 Debian ALSA 后备库（清单记录二进制包与对应源代码地址）；仍依赖操作系统的图形、字体、音频服务及 ALSA 配置。还原 Linux 运行库需要 `tar`、`curl`；Unix 上还需 `ar` 与 `xz`，Windows 上需要 7-Zip。macOS ZIP 同时生成包含 ZIP 校验值的 Homebrew Cask。运行时仅检查应用目录和固定系统路径，不搜索用户目录；缺少库、依赖或必要的本地媒体安全选项时回退到静态背景。各平台仍需实际设备验证。
 
 Linux 随包 libmpv 的 ELF 依赖最高需要 glibc 2.35 与 `GLIBCXX_3.4.29`；若无法加载，会尝试系统固定位置的 libmpv。Ubuntu 24.04 的 libmpv 0.37 使用旧的背景色属性和截图命令参数，本地媒体安全限制、首帧与属性兼容由原生测试覆盖。媒体路径在传给 libmpv 前归一化为本地绝对路径，避免顶层 URL 绕过嵌套协议限制；安全选项设置失败时不跳过该限制。
 
@@ -97,9 +97,9 @@ pwsh ./scripts/Test-WindowsPublishOutput.ps1 -PublishDir <发布目录>
 
 Windows 游戏快捷方式通过原生 Shell Link COM 接口写入 `.lnk`。验证主程序的 Native AOT 发布产物时，应实际创建快捷方式并核对 `run.bat` 目标、游戏工作目录与图标。
 
-验证 Inno 从托管版覆盖升级到 Native AOT 时，使用独立的安装目录、用户数据目录和游戏目录。确认新版能启动，[旧文件清单](../installer/windows/LegacyJitFiles.iss)中的文件已清除，且用户数据和游戏文件未变。安装器仅在识别到旧安装标记及托管入口文件后执行清理。
+验证 Inno 从托管版覆盖升级到 Native AOT 时，使用独立的安装目录、用户数据目录和游戏目录。确认新版能启动，[旧文件清单](../installer/windows/LegacyJitFiles.iss)中的文件已清除，且用户数据和游戏文件未变。安装器仅在识别到旧安装标记与托管入口文件后执行清理。
 
-校验脚本检查主程序、更新助手、播放器、清单和许可证，也会拒绝包含旧托管产物的目录。使用 `-SkipPublish` 或单独调用安装器脚本时，需传入干净的 Native AOT 发布目录。`native/libmpv/COPYING*` 固定使用 LF，保证跨平台校验同一字节序列。Debug 通常使用本机安装的 .NET。macOS 和 Linux 的 Release 发布继续使用自包含 .NET。
+校验脚本检查主程序、更新助手、播放器、清单和许可证，也会拒绝包含旧托管产物的目录。使用 `-SkipPublish` 或单独调用安装器脚本时，需传入干净的 Native AOT 发布目录。`native/libmpv/COPYING*` 固定使用 LF，保证跨平台校验同一字节序列。Debug 通常使用本机安装的 .NET；macOS 与 Linux 的 Release 发布继续使用自包含 .NET。
 
 涉及播放器生命周期时执行生产场景复测：
 
@@ -120,7 +120,7 @@ NuGet 版本集中维护在 [Directory.Packages.props](../Directory.Packages.pro
 
 `.NET SDK` 以 [global.json](../global.json) 为唯一来源：升级时同步各工作流的 `dotnet-version` 与 §12 表，`InstallerContractTests` 会在任一处漂移时失败。libmpv 版本以 `native/libmpv/*.json` 清单为准，§12 表同样受该契约守护。
 
-CI 使用 `actions/cache/restore` 与 `actions/cache/save`，缓存键取中央包版本文件，保存使用 `if: always()`；关闭 `actions/setup-dotnet` 的重复缓存。测试与覆盖率报告保留 7 天，发布中转产物保留 1 天；实际作业与权限以 [.github/workflows/](../.github/workflows/) 为准。
+CI 使用 `actions/cache/restore` 与 `actions/cache/save`，缓存键取中央包版本文件，保存步骤使用 `if: always()`；`actions/setup-dotnet` 的重复缓存关闭。测试与覆盖率报告保留 7 天，发布中转产物保留 1 天；实际作业、权限和触发条件以 [.github/workflows/](../.github/workflows/) 为准。
 
 ## 提交与评审
 

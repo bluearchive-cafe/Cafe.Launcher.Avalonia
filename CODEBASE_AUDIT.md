@@ -29,9 +29,9 @@
 ### AUD-PKG-002 — 发布物未签名、macOS 未公证
 
 - 严重度：Medium；置信度：高（缺失证据）；状态：`open`；处置：Product Decision。
-- 证据：`installer/windows/Cafe.Launcher.iss` 无 `SignTool` 配置；`.github/workflows/{build,release}.yml` 无 Authenticode、`codesign` 或 `notarytool` 步骤；仓库文档未声明签名策略。
+- 证据：`installer/windows/Cafe.Launcher.iss` 无 `SignTool` 配置；`.github/workflows/{build,release}.yml` 无 Authenticode、`codesign` 或 `notarytool` 步骤。2026-11-23 已在本仓库 README／TERMS 与配套文档站安装、FAQ 页面声明未签名状态、SmartScreen／智能应用控制的预期提示及用户自担风险的绕过说明；签名决策本身仍未落地。
 - 影响与边界：Windows 每次安装触发 SmartScreen，macOS 未公证应用会被 Gatekeeper 阻断，用户需绕过系统提示；不影响已安装用户的运行。签名需要证书与发布密钥，属于产品与成本决策。
-- 建议：若承诺正式分发，接入 Authenticode 与 Developer ID／公证并在 CI 验证签名；若暂不签名，登记为已接受风险并写入用户文档，说明系统提示的预期行为。
+- 建议：若承诺正式分发，接入 Authenticode 与 Developer ID／公证并在 CI 验证签名；若暂不签名，登记为已接受风险，并保持用户文档对系统提示的说明与发行策略同步。
 - 建议验证：完成条件为决策落地：要么 CI 验证签名／公证产物，要么接受风险条款与用户提示同步完成。
 
 ### AUD-ARCH-017 — Core 网络偏好依赖表现层草稿，缺席时静默使用默认设置
