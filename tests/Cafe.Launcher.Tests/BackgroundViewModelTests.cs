@@ -27,7 +27,7 @@ public sealed class BackgroundViewModelTests : IDisposable
         var paletteRefreshes = 0;
         string? requestedPath = null;
         using var viewModel = new BackgroundViewModel(cache, new LocalDiagnostics(), _ => paletteRefreshes++,
-            (_, _) => new TestImage(), () => new TestImage(),
+            (_, _) => new TestImage(), _ => new TestImage(),
             videoThumbnailLoader: (selectedPath, _) =>
             {
                 requestedPath = selectedPath;
@@ -61,7 +61,7 @@ public sealed class BackgroundViewModelTests : IDisposable
         var paletteRefreshes = 0;
         var metrics = new SteppedWindowMetrics();
         using var viewModel = new BackgroundViewModel(cache, new LocalDiagnostics(), _ => paletteRefreshes++,
-            (_, _) => new TestImage(), () => new TestImage(), metrics,
+            (_, _) => new TestImage(), _ => new TestImage(), metrics,
             videoThumbnailLoader: (_, _) =>
             {
                 requests++;
@@ -106,7 +106,7 @@ public sealed class BackgroundViewModelTests : IDisposable
         var requests = 0;
         using var cache = CreateCache(_ => PngBytes);
         using var viewModel = new BackgroundViewModel(cache, new LocalDiagnostics(), _ => { },
-            (_, _) => new TestImage(), () => new TestImage(),
+            (_, _) => new TestImage(), _ => new TestImage(),
             videoThumbnailLoader: (_, _) =>
             {
                 requests++;
@@ -141,7 +141,7 @@ public sealed class BackgroundViewModelTests : IDisposable
         var oldThumbnail = new TestImage();
         var newThumbnail = new TestImage();
         using var viewModel = new BackgroundViewModel(cache, new LocalDiagnostics(), _ => { },
-            (_, _) => new TestImage(), () => new TestImage(),
+            (_, _) => new TestImage(), _ => new TestImage(),
             videoThumbnailLoader: (path, _) => path == first ? oldResult.Task : Task.FromResult<IImage?>(newThumbnail));
         var settings = new LauncherSettings { BackgroundSource = BackgroundSources.Custom, CustomBackgroundPath = first };
         await viewModel.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
@@ -165,7 +165,7 @@ public sealed class BackgroundViewModelTests : IDisposable
         using var cache = CreateCache(_ => PngBytes);
         var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         using var viewModel = new BackgroundViewModel(cache, new LocalDiagnostics(), _ => { },
-            (_, _) => new TestImage(), () => new TestImage(), videoThumbnailLoader: async (_, cancellationToken) =>
+            (_, _) => new TestImage(), _ => new TestImage(), videoThumbnailLoader: async (_, cancellationToken) =>
             {
                 started.SetResult();
                 await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
@@ -194,7 +194,7 @@ public sealed class BackgroundViewModelTests : IDisposable
         var completion = new TaskCompletionSource<IImage?>(TaskCreationOptions.RunContinuationsAsynchronously);
         var thumbnail = new TestImage();
         using var viewModel = new BackgroundViewModel(cache, new LocalDiagnostics(), _ => { },
-            (_, _) => new TestImage(), () => new TestImage(), videoThumbnailLoader: (_, _) => completion.Task);
+            (_, _) => new TestImage(), _ => new TestImage(), videoThumbnailLoader: (_, _) => completion.Task);
         await viewModel.UpdateBackgroundImageAsync(new LauncherSettings
         {
             BackgroundSource = BackgroundSources.Custom, CustomBackgroundPath = path
@@ -217,7 +217,7 @@ public sealed class BackgroundViewModelTests : IDisposable
     {
         using var cache = CreateCache(_ => PngBytes);
         using var viewModel = new BackgroundViewModel(cache, new LocalDiagnostics(), _ => { },
-            (_, _) => new TestImage(), () => new TestImage());
+            (_, _) => new TestImage(), _ => new TestImage());
         var settings = new LauncherSettings { BackgroundVideoVolume = volume, BackgroundVideoMuted = true };
         viewModel.ApplyBackgroundPresentation(settings);
         Assert.Equal(0, viewModel.BackgroundVideoVolume);
@@ -272,7 +272,7 @@ public sealed class BackgroundViewModelTests : IDisposable
         using var cache = CreateCache(_ => PngBytes);
         using var viewModel = new BackgroundViewModel(cache, new LocalDiagnostics(), _ => { },
             (_, _) => throw new InvalidOperationException("Video must not enter the bitmap decoder."),
-            () => new TestImage());
+            _ => new TestImage());
         var settings = new LauncherSettings
         {
             BackgroundSource = BackgroundSources.Custom, CustomBackgroundPath = fromFolder ? tempDir : path, BackgroundVideoVolume = 35
@@ -310,7 +310,7 @@ public sealed class BackgroundViewModelTests : IDisposable
     {
         using var cache = CreateCache(_ => PngBytes);
         using var viewModel = new BackgroundViewModel(cache, new LocalDiagnostics(), _ => { },
-            (_, _) => new TestImage(), () => new TestImage());
+            (_, _) => new TestImage(), _ => new TestImage());
         var settings = new LauncherSettings
         {
             BackgroundSource = BackgroundSources.Custom,
@@ -345,7 +345,7 @@ public sealed class BackgroundViewModelTests : IDisposable
         using var cache = CreateCache(_ => PngBytes);
         var imageLoads = 0;
         using var viewModel = new BackgroundViewModel(cache, new LocalDiagnostics(), _ => { },
-            (_, _) => { imageLoads++; return new TestImage(); }, () => new TestImage());
+            (_, _) => { imageLoads++; return new TestImage(); }, _ => new TestImage());
         var settings = new LauncherSettings
         {
             BackgroundSource = BackgroundSources.Custom,
@@ -373,7 +373,7 @@ public sealed class BackgroundViewModelTests : IDisposable
             new LocalDiagnostics(),
             _ => themeRefreshCount++,
             (path, _) => new TestImage(),
-            () => new TestImage());
+            _ => new TestImage());
         var settings = new LauncherSettings
         {
             BackgroundSource = BackgroundSources.Remote,
@@ -399,7 +399,7 @@ public sealed class BackgroundViewModelTests : IDisposable
             new LocalDiagnostics(),
             _ => { },
             (path, _) => new TestImage(),
-            () => new TestImage());
+            _ => new TestImage());
         var initialImage = viewModel.BackgroundImageSource;
         var settings = new LauncherSettings
         {
@@ -431,7 +431,7 @@ public sealed class BackgroundViewModelTests : IDisposable
             new LocalDiagnostics(),
             _ => { },
             (path, _) => new TestImage(),
-            () =>
+            _ =>
             {
                 bundledDecodes++;
                 return bundled;
@@ -470,7 +470,7 @@ public sealed class BackgroundViewModelTests : IDisposable
             new LocalDiagnostics(),
             _ => { },
             (_, _) => new TestImage(),
-            () => bundled);
+            _ => bundled);
         var fadingOut = new List<TestImage>();
         viewModel.PreviousWallpaperFadingOut += (image, _) => fadingOut.Add((TestImage)image);
 
@@ -563,7 +563,7 @@ public sealed class BackgroundViewModelTests : IDisposable
             new LocalDiagnostics(),
             _ => { },
             (path, _) => new TestImage(),
-            () => new TestImage());
+            _ => new TestImage());
 
         await viewModel.UpdateBackgroundImageAsync(
             new LauncherSettings { BackgroundSource = BackgroundSources.Remote },
@@ -603,7 +603,7 @@ public sealed class BackgroundViewModelTests : IDisposable
             new LocalDiagnostics(),
             _ => { },
             (path, _) => new TestImage(),
-            () =>
+            _ =>
             {
                 bundledDecodeCount++;
                 return new TestImage();
@@ -633,7 +633,7 @@ public sealed class BackgroundViewModelTests : IDisposable
             new LocalDiagnostics(),
             _ => { },
             (path, _) => new TestImage(),
-            () =>
+            _ =>
             {
                 bundledDecodeCount++;
                 return bundledDecodeCount == 1 ? null : new TestImage();
@@ -660,7 +660,7 @@ public sealed class BackgroundViewModelTests : IDisposable
             new LocalDiagnostics(),
             _ => { },
             (path, _) => new TestImage(),
-            () =>
+            _ =>
             {
                 bundledDecodeCount++;
                 return new TestImage();
@@ -689,7 +689,7 @@ public sealed class BackgroundViewModelTests : IDisposable
             new LocalDiagnostics(),
             _ => { },
             (path, _) => new TestImage(),
-            () => new TestImage());
+            _ => new TestImage());
 
         await viewModel.UpdateBackgroundImageAsync(
             new LauncherSettings { BackgroundSource = BackgroundSources.Remote },
@@ -720,7 +720,7 @@ public sealed class BackgroundViewModelTests : IDisposable
             new LocalDiagnostics(),
             _ => { },
             (path, _) => new TestImage(),
-            () => new TestImage());
+            _ => new TestImage());
         var settings = new LauncherSettings
         {
             BackgroundSource = BackgroundSources.Custom,
@@ -762,7 +762,7 @@ public sealed class BackgroundViewModelTests : IDisposable
             new LocalDiagnostics(),
             _ => { },
             (path, _) => new TestImage(),
-            () => bundled);
+            _ => bundled);
         var fadingOut = new List<IImage>();
         viewModel.PreviousWallpaperFadingOut += (image, _) => fadingOut.Add(image);
         viewModel.ApplyMotionPreference(reduceMotion: true);
@@ -784,7 +784,7 @@ public sealed class BackgroundViewModelTests : IDisposable
             new LocalDiagnostics(),
             _ => { },
             (path, _) => new TestImage(),
-            () => new TestImage());
+            _ => new TestImage());
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
@@ -805,7 +805,7 @@ public sealed class BackgroundViewModelTests : IDisposable
             new LocalDiagnostics(),
             _ => { },
             (path, _) => new TestImage(),
-            () => bundled);
+            _ => bundled);
 
         await viewModel.UpdateBackgroundImageAsync(
             new LauncherSettings { BackgroundSource = BackgroundSources.Remote },
@@ -837,7 +837,7 @@ public sealed class BackgroundViewModelTests : IDisposable
             new LocalDiagnostics(),
             _ => { },
             (path, _) => custom,
-            () => new TestImage());
+            _ => new TestImage());
 
         await viewModel.UpdateBackgroundImageAsync(
             new LauncherSettings
@@ -863,7 +863,7 @@ public sealed class BackgroundViewModelTests : IDisposable
         await File.WriteAllBytesAsync(path, []);
         using var cache = CreateCache(_ => PngBytes);
         using var viewModel = new BackgroundViewModel(cache, new LocalDiagnostics(), _ => { },
-            (_, _) => new TestImage(), () => new TestImage());
+            (_, _) => new TestImage(), _ => new TestImage());
         var settings = new LauncherSettings
         {
             BackgroundSource = BackgroundSources.Custom,
@@ -891,7 +891,7 @@ public sealed class BackgroundViewModelTests : IDisposable
         using var cancellation = new CancellationTokenSource();
         var decoded = new TestImage();
         using var viewModel = new BackgroundViewModel(cache, new LocalDiagnostics(), _ => { },
-            (_, _) => { cancellation.Cancel(); return decoded; }, () => new TestImage());
+            (_, _) => { cancellation.Cancel(); return decoded; }, _ => new TestImage());
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => viewModel.UpdateBackgroundImageAsync(new LauncherSettings
         {
@@ -912,7 +912,7 @@ public sealed class BackgroundViewModelTests : IDisposable
         using var cache = CreateCache(_ => PngBytes);
         var imageLoads = 0;
         using var viewModel = new BackgroundViewModel(cache, new LocalDiagnostics(), _ => { },
-            (_, _) => { imageLoads++; return new TestImage(); }, () => new TestImage());
+            (_, _) => { imageLoads++; return new TestImage(); }, _ => new TestImage());
         var settings = new LauncherSettings { BackgroundSource = BackgroundSources.Custom, CustomBackgroundPath = path };
         await viewModel.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
         settings.CustomBackgroundPath = Path.Combine(tempDir, "missing.png");
@@ -940,7 +940,7 @@ public sealed class BackgroundViewModelTests : IDisposable
             new LocalDiagnostics(),
             _ => { },
             (path, _) => new TestImage(),
-            () => new TestImage());
+            _ => new TestImage());
 
         await viewModel.UpdateBackgroundImageAsync(
             new LauncherSettings
@@ -978,7 +978,7 @@ public sealed class BackgroundViewModelTests : IDisposable
             new LocalDiagnostics(),
             _ => { },
             (path, _) => new TestImage(),
-            () => new TestImage());
+            _ => new TestImage());
 
         await viewModel.UpdateBackgroundImageAsync(
             new LauncherSettings
@@ -1032,7 +1032,7 @@ public sealed class BackgroundViewModelTests : IDisposable
             new LocalDiagnostics(),
             _ => { },
             (path, _) => new TestImage(),
-            () => new TestImage());
+            _ => new TestImage());
 
         viewModel.Dispose();
         viewModel.Dispose();

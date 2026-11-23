@@ -14,8 +14,11 @@ $threshold = 0.50
 # 2026-11-10 全量实测：手写行 87.45%、分支 92.51%，旧基线 0.8560／0.9180 因此留下约
 # 1.85pp／0.71pp 余量，这段回退可以静默通过闸口。现基线按上一条规则上调到 0.8720／
 # 0.9240，余量回到约 0.25pp／0.11pp。旧分支基线按条件是否命中统计，现改用分支下限。
+# 2026-11-20 ADR-070 第二批全量实测：手写行 87.43%、分支 79.68%（11,064 分支）。
+# 分段按钮退场删除的是全覆盖的生成器段落（分支数随删减），基线随实测下移到 0.7955，
+# 余量约 0.13pp；行基线 0.8720 保持（余量 +0.23pp）。
 $lineBaseline = 0.8720
-$branchBaseline = 0.7975
+$branchBaseline = 0.7955
 $resultsRoot = (Join-Path (Join-Path $PSScriptRoot 'TestResults') 'Coverage').Replace('\', '/')
 
 $repositoryRoot = [IO.Path]::GetFullPath($PSScriptRoot)

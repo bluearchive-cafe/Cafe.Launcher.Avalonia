@@ -39,7 +39,6 @@ internal partial class SetupWizardOverlay : UserControl
     private const double AgreementReadBottomTolerance = 8;
 
     private readonly Control[] stepPanels;
-    private readonly Border[] progressSegments;
     private CancellationTokenSource? stepMotionCts;
     private SetupWizardViewModel? wizard;
     private MainWindowViewModel? mainWindow;
@@ -50,7 +49,7 @@ internal partial class SetupWizardOverlay : UserControl
     {
         InitializeComponent();
         stepPanels = [WizardStep0, WizardStep1, WizardStep2, WizardStep3, WizardStep4, WizardStep5, WizardStep6];
-        progressSegments = [ProgressSegment0, ProgressSegment1, ProgressSegment2, ProgressSegment3, ProgressSegment4, ProgressSegment5, ProgressSegment6];
+        StepProgressBar.Maximum = SetupWizardViewModel.StepCount;
         DataContextChanged += OnDataContextChanged;
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
@@ -355,10 +354,7 @@ internal partial class SetupWizardOverlay : UserControl
 
         displayedStep = wizard.Step;
         StepProgressText.Text = wizard.StepProgress;
-        for (var i = 0; i < progressSegments.Length; i++)
-        {
-            progressSegments[i].Classes.Set("reached", i <= wizard.Step);
-        }
+        StepProgressBar.Value = wizard.Step + 1;
 
         PreviousButton.IsVisible = wizard.CanGoPrevious;
         NextButton.IsVisible = !wizard.IsLastStep;

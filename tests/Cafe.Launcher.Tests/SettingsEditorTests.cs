@@ -385,4 +385,181 @@ public sealed class SettingsEditorTests
 
         Assert.Contains(nameof(GameRuntimeSettings.ProtonPath), propertyNames);
     }
+
+    [Fact]
+    public void StellaGamePropertyChange_WhenDiscarded_RestoresOnlySavedGameState()
+    {
+        var editor = new SettingsEditor();
+        editor.ApplySnapshot(new LauncherSettings { GamePath = @"C:\Games\BlueArchive_JP" });
+        var stella = editor.Current.GetGameSettings(LauncherProfiles.StellaSoraChina.RuntimeId);
+        var propertyNames = new List<string?>();
+        editor.CurrentPropertyChanged += (_, args) => propertyNames.Add(args.PropertyName);
+
+        stella.GamePath = @"D:\Games\StellaSora_CN";
+
+        Assert.True(editor.IsDirty);
+        Assert.Equal(nameof(GameSettings.GamePath), Assert.Single(propertyNames));
+        Assert.Equal(@"C:\Games\BlueArchive_JP", editor.Current.GetGameSettings(LauncherProfiles.BlueArchiveJapan.RuntimeId).GamePath);
+        Assert.Empty(editor.GetSavedSnapshot().GetGameSettings(LauncherProfiles.StellaSoraChina.RuntimeId).GamePath);
+
+        editor.Discard();
+
+        Assert.False(editor.IsDirty);
+        Assert.Empty(editor.Current.GetGameSettings(LauncherProfiles.StellaSoraChina.RuntimeId).GamePath);
+        Assert.Equal(@"C:\Games\BlueArchive_JP", editor.Current.GetGameSettings(LauncherProfiles.BlueArchiveJapan.RuntimeId).GamePath);
+        propertyNames.Clear();
+        stella.GamePath = "detached";
+        Assert.Empty(propertyNames);
+        Assert.False(editor.IsDirty);
+    }
+
+    [Fact]
+    public void StellaRuntimePropertyChange_WhenReverted_NotifiesAndClearsDirty()
+    {
+        var editor = new SettingsEditor();
+        editor.ApplySnapshot(new LauncherSettings());
+        var runtime = editor.Current.GetGameSettings(LauncherProfiles.StellaSoraChina.RuntimeId).GameRuntime;
+        var propertyNames = new List<string?>();
+        editor.CurrentPropertyChanged += (_, args) => propertyNames.Add(args.PropertyName);
+
+        runtime.ProtonPath = "/home/user/StellaProton";
+
+        Assert.True(editor.IsDirty);
+        Assert.Equal(nameof(GameRuntimeSettings.ProtonPath), Assert.Single(propertyNames));
+        Assert.Null(editor.Current.GameRuntime.ProtonPath);
+
+        runtime.ProtonPath = null;
+
+        Assert.False(editor.IsDirty);
+        Assert.Equal(2, propertyNames.Count);
+    }
+
+    [Fact]
+    public void StellaRuntimePropertyChange_WhenDiscarded_RestoresSavedRuntime()
+    {
+        var editor = new SettingsEditor();
+        editor.ApplySnapshot(new LauncherSettings());
+        var previousRuntime = editor.Current.GetGameSettings(LauncherProfiles.StellaSoraChina.RuntimeId).GameRuntime;
+        previousRuntime.Runner = GameRuntimeRunners.Wine;
+        previousRuntime.PrefixPath = "/home/user/prefixes/stella";
+
+        editor.Discard();
+
+        var restored = editor.Current.GetGameSettings(LauncherProfiles.StellaSoraChina.RuntimeId).GameRuntime;
+        Assert.False(editor.IsDirty);
+        Assert.Equal(GameRuntimeRunners.Auto, restored.Runner);
+        Assert.Null(restored.PrefixPath);
+        Assert.NotSame(previousRuntime, restored);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void GameRuntimeReplacement_UnsubscribesPreviousRuntimeAndObservesNewRuntime(bool useStella)
+    {
+        var editor = new SettingsEditor();
+        editor.ApplySnapshot(new LauncherSettings());
+        var gameId = useStella ? LauncherProfiles.StellaSoraChina.RuntimeId : LauncherProfiles.BlueArchiveJapan.RuntimeId;
+        var game = editor.Current.GetGameSettings(gameId);
+        var oldRuntime = game.GameRuntime;
+        var replacement = new GameRuntimeSettings();
+        var propertyNames = new List<string?>();
+        editor.CurrentPropertyChanged += (_, args) => propertyNames.Add(args.PropertyName);
+
+        game.GameRuntime = replacement;
+
+        Assert.Equal(nameof(GameSettings.GameRuntime), Assert.Single(propertyNames));
+        Assert.False(editor.IsDirty);
+        propertyNames.Clear();
+        oldRuntime.RunnerPath = "detached-runner";
+        Assert.Empty(propertyNames);
+        Assert.False(editor.IsDirty);
+
+        replacement.RunnerPath = "observed-runner";
+
+        Assert.True(editor.IsDirty);
+        Assert.Equal(nameof(GameRuntimeSettings.RunnerPath), Assert.Single(propertyNames));
+        replacement.RunnerPath = null;
+        Assert.False(editor.IsDirty);
+    }
+
+    [Fact]
+    public void GamesReplacement_UnsubscribesPreviousGamesAndRuntimesAndObservesNewGames()
+    {
+        var editor = new SettingsEditor();
+        editor.ApplySnapshot(new LauncherSettings());
+        var previousGames = editor.Current.Games;
+        var replacement = editor.Current.DeepClone().Games;
+        var propertyNames = new List<string?>();
+        editor.CurrentPropertyChanged += (_, args) => propertyNames.Add(args.PropertyName);
+
+        editor.Current.Games = replacement;
+
+        Assert.Equal(nameof(LauncherSettings.Games), Assert.Single(propertyNames));
+        Assert.False(editor.IsDirty);
+        propertyNames.Clear();
+        foreach (var game in previousGames.Values)
+        {
+            game.GamePath = "detached-game";
+            game.GameRuntime.PrefixPath = "detached-prefix";
+        }
+
+        Assert.Empty(propertyNames);
+        Assert.False(editor.IsDirty);
+        editor.Current.GetGameSettings(LauncherProfiles.StellaSoraChina.RuntimeId).GamePath = "observed-game";
+
+        Assert.True(editor.IsDirty);
+        Assert.Equal(nameof(GameSettings.GamePath), Assert.Single(propertyNames));
+        editor.Current.GetGameSettings(LauncherProfiles.StellaSoraChina.RuntimeId).GamePath = "";
+        Assert.False(editor.IsDirty);
+
+        propertyNames.Clear();
+        editor.Current.GetGameSettings(LauncherProfiles.StellaSoraChina.RuntimeId).GameRuntime.RunnerPath = "observed-runtime";
+        Assert.True(editor.IsDirty);
+        Assert.Equal(nameof(GameRuntimeSettings.RunnerPath), Assert.Single(propertyNames));
+    }
+
+    [Theory]
+    [InlineData(nameof(LauncherSettings.GamePath))]
+    [InlineData(nameof(LauncherSettings.PatchUrlGroup))]
+    [InlineData(nameof(LauncherSettings.LaunchCheckMode))]
+    [InlineData(nameof(LauncherSettings.GameRuntime))]
+    [InlineData(nameof(LauncherSettings.AfterLaunchBehavior))]
+    [InlineData(nameof(LauncherSettings.ResourcePanelUid))]
+    [InlineData(nameof(LauncherSettings.ResourcePanelUidSource))]
+    public void CompatibilityAliasChange_WhenRootForwardsChildChange_NotifiesEditorOnce(string propertyName)
+    {
+        var editor = new SettingsEditor();
+        editor.ApplySnapshot(new LauncherSettings { LastViewedGameId = LauncherProfiles.StellaSoraChina.RuntimeId });
+        var propertyNames = new List<string?>();
+        editor.CurrentPropertyChanged += (_, args) => propertyNames.Add(args.PropertyName);
+        var property = typeof(LauncherSettings).GetProperty(propertyName)!;
+        object value = property.PropertyType == typeof(GameRuntimeSettings)
+            ? new GameRuntimeSettings { Runner = GameRuntimeRunners.Wine }
+            : "changed-value";
+
+        property.SetValue(editor.Current, value);
+
+        Assert.True(editor.IsDirty);
+        Assert.Equal(propertyName, Assert.Single(propertyNames));
+    }
+
+    [Fact]
+    public void ApplySnapshot_WhenPreviousGamesLaterChange_DoesNotNotifyOrDirtyTheNewDraft()
+    {
+        var editor = new SettingsEditor();
+        var previous = editor.Current;
+        editor.ApplySnapshot(new LauncherSettings());
+        var propertyNames = new List<string?>();
+        editor.CurrentPropertyChanged += (_, args) => propertyNames.Add(args.PropertyName);
+
+        foreach (var game in previous.Games.Values)
+        {
+            game.GamePath = "detached-game";
+            game.GameRuntime.RunnerPath = "detached-runtime";
+        }
+
+        Assert.Empty(propertyNames);
+        Assert.False(editor.IsDirty);
+    }
 }

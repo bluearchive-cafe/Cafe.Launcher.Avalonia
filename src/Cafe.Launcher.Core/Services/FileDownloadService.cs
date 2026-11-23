@@ -83,6 +83,10 @@ internal sealed class FileDownloadService : IFileDownloadService
         var onProgressAsync = control.ReportProgressAsync;
         var onProgressResetAsync = control.ReportProgressResetAsync;
         var targetDirectory = Path.GetDirectoryName(targetTempPath);
+        if (control.BeforeFileWriteAsync is not null)
+        {
+            await control.BeforeFileWriteAsync(cancellationToken).ConfigureAwait(false);
+        }
         if (!string.IsNullOrWhiteSpace(targetDirectory))
         {
             Directory.CreateDirectory(targetDirectory);
@@ -110,6 +114,10 @@ internal sealed class FileDownloadService : IFileDownloadService
                     : 0;
                 if (declaredLength > expectedSize && expectedSize > 0)
                 {
+                    if (control.BeforeFileWriteAsync is not null)
+                    {
+                        await control.BeforeFileWriteAsync(cancellationToken).ConfigureAwait(false);
+                    }
                     File.Delete(targetTempPath);
                     existingLength = 0;
                     await onProgressResetAsync(cancellationToken).ConfigureAwait(false);
@@ -161,6 +169,10 @@ internal sealed class FileDownloadService : IFileDownloadService
                 try
                 {
                     await using var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+                    if (control.BeforeFileWriteAsync is not null)
+                    {
+                        await control.BeforeFileWriteAsync(cancellationToken).ConfigureAwait(false);
+                    }
                     await using var output = new FileStream(targetTempPath, fileMode, FileAccess.Write, FileShare.Read);
                     if (restartProgressFromZero)
                     {
@@ -192,6 +204,10 @@ internal sealed class FileDownloadService : IFileDownloadService
                 if (crc64 == expectedHash) return DownloadOutcome.Transferred(crc64);
 
                 var downloadedLength = new FileInfo(targetTempPath).Length;
+                if (control.BeforeFileWriteAsync is not null)
+                {
+                    await control.BeforeFileWriteAsync(cancellationToken).ConfigureAwait(false);
+                }
                 File.Delete(targetTempPath);
                 await onProgressResetAsync(cancellationToken).ConfigureAwait(false);
 

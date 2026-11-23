@@ -1,8 +1,8 @@
-﻿<UserControl xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Cafe.Launcher.UI.ViewModels"
              xmlns:controls="using:Cafe.Launcher.UI.Controls"
-             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:glyphs="using:Cafe.Launcher.UI.Constants"
              x:Class="Cafe.Launcher.UI.Views.MainWindowDebugOverlay"
              x:Name="DebugRoot"
              x:DataType="vm:MainWindowViewModel">
@@ -237,15 +237,15 @@
             </StackPanel>
             </controls:DialogSurface.Content>
             <controls:DialogSurface.Footer>
-                <StackPanel Classes="confirm-actions">
-                    <Button Classes="primary-action dialog-action" Command="{Binding Debug.CloseCommand}"
+                <WrapPanel Classes="dialog-actions">
+                    <Button Classes="primary-action dialog-action accent" Command="{Binding Debug.CloseCommand}"
                             AutomationProperties.Name="{Binding Shell.I18n[close]}">
                         <StackPanel Classes="button-content">
-                            <materialIcons:MaterialIcon Kind="Check" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                            <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Check}" FontSize="{StaticResource Launcher.Icon.Sm}"/>
                             <TextBlock Text="{Binding Shell.I18n[close]}"/>
                         </StackPanel>
                     </Button>
-                </StackPanel>
+                </WrapPanel>
             </controls:DialogSurface.Footer>
         </controls:DialogSurface>
     </Grid>

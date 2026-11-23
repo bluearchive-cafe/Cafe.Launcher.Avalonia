@@ -17,13 +17,15 @@ namespace Cafe.Launcher.UI.Features.Shell;
 /// </summary>
 internal sealed class ShellPresentationWiring : IDisposable
 {
-    private readonly ShellPresentationFamily family;
+    private ShellPresentationFamily family;
+    private readonly Func<ShellPresentationFamily>? activeFamily;
+    private readonly bool operationsWiredByLibrary;
     private readonly ISavedSettingsFollowThrough followThrough;
     private readonly ShellStartup startup;
     private readonly LocalizationService localizer;
     private readonly ShellWiringActions actions;
     private readonly ModalRegistrar modalRegistrar;
-    private readonly IReadOnlyList<ModalRegistration> modalRegistrations;
+    private IReadOnlyList<ModalRegistration> modalRegistrations;
 
     /// <summary>
     /// 退订记录表：每条接线经 <see cref="Attach"/> 配对登记，Unwire 逆序执行后清空——
@@ -37,9 +39,13 @@ internal sealed class ShellPresentationWiring : IDisposable
         ISavedSettingsFollowThrough followThrough,
         ShellStartup startup,
         LocalizationService localizer,
-        ShellWiringActions actions)
+        ShellWiringActions actions,
+        Func<ShellPresentationFamily>? activeFamily = null,
+        bool operationsWiredByLibrary = false)
     {
         this.family = family;
+        this.activeFamily = activeFamily;
+        this.operationsWiredByLibrary = operationsWiredByLibrary;
         this.followThrough = followThrough;
         this.startup = startup;
         this.localizer = localizer;
@@ -56,6 +62,8 @@ internal sealed class ShellPresentationWiring : IDisposable
     {
         if (isWired) return;
         isWired = true;
+        family = activeFamily?.Invoke() ?? family;
+        modalRegistrations = ShellModalCatalog.Create(family);
 
         var settings = family.Settings;
         var dialogs = family.Dialogs;
@@ -79,21 +87,24 @@ internal sealed class ShellPresentationWiring : IDisposable
             () => dialogs.ResourcePanelSourceConfirm.Confirmed += actions.SwitchResourcePanelSourceAsync,
             () => dialogs.ResourcePanelSourceConfirm.Confirmed -= actions.SwitchResourcePanelSourceAsync);
 
-        Attach(
-            () => operations.PickInstallPathAsync = settings.PickInstallationDraftAsync,
-            () => operations.PickInstallPathAsync = null);
-        Attach(
-            () => operations.CommitInstallPathAsync = settings.CommitInstallationPathAsync,
-            () => operations.CommitInstallPathAsync = null);
-        Attach(
-            () => operations.RefreshRequested += actions.RefreshForOperationsAsync,
-            () => operations.RefreshRequested -= actions.RefreshForOperationsAsync);
-        Attach(
-            () => operations.OpenLogViewerRequested += OpenLogViewerAsync,
-            () => operations.OpenLogViewerRequested -= OpenLogViewerAsync);
-        Attach(
-            () => operations.TaskSurfaceRequested += RevealTaskSurface,
-            () => operations.TaskSurfaceRequested -= RevealTaskSurface);
+        if (!operationsWiredByLibrary)
+        {
+            Attach(
+                () => operations.PickInstallPathAsync = settings.PickInstallationDraftAsync,
+                () => operations.PickInstallPathAsync = null);
+            Attach(
+                () => operations.CommitInstallPathAsync = settings.CommitInstallationPathAsync,
+                () => operations.CommitInstallPathAsync = null);
+            Attach(
+                () => operations.RefreshRequested += actions.RefreshForOperationsAsync,
+                () => operations.RefreshRequested -= actions.RefreshForOperationsAsync);
+            Attach(
+                () => operations.OpenLogViewerRequested += OpenLogViewerAsync,
+                () => operations.OpenLogViewerRequested -= OpenLogViewerAsync);
+            Attach(
+                () => operations.TaskSurfaceRequested += RevealTaskSurface,
+                () => operations.TaskSurfaceRequested -= RevealTaskSurface);
+        }
 
         Attach(
             () => dialogs.DownloadRunningCloseConfirm.Confirmed += family.WindowChrome.CloseAfterStoppingDownload,
@@ -196,7 +207,8 @@ internal sealed class ShellPresentationWiring : IDisposable
     private void ApplySetupWizardDefaultScheme() =>
         family.Settings.Appearance.ApplyDefaultScheme();
 
-    private void RevealTaskSurface()
+    /// <summary>Closes ordinary overlays until the task surface is visible.</summary>
+    internal void RevealTaskSurface()
     {
         // Navigation closes ordinary overlays through their own commands. A draft confirmation,
         // executing uninstall or other decision remains in place until the user handles it.

@@ -1,4 +1,4 @@
-using Avalonia;
+﻿using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Styling;
@@ -50,7 +50,7 @@ public sealed partial class MainWindowHeadlessTests
         context.Window.Show();
         context.ViewModel.Operations.ApplyProgress(new GameOperationProgress { OperationKind = GameOperationKind.Download });
         OpenSettings(context);
-        if (dirty) context.ViewModel.Settings.Editor.Current.GamePath = "unsubmitted-path";
+        if (dirty) context.ViewModel.Settings.Editor.Current.Language = LauncherLanguages.Japanese;
         context.ViewModel.Operations.ShowTaskCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
         Assert.True(context.ViewModel.Operations.IsTaskCardVisible);
@@ -87,6 +87,10 @@ public sealed partial class MainWindowHeadlessTests
         var card = window.GetVisualDescendants().OfType<GameTaskCard>().Single();
         var split = window.GetVisualDescendants().OfType<SplitButton>().Single();
         var title = card.GetVisualDescendants().OfType<TextBlock>().Single(text => text.Classes.Contains("progress-title"));
+        // 窄轨道用图标角标提示进行中的任务，进度本身仍留在任务卡。
+        Assert.True(context.ViewModel.Games!.ActiveEntry.HasTaskBadge);
+        Assert.NotNull(window.GetVisualDescendants().OfType<Border>()
+            .SingleOrDefault(border => border.Classes.Contains("rail-task-badge") && border.IsEffectivelyVisible));
         var titleFontSize = title.FontSize;
         foreach (var scale in new[] { 1d, 1.25, 1.5 })
         {
@@ -109,7 +113,9 @@ public sealed partial class MainWindowHeadlessTests
         {
             var initialButton = split.TranslatePoint(default, window)!.Value;
             Assert.True(card.IsEffectivelyVisible);
-            var background = PaintColor(card.FindControl<Border>("FloatingTaskCard")!.Background);
+            // 任务卡表面由卡片 Border 直接承载：对比度与明暗断言读它的半透明底色。
+            var surface = card.FindControl<Border>("FloatingTaskCard")!;
+            var background = PaintColor(surface.Background);
             Assert.True(ColorUtils.GetContrastRatio(PaintColor(title.Foreground), background) >= 4.5);
             Assert.Equal(dark, background.R < 128 && background.G < 128 && background.B < 128);
             Assert.Null(context.ViewModel.ModalHost.Top);

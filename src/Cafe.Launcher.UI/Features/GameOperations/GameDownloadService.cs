@@ -113,7 +113,7 @@ internal sealed class GameDownloadService : IDisposable
         if (config is null || string.IsNullOrWhiteSpace(config.GameLatestVersion)
             || string.IsNullOrWhiteSpace(config.GameLatestFilePath)) return null;
         var manifest = await remoteManifestService.GetOptionalManifestAsync(config.GameLatestVersion,
-            config.GameLatestFilePath, snapshot.Settings.PatchUrlGroup, cancellationToken).ConfigureAwait(false);
+            config.GameLatestFilePath, snapshot.GameSettings.PatchUrlGroup, cancellationToken).ConfigureAwait(false);
         return manifest?.File.Sum(file => Math.Max(0, file.SizeBytes));
     }
 

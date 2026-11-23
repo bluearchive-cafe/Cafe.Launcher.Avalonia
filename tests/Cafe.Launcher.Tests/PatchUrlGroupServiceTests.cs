@@ -9,6 +9,20 @@ namespace Cafe.Launcher.Tests;
 public sealed class PatchUrlGroupServiceTests
 {
     [Fact]
+    public void RewriteCdnConfig_StellaWithStaleCafePreference_PreservesBothOfficialSources()
+    {
+        var service = new PatchUrlGroupService(LauncherProfiles.StellaSoraChina, LauncherProfiles.Cafe);
+        const string primary = "https://game-launcher-ss-cn.yostar.net";
+        const string backup = "https://game-launcher-ss-cn-bk.yostar.net";
+        var result = service.RewriteCdnConfig(new CdnConfigResponse { PrimaryCdn = primary, BackUpCdn = backup }, PatchUrlGroups.Cafe);
+
+        Assert.Equal(PatchUrlGroups.Official, service.Resolve(PatchUrlGroups.Cafe).Code);
+        Assert.Equal(primary, result.PrimaryCdn);
+        Assert.Equal(backup, result.BackUpCdn);
+        Assert.Equal(primary + "/file", service.RewritePackageUrl(primary + "/file", PatchUrlGroups.Cafe));
+    }
+
+    [Fact]
     public void RewritePackageUrl_WhenOfficial_ReturnsOriginalUrl()
     {
         var service = new PatchUrlGroupService(LauncherProfiles.BlueArchiveJapan, LauncherProfiles.Cafe);

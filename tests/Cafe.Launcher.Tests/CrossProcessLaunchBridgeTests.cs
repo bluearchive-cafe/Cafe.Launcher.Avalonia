@@ -33,6 +33,38 @@ public sealed class CrossProcessLaunchBridgeTests
 
         Assert.False(won);
         Assert.True(first.Signal.WaitOne(TimeSpan.FromMilliseconds(500)));
+        Assert.True(first.Signal.TryTake(out var request));
+        Assert.Equal("blue-archive-jp", request?.GameId);
+    }
+
+    [Theory]
+    [InlineData("blue-archive-jp")]
+    [InlineData("stella-sora-cn")]
+    public void TryEnterSingleInstance_WhenTargetIsExplicit_ForwardsTheSameGameIdentity(string gameId)
+    {
+        var (launchName, showName, lockName, mutexName) = UniqueNames();
+        using var first = new CrossProcessLaunchBridge(launchName, showName, lockName, TestDataRoot.ForCurrentProcess());
+        Assert.True(first.TryEnterSingleInstance(mutexName, []));
+        using var second = new CrossProcessLaunchBridge(launchName, showName, lockName, TestDataRoot.ForCurrentProcess());
+
+        Assert.False(second.TryEnterSingleInstance(mutexName, ["--launch-game", "--game-id", gameId]));
+
+        Assert.True(first.Signal.WaitOne(TimeSpan.FromSeconds(5)));
+        Assert.True(first.Signal.TryTake(out var request));
+        Assert.Equal(gameId, request?.GameId);
+    }
+
+    [Fact]
+    public void TryEnterSingleInstance_WhenTargetIsUnknown_RejectsWithoutForwardingALegacyLaunch()
+    {
+        var (launchName, showName, lockName, mutexName) = UniqueNames();
+        using var first = new CrossProcessLaunchBridge(launchName, showName, lockName, TestDataRoot.ForCurrentProcess());
+        Assert.True(first.TryEnterSingleInstance(mutexName, []));
+        using var second = new CrossProcessLaunchBridge(launchName, showName, lockName, TestDataRoot.ForCurrentProcess());
+
+        Assert.Throws<ArgumentException>(() => second.TryEnterSingleInstance(mutexName, ["--launch-game", "--game-id", "unknown"]));
+
+        Assert.False(first.Signal.TryTake(out _));
     }
 
     [Fact]

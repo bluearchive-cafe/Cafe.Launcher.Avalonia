@@ -221,22 +221,113 @@ public sealed partial class GameOperationsViewModelTests : IDisposable
         Assert.False(context.ViewModel.IsProgressPanelVisible);
     }
 
+    [Fact]
+    public void ApplySnapshot_WhenAnotherGamesSnapshotArrives_RejectsBeforeChangingTheModule()
+    {
+        // 每游戏一个操作模块：别的游戏的快照必须原样拒绝，绝不能把这个模块的
+        // 路径/按钮/任务结果改到另一款游戏上。
+        var context = CreateContext();
+        context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
+        {
+            RuntimeState = LauncherRuntimeState.Ready,
+            LocalGame = new LocalInstallationState { GamePath = "C:\\Game" }
+        });
+
+        Assert.Throws<ArgumentException>(() => context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
+        {
+            GameId = "stella-sora-cn",
+            RuntimeState = LauncherRuntimeState.NotInstalled
+        }));
+
+        Assert.Equal("C:\\Game", context.ViewModel.GameManagementPath);
+        Assert.True(context.ViewModel.IsControlPanelVisible);
+    }
+
+    [Fact]
+    public async Task OpenInstallPreparationCommand_WhenAnotherGameHoldsTheFileSlot_DoesNotOpenTheTask()
+    {
+        var coordinator = new GameFileOperationCoordinator();
+        using var lease = coordinator.TryAcquire("stella-sora-cn", GameFileOperationKind.Download).Lease;
+        Assert.NotNull(lease);
+        var context = CreateContext(fileOperations: coordinator);
+        var notifications = SubscribeToasts(context);
+        context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
+        {
+            RuntimeState = LauncherRuntimeState.NotInstalled,
+            LocalGame = new LocalInstallationState(),
+            Remote = new LauncherRemoteState()
+        });
+
+        await context.ViewModel.OpenInstallPreparationCommand.ExecuteAsync(null);
+
+        Assert.False(context.ViewModel.IsTaskDialogVisible);
+        var toast = Assert.Single(notifications);
+        Assert.Equal(
+            context.Localizer.F(LocalizationKeys.GameOperationBusy, context.Localizer.T(LocalizationKeys.StellaSoraChina)),
+            toast.Message);
+    }
+
+    [Fact]
+    public async Task RequestUninstallCommand_WhenPresentationIsInactive_DoesNotValidateOrConfirm()
+    {
+        // 切到别的游戏后，留在旧游戏页面上的请求不能再让确认框跳出来。
+        var context = CreateContext();
+        context.ViewModel.ApplySnapshot(ReadySnapshot("C:\\Game"));
+        context.ViewModel.IsPresentationActive = false;
+
+        await context.ViewModel.RequestUninstallCommand.ExecuteAsync(null);
+
+        Assert.False(context.ViewModel.Uninstall.IsVisible);
+        Assert.Equal(0, context.Backend.ValidateUninstallCallCount);
+    }
+
+    [Fact]
+    public async Task HasPendingOperation_CoversTheWholeJourneyAndNotifiesWhenIdle()
+    {
+        // 退出屏障依赖这个信号：会话看护的进度之后仍可能有收尾工作（刷新、结果呈现），
+        // 所以它必须覆盖整个旅程，而不是只看执行层是否还在下载。
+        var context = CreateContext();
+        var completion = new TaskCompletionSource<GameOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        context.Backend.InstallCompletion = completion;
+        context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
+        {
+            RuntimeState = LauncherRuntimeState.UpdateAvailable,
+            LocalGame = new LocalInstallationState { GamePath = "C:\\Game" },
+            Remote = new LauncherRemoteState(),
+            Settings = new LauncherSettings()
+        });
+        var changed = new List<string?>();
+        context.ViewModel.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        var install = context.ViewModel.InstallOrUpdateCommand.ExecuteAsync(null);
+
+        Assert.True(context.ViewModel.HasPendingOperation);
+        Assert.Contains(nameof(GameOperationsViewModel.HasPendingOperation), changed);
+        Assert.False(context.ViewModel.WhenIdle.IsCompleted);
+
+        completion.SetResult(new GameOperationResult { Success = true, Message = "done" });
+        await install.WaitAsync(TimeSpan.FromSeconds(5));
+        await context.ViewModel.WhenIdle.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.False(context.ViewModel.HasPendingOperation);
+    }
+
     [Theory]
-    [InlineData(LauncherRuntimeState.NotInstalled, "Download")]
-    [InlineData(LauncherRuntimeState.Corrupted, "Tools")]
-    [InlineData(LauncherRuntimeState.IoFailure, "Refresh")]
-    [InlineData(LauncherRuntimeState.RemoteUnavailable, "Refresh")]
-    [InlineData(LauncherRuntimeState.BelowLowestVersion, "Update")]
-    [InlineData(LauncherRuntimeState.UpdateAvailable, "Update")]
+    [InlineData(LauncherRuntimeState.NotInstalled, FluentGlyphs.Download)]
+    [InlineData(LauncherRuntimeState.Corrupted, FluentGlyphs.Tools)]
+    [InlineData(LauncherRuntimeState.IoFailure, FluentGlyphs.Refresh)]
+    [InlineData(LauncherRuntimeState.RemoteUnavailable, FluentGlyphs.Refresh)]
+    [InlineData(LauncherRuntimeState.BelowLowestVersion, FluentGlyphs.Update)]
+    [InlineData(LauncherRuntimeState.UpdateAvailable, FluentGlyphs.Update)]
     public void ApplySnapshot_MapsInstallButtonIconToAction(
         LauncherRuntimeState state,
-        string expectedIconKind)
+        string expectedGlyph)
     {
         var context = CreateContext();
 
         context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot { RuntimeState = state });
 
-        Assert.Equal(expectedIconKind, context.ViewModel.InstallButtonIconKind);
+        Assert.Equal(expectedGlyph, context.ViewModel.InstallButtonGlyph);
     }
 
     [Fact]
@@ -380,7 +471,7 @@ public sealed partial class GameOperationsViewModelTests : IDisposable
 
         Assert.True(context.Dialogs.RepairConfirm.IsVisible);
         Assert.Equal(
-            context.Localizer.T(LocalizationKeys.LaunchDamageRepairPrompt),
+            context.OperationMessage(context.Localizer.T(LocalizationKeys.LaunchDamageRepairPrompt)),
             context.Dialogs.RepairConfirm.Message);
 
         await context.Dialogs.RepairConfirm.ConfirmCommand.ExecuteAsync(null);
@@ -531,7 +622,7 @@ public sealed partial class GameOperationsViewModelTests : IDisposable
 
         Assert.NotNull(context.ShortcutService.LastSnapshot);
         Assert.NotNull(raised);
-        Assert.Equal(context.Localizer.T(LocalizationKeys.GameShortcutCreated), raised!.Message);
+        Assert.Equal(context.OperationMessage(context.Localizer.T(LocalizationKeys.GameShortcutCreated)), raised!.Message);
         Assert.False(context.Shell.IsBusy);
     }
 
@@ -547,7 +638,7 @@ public sealed partial class GameOperationsViewModelTests : IDisposable
         await context.ViewModel.CreateGameShortcutCommand.ExecuteAsync(null);
 
         Assert.NotNull(raised);
-        Assert.Equal(context.Localizer.T(LocalizationKeys.GameShortcutUnsupported), raised!.Message);
+        Assert.Equal(context.OperationMessage(context.Localizer.T(LocalizationKeys.GameShortcutUnsupported)), raised!.Message);
     }
 
     [Fact]
@@ -562,7 +653,7 @@ public sealed partial class GameOperationsViewModelTests : IDisposable
         await context.ViewModel.CreateGameShortcutCommand.ExecuteAsync(null);
 
         Assert.NotNull(raised);
-        Assert.Equal(context.Localizer.T(LocalizationKeys.GameShortcutTargetMissing), raised!.Message);
+        Assert.Equal(context.OperationMessage(context.Localizer.T(LocalizationKeys.GameShortcutTargetMissing)), raised!.Message);
     }
 
     [Fact]
@@ -594,7 +685,7 @@ public sealed partial class GameOperationsViewModelTests : IDisposable
 
         Assert.Equal(snapshot, context.ShortcutService.LastSnapshot);
         Assert.NotNull(raised);
-        Assert.Equal(context.Localizer.T(LocalizationKeys.GameFolderMissing), raised!.Message);
+        Assert.Equal(context.OperationMessage(context.Localizer.T(LocalizationKeys.GameFolderMissing)), raised!.Message);
     }
 
     [Fact]
@@ -750,7 +841,7 @@ public sealed partial class GameOperationsViewModelTests : IDisposable
         var notification = Assert.Single(raised);
         Assert.Equal(ToastSeverity.Warning, notification.Severity);
         Assert.Equal(
-            context.Localizer.T(LocalizationKeys.OperationUnavailableForCurrentState),
+            context.OperationMessage(context.Localizer.T(LocalizationKeys.OperationUnavailableForCurrentState)),
             notification.Message);
     }
 
@@ -792,13 +883,13 @@ public sealed partial class GameOperationsViewModelTests : IDisposable
 
         Assert.True(context.Backend.IsPaused);
         Assert.True(context.ViewModel.IsPaused);
-        Assert.Equal("Play", context.ViewModel.PauseResumeIcon);
+        Assert.Equal(FluentGlyphs.Play, context.ViewModel.PauseResumeGlyph);
 
         context.ViewModel.PauseResumeCommand.Execute(null);
 
         Assert.False(context.Backend.IsPaused);
         Assert.False(context.ViewModel.IsPaused);
-        Assert.Equal("Pause", context.ViewModel.PauseResumeIcon);
+        Assert.Equal(FluentGlyphs.Pause, context.ViewModel.PauseResumeGlyph);
     }
 
     [Fact]
@@ -1154,13 +1245,13 @@ public sealed partial class GameOperationsViewModelTests : IDisposable
     }
 
     [Theory]
-    [InlineData(GameOperationKind.Download, GameOperationStage.Downloading, "Download")]
-    [InlineData(GameOperationKind.Repair, GameOperationStage.RepairCheck, "Tools")]
-    [InlineData(GameOperationKind.Idle, GameOperationStage.Idle, "Sync")]
+    [InlineData(GameOperationKind.Download, GameOperationStage.Downloading, FluentGlyphs.Download)]
+    [InlineData(GameOperationKind.Repair, GameOperationStage.RepairCheck, FluentGlyphs.Tools)]
+    [InlineData(GameOperationKind.Idle, GameOperationStage.Idle, FluentGlyphs.Sync)]
     public void ApplyProgress_ForOperationKind_UsesSemanticProgressIcon(
         GameOperationKind operationKind,
         GameOperationStage stage,
-        string expectedIconKind)
+        string expectedGlyph)
     {
         var context = CreateContext();
 
@@ -1170,7 +1261,7 @@ public sealed partial class GameOperationsViewModelTests : IDisposable
             Stage = stage
         });
 
-        Assert.Equal(expectedIconKind, context.ViewModel.ProgressIconKind);
+        Assert.Equal(expectedGlyph, context.ViewModel.ProgressGlyph);
     }
 
     [Fact]
@@ -1193,7 +1284,7 @@ public sealed partial class GameOperationsViewModelTests : IDisposable
         var commandTask = context.ViewModel.InstallOrUpdateCommand.ExecuteAsync(null);
 
         Assert.True(context.ViewModel.IsProgressPanelVisible);
-        Assert.Equal("Sync", context.ViewModel.ProgressIconKind);
+        Assert.Equal(FluentGlyphs.Sync, context.ViewModel.ProgressGlyph);
 
         context.Backend.InstallCompletion.SetResult(new GameOperationResult());
         await commandTask.WaitAsync(TimeSpan.FromSeconds(5));
@@ -1351,7 +1442,7 @@ public sealed partial class GameOperationsViewModelTests : IDisposable
             Assert.Contains("[WRN] [GameLaunch]", log, StringComparison.Ordinal);
             Assert.Contains("umu-run was not found on PATH.", log, StringComparison.Ordinal);
             var notification = Assert.Single(notifications);
-            Assert.Equal("The game process did not start.", notification.Message);
+            Assert.Equal(context.OperationMessage("The game process did not start."), notification.Message);
             Assert.DoesNotContain("umu-run was not found on PATH.", notification.Message, StringComparison.Ordinal);
         }
         finally
@@ -1376,7 +1467,7 @@ public sealed partial class GameOperationsViewModelTests : IDisposable
         var notification = Assert.Single(notifications);
         Assert.Equal(ToastSeverity.Warning, notification.Severity);
         Assert.Equal(
-            context.Localizer.T(LocalizationKeys.OperationUnavailableForCurrentState),
+            context.OperationMessage(context.Localizer.T(LocalizationKeys.OperationUnavailableForCurrentState)),
             notification.Message);
     }
 
@@ -1411,7 +1502,7 @@ public sealed partial class GameOperationsViewModelTests : IDisposable
 
         var notification = Assert.Single(notifications);
         Assert.Equal(ToastSeverity.Warning, notification.Severity);
-        Assert.Equal(context.Localizer.T(LocalizationKeys.OperationUnavailableForCurrentState), notification.Message);
+        Assert.Equal(context.OperationMessage(context.Localizer.T(LocalizationKeys.OperationUnavailableForCurrentState)), notification.Message);
         Assert.False(context.Dialogs.RepairConfirm.IsVisible);
     }
 
@@ -1430,7 +1521,7 @@ public sealed partial class GameOperationsViewModelTests : IDisposable
 
         var notification = Assert.Single(notifications);
         Assert.Equal(ToastSeverity.Warning, notification.Severity);
-        Assert.Equal(context.Localizer.T(LocalizationKeys.OperationUnavailableForCurrentState), notification.Message);
+        Assert.Equal(context.OperationMessage(context.Localizer.T(LocalizationKeys.OperationUnavailableForCurrentState)), notification.Message);
         Assert.False(context.ViewModel.Uninstall.IsVisible);
     }
 
@@ -1496,7 +1587,7 @@ public sealed partial class GameOperationsViewModelTests : IDisposable
         Assert.False(context.ViewModel.Uninstall.IsVisible);
         var notification = Assert.Single(notifications);
         Assert.Equal(ToastSeverity.Warning, notification.Severity);
-        Assert.Equal("cannot uninstall", notification.Message);
+        Assert.Equal(context.OperationMessage("cannot uninstall"), notification.Message);
     }
 
     [Fact]
@@ -1519,7 +1610,7 @@ public sealed partial class GameOperationsViewModelTests : IDisposable
         var notification = Assert.Single(notifications);
         Assert.Equal(ToastSeverity.Warning, notification.Severity);
         Assert.Equal(
-            context.Localizer.T(LocalizationKeys.OperationUnavailableForCurrentState),
+            context.OperationMessage(context.Localizer.T(LocalizationKeys.OperationUnavailableForCurrentState)),
             notification.Message);
     }
 
@@ -1596,7 +1687,7 @@ public sealed partial class GameOperationsViewModelTests : IDisposable
             toast.Severity == ToastSeverity.Error
             && string.Equals(
                 toast.Message,
-                context.Localizer.F(LocalizationKeys.GameSessionStartFailed, 53),
+                context.OperationMessage(context.Localizer.F(LocalizationKeys.GameSessionStartFailed, 53)),
                 StringComparison.Ordinal));
         Assert.Equal(
             context.Localizer.F(LocalizationKeys.GameSessionStartFailed, 53),
@@ -1653,7 +1744,10 @@ public sealed partial class GameOperationsViewModelTests : IDisposable
 
     private string NextDataRoot() => tempDir.Sub(Guid.NewGuid().ToString("N"));
 
-    private TestContext CreateContext(LocalDiagnostics? diagnostics = null)
+    private TestContext CreateContext(
+        LocalDiagnostics? diagnostics = null,
+        string gameId = "blue-archive-jp",
+        IGameFileOperationCoordinator? fileOperations = null)
     {
         diagnostics ??= new LocalDiagnostics();
         var localizer = new LocalizationService();
@@ -1671,6 +1765,8 @@ public sealed partial class GameOperationsViewModelTests : IDisposable
             diagnostics,
             toastService);
         var viewModel = new GameOperationsViewModel(
+            gameId,
+            fileOperations ?? new GameFileOperationCoordinator(),
             backend,
             shortcutService,
             sessionMonitor,
@@ -1702,5 +1798,11 @@ public sealed partial class GameOperationsViewModelTests : IDisposable
         ShellViewModel Shell,
         DialogsViewModel Dialogs,
         ToastService ToastService,
-        LocalizationService Localizer);
+        LocalizationService Localizer)
+    {
+        public string OperationMessage(string message) => Localizer.F(
+            LocalizationKeys.GameOperationMessage,
+            GameDisplayName.Resolve(ViewModel.FixedGameId, Localizer),
+            message);
+    }
 }

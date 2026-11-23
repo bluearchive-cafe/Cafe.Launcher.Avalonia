@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Cafe.Launcher.UI.Models;
@@ -12,19 +13,13 @@ internal partial class MainWindowToastOverlay : UserControl
         InitializeComponent();
     }
 
-    // 悬停即暂停消失计时：判定只看卡片自己，父层不必知道哪条 Toast 被指向。
-    private void OnToastCardPointerEntered(object? sender, PointerEventArgs e) =>
-        SetToastPointerOver(sender, isPointerOver: true);
-
-    private void OnToastCardPointerExited(object? sender, PointerEventArgs e) =>
-        SetToastPointerOver(sender, isPointerOver: false);
-
-    private void SetToastPointerOver(object? sender, bool isPointerOver)
+    private void OnToastCardPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
     {
-        if (sender is Control { DataContext: ToastNotification toast }
+        if ((e.Property == InputElement.IsPointerOverProperty || e.Property == InputElement.IsKeyboardFocusWithinProperty)
+            && sender is Control { DataContext: ToastNotification toast } card
             && DataContext is MainWindowViewModel viewModel)
         {
-            viewModel.Toasts.SetToastPointerOver(toast.Id, isPointerOver);
+            viewModel.Toasts.SetToastInteractionActive(toast.Id, card.IsPointerOver || card.IsKeyboardFocusWithin);
         }
     }
 }

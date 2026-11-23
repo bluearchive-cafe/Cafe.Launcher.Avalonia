@@ -1,6 +1,9 @@
 using System.Collections;
+using System.Globalization;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
+using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.Core.Models;
@@ -54,6 +57,12 @@ public sealed class LauncherSettingsTests
 
         Assert.NotSame(source.ThemeColorPalette, clone.ThemeColorPalette);
         Assert.NotSame(source.GameRuntime, clone.GameRuntime);
+        Assert.NotSame(source.Games, clone.Games);
+        foreach (var gameId in source.Games.Keys)
+        {
+            Assert.NotSame(source.GetGameSettings(gameId), clone.GetGameSettings(gameId));
+            Assert.NotSame(source.GetGameSettings(gameId).GameRuntime, clone.GetGameSettings(gameId).GameRuntime);
+        }
     }
 
     /// <summary>
@@ -68,6 +77,7 @@ public sealed class LauncherSettingsTests
     {
         AssertNamesEverySettableProperty(typeof(LauncherSettings));
         AssertNamesEverySettableProperty(typeof(GameRuntimeSettings));
+        AssertNamesEverySettableProperty(typeof(GameSettings));
     }
 
     private static void AssertNamesEverySettableProperty(Type type)
@@ -184,6 +194,169 @@ public sealed class LauncherSettingsTests
         }
     }
 
+    [Fact]
+    public void DefaultConstructor_CreatesIndependentSettingsForBothGames()
+    {
+        var settings = new LauncherSettings();
+
+        Assert.Equal(SettingsFormatVersions.Current, settings.FormatVersion);
+        Assert.Equal(LauncherProfiles.BlueArchiveJapan.RuntimeId, settings.LastViewedGameId);
+        Assert.Equal(2, settings.Games.Count);
+        Assert.Same(StringComparer.Ordinal, settings.Games.Comparer);
+        Assert.NotSame(settings.GetGameSettings(LauncherProfiles.BlueArchiveJapan.RuntimeId),
+            settings.GetGameSettings(LauncherProfiles.StellaSoraChina.RuntimeId));
+        Assert.NotSame(settings.GetGameSettings(LauncherProfiles.BlueArchiveJapan.RuntimeId).GameRuntime,
+            settings.GetGameSettings(LauncherProfiles.StellaSoraChina.RuntimeId).GameRuntime);
+        Assert.Equal(PatchUrlGroups.Official, settings.GetGameSettings(LauncherProfiles.StellaSoraChina.RuntimeId).PatchUrlGroup);
+    }
+
+    [Fact]
+    public void CreateDefaults_WhenCultureIsChinese_UsesCafeSourceForBlueArchiveOnly()
+    {
+        var original = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("zh-CN");
+
+            var settings = LauncherSettings.CreateDefaults();
+
+            Assert.Equal(PatchUrlGroups.Cafe, settings.GetGameSettings(LauncherProfiles.BlueArchiveJapan.RuntimeId).PatchUrlGroup);
+            Assert.Equal(PatchUrlGroups.Official, settings.GetGameSettings(LauncherProfiles.StellaSoraChina.RuntimeId).PatchUrlGroup);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = original;
+        }
+    }
+
+    [Fact]
+    public void CompatibilityAliases_WhenViewingStella_StillReadAndWriteBlueArchive()
+    {
+        var settings = new LauncherSettings { LastViewedGameId = LauncherProfiles.StellaSoraChina.RuntimeId };
+        var originalStella = settings.GetGameSettings(LauncherProfiles.StellaSoraChina.RuntimeId).DeepClone();
+        var changes = new List<string?>();
+        settings.PropertyChanged += (_, args) => changes.Add(args.PropertyName);
+
+        foreach (var name in new[] { nameof(LauncherSettings.GamePath), nameof(LauncherSettings.PatchUrlGroup),
+            nameof(LauncherSettings.LaunchCheckMode), nameof(LauncherSettings.GameRuntime),
+            nameof(LauncherSettings.AfterLaunchBehavior), nameof(LauncherSettings.ResourcePanelUid),
+            nameof(LauncherSettings.ResourcePanelUidSource) })
+        {
+            var alias = typeof(LauncherSettings).GetProperty(name)!;
+            var gameProperty = typeof(GameSettings).GetProperty(name)!;
+            var probe = CreateProbeValue(alias.PropertyType, name);
+            alias.SetValue(settings, probe);
+
+            Assert.Equal(Describe(probe), Describe(alias.GetValue(settings)));
+            Assert.Equal(Describe(probe), Describe(gameProperty.GetValue(settings.GetGameSettings(LauncherProfiles.BlueArchiveJapan.RuntimeId))));
+            Assert.Contains(name, changes);
+        }
+
+        Assert.True(originalStella.HasSameSettingsState(settings.GetGameSettings(LauncherProfiles.StellaSoraChina.RuntimeId)));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("unknown")]
+    [InlineData("BLUE-ARCHIVE-JP")]
+    [InlineData("BlueArchive_JP")]
+    public void GetGameSettings_WhenIdentityIsUnsupported_ThrowsWithoutChangingEntries(string gameId)
+    {
+        var settings = new LauncherSettings();
+        settings.Games[gameId] = new GameSettings();
+        var count = settings.Games.Count;
+
+        Assert.Throws<ArgumentException>(() => settings.GetGameSettings(gameId));
+        Assert.Equal(count, settings.Games.Count);
+    }
+
+    [Fact]
+    public void GetGameSettings_WhenSupportedEntryIsMissing_DoesNotRecreateOrFallback()
+    {
+        var settings = new LauncherSettings();
+        settings.Games.Remove(LauncherProfiles.StellaSoraChina.RuntimeId);
+
+        Assert.Throws<InvalidOperationException>(() => settings.GetGameSettings(LauncherProfiles.StellaSoraChina.RuntimeId));
+        Assert.Single(settings.Games);
+    }
+
+    [Fact]
+    public void GetGameSettings_WhenSupportedEntryIsNull_RejectsIt()
+    {
+        var settings = new LauncherSettings();
+        settings.Games[LauncherProfiles.StellaSoraChina.RuntimeId] = null!;
+
+        Assert.Throws<InvalidOperationException>(() => settings.GetGameSettings(LauncherProfiles.StellaSoraChina.RuntimeId));
+    }
+
+    [Fact]
+    public void DeepClone_WhenGamesAreMissingOrNull_PreservesInvalidShapeForDocumentValidation()
+    {
+        var missing = new LauncherSettings { Games = new Dictionary<string, GameSettings>(StringComparer.Ordinal) };
+        var nullEntry = new LauncherSettings();
+        nullEntry.Games[LauncherProfiles.StellaSoraChina.RuntimeId] = null!;
+        var nullGames = new LauncherSettings { Games = null! };
+
+        var missingClone = missing.DeepClone();
+        var nullEntryClone = nullEntry.DeepClone();
+        var nullGamesClone = nullGames.DeepClone();
+
+        Assert.Empty(missingClone.Games);
+        Assert.Null(nullEntryClone.Games[LauncherProfiles.StellaSoraChina.RuntimeId]);
+        Assert.Null(nullGamesClone.Games);
+        Assert.True(missing.HasSameSettingsState(missingClone));
+        Assert.True(nullEntry.HasSameSettingsState(nullEntryClone));
+        Assert.True(nullGames.HasSameSettingsState(nullGamesClone));
+        Assert.Throws<InvalidOperationException>(() => nullGamesClone.GetGameSettings(LauncherProfiles.BlueArchiveJapan.RuntimeId));
+    }
+
+    [Fact]
+    public void HasSameSettingsState_WhenGameDictionaryOrderDiffers_StillComparesByKeyAndValue()
+    {
+        var left = new LauncherSettings();
+        var right = left.DeepClone();
+        right.Games = right.Games.Reverse().ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
+
+        Assert.True(left.HasSameSettingsState(right));
+        Assert.True(right.HasSameSettingsState(left));
+        right.GetGameSettings(LauncherProfiles.StellaSoraChina.RuntimeId).GameRuntime.RunnerPath = "different";
+        Assert.False(left.HasSameSettingsState(right));
+        Assert.False(right.HasSameSettingsState(left));
+        Assert.Null(left.GetGameSettings(LauncherProfiles.StellaSoraChina.RuntimeId).GameRuntime.RunnerPath);
+    }
+
+    [Fact]
+    public void Games_WhenAssignedCaseInsensitiveDictionary_StoresOrdinalKeys()
+    {
+        var settings = new LauncherSettings { Games = new Dictionary<string, GameSettings>(StringComparer.OrdinalIgnoreCase)
+        {
+            [LauncherProfiles.BlueArchiveJapan.RuntimeId] = new(),
+            [LauncherProfiles.StellaSoraChina.RuntimeId] = new()
+        } };
+
+        Assert.Same(StringComparer.Ordinal, settings.Games.Comparer);
+        Assert.False(settings.Games.ContainsKey("BLUE-ARCHIVE-JP"));
+    }
+
+    [Fact]
+    public void Serialize_WhenAliasesHaveValues_WritesOnlyGameOwnedFieldsInsideGames()
+    {
+        var settings = new LauncherSettings { GamePath = "BA-path", ResourcePanelUid = "ABCDEFGH" };
+        settings.GetGameSettings(LauncherProfiles.StellaSoraChina.RuntimeId).GamePath = "Stella-path";
+        using var document = JsonDocument.Parse(JsonSerializer.Serialize(settings));
+        var root = document.RootElement;
+
+        foreach (var name in new[] { "gamePath", "patchUrlGroup", "launchCheckMode", "gameRuntime",
+            "afterLaunchBehavior", "resourcePanelUid", "resourcePanelUidSource" })
+        {
+            Assert.False(root.TryGetProperty(name, out _));
+            Assert.True(root.GetProperty("games").GetProperty(LauncherProfiles.BlueArchiveJapan.RuntimeId).TryGetProperty(name, out _));
+        }
+
+        Assert.Equal("BA-path", root.GetProperty("games").GetProperty(LauncherProfiles.BlueArchiveJapan.RuntimeId).GetProperty("gamePath").GetString());
+        Assert.Equal("Stella-path", root.GetProperty("games").GetProperty(LauncherProfiles.StellaSoraChina.RuntimeId).GetProperty("gamePath").GetString());
+    }
+
     private static PropertyInfo[] SettableProperties(Type type) =>
         type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
             .Where(property => property.CanWrite && property.GetIndexParameters().Length == 0)
@@ -200,6 +373,10 @@ public sealed class LauncherSettingsTests
     {
         null => "<null>",
         string text => text,
+        Dictionary<string, GameSettings> games => string.Join(";", games.OrderBy(pair => pair.Key, StringComparer.Ordinal)
+            .Select(pair => $"{pair.Key}={Describe(pair.Value)}")),
+        GameSettings game => string.Join(";", SettableProperties(typeof(GameSettings))
+            .Select(property => $"{property.Name}={Describe(property.GetValue(game))}")),
         GameRuntimeSettings runtime => string.Join(
             "; ",
             SettableProperties(typeof(GameRuntimeSettings))
@@ -235,6 +412,26 @@ public sealed class LauncherSettingsTests
             return new List<string> { $"probe-{propertyName}" };
         }
 
+        if (type == typeof(Dictionary<string, GameSettings>))
+        {
+            return new Dictionary<string, GameSettings>(StringComparer.Ordinal)
+            {
+                [LauncherProfiles.BlueArchiveJapan.RuntimeId] = (GameSettings)CreateProbeValue(typeof(GameSettings), propertyName)!,
+                [LauncherProfiles.StellaSoraChina.RuntimeId] = new() { GamePath = "stella-probe" }
+            };
+        }
+
+        if (type == typeof(GameSettings))
+        {
+            var game = new GameSettings();
+            foreach (var property in SettableProperties(typeof(GameSettings)))
+            {
+                property.SetValue(game, CreateProbeValue(property.PropertyType, property.Name));
+            }
+
+            return game;
+        }
+
         if (type == typeof(GameRuntimeSettings))
         {
             var runtime = new GameRuntimeSettings();
@@ -257,6 +454,8 @@ public sealed class LauncherSettingsTests
     private static object? DetachedCopy(object? value) => value switch
     {
         GameRuntimeSettings runtime => runtime.DeepClone(),
+        GameSettings game => game.DeepClone(),
+        Dictionary<string, GameSettings> games => games.ToDictionary(pair => pair.Key, pair => pair.Value.DeepClone(), StringComparer.Ordinal),
         List<string> palette => new List<string>(palette),
         _ => value
     };
@@ -299,6 +498,11 @@ public sealed class LauncherSettingsTests
         if (type == typeof(List<string>))
         {
             return new List<string> { $"probe-{propertyName}" };
+        }
+
+        if (type == typeof(Dictionary<string, GameSettings>) || type == typeof(GameSettings))
+        {
+            return CreateProbeValue(type, propertyName);
         }
 
         if (type == typeof(GameRuntimeSettings))

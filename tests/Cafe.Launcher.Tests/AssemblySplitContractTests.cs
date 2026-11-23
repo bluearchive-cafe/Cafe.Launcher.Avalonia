@@ -227,6 +227,8 @@ public sealed class AssemblySplitContractTests
             "DirectoryWriteProbe", // UI setup and download planning preflight local write access.
             "FileSizeFormatter", // UI progress and diagnostic exports share byte formatting.
             "GameCompatibilityPaths", // Typed path calculations are shared with UI compatibility cleanup.
+            "GameInstallationPathConflictException", // UI download flows distinguish a refused installation boundary.
+            "GameInstallationPathSafety", // UI install/repair plans check shared or nested directories before writing.
             "GamePathValidator", // UI operation workflows must enforce the Core filesystem safety contract.
             "GameProcessNames", // UI launch and uninstall derive the same executable family.
             "HttpClientLease", // IRemoteHttpClientLeaseSource returns this explicit resource owner.
@@ -243,6 +245,7 @@ public sealed class AssemblySplitContractTests
             "LogEntryReader", // UI log viewer and export must interpret the same entry boundaries.
             "ProcessService", // UI process gates and monitoring share the process-family adapter.
             "RemoteHttpRequestService", // Only the failure-hint reader is public; sending stays internal.
+            "SettingsFormatVersions", // Tests and hosts pin the accepted settings format versions.
             "ShellFolderOpener", // UI folder actions use the platform shell adapter.
             "StorageFailure", // UI-owned persistence shares the recoverable-error classification.
             "UnifiedLogger" // The host owns the logger before DI exists and after the session ends.
@@ -299,6 +302,8 @@ public sealed class AssemblySplitContractTests
 
             // XAML/宿主登记直接引用的表现层类型。
             "BannerCarouselTransition",
+            "FluentGlyphs",
+            "FluentIcon",
             "LocalizationKeys",
             "LocalizationService",
             "LocalizedTextCatalog",

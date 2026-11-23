@@ -86,6 +86,7 @@ public partial class MainWindowViewModelTests
         var coreService = new CountingCoreService(snapshot);
         using var viewModel = await CreateViewModelAsync(coreService, savedSettings);
         await viewModel.InitializeAsync();
+        viewModel.Settings.BeginEdit(gameSpecific: true);
 
         viewModel.Settings.Editor.Current.PatchUrlGroup = PatchUrlGroups.Cafe;
         await SaveSettingsAsync(viewModel);
@@ -121,6 +122,7 @@ public partial class MainWindowViewModelTests
             new CountingCoreService(snapshot),
             savedSettings);
         await viewModel.InitializeAsync();
+        viewModel.Settings.BeginEdit(gameSpecific: true);
 
         viewModel.Settings.Editor.Current.PatchUrlGroup = PatchUrlGroups.Cafe;
         await SaveSettingsAsync(viewModel);
@@ -215,6 +217,7 @@ public partial class MainWindowViewModelTests
             savedSettings,
             gameOperationsBackend: new StubGameOperationExecutor { IsDownloadRunning = true });
         await viewModel.InitializeAsync();
+        viewModel.Settings.BeginEdit(gameSpecific: true);
 
         viewModel.Settings.Editor.Current.PatchUrlGroup = PatchUrlGroups.Cafe;
         await SaveSettingsAsync(viewModel);
@@ -244,6 +247,7 @@ public partial class MainWindowViewModelTests
         };
         using var viewModel = await CreateViewModelAsync(coreService, savedSettings, filePickerService: filePicker);
         await viewModel.InitializeAsync();
+        viewModel.Settings.BeginEdit(gameSpecific: true);
         viewModel.WindowChrome.IsSettingsVisible = true;
 
         await viewModel.Settings.ChooseGamePathCommand.ExecuteAsync(null);
@@ -622,7 +626,11 @@ public partial class MainWindowViewModelTests
                 [],
                 new DefaultProcessLauncher(),
                 new GameProcessTracker(),
-                new GameCompatibilityPaths(TestDataRoot.ForCurrentProcess())), new StubFilePickerService(), new ProtonBuildDiscovery([]));
+                new GameCompatibilityPaths(TestDataRoot.ForCurrentProcess())), new StubFilePickerService(), new ProtonBuildDiscovery([]),
+            new GameDeviceOptionReader(),
+            new TitleVideoAudioReader(),
+            LauncherProfiles.BlueArchiveJapan,
+            new GameCompatibilityPaths(TestDataRoot.ForCurrentProcess()));
         ToastNotification? errorToast = null;
         toastService.ToastRaised += notification =>
         {
@@ -770,6 +778,7 @@ public partial class MainWindowViewModelTests
         {
             var settings = await settingsService.ReadAsync(cancellationToken);
             snapshot.Settings = settings;
+            snapshot.GameSettings = settings.GetGameSettings(snapshot.GameId).DeepClone();
             snapshot.LocalGame = CopyLocalGameWithPath(snapshot.LocalGame, settings.GamePath);
             return snapshot;
         }

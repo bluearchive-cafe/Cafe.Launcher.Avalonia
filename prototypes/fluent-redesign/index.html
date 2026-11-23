@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="zh-Hans" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cafe Launcher · Fluent 重设计草稿 · 对话框 / 设置 / 通知</title>
+<style>
+/* ============================================================
+   Fluent 2 (Windows 11 / WinUI) 视觉基线
+   仅用于本轮设计裁决；不是生产样式来源。
+   ============================================================ */
+:root{
+  --font: "Segoe UI Variable Text", "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif;
+  --font-display: "Segoe UI Variable Display", "Segoe UI", "Microsoft YaHei UI", system-ui, sans-serif;
+  --glyph: "Segoe Fluent Icons", "Segoe MDL2 Assets", "Segoe UI Symbol", sans-serif;
+
+  --accent: #005FB8;
+  --accent-text: #003E92;
+  --accent-fill-hover: #1A6FC4;
+  --on-accent: #FFFFFF;
+
+  --bg-base: #F3F3F3;
+  --bg-alt: #EAEAEA;
+  --bg-card: #FFFFFF;
+  --bg-card-translucent: rgba(255,255,255,.70);
+  --bg-layer: #F9F9F9;
+  --bg-stroke: rgba(0,0,0,.0578);
+  --bg-stroke-strong: rgba(0,0,0,.11);
+
+  --text-primary: rgba(0,0,0,.8956);
+  --text-secondary: rgba(0,0,0,.6063);
+  --text-tertiary: rgba(0,0,0,.4458);
+  --text-disabled: rgba(0,0,0,.3614);
+
+  --control-fill: rgba(255,255,255,.70);
+  --control-fill-hover: rgba(249,249,249,.50);
+  --control-stroke: rgba(0,0,0,.0578);
+  --control-stroke-bottom: rgba(0,0,0,.1622);
+
+  --critical: #C42B1C;
+  --critical-text: #FFFFFF;
+  --success: #0F7B0F;
+  --warning: #9D5D00;
+
+  --success-bg: #DFF6DD;
+  --warning-bg: #FFF4CE;
+  --error-bg: #FDE7E9;
+  --info-bg: #F0F6FF;
+
+  --smoke: rgba(0,0,0,.30);
+  --shadow-dialog: 0 32px 64px rgba(0,0,0,.24), 0 2px 21px rgba(0,0,0,.14);
+  --shadow-card: 0 2px 4px rgba(0,0,0,.08);
+  --radius-control: 4px;
+  --radius-surface: 8px;
+
+  --wallpaper: radial-gradient(1200px 700px at 12% 18%, #7ec8ff 0%, transparent 55%),
+               radial-gradient(900px 600px at 88% 82%, #ffd0e4 0%, transparent 52%),
+               linear-gradient(135deg, #12324f 0%, #1d4f7a 46%, #2b6f9e 100%);
+}
+html[data-theme="dark"]{
+  --accent: #60CDFF;
+  --accent-text: #99EBFF;
+  --accent-fill-hover: #4FB8E8;
+  --on-accent: #000000;
+
+  --bg-base: #202020;
+  --bg-alt: #1A1A1A;
+  --bg-card: #2B2B2B;
+  --bg-card-translucent: rgba(43,43,43,.70);
+  --bg-layer: #272727;
+  --bg-stroke: rgba(255,255,255,.0698);
+  --bg-stroke-strong: rgba(255,255,255,.11);
+
+  --text-primary: rgba(255,255,255,.96);
+  --text-secondary: rgba(255,255,255,.786);
+  --text-tertiary: rgba(255,255,255,.544);
+  --text-disabled: rgba(255,255,255,.363);
+
+  --control-fill: rgba(255,255,255,.0605);
+  --control-fill-hover: rgba(255,255,255,.0837);
+  --control-stroke: rgba(255,255,255,.0698);
+  --control-stroke-bottom: rgba(255,255,255,.20);
+
+  --critical: #FF99A4;
+  --critical-text: #000000;
+  --success: #6CCB5F;
+  --warning: #FCE100;
+
+  --success-bg: rgba(15,123,15,.18);
+  --warning-bg: rgba(157,93,0,.22);
+  --error-bg: rgba(196,43,28,.22);
+  --info-bg: rgba(0,95,184,.22);
+
+  --smoke: rgba(0,0,0,.45);
+  --shadow-dialog: 0 32px 64px rgba(0,0,0,.56), 0 2px 21px rgba(0,0,0,.40);
+  --shadow-card: 0 2px 4px rgba(0,0,0,.28);
+  --wallpaper: radial-gradient(1200px 700px at 12% 18%, #2a5b86 0%, transparent 55%),
+               radial-gradient(900px 600px at 88% 82%, #6a3550 0%, transparent 52%),
+               linear-gradient(135deg, #0b1c2c 0%, #12293d 46%, #1a3b52 100%);
+}
+
+*{ box-sizing: border-box; }
+html,body{ margin:0; padding:0; }
+body{
+  font-family: var(--font);
+  font-size: 14px; line-height: 20px;
+  color: var(--text-primary);
+  background: #101418;
+  -webkit-font-smoothing: antialiased;
+}
+html[data-theme="light"] body{ background:#E8EAED; }
+
+/* ---------- 原型外壳（不属于产品界面） ---------- */
+.proto-bar{
+  position: sticky; top:0; z-index: 50;
+  display:flex; flex-wrap:wrap; align-items:center; gap:16px;
+  padding: 12px 24px;
+  background: color-mix(in srgb, var(--bg-base) 92%, transparent);
+  border-bottom: 1px solid var(--bg-stroke-strong);
+  backdrop-filter: blur(20px);
+}
+.proto-bar h1{ font-size: 14px; font-weight: 600; margin:0; letter-spacing:.01em; }
+.proto-bar .sub{ font-size: 12px; color: var(--text-secondary); }
+.fork{ display:flex; align-items:center; gap:8px; }
+.fork > span{ font-size:12px; color: var(--text-secondary); }
+.switch{
+  display:inline-flex; padding:2px; gap:2px;
+  background: var(--control-fill);
+  border:1px solid var(--control-stroke);
+  border-radius: var(--radius-control);
+}
+.switch button{
+  font: inherit; font-size: 12px; line-height: 16px;
+  padding: 4px 10px; min-height: 24px;
+  color: var(--text-secondary);
+  background: transparent; border: 1px solid transparent; border-radius: 2px;
+  cursor: pointer;
+}
+.switch button[aria-pressed="true"]{
+  color: var(--text-primary);
+  background: var(--bg-card);
+  border-color: var(--control-stroke);
+  box-shadow: var(--shadow-card);
+}
+.switch button:hover:not([aria-pressed="true"]){ background: var(--control-fill-hover); }
+.switch button:focus-visible{ outline: 2px solid var(--text-primary); outline-offset: 1px; }
+
+.page{ max-width: 1240px; margin: 0 auto; padding: 32px 24px 96px; }
+.section{ margin-top: 48px; }
+.section:first-of-type{ margin-top: 24px; }
+.section-head{ display:flex; align-items:baseline; gap:12px; margin-bottom: 8px; }
+.section-head h2{ font: 600 20px/28px var(--font-display); margin:0; }
+.section-head .tag{
+  font-size: 12px; padding: 2px 8px; border-radius: 999px;
+  color: var(--accent-text); background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.section-note{ margin: 0 0 20px; font-size: 13px; line-height: 20px; color: var(--text-secondary); max-width: 78ch; }
+.section-note b{ color: var(--text-primary); font-weight:600; }
+
+/* ---------- 模拟窗口 ---------- */
+.frames{ display:grid; grid-template-columns: repeat(auto-fit, minmax(440px, 1fr)); gap: 20px; }
+.frame{
+  position: relative; overflow: hidden;
+  border-radius: 8px;
+  background: var(--wallpaper);
+  border: 1px solid rgba(255,255,255,.16);
+  box-shadow: 0 12px 32px rgba(0,0,0,.18);
+  min-height: 440px;
+  display:flex; flex-direction:column;
+}
+.frame.tall{ min-height: 660px; }
+.frame-caption{ font-size:12px; color: var(--text-secondary); margin: 0 0 8px; }
+.frame-label{
+  position:absolute; left:12px; top:10px; z-index:3;
+  font-size: 11px; letter-spacing:.04em; text-transform: uppercase;
+  color: rgba(255,255,255,.82);
+  background: rgba(0,0,0,.28);
+  padding: 2px 8px; border-radius: 999px;
+}
+/* 壳层示意：左上图标栏 + 顶部标题 */
+.shell{ position:relative; flex:1; display:flex; min-height:0; }
+.rail{ width:64px; background: rgba(0,0,0,.18); display:flex; flex-direction:column; align-items:center; gap:8px; padding:14px 0; }
+.rail .ico{ width:40px; height:40px; border-radius:6px; display:grid; place-items:center; color:#fff; opacity:.75; font-family:var(--glyph); font-size:16px; }
+.rail .ico.active{ background: rgba(255,255,255,.18); opacity:1; }
+.rail .spacer{ flex:1; }
+.home{ flex:1; padding: 16px 20px; color:#fff; }
+.home .wordmark{ font: 600 28px/34px var(--font-display); opacity:.92; margin-top: 8px; }
+.home .statusline{ display:flex; gap:8px; margin-top: 6px; }
+.chip{ font-size:11px; padding:2px 8px; border-radius:999px; background: rgba(0,0,0,.24); color:#fff; border:1px solid rgba(255,255,255,.18); }
+.home .panel{
+  margin-top: 16px; width: 260px; height: 150px; border-radius:8px;
+  background: rgba(20,30,40,.30); border:1px solid rgba(255,255,255,.16);
+}
+
+/* 遮罩 */
+.scrim{
+  position:absolute; inset:0; z-index: 5;
+  background: var(--smoke);
+  display:grid; place-items:center;
+  padding: 24px;
+}
+
+/* ---------- 对话框 ---------- */
+.dialog{
+  width: min(540px, 100%);
+  max-height: 100%;
+  display:flex; flex-direction:column;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  border: 1px solid var(--bg-stroke);
+  border-radius: var(--radius-surface);
+  box-shadow: var(--shadow-dialog);
+  overflow: hidden;
+}
+html[data-dialog="glass"] .dialog{
+  background: color-mix(in srgb, var(--bg-base) 78%, transparent);
+  backdrop-filter: blur(30px) saturate(140%);
+  border-color: rgba(255,255,255,.22);
+  box-shadow: 0 24px 48px rgba(0,0,0,.28);
+}
+.dialog.basic{ width: min(440px, 100%); }
+.dlg-head{
+  display:flex; align-items:flex-start; gap:12px;
+  padding: 24px 24px 0 24px;
+}
+.dlg-title{
+  font: 600 20px/28px var(--font-display);
+  margin:0; flex:1; text-wrap: balance;
+}
+.dlg-close{
+  flex:none; width:32px; height:32px; margin:-4px -6px 0 0;
+  display:grid; place-items:center;
+  border:1px solid transparent; border-radius: var(--radius-control);
+  background: transparent; color: var(--text-secondary);
+  font-family: var(--glyph); font-size: 12px; cursor:pointer;
+}
+.dlg-close:hover{ background: var(--control-fill-hover); color: var(--text-primary); }
+.dlg-body{ padding: 12px 24px 0 24px; overflow:auto; font-size:14px; line-height:20px; }
+.dlg-body p{ margin:0 0 12px; color: var(--text-primary); }
+.dlg-body p.secondary{ color: var(--text-secondary); }
+.dlg-body .kv{ display:flex; justify-content:space-between; gap:16px; padding:6px 0; border-bottom:1px solid var(--bg-stroke); }
+.dlg-body .kv:last-child{ border-bottom:0; }
+.dlg-body .kv span:first-child{ color: var(--text-secondary); }
+.dlg-body h4{ font-size:12px; line-height:16px; letter-spacing:.02em; text-transform:uppercase; color: var(--text-tertiary); margin: 4px 0 8px; font-weight:600; }
+.release{
+  border:1px solid var(--bg-stroke); border-radius: var(--radius-control);
+  background: var(--bg-card); padding: 12px; font-size: 13px; line-height:20px; color: var(--text-secondary);
+}
+.release strong{ color: var(--text-primary); }
+.dlg-footer{
+  display:flex; align-items:center; gap:8px;
+  padding: 24px; margin-top: 12px;
+}
+.dlg-footer .leading{ flex:1; display:flex; gap:4px; }
+.dlg-footer .actions{ display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; margin-left:auto; }
+
+/* 按钮（Fluent 标准） */
+.btn{
+  font: inherit; font-size:14px; line-height:20px; font-weight:400;
+  min-height:32px; padding: 5px 12px;
+  border-radius: var(--radius-control);
+  border:1px solid var(--control-stroke);
+  border-bottom-color: var(--control-stroke-bottom);
+  background: var(--control-fill);
+  color: var(--text-primary);
+  cursor:pointer; white-space:nowrap;
+}
+.btn:hover{ background: var(--control-fill-hover); }
+.btn:focus-visible{ outline: 2px solid var(--text-primary); outline-offset: 1px; }
+.btn.accent{
+  background: var(--accent); color: var(--on-accent);
+  border-color: rgba(0,0,0,.10); border-bottom-color: rgba(0,0,0,.20);
+}
+.btn.accent:hover{ background: var(--accent-fill-hover); }
+.btn.critical{
+  background: var(--critical); color: var(--critical-text);
+  border-color: rgba(0,0,0,.10);
+}
+.btn.subtle{ background: transparent; border-color: transparent; }
+.btn.subtle:hover{ background: var(--control-fill-hover); }
+.btn[disabled]{ color: var(--text-disabled); background: var(--control-fill); border-color: var(--control-stroke); cursor:default; }
+
+/* ---------- 设置页 ---------- */
+/* 标题栏（模拟 FAAppWindow 扩展标题栏） */
+.titlebar{
+  position:absolute; inset:0 0 auto 0; z-index:7; height:48px;
+  display:flex; align-items:center; gap:8px; padding-left:16px;
+  color:#fff;
+}
+.titlebar .tb-title{ font-size:12px; opacity:.85; }
+.titlebar .tb-controls{ margin-left:auto; display:flex; height:100%; }
+.titlebar .tb-controls span{ width:46px; display:grid; place-items:center; font-family:var(--glyph); font-size:10px; opacity:.85; }
+
+.rail.settings-rail{
+  position:absolute; z-index:6; left:0; top:48px; bottom:0; width:64px;
+  background: rgba(0,0,0,.16);
+  border-right:1px solid rgba(255,255,255,.12);
+  backdrop-filter: blur(12px);
+}
+.rail.settings-rail .ico.selected{ background: rgba(255,255,255,.22); opacity:1; }
+
+/* 整窗设置页：覆盖标题栏以下的整个客户区 */
+.settings{
+  position:absolute; z-index: 6; left:64px; right:0; top:48px; bottom:0;
+  display:grid; grid-template-rows: auto 1fr auto;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  border-top: 1px solid rgba(255,255,255,.14);
+}
+.settings-head{
+  display:flex; align-items:center; gap:12px;
+  padding: 0 24px; min-height: 56px;
+  border-bottom: 1px solid var(--bg-stroke);
+}
+.settings-head h2{ font: 600 20px/28px var(--font-display); margin:0; flex:1; }
+.back{
+  flex:none; width:32px; height:32px; border-radius: var(--radius-control);
+  border:1px solid transparent; background:transparent; color: var(--text-primary);
+  font-family: var(--glyph); font-size:14px; cursor:pointer;
+  display:grid; place-items:center;
+}
+.back:hover{ background: var(--control-fill-hover); }
+.back:focus-visible{ outline:2px solid var(--text-primary); outline-offset:1px; }
+.scope-strip{ display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+.scope{
+  font-size:12px; line-height:16px; padding:6px 10px;
+  border-radius: var(--radius-control);
+  border:1px solid var(--bg-stroke-strong);
+  background: var(--bg-card); color: var(--text-secondary);
+}
+.scope strong{ color: var(--text-primary); font-weight:600; }
+.settings-body{ display:grid; grid-template-columns: 216px 1fr; min-height:0; overflow:hidden; }
+.settings-nav{
+  border-right:1px solid var(--bg-stroke);
+  background: var(--bg-layer);
+  padding: 8px 8px 16px;
+  display:flex; flex-direction:column; gap:2px;
+  overflow:auto;
+}
+.nav-item{
+  display:flex; align-items:center; gap:12px;
+  min-height:36px; padding: 0 10px;
+  border-radius: var(--radius-control);
+  border:1px solid transparent;
+  color: var(--text-primary); font-size:14px; text-decoration:none;
+  position:relative;
+}
+.nav-item .ico{ font-family:var(--glyph); font-size:16px; width:16px; text-align:center; color: var(--text-secondary); }
+.nav-item:hover{ background: var(--control-fill-hover); }
+.nav-item[aria-current="page"]{ background: var(--control-fill); border-color: var(--bg-stroke); font-weight:600; }
+.nav-item[aria-current="page"]::before{
+  content:""; position:absolute; left:-6px; top:50%; transform: translateY(-50%);
+  width:3px; height:16px; border-radius:2px; background: var(--accent);
+}
+.settings-main{ min-width:0; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
+.settings-scroll{ flex:1; min-height:0; overflow:auto; padding: 24px 24px 8px; }
+.cat-title{ font: 600 18px/24px var(--font-display); margin:0; }
+.cat-desc{ margin: 4px 0 0; font-size:13px; line-height:18px; color: var(--text-secondary); max-width: 62ch; }
+
+.group{ margin-top: 20px; }
+.group:first-of-type{ margin-top: 16px; }
+.group-title{ font-size:14px; line-height:20px; font-weight:600; margin: 0 0 8px; }
+.group-card{
+  background: var(--bg-card);
+  border:1px solid var(--bg-stroke);
+  border-radius: var(--radius-control);
+  overflow:hidden;
+  box-shadow: var(--shadow-card);
+}
+html[data-theme="dark"] .group-card{ background: var(--bg-card-translucent); }
+.row{
+  display:flex; align-items:center; gap: 16px;
+  padding: 10px 16px; min-height: 64px;
+}
+.row + .row{ border-top: 1px solid var(--bg-stroke); }
+.row-text{ flex:1; min-width: 180px; }
+.row-title{ font-size:14px; line-height:20px; }
+.row-desc{ font-size:12px; line-height:16px; color: var(--text-secondary); margin-top:2px; }
+.row-action{ flex:none; display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end; max-width: 60%; }
+.row-note{ font-size:11px; line-height:16px; color: var(--text-tertiary); margin-top:2px; }
+
+/* 明细行（对比变体） */
+html[data-rows="rows"] .group-card{ background: transparent; border:0; box-shadow:none; border-radius:0; }
+html[data-rows="rows"] .row{ padding: 10px 0; border-top:1px solid var(--bg-stroke); }
+html[data-rows="rows"] .row:first-child{ border-top:0; }
+
+/* 表单控件 */
+.combo{
+  display:inline-flex; align-items:center; justify-content:space-between; gap:8px;
+  min-height:32px; min-width: 220px; padding: 0 10px 0 12px;
+  font-size:14px;
+  background: var(--control-fill);
+  border:1px solid var(--control-stroke);
+  border-bottom-color: var(--control-stroke-bottom);
+  border-radius: var(--radius-control);
+  color: var(--text-primary);
+}
+.combo .chev{ font-family:var(--glyph); font-size:10px; color: var(--text-secondary); }
+.check{ display:inline-flex; align-items:center; gap:8px; font-size:14px; cursor:pointer; }
+.check .box{
+  width:20px; height:20px; border-radius: 4px;
+  border:1px solid var(--control-stroke-bottom);
+  background: var(--control-fill);
+  display:grid; place-items:center;
+  font-family: var(--glyph); font-size:11px; color: var(--on-accent);
+}
+.check[data-checked="true"] .box{ background: var(--accent); border-color: var(--accent); }
+
+/* 互斥选项：单选组（推荐） vs 胶囊（对比） */
+.radios{ display:flex; flex-wrap:wrap; gap: 4px 20px; }
+.radio{ display:inline-flex; align-items:center; gap:8px; font-size:14px; cursor:pointer; min-height:32px; }
+.radio .dot{
+  width:20px; height:20px; border-radius:50%;
+  border:1px solid var(--text-secondary);
+  display:grid; place-items:center; flex:none;
+}
+.radio[data-checked="true"] .dot{ border-color: var(--accent); border-width: 1px; }
+.radio[data-checked="true"] .dot::after{
+  content:""; width:10px; height:10px; border-radius:50%; background: var(--accent);
+}
+.pill{ display:none; }
+html[data-seg="pill"] .radios{ display:none; }
+html[data-seg="pill"] .pill{
+  display:inline-flex; align-items:center;
+  border:1px solid var(--control-stroke-bottom);
+  border-radius: 999px; padding:2px;
+  background: var(--control-fill);
+}
+.pill button{
+  font: inherit; font-size:13px; line-height:18px;
+  border:0; background:transparent; color: var(--text-secondary);
+  padding: 4px 12px; border-radius:999px; cursor:pointer;
+  display:inline-flex; align-items:center; gap:6px;
+}
+.pill button[aria-pressed="true"]{
+  background: color-mix(in srgb, var(--accent) 14%, var(--bg-card));
+  color: var(--text-primary); font-weight:600;
+}
+.pill button[aria-pressed="true"]::before{
+  content:"\E73E"; font-family: var(--glyph); font-size:10px; color: var(--accent);
+}
+
+.switch-ctl{ width:40px; height:20px; border-radius:999px; background: var(--control-fill); border:1px solid var(--control-stroke-bottom); position:relative; }
+.switch-ctl::after{ content:""; position:absolute; left:3px; top:3px; width:12px; height:12px; border-radius:50%; background: var(--text-secondary); }
+.switch-ctl[data-on="true"]{ background: var(--accent); border-color: var(--accent); }
+.switch-ctl[data-on="true"]::after{ left:auto; right:3px; background: var(--on-accent); }
+
+.inline-bar{ flex:none; }
+.settings-footer{
+  flex:none;
+  display:flex; align-items:center; gap:16px;
+  min-height: 64px; padding: 12px 24px;
+  border-top:1px solid var(--bg-stroke);
+  background: var(--bg-base);
+}
+.settings-footer .status{ flex:1; font-size:13px; color: var(--text-secondary); display:flex; align-items:center; gap:8px; }
+.settings-footer .actions{ display:flex; gap:8px; }
+.dot-warn{ width:8px; height:8px; border-radius:50%; background: var(--warning); }
+
+/* 页内提示条（MessageBar，持久、就地） */
+.inline-bar{
+  display:flex; gap:12px; align-items:flex-start;
+  margin: 16px 24px 0; padding: 10px 12px;
+  border-radius: var(--radius-control);
+  border:1px solid var(--control-stroke);
+  font-size:13px; line-height:18px;
+}
+.inline-bar .ico{ font-family: var(--glyph); font-size:14px; line-height:18px; }
+.inline-bar.error{ background: var(--error-bg); border-color: color-mix(in srgb, var(--critical) 45%, transparent); }
+.inline-bar.error .ico{ color: var(--critical); }
+.inline-bar b{ font-weight:600; }
+.inline-bar .bar-actions{ margin-left:auto; display:flex; gap:8px; }
+
+/* ---------- 通知 ---------- */
+.toast-host{
+  position:absolute; top: 56px; right: 16px; z-index: 8;
+  display:flex; flex-direction:column; gap:8px; width: 392px; max-width: calc(100% - 32px);
+}
+.toast{
+  display:flex; gap:12px; align-items:flex-start;
+  padding: 12px 12px 12px 14px;
+  border-radius: var(--radius-control);
+  border:1px solid var(--control-stroke);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-card);
+  font-size:13px; line-height:18px;
+}
+.toast.success{ background: var(--success-bg); border-color: color-mix(in srgb, var(--success) 45%, transparent); }
+.toast.warning{ background: var(--warning-bg); border-color: color-mix(in srgb, var(--warning) 45%, transparent); }
+.toast.error{ background: var(--error-bg); border-color: color-mix(in srgb, var(--critical) 45%, transparent); }
+.toast.info{ background: var(--info-bg); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+.toast .ico{ font-family: var(--glyph); font-size:14px; line-height:20px; margin-top:1px; }
+.toast.success .ico{ color: var(--success); }
+.toast.warning .ico{ color: var(--warning); }
+.toast.error .ico{ color: var(--critical); }
+.toast.info .ico{ color: var(--accent); }
+.toast .body{ flex:1; min-width:0; }
+.toast .t-title{ font-weight:600; color: var(--text-primary); }
+.toast .t-msg{ color: var(--text-primary); margin-top:2px; }
+.toast .t-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:10px; }
+.toast .t-close{
+  flex:none; width:28px; height:28px; margin-top:-4px; margin-right:-4px;
+  border:1px solid transparent; border-radius: var(--radius-control);
+  background:transparent; color: var(--text-secondary);
+  font-family: var(--glyph); font-size:10px; cursor:pointer;
+}
+.toast .t-close:hover{ background: rgba(0,0,0,.06); }
+html[data-theme="dark"] .toast .t-close:hover{ background: rgba(255,255,255,.08); }
+.toast .t-progress{ height:3px; margin-top:10px; border-radius:2px; background: color-mix(in srgb, var(--accent) 24%, transparent); overflow:hidden; }
+.toast .t-progress i{ display:block; width:38%; height:100%; background: var(--accent); }
+
+/* ---------- 决策清单 ---------- */
+.decisions{ display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-top: 20px; }
+.decision{
+  border:1px solid var(--bg-stroke-strong); border-radius: var(--radius-control);
+  background: var(--bg-card); padding: 14px 16px;
+}
+html[data-theme="dark"] .decision{ background: var(--bg-layer); }
+.decision h3{ font-size:13px; margin:0 0 6px; }
+.decision p{ margin:0; font-size:12px; line-height:18px; color: var(--text-secondary); }
+.decision .rec{ color: var(--success); font-weight:600; }
+
+@media (max-width: 720px){
+  .row{ align-items:flex-start; flex-direction:column; gap:8px; }
+  .row-action{ max-width:100%; justify-content:flex-start; }
+  .settings-body{ grid-template-columns: 1fr; }
+  .settings-nav{ display:none; }
+  .toast-host{ width:auto; left:16px; }
+}
+</style>
+</head>
+<body data-dialog="solid" data-rows="cards" data-seg="radio">
+
+<!-- ================= 原型控制条 ================= -->
+<div class="proto-bar">
+  <h1>Cafe Launcher · Fluent 重设计草稿</h1>
+  <span class="sub">对话框 / 设置 / 通知</span>
+
+  <div class="fork">
+    <span>主题</span>
+    <div class="switch" data-fork="theme">
+      <button aria-pressed="true" data-theme-value="light">浅色</button>
+      <button aria-pressed="false" data-theme-value="dark">深色</button>
+    </div>
+  </div>
+
+  <div class="fork">
+    <span>对话框材质</span>
+    <div class="switch" data-fork="dialog">
+      <button aria-pressed="true" data-dialog-value="solid">Fluent 实心</button>
+      <button aria-pressed="false" data-dialog-value="glass">玻璃</button>
+    </div>
+  </div>
+
+  <div class="fork">
+    <span>设置行</span>
+    <div class="switch" data-fork="rows">
+      <button aria-pressed="true" data-rows-value="cards">分组卡片</button>
+      <button aria-pressed="false" data-rows-value="rows">明细行</button>
+    </div>
+  </div>
+
+  <div class="fork">
+    <span>互斥选项</span>
+    <div class="switch" data-fork="seg">
+      <button aria-pressed="true" data-seg-value="radio">单选组</button>
+      <button aria-pressed="false" data-seg-value="pill">胶囊分段</button>
+    </div>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- ================= 1. 对话框 ================= -->
+  <section class="section">
+    <div class="section-head"><h2>对话框</h2><span class="tag">ADR-015 / ADR-040 延续</span></div>
+    <p class="section-note">
+      保留现有模态栈（ESC、焦点归还、遮罩拦截）与“主要动作在左、安全动作在右”的顺序，
+      只换表面与解剖：<b>标题 20/28 半粗、正文 14/20、动作区 24 内边距、8 DIP 圆角、1 DIP 描边、实心表面</b>。
+      危险确认仍用 critical 实心且不设默认按钮。Panel 形态保留右上角关闭，Basic 形态以动作退出。
+    </p>
+
+    <div class="frames">
+      <!-- 危险确认 -->
+      <div class="frame" style="min-height:420px">
+        <span class="frame-label">Basic · 危险确认</span>
+        <div class="shell" aria-hidden="true">
+          <div class="rail">
+            <div class="ico active">&#xE7FC;</div><div class="ico">&#xE7FC;</div>
+            <div class="spacer"></div><div class="ico">&#xE713;</div>
+          </div>
+          <div class="home">
+            <div class="wordmark">Blue Archive</div>
+            <div class="statusline"><span class="chip">游戏未运行</span><span class="chip">网络正常</span></div>
+            <div class="panel"></div>
+          </div>
+        </div>
+        <div class="scrim">
+          <div class="dialog basic" role="alertdialog" aria-modal="true" aria-labelledby="dlg1t">
+            <div class="dlg-head"><h3 class="dlg-title" id="dlg1t">停止下载？</h3></div>
+            <div class="dlg-body">
+              <p>已下载的内容会保留，下次可以继续从这里开始。</p>
+              <p class="secondary">停止后需要重新检查文件，可能比继续下载多花一些时间。</p>
+            </div>
+            <div class="dlg-footer">
+              <div class="actions">
+                <button class="btn critical">停止下载</button>
+                <button class="btn">继续下载</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 更新 -->
+      <div class="frame" style="min-height:420px">
+        <span class="frame-label">Panel · 更新说明</span>
+        <div class="shell" aria-hidden="true">
+          <div class="rail">
+            <div class="ico active">&#xE7FC;</div><div class="ico">&#xE7FC;</div>
+            <div class="spacer"></div><div class="ico">&#xE713;</div>
+          </div>
+          <div class="home">
+            <div class="wordmark">Blue Archive</div>
+            <div class="statusline"><span class="chip">有可用更新</span><span class="chip">稳定版</span></div>
+            <div class="panel"></div>
+          </div>
+        </div>
+        <div class="scrim">
+          <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dlg2t">
+            <div class="dlg-head">
+              <h3 class="dlg-title" id="dlg2t">发现新版本 0.9.4</h3>
+              <button class="dlg-close" aria-label="关闭">&#xE711;</button>
+            </div>
+            <div class="dlg-body">
+              <p class="secondary">这是启动器更新，不会影响已安装的游戏文件。</p>
+              <h4>本次更新</h4>
+              <div class="release">
+                <p style="margin:0 0 8px"><strong>下载与安装</strong></p>
+                <p style="margin:0 0 6px">· 修复断点续传在切换下载源后丢失进度的问题。</p>
+                <p style="margin:0">· 安装准备对话框现在会提前显示所需磁盘空间。</p>
+              </div>
+            </div>
+            <div class="dlg-footer">
+              <div class="leading"></div>
+              <div class="actions">
+                <button class="btn accent">下载更新</button>
+                <button class="btn subtle">稍后</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 2. 设置 ================= -->
+  <section class="section">
+    <div class="section-head"><h2>设置</h2><span class="tag">整窗页面（替代 960×620 叠层）</span></div>
+    <p class="section-note">
+      设置不再是“对话框套对话框”，而是图标栏右侧的整窗页面：壁纸与首页内容让位，<b>64 DIP 图标栏保留</b>
+      （每款游戏的任务角标与失败角标始终可见，齿轮项呈选中态），关闭或 ESC 之后原样恢复。
+      <b>分组卡片</b>沿用 WinUI 设置页语言（每组一张 4 DIP 圆角卡、行间 1 DIP 分隔），
+      互斥选项用<b>原生单选组</b>；页脚跨内容列，保留“未保存状态 + 放弃更改 + 保存”。
+    </p>
+
+    <div class="scope-strip">
+      <span class="scope"><strong>启动器设置</strong> · 6 分类 · 从标题栏齿轮进入</span>
+      <span class="scope"><strong>蔚蓝档案 · 游戏设置</strong> · 4 分类 · 固定目标 · 从首页“游戏设置”进入</span>
+    </div>
+
+    <p class="frame-caption">整窗设置页 · 启动器范围（图标栏右侧占满，左导航 216，正文独立滚动）</p>
+    <div class="frame tall" style="min-height:660px">
+      <div class="titlebar" aria-hidden="true">
+        <span class="tb-title">Cafe Launcher</span>
+        <span class="tb-controls">
+          <span>&#xE921;</span><span>&#xE922;</span><span>&#xE8BB;</span>
+        </span>
+      </div>
+
+      <div class="rail settings-rail" aria-hidden="true">
+        <div class="ico active">&#xE7FC;</div>
+        <div class="ico">&#xE7FC;</div>
+        <div class="spacer"></div>
+        <div class="ico">&#xE9D9;</div>
+        <div class="ico selected">&#xE713;</div>
+      </div>
+
+      <div class="settings">
+        <div class="settings-head">
+          <h2>启动器设置</h2>
+          <button class="dlg-close" aria-label="关闭设置">&#xE711;</button>
+        </div>
+
+        <div class="settings-body">
+          <nav class="settings-nav" aria-label="设置分类">
+            <a class="nav-item" href="#" aria-current="page"><span class="ico">&#xE713;</span>常规</a>
+            <a class="nav-item" href="#"><span class="ico">&#xE790;</span>外观</a>
+            <a class="nav-item" href="#"><span class="ico">&#xE8B9;</span>默认背景</a>
+            <a class="nav-item" href="#"><span class="ico">&#xE896;</span>下载与网络</a>
+            <a class="nav-item" href="#"><span class="ico">&#xE9E9;</span>高级</a>
+            <a class="nav-item" href="#"><span class="ico">&#xE946;</span>关于</a>
+          </nav>
+
+          <div class="settings-main">
+            <div class="settings-scroll">
+              <h1 class="cat-title">常规</h1>
+              <p class="cat-desc">语言、窗口、显示与更新。</p>
+
+              <section class="group">
+                <h3 class="group-title">应用偏好</h3>
+                <div class="group-card">
+                  <div class="row">
+                    <div class="row-text"><div class="row-title">语言</div></div>
+                    <div class="row-action">
+                      <div class="combo">简体中文 <span class="chev">&#xE70D;</span></div>
+                    </div>
+                  </div>
+                  <div class="row">
+                    <div class="row-text"><div class="row-title">关闭窗口时</div></div>
+                    <div class="row-action">
+                      <div class="radios" role="radiogroup" aria-label="关闭窗口时">
+                        <span class="radio" data-checked="true" role="radio" aria-checked="true"><span class="dot"></span>最小化到托盘</span>
+                        <span class="radio" data-checked="false" role="radio" aria-checked="false"><span class="dot"></span>退出启动器</span>
+                      </div>
+                      <div class="pill">
+                        <button aria-pressed="true">最小化到托盘</button>
+                        <button aria-pressed="false">退出启动器</button>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="row">
+                    <div class="row-text"><div class="row-title">启动游戏后</div></div>
+                    <div class="row-action">
+                      <div class="combo">保持窗口 <span class="chev">&#xE70D;</span></div>
+                    </div>
+                  </div>
+                  <div class="row">
+                    <div class="row-text"><div class="row-title">记住窗口位置与大小</div></div>
+                    <div class="row-action">
+                      <label class="check" data-checked="true"><span class="box">&#xE73E;</span></label>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="group">
+                <h3 class="group-title">显示</h3>
+                <div class="group-card">
+                  <div class="row">
+                    <div class="row-text">
+                      <div class="row-title">状态面板</div>
+                      <div class="row-desc">标题下方依次显示游戏会话、启动校验、网络、下载源与版本。</div>
+                    </div>
+                    <div class="row-action">
+                      <div class="radios" role="radiogroup" aria-label="状态面板">
+                        <span class="radio" data-checked="false" role="radio" aria-checked="false"><span class="dot"></span>不显示</span>
+                        <span class="radio" data-checked="true" role="radio" aria-checked="true"><span class="dot"></span>紧凑</span>
+                      </div>
+                      <div class="pill">
+                        <button aria-pressed="false">不显示</button>
+                        <button aria-pressed="true">紧凑</button>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="row">
+                    <div class="row-text">
+                      <div class="row-title">远程内容卡</div>
+                      <div class="row-desc">在首页右侧显示官方公告与活动内容。</div>
+                    </div>
+                    <div class="row-action">
+                      <label class="check" data-checked="true"><span class="box">&#xE73E;</span></label>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="group">
+                <h3 class="group-title">更新</h3>
+                <div class="group-card">
+                  <div class="row">
+                    <div class="row-text">
+                      <div class="row-title">启动时检查更新</div>
+                      <div class="row-desc">发现新版本时显示一次通知，不打断当前操作。</div>
+                    </div>
+                    <div class="row-action">
+                      <label class="check" data-checked="true"><span class="box">&#xE73E;</span></label>
+                    </div>
+                  </div>
+                  <div class="row">
+                    <div class="row-text"><div class="row-title">更新通道</div></div>
+                    <div class="row-action">
+                      <div class="radios" role="radiogroup" aria-label="更新通道">
+                        <span class="radio" data-checked="true" role="radio" aria-checked="true"><span class="dot"></span>稳定版</span>
+                        <span class="radio" data-checked="false" role="radio" aria-checked="false"><span class="dot"></span>测试版</span>
+                      </div>
+                      <div class="pill">
+                        <button aria-pressed="true">稳定版</button>
+                        <button aria-pressed="false">测试版</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <div class="inline-bar error" role="alert">
+              <span class="ico">&#xE783;</span>
+              <div><b>保存失败。</b>无法写入 settings.json，请检查数据目录权限后重试。</div>
+              <div class="bar-actions"><button class="btn subtle">查看日志</button></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-footer">
+          <div class="status"><span class="dot-warn"></span>有未保存的更改</div>
+          <div class="actions">
+            <button class="btn">放弃更改</button>
+            <button class="btn accent">保存</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 3. 通知 ================= -->
+  <section class="section">
+    <div class="section-head"><h2>通知</h2><span class="tag">仍是应用内 Toast</span></div>
+    <p class="section-note">
+      保留右上角、392 DIP、悬停/焦点暂停、固定档位时长；换掉玻璃卡，改用 Fluent InfoBar 的
+      <b>严重级别语义底色 + 1 DIP 同色描边</b>，实心卡片，最多 4 条，按稳定 ID 去重。
+      需要用户决策的反馈不用 Toast，改用设置页内的 MessageBar（见上一节底部）。
+    </p>
+
+    <div class="frame tall" style="min-height:600px">
+      <span class="frame-label">主界面 · 通知栈</span>
+      <div class="shell" aria-hidden="true">
+        <div class="rail">
+          <div class="ico active">&#xE7FC;</div><div class="ico">&#xE7FC;</div>
+          <div class="spacer"></div><div class="ico">&#xE713;</div>
+        </div>
+        <div class="home">
+          <div class="wordmark">Blue Archive</div>
+          <div class="statusline"><span class="chip">游戏运行中</span><span class="chip">下载源：官方</span></div>
+          <div class="panel"></div>
+        </div>
+      </div>
+
+      <div class="toast-host" role="region" aria-label="通知" aria-live="polite">
+        <div class="toast success">
+          <span class="ico">&#xE930;</span>
+          <div class="body">
+            <div class="t-title">安装完成</div>
+            <div class="t-msg">蔚蓝档案已更新到 2.14.3，可以开始游戏。</div>
+            <div class="t-actions"><button class="btn subtle">开始游戏</button></div>
+          </div>
+          <button class="t-close" aria-label="关闭通知">&#xE711;</button>
+        </div>
+
+        <div class="toast info">
+          <span class="ico">&#xE946;</span>
+          <div class="body">
+            <div class="t-title">发现新版本 0.9.4</div>
+            <div class="t-msg">启动器有可用更新，不会影响游戏文件。</div>
+            <div class="t-actions"><button class="btn subtle">查看更新</button></div>
+          </div>
+          <button class="t-close" aria-label="关闭通知">&#xE711;</button>
+        </div>
+
+        <div class="toast warning">
+          <span class="ico">&#xE7BA;</span>
+          <div class="body">
+            <div class="t-title">检查更新失败</div>
+            <div class="t-msg">无法连接更新服务器，请检查网络或代理设置。</div>
+          </div>
+          <button class="t-close" aria-label="关闭通知">&#xE711;</button>
+        </div>
+
+        <div class="toast error">
+          <span class="ico">&#xE783;</span>
+          <div class="body">
+            <div class="t-title">下载失败</div>
+            <div class="t-msg">主 CDN 与备用 CDN 均无响应。已保留可续传的临时文件。</div>
+            <div class="t-actions">
+              <button class="btn subtle">查看日志</button>
+              <button class="btn subtle">重试</button>
+            </div>
+            <div class="t-progress" aria-hidden="true"><i></i></div>
+          </div>
+          <button class="t-close" aria-label="关闭通知">&#xE711;</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 待决清单 ================= -->
+  <section class="section">
+    <div class="section-head"><h2>已定结论与剩余分叉</h2></div>
+    <div class="decisions">
+      <div class="decision">
+        <h3>✅ 已定</h3>
+        <p>实心表面；确认 440 / 对话框 560 / 面板 720–1000；Basic + Panel 两形态；整窗设置页保留 64 图标栏；分组卡片 + 原生单选组；保留草稿 + 保存；通知最多 4 条、按 key 去重；本轮不接系统通知；Fluent 字阶先用于这三处。</p>
+      </div>
+      <div class="decision">
+        <h3>① 批次切法</h3>
+        <p>三批（对话框 → 设置 → 通知）还是先把共享表面层一次改完、再清理各功能。</p>
+      </div>
+      <div class="decision">
+        <h3>② 外观预览</h3>
+        <p>整窗设置页下，预览主界面是继续“隐藏设置、底部返回条”，还是改成左右分屏。</p>
+      </div>
+      <div class="decision">
+        <h3>③ 通知合并</h3>
+        <p>去重键由调用方显式给出；同类消息合并计数；超过 4 条时淘汰最早且无动作的通知。</p>
+      </div>
+      <div class="decision">
+        <h3>④ 验收与结算</h3>
+        <p>每批跑 verify.ps1、定向重制黄金基线、同步设计规范与新 ADR，还是一次性收口。</p>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function () {
+  var html = document.documentElement;
+  var body = document.body;
+
+  function wire(fork, attr, apply) {
+    var group = document.querySelector('.switch[data-fork="' + fork + '"]');
+    if (!group) return;
+    group.addEventListener('click', function (e) {
+      var btn = e.target.closest('button');
+      if (!btn || btn.getAttribute('aria-pressed') === 'true') return;
+      group.querySelectorAll('button').forEach(function (b) {
+        b.setAttribute('aria-pressed', String(b === btn));
+      });
+      apply(btn.getAttribute(attr));
+    });
+  }
+
+  wire('theme', 'data-theme-value', function (v) {
+    html.setAttribute('data-theme', v);
+  });
+  wire('dialog', 'data-dialog-value', function (v) {
+    body.setAttribute('data-dialog', v);
+  });
+  wire('rows', 'data-rows-value', function (v) {
+    body.setAttribute('data-rows', v);
+  });
+  wire('seg', 'data-seg-value', function (v) {
+    body.setAttribute('data-seg', v);
+  });
+
+  // 原型内的假交互：单选/复选/胶囊只看视觉，不做状态机
+  document.querySelectorAll('.pill button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      b.parentElement.querySelectorAll('button').forEach(function (x) {
+        x.setAttribute('aria-pressed', String(x === b));
+      });
+    });
+  });
+})();
+</script>
+</body>
+</html>

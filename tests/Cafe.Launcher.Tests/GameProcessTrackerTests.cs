@@ -234,19 +234,214 @@ public sealed class GameProcessTrackerTests
         Assert.Null(tracker.LastExit);
     }
 
+    [Fact]
+    public async Task Dispose_WhenTrackingLiveGame_ReleasesObservationOnceWithoutReportingExit()
+    {
+        var fake = new FakeTrackedProcess();
+        var tracker = new GameProcessTracker(StubProbe(), _ => fake);
+        using var process = new Process();
+        var exitEvents = 0;
+        tracker.TrackedProcessExited += () => exitEvents++;
+        tracker.Register(new GameProcess(process, "wine"));
+        var lateExit = fake.CaptureExitCallback();
+
+        tracker.Dispose();
+        tracker.Dispose();
+        lateExit();
+
+        Assert.Equal(1, fake.DisposeCount);
+        Assert.Equal(0, fake.SubscriberCount);
+        Assert.Equal(0, fake.ExitCodeReadCount);
+        Assert.Equal(0, exitEvents);
+        Assert.False(fake.HasExited);
+        Assert.False(tracker.HasLiveTrackedProcess);
+        Assert.Null(tracker.LastExit);
+        Assert.Empty(await tracker.FindRunningGameProcessesAsync(Query));
+    }
+
+    [Fact]
+    public async Task Dispose_WhenGameIsStillRunning_KeepsNameQueriesAvailable()
+    {
+        using var tracker = new GameProcessTracker(StubProbe("BlueArchive"));
+
+        tracker.Dispose();
+
+        Assert.Equal(["BlueArchive"], await tracker.FindRunningGameProcessesAsync(Query));
+        Assert.False(tracker.HasLiveTrackedProcess);
+    }
+
+    [Fact]
+    public void Dispose_AfterCapturedExit_PreservesLastExitAndIgnoresQueuedCallback()
+    {
+        var fake = new FakeTrackedProcess { ExitCode = 42 };
+        using var tracker = new GameProcessTracker(StubProbe(), _ => fake);
+        using var process = new Process();
+        var exitEvents = 0;
+        tracker.TrackedProcessExited += () => exitEvents++;
+        tracker.Register(new GameProcess(process, "umu"));
+        var lateExit = fake.CaptureExitCallback();
+        fake.RaiseExited();
+        var lastExit = tracker.LastExit;
+
+        tracker.Dispose();
+        lateExit();
+
+        Assert.NotNull(lastExit);
+        Assert.Same(lastExit, tracker.LastExit);
+        Assert.Equal(42, tracker.LastExit!.ExitCode);
+        Assert.Equal(1, fake.DisposeCount);
+        Assert.Equal(1, fake.ExitCodeReadCount);
+        Assert.Equal(0, fake.SubscriberCount);
+        Assert.Equal(1, exitEvents);
+    }
+
+    [Fact]
+    public void Register_AfterDispose_RejectsBeforeAdaptingTheProcess()
+    {
+        var adapterCalls = 0;
+        using var tracker = new GameProcessTracker(StubProbe(), _ =>
+        {
+            adapterCalls++;
+            return new FakeTrackedProcess();
+        });
+        using var process = new Process();
+        tracker.Dispose();
+
+        Assert.Throws<ObjectDisposedException>(() => tracker.Register(new GameProcess(process, "native")));
+
+        Assert.Equal(0, adapterCalls);
+        Assert.False(tracker.HasLiveTrackedProcess);
+        Assert.Null(tracker.LastExit);
+    }
+
+    [Fact]
+    public async Task Register_WhenDisposeWinsDuringAdaptation_ReleasesUnadoptedWrapper()
+    {
+        var fake = new FakeTrackedProcess();
+        var adapterEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseAdapter = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var tracker = new GameProcessTracker(StubProbe(), _ =>
+        {
+            adapterEntered.SetResult();
+            // Adapter is synchronous; block only this background test worker to fix the race order.
+            releaseAdapter.Task.GetAwaiter().GetResult();
+            return fake;
+        });
+        using var process = new Process();
+        var registration = Task.Run(() => tracker.Register(new GameProcess(process, "wine")));
+        await adapterEntered.Task;
+        try
+        {
+            tracker.Dispose();
+        }
+        finally
+        {
+            releaseAdapter.SetResult();
+        }
+
+        await Assert.ThrowsAsync<ObjectDisposedException>(() => registration);
+
+        Assert.Equal(1, fake.DisposeCount);
+        Assert.Equal(0, fake.SubscriberCount);
+        Assert.Equal(0, fake.StartObservingCount);
+        Assert.False(tracker.HasLiveTrackedProcess);
+        Assert.Null(tracker.LastExit);
+    }
+
+    [Fact]
+    public async Task Dispose_WhenExitCallbackRaces_ReleasesWrapperOnlyOnceAndRejectsLateCallbacks()
+    {
+        var fake = new FakeTrackedProcess { ExitCode = 7 };
+        using var tracker = new GameProcessTracker(StubProbe(), _ => fake);
+        using var process = new Process();
+        var exitEvents = 0;
+        tracker.TrackedProcessExited += () => Interlocked.Increment(ref exitEvents);
+        tracker.Register(new GameProcess(process, "native"));
+        var exit = fake.CaptureExitCallback();
+        var start = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var exitTask = Task.Run(async () =>
+        {
+            await start.Task;
+            exit();
+        });
+        var disposeTask = Task.Run(async () =>
+        {
+            await start.Task;
+            tracker.Dispose();
+        });
+        start.SetResult();
+        await Task.WhenAll(exitTask, disposeTask);
+        var confirmedExitEvents = exitEvents;
+        var exitCodeReads = fake.ExitCodeReadCount;
+
+        exit();
+        tracker.Dispose();
+
+        Assert.InRange(confirmedExitEvents, 0, 1);
+        Assert.Equal(confirmedExitEvents, exitEvents);
+        Assert.Equal(exitCodeReads, fake.ExitCodeReadCount);
+        Assert.Equal(1, fake.DisposeCount);
+        Assert.Equal(0, fake.SubscriberCount);
+        Assert.False(tracker.HasLiveTrackedProcess);
+        Assert.Equal(confirmedExitEvents == 1, tracker.LastExit is not null);
+    }
+
+    [Fact]
+    public void Register_WhenObservationReportsExitSynchronously_CapturesAndPublishesItOnce()
+    {
+        var fake = new FakeTrackedProcess { ExitCode = 3 };
+        fake.OnStartObserving = fake.RaiseExited;
+        using var tracker = new GameProcessTracker(StubProbe(), _ => fake);
+        using var process = new Process();
+        var exitEvents = 0;
+        tracker.TrackedProcessExited += () => exitEvents++;
+
+        tracker.Register(new GameProcess(process, "native"));
+
+        Assert.Equal(1, exitEvents);
+        Assert.Equal(1, fake.ExitCodeReadCount);
+        Assert.Equal(1, fake.DisposeCount);
+        Assert.Equal(3, tracker.LastExit!.ExitCode);
+        Assert.False(tracker.HasLiveTrackedProcess);
+    }
+
     private sealed class FakeTrackedProcess : ITrackedProcess
     {
+        private Action? exited;
+        private int exitCode = -1;
         public bool HasExited { get; set; }
-        public int ExitCode { get; set; } = -1;
-        public bool DisposeSucceeded { get; private set; }
-        public event Action? Exited;
+        public int ExitCode
+        {
+            get
+            {
+                ObjectDisposedException.ThrowIf(DisposeCount > 0, this);
+                ExitCodeReadCount++;
+                return exitCode;
+            }
+            set => exitCode = value;
+        }
+        public bool DisposeSucceeded => DisposeCount > 0;
+        public int DisposeCount { get; private set; }
+        public int ExitCodeReadCount { get; private set; }
+        public int StartObservingCount { get; private set; }
+        public int SubscriberCount => exited?.GetInvocationList().Length ?? 0;
+        public Action? OnStartObserving { get; set; }
+        public event Action? Exited
+        {
+            add => exited += value;
+            remove => exited -= value;
+        }
 
-        public void RaiseExited() => Exited?.Invoke();
+        public void RaiseExited() => exited?.Invoke();
+
+        public Action CaptureExitCallback() => exited ?? throw new InvalidOperationException("No exit observer.");
 
         public void StartObserving()
         {
+            StartObservingCount++;
+            OnStartObserving?.Invoke();
         }
 
-        public void Dispose() => DisposeSucceeded = true;
+        public void Dispose() => DisposeCount++;
     }
 }

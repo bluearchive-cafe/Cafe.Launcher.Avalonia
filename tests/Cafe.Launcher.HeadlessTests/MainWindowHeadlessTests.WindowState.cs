@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.Controls.Chrome;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
@@ -25,28 +26,15 @@ public sealed partial class MainWindowHeadlessTests
     [AvaloniaTheory]
     [InlineData("1.2.3")]
     [InlineData("1.2.3-beta.4")]
-    public void MainWindow_TitleBar_ShowsHostVersionAcrossLanguages(string launcherVersion)
+    public void MainWindow_WindowTitle_ShowsProductNameAndHostVersion(string launcherVersion)
     {
         using var context = CreateContext(configure: services => services.AddSingleton(
             new LauncherBuildIdentity(launcherVersion, "abc1234", "2026-11-01", "Debug")));
-        context.Window.Width = context.Window.MinWidth;
         context.Window.Show();
         Dispatcher.UIThread.RunJobs();
 
-        var titleBar = context.Window.GetVisualDescendants()
-            .OfType<Grid>()
-            .Single(control => control.Name == "TitleBar");
-        var title = titleBar.GetVisualDescendants()
-            .OfType<TextBlock>()
-            .Single(control => control.Classes.Contains("titlebar-brand"));
-        var version = titleBar.GetVisualDescendants()
-            .OfType<TextBlock>()
-            .Single(control => control.Classes.Contains("titlebar-version"));
-        var badge = Assert.IsType<Border>(version.Parent);
-        var fill = Assert.IsAssignableFrom<ISolidColorBrush>(badge.Background);
-        Assert.True(fill.Color.A is > 0 and < byte.MaxValue);
-        Assert.Equal(context.Window.FindResource("Launcher.Text.OnChrome.Muted"), version.Foreground);
-        Assert.True(version.FontSize < title.FontSize);
+        var expected = $"{context.ViewModel.Shell.ProductName} v{launcherVersion}";
+        Assert.Equal(expected, context.Window.Title);
 
         foreach (var language in new[]
         {
@@ -59,16 +47,68 @@ public sealed partial class MainWindowHeadlessTests
             context.ViewModel.Shell.ApplyLanguage(language, hasSnapshot: false);
             Dispatcher.UIThread.RunJobs();
 
-            Assert.Equal($"v{launcherVersion}", version.Text);
-            Assert.True(version.IsEffectivelyVisible);
-            AssertControlInsideWindow(version, context.Window);
-            var titleRight = title.TranslatePoint(new Point(title.Bounds.Width, 0), titleBar)!.Value.X;
-            var versionLeft = version.TranslatePoint(default, titleBar)!.Value.X;
-            Assert.True(versionLeft > titleRight);
-            Assert.True(context.Window.IsWithinTitleBar(version));
-            Assert.False(MainWindow.IsInteractive(version));
-            Assert.False(MainWindow.IsInteractive(badge));
+            Assert.Equal(expected, context.Window.Title);
         }
+    }
+
+    [AvaloniaFact]
+    public void MainWindow_UsesTransparentExtendedTitleBar()
+    {
+        using var context = CreateContext();
+        Assert.True(context.Window.TitleBar.ExtendsContentIntoTitleBar);
+        Assert.Equal(48, context.Window.TitleBar.Height);
+        Assert.Equal(Colors.Transparent, context.Window.TitleBar.BackgroundColor);
+        Assert.Equal(Colors.Transparent, context.Window.TitleBar.InactiveBackgroundColor);
+        Assert.Equal(Colors.Transparent, context.Window.TitleBar.ButtonBackgroundColor);
+        Assert.Equal(Colors.Transparent, context.Window.TitleBar.ButtonInactiveBackgroundColor);
+    }
+
+    [AvaloniaFact]
+    public void MainWindow_Header_IsDraggableTitleBarAndKeepsToolsInteractive()
+    {
+        using var context = CreateContext();
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var header = context.Window.FindControl<Border>("GameHeader")!;
+        Assert.Equal(WindowDecorationsElementRole.TitleBar, WindowDecorationProperties.GetElementRole(header));
+
+        // 页头空白区承担拖拽：平台会把它映射为 HTCAPTION（双击最大化、右键系统菜单随附）。
+        var emptyPoint = header.TranslatePoint(new Point(8, header.Bounds.Height / 2), context.Window)!.Value;
+        Assert.Equal(WindowDecorationsElementRole.TitleBar, ResolveChromeRole(context.Window, emptyPoint));
+
+        // 工具按钮仍须接收指针输入，不能被页头的拖拽角色吞掉。
+        var tools = header.GetVisualDescendants().OfType<Button>().Where(button => button.IsEffectivelyVisible).ToArray();
+        Assert.NotEmpty(tools);
+        Assert.All(tools, button =>
+        {
+            Assert.Equal(WindowDecorationsElementRole.User, WindowDecorationProperties.GetElementRole(button));
+            var center = button.TranslatePoint(
+                new Point(button.Bounds.Width / 2, button.Bounds.Height / 2),
+                context.Window)!.Value;
+            Assert.Equal(WindowDecorationsElementRole.User, ResolveChromeRole(context.Window, center));
+        });
+    }
+
+    /// <summary>
+    /// 复刻 Avalonia 平台侧的装饰区角色解析：取命中点最上层视觉，再沿视觉树向上找
+    /// 第一个非 None 的角色。页头声明 <c>TitleBar</c> 时，按钮必须就近声明
+    /// <c>User</c>，否则点击会被窗口拖动吞掉。
+    /// </summary>
+    private static WindowDecorationsElementRole? ResolveChromeRole(Window window, Point point)
+    {
+        for (var visual = window.GetVisualAt(point);
+             visual is not null;
+             visual = visual.GetVisualParent())
+        {
+            var role = WindowDecorationProperties.GetElementRole(visual);
+            if (role != WindowDecorationsElementRole.None)
+            {
+                return role;
+            }
+        }
+
+        return null;
     }
 
     [AvaloniaFact]
@@ -91,64 +131,6 @@ public sealed partial class MainWindowHeadlessTests
         Assert.Single(context.Window.GetVisualDescendants().OfType<MainWindowSettingsOverlay>());
         Assert.Single(context.Window.GetVisualDescendants().OfType<MainWindowDialogsOverlay>());
         Assert.Single(context.Window.GetVisualDescendants().OfType<MainWindowToastOverlay>());
-    }
-
-    [AvaloniaFact]
-    public void MainWindow_TitleBarDragHitTesting_ExcludesInteractiveControlsAndNonTitleContent()
-    {
-        using var context = CreateContext();
-        context.Window.Show();
-        Dispatcher.UIThread.RunJobs();
-
-        var titleBar = context.Window.GetVisualDescendants()
-            .OfType<Grid>()
-            .Single(control => control.Name == "TitleBar");
-        var settingsButton = titleBar.GetVisualDescendants()
-            .OfType<Button>()
-            .Single(control => control.Classes.Contains("settings"));
-        var title = titleBar.GetVisualDescendants()
-            .OfType<TextBlock>()
-            .Single(control => control.Classes.Contains("titlebar-brand"));
-        var outsideTitleBar = context.Window.GetVisualDescendants()
-            .OfType<Grid>()
-            .Single(control => control.Classes.Contains("operation-layout"));
-
-        Assert.True(context.Window.IsWithinTitleBar(settingsButton));
-        Assert.True(context.Window.IsWithinTitleBar(title));
-        Assert.True(MainWindow.IsInteractive(settingsButton));
-        Assert.False(MainWindow.IsInteractive(title));
-        Assert.False(context.Window.IsWithinTitleBar(outsideTitleBar));
-    }
-
-    /// <summary>
-    /// 标题栏是自绘的，拖动走 <c>OnPointerPressed</c> → <c>BeginMoveDrag</c>。触摸接触同样报
-    /// <c>IsLeftButtonPressed</c>，而同一窗口只有一个主指针：Win32 的 <c>BeginMoveDrag</c> 对
-    /// 非主指针**同步抛出** <c>InvalidOperationException</c>（Avalonia 12.1.3 把这个抛出从 Post
-    /// 回调里前移到了调用点），宿主的 dispatcher 策略会把它升级成致命崩溃——于是「第二根手指
-    /// 搭在标题栏上」会直接把启动器换成崩溃报告窗口。这里按多指接触钉住那条守卫。
-    /// </summary>
-    [AvaloniaFact]
-    public void MainWindow_TitleBarDrag_WithASecondTouchContact_DoesNotStartADrag()
-    {
-        using var context = CreateContext();
-        context.Window.Show();
-        Dispatcher.UIThread.RunJobs();
-
-        var titleBar = context.Window.GetVisualDescendants()
-            .OfType<Grid>()
-            .Single(control => control.Name == "TitleBar");
-        var pressPoint = new Point(titleBar.Bounds.Width / 2, titleBar.Bounds.Height / 2);
-
-        var firstContact = context.Window.TouchBegin(pressPoint);
-        var secondContact = context.Window.TouchBegin(pressPoint);
-        Dispatcher.UIThread.RunJobs();
-
-        context.Window.TouchEnd(secondContact, pressPoint);
-        context.Window.TouchEnd(firstContact, pressPoint);
-        Dispatcher.UIThread.RunJobs();
-
-        // 报错即失败：修好之前这条在 Win32 上是 BeginMoveDrag 的同步抛出。
-        Assert.True(context.Window.IsVisible);
     }
 
     [AvaloniaFact]
@@ -252,7 +234,7 @@ public sealed partial class MainWindowHeadlessTests
         var confirmations = new (Action Show, Action Hide, double Width)[]
         {
             (vm.Dialogs.ShowStopConfirm, () => vm.Dialogs.StopConfirm.IsVisible = false, 440),
-            (vm.Dialogs.ShowDownloadRunningCloseConfirm, () => vm.Dialogs.DownloadRunningCloseConfirm.IsVisible = false, 540),
+            (vm.Dialogs.ShowDownloadRunningCloseConfirm, () => vm.Dialogs.DownloadRunningCloseConfirm.IsVisible = false, 440),
             (() => vm.Settings.IsUnsavedChangesVisible = true, () => vm.Settings.IsUnsavedChangesVisible = false, 440),
             (() => vm.ResourcePanel.DiscardChangesConfirm.Show(vm.Shell.I18n[LocalizationKeys.ResourcePanelUnsavedChangesMessage]),
                 () => vm.ResourcePanel.DiscardChangesConfirm.IsVisible = false, 440),
@@ -272,16 +254,19 @@ public sealed partial class MainWindowHeadlessTests
                 var surface = dialog.GetVisualDescendants().OfType<DialogSurface>().Single();
                 var confirm = dialog.FindControl<Button>(dialog.IsDangerConfirm ? "DangerActionButton" : "PrimaryActionButton")!;
                 var cancel = dialog.FindControl<Button>("SafeActionButton")!;
-                var confirmStart = confirm.TranslatePoint(default, surface);
-                var cancelEnd = cancel.TranslatePoint(new Point(cancel.Bounds.Width, cancel.Bounds.Height), surface);
-                Assert.NotNull(confirmStart);
-                Assert.NotNull(cancelEnd);
+                var footer = surface.GetVisualDescendants().OfType<Border>()
+                    .Single(border => border.Name == "PART_FooterBand");
                 Assert.Equal(width, surface.Bounds.Width);
-                Assert.True(confirm.IsEffectivelyVisible);
-                Assert.True(cancel.IsEffectivelyVisible);
-                Assert.InRange(confirmStart.Value.X, 28, surface.Bounds.Width);
-                Assert.InRange(cancelEnd.Value.X, confirmStart.Value.X, surface.Bounds.Width - 28);
-                Assert.InRange(cancelEnd.Value.Y, 0, surface.Bounds.Height);
+                foreach (var button in new[] { confirm, cancel })
+                {
+                    Assert.True(button.IsEffectivelyVisible);
+                    var start = button.TranslatePoint(default, footer)!.Value;
+                    var end = new Point(start.X + button.Bounds.Width, start.Y + button.Bounds.Height);
+                    Assert.InRange(start.X, footer.Padding.Left, footer.Bounds.Width - footer.Padding.Right);
+                    Assert.InRange(end.X, start.X, footer.Bounds.Width - footer.Padding.Right);
+                    Assert.InRange(start.Y, footer.Padding.Top, footer.Bounds.Height - footer.Padding.Bottom);
+                    Assert.InRange(end.Y, start.Y, footer.Bounds.Height - footer.Padding.Bottom);
+                }
             }
 
             hide();
@@ -299,6 +284,7 @@ public sealed partial class MainWindowHeadlessTests
         using var context = CreateContext();
         context.Window.Width = 1024;
         context.Window.Height = 640;
+        context.ViewModel.IsMotionReduced = true;
         context.ViewModel.RemoteContent.IsPanelVisible = true;
         context.ViewModel.Operations.PanelMode = panelMode switch
         {
@@ -312,14 +298,40 @@ public sealed partial class MainWindowHeadlessTests
 
         var remotePanel = context.Window.GetVisualDescendants().OfType<Border>()
             .Single(control => control.Classes.Contains("remote-surface"));
-        // ADR-016：三种状态共享同一任务容器，底栏对遥测面板的让位约束对所有模式一致。
+        // 主操作浮在右下角；资讯占左侧身份区，两者在最小窗口下仍保持水平分离。
         var operationPanel = context.Window.GetVisualDescendants().OfType<Border>()
             .Single(control => control.Classes.Contains("operation-surface"));
+        var header = context.Window.FindControl<Border>("GameHeader")!;
+        var operation = context.Window.FindControl<Border>("OperationControlState")!;
+        var sidebar = context.Window.GetVisualDescendants().OfType<Border>()
+            .Single(control => control.Classes.Contains("game-sidebar"));
+        var content = context.Window.FindControl<Grid>("MainContentLayer")!;
+        var sidebarOrigin = sidebar.TranslatePoint(default, content)!.Value;
+        var headerOrigin = header.TranslatePoint(default, content)!.Value;
+        var operationOrigin = operation.TranslatePoint(default, content)!.Value;
+
+        Assert.Equal(new Point(0, 0), sidebarOrigin);
+        Assert.Equal(64, sidebar.Bounds.Width);
+        Assert.Equal(0, sidebar.CornerRadius.TopLeft);
+        Assert.Equal(sidebarOrigin.X + sidebar.Bounds.Width + 12, headerOrigin.X);
+        Assert.Equal(0, headerOrigin.Y);
+        Assert.Equal(48, header.Bounds.Height);
+        Assert.Equal(content.Bounds.Width, headerOrigin.X + header.Bounds.Width);
+        Assert.Equal(12, content.Bounds.Width - operationOrigin.X - operation.Bounds.Width);
+        Assert.Equal(12, content.Bounds.Height - operationOrigin.Y - operation.Bounds.Height);
 
         Assert.True(remotePanel.IsEffectivelyVisible);
-        Assert.True(
-            remotePanel.Bounds.Bottom <= operationPanel.Bounds.Top,
-            $"Remote panel bottom {remotePanel.Bounds.Bottom} overlaps operation panel top {operationPanel.Bounds.Top}.");
+        var remoteOrigin = remotePanel.TranslatePoint(default, context.Window)!.Value;
+        var operationWindowOrigin = operationPanel.TranslatePoint(default, context.Window)!.Value;
+        var client = context.Window.ClientSize;
+        Assert.Equal(12, client.Height - (remoteOrigin.Y + remotePanel.Bounds.Height));
+        Assert.Equal(12, client.Width - (operationWindowOrigin.X + operationPanel.Bounds.Width));
+        Assert.Equal(12, client.Height - (operationWindowOrigin.Y + operationPanel.Bounds.Height));
+        Assert.True(remoteOrigin.X + remotePanel.Bounds.Width <= operationWindowOrigin.X);
+
+        // 状态行归入标题下方的身份区，不再参与操作表面测量。
+        Assert.Null(operation.GetVisualDescendants().OfType<WrapPanel>().SingleOrDefault());
+        Assert.NotNull(context.Window.FindControl<WrapPanel>("GameStatusDetails"));
     }
 
     [AvaloniaTheory]
@@ -424,10 +436,15 @@ public sealed partial class MainWindowHeadlessTests
         using var context = CreateContext();
         context.Window.Show();
         Dispatcher.UIThread.RunJobs();
+        // 设置页脚的「放弃更改」同绑 ToggleSettingsCommand，但页未打开时不可见；
+        // 首页齿轮钮是唯一可见入口。
         var button = context.Window
             .GetVisualDescendants()
             .OfType<Button>()
-            .Single(control => control.Classes.Contains("settings"));
+            .Single(control => control.IsEffectivelyVisible
+                && ReferenceEquals(
+                    control.Command,
+                    context.ViewModel.WindowChrome.ToggleSettingsCommand));
 
         Assert.Same(context.ViewModel.WindowChrome.ToggleSettingsCommand, button.Command);
         Assert.False(string.IsNullOrWhiteSpace(AutomationProperties.GetName(button)));
@@ -540,7 +557,7 @@ public sealed partial class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
-    public void MainWindow_CloseCommand_WhenTrayIsConfigured_HidesWindow()
+    public void MainWindow_DrawnCaptionClose_WhenTrayIsConfigured_HidesWindow()
     {
         using var context = CreateContext();
         context.ViewModel.Settings.Editor.ApplySnapshot(new LauncherSettings
@@ -553,10 +570,14 @@ public sealed partial class MainWindowHeadlessTests
             new TestTrayPlatform());
         context.Window.SetSystemTray(trayService);
         context.Window.Show();
+        var closed = false;
+        context.Window.Closed += (_, _) => closed = true;
 
-        context.ViewModel.WindowChrome.CloseCommand.Execute(null);
+        // Avalonia's default drawn title bar invokes this Window API.
+        context.Window.Close();
         Dispatcher.UIThread.RunJobs();
 
+        Assert.False(closed);
         Assert.False(context.Window.IsVisible);
         Assert.NotEqual(WindowState.Minimized, context.Window.WindowState);
     }
@@ -625,23 +646,28 @@ public sealed partial class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
-    public void MainWindow_TitleBarMinimize_WhenTrayIsConfigured_StaysOnTaskbar()
+    public void MainWindow_NativeMinimize_PausesAndRestoresBannerCarousel()
     {
-        // The launch path hides to tray, but the title-bar minimize button still asks for a
-        // taskbar minimize — guard against the two paths being collapsed into one handler.
+        // The OS caption minimize button no longer runs the WindowChrome minimize command,
+        // so carousel pause/resume must follow the real window state.
         using var context = CreateContext();
-        using var trayService = new SystemTrayService(LauncherProfiles.Cafe, 
-            context.Window,
-            new LocalizationService(),
-            new TestTrayPlatform());
-        context.Window.SetSystemTray(trayService);
-        context.Window.Show();
+        ApplyRemoteState(context, state => state.OperationsResource = new OperationsResourceResponse
+        {
+            OperationsResourceOpen = true,
+            BannerLoop = true,
+            OperationsBannerList = [new OperationsBannerItem(), new OperationsBannerItem()]
+        });
+        Assert.True(context.ViewModel.RemoteContent.IsCarouselTimerRunning);
 
-        context.ViewModel.WindowChrome.MinimizeCommand.Execute(null);
+        context.Window.WindowState = WindowState.Minimized;
         Dispatcher.UIThread.RunJobs();
 
-        Assert.True(context.Window.IsVisible);
-        Assert.Equal(WindowState.Minimized, context.Window.WindowState);
+        Assert.False(context.ViewModel.RemoteContent.IsCarouselTimerRunning);
+
+        context.Window.WindowState = WindowState.Normal;
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(context.ViewModel.RemoteContent.IsCarouselTimerRunning);
     }
 
     [AvaloniaFact]

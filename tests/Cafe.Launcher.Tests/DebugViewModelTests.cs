@@ -218,6 +218,8 @@ public sealed class DebugViewModelTests : IDisposable
         var backend = new StubGameOperationExecutor { IsDownloadRunning = true };
         var errorHandling = new ErrorHandlingService(localizer, diagnostics, toastService);
         var operations = new GameOperationsViewModel(
+            LauncherProfiles.BlueArchiveJapan.RuntimeId,
+            new GameFileOperationCoordinator(),
             backend,
             new TestGameShortcutService(),
             new FakeGameSessionMonitor(),

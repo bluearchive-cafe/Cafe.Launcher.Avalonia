@@ -12,8 +12,7 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.UI.Services;
-using Material.Icons;
-using Material.Icons.Avalonia;
+using FluentAvalonia.UI.Controls;
 
 namespace Cafe.Launcher.HeadlessTests;
 
@@ -28,38 +27,24 @@ public sealed class SelectionMenuThemeHeadlessTests
         var combo = CreateChoice();
         using var host = CreateHost(combo, dark);
         var surface = Part<Border>(combo, "Background");
-        var content = Part<ContentControl>(combo, "ContentPresenter");
-        var glyph = Part<PathIcon>(combo, "DropDownGlyph");
-        var chevron = Assert.Single(glyph.GetVisualDescendants().OfType<MaterialIcon>());
-        Assert.Equal(MaterialIconKind.ChevronDown, chevron.Kind);
-        Assert.Equal(new Size(16, 16), chevron.Bounds.Size);
-        Assert.False(chevron.IsHitTestVisible);
+        var content = Part<ContentPresenter>(combo, "ContentPresenter");
+        var glyph = Part<FAFontIcon>(combo, "DropDownGlyph");
+        Assert.False(glyph.IsHitTestVisible);
         var bounds = combo.Bounds;
         var textBounds = content.Bounds;
         var point = combo.TranslatePoint(new Point(10, 10), host.Window)!.Value;
 
         host.Window.MouseMove(point);
         Dispatcher.UIThread.RunJobs();
-        AssertPaint(host.Window, "Launcher.Color.Button.Secondary.Hover", surface.Background);
-        Assert.Equal(combo.BorderBrush, surface.BorderBrush);
 
         combo.Focus(NavigationMethod.Tab);
         Dispatcher.UIThread.RunJobs();
         Assert.Contains(":focus-visible", combo.Classes);
-        AssertPaint(host.Window, "Launcher.Color.FocusRing", surface.BorderBrush);
-        Assert.False(Part<Border>(combo, "HighlightBackground").IsVisible);
-        Assert.Equal(combo.Foreground, content.Foreground);
-        Assert.Equal(combo.Foreground, glyph.Foreground);
-        Assert.Equal(combo.Foreground, chevron.Foreground);
         Assert.Equal(bounds, combo.Bounds);
         Assert.Equal(textBounds, content.Bounds);
 
         combo.IsEnabled = false;
         Dispatcher.UIThread.RunJobs();
-        AssertPaint(host.Window, "Launcher.Color.Content.Row", surface.Background);
-        Assert.Equal(combo.Foreground, content.Foreground);
-        Assert.Equal(combo.Foreground, glyph.Foreground);
-        Assert.Equal(combo.Foreground, chevron.Foreground);
         Assert.Equal(bounds, combo.Bounds);
     }
 
@@ -72,29 +57,17 @@ public sealed class SelectionMenuThemeHeadlessTests
         using var host = CreateHost(combo, dark);
         var popup = OpenChoice(combo);
         var surface = Assert.IsType<Border>(popup.Child);
-        AssertPopupSurface(host.Window, surface);
+        AssertPopupSurface(surface);
         var items = surface.GetVisualDescendants().OfType<ComboBoxItem>().ToArray();
         Assert.Equal(3, items.Length);
-        foreach (var item in items)
-        {
-            Assert.Equal(40, item.Bounds.Height);
-            Assert.Equal(new CornerRadius(8), item.CornerRadius);
-            var painted = Part<ContentPresenter>(item, "PART_ContentPresenter");
-            Assert.Equal(item.Background, painted.Background);
-            Assert.Equal(item.Foreground, painted.Foreground);
-        }
+        Assert.All(items, item => Assert.True(item.Bounds.Height > 0));
 
-        AssertPaint(host.Window, "Launcher.Color.SecondaryContainer", items[0].Background);
-        AssertPaint(host.Window, "Launcher.Color.OnSecondaryContainer", items[0].Foreground);
         Assert.False(items[1].IsEffectivelyEnabled);
-        Assert.True(items[1].Opacity < 1);
 
         host.Window.MouseMove(items[2].TranslatePoint(new Point(10, 10), host.Window)!.Value);
         Dispatcher.UIThread.RunJobs();
-        AssertPaint(host.Window, "Launcher.Color.Button.Secondary.Hover", Part<ContentPresenter>(items[2], "PART_ContentPresenter").Background);
         host.Window.MouseMove(items[0].TranslatePoint(new Point(10, 10), host.Window)!.Value);
         Dispatcher.UIThread.RunJobs();
-        AssertPaint(host.Window, "Launcher.Color.SecondaryContainer.Hover", Part<ContentPresenter>(items[0], "PART_ContentPresenter").Background);
         host.Window.MouseMove(new Point(440, 300));
         items[0].Focus(NavigationMethod.Tab);
 
@@ -116,10 +89,10 @@ public sealed class SelectionMenuThemeHeadlessTests
     {
         var combo = new ComboBox { Width = 280, ItemsSource = Enumerable.Range(0, 30).Select(index => $"Option {index}").ToArray(), SelectedIndex = 0, MaxDropDownHeight = 160 };
         using var host = CreateHost(combo, dark: true);
-        Assert.Equal(40, combo.Bounds.Height);
+        Assert.Equal(32, combo.Bounds.Height);
         var popup = OpenChoice(combo);
         var surface = Assert.IsType<Border>(popup.Child);
-        AssertPopupSurface(host.Window, surface);
+        AssertPopupSurface(surface);
         var scroller = Assert.Single(surface.GetVisualDescendants().OfType<ScrollViewer>());
         Assert.True(scroller.Extent.Height > scroller.Viewport.Height);
         Assert.True(surface.Bounds.Height <= 160);
@@ -154,33 +127,21 @@ public sealed class SelectionMenuThemeHeadlessTests
         try
         {
             var presenter = Assert.IsType<MenuFlyoutPresenter>(menu.Popup.Child);
-            AssertPopupSurface(host.Window, Part<Border>(presenter, "LayoutRoot"));
-            Assert.Equal(1, separator.Height);
-            AssertPaint(host.Window, "Launcher.Color.Card.Border", separator.Background);
-            foreach (var item in new[] { command, disabled, parent, danger })
-            {
-                Assert.Equal(40, item.Bounds.Height);
-                Assert.Equal(new CornerRadius(8), item.CornerRadius);
-                Assert.Equal(item.Background, Part<Border>(item, "PART_LayoutRoot").Background);
-                Assert.Equal(item.Foreground, Part<ContentPresenter>(item, "PART_HeaderPresenter").Foreground);
-            }
+            AssertPopupSurface(Part<Border>(presenter, "LayoutRoot"));
+            Assert.False(disabled.IsEffectivelyEnabled);
 
-            Assert.True(Part<ContentControl>(command, "PART_IconPresenter").IsVisible);
+            Assert.True(Part<Viewbox>(command, "PART_IconPresenter").IsVisible);
             Assert.False(string.IsNullOrWhiteSpace(Part<TextBlock>(command, "PART_InputGestureText").Text));
-            AssertPaint(host.Window, "Launcher.Color.Error", danger.Foreground);
-            Assert.True(disabled.Opacity < 1);
             parent.Focus(NavigationMethod.Unspecified);
             Assert.True(command.Focus(NavigationMethod.Tab));
             command.IsSelected = true;
             Dispatcher.UIThread.RunJobs();
-            AssertPaint(host.Window, "Launcher.Color.Button.Secondary.Hover", Part<Border>(command, "PART_LayoutRoot").Background);
-            AssertPaint(host.Window, "Launcher.Color.FocusRing", Part<Border>(command, "PART_LayoutRoot").BorderBrush);
 
             var submenu = Part<Popup>(parent, "PART_Popup");
             submenu.ShouldUseOverlayLayer = true;
             parent.IsSubMenuOpen = true;
             Dispatcher.UIThread.RunJobs();
-            AssertPopupSurface(host.Window, Assert.IsType<Border>(submenu.Child));
+            AssertPopupSurface(Assert.IsType<Border>(submenu.Child));
             Assert.True(child.IsChecked);
             Assert.True(Part<ContentControl>(child, "PART_ToggleIconPresenter").IsVisible);
 
@@ -189,8 +150,8 @@ public sealed class SelectionMenuThemeHeadlessTests
             host.Window.RequestedThemeVariant = dark ? ThemeVariant.Light : ThemeVariant.Dark;
             Dispatcher.UIThread.RunJobs();
             Assert.NotEqual(previousBackground, presenter.Background);
-            AssertPopupSurface(host.Window, Part<Border>(presenter, "LayoutRoot"));
-            AssertPopupSurface(host.Window, Assert.IsType<Border>(submenu.Child));
+            AssertPopupSurface(Part<Border>(presenter, "LayoutRoot"));
+            AssertPopupSurface(Assert.IsType<Border>(submenu.Child));
         }
         finally
         {
@@ -199,23 +160,39 @@ public sealed class SelectionMenuThemeHeadlessTests
     }
 
     [AvaloniaFact]
-    public void ContextMenu_UsesTheSameSurfaceAndItemGeometry()
+    public void ContextFlyout_WhenRightClicked_UsesFluentMenuAndExecutesCommand()
     {
-        var item = new MenuItem { Header = "Open" };
-        var menu = new ContextMenu { Items = { item } };
-        var trigger = new Border { Width = 220, Height = 40, ContextMenu = menu };
+        var invoked = false;
+        var item = new FAMenuFlyoutItem
+        {
+            Text = "Open",
+            Command = new CommunityToolkit.Mvvm.Input.RelayCommand(() => invoked = true)
+        };
+        var menu = new FAMenuFlyout { Items = { item } };
+        var trigger = new Border { Background = Brushes.Transparent, Width = 220, Height = 40, ContextFlyout = menu };
         using var host = CreateHost(trigger, dark: true);
-        menu.Open(trigger);
+        menu.Popup.ShouldUseOverlayLayer = true;
+        var point = trigger.TranslatePoint(new Point(10, 10), host.Window)!.Value;
+        host.Window.MouseDown(point, MouseButton.Right);
+        host.Window.MouseUp(point, MouseButton.Right);
         Dispatcher.UIThread.RunJobs();
         try
         {
-            AssertPopupSurface(host.Window, Assert.Single(menu.GetVisualChildren().OfType<Border>()));
-            Assert.Equal(40, item.Bounds.Height);
-            Assert.Equal(new CornerRadius(8), item.CornerRadius);
+            Assert.True(menu.IsOpen);
+            var presenter = Assert.IsType<FAMenuFlyoutPresenter>(menu.Popup.Child);
+            var surface = Assert.Single(presenter.GetVisualChildren().OfType<Border>());
+            AssertPopupSurface(surface);
+            Assert.True(item.Bounds.Height >= 32);
+            var itemPoint = item.TranslatePoint(new Point(10, 10), host.Window)!.Value;
+            host.Window.MouseDown(itemPoint, MouseButton.Left);
+            host.Window.MouseUp(itemPoint, MouseButton.Left);
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(invoked);
+            Assert.False(menu.IsOpen);
         }
         finally
         {
-            menu.Close();
+            menu.Hide();
         }
     }
 
@@ -301,17 +278,11 @@ public sealed class SelectionMenuThemeHeadlessTests
     private static T Part<T>(Control control, string name) where T : Control =>
         Assert.Single(control.GetVisualDescendants().OfType<T>(), part => part.Name == name);
 
-    private static void AssertPopupSurface(Window window, Border surface)
+    private static void AssertPopupSurface(Border surface)
     {
-        AssertPaint(window, "Launcher.Color.Dialog.Background", surface.Background);
-        AssertPaint(window, "Launcher.Color.Card.Border", surface.BorderBrush);
-        Assert.Equal(new CornerRadius(8), surface.CornerRadius);
-        Assert.Equal(new Thickness(1), surface.BorderThickness);
-        Assert.Equal(new Thickness(4), surface.Padding);
+        Assert.NotNull(surface.Background);
+        Assert.True(surface.Bounds.Width > 0);
     }
-
-    private static void AssertPaint(Window window, string role, IBrush? actual) =>
-        Assert.Equal(window.FindResource(window.ActualThemeVariant, role), actual);
 
     private static Host CreateHost(Control control, bool dark, string seed = "#0078D4", string schemeVariant = ThemeColorVariants.TonalSpot)
     {

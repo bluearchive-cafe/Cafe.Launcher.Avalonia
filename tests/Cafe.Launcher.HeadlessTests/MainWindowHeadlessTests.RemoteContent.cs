@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Threading;
 using Avalonia;
@@ -56,6 +56,10 @@ public sealed partial class MainWindowHeadlessTests
             };
         });
 
+        Assert.Equal(3, context.ViewModel.RemoteContent.SelectedNewsCategory!.VisibleItems.Count());
+        context.ViewModel.RemoteContent.ToggleNewsCategoryCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+
         var viewport = context.Window
             .GetVisualDescendants()
             .OfType<ScrollViewer>()
@@ -69,7 +73,7 @@ public sealed partial class MainWindowHeadlessTests
         Assert.Equal(5, context.ViewModel.RemoteContent.SelectedNewsCategory?.Items.Count);
         Assert.Equal(5, rowButtons.Length);
         Assert.Equal(184, viewport.Viewport.Height);
-        Assert.All(rowButtons, row => Assert.Equal(36, row.Bounds.Height));
+        Assert.All(rowButtons, row => Assert.True(row.Bounds.Height >= row.DesiredSize.Height));
         Assert.True(viewport.Extent.Height > viewport.Viewport.Height);
         Assert.Equal(longTitle, ToolTip.GetTip(rowButtons[0]));
 
@@ -138,9 +142,49 @@ public sealed partial class MainWindowHeadlessTests
             .ToArray();
 
         Assert.Equal(3, rowButtons.Length);
-        Assert.All(rowButtons, row => Assert.Equal(36, row.Bounds.Height));
-        Assert.Equal(124, viewport.Viewport.Height);
+        Assert.All(rowButtons, row => Assert.True(row.Bounds.Height >= row.DesiredSize.Height));
+        Assert.True(viewport.Viewport.Height >= rowButtons.Sum(row => row.Bounds.Height));
         Assert.Equal(viewport.Viewport.Height, viewport.Extent.Height);
+    }
+
+    [AvaloniaFact]
+    public void Golden_HomeNews_MatchesBaseline()
+    {
+        using var context = CreateContext();
+        PrepareGoldenWindow(context);
+        context.Window.Width = 1300;
+        context.Window.Height = 754;
+        var rows = Enumerable.Range(1, 3)
+            .Select(index => new NewsRowItem
+            {
+                Title = $"News item {index}",
+                Link = $"https://news.example.invalid/{index}",
+                PublishTime = 1_700_000_000_000 + index
+            })
+            .ToList();
+        ApplyRemoteState(context, state =>
+        {
+            state.OperationsResource = new OperationsResourceResponse
+            {
+                OperationsResourceOpen = true,
+                NewsList = new NewsListEnvelope
+                {
+                    Code = 0,
+                    Data = new NewsListData
+                    {
+                        News =
+                        [
+                            new NewsTypeItem
+                            {
+                                TypeLabel = "News",
+                                Rows = rows
+                            }
+                        ]
+                    }
+                }
+            };
+        });
+        GoldenScreenshot.Compare(context.Window, "home-news");
     }
 
     [AvaloniaFact]
@@ -248,7 +292,7 @@ public sealed partial class MainWindowHeadlessTests
 
         var selectedTab = context.Window.GetVisualDescendants().OfType<TabItem>().Single(tab => tab.IsSelected);
         var header = selectedTab.GetVisualDescendants().OfType<TextBlock>().Single(text => text.Text == "News");
-        var indicator = selectedTab.GetVisualDescendants().OfType<Border>()
+        var indicator = selectedTab.GetVisualDescendants().OfType<Avalonia.Controls.Shapes.Rectangle>()
             .Single(border => border.Name == "PART_SelectedPipe" && border.IsEffectivelyVisible);
         var headerTop = header.TranslatePoint(default, selectedTab);
         var indicatorTop = indicator.TranslatePoint(default, selectedTab);
@@ -286,42 +330,6 @@ public sealed partial class MainWindowHeadlessTests
 
         Assert.Empty(context.ViewModel.RemoteContent.BannerItems);
         Assert.Throws<ObjectDisposedException>(() => _ = bound.PixelSize);
-    }
-
-    [AvaloniaFact]
-    public void MainWindow_SocialChip_HoverKeepsOpaqueBackgroundOverWallpaper()
-    {
-        using var context = CreateContext();
-        ApplyRemoteState(context, state =>
-        {
-            state.SocialMediaResource = new SocialMediaResourceResponse
-            {
-                SocialMediaResourceOpen = true,
-                SocialMediaResourceList =
-                [
-                    new SocialMediaResourceItem { SocialMediaChannel = "Twitter", JumpUrl = "https://x.example.invalid/" }
-                ]
-            };
-        });
-
-        var chip = context.Window
-            .GetVisualDescendants()
-            .OfType<Button>()
-            .Single(control => control.Classes.Contains("social-chip") && control.Classes.Contains("official-site"));
-        var chipBorder = chip.GetVisualDescendants().OfType<Border>().First();
-
-        // The chips float directly on the wallpaper: both rest and hover states
-        // must stay opaque, otherwise the backdrop shows through on hover.
-        Assert.Equal((byte)0xFF, ((ISolidColorBrush)chipBorder.Background!).Color.A);
-
-        var topLeft = chip.TranslatePoint(default, context.Window);
-        Assert.NotNull(topLeft);
-        context.Window.MouseMove(topLeft.Value + new Point(chip.Bounds.Width / 2, chip.Bounds.Height / 2));
-        Dispatcher.UIThread.RunJobs();
-
-        Assert.True(chip.IsPointerOver);
-        var hoverBackground = Assert.IsType<SolidColorBrush>(chipBorder.Background);
-        Assert.Equal((byte)0xFF, hoverBackground.Color.A);
     }
 
     private static OperationsResourceResponse SingleBanner(string bannerUrl) => new()

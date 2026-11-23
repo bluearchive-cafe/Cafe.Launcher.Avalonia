@@ -72,13 +72,13 @@ public sealed class ResourcePanelViewModelTests
         var text = GetItem(context.ViewModel, ResourcePanelResourceCodes.Text);
         Assert.Equal(ResourcePanelItemStatus.Ready, text.Status);
         Assert.True(text.IsEnabled);
-        Assert.Equal("CheckCircle", text.StatusIconKind);
+        Assert.Equal(FluentGlyphs.Success, text.StatusGlyph);
         // 版本一致判定：官方与本地化版本相同的条目折叠为单行结论。
         Assert.True(text.IsVersionAligned);
         var voice = GetItem(context.ViewModel, ResourcePanelResourceCodes.Voice);
         Assert.Equal(ResourcePanelItemStatus.Waiting, voice.Status);
         Assert.False(voice.IsEnabled);
-        Assert.Equal("ClockOutline", voice.StatusIconKind);
+        Assert.Equal(FluentGlyphs.Clock, voice.StatusGlyph);
         Assert.False(voice.IsVersionAligned);
         // 脏检查：加载完成后无任何改动，保存不可用；改动开关后恢复可用。
         Assert.False(context.ViewModel.IsResourcePanelSaveEnabled);
@@ -156,7 +156,7 @@ public sealed class ResourcePanelViewModelTests
         foreach (var item in context.ViewModel.ResourcePanelItems)
         {
             Assert.Equal(ResourcePanelItemStatus.Failed, item.Status);
-            Assert.Equal("AlertCircle", item.StatusIconKind);
+            Assert.Equal(FluentGlyphs.Error, item.StatusGlyph);
             Assert.Equal(context.Localizer.T(LocalizationKeys.ResourcePanelFailed), item.StatusText);
             Assert.Equal("--", item.OfficialVersion);
             Assert.Equal("--", item.LocalizedVersion);

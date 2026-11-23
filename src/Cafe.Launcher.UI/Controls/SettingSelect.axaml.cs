@@ -5,11 +5,7 @@ using Avalonia.Data;
 
 namespace Cafe.Launcher.UI.Controls;
 
-/// <summary>
-/// Reusable M3 settings row for selectable launcher options. Forwards the shared
-/// row's adaptive-wrap metrics so standalone hosts can override them per instance;
-/// the defaults still come from the window-level styles.
-/// </summary>
+/// <summary>Binds a localized list of choices to the shared Fluent settings row.</summary>
 internal partial class SettingSelect : UserControl
 {
     public static readonly StyledProperty<string?> TitleProperty =
@@ -29,23 +25,12 @@ internal partial class SettingSelect : UserControl
             nameof(SelectedValue),
             defaultBindingMode: BindingMode.TwoWay);
 
-    public static readonly StyledProperty<bool> ShowTopDividerProperty =
-        AvaloniaProperty.Register<SettingSelect, bool>(nameof(ShowTopDivider), true);
-
     public static readonly StyledProperty<string?> HintProperty =
         AvaloniaProperty.Register<SettingSelect, string?>(nameof(Hint));
 
     /// <summary>提示显示闸门，默认开启；提示文本为空时始终折叠。</summary>
     public static readonly StyledProperty<bool> IsHintVisibleProperty =
         AvaloniaProperty.Register<SettingSelect, bool>(nameof(IsHintVisible), true);
-
-    /// <inheritdoc cref="SettingRow.MinimumCopyWidthProperty"/>
-    public static readonly StyledProperty<double> MinimumCopyWidthProperty =
-        AvaloniaProperty.Register<SettingSelect, double>(nameof(MinimumCopyWidth));
-
-    /// <inheritdoc cref="SettingRow.ContentSpacingProperty"/>
-    public static readonly StyledProperty<double> ContentSpacingProperty =
-        AvaloniaProperty.Register<SettingSelect, double>(nameof(ContentSpacing));
 
     public string? Title
     {
@@ -77,12 +62,6 @@ internal partial class SettingSelect : UserControl
         set => SetValue(SelectedValueProperty, value);
     }
 
-    public bool ShowTopDivider
-    {
-        get => GetValue(ShowTopDividerProperty);
-        set => SetValue(ShowTopDividerProperty, value);
-    }
-
     public string? Hint
     {
         get => GetValue(HintProperty);
@@ -93,20 +72,6 @@ internal partial class SettingSelect : UserControl
     {
         get => GetValue(IsHintVisibleProperty);
         set => SetValue(IsHintVisibleProperty, value);
-    }
-
-    /// <inheritdoc cref="MinimumCopyWidthProperty"/>
-    public double MinimumCopyWidth
-    {
-        get => GetValue(MinimumCopyWidthProperty);
-        set => SetValue(MinimumCopyWidthProperty, value);
-    }
-
-    /// <inheritdoc cref="ContentSpacingProperty"/>
-    public double ContentSpacing
-    {
-        get => GetValue(ContentSpacingProperty);
-        set => SetValue(ContentSpacingProperty, value);
     }
 
     public SettingSelect()

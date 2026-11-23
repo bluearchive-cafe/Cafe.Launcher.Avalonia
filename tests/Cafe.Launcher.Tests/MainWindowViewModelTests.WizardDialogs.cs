@@ -113,6 +113,9 @@ public partial class MainWindowViewModelTests
             case ModalKind.Notice:
                 viewModel.Dialogs.IsNoticeDialogVisible = true;
                 break;
+            case ModalKind.LegalDocument:
+                viewModel.Dialogs.ShowOpenSourceLicenseCommand.Execute(null);
+                break;
             case ModalKind.Update:
                 viewModel.Dialogs.LauncherUpdate.Show("1.0.0", [], LauncherUpdateInAppAvailability.PlatformUnsupported);
                 break;

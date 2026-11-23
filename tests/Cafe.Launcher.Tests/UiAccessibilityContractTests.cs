@@ -134,7 +134,7 @@ public sealed class UiAccessibilityContractTests
             .Where(element => HasClass(element, "gallery-button") || HasClass(element, "gallery-select"))
             .ToArray();
 
-        Assert.Equal(26, samples.Length);
+        Assert.Equal(4, samples.Length);
         Assert.All(samples, sample => Assert.Equal("False", sample.Attribute("IsTabStop")?.Value));
     }
 
@@ -143,22 +143,18 @@ public sealed class UiAccessibilityContractTests
     {
         // §8（2026-08-28 审计修复）：DialogSurface 表面名 = 标题文本；
         // 无标题外壳（设置/向导）由使用方显式给名；Toast 宿主命名并声明 live region。
-        var dialogTheme = XDocument.Load(TestRepository.FromPresentationRoot("Views/Styles/DialogSurface.axaml"));
-        var surfaceStyle = dialogTheme
-            .Descendants(Avalonia + "Style")
-            .Single(element => element.Attribute("Selector")?.Value == "controls|DialogSurface");
-        Assert.Equal(
-            "{Binding Title, RelativeSource={RelativeSource Self}}",
-            surfaceStyle.Elements(Avalonia + "Setter")
-                .Single(setter => setter.Attribute("Property")?.Value == "AutomationProperties.Name")
-                .Attribute("Value")?.Value);
+        var surface = XDocument.Load(TestRepository.FromPresentationRoot("Controls/DialogSurface.axaml")).Root;
+        Assert.Equal("{Binding #Surface.Title}", (string?)surface?.Attribute("AutomationProperties.Name"));
 
         var settings = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowSettingsOverlay.axaml"));
+        // ADR-070 第二批：设置整窗页不再包 DialogSurface；页面表面（Border.settings-page）继续持有
+        // 随编辑范围变化的可读名。
         var settingsSurface = settings
             .Descendants()
-            .Single(element => element.Name.LocalName == "DialogSurface");
+            .Single(element => element.Name.LocalName == "Border" && HasClass(element, "settings-page"));
+        // 设置表面可编辑启动器或某款游戏的配置，对外名随编辑范围变化（仍由本地化服务给出）。
         Assert.Equal(
-            "{Binding Shell.I18n[settings]}",
+            "{Binding Settings.DialogTitle}",
             settingsSurface.Attribute("AutomationProperties.Name")?.Value);
 
         var wizard = XDocument.Load(TestRepository.FromPresentationRoot("Views/SetupWizardOverlay.axaml"));

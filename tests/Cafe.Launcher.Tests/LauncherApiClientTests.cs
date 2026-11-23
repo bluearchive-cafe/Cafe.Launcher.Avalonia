@@ -44,6 +44,21 @@ public sealed class LauncherApiClientTests
     }
 
     [Fact]
+    public async Task GetBaseConfigAsync_WhenStellaBackgroundIsAbsolute_PreservesUrl()
+    {
+        const string imageUrl = "https://game-launcher-ss-cn.yostar.net/launcher_background_img/fixture.jpg";
+        var transport = new StubRemoteHttpTransport(_ =>
+            """{"code":200,"data":{"launcher_background_img":"https://game-launcher-ss-cn.yostar.net/launcher_background_img/fixture.jpg"}}""");
+        var profile = LauncherProfiles.StellaSoraChina;
+        var client = new LauncherApiClient(profile, transport, new AuthorizationHeaderFactory(profile),
+            new PatchUrlGroupService(profile, LauncherProfiles.Cafe));
+
+        var result = await client.GetBaseConfigAsync();
+
+        Assert.Equal(imageUrl, result.LauncherBackgroundImg);
+    }
+
+    [Fact]
     public void RewriteManifestUrl_WhenCafe_RewritesPackageHost()
     {
         var client = new LauncherApiClient(LauncherProfiles.BlueArchiveJapan, new StubRemoteHttpTransport(), new AuthorizationHeaderFactory(LauncherProfiles.BlueArchiveJapan), new PatchUrlGroupService(LauncherProfiles.BlueArchiveJapan, LauncherProfiles.Cafe));

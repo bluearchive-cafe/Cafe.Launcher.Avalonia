@@ -2,7 +2,7 @@
 
 [简体中文](README.md) | [English](README.en.md)
 
-面向 Blue Archive 日服的社区第三方桌面启动器，基于 .NET 10 与 Avalonia 构建。可以接管官方启动器已有的游戏目录，也可以从零安装，并完成更新、修复、启动和卸载。
+面向蔚蓝档案日服与星塔旅人国服的社区第三方桌面启动器，基于 .NET 10 与 Avalonia 构建。可以接管官方启动器已有的游戏目录，也可以从零安装，并完成更新、修复、启动和卸载。
 
 [![Stars](https://img.shields.io/github/stars/bluearchive-cafe/Cafe.Launcher.Avalonia?style=flat-square&label=Stars)](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia)
 [![正式版](https://img.shields.io/github/v/release/bluearchive-cafe/Cafe.Launcher.Avalonia?style=flat-square&color=3fb950&label=%E6%AD%A3%E5%BC%8F%E7%89%88)](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/latest)
@@ -26,10 +26,10 @@
 
 | 能力 | 说明 |
 | --- | --- |
-| 游戏管理 | 复用官方游戏目录与安装清单；安装、增量更新、CRC64 修复、启动和卸载 |
-| 下载控制 | 最多 10 个并发传输，暂停、继续、断点续传和限速；提供官方下载源与 Cafe 下载源 |
+| 游戏管理 | 复用两款游戏的官方目录与安装清单；分别管理设置与会话，后台任务在切换游戏时继续 |
+| 下载控制 | 最多 10 个并发传输，暂停、继续、断点续传和限速；蔚蓝档案提供官方与 Cafe 下载源，星塔旅人使用官方源 |
 | 启动校验 | 选择本地文件清单、远程文件清单或跳过检查；检查文件存在性和大小，完整内容校验使用修复 |
-| 汉化资源 | 使用八位大写字母 UID，在资源面板管理游戏文本、主线中配、图像视频三类资源 |
+| 汉化资源 | 蔚蓝档案使用八位大写字母 UID，在资源面板管理游戏文本、主线中配、图像视频三类资源 |
 | 外观 | English、简体中文、繁體中文、日本語界面；主题、图片与视频背景、壁纸取色；可预览、保存或放弃 |
 | 诊断与更新 | 本地日志查看与导出；Windows 更新包按同一版本的 SHA256SUMS 校验，再由独立更新助手应用 |
 
@@ -50,8 +50,8 @@ Linux 的反作弊兼容性取决于发行版、运行器、Proton 和驱动。�
 ## 开始使用
 
 1. 从 [Releases](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases) 下载对应平台的完整发行包。Windows 通常选择 `Cafe.Launcher_v<版本>_setup.exe`；便携版完整解压后运行 `Cafe.Launcher.exe`。
-2. 完成首次向导：语言、下载源、游戏安装路径、代理、确认。中文系统默认选择 Cafe 下载源，其他语言环境默认选择官方下载源。
-3. 已有游戏时选择现有 `BlueArchive_JP` 目录；尚未安装时选择基础目录，确认最终路径为 `YostarGames/BlueArchive_JP` 后安装。
+2. 完成首次向导，再从左侧游戏栏选择游戏。蔚蓝档案在中文系统首次选择 Cafe 下载源，星塔旅人使用官方源。
+3. 在游戏设置中识别现有的 `BlueArchive_JP` 或 `StellaSora_CN` 目录；尚未安装时，在安装准备中选择基础目录并核对最终路径。
 4. 游戏就绪后点击“开始游戏”。右侧下拉入口提供检查更新、打开目录、修复、卸载等操作；游戏桌面快捷方式支持 Windows 和 Linux（AppImage 需保留镜像文件）。
 
 完整步骤见[安装与首次使用](https://docs.bluearchive.cafe/cafe-launcher/installation)。切换下载源后按提示修复，使文件与所选清单一致。两个启动器使用同一游戏目录时，避免同时操作文件。
@@ -76,7 +76,7 @@ Linux 的反作弊兼容性取决于发行版、运行器、Proton 和驱动。�
 
 远程背景来自官方启动器配置中的图片地址，按需下载到本机缓存，失败时回退到内置背景；版权归相应权利人，项目发行包不包含该图片。自定义图片、视频或文件夹由用户选择，不会上传或随项目分发，使用许可由用户自行确认。
 
-Windows x64 与 Linux、macOS 便携版随包提供视频运行库；Linux 系统安装包通过包管理器安装依赖。视频音量默认为 0，独立静音开关保留所选音量；最小化、隐藏到托盘时暂停，减少动态效果时暂停并显示首帧静帧。主题色使用视频封面或首帧，不逐帧变化。外观修改即时预览，保存后持久化，放弃时恢复。格式与回退规则见[背景设置](https://docs.bluearchive.cafe/cafe-launcher/settings#背景)；动效位于“外观 → 主题与动效”，取色算法位于默认折叠的“高级配色”。仓库主视觉与发布横幅为项目制作的宣传物料。
+Windows x64 与 Linux、macOS 便携版随包提供视频运行库；Linux 系统安装包通过包管理器安装依赖。视频音量默认为 0，独立静音开关保留所选音量；最小化、隐藏到托盘时暂停，减少动态效果时暂停并显示首帧静帧。主题色使用视频封面或首帧，不逐帧变化。外观修改即时预览，也可选择“预览主界面”查看完整效果；保存后持久化，放弃时恢复。格式与回退规则见[背景设置](https://docs.bluearchive.cafe/cafe-launcher/settings#背景)；动效位于“外观 → 主题与动效”，取色算法位于默认折叠的“高级配色”。仓库主视觉与发布横幅为项目制作的宣传物料。
 
 ## 数据与许可
 
@@ -90,7 +90,7 @@ Windows x64 与 Linux、macOS 便携版随包提供视频运行库；Linux 系�
 
 Linux 升级会尝试迁移同一数据主目录中的旧 `Cafe Launcher` 目录，保留目标已有内容和未能迁移的旧文件。清理前通过“设置 → 高级 → 打开数据目录”核对位置。
 
-源码采用 [MIT License](LICENSE)，第三方组件许可见 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)。感谢 Avalonia、CommunityToolkit.Mvvm、Material.Icons.Avalonia 等开源项目，以及参与测试、翻译和反馈的贡献者。
+源码采用 [MIT License](LICENSE)，第三方组件许可见 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)。感谢 Avalonia、FluentAvaloniaUI、CommunityToolkit.Mvvm 等开源项目，以及参与测试、翻译和反馈的贡献者。
 
 ## 开发与文档
 

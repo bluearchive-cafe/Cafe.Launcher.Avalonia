@@ -7,6 +7,7 @@ using Cafe.Launcher.UI.Services.GameRuntime;
 using Cafe.Launcher.Testing;
 using Xunit;
 using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Services;
 using Cafe.Launcher.Core.Services.GameRuntime;
 
 namespace Cafe.Launcher.Tests;
@@ -68,7 +69,7 @@ public sealed class GameOperationJourneyTests
         Assert.False(context.Host.ExitRequested);
         Assert.Contains(notifications, toast =>
             toast.Severity == ToastSeverity.Success
-            && string.Equals(toast.Message, context.Localizer.T(LocalizationKeys.GameLaunched), StringComparison.Ordinal));
+            && string.Equals(toast.Message, context.OperationMessage(context.Localizer.T(LocalizationKeys.GameLaunched)), StringComparison.Ordinal));
     }
 
     [Fact]
@@ -91,7 +92,7 @@ public sealed class GameOperationJourneyTests
         // will not find.
         Assert.Contains(notifications, toast =>
             toast.Severity == ToastSeverity.Success
-            && string.Equals(toast.Message, context.Localizer.T(LocalizationKeys.GameLaunchedExiting), StringComparison.Ordinal));
+            && string.Equals(toast.Message, context.OperationMessage(context.Localizer.T(LocalizationKeys.GameLaunchedExiting)), StringComparison.Ordinal));
     }
 
     [Fact]
@@ -179,7 +180,8 @@ public sealed class GameOperationJourneyTests
 
         Assert.Null(context.Host.RepairConfirmationShown);
         Assert.Contains(notifications, toast =>
-            toast.Severity == ToastSeverity.Warning && toast.Message == "update available");
+            toast.Severity == ToastSeverity.Warning
+            && toast.Message == context.OperationMessage("update available"));
     }
 
     [Fact]
@@ -218,6 +220,89 @@ public sealed class GameOperationJourneyTests
         Assert.Equal(0, context.SessionMonitor.BeginSessionCallCount);
     }
 
+    [Theory]
+    [InlineData("stella-sora-cn", 1)]
+    [InlineData("blue-archive-jp", 0)]
+    public async Task StartGameAsync_WithAFileOperation_BlocksOnlyItsOwnGame(string busyGame, int expectedLaunches)
+    {
+        // 启动不是文件任务：别的游戏在下载/修复/卸载不该拦住本游戏的启动，
+        // 只有本游戏自己的文件任务才必须等它收尾。
+        var fileOperations = new GameFileOperationCoordinator();
+        using var lease = fileOperations.TryAcquire(busyGame, GameFileOperationKind.Download).Lease;
+        Assert.NotNull(lease);
+        var context = CreateContext(fileOperations: fileOperations);
+        context.Executor.LaunchResult = new GameLaunchResult
+        {
+            Success = true,
+            Message = "launched",
+            Validation = new ManifestValidationResult { Message = "validation ok" }
+        };
+        var notifications = context.SubscribeToasts();
+
+        await context.Journey.StartGameAsync(CreateSnapshot());
+
+        Assert.Equal(expectedLaunches, context.Executor.LaunchCallCount);
+        if (expectedLaunches == 0)
+        {
+            Assert.Contains(notifications, toast =>
+                toast.Severity == ToastSeverity.Warning
+                && toast.Message == context.Localizer.F(
+                    LocalizationKeys.GameOperationBusy,
+                    context.Localizer.T(LocalizationKeys.BlueArchiveJapan)));
+        }
+        else
+        {
+            Assert.DoesNotContain(notifications, toast => toast.Severity == ToastSeverity.Warning);
+        }
+    }
+
+    [Fact]
+    public async Task StartGameAsync_StellaSnapshot_ReadsItsAfterLaunchPreference()
+    {
+        // 后置行为是每游戏设置：Stella 的「保持窗口」不能被 Blue Archive 分区的
+        // 「最小化」覆盖，否则切到第二个游戏后窗口会无故消失。
+        var context = CreateContext("stella-sora-cn");
+        context.Executor.LaunchResult = new GameLaunchResult
+        {
+            Success = true,
+            Message = "launched",
+            Validation = new ManifestValidationResult { Message = "validation ok" }
+        };
+        var settings = new LauncherSettings { AfterLaunchBehavior = AfterLaunchBehaviors.Minimize };
+        settings.GetGameSettings("stella-sora-cn").AfterLaunchBehavior = AfterLaunchBehaviors.KeepOpen;
+        var snapshot = new LauncherStatusSnapshot
+        {
+            GameId = "stella-sora-cn",
+            RuntimeState = LauncherRuntimeState.Ready,
+            LocalGame = new LocalInstallationState(),
+            Remote = new LauncherRemoteState(),
+            Settings = settings
+        };
+
+        await context.Journey.StartGameAsync(snapshot);
+
+        Assert.Equal(1, context.Executor.LaunchCallCount);
+        Assert.False(context.Host.MinimizeRequested);
+        Assert.False(context.Host.ExitRequested);
+    }
+
+    [Fact]
+    public async Task StartGameAsync_WhenSnapshotBelongsToAnotherGame_RejectsBeforeRunning()
+    {
+        var context = CreateContext();
+
+        await Assert.ThrowsAsync<ArgumentException>(() => context.Journey.StartGameAsync(new LauncherStatusSnapshot
+        {
+            GameId = "stella-sora-cn",
+            RuntimeState = LauncherRuntimeState.Ready,
+            LocalGame = new LocalInstallationState(),
+            Remote = new LauncherRemoteState()
+        }));
+
+        Assert.Equal(0, context.Executor.LaunchCallCount);
+        Assert.Equal(0, context.Host.SetBusyCallCount);
+    }
+
     [Fact]
     public void NotifySessionStartFailed_RestoresWindowAndReportsTheExitCode()
     {
@@ -234,7 +319,7 @@ public sealed class GameOperationJourneyTests
             toast.Severity == ToastSeverity.Error
             && string.Equals(
                 toast.Message,
-                context.Localizer.F(LocalizationKeys.GameSessionStartFailed, exitCode),
+                context.OperationMessage(context.Localizer.F(LocalizationKeys.GameSessionStartFailed, exitCode)),
                 StringComparison.Ordinal));
     }
 
@@ -252,7 +337,7 @@ public sealed class GameOperationJourneyTests
             toast.Severity == ToastSeverity.Error
             && string.Equals(
                 toast.Message,
-                context.Localizer.F(LocalizationKeys.GameSessionStartFailed, -1),
+                context.OperationMessage(context.Localizer.F(LocalizationKeys.GameSessionStartFailed, -1)),
                 StringComparison.Ordinal));
     }
 
@@ -287,7 +372,8 @@ public sealed class GameOperationJourneyTests
             CreateSnapshot(LauncherRuntimeState.NotInstalled, gamePath: gamePath));
 
         Assert.Equal(1, context.Executor.InstallCallCount);
-        var expectedNotice = context.Localizer.F(LocalizationKeys.InstallOverExistingContentNotice, gamePath);
+        var expectedNotice = context.OperationMessage(
+            context.Localizer.F(LocalizationKeys.InstallOverExistingContentNotice, gamePath));
         // 提示必须先出现：「安装完成」的成功 toast 也会升起（ShowOperationResult），
         // 若它先到，用户读到的顺序就反了。
         Assert.Same(notifications[0], Assert.Single(notifications, toast => toast.Message == expectedNotice));
@@ -329,6 +415,25 @@ public sealed class GameOperationJourneyTests
             notifications,
             toast => toast.Message
                 == context.Localizer.F(LocalizationKeys.InstallOverExistingContentNotice, gamePath));
+    }
+
+    [Fact]
+    public async Task InstallOrUpdateAsync_WhenAnotherGameHoldsTheFileSlot_ReportsBusyAndSkipsExecution()
+    {
+        var fileOperations = new GameFileOperationCoordinator();
+        using var lease = fileOperations.TryAcquire("stella-sora-cn", GameFileOperationKind.Download).Lease;
+        Assert.NotNull(lease);
+        var context = CreateContext(fileOperations: fileOperations);
+        var notifications = context.SubscribeToasts();
+
+        await context.Journey.InstallOrUpdateAsync(CreateSnapshot(LauncherRuntimeState.NotInstalled));
+
+        Assert.Equal(0, context.Executor.InstallCallCount);
+        var toast = Assert.Single(notifications);
+        Assert.Equal(ToastSeverity.Warning, toast.Severity);
+        Assert.Equal(
+            context.Localizer.F(LocalizationKeys.GameOperationBusy, context.Localizer.T(LocalizationKeys.StellaSoraChina)),
+            toast.Message);
     }
 
     [Fact]
@@ -461,7 +566,7 @@ public sealed class GameOperationJourneyTests
         Assert.Equal(1, context.Executor.ValidateUninstallCallCount);
         var notification = Assert.Single(notifications);
         Assert.Equal(ToastSeverity.Warning, notification.Severity);
-        Assert.Equal("game path is gone", notification.Message);
+        Assert.Equal(context.OperationMessage("game path is gone"), notification.Message);
     }
 
     [Fact]
@@ -481,6 +586,32 @@ public sealed class GameOperationJourneyTests
         Assert.NotNull(validation);
         Assert.Equal(5, validation.AffectedFileCount);
         Assert.Empty(notifications);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RequestUninstallAsync_WhenTheGameIsSwitchedDuringPreflight_DiscardsTheConfirmation(bool switchBack)
+    {
+        // 预检还挂在执行层时用户切走了（无论之后是否切回），旧请求都不能再弹出确认框：
+        // 卸载对话框属于当时的那个游戏，切回来后凭空出现会让人以为点错了。
+        var context = CreateContext();
+        var completion = new TaskCompletionSource<GameOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        context.Executor.ValidateUninstallCompletion = completion;
+
+        var pending = context.Journey.RequestUninstallAsync(CreateSnapshot(gamePath: "C:\\Game"));
+        context.Journey.IsPresentationActive = false;
+        if (switchBack)
+        {
+            context.Journey.IsPresentationActive = true;
+        }
+        completion.SetResult(new GameOperationResult { Success = true });
+
+        await pending.WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.Equal(1, context.Executor.ValidateUninstallCallCount);
+        Assert.Equal(0, context.Host.UninstallConfirmationCount);
+        Assert.Equal(0, context.Executor.MeasureFootprintCallCount);
     }
 
     [Theory]
@@ -654,7 +785,9 @@ public sealed class GameOperationJourneyTests
         };
     }
 
-    private static JourneyTestContext CreateContext()
+    private static JourneyTestContext CreateContext(
+        string gameId = "blue-archive-jp",
+        IGameFileOperationCoordinator? fileOperations = null)
     {
         // Succeeding 预设与原 RecordingOperationExecutor 一致：所有操作默认成功，
         // 让旅程测试直接走成功分支，只有显式改写结果的用例才关心失败路径。
@@ -665,6 +798,8 @@ public sealed class GameOperationJourneyTests
         var localizer = new LocalizationService();
         var sessionMonitor = new FakeGameSessionMonitor();
         var journey = new GameOperationJourney(
+            gameId,
+            fileOperations ?? new GameFileOperationCoordinator(),
             executor,
             new TestGameShortcutService(),
             sessionMonitor,
@@ -692,6 +827,11 @@ public sealed class GameOperationJourneyTests
             ToastService.ToastRaised += notifications.Add;
             return notifications;
         }
+
+        public string OperationMessage(string message) => Localizer.F(
+            LocalizationKeys.GameOperationMessage,
+            GameDisplayName.Resolve(Journey.FixedGameId, Localizer),
+            message);
     }
 
     private sealed class RecordingJourneyHost : IGameOperationJourneyHost
@@ -714,6 +854,8 @@ public sealed class GameOperationJourneyTests
 
         public string? RepairConfirmationShown { get; private set; }
 
+        public int UninstallConfirmationCount { get; private set; }
+
         public List<GameOperationsRefreshMode> RefreshRequests { get; } = [];
         public Exception? RefreshException { get; set; }
         public TaskCompletionSource<bool>? RefreshCompletion { get; set; }
@@ -735,6 +877,7 @@ public sealed class GameOperationJourneyTests
                 case GameOperationPresentation.Snapshot snapshot: ApplySnapshot(snapshot.Value); break;
                 case GameOperationPresentation.LaunchCheck check: SetLaunchCheckResult(check.Message); break;
                 case GameOperationPresentation.RepairConfirmation confirmation: ShowRepairConfirmation(confirmation.Message); break;
+                case GameOperationPresentation.UninstallConfirmation: UninstallConfirmationCount++; break;
                 case GameOperationPresentation.Window { Action: GameOperationWindowAction.Minimize }: RequestMinimize(); break;
                 case GameOperationPresentation.Window { Action: GameOperationWindowAction.Exit }: RequestExit(); break;
                 case GameOperationPresentation.Window { Action: GameOperationWindowAction.Show }: RequestShow(); break;

@@ -94,7 +94,7 @@ public sealed partial class GameOperationsViewModelTests
         Assert.Empty(context.ViewModel.CompactTaskSpeed);
         Assert.Equal(context.Localizer.T(LocalizationKeys.TaskChecking), context.ViewModel.PrimaryActionText);
         Assert.Equal(context.Localizer.T(LocalizationKeys.VerifyingDownloadedFiles), context.ViewModel.ProgressDetail);
-        Assert.Equal("Magnify", context.ViewModel.PrimaryActionIcon);
+        Assert.Equal(FluentGlyphs.Search, context.ViewModel.PrimaryActionGlyph);
     }
 
     [Theory]

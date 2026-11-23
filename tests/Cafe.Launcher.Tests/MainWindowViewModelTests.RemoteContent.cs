@@ -1,3 +1,4 @@
+using Cafe.Launcher.UI.Constants;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.Core.Models;
 
@@ -40,7 +41,7 @@ public partial class MainWindowViewModelTests
     }
 
     [Fact]
-    public async Task InitializeAsync_WhenSocialChannelIsPixiv_UsesPaletteIcon()
+    public async Task InitializeAsync_WhenSocialChannelIsPixiv_UsesImageIcon()
     {
         var snapshot = CreateSnapshot();
         snapshot.Remote.SocialMediaResource = new SocialMediaResourceResponse
@@ -61,7 +62,7 @@ public partial class MainWindowViewModelTests
         await viewModel.InitializeAsync();
 
         var item = Assert.Single(viewModel.RemoteContent.SocialMediaItems);
-        Assert.Equal("Palette", item.SocialIconKind);
+        Assert.Equal(FluentGlyphs.Image, item.SocialGlyph);
     }
 
     [Fact]

@@ -1,4 +1,4 @@
-using Avalonia;
+﻿using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -12,6 +12,7 @@ using Cafe.Launcher.UI.ViewModels;
 using Cafe.Launcher.UI.Views;
 using Microsoft.Extensions.DependencyInjection;
 using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.HeadlessTests;
 
@@ -23,11 +24,20 @@ public sealed partial class MainWindowHeadlessTests
     private static readonly (string Code, Type SectionType)[] SettingsSections =
     [
         (SettingsCategoryCodes.General, typeof(SettingsGeneralSection)),
-        (SettingsCategoryCodes.Game, typeof(SettingsGameSection)),
         (SettingsCategoryCodes.DownloadNetwork, typeof(SettingsDownloadNetworkSection)),
         (SettingsCategoryCodes.Appearance, typeof(SettingsAppearanceSection)),
+        (SettingsCategoryCodes.DefaultBackground, typeof(SettingsAppearanceSection)),
         (SettingsCategoryCodes.Advanced, typeof(SettingsAdvancedSection)),
         (SettingsCategoryCodes.About, typeof(SettingsAboutSection))
+    ];
+
+    private static readonly (string Code, Type SectionType)[] GameSettingsSections =
+    [
+        (SettingsCategoryCodes.Game, typeof(SettingsGameSection)),
+        (SettingsCategoryCodes.GameLaunch, typeof(SettingsGameLaunchSection)),
+        (SettingsCategoryCodes.GameOptions, typeof(SettingsGameOptionsSection)),
+        (SettingsCategoryCodes.GameDownload, typeof(SettingsGameDownloadSection)),
+        (SettingsCategoryCodes.GameBackground, typeof(SettingsAppearanceSection))
     ];
 
     private static TestContext CreateContext(
@@ -41,7 +51,11 @@ public sealed partial class MainWindowHeadlessTests
         {
             if (executor is not null)
             {
-                services.AddSingleton(executor);
+                // 固定的 Blue Archive 呈现通过 DI 取得测试执行器；其他游戏保留真实默认实现。
+                services.AddSingleton<Func<LauncherGameContext, IGameOperationExecutor>>(
+                    (IServiceProvider _) => context => context.GameId == LauncherProfiles.BlueArchiveJapan.RuntimeId
+                        ? executor
+                        : new StubGameOperationExecutor());
             }
 
             configure?.Invoke(services);
@@ -66,6 +80,13 @@ public sealed partial class MainWindowHeadlessTests
         Dispatcher.UIThread.RunJobs();
     }
 
+    private static void OpenGameSettings(TestContext context)
+    {
+        context.Window.Show();
+        context.ViewModel.WindowChrome.ShowGameSettingsCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+    }
+
     private static void AssertControlInsideWindow(Control control, Window window)
     {
         var topLeft = control.TranslatePoint(default, window);
@@ -87,7 +108,7 @@ public sealed partial class MainWindowHeadlessTests
         /// <summary>拆卸顺序即所有权顺序：先关窗（停掉绑定与后台操作），再放容器，最后删目录。</summary>
         public void Dispose()
         {
-            Window.Close();
+            Window.CloseForShutdown();
             Provider.Dispose();
             Directory.Dispose();
         }

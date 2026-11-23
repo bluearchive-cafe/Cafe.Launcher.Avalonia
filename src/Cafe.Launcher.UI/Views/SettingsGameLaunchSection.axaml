@@ -1,0 +1,138 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cafe.Launcher.UI.ViewModels"
+             xmlns:glyphs="using:Cafe.Launcher.UI.Constants"
+             xmlns:controls="using:Cafe.Launcher.UI.Controls"
+             x:Class="Cafe.Launcher.UI.Views.SettingsGameLaunchSection"
+             x:Name="SettingsRoot"
+             Classes="settings-section"
+             x:DataType="vm:MainWindowViewModel">
+    <StackPanel IsEnabled="{Binding Settings.IsGameConfigurationEnabled}">
+        <StackPanel Classes="settings-group">
+            <Border Classes="settings-group-card">
+                <StackPanel>
+                    <controls:SettingSelect Title="{Binding Shell.I18n[launchCheck]}"
+                                            Description="{Binding Shell.I18n[launchCheckDescription]}"
+                                            AutomationName="{Binding Shell.I18n[launchCheck]}"
+                                            ItemsSource="{Binding Settings.Options.LaunchCheckMode}"
+                                            SelectedValue="{Binding Settings.Game.LaunchCheckMode, Mode=TwoWay}"/>
+                    <Border Classes="settings-row-divider"/>
+                    <controls:SettingSelect Title="{Binding Shell.I18n[launchBehavior]}"
+                                            Description="{Binding Shell.I18n[launchBehaviorDescription]}"
+                                            AutomationName="{Binding Shell.I18n[launchBehavior]}"
+                                            ItemsSource="{Binding Settings.Options.AfterLaunchBehavior}"
+                                            SelectedValue="{Binding Settings.Game.AfterLaunchBehavior, Mode=TwoWay}"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <StackPanel Classes="settings-group" IsVisible="{Binding IsPlatformSpecificSettingsVisible}">
+            <TextBlock Text="{Binding Shell.I18n[settingsGroupGameRuntime]}" Classes="group-title"/>
+
+            <Border Classes="settings-group-card">
+                <StackPanel>
+                    <controls:SettingSelect
+                                            Title="{Binding Shell.I18n[gameRuntimeRunner]}"
+                                            Description="{Binding Shell.I18n[gameRuntimeRunnerDescription]}"
+                                            AutomationName="{Binding Shell.I18n[gameRuntimeRunner]}"
+                                            ItemsSource="{Binding Settings.Options.GameRuntimeRunner}"
+                                            SelectedValue="{Binding Settings.Game.GameRuntime.Runner, Mode=TwoWay}"/>
+
+                    <Border Classes="settings-row-divider"/>
+                    <controls:SettingRow Title="{Binding Shell.I18n[gameRuntimeRunnerPath]}"
+                                         Description="{Binding Shell.I18n[gameRuntimeRunnerPathDescription]}">
+                        <controls:SettingRow.Action>
+                            <TextBox Classes="field-input"
+                                     Width="{StaticResource Launcher.Component.Settings.Control.MinWidth}"
+                                     Text="{Binding Settings.Game.GameRuntime.RunnerPath, Mode=TwoWay}"
+                                     PlaceholderText="{Binding Shell.I18n[gameRuntimeRunnerPathPlaceholder]}"
+                                     AutomationProperties.Name="{Binding Shell.I18n[gameRuntimeRunnerPath]}"
+                                     IsEnabled="{Binding Settings.GameRuntime.IsRunnerPathEnabled}"/>
+                        </controls:SettingRow.Action>
+                    </controls:SettingRow>
+
+                    <Border Classes="settings-row-divider"/>
+                    <controls:SettingRow Title="{Binding Shell.I18n[gameRuntimePrefixPath]}"
+                                         Description="{Binding Shell.I18n[gameRuntimePrefixPathDescription]}">
+                        <controls:SettingRow.Action>
+                            <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}">
+                                <TextBox Classes="field-input"
+                                         Width="{StaticResource Launcher.Component.Settings.Control.MinWidth}"
+                                         Text="{Binding Settings.Game.GameRuntime.PrefixPath, Mode=TwoWay}"
+                                         PlaceholderText="{Binding Shell.I18n[gameRuntimePrefixPathPlaceholder]}"
+                                         AutomationProperties.Name="{Binding Shell.I18n[gameRuntimePrefixPath]}"/>
+                                <Button Classes="flat-action" Command="{Binding Settings.GameRuntime.ChoosePrefixPathCommand}"
+                                        HorizontalAlignment="Right"
+                                        AutomationProperties.Name="{Binding Shell.I18n[choose]}">
+                                    <StackPanel Classes="button-content">
+                                        <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Folder}" FontSize="{StaticResource Launcher.Icon.Sm}"/>
+                                        <TextBlock Text="{Binding Shell.I18n[choose]}"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </controls:SettingRow.Action>
+                    </controls:SettingRow>
+
+                    <Border Classes="settings-row-divider"/>
+                    <controls:SettingRow Title="{Binding Shell.I18n[gameRuntimeProtonPath]}"
+                                         Description="{Binding Shell.I18n[gameRuntimeProtonPathDescription]}">
+                        <controls:SettingRow.Action>
+                            <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}">
+                                <TextBox Classes="field-input"
+                                         Width="{StaticResource Launcher.Component.Settings.Control.MinWidth}"
+                                         Text="{Binding Settings.Game.GameRuntime.ProtonPath, Mode=TwoWay}"
+                                         PlaceholderText="{Binding Shell.I18n[gameRuntimeProtonPathPlaceholder]}"
+                                         AutomationProperties.Name="{Binding Shell.I18n[gameRuntimeProtonPath]}"/>
+                                <Button Classes="flat-action" Command="{Binding Settings.GameRuntime.ChooseProtonPathCommand}"
+                                        HorizontalAlignment="Right"
+                                        AutomationProperties.Name="{Binding Shell.I18n[choose]}">
+                                    <StackPanel Classes="button-content">
+                                        <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Folder}" FontSize="{StaticResource Launcher.Icon.Sm}"/>
+                                        <TextBlock Text="{Binding Shell.I18n[choose]}"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </controls:SettingRow.Action>
+                    </controls:SettingRow>
+
+                    <Border Classes="settings-row-divider" IsVisible="{Binding Settings.GameRuntime.HasBuilds}"/>
+                    <controls:SettingSelect IsVisible="{Binding Settings.GameRuntime.HasBuilds}"
+                                            Title="{Binding Shell.I18n[gameRuntimeInstalledProton]}"
+                                            AutomationName="{Binding Shell.I18n[gameRuntimeInstalledProton]}"
+                                            ItemsSource="{Binding Settings.GameRuntime.Builds}"
+                                            SelectedValue="{Binding Settings.GameRuntime.SelectedBuild, Mode=TwoWay}"/>
+
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}"
+                          IsVisible="{Binding Settings.GameRuntime.BuildDiscoveryFailed}">
+                        <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Error}" FontSize="{StaticResource Launcher.Icon.Sm}"/>
+                        <TextBlock Grid.Column="1" Text="{Binding Shell.I18n[gameRuntimeProtonDiscoveryFailed]}" Classes="caption" TextWrapping="Wrap"
+                                   AutomationProperties.LiveSetting="Polite"/>
+                    </Grid>
+
+                    <Border Classes="settings-row-divider" IsVisible="{Binding Shell.IsLinuxPlatform}"/>
+                    <controls:SettingRow x:Name="MangoHudSetting"
+                                         IsVisible="{Binding Shell.IsLinuxPlatform}"
+                                         Title="{Binding Shell.I18n[gameRuntimeMangoHud]}"
+                                         Description="{Binding Shell.I18n[gameRuntimeMangoHudDescription]}">
+                        <controls:SettingRow.Action>
+                            <CheckBox Classes="setting-checkbox"
+                                      AutomationProperties.Name="{Binding Shell.I18n[gameRuntimeMangoHud]}"
+                                      IsChecked="{Binding Settings.Game.GameRuntime.EnableMangoHud, Mode=TwoWay}"/>
+                        </controls:SettingRow.Action>
+                    </controls:SettingRow>
+
+                    <Border Classes="settings-row-divider"/>
+                    <controls:SettingRow Title="{Binding Shell.I18n[gameRuntimeStatusTitle]}"
+                                         Description="{Binding Settings.GameRuntime.StatusSummary}">
+                        <controls:SettingRow.Action>
+                            <Button Classes="flat-action" Command="{Binding Settings.GameRuntime.RefreshStatusCommand}"
+                                    Content="{Binding Shell.I18n[refresh]}"
+                                    AutomationProperties.Name="{Binding Shell.I18n[refresh]}"
+                                    IsEnabled="{Binding Settings.GameRuntime.IsStatusRefreshing, Converter={x:Static BoolConverters.Not}}"/>
+                        </controls:SettingRow.Action>
+                    </controls:SettingRow>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </StackPanel>
+</UserControl>

@@ -1,10 +1,8 @@
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Core.Constants;
@@ -61,13 +59,20 @@ internal sealed class LauncherSettingsService : ILauncherSettingsService, IDispo
         try
         {
             var json = await File.ReadAllTextAsync(SettingsPath, cancellationToken).ConfigureAwait(false);
-            var result = ParseSettings(json);
-            if (result.StructureProblem is not null || result.DegradedFields.Count > 0)
+            var document = SettingsDocumentCodec.Read(json);
+            var settings = NormalizeSettings(document.Settings);
+            if (document.DegradedFields.Count > 0)
             {
-                await ReportSettingsRecoveryAsync(result).ConfigureAwait(false);
+                await ReportSettingsRecoveryAsync(document).ConfigureAwait(false);
             }
 
-            return result.Settings;
+            return settings;
+        }
+        catch (SettingsFormatException exception)
+        {
+            await CopySettingsFileToBackupAsync().ConfigureAwait(false);
+            await ReportStructureFailureAsync(exception).ConfigureAwait(false);
+            return CreateDefaultSettings();
         }
         catch (Exception exception) when (StorageFailure.IsRecoverableOrInvalidJson(exception))
         {
@@ -97,84 +102,29 @@ internal sealed class LauncherSettingsService : ILauncherSettingsService, IDispo
     }
 
     /// <summary>
-    /// Reads the settings document without letting one malformed value abort the whole file:
-    /// a non-object root yields defaults, and a value whose type does not match its setting is
-    /// removed so every other field (game path, theme, UID) survives. Legacy capitalized names
-    /// are applied only when their current name is absent, as before.
+    /// 仅向唯一写入事务提供尚未提交的旧格式基底；读取不落盘，也不回填编辑器。
+    /// 返回 null 表示盘上已是当前格式（或没有文件），调用方无需迁移。
     /// </summary>
-    private SettingsReadResult ParseSettings(string json)
+    internal async Task<LauncherSettings?> ReadMigrationBaseAsync(CancellationToken cancellationToken)
     {
-        var node = JsonNode.Parse(json);
-        if (node is not JsonObject root)
-        {
-            return new SettingsReadResult(
-                CreateDefaultSettings(),
-                [],
-                $"root is {DescribeRootKind(node)} instead of an object");
-        }
-
-        var degradedFields = new List<string>();
-        while (true)
-        {
-            LauncherSettings? parsed = null;
-            try
-            {
-                parsed = JsonSerializer.Deserialize(root, CoreStorageJsonContext.Default.LauncherSettings);
-            }
-            catch (JsonException exception)
-            {
-                var propertyName = GetTopLevelPropertyName(exception.Path);
-                if (propertyName is null || !root.Remove(propertyName))
-                {
-                    return new SettingsReadResult(
-                        CreateDefaultSettings(),
-                        degradedFields,
-                        "contains a value that cannot be attributed to a single setting");
-                }
-
-                degradedFields.Add(propertyName);
-                continue;
-            }
-
-            if (parsed is null)
-            {
-                return new SettingsReadResult(
-                    CreateDefaultSettings(),
-                    degradedFields,
-                    "did not deserialize to a settings object");
-            }
-
-            ApplyLegacyFields(parsed, root);
-            return new SettingsReadResult(NormalizeSettings(parsed), degradedFields, null);
-        }
-    }
-
-    /// <summary>
-    /// First path segment of a <see cref="JsonException.Path"/> (for example
-    /// <c>$.themeColorPalette[0]</c> → <c>themeColorPalette</c>). Returns null when the failure
-    /// is not tied to a top-level property, which the caller treats as a structural failure.
-    /// </summary>
-    private static string? GetTopLevelPropertyName(string? path)
-    {
-        if (path is null || !path.StartsWith("$.", StringComparison.Ordinal))
+        if (!File.Exists(SettingsPath))
         {
             return null;
         }
 
-        var name = path.AsSpan(2);
-        var end = name.IndexOfAny('.', '[');
-        return (end >= 0 ? name[..end] : name).ToString();
+        var json = await File.ReadAllTextAsync(SettingsPath, cancellationToken).ConfigureAwait(false);
+        var document = SettingsDocumentCodec.ReadForWrite(json);
+        return document is { RequiresMigration: true } migration
+            ? NormalizeSettings(migration.Settings)
+            : null;
     }
-
-    private static string DescribeRootKind(JsonNode? node) =>
-        node is null ? "null" : node.GetValueKind().ToString();
 
     /// <summary>
     /// Backs up the file that could not be read as written and records one diagnostic entry.
     /// Both are side effects of recovery, so they complete even when the refresh that triggered
     /// the read has already been cancelled.
     /// </summary>
-    private async Task ReportSettingsRecoveryAsync(SettingsReadResult result)
+    private async Task ReportSettingsRecoveryAsync(SettingsDocumentReadResult result)
     {
         await CopySettingsFileToBackupAsync().ConfigureAwait(false);
         if (diagnostics is null)
@@ -182,14 +132,31 @@ internal sealed class LauncherSettingsService : ILauncherSettingsService, IDispo
             return;
         }
 
-        var message = result.StructureProblem is not null
-            ? $"settings.json {result.StructureProblem}; defaults were applied."
-            : $"settings.json contained invalid values for {string.Join(", ", result.DegradedFields)}; those values were reset to defaults.";
+        var message =
+            $"settings.json contained invalid values for {string.Join(", ", result.DegradedFields)}; those values were reset to defaults.";
 
         await diagnostics.ErrorAsync(
             "Settings",
             message,
             new InvalidDataException(message),
+            CancellationToken.None).ConfigureAwait(false);
+    }
+
+    private async Task ReportStructureFailureAsync(SettingsFormatException exception)
+    {
+        if (diagnostics is null)
+        {
+            return;
+        }
+
+        var message = exception.Detail is not null
+            ? $"settings.json {exception.Detail}; defaults were applied."
+            : $"settings.json was rejected ({exception.FailureCode}); defaults were applied.";
+
+        await diagnostics.ErrorAsync(
+            "Settings",
+            message,
+            exception,
             CancellationToken.None).ConfigureAwait(false);
     }
 
@@ -223,40 +190,6 @@ internal sealed class LauncherSettingsService : ILauncherSettingsService, IDispo
         }
     }
 
-    private static void ApplyLegacyFields(LauncherSettings settings, JsonObject root)
-    {
-        if (!root.ContainsKey("gamePath")
-            && TryGetString(root, "GamePath") is { } legacyGamePath)
-        {
-            settings.GamePath = legacyGamePath;
-        }
-
-        if (!root.ContainsKey("launchCheckMode")
-            && TryGetString(root, "LaunchCheckMode") is { } legacyLaunchCheckMode)
-        {
-            settings.LaunchCheckMode = legacyLaunchCheckMode;
-        }
-    }
-
-    private static string? TryGetString(JsonObject root, string propertyName)
-    {
-        return root.TryGetPropertyValue(propertyName, out var node)
-            && node is JsonValue value
-            && value.TryGetValue<string>(out var text)
-                ? text
-                : null;
-    }
-
-    /// <summary>
-    /// What a read recovered: the settings to use, the top-level fields that were dropped
-    /// because their value had the wrong type, and a description when the whole document
-    /// (rather than a single field) had to be discarded.
-    /// </summary>
-    private sealed record SettingsReadResult(
-        LauncherSettings Settings,
-        IReadOnlyList<string> DegradedFields,
-        string? StructureProblem);
-
     /// <summary>
     /// Writes <paramref name="settings"/> and returns the normalized value that was written, so a
     /// caller that keeps the value as its own state never holds a copy that normalization changed.
@@ -268,6 +201,36 @@ internal sealed class LauncherSettingsService : ILauncherSettingsService, IDispo
         {
             var normalized = NormalizeSettings(settings);
             var path = SettingsPath;
+            _ = SettingsDocumentCodec.Serialize(normalized);
+
+            // Re-read the discriminator at the commit boundary. A stale/default editor must never
+            // overwrite a future document or a failed migration on disk; only a document we can
+            // migrate, or one with no syntax at all, is backed up before being replaced.
+            if (File.Exists(path))
+            {
+                var originalBytes = await File.ReadAllBytesAsync(path, cancellationToken).ConfigureAwait(false);
+                var originalJson = Encoding.UTF8.GetString(originalBytes);
+                if (originalJson.Length > 0 && originalJson[0] == '\uFEFF')
+                {
+                    originalJson = originalJson[1..];
+                }
+
+                var original = SettingsDocumentCodec.ReadForWrite(originalJson);
+                var backup = original switch
+                {
+                    null => dataRoot.CorruptSettingsBackupPath,
+                    { RequiresMigration: true, SourceFormatVersion: SettingsFormatVersions.GamesWithBackgrounds } =>
+                        dataRoot.SettingsBackgroundMigrationBackupPath,
+                    { RequiresMigration: true } => dataRoot.SettingsMigrationBackupPath,
+                    _ => null
+                };
+
+                if (backup is not null)
+                {
+                    await BackupSettingsAsync(originalBytes, backup, cancellationToken).ConfigureAwait(false);
+                }
+            }
+
             await AtomicJsonFileStore.WriteAsync(
                 path,
                 normalized,
@@ -281,13 +244,57 @@ internal sealed class LauncherSettingsService : ILauncherSettingsService, IDispo
         }
     }
 
+    private static async Task BackupSettingsAsync(
+        byte[] originalBytes,
+        string baseBackup,
+        CancellationToken cancellationToken)
+    {
+        var backup = baseBackup;
+        for (var index = 1; File.Exists(backup); index++)
+        {
+            var existing = await File.ReadAllBytesAsync(backup, cancellationToken).ConfigureAwait(false);
+            if (originalBytes.AsSpan().SequenceEqual(existing))
+            {
+                return;
+            }
+
+            // A downgrade or restored settings can produce another legitimate source.
+            // Keep every prior backup and reuse an identical one after an interrupted migration.
+            backup = baseBackup + "." + index.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        }
+
+        var temporaryBackup = $"{backup}.{Guid.NewGuid():N}.tmp";
+        try
+        {
+            await File.WriteAllBytesAsync(temporaryBackup, originalBytes, cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            File.Move(temporaryBackup, backup);
+        }
+        finally
+        {
+            FileCleanup.TryDelete(temporaryBackup);
+        }
+    }
+
     /// <summary>
     /// Normalize all setting values to valid codes, apply defaults for invalid values,
     /// normalize colors, trim UIDs, and return a deep-cloned copy.
     /// </summary>
     private LauncherSettings NormalizeSettings(LauncherSettings settings)
     {
+        SettingsDocumentCodec.ValidateForWrite(settings);
+
         settings = settings.DeepClone();
+        foreach (var profile in LauncherProfiles.SupportedGames)
+        {
+            NormalizeGameSettings(profile.RuntimeId, settings.GetGameSettings(profile.RuntimeId));
+        }
+
+        if (!LauncherProfiles.TryGetSupportedGame(settings.LastViewedGameId, out _))
+        {
+            throw new SettingsFormatException("unknown-selection", settings.FormatVersion);
+        }
+
         settings.LaunchCheckMode = settings.LaunchCheckMode switch
         {
             "LocalManifest" => LaunchCheckModes.LocalManifest,
@@ -319,23 +326,6 @@ internal sealed class LauncherSettingsService : ILauncherSettingsService, IDispo
 
         settings.BackgroundFillColor = NormalizeColor(settings.BackgroundFillColor);
         settings.BackgroundVideoVolume = Math.Clamp(settings.BackgroundVideoVolume, 0, 100);
-        settings.GamePath ??= "";
-        settings.ResourcePanelUid = settings.ResourcePanelUid?.Trim() ?? "";
-
-        settings.GameRuntime ??= new GameRuntimeSettings();
-        // Native execution cannot work on Linux; a persisted "native" there (legacy or
-        // hand-edited) would leave the runner dropdown with no matching selection.
-        settings.GameRuntime.Runner = settings.GameRuntime.Runner switch
-        {
-            GameRuntimeRunners.Native when isLinuxPlatform() => GameRuntimeRunners.Auto,
-            GameRuntimeRunners.Native => GameRuntimeRunners.Native,
-            GameRuntimeRunners.Umu => GameRuntimeRunners.Umu,
-            GameRuntimeRunners.Wine => GameRuntimeRunners.Wine,
-            _ => GameRuntimeRunners.Auto
-        };
-        settings.GameRuntime.RunnerPath = NormalizeOptionalPath(settings.GameRuntime.RunnerPath);
-        settings.GameRuntime.PrefixPath = NormalizeOptionalPath(settings.GameRuntime.PrefixPath);
-        settings.GameRuntime.ProtonPath = NormalizeOptionalPath(settings.GameRuntime.ProtonPath);
 
         if (settings.WindowWidth is not null && !IsValidWindowDimension(settings.WindowWidth.Value))
         {
@@ -348,6 +338,62 @@ internal sealed class LauncherSettingsService : ILauncherSettingsService, IDispo
         }
 
         return settings;
+    }
+
+    private void NormalizeGameSettings(string gameId, GameSettings settings)
+    {
+        var definition = LauncherProfiles.GetGameDefinition(gameId);
+        settings.GamePath ??= "";
+        settings.CustomBackgroundPath ??= "";
+        settings.BackgroundSource = settings.BackgroundSource switch
+        {
+            BackgroundSources.Remote => BackgroundSources.Remote,
+            BackgroundSources.Custom => BackgroundSources.Custom,
+            _ => BackgroundSources.Bundled
+        };
+        settings.BackgroundFit = settings.BackgroundFit switch
+        {
+            BackgroundFits.Fill => BackgroundFits.Fill,
+            BackgroundFits.Uniform => BackgroundFits.Uniform,
+            _ => BackgroundFits.UniformToFill
+        };
+        settings.BackgroundFillColor = TryNormalizeColor(settings.BackgroundFillColor) ?? "#FF000000";
+        settings.BackgroundVideoVolume = Math.Clamp(settings.BackgroundVideoVolume, 0, 100);
+        settings.LaunchCheckMode = settings.LaunchCheckMode switch
+        {
+            "LocalManifest" or LaunchCheckModes.LocalManifest => LaunchCheckModes.LocalManifest,
+            "RemoteManifest" or LaunchCheckModes.RemoteManifest => LaunchCheckModes.RemoteManifest,
+            "None" or LaunchCheckModes.None => LaunchCheckModes.None,
+            _ => LaunchCheckModes.LocalManifest
+        };
+        settings.PatchUrlGroup = settings.PatchUrlGroup == PatchUrlGroups.Cafe
+            && definition.SupportsCafeDownloadSource
+                ? PatchUrlGroups.Cafe
+                : PatchUrlGroups.Official;
+        settings.AfterLaunchBehavior = settings.AfterLaunchBehavior switch
+        {
+            AfterLaunchBehaviors.KeepOpen => AfterLaunchBehaviors.KeepOpen,
+            AfterLaunchBehaviors.Exit => AfterLaunchBehaviors.Exit,
+            _ => AfterLaunchBehaviors.Minimize
+        };
+        settings.ResourcePanelUid = definition.SupportsResourcePanel
+            ? settings.ResourcePanelUid?.Trim() ?? ""
+            : "";
+        settings.ResourcePanelUidSource = definition.SupportsResourcePanel
+            && settings.ResourcePanelUidSource == ResourcePanelUidSources.Custom
+                ? ResourcePanelUidSources.Custom
+                : ResourcePanelUidSources.Auto;
+        settings.GameRuntime ??= new GameRuntimeSettings();
+        settings.GameRuntime.Runner = settings.GameRuntime.Runner switch
+        {
+            GameRuntimeRunners.Native when !isLinuxPlatform() => GameRuntimeRunners.Native,
+            GameRuntimeRunners.Umu => GameRuntimeRunners.Umu,
+            GameRuntimeRunners.Wine => GameRuntimeRunners.Wine,
+            _ => GameRuntimeRunners.Auto
+        };
+        settings.GameRuntime.RunnerPath = NormalizeOptionalPath(settings.GameRuntime.RunnerPath);
+        settings.GameRuntime.PrefixPath = NormalizeOptionalPath(settings.GameRuntime.PrefixPath);
+        settings.GameRuntime.ProtonPath = NormalizeOptionalPath(settings.GameRuntime.ProtonPath);
     }
 
     private static bool IsValidWindowDimension(double value) =>

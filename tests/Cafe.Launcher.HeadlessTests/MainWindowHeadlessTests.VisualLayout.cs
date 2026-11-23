@@ -26,7 +26,7 @@ public sealed partial class MainWindowHeadlessTests
     [InlineData(LauncherLanguages.SimplifiedChinese)]
     [InlineData(LauncherLanguages.TraditionalChinese)]
     [InlineData(LauncherLanguages.Japanese)]
-    public void Visual_SettingsHeader_TitlesAndCloseButtonShareVerticalCenter(string language)
+    public void Visual_SettingsScopeAndCategoryHeadings_KeepSeparateRows(string language)
     {
         using var context = CreateContext();
         var window = context.Window;
@@ -37,15 +37,11 @@ public sealed partial class MainWindowHeadlessTests
         Assert.Equal(new Size(1024, 640), window.ClientSize);
         var overlay = window.GetVisualDescendants().OfType<MainWindowSettingsOverlay>().Single();
         var navigation = overlay.FindControl<ListBox>("SettingsNavigation")!;
-        var navigationHeader = overlay.GetVisualDescendants().OfType<Border>()
-            .Single(control => control.Classes.Contains("settings-navigation-header"));
-        var settingsTitle = navigationHeader.GetVisualDescendants().OfType<TextBlock>()
-            .Single(control => control.Classes.Contains("dialog-title"));
+        var settingsTitle = overlay.FindControl<TextBlock>("SettingsScopeTitle")!;
         var categoryTitle = overlay.GetVisualDescendants().OfType<TextBlock>()
             .Single(control => control.Classes.Contains("category-title"));
         var close = overlay.GetVisualDescendants().OfType<Button>()
             .Single(control => control.Classes.Contains("content-header-action"));
-        var settingsTitleSize = settingsTitle.FontSize;
         var categoryTitleSize = categoryTitle.FontSize;
         var settings = context.ViewModel.Settings;
 
@@ -64,15 +60,16 @@ public sealed partial class MainWindowHeadlessTests
                 var selectedCategory = Assert.IsType<SettingOption>(navigation.SelectedItem);
                 Assert.Equal(category, selectedCategory.Code);
                 Assert.Equal(selectedCategory.DisplayName, categoryTitle.Text);
-                Assert.Equal(settingsTitleSize * scale, settingsTitle.FontSize);
                 Assert.Equal(categoryTitleSize * scale, categoryTitle.FontSize);
 
-                var settingsCenter = settingsTitle.TranslatePoint(default, window)!.Value.Y + settingsTitle.Bounds.Height / 2;
-                var categoryCenter = categoryTitle.TranslatePoint(default, window)!.Value.Y + categoryTitle.Bounds.Height / 2;
+                Assert.Equal(settings.DialogTitle, settingsTitle.Text);
+                AssertControlInsideWindow(settingsTitle, window);
+                AssertControlInsideWindow(close, window);
+                var titleOrigin = settingsTitle.TranslatePoint(default, window)!.Value;
                 var closeCenter = close.TranslatePoint(default, window)!.Value.Y + close.Bounds.Height / 2;
-                var geometry = $"{language}, {scale}, {category}: settings={settingsCenter}, category={categoryCenter}, close={closeCenter}";
-                Assert.True(Math.Abs(settingsCenter - categoryCenter) <= 1, geometry);
-                Assert.True(Math.Abs(categoryCenter - closeCenter) <= 1, geometry);
+                var categoryTop = categoryTitle.TranslatePoint(default, window)!.Value.Y;
+                Assert.InRange(Math.Abs(titleOrigin.Y + settingsTitle.Bounds.Height / 2 - closeCenter), 0, 1);
+                Assert.True(categoryTop >= titleOrigin.Y + settingsTitle.Bounds.Height);
             }
         }
     }
@@ -96,16 +93,14 @@ public sealed partial class MainWindowHeadlessTests
         foreach (var row in rows)
         {
             var title = row.FindControl<TextBlock>("RowTitle");
-            var layout = row.FindControl<Grid>("RowLayout");
             var action = Assert.IsAssignableFrom<Control>(row.Action);
             Assert.NotNull(title);
-            Assert.NotNull(layout);
             var titlePosition = title.TranslatePoint(default, row);
             var actionPosition = action.TranslatePoint(default, row);
             Assert.NotNull(titlePosition);
             Assert.NotNull(actionPosition);
             var center = row.Bounds.Height / 2;
-            var geometry = $"{row.Title}: row={row.Bounds.Height}, firstRow={layout.RowDefinitions[0].ActualHeight}, "
+            var geometry = $"{row.Title}: row={row.Bounds.Height}, "
                 + $"titleY={titlePosition.Value.Y}, titleHeight={title.Bounds.Height}, "
                 + $"actionY={actionPosition.Value.Y}, actionHeight={action.Bounds.Height}";
             Assert.True(Math.Abs(titlePosition.Value.Y + title.Bounds.Height / 2 - center) <= 1, geometry);
@@ -128,6 +123,14 @@ public sealed partial class MainWindowHeadlessTests
         foreach (var (category, _) in SettingsSections)
         {
             context.ViewModel.Settings.SelectedCategory = category;
+            Dispatcher.UIThread.RunJobs();
+            // 有些分区（例如默认背景）整页只有首行无分隔，跳过而不是要求空白页面造出分隔线。
+            if (!window.GetVisualDescendants().OfType<Border>()
+                    .Any(border => border.IsEffectivelyVisible && border.Classes.Contains("settings-row-divider")))
+            {
+                continue;
+            }
+
             AssertAtEachScale(scale => AssertBorders(scale, "settings-row-divider", topEdge));
         }
 
@@ -146,6 +149,9 @@ public sealed partial class MainWindowHeadlessTests
         });
         context.ViewModel.WindowChrome.ToggleSettingsCommand.Execute(null);
 
+        // 资源面板每次打开都播放入场位移；设置页的预览会把动效偏好刷回系统档，
+        // 因此在断言静态布局边界前再次落到降动效档，避免把动画中的位移当成布局。
+        context.ViewModel.IsMotionReduced = true;
         context.ViewModel.ResourcePanel.IsResourcePanelVisible = true;
         AssertAtEachScale(scale =>
         {
@@ -246,8 +252,10 @@ public sealed partial class MainWindowHeadlessTests
         context.Window.Show();
         Dispatcher.UIThread.RunJobs();
 
-        var description = row.FindControl<TextBlock>("RowDescription");
-        Assert.NotNull(description);
+        // FA 迁移后描述行由 FASettingsExpanderItem 模板的 DescriptionText 承担：
+        // 空描述经 :description 伪类折叠，不占一行。
+        var description = row.GetVisualDescendants().OfType<TextBlock>()
+            .Single(text => text.Name == "DescriptionText");
         Assert.False(description.IsVisible);
         row.Description = "Explains a choice";
         Dispatcher.UIThread.RunJobs();
@@ -294,7 +302,7 @@ public sealed partial class MainWindowHeadlessTests
         context.Window.Show();
         row.Width = 360;
         Dispatcher.UIThread.RunJobs();
-        var action = row.FindControl<ContentPresenter>("ActionPresenter");
+        var action = row.GetVisualDescendants().OfType<ContentPresenter>().First(presenter => presenter.Name == "FooterPresenter");
         var title = row.FindControl<TextBlock>("RowTitle");
         Assert.NotNull(action);
         Assert.NotNull(title);
@@ -329,7 +337,7 @@ public sealed partial class MainWindowHeadlessTests
 
     [AvaloniaTheory]
     [MemberData(nameof(StackedSettingRowCases))]
-    public void Visual_SettingRow_StackedActionKeepsBottomInsetAcrossReflow(string copyState, double scale, bool groupedAction)
+    public void Visual_SettingRow_ReflowsWithoutOverlappingTheNextSetting(string copyState, double scale, bool groupedAction)
     {
         using var context = CreateContext();
         var select = new ComboBox
@@ -361,13 +369,11 @@ public sealed partial class MainWindowHeadlessTests
         Dispatcher.UIThread.RunJobs();
         using var typography = new TypographyScaleSnapshot(context.Window, scale);
         Dispatcher.UIThread.RunJobs();
-        var presenter = row.FindControl<ContentPresenter>("ActionPresenter")!;
+        var presenter = row.GetVisualDescendants().OfType<ContentPresenter>().First(presenter => presenter.Name == "FooterPresenter");
         var copy = row.FindControl<TextBlock>("RowTitle")!.GetVisualAncestors().OfType<StackPanel>().First();
-        var divider = nextRow.FindControl<Border>("TopDivider")!;
         Control focusTarget = groupedAction ? button : select;
         Assert.True(focusTarget.Focus(NavigationMethod.Tab));
         Dispatcher.UIThread.RunJobs();
-        var horizontalHeight = row.Bounds.Height;
 
         foreach (var width in new[] { 360, 700, 360 })
         {
@@ -380,23 +386,12 @@ public sealed partial class MainWindowHeadlessTests
                 Assert.Equal(2, select.SelectedIndex);
             }
             var actionPosition = action.TranslatePoint(default, row)!.Value;
-            if (width == 700)
-            {
-                Assert.Equal(0, Grid.GetRow(presenter));
-                Assert.Equal(horizontalHeight, row.Bounds.Height);
-                Assert.InRange(Math.Abs(actionPosition.Y + action.Bounds.Height / 2 - row.Bounds.Height / 2), 0, 1);
-                continue;
-            }
-
-            Assert.Equal(1, Grid.GetRow(presenter));
-            var actionBottom = action.GetVisualDescendants().Prepend(action).OfType<Control>()
-                .Where(control => control.IsEffectivelyVisible && control is Button or ComboBox)
-                .Max(control => control.TranslatePoint(default, row)!.Value.Y + control.Bounds.Height);
-            var dividerTop = divider.TranslatePoint(default, row)!.Value.Y;
-            var expectedInset = copy.Margin.Bottom;
-            Assert.True(expectedInset > 0);
-            Assert.InRange(row.Bounds.Height - actionBottom, expectedInset - 1, expectedInset + 1);
-            Assert.InRange(dividerTop - actionBottom, expectedInset - 1, expectedInset + 1);
+            var copyPosition = copy.TranslatePoint(default, row)!.Value;
+            var actionBounds = new Rect(actionPosition, action.Bounds.Size);
+            var copyBounds = new Rect(copyPosition, copy.Bounds.Size);
+            Assert.False(actionBounds.Intersects(copyBounds));
+            Assert.InRange(actionBounds.Bottom, 1, row.Bounds.Height + 1);
+            Assert.True(row.Bounds.Bottom <= nextRow.Bounds.Top);
         }
     }
 
@@ -448,7 +443,7 @@ public sealed partial class MainWindowHeadlessTests
                     window.Height = height;
                     Dispatcher.UIThread.RunJobs();
                     Assert.Equal(new Size(width, height), window.ClientSize);
-                    AssertSettingsLayout(overlay, section, scale,
+                    AssertSettingsLayout(window, overlay, section, scale, context.ViewModel.Settings.CanPreviewAppearance,
                         $"{category}, {width}×{height}, scale {scale}");
                 }
 
@@ -458,17 +453,21 @@ public sealed partial class MainWindowHeadlessTests
         }
     }
 
-    private static void AssertSettingsLayout(MainWindowSettingsOverlay overlay, UserControl section, double scale, string scenario)
+    private static void AssertSettingsLayout(
+        Window window, MainWindowSettingsOverlay overlay, UserControl section, double scale, bool canPreview, string scenario)
     {
         var footerActions = overlay.GetVisualDescendants().OfType<Button>()
             .Where(button => button.IsEffectivelyVisible && button.Classes.Contains("dialog-action"))
             .ToArray();
-        Assert.Equal(2, footerActions.Length);
-        Assert.Equal(footerActions[0].Bounds.Height, footerActions[1].Bounds.Height);
+        Assert.Equal(canPreview ? 3 : 2, footerActions.Length);
+        var cancel = footerActions[^2];
+        var save = footerActions[^1];
+        Assert.Equal(cancel.Bounds.Height, save.Bounds.Height);
+        Assert.All(footerActions, button => AssertControlInsideWindow(button, window));
         foreach (var row in section.GetVisualDescendants().OfType<SettingRow>().Where(row => row.IsEffectivelyVisible))
         {
             var title = row.FindControl<TextBlock>("RowTitle")!;
-            var action = row.FindControl<ContentPresenter>("ActionPresenter")!;
+            var action = row.GetVisualDescendants().OfType<ContentPresenter>().First(presenter => presenter.Name == "FooterPresenter");
             Assert.Equal(14 * scale, title.FontSize);
             var copy = title.GetVisualAncestors().OfType<StackPanel>().First();
             Assert.True(copy.Bounds.Width > 0, $"{scenario}: {row.Title}");

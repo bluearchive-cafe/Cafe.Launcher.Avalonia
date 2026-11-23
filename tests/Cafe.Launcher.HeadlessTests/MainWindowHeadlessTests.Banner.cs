@@ -1,9 +1,10 @@
-﻿using Avalonia;
+using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
+using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Cafe.Launcher.UI.Models;
@@ -228,10 +229,14 @@ public sealed partial class MainWindowHeadlessTests
         context.Window.MouseUp(bannerCenter, MouseButton.Left, RawInputModifiers.None);
     }
 
-    [AvaloniaFact]
-    public void MainWindow_BannerAndNews_JoinWithoutGapAndSquareTheSeamCorners()
+    [AvaloniaTheory]
+    [InlineData(1300, 754)]
+    [InlineData(1024, 640)]
+    public void MainWindow_BannerAndNews_FitArtworkAndShowFirstRowWithoutScrolling(double width, double height)
     {
         using var context = CreateContext();
+        context.Window.Width = width;
+        context.Window.Height = height;
         ApplyRemoteState(context, state =>
         {
             state.OperationsResource = new OperationsResourceResponse
@@ -246,22 +251,18 @@ public sealed partial class MainWindowHeadlessTests
                     Code = 0,
                     Data = new NewsListData
                     {
-                        News =
-                        [
-                            new NewsTypeItem
+                        News = new[] { "すべて", "メンテナンス", "お知らせ", "イベント" }
+                            .Select(label => new NewsTypeItem
                             {
-                                TypeLabel = "News",
-                                Rows =
-                                [
-                                    new NewsRowItem
+                                TypeLabel = label,
+                                Rows = Enumerable.Range(1, 4)
+                                    .Select(index => new NewsRowItem
                                     {
-                                        Title = "News item",
-                                        Link = "https://news.example.invalid/1",
+                                        Title = $"News item {index}",
+                                        Link = $"https://news.example.invalid/{index}",
                                         PublishTime = 1_700_000_000_000
-                                    }
-                                ]
-                            }
-                        ]
+                                    }).ToList()
+                            }).ToList()
                     }
                 }
             };
@@ -269,46 +270,31 @@ public sealed partial class MainWindowHeadlessTests
 
         var bannerFrame = context.Window.GetVisualDescendants()
             .OfType<Border>().Single(control => control.Classes.Contains("banner-frame"));
-        var bannerCarousel = context.Window.GetVisualDescendants()
-            .OfType<Carousel>().Single(control => control.Classes.Contains("banner-carousel"));
-        var bannerMedia = context.Window.GetVisualDescendants()
-            .OfType<Border>().Single(control => control.Classes.Contains("banner-media"));
         var newsCard = context.Window.GetVisualDescendants()
             .OfType<Border>().Single(control => control.Classes.Contains("news-card"));
-
-        var edgeGradients = context.Window.GetVisualDescendants()
-            .OfType<Border>().Where(control => control.Classes.Contains("banner-edge-gradient")).ToArray();
-
-        var joinedUpper = new CornerRadius(8, 8, 0, 0);
-        Assert.Equal(joinedUpper, bannerFrame.CornerRadius);
-        Assert.Equal(joinedUpper, bannerCarousel.CornerRadius);
-        Assert.Equal(joinedUpper, bannerMedia.CornerRadius);
-        Assert.Equal(2, edgeGradients.Length);
-        Assert.All(edgeGradients, gradient => Assert.Equal(joinedUpper, gradient.CornerRadius));
+        var bannerBottom = bannerFrame.TranslatePoint(new Point(0, bannerFrame.Bounds.Height), context.Window)!.Value.Y;
+        var newsTop = newsCard.TranslatePoint(default, context.Window)!.Value.Y;
+        Assert.InRange(newsTop - bannerBottom, -0.5, 0.5);
+        Assert.Equal(new CornerRadius(8, 8, 0, 0), bannerFrame.CornerRadius);
         Assert.Equal(new CornerRadius(0, 0, 8, 8), newsCard.CornerRadius);
 
-        var bannerBottom = bannerFrame.TranslatePoint(new Point(0, bannerFrame.Bounds.Height), context.Window);
-        var newsTop = newsCard.TranslatePoint(default, context.Window);
-        Assert.NotNull(bannerBottom);
-        Assert.NotNull(newsTop);
-        Assert.InRange(newsTop!.Value.Y - bannerBottom!.Value.Y, -0.5, 0.5);
+        var bannerImage = Assert.Single(bannerFrame.GetVisualDescendants().OfType<Image>());
+        Assert.Equal(Stretch.Uniform, bannerImage.Stretch);
+        var tabs = newsCard.GetVisualDescendants().OfType<TabItem>().ToArray();
+        Assert.Equal(4, tabs.Length);
+        Assert.Single(tabs.Select(tab => tab.TranslatePoint(default, newsCard)!.Value.Y).Distinct());
 
-        // Without news below it, the banner keeps its rounded bottom corners.
-        ApplyRemoteState(context, state => state.OperationsResource = new OperationsResourceResponse
-        {
-            OperationsResourceOpen = true,
-            OperationsBannerList =
-            [
-                new OperationsBannerItem { BannerImg = "", JumpUrl = "https://banner.example.invalid/1" }
-            ]
-        });
-        bannerFrame = context.Window.GetVisualDescendants()
-            .OfType<Border>().Single(control => control.Classes.Contains("banner-frame"));
-        Assert.Equal(new CornerRadius(8), bannerFrame.CornerRadius);
+        var firstRow = newsCard.GetVisualDescendants().OfType<Button>()
+            .First(button => button.Classes.Contains("news-row"));
+        var viewport = context.Window.GetVisualDescendants().OfType<ScrollViewer>()
+            .Single(viewer => viewer.Classes.Contains("remote-content-layout-host"));
+        var rowTop = firstRow.TranslatePoint(default, viewport)!.Value.Y;
+        Assert.Equal(default, viewport.Offset);
+        Assert.InRange(rowTop + firstRow.Bounds.Height, 1, viewport.Bounds.Height - viewport.Padding.Bottom);
     }
 
     [AvaloniaFact]
-    public void MainWindow_SocialActions_AddTopRightVerticalButtonsInSourceOrder()
+    public void MainWindow_GameLinks_AppearInNewsInSourceOrder()
     {
         using var context = CreateContext();
         ApplyRemoteState(context, state =>
@@ -332,63 +318,27 @@ public sealed partial class MainWindowHeadlessTests
             };
         });
 
-        var actionButtons = context.Window
-            .GetVisualDescendants()
-            .OfType<Button>()
-            .Where(control => control.Classes.Contains("social-action"))
-            .ToArray();
-
-        var officialSiteButton = Assert.Single(
-            actionButtons,
-            control => control.Classes.Contains("official-site"));
-        var itemButtons = actionButtons
-            .Where(control => control.DataContext is RemoteContentItem)
-            .ToArray();
-
-        Assert.Equal(2, itemButtons.Length);
-        Assert.Equal(["YouTube", "Discord"], itemButtons.Select(button => ((RemoteContentItem)button.DataContext!).Title));
-        Assert.DoesNotContain(
-            context.Window.GetVisualDescendants().OfType<Border>(),
-            control => control.Classes.Contains("social-media-card"));
-        Assert.All(actionButtons, button =>
-        {
-            Assert.Equal(36, button.Bounds.Width);
-            Assert.Equal(36, button.Bounds.Height);
-            AssertControlInsideWindow(button, context.Window);
-            Assert.True(AutomationProperties.GetName(button) is not null);
-        });
-
-        var officialTop = officialSiteButton.TranslatePoint(default, context.Window);
-        var firstTop = itemButtons[0].TranslatePoint(default, context.Window);
-        var secondTop = itemButtons[1].TranslatePoint(default, context.Window);
-        Assert.NotNull(officialTop);
-        Assert.NotNull(firstTop);
-        Assert.NotNull(secondTop);
-        Assert.True(officialTop.Value.X > context.Window.ClientSize.Width / 2);
-        Assert.True(officialTop.Value.Y < firstTop.Value.Y);
-        Assert.True(firstTop.Value.Y < secondTop.Value.Y);
-
-        var socialActions = context.Window
-            .GetVisualDescendants()
-            .OfType<StackPanel>()
+        var news = context.Window.FindControl<Border>("HomeNews")!;
+        var links = news.GetVisualDescendants().OfType<WrapPanel>()
             .Single(control => control.Classes.Contains("social-actions"));
-        var socialItems = socialActions
-            .GetVisualDescendants()
-            .OfType<ItemsControl>()
-            .Single(control => control.ItemsSource is not null);
-        Assert.True(socialActions.IsEffectivelyVisible);
-        Assert.True(socialItems.IsEffectivelyVisible);
+        var buttons = links.GetVisualDescendants().OfType<Button>().ToArray();
+        Assert.Equal(3, buttons.Length);
+        Assert.Same(context.ViewModel.WindowChrome.OpenOfficialSiteCommand, buttons[0].Command);
+        Assert.Equal(["YouTube", "Discord"], buttons.Skip(1).Select(AutomationProperties.GetName));
+        Assert.Equal(["https://youtube.example.invalid", "https://discord.example.invalid"],
+            buttons.Skip(1).Select(button => button.CommandParameter));
+        Assert.All(buttons, button =>
+        {
+            Assert.True(button.IsEffectivelyVisible);
+            AssertControlInsideWindow(button, context.Window);
+        });
 
         context.ViewModel.RemoteContent.UpdateRemoteContentVisibility(false);
         Dispatcher.UIThread.RunJobs();
-        Assert.True(socialActions.IsEffectivelyVisible);
-        Assert.False(socialItems.IsEffectivelyVisible);
-        Assert.False(officialSiteButton.IsEffectivelyVisible);
+        Assert.All(buttons, button => Assert.False(button.IsEffectivelyVisible));
 
         context.ViewModel.RemoteContent.UpdateRemoteContentVisibility(true);
         Dispatcher.UIThread.RunJobs();
-        Assert.True(socialActions.IsEffectivelyVisible);
-        Assert.True(socialItems.IsEffectivelyVisible);
-        Assert.True(officialSiteButton.IsEffectivelyVisible);
+        Assert.All(buttons, button => Assert.True(button.IsEffectivelyVisible));
     }
 }

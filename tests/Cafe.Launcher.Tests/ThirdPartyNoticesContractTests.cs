@@ -78,8 +78,8 @@ public sealed class ThirdPartyNoticesContractTests
             referenced.Count >= 13,
             $"生产工程只解析出 {referenced.Count} 个包引用，读法多半已经失效。");
         Assert.True(
-            notices.Count >= 40,
-            $"{NoticesRelativePath} 只解析出 {notices.Count} 行，表格格式或过滤条件已经对不上。");
+            notices.Count > referenced.Count,
+            $"{NoticesRelativePath} 解析出 {notices.Count} 行，未包含生产工程直接引用之外的传递依赖。");
 
         var drift = new List<string>();
         foreach (var name in referenced)

@@ -10,3 +10,5 @@
 | [NuGet 升级变更核对](nuget-upgrade-2026-10-19.md) | 依赖升级的上游变化与影响 | 2026-10-19 |
 | [MTP 测试迁移](mtp-migration.md) | .NET 10 原生 MTP 迁移依据与命令 | 2026-10-19；已落地 |
 | [libmpv 视频背景原型](video-background-prototype.md) | 视频背景实验与生命周期复核 | 2026-10-31；已接入生产 |
+| [多游戏启动器样本](multi-game-launcher-samples-2026-11-02.md) | 多游戏壳与运行流程对比 | 2026-11-02 |
+| [Yostar 双游戏协议验证](yostar-protocol-verification-2026-11-02.md) | 蔚蓝档案与星塔旅人的配置与下载协议证据 | 2026-11-02 |

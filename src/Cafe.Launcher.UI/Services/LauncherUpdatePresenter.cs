@@ -19,7 +19,7 @@ namespace Cafe.Launcher.UI.Services;
 internal sealed class LauncherUpdatePresenter : ILauncherUpdatePresenter
 {
     private readonly LocalizationService localizer;
-    private readonly ToastService toastService;
+    private readonly INotificationService toastService;
     private readonly DialogsViewModel dialogs;
     private readonly ILauncherSelfUpdateService selfUpdateService;
     private readonly ILauncherUpdateService updateService;
@@ -27,7 +27,7 @@ internal sealed class LauncherUpdatePresenter : ILauncherUpdatePresenter
 
     public LauncherUpdatePresenter(
         LocalizationService localizer,
-        ToastService toastService,
+        INotificationService toastService,
         DialogsViewModel dialogs,
         ILauncherSelfUpdateService selfUpdateService,
         ILauncherUpdateService updateService,

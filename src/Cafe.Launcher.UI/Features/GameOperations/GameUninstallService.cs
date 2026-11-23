@@ -224,7 +224,7 @@ internal sealed class GameUninstallService
 
     private string? ResolveKeptPrefixPath(LauncherStatusSnapshot snapshot, string gamePath, UninstallScope scope)
     {
-        var prefixPath = GameRuntimeConfiguration.FromSettings(snapshot.Settings.GameRuntime).PrefixPath;
+        var prefixPath = GameRuntimeConfiguration.FromSettings(snapshot.GameSettings.GameRuntime).PrefixPath;
         if (string.IsNullOrWhiteSpace(prefixPath) || DirectoryTreeDeleter.IsUnder(prefixPath, gamePath))
         {
             return null;

@@ -1,0 +1,221 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cafe.Launcher.UI.ViewModels"
+             xmlns:glyphs="using:Cafe.Launcher.UI.Constants"
+             xmlns:controls="using:Cafe.Launcher.UI.Controls"
+             x:Class="Cafe.Launcher.UI.Views.SettingsGameOptionsSection"
+             x:Name="SettingsRoot"
+             Classes="settings-section"
+             x:DataType="vm:MainWindowViewModel">
+    <StackPanel IsEnabled="{Binding Settings.IsGameConfigurationEnabled}">
+        <StackPanel Classes="settings-group">
+            <TextBlock Text="{Binding Shell.I18n[gameOptionReadOnlyNotice]}"
+                       Classes="caption" TextWrapping="Wrap"/>
+            <WrapPanel ItemSpacing="{StaticResource Launcher.Spacing.Sm}"
+                       LineSpacing="{StaticResource Launcher.Spacing.Sm}">
+                <Button Classes="flat-action"
+                        Command="{Binding Settings.GameOptions.RefreshCommand}"
+                        AutomationProperties.Name="{Binding Shell.I18n[refresh]}">
+                    <StackPanel Classes="button-content">
+                        <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Refresh}"
+                                             FontSize="{StaticResource Launcher.Icon.Sm}"/>
+                        <TextBlock Text="{Binding Shell.I18n[refresh]}"/>
+                    </StackPanel>
+                </Button>
+            </WrapPanel>
+
+            <Border Classes="settings-group-card"
+                    IsVisible="{Binding Settings.GameOptions.HasStatus}">
+                <TextBlock Text="{Binding Settings.GameOptions.StatusMessage}"
+                           Classes="caption" TextWrapping="Wrap"/>
+            </Border>
+
+            <TextBlock Text="{Binding Settings.GameOptions.UnknownFieldsMessage}"
+                       Classes="caption" TextWrapping="Wrap"
+                       IsVisible="{Binding Settings.GameOptions.HasUnknownFields}"/>
+        </StackPanel>
+
+        <StackPanel Classes="settings-group"
+                    IsVisible="{Binding Settings.GameOptions.IsSupported}">
+            <TextBlock Text="{Binding Shell.I18n[settingsGroupGameOptionsAudio]}"
+                       Classes="group-title"/>
+            <Border Classes="settings-group-card">
+                <StackPanel>
+                    <controls:SettingRow Title="{Binding Shell.I18n[gameOptionBgm]}">
+                        <controls:SettingRow.Action>
+                            <TextBlock Text="{Binding Settings.GameOptions.Bgm}" VerticalAlignment="Center"/>
+                        </controls:SettingRow.Action>
+                    </controls:SettingRow>
+                    <Border Classes="settings-row-divider"/>
+                    <controls:SettingRow Title="{Binding Shell.I18n[gameOptionFxs]}">
+                        <controls:SettingRow.Action>
+                            <TextBlock Text="{Binding Settings.GameOptions.Fxs}" VerticalAlignment="Center"/>
+                        </controls:SettingRow.Action>
+                    </controls:SettingRow>
+                    <Border Classes="settings-row-divider"/>
+                    <controls:SettingRow Title="{Binding Shell.I18n[gameOptionVoice]}">
+                        <controls:SettingRow.Action>
+                            <TextBlock Text="{Binding Settings.GameOptions.Voice}" VerticalAlignment="Center"/>
+                        </controls:SettingRow.Action>
+                    </controls:SettingRow>
+                    <Border Classes="settings-row-divider"/>
+                    <controls:SettingRow Title="{Binding Shell.I18n[gameOptionMaster]}">
+                        <controls:SettingRow.Action>
+                            <TextBlock Text="{Binding Settings.GameOptions.Master}" VerticalAlignment="Center"/>
+                        </controls:SettingRow.Action>
+                    </controls:SettingRow>
+                    <Border Classes="settings-row-divider"/>
+                    <controls:SettingRow Title="{Binding Shell.I18n[gameOptionBackgroundSound]}">
+                        <controls:SettingRow.Action>
+                            <TextBlock Text="{Binding Settings.GameOptions.BackgroundSound}" VerticalAlignment="Center"/>
+                        </controls:SettingRow.Action>
+                    </controls:SettingRow>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <StackPanel Classes="settings-group"
+                    IsVisible="{Binding Settings.GameOptions.IsSupported}">
+            <TextBlock Text="{Binding Shell.I18n[settingsGroupGameOptionsGraphics]}"
+                       Classes="group-title"/>
+            <Border Classes="settings-group-card">
+                <StackPanel>
+                    <controls:SettingRow Title="{Binding Shell.I18n[gameOptionQuality]}">
+                        <controls:SettingRow.Action>
+                            <TextBlock Text="{Binding Settings.GameOptions.Quality}" VerticalAlignment="Center"/>
+                        </controls:SettingRow.Action>
+                    </controls:SettingRow>
+                    <Border Classes="settings-row-divider"/>
+                    <controls:SettingRow Title="{Binding Shell.I18n[gameOptionRenderScale]}">
+                        <controls:SettingRow.Action>
+                            <TextBlock Text="{Binding Settings.GameOptions.RenderScale}" VerticalAlignment="Center"/>
+                        </controls:SettingRow.Action>
+                    </controls:SettingRow>
+                    <Border Classes="settings-row-divider"/>
+                    <controls:SettingRow Title="{Binding Shell.I18n[gameOptionFrameRate]}">
+                        <controls:SettingRow.Action>
+                            <TextBlock Text="{Binding Settings.GameOptions.FrameRate}" VerticalAlignment="Center"/>
+                        </controls:SettingRow.Action>
+                    </controls:SettingRow>
+                    <Border Classes="settings-row-divider"/>
+                    <controls:SettingRow Title="{Binding Shell.I18n[gameOptionAntiAliasing]}">
+                        <controls:SettingRow.Action>
+                            <TextBlock Text="{Binding Settings.GameOptions.AntiAliasing}" VerticalAlignment="Center"/>
+                        </controls:SettingRow.Action>
+                    </controls:SettingRow>
+                    <Border Classes="settings-row-divider"/>
+                    <controls:SettingRow Title="{Binding Shell.I18n[gameOptionPostProcessing]}">
+                        <controls:SettingRow.Action>
+                            <TextBlock Text="{Binding Settings.GameOptions.PostProcessing}" VerticalAlignment="Center"/>
+                        </controls:SettingRow.Action>
+                    </controls:SettingRow>
+                    <Border Classes="settings-row-divider"/>
+                    <controls:SettingRow Title="{Binding Shell.I18n[gameOptionDrawcallMode]}">
+                        <controls:SettingRow.Action>
+                            <TextBlock Text="{Binding Settings.GameOptions.DrawcallMode}" VerticalAlignment="Center"/>
+                        </controls:SettingRow.Action>
+                    </controls:SettingRow>
+                    <Border Classes="settings-row-divider"/>
+                    <controls:SettingRow Title="{Binding Shell.I18n[gameOptionLetterBox]}">
+                        <controls:SettingRow.Action>
+                            <TextBlock Text="{Binding Settings.GameOptions.LetterBox}" VerticalAlignment="Center"/>
+                        </controls:SettingRow.Action>
+                    </controls:SettingRow>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <StackPanel Classes="settings-group"
+                    IsVisible="{Binding Settings.GameOptions.IsSupported}">
+            <TextBlock Text="{Binding Shell.I18n[settingsGroupGameOptionsDisplay]}"
+                       Classes="group-title"/>
+            <Border Classes="settings-group-card">
+                <StackPanel>
+                    <controls:SettingRow Title="{Binding Shell.I18n[gameOptionScreenMode]}">
+                        <controls:SettingRow.Action>
+                            <TextBlock Text="{Binding Settings.GameOptions.ScreenMode}" VerticalAlignment="Center"/>
+                        </controls:SettingRow.Action>
+                    </controls:SettingRow>
+                    <Border Classes="settings-row-divider"/>
+                    <controls:SettingRow Title="{Binding Shell.I18n[gameOptionScreenRatio]}">
+                        <controls:SettingRow.Action>
+                            <TextBlock Text="{Binding Settings.GameOptions.ScreenRatio}" VerticalAlignment="Center"/>
+                        </controls:SettingRow.Action>
+                    </controls:SettingRow>
+                    <Border Classes="settings-row-divider"/>
+                    <controls:SettingRow Title="{Binding Shell.I18n[gameOptionVSync]}">
+                        <controls:SettingRow.Action>
+                            <TextBlock Text="{Binding Settings.GameOptions.VSync}" VerticalAlignment="Center"/>
+                        </controls:SettingRow.Action>
+                    </controls:SettingRow>
+                    <Border Classes="settings-row-divider"/>
+                    <controls:SettingRow Title="{Binding Shell.I18n[gameOptionWindowSize]}">
+                        <controls:SettingRow.Action>
+                            <TextBlock Text="{Binding Settings.GameOptions.WindowSize}" VerticalAlignment="Center"/>
+                        </controls:SettingRow.Action>
+                    </controls:SettingRow>
+                    <Border Classes="settings-row-divider"/>
+                    <controls:SettingRow Title="{Binding Shell.I18n[gameOptionTitleAudio]}">
+                        <controls:SettingRow.Action>
+                            <TextBlock Text="{Binding Settings.GameOptions.TitleVideo}" VerticalAlignment="Center"/>
+                        </controls:SettingRow.Action>
+                    </controls:SettingRow>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <StackPanel Classes="settings-group"
+                    IsVisible="{Binding Settings.GameOptions.IsSupported}">
+            <TextBlock Text="{Binding Shell.I18n[settingsGroupGameOptionsInput]}"
+                       Classes="group-title"/>
+            <Border Classes="settings-group-card">
+                <StackPanel>
+                    <controls:SettingRow Title="{Binding Shell.I18n[gameOptionControlDisplay]}">
+                        <controls:SettingRow.Action>
+                            <TextBlock Text="{Binding Settings.GameOptions.ControlDisplay}" VerticalAlignment="Center"/>
+                        </controls:SettingRow.Action>
+                    </controls:SettingRow>
+                    <Border Classes="settings-row-divider"/>
+                    <controls:SettingRow Title="{Binding Shell.I18n[gameOptionMouseCursor]}">
+                        <controls:SettingRow.Action>
+                            <TextBlock Text="{Binding Settings.GameOptions.MouseCursor}" VerticalAlignment="Center"/>
+                        </controls:SettingRow.Action>
+                    </controls:SettingRow>
+                    <Border Classes="settings-row-divider"/>
+                    <controls:SettingRow Title="{Binding Shell.I18n[gameOptionVibration]}">
+                        <controls:SettingRow.Action>
+                            <TextBlock Text="{Binding Settings.GameOptions.Vibration}" VerticalAlignment="Center"/>
+                        </controls:SettingRow.Action>
+                    </controls:SettingRow>
+                    <Border Classes="settings-row-divider"/>
+                    <controls:SettingRow Title="{Binding Shell.I18n[gameOptionControllerCursorSpeed]}">
+                        <controls:SettingRow.Action>
+                            <TextBlock Text="{Binding Settings.GameOptions.ControllerCursorSpeed}" VerticalAlignment="Center"/>
+                        </controls:SettingRow.Action>
+                    </controls:SettingRow>
+                    <Border Classes="settings-row-divider"/>
+                    <controls:SettingRow Title="{Binding Shell.I18n[gameOptionCursorAutoFocus]}">
+                        <controls:SettingRow.Action>
+                            <TextBlock Text="{Binding Settings.GameOptions.CursorAutoFocus}" VerticalAlignment="Center"/>
+                        </controls:SettingRow.Action>
+                    </controls:SettingRow>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <StackPanel Classes="settings-group"
+                    IsVisible="{Binding Settings.GameOptions.IsSupported}">
+            <TextBlock Text="{Binding Shell.I18n[settingsGroupGameOptionsNotifications]}"
+                       Classes="group-title"/>
+            <Border Classes="settings-group-card">
+                <StackPanel>
+                    <controls:SettingRow Title="{Binding Shell.I18n[gameOptionDownloadNotification]}">
+                        <controls:SettingRow.Action>
+                            <TextBlock Text="{Binding Settings.GameOptions.DownloadNotification}" VerticalAlignment="Center"/>
+                        </controls:SettingRow.Action>
+                    </controls:SettingRow>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </StackPanel>
+</UserControl>

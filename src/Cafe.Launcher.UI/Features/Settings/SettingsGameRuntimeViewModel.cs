@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Helpers;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services.GameRuntime;
@@ -30,9 +31,10 @@ internal sealed partial class SettingsGameRuntimeViewModel : ObservableObject, I
     private readonly SettingsEditor editor;
     private readonly SettingsOptionsViewModel options;
     private readonly LocalizationService localizer;
-    private readonly IGameRuntime gameRuntime;
+    private IGameRuntime gameRuntime;
     private readonly IFilePickerService filePickerService;
     private readonly IProtonBuildDiscovery protonBuildDiscovery;
+    private string gameId = LauncherProfiles.BlueArchiveJapan.RuntimeId;
 
     /// <summary>运行器/路径连续编辑时合并刷新，避免每次按键都探测版本并扫描磁盘。</summary>
     private const int StatusRefreshDebounceMilliseconds = 300;
@@ -60,9 +62,42 @@ internal sealed partial class SettingsGameRuntimeViewModel : ObservableObject, I
         editor.CurrentPropertyChanged += OnCurrentSettingChanged;
     }
 
+    /// <summary>此流程固定的游戏分区；读取与写入都不经根设置的 BA 兼容投影。</summary>
+    public string GameId => gameId;
+
+    private GameSettings Game => editor.Current.GetGameSettings(gameId);
+
+    /// <summary>
+    /// Rebinds the runtime surface to a fixed game. The caller decides when to refresh the
+    /// status row so opening the overlay does not double-probe the runtime.
+    /// </summary>
+    public void SetGameTarget(string targetGameId, IGameRuntime runtime)
+    {
+        ArgumentNullException.ThrowIfNull(runtime);
+        _ = LauncherProfiles.GetSupportedGame(targetGameId);
+        if (string.Equals(gameId, targetGameId, StringComparison.Ordinal)
+            && ReferenceEquals(gameRuntime, runtime))
+        {
+            return;
+        }
+
+        statusRefresh.Cancel();
+        statusRefreshGeneration++;
+        gameId = targetGameId;
+        gameRuntime = runtime;
+        statusEntries = null;
+        StatusSummary = string.Empty;
+        BuildDiscoveryFailed = false;
+        IsStatusRefreshing = false;
+        Builds = [];
+        OnPropertyChanged(nameof(GameId));
+        OnPropertyChanged(nameof(IsRunnerPathEnabled));
+        OnPropertyChanged(nameof(SelectedBuild));
+    }
+
     /// <summary>A custom executable path is only applied to an explicitly selected runner.</summary>
     public bool IsRunnerPathEnabled =>
-        editor.Current.GameRuntime.Runner is GameRuntimeRunners.Umu or GameRuntimeRunners.Wine;
+        Game.GameRuntime.Runner is GameRuntimeRunners.Umu or GameRuntimeRunners.Wine;
 
     /// <summary>
     /// Multi-line per-runner availability summary, e.g.
@@ -92,7 +127,7 @@ internal sealed partial class SettingsGameRuntimeViewModel : ObservableObject, I
     {
         get
         {
-            var currentPath = NormalizePath(editor.Current.GameRuntime.ProtonPath);
+            var currentPath = NormalizePath(Game.GameRuntime.ProtonPath);
             if (currentPath.Length == 0)
             {
                 return null;
@@ -107,7 +142,7 @@ internal sealed partial class SettingsGameRuntimeViewModel : ObservableObject, I
             // 自定义路径，只有用户选中具体候选才改写草稿。清空请使用路径输入框。
             if (value is not null)
             {
-                editor.Current.GameRuntime.ProtonPath = value;
+                Game.GameRuntime.ProtonPath = value;
             }
         }
     }
@@ -131,14 +166,14 @@ internal sealed partial class SettingsGameRuntimeViewModel : ObservableObject, I
     [RelayCommand]
     private Task ChoosePrefixPathAsync() => PickRuntimeFolderAsync(
         LocalizationKeys.GameRuntimePrefixPath,
-        () => editor.Current.GameRuntime.PrefixPath,
-        path => editor.Current.GameRuntime.PrefixPath = path);
+        () => Game.GameRuntime.PrefixPath,
+        path => Game.GameRuntime.PrefixPath = path);
 
     [RelayCommand]
     private Task ChooseProtonPathAsync() => PickRuntimeFolderAsync(
         LocalizationKeys.GameRuntimeProtonPath,
-        () => editor.Current.GameRuntime.ProtonPath,
-        path => editor.Current.GameRuntime.ProtonPath = path);
+        () => Game.GameRuntime.ProtonPath,
+        path => Game.GameRuntime.ProtonPath = path);
 
     internal string BuildStatusSummary(IReadOnlyList<GameRuntimeStatusEntry> entries)
     {
@@ -231,7 +266,7 @@ internal sealed partial class SettingsGameRuntimeViewModel : ObservableObject, I
         {
             try
             {
-                var runtimeConfiguration = GameRuntimeConfiguration.FromSettings(editor.GetSnapshot().GameRuntime);
+                var runtimeConfiguration = GameRuntimeConfiguration.FromSettings(Game.GameRuntime.DeepClone());
                 var entries = await gameRuntime
                     .GetStatusesAsync(runtimeConfiguration, cancellationToken)
                     .ConfigureAwait(true);

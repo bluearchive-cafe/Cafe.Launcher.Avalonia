@@ -1,0 +1,50 @@
+<Border xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="using:Cafe.Launcher.UI.Controls"
+        xmlns:glyphs="using:Cafe.Launcher.UI.Constants"
+        xmlns:helpers="using:Cafe.Launcher.UI.Helpers"
+        x:Class="Cafe.Launcher.UI.Controls.DialogSurface"
+        x:Name="Surface"
+        x:DataType="controls:DialogSurface"
+        Background="{DynamicResource Launcher.Color.Dialog.Background}"
+        BoxShadow="{helpers:BoxShadows {StaticResource Launcher.Elevation.Shadow.Dialog}}"
+        BorderBrush="{DynamicResource ContentDialogBorderBrush}"
+        BorderThickness="{DynamicResource ContentDialogBorderWidth}"
+        CornerRadius="{StaticResource Launcher.Component.Dialog.CornerRadius}"
+        AutomationProperties.Name="{Binding #Surface.Title}">
+    <Grid RowDefinitions="Auto,Auto,*,Auto">
+        <Border x:Name="PART_PanelHead" Padding="{StaticResource Launcher.Component.Dialog.Header.Panel.Padding}">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}">
+                <TextBlock x:Name="PART_TitleTextBlock" Text="{Binding #Surface.Title}" Theme="{StaticResource SubtitleTextBlockStyle}"
+                           VerticalAlignment="Center" TextWrapping="Wrap"/>
+                <Button x:Name="PART_CloseButton" Grid.Column="1"
+                        Theme="{StaticResource TransparentButton}"
+                        Command="{Binding #Surface.CloseCommand}" IsEnabled="{Binding #Surface.CanClose}"
+                        AutomationProperties.Name="{Binding #Surface.CloseAutomationName}"
+                        ToolTip.Tip="{Binding #Surface.CloseToolTip}">
+                    <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Close}"/>
+                </Button>
+            </Grid>
+        </Border>
+        <Border x:Name="PART_BasicHead" Padding="{StaticResource Launcher.Component.Dialog.Header.Basic.Padding}">
+            <TextBlock Text="{Binding #Surface.Title}" Theme="{StaticResource SubtitleTextBlockStyle}" TextWrapping="Wrap"/>
+        </Border>
+        <ContentPresenter x:Name="PART_ToolbarPresenter" Grid.Row="1"/>
+        <ScrollViewer x:Name="PART_ScrollViewer" Grid.Row="2"
+                      Padding="{StaticResource Launcher.Component.Dialog.Body.Padding}"
+                      HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+            <ContentPresenter x:Name="PART_ScrollContentPresenter"/>
+        </ScrollViewer>
+        <ContentPresenter x:Name="PART_DirectContentPresenter" Grid.Row="2"/>
+        <Border x:Name="PART_FooterBand" Grid.Row="3"
+                UseLayoutRounding="True"
+                Padding="{StaticResource Launcher.Component.Dialog.Footer.Padding}"
+                BorderBrush="{DynamicResource Launcher.Color.Dialog.Section.Divider}"
+                BorderThickness="{StaticResource Launcher.Component.Dialog.Footer.BorderThickness}">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                <ContentPresenter x:Name="PART_FooterLeadingPresenter" HorizontalContentAlignment="Left" VerticalAlignment="Center"/>
+                <ContentPresenter x:Name="PART_FooterPresenter" Grid.Column="1" VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+    </Grid>
+</Border>

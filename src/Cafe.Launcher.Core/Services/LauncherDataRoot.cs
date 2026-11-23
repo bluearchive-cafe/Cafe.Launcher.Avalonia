@@ -67,6 +67,18 @@ public sealed class LauncherDataRoot
     /// <summary><c>settings.json.bak</c>：最近一次无法按原样读取的设置文件副本，仅供诊断。</summary>
     public string SettingsBackupPath => Path.Combine(Root, LauncherPaths.LauncherSettingsBackupFileName);
 
+    /// <summary>旧单游戏设置首次提交为多游戏格式前的原始字节备份。</summary>
+    public string SettingsMigrationBackupPath =>
+        Path.Combine(Root, LauncherPaths.SettingsMigrationBackupFileName);
+
+    /// <summary>版本 2 全局背景迁入游戏专属配置前的原始字节备份。</summary>
+    public string SettingsBackgroundMigrationBackupPath =>
+        Path.Combine(Root, LauncherPaths.SettingsBackgroundMigrationBackupFileName);
+
+    /// <summary>写入前无法解析的设置文件原样备份。</summary>
+    public string CorruptSettingsBackupPath =>
+        Path.Combine(Root, LauncherPaths.CorruptSettingsBackupFileName);
+
     /// <summary><c>download_state.json</c>：可续传下载的检查点。</summary>
     public string DownloadStatePath => Path.Combine(Root, LauncherPaths.DownloadStateFileName);
 

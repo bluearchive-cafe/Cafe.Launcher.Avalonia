@@ -19,3 +19,9 @@
 ## 2026-11-01 共享组件跟进
 
 跨功能按钮外观、尺寸、焦点预留与表面圆角由 [ADR-050](ADR-050-跨功能共享组件视觉基准.md) 更新；本文保留当时决策与未被替代的业务、交互及生命周期契约。
+
+## 2026-11-14 主应用主题迁移
+
+[ADR-063](ADR-063-全应用统一Fluent2视觉.md) 将主应用全局切换为 FluentAvaloniaTheme，并把控件密度与圆角统一为 32/4/8 DIP。隔离报告进程继续加载自身的 FluentTheme 与本地 Crash 资源，只同步动作高度 32 DIP 与 4/8 DIP 圆角。
+
+同日主应用图标语言统一为 Fluent 符号，`MaterialIcons` 依赖移除。`CrashReportApp.axaml` 不再注册图标样式包，改为就地声明 `SymbolThemeFontFamily` 资源并为 `FAFontIcon` 绑定该字体；隔离进程的自包含边界不变。

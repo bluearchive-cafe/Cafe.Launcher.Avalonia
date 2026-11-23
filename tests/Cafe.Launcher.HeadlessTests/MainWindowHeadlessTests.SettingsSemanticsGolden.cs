@@ -39,9 +39,13 @@ public sealed partial class MainWindowHeadlessTests
         context.Window.Width = 1024;
         context.Window.Height = 640;
         OpenSettings(context);
+        // A settings preview reapplies the draft's motion preference. Pin it as well so
+        // the screenshot never samples the General section partway through its entrance.
+        context.ViewModel.Settings.Editor.Current.MotionMode = MotionModes.Reduced;
         context.ViewModel.Settings.Editor.Current.ThemeMode = ThemeModes.Dark;
         await context.ViewModel.Settings.PendingAppearancePreview.WaitAsync(TimeSpan.FromSeconds(5));
         context.Provider.GetRequiredService<ThemeApplier>().ApplyScheme(Color.Parse("#2E7DF6"), isDark: true);
+        Assert.True(context.ViewModel.IsMotionReduced);
         context.ViewModel.Settings.IsSaving = true;
         using var typography = new TypographyScaleSnapshot(context.Window, 1.5);
         GoldenScreenshot.Compare(context.Window, "settings-saving-dark-scaled");
@@ -133,7 +137,7 @@ public sealed partial class MainWindowHeadlessTests
         foreach (var item in resource.ResourcePanelItems)
         {
             item.Status = ResourcePanelItemStatus.Ready;
-            item.StatusIconKind = "CheckCircle";
+            item.StatusGlyph = FluentGlyphs.Success;
             item.StatusText = context.ViewModel.Shell.I18n[LocalizationKeys.ResourcePanelReady];
             item.OfficialVersion = "1.2.0";
             item.LocalizedVersion = "1.2.0";

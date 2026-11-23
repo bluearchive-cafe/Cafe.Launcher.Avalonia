@@ -720,7 +720,7 @@ Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
         Directory.CreateDirectory(gamePath);
         var settingsPath = Path.Combine(tempDir, "settings.json");
         var statePath = Path.Combine(tempDir, "download_state.json");
-        File.WriteAllText(statePath, "stale-checkpoint");
+        File.WriteAllText(statePath, """{"formatVersion":2,"gameId":"blue-archive-jp","version":"stale"}""");
         var settingsService = new LauncherSettingsService( TestDataRoot.ForFile(settingsPath) );
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
         // 版本落后使状态不匹配 → 确需提交；清单两侧均为空 → diff==0 走写探测闸口。
@@ -1727,6 +1727,8 @@ Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
         var checkpointStore = new DownloadCheckpointStore(tempDir.DataRoot);
         await checkpointStore.SaveAsync(new DownloadTaskState
         {
+            FormatVersion = DownloadCheckpointStore.CurrentFormatVersion,
+            GameId = LauncherProfiles.BlueArchiveJapan.RuntimeId,
             Version = "1.0.0",
             Basis = "manifest.json",
             GamePath = gamePath,
@@ -1754,6 +1756,8 @@ Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
         var statePath = Path.Combine(tempDir, "download_state.json");
         await File.WriteAllTextAsync(statePath, JsonSerializer.Serialize(new DownloadTaskState
         {
+            FormatVersion = DownloadCheckpointStore.CurrentFormatVersion,
+            GameId = LauncherProfiles.BlueArchiveJapan.RuntimeId,
             Version = "0.9.0",
             Basis = "manifest.json",
             GamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP")
@@ -1775,6 +1779,8 @@ Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
         var statePath = Path.Combine(tempDir, "download_state.json");
         await File.WriteAllTextAsync(statePath, JsonSerializer.Serialize(new DownloadTaskState
         {
+            FormatVersion = DownloadCheckpointStore.CurrentFormatVersion,
+            GameId = LauncherProfiles.BlueArchiveJapan.RuntimeId,
             Version = "1.0.0",
             Basis = "manifest.json",
             GamePath = gamePath,

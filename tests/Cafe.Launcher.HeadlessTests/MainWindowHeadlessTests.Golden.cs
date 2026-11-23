@@ -9,6 +9,7 @@ using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services.Update;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
+using FluentAvalonia.UI.Controls;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cafe.Launcher.HeadlessTests;
@@ -39,7 +40,7 @@ public sealed partial class MainWindowHeadlessTests
         using var context = CreateContext();
         PrepareGoldenWindow(context);
         var split = ShowLaunchSplitButton(context);
-        var menu = Assert.IsType<MenuFlyout>(split.Flyout);
+        var menu = Assert.IsType<FAMenuFlyout>(split.Flyout);
         // 将弹窗放入同一渲染树，截图才能同时捕获按钮、间距与菜单。
         menu.Popup.ShouldUseOverlayLayer = true;
         try
@@ -215,6 +216,10 @@ public sealed partial class MainWindowHeadlessTests
     [AvaloniaFact]
     public void Golden_SetupWizardAgreementReadDarkChinese_MatchesBaseline()
     {
+        // 本用例的渲染对进程内用例序敏感：同一构建下，全量套件序与单用例/纯黄金序的截图
+        // 存在约 4% 像素差。基线必须随全量套件重制（先设 CAFE_GOLDEN_UPDATE=1 再跑
+        // test.ps1 -Suite Headless），单用例定向或 -UpdateGolden 的纯黄金序都会得到另一帧。
+        // 向导本身无产品回归，序依赖属无头宿主的跨用例渲染状态，尚未定位。
         using var variant = ThemeVariantSnapshot.Capture(ThemeVariant.Dark);
         using var context = CreateContext();
         PrepareGoldenWindow(context, ThemeVariant.Dark);

@@ -2,10 +2,13 @@ using System;
 using Avalonia;
 using Avalonia.Media;
 using Avalonia.Styling;
+using Cafe.Launcher.UI.Helpers;
 using Cafe.Launcher.UI.Constants;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Constants;
+using FluentAvalonia.Styling;
+using MaterialColorUtilities.DynamicColors;
 
 namespace Cafe.Launcher.UI.Services;
 
@@ -66,16 +69,9 @@ internal sealed class ThemeApplier : IDisposable
     /// <summary>取系统强调色；不可得时回落到声明式默认主题色。</summary>
     public static Color GetSystemAccentColor()
     {
-        if (Application.Current?.TryGetResource(
-                "SystemAccentColor",
-                ThemeVariant.Default,
-                out var value) == true
-            && value is Color color)
-        {
-            return color;
-        }
-
-        return Color.Parse(LauncherConstants.DefaultThemeColor);
+        // Fluent 的 SystemAccentColor 已由 CustomAccentColor 接管，系统来源须直接读取平台值。
+        return Application.Current?.PlatformSettings?.GetColorValues().AccentColor1
+            ?? Color.Parse(LauncherConstants.DefaultThemeColor);
     }
 
     /// <summary>
@@ -105,6 +101,8 @@ internal sealed class ThemeApplier : IDisposable
             SetBrush(application, key, brush);
         }
 
+        ApplyFluentAccent(application, scheme, roleBrushes["Launcher.Color.Primary"].Color, isDark);
+
         lastSchemeApplied = true;
         lastSchemeSeed = seed;
         lastSchemeVariant = variant;
@@ -132,6 +130,29 @@ internal sealed class ThemeApplier : IDisposable
 
         themeApplication = application;
         themeApplication.ActualThemeVariantChanged += OnActualThemeVariantChanged;
+    }
+
+    private static void ApplyFluentAccent(Application application, DynamicScheme scheme, Color primary, bool isDark)
+    {
+        foreach (var style in application.Styles)
+        {
+            if (style is not FluentAvaloniaTheme theme)
+            {
+                continue;
+            }
+
+            // Fluent 的默认浅色档会把已是高明度的 M3 主色继续提亮至白色。
+            // 在公开的系统色阶资源上提供 HCT 色调，让原生状态画刷保留主题色相。
+            var palette = scheme.PrimaryPalette;
+            application.Resources["SystemAccentColorLight1"] = MaterialColorMapper.ToAvaloniaColor(palette.Get(70));
+            application.Resources["SystemAccentColorLight2"] = isDark ? primary : MaterialColorMapper.ToAvaloniaColor(palette.Get(80));
+            application.Resources["SystemAccentColorLight3"] = MaterialColorMapper.ToAvaloniaColor(palette.Get(88));
+            application.Resources["SystemAccentColorDark1"] = isDark ? MaterialColorMapper.ToAvaloniaColor(palette.Get(40)) : primary;
+            application.Resources["SystemAccentColorDark2"] = MaterialColorMapper.ToAvaloniaColor(palette.Get(35));
+            application.Resources["SystemAccentColorDark3"] = MaterialColorMapper.ToAvaloniaColor(palette.Get(30));
+            theme.CustomAccentColor = primary;
+            break;
+        }
     }
 
     private static void SetBrush(Application application, string key, SolidColorBrush source)

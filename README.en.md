@@ -2,7 +2,7 @@
 
 [简体中文](README.md) | [English](README.en.md)
 
-A community desktop launcher for Blue Archive JP, built with .NET 10 and Avalonia. Reuse an official game installation or start from scratch, then update, repair, launch, and uninstall from one application.
+A community desktop launcher for Blue Archive JP and Stella Sora CN, built with .NET 10 and Avalonia. Reuse an official game installation or start from scratch, then update, repair, launch, and uninstall from one application.
 
 [![Stars](https://img.shields.io/github/stars/bluearchive-cafe/Cafe.Launcher.Avalonia?style=flat-square&label=Stars)](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia)
 [![Stable release](https://img.shields.io/github/v/release/bluearchive-cafe/Cafe.Launcher.Avalonia?style=flat-square&color=3fb950&label=Stable)](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases/latest)
@@ -26,10 +26,10 @@ A community desktop launcher for Blue Archive JP, built with .NET 10 and Avaloni
 
 | Capability | What it provides |
 | --- | --- |
-| Game management | Compatible official game directories and manifests; installation, incremental updates, CRC64 repair, launch, and uninstall |
-| Download controls | Up to 10 concurrent transfers, pause, resume, saved progress, speed limits, and Official or Cafe download sources |
+| Game management | Reuse official directories and manifests for both games; each keeps its own settings and sessions, and tasks continue when you switch games |
+| Download controls | Up to 10 concurrent transfers, pause, resume, saved progress, speed limits, and Official or Cafe sources for Blue Archive; Stella Sora uses Official |
 | Launch verification | Local manifest, remote manifest, or no check; verifies file existence and size, while repair checks file contents |
-| Chinese-localized resources | Manage game text, main-story Chinese voice, and image/video resources using an eight-letter uppercase UID |
+| Chinese-localized resources | Manage Blue Archive text, main-story Chinese voice, and image/video resources with an eight-letter uppercase UID |
 | Appearance | English, Simplified Chinese, Traditional Chinese, and Japanese; themes, image/video backgrounds, wallpaper colors; preview, save, or discard changes |
 | Diagnostics and updates | Local log viewing and export; Windows updates checked against the same release's SHA256SUMS and applied by a separate updater |
 
@@ -50,8 +50,8 @@ Linux anti-cheat compatibility depends on the distribution, runner, Proton build
 ## Get started
 
 1. Download the complete package for your platform from [Releases](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases). Most Windows users can use `Cafe.Launcher_v<version>_setup.exe`; extract the entire portable ZIP before running `Cafe.Launcher.exe`.
-2. Complete the setup wizard: language, download source, game installation path, proxy, and confirmation. Chinese system languages default to Cafe; other languages default to Official.
-3. Select an existing `BlueArchive_JP` directory, or choose a base directory and confirm the final `YostarGames/BlueArchive_JP` path before installing.
+2. Complete the setup wizard, then select a game in the left rail. Blue Archive initially uses Cafe for Chinese system languages; Stella Sora uses Official.
+3. Use Game Settings to recognize an existing `BlueArchive_JP` or `StellaSora_CN` directory. For a fresh installation, choose a base directory and confirm the destination before installing.
 4. When ready, select **Start Game**. The adjacent dropdown provides update checks, the game directory, repair, uninstall, and other actions. Game desktop shortcuts support Windows and Linux (keep the AppImage file in place).
 
 See [Installation and First Run](https://docs.bluearchive.cafe/en/cafe-launcher/installation). After switching download sources, repair when prompted so files match the selected manifest. Avoid simultaneous file operations when sharing a directory with the official launcher.
@@ -76,7 +76,7 @@ The bundled wallpaper is [初めてのゲーム](https://www.pixiv.net/artworks/
 
 Remote backgrounds use the image address supplied by the official launcher configuration. They are downloaded to the local cache and fall back to the bundled wallpaper on failure. Rights remain with their respective holders; these images are not included in project packages. Custom images, videos, and folders are selected locally, never uploaded or distributed by the project. Users are responsible for permission to use them.
 
-Windows x64 and Linux and macOS portable packages include the video runtime; Linux system packages use a package-manager dependency. Volume defaults to 0, and muting retains your chosen volume. Playback pauses when minimized or hidden to the tray; reduced motion pauses it and shows the first frame as a still. Colors come from cover art or the first frame and remain stable during playback. Appearance changes preview immediately; save to persist them or discard to restore the previous state. See [Background settings](https://docs.bluearchive.cafe/en/cafe-launcher/settings#background). Motion is under **Appearance → Theme and motion**; extraction algorithms are in the collapsed **Advanced colors** section. Repository key visuals and release banners are project-created promotional materials.
+Windows x64 and Linux and macOS portable packages include the video runtime; Linux system packages use a package-manager dependency. Volume defaults to 0, and muting retains your chosen volume. Playback pauses when minimized or hidden to the tray; reduced motion pauses it and shows the first frame as a still. Colors come from cover art or the first frame and remain stable during playback. Appearance changes preview immediately. Use Preview Main Window to see the full effect, then save or discard your changes. See [Background settings](https://docs.bluearchive.cafe/en/cafe-launcher/settings#background). Motion is under **Appearance → Theme and motion**; extraction algorithms are in the collapsed **Advanced colors** section. Repository key visuals and release banners are project-created promotional materials.
 
 ## Data and licensing
 
@@ -90,7 +90,7 @@ The application, user data, and game directory are separate. Removing the launch
 
 Linux upgrades attempt to migrate the old `Cafe Launcher` directory within the same data home, preserving existing destination entries and old files that could not be moved. Check **Settings → Advanced → Open Data Directory** before cleaning up.
 
-Source code uses the [MIT License](LICENSE). See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) for component licenses. Thanks to Avalonia, CommunityToolkit.Mvvm, Material.Icons.Avalonia, the other open-source dependencies, and everyone contributing tests, translations, and feedback.
+Source code uses the [MIT License](LICENSE). See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) for component licenses. Thanks to Avalonia, FluentAvaloniaUI, CommunityToolkit.Mvvm, the other open-source dependencies, and everyone contributing tests, translations, and feedback.
 
 ## Development and documentation
 

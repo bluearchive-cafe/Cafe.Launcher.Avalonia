@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text.Json;
 using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.Core.Helpers;
+using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.Core.Services.GameRuntime;
 
@@ -59,16 +60,26 @@ internal sealed record CompatibilityEnvironmentReport(
 /// </remarks>
 internal sealed class CompatibilityEnvironmentPrecheck
 {
-    private readonly LauncherDataRoot dataRoot;
+    private readonly string reportPath;
 
     public CompatibilityEnvironmentPrecheck(LauncherDataRoot dataRoot)
+        : this((dataRoot ?? throw new ArgumentNullException(nameof(dataRoot))).CompatibilityEnvironmentPath)
     {
-        ArgumentNullException.ThrowIfNull(dataRoot);
-        this.dataRoot = dataRoot;
+    }
+
+    /// <summary>把兼容环境报告保存在指定游戏的私有状态目录中。</summary>
+    public CompatibilityEnvironmentPrecheck(GameDataPaths paths)
+        : this((paths ?? throw new ArgumentNullException(nameof(paths))).CompatibilityEnvironmentPath)
+    {
+    }
+
+    private CompatibilityEnvironmentPrecheck(string reportPath)
+    {
+        this.reportPath = reportPath;
     }
 
     /// <summary>报告文件的绝对路径。</summary>
-    public string ReportPath => dataRoot.CompatibilityEnvironmentPath;
+    public string ReportPath => reportPath;
 
     /// <summary>对给定前缀做预检，尽力写出报告并返回；报告写入失败不影响调用方。</summary>
     internal CompatibilityEnvironmentReport Check(string prefixPath)

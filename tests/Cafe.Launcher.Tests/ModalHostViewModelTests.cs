@@ -167,6 +167,7 @@ public sealed class ModalHostViewModelTests
     [
         ModalKind.DebugResetConfirmation,
         ModalKind.Notice,
+        ModalKind.LegalDocument,
         ModalKind.Update,
         ModalKind.Error,
         ModalKind.SetupWizardExitConfirmation,

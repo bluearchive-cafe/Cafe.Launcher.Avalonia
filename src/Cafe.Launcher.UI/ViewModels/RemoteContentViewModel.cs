@@ -90,7 +90,19 @@ internal partial class RemoteContentViewModel : ObservableObject, IDisposable, I
     private IPageTransition carouselTransition = null!;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(NewsExpansionActionLabel))]
     private NewsCategory? selectedNewsCategory;
+
+    public string NewsExpansionActionLabel => localizer.T(SelectedNewsCategory?.IsExpanded == true
+        ? LocalizationKeys.NewsCollapse : LocalizationKeys.NewsExpand);
+
+    [RelayCommand]
+    private void ToggleNewsCategory()
+    {
+        if (SelectedNewsCategory is not { CanExpand: true } category) return;
+        category.IsExpanded = !category.IsExpanded;
+        OnPropertyChanged(nameof(NewsExpansionActionLabel));
+    }
 
     public ObservableCollection<BannerDot> BannerDots { get; } = [];
 
@@ -141,6 +153,7 @@ internal partial class RemoteContentViewModel : ObservableObject, IDisposable, I
 
     public void RefreshLocalizedText()
     {
+        OnPropertyChanged(nameof(NewsExpansionActionLabel));
         UpdateCarouselPageText();
         UpdateBannerDotAccessibleNames();
     }
@@ -266,7 +279,7 @@ internal partial class RemoteContentViewModel : ObservableObject, IDisposable, I
                         : SanitizeImageUrl(item.QrImg),
                     Url = SanitizeLinkUrl(item.JumpUrl),
                     ImageUrl = SanitizeImageUrl(item.QrImg),
-                    SocialIconKind = ResolveSocialIconKind(item.SocialMediaChannel)
+                    SocialGlyph = ResolveSocialGlyph(item.SocialMediaChannel)
                 });
             }
         }
@@ -278,7 +291,7 @@ internal partial class RemoteContentViewModel : ObservableObject, IDisposable, I
                 Title = localizer.T(LocalizationKeys.ContactCustomerSupport),
                 Subtitle = ResolveContactSubtitle(social),
                 Url = SanitizeLinkUrl(ResolveContactUrl(social)),
-                SocialIconKind = "Headset"
+                SocialGlyph = FluentGlyphs.Help
             });
         }
 
@@ -641,27 +654,27 @@ internal partial class RemoteContentViewModel : ObservableObject, IDisposable, I
         }
     }
 
-    public static string ResolveSocialIconKind(string? channelName)
+    public static string ResolveSocialGlyph(string? channelName)
     {
         if (string.IsNullOrWhiteSpace(channelName))
         {
-            return "Link";
+            return FluentGlyphs.Link;
         }
 
         var name = channelName.ToLowerInvariant();
-        if (name.Contains("twitter") || string.Equals(name, "x", StringComparison.Ordinal)) return "Twitter";
-        if (name.Contains("youtube")) return "Youtube";
-        if (name.Contains("discord")) return "Discord";
-        if (name.Contains("line")) return "Chat";
-        if (name.Contains("公式") || name.Contains("official") || name.Contains("website")) return "Web";
-        if (name.Contains("niconico") || name.Contains("ニコ")) return "Television";
-        if (name.Contains("pixiv")) return "Palette";
-        if (name.Contains("forum") || name.Contains("コミュ")) return "Forum";
-        if (name.Contains("mail") || name.Contains("メール")) return "Email";
-        if (name.Contains("instagram")) return "Instagram";
-        if (name.Contains("facebook")) return "Facebook";
-        if (name.Contains("tiktok")) return "MusicNote";
-        return "Link";
+        if (name.Contains("twitter") || string.Equals(name, "x", StringComparison.Ordinal)) return FluentGlyphs.Message;
+        if (name.Contains("youtube")) return FluentGlyphs.Video;
+        if (name.Contains("discord")) return FluentGlyphs.Message;
+        if (name.Contains("line")) return FluentGlyphs.Message;
+        if (name.Contains("公式") || name.Contains("official") || name.Contains("website")) return FluentGlyphs.Globe;
+        if (name.Contains("niconico") || name.Contains("ニコ")) return FluentGlyphs.Video;
+        if (name.Contains("pixiv")) return FluentGlyphs.Image;
+        if (name.Contains("forum") || name.Contains("コミュ")) return FluentGlyphs.People;
+        if (name.Contains("mail") || name.Contains("メール")) return FluentGlyphs.Mail;
+        if (name.Contains("instagram")) return FluentGlyphs.Image;
+        if (name.Contains("facebook")) return FluentGlyphs.Account;
+        if (name.Contains("tiktok")) return FluentGlyphs.Music;
+        return FluentGlyphs.Link;
     }
 
     public static string ResolveContactSubtitle(SocialMediaResourceResponse social)

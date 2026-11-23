@@ -80,8 +80,11 @@ internal partial class GameOperationsViewModel : IModalContentViewModel
         && taskResult!.ErrorCode is not (GameOperationErrorCode.PathMissing or GameOperationErrorCode.CdnConfiguration
             or GameOperationErrorCode.RemoteConfiguration or GameOperationErrorCode.GameRunning
             or GameOperationErrorCode.InsufficientDiskSpace or GameOperationErrorCode.InvalidState);
-    public bool CanStartInstall => CanCommitInstall && (!shell.IsInstallBlockedByDiskSpace
-        || !GamePathValidator.PathComparer.Equals(InstallPathDraft, currentSnapshot?.LocalGame.GamePath));
+    private bool IsInstallDraftBlockedByDiskSpace => shell.IsInstallBlockedByDiskSpace
+        && GamePathValidator.PathComparer.Equals(InstallPathDraft, currentSnapshot?.LocalGame.GamePath);
+    public bool CanStartInstall => CanCommitInstall && !IsInstallDraftBlockedByDiskSpace;
+    public string? InstallPreparationDiskSpaceMessage => IsInstallDraftBlockedByDiskSpace
+        ? shell.InstallDiskSpaceMessage : null;
     public bool CanViewTaskLog => HasTask;
     public bool CanChooseInstallPath => IsInstallPreparing && !IsInstallPathBusy && CanManageGame;
     public bool CanCommitInstall => CanChooseInstallPath && !string.IsNullOrWhiteSpace(InstallPathDraft);
@@ -93,11 +96,12 @@ internal partial class GameOperationsViewModel : IModalContentViewModel
             : taskIsInstall ? LocalizationKeys.TaskInstallStopped : LocalizationKeys.TaskUpdateStopped)
         : IsTaskFailed ? localizer.T(taskKind == GameOperationKind.Repair ? LocalizationKeys.TaskRepairFailed
             : taskIsInstall ? LocalizationKeys.TaskInstallFailed : LocalizationKeys.TaskUpdateFailed) : ProgressTitle;
-    public string TaskIcon => IsInstallPreparing ? "Download" : IsTaskStopping ? "Stop" : taskResult?.Success == true ? "Check"
-        : IsTaskFailed ? "AlertCircleOutline" : taskResult?.ErrorCode == GameOperationErrorCode.Stopped ? "Stop"
-        : IsPaused ? "Pause" : IsTaskStalled ? "ClockOutline"
-        : taskProgress?.IsCheckingDownload == true || displayedProgressStage is GameOperationStage.UpdateCheck or GameOperationStage.RepairCheck or GameOperationStage.FileCheck ? "Magnify"
-        : displayedProgressStage == GameOperationStage.VerificationRetry ? "Refresh" : ProgressIconKind;
+    public string TaskIcon => IsInstallPreparing ? FluentGlyphs.Download : IsTaskStopping ? FluentGlyphs.Stop
+        : taskResult?.Success == true ? FluentGlyphs.Check
+        : IsTaskFailed ? FluentGlyphs.Error : taskResult?.ErrorCode == GameOperationErrorCode.Stopped ? FluentGlyphs.Stop
+        : IsPaused ? FluentGlyphs.Pause : IsTaskStalled ? FluentGlyphs.Clock
+        : taskProgress?.IsCheckingDownload == true || displayedProgressStage is GameOperationStage.UpdateCheck or GameOperationStage.RepairCheck or GameOperationStage.FileCheck ? FluentGlyphs.Search
+        : displayedProgressStage == GameOperationStage.VerificationRetry ? FluentGlyphs.Refresh : ProgressGlyph;
     public string TaskMessage => taskResult?.Message ?? "";
     public string TaskPath => IsInstallPreparing ? InstallPathDraft : taskPath;
     public string TaskCloseText => localizer.T(IsTaskExecuting ? LocalizationKeys.TaskHide : LocalizationKeys.Close);
@@ -105,9 +109,9 @@ internal partial class GameOperationsViewModel : IModalContentViewModel
         : CanLaunchTaskResult ? localizer.T(LocalizationKeys.StartGame)
         : IsTaskResultOnPrimary ? TaskTitle
         : currentSnapshot?.RuntimeState == LauncherRuntimeState.Ready ? localizer.T(LocalizationKeys.StartGame) : InstallButtonText;
-    public string PrimaryActionIcon => IsTaskExecuting ? TaskIcon
-        : CanLaunchTaskResult ? "PlayCircle" : IsTaskResultOnPrimary ? TaskIcon
-        : currentSnapshot?.RuntimeState == LauncherRuntimeState.Ready ? "PlayCircle" : InstallButtonIconKind;
+    public string PrimaryActionGlyph => IsTaskExecuting ? TaskIcon
+        : CanLaunchTaskResult ? FluentGlyphs.Play : IsTaskResultOnPrimary ? TaskIcon
+        : currentSnapshot?.RuntimeState == LauncherRuntimeState.Ready ? FluentGlyphs.Play : InstallButtonGlyph;
     [RelayCommand]
     private async Task PrimaryActionAsync()
     {
@@ -126,7 +130,7 @@ internal partial class GameOperationsViewModel : IModalContentViewModel
     [RelayCommand]
     private async Task OpenInstallPreparationAsync()
     {
-        if (!CanManageGame) return;
+        if (!CanManageGame || !journey.CanConfigureInstallation()) return;
         installSizeCancellation?.Cancel();
         using var cancellation = new CancellationTokenSource();
         installSizeCancellation = cancellation;
@@ -209,6 +213,19 @@ internal partial class GameOperationsViewModel : IModalContentViewModel
             if (!await CommitInstallPathAsync(InstallPathDraft)) return;
             if (currentSnapshot is null) return;
             IsInstallPathBusy = false;
+            if (install
+                && currentSnapshot.LocalGame.Kind == LocalInstallationStateKind.Valid
+                && GameOperationAttempt.Evaluate(GameOperationPolicy.Operation.InstallOrUpdate, currentSnapshot)
+                    .Decision == GameOperationDecision.RejectedForCurrentState)
+            {
+                // 提交路径后快照已按新目录刷新：用户随手选中的目录可能已经是一份可用的安装，
+                // 安装因此没有准入。继续走只会得到一句笼统的「当前状态不可用」，并把准备页留在
+                // 原地；按「定位游戏」收尾，什么都不下载。仍可安装的旧版本（有可用更新）不受影响。
+                IsTaskDialogVisible = false;
+                IsInstallPreparing = false;
+                toastService.ShowSuccess(localizer.T(LocalizationKeys.GameInstallationAlreadyPresent));
+                return;
+            }
             if (install)
             {
                 if (shell.IsInstallBlockedByDiskSpace) return;
@@ -231,7 +248,7 @@ internal partial class GameOperationsViewModel : IModalContentViewModel
         if (!GamePathValidator.PathComparer.Equals(Path.TrimEndingDirectorySeparator(taskPath),
                 Path.TrimEndingDirectorySeparator(currentSnapshot.LocalGame.GamePath)))
         {
-            toastService.ShowWarning(localizer.T(LocalizationKeys.OperationUnavailableForCurrentState));
+            toastService.ShowWarning(OperationMessage(localizer.T(LocalizationKeys.OperationUnavailableForCurrentState)));
             return;
         }
         if (taskKind == GameOperationKind.Repair) await RepairAsync();
@@ -305,6 +322,8 @@ internal partial class GameOperationsViewModel : IModalContentViewModel
     private void OnShellTaskStateChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(ShellViewModel.IsBusy) or nameof(ShellViewModel.IsInstallBlockedByDiskSpace)) RefreshTaskPresentation();
+        if (e.PropertyName == nameof(ShellViewModel.InstallDiskSpaceMessage))
+            OnPropertyChanged(nameof(InstallPreparationDiskSpaceMessage));
     }
 
     partial void OnIsTaskExecutingChanged(bool value) => RefreshTaskPresentation();
@@ -326,7 +345,7 @@ internal partial class GameOperationsViewModel : IModalContentViewModel
         OnPropertyChanged(nameof(TaskTitle));
         OnPropertyChanged(nameof(TaskIcon));
         OnPropertyChanged(nameof(PrimaryActionText));
-        OnPropertyChanged(nameof(PrimaryActionIcon));
+        OnPropertyChanged(nameof(PrimaryActionGlyph));
         RefreshFloatingTaskPresentation();
     }
 
@@ -336,7 +355,7 @@ internal partial class GameOperationsViewModel : IModalContentViewModel
         foreach (var name in new[] { nameof(HasTask), nameof(HasTaskResult), nameof(IsTaskResultOnPrimary), nameof(IsTaskResultVisible), nameof(IsTaskFailed),
             nameof(CanRepairGame), nameof(CanUninstallGame), nameof(CanStopTask), nameof(CanManageGame), nameof(CanUsePrimaryAction), nameof(CanLaunchTaskResult),
             nameof(CanRetryTask), nameof(CanStartInstall), nameof(CanChooseInstallPath), nameof(CanViewTaskLog), nameof(CanCommitInstall), nameof(TaskTitle), nameof(TaskIcon), nameof(TaskMessage), nameof(TaskPath),
-            nameof(InstallDownloadSizeText), nameof(InstallRequiredSizeText), nameof(TaskCloseText), nameof(PrimaryActionText), nameof(PrimaryActionIcon) })
+            nameof(InstallDownloadSizeText), nameof(InstallRequiredSizeText), nameof(InstallPreparationDiskSpaceMessage), nameof(TaskCloseText), nameof(PrimaryActionText), nameof(PrimaryActionGlyph) })
             OnPropertyChanged(name);
     }
 }

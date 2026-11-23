@@ -1,0 +1,8 @@
+{
+  "code": 200,
+  "data": {
+    "back_up_cdn": "https://game-launcher-ss-cn-bk.yostar.net",
+    "primary_cdn": "https://game-launcher-ss-cn.yostar.net"
+  },
+  "msg": "OK"
+}

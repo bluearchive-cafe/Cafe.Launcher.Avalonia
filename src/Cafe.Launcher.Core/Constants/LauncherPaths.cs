@@ -32,7 +32,28 @@ public static class LauncherPaths
     /// </summary>
     public const string LauncherSettingsBackupFileName = "settings.json.bak";
 
+    /// <summary>
+    /// Original bytes of an unversioned single-game <c>settings.json</c>, written once when the
+    /// multi-game format is first committed.
+    /// </summary>
+    public const string SettingsMigrationBackupFileName = "settings.pre-multigame.json";
+
+    /// <summary>
+    /// Original bytes of a former version-2 document whose global background moved into game entries.
+    /// </summary>
+    public const string SettingsBackgroundMigrationBackupFileName = "settings.pre-backgrounds.json";
+
+    /// <summary>
+    /// Original bytes of a document that could not be parsed at all when a write was about to
+    /// replace it. Kept so a "my settings were reset" report has the destroyed file to inspect.
+    /// </summary>
+    public const string CorruptSettingsBackupFileName = "settings.corrupt.json";
+
     public const string DownloadStateFileName = "download_state.json";
+
+    /// <summary>旧单游戏检查点导入完成标记，避免停止新任务后再次复活旧备份。</summary>
+    public const string DownloadMigrationMarkerFileName = "download_state.migrated-v1.json";
+
     public const string NoticeStateFileName = "shown_notices.json";
 
     /// <summary>

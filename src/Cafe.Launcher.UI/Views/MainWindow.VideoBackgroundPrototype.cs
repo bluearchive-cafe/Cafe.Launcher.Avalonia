@@ -130,6 +130,10 @@ internal partial class MainWindow
                 }
                 break;
             case "close":
+                if (configuredViewModel is { Games: not null } closing)
+                {
+                    await closing.Settings.DiscardChangesAsync();
+                }
                 Close();
                 break;
         }
@@ -140,8 +144,10 @@ internal partial class MainWindow
     {
         if (configuredViewModel is not { } vm) return;
         vm.IsMotionReduced = false;
-        var settings = vm.Settings.Editor.Current;
-        settings.MotionMode = MotionModes.Full;
+        vm.Settings.BeginEdit(gameSpecific: true);
+        vm.Settings.Editor.Current.MotionMode = MotionModes.Full;
+        var settings = vm.Settings.Game;
+        settings.UseBackgroundOverride = true;
         settings.BackgroundSource = released ? BackgroundSources.Bundled : BackgroundSources.Custom;
         settings.CustomBackgroundPath = released ? "" : Environment.GetEnvironmentVariable("CAFE_VIDEO_PROTOTYPE_FILE") ?? "";
         await vm.Settings.PendingAppearancePreview;

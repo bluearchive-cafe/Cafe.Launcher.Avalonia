@@ -4,7 +4,7 @@
              xmlns:models="using:Cafe.Launcher.UI.Models"
              xmlns:coreModels="using:Cafe.Launcher.Core.Models"
              xmlns:converters="using:Cafe.Launcher.UI.Converters"
-             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:glyphs="using:Cafe.Launcher.UI.Constants"
              xmlns:controls="using:Cafe.Launcher.UI.Controls"
              x:Class="Cafe.Launcher.UI.Views.ResourcePanelOverlay"
              x:Name="ResourcePanelRoot"
@@ -19,34 +19,39 @@
                       RowDefinitions="Auto,Auto"
                       RowSpacing="{StaticResource Launcher.Spacing.Xs}"
                       ColumnSpacing="{StaticResource Launcher.Spacing.Lg}">
-                <StackPanel Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}">
-                    <TextBlock Text="{Binding DisplayName}" Classes="section-title" VerticalAlignment="Center"/>
+                <WrapPanel ItemSpacing="{StaticResource Launcher.Spacing.Sm}">
+                    <TextBlock Text="{Binding DisplayName}" Classes="section-title" TextWrapping="Wrap" VerticalAlignment="Center"/>
                     <Border Classes="status-chip"
                             Classes.loading="{Binding IsStatusLoading}"
                             Classes.ready="{Binding IsStatusReady}"
                             Classes.waiting="{Binding IsStatusWaiting}"
                             Classes.failed="{Binding IsStatusFailed}">
                         <StackPanel Classes="status-chip-content" Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Xs}">
-                            <materialIcons:MaterialIcon Kind="{Binding StatusIconKind}"
+                            <controls:FluentIcon Glyph="{Binding StatusGlyph}"
                                                         Classes="status-chip-icon"
-                                                        Width="{StaticResource Launcher.Icon.Sm}"
-                                                        Height="{StaticResource Launcher.Icon.Sm}"/>
+                                                        FontSize="{StaticResource Launcher.Icon.Sm}"/>
                             <TextBlock Text="{Binding StatusText}" Classes="status-chip-text"/>
                         </StackPanel>
                     </Border>
-                </StackPanel>
-                <!-- 版本一致时折叠为单行结论，避免两列相同哈希的重复噪音。 -->
-                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}"
-                            IsVisible="{Binding IsVersionAligned}">
-                    <TextBlock Text="{Binding #ResourcePanelRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n[resourcePanelVersionAligned]}" Classes="caption" VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding OfficialVersion}" Classes="value" VerticalAlignment="Center"/>
-                </StackPanel>
-                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}"
-                            IsVisible="{Binding !IsVersionAligned}">
-                    <TextBlock Text="{Binding #ResourcePanelRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n[resourcePanelOfficialVersion]}" Classes="caption" VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding OfficialVersion}" Classes="value" VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding #ResourcePanelRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n[resourcePanelLocalizedVersion]}" Classes="caption" VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding LocalizedVersion}" Classes="value" VerticalAlignment="Center"/>
+                </WrapPanel>
+                <StackPanel Grid.Row="1" Spacing="{StaticResource Launcher.Spacing.Xs}">
+                    <WrapPanel ItemSpacing="{StaticResource Launcher.Spacing.Sm}" IsVisible="{Binding IsVersionAligned}">
+                        <TextBlock Text="{Binding #ResourcePanelRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n[resourcePanelVersionAligned]}"
+                                   Classes="caption" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding OfficialVersion}" Classes="value" TextWrapping="Wrap"/>
+                    </WrapPanel>
+                    <StackPanel Spacing="{StaticResource Launcher.Spacing.Xs}" IsVisible="{Binding !IsVersionAligned}">
+                        <WrapPanel ItemSpacing="{StaticResource Launcher.Spacing.Sm}">
+                            <TextBlock Text="{Binding #ResourcePanelRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n[resourcePanelOfficialVersion]}"
+                                       Classes="caption" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding OfficialVersion}" Classes="value" TextWrapping="Wrap"/>
+                        </WrapPanel>
+                        <WrapPanel ItemSpacing="{StaticResource Launcher.Spacing.Sm}">
+                            <TextBlock Text="{Binding #ResourcePanelRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n[resourcePanelLocalizedVersion]}"
+                                       Classes="caption" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding LocalizedVersion}" Classes="value" TextWrapping="Wrap"/>
+                        </WrapPanel>
+                    </StackPanel>
                 </StackPanel>
                 <!-- 条目选择在保存时统一提交，使用独立多选语义。 -->
                 <CheckBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
@@ -82,43 +87,28 @@
             </controls:DialogSurface.RenderTransform>
             <controls:DialogSurface.Content>
                 <StackPanel Spacing="{StaticResource Launcher.Spacing.Md}">
-                    <!-- ① 提示条（info 语调）：常驻说明行，无关闭钮（2026-09-28 用户裁决）。 -->
-                    <Border Classes="info-strip">
-                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Md}">
-                            <materialIcons:MaterialIcon Kind="InformationOutline"
-                                                        Classes="info-strip-icon"
-                                                        Width="{StaticResource Launcher.Icon.Sm}"
-                                                        Height="{StaticResource Launcher.Icon.Sm}"/>
-                            <TextBlock Text="{Binding Shell.I18n[resourcePanelUidGenerationHint]}" Classes="body"
-                                       TextWrapping="Wrap" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- ② 消息条（中性 / 危险两语调；前导图标提供非颜色线索）。 -->
+                    <!-- 前导图标与文字共同表达操作反馈。 -->
                     <Border Classes="info-strip resource-panel-status"
                             Classes.danger="{Binding ResourcePanel.IsResourcePanelMessageError}"
                             IsVisible="{Binding ResourcePanel.ResourcePanelMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
-                            <materialIcons:MaterialIcon Kind="CheckCircle"
+                            <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Success}"
                                                         Classes="status-strip-icon"
-                                                        Width="{StaticResource Launcher.Icon.Sm}"
-                                                        Height="{StaticResource Launcher.Icon.Sm}"
+                                                        FontSize="{StaticResource Launcher.Icon.Sm}"
                                                         IsVisible="{Binding !ResourcePanel.IsResourcePanelMessageError}"/>
-                            <materialIcons:MaterialIcon Kind="AlertCircle"
+                            <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Error}"
                                                         Classes="status-strip-icon danger"
-                                                        Width="{StaticResource Launcher.Icon.Sm}"
-                                                        Height="{StaticResource Launcher.Icon.Sm}"
+                                                        FontSize="{StaticResource Launcher.Icon.Sm}"
                                                         IsVisible="{Binding ResourcePanel.IsResourcePanelMessageError}"/>
                             <TextBlock Grid.Column="1" Text="{Binding ResourcePanel.ResourcePanelMessage}" Classes="body"
-                                       TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                       TextWrapping="Wrap" VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite"/>
                         </Grid>
                     </Border>
 
-                    <!-- ③ UID 单卡三态（ADR-041）：缺失 / 编辑 / 展示互斥，共用同一份
-                         ManualResourcePanelUid；互斥性由 ViewModel 的三个标志保证。 -->
+                    <!-- UID 的展示、编辑和缺失状态使用同一份草稿。 -->
                     <Border Classes="dialog-card uid-card">
                         <StackPanel Spacing="{StaticResource Launcher.Spacing.Md}">
-                            <!-- 展示态：标签 + 等宽 UID 值，右侧「修改 UID」；发丝线下是来源分段按钮。 -->
+                            <!-- 展示态下，UID 与来源分别排列。 -->
                             <StackPanel Spacing="{StaticResource Launcher.Spacing.Md}"
                                         IsVisible="{Binding ResourcePanel.IsResourcePanelUidPresent}">
                                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Lg}">
@@ -131,45 +121,31 @@
                                             AutomationProperties.Name="{Binding Shell.I18n[resourcePanelChangeUid]}"
                                             IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
                                         <StackPanel Classes="button-content">
-                                            <materialIcons:MaterialIcon Kind="Pencil" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                            <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Edit}" FontSize="{StaticResource Launcher.Icon.Sm}"/>
                                             <TextBlock Text="{Binding Shell.I18n[resourcePanelChangeUid]}"/>
                                         </StackPanel>
                                     </Button>
                                 </Grid>
                                 <Border Classes="uid-section-divider"/>
-                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Lg}">
+                                <StackPanel Spacing="{StaticResource Launcher.Spacing.Xs}">
                                     <TextBlock Text="{Binding Shell.I18n[resourcePanelUidSource]}" Classes="group-title"
                                                VerticalAlignment="Center"/>
-                                    <!-- 分段按钮替代 ComboBox：两项互斥常显，单击直达；busy 时整组禁用。 -->
-                                    <Border Grid.Column="1" Classes="segmented"
-                                            IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
-                                        <StackPanel Orientation="Horizontal">
-                                            <RadioButton Classes="segment-option"
-                                                         GroupName="ResourcePanelUidSource"
-                                                         IsChecked="{Binding ResourcePanel.SelectedResourcePanelUidSource, Converter={x:Static converters:SegmentOptionConverter.Instance}, ConverterParameter={x:Static coreModels:ResourcePanelUidSources.Auto}, Mode=TwoWay}"
-                                                         AutomationProperties.Name="{Binding Shell.I18n[resourcePanelUidSourceAuto]}">
-                                                <StackPanel Classes="segment-content" Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Xs}">
-                                                    <materialIcons:MaterialIcon Kind="Check" Classes="segment-check"
-                                                                                Width="{StaticResource Launcher.Icon.Sm}"
-                                                                                Height="{StaticResource Launcher.Icon.Sm}"/>
-                                                    <TextBlock Text="{Binding Shell.I18n[resourcePanelUidSourceAuto]}"/>
-                                                </StackPanel>
-                                            </RadioButton>
-                                            <Border Classes="segmented-divider"/>
-                                            <RadioButton Classes="segment-option"
-                                                         GroupName="ResourcePanelUidSource"
-                                                         IsChecked="{Binding ResourcePanel.SelectedResourcePanelUidSource, Converter={x:Static converters:SegmentOptionConverter.Instance}, ConverterParameter={x:Static coreModels:ResourcePanelUidSources.Custom}, Mode=TwoWay}"
-                                                         AutomationProperties.Name="{Binding Shell.I18n[resourcePanelUidSourceCustom]}">
-                                                <StackPanel Classes="segment-content" Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Xs}">
-                                                    <materialIcons:MaterialIcon Kind="Check" Classes="segment-check"
-                                                                                Width="{StaticResource Launcher.Icon.Sm}"
-                                                                                Height="{StaticResource Launcher.Icon.Sm}"/>
-                                                    <TextBlock Text="{Binding Shell.I18n[resourcePanelUidSourceCustom]}"/>
-                                                </StackPanel>
-                                            </RadioButton>
-                                        </StackPanel>
-                                    </Border>
-                                </Grid>
+                                    <WrapPanel x:Name="ResourceUidSourceOptions"
+                                               ItemSpacing="{StaticResource Launcher.Spacing.Md}"
+                                               IsEnabled="{Binding !ResourcePanel.IsResourcePanelBusy}">
+                                        <RadioButton GroupName="ResourcePanelUidSource"
+                                                     IsChecked="{Binding ResourcePanel.SelectedResourcePanelUidSource, Converter={x:Static converters:SegmentOptionConverter.Instance}, ConverterParameter={x:Static coreModels:ResourcePanelUidSources.Auto}, Mode=TwoWay}"
+                                                     AutomationProperties.Name="{Binding Shell.I18n[resourcePanelUidSourceAuto]}">
+                                            <TextBlock Text="{Binding Shell.I18n[resourcePanelUidSourceAuto]}" TextWrapping="Wrap"/>
+                                        </RadioButton>
+
+                                        <RadioButton GroupName="ResourcePanelUidSource"
+                                                     IsChecked="{Binding ResourcePanel.SelectedResourcePanelUidSource, Converter={x:Static converters:SegmentOptionConverter.Instance}, ConverterParameter={x:Static coreModels:ResourcePanelUidSources.Custom}, Mode=TwoWay}"
+                                                     AutomationProperties.Name="{Binding Shell.I18n[resourcePanelUidSourceCustom]}">
+                                            <TextBlock Text="{Binding Shell.I18n[resourcePanelUidSourceCustom]}" TextWrapping="Wrap"/>
+                                        </RadioButton>
+                                    </WrapPanel>
+                                </StackPanel>
                             </StackPanel>
 
                             <!-- 编辑态：点「修改 UID」后原位换面，取消 / 保存右对齐（确认在右）。 -->
@@ -187,16 +163,16 @@
                                             AutomationProperties.Name="{Binding Shell.I18n[cancel]}"
                                             IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
                                         <StackPanel Classes="button-content">
-                                            <materialIcons:MaterialIcon Kind="CloseCircle" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                            <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Cancel}" FontSize="{StaticResource Launcher.Icon.Sm}"/>
                                             <TextBlock Text="{Binding Shell.I18n[cancel]}"/>
                                         </StackPanel>
                                     </Button>
-                                    <Button Classes="primary-action dialog-action"
+                                    <Button Classes="primary-action dialog-action accent"
                                             Command="{Binding ResourcePanel.SaveManualResourcePanelUidCommand}"
                                             AutomationProperties.Name="{Binding Shell.I18n[resourcePanelSaveUid]}"
                                             IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
                                         <StackPanel Classes="button-content">
-                                            <materialIcons:MaterialIcon Kind="ContentSave" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                            <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Save}" FontSize="{StaticResource Launcher.Icon.Sm}"/>
                                             <TextBlock Text="{Binding Shell.I18n[resourcePanelSaveUid]}"/>
                                         </StackPanel>
                                     </Button>
@@ -213,12 +189,12 @@
                                          AutomationProperties.Name="{Binding Shell.I18n[resourcePanelUid]}"
                                          IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}"/>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="{StaticResource Launcher.Spacing.Md}">
-                                    <Button Classes="primary-action dialog-action"
+                                    <Button Classes="primary-action dialog-action accent"
                                             Command="{Binding ResourcePanel.SaveManualResourcePanelUidCommand}"
                                             AutomationProperties.Name="{Binding Shell.I18n[resourcePanelSaveUid]}"
                                             IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
                                         <StackPanel Classes="button-content">
-                                            <materialIcons:MaterialIcon Kind="ContentSave" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                            <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Save}" FontSize="{StaticResource Launcher.Icon.Sm}"/>
                                             <TextBlock Text="{Binding Shell.I18n[resourcePanelSaveUid]}"/>
                                         </StackPanel>
                                     </Button>
@@ -227,7 +203,17 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- ④ 资源单卡三行：条目集合按位对齐恒为三项，行模板共享、分隔线显式。 -->
+                    <Border Classes="info-strip">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                            <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Info}"
+                                                        Classes="info-strip-icon"
+                                                        FontSize="{StaticResource Launcher.Icon.Sm}"/>
+                            <TextBlock Grid.Column="1" Text="{Binding Shell.I18n[resourcePanelUidGenerationHint]}" Classes="body"
+                                       TextWrapping="Wrap" VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- 资源偏好在底部统一提交。 -->
                     <Border Classes="dialog-card resource-card" IsEnabled="{Binding !ResourcePanel.IsResourcePanelBusy}">
                         <StackPanel>
                             <ContentControl Content="{Binding ResourcePanel.ResourcePanelItems[0]}"
@@ -243,31 +229,31 @@
                 </StackPanel>
             </controls:DialogSurface.Content>
             <controls:DialogSurface.FooterLeading>
-                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Md}">
+                <WrapPanel Classes="dialog-actions" HorizontalAlignment="Left">
                     <Button Classes="flat-action dialog-action" Command="{Binding ResourcePanel.RefreshResourcePanelCommand}"
                             AutomationProperties.Name="{Binding Shell.I18n[resourcePanelRefresh]}"
                             IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
                         <StackPanel Classes="button-content">
-                            <materialIcons:MaterialIcon Kind="Refresh" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                            <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Refresh}" FontSize="{StaticResource Launcher.Icon.Sm}"/>
                             <TextBlock Text="{Binding Shell.I18n[resourcePanelRefresh]}"/>
                         </StackPanel>
                     </Button>
                     <TextBlock Text="{Binding Shell.I18n[unsavedChanges]}" Classes="caption" VerticalAlignment="Center"
                                ToolTip.Tip="{Binding Shell.I18n[resourcePanelUnsavedChanges]}"
                                IsVisible="{Binding ResourcePanel.HasUnsavedChanges}" AutomationProperties.LiveSetting="Polite"/>
-                </StackPanel>
+                </WrapPanel>
             </controls:DialogSurface.FooterLeading>
             <controls:DialogSurface.Footer>
-                <StackPanel Classes="confirm-actions">
-                    <Button Classes="primary-action dialog-action" Command="{Binding ResourcePanel.SaveResourcePanelCommand}"
+                <WrapPanel Classes="dialog-actions">
+                    <Button Classes="primary-action dialog-action accent" Command="{Binding ResourcePanel.SaveResourcePanelCommand}"
                             AutomationProperties.Name="{Binding Shell.I18n[resourcePanelSave]}"
                             IsEnabled="{Binding ResourcePanel.IsResourcePanelSaveEnabled}">
                         <StackPanel Classes="button-content">
-                            <materialIcons:MaterialIcon Kind="ContentSave" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                            <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Save}" FontSize="{StaticResource Launcher.Icon.Sm}"/>
                             <TextBlock Text="{Binding Shell.I18n[resourcePanelSave]}"/>
                         </StackPanel>
                     </Button>
-                </StackPanel>
+                </WrapPanel>
             </controls:DialogSurface.Footer>
         </controls:DialogSurface>
     </Grid>

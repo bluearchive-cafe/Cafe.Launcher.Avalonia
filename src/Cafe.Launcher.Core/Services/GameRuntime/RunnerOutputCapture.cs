@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Core.Constants;
+using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services.Diagnostics;
 
 namespace Cafe.Launcher.Core.Services.GameRuntime;
@@ -20,7 +21,7 @@ namespace Cafe.Launcher.Core.Services.GameRuntime;
 /// （AUD-GAME-001）。</para>
 /// <para>新一次 <see cref="BeginAsync"/> 会先取消上一次捕获并等待它释放录制文件（有上限）再覆盖
 /// 写入；旧捕获若在该预算内没有结束，新捕获退化为只排空不录制，而不是因共享冲突静默失败。</para>
-/// <para>文件路径由 <see cref="LauncherDataRoot"/> 拥有；本类不解析进程级静态。</para>
+/// <para>文件路径由注入的数据路径拥有；本类不解析进程级静态。</para>
 /// </remarks>
 internal sealed class RunnerOutputCapture
 {
@@ -34,20 +35,30 @@ internal sealed class RunnerOutputCapture
     internal const string RecordingUnavailableTitle = "RunnerOutputCapture";
 
     private readonly object gate = new();
-    private readonly LauncherDataRoot dataRoot;
+    private readonly string filePath;
     private readonly ILauncherDiagnostics? diagnostics;
     private CancellationTokenSource? current;
     private Task currentCapture = Task.CompletedTask;
 
     public RunnerOutputCapture(LauncherDataRoot dataRoot, ILauncherDiagnostics? diagnostics = null)
+        : this((dataRoot ?? throw new ArgumentNullException(nameof(dataRoot))).RunnerOutputPath, diagnostics)
     {
-        ArgumentNullException.ThrowIfNull(dataRoot);
-        this.dataRoot = dataRoot;
+    }
+
+    /// <summary>把运行器输出保存在指定游戏的私有状态目录中。</summary>
+    public RunnerOutputCapture(GameDataPaths paths, ILauncherDiagnostics? diagnostics = null)
+        : this((paths ?? throw new ArgumentNullException(nameof(paths))).RunnerOutputPath, diagnostics)
+    {
+    }
+
+    private RunnerOutputCapture(string filePath, ILauncherDiagnostics? diagnostics)
+    {
+        this.filePath = filePath;
         this.diagnostics = diagnostics;
     }
 
     /// <summary>捕获文件的绝对路径。</summary>
-    public string FilePath => dataRoot.RunnerOutputPath;
+    public string FilePath => filePath;
 
     /// <summary>
     /// 开始把 <paramref name="standardOutput"/> 与 <paramref name="standardError"/> 抽干进

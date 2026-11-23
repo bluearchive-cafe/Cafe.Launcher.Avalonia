@@ -44,6 +44,7 @@ internal partial class SettingsAppearanceViewModel : ObservableObject, IDisposab
         SettingsOptionsViewModel? options = null)
     {
         this.editor = editor;
+        BackgroundEditor = new BackgroundSettingsEditor(editor);
         this.themeApplier = themeApplier;
         this.diagnostics = diagnostics;
         this.showHiddenSettings = showHiddenSettings;
@@ -57,6 +58,16 @@ internal partial class SettingsAppearanceViewModel : ObservableObject, IDisposab
     }
 
     public SettingsEditor Editor => editor;
+
+    /// <summary>背景字段的绑定面：全局设置或一个明确的游戏覆盖范围。</summary>
+    public BackgroundSettingsEditor BackgroundEditor { get; }
+
+    /// <summary>Rebinds the background surface without moving values between scopes.</summary>
+    public void SetBackgroundScope(string? gameId)
+    {
+        BackgroundEditor.SetScope(gameId);
+        LoadBackgroundState();
+    }
 
     /// <summary>Borrow the current palette source, waiting for video artwork when needed.</summary>
     public Func<CancellationToken, Task<Bitmap?>>? GetBackgroundBitmapAsync { get; set; }
@@ -143,13 +154,28 @@ internal partial class SettingsAppearanceViewModel : ObservableObject, IDisposab
             IsThemeColorExtractionAlgorithmVisible = IsWallpaperThemeColorSelected;
             IsSeedFollowingNeutralStrategySelected =
                 settings.NeutralColorStrategy == NeutralColorStrategies.SeedFollowing;
-            IsCustomBackground = !string.IsNullOrWhiteSpace(settings.CustomBackgroundPath);
-            IsBackgroundFitSelected = settings.BackgroundFit == BackgroundFits.Uniform;
-            SelectedBackgroundFillColor = ColorUtils.ParseColorOrDefault(settings.BackgroundFillColor);
-            IsCustomBackgroundSelected = settings.BackgroundSource == BackgroundSources.Custom;
+            LoadBackgroundState();
             ReplaceThemeColorPalette(
                 settings.ThemeColorPalette,
                 settings.SelectedThemeColorPaletteIndex);
+        }
+        finally
+        {
+            suppressEditorUpdates = previous;
+        }
+    }
+
+    /// <summary>按当前绑定范围同步背景相关的展示状态；范围切换与快照加载共用。</summary>
+    private void LoadBackgroundState()
+    {
+        var previous = suppressEditorUpdates;
+        suppressEditorUpdates = true;
+        try
+        {
+            IsCustomBackground = !string.IsNullOrWhiteSpace(BackgroundEditor.CustomBackgroundPath);
+            IsBackgroundFitSelected = BackgroundEditor.BackgroundFit == BackgroundFits.Uniform;
+            SelectedBackgroundFillColor = ColorUtils.ParseColorOrDefault(BackgroundEditor.BackgroundFillColor);
+            IsCustomBackgroundSelected = BackgroundEditor.BackgroundSource == BackgroundSources.Custom;
         }
         finally
         {
@@ -228,7 +254,7 @@ internal partial class SettingsAppearanceViewModel : ObservableObject, IDisposab
                     ReplaceThemeColorPalette([], 0);
                     if (applySchemeAfter && editor.Current.ThemeColorMode == ThemeColorModes.Wallpaper)
                     {
-                        ApplyResolvedTheme();
+                        ApplyResolvedTheme(editor.Current);
                     }
                 });
                 return;
@@ -268,7 +294,7 @@ internal partial class SettingsAppearanceViewModel : ObservableObject, IDisposab
                 if (applySchemeAfter && editor.Current.ThemeColorMode == ThemeColorModes.Wallpaper)
                 {
                     // 直接落色而非走 ApplyThemeColor：空结果（如纯透明图）不会再次触发提取。
-                    ApplyResolvedTheme();
+                    ApplyResolvedTheme(editor.Current);
                 }
             });
         }
@@ -318,7 +344,7 @@ internal partial class SettingsAppearanceViewModel : ObservableObject, IDisposab
     {
         ArgumentNullException.ThrowIfNull(settings);
         ApplyTheme(settings.ThemeMode);
-        ApplyThemeColor(settings.ThemeColorMode, ColorUtils.ParseColorOrDefault(settings.CustomThemeColor));
+        ApplyThemeColor(settings);
     }
 
     /// <summary>
@@ -342,9 +368,10 @@ internal partial class SettingsAppearanceViewModel : ObservableObject, IDisposab
     /// </summary>
     public void ApplyTheme(string themeMode) => themeApplier.ApplyThemeMode(themeMode);
 
-    public void ApplyThemeColor(string themeColorMode, Color customColor)
+    /// <summary>应用指定设置的主题色。壁纸色板尚未就绪时等待当前背景取色。</summary>
+    public void ApplyThemeColor(LauncherSettings settings)
     {
-        if (themeColorMode == ThemeColorModes.Wallpaper && ThemeColorPaletteItems.Count == 0)
+        if (settings.ThemeColorMode == ThemeColorModes.Wallpaper && ThemeColorPaletteItems.Count == 0)
         {
             // 色板尚未提取：后台取色完成后经 applySchemeAfter 落色；
             // 此处直接返回，避免先落一次默认色再跳变。
@@ -354,19 +381,19 @@ internal partial class SettingsAppearanceViewModel : ObservableObject, IDisposab
             return;
         }
 
-        ApplyResolvedTheme();
+        ApplyResolvedTheme(settings);
     }
 
-    private void ApplyResolvedTheme()
+    private void ApplyResolvedTheme(LauncherSettings settings)
     {
         var color = ResolveThemeColor(
-            editor.Current.ThemeColorMode,
-            SelectedCustomThemeColor);
+            settings.ThemeColorMode,
+            ColorUtils.ParseColorOrDefault(settings.CustomThemeColor));
         themeApplier.ApplyScheme(
             color,
-            editor.Current.ThemeColorVariant,
-            ThemeApplier.IsDarkTheme(editor.Current.ThemeMode),
-            editor.Current.NeutralColorStrategy);
+            settings.ThemeColorVariant,
+            ThemeApplier.IsDarkTheme(settings.ThemeMode),
+            settings.NeutralColorStrategy);
         RefreshThemeColorPaletteBrushes();
         UpdateThemeColorPreview();
     }
@@ -377,7 +404,7 @@ internal partial class SettingsAppearanceViewModel : ObservableObject, IDisposab
         await RefreshThemeColorPaletteFromCurrentBackgroundAsync(markDirty: true);
         if (editor.Current.ThemeColorMode == ThemeColorModes.Wallpaper)
         {
-            ApplyThemeColor(editor.Current.ThemeColorMode, SelectedCustomThemeColor);
+            ApplyThemeColor(editor.Current);
         }
     }
 
@@ -405,7 +432,7 @@ internal partial class SettingsAppearanceViewModel : ObservableObject, IDisposab
 
             // ADR-009: 变更即预览 — mode changes repaint the main window immediately.
             // 壁纸模式且色板缺失时由 ApplyThemeColor 触发后台提取，完成后自动落色。
-            ApplyThemeColor(value, SelectedCustomThemeColor);
+            ApplyThemeColor(editor.Current);
             return;
         }
 
@@ -436,29 +463,29 @@ internal partial class SettingsAppearanceViewModel : ObservableObject, IDisposab
             // ADR-009: 变更即预览 — variant/strategy changes repaint the main
             // window immediately (ApplyThemeColor applies the scheme and refreshes
             // the palette swatches and preview chip).
-            ApplyThemeColor(editor.Current.ThemeColorMode, SelectedCustomThemeColor);
+            ApplyThemeColor(editor.Current);
             return;
         }
 
         if (e.PropertyName == nameof(LauncherSettings.BackgroundSource))
         {
             IsCustomBackgroundSelected =
-                editor.Current.BackgroundSource == BackgroundSources.Custom;
+                BackgroundEditor.BackgroundSource == BackgroundSources.Custom;
             IsCustomBackground =
-                !string.IsNullOrWhiteSpace(editor.Current.CustomBackgroundPath);
+                !string.IsNullOrWhiteSpace(BackgroundEditor.CustomBackgroundPath);
             return;
         }
 
         if (e.PropertyName == nameof(LauncherSettings.CustomBackgroundPath))
         {
             IsCustomBackground =
-                !string.IsNullOrWhiteSpace(editor.Current.CustomBackgroundPath);
+                !string.IsNullOrWhiteSpace(BackgroundEditor.CustomBackgroundPath);
             return;
         }
 
         if (e.PropertyName == nameof(LauncherSettings.BackgroundFit))
         {
-            IsBackgroundFitSelected = editor.Current.BackgroundFit == BackgroundFits.Uniform;
+            IsBackgroundFitSelected = BackgroundEditor.BackgroundFit == BackgroundFits.Uniform;
         }
     }
 
@@ -475,13 +502,17 @@ internal partial class SettingsAppearanceViewModel : ObservableObject, IDisposab
         UpdateThemeColorPreview();
         if (editor.Current.ThemeColorMode == ThemeColorModes.Wallpaper)
         {
-            ApplyThemeColor(editor.Current.ThemeColorMode, SelectedCustomThemeColor);
+            ApplyThemeColor(editor.Current);
         }
     }
 
     partial void OnSelectedBackgroundFillColorChanged(Color value)
     {
-        PushToEditor(settings => settings.BackgroundFillColor = ThemeColorExtractionService.ToColorHex(value));
+        if (!suppressEditorUpdates)
+        {
+            BackgroundEditor.BackgroundFillColor = ThemeColorExtractionService.ToColorHex(value);
+        }
+
         BackgroundFillColorPreviewBrush = new SolidColorBrush(value);
     }
 
@@ -681,6 +712,7 @@ internal partial class SettingsAppearanceViewModel : ObservableObject, IDisposab
         foreach (var item in ThemeColorPaletteItems)
             item.PropertyChanged -= OnPaletteSelectionChanged;
         editor.CurrentPropertyChanged -= OnCurrentSettingChanged;
+        BackgroundEditor.Dispose();
         if (platformSettings is not null)
         {
             platformSettings.ColorValuesChanged -= OnPlatformColorValuesChanged;

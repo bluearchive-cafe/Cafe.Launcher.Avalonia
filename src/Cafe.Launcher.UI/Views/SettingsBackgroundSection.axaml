@@ -1,0 +1,198 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cafe.Launcher.UI.ViewModels"
+             xmlns:coreModels="using:Cafe.Launcher.Core.Models"
+             xmlns:converters="using:Cafe.Launcher.UI.Converters"
+             xmlns:glyphs="using:Cafe.Launcher.UI.Constants"
+             xmlns:controls="using:Cafe.Launcher.UI.Controls"
+             x:Class="Cafe.Launcher.UI.Views.SettingsBackgroundSection"
+             x:Name="SettingsRoot"
+             x:DataType="vm:MainWindowViewModel">
+    <StackPanel>
+        <!-- 整组启停与保存语义一致（ADR-056）：提交式开关用复选框，不再用即时生效的拨动开关。 -->
+        <Border Classes="settings-group-card" IsVisible="{Binding Settings.IsGameSettingsEditing}">
+            <controls:SettingRow
+                                 Title="{Binding Shell.I18n[useBackgroundOverride]}"
+                                 Description="{Binding Shell.I18n[useBackgroundOverrideDescription]}">
+                <controls:SettingRow.Action>
+                    <CheckBox Classes="setting-checkbox"
+                              IsChecked="{Binding Settings.BackgroundEditor.UseBackgroundOverride, Mode=TwoWay}"
+                              AutomationProperties.Name="{Binding Shell.I18n[useBackgroundOverride]}"
+                              VerticalAlignment="Center"/>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+        </Border>
+
+        <StackPanel IsVisible="{Binding Settings.BackgroundEditor.CanEdit}">
+            <StackPanel Classes="settings-group">
+                <TextBlock Text="{Binding Shell.I18n[settingsGroupBackground]}" Classes="group-title"/>
+                <Border Classes="settings-group-card">
+                    <StackPanel>
+                        <controls:SettingRow
+                                             Title="{Binding Shell.I18n[backgroundSource]}"
+                                             Description="{Binding Shell.I18n[backgroundSourceDescription]}">
+                            <controls:SettingRow.Action>
+                                <WrapPanel Classes="setting-radio-group">
+                                    <RadioButton Classes="setting-radio"
+                                                 GroupName="SettingsBackgroundSource"
+                                                 IsChecked="{Binding Settings.BackgroundEditor.BackgroundSource, Converter={x:Static converters:SegmentOptionConverter.Instance}, ConverterParameter={x:Static coreModels:BackgroundSources.Bundled}, Mode=TwoWay}"
+                                                 AutomationProperties.Name="{Binding Shell.I18n[backgroundSourceBundled]}">
+                                        <TextBlock Text="{Binding Shell.I18n[backgroundSourceBundled]}" TextWrapping="Wrap"/>
+                                    </RadioButton>
+                                    <RadioButton Classes="setting-radio"
+                                                 GroupName="SettingsBackgroundSource"
+                                                 IsChecked="{Binding Settings.BackgroundEditor.BackgroundSource, Converter={x:Static converters:SegmentOptionConverter.Instance}, ConverterParameter={x:Static coreModels:BackgroundSources.Remote}, Mode=TwoWay}"
+                                                 AutomationProperties.Name="{Binding Shell.I18n[backgroundSourceRemote]}">
+                                        <TextBlock Text="{Binding Shell.I18n[backgroundSourceRemote]}" TextWrapping="Wrap"/>
+                                    </RadioButton>
+                                    <RadioButton Classes="setting-radio"
+                                                 GroupName="SettingsBackgroundSource"
+                                                 IsChecked="{Binding Settings.BackgroundEditor.BackgroundSource, Converter={x:Static converters:SegmentOptionConverter.Instance}, ConverterParameter={x:Static coreModels:BackgroundSources.Custom}, Mode=TwoWay}"
+                                                 AutomationProperties.Name="{Binding Shell.I18n[backgroundSourceCustom]}">
+                                        <TextBlock Text="{Binding Shell.I18n[backgroundSourceCustom]}" TextWrapping="Wrap"/>
+                                    </RadioButton>
+                                </WrapPanel>
+                            </controls:SettingRow.Action>
+                        </controls:SettingRow>
+
+                        <Border Classes="settings-row-divider"/>
+                        <Grid Classes="settings-appearance-media" ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                            <Border Classes="settings-appearance-thumbnail">
+                                <Grid>
+                                    <Image Classes="settings-appearance-thumbnail-image"
+                                           Classes.video="{Binding Background.IsVideoBackgroundSelected}"
+                                           Source="{Binding Background.BackgroundPreviewImage}" Stretch="UniformToFill"/>
+                                    <Border Classes="settings-appearance-video-shade"
+                                            IsVisible="{Binding Background.IsVideoBackgroundSelected}"/>
+                                    <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Video}" Classes="settings-appearance-video-icon"
+                                                                FontSize="{StaticResource Launcher.Icon.Lg}"
+                                                                HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                Foreground="{StaticResource Launcher.Text.OnChrome}"
+                                                                IsVisible="{Binding Background.IsVideoBackgroundSelected}"/>
+                                </Grid>
+                            </Border>
+                            <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
+                                <TextBlock Text="{Binding Shell.I18n[currentBackground]}" Classes="group-title"/>
+                                <TextBlock Text="{Binding Shell.I18n[backgroundSourceBundled]}" Classes="caption"
+                                           IsVisible="{Binding Background.CurrentBackgroundLocation, Converter={x:Static StringConverters.IsNullOrEmpty}}"/>
+                                <TextBlock Text="{Binding Shell.I18n[backgroundSourceRemote]}" Classes="caption"
+                                           ToolTip.Tip="{Binding Background.CurrentBackgroundLocation}"
+                                           IsVisible="{Binding Background.IsRemoteBackgroundDisplayed}"/>
+                                <TextBlock Text="{Binding Background.CurrentBackgroundFilePath}" Classes="caption"
+                                           TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Background.CurrentBackgroundFilePath}"
+                                           IsVisible="{Binding Background.CurrentBackgroundFilePath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                            </StackPanel>
+                        </Grid>
+                        <Border Classes="settings-row-divider"/>
+                        <Grid Classes="settings-appearance-warning" ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}"
+                                    IsVisible="{Binding Background.HasBackgroundLoadFailure}">
+                            <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Error}" FontSize="{StaticResource Launcher.Icon.Sm}"/>
+                            <TextBlock Grid.Column="1" Text="{Binding Shell.I18n[backgroundLoadFallback]}" Classes="caption" TextWrapping="Wrap"
+                                       AutomationProperties.LiveSetting="Polite"/>
+                        </Grid>
+
+                        <controls:SettingRow Title="{Binding Shell.I18n[customBackground]}"
+                                             Description="{Binding Shell.I18n[customBackgroundDescription]}"
+                                             IsVisible="{Binding Settings.Appearance.IsCustomBackgroundSettingsVisible}">
+                            <controls:SettingRow.Action>
+                                <WrapPanel ItemSpacing="{StaticResource Launcher.Spacing.Sm}" LineSpacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
+                                    <Button Classes="flat-action"
+                                            Command="{Binding Settings.ChooseBackgroundFileCommand}"
+                                            AutomationProperties.Name="{Binding Shell.I18n[chooseImageOrVideo]}">
+                                        <StackPanel Classes="button-content">
+                                            <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Image}" FontSize="{StaticResource Launcher.Icon.Sm}"/>
+                                            <TextBlock Text="{Binding Shell.I18n[chooseImageOrVideo]}"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Classes="flat-action"
+                                            Command="{Binding Settings.ChooseBackgroundFolderCommand}"
+                                            AutomationProperties.Name="{Binding Shell.I18n[chooseFolder]}">
+                                        <StackPanel Classes="button-content">
+                                            <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.FolderOpen}" FontSize="{StaticResource Launcher.Icon.Sm}"/>
+                                            <TextBlock Text="{Binding Shell.I18n[chooseFolder]}"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Classes="flat-action icon-only"
+                                            Command="{Binding Settings.ClearBackgroundCommand}"
+                                            ToolTip.Tip="{Binding Shell.I18n[clearBackground]}"
+                                            AutomationProperties.Name="{Binding Shell.I18n[clearBackground]}"
+                                            IsVisible="{Binding Settings.Appearance.IsCustomBackground}">
+                                        <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Delete}" FontSize="{StaticResource Launcher.Icon.Sm}"/>
+                                    </Button>
+                                </WrapPanel>
+                            </controls:SettingRow.Action>
+                        </controls:SettingRow>
+
+                        <Border Classes="settings-row-divider" IsVisible="{Binding Settings.Appearance.IsCustomBackgroundSettingsVisible}"/>
+                        <controls:SettingRow Title="{Binding Shell.I18n[backgroundFit]}">
+                            <controls:SettingRow.Action>
+                                <WrapPanel Classes="setting-radio-group">
+                                    <RadioButton Classes="setting-radio"
+                                                 GroupName="SettingsBackgroundFit"
+                                                 IsChecked="{Binding Settings.BackgroundEditor.BackgroundFit, Converter={x:Static converters:SegmentOptionConverter.Instance}, ConverterParameter={x:Static coreModels:BackgroundFits.Fill}, Mode=TwoWay}"
+                                                 AutomationProperties.Name="{Binding Shell.I18n[backgroundFitFill]}">
+                                        <TextBlock Text="{Binding Shell.I18n[backgroundFitFill]}" TextWrapping="Wrap"/>
+                                    </RadioButton>
+                                    <RadioButton Classes="setting-radio"
+                                                 GroupName="SettingsBackgroundFit"
+                                                 IsChecked="{Binding Settings.BackgroundEditor.BackgroundFit, Converter={x:Static converters:SegmentOptionConverter.Instance}, ConverterParameter={x:Static coreModels:BackgroundFits.Uniform}, Mode=TwoWay}"
+                                                 AutomationProperties.Name="{Binding Shell.I18n[backgroundFitUniform]}">
+                                        <TextBlock Text="{Binding Shell.I18n[backgroundFitUniform]}" TextWrapping="Wrap"/>
+                                    </RadioButton>
+                                    <RadioButton Classes="setting-radio"
+                                                 GroupName="SettingsBackgroundFit"
+                                                 IsChecked="{Binding Settings.BackgroundEditor.BackgroundFit, Converter={x:Static converters:SegmentOptionConverter.Instance}, ConverterParameter={x:Static coreModels:BackgroundFits.UniformToFill}, Mode=TwoWay}"
+                                                 AutomationProperties.Name="{Binding Shell.I18n[backgroundFitUniformToFill]}">
+                                        <TextBlock Text="{Binding Shell.I18n[backgroundFitUniformToFill]}" TextWrapping="Wrap"/>
+                                    </RadioButton>
+                                </WrapPanel>
+                            </controls:SettingRow.Action>
+                        </controls:SettingRow>
+
+                        <Border Classes="settings-row-divider"/>
+                        <controls:SettingRow Title="{Binding Shell.I18n[backgroundFillColor]}"
+                                             Description="{Binding Shell.I18n[backgroundFillColorDescription]}"
+                                             IsVisible="{Binding Settings.Appearance.IsBackgroundFillColorVisible}">
+                            <controls:SettingRow.Action>
+                                <ColorPicker Classes="setting-control"
+                                             AutomationProperties.Name="{Binding Shell.I18n[backgroundFillColor]}"
+                                             Color="{Binding Settings.Appearance.SelectedBackgroundFillColor, Mode=TwoWay}">
+                                    <StackPanel Classes="button-content">
+                                        <Border Classes="color-swatch-preview"
+                                                Background="{Binding Settings.Appearance.BackgroundFillColorPreviewBrush}"/>
+                                        <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.ColorPalette}" FontSize="{StaticResource Launcher.Icon.Sm}"/>
+                                        <TextBlock Text="{Binding Shell.I18n[openColorPalette]}"/>
+                                    </StackPanel>
+                                </ColorPicker>
+                            </controls:SettingRow.Action>
+                        </controls:SettingRow>
+
+                        <Border Classes="settings-row-divider" IsVisible="{Binding Background.IsVideoBackgroundSelected}"/>
+                        <controls:SettingRow Title="{Binding Shell.I18n[videoBackgroundVolume]}"
+                                             Description="{Binding Shell.I18n[videoBackgroundVolumeDescription]}"
+                                             IsVisible="{Binding Background.IsVideoBackgroundSelected}">
+                            <controls:SettingRow.Action>
+                                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}">
+                                    <Slider Classes="setting-control" Width="{StaticResource Launcher.Component.Settings.Control.MinWidth}"
+                                            Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True"
+                                            Value="{Binding Settings.BackgroundEditor.BackgroundVideoVolume, Mode=TwoWay}"
+                                            AutomationProperties.Name="{Binding Shell.I18n[videoBackgroundVolume]}"/>
+                                    <Grid Classes="settings-volume-value">
+                                        <TextBlock Text="100%" Opacity="0" IsHitTestVisible="False"
+                                                   AutomationProperties.AccessibilityView="Raw"/>
+                                        <TextBlock Classes="settings-volume-value"
+                                                   Text="{Binding Settings.BackgroundEditor.BackgroundVideoVolume, StringFormat='{}{0}%'}"/>
+                                    </Grid>
+                                    <CheckBox Classes="setting-checkbox" VerticalAlignment="Center"
+                                              Content="{Binding Shell.I18n[videoBackgroundMute]}"
+                                              AutomationProperties.Name="{Binding Shell.I18n[videoBackgroundMute]}"
+                                              IsChecked="{Binding Settings.BackgroundEditor.BackgroundVideoMuted, Mode=TwoWay}"/>
+                                </StackPanel>
+                            </controls:SettingRow.Action>
+                        </controls:SettingRow>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </StackPanel>
+    </StackPanel>
+</UserControl>

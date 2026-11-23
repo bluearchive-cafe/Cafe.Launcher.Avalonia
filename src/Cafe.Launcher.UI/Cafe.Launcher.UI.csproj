@@ -26,6 +26,10 @@
     <!-- 协议正文以仓库根目录的单一来源嵌入，避免与应用内文本分叉。 -->
     <AvaloniaResource Include="..\..\TERMS.md" Link="Assets\Legal\TERMS.md" />
     <AvaloniaResource Include="..\..\PRIVACY.md" Link="Assets\Legal\PRIVACY.md" />
+    <!-- 关于页的「开源许可」「第三方声明」入口读取这两份文档；它们此前只随发行包
+         拷贝，普通发布下运行期不可见，因此这里与协议正文同样嵌入。 -->
+    <AvaloniaResource Include="..\..\LICENSE" Link="Assets\Legal\LICENSE.md" />
+    <AvaloniaResource Include="..\..\THIRD-PARTY-NOTICES.md" Link="Assets\Legal\THIRD-PARTY-NOTICES.md" />
     <None Update="Assets\app-icon.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -34,9 +38,11 @@
   <ItemGroup>
     <PackageReference Include="Avalonia" />
     <PackageReference Include="Avalonia.Controls.ColorPicker" />
+    <!-- Keep the renderer selected by FluentAvalonia aligned with the desktop host. -->
+    <PackageReference Include="Avalonia.Skia" />
+    <PackageReference Include="FluentAvaloniaUI" />
     <PackageReference Include="CommunityToolkit.Mvvm" />
     <PackageReference Include="MarkView.Avalonia" />
-    <PackageReference Include="Material.Icons.Avalonia" />
     <PackageReference Include="Shirasagi0012.MaterialColorUtilities" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
   </ItemGroup>

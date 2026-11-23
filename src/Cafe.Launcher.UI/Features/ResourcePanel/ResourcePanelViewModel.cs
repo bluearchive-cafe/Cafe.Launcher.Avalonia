@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Cafe.Launcher.Core.Constants;
 using Cafe.Launcher.UI.Constants;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
@@ -25,7 +26,7 @@ internal partial class ResourcePanelViewModel : ObservableObject, IDisposable, I
 {
     private readonly ResourcePanelService resourcePanelService;
     private readonly LocalizationService localizer;
-    private readonly ToastService toastService;
+    private readonly INotificationService toastService;
     private readonly IErrorHandlingService errorHandling;
     private readonly CancellationTokenSource lifetimeCts = new();
     private readonly CancellationToken lifetimeToken;
@@ -35,6 +36,7 @@ internal partial class ResourcePanelViewModel : ObservableObject, IDisposable, I
     private Task operationTask = Task.CompletedTask;
     private ResourcePanelOperationKind operationKind;
     private Func<Task>? pendingDiscardAction;
+    private string targetGameId = LauncherProfiles.BlueArchiveJapan.RuntimeId;
     private string patchUrlGroup = PatchUrlGroups.Official;
     private bool isLoadingSource;
     private bool isSettingUidSource;
@@ -59,7 +61,7 @@ internal partial class ResourcePanelViewModel : ObservableObject, IDisposable, I
     public ResourcePanelViewModel(
         ResourcePanelService resourcePanelService,
         LocalizationService localizer,
-        ToastService toastService,
+        INotificationService toastService,
         IErrorHandlingService errorHandling,
         ILauncherDiagnostics diagnostics)
     {
@@ -197,7 +199,22 @@ internal partial class ResourcePanelViewModel : ObservableObject, IDisposable, I
 
     public void ApplySettings(LauncherSettings settings)
     {
-        patchUrlGroup = settings.PatchUrlGroup;
+        patchUrlGroup = settings.GetGameSettings(targetGameId).PatchUrlGroup;
+    }
+
+    /// <summary>资源面板只服务支持它的游戏；目标随首页显示条目切换。</summary>
+    public bool IsAvailable => LauncherProfiles.GetGameDefinition(targetGameId).SupportsResourcePanel;
+
+    public void SetGameTarget(LauncherGameContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        if (string.Equals(targetGameId, context.GameId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        targetGameId = context.GameId;
+        OnPropertyChanged(nameof(IsAvailable));
     }
 
     // ── Commands ──────────────────────────────────────────────────────────
@@ -205,6 +222,11 @@ internal partial class ResourcePanelViewModel : ObservableObject, IDisposable, I
     [RelayCommand]
     private async Task OpenResourcePanelAsync()
     {
+        if (!IsAvailable)
+        {
+            return;
+        }
+
         if (!string.Equals(patchUrlGroup, PatchUrlGroups.Cafe, StringComparison.Ordinal))
         {
             ResourcePanelSourceConfirmRequested?.Invoke();
@@ -217,7 +239,7 @@ internal partial class ResourcePanelViewModel : ObservableObject, IDisposable, I
     /// <summary>Open the panel directly without Cafe-source check. Called by parent after switching source.</summary>
     public async Task OpenPanelDirectlyAsync()
     {
-        if (disposed)
+        if (disposed || !IsAvailable)
         {
             return;
         }
@@ -656,19 +678,19 @@ internal partial class ResourcePanelViewModel : ObservableObject, IDisposable, I
         item.IsEnabled = data.IsEnabled;
         if (data.IsReady)
         {
-            SetState(item, ResourcePanelItemStatus.Ready, "CheckCircle", localizer.T(LocalizationKeys.ResourcePanelReady));
+            SetState(item, ResourcePanelItemStatus.Ready, FluentGlyphs.Success, localizer.T(LocalizationKeys.ResourcePanelReady));
         }
         else
         {
-            SetState(item, ResourcePanelItemStatus.Waiting, "ClockOutline", localizer.T(LocalizationKeys.ResourcePanelWaiting));
+            SetState(item, ResourcePanelItemStatus.Waiting, FluentGlyphs.Clock, localizer.T(LocalizationKeys.ResourcePanelWaiting));
         }
     }
 
     /// <summary>条目状态的三字段（枚举/图标/文案）由这一处统一写（D11）。</summary>
-    private static void SetState(ResourcePanelItem item, ResourcePanelItemStatus status, string iconKind, string statusText)
+    private static void SetState(ResourcePanelItem item, ResourcePanelItemStatus status, string glyph, string statusText)
     {
         item.Status = status;
-        item.StatusIconKind = iconKind;
+        item.StatusGlyph = glyph;
         item.StatusText = statusText;
     }
 
@@ -677,7 +699,7 @@ internal partial class ResourcePanelViewModel : ObservableObject, IDisposable, I
     {
         foreach (var item in ResourcePanelItems)
         {
-            SetState(item, ResourcePanelItemStatus.Loading, "Sync", localizer.T(LocalizationKeys.ResourcePanelLoading));
+            SetState(item, ResourcePanelItemStatus.Loading, FluentGlyphs.Sync, localizer.T(LocalizationKeys.ResourcePanelLoading));
             if (!preserveVersions)
             {
                 item.OfficialVersion = "--";
@@ -691,7 +713,7 @@ internal partial class ResourcePanelViewModel : ObservableObject, IDisposable, I
     {
         foreach (var item in ResourcePanelItems)
         {
-            SetState(item, ResourcePanelItemStatus.Failed, "AlertCircle", localizer.T(LocalizationKeys.ResourcePanelFailed));
+            SetState(item, ResourcePanelItemStatus.Failed, FluentGlyphs.Error, localizer.T(LocalizationKeys.ResourcePanelFailed));
         }
     }
 

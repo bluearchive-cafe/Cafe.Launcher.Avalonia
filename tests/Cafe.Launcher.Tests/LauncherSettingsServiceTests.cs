@@ -388,8 +388,13 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         var propertyNames = root.EnumerateObject()
             .Select(property => property.Name)
             .ToHashSet(StringComparer.Ordinal);
-        Assert.True(root.TryGetProperty("gamePath", out _));
-        Assert.True(root.TryGetProperty("launchCheckMode", out _));
+        var game = root.GetProperty("games").GetProperty(LauncherProfiles.BlueArchiveJapan.RuntimeId);
+        Assert.Equal(SettingsFormatVersions.Current, root.GetProperty("formatVersion").GetInt32());
+        Assert.Equal(
+            LauncherProfiles.BlueArchiveJapan.RuntimeId,
+            root.GetProperty("lastViewedGameId").GetString());
+        Assert.True(game.TryGetProperty("gamePath", out _));
+        Assert.True(game.TryGetProperty("launchCheckMode", out _));
         Assert.True(root.TryGetProperty("proxyMode", out _));
         Assert.True(root.TryGetProperty("closeBehavior", out _));
         Assert.True(root.TryGetProperty("language", out _));
@@ -413,7 +418,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         Assert.Equal(240, root.GetProperty("windowPositionY").GetInt32());
         Assert.Equal(1400, root.GetProperty("windowWidth").GetDouble());
         Assert.Equal(820, root.GetProperty("windowHeight").GetDouble());
-        Assert.True(root.TryGetProperty("patchUrlGroup", out _));
+        Assert.True(game.TryGetProperty("patchUrlGroup", out _));
         Assert.True(root.TryGetProperty("customBackgroundPath", out var customBackgroundPath));
         Assert.Equal(tempDir, customBackgroundPath.GetString());
         Assert.True(root.TryGetProperty("backgroundSource", out _));
@@ -421,15 +426,15 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         Assert.Equal(BackgroundFits.Fill, backgroundFit.GetString());
         Assert.True(root.TryGetProperty("backgroundFillColor", out var backgroundFillColor));
         Assert.Equal("#FF112233", backgroundFillColor.GetString());
-        Assert.True(root.TryGetProperty("resourcePanelUid", out var resourcePanelUid));
+        Assert.True(game.TryGetProperty("resourcePanelUid", out var resourcePanelUid));
         Assert.Equal("UID123", resourcePanelUid.GetString());
         var expectedPropertyNames = new HashSet<string>(StringComparer.Ordinal)
         {
-            "gamePath",
-            "launchCheckMode",
+            "formatVersion",
+            "lastViewedGameId",
+            "games",
             "proxyMode",
             "closeBehavior",
-            "afterLaunchBehavior",
             "language",
             "themeMode",
             "motionMode",
@@ -450,22 +455,37 @@ public sealed class LauncherSettingsServiceTests : IDisposable
             "windowPositionY",
             "windowWidth",
             "windowHeight",
-            "patchUrlGroup",
             "customBackgroundPath",
             "backgroundSource",
             "backgroundFit",
             "backgroundFillColor",
             "backgroundVideoVolume",
             "backgroundVideoMuted",
-            "resourcePanelUid",
-            "resourcePanelUidSource",
-            "gameRuntime",
             "statusDetailMode",
             "updateChannel",
             "logLevel",
             "acceptedAgreementVersion"
         };
         Assert.True(expectedPropertyNames.SetEquals(propertyNames));
+        var expectedGamePropertyNames = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "gamePath",
+            "launchCheckMode",
+            "patchUrlGroup",
+            "afterLaunchBehavior",
+            "resourcePanelUid",
+            "resourcePanelUidSource",
+            "gameRuntime",
+            "useBackgroundOverride",
+            "customBackgroundPath",
+            "backgroundSource",
+            "backgroundFit",
+            "backgroundFillColor",
+            "backgroundVideoVolume",
+            "backgroundVideoMuted"
+        };
+        Assert.True(expectedGamePropertyNames.SetEquals(
+            game.EnumerateObject().Select(property => property.Name)));
         Assert.False(File.Exists($"{settingsPath}.tmp"));
     }
 
@@ -494,9 +514,11 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         await Task.WhenAll(writes);
 
         using var document = JsonDocument.Parse(await File.ReadAllTextAsync(settingsPath));
-        var root = document.RootElement;
-        var gamePath = root.GetProperty("gamePath").GetString();
-        var resourcePanelUid = root.GetProperty("resourcePanelUid").GetString();
+        var game = document.RootElement
+            .GetProperty("games")
+            .GetProperty(LauncherProfiles.BlueArchiveJapan.RuntimeId);
+        var gamePath = game.GetProperty("gamePath").GetString();
+        var resourcePanelUid = game.GetProperty("resourcePanelUid").GetString();
         Assert.NotNull(gamePath);
         Assert.NotNull(resourcePanelUid);
         Assert.Equal(gamePath!["D:\\Games\\".Length..], resourcePanelUid!["UID".Length..]);
@@ -549,16 +571,15 @@ public sealed class LauncherSettingsServiceTests : IDisposable
     }
 
     [Fact]
-    public void DeepClone_WhenGameRuntimeIsNull_ProducesDefaultRuntime()
+    public void DeepClone_WhenGameRuntimeIsNull_PreservesItForExplicitNormalization()
     {
-        var source = JsonSerializer.Deserialize<LauncherSettings>("""{"gameRuntime":null}""");
+        var source = SettingsDocumentCodec.Read("""{"gameRuntime":null}""").Settings;
 
-        Assert.Null(source!.GameRuntime);
+        Assert.Null(source.GetGameSettings(LauncherProfiles.BlueArchiveJapan.RuntimeId).GameRuntime);
 
         var clone = source.DeepClone();
 
-        Assert.NotNull(clone.GameRuntime);
-        Assert.Equal(GameRuntimeRunners.Auto, clone.GameRuntime.Runner);
+        Assert.Null(clone.GetGameSettings(LauncherProfiles.BlueArchiveJapan.RuntimeId).GameRuntime);
     }
 
     [Fact]

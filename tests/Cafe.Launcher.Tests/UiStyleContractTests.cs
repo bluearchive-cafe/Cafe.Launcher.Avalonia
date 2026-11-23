@@ -17,6 +17,8 @@ public sealed partial class UiStyleContractTests
         "Views/CrashReportWindow.axaml"
     ];
 
+    private static readonly XNamespace DesignNamespace = "http://schemas.microsoft.com/expression/blend/2008";
+
     private static readonly string[] StyleFiles =
         ["Views/MainWindow.Styles.axaml", .. FindXamlFiles("Views/Styles", SearchOption.AllDirectories)];
 
@@ -24,6 +26,31 @@ public sealed partial class UiStyleContractTests
         .Except(StyleFiles, StringComparer.Ordinal)
         .Except(ExemptViewFiles, StringComparer.Ordinal)
         .ToArray();
+
+    [Fact]
+    public void ProductMarkup_UsesFluentControlTemplates()
+    {
+        var app = XDocument.Load(TestRepository.InHost("App.axaml"));
+        var crashApp = XDocument.Load(TestRepository.InHost("CrashReportApp.axaml"));
+        foreach (var host in new[] { app, crashApp })
+        {
+            Assert.Single(host.Descendants(), element => element.Name.LocalName == "FluentAvaloniaTheme");
+        }
+
+        var markup = ProjectMarkupFiles()
+            .Select(path => XDocument.Load(TestRepository.FromPresentationRoot(path)))
+            .Append(app)
+            .Append(crashApp)
+            .SelectMany(document => document.Descendants())
+            .ToArray();
+
+        Assert.DoesNotContain(markup, element => element.Name.LocalName is "ControlTemplate" or "ControlTheme");
+        Assert.DoesNotContain(markup, element =>
+            ((string?)element.Attribute("Selector"))?.Contains("/template/", StringComparison.Ordinal) == true
+            && element.Elements().Any(setter => (string?)setter.Attribute("Property") != "AutomationProperties.Name"));
+        Assert.Contains(markup, element => element.Name.LocalName == "FASettingsExpanderItem");
+        Assert.Contains(markup, element => element.Name.LocalName == "FAInfoBar");
+    }
 
     [Fact]
     public void ScanTargets_CoverEveryTopLevelViewFile()
@@ -71,6 +98,7 @@ public sealed partial class UiStyleContractTests
 
     private static readonly HashSet<string> IconTokens =
     [
+        "{StaticResource Launcher.Icon.Xs}",
         "{StaticResource Launcher.Icon.Sm}",
         "{StaticResource Launcher.Icon.Md}",
         "{StaticResource Launcher.Icon.Lg}",
@@ -122,6 +150,30 @@ public sealed partial class UiStyleContractTests
                                     $"{source}:{((IXmlLineInfo)node).LineNumber} "
                                     + node.Value.Trim())
                             : []))
+            .ToList();
+    }
+
+    // 设计规范 §1：层级靠留白与分组建立，竖线/中点等标点字形不得充当
+    // 普通 UI 的独立分隔符（安装准备容量元数据曾用 "|" 漂移）。
+    private static IReadOnlyList<string> FindGlyphSeparators(XDocument document, string source)
+    {
+        HashSet<string> separatorGlyphs = new(StringComparer.Ordinal) { "|", "·", "•", "・" };
+
+        return (document.Root?.DescendantsAndSelf() ?? [])
+            .Where(element => element.Name.Namespace != DesignNamespace)
+            .SelectMany(element =>
+                element.Attributes()
+                    .Where(attribute => attribute.Name.Namespace != DesignNamespace)
+                    .Where(attribute => attribute.Name.LocalName == "Text")
+                    .Where(attribute => separatorGlyphs.Contains(attribute.Value.Trim()))
+                    .Select(attribute =>
+                        $"{source}:{((IXmlLineInfo)attribute).LineNumber} Text=\"{attribute.Value}\"")
+                    .Concat(
+                        element.Nodes()
+                            .OfType<XText>()
+                            .Where(node => separatorGlyphs.Contains(node.Value.Trim()))
+                            .Select(node =>
+                                $"{source}:{((IXmlLineInfo)node).LineNumber} {node.Value.Trim()}")))
             .ToList();
     }
 

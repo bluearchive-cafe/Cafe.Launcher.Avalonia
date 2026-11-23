@@ -1,6 +1,9 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Cafe.Launcher.Core.Constants;
+using Cafe.Launcher.Core.Helpers;
 using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.Core.Services;
@@ -22,12 +25,25 @@ public interface ISavedSettingsWriter
     /// <summary>保存设置草稿（设置页的保存）。</summary>
     Task<LauncherSettings> SaveDraftAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>基于会话基线合并明确范围的草稿变化；空游戏身份表示启动器偏好。</summary>
+    Task<LauncherSettings> SaveScopedDraftAsync(
+        LauncherSettings draft,
+        LauncherSettings baseline,
+        string? gameId,
+        CancellationToken cancellationToken = default);
+
     /// <summary>
     /// 在已保存设置上施加一次改动（资源面板来源与 UID、游戏路径、窗口几何）。
     /// 基底是设置快照而非重新读盘：所有写入方都走这里，两者不会分叉。
     /// </summary>
     Task<LauncherSettings> UpdateAsync(
         Action<LauncherSettings> change,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>在同一个设置事务内更新明确游戏；目标不由当前页面或上次查看条目推导。</summary>
+    Task<LauncherSettings> UpdateGameAsync(
+        string gameId,
+        Action<GameSettings> change,
         CancellationToken cancellationToken = default);
 
     /// <summary>整份替换已保存设置（首次设置向导完成、恢复默认设置）。</summary>
@@ -63,6 +79,10 @@ public interface ISettingsDraftOwner
 
     /// <summary>落盘完成后收口草稿与快照；实现方负责把它调度到自己的线程上。</summary>
     Task ApplyPersistedAsync(LauncherSettings persisted, CancellationToken cancellationToken = default);
+
+    /// <summary>外部增量写入完成时更新已保存值，同时允许编辑器保留未提交草稿。</summary>
+    Task ApplyPersistedUpdateAsync(LauncherSettings persisted, CancellationToken cancellationToken = default) =>
+        ApplyPersistedAsync(persisted, cancellationToken);
 }
 
 /// <summary>
@@ -74,19 +94,63 @@ internal sealed class SavedSettingsWriter : ISavedSettingsWriter, IDisposable
 {
     private readonly LauncherSettingsService settingsService;
     private readonly ISettingsDraftOwner draftOwner;
+    private readonly IGameFileOperationCoordinator? fileOperations;
     private readonly SemaphoreSlim transactionLock = new(1, 1);
 
-    public SavedSettingsWriter(LauncherSettingsService settingsService, ISettingsDraftOwner draftOwner)
+    public SavedSettingsWriter(
+        LauncherSettingsService settingsService,
+        ISettingsDraftOwner draftOwner,
+        IGameFileOperationCoordinator? fileOperations = null)
     {
         ArgumentNullException.ThrowIfNull(settingsService);
         ArgumentNullException.ThrowIfNull(draftOwner);
 
         this.settingsService = settingsService;
         this.draftOwner = draftOwner;
+        this.fileOperations = fileOperations;
     }
 
     public Task<LauncherSettings> SaveDraftAsync(CancellationToken cancellationToken = default) =>
-        PersistAsync(draftOwner.GetDraftSnapshot, cancellationToken);
+        PersistCoreAsync(async () =>
+        {
+            var migrationBase = await settingsService.ReadMigrationBaseAsync(cancellationToken).ConfigureAwait(false);
+            if (migrationBase is not null
+                && !migrationBase.HasSameSettingsState(draftOwner.GetSavedSnapshot()))
+            {
+                throw new SettingsFormatException("migration-not-initialized", migrationBase.FormatVersion);
+            }
+
+            return draftOwner.GetDraftSnapshot();
+        }, cancellationToken);
+
+    public Task<LauncherSettings> SaveScopedDraftAsync(
+        LauncherSettings draft,
+        LauncherSettings baseline,
+        string? gameId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(draft);
+        ArgumentNullException.ThrowIfNull(baseline);
+        if (gameId is not null)
+        {
+            _ = LauncherProfiles.GetSupportedGame(gameId);
+        }
+
+        var sessionDraft = draft.DeepClone();
+        var sessionBaseline = baseline.DeepClone();
+        return PersistCoreAsync(async () =>
+        {
+            var migrationBase = await settingsService.ReadMigrationBaseAsync(cancellationToken).ConfigureAwait(false);
+            var next = draftOwner.GetSavedSnapshot();
+            if (migrationBase is not null && !migrationBase.HasSameSettingsState(next))
+            {
+                throw new SettingsFormatException("migration-not-initialized", migrationBase.FormatVersion);
+            }
+
+            next.ApplyDraftChanges(sessionDraft, sessionBaseline, gameId);
+            return next;
+        }, cancellationToken);
+    }
 
     public Task<LauncherSettings> UpdateAsync(
         Action<LauncherSettings> change,
@@ -94,12 +158,23 @@ internal sealed class SavedSettingsWriter : ISavedSettingsWriter, IDisposable
     {
         ArgumentNullException.ThrowIfNull(change);
 
-        return PersistAsync(() =>
+        return PersistCoreAsync(async () =>
         {
-            var next = draftOwner.GetSavedSnapshot();
+            var next = await settingsService.ReadMigrationBaseAsync(cancellationToken).ConfigureAwait(false)
+                ?? draftOwner.GetSavedSnapshot();
             change(next);
             return next;
-        }, cancellationToken);
+        }, cancellationToken, preserveDraft: true);
+    }
+
+    public Task<LauncherSettings> UpdateGameAsync(
+        string gameId,
+        Action<GameSettings> change,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+        _ = LauncherProfiles.GetSupportedGame(gameId);
+        return UpdateAsync(settings => change(settings.GetGameSettings(gameId)), cancellationToken);
     }
 
     public Task<LauncherSettings> ReplaceAsync(
@@ -121,14 +196,65 @@ internal sealed class SavedSettingsWriter : ISavedSettingsWriter, IDisposable
     }
 
     /// <summary>串行化读取基底、修改、落盘与编辑器同步；磁盘锁不能保护锁外的快照与 UI 调度。</summary>
-    private async Task<LauncherSettings> PersistAsync(Func<LauncherSettings> createSettings, CancellationToken cancellationToken)
+    private Task<LauncherSettings> PersistAsync(
+        Func<LauncherSettings> createSettings,
+        CancellationToken cancellationToken) =>
+        PersistCoreAsync(() => Task.FromResult(createSettings()), cancellationToken);
+
+    private async Task<LauncherSettings> PersistCoreAsync(
+        Func<Task<LauncherSettings>> createSettings,
+        CancellationToken cancellationToken,
+        bool preserveDraft = false)
     {
         await transactionLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            var persisted = await settingsService.SaveAsync(createSettings(), cancellationToken).ConfigureAwait(false);
+            var previous = fileOperations is null
+                ? null
+                : await settingsService.ReadMigrationBaseAsync(cancellationToken).ConfigureAwait(false)
+                    ?? draftOwner.GetSavedSnapshot();
+            var next = await createSettings().ConfigureAwait(false);
+            IDisposable? settingsLease = null;
+            if (fileOperations is not null)
+            {
+                var changedGames = LauncherProfiles.SupportedGames
+                    .Where(profile => !previous!.GetGameSettings(profile.RuntimeId)
+                        .HasSameOperationSettingsState(next.GetGameSettings(profile.RuntimeId)))
+                    .Select(profile => profile.RuntimeId).ToArray();
+                foreach (var gameId in changedGames)
+                {
+                    var path = next.GetGameSettings(gameId).GamePath;
+                    if (!string.IsNullOrWhiteSpace(path)
+                        && GameInstallationPathSafety.FindConflict(
+                            gameId,
+                            new GameInstallationPath(LauncherProfiles.GetSupportedGame(gameId))
+                                .NormalizeGamePath(path),
+                            next) is not null)
+                    {
+                        throw new InvalidOperationException("game-installation-path-conflict");
+                    }
+                }
+
+                if (!fileOperations.TryBeginSettingsWrite(changedGames, out settingsLease))
+                {
+                    throw new InvalidOperationException("game-settings-locked");
+                }
+            }
+
+            // The lease covers the disk commit and editor synchronization: a task cannot
+            // begin against a game whose new settings have not reached the saved snapshot yet.
+            using var committedSettingsLease = settingsLease;
+            var persisted = await settingsService.SaveAsync(next, cancellationToken).ConfigureAwait(false);
             // 落盘是提交点：此后即使调用方取消，也必须把同一值交回编辑器，才能放行下一笔事务。
-            await draftOwner.ApplyPersistedAsync(persisted, CancellationToken.None).ConfigureAwait(false);
+            if (preserveDraft)
+            {
+                await draftOwner.ApplyPersistedUpdateAsync(persisted, CancellationToken.None).ConfigureAwait(false);
+            }
+            else
+            {
+                await draftOwner.ApplyPersistedAsync(persisted, CancellationToken.None).ConfigureAwait(false);
+            }
+
             return persisted;
         }
         finally

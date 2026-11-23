@@ -60,6 +60,8 @@ internal partial class MainWindow
             UpdateVideoPlayback();
             // A zero-opacity OpenGlControlBase is culled before GL initialization.
             // Keep it drawable behind the opaque fallback until the first frame.
+            // 索引 1：位于背景填充之上、静态壁纸与交叉淡化（2/3）之下——
+            // 首帧呈现后静态壁纸隐藏，原生表面即成为唯一可见的壁纸层。
             ShellRoot.Children.Insert(1, videoBackground);
         }
         else

@@ -34,6 +34,7 @@ public sealed class SettingsWriteOwnershipTests
         "src/Cafe.Launcher.UI/Features/GameOperations/DownloadSession.cs",
         "src/Cafe.Launcher.UI/Features/GameOperations/DownloadSessionContext.cs",
         "src/Cafe.Launcher.UI/Features/GameOperations/GameDownloadService.cs",
+        "src/Cafe.Launcher.UI/Features/Games/GamePresentationFactory.cs",
         "src/Cafe.Launcher.UI/Features/ResourcePanel/ResourcePanelUidService.cs",
         "src/Cafe.Launcher.UI/Features/Settings/SettingsViewModel.cs",
         "src/Cafe.Launcher.UI/Features/Shell/ShellLifecycle.cs",

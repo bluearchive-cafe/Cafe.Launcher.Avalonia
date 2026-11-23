@@ -8,7 +8,10 @@ using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using Avalonia.Threading;
+using Cafe.Launcher.Core.Constants;
+using Cafe.Launcher.UI.Features.Games;
 using Cafe.Launcher.UI.Helpers;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
@@ -28,6 +31,39 @@ namespace Cafe.Launcher.HeadlessTests;
 /// </summary>
 public sealed class BackgroundViewModelHeadlessTests
 {
+    [AvaloniaFact]
+    public async Task UpdateBackgroundImageAsync_WhenGameChanges_UsesThatGamesBundledImageAndFallback()
+    {
+        using var context = HeadlessTestHost.CreateContext();
+        var viewModel = context.ViewModel;
+        var blueArchive = new LauncherSettings { BackgroundSource = BackgroundSources.Bundled };
+        var stellaSora = new LauncherSettings
+        {
+            BackgroundSource = BackgroundSources.Bundled,
+            LastViewedGameId = LauncherProfiles.StellaSoraChina.RuntimeId
+        };
+        await viewModel.UpdateBackgroundImageAsync(blueArchive, null, CancellationToken.None);
+        var blueArchiveImage = Assert.IsType<Bitmap>(viewModel.BackgroundImageSource);
+        Assert.False(viewModel.IsCurrentBackgroundSelection(stellaSora));
+
+        await viewModel.UpdateBackgroundImageAsync(stellaSora, null, CancellationToken.None);
+        var stellaSoraImage = Assert.IsType<Bitmap>(viewModel.BackgroundImageSource);
+        Assert.NotSame(blueArchiveImage, stellaSoraImage);
+        using var assetStream = AssetLoader.Open(new Uri(GameVisualAssets.Background(stellaSora.LastViewedGameId)));
+        using var expected = new Bitmap(assetStream);
+        Assert.Equal(expected.PixelSize, stellaSoraImage.PixelSize);
+        Assert.True(viewModel.IsCurrentBackgroundSelection(stellaSora));
+
+        stellaSora.BackgroundSource = BackgroundSources.Remote;
+        await viewModel.UpdateBackgroundImageAsync(stellaSora, null, CancellationToken.None);
+        Assert.True(viewModel.HasBackgroundLoadFailure);
+        Assert.Same(stellaSoraImage, viewModel.BackgroundImageSource);
+
+        await viewModel.UpdateBackgroundImageAsync(blueArchive, null, CancellationToken.None);
+        Assert.Same(blueArchiveImage, viewModel.BackgroundImageSource);
+        Assert.False(viewModel.HasBackgroundLoadFailure);
+    }
+
     [AvaloniaTheory]
     [InlineData(ThemeColorModes.Default)]
     [InlineData(ThemeColorModes.Custom)]
@@ -333,7 +369,7 @@ public sealed class BackgroundViewModelHeadlessTests
                 Assert.True(releaseDecode.Task.Wait(TimeSpan.FromSeconds(5)), "Timed out waiting to release decode.");
                 return BackgroundImageDecoder.Decode(path, target);
             },
-            () => null,
+            _ => null,
             metrics);
         try
         {
@@ -402,7 +438,7 @@ public sealed class BackgroundViewModelHeadlessTests
 
                     return BackgroundImageDecoder.Decode(path, target);
                 },
-                () => null,
+                _ => null,
                 metrics);
             try
             {
@@ -476,7 +512,7 @@ public sealed class BackgroundViewModelHeadlessTests
 
                 return bitmap;
             },
-            () => null);
+            _ => null);
         try
         {
             var firstSettings = CreateCustomBackgroundSettings(fromFolder ? firstFolder : firstPath);
@@ -528,7 +564,7 @@ public sealed class BackgroundViewModelHeadlessTests
             context.Provider.GetRequiredService<LocalDiagnostics>(),
             _ => { },
             (path, target) => BackgroundImageDecoder.Decode(path, target),
-            () => null,
+            _ => null,
             metrics);
 
     private sealed class FixedWindowMetrics(PixelSize size) : IWindowMetricsService

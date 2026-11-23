@@ -2,7 +2,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Cafe.Launcher.UI.ViewModels"
              xmlns:models="using:Cafe.Launcher.UI.Models"
-             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:glyphs="using:Cafe.Launcher.UI.Constants"
+             xmlns:controls="using:Cafe.Launcher.UI.Controls"
              x:Class="Cafe.Launcher.UI.Views.SettingsAboutSection"
              x:Name="SettingsRoot"
              x:DataType="vm:MainWindowViewModel">
@@ -13,18 +14,19 @@
                         Command="{Binding #SettingsRoot.((vm:MainWindowViewModel)DataContext).WindowChrome.OpenExternalUrlCommand}"
                         CommandParameter="{Binding Url}"
                         AutomationProperties.Name="{Binding Name}"
-                        AutomationProperties.HelpText="{Binding Description}">
+                        AutomationProperties.HelpText="{Binding Description}"
+                        Theme="{StaticResource TransparentButton}">
                     <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
                         <Border Classes="about-credit-avatar">
-                            <materialIcons:MaterialIcon Kind="{Binding IconKind}" Width="{StaticResource Launcher.Icon.Lg}" Height="{StaticResource Launcher.Icon.Lg}"
-                                                        Foreground="{DynamicResource Launcher.Color.OnSecondaryContainer}"
+                            <controls:FluentIcon Glyph="{Binding Glyph}" FontSize="{StaticResource Launcher.Icon.Lg}"
+                                                        Foreground="{DynamicResource Launcher.Color.Primary}"
                                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="{StaticResource Launcher.Spacing.Xs}">
                             <TextBlock Text="{Binding Name}" Classes="group-title" TextWrapping="Wrap"/>
                             <TextBlock Text="{Binding Description}" Classes="caption" TextWrapping="Wrap"/>
                         </StackPanel>
-                        <materialIcons:MaterialIcon Grid.Column="2" Kind="ChevronRight" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"
+                        <controls:FluentIcon Grid.Column="2" Glyph="{x:Static glyphs:FluentGlyphs.ChevronRight}" FontSize="{StaticResource Launcher.Icon.Sm}"
                                                     Foreground="{DynamicResource Launcher.Text.Secondary}" VerticalAlignment="Center"/>
                     </Grid>
                 </Button>
@@ -33,73 +35,88 @@
         </DataTemplate>
     </UserControl.Resources>
     <StackPanel Classes="settings-group" Spacing="{StaticResource Launcher.Spacing.Md}">
-        <!-- 身份卡：产品名 + 版本 caption + 副标题；操作行内收（ADR-018 融合变体） -->
+        <!-- 身份卡：应用图标 + 产品名 + 版本 caption + 副标题，只保留一个主操作（ADR-018 融合变体）。 -->
         <Border Classes="about-identity-card">
-            <StackPanel Spacing="{StaticResource Launcher.Spacing.Lg}">
-                <StackPanel Spacing="{StaticResource Launcher.Spacing.Xs}">
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Lg}">
+                <Border Classes="about-app-icon-frame">
+                    <Image Classes="about-app-icon"
+                           Source="/Assets/app-icon.png"
+                           Width="{StaticResource Launcher.Component.About.AppIcon.Size}"
+                           Height="{StaticResource Launcher.Component.About.AppIcon.Size}"
+                           Stretch="Uniform"
+                           AutomationProperties.Name="{Binding Shell.ProductName}"/>
+                </Border>
+                <StackPanel Grid.Column="1" Spacing="{StaticResource Launcher.Spacing.Xs}">
                     <TextBlock Text="{Binding Shell.ProductName}" Classes="about-product-name"/>
                     <TextBlock Text="{Binding Shell.VersionCaptionText}" Classes="caption"/>
                     <TextBlock Text="{Binding Shell.I18n[aboutDescription]}" Classes="caption" TextWrapping="Wrap"/>
-                </StackPanel>
-                <WrapPanel ItemSpacing="{StaticResource Launcher.Spacing.Sm}" LineSpacing="{StaticResource Launcher.Spacing.Sm}">
-                    <Button Classes="primary-action"
+                    <Button Classes="primary-action accent about-identity-action"
                             Command="{Binding Settings.CheckForUpdatesCommand}"
                             AutomationProperties.Name="{Binding Shell.I18n[checkUpdates]}">
                         <StackPanel Classes="button-content">
-                            <materialIcons:MaterialIcon Kind="Update" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                            <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Update}" FontSize="{StaticResource Launcher.Icon.Sm}"/>
                             <TextBlock Text="{Binding Shell.I18n[checkUpdates]}"/>
                         </StackPanel>
                     </Button>
-                    <Button Classes="flat-action"
-                            Command="{Binding WindowChrome.OpenAboutOfficialSiteCommand}"
-                            AutomationProperties.Name="{Binding Shell.I18n[officialSite]}">
-                        <StackPanel Classes="button-content">
-                            <materialIcons:MaterialIcon Kind="Web" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                            <TextBlock Text="{Binding Shell.I18n[officialSite]}"/>
-                        </StackPanel>
-                    </Button>
-                    <Button Classes="flat-action"
-                            Command="{Binding WindowChrome.OpenHelpDocsCommand}"
-                            AutomationProperties.Name="{Binding Shell.I18n[helpDocs]}">
-                        <StackPanel Classes="button-content">
-                            <materialIcons:MaterialIcon Kind="HelpCircleOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                            <TextBlock Text="{Binding Shell.I18n[helpDocs]}"/>
-                        </StackPanel>
-                    </Button>
-                </WrapPanel>
-            </StackPanel>
+                </StackPanel>
+            </Grid>
         </Border>
 
-        <!-- 无选择语义的操作列表：ItemsControl 负责排列，Button 负责交互与命令。 -->
+        <!-- 无选择语义的入口列表：ItemsControl 负责排列，Button 负责交互与命令。 -->
         <TextBlock Text="{Binding Shell.I18n[aboutQuickLinks]}" Classes="group-title"/>
         <ItemsControl Classes="about-link-list">
             <Button Classes="about-link-item"
-                    Command="{Binding WindowChrome.OpenGitHubRepositoryCommand}"
-                    AutomationProperties.Name="{Binding Shell.I18n[gitHubRepository]}">
+                    Command="{Binding WindowChrome.OpenAboutOfficialSiteCommand}"
+                    AutomationProperties.Name="{Binding Shell.I18n[officialSite]}"
+                    Theme="{StaticResource TransparentButton}">
                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
-                    <materialIcons:MaterialIcon Kind="Github" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}" Foreground="{DynamicResource Launcher.Text.Body}"/>
+                    <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Globe}" FontSize="{StaticResource Launcher.Icon.Sm}" Foreground="{DynamicResource Launcher.Text.Body}"/>
+                    <TextBlock Grid.Column="1" Text="{Binding Shell.I18n[officialSite]}" VerticalAlignment="Center"/>
+                    <controls:FluentIcon Grid.Column="2" Glyph="{x:Static glyphs:FluentGlyphs.ChevronRight}" FontSize="{StaticResource Launcher.Icon.Sm}" Foreground="{DynamicResource Launcher.Text.Secondary}"/>
+                </Grid>
+            </Button>
+            <Border Classes="settings-row-divider"/>
+            <Button Classes="about-link-item"
+                    Command="{Binding WindowChrome.OpenHelpDocsCommand}"
+                    AutomationProperties.Name="{Binding Shell.I18n[helpDocs]}"
+                    Theme="{StaticResource TransparentButton}">
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                    <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Help}" FontSize="{StaticResource Launcher.Icon.Sm}" Foreground="{DynamicResource Launcher.Text.Body}"/>
+                    <TextBlock Grid.Column="1" Text="{Binding Shell.I18n[helpDocs]}" VerticalAlignment="Center"/>
+                    <controls:FluentIcon Grid.Column="2" Glyph="{x:Static glyphs:FluentGlyphs.ChevronRight}" FontSize="{StaticResource Launcher.Icon.Sm}" Foreground="{DynamicResource Launcher.Text.Secondary}"/>
+                </Grid>
+            </Button>
+            <Border Classes="settings-row-divider"/>
+            <Button Classes="about-link-item"
+                    Command="{Binding WindowChrome.OpenGitHubRepositoryCommand}"
+                    AutomationProperties.Name="{Binding Shell.I18n[gitHubRepository]}"
+                    Theme="{StaticResource TransparentButton}">
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                    <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Code}" FontSize="{StaticResource Launcher.Icon.Sm}" Foreground="{DynamicResource Launcher.Text.Body}"/>
                     <TextBlock Grid.Column="1" Text="{Binding Shell.I18n[gitHubRepository]}" VerticalAlignment="Center"/>
-                    <materialIcons:MaterialIcon Grid.Column="2" Kind="ChevronRight" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}" Foreground="{DynamicResource Launcher.Text.Secondary}"/>
+                    <controls:FluentIcon Grid.Column="2" Glyph="{x:Static glyphs:FluentGlyphs.ChevronRight}" FontSize="{StaticResource Launcher.Icon.Sm}" Foreground="{DynamicResource Launcher.Text.Secondary}"/>
                 </Grid>
             </Button>
             <Border Classes="settings-row-divider"/>
             <Button Classes="about-link-item"
                     Command="{Binding WindowChrome.OpenGitHubReleaseRepositoryCommand}"
-                    AutomationProperties.Name="{Binding Shell.I18n[gitHubReleaseRepository]}">
+                    AutomationProperties.Name="{Binding Shell.I18n[gitHubReleaseRepository]}"
+                    Theme="{StaticResource TransparentButton}">
                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
-                    <materialIcons:MaterialIcon Kind="Github" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}" Foreground="{DynamicResource Launcher.Text.Body}"/>
+                    <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Code}" FontSize="{StaticResource Launcher.Icon.Sm}" Foreground="{DynamicResource Launcher.Text.Body}"/>
                     <TextBlock Grid.Column="1" Text="{Binding Shell.I18n[gitHubReleaseRepository]}" VerticalAlignment="Center"/>
-                    <materialIcons:MaterialIcon Grid.Column="2" Kind="ChevronRight" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}" Foreground="{DynamicResource Launcher.Text.Secondary}"/>
+                    <controls:FluentIcon Grid.Column="2" Glyph="{x:Static glyphs:FluentGlyphs.ChevronRight}" FontSize="{StaticResource Launcher.Icon.Sm}" Foreground="{DynamicResource Launcher.Text.Secondary}"/>
                 </Grid>
             </Button>
             <Border Classes="settings-row-divider"/>
             <Button Classes="about-link-item"
                     Command="{Binding WindowChrome.OpenIssueTrackerCommand}"
-                    AutomationProperties.Name="{Binding Shell.I18n[issueTracker]}">
+                    AutomationProperties.Name="{Binding Shell.I18n[issueTracker]}"
+                    Theme="{StaticResource TransparentButton}">
                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
-                    <materialIcons:MaterialIcon Kind="MessageAlertOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}" Foreground="{DynamicResource Launcher.Text.Body}"/>
+                    <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Message}" FontSize="{StaticResource Launcher.Icon.Sm}" Foreground="{DynamicResource Launcher.Text.Body}"/>
                     <TextBlock Grid.Column="1" Text="{Binding Shell.I18n[issueTracker]}" VerticalAlignment="Center"/>
-                    <materialIcons:MaterialIcon Grid.Column="2" Kind="ChevronRight" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}" Foreground="{DynamicResource Launcher.Text.Secondary}"/>
+                    <controls:FluentIcon Grid.Column="2" Glyph="{x:Static glyphs:FluentGlyphs.ChevronRight}" FontSize="{StaticResource Launcher.Icon.Sm}" Foreground="{DynamicResource Launcher.Text.Secondary}"/>
                 </Grid>
             </Button>
         </ItemsControl>
@@ -122,30 +139,78 @@
                   AutomationProperties.Name="{Binding Shell.I18n[aboutBuildInformation]}">
             <Border Classes="about-kv-list">
                 <StackPanel>
-                    <Grid Classes="about-kv-row" ColumnDefinitions="*,Auto">
+                    <Grid Classes="about-kv-row" ColumnDefinitions="*,Auto,Auto">
                         <TextBlock Text="{Binding Shell.I18n[aboutRowCommit]}" Classes="caption"/>
                         <TextBlock Grid.Column="1" Text="{Binding Shell.CommitShaValue}" Classes="about-kv-value" TextWrapping="Wrap"/>
+                        <Button Grid.Column="2" Classes="about-kv-copy"
+                                Command="{Binding Shell.CopyBuildInfoValueCommand}"
+                                CommandParameter="{Binding Shell.CommitShaValue}"
+                                AutomationProperties.Name="{Binding Shell.I18n[aboutCopyBuildInfoRowHint]}"
+                                Theme="{StaticResource TransparentButton}">
+                            <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Copy}" FontSize="{StaticResource Launcher.Icon.Sm}" Foreground="{DynamicResource Launcher.Text.Secondary}"/>
+                        </Button>
                     </Grid>
                     <Border Classes="settings-row-divider"/>
-                    <Grid Classes="about-kv-row" ColumnDefinitions="*,Auto">
+                    <Grid Classes="about-kv-row" ColumnDefinitions="*,Auto,Auto">
                         <TextBlock Text="{Binding Shell.I18n[aboutRowBuildConfig]}" Classes="caption"/>
                         <TextBlock Grid.Column="1" Text="{Binding Shell.BuildConfigValue}" Classes="about-kv-value" TextWrapping="Wrap"/>
+                        <Button Grid.Column="2" Classes="about-kv-copy"
+                                Command="{Binding Shell.CopyBuildInfoValueCommand}"
+                                CommandParameter="{Binding Shell.BuildConfigValue}"
+                                AutomationProperties.Name="{Binding Shell.I18n[aboutCopyBuildInfoRowHint]}"
+                                Theme="{StaticResource TransparentButton}">
+                            <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Copy}" FontSize="{StaticResource Launcher.Icon.Sm}" Foreground="{DynamicResource Launcher.Text.Secondary}"/>
+                        </Button>
                     </Grid>
                     <Border Classes="settings-row-divider"/>
-                    <Grid Classes="about-kv-row" ColumnDefinitions="*,Auto">
+                    <Grid Classes="about-kv-row" ColumnDefinitions="*,Auto,Auto">
                         <TextBlock Text="{Binding Shell.I18n[aboutRowRuntime]}" Classes="caption"/>
                         <TextBlock Grid.Column="1" Text="{Binding Shell.FrameworkVersionText}" Classes="about-kv-value" TextWrapping="Wrap"/>
+                        <Button Grid.Column="2" Classes="about-kv-copy"
+                                Command="{Binding Shell.CopyBuildInfoValueCommand}"
+                                CommandParameter="{Binding Shell.FrameworkVersionText}"
+                                AutomationProperties.Name="{Binding Shell.I18n[aboutCopyBuildInfoRowHint]}"
+                                Theme="{StaticResource TransparentButton}">
+                            <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Copy}" FontSize="{StaticResource Launcher.Icon.Sm}" Foreground="{DynamicResource Launcher.Text.Secondary}"/>
+                        </Button>
                     </Grid>
                     <Border Classes="settings-row-divider"/>
-                    <Grid Classes="about-kv-row" ColumnDefinitions="*,Auto">
+                    <Grid Classes="about-kv-row" ColumnDefinitions="*,Auto,Auto">
                         <TextBlock Text="{Binding Shell.I18n[aboutRowAvalonia]}" Classes="caption"/>
                         <TextBlock Grid.Column="1" Text="{Binding Shell.AvaloniaVersionText}" Classes="about-kv-value" TextWrapping="Wrap"/>
+                        <Button Grid.Column="2" Classes="about-kv-copy"
+                                Command="{Binding Shell.CopyBuildInfoValueCommand}"
+                                CommandParameter="{Binding Shell.AvaloniaVersionText}"
+                                AutomationProperties.Name="{Binding Shell.I18n[aboutCopyBuildInfoRowHint]}"
+                                Theme="{StaticResource TransparentButton}">
+                            <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Copy}" FontSize="{StaticResource Launcher.Icon.Sm}" Foreground="{DynamicResource Launcher.Text.Secondary}"/>
+                        </Button>
                     </Grid>
                     <Border Classes="settings-row-divider"/>
-                    <Grid Classes="about-kv-row" ColumnDefinitions="*,Auto">
+                    <Grid Classes="about-kv-row" ColumnDefinitions="*,Auto,Auto">
                         <TextBlock Text="{Binding Shell.I18n[aboutRowPlatform]}" Classes="caption"/>
                         <TextBlock Grid.Column="1" Text="{Binding Shell.PlatformValue}" Classes="about-kv-value" TextWrapping="Wrap"/>
+                        <Button Grid.Column="2" Classes="about-kv-copy"
+                                Command="{Binding Shell.CopyBuildInfoValueCommand}"
+                                CommandParameter="{Binding Shell.PlatformValue}"
+                                AutomationProperties.Name="{Binding Shell.I18n[aboutCopyBuildInfoRowHint]}"
+                                Theme="{StaticResource TransparentButton}">
+                            <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Copy}" FontSize="{StaticResource Launcher.Icon.Sm}" Foreground="{DynamicResource Launcher.Text.Secondary}"/>
+                        </Button>
                     </Grid>
+                    <Border Classes="settings-row-divider"/>
+                    <!-- 复制全部：把五行拼成一段可直接贴进 issue 的文本。 -->
+                    <StackPanel Classes="about-kv-footer">
+                        <Button Classes="flat-action"
+                                Command="{Binding Shell.CopyAllBuildInfoCommand}"
+                                AutomationProperties.Name="{Binding Shell.I18n[aboutCopyAllBuildInfo]}"
+                                AutomationProperties.HelpText="{Binding Shell.I18n[aboutCopyBuildInfoRowHint]}">
+                            <StackPanel Classes="button-content">
+                                <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Clipboard}" FontSize="{StaticResource Launcher.Icon.Sm}"/>
+                                <TextBlock Text="{Binding Shell.I18n[aboutCopyAllBuildInfo]}"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
                 </StackPanel>
             </Border>
         </Expander>
@@ -153,22 +218,49 @@
         <!-- 法律信息：文字与链接分列，避免内联控件在页面重新显示后消失。 -->
         <StackPanel Spacing="{StaticResource Launcher.Spacing.Xs}">
             <TextBlock Text="{Binding Shell.I18n[aboutLinks]}" Classes="group-title"/>
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}">
-                <TextBlock Text="{Binding Shell.I18n[aboutCopyrightText]}" Classes="caption" TextWrapping="Wrap"/>
-                <HyperlinkButton Grid.Column="1" Classes="inline-legal-link"
-                                 VerticalAlignment="Bottom"
-                                 Content="{Binding Shell.I18n[privacyPolicy]}"
-                                 Command="{Binding WindowChrome.OpenPrivacyPolicyCommand}"
-                                 AutomationProperties.Name="{Binding Shell.I18n[privacyPolicy]}"/>
-            </Grid>
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}">
-                <TextBlock Text="{Binding Shell.I18n[defaultBackgroundCopyrightText]}" Classes="caption" TextWrapping="Wrap"/>
-                <HyperlinkButton Grid.Column="1" Classes="inline-legal-link"
-                                 VerticalAlignment="Bottom"
-                                 Content="{Binding Shell.I18n[defaultBackgroundArtwork]}"
-                                 Command="{Binding WindowChrome.OpenDefaultBackgroundArtworkCommand}"
-                                 AutomationProperties.Name="{Binding Shell.I18n[defaultBackgroundArtwork]}"/>
-            </Grid>
+            <Border Classes="about-kv-list">
+                <StackPanel>
+                    <Grid Classes="about-legal-row" ColumnDefinitions="*,Auto">
+                        <TextBlock Text="{Binding Shell.I18n[aboutCopyrightText]}" Classes="caption" TextWrapping="Wrap"/>
+                        <HyperlinkButton Grid.Column="1" Classes="inline-legal-link"
+                                         VerticalAlignment="Bottom"
+                                         Content="{Binding Shell.I18n[privacyPolicy]}"
+                                         Command="{Binding WindowChrome.OpenPrivacyPolicyCommand}"
+                                         AutomationProperties.Name="{Binding Shell.I18n[privacyPolicy]}"/>
+                    </Grid>
+                    <Border Classes="settings-row-divider"/>
+                    <Grid Classes="about-legal-row" ColumnDefinitions="*,Auto">
+                        <TextBlock Text="{Binding Shell.I18n[defaultBackgroundCopyrightText]}" Classes="caption" TextWrapping="Wrap"/>
+                        <HyperlinkButton Grid.Column="1" Classes="inline-legal-link"
+                                         VerticalAlignment="Bottom"
+                                         Content="{Binding Shell.I18n[defaultBackgroundArtwork]}"
+                                         Command="{Binding WindowChrome.OpenDefaultBackgroundArtworkCommand}"
+                                         AutomationProperties.Name="{Binding Shell.I18n[defaultBackgroundArtwork]}"/>
+                    </Grid>
+                    <Border Classes="settings-row-divider"/>
+                    <Button Classes="about-link-item"
+                            Command="{Binding Dialogs.ShowOpenSourceLicenseCommand}"
+                            AutomationProperties.Name="{Binding Shell.I18n[aboutOpenSourceLicense]}"
+                            Theme="{StaticResource TransparentButton}">
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                            <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Document}" FontSize="{StaticResource Launcher.Icon.Sm}" Foreground="{DynamicResource Launcher.Text.Body}"/>
+                            <TextBlock Grid.Column="1" Text="{Binding Shell.I18n[aboutOpenSourceLicense]}" VerticalAlignment="Center"/>
+                            <controls:FluentIcon Grid.Column="2" Glyph="{x:Static glyphs:FluentGlyphs.ChevronRight}" FontSize="{StaticResource Launcher.Icon.Sm}" Foreground="{DynamicResource Launcher.Text.Secondary}"/>
+                        </Grid>
+                    </Button>
+                    <Border Classes="settings-row-divider"/>
+                    <Button Classes="about-link-item"
+                            Command="{Binding Dialogs.ShowThirdPartyNoticesCommand}"
+                            AutomationProperties.Name="{Binding Shell.I18n[aboutThirdPartyNotices]}"
+                            Theme="{StaticResource TransparentButton}">
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                            <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Document}" FontSize="{StaticResource Launcher.Icon.Sm}" Foreground="{DynamicResource Launcher.Text.Body}"/>
+                            <TextBlock Grid.Column="1" Text="{Binding Shell.I18n[aboutThirdPartyNotices]}" VerticalAlignment="Center"/>
+                            <controls:FluentIcon Grid.Column="2" Glyph="{x:Static glyphs:FluentGlyphs.ChevronRight}" FontSize="{StaticResource Launcher.Icon.Sm}" Foreground="{DynamicResource Launcher.Text.Secondary}"/>
+                        </Grid>
+                    </Button>
+                </StackPanel>
+            </Border>
             <TextBlock Text="{Binding Shell.I18n[aboutDisclaimerText]}" Classes="caption" TextWrapping="Wrap"/>
         </StackPanel>
     </StackPanel>

@@ -322,8 +322,8 @@ public sealed class SetupWizardViewModelTests
         Assert.Equal(4, items.Count);
         Assert.Equal(new[] { 1, 4, 3, 5 }, items.Select(item => item.EditStep).ToArray());
         Assert.Equal(
-            new[] { "Translate", "CloudDownload", "FolderSearch", "SwapHorizontal" },
-            items.Select(item => item.Icon.ToString()).ToArray());
+            new[] { FluentGlyphs.Globe, FluentGlyphs.CloudDownload, FluentGlyphs.FolderOpen, FluentGlyphs.Switch },
+            items.Select(item => item.Glyph).ToArray());
         Assert.Equal(
             new[] { false, true, true, true },
             items.Select(item => item.HasDivider).ToArray());

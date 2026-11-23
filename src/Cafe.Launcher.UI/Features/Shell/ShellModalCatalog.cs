@@ -78,6 +78,13 @@ internal static class ShellModalCatalog
                 dialogs,
                 dialogs.DismissNoticeCommand),
             new ModalRegistration(
+                ModalKind.LegalDocument,
+                dialogs,
+                nameof(DialogsViewModel.IsLegalDocumentVisible),
+                () => dialogs.IsLegalDocumentVisible,
+                dialogs,
+                dialogs.CloseLegalDocumentCommand),
+            new ModalRegistration(
                 ModalKind.Update,
                 dialogs.LauncherUpdate,
                 nameof(LauncherUpdateDialogViewModel.IsVisible),

@@ -1,0 +1,22 @@
+{
+  "BGM": {
+    "Mute": 1,
+    "Volume": 0.5
+  },
+  "FXS": {
+    "Mute": 1,
+    "Volume": 0.6
+  },
+  "Voice": {
+    "Mute": 1,
+    "Volume": 1.0
+  },
+  "Resolution": 1,
+  "FPS": 1,
+  "DrawcallMode": 1,
+  "AllowPostProcess": 1,
+  "AntiAliasing": 1,
+  "LetterBoxInBattle": 1,
+  "TitleVideoAudioId": 3,
+  "IsInitialized": true
+}

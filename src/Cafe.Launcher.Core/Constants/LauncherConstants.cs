@@ -33,4 +33,7 @@ public static class LauncherConstants
 
     /// <summary>第二实例转发「直接启动游戏」的 CLI 参数（宿主与快捷方式生成共用一处字面量）。</summary>
     public const string LaunchGameArgument = "--launch-game";
+
+    /// <summary>紧随 <see cref="LaunchGameArgument"/> 的明确游戏身份参数；不接受隐式当前条目。</summary>
+    public const string GameIdArgument = "--game-id";
 }

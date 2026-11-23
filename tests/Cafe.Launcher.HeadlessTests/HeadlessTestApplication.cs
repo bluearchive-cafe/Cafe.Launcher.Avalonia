@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 
@@ -17,5 +18,16 @@ public static class HeadlessTestAppBuilder
                 // pixel-accurate baselines (spec §9).
                 UseHeadlessDrawing = false
             })
-            .UseSkia();
+            .UseSkia()
+            .AfterSetup(_ =>
+            {
+                if (!OperatingSystem.IsWindows())
+                {
+                    return;
+                }
+
+                // FluentAvalonia 3.1 skips Win32 HWND subclassing in preview mode.
+                // Headless windows share a stub HWND and cannot use that native path.
+                typeof(Design).GetProperty(nameof(Design.IsDesignMode))!.SetValue(null, true);
+            });
 }

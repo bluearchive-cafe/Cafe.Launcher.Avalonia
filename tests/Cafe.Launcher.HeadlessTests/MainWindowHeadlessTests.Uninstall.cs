@@ -77,13 +77,13 @@ public sealed partial class MainWindowHeadlessTests
         context.Window.Closed += (_, _) => closed = true;
         context.ViewModel.WindowChrome.CloseCommand.Execute(null);
         context.ViewModel.WindowChrome.RequestShutdown();
-        context.Window.Close();
+        context.Window.CloseForShutdown();
         Assert.False(closed);
         context.ViewModel.WindowChrome.MinimizeCommand.Execute(null);
         Assert.Equal(WindowState.Minimized, context.Window.WindowState);
         uninstall.Complete(new GameOperationResult { Success = true });
         Assert.True(context.Provider.GetRequiredService<LauncherPresentationSession>().CanShutdown);
-        context.Window.Close();
+        context.Window.CloseForShutdown();
         Assert.True(closed);
     }
 

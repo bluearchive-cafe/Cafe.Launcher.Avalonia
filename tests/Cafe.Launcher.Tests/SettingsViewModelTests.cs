@@ -253,7 +253,11 @@ public sealed class SettingsViewModelTests : IDisposable
             new SettingsAppearanceViewModel(editor ?? new SettingsEditor(), new ThemeApplier()),
             new RecordingErrorHandlingService(),
             new StubGameRuntime(),
-            new StubFilePickerService(), new ProtonBuildDiscovery([]));
+            new StubFilePickerService(), new ProtonBuildDiscovery([]),
+            new GameDeviceOptionReader(),
+            new TitleVideoAudioReader(),
+            LauncherProfiles.BlueArchiveJapan,
+            new GameCompatibilityPaths(TestDataRoot.ForCurrentProcess()));
     }
 
     private string NextDataRoot() => tempDir.Sub(Guid.NewGuid().ToString("N"));

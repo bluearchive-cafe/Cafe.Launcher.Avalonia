@@ -1,25 +1,13 @@
 using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Metadata;
-using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Presenters;
 using Avalonia.Controls.Templates;
-using Avalonia.Media;
 
 namespace Cafe.Launcher.UI.Controls;
 
-/// <summary>
-/// 对话框家族 v2 的统一外壳（ADR-015）。两种合法形态：
-/// <see cref="DialogSurfaceForm.Basic"/>（聚焦决策）与
-/// <see cref="DialogSurfaceForm.Panel"/>（特性面板），由 <see cref="Form"/>
-/// 切换并映射到伪类。
-/// 视觉契约集中在 Views/Styles/DialogSurface.axaml 中，
-/// 使用方不得自带几何或色彩值。
-/// </summary>
-[TemplatePart("PART_CloseButton", typeof(Button))]
-[PseudoClasses(":panel")]
-internal class DialogSurface : TemplatedControl
+/// <summary>Composes modal content and commands in the launcher's existing modal stack.</summary>
+internal sealed partial class DialogSurface : Border
 {
     private Button? closeButton;
     private Border? headerBorder;
@@ -41,10 +29,6 @@ internal class DialogSurface : TemplatedControl
     /// <summary>共享滚动内容区承载的主体内容。</summary>
     public static readonly StyledProperty<object?> ContentProperty =
         AvaloniaProperty.Register<DialogSurface, object?>(nameof(Content));
-
-    /// <summary>表面阴影；默认值来自 Launcher.Elevation.Shadow.Dialog（ADR-015 表面档案）。</summary>
-    public static readonly StyledProperty<BoxShadows> BoxShadowProperty =
-        AvaloniaProperty.Register<DialogSurface, BoxShadows>(nameof(BoxShadow));
 
     public static readonly StyledProperty<IDataTemplate?> ContentTemplateProperty =
         AvaloniaProperty.Register<DialogSurface, IDataTemplate?>(nameof(ContentTemplate));
@@ -70,6 +54,15 @@ internal class DialogSurface : TemplatedControl
     public static readonly StyledProperty<string?> CloseToolTipProperty =
         AvaloniaProperty.Register<DialogSurface, string?>(nameof(CloseToolTip));
 
+    public static readonly StyledProperty<bool> CanCloseProperty =
+        AvaloniaProperty.Register<DialogSurface, bool>(nameof(CanClose), true);
+
+    public bool CanClose
+    {
+        get => GetValue(CanCloseProperty);
+        set => SetValue(CanCloseProperty, value);
+    }
+
     public DialogSurfaceForm Form
     {
         get => GetValue(FormProperty);
@@ -92,12 +85,6 @@ internal class DialogSurface : TemplatedControl
     {
         get => GetValue(ContentTemplateProperty);
         set => SetValue(ContentTemplateProperty, value);
-    }
-
-    public BoxShadows BoxShadow
-    {
-        get => GetValue(BoxShadowProperty);
-        set => SetValue(BoxShadowProperty, value);
     }
 
     public object? Footer
@@ -136,20 +123,20 @@ internal class DialogSurface : TemplatedControl
         set => SetValue(CloseToolTipProperty, value);
     }
 
-    protected override void OnApplyTemplate(TemplateAppliedEventArgs e)
+    public DialogSurface()
     {
-        base.OnApplyTemplate(e);
+        InitializeComponent();
 
-        closeButton = e.NameScope.Find<Button>("PART_CloseButton");
-        headerBorder = e.NameScope.Find<Border>("PART_PanelHead");
-        basicHeadBorder = e.NameScope.Find<Border>("PART_BasicHead");
-        footerBand = e.NameScope.Find<Border>("PART_FooterBand");
-        scrollContentPresenter = e.NameScope.Find<ContentPresenter>("PART_ScrollContentPresenter");
-        footerPresenter = e.NameScope.Find<ContentPresenter>("PART_FooterPresenter");
-        leadingPresenter = e.NameScope.Find<ContentPresenter>("PART_FooterLeadingPresenter");
-        toolbarPresenter = e.NameScope.Find<ContentPresenter>("PART_ToolbarPresenter");
-        scrollViewer = e.NameScope.Find<ScrollViewer>("PART_ScrollViewer");
-        directContentPresenter = e.NameScope.Find<ContentPresenter>("PART_DirectContentPresenter");
+        closeButton = this.FindControl<Button>("PART_CloseButton");
+        headerBorder = this.FindControl<Border>("PART_PanelHead");
+        basicHeadBorder = this.FindControl<Border>("PART_BasicHead");
+        footerBand = this.FindControl<Border>("PART_FooterBand");
+        scrollContentPresenter = this.FindControl<ContentPresenter>("PART_ScrollContentPresenter");
+        footerPresenter = this.FindControl<ContentPresenter>("PART_FooterPresenter");
+        leadingPresenter = this.FindControl<ContentPresenter>("PART_FooterLeadingPresenter");
+        toolbarPresenter = this.FindControl<ContentPresenter>("PART_ToolbarPresenter");
+        scrollViewer = this.FindControl<ScrollViewer>("PART_ScrollViewer");
+        directContentPresenter = this.FindControl<ContentPresenter>("PART_DirectContentPresenter");
 
         SyncSlotContents();
     }
@@ -160,7 +147,6 @@ internal class DialogSurface : TemplatedControl
 
         if (change.Property == FormProperty)
         {
-            PseudoClasses.Set(":panel", Form == DialogSurfaceForm.Panel);
             SyncSlotContents();
             return;
         }
@@ -177,10 +163,6 @@ internal class DialogSurface : TemplatedControl
         }
     }
 
-    /// <summary>
-    /// 对象型插槽（正文、工具行、动作组）不依赖模板绑定而由代码同步：
-    /// 模板重应用或属性变化时保持一致，规避无类型转换器的绑定路径。
-    /// </summary>
     private void SyncSlotContents()
     {
         // 正文按当前模式单路投递：同一可视元素不能同时挂到两个展示器。
@@ -199,15 +181,19 @@ internal class DialogSurface : TemplatedControl
             SetContent(scrollContentPresenter, Content, ContentTemplate);
         }
 
+        var hasLeadingFooter = FooterLeading is not null;
         if (footerPresenter is not null)
         {
             footerPresenter.Content = Footer;
+            // Span the whole grid when there is no leading content so the wrap panel gets a finite width.
+            Grid.SetColumn(footerPresenter, hasLeadingFooter ? 1 : 0);
+            Grid.SetColumnSpan(footerPresenter, hasLeadingFooter ? 1 : 2);
         }
 
         if (leadingPresenter is not null)
         {
             leadingPresenter.Content = FooterLeading;
-            leadingPresenter.IsVisible = FooterLeading is not null;
+            leadingPresenter.IsVisible = hasLeadingFooter;
         }
 
         if (toolbarPresenter is not null)

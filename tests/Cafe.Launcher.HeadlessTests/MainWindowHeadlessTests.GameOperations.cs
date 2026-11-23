@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
@@ -9,8 +10,10 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.UI.Constants;
+using Cafe.Launcher.UI.Controls;
 using Cafe.Launcher.UI.Models;
 using CommunityToolkit.Mvvm.Input;
+using FluentAvalonia.UI.Controls;
 
 namespace Cafe.Launcher.HeadlessTests;
 
@@ -36,22 +39,23 @@ public sealed partial class MainWindowHeadlessTests
         Assert.Equal(context.ViewModel.Shell.I18n[LocalizationKeys.GameManagement], AutomationProperties.GetName(secondary));
         Assert.False(primary.IsTabStop);
         Assert.False(secondary.IsTabStop);
-        Assert.Equal(primary.Bounds.Right, secondary.Bounds.Left);
+        Assert.InRange(secondary.Bounds.Left - primary.Bounds.Right, 0, 1);
         ClickLaunchPart(context, primary);
         Assert.Equal(1, launches);
         Assert.False(split.Flyout!.IsOpen);
 
         ClickLaunchPart(context, secondary);
         Assert.Equal(1, launches);
-        var menu = Assert.IsType<MenuFlyout>(split.Flyout);
+        var menu = Assert.IsType<FAMenuFlyout>(split.Flyout);
         Assert.True(menu.IsOpen);
-        var presenter = Assert.IsType<MenuFlyoutPresenter>(menu.Popup.Child);
+        var presenter = Assert.IsType<FAMenuFlyoutPresenter>(menu.Popup.Child);
         var menuBottomRight = presenter.PointToScreen(new Point(presenter.Bounds.Width, presenter.Bounds.Height));
         var buttonTopRight = split.PointToScreen(new Point(split.Bounds.Width, 0));
         Assert.InRange(Math.Abs(menuBottomRight.X - buttonTopRight.X), 0, 1);
         Assert.InRange(Math.Abs(buttonTopRight.Y - menuBottomRight.Y - 8 * context.Window.RenderScaling), 0, 1);
-        var items = menu.Items.OfType<MenuItem>().ToArray();
+        var items = menu.Items.OfType<FAMenuFlyoutItem>().ToArray();
         Assert.Equal(5, items.Length);
+        Assert.All(items, item => Assert.IsType<FluentIcon>(item.TemplateSettings.Icon));
         Assert.Same(context.ViewModel.Operations.RequestRepairCommand, items[3].Command);
         Assert.Same(context.ViewModel.Operations.RequestUninstallCommand, items[4].Command);
         menu.Hide();
@@ -69,9 +73,8 @@ public sealed partial class MainWindowHeadlessTests
         split.Command = new RelayCommand(() => launches++);
         Assert.True(split.Focus(NavigationMethod.Tab));
         Dispatcher.UIThread.RunJobs();
-        var focus = split.GetVisualDescendants().OfType<Border>().Single(border => border.Name == "LaunchFocus");
-        Assert.Equal(Assert.IsAssignableFrom<ISolidColorBrush>(split.Foreground).Color,
-            Assert.IsAssignableFrom<ISolidColorBrush>(focus.BorderBrush).Color);
+        Assert.Contains(context.Window.GetVisualDescendants().OfType<Border>(), border =>
+            ReferenceEquals(border.GetValue(AdornerLayer.AdornedElementProperty), split));
 
         context.Window.KeyPress(Key.Enter, RawInputModifiers.None, PhysicalKey.Enter, "");
         context.Window.KeyRelease(Key.Enter, RawInputModifiers.None, PhysicalKey.Enter, "");

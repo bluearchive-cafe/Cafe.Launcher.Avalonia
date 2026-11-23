@@ -171,6 +171,89 @@ public sealed partial class GameOperationsViewModelTests
     }
 
     [Fact]
+    public async Task ConfirmInstall_WhenCommittedFolderIsAlreadyInstalled_UsesItWithoutDownloading()
+    {
+        // 用户没走「定位游戏」，而是在安装准备页把路径改到一份已有安装上再点开始安装：
+        // 提交后快照按新目录刷新为可用安装，此时不能再装（安装对 Valid 没有准入），
+        // 要按定位收尾：关闭准备页、保留这份安装，而不是下载或报「当前状态不可用」。
+        var context = CreateContext();
+        var notices = SubscribeToasts(context);
+        context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot { RuntimeState = LauncherRuntimeState.NotInstalled,
+            LocalGame = new LocalInstallationState { GamePath = "old" } });
+        context.ViewModel.CommitInstallPathAsync = path =>
+        {
+            context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
+            {
+                RuntimeState = LauncherRuntimeState.Ready,
+                LocalGame = new LocalInstallationState { Kind = LocalInstallationStateKind.Valid, GamePath = path }
+            });
+            return Task.FromResult(true);
+        };
+        await context.ViewModel.OpenInstallPreparationCommand.ExecuteAsync(null);
+        context.ViewModel.InstallPathDraft = "existing";
+
+        await context.ViewModel.ConfirmInstallCommand.ExecuteAsync(null);
+
+        Assert.Equal(0, context.Backend.InstallCallCount);
+        Assert.Null(context.ShortcutService.LastSnapshot);
+        Assert.False(context.ViewModel.IsInstallPreparing);
+        Assert.False(context.ViewModel.IsTaskDialogVisible);
+        Assert.Contains(notices, notice => notice.Severity == ToastSeverity.Success
+            && string.Equals(notice.Message,
+                context.Localizer.T(LocalizationKeys.GameInstallationAlreadyPresent), StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ConfirmInstall_WhenCommittedFolderNeedsUpdate_StillStartsTheUpdate()
+    {
+        // 目录里是有效但落后的安装：这是正常的更新路径，不能被「已有安装」的收尾吞掉。
+        var context = CreateContext();
+        context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot { RuntimeState = LauncherRuntimeState.NotInstalled,
+            LocalGame = new LocalInstallationState { GamePath = "old" } });
+        context.ViewModel.CommitInstallPathAsync = path =>
+        {
+            context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
+            {
+                RuntimeState = LauncherRuntimeState.UpdateAvailable,
+                LocalGame = new LocalInstallationState { Kind = LocalInstallationStateKind.Valid, GamePath = path }
+            });
+            return Task.FromResult(true);
+        };
+        await context.ViewModel.OpenInstallPreparationCommand.ExecuteAsync(null);
+        context.ViewModel.InstallPathDraft = "outdated";
+
+        await context.ViewModel.ConfirmInstallCommand.ExecuteAsync(null);
+
+        Assert.Equal(1, context.Backend.InstallCallCount);
+        Assert.Equal("outdated", context.Backend.LastInstallSnapshot!.LocalGame.GamePath);
+    }
+
+    [Fact]
+    public async Task ConfirmInstall_WhenCommittedFolderIsCorrupted_StillRoutesToRepair()
+    {
+        // 判据只认「可用的安装」：损坏的目录要按原路进入修复确认，不能被当成已有安装吞掉。
+        var context = CreateContext();
+        context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot { RuntimeState = LauncherRuntimeState.NotInstalled,
+            LocalGame = new LocalInstallationState { GamePath = "old" } });
+        context.ViewModel.CommitInstallPathAsync = path =>
+        {
+            context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
+            {
+                RuntimeState = LauncherRuntimeState.Corrupted,
+                LocalGame = new LocalInstallationState { Kind = LocalInstallationStateKind.Corrupted, GamePath = path }
+            });
+            return Task.FromResult(true);
+        };
+        await context.ViewModel.OpenInstallPreparationCommand.ExecuteAsync(null);
+        context.ViewModel.InstallPathDraft = "broken";
+
+        await context.ViewModel.ConfirmInstallCommand.ExecuteAsync(null);
+
+        Assert.True(context.Dialogs.RepairConfirm.IsVisible);
+        Assert.Equal(0, context.Backend.InstallCallCount);
+    }
+
+    [Fact]
     public async Task IdentifyInstalledGame_PicksFolderBeforeCommittingWithoutStartingDownload()
     {
         var context = CreateContext();
@@ -372,10 +455,10 @@ public sealed partial class GameOperationsViewModelTests
     }
 
     [Theory]
-    [InlineData(LauncherRuntimeState.Corrupted, LocalizationKeys.Repair, "Tools")]
-    [InlineData(LauncherRuntimeState.UpdateAvailable, LocalizationKeys.UpdateGame, "Update")]
+    [InlineData(LauncherRuntimeState.Corrupted, LocalizationKeys.Repair, FluentGlyphs.Tools)]
+    [InlineData(LauncherRuntimeState.UpdateAvailable, LocalizationKeys.UpdateGame, FluentGlyphs.Update)]
     public async Task SuccessfulResult_WhenStateLaterRequiresAnotherAction_NamesPrimaryActionByState(
-        LauncherRuntimeState state, LocalizationKeys label, string icon)
+        LauncherRuntimeState state, LocalizationKeys label, string glyph)
     {
         // 修复完成后检查更新改判安装已损坏（或出现新版本）：过期成功结果不能继续占住主按钮，
         // 否则「修复完成」既是错误入口，也挡住了新的修复。
@@ -388,7 +471,7 @@ public sealed partial class GameOperationsViewModelTests
         context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot { RuntimeState = state });
 
         Assert.Equal(context.Localizer.T(label), context.ViewModel.PrimaryActionText);
-        Assert.Equal(icon, context.ViewModel.PrimaryActionIcon);
+        Assert.Equal(glyph, context.ViewModel.PrimaryActionGlyph);
         // 结果卡片本身仍保留到关闭或下一项任务实际开始（CONTEXT.md 游戏任务对话框）。
         Assert.True(context.ViewModel.HasTaskResult);
         Assert.Equal(context.Localizer.T(LocalizationKeys.RepairCompleted), context.ViewModel.TaskTitle);

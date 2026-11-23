@@ -185,8 +185,7 @@ public sealed partial class UiStyleContractTests
                      "Border.motion-surface",
                      ":is(UserControl).motion-content",
                      "StackPanel.motion-content",
-                     "Border.motion-bottom",
-                     "ListBox.settings-navigation > ListBoxItem:selected"
+                     "Border.motion-bottom"
                  })
         {
             var style = document
@@ -227,6 +226,8 @@ public sealed partial class UiStyleContractTests
 
         // 反空转基线（刻意过度指定，与 ResxValues 的元素数锚点同型）：发现式扫描一旦因类名
         // 改写、目录变动或文件合并而扫到 0 个元素，下面的 Assert.All 会全绿地什么都不检。
+        // 设置整窗页（ADR-070 第二批）不再挂 motion-overlay：无遮罩页面的显隐与入场
+        // 由 settings-overlay 自身的 MotionVisibility 契约（UiStyleContractTests.Settings）锁定。
         Assert.Equal(
             new[]
             {
@@ -236,7 +237,6 @@ public sealed partial class UiStyleContractTests
                 "Views/MainWindowDialogsOverlay.axaml",
                 "Views/MainWindowLogExportOverlay.axaml",
                 "Views/MainWindowLogViewerOverlay.axaml",
-                "Views/MainWindowSettingsOverlay.axaml",
                 "Views/ResourcePanelOverlay.axaml",
                 "Views/SetupWizardOverlay.axaml",
                 "Views/UninstallDialog.axaml"
@@ -277,10 +277,10 @@ public sealed partial class UiStyleContractTests
             .ToList();
 
         // ADR-017：向导步骤面板改由后置代码顺序换页（wizard-step），不再属于 motion-content
-        // 家族；设置页六个内容分区保留纯淡化，但入场锚点改由 MotionEntrance 单次触发，
-        // 不再与可见性同源常驻——否则重开动效会让当前分类整体重播淡化（§2.7）。
+        // 家族；设置页八个内容分区（多游戏拆出游戏启动/游戏下载）保留纯淡化，入场锚点改由
+        // MotionEntrance 单次触发，不再与可见性同源常驻——否则重开动效会让当前分类整体重播淡化（§2.7）。
         // 审计-0828：淡化家族不承载位移，仅表面（motion-surface）保留本地 TranslateTransform。
-        Assert.Equal(6, contentTargets.Count);
+        Assert.Equal(9, contentTargets.Count);
         Assert.All(contentTargets, element =>
         {
             Assert.Equal(
@@ -325,8 +325,7 @@ public sealed partial class UiStyleContractTests
     {
         var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.axaml"));
         var surface = Assert.Single(document.Descendants(), element => HasClass(element, "operation-surface"));
-        var panel = Assert.Single(surface.Descendants(), element => HasClass(element, "bottom-panel"));
-        Assert.True(HasClass(panel, "control-panel"));
+        var panel = Assert.Single(surface.Descendants(), element => HasClass(element, "operation-state"));
         Assert.Null(panel.Attribute("IsVisible"));
         Assert.Null(panel.Attribute("Classes.motion-enter"));
         AssertHasLocalTranslateTransform(surface);

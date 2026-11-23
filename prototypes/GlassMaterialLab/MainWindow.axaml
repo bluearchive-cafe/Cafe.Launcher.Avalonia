@@ -1,0 +1,140 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:media="using:Avalonia.Media"
+        xmlns:lab="using:GlassMaterialLab"
+        xmlns:acrylic="using:Fluid.Avalonia.Acrylic"
+        xmlns:fluid="using:Fluid.Avalonia.Acrylic"
+        xmlns:juff="using:JuffMa.Controls.Acrylic"
+        x:Class="GlassMaterialLab.MainWindow"
+        Title="Glass Material Lab — 玻璃表面候选对比（原型）"
+        Width="1500" Height="960" MinWidth="1240" MinHeight="760"
+        Background="#0A0A0F"
+        WindowStartupLocation="CenterScreen">
+    <Grid>
+        <!-- 模拟壁纸层：动态漂移 + 交叉淡化，等价于视频壁纸的连续变化。 -->
+        <lab:AnimatedBackdropControl x:Name="Backdrop" IsAnimated="True"/>
+
+        <!-- 视频壁纸模拟（GLASSLAB_VIDEO_SIM）：用「排除出采样」的全窗层模拟 mpv 原生表面
+             （视觉存在、采样不可见），其下的静态替身模拟「玻璃采样源」。 -->
+        <Image x:Name="VideoSimSurface" IsVisible="False" IsHitTestVisible="False"
+               Stretch="UniformToFill" RenderOptions.BitmapInterpolationMode="HighQuality"
+               acrylic:AcrylicBackdrop.IsExcludedFromCapture="True"
+               Source="avares://GlassMaterialLab/Assets/launcher-background.png"/>
+        <Image x:Name="VideoSimSurrogate" IsVisible="False" IsHitTestVisible="False"
+               Stretch="UniformToFill" RenderOptions.BitmapInterpolationMode="HighQuality"
+               Source="avares://GlassMaterialLab/Assets/launcher-background.png"/>
+
+        <DockPanel>
+            <Border x:Name="ToolbarHost" DockPanel.Dock="Top" Padding="20,12" Background="#CC0F1014"
+                    BorderBrush="#22FFFFFF" BorderThickness="0,0,0,1">
+                <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto">
+                    <ToggleButton x:Name="AnimatedToggle" IsChecked="True" Content="动态背景"
+                                  Click="OnAnimatedToggleClick"/>
+                    <Button Grid.Column="1" Margin="12,0,0,0" Content="切换壁纸（交叉淡化）"
+                            Click="OnCrossfadeClick"/>
+                    <TextBlock Grid.Column="2" x:Name="ModeHint" Margin="12,0,0,0"
+                               VerticalAlignment="Center" Opacity="0.65"/>
+                    <TextBlock Grid.Column="4" x:Name="FpsText" VerticalAlignment="Center"
+                               FontFamily="Consolas,monospace"/>
+                </Grid>
+            </Border>
+
+            <Grid Margin="24,20,24,28" ColumnDefinitions="*,*,*,*">
+
+                <!-- A · Avalonia 内置：ExperimentalAcrylicBorder（组合渲染 + Digger 采样） -->
+                <ExperimentalAcrylicBorder x:Name="CardA" Grid.Column="0" Margin="0,0,16,0" CornerRadius="16">
+                    <ExperimentalAcrylicBorder.Material>
+                        <media:ExperimentalAcrylicMaterial BackgroundSource="Digger"
+                                                           TintColor="#E614141C" TintOpacity="0.55"
+                                                           MaterialOpacity="0.35"/>
+                    </ExperimentalAcrylicBorder.Material>
+                    <Border Padding="20">
+                        <StackPanel Spacing="12">
+                            <Border CornerRadius="4" Background="#26FFFFFF" Padding="10,4" HorizontalAlignment="Left">
+                                <TextBlock FontSize="11" Foreground="#E6FFFFFF"
+                                           Text="A · 内置 ExperimentalAcrylicBorder（Digger 采样）"/>
+                            </Border>
+                            <TextBlock FontSize="24" FontWeight="SemiBold" Foreground="White" Text="玻璃表面 A"/>
+                            <TextBlock FontSize="13" Foreground="#D8FFFFFF" TextWrapping="Wrap"
+                                       Text="这段文字检验玻璃上的可读性：动态背景模糊后仍需保持对比度，交叉淡化期间不应出现残影或闪烁。"/>
+                            <Border Height="1" Background="#1FFFFFFF"/>
+                            <Grid ColumnDefinitions="Auto,*">
+                                <Button Content="交互样本"/>
+                                <TextBlock Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right"
+                                           Opacity="0.7" FontSize="11" Text="零新增依赖 · 实验性控件"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </ExperimentalAcrylicBorder>
+
+                <!-- B · Fluid.Avalonia.Acrylic：AcrylicSurface（Skia 窗口内采样管线） -->
+                <fluid:AcrylicSurface x:Name="CardB" Grid.Column="1" Margin="0,0,16,0" CornerRadius="16"
+                                      BlurRadius="18" Vibrancy="1.15" TintColor="#5914141C"
+                                      HighlightEnabled="False" ShadowEnabled="False">
+                    <Border Padding="20">
+                        <StackPanel Spacing="12">
+                            <Border CornerRadius="4" Background="#26FFFFFF" Padding="10,4" HorizontalAlignment="Left">
+                                <TextBlock FontSize="11" Foreground="#E6FFFFFF"
+                                           Text="B · Fluid.Avalonia.Acrylic 1.4.0（节流捕获 + 参数缓存）"/>
+                            </Border>
+                            <TextBlock FontSize="24" FontWeight="SemiBold" Foreground="White" Text="玻璃表面 B"/>
+                            <TextBlock FontSize="13" Foreground="#D8FFFFFF" TextWrapping="Wrap"
+                                       Text="这段文字检验玻璃上的可读性：动态背景模糊后仍需保持对比度，交叉淡化期间不应出现残影或闪烁。"/>
+                            <Border Height="1" Background="#1FFFFFFF"/>
+                            <Grid ColumnDefinitions="Auto,*">
+                                <Button Content="交互样本"/>
+                                <TextBlock Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right"
+                                           Opacity="0.7" FontSize="11" Text="Avalonia 12+ · 跨平台含 WASM"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </fluid:AcrylicSurface>
+
+                <!-- C · JuffMa.Controls.Acrylic：AcrylicBackdropControl（手动快照 + 残影缓解开关） -->
+                <Grid x:Name="CardC" Grid.Column="2" Margin="0,0,16,0">
+                    <juff:AcrylicBackdropControl x:Name="JuffBackdrop" CornerRadius="16">
+                        <juff:AcrylicBackdropControl.Material>
+                            <media:ExperimentalAcrylicMaterial TintColor="#E614141C"
+                                                               TintOpacity="0.55" MaterialOpacity="0.35"/>
+                        </juff:AcrylicBackdropControl.Material>
+                    </juff:AcrylicBackdropControl>
+                    <Border Padding="20">
+                        <StackPanel Spacing="12">
+                            <Border CornerRadius="4" Background="#26FFFFFF" Padding="10,4" HorizontalAlignment="Left">
+                                <TextBlock FontSize="11" Foreground="#E6FFFFFF"
+                                           Text="C · JuffMa.Controls.Acrylic 2.0.0（手动快照）"/>
+                            </Border>
+                            <TextBlock FontSize="24" FontWeight="SemiBold" Foreground="White" Text="玻璃表面 C"/>
+                            <TextBlock FontSize="13" Foreground="#D8FFFFFF" TextWrapping="Wrap"
+                                       Text="这段文字检验玻璃上的可读性：动态背景模糊后仍需保持对比度，交叉淡化期间不应出现残影或闪烁。"/>
+                            <Border Height="1" Background="#1FFFFFFF"/>
+                            <CheckBox x:Name="JuffForce" Content="ForcePermanentRender（逐帧强制重采）"
+                                      Click="OnJuffForceClick"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <!-- D · 现行生产方案对照：半透明实底 token（#E6202020 + 发丝描边） -->
+                <Border x:Name="CardD" Grid.Column="3" CornerRadius="16" Background="#E6202020"
+                        BorderBrush="#1FFFFFFF" BorderThickness="1" Padding="20">
+                    <StackPanel Spacing="12">
+                        <Border CornerRadius="4" Background="#26FFFFFF" Padding="10,4" HorizontalAlignment="Left">
+                            <TextBlock FontSize="11" Foreground="#E6FFFFFF"
+                                       Text="D · 现行 Glass token 实底（对照基线）"/>
+                        </Border>
+                        <TextBlock FontSize="24" FontWeight="SemiBold" Foreground="White" Text="玻璃表面 D"/>
+                        <TextBlock FontSize="13" Foreground="#D8FFFFFF" TextWrapping="Wrap"
+                                   Text="这段文字检验玻璃上的可读性：动态背景模糊后仍需保持对比度，交叉淡化期间不应出现残影或闪烁。"/>
+                        <Border Height="1" Background="#1FFFFFFF"/>
+                        <Grid ColumnDefinitions="Auto,*">
+                            <Button Content="交互样本"/>
+                            <TextBlock Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right"
+                                       Opacity="0.7" FontSize="11" Text="无模糊 · 无依赖 · 无残影风险"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+            </Grid>
+        </DockPanel>
+    </Grid>
+</Window>

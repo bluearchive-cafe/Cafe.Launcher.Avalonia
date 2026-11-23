@@ -11,12 +11,52 @@ using Cafe.Launcher.Testing;
 using Cafe.Launcher.Core.Services;
 using Cafe.Launcher.Core.Services.GameRuntime;
 using Cafe.Launcher.Core.Constants;
+using Cafe.Launcher.Core.Models;
 
 namespace Cafe.Launcher.Tests;
 
 public sealed class LogExportServiceTests : IDisposable
 {
     private readonly TestDirectory tempDir = TestDirectory.Create();
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ExportAsync_WithTwoGames_KeepsDiagnosticsDistinctAndGatesPrivateState(bool includeUserData)
+    {
+        var root = tempDir.DataRoot;
+        foreach (var profile in LauncherProfiles.SupportedGames)
+        {
+            var paths = new GameDataPaths(root, profile.RuntimeId);
+            Directory.CreateDirectory(paths.Root);
+            File.WriteAllText(paths.RunnerOutputPath, paths.GameId);
+            File.WriteAllText(paths.CompatibilityEnvironmentPath, paths.GameId);
+            File.WriteAllText(paths.PrefixMetadataPath, paths.GameId);
+            File.WriteAllText(paths.DownloadStatePath, paths.GameId);
+            File.WriteAllText(paths.NoticeStatePath, paths.GameId);
+            File.WriteAllText(paths.DownloadMigrationMarkerPath, paths.GameId);
+            File.WriteAllText(Path.Combine(paths.Root, "unrelated.bin"), "do not export");
+        }
+        File.WriteAllText(root.SettingsMigrationBackupPath, "legacy settings");
+        using var logger = WriteDeterministicLog("two-games-source", "2026-09-09T10:00:00.0000000+08:00 [INF] [Test] Entry\n");
+        var service = new LogExportService(new LocalDiagnostics(logger), root, new CrashReportStore(root));
+
+        var zipPath = await service.ExportAsync(tempDir.Sub("two-games-export"),
+            new LogExportOptions { IncludeUserData = includeUserData });
+
+        using var zip = ZipFile.OpenRead(zipPath);
+        foreach (var profile in LauncherProfiles.SupportedGames)
+        {
+            foreach (var name in new[] { LauncherPaths.RunnerOutputFileName,
+                         LauncherPaths.CompatibilityEnvironmentFileName, LauncherPaths.PrefixMetadataFileName })
+                Assert.Equal(profile.RuntimeId, ReadEntry(zipPath, $"games/{profile.RuntimeId}/{name}"));
+            foreach (var name in new[] { LauncherPaths.DownloadStateFileName,
+                         LauncherPaths.NoticeStateFileName, LauncherPaths.DownloadMigrationMarkerFileName })
+                Assert.Equal(includeUserData, zip.GetEntry($"user-data/games/{profile.RuntimeId}/{name}") is not null);
+        }
+        Assert.Equal(includeUserData, zip.GetEntry($"user-data/{LauncherPaths.SettingsMigrationBackupFileName}") is not null);
+        Assert.DoesNotContain(zip.Entries, entry => entry.FullName.EndsWith("unrelated.bin", StringComparison.Ordinal));
+    }
 
     [Fact]
     public async Task ExportAsync_WritesArchiveToSpecifiedDirectory()

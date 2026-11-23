@@ -17,6 +17,9 @@ public sealed record YostarGameProfile
     /// <summary>官方 API 与状态文件里的游戏标识（官方 <c>game_tag</c> / <c>GAME_DIR_NAME</c>）。</summary>
     public required string Tag { get; init; }
 
+    /// <summary>写入官方启动配置时是否包含 <c>params</c>；默认保留蔚蓝档案格式。</summary>
+    public bool GameConfigIncludesParameters { get; init; } = true;
+
     /// <summary>官方安装根的目录名。两款已知官方启动器都用 <c>YostarGames</c>。</summary>
     public required string RootFolderName { get; init; }
 
@@ -63,6 +66,18 @@ public sealed record YostarGameProfile
     /// 游戏客户端 Cookie 库在用户配置目录下的相对路径（BestHTTP 的实现细节，供资源面板读取 UID）。
     /// </summary>
     public required string[] CookieLibraryRelativeSegments { get; init; }
+
+    /// <summary>
+    /// 游戏客户端 <c>DeviceOption</c> 文件在用户配置目录下的相对路径；未知游戏为空，
+    /// 表示没有已校准的设备选项读取入口。
+    /// </summary>
+    public required string[] DeviceOptionRelativeSegments { get; init; }
+
+    /// <summary>
+    /// 游戏客户端 <c>TitleVideoAudioSaveData</c> 文件在用户配置目录下的相对路径；
+    /// 未知游戏为空，表示没有已校准的标题画面 PV 读取入口。
+    /// </summary>
+    public required string[] TitleVideoAudioRelativeSegments { get; init; }
 
     /// <summary>官方包基址；由 <see cref="OfficialPackageHost"/> 派生，不单独登记。</summary>
     public string OfficialPackageBaseUrl => "https://" + OfficialPackageHost;

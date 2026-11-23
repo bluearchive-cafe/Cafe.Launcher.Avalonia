@@ -64,9 +64,9 @@ public sealed class ToolTipThemeHeadlessTests
             var surface = Assert.Single(tip.GetVisualDescendants().OfType<Border>(), part => part.Name == "PART_LayoutRoot");
             var text = Assert.Single(tip.GetVisualDescendants().OfType<TextBlock>());
 
-            Assert.Equal(new CornerRadius(4), surface.CornerRadius);
-            Assert.Equal(new Thickness(0), surface.BorderThickness);
-            Assert.Equal(new Thickness(8, 4), surface.Padding);
+            Assert.Equal(tip.CornerRadius, surface.CornerRadius);
+            Assert.Equal(tip.BorderThickness, surface.BorderThickness);
+            Assert.Equal(tip.Padding, surface.Padding);
             Assert.Equal(12, text.FontSize);
             Assert.Equal(FontWeight.Normal, text.FontWeight);
             Assert.Equal(url, text.Text);
@@ -74,10 +74,10 @@ public sealed class ToolTipThemeHeadlessTests
             Assert.InRange(surface.Bounds.Width, 1, 320);
             Assert.True(surface.Bounds.Height > 24);
 
-            var background = Assert.IsType<SolidColorBrush>(surface.Background);
-            var foreground = Assert.IsType<SolidColorBrush>(text.Foreground);
-            Assert.Same(window.FindResource(window.ActualThemeVariant, "Launcher.Color.InverseSurface"), background);
-            Assert.Same(window.FindResource(window.ActualThemeVariant, "Launcher.Color.InverseOnSurface"), foreground);
+            var background = Assert.IsAssignableFrom<ISolidColorBrush>(surface.Background);
+            var foreground = Assert.IsAssignableFrom<ISolidColorBrush>(text.Foreground);
+            Assert.Same(window.FindResource(window.ActualThemeVariant, "ToolTipBackgroundBrush"), background);
+            Assert.Same(window.FindResource(window.ActualThemeVariant, "ToolTipForegroundBrush"), foreground);
             await HeadlessTestHost.WaitUntilAsync(() => tip.Opacity == 1, TimeSpan.FromSeconds(2));
             if (dark)
             {
@@ -91,10 +91,10 @@ public sealed class ToolTipThemeHeadlessTests
             window.RequestedThemeVariant = dark ? ThemeVariant.Light : ThemeVariant.Dark;
             Dispatcher.UIThread.RunJobs();
             Assert.True(ToolTip.GetIsOpen(trigger));
-            Assert.NotEqual(background.Color, Assert.IsType<SolidColorBrush>(surface.Background).Color);
-            Assert.NotEqual(foreground.Color, Assert.IsType<SolidColorBrush>(text.Foreground).Color);
-            Assert.Same(window.FindResource(window.ActualThemeVariant, "Launcher.Color.InverseSurface"), surface.Background);
-            Assert.Same(window.FindResource(window.ActualThemeVariant, "Launcher.Color.InverseOnSurface"), text.Foreground);
+            Assert.NotEqual(background.Color, Assert.IsAssignableFrom<ISolidColorBrush>(surface.Background).Color);
+            Assert.NotEqual(foreground.Color, Assert.IsAssignableFrom<ISolidColorBrush>(text.Foreground).Color);
+            Assert.Same(window.FindResource(window.ActualThemeVariant, "ToolTipBackgroundBrush"), surface.Background);
+            Assert.Same(window.FindResource(window.ActualThemeVariant, "ToolTipForegroundBrush"), text.Foreground);
 
             ToolTip.SetIsOpen(trigger, false);
             Dispatcher.UIThread.RunJobs();

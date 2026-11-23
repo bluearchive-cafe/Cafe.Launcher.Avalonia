@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
+using FluentAvalonia.UI.Controls;
 
 namespace Cafe.Launcher.UI.Models;
 
@@ -52,6 +53,19 @@ internal sealed class ToastOptions
     public ToastSeverity Severity { get; init; } = ToastSeverity.Info;
 
     /// <summary>
+    /// Gets the optional key that merges this notification into an already-shown card with the
+    /// same key (a per-occurrence count, per [ADR-070](../../docs/design/adr/ADR-070-对话框设置与通知统一为实心Fluent表面.md)).
+    /// Leave it <see langword="null"/> to always add a new card.
+    /// </summary>
+    public string? Key { get; init; }
+
+    /// <summary>
+    /// Gets the delivery policy of this notification. This batch only defines the in-app tier;
+    /// system-notification tiers are added with that capability without touching call sites.
+    /// </summary>
+    public ToastPolicy Policy { get; init; } = ToastPolicy.InApp;
+
+    /// <summary>
     /// Gets the tier that decides how long the toast stays on screen before it disappears.
     /// Leave it <see langword="null"/> for the severity's tier from <see cref="ToastDurations"/>.
     /// </summary>
@@ -79,13 +93,28 @@ internal sealed partial class ToastNotification : ObservableObject
     private string message = "";
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IconKind))]
+    [NotifyPropertyChangedFor(
+        nameof(FluentSeverity),
+        nameof(IsInformational),
+        nameof(IsSuccess),
+        nameof(IsWarning),
+        nameof(IsError))]
     private ToastSeverity severity = ToastSeverity.Info;
 
     [ObservableProperty]
     private string severityLabel = "";
 
+    /// <summary>同 key 合并进本卡的次数；1 表示没有发生过合并。</summary>
+    [ObservableProperty]
+    private int mergeCount = 1;
+
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
+
+    /// <summary>Gets the optional key that merges same-key notifications into this card.</summary>
+    public string? Key { get; set; }
+
+    /// <summary>Gets the delivery policy reserved for the system-notification tier switch.</summary>
+    public ToastPolicy Policy { get; set; } = ToastPolicy.InApp;
 
     /// <summary>Gets the tier that decides how long the toast stays on screen.</summary>
     public ToastDuration Duration { get; set; } = ToastDuration.Brief;
@@ -98,7 +127,19 @@ internal sealed partial class ToastNotification : ObservableObject
     public string PrimaryActionLabel => PrimaryAction?.Label ?? "";
     public string SecondaryActionLabel => SecondaryAction?.Label ?? "";
 
-    public string IconKind => ToastSeverityProfile.For(Severity).IconKind;
+    public FAInfoBarSeverity FluentSeverity => Severity switch
+    {
+        ToastSeverity.Success => FAInfoBarSeverity.Success,
+        ToastSeverity.Warning => FAInfoBarSeverity.Warning,
+        ToastSeverity.Error => FAInfoBarSeverity.Error,
+        _ => FAInfoBarSeverity.Informational
+    };
+
+    /// <summary>严重级条件类（ADR-070 同色描边）：卡片外框按档位选用语义底色收边。</summary>
+    public bool IsInformational => Severity == ToastSeverity.Info;
+    public bool IsSuccess => Severity == ToastSeverity.Success;
+    public bool IsWarning => Severity == ToastSeverity.Warning;
+    public bool IsError => Severity == ToastSeverity.Error;
 }
 
 public enum ToastSeverity
@@ -107,4 +148,14 @@ public enum ToastSeverity
     Success,
     Warning,
     Error
+}
+
+/// <summary>
+/// 通知的呈现档位。本轮只定义应用内栈；Windows 系统通知档位随该能力引入时在此追加，
+/// 调用点与 <see cref="Services.INotificationService"/> 接缝不变（ADR-070）。
+/// </summary>
+internal enum ToastPolicy
+{
+    /// <summary>应用内右上角通知栈；当前唯一档位。</summary>
+    InApp
 }

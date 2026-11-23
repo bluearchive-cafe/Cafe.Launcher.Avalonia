@@ -12,8 +12,12 @@ internal static class AgreementDocuments
 {
     private const string TermsUri = "avares://Cafe.Launcher.UI/Assets/Legal/TERMS.md";
     private const string PrivacyUri = "avares://Cafe.Launcher.UI/Assets/Legal/PRIVACY.md";
+    private const string LicenseUri = "avares://Cafe.Launcher.UI/Assets/Legal/LICENSE.md";
+    private const string ThirdPartyNoticesUri = "avares://Cafe.Launcher.UI/Assets/Legal/THIRD-PARTY-NOTICES.md";
 
     private static readonly Lazy<Content> combined = new(LoadCombined);
+    private static readonly Lazy<Content> license = new(() => LoadSingle(LicenseUri));
+    private static readonly Lazy<Content> thirdPartyNotices = new(() => LoadSingle(ThirdPartyNoticesUri));
 
     /// <summary>
     /// 一次读取的结果。<see cref="IsAvailable"/> 为 false 时正文没有加载出来，调用方
@@ -26,6 +30,33 @@ internal static class AgreementDocuments
     }
 
     public static Content Load() => combined.Value;
+
+    /// <summary>仓库根目录的 LICENSE，关于页「开源许可」入口使用。</summary>
+    public static Content License => license.Value;
+
+    /// <summary>仓库根目录的 THIRD-PARTY-NOTICES.md，关于页「第三方声明」入口使用。</summary>
+    public static Content ThirdPartyNotices => thirdPartyNotices.Value;
+
+    private static Content LoadSingle(string uri)
+    {
+        try
+        {
+            return new Content(Read(uri), null);
+        }
+        catch (Exception exception) when (IsUnavailable(exception))
+        {
+            return new Content(string.Empty, exception.Message);
+        }
+    }
+
+    /// <summary>
+    /// 资源基座缺失、文件缺失与 Avalonia 未初始化都只能降级，不能让它抛出到 UI 线程。
+    /// <see cref="InvalidOperationException"/> 覆盖无 <c>IAssetLoader</c> 的宿主。
+    /// </summary>
+    private static bool IsUnavailable(Exception exception) => exception is IOException
+        or FileNotFoundException
+        or ArgumentException
+        or InvalidOperationException;
 
     private static Content LoadCombined()
     {
@@ -41,14 +72,9 @@ internal static class AgreementDocuments
                     .ToString(),
                 null);
         }
-        catch (Exception exception) when (exception is IOException
-            or FileNotFoundException
-            or ArgumentException
-            or InvalidOperationException)
+        catch (Exception exception) when (IsUnavailable(exception))
         {
             // 标题由调用方本地化；错误串进入回退正文，便于诊断。
-            // InvalidOperationException 覆盖 Avalonia 未初始化（无 IAssetLoader）的宿主，
-            // 资源基座缺失与资源文件缺失一样只能降级，不能让向导启动失败。
             return new Content(string.Empty, exception.Message);
         }
     }

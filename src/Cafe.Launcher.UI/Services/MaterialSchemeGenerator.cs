@@ -80,8 +80,13 @@ internal static class MaterialSchemeGenerator
         // The active banner indicator is a fixed over-image chrome color, not a
         // dynamic accent role. Keep it white across theme and seed changes.
         result["Launcher.Color.Carousel.Dot.Active"] = new SolidColorBrush(Colors.White);
-        result["Launcher.Color.Button.Flat.Hover"] = new SolidColorBrush(Color.FromArgb(0x14, primary.R, primary.G, primary.B));
-        result["Launcher.Color.Button.Flat.Pressed"] = new SolidColorBrush(Color.FromArgb(0x30, primary.R, primary.G, primary.B));
+        // Fluent 2 interaction states are neutral black/white layers, never an
+        // accent wash; flat rows must not pick up a seed hue on hover.
+        var neutralState = isDark ? Colors.White : Colors.Black;
+        result["Launcher.Color.Button.Flat.Hover"] = new SolidColorBrush(
+            Color.FromArgb(0x0F, neutralState.R, neutralState.G, neutralState.B));
+        result["Launcher.Color.Button.Flat.Pressed"] = new SolidColorBrush(
+            Color.FromArgb(isDark ? (byte)0x17 : (byte)0x18, neutralState.R, neutralState.G, neutralState.B));
         // Social chips float directly on the wallpaper, so translucent state
         // washes would show the backdrop through them. Pre-composite their state
         // layers onto the opaque Content.Row base (defaults in App.axaml) instead.
@@ -95,21 +100,12 @@ internal static class MaterialSchemeGenerator
         result["Launcher.Color.Error.Hover"] = new SolidColorBrush(Blend(error, onError, 0.08));
         result["Launcher.Color.Error.Pressed"] = new SolidColorBrush(Blend(error, onError, 0.16));
         result["Launcher.Color.OnError"] = new SolidColorBrush(onError);
+        // FA 原生 ComboBox 模板的 :error 描边引用系统关键色；桥接到应用错误档。
+        result["SystemFillColorCriticalBrush"] = result["Launcher.Color.Error"];
 
         // M3 scheme roles.
-        var secondaryContainer = MaterialColorMapper.ToAvaloniaColor(scheme.SecondaryContainer);
-        var onSecondaryContainer = MaterialColorMapper.ToAvaloniaColor(scheme.OnSecondaryContainer);
-        var secondaryContainerHover = Blend(secondaryContainer, onSecondaryContainer, 0.08);
-        var secondaryContainerPressed = Blend(secondaryContainer, onSecondaryContainer, 0.16);
-        var containerFallback = MaterialColorMapper.ToAvaloniaColor(scheme.OnSurface);
         result["Launcher.Color.Secondary"] = MaterialColorMapper.ToBrush(scheme.Secondary);
         result["Launcher.Color.OnSecondary"] = MaterialColorMapper.ToBrush(scheme.OnSecondary);
-        result["Launcher.Color.SecondaryContainer"] = new SolidColorBrush(secondaryContainer);
-        result["Launcher.Color.OnSecondaryContainer"] = new SolidColorBrush(ReadableContainerForeground(onSecondaryContainer, secondaryContainer, containerFallback));
-        result["Launcher.Color.OnSecondaryContainer.Hover"] = new SolidColorBrush(ReadableContainerForeground(onSecondaryContainer, secondaryContainerHover, containerFallback));
-        result["Launcher.Color.OnSecondaryContainer.Pressed"] = new SolidColorBrush(ReadableContainerForeground(onSecondaryContainer, secondaryContainerPressed, containerFallback));
-        result["Launcher.Color.SecondaryContainer.Hover"] = new SolidColorBrush(secondaryContainerHover);
-        result["Launcher.Color.SecondaryContainer.Pressed"] = new SolidColorBrush(secondaryContainerPressed);
         result["Launcher.Color.Tertiary"] = MaterialColorMapper.ToBrush(scheme.Tertiary);
         result["Launcher.Color.OnTertiary"] = MaterialColorMapper.ToBrush(scheme.OnTertiary);
         result["Launcher.Color.TertiaryContainer"] = MaterialColorMapper.ToBrush(scheme.TertiaryContainer);
@@ -144,6 +140,7 @@ internal static class MaterialSchemeGenerator
             result["Launcher.Text.Primary"] = MaterialColorMapper.ToBrush(neutralScheme.OnSurface);
             result["Launcher.Text.Secondary"] = MaterialColorMapper.ToBrush(neutralScheme.OnSurfaceVariant);
             result["Launcher.Text.Body"] = MaterialColorMapper.ToBrush(neutralScheme.OnSurfaceVariant);
+            result["Launcher.Color.Card.Background"] = MaterialColorMapper.ToBrush(neutralScheme.SurfaceContainerHighest);
             result["Launcher.Color.Field.Background"] = MaterialColorMapper.ToBrush(neutralScheme.SurfaceContainerHighest);
             result["Launcher.Color.Field.Border"] = MaterialColorMapper.ToBrush(neutralScheme.Outline);
             result["Launcher.Color.Button.Secondary.Background"] = MaterialColorMapper.ToBrush(neutralScheme.SurfaceContainerHighest);
@@ -161,6 +158,19 @@ internal static class MaterialSchemeGenerator
             }
         }
 
+        // 壁纸上的半透明表面沿用各自宿主色的明暗，只把不透明度降到表面档；
+        // 主界面边框与浮层取对话框表面，嵌套卡片取内容卡表面。
+        result["Launcher.Color.Glass.Background"] = new SolidColorBrush(
+            WithAlpha(result["Launcher.Color.Dialog.Background"].Color, GlassBackgroundAlpha));
+        result["Launcher.Color.Glass.Card.Background"] = new SolidColorBrush(
+            WithAlpha(result["Launcher.Color.Card.Background"].Color, GlassCardAlpha));
+        // 首页左侧图标栏使用对话框表面的高不透明度档；任务卡、菜单与工具提示
+        // 浮在壁纸最上层，取内容卡表面并提高一档不透明度。
+        result["Launcher.Color.Glass.Rail.Background"] = new SolidColorBrush(
+            WithAlpha(result["Launcher.Color.Dialog.Background"].Color, GlassRailAlpha));
+        result["Launcher.Color.Glass.Strong.Background"] = new SolidColorBrush(
+            WithAlpha(result["Launcher.Color.Card.Background"].Color, isDark ? GlassStrongDarkAlpha : GlassStrongLightAlpha));
+
         // 标准次要操作在设置、向导和对话框中共用同一不透明表面。状态层使用
         // 中性前景预混，避免旧的透明 accent wash 在不同宿主上显出不同底色。
         var secondaryBackground = result["Launcher.Color.Button.Secondary.Background"].Color;
@@ -169,6 +179,37 @@ internal static class MaterialSchemeGenerator
         result["Launcher.Color.Button.Secondary.Pressed"] = new SolidColorBrush(Blend(secondaryBackground, secondaryForeground, 0.16));
         // 旧 token 保留为兼容面，每次方案应用都同步，不能残留上一次策略的底色。
         result["Launcher.Color.Dialog.Action.Background"] = new SolidColorBrush(secondaryBackground);
+
+        // ADR-070 第二批：设置下拉与折叠区走 FA 原生模板，状态色必须经键覆盖
+        // 跟随方案。下拉复用 Field 实心底与同色描边（配对对比度由测试锁定），
+        // 悬停/按压不换底；折叠区头部静止面保持透明，悬停/按压描边取 Field.Border。
+        result["ComboBoxBackground"] = result["Launcher.Color.Field.Background"];
+        result["ComboBoxBackgroundPointerOver"] = result["Launcher.Color.Field.Background"];
+        result["ComboBoxBackgroundPressed"] = result["Launcher.Color.Field.Background"];
+        result["ComboBoxBorderBrush"] = result["Launcher.Color.Field.Border"];
+        result["ComboBoxBorderBrushPointerOver"] = result["Launcher.Color.Field.Border"];
+        result["ExpanderHeaderBorderPointerOverBrush"] = result["Launcher.Color.Field.Border"];
+        result["ExpanderBorderPressedBrush"] = result["Launcher.Color.Field.Border"];
+        result["ExpanderHeaderBorderPressedBrush"] = result["Launcher.Color.Field.Border"];
+
+        // Fluent 2 selection is a neutral state fill composited onto the dialog
+        // surface (opaque, so it reads the same on every host), with primary text.
+        // The historical M3 role names stay as the key surface for existing styles.
+        var dialogSurface = result["Launcher.Color.Dialog.Background"].Color;
+        var selectionState = isDark ? Colors.White : Colors.Black;
+        var selectionFill = Blend(dialogSurface, selectionState, isDark ? 0.08 : 0.06);
+        var selectionHover = Blend(dialogSurface, selectionState, isDark ? 0.11 : 0.09);
+        var selectionPressed = Blend(dialogSurface, selectionState, isDark ? 0.14 : 0.12);
+        var selectionForeground = result["Launcher.Text.Primary"].Color;
+        result["Launcher.Color.SecondaryContainer"] = new SolidColorBrush(selectionFill);
+        result["Launcher.Color.SecondaryContainer.Hover"] = new SolidColorBrush(selectionHover);
+        result["Launcher.Color.SecondaryContainer.Pressed"] = new SolidColorBrush(selectionPressed);
+        result["Launcher.Color.OnSecondaryContainer"] = new SolidColorBrush(
+            ReadableContainerForeground(selectionForeground, selectionFill, selectionForeground));
+        result["Launcher.Color.OnSecondaryContainer.Hover"] = new SolidColorBrush(
+            ReadableContainerForeground(selectionForeground, selectionHover, selectionForeground));
+        result["Launcher.Color.OnSecondaryContainer.Pressed"] = new SolidColorBrush(
+            ReadableContainerForeground(selectionForeground, selectionPressed, selectionForeground));
 
         // 焦点是独立于交互填充的标识。强调色在浅色种子或深色表面上可能不足
         // 3:1，此时使用同一中性方案的 OnSurface；实心按钮另用 OnPrimary/OnError。
@@ -204,20 +245,6 @@ internal static class MaterialSchemeGenerator
                 ReadableContainerForeground(primary, selectedFill, result["Launcher.Text.Primary"].Color));
         }
 
-        // Segments appear on both settings dialogs and resource-panel cards.
-        // Keep one foreground readable on the accent wash over either host.
-        var segmentForeground = primary;
-        foreach (var background in new[]
-                 {
-                     result["Launcher.Color.Dialog.Background"].Color,
-                     Color.Parse(isDark ? "#FF202733" : "#FFFAFCFF")
-                 })
-        {
-            segmentForeground = ReadableContainerForeground(segmentForeground,
-                Blend(background, primary, selectedWash.A / 255d), result["Launcher.Text.Primary"].Color);
-        }
-        result["Launcher.Color.Segmented.Selected.Foreground"] = new SolidColorBrush(segmentForeground);
-
         return result;
     }
 
@@ -227,23 +254,43 @@ internal static class MaterialSchemeGenerator
     /// UiStyleContractTests asserts the XAML declarations against this table so
     /// the two cannot drift apart.
     /// </summary>
+    /// <summary>半透明表面 alpha：边框/浮层 90%，嵌套卡片 94%；与 App.axaml 声明值同步。</summary>
+    internal const byte GlassBackgroundAlpha = 0xE6;
+    internal const byte GlassCardAlpha = 0xF0;
+    internal const byte GlassRailAlpha = 0xEB;
+    internal const byte GlassStrongLightAlpha = 0xC9;
+    internal const byte GlassStrongDarkAlpha = 0xD1;
+
+    /// <summary>
+    /// App.axaml 中半透明表面声明的 (key, light, dark) 行；Brand Blue 与 XAML
+    /// 契约测试共用，防止运行时合成值与声明值漂移。
+    /// </summary>
+    internal static readonly (string Key, string Light, string Dark)[] GlassSurfaceDefaults =
+    [
+        ("Launcher.Color.Glass.Background", "#E6F3F3F3", "#E6202020"),
+        ("Launcher.Color.Glass.Card.Background", "#F0FFFFFF", "#F02B2B2B"),
+        ("Launcher.Color.Glass.Rail.Background", "#EBF3F3F3", "#EB202020"),
+        ("Launcher.Color.Glass.Strong.Background", "#C9FFFFFF", "#D12B2B2B"),
+    ];
+
     internal static readonly (string Key, string Light, string Dark)[] DialogSurfaceDefaults =
     [
-        ("Launcher.Color.Dialog.Background", "#FFFFFFFF", "#FF161C26"),
-        ("Launcher.Color.Dialog.Header", "#FFF4F8FD", "#FF1B2430"),
-        ("Launcher.Color.Dialog.Footer", "#FFFFFFFF", "#FF161C26"),
-        ("Launcher.Color.Dialog.Close.Hover", "#FFEDF2F7", "#FF2A3547"),
-        ("Launcher.Color.Dialog.Close.Pressed", "#FFDDE6F0", "#FF344156"),
+        ("Launcher.Color.Dialog.Background", "#FFF3F3F3", "#FF202020"),
+        ("Launcher.Color.Dialog.Header", "#FFF3F3F3", "#FF202020"),
+        ("Launcher.Color.Dialog.Footer", "#FFF3F3F3", "#FF202020"),
+        ("Launcher.Color.Dialog.Close.Hover", "#FFE9E9E9", "#FF2E2E2E"),
+        ("Launcher.Color.Dialog.Close.Pressed", "#FFDEDEDE", "#FF383838"),
     ];
 
     internal static readonly (string Key, string Light, string Dark)[] NeutralContentDefaults =
     [
-        ("Launcher.Text.Primary", "#FF232A31", "#FFE8EEF6"),
-        ("Launcher.Text.Secondary", "#FF646D79", "#FFA8B3C2"),
-        ("Launcher.Text.Body", "#FF3F4954", "#FFC8D2DF"),
-        ("Launcher.Color.Field.Background", "#FFF9FAFC", "#FF272E3A"),
-        ("Launcher.Color.Field.Border", "#FF8290A5", "#FF7B89A0"),
-        ("Launcher.Color.Button.Secondary.Background", "#FFEDF0F5", "#FF303744"),
+        ("Launcher.Color.Card.Background", "#FFFFFFFF", "#FF2B2B2B"),
+        ("Launcher.Text.Primary", "#FF1A1A1A", "#FFFFFFFF"),
+        ("Launcher.Text.Secondary", "#FF5F5F5F", "#FFC5C5C5"),
+        ("Launcher.Text.Body", "#FF454545", "#FFD0D0D0"),
+        ("Launcher.Color.Field.Background", "#FFFFFFFF", "#FF2D2D2D"),
+        ("Launcher.Color.Field.Border", "#FF8A8A8A", "#FF9A9A9A"),
+        ("Launcher.Color.Button.Secondary.Background", "#FFFBFBFB", "#FF2D2D2D"),
     ];
 
     // Keep the scheme's on-container hue wherever it meets AA. State layers can
@@ -271,4 +318,7 @@ internal static class MaterialSchemeGenerator
             (byte)Math.Round(background.R + ((foreground.R - background.R) * opacity)),
             (byte)Math.Round(background.G + ((foreground.G - background.G) * opacity)),
             (byte)Math.Round(background.B + ((foreground.B - background.B) * opacity)));
+
+    private static Color WithAlpha(Color color, byte alpha) =>
+        Color.FromArgb(alpha, color.R, color.G, color.B);
 }

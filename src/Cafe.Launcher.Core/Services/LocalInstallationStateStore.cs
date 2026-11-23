@@ -112,7 +112,9 @@ internal sealed class LocalInstallationStateStore : ILocalInstallationStateStore
             {
                 Tag = gameProfile.Tag,
                 Name = copiedCommit.ExecutableName,
-                Params = copiedCommit.LaunchParameters.ToArray(),
+                Params = gameProfile.GameConfigIncludesParameters
+                    ? copiedCommit.LaunchParameters.ToArray()
+                    : null,
                 Version = copiedCommit.Version
             };
             config.Vc = OfficialHashService.GetGameConfigHash(config);
@@ -220,6 +222,13 @@ internal sealed class LocalInstallationStateStore : ILocalInstallationStateStore
 
             var config = await ReadConfigAsync(configPath, cancellationToken).ConfigureAwait(false);
             var manifest = await ReadManifestAsync(manifestPath, cancellationToken).ConfigureAwait(false);
+            if (!string.Equals(config.Tag, gameProfile.Tag, StringComparison.Ordinal)
+                || !string.Equals(manifest.Name, gameProfile.Tag, StringComparison.Ordinal))
+            {
+                return CreateFailure(LocalInstallationStateKind.Corrupted, gamePath, configPath, manifestPath,
+                    error: null, hasDifferentGameIdentity: true);
+            }
+
             if (!string.Equals(config.Version, manifest.Version, StringComparison.Ordinal))
             {
                 return Failure(LocalInstallationStateKind.Corrupted);
@@ -262,21 +271,13 @@ internal sealed class LocalInstallationStateStore : ILocalInstallationStateStore
         RequireNonEmptyString(root, "name");
         RequireNonEmptyString(root, "version");
         RequireNonEmptyString(root, "vc");
-        var parameters = RequireProperty(root, "params");
-        if (parameters.ValueKind != JsonValueKind.Array
-            || parameters.EnumerateArray().Any(item => item.ValueKind != JsonValueKind.String))
-        {
-            throw new InvalidDataException("Invalid params.");
-        }
-
-        var config = document.RootElement.Deserialize(CoreStorageJsonContext.Default.GameLauncherConfig)
-            ?? throw new InvalidDataException("Invalid game launcher config.");
-        if (!OfficialHashService.IsGameConfigHashValid(config))
+        if (!OfficialHashService.IsGameConfigHashValid(root))
         {
             throw new InvalidDataException("Invalid game launcher config Vc.");
         }
 
-        return config;
+        return root.Deserialize(CoreStorageJsonContext.Default.GameLauncherConfig)
+            ?? throw new InvalidDataException("Invalid game launcher config.");
     }
 
     private static async Task<LocalManifest> ReadManifestAsync(
@@ -360,7 +361,7 @@ internal sealed class LocalInstallationStateStore : ILocalInstallationStateStore
             : throw new InvalidDataException($"Empty property: {propertyName}");
     }
 
-    private static LocalInstallationStateCommit ValidateAndCopyCommit(
+    private LocalInstallationStateCommit ValidateAndCopyCommit(
         string gamePath,
         LocalInstallationStateCommit commit)
     {
@@ -382,6 +383,11 @@ internal sealed class LocalInstallationStateStore : ILocalInstallationStateStore
         ArgumentNullException.ThrowIfNull(commit.LaunchParameters);
         ArgumentNullException.ThrowIfNull(commit.Files);
         var launchParameters = commit.LaunchParameters.ToArray();
+        if (!gameProfile.GameConfigIncludesParameters && launchParameters.Length > 0)
+        {
+            throw new ArgumentException("This game config format cannot store launch parameters.", nameof(commit));
+        }
+
         if (launchParameters.Any(parameter => parameter is null))
         {
             throw new ArgumentException("Launch parameters cannot contain null.", nameof(commit));
@@ -499,7 +505,8 @@ internal sealed class LocalInstallationStateStore : ILocalInstallationStateStore
         string gamePath,
         string configPath,
         string manifestPath,
-        string? error)
+        string? error,
+        bool hasDifferentGameIdentity = false)
     {
         return new LocalInstallationState
         {
@@ -507,7 +514,8 @@ internal sealed class LocalInstallationStateStore : ILocalInstallationStateStore
             GamePath = gamePath,
             ConfigPath = configPath,
             ManifestPath = manifestPath,
-            Error = error
+            Error = error,
+            HasDifferentGameIdentity = hasDifferentGameIdentity
         };
     }
 

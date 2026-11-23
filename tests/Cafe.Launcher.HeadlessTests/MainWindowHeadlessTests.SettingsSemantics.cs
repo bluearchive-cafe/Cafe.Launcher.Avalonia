@@ -1,4 +1,4 @@
-using Avalonia;
+﻿using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Automation.Peers;
 using Avalonia.Automation.Provider;
@@ -57,21 +57,22 @@ public sealed partial class MainWindowHeadlessTests
             RuntimeState = LauncherRuntimeState.Ready
         });
         context.ViewModel.Shell.IsBusy = false;
-        OpenSettings(context);
-        context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.Game;
-        context.ViewModel.Settings.Editor.Current.GamePath = @"E:\Different\BlueArchive_JP";
+        OpenGameSettings(context);
+        var settings = context.ViewModel.Settings;
+        settings.SelectedCategory = SettingsCategoryCodes.Game;
+        settings.Game.GamePath = @"E:\Different\BlueArchive_JP";
         Dispatcher.UIThread.RunJobs();
         Assert.Equal(@"D:\Games\BlueArchive_JP", context.ViewModel.Operations.GameManagementPath);
-        Assert.True(context.ViewModel.Settings.HasGamePathChanges);
+        Assert.True(settings.HasGamePathChanges);
         var buttons = context.Window.GetVisualDescendants().OfType<Button>().Where(button =>
-            button.IsEffectivelyVisible && (ReferenceEquals(button.Command, context.ViewModel.Operations.OpenGameFolderCommand)
-                || ReferenceEquals(button.Command, context.ViewModel.Operations.RequestRepairCommand)
-                || ReferenceEquals(button.Command, context.ViewModel.Operations.RequestUninstallCommand))).ToArray();
+            button.IsEffectivelyVisible
+            && ReferenceEquals(button.Command, context.ViewModel.ManageGameFromSettingsCommand)
+            && button.CommandParameter is "folder" or "repair" or "uninstall").ToArray();
         Assert.Equal(3, buttons.Length);
         Assert.All(buttons, button => Assert.False(button.IsEffectivelyEnabled));
-        context.ViewModel.Settings.Editor.Current.GamePath = context.ViewModel.Settings.Editor.GetSavedSnapshot().GamePath;
+        settings.Game.GamePath = settings.Editor.GetSavedSnapshot().GetGameSettings(settings.EditingGameId).GamePath;
         Dispatcher.UIThread.RunJobs();
-        Assert.False(context.ViewModel.Settings.HasGamePathChanges);
+        Assert.False(settings.HasGamePathChanges);
         Assert.All(buttons, button => Assert.True(button.IsEffectivelyEnabled));
     }
 
@@ -162,16 +163,16 @@ public sealed partial class MainWindowHeadlessTests
             Dispatcher.UIThread.RunJobs();
             var thumb = Assert.Single(slider.GetVisualDescendants().OfType<Thumb>());
             var track = slider.GetVisualDescendants().OfType<RepeatButton>().Single(control => control.Name == "PART_DecreaseButton");
-            var primary = window.FindResource(window.ActualThemeVariant, "Launcher.Color.Primary");
-            Assert.Equal(primary, thumb.Background);
-            Assert.Equal(primary, track.Background);
+            var primary = PaintColor(Assert.IsAssignableFrom<IBrush>(window.FindResource(window.ActualThemeVariant, "Launcher.Color.Primary")));
+            Assert.Equal(primary, PaintColor(thumb.Background));
+            Assert.Equal(primary, PaintColor(track.Background));
             var bounds = slider.Bounds;
             slider.Focus(NavigationMethod.Tab);
             window.KeyPress(Key.Right, RawInputModifiers.None, PhysicalKey.ArrowRight, "");
             Dispatcher.UIThread.RunJobs();
             Assert.Equal(36, slider.Value);
             Assert.Equal(bounds, slider.Bounds);
-            Assert.Equal(window.FindResource(window.ActualThemeVariant, "Launcher.Color.FocusRing"), slider.BorderBrush);
+            Assert.Contains(":focus-visible", slider.Classes);
         }
         finally
         {

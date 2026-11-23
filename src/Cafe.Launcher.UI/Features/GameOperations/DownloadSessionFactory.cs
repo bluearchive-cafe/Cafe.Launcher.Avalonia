@@ -1,8 +1,9 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Cafe.Launcher.UI.Models;
+using Cafe.Launcher.Core.Helpers;
 using Cafe.Launcher.Core.Models;
+using Cafe.Launcher.UI.Models;
 
 namespace Cafe.Launcher.UI.Features.GameOperations;
 
@@ -35,22 +36,54 @@ internal static class DownloadSessionFactory
         CancellationToken cancellationToken)
     {
         var checkpointStore = context.CheckpointStore;
+        if (!string.Equals(snapshot.GameId, context.GameProfile.RuntimeId, StringComparison.Ordinal)
+            || !string.Equals(checkpointStore.GameId, context.GameProfile.RuntimeId, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
         var state = await checkpointStore.LoadAsync(cancellationToken).ConfigureAwait(false);
         if (state is null)
         {
             return null;
         }
 
-        var gameConfig = snapshot.Remote.GameConfig;
-        var settingsPath = context.InstallationPath.NormalizeGamePath(snapshot.Settings.GamePath);
-        var statePath = context.InstallationPath.NormalizeGamePath(state.GamePath);
-        if (gameConfig is null
-            || !string.Equals(state.Version, gameConfig.GameLatestVersion, StringComparison.Ordinal)
-            || !string.Equals(state.Basis, gameConfig.GameLatestFilePath, StringComparison.Ordinal)
-            || !string.Equals(statePath, settingsPath, StringComparison.Ordinal)
-            || !string.Equals(state.PatchUrlGroup, snapshot.Settings.PatchUrlGroup, StringComparison.Ordinal))
+        // A manually edited settings document must not turn a valid checkpoint into permission
+        // to write another game's tree. A refused checkpoint remains available for correction.
+        var settings = await context.SettingsService.ReadAsync(cancellationToken).ConfigureAwait(false);
+        var identified = state.FormatVersion == DownloadCheckpointStore.CurrentFormatVersion
+            && string.Equals(state.GameId, snapshot.GameId, StringComparison.Ordinal);
+        try
         {
-            checkpointStore.Clear();
+            if (!string.IsNullOrWhiteSpace(state.GamePath)
+                && (GameInstallationPathSafety.FindConflict(snapshot.GameId, state.GamePath, settings) is not null
+                    || GameInstallationPathSafety.FindConflict(snapshot.GameId, state.GamePath, snapshot.Settings) is not null))
+            {
+                return null;
+            }
+
+            if (!identified
+                && !await DownloadCheckpointStore.HasVerifiedLegacyIdentityAsync(snapshot,
+                    context.ILocalInstallationStateStore, context.InstallationPath, cancellationToken).ConfigureAwait(false))
+            {
+                return null;
+            }
+
+            if (!DownloadCheckpointStore.MatchesSnapshot(state, snapshot, context.InstallationPath))
+            {
+                if (identified)
+                {
+                    checkpointStore.Clear();
+                }
+
+                return null;
+            }
+        }
+        catch (Exception exception) when (StorageFailure.IsRecoverable(exception)
+            || exception is ArgumentException or NotSupportedException)
+        {
+            // An unreadable or unverifiable legacy document is evidence, not
+            // permission to delete it or guess which game owns it.
             return null;
         }
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,6 +18,9 @@ namespace Cafe.Launcher.UI.ViewModels;
 
 internal partial class ToastHostViewModel : ObservableObject, IDisposable
 {
+    /// <summary>栈内同时可见的通知上限；超出时淘汰最早且没有动作的一条（ADR-070）。</summary>
+    private const int MaxActiveToasts = 4;
+
     private readonly ToastService toastService;
     private readonly LocalizationService localizer;
     private readonly ILauncherDiagnostics diagnostics;
@@ -94,22 +98,22 @@ internal partial class ToastHostViewModel : ObservableObject, IDisposable
             : null;
 
     /// <summary>
-    /// Suspends or resumes the display countdown of one toast as the pointer enters or leaves its
-    /// card. A suspended toast never expires, and a resumed one restarts with its full duration —
-    /// the same restart-on-resume semantics the banner carousel uses.
+    /// Suspends the display countdown while the toast is hovered or contains keyboard focus.
+    /// When both are clear, the countdown restarts with its full duration.
     /// </summary>
-    /// <remarks>Call on the UI thread, from the pointer handlers of the toast card.</remarks>
-    internal void SetToastPointerOver(string toastId, bool isPointerOver)
+    /// <remarks>Call on the UI thread.</remarks>
+    internal void SetToastInteractionActive(string toastId, bool isActive)
     {
         if (disposed
             || !lifecycles.TryGetValue(toastId, out var lifecycle)
-            || lifecycle.Countdown is not { } countdown)
+            || lifecycle.Countdown is not { } countdown
+            || countdown.Suspended == isActive)
         {
             return;
         }
 
-        countdown.Suspended = isPointerOver;
-        if (isPointerOver)
+        countdown.Suspended = isActive;
+        if (isActive)
         {
             countdown.Interruption?.Cancel();
             return;
@@ -179,8 +183,17 @@ internal partial class ToastHostViewModel : ObservableObject, IDisposable
             }
 
         var lifecycle = new ToastLifecycle();
+        var merged = false;
+        string? evictedToastId = null;
         await invokeOnUiAsync(() =>
         {
+            // 同 key 的重复通知不新增卡片：并入已有卡片计数并刷新内容（ADR-070）。
+            merged = TryMergeIntoExistingCard(notification);
+            if (merged)
+            {
+                return;
+            }
+
             // 记录的建立与拆除各只有一处：随提示条进入栈建立，随其离开栈拆除。
             if (!notification.HasActions)
             {
@@ -189,7 +202,23 @@ internal partial class ToastHostViewModel : ObservableObject, IDisposable
 
             lifecycles[notification.Id] = lifecycle;
             ActiveToasts.Insert(0, notification);
+
+            // 超出上限时淘汰最早且没有动作的卡片；带动作的入口不参与淘汰（ADR-070）。
+            if (ActiveToasts.Count > MaxActiveToasts)
+            {
+                evictedToastId = FindEarliestEvictableToastId(notification.Id);
+            }
         });
+        if (merged)
+        {
+            return;
+        }
+
+        if (evictedToastId is { } toastId)
+        {
+            _ = ExitToastAsync(toastId, lifetimeToken);
+        }
+
         if (notification.HasActions)
         {
             return;
@@ -217,6 +246,46 @@ internal partial class ToastHostViewModel : ObservableObject, IDisposable
                 $"ToastHost: toast notification lifecycle failed: {ex.Message}",
                 CancellationToken.None);
         }
+    }
+
+    /// <summary>
+    /// 把带 key 的通知并入栈里同 key 的卡片：计数加一、消息换为最新一条、倒计时按原档位
+    /// 重新计满；标题保留第一条的，并在计数超过一时追加本地化的「 ×N」后缀。
+    /// </summary>
+    /// <remarks>只动已有卡片，不新增、不拆除记录；带动作的卡片没有倒计时，只更新内容。</remarks>
+    private bool TryMergeIntoExistingCard(ToastNotification notification)
+    {
+        if (notification.Key is not { } key)
+        {
+            return false;
+        }
+
+        var existing = ActiveToasts.FirstOrDefault(candidate => candidate.Key == key && !candidate.IsExiting);
+        if (existing is null)
+        {
+            return false;
+        }
+
+        if (!lifecycles.TryGetValue(existing.Id, out var lifecycle))
+        {
+            return false;
+        }
+
+        lifecycle.MergeBaseTitle ??= existing.Title;
+        // 重新计满：打断在途等待后，倒计时循环会按原档位重开一轮（与指针离开后的恢复一致）。
+        lifecycle.Countdown?.Interruption?.Cancel();
+
+        existing.MergeCount++;
+        existing.Message = notification.Message;
+        if (lifecycle.MergeBaseTitle is { } baseTitle)
+        {
+            existing.Title = baseTitle + string.Format(
+                CultureInfo.CurrentCulture,
+                localizer.T(LocalizationKeys.ToastMergeCountSuffix),
+                existing.MergeCount);
+        }
+
+        return true;
     }
 
     /// <summary>
@@ -296,6 +365,27 @@ internal partial class ToastHostViewModel : ObservableObject, IDisposable
 
             await resumed.Task.WaitAsync(cancellationToken);
         }
+    }
+
+    /// <summary>
+    /// 栈满时挑选淘汰对象：从最早（栈底）向最新扫描，返回第一条既无动作也不在退场动画中的
+    /// 卡片。带动作的卡片保留到用户处理；刚插入的这条不在候选之列。无可淘汰者时返回
+    /// <see langword="null"/>，栈暂时超过上限。
+    /// </summary>
+    private string? FindEarliestEvictableToastId(string excludedToastId)
+    {
+        for (var index = ActiveToasts.Count - 1; index >= 0; index--)
+        {
+            var candidate = ActiveToasts[index];
+            if (candidate.Id != excludedToastId
+                && !candidate.HasActions
+                && !candidate.IsExiting)
+            {
+                return candidate.Id;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -563,6 +653,11 @@ internal partial class ToastHostViewModel : ObservableObject, IDisposable
     private sealed class ToastLifecycle
     {
         public ToastCountdown? Countdown { get; set; }
+
+        /// <summary>
+        /// 首条标题的原文：合并只在原文上追加「 ×N」后缀，反复合并不会累积出「×2 ×3」。
+        /// </summary>
+        public string? MergeBaseTitle { get; set; }
 
         /// <summary>
         /// 测试缝：倒计时循环随提示条 fire-and-forget，这里是唯一能拿到它引用的地方。

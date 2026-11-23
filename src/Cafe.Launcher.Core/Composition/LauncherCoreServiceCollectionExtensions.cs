@@ -110,6 +110,8 @@ public static class LauncherCoreServiceCollectionExtensions
         services.TryAddSingleton<ILocalInstallationStateStore>(sp => sp.GetRequiredService<LocalInstallationStateStore>());
         services.TryAddSingleton<AuthorizationHeaderFactory>();
         services.TryAddSingleton<IBestHttpCookieLibraryReader, BestHttpCookieLibraryService>();
+        services.TryAddSingleton<IGameDeviceOptionReader, GameDeviceOptionReader>();
+        services.TryAddSingleton<IGameTitleVideoAudioReader, TitleVideoAudioReader>();
         services.TryAddSingleton<PatchUrlGroupService>();
         // 「允许本机/内网地址」同样按使用时机读取已保存快照（ADR-028）；按类型注册会让
         // 容器回退到可选参数的默认值，开关将永远读不到设置。
@@ -167,6 +169,7 @@ public static class LauncherCoreServiceCollectionExtensions
         services.TryAddSingleton<CompatibilityEnvironmentPrecheck>();
         services.TryAddSingleton<PrefixMetadataStore>();
         services.TryAddSingleton<IGameProcessTracker, GameProcessTracker>();
+        services.TryAddSingleton<IGameFileOperationCoordinator, GameFileOperationCoordinator>();
         services.TryAddSingleton(sp => new GameCompatibilityPaths(
             sp.GetRequiredService<LauncherDataRoot>()));
         services.TryAddSingleton<IGameRuntime>(sp => new GameRuntime(
@@ -177,6 +180,64 @@ public static class LauncherCoreServiceCollectionExtensions
             sp.GetRequiredService<RunnerOutputCapture>(),
             sp.GetRequiredService<CompatibilityEnvironmentPrecheck>(),
             sp.GetRequiredService<PrefixMetadataStore>()));
+
+        // Shared dependencies are resolved once in the composition root. The game
+        // factory captures explicit dependencies and never retains a service provider.
+        services.TryAddSingleton<Func<YostarGameProfile, GameDataPaths, LauncherGameContext>>(sp =>
+        {
+            var transport = sp.GetRequiredService<IRemoteHttpTransport>();
+            var settings = sp.GetRequiredService<ILauncherSettingsService>();
+            var diagnostics = sp.GetRequiredService<ILauncherDiagnostics>();
+            var processLauncher = sp.GetRequiredService<IProcessLauncher>();
+            var compatibilityPaths = sp.GetRequiredService<GameCompatibilityPaths>();
+            return (profile, paths) =>
+            {
+                var stateStore = new LocalInstallationStateStore(profile);
+                var installationPath = new GameInstallationPath(profile);
+                var api = new LauncherApiClient(
+                    profile,
+                    transport,
+                    new AuthorizationHeaderFactory(profile),
+                    new PatchUrlGroupService(profile, productProfile),
+                    diagnostics);
+                var tracker = new GameProcessTracker();
+                var output = new RunnerOutputCapture(paths);
+                var precheck = new CompatibilityEnvironmentPrecheck(paths);
+                var metadata = new PrefixMetadataStore(paths, buildIdentity);
+                var runtime = new GameRuntime(
+                    [GameRunnerDefinition.Native, GameRunnerDefinition.Umu, GameRunnerDefinition.Wine],
+                    processLauncher,
+                    tracker,
+                    compatibilityPaths,
+                    output,
+                    precheck,
+                    metadata);
+                var loader = new LauncherStatusSnapshotService(
+                    profile.RuntimeId,
+                    api,
+                    stateStore,
+                    installationPath,
+                    settings,
+                    diagnostics);
+                return new LauncherGameContext(
+                    profile,
+                    paths,
+                    api,
+                    stateStore,
+                    installationPath,
+                    loader,
+                    tracker,
+                    [tracker],
+                    output,
+                    precheck,
+                    metadata,
+                    runtime,
+                    new NoticeStateService(paths));
+            };
+        });
+        services.TryAddSingleton<IGameContextRegistry>(sp => new GameContextRegistry(
+            launcherDataRoot,
+            sp.GetRequiredService<Func<YostarGameProfile, GameDataPaths, LauncherGameContext>>()));
         return services;
     }
 

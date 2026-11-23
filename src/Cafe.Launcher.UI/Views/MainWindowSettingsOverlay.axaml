@@ -3,192 +3,196 @@
              xmlns:vm="using:Cafe.Launcher.UI.ViewModels"
              xmlns:models="using:Cafe.Launcher.UI.Models"
              xmlns:controls="using:Cafe.Launcher.UI.Controls"
-             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:glyphs="using:Cafe.Launcher.UI.Constants"
              xmlns:views="using:Cafe.Launcher.UI.Views"
              x:Class="Cafe.Launcher.UI.Views.MainWindowSettingsOverlay"
              x:Name="SettingsRoot"
-             x:DataType="vm:MainWindowViewModel">
-    <Grid Classes="settings-overlay motion-overlay"
+             x:DataType="vm:MainWindowViewModel"
+             IsVisible="{Binding !Settings.IsPreviewing}">
+    <!-- ADR-070 第二批：标题栏以下、图标栏右侧的整窗页面。根网格不铺遮罩，
+         图标栏与页头的指针命中保持透传；页面表面自绘实心底与上缘发丝线。 -->
+    <Grid Classes="settings-overlay"
+          Margin="{StaticResource Launcher.Component.Settings.Page.Offset}"
           IsEnabled="{Binding ModalHost.IsSettingsInteractive}"
           Classes.motion-enabled="{Binding IsMotionEnabled}"
           controls:MotionVisibility.IsOpen="{Binding WindowChrome.IsSettingsVisible}"
           controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
-        <!-- 纯表面外壳：无头带（身份区折叠），工作区与钉死的关闭钮保持原样；
-             表面档案（圆角/阴影/底色）由 DialogSurface 承载（ADR-015）。
-             外壳模式无标题，表面对外语义由 §8 的本地化名显式给出。 -->
-        <controls:DialogSurface
-            Form="Panel"
-            Classes="motion-surface settings-surface"
-            AutomationProperties.Name="{Binding Shell.I18n[settings]}"
-            HorizontalAlignment="Stretch"
-            VerticalAlignment="Stretch"
-            Margin="{StaticResource Launcher.Spacing.Thickness.Xxl}"
-            MaxWidth="{StaticResource Launcher.Layout.Settings.MaxWidth}"
-            MaxHeight="{StaticResource Launcher.Layout.Settings.MaxHeight}">
-            <controls:DialogSurface.RenderTransform>
-                <TranslateTransform/>
-            </controls:DialogSurface.RenderTransform>
-            <controls:DialogSurface.Content>
-                <Grid Classes="settings-workspace" ColumnDefinitions="Auto,*">
-                    <Grid Classes="settings-navigation-pane"
-                          Width="{StaticResource Launcher.Component.Settings.Navigation.Width}"
-                          RowDefinitions="Auto,*">
-                        <Border Classes="settings-navigation-header">
-                            <StackPanel Classes="dialog-title-row">
-                                <TextBlock Text="{Binding Shell.I18n[settings]}" Classes="dialog-title" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Border>
-                        <ListBox Grid.Row="1" Classes="settings-navigation"
-                             x:Name="SettingsNavigation"
-                             AutomationProperties.AutomationId="SettingsNavigation"
-                             AutomationProperties.Name="{Binding Shell.I18n[settingsNavigation]}"
-                             Focusable="True"
-                             FocusAdorner="{x:Null}"
-                             ItemsSource="{Binding Settings.Options.SettingsCategories}"
-                             SelectedValue="{Binding Settings.SelectedCategory, Mode=TwoWay}"
-                             SelectedValueBinding="{Binding Code}"
-                             ScrollViewer.VerticalScrollBarVisibility="Hidden"
-                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                             IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate x:DataType="models:SettingOption">
-                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}">
-                                    <materialIcons:MaterialIcon Kind="{Binding IconKind}"
-                                                                Width="{StaticResource Launcher.Icon.Md}"
-                                                                Height="{StaticResource Launcher.Icon.Md}"
-                                                                VerticalAlignment="Center"
-                                                                Classes="settings-navigation-icon-outline"/>
-                                    <materialIcons:MaterialIcon Kind="{Binding SelectedIconKind}"
-                                                                Width="{StaticResource Launcher.Icon.Md}"
-                                                                Height="{StaticResource Launcher.Icon.Md}"
-                                                                VerticalAlignment="Center"
-                                                                Classes="settings-navigation-icon-filled"/>
-                                    <TextBlock Grid.Column="1"
-                                               Text="{Binding DisplayName}"
-                                               Classes="settings-navigation-item"
-                                               ToolTip.Tip="{Binding DisplayName}"
-                                               AutomationProperties.Name="{Binding DisplayName}"/>
-                                </Grid>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                        </ListBox>
-                    </Grid>
-
-                    <Grid Grid.Column="1" Classes="settings-content" RowDefinitions="*,Auto">
-                        <Border Grid.Row="0" Classes="settings-content-padding">
-                                <Grid RowDefinitions="Auto,*">
-                                    <!-- 标题行与关闭按钮固定在内容区顶部，不随下方内容滚动。 -->
-                                    <Grid Classes="settings-content-heading" ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
-                                        <StackPanel DataContext="{Binding SelectedItem, ElementName=SettingsNavigation}"
-                                                    x:DataType="models:SettingOption"
-                                                    Classes="settings-content-heading-copy">
-                                            <TextBlock Classes="category-title"
-                                                       Text="{Binding DisplayName}"
-                                                       AutomationProperties.Name="{Binding DisplayName}"/>
-                                        </StackPanel>
-                                        <Button Grid.Column="1"
-                                                Classes="dialog-close content-header-action"
-                                                Command="{Binding WindowChrome.ToggleSettingsCommand}"
-                                                IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}"
-                                                ToolTip.Tip="{Binding Shell.I18n[close]}"
-                                                AutomationProperties.Name="{Binding Shell.I18n[close]}"
-                                                VerticalAlignment="Center">
-                                            <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
-                                        </Button>
-                                    </Grid>
-                                    <ScrollViewer x:Name="SettingsContentScroll" Grid.Row="1"
-                                                  Classes="dialog-scroll settings-content-scroll"
-                                                  VerticalScrollBarVisibility="Auto"
-                                                  HorizontalScrollBarVisibility="Disabled"
-                                                  IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}">
-                                    <StackPanel Classes="settings-sections">
-                                        <TextBlock x:Name="SettingsCategoryDescription"
-                                                   DataContext="{Binding SelectedItem, ElementName=SettingsNavigation}"
-                                                   x:DataType="models:SettingOption"
-                                                   Text="{Binding Description}"
-                                                   Classes="caption" TextWrapping="Wrap"/>
-
-                                    <!-- 入场锚点由 MotionEntrance 单次触发并在快速档后摘除：
-                                         若把 motion-enter 绑成常驻类，重开动效会让当前分类整体重播淡化（§2.7）。 -->
-                                    <views:SettingsGeneralSection IsVisible="{Binding Settings.IsGeneralCategorySelected}"
-                                                              Classes="motion-content"
-                                                              Classes.motion-enabled="{Binding IsMotionEnabled}"
-                                                              controls:MotionEntrance.IsTriggered="{Binding Settings.IsGeneralCategorySelected}">
-                                </views:SettingsGeneralSection>
-                                <views:SettingsGameSection IsVisible="{Binding Settings.IsGameCategorySelected}"
-                                                           Classes="motion-content"
-                                                           Classes.motion-enabled="{Binding IsMotionEnabled}"
-                                                           controls:MotionEntrance.IsTriggered="{Binding Settings.IsGameCategorySelected}">
-                                </views:SettingsGameSection>
-                                <views:SettingsDownloadNetworkSection IsVisible="{Binding Settings.IsDownloadNetworkCategorySelected}"
-                                                                      Classes="motion-content"
-                                                                      Classes.motion-enabled="{Binding IsMotionEnabled}"
-                                                                      controls:MotionEntrance.IsTriggered="{Binding Settings.IsDownloadNetworkCategorySelected}">
-                                </views:SettingsDownloadNetworkSection>
-                                <views:SettingsAppearanceSection IsVisible="{Binding Settings.IsAppearanceCategorySelected}"
-                                                                 Classes="motion-content"
-                                                                 Classes.motion-enabled="{Binding IsMotionEnabled}"
-                                                                 controls:MotionEntrance.IsTriggered="{Binding Settings.IsAppearanceCategorySelected}">
-                                </views:SettingsAppearanceSection>
-                                <views:SettingsAdvancedSection IsVisible="{Binding Settings.IsAdvancedCategorySelected}"
-                                                               Classes="motion-content"
-                                                               Classes.motion-enabled="{Binding IsMotionEnabled}"
-                                                               controls:MotionEntrance.IsTriggered="{Binding Settings.IsAdvancedCategorySelected}">
-                                </views:SettingsAdvancedSection>
-                                <views:SettingsAboutSection IsVisible="{Binding Settings.IsAboutCategorySelected}"
-                                                            Classes="motion-content"
-                                                            Classes.motion-enabled="{Binding IsMotionEnabled}"
-                                                            controls:MotionEntrance.IsTriggered="{Binding Settings.IsAboutCategorySelected}">
-                                </views:SettingsAboutSection>
-                                    </StackPanel>
-                                    </ScrollViewer>
-                                </Grid>
-                        </Border>
-                        <Border Grid.Row="1" Classes="settings-content-actions">
-                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
-                                <StackPanel VerticalAlignment="Center" Spacing="{StaticResource Launcher.Spacing.Xs}">
-                                    <TextBlock x:Name="SettingsSaveStatus"
-                                               Text="{Binding Settings.SaveStatusText}"
-                                               Classes="caption" TextWrapping="Wrap"
-                                               AutomationProperties.LiveSetting="Polite"
-                                               IsVisible="{Binding Settings.SaveStatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                                    <ProgressBar Classes="settings-save-progress"
-                                                 IsVisible="{Binding Settings.IsSaving}"
-                                                 IsIndeterminate="{Binding Settings.IsSaving}"
-                                                 AutomationProperties.Name="{Binding Settings.SaveButtonText}"/>
-                                </StackPanel>
-                                <StackPanel Grid.Column="1" Orientation="Horizontal"
-                                            Spacing="{StaticResource Launcher.Spacing.Sm}"
-                                            HorizontalAlignment="Right"
-                                            VerticalAlignment="Center">
-                                    <Button Classes="flat-action dialog-action"
-                                            Command="{Binding WindowChrome.ToggleSettingsCommand}"
-                                            IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}"
-                                            ToolTip.Tip="{Binding Shell.I18n[cancel]}"
-                                            AutomationProperties.Name="{Binding Shell.I18n[cancel]}">
-                                        <StackPanel Classes="button-content" HorizontalAlignment="Center">
-                                            <materialIcons:MaterialIcon Kind="CloseCircleOutline"
-                                                Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                                            <TextBlock Text="{Binding Shell.I18n[cancel]}"/>
-                                        </StackPanel>
-                                    </Button>
-                                    <Button Classes="primary-action dialog-action"
-                                            Command="{Binding Settings.SaveSettingsCommand}"
-                                            IsEnabled="{Binding Settings.CanSaveSettings}"
-                                            ToolTip.Tip="{Binding Settings.SaveButtonText}"
-                                            AutomationProperties.Name="{Binding Settings.SaveButtonText}">
-                                        <StackPanel Classes="button-content" HorizontalAlignment="Center">
-                                            <materialIcons:MaterialIcon Kind="ContentSave"
-                                                Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                                            <TextBlock Text="{Binding Settings.SaveButtonText}"/>
-                                        </StackPanel>
-                                    </Button>
-                                </StackPanel>
+        <Border Classes="settings-page"
+                AutomationProperties.Name="{Binding Settings.DialogTitle}">
+            <Grid Classes="settings-workspace"
+                  ColumnDefinitions="Auto,*"
+                  RowDefinitions="Auto,*,Auto">
+                <Border Grid.Row="1" Classes="settings-navigation-pane"
+                        Width="{StaticResource Launcher.Component.Settings.Navigation.Width}">
+                    <ListBox Classes="settings-navigation"
+                         x:Name="SettingsNavigation"
+                         AutomationProperties.AutomationId="SettingsNavigation"
+                         AutomationProperties.Name="{Binding Shell.I18n[settingsNavigation]}"
+                         Focusable="True"
+                         ItemsSource="{Binding Settings.ActiveCategories}"
+                         SelectedItem="{Binding Settings.SelectedCategoryOption, Mode=TwoWay}"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}">
+                    <ListBox.Styles>
+                        <Style Selector="ListBoxItem" x:DataType="models:SettingOption">
+                            <Setter Property="AutomationProperties.Name" Value="{Binding DisplayName}"/>
+                        </Style>
+                    </ListBox.Styles>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="models:SettingOption">
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                                <controls:FluentIcon Glyph="{Binding CategoryGlyph}"
+                                                             FontSize="{StaticResource Launcher.Icon.Md}"
+                                                             VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding DisplayName}"
+                                           Classes="settings-navigation-item"
+                                           ToolTip.Tip="{Binding DisplayName}"
+                                           AutomationProperties.Name="{Binding DisplayName}"/>
                             </Grid>
-                        </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                    </ListBox>
+                </Border>
+                <Grid Grid.Row="1" Grid.Column="1" Classes="settings-content" RowDefinitions="Auto,*">
+                    <Grid Classes="settings-content-heading">
+                        <StackPanel DataContext="{Binding Settings.SelectedCategoryOption}"
+                                    x:DataType="models:SettingOption"
+                                    Classes="settings-content-heading-copy">
+                            <TextBlock Classes="category-title"
+                                       Text="{Binding DisplayName}" TextWrapping="Wrap"
+                                       AutomationProperties.Name="{Binding DisplayName}"/>
+                        </StackPanel>
                     </Grid>
+                    <ScrollViewer x:Name="SettingsContentScroll" Grid.Row="1"
+                                  Classes="dialog-scroll settings-content-scroll"
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}">
+                        <StackPanel Classes="settings-sections">
+                            <TextBlock x:Name="SettingsCategoryDescription"
+                                       DataContext="{Binding Settings.SelectedCategoryOption}"
+                                       x:DataType="models:SettingOption"
+                                       Text="{Binding Description}"
+                                       Classes="caption" TextWrapping="Wrap"/>
+
+                            <!-- 入场锚点由 MotionEntrance 单次触发并在快速档后摘除：
+                                 若把 motion-enter 绑成常驻类，重开动效会让当前分类整体重播淡化（§2.7）。 -->
+
+                            <views:SettingsGeneralSection IsVisible="{Binding Settings.IsGeneralCategorySelected}"
+                                Classes="motion-content"
+                                Classes.motion-enabled="{Binding IsMotionEnabled}"
+                                controls:MotionEntrance.IsTriggered="{Binding Settings.IsGeneralCategorySelected}"/>
+
+                            <views:SettingsGameSection IsVisible="{Binding Settings.IsGameCategorySelected}"
+                                Classes="motion-content"
+                                Classes.motion-enabled="{Binding IsMotionEnabled}"
+                                controls:MotionEntrance.IsTriggered="{Binding Settings.IsGameCategorySelected}"/>
+
+                            <views:SettingsGameLaunchSection IsVisible="{Binding Settings.IsGameLaunchCategorySelected}"
+                                Classes="motion-content"
+                                Classes.motion-enabled="{Binding IsMotionEnabled}"
+                                controls:MotionEntrance.IsTriggered="{Binding Settings.IsGameLaunchCategorySelected}"/>
+
+                            <views:SettingsGameOptionsSection IsVisible="{Binding Settings.IsGameOptionsCategorySelected}"
+                                Classes="motion-content"
+                                Classes.motion-enabled="{Binding IsMotionEnabled}"
+                                controls:MotionEntrance.IsTriggered="{Binding Settings.IsGameOptionsCategorySelected}"/>
+
+                            <views:SettingsGameDownloadSection IsVisible="{Binding Settings.IsGameDownloadCategorySelected}"
+                                Classes="motion-content"
+                                Classes.motion-enabled="{Binding IsMotionEnabled}"
+                                controls:MotionEntrance.IsTriggered="{Binding Settings.IsGameDownloadCategorySelected}"/>
+
+                            <views:SettingsDownloadNetworkSection IsVisible="{Binding Settings.IsDownloadNetworkCategorySelected}"
+                                Classes="motion-content"
+                                Classes.motion-enabled="{Binding IsMotionEnabled}"
+                                controls:MotionEntrance.IsTriggered="{Binding Settings.IsDownloadNetworkCategorySelected}"/>
+
+                            <views:SettingsAppearanceSection IsVisible="{Binding Settings.IsBackgroundEditorCategorySelected}"
+                                Classes="motion-content"
+                                Classes.motion-enabled="{Binding IsMotionEnabled}"
+                                controls:MotionEntrance.IsTriggered="{Binding Settings.IsBackgroundEditorCategorySelected}"/>
+
+                            <views:SettingsAdvancedSection IsVisible="{Binding Settings.IsAdvancedCategorySelected}"
+                                Classes="motion-content"
+                                Classes.motion-enabled="{Binding IsMotionEnabled}"
+                                controls:MotionEntrance.IsTriggered="{Binding Settings.IsAdvancedCategorySelected}"/>
+
+                            <views:SettingsAboutSection IsVisible="{Binding Settings.IsAboutCategorySelected}"
+                                Classes="motion-content"
+                                Classes.motion-enabled="{Binding IsMotionEnabled}"
+                                controls:MotionEntrance.IsTriggered="{Binding Settings.IsAboutCategorySelected}"/>
+                        </StackPanel>
+                    </ScrollViewer>
                 </Grid>
-            </controls:DialogSurface.Content>
-        </controls:DialogSurface>
+                <!-- 页脚跨内容列：保存状态在左，预览（适用时）/放弃更改/保存靠右；
+                     脏态时关闭命令仍先经未保存确认，改动不会静默丢弃。 -->
+                <Border Grid.Row="2" Grid.ColumnSpan="2" Classes="settings-content-actions">
+                    <Grid x:Name="SettingsFooter" ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                        <StackPanel VerticalAlignment="Center" Spacing="{StaticResource Launcher.Spacing.Xs}">
+                            <TextBlock x:Name="SettingsSaveStatus"
+                                       Text="{Binding Settings.SaveStatusText}"
+                                       Classes="caption" TextWrapping="Wrap"
+                                       AutomationProperties.LiveSetting="Polite"
+                                       IsVisible="{Binding Settings.SaveStatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                            <ProgressBar Classes="settings-save-progress"
+                                         IsVisible="{Binding Settings.IsSaving}"
+                                         IsIndeterminate="{Binding Settings.IsSaving}"
+                                         AutomationProperties.Name="{Binding Settings.SaveButtonText}"/>
+                        </StackPanel>
+                        <WrapPanel Grid.Column="1" Classes="dialog-actions">
+                            <Button Classes="flat-action dialog-action"
+                                    Command="{Binding Settings.PreviewMainWindowCommand}"
+                                    IsVisible="{Binding Settings.CanPreviewAppearance}"
+                                    IsEnabled="{Binding !Settings.IsSaving}"
+                                    AutomationProperties.Name="{Binding Shell.I18n[previewMainWindow]}"
+                                    Content="{Binding Shell.I18n[previewMainWindow]}"/>
+                            <Button Classes="flat-action dialog-action"
+                                    Command="{Binding WindowChrome.ToggleSettingsCommand}"
+                                    IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}"
+                                    ToolTip.Tip="{Binding Shell.I18n[settingsDiscardChanges]}"
+                                    AutomationProperties.Name="{Binding Shell.I18n[settingsDiscardChanges]}">
+                                <StackPanel Classes="button-content" HorizontalAlignment="Center">
+                                    <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Cancel}"
+                                        FontSize="{StaticResource Launcher.Icon.Sm}"/>
+                                    <TextBlock Text="{Binding Shell.I18n[settingsDiscardChanges]}"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="primary-action dialog-action accent"
+                                    Command="{Binding Settings.SaveSettingsCommand}"
+                                    IsEnabled="{Binding Settings.CanSaveSettings}"
+                                    ToolTip.Tip="{Binding Settings.SaveButtonText}"
+                                    AutomationProperties.Name="{Binding Settings.SaveButtonText}">
+                                <StackPanel Classes="button-content" HorizontalAlignment="Center">
+                                    <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Save}"
+                                        FontSize="{StaticResource Launcher.Icon.Sm}"/>
+                                    <TextBlock Text="{Binding Settings.SaveButtonText}"/>
+                                </StackPanel>
+                            </Button>
+                        </WrapPanel>
+                    </Grid>
+                </Border>
+                <!-- 页头跨两列：范围标题常驻左侧，关闭钮贴右缘（与页脚动作右缘对齐）。
+                     声明序排在末尾：分类先获得焦点，关闭按钮排在表单操作之后。 -->
+                <Border Grid.Row="0" Grid.ColumnSpan="2" Classes="settings-header">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                        <TextBlock x:Name="SettingsScopeTitle" Text="{Binding Settings.DialogTitle}"
+                                   Classes="dialog-title" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                        <Button Grid.Column="1"
+                                Classes="dialog-close content-header-action"
+                                Command="{Binding WindowChrome.ToggleSettingsCommand}"
+                                IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}"
+                                ToolTip.Tip="{Binding Shell.I18n[close]}"
+                                AutomationProperties.Name="{Binding Shell.I18n[close]}"
+                                VerticalAlignment="Center"
+                                Theme="{StaticResource TransparentButton}">
+                            <controls:FluentIcon Glyph="{x:Static glyphs:FluentGlyphs.Close}" FontSize="{StaticResource Launcher.Icon.Md}"/>
+                        </Button>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
     </Grid>
 </UserControl>

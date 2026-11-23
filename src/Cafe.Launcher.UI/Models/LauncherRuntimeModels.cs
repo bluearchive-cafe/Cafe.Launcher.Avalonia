@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 
@@ -36,9 +37,7 @@ public abstract class SelectableOption : ObservableObject
 
 internal sealed class SettingOption : SelectableOption
 {
-    public string IconKind { get; init; } = "CogOutline";
-
-    public string SelectedIconKind { get; init; } = "Cog";
+    public string CategoryGlyph { get; init; } = Constants.FluentGlyphs.Setting;
 }
 
 public sealed class LanguageOption : SelectableOption
@@ -146,7 +145,7 @@ internal sealed class RemoteContentItem : ObservableObject
     private string subtitle = "";
     private string url = "";
     private string imageUrl = "";
-    private string socialIconKind = "Link";
+    private string socialGlyph = Constants.FluentGlyphs.Link;
     private global::Avalonia.Media.Imaging.Bitmap? bannerBitmap;
     private bool isImageLoading = true;
     private bool isImageLoadFailed;
@@ -155,7 +154,7 @@ internal sealed class RemoteContentItem : ObservableObject
     public string Subtitle { get => subtitle; set => SetProperty(ref subtitle, value); }
     public string Url { get => url; set => SetProperty(ref url, value); }
     public string ImageUrl { get => imageUrl; set => SetProperty(ref imageUrl, value); }
-    public string SocialIconKind { get => socialIconKind; set => SetProperty(ref socialIconKind, value); }
+    public string SocialGlyph { get => socialGlyph; set => SetProperty(ref socialGlyph, value); }
 
     public global::Avalonia.Media.Imaging.Bitmap? BannerBitmap
     {
@@ -196,8 +195,34 @@ internal sealed class RemoteContentItem : ObservableObject
 
 internal sealed class NewsCategory : ObservableObject
 {
+    private const int PreviewItemCount = 3;
+    private bool isExpanded;
     private string label = "";
     private readonly ObservableCollection<RemoteContentItem> items = [];
+
+    public NewsCategory()
+    {
+        items.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(CanExpand));
+            OnPropertyChanged(nameof(VisibleItems));
+        };
+    }
+
+    public bool IsExpanded
+    {
+        get => isExpanded;
+        set
+        {
+            if (SetProperty(ref isExpanded, value))
+            {
+                OnPropertyChanged(nameof(VisibleItems));
+            }
+        }
+    }
+
+    public bool CanExpand => items.Count > PreviewItemCount;
+    public IEnumerable<RemoteContentItem> VisibleItems => IsExpanded ? items : items.Take(PreviewItemCount);
 
     public string Label
     {

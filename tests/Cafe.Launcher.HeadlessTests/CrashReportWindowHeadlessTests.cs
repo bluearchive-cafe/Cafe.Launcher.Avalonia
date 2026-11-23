@@ -83,14 +83,8 @@ public sealed class CrashReportWindowHeadlessTests
             Dispatcher.UIThread.RunJobs();
             var copyButton = window.FindControl<Button>("CopyDetailsButton");
             Assert.NotNull(copyButton);
-            Assert.Equal(40, exitButton!.Bounds.Height);
-            Assert.Equal(40, copyButton!.Bounds.Height);
-            Assert.Equal(new CornerRadius(8), copyButton.CornerRadius);
-            Assert.Equal(new Thickness(2), copyButton.BorderThickness);
-            Assert.Equal(0, Assert.IsAssignableFrom<ISolidColorBrush>(copyButton.BorderBrush).Color.A);
-            Assert.Equal(14, copyButton.FontSize);
-            Assert.Equal(HorizontalAlignment.Center, exitButton!.HorizontalContentAlignment);
-            Assert.Equal(VerticalAlignment.Center, exitButton.VerticalContentAlignment);
+                                            Assert.Contains("accent", exitButton!.Classes);
+            Assert.True(copyButton!.IsEffectivelyEnabled);
             Assert.Equal("CR-TEST", viewModel.ReportId);
             Assert.Equal("0123456789abcdef0123456789abcdef01234567", viewModel.Build);
             Assert.Equal("technical details", viewModel.TechnicalDetails);

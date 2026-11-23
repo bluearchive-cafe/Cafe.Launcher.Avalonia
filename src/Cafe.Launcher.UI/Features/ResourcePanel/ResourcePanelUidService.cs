@@ -11,6 +11,7 @@ using Cafe.Launcher.Core.Services.Diagnostics;
 using Cafe.Launcher.Core.Services.GameRuntime;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services;
+using Cafe.Launcher.Core.Constants;
 
 namespace Cafe.Launcher.UI.Features.ResourcePanel;
 
@@ -69,16 +70,28 @@ internal sealed partial class ResourcePanelUidService
         this.savedSettingsWriter = savedSettingsWriter;
         this.compatibilityPaths = compatibilityPaths;
         cookieLibraryPathOverride = cookieLibraryPath;
-        this.cookieLibraryPath = cookieLibraryPath ?? GetDefaultCookieLibraryPath();
+        this.cookieLibraryPath = IsAvailable ? cookieLibraryPath ?? GetDefaultCookieLibraryPath() : "";
         this.diagnostics = diagnostics;
     }
 
     public string CookieLibraryPath => cookieLibraryPath;
+    /// <summary>UID 和 Cookie 的归属固定在构造时的游戏，不随全局当前条目变化。</summary>
+    public string GameId => gameProfile.RuntimeId;
+    public bool IsAvailable => LauncherProfiles.GetGameDefinition(GameId).SupportsResourcePanel;
+
+    private void EnsureAvailable()
+    {
+        if (!IsAvailable)
+        {
+            throw new NotSupportedException("This game has no resource-panel UID or cookie library.");
+        }
+    }
 
     public async Task<string> GetUidSourceAsync(CancellationToken cancellationToken = default)
     {
+        EnsureAvailable();
         var settings = await settingsService.ReadAsync(cancellationToken).ConfigureAwait(false);
-        return settings.ResourcePanelUidSource;
+        return settings.GetGameSettings(GameId).ResourcePanelUidSource;
     }
 
     /// <summary>
@@ -87,26 +100,32 @@ internal sealed partial class ResourcePanelUidService
     /// </summary>
     internal async Task SaveUidSourceAsync(string uidSource, CancellationToken cancellationToken = default)
     {
-        await savedSettingsWriter.UpdateAsync(
+        EnsureAvailable();
+        await savedSettingsWriter.UpdateGameAsync(GameId,
             settings => settings.ResourcePanelUidSource = uidSource,
             cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<string> ResolveUidAsync(CancellationToken cancellationToken = default)
     {
+        EnsureAvailable();
         var settings = await settingsService.ReadAsync(cancellationToken).ConfigureAwait(false);
-        return ResolveUidCore(settings, settings.ResourcePanelUidSource);
+        cancellationToken.ThrowIfCancellationRequested();
+        var game = settings.GetGameSettings(GameId);
+        return ResolveUidCore(game, game.ResourcePanelUidSource);
     }
 
     public async Task<string> ResolveUidWithSourceAsync(
         string uidSource,
         CancellationToken cancellationToken = default)
     {
+        EnsureAvailable();
         var settings = await settingsService.ReadAsync(cancellationToken).ConfigureAwait(false);
-        return ResolveUidCore(settings, uidSource);
+        cancellationToken.ThrowIfCancellationRequested();
+        return ResolveUidCore(settings.GetGameSettings(GameId), uidSource);
     }
 
-    private string ResolveUidCore(LauncherSettings settings, string uidSource)
+    private string ResolveUidCore(GameSettings settings, string uidSource)
     {
         if (uidSource == ResourcePanelUidSources.Custom)
         {
@@ -123,7 +142,7 @@ internal sealed partial class ResourcePanelUidService
         return ResolveAutoUidCore(settings);
     }
 
-    private string ResolveAutoUidCore(LauncherSettings settings)
+    private string ResolveAutoUidCore(GameSettings settings)
     {
         var cookieUid = TryReadCookieUid(settings);
         if (IsValidUid(cookieUid))
@@ -137,18 +156,19 @@ internal sealed partial class ResourcePanelUidService
 
     public async Task SaveManualUidAsync(string uid, CancellationToken cancellationToken = default)
     {
+        EnsureAvailable();
         var trimmed = uid.Trim();
         if (!IsValidUid(trimmed))
         {
             throw new ArgumentException("UID must be exactly 8 uppercase letters (A-Z).", nameof(uid));
         }
 
-        await savedSettingsWriter.UpdateAsync(
+        await savedSettingsWriter.UpdateGameAsync(GameId,
             settings => settings.ResourcePanelUid = trimmed,
             cancellationToken).ConfigureAwait(false);
     }
 
-    private string TryReadCookieUid(LauncherSettings settings)
+    private string TryReadCookieUid(GameSettings settings)
     {
         try
         {
@@ -195,51 +215,13 @@ internal sealed partial class ResourcePanelUidService
         GameRuntimeSettings settings,
         string userName,
         Func<string, string> defaultPrefix,
-        IReadOnlyList<string> cookieLibraryRelativeSegments)
-    {
-        string[] runners = settings.Runner == GameRuntimeRunners.Wine
-            ? [GameRuntimeRunners.Wine]
-            : settings.Runner == GameRuntimeRunners.Umu
-                ? [GameRuntimeRunners.Umu]
-                : [GameRuntimeRunners.Umu, GameRuntimeRunners.Wine];
-        string[] prefixes = !string.IsNullOrWhiteSpace(settings.PrefixPath)
-            ? [settings.PrefixPath]
-            : runners.Select(defaultPrefix).ToArray();
-        var fallback = CookiePath(Path.Combine(prefixes[0], "drive_c", "users", userName), cookieLibraryRelativeSegments);
-        foreach (var prefix in prefixes)
-        {
-            var users = Path.Combine(prefix, "drive_c", "users");
-            var currentUserPath = CookiePath(Path.Combine(users, userName), cookieLibraryRelativeSegments);
-            if (File.Exists(currentUserPath))
-            {
-                return currentUserPath;
-            }
+        IReadOnlyList<string> cookieLibraryRelativeSegments) =>
+        GameUserDataPathResolver.ResolveLinux(
+            settings,
+            userName,
+            defaultPrefix,
+            cookieLibraryRelativeSegments);
 
-            if (!Directory.Exists(users))
-            {
-                continue;
-            }
-
-            foreach (var profile in Directory.EnumerateDirectories(users).Order(StringComparer.Ordinal))
-            {
-                var path = CookiePath(profile, cookieLibraryRelativeSegments);
-                if (File.Exists(path))
-                {
-                    return path;
-                }
-            }
-        }
-
-        return fallback;
-    }
-
-    private static string CookiePath(string profile, IReadOnlyList<string> relativeSegments) =>
-        Path.Combine([profile, .. relativeSegments]);
-
-    private string GetDefaultCookieLibraryPath()
-    {
-        return CookiePath(
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            gameProfile.CookieLibraryRelativeSegments);
-    }
+    private string GetDefaultCookieLibraryPath() =>
+        GameUserDataPathResolver.ResolveWindows(gameProfile.CookieLibraryRelativeSegments);
 }

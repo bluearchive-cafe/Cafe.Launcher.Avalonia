@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -10,11 +11,13 @@ using Cafe.Launcher.UI.Controls.VideoBackground;
 using Cafe.Launcher.UI.Constants;
 using Avalonia.Platform;
 using Avalonia.Threading;
+using Cafe.Launcher.UI.Features.Games;
 using Cafe.Launcher.UI.Features.Settings;
 using Cafe.Launcher.UI.Helpers;
 using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.Core.Services.Diagnostics;
+using Cafe.Launcher.Core.Constants;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Core.Services;
@@ -28,12 +31,13 @@ internal partial class BackgroundViewModel : ObservableObject, IDisposable
     private readonly ILauncherDiagnostics diagnostics;
     private readonly Action<LauncherSettings> wallpaperChanged;
     private readonly Func<string, PixelSize, IImage?> imageLoader;
-    private readonly Func<IImage?> bundledImageLoader;
+    private readonly Func<string, IImage?> bundledImageLoader;
     private readonly IWindowMetricsService? windowMetrics;
     private readonly VideoThumbnailFlow videoThumbnails;
     private string? currentDecodedImagePath;
     private PixelSize lastDecodeTarget;
     private string? lastBackgroundSourceKey;
+    private string appliedGameId = LauncherProfiles.BlueArchiveJapan.RuntimeId;
     private string appliedBackgroundSource = BackgroundSources.Bundled;
     private string? appliedCustomBackgroundPath;
     private int backgroundLoadGeneration;
@@ -45,7 +49,7 @@ internal partial class BackgroundViewModel : ObservableObject, IDisposable
     /// 每次回落到内置图都重新解码一份 2560×1388 位图，会让 Skia/原生分配随
     /// 切换次数留下阶梯式增长（AUD-PERF-009）；这里只解码一次并复用。
     /// </summary>
-    private IImage? bundledImage;
+    private readonly Dictionary<string, IImage> bundledImages = new(StringComparer.Ordinal);
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(BackgroundPreviewImage))]
@@ -73,7 +77,7 @@ internal partial class BackgroundViewModel : ObservableObject, IDisposable
     private bool isMotionReduced;
     private IDisposable? fadingOutWallpaper;
     private CancellationTokenSource? wallpaperFadeCancellation;
-    private readonly ToastService? toastService;
+    private readonly INotificationService? toastService;
     private readonly LocalizationService? localizer;
 
     [ObservableProperty]
@@ -118,7 +122,7 @@ internal partial class BackgroundViewModel : ObservableObject, IDisposable
         SettingsViewModel settings,
         VideoThumbnailService videoThumbnailService,
         IWindowMetricsService? windowMetrics = null,
-        ToastService? toastService = null,
+        INotificationService? toastService = null,
         LocalizationService? localizer = null)
         : this(remoteImageStore, diagnostics, settings, windowMetrics, toastService, localizer,
             videoThumbnailService.LoadThumbnailAsync)
@@ -130,7 +134,7 @@ internal partial class BackgroundViewModel : ObservableObject, IDisposable
         ILauncherDiagnostics diagnostics,
         SettingsViewModel settings,
         IWindowMetricsService? windowMetrics = null,
-        ToastService? toastService = null,
+        INotificationService? toastService = null,
         LocalizationService? localizer = null,
         Func<string, CancellationToken, Task<IImage?>>? videoThumbnailLoader = null)
         : this(
@@ -162,7 +166,9 @@ internal partial class BackgroundViewModel : ObservableObject, IDisposable
             diagnostics,
             wallpaperChanged,
             (path, targetPhysicalSize) => BackgroundImageDecoder.Decode(path, targetPhysicalSize),
-            () => LoadBundledBackground(diagnostics),
+            assetPath => LoadBundledBackground(assetPath, diagnostics)
+                ?? (assetPath == GameVisualAssets.FallbackBackground
+                    ? null : LoadBundledBackground(GameVisualAssets.FallbackBackground, diagnostics)),
             windowMetrics,
             videoThumbnailLoader)
     {
@@ -180,7 +186,7 @@ internal partial class BackgroundViewModel : ObservableObject, IDisposable
         ILauncherDiagnostics diagnostics,
         Action<LauncherSettings> wallpaperChanged,
         Func<string, PixelSize, IImage?> imageLoader,
-        Func<IImage?> bundledImageLoader,
+        Func<string, IImage?> bundledImageLoader,
         IWindowMetricsService? windowMetrics = null,
         Func<string, CancellationToken, Task<IImage?>>? videoThumbnailLoader = null)
     {
@@ -199,7 +205,7 @@ internal partial class BackgroundViewModel : ObservableObject, IDisposable
             windowMetrics.PhysicalSizeChanged += OnPhysicalSizeChanged;
         }
 
-        backgroundImageSource = LoadBundledImage();
+        backgroundImageSource = LoadBundledImage(appliedGameId);
 
         // 构造期交付的那张内置图，就是首次刷新要的同一张：内置图由 `LoadBundledBackground`
         // 按原生分辨率解码、**忽略目标尺寸**（该图也没有更大的一档可解），因此把来源键与解码
@@ -235,7 +241,8 @@ internal partial class BackgroundViewModel : ObservableObject, IDisposable
     /// preview must finish a source change if it cancelled the preview that was still loading it.
     /// </summary>
     public bool IsCurrentBackgroundSelection(LauncherSettings settings) =>
-        appliedBackgroundSource == settings.BackgroundSource
+        appliedGameId == settings.LastViewedGameId
+        && appliedBackgroundSource == settings.BackgroundSource
         && (settings.BackgroundSource != BackgroundSources.Custom
             || appliedCustomBackgroundPath == settings.CustomBackgroundPath);
 
@@ -245,6 +252,7 @@ internal partial class BackgroundViewModel : ObservableObject, IDisposable
         CancellationToken cancellationToken)
     {
         var loadGeneration = Interlocked.Increment(ref backgroundLoadGeneration);
+        var gameId = settings.LastViewedGameId;
         // 入口快照：解码与 lastDecodeTarget 记录共用同一份窗口尺寸，中途 resize
         // 不会让“已记录目标”与“位图实际解码目标”脱节（由重解码路径兜底）。
         var decodeSize = GetPhysicalSize();
@@ -278,6 +286,7 @@ internal partial class BackgroundViewModel : ObservableObject, IDisposable
             && !VideoBackgroundRuntime.IsVideoFile(customFilePath);
         if (sourceKey is not null
             && sourceKey == lastBackgroundSourceKey
+            && gameId == appliedGameId
             && (!targetDecidesReuse || decodeTarget == lastDecodeTarget)
             && BackgroundImageSource is not null)
         {
@@ -297,7 +306,7 @@ internal partial class BackgroundViewModel : ObservableObject, IDisposable
         {
             // Keep the bundled image underneath playback. Start the cover/first-frame request
             // before notifying palette consumers so they await this selection's image once.
-            var fallback = await Task.Run(() => LoadBundledImage());
+            var fallback = await Task.Run(() => LoadBundledImage(gameId));
             ThrowIfCancellationRequestedUnlessBundled(fallback, cancellationToken);
             if (TrySetBackgroundImage(fallback, settings, loadGeneration, null, decodeTarget,
                     currentFilePath: customFilePath, notifyPalette: false))
@@ -381,7 +390,7 @@ internal partial class BackgroundViewModel : ObservableObject, IDisposable
         cancellationToken.ThrowIfCancellationRequested();
         // 内置图与远端图同为全屏大图：解码同样放线程池，避免默认壁纸下每次
         // 回落都在 UI 线程重解码整图。
-        var bundled = await Task.Run(() => LoadBundledImage());
+        var bundled = await Task.Run(() => LoadBundledImage(gameId));
         ThrowIfCancellationRequestedUnlessBundled(bundled, cancellationToken);
         var applied = TrySetBackgroundImage(
             bundled,
@@ -701,33 +710,39 @@ internal partial class BackgroundViewModel : ObservableObject, IDisposable
     /// 首次解码内置壁纸后缓存同一实例；解码与窗口尺寸无关，结果恒定。加载失败不缓存，
     /// 让后续刷新仍可重试；并发首次解码时保留先到的一份。
     /// </summary>
-    private IImage? LoadBundledImage()
+    private IImage? LoadBundledImage(string gameId)
     {
-        if (Volatile.Read(ref bundledImage) is { } cached)
+        var assetPath = GameVisualAssets.Background(gameId);
+        lock (bundledImages)
         {
-            return cached;
+            if (disposed) return null;
+            if (bundledImages.TryGetValue(assetPath, out var cached)) return cached;
         }
 
-        var loaded = bundledImageLoader();
+        var loaded = bundledImageLoader(assetPath);
         if (loaded is null)
         {
             return null;
         }
 
-        var winner = Interlocked.CompareExchange(ref bundledImage, loaded, null);
-        if (winner is null || ReferenceEquals(winner, loaded))
+        lock (bundledImages)
         {
-            return loaded;
-        }
+            if (!disposed && bundledImages.TryAdd(assetPath, loaded)) return loaded;
 
-        // 本次解码结果从未对外发布，直接释放。
-        (loaded as IDisposable)?.Dispose();
-        return winner;
+            var winner = bundledImages.GetValueOrDefault(assetPath);
+            if (!ReferenceEquals(winner, loaded)) (loaded as IDisposable)?.Dispose();
+            return disposed ? null : winner;
+        }
     }
 
     /// <summary>缓存的内置图由 ViewModel 持有到 Dispose，任何换图路径都不得释放它。</summary>
-    private bool IsBundledImage(object? image) =>
-        image is not null && ReferenceEquals(image, Volatile.Read(ref bundledImage));
+    private bool IsBundledImage(object? image)
+    {
+        lock (bundledImages)
+        {
+            return image is not null && bundledImages.Values.Any(value => ReferenceEquals(value, image));
+        }
+    }
 
     /// <summary>释放调用方交出的位图；内置壁纸的释放权归本类，所有路径统一经此判定。</summary>
     private void DisposeUnlessBundled(object? image)
@@ -793,6 +808,7 @@ internal partial class BackgroundViewModel : ObservableObject, IDisposable
 
     private void RememberBackgroundSelection(LauncherSettings settings)
     {
+        appliedGameId = settings.LastViewedGameId;
         appliedBackgroundSource = settings.BackgroundSource;
         appliedCustomBackgroundPath = settings.CustomBackgroundPath;
     }
@@ -854,11 +870,11 @@ internal partial class BackgroundViewModel : ObservableObject, IDisposable
         wallpaperFadeCancellation?.Cancel();
     }
 
-    private static Bitmap? LoadBundledBackground(ILauncherDiagnostics diagnostics)
+    private static Bitmap? LoadBundledBackground(string assetPath, ILauncherDiagnostics diagnostics)
     {
         try
         {
-            var uri = new Uri("avares://Cafe.Launcher.UI/Assets/launcher-background.png");
+            var uri = new Uri(assetPath);
             using var stream = AssetLoader.Open(uri);
             return new Bitmap(stream);
         }
@@ -866,7 +882,7 @@ internal partial class BackgroundViewModel : ObservableObject, IDisposable
         {
             _ = diagnostics.WarningAsync(
                 "LoadBundledBackground",
-                $"Failed to load bundled background image: {ex.Message}");
+                $"Failed to load bundled background image {assetPath}: {ex.Message}");
             return null;
         }
     }
@@ -880,12 +896,15 @@ internal partial class BackgroundViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
-        if (disposed)
+        IDisposable[] bundled;
+        lock (bundledImages)
         {
-            return;
+            if (disposed) return;
+            disposed = true;
+            // Keep the identities for any cancelled loads that are still returning a cached image.
+            bundled = bundledImages.Values.Distinct(ReferenceEqualityComparer.Instance).OfType<IDisposable>().ToArray();
         }
 
-        disposed = true;
         videoThumbnails.Dispose();
         BackgroundVideoPath = null;
         CurrentBackgroundFilePath = null;
@@ -900,9 +919,8 @@ internal partial class BackgroundViewModel : ObservableObject, IDisposable
         BackgroundImageSource = null;
         var fading = fadingOutWallpaper;
         fadingOutWallpaper = null;
-        var bundled = Interlocked.Exchange(ref bundledImage, null);
-        if (!ReferenceEquals(current, bundled)) current?.Dispose();
-        if (!ReferenceEquals(fading, current) && !ReferenceEquals(fading, bundled)) fading?.Dispose();
-        (bundled as IDisposable)?.Dispose();
+        DisposeUnlessBundled(current);
+        if (!ReferenceEquals(fading, current)) DisposeUnlessBundled(fading);
+        foreach (var image in bundled) image.Dispose();
     }
 }

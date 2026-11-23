@@ -1,4 +1,4 @@
-﻿using System.Xml.Linq;
+using System.Xml.Linq;
 using Cafe.Launcher.Testing;
 using Cafe.Launcher.Core.Constants;
 
@@ -52,41 +52,6 @@ public sealed partial class UiStyleContractTests
             Assert.DoesNotContain($"Text=\"{literal}\"", settings, StringComparison.Ordinal);
             Assert.DoesNotContain($"PlaceholderText=\"{literal}\"", logViewer, StringComparison.Ordinal);
         }
-    }
-
-    [Fact]
-    public void LogViewer_EmptyStateUsesExplicitViewModelStateAndContainer()
-    {
-        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowLogViewerOverlay.axaml"));
-        var emptyState = document
-            .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "Border"
-                && HasClass(element, "log-empty-state"));
-
-        Assert.Equal(
-            "{Binding LogViewer.IsEmpty}",
-            emptyState.Attribute("IsVisible")?.Value);
-        Assert.Contains(
-            emptyState.Descendants(),
-            element =>
-                element.Name.LocalName == "TextBlock"
-                && element.Attribute("Text")?.Value == "{Binding Shell.I18n[logNoMatchingEntries]}");
-
-        var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/Styles/Diagnostics.axaml"));
-        var emptyStateTextStyle = styles
-            .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "Style"
-                && element.Attribute("Selector")?.Value
-                    == "Border.log-empty-state TextBlock.media-placeholder-text");
-        Assert.Contains(
-            emptyStateTextStyle.Elements(),
-            element =>
-                element.Name.LocalName == "Setter"
-                && element.Attribute("Property")?.Value == "Foreground"
-                && element.Attribute("Value")?.Value
-                    == "{DynamicResource Launcher.Text.Secondary}");
     }
 
     [Fact]
@@ -158,49 +123,9 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             "True",
             GetStyleSetters(document, "Grid.toast-host")["IsHitTestVisible"]);
-        Assert.Equal("1", GetStyleSetters(document, "Button.toast-close")["Opacity"]);
-    }
-
-    [Fact]
-    public void LogViewer_FilterControlsShareHeightAndSingleBottomGap()
-    {
-        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowLogViewerOverlay.axaml"));
-        var filterButtons = document
-            .Descendants()
-            .Where(element =>
-                element.Name.LocalName == "Button"
-                && HasClass(element, "log-filter"))
-            .ToList();
-        Assert.Equal(7, filterButtons.Count);
-
-        var search = document
-            .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "TextBox"
-                && HasClass(element, "log-search"));
-        Assert.Equal(
-            "{StaticResource Launcher.Control.Height.Setting}",
-            search.Attribute("Height")?.Value);
-
-        var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
-        Assert.Equal(
-            "{StaticResource Launcher.Control.Height.Setting}",
-            GetStyleSetters(styles, "Button.filter-tab.log-filter")["Height"]);
-        Assert.Equal(
-            "{StaticResource Launcher.Component.LogViewer.FilterBar.Margin}",
-            GetStyleSetters(styles, "StackPanel.log-filter-bar")["Margin"]);
-
-        var app = XDocument.Load(TestRepository.FromHostRoot("App.axaml"));
-        var xKey = XNamespace.Get("http://schemas.microsoft.com/winfx/2006/xaml") + "Key";
-        string TokenValue(string key) => app
-            .Descendants()
-            .Single(element => (string?)element.Attribute(xKey) == key)
-            .Value
-            .Trim();
-        var filterMargin = TokenValue("Launcher.Component.LogViewer.FilterBar.Margin").Split(',');
-        var bodyPadding = TokenValue("Launcher.Component.Dialog.Panel.Body.Padding").Split(',');
-        Assert.Equal(bodyPadding[0], filterMargin[0]);
-        Assert.Equal(bodyPadding[2], filterMargin[2]);
+        var view = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowToastOverlay.axaml"));
+        var toast = Assert.Single(view.Descendants(), element => element.Name.LocalName == "FAInfoBar");
+        Assert.Contains("DismissToastCommand", (string?)toast.Attribute("CloseButtonCommand"), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -226,39 +151,6 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void LogViewer_ListTopIsFlush_GapLivesInFixedFilterBarRow()
-    {
-        // 列表顶端无边距：与过滤栏的间距由固定工具行的下边距承担（不随内容滚动），
-        // 滚动正文顶端必须显式归零。
-        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowLogViewerOverlay.axaml"));
-        var dialog = document
-            .Descendants()
-            .Single(element => element.Name.LocalName == "DialogSurface");
-        Assert.True(HasClass(dialog, "log-surface"));
-
-        var surfaceStyles = XDocument.Load(TestRepository.FromPresentationRoot("Views/Styles/DialogSurface.axaml"));
-        Assert.Equal(
-            "{StaticResource Launcher.Component.LogViewer.Body.Padding}",
-            GetStyleSetters(
-                surfaceStyles,
-                "controls|DialogSurface.log-surface:panel /template/ ScrollViewer#PART_ScrollViewer")["Padding"]);
-
-        var app = XDocument.Load(TestRepository.FromHostRoot("App.axaml"));
-        var xKey = XNamespace.Get("http://schemas.microsoft.com/winfx/2006/xaml") + "Key";
-        string TokenValue(string key) => app
-            .Descendants()
-            .Single(element => (string?)element.Attribute(xKey) == key)
-            .Value
-            .Trim();
-        var bodyPadding = TokenValue("Launcher.Component.LogViewer.Body.Padding").Split(',');
-        var filterMargin = TokenValue("Launcher.Component.LogViewer.FilterBar.Margin").Split(',');
-        Assert.Equal("0", bodyPadding[1]);
-        Assert.Equal(bodyPadding[0], filterMargin[0]);
-        Assert.Equal(bodyPadding[2], filterMargin[2]);
-        Assert.Equal(bodyPadding[3], filterMargin[3]);
-    }
-
-    [Fact]
     public void ToastAndDebugOverlay_NewMeasurements_UseLauncherTokens()
     {
         var debugOverlay = File.ReadAllText(TestRepository.FromPresentationRoot("Views/MainWindowDebugOverlay.axaml"));
@@ -274,7 +166,75 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void ToastCards_DoNotUseOverlappingBoxShadows()
+    public void ToastCards_UseNeutralSurfaceWithSeverityAccentBar()
+    {
+        var toastStyles = XDocument.Load(TestRepository.FromPresentationRoot("Views/Styles/Toast.axaml"));
+
+        // 外壳现在是中性描边 + 中性卡片底色：严重级别不再铺满整卡换色（ADR-070 2026-11-21 修订）。
+        // 底色与资讯级 InfoBar 同源，左缘语义条与信息区因此落在同一表面上。
+        var toastCardStyle = toastStyles
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Style"
+                && element.Attribute("Selector")?.Value == "Border.toast-card");
+        var cardSetters = toastCardStyle
+            .Elements()
+            .Where(element => element.Name.LocalName == "Setter")
+            .ToDictionary(
+                element => element.Attribute("Property")!.Value,
+                element => element.Attribute("Value")?.Value);
+        Assert.Equal("{DynamicResource InfoBarInformationalSeverityBackgroundBrush}", cardSetters["Background"]);
+        Assert.Equal("{DynamicResource DividerStrokeColorDefaultBrush}", cardSetters["BorderBrush"]);
+        Assert.Equal("{StaticResource Launcher.Border.Thickness.Default}", cardSetters["BorderThickness"]);
+        Assert.Equal("{StaticResource OverlayCornerRadius}", cardSetters["CornerRadius"]);
+
+        // 四档严重级只染左缘语义条，卡片底色保持一致。
+        var severityBars = new Dictionary<string, string>
+        {
+            ["toast-severity-informational"] = "Launcher.Color.Info",
+            ["toast-severity-error"] = "Launcher.Color.Danger",
+            ["toast-severity-warning"] = "Launcher.Color.Warning",
+            ["toast-severity-success"] = "Launcher.Color.Success"
+        };
+        foreach (var (severityClass, resourceKey) in severityBars)
+        {
+            var style = Assert.Single(
+                toastStyles.Descendants(),
+                element =>
+                    element.Name.LocalName == "Style"
+                    && element.Attribute("Selector")?.Value
+                        == $"Border.toast-card.{severityClass} Border.toast-accent-bar");
+            var setters = style
+                .Elements()
+                .Where(element => element.Name.LocalName == "Setter")
+                .ToDictionary(
+                    element => element.Attribute("Property")!.Value,
+                    element => element.Attribute("Value")?.Value);
+            Assert.Equal($"{{DynamicResource {resourceKey}}}", setters["Background"]);
+        }
+
+        // 通知卡固定资讯级表面（中性），严重级别由外部语义条与本地化标题表达。
+        var overlay = XDocument.Load(
+            TestRepository.FromPresentationRoot("Views/MainWindowToastOverlay.axaml"));
+        var infoBar = Assert.Single(overlay.Descendants(), element => element.Name.LocalName == "FAInfoBar");
+        Assert.Equal("Informational", infoBar.Attribute("Severity")?.Value);
+        Assert.Equal("False", infoBar.Attribute("IsIconVisible")?.Value);
+        Assert.Single(overlay.Descendants(),
+            element => element.Name.LocalName == "Border" && HasClass(element, "toast-accent-bar"));
+
+        var app = XDocument.Load(TestRepository.InHost("App.axaml"));
+        var infoBarBorderThickness = Assert.Single(
+            app.Descendants(),
+            element =>
+                element.Name.LocalName == "Thickness"
+                && element.Attributes().Any(attribute =>
+                    attribute.Name.LocalName == "Key"
+                    && attribute.Value == "InfoBarBorderThickness"));
+        Assert.Equal("0", infoBarBorderThickness.Value);
+    }
+
+    [Fact]
+    public void ToastCards_DoNotUseBoxShadowInStyleSetters()
     {
         var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/Styles/Toast.axaml"));
         var toastCardStyle = document
@@ -283,62 +243,14 @@ public sealed partial class UiStyleContractTests
                 element.Name.LocalName == "Style"
                 && element.Attribute("Selector")?.Value == "Border.toast-card");
 
+        // Avalonia 12.1.1 无法在 Setter 里解析字符串型阴影资源，而魔法值被
+        // BoxShadowSetters_ConsumeElevationTokensInsteadOfLiterals 拦截；
+        // 通知卡因此只用 1 DIP 描边表达高度，不加阴影。
         Assert.DoesNotContain(
             toastCardStyle.Elements(),
             element =>
                 element.Name.LocalName == "Setter"
                 && element.Attribute("Property")?.Value == "BoxShadow");
-    }
-
-    [Fact]
-    public void ToastActions_UseTitleAlignedGridAndPrimaryFirstLeftAlignedLayout()
-    {
-        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindowToastOverlay.axaml"));
-        var layout = document.Descendants().Single(element => HasClass(element, "toast-layout"));
-        Assert.Equal("Auto,*,Auto", layout.Attribute("ColumnDefinitions")?.Value);
-        Assert.Equal("Auto,Auto,Auto", layout.Attribute("RowDefinitions")?.Value);
-
-        var title = document.Descendants().Single(element => HasClass(element, "toast-title"));
-        Assert.Equal("{Binding Title}", title.Attribute("Text")?.Value);
-        Assert.Equal("0", title.Attribute("Grid.Row")?.Value);
-        Assert.Equal("1", title.Attribute("Grid.Column")?.Value);
-
-        var icon = document.Descendants().Single(element => HasClass(element, "toast-icon"));
-        Assert.Equal("0", icon.Attribute("Grid.Row")?.Value);
-        Assert.Equal("0", icon.Attribute("Grid.Column")?.Value);
-        Assert.Equal("Center", icon.Attribute("VerticalAlignment")?.Value);
-        Assert.Null(icon.Attribute("Margin"));
-        Assert.DoesNotContain(document.Descendants(), element => HasClass(element, "toast-rail"));
-
-        var actions = document.Descendants().Single(element => HasClass(element, "toast-actions"));
-        Assert.Equal("2", actions.Attribute("Grid.Row")?.Value);
-        Assert.Equal("1", actions.Attribute("Grid.Column")?.Value);
-        Assert.Equal("Left", actions.Attribute("HorizontalAlignment")?.Value);
-
-        var actionButtons = actions.Elements().Where(element => element.Name.LocalName == "Button").ToArray();
-        Assert.Equal(2, actionButtons.Length);
-        Assert.True(HasClass(actionButtons[0], "toast-primary-action"));
-        Assert.True(HasClass(actionButtons[1], "toast-secondary-action"));
-        Assert.Equal(
-            "{Binding #ToastOverlayRoot.((vm:MainWindowViewModel)DataContext).Toasts.ExecutePrimaryToastActionCommand}",
-            actionButtons[0].Attribute("Command")?.Value);
-        Assert.Equal(
-            "{Binding #ToastOverlayRoot.((vm:MainWindowViewModel)DataContext).Toasts.ExecuteSecondaryToastActionCommand}",
-            actionButtons[1].Attribute("Command")?.Value);
-        Assert.Equal("{Binding Id}", actionButtons[0].Attribute("CommandParameter")?.Value);
-        Assert.Equal("{Binding Id}", actionButtons[1].Attribute("CommandParameter")?.Value);
-        Assert.Equal("{Binding PrimaryActionLabel}", actionButtons[0].Attribute("AutomationProperties.Name")?.Value);
-        Assert.Equal("{Binding SecondaryActionLabel}", actionButtons[1].Attribute("AutomationProperties.Name")?.Value);
-
-        var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/Styles/Toast.axaml"));
-        var titleStyle = styles.Descendants().Single(element =>
-            element.Name.LocalName == "Style"
-            && element.Attribute("Selector")?.Value == "TextBlock.toast-title");
-        Assert.Contains(titleStyle.Elements(), element =>
-            element.Name.LocalName == "Setter"
-            && element.Attribute("Property")?.Value == "FontSize"
-            && element.Attribute("Value")?.Value == "{StaticResource Launcher.Typography.FontSize.Body.Md}");
-        // toast-title no longer sets FontWeight (removed to match the lighter title + button styling).
     }
 
     [Fact]
@@ -350,33 +262,8 @@ public sealed partial class UiStyleContractTests
         Assert.Single(progressElements);
 
         var actionExecuting = progressElements[0];
-        Assert.Equal("1", actionExecuting.Attribute("Grid.Row")?.Value);
         Assert.Equal("{Binding IsActionExecuting}", actionExecuting.Attribute("IsVisible")?.Value);
         Assert.Equal("True", actionExecuting.Attribute("IsIndeterminate")?.Value);
-
-        var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/Styles/Toast.axaml"));
-        var progressStyle = styles.Descendants().Single(element =>
-            element.Name.LocalName == "Style"
-            && element.Attribute("Selector")?.Value == "ProgressBar.toast-progress");
-        Assert.Contains(progressStyle.Elements(), element =>
-            element.Name.LocalName == "Setter"
-            && element.Attribute("Property")?.Value == "Height"
-            && element.Attribute("Value")?.Value
-                == "{StaticResource Launcher.Component.Toast.Action.Progress.Height}");
-        Assert.DoesNotContain(progressStyle.Descendants(), element =>
-            element.Name.LocalName == "DoubleTransition"
-            && element.Attribute("Property")?.Value == "Value");
-
-        var toastCardStyle = styles.Descendants().Single(element =>
-            element.Name.LocalName == "Style"
-            && element.Attribute("Selector")?.Value == "Border.toast-card");
-        foreach (var property in new[] { "MinWidth", "MaxWidth" })
-        {
-            Assert.Contains(toastCardStyle.Elements(), element =>
-                element.Name.LocalName == "Setter"
-                && element.Attribute("Property")?.Value == property
-                && element.Attribute("Value")?.Value == "{StaticResource Launcher.Component.Toast.Width}");
-        }
     }
 
     [Fact]

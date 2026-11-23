@@ -46,64 +46,18 @@ public sealed partial class UiStyleContractTests
                             || attribute.Value == "Launcher.Spacing.Thickness.Lg"))),
             element => Assert.Equal("Thickness", element.Name.LocalName));
         Assert.Equal("8", resources["Launcher.Radius.Sm"]);
-        Assert.Equal("12", resources["Launcher.Radius.Md"]);
-        Assert.Equal("16", resources["Launcher.Radius.Lg"]);
+        Assert.Equal("8", resources["Launcher.Radius.Md"]);
+        Assert.Equal("8", resources["Launcher.Radius.Lg"]);
         Assert.Equal("16", resources["Launcher.Icon.Sm"]);
         Assert.Equal("18", resources["Launcher.Icon.Md"]);
         Assert.Equal("20", resources["Launcher.Icon.Lg"]);
         Assert.Equal("22", resources["Launcher.Icon.Xl"]);
         Assert.Equal("24", resources["Launcher.Icon.Xxl"]);
         Assert.Equal("0", resources["Launcher.Control.Size.None"]);
-        Assert.Equal("36", resources["Launcher.Control.Height.Setting"]);
-        Assert.Equal("40", resources["Launcher.Control.Height.Dialog"]);
+        Assert.Equal("32", resources["Launcher.Control.Height.Setting"]);
+        Assert.Equal("32", resources["Launcher.Control.Height.Dialog"]);
         Assert.Equal("48", resources["Launcher.Control.Height.Bottom"]);
         Assert.Equal("58", resources["Launcher.Control.Height.Launch"]);
-    }
-
-    [Fact]
-    public void TypographyTokens_ContainExactScaleWeightAndFamilyValues()
-    {
-        var appDocument = XDocument.Load(TestRepository.FromHostRoot("App.axaml"));
-        var resources = appDocument
-            .Descendants()
-            .Where(element => element.Attributes().Any(attribute => attribute.Name.LocalName == "Key"))
-            .GroupBy(
-                element => element.Attributes().Single(attribute => attribute.Name.LocalName == "Key").Value,
-                StringComparer.Ordinal)
-            .ToDictionary(
-                group => group.Key,
-                group => group.First().Value.Trim(),
-                StringComparer.Ordinal);
-
-        Assert.Equal("12", resources["Launcher.Typography.FontSize.Label.Sm"]);
-        Assert.Equal("12", resources["Launcher.Typography.FontSize.Label.Md"]);
-        Assert.Equal("13", resources["Launcher.Typography.FontSize.Body.Sm"]);
-        Assert.Equal("14", resources["Launcher.Typography.FontSize.Body.Md"]);
-        Assert.Equal("15", resources["Launcher.Typography.FontSize.Body.Lg"]);
-        Assert.Equal("16", resources["Launcher.Typography.FontSize.Title.Md"]);
-        Assert.Equal("17", resources["Launcher.Typography.FontSize.Title.Lg"]);
-        Assert.Equal("18", resources["Launcher.Typography.FontSize.Headline.Md"]);
-        Assert.Equal("19", resources["Launcher.Typography.FontSize.Headline.Lg"]);
-        Assert.Equal("22", resources["Launcher.Typography.FontSize.Display"]);
-        Assert.Equal("Normal", resources["Launcher.Typography.FontWeight.Normal"]);
-        Assert.Equal("SemiBold", resources["Launcher.Typography.FontWeight.Strong"]);
-        Assert.Equal("Consolas", resources["Launcher.Typography.FontFamily.Monospace"]);
-
-        var stylesDocument = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
-        var typographySetters = stylesDocument
-            .Descendants()
-            .Where(element =>
-                element.Name.LocalName == "Setter"
-                && element.Attribute("Property")?.Value is "FontSize" or "FontWeight")
-            .ToArray();
-
-        Assert.NotEmpty(typographySetters);
-        Assert.All(
-            typographySetters,
-            setter => Assert.StartsWith(
-                "{StaticResource Launcher.Typography",
-                setter.Attribute("Value")?.Value,
-                StringComparison.Ordinal));
     }
 
     [Fact]
@@ -128,248 +82,6 @@ public sealed partial class UiStyleContractTests
                     attribute.Name.LocalName == "Key"
                     && attribute.Value == "Launcher.Typography.FontFamily.Monospace"));
         Assert.Equal("Consolas", monospace.Value.Trim());
-    }
-
-    [Fact]
-    public void FontWeight_StrongIsLimitedToConfirmedEmphasisScenarios()
-    {
-        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
-        var strongSelectors = document
-            .Descendants()
-            .Where(element =>
-                element.Name.LocalName == "Style"
-                && element.Elements().Any(setter =>
-                    setter.Name.LocalName == "Setter"
-                    && setter.Attribute("Property")?.Value == "FontWeight"
-                    && setter.Attribute("Value")?.Value
-                        == "{StaticResource Launcher.Typography.FontWeight.Strong}"))
-            .Select(element => element.Attribute("Selector")?.Value)
-            .ToHashSet(StringComparer.Ordinal);
-
-        var expectedSelectors = new HashSet<string>(StringComparer.Ordinal)
-        {
-            "TextBlock.dialog-title",
-            "TextBlock.dialog-alert-title",
-            "TextBlock.titlebar-brand",
-            "TextBlock.progress-title",
-            "TextBlock.panel-title",
-            "TextBlock.section-title",
-            "TextBlock.group-title",
-            "TextBlock.category-title",
-            "TextBlock.about-product-name",
-            "TextBlock.operation-status-title",
-            "ListBox.settings-navigation > ListBoxItem:selected",
-            "Button.primary-action",
-            "Button.danger-action",
-            "Button.gallery-button",
-            "SplitButton.launcher-control.start",
-            "controls|RemoteMarkdownView :is(TextBlock).markdown-h1",
-            "controls|RemoteMarkdownView :is(TextBlock).markdown-h2",
-            "controls|RemoteMarkdownView :is(TextBlock).markdown-h3",
-            "controls|RemoteMarkdownView :is(TextBlock).markdown-h4",
-            "controls|RemoteMarkdownView Border.markdown-table-header TextBlock"
-        };
-
-        Assert.True(
-            strongSelectors.SetEquals(expectedSelectors),
-            $"Strong font weight selectors: {string.Join(", ", strongSelectors.Order())}");
-
-        Assert.DoesNotContain(
-            document.Descendants(),
-            element =>
-                element.Name.LocalName == "Style"
-                && element.Attribute("Selector")?.Value == "Window"
-                && element.Elements().Any(setter =>
-                    setter.Name.LocalName == "Setter"
-                    && setter.Attribute("Property")?.Value == "FontWeight"));
-    }
-
-    [Fact]
-    public void SemanticComponents_UseBalancedDensityTokens()
-    {
-        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
-
-        var contentRow = GetStyleSetters(document, "Border.content-row");
-        Assert.Equal("{StaticResource Launcher.Spacing.Thickness.Md}", contentRow["Padding"]);
-        Assert.Equal("{StaticResource Launcher.Component.ContentRow.Margin}", contentRow["Margin"]);
-        Assert.Equal("{StaticResource Launcher.Radius.Sm}", contentRow["CornerRadius"]);
-
-        // ADR-015：Border.dialog 退役，表面档案（圆角/底色）由 DialogSurface 主题承载。
-        var dialogTheme = File.ReadAllText(TestRepository.FromPresentationRoot("Views/Styles/DialogSurface.axaml"));
-        Assert.Contains(
-            "{StaticResource Launcher.Component.Dialog.CornerRadius}",
-            dialogTheme,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "{DynamicResource Launcher.Color.Dialog.Background}",
-            dialogTheme,
-            StringComparison.Ordinal);
-
-        var settingControl = GetStyleSetters(document, "ComboBox.setting-control");
-        Assert.False(settingControl.ContainsKey("Width"));
-        Assert.Equal("{StaticResource Launcher.Component.Settings.Control.MinWidth}", settingControl["MinWidth"]);
-        Assert.Equal(
-            "{StaticResource Launcher.Control.Height.Field}",
-            settingControl["MinHeight"]);
-        Assert.Equal("Center", settingControl["VerticalAlignment"]);
-
-        var colorPickerControl = GetStyleSetters(document, "ColorPicker.setting-control");
-        Assert.Equal("{StaticResource Launcher.Component.Settings.Control.MinWidth}", colorPickerControl["Width"]);
-        Assert.Equal("{StaticResource Launcher.Component.Settings.Control.MinWidth}", colorPickerControl["MinWidth"]);
-        Assert.Equal(
-            "{StaticResource Launcher.Control.Height.Field}",
-            colorPickerControl["MinHeight"]);
-
-        var dialogAction = GetStyleSetters(document, "Button.dialog-action");
-        Assert.Equal(
-            "{StaticResource Launcher.Control.Height.Dialog}",
-            dialogAction["MinHeight"]);
-
-        var bottomAction = GetStyleSetters(document, "Button.bottom-action");
-        Assert.Equal(
-            "{StaticResource Launcher.Control.Height.Bottom}",
-            bottomAction["MinHeight"]);
-
-        var launchAction = GetStyleSetters(document, "SplitButton.launcher-control.start");
-        Assert.Equal(
-            "{StaticResource Launcher.Control.Height.Launch}",
-            launchAction["MinHeight"]);
-    }
-
-    [Fact]
-    public void InteractiveControlStyles_UseSharedFocusAndHeightTokens()
-    {
-        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
-        var common = GetActionThemeSetters(document);
-        Assert.Equal("{StaticResource LauncherBorderButtonTemplate}", common["Template"]);
-        Assert.Equal("{StaticResource Launcher.Control.Height.Dialog}", common["MinHeight"]);
-        Assert.Equal("{StaticResource Launcher.Radius.Sm}", common["CornerRadius"]);
-        Assert.Equal("Center", common["HorizontalContentAlignment"]);
-        Assert.Equal("Center", common["VerticalContentAlignment"]);
-        foreach (var selector in new[] { "Button.primary-action", "Button.flat-action", "Button.danger-action" })
-        {
-            Assert.Equal("{StaticResource Launcher.Component.Button.Theme}", GetStyleSetters(document, selector)["Theme"]);
-        }
-
-        foreach (var selector in new[] { "Button.icon-button", "Button.banner-link", "Button.dialog-close", "Button.chrome" })
-        {
-            Assert.Equal("{StaticResource LauncherBorderButtonTemplate}", GetStyleSetters(document, selector)["Template"]);
-        }
-
-        var iconLink = GetStyleSetters(document, "Button.icon-link");
-        Assert.Equal("{StaticResource Launcher.Radius.Sm}", iconLink["CornerRadius"]);
-        Assert.Equal("{StaticResource Launcher.Typography.FontSize.Body.Md}", iconLink["FontSize"]);
-        var focus = GetStyleSetters(document, "Button:focus-visible");
-        Assert.Equal("{DynamicResource Launcher.Color.FocusRing}", focus["BorderBrush"]);
-        Assert.Equal("{StaticResource Launcher.Border.Thickness.Focus}", focus["BorderThickness"]);
-        var path = GetStyleSetters(document, "Border.path-field");
-        Assert.Equal("{StaticResource Launcher.Control.Height.Field}", path["Height"]);
-        Assert.Equal("{StaticResource Launcher.Component.PathField.Padding}", path["Padding"]);
-    }
-
-    [Fact]
-    public void ButtonVariants_CoverM3InteractiveAndDisabledStates()
-    {
-        var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
-
-        var iconButtonDisabled = GetStyleSetters(document, "Button.icon-button:disabled");
-        Assert.Equal(
-            "{StaticResource Launcher.Color.Transparent}",
-            iconButtonDisabled["Background"]);
-        Assert.Equal(
-            "{DynamicResource Launcher.Text.Secondary}",
-            iconButtonDisabled["Foreground"]);
-
-        var dangerDisabled = GetStyleSetters(document, "Button.danger-action:disabled");
-        Assert.Equal(
-            "{DynamicResource Launcher.Color.OnError}",
-            GetStyleSetters(document, "Button.danger-action")["Foreground"]);
-        Assert.Equal(
-            "{DynamicResource Launcher.Color.OnError}",
-            GetStyleSetters(document, "Button.danger-action:pointerover")["Foreground"]);
-        Assert.Equal(
-            "{DynamicResource Launcher.Color.OnError}",
-            GetStyleSetters(document, "Button.danger-action:pressed")["Foreground"]);
-        Assert.Equal(
-            "{DynamicResource Launcher.Color.Content.Row}",
-            dangerDisabled["Background"]);
-        Assert.DoesNotContain("BorderBrush", dangerDisabled.Keys);
-        Assert.DoesNotContain("BorderThickness", dangerDisabled.Keys);
-
-        var closeDisabled = GetStyleSetters(document, "Button.dialog-close:disabled");
-        Assert.Equal(
-            "{DynamicResource Launcher.Text.Secondary}",
-            closeDisabled["Foreground"]);
-    }
-
-    [Fact]
-    public void ExistingM3Components_CoverPressedFocusAndDisabledStates()
-    {
-        var remoteStyles = XDocument.Load(TestRepository.FromPresentationRoot("Views/Styles/RemoteContent.axaml"));
-
-        var socialHover = GetStyleSetters(remoteStyles, "Button.social-chip:pointerover");
-        Assert.Equal(
-            "{DynamicResource Launcher.Color.SocialChip.Hover}",
-            socialHover["Background"]);
-        var socialPressed = GetStyleSetters(remoteStyles, "Button.social-chip:pressed");
-        Assert.Equal(
-            "{DynamicResource Launcher.Color.SocialChip.Pressed}",
-            socialPressed["Background"]);
-        Assert.Equal(
-            "{DynamicResource Launcher.Color.Primary.Pressed}",
-            socialPressed["BorderBrush"]);
-        Assert.Equal(
-            "{DynamicResource Launcher.Color.FocusRing}",
-            GetStyleSetters(remoteStyles, "Button.social-chip:focus-visible")["BorderBrush"]);
-
-        var filterTabStyles = XDocument.Load(TestRepository.FromPresentationRoot("Views/Styles/Diagnostics.axaml"));
-        var filterTab = GetStyleSetters(filterTabStyles, "Button.filter-tab");
-        Assert.Equal("{StaticResource LauncherBorderButtonTemplate}", filterTab["Template"]);
-        Assert.Equal("{StaticResource Launcher.Radius.Sm}", filterTab["CornerRadius"]);
-        Assert.Equal(
-            "{DynamicResource Launcher.Color.Primary.Pressed}",
-            GetStyleSetters(filterTabStyles, "Button.filter-tab:pressed")["Background"]);
-        Assert.Equal(
-            "{StaticResource Launcher.StateLayer.Disabled.Content}",
-            GetStyleSetters(filterTabStyles, "Button.filter-tab:disabled")["Opacity"]);
-
-        var mainStyles = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
-        var settingRow = GetStyleSetters(mainStyles, "Grid.settings-row");
-        Assert.Equal("Center", settingRow["VerticalAlignment"]);
-    }
-
-    [Fact]
-    public void SelectControls_UseOutlinedFieldTokensAcrossStates()
-    {
-        var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
-
-        var select = GetStyleSetters(styles, "ComboBox.setting-control");
-        Assert.Equal(
-            "{DynamicResource Launcher.Color.Field.Background}",
-            select["Background"]);
-        Assert.Equal(
-            "{DynamicResource Launcher.Color.Field.Border}",
-            select["BorderBrush"]);
-        Assert.Equal("{StaticResource Launcher.Border.Thickness.Default}", select["BorderThickness"]);
-        Assert.Equal(
-            "{StaticResource Launcher.Radius.Sm}",
-            select["CornerRadius"]);
-        Assert.Equal(
-            "{StaticResource Launcher.Component.Select.Padding}",
-            select["Padding"]);
-
-        Assert.Equal(
-            "{DynamicResource Launcher.Text.Secondary}",
-            GetStyleSetters(styles, "ComboBox.setting-control:pointerover")["BorderBrush"]);
-        Assert.Equal(
-            "{DynamicResource Launcher.Text.Secondary}",
-            GetStyleSetters(styles, "ComboBox.setting-control:pressed")["BorderBrush"]);
-        Assert.Equal(
-            "{DynamicResource Launcher.Color.FocusRing}",
-            GetStyleSetters(styles, "ComboBox.setting-control:focus-visible")["BorderBrush"]);
-        Assert.Equal(
-            "{StaticResource Launcher.StateLayer.Disabled.Content}",
-            GetStyleSetters(styles, "ComboBox.setting-control:disabled")["Opacity"]);
     }
 
     [Fact]
@@ -408,62 +120,18 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void DesignGallery_ProvidesFourButtonTypesCardAndSettingsRowAcrossSixStates()
+    public void DesignGallery_PreviewsDefaultButtonVariantsWithoutPaintingFakeStates()
     {
         var document = XDocument.Load(TestRepository.FromPresentationRoot("Views/DesignGalleryOverlay.axaml"));
-        var dialogContent = document
-            .Descendants()
-            .Single(element => element.Name.LocalName == "DialogSurface.Content");
-        var contentStack = dialogContent.Elements().Single();
-        Assert.Null(contentStack.Attribute("Margin"));
-        var matrix = document.Descendants().Single(element => HasClass(element, "design-state-matrix"));
-
-        Assert.Equal("Auto,*,*,*,*,*,*", matrix.Attribute("ColumnDefinitions")?.Value);
-        Assert.Equal(
-            "Auto,Auto,Auto,Auto,Auto,Auto,Auto",
-            matrix.Attribute("RowDefinitions")?.Value);
-        Assert.Equal(7, matrix.Descendants().Count(element => HasClass(element, "design-state-header")));
-        Assert.Equal(20, matrix.Descendants().Count(element => HasClass(element, "gallery-button")));
-        Assert.Equal(6, matrix.Descendants().Count(element => HasClass(element, "gallery-select")));
-        Assert.Equal(5, matrix.Descendants().Count(element => HasClass(element, "gallery-card")));
-
-        // ADR-007: the matrix shows the four button types, a card (Toast) and a settings row.
-        Assert.Equal(5, matrix.Descendants().Count(element =>
-            HasClass(element, "gallery-button") && HasClass(element, "outlined")));
-        Assert.Equal(5, matrix.Descendants().Count(element =>
-            HasClass(element, "gallery-button") && HasClass(element, "text")));
-        Assert.Equal(5, matrix.Descendants().Count(element =>
-            HasClass(element, "gallery-button") && HasClass(element, "error")));
-        Assert.Equal(5, matrix.Descendants().Count(element =>
-            HasClass(element, "gallery-button") && !HasClass(element, "outlined")
-            && !HasClass(element, "text") && !HasClass(element, "error")));
-        Assert.Equal(5, matrix.Descendants().Count(element =>
-            HasClass(element, "gallery-card") && HasClass(element, "toast")));
-
-        // Invalid state applies only to the settings row / input classes (ADR-007);
-        // buttons and cards render an explicit unused placeholder instead.
-        Assert.Equal(5, matrix.Descendants().Count(element => HasClass(element, "gallery-invalid-unused")));
-        Assert.DoesNotContain(matrix.Descendants(), element =>
-            HasClass(element, "gallery-button") && HasClass(element, "state-invalid"));
-        Assert.DoesNotContain(matrix.Descendants(), element =>
-            HasClass(element, "gallery-card") && HasClass(element, "state-invalid"));
-        Assert.Single(matrix.Descendants(), element =>
-            HasClass(element, "gallery-select") && HasClass(element, "state-invalid"));
-
-        var disabledButtons = matrix.Descendants()
-            .Where(element =>
-                element.Name.LocalName == "Button" && HasClass(element, "state-disabled"))
-            .ToArray();
-        Assert.Equal(4, disabledButtons.Length);
-        Assert.All(disabledButtons, button =>
-            Assert.Equal("False", button.Attribute("IsEnabled")?.Value));
-        var disabledSelect = matrix.Descendants().Single(element =>
-            element.Name.LocalName == "ComboBox" && HasClass(element, "state-disabled"));
-        Assert.Equal("False", disabledSelect.Attribute("IsEnabled")?.Value);
+        var samples = document.Descendants().Where(element => HasClass(element, "gallery-button")).ToArray();
+        Assert.Contains(samples, element => HasClass(element, "accent"));
+        Assert.Contains(samples, element => (string?)element.Attribute("Theme") == "{StaticResource TransparentButton}");
+        Assert.Contains(samples, element => (string?)element.Attribute("IsEnabled") == "False");
+        Assert.DoesNotContain(samples, element => ((string?)element.Attribute("Classes"))?.Contains("state-", StringComparison.Ordinal) == true);
     }
 
     [Fact]
-    public void Views_UseSemanticColorsAndTokenizedMaterialIconSizes()
+    public void Views_UseSemanticColorsAndTokenizedFluentIconSizes()
     {
         foreach (var relativePath in ViewFiles
                      .Concat(StyleFiles)
@@ -486,15 +154,16 @@ public sealed partial class UiStyleContractTests
             Assert.DoesNotContain("\"Transparent\"", text, StringComparison.Ordinal);
 
             var document = XDocument.Parse(text);
-            foreach (var icon in document.Descendants().Where(element => element.Name.LocalName == "MaterialIcon"))
+            foreach (var icon in document.Descendants().Where(element => element.Name.LocalName == "FluentIcon"))
             {
-                var width = icon.Attribute("Width")?.Value;
-                var height = icon.Attribute("Height")?.Value;
-
-                Assert.NotNull(width);
-                Assert.NotNull(height);
-                Assert.Contains(width, IconTokens);
-                Assert.Equal(width, height);
+                // 字形大小走 FontSize 语义令牌；盒尺寸由字形本身决定，不再写 Width/Height。
+                Assert.Null(icon.Attribute("Width"));
+                Assert.Null(icon.Attribute("Height"));
+                var fontSize = icon.Attribute("FontSize")?.Value;
+                if (fontSize is not null)
+                {
+                    Assert.Contains(fontSize, IconTokens);
+                }
             }
 
             var spacingValues = document
@@ -564,9 +233,12 @@ public sealed partial class UiStyleContractTests
                 .SelectMany(element => element.Attributes())
                 .ToArray();
 
+            // 图标字形大小是图形属性而不是排版字号：FluentIcon 的 FontSize 由
+            // Views_UseSemanticColorsAndTokenizedFluentIconSizes 单独约束为语义令牌。
             Assert.DoesNotContain(
                 attributes,
-                attribute => attribute.Name.LocalName is "FontSize" or "FontWeight");
+                attribute => (attribute.Name.LocalName is "FontSize" or "FontWeight")
+                    && attribute.Parent?.Name.LocalName != "FluentIcon");
             Assert.DoesNotContain(
                 attributes,
                 attribute => attribute.Name.LocalName == "Padding");
@@ -576,6 +248,47 @@ public sealed partial class UiStyleContractTests
                     attribute.Name.LocalName == "Margin"
                     && attribute.Value is "0,0,16,0" or "0,4,0,0");
         }
+    }
+
+    [Fact]
+    public void IconGlyphs_ComeFromTheFluentGlyphsCatalog()
+    {
+        const string catalogPrefix = "{x:Static glyphs:FluentGlyphs.";
+        const string bindingPrefix = "{Binding ";
+        var scanned = new List<(string Path, string Value)>();
+
+        // ADR-064：字形码点只在 FluentGlyphs 定义；XAML 引用常量或绑定视图模型的
+        // 字形属性，不写 \uXXXX 字面量，也不混入第二套图标包。
+        foreach (var relativePath in ProjectMarkupFiles())
+        {
+            var document = XDocument.Load(TestRepository.FromPresentationRoot(relativePath));
+            var attributeForm = document
+                .Descendants()
+                .SelectMany(element => element.Attributes())
+                .Where(attribute => attribute.Name.LocalName == "Glyph")
+                .Select(attribute => (relativePath, attribute.Value));
+            var setterForm = document
+                .Descendants()
+                .Where(element => element.Name.LocalName == "Setter")
+                .SelectMany(element => element.Attributes()
+                    .Where(attribute => attribute.Name.LocalName == "Property"
+                        && attribute.Value == "Glyph")
+                    .Select(attribute => element.Attribute("Value")?.Value))
+                .Where(value => value is not null)
+                .Select(value => (relativePath, value!));
+            scanned.AddRange(attributeForm.Concat(setterForm));
+        }
+
+        // 反空转基线：全部业务图标都经此扫描；命中数掉到零即说明扫描域漂移。
+        Assert.True(scanned.Count >= 100, $"Glyph scan lost its coverage: only {scanned.Count} occurrences.");
+
+        var offenders = scanned
+            .Where(item => !item.Value.StartsWith(catalogPrefix, StringComparison.Ordinal)
+                && !item.Value.StartsWith(bindingPrefix, StringComparison.Ordinal))
+            .Select(item => $"{item.Path}: Glyph=\"{item.Value}\"")
+            .ToArray();
+
+        Assert.Equal([], offenders);
     }
 
     [Fact]
@@ -603,145 +316,29 @@ public sealed partial class UiStyleContractTests
         foreach (var relativePath in StyleFiles)
         {
             var document = XDocument.Load(TestRepository.FromPresentationRoot(relativePath));
-            var rawValues = document
+            var setterValues = document
                 .Descendants()
                 .Where(element => element.Name.LocalName == "Setter")
                 .SelectMany(element => element.Attributes()
                     .Where(attribute => attribute.Name.LocalName == "Property"
                         && visualProperties.Contains(attribute.Value))
-                    .Select(attribute => (Property: attribute.Value, Value: element.Attribute("Value")?.Value)))
+                    .Select(attribute => (Property: attribute.Value, Value: element.Attribute("Value")?.Value)));
+            // ControlTemplate 部件上的直接属性同样是视觉值；只扫 Setter 会让
+            // 模板内裸间距/圆角漏网（TabItem 选中指示条曾在此漂移）。
+            var attributeValues = document
+                .Descendants()
+                .SelectMany(element => element.Attributes())
+                .Where(attribute => attribute.Name.Namespace != DesignNamespace
+                    && visualProperties.Contains(attribute.Name.LocalName))
+                .Select(attribute => (Property: attribute.Name.LocalName, Value: (string?)attribute.Value));
+            var rawValues = setterValues
+                .Concat(attributeValues)
                 .Where(item => item.Value is not null
                     && !item.Value.StartsWith('{'))
                 .ToArray();
 
             Assert.Empty(rawValues);
         }
-    }
-
-    [Fact]
-    public void Opacity_UsesOnlyStructuralValuesOrStateLayerTokens()
-    {
-        const string stateLayerPrefix = "{StaticResource Launcher.StateLayer.";
-        var scanned = new List<(string Path, string Value)>();
-
-        // 属性形式（内联 Opacity="…"）与 Setter/关键帧形式（Property="Opacity" Value="…"）
-        // 各收一次；CrashReportWindow 也在 ProjectMarkupFiles 内，一并受管。
-        foreach (var relativePath in ProjectMarkupFiles())
-        {
-            var document = XDocument.Load(TestRepository.FromPresentationRoot(relativePath));
-            var attributeForm = document
-                .Descendants()
-                .SelectMany(element => element.Attributes())
-                .Where(attribute => attribute.Name.LocalName == "Opacity")
-                .Select(attribute => (relativePath, attribute.Value));
-            var setterForm = document
-                .Descendants()
-                .Where(element => element.Name.LocalName == "Setter")
-                .SelectMany(element => element.Attributes()
-                    .Where(attribute => attribute.Name.LocalName == "Property"
-                        && attribute.Value == "Opacity")
-                    .Select(attribute => element.Attribute("Value")?.Value))
-                .Where(value => value is not null)
-                .Select(value => (relativePath, value!));
-            scanned.AddRange(attributeForm.Concat(setterForm));
-        }
-
-        // 反空转基线：今天全部命中都是结构性 0/1（可见/隐藏与动画关键帧）加
-        // StateLayer.Disabled.Content 消费；扫描域漂移到零命中即失效。
-        Assert.True(scanned.Count >= 40, $"Opacity scan lost its coverage: only {scanned.Count} occurrences.");
-
-        var offenders = scanned
-            .Where(item => item.Value is not "0" and not "1"
-                && !item.Value.StartsWith(stateLayerPrefix, StringComparison.Ordinal))
-            .Select(item => $"{item.Path}: Opacity=\"{item.Value}\"")
-            .ToArray();
-
-        Assert.Equal([], offenders);
-    }
-
-    [Fact]
-    public void CornerRadii_UseTheFourDeclaredHierarchyTokens()
-    {
-        var allowedTokens = new HashSet<string>(StringComparer.Ordinal)
-        {
-            "0",
-            "{StaticResource Launcher.Radius.Xs}",
-            "{StaticResource Launcher.Radius.Sm}",
-            "{StaticResource Launcher.Radius.Md}",
-            "{StaticResource Launcher.Radius.Lg}",
-            // 整圆端头（分段按钮、状态 chip、pill），ADR-041 起是独立声明的层级。
-            "{StaticResource Launcher.Radius.Full}",
-            // 唯一的方向性例外：警示卡起始两角必须平角，其左侧 3px 强调边才不被圆弧切掉。
-            // 四档对称 token 无法表达「两角平、两角圆」，因此它由组件 token 声明（见 App.axaml）。
-            "{StaticResource Launcher.Component.Dialog.Alert.CornerRadius}",
-            // 对话框徽章是整圆（16 = 半径），卸载步骤徽章复用同一枚组件 token 画圆，
-            // 与 DialogSurface 模板消费的是同一个声明。
-            "{StaticResource Launcher.Component.Dialog.Badge.CornerRadius}",
-            // 远端内容的横幅与信息卡无缝拼接：接缝两侧必须平角，外缘各留两角圆角，
-            // 对称四角 token 无法表达，故由组件 token 声明（见 App.axaml）。
-            "{StaticResource Launcher.Component.RemoteContent.JoinedUpper.CornerRadius}",
-            "{StaticResource Launcher.Component.RemoteContent.JoinedLower.CornerRadius}",
-            // 致谢列表行以平角贴齐横贯整行的分割线。
-            "{StaticResource Launcher.Component.About.CreditRow.CornerRadius}",
-            "{TemplateBinding CornerRadius}",
-            // 原生模板部件转发控件已由 token 决定的圆角，不引入另一套数值。
-            "{Binding CornerRadius, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type ComboBox}}",
-            "{Binding CornerRadius, RelativeSource={RelativeSource TemplatedParent}, DataType={x:Type MenuItem}}"
-        };
-
-        foreach (var relativePath in ViewFiles.Append("Views/MainWindow.Styles.axaml"))
-        {
-            var document = XDocument.Load(TestRepository.FromPresentationRoot(relativePath));
-            var radiusValues = document
-                .Descendants()
-                .SelectMany(element => element.Attributes())
-                .Where(attribute =>
-                    attribute.Name.LocalName == "CornerRadius"
-                    || attribute.Parent?.Attribute("Property")?.Value == "CornerRadius" && attribute.Name.LocalName == "Value")
-                .Select(attribute => attribute.Value);
-
-            Assert.All(radiusValues, value => Assert.Contains(value, allowedTokens));
-        }
-    }
-
-    [Fact]
-    public void ActionButtons_ReserveFocusGeometryAcrossStates()
-    {
-        var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/MainWindow.Styles.axaml"));
-        var common = GetActionThemeSetters(styles);
-        Assert.Equal("{StaticResource Launcher.Color.Transparent}", common["BorderBrush"]);
-        Assert.Equal("{StaticResource Launcher.Border.Thickness.Focus}", common["BorderThickness"]);
-        foreach (var role in new[] { "primary-action", "flat-action", "danger-action" })
-        {
-            Assert.DoesNotContain("BorderThickness", GetStyleSetters(styles, $"Button.{role}:disabled").Keys);
-        }
-
-        Assert.Equal("{DynamicResource Launcher.Color.OnPrimary}", GetStyleSetters(styles, "Button.primary-action:focus-visible")["BorderBrush"]);
-        Assert.Equal("{DynamicResource Launcher.Color.OnError}", GetStyleSetters(styles, "Button.danger-action:focus-visible")["BorderBrush"]);
-    }
-
-    [Fact]
-    public void LogFilterTabs_UseNoThemeBorderForAccentStates()
-    {
-        var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/Styles/Diagnostics.axaml"));
-
-        Assert.Equal("{StaticResource Launcher.Spacing.Thickness.None}", GetStyleSetters(styles, "Button.filter-tab")["BorderThickness"]);
-        Assert.Equal("{DynamicResource Launcher.Color.Primary}", GetStyleSetters(styles, "Button.filter-tab.active")["Background"]);
-    }
-
-    [Fact]
-    public void SocialChips_UseCrispBorderTemplateAcrossInteractiveStates()
-    {
-        var styles = XDocument.Load(TestRepository.FromPresentationRoot("Views/Styles/RemoteContent.axaml"));
-
-        var socialChip = GetStyleSetters(styles, "Button.social-chip");
-        Assert.Equal("{StaticResource LauncherBorderButtonTemplate}", socialChip["Template"]);
-        Assert.Equal("Center", socialChip["HorizontalContentAlignment"]);
-        Assert.Equal("Center", socialChip["VerticalContentAlignment"]);
-
-        var disabled = GetStyleSetters(styles, "Button.social-chip:disabled");
-        Assert.Equal("1", disabled["Opacity"]);
-        Assert.Equal("{DynamicResource Launcher.Color.Button.Border}", disabled["BorderBrush"]);
     }
 
     [Fact]
@@ -774,7 +371,7 @@ public sealed partial class UiStyleContractTests
                 {
                     var children = element.Elements().ToList();
                     return children.Count == 1
-                        && children[0].Name.LocalName == "MaterialIcon";
+                        && children[0].Name.LocalName == "FluentIcon";
                 });
 
             Assert.All(

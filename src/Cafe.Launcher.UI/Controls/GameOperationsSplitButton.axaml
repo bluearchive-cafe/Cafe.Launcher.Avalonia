@@ -1,61 +1,91 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:viewModels="using:Cafe.Launcher.UI.ViewModels"
-             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:glyphs="using:Cafe.Launcher.UI.Constants"
+             xmlns:controls="using:Cafe.Launcher.UI.Controls"
+             xmlns:fluent="using:FluentAvalonia.UI.Controls"
              x:Class="Cafe.Launcher.UI.Controls.GameOperationsSplitButton"
              x:DataType="viewModels:MainWindowViewModel">
     <!-- 统一面板的上下文主操作与管理入口。 -->
     <SplitButton Classes="launcher-control start primary-operation"
-            Theme="{StaticResource GameOperationsSplitButtonTheme}"
+            MinWidth="{StaticResource Launcher.Component.LaunchSplit.MinWidth}"
+            MinHeight="{StaticResource Launcher.Control.Height.Bottom}"
+            Padding="{StaticResource Launcher.Component.Action.Launcher.Padding}"
             Command="{Binding Operations.PrimaryActionCommand}"
             IsEnabled="{Binding Operations.CanUsePrimaryAction}"
             ToolTip.Tip="{Binding Operations.PrimaryActionText}"
             AutomationProperties.Name="{Binding Operations.PrimaryActionText}">
+        <SplitButton.Resources>
+            <ResourceDictionary>
+                <ResourceDictionary.ThemeDictionaries>
+                    <ResourceDictionary x:Key="Light">
+                        <StaticResource x:Key="SplitButtonBackground" ResourceKey="AccentButtonBackground"/>
+                        <StaticResource x:Key="SplitButtonBackgroundPointerOver" ResourceKey="AccentButtonBackgroundPointerOver"/>
+                        <StaticResource x:Key="SplitButtonBackgroundPressed" ResourceKey="AccentButtonBackgroundPressed"/>
+                        <StaticResource x:Key="SplitButtonBackgroundDisabled" ResourceKey="AccentButtonBackgroundDisabled"/>
+                        <StaticResource x:Key="SplitButtonForeground" ResourceKey="AccentButtonForeground"/>
+                        <StaticResource x:Key="SplitButtonForegroundPointerOver" ResourceKey="AccentButtonForegroundPointerOver"/>
+                        <StaticResource x:Key="SplitButtonForegroundPressed" ResourceKey="AccentButtonForegroundPressed"/>
+                        <StaticResource x:Key="SplitButtonForegroundDisabled" ResourceKey="AccentButtonForegroundDisabled"/>
+                    </ResourceDictionary>
+                    <ResourceDictionary x:Key="Dark">
+                        <StaticResource x:Key="SplitButtonBackground" ResourceKey="AccentButtonBackground"/>
+                        <StaticResource x:Key="SplitButtonBackgroundPointerOver" ResourceKey="AccentButtonBackgroundPointerOver"/>
+                        <StaticResource x:Key="SplitButtonBackgroundPressed" ResourceKey="AccentButtonBackgroundPressed"/>
+                        <StaticResource x:Key="SplitButtonBackgroundDisabled" ResourceKey="AccentButtonBackgroundDisabled"/>
+                        <StaticResource x:Key="SplitButtonForeground" ResourceKey="AccentButtonForeground"/>
+                        <StaticResource x:Key="SplitButtonForegroundPointerOver" ResourceKey="AccentButtonForegroundPointerOver"/>
+                        <StaticResource x:Key="SplitButtonForegroundPressed" ResourceKey="AccentButtonForegroundPressed"/>
+                        <StaticResource x:Key="SplitButtonForegroundDisabled" ResourceKey="AccentButtonForegroundDisabled"/>
+                    </ResourceDictionary>
+                </ResourceDictionary.ThemeDictionaries>
+            </ResourceDictionary>
+        </SplitButton.Resources>
         <StackPanel Classes="button-content">
-            <materialIcons:MaterialIcon Kind="{Binding Operations.PrimaryActionIcon}" Width="{StaticResource Launcher.Icon.Xxl}" Height="{StaticResource Launcher.Icon.Xxl}"/>
+            <controls:FluentIcon Glyph="{Binding Operations.PrimaryActionGlyph}" FontSize="{StaticResource Launcher.Icon.Xxl}"/>
             <TextBlock Text="{Binding Operations.PrimaryActionText}"/>
         </StackPanel>
         <SplitButton.Flyout>
-            <MenuFlyout Placement="TopEdgeAlignedRight"
+            <fluent:FAMenuFlyout Placement="TopEdgeAlignedRight"
                         VerticalOffset="{StaticResource Launcher.Component.LaunchSplit.Menu.VerticalOffset}">
-                <MenuItem IsEnabled="{Binding Operations.CanManageGame}" Header="{Binding Shell.I18n[gameCheckUpdate]}"
+                <fluent:FAMenuFlyoutItem IsEnabled="{Binding Operations.CanManageGame}" Text="{Binding Shell.I18n[gameCheckUpdate]}"
                           Command="{Binding Operations.CheckForGameUpdateCommand}"
                           AutomationProperties.Name="{Binding Shell.I18n[gameCheckUpdate]}">
-                    <MenuItem.Icon>
-                        <materialIcons:MaterialIcon Kind="Update" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
-                    </MenuItem.Icon>
-                </MenuItem>
-                <MenuItem IsEnabled="{Binding Operations.CanManageGame}" Header="{Binding Shell.I18n[gameCreateShortcut]}"
+                    <fluent:FAMenuFlyoutItem.IconSource>
+                        <controls:FluentIconSource Glyph="{x:Static glyphs:FluentGlyphs.Update}" FontSize="{StaticResource Launcher.Icon.Md}"/>
+                    </fluent:FAMenuFlyoutItem.IconSource>
+                </fluent:FAMenuFlyoutItem>
+                <fluent:FAMenuFlyoutItem IsEnabled="{Binding Operations.CanManageGame}" Text="{Binding Shell.I18n[gameCreateShortcut]}"
                           Command="{Binding Operations.CreateGameShortcutCommand}"
                           AutomationProperties.Name="{Binding Shell.I18n[gameCreateShortcut]}">
-                    <MenuItem.Icon>
-                        <materialIcons:MaterialIcon Kind="Monitor" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
-                    </MenuItem.Icon>
-                </MenuItem>
-                <Separator/>
-                <MenuItem IsEnabled="{Binding Operations.CanManageGame}" Header="{Binding Shell.I18n[gameOpenFolder]}"
+                    <fluent:FAMenuFlyoutItem.IconSource>
+                        <controls:FluentIconSource Glyph="{x:Static glyphs:FluentGlyphs.Monitor}" FontSize="{StaticResource Launcher.Icon.Md}"/>
+                    </fluent:FAMenuFlyoutItem.IconSource>
+                </fluent:FAMenuFlyoutItem>
+                <fluent:FAMenuFlyoutSeparator/>
+                <fluent:FAMenuFlyoutItem IsEnabled="{Binding Operations.CanManageGame}" Text="{Binding Shell.I18n[gameOpenFolder]}"
                           Command="{Binding Operations.OpenGameFolderCommand}"
                           AutomationProperties.Name="{Binding Shell.I18n[gameOpenFolder]}">
-                    <MenuItem.Icon>
-                        <materialIcons:MaterialIcon Kind="FolderOpenOutline" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
-                    </MenuItem.Icon>
-                </MenuItem>
-                <MenuItem IsEnabled="{Binding Operations.CanRepairGame}" Header="{Binding Shell.I18n[repair]}"
+                    <fluent:FAMenuFlyoutItem.IconSource>
+                        <controls:FluentIconSource Glyph="{x:Static glyphs:FluentGlyphs.FolderOpen}" FontSize="{StaticResource Launcher.Icon.Md}"/>
+                    </fluent:FAMenuFlyoutItem.IconSource>
+                </fluent:FAMenuFlyoutItem>
+                <fluent:FAMenuFlyoutItem IsEnabled="{Binding Operations.CanRepairGame}" Text="{Binding Shell.I18n[repair]}"
                           Command="{Binding Operations.RequestRepairCommand}"
                           AutomationProperties.Name="{Binding Shell.I18n[repair]}">
-                    <MenuItem.Icon>
-                        <materialIcons:MaterialIcon Kind="Tools" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
-                    </MenuItem.Icon>
-                </MenuItem>
-                <Separator/>
-                <MenuItem IsEnabled="{Binding Operations.CanUninstallGame}" Classes="danger-menu-item" Header="{Binding Shell.I18n[uninstall]}"
+                    <fluent:FAMenuFlyoutItem.IconSource>
+                        <controls:FluentIconSource Glyph="{x:Static glyphs:FluentGlyphs.Tools}" FontSize="{StaticResource Launcher.Icon.Md}"/>
+                    </fluent:FAMenuFlyoutItem.IconSource>
+                </fluent:FAMenuFlyoutItem>
+                <fluent:FAMenuFlyoutSeparator/>
+                <fluent:FAMenuFlyoutItem IsEnabled="{Binding Operations.CanUninstallGame}" Classes="danger-menu-item" Text="{Binding Shell.I18n[uninstall]}"
                           Command="{Binding Operations.RequestUninstallCommand}"
                           AutomationProperties.Name="{Binding Shell.I18n[uninstall]}">
-                    <MenuItem.Icon>
-                        <materialIcons:MaterialIcon Kind="DeleteOutline" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
-                    </MenuItem.Icon>
-                </MenuItem>
-            </MenuFlyout>
+                    <fluent:FAMenuFlyoutItem.IconSource>
+                        <controls:FluentIconSource Glyph="{x:Static glyphs:FluentGlyphs.Delete}" FontSize="{StaticResource Launcher.Icon.Md}"/>
+                    </fluent:FAMenuFlyoutItem.IconSource>
+                </fluent:FAMenuFlyoutItem>
+            </fluent:FAMenuFlyout>
         </SplitButton.Flyout>
     </SplitButton>
 </UserControl>

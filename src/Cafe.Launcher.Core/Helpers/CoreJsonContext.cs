@@ -25,6 +25,7 @@ internal sealed partial class CoreJsonContext : JsonSerializerContext;
 
 [JsonSourceGenerationOptions(WriteIndented = true)]
 [JsonSerializable(typeof(LauncherSettings))]
+[JsonSerializable(typeof(GameSettings))]
 [JsonSerializable(typeof(LocalManifest))]
 [JsonSerializable(typeof(GameLauncherConfig))]
 internal sealed partial class CoreStorageJsonContext : JsonSerializerContext;
@@ -33,3 +34,6 @@ internal sealed partial class CoreStorageJsonContext : JsonSerializerContext;
 [JsonSerializable(typeof(PrefixMetadataStore.PrefixMetadataDocument))]
 [JsonSerializable(typeof(CompatibilityEnvironmentPrecheck.CompatibilityReportDocument))]
 internal sealed partial class GameRuntimeJsonContext : JsonSerializerContext;
+
+[JsonSerializable(typeof(GameDeviceOptionDocument))]
+internal sealed partial class GameDeviceOptionJsonContext : JsonSerializerContext;

@@ -1,4 +1,4 @@
-using Avalonia.Controls;
+﻿using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 using Cafe.Launcher.UI.Constants;
@@ -162,8 +162,14 @@ public sealed class SystemTrayIntegrationTests
         {
             provider = HeadlessTestHost.CreateServiceProvider(Directory, services =>
             {
-                services.AddSingleton<IGameOperationExecutor>(Executor);
-                services.AddSingleton<IGameSessionMonitor>(Monitor);
+                services.AddSingleton<Func<LauncherGameContext, IGameOperationExecutor>>(
+                    (IServiceProvider _) => context => context.GameId == LauncherProfiles.BlueArchiveJapan.RuntimeId
+                        ? Executor
+                        : new StubGameOperationExecutor());
+                services.AddSingleton<Func<LauncherGameContext, IGameSessionMonitor>>(
+                    (IServiceProvider _) => context => context.GameId == LauncherProfiles.BlueArchiveJapan.RuntimeId
+                        ? Monitor
+                        : new FakeGameSessionMonitor());
             });
             ViewModel = provider.GetRequiredService<MainWindowViewModel>();
             Localizer = provider.GetRequiredService<LocalizationService>();
