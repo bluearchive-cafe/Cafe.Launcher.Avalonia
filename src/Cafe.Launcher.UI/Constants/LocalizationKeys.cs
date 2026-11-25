@@ -598,6 +598,7 @@ public enum LocalizationKeys
     TaskFinishing,
     TaskHide,
     TaskIdentifyInstallation,
+    TaskIdentifyInstallationHint,
     TaskInstallChangePath,
     TaskInstallCompleted,
     TaskInstallDesktopShortcut,

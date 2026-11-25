@@ -104,7 +104,8 @@ Enter a UID manually to continue.</value></data><data name="resourcePanelUidSave
     <value>Finishing</value>
   </data><data name="taskHide" xml:space="preserve">
     <value>Hide</value>
-  </data><data name="taskIdentifyInstallation" xml:space="preserve"><value>Locate game</value></data>
+  </data><data name="taskIdentifyInstallation" xml:space="preserve"><value>Locate installed game</value></data>
+  <data name="taskIdentifyInstallationHint" xml:space="preserve"><value>Already have the game installed? Choose its folder to detect the existing installation and skip re-downloading.</value></data>
   <data name="taskInstallChangePath" xml:space="preserve"><value>Change</value></data>
   <data name="taskInstallCompleted" xml:space="preserve">
     <value>Installation completed</value>

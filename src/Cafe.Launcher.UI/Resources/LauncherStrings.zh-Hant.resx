@@ -104,7 +104,8 @@ Avalonia：{5}</value></data><data name="debugTestActionToast" xml:space="preser
     <value>正在收尾</value>
   </data><data name="taskHide" xml:space="preserve">
     <value>收起</value>
-  </data><data name="taskIdentifyInstallation" xml:space="preserve"><value>定位遊戲</value></data>
+  </data><data name="taskIdentifyInstallation" xml:space="preserve"><value>定位已安裝的遊戲</value></data>
+  <data name="taskIdentifyInstallationHint" xml:space="preserve"><value>已安裝過遊戲？選擇遊戲目錄即可識別現有安裝，無需重新下載。</value></data>
   <data name="taskInstallChangePath" xml:space="preserve"><value>變更</value></data>
   <data name="taskInstallCompleted" xml:space="preserve">
     <value>安裝完成</value>

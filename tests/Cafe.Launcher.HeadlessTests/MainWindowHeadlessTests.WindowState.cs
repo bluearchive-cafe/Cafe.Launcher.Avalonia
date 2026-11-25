@@ -384,7 +384,7 @@ public sealed partial class MainWindowHeadlessTests
         Dispatcher.UIThread.RunJobs();
         var surface = context.Window.GetVisualDescendants().OfType<Cafe.Launcher.UI.Controls.DialogSurface>()
             .Single(control => control.Name == "GameTaskSurface");
-        var path = surface.GetVisualDescendants().OfType<TextBlock>()
+        var path = surface.GetVisualDescendants().OfType<TextBox>()
             .Single(control => control.IsEffectivelyVisible && control.Text == context.ViewModel.Operations.TaskPath);
         AssertControlInsideWindow(path, context.Window);
         var actions = surface.GetVisualDescendants().OfType<Button>().Where(control => control.IsEffectivelyVisible).ToArray();

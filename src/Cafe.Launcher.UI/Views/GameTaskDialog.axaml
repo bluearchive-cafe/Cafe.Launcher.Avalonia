@@ -22,17 +22,17 @@
                 <StackPanel Spacing="{StaticResource Launcher.Spacing.Lg}">
                     <StackPanel IsVisible="{Binding Operations.IsInstallPreparing}" Spacing="{StaticResource Launcher.Spacing.Md}">
                         <TextBlock Text="{Binding Shell.I18n[taskInstallSelectPath]}" Classes="dialog-alert-content"/>
-                        <Border Classes="task-install-path">
-                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}">
-                                <TextBlock x:Name="InstallPathLabel" Text="{Binding Operations.InstallPathDraft}"
-                                           Classes="dialog-alert-content" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                                           ToolTip.Tip="{Binding Operations.InstallPathDraft}"/>
-                                <HyperlinkButton Grid.Column="1" Classes="inline-link" VerticalAlignment="Center"
-                                        IsEnabled="{Binding Operations.CanChooseInstallPath}"
-                                        Content="{Binding Shell.I18n[taskInstallChangePath]}" AutomationProperties.Name="{Binding Shell.I18n[taskInstallChangePath]}"
-                                        Command="{Binding Operations.ChooseInstallPathCommand}"/>
-                            </Grid>
-                        </Border>
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}">
+                            <TextBox x:Name="InstallPathInput"
+                                     Classes="field-input"
+                                     Text="{Binding Operations.InstallPathDraft, Mode=TwoWay}"
+                                     IsEnabled="{Binding Operations.CanChooseInstallPath}"
+                                     AutomationProperties.Name="{Binding Shell.I18n[taskInstallSelectPath]}"/>
+                            <HyperlinkButton Grid.Column="1" Classes="inline-link" VerticalAlignment="Center"
+                                    IsEnabled="{Binding Operations.CanChooseInstallPath}"
+                                    Content="{Binding Shell.I18n[taskInstallChangePath]}" AutomationProperties.Name="{Binding Shell.I18n[taskInstallChangePath]}"
+                                    Command="{Binding Operations.ChooseInstallPathCommand}"/>
+                        </Grid>
                         <WrapPanel ItemSpacing="{StaticResource Launcher.Spacing.Sm}" LineSpacing="{StaticResource Launcher.Spacing.Xs}">
                             <TextBlock Text="{Binding Operations.InstallDownloadSizeText}" Classes="caption"/>
                             <TextBlock Text="|" Classes="caption"/>
@@ -44,6 +44,9 @@
                                   AutomationProperties.Name="{Binding Shell.I18n[taskInstallDesktopShortcut]}">
                             <TextBlock Text="{Binding Shell.I18n[taskInstallDesktopShortcut]}" Classes="dialog-alert-content" TextWrapping="Wrap"/>
                         </CheckBox>
+                        <TextBlock Text="{Binding Shell.I18n[taskIdentifyInstallationHint]}"
+                                   Classes="caption"
+                                   TextWrapping="Wrap"/>
                     </StackPanel>
                 </StackPanel>
             </controls:DialogSurface.Content>
@@ -52,7 +55,9 @@
                     <Button Classes="flat-action dialog-action" IsVisible="{Binding Operations.IsInstallPreparing}"
                             IsEnabled="{Binding Operations.CanChooseInstallPath}"
                             Content="{Binding Shell.I18n[taskIdentifyInstallation]}" AutomationProperties.Name="{Binding Shell.I18n[taskIdentifyInstallation]}"
-                            Command="{Binding Operations.IdentifyInstalledGameCommand}"/>
+                            Command="{Binding Operations.IdentifyInstalledGameCommand}"
+                            ToolTip.Tip="{Binding Shell.I18n[taskIdentifyInstallationHint]}" ToolTip.ShowOnDisabled="True"
+                            AutomationProperties.HelpText="{Binding Shell.I18n[taskIdentifyInstallationHint]}"/>
                     <Button Classes="primary-action dialog-action" IsVisible="{Binding Operations.IsInstallPreparing}"
                             IsEnabled="{Binding Operations.CanStartInstall}"
                             Content="{Binding Shell.I18n[taskStartInstall]}" AutomationProperties.Name="{Binding Shell.I18n[taskStartInstall]}"

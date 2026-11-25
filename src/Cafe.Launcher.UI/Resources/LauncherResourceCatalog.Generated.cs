@@ -606,6 +606,7 @@ internal static class LauncherResourceCatalog
         "taskFinishing",
         "taskHide",
         "taskIdentifyInstallation",
+        "taskIdentifyInstallationHint",
         "taskInstallChangePath",
         "taskInstallCompleted",
         "taskInstallDesktopShortcut",

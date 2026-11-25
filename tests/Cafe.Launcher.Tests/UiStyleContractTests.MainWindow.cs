@@ -832,7 +832,7 @@ public sealed partial class UiStyleContractTests
     public void GameTaskDialog_PathDoesNotBindSettingsEditor()
     {
         var view = File.ReadAllText(TestRepository.FromPresentationRoot("Views/GameTaskDialog.axaml"));
-        Assert.Contains("{Binding Operations.InstallPathDraft}", view, StringComparison.Ordinal);
+        Assert.Contains("Operations.InstallPathDraft", view, StringComparison.Ordinal);
         var card = File.ReadAllText(TestRepository.FromPresentationRoot("Views/GameTaskCard.axaml"));
         Assert.Contains("{Binding Operations.CompactTaskSummary}", card, StringComparison.Ordinal);
         Assert.DoesNotContain("ToggleTaskDetails", card, StringComparison.Ordinal);

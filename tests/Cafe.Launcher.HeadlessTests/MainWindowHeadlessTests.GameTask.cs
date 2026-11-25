@@ -4,6 +4,7 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.Testing;
+using Cafe.Launcher.UI.Constants;
 using Cafe.Launcher.UI.Controls;
 using Cafe.Launcher.UI.Features.GameOperations;
 using Cafe.Launcher.UI.Models;
@@ -34,7 +35,7 @@ public sealed partial class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
-    public void InstallPreparation_UsesCompactPathLinkAndRightAlignedActions()
+    public void InstallPreparation_UsesEditablePathFieldAndRightAlignedActions()
     {
         using var context = CreateContext();
         PrepareGoldenWindow(context);
@@ -45,12 +46,16 @@ public sealed partial class MainWindowHeadlessTests
         context.Window.Show();
         Dispatcher.UIThread.RunJobs();
         var surface = context.Window.GetVisualDescendants().OfType<DialogSurface>().Single(item => item.Name == "GameTaskSurface");
-        var path = surface.GetVisualDescendants().OfType<TextBlock>().Single(item => item.Name == "InstallPathLabel");
+        var path = surface.GetVisualDescendants().OfType<TextBox>().Single(item => item.Name == "InstallPathInput");
         var change = surface.GetVisualDescendants().OfType<Button>().Single(item => item.Command == context.ViewModel.Operations.ChooseInstallPathCommand);
         Assert.Same(path.Parent, change.Parent);
         Assert.IsType<HyperlinkButton>(change);
-        var field = surface.GetVisualDescendants().OfType<Border>().Single(item => item.Classes.Contains("task-install-path"));
-        Assert.InRange(field.Bounds.Height, 40, 42);
+        Assert.Contains("field-input", path.Classes);
+        Assert.InRange(path.Bounds.Height, 40, 42);
+        Assert.Equal(@"D:\Games\BlueArchive_JP", path.Text);
+        path.Text = @"E:\Games\BlueArchive_JP";
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(@"E:\Games\BlueArchive_JP", context.ViewModel.Operations.InstallPathDraft);
         var checkbox = surface.GetVisualDescendants().OfType<CheckBox>().Single(item => item.Name == "InstallShortcutCheckBox");
         Assert.True(checkbox.IsChecked);
         var shortcutLabel = Assert.IsType<TextBlock>(checkbox.Content);
@@ -61,6 +66,11 @@ public sealed partial class MainWindowHeadlessTests
         var visibleActions = surface.GetVisualDescendants().OfType<Button>().Where(item => item.IsEffectivelyVisible).ToArray();
         Assert.Single(visibleActions, item => item.Command == context.ViewModel.Operations.CloseTaskCommand);
         var locate = Assert.Single(visibleActions, item => item.Command == context.ViewModel.Operations.IdentifyInstalledGameCommand);
+        var hintText = context.ViewModel.Shell.I18n[LocalizationKeys.TaskIdentifyInstallationHint];
+        Assert.Equal(context.ViewModel.Shell.I18n[LocalizationKeys.TaskIdentifyInstallation], locate.Content);
+        Assert.Equal(hintText, ToolTip.GetTip(locate));
+        Assert.Contains(surface.GetVisualDescendants().OfType<TextBlock>(),
+            item => item.IsEffectivelyVisible && item.Text == hintText);
         var install = Assert.Single(visibleActions, item => item.Command == context.ViewModel.Operations.ConfirmInstallCommand);
         var actions = Assert.IsType<StackPanel>(locate.Parent);
         Assert.Same(actions, install.Parent);

@@ -104,7 +104,8 @@ UID を手動入力して続行してください。</value></data><data name="r
     <value>完了処理中</value>
   </data><data name="taskHide" xml:space="preserve">
     <value>閉じて続行</value>
-  </data><data name="taskIdentifyInstallation" xml:space="preserve"><value>ゲームを指定</value></data>
+  </data><data name="taskIdentifyInstallation" xml:space="preserve"><value>インストール済みゲームを選択</value></data>
+  <data name="taskIdentifyInstallationHint" xml:space="preserve"><value>ゲームがインストール済みの場合は、そのフォルダーを選択すると既存のインストールを検出し、再ダウンロードを省略できます。</value></data>
   <data name="taskInstallChangePath" xml:space="preserve"><value>変更</value></data>
   <data name="taskInstallCompleted" xml:space="preserve">
     <value>インストール完了</value>
