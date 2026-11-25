@@ -1,6 +1,7 @@
 ﻿; Cafe Launcher — Inno Setup installer script.
-; Replaces the retired NSIS script (installer/Cafe.Launcher.nsi).
-; Build through scripts/Build-Distribution.ps1. Requires Inno Setup 7.x (ISCC).
+; Replaces the retired NSIS installer (installer/Cafe.Launcher.Avalonia.nsi).
+; Build through scripts/New-WindowsInstaller.ps1 (called by
+; scripts/Build-Distribution.ps1). Requires Inno Setup 7.x (ISCC).
 ;
 ; Required ISCC /D defines (enforced by the preprocessor below):
 ;   APP_VERSION       e.g. 1.0.1-beta.1  — the <VersionPrefix> from the main .csproj
@@ -20,34 +21,42 @@
 ; The launcher's Windows single-instance mutex (Program.cs: MutexName).
 #define APP_MUTEX "Local\Cafe_Launcher_SI"
 #define EXECUTABLE_NAME "Cafe.Launcher.exe"
-; Uninstall registration key written by this installer (AppId + "_is1").
-#define INNO_UNINSTALL_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\{803fa671-62db-49fd-b99b-85635f5118ba}_is1"
 ; Uninstall registration key of the retired NSIS installer, used for the one-time
-; upgrade bridge in [Code]. The Inno installer registers under {AppId}_is1 instead.
-#define LEGACY_NSIS_UNINSTALL_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\Cafe.Launcher"
+; upgrade bridge in [Code]. ADR-043 renamed the product, but the legacy key still
+; carries the old executable token; the Inno installer registers under {AppId}_is1.
+#define LEGACY_NSIS_UNINSTALL_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\Cafe.Launcher.Avalonia"
 
 [Setup]
 ; Stable product identity. Keep AppId across versions so Inno can reuse the
-; previous install directory and append to its uninstall log during upgrades.
+; previous install directory and update its uninstall log during upgrades.
 ; It also names the Windows uninstall entry (HKLM\...\Uninstall\{AppId}_is1).
 AppId={{803fa671-62db-49fd-b99b-85635f5118ba}
 AppName=Cafe Launcher
 AppVersion={#APP_VERSION}
 AppVerName=Cafe Launcher {#APP_VERSION}
 AppPublisher=BlueArchive Cafe
-; Resolved by ResolveDefaultDir: the previous installation's directory when a
-; registry record exists (Inno upgrade or trusted legacy NSIS bridge), otherwise
-; the machine-wide default.
-DefaultDirName={code:ResolveDefaultDir}
-; Upgrading into the existing directory is the normal path (the default
-; directory above is the detected previous install), so the "folder already
-; exists — are you sure?" prompt would fire on every upgrade. Skip it.
-DirExistsWarning=no
+AppPublisherURL=https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia
+AppSupportURL=https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/issues
+AppUpdatesURL=https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/releases
+; Machine-wide default directory. UsePreviousAppDir is Inno's standard upgrade
+; behavior: it substitutes the directory of the installed copy, and the default
+; DirExistsWarning=auto keeps the "directory already exists" prompt from firing
+; for that same directory. Do not replace this with a scripted registry lookup:
+; that would bypass Inno's own multi-view upgrade detection.
+DefaultDirName={autopf}\Cafe Launcher
+UsePreviousAppDir=yes
 DefaultGroupName=Cafe Launcher
 DisableProgramGroupPage=yes
 PrivilegesRequired=admin
+; The launcher ships win-x64 binaries only. x64compatible also covers Windows 11
+; on Arm, where x64 binaries run under emulation.
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
+; Windows 10 1809 is the oldest OS listed in README.md and the oldest supported
+; by the .NET 10 runtime.
+MinVersion=10.0.17763
+; Follow the system light/dark setting using Inno's standard modern wizard.
+WizardStyle=modern dynamic
 UninstallDisplayName=Cafe Launcher
 UninstallDisplayIcon={app}\{#EXECUTABLE_NAME}
 ; Resolved against this script's directory: the icon ships with the presentation
@@ -113,12 +122,15 @@ Name: "{autoprograms}\Cafe Launcher\Uninstall Cafe Launcher"; Filename: "{uninst
 Name: "{autodesktop}\Cafe Launcher"; Filename: "{app}\{#EXECUTABLE_NAME}"; WorkingDir: "{app}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\{#EXECUTABLE_NAME}"; Description: "{cm:LaunchProgram,Cafe Launcher}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#EXECUTABLE_NAME}"; Description: "{cm:LaunchProgram,Cafe Launcher}"; Flags: nowait postinstall runasoriginaluser skipifsilent
 ; The in-app updater applies a package by running this setup silently, and the helper that
 ; does so comes from the PREVIOUS version: it relaunches the executable name it was started
 ; with, which the rename above may just have deleted. A silent install therefore starts the
 ; new version itself instead of leaving the user with a closed launcher (ADR-047).
-Filename: "{app}\{#EXECUTABLE_NAME}"; Flags: nowait skipifnotsilent
+; runasoriginaluser is explicit here because only postinstall entries default to it; a
+; silent install is normally launched by the elevated updater, and the launcher must not
+; inherit that elevation and write into the administrator's profile.
+Filename: "{app}\{#EXECUTABLE_NAME}"; Flags: nowait runasoriginaluser skipifnotsilent
 
 [UninstallDelete]
 ; Installation ownership marker (written at install time; see CurStepChanged).
@@ -131,7 +143,6 @@ Type: filesandordirs; Name: "{localappdata}\Cafe Launcher"; Check: ShouldDeleteU
 var
   DeleteApplicationData: Boolean;
   CleanLegacyJit: Boolean;
-  InitialInstallDir: String;
 
 function GetFileAttributes(Path: String): DWORD;
   external 'GetFileAttributesW@kernel32.dll stdcall';
@@ -154,45 +165,6 @@ begin
     else
       Log('Could not remove legacy JIT file: ' + Path);
   end;
-end;
-
-{ Reads InstallLocation from an uninstall registry key when present and non-empty. }
-function TryReadInstallLocation(const Root: Integer; const Key: String): Boolean;
-var
-  Location: String;
-begin
-  Result := False;
-  if RegQueryStringValue(Root, Key, 'InstallLocation', Location) and (Location <> '') then
-  begin
-    InitialInstallDir := RemoveBackslashUnlessRoot(Location);
-    Result := True;
-  end;
-end;
-
-{ Locate an existing installation so the directory page defaults to it.
-  Inno-to-Inno upgrades are normally covered by UsePreviousAppDir, which reads
-  the current-hive uninstall key; the explicit lookups also recover the path
-  when that default lookup misses (e.g. the record lives in another registry
-  view). The legacy NSIS registration is adopted only by the validated upgrade
-  bridge below, never here, so a stale record can never seed the default. }
-procedure ResolveInitialInstallDir;
-begin
-  if TryReadInstallLocation(HKLM64, '{#INNO_UNINSTALL_KEY}') then
-    Exit;
-  if TryReadInstallLocation(HKLM32, '{#INNO_UNINSTALL_KEY}') then
-    Exit;
-  if TryReadInstallLocation(HKCU, '{#INNO_UNINSTALL_KEY}') then
-    Exit;
-  TryReadInstallLocation(HKCU32, '{#INNO_UNINSTALL_KEY}');
-end;
-
-{ DefaultDirName callback: reuse the detected installation, else the default. }
-function ResolveDefaultDir(const Param: String): String;
-begin
-  if InitialInstallDir <> '' then
-    Result := InitialInstallDir
-  else
-    Result := ExpandConstant('{autopf}\Cafe Launcher');
 end;
 
 { Called by [UninstallDelete] while Setup records the uninstall entry and again
@@ -315,19 +287,6 @@ begin
   if FileExists(UninstallerPath) then
     DeleteFile(UninstallerPath);
   RemoveDir(InstallDir);
-end;
-
-function InitializeSetup: Boolean;
-var
-  LegacyUninstallerPath: String;
-begin
-  Result := True;
-  ResolveInitialInstallDir;
-  { Only read the legacy registration here (as the directory-page default when
-    no Inno Setup record exists); the actual uninstall happens in
-    PrepareToInstall, after the user chose to install. }
-  if InitialInstallDir = '' then
-    InitialInstallDir := TryGetValidatedLegacyInstall(LegacyUninstallerPath);
 end;
 
 function PrepareToInstall(var NeedsRestart: Boolean): String;
