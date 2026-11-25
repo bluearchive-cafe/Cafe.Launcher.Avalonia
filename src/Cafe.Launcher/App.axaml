@@ -88,6 +88,8 @@
             <ItemsPanelTemplate x:Key="Launcher.Component.RowPanel.Sm">
                 <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}"/>
             </ItemsPanelTemplate>
+            <!-- 零圆角显式档：分段按钮的段内接缝与中间段四角必须平直。 -->
+            <CornerRadius x:Key="Launcher.Radius.None">0</CornerRadius>
             <CornerRadius x:Key="Launcher.Radius.Xs">4</CornerRadius>
             <CornerRadius x:Key="Launcher.Radius.Sm">8</CornerRadius>
             <CornerRadius x:Key="Launcher.Radius.Md">12</CornerRadius>

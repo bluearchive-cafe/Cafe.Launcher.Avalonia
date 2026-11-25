@@ -101,6 +101,7 @@
 ### 3.6b 资源面板（ADR-041）
 - 外层骨架 = `DialogSurface` Panel 形态不动（头带 / 滚动正文 / 发丝底带，ADR-015）；正文解剖已 M3 化：UID 单卡三态（展示 / 编辑 / 缺失互斥面板，UID 值等宽 + 字距）、来源 = MD3 分段按钮（`RadioButton.segment-option`，选中段 accent 家族 + 勾选图标）、条目 = 单卡三行（`Border.resource-row` + 发丝分隔线，行 = 标题 + 状态 chip + 版本行 + 无标签 Switch）。
 - 分段控件的独立胶囊焦点层不参与测量；四语言、亮暗主题及 100%／150%／200% 文字下往返取焦，段宽、组边界、相邻位置和选择值保持不变。
+- 分段圆角只属于整组两端：段内接缝与中间选中段四角为方角，视觉上不应在分隔线上下露出缺口。
 - 状态 chip：Ready=Success/`Success.Soft`、Waiting/Loading=Secondary/`Content.Row`、Failed=Danger/`Danger.Soft`；类映射由 `ResourcePanelItem` 的四个表象布尔驱动。
 
 ### 3.7 崩溃窗口（ADR-019 / ADR-020，独立 Fluent 设计系统）

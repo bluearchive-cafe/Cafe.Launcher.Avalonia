@@ -31,7 +31,7 @@
 | `Launcher.Color.*` | M3 scheme 角色（primary/secondary/tertiary + containers + surface/outline/error 族）+ 业务语义色（Success/Warning/Info）+ 主题无关特殊色（Chrome/Overlay/scrim/媒体占位） | `Color.Primary`、`Color.OnPrimary`、`Color.PrimaryContainer`、`Color.Surface`、`Color.Outline`、`Color.Danger`、`Color.Success`、`Color.Overlay.Scrim` |
 | `Launcher.Text.*` | 应用文本专用角色（Primary/Secondary/Body/Link/OnChrome/OnDark/Placeholder 等） | `Text.Primary`、`Text.OnChrome` |
 | `Launcher.Spacing.*` | 间距 0/4/8/12/16/20/24/32/40 全档（Double，`Spacing.None`=0 为零间距显式档）+ Thickness 全档（`Spacing.Thickness.*`） | `Spacing.Md`、`Spacing.Thickness.Lg` |
-| `Launcher.Radius.*` | 目标字阶 4/8/12/16（`Xs/Sm/Md/Lg`，含全部四档 token）；28（`Xxl` 或 full）无消费面，暂不落地（ADR-002 只重标四档） | `Radius.Xs`、`Radius.Md` |
+| `Launcher.Radius.*` | 目标字阶 0/4/8/12/16（`None/Xs/Sm/Md/Lg`，`None` 为段内方角等显式零档）；28（`Xxl` 或 full）无消费面，暂不落地（ADR-002 只重标四档） | `Radius.None`、`Radius.Xs`、`Radius.Md` |
 | `Launcher.Typography.*` | M3 角色字阶（Display/Headline/Title/Body/Label × 字号/字重/字距）+ 字体族 | `Typography.FontSize.Body.Md`、`Typography.FontWeight.Strong`、`Typography.FontFamily.Monospace` |
 | `Launcher.Icon.*` | 图标尺寸 16/18/20/22/24 | `Icon.Md` |
 | `Launcher.Control.*` | 控件高度/宽度（Setting36/Dialog40/Bottom48/Launch58/Field40/Chip32/Swatch28 等） | `Control.Height.Setting` |
@@ -202,7 +202,7 @@
 
 - （2026-11-01）「当前背景」的说明随实际加载结果更新：自带和远程壁纸显示本地化来源名称，远程壁纸通过 tooltip 提供完整图片地址，自定义背景显示所选具体文件路径；远程加载回退到自带壁纸时同步显示自带来源名称。长路径省略显示并通过 tooltip 保留完整内容。
 - 常用项按「主题与动效 → 背景 → 主题配色」排列，组标题保留强调字重、行标题使用普通字重；动态效果从常规移到外观，字段、默认值和应用时机不变。背景操作紧邻来源，图片与视频合并为「选择图片或视频」入口，使用同一文件选择器同时筛选两类格式；文件夹与清除入口独立保留，文件夹可随机选择图片或视频。缩略图按图片／视频类型展示，「当前背景」显示本次选中的具体文件路径，长路径省略显示并通过 tooltip 保留完整路径。路径与媒体类型随最新加载结果一起更新，不把随机结果写回文件夹设置。填充色仅在适应模式出现，音量按实际选中的文件类型显示，包含文件夹随机选中的视频。
-- （2026-11-07，[ADR-056](adr/ADR-056-提交式选项与维护目标语义统一.md)）主题、背景来源、壁纸适配与中性色策略这四组 2–3 项短标签互斥值改用共享分段按钮：整组整圆胶囊描边、段间 1 DIP 竖线、选中段使用 `Primary.Soft` 底并显形勾选图标；`Segmented.Selected.Foreground` 优先取 `Primary`，仅在对话框或资源卡片上的实际合成背景不足 4.5:1 时回退到可读前景，焦点环使用独立覆盖层、不参与内容测量。未选中段的反选不写回来源，双向接缝由 `SegmentOptionConverter` 承担；长标签或 ≥4 项的动态效果、取色算法、配色变体与主题色来源仍用下拉菜单。共享视觉契约在 `Views/Styles/Segmented.axaml`。
+- （2026-11-07，[ADR-056](adr/ADR-056-提交式选项与维护目标语义统一.md)）主题、背景来源、壁纸适配与中性色策略这四组 2–3 项短标签互斥值改用共享分段按钮：整组整圆胶囊描边、段间 1 DIP 竖线、选中段使用 `Primary.Soft` 底并显形勾选图标；`Segmented.Selected.Foreground` 优先取 `Primary`，仅在对话框或资源卡片上的实际合成背景不足 4.5:1 时回退到可读前景，焦点环使用独立覆盖层、不参与内容测量。圆角只属于整组两端：段内接缝与中间段四角保持方角，段模板不继承 Fluent `RadioButton` 主题的 `CornerRadius`（否则选中底色会在分隔线上下露出 3 DIP 圆角缺口）。未选中段的反选不写回来源，双向接缝由 `SegmentOptionConverter` 承担；长标签或 ≥4 项的动态效果、取色算法、配色变体与主题色来源仍用下拉菜单。共享视觉契约在 `Views/Styles/Segmented.axaml`。
 - 同一分段门槛适用于其余设置页：常规页的关闭行为、状态面板、更新通道与下载与网络页的下载源（2 项短标签）使用分段按钮；游戏启动后行为、代理、下载限速、日志级别与游戏运行器因标签较长或选项 ≥4 项继续用下拉。
 - 主题色来源下拉的每一项前置一枚圆点，预演「该来源当前解析出的主色」；触发器与菜单共用同一 `ItemTemplate`，行内不再单放与选项无关的色块。圆点随亮暗主题、壁纸取色、系统强调色与自定义色即时刷新，包括尚未选中的来源。打开设置时补齐当前壁纸色板，壁纸或算法变化也刷新未选中的壁纸预览；这些后台预览不改变当前主题色来源、不标记草稿为已修改，也不把未选中来源应用到主窗口。系统事件直接使用事件携带的强调色与明暗值，避免资源字典更新时间差导致预览滞后。
 - 自定义背景的清除动作收为图标按钮，保留 tooltip 与辅助名称；两个选择动作仍是带文字的 `flat-action`，避免清除与选择争夺视觉重量。
@@ -342,6 +342,7 @@ Q1–Q24 表保留最初决策脉络；后续变更以正文修订及 [ADR 索�
 | 优化-1024 | 2026-10-24 用户确认保留 Material 令牌与动态色管线；精简设置页重复说明与分类副标题，空说明不占位；设置行根据实际操作宽度换行，操作组可换行；装饰线 0.5 DIP，交互边框 1 DIP、焦点环 2 DIP；Label.Sm 最小 12；减弱对话框阴影，警示保留图标/文字/背景并移除额外左边线 | 本次修订取代 ADR-005 的 11px 下限、ADR-013 的 1px 装饰线及后续相关历史视觉值；不替换 Material 设计系统，不改变主题设置、命令、持久化与模态行为 |
 | 修复-1102 | 2026-11-02 设计审查修复：选中容器三态分别校正文字前景；下拉项焦点使用对应 on-container 状态色并内缩 2 DIP；资源来源分段控件用独立胶囊焦点层保持测量稳定 | §2.4、§7；维持既有容器底色与 8%／16% 状态层，补齐动态矩阵和实际模板回归 |
 | 对齐-1113 | 2026-11-13 装饰描边和分隔线统一为 1 DIP，启用 Avalonia 默认布局取整 | 取代优化-1024 的 0.5 DIP 装饰线；无头测试覆盖 100%、125%、150%、175%、200% 显示缩放 |
+| 修复-1125 | 2026-11-25 用户指出分段按钮「中间段的选择项不应该有圆角」：段模板继承 Fluent `RadioButton` 的 `CornerRadius=3`，选中底色在分隔线上下露出圆角缺口 | §4.2、ADR-056 分段契约；段内方角固定为 0，只有整组两端随胶囊裁剪成圆；新增中间段选中回归测试并再生含分段控件的黄金截图 |
 | Q1 | 动因 = 系统化 + 视觉现代化 + 一致性 | 体系先行，观感随后 |
 | Q2 | 分阶段：P1 token 体系 → P2 组件 → P3 表面 | 见 §9 |
 | Q3 | 范围 = 全部表面分批：第一批主壳/设置/对话框/Toast/向导；第二批诊断/日志**仅 token 兼容**；资源面板后由 [ADR-041](adr/ADR-041-资源面板MD3结构级重设计.md) 补做结构级重设计 | 排障界面不做视觉重设计 |

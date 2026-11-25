@@ -660,11 +660,13 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void CornerRadii_UseTheFourDeclaredHierarchyTokens()
+    public void CornerRadii_UseTheDeclaredHierarchyTokens()
     {
         var allowedTokens = new HashSet<string>(StringComparer.Ordinal)
         {
             "0",
+            // 显式零圆角档：分段按钮的段内接缝与中间段四角保持平直。
+            "{StaticResource Launcher.Radius.None}",
             "{StaticResource Launcher.Radius.Xs}",
             "{StaticResource Launcher.Radius.Sm}",
             "{StaticResource Launcher.Radius.Md}",

@@ -54,6 +54,11 @@
     <Setter Property="Padding" Value="{StaticResource Launcher.Component.Segmented.Segment.Padding}"/>
     <Setter Property="HorizontalContentAlignment" Value="Center"/>
     <Setter Property="VerticalContentAlignment" Value="Center"/>
+    <!-- 段内方角是分段按钮的几何契约：只有整组两端随 Border.segmented 的圆角成圆，
+         内侧接缝（以及中间段的四角）必须平直。Fluent 的 RadioButton 主题把
+         CornerRadius 定为 3，模板又用 TemplateBinding 继承它——不在这里清掉，
+         选中底色就会在分隔线上下各露出一个圆角缺口。 -->
+    <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.None}"/>
     <Setter Property="Template" Value="{StaticResource SegmentedOptionTemplate}"/>
   </Style>
   <Style Selector="RadioButton.segment-option > StackPanel.segment-content">

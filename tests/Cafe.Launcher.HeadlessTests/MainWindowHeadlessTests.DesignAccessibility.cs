@@ -11,6 +11,7 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Cafe.Launcher.Core.Models;
 using Cafe.Launcher.UI.Helpers;
+using Cafe.Launcher.UI.Models;
 using Cafe.Launcher.UI.Services;
 using Cafe.Launcher.UI.Views;
 using Microsoft.Extensions.DependencyInjection;
@@ -51,6 +52,36 @@ public sealed partial class MainWindowHeadlessTests
                         ((IPseudoClasses)segment.Classes).Set(state, false);
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// 分段按钮只在整组两端成圆（由 <c>Border.segmented</c> 的圆角裁剪），
+    /// 段内接缝与中间段四角必须是方角。Fluent 的 <c>RadioButton</c> 主题把
+    /// <c>CornerRadius</c> 定为 3，段模板用 <c>TemplateBinding</c> 继承后，
+    /// 选中底色会在分隔线上下露出圆角缺口（2026-11-25 用户标出的显示缺陷）。
+    /// </summary>
+    [AvaloniaFact]
+    public void Segments_KeepSquareCornersInsideTheGroup()
+    {
+        using var context = CreateContext();
+        OpenSettings(context);
+        context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.Appearance;
+        Dispatcher.UIThread.RunJobs();
+
+        var section = Assert.Single(
+            context.Window.GetVisualDescendants().OfType<SettingsAppearanceSection>());
+        // 主题分组是 3 段：中间段两侧都不邻接胶囊端，最容易被继承的圆角破坏。
+        var themeSegments = SegmentOptions(section, "SettingsThemeMode");
+        Assert.Equal(3, themeSegments.Length);
+
+        foreach (var segment in section.GetVisualDescendants().OfType<RadioButton>()
+                     .Where(button => button.Classes.Contains("segment-option")))
+        {
+            var fill = Assert.Single(
+                segment.GetVisualDescendants().OfType<Border>(),
+                border => border.Name != "SegmentFocus" && border.Background is not null);
+            Assert.Equal(new CornerRadius(0), fill.CornerRadius);
         }
     }
 
